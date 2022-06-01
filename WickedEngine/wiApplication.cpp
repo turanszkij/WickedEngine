@@ -86,25 +86,13 @@ namespace wi
 			// Until engine is not loaded, present initialization screen...
 			CommandList cmd = graphicsDevice->BeginCommandList();
 			graphicsDevice->RenderPassBegin(&swapChain, cmd);
-			wi::image::SetCanvas(canvas);
 			Viewport viewport;
 			viewport.width = (float)swapChain.desc.width;
 			viewport.height = (float)swapChain.desc.height;
 			graphicsDevice->BindViewports(1, &viewport, cmd);
 			if (wi::initializer::IsInitializeFinished(wi::initializer::INITIALIZED_SYSTEM_FONT))
 			{
-				wi::font::SetCanvas(canvas);
-				wi::font::Params params;
-				params.posX = 5.f;
-				params.posY = 5.f;
-				std::string text = wi::backlog::getText();
-				float textheight = wi::font::TextHeight(text, params);
-				float screenheight = canvas.GetLogicalHeight();
-				if (textheight > screenheight)
-				{
-					params.posY = screenheight - textheight;
-				}
-				wi::font::Draw(text, params, cmd);
+				wi::backlog::DrawOutputText(canvas, cmd);
 			}
 			graphicsDevice->RenderPassEnd(cmd);
 			graphicsDevice->SubmitCommandLists();

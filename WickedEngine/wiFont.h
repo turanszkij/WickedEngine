@@ -12,34 +12,41 @@ namespace wi::font
 	// Do not alter order because it is bound to lua manually
 	enum Alignment
 	{
-		WIFALIGN_LEFT,
-		WIFALIGN_CENTER,
-		WIFALIGN_RIGHT,
-		WIFALIGN_TOP,
-		WIFALIGN_BOTTOM
+		WIFALIGN_LEFT,		// left alignment (horizontal)
+		WIFALIGN_CENTER,	// center alignment (horizontal or vertical)
+		WIFALIGN_RIGHT,		// right alignment (horizontal)
+		WIFALIGN_TOP,		// top alignment (vertical)
+		WIFALIGN_BOTTOM		// bottom alignment (vertical)
 	};
 
 	static constexpr int WIFONTSIZE_DEFAULT = 16;
 
+	struct Cursor
+	{
+		XMFLOAT2 position = {}; // the next character's position offset from the first character (logical canvas units)
+		XMFLOAT2 size = {}; // the written text's measurements from the first character (logical canvas units)
+	};
+
 	struct Params
 	{
-		float posX = 0;
-		float posY = 0;
-		int size = WIFONTSIZE_DEFAULT; // line height in DPI scaled units
-		float scaling = 1;
-		float spacingX = 0, spacingY = 0; // minimum spacing between characters
-		Alignment h_align, v_align;
-		wi::Color color;
-		wi::Color shadowColor;
-		float h_wrap = -1; // wrap start width (-1 default for no wrap)
-		int style = 0;
+		float posX = 0; // position in horizontal direction (logical canvas units)
+		float posY = 0; // position in vertical direction (logical canvas units)
+		int size = WIFONTSIZE_DEFAULT; // line height (logical canvas units)
+		float scaling = 1; // this will apply upscaling to the text while keeping the same resolution (size) of the font
+		float spacingX = 0, spacingY = 0; // minimum spacing between characters (logical canvas units)
+		Alignment h_align = WIFALIGN_LEFT; // horizontal alignment
+		Alignment v_align = WIFALIGN_TOP; // vertical alignment
+		wi::Color color; // base color of the text characters
+		wi::Color shadowColor; // transparent disables, any other color enables shadow under text
+		float h_wrap = -1; // wrap start width (-1 default for no wrap) (logical canvas units)
+		int style = 0; // 0: use default font style, other values can be taken from the wi::font::AddFontStyle() funtion's return value
 		float softness = 0.1f; // value in [0,1] range
 		float bolden = 0; // value in [0,1] range
 		float shadow_softness = 0.5f; // value in [0,1] range
 		float shadow_bolden = 0.1f; // value in [0,1] range
 		float shadow_offset_x = 0; // offset for shadow under the text in logical canvas coordinates
 		float shadow_offset_y = 0; // offset for shadow under the text in logical canvas coordinates
-		XMFLOAT2 cursor = XMFLOAT2(0, 0); // cursor offset, it can be used to continue text drawing by taking the Draw's return value (optional)
+		Cursor cursor; // cursor can be used to continue text drawing by taking the Draw's return value (optional)
 
 		Params(
 			float posX = 0,
@@ -86,21 +93,28 @@ namespace wi::font
 	void UpdateAtlas();
 
 	// Draw text with specified parameters and return cursor for last word
-	XMFLOAT2 Draw(const char* text, const Params& params, wi::graphics::CommandList cmd);
-	XMFLOAT2 Draw(const wchar_t* text, const Params& params, wi::graphics::CommandList cmd);
-	XMFLOAT2 Draw(const std::string& text, const Params& params, wi::graphics::CommandList cmd);
-	XMFLOAT2 Draw(const std::wstring& text, const Params& params, wi::graphics::CommandList cmd);
+	//	The next Draw() can continue from where this left off by using the return value of this function
+	//	in wi::font::Params::cursor
+	Cursor Draw(const char* text, const Params& params, wi::graphics::CommandList cmd);
+	Cursor Draw(const wchar_t* text, const Params& params, wi::graphics::CommandList cmd);
+	Cursor Draw(const std::string& text, const Params& params, wi::graphics::CommandList cmd);
+	Cursor Draw(const std::wstring& text, const Params& params, wi::graphics::CommandList cmd);
 
+	// Computes the text's size measurements in logical canvas coordinates
 	XMFLOAT2 TextSize(const char* text, const Params& params);
 	XMFLOAT2 TextSize(const wchar_t* text, const Params& params);
 	XMFLOAT2 TextSize(const std::string& text, const Params& params);
 	XMFLOAT2 TextSize(const std::wstring& text, const Params& params);
 
+	// Computes the text's width in logical canvas coordinates
+	//	Avoid calling TextWidth() and TextHeight() both, instead use TextSize() if you need both measurements!
 	float TextWidth(const char* text, const Params& params);
 	float TextWidth(const wchar_t* text, const Params& params);
 	float TextWidth(const std::string& text, const Params& params);
 	float TextWidth(const std::wstring& text, const Params& params);
 
+	// Computes the text's height in logical canvas coordinates
+	//	Avoid calling TextWidth() and TextHeight() both, instead use TextSize() if you need both measurements!
 	float TextHeight(const char* text, const Params& params);
 	float TextHeight(const wchar_t* text, const Params& params);
 	float TextHeight(const std::string& text, const Params& params);

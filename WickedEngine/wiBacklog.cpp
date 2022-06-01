@@ -31,7 +31,7 @@ namespace wi::backlog
 	std::deque<LogEntry> history;
 	const float speed = 4000.0f;
 	const size_t deletefromline = 500;
-	float pos = std::numeric_limits<float>::lowest();
+	float pos = 5;
 	float scroll = 0;
 	std::string inputArea;
 	int historyPos = 0;
@@ -44,6 +44,15 @@ namespace wi::backlog
 	bool blockLuaExec = false;
 	LogLevel logLevel = LogLevel::Default;
 
+	std::string getTextWithoutLock()
+	{
+		std::string retval;
+		for (auto& x : entries)
+		{
+			retval += x.text;
+		}
+		return retval;
+	}
 	void write_logfile()
 	{
 		std::string filename = wi::helper::GetTempDirectoryPath() + "wiBacklog.txt";
@@ -142,46 +151,15 @@ namespace wi::backlog
 			params.shadow_softness = 1;
 			wi::font::Draw(inputArea, params, cmd);
 
-			font_params.cursor = XMFLOAT2(0, 0);
-			params.shadowColor = 0x10000000u;
-			params.shadow_offset_x = 2;
-			params.shadow_offset_y = 2;
-			params.shadow_softness = 1;
-			if (refitscroll)
-			{
-				refitscroll = false;
-				float textheight = wi::font::TextHeight(getText(), font_params);
-				float limit = canvas.GetLogicalHeight() * 0.9f;
-				if (scroll + textheight > limit)
-				{
-					scroll = limit - textheight;
-				}
-			}
-			font_params.posX = 50;
-			font_params.posY = pos + scroll;
-			font_params.h_wrap = canvas.GetLogicalWidth() - font_params.posX;
 			Rect rect;
 			rect.left = 0;
 			rect.right = (int32_t)canvas.GetPhysicalWidth();
 			rect.top = 0;
 			rect.bottom = int32_t(canvas.LogicalToPhysical(canvas.GetLogicalHeight() - 35));
 			wi::graphics::GetDevice()->BindScissorRects(1, &rect, cmd);
-			for (auto& x : entries)
-			{
-				switch (x.level)
-				{
-				case LogLevel::Warning:
-					font_params.color = 0xFF66FFFF; // light yellow
-					break;
-				case LogLevel::Error:
-					font_params.color = 0xFF6666FF; // light red
-					break;
-				default:
-					font_params.color = wi::Color::White();
-					break;
-				}
-				font_params.cursor = wi::font::Draw(x.text, font_params, cmd);
-			}
+
+			DrawOutputText(canvas, cmd);
+
 			rect.left = -std::numeric_limits<int>::max();
 			rect.right = std::numeric_limits<int>::max();
 			rect.top = -std::numeric_limits<int>::max();
@@ -190,16 +168,46 @@ namespace wi::backlog
 		}
 	}
 
+	void DrawOutputText(const wi::Canvas& canvas, wi::graphics::CommandList cmd)
+	{
+		std::scoped_lock lock(logLock);
+		wi::font::SetCanvas(canvas); // always set here as it can be called from outside...
+		font_params.cursor = {};
+		if (refitscroll)
+		{
+			float textheight = wi::font::TextHeight(getTextWithoutLock(), font_params);
+			float limit = canvas.GetLogicalHeight() - 35;
+			if (scroll + textheight > limit)
+			{
+				scroll = limit - textheight;
+			}
+			refitscroll = false;
+		}
+		font_params.posX = 5;
+		font_params.posY = pos + scroll;
+		font_params.h_wrap = canvas.GetLogicalWidth() - font_params.posX;
+		for (auto& x : entries)
+		{
+			switch (x.level)
+			{
+			case LogLevel::Warning:
+				font_params.color = 0xFF66FFFF; // light yellow
+				break;
+			case LogLevel::Error:
+				font_params.color = 0xFF6666FF; // light red
+				break;
+			default:
+				font_params.color = wi::Color::White();
+				break;
+			}
+			font_params.cursor = wi::font::Draw(x.text, font_params, cmd);
+		}
+	}
 
 	std::string getText()
 	{
 		std::scoped_lock lock(logLock);
-		std::string retval;
-		for (auto& x : entries)
-		{
-			retval += x.text;
-		}
-		return retval;
+		return getTextWithoutLock();
 	}
 	void clear()
 	{
