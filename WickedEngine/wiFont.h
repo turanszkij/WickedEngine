@@ -3,6 +3,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiColor.h"
 #include "wiCanvas.h"
+#include "wiMath.h"
 
 #include <string>
 
@@ -38,6 +39,7 @@ namespace wi::font
 		float shadow_bolden = 0.1f; // value in [0,1] range
 		float shadow_offset_x = 0; // offset for shadow under the text in logical canvas coordinates
 		float shadow_offset_y = 0; // offset for shadow under the text in logical canvas coordinates
+		XMFLOAT2 cursor = XMFLOAT2(0, 0); // cursor offset, it can be used to continue text drawing by taking the Draw's return value (optional)
 
 		Params(
 			float posX = 0,
@@ -83,10 +85,11 @@ namespace wi::font
 	// Call once per frame to update font atlas texture
 	void UpdateAtlas();
 
-	void Draw(const char* text, const Params& params, wi::graphics::CommandList cmd);
-	void Draw(const wchar_t* text, const Params& params, wi::graphics::CommandList cmd);
-	void Draw(const std::string& text, const Params& params, wi::graphics::CommandList cmd);
-	void Draw(const std::wstring& text, const Params& params, wi::graphics::CommandList cmd);
+	// Draw text with specified parameters and return cursor for last word
+	XMFLOAT2 Draw(const char* text, const Params& params, wi::graphics::CommandList cmd);
+	XMFLOAT2 Draw(const wchar_t* text, const Params& params, wi::graphics::CommandList cmd);
+	XMFLOAT2 Draw(const std::string& text, const Params& params, wi::graphics::CommandList cmd);
+	XMFLOAT2 Draw(const std::wstring& text, const Params& params, wi::graphics::CommandList cmd);
 
 	XMFLOAT2 TextSize(const char* text, const Params& params);
 	XMFLOAT2 TextSize(const wchar_t* text, const Params& params);

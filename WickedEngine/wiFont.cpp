@@ -126,6 +126,8 @@ namespace wi::font
 		Cursor ParseText(const T* text, size_t text_length, Params params)
 		{
 			Cursor cursor;
+			cursor.pos = params.cursor;
+
 			const FontStyle& fontStyle = fontStyles[params.style];
 			const float fontScale = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, (float)params.size);
 			vertexList.clear();
@@ -135,7 +137,7 @@ namespace wi::font
 				if (cursor.last_word_begin > 0 && params.h_wrap >= 0 && cursor.pos.x >= params.h_wrap - 1)
 				{
 					// Word ended and wrap detected, push down last word by one line:
-					float word_offset = vertexList[cursor.last_word_begin].pos.x;
+					float word_offset = vertexList[cursor.last_word_begin].pos.x + WHITESPACE_SIZE;
 					for (size_t i = cursor.last_word_begin; i < cursor.quadCount * 4; ++i)
 					{
 						vertexList[i].pos.x -= word_offset;
@@ -146,7 +148,7 @@ namespace wi::font
 				}
 			};
 
-			cursor.size.y = LINEBREAK_SIZE;
+			cursor.size.y = cursor.pos.y + LINEBREAK_SIZE;
 			for (size_t i = 0; i < text_length; ++i)
 			{
 				T character = text[i];
@@ -431,23 +433,23 @@ namespace wi::font
 	}
 
 	template<typename T>
-	void Draw_internal(const T* text, size_t text_length, const Params& params, CommandList cmd)
+	XMFLOAT2 Draw_internal(const T* text, size_t text_length, const Params& params_in, CommandList cmd)
 	{
 		if (text_length <= 0)
 		{
-			return;
+			return XMFLOAT2(0, 0);
 		}
-		Cursor cursor = ParseText(text, text_length, params);
+		Cursor cursor = ParseText(text, text_length, params_in);
 
-		Params newProps = params;
+		Params params = params_in;
 		if (params.h_align == WIFALIGN_CENTER)
-			newProps.posX -= cursor.size.x / 2;
+			params.posX -= cursor.size.x / 2;
 		else if (params.h_align == WIFALIGN_RIGHT)
-			newProps.posX -= cursor.size.x;
+			params.posX -= cursor.size.x;
 		if (params.v_align == WIFALIGN_CENTER)
-			newProps.posY -= cursor.size.y / 2;
+			params.posY -= cursor.size.y / 2;
 		else if (params.v_align == WIFALIGN_BOTTOM)
-			newProps.posY -= cursor.size.y;
+			params.posY -= cursor.size.y;
 
 
 		if (cursor.quadCount > 0)
@@ -456,7 +458,7 @@ namespace wi::font
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * cursor.quadCount * 4, cmd);
 			if (!mem.IsValid())
 			{
-				return;
+				return cursor.pos;
 			}
 			CommitText(mem.data);
 
@@ -476,16 +478,16 @@ namespace wi::font
 			assert(canvas.dpi > 0);
 			const XMMATRIX Projection = canvas.GetProjection();
 
-			if (newProps.shadowColor.getA() > 0)
+			if (params.shadowColor.getA() > 0)
 			{
 				// font shadow render:
 				XMStoreFloat4x4(&font.transform,
-					XMMatrixTranslation((float)newProps.posX + newProps.shadow_offset_x, (float)newProps.posY + newProps.shadow_offset_y, 0)
+					XMMatrixTranslation((float)params.posX + params.shadow_offset_x, (float)params.posY + params.shadow_offset_y, 0)
 					* Projection
 				);
-				font.color = newProps.shadowColor.rgba;
-				font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, newProps.shadow_bolden));
-				font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, newProps.shadow_softness));
+				font.color = params.shadowColor.rgba;
+				font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, params.shadow_bolden));
+				font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, params.shadow_softness));
 				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 				device->DrawInstanced(4, cursor.quadCount, 0, 0, cmd);
@@ -493,18 +495,20 @@ namespace wi::font
 
 			// font base render:
 			XMStoreFloat4x4(&font.transform,
-				XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
+				XMMatrixTranslation((float)params.posX, (float)params.posY, 0)
 				* Projection
 			);
-			font.color = newProps.color.rgba;
-			font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, newProps.bolden));
-			font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, newProps.softness));
+			font.color = params.color.rgba;
+			font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, params.bolden));
+			font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, params.softness));
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 			device->DrawInstanced(4, cursor.quadCount, 0, 0, cmd);
 
 			device->EventEnd(cmd);
 		}
+
+		return cursor.pos;
 	}
 
 	void SetCanvas(const wi::Canvas& current_canvas)
@@ -512,31 +516,31 @@ namespace wi::font
 		canvas = current_canvas;
 	}
 
-	void Draw(const char* text, const Params& params, CommandList cmd)
+	XMFLOAT2 Draw(const char* text, const Params& params, CommandList cmd)
 	{
 		size_t text_length = strlen(text);
 		if (text_length == 0)
 		{
-			return;
+			return XMFLOAT2(0, 0);
 		}
-		Draw_internal(text, text_length, params, cmd);
+		return Draw_internal(text, text_length, params, cmd);
 	}
-	void Draw(const wchar_t* text, const Params& params, CommandList cmd)
+	XMFLOAT2 Draw(const wchar_t* text, const Params& params, CommandList cmd)
 	{
 		size_t text_length = wcslen(text);
 		if (text_length == 0)
 		{
-			return;
+			return XMFLOAT2(0, 0);
 		}
-		Draw_internal(text, text_length, params, cmd);
+		return Draw_internal(text, text_length, params, cmd);
 	}
-	void Draw(const std::string& text, const Params& params, CommandList cmd)
+	XMFLOAT2 Draw(const std::string& text, const Params& params, CommandList cmd)
 	{
-		Draw_internal(text.c_str(), text.length(), params, cmd);
+		return Draw_internal(text.c_str(), text.length(), params, cmd);
 	}
-	void Draw(const std::wstring& text, const Params& params, CommandList cmd)
+	XMFLOAT2 Draw(const std::wstring& text, const Params& params, CommandList cmd)
 	{
-		Draw_internal(text.c_str(), text.length(), params, cmd);
+		return Draw_internal(text.c_str(), text.length(), params, cmd);
 	}
 
 	XMFLOAT2 TextSize(const char* text, const Params& params)
