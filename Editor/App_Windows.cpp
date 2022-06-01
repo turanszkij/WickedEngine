@@ -249,7 +249,7 @@ protected:
 			args.Handled(true);
 		}
 
-		if (args.EventType() == CoreAcceleratorKeyEventType::Character)
+		if (args.EventType() == CoreAcceleratorKeyEventType::Character && args.VirtualKey() != VirtualKey::Enter)
 		{
 			char c = (char)args.VirtualKey();
 
