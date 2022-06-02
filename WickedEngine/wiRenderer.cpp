@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 
 using namespace wi::primitive;
 using namespace wi::graphics;
@@ -102,6 +103,8 @@ bool DDGI_ENABLED = false;
 bool DDGI_DEBUG_ENABLED = false;
 uint32_t DDGI_RAYCOUNT = 128u;
 float GI_BOOST = 1.0f;
+std::atomic<size_t> SHADER_ERRORS{ 0 };
+std::atomic<size_t> SHADER_MISSING{ 0 };
 
 
 struct VoxelizedSceneData
@@ -626,6 +629,15 @@ size_t GetShaderDumpCount()
 }
 #endif // SHADERDUMP
 
+size_t GetShaderErrorCount()
+{
+	return SHADER_ERRORS.load();
+}
+size_t GetShaderMissingCount()
+{
+	return SHADER_MISSING.load();
+}
+
 bool LoadShader(
 	ShaderStage stage,
 	Shader& shader,
@@ -658,7 +670,7 @@ bool LoadShader(
 		}
 		else
 		{
-			wi::backlog::post("shader dump doesn't contain shader: " + shaderbinaryfilename);
+			wi::backlog::post("shader dump doesn't contain shader: " + shaderbinaryfilename, wi::backlog::LogLevel::Error);
 		}
 #endif // SHADERDUMP_ENABLED
 	}
@@ -695,6 +707,7 @@ bool LoadShader(
 		else
 		{
 			wi::backlog::post("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message, wi::backlog::LogLevel::Error);
+			SHADER_ERRORS.fetch_add(1);
 		}
 	}
 
@@ -704,6 +717,10 @@ bool LoadShader(
 		if (wi::helper::FileRead(shaderbinaryfilename, buffer))
 		{
 			return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+		}
+		else
+		{
+			SHADER_MISSING.fetch_add(1);
 		}
 	}
 
@@ -2162,6 +2179,8 @@ void SetShaderSourcePath(const std::string& path)
 void ReloadShaders()
 {
 	device->ClearPipelineStateCache();
+	SHADER_ERRORS.store(0);
+	SHADER_MISSING.store(0);
 
 	wi::eventhandler::FireEvent(wi::eventhandler::EVENT_RELOAD_SHADERS, 0);
 }

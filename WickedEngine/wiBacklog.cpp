@@ -191,10 +191,10 @@ namespace wi::backlog
 			switch (x.level)
 			{
 			case LogLevel::Warning:
-				font_params.color = 0xFF66FFFF; // light yellow
+				font_params.color = wi::Color::Warning();
 				break;
 			case LogLevel::Error:
-				font_params.color = 0xFF6666FF; // light red
+				font_params.color = wi::Color::Error();
 				break;
 			default:
 				font_params.color = wi::Color::White();

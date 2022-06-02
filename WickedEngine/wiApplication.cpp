@@ -368,15 +368,30 @@ namespace wi
 				infodisplay_str += "Graphics pipelines active: " + std::to_string(graphicsDevice->GetActivePipelineCount()) + "\n";
 			}
 
+			wi::font::Params params = wi::font::Params(4, 4, infoDisplay.size, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, wi::Color(255, 255, 255, 255), wi::Color(0, 0, 0, 255));
+			params.cursor = wi::font::Draw(infodisplay_str, params, cmd);
+
+			// Write warnings below:
+			params.color = wi::Color::Warning();
 #ifdef _DEBUG
-			infodisplay_str += "Warning: This is a [DEBUG] build, performance will be slow!\n";
+			params.cursor = wi::font::Draw("Warning: This is a [DEBUG] build, performance will be slow!\n", params, cmd);
 #endif
 			if (graphicsDevice->IsDebugDevice())
 			{
-				infodisplay_str += "Warning: Graphics is in [debugdevice] mode, performance will be slow!\n";
+				params.cursor = wi::font::Draw("Warning: Graphics is in [debugdevice] mode, performance will be slow!\n", params, cmd);
 			}
 
-			wi::font::Draw(infodisplay_str, wi::font::Params(4, 4, infoDisplay.size, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, wi::Color(255, 255, 255, 255), wi::Color(0, 0, 0, 255)), cmd);
+			// Write errors below:
+			params.color = wi::Color::Error();
+			if (wi::renderer::GetShaderMissingCount() > 0)
+			{
+				params.cursor = wi::font::Draw(std::to_string(wi::renderer::GetShaderMissingCount()) + " shaders missing! Check the backlog for more information!\n", params, cmd);
+			}
+			if (wi::renderer::GetShaderErrorCount() > 0)
+			{
+				params.cursor = wi::font::Draw(std::to_string(wi::renderer::GetShaderErrorCount()) + " shader compilation errors! Check the backlog for more information!\n", params, cmd);
+			}
+
 
 			if (infoDisplay.colorgrading_helper)
 			{
