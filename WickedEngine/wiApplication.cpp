@@ -371,6 +371,21 @@ namespace wi
 			wi::font::Params params = wi::font::Params(4, 4, infoDisplay.size, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, wi::Color(255, 255, 255, 255), wi::Color(0, 0, 0, 255));
 			params.cursor = wi::font::Draw(infodisplay_str, params, cmd);
 
+			if (infoDisplay.vram_usage)
+			{
+				GraphicsDevice::MemoryUsage vram = graphicsDevice->GetMemoryUsage();
+				if (vram.usage > vram.budget)
+				{
+					params.color = wi::Color::Error();
+				}
+				else if (float(vram.usage) / float(vram.budget) > 0.9f)
+				{
+					params.color = wi::Color::Warning();
+				}
+				params.cursor = wi::font::Draw("VRAM usage: " + std::to_string(vram.usage / 1024 / 1024) + "MB / " + std::to_string(vram.budget / 1024 / 1024) + "MB\n", params, cmd);
+				params.color = wi::Color::White();
+			}
+
 			// Write warnings below:
 			params.color = wi::Color::Warning();
 #ifdef _DEBUG

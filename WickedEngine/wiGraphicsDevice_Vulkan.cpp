@@ -2770,6 +2770,8 @@ using namespace vulkan_internal;
 			}
 		}
 
+		memory_properties_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+		vkGetPhysicalDeviceMemoryProperties2(physicalDevice, &memory_properties_2);
 
 		allocationhandler = std::make_shared<AllocationHandler>();
 		allocationhandler->device = device;
@@ -2803,7 +2805,9 @@ using namespace vulkan_internal;
 		allocatorInfo.instance = instance;
 
 		// Core in 1.1
-		allocatorInfo.flags = VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT | VMA_ALLOCATOR_CREATE_KHR_BIND_MEMORY2_BIT;
+		allocatorInfo.flags =
+			VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT |
+			VMA_ALLOCATOR_CREATE_KHR_BIND_MEMORY2_BIT;
 		vma_vulkan_func.vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2;
 		vma_vulkan_func.vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2;
 

@@ -23,6 +23,7 @@ namespace wi::lua
 		lunamethod(Application_BindLua, SetLogicalSizeDisplay),
 		lunamethod(Application_BindLua, SetPipelineCountDisplay),
 		lunamethod(Application_BindLua, SetHeapAllocationCountDisplay),
+		lunamethod(Application_BindLua, SetVRAMUsageDisplay),
 		lunamethod(Application_BindLua, GetCanvas),
 		lunamethod(Application_BindLua, SetCanvas),
 		{ NULL, NULL }
@@ -309,6 +310,22 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetHeapAllocationCountDisplay(bool active) not enough arguments!");
+		return 0;
+	}
+	int Application_BindLua::SetVRAMUsageDisplay(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetVRAMUsageDisplay() component is empty!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			component->infoDisplay.vram_usage = wi::lua::SGetBool(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetVRAMUsageDisplay(bool active) not enough arguments!");
 		return 0;
 	}
 

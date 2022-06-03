@@ -30,6 +30,7 @@ void Editor::Initialize()
 	//infoDisplay.logical_size = true;
 	infoDisplay.colorspace = true;
 	infoDisplay.heap_allocation_counter = true;
+	infoDisplay.vram_usage = true;
 
 	wi::renderer::SetOcclusionCullingEnabled(true);
 

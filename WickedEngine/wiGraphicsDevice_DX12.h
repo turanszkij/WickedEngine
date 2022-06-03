@@ -241,6 +241,16 @@ namespace wi::graphics
 			return alignment;
 		}
 
+		MemoryUsage GetMemoryUsage() const override
+		{
+			MemoryUsage retval;
+			D3D12MA::Budget budget;
+			allocationhandler->allocator->GetBudget(&budget, nullptr);
+			retval.budget = budget.BudgetBytes;
+			retval.usage = budget.UsageBytes;
+			return retval;
+		}
+
 		///////////////Thread-sensitive////////////////////////
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;
