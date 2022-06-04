@@ -120,6 +120,8 @@ namespace wi
 		deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 		timer.record();
 
+		wi::input::Update(window, canvas);
+
 		// Wake up the events that need to be executed on the main thread, in thread safe manner:
 		wi::eventhandler::FireEvent(wi::eventhandler::EVENT_THREAD_SAFE_POINT, 0);
 
@@ -167,8 +169,6 @@ namespace wi
 
 		Render();
 
-		wi::input::Update(window, canvas);
-
 		// Begin final compositing:
 		CommandList cmd = graphicsDevice->BeginCommandList();
 		wi::image::SetCanvas(canvas);
@@ -205,6 +205,7 @@ namespace wi
 			graphicsDevice->RenderPassEnd(cmd);
 		}
 
+		wi::input::ClearForNextFrame();
 		wi::profiler::EndFrame(cmd);
 		graphicsDevice->SubmitCommandLists();
 	}

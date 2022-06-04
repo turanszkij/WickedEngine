@@ -113,6 +113,10 @@ namespace wi::input
 	// call once per frame
 	void Update(wi::platform::window_type window, wi::Canvas canvas);
 
+	// Some things need to be cleared for next frame, like touches and delta states
+	//	These things can occasionally be updated outside engine's loop, depending on operating system messages
+	void ClearForNextFrame();
+
 	const KeyboardState& GetKeyboardState();
 	const MouseState& GetMouseState();
 	
