@@ -3735,7 +3735,7 @@ void UpdateRenderData(
 	}
 
 	// Meshlets:
-	if(vis.scene->instanceArraySize > 0)
+	if(vis.scene->instanceArraySize > 0 && vis.scene->meshletBuffer.IsValid())
 	{
 		device->EventBegin("Meshlet prepare", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Meshlet prepare", cmd);
