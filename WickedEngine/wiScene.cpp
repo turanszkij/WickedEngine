@@ -1590,6 +1590,16 @@ namespace wi::scene
 			std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
 		});
 
+		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+			// Must not keep inactive instances, so init them for safety:
+			ShaderMeshInstance inst;
+			inst.init();
+			for (uint32_t i = 0; i < instanceArraySize; ++i)
+			{
+				std::memcpy(instanceArrayMapped + i, &inst, sizeof(inst));
+			}
+		});
+
 		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
 
 		RunAnimationUpdateSystem(ctx);
@@ -3299,7 +3309,7 @@ namespace wi::scene
 				uint32_t transform_index = (uint32_t)transforms.GetIndex(entity);
 				const TransformComponent& transform = transforms[transform_index];
 
-				if (object.mesh_index != ~0ull)
+				if (object.mesh_index != ~0u)
 				{
 					const MeshComponent& mesh = meshes[object.mesh_index];
 
