@@ -95,12 +95,16 @@ namespace wi::font
 	// Draw text with specified parameters and return cursor for last word
 	//	The next Draw() can continue from where this left off by using the return value of this function
 	//	in wi::font::Params::cursor
+	Cursor Draw(const char* text, size_t text_length, const Params& params, wi::graphics::CommandList cmd);
+	Cursor Draw(const wchar_t* text, size_t text_length, const Params& params, wi::graphics::CommandList cmd);
 	Cursor Draw(const char* text, const Params& params, wi::graphics::CommandList cmd);
 	Cursor Draw(const wchar_t* text, const Params& params, wi::graphics::CommandList cmd);
 	Cursor Draw(const std::string& text, const Params& params, wi::graphics::CommandList cmd);
 	Cursor Draw(const std::wstring& text, const Params& params, wi::graphics::CommandList cmd);
 
 	// Computes the text's size measurements in logical canvas coordinates
+	XMFLOAT2 TextSize(const char* text, size_t text_length, const Params& params);
+	XMFLOAT2 TextSize(const wchar_t* text, size_t text_length, const Params& params);
 	XMFLOAT2 TextSize(const char* text, const Params& params);
 	XMFLOAT2 TextSize(const wchar_t* text, const Params& params);
 	XMFLOAT2 TextSize(const std::string& text, const Params& params);
@@ -108,6 +112,8 @@ namespace wi::font
 
 	// Computes the text's width in logical canvas coordinates
 	//	Avoid calling TextWidth() and TextHeight() both, instead use TextSize() if you need both measurements!
+	float TextWidth(const char* text, size_t text_length, const Params& params);
+	float TextWidth(const wchar_t* text, size_t text_length, const Params& params);
 	float TextWidth(const char* text, const Params& params);
 	float TextWidth(const wchar_t* text, const Params& params);
 	float TextWidth(const std::string& text, const Params& params);
@@ -115,6 +121,8 @@ namespace wi::font
 
 	// Computes the text's height in logical canvas coordinates
 	//	Avoid calling TextWidth() and TextHeight() both, instead use TextSize() if you need both measurements!
+	float TextHeight(const char* text, size_t text_length, const Params& params);
+	float TextHeight(const wchar_t* text, size_t text_length, const Params& params);
 	float TextHeight(const char* text, const Params& params);
 	float TextHeight(const wchar_t* text, const Params& params);
 	float TextHeight(const std::string& text, const Params& params);

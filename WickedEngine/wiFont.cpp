@@ -514,23 +514,21 @@ namespace wi::font
 		canvas = current_canvas;
 	}
 
+	Cursor Draw(const char* text, size_t text_length, const Params& params, CommandList cmd)
+	{
+		return Draw_internal(text, text_length, params, cmd);
+	}
+	Cursor Draw(const wchar_t* text, size_t text_length, const Params& params, CommandList cmd)
+	{
+		return Draw_internal(text, text_length, params, cmd);
+	}
 	Cursor Draw(const char* text, const Params& params, CommandList cmd)
 	{
-		size_t text_length = strlen(text);
-		if (text_length == 0)
-		{
-			return Cursor();
-		}
-		return Draw_internal(text, text_length, params, cmd);
+		return Draw_internal(text, strlen(text), params, cmd);
 	}
 	Cursor Draw(const wchar_t* text, const Params& params, CommandList cmd)
 	{
-		size_t text_length = wcslen(text);
-		if (text_length == 0)
-		{
-			return Cursor();
-		}
-		return Draw_internal(text, text_length, params, cmd);
+		return Draw_internal(text, wcslen(text), params, cmd);
 	}
 	Cursor Draw(const std::string& text, const Params& params, CommandList cmd)
 	{
@@ -541,6 +539,22 @@ namespace wi::font
 		return Draw_internal(text.c_str(), text.length(), params, cmd);
 	}
 
+	XMFLOAT2 TextSize(const char* text, size_t text_length, const Params& params)
+	{
+		if (text_length == 0)
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text, text_length, params).cursor.size;
+	}
+	XMFLOAT2 TextSize(const wchar_t* text, size_t text_length, const Params& params)
+	{
+		if (text_length == 0)
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text, text_length, params).cursor.size;
+	}
 	XMFLOAT2 TextSize(const char* text, const Params& params)
 	{
 		size_t text_length = strlen(text);
@@ -576,6 +590,14 @@ namespace wi::font
 		return ParseText(text.c_str(), text.length(), params).cursor.size;
 	}
 
+	float TextWidth(const char* text, size_t text_length, const Params& params)
+	{
+		return TextSize(text, text_length, params).x;
+	}
+	float TextWidth(const wchar_t* text, size_t text_length, const Params& params)
+	{
+		return TextSize(text, text_length, params).x;
+	}
 	float TextWidth(const char* text, const Params& params)
 	{
 		return TextSize(text, params).x;
@@ -593,6 +615,14 @@ namespace wi::font
 		return TextSize(text, params).x;
 	}
 
+	float TextHeight(const char* text, size_t text_length, const Params& params)
+	{
+		return TextSize(text, text_length, params).y;
+	}
+	float TextHeight(const wchar_t* text, size_t text_length, const Params& params)
+	{
+		return TextSize(text, text_length, params).y;
+	}
 	float TextHeight(const char* text, const Params& params)
 	{
 		return TextSize(text, params).y;
