@@ -4056,7 +4056,7 @@ void OcclusionCulling_Reset(const Visibility& vis, CommandList cmd)
 	{
 		return;
 	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
 	{
 		return;
 	}
@@ -4077,7 +4077,7 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	{
 		return;
 	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
 	{
 		return;
 	}
@@ -4171,7 +4171,7 @@ void OcclusionCulling_Resolve(const Visibility& vis, CommandList cmd)
 	{
 		return;
 	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
 	{
 		return;
 	}
