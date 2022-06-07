@@ -81,7 +81,7 @@ TextureCubeArray bindless_cubearrays[] : register(space8);
 Texture3D bindless_textures3D[] : register(space9);
 Texture2D<float> bindless_textures_float[] : register(space10);
 Texture2D<float2> bindless_textures_float2[] : register(space11);
-Texture2D<uint2> bindless_textures_uint2[] : register(space12);
+Texture2D<uint> bindless_textures_uint[] : register(space12);
 Texture2D<uint4> bindless_textures_uint4[] : register(space13);
 
 RWTexture2D<float4> bindless_rwtextures[] : register(space14);
@@ -113,6 +113,10 @@ inline ShaderGeometry load_geometry(uint geometryIndex)
 {
 	return bindless_buffers[GetScene().geometrybuffer].Load<ShaderGeometry>(geometryIndex * sizeof(ShaderGeometry));
 }
+inline ShaderMeshlet load_meshlet(uint meshletIndex)
+{
+	return bindless_buffers[GetScene().meshletbuffer].Load<ShaderMeshlet>(meshletIndex * sizeof(ShaderMeshlet));
+}
 inline ShaderMaterial load_material(uint materialIndex)
 {
 	return bindless_buffers[GetScene().materialbuffer].Load<ShaderMaterial>(materialIndex * sizeof(ShaderMaterial));
@@ -125,6 +129,56 @@ inline float4x4 load_entitymatrix(uint matrixIndex)
 {
 	return transpose(bindless_buffers[GetFrame().buffer_entitymatrixarray_index].Load<float4x4>(matrixIndex * sizeof(float4x4)));
 }
+
+struct PrimitiveID
+{
+	uint primitiveIndex;
+	uint instanceIndex;
+	uint subsetIndex;
+
+	// These packing methods require meshlet data, and pack into 32 bits:
+	inline uint pack()
+	{
+		// 1 bit valid flag
+		// 23 bit meshletIndex
+		// 8  bit meshletPrimitiveIndex
+		ShaderMeshInstance inst = load_instance(instanceIndex);
+		ShaderGeometry geometry = load_geometry(inst.geometryOffset + subsetIndex);
+		uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + primitiveIndex / MESHLET_TRIANGLE_COUNT;
+		meshletIndex &= ~0u >> 9u; // mask 23 active bits
+		uint meshletPrimitiveIndex = primitiveIndex % MESHLET_TRIANGLE_COUNT;
+		meshletPrimitiveIndex &= 0xFF; // mask 8 active bits
+		meshletPrimitiveIndex <<= 23u;
+		return (1u << 31u) | meshletPrimitiveIndex | meshletIndex;
+	}
+	inline void unpack(uint value)
+	{
+		value ^= 1u << 31u; // remove valid flag
+		uint meshletIndex = value & (~0u >> 9u);
+		uint meshletPrimitiveIndex = (value >> 23u) & 0xFF;
+		ShaderMeshlet meshlet = load_meshlet(meshletIndex);
+		ShaderMeshInstance inst = load_instance(meshlet.instanceIndex);
+		primitiveIndex = meshlet.primitiveOffset + meshletPrimitiveIndex;
+		instanceIndex = meshlet.instanceIndex;
+		subsetIndex = meshlet.geometryIndex - inst.geometryOffset;
+	}
+
+	// These packing methods don't need meshlets, but they are packed into 64 bits:
+	uint2 pack2()
+	{
+		// 1 bit valid flag
+		// 31 bit primitiveIndex
+		// 24 bit instanceIndex
+		// 8  bit subsetIndex
+		return uint2((1u << 31u) | primitiveIndex, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
+	}
+	void unpack2(uint2 value)
+	{
+		primitiveIndex = value.x & (~0u >> 1u);
+		instanceIndex = value.y & 0xFFFFFF;
+		subsetIndex = (value.y >> 24u) & 0xFF;
+	}
+};
 
 #define texture_globalenvmap bindless_cubemaps[GetScene().globalenvmap]
 #define texture_envmaparray bindless_cubearrays[GetScene().envmaparray]
@@ -146,7 +200,7 @@ inline float4x4 load_entitymatrix(uint matrixIndex)
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
 #define texture_depth_history bindless_textures_float[GetCamera().texture_depth_index_prev]
 #define texture_lineardepth bindless_textures_float[GetCamera().texture_lineardepth_index]
-#define texture_primitiveID bindless_textures_uint2[GetCamera().texture_primitiveID_index]
+#define texture_primitiveID bindless_textures_uint[GetCamera().texture_primitiveID_index]
 #define texture_velocity bindless_textures_float2[GetCamera().texture_velocity_index]
 #define texture_normal bindless_textures_float2[GetCamera().texture_normal_index]
 #define texture_roughness bindless_textures_float[GetCamera().texture_roughness_index]
@@ -158,6 +212,30 @@ inline float4x4 load_entitymatrix(uint matrixIndex)
 #define GOLDEN_RATIO 1.6180339887
 
 #define sqr(a)		((a)*(a))
+#define pow5(x) pow(x, 5)
+
+// attribute computation with barycentric interpolation
+//	a0 : attribute at triangle corner 0
+//	a1 : attribute at triangle corner 1
+//	a2 : attribute at triangle corner 2
+//  bary : (u,v) barycentrics [same as you get from raytracing]; w is computed as 1 - u - w
+//	computation can be also written as: p0 * w + p1 * u + p2 * v
+inline float attribute_at_bary(in float a0, in float a1, in float a2, in float2 bary)
+{
+	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
+}
+inline float2 attribute_at_bary(in float2 a0, in float2 a1, in float2 a2, in float2 bary)
+{
+	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
+}
+inline float3 attribute_at_bary(in float3 a0, in float3 a1, in float3 a2, in float2 bary)
+{
+	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
+}
+inline float4 attribute_at_bary(in float4 a0, in float4 a1, in float4 a2, in float2 bary)
+{
+	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
+}
 
 inline bool is_saturated(float a) { return a == saturate(a); }
 inline bool is_saturated(float2 a) { return is_saturated(a.x) && is_saturated(a.y); }
@@ -676,10 +754,10 @@ inline float3 unpack_unitvector(in uint value)
 inline uint pack_utangent(in float4 value)
 {
 	uint retVal = 0;
-	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0u;
-	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8u;
-	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16u;
-	retVal |= (uint)((value.w * 0.5 + 0.5) * 255.0) << 24u;
+	retVal |= (uint)((value.x) * 255.0) << 0u;
+	retVal |= (uint)((value.y) * 255.0) << 8u;
+	retVal |= (uint)((value.z) * 255.0) << 16u;
+	retVal |= (uint)((value.w) * 255.0) << 24u;
 	return retVal;
 }
 inline float4 unpack_utangent(in uint value)
@@ -756,6 +834,18 @@ inline float4 unpack_half4(in uint2 value)
 	return retVal;
 }
 
+inline uint pack_pixel(uint2 value)
+{
+	return (value.x & 0xFFFF) | ((value.y & 0xFFFF) << 16u);
+}
+inline uint2 unpack_pixel(uint value)
+{
+	uint2 retVal;
+	retVal.x = value & 0xFFFF;
+	retVal.y = (value >> 16u) & 0xFFFF;
+	return retVal;
+}
+
 
 // Expands a 10-bit integer into 30 bits
 // by inserting 2 zeros after each bit.
@@ -823,7 +913,24 @@ float3 decode_hemioct(float2 e)
 	return normalize(v);
 }
 
-
+// Source: https://github.com/GPUOpen-Effects/FidelityFX-Denoiser/blob/master/ffx-shadows-dnsr/ffx_denoiser_shadows_util.h
+//  LANE TO 8x8 MAPPING
+//  ===================
+//  00 01 08 09 10 11 18 19 
+//  02 03 0a 0b 12 13 1a 1b
+//  04 05 0c 0d 14 15 1c 1d
+//  06 07 0e 0f 16 17 1e 1f 
+//  20 21 28 29 30 31 38 39 
+//  22 23 2a 2b 32 33 3a 3b
+//  24 25 2c 2d 34 35 3c 3d
+//  26 27 2e 2f 36 37 3e 3f 
+uint bitfield_extract(uint src, uint off, uint bits) { uint mask = (1u << bits) - 1; return (src >> off) & mask; } // ABfe
+uint bitfield_insert(uint src, uint ins, uint bits) { uint mask = (1u << bits) - 1; return (ins & mask) | (src & (~mask)); } // ABfiM
+uint2 remap_lane_8x8(uint lane) {
+	return uint2(bitfield_insert(bitfield_extract(lane, 2u, 3u), lane, 1u)
+		, bitfield_insert(bitfield_extract(lane, 3u, 3u)
+			, bitfield_extract(lane, 1u, 2u), 2u));
+}
 
 
 static const float2x2 BayerMatrix2 =
@@ -1006,6 +1113,24 @@ float2 compute_barycentrics(float3 rayOrigin, float3 rayDirection, float3 a, flo
 	t = dot(v0v2, qvec) * det_rcp;
 	return float2(u, v);
 }
+// Compute barycentric coordinates on triangle from a ray
+//	also outputs hit distance "t"
+//	also outputs backface flag
+float2 compute_barycentrics(float3 rayOrigin, float3 rayDirection, float3 a, float3 b, float3 c, out float t, out bool is_backface)
+{
+	float3 v0v1 = b - a;
+	float3 v0v2 = c - a;
+	float3 pvec = cross(rayDirection, v0v2);
+	float det = dot(v0v1, pvec);
+	is_backface = det > 0;
+	float det_rcp = rcp(det);
+	float3 tvec = rayOrigin - a;
+	float u = dot(tvec, pvec) * det_rcp;
+	float3 qvec = cross(tvec, v0v1);
+	float v = dot(rayDirection, qvec) * det_rcp;
+	t = dot(v0v2, qvec) * det_rcp;
+	return float2(u, v);
+}
 
 // Texture LOD computation things from https://github.com/EmbarkStudios/kajiya
 float twice_triangle_area(float3 p0, float3 p1, float3 p2)
@@ -1079,20 +1204,28 @@ RayCone pixel_ray_cone_from_image_height(float image_height)
 
 float3 compute_wind(float3 position, float weight)
 {
-	const float time = GetTime();
-	position += time;
-	const ShaderWind wind = GetWeather().wind;
+	[branch]
+	if (weight > 0)
+	{
+		const float time = GetTime();
+		position += time;
+		const ShaderWind wind = GetWeather().wind;
 
-	float randomness_amount = 0;
-	randomness_amount += noise_gradient_3D(position.xyz);
-	randomness_amount += noise_gradient_3D(position.xyz * 0.1);
-	randomness_amount *= wind.randomness;
+		float randomness_amount = 0;
+		randomness_amount += noise_gradient_3D(position.xyz);
+		randomness_amount += noise_gradient_3D(position.xyz * 0.1);
+		randomness_amount *= wind.randomness;
 
-	float direction_amount = dot(position.xyz, wind.direction);
-	float waveoffset = mad(direction_amount, wind.wavesize, randomness_amount);
-	float3 wavedir = wind.direction * weight;
+		float direction_amount = dot(position.xyz, wind.direction);
+		float waveoffset = mad(direction_amount, wind.wavesize, randomness_amount);
+		float3 wavedir = wind.direction * weight;
 
-	return sin(mad(time, wind.speed, waveoffset)) * wavedir;
+		return sin(mad(time, wind.speed, waveoffset)) * wavedir;
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 
@@ -1171,5 +1304,46 @@ enum class ColorSpace
 	HDR10_ST2084,	// HDR10 color space (10 bits per channel)
 	HDR_LINEAR,		// HDR color space (16 bits per channel)
 };
+
+
+#define NUM_PARALLAX_OCCLUSION_STEPS 32
+inline void ParallaxOcclusionMapping_Impl(
+	inout float4 uvsets,		// uvsets to modify
+	in float3 V,				// view vector (pointing towards camera)
+	in float3x3 TBN,			// tangent basis matrix (same that is used for normal mapping)
+	in ShaderMaterial material,	// material parameters
+	in Texture2D tex,			// displacement map texture
+	in float2 uv,				// uv to use for the displacement map
+	in float2 uv_dx,			// horizontal derivative of displacement map uv
+	in float2 uv_dy				// vertical derivative of displacement map uv
+)
+{
+	[branch]
+	if (material.parallaxOcclusionMapping > 0 && material.uvset_displacementMap >= 0)
+	{
+		V = mul(TBN, V);
+		float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
+		float curLayerHeight = 0;
+		float2 dtex = material.parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
+		float2 currentTextureCoords = uv;
+		float heightFromTexture = 1 - tex.SampleGrad(sampler_linear_wrap, currentTextureCoords, uv_dx, uv_dy).r;
+		uint iter = 0;
+		[loop]
+		while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
+		{
+			curLayerHeight += layerHeight;
+			currentTextureCoords -= dtex;
+			heightFromTexture = 1 - tex.SampleGrad(sampler_linear_wrap, currentTextureCoords, uv_dx, uv_dy).r;
+			iter++;
+		}
+		float2 prevTCoords = currentTextureCoords + dtex;
+		float nextH = heightFromTexture - curLayerHeight;
+		float prevH = 1 - tex.SampleGrad(sampler_linear_wrap, prevTCoords, uv_dx, uv_dy).r - curLayerHeight + layerHeight;
+		float weight = nextH / (nextH - prevH);
+		float2 finalTextureCoords = mad(prevTCoords, weight, currentTextureCoords * (1.0 - weight));
+		float2 difference = finalTextureCoords - uv;
+		uvsets += difference.xyxy;
+	}
+}
 
 #endif // WI_SHADER_GLOBALS_HF

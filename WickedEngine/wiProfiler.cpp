@@ -24,6 +24,7 @@ using namespace wi::graphics;
 namespace wi::profiler
 {
 	bool ENABLED = false;
+	bool ENABLED_REQUEST = false;
 	bool initialized = false;
 	std::mutex lock;
 	range_id cpu_frame;
@@ -58,6 +59,12 @@ namespace wi::profiler
 
 	void BeginFrame()
 	{
+		if (ENABLED_REQUEST != ENABLED)
+		{
+			ranges.clear();
+			ENABLED = ENABLED_REQUEST;
+		}
+
 		if (!ENABLED)
 			return;
 
@@ -278,8 +285,7 @@ namespace wi::profiler
 
 		std::stringstream ss("");
 		ss.precision(2);
-		ss << "Frame Profiler Ranges:" << std::endl << "----------------------------" << std::endl;
-
+		ss << "Frame Profiler Ranges:\n----------------------------\n";
 
 		for (auto& x : ranges)
 		{
@@ -347,11 +353,9 @@ namespace wi::profiler
 
 	void SetEnabled(bool value)
 	{
-		if (value != ENABLED)
-		{
-			ranges.clear();
-			ENABLED = value;
-		}
+		// Don't enable/disable the profiler immediately, only on the next frame
+		//	to avoid enabling inside a Begin/End by mistake
+		ENABLED_REQUEST = value;
 	}
 
 	bool IsEnabled()

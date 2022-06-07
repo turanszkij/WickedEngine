@@ -25,6 +25,11 @@ namespace wi::lua
 		int SetAlign(lua_State* L);
 		int SetColor(lua_State* L);
 		int SetShadowColor(lua_State* L);
+		int SetBolden(lua_State* L);
+		int SetSoftness(lua_State* L);
+		int SetShadowBolden(lua_State* L);
+		int SetShadowSoftness(lua_State* L);
+		int SetShadowOffset(lua_State* L);
 
 		int GetText(lua_State* L);
 		int GetSize(lua_State* L);
@@ -33,6 +38,11 @@ namespace wi::lua
 		int GetAlign(lua_State* L);
 		int GetColor(lua_State* L);
 		int GetShadowColor(lua_State* L);
+		int GetBolden(lua_State* L);
+		int GetSoftness(lua_State* L);
+		int GetShadowBolden(lua_State* L);
+		int GetShadowSoftness(lua_State* L);
+		int GetShadowOffset(lua_State* L);
 
 		static void Bind();
 	};

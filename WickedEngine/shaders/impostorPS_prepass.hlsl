@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "impostorHF.hlsli"
 
-uint2 main(VSOut input) : SV_Target
+uint main(VSOut input) : SV_Target
 {
 	clip(dither(input.pos.xy + GetTemporalAASampleRotation()) - input.dither);
 	float3 uv_col = float3(input.uv, input.slice);

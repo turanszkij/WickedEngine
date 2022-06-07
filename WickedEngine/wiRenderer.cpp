@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 
 using namespace wi::primitive;
 using namespace wi::graphics;
@@ -102,6 +103,8 @@ bool DDGI_ENABLED = false;
 bool DDGI_DEBUG_ENABLED = false;
 uint32_t DDGI_RAYCOUNT = 128u;
 float GI_BOOST = 1.0f;
+std::atomic<size_t> SHADER_ERRORS{ 0 };
+std::atomic<size_t> SHADER_MISSING{ 0 };
 
 
 struct VoxelizedSceneData
@@ -626,23 +629,51 @@ size_t GetShaderDumpCount()
 }
 #endif // SHADERDUMP
 
-bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, ShaderModel minshadermodel)
+size_t GetShaderErrorCount()
+{
+	return SHADER_ERRORS.load();
+}
+size_t GetShaderMissingCount()
+{
+	return SHADER_MISSING.load();
+}
+
+bool LoadShader(
+	ShaderStage stage,
+	Shader& shader,
+	const std::string& filename,
+	ShaderModel minshadermodel,
+	wi::vector<std::string> permutation_defines
+)
 {
 	std::string shaderbinaryfilename = SHADERPATH + filename;
 
+	if (!permutation_defines.empty())
+	{
+		std::string ext = wi::helper::GetExtensionFromFileName(shaderbinaryfilename);
+		shaderbinaryfilename = wi::helper::RemoveExtension(shaderbinaryfilename);
+		for (auto& def : permutation_defines)
+		{
+			shaderbinaryfilename += "_" + def;
+		}
+		shaderbinaryfilename += "." + ext;
+	}
+
+	if (device != nullptr)
+	{
 #ifdef SHADERDUMP_ENABLED
-	
-	// Loading shader from precompiled dump:
-	auto it = wiShaderDump::shaderdump.find(shaderbinaryfilename);
-	if (it != wiShaderDump::shaderdump.end())
-	{
-		return device->CreateShader(stage, it->second.data, it->second.size, &shader);
-	}
-	else
-	{
-		wi::backlog::post("shader dump doesn't contain shader: " + shaderbinaryfilename);
-	}
+		// Loading shader from precompiled dump:
+		auto it = wiShaderDump::shaderdump.find(shaderbinaryfilename);
+		if (it != wiShaderDump::shaderdump.end())
+		{
+			return device->CreateShader(stage, it->second.data, it->second.size, &shader);
+		}
+		else
+		{
+			wi::backlog::post("shader dump doesn't contain shader: " + shaderbinaryfilename, wi::backlog::LogLevel::Error);
+		}
 #endif // SHADERDUMP_ENABLED
+	}
 
 	wi::shadercompiler::RegisterShader(shaderbinaryfilename);
 
@@ -652,11 +683,11 @@ bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, 
 		input.format = device->GetShaderFormat();
 		input.stage = stage;
 		input.minshadermodel = minshadermodel;
+		input.defines = permutation_defines;
 
 		std::string sourcedir = SHADERSOURCEPATH;
 		wi::helper::MakePathAbsolute(sourcedir);
 		input.include_directories.push_back(sourcedir);
-
 		input.shadersourcefilename = wi::helper::ReplaceExtension(sourcedir + filename, "hlsl");
 
 		wi::shadercompiler::CompilerOutput output;
@@ -675,14 +706,22 @@ bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, 
 		}
 		else
 		{
-			wi::backlog::post("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message);
+			wi::backlog::post("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message, wi::backlog::LogLevel::Error);
+			SHADER_ERRORS.fetch_add(1);
 		}
 	}
 
-	wi::vector<uint8_t> buffer;
-	if (wi::helper::FileRead(shaderbinaryfilename, buffer))
+	if (device != nullptr)
 	{
-		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+		wi::vector<uint8_t> buffer;
+		if (wi::helper::FileRead(shaderbinaryfilename, buffer))
+		{
+			return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+		}
+		else
+		{
+			SHADER_MISSING.fetch_add(1);
+		}
 	}
 
 	return false;
@@ -1017,8 +1056,9 @@ void LoadShaders()
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE], "visibility_resolveCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_MSAA], "visibility_resolveCS_MSAA.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_FAST], "visibility_resolveCS_fast.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_FAST_MSAA], "visibility_resolveCS_fast_MSAA.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_INDIRECT_PREPARE], "visibility_indirect_prepareCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_SKY], "visibility_skyCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_VELOCITY], "visibility_velocityCS.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
@@ -1031,6 +1071,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_UPDATE], "ddgi_updateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_UPDATE_DEPTH], "ddgi_updateCS_depth.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE], "terrainVirtualTextureUpdateCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_MESHLET_PREPARE], "meshlet_prepareCS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -1185,6 +1226,44 @@ void LoadShaders()
 			}
 		}
 	});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SURFACE_PERMUTATION_BEGIN + args.jobIndex],
+			"visibility_surfaceCS.cso",
+			ShaderModel::SM_6_0,
+			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
+		);
+
+		});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
+		defines.push_back("REDUCED");
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_PERMUTATION_BEGIN + args.jobIndex],
+			"visibility_surfaceCS.cso",
+			ShaderModel::SM_6_0,
+			defines // permutation defines
+		);
+
+		});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + args.jobIndex],
+			"visibility_shadeCS.cso",
+			ShaderModel::SM_6_0,
+			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
+		);
+
+		});
 
 	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
 	customShaders.clear();
@@ -2100,6 +2179,8 @@ void SetShaderSourcePath(const std::string& path)
 void ReloadShaders()
 {
 	device->ClearPipelineStateCache();
+	SHADER_ERRORS.store(0);
+	SHADER_MISSING.store(0);
 
 	wi::eventhandler::FireEvent(wi::eventhandler::EVENT_RELOAD_SHADERS, 0);
 }
@@ -2459,13 +2540,10 @@ void RenderMeshes(
 			assert(subsetIndex < 256u); // subsets must be represented as 8-bit
 
 			ObjectPushConstants push;
-			push.init(
-				mesh.geometryOffset,
-				(uint)subsetIndex,
-				subset.materialIndex,
-				instanceBufferDescriptorIndex,
-				instancedBatch.dataOffset
-			);
+			push.geometryIndex = mesh.geometryOffset + subsetIndex;
+			push.materialIndex = subset.materialIndex;
+			push.instances = instanceBufferDescriptorIndex;
+			push.instance_offset = (uint)instancedBatch.dataOffset;
 
 			if (pso_backside != nullptr)
 			{
@@ -3560,7 +3638,7 @@ void UpdateRenderData(
 		const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
 
 		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
-		if (mesh != nullptr)
+		if (mesh != nullptr && mesh->streamoutBuffer.IsValid())
 		{
 			GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh->so_pos_nor_wind.size + mesh->so_tan.size, cmd);
 			std::memcpy(allocation.data, softbody.vertex_positions_simulation.data(), mesh->so_pos_nor_wind.size);
@@ -3654,6 +3732,30 @@ void UpdateRenderData(
 			}
 		}
 		wi::profiler::EndRange(range);
+	}
+
+	// Meshlets:
+	if(vis.scene->instanceArraySize > 0 && vis.scene->meshletBuffer.IsValid())
+	{
+		device->EventBegin("Meshlet prepare", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Meshlet prepare", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_MESHLET_PREPARE], cmd);
+
+		const GPUResource* uavs[] = {
+			&vis.scene->meshletBuffer,
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch((uint32_t)vis.scene->instanceArraySize, 1, 1, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+		wi::profiler::EndRange(range);
+		device->EventEnd(cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -3954,7 +4056,7 @@ void OcclusionCulling_Reset(const Visibility& vis, CommandList cmd)
 	{
 		return;
 	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
 	{
 		return;
 	}
@@ -3975,7 +4077,7 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	{
 		return;
 	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
 	{
 		return;
 	}
@@ -4069,7 +4171,7 @@ void OcclusionCulling_Resolve(const Visibility& vis, CommandList cmd)
 	{
 		return;
 	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
 	{
 		return;
 	}
@@ -5868,13 +5970,10 @@ void DrawDebugWorld(
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PaintRadiusCB), cmd);
 
 			ObjectPushConstants push;
-			push.init(
-				mesh.geometryOffset,
-				x.subset,
-				subset.materialIndex,
-				device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV),
-				(uint32_t)mem.offset
-			);
+			push.geometryIndex = mesh.geometryOffset + x.subset;
+			push.materialIndex = subset.materialIndex;
+			push.instances = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+			push.instance_offset = (uint)mem.offset;
 			device->PushConstants(&push, sizeof(push), cmd);
 
 			device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
@@ -6473,12 +6572,10 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 					const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 					ObjectPushConstants push;
-					push.init(
-						mesh.geometryOffset,
-						(uint)subsetIndex,
-						subset.materialIndex,
-						-1, 0
-					);
+					push.geometryIndex = mesh.geometryOffset + subsetIndex;
+					push.materialIndex = subset.materialIndex;
+					push.instances = -1;
+					push.instance_offset = 0;
 					device->PushConstants(&push, sizeof(push), cmd);
 
 					device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
@@ -6668,6 +6765,7 @@ void ComputeTiledLightCulling(
 )
 {
 	BindCommonResources(cmd);
+	auto range = wi::profiler::BeginRangeGPU("Entity Culling", cmd);
 
 	// Frustum computation
 	{
@@ -6681,7 +6779,6 @@ void ComputeTiledLightCulling(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&res.tileFrustums),
 				GPUBarrier::Buffer(&res.tileFrustums, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -6721,7 +6818,6 @@ void ComputeTiledLightCulling(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&res.tileFrustums),
 				GPUBarrier::Buffer(&res.tileFrustums, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&res.entityTiles_Transparent, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Buffer(&res.entityTiles_Opaque, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
@@ -6733,8 +6829,6 @@ void ComputeTiledLightCulling(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&res.entityTiles_Opaque),
-				GPUBarrier::Memory(&res.entityTiles_Transparent),
 				GPUBarrier::Buffer(&res.entityTiles_Opaque, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&res.entityTiles_Transparent, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 			};
@@ -6751,6 +6845,8 @@ void ComputeTiledLightCulling(
 		&empty
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+	wi::profiler::EndRange(range);
 }
 
 
@@ -7380,6 +7476,8 @@ void BindCameraCB(
 
 	cb.entity_culling_tilecount = GetEntityCullingTileCount(cb.internal_resolution);
 	cb.sample_count = camera.sample_count;
+	cb.visibility_tilecount = GetVisibilityTileCount(cb.internal_resolution);
+	cb.visibility_tilecount_flat = cb.visibility_tilecount.x * cb.visibility_tilecount.y;
 
 	cb.texture_primitiveID_index = camera.texture_primitiveID_index;
 	cb.texture_depth_index = camera.texture_depth_index;
@@ -7640,147 +7738,334 @@ void ComputeShadingRateClassification(
 	device->EventEnd(cmd);
 }
 
-void VisibilityResolve(
+void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
+{
+	res.tile_count = GetVisibilityTileCount(resolution);
+	{
+		GPUBufferDesc desc;
+		desc.stride = sizeof(ShaderTypeBin);
+		desc.size = desc.stride * (MaterialComponent::SHADERTYPE_COUNT + 1); // +1 for sky
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::CONSTANT_BUFFER;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
+		bool success = device->CreateBuffer(&desc, nullptr, &res.bins);
+		assert(success);
+		device->SetName(&res.bins, "res.bins");
+
+		desc.stride = sizeof(VisibilityTile);
+		desc.size = desc.stride * res.tile_count.x * res.tile_count.y * (MaterialComponent::SHADERTYPE_COUNT + 1); // +1 for sky
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		success = device->CreateBuffer(&desc, nullptr, &res.binned_tiles);
+		assert(success);
+		device->SetName(&res.binned_tiles, "res.binned_tiles");
+	}
+	{
+		TextureDesc desc;
+		desc.width = resolution.x;
+		desc.height = resolution.y;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+
+		desc.format = Format::R16G16_FLOAT;
+		device->CreateTexture(&desc, nullptr, &res.texture_normals);
+		device->SetName(&res.texture_normals, "res.texture_normals");
+
+		desc.format = Format::R8_UNORM;
+		device->CreateTexture(&desc, nullptr, &res.texture_roughness);
+		device->SetName(&res.texture_roughness, "res.texture_roughness");
+
+		desc.format = Format::R32G32B32A32_UINT;
+		device->CreateTexture(&desc, nullptr, &res.texture_payload_0);
+		device->SetName(&res.texture_payload_0, "res.texture_payload_0");
+		device->CreateTexture(&desc, nullptr, &res.texture_payload_1);
+		device->SetName(&res.texture_payload_1, "res.texture_payload_1");
+	}
+}
+void Visibility_Prepare(
+	const VisibilityResources& res,
 	const Texture& input_primitiveID, // can be MSAA
-	const VisibilityResolveOutputs& outputs,
 	CommandList cmd
 )
 {
-	device->EventBegin("VisibilityResolve", cmd);
-	auto range = wi::profiler::BeginRangeGPU("VisibilityResolve", cmd);
+	device->EventBegin("Visibility_Prepare", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Visibility_Prepare", cmd);
 
 	BindCommonResources(cmd);
 
-	const bool msaa = input_primitiveID.GetDesc().sample_count > 1;
-	bool fast = true;
+	// Beginning barriers, clears:
+	{
+		barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS));
+		barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+		barrier_stack_flush(cmd);
+		device->ClearUAV(&res.bins, 0, cmd);
+		barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
+		barrier_stack_flush(cmd);
+	}
 
-	device->BindResource(&input_primitiveID, 0, cmd);
-	GPUResource unbind;
+	// Resolve:
+	//	PrimitiveID -> depth, lineardepth
+	//	Binning classification
+	{
+		device->EventBegin("Resolve", cmd);
+		const bool msaa = input_primitiveID.GetDesc().sample_count > 1;
 
-	VisibilityResolvePushConstants push = {};
-	if (outputs.depthbuffer)
-	{
-		push.options |= VISIBILITY_RESOLVE_DEPTH;
-		device->BindUAV(outputs.depthbuffer, 0, cmd, 0);
-		device->BindUAV(outputs.depthbuffer, 1, cmd, 1);
-		device->BindUAV(outputs.depthbuffer, 2, cmd, 2);
-		device->BindUAV(outputs.depthbuffer, 3, cmd, 3);
-		device->BindUAV(outputs.depthbuffer, 4, cmd, 4);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.depthbuffer, outputs.depthbuffer->desc.layout, ResourceState::UNORDERED_ACCESS));
+		device->BindResource(&input_primitiveID, 0, cmd);
+
+		device->BindUAV(&res.bins, 0, cmd);
+		device->BindUAV(&res.binned_tiles, 1, cmd);
+
+		GPUResource unbind;
+		if (res.depthbuffer)
+		{
+			device->BindUAV(res.depthbuffer, 3, cmd, 0);
+			device->BindUAV(res.depthbuffer, 4, cmd, 1);
+			device->BindUAV(res.depthbuffer, 5, cmd, 2);
+			device->BindUAV(res.depthbuffer, 6, cmd, 3);
+			device->BindUAV(res.depthbuffer, 7, cmd, 4);
+			barrier_stack.push_back(GPUBarrier::Image(res.depthbuffer, res.depthbuffer->desc.layout, ResourceState::UNORDERED_ACCESS));
+		}
+		else
+		{
+			device->BindUAV(&unbind, 3, cmd);
+			device->BindUAV(&unbind, 4, cmd);
+			device->BindUAV(&unbind, 5, cmd);
+			device->BindUAV(&unbind, 6, cmd);
+			device->BindUAV(&unbind, 7, cmd);
+		}
+		if (res.lineardepth)
+		{
+			device->BindUAV(res.lineardepth, 8, cmd, 0);
+			device->BindUAV(res.lineardepth, 9, cmd, 1);
+			device->BindUAV(res.lineardepth, 10, cmd, 2);
+			device->BindUAV(res.lineardepth, 11, cmd, 3);
+			device->BindUAV(res.lineardepth, 12, cmd, 4);
+			barrier_stack.push_back(GPUBarrier::Image(res.lineardepth, res.lineardepth->desc.layout, ResourceState::UNORDERED_ACCESS));
+		}
+		else
+		{
+			device->BindUAV(&unbind, 8, cmd);
+			device->BindUAV(&unbind, 9, cmd);
+			device->BindUAV(&unbind, 10, cmd);
+			device->BindUAV(&unbind, 11, cmd);
+			device->BindUAV(&unbind, 12, cmd);
+		}
+		if (res.primitiveID_resolved)
+		{
+			device->BindUAV(res.primitiveID_resolved, 13, cmd);
+			barrier_stack.push_back(GPUBarrier::Image(res.primitiveID_resolved, res.primitiveID_resolved->desc.layout, ResourceState::UNORDERED_ACCESS));
+		}
+		else
+		{
+			device->BindUAV(&unbind, 13, cmd);
+		}
+		barrier_stack_flush(cmd);
+
+		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
+
+		device->Dispatch(
+			res.tile_count.x,
+			res.tile_count.y,
+			1,
+			cmd
+		);
+
+		if (res.depthbuffer)
+		{
+			barrier_stack.push_back(GPUBarrier::Image(res.depthbuffer, ResourceState::UNORDERED_ACCESS, res.depthbuffer->desc.layout));
+		}
+		if (res.lineardepth)
+		{
+			barrier_stack.push_back(GPUBarrier::Image(res.lineardepth, ResourceState::UNORDERED_ACCESS, res.lineardepth->desc.layout));
+		}
+		if (res.primitiveID_resolved)
+		{
+			barrier_stack.push_back(GPUBarrier::Image(res.primitiveID_resolved, ResourceState::UNORDERED_ACCESS, res.primitiveID_resolved->desc.layout));
+		}
+		barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
+		barrier_stack_flush(cmd);
+
+		device->EventEnd(cmd);
 	}
-	else
+
+	// Indirect prepare:
 	{
-		device->BindUAV(&unbind, 0, cmd);
-		device->BindUAV(&unbind, 1, cmd);
-		device->BindUAV(&unbind, 2, cmd);
-		device->BindUAV(&unbind, 3, cmd);
-		device->BindUAV(&unbind, 4, cmd);
+		device->EventBegin("Indirect Prepare", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_INDIRECT_PREPARE], cmd);
+		device->BindUAV(&res.bins, 0, cmd);
+		device->Dispatch(1, 1, 1, cmd);
+		device->EventEnd(cmd);
 	}
-	if (outputs.lineardepth)
-	{
-		push.options |= VISIBILITY_RESOLVE_LINEARDEPTH;
-		device->BindUAV(outputs.lineardepth, 5, cmd, 0);
-		device->BindUAV(outputs.lineardepth, 6, cmd, 1);
-		device->BindUAV(outputs.lineardepth, 7, cmd, 2);
-		device->BindUAV(outputs.lineardepth, 8, cmd, 3);
-		device->BindUAV(outputs.lineardepth, 9, cmd, 4);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.lineardepth, outputs.lineardepth->desc.layout, ResourceState::UNORDERED_ACCESS));
-	}
-	else
-	{
-		device->BindUAV(&unbind, 5, cmd);
-		device->BindUAV(&unbind, 6, cmd);
-		device->BindUAV(&unbind, 7, cmd);
-		device->BindUAV(&unbind, 8, cmd);
-		device->BindUAV(&unbind, 9, cmd);
-	}
-	if (outputs.velocity)
-	{
-		fast = false;
-		push.options |= VISIBILITY_RESOLVE_VELOCITY;
-		device->BindUAV(outputs.velocity, 10, cmd);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.velocity, outputs.velocity->desc.layout, ResourceState::UNORDERED_ACCESS));
-	}
-	else
-	{
-		device->BindUAV(&unbind, 10, cmd);
-	}
-	if (outputs.normal)
-	{
-		fast = false;
-		push.options |= VISIBILITY_RESOLVE_NORMAL;
-		device->BindUAV(outputs.normal, 11, cmd);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.normal, outputs.normal->desc.layout, ResourceState::UNORDERED_ACCESS));
-	}
-	else
-	{
-		device->BindUAV(&unbind, 11, cmd);
-	}
-	if (outputs.roughness)
-	{
-		fast = false;
-		push.options |= VISIBILITY_RESOLVE_ROUGHNESS;
-		device->BindUAV(outputs.roughness, 12, cmd);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.roughness, outputs.roughness->desc.layout, ResourceState::UNORDERED_ACCESS));
-	}
-	else
-	{
-		device->BindUAV(&unbind, 12, cmd);
-	}
-	if (outputs.primitiveID_resolved)
-	{
-		push.options |= VISIBILITY_RESOLVE_PRIMITIVEID;
-		device->BindUAV(outputs.primitiveID_resolved, 13, cmd);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.primitiveID_resolved, outputs.primitiveID_resolved->desc.layout, ResourceState::UNORDERED_ACCESS));
-	}
-	else
-	{
-		device->BindUAV(&unbind, 13, cmd);
-	}
+
+	barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT));
+	barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 	barrier_stack_flush(cmd);
 
-	if (fast)
-	{
-		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_FAST_MSAA : CSTYPE_VISIBILITY_RESOLVE_FAST], cmd);
-	}
-	else
-	{
-		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
-	}
-	device->PushConstants(&push, sizeof(push), cmd);
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void Visibility_Surface(
+	const VisibilityResources& res,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	device->EventBegin("Visibility_Surface", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Visibility_Surface", cmd);
 
+	BindCommonResources(cmd);
+
+	barrier_stack.push_back(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_0, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_1, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+	barrier_stack_flush(cmd);
+
+	device->BindResource(&res.binned_tiles, 0, cmd);
+	device->BindUAV(&output, 0, cmd);
+	device->BindUAV(&res.texture_normals, 1, cmd);
+	device->BindUAV(&res.texture_roughness, 2, cmd);
+	device->BindUAV(&res.texture_payload_0, 3, cmd);
+	device->BindUAV(&res.texture_payload_1, 4, cmd);
+
+	// surface dispatches per material type:
+	device->EventBegin("Surface parameters", cmd);
+	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
+	{
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_PERMUTATION_BEGIN + i], cmd);
+		device->BindConstantBuffer(&res.bins, 10, cmd, i * sizeof(ShaderTypeBin));
+		device->DispatchIndirect(&res.bins, i * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
+	}
+	device->EventEnd(cmd);
+
+	// sky dispatch:
+	device->EventBegin("Sky", cmd);
+	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SKY], cmd);
+	device->BindConstantBuffer(&res.bins, 10, cmd, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin));
+	device->DispatchIndirect(&res.bins, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
+	device->EventEnd(cmd);
+
+	// Ending barriers:
+	//	These resources will be used by other post processing effects
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
+	barrier_stack_flush(cmd);
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void Visibility_Surface_Reduced(
+	const VisibilityResources& res,
+	CommandList cmd
+)
+{
+	device->EventBegin("Visibility_Surface_Reduced", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Visibility_Surface_Reduced", cmd);
+
+	BindCommonResources(cmd);
+
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
+	barrier_stack_flush(cmd);
+
+	device->BindResource(&res.binned_tiles, 0, cmd);
+	device->BindUAV(&res.texture_normals, 1, cmd);
+	device->BindUAV(&res.texture_roughness, 2, cmd);
+
+	// surface dispatches per material type:
+	device->EventBegin("Surface parameters", cmd);
+	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
+	{
+		if (i == MaterialComponent::SHADERTYPE_UNLIT)
+			continue; // this won't need surface parameter write out
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_PERMUTATION_BEGIN + i], cmd);
+		device->BindConstantBuffer(&res.bins, 10, cmd, i * sizeof(ShaderTypeBin));
+		device->DispatchIndirect(&res.bins, i * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
+	}
+	device->EventEnd(cmd);
+
+	// Ending barriers:
+	//	These resources will be used by other post processing effects
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
+	barrier_stack_flush(cmd);
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void Visibility_Shade(
+	const VisibilityResources& res,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	device->EventBegin("Visibility_Shade", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Visibility_Shade", cmd);
+
+	BindCommonResources(cmd);
+
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+	barrier_stack_flush(cmd);
+
+	device->BindResource(&res.binned_tiles, 0, cmd);
+	device->BindResource(&res.texture_payload_0, 2, cmd);
+	device->BindResource(&res.texture_payload_1, 3, cmd);
+	device->BindUAV(&output, 0, cmd);
+
+	// shading dispatches per material type:
+	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
+	{
+		if (i == MaterialComponent::SHADERTYPE_UNLIT)
+			continue; // the unlit shader is special, it had already written out its final color in the surface shader
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + i], cmd);
+		device->BindConstantBuffer(&res.bins, 10, cmd, i * sizeof(ShaderTypeBin));
+		device->DispatchIndirect(&res.bins, i * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
+	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void Visibility_Velocity(
+	const VisibilityResources& res,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	device->EventBegin("Visibility_Velocity", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Visibility_Velocity", cmd);
+
+	BindCommonResources(cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_VELOCITY], cmd);
+	device->BindUAV(&output, 0, cmd);
 	device->Dispatch(
-		(input_primitiveID.desc.width + 15) / 16,
-		(input_primitiveID.desc.height + 15) / 16,
+		(output.desc.width + 7u) / 8u,
+		(output.desc.height + 7u) / 8u,
 		1,
 		cmd
 	);
 
-	if (outputs.depthbuffer)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.depthbuffer, ResourceState::UNORDERED_ACCESS, outputs.depthbuffer->desc.layout));
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
-	if (outputs.lineardepth)
-	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.lineardepth, ResourceState::UNORDERED_ACCESS, outputs.lineardepth->desc.layout));
-	}
-	if (outputs.velocity)
-	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.velocity, ResourceState::UNORDERED_ACCESS, outputs.velocity->desc.layout));
-	}
-	if (outputs.normal)
-	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.normal, ResourceState::UNORDERED_ACCESS, outputs.normal->desc.layout));
-	}
-	if (outputs.roughness)
-	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.roughness, ResourceState::UNORDERED_ACCESS, outputs.roughness->desc.layout));
-	}
-	if (outputs.primitiveID_resolved)
-	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.primitiveID_resolved, ResourceState::UNORDERED_ACCESS, outputs.primitiveID_resolved->desc.layout));
-	}
-	barrier_stack_flush(cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

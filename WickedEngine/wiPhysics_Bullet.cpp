@@ -506,11 +506,8 @@ namespace wi::physics
 				if (IsSimulationEnabled() && !physicscomponent->IsKinematic())
 				{
 					TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-					btMotionState* motionState = rigidbody->getMotionState();
-					btTransform physicsTransform;
-
-					motionState->getWorldTransform(physicsTransform);
+	
+					btTransform physicsTransform = rigidbody->getWorldTransform();
 					btVector3 T = physicsTransform.getOrigin();
 					btQuaternion R = physicsTransform.getRotation();
 
@@ -693,4 +690,15 @@ namespace wi::physics
 		}
 	}
 
+	void ApplyTorque(
+		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& torque
+	)
+	{
+		if (physicscomponent.physicsobject != nullptr)
+		{
+			btRigidBody* rigidbody = (btRigidBody*)physicscomponent.physicsobject;
+			rigidbody->applyTorque(btVector3(torque.x, torque.y, torque.z));
+		}
+	}
 }

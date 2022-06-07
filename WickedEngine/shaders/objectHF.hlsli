@@ -28,17 +28,13 @@
 
 PUSHCONSTANT(push, ObjectPushConstants);
 
-inline uint GetSubsetIndex()
-{
-	return push.GetSubsetIndex();
-}
 inline ShaderGeometry GetMesh()
 {
-	return load_geometry(push.GetMeshIndex() + push.GetSubsetIndex());
+	return load_geometry(push.geometryIndex);
 }
 inline ShaderMaterial GetMaterial()
 {
-	return load_material(push.GetMaterialIndex());
+	return load_material(push.materialIndex);
 }
 
 #define sampler_objectshader			bindless_samplers[GetFrame().sampler_objectshader_index]
@@ -308,11 +304,6 @@ struct PixelInput
 // METHODS
 ////////////
 
-inline void ApplyEmissive(in Surface surface, inout Lighting lighting)
-{
-	lighting.direct.specular += surface.emissiveColor;
-}
-
 inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighting, inout Surface surface)
 {
 	[branch]
@@ -354,43 +345,27 @@ inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 		float4 reflectionUV = mul(GetCamera().reflection_view_projection, float4(surface.P, 1));
 		reflectionUV.xy /= reflectionUV.w;
 		reflectionUV.xy = clipspace_to_uv(reflectionUV.xy);
-		return bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor * GetMaterial().normalMapStrength, 0).rgb;
+		return bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor, 0).rgb;
 	}
 	return 0;
 }
 
-#define NUM_PARALLAX_OCCLUSION_STEPS 32
 inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3x3 TBN)
 {
-	[branch]
-	if (GetMaterial().parallaxOcclusionMapping > 0 && GetMaterial().uvset_displacementMap >= 0)
-	{
-		V = mul(TBN, V);
-		float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
-		float curLayerHeight = 0;
-		float2 dtex = GetMaterial().parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
-		float2 originalTextureCoords = GetMaterial().uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
-		float2 currentTextureCoords = originalTextureCoords;
-		float2 derivX = ddx_coarse(currentTextureCoords);
-		float2 derivY = ddy_coarse(currentTextureCoords);
-		float heightFromTexture = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
-		uint iter = 0;
-		[loop]
-		while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
-		{
-			curLayerHeight += layerHeight;
-			currentTextureCoords -= dtex;
-			heightFromTexture = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
-			iter++;
-		}
-		float2 prevTCoords = currentTextureCoords + dtex;
-		float nextH = heightFromTexture - curLayerHeight;
-		float prevH = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, prevTCoords, derivX, derivY).r - curLayerHeight + layerHeight;
-		float weight = nextH / (nextH - prevH);
-		float2 finalTextureCoords = mad(prevTCoords, weight, currentTextureCoords * (1.0 - weight));
-		float2 difference = finalTextureCoords - originalTextureCoords;
-		uvsets += difference.xyxy;
-	}
+	float2 uv = GetMaterial().uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
+	float2 uv_dx = ddx_coarse(uv);
+	float2 uv_dy = ddy_coarse(uv);
+
+	ParallaxOcclusionMapping_Impl(
+		uvsets,
+		V,
+		TBN,
+		GetMaterial(),
+		texture_displacementmap,
+		uv,
+		uv_dx,
+		uv_dy
+	);
 }
 
 inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
@@ -600,20 +575,21 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 
 }
 
-inline void TiledLighting(inout Surface surface, inout Lighting lighting)
+
+inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 {
-	const uint2 tileIndex = uint2(floor(surface.pixel / TILED_CULLING_BLOCKSIZE));
-	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
-
-
-#ifndef DISABLE_DECALS
 	[branch]
 	if (GetFrame().decalarray_count > 0)
 	{
 		// decals are enabled, loop through them first:
 		float4 decalAccumulation = 0;
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+		const float3 P_dx = surface.P_dx;
+		const float3 P_dy = surface.P_dy;
+#else
 		const float3 P_dx = ddx_coarse(surface.P);
 		const float3 P_dy = ddy_coarse(surface.P);
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 		// Loop through decal buckets in the tile:
 		const uint first_item = GetFrame().decalarray_offset;
@@ -625,8 +601,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
+#ifndef ENTITY_TILE_UNIFORM
 			// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -666,10 +644,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						decalColor.a *= edgeBlend;
 						decalColor *= decal.GetColor();
 						// apply emissive:
-						lighting.direct.specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
+						surface.emissiveColor += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
 						// perform manual blending of decals:
 						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a*decalColor.rgb, decalAccumulation.rgb);
+						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
 						decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 						[branch]
 						if (decalAccumulation.a >= 1.0)
@@ -692,8 +670,13 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 		surface.albedo.rgb = lerp(surface.albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
 	}
-#endif // DISABLE_DECALS
+}
 
+inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex)
+{
+#ifndef DISABLE_DECALS
+	TiledDecals(surface, flatTileIndex);
+#endif // DISABLE_DECALS
 
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
@@ -713,8 +696,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
+#ifndef ENTITY_TILE_UNIFORM
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -779,16 +764,6 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if (GetFrame().lightarray_count > 0)
 	{
-		uint4 shadow_mask_packed = 0;
-		const bool shadow_mask_enabled = GetFrame().options & OPTION_BIT_SHADOW_MASK && GetCamera().texture_rtshadow_index >= 0;
-#ifdef SHADOW_MASK_ENABLED
-		[branch]
-		if (shadow_mask_enabled)
-		{
-			shadow_mask_packed = bindless_textures_uint4[GetCamera().texture_rtshadow_index][surface.pixel / 2];
-		}
-#endif // SHADOW_MASK_ENABLED
-
 		// Loop through light buckets in the tile:
 		const uint first_item = GetFrame().lightarray_offset;
 		const uint last_item = first_item + GetFrame().lightarray_count - 1;
@@ -799,8 +774,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
+#ifndef ENTITY_TILE_UNIFORM
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -823,8 +800,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						continue; // static lights will be skipped (they are used in lightmap baking)
 					}
 
-					float shadow_mask = 1;
 #ifdef SHADOW_MASK_ENABLED
+					const bool shadow_mask_enabled = (GetFrame().options & OPTION_BIT_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0;
+					float shadow_mask = 1;
 					[branch]
 					if (shadow_mask_enabled && light.IsCastingShadow())
 					{
@@ -833,7 +811,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						{
 							uint mask_shift = (shadow_index % 4) * 8;
 							uint mask_bucket = shadow_index / 4;
-							uint mask = (shadow_mask_packed[mask_bucket] >> mask_shift) & 0xFF;
+							uint mask = (bindless_textures_uint4[GetCamera().texture_rtshadow_index][surface.pixel / 2][mask_bucket] >> mask_shift) & 0xFF;
 							if (mask == 0)
 							{
 								continue;
@@ -841,6 +819,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 							shadow_mask = mask / 255.0;
 						}
 					}
+#else
+					const float shadow_mask = 1;
 #endif // SHADOW_MASK_ENABLED
 
 					switch (light.GetType())
@@ -889,6 +869,16 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		surface.flags |= SURFACE_FLAG_GI_APPLIED;
 	}
 
+}
+inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint2 tileIndex)
+{
+	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	TiledLighting(surface, lighting, flatTileIndex);
+}
+inline void TiledLighting(inout Surface surface, inout Lighting lighting)
+{
+	const uint2 tileIndex = uint2(floor(surface.pixel / TILED_CULLING_BLOCKSIZE));
+	TiledLighting(surface, lighting, tileIndex);
 }
 
 inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
@@ -1030,7 +1020,7 @@ PixelInput main(VertexInput input)
 
 // entry point:
 #ifdef PREPASS
-uint2 main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage) : SV_Target
+uint main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage) : SV_Target
 #else
 float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
@@ -1084,10 +1074,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #if 0
 	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, uvsets.xy);
 #else
-	float4 tangent = input.tan;
-	tangent.xyz = normalize(tangent.xyz);
-	float3 binormal = normalize(cross(tangent.xyz, surface.N) * tangent.w);
-	float3x3 TBN = float3x3(tangent.xyz, binormal, surface.N);
+	surface.T = input.tan;
+	surface.T.xyz = normalize(surface.T.xyz);
+	float3 binormal = normalize(cross(surface.T.xyz, surface.N) * surface.T.w);
+	float3x3 TBN = float3x3(surface.T.xyz, binormal, surface.N);
 #endif
 
 #ifdef POM
@@ -1213,14 +1203,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
 
 
-#ifdef BRDF_ANISOTROPIC
+#ifdef ANISOTROPIC
 	surface.anisotropy = GetMaterial().parallaxOcclusionMapping;
-	surface.T = tangent.xyz;
-	surface.B = normalize(cross(tangent.xyz, surface.N) * tangent.w); // Compute bitangent again after normal mapping
-#endif // BRDF_ANISOTROPIC
+#endif // ANISOTROPIC
 
 
-#ifdef BRDF_SHEEN
+#ifdef SHEEN
 	surface.sheen.color = GetMaterial().GetSheenColor();
 	surface.sheen.roughness = GetMaterial().sheenRoughness;
 
@@ -1238,10 +1226,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		surface.sheen.roughness *= texture_sheenroughnessmap.Sample(sampler_objectshader, uvset_sheenRoughnessMap).a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
-#endif // BRDF_SHEEN
+#endif // SHEEN
 
 
-#ifdef BRDF_CLEARCOAT
+#ifdef CLEARCOAT
 	surface.clearcoat.factor = GetMaterial().clearcoat;
 	surface.clearcoat.roughness = GetMaterial().clearcoatRoughness;
 	surface.clearcoat.N = input.nor;
@@ -1273,7 +1261,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	surface.clearcoat.N = normalize(surface.clearcoat.N);
 
 #endif // OBJECTSHADER_USE_UVSETS
-#endif // BRDF_CLEARCOAT
+#endif // CLEARCOAT
 
 
 	surface.sss = GetMaterial().subsurfaceScattering;
@@ -1367,11 +1355,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_ATLAS
 
 
-#ifdef OBJECTSHADER_USE_EMISSIVE
-	ApplyEmissive(surface, lighting);
-#endif // OBJECTSHADER_USE_EMISSIVE
-
-
 #ifdef PLANARREFLECTION
 	lighting.indirect.specular += PlanarReflection(surface, bumpColor.rg) * surface.F;
 #endif
@@ -1423,15 +1406,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // WATER
 
 
-#ifdef UNLIT
-	lighting.direct.diffuse = 1;
-	lighting.indirect.diffuse = 0;
-	lighting.direct.specular = 0;
-	lighting.indirect.specular = 0;
-#endif // UNLIT
-
-
 	ApplyLighting(surface, lighting, color);
+
+
+#ifdef UNLIT
+	color = surface.baseColor;
+#endif // UNLIT
 
 
 #ifdef OBJECTSHADER_USE_POSITION3D
@@ -1449,7 +1429,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;
 	prim.instanceIndex = input.instanceIndex;
-	prim.subsetIndex = GetSubsetIndex();
+	prim.subsetIndex = push.geometryIndex - load_instance(input.instanceIndex).geometryOffset;
 	return prim.pack();
 #else
 	return color;

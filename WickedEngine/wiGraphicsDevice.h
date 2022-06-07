@@ -136,6 +136,14 @@ namespace wi::graphics
 		// Returns the minimum required alignment for buffer offsets when creating subresources
 		virtual uint64_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const = 0;
 
+		struct MemoryUsage
+		{
+			uint64_t budget = 0ull;		// total video memory available for use by the current application (in bytes)
+			uint64_t usage = 0ull;		// used video memory by the current application (in bytes)
+		};
+		// Returns video memory statistics for the current application
+		virtual MemoryUsage GetMemoryUsage() const = 0;
+
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Command List functions are below:
 		//	- These are used to record rendering commands to a CommandList

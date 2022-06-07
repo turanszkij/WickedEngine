@@ -769,7 +769,7 @@ namespace wi::graphics
 
 	struct SubresourceData
 	{
-		const void *data_ptr = nullptr;
+		const void* data_ptr = nullptr;
 		uint32_t row_pitch = 0;
 		uint32_t slice_pitch = 0;
 	};
@@ -1021,6 +1021,19 @@ namespace wi::graphics
 	};
 
 
+	constexpr bool IsFormatTypeless(Format format)
+	{
+		switch (format)
+		{
+		case Format::R16_TYPELESS:
+		case Format::R32_TYPELESS:
+		case Format::R32G8X24_TYPELESS:
+		case Format::R24G8_TYPELESS:
+			return true;
+		}
+
+		return false;
+	}
 	constexpr bool IsFormatUnorm(Format format)
 	{
 		switch (format)

@@ -22,15 +22,20 @@ using namespace wi::graphics;
 namespace wi::backlog
 {
 	bool enabled = false;
-	std::deque<std::string> stream;
-	std::deque<std::string> history;
+	struct LogEntry
+	{
+		std::string text;
+		LogLevel level = LogLevel::Default;
+	};
+	std::deque<LogEntry> entries;
+	std::deque<LogEntry> history;
 	const float speed = 4000.0f;
 	const size_t deletefromline = 500;
-	float pos = std::numeric_limits<float>::lowest();
+	float pos = 5;
 	float scroll = 0;
 	std::string inputArea;
 	int historyPos = 0;
-	wi::SpriteFont font;
+	wi::font::Params font_params;
 	wi::SpinLock logLock;
 	Texture backgroundTex;
 	bool refitscroll = false;
@@ -39,6 +44,15 @@ namespace wi::backlog
 	bool blockLuaExec = false;
 	LogLevel logLevel = LogLevel::Default;
 
+	std::string getTextWithoutLock()
+	{
+		std::string retval;
+		for (auto& x : entries)
+		{
+			retval += x.text;
+		}
+		return retval;
+	}
 	void write_logfile()
 	{
 		std::string filename = wi::helper::GetTempDirectoryPath() + "wiBacklog.txt";
@@ -123,32 +137,29 @@ namespace wi::backlog
 			fx.opacity = wi::math::Lerp(1, 0, -pos / canvas.GetLogicalHeight());
 			wi::image::Draw(&backgroundTex, fx, cmd);
 
+			fx.pos = XMFLOAT3(5, canvas.GetLogicalHeight() - 30, 0);
+			fx.siz = XMFLOAT2(canvas.GetLogicalWidth() - 10, 25);
+			fx.color = XMFLOAT4(1, 1, 1, 0.2f);
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+
 			wi::font::Params params = wi::font::Params(10, canvas.GetLogicalHeight() - 10, wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_BOTTOM);
 			params.h_wrap = canvas.GetLogicalWidth() - params.posX;
 			params.v_align = wi::font::WIFALIGN_BOTTOM;
+			params.shadowColor = 0x10000000u;
+			params.shadow_offset_x = 2;
+			params.shadow_offset_y = 2;
+			params.shadow_softness = 1;
 			wi::font::Draw(inputArea, params, cmd);
 
-			font.SetText(getText());
-			if (refitscroll)
-			{
-				refitscroll = false;
-				float textheight = font.TextHeight();
-				float limit = canvas.GetLogicalHeight() * 0.9f;
-				if (scroll + textheight > limit)
-				{
-					scroll = limit - textheight;
-				}
-			}
-			font.params.posX = 50;
-			font.params.posY = pos + scroll;
-			font.params.h_wrap = canvas.GetLogicalWidth() - font.params.posX;
 			Rect rect;
 			rect.left = 0;
 			rect.right = (int32_t)canvas.GetPhysicalWidth();
 			rect.top = 0;
-			rect.bottom = int32_t(canvas.GetPhysicalHeight() * 0.9f);
+			rect.bottom = int32_t(canvas.LogicalToPhysical(canvas.GetLogicalHeight() - 35));
 			wi::graphics::GetDevice()->BindScissorRects(1, &rect, cmd);
-			font.Draw(cmd);
+
+			DrawOutputText(canvas, cmd);
+
 			rect.left = -std::numeric_limits<int>::max();
 			rect.right = std::numeric_limits<int>::max();
 			rect.top = -std::numeric_limits<int>::max();
@@ -157,21 +168,51 @@ namespace wi::backlog
 		}
 	}
 
+	void DrawOutputText(const wi::Canvas& canvas, wi::graphics::CommandList cmd)
+	{
+		std::scoped_lock lock(logLock);
+		wi::font::SetCanvas(canvas); // always set here as it can be called from outside...
+		font_params.cursor = {};
+		if (refitscroll)
+		{
+			float textheight = wi::font::TextHeight(getTextWithoutLock(), font_params);
+			float limit = canvas.GetLogicalHeight() - 35;
+			if (scroll + textheight > limit)
+			{
+				scroll = limit - textheight;
+			}
+			refitscroll = false;
+		}
+		font_params.posX = 5;
+		font_params.posY = pos + scroll;
+		font_params.h_wrap = canvas.GetLogicalWidth() - font_params.posX;
+		for (auto& x : entries)
+		{
+			switch (x.level)
+			{
+			case LogLevel::Warning:
+				font_params.color = wi::Color::Warning();
+				break;
+			case LogLevel::Error:
+				font_params.color = wi::Color::Error();
+				break;
+			default:
+				font_params.color = wi::Color::White();
+				break;
+			}
+			font_params.cursor = wi::font::Draw(x.text, font_params, cmd);
+		}
+	}
 
 	std::string getText()
 	{
 		std::scoped_lock lock(logLock);
-		std::string retval;
-		for (auto& x : stream)
-		{
-			retval += x;
-		}
-		return retval;
+		return getTextWithoutLock();
 	}
 	void clear()
 	{
 		std::scoped_lock lock(logLock);
-		stream.clear();
+		entries.clear();
 		scroll = 0;
 	}
 	void post(const std::string& input, LogLevel level)
@@ -201,10 +242,13 @@ namespace wi::backlog
 			}
 			str += input;
 			str += '\n';
-			stream.push_back(str);
-			if (stream.size() > deletefromline)
+			LogEntry entry;
+			entry.text = str;
+			entry.level = level;
+			entries.push_back(entry);
+			if (entries.size() > deletefromline)
 			{
-				stream.pop_front();
+				entries.pop_front();
 			}
 			refitscroll = true;
 
@@ -243,7 +287,10 @@ namespace wi::backlog
 	{
 		historyPos = 0;
 		post(inputArea.c_str());
-		history.push_back(inputArea);
+		LogEntry entry;
+		entry.text = inputArea;
+		entry.level = LogLevel::Default;
+		history.push_back(entry);
 		if (history.size() > deletefromline)
 		{
 			history.pop_front();
@@ -272,7 +319,7 @@ namespace wi::backlog
 		std::scoped_lock lock(logLock);
 		if (!history.empty())
 		{
-			inputArea = history[history.size() - 1 - historyPos];
+			inputArea = history[history.size() - 1 - historyPos].text;
 			if ((size_t)historyPos < history.size() - 1)
 			{
 				historyPos++;
@@ -288,7 +335,7 @@ namespace wi::backlog
 			{
 				historyPos--;
 			}
-			inputArea = history[history.size() - 1 - historyPos];
+			inputArea = history[history.size() - 1 - historyPos].text;
 		}
 	}
 
@@ -298,11 +345,11 @@ namespace wi::backlog
 	}
 	void setFontSize(int value)
 	{
-		font.params.size = value;
+		font_params.size = value;
 	}
 	void setFontRowspacing(float value)
 	{
-		font.params.spacingY = value;
+		font_params.spacingY = value;
 	}
 
 	bool isActive() { return enabled; }

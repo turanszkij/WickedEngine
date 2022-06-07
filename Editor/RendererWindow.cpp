@@ -11,14 +11,15 @@ void RendererWindow::Create(EditorComponent* editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 600));
+	SetSize(XMFLOAT2(580, 400));
 
-	float x = 220, y = 5, step = 20, itemheight = 18;
+	float step = 20, itemheight = 18;
+	float x = 220, y = 0;
 
 	vsyncCheckBox.Create("VSync: ");
 	vsyncCheckBox.SetTooltip("Toggle vertical sync");
 	vsyncCheckBox.SetScriptTip("SetVSyncEnabled(opt bool enabled)");
-	vsyncCheckBox.SetPos(XMFLOAT2(x, y += step));
+	vsyncCheckBox.SetPos(XMFLOAT2(x, y));
 	vsyncCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
 	vsyncCheckBox.OnClick([=](wi::gui::EventArgs args) {
@@ -43,6 +44,23 @@ void RendererWindow::Create(EditorComponent* editor)
 	});
 	occlusionCullingCheckBox.SetCheck(wi::renderer::GetOcclusionCullingEnabled());
 	AddWidget(&occlusionCullingCheckBox);
+
+	visibilityComputeShadingCheckBox.Create("VCS: ");
+	visibilityComputeShadingCheckBox.SetTooltip("Visibility Compute Shading (experimental)\nThis will shade the scene in compute shaders instead of pixel shaders\nThis has a higher initial performance cost, but it will be faster in high polygon scenes");
+	visibilityComputeShadingCheckBox.SetPos(XMFLOAT2(x + 120, y));
+	visibilityComputeShadingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	visibilityComputeShadingCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		if (args.bValue)
+		{
+			editor->renderPath->visibility_shading_in_compute = true;
+		}
+		else
+		{
+			editor->renderPath->visibility_shading_in_compute = false;
+		}
+	});
+	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->visibility_shading_in_compute);
+	AddWidget(&visibilityComputeShadingCheckBox);
 
 	resolutionScaleSlider.Create(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");
 	resolutionScaleSlider.SetTooltip("Adjust the internal rendering resolution.");
@@ -107,7 +125,7 @@ void RendererWindow::Create(EditorComponent* editor)
 
 	ddgiDebugCheckBox.Create("DEBUG: ");
 	ddgiDebugCheckBox.SetTooltip("Toggle DDGI probe visualization.");
-	ddgiDebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
+	ddgiDebugCheckBox.SetPos(XMFLOAT2(x + 120, y));
 	ddgiDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	ddgiDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetDDGIDebugEnabled(args.bValue);
@@ -137,7 +155,7 @@ void RendererWindow::Create(EditorComponent* editor)
 
 	voxelRadianceDebugCheckBox.Create("DEBUG: ");
 	voxelRadianceDebugCheckBox.SetTooltip("Toggle Voxel GI visualization.");
-	voxelRadianceDebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
+	voxelRadianceDebugCheckBox.SetPos(XMFLOAT2(x + 120, y));
 	voxelRadianceDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	voxelRadianceDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawVoxelHelper(args.bValue);
@@ -157,7 +175,7 @@ void RendererWindow::Create(EditorComponent* editor)
 
 	voxelRadianceReflectionsCheckBox.Create("Reflections: ");
 	voxelRadianceReflectionsCheckBox.SetTooltip("Toggle specular reflections computation for Voxel GI.");
-	voxelRadianceReflectionsCheckBox.SetPos(XMFLOAT2(x + 122, y));
+	voxelRadianceReflectionsCheckBox.SetPos(XMFLOAT2(x + 120, y));
 	voxelRadianceReflectionsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	voxelRadianceReflectionsCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetVoxelRadianceReflectionsEnabled(args.bValue);
@@ -229,7 +247,7 @@ void RendererWindow::Create(EditorComponent* editor)
 
 	variableRateShadingClassificationDebugCheckBox.Create("DEBUG: ");
 	variableRateShadingClassificationDebugCheckBox.SetTooltip("Toggle visualization of variable rate shading classification feature");
-	variableRateShadingClassificationDebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
+	variableRateShadingClassificationDebugCheckBox.SetPos(XMFLOAT2(x + 120, y));
 	variableRateShadingClassificationDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	variableRateShadingClassificationDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetVariableRateShadingClassificationDebug(args.bValue);
@@ -250,7 +268,7 @@ void RendererWindow::Create(EditorComponent* editor)
 
 	debugLightCullingCheckBox.Create("DEBUG: ");
 	debugLightCullingCheckBox.SetTooltip("Toggle visualization of the screen space light culling heatmap grid (Tiled renderer only)");
-	debugLightCullingCheckBox.SetPos(XMFLOAT2(x + 122, y));
+	debugLightCullingCheckBox.SetPos(XMFLOAT2(x + 120, y));
 	debugLightCullingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	debugLightCullingCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetDebugLightCulling(args.bValue);
@@ -445,7 +463,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	temporalAADebugCheckBox.Create("DEBUGJitter: ");
 	temporalAADebugCheckBox.SetText("DEBUG: ");
 	temporalAADebugCheckBox.SetTooltip("Disable blending of frame history. Camera Subpixel jitter will be visible.");
-	temporalAADebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
+	temporalAADebugCheckBox.SetPos(XMFLOAT2(x + 120, y));
 	temporalAADebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	temporalAADebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetTemporalAADebugEnabled(args.bValue);
@@ -512,11 +530,11 @@ void RendererWindow::Create(EditorComponent* editor)
 
 
 	// Visualizer toggles:
-	x = 540, y = 5;
+	x = 540, y = 0;
 
 	physicsDebugCheckBox.Create("Physics visualizer: ");
 	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
-	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
+	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y));
 	physicsDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	physicsDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::physics::SetDebugDrawEnabled(args.bValue);

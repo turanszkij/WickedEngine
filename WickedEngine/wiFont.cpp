@@ -18,6 +18,7 @@
 #include "Utility/stb_truetype.h"
 
 #include <fstream>
+#include <mutex>
 
 using namespace wi::graphics;
 using namespace wi::rectpacker;
@@ -55,6 +56,18 @@ namespace wi::font
 		};
 		static wi::unordered_map<int32_t, Glyph> glyph_lookup;
 		static wi::unordered_map<int32_t, rect_xywh> rect_lookup;
+		struct SDF
+		{
+			static constexpr int padding = 5;
+			static constexpr unsigned char onedge_value = 180;
+			static constexpr float pixel_dist_scale = float(onedge_value) / float(padding);
+			int width;
+			int height;
+			int xoff;
+			int yoff;
+			wi::vector<uint8_t> bitmap;
+		};
+		static wi::unordered_map<int32_t, SDF> sdf_lookup;
 		// pack glyph identifiers to a 32-bit hash:
 		//	height:	10 bits	(height supported: 0 - 1023)
 		//	style:	6 bits	(number of font styles supported: 0 - 63)
@@ -98,70 +111,72 @@ namespace wi::font
 		};
 		static wi::vector<FontStyle> fontStyles;
 
-		template<typename T>
-		uint32_t WriteVertices(FontVertex* vertexList, const T* text, Params params)
+		struct ParseStatus
 		{
-			const FontStyle& fontStyle = fontStyles[params.style];
-			const float fontScale = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, (float)params.size);
-
+			Cursor cursor;
 			uint32_t quadCount = 0;
-			float line = 0;
-			float pos = 0;
-			float pos_last_letter = 0;
 			size_t last_word_begin = 0;
 			bool start_new_word = false;
+		};
+
+		static thread_local wi::vector<FontVertex> vertexList;
+
+		template<typename T>
+		ParseStatus ParseText(const T* text, size_t text_length, Params params)
+		{
+			ParseStatus status;
+			status.cursor = params.cursor;
+
+			const FontStyle& fontStyle = fontStyles[params.style];
+			const float fontScale = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, (float)params.size);
+			vertexList.clear();
 
 			auto word_wrap = [&] {
-				start_new_word = true;
-				if (last_word_begin > 0 && params.h_wrap >= 0 && pos >= params.h_wrap - 1)
+				status.start_new_word = true;
+				if (status.last_word_begin > 0 && params.h_wrap >= 0 && status.cursor.position.x >= params.h_wrap - 1)
 				{
 					// Word ended and wrap detected, push down last word by one line:
-					float word_offset = vertexList[last_word_begin].pos.x;
-					for (size_t i = last_word_begin; i < quadCount * 4; ++i)
+					float word_offset = vertexList[status.last_word_begin].pos.x + WHITESPACE_SIZE;
+					for (size_t i = status.last_word_begin; i < status.quadCount * 4; ++i)
 					{
 						vertexList[i].pos.x -= word_offset;
 						vertexList[i].pos.y += LINEBREAK_SIZE;
 					}
-					line += LINEBREAK_SIZE;
-					pos -= word_offset;
+					status.cursor.position.x -= word_offset;
+					status.cursor.position.y += LINEBREAK_SIZE;
 				}
 			};
 
-			int code_prev = 0;
-			size_t i = 0;
-			while (text[i] != 0)
+			status.cursor.size.y = status.cursor.position.y + LINEBREAK_SIZE;
+			for (size_t i = 0; i < text_length; ++i)
 			{
-				T character = text[i++];
+				T character = text[i];
 				int code = (int)character;
 				const int32_t hash = glyphhash(code, params.style, params.size);
 
 				if (glyph_lookup.count(hash) == 0)
 				{
 					// glyph not packed yet, so add to pending list:
-					glyphLock.lock();
+					std::scoped_lock locker(glyphLock);
 					pendingGlyphs.insert(hash);
-					glyphLock.unlock();
 					continue;
 				}
 
 				if (code == '\n')
 				{
 					word_wrap();
-					line += LINEBREAK_SIZE;
-					pos = 0;
-					code_prev = 0;
+					status.cursor.position.x = 0;
+					status.cursor.position.y += LINEBREAK_SIZE;
 				}
 				else if (code == ' ')
 				{
 					word_wrap();
-					pos += WHITESPACE_SIZE;
-					code_prev = 0;
+					status.cursor.position.x += WHITESPACE_SIZE;
 				}
 				else if (code == '\t')
 				{
 					word_wrap();
-					pos += TAB_SIZE;
-					code_prev = 0;
+					status.cursor.position.x += TAB_SIZE;
 				}
 				else
 				{
@@ -171,24 +186,19 @@ namespace wi::font
 					const float glyphOffsetX = glyph.x * params.scaling;
 					const float glyphOffsetY = glyph.y * params.scaling;
 
-					const size_t vertexID = size_t(quadCount) * 4;
+					const size_t vertexID = size_t(status.quadCount) * 4;
+					vertexList.resize(vertexID + 4);
+					status.quadCount++;
 
-					if (start_new_word)
+					if (status.start_new_word)
 					{
-						last_word_begin = vertexID;
+						status.last_word_begin = vertexID;
 					}
-					start_new_word = false;
+					status.start_new_word = false;
 
-					if (code_prev != 0)
-					{
-						int kern = stbtt_GetCodepointKernAdvance(&fontStyle.fontInfo, code_prev, code);
-						pos += kern * fontScale;
-					}
-					code_prev = code;
-
-					const float left = pos + glyphOffsetX;
+					const float left = status.cursor.position.x + glyphOffsetX;
 					const float right = left + glyphWidth;
-					const float top = line + glyphOffsetY;
+					const float top = status.cursor.position.y + glyphOffsetY;
 					const float bottom = top + glyphHeight;
 
 					vertexList[vertexID + 0].pos = float2(left, top);
@@ -201,17 +211,31 @@ namespace wi::font
 					vertexList[vertexID + 2].uv = float2(glyph.tc_left, glyph.tc_bottom);
 					vertexList[vertexID + 3].uv = float2(glyph.tc_right, glyph.tc_bottom);
 
-					pos += glyph.width * params.scaling + params.spacingX;
-					pos_last_letter = pos;
+					int advance, lsb;
+					stbtt_GetCodepointHMetrics(&fontStyle.fontInfo, code, &advance, &lsb);
+					status.cursor.position.x += advance * fontScale * params.scaling;
 
-					quadCount++;
+					status.cursor.position.x += params.spacingX;
+
+					if (text_length > 1 && i < text_length - 1 && text[i + 1])
+					{
+						int code_next = (int)text[i + 1];
+						int kern = stbtt_GetCodepointKernAdvance(&fontStyle.fontInfo, code, code_next);
+						status.cursor.position.x += kern * fontScale;
+					}
 				}
 
+				status.cursor.size.x = std::max(status.cursor.size.x, status.cursor.position.x);
+				status.cursor.size.y = std::max(status.cursor.size.y, status.cursor.position.y + LINEBREAK_SIZE);
 			}
 
 			word_wrap();
 
-			return quadCount;
+			return status;
+		}
+		void CommitText(void* vertexList_GPU)
+		{
+			std::memcpy(vertexList_GPU, vertexList.data(), sizeof(FontVertex) * vertexList.size());
 		}
 
 	}
@@ -278,49 +302,38 @@ namespace wi::font
 		wi::backlog::post("wi::font Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
-	void UpdatePendingGlyphs()
+	void UpdateAtlas()
 	{
-		glyphLock.lock();
+		std::scoped_lock locker(glyphLock);
 
 		// If there are pending glyphs, render them and repack the atlas:
 		if (!pendingGlyphs.empty())
 		{
-			// Pad the glyph rects in the atlas to avoid bleeding from nearby texels:
-			const int borderPadding = 1;
-
-			// Font resolution is upscaled to make it sharper:
-			const float upscaling = 2.0f;
-
 			for (int32_t hash : pendingGlyphs)
 			{
 				const int code = codefromhash(hash);
 				const int style = stylefromhash(hash);
-				const float height = (float)heightfromhash(hash) * upscaling;
+				const float height = (float)heightfromhash(hash);
 				FontStyle& fontStyle = fontStyles[style];
 
 				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
 
-				// get bounding box for character (may be offset to account for chars that dip above or below the line
-				int left, top, right, bottom;
-				stbtt_GetCodepointBitmapBox(&fontStyle.fontInfo, code, fontScaling, fontScaling, &left, &top, &right, &bottom);
+				SDF& sdf = sdf_lookup[hash];
+				sdf.width = 0;
+				sdf.height = 0;
+				sdf.xoff = 0;
+				sdf.yoff = 0;
+				unsigned char* bitmap = stbtt_GetCodepointSDF(&fontStyle.fontInfo, fontScaling, code, sdf.padding, sdf.onedge_value, sdf.pixel_dist_scale, &sdf.width, &sdf.height, &sdf.xoff, &sdf.yoff);
+				sdf.bitmap.resize(sdf.width * sdf.height);
+				std::memcpy(sdf.bitmap.data(), bitmap, sdf.bitmap.size());
+				stbtt_FreeSDF(bitmap, nullptr);
+				rect_lookup[hash] = rect_xywh(0, 0, sdf.width, sdf.height);
 
-				// Glyph dimensions are calculated without padding:
 				Glyph& glyph = glyph_lookup[hash];
-				glyph.x = float(left);
-				glyph.y = float(top) + float(fontStyle.ascent) * fontScaling;
-				glyph.width = float(right - left);
-				glyph.height = float(bottom - top);
-
-				// Remove dpi upscaling:
-				glyph.x = glyph.x / upscaling;
-				glyph.y = glyph.y / upscaling;
-				glyph.width = glyph.width / upscaling;
-				glyph.height = glyph.height / upscaling;
-
-				// Add padding to the rectangle that will be packed in the atlas:
-				right += borderPadding * 2;
-				bottom += borderPadding * 2;
-				rect_lookup[hash] = rect_ltrb(left, top, right, bottom);
+				glyph.x = float(sdf.xoff);
+				glyph.y = float(sdf.yoff) + float(fontStyle.ascent) * fontScaling;
+				glyph.width = float(sdf.width);
+				glyph.height = float(sdf.height);
 			}
 			pendingGlyphs.clear();
 
@@ -354,22 +367,18 @@ namespace wi::font
 					const int32_t hash = it.first;
 					const wchar_t code = codefromhash(hash);
 					const int style = stylefromhash(hash);
-					const float height = (float)heightfromhash(hash) * upscaling;
+					const float height = (float)heightfromhash(hash);
 					const FontStyle& fontStyle = fontStyles[style];
 					rect_xywh& rect = it.second;
 					Glyph& glyph = glyph_lookup[hash];
+					SDF& sdf = sdf_lookup[hash];
 
-					// Remove border padding from the packed rectangle (we don't want to touch the border, it should stay transparent):
-					rect.x += borderPadding;
-					rect.y += borderPadding;
-					rect.w -= borderPadding * 2;
-					rect.h -= borderPadding * 2;
-
-					float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
-
-					// Render the glyph inside the CPU-side atlas:
-					int byteOffset = rect.x + (rect.y * bitmapWidth);
-					stbtt_MakeCodepointBitmap(&fontStyle.fontInfo, bitmap.data() + byteOffset, rect.w, rect.h, bitmapWidth, fontScaling, fontScaling, code);
+					for (int row = 0; row < sdf.height; ++row)
+					{
+						uint8_t* dst = bitmap.data() + rect.x + (rect.y + row) * bitmapWidth;
+						uint8_t* src = sdf.bitmap.data() + row * sdf.width;
+						std::memcpy(dst, src, sdf.width);
+					}
 
 					// Compute texture coordinates for the glyph:
 					glyph.tc_left = float(rect.x);
@@ -388,7 +397,6 @@ namespace wi::font
 			}
 		}
 
-		glyphLock.unlock();
 	}
 	const Texture* GetAtlas()
 	{
@@ -423,118 +431,43 @@ namespace wi::font
 		return int(fontStyles.size() - 1);
 	}
 
-
 	template<typename T>
-	float TextWidth_internal(const T* text, const Params& params)
-	{
-		if (params.style >= (int)fontStyles.size())
-		{
-			return 0;
-		}
-
-		// TODO: account for word wrap
-		float maxWidth = 0;
-		float currentLineWidth = 0;
-		size_t i = 0;
-		while (text[i] != 0)
-		{
-			int code = (int)text[i++];
-			const int32_t hash = glyphhash(code, params.style, params.size);
-
-			if (glyph_lookup.count(hash) == 0)
-			{
-				// glyph not packed yet, we just continue (it will be added if it is actually rendered)
-				continue;
-			}
-
-			if (code == '\n')
-			{
-				currentLineWidth = 0;
-			}
-			else if (code == ' ')
-			{
-				currentLineWidth += WHITESPACE_SIZE;
-			}
-			else if (code == '\t')
-			{
-				currentLineWidth += TAB_SIZE;
-			}
-			else
-			{
-				const Glyph& glyph = glyph_lookup.at(hash);
-				currentLineWidth += glyph.width + float(params.spacingX) * params.scaling;
-			}
-			maxWidth = std::max(maxWidth, currentLineWidth);
-		}
-
-		return maxWidth;
-	}
-
-	template<typename T>
-	float TextHeight_internal(const T* text, const Params& params)
-	{
-		if (params.style >= (int)fontStyles.size())
-		{
-			return 0;
-		}
-
-		// TODO: account for word wrap
-		float height = LINEBREAK_SIZE;
-		size_t i = 0;
-		while (text[i] != 0)
-		{
-			int code = (int)text[i++];
-			if (code == '\n')
-			{
-				height += LINEBREAK_SIZE;
-			}
-		}
-
-		return height;
-	}
-
-	template<typename T>
-	void Draw_internal(const T* text, size_t text_length, const Params& params, CommandList cmd)
+	Cursor Draw_internal(const T* text, size_t text_length, const Params& params_in, CommandList cmd)
 	{
 		if (text_length <= 0)
 		{
-			return;
+			return Cursor();
 		}
+		ParseStatus status = ParseText(text, text_length, params_in);
 
-		Params newProps = params;
-
+		Params params = params_in;
 		if (params.h_align == WIFALIGN_CENTER)
-			newProps.posX -= TextWidth_internal(text, newProps) / 2;
+			params.posX -= status.cursor.size.x / 2;
 		else if (params.h_align == WIFALIGN_RIGHT)
-			newProps.posX -= TextWidth_internal(text, newProps);
+			params.posX -= status.cursor.size.x;
 		if (params.v_align == WIFALIGN_CENTER)
-			newProps.posY -= TextHeight_internal(text, newProps) / 2;
+			params.posY -= status.cursor.size.y / 2;
 		else if (params.v_align == WIFALIGN_BOTTOM)
-			newProps.posY -= TextHeight_internal(text, newProps);
+			params.posY -= status.cursor.size.y;
 
-		GraphicsDevice* device = wi::graphics::GetDevice();
-
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * text_length * 4, cmd);
-		if (!mem.IsValid())
+		if (status.quadCount > 0)
 		{
-			return;
-		}
-		static thread_local wi::vector<FontVertex> textbuffer;
-		textbuffer.resize(text_length * 4);
-		const uint32_t quadCount = WriteVertices(textbuffer.data(), text, newProps);
-		std::memcpy(mem.data, textbuffer.data(), textbuffer.size() * sizeof(FontVertex)); // only allow writes into mapped GPU buffer memory to avoid uncached read by mistake
+			GraphicsDevice* device = wi::graphics::GetDevice();
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * status.quadCount * 4, cmd);
+			if (!mem.IsValid())
+			{
+				return status.cursor;
+			}
+			CommitText(mem.data);
 
-		if (quadCount > 0)
-		{
 			device->EventBegin("Font", cmd);
 
 			device->BindPipelineState(&PSO, cmd);
 
 			FontConstants font;
-			FontPushConstants font_push;
-			font_push.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
-			font_push.buffer_offset = (uint32_t)mem.offset;
-			font_push.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
+			font.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+			font.buffer_offset = (uint32_t)mem.offset;
+			font.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
 
 			// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
 			//	The canvas must be set to have dpi aware rendering
@@ -543,37 +476,37 @@ namespace wi::font
 			assert(canvas.dpi > 0);
 			const XMMATRIX Projection = canvas.GetProjection();
 
-			if (newProps.shadowColor.getA() > 0)
+			if (params.shadowColor.getA() > 0)
 			{
 				// font shadow render:
 				XMStoreFloat4x4(&font.transform,
-					XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
+					XMMatrixTranslation((float)params.posX + params.shadow_offset_x, (float)params.posY + params.shadow_offset_y, 0)
 					* Projection
 				);
+				font.color = params.shadowColor.rgba;
+				font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, params.shadow_bolden));
+				font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, params.shadow_softness));
 				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
-				font_push.color = newProps.shadowColor.rgba;
-				device->PushConstants(&font_push, sizeof(font_push), cmd);
-
-				device->DrawInstanced(4, quadCount, 0, 0, cmd);
+				device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
 			}
 
 			// font base render:
 			XMStoreFloat4x4(&font.transform,
-				XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
+				XMMatrixTranslation((float)params.posX, (float)params.posY, 0)
 				* Projection
 			);
+			font.color = params.color.rgba;
+			font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, params.bolden));
+			font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, params.softness));
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
-			font_push.color = newProps.color.rgba;
-			device->PushConstants(&font_push, sizeof(font_push), cmd);
-
-			device->DrawInstanced(4, quadCount, 0, 0, cmd);
+			device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
 
 			device->EventEnd(cmd);
 		}
 
-		UpdatePendingGlyphs();
+		return status.cursor;
 	}
 
 	void SetCanvas(const wi::Canvas& current_canvas)
@@ -581,65 +514,130 @@ namespace wi::font
 		canvas = current_canvas;
 	}
 
-	void Draw(const char* text, const Params& params, CommandList cmd)
+	Cursor Draw(const char* text, size_t text_length, const Params& params, CommandList cmd)
+	{
+		return Draw_internal(text, text_length, params, cmd);
+	}
+	Cursor Draw(const wchar_t* text, size_t text_length, const Params& params, CommandList cmd)
+	{
+		return Draw_internal(text, text_length, params, cmd);
+	}
+	Cursor Draw(const char* text, const Params& params, CommandList cmd)
+	{
+		return Draw_internal(text, strlen(text), params, cmd);
+	}
+	Cursor Draw(const wchar_t* text, const Params& params, CommandList cmd)
+	{
+		return Draw_internal(text, wcslen(text), params, cmd);
+	}
+	Cursor Draw(const std::string& text, const Params& params, CommandList cmd)
+	{
+		return Draw_internal(text.c_str(), text.length(), params, cmd);
+	}
+	Cursor Draw(const std::wstring& text, const Params& params, CommandList cmd)
+	{
+		return Draw_internal(text.c_str(), text.length(), params, cmd);
+	}
+
+	XMFLOAT2 TextSize(const char* text, size_t text_length, const Params& params)
+	{
+		if (text_length == 0)
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text, text_length, params).cursor.size;
+	}
+	XMFLOAT2 TextSize(const wchar_t* text, size_t text_length, const Params& params)
+	{
+		if (text_length == 0)
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text, text_length, params).cursor.size;
+	}
+	XMFLOAT2 TextSize(const char* text, const Params& params)
 	{
 		size_t text_length = strlen(text);
 		if (text_length == 0)
 		{
-			return;
+			return XMFLOAT2(0, 0);
 		}
-		Draw_internal(text, text_length, params, cmd);
+		return ParseText(text, text_length, params).cursor.size;
 	}
-	void Draw(const wchar_t* text, const Params& params, CommandList cmd)
+	XMFLOAT2 TextSize(const wchar_t* text, const Params& params)
 	{
 		size_t text_length = wcslen(text);
 		if (text_length == 0)
 		{
-			return;
+			return XMFLOAT2(0, 0);
 		}
-		Draw_internal(text, text_length, params, cmd);
+		return ParseText(text, text_length, params).cursor.size;
 	}
-	void Draw(const std::string& text, const Params& params, CommandList cmd)
+	XMFLOAT2 TextSize(const std::string& text, const Params& params)
 	{
-		Draw_internal(text.c_str(), text.length(), params, cmd);
+		if (text.empty())
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text.c_str(), text.length(), params).cursor.size;
 	}
-	void Draw(const std::wstring& text, const Params& params, CommandList cmd)
+	XMFLOAT2 TextSize(const std::wstring& text, const Params& params)
 	{
-		Draw_internal(text.c_str(), text.length(), params, cmd);
+		if (text.empty())
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text.c_str(), text.length(), params).cursor.size;
 	}
 
+	float TextWidth(const char* text, size_t text_length, const Params& params)
+	{
+		return TextSize(text, text_length, params).x;
+	}
+	float TextWidth(const wchar_t* text, size_t text_length, const Params& params)
+	{
+		return TextSize(text, text_length, params).x;
+	}
 	float TextWidth(const char* text, const Params& params)
 	{
-		return TextWidth_internal(text, params);
+		return TextSize(text, params).x;
 	}
 	float TextWidth(const wchar_t* text, const Params& params)
 	{
-		return TextWidth_internal(text, params);
+		return TextSize(text, params).x;
 	}
 	float TextWidth(const std::string& text, const Params& params)
 	{
-		return TextWidth_internal(text.c_str(), params);
+		return TextSize(text, params).x;
 	}
 	float TextWidth(const std::wstring& text, const Params& params)
 	{
-		return TextWidth_internal(text.c_str(), params);
+		return TextSize(text, params).x;
 	}
 
+	float TextHeight(const char* text, size_t text_length, const Params& params)
+	{
+		return TextSize(text, text_length, params).y;
+	}
+	float TextHeight(const wchar_t* text, size_t text_length, const Params& params)
+	{
+		return TextSize(text, text_length, params).y;
+	}
 	float TextHeight(const char* text, const Params& params)
 	{
-		return TextHeight_internal(text, params);
+		return TextSize(text, params).y;
 	}
 	float TextHeight(const wchar_t* text, const Params& params)
 	{
-		return TextHeight_internal(text, params);
+		return TextSize(text, params).y;
 	}
 	float TextHeight(const std::string& text, const Params& params)
 	{
-		return TextHeight_internal(text.c_str(), params);
+		return TextSize(text, params).y;
 	}
 	float TextHeight(const std::wstring& text, const Params& params)
 	{
-		return TextHeight_internal(text.c_str(), params);
+		return TextSize(text, params).y;
 	}
 
 }

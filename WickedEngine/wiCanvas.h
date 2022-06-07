@@ -37,6 +37,10 @@ namespace wi
 		inline float GetDPI() const { return dpi * scaling; }
 		// The scaling factor between logical and physical coordinates
 		inline float GetDPIScaling() const { return GetDPI() / 96.f; }
+		// Convert from logical to physical coordinates
+		inline uint32_t LogicalToPhysical(float logical) const { return uint32_t(logical * GetDPIScaling()); }
+		// Convert from physical to logical coordinates
+		inline float PhysicalToLogical(uint32_t physical) const { return float(physical) / GetDPIScaling(); }
 		// Returns native resolution width in pixels:
 		//	Use this for texture allocations
 		//	Use this for scissor, viewport
@@ -47,10 +51,10 @@ namespace wi
 		inline uint32_t GetPhysicalHeight() const { return height; }
 		// Returns the width with DPI scaling applied (subpixel size):
 		//	Use this for logic and positioning drawable elements
-		inline float GetLogicalWidth() const { return GetPhysicalWidth() / GetDPIScaling(); }
+		inline float GetLogicalWidth() const { return PhysicalToLogical(GetPhysicalWidth()); }
 		// Returns the height with DPI scaling applied (subpixel size):
 		//	Use this for logic and positioning drawable elements
-		inline float GetLogicalHeight() const { return GetPhysicalHeight() / GetDPIScaling(); }
+		inline float GetLogicalHeight() const { return PhysicalToLogical(GetPhysicalHeight()); }
 		// Returns projection matrix that maps logical to physical space
 		//	Use this to render to a graphics viewport
 		inline XMMATRIX GetProjection() const

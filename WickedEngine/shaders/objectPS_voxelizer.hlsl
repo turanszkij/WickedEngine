@@ -135,7 +135,7 @@ void main(PSInput input)
 
 								[branch]
 								if (light.IsCastingShadow() >= 0) {
-									lightColor *= shadow_cube(light, L, Lunnormalized);
+									lightColor *= shadow_cube(light, Lunnormalized);
 								}
 
 								lighting.direct.diffuse += lightColor;

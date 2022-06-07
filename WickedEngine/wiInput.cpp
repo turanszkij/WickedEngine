@@ -107,9 +107,6 @@ namespace wi::input
 		wi::input::rawinput::Update();
 		wi::input::sdlinput::Update();
 
-		mouse.delta_wheel = 0;
-		mouse.delta_position = XMFLOAT2(0, 0);
-
 #ifdef _WIN32
 		wi::input::rawinput::GetMouseState(&mouse); // currently only the relative data can be used from this
 		wi::input::rawinput::GetKeyboardState(&keyboard); 
@@ -364,9 +361,14 @@ namespace wi::input
 			}
 		}
 
-		touches.clear();
-
 		wi::profiler::EndRange(range);
+	}
+
+	void ClearForNextFrame()
+	{
+		mouse.delta_wheel = 0;
+		mouse.delta_position = XMFLOAT2(0, 0);
+		touches.clear();
 	}
 
 	bool Down(BUTTON button, int playerindex)

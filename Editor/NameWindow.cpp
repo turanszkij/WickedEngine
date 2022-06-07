@@ -19,7 +19,7 @@ void NameWindow::Create(EditorComponent* editor)
 
 	nameInput.Create("");
 	nameInput.SetDescription("Name: ");
-	nameInput.SetPos(XMFLOAT2(x, y += step));
+	nameInput.SetPos(XMFLOAT2(x, y));
 	nameInput.SetSize(XMFLOAT2(siz, hei));
 	nameInput.OnInputAccepted([=](wi::gui::EventArgs args) {
 		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);

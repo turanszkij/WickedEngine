@@ -12,14 +12,14 @@ void WeatherWindow::Create(EditorComponent* editor)
 	SetSize(XMFLOAT2(660, 680));
 
 	float x = 180;
-	float y = 20;
+	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
 
 
 	heightFogCheckBox.Create("Height fog: ");
 	heightFogCheckBox.SetSize(XMFLOAT2(hei, hei));
-	heightFogCheckBox.SetPos(XMFLOAT2(x + 100, y += step));
+	heightFogCheckBox.SetPos(XMFLOAT2(x + 100, y));
 	heightFogCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 		weather.SetHeightFog(args.bValue);
@@ -396,11 +396,11 @@ void WeatherWindow::Create(EditorComponent* editor)
 
 
 	x = 340;
-	y = 20;
+	y = 0;
 
 	colorComboBox.Create("Color picker mode: ");
 	colorComboBox.SetSize(XMFLOAT2(120, hei));
-	colorComboBox.SetPos(XMFLOAT2(x + 150, y += step));
+	colorComboBox.SetPos(XMFLOAT2(x + 150, y));
 	colorComboBox.AddItem("Ambient color");
 	colorComboBox.AddItem("Horizon color");
 	colorComboBox.AddItem("Zenith color");

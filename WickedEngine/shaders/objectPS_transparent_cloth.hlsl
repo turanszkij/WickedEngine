@@ -3,6 +3,6 @@
 #define SHADOW_MASK_ENABLED
 #define TILEDFORWARD
 #define TRANSPARENT
-#define BRDF_SHEEN
+#define SHEEN
 #include "objectHF.hlsli"
 

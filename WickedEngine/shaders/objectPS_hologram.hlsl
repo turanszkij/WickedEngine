@@ -17,7 +17,7 @@ float4 main(PixelInput input) : SV_TARGET
 	{
 		color = 1;
 	}
-	color *= input.color;
+	color *= GetMaterial().baseColor * input.color;
 
 	float3 emissiveColor = GetMaterial().GetEmissive();
 	[branch]

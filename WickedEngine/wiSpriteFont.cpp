@@ -15,15 +15,36 @@ namespace wi
 	{
 		if (IsDisableUpdate())
 			return;
+
+		if (anim.typewriter.time > 0)
+		{
+			anim.typewriter.elapsed += dt;
+			if (anim.typewriter.looped && anim.typewriter.elapsed > anim.typewriter.time)
+			{
+				anim.typewriter.reset();
+			}
+		}
 	}
 
 	void SpriteFont::Draw(CommandList cmd) const
 	{
 		if (IsHidden())
 			return;
-		wi::font::Draw(text, params, cmd);
+
+		size_t text_length = text.length();
+
+		if (anim.typewriter.time > 0)
+		{
+			text_length = std::min(text_length, size_t(wi::math::Lerp(float(std::min(text_length, anim.typewriter.character_start)), float(text_length + 1), anim.typewriter.elapsed / anim.typewriter.time)));
+		}
+
+		wi::font::Draw(text.c_str(), text_length, params, cmd);
 	}
 
+	XMFLOAT2 SpriteFont::TextSize() const
+	{
+		return wi::font::TextSize(text, params);
+	}
 	float SpriteFont::TextWidth() const
 	{
 		return wi::font::TextWidth(text, params);

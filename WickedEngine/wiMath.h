@@ -154,9 +154,31 @@ namespace wi::math
 	}
 	constexpr float Clamp(float val, float min, float max)
 	{
-		if (val < min) return min;
-		else if (val > max) return max;
-		return val;
+		return std::min(max, std::max(min, val));
+	}
+	constexpr XMFLOAT2 Clamp(XMFLOAT2 val, XMFLOAT2 min, XMFLOAT2 max)
+	{
+		XMFLOAT2 retval = val;
+		retval.x = Clamp(retval.x, min.x, max.x);
+		retval.y = Clamp(retval.y, min.y, max.y);
+		return retval;
+	}
+	constexpr XMFLOAT3 Clamp(XMFLOAT3 val, XMFLOAT3 min, XMFLOAT3 max)
+	{
+		XMFLOAT3 retval = val;
+		retval.x = Clamp(retval.x, min.x, max.x);
+		retval.y = Clamp(retval.y, min.y, max.y);
+		retval.z = Clamp(retval.z, min.z, max.z);
+		return retval;
+	}
+	constexpr XMFLOAT4 Clamp(XMFLOAT4 val, XMFLOAT4 min, XMFLOAT4 max)
+	{
+		XMFLOAT4 retval = val;
+		retval.x = Clamp(retval.x, min.x, max.x);
+		retval.y = Clamp(retval.y, min.y, max.y);
+		retval.z = Clamp(retval.z, min.z, max.z);
+		retval.w = Clamp(retval.w, min.w, max.w);
+		return retval;
 	}
 	constexpr float SmoothStep(float value1, float value2, float amount)
 	{
@@ -165,6 +187,9 @@ namespace wi::math
 	}
 	constexpr bool Collision2D(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Siz, const XMFLOAT2& hitBox2Pos, const XMFLOAT2& hitBox2Siz)
 	{
+		if (hitBox1Siz.x <= 0 || hitBox1Siz.y <= 0 || hitBox2Siz.x <= 0 || hitBox2Siz.y <= 0)
+			return false;
+
 		if (hitBox1Pos.x + hitBox1Siz.x < hitBox2Pos.x)
 			return false;
 		else if (hitBox1Pos.x > hitBox2Pos.x + hitBox2Siz.x)

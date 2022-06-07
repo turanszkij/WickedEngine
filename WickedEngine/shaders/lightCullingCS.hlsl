@@ -17,8 +17,6 @@ RWTexture2D<unorm float4> DebugTexture : register(u3);
 // Group shared variables.
 groupshared uint uMinDepth;
 groupshared uint uMaxDepth;
-groupshared AABB GroupAABB;			// frustum AABB around min-max depth in View Space
-groupshared AABB GroupAABB_WS;		// frustum AABB in world space
 groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 groupshared uint tile_opaque[SHADER_ENTITY_TILE_BUCKET_COUNT];
 groupshared uint tile_transparent[SHADER_ENTITY_TILE_BUCKET_COUNT];
@@ -96,11 +94,10 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	// Compute addresses and load frustum:
 	const uint flatTileIndex = flatten2D(Gid.xy, GetCamera().entity_culling_tilecount.xy);
 	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
-	const uint bucketIndex = groupIndex;
 	Frustum GroupFrustum = in_Frustums[flatTileIndex];
 
 	// Each thread will zero out one bucket in the LDS:
-	for (i = bucketIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		tile_opaque[i] = 0;
 		tile_transparent[i] = 0;
@@ -135,8 +132,13 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 	GroupMemoryBarrierWithGroupSync();
 
-	InterlockedMin(uMinDepth, asuint(depthMinUnrolled));
-	InterlockedMax(uMaxDepth, asuint(depthMaxUnrolled));
+	float wave_local_min = WaveActiveMin(depthMinUnrolled);
+	float wave_local_max = WaveActiveMax(depthMaxUnrolled);
+	if (WaveIsFirstLane())
+	{
+		InterlockedMin(uMinDepth, asuint(wave_local_min));
+		InterlockedMax(uMaxDepth, asuint(wave_local_max));
+	}
 
 	GroupMemoryBarrierWithGroupSync();
 
@@ -144,7 +146,10 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	float fMinDepth = asfloat(uMaxDepth);
 	float fMaxDepth = asfloat(uMinDepth);
 
-	if (groupIndex == 0)
+	// Note: the following will be SGPR
+	AABB GroupAABB;			// frustum AABB around min-max depth in View Space
+	AABB GroupAABB_WS;		// frustum AABB in world space
+	if(WaveIsFirstLane())
 	{
 		// I construct an AABB around the minmax depth bounds to perform tighter culling:
 		// The frustum is asymmetric so we must consider all corners!
@@ -184,6 +189,10 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		GroupAABB_WS = GroupAABB;
 		AABBtransform(GroupAABB_WS, GetCamera().inverse_view);
 	}
+	GroupAABB.c = WaveReadLaneFirst(GroupAABB.c);
+	GroupAABB.e = WaveReadLaneFirst(GroupAABB.e);
+	GroupAABB_WS.c = WaveReadLaneFirst(GroupAABB_WS.c);
+	GroupAABB_WS.e = WaveReadLaneFirst(GroupAABB_WS.e);
 
 	// Convert depth values to view space.
 	float minDepthVS = ScreenToView(float4(0, 0, fMinDepth, 1), dim_rcp).z;
@@ -204,10 +213,17 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		const uint __depthmaskcellindex = max(0, min(31, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
 		__depthmaskUnrolled |= 1u << __depthmaskcellindex;
 	}
-	InterlockedOr(uDepthMask, __depthmaskUnrolled);
+
+	uint wave_depth_mask = WaveActiveBitOr(__depthmaskUnrolled);
+	if (WaveIsFirstLane())
+	{
+		InterlockedOr(uDepthMask, wave_depth_mask);
+	}
 #endif
 
 	GroupMemoryBarrierWithGroupSync();
+
+	const uint depth_mask = uDepthMask; // take out from groupshared into register
 
 	// Each thread will cull one entity until all entities have been culled:
 	for (i = groupIndex; i < entityCount; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
@@ -232,7 +248,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
 				{
 #ifdef ADVANCED_CULLING
-					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+					if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
 						AppendEntity_Opaque(i);
@@ -255,7 +271,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
 				{
 #ifdef ADVANCED_CULLING
-					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+					if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
 						AppendEntity_Opaque(i);
@@ -292,7 +308,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 				if (IntersectAABB(a, b))
 				{
 #ifdef ADVANCED_CULLING
-					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+					if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
 						AppendEntity_Opaque(i);
@@ -307,7 +323,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	GroupMemoryBarrierWithGroupSync();
 
 	// Each thread will export one bucket from LDS to global memory:
-	for (i = bucketIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		EntityTiles_Opaque.Store((tileBucketsAddress + i) * sizeof(uint), tile_opaque[i]);
 		EntityTiles_Transparent.Store((tileBucketsAddress + i) * sizeof(uint), tile_transparent[i]);

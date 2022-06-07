@@ -5,6 +5,7 @@
 #include "wiUnorderedMap.h"
 
 #include "Utility/stb_image.h"
+#include "Utility/qoi.h"
 #include "Utility/tinyddsloader.h"
 #include "Utility/basis_universal/transcoder/basisu_transcoder.h"
 extern basist::etc1_global_selector_codebook g_basis_global_codebook;
@@ -106,6 +107,7 @@ namespace wi
 			std::make_pair("BMP", DataType::IMAGE),
 			std::make_pair("DDS", DataType::IMAGE),
 			std::make_pair("TGA", DataType::IMAGE),
+			std::make_pair("QOI", DataType::IMAGE),
 			std::make_pair("WAV", DataType::SOUND),
 			std::make_pair("OGG", DataType::SOUND),
 		};
@@ -515,11 +517,22 @@ namespace wi
 				}
 				else
 				{
-					// png, tga, jpg, etc. loader:
+					// qoi, png, tga, jpg, etc. loader:
 
 					const int channelCount = 4;
-					int width, height, bpp;
-					unsigned char* rgb = stbi_load_from_memory(filedata, (int)filesize, &width, &height, &bpp, channelCount);
+					int height, width, bpp; // stb_image
+					qoi_desc desc;
+					
+					void* rgb;
+					if (!ext.compare("QOI"))
+					{
+						rgb = qoi_decode(filedata, (int)filesize, &desc, channelCount);
+						// redefine width, height to avoid further conditionals
+						height = desc.height;
+						width = desc.width;
+					}
+					else
+						rgb = stbi_load_from_memory(filedata, (int)filesize, &width, &height, &bpp, channelCount);
 
 					if (rgb != nullptr)
 					{
@@ -596,7 +609,7 @@ namespace wi
 							}
 						}
 					}
-					stbi_image_free(rgb);
+					free(rgb);
 				}
 			}
 			break;

@@ -13,12 +13,12 @@ void SoundWindow::Create(EditorComponent* editor)
 	SetSize(XMFLOAT2(440, 220));
 
 	float x = 20;
-	float y = 10;
+	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
 
 	reverbComboBox.Create("Reverb: ");
-	reverbComboBox.SetPos(XMFLOAT2(x + 80, y += step));
+	reverbComboBox.SetPos(XMFLOAT2(x + 80, y));
 	reverbComboBox.SetSize(XMFLOAT2(180, hei));
 	reverbComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		wi::audio::SetReverb((wi::audio::REVERB_PRESET)args.iValue);

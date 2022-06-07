@@ -54,6 +54,7 @@ namespace wi::graphics
 		VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytracing_properties = {};
 		VkPhysicalDeviceFragmentShadingRatePropertiesKHR fragment_shading_rate_properties = {};
 		VkPhysicalDeviceMeshShaderPropertiesNV mesh_shader_properties = {};
+		VkPhysicalDeviceMemoryProperties2 memory_properties_2 = {};
 
 		VkPhysicalDeviceFeatures2 features2 = {};
 		VkPhysicalDeviceVulkan11Features features_1_1 = {};
@@ -338,6 +339,22 @@ namespace wi::graphics
 				alignment = std::max(alignment, properties2.properties.limits.minTexelBufferOffsetAlignment);
 			}
 			return alignment;
+		}
+
+		MemoryUsage GetMemoryUsage() const override
+		{
+			MemoryUsage retval;
+			VmaBudget budgets[VK_MAX_MEMORY_HEAPS] = {};
+			vmaGetHeapBudgets(allocationhandler->allocator, budgets);
+			for (uint32_t i = 0; i < memory_properties_2.memoryProperties.memoryHeapCount; ++i)
+			{
+				if (memory_properties_2.memoryProperties.memoryHeaps[i].flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+				{
+					retval.budget += budgets[i].budget;
+					retval.usage += budgets[i].usage;
+				}
+			}
+			return retval;
 		}
 
 		///////////////Thread-sensitive////////////////////////

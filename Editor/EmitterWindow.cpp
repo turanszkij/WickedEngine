@@ -10,16 +10,16 @@ using namespace wi::scene;
 void EmitterWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Emitter Window");
-	SetSize(XMFLOAT2(680, 720));
+	SetSize(XMFLOAT2(680, 420));
 
 	float x = 200;
-	float y = 5;
+	float y = 0;
 	float itemheight = 18;
 	float step = itemheight + 2;
 
 
 	emitterNameField.Create("EmitterName");
-	emitterNameField.SetPos(XMFLOAT2(x, y += step));
+	emitterNameField.SetPos(XMFLOAT2(x, y));
 	emitterNameField.SetSize(XMFLOAT2(300, itemheight));
 	emitterNameField.OnInputAccepted([=](wi::gui::EventArgs args) {
 		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);

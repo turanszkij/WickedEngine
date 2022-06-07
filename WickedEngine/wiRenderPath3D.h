@@ -5,8 +5,6 @@
 #include "wiResourceManager.h"
 #include "wiScene.h"
 
-#include <memory>
-
 namespace wi
 {
 
@@ -71,9 +69,7 @@ namespace wi
 		wi::graphics::Texture rtMain_render; // can be MSAA
 		wi::graphics::Texture rtPrimitiveID;
 		wi::graphics::Texture rtPrimitiveID_render; // can be MSAA
-		wi::graphics::Texture rtVelocity; // per pixel velocity (optional)
-		wi::graphics::Texture rtNormal; // per pixel normal (optional)
-		wi::graphics::Texture rtRoughness; // per pixel roughness (optional)
+		wi::graphics::Texture rtVelocity; // optional R16G16_FLOAT
 		wi::graphics::Texture rtReflection; // contains the scene rendered for planar reflections
 		wi::graphics::Texture rtSSR; // standard screen-space reflection results
 		wi::graphics::Texture rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
@@ -129,6 +125,7 @@ namespace wi
 		wi::renderer::BloomResources bloomResources;
 		wi::renderer::SurfelGIResources surfelGIResources;
 		wi::renderer::TemporalAAResources temporalAAResources;
+		wi::renderer::VisibilityResources visibilityResources;
 
 		mutable const wi::graphics::Texture* lastPostprocessRT = &rtPostprocess;
 		// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
@@ -165,6 +162,8 @@ namespace wi
 		uint8_t instanceInclusionMask_SurfelGI = 0xFF;
 		uint8_t instanceInclusionMask_Lightmap = 0xFF;
 		uint8_t instanceInclusionMask_DDGI = 0xFF;
+
+		bool visibility_shading_in_compute = false;
 
 		const wi::graphics::Texture* GetDepthStencil() const override { return &depthBuffer_Main; }
 		const wi::graphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }

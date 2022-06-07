@@ -20,6 +20,7 @@ namespace wi::backlog
 	void Scroll(int direction);
 	void Update(const wi::Canvas& canvas, float dt = 1.0f / 60.0f);
 	void Draw(const wi::Canvas& canvas, wi::graphics::CommandList cmd);
+	void DrawOutputText(const wi::Canvas& canvas, wi::graphics::CommandList cmd);
 
 	std::string getText();
 	void clear();

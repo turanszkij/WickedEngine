@@ -12,13 +12,13 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 	SetSize(XMFLOAT2(420, 120));
 
 	float x = 150;
-	float y = 10;
+	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
 
 	addButton.Create("Add Force Field");
 	addButton.SetSize(XMFLOAT2(150, hei));
-	addButton.SetPos(XMFLOAT2(x, y += step));
+	addButton.SetPos(XMFLOAT2(x, y));
 	addButton.OnClick([=](wi::gui::EventArgs args) {
 		Entity entity = wi::scene::GetScene().Entity_CreateForce("editorForce");
 		ForceFieldComponent* force = wi::scene::GetScene().forces.GetComponent(entity);

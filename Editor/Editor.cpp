@@ -30,6 +30,7 @@ void Editor::Initialize()
 	//infoDisplay.logical_size = true;
 	infoDisplay.colorspace = true;
 	infoDisplay.heap_allocation_counter = true;
+	infoDisplay.vram_usage = true;
 
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
@@ -45,7 +46,10 @@ void Editor::Initialize()
 
 void EditorLoadingScreen::Load()
 {
-	font = wi::SpriteFont("Loading...", wi::font::Params(0, 0, 36, wi::font::WIFALIGN_CENTER, wi::font::WIFALIGN_CENTER));
+	font = wi::SpriteFont("Loading...", wi::font::Params(0, 0, 36, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_CENTER));
+	font.anim.typewriter.time = 2;
+	font.anim.typewriter.looped = true;
+	font.anim.typewriter.character_start = 7;
 	AddFont(&font);
 
 	sprite = wi::Sprite("images/logo_small.png");
@@ -61,7 +65,7 @@ void EditorLoadingScreen::Load()
 }
 void EditorLoadingScreen::Update(float dt)
 {
-	font.params.posX = GetLogicalWidth()*0.5f;
+	font.params.posX = GetLogicalWidth()*0.5f - font.TextWidth() * 0.5f;
 	font.params.posY = GetLogicalHeight()*0.5f;
 	sprite.params.pos = XMFLOAT3(GetLogicalWidth()*0.5f, GetLogicalHeight()*0.5f - font.TextHeight(), 0);
 
@@ -948,7 +952,7 @@ void EditorComponent::Load()
 		helpLabel.Create("HelpLabel");
 		helpLabel.SetText(ss);
 		helpLabel.SetVisible(false);
-		helpLabel.SetColor(wi::Color(113, 183, 214, 100), wi::gui::WIDGETSTATE::IDLE);
+		helpLabel.SetColor(wi::Color(113, 183, 214, 100));
 		GetGUI().AddWidget(&helpLabel);
 	}
 
@@ -1021,7 +1025,6 @@ void EditorComponent::Load()
 		RecordSelection(archive);
 
 		});
-	sceneGraphView.SetColor(wi::Color(100, 100, 100, 100), wi::gui::IDLE);
 	GetGUI().AddWidget(&sceneGraphView);
 
 
@@ -1506,22 +1509,31 @@ void EditorComponent::Update(float dt)
 
 						RefreshSceneGraphView();
 					}
-				}
-
-				if (scene.hairs.Contains(hovered.entity))
-				{
-					XMVECTOR P = XMLoadFloat3(&hovered.position);
-					P += XMLoadFloat3(&hovered.normal) * 2;
-					if (grass_interaction_entity == INVALID_ENTITY)
+					else
 					{
-						grass_interaction_entity = CreateEntity();
+						// Check for interactive grass (hair particle that is child of hovered object:
+						for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+						{
+							Entity entity = scene.hairs.GetEntity(i);
+							HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+							if (hier != nullptr && hier->parentID == hovered.entity)
+							{
+								XMVECTOR P = XMLoadFloat3(&hovered.position);
+								P += XMLoadFloat3(&hovered.normal) * 2;
+								if (grass_interaction_entity == INVALID_ENTITY)
+								{
+									grass_interaction_entity = CreateEntity();
+								}
+								ForceFieldComponent& force = scene.forces.Create(grass_interaction_entity);
+								TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
+								force.type = ENTITY_TYPE_FORCEFIELD_POINT;
+								force.gravity = -80;
+								force.range_local = 3;
+								transform.Translate(P);
+								break;
+							}
+						}
 					}
-					ForceFieldComponent& force = scene.forces.Create(grass_interaction_entity);
-					TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
-					force.type = ENTITY_TYPE_FORCEFIELD_POINT;
-					force.gravity = -80;
-					force.range_local = 3;
-					transform.Translate(P);
 				}
 
 			}

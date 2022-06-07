@@ -4,7 +4,7 @@
 #define OUTPUT_GBUFFER
 #define TILEDFORWARD
 #define DISABLE_ALPHATEST
-#define BRDF_SHEEN
-#define BRDF_CLEARCOAT
+#define SHEEN
+#define CLEARCOAT
 #include "objectHF.hlsli"
 

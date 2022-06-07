@@ -146,6 +146,21 @@ namespace wi::scene
 			SHADERTYPE_PBR_CLOTH_CLEARCOAT,
 			SHADERTYPE_COUNT
 		} shaderType = SHADERTYPE_PBR;
+		static_assert(SHADERTYPE_COUNT == SHADERTYPE_BIN_COUNT, "These values must match!");
+
+		inline static const wi::vector<std::string> shaderTypeDefines[] = {
+			{}, // SHADERTYPE_PBR,
+			{"PLANARREFLECTION"}, // SHADERTYPE_PBR_PLANARREFLECTION,
+			{"PARALLAXOCCLUSIONMAPPING"}, // SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING,
+			{"ANISOTROPIC"}, // SHADERTYPE_PBR_ANISOTROPIC,
+			{"WATER"}, // SHADERTYPE_WATER,
+			{"CARTOON"}, // SHADERTYPE_CARTOON,
+			{"UNLIT"}, // SHADERTYPE_UNLIT,
+			{"SHEEN"}, // SHADERTYPE_PBR_CLOTH,
+			{"CLEARCOAT"}, // SHADERTYPE_PBR_CLEARCOAT,
+			{"SHEEN", "CLEARCOAT"}, // SHADERTYPE_PBR_CLOTH_CLEARCOAT,
+		};
+		static_assert(SHADERTYPE_COUNT == arraysize(shaderTypeDefines), "These values must match!");
 
 		wi::enums::STENCILREF engineStencilRef = wi::enums::STENCILREF_DEFAULT;
 		uint8_t userStencilRef = 0;
@@ -388,6 +403,7 @@ namespace wi::scene
 		BufferView so_pre;
 		wi::vector<uint8_t> vertex_subsets;
 		uint32_t geometryOffset = 0;
+		uint32_t meshletCount = 0;
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 		enum BLAS_STATE
@@ -1335,6 +1351,10 @@ namespace wi::scene
 		ShaderMaterial* materialArrayMapped = nullptr;
 		size_t materialArraySize = 0;
 		wi::graphics::GPUBuffer materialBuffer;
+
+		// Meshlets:
+		wi::graphics::GPUBuffer meshletBuffer;
+		std::atomic<uint32_t> meshletAllocator{ 0 };
 
 		// Occlusion query state:
 		wi::graphics::GPUQueryHeap queryHeap;

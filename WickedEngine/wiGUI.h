@@ -100,7 +100,7 @@ namespace wi::gui
 		void SetImage(wi::Resource textureResource, WIDGETSTATE state = WIDGETSTATE_COUNT);
 
 		virtual void Update(const wi::Canvas& canvas, float dt);
-		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const = 0;
+		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const {}
 		virtual void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
 
 		wi::Sprite sprites[WIDGETSTATE_COUNT];
@@ -120,7 +120,10 @@ namespace wi::gui
 		void Deactivate();
 
 		void ApplyScissor(const wi::Canvas& canvas, const wi::graphics::Rect rect, wi::graphics::CommandList cmd, bool constrain_to_parent = true) const;
-		wi::primitive::Hitbox2D GetPointerHitbox() const;
+		wi::primitive::Hitbox2D GetPointerHitbox(bool constrained = true) const;
+
+		wi::primitive::Hitbox2D active_area; // Pointer hitbox constrain area
+		void HitboxConstrain(wi::primitive::Hitbox2D& hb) const;
 
 		bool priority_change = true;
 		uint32_t priority = 0;
@@ -140,6 +143,9 @@ namespace wi::gui
 	public:
 		void Create(const std::string& name);
 
+		wi::SpriteFont font_description;
+		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
+
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 
@@ -149,10 +155,56 @@ namespace wi::gui
 		void OnDragEnd(std::function<void(EventArgs args)> func);
 	};
 
+	// Generic scroll bar
+	class ScrollBar : public Widget
+	{
+	protected:
+		float scrollbar_delta = 0;
+		float scrollbar_length = 0;
+		float scrollbar_value = 0;
+		float scrollbar_granularity = 1;
+		float list_length = 0;
+		float list_offset = 0;
+		float overscroll = 0;
+		bool vertical = true;
+		XMFLOAT2 grab_pos = {};
+		float grab_delta = 0;
+
+	public:
+		// Set the list's length that will be scrollable and moving
+		void SetListLength(float size) { list_length = size; }
+		// The scrolling offset that should be applied to the list items
+		float GetOffset() const { return list_offset; }
+		// This can be called by user for extra scrolling on top of base functionality
+		void Scroll(float amount) { scrollbar_delta -= amount; }
+		// How much the max scrolling will offset the list even further than it would be necessary for fitting
+		//	this value is in percent of a full scrollbar's worth of extra offset
+		//	0: no extra offset
+		//	1: full extra offset
+		void SetOverScroll(float amount) { overscroll = amount; }
+		// Check whether the scrollbar is required (when the items don't and scrolling could be used)
+		bool IsScrollbarRequired() const { return scrollbar_granularity < 1; }
+
+		enum SCROLLBAR_STATE
+		{
+			SCROLLBAR_INACTIVE,
+			SCROLLBAR_HOVER,
+			SCROLLBAR_GRABBED,
+			SCROLLBAR_STATE_COUNT,
+		} scrollbar_state = SCROLLBAR_INACTIVE;
+		wi::Sprite sprites_knob[SCROLLBAR_STATE_COUNT];
+		XMFLOAT2 knob_inset_border = {};
+
+		void Update(const wi::Canvas& canvas, float dt) override;
+		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+	};
+
 	// Static box that holds text
 	class Label : public Widget
 	{
 	protected:
+		ScrollBar scrollbar;
+		float scrollbar_width = 18;
 	public:
 		void Create(const std::string& name);
 
@@ -304,12 +356,15 @@ namespace wi::gui
 		Button resizeDragger_BottomRight;
 		Button moveDragger;
 		Label label;
+		ScrollBar scrollbar_vertical;
+		ScrollBar scrollbar_horizontal;
 		wi::vector<Widget*> widgets;
 		bool minimized = false;
+		Widget scrollable_area;
 	public:
 		void Create(const std::string& name, bool window_controls = true);
 
-		void AddWidget(Widget* widget);
+		void AddWidget(Widget* widget, bool scrollable = true);
 		void RemoveWidget(Widget* widget);
 		void RemoveWidgets();
 
@@ -373,22 +428,10 @@ namespace wi::gui
 		};
 	protected:
 		std::function<void(EventArgs args)> onSelect;
-		float list_height = 0;
-		float list_offset = 0;
 		int item_highlight = -1;
 		int opener_highlight = -1;
 
-		enum SCROLLBAR_STATE
-		{
-			SCROLLBAR_INACTIVE,
-			SCROLLBAR_HOVER,
-			SCROLLBAR_GRABBED,
-			TREESTATE_COUNT,
-		} scrollbar_state = SCROLLBAR_INACTIVE;
-
-		float scrollbar_delta = 0;
-		float scrollbar_height = 0;
-		float scrollbar_value = 0;
+		ScrollBar scrollbar;
 
 		wi::primitive::Hitbox2D GetHitbox_ListArea() const;
 		wi::primitive::Hitbox2D GetHitbox_Item(int visible_count, int level) const;

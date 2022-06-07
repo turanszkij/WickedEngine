@@ -75,18 +75,17 @@ namespace wi::image
 		}
 
 		ImageConstants image;
-		ImagePushConstants image_push;
-		image_push.texture_base_index = device->GetDescriptorIndex(texture, SubresourceType::SRV);
-		image_push.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SubresourceType::SRV);
+		image.texture_base_index = device->GetDescriptorIndex(texture, SubresourceType::SRV);
+		image.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SubresourceType::SRV);
 		if (params.isBackgroundEnabled())
 		{
-			image_push.texture_background_index = device->GetDescriptorIndex(&backgroundTexture, SubresourceType::SRV);
+			image.texture_background_index = device->GetDescriptorIndex(&backgroundTexture, SubresourceType::SRV);
 		}
 		else
 		{
-			image_push.texture_background_index = -1;
+			image.texture_background_index = -1;
 		}
-		image_push.sampler_index = device->GetDescriptorIndex(sampler);
+		image.sampler_index = device->GetDescriptorIndex(sampler);
 
 		const RenderPass* renderpass = device->GetCurrentRenderPass(cmd);
 		assert(renderpass != nullptr); // image renderer must draw inside render pass!
@@ -110,26 +109,26 @@ namespace wi::image
 		packed_color.z = XMConvertFloatToHalf(color.z);
 		packed_color.w = XMConvertFloatToHalf(color.w);
 
-		image_push.packed_color.x = uint(packed_color.v);
-		image_push.packed_color.y = uint(packed_color.v >> 32ull);
+		image.packed_color.x = uint(packed_color.v);
+		image.packed_color.y = uint(packed_color.v >> 32ull);
 
-		image_push.flags = 0;
+		image.flags = 0;
 		if (params.isExtractNormalMapEnabled())
 		{
-			image_push.flags |= IMAGE_FLAG_EXTRACT_NORMALMAP;
+			image.flags |= IMAGE_FLAG_EXTRACT_NORMALMAP;
 		}
 		if (params.isHDR10OutputMappingEnabled())
 		{
-			image_push.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
+			image.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
 		}
 		if (params.isLinearOutputMappingEnabled())
 		{
-			image_push.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
-			image_push.hdr_scaling = params.hdr_scaling;
+			image.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
+			image.hdr_scaling = params.hdr_scaling;
 		}
 		if (params.isFullScreenEnabled())
 		{
-			image_push.flags |= IMAGE_FLAG_FULLSCREEN;
+			image.flags |= IMAGE_FLAG_FULLSCREEN;
 		}
 
 		XMMATRIX M = XMMatrixScaling(params.scale.x * params.siz.x, params.scale.y * params.siz.y, 1);
@@ -233,7 +232,6 @@ namespace wi::image
 		device->BindPipelineState(&imagePSO[params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 
 		device->BindDynamicConstantBuffer(image, CBSLOT_IMAGE, cmd);
-		device->PushConstants(&image_push, sizeof(image_push), cmd);
 
 		if (params.isFullScreenEnabled())
 		{

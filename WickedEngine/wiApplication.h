@@ -109,6 +109,8 @@ namespace wi
 			bool heap_allocation_counter = false;
 			// display the active graphics pipeline count
 			bool pipeline_count = false;
+			// display video memory usage and budget
+			bool vram_usage = false;
 			// text size
 			int size = 16;
 			// display default color grading helper texture in top left corner of the screen

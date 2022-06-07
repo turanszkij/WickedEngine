@@ -1,7 +1,7 @@
-#!/usr/bin/zsh
+#!/bin/sh
 
 echo "Starting Wicked Engine"
 
 cd $WICKED
 
-./WickedEngineEditor
+exec ./WickedEngineEditor $@

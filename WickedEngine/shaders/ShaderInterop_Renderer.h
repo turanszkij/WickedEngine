@@ -8,12 +8,12 @@ struct ShaderScene
 	int instancebuffer;
 	int geometrybuffer;
 	int materialbuffer;
-	int envmaparray;
+	int meshletbuffer;
 
+	int envmaparray;
 	int globalenvmap;
 	int padding0;
 	int padding1;
-	int padding2;
 
 	int TLAS;
 	int BVH_counter;
@@ -123,7 +123,7 @@ struct ShaderMaterial
 	int			texture_clearcoatroughnessmap_index;
 	int			texture_clearcoatnormalmap_index;
 	int			texture_specularmap_index;
-	int			padding0;
+	uint		shaderType;
 
 #ifndef __cplusplus
 	float3 GetEmissive() { return Unpack_R11G11B10_FLOAT(emissive_r11g11b10); }
@@ -139,6 +139,40 @@ struct ShaderMaterial
 	inline bool IsReceiveShadow() { return options & SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW; }
 	inline bool IsCastingShadow() { return options & SHADERMATERIAL_OPTION_BIT_CAST_SHADOW; }
 	inline bool IsUnlit() { return options & SHADERMATERIAL_OPTION_BIT_UNLIT; }
+};
+
+// For binning shading based on shader types:
+struct ShaderTypeBin
+{
+	uint shaderType;
+	uint offset;
+	uint count;
+	uint padding;
+
+	uint dispatchX;
+	uint dispatchY;
+	uint dispatchZ;
+	uint padding1;
+
+	uint4 padding2[14]; // force 256-byte alignment that's necessary for constant buffers :(
+};
+static const uint SHADERTYPE_BIN_COUNT = 10;
+
+struct VisibilityTile
+{
+	uint visibility_tile_id;
+	uint entity_flat_tile_index;
+	uint execution_mask_0;
+	uint execution_mask_1;
+
+	inline bool check_thread_valid(uint groupIndex)
+	{
+		if (groupIndex < 32)
+		{
+			return execution_mask_0 & (1u << groupIndex);
+		}
+		return execution_mask_1 & (1u << (groupIndex - 32u));
+	}
 };
 
 static const uint SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0;
@@ -159,8 +193,10 @@ struct ShaderGeometry
 	int vb_atl;
 	int vb_pre;
 
-	uint3 padding;
 	uint materialIndex;
+	uint meshletOffset; // offset of this subset in meshlets
+	uint meshletCount;
+	uint padding;
 
 	float3 aabb_min;
 	uint flags;
@@ -180,12 +216,27 @@ struct ShaderGeometry
 		vb_pre = -1;
 
 		materialIndex = 0;
+		meshletOffset = 0;
+		meshletCount = 0;
 
 		aabb_min = float3(0, 0, 0);
 		flags = 0;
 		aabb_max = float3(0, 0, 0);
 		tessellation_factor = 0;
 	}
+};
+
+// 256 triangle batch of a ShaderGeometry
+static const uint MESHLET_TRIANGLE_COUNT = 256u;
+inline uint triangle_count_to_meshlet_count(uint triangleCount)
+{
+	return (triangleCount + MESHLET_TRIANGLE_COUNT - 1u) / MESHLET_TRIANGLE_COUNT;
+}
+struct ShaderMeshlet
+{
+	uint instanceIndex;
+	uint geometryIndex;
+	uint primitiveOffset;
 };
 
 struct ShaderTransform
@@ -226,10 +277,17 @@ struct ShaderMeshInstance
 	uint flags;
 	uint layerMask;
 	uint geometryOffset;
+
+	uint geometryCount;
 	uint color;
 	uint emissive;
 	int lightmap;
-	int padding;
+
+	uint meshletOffset; // offset in the global meshlet buffer for first subset
+	int padding0;
+	int padding1;
+	int padding2;
+
 	ShaderTransform transform;
 	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
 	ShaderTransform transformPrev;
@@ -243,6 +301,8 @@ struct ShaderMeshInstance
 		emissive = ~0u;
 		lightmap = -1;
 		geometryOffset = 0;
+		geometryCount = 0;
+		meshletOffset = ~0u;
 		transform.init();
 		transformInverseTranspose.init();
 		transformPrev.init();
@@ -278,60 +338,10 @@ struct ShaderMeshInstancePointer
 
 struct ObjectPushConstants
 {
-	uint meshIndex_subsetIndex; // 24-bit mesh, 8-bit subset
+	uint geometryIndex;
 	uint materialIndex;
 	int instances;
 	uint instance_offset;
-
-	void init(
-		uint _meshIndex,
-		uint _subsetIndex,
-		uint _materialIndex,
-		int _instances,
-		uint _instance_offset
-	)
-	{
-		meshIndex_subsetIndex = 0;
-		meshIndex_subsetIndex |= _meshIndex & 0xFFFFFF;
-		meshIndex_subsetIndex |= (_subsetIndex & 0xFF) << 24u;
-		materialIndex = _materialIndex;
-		instances = _instances;
-		instance_offset = _instance_offset;
-	}
-	uint GetMeshIndex()
-	{
-		return meshIndex_subsetIndex & 0xFFFFFF;
-	}
-	uint GetSubsetIndex()
-	{
-		return (meshIndex_subsetIndex >> 24u) & 0xFF;
-	}
-	uint GetMaterialIndex()
-	{
-		return materialIndex;
-	}
-};
-
-struct PrimitiveID
-{
-	uint primitiveIndex;
-	uint instanceIndex;
-	uint subsetIndex;
-
-	uint2 pack()
-	{
-		// 1 bit valid flag
-		// 31 bit primitiveIndex
-		// 24 bit instanceIndex
-		// 8  bit subsetIndex
-		return uint2((1u << 31u) | primitiveIndex, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
-	}
-	void unpack(uint2 value)
-	{
-		primitiveIndex = value.x & (~0u >> 1u);
-		instanceIndex = value.y & 0xFFFFFF;
-		subsetIndex = (value.y >> 24u) & 0xFF;
-	}
 };
 
 // Warning: the size of this structure directly affects shader performance.
@@ -512,6 +522,9 @@ static const uint TILED_CULLING_BLOCKSIZE = 16;
 static const uint TILED_CULLING_THREADSIZE = 8;
 static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CULLING_THREADSIZE;
 
+static const uint VISIBILITY_BLOCKSIZE = 8;
+static const uint VISIBILITY_TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / VISIBILITY_BLOCKSIZE;
+
 static const int impostorCaptureAngles = 36;
 
 // These option bits can be read from options constant buffer value:
@@ -646,6 +659,10 @@ struct CameraCB
 	uint3 entity_culling_tilecount;
 	uint sample_count;
 
+	uint2 visibility_tilecount;
+	uint visibility_tilecount_flat;
+	uint padding;
+
 	int texture_primitiveID_index;
 	int texture_depth_index;
 	int texture_lineardepth_index;
@@ -762,7 +779,8 @@ struct PaintTextureCB
 
 	float xPaintBrushFalloff;
 	uint xPaintBrushColor;
-	uint2 padding0;
+	uint xPaintReveal;
+	uint padding0;
 };
 
 CBUFFER(PaintRadiusCB, CBSLOT_RENDERER_MISC)
@@ -783,20 +801,6 @@ struct SkinningPushConstants
 
 	int so_pos_nor_wind;
 	int so_tan;
-};
-
-enum VisibilityResolveOptions
-{
-	VISIBILITY_RESOLVE_DEPTH = 1 << 0,
-	VISIBILITY_RESOLVE_LINEARDEPTH = 1 << 1,
-	VISIBILITY_RESOLVE_VELOCITY = 1 << 2,
-	VISIBILITY_RESOLVE_NORMAL = 1 << 3,
-	VISIBILITY_RESOLVE_ROUGHNESS = 1 << 4,
-	VISIBILITY_RESOLVE_PRIMITIVEID = 1 << 5,
-};
-struct VisibilityResolvePushConstants
-{
-	uint options;
 };
 
 

@@ -274,6 +274,7 @@ namespace wi::scene
 		material.alphaTest = 1 - alphaRef;
 		material.layerMask = layerMask;
 		material.transmission = transmission;
+		material.shaderType = (uint)shaderType;
 
 		material.options = 0;
 		if (IsUsingVertexColors())
@@ -1589,6 +1590,18 @@ namespace wi::scene
 			std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
 		});
 
+		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+			// Must not keep inactive instances, so init them for safety:
+			ShaderMeshInstance inst;
+			inst.init();
+			for (uint32_t i = 0; i < instanceArraySize; ++i)
+			{
+				std::memcpy(instanceArrayMapped + i, &inst, sizeof(inst));
+			}
+		});
+
+		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
+
 		RunAnimationUpdateSystem(ctx);
 
 		RunTransformUpdateSystem(ctx);
@@ -1640,8 +1653,6 @@ namespace wi::scene
 
 		wi::jobsystem::Wait(ctx); // dependencies
 
-		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
-
 		RunObjectUpdateSystem(ctx);
 
 		RunCameraUpdateSystem(ctx);
@@ -1665,6 +1676,20 @@ namespace wi::scene
 		for (auto& group_bound : parallel_bounds)
 		{
 			bounds = AABB::Merge(bounds, group_bound);
+		}
+
+		// Meshlet buffer:
+		uint32_t meshletCount = meshletAllocator.load();
+		if(meshletBuffer.desc.size < meshletCount * sizeof(ShaderMeshlet))
+		{
+			GPUBufferDesc desc;
+			desc.stride = sizeof(ShaderMeshlet);
+			desc.size = desc.stride * meshletCount * 2; // *2 to grow fast
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			bool success = device->CreateBuffer(&desc, nullptr, &meshletBuffer);
+			assert(success);
+			device->SetName(&meshletBuffer, "meshletBuffer");
 		}
 
 		if (lightmap_refresh_needed.load())
@@ -1853,6 +1878,7 @@ namespace wi::scene
 		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
 		shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
 		shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
+		shaderscene.meshletbuffer = device->GetDescriptorIndex(&meshletBuffer, SubresourceType::SRV);
 		shaderscene.envmaparray = device->GetDescriptorIndex(&envmapArray, SubresourceType::SRV);
 		if (weather.skyMap.IsValid())
 		{
@@ -3065,6 +3091,8 @@ namespace wi::scene
 				geometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
 			}
 
+			mesh.meshletCount = 0;
+
 			uint32_t subsetIndex = 0;
 			for (auto& subset : mesh.subsets)
 			{
@@ -3108,6 +3136,9 @@ namespace wi::scene
 
 				geometry.indexOffset = subset.indexOffset;
 				geometry.materialIndex = subset.materialIndex;
+				geometry.meshletOffset = mesh.meshletCount;
+				geometry.meshletCount = triangle_count_to_meshlet_count(subset.indexCount / 3u);
+				mesh.meshletCount += geometry.meshletCount;
 				std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &geometry, sizeof(geometry));
 				subsetIndex++;
 			}
@@ -3221,6 +3252,8 @@ namespace wi::scene
 	void Scene::RunObjectUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		assert(objects.GetCount() == aabb_objects.GetCount());
+
+		meshletAllocator.store(0u);
 
 		parallel_bounds.clear();
 		parallel_bounds.resize((size_t)wi::jobsystem::DispatchGroupCount((uint32_t)objects.GetCount(), small_subtask_groupsize));
@@ -3382,6 +3415,8 @@ namespace wi::scene
 					inst.color = wi::math::CompressColor(object.color);
 					inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
 					inst.geometryOffset = mesh.geometryOffset;
+					inst.geometryCount = (uint)mesh.subsets.size();
+					inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
 
 					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
@@ -3786,54 +3821,63 @@ namespace wi::scene
 					const TransformComponent& transform = *transforms.GetComponent(entity);
 
 					hair.UpdateCPU(transform, *mesh, dt);
+				}
+			}
 
-					GraphicsDevice* device = wi::graphics::GetDevice();
+			GraphicsDevice* device = wi::graphics::GetDevice();
 
-					ShaderGeometry geometry;
-					geometry.init();
-					geometry.indexOffset = 0;
-					geometry.materialIndex = (uint)materials.GetIndex(entity);
-					geometry.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
-					geometry.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SubresourceType::SRV);
-					geometry.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SubresourceType::SRV);
-					geometry.vb_uvs = device->GetDescriptorIndex(&hair.vertexBuffer_UVS, SubresourceType::SRV);
-					geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
+			uint32_t indexCount = (uint32_t)hair.primitiveBuffer.desc.size / std::max(1u, (uint32_t)hair.primitiveBuffer.desc.stride);
+			uint32_t triangleCount = indexCount / 3u;
+			uint32_t meshletCount = triangle_count_to_meshlet_count(triangleCount);
+			uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount);
 
-					size_t geometryAllocation = geometryAllocator.fetch_add(1);
-					std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
+			ShaderGeometry geometry;
+			geometry.init();
+			geometry.indexOffset = 0;
+			geometry.materialIndex = (uint)materials.GetIndex(entity);
+			geometry.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
+			geometry.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SubresourceType::SRV);
+			geometry.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SubresourceType::SRV);
+			geometry.vb_uvs = device->GetDescriptorIndex(&hair.vertexBuffer_UVS, SubresourceType::SRV);
+			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
+			geometry.meshletOffset = 0;
+			geometry.meshletCount = meshletCount;
 
-					ShaderMeshInstance inst;
-					inst.init();
-					inst.uid = entity;
-					inst.layerMask = hair.layerMask;
-					inst.geometryOffset = (uint)geometryAllocation;
-					inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1, 1, 1));
-					inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
+			size_t geometryAllocation = geometryAllocator.fetch_add(1);
+			std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
 
-					const size_t instanceIndex = objects.GetCount() + args.jobIndex;
-					std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
+			ShaderMeshInstance inst;
+			inst.init();
+			inst.uid = entity;
+			inst.layerMask = hair.layerMask;
+			inst.geometryOffset = (uint)geometryAllocation;
+			inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1, 1, 1));
+			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
+			inst.geometryCount = 1;
+			inst.meshletOffset = meshletOffset;
 
-					if (TLAS_instancesMapped != nullptr && hair.BLAS.IsValid())
+			const size_t instanceIndex = objects.GetCount() + args.jobIndex;
+			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
+
+			if (TLAS_instancesMapped != nullptr && hair.BLAS.IsValid())
+			{
+				// TLAS instance data:
+				RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
+				for (int i = 0; i < arraysize(instance.transform); ++i)
+				{
+					for (int j = 0; j < arraysize(instance.transform[i]); ++j)
 					{
-						// TLAS instance data:
-						RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
-						for (int i = 0; i < arraysize(instance.transform); ++i)
-						{
-							for (int j = 0; j < arraysize(instance.transform[i]); ++j)
-							{
-								instance.transform[i][j] = wi::math::IDENTITY_MATRIX.m[j][i];
-							}
-						}
-						instance.instance_id = (uint32_t)instanceIndex;
-						instance.instance_mask = hair.layerMask & 0xFF;
-						instance.bottom_level = &hair.BLAS;
-						instance.instance_contribution_to_hit_group_index = 0;
-						instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
-
-						void* dest = (void*)((size_t)TLAS_instancesMapped + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
-						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
+						instance.transform[i][j] = wi::math::IDENTITY_MATRIX.m[j][i];
 					}
 				}
+				instance.instance_id = (uint32_t)instanceIndex;
+				instance.instance_mask = hair.layerMask & 0xFF;
+				instance.bottom_level = &hair.BLAS;
+				instance.instance_contribution_to_hit_group_index = 0;
+				instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
+
+				void* dest = (void*)((size_t)TLAS_instancesMapped + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+				device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
 			}
 
 		});
@@ -3871,6 +3915,11 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
+			uint32_t indexCount = (uint32_t)emitter.primitiveBuffer.desc.size / std::max(1u, (uint32_t)emitter.primitiveBuffer.desc.stride);
+			uint32_t triangleCount = indexCount / 3u;
+			uint32_t meshletCount = triangle_count_to_meshlet_count(triangleCount);
+			uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount);
+
 			ShaderGeometry geometry;
 			geometry.init();
 			geometry.indexOffset = 0;
@@ -3880,6 +3929,8 @@ namespace wi::scene
 			geometry.vb_uvs = device->GetDescriptorIndex(&emitter.vertexBuffer_UVS, SubresourceType::SRV);
 			geometry.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SubresourceType::SRV);
 			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
+			geometry.meshletOffset = 0;
+			geometry.meshletCount = meshletCount;
 
 			size_t geometryAllocation = geometryAllocator.fetch_add(1);
 			std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
@@ -3891,6 +3942,8 @@ namespace wi::scene
 			inst.geometryOffset = (uint)geometryAllocation;
 			inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1, 1, 1));
 			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
+			inst.geometryCount = 1;
+			inst.meshletOffset = meshletOffset;
 
 			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
