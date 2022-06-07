@@ -769,7 +769,7 @@ namespace wi::graphics
 
 	struct SubresourceData
 	{
-		const void *data_ptr = nullptr;
+		const void* data_ptr = nullptr;
 		uint32_t row_pitch = 0;
 		uint32_t slice_pitch = 0;
 	};

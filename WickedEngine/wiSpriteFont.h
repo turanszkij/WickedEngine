@@ -45,5 +45,22 @@ namespace wi
 
 		std::string GetTextA() const;
 		const std::wstring& GetText() const;
+
+		struct Animation
+		{
+			struct Typewriter
+			{
+				float time = 0; // time to fully type the text in seconds (0: disable)
+				bool looped = false; // if true, typing starts over when finished
+				size_t character_start = 0; // starting character for the animation
+
+				float elapsed = 0; // internal use; you don't need to initialize
+
+				void reset()
+				{
+					elapsed = 0;
+				}
+			} typewriter;
+		} anim;
 	};
 }

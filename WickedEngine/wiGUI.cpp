@@ -912,6 +912,10 @@ namespace wi::gui
 	}
 	void Label::Update(const wi::Canvas& canvas, float dt)
 	{
+		if (!IsVisible())
+		{
+			return;
+		}
 		Widget::Update(canvas, dt);
 
 		font.params.h_wrap = scale.x;

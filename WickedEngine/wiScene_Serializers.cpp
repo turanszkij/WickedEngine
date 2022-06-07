@@ -1701,6 +1701,11 @@ namespace wi::scene
 				}
 			}
 
+			// Wait the job system, because from this point, component managers could be resized
+			//	due to more serialization tasks in recursive operation
+			//	The pointers must not be invalidated while serialization jobs are not finished
+			wi::jobsystem::Wait(seri.ctx);
+
 			if (archive.GetVersion() >= 72 && has_flag(flags, EntitySerializeFlags::RECURSIVE))
 			{
 				// serialize children:
@@ -2064,6 +2069,11 @@ namespace wi::scene
 					archive << false;
 				}
 			}
+
+			// Wait the job system, because from this point, component managers could be resized
+			//	due to more serialization tasks in recursive operation
+			//	The pointers must not be invalidated while serialization jobs are not finished
+			wi::jobsystem::Wait(seri.ctx);
 
 			if (archive.GetVersion() >= 72 && has_flag(flags, EntitySerializeFlags::RECURSIVE))
 			{

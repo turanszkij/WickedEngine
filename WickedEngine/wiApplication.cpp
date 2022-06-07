@@ -86,25 +86,13 @@ namespace wi
 			// Until engine is not loaded, present initialization screen...
 			CommandList cmd = graphicsDevice->BeginCommandList();
 			graphicsDevice->RenderPassBegin(&swapChain, cmd);
-			wi::image::SetCanvas(canvas);
 			Viewport viewport;
 			viewport.width = (float)swapChain.desc.width;
 			viewport.height = (float)swapChain.desc.height;
 			graphicsDevice->BindViewports(1, &viewport, cmd);
 			if (wi::initializer::IsInitializeFinished(wi::initializer::INITIALIZED_SYSTEM_FONT))
 			{
-				wi::font::SetCanvas(canvas);
-				wi::font::Params params;
-				params.posX = 5.f;
-				params.posY = 5.f;
-				std::string text = wi::backlog::getText();
-				float textheight = wi::font::TextHeight(text, params);
-				float screenheight = canvas.GetLogicalHeight();
-				if (textheight > screenheight)
-				{
-					params.posY = screenheight - textheight;
-				}
-				wi::font::Draw(text, params, cmd);
+				wi::backlog::DrawOutputText(canvas, cmd);
 			}
 			graphicsDevice->RenderPassEnd(cmd);
 			graphicsDevice->SubmitCommandLists();
@@ -131,6 +119,8 @@ namespace wi
 
 		deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 		timer.record();
+
+		wi::input::Update(window, canvas);
 
 		// Wake up the events that need to be executed on the main thread, in thread safe manner:
 		wi::eventhandler::FireEvent(wi::eventhandler::EVENT_THREAD_SAFE_POINT, 0);
@@ -179,8 +169,6 @@ namespace wi
 
 		Render();
 
-		wi::input::Update(window, canvas);
-
 		// Begin final compositing:
 		CommandList cmd = graphicsDevice->BeginCommandList();
 		wi::image::SetCanvas(canvas);
@@ -217,6 +205,7 @@ namespace wi
 			graphicsDevice->RenderPassEnd(cmd);
 		}
 
+		wi::input::ClearForNextFrame();
 		wi::profiler::EndFrame(cmd);
 		graphicsDevice->SubmitCommandLists();
 	}
@@ -380,15 +369,45 @@ namespace wi
 				infodisplay_str += "Graphics pipelines active: " + std::to_string(graphicsDevice->GetActivePipelineCount()) + "\n";
 			}
 
+			wi::font::Params params = wi::font::Params(4, 4, infoDisplay.size, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, wi::Color(255, 255, 255, 255), wi::Color(0, 0, 0, 255));
+			params.cursor = wi::font::Draw(infodisplay_str, params, cmd);
+
+			if (infoDisplay.vram_usage)
+			{
+				GraphicsDevice::MemoryUsage vram = graphicsDevice->GetMemoryUsage();
+				if (vram.usage > vram.budget)
+				{
+					params.color = wi::Color::Error();
+				}
+				else if (float(vram.usage) / float(vram.budget) > 0.9f)
+				{
+					params.color = wi::Color::Warning();
+				}
+				params.cursor = wi::font::Draw("VRAM usage: " + std::to_string(vram.usage / 1024 / 1024) + "MB / " + std::to_string(vram.budget / 1024 / 1024) + "MB\n", params, cmd);
+				params.color = wi::Color::White();
+			}
+
+			// Write warnings below:
+			params.color = wi::Color::Warning();
 #ifdef _DEBUG
-			infodisplay_str += "Warning: This is a [DEBUG] build, performance will be slow!\n";
+			params.cursor = wi::font::Draw("Warning: This is a [DEBUG] build, performance will be slow!\n", params, cmd);
 #endif
 			if (graphicsDevice->IsDebugDevice())
 			{
-				infodisplay_str += "Warning: Graphics is in [debugdevice] mode, performance will be slow!\n";
+				params.cursor = wi::font::Draw("Warning: Graphics is in [debugdevice] mode, performance will be slow!\n", params, cmd);
 			}
 
-			wi::font::Draw(infodisplay_str, wi::font::Params(4, 4, infoDisplay.size, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, wi::Color(255, 255, 255, 255), wi::Color(0, 0, 0, 255)), cmd);
+			// Write errors below:
+			params.color = wi::Color::Error();
+			if (wi::renderer::GetShaderMissingCount() > 0)
+			{
+				params.cursor = wi::font::Draw(std::to_string(wi::renderer::GetShaderMissingCount()) + " shaders missing! Check the backlog for more information!\n", params, cmd);
+			}
+			if (wi::renderer::GetShaderErrorCount() > 0)
+			{
+				params.cursor = wi::font::Draw(std::to_string(wi::renderer::GetShaderErrorCount()) + " shader compilation errors! Check the backlog for more information!\n", params, cmd);
+			}
+
 
 			if (infoDisplay.colorgrading_helper)
 			{

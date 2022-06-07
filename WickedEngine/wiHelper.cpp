@@ -660,7 +660,7 @@ namespace wi::helper
 
 #endif // PLATFORM_UWP
 
-		wi::backlog::post("File not found: " + fileName);
+		wi::backlog::post("File not found: " + fileName, wi::backlog::LogLevel::Warning);
 		return false;
 	}
 	bool FileRead(const std::string& fileName, wi::vector<uint8_t>& data)

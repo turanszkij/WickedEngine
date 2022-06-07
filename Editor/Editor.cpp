@@ -30,6 +30,7 @@ void Editor::Initialize()
 	//infoDisplay.logical_size = true;
 	infoDisplay.colorspace = true;
 	infoDisplay.heap_allocation_counter = true;
+	infoDisplay.vram_usage = true;
 
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
@@ -45,7 +46,10 @@ void Editor::Initialize()
 
 void EditorLoadingScreen::Load()
 {
-	font = wi::SpriteFont("Loading...", wi::font::Params(0, 0, 36, wi::font::WIFALIGN_CENTER, wi::font::WIFALIGN_CENTER));
+	font = wi::SpriteFont("Loading...", wi::font::Params(0, 0, 36, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_CENTER));
+	font.anim.typewriter.time = 2;
+	font.anim.typewriter.looped = true;
+	font.anim.typewriter.character_start = 7;
 	AddFont(&font);
 
 	sprite = wi::Sprite("images/logo_small.png");
@@ -61,7 +65,7 @@ void EditorLoadingScreen::Load()
 }
 void EditorLoadingScreen::Update(float dt)
 {
-	font.params.posX = GetLogicalWidth()*0.5f;
+	font.params.posX = GetLogicalWidth()*0.5f - font.TextWidth() * 0.5f;
 	font.params.posY = GetLogicalHeight()*0.5f;
 	sprite.params.pos = XMFLOAT3(GetLogicalWidth()*0.5f, GetLogicalHeight()*0.5f - font.TextHeight(), 0);
 

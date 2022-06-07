@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 
 using namespace wi::primitive;
 using namespace wi::graphics;
@@ -102,6 +103,8 @@ bool DDGI_ENABLED = false;
 bool DDGI_DEBUG_ENABLED = false;
 uint32_t DDGI_RAYCOUNT = 128u;
 float GI_BOOST = 1.0f;
+std::atomic<size_t> SHADER_ERRORS{ 0 };
+std::atomic<size_t> SHADER_MISSING{ 0 };
 
 
 struct VoxelizedSceneData
@@ -626,6 +629,15 @@ size_t GetShaderDumpCount()
 }
 #endif // SHADERDUMP
 
+size_t GetShaderErrorCount()
+{
+	return SHADER_ERRORS.load();
+}
+size_t GetShaderMissingCount()
+{
+	return SHADER_MISSING.load();
+}
+
 bool LoadShader(
 	ShaderStage stage,
 	Shader& shader,
@@ -658,7 +670,7 @@ bool LoadShader(
 		}
 		else
 		{
-			wi::backlog::post("shader dump doesn't contain shader: " + shaderbinaryfilename);
+			wi::backlog::post("shader dump doesn't contain shader: " + shaderbinaryfilename, wi::backlog::LogLevel::Error);
 		}
 #endif // SHADERDUMP_ENABLED
 	}
@@ -695,6 +707,7 @@ bool LoadShader(
 		else
 		{
 			wi::backlog::post("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message, wi::backlog::LogLevel::Error);
+			SHADER_ERRORS.fetch_add(1);
 		}
 	}
 
@@ -704,6 +717,10 @@ bool LoadShader(
 		if (wi::helper::FileRead(shaderbinaryfilename, buffer))
 		{
 			return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+		}
+		else
+		{
+			SHADER_MISSING.fetch_add(1);
 		}
 	}
 
@@ -2162,6 +2179,8 @@ void SetShaderSourcePath(const std::string& path)
 void ReloadShaders()
 {
 	device->ClearPipelineStateCache();
+	SHADER_ERRORS.store(0);
+	SHADER_MISSING.store(0);
 
 	wi::eventhandler::FireEvent(wi::eventhandler::EVENT_RELOAD_SHADERS, 0);
 }
@@ -3716,7 +3735,7 @@ void UpdateRenderData(
 	}
 
 	// Meshlets:
-	if(vis.scene->instanceArraySize > 0)
+	if(vis.scene->instanceArraySize > 0 && vis.scene->meshletBuffer.IsValid())
 	{
 		device->EventBegin("Meshlet prepare", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Meshlet prepare", cmd);
@@ -4037,7 +4056,7 @@ void OcclusionCulling_Reset(const Visibility& vis, CommandList cmd)
 	{
 		return;
 	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
 	{
 		return;
 	}
@@ -4058,7 +4077,7 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	{
 		return;
 	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
 	{
 		return;
 	}
@@ -4152,7 +4171,7 @@ void OcclusionCulling_Resolve(const Visibility& vis, CommandList cmd)
 	{
 		return;
 	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
 	{
 		return;
 	}
