@@ -4,7 +4,7 @@
         {
             "label": "Build Debug",
             "type": "shell",
-            "command": "cmake -B build -DCMAKE_BUILD_TYPE=Debug; cd build; make",
+            "command": "cmake -B build -DCMAKE_BUILD_TYPE=Debug; cd build; make -j`nproc`",
             "problemMatcher": ["gcc"],
             "group": {
                 "kind": "build"
@@ -13,12 +13,18 @@
         {
             "label": "Build Release",
             "type": "shell",
-            "command": "cmake -B build -DCMAKE_BUILD_TYPE=Release; cd build; make",
+            "command": "cmake -B build -DCMAKE_BUILD_TYPE=Release; cd build; make -j`nproc`",
             "problemMatcher": ["gcc"],
             "group": {
                 "kind": "build",
                 "isDefault": true
             }
         }
-    ]
+    ],
+    
+    "CMake": {
+        "cmake.configureOnOpen": true,
+        "cmake.buildDirectory": "${workspaceFolder}/build",
+        "cmake.buildTask": true
+    }
 }
