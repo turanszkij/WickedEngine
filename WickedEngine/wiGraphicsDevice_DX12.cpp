@@ -1308,9 +1308,13 @@ namespace dx12_internal
 		wi::vector<SingleDescriptor> subresources_uav;
 		SingleDescriptor uav_raw;
 
-		D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
-
 		D3D12_GPU_VIRTUAL_ADDRESS gpu_address = 0;
+
+		UINT64 total_size = 0;
+		wi::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
+		wi::vector<UINT64> rowSizesInBytes;
+		wi::vector<UINT> numRows;
+		wi::vector<SubresourceData> mapped_subresources;
 
 		virtual ~Resource_DX12()
 		{
@@ -2997,7 +3001,7 @@ using namespace dx12_internal;
 		buffer->internal_state = internal_state;
 		buffer->type = GPUResource::Type::BUFFER;
 		buffer->mapped_data = nullptr;
-		buffer->mapped_rowpitch = 0;
+		buffer->mapped_size = 0;
 		buffer->desc = *desc;
 
 		HRESULT hr = E_FAIL;
@@ -3047,8 +3051,6 @@ using namespace dx12_internal;
 			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 		}
 
-		device->GetCopyableFootprints(&resourceDesc, 0, 1, 0, &internal_state->footprint, nullptr, nullptr, nullptr);
-
 		hr = allocationhandler->allocator->CreateResource(
 			&allocationDesc,
 			&resourceDesc,
@@ -3065,14 +3067,14 @@ using namespace dx12_internal;
 		{
 			hr = internal_state->resource->Map(0, nullptr, &buffer->mapped_data);
 			assert(SUCCEEDED(hr));
-			buffer->mapped_rowpitch = static_cast<uint32_t>(desc->size);
+			buffer->mapped_size = static_cast<uint32_t>(desc->size);
 		}
 		else if (desc->usage == Usage::UPLOAD)
 		{
 			D3D12_RANGE read_range = {};
 			hr = internal_state->resource->Map(0, &read_range, &buffer->mapped_data);
 			assert(SUCCEEDED(hr));
-			buffer->mapped_rowpitch = static_cast<uint32_t>(desc->size);
+			buffer->mapped_size = static_cast<uint32_t>(desc->size);
 		}
 
 		// Issue data copy on request:
@@ -3123,7 +3125,9 @@ using namespace dx12_internal;
 		texture->internal_state = internal_state;
 		texture->type = GPUResource::Type::TEXTURE;
 		texture->mapped_data = nullptr;
-		texture->mapped_rowpitch = 0;
+		texture->mapped_size = 0;
+		texture->mapped_subresources = nullptr;
+		texture->mapped_subresource_count = 0;
 		texture->desc = *desc;
 
 		HRESULT hr = E_FAIL;
@@ -3207,14 +3211,33 @@ using namespace dx12_internal;
 			resourceState = D3D12_RESOURCE_STATE_COMMON;
 		}
 
+		if (texture->desc.mip_levels == 0)
+		{
+			texture->desc.mip_levels = (uint32_t)log2(std::max(texture->desc.width, texture->desc.height)) + 1;
+		}
+
+		internal_state->total_size = 0;
+		internal_state->footprints.resize(desc->array_size * std::max(1u, desc->mip_levels));
+		internal_state->rowSizesInBytes.resize(internal_state->footprints.size());
+		internal_state->numRows.resize(internal_state->footprints.size());
+		device->GetCopyableFootprints(
+			&resourcedesc,
+			0,
+			(UINT)internal_state->footprints.size(),
+			0,
+			internal_state->footprints.data(),
+			internal_state->numRows.data(),
+			internal_state->rowSizesInBytes.data(),
+			&internal_state->total_size
+		);
+
 		if (texture->desc.usage == Usage::READBACK || texture->desc.usage == Usage::UPLOAD)
 		{
-			UINT64 RequiredSize = 0;
-			device->GetCopyableFootprints(&resourcedesc, 0, 1, 0, &internal_state->footprint, nullptr, nullptr, &RequiredSize);
 			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-			resourcedesc.Width = RequiredSize;
+			resourcedesc.Width = internal_state->total_size;
 			resourcedesc.Height = 1;
 			resourcedesc.DepthOrArraySize = 1;
+			resourcedesc.MipLevels = 1;
 			resourcedesc.Format = DXGI_FORMAT_UNKNOWN;
 			resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 			resourcedesc.Flags = D3D12_RESOURCE_FLAG_NONE;
@@ -3245,54 +3268,54 @@ using namespace dx12_internal;
 		{
 			hr = internal_state->resource->Map(0, nullptr, &texture->mapped_data);
 			assert(SUCCEEDED(hr));
-			texture->mapped_rowpitch = internal_state->footprint.Footprint.RowPitch;
 		}
 		else if(texture->desc.usage == Usage::UPLOAD)
 		{
 			D3D12_RANGE read_range = {};
 			hr = internal_state->resource->Map(0, &read_range, &texture->mapped_data);
 			assert(SUCCEEDED(hr));
-			texture->mapped_rowpitch = internal_state->footprint.Footprint.RowPitch;
 		}
 
-		if (texture->desc.mip_levels == 0)
+		if (texture->mapped_data != nullptr)
 		{
-			texture->desc.mip_levels = (uint32_t)log2(std::max(texture->desc.width, texture->desc.height)) + 1;
+			texture->mapped_size = internal_state->total_size;
+			internal_state->mapped_subresources.resize(internal_state->footprints.size());
+			for (size_t i = 0; i < internal_state->footprints.size(); ++i)
+			{
+				internal_state->mapped_subresources[i].data_ptr = (uint8_t*)texture->mapped_data + internal_state->footprints[i].Offset;
+				internal_state->mapped_subresources[i].row_pitch = internal_state->footprints[i].Footprint.RowPitch;
+				internal_state->mapped_subresources[i].slice_pitch = internal_state->footprints[i].Footprint.RowPitch * internal_state->footprints[i].Footprint.Height;
+			}
+			texture->mapped_subresources = internal_state->mapped_subresources.data();
+			texture->mapped_subresource_count = internal_state->mapped_subresources.size();
 		}
 
 		// Issue data copy on request:
 		if (initial_data != nullptr)
 		{
-			uint32_t dataCount = desc->array_size * std::max(1u, desc->mip_levels);
-			wi::vector<D3D12_SUBRESOURCE_DATA> data(dataCount);
-			for (uint32_t slice = 0; slice < dataCount; ++slice)
+			wi::vector<D3D12_SUBRESOURCE_DATA> data(internal_state->footprints.size());
+			for (size_t i = 0; i < internal_state->footprints.size(); ++i)
 			{
-				data[slice] = _ConvertSubresourceData(initial_data[slice]);
+				data[i] = _ConvertSubresourceData(initial_data[i]);
 			}
 
-			UINT64 RequiredSize = 0;
-			wi::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> layouts(dataCount);
-			wi::vector<UINT64> rowSizesInBytes(dataCount);
-			wi::vector<UINT> numRows(dataCount);
-			device->GetCopyableFootprints(&resourcedesc, 0, dataCount, 0, layouts.data(), numRows.data(), rowSizesInBytes.data(), &RequiredSize);
+			auto cmd = copyAllocator.allocate(internal_state->total_size);
 
-			auto cmd = copyAllocator.allocate(RequiredSize);
-
-			for (uint32_t i = 0; i < dataCount; ++i)
+			for (size_t i = 0; i < internal_state->footprints.size(); ++i)
 			{
-				if (rowSizesInBytes[i] > (SIZE_T)-1)
+				if (internal_state->rowSizesInBytes[i] > (SIZE_T)-1)
 					continue;
 				D3D12_MEMCPY_DEST DestData = {};
-				DestData.pData = (void*)((UINT64)cmd.uploadbuffer.mapped_data + layouts[i].Offset);
-				DestData.RowPitch = (SIZE_T)layouts[i].Footprint.RowPitch;
-				DestData.SlicePitch = (SIZE_T)layouts[i].Footprint.RowPitch * (SIZE_T)numRows[i];
-				MemcpySubresource(&DestData, &data[i], (SIZE_T)rowSizesInBytes[i], numRows[i], layouts[i].Footprint.Depth);
+				DestData.pData = (void*)((UINT64)cmd.uploadbuffer.mapped_data + internal_state->footprints[i].Offset);
+				DestData.RowPitch = (SIZE_T)internal_state->footprints[i].Footprint.RowPitch;
+				DestData.SlicePitch = (SIZE_T)internal_state->footprints[i].Footprint.RowPitch * (SIZE_T)internal_state->numRows[i];
+				MemcpySubresource(&DestData, &data[i], (SIZE_T)internal_state->rowSizesInBytes[i], internal_state->numRows[i], internal_state->footprints[i].Footprint.Depth);
 			}
 
-			for (UINT i = 0; i < dataCount; ++i)
+			for (UINT i = 0; i < internal_state->footprints.size(); ++i)
 			{
 				CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
-				CD3DX12_TEXTURE_COPY_LOCATION Src(to_internal(&cmd.uploadbuffer)->resource.Get(), layouts[i]);
+				CD3DX12_TEXTURE_COPY_LOCATION Src(to_internal(&cmd.uploadbuffer)->resource.Get(), internal_state->footprints[i]);
 				cmd.commandList->CopyTextureRegion(
 					&Dst,
 					0,
@@ -4992,13 +5015,26 @@ using namespace dx12_internal;
 		internal_state->allocationhandler = allocationhandler;
 		internal_state->resource = swapchain_internal->backBuffers[swapchain_internal->swapChain->GetCurrentBackBufferIndex()];
 
-		D3D12_RESOURCE_DESC desc = internal_state->resource->GetDesc();
-		device->GetCopyableFootprints(&desc, 0, 1, 0, &internal_state->footprint, nullptr, nullptr, nullptr);
+		D3D12_RESOURCE_DESC resourcedesc = internal_state->resource->GetDesc();
+		internal_state->total_size = 0;
+		internal_state->footprints.resize(resourcedesc.DepthOrArraySize * resourcedesc.MipLevels);
+		internal_state->rowSizesInBytes.resize(internal_state->footprints.size());
+		internal_state->numRows.resize(internal_state->footprints.size());
+		device->GetCopyableFootprints(
+			&resourcedesc,
+			0,
+			(UINT)internal_state->footprints.size(),
+			0,
+			internal_state->footprints.data(),
+			internal_state->numRows.data(),
+			internal_state->rowSizesInBytes.data(),
+			&internal_state->total_size
+		);
 
 		Texture result;
 		result.type = GPUResource::Type::TEXTURE;
 		result.internal_state = internal_state;
-		result.desc = _ConvertTextureDesc_Inv(desc);
+		result.desc = _ConvertTextureDesc_Inv(resourcedesc);
 		return result;
 	}
 
@@ -5512,19 +5548,35 @@ using namespace dx12_internal;
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto internal_state_src = to_internal(pSrc);
 		auto internal_state_dst = to_internal(pDst);
-		D3D12_RESOURCE_DESC desc_src = internal_state_src->resource->GetDesc();
-		D3D12_RESOURCE_DESC desc_dst = internal_state_dst->resource->GetDesc();
-		if (desc_dst.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER && desc_src.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
+
+		const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
+		const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
+
+		if (src_desc.usage == Usage::UPLOAD)
 		{
-			CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), 0);
-			CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), internal_state_dst->footprint);
-			commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+			for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
+			{
+				for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+				{
+					UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
+					CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), internal_state_src->footprints[layer * dst_desc.mip_levels + mip]);
+					CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), subresource);
+					commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+				}
+			}
 		}
-		else if (desc_src.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER && desc_dst.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
+		else if (dst_desc.usage == Usage::READBACK)
 		{
-			CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), internal_state_src->footprint);
-			CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), 0);
-			commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+			for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
+			{
+				for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+				{
+					UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
+					CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), subresource);
+					CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), internal_state_dst->footprints[layer * dst_desc.mip_levels + mip]);
+					commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+				}
+			}
 		}
 		else
 		{

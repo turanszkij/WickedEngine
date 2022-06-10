@@ -3,6 +3,7 @@
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 #include "wiUnorderedMap.h"
+#include "wiBacklog.h"
 
 #include "Utility/stb_image.h"
 #include "Utility/qoi.h"
@@ -235,11 +236,14 @@ namespace wi
 						{
 							// all subresources will use one allocation for transcoder destination, so compute combined size:
 							size_t transcoded_data_size = 0;
-							for (uint32_t layer = 0; layer < std::max(1u, transcoder.get_layers()); ++layer)
+							const uint32_t layers = std::max(1u, transcoder.get_layers());
+							const uint32_t faces = transcoder.get_faces();
+							const uint32_t levels = transcoder.get_levels();
+							for (uint32_t layer = 0; layer < layers; ++layer)
 							{
-								for (uint32_t face = 0; face < transcoder.get_faces(); ++face)
+								for (uint32_t face = 0; face < faces; ++face)
 								{
-									for (uint32_t mip = 0; mip < transcoder.get_levels(); ++mip)
+									for (uint32_t mip = 0; mip < levels; ++mip)
 									{
 										basist::ktx2_image_level_info level_info;
 										if (transcoder.get_image_level_info(level_info, mip, layer, face))
@@ -249,15 +253,15 @@ namespace wi
 									}
 								}
 							}
-							wi::vector<uint8_t*> transcoded_data(transcoded_data_size);
+							wi::vector<uint8_t> transcoded_data(transcoded_data_size);
 
 							wi::vector<SubresourceData> InitData;
 							size_t transcoded_data_offset = 0;
-							for (uint32_t layer = 0; layer < std::max(1u, transcoder.get_layers()); ++layer)
+							for (uint32_t layer = 0; layer < layers; ++layer)
 							{
-								for (uint32_t face = 0; face < transcoder.get_faces(); ++face)
+								for (uint32_t face = 0; face < faces; ++face)
 								{
-									for (uint32_t mip = 0; mip < transcoder.get_levels(); ++mip)
+									for (uint32_t mip = 0; mip < levels; ++mip)
 									{
 										basist::ktx2_image_level_info level_info;
 										if (transcoder.get_image_level_info(level_info, mip, layer, face))
@@ -265,7 +269,9 @@ namespace wi
 											void* data_ptr = transcoded_data.data() + transcoded_data_offset;
 											transcoded_data_offset += level_info.m_total_blocks * bytes_per_block;
 											if (transcoder.transcode_image_level(
-												mip, layer, face,
+												mip,
+												layer,
+												face,
 												data_ptr,
 												level_info.m_total_blocks,
 												fmt
@@ -277,6 +283,16 @@ namespace wi
 												subresourceData.slice_pitch = subresourceData.row_pitch * level_info.m_num_blocks_y;
 												InitData.push_back(subresourceData);
 											}
+											else
+											{
+												wi::backlog::post("KTX2 transcoding error while loading image!", wi::backlog::LogLevel::Error);
+												assert(0);
+											}
+										}
+										else
+										{
+											wi::backlog::post("KTX2 transcoding error while loading image level info!", wi::backlog::LogLevel::Error);
+											assert(0);
 										}
 									}
 								}
@@ -334,7 +350,7 @@ namespace wi
 											transcoded_data_size += level_info.m_total_blocks * bytes_per_block;
 										}
 									}
-									wi::vector<uint8_t*> transcoded_data(transcoded_data_size);
+									wi::vector<uint8_t> transcoded_data(transcoded_data_size);
 
 									wi::vector<SubresourceData> InitData;
 									size_t transcoded_data_offset = 0;
@@ -346,10 +362,12 @@ namespace wi
 											void* data_ptr = transcoded_data.data() + transcoded_data_offset;
 											transcoded_data_offset += level_info.m_total_blocks * bytes_per_block;
 											if (transcoder.transcode_image_level(
-												filedata, (uint32_t)filesize, image_index,
+												filedata,
+												(uint32_t)filesize,
+												image_index,
 												mip,
 												data_ptr,
-												info.m_total_blocks,
+												level_info.m_total_blocks,
 												fmt
 											))
 											{
@@ -359,6 +377,16 @@ namespace wi
 												subresourceData.slice_pitch = subresourceData.row_pitch * level_info.m_num_blocks_y;
 												InitData.push_back(subresourceData);
 											}
+											else
+											{
+												wi::backlog::post("BASIS transcoding error while loading image!", wi::backlog::LogLevel::Error);
+												assert(0);
+											}
+										}
+										else
+										{
+											wi::backlog::post("BASIS transcoding error while loading image level info!", wi::backlog::LogLevel::Error);
+											assert(0);
 										}
 									}
 
