@@ -3051,9 +3051,6 @@ using namespace dx12_internal;
 			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 		}
 
-		D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint = {};
-		device->GetCopyableFootprints(&resourceDesc, 0, 1, 0, &footprint, nullptr, nullptr, nullptr);
-
 		hr = allocationhandler->allocator->CreateResource(
 			&allocationDesc,
 			&resourceDesc,
@@ -3281,7 +3278,7 @@ using namespace dx12_internal;
 
 		if (texture->mapped_data != nullptr)
 		{
-			texture->mapped_size = resourcedesc.Width;
+			texture->mapped_size = internal_state->total_size;
 			internal_state->mapped_subresources.resize(internal_state->footprints.size());
 			for (size_t i = 0; i < internal_state->footprints.size(); ++i)
 			{
