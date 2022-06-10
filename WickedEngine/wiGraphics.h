@@ -769,9 +769,9 @@ namespace wi::graphics
 
 	struct SubresourceData
 	{
-		const void* data_ptr = nullptr;
-		uint32_t row_pitch = 0;
-		uint32_t slice_pitch = 0;
+		const void* data_ptr = nullptr;	// pointer to the beginning of the subresource data (pointer to beginning of resource + subresource offset)
+		uint32_t row_pitch = 0;			// bytes between two rows of a texture (2D and 3D textures)
+		uint32_t slice_pitch = 0;		// bytes between two depth slices of a texture (3D textures only)
 	};
 
 	struct Rect
@@ -817,8 +817,8 @@ namespace wi::graphics
 		constexpr bool IsAccelerationStructure() const { return type == Type::RAYTRACING_ACCELERATION_STRUCTURE; }
 
 		// These are only valid if the resource was created with CPU access (USAGE::UPLOAD or USAGE::READBACK)
-		void* mapped_data = nullptr; // for buffers, it is a pointer to the buffer data; for textures, it is a pointer to texture data with linear tiling;
-		size_t mapped_size = 0; // for buffers, it is the full buffer size; for textures it is the full texture size including all subresources;
+		void* mapped_data = nullptr;	// for buffers, it is a pointer to the buffer data; for textures, it is a pointer to texture data with linear tiling;
+		size_t mapped_size = 0;			// for buffers, it is the full buffer size; for textures it is the full texture size including all subresources;
 	};
 
 	struct GPUBuffer : public GPUResource
@@ -833,8 +833,8 @@ namespace wi::graphics
 		TextureDesc	desc;
 
 		// These are only valid if the texture was created with CPU access (USAGE::UPLOAD or USAGE::READBACK)
-		const SubresourceData* mapped_subresources = nullptr; // an array of subresource mappings in the following memory layout: slice0|mip0, slice0|mip1, slice0|mip2, ... sliceN|mipN
-		size_t mapped_subresource_count = 0; // the array size of mapped_subresources (number of slices * number of miplevels)
+		const SubresourceData* mapped_subresources = nullptr;	// an array of subresource mappings in the following memory layout: slice0|mip0, slice0|mip1, slice0|mip2, ... sliceN|mipN
+		size_t mapped_subresource_count = 0;					// the array size of mapped_subresources (number of slices * number of miplevels)
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
 	};

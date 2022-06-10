@@ -416,6 +416,9 @@ namespace wi::helper
 #else
 			params.m_compression_level = basisu::BASISU_MAX_COMPRESSION_LEVEL;
 #endif
+			// Disable CPU mipmap generation:
+			//	instead we provide mipmap data that was downloaded from the GPU with m_source_mipmap_images.
+			//	This is better, because engine specific mipgen options will be retained, such as coverage preserving mipmaps
 			params.m_mip_gen = false;
 			params.m_pSel_codebook = &g_basis_global_codebook;
 			params.m_quality_level = basisu::BASISU_QUALITY_MAX;
