@@ -443,9 +443,9 @@ namespace wi::graphics
 			TEXTURE_2D,
 			TEXTURE_3D,
 		} type = Type::TEXTURE_2D;
-		uint32_t width = 0;
-		uint32_t height = 0;
-		uint32_t depth = 0;
+		uint32_t width = 1;
+		uint32_t height = 1;
+		uint32_t depth = 1;
 		uint32_t array_size = 1;
 		uint32_t mip_levels = 1;
 		Format format = Format::UNKNOWN;
@@ -817,7 +817,7 @@ namespace wi::graphics
 		constexpr bool IsAccelerationStructure() const { return type == Type::RAYTRACING_ACCELERATION_STRUCTURE; }
 
 		void* mapped_data = nullptr;
-		uint32_t mapped_rowpitch = 0;
+		size_t mapped_size = 0;
 	};
 
 	struct GPUBuffer : public GPUResource
@@ -830,6 +830,9 @@ namespace wi::graphics
 	struct Texture : public GPUResource
 	{
 		TextureDesc	desc;
+
+		const SubresourceData* mapped_subresources = nullptr;
+		size_t mapped_subresource_count = 0;
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
 	};
