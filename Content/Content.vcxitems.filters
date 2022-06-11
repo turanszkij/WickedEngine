@@ -198,6 +198,9 @@
     <None Include="$(MSBuildThisFileDirectory)models\shadowspriority_spot_test.wiscene">
       <Filter>models</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\set_material_all.lua">
+      <Filter>scripts</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\background.png">
