@@ -902,6 +902,7 @@ namespace wi::gui
 		SetName(name);
 		SetText(name);
 		SetSize(XMFLOAT2(100, 20));
+		SetColor(GetColor()); // all states use same color by default
 
 		scrollbar.SetColor(wi::Color(80, 80, 80, 100), wi::gui::IDLE);
 		scrollbar.sprites_knob[ScrollBar::SCROLLBAR_INACTIVE].params.color = wi::Color(140, 140, 140, 140);
@@ -2203,12 +2204,6 @@ namespace wi::gui
 		bool focus = false;
 		for (auto& widget : widgets)
 		{
-			// Don't update these again:
-			if (widget == &scrollbar_horizontal)
-				continue;
-			if (widget == &scrollbar_vertical)
-				continue;
-
 			widget->force_disable = force_disable || focus;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
@@ -3206,7 +3201,11 @@ namespace wi::gui
 		XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height(), translation.y + GetItemOffset(visible_count) + item_height() * 0.5f);
 		Hitbox2D hitbox;
 		hitbox.pos = XMFLOAT2(pos.x + item_height() * 0.5f + 2, pos.y - item_height() * 0.5f);
-		hitbox.siz = XMFLOAT2(scale.x - 2 - item_height() * 0.5f - 2 - level * item_height() - scrollbar.scale.x - 2, item_height());
+		hitbox.siz = XMFLOAT2(scale.x - 2 - item_height() * 0.5f - 2 - level * item_height() - 2, item_height());
+		if (HasScrollbar())
+		{
+			hitbox.siz.x -= scrollbar.scale.x;
+		}
 		return hitbox;
 	}
 	Hitbox2D TreeList::GetHitbox_ItemOpener(int visible_count, int level) const
@@ -3216,7 +3215,7 @@ namespace wi::gui
 	}
 	bool TreeList::HasScrollbar() const
 	{
-		return scale.y < (int)items.size()* item_height();
+		return scale.y < (int)items.size() * item_height();
 	}
 	void TreeList::Update(const wi::Canvas& canvas, float dt)
 	{

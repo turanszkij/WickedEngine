@@ -192,7 +192,7 @@ void LightWindow::Create(EditorComponent* editor)
 
 
 	colorPicker.Create("Light Color", false);
-	colorPicker.SetPos(XMFLOAT2(10, 30));
+	colorPicker.SetPos(XMFLOAT2(10, 0));
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(false);
 	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
@@ -226,12 +226,8 @@ void LightWindow::Create(EditorComponent* editor)
 	typeSelectorComboBox.SetSelected((int)LightComponent::POINT);
 	AddWidget(&typeSelectorComboBox);
 
-
-
-	x = 10;
-	y = 280;
-	hei = 20;
-	step = hei + 2;
+	y += step;
+	x -= 100;
 
 	lensflare_Label.Create("Lens flare textures: ");
 	lensflare_Label.SetPos(XMFLOAT2(x, y += step));
