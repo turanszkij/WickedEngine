@@ -350,6 +350,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			}
 		}
 
+		// Terminate ray's path or apply inverse termination bias:
+		const float termination_chance = max3(energy);
+		if (rng.next_float() > termination_chance)
+		{
+			break;
+		}
+		energy /= termination_chance;
+
+		// Set up next bounce:
 		if (rng.next_float() < surface.transmission)
 		{
 			// Refraction
@@ -383,14 +392,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				ray.Origin += surface.facenormal * 0.001;
 			}
 		}
-
-		// Terminate ray's path or apply inverse termination bias:
-		const float termination_chance = max3(energy);
-		if (rng.next_float() > termination_chance)
-		{
-			break;
-		}
-		energy /= termination_chance;
 
 	}
 
