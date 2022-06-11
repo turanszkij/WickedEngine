@@ -275,7 +275,13 @@ namespace wi::profiler
 	};
 	wi::unordered_map<std::string, Hits> time_cache_cpu;
 	wi::unordered_map<std::string, Hits> time_cache_gpu;
-	void DrawData(const wi::Canvas& canvas, float x, float y, CommandList cmd)
+	void DrawData(
+		const wi::Canvas& canvas,
+		float x,
+		float y,
+		CommandList cmd,
+		ColorSpace colorspace
+	)
 	{
 		if (!ENABLED || !initialized)
 			return;
@@ -346,8 +352,14 @@ namespace wi::profiler
 		fx.siz.x = (float)wi::font::TextWidth(ss.str(), params);
 		fx.siz.y = (float)wi::font::TextHeight(ss.str(), params);
 		fx.color = wi::Color(20, 20, 20, 230);
-		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 
+		if (colorspace != ColorSpace::SRGB)
+		{
+			params.enableLinearOutputMapping(9);
+			fx.enableLinearOutputMapping(9);
+		}
+
+		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		wi::font::Draw(ss.str(), params, cmd);
 	}
 

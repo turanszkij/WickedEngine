@@ -2154,6 +2154,10 @@ void EditorComponent::Compose(CommandList cmd) const
 	wi::image::Params fx;
 	fx.customRotation = &R;
 	fx.customProjection = &VP;
+	if (colorspace != ColorSpace::SRGB)
+	{
+		fx.enableLinearOutputMapping(GetHDRScaling());
+	}
 
 	if (rendererWnd.GetPickType() & PICK_LIGHT)
 	{
