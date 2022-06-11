@@ -22,7 +22,13 @@ namespace wi::profiler
 	void EndRange(range_id id);
 
 	// Renders a basic text of the Profiling results to the (x,y) screen coordinate
-	void DrawData(const wi::Canvas& canvas, float x, float y, wi::graphics::CommandList cmd);
+	void DrawData(
+		const wi::Canvas& canvas,
+		float x,
+		float y,
+		wi::graphics::CommandList cmd,
+		wi::graphics::ColorSpace colorspace = wi::graphics::ColorSpace::SRGB
+	);
 
 	// Enable/disable profiling
 	void SetEnabled(bool value);

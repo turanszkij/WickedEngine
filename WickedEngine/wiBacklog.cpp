@@ -122,7 +122,11 @@ namespace wi::backlog
 		}
 		pos = wi::math::Clamp(pos, -canvas.GetLogicalHeight(), 0);
 	}
-	void Draw(const wi::Canvas& canvas, CommandList cmd)
+	void Draw(
+		const wi::Canvas& canvas,
+		CommandList cmd,
+		ColorSpace colorspace
+	)
 	{
 		if (pos > -canvas.GetLogicalHeight())
 		{
@@ -135,11 +139,19 @@ namespace wi::backlog
 			wi::image::Params fx = wi::image::Params((float)canvas.GetLogicalWidth(), (float)canvas.GetLogicalHeight());
 			fx.pos = XMFLOAT3(0, pos, 0);
 			fx.opacity = wi::math::Lerp(1, 0, -pos / canvas.GetLogicalHeight());
+			if (colorspace != ColorSpace::SRGB)
+			{
+				fx.enableLinearOutputMapping(9);
+			}
 			wi::image::Draw(&backgroundTex, fx, cmd);
 
 			fx.pos = XMFLOAT3(5, canvas.GetLogicalHeight() - 30, 0);
 			fx.siz = XMFLOAT2(canvas.GetLogicalWidth() - 10, 25);
 			fx.color = XMFLOAT4(1, 1, 1, 0.2f);
+			if (colorspace != ColorSpace::SRGB)
+			{
+				fx.enableLinearOutputMapping(9);
+			}
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 
 			wi::font::Params params = wi::font::Params(10, canvas.GetLogicalHeight() - 10, wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_BOTTOM);
@@ -149,6 +161,10 @@ namespace wi::backlog
 			params.shadow_offset_x = 2;
 			params.shadow_offset_y = 2;
 			params.shadow_softness = 1;
+			if (colorspace != ColorSpace::SRGB)
+			{
+				params.enableLinearOutputMapping(9);
+			}
 			wi::font::Draw(inputArea, params, cmd);
 
 			Rect rect;
@@ -158,17 +174,21 @@ namespace wi::backlog
 			rect.bottom = int32_t(canvas.LogicalToPhysical(canvas.GetLogicalHeight() - 35));
 			wi::graphics::GetDevice()->BindScissorRects(1, &rect, cmd);
 
-			DrawOutputText(canvas, cmd);
+			DrawOutputText(canvas, cmd, colorspace);
 
-			rect.left = -std::numeric_limits<int>::max();
+			rect.left = 0;
 			rect.right = std::numeric_limits<int>::max();
-			rect.top = -std::numeric_limits<int>::max();
+			rect.top = 0;
 			rect.bottom = std::numeric_limits<int>::max();
 			wi::graphics::GetDevice()->BindScissorRects(1, &rect, cmd);
 		}
 	}
 
-	void DrawOutputText(const wi::Canvas& canvas, wi::graphics::CommandList cmd)
+	void DrawOutputText(
+		const wi::Canvas& canvas,
+		CommandList cmd,
+		ColorSpace colorspace
+	)
 	{
 		std::scoped_lock lock(logLock);
 		wi::font::SetCanvas(canvas); // always set here as it can be called from outside...
@@ -186,6 +206,10 @@ namespace wi::backlog
 		font_params.posX = 5;
 		font_params.posY = pos + scroll;
 		font_params.h_wrap = canvas.GetLogicalWidth() - font_params.posX;
+		if (colorspace != ColorSpace::SRGB)
+		{
+			font_params.enableLinearOutputMapping(9);
+		}
 		for (auto& x : entries)
 		{
 			switch (x.level)

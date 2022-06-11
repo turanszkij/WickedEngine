@@ -70,7 +70,7 @@ namespace wi::image
 		float rotation = 0;
 		float fade = 0;
 		float opacity = 1;
-		float hdr_scaling = 1.0f;
+		float hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
 
 		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
 		XMFLOAT2 corners[4] = {
@@ -88,7 +88,8 @@ namespace wi::image
 		QUALITY quality = QUALITY_LINEAR;
 
 		const wi::graphics::Texture* maskMap = nullptr;
-		// Generic texture
+
+		// Set a mask map that will be used to multiply the base image
 		constexpr void setMaskMap(const wi::graphics::Texture* tex) { maskMap = tex; }
 
 		constexpr bool isDrawRectEnabled() const { return _flags & DRAWRECT; }
@@ -110,14 +111,12 @@ namespace wi::image
 		constexpr void enableExtractNormalMap() { _flags |= EXTRACT_NORMALMAP; }
 		// enable full screen override. It just draws texture onto the full screen, disabling any other setup except sampler and stencil)
 		constexpr void enableFullScreen() { _flags |= FULLSCREEN; }
-		// enable background blur, which samples a background screen texture on a specified mip level on transparent areas instead of alpha blending
+		// enable background, which samples a background screen texture on transparent areas instead of alpha blending
 		//	the background tex should be bound with wi::image::SetBackground() beforehand
 		constexpr void enableBackground() { _flags |= BACKGROUND; }
 		// enable HDR10 output mapping, if this image can be interpreted in linear space and converted to HDR10 display format
-		//	this only works together with the enableFullScreen() override!
 		constexpr void enableHDR10OutputMapping() { _flags |= OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		// enable linear output mapping, which means removing gamma curve and outputting in linear space (useful for blending in HDR space)
-		//	this only works together with the enableFullScreen() override!
 		constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
 
 		// disable draw rectangle for base texture (whole texture will be drawn, no cutout)

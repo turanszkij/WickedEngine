@@ -464,10 +464,21 @@ namespace wi::font
 
 			device->BindPipelineState(&PSO, cmd);
 
-			FontConstants font;
+			FontConstants font = {};
 			font.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
 			font.buffer_offset = (uint32_t)mem.offset;
 			font.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
+
+			font.flags = 0;
+			if (params.isHDR10OutputMappingEnabled())
+			{
+				font.flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
+			}
+			if (params.isLinearOutputMappingEnabled())
+			{
+				font.flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
+				font.hdr_scaling = params.hdr_scaling;
+			}
 
 			// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
 			//	The canvas must be set to have dpi aware rendering
