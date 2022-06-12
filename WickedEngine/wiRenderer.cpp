@@ -155,8 +155,9 @@ struct RenderBatch
 {
 	uint64_t data;
 
-	inline void Create(size_t meshIndex, size_t instanceIndex, float distance)
+	inline void Create(uint32_t meshIndex, uint32_t instanceIndex, float distance)
 	{
+		// These asserts are a indicating if render queue limits are reached:
 		assert(meshIndex < 0x00FFFFFF);
 		assert(instanceIndex < 0x00FFFFFF);
 
@@ -213,7 +214,7 @@ struct RenderQueue
 	{
 		batches.clear();
 	}
-	inline void add(size_t meshIndex, size_t instanceIndex, float distance)
+	inline void add(uint32_t meshIndex, uint32_t instanceIndex, float distance)
 	{
 		batches.emplace_back().Create(meshIndex, instanceIndex, distance);
 	}
@@ -4761,7 +4762,7 @@ void DrawShadowmaps(
 							{
 								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-								renderQueue.add(object.mesh_index, i, 0);
+								renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 								if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 								{
@@ -4822,7 +4823,7 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-							renderQueue.add(object.mesh_index, i, 0);
+							renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 							{
@@ -4889,7 +4890,7 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-							renderQueue.add(object.mesh_index, i, 0);
+							renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 							{
@@ -6370,7 +6371,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					const ObjectComponent& object = vis.scene->objects[i];
 					if (object.IsRenderable())
 					{
-						renderQueue.add(object.mesh_index, i, 0);
+						renderQueue.add(object.mesh_index, uint32_t(i), 0);
 					}
 				}
 			}
@@ -6635,7 +6636,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			const ObjectComponent& object = vis.scene->objects[i];
 			if (object.IsRenderable())
 			{
-				renderQueue.add(object.mesh_index, i, 0);
+				renderQueue.add(object.mesh_index, uint32_t(i), 0);
 			}
 		}
 	}
