@@ -5965,8 +5965,7 @@ void DrawDebugWorld(
 
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstancePointer), cmd);
 			ShaderMeshInstancePointer poi;
-			poi.init();
-			poi.instanceIndex = (uint)scene.objects.GetIndex(x.objectEntity);
+			poi.Create((uint)scene.objects.GetIndex(x.objectEntity));
 			std::memcpy(mem.data, &poi, sizeof(poi));
 
 			device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);

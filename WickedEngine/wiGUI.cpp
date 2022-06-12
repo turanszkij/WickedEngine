@@ -872,6 +872,9 @@ namespace wi::gui
 				sprites_knob[i].params.siz.y = scale.y - knob_inset_border.y * 2;
 			}
 		}
+
+		if (!IsScrollbarRequired())
+			state = IDLE;
 	}
 	void ScrollBar::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
