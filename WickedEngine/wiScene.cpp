@@ -3381,8 +3381,6 @@ namespace wi::scene
 						impostor->color = object.color;
 						impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
 
-						const Sphere boundingsphere = mesh.GetBoundingSphere();
-
 						locker.lock();
 						impostor->instances.push_back(args.jobIndex);
 						locker.unlock();

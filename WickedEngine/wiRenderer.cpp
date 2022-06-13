@@ -2662,8 +2662,6 @@ void RenderImpostors(
 			return;
 		}
 
-		device->EventBegin("RenderImpostors", cmd);
-
 		// Pre-allocate space for all the instances in GPU-buffer:
 		const uint32_t instanceDataSize = sizeof(ShaderMeshInstancePointer);
 		const size_t alloc_size = instanceCount * instanceDataSize;
@@ -2693,7 +2691,6 @@ void RenderImpostors(
 				{
 					continue;
 				}
-
 				float dither = std::max(0.0f, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
 
 				ShaderMeshInstancePointer poi;
@@ -2705,6 +2702,11 @@ void RenderImpostors(
 				drawableInstanceCount++;
 			}
 		}
+
+		if (drawableInstanceCount == 0)
+			return;
+
+		device->EventBegin("RenderImpostors", cmd);
 
 		device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 		device->BindPipelineState(pso, cmd);

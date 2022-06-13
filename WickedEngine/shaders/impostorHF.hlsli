@@ -3,7 +3,7 @@
 
 struct VSOut
 {
-	float4 pos						: SV_POSITION;
+	precise float4 pos				: SV_POSITION;
 	float2 uv						: TEXCOORD;
 	uint slice						: SLICE;
 	nointerpolation float dither	: DITHER;
