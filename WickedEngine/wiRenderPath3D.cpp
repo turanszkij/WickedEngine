@@ -758,7 +758,8 @@ void RenderPath3D::Render() const
 		wi::renderer::DRAWSCENE_OCCLUSIONCULLING
 		;
 	static const uint32_t drawscene_flags_reflections =
-		wi::renderer::DRAWSCENE_OPAQUE
+		wi::renderer::DRAWSCENE_OPAQUE |
+		wi::renderer::DRAWSCENE_IMPOSTOR
 		;
 
 	// Main camera depth prepass + occlusion culling:
@@ -786,7 +787,7 @@ void RenderPath3D::Render() const
 		vp.width = (float)depthBuffer_Main.GetDesc().width;
 		vp.height = (float)depthBuffer_Main.GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
-		wi::renderer::DrawScene(visibility_main, RENDERPASS_PREPASS, cmd, drawscene_flags);
+		wi::renderer::DrawScene(visibility_main, RENDERPASS_PREPASS, cmd, drawscene_flags | wi::renderer::DRAWSCENE_IMPOSTOR);
 
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
@@ -1419,6 +1420,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		drawscene_flags |= wi::renderer::DRAWSCENE_OCCLUSIONCULLING;
 		drawscene_flags |= wi::renderer::DRAWSCENE_HAIRPARTICLE;
 		drawscene_flags |= wi::renderer::DRAWSCENE_TESSELLATION;
+		drawscene_flags |= wi::renderer::DRAWSCENE_IMPOSTOR;
 		wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 
 		device->EventEnd(cmd);

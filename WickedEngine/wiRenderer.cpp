@@ -2580,16 +2580,7 @@ void RenderMeshes(
 			instancedBatch.lod = instance.lod;
 		}
 
-		float dither = instance.GetTransparency();
-
-		if (instance.IsImpostorPlacement())
-		{
-			float distance = batch.GetDistance();
-			float swapDistance = instance.impostorSwapDistance;
-			float fadeThreshold = instance.impostorFadeThresholdRadius;
-			dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;
-		}
-
+		const float dither = std::max(instance.GetTransparency(), std::max(0.0f, batch.GetDistance() - instance.fadeDistance) / instance.radius);
 		if (dither > 0)
 		{
 			instancedBatch.forceAlphatestForDithering = 1;
@@ -4958,6 +4949,7 @@ void DrawScene(
 	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
 	const bool tessellation = (flags & DRAWSCENE_TESSELLATION) && GetTessellationEnabled();
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
+	const bool impostor = flags & DRAWSCENE_IMPOSTOR;
 	const bool occlusion = (flags & DRAWSCENE_OCCLUSIONCULLING) && GetOcclusionCullingEnabled();
 
 	device->EventBegin("DrawScene", cmd);
@@ -4992,7 +4984,7 @@ void DrawScene(
 		renderTypeFlags = RENDERTYPE_ALL;
 	}
 
-	if (renderPass == RENDERPASS_PREPASS || opaque)
+	if (impostor)
 	{
 		RenderImpostors(vis, renderPass, cmd);
 	}
@@ -5024,7 +5016,7 @@ void DrawScene(
 		if (object.IsRenderable() && (object.GetRenderTypes() & renderTypeFlags))
 		{
 			const float distance = wi::math::Distance(vis.camera->Eye, object.center);
-			if (object.IsImpostorPlacement() && distance > object.impostorSwapDistance + object.impostorFadeThresholdRadius)
+			if (distance > object.fadeDistance + object.radius)
 			{
 				continue;
 			}

@@ -3312,8 +3312,8 @@ namespace wi::scene
 			aabb = AABB();
 			object.rendertypeMask = 0;
 			object.SetDynamic(false);
-			object.SetImpostorPlacement(false);
 			object.SetRequestPlanarReflection(false);
+			object.fadeDistance = object.draw_distance;
 
 			if (object.meshID != INVALID_ENTITY)
 			{
@@ -3369,9 +3369,7 @@ namespace wi::scene
 					ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
 					if (impostor != nullptr)
 					{
-						object.SetImpostorPlacement(true);
-						object.impostorFadeThresholdRadius = aabb.getRadius();
-						object.impostorSwapDistance = impostor->swapInDistance;
+						object.fadeDistance = std::min(object.fadeDistance, impostor->swapInDistance);
 
 						locker.lock();
 						impostor->instances.push_back(args.jobIndex);
@@ -3399,6 +3397,9 @@ namespace wi::scene
 						transform_index = ~0u;
 					}
 
+					object.center = aabb.getCenter();
+					object.radius = aabb.getRadius();
+
 					// Create GPU instance data:
 					GraphicsDevice* device = wi::graphics::GetDevice();
 					ShaderMeshInstance inst;
@@ -3425,8 +3426,8 @@ namespace wi::scene
 					inst.geometryOffset = mesh.geometryOffset;
 					inst.geometryCount = (uint)mesh.subsets.size();
 					inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
-					inst.center = aabb.getCenter();
-					inst.radius = aabb.getRadius();
+					inst.center = object.center;
+					inst.radius = object.radius;
 
 					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
