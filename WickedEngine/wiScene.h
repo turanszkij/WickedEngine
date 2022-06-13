@@ -618,9 +618,6 @@ namespace wi::scene
 		float swapInDistance = 100.0f;
 
 		// Non-serialized attributes:
-		wi::primitive::AABB aabb;
-		XMFLOAT4 color;
-		float fadeThresholdRadius;
 		wi::vector<uint32_t> instances;
 		mutable bool render_dirty = false;
 

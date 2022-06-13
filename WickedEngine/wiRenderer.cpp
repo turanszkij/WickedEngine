@@ -862,7 +862,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_ALPHATEST], "objectPS_prepass_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_PREPASS], "impostorPS_prepass.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_SIMPLE], "impostorPS_simple.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_WIRE], "impostorPS_wire.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LIGHTVISUALIZER], "lightVisualizerPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetricLight_DirectionalPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_POINT], "volumetricLight_PointPS.cso"); });
@@ -1353,7 +1352,7 @@ void LoadShaders()
 			break;
 		default:
 			desc.vs = &shaders[VSTYPE_IMPOSTOR];
-			desc.ps = &shaders[PSTYPE_IMPOSTOR_SIMPLE];
+			desc.ps = &shaders[PSTYPE_IMPOSTOR_PREPASS];
 			break;
 		}
 
@@ -1362,7 +1361,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
 		desc.vs = &shaders[VSTYPE_IMPOSTOR];
-		desc.ps = &shaders[PSTYPE_IMPOSTOR_WIRE];
+		desc.ps = &shaders[PSTYPE_IMPOSTOR_SIMPLE];
 		desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
@@ -2651,10 +2650,7 @@ void RenderImpostors(
 		for (size_t impostorID = 0; impostorID < vis.scene->impostors.GetCount(); ++impostorID)
 		{
 			const ImpostorComponent& impostor = vis.scene->impostors[impostorID];
-			if (vis.camera->frustum.CheckBoxFast(impostor.aabb))
-			{
-				instanceCount += (uint32_t)impostor.instances.size();
-			}
+			instanceCount += (uint32_t)impostor.instances.size();
 		}
 
 		if (instanceCount == 0)
@@ -2671,10 +2667,6 @@ void RenderImpostors(
 		for (size_t impostorID = 0; impostorID < vis.scene->impostors.GetCount(); ++impostorID)
 		{
 			const ImpostorComponent& impostor = vis.scene->impostors[impostorID];
-			if (!vis.camera->frustum.CheckBoxFast(impostor.aabb))
-			{
-				continue;
-			}
 
 			for (auto& instanceIndex : impostor.instances)
 			{
@@ -2687,14 +2679,13 @@ void RenderImpostors(
 				const XMFLOAT3 center = aabb.getCenter();
 				float distance = wi::math::Distance(vis.camera->Eye, center);
 
-				if (distance < impostor.swapInDistance - impostor.fadeThresholdRadius)
+				if (distance < impostor.swapInDistance)
 				{
 					continue;
 				}
-				float dither = std::max(0.0f, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
 
 				ShaderMeshInstancePointer poi;
-				poi.Create(instanceIndex, uint32_t(impostorID * 3), dither);
+				poi.Create(instanceIndex, uint32_t(impostorID * 3));
 
 				// memcpy whole structure into mapped pointer to avoid read from uncached memory:
 				std::memcpy((ShaderMeshInstancePointer*)instances.data + drawableInstanceCount, &poi, sizeof(poi));
@@ -5001,6 +4992,11 @@ void DrawScene(
 		renderTypeFlags = RENDERTYPE_ALL;
 	}
 
+	if (renderPass == RENDERPASS_PREPASS || opaque)
+	{
+		RenderImpostors(vis, renderPass, cmd);
+	}
+
 	if (hairparticle)
 	{
 		if (IsWireRender() || !transparent)
@@ -5015,8 +5011,6 @@ void DrawScene(
 			}
 		}
 	}
-
-	RenderImpostors(vis, renderPass, cmd);
 
 	static thread_local RenderQueue renderQueue;
 	renderQueue.init();

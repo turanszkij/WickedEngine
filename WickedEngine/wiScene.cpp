@@ -1145,12 +1145,9 @@ namespace wi::scene
 	}
 	Sphere MeshComponent::GetBoundingSphere() const
 	{
-		XMFLOAT3 halfwidth = aabb.getHalfWidth();
-
 		Sphere sphere;
 		sphere.center = aabb.getCenter();
-		sphere.radius = std::max(halfwidth.x, std::max(halfwidth.y, halfwidth.z));
-
+		sphere.radius = aabb.getRadius();
 		return sphere;
 	}
 
@@ -3257,7 +3254,6 @@ namespace wi::scene
 		wi::jobsystem::Dispatch(ctx, (uint32_t)impostors.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
 
 			ImpostorComponent& impostor = impostors[args.jobIndex];
-			impostor.aabb = AABB();
 			impostor.instances.clear();
 
 			if (impostor.IsDirty())
@@ -3374,12 +3370,8 @@ namespace wi::scene
 					if (impostor != nullptr)
 					{
 						object.SetImpostorPlacement(true);
-						object.impostorSwapDistance = impostor->swapInDistance;
 						object.impostorFadeThresholdRadius = aabb.getRadius();
-
-						impostor->aabb = AABB::Merge(impostor->aabb, aabb);
-						impostor->color = object.color;
-						impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
+						object.impostorSwapDistance = impostor->swapInDistance;
 
 						locker.lock();
 						impostor->instances.push_back(args.jobIndex);

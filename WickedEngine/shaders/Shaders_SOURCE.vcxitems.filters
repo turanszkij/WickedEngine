@@ -572,9 +572,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)lensFlarePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)impostorPS_wire.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)impostorPS_simple.hlsl">
       <Filter>PS</Filter>
     </FxCompile>

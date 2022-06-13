@@ -8,7 +8,7 @@ struct VSOut
 	uint slice						: SLICE;
 	nointerpolation float dither	: DITHER;
 	float3 pos3D					: WORLDPOSITION;
-	uint instanceID					: INSTANCEID;
+	uint instanceColor				: COLOR;
 };
 
 Texture2DArray<float4> impostorTex : register(t1);

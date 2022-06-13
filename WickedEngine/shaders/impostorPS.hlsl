@@ -9,10 +9,9 @@ float4 main(VSOut input) : SV_Target
 	float3 uv_nor = float3(input.uv, input.slice + 1);
 	float3 uv_sur = float3(input.uv, input.slice + 2);
 
-	ShaderMeshInstance instance = load_instance(input.instanceID);
-
-	float4 baseColor = impostorTex.Sample(sampler_linear_clamp, uv_col) * unpack_rgba(instance.color);
+	float4 baseColor = impostorTex.Sample(sampler_linear_clamp, uv_col);
 	baseColor.rgb = DEGAMMA(baseColor.rgb);
+	baseColor *= unpack_rgba(input.instanceColor);
 	float3 N = impostorTex.Sample(sampler_linear_clamp, uv_nor).rgb * 2 - 1;
 	float4 surfaceparams = impostorTex.Sample(sampler_linear_clamp, uv_sur);
 

@@ -60,7 +60,7 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	Out.uv = uv;
 	Out.slice = slice;
 	Out.dither = poi.GetDither();
-	Out.instanceID = poi.GetInstanceIndex();
+	Out.instanceColor = instance.color;
 
 	return Out;
 }
