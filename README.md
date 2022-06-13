@@ -59,12 +59,10 @@ sudo apt update
 sudo apt install libsdl2-dev
 sudo apt install build-essential
 ```
-To build the engine, editor and tests, use `cmake` and then `make`:
+To build the engine, editor and tests, use CMake from the root directory:
 ```bash
-mkdir build
-cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make
+cmake -S . -B ./Build -DCMAKE_BUILD_TYPE="Debug"
+cmake --build Build -j$(nproc)
 ```
 
 If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. For examples, look at the Cmake files, or the Tests and the Editor applications.
@@ -227,9 +225,10 @@ You can specify command line arguments (without any prefix) to switch between re
 <br/>
 
 ### Other software using Wicked Engine
-- <a href="https://www.game-guru.com/max">Game Guru MAX</a>: Easy to use game creator software
-- <a href="https://www.youtube.com/watch?v=0SxXmnSQ6Q4">Flytrap</a>: Demoscene production by qop
-- Your project: add your project to this readme and open a pull request
+- <a href="https://github.com/MolassesLover/WickedEngine-Demo.git">The Wicked Engine demo</a>: A fully-fledged game in the works.
+- <a href="https://www.game-guru.com/max">Game Guru MAX</a>: An easy to use game creation software.
+- <a href="https://www.youtube.com/watch?v=0SxXmnSQ6Q4">Flytrap</a>: Demoscene production by qop.
+- Your project: add your project to this README and open a pull request!
 
 <br/>
 
