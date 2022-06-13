@@ -3207,14 +3207,16 @@ namespace wi::scene
 			device->CreateTexture(&desc, nullptr, &impostorArray);
 			device->SetName(&impostorArray, "impostorArray");
 
-			renderpasses_impostor.resize(desc.array_size);
-
 			for (uint32_t i = 0; i < desc.array_size; ++i)
 			{
 				int subresource_index;
 				subresource_index = device->CreateSubresource(&impostorArray, SubresourceType::RTV, i, 1, 0, 1);
 				assert(subresource_index == i);
+			}
 
+			renderpasses_impostor.resize(desc.array_size / 3);
+			for (uint32_t i = 0; i < desc.array_size / 3; ++i)
+			{
 				RenderPassDesc renderpassdesc;
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::RenderTarget(
@@ -3222,7 +3224,23 @@ namespace wi::scene
 						RenderPassAttachment::LoadOp::CLEAR
 					)
 				);
-				renderpassdesc.attachments.back().subresource = subresource_index;
+				renderpassdesc.attachments.back().subresource = i * 3;
+
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::RenderTarget(
+						&impostorArray,
+						RenderPassAttachment::LoadOp::CLEAR
+					)
+				);
+				renderpassdesc.attachments.back().subresource = i * 3 + 1;
+
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::RenderTarget(
+						&impostorArray,
+						RenderPassAttachment::LoadOp::CLEAR
+					)
+				);
+				renderpassdesc.attachments.back().subresource = i * 3 + 2;
 
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::DepthStencil(
@@ -3232,7 +3250,7 @@ namespace wi::scene
 					)
 				);
 
-				device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
+				device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[i]);
 			}
 		}
 
@@ -3417,6 +3435,8 @@ namespace wi::scene
 					inst.geometryOffset = mesh.geometryOffset;
 					inst.geometryCount = (uint)mesh.subsets.size();
 					inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
+					inst.center = aabb.getCenter();
+					inst.radius = aabb.getRadius();
 
 					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
@@ -3855,6 +3875,8 @@ namespace wi::scene
 			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
 			inst.geometryCount = 1;
 			inst.meshletOffset = meshletOffset;
+			inst.center = hair.aabb.getCenter();
+			inst.radius = hair.aabb.getRadius();
 
 			const size_t instanceIndex = objects.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));

@@ -611,13 +611,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)circlePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)captureImpostorPS_normal.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)captureImpostorPS_surface.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)captureImpostorPS_albedo.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)captureImpostorPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticleVS.hlsl">

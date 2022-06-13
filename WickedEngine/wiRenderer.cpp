@@ -568,9 +568,7 @@ PipelineState PSO_decal;
 PipelineState PSO_occlusionquery;
 PipelineState PSO_impostor[RENDERPASS_COUNT];
 PipelineState PSO_impostor_wire;
-PipelineState PSO_captureimpostor_albedo;
-PipelineState PSO_captureimpostor_normal;
-PipelineState PSO_captureimpostor_surface;
+PipelineState PSO_captureimpostor;
 
 PipelineState PSO_lightvisualizer[LightComponent::LIGHTTYPE_COUNT];
 PipelineState PSO_volumetriclight[LightComponent::LIGHTTYPE_COUNT];
@@ -872,9 +870,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP], "envMapPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP_SKY_STATIC], "envMap_skyPS_static.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP_SKY_DYNAMIC], "envMap_skyPS_dynamic.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO], "captureImpostorPS_albedo.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL], "captureImpostorPS_normal.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE], "captureImpostorPS_surface.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_CAPTUREIMPOSTOR], "captureImpostorPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_CUBEMAP], "cubeMapPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VERTEXCOLOR], "vertexcolorPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SKY_STATIC], "skyPS_static.cso"); });
@@ -1381,14 +1377,8 @@ void LoadShaders()
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_CAPTUREIMPOSTOR];
 
-		desc.ps = &shaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO];
-		device->CreatePipelineState(&desc, &PSO_captureimpostor_albedo);
-
-		desc.ps = &shaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL];
-		device->CreatePipelineState(&desc, &PSO_captureimpostor_normal);
-
-		desc.ps = &shaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE];
-		device->CreatePipelineState(&desc, &PSO_captureimpostor_surface);
+		desc.ps = &shaders[PSTYPE_CAPTUREIMPOSTOR];
+		device->CreatePipelineState(&desc, &PSO_captureimpostor);
 		});
 
 	wi::jobsystem::Dispatch(ctx, LightComponent::LIGHTTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
@@ -1999,12 +1989,6 @@ void SetUpStates()
 
 	BlendState bd;
 	bd.render_target[0].blend_enable = false;
-	bd.render_target[0].src_blend = Blend::SRC_ALPHA;
-	bd.render_target[0].dest_blend = Blend::INV_SRC_ALPHA;
-	bd.render_target[0].blend_op = BlendOp::MAX;
-	bd.render_target[0].src_blend_alpha = Blend::ONE;
-	bd.render_target[0].dest_blend_alpha = Blend::ZERO;
-	bd.render_target[0].blend_op_alpha = BlendOp::ADD;
 	bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
 	bd.alpha_to_coverage_enable = false;
 	bd.independent_blend_enable = false;
@@ -2655,8 +2639,10 @@ void RenderImpostors(
 		{
 		case RENDERPASS_MAIN:
 			pso = &PSO_impostor_wire;
+			break;
+		default:
+			return;
 		}
-		return;
 	}
 
 	if (vis.scene->impostors.GetCount() > 0 && pso != nullptr)
@@ -2712,7 +2698,7 @@ void RenderImpostors(
 
 				// Write into actual GPU-buffer:
 				ShaderMeshInstancePointer* poi = (ShaderMeshInstancePointer*)instances.data + drawableInstanceCount;
-				poi->Create(instanceIndex, uint32_t(impostorID * impostorCaptureAngles * 3), dither);
+				poi->Create(instanceIndex, uint32_t(impostorID * 3), dither);
 
 				drawableInstanceCount++;
 			}
@@ -5011,6 +4997,23 @@ void DrawScene(
 		renderTypeFlags = RENDERTYPE_ALL;
 	}
 
+	if (hairparticle)
+	{
+		if (IsWireRender() || !transparent)
+		{
+			for (uint32_t hairIndex : vis.visibleHairs)
+			{
+				const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
+
+				hair.Draw(material, renderPass, cmd);
+			}
+		}
+	}
+
+	RenderImpostors(vis, renderPass, cmd);
+
 	static thread_local RenderQueue renderQueue;
 	renderQueue.init();
 	for (uint32_t instanceIndex : vis.visibleObjects)
@@ -5042,23 +5045,6 @@ void DrawScene(
 		}
 		RenderMeshes(vis, renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
 	}
-
-	if (hairparticle)
-	{
-		if (IsWireRender() || !transparent)
-		{
-			for (uint32_t hairIndex : vis.visibleHairs)
-			{
-				const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
-				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
-
-				hair.Draw(material, renderPass, cmd);
-			}
-		}
-	}
-
-	RenderImpostors(vis, renderPass, cmd);
 
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
 	device->EventEnd(cmd);
@@ -6506,6 +6492,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 	device->EventBegin("Impostor Refresh", cmd);
 
+	device->BindPipelineState(&PSO_captureimpostor, cmd);
 	BindCommonResources(cmd);
 
 	for (uint32_t impostorIndex = 0; impostorIndex < scene.impostors.GetCount(); ++impostorIndex)
@@ -6523,74 +6510,57 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 		device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
 
-		for (int prop = 0; prop < 3; ++prop)
+		for (size_t i = 0; i < impostorCaptureAngles; ++i)
 		{
-			switch (prop)
+			CameraComponent impostorcamera;
+			impostorcamera.SetCustomProjectionEnabled(true);
+			TransformComponent camera_transform;
+
+			camera_transform.ClearTransform();
+			camera_transform.Translate(boundingsphere.center);
+
+			XMMATRIX P = XMMatrixOrthographicOffCenterLH(-boundingsphere.radius, boundingsphere.radius, -boundingsphere.radius, boundingsphere.radius, -boundingsphere.radius, boundingsphere.radius);
+			XMStoreFloat4x4(&impostorcamera.Projection, P);
+			XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationAxis(XMVectorSet(0, 1, 0, 0), XM_2PI * (float)i / (float)impostorCaptureAngles));
+			XMStoreFloat4(&camera_transform.rotation_local, Q);
+
+			camera_transform.UpdateTransform();
+			impostorcamera.TransformCamera(camera_transform);
+			impostorcamera.UpdateCamera();
+
+			BindCameraCB(impostorcamera, impostorcamera, impostorcamera, cmd);
+
+			int slice = (int)(impostorIndex * impostorCaptureAngles + i);
+			device->RenderPassBegin(&scene.renderpasses_impostor[slice], cmd);
+
+			Viewport viewport;
+			viewport.height = (float)scene.impostorTextureDim;
+			viewport.width = (float)scene.impostorTextureDim;
+			device->BindViewports(1, &viewport, cmd);
+
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			mesh.GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 			{
-			case 0:
-				device->BindPipelineState(&PSO_captureimpostor_albedo, cmd);
-				break;
-			case 1:
-				device->BindPipelineState(&PSO_captureimpostor_normal, cmd);
-				break;
-			case 2:
-				device->BindPipelineState(&PSO_captureimpostor_surface, cmd);
-				break;
-			}
-
-			for (size_t i = 0; i < impostorCaptureAngles; ++i)
-			{
-				CameraComponent impostorcamera;
-				impostorcamera.SetCustomProjectionEnabled(true);
-				TransformComponent camera_transform;
-
-				camera_transform.ClearTransform();
-				camera_transform.Translate(boundingsphere.center);
-
-				XMMATRIX P = XMMatrixOrthographicOffCenterLH(-boundingsphere.radius, boundingsphere.radius, -boundingsphere.radius, boundingsphere.radius, -boundingsphere.radius, boundingsphere.radius);
-				XMStoreFloat4x4(&impostorcamera.Projection, P);
-				XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationAxis(XMVectorSet(0, 1, 0, 0), XM_2PI * (float)i / (float)impostorCaptureAngles));
-				XMStoreFloat4(&camera_transform.rotation_local, Q);
-
-				camera_transform.UpdateTransform();
-				impostorcamera.TransformCamera(camera_transform);
-				impostorcamera.UpdateCamera();
-
-				BindCameraCB(impostorcamera, impostorcamera, impostorcamera, cmd);
-
-
-				int textureIndex = (int)(impostorIndex * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
-				device->RenderPassBegin(&scene.renderpasses_impostor[textureIndex], cmd);
-
-				Viewport viewport;
-				viewport.height = (float)scene.impostorTextureDim;
-				viewport.width = (float)scene.impostorTextureDim;
-				device->BindViewports(1, &viewport, cmd);
-
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				mesh.GetLODSubsetRange(0, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+				if (subset.indexCount == 0)
 				{
-					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
-					if (subset.indexCount == 0)
-					{
-						continue;
-					}
-					const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
-
-					ObjectPushConstants push;
-					push.geometryIndex = mesh.geometryOffset + subsetIndex;
-					push.materialIndex = subset.materialIndex;
-					push.instances = -1;
-					push.instance_offset = 0;
-					device->PushConstants(&push, sizeof(push), cmd);
-
-					device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
+					continue;
 				}
+				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				device->RenderPassEnd(cmd);
+				ObjectPushConstants push;
+				push.geometryIndex = mesh.geometryOffset + subsetIndex;
+				push.materialIndex = subset.materialIndex;
+				push.instances = -1;
+				push.instance_offset = 0;
+				device->PushConstants(&push, sizeof(push), cmd);
+
+				device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
 			}
+
+			device->RenderPassEnd(cmd);
 		}
 
 	}

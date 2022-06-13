@@ -292,6 +292,10 @@ struct ShaderMeshInstance
 	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
 	ShaderTransform transformPrev;
 
+	// Bounding sphere of the instance:
+	float3 center;
+	float radius;
+
 	void init()
 	{
 		uid = 0;
@@ -306,6 +310,8 @@ struct ShaderMeshInstance
 		transform.init();
 		transformInverseTranspose.init();
 		transformPrev.init();
+		center = float3(0, 0, 0);
+		radius = 0;
 	}
 
 };

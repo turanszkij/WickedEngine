@@ -260,9 +260,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"emittedparticlePS_simple", wi::graphics::ShaderStage::PS },
 	{"cubeMapPS", wi::graphics::ShaderStage::PS },
 	{"circlePS", wi::graphics::ShaderStage::PS },
-	{"captureImpostorPS_normal", wi::graphics::ShaderStage::PS },
-	{"captureImpostorPS_surface", wi::graphics::ShaderStage::PS },
-	{"captureImpostorPS_albedo", wi::graphics::ShaderStage::PS },
+	{"captureImpostorPS", wi::graphics::ShaderStage::PS },
 	{"ddgi_debugPS", wi::graphics::ShaderStage::PS },
 
 
