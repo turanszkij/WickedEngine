@@ -74,7 +74,10 @@ namespace wi::primitive
 		XMFLOAT3 abc = getHalfWidth();
 		return std::max(std::max(abc.x, abc.y), abc.z);
 	}
-	AABB::INTERSECTION_TYPE AABB::intersects(const AABB& b) const {
+	AABB::INTERSECTION_TYPE AABB::intersects(const AABB& b) const
+	{
+		if (!IsValid() || !b.IsValid())
+			return OUTSIDE;
 
 		XMFLOAT3 aMin = getMin(), aMax = getMax();
 		XMFLOAT3 bMin = b.getMin(), bMax = b.getMax();
@@ -95,7 +98,10 @@ namespace wi::primitive
 
 		return INTERSECTS;
 	}
-	AABB::INTERSECTION_TYPE AABB::intersects2D(const AABB& b) const {
+	AABB::INTERSECTION_TYPE AABB::intersects2D(const AABB& b) const
+	{
+		if (!IsValid() || !b.IsValid())
+			return OUTSIDE;
 
 		XMFLOAT3 aMin = getMin(), aMax = getMax();
 		XMFLOAT3 bMin = b.getMin(), bMax = b.getMax();
@@ -113,18 +119,22 @@ namespace wi::primitive
 
 		return INTERSECTS;
 	}
-	bool AABB::intersects(const XMFLOAT3& p) const {
-		XMFLOAT3 max = getMax();
-		XMFLOAT3 min = getMin();
-		if (p.x > max.x) return false;
-		if (p.x < min.x) return false;
-		if (p.y > max.y) return false;
-		if (p.y < min.y) return false;
-		if (p.z > max.z) return false;
-		if (p.z < min.z) return false;
+	bool AABB::intersects(const XMFLOAT3& p) const
+	{
+		if (!IsValid())
+			return false;
+		if (p.x > _max.x) return false;
+		if (p.x < _min.x) return false;
+		if (p.y > _max.y) return false;
+		if (p.y < _min.y) return false;
+		if (p.z > _max.z) return false;
+		if (p.z < _min.z) return false;
 		return true;
 	}
-	bool AABB::intersects(const Ray& ray) const {
+	bool AABB::intersects(const Ray& ray) const
+	{
+		if (!IsValid())
+			return false;
 		if (intersects(ray.origin))
 			return true;
 
@@ -159,10 +169,14 @@ namespace wi::primitive
 	}
 	bool AABB::intersects(const Sphere& sphere) const
 	{
+		if (!IsValid())
+			return false;
 		return sphere.intersects(*this);
 	}
 	bool AABB::intersects(const BoundingFrustum& frustum) const
 	{
+		if (!IsValid())
+			return false;
 		BoundingBox bb = BoundingBox(getCenter(), getHalfWidth());
 		bool intersection = frustum.Intersects(bb);
 		return intersection;
@@ -214,7 +228,10 @@ namespace wi::primitive
 
 
 
-	bool Sphere::intersects(const AABB& b) const {
+	bool Sphere::intersects(const AABB& b) const
+	{
+		if (!b.IsValid())
+			return false;
 		XMFLOAT3 min = b.getMin();
 		XMFLOAT3 max = b.getMax();
 		XMFLOAT3 closestPointInAabb = wi::math::Min(wi::math::Max(center, min), max);
@@ -298,7 +315,8 @@ namespace wi::primitive
 
 
 
-	bool Ray::intersects(const AABB& b) const {
+	bool Ray::intersects(const AABB& b) const
+	{
 		return b.intersects(*this);
 	}
 	bool Ray::intersects(const Sphere& b) const {
@@ -361,6 +379,8 @@ namespace wi::primitive
 	}
 	Frustum::BoxFrustumIntersect Frustum::CheckBox(const AABB& box) const
 	{
+		if (!box.IsValid())
+			return BOX_FRUSTUM_OUTSIDE;
 		int iTotalIn = 0;
 		for (int p = 0; p < 6; ++p)
 		{
@@ -387,6 +407,8 @@ namespace wi::primitive
 	}
 	bool Frustum::CheckBoxFast(const AABB& box) const
 	{
+		if (!box.IsValid())
+			return false;
 		XMVECTOR max = XMLoadFloat3(&box._max);
 		XMVECTOR min = XMLoadFloat3(&box._min);
 		XMVECTOR zero = XMVectorZero();

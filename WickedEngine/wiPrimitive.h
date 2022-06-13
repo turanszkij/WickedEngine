@@ -65,6 +65,12 @@ namespace wi::primitive
 			assert(0);
 			return XMFLOAT3(0, 0, 0);
 		}
+		constexpr bool IsValid() const
+		{
+			if (_min.x > _max.x || _min.y > _max.y || _min.z > _max.z)
+				return false;
+			return true;
+		}
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

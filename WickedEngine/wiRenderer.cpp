@@ -154,30 +154,54 @@ Texture texture_weatherMap;
 struct RenderBatch
 {
 	uint64_t data;
-	constexpr operator uint64_t() const { return data; }
 
-	inline void Create(size_t meshIndex, size_t instanceIndex, float distance)
+	inline void Create(uint32_t meshIndex, uint32_t instanceIndex, float distance)
 	{
+		// These asserts are a indicating if render queue limits are reached:
 		assert(meshIndex < 0x00FFFFFF);
 		assert(instanceIndex < 0x00FFFFFF);
 
 		data = 0;
-		data |= uint64_t(XMConvertFloatToHalf(distance) & 0xFFFF) << 48ull;
-		data |= uint64_t(meshIndex & 0x00FFFFFF) << 24ull;
+		data |= uint64_t(meshIndex & 0x00FFFFFF) << 40ull;
+		data |= uint64_t(XMConvertFloatToHalf(distance) & 0xFFFF) << 24ull;
 		data |= uint64_t(instanceIndex & 0x00FFFFFF) << 0ull;
 	}
 
 	inline float GetDistance() const
 	{
-		return XMConvertHalfToFloat(HALF(data >> 48ull));
+		return XMConvertHalfToFloat(HALF((data >> 24ull) & 0xFFFF));
 	}
 	inline uint32_t GetMeshIndex() const
 	{
-		return (data >> 24ull) & 0x00FFFFFF;
+		return (data >> 40ull) & 0x00FFFFFF;
 	}
 	inline uint32_t GetInstanceIndex() const
 	{
 		return (data >> 0ull) & 0x00FFFFFF;
+	}
+
+	// opaque sorting
+	//	Priority is set to mesh index to have more instancing
+	//	distance is second priority (front to back Z-buffering)
+	bool operator<(const RenderBatch& other) const
+	{
+		return data < other.data;
+	}
+	// transparent sorting
+	//	Priority is distance for correct alpha blending (back to front rendering)
+	//	mesh index is second priority for instancing
+	bool operator>(const RenderBatch& other) const
+	{
+		// Swap bits of meshIndex and distance to prioritize distance more
+		uint64_t a_data = 0ull;
+		a_data |= ((data >> 24ull) & 0xFFFF) << 48ull; // distance repack
+		a_data |= ((data >> 40ull) & 0x00FFFFFF) << 24ull; // meshIndex repack
+		a_data |= data & 0x00FFFFFF; // instanceIndex repack
+		uint64_t b_data = 0ull;
+		b_data |= ((other.data >> 24ull) & 0xFFFF) << 48ull; // distance repack
+		b_data |= ((other.data >> 40ull) & 0x00FFFFFF) << 24ull; // meshIndex repack
+		b_data |= other.data & 0x00FFFFFF; // instanceIndex repack
+		return a_data > b_data;
 	}
 };
 
@@ -186,36 +210,21 @@ struct RenderQueue
 {
 	wi::vector<RenderBatch> batches;
 
-	enum RenderQueueSortType
-	{
-		SORT_FRONT_TO_BACK,
-		SORT_BACK_TO_FRONT,
-	};
-
 	inline void init()
 	{
 		batches.clear();
 	}
-	inline void add(size_t meshIndex, size_t instanceIndex, float distance)
+	inline void add(uint32_t meshIndex, uint32_t instanceIndex, float distance)
 	{
 		batches.emplace_back().Create(meshIndex, instanceIndex, distance);
 	}
-	inline void sort(RenderQueueSortType sortType = SORT_FRONT_TO_BACK)
+	inline void sort_transparent()
 	{
-		if (!batches.empty())
-		{
-			switch (sortType)
-			{
-			case wi::renderer::RenderQueue::SORT_FRONT_TO_BACK:
-				std::sort(batches.begin(), batches.end(), std::less<uint64_t>());
-				break;
-			case wi::renderer::RenderQueue::SORT_BACK_TO_FRONT:
-				std::sort(batches.begin(), batches.end(), std::greater<uint64_t>());
-				break;
-			default:
-				break;
-			}
-		}
+		std::sort(batches.begin(), batches.end(), std::greater<RenderBatch>());
+	}
+	inline void sort_opaque()
+	{
+		std::sort(batches.begin(), batches.end(), std::less<RenderBatch>());
 	}
 	inline bool empty() const
 	{
@@ -4753,7 +4762,7 @@ void DrawShadowmaps(
 							{
 								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-								renderQueue.add(object.mesh_index, i, 0);
+								renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 								if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 								{
@@ -4814,7 +4823,7 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-							renderQueue.add(object.mesh_index, i, 0);
+							renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 							{
@@ -4881,7 +4890,7 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-							renderQueue.add(object.mesh_index, i, 0);
+							renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 							{
@@ -5025,11 +5034,11 @@ void DrawScene(
 	{
 		if (transparent)
 		{
-			renderQueue.sort(RenderQueue::SORT_BACK_TO_FRONT);
+			renderQueue.sort_transparent();
 		}
-		else if (renderPass == RENDERPASS_PREPASS)
+		else
 		{
-			renderQueue.sort(RenderQueue::SORT_FRONT_TO_BACK);
+			renderQueue.sort_opaque();
 		}
 		RenderMeshes(vis, renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
 	}
@@ -5956,8 +5965,7 @@ void DrawDebugWorld(
 
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstancePointer), cmd);
 			ShaderMeshInstancePointer poi;
-			poi.init();
-			poi.instanceIndex = (uint)scene.objects.GetIndex(x.objectEntity);
+			poi.Create((uint)scene.objects.GetIndex(x.objectEntity));
 			std::memcpy(mem.data, &poi, sizeof(poi));
 
 			device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
@@ -6362,7 +6370,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					const ObjectComponent& object = vis.scene->objects[i];
 					if (object.IsRenderable())
 					{
-						renderQueue.add(object.mesh_index, i, 0);
+						renderQueue.add(object.mesh_index, uint32_t(i), 0);
 					}
 				}
 			}
@@ -6627,7 +6635,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			const ObjectComponent& object = vis.scene->objects[i];
 			if (object.IsRenderable())
 			{
-				renderQueue.add(object.mesh_index, i, 0);
+				renderQueue.add(object.mesh_index, uint32_t(i), 0);
 			}
 		}
 	}

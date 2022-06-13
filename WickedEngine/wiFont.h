@@ -47,6 +47,26 @@ namespace wi::font
 		float shadow_offset_x = 0; // offset for shadow under the text in logical canvas coordinates
 		float shadow_offset_y = 0; // offset for shadow under the text in logical canvas coordinates
 		Cursor cursor; // cursor can be used to continue text drawing by taking the Draw's return value (optional)
+		float hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
+
+		enum FLAGS
+		{
+			EMPTY = 0,
+			OUTPUT_COLOR_SPACE_HDR10_ST2084 = 1 << 1,
+			OUTPUT_COLOR_SPACE_LINEAR = 1 << 2,
+		};
+		uint32_t _flags = EMPTY;
+
+		constexpr bool isHDR10OutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_HDR10_ST2084; }
+		constexpr bool isLinearOutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_LINEAR; }
+
+		// enable HDR10 output mapping, if this image can be interpreted in linear space and converted to HDR10 display format
+		constexpr void enableHDR10OutputMapping() { _flags |= OUTPUT_COLOR_SPACE_HDR10_ST2084; }
+		// enable linear output mapping, which means removing gamma curve and outputting in linear space (useful for blending in HDR space)
+		constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
+
+		constexpr void disableHDR10OutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_HDR10_ST2084; }
+		constexpr void disableLinearOutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_LINEAR; }
 
 		Params(
 			float posX = 0,

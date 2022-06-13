@@ -81,6 +81,8 @@ namespace wi
 
 		wi::font::UpdateAtlas();
 
+		ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
+
 		if (!wi::initializer::IsInitializeFinished())
 		{
 			// Until engine is not loaded, present initialization screen...
@@ -92,7 +94,7 @@ namespace wi
 			graphicsDevice->BindViewports(1, &viewport, cmd);
 			if (wi::initializer::IsInitializeFinished(wi::initializer::INITIALIZED_SYSTEM_FONT))
 			{
-				wi::backlog::DrawOutputText(canvas, cmd);
+				wi::backlog::DrawOutputText(canvas, cmd, colorspace);
 			}
 			graphicsDevice->RenderPassEnd(cmd);
 			graphicsDevice->SubmitCommandLists();
@@ -128,8 +130,6 @@ namespace wi
 		const float dt = framerate_lock ? (1.0f / targetFrameRate) : deltaTime;
 
 		fadeManager.Update(dt);
-
-		ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 
 		if (GetActivePath() != nullptr)
 		{
@@ -255,6 +255,7 @@ namespace wi
 	void Application::Compose(CommandList cmd)
 	{
 		auto range = wi::profiler::BeginRangeCPU("Compose");
+		ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 
 		if (GetActivePath() != nullptr)
 		{
@@ -370,6 +371,14 @@ namespace wi
 			}
 
 			wi::font::Params params = wi::font::Params(4, 4, infoDisplay.size, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, wi::Color(255, 255, 255, 255), wi::Color(0, 0, 0, 255));
+
+			// Explanation: this compose pass is in LINEAR space if display output is linear or HDR10
+			//	If HDR10, the HDR10 output mapping will be performed on whole image later when drawing to swapchain
+			if (colorspace != ColorSpace::SRGB)
+			{
+				params.enableLinearOutputMapping(9);
+			}
+
 			params.cursor = wi::font::Draw(infodisplay_str, params, cmd);
 
 			if (infoDisplay.vram_usage)
@@ -415,9 +424,9 @@ namespace wi
 			}
 		}
 
-		wi::profiler::DrawData(canvas, 4, 120, cmd);
+		wi::profiler::DrawData(canvas, 4, 120, cmd, colorspace);
 
-		wi::backlog::Draw(canvas, cmd);
+		wi::backlog::Draw(canvas, cmd, colorspace);
 
 		wi::profiler::EndRange(range); // Compose
 	}

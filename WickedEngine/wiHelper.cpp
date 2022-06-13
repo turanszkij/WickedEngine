@@ -121,7 +121,6 @@ namespace wi::helper
 		Texture stagingTex;
 		TextureDesc staging_desc = desc;
 		staging_desc.usage = Usage::READBACK;
-		staging_desc.mip_levels = 1;
 		staging_desc.layout = ResourceState::COPY_DST;
 		staging_desc.bind_flags = BindFlag::NONE;
 		staging_desc.misc_flags = ResourceMiscFlag::NONE;
@@ -149,32 +148,47 @@ namespace wi::helper
 		device->SubmitCommandLists();
 		device->WaitForGPU();
 
-		desc.width /= GetFormatBlockSize(desc.format);
-		desc.height /= GetFormatBlockSize(desc.format);
-		uint32_t data_count = desc.width * desc.height;
-		uint32_t data_stride = GetFormatStride(desc.format);
-		uint32_t data_size = data_count * data_stride;
-
 		texturedata.clear();
-		texturedata.resize(data_size);
 
 		if (stagingTex.mapped_data != nullptr)
 		{
-			if (stagingTex.mapped_rowpitch / data_stride != desc.width)
+			texturedata.resize(stagingTex.mapped_size);
+
+			const uint32_t data_stride = GetFormatStride(desc.format);
+			const uint32_t block_size = GetFormatBlockSize(desc.format);
+			const uint32_t num_blocks_x = desc.width / block_size;
+			const uint32_t num_blocks_y = desc.height / block_size;
+			size_t cpy_offset = 0;
+			size_t subresourceIndex = 0;
+			for (uint32_t layer = 0; layer < desc.array_size; ++layer)
 			{
-				// Copy padded texture row by row:
-				const uint32_t cpysize = desc.width * data_stride;
-				for (uint32_t i = 0; i < desc.height; ++i)
+				uint32_t mip_width = num_blocks_x;
+				uint32_t mip_height = num_blocks_y;
+				uint32_t mip_depth = desc.depth;
+				for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 				{
-					void* src = (void*)((size_t)stagingTex.mapped_data + size_t(i * stagingTex.mapped_rowpitch));
-					void* dst = (void*)((size_t)texturedata.data() + size_t(i * cpysize));
-					memcpy(dst, src, cpysize);
+					assert(subresourceIndex < stagingTex.mapped_subresource_count);
+					const SubresourceData& subresourcedata = stagingTex.mapped_subresources[subresourceIndex++];
+					const size_t dst_rowpitch = mip_width * data_stride;
+					for (uint32_t z = 0; z < mip_depth; ++z)
+					{
+						uint8_t* dst_slice = texturedata.data() + cpy_offset;
+						uint8_t* src_slice = (uint8_t*)subresourcedata.data_ptr + subresourcedata.slice_pitch * z;
+						for (uint32_t i = 0; i < mip_height; ++i)
+						{
+							std::memcpy(
+								dst_slice + i * dst_rowpitch,
+								src_slice + i * subresourcedata.row_pitch,
+								subresourcedata.row_pitch
+							);
+						}
+						cpy_offset += mip_height * dst_rowpitch;
+					}
+
+					mip_width = std::max(1u, mip_width / 2);
+					mip_height = std::max(1u, mip_height / 2);
+					mip_depth = std::max(1u, mip_depth / 2);
 				}
-			}
-			else
-			{
-				// Copy whole
-				std::memcpy(texturedata.data(), stagingTex.mapped_data, texturedata.size());
 			}
 		}
 		else
@@ -200,12 +214,40 @@ namespace wi::helper
 	bool saveTextureToMemoryFile(const wi::vector<uint8_t>& texturedata, const wi::graphics::TextureDesc& desc, const std::string& fileExtension, wi::vector<uint8_t>& filedata)
 	{
 		using namespace wi::graphics;
-		uint32_t data_count = desc.width * desc.height;
+		const uint32_t data_stride = GetFormatStride(desc.format);
+
+		struct MipDesc
+		{
+			const uint8_t* address = nullptr;
+			uint32_t width = 0;
+			uint32_t height = 0;
+			uint32_t depth = 0;
+		};
+		wi::vector<MipDesc> mips;
+		mips.reserve(desc.mip_levels);
+
+		uint32_t data_count = 0;
+		uint32_t mip_width = desc.width;
+		uint32_t mip_height = desc.height;
+		uint32_t mip_depth = desc.depth;
+		for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+		{
+			MipDesc& mipdesc = mips.emplace_back();
+			mipdesc.address = texturedata.data() + data_count * data_stride;
+			data_count += mip_width * mip_height * mip_depth;
+			mipdesc.width = mip_width;
+			mipdesc.height = mip_height;
+			mipdesc.depth = mip_depth;
+			mip_width = std::max(1u, mip_width / 2);
+			mip_height = std::max(1u, mip_height / 2);
+			mip_depth = std::max(1u, mip_depth / 2);
+		}
 
 		std::string extension = wi::helper::toUpper(fileExtension);
 		bool basis = !extension.compare("BASIS");
 		bool ktx2 = !extension.compare("KTX2");
 		basisu::image basis_image;
+		basisu::vector<basisu::image> basis_mipmaps;
 
 		if (desc.format == Format::R10G10B10A2_UNORM)
 		{
@@ -343,9 +385,24 @@ namespace wi::helper
 			if (basis_image.get_total_pixels() == 0)
 			{
 				basis_image.init(texturedata.data(), desc.width, desc.height, 4);
+				if (desc.mip_levels > 1)
+				{
+					basis_mipmaps.reserve(desc.mip_levels - 1);
+					for (uint32_t mip = 1; mip < desc.mip_levels; ++mip)
+					{
+						basisu::image basis_mip;
+						const MipDesc& mipdesc = mips[mip];
+						basis_mip.init(mipdesc.address, mipdesc.width, mipdesc.height, 4);
+						basis_mipmaps.push_back(basis_mip);
+					}
+				}
 			}
 			basisu::basis_compressor_params params;
 			params.m_source_images.push_back(basis_image);
+			if (desc.mip_levels > 1)
+			{
+				params.m_source_mipmap_images.push_back(basis_mipmaps);
+			}
 			if (ktx2)
 			{
 				params.m_create_ktx2_file = true;
@@ -359,7 +416,10 @@ namespace wi::helper
 #else
 			params.m_compression_level = basisu::BASISU_MAX_COMPRESSION_LEVEL;
 #endif
-			params.m_mip_gen = true;
+			// Disable CPU mipmap generation:
+			//	instead we provide mipmap data that was downloaded from the GPU with m_source_mipmap_images.
+			//	This is better, because engine specific mipgen options will be retained, such as coverage preserving mipmaps
+			params.m_mip_gen = false;
 			params.m_pSel_codebook = &g_basis_global_codebook;
 			params.m_quality_level = basisu::BASISU_QUALITY_MAX;
 			params.m_multithreading = true;
@@ -387,6 +447,11 @@ namespace wi::helper
 						return true;
 					}
 				}
+				else
+				{
+					wi::backlog::post("basisu::basis_compressor::process() failure!", wi::backlog::LogLevel::Error);
+					assert(0);
+				}
 			}
 			return false;
 		}
@@ -408,21 +473,24 @@ namespace wi::helper
 			src_data = basis_image.get_ptr();
 		}
 
+		static int mip_request = 0; // you can use this while debugging to write specific mip level to file (todo: option param?)
+		const MipDesc& mip = mips[mip_request];
+
 		if (!extension.compare("JPG") || !extension.compare("JPEG"))
 		{
-			write_result = stbi_write_jpg_to_func(func, &filedata, (int)desc.width, (int)desc.height, 4, src_data, 100);
+			write_result = stbi_write_jpg_to_func(func, &filedata, (int)mip.width, (int)mip.height, 4, mip.address, 100);
 		}
 		else if (!extension.compare("PNG"))
 		{
-			write_result = stbi_write_png_to_func(func, &filedata, (int)desc.width, (int)desc.height, 4, src_data, 0);
+			write_result = stbi_write_png_to_func(func, &filedata, (int)mip.width, (int)mip.height, 4, mip.address, 0);
 		}
 		else if (!extension.compare("TGA"))
 		{
-			write_result = stbi_write_tga_to_func(func, &filedata, (int)desc.width, (int)desc.height, 4, src_data);
+			write_result = stbi_write_tga_to_func(func, &filedata, (int)mip.width, (int)mip.height, 4, mip.address);
 		}
 		else if (!extension.compare("BMP"))
 		{
-			write_result = stbi_write_bmp_to_func(func, &filedata, (int)desc.width, (int)desc.height, 4, src_data);
+			write_result = stbi_write_bmp_to_func(func, &filedata, (int)mip.width, (int)mip.height, 4, mip.address);
 		}
 		else
 		{

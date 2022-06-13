@@ -195,7 +195,7 @@ struct VertexInput
 	ShaderMeshInstance GetInstance()
 	{
 		if (push.instances >= 0)
-			return load_instance(GetInstancePointer().instanceIndex);
+			return load_instance(GetInstancePointer().GetInstanceIndex());
 
 		ShaderMeshInstance inst;
 		inst.init();
@@ -940,7 +940,7 @@ PixelInput main(VertexInput input)
 	PixelInput Out;
 
 #ifdef OBJECTSHADER_USE_INSTANCEINDEX
-	Out.instanceIndex = input.GetInstancePointer().instanceIndex;
+	Out.instanceIndex = input.GetInstancePointer().GetInstanceIndex();
 #endif // OBJECTSHADER_USE_INSTANCEINDEX
 
 	VertexSurface surface;

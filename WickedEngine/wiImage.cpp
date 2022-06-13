@@ -74,7 +74,7 @@ namespace wi::image
 				sampler = &samplers[SAMPLER_ANISO_CLAMP];
 		}
 
-		ImageConstants image;
+		ImageConstants image = {};
 		image.texture_base_index = device->GetDescriptorIndex(texture, SubresourceType::SRV);
 		image.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SubresourceType::SRV);
 		if (params.isBackgroundEnabled())

@@ -2,6 +2,9 @@
 #define WI_SHADERINTEROP_FONT_H
 #include "ShaderInterop.h"
 
+static const uint FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084 = 1 << 1;
+static const uint FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR = 1 << 2;
+
 struct FontVertex
 {
 	float2 pos;
@@ -17,8 +20,8 @@ struct FontConstants
 
 	float sdf_threshold_top;
 	float sdf_threshold_bottom;
-	float padding0;
-	float padding1;
+	uint flags;
+	float hdr_scaling;
 
 	float4x4 transform;
 };
