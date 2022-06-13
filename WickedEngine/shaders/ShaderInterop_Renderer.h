@@ -317,30 +317,30 @@ struct ShaderMeshInstance
 };
 struct ShaderMeshInstancePointer
 {
-	uint instanceIndex_frustumIndex_dither;
+	uint data;
 
 	void init()
 	{
-		instanceIndex_frustumIndex_dither = ~0;
+		data = ~0;
 	}
 	void Create(uint _instanceIndex, uint frustum_index = 0, float dither = 0)
 	{
-		instanceIndex_frustumIndex_dither = 0;
-		instanceIndex_frustumIndex_dither |= _instanceIndex & 0xFFFFFF;
-		instanceIndex_frustumIndex_dither |= (frustum_index & 0xF) << 24u;
-		instanceIndex_frustumIndex_dither |= (uint(dither * 15.0f) & 0xF) << 28u;
+		data = 0;
+		data |= _instanceIndex & 0xFFFFFF;
+		data |= (frustum_index & 0xF) << 24u;
+		data |= (uint(dither * 15.0f) & 0xF) << 28u;
 	}
 	uint GetInstanceIndex()
 	{
-		return instanceIndex_frustumIndex_dither & 0xFFFFFF;
+		return data & 0xFFFFFF;
 	}
 	uint GetFrustumIndex()
 	{
-		return (instanceIndex_frustumIndex_dither >> 24u) & 0xF;
+		return (data >> 24u) & 0xF;
 	}
 	float GetDither()
 	{
-		return float((instanceIndex_frustumIndex_dither >> 28u) & 0xF) / 15.0f;
+		return float((data >> 28u) & 0xF) / 15.0f;
 	}
 };
 

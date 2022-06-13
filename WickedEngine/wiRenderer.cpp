@@ -2696,9 +2696,11 @@ void RenderImpostors(
 
 				float dither = std::max(0.0f, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
 
-				// Write into actual GPU-buffer:
-				ShaderMeshInstancePointer* poi = (ShaderMeshInstancePointer*)instances.data + drawableInstanceCount;
-				poi->Create(instanceIndex, uint32_t(impostorID * 3), dither);
+				ShaderMeshInstancePointer poi;
+				poi.Create(instanceIndex, uint32_t(impostorID * 3), dither);
+
+				// memcpy whole structure into mapped pointer to avoid read from uncached memory:
+				std::memcpy((ShaderMeshInstancePointer*)instances.data + drawableInstanceCount, &poi, sizeof(poi));
 
 				drawableInstanceCount++;
 			}
