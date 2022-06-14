@@ -2676,7 +2676,7 @@ void RenderImpostors(
 				}
 
 				ShaderMeshInstancePointer poi;
-				poi.Create(instanceIndex, uint32_t(impostorID * 3));
+				poi.Create(instanceIndex, uint32_t(impostor.textureIndex));
 
 				// memcpy whole structure into mapped pointer to avoid read from uncached memory:
 				std::memcpy((ShaderMeshInstancePointer*)instances.data + drawableInstanceCount, &poi, sizeof(poi));
@@ -6483,6 +6483,11 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 	device->EventBegin("Impostor Refresh", cmd);
 
 	device->BindPipelineState(&PSO_captureimpostor, cmd);
+
+	Viewport viewport;
+	viewport.width = viewport.height = (float)scene.impostorTextureDim;
+	device->BindViewports(1, &viewport, cmd);
+
 	BindCommonResources(cmd);
 
 	for (uint32_t impostorIndex = 0; impostorIndex < scene.impostors.GetCount(); ++impostorIndex)
@@ -6520,13 +6525,8 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 			BindCameraCB(impostorcamera, impostorcamera, impostorcamera, cmd);
 
-			int slice = (int)(impostorIndex * impostorCaptureAngles + i);
+			int slice = (int)(impostor.textureIndex * impostorCaptureAngles + i);
 			device->RenderPassBegin(&scene.renderpasses_impostor[slice], cmd);
-
-			Viewport viewport;
-			viewport.height = (float)scene.impostorTextureDim;
-			viewport.width = (float)scene.impostorTextureDim;
-			device->BindViewports(1, &viewport, cmd);
 
 			uint32_t first_subset = 0;
 			uint32_t last_subset = 0;

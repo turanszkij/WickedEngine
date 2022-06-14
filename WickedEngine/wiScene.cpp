@@ -3251,9 +3251,24 @@ namespace wi::scene
 			}
 		}
 
-		wi::jobsystem::Dispatch(ctx, (uint32_t)impostors.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
+		// reconstruct impostor array status:
+		bool impostorTaken[maxImpostorCount] = {};
+		for (size_t i = 0; i < impostors.GetCount(); ++i)
+		{
+			ImpostorComponent& impostor = impostors[i];
+			if (impostor.textureIndex >= 0 && impostor.textureIndex < maxImpostorCount)
+			{
+				impostorTaken[impostor.textureIndex] = true;
+			}
+			else
+			{
+				impostor.textureIndex = -1;
+			}
+		}
 
-			ImpostorComponent& impostor = impostors[args.jobIndex];
+		for (size_t i = 0; i < impostors.GetCount(); ++i)
+		{
+			ImpostorComponent& impostor = impostors[i];
 			impostor.instances.clear();
 
 			if (impostor.IsDirty())
@@ -3261,7 +3276,21 @@ namespace wi::scene
 				impostor.SetDirty(false);
 				impostor.render_dirty = true;
 			}
-		});
+
+			if (impostor.render_dirty && impostor.textureIndex < 0)
+			{
+				// need to take a free impostor texture slot:
+				for (int i = 0; i < arraysize(impostorTaken); ++i)
+				{
+					if (impostorTaken[i] == false)
+					{
+						impostorTaken[i] = true;
+						impostor.textureIndex = i;
+						break;
+					}
+				}
+			}
+		}
 	}
 	void Scene::RunObjectUpdateSystem(wi::jobsystem::context& ctx)
 	{
@@ -3718,14 +3747,12 @@ namespace wi::scene
 			if (probe.render_dirty && probe.textureIndex < 0)
 			{
 				// need to take a free envmap texture slot:
-				bool found = false;
 				for (int i = 0; i < arraysize(envmapTaken); ++i)
 				{
 					if (envmapTaken[i] == false)
 					{
 						envmapTaken[i] = true;
 						probe.textureIndex = i;
-						found = true;
 						break;
 					}
 				}

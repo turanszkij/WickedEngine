@@ -28,7 +28,7 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 
 	float3 pos = BILLBOARD[vertexID];
 	float2 uv = float2(pos.xy * float2(0.5f, -0.5f) + 0.5f);
-	uint slice = poi.GetFrustumIndex();
+	uint slice = poi.GetFrustumIndex() * impostorCaptureAngles * 3;
 
 	// We rotate the billboard to face camera, but unlike emitted particles, 
 	//	they don't rotate according to camera rotation, but the camera position relative

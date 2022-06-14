@@ -620,6 +620,7 @@ namespace wi::scene
 		// Non-serialized attributes:
 		wi::vector<uint32_t> instances;
 		mutable bool render_dirty = false;
+		int textureIndex = -1;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
@@ -635,7 +636,7 @@ namespace wi::scene
 			RENDERABLE = 1 << 0,
 			CAST_SHADOW = 1 << 1,
 			DYNAMIC = 1 << 2,
-			IMPOSTOR_PLACEMENT = 1 << 3,
+			_DEPRECATED_IMPOSTOR_PLACEMENT = 1 << 3,
 			REQUEST_PLANAR_REFLECTION = 1 << 4,
 			LIGHTMAP_RENDER_REQUEST = 1 << 5,
 		};
