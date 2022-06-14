@@ -732,7 +732,12 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		const ImpostorComponent* impostor = scene.impostors.GetComponent(entity);
 		if (impostor != nullptr)
 		{
+			impostorCreateButton.SetText("Delete Impostor");
 			impostorDistanceSlider.SetValue(impostor->swapInDistance);
+		}
+		else
+		{
+			impostorCreateButton.SetText("Create Impostor");
 		}
 		tessellationFactorSlider.SetValue(mesh->GetTessellationFactor());
 

@@ -456,6 +456,7 @@ void EditorComponent::Load()
 					prop.object = *object;
 					prop.object.lod_distance_multiplier = 0.02f;
 					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+					prop.object.draw_distance = 400;
 				}
 				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
 				wi::scene::GetScene().Merge(props_scene);
@@ -485,6 +486,7 @@ void EditorComponent::Load()
 					prop.object = *object;
 					prop.object.lod_distance_multiplier = 0.05f;
 					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+					prop.object.draw_distance = 200;
 				}
 				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
 				wi::scene::GetScene().Merge(props_scene);

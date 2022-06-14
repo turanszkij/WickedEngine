@@ -1145,12 +1145,9 @@ namespace wi::scene
 	}
 	Sphere MeshComponent::GetBoundingSphere() const
 	{
-		XMFLOAT3 halfwidth = aabb.getHalfWidth();
-
 		Sphere sphere;
 		sphere.center = aabb.getCenter();
-		sphere.radius = std::max(halfwidth.x, std::max(halfwidth.y, halfwidth.z));
-
+		sphere.radius = aabb.getRadius();
 		return sphere;
 	}
 
@@ -3207,14 +3204,16 @@ namespace wi::scene
 			device->CreateTexture(&desc, nullptr, &impostorArray);
 			device->SetName(&impostorArray, "impostorArray");
 
-			renderpasses_impostor.resize(desc.array_size);
-
 			for (uint32_t i = 0; i < desc.array_size; ++i)
 			{
 				int subresource_index;
 				subresource_index = device->CreateSubresource(&impostorArray, SubresourceType::RTV, i, 1, 0, 1);
 				assert(subresource_index == i);
+			}
 
+			renderpasses_impostor.resize(desc.array_size / 3);
+			for (uint32_t i = 0; i < desc.array_size / 3; ++i)
+			{
 				RenderPassDesc renderpassdesc;
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::RenderTarget(
@@ -3222,7 +3221,23 @@ namespace wi::scene
 						RenderPassAttachment::LoadOp::CLEAR
 					)
 				);
-				renderpassdesc.attachments.back().subresource = subresource_index;
+				renderpassdesc.attachments.back().subresource = i * 3;
+
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::RenderTarget(
+						&impostorArray,
+						RenderPassAttachment::LoadOp::CLEAR
+					)
+				);
+				renderpassdesc.attachments.back().subresource = i * 3 + 1;
+
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::RenderTarget(
+						&impostorArray,
+						RenderPassAttachment::LoadOp::CLEAR
+					)
+				);
+				renderpassdesc.attachments.back().subresource = i * 3 + 2;
 
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::DepthStencil(
@@ -3232,14 +3247,28 @@ namespace wi::scene
 					)
 				);
 
-				device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
+				device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[i]);
 			}
 		}
 
-		wi::jobsystem::Dispatch(ctx, (uint32_t)impostors.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
+		// reconstruct impostor array status:
+		bool impostorTaken[maxImpostorCount] = {};
+		for (size_t i = 0; i < impostors.GetCount(); ++i)
+		{
+			ImpostorComponent& impostor = impostors[i];
+			if (impostor.textureIndex >= 0 && impostor.textureIndex < maxImpostorCount)
+			{
+				impostorTaken[impostor.textureIndex] = true;
+			}
+			else
+			{
+				impostor.textureIndex = -1;
+			}
+		}
 
-			ImpostorComponent& impostor = impostors[args.jobIndex];
-			impostor.aabb = AABB();
+		for (size_t i = 0; i < impostors.GetCount(); ++i)
+		{
+			ImpostorComponent& impostor = impostors[i];
 			impostor.instances.clear();
 
 			if (impostor.IsDirty())
@@ -3247,7 +3276,21 @@ namespace wi::scene
 				impostor.SetDirty(false);
 				impostor.render_dirty = true;
 			}
-		});
+
+			if (impostor.render_dirty && impostor.textureIndex < 0)
+			{
+				// need to take a free impostor texture slot:
+				for (int i = 0; i < arraysize(impostorTaken); ++i)
+				{
+					if (impostorTaken[i] == false)
+					{
+						impostorTaken[i] = true;
+						impostor.textureIndex = i;
+						break;
+					}
+				}
+			}
+		}
 	}
 	void Scene::RunObjectUpdateSystem(wi::jobsystem::context& ctx)
 	{
@@ -3298,8 +3341,8 @@ namespace wi::scene
 			aabb = AABB();
 			object.rendertypeMask = 0;
 			object.SetDynamic(false);
-			object.SetImpostorPlacement(false);
 			object.SetRequestPlanarReflection(false);
+			object.fadeDistance = object.draw_distance;
 
 			if (object.meshID != INVALID_ENTITY)
 			{
@@ -3355,15 +3398,7 @@ namespace wi::scene
 					ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
 					if (impostor != nullptr)
 					{
-						object.SetImpostorPlacement(true);
-						object.impostorSwapDistance = impostor->swapInDistance;
-						object.impostorFadeThresholdRadius = aabb.getRadius();
-
-						impostor->aabb = AABB::Merge(impostor->aabb, aabb);
-						impostor->color = object.color;
-						impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
-
-						const Sphere boundingsphere = mesh.GetBoundingSphere();
+						object.fadeDistance = std::min(object.fadeDistance, impostor->swapInDistance);
 
 						locker.lock();
 						impostor->instances.push_back(args.jobIndex);
@@ -3391,6 +3426,9 @@ namespace wi::scene
 						transform_index = ~0u;
 					}
 
+					object.center = aabb.getCenter();
+					object.radius = aabb.getRadius();
+
 					// Create GPU instance data:
 					GraphicsDevice* device = wi::graphics::GetDevice();
 					ShaderMeshInstance inst;
@@ -3417,6 +3455,8 @@ namespace wi::scene
 					inst.geometryOffset = mesh.geometryOffset;
 					inst.geometryCount = (uint)mesh.subsets.size();
 					inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
+					inst.center = object.center;
+					inst.radius = object.radius;
 
 					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
@@ -3707,14 +3747,12 @@ namespace wi::scene
 			if (probe.render_dirty && probe.textureIndex < 0)
 			{
 				// need to take a free envmap texture slot:
-				bool found = false;
 				for (int i = 0; i < arraysize(envmapTaken); ++i)
 				{
 					if (envmapTaken[i] == false)
 					{
 						envmapTaken[i] = true;
 						probe.textureIndex = i;
-						found = true;
 						break;
 					}
 				}
@@ -3855,6 +3893,8 @@ namespace wi::scene
 			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
 			inst.geometryCount = 1;
 			inst.meshletOffset = meshletOffset;
+			inst.center = hair.aabb.getCenter();
+			inst.radius = hair.aabb.getRadius();
 
 			const size_t instanceIndex = objects.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));

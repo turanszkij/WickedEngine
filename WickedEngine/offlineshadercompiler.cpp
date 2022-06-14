@@ -199,7 +199,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"emittedparticlePS_soft_lighting", wi::graphics::ShaderStage::PS },
 	{"oceanSurfacePS", wi::graphics::ShaderStage::PS },
 	{"hairparticlePS", wi::graphics::ShaderStage::PS },
-	{"impostorPS", wi::graphics::ShaderStage::PS },
 	{"volumetricLight_SpotPS", wi::graphics::ShaderStage::PS },
 	{"volumetricLight_PointPS", wi::graphics::ShaderStage::PS },
 	{"volumetricLight_DirectionalPS", wi::graphics::ShaderStage::PS },
@@ -245,7 +244,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"objectPS_transparent_unlit", wi::graphics::ShaderStage::PS },
 	{"lightVisualizerPS", wi::graphics::ShaderStage::PS },
 	{"lensFlarePS", wi::graphics::ShaderStage::PS },
-	{"impostorPS_wire", wi::graphics::ShaderStage::PS },
+	{"impostorPS", wi::graphics::ShaderStage::PS },
 	{"impostorPS_simple", wi::graphics::ShaderStage::PS },
 	{"impostorPS_prepass", wi::graphics::ShaderStage::PS },
 	{"hairparticlePS_simple", wi::graphics::ShaderStage::PS },
@@ -260,9 +259,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"emittedparticlePS_simple", wi::graphics::ShaderStage::PS },
 	{"cubeMapPS", wi::graphics::ShaderStage::PS },
 	{"circlePS", wi::graphics::ShaderStage::PS },
-	{"captureImpostorPS_normal", wi::graphics::ShaderStage::PS },
-	{"captureImpostorPS_surface", wi::graphics::ShaderStage::PS },
-	{"captureImpostorPS_albedo", wi::graphics::ShaderStage::PS },
+	{"captureImpostorPS", wi::graphics::ShaderStage::PS },
 	{"ddgi_debugPS", wi::graphics::ShaderStage::PS },
 
 

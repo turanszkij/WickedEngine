@@ -538,6 +538,10 @@ namespace wi::scene
 			{
 				archive >> lod_distance_multiplier;
 			}
+			if (archive.GetVersion() >= 80)
+			{
+				archive >> draw_distance;
+			}
 		}
 		else
 		{
@@ -564,6 +568,10 @@ namespace wi::scene
 			if (archive.GetVersion() >= 76)
 			{
 				archive << lod_distance_multiplier;
+			}
+			if (archive.GetVersion() >= 80)
+			{
+				archive << draw_distance;
 			}
 		}
 	}

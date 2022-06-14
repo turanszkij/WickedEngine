@@ -618,11 +618,9 @@ namespace wi::scene
 		float swapInDistance = 100.0f;
 
 		// Non-serialized attributes:
-		wi::primitive::AABB aabb;
-		XMFLOAT4 color;
-		float fadeThresholdRadius;
 		wi::vector<uint32_t> instances;
 		mutable bool render_dirty = false;
+		int textureIndex = -1;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
@@ -638,7 +636,7 @@ namespace wi::scene
 			RENDERABLE = 1 << 0,
 			CAST_SHADOW = 1 << 1,
 			DYNAMIC = 1 << 2,
-			IMPOSTOR_PLACEMENT = 1 << 3,
+			_DEPRECATED_IMPOSTOR_PLACEMENT = 1 << 3,
 			REQUEST_PLANAR_REFLECTION = 1 << 4,
 			LIGHTMAP_RENDER_REQUEST = 1 << 5,
 		};
@@ -657,6 +655,8 @@ namespace wi::scene
 		uint8_t userStencilRef = 0;
 		float lod_distance_multiplier = 1;
 
+		float draw_distance = std::numeric_limits<float>::max(); // object will begin to fade out at this distance to camera
+
 		// Non-serialized attributes:
 
 		wi::graphics::Texture lightmap;
@@ -665,8 +665,8 @@ namespace wi::scene
 		mutable uint32_t lightmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
-		float impostorFadeThresholdRadius;
-		float impostorSwapDistance;
+		float radius = 0;
+		float fadeDistance = 0;
 
 		uint32_t lod = 0;
 
@@ -690,14 +690,12 @@ namespace wi::scene
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
-		inline void SetImpostorPlacement(bool value) { if (value) { _flags |= IMPOSTOR_PLACEMENT; } else { _flags &= ~IMPOSTOR_PLACEMENT; } }
 		inline void SetRequestPlanarReflection(bool value) { if (value) { _flags |= REQUEST_PLANAR_REFLECTION; } else { _flags &= ~REQUEST_PLANAR_REFLECTION; } }
 		inline void SetLightmapRenderRequest(bool value) { if (value) { _flags |= LIGHTMAP_RENDER_REQUEST; } else { _flags &= ~LIGHTMAP_RENDER_REQUEST; } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
-		inline bool IsImpostorPlacement() const { return _flags & IMPOSTOR_PLACEMENT; }
 		inline bool IsRequestPlanarReflection() const { return _flags & REQUEST_PLANAR_REFLECTION; }
 		inline bool IsLightmapRenderRequested() const { return _flags & LIGHTMAP_RENDER_REQUEST; }
 
