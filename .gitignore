@@ -218,3 +218,6 @@ ModelManifest.xml
 *.cso
 *.wishadermeta
 wiShaderdump.h
+
+# vscode
+.vscode/settings.json
