@@ -60,28 +60,46 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	output_primitiveID[pixel] = primitiveID;
 #endif // VISIBILITY_MSAA
 
-	float depth = 0;
-	uint bin = SHADERTYPE_BIN_COUNT;
+	float depth = 1; // invalid
+	uint bin = ~0u; // invalid
 	if (pixel_valid)
 	{
 		[branch]
 		if (any(primitiveID))
 		{
-			PrimitiveID prim;
-			prim.unpack(primitiveID);
-
-			Surface surface;
-			surface.init();
-
 			[branch]
-			if (surface.load(prim, ray.Origin, ray.Direction))
+			if (primitiveID == ~0u)
 			{
-				float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
-				tmp.xyz /= tmp.w;
-				depth = tmp.z;
-
-				bin = surface.material.shaderType;
+				// Hack: impostors write ~0u primitiveID because their geometry is temporary and non indexable
+				//	But we don't want to handle them like sky pixels, so force them to foreground
+				//	This solves some issues with sky, cloud rendering when impostors are visible
+				float depth = 1; // invalid
+				uint bin = ~0u; // invalid
 			}
+			else
+			{
+				PrimitiveID prim;
+				prim.unpack(primitiveID);
+
+				Surface surface;
+				surface.init();
+
+				[branch]
+				if (surface.load(prim, ray.Origin, ray.Direction))
+				{
+					float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
+					tmp.xyz /= tmp.w;
+					depth = tmp.z;
+
+					bin = surface.material.shaderType;
+				}
+			}
+		}
+		else
+		{
+			// sky:
+			depth = 0;
+			bin = SHADERTYPE_BIN_COUNT;
 		}
 		if (groupIndex < 32)
 		{
