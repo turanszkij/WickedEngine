@@ -420,6 +420,7 @@ void EditorComponent::Load()
 				prop.min_y_offset = -0.5f;
 				prop.max_y_offset = -0.5f;
 				prop.mesh_entity = props_scene.Entity_FindByName("tree_mesh");
+				props_scene.impostors.Create(prop.mesh_entity).swapInDistance = 200;
 				Entity object_entity = props_scene.Entity_FindByName("tree_object");
 				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
 				if (object != nullptr)
