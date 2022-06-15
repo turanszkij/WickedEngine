@@ -26,6 +26,7 @@ float4 main(VSOut input) : SV_Target
 
 	Surface surface;
 	surface.init();
+	surface.flags |= SURFACE_FLAG_RECEIVE_SHADOW;
 	surface.roughness = roughness;
 	surface.albedo = baseColor.rgb * (1 - max(reflectance, metalness));
 	surface.f0 = lerp(reflectance.xxx, baseColor.rgb, metalness);

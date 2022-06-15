@@ -2669,14 +2669,17 @@ void RenderImpostors(
 
 				const XMFLOAT3 center = aabb.getCenter();
 				float distance = wi::math::Distance(vis.camera->Eye, center);
+				float radius = aabb.getRadius();
 
-				if (distance < impostor.swapInDistance)
+				if (distance < impostor.swapInDistance - radius)
 				{
 					continue;
 				}
 
+				const float dither = std::max(0.0f, impostor.swapInDistance - distance) / radius;
+
 				ShaderMeshInstancePointer poi;
-				poi.Create(instanceIndex, uint32_t(impostor.textureIndex));
+				poi.Create(instanceIndex, uint32_t(impostor.textureIndex), dither);
 
 				// memcpy whole structure into mapped pointer to avoid read from uncached memory:
 				std::memcpy((ShaderMeshInstancePointer*)instances.data + drawableInstanceCount, &poi, sizeof(poi));
