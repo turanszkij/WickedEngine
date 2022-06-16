@@ -771,7 +771,7 @@ namespace wi::scene
 		{
 			so_tan.offset = buffer_offset;
 			so_tan.size = vb_tan.size;
-			buffer_offset += AlignTo(vb_tan.size, alignment);
+			buffer_offset += AlignTo(so_tan.size, alignment);
 			so_tan.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_tan.offset, so_tan.size);
 			so_tan.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_tan.offset, so_tan.size);
 			so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);
@@ -780,7 +780,7 @@ namespace wi::scene
 
 		so_pre.offset = buffer_offset;
 		so_pre.size = vb_pos_nor_wind.size;
-		buffer_offset += AlignTo(vb_pos_nor_wind.size, alignment);
+		buffer_offset += AlignTo(so_pre.size, alignment);
 		so_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pre.offset, so_pre.size);
 		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size);
 		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
