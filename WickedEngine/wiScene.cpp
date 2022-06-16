@@ -757,22 +757,30 @@ namespace wi::scene
 		assert(success);
 		device->SetName(&streamoutBuffer, "MeshComponent::streamoutBuffer");
 
-		so_pos_nor_wind.offset = 0;
+		uint64_t buffer_offset = 0ull;
+
+		so_pos_nor_wind.offset = buffer_offset;
 		so_pos_nor_wind.size = vb_pos_nor_wind.size;
+		buffer_offset += AlignTo(so_pos_nor_wind.size, alignment);
 		so_pos_nor_wind.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.offset, so_pos_nor_wind.size);
 		so_pos_nor_wind.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.offset, so_pos_nor_wind.size);
 		so_pos_nor_wind.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.subresource_srv);
 		so_pos_nor_wind.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.subresource_uav);
 
-		so_tan.offset = AlignTo(so_pos_nor_wind.offset + so_pos_nor_wind.size, alignment);
-		so_tan.size = vb_tan.size;
-		so_tan.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_tan.offset, so_tan.size);
-		so_tan.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_tan.offset, so_tan.size);
-		so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);
-		so_tan.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_tan.subresource_uav);
+		if (vb_tan.IsValid())
+		{
+			so_tan.offset = buffer_offset;
+			so_tan.size = vb_tan.size;
+			buffer_offset += AlignTo(vb_tan.size, alignment);
+			so_tan.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_tan.offset, so_tan.size);
+			so_tan.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_tan.offset, so_tan.size);
+			so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);
+			so_tan.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_tan.subresource_uav);
+		}
 
-		so_pre.offset = AlignTo(so_tan.offset + so_tan.size, alignment);
+		so_pre.offset = buffer_offset;
 		so_pre.size = vb_pos_nor_wind.size;
+		buffer_offset += AlignTo(vb_pos_nor_wind.size, alignment);
 		so_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pre.offset, so_pre.size);
 		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size);
 		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
