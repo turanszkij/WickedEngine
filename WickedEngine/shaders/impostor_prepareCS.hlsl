@@ -26,6 +26,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (dist < instance.fadeDistance - instance.radius)
 		return;
 
+	// Frustum culling:
+	ShaderSphere sphere;
+	sphere.center = instance.center;
+	sphere.radius = instance.radius;
+	if (!GetCamera().frustum.intersects(sphere))
+		return;
+
 	uint slice = uint(geometry.impostorSliceOffset);
 
 	uint indexOffset;
