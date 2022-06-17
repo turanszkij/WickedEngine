@@ -2626,12 +2626,12 @@ void RenderImpostors(
 	const PipelineState* pso = &PSO_impostor[renderPass];
 	if (IsWireRender())
 	{
-		switch (renderPass)
+		if (renderPass != RENDERPASS_PREPASS)
 		{
-		case RENDERPASS_MAIN:
 			pso = &PSO_impostor_wire;
-			break;
-		default:
+		}
+		else
+		{
 			return;
 		}
 	}
@@ -4954,9 +4954,6 @@ void DrawScene(
 			vis.scene->ocean.Render(*vis.camera, vis.scene->weather.oceanParameters, cmd);
 		}
 	}
-
-	if (IsWireRender() && !transparent)
-		return;
 
 	uint32_t renderTypeFlags = 0;
 	if (opaque)
