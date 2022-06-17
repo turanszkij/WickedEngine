@@ -753,6 +753,7 @@ void RenderPath3D::Render() const
 
 	static const uint32_t drawscene_flags =
 		wi::renderer::DRAWSCENE_OPAQUE |
+		wi::renderer::DRAWSCENE_IMPOSTOR |
 		wi::renderer::DRAWSCENE_HAIRPARTICLE |
 		wi::renderer::DRAWSCENE_TESSELLATION |
 		wi::renderer::DRAWSCENE_OCCLUSIONCULLING
@@ -787,7 +788,7 @@ void RenderPath3D::Render() const
 		vp.width = (float)depthBuffer_Main.GetDesc().width;
 		vp.height = (float)depthBuffer_Main.GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
-		wi::renderer::DrawScene(visibility_main, RENDERPASS_PREPASS, cmd, drawscene_flags | wi::renderer::DRAWSCENE_IMPOSTOR);
+		wi::renderer::DrawScene(visibility_main, RENDERPASS_PREPASS, cmd, drawscene_flags);
 
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
@@ -1106,7 +1107,12 @@ void RenderPath3D::Render() const
 
 		device->RenderPassBegin(&renderpass_main, cmd);
 
-		if (!visibility_shading_in_compute)
+		if (visibility_shading_in_compute)
+		{
+			// In visibility compute shading, the impostors must still be drawn using rasterization:
+			wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_IMPOSTOR);
+		}
+		else
 		{
 			auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
 			wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
@@ -1420,7 +1426,6 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		drawscene_flags |= wi::renderer::DRAWSCENE_OCCLUSIONCULLING;
 		drawscene_flags |= wi::renderer::DRAWSCENE_HAIRPARTICLE;
 		drawscene_flags |= wi::renderer::DRAWSCENE_TESSELLATION;
-		drawscene_flags |= wi::renderer::DRAWSCENE_IMPOSTOR;
 		wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 
 		device->EventEnd(cmd);
