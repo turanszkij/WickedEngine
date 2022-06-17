@@ -3676,6 +3676,8 @@ void UpdateRenderData(
 		device->EventBegin("Impostor prepare", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Impostor prepare", cmd);
 
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorIndirectBuffer, ResourceState::INDIRECT_ARGUMENT, ResourceState::COPY_DST));
+		barrier_stack_flush(cmd);
 		IndirectDrawArgsIndexedInstanced clear_indirect = {};
 		clear_indirect.index_count_per_instance = 0;
 		clear_indirect.instance_count = 1;
@@ -3683,7 +3685,8 @@ void UpdateRenderData(
 		clear_indirect.base_vertex_location = 0;
 		clear_indirect.start_instance_location = 0;
 		device->UpdateBuffer(&vis.scene->impostorIndirectBuffer, &clear_indirect, cmd, sizeof(clear_indirect), 0);
-		barrier_stack.push_back(GPUBarrier::Memory(&vis.scene->impostorIndirectBuffer));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorIndirectBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
 		barrier_stack_flush(cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_IMPOSTOR_PREPARE], cmd);

@@ -1667,8 +1667,6 @@ namespace wi::scene
 
 		RunArmatureUpdateSystem(ctx);
 
-		RunImpostorUpdateSystem(ctx);
-
 		RunWeatherUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
@@ -1688,6 +1686,8 @@ namespace wi::scene
 		RunParticleUpdateSystem(ctx);
 
 		RunSoundUpdateSystem(ctx);
+
+		RunImpostorUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
 
