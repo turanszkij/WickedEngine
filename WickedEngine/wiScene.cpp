@@ -1480,6 +1480,11 @@ namespace wi::scene
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		instanceArraySize = objects.GetCount() + hairs.GetCount() + emitters.GetCount();
+		if (impostors.GetCount() > 0)
+		{
+			impostorInstanceOffset = uint32_t(instanceArraySize);
+			instanceArraySize += 1;
+		}
 		if (instanceBuffer.desc.size < (instanceArraySize * sizeof(ShaderMeshInstance)))
 		{
 			GPUBufferDesc desc;
@@ -1502,6 +1507,11 @@ namespace wi::scene
 		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[device->GetBufferIndex()].mapped_data;
 
 		materialArraySize = materials.GetCount();
+		if (impostors.GetCount() > 0)
+		{
+			impostorMaterialOffset = uint32_t(materialArraySize);
+			materialArraySize += 1;
+		}
 		if (materialBuffer.desc.size < (materialArraySize * sizeof(ShaderMaterial)))
 		{
 			GPUBufferDesc desc;
@@ -1619,6 +1629,11 @@ namespace wi::scene
 		geometryArraySize = geometryAllocator.load();
 		geometryArraySize += hairs.GetCount();
 		geometryArraySize += emitters.GetCount();
+		if (impostors.GetCount() > 0)
+		{
+			impostorGeometryOffset = uint32_t(geometryArraySize);
+			geometryArraySize += 1;
+		}
 		if (geometryBuffer.desc.size < (geometryArraySize * sizeof(ShaderGeometry)))
 		{
 			GPUBufferDesc desc;
@@ -1652,8 +1667,6 @@ namespace wi::scene
 
 		RunArmatureUpdateSystem(ctx);
 
-		RunImpostorUpdateSystem(ctx);
-
 		RunWeatherUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
@@ -1673,6 +1686,8 @@ namespace wi::scene
 		RunParticleUpdateSystem(ctx);
 
 		RunSoundUpdateSystem(ctx);
+
+		RunImpostorUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
 
@@ -1879,6 +1894,54 @@ namespace wi::scene
 			ddgiDepthTexture[1] = {};
 		}
 
+		impostor_ib_format = (((objects.GetCount() * 4) < 655536) ? Format::R16_UINT : Format::R32_UINT);
+		const size_t impostor_index_stride = impostor_ib_format == Format::R16_UINT ? sizeof(uint16_t) : sizeof(uint32_t);
+		const uint64_t required_impostor_buffer_size = objects.GetCount() * (sizeof(impostor_index_stride) * 6 + sizeof(uint4) * 4 + sizeof(uint2));
+		if (impostorBuffer.desc.size < required_impostor_buffer_size)
+		{
+			GPUBufferDesc desc;
+			desc.usage = Usage::DEFAULT;
+			desc.size = required_impostor_buffer_size * 2; // *2 to grow fast
+			desc.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			device->CreateBuffer(&desc, nullptr, &impostorBuffer);
+			device->SetName(&impostorBuffer, "impostorBuffer");
+
+			const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
+			uint64_t buffer_offset = 0ull;
+
+			impostor_ib.offset = buffer_offset;
+			impostor_ib.size = objects.GetCount() * sizeof(impostor_index_stride) * 6;
+			buffer_offset += AlignTo(impostor_ib.size, alignment);
+			impostor_ib.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_ib.offset, impostor_ib.size, &impostor_ib_format);
+			impostor_ib.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_ib.offset, impostor_ib.size, &impostor_ib_format);
+			impostor_ib.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_ib.subresource_srv);
+			impostor_ib.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_ib.subresource_uav);
+
+			impostor_vb.offset = buffer_offset;
+			impostor_vb.size = objects.GetCount() * sizeof(uint4) * 4;
+			buffer_offset += AlignTo(impostor_vb.size, alignment);
+			impostor_vb.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_vb.offset, impostor_vb.size);
+			impostor_vb.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_vb.offset, impostor_vb.size);
+			impostor_vb.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_vb.subresource_srv);
+			impostor_vb.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_vb.subresource_uav);
+
+			impostor_data.offset = buffer_offset;
+			impostor_data.size = objects.GetCount() * sizeof(uint2);
+			buffer_offset += AlignTo(impostor_data.size, alignment);
+			impostor_data.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_data.offset, impostor_data.size);
+			impostor_data.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_data.offset, impostor_data.size);
+			impostor_data.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_data.subresource_srv);
+			impostor_data.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_data.subresource_uav);
+
+			desc.stride = sizeof(IndirectDrawArgsIndexedInstanced);
+			desc.size = desc.stride;
+			desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+			desc.misc_flags = ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::BUFFER_STRUCTURED;
+			device->CreateBuffer(&desc, nullptr, &impostorIndirectBuffer);
+			device->SetName(&impostorIndirectBuffer, "impostorIndirectBuffer");
+		}
+
 		// Shader scene resources:
 		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
 		shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
@@ -1893,6 +1956,7 @@ namespace wi::scene
 		{
 			shaderscene.globalenvmap = -1;
 		}
+		shaderscene.impostorInstanceOffset = impostorInstanceOffset;
 		shaderscene.TLAS = device->GetDescriptorIndex(&TLAS, SubresourceType::SRV);
 		shaderscene.BVH_counter = device->GetDescriptorIndex(&BVH.primitiveCounterBuffer, SubresourceType::SRV);
 		shaderscene.BVH_nodes = device->GetDescriptorIndex(&BVH.bvhNodeBuffer, SubresourceType::SRV);
@@ -3091,6 +3155,12 @@ namespace wi::scene
 			geometry.aabb_max = mesh.aabb._max;
 			geometry.tessellation_factor = mesh.tessellationFactor;
 
+			const ImpostorComponent* impostor = impostors.GetComponent(entity);
+			if (impostor != nullptr && impostor->textureIndex >= 0)
+			{
+				geometry.impostorSliceOffset = impostor->textureIndex * impostorCaptureAngles * 3;
+			}
+
 			if (mesh.IsDoubleSided())
 			{
 				geometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
@@ -3226,7 +3296,11 @@ namespace wi::scene
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::RenderTarget(
 						&impostorArray,
-						RenderPassAttachment::LoadOp::CLEAR
+						RenderPassAttachment::LoadOp::CLEAR,
+						RenderPassAttachment::StoreOp::STORE,
+						ResourceState::SHADER_RESOURCE,
+						ResourceState::RENDERTARGET,
+						ResourceState::SHADER_RESOURCE
 					)
 				);
 				renderpassdesc.attachments.back().subresource = i * 3;
@@ -3234,7 +3308,11 @@ namespace wi::scene
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::RenderTarget(
 						&impostorArray,
-						RenderPassAttachment::LoadOp::CLEAR
+						RenderPassAttachment::LoadOp::CLEAR,
+						RenderPassAttachment::StoreOp::STORE,
+						ResourceState::SHADER_RESOURCE,
+						ResourceState::RENDERTARGET,
+						ResourceState::SHADER_RESOURCE
 					)
 				);
 				renderpassdesc.attachments.back().subresource = i * 3 + 1;
@@ -3242,7 +3320,11 @@ namespace wi::scene
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::RenderTarget(
 						&impostorArray,
-						RenderPassAttachment::LoadOp::CLEAR
+						RenderPassAttachment::LoadOp::CLEAR,
+						RenderPassAttachment::StoreOp::STORE,
+						ResourceState::SHADER_RESOURCE,
+						ResourceState::RENDERTARGET,
+						ResourceState::SHADER_RESOURCE
 					)
 				);
 				renderpassdesc.attachments.back().subresource = i * 3 + 2;
@@ -3277,7 +3359,6 @@ namespace wi::scene
 		for (size_t i = 0; i < impostors.GetCount(); ++i)
 		{
 			ImpostorComponent& impostor = impostors[i];
-			impostor.instances.clear();
 
 			if (impostor.IsDirty())
 			{
@@ -3298,6 +3379,30 @@ namespace wi::scene
 					}
 				}
 			}
+		}
+
+		if (impostors.GetCount() > 0)
+		{
+			ShaderMaterial material;
+			material.init();
+			material.shaderType = ~0u;
+			std::memcpy(materialArrayMapped + impostorMaterialOffset, &material, sizeof(material));
+
+			ShaderGeometry geometry;
+			geometry.init();
+			geometry.meshletCount = triangle_count_to_meshlet_count(uint32_t(objects.GetCount()) * 2);
+			geometry.meshletOffset = 0; // local meshlet offset
+			geometry.ib = impostor_ib.descriptor_srv;
+			geometry.vb_pos_nor_wind = impostor_vb.descriptor_srv;
+			geometry.materialIndex = impostorMaterialOffset;
+			std::memcpy(geometryArrayMapped + impostorGeometryOffset, &geometry, sizeof(geometry));
+
+			ShaderMeshInstance instance;
+			instance.init();
+			instance.geometryOffset = impostorGeometryOffset;
+			instance.geometryCount = 1;
+			instance.meshletOffset = meshletAllocator.fetch_add(geometry.meshletCount); // global meshlet offset
+			std::memcpy(instanceArrayMapped + impostorInstanceOffset, &instance, sizeof(instance));
 		}
 	}
 	void Scene::RunObjectUpdateSystem(wi::jobsystem::context& ctx)
@@ -3407,10 +3512,6 @@ namespace wi::scene
 					if (impostor != nullptr)
 					{
 						object.fadeDistance = std::min(object.fadeDistance, impostor->swapInDistance);
-
-						locker.lock();
-						impostor->instances.push_back(args.jobIndex);
-						locker.unlock();
 					}
 
 					SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
@@ -3463,6 +3564,7 @@ namespace wi::scene
 					inst.geometryOffset = mesh.geometryOffset;
 					inst.geometryCount = (uint)mesh.subsets.size();
 					inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
+					inst.fadeDistance = object.fadeDistance;
 					inst.center = object.center;
 					inst.radius = object.radius;
 

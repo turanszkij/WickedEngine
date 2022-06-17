@@ -1076,6 +1076,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_UPDATE_DEPTH], "ddgi_updateCS_depth.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE], "terrainVirtualTextureUpdateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_MESHLET_PREPARE], "meshlet_prepareCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_IMPOSTOR_PREPARE], "impostor_prepareCS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -2625,83 +2626,34 @@ void RenderImpostors(
 	const PipelineState* pso = &PSO_impostor[renderPass];
 	if (IsWireRender())
 	{
-		switch (renderPass)
+		if (renderPass != RENDERPASS_PREPASS)
 		{
-		case RENDERPASS_MAIN:
 			pso = &PSO_impostor_wire;
-			break;
-		default:
+		}
+		else
+		{
 			return;
 		}
 	}
 
-	if (vis.scene->impostors.GetCount() > 0 && pso != nullptr)
+	if (vis.scene->impostors.GetCount() > 0 && pso != nullptr && vis.scene->impostorBuffer.IsValid())
 	{
-		uint32_t instanceCount = 0;
-		for (size_t impostorID = 0; impostorID < vis.scene->impostors.GetCount(); ++impostorID)
-		{
-			const ImpostorComponent& impostor = vis.scene->impostors[impostorID];
-			instanceCount += (uint32_t)impostor.instances.size();
-		}
-
-		if (instanceCount == 0)
-		{
-			return;
-		}
-
-		// Pre-allocate space for all the instances in GPU-buffer:
-		const uint32_t instanceDataSize = sizeof(ShaderMeshInstancePointer);
-		const size_t alloc_size = instanceCount * instanceDataSize;
-		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
-
-		uint32_t drawableInstanceCount = 0;
-		for (size_t impostorID = 0; impostorID < vis.scene->impostors.GetCount(); ++impostorID)
-		{
-			const ImpostorComponent& impostor = vis.scene->impostors[impostorID];
-
-			for (auto& instanceIndex : impostor.instances)
-			{
-				const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
-				if (!vis.camera->frustum.CheckBoxFast(aabb))
-				{
-					continue;
-				}
-
-				const XMFLOAT3 center = aabb.getCenter();
-				float distance = wi::math::Distance(vis.camera->Eye, center);
-				float radius = aabb.getRadius();
-
-				if (distance < impostor.swapInDistance - radius)
-				{
-					continue;
-				}
-
-				const float dither = std::max(0.0f, impostor.swapInDistance - distance) / radius;
-
-				ShaderMeshInstancePointer poi;
-				poi.Create(instanceIndex, uint32_t(impostor.textureIndex), dither);
-
-				// memcpy whole structure into mapped pointer to avoid read from uncached memory:
-				std::memcpy((ShaderMeshInstancePointer*)instances.data + drawableInstanceCount, &poi, sizeof(poi));
-
-				drawableInstanceCount++;
-			}
-		}
-
-		if (drawableInstanceCount == 0)
-			return;
-
 		device->EventBegin("RenderImpostors", cmd);
 
 		device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 		device->BindPipelineState(pso, cmd);
 
-		device->PushConstants(&instances.offset, sizeof(uint), cmd);
-
-		device->BindResource(&instances.buffer, 0, cmd);
+		device->BindIndexBuffer(
+			&vis.scene->impostorBuffer,
+			vis.scene->impostor_ib_format == Format::R32_UINT ? IndexBufferFormat::UINT32 : IndexBufferFormat::UINT16,
+			vis.scene->impostor_ib.offset,
+			cmd
+		);
+		device->BindResource(&vis.scene->impostorBuffer, 0, cmd, vis.scene->impostor_vb.subresource_srv);
+		device->BindResource(&vis.scene->impostorBuffer, 2, cmd, vis.scene->impostor_data.subresource_srv);
 		device->BindResource(&vis.scene->impostorArray, 1, cmd);
 
-		device->Draw(drawableInstanceCount * 6, 0, cmd);
+		device->DrawIndexedInstancedIndirect(&vis.scene->impostorIndirectBuffer, 0, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -3716,6 +3668,41 @@ void UpdateRenderData(
 			}
 		}
 		wi::profiler::EndRange(range);
+	}
+
+	// Impostor prepare:
+	if (vis.scene->instanceArraySize > 0 && vis.scene->meshletBuffer.IsValid())
+	{
+		device->EventBegin("Impostor prepare", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Impostor prepare", cmd);
+
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorIndirectBuffer, ResourceState::INDIRECT_ARGUMENT, ResourceState::COPY_DST));
+		barrier_stack_flush(cmd);
+		IndirectDrawArgsIndexedInstanced clear_indirect = {};
+		clear_indirect.index_count_per_instance = 0;
+		clear_indirect.instance_count = 1;
+		clear_indirect.start_index_location = 0;
+		clear_indirect.base_vertex_location = 0;
+		clear_indirect.start_instance_location = 0;
+		device->UpdateBuffer(&vis.scene->impostorIndirectBuffer, &clear_indirect, cmd, sizeof(clear_indirect), 0);
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorIndirectBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+		barrier_stack_flush(cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_IMPOSTOR_PREPARE], cmd);
+		device->BindUAV(&vis.scene->impostorBuffer, 0, cmd, vis.scene->impostor_ib.subresource_uav);
+		device->BindUAV(&vis.scene->impostorBuffer, 1, cmd, vis.scene->impostor_vb.subresource_uav);
+		device->BindUAV(&vis.scene->impostorBuffer, 2, cmd, vis.scene->impostor_data.subresource_uav);
+		device->BindUAV(&vis.scene->impostorIndirectBuffer, 3, cmd);
+
+		device->Dispatch(uint32_t(vis.scene->objects.GetCount() + 63u) / 64u, 1, 1, cmd);
+
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorIndirectBuffer,ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT));
+		barrier_stack_flush(cmd);
+
+		wi::profiler::EndRange(range);
+		device->EventEnd(cmd);
 	}
 
 	// Meshlets:
@@ -4968,9 +4955,6 @@ void DrawScene(
 		}
 	}
 
-	if (IsWireRender() && !transparent)
-		return;
-
 	uint32_t renderTypeFlags = 0;
 	if (opaque)
 	{
@@ -4985,11 +4969,6 @@ void DrawScene(
 	if (IsWireRender())
 	{
 		renderTypeFlags = RENDERTYPE_ALL;
-	}
-
-	if (impostor)
-	{
-		RenderImpostors(vis, renderPass, cmd);
 	}
 
 	if (hairparticle)
@@ -5037,6 +5016,11 @@ void DrawScene(
 			renderQueue.sort_opaque();
 		}
 		RenderMeshes(vis, renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
+	}
+
+	if (impostor)
+	{
+		RenderImpostors(vis, renderPass, cmd);
 	}
 
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);

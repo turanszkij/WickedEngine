@@ -192,6 +192,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"ddgi_updateCS_depth", wi::graphics::ShaderStage::CS },
 	{"terrainVirtualTextureUpdateCS", wi::graphics::ShaderStage::CS },
 	{"meshlet_prepareCS", wi::graphics::ShaderStage::CS },
+	{"impostor_prepareCS", wi::graphics::ShaderStage::CS },
 
 
 	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },

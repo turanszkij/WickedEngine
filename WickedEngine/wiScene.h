@@ -618,7 +618,6 @@ namespace wi::scene
 		float swapInDistance = 100.0f;
 
 		// Non-serialized attributes:
-		wi::vector<uint32_t> instances;
 		mutable bool render_dirty = false;
 		int textureIndex = -1;
 
@@ -1328,6 +1327,7 @@ namespace wi::scene
 		//		1) objects
 		//		2) hair particles
 		//		3) emitted particles
+		//		4) impostors
 		wi::graphics::GPUBuffer instanceUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		ShaderMeshInstance* instanceArrayMapped = nullptr;
 		size_t instanceArraySize = 0;
@@ -1338,6 +1338,7 @@ namespace wi::scene
 		//		1) meshes * mesh.subsetCount
 		//		2) hair particles * 1
 		//		3) emitted particles * 1
+		//		4) impostors * 1
 		wi::graphics::GPUBuffer geometryUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		ShaderGeometry* geometryArrayMapped = nullptr;
 		size_t geometryArraySize = 0;
@@ -1388,12 +1389,21 @@ namespace wi::scene
 		wi::graphics::Texture envmapArray;
 		wi::vector<wi::graphics::RenderPass> renderpasses_envmap;
 
-		// Impostor texture array state:
+		// Impostor state:
 		static constexpr uint32_t maxImpostorCount = 8;
 		static constexpr uint32_t impostorTextureDim = 128;
 		wi::graphics::Texture impostorDepthStencil;
 		wi::graphics::Texture impostorArray;
 		wi::vector<wi::graphics::RenderPass> renderpasses_impostor;
+		wi::graphics::GPUBuffer impostorBuffer;
+		MeshComponent::BufferView impostor_ib;
+		MeshComponent::BufferView impostor_vb;
+		MeshComponent::BufferView impostor_data;
+		wi::graphics::Format impostor_ib_format = wi::graphics::Format::R32_UINT;
+		wi::graphics::GPUBuffer impostorIndirectBuffer;
+		uint32_t impostorInstanceOffset = ~0u;
+		uint32_t impostorGeometryOffset = ~0u;
+		uint32_t impostorMaterialOffset = ~0u;
 
 		mutable std::atomic_bool lightmap_refresh_needed{ false };
 
