@@ -67,32 +67,20 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		[branch]
 		if (any(primitiveID))
 		{
+			PrimitiveID prim;
+			prim.unpack(primitiveID);
+
+			Surface surface;
+			surface.init();
+
 			[branch]
-			if (primitiveID == ~0u)
+			if (surface.load(prim, ray.Origin, ray.Direction))
 			{
-				// Hack: impostors write ~0u primitiveID because their geometry is temporary and non indexable
-				//	But we don't want to handle them like sky pixels, so force them to foreground
-				//	This solves some issues with sky, cloud rendering when impostors are visible
-				float depth = 1; // invalid
-				uint bin = ~0u; // invalid
-			}
-			else
-			{
-				PrimitiveID prim;
-				prim.unpack(primitiveID);
+				float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
+				tmp.xyz /= tmp.w;
+				depth = tmp.z;
 
-				Surface surface;
-				surface.init();
-
-				[branch]
-				if (surface.load(prim, ray.Origin, ray.Direction))
-				{
-					float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
-					tmp.xyz /= tmp.w;
-					depth = tmp.z;
-
-					bin = surface.material.shaderType;
-				}
+				bin = surface.material.shaderType;
 			}
 		}
 		else

@@ -12,7 +12,7 @@ struct ShaderScene
 
 	int envmaparray;
 	int globalenvmap;
-	int padding0;
+	int impostorInstanceOffset;
 	int padding1;
 
 	int TLAS;
@@ -125,6 +125,70 @@ struct ShaderMaterial
 	int			texture_specularmap_index;
 	uint		shaderType;
 
+	void init()
+	{
+		baseColor = float4(1, 1, 1, 1);
+		subsurfaceScattering = float4(0, 0, 0, 0);
+		subsurfaceScattering_inv = float4(0, 0, 0, 0);
+		texMulAdd = float4(1, 1, 0, 0);
+
+		roughness = 0;
+		reflectance = 0;
+		metalness = 0;
+		refraction = 0;
+
+		normalMapStrength = 0;
+		parallaxOcclusionMapping = 0;
+		alphaTest = 0;
+		displacementMapping = 0;
+
+		transmission = 0;
+		options = 0u;
+		emissive_r11g11b10 = 0;
+		specular_r11g11b10 = 0;
+
+		layerMask = ~0u;
+		uvset_baseColorMap = -1;
+		uvset_surfaceMap = -1;
+		uvset_normalMap = -1;
+
+		uvset_displacementMap = -1;
+		uvset_emissiveMap = -1;
+		uvset_occlusionMap = -1;
+		uvset_transmissionMap = -1;
+
+		uvset_sheenColorMap = -1;
+		uvset_sheenRoughnessMap = -1;
+		uvset_clearcoatMap = -1;
+		uvset_clearcoatRoughnessMap = -1;
+
+		uvset_clearcoatNormalMap = -1;
+		uvset_specularMap = -1;
+		sheenColor_r11g11b10 = 0;
+		sheenRoughness = 0;
+
+		clearcoat = 0;
+		clearcoatRoughness = 0;
+		texture_basecolormap_index = -1;
+		texture_surfacemap_index = -1;
+
+		texture_emissivemap_index = -1;
+		texture_normalmap_index = -1;
+		texture_displacementmap_index = -1;
+		texture_occlusionmap_index = -1;
+
+		texture_transmissionmap_index = -1;
+		texture_sheencolormap_index = -1;
+		texture_sheenroughnessmap_index = -1;
+		texture_clearcoatmap_index = -1;
+
+		texture_clearcoatroughnessmap_index = -1;
+		texture_clearcoatnormalmap_index = -1;
+		texture_specularmap_index = -1;
+		shaderType = 0;
+
+	}
+
 #ifndef __cplusplus
 	float3 GetEmissive() { return Unpack_R11G11B10_FLOAT(emissive_r11g11b10); }
 	float3 GetSpecular() { return Unpack_R11G11B10_FLOAT(specular_r11g11b10); }
@@ -196,7 +260,7 @@ struct ShaderGeometry
 	uint materialIndex;
 	uint meshletOffset; // offset of this subset in meshlets
 	uint meshletCount;
-	uint padding;
+	int impostorSliceOffset;
 
 	float3 aabb_min;
 	uint flags;
@@ -218,6 +282,7 @@ struct ShaderGeometry
 		materialIndex = 0;
 		meshletOffset = 0;
 		meshletCount = 0;
+		impostorSliceOffset = -1;
 
 		aabb_min = float3(0, 0, 0);
 		flags = 0;
@@ -284,17 +349,16 @@ struct ShaderMeshInstance
 	int lightmap;
 
 	uint meshletOffset; // offset in the global meshlet buffer for first subset
+	float fadeDistance;
 	int padding0;
 	int padding1;
-	int padding2;
+
+	float3 center;
+	float radius;
 
 	ShaderTransform transform;
 	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
 	ShaderTransform transformPrev;
-
-	// Bounding sphere of the instance:
-	float3 center;
-	float radius;
 
 	void init()
 	{
@@ -307,11 +371,12 @@ struct ShaderMeshInstance
 		geometryOffset = 0;
 		geometryCount = 0;
 		meshletOffset = ~0u;
+		fadeDistance = 0;
+		center = float3(0, 0, 0);
+		radius = 0;
 		transform.init();
 		transformInverseTranspose.init();
 		transformPrev.init();
-		center = float3(0, 0, 0);
-		radius = 0;
 	}
 
 };
