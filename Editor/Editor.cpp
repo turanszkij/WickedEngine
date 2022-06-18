@@ -93,6 +93,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	}
 
 	renderPath->resolutionScale = resolutionScale;
+	renderPath->setBloomThreshold(3.0f);
 
 	renderPath->Load();
 
@@ -379,6 +380,7 @@ void EditorComponent::Load()
 		{
 			// Customize terrain generator before it's initialized:
 			terragen.material_Base.SetRoughness(1);
+			terragen.material_Base.SetReflectance(0.005f);
 			terragen.material_Slope.SetRoughness(0.1f);
 			terragen.material_LowAltitude.SetRoughness(1);
 			terragen.material_HighAltitude.SetRoughness(1);
