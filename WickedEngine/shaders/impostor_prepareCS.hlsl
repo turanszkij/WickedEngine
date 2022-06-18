@@ -14,15 +14,29 @@ RWByteAddressBuffer output_vertices_pos_nor : register(u1);
 RWByteAddressBuffer output_impostor_data : register(u2);
 RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> output_indirect : register(u3);
 
+struct ObjectCount
+{
+	uint count;
+};
+PUSHCONSTANT(push, ObjectCount);
+
 [numthreads(THREADCOUNT, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
+	[branch]
+	if (DTid.x >= push.count)
+		return;
+
 	const uint instanceIndex = DTid.x;
 	ShaderMeshInstance instance = load_instance(instanceIndex);
 	ShaderGeometry geometry = load_geometry(instance.geometryOffset);
+
+	[branch]
 	if (geometry.impostorSliceOffset < 0)
 		return;
+
 	float dist = distance(GetCamera().position, instance.center);
+	[branch]
 	if (dist < instance.fadeDistance - instance.radius)
 		return;
 
@@ -30,10 +44,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	ShaderSphere sphere;
 	sphere.center = instance.center;
 	sphere.radius = instance.radius;
+	[branch]
 	if (!GetCamera().frustum.intersects(sphere))
 		return;
-
-	uint slice = uint(geometry.impostorSliceOffset);
 
 	uint indexOffset;
 	InterlockedAdd(output_indirect[0].IndexCountPerInstance, 6u, indexOffset);
@@ -59,6 +72,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 right = normalize(cross(face, up));
 
 	// Decide which slice to show according to billboard facing direction:
+	uint slice = uint(geometry.impostorSliceOffset);
 	float angle = acos(dot(face.xz, float2(0, 1))) / PI;
 	if (cross(face, float3(0, 0, 1)).y < 0)
 	{

@@ -3695,7 +3695,10 @@ void UpdateRenderData(
 		device->BindUAV(&vis.scene->impostorBuffer, 2, cmd, vis.scene->impostor_data.subresource_uav);
 		device->BindUAV(&vis.scene->impostorIndirectBuffer, 3, cmd);
 
-		device->Dispatch(uint32_t(vis.scene->objects.GetCount() + 63u) / 64u, 1, 1, cmd);
+		uint object_count = (uint)vis.scene->objects.GetCount();
+		device->PushConstants(&object_count, sizeof(object_count), cmd);
+
+		device->Dispatch((object_count + 63u) / 64u, 1, 1, cmd);
 
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorIndirectBuffer,ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT));
