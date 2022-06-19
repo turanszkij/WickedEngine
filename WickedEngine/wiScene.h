@@ -967,6 +967,7 @@ namespace wi::scene
 			EMPTY = 0,
 			DIRTY = 1 << 0,
 			REALTIME = 1 << 1,
+			MSAA = 1 << 2,
 		};
 		uint32_t _flags = DIRTY;
 
@@ -979,9 +980,11 @@ namespace wi::scene
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline void SetRealTime(bool value) { if (value) { _flags |= REALTIME; } else { _flags &= ~REALTIME; } }
+		inline void SetMSAA(bool value) { if (value) { _flags |= MSAA; } else { _flags &= ~MSAA; } }
 
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsRealTime() const { return _flags & REALTIME; }
+		inline bool IsMSAA() const { return _flags & MSAA; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -1385,9 +1388,13 @@ namespace wi::scene
 		static constexpr uint32_t envmapCount = 16;
 		static constexpr uint32_t envmapRes = 128;
 		static constexpr uint32_t envmapMIPs = 8;
+		static constexpr uint32_t envmapMSAASampleCount = 8;
 		wi::graphics::Texture envrenderingDepthBuffer;
+		wi::graphics::Texture envrenderingDepthBuffer_MSAA;
+		wi::graphics::Texture envrenderingColorBuffer_MSAA;
 		wi::graphics::Texture envmapArray;
 		wi::vector<wi::graphics::RenderPass> renderpasses_envmap;
+		wi::vector<wi::graphics::RenderPass> renderpasses_envmap_MSAA;
 
 		// Impostor state:
 		static constexpr uint32_t maxImpostorCount = 8;

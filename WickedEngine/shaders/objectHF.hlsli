@@ -569,7 +569,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetScene().ddgi.color_texture >= 0)
 	{
-		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N) * GetFrame().gi_boost;
 		surface.flags |= SURFACE_FLAG_GI_APPLIED;
 	}
 

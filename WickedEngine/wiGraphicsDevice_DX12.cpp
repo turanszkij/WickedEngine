@@ -1481,7 +1481,7 @@ namespace dx12_internal
 		const Texture* shading_rate_image = nullptr;
 
 		// Due to a API bug, this resolve_subresources array must be kept alive between BeginRenderpass() and EndRenderpass()!
-		D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_subresources[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+		wi::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> resolve_subresources[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 	};
 	struct SwapChain_DX12
 	{
@@ -2314,7 +2314,7 @@ using namespace dx12_internal;
 			}
 
 			D3D_FEATURE_LEVEL featurelevels[] = {
-				D3D_FEATURE_LEVEL_12_2,
+				//D3D_FEATURE_LEVEL_12_2,
 				D3D_FEATURE_LEVEL_12_1,
 				D3D_FEATURE_LEVEL_12_0,
 				D3D_FEATURE_LEVEL_11_1,
@@ -3827,22 +3827,31 @@ using namespace dx12_internal;
 							if (resolve_src_counter == resolve_dst_counter)
 							{
 								auto src_internal = to_internal(src.texture);
+								int src_subresource = src.subresource;
+								const SingleDescriptor& src_descriptor = src_subresource < 0 ? src_internal->rtv : src_internal->subresources_rtv[src_subresource];
 
 								D3D12_RENDER_PASS_RENDER_TARGET_DESC& src_RTV = internal_state->RTVs[resolve_src_counter];
 								src_RTV.EndingAccess.Resolve.PreserveResolveSource = src_RTV.EndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 								src_RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
 								src_RTV.EndingAccess.Resolve.Format = clear_value.Format;
 								src_RTV.EndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
-								src_RTV.EndingAccess.Resolve.SubresourceCount = 1;
+								src_RTV.EndingAccess.Resolve.PreserveResolveSource = src_RTV.EndingAccess.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD ? FALSE : TRUE;
 								src_RTV.EndingAccess.Resolve.pDstResource = texture_internal->resource.Get();
 								src_RTV.EndingAccess.Resolve.pSrcResource = src_internal->resource.Get();
 
-								src_RTV.EndingAccess.Resolve.pSubresourceParameters = &internal_state->resolve_subresources[resolve_src_counter];
-								internal_state->resolve_subresources[resolve_src_counter].SrcRect.left = 0;
-								internal_state->resolve_subresources[resolve_src_counter].SrcRect.right = (LONG)texture->desc.width;
-								internal_state->resolve_subresources[resolve_src_counter].SrcRect.bottom = (LONG)texture->desc.height;
-								internal_state->resolve_subresources[resolve_src_counter].SrcRect.top = 0;
-
+								const SingleDescriptor& descriptor = subresource < 0 ? texture_internal->srv : texture_internal->subresources_srv[subresource];
+								src_RTV.EndingAccess.Resolve.SubresourceCount = std::max(1u, std::min(src_descriptor.rtv.Texture2DMSArray.ArraySize, src.texture->desc.array_size));
+								internal_state->resolve_subresources[resolve_src_counter].resize(src_RTV.EndingAccess.Resolve.SubresourceCount);
+								src_RTV.EndingAccess.Resolve.pSubresourceParameters = internal_state->resolve_subresources[resolve_src_counter].data();
+								for (UINT i = 0; i < src_RTV.EndingAccess.Resolve.SubresourceCount; ++i)
+								{
+									internal_state->resolve_subresources[resolve_src_counter][i].SrcSubresource = D3D12CalcSubresource(0, src_descriptor.rtv.Texture2DMSArray.FirstArraySlice + i, 0, src.texture->desc.mip_levels, src.texture->desc.array_size);
+									internal_state->resolve_subresources[resolve_src_counter][i].DstSubresource = D3D12CalcSubresource(0, descriptor.srv.Texture2DArray.FirstArraySlice + i, 0, texture->desc.mip_levels, texture->desc.array_size);
+									internal_state->resolve_subresources[resolve_src_counter][i].SrcRect.left = 0;
+									internal_state->resolve_subresources[resolve_src_counter][i].SrcRect.right = (LONG)texture->desc.width;
+									internal_state->resolve_subresources[resolve_src_counter][i].SrcRect.bottom = (LONG)texture->desc.height;
+									internal_state->resolve_subresources[resolve_src_counter][i].SrcRect.top = 0;
+								}
 								break;
 							}
 							resolve_src_counter++;

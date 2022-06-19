@@ -6319,7 +6319,14 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			RefreshAtmosphericScatteringTextures(cmd);
 		}
 
-		device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
+		if (probe.IsMSAA())
+		{
+			device->RenderPassBegin(&vis.scene->renderpasses_envmap_MSAA[probe.textureIndex], cmd);
+		}
+		else
+		{
+			device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
+		}
 
 		// Scene will only be rendered if this is a real probe entity:
 		if (probe_aabb.layerMask & vis.layerMask)
