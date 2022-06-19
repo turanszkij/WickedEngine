@@ -13,6 +13,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 	float x = 100, y = 0, step = 35;
 
 	realTimeCheckBox.Create("RealTime: ");
+	realTimeCheckBox.SetTooltip("Enable continuous rendering of the probe in every frame.");
 	realTimeCheckBox.SetPos(XMFLOAT2(x, y));
 	realTimeCheckBox.SetEnabled(false);
 	realTimeCheckBox.OnClick([&](wi::gui::EventArgs args) {
@@ -24,6 +25,20 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 		}
 	});
 	AddWidget(&realTimeCheckBox);
+
+	msaaCheckBox.Create("MSAA: ");
+	msaaCheckBox.SetTooltip("Enable Multi Sampling Anti Aliasing for the probe, this will improve its quality.");
+	msaaCheckBox.SetPos(XMFLOAT2(x + 100, y));
+	msaaCheckBox.SetEnabled(false);
+	msaaCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		EnvironmentProbeComponent* probe = wi::scene::GetScene().probes.GetComponent(entity);
+		if (probe != nullptr)
+		{
+			probe->SetMSAA(args.bValue);
+			probe->SetDirty();
+		}
+		});
+	AddWidget(&msaaCheckBox);
 
 	generateButton.Create("Put");
 	generateButton.SetPos(XMFLOAT2(x, y += step));
@@ -90,12 +105,15 @@ void EnvProbeWindow::SetEntity(Entity entity)
 	if (probe == nullptr)
 	{
 		realTimeCheckBox.SetEnabled(false);
+		msaaCheckBox.SetEnabled(false);
 		refreshButton.SetEnabled(false);
 	}
 	else
 	{
 		realTimeCheckBox.SetCheck(probe->IsRealTime());
 		realTimeCheckBox.SetEnabled(true);
+		msaaCheckBox.SetCheck(probe->IsMSAA());
+		msaaCheckBox.SetEnabled(true);
 		refreshButton.SetEnabled(true);
 	}
 }

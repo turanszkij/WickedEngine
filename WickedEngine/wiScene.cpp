@@ -3733,20 +3733,31 @@ namespace wi::scene
 
 			TextureDesc desc;
 			desc.array_size = 6;
-			desc.bind_flags = BindFlag::DEPTH_STENCIL;
-			desc.format = Format::D16_UNORM;
 			desc.height = envmapRes;
 			desc.width = envmapRes;
 			desc.mip_levels = 1;
-			desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 			desc.usage = Usage::DEFAULT;
-			desc.layout = ResourceState::DEPTHSTENCIL;
 
+			desc.bind_flags = BindFlag::DEPTH_STENCIL;
+			desc.format = Format::D16_UNORM;
+			desc.layout = ResourceState::DEPTHSTENCIL;
+			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
 			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
+			desc.sample_count = envmapMSAASampleCount;
+			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer_MSAA);
+			device->SetName(&envrenderingDepthBuffer_MSAA, "envrenderingDepthBuffer_MSAA");
 
+			desc.bind_flags = BindFlag::RENDER_TARGET;
+			desc.format = Format::R11G11B10_FLOAT;
+			desc.layout = ResourceState::RENDERTARGET;
+			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+			device->CreateTexture(&desc, nullptr, &envrenderingColorBuffer_MSAA);
+			device->SetName(&envrenderingColorBuffer_MSAA, "envrenderingColorBuffer_MSAA");
+
+			desc.sample_count = 1;
 			desc.array_size = envmapCount * 6;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET | BindFlag::UNORDERED_ACCESS;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
 			desc.format = Format::R11G11B10_FLOAT;
 			desc.height = envmapRes;
 			desc.width = envmapRes;
@@ -3758,32 +3769,7 @@ namespace wi::scene
 			device->CreateTexture(&desc, nullptr, &envmapArray);
 			device->SetName(&envmapArray, "envmapArray");
 
-			renderpasses_envmap.resize(envmapCount);
-
-			for (uint32_t i = 0; i < envmapCount; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::RTV, i * 6, 6, 0, 1);
-				assert(subresource_index == i);
-
-				RenderPassDesc renderpassdesc;
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::RenderTarget(&envmapArray,
-						RenderPassAttachment::LoadOp::DONTCARE
-					)
-				);
-				renderpassdesc.attachments.back().subresource = subresource_index;
-
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::DepthStencil(
-						&envrenderingDepthBuffer,
-						RenderPassAttachment::LoadOp::CLEAR,
-						RenderPassAttachment::StoreOp::DONTCARE
-					)
-				);
-
-				device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[subresource_index]);
-			}
+			// Cube arrays per mip level:
 			for (uint32_t i = 0; i < envmapArray.desc.mip_levels; ++i)
 			{
 				int subresource_index;
@@ -3793,12 +3779,82 @@ namespace wi::scene
 				assert(subresource_index == i);
 			}
 
-			// debug probe views, individual cubes:
+			// individual cubes with mips:
 			for (uint32_t i = 0; i < envmapCount; ++i)
 			{
 				int subresource_index;
 				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, i * 6, 6, 0, -1);
 				assert(subresource_index == envmapArray.desc.mip_levels + i);
+			}
+
+			// individual cubes only mip0:
+			for (uint32_t i = 0; i < envmapCount; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, i * 6, 6, 0, 1);
+				assert(subresource_index == envmapArray.desc.mip_levels + envmapCount + i);
+			}
+
+			renderpasses_envmap.resize(envmapCount);
+			renderpasses_envmap_MSAA.resize(envmapCount);
+			for (uint32_t i = 0; i < envmapCount; ++i)
+			{
+				// Non MSAA:
+				{
+					int subresource_index;
+					subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::RTV, i * 6, 6, 0, 1);
+					assert(subresource_index == i);
+
+					RenderPassDesc renderpassdesc;
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::DepthStencil(
+							&envrenderingDepthBuffer,
+							RenderPassAttachment::LoadOp::CLEAR,
+							RenderPassAttachment::StoreOp::DONTCARE
+						)
+					);
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::RenderTarget(&envmapArray,
+							RenderPassAttachment::LoadOp::DONTCARE,
+							RenderPassAttachment::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::RENDERTARGET,
+							ResourceState::SHADER_RESOURCE,
+							subresource_index
+						)
+					);
+					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[i]);
+				}
+
+				// MSAA:
+				{
+					RenderPassDesc renderpassdesc;
+					renderpassdesc.attachments.clear();
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::DepthStencil(
+							&envrenderingDepthBuffer_MSAA,
+							RenderPassAttachment::LoadOp::CLEAR,
+							RenderPassAttachment::StoreOp::DONTCARE
+						)
+					);
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::RenderTarget(&envrenderingColorBuffer_MSAA,
+							RenderPassAttachment::LoadOp::DONTCARE,
+							RenderPassAttachment::StoreOp::DONTCARE,
+							ResourceState::RENDERTARGET,
+							ResourceState::RENDERTARGET,
+							ResourceState::RENDERTARGET
+						)
+					);
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::Resolve(&envmapArray,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::SHADER_RESOURCE,
+							envmapArray.desc.mip_levels + envmapCount + i // subresource: individual cubes only mip0
+						)
+					);
+					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap_MSAA[i]);
+				}
 			}
 		}
 

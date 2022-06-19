@@ -344,6 +344,7 @@ namespace wi::graphics
 		BUFFER_STRUCTURED = 1 << 3,
 		RAY_TRACING = 1 << 4,
 		PREDICATION = 1 << 5,
+		TRANSIENT_ATTACHMENT = 1 << 6,	// hint: used in renderpass, without needing to write content to memory (VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
 	};
 
 	enum class GraphicsDeviceCapability
@@ -656,7 +657,8 @@ namespace wi::graphics
 			StoreOp store_op = StoreOp::STORE,
 			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
 			ResourceState subpass_layout = ResourceState::RENDERTARGET,
-			ResourceState final_layout = ResourceState::SHADER_RESOURCE
+			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
+			int subresource_RTV = -1
 		)
 		{
 			RenderPassAttachment attachment;
@@ -667,6 +669,7 @@ namespace wi::graphics
 			attachment.initial_layout = initial_layout;
 			attachment.subpass_layout = subpass_layout;
 			attachment.final_layout = final_layout;
+			attachment.subresource = subresource_RTV;
 			return attachment;
 		}
 
@@ -676,7 +679,8 @@ namespace wi::graphics
 			StoreOp store_op = StoreOp::STORE,
 			ResourceState initial_layout = ResourceState::DEPTHSTENCIL,
 			ResourceState subpass_layout = ResourceState::DEPTHSTENCIL,
-			ResourceState final_layout = ResourceState::DEPTHSTENCIL
+			ResourceState final_layout = ResourceState::DEPTHSTENCIL,
+			int subresource_DSV = -1
 		)
 		{
 			RenderPassAttachment attachment;
@@ -687,13 +691,15 @@ namespace wi::graphics
 			attachment.initial_layout = initial_layout;
 			attachment.subpass_layout = subpass_layout;
 			attachment.final_layout = final_layout;
+			attachment.subresource = subresource_DSV;
 			return attachment;
 		}
 
 		static RenderPassAttachment Resolve(
 			const Texture* resource = nullptr,
 			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
-			ResourceState final_layout = ResourceState::SHADER_RESOURCE
+			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
+			int subresource_SRV = -1
 		)
 		{
 			RenderPassAttachment attachment;
@@ -701,6 +707,7 @@ namespace wi::graphics
 			attachment.texture = resource;
 			attachment.initial_layout = initial_layout;
 			attachment.final_layout = final_layout;
+			attachment.subresource = subresource_SRV;
 			return attachment;
 		}
 

@@ -12,6 +12,7 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::CheckBox realTimeCheckBox;
+	wi::gui::CheckBox msaaCheckBox;
 	wi::gui::Button generateButton;
 	wi::gui::Button refreshButton;
 	wi::gui::Button refreshAllButton;
