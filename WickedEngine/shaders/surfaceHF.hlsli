@@ -161,7 +161,9 @@ struct Surface
 		roughness = material.roughness;
 		f0 = material.GetSpecular() * specularMap.rgb * specularMap.a;
 
+#ifndef ENVMAPRENDERING
 		if (GetFrame().options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING)
+#endif // ENVMAPRENDERING
 		{
 			f0 = material.metalness = material.reflectance = 0;
 		}
