@@ -100,7 +100,7 @@ inline float3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized)
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 	if (GetFrame().options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED)
 	{
-		float4 transparent_shadow = texture_shadowarray_transparent_cube.SampleLevel(sampler_linear_clamp, float4(-Lunnormalized, slice), 0);
+		float4 transparent_shadow = texture_shadowarray_transparent_cube.SampleLevel(sampler_linear_clamp, float4(Lunnormalized, slice), 0);
 #ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 		if (transparent_shadow.a > remapped_distance)
 #endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
