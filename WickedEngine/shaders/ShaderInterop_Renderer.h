@@ -420,7 +420,6 @@ struct ObjectPushConstants
 // Warning: the size of this structure directly affects shader performance.
 //	Try to reduce it as much as possible!
 //	Keep it aligned to 16 bytes for best performance!
-//	Right now, this is 48 bytes total
 struct ShaderEntity
 {
 	float3 position;
@@ -496,7 +495,7 @@ struct ShaderEntity
 	}
 	inline bool IsCastingShadow()
 	{
-		return indices != ~0;
+		return any(shadowAtlasMulAdd);
 	}
 
 	// Load decal props:
