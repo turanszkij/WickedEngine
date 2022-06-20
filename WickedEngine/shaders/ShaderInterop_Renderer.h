@@ -435,6 +435,8 @@ struct ShaderEntity
 	uint cubeRemap;
 	uint userdata;
 
+	float4 shadowAtlasMulAdd;
+
 #ifndef __cplusplus
 	// Shader-side:
 	inline uint GetType()
@@ -622,8 +624,8 @@ struct FrameCB
 {
 	uint		options;							// wi::renderer bool options packed into bitmask
 	uint		shadow_cascade_count;
-	float		shadow_kernel_2D;
-	float		shadow_kernel_cube;
+	float		shadow_texel_size_x;
+	float		shadow_texel_size_y;
 
 	float		time;
 	float		time_previous;
@@ -668,15 +670,15 @@ struct FrameCB
 	int			texture_multiscatteringlut_index;
 	int			texture_skyluminancelut_index;
 
-	int			texture_shadowarray_2d_index;
-	int			texture_shadowarray_cube_index;
-	int			texture_shadowarray_transparent_2d_index;
-	int			texture_shadowarray_transparent_cube_index;
-
 	int			texture_voxelgi_index;
 	int			buffer_entityarray_index;
 	int			buffer_entitymatrixarray_index;
 	float		gi_boost;
+
+	int			texture_shadowatlas_index;
+	int			texture_shadowatlas_transparent_index;
+	int			padding0;
+	int			padding1;
 
 	ShaderScene scene;
 };

@@ -15,6 +15,7 @@
 #include "wiMath.h"
 #include "wiECS.h"
 #include "wiVector.h"
+#include "wiRectPacker.h"
 
 #include <string>
 #include <memory>
@@ -868,6 +869,7 @@ namespace wi::scene
 		XMFLOAT3 front;
 		XMFLOAT3 right;
 		mutable int occlusionquery = -1;
+		rectpacker::rect_xywh shadow_rect = {};
 
 		wi::vector<wi::Resource> lensFlareRimTextures;
 

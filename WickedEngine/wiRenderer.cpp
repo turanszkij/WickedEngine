@@ -123,12 +123,11 @@ struct VoxelizedSceneData
 	uint32_t mips = 7;
 } voxelSceneData;
 
-Texture shadowMapArray_2D;
-Texture shadowMapArray_Cube;
-Texture shadowMapArray_Transparent_2D;
-Texture shadowMapArray_Transparent_Cube;
-wi::vector<RenderPass> renderpasses_shadow2D;
-wi::vector<RenderPass> renderpasses_shadowCube;
+Texture shadowMapAtlas;
+Texture shadowMapAtlas_Transparent;
+RenderPass renderpass_shadowMapAtlas;
+int max_shadow_resolution_2D = 1024;
+int max_shadow_resolution_cube = 256;
 
 wi::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
 wi::vector<std::pair<Sphere, XMFLOAT4>> renderableSpheres;
@@ -2188,9 +2187,6 @@ void Initialize()
 	static wi::eventhandler::Handle handle2 = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 	LoadShaders();
 
-	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D);
-	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
-
 	wi::backlog::post("wi::renderer Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 }
 void ClearWorld(Scene& scene)
@@ -2312,7 +2308,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 		// Snap cascade to texel grid:
 		const XMVECTOR extent = XMVectorSubtract(vMax, vMin);
-		const XMVECTOR texelSize = extent / float(GetShadowRes2D());
+		const XMVECTOR texelSize = extent / XMVectorSet(float(light.shadow_rect.w / CASCADE_COUNT), float(light.shadow_rect.h), 1, 1);
 		vMin = XMVectorFloor(vMin / texelSize) * texelSize;
 		vMax = XMVectorFloor(vMax / texelSize) * texelSize;
 		center = (vMin + vMax) * 0.5f;
@@ -2991,10 +2987,94 @@ void UpdatePerFrameData(
 		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
 	}
 
+	// Shadow atlas packing:
+	if (!vis.visibleLights.empty())
+	{
+		static thread_local wi::vector<rectpacker::rect_xywh*> out_rects;
+		out_rects.clear();
+		for (auto& x : vis.visibleLights)
+		{
+			LightComponent& light = scene.lights[x.index];
+			switch (light.GetType())
+			{
+			case LightComponent::DIRECTIONAL:
+				light.shadow_rect = rectpacker::rect_xywh(0, 0, max_shadow_resolution_2D * CASCADE_COUNT, max_shadow_resolution_2D);
+				break;
+			case LightComponent::SPOT:
+				light.shadow_rect = rectpacker::rect_xywh(0, 0, max_shadow_resolution_2D, max_shadow_resolution_2D);
+				break;
+			case LightComponent::POINT:
+				light.shadow_rect = rectpacker::rect_xywh(0, 0, max_shadow_resolution_cube * 6, max_shadow_resolution_cube);
+				break;
+			}
+			out_rects.push_back(&light.shadow_rect);
+		}
+		static thread_local wi::vector<rectpacker::bin> bins;
+		bins.clear();
+		int max_side = 4096;
+		max_side = std::max(max_side, max_shadow_resolution_2D * int(CASCADE_COUNT));
+		max_side = std::max(max_side, max_shadow_resolution_cube * 6);
+		if (rectpacker::pack(out_rects.data(), (int)out_rects.size(), max_side, bins))
+		{
+			if (!bins.empty())
+			{
+				// Retrieve texture atlas dimensions:
+				const int width = bins[0].size.w;
+				const int height = bins[0].size.h;
+
+				if ((int)shadowMapAtlas.desc.width < width || (int)shadowMapAtlas.desc.height < height)
+				{
+					TextureDesc desc;
+					desc.width = uint32_t(width);
+					desc.height = uint32_t(height);
+					desc.format = Format::R16_TYPELESS;
+					desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+					desc.layout = ResourceState::SHADER_RESOURCE;
+					device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
+					device->SetName(&shadowMapAtlas, "shadowMapAtlas");
+
+					desc.format = Format::R16G16B16A16_FLOAT;
+					desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+					desc.layout = ResourceState::SHADER_RESOURCE;
+					desc.clear.color[0] = 1;
+					desc.clear.color[1] = 1;
+					desc.clear.color[2] = 1;
+					desc.clear.color[3] = 0;
+					device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Transparent);
+					device->SetName(&shadowMapAtlas_Transparent, "shadowMapAtlas_Transparent");
+
+
+					RenderPassDesc renderpassdesc;
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::DepthStencil(
+							&shadowMapAtlas,
+							RenderPassAttachment::LoadOp::CLEAR,
+							RenderPassAttachment::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::SHADER_RESOURCE
+						)
+					);
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::RenderTarget(
+							&shadowMapAtlas_Transparent,
+							RenderPassAttachment::LoadOp::CLEAR,
+							RenderPassAttachment::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::RENDERTARGET,
+							ResourceState::SHADER_RESOURCE
+						)
+					);
+					device->CreateRenderPass(&renderpassdesc, &renderpass_shadowMapAtlas);
+				}
+			}
+		}
+	}
+
 	// Update CPU-side frame constant buffer:
 	frameCB.shadow_cascade_count = CASCADE_COUNT;
-	frameCB.shadow_kernel_2D = 1.0f / SHADOWRES_2D;
-	frameCB.shadow_kernel_cube = 1.0f / SHADOWRES_CUBE;
+	frameCB.shadow_texel_size_x = 1.0f / shadowMapAtlas.desc.width;
+	frameCB.shadow_texel_size_y = 1.0f / shadowMapAtlas.desc.height;
 	frameCB.delta_time = dt * GetGameSpeed();
 	frameCB.time_previous = frameCB.time;
 	frameCB.time += frameCB.delta_time;
@@ -3129,13 +3209,12 @@ void UpdatePerFrameData(
 	frameCB.texture_transmittancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], SubresourceType::SRV);
 	frameCB.texture_multiscatteringlut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], SubresourceType::SRV);
 	frameCB.texture_skyluminancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], SubresourceType::SRV);
-	frameCB.texture_shadowarray_2d_index = device->GetDescriptorIndex(&shadowMapArray_2D, SubresourceType::SRV);
-	frameCB.texture_shadowarray_cube_index = device->GetDescriptorIndex(&shadowMapArray_Cube, SubresourceType::SRV);
-	frameCB.texture_shadowarray_transparent_2d_index = device->GetDescriptorIndex(&shadowMapArray_Transparent_2D, SubresourceType::SRV);
-	frameCB.texture_shadowarray_transparent_cube_index = device->GetDescriptorIndex(&shadowMapArray_Transparent_Cube, SubresourceType::SRV);
 	frameCB.texture_voxelgi_index = device->GetDescriptorIndex(GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], SubresourceType::SRV);
 	frameCB.buffer_entityarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_ENTITYARRAY], SubresourceType::SRV);
 	frameCB.buffer_entitymatrixarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_MATRIXARRAY], SubresourceType::SRV);
+	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMapAtlas, SubresourceType::SRV);
+	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapAtlas_Transparent, SubresourceType::SRV);
+
 
 
 	// Create volumetric cloud static resources if needed:
@@ -3373,6 +3452,7 @@ void UpdateRenderData(
 		// Write lights into entity array:
 		uint32_t shadowCounter_2D = SHADOWRES_2D > 0 ? 0 : SHADOWCOUNT_2D;
 		uint32_t shadowCounter_Cube = SHADOWRES_CUBE > 0 ? 0 : SHADOWCOUNT_CUBE;
+		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
 		for (auto visibleLight : vis.visibleLights)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -3415,6 +3495,11 @@ void UpdateRenderData(
 				shadow = light.IsCastingShadow() && !light.IsStatic();
 				if (shadow)
 				{
+					shaderentity.shadowAtlasMulAdd.x = light.shadow_rect.w * atlas_dim_rcp.x;
+					shaderentity.shadowAtlasMulAdd.y = light.shadow_rect.h * atlas_dim_rcp.y;
+					shaderentity.shadowAtlasMulAdd.z = light.shadow_rect.x * atlas_dim_rcp.x;
+					shaderentity.shadowAtlasMulAdd.w = light.shadow_rect.y * atlas_dim_rcp.y;
+
 					switch (light.GetType())
 					{
 					case LightComponent::DIRECTIONAL:
@@ -3423,6 +3508,7 @@ void UpdateRenderData(
 							shaderentity.SetIndices(matrixCounter, shadowCounter_2D);
 							shadowCounter_2D += CASCADE_COUNT;
 						}
+						shaderentity.shadowAtlasMulAdd.x = light.shadow_rect.w / CASCADE_COUNT * atlas_dim_rcp.x;
 						break;
 					case LightComponent::SPOT:
 						if (shadowCounter_2D < SHADOWCOUNT_2D)
@@ -3437,6 +3523,7 @@ void UpdateRenderData(
 							shaderentity.SetIndices(matrixCounter, shadowCounter_Cube);
 							shadowCounter_Cube += 1;
 						}
+						shaderentity.shadowAtlasMulAdd.x = light.shadow_rect.w / 6 * atlas_dim_rcp.x;
 						break;
 					}
 				}
@@ -4502,158 +4589,15 @@ void DrawLensFlares(
 }
 
 
-void SetShadowProps2D(int resolution, int count)
+void SetShadowProps2D(int resolution)
 {
-	if (resolution >= 0)
-	{
-		SHADOWRES_2D = resolution;
-	}
-	if (count >= 0)
-	{
-		SHADOWCOUNT_2D = count;
-	}
-
-	if (SHADOWCOUNT_2D > 0 && SHADOWRES_2D > 0)
-	{
-		TextureDesc desc;
-		desc.width = SHADOWRES_2D;
-		desc.height = SHADOWRES_2D;
-		desc.mip_levels = 1;
-		desc.array_size = SHADOWCOUNT_2D;
-		desc.sample_count = 1;
-		desc.usage = Usage::DEFAULT;
-
-		desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-		desc.format = Format::R16_TYPELESS;
-		desc.layout = ResourceState::SHADER_RESOURCE;
-		device->CreateTexture(&desc, nullptr, &shadowMapArray_2D);
-
-		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.layout = ResourceState::SHADER_RESOURCE;
-		desc.clear.color[0] = 1;
-		desc.clear.color[1] = 1;
-		desc.clear.color[2] = 1;
-		desc.clear.color[3] = 0;
-		device->CreateTexture(&desc, nullptr, &shadowMapArray_Transparent_2D);
-
-		renderpasses_shadow2D.resize(SHADOWCOUNT_2D);
-
-		for (uint32_t i = 0; i < SHADOWCOUNT_2D; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&shadowMapArray_2D, SubresourceType::DSV, i, 1, 0, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&shadowMapArray_Transparent_2D, SubresourceType::RTV, i, 1, 0, 1);
-			assert(subresource_index == i);
-
-			RenderPassDesc renderpassdesc;
-
-			renderpassdesc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					&shadowMapArray_2D,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::SHADER_RESOURCE
-				)
-			);
-			renderpassdesc.attachments.back().subresource = subresource_index;
-
-			renderpassdesc.attachments.push_back(
-				RenderPassAttachment::RenderTarget(
-					&shadowMapArray_Transparent_2D,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::RENDERTARGET,
-					ResourceState::SHADER_RESOURCE
-				)
-			);
-			renderpassdesc.attachments.back().subresource = subresource_index;
-
-			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadow2D[subresource_index]);
-		}
-	}
-
+	max_shadow_resolution_2D = resolution;
 }
-void SetShadowPropsCube(int resolution, int count)
+void SetShadowPropsCube(int resolution)
 {
-	if (resolution >= 0)
-	{
-		SHADOWRES_CUBE = resolution;
-	}
-	if (count >= 0)
-	{
-		SHADOWCOUNT_CUBE = count;
-	}
-
-	if (SHADOWCOUNT_CUBE > 0 && SHADOWRES_CUBE > 0)
-	{
-		TextureDesc desc;
-		desc.width = SHADOWRES_CUBE;
-		desc.height = SHADOWRES_CUBE;
-		desc.mip_levels = 1;
-		desc.array_size = 6 * SHADOWCOUNT_CUBE;
-		desc.sample_count = 1;
-		desc.usage = Usage::DEFAULT;
-		desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
-
-		desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-		desc.format = Format::R16_TYPELESS;
-		desc.layout = ResourceState::SHADER_RESOURCE;
-		device->CreateTexture(&desc, nullptr, &shadowMapArray_Cube);
-
-		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.layout = ResourceState::SHADER_RESOURCE;
-		desc.clear.color[0] = 1;
-		desc.clear.color[1] = 1;
-		desc.clear.color[2] = 1;
-		desc.clear.color[3] = 0;
-		device->CreateTexture(&desc, nullptr, &shadowMapArray_Transparent_Cube);
-
-		renderpasses_shadowCube.resize(SHADOWCOUNT_CUBE);
-
-		for (uint32_t i = 0; i < SHADOWCOUNT_CUBE; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&shadowMapArray_Cube, SubresourceType::DSV, i * 6, 6, 0, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&shadowMapArray_Transparent_Cube, SubresourceType::RTV, i * 6, 6, 0, 1);
-			assert(subresource_index == i);
-
-			RenderPassDesc renderpassdesc;
-			renderpassdesc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					&shadowMapArray_Cube,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::SHADER_RESOURCE
-				)
-			);
-			renderpassdesc.attachments.back().subresource = subresource_index;
-
-			renderpassdesc.attachments.push_back(
-				RenderPassAttachment::RenderTarget(
-					&shadowMapArray_Transparent_Cube,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::RENDERTARGET,
-					ResourceState::SHADER_RESOURCE
-				)
-			);
-			renderpassdesc.attachments.back().subresource = subresource_index;
-
-			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadowCube[subresource_index]);
-		}
-	}
-
+	max_shadow_resolution_cube = resolution;
 }
+
 void DrawShadowmaps(
 	const Visibility& vis,
 	CommandList cmd
@@ -4684,6 +4628,8 @@ void DrawShadowmaps(
 		uint32_t shadowCounter_Cube = SHADOWRES_CUBE > 0 ? 0 : SHADOWCOUNT_CUBE;
 
 		static thread_local RenderQueue renderQueue;
+
+		device->RenderPassBegin(&renderpass_shadowMapAtlas, cmd);
 
 		for (const auto& visibleLight : vis.visibleLights)
 		{
@@ -4737,7 +4683,6 @@ void DrawShadowmaps(
 						}
 					}
 
-					device->RenderPassBegin(&renderpasses_shadow2D[slice + cascade], cmd);
 					if (!renderQueue.empty())
 					{
 						CameraCB cb;
@@ -4745,10 +4690,10 @@ void DrawShadowmaps(
 						device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 						Viewport vp;
-						vp.top_left_x = 0;
-						vp.top_left_y = 0;
-						vp.width = (float)SHADOWRES_2D;
-						vp.height = (float)SHADOWRES_2D;
+						vp.width = float(light.shadow_rect.w / CASCADE_COUNT);
+						vp.height = float(light.shadow_rect.h);
+						vp.top_left_x = float(light.shadow_rect.x + cascade * vp.width);
+						vp.top_left_y = float(light.shadow_rect.y);
 						vp.min_depth = 0.0f;
 						vp.max_depth = 1.0f;
 						device->BindViewports(1, &vp, cmd);
@@ -4759,7 +4704,6 @@ void DrawShadowmaps(
 							RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 						}
 					}
-					device->RenderPassEnd(cmd);
 
 				}
 			}
@@ -4812,21 +4756,19 @@ void DrawShadowmaps(
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 					Viewport vp;
-					vp.top_left_x = 0;
-					vp.top_left_y = 0;
-					vp.width = (float)SHADOWRES_2D;
-					vp.height = (float)SHADOWRES_2D;
+					vp.width = float(light.shadow_rect.w);
+					vp.height = float(light.shadow_rect.h);
+					vp.top_left_x = float(light.shadow_rect.x);
+					vp.top_left_y = float(light.shadow_rect.y);
 					vp.min_depth = 0.0f;
 					vp.max_depth = 1.0f;
 					device->BindViewports(1, &vp, cmd);
 
-					device->RenderPassBegin(&renderpasses_shadow2D[slice], cmd);
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 					}
-					device->RenderPassEnd(cmd);
 
 					if (predicationRequest && light.occlusionquery >= 0)
 						device->PredicationEnd(cmd);
@@ -4884,6 +4826,7 @@ void DrawShadowmaps(
 						SHCAM(light.position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
 						SHCAM(light.position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
 					};
+					Viewport vp[arraysize(cameras)];
 					Frustum frusta[arraysize(cameras)];
 					uint32_t frustum_count = 0;
 
@@ -4897,25 +4840,21 @@ void DrawShadowmaps(
 							frusta[frustum_count] = cameras[shcam].frustum;
 							frustum_count++;
 						}
+						vp[shcam].width = float(light.shadow_rect.w / 6);
+						vp[shcam].height = float(light.shadow_rect.h);
+						vp[shcam].top_left_x = float(light.shadow_rect.x + shcam * vp[shcam].width);
+						vp[shcam].top_left_y = float(light.shadow_rect.y);
+						vp[shcam].min_depth = 0.0f;
+						vp[shcam].max_depth = 1.0f;
 					}
 					device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
+					device->BindViewports(arraysize(vp), vp, cmd);
 
-					Viewport vp;
-					vp.top_left_x = 0;
-					vp.top_left_y = 0;
-					vp.width = (float)SHADOWRES_CUBE;
-					vp.height = (float)SHADOWRES_CUBE;
-					vp.min_depth = 0.0f;
-					vp.max_depth = 1.0f;
-					device->BindViewports(1, &vp, cmd);
-
-					device->RenderPassBegin(&renderpasses_shadowCube[slice], cmd);
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, frusta, frustum_count);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd, false, frusta, frustum_count);
 					}
-					device->RenderPassEnd(cmd);
 
 					if (predicationRequest && light.occlusionquery >= 0)
 						device->PredicationEnd(cmd);
@@ -4925,6 +4864,8 @@ void DrawShadowmaps(
 			break;
 			} // terminate switch
 		}
+
+		device->RenderPassEnd(cmd);
 
 		wi::profiler::EndRange(range); // Shadow Rendering
 		device->EventEnd(cmd);

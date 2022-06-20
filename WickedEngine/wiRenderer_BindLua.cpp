@@ -55,10 +55,10 @@ namespace wi::lua::renderer
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			wi::renderer::SetShadowProps2D(wi::lua::SGetInt(L, 1), wi::lua::SGetInt(L, 2));
+			wi::renderer::SetShadowProps2D(wi::lua::SGetInt(L, 1));
 		}
 		else
-			wi::lua::SError(L, "SetShadowProps2D(int resolution, int count) not enough arguments!");
+			wi::lua::SError(L, "SetShadowProps2D(int max_resolution) not enough arguments!");
 		return 0;
 	}
 	int SetShadowPropsCube(lua_State* L)
@@ -66,10 +66,10 @@ namespace wi::lua::renderer
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			wi::renderer::SetShadowPropsCube(wi::lua::SGetInt(L, 1), wi::lua::SGetInt(L, 2));
+			wi::renderer::SetShadowPropsCube(wi::lua::SGetInt(L, 1));
 		}
 		else
-			wi::lua::SError(L, "SetShadowPropsCube(int resolution, int count) not enough arguments!");
+			wi::lua::SError(L, "SetShadowPropsCube(int max_resolution) not enough arguments!");
 		return 0;
 	}
 	int SetDebugPartitionTreeEnabled(lua_State* L)

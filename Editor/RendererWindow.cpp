@@ -347,25 +347,25 @@ void RendererWindow::Create(EditorComponent* editor)
 		switch (args.iValue)
 		{
 		case 0:
-			wi::renderer::SetShadowProps2D(0, -1);
+			wi::renderer::SetShadowProps2D(0);
 			break;
 		case 1:
-			wi::renderer::SetShadowProps2D(128, -1);
+			wi::renderer::SetShadowProps2D(128);
 			break;
 		case 2:
-			wi::renderer::SetShadowProps2D(256, -1);
+			wi::renderer::SetShadowProps2D(256);
 			break;
 		case 3:
-			wi::renderer::SetShadowProps2D(512, -1);
+			wi::renderer::SetShadowProps2D(512);
 			break;
 		case 4:
-			wi::renderer::SetShadowProps2D(1024, -1);
+			wi::renderer::SetShadowProps2D(1024);
 			break;
 		case 5:
-			wi::renderer::SetShadowProps2D(2048, -1);
+			wi::renderer::SetShadowProps2D(2048);
 			break;
 		case 6:
-			wi::renderer::SetShadowProps2D(4096, -1);
+			wi::renderer::SetShadowProps2D(4096);
 			break;
 		default:
 			break;
@@ -390,25 +390,25 @@ void RendererWindow::Create(EditorComponent* editor)
 		switch (args.iValue)
 		{
 		case 0:
-			wi::renderer::SetShadowPropsCube(0, -1);
+			wi::renderer::SetShadowPropsCube(0);
 			break;
 		case 1:
-			wi::renderer::SetShadowPropsCube(128, -1);
+			wi::renderer::SetShadowPropsCube(128);
 			break;
 		case 2:
-			wi::renderer::SetShadowPropsCube(256, -1);
+			wi::renderer::SetShadowPropsCube(256);
 			break;
 		case 3:
-			wi::renderer::SetShadowPropsCube(512, -1);
+			wi::renderer::SetShadowPropsCube(512);
 			break;
 		case 4:
-			wi::renderer::SetShadowPropsCube(1024, -1);
+			wi::renderer::SetShadowPropsCube(1024);
 			break;
 		case 5:
-			wi::renderer::SetShadowPropsCube(2048, -1);
+			wi::renderer::SetShadowPropsCube(2048);
 			break;
 		case 6:
-			wi::renderer::SetShadowPropsCube(4096, -1);
+			wi::renderer::SetShadowPropsCube(4096);
 			break;
 		default:
 			break;

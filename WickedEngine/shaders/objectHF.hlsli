@@ -86,8 +86,9 @@ uint load_entitytile(uint tileIndex)
 //#define OBJECTSHADER_USE_POSITION3D				- shader will use world space positions
 //#define OBJECTSHADER_USE_EMISSIVE					- shader will use emissive
 //#define OBJECTSHADER_USE_RENDERTARGETARRAYINDEX	- shader will use dynamic render target slice selection
+//#define OBJECTSHADER_USE_VIEWPORTARRAYINDEX		- shader will use dynamic viewport selection
 //#define OBJECTSHADER_USE_NOCAMERA					- shader will not use camera space transform
-//#define OBJECTSHADER_USE_INSTANCEINDEX				- shader will use instance ID
+//#define OBJECTSHADER_USE_INSTANCEINDEX			- shader will use instance ID
 
 
 #ifdef OBJECTSHADER_LAYOUT_SHADOW
@@ -298,6 +299,14 @@ struct PixelInput
 	uint RTIndex : SV_RenderTargetArrayIndex;
 #endif // VPRT_EMULATION
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
+
+#ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
+#ifdef VPRT_EMULATION
+	uint VPIndex : VPINDEX;
+#else
+	uint VPIndex : SV_ViewportArrayIndex;
+#endif // VPRT_EMULATION
+#endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 };
 
 
@@ -995,6 +1004,14 @@ PixelInput main(VertexInput input)
 	Out.pos = mul(xCubemapRenderCams[frustum_index].view_projection, surface.position);
 #endif // OBJECTSHADER_USE_NOCAMERA
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
+
+#ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
+	const uint frustum_index = input.GetInstancePointer().GetFrustumIndex();
+	Out.VPIndex = xCubemapRenderCams[frustum_index].properties.x;
+#ifndef OBJECTSHADER_USE_NOCAMERA
+	Out.pos = mul(xCubemapRenderCams[frustum_index].view_projection, surface.position);
+#endif // OBJECTSHADER_USE_NOCAMERA
+#endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 
 	return Out;
 }

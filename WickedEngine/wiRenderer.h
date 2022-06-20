@@ -764,10 +764,8 @@ namespace wi::renderer
 
 
 
-	// Set any param to -1 if don't want to modify
-	void SetShadowProps2D(int resolution, int count);
-	// Set any param to -1 if don't want to modify
-	void SetShadowPropsCube(int resolution, int count);
+	void SetShadowProps2D(int max_resolution);
+	void SetShadowPropsCube(int max_resolution);
 
 	// Returns the resolution that is used for all spotlight and directional light shadow maps
 	int GetShadowRes2D();

@@ -191,9 +191,11 @@ struct PrimitiveID
 #define texture_multiscatteringlut bindless_textures[GetFrame().texture_multiscatteringlut_index]
 #define texture_skyluminancelut bindless_textures[GetFrame().texture_skyluminancelut_index]
 #define texture_shadowarray_2d bindless_textures2DArray[GetFrame().texture_shadowarray_2d_index]
-#define texture_shadowarray_cube bindless_cubearrays[GetFrame().texture_shadowarray_cube_index]
+#define texture_shadowarray_cube bindless_textures2DArray[GetFrame().texture_shadowarray_cube_index]
 #define texture_shadowarray_transparent_2d bindless_textures2DArray[GetFrame().texture_shadowarray_transparent_2d_index]
-#define texture_shadowarray_transparent_cube bindless_cubearrays[GetFrame().texture_shadowarray_transparent_cube_index]
+#define texture_shadowarray_transparent_cube bindless_textures2DArray[GetFrame().texture_shadowarray_transparent_cube_index]
+#define texture_shadowatlas bindless_textures[GetFrame().texture_shadowatlas_index]
+#define texture_shadowatlas_transparent bindless_textures[GetFrame().texture_shadowatlas_transparent_index]
 #define texture_voxelgi bindless_textures3D[GetFrame().texture_voxelgi_index]
 #define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 
@@ -645,6 +647,7 @@ inline float caustic_pattern(float2 uv, float time)
 // Convert texture coordinates on a cubemap face to cubemap sampling coordinates:
 // uv			: UV texture coordinates on cubemap face in range [0, 1]
 // faceIndex	: cubemap face index as in the backing texture2DArray in range [0, 5]
+// returns direction to be used in cubemap sampling
 inline float3 uv_to_cubemap(in float2 uv, in uint faceIndex)
 {
 	// get uv in [-1, 1] range:
@@ -677,6 +680,38 @@ inline float3 uv_to_cubemap(in float2 uv, in uint faceIndex)
 		// error
 		return 0;
 	}
+}
+// Convert texture coordinates on a cubemap face to cubemap sampling coordinates:
+// direction	: direction that is usable for cubemap sampling
+// returns float3 that has uv in .xy components, and face index in Z component
+//	https://stackoverflow.com/questions/53115467/how-to-implement-texturecube-using-6-sampler2d
+inline float3 cubemap_to_uv(in float3 r)
+{
+	float faceIndex = 0;
+	float3 absr = abs(r);
+	float3 uvw = 0;
+	if (absr.x > absr.y && absr.x > absr.z)
+	{
+		// x major
+		float negx = step(r.x, 0.0);
+		uvw = float3(r.zy, absr.x) * float3(lerp(-1.0, 1.0, negx), -1, 1);
+		faceIndex = negx;
+	}
+	else if (absr.y > absr.z)
+	{
+		// y major
+		float negy = step(r.y, 0.0);
+		uvw = float3(r.xz, absr.y) * float3(1.0, lerp(1.0, -1.0, negy), 1.0);
+		faceIndex = 2.0 + negy;
+	}
+	else
+	{
+		// z major
+		float negz = step(r.z, 0.0);
+		uvw = float3(r.xy, absr.z) * float3(lerp(1.0, -1.0, negz), -1, 1);
+		faceIndex = 4.0 + negz;
+	}
+	return float3((uvw.xy / uvw.z + 1) * 0.5, faceIndex);
 }
 
 // Samples a texture with Catmull-Rom filtering, using 9 texture fetches instead of 16. ( https://gist.github.com/TheRealMJP/c83b8c0f46b63f3a88a5986f4fa982b1#file-tex2dcatmullrom-hlsl )
