@@ -78,7 +78,8 @@ inline float3 sample_shadow(float2 uv, float cmp)
 
 inline float3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade)
 {
-	shadow_uv = clipspace_to_uv(uv_to_clipspace(shadow_uv) * 0.99); // shrink the uv towards center to avoid sampling the border
+	const float shadow_resolution = float(light.GetTextureIndex());
+	shadow_uv = clipspace_to_uv(uv_to_clipspace(shadow_uv) * ((shadow_resolution - 3) / shadow_resolution)); // shrink the uv towards center to avoid sampling the border
 	float4 mulAdd = light.shadowAtlasMulAdd;
 	mulAdd.z += cascade * mulAdd.x;
 	shadow_uv = mad(shadow_uv, mulAdd.xy, mulAdd.zw);
@@ -90,7 +91,8 @@ inline float3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized)
 	float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)));
 	float3 uv_slice = cubemap_to_uv(-Lunnormalized);
 	float2 shadow_uv = uv_slice.xy;
-	shadow_uv = clipspace_to_uv(uv_to_clipspace(shadow_uv) * 0.99); // shrink the uv towards center to avoid sampling the border
+	const float shadow_resolution = float(light.GetTextureIndex());
+	shadow_uv = clipspace_to_uv(uv_to_clipspace(shadow_uv) * ((shadow_resolution - 3) / shadow_resolution)); // shrink the uv towards center to avoid sampling the border
 	float4 mulAdd = light.shadowAtlasMulAdd;
 	mulAdd.z += uv_slice.z * mulAdd.x;
 	shadow_uv = mad(shadow_uv, mulAdd.xy, mulAdd.zw);

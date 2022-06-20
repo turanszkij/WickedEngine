@@ -3512,19 +3512,7 @@ void UpdateRenderData(
 					shaderentity.shadowAtlasMulAdd.y = light.shadow_rect.h * atlas_dim_rcp.y;
 					shaderentity.shadowAtlasMulAdd.z = light.shadow_rect.x * atlas_dim_rcp.x;
 					shaderentity.shadowAtlasMulAdd.w = light.shadow_rect.y * atlas_dim_rcp.y;
-
-					switch (light.GetType())
-					{
-					case LightComponent::DIRECTIONAL:
-						shaderentity.SetIndices(matrixCounter, 0);
-						break;
-					case LightComponent::SPOT:
-						shaderentity.SetIndices(matrixCounter, 0);
-						break;
-					default:
-						shaderentity.SetIndices(matrixCounter, 0);
-						break;
-					}
+					shaderentity.SetIndices(matrixCounter, uint(light.shadow_rect.w));
 				}
 			}
 
