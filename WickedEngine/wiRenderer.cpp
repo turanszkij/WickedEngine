@@ -2976,6 +2976,9 @@ void UpdatePerFrameData(
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
 			LightComponent& light = scene.lights[lightIndex];
+			if (!light.IsCastingShadow() || light.IsStatic())
+				continue;
+
 			switch (light.GetType())
 			{
 			case LightComponent::DIRECTIONAL:
