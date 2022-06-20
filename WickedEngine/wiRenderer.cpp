@@ -2304,7 +2304,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 		// Snap cascade to texel grid:
 		const XMVECTOR extent = XMVectorSubtract(vMax, vMin);
-		const XMVECTOR texelSize = extent / XMVectorSet(float(light.shadow_rect.w / CASCADE_COUNT), float(light.shadow_rect.h), 1, 1);
+		const XMVECTOR texelSize = extent / XMVectorSet(float(light.shadow_rect.w), float(light.shadow_rect.h), 1, 1);
 		vMin = XMVectorFloor(vMin / texelSize) * texelSize;
 		vMax = XMVectorFloor(vMax / texelSize) * texelSize;
 		center = (vMin + vMax) * 0.5f;
@@ -2982,6 +2982,10 @@ void UpdatePerFrameData(
 			if (!light.IsCastingShadow() || light.IsStatic())
 				continue;
 
+			const float dist = wi::math::Distance(vis.camera->Eye, light.position);
+			const float range = light.GetRange();
+			const float amount = std::min(1.0f, range / std::max(0.001f, dist));
+
 			wi::rectpacker::Rect rect = {};
 			rect.id = int(lightIndex);
 			switch (light.GetType())
@@ -2991,15 +2995,18 @@ void UpdatePerFrameData(
 				rect.h = max_shadow_resolution_2D;
 				break;
 			case LightComponent::SPOT:
-				rect.w = max_shadow_resolution_2D;
-				rect.h = max_shadow_resolution_2D;
+				rect.w = int(max_shadow_resolution_2D * amount);
+				rect.h = int(max_shadow_resolution_2D * amount);
 				break;
 			case LightComponent::POINT:
-				rect.w = max_shadow_resolution_cube * 6;
-				rect.h = max_shadow_resolution_cube;
+				rect.w = int(max_shadow_resolution_cube * amount) * 6;
+				rect.h = int(max_shadow_resolution_cube * amount);
 				break;
 			}
-			packer.add_rect(rect);
+			if (rect.w > 8 && rect.h > 8)
+			{
+				packer.add_rect(rect);
+			}
 		}
 		if (!packer.rects.empty())
 		{
@@ -3013,6 +3020,17 @@ void UpdatePerFrameData(
 					light.shadow_rect.y = rect.y;
 					light.shadow_rect.w = rect.w;
 					light.shadow_rect.h = rect.h;
+
+					// Remove slice multipliers from rect:
+					switch (light.GetType())
+					{
+					case LightComponent::DIRECTIONAL:
+						light.shadow_rect.w /= int(CASCADE_COUNT);
+						break;
+					case LightComponent::POINT:
+						light.shadow_rect.w /= 6;
+						break;
+					}
 				}
 
 				if ((int)shadowMapAtlas.desc.width < packer.width || (int)shadowMapAtlas.desc.height < packer.height)
@@ -3499,14 +3517,12 @@ void UpdateRenderData(
 					{
 					case LightComponent::DIRECTIONAL:
 						shaderentity.SetIndices(matrixCounter, 0);
-						shaderentity.shadowAtlasMulAdd.x = light.shadow_rect.w / CASCADE_COUNT * atlas_dim_rcp.x;
 						break;
 					case LightComponent::SPOT:
 						shaderentity.SetIndices(matrixCounter, 0);
 						break;
 					default:
 						shaderentity.SetIndices(matrixCounter, 0);
-						shaderentity.shadowAtlasMulAdd.x = light.shadow_rect.w / 6 * atlas_dim_rcp.x;
 						break;
 					}
 				}
@@ -4586,7 +4602,7 @@ void DrawShadowmaps(
 	if (IsWireRender())
 		return;
 
-	if (!vis.visibleLights.empty())
+	if (!vis.visibleLights.empty() && renderpass_shadowMapAtlas.IsValid())
 	{
 		device->EventBegin("DrawShadowmaps", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Shadow Rendering", cmd);
@@ -4655,10 +4671,10 @@ void DrawShadowmaps(
 						device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 						Viewport vp;
-						vp.width = float(light.shadow_rect.w / CASCADE_COUNT);
-						vp.height = float(light.shadow_rect.h);
-						vp.top_left_x = float(light.shadow_rect.x + cascade * vp.width);
+						vp.top_left_x = float(light.shadow_rect.x + cascade * light.shadow_rect.w);
 						vp.top_left_y = float(light.shadow_rect.y);
+						vp.width = float(light.shadow_rect.w);
+						vp.height = float(light.shadow_rect.h);
 						vp.min_depth = 0.0f;
 						vp.max_depth = 1.0f;
 						device->BindViewports(1, &vp, cmd);
@@ -4716,10 +4732,10 @@ void DrawShadowmaps(
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 					Viewport vp;
-					vp.width = float(light.shadow_rect.w);
-					vp.height = float(light.shadow_rect.h);
 					vp.top_left_x = float(light.shadow_rect.x);
 					vp.top_left_y = float(light.shadow_rect.y);
+					vp.width = float(light.shadow_rect.w);
+					vp.height = float(light.shadow_rect.h);
 					vp.min_depth = 0.0f;
 					vp.max_depth = 1.0f;
 					device->BindViewports(1, &vp, cmd);
@@ -4795,10 +4811,10 @@ void DrawShadowmaps(
 							frusta[frustum_count] = cameras[shcam].frustum;
 							frustum_count++;
 						}
-						vp[shcam].width = float(light.shadow_rect.w / 6);
-						vp[shcam].height = float(light.shadow_rect.h);
-						vp[shcam].top_left_x = float(light.shadow_rect.x + shcam * vp[shcam].width);
+						vp[shcam].top_left_x = float(light.shadow_rect.x + shcam * light.shadow_rect.w);
 						vp[shcam].top_left_y = float(light.shadow_rect.y);
+						vp[shcam].width = float(light.shadow_rect.w);
+						vp[shcam].height = float(light.shadow_rect.h);
 						vp[shcam].min_depth = 0.0f;
 						vp[shcam].max_depth = 1.0f;
 					}
