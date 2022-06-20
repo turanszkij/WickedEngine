@@ -35,6 +35,10 @@ inline void Skinning(inout float3 pos, inout float3 nor, inout float3 tan, in ui
 [numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 {
+	[branch]
+	if (push.vb_pos_nor_wind < 0)
+		return;
+
 	const uint fetchAddress_POS_NOR = DTid.x * sizeof(float4);
 	const uint fetchAddress_TAN = DTid.x * sizeof(uint);
 	const uint fetchAddress_BON = DTid.x * sizeof(uint4);
@@ -42,7 +46,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	// Manual type-conversion for pos:
 	uint4 pos_nor_u = bindless_buffers[push.vb_pos_nor_wind].Load4(fetchAddress_POS_NOR);
 	float3 pos = asfloat(pos_nor_u.xyz);
-	uint vtan = bindless_buffers[push.vb_tan].Load(fetchAddress_TAN);
 
 	// Manual type-conversion for normal:
 	float4 nor = 0;
@@ -55,18 +58,24 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 
 	// Manual type-conversion for tangent:
 	float4 tan = 0;
+	[branch]
+	if (push.vb_tan >= 0)
 	{
+		uint vtan = bindless_buffers[push.vb_tan].Load(fetchAddress_TAN);
 		tan.x = (float)((vtan >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		tan.y = (float)((vtan >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		tan.z = (float)((vtan >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		tan.w = (float)((vtan >> 24) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	}
 
-	// Manual type-conversion for bone props:
-	uint4 ind_wei_u = bindless_buffers[push.vb_bon].Load4(fetchAddress_BON);
 	float4 ind = 0;
 	float4 wei = 0;
+	[branch]
+	if (push.vb_bon >= 0)
 	{
+		// Manual type-conversion for bone props:
+		uint4 ind_wei_u = bindless_buffers[push.vb_bon].Load4(fetchAddress_BON);
+
 		ind.x = (ind_wei_u.x >> 0) & 0x0000FFFF;
 		ind.y = (ind_wei_u.x >> 16) & 0x0000FFFF;
 		ind.z = (ind_wei_u.y >> 0) & 0x0000FFFF;
@@ -82,31 +91,27 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	// Perform skinning:
 	Skinning(pos, nor.xyz, tan.xyz, ind, wei);
 
-
-
-	// Manual type-conversion for pos:
-	pos_nor_u.xyz = asuint(pos.xyz);
-
-	
-	// Manual type-conversion for normal:
-	pos_nor_u.w = 0;
+	// Store data:
+	[branch]
+	if (push.so_pos_nor_wind >= 0)
 	{
+		pos_nor_u.xyz = asuint(pos.xyz);
+		pos_nor_u.w = 0;
 		pos_nor_u.w |= (uint)((nor.x * 0.5f + 0.5f) * 255.0f) << 0;
 		pos_nor_u.w |= (uint)((nor.y * 0.5f + 0.5f) * 255.0f) << 8;
 		pos_nor_u.w |= (uint)((nor.z * 0.5f + 0.5f) * 255.0f) << 16;
 		pos_nor_u.w |= (uint)(nor.w * 255.0f) << 24; // wind
+		bindless_rwbuffers[push.so_pos_nor_wind].Store4(fetchAddress_POS_NOR, pos_nor_u);
 	}
 
-	// Manual type-conversion for tangent:
-	vtan = 0;
+	[branch]
+	if (push.so_tan >= 0)
 	{
+		uint vtan = 0;
 		vtan |= (uint)((tan.x * 0.5f + 0.5f) * 255.0f) << 0;
 		vtan |= (uint)((tan.y * 0.5f + 0.5f) * 255.0f) << 8;
 		vtan |= (uint)((tan.z * 0.5f + 0.5f) * 255.0f) << 16;
 		vtan |= (uint)((tan.w * 0.5f + 0.5f) * 255.0f) << 24;
+		bindless_rwbuffers[push.so_tan].Store(fetchAddress_TAN, vtan);
 	}
-
-	// Store data:
-	bindless_rwbuffers[push.so_pos_nor_wind].Store4(fetchAddress_POS_NOR, pos_nor_u);
-	bindless_rwbuffers[push.so_tan].Store(fetchAddress_TAN, vtan);
 }
