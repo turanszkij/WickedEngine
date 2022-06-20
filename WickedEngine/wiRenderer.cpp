@@ -2971,43 +2971,55 @@ void UpdatePerFrameData(
 	// Shadow atlas packing:
 	if (!vis.visibleLights.empty())
 	{
-		static thread_local wi::vector<rectpacker::rect_xywh*> out_rects;
-		out_rects.clear();
+		auto range = wi::profiler::BeginRangeCPU("Shadowmap packing");
+		static thread_local wi::rectpacker::State packer;
+
+		packer.clear();
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
 			LightComponent& light = scene.lights[lightIndex];
+			light.shadow_rect = {};
 			if (!light.IsCastingShadow() || light.IsStatic())
 				continue;
 
+			wi::rectpacker::Rect rect = {};
+			rect.id = int(lightIndex);
 			switch (light.GetType())
 			{
 			case LightComponent::DIRECTIONAL:
-				light.shadow_rect = rectpacker::rect_xywh(0, 0, max_shadow_resolution_2D * CASCADE_COUNT, max_shadow_resolution_2D);
+				rect.w = max_shadow_resolution_2D * int(CASCADE_COUNT);
+				rect.h = max_shadow_resolution_2D;
 				break;
 			case LightComponent::SPOT:
-				light.shadow_rect = rectpacker::rect_xywh(0, 0, max_shadow_resolution_2D, max_shadow_resolution_2D);
+				rect.w = max_shadow_resolution_2D;
+				rect.h = max_shadow_resolution_2D;
 				break;
 			case LightComponent::POINT:
-				light.shadow_rect = rectpacker::rect_xywh(0, 0, max_shadow_resolution_cube * 6, max_shadow_resolution_cube);
+				rect.w = max_shadow_resolution_cube * 6;
+				rect.h = max_shadow_resolution_cube;
 				break;
 			}
-			out_rects.push_back(&light.shadow_rect);
+			packer.add_rect(rect);
 		}
-		static thread_local wi::vector<rectpacker::bin> bins;
-		bins.clear();
-		if (rectpacker::pack(out_rects.data(), (int)out_rects.size(), 16384, bins))
+		if (!packer.rects.empty())
 		{
-			if (!bins.empty())
+			if (packer.pack(8192))
 			{
-				// Retrieve texture atlas dimensions:
-				const int width = bins[0].size.w;
-				const int height = bins[0].size.h;
+				for (auto& rect : packer.rects)
+				{
+					uint32_t lightIndex = uint32_t(rect.id);
+					LightComponent& light = scene.lights[lightIndex];
+					light.shadow_rect.x = rect.x;
+					light.shadow_rect.y = rect.y;
+					light.shadow_rect.w = rect.w;
+					light.shadow_rect.h = rect.h;
+				}
 
-				if ((int)shadowMapAtlas.desc.width < width || (int)shadowMapAtlas.desc.height < height)
+				if ((int)shadowMapAtlas.desc.width < packer.width || (int)shadowMapAtlas.desc.height < packer.height)
 				{
 					TextureDesc desc;
-					desc.width = uint32_t(width);
-					desc.height = uint32_t(height);
+					desc.width = uint32_t(packer.width);
+					desc.height = uint32_t(packer.height);
 					desc.format = Format::R16_TYPELESS;
 					desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 					desc.layout = ResourceState::SHADER_RESOURCE;
@@ -3049,7 +3061,12 @@ void UpdatePerFrameData(
 					device->CreateRenderPass(&renderpassdesc, &renderpass_shadowMapAtlas);
 				}
 			}
+			else
+			{
+				assert(0); // rect packing failure
+			}
 		}
+		wi::profiler::EndRange(range);
 	}
 
 	// Update CPU-side frame constant buffer:

@@ -180,7 +180,6 @@ add_library(${TARGET_NAME} STATIC
 	wiProfiler.cpp
 	wiRandom.cpp
 	wiRawInput.cpp
-	wiRectPacker.cpp
 	wiRenderer.cpp
 	wiRenderer_BindLua.cpp
 	wiResourceManager.cpp

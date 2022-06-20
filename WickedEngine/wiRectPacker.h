@@ -1,82 +1,66 @@
 #pragma once
 #include "CommonInclude.h"
-
-// NOTE: 
-// This is based on the rectpack2D library hosted here: https://github.com/TeamHypersomnia/rectpack2D
-
-/* of your interest:
-
-1. rect_xywh - structure representing your rectangle object
-members:
-int x, y, w, h;
-
-2. bin - structure representing resultant bin object
-3. bool pack(rect_xywh* const * v, int n, int max_side, wi::vector<bin>& bins) - actual packing function
-Arguments:
-input/output: v - pointer to array of pointers to your rectangles (const here means that the pointers will point to the same rectangles after the call)
-input: n - rectangles count
-
-input: max_side - maximum bins' side - algorithm works with square bins (in the end it may trim them to rectangular form).
-for the algorithm to finish faster, pass a reasonable value (unreasonable would be passing 1 000 000 000 for packing 4 50x50 rectangles).
-output: bins - vector to which the function will push_back() created bins, each of them containing vector to pointers of rectangles from "v" belonging to that particular bin.
-Every bin also keeps information about its width and height of course, none of the dimensions is bigger than max_side.
-
-returns true on success, false if one of the rectangles' dimension was bigger than max_side
-
-You want to your rectangles representing your textures/glyph objects with GL_MAX_TEXTURE_SIZE as max_side,
-then for each bin iterate through its rectangles, typecast each one to your own structure (or manually add userdata) and then memcpy its pixel contents (rotated by 90 degrees if "flipped" rect_xywh's member is true)
-to the array representing your texture atlas to the place specified by the rectangle, then finally upload it with glTexImage2D.
-
-Algorithm doesn't create any new rectangles.
-You just pass an array of pointers - rectangles' x/y/w/h are modified in place.
-There is a vector of pointers for every resultant bin to let you know which ones belong to the particular bin.
-
-For description how to tune the algorithm and how it actually works see the .cpp file.
-
-
-*/
-
 #include "wiVector.h"
+
+#include "Utility/stb_rect_pack.h"
 
 namespace wi::rectpacker
 {
+	using Rect = stbrp_rect;
 
-	struct rect_ltrb;
-	struct rect_xywh;
+	// Convenience state wrapper around stb_rect_pack
+	//	This can be used to automatically grow backing memory for the packer,
+	//	and also supports iteratively finding a minimal containing size when packing
+	struct State
+	{
+		stbrp_context context = {};
+		wi::vector<stbrp_node> nodes;
+		wi::vector<Rect> rects;
+		int width = 0;
+		int height = 0;
 
-	struct rect_wh {
-		rect_wh(const rect_ltrb&);
-		rect_wh(const rect_xywh&);
-		rect_wh(int w = 0, int h = 0);
-		int w, h, area(), perimeter(),
-			fits(const rect_wh& bigger) const; // 0 - no, 1 - yes, 2 - perfectly
+		// Clears the rectangles to empty, but doesn't reset the containing width/height result
+		void clear()
+		{
+			rects.clear();
+		}
+
+		// Add a new rect and also grow the minimum containing size
+		void add_rect(const Rect& rect)
+		{
+			rects.push_back(rect);
+			width = std::max(width, rect.w);
+			height = std::max(height, rect.h);
+		}
+
+		// Performs packing of the rect array
+		//	The rectangle offsets will be filled after this
+		//	The width, height for minimal containing area will be filled after this if the packing is successful
+		//	max_width : if the packing is unsuccessful above this, it will result in a failure
+		//	returns true for success, false for failure
+		bool pack(int max_width)
+		{
+			while (width <= max_width && height <= max_width)
+			{
+				if (nodes.size() < width)
+				{
+					nodes.resize(width);
+				}
+				stbrp_init_target(&context, width, height, nodes.data(), int(nodes.size()));
+				if (stbrp_pack_rects(&context, rects.data(), int(rects.size())))
+					return true;
+				if (height < width)
+				{
+					height *= 2;
+				}
+				else
+				{
+					width *= 2;
+				}
+			}
+			width = 0;
+			height = 0;
+			return false;
+		}
 	};
-
-	// rectangle implementing left/top/right/bottom behaviour
-
-	struct rect_ltrb {
-		rect_ltrb();
-		rect_ltrb(int left, int top, int right, int bottom);
-		int l, t, r, b, w() const, h() const, area() const, perimeter() const;
-		void w(int), h(int);
-	};
-
-	struct rect_xywh : public rect_wh {
-		rect_xywh();
-		rect_xywh(const rect_ltrb&);
-		rect_xywh(int x, int y, int width, int height);
-		operator rect_ltrb();
-
-		int x, y, r() const, b() const;
-		void r(int), b(int);
-	};
-
-
-	struct bin {
-		rect_wh size;
-		wi::vector<rect_xywh*> rects;
-	};
-
-	bool pack(rect_xywh* const * v, int n, int max_side, wi::vector<bin>& bins);
-
 }

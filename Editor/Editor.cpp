@@ -12,7 +12,6 @@
 
 using namespace wi::graphics;
 using namespace wi::primitive;
-using namespace wi::rectpacker;
 using namespace wi::scene;
 using namespace wi::ecs;
 
