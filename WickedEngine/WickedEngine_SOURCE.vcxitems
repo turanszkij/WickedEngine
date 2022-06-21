@@ -675,7 +675,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiProfiler.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRandom.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRawInput.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRectPacker.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager.cpp" />

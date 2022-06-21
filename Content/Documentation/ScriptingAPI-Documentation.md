@@ -492,6 +492,8 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
 - Component_DetachChildren(Entity parent)  -- detaches all children from parent, as if calling Component_Detach for all of its children
 
+- GetBounds() : AABB result  -- returns an AABB fully containing objects in the scene. Only valid after scene has been updated.
+
 #### NameComponent
 Holds a string that can more easily identify an entity to humans than an entity ID. 
 - SetName(string value)  -- set the name

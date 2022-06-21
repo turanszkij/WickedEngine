@@ -751,6 +751,11 @@ namespace wi::scene
 
 			archive >> lensFlareNames;
 
+			if (archive.GetVersion() >= 81)
+			{
+				archive >> forced_shadow_resolution;
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				lensFlareRimTextures.resize(lensFlareNames.size());
 				for (size_t i = 0; i < lensFlareNames.size(); ++i)
@@ -792,6 +797,11 @@ namespace wi::scene
 				}
 			}
 			archive << lensFlareNames;
+
+			if (archive.GetVersion() >= 81)
+			{
+				archive << forced_shadow_resolution;
+			}
 		}
 	}
 	void CameraComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)

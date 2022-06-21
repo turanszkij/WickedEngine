@@ -1682,9 +1682,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRectPacker.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>

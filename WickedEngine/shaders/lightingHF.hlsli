@@ -42,31 +42,37 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout float4
 	color.rgb += surface.emissiveColor;
 }
 
-inline float3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade)
+inline float3 sample_shadow(float2 uv, float cmp)
 {
-	const float slice = light.GetTextureIndex() + cascade;
-	const float realDistance = shadow_pos.z; // bias was already applied when shadow map was rendered
-	float3 shadow = texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(shadow_uv, slice), realDistance).r;
+	[branch]
+	if (GetFrame().texture_shadowatlas_index < 0)
+		return 0;
+
+	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
+	float3 shadow = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp).r;
 
 #ifndef DISABLE_SOFT_SHADOWMAP
 	// sample along a rectangle pattern around center:
-	shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(mad(float2(-1, -1), GetFrame().shadow_kernel_2D, shadow_uv), slice), realDistance).r;
-	shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(mad(float2(-1, 0), GetFrame().shadow_kernel_2D, shadow_uv), slice), realDistance).r;
-	shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(mad(float2(-1, 1), GetFrame().shadow_kernel_2D, shadow_uv), slice), realDistance).r;
-	shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(mad(float2(0, -1), GetFrame().shadow_kernel_2D, shadow_uv), slice), realDistance).r;
-	shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(mad(float2(0, 1), GetFrame().shadow_kernel_2D, shadow_uv), slice), realDistance).r;
-	shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(mad(float2(1, -1), GetFrame().shadow_kernel_2D, shadow_uv), slice), realDistance).r;
-	shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(mad(float2(1, 0), GetFrame().shadow_kernel_2D, shadow_uv), slice), realDistance).r;
-	shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(mad(float2(1, 1), GetFrame().shadow_kernel_2D, shadow_uv), slice), realDistance).r;
+	const float2 shadow_texel_size = GetFrame().shadow_atlas_resolution_rcp;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(-shadow_texel_size.x, -shadow_texel_size.y), cmp).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(-shadow_texel_size.x, 0), cmp).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(-shadow_texel_size.x, shadow_texel_size.y), cmp).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(0, -shadow_texel_size.y), cmp).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(0, shadow_texel_size.y), cmp).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(shadow_texel_size.x, -shadow_texel_size.y), cmp).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(shadow_texel_size.x, 0), cmp).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(shadow_texel_size.x, shadow_texel_size.y), cmp).r;
 	shadow = shadow.xxx / 9.0;
 #endif // DISABLE_SOFT_SHADOWMAP
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
-	if (GetFrame().options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED)
+	[branch]
+	if (GetFrame().options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED && GetFrame().texture_shadowatlas_transparent_index)
 	{
-		float4 transparent_shadow = texture_shadowarray_transparent_2d.SampleLevel(sampler_linear_clamp, float3(shadow_uv, slice), 0);
+		Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
+		float4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
 #ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
-		if (transparent_shadow.a > realDistance)
+		if (transparent_shadow.a > cmp)
 #endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 		{
 			shadow *= transparent_shadow.rgb;
@@ -77,40 +83,37 @@ inline float3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 s
 	return shadow;
 }
 
+// This is used to pull the uvs to the center to avoid sampling on the border and overfiltering into a different shadow
+inline void shadow_border_shrink(in ShaderEntity light, inout float2 shadow_uv)
+{
+	const float2 shadow_resolution = light.shadowAtlasMulAdd.xy * GetFrame().shadow_atlas_resolution;
+#ifdef DISABLE_SOFT_SHADOWMAP
+	const float border_size = 0.5;
+#else
+	const float border_size = 1.5;
+#endif // DISABLE_SOFT_SHADOWMAP
+	shadow_uv *= shadow_resolution - border_size * 2;
+	shadow_uv += border_size;
+	shadow_uv /= shadow_resolution;
+}
+
+inline float3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade)
+{
+	shadow_border_shrink(light, shadow_uv);
+	shadow_uv.x += cascade;
+	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
+	return sample_shadow(shadow_uv, shadow_pos.z);
+}
+
 inline float3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized)
 {
-	const float slice = light.GetTextureIndex();
-	float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)) * 0.989); // little bias to avoid border sampling artifact
-	Lunnormalized = -Lunnormalized;
-	float3 shadow = texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(Lunnormalized, slice), remapped_distance).r;
-
-#ifndef DISABLE_SOFT_SHADOWMAP
-	// sample along a cube pattern around center:
-	shadow.x += texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(mad(float3(-1, -1, -1), GetFrame().shadow_kernel_cube, Lunnormalized), slice), remapped_distance).r;
-	shadow.x += texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(mad(float3(1, -1, -1), GetFrame().shadow_kernel_cube, Lunnormalized), slice), remapped_distance).r;
-	shadow.x += texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(mad(float3(-1, 1, -1), GetFrame().shadow_kernel_cube, Lunnormalized), slice), remapped_distance).r;
-	shadow.x += texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(mad(float3(1, 1, -1), GetFrame().shadow_kernel_cube, Lunnormalized), slice), remapped_distance).r;
-	shadow.x += texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(mad(float3(-1, -1, 1), GetFrame().shadow_kernel_cube, Lunnormalized), slice), remapped_distance).r;
-	shadow.x += texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(mad(float3(1, -1, 1), GetFrame().shadow_kernel_cube, Lunnormalized), slice), remapped_distance).r;
-	shadow.x += texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(mad(float3(-1, 1, 1), GetFrame().shadow_kernel_cube, Lunnormalized), slice), remapped_distance).r;
-	shadow.x += texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(mad(float3(1, 1, 1), GetFrame().shadow_kernel_cube, Lunnormalized), slice), remapped_distance).r;
-	shadow = shadow.xxx / 9.0;
-#endif // DISABLE_SOFT_SHADOWMAP
-
-#ifndef DISABLE_TRANSPARENT_SHADOWMAP
-	if (GetFrame().options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED)
-	{
-		float4 transparent_shadow = texture_shadowarray_transparent_cube.SampleLevel(sampler_linear_clamp, float4(Lunnormalized, slice), 0);
-#ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
-		if (transparent_shadow.a > remapped_distance)
-#endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
-		{
-			shadow *= transparent_shadow.rgb;
-		}
-	}
-#endif //DISABLE_TRANSPARENT_SHADOWMAP
-
-	return shadow;
+	const float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)) * 0.989); // little bias to avoid artifact
+	const float3 uv_slice = cubemap_to_uv(-Lunnormalized);
+	float2 shadow_uv = uv_slice.xy;
+	shadow_border_shrink(light, shadow_uv);
+	shadow_uv.x += uv_slice.z;
+	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
+	return sample_shadow(shadow_uv, remapped_distance);
 }
 
 inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)

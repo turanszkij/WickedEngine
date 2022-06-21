@@ -21,7 +21,6 @@
 #include <mutex>
 
 using namespace wi::graphics;
-using namespace wi::rectpacker;
 
 namespace wi::font
 {
@@ -55,7 +54,7 @@ namespace wi::font
 			float tc_bottom;
 		};
 		static wi::unordered_map<int32_t, Glyph> glyph_lookup;
-		static wi::unordered_map<int32_t, rect_xywh> rect_lookup;
+		static wi::unordered_map<int32_t, wi::rectpacker::Rect> rect_lookup;
 		struct SDF
 		{
 			static constexpr int padding = 5;
@@ -327,7 +326,12 @@ namespace wi::font
 				sdf.bitmap.resize(sdf.width * sdf.height);
 				std::memcpy(sdf.bitmap.data(), bitmap, sdf.bitmap.size());
 				stbtt_FreeSDF(bitmap, nullptr);
-				rect_lookup[hash] = rect_xywh(0, 0, sdf.width, sdf.height);
+
+				wi::rectpacker::Rect rect = {};
+				rect.w = sdf.width;
+				rect.h = sdf.height;
+				rect.id = hash;
+				rect_lookup[hash] = rect;
 
 				Glyph& glyph = glyph_lookup[hash];
 				glyph.x = float(sdf.xoff);
@@ -337,23 +341,20 @@ namespace wi::font
 			}
 			pendingGlyphs.clear();
 
-			// This reference array will be used for packing:
-			wi::vector<rect_xywh*> out_rects;
-			out_rects.reserve(rect_lookup.size());
+			// Setup packer, this will allocate memory if needed:
+			static thread_local wi::rectpacker::State packer;
+			packer.clear();
 			for (auto& it : rect_lookup)
 			{
-				out_rects.push_back(&it.second);
+				packer.add_rect(it.second);
 			}
 
 			// Perform packing and process the result if successful:
-			wi::vector<bin> bins;
-			if (pack(out_rects.data(), (int)out_rects.size(), 4096, bins))
+			if (packer.pack(4096))
 			{
-				assert(bins.size() == 1 && "The regions won't fit into one texture!");
-
 				// Retrieve texture atlas dimensions:
-				const int bitmapWidth = bins[0].size.w;
-				const int bitmapHeight = bins[0].size.h;
+				const int bitmapWidth = packer.width;
+				const int bitmapHeight = packer.height;
 				const float inv_width = 1.0f / bitmapWidth;
 				const float inv_height = 1.0f / bitmapHeight;
 
@@ -362,14 +363,13 @@ namespace wi::font
 				std::fill(bitmap.begin(), bitmap.end(), 0);
 
 				// Iterate all packed glyph rectangles:
-				for (auto it : rect_lookup)
+				for (auto& rect : packer.rects)
 				{
-					const int32_t hash = it.first;
+					const int32_t hash = rect.id;
 					const wchar_t code = codefromhash(hash);
 					const int style = stylefromhash(hash);
 					const float height = (float)heightfromhash(hash);
 					const FontStyle& fontStyle = fontStyles[style];
-					rect_xywh& rect = it.second;
 					Glyph& glyph = glyph_lookup[hash];
 					SDF& sdf = sdf_lookup[hash];
 
@@ -394,6 +394,10 @@ namespace wi::font
 
 				// Upload the CPU-side texture atlas bitmap to the GPU:
 				wi::texturehelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, Format::R8_UNORM);
+			}
+			else
+			{
+				assert(0); // rect packing failure
 			}
 		}
 

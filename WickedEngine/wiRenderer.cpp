@@ -67,10 +67,6 @@ void barrier_stack_flush(CommandList cmd)
 	barrier_stack.clear();
 }
 
-uint32_t SHADOWRES_2D = 1024;
-uint32_t SHADOWRES_CUBE = 256;
-uint32_t SHADOWCOUNT_2D = 5 + 3 + 3;
-uint32_t SHADOWCOUNT_CUBE = 5;
 bool TRANSPARENTSHADOWSENABLED = true;
 bool wireRender = false;
 bool debugBoneLines = false;
@@ -123,12 +119,11 @@ struct VoxelizedSceneData
 	uint32_t mips = 7;
 } voxelSceneData;
 
-Texture shadowMapArray_2D;
-Texture shadowMapArray_Cube;
-Texture shadowMapArray_Transparent_2D;
-Texture shadowMapArray_Transparent_Cube;
-wi::vector<RenderPass> renderpasses_shadow2D;
-wi::vector<RenderPass> renderpasses_shadowCube;
+Texture shadowMapAtlas;
+Texture shadowMapAtlas_Transparent;
+RenderPass renderpass_shadowMapAtlas;
+int max_shadow_resolution_2D = 1024;
+int max_shadow_resolution_cube = 256;
 
 wi::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
 wi::vector<std::pair<Sphere, XMFLOAT4>> renderableSpheres;
@@ -2188,9 +2183,6 @@ void Initialize()
 	static wi::eventhandler::Handle handle2 = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 	LoadShaders();
 
-	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D);
-	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
-
 	wi::backlog::post("wi::renderer Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 }
 void ClearWorld(Scene& scene)
@@ -2312,7 +2304,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 		// Snap cascade to texel grid:
 		const XMVECTOR extent = XMVectorSubtract(vMax, vMin);
-		const XMVECTOR texelSize = extent / float(GetShadowRes2D());
+		const XMVECTOR texelSize = extent / float(light.shadow_rect.w);
 		vMin = XMVectorFloor(vMin / texelSize) * texelSize;
 		vMax = XMVectorFloor(vMax / texelSize) * texelSize;
 		center = (vMin + vMax) * 0.5f;
@@ -2353,7 +2345,7 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 	uint32_t buckets[2] = { 0,0 };
 	for (size_t i = 0; i < std::min(size_t(64), vis.visibleLights.size()); ++i) // only support indexing 64 lights at max for now
 	{
-		const uint16_t lightIndex = vis.visibleLights[i].index;
+		const uint32_t lightIndex = vis.visibleLights[i];
 		const AABB& light_aabb = vis.scene->aabb_lights[lightIndex];
 		if (light_aabb.intersects(batch_aabb))
 		{
@@ -2676,7 +2668,6 @@ void UpdateVisibility(Visibility& vis)
 {
 	// Perform parallel frustum culling and obtain closest reflector:
 	wi::jobsystem::context ctx;
-	wi::jobsystem::context ctx_lights;
 	auto range = wi::profiler::BeginRangeCPU("Frustum Culling");
 
 	assert(vis.scene != nullptr); // User must provide a scene!
@@ -2706,11 +2697,11 @@ void UpdateVisibility(Visibility& vis)
 	{
 		// Cull lights:
 		vis.visibleLights.resize(vis.scene->aabb_lights.GetCount());
-		wi::jobsystem::Dispatch(ctx_lights, (uint32_t)vis.scene->aabb_lights.GetCount(), groupSize, [&](wi::jobsystem::JobArgs args) {
+		wi::jobsystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_lights.GetCount(), groupSize, [&](wi::jobsystem::JobArgs args) {
 
 			// Setup stream compaction:
 			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
-			Visibility::VisibleLight* group_list = (Visibility::VisibleLight*)args.sharedmemory + 1;
+			uint32_t* group_list = (uint32_t*)args.sharedmemory + 1;
 			if (args.isFirstJobInGroup)
 			{
 				group_count = 0; // first thread initializes local counter
@@ -2722,15 +2713,8 @@ void UpdateVisibility(Visibility& vis)
 			{
 				// Local stream compaction:
 				//	(also compute light distance for shadow priority sorting)
-				assert(args.jobIndex < 0xFFFF);
-				group_list[group_count].index = (uint16_t)args.jobIndex;
+				group_list[group_count] = args.jobIndex;
 				const LightComponent& light = vis.scene->lights[args.jobIndex];
-				float distance = 0;
-				if (light.type != LightComponent::DIRECTIONAL)
-				{
-					distance = wi::math::DistanceEstimated(light.position, vis.camera->Eye);
-				}
-				group_list[group_count].distance = uint16_t(distance * 10);
 				group_count++;
 				if (light.IsVolumetricsEnabled())
 				{
@@ -2929,19 +2913,12 @@ void UpdateVisibility(Visibility& vis)
 			});
 	}
 
-	if (vis.flags & Visibility::ALLOW_LIGHTS)
-	{
-		wi::jobsystem::Wait(ctx_lights);
-		vis.visibleLights.resize((size_t)vis.light_counter.load());
-		// Sort lights based on distance so that closer lights will receive shadow map priority:
-		std::sort(vis.visibleLights.begin(), vis.visibleLights.end());
-	}
-
 	wi::jobsystem::Wait(ctx);
 
 	// finalize stream compaction:
 	vis.visibleObjects.resize((size_t)vis.object_counter.load());
 	vis.visibleDecals.resize((size_t)vis.decal_counter.load());
+	vis.visibleLights.resize((size_t)vis.light_counter.load());
 
 	if (vis.scene->weather.IsOceanEnabled())
 	{
@@ -2991,10 +2968,154 @@ void UpdatePerFrameData(
 		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
 	}
 
+	// Shadow atlas packing:
+	if (!vis.visibleLights.empty())
+	{
+		auto range = wi::profiler::BeginRangeCPU("Shadowmap packing");
+		static thread_local wi::rectpacker::State packer;
+
+		packer.clear();
+		for (uint32_t lightIndex : vis.visibleLights)
+		{
+			LightComponent& light = scene.lights[lightIndex];
+			light.shadow_rect = {};
+			if (!light.IsCastingShadow() || light.IsStatic())
+				continue;
+
+			const float dist = wi::math::Distance(vis.camera->Eye, light.position);
+			const float range = light.GetRange();
+			const float amount = std::min(1.0f, range / std::max(0.001f, dist));
+
+			wi::rectpacker::Rect rect = {};
+			rect.id = int(lightIndex);
+			switch (light.GetType())
+			{
+			case LightComponent::DIRECTIONAL:
+				if (light.forced_shadow_resolution >= 0)
+				{
+					rect.w = light.forced_shadow_resolution * int(CASCADE_COUNT);
+					rect.h = light.forced_shadow_resolution;
+				}
+				else
+				{
+					rect.w = max_shadow_resolution_2D * int(CASCADE_COUNT);
+					rect.h = max_shadow_resolution_2D;
+				}
+				break;
+			case LightComponent::SPOT:
+				if (light.forced_shadow_resolution >= 0)
+				{
+					rect.w = int(light.forced_shadow_resolution);
+					rect.h = int(light.forced_shadow_resolution);
+				}
+				else
+				{
+					rect.w = int(max_shadow_resolution_2D * amount);
+					rect.h = int(max_shadow_resolution_2D * amount);
+				}
+				break;
+			case LightComponent::POINT:
+				if (light.forced_shadow_resolution >= 0)
+				{
+					rect.w = int(light.forced_shadow_resolution) * 6;
+					rect.h = int(light.forced_shadow_resolution);
+				}
+				else
+				{
+					rect.w = int(max_shadow_resolution_cube * amount) * 6;
+					rect.h = int(max_shadow_resolution_cube * amount);
+				}
+				break;
+			}
+			if (rect.w > 8 && rect.h > 8)
+			{
+				packer.add_rect(rect);
+			}
+		}
+		if (!packer.rects.empty())
+		{
+			if (packer.pack(16384))
+			{
+				for (auto& rect : packer.rects)
+				{
+					uint32_t lightIndex = uint32_t(rect.id);
+					LightComponent& light = scene.lights[lightIndex];
+					if (rect.was_packed)
+					{
+						light.shadow_rect = rect;
+
+						// Remove slice multipliers from rect:
+						switch (light.GetType())
+						{
+						case LightComponent::DIRECTIONAL:
+							light.shadow_rect.w /= int(CASCADE_COUNT);
+							break;
+						case LightComponent::POINT:
+							light.shadow_rect.w /= 6;
+							break;
+						}
+					}
+					else
+					{
+						light.direction = {};
+					}
+				}
+
+				if ((int)shadowMapAtlas.desc.width < packer.width || (int)shadowMapAtlas.desc.height < packer.height)
+				{
+					TextureDesc desc;
+					desc.width = uint32_t(packer.width);
+					desc.height = uint32_t(packer.height);
+					desc.format = Format::R16_TYPELESS;
+					desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+					desc.layout = ResourceState::SHADER_RESOURCE;
+					device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
+					device->SetName(&shadowMapAtlas, "shadowMapAtlas");
+
+					desc.format = Format::R16G16B16A16_FLOAT;
+					desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+					desc.layout = ResourceState::SHADER_RESOURCE;
+					desc.clear.color[0] = 1;
+					desc.clear.color[1] = 1;
+					desc.clear.color[2] = 1;
+					desc.clear.color[3] = 0;
+					device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Transparent);
+					device->SetName(&shadowMapAtlas_Transparent, "shadowMapAtlas_Transparent");
+
+
+					RenderPassDesc renderpassdesc;
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::DepthStencil(
+							&shadowMapAtlas,
+							RenderPassAttachment::LoadOp::CLEAR,
+							RenderPassAttachment::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::SHADER_RESOURCE
+						)
+					);
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::RenderTarget(
+							&shadowMapAtlas_Transparent,
+							RenderPassAttachment::LoadOp::CLEAR,
+							RenderPassAttachment::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::RENDERTARGET,
+							ResourceState::SHADER_RESOURCE
+						)
+					);
+					device->CreateRenderPass(&renderpassdesc, &renderpass_shadowMapAtlas);
+				}
+			}
+			else
+			{
+				assert(0); // rect packing failure
+			}
+		}
+		wi::profiler::EndRange(range);
+	}
+
 	// Update CPU-side frame constant buffer:
-	frameCB.shadow_cascade_count = CASCADE_COUNT;
-	frameCB.shadow_kernel_2D = 1.0f / SHADOWRES_2D;
-	frameCB.shadow_kernel_cube = 1.0f / SHADOWRES_CUBE;
 	frameCB.delta_time = dt * GetGameSpeed();
 	frameCB.time_previous = frameCB.time;
 	frameCB.time += frameCB.delta_time;
@@ -3129,13 +3250,17 @@ void UpdatePerFrameData(
 	frameCB.texture_transmittancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], SubresourceType::SRV);
 	frameCB.texture_multiscatteringlut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], SubresourceType::SRV);
 	frameCB.texture_skyluminancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], SubresourceType::SRV);
-	frameCB.texture_shadowarray_2d_index = device->GetDescriptorIndex(&shadowMapArray_2D, SubresourceType::SRV);
-	frameCB.texture_shadowarray_cube_index = device->GetDescriptorIndex(&shadowMapArray_Cube, SubresourceType::SRV);
-	frameCB.texture_shadowarray_transparent_2d_index = device->GetDescriptorIndex(&shadowMapArray_Transparent_2D, SubresourceType::SRV);
-	frameCB.texture_shadowarray_transparent_cube_index = device->GetDescriptorIndex(&shadowMapArray_Transparent_Cube, SubresourceType::SRV);
 	frameCB.texture_voxelgi_index = device->GetDescriptorIndex(GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], SubresourceType::SRV);
 	frameCB.buffer_entityarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_ENTITYARRAY], SubresourceType::SRV);
 	frameCB.buffer_entitymatrixarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_MATRIXARRAY], SubresourceType::SRV);
+
+	frameCB.shadow_cascade_count = CASCADE_COUNT;
+	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMapAtlas, SubresourceType::SRV);
+	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapAtlas_Transparent, SubresourceType::SRV);
+	frameCB.shadow_atlas_resolution.x = shadowMapAtlas.desc.width;
+	frameCB.shadow_atlas_resolution.y = shadowMapAtlas.desc.height;
+	frameCB.shadow_atlas_resolution_rcp.x = 1.0f / frameCB.shadow_atlas_resolution.x;
+	frameCB.shadow_atlas_resolution_rcp.y = 1.0f / frameCB.shadow_atlas_resolution.y;
 
 
 	// Create volumetric cloud static resources if needed:
@@ -3371,9 +3496,8 @@ void UpdateRenderData(
 		}
 
 		// Write lights into entity array:
-		uint32_t shadowCounter_2D = SHADOWRES_2D > 0 ? 0 : SHADOWCOUNT_2D;
-		uint32_t shadowCounter_Cube = SHADOWRES_CUBE > 0 ? 0 : SHADOWCOUNT_CUBE;
-		for (auto visibleLight : vis.visibleLights)
+		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
+		for (uint32_t lightIndex : vis.visibleLights)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -3383,7 +3507,6 @@ void UpdateRenderData(
 			}
 			ShaderEntity shaderentity = {};
 
-			uint16_t lightIndex = visibleLight.index;
 			const LightComponent& light = vis.scene->lights[lightIndex];
 
 			shaderentity.layerMask = ~0u;
@@ -3415,30 +3538,11 @@ void UpdateRenderData(
 				shadow = light.IsCastingShadow() && !light.IsStatic();
 				if (shadow)
 				{
-					switch (light.GetType())
-					{
-					case LightComponent::DIRECTIONAL:
-						if (shadowCounter_2D < SHADOWCOUNT_2D - CASCADE_COUNT + 1)
-						{
-							shaderentity.SetIndices(matrixCounter, shadowCounter_2D);
-							shadowCounter_2D += CASCADE_COUNT;
-						}
-						break;
-					case LightComponent::SPOT:
-						if (shadowCounter_2D < SHADOWCOUNT_2D)
-						{
-							shaderentity.SetIndices(matrixCounter, shadowCounter_2D);
-							shadowCounter_2D += 1;
-						}
-						break;
-					default:
-						if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
-						{
-							shaderentity.SetIndices(matrixCounter, shadowCounter_Cube);
-							shadowCounter_Cube += 1;
-						}
-						break;
-					}
+					shaderentity.shadowAtlasMulAdd.x = light.shadow_rect.w * atlas_dim_rcp.x;
+					shaderentity.shadowAtlasMulAdd.y = light.shadow_rect.h * atlas_dim_rcp.y;
+					shaderentity.shadowAtlasMulAdd.z = light.shadow_rect.x * atlas_dim_rcp.x;
+					shaderentity.shadowAtlasMulAdd.w = light.shadow_rect.y * atlas_dim_rcp.y;
+					shaderentity.SetIndices(matrixCounter, 0);
 				}
 			}
 
@@ -4094,9 +4198,8 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	{
 		device->EventBegin("Occlusion Culling Lights", cmd);
 
-		for (auto& x : vis.visibleLights)
+		for (uint32_t lightIndex : vis.visibleLights)
 		{
-			const uint32_t lightIndex = x.index;
 			const LightComponent& light = vis.scene->lights[lightIndex];
 			if (light.occlusionquery >= 0)
 			{
@@ -4281,9 +4384,8 @@ void DrawLightVisualizers(
 		{
 			device->BindPipelineState(&PSO_lightvisualizer[type], cmd);
 
-			for (auto visibleLight : vis.visibleLights)
+			for (uint32_t lightIndex : vis.visibleLights)
 			{
-				uint16_t lightIndex = visibleLight.index;
 				const LightComponent& light = vis.scene->lights[lightIndex];
 
 				if (light.GetType() == type && light.IsVisualizerEnabled())
@@ -4356,7 +4458,7 @@ void DrawVolumeLights(
 
 			for (size_t i = 0; i < vis.visibleLights.size(); ++i)
 			{
-				const uint32_t lightIndex = vis.visibleLights[i].index;
+				const uint32_t lightIndex = vis.visibleLights[i];
 				const LightComponent& light = vis.scene->lights[lightIndex];
 				if (light.GetType() == type && light.IsVolumetricsEnabled())
 				{
@@ -4424,9 +4526,8 @@ void DrawLensFlares(
 
 	BindCommonResources(cmd);
 
-	for (auto visibleLight : vis.visibleLights)
+	for (uint32_t lightIndex : vis.visibleLights)
 	{
-		uint16_t lightIndex = visibleLight.index;
 		const LightComponent& light = vis.scene->lights[lightIndex];
 
 		if (!light.lensFlareRimTextures.empty())
@@ -4502,158 +4603,15 @@ void DrawLensFlares(
 }
 
 
-void SetShadowProps2D(int resolution, int count)
+void SetShadowProps2D(int resolution)
 {
-	if (resolution >= 0)
-	{
-		SHADOWRES_2D = resolution;
-	}
-	if (count >= 0)
-	{
-		SHADOWCOUNT_2D = count;
-	}
-
-	if (SHADOWCOUNT_2D > 0 && SHADOWRES_2D > 0)
-	{
-		TextureDesc desc;
-		desc.width = SHADOWRES_2D;
-		desc.height = SHADOWRES_2D;
-		desc.mip_levels = 1;
-		desc.array_size = SHADOWCOUNT_2D;
-		desc.sample_count = 1;
-		desc.usage = Usage::DEFAULT;
-
-		desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-		desc.format = Format::R16_TYPELESS;
-		desc.layout = ResourceState::SHADER_RESOURCE;
-		device->CreateTexture(&desc, nullptr, &shadowMapArray_2D);
-
-		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.layout = ResourceState::SHADER_RESOURCE;
-		desc.clear.color[0] = 1;
-		desc.clear.color[1] = 1;
-		desc.clear.color[2] = 1;
-		desc.clear.color[3] = 0;
-		device->CreateTexture(&desc, nullptr, &shadowMapArray_Transparent_2D);
-
-		renderpasses_shadow2D.resize(SHADOWCOUNT_2D);
-
-		for (uint32_t i = 0; i < SHADOWCOUNT_2D; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&shadowMapArray_2D, SubresourceType::DSV, i, 1, 0, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&shadowMapArray_Transparent_2D, SubresourceType::RTV, i, 1, 0, 1);
-			assert(subresource_index == i);
-
-			RenderPassDesc renderpassdesc;
-
-			renderpassdesc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					&shadowMapArray_2D,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::SHADER_RESOURCE
-				)
-			);
-			renderpassdesc.attachments.back().subresource = subresource_index;
-
-			renderpassdesc.attachments.push_back(
-				RenderPassAttachment::RenderTarget(
-					&shadowMapArray_Transparent_2D,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::RENDERTARGET,
-					ResourceState::SHADER_RESOURCE
-				)
-			);
-			renderpassdesc.attachments.back().subresource = subresource_index;
-
-			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadow2D[subresource_index]);
-		}
-	}
-
+	max_shadow_resolution_2D = resolution;
 }
-void SetShadowPropsCube(int resolution, int count)
+void SetShadowPropsCube(int resolution)
 {
-	if (resolution >= 0)
-	{
-		SHADOWRES_CUBE = resolution;
-	}
-	if (count >= 0)
-	{
-		SHADOWCOUNT_CUBE = count;
-	}
-
-	if (SHADOWCOUNT_CUBE > 0 && SHADOWRES_CUBE > 0)
-	{
-		TextureDesc desc;
-		desc.width = SHADOWRES_CUBE;
-		desc.height = SHADOWRES_CUBE;
-		desc.mip_levels = 1;
-		desc.array_size = 6 * SHADOWCOUNT_CUBE;
-		desc.sample_count = 1;
-		desc.usage = Usage::DEFAULT;
-		desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
-
-		desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-		desc.format = Format::R16_TYPELESS;
-		desc.layout = ResourceState::SHADER_RESOURCE;
-		device->CreateTexture(&desc, nullptr, &shadowMapArray_Cube);
-
-		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.layout = ResourceState::SHADER_RESOURCE;
-		desc.clear.color[0] = 1;
-		desc.clear.color[1] = 1;
-		desc.clear.color[2] = 1;
-		desc.clear.color[3] = 0;
-		device->CreateTexture(&desc, nullptr, &shadowMapArray_Transparent_Cube);
-
-		renderpasses_shadowCube.resize(SHADOWCOUNT_CUBE);
-
-		for (uint32_t i = 0; i < SHADOWCOUNT_CUBE; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&shadowMapArray_Cube, SubresourceType::DSV, i * 6, 6, 0, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&shadowMapArray_Transparent_Cube, SubresourceType::RTV, i * 6, 6, 0, 1);
-			assert(subresource_index == i);
-
-			RenderPassDesc renderpassdesc;
-			renderpassdesc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					&shadowMapArray_Cube,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::SHADER_RESOURCE
-				)
-			);
-			renderpassdesc.attachments.back().subresource = subresource_index;
-
-			renderpassdesc.attachments.push_back(
-				RenderPassAttachment::RenderTarget(
-					&shadowMapArray_Transparent_Cube,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::RENDERTARGET,
-					ResourceState::SHADER_RESOURCE
-				)
-			);
-			renderpassdesc.attachments.back().subresource = subresource_index;
-
-			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadowCube[subresource_index]);
-		}
-	}
-
+	max_shadow_resolution_cube = resolution;
 }
+
 void DrawShadowmaps(
 	const Visibility& vis,
 	CommandList cmd
@@ -4662,7 +4620,7 @@ void DrawShadowmaps(
 	if (IsWireRender())
 		return;
 
-	if (!vis.visibleLights.empty())
+	if (!vis.visibleLights.empty() && renderpass_shadowMapAtlas.IsValid())
 	{
 		device->EventBegin("DrawShadowmaps", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Shadow Rendering", cmd);
@@ -4679,20 +4637,12 @@ void DrawShadowmaps(
 		cam_frustum.Transform(cam_frustum, vis.camera->GetInvView());
 		XMStoreFloat4(&cam_frustum.Orientation, XMQuaternionNormalize(XMLoadFloat4(&cam_frustum.Orientation)));
 
-
-		uint32_t shadowCounter_2D = SHADOWRES_2D > 0 ? 0 : SHADOWCOUNT_2D;
-		uint32_t shadowCounter_Cube = SHADOWRES_CUBE > 0 ? 0 : SHADOWCOUNT_CUBE;
-
 		static thread_local RenderQueue renderQueue;
 
-		for (const auto& visibleLight : vis.visibleLights)
-		{
-			if (shadowCounter_2D >= SHADOWCOUNT_2D && shadowCounter_Cube >= SHADOWCOUNT_CUBE)
-			{
-				break;
-			}
+		device->RenderPassBegin(&renderpass_shadowMapAtlas, cmd);
 
-			uint16_t lightIndex = visibleLight.index;
+		for (uint32_t lightIndex : vis.visibleLights)
+		{
 			const LightComponent& light = vis.scene->lights[lightIndex];
 			
 			bool shadow = light.IsCastingShadow() && !light.IsStatic();
@@ -4705,11 +4655,6 @@ void DrawShadowmaps(
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				if (shadowCounter_2D >= SHADOWCOUNT_2D - CASCADE_COUNT + 1)
-					break;
-				uint32_t slice = shadowCounter_2D;
-				shadowCounter_2D += CASCADE_COUNT;
-
 				std::array<SHCAM, CASCADE_COUNT> shcams;
 				CreateDirLightShadowCams(light, *vis.camera, shcams);
 
@@ -4737,7 +4682,6 @@ void DrawShadowmaps(
 						}
 					}
 
-					device->RenderPassBegin(&renderpasses_shadow2D[slice + cascade], cmd);
 					if (!renderQueue.empty())
 					{
 						CameraCB cb;
@@ -4745,10 +4689,10 @@ void DrawShadowmaps(
 						device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 						Viewport vp;
-						vp.top_left_x = 0;
-						vp.top_left_y = 0;
-						vp.width = (float)SHADOWRES_2D;
-						vp.height = (float)SHADOWRES_2D;
+						vp.top_left_x = float(light.shadow_rect.x + cascade * light.shadow_rect.w);
+						vp.top_left_y = float(light.shadow_rect.y);
+						vp.width = float(light.shadow_rect.w);
+						vp.height = float(light.shadow_rect.h);
 						vp.min_depth = 0.0f;
 						vp.max_depth = 1.0f;
 						device->BindViewports(1, &vp, cmd);
@@ -4759,18 +4703,12 @@ void DrawShadowmaps(
 							RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 						}
 					}
-					device->RenderPassEnd(cmd);
 
 				}
 			}
 			break;
 			case LightComponent::SPOT:
 			{
-				if (shadowCounter_2D >= SHADOWCOUNT_2D)
-					break;
-				uint32_t slice = shadowCounter_2D;
-				shadowCounter_2D += 1;
-
 				SHCAM shcam;
 				CreateSpotLightShadowCam(light, shcam);
 				if (!cam_frustum.Intersects(shcam.boundingfrustum))
@@ -4812,21 +4750,19 @@ void DrawShadowmaps(
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 					Viewport vp;
-					vp.top_left_x = 0;
-					vp.top_left_y = 0;
-					vp.width = (float)SHADOWRES_2D;
-					vp.height = (float)SHADOWRES_2D;
+					vp.top_left_x = float(light.shadow_rect.x);
+					vp.top_left_y = float(light.shadow_rect.y);
+					vp.width = float(light.shadow_rect.w);
+					vp.height = float(light.shadow_rect.h);
 					vp.min_depth = 0.0f;
 					vp.max_depth = 1.0f;
 					device->BindViewports(1, &vp, cmd);
 
-					device->RenderPassBegin(&renderpasses_shadow2D[slice], cmd);
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 					}
-					device->RenderPassEnd(cmd);
 
 					if (predicationRequest && light.occlusionquery >= 0)
 						device->PredicationEnd(cmd);
@@ -4836,11 +4772,6 @@ void DrawShadowmaps(
 			break;
 			case LightComponent::POINT:
 			{
-				if (shadowCounter_Cube >= SHADOWCOUNT_CUBE)
-					break;
-				uint32_t slice = shadowCounter_Cube;
-				shadowCounter_Cube += 1;
-
 				Sphere boundingsphere(light.position, light.GetRange());
 
 				renderQueue.init();
@@ -4884,6 +4815,7 @@ void DrawShadowmaps(
 						SHCAM(light.position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
 						SHCAM(light.position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
 					};
+					Viewport vp[arraysize(cameras)];
 					Frustum frusta[arraysize(cameras)];
 					uint32_t frustum_count = 0;
 
@@ -4897,25 +4829,21 @@ void DrawShadowmaps(
 							frusta[frustum_count] = cameras[shcam].frustum;
 							frustum_count++;
 						}
+						vp[shcam].top_left_x = float(light.shadow_rect.x + shcam * light.shadow_rect.w);
+						vp[shcam].top_left_y = float(light.shadow_rect.y);
+						vp[shcam].width = float(light.shadow_rect.w);
+						vp[shcam].height = float(light.shadow_rect.h);
+						vp[shcam].min_depth = 0.0f;
+						vp[shcam].max_depth = 1.0f;
 					}
 					device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
+					device->BindViewports(arraysize(vp), vp, cmd);
 
-					Viewport vp;
-					vp.top_left_x = 0;
-					vp.top_left_y = 0;
-					vp.width = (float)SHADOWRES_CUBE;
-					vp.height = (float)SHADOWRES_CUBE;
-					vp.min_depth = 0.0f;
-					vp.max_depth = 1.0f;
-					device->BindViewports(1, &vp, cmd);
-
-					device->RenderPassBegin(&renderpasses_shadowCube[slice], cmd);
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, frusta, frustum_count);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd, false, frusta, frustum_count);
 					}
-					device->RenderPassEnd(cmd);
 
 					if (predicationRequest && light.occlusionquery >= 0)
 						device->PredicationEnd(cmd);
@@ -4925,6 +4853,8 @@ void DrawShadowmaps(
 			break;
 			} // terminate switch
 		}
+
+		device->RenderPassEnd(cmd);
 
 		wi::profiler::EndRange(range); // Shadow Rendering
 		device->EventEnd(cmd);
@@ -12823,8 +12753,6 @@ void AddDeferredMIPGen(const Texture& texture, bool preserve_coverage)
 
 
 
-int GetShadowRes2D() { return SHADOWRES_2D; }
-int GetShadowResCube() { return SHADOWRES_CUBE; }
 void SetTransparentShadowsEnabled(float value) { TRANSPARENTSHADOWSENABLED = value; }
 float GetTransparentShadowsEnabled() { return TRANSPARENTSHADOWSENABLED; }
 void SetWireRender(bool value) { wireRender = value; }

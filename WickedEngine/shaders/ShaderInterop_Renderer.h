@@ -420,7 +420,6 @@ struct ObjectPushConstants
 // Warning: the size of this structure directly affects shader performance.
 //	Try to reduce it as much as possible!
 //	Keep it aligned to 16 bytes for best performance!
-//	Right now, this is 48 bytes total
 struct ShaderEntity
 {
 	float3 position;
@@ -434,6 +433,8 @@ struct ShaderEntity
 	uint indices;
 	uint cubeRemap;
 	uint userdata;
+
+	float4 shadowAtlasMulAdd;
 
 #ifndef __cplusplus
 	// Shader-side:
@@ -621,14 +622,17 @@ static const uint OPTION_BIT_STATIC_SKY_HDR = 1 << 13;
 struct FrameCB
 {
 	uint		options;							// wi::renderer bool options packed into bitmask
-	uint		shadow_cascade_count;
-	float		shadow_kernel_2D;
-	float		shadow_kernel_cube;
-
 	float		time;
 	float		time_previous;
 	float		delta_time;
+
 	uint		frame_count;
+	uint		shadow_cascade_count;
+	int			texture_shadowatlas_index;
+	int			texture_shadowatlas_transparent_index;
+
+	uint2		shadow_atlas_resolution;
+	float2		shadow_atlas_resolution_rcp;
 
 	float3		voxelradiance_center;			// center of the voxel grid in world space units
 	float		voxelradiance_max_distance;		// maximum raymarch distance for voxel GI in world-space
@@ -667,11 +671,6 @@ struct FrameCB
 	int			texture_transmittancelut_index;
 	int			texture_multiscatteringlut_index;
 	int			texture_skyluminancelut_index;
-
-	int			texture_shadowarray_2d_index;
-	int			texture_shadowarray_cube_index;
-	int			texture_shadowarray_transparent_2d_index;
-	int			texture_shadowarray_transparent_cube_index;
 
 	int			texture_voxelgi_index;
 	int			buffer_entityarray_index;

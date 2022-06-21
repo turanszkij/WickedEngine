@@ -15,6 +15,7 @@
 #include "wiMath.h"
 #include "wiECS.h"
 #include "wiVector.h"
+#include "wiRectPacker.h"
 
 #include <string>
 #include <memory>
@@ -859,6 +860,8 @@ namespace wi::scene
 
 		wi::vector<std::string> lensFlareNames;
 
+		int forced_shadow_resolution = -1; // -1: disabled, greater: fixed shadow map resolution
+
 		// Non-serialized attributes:
 		XMFLOAT3 position;
 		float range_global;
@@ -868,6 +871,7 @@ namespace wi::scene
 		XMFLOAT3 front;
 		XMFLOAT3 right;
 		mutable int occlusionquery = -1;
+		wi::rectpacker::Rect shadow_rect = {};
 
 		wi::vector<wi::Resource> lensFlareRimTextures;
 

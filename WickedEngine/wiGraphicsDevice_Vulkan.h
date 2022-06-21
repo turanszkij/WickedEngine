@@ -357,6 +357,8 @@ namespace wi::graphics
 			return retval;
 		}
 
+		uint32_t GetMaxViewportCount() const { return properties2.properties.limits.maxViewports; };
+
 		///////////////Thread-sensitive////////////////////////
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;
