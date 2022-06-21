@@ -251,6 +251,8 @@ namespace wi::graphics
 			return retval;
 		}
 
+		uint32_t GetMaxViewportCount() const { return D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE; };
+
 		///////////////Thread-sensitive////////////////////////
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;

@@ -144,6 +144,8 @@ namespace wi::graphics
 		// Returns video memory statistics for the current application
 		virtual MemoryUsage GetMemoryUsage() const = 0;
 
+		virtual uint32_t GetMaxViewportCount() const = 0;
+
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Command List functions are below:
 		//	- These are used to record rendering commands to a CommandList
