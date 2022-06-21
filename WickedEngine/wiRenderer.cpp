@@ -3040,17 +3040,24 @@ void UpdatePerFrameData(
 				{
 					uint32_t lightIndex = uint32_t(rect.id);
 					LightComponent& light = scene.lights[lightIndex];
-					light.shadow_rect = rect;
-
-					// Remove slice multipliers from rect:
-					switch (light.GetType())
+					if (rect.was_packed)
 					{
-					case LightComponent::DIRECTIONAL:
-						light.shadow_rect.w /= int(CASCADE_COUNT);
-						break;
-					case LightComponent::POINT:
-						light.shadow_rect.w /= 6;
-						break;
+						light.shadow_rect = rect;
+
+						// Remove slice multipliers from rect:
+						switch (light.GetType())
+						{
+						case LightComponent::DIRECTIONAL:
+							light.shadow_rect.w /= int(CASCADE_COUNT);
+							break;
+						case LightComponent::POINT:
+							light.shadow_rect.w /= 6;
+							break;
+						}
+					}
+					else
+					{
+						light.direction = {};
 					}
 				}
 
