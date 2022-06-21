@@ -351,6 +351,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
 	lunamethod(Scene_BindLua, Component_DetachChildren),
+
+	lunamethod(Scene_BindLua, GetBounds),
 	{ NULL, NULL }
 };
 Luna<Scene_BindLua>::PropertyType Scene_BindLua::properties[] = {
@@ -1107,6 +1109,12 @@ int Scene_BindLua::Component_DetachChildren(lua_State* L)
 		wi::lua::SError(L, "Scene::Component_DetachChildren(Entity parent) not enough arguments!");
 	}
 	return 0;
+}
+
+int Scene_BindLua::GetBounds(lua_State* L)
+{
+	Luna<AABB_BindLua>::push(L, new AABB_BindLua(scene->bounds));
+	return 1;
 }
 
 
