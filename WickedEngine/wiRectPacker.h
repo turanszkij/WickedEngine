@@ -51,13 +51,15 @@ namespace wi::rectpacker
 					return true;
 				if (height < width)
 				{
-					height = std::min(height * 2, max_width);
+					height *= 2;
 				}
 				else
 				{
-					width = std::min(width * 2, max_width);
+					width *= 2;
 				}
 			}
+			width = 0;
+			height = 0;
 			return false;
 		}
 	};

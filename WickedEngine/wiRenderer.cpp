@@ -2973,143 +2973,149 @@ void UpdatePerFrameData(
 	{
 		auto range = wi::profiler::BeginRangeCPU("Shadowmap packing");
 		static thread_local wi::rectpacker::State packer;
+		float iterative_scaling = 1;
 
-		packer.clear();
-		for (uint32_t lightIndex : vis.visibleLights)
+		while (iterative_scaling > 0.03f)
 		{
-			LightComponent& light = scene.lights[lightIndex];
-			light.shadow_rect = {};
-			if (!light.IsCastingShadow() || light.IsStatic())
-				continue;
+			packer.clear();
+			for (uint32_t lightIndex : vis.visibleLights)
+			{
+				LightComponent& light = scene.lights[lightIndex];
+				light.shadow_rect = {};
+				if (!light.IsCastingShadow() || light.IsStatic())
+					continue;
 
-			const float dist = wi::math::Distance(vis.camera->Eye, light.position);
-			const float range = light.GetRange();
-			const float amount = std::min(1.0f, range / std::max(0.001f, dist));
+				const float dist = wi::math::Distance(vis.camera->Eye, light.position);
+				const float range = light.GetRange();
+				const float amount = std::min(1.0f, range / std::max(0.001f, dist)) * iterative_scaling;
 
-			wi::rectpacker::Rect rect = {};
-			rect.id = int(lightIndex);
-			switch (light.GetType())
-			{
-			case LightComponent::DIRECTIONAL:
-				if (light.forced_shadow_resolution >= 0)
+				wi::rectpacker::Rect rect = {};
+				rect.id = int(lightIndex);
+				switch (light.GetType())
 				{
-					rect.w = light.forced_shadow_resolution * int(CASCADE_COUNT);
-					rect.h = light.forced_shadow_resolution;
-				}
-				else
-				{
-					rect.w = max_shadow_resolution_2D * int(CASCADE_COUNT);
-					rect.h = max_shadow_resolution_2D;
-				}
-				break;
-			case LightComponent::SPOT:
-				if (light.forced_shadow_resolution >= 0)
-				{
-					rect.w = int(light.forced_shadow_resolution);
-					rect.h = int(light.forced_shadow_resolution);
-				}
-				else
-				{
-					rect.w = int(max_shadow_resolution_2D * amount);
-					rect.h = int(max_shadow_resolution_2D * amount);
-				}
-				break;
-			case LightComponent::POINT:
-				if (light.forced_shadow_resolution >= 0)
-				{
-					rect.w = int(light.forced_shadow_resolution) * 6;
-					rect.h = int(light.forced_shadow_resolution);
-				}
-				else
-				{
-					rect.w = int(max_shadow_resolution_cube * amount) * 6;
-					rect.h = int(max_shadow_resolution_cube * amount);
-				}
-				break;
-			}
-			if (rect.w > 8 && rect.h > 8)
-			{
-				packer.add_rect(rect);
-			}
-		}
-		if (!packer.rects.empty())
-		{
-			if (packer.pack(16384))
-			{
-				for (auto& rect : packer.rects)
-				{
-					uint32_t lightIndex = uint32_t(rect.id);
-					LightComponent& light = scene.lights[lightIndex];
-					if (rect.was_packed)
+				case LightComponent::DIRECTIONAL:
+					if (light.forced_shadow_resolution >= 0)
 					{
-						light.shadow_rect = rect;
-
-						// Remove slice multipliers from rect:
-						switch (light.GetType())
-						{
-						case LightComponent::DIRECTIONAL:
-							light.shadow_rect.w /= int(CASCADE_COUNT);
-							break;
-						case LightComponent::POINT:
-							light.shadow_rect.w /= 6;
-							break;
-						}
+						rect.w = light.forced_shadow_resolution * int(CASCADE_COUNT);
+						rect.h = light.forced_shadow_resolution;
 					}
 					else
 					{
-						light.direction = {};
+						rect.w = int(max_shadow_resolution_2D * iterative_scaling) * int(CASCADE_COUNT);
+						rect.h = int(max_shadow_resolution_2D * iterative_scaling);
 					}
+					break;
+				case LightComponent::SPOT:
+					if (light.forced_shadow_resolution >= 0)
+					{
+						rect.w = int(light.forced_shadow_resolution);
+						rect.h = int(light.forced_shadow_resolution);
+					}
+					else
+					{
+						rect.w = int(max_shadow_resolution_2D * amount);
+						rect.h = int(max_shadow_resolution_2D * amount);
+					}
+					break;
+				case LightComponent::POINT:
+					if (light.forced_shadow_resolution >= 0)
+					{
+						rect.w = int(light.forced_shadow_resolution) * 6;
+						rect.h = int(light.forced_shadow_resolution);
+					}
+					else
+					{
+						rect.w = int(max_shadow_resolution_cube * amount) * 6;
+						rect.h = int(max_shadow_resolution_cube * amount);
+					}
+					break;
 				}
-
-				if ((int)shadowMapAtlas.desc.width < packer.width || (int)shadowMapAtlas.desc.height < packer.height)
+				if (rect.w > 8 && rect.h > 8)
 				{
-					TextureDesc desc;
-					desc.width = uint32_t(packer.width);
-					desc.height = uint32_t(packer.height);
-					desc.format = Format::R16_TYPELESS;
-					desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-					desc.layout = ResourceState::SHADER_RESOURCE;
-					device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
-					device->SetName(&shadowMapAtlas, "shadowMapAtlas");
-
-					desc.format = Format::R16G16B16A16_FLOAT;
-					desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-					desc.layout = ResourceState::SHADER_RESOURCE;
-					desc.clear.color[0] = 1;
-					desc.clear.color[1] = 1;
-					desc.clear.color[2] = 1;
-					desc.clear.color[3] = 0;
-					device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Transparent);
-					device->SetName(&shadowMapAtlas_Transparent, "shadowMapAtlas_Transparent");
-
-
-					RenderPassDesc renderpassdesc;
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::DepthStencil(
-							&shadowMapAtlas,
-							RenderPassAttachment::LoadOp::CLEAR,
-							RenderPassAttachment::StoreOp::STORE,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::DEPTHSTENCIL,
-							ResourceState::SHADER_RESOURCE
-						)
-					);
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::RenderTarget(
-							&shadowMapAtlas_Transparent,
-							RenderPassAttachment::LoadOp::CLEAR,
-							RenderPassAttachment::StoreOp::STORE,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::RENDERTARGET,
-							ResourceState::SHADER_RESOURCE
-						)
-					);
-					device->CreateRenderPass(&renderpassdesc, &renderpass_shadowMapAtlas);
+					packer.add_rect(rect);
 				}
 			}
-			else
+			if (!packer.rects.empty())
 			{
-				assert(0); // rect packing failure
+				if (packer.pack(8192))
+				{
+					for (auto& rect : packer.rects)
+					{
+						uint32_t lightIndex = uint32_t(rect.id);
+						LightComponent& light = scene.lights[lightIndex];
+						if (rect.was_packed)
+						{
+							light.shadow_rect = rect;
+
+							// Remove slice multipliers from rect:
+							switch (light.GetType())
+							{
+							case LightComponent::DIRECTIONAL:
+								light.shadow_rect.w /= int(CASCADE_COUNT);
+								break;
+							case LightComponent::POINT:
+								light.shadow_rect.w /= 6;
+								break;
+							}
+						}
+						else
+						{
+							light.direction = {};
+						}
+					}
+
+					if ((int)shadowMapAtlas.desc.width < packer.width || (int)shadowMapAtlas.desc.height < packer.height)
+					{
+						TextureDesc desc;
+						desc.width = uint32_t(packer.width);
+						desc.height = uint32_t(packer.height);
+						desc.format = Format::R16_TYPELESS;
+						desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+						desc.layout = ResourceState::SHADER_RESOURCE;
+						device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
+						device->SetName(&shadowMapAtlas, "shadowMapAtlas");
+
+						desc.format = Format::R16G16B16A16_FLOAT;
+						desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+						desc.layout = ResourceState::SHADER_RESOURCE;
+						desc.clear.color[0] = 1;
+						desc.clear.color[1] = 1;
+						desc.clear.color[2] = 1;
+						desc.clear.color[3] = 0;
+						device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Transparent);
+						device->SetName(&shadowMapAtlas_Transparent, "shadowMapAtlas_Transparent");
+
+
+						RenderPassDesc renderpassdesc;
+						renderpassdesc.attachments.push_back(
+							RenderPassAttachment::DepthStencil(
+								&shadowMapAtlas,
+								RenderPassAttachment::LoadOp::CLEAR,
+								RenderPassAttachment::StoreOp::STORE,
+								ResourceState::SHADER_RESOURCE,
+								ResourceState::DEPTHSTENCIL,
+								ResourceState::SHADER_RESOURCE
+							)
+						);
+						renderpassdesc.attachments.push_back(
+							RenderPassAttachment::RenderTarget(
+								&shadowMapAtlas_Transparent,
+								RenderPassAttachment::LoadOp::CLEAR,
+								RenderPassAttachment::StoreOp::STORE,
+								ResourceState::SHADER_RESOURCE,
+								ResourceState::RENDERTARGET,
+								ResourceState::SHADER_RESOURCE
+							)
+						);
+						device->CreateRenderPass(&renderpassdesc, &renderpass_shadowMapAtlas);
+					}
+
+					break;
+				}
+				else
+				{
+					iterative_scaling *= 0.5f;
+				}
 			}
 		}
 		wi::profiler::EndRange(range);
