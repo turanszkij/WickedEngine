@@ -44,11 +44,16 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout float4
 
 inline float3 sample_shadow(float2 uv, float cmp)
 {
+	[branch]
+	if (GetFrame().texture_shadowatlas_index < 0)
+		return 0;
+
+	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
 	float3 shadow = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp).r;
 
 #ifndef DISABLE_SOFT_SHADOWMAP
 	// sample along a rectangle pattern around center:
-	const float2 shadow_texel_size = float2(GetFrame().shadow_texel_size_x, GetFrame().shadow_texel_size_y);
+	const float2 shadow_texel_size = GetFrame().shadow_atlas_resolution_rcp;
 	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(-shadow_texel_size.x, -shadow_texel_size.y), cmp).r;
 	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(-shadow_texel_size.x, 0), cmp).r;
 	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(-shadow_texel_size.x, shadow_texel_size.y), cmp).r;
@@ -61,8 +66,10 @@ inline float3 sample_shadow(float2 uv, float cmp)
 #endif // DISABLE_SOFT_SHADOWMAP
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
-	if (GetFrame().options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED)
+	[branch]
+	if (GetFrame().options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED && GetFrame().texture_shadowatlas_transparent_index)
 	{
+		Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
 		float4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
 #ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 		if (transparent_shadow.a > cmp)
@@ -76,26 +83,36 @@ inline float3 sample_shadow(float2 uv, float cmp)
 	return shadow;
 }
 
+// This is used to pull the uvs to the center to avoid sampling on the border and overfiltering into a different shadow
+inline void shadow_border_shrink(in ShaderEntity light, inout float2 shadow_uv)
+{
+	const float2 shadow_resolution = light.shadowAtlasMulAdd.xy * GetFrame().shadow_atlas_resolution;
+#ifdef DISABLE_SOFT_SHADOWMAP
+	const float border_size = 0.5;
+#else
+	const float border_size = 1.5;
+#endif // DISABLE_SOFT_SHADOWMAP
+	shadow_uv *= shadow_resolution - border_size * 2;
+	shadow_uv += border_size;
+	shadow_uv /= shadow_resolution;
+}
+
 inline float3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade)
 {
-	const float shadow_resolution = float(light.GetTextureIndex());
-	shadow_uv = clipspace_to_uv(uv_to_clipspace(shadow_uv) * ((shadow_resolution - 3) / shadow_resolution)); // shrink the uv towards center to avoid sampling the border
-	float4 mulAdd = light.shadowAtlasMulAdd;
-	mulAdd.z += cascade * mulAdd.x;
-	shadow_uv = mad(shadow_uv, mulAdd.xy, mulAdd.zw);
+	shadow_border_shrink(light, shadow_uv);
+	shadow_uv.x += cascade;
+	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
 	return sample_shadow(shadow_uv, shadow_pos.z);
 }
 
 inline float3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized)
 {
-	float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)));
-	float3 uv_slice = cubemap_to_uv(-Lunnormalized);
+	const float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)));
+	const float3 uv_slice = cubemap_to_uv(-Lunnormalized);
 	float2 shadow_uv = uv_slice.xy;
-	const float shadow_resolution = float(light.GetTextureIndex());
-	shadow_uv = clipspace_to_uv(uv_to_clipspace(shadow_uv) * ((shadow_resolution - 3) / shadow_resolution)); // shrink the uv towards center to avoid sampling the border
-	float4 mulAdd = light.shadowAtlasMulAdd;
-	mulAdd.z += uv_slice.z * mulAdd.x;
-	shadow_uv = mad(shadow_uv, mulAdd.xy, mulAdd.zw);
+	shadow_border_shrink(light, shadow_uv);
+	shadow_uv.x += uv_slice.z;
+	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
 	return sample_shadow(shadow_uv, remapped_distance);
 }
 

@@ -622,14 +622,17 @@ static const uint OPTION_BIT_STATIC_SKY_HDR = 1 << 13;
 struct FrameCB
 {
 	uint		options;							// wi::renderer bool options packed into bitmask
-	uint		shadow_cascade_count;
-	float		shadow_texel_size_x;
-	float		shadow_texel_size_y;
-
 	float		time;
 	float		time_previous;
 	float		delta_time;
+
 	uint		frame_count;
+	uint		shadow_cascade_count;
+	int			texture_shadowatlas_index;
+	int			texture_shadowatlas_transparent_index;
+
+	uint2		shadow_atlas_resolution;
+	float2		shadow_atlas_resolution_rcp;
 
 	float3		voxelradiance_center;			// center of the voxel grid in world space units
 	float		voxelradiance_max_distance;		// maximum raymarch distance for voxel GI in world-space
@@ -673,11 +676,6 @@ struct FrameCB
 	int			buffer_entityarray_index;
 	int			buffer_entitymatrixarray_index;
 	float		gi_boost;
-
-	int			texture_shadowatlas_index;
-	int			texture_shadowatlas_transparent_index;
-	int			padding0;
-	int			padding1;
 
 	ShaderScene scene;
 };

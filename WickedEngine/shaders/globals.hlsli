@@ -190,12 +190,6 @@ struct PrimitiveID
 #define texture_transmittancelut bindless_textures[GetFrame().texture_transmittancelut_index]
 #define texture_multiscatteringlut bindless_textures[GetFrame().texture_multiscatteringlut_index]
 #define texture_skyluminancelut bindless_textures[GetFrame().texture_skyluminancelut_index]
-#define texture_shadowarray_2d bindless_textures2DArray[GetFrame().texture_shadowarray_2d_index]
-#define texture_shadowarray_cube bindless_textures2DArray[GetFrame().texture_shadowarray_cube_index]
-#define texture_shadowarray_transparent_2d bindless_textures2DArray[GetFrame().texture_shadowarray_transparent_2d_index]
-#define texture_shadowarray_transparent_cube bindless_textures2DArray[GetFrame().texture_shadowarray_transparent_cube_index]
-#define texture_shadowatlas bindless_textures[GetFrame().texture_shadowatlas_index]
-#define texture_shadowatlas_transparent bindless_textures[GetFrame().texture_shadowatlas_transparent_index]
 #define texture_voxelgi bindless_textures3D[GetFrame().texture_voxelgi_index]
 #define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 

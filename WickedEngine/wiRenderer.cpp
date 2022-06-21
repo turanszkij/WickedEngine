@@ -2304,7 +2304,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 		// Snap cascade to texel grid:
 		const XMVECTOR extent = XMVectorSubtract(vMax, vMin);
-		const XMVECTOR texelSize = extent / XMVectorSet(float(light.shadow_rect.w), float(light.shadow_rect.h), 1, 1);
+		const XMVECTOR texelSize = extent / float(light.shadow_rect.w);
 		vMin = XMVectorFloor(vMin / texelSize) * texelSize;
 		vMax = XMVectorFloor(vMax / texelSize) * texelSize;
 		center = (vMin + vMax) * 0.5f;
@@ -3010,16 +3010,13 @@ void UpdatePerFrameData(
 		}
 		if (!packer.rects.empty())
 		{
-			if (packer.pack(8192))
+			if (packer.pack(16384))
 			{
 				for (auto& rect : packer.rects)
 				{
 					uint32_t lightIndex = uint32_t(rect.id);
 					LightComponent& light = scene.lights[lightIndex];
-					light.shadow_rect.x = rect.x;
-					light.shadow_rect.y = rect.y;
-					light.shadow_rect.w = rect.w;
-					light.shadow_rect.h = rect.h;
+					light.shadow_rect = rect;
 
 					// Remove slice multipliers from rect:
 					switch (light.GetType())
@@ -3088,9 +3085,6 @@ void UpdatePerFrameData(
 	}
 
 	// Update CPU-side frame constant buffer:
-	frameCB.shadow_cascade_count = CASCADE_COUNT;
-	frameCB.shadow_texel_size_x = 1.0f / shadowMapAtlas.desc.width;
-	frameCB.shadow_texel_size_y = 1.0f / shadowMapAtlas.desc.height;
 	frameCB.delta_time = dt * GetGameSpeed();
 	frameCB.time_previous = frameCB.time;
 	frameCB.time += frameCB.delta_time;
@@ -3228,9 +3222,14 @@ void UpdatePerFrameData(
 	frameCB.texture_voxelgi_index = device->GetDescriptorIndex(GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], SubresourceType::SRV);
 	frameCB.buffer_entityarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_ENTITYARRAY], SubresourceType::SRV);
 	frameCB.buffer_entitymatrixarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_MATRIXARRAY], SubresourceType::SRV);
+
+	frameCB.shadow_cascade_count = CASCADE_COUNT;
 	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMapAtlas, SubresourceType::SRV);
 	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapAtlas_Transparent, SubresourceType::SRV);
-
+	frameCB.shadow_atlas_resolution.x = shadowMapAtlas.desc.width;
+	frameCB.shadow_atlas_resolution.y = shadowMapAtlas.desc.height;
+	frameCB.shadow_atlas_resolution_rcp.x = 1.0f / frameCB.shadow_atlas_resolution.x;
+	frameCB.shadow_atlas_resolution_rcp.y = 1.0f / frameCB.shadow_atlas_resolution.y;
 
 
 	// Create volumetric cloud static resources if needed:
@@ -3512,7 +3511,7 @@ void UpdateRenderData(
 					shaderentity.shadowAtlasMulAdd.y = light.shadow_rect.h * atlas_dim_rcp.y;
 					shaderentity.shadowAtlasMulAdd.z = light.shadow_rect.x * atlas_dim_rcp.x;
 					shaderentity.shadowAtlasMulAdd.w = light.shadow_rect.y * atlas_dim_rcp.y;
-					shaderentity.SetIndices(matrixCounter, uint(light.shadow_rect.w));
+					shaderentity.SetIndices(matrixCounter, 0);
 				}
 			}
 

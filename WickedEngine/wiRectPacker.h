@@ -40,7 +40,7 @@ namespace wi::rectpacker
 		//	returns true for success, false for failure
 		bool pack(int max_width)
 		{
-			while (width <= max_width && height <= max_width)
+			while (width <= max_width || height <= max_width)
 			{
 				if (nodes.size() < width)
 				{
@@ -51,15 +51,13 @@ namespace wi::rectpacker
 					return true;
 				if (height < width)
 				{
-					height *= 2;
+					height = std::min(height * 2, max_width);
 				}
 				else
 				{
-					width *= 2;
+					width = std::min(width * 2, max_width);
 				}
 			}
-			width = 0;
-			height = 0;
 			return false;
 		}
 	};
