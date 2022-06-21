@@ -2991,16 +2991,40 @@ void UpdatePerFrameData(
 			switch (light.GetType())
 			{
 			case LightComponent::DIRECTIONAL:
-				rect.w = max_shadow_resolution_2D * int(CASCADE_COUNT);
-				rect.h = max_shadow_resolution_2D;
+				if (light.forced_shadow_resolution >= 0)
+				{
+					rect.w = light.forced_shadow_resolution * int(CASCADE_COUNT);
+					rect.h = light.forced_shadow_resolution;
+				}
+				else
+				{
+					rect.w = max_shadow_resolution_2D * int(CASCADE_COUNT);
+					rect.h = max_shadow_resolution_2D;
+				}
 				break;
 			case LightComponent::SPOT:
-				rect.w = int(max_shadow_resolution_2D * amount);
-				rect.h = int(max_shadow_resolution_2D * amount);
+				if (light.forced_shadow_resolution >= 0)
+				{
+					rect.w = int(light.forced_shadow_resolution);
+					rect.h = int(light.forced_shadow_resolution);
+				}
+				else
+				{
+					rect.w = int(max_shadow_resolution_2D * amount);
+					rect.h = int(max_shadow_resolution_2D * amount);
+				}
 				break;
 			case LightComponent::POINT:
-				rect.w = int(max_shadow_resolution_cube * amount) * 6;
-				rect.h = int(max_shadow_resolution_cube * amount);
+				if (light.forced_shadow_resolution >= 0)
+				{
+					rect.w = int(light.forced_shadow_resolution) * 6;
+					rect.h = int(light.forced_shadow_resolution);
+				}
+				else
+				{
+					rect.w = int(max_shadow_resolution_cube * amount) * 6;
+					rect.h = int(max_shadow_resolution_cube * amount);
+				}
 				break;
 			}
 			if (rect.w > 8 && rect.h > 8)

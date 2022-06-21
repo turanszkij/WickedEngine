@@ -860,6 +860,8 @@ namespace wi::scene
 
 		wi::vector<std::string> lensFlareNames;
 
+		int forced_shadow_resolution = -1; // -1: disabled, greater: fixed shadow map resolution
+
 		// Non-serialized attributes:
 		XMFLOAT3 position;
 		float range_global;

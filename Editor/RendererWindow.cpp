@@ -372,7 +372,7 @@ void RendererWindow::Create(EditorComponent* editor)
 		}
 	});
 	shadowProps2DComboBox.SetSelected(4);
-	shadowProps2DComboBox.SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights)...");
+	shadowProps2DComboBox.SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights)...\nThis specifies the maximum shadow resolution for these light types, but that can dynamically change unless they are set to a fixed resolution individually.");
 	shadowProps2DComboBox.SetScriptTip("SetShadowProps2D(int resolution, int count, int softShadowQuality)");
 	AddWidget(&shadowProps2DComboBox);
 
@@ -385,7 +385,6 @@ void RendererWindow::Create(EditorComponent* editor)
 	shadowPropsCubeComboBox.AddItem("512");
 	shadowPropsCubeComboBox.AddItem("1024");
 	shadowPropsCubeComboBox.AddItem("2048");
-	shadowPropsCubeComboBox.AddItem("4096");
 	shadowPropsCubeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		switch (args.iValue)
 		{
@@ -407,15 +406,12 @@ void RendererWindow::Create(EditorComponent* editor)
 		case 5:
 			wi::renderer::SetShadowPropsCube(2048);
 			break;
-		case 6:
-			wi::renderer::SetShadowPropsCube(4096);
-			break;
 		default:
 			break;
 		}
 	});
 	shadowPropsCubeComboBox.SetSelected(2);
-	shadowPropsCubeComboBox.SetTooltip("Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...");
+	shadowPropsCubeComboBox.SetTooltip("Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...\nThis specifies the maximum shadow resolution for these light types, but that can dynamically change unless they are set to a fixed resolution individually.");
 	shadowPropsCubeComboBox.SetScriptTip("SetShadowPropsCube(int resolution, int count)");
 	AddWidget(&shadowPropsCubeComboBox);
 
