@@ -495,7 +495,7 @@ struct ShaderEntity
 	}
 	inline bool IsCastingShadow()
 	{
-		return any(shadowAtlasMulAdd);
+		return indices != ~0;
 	}
 
 	// Load decal props:
