@@ -26,6 +26,7 @@ namespace wi::lua
 		lunamethod(RenderPath_BindLua, SetLayerMask),
 
 		lunamethod(RenderPath3D_BindLua, SetAO),
+		lunamethod(RenderPath3D_BindLua, SetAOPower),
 		lunamethod(RenderPath3D_BindLua, SetSSREnabled),
 		lunamethod(RenderPath3D_BindLua, SetRaytracedReflectionsEnabled),
 		lunamethod(RenderPath3D_BindLua, SetShadowsEnabled),
@@ -69,6 +70,22 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetAO(AO value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetAOPower(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetAOPower(float value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			float value = wi::lua::SGetFloat(L, 1);
+			((RenderPath3D*)component)->setAOPower(value);
+		}
+		else
+			wi::lua::SError(L, "SetAOPower(float value) not enough arguments!");
 		return 0;
 	}
 	int RenderPath3D_BindLua::SetSSREnabled(lua_State* L)
