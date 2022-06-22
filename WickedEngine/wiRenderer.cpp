@@ -3117,6 +3117,10 @@ void UpdatePerFrameData(
 					iterative_scaling *= 0.5f;
 				}
 			}
+			else
+			{
+				iterative_scaling = 0.0; //PE: fix - endless loop if some lights do not have shadows.
+			}
 		}
 		wi::profiler::EndRange(range);
 	}
