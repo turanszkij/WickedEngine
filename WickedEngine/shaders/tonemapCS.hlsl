@@ -54,7 +54,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		uv += bindless_textures[tonemap_push.texture_input_distortion].SampleLevel(sampler_linear_clamp, uv, 0).rg;
 	}
 
-	float4 hdr = bindless_textures[tonemap_push.texture_input].SampleLevel(sampler_linear_clamp, uv, 0);
+	float4 hdr = 0;
+
+	[branch]
+	if (tonemap_push.texture_input >= 0)
+	{
+		hdr = bindless_textures[tonemap_push.texture_input].SampleLevel(sampler_linear_clamp, uv, 0);
+	}
 
 	[branch]
 	if (tonemap_push.buffer_input_luminance >= 0)
@@ -96,5 +102,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		result.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;
 	}
 
-	bindless_rwtextures[tonemap_push.texture_output][DTid.xy] = result;
+	[branch]
+	if (tonemap_push.texture_output >= 0)
+	{
+		bindless_rwtextures[tonemap_push.texture_output][DTid.xy] = result;
+	}
 }

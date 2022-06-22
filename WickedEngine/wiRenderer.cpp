@@ -6783,6 +6783,12 @@ void DownsampleDepthBuffer(const Texture& src, CommandList cmd)
 
 void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList cmd, const MIPGEN_OPTIONS& options)
 {
+	if (!texture.IsValid())
+	{
+		assert(0);
+		return;
+	}
+
 	TextureDesc desc = texture.GetDesc();
 
 	if (desc.mip_levels < 2)
@@ -12226,6 +12232,12 @@ void Postprocess_Tonemap(
 	ColorSpace display_colorspace
 )
 {
+	if (!input.IsValid() || !output.IsValid())
+	{
+		assert(0);
+		return;
+	}
+
 	device->EventBegin("Postprocess_Tonemap", cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_TONEMAP], cmd);
