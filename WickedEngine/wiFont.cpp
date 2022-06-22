@@ -464,14 +464,18 @@ namespace wi::font
 			}
 			CommitText(mem.data);
 
-			device->EventBegin("Font", cmd);
-
-			device->BindPipelineState(&PSO, cmd);
-
 			FontConstants font = {};
 			font.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
 			font.buffer_offset = (uint32_t)mem.offset;
 			font.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
+			if (font.buffer_index < 0 || font.texture_index < 0)
+			{
+				return status.cursor;
+			}
+
+			device->EventBegin("Font", cmd);
+
+			device->BindPipelineState(&PSO, cmd);
 
 			font.flags = 0;
 			if (params.isHDR10OutputMappingEnabled())

@@ -35,14 +35,6 @@ namespace wi::image
 	void Draw(const Texture* texture, const Params& params, CommandList cmd)
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
-		device->EventBegin("Image", cmd);
-
-		uint32_t stencilRef = params.stencilRef;
-		if (params.stencilRefMode == STENCILREFMODE_USER)
-		{
-			stencilRef = wi::renderer::CombineStencilrefs(STENCILREF_EMPTY, (uint8_t)stencilRef);
-		}
-		device->BindStencilRef(stencilRef, cmd);
 
 		const Sampler* sampler = &samplers[SAMPLER_LINEAR_CLAMP];
 
@@ -86,6 +78,8 @@ namespace wi::image
 			image.texture_background_index = -1;
 		}
 		image.sampler_index = device->GetDescriptorIndex(sampler);
+		if (image.sampler_index < 0)
+			return;
 
 		const RenderPass* renderpass = device->GetCurrentRenderPass(cmd);
 		assert(renderpass != nullptr); // image renderer must draw inside render pass!
@@ -228,6 +222,15 @@ namespace wi::image
 		half_texMulAdd2.w = XMConvertFloatToHalf(texMulAdd2.w);
 		image.texMulAdd2.x = uint(half_texMulAdd2.v);
 		image.texMulAdd2.y = uint(half_texMulAdd2.v >> 32ull);
+
+		device->EventBegin("Image", cmd);
+
+		uint32_t stencilRef = params.stencilRef;
+		if (params.stencilRefMode == STENCILREFMODE_USER)
+		{
+			stencilRef = wi::renderer::CombineStencilrefs(STENCILREF_EMPTY, (uint8_t)stencilRef);
+		}
+		device->BindStencilRef(stencilRef, cmd);
 
 		device->BindPipelineState(&imagePSO[params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 
