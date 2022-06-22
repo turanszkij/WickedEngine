@@ -4,7 +4,7 @@
 struct GSInput
 {
 	float4 pos : SV_POSITION;
-	uint instanceID : INSTANCEID;
+	uint instanceID : INSTANCEINDEX;
 	uint emissiveColor : EMISSIVECOLOR;
 	float4 color : COLOR;
 	float4 uvsets : UVSETS;
@@ -18,7 +18,7 @@ struct GSInput
 struct GSOutput
 {
 	float4 pos : SV_POSITION;
-	uint instanceID : INSTANCEID;
+	uint instanceID : INSTANCEINDEX;
 	uint emissiveColor : EMISSIVECOLOR;
 	float4 color : COLOR;
 	float4 uvsets : UVSETS;

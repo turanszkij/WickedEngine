@@ -12,7 +12,6 @@
 
 using namespace wi::graphics;
 using namespace wi::primitive;
-using namespace wi::rectpacker;
 using namespace wi::scene;
 using namespace wi::ecs;
 
@@ -93,6 +92,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	}
 
 	renderPath->resolutionScale = resolutionScale;
+	renderPath->setBloomThreshold(3.0f);
 
 	renderPath->Load();
 
@@ -379,6 +379,7 @@ void EditorComponent::Load()
 		{
 			// Customize terrain generator before it's initialized:
 			terragen.material_Base.SetRoughness(1);
+			terragen.material_Base.SetReflectance(0.005f);
 			terragen.material_Slope.SetRoughness(0.1f);
 			terragen.material_LowAltitude.SetRoughness(1);
 			terragen.material_HighAltitude.SetRoughness(1);
@@ -420,6 +421,7 @@ void EditorComponent::Load()
 				prop.min_y_offset = -0.5f;
 				prop.max_y_offset = -0.5f;
 				prop.mesh_entity = props_scene.Entity_FindByName("tree_mesh");
+				props_scene.impostors.Create(prop.mesh_entity).swapInDistance = 200;
 				Entity object_entity = props_scene.Entity_FindByName("tree_object");
 				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
 				if (object != nullptr)
@@ -456,6 +458,7 @@ void EditorComponent::Load()
 					prop.object = *object;
 					prop.object.lod_distance_multiplier = 0.02f;
 					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+					prop.object.draw_distance = 400;
 				}
 				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
 				wi::scene::GetScene().Merge(props_scene);
@@ -485,6 +488,7 @@ void EditorComponent::Load()
 					prop.object = *object;
 					prop.object.lod_distance_multiplier = 0.05f;
 					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+					prop.object.draw_distance = 200;
 				}
 				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
 				wi::scene::GetScene().Merge(props_scene);

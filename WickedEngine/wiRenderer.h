@@ -107,14 +107,7 @@ namespace wi::renderer
 		wi::vector<uint32_t> visibleEnvProbes;
 		wi::vector<uint32_t> visibleEmitters;
 		wi::vector<uint32_t> visibleHairs;
-
-		struct VisibleLight
-		{
-			uint16_t index;
-			uint16_t distance;
-			constexpr operator uint32_t() const { return index | (uint32_t(distance) << 16u); }
-		};
-		wi::vector<VisibleLight> visibleLights;
+		wi::vector<uint32_t> visibleLights;
 
 		std::atomic<uint32_t> object_counter;
 		std::atomic<uint32_t> light_counter;
@@ -199,6 +192,7 @@ namespace wi::renderer
 		DRAWSCENE_OCCLUSIONCULLING = 1 << 2,
 		DRAWSCENE_TESSELLATION = 1 << 3,
 		DRAWSCENE_HAIRPARTICLE = 1 << 4,
+		DRAWSCENE_IMPOSTOR = 1 << 5,
 	};
 
 	// Draw the world from a camera. You must call BindCameraCB() at least once in this frame prior to this
@@ -763,15 +757,8 @@ namespace wi::renderer
 
 
 
-	// Set any param to -1 if don't want to modify
-	void SetShadowProps2D(int resolution, int count);
-	// Set any param to -1 if don't want to modify
-	void SetShadowPropsCube(int resolution, int count);
-
-	// Returns the resolution that is used for all spotlight and directional light shadow maps
-	int GetShadowRes2D();
-	// Returns the resolution that is used for all pointlight and area light shadow maps
-	int GetShadowResCube();
+	void SetShadowProps2D(int max_resolution);
+	void SetShadowPropsCube(int max_resolution);
 
 
 

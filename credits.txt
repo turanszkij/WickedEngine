@@ -36,6 +36,7 @@ Contributions:
 	- Fixes
 - Molasses https://github.com/MolassesLover
 	- Linux package files
+	- Visual Studio Code support improvement
 - Igor Alexey https://github.com/sororfortuna
 	- QOI image loader integration
 - Eddie Ataberk https://github.com/eddieataberk
@@ -59,4 +60,9 @@ Patreon supporters:
 - Invictus
 - Scott Hunt
 - Yazan Altaki
+- Tuan NV
+- Robert MacGregor
+- cybernescence
+- Alexander Dahlin
+- blueapples
 

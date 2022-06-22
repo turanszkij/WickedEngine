@@ -2485,6 +2485,11 @@ using namespace vulkan_internal;
 
 				enabled_deviceExtensions = required_deviceExtensions;
 
+				if (checkExtensionSupport(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME, available_deviceExtensions))
+				{
+					// The shader compiler can still be using this extension, even though it is core in Vulkan 1.2, so enable it for now:
+					enabled_deviceExtensions.push_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
+				}
 				if (checkExtensionSupport(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME, available_deviceExtensions))
 				{
 					enabled_deviceExtensions.push_back(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME);
@@ -3710,8 +3715,15 @@ using namespace vulkan_internal;
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
 		}
-		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TRANSIENT_ATTACHMENT))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+		}
+		else
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		}
 
 		imageInfo.flags = 0;
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))

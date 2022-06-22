@@ -495,14 +495,14 @@ void TerrainGenerator::Generation_Restart()
 		}
 		weather.oceanParameters.waterHeight = -40;
 		weather.oceanParameters.wave_amplitude = 120;
-		weather.fogStart = 10;
+		weather.fogStart = 300;
 		weather.fogEnd = 100000;
 		weather.SetHeightFog(true);
 		weather.fogHeightStart = 0;
 		weather.fogHeightEnd = 100;
 		weather.windDirection = XMFLOAT3(0.05f, 0.05f, 0.05f);
 		weather.windSpeed = 4;
-		weather.cloud_shadow_amount = 0.5f;
+		weather.cloud_shadow_amount = 0.4f;
 		weather.cloud_shadow_scale = 0.003f;
 		weather.cloud_shadow_speed = 0.25f;
 		weather.stars = 0.6f;
@@ -513,7 +513,7 @@ void TerrainGenerator::Generation_Restart()
 		scene->Component_Attach(sunEntity, terrainEntity);
 		LightComponent& light = *scene->lights.GetComponent(sunEntity);
 		light.SetType(LightComponent::LightType::DIRECTIONAL);
-		light.energy = 8;
+		light.energy = 16;
 		light.SetCastShadow(true);
 		//light.SetVolumetricsEnabled(true);
 		TransformComponent& transform = *scene->transforms.GetComponent(sunEntity);

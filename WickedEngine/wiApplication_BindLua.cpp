@@ -21,6 +21,7 @@ namespace wi::lua
 		lunamethod(Application_BindLua, SetFPSDisplay),
 		lunamethod(Application_BindLua, SetResolutionDisplay),
 		lunamethod(Application_BindLua, SetLogicalSizeDisplay),
+		lunamethod(Application_BindLua, SetColorSpaceDisplay),
 		lunamethod(Application_BindLua, SetPipelineCountDisplay),
 		lunamethod(Application_BindLua, SetHeapAllocationCountDisplay),
 		lunamethod(Application_BindLua, SetVRAMUsageDisplay),
@@ -278,6 +279,22 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetLogicalSizeDisplay(bool active) not enough arguments!");
+		return 0;
+	}
+	int Application_BindLua::SetColorSpaceDisplay(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetColorSpaceDisplay() component is empty!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			component->infoDisplay.colorspace = wi::lua::SGetBool(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetColorSpaceDisplay(bool active) not enough arguments!");
 		return 0;
 	}
 	int Application_BindLua::SetPipelineCountDisplay(lua_State* L)

@@ -492,6 +492,8 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
 - Component_DetachChildren(Entity parent)  -- detaches all children from parent, as if calling Component_Detach for all of its children
 
+- GetBounds() : AABB result  -- returns an AABB fully containing objects in the scene. Only valid after scene has been updated.
+
 #### NameComponent
 Holds a string that can more easily identify an entity to humans than an entity ID. 
 - SetName(string value)  -- set the name
@@ -638,6 +640,7 @@ This is the main entry point and manages the lifetime of the application. Even t
 - SetFPSDisplay(bool active)	-- toggle display of frame rate if info display is enabled
 - SetResolutionDisplay(bool active)	-- toggle display of resolution if info display is enabled
 - SetLogicalSizeDisplay(bool active)	-- toggle display of logical size of canvas if info display is enabled
+- SetColorSpaceDisplay(bool active)	-- toggle display of output color space if info display is enabled
 - SetPipelineCountDisplay(bool active)	-- toggle display of active graphics pipeline count if info display is enabled
 - SetHeapAllocationCountDisplay(bool active)	-- toggle display of heap allocation statistics if info display is enabled
 - SetVRAMUsageDisplay(bool active)	-- toggle display of video memory usage if info display is enabled
@@ -673,10 +676,10 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - [constructor]RenderPath3D()
 - SetAO(int value)  -- Sets up the ambient occlusion effect (possible values below)
 - AO_DISABLED : int  -- turn off AO computation (use in SetAO() function)
-- AO_SSAO : int  -- enable simple brute force screen space ambient occlusion (use in SetAO() function)
-- AO_HBAO : int  -- enable horizon based screen space ambient occlusion (use in SetAO() function)
-- AO_MSAO : int  -- enable multi scale screen space ambient occlusion (use in SetAO() function)
-- SetHBAOEnabled(bool value)
+	- AO_SSAO : int  -- enable simple brute force screen space ambient occlusion (use in SetAO() function)
+	- AO_HBAO : int  -- enable horizon based screen space ambient occlusion (use in SetAO() function)
+	- AO_MSAO : int  -- enable multi scale screen space ambient occlusion (use in SetAO() function)
+- SetAOPower(float value)  -- applies AO power value if any AO is enabled
 - SetSSREnabled(bool value)
 - SetRaytracedReflectionsEnabled(bool value)
 - SetShadowsEnabled(bool value)

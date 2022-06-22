@@ -15,6 +15,7 @@
 #include "wiMath.h"
 #include "wiECS.h"
 #include "wiVector.h"
+#include "wiRectPacker.h"
 
 #include <string>
 #include <memory>
@@ -618,11 +619,8 @@ namespace wi::scene
 		float swapInDistance = 100.0f;
 
 		// Non-serialized attributes:
-		wi::primitive::AABB aabb;
-		XMFLOAT4 color;
-		float fadeThresholdRadius;
-		wi::vector<uint32_t> instances;
 		mutable bool render_dirty = false;
+		int textureIndex = -1;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
@@ -638,7 +636,7 @@ namespace wi::scene
 			RENDERABLE = 1 << 0,
 			CAST_SHADOW = 1 << 1,
 			DYNAMIC = 1 << 2,
-			IMPOSTOR_PLACEMENT = 1 << 3,
+			_DEPRECATED_IMPOSTOR_PLACEMENT = 1 << 3,
 			REQUEST_PLANAR_REFLECTION = 1 << 4,
 			LIGHTMAP_RENDER_REQUEST = 1 << 5,
 		};
@@ -657,6 +655,8 @@ namespace wi::scene
 		uint8_t userStencilRef = 0;
 		float lod_distance_multiplier = 1;
 
+		float draw_distance = std::numeric_limits<float>::max(); // object will begin to fade out at this distance to camera
+
 		// Non-serialized attributes:
 
 		wi::graphics::Texture lightmap;
@@ -665,8 +665,8 @@ namespace wi::scene
 		mutable uint32_t lightmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
-		float impostorFadeThresholdRadius;
-		float impostorSwapDistance;
+		float radius = 0;
+		float fadeDistance = 0;
 
 		uint32_t lod = 0;
 
@@ -690,14 +690,12 @@ namespace wi::scene
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
-		inline void SetImpostorPlacement(bool value) { if (value) { _flags |= IMPOSTOR_PLACEMENT; } else { _flags &= ~IMPOSTOR_PLACEMENT; } }
 		inline void SetRequestPlanarReflection(bool value) { if (value) { _flags |= REQUEST_PLANAR_REFLECTION; } else { _flags &= ~REQUEST_PLANAR_REFLECTION; } }
 		inline void SetLightmapRenderRequest(bool value) { if (value) { _flags |= LIGHTMAP_RENDER_REQUEST; } else { _flags &= ~LIGHTMAP_RENDER_REQUEST; } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
-		inline bool IsImpostorPlacement() const { return _flags & IMPOSTOR_PLACEMENT; }
 		inline bool IsRequestPlanarReflection() const { return _flags & REQUEST_PLANAR_REFLECTION; }
 		inline bool IsLightmapRenderRequested() const { return _flags & LIGHTMAP_RENDER_REQUEST; }
 
@@ -862,6 +860,8 @@ namespace wi::scene
 
 		wi::vector<std::string> lensFlareNames;
 
+		int forced_shadow_resolution = -1; // -1: disabled, greater: fixed shadow map resolution
+
 		// Non-serialized attributes:
 		XMFLOAT3 position;
 		float range_global;
@@ -871,6 +871,7 @@ namespace wi::scene
 		XMFLOAT3 front;
 		XMFLOAT3 right;
 		mutable int occlusionquery = -1;
+		wi::rectpacker::Rect shadow_rect = {};
 
 		wi::vector<wi::Resource> lensFlareRimTextures;
 
@@ -970,6 +971,7 @@ namespace wi::scene
 			EMPTY = 0,
 			DIRTY = 1 << 0,
 			REALTIME = 1 << 1,
+			MSAA = 1 << 2,
 		};
 		uint32_t _flags = DIRTY;
 
@@ -982,9 +984,11 @@ namespace wi::scene
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline void SetRealTime(bool value) { if (value) { _flags |= REALTIME; } else { _flags &= ~REALTIME; } }
+		inline void SetMSAA(bool value) { if (value) { _flags |= MSAA; } else { _flags &= ~MSAA; } }
 
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsRealTime() const { return _flags & REALTIME; }
+		inline bool IsMSAA() const { return _flags & MSAA; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -1330,6 +1334,7 @@ namespace wi::scene
 		//		1) objects
 		//		2) hair particles
 		//		3) emitted particles
+		//		4) impostors
 		wi::graphics::GPUBuffer instanceUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		ShaderMeshInstance* instanceArrayMapped = nullptr;
 		size_t instanceArraySize = 0;
@@ -1340,6 +1345,7 @@ namespace wi::scene
 		//		1) meshes * mesh.subsetCount
 		//		2) hair particles * 1
 		//		3) emitted particles * 1
+		//		4) impostors * 1
 		wi::graphics::GPUBuffer geometryUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		ShaderGeometry* geometryArrayMapped = nullptr;
 		size_t geometryArraySize = 0;
@@ -1386,16 +1392,29 @@ namespace wi::scene
 		static constexpr uint32_t envmapCount = 16;
 		static constexpr uint32_t envmapRes = 128;
 		static constexpr uint32_t envmapMIPs = 8;
+		static constexpr uint32_t envmapMSAASampleCount = 8;
 		wi::graphics::Texture envrenderingDepthBuffer;
+		wi::graphics::Texture envrenderingDepthBuffer_MSAA;
+		wi::graphics::Texture envrenderingColorBuffer_MSAA;
 		wi::graphics::Texture envmapArray;
 		wi::vector<wi::graphics::RenderPass> renderpasses_envmap;
+		wi::vector<wi::graphics::RenderPass> renderpasses_envmap_MSAA;
 
-		// Impostor texture array state:
+		// Impostor state:
 		static constexpr uint32_t maxImpostorCount = 8;
 		static constexpr uint32_t impostorTextureDim = 128;
 		wi::graphics::Texture impostorDepthStencil;
 		wi::graphics::Texture impostorArray;
 		wi::vector<wi::graphics::RenderPass> renderpasses_impostor;
+		wi::graphics::GPUBuffer impostorBuffer;
+		MeshComponent::BufferView impostor_ib;
+		MeshComponent::BufferView impostor_vb;
+		MeshComponent::BufferView impostor_data;
+		wi::graphics::Format impostor_ib_format = wi::graphics::Format::R32_UINT;
+		wi::graphics::GPUBuffer impostorIndirectBuffer;
+		uint32_t impostorInstanceOffset = ~0u;
+		uint32_t impostorGeometryOffset = ~0u;
+		uint32_t impostorMaterialOffset = ~0u;
 
 		mutable std::atomic_bool lightmap_refresh_needed{ false };
 

@@ -226,6 +226,27 @@ void LightWindow::Create(EditorComponent* editor)
 	typeSelectorComboBox.SetSelected((int)LightComponent::POINT);
 	AddWidget(&typeSelectorComboBox);
 
+	shadowResolutionComboBox.Create("Shadow resolution: ");
+	shadowResolutionComboBox.SetTooltip("You can force a fixed resolution for this light's shadow map to avoid dynamic scaling.\nIf you leave it as dynamic, the resolution will be scaled between 0 and the max shadow resolution in the renderer for this light type, based on light's distance and size.");
+	shadowResolutionComboBox.SetSize(XMFLOAT2(150, hei));
+	shadowResolutionComboBox.SetPos(XMFLOAT2(x, y += step));
+	shadowResolutionComboBox.AddItem("Dynamic", uint64_t(-1));
+	shadowResolutionComboBox.AddItem("32", 32);
+	shadowResolutionComboBox.AddItem("64", 64);
+	shadowResolutionComboBox.AddItem("128", 128);
+	shadowResolutionComboBox.AddItem("256", 256);
+	shadowResolutionComboBox.AddItem("512", 512);
+	shadowResolutionComboBox.AddItem("1024", 1024);
+	shadowResolutionComboBox.AddItem("2048", 2048);
+	shadowResolutionComboBox.OnSelect([&](wi::gui::EventArgs args) {
+		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		if (light == nullptr)
+			return;
+		light->forced_shadow_resolution = int(args.userdata);
+		});
+	shadowResolutionComboBox.SetSelected(0);
+	AddWidget(&shadowResolutionComboBox);
+
 	y += step;
 	x -= 100;
 
@@ -309,6 +330,8 @@ void LightWindow::SetEntity(Entity entity)
 		colorPicker.SetEnabled(true);
 		colorPicker.SetPickColor(wi::Color::fromFloat3(light->color));
 		typeSelectorComboBox.SetSelected((int)light->GetType());
+		shadowResolutionComboBox.SetSelectedByUserdataWithoutCallback(uint64_t(light->forced_shadow_resolution));
+		shadowResolutionComboBox.SetEnabled(true);
 		
 		SetLightType(light->GetType());
 
@@ -338,6 +361,7 @@ void LightWindow::SetEntity(Entity entity)
 		staticCheckBox.SetEnabled(false);
 		energySlider.SetEnabled(false);
 		colorPicker.SetEnabled(false);
+		shadowResolutionComboBox.SetEnabled(false);
 
 		for (size_t i = 0; i < arraysize(lensflare_Button); ++i)
 		{

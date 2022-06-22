@@ -1,5 +1,7 @@
 This file contains changelog of wi::Archive versions
 
+81: serialized LightComponent::forced_shadow_resolution
+80: object draw distance
 79: removed terrain blend materials from mesh
 78: serialized stars parameter in weather
 77: serialized cloud shadow properties

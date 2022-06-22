@@ -22,6 +22,7 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/spirv_reflect.h
 		${CMAKE_CURRENT_SOURCE_DIR}/stb_image.h
 		${CMAKE_CURRENT_SOURCE_DIR}/stb_image_write.h
+		${CMAKE_CURRENT_SOURCE_DIR}/stb_rect_pack.h
 		${CMAKE_CURRENT_SOURCE_DIR}/stb_truetype.h
 		${CMAKE_CURRENT_SOURCE_DIR}/qoi.h
 		${CMAKE_CURRENT_SOURCE_DIR}/dxcapi.h

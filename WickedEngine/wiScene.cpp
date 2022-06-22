@@ -757,22 +757,30 @@ namespace wi::scene
 		assert(success);
 		device->SetName(&streamoutBuffer, "MeshComponent::streamoutBuffer");
 
-		so_pos_nor_wind.offset = 0;
+		uint64_t buffer_offset = 0ull;
+
+		so_pos_nor_wind.offset = buffer_offset;
 		so_pos_nor_wind.size = vb_pos_nor_wind.size;
+		buffer_offset += AlignTo(so_pos_nor_wind.size, alignment);
 		so_pos_nor_wind.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.offset, so_pos_nor_wind.size);
 		so_pos_nor_wind.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.offset, so_pos_nor_wind.size);
 		so_pos_nor_wind.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.subresource_srv);
 		so_pos_nor_wind.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.subresource_uav);
 
-		so_tan.offset = AlignTo(so_pos_nor_wind.offset + so_pos_nor_wind.size, alignment);
-		so_tan.size = vb_tan.size;
-		so_tan.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_tan.offset, so_tan.size);
-		so_tan.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_tan.offset, so_tan.size);
-		so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);
-		so_tan.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_tan.subresource_uav);
+		if (vb_tan.IsValid())
+		{
+			so_tan.offset = buffer_offset;
+			so_tan.size = vb_tan.size;
+			buffer_offset += AlignTo(so_tan.size, alignment);
+			so_tan.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_tan.offset, so_tan.size);
+			so_tan.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_tan.offset, so_tan.size);
+			so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);
+			so_tan.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_tan.subresource_uav);
+		}
 
-		so_pre.offset = AlignTo(so_tan.offset + so_tan.size, alignment);
+		so_pre.offset = buffer_offset;
 		so_pre.size = vb_pos_nor_wind.size;
+		buffer_offset += AlignTo(so_pre.size, alignment);
 		so_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pre.offset, so_pre.size);
 		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size);
 		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
@@ -1145,12 +1153,9 @@ namespace wi::scene
 	}
 	Sphere MeshComponent::GetBoundingSphere() const
 	{
-		XMFLOAT3 halfwidth = aabb.getHalfWidth();
-
 		Sphere sphere;
 		sphere.center = aabb.getCenter();
-		sphere.radius = std::max(halfwidth.x, std::max(halfwidth.y, halfwidth.z));
-
+		sphere.radius = aabb.getRadius();
 		return sphere;
 	}
 
@@ -1475,6 +1480,11 @@ namespace wi::scene
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		instanceArraySize = objects.GetCount() + hairs.GetCount() + emitters.GetCount();
+		if (impostors.GetCount() > 0)
+		{
+			impostorInstanceOffset = uint32_t(instanceArraySize);
+			instanceArraySize += 1;
+		}
 		if (instanceBuffer.desc.size < (instanceArraySize * sizeof(ShaderMeshInstance)))
 		{
 			GPUBufferDesc desc;
@@ -1497,6 +1507,11 @@ namespace wi::scene
 		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[device->GetBufferIndex()].mapped_data;
 
 		materialArraySize = materials.GetCount();
+		if (impostors.GetCount() > 0)
+		{
+			impostorMaterialOffset = uint32_t(materialArraySize);
+			materialArraySize += 1;
+		}
 		if (materialBuffer.desc.size < (materialArraySize * sizeof(ShaderMaterial)))
 		{
 			GPUBufferDesc desc;
@@ -1614,6 +1629,11 @@ namespace wi::scene
 		geometryArraySize = geometryAllocator.load();
 		geometryArraySize += hairs.GetCount();
 		geometryArraySize += emitters.GetCount();
+		if (impostors.GetCount() > 0)
+		{
+			impostorGeometryOffset = uint32_t(geometryArraySize);
+			geometryArraySize += 1;
+		}
 		if (geometryBuffer.desc.size < (geometryArraySize * sizeof(ShaderGeometry)))
 		{
 			GPUBufferDesc desc;
@@ -1647,8 +1667,6 @@ namespace wi::scene
 
 		RunArmatureUpdateSystem(ctx);
 
-		RunImpostorUpdateSystem(ctx);
-
 		RunWeatherUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
@@ -1668,6 +1686,8 @@ namespace wi::scene
 		RunParticleUpdateSystem(ctx);
 
 		RunSoundUpdateSystem(ctx);
+
+		RunImpostorUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
 
@@ -1874,6 +1894,54 @@ namespace wi::scene
 			ddgiDepthTexture[1] = {};
 		}
 
+		impostor_ib_format = (((objects.GetCount() * 4) < 655536) ? Format::R16_UINT : Format::R32_UINT);
+		const size_t impostor_index_stride = impostor_ib_format == Format::R16_UINT ? sizeof(uint16_t) : sizeof(uint32_t);
+		const uint64_t required_impostor_buffer_size = objects.GetCount() * (sizeof(impostor_index_stride) * 6 + sizeof(uint4) * 4 + sizeof(uint2));
+		if (impostorBuffer.desc.size < required_impostor_buffer_size)
+		{
+			GPUBufferDesc desc;
+			desc.usage = Usage::DEFAULT;
+			desc.size = required_impostor_buffer_size * 2; // *2 to grow fast
+			desc.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			device->CreateBuffer(&desc, nullptr, &impostorBuffer);
+			device->SetName(&impostorBuffer, "impostorBuffer");
+
+			const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
+			uint64_t buffer_offset = 0ull;
+
+			impostor_ib.offset = buffer_offset;
+			impostor_ib.size = objects.GetCount() * sizeof(impostor_index_stride) * 6;
+			buffer_offset += AlignTo(impostor_ib.size, alignment);
+			impostor_ib.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_ib.offset, impostor_ib.size, &impostor_ib_format);
+			impostor_ib.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_ib.offset, impostor_ib.size, &impostor_ib_format);
+			impostor_ib.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_ib.subresource_srv);
+			impostor_ib.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_ib.subresource_uav);
+
+			impostor_vb.offset = buffer_offset;
+			impostor_vb.size = objects.GetCount() * sizeof(uint4) * 4;
+			buffer_offset += AlignTo(impostor_vb.size, alignment);
+			impostor_vb.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_vb.offset, impostor_vb.size);
+			impostor_vb.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_vb.offset, impostor_vb.size);
+			impostor_vb.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_vb.subresource_srv);
+			impostor_vb.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_vb.subresource_uav);
+
+			impostor_data.offset = buffer_offset;
+			impostor_data.size = objects.GetCount() * sizeof(uint2);
+			buffer_offset += AlignTo(impostor_data.size, alignment);
+			impostor_data.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_data.offset, impostor_data.size);
+			impostor_data.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_data.offset, impostor_data.size);
+			impostor_data.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_data.subresource_srv);
+			impostor_data.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_data.subresource_uav);
+
+			desc.stride = sizeof(IndirectDrawArgsIndexedInstanced);
+			desc.size = desc.stride;
+			desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+			desc.misc_flags = ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::BUFFER_STRUCTURED;
+			device->CreateBuffer(&desc, nullptr, &impostorIndirectBuffer);
+			device->SetName(&impostorIndirectBuffer, "impostorIndirectBuffer");
+		}
+
 		// Shader scene resources:
 		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
 		shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
@@ -1888,6 +1956,7 @@ namespace wi::scene
 		{
 			shaderscene.globalenvmap = -1;
 		}
+		shaderscene.impostorInstanceOffset = impostorInstanceOffset;
 		shaderscene.TLAS = device->GetDescriptorIndex(&TLAS, SubresourceType::SRV);
 		shaderscene.BVH_counter = device->GetDescriptorIndex(&BVH.primitiveCounterBuffer, SubresourceType::SRV);
 		shaderscene.BVH_nodes = device->GetDescriptorIndex(&BVH.bvhNodeBuffer, SubresourceType::SRV);
@@ -3086,6 +3155,12 @@ namespace wi::scene
 			geometry.aabb_max = mesh.aabb._max;
 			geometry.tessellation_factor = mesh.tessellationFactor;
 
+			const ImpostorComponent* impostor = impostors.GetComponent(entity);
+			if (impostor != nullptr && impostor->textureIndex >= 0)
+			{
+				geometry.impostorSliceOffset = impostor->textureIndex * impostorCaptureAngles * 3;
+			}
+
 			if (mesh.IsDoubleSided())
 			{
 				geometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
@@ -3207,22 +3282,52 @@ namespace wi::scene
 			device->CreateTexture(&desc, nullptr, &impostorArray);
 			device->SetName(&impostorArray, "impostorArray");
 
-			renderpasses_impostor.resize(desc.array_size);
-
 			for (uint32_t i = 0; i < desc.array_size; ++i)
 			{
 				int subresource_index;
 				subresource_index = device->CreateSubresource(&impostorArray, SubresourceType::RTV, i, 1, 0, 1);
 				assert(subresource_index == i);
+			}
 
+			renderpasses_impostor.resize(desc.array_size / 3);
+			for (uint32_t i = 0; i < desc.array_size / 3; ++i)
+			{
 				RenderPassDesc renderpassdesc;
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::RenderTarget(
 						&impostorArray,
-						RenderPassAttachment::LoadOp::CLEAR
+						RenderPassAttachment::LoadOp::CLEAR,
+						RenderPassAttachment::StoreOp::STORE,
+						ResourceState::SHADER_RESOURCE,
+						ResourceState::RENDERTARGET,
+						ResourceState::SHADER_RESOURCE
 					)
 				);
-				renderpassdesc.attachments.back().subresource = subresource_index;
+				renderpassdesc.attachments.back().subresource = i * 3;
+
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::RenderTarget(
+						&impostorArray,
+						RenderPassAttachment::LoadOp::CLEAR,
+						RenderPassAttachment::StoreOp::STORE,
+						ResourceState::SHADER_RESOURCE,
+						ResourceState::RENDERTARGET,
+						ResourceState::SHADER_RESOURCE
+					)
+				);
+				renderpassdesc.attachments.back().subresource = i * 3 + 1;
+
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::RenderTarget(
+						&impostorArray,
+						RenderPassAttachment::LoadOp::CLEAR,
+						RenderPassAttachment::StoreOp::STORE,
+						ResourceState::SHADER_RESOURCE,
+						ResourceState::RENDERTARGET,
+						ResourceState::SHADER_RESOURCE
+					)
+				);
+				renderpassdesc.attachments.back().subresource = i * 3 + 2;
 
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::DepthStencil(
@@ -3232,22 +3337,73 @@ namespace wi::scene
 					)
 				);
 
-				device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
+				device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[i]);
 			}
 		}
 
-		wi::jobsystem::Dispatch(ctx, (uint32_t)impostors.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
+		// reconstruct impostor array status:
+		bool impostorTaken[maxImpostorCount] = {};
+		for (size_t i = 0; i < impostors.GetCount(); ++i)
+		{
+			ImpostorComponent& impostor = impostors[i];
+			if (impostor.textureIndex >= 0 && impostor.textureIndex < maxImpostorCount)
+			{
+				impostorTaken[impostor.textureIndex] = true;
+			}
+			else
+			{
+				impostor.textureIndex = -1;
+			}
+		}
 
-			ImpostorComponent& impostor = impostors[args.jobIndex];
-			impostor.aabb = AABB();
-			impostor.instances.clear();
+		for (size_t i = 0; i < impostors.GetCount(); ++i)
+		{
+			ImpostorComponent& impostor = impostors[i];
 
 			if (impostor.IsDirty())
 			{
 				impostor.SetDirty(false);
 				impostor.render_dirty = true;
 			}
-		});
+
+			if (impostor.render_dirty && impostor.textureIndex < 0)
+			{
+				// need to take a free impostor texture slot:
+				for (int i = 0; i < arraysize(impostorTaken); ++i)
+				{
+					if (impostorTaken[i] == false)
+					{
+						impostorTaken[i] = true;
+						impostor.textureIndex = i;
+						break;
+					}
+				}
+			}
+		}
+
+		if (impostors.GetCount() > 0)
+		{
+			ShaderMaterial material;
+			material.init();
+			material.shaderType = ~0u;
+			std::memcpy(materialArrayMapped + impostorMaterialOffset, &material, sizeof(material));
+
+			ShaderGeometry geometry;
+			geometry.init();
+			geometry.meshletCount = triangle_count_to_meshlet_count(uint32_t(objects.GetCount()) * 2);
+			geometry.meshletOffset = 0; // local meshlet offset
+			geometry.ib = impostor_ib.descriptor_srv;
+			geometry.vb_pos_nor_wind = impostor_vb.descriptor_srv;
+			geometry.materialIndex = impostorMaterialOffset;
+			std::memcpy(geometryArrayMapped + impostorGeometryOffset, &geometry, sizeof(geometry));
+
+			ShaderMeshInstance instance;
+			instance.init();
+			instance.geometryOffset = impostorGeometryOffset;
+			instance.geometryCount = 1;
+			instance.meshletOffset = meshletAllocator.fetch_add(geometry.meshletCount); // global meshlet offset
+			std::memcpy(instanceArrayMapped + impostorInstanceOffset, &instance, sizeof(instance));
+		}
 	}
 	void Scene::RunObjectUpdateSystem(wi::jobsystem::context& ctx)
 	{
@@ -3298,8 +3454,8 @@ namespace wi::scene
 			aabb = AABB();
 			object.rendertypeMask = 0;
 			object.SetDynamic(false);
-			object.SetImpostorPlacement(false);
 			object.SetRequestPlanarReflection(false);
+			object.fadeDistance = object.draw_distance;
 
 			if (object.meshID != INVALID_ENTITY)
 			{
@@ -3355,19 +3511,7 @@ namespace wi::scene
 					ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
 					if (impostor != nullptr)
 					{
-						object.SetImpostorPlacement(true);
-						object.impostorSwapDistance = impostor->swapInDistance;
-						object.impostorFadeThresholdRadius = aabb.getRadius();
-
-						impostor->aabb = AABB::Merge(impostor->aabb, aabb);
-						impostor->color = object.color;
-						impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
-
-						const Sphere boundingsphere = mesh.GetBoundingSphere();
-
-						locker.lock();
-						impostor->instances.push_back(args.jobIndex);
-						locker.unlock();
+						object.fadeDistance = std::min(object.fadeDistance, impostor->swapInDistance);
 					}
 
 					SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
@@ -3390,6 +3534,9 @@ namespace wi::scene
 						// soft bodies have no transform, their vertices are simulated in world space
 						transform_index = ~0u;
 					}
+
+					object.center = aabb.getCenter();
+					object.radius = aabb.getRadius();
 
 					// Create GPU instance data:
 					GraphicsDevice* device = wi::graphics::GetDevice();
@@ -3417,6 +3564,9 @@ namespace wi::scene
 					inst.geometryOffset = mesh.geometryOffset;
 					inst.geometryCount = (uint)mesh.subsets.size();
 					inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
+					inst.fadeDistance = object.fadeDistance;
+					inst.center = object.center;
+					inst.radius = object.radius;
 
 					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
@@ -3583,20 +3733,31 @@ namespace wi::scene
 
 			TextureDesc desc;
 			desc.array_size = 6;
-			desc.bind_flags = BindFlag::DEPTH_STENCIL;
-			desc.format = Format::D16_UNORM;
 			desc.height = envmapRes;
 			desc.width = envmapRes;
 			desc.mip_levels = 1;
-			desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 			desc.usage = Usage::DEFAULT;
-			desc.layout = ResourceState::DEPTHSTENCIL;
 
+			desc.bind_flags = BindFlag::DEPTH_STENCIL;
+			desc.format = Format::D16_UNORM;
+			desc.layout = ResourceState::DEPTHSTENCIL;
+			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
 			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
+			desc.sample_count = envmapMSAASampleCount;
+			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer_MSAA);
+			device->SetName(&envrenderingDepthBuffer_MSAA, "envrenderingDepthBuffer_MSAA");
 
+			desc.bind_flags = BindFlag::RENDER_TARGET;
+			desc.format = Format::R11G11B10_FLOAT;
+			desc.layout = ResourceState::RENDERTARGET;
+			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+			device->CreateTexture(&desc, nullptr, &envrenderingColorBuffer_MSAA);
+			device->SetName(&envrenderingColorBuffer_MSAA, "envrenderingColorBuffer_MSAA");
+
+			desc.sample_count = 1;
 			desc.array_size = envmapCount * 6;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET | BindFlag::UNORDERED_ACCESS;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
 			desc.format = Format::R11G11B10_FLOAT;
 			desc.height = envmapRes;
 			desc.width = envmapRes;
@@ -3608,32 +3769,7 @@ namespace wi::scene
 			device->CreateTexture(&desc, nullptr, &envmapArray);
 			device->SetName(&envmapArray, "envmapArray");
 
-			renderpasses_envmap.resize(envmapCount);
-
-			for (uint32_t i = 0; i < envmapCount; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::RTV, i * 6, 6, 0, 1);
-				assert(subresource_index == i);
-
-				RenderPassDesc renderpassdesc;
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::RenderTarget(&envmapArray,
-						RenderPassAttachment::LoadOp::DONTCARE
-					)
-				);
-				renderpassdesc.attachments.back().subresource = subresource_index;
-
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::DepthStencil(
-						&envrenderingDepthBuffer,
-						RenderPassAttachment::LoadOp::CLEAR,
-						RenderPassAttachment::StoreOp::DONTCARE
-					)
-				);
-
-				device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[subresource_index]);
-			}
+			// Cube arrays per mip level:
 			for (uint32_t i = 0; i < envmapArray.desc.mip_levels; ++i)
 			{
 				int subresource_index;
@@ -3643,12 +3779,82 @@ namespace wi::scene
 				assert(subresource_index == i);
 			}
 
-			// debug probe views, individual cubes:
+			// individual cubes with mips:
 			for (uint32_t i = 0; i < envmapCount; ++i)
 			{
 				int subresource_index;
 				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, i * 6, 6, 0, -1);
 				assert(subresource_index == envmapArray.desc.mip_levels + i);
+			}
+
+			// individual cubes only mip0:
+			for (uint32_t i = 0; i < envmapCount; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, i * 6, 6, 0, 1);
+				assert(subresource_index == envmapArray.desc.mip_levels + envmapCount + i);
+			}
+
+			renderpasses_envmap.resize(envmapCount);
+			renderpasses_envmap_MSAA.resize(envmapCount);
+			for (uint32_t i = 0; i < envmapCount; ++i)
+			{
+				// Non MSAA:
+				{
+					int subresource_index;
+					subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::RTV, i * 6, 6, 0, 1);
+					assert(subresource_index == i);
+
+					RenderPassDesc renderpassdesc;
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::DepthStencil(
+							&envrenderingDepthBuffer,
+							RenderPassAttachment::LoadOp::CLEAR,
+							RenderPassAttachment::StoreOp::DONTCARE
+						)
+					);
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::RenderTarget(&envmapArray,
+							RenderPassAttachment::LoadOp::DONTCARE,
+							RenderPassAttachment::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::RENDERTARGET,
+							ResourceState::SHADER_RESOURCE,
+							subresource_index
+						)
+					);
+					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[i]);
+				}
+
+				// MSAA:
+				{
+					RenderPassDesc renderpassdesc;
+					renderpassdesc.attachments.clear();
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::DepthStencil(
+							&envrenderingDepthBuffer_MSAA,
+							RenderPassAttachment::LoadOp::CLEAR,
+							RenderPassAttachment::StoreOp::DONTCARE
+						)
+					);
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::RenderTarget(&envrenderingColorBuffer_MSAA,
+							RenderPassAttachment::LoadOp::DONTCARE,
+							RenderPassAttachment::StoreOp::DONTCARE,
+							ResourceState::RENDERTARGET,
+							ResourceState::RENDERTARGET,
+							ResourceState::RENDERTARGET
+						)
+					);
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::Resolve(&envmapArray,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::SHADER_RESOURCE,
+							envmapArray.desc.mip_levels + envmapCount + i // subresource: individual cubes only mip0
+						)
+					);
+					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap_MSAA[i]);
+				}
 			}
 		}
 
@@ -3707,14 +3913,12 @@ namespace wi::scene
 			if (probe.render_dirty && probe.textureIndex < 0)
 			{
 				// need to take a free envmap texture slot:
-				bool found = false;
 				for (int i = 0; i < arraysize(envmapTaken); ++i)
 				{
 					if (envmapTaken[i] == false)
 					{
 						envmapTaken[i] = true;
 						probe.textureIndex = i;
-						found = true;
 						break;
 					}
 				}
@@ -3769,7 +3973,7 @@ namespace wi::scene
 			XMStoreFloat3(&light.position, T);
 			XMStoreFloat4(&light.rotation, R);
 			XMStoreFloat3(&light.scale, S);
-			XMStoreFloat3(&light.direction, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W));
+			XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
 
 			light.range_global = light.range_local * std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 
@@ -3855,6 +4059,8 @@ namespace wi::scene
 			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
 			inst.geometryCount = 1;
 			inst.meshletOffset = meshletOffset;
+			inst.center = hair.aabb.getCenter();
+			inst.radius = hair.aabb.getRadius();
 
 			const size_t instanceIndex = objects.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));

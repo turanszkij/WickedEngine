@@ -60,8 +60,8 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	output_primitiveID[pixel] = primitiveID;
 #endif // VISIBILITY_MSAA
 
-	float depth = 0;
-	uint bin = SHADERTYPE_BIN_COUNT;
+	float depth = 1; // invalid
+	uint bin = ~0u; // invalid
 	if (pixel_valid)
 	{
 		[branch]
@@ -82,6 +82,12 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 				bin = surface.material.shaderType;
 			}
+		}
+		else
+		{
+			// sky:
+			depth = 0;
+			bin = SHADERTYPE_BIN_COUNT;
 		}
 		if (groupIndex < 32)
 		{

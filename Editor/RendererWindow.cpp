@@ -347,32 +347,32 @@ void RendererWindow::Create(EditorComponent* editor)
 		switch (args.iValue)
 		{
 		case 0:
-			wi::renderer::SetShadowProps2D(0, -1);
+			wi::renderer::SetShadowProps2D(0);
 			break;
 		case 1:
-			wi::renderer::SetShadowProps2D(128, -1);
+			wi::renderer::SetShadowProps2D(128);
 			break;
 		case 2:
-			wi::renderer::SetShadowProps2D(256, -1);
+			wi::renderer::SetShadowProps2D(256);
 			break;
 		case 3:
-			wi::renderer::SetShadowProps2D(512, -1);
+			wi::renderer::SetShadowProps2D(512);
 			break;
 		case 4:
-			wi::renderer::SetShadowProps2D(1024, -1);
+			wi::renderer::SetShadowProps2D(1024);
 			break;
 		case 5:
-			wi::renderer::SetShadowProps2D(2048, -1);
+			wi::renderer::SetShadowProps2D(2048);
 			break;
 		case 6:
-			wi::renderer::SetShadowProps2D(4096, -1);
+			wi::renderer::SetShadowProps2D(4096);
 			break;
 		default:
 			break;
 		}
 	});
 	shadowProps2DComboBox.SetSelected(4);
-	shadowProps2DComboBox.SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights)...");
+	shadowProps2DComboBox.SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights)...\nThis specifies the maximum shadow resolution for these light types, but that can dynamically change unless they are set to a fixed resolution individually.");
 	shadowProps2DComboBox.SetScriptTip("SetShadowProps2D(int resolution, int count, int softShadowQuality)");
 	AddWidget(&shadowProps2DComboBox);
 
@@ -385,37 +385,33 @@ void RendererWindow::Create(EditorComponent* editor)
 	shadowPropsCubeComboBox.AddItem("512");
 	shadowPropsCubeComboBox.AddItem("1024");
 	shadowPropsCubeComboBox.AddItem("2048");
-	shadowPropsCubeComboBox.AddItem("4096");
 	shadowPropsCubeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		switch (args.iValue)
 		{
 		case 0:
-			wi::renderer::SetShadowPropsCube(0, -1);
+			wi::renderer::SetShadowPropsCube(0);
 			break;
 		case 1:
-			wi::renderer::SetShadowPropsCube(128, -1);
+			wi::renderer::SetShadowPropsCube(128);
 			break;
 		case 2:
-			wi::renderer::SetShadowPropsCube(256, -1);
+			wi::renderer::SetShadowPropsCube(256);
 			break;
 		case 3:
-			wi::renderer::SetShadowPropsCube(512, -1);
+			wi::renderer::SetShadowPropsCube(512);
 			break;
 		case 4:
-			wi::renderer::SetShadowPropsCube(1024, -1);
+			wi::renderer::SetShadowPropsCube(1024);
 			break;
 		case 5:
-			wi::renderer::SetShadowPropsCube(2048, -1);
-			break;
-		case 6:
-			wi::renderer::SetShadowPropsCube(4096, -1);
+			wi::renderer::SetShadowPropsCube(2048);
 			break;
 		default:
 			break;
 		}
 	});
 	shadowPropsCubeComboBox.SetSelected(2);
-	shadowPropsCubeComboBox.SetTooltip("Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...");
+	shadowPropsCubeComboBox.SetTooltip("Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...\nThis specifies the maximum shadow resolution for these light types, but that can dynamically change unless they are set to a fixed resolution individually.");
 	shadowPropsCubeComboBox.SetScriptTip("SetShadowPropsCube(int resolution, int count)");
 	AddWidget(&shadowPropsCubeComboBox);
 

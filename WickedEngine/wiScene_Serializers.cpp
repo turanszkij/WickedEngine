@@ -538,6 +538,10 @@ namespace wi::scene
 			{
 				archive >> lod_distance_multiplier;
 			}
+			if (archive.GetVersion() >= 80)
+			{
+				archive >> draw_distance;
+			}
 		}
 		else
 		{
@@ -564,6 +568,10 @@ namespace wi::scene
 			if (archive.GetVersion() >= 76)
 			{
 				archive << lod_distance_multiplier;
+			}
+			if (archive.GetVersion() >= 80)
+			{
+				archive << draw_distance;
 			}
 		}
 	}
@@ -743,6 +751,11 @@ namespace wi::scene
 
 			archive >> lensFlareNames;
 
+			if (archive.GetVersion() >= 81)
+			{
+				archive >> forced_shadow_resolution;
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				lensFlareRimTextures.resize(lensFlareNames.size());
 				for (size_t i = 0; i < lensFlareNames.size(); ++i)
@@ -784,6 +797,11 @@ namespace wi::scene
 				}
 			}
 			archive << lensFlareNames;
+
+			if (archive.GetVersion() >= 81)
+			{
+				archive << forced_shadow_resolution;
+			}
 		}
 	}
 	void CameraComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)

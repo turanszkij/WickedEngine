@@ -79,6 +79,8 @@ namespace wi::lua::scene
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
 		int Component_DetachChildren(lua_State* L);
+
+		int GetBounds(lua_State* L);
 	};
 
 	class NameComponent_BindLua

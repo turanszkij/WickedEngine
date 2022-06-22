@@ -1,12 +1,12 @@
 // This geometry shader is intended as fallback support when GPU doesn't support writing to 
-//	SV_RenderTargetArrayIndex from Vertex Shader stage
+//	SV_ViewportArrayIndex from Vertex Shader stage
 
 struct GSInput
 {
 	float4 pos : SV_POSITION;
 	float4 color : COLOR;
 	float4 uvsets : UVSETS;
-	uint RTIndex : RTINDEX;
+	uint VPIndex : VPINDEX;
 };
 
 struct GSOutput
@@ -14,7 +14,7 @@ struct GSOutput
 	float4 pos : SV_POSITION;
 	float4 color : COLOR;
 	float4 uvsets : UVSETS;
-	uint RTIndex : SV_RenderTargetArrayIndex;
+	uint VPIndex : SV_ViewportArrayIndex;
 };
 
 [maxvertexcount(3)]
@@ -29,7 +29,7 @@ void main(
 		element.pos = input[i].pos;
 		element.color = input[i].color;
 		element.uvsets = input[i].uvsets;
-		element.RTIndex = input[i].RTIndex;
+		element.VPIndex = input[i].VPIndex;
 		output.Append(element);
 	}
 }
