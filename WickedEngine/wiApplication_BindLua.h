@@ -51,6 +51,7 @@ namespace wi::lua
 		int SetFPSDisplay(lua_State* L);
 		int SetResolutionDisplay(lua_State* L);
 		int SetLogicalSizeDisplay(lua_State* L);
+		int SetColorSpaceDisplay(lua_State* L);
 		int SetPipelineCountDisplay(lua_State* L);
 		int SetHeapAllocationCountDisplay(lua_State* L);
 		int SetVRAMUsageDisplay(lua_State* L);
