@@ -88,7 +88,7 @@ namespace wi::physics
 	bool IsEnabled() { return ENABLED; }
 	void SetEnabled(bool value) { ENABLED = value; }
 
-	bool IsSimulationEnabled() { return SIMULATION_ENABLED; }
+	bool IsSimulationEnabled() { return ENABLED && SIMULATION_ENABLED; }
 	void SetSimulationEnabled(bool value) { SIMULATION_ENABLED = value; }
 
 	bool IsDebugDrawEnabled() { return DEBUGDRAW_ENABLED; }

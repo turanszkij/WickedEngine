@@ -87,6 +87,11 @@ void MeshWindow::Create(EditorComponent* editor)
 			if (physicscomponent != nullptr)
 			{
 				scene.softbodies.Remove(entity);
+				MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
+				if (mesh != nullptr)
+				{
+					mesh->CreateRenderData();
+				}
 			}
 		}
 
