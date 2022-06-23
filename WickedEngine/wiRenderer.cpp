@@ -6040,10 +6040,8 @@ void DrawDebugWorld(
 
 	if (GetRaytraceDebugBVHVisualizerEnabled())
 	{
-		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING)) //PE: Crash if not available. PathTracing has its own.
-		{
-			RayTraceSceneBVH(scene, cmd);
-		}
+		//PE: Need another way to check if BVH is active, or it will crash.
+		RayTraceSceneBVH(scene, cmd);
 	}
 
 	device->EventEnd(cmd);
