@@ -280,6 +280,7 @@ namespace wi::lua::scene
 		int SetEnergy(lua_State* L);
 		int SetColor(lua_State* L);
 		int SetCastShadow(lua_State* L);
+		int SetVolumetricsEnabled(lua_State* L);
 		int SetFOV(lua_State* L);
 
 		int GetType(lua_State* L);
