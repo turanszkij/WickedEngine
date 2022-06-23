@@ -4669,7 +4669,8 @@ void DrawShadowmaps(
 	if (!vis.visibleLights.empty() && renderpass_shadowMapAtlas.IsValid())
 	{
 		device->EventBegin("DrawShadowmaps", cmd);
-		auto range = wi::profiler::BeginRangeGPU("Shadow Rendering", cmd);
+		auto range_cpu = wi::profiler::BeginRangeCPU("Shadowmap Rendering");
+		auto range_gpu = wi::profiler::BeginRangeGPU("Shadowmap Rendering", cmd);
 
 		const bool predicationRequest =
 			device->CheckCapability(GraphicsDeviceCapability::PREDICATION) &&
@@ -4902,7 +4903,8 @@ void DrawShadowmaps(
 
 		device->RenderPassEnd(cmd);
 
-		wi::profiler::EndRange(range); // Shadow Rendering
+		wi::profiler::EndRange(range_gpu);
+		wi::profiler::EndRange(range_cpu);
 		device->EventEnd(cmd);
 	}
 }

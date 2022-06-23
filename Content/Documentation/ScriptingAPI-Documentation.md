@@ -640,6 +640,7 @@ This is the main entry point and manages the lifetime of the application. Even t
 - SetFPSDisplay(bool active)	-- toggle display of frame rate if info display is enabled
 - SetResolutionDisplay(bool active)	-- toggle display of resolution if info display is enabled
 - SetLogicalSizeDisplay(bool active)	-- toggle display of logical size of canvas if info display is enabled
+- SetColorSpaceDisplay(bool active)	-- toggle display of output color space if info display is enabled
 - SetPipelineCountDisplay(bool active)	-- toggle display of active graphics pipeline count if info display is enabled
 - SetHeapAllocationCountDisplay(bool active)	-- toggle display of heap allocation statistics if info display is enabled
 - SetVRAMUsageDisplay(bool active)	-- toggle display of video memory usage if info display is enabled
