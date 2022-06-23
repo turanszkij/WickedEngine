@@ -954,6 +954,11 @@ void RenderPath3D::Render() const
 			wi::renderer::VoxelRadiance(visibility_main, cmd);
 			});
 	}
+	else
+	{
+		cmd = device->BeginCommandList();
+		wi::renderer::ClearPSO(visibility_main, cmd);
+	}
 
 	if (visibility_main.IsRequestedPlanarReflections())
 	{

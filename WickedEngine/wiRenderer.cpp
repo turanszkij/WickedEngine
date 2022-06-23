@@ -2385,6 +2385,40 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 	return cb;
 }
 
+void ClearPSO(const Visibility& vis, CommandList cmd)
+{
+	//PE: Strange DX12 bug, we must change the pso/pipeline state, just one time.
+	//PE: After this there will be no "black dots" or culling/depth errors.
+	//PE: This must be done after light has been created, so we just do this on light.size changes.
+	//PE: This bug only happen on some nvidia cards ?
+	//PE: https://github.com/turanszkij/WickedEngine/issues/450#issuecomment-1143647323
+
+	if (vis.visibleLights.empty())
+		return;
+
+	static int current_lights = -1;
+	static RenderPass renderpass_clear;
+
+	if (vis.visibleLights.size() == current_lights)
+		return;
+
+	current_lights = vis.visibleLights.size();
+
+	if (!renderpass_clear.IsValid())
+	{
+		RenderPassDesc renderpassdesc;
+		renderpassdesc.flags = RenderPassDesc::Flags::EMPTY;
+		device->CreateRenderPass(&renderpassdesc, &renderpass_clear);
+	}
+	//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work.
+	const PipelineState* pso = &PSO_object[0][RENDERPASS_VOXELIZE][BLENDMODE_OPAQUE][0][0][0];
+	device->RenderPassBegin(&renderpass_clear, cmd);
+	device->BindPipelineState(pso, cmd);
+	device->DrawIndexedInstanced(0, 0, 0, 0, 0, cmd); //PE: Just need predraw(cmd);
+	device->RenderPassEnd(cmd);
+	return;
+}
+
 void RenderMeshes(
 	const Visibility& vis,
 	const RenderQueue& renderQueue,
@@ -3136,7 +3170,7 @@ void UpdatePerFrameData(
 	frameCB.voxelradiance_size = voxelSceneData.voxelsize;
 	frameCB.voxelradiance_size_rcp = 1.0f / (float)frameCB.voxelradiance_size;
 	frameCB.voxelradiance_resolution = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
-	frameCB.voxelradiance_resolution_rcp = 1.0f / (float)frameCB.voxelradiance_resolution;
+	frameCB.voxelradiance_resolution_rcp = GetVoxelRadianceEnabled() ? 1.0f / (float)frameCB.voxelradiance_resolution : 0; //PE: was inf.
 	frameCB.voxelradiance_mipcount = voxelSceneData.mips;
 	frameCB.voxelradiance_numcones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
 	frameCB.voxelradiance_numcones_rcp = 1.0f / (float)frameCB.voxelradiance_numcones;
