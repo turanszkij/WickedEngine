@@ -6040,8 +6040,11 @@ void DrawDebugWorld(
 
 	if (GetRaytraceDebugBVHVisualizerEnabled())
 	{
-		//PE: Need another way to check if BVH is active, or it will crash.
-		RayTraceSceneBVH(scene, cmd);
+		//PE: Check if debug BVH is possible. or it will crash.
+		if (GetSurfelGIEnabled() || GetDDGIEnabled() )
+		{
+			RayTraceSceneBVH(scene, cmd);
+		}
 	}
 
 	device->EventEnd(cmd);
