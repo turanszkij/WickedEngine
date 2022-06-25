@@ -162,7 +162,7 @@ void TerrainGenerator::init()
 	ClearTransform();
 
 	wi::gui::Window::Create("TerraGen (Preview version)");
-	SetSize(XMFLOAT2(420, 590));
+	SetSize(XMFLOAT2(420, 300));
 
 	float x = 160;
 	float y = 0;
@@ -372,6 +372,11 @@ void TerrainGenerator::init()
 	voronoiPerturbationSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiPerturbationSlider);
 
+	saveHeightmapButton.Create("Save Heightmap...");
+	saveHeightmapButton.SetTooltip("Save a heightmap texture from the currently generated terrain, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be normalized into 8bit PNG format which can result in precision loss!");
+	saveHeightmapButton.SetSize(XMFLOAT2(200, hei));
+	saveHeightmapButton.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&saveHeightmapButton);
 
 	heightmapButton.Create("Load Heightmap...");
 	heightmapButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be placed in the world center.");
@@ -423,6 +428,66 @@ void TerrainGenerator::init()
 	region1Slider.OnSlide(generate_callback);
 	region2Slider.OnSlide(generate_callback);
 	region3Slider.OnSlide(generate_callback);
+
+	saveHeightmapButton.OnClick([=](wi::gui::EventArgs args) {
+
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::SAVE;
+		params.description = "PNG";
+		params.extensions = { "PNG" };
+		wi::helper::FileDialog(params, [=](std::string fileName) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+
+				wi::primitive::AABB aabb;
+				for (auto& chunk : chunks)
+				{
+					const wi::primitive::AABB* object_aabb = scene->aabb_objects.GetComponent(chunk.second.entity);
+					if (object_aabb != nullptr)
+					{
+						aabb = wi::primitive::AABB::Merge(aabb, *object_aabb);
+					}
+				}
+
+				HeightmapTexture saved_heightmap;
+				saved_heightmap.width = int(aabb.getHalfWidth().x * 2 + 1);
+				saved_heightmap.height = int(aabb.getHalfWidth().z * 2 + 1);
+				saved_heightmap.data.resize(saved_heightmap.width * saved_heightmap.height);
+				std::fill(saved_heightmap.data.begin(), saved_heightmap.data.end(), 0u);
+
+				for (auto& chunk : chunks)
+				{
+					const ObjectComponent* object = scene->objects.GetComponent(chunk.second.entity);
+					if (object != nullptr)
+					{
+						const MeshComponent* mesh = scene->meshes.GetComponent(object->meshID);
+						if (mesh != nullptr)
+						{
+							const XMMATRIX W = XMLoadFloat4x4(&object->worldMatrix);
+							for (auto& x : mesh->vertex_positions)
+							{
+								XMVECTOR P = XMLoadFloat3(&x);
+								P = XMVector3Transform(P, W);
+								XMFLOAT3 p;
+								XMStoreFloat3(&p, P);
+								p.x -= aabb._min.x;
+								p.z -= aabb._min.z;
+								int coord = int(p.x) + int(p.z) * saved_heightmap.width;
+								saved_heightmap.data[coord] = uint8_t(wi::math::InverseLerp(aabb._min.y, aabb._max.y, p.y) * 255u);
+							}
+						}
+					}
+				}
+
+				wi::graphics::TextureDesc desc;
+				desc.width = uint32_t(saved_heightmap.width);
+				desc.height = uint32_t(saved_heightmap.height);
+				desc.format = wi::graphics::Format::R8_UNORM;
+				bool success = wi::helper::saveTextureToFile(saved_heightmap.data, desc, wi::helper::ReplaceExtension(fileName, "PNG"));
+				assert(success);
+
+				});
+			});
+		});
 
 	heightmapButton.OnClick([=](wi::gui::EventArgs args) {
 

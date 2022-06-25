@@ -126,6 +126,7 @@ struct TerrainGenerator : public wi::gui::Window
 	wi::gui::Slider voronoiShapeSlider;
 	wi::gui::Slider voronoiFalloffSlider;
 	wi::gui::Slider voronoiPerturbationSlider;
+	wi::gui::Button saveHeightmapButton;
 	wi::gui::Button heightmapButton;
 	wi::gui::Slider heightmapBlendSlider;
 
