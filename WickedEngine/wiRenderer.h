@@ -841,7 +841,7 @@ namespace wi::renderer
 	uint32_t GetDDGIRayCount();
 	void SetGIBoost(float value);
 	float GetGIBoost();
-	void ClearPSO(const Visibility& vis,wi::graphics::CommandList cmd);
+	void Workaround(const Visibility& vis, const int bug,wi::graphics::CommandList cmd);
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	wi::primitive::Ray GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const wi::scene::CameraComponent& camera = wi::scene::GetCamera());

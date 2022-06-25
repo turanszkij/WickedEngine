@@ -44,6 +44,12 @@ namespace wi::graphics
 
 		QUEUE_COUNT,
 	};
+	enum BACKEND_TYPE
+	{
+		BACKEND_DX12,
+		BACKEND_VULKAN,
+		BACKEND_COUNT,
+	};
 
 	class GraphicsDevice
 	{
@@ -203,6 +209,8 @@ namespace wi::graphics
 		virtual void EventBegin(const char* name, CommandList cmd) = 0;
 		virtual void EventEnd(CommandList cmd) = 0;
 		virtual void SetMarker(const char* name, CommandList cmd) = 0;
+
+		virtual int GetBackend(void) = 0;
 
 		virtual const RenderPass* GetCurrentRenderPass(CommandList cmd) const = 0;
 

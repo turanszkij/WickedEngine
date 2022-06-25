@@ -944,6 +944,7 @@ void RenderPath3D::Render() const
 		wi::renderer::RefreshLightmaps(*scene, cmd, instanceInclusionMask_Lightmap);
 		wi::renderer::RefreshEnvProbes(visibility_main, cmd);
 		wi::renderer::RefreshImpostors(*scene, cmd);
+		wi::renderer::Workaround(visibility_main, 1, cmd);
 		});
 
 	// Voxel GI:
@@ -953,11 +954,6 @@ void RenderPath3D::Render() const
 		wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
 			wi::renderer::VoxelRadiance(visibility_main, cmd);
 			});
-	}
-	else
-	{
-		cmd = device->BeginCommandList();
-		wi::renderer::ClearPSO(visibility_main, cmd);
 	}
 
 	if (visibility_main.IsRequestedPlanarReflections())

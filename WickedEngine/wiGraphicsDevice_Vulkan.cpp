@@ -7742,6 +7742,12 @@ using namespace vulkan_internal;
 		label.color[3] = 1.0f;
 		vkCmdInsertDebugUtilsLabelEXT(commandlist.GetCommandBuffer(), &label);
 	}
+
+	int GraphicsDevice_Vulkan::GetBackend(void)
+	{
+		return(BACKEND_VULKAN);
+	}
+
 }
 
 #endif // WICKEDENGINE_BUILD_VULKAN
