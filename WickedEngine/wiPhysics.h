@@ -48,7 +48,7 @@ namespace wi::physics
 	);
 
 	// Apply impulse at body center
-	void ApplyBodyImpulse(
+	void ApplyImpulse(
 		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse
 	);
