@@ -34,6 +34,8 @@ inline static const float chunk_half_width = (chunk_width - 1) * 0.5f;
 inline static const float chunk_width_rcp = 1.0f / (chunk_width - 1);
 inline static const uint32_t vertexCount = chunk_width * chunk_width;
 inline static const int max_lod = (int)std::log2(chunk_width - 3) + 1;
+inline static const float chunk_scale = 1;
+inline static const float chunk_scale_rcp = 1.0f / chunk_scale;
 struct ChunkData
 {
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;

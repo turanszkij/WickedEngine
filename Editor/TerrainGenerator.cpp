@@ -603,8 +603,8 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 	if (centerToCamCheckBox.GetCheck())
 	{
-		center_chunk.x = (int)std::floor((camera.Eye.x + chunk_half_width) * chunk_width_rcp);
-		center_chunk.z = (int)std::floor((camera.Eye.z + chunk_half_width) * chunk_width_rcp);
+		center_chunk.x = (int)std::floor((camera.Eye.x + chunk_half_width) * chunk_width_rcp * chunk_scale_rcp);
+		center_chunk.z = (int)std::floor((camera.Eye.z + chunk_half_width) * chunk_width_rcp * chunk_scale_rcp);
 	}
 
 	const int removal_threshold = (int)generationSlider.GetValue() + 2;
@@ -760,9 +760,16 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 			};
 			device->BindResources(res, 0, arraysize(res), cmd);
 
-			const MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
 			if (material != nullptr)
 			{
+				// Shrink the uvs to avoid wrap sampling across edge by object rendering shaders:
+				float virtual_texture_resolution_rcp = 1.0f / float(chunk_data.virtual_texture_resolution);
+				material->texMulAdd.x = float(chunk_data.virtual_texture_resolution - 1) * virtual_texture_resolution_rcp;
+				material->texMulAdd.y = float(chunk_data.virtual_texture_resolution - 1) * virtual_texture_resolution_rcp;
+				material->texMulAdd.z = 0.5f * virtual_texture_resolution_rcp;
+				material->texMulAdd.w = 0.5f * virtual_texture_resolution_rcp;
+
 				for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
 				{
 					if (virtual_texture_available[i])
@@ -822,7 +829,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 				TransformComponent& transform = *generation_scene.transforms.GetComponent(chunk_data.entity);
 				transform.ClearTransform();
-				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (chunk_width - 1)), 0, float(chunk.z * (chunk_width - 1)));
+				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (chunk_width - 1)) * chunk_scale, 0, float(chunk.z * (chunk_width - 1)) * chunk_scale);
 				transform.Translate(chunk_pos);
 				transform.UpdateTransform();
 
@@ -856,8 +863,8 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 				wi::jobsystem::context ctx;
 				wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width, [&](wi::jobsystem::JobArgs args) {
 					uint32_t index = args.jobIndex;
-					const float x = float(index % chunk_width) - chunk_half_width;
-					const float z = float(index / chunk_width) - chunk_half_width;
+					const float x = (float(index % chunk_width) - chunk_half_width) * chunk_scale;
+					const float z = (float(index / chunk_width) - chunk_half_width) * chunk_scale;
 					XMVECTOR corners[3];
 					XMFLOAT2 corner_offsets[3] = {
 						XMFLOAT2(0, 0),
@@ -928,7 +935,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 					mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
 					mesh.vertex_normals[index] = normal;
-					const XMFLOAT2 uv = XMFLOAT2(x * chunk_width_rcp + 0.5f, z * chunk_width_rcp + 0.5f);
+					const XMFLOAT2 uv = XMFLOAT2(x * chunk_scale_rcp * chunk_width_rcp + 0.5f, z * chunk_scale_rcp * chunk_width_rcp + 0.5f);
 					mesh.vertex_uvset_0[index] = uv;
 
 					XMFLOAT3 vertex_pos(chunk_pos.x + x, height, chunk_pos.z + z);
