@@ -141,7 +141,15 @@ namespace wi::physics
 			if(mesh != nullptr)
 			{
 				int totalVerts = (int)mesh->vertex_positions.size();
-				int totalTriangles = (int)mesh->indices.size() / 3;
+				int totalTriangles = 0;
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh->GetLODSubsetRange(0, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+					totalTriangles += int(subset.indexCount / 3);
+				}
 
 				btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray(
 					totalTriangles,
@@ -551,67 +559,74 @@ namespace wi::physics
 					}
 
 					// Update tangent vectors:
-					if (!mesh.vertex_uvset_0.empty())
+					if (!mesh.vertex_uvset_0.empty() && !mesh.vertex_normals.empty())
 					{
-						for (size_t i = 0; i < mesh.indices.size(); i += 3)
+						uint32_t first_subset = 0;
+						uint32_t last_subset = 0;
+						mesh.GetLODSubsetRange(0, first_subset, last_subset);
+						for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 						{
-							const uint32_t i0 = mesh.indices[i + 0];
-							const uint32_t i1 = mesh.indices[i + 1];
-							const uint32_t i2 = mesh.indices[i + 2];
+							const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+							for (size_t i = 0; i < subset.indexCount; i += 3)
+							{
+								const uint32_t i0 = mesh.indices[i + 0];
+								const uint32_t i1 = mesh.indices[i + 1];
+								const uint32_t i2 = mesh.indices[i + 2];
 
-							const XMFLOAT3 v0 = physicscomponent->vertex_positions_simulation[i0].pos;
-							const XMFLOAT3 v1 = physicscomponent->vertex_positions_simulation[i1].pos;
-							const XMFLOAT3 v2 = physicscomponent->vertex_positions_simulation[i2].pos;
+								const XMFLOAT3 v0 = physicscomponent->vertex_positions_simulation[i0].pos;
+								const XMFLOAT3 v1 = physicscomponent->vertex_positions_simulation[i1].pos;
+								const XMFLOAT3 v2 = physicscomponent->vertex_positions_simulation[i2].pos;
 
-							const XMFLOAT2 u0 = mesh.vertex_uvset_0[i0];
-							const XMFLOAT2 u1 = mesh.vertex_uvset_0[i1];
-							const XMFLOAT2 u2 = mesh.vertex_uvset_0[i2];
+								const XMFLOAT2 u0 = mesh.vertex_uvset_0[i0];
+								const XMFLOAT2 u1 = mesh.vertex_uvset_0[i1];
+								const XMFLOAT2 u2 = mesh.vertex_uvset_0[i2];
 
-							const XMVECTOR nor0 = physicscomponent->vertex_positions_simulation[i0].LoadNOR();
-							const XMVECTOR nor1 = physicscomponent->vertex_positions_simulation[i1].LoadNOR();
-							const XMVECTOR nor2 = physicscomponent->vertex_positions_simulation[i2].LoadNOR();
+								const XMVECTOR nor0 = physicscomponent->vertex_positions_simulation[i0].LoadNOR();
+								const XMVECTOR nor1 = physicscomponent->vertex_positions_simulation[i1].LoadNOR();
+								const XMVECTOR nor2 = physicscomponent->vertex_positions_simulation[i2].LoadNOR();
 
-							const XMVECTOR facenormal = XMVector3Normalize(XMVectorAdd(XMVectorAdd(nor0, nor1), nor2));
+								const XMVECTOR facenormal = XMVector3Normalize(XMVectorAdd(XMVectorAdd(nor0, nor1), nor2));
 
-							const float x1 = v1.x - v0.x;
-							const float x2 = v2.x - v0.x;
-							const float y1 = v1.y - v0.y;
-							const float y2 = v2.y - v0.y;
-							const float z1 = v1.z - v0.z;
-							const float z2 = v2.z - v0.z;
+								const float x1 = v1.x - v0.x;
+								const float x2 = v2.x - v0.x;
+								const float y1 = v1.y - v0.y;
+								const float y2 = v2.y - v0.y;
+								const float z1 = v1.z - v0.z;
+								const float z2 = v2.z - v0.z;
 
-							const float s1 = u1.x - u0.x;
-							const float s2 = u2.x - u0.x;
-							const float t1 = u1.y - u0.y;
-							const float t2 = u2.y - u0.y;
+								const float s1 = u1.x - u0.x;
+								const float s2 = u2.x - u0.x;
+								const float t1 = u1.y - u0.y;
+								const float t2 = u2.y - u0.y;
 
-							const float r = 1.0f / (s1 * t2 - s2 * t1);
-							const XMVECTOR sdir = XMVectorSet((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
-								(t2 * z1 - t1 * z2) * r, 0);
-							const XMVECTOR tdir = XMVectorSet((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
-								(s1 * z2 - s2 * z1) * r, 0);
+								const float r = 1.0f / (s1 * t2 - s2 * t1);
+								const XMVECTOR sdir = XMVectorSet((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
+									(t2 * z1 - t1 * z2) * r, 0);
+								const XMVECTOR tdir = XMVectorSet((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
+									(s1 * z2 - s2 * z1) * r, 0);
 
-							XMVECTOR tangent;
-							tangent = XMVector3Normalize(XMVectorSubtract(sdir, XMVectorMultiply(facenormal, XMVector3Dot(facenormal, sdir))));
-							float sign = XMVectorGetX(XMVector3Dot(XMVector3Cross(tangent, facenormal), tdir)) < 0.0f ? -1.0f : 1.0f;
+								XMVECTOR tangent;
+								tangent = XMVector3Normalize(XMVectorSubtract(sdir, XMVectorMultiply(facenormal, XMVector3Dot(facenormal, sdir))));
+								float sign = XMVectorGetX(XMVector3Dot(XMVector3Cross(tangent, facenormal), tdir)) < 0.0f ? -1.0f : 1.0f;
 
-							XMFLOAT3 t;
-							XMStoreFloat3(&t, tangent);
+								XMFLOAT3 t;
+								XMStoreFloat3(&t, tangent);
 
-							physicscomponent->vertex_tangents_tmp[i0].x += t.x;
-							physicscomponent->vertex_tangents_tmp[i0].y += t.y;
-							physicscomponent->vertex_tangents_tmp[i0].z += t.z;
-							physicscomponent->vertex_tangents_tmp[i0].w = sign;
+								physicscomponent->vertex_tangents_tmp[i0].x += t.x;
+								physicscomponent->vertex_tangents_tmp[i0].y += t.y;
+								physicscomponent->vertex_tangents_tmp[i0].z += t.z;
+								physicscomponent->vertex_tangents_tmp[i0].w = sign;
 
-							physicscomponent->vertex_tangents_tmp[i1].x += t.x;
-							physicscomponent->vertex_tangents_tmp[i1].y += t.y;
-							physicscomponent->vertex_tangents_tmp[i1].z += t.z;
-							physicscomponent->vertex_tangents_tmp[i1].w = sign;
+								physicscomponent->vertex_tangents_tmp[i1].x += t.x;
+								physicscomponent->vertex_tangents_tmp[i1].y += t.y;
+								physicscomponent->vertex_tangents_tmp[i1].z += t.z;
+								physicscomponent->vertex_tangents_tmp[i1].w = sign;
 
-							physicscomponent->vertex_tangents_tmp[i2].x += t.x;
-							physicscomponent->vertex_tangents_tmp[i2].y += t.y;
-							physicscomponent->vertex_tangents_tmp[i2].z += t.z;
-							physicscomponent->vertex_tangents_tmp[i2].w = sign;
+								physicscomponent->vertex_tangents_tmp[i2].x += t.x;
+								physicscomponent->vertex_tangents_tmp[i2].y += t.y;
+								physicscomponent->vertex_tangents_tmp[i2].z += t.z;
+								physicscomponent->vertex_tangents_tmp[i2].w = sign;
+							}
 						}
 
 						for (size_t i = 0; i < physicscomponent->vertex_tangents_simulation.size(); ++i)
