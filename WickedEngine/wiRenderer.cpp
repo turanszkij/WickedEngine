@@ -7737,7 +7737,7 @@ void Visibility_Prepare(
 			device->BindUAV(res.depthbuffer, 5, cmd, 2);
 			device->BindUAV(res.depthbuffer, 6, cmd, 3);
 			device->BindUAV(res.depthbuffer, 7, cmd, 4);
-			barrier_stack.push_back(GPUBarrier::Image(res.depthbuffer, res.depthbuffer->desc.layout, ResourceState::UNORDERED_ACCESS));
+			barrier_stack.push_back(GPUBarrier::Image(res.depthbuffer, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
 		}
 		else
 		{
@@ -7754,7 +7754,7 @@ void Visibility_Prepare(
 			device->BindUAV(res.lineardepth, 10, cmd, 2);
 			device->BindUAV(res.lineardepth, 11, cmd, 3);
 			device->BindUAV(res.lineardepth, 12, cmd, 4);
-			barrier_stack.push_back(GPUBarrier::Image(res.lineardepth, res.lineardepth->desc.layout, ResourceState::UNORDERED_ACCESS));
+			barrier_stack.push_back(GPUBarrier::Image(res.lineardepth, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
 		}
 		else
 		{
@@ -7767,7 +7767,7 @@ void Visibility_Prepare(
 		if (res.primitiveID_resolved)
 		{
 			device->BindUAV(res.primitiveID_resolved, 13, cmd);
-			barrier_stack.push_back(GPUBarrier::Image(res.primitiveID_resolved, res.primitiveID_resolved->desc.layout, ResourceState::UNORDERED_ACCESS));
+			barrier_stack.push_back(GPUBarrier::Image(res.primitiveID_resolved, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
 		}
 		else
 		{
