@@ -143,36 +143,20 @@ namespace wi::physics
 				int totalVerts = (int)mesh->vertex_positions.size();
 				int totalTriangles = (int)mesh->indices.size() / 3;
 
-				btVector3* btVerts = new btVector3[totalVerts];
-				size_t i = 0;
-				for (auto& pos : mesh->vertex_positions)
-				{
-					btVerts[i++] = btVector3(pos.x, pos.y, pos.z);
-				}
-
-				int* btInd = new int[mesh->indices.size()];
-				i = 0;
-				for (auto& ind : mesh->indices)
-				{
-					btInd[i++] = ind;
-				}
-
-				int vertStride = sizeof(btVector3);
-				int indexStride = 3 * sizeof(int);
-
 				btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray(
 					totalTriangles,
-					btInd,
-					indexStride,
+					(int*)mesh->indices.data(),
+					3 * sizeof(int),
 					totalVerts,
-					(btScalar*)&btVerts[0].x(),
-					vertStride
+					(btScalar*)mesh->vertex_positions.data(),
+					sizeof(XMFLOAT3)
 				);
 
 				bool useQuantizedAabbCompression = true;
 				shape = new btBvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
 				btVector3 S(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
 				shape->setLocalScaling(S);
+				shape->setUserPointer(indexVertexArrays);
 			}
 			else
 			{
@@ -246,7 +230,7 @@ namespace wi::physics
 		XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
 
 		const int vCount = (int)physicscomponent.physicsToGraphicsVertexMapping.size();
-		btScalar* btVerts = new btScalar[vCount * 3];
+		wi::vector<btScalar> btVerts(vCount * 3);
 		for (int i = 0; i < vCount; ++i) 
 		{
 			uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[i];
@@ -263,7 +247,7 @@ namespace wi::physics
 
 		const int iCount = (int)mesh.indices.size();
 		const int tCount = iCount / 3;
-		int* btInd = new int[iCount];
+		wi::vector<int> btInd(iCount);
 		for (int i = 0; i < iCount; ++i) 
 		{
 			uint32_t ind = mesh.indices[i];
@@ -273,13 +257,11 @@ namespace wi::physics
 
 		btSoftBody* softbody = btSoftBodyHelpers::CreateFromTriMesh(
 			dynamicsWorld.getWorldInfo()
-			, btVerts
-			, btInd
+			, btVerts.data()
+			, btInd.data()
 			, tCount
 			, false
 		);
-		delete[] btVerts;
-		delete[] btInd;
 
 		if (softbody)
 		{
@@ -435,7 +417,9 @@ namespace wi::physics
 				physicscomponent._flags &= ~SoftBodyPhysicsComponent::FORCE_RESET;
 				if (physicscomponent.physicsobject != nullptr)
 				{
-					dynamicsWorld.removeSoftBody((btSoftBody*)physicscomponent.physicsobject);
+					btSoftBody* softbody = (btSoftBody*)physicscomponent.physicsobject;
+					delete softbody;
+					dynamicsWorld.removeSoftBody(softbody);
 					physicscomponent.physicsobject = nullptr;
 				}
 			}
@@ -497,7 +481,14 @@ namespace wi::physics
 				RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
 				if (physicscomponent == nullptr || physicscomponent->physicsobject != rigidbody)
 				{
+					btCollisionShape* shape = rigidbody->getCollisionShape();
+					btTriangleIndexVertexArray* triangleinfo = (btTriangleIndexVertexArray*)shape->getUserPointer();
+					delete triangleinfo;
+					delete shape;
+					btMotionState* motionstate = rigidbody->getMotionState();
+					delete motionstate;
 					dynamicsWorld.removeRigidBody(rigidbody);
+					delete rigidbody;
 					i--;
 					continue;
 				}
@@ -526,6 +517,7 @@ namespace wi::physics
 					if (physicscomponent == nullptr || physicscomponent->physicsobject != softbody)
 					{
 						dynamicsWorld.removeSoftBody(softbody);
+						delete softbody;
 						i--;
 						continue;
 					}
