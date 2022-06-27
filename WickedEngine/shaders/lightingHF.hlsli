@@ -220,7 +220,8 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 {
 	float3 L = light.position - surface.P;
 	const float dist2 = dot(L, L);
-	const float range2 = light.GetRange() * light.GetRange();
+	const float range = light.GetRange();
+	const float range2 = range * range;
 
 	[branch]
 	if (dist2 < range2)
@@ -254,8 +255,8 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 			{
 				float3 light_color = light.GetColor().rgb * light.GetEnergy() * shadow;
 
-				const float att = saturate(1 - (dist2 / range2));
-				const float attenuation = att * att;
+				float attenuation = saturate(1 - (dist2 / range2));
+				attenuation *= attenuation;
 				light_color *= attenuation;
 
 				lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
@@ -268,7 +269,8 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 {
 	float3 L = light.position - surface.P;
 	const float dist2 = dot(L, L);
-	const float range2 = light.GetRange() * light.GetRange();
+	const float range = light.GetRange();
+	const float range2 = range * range;
 
 	[branch]
 	if (dist2 < range2)

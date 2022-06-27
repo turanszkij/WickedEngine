@@ -34,7 +34,8 @@ float4 main(VertexToPixel input) : SV_TARGET
 		const float dist = sqrt(dist2);
 		L /= dist;
 
-		const float range2 = light.GetRange() * light.GetRange();
+		const float range = light.GetRange();
+		const float range2 = range * range;
 		float3 attenuation = saturate(1.0 - (dist2 / range2));
 
 		// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles

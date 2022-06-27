@@ -163,7 +163,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				{
 					L = light.position - surface.P;
 					const float dist2 = dot(L, L);
-					const float range2 = light.GetRange() * light.GetRange();
+					const float range = light.GetRange();
+					const float range2 = range * range;
 
 					[branch]
 					if (dist2 < range2)
@@ -179,9 +180,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 							lighting.direct.diffuse = lightColor;
 
-							const float range2 = light.GetRange() * light.GetRange();
-							const float att = saturate(1.0 - (dist2 / range2));
-							const float attenuation = att * att;
+							float attenuation = saturate(1.0 - (dist2 / range2));
+							attenuation *= attenuation;
 
 							lighting.direct.diffuse *= attenuation;
 						}
@@ -192,7 +192,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				{
 					L = light.position - surface.P;
 					const float dist2 = dot(L, L);
-					const float range2 = light.GetRange() * light.GetRange();
+					const float range = light.GetRange();
+					const float range2 = range * range;
 
 					[branch]
 					if (dist2 < range2)
@@ -208,7 +209,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 							lighting.direct.diffuse = lightColor;
 
-							const float range2 = light.GetRange() * light.GetRange();
 							float attenuation = saturate(1.0 - (dist2 / range2));
 
 							// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
