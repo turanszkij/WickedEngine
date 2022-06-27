@@ -7,13 +7,14 @@
 
 RWStructuredBuffer<VoxelType> output : register(u0);
 
+// Note: centroid interpolation is used to avoid floating voxels in some cases
 struct PSInput
 {
 	float4 pos : SV_POSITION;
-	float4 color : COLOR;
-	float4 uvsets : UVSETS;
-	float3 N : NORMAL;
-	float3 P : POSITION3D;
+	centroid float4 color : COLOR;
+	centroid float4 uvsets : UVSETS;
+	centroid float3 N : NORMAL;
+	centroid float3 P : POSITION3D;
 };
 
 void main(PSInput input)
