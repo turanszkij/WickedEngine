@@ -1479,7 +1479,9 @@ namespace wi::scene
 			const XMFLOAT3& color = XMFLOAT3(1, 1, 1), 
 			float energy = 1, 
 			float range = 10,
-			LightComponent::LightType type = LightComponent::POINT
+			LightComponent::LightType type = LightComponent::POINT,
+			float fov = XM_PIDIV4,
+			float fov_inner = 0
 		);
 		wi::ecs::Entity Entity_CreateForce(
 			const std::string& name,

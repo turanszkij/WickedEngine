@@ -2229,7 +2229,9 @@ namespace wi::scene
 		const XMFLOAT3& color,
 		float energy,
 		float range,
-		LightComponent::LightType type)
+		LightComponent::LightType type,
+		float fov,
+		float fov_inner)
 	{
 		Entity entity = CreateEntity();
 
@@ -2249,6 +2251,8 @@ namespace wi::scene
 		light.fov = XM_PIDIV4;
 		light.color = color;
 		light.SetType(type);
+		light.fov = fov;
+		light.fov_inner = fov_inner;
 
 		return entity;
 	}

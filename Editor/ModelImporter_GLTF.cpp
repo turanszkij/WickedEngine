@@ -193,6 +193,13 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 		entity = scene.Entity_CreateCamera(node.name, wi::scene::GetCamera().width, wi::scene::GetCamera().height, 0.1f, 800);
 	}
 
+	auto ext_lights_punctual = node.extensions.find("KHR_lights_punctual");
+	if (ext_lights_punctual != node.extensions.end())
+	{
+		// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
+		entity = scene.Entity_CreateLight(""); // light component will be filled later
+	}
+
 	if (entity == INVALID_ENTITY)
 	{
 		entity = CreateEntity();
@@ -1350,6 +1357,39 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 		}
 
+	}
+
+	// Create lights:
+	int lightIndex = 0;
+	for (auto& x : state.gltfModel.lights)
+	{
+		Entity entity = scene.lights.GetEntity(lightIndex);
+		LightComponent& light = scene.lights[lightIndex++];
+		NameComponent& name = *scene.names.GetComponent(entity);
+		name = x.name;
+
+		if (!x.type.compare("spot"))
+		{
+			light.type = LightComponent::LightType::SPOT;
+		}
+		if (!x.type.compare("point"))
+		{
+			light.type = LightComponent::LightType::POINT;
+		}
+		if (!x.type.compare("directional"))
+		{
+			light.type = LightComponent::LightType::DIRECTIONAL;
+		}
+
+		if (!x.color.empty())
+		{
+			light.color = XMFLOAT3(float(x.color[0]), float(x.color[1]), float(x.color[2]));
+		}
+
+		light.energy = float(x.intensity);
+		light.range_local = x.range > 0 ? float(x.range) : std::numeric_limits<float>::max();
+		light.fov = float(x.spot.outerConeAngle);
+		light.fov_inner = float(x.spot.innerConeAngle);
 	}
 
 	if (transform_to_LH)
