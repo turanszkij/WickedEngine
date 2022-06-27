@@ -160,34 +160,31 @@ void main(PSInput input)
 							[branch]
 							if (NdotL > 0)
 							{
-								const float SpotFactor = dot(L, light.GetDirection());
-								const float spotCutOff = light.GetConeAngleCos();
+								const float range2 = light.GetRange() * light.GetRange();
+								float attenuation = saturate(1.0 - (dist2 / range2));
+
+								// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
+								float cd = dot(light.GetDirection(), L);
+								float angularAttenuation = saturate(cd * light.GetAngleScale() + light.GetAngleOffset());
+								attenuation *= angularAttenuation;
+
+								attenuation *= attenuation;
+								float3 lightColor = light.GetColor().rgb * light.GetEnergy() * NdotL * attenuation;
 
 								[branch]
-								if (SpotFactor > spotCutOff)
+								if (light.IsCastingShadow() >= 0)
 								{
-									const float range2 = light.GetRange() * light.GetRange();
-									const float att = saturate(1.0 - (dist2 / range2));
-									float attenuation = att * att;
-									attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
-
-									float3 lightColor = light.GetColor().rgb * light.GetEnergy() * NdotL * attenuation;
-
+									float4 ShPos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
+									ShPos.xyz /= ShPos.w;
+									float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 									[branch]
-									if (light.IsCastingShadow() >= 0)
+									if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
 									{
-										float4 ShPos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
-										ShPos.xyz /= ShPos.w;
-										float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
-										[branch]
-										if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
-										{
-											lightColor *= shadow_2D(light, ShPos.xyz, ShTex.xy, 0);
-										}
+										lightColor *= shadow_2D(light, ShPos.xyz, ShTex.xy, 0);
 									}
-
-									lighting.direct.diffuse += lightColor;
 								}
+
+								lighting.direct.diffuse += lightColor;
 							}
 						}
 					}

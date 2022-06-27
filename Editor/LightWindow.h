@@ -19,6 +19,7 @@ public:
 	wi::gui::Slider widthSlider;
 	wi::gui::Slider heightSlider;
 	wi::gui::Slider fovSlider;
+	wi::gui::Slider fovInnerSlider;
 	wi::gui::CheckBox	shadowCheckBox;
 	wi::gui::CheckBox	haloCheckBox;
 	wi::gui::CheckBox	volumetricsCheckBox;

@@ -103,6 +103,20 @@ void LightWindow::Create(EditorComponent* editor)
 	fovSlider.SetTooltip("Adjust the cone aperture for spotlight.");
 	AddWidget(&fovSlider);
 
+	fovInnerSlider.Create(0.1f, XM_PI - 0.01f, 0, 100000, "FOV (inner): ");
+	fovInnerSlider.SetSize(XMFLOAT2(100, hei));
+	fovInnerSlider.SetPos(XMFLOAT2(x, y += step));
+	fovInnerSlider.OnSlide([&](wi::gui::EventArgs args) {
+		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->fov_inner = args.fValue;
+		}
+		});
+	fovInnerSlider.SetEnabled(false);
+	fovInnerSlider.SetTooltip("Adjust the inner cone aperture for spotlight.");
+	AddWidget(&fovInnerSlider);
+
 	shadowCheckBox.Create("Shadow: ");
 	shadowCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -319,6 +333,7 @@ void LightWindow::SetEntity(Entity entity)
 		//widthSlider.SetValue(light->width);
 		//heightSlider.SetValue(light->height);
 		fovSlider.SetValue(light->fov);
+		fovInnerSlider.SetValue(light->fov_inner);
 		shadowCheckBox.SetEnabled(true);
 		shadowCheckBox.SetCheck(light->IsCastingShadow());
 		haloCheckBox.SetEnabled(true);
@@ -355,6 +370,7 @@ void LightWindow::SetEntity(Entity entity)
 		widthSlider.SetEnabled(false);
 		heightSlider.SetEnabled(false);
 		fovSlider.SetEnabled(false);
+		fovInnerSlider.SetEnabled(false);
 		shadowCheckBox.SetEnabled(false);
 		haloCheckBox.SetEnabled(false);
 		volumetricsCheckBox.SetEnabled(false);
@@ -375,6 +391,7 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 	{
 		rangeSlider.SetEnabled(false);
 		fovSlider.SetEnabled(false);
+		fovInnerSlider.SetEnabled(false);
 	}
 	else
 	{
@@ -395,10 +412,12 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 			if (type == LightComponent::SPOT)
 			{
 				fovSlider.SetEnabled(true);
+				fovInnerSlider.SetEnabled(true);
 			}
 			else
 			{
 				fovSlider.SetEnabled(false);
+				fovInnerSlider.SetEnabled(false);
 			}
 		}
 	}

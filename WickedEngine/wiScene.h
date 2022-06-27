@@ -857,6 +857,7 @@ namespace wi::scene
 		float energy = 1.0f;
 		float range_local = 10.0f;
 		float fov = XM_PIDIV4;
+		float fov_inner = 0;
 
 		wi::vector<std::string> lensFlareNames;
 

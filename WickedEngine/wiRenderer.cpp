@@ -3588,7 +3588,18 @@ void UpdateRenderData(
 			break;
 			case LightComponent::SPOT:
 			{
-				shaderentity.SetConeAngleCos(cosf(light.fov * 0.5f));
+				const float outerConeAngle = light.fov * 0.5f;
+				const float innerConeAngle = std::min(light.fov_inner * 0.5f, outerConeAngle);
+				const float outerConeAngleCos = std::cos(outerConeAngle);
+				const float innerConeAngleCos = std::cos(innerConeAngle);
+
+				// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
+				const float lightAngleScale = 1.0f / std::max(0.001f, innerConeAngleCos - outerConeAngleCos);
+				const float lightAngleOffset = -outerConeAngleCos * lightAngleScale;
+
+				shaderentity.SetConeAngleCos(outerConeAngleCos);
+				shaderentity.SetAngleScale(lightAngleScale);
+				shaderentity.SetAngleOffset(lightAngleOffset);
 				shaderentity.SetDirection(light.direction);
 
 				if (shadow)
@@ -3636,7 +3647,7 @@ void UpdateRenderData(
 			shaderentity.position = force.position;
 			shaderentity.SetEnergy(force.gravity);
 			shaderentity.SetRange(1.0f / std::max(0.0001f, force.GetRange())); // avoid division in shader
-			shaderentity.SetConeAngleCos(force.GetRange()); // this will be the real range in the less common shaders...
+			shaderentity.SetAngleScale(force.GetRange()); // this will be the real range in the less common shaders...
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
 			shaderentity.SetDirection(force.direction);
 

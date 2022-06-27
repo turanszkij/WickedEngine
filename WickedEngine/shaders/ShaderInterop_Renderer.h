@@ -417,6 +417,7 @@ struct ObjectPushConstants
 	uint instance_offset;
 };
 
+
 // Warning: the size of this structure directly affects shader performance.
 //	Try to reduce it as much as possible!
 //	Keep it aligned to 16 bytes for best performance!
@@ -425,13 +426,13 @@ struct ShaderEntity
 	float3 position;
 	uint type8_flags8_range16;
 
-	uint2 direction16_coneAngleCos16;
-	uint energy16_X16; // 16 bits free
+	uint2 direction16_energy16;
 	uint color;
+	float coneAngleCos;
 
 	uint layerMask;
 	uint indices;
-	uint cubeRemap;
+	uint remap;
 	uint userdata;
 
 	float4 shadowAtlasMulAdd;
@@ -444,44 +445,52 @@ struct ShaderEntity
 	}
 	inline uint GetFlags()
 	{
-		return (type8_flags8_range16 >> 8) & 0xFF;
+		return (type8_flags8_range16 >> 8u) & 0xFF;
 	}
 	inline float GetRange()
 	{
-		return f16tof32((type8_flags8_range16 >> 16) & 0xFFFF);
+		return f16tof32((type8_flags8_range16 >> 16u) & 0xFFFF);
 	}
 	inline float3 GetDirection()
 	{
 		return float3(
-			f16tof32(direction16_coneAngleCos16.x & 0xFFFF),
-			f16tof32((direction16_coneAngleCos16.x >> 16) & 0xFFFF),
-			f16tof32(direction16_coneAngleCos16.y & 0xFFFF)
+			f16tof32(direction16_energy16.x & 0xFFFF),
+			f16tof32((direction16_energy16.x >> 16u) & 0xFFFF),
+			f16tof32(direction16_energy16.y & 0xFFFF)
 		);
-	}
-	inline float GetConeAngleCos()
-	{
-		return f16tof32((direction16_coneAngleCos16.y >> 16) & 0xFFFF);
 	}
 	inline float GetEnergy()
 	{
-		return f16tof32(energy16_X16 & 0xFFFF);
+		return f16tof32((direction16_energy16.y >> 16u) & 0xFFFF);
+	}
+	inline float GetConeAngleCos()
+	{
+		return coneAngleCos;
+	}
+	inline float GetAngleScale()
+	{
+		return f16tof32(remap & 0xFFFF);
+	}
+	inline float GetAngleOffset()
+	{
+		return f16tof32((remap >> 16u) & 0xFFFF);
 	}
 	inline float GetCubemapDepthRemapNear()
 	{
-		return f16tof32(cubeRemap & 0xFFFF);
+		return f16tof32(remap & 0xFFFF);
 	}
 	inline float GetCubemapDepthRemapFar()
 	{
-		return f16tof32((cubeRemap >> 16) & 0xFFFF);
+		return f16tof32((remap >> 16u) & 0xFFFF);
 	}
 	inline float4 GetColor()
 	{
 		float4 fColor;
 
-		fColor.x = (float)((color >> 0) & 0xFF) / 255.0f;
-		fColor.y = (float)((color >> 8) & 0xFF) / 255.0f;
-		fColor.z = (float)((color >> 16) & 0xFF) / 255.0f;
-		fColor.w = (float)((color >> 24) & 0xFF) / 255.0f;
+		fColor.x = (float)((color >> 0u) & 0xFF) / 255.0f;
+		fColor.y = (float)((color >> 8u) & 0xFF) / 255.0f;
+		fColor.z = (float)((color >> 16u) & 0xFF) / 255.0f;
+		fColor.w = (float)((color >> 24u) & 0xFF) / 255.0f;
 
 		return fColor;
 	}
@@ -491,7 +500,7 @@ struct ShaderEntity
 	}
 	inline uint GetTextureIndex()
 	{
-		return (indices >> 16) & 0xFFFF;
+		return (indices >> 16u) & 0xFFFF;
 	}
 	inline bool IsCastingShadow()
 	{
@@ -509,38 +518,46 @@ struct ShaderEntity
 	}
 	inline void SetFlags(uint flags)
 	{
-		type8_flags8_range16 |= (flags & 0xFF) << 8;
+		type8_flags8_range16 |= (flags & 0xFF) << 8u;
 	}
 	inline void SetRange(float value)
 	{
-		type8_flags8_range16 |= XMConvertFloatToHalf(value) << 16;
+		type8_flags8_range16 |= XMConvertFloatToHalf(value) << 16u;
 	}
 	inline void SetDirection(float3 value)
 	{
-		direction16_coneAngleCos16.x |= XMConvertFloatToHalf(value.x);
-		direction16_coneAngleCos16.x |= XMConvertFloatToHalf(value.y) << 16;
-		direction16_coneAngleCos16.y |= XMConvertFloatToHalf(value.z);
-	}
-	inline void SetConeAngleCos(float value)
-	{
-		direction16_coneAngleCos16.y |= XMConvertFloatToHalf(value) << 16;
+		direction16_energy16.x |= XMConvertFloatToHalf(value.x);
+		direction16_energy16.x |= XMConvertFloatToHalf(value.y) << 16u;
+		direction16_energy16.y |= XMConvertFloatToHalf(value.z);
 	}
 	inline void SetEnergy(float value)
 	{
-		energy16_X16 |= XMConvertFloatToHalf(value);
+		direction16_energy16.y |= XMConvertFloatToHalf(value) << 16u;
+	}
+	inline void SetConeAngleCos(float value)
+	{
+		coneAngleCos = value;
+	}
+	inline void SetAngleScale(float value)
+	{
+		remap |= XMConvertFloatToHalf(value);
+	}
+	inline void SetAngleOffset(float value)
+	{
+		remap |= XMConvertFloatToHalf(value) << 16u;
 	}
 	inline void SetCubeRemapNear(float value)
 	{
-		cubeRemap |= XMConvertFloatToHalf(value);
+		remap |= XMConvertFloatToHalf(value);
 	}
 	inline void SetCubeRemapFar(float value)
 	{
-		cubeRemap |= XMConvertFloatToHalf(value) << 16;
+		remap |= XMConvertFloatToHalf(value) << 16u;
 	}
 	inline void SetIndices(uint matrixIndex, uint textureIndex)
 	{
 		indices = matrixIndex & 0xFFFF;
-		indices |= (textureIndex & 0xFFFF) << 16;
+		indices |= (textureIndex & 0xFFFF) << 16u;
 	}
 
 #endif // __cplusplus

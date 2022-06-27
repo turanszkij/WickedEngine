@@ -282,46 +282,44 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 		[branch]
 		if (any(surface_to_light.NdotL_sss))
 		{
-			const float spot_factor = dot(L, light.GetDirection());
-			const float spot_cutoff = light.GetConeAngleCos();
+			float3 shadow = shadow_mask;
 
 			[branch]
-			if (spot_factor > spot_cutoff)
+			if (light.IsCastingShadow() && surface.IsReceiveShadow())
 			{
-				float3 shadow = shadow_mask;
-
-				[branch]
-				if (light.IsCastingShadow() && surface.IsReceiveShadow())
-				{
 #ifdef SHADOW_MASK_ENABLED
-					[branch]
-					if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0)
+				[branch]
+				if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0)
 #endif // SHADOW_MASK_ENABLED
+				{
+					float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
+					shadow_pos.xyz /= shadow_pos.w;
+					float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
+					[branch]
+					if (is_saturated(shadow_uv))
 					{
-						float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
-						shadow_pos.xyz /= shadow_pos.w;
-						float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
-						[branch]
-						if (is_saturated(shadow_uv))
-						{
-							shadow *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0);
-						}
+						shadow *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0);
 					}
 				}
+			}
 
-				[branch]
-				if (any(shadow))
-				{
-					float3 light_color = light.GetColor().rgb * light.GetEnergy() * shadow;
+			[branch]
+			if (any(shadow))
+			{
+				float3 light_color = light.GetColor().rgb * light.GetEnergy() * shadow;
 
-					const float att = saturate(1 - (dist2 / range2));
-					float attenuation = att * att;
-					attenuation *= saturate((1 - (1 - spot_factor) * 1 / (1 - spot_cutoff)));
-					light_color *= attenuation;
+				float attenuation = saturate(1 - (dist2 / range2));
 
-					lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
-					lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
-				}
+				// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
+				float cd = dot(light.GetDirection(), L);
+				float angularAttenuation = saturate(cd * light.GetAngleScale() + light.GetAngleOffset());
+				attenuation *= angularAttenuation;
+
+				attenuation *= attenuation;
+				light_color *= attenuation;
+
+				lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
+				lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
 			}
 		}
 	}

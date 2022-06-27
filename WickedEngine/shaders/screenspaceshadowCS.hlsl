@@ -181,16 +181,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							surfaceToLight.create(surface, L);
 
 							[branch]
-							if (any(surfaceToLight.NdotL_sss))
+							if (any(surfaceToLight.NdotL_sss) && (dot(L, light.GetDirection()) > light.GetConeAngleCos()))
 							{
-								const float SpotFactor = dot(L, light.GetDirection());
-								const float spotCutOff = light.GetConeAngleCos();
-
-								[branch]
-								if (SpotFactor > spotCutOff)
-								{
-									ray.TMax = dist;
-								}
+								ray.TMax = dist;
 							}
 						}
 					}
