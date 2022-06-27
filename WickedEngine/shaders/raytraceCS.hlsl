@@ -217,7 +217,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				[branch]
 				if (any(surfaceToLight.NdotL_sss))
 				{
-					lightColor = light.GetColor().rgb * light.GetEnergy();
+					lightColor = light.GetColor().rgb;
 
 					[branch]
 					if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
@@ -245,7 +245,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					[branch]
 					if (any(surfaceToLight.NdotL_sss))
 					{
-						lightColor = light.GetColor().rgb * light.GetEnergy();
+						lightColor = light.GetColor().rgb;
 
 						float attenuation = saturate(1 - (dist2 / range2));
 						attenuation *= attenuation;
@@ -272,7 +272,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					[branch]
 					if (any(surfaceToLight.NdotL_sss))
 					{
-						lightColor = light.GetColor().rgb * light.GetEnergy();
+						lightColor = light.GetColor().rgb;
 
 						float attenuation = saturate(1 - (dist2 / range2));
 

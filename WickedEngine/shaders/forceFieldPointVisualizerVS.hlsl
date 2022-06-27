@@ -18,7 +18,7 @@ PSIn main(uint vID : SV_VERTEXID)
 	uint forceFieldID = GetFrame().forcefieldarray_offset + (uint)g_xColor.w;
 	ShaderEntity forceField = load_entity(forceFieldID);
 
-	Out.pos.xyz *= forceField.GetAngleScale(); // range...
+	Out.pos.xyz *= forceField.GetRange();
 	Out.pos.xyz += forceField.position;
 
 	Out.pos3D = Out.pos;

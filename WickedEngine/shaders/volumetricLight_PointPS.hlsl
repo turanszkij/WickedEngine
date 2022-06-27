@@ -62,5 +62,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	accumulation /= sampleCount;
 
-	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy(), 1));
+	return max(0, float4(accumulation * light.GetColor().rgb, 1));
 }

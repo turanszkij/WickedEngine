@@ -93,7 +93,7 @@ void main(PSInput input)
 						[branch]
 						if (NdotL > 0)
 						{
-							float3 lightColor = light.GetColor().rgb * light.GetEnergy() * NdotL;
+							float3 lightColor = light.GetColor().rgb * NdotL;
 
 							[branch]
 							if (light.IsCastingShadow() >= 0)
@@ -133,7 +133,7 @@ void main(PSInput input)
 								float attenuation = saturate(1.0 - (dist2 / range2));
 								attenuation *= attenuation;
 
-								float3 lightColor = light.GetColor().rgb * light.GetEnergy() * NdotL * attenuation;
+								float3 lightColor = light.GetColor().rgb * NdotL * attenuation;
 
 								[branch]
 								if (light.IsCastingShadow() >= 0) {
@@ -170,7 +170,7 @@ void main(PSInput input)
 								attenuation *= angularAttenuation;
 
 								attenuation *= attenuation;
-								float3 lightColor = light.GetColor().rgb * light.GetEnergy() * NdotL * attenuation;
+								float3 lightColor = light.GetColor().rgb * NdotL * attenuation;
 
 								[branch]
 								if (light.IsCastingShadow() >= 0)

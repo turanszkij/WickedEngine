@@ -184,7 +184,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		[branch]
 		if (any(shadow))
 		{
-			float3 light_color = light.GetColor().rgb * light.GetEnergy() * shadow;
+			float3 light_color = light.GetColor().rgb * shadow;
 
 			[branch]
 			if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
@@ -253,7 +253,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 			[branch]
 			if (any(shadow))
 			{
-				float3 light_color = light.GetColor().rgb * light.GetEnergy() * shadow;
+				float3 light_color = light.GetColor().rgb * shadow;
 
 				float attenuation = saturate(1 - (dist2 / range2));
 				attenuation *= attenuation;
@@ -308,7 +308,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (any(shadow))
 			{
-				float3 light_color = light.GetColor().rgb * light.GetEnergy() * shadow;
+				float3 light_color = light.GetColor().rgb * shadow;
 
 				float attenuation = saturate(1 - (dist2 / range2));
 

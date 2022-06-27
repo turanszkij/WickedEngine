@@ -77,7 +77,7 @@ float4 main(Input input) : SV_TARGET
 							atmosphereTransmittance = GetAtmosphericLightTransmittance(GetWeather().atmosphere, surface.P, L, texture_transmittancelut);
 						}
 
-						float3 lightColor = light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance;
+						float3 lightColor = light.GetColor().rgb * atmosphereTransmittance;
 
 						lighting.direct.diffuse = lightColor;
 					}
@@ -100,7 +100,7 @@ float4 main(Input input) : SV_TARGET
 						[branch]
 						if (NdotL > 0)
 						{
-							const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+							const float3 lightColor = light.GetColor().rgb;
 
 							lighting.direct.diffuse = lightColor;
 
@@ -129,7 +129,7 @@ float4 main(Input input) : SV_TARGET
 						[branch]
 						if (NdotL > 0)
 						{
-							const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+							const float3 lightColor = light.GetColor().rgb;
 
 							lighting.direct.diffuse = lightColor;
 

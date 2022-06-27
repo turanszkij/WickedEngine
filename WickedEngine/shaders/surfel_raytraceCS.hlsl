@@ -147,7 +147,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					[branch]
 					if (NdotL > 0)
 					{
-						float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+						float3 lightColor = light.GetColor().rgb;
 
 						[branch]
 						if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
@@ -176,7 +176,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 						[branch]
 						if (NdotL > 0)
 						{
-							const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+							const float3 lightColor = light.GetColor().rgb;
 
 							lighting.direct.diffuse = lightColor;
 
@@ -205,7 +205,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 						[branch]
 						if (NdotL > 0)
 						{
-							const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+							const float3 lightColor = light.GetColor().rgb;
 
 							lighting.direct.diffuse = lightColor;
 

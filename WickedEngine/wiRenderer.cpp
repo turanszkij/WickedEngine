@@ -3434,8 +3434,8 @@ void UpdateRenderData(
 			shaderentity.SetType(ENTITY_TYPE_DECAL);
 			shaderentity.position = decal.position;
 			shaderentity.SetRange(decal.range);
-			shaderentity.color = wi::math::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
-			shaderentity.SetEnergy(decal.emissive);
+			float emissive_mul = 1 + decal.emissive;
+			shaderentity.SetColor(float4(decal.color.x * emissive_mul, decal.color.y * emissive_mul, decal.color.z * emissive_mul, decal.color.w));
 
 			shaderentity.SetIndices(matrixCounter, 0);
 			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
@@ -3531,8 +3531,7 @@ void UpdateRenderData(
 			shaderentity.SetType(light.GetType());
 			shaderentity.position = light.position;
 			shaderentity.SetRange(light.GetRange());
-			shaderentity.color = wi::math::CompressColor(light.color);
-			shaderentity.SetEnergy(light.energy);
+			shaderentity.SetColor(float4(light.color.x* light.energy, light.color.y * light.energy, light.color.z * light.energy, 1));
 
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
@@ -3645,9 +3644,8 @@ void UpdateRenderData(
 
 			shaderentity.SetType(force.type);
 			shaderentity.position = force.position;
-			shaderentity.SetEnergy(force.gravity);
-			shaderentity.SetRange(1.0f / std::max(0.0001f, force.GetRange())); // avoid division in shader
-			shaderentity.SetAngleScale(force.GetRange()); // this will be the real range in the less common shaders...
+			shaderentity.SetGravity(force.gravity);
+			shaderentity.SetRange(force.GetRange());
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
 			shaderentity.SetDirection(force.direction);
 
