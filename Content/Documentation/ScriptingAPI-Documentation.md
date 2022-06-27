@@ -585,6 +585,7 @@ Describes an orientation in 3D space.
 - SetEnergy(float value)
 - SetColor(Vector value)
 - SetCastShadow(bool value)
+- SetVolumetricsEnabled(bool value)
 - SetFOV(float value)
 - GetType() : int result
 

@@ -162,7 +162,7 @@ void TerrainGenerator::init()
 	ClearTransform();
 
 	wi::gui::Window::Create("TerraGen (Preview version)");
-	SetSize(XMFLOAT2(420, 590));
+	SetSize(XMFLOAT2(420, 300));
 
 	float x = 160;
 	float y = 0;
@@ -372,6 +372,11 @@ void TerrainGenerator::init()
 	voronoiPerturbationSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiPerturbationSlider);
 
+	saveHeightmapButton.Create("Save Heightmap...");
+	saveHeightmapButton.SetTooltip("Save a heightmap texture from the currently generated terrain, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be normalized into 8bit PNG format which can result in precision loss!");
+	saveHeightmapButton.SetSize(XMFLOAT2(200, hei));
+	saveHeightmapButton.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&saveHeightmapButton);
 
 	heightmapButton.Create("Load Heightmap...");
 	heightmapButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be placed in the world center.");
@@ -423,6 +428,66 @@ void TerrainGenerator::init()
 	region1Slider.OnSlide(generate_callback);
 	region2Slider.OnSlide(generate_callback);
 	region3Slider.OnSlide(generate_callback);
+
+	saveHeightmapButton.OnClick([=](wi::gui::EventArgs args) {
+
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::SAVE;
+		params.description = "PNG";
+		params.extensions = { "PNG" };
+		wi::helper::FileDialog(params, [=](std::string fileName) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+
+				wi::primitive::AABB aabb;
+				for (auto& chunk : chunks)
+				{
+					const wi::primitive::AABB* object_aabb = scene->aabb_objects.GetComponent(chunk.second.entity);
+					if (object_aabb != nullptr)
+					{
+						aabb = wi::primitive::AABB::Merge(aabb, *object_aabb);
+					}
+				}
+
+				HeightmapTexture saved_heightmap;
+				saved_heightmap.width = int(aabb.getHalfWidth().x * 2 + 1);
+				saved_heightmap.height = int(aabb.getHalfWidth().z * 2 + 1);
+				saved_heightmap.data.resize(saved_heightmap.width * saved_heightmap.height);
+				std::fill(saved_heightmap.data.begin(), saved_heightmap.data.end(), 0u);
+
+				for (auto& chunk : chunks)
+				{
+					const ObjectComponent* object = scene->objects.GetComponent(chunk.second.entity);
+					if (object != nullptr)
+					{
+						const MeshComponent* mesh = scene->meshes.GetComponent(object->meshID);
+						if (mesh != nullptr)
+						{
+							const XMMATRIX W = XMLoadFloat4x4(&object->worldMatrix);
+							for (auto& x : mesh->vertex_positions)
+							{
+								XMVECTOR P = XMLoadFloat3(&x);
+								P = XMVector3Transform(P, W);
+								XMFLOAT3 p;
+								XMStoreFloat3(&p, P);
+								p.x -= aabb._min.x;
+								p.z -= aabb._min.z;
+								int coord = int(p.x) + int(p.z) * saved_heightmap.width;
+								saved_heightmap.data[coord] = uint8_t(wi::math::InverseLerp(aabb._min.y, aabb._max.y, p.y) * 255u);
+							}
+						}
+					}
+				}
+
+				wi::graphics::TextureDesc desc;
+				desc.width = uint32_t(saved_heightmap.width);
+				desc.height = uint32_t(saved_heightmap.height);
+				desc.format = wi::graphics::Format::R8_UNORM;
+				bool success = wi::helper::saveTextureToFile(saved_heightmap.data, desc, wi::helper::ReplaceExtension(fileName, "PNG"));
+				assert(success);
+
+				});
+			});
+		});
 
 	heightmapButton.OnClick([=](wi::gui::EventArgs args) {
 
@@ -538,8 +603,8 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 	if (centerToCamCheckBox.GetCheck())
 	{
-		center_chunk.x = (int)std::floor((camera.Eye.x + chunk_half_width) * chunk_width_rcp);
-		center_chunk.z = (int)std::floor((camera.Eye.z + chunk_half_width) * chunk_width_rcp);
+		center_chunk.x = (int)std::floor((camera.Eye.x + chunk_half_width) * chunk_width_rcp * chunk_scale_rcp);
+		center_chunk.z = (int)std::floor((camera.Eye.z + chunk_half_width) * chunk_width_rcp * chunk_scale_rcp);
 	}
 
 	const int removal_threshold = (int)generationSlider.GetValue() + 2;
@@ -695,9 +760,16 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 			};
 			device->BindResources(res, 0, arraysize(res), cmd);
 
-			const MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
 			if (material != nullptr)
 			{
+				// Shrink the uvs to avoid wrap sampling across edge by object rendering shaders:
+				float virtual_texture_resolution_rcp = 1.0f / float(chunk_data.virtual_texture_resolution);
+				material->texMulAdd.x = float(chunk_data.virtual_texture_resolution - 1) * virtual_texture_resolution_rcp;
+				material->texMulAdd.y = float(chunk_data.virtual_texture_resolution - 1) * virtual_texture_resolution_rcp;
+				material->texMulAdd.z = 0.5f * virtual_texture_resolution_rcp;
+				material->texMulAdd.w = 0.5f * virtual_texture_resolution_rcp;
+
 				for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
 				{
 					if (virtual_texture_available[i])
@@ -757,7 +829,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 				TransformComponent& transform = *generation_scene.transforms.GetComponent(chunk_data.entity);
 				transform.ClearTransform();
-				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (chunk_width - 1)), 0, float(chunk.z * (chunk_width - 1)));
+				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (chunk_width - 1)) * chunk_scale, 0, float(chunk.z * (chunk_width - 1)) * chunk_scale);
 				transform.Translate(chunk_pos);
 				transform.UpdateTransform();
 
@@ -791,8 +863,8 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 				wi::jobsystem::context ctx;
 				wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width, [&](wi::jobsystem::JobArgs args) {
 					uint32_t index = args.jobIndex;
-					const float x = float(index % chunk_width) - chunk_half_width;
-					const float z = float(index / chunk_width) - chunk_half_width;
+					const float x = (float(index % chunk_width) - chunk_half_width) * chunk_scale;
+					const float z = (float(index / chunk_width) - chunk_half_width) * chunk_scale;
 					XMVECTOR corners[3];
 					XMFLOAT2 corner_offsets[3] = {
 						XMFLOAT2(0, 0),
@@ -863,7 +935,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 					mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
 					mesh.vertex_normals[index] = normal;
-					const XMFLOAT2 uv = XMFLOAT2(x * chunk_width_rcp + 0.5f, z * chunk_width_rcp + 0.5f);
+					const XMFLOAT2 uv = XMFLOAT2(x * chunk_scale_rcp * chunk_width_rcp + 0.5f, z * chunk_scale_rcp * chunk_width_rcp + 0.5f);
 					mesh.vertex_uvset_0[index] = uv;
 
 					XMFLOAT3 vertex_pos(chunk_pos.x + x, height, chunk_pos.z + z);

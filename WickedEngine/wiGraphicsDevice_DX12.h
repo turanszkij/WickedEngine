@@ -117,6 +117,12 @@ namespace wi::graphics
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
 
 			wi::vector<D3D12_RESOURCE_BARRIER> frame_barriers;
+			struct Discard
+			{
+				ID3D12Resource* resource = nullptr;
+				D3D12_DISCARD_REGION region = {};
+			};
+			wi::vector<Discard> discards;
 			D3D_PRIMITIVE_TOPOLOGY prev_pt = {};
 			wi::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker;
 			size_t prev_pipeline_hash = {};

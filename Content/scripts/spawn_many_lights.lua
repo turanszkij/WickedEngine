@@ -12,7 +12,7 @@ local bounds_max = scene.GetBounds().GetMax()
 for i=1,200 do
 	local entity = CreateEntity()
 	entities[i] = entity
-	velocities[i] = math.lerp(0.1, 0.5, math.random())
+	velocities[i] = math.lerp(0.1, 0.2, math.random())
 	local light_transform = scene.Component_CreateTransform(entity)
 	light_transform.Translate(Vector(
 		math.lerp(bounds_min.GetX(), bounds_max.GetX(), math.random()),
@@ -25,6 +25,7 @@ for i=1,200 do
 	light_component.SetEnergy(6)
 	light_component.SetColor(Vector(1,0.5,0)) -- orange color
 	--light_component.SetColor(Vector(math.random(),math.random(),math.random())) -- random color
+	--light_component.SetVolumetricsEnabled(true)
 	light_component.SetCastShadow(true)
 end
 

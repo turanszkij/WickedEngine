@@ -2160,6 +2160,7 @@ Luna<LightComponent_BindLua>::FunctionType LightComponent_BindLua::methods[] = {
 	lunamethod(LightComponent_BindLua, SetEnergy),
 	lunamethod(LightComponent_BindLua, SetColor),
 	lunamethod(LightComponent_BindLua, SetCastShadow),
+	lunamethod(LightComponent_BindLua, SetVolumetricsEnabled),
 	lunamethod(LightComponent_BindLua, GetType),
 	lunamethod(LightComponent_BindLua, SetFOV),
 	{ NULL, NULL }
@@ -2258,6 +2259,20 @@ int LightComponent_BindLua::SetCastShadow(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetCastShadow(bool value) not enough arguments!");
+	}
+
+	return 0;
+}
+int LightComponent_BindLua::SetVolumetricsEnabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->SetVolumetricsEnabled(wi::lua::SGetBool(L, 1));
+	}
+	else
+	{
+		wi::lua::SError(L, "SetVolumetricsEnabled(bool value) not enough arguments!");
 	}
 
 	return 0;

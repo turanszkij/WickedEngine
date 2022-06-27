@@ -249,6 +249,7 @@ namespace wi::helper
 		basisu::image basis_image;
 		basisu::vector<basisu::image> basis_mipmaps;
 
+		int dst_channel_count = 4;
 		if (desc.format == Format::R10G10B10A2_UNORM)
 		{
 			// This will be converted first to rgba8 before saving to common format:
@@ -342,6 +343,11 @@ namespace wi::helper
 
 				data32[i] = rgba8;
 			}
+		}
+		else if (desc.format == Format::R8_UNORM)
+		{
+			// This can be saved by reducing target channel count, no conversion needed
+			dst_channel_count = 1;
 		}
 		else if (IsFormatBlockCompressed(desc.format))
 		{
@@ -478,19 +484,19 @@ namespace wi::helper
 
 		if (!extension.compare("JPG") || !extension.compare("JPEG"))
 		{
-			write_result = stbi_write_jpg_to_func(func, &filedata, (int)mip.width, (int)mip.height, 4, mip.address, 100);
+			write_result = stbi_write_jpg_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address, 100);
 		}
 		else if (!extension.compare("PNG"))
 		{
-			write_result = stbi_write_png_to_func(func, &filedata, (int)mip.width, (int)mip.height, 4, mip.address, 0);
+			write_result = stbi_write_png_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address, 0);
 		}
 		else if (!extension.compare("TGA"))
 		{
-			write_result = stbi_write_tga_to_func(func, &filedata, (int)mip.width, (int)mip.height, 4, mip.address);
+			write_result = stbi_write_tga_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address);
 		}
 		else if (!extension.compare("BMP"))
 		{
-			write_result = stbi_write_bmp_to_func(func, &filedata, (int)mip.width, (int)mip.height, 4, mip.address);
+			write_result = stbi_write_bmp_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address);
 		}
 		else
 		{

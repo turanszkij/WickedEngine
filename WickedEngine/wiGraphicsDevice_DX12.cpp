@@ -5719,7 +5719,6 @@ using namespace dx12_internal;
 				continue;
 
 			D3D12_RESOURCE_BARRIER barrierdesc = {};
-			bool skip_barrier = false;
 
 			switch (barrier.type)
 			{
@@ -5734,78 +5733,67 @@ using namespace dx12_internal;
 			case GPUBarrier::Type::IMAGE:
 			{
 				auto internal_state = to_internal(barrier.image.texture);
-
-				if (barrier.image.layout_before == ResourceState::UNDEFINED)
+				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrierdesc.Transition.pResource = internal_state->resource.Get();
+				barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.image.layout_before);
+				barrierdesc.Transition.StateAfter = _ParseResourceState(barrier.image.layout_after);
+				if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
 				{
-					skip_barrier = true;
-					if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
-					{
-						D3D12_DISCARD_REGION region = {};
-						region.FirstSubresource = D3D12CalcSubresource(
-							(UINT)std::max(0, barrier.image.mip),
-							(UINT)std::max(0, barrier.image.slice),
-							0,
-							barrier.image.texture->desc.mip_levels,
-							barrier.image.texture->desc.array_size
-						);
-						region.NumSubresources = 1;
-						region.NumRects = 0;
-						region.pRects = nullptr;
-						commandlist.GetGraphicsCommandList()->DiscardResource(internal_state->resource.Get(), &region);
-					}
-					else
-					{
-						commandlist.GetGraphicsCommandList()->DiscardResource(internal_state->resource.Get(), nullptr);
-					}
+					barrierdesc.Transition.Subresource = D3D12CalcSubresource(
+						(UINT)std::max(0, barrier.image.mip),
+						(UINT)std::max(0, barrier.image.slice),
+						0,
+						barrier.image.texture->desc.mip_levels,
+						barrier.image.texture->desc.array_size
+					);
 				}
 				else
 				{
-					barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-					barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-					barrierdesc.Transition.pResource = internal_state->resource.Get();
-					barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.image.layout_before);
-					barrierdesc.Transition.StateAfter = _ParseResourceState(barrier.image.layout_after);
+					barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				}
+
+				if (barrier.image.layout_before == ResourceState::UNDEFINED)
+				{
+					CommandList_DX12::Discard& discard = commandlist.discards.emplace_back();
+					discard.resource = internal_state->resource.Get();
+
 					if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
 					{
-						barrierdesc.Transition.Subresource = D3D12CalcSubresource(
+						discard.region.FirstSubresource = D3D12CalcSubresource(
 							(UINT)std::max(0, barrier.image.mip),
 							(UINT)std::max(0, barrier.image.slice),
 							0,
 							barrier.image.texture->desc.mip_levels,
 							barrier.image.texture->desc.array_size
 						);
+						discard.region.NumSubresources = 1;
+						discard.region.NumRects = 0;
+						discard.region.pRects = nullptr;
 					}
-					else
-					{
-						barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-					}
+
+					barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.image.texture->desc.layout);
 				}
 			}
 			break;
 			case GPUBarrier::Type::BUFFER:
 			{
 				auto internal_state = to_internal(barrier.buffer.buffer);
+				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrierdesc.Transition.pResource = internal_state->resource.Get();
+				barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.buffer.state_before);
+				barrierdesc.Transition.StateAfter = _ParseResourceState(barrier.buffer.state_after);
+				barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
 				if (barrier.buffer.state_before == ResourceState::UNDEFINED)
 				{
-					skip_barrier = true;
-					commandlist.GetGraphicsCommandList()->DiscardResource(internal_state->resource.Get(), nullptr);
-				}
-				else
-				{
-					barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-					barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-					barrierdesc.Transition.pResource = internal_state->resource.Get();
-					barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.buffer.state_before);
-					barrierdesc.Transition.StateAfter = _ParseResourceState(barrier.buffer.state_after);
-					barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+					CommandList_DX12::Discard& discard = commandlist.discards.emplace_back();
+					discard.resource = internal_state->resource.Get();
 				}
 			}
 			break;
 			}
-
-			if (skip_barrier)
-				continue;
 
 			if (barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION && commandlist.queue > QUEUE_GRAPHICS)
 			{
@@ -5824,6 +5812,15 @@ using namespace dx12_internal;
 				barrierdescs.data()
 			);
 			barrierdescs.clear();
+		}
+
+		if (!commandlist.discards.empty())
+		{
+			for (auto& discard : commandlist.discards)
+			{
+				commandlist.GetGraphicsCommandList()->DiscardResource(discard.resource, discard.region.NumSubresources > 0 ? &discard.region : nullptr);
+			}
+			commandlist.discards.clear();
 		}
 	}
 	void GraphicsDevice_DX12::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
