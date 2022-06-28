@@ -103,11 +103,7 @@ float4 main(Input input) : SV_TARGET
 							const float3 lightColor = light.GetColor().rgb;
 
 							lighting.direct.diffuse = lightColor;
-
-							float attenuation = saturate(1.0 - (dist2 / range2));
-							attenuation *= attenuation;
-
-							lighting.direct.diffuse *= attenuation;
+							lighting.direct.diffuse *= attenuation_pointlight(dist, dist2, range, range2);
 						}
 					}
 				}
@@ -138,13 +134,7 @@ float4 main(Input input) : SV_TARGET
 								const float3 lightColor = light.GetColor().rgb;
 
 								lighting.direct.diffuse = lightColor;
-
-								float attenuation = saturate(1.0 - (dist2 / range2));
-								float angularAttenuation = saturate(mad(spot_factor, light.GetAngleScale(), light.GetAngleOffset()));
-								attenuation *= angularAttenuation;
-								attenuation *= attenuation;
-
-								lighting.direct.diffuse *= attenuation;
+								lighting.direct.diffuse *= attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 							}
 						}
 					}

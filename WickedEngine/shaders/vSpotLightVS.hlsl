@@ -1,17 +1,16 @@
 #include "volumeLightHF.hlsli"
 #include "cone.hlsli"
+#include "lightingHF.hlsli"
 
 VertexToPixel main(uint vID : SV_VertexID)
 {
 	VertexToPixel Out = (VertexToPixel)0;
 		
 	float4 pos = CONE[vID];
-	pos = mul(lightWorld, pos);
+	Out.col = float4(xLightColor.rgb, 1) * saturate(1 - dot(pos.xyz, pos.xyz));
+
+	pos = mul(xLightWorld, pos);
 	Out.pos = mul(GetCamera().view_projection, pos);
-	Out.col = lerp(
-		float4(lightColor.rgb, 1), float4(0, 0, 0, 0),
-		distance(pos.xyz, float3(lightWorld._14, lightWorld._24, lightWorld._34)) / (lightEnerdis.w)
-	);
 
 	return Out;
 }

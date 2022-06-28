@@ -246,10 +246,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					if (any(surfaceToLight.NdotL_sss))
 					{
 						lightColor = light.GetColor().rgb;
-
-						float attenuation = saturate(1 - (dist2 / range2));
-						attenuation *= attenuation;
-						lightColor *= attenuation;
+						lightColor *= attenuation_pointlight(dist, dist2, range, range2);
 					}
 				}
 			}
@@ -279,13 +276,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						if (spot_factor > spot_cutoff)
 						{
 							lightColor = light.GetColor().rgb;
-
-							float attenuation = saturate(1 - (dist2 / range2));
-							float angularAttenuation = saturate(mad(spot_factor, light.GetAngleScale(), light.GetAngleOffset()));
-							attenuation *= angularAttenuation;
-							attenuation *= attenuation;
-
-							lightColor *= attenuation;
+							lightColor *= attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 						}
 					}
 				}

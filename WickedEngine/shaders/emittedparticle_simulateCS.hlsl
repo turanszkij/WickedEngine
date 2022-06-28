@@ -62,7 +62,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 						dir = forceField.GetDirection();
 					}
 
-					particle.force += dir * forceField.GetGravity() * (1 - saturate(dist / max(0.001, forceField.GetRange())));
+					particle.force += dir * forceField.GetGravity() * (1 - saturate(dist / forceField.GetRange()));
 				}
 			}
 

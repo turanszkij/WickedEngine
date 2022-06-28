@@ -2243,7 +2243,7 @@ namespace wi::scene
 
 		LightComponent& light = lights.Create(entity);
 		light.energy = energy;
-		light.range_local = range;
+		light.range = range;
 		light.fov = XM_PIDIV4;
 		light.color = color;
 		light.SetType(type);
@@ -2269,7 +2269,7 @@ namespace wi::scene
 
 		ForceFieldComponent& force = forces.Create(entity);
 		force.gravity = 0;
-		force.range_local = 0;
+		force.range = 0;
 		force.type = ENTITY_TYPE_FORCEFIELD_POINT;
 
 		return entity;
@@ -3940,7 +3940,6 @@ namespace wi::scene
 			XMStoreFloat3(&force.position, T);
 			XMStoreFloat3(&force.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), W)));
 
-			force.range_global = force.range_local * std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 		});
 	}
 	void Scene::RunLightUpdateSystem(wi::jobsystem::context& ctx)
@@ -3974,8 +3973,6 @@ namespace wi::scene
 			XMStoreFloat4(&light.rotation, R);
 			XMStoreFloat3(&light.scale, S);
 			XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
-
-			light.range_global = light.range_local * std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 
 			switch (light.type)
 			{

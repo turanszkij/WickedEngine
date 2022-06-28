@@ -40,7 +40,7 @@ void LightWindow::Create(EditorComponent* editor)
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->range_local = args.fValue;
+			light->range = args.fValue;
 		}
 	});
 	rangeSlider.SetEnabled(false);
@@ -328,7 +328,7 @@ void LightWindow::SetEntity(Entity entity)
 	{
 		energySlider.SetEnabled(true);
 		energySlider.SetValue(light->energy);
-		rangeSlider.SetValue(light->range_local);
+		rangeSlider.SetValue(light->range);
 		//radiusSlider.SetValue(light->radius);
 		//widthSlider.SetValue(light->width);
 		//heightSlider.SetValue(light->height);

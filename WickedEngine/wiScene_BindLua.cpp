@@ -2203,7 +2203,7 @@ int LightComponent_BindLua::SetRange(lua_State* L)
 	if (argc > 0)
 	{
 		float value = wi::lua::SGetFloat(L, 1);
-		component->range_local = value;
+		component->range = value;
 	}
 	else
 	{

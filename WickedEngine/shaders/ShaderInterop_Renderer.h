@@ -796,9 +796,9 @@ CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
 
 CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)
 {
-	float4x4 lightWorld;
-	float4 lightColor;
-	float4 lightEnerdis;
+	float4x4 xLightWorld;
+	float4 xLightColor;
+	float4 xLightEnerdis;
 };
 
 struct LensFlarePush

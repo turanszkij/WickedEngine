@@ -3531,6 +3531,7 @@ void UpdateRenderData(
 			shaderentity.SetType(light.GetType());
 			shaderentity.position = light.position;
 			float range = light.GetRange();
+			range = std::max(0.001f, range);
 			range = std::min(range, 65504.0f); // clamp to 16-bit float max value
 			shaderentity.SetRange(range);
 			shaderentity.SetColor(float4(light.color.x* light.energy, light.color.y * light.energy, light.color.z * light.energy, 1));
@@ -3647,7 +3648,7 @@ void UpdateRenderData(
 			shaderentity.SetType(force.type);
 			shaderentity.position = force.position;
 			shaderentity.SetGravity(force.gravity);
-			shaderentity.SetRange(force.GetRange());
+			shaderentity.SetRange(std::max(0.001f, force.GetRange()));
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
 			shaderentity.SetDirection(force.direction);
 
@@ -4415,14 +4416,14 @@ void DrawLightVisualizers(
 				{
 
 					VolumeLightCB lcb;
-					lcb.lightColor = XMFLOAT4(light.color.x, light.color.y, light.color.z, 1);
-					lcb.lightEnerdis = XMFLOAT4(light.energy, light.GetRange(), light.fov, light.energy);
+					lcb.xLightColor = XMFLOAT4(light.color.x, light.color.y, light.color.z, 1);
+					lcb.xLightEnerdis = XMFLOAT4(light.energy, light.GetRange(), light.fov, light.energy);
 
 					if (type == LightComponent::POINT)
 					{
-						lcb.lightEnerdis.w = light.GetRange()*light.energy*0.01f; // scale
-						XMStoreFloat4x4(&lcb.lightWorld, 
-							XMMatrixScaling(lcb.lightEnerdis.w, lcb.lightEnerdis.w, lcb.lightEnerdis.w)*
+						lcb.xLightEnerdis.w = light.GetRange() * 0.025f; // scale
+						XMStoreFloat4x4(&lcb.xLightWorld,
+							XMMatrixScaling(lcb.xLightEnerdis.w, lcb.xLightEnerdis.w, lcb.xLightEnerdis.w)*
 							camrot*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						);
@@ -4436,9 +4437,9 @@ void DrawLightVisualizers(
 						if (light.fov_inner > 0)
 						{
 							float coneS = (float)(std::min(light.fov_inner, light.fov) / 0.7853981852531433);
-							lcb.lightEnerdis.w = std::min(light.GetRange(), 65504.0f) * light.energy * 0.03f; // scale
-							XMStoreFloat4x4(&lcb.lightWorld,
-								XMMatrixScaling(coneS * lcb.lightEnerdis.w, lcb.lightEnerdis.w, coneS * lcb.lightEnerdis.w) *
+							lcb.xLightEnerdis.w = std::min(light.GetRange(), 65504.0f) * 0.1f; // scale
+							XMStoreFloat4x4(&lcb.xLightWorld,
+								XMMatrixScaling(coneS * lcb.xLightEnerdis.w, lcb.xLightEnerdis.w, coneS * lcb.xLightEnerdis.w) *
 								XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
 								XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 							);
@@ -4449,9 +4450,9 @@ void DrawLightVisualizers(
 						}
 
 						float coneS = (float)(light.fov / 0.7853981852531433);
-						lcb.lightEnerdis.w = std::min(light.GetRange(), 65504.0f)*light.energy*0.03f; // scale
-						XMStoreFloat4x4(&lcb.lightWorld, 
-							XMMatrixScaling(coneS*lcb.lightEnerdis.w, lcb.lightEnerdis.w, coneS*lcb.lightEnerdis.w)*
+						lcb.xLightEnerdis.w = std::min(light.GetRange(), 65504.0f) * 0.1f; // scale
+						XMStoreFloat4x4(&lcb.xLightWorld,
+							XMMatrixScaling(coneS*lcb.xLightEnerdis.w, lcb.xLightEnerdis.w, coneS*lcb.xLightEnerdis.w)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						);

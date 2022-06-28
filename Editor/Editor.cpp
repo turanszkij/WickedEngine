@@ -1532,7 +1532,7 @@ void EditorComponent::Update(float dt)
 								TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
 								force.type = ENTITY_TYPE_FORCEFIELD_POINT;
 								force.gravity = -80;
-								force.range_local = 3;
+								force.range = 3;
 								transform.Translate(P);
 								break;
 							}

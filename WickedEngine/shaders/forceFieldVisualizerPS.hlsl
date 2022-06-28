@@ -26,13 +26,13 @@ float4 main(PSIn input) : SV_TARGET
 		// planar forcefield:
 		float3 dir = forceField.position - input.pos3D.xyz;
 		float dist = dot(forceField.GetDirection(), dir);
-		color.a *= pow(1 - saturate(dist / max(0.001, forceField.GetRange())), 1.0f / max(0.0001f, abs(forceField.GetGravity())));
+		color.a *= pow(1 - saturate(dist / forceField.GetRange()), 1.0f / max(0.0001f, abs(forceField.GetGravity())));
 	}
 
 	float2 pTex = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
 	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, pTex) * GetCamera().z_far;
 	float depthFragment = input.pos2D.w;
-	float fade = saturate(1.0 / max(0.001, forceField.GetRange()) * abs(forceField.GetGravity()) * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
+	float fade = saturate(1.0 / forceField.GetRange() * abs(forceField.GetGravity()) * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 	color.a *= fade;
 
 	color.a = saturate(color.a * 0.78f);

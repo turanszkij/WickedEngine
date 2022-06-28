@@ -735,7 +735,7 @@ namespace wi::scene
 				type = POINT; // fallback from old area light
 			}
 			archive >> energy;
-			archive >> range_local;
+			archive >> range;
 			archive >> fov;
 			if (archive.GetVersion() < 55)
 			{
@@ -779,7 +779,7 @@ namespace wi::scene
 			archive << color;
 			archive << (uint32_t)type;
 			archive << energy;
-			archive << range_local;
+			archive << range;
 			archive << fov;
 			if (archive.GetVersion() < 55)
 			{
@@ -871,14 +871,14 @@ namespace wi::scene
 			archive >> _flags;
 			archive >> type;
 			archive >> gravity;
-			archive >> range_local;
+			archive >> range;
 		}
 		else
 		{
 			archive << _flags;
 			archive << type;
 			archive << gravity;
-			archive << range_local;
+			archive << range;
 		}
 	}
 	void DecalComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)

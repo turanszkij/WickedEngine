@@ -1387,7 +1387,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		}
 
 		light.energy = float(x.intensity);
-		light.range_local = x.range > 0 ? float(x.range) : std::numeric_limits<float>::max();
+		light.range = x.range > 0 ? float(x.range) : std::numeric_limits<float>::max();
 		light.fov = float(x.spot.outerConeAngle) * 2; // *2: in engine, fov is a value directly used for shadow camera, in gltf, it's cone angle
 		light.fov_inner = float(x.spot.innerConeAngle) * 2; // *2: in engine, fov is a value directly used for shadow camera, in gltf, it's cone angle
 

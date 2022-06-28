@@ -130,10 +130,7 @@ void main(PSInput input)
 							[branch]
 							if (NdotL > 0)
 							{
-								float attenuation = saturate(1.0 - (dist2 / range2));
-								attenuation *= attenuation;
-
-								float3 lightColor = light.GetColor().rgb * NdotL * attenuation;
+								float3 lightColor = light.GetColor().rgb * NdotL * attenuation_pointlight(dist, dist2, range, range2);
 
 								[branch]
 								if (light.IsCastingShadow() >= 0) {
@@ -168,12 +165,7 @@ void main(PSInput input)
 								[branch]
 								if (spot_factor > spot_cutoff)
 								{
-									float attenuation = saturate(1.0 - (dist2 / range2));
-									float angularAttenuation = saturate(mad(spot_factor, light.GetAngleScale(), light.GetAngleOffset()));
-									attenuation *= angularAttenuation;
-									attenuation *= attenuation;
-
-									float3 lightColor = light.GetColor().rgb * NdotL * attenuation;
+									float3 lightColor = light.GetColor().rgb * NdotL * attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 
 									[branch]
 									if (light.IsCastingShadow() >= 0)
