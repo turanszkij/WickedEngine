@@ -41,6 +41,8 @@ Contributions:
 	- QOI image loader integration
 - Eddie Ataberk https://github.com/eddieataberk
 	- Physics improvements
+- matpx https://github.com/matpx
+	- Fixes
 
 	
 Support the project on Patreon: https://www.patreon.com/wickedengine
