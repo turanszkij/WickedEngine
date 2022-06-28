@@ -1421,20 +1421,16 @@ namespace wi::scene
 	}
 	void CameraComponent::TransformCamera(const TransformComponent& transform)
 	{
-		XMVECTOR S, R, T;
-		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&transform.world));
+		XMMATRIX W = XMLoadFloat4x4(&transform.world);
 
-		XMVECTOR _Eye = T;
-		XMVECTOR _At = XMVectorSet(0, 0, 1, 0);
-		XMVECTOR _Up = XMVectorSet(0, 1, 0, 0);
-
-		XMMATRIX _Rot = XMMatrixRotationQuaternion(R);
-		_At = XMVector3TransformNormal(_At, _Rot);
-		_Up = XMVector3TransformNormal(_Up, _Rot);
-		XMStoreFloat3x3(&rotationMatrix, _Rot);
+		XMVECTOR _Eye = XMVector3Transform(XMVectorSet(0, 0, 0, 1), W);
+		XMVECTOR _At = XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 0, 1, 0), W));
+		XMVECTOR _Up = XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W));
 
 		XMMATRIX _V = XMMatrixLookToLH(_Eye, _At, _Up);
 		XMStoreFloat4x4(&View, _V);
+
+		XMStoreFloat3x3(&rotationMatrix, XMMatrixInverse(nullptr, _V));
 
 		XMStoreFloat3(&Eye, _Eye);
 		XMStoreFloat3(&At, _At);

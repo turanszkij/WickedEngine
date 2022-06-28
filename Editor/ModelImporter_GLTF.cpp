@@ -190,7 +190,7 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 			node.name = "cam" + std::to_string(camID++);
 		}
 
-		entity = scene.Entity_CreateCamera(node.name, wi::scene::GetCamera().width, wi::scene::GetCamera().height, 0.1f, 800);
+		entity = scene.Entity_CreateCamera(node.name, wi::scene::GetCamera().width, wi::scene::GetCamera().height);
 	}
 
 	auto ext_lights_punctual = node.extensions.find("KHR_lights_punctual");
@@ -1388,8 +1388,21 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 		light.energy = float(x.intensity);
 		light.range_local = x.range > 0 ? float(x.range) : std::numeric_limits<float>::max();
-		light.fov = float(x.spot.outerConeAngle);
-		light.fov_inner = float(x.spot.innerConeAngle);
+		light.fov = float(x.spot.outerConeAngle) * 2; // *2: in engine, fov is a value directly used for shadow camera, in gltf, it's cone angle
+		light.fov_inner = float(x.spot.innerConeAngle) * 2; // *2: in engine, fov is a value directly used for shadow camera, in gltf, it's cone angle
+
+		// In gltf, default light direction is forward, in engine, it's downwards, so apply a rotation:
+		TransformComponent& transform = *scene.transforms.GetComponent(entity);
+		transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+	}
+
+	int cameraCounter = 0;
+	for (auto& x : state.gltfModel.cameras)
+	{
+		Entity entity = scene.cameras.GetEntity(cameraCounter);
+		CameraComponent& camera = scene.cameras[cameraCounter++];
+		TransformComponent& transform = *scene.transforms.GetComponent(entity);
+		transform.RotateRollPitchYaw(XMFLOAT3(XM_PI, 0, XM_PI));
 	}
 
 	if (transform_to_LH)
@@ -1399,4 +1412,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		transform.SetDirty();
 	}
 
+	// Update the scene, to have up to date values immediately after loading:
+	//	For example, snap to camera functionality relies on this
+	scene.Update(0);
 }

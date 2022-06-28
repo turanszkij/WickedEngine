@@ -452,11 +452,11 @@ struct ShaderEntity
 	}
 	inline float3 GetDirection()
 	{
-		return float3(
+		return normalize(float3(
 			f16tof32(direction16_coneAngleCos16.x),
 			f16tof32(direction16_coneAngleCos16.x >> 16u),
 			f16tof32(direction16_coneAngleCos16.y)
-		);
+		));
 	}
 	inline float GetConeAngleCos()
 	{

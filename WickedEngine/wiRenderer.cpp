@@ -3530,7 +3530,9 @@ void UpdateRenderData(
 
 			shaderentity.SetType(light.GetType());
 			shaderentity.position = light.position;
-			shaderentity.SetRange(light.GetRange());
+			float range = light.GetRange();
+			range = std::min(range, 65504.0f); // clamp to 16-bit float max value
+			shaderentity.SetRange(range);
 			shaderentity.SetColor(float4(light.color.x* light.energy, light.color.y * light.energy, light.color.z * light.energy, 1));
 
 			// mark as no shadow by default:
@@ -4431,8 +4433,23 @@ void DrawLightVisualizers(
 					}
 					else if (type == LightComponent::SPOT)
 					{
+						if (light.fov_inner > 0)
+						{
+							float coneS = (float)(std::min(light.fov_inner, light.fov) / 0.7853981852531433);
+							lcb.lightEnerdis.w = std::min(light.GetRange(), 65504.0f) * light.energy * 0.03f; // scale
+							XMStoreFloat4x4(&lcb.lightWorld,
+								XMMatrixScaling(coneS * lcb.lightEnerdis.w, lcb.lightEnerdis.w, coneS * lcb.lightEnerdis.w) *
+								XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+								XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
+							);
+
+							device->BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
+
+							device->Draw(192, 0, cmd); // cone
+						}
+
 						float coneS = (float)(light.fov / 0.7853981852531433);
-						lcb.lightEnerdis.w = light.GetRange()*light.energy*0.03f; // scale
+						lcb.lightEnerdis.w = std::min(light.GetRange(), 65504.0f)*light.energy*0.03f; // scale
 						XMStoreFloat4x4(&lcb.lightWorld, 
 							XMMatrixScaling(coneS*lcb.lightEnerdis.w, lcb.lightEnerdis.w, coneS*lcb.lightEnerdis.w)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*

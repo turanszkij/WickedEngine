@@ -103,7 +103,7 @@ void LightWindow::Create(EditorComponent* editor)
 	fovSlider.SetTooltip("Adjust the cone aperture for spotlight.");
 	AddWidget(&fovSlider);
 
-	fovInnerSlider.Create(0.1f, XM_PI - 0.01f, 0, 100000, "FOV (inner): ");
+	fovInnerSlider.Create(0, XM_PI - 0.01f, 0, 100000, "FOV (inner): ");
 	fovInnerSlider.SetSize(XMFLOAT2(100, hei));
 	fovInnerSlider.SetPos(XMFLOAT2(x, y += step));
 	fovInnerSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -114,7 +114,7 @@ void LightWindow::Create(EditorComponent* editor)
 		}
 		});
 	fovInnerSlider.SetEnabled(false);
-	fovInnerSlider.SetTooltip("Adjust the inner cone aperture for spotlight.");
+	fovInnerSlider.SetTooltip("Adjust the inner cone aperture for spotlight.\n(The inner cone will always be inside the outer/main cone)");
 	AddWidget(&fovInnerSlider);
 
 	shadowCheckBox.Create("Shadow: ");
