@@ -756,6 +756,11 @@ namespace wi::scene
 				archive >> forced_shadow_resolution;
 			}
 
+			if (archive.GetVersion() >= 82)
+			{
+				archive >> fov_inner;
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				lensFlareRimTextures.resize(lensFlareNames.size());
 				for (size_t i = 0; i < lensFlareNames.size(); ++i)
@@ -801,6 +806,11 @@ namespace wi::scene
 			if (archive.GetVersion() >= 81)
 			{
 				archive << forced_shadow_resolution;
+			}
+
+			if (archive.GetVersion() >= 82)
+			{
+				archive << fov_inner;
 			}
 		}
 	}
