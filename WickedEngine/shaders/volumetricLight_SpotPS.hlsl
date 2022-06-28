@@ -34,34 +34,37 @@ float4 main(VertexToPixel input) : SV_TARGET
 		const float dist = sqrt(dist2);
 		L /= dist;
 
-		const float range = light.GetRange();
-		const float range2 = range * range;
-		float3 attenuation = saturate(1.0 - (dist2 / range2));
-
-		// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
-		float cd = dot(light.GetDirection(), L);
-		float angularAttenuation = saturate(cd * light.GetAngleScale() + light.GetAngleOffset());
-		attenuation *= angularAttenuation;
-
-		attenuation *= attenuation;
+		const float spot_factor = dot(L, light.GetDirection());
+		const float spot_cutoff = light.GetConeAngleCos();
 
 		[branch]
-		if (light.IsCastingShadow())
+		if (spot_factor > spot_cutoff)
 		{
-			float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
-			shadow_pos.xyz /= shadow_pos.w;
-			float2 shadow_uv = shadow_pos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+			const float range = light.GetRange();
+			const float range2 = range * range;
+			float3 attenuation = saturate(1.0 - (dist2 / range2));
+			float angularAttenuation = saturate(spot_factor * light.GetAngleScale() + light.GetAngleOffset());
+			attenuation *= angularAttenuation;
+			attenuation *= attenuation;
+
 			[branch]
-			if ((saturate(shadow_uv.x) == shadow_uv.x) && (saturate(shadow_uv.y) == shadow_uv.y))
+			if (light.IsCastingShadow())
 			{
-				attenuation *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0);
+				float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
+				shadow_pos.xyz /= shadow_pos.w;
+				float2 shadow_uv = shadow_pos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+				[branch]
+				if ((saturate(shadow_uv.x) == shadow_uv.x) && (saturate(shadow_uv.y) == shadow_uv.y))
+				{
+					attenuation *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0);
+				}
 			}
+
+			// Evaluate sample height for exponential fog calculation, given 0 for V:
+			attenuation *= GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0));
+
+			accumulation += attenuation;
 		}
-
-		// Evaluate sample height for exponential fog calculation, given 0 for V:
-		attenuation *= GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0));
-
-		accumulation += attenuation;
 
 		marchedDistance += stepSize;
 		P = P + V * stepSize;

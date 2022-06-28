@@ -162,30 +162,34 @@ void main(PSInput input)
 							[branch]
 							if (NdotL > 0)
 							{
-								float attenuation = saturate(1.0 - (dist2 / range2));
-
-								// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
-								float cd = dot(light.GetDirection(), L);
-								float angularAttenuation = saturate(cd * light.GetAngleScale() + light.GetAngleOffset());
-								attenuation *= angularAttenuation;
-
-								attenuation *= attenuation;
-								float3 lightColor = light.GetColor().rgb * NdotL * attenuation;
+								const float spot_factor = dot(L, light.GetDirection());
+								const float spot_cutoff = light.GetConeAngleCos();
 
 								[branch]
-								if (light.IsCastingShadow() >= 0)
+								if (spot_factor > spot_cutoff)
 								{
-									float4 ShPos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
-									ShPos.xyz /= ShPos.w;
-									float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
-									[branch]
-									if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
-									{
-										lightColor *= shadow_2D(light, ShPos.xyz, ShTex.xy, 0);
-									}
-								}
+									float attenuation = saturate(1.0 - (dist2 / range2));
+									float angularAttenuation = saturate(spot_factor * light.GetAngleScale() + light.GetAngleOffset());
+									attenuation *= angularAttenuation;
+									attenuation *= attenuation;
 
-								lighting.direct.diffuse += lightColor;
+									float3 lightColor = light.GetColor().rgb * NdotL * attenuation;
+
+									[branch]
+									if (light.IsCastingShadow() >= 0)
+									{
+										float4 ShPos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
+										ShPos.xyz /= ShPos.w;
+										float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+										[branch]
+										if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
+										{
+											lightColor *= shadow_2D(light, ShPos.xyz, ShTex.xy, 0);
+										}
+									}
+
+									lighting.direct.diffuse += lightColor;
+								}
 							}
 						}
 					}

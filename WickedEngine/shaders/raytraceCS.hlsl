@@ -272,17 +272,21 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					[branch]
 					if (any(surfaceToLight.NdotL_sss))
 					{
-						lightColor = light.GetColor().rgb;
+						const float spot_factor = dot(L, light.GetDirection());
+						const float spot_cutoff = light.GetConeAngleCos();
 
-						float attenuation = saturate(1 - (dist2 / range2));
+						[branch]
+						if (spot_factor > spot_cutoff)
+						{
+							lightColor = light.GetColor().rgb;
 
-						// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
-						float cd = dot(light.GetDirection(), L);
-						float angularAttenuation = saturate(cd * light.GetAngleScale() + light.GetAngleOffset());
-						attenuation *= angularAttenuation;
+							float attenuation = saturate(1 - (dist2 / range2));
+							float angularAttenuation = saturate(spot_factor * light.GetAngleScale() + light.GetAngleOffset());
+							attenuation *= angularAttenuation;
+							attenuation *= attenuation;
 
-						attenuation *= attenuation;
-						lightColor *= attenuation;
+							lightColor *= attenuation;
+						}
 					}
 				}
 			}
