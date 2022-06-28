@@ -190,7 +190,14 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 			node.name = "cam" + std::to_string(camID++);
 		}
 
-		entity = scene.Entity_CreateCamera(node.name, wi::scene::GetCamera().width, wi::scene::GetCamera().height, 0.1f, 800);
+		entity = scene.Entity_CreateCamera(node.name, wi::scene::GetCamera().width, wi::scene::GetCamera().height);
+	}
+
+	auto ext_lights_punctual = node.extensions.find("KHR_lights_punctual");
+	if (ext_lights_punctual != node.extensions.end())
+	{
+		// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
+		entity = scene.Entity_CreateLight(""); // light component will be filled later
 	}
 
 	if (entity == INVALID_ENTITY)
@@ -1352,6 +1359,52 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 	}
 
+	// Create lights:
+	int lightIndex = 0;
+	for (auto& x : state.gltfModel.lights)
+	{
+		Entity entity = scene.lights.GetEntity(lightIndex);
+		LightComponent& light = scene.lights[lightIndex++];
+		NameComponent& name = *scene.names.GetComponent(entity);
+		name = x.name;
+
+		if (!x.type.compare("spot"))
+		{
+			light.type = LightComponent::LightType::SPOT;
+		}
+		if (!x.type.compare("point"))
+		{
+			light.type = LightComponent::LightType::POINT;
+		}
+		if (!x.type.compare("directional"))
+		{
+			light.type = LightComponent::LightType::DIRECTIONAL;
+		}
+
+		if (!x.color.empty())
+		{
+			light.color = XMFLOAT3(float(x.color[0]), float(x.color[1]), float(x.color[2]));
+		}
+
+		light.energy = float(x.intensity);
+		light.range = x.range > 0 ? float(x.range) : std::numeric_limits<float>::max();
+		light.fov = float(x.spot.outerConeAngle) * 2; // *2: in engine, fov is a value directly used for shadow camera, in gltf, it's cone angle
+		light.fov_inner = float(x.spot.innerConeAngle) * 2; // *2: in engine, fov is a value directly used for shadow camera, in gltf, it's cone angle
+
+		// In gltf, default light direction is forward, in engine, it's downwards, so apply a rotation:
+		TransformComponent& transform = *scene.transforms.GetComponent(entity);
+		transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+	}
+
+	int cameraIndex = 0;
+	for (auto& x : state.gltfModel.cameras)
+	{
+		Entity entity = scene.cameras.GetEntity(cameraIndex);
+		CameraComponent& camera = scene.cameras[cameraIndex++];
+		TransformComponent& transform = *scene.transforms.GetComponent(entity);
+		transform.RotateRollPitchYaw(XMFLOAT3(XM_PI, 0, XM_PI));
+	}
+
 	if (transform_to_LH)
 	{
 		TransformComponent& transform = *scene.transforms.GetComponent(rootEntity);
@@ -1359,4 +1412,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		transform.SetDirty();
 	}
 
+	// Update the scene, to have up to date values immediately after loading:
+	//	For example, snap to camera functionality relies on this
+	scene.Update(0);
 }

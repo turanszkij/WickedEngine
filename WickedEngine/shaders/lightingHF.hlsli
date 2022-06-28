@@ -184,7 +184,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		[branch]
 		if (any(shadow))
 		{
-			float3 light_color = light.GetColor().rgb * light.GetEnergy() * shadow;
+			float3 light_color = light.GetColor().rgb * shadow;
 
 			[branch]
 			if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
@@ -216,11 +216,23 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		}
 	}
 }
+
+inline float attenuation_pointlight(in float dist, in float dist2, in float range, in float range2)
+{
+#if 0
+	// GLTF recommendation: https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#range-property
+	return saturate(1 - pow(dist / range, 4)) / dist2;
+#else
+	// Old attenuation:
+	return sqr(saturate(1 - (dist2 / range2)));
+#endif
+}
 inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
 {
 	float3 L = light.position - surface.P;
 	const float dist2 = dot(L, L);
-	const float range2 = light.GetRange() * light.GetRange();
+	const float range = light.GetRange();
+	const float range2 = range * range;
 
 	[branch]
 	if (dist2 < range2)
@@ -252,11 +264,8 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 			[branch]
 			if (any(shadow))
 			{
-				float3 light_color = light.GetColor().rgb * light.GetEnergy() * shadow;
-
-				const float att = saturate(1 - (dist2 / range2));
-				const float attenuation = att * att;
-				light_color *= attenuation;
+				float3 light_color = light.GetColor().rgb * shadow;
+				light_color *= attenuation_pointlight(dist, dist2, range, range2);
 
 				lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
 				lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
@@ -264,11 +273,21 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		}
 	}
 }
+
+inline float attenuation_spotlight(in float dist, in float dist2, in float range, in float range2, in float spot_factor, in float angle_scale, in float angle_offset)
+{
+	float attenuation = attenuation_pointlight(dist, dist2, range, range2);
+	float angularAttenuation = saturate(mad(spot_factor, angle_scale, angle_offset));
+	angularAttenuation *= angularAttenuation;
+	attenuation *= angularAttenuation;
+	return attenuation;
+}
 inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
 {
 	float3 L = light.position - surface.P;
 	const float dist2 = dot(L, L);
-	const float range2 = light.GetRange() * light.GetRange();
+	const float range = light.GetRange();
+	const float range2 = range * range;
 
 	[branch]
 	if (dist2 < range2)
@@ -312,12 +331,8 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 				[branch]
 				if (any(shadow))
 				{
-					float3 light_color = light.GetColor().rgb * light.GetEnergy() * shadow;
-
-					const float att = saturate(1 - (dist2 / range2));
-					float attenuation = att * att;
-					attenuation *= saturate((1 - (1 - spot_factor) * 1 / (1 - spot_cutoff)));
-					light_color *= attenuation;
+					float3 light_color = light.GetColor().rgb * shadow;
+					light_color *= attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 
 					lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
 					lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);

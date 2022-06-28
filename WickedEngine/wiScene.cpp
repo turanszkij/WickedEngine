@@ -1421,20 +1421,16 @@ namespace wi::scene
 	}
 	void CameraComponent::TransformCamera(const TransformComponent& transform)
 	{
-		XMVECTOR S, R, T;
-		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&transform.world));
+		XMMATRIX W = XMLoadFloat4x4(&transform.world);
 
-		XMVECTOR _Eye = T;
-		XMVECTOR _At = XMVectorSet(0, 0, 1, 0);
-		XMVECTOR _Up = XMVectorSet(0, 1, 0, 0);
-
-		XMMATRIX _Rot = XMMatrixRotationQuaternion(R);
-		_At = XMVector3TransformNormal(_At, _Rot);
-		_Up = XMVector3TransformNormal(_Up, _Rot);
-		XMStoreFloat3x3(&rotationMatrix, _Rot);
+		XMVECTOR _Eye = XMVector3Transform(XMVectorSet(0, 0, 0, 1), W);
+		XMVECTOR _At = XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 0, 1, 0), W));
+		XMVECTOR _Up = XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W));
 
 		XMMATRIX _V = XMMatrixLookToLH(_Eye, _At, _Up);
 		XMStoreFloat4x4(&View, _V);
+
+		XMStoreFloat3x3(&rotationMatrix, XMMatrixInverse(nullptr, _V));
 
 		XMStoreFloat3(&Eye, _Eye);
 		XMStoreFloat3(&At, _At);
@@ -2229,7 +2225,9 @@ namespace wi::scene
 		const XMFLOAT3& color,
 		float energy,
 		float range,
-		LightComponent::LightType type)
+		LightComponent::LightType type,
+		float fov,
+		float fov_inner)
 	{
 		Entity entity = CreateEntity();
 
@@ -2245,10 +2243,12 @@ namespace wi::scene
 
 		LightComponent& light = lights.Create(entity);
 		light.energy = energy;
-		light.range_local = range;
+		light.range = range;
 		light.fov = XM_PIDIV4;
 		light.color = color;
 		light.SetType(type);
+		light.fov = fov;
+		light.fov_inner = fov_inner;
 
 		return entity;
 	}
@@ -2269,7 +2269,7 @@ namespace wi::scene
 
 		ForceFieldComponent& force = forces.Create(entity);
 		force.gravity = 0;
-		force.range_local = 0;
+		force.range = 0;
 		force.type = ENTITY_TYPE_FORCEFIELD_POINT;
 
 		return entity;
@@ -3940,7 +3940,6 @@ namespace wi::scene
 			XMStoreFloat3(&force.position, T);
 			XMStoreFloat3(&force.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), W)));
 
-			force.range_global = force.range_local * std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 		});
 	}
 	void Scene::RunLightUpdateSystem(wi::jobsystem::context& ctx)
@@ -3974,8 +3973,6 @@ namespace wi::scene
 			XMStoreFloat4(&light.rotation, R);
 			XMStoreFloat3(&light.scale, S);
 			XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
-
-			light.range_global = light.range_local * std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 
 			switch (light.type)
 			{

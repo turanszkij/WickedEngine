@@ -40,9 +40,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 		const float dist = sqrt(dist2);
 		L /= dist;
 
-		const float range2 = light.GetRange() * light.GetRange();
-		const float att = saturate(1.0 - (dist2 / range2));
-		float3 attenuation = att * att;
+		const float range = light.GetRange();
+		const float range2 = range * range;
+		float3 attenuation = attenuation_pointlight(dist, dist2, range, range2);
 
 		[branch]
 		if (light.IsCastingShadow())
@@ -61,5 +61,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	accumulation /= sampleCount;
 
-	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy(), 1));
+	return max(0, float4(accumulation * light.GetColor().rgb, 1));
 }

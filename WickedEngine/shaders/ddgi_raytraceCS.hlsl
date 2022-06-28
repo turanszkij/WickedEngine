@@ -155,7 +155,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					[branch]
 					if (NdotL > 0)
 					{
-						float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+						float3 lightColor = light.GetColor().rgb;
 
 						[branch]
 						if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
@@ -171,7 +171,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				{
 					L = light.position - surface.P;
 					const float dist2 = dot(L, L);
-					const float range2 = light.GetRange() * light.GetRange();
+					const float range = light.GetRange();
+					const float range2 = range * range;
 
 					[branch]
 					if (dist2 < range2)
@@ -183,15 +184,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 						[branch]
 						if (NdotL > 0)
 						{
-							const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+							const float3 lightColor = light.GetColor().rgb;
 
-							lighting.direct.diffuse = lightColor;
-
-							const float range2 = light.GetRange() * light.GetRange();
-							const float att = saturate(1.0 - (dist2 / range2));
-							const float attenuation = att * att;
-
-							lighting.direct.diffuse *= attenuation;
+							lighting.direct.diffuse = lightColor * attenuation_pointlight(dist, dist2, range, range2);
 						}
 					}
 				}
@@ -200,7 +195,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				{
 					L = light.position - surface.P;
 					const float dist2 = dot(L, L);
-					const float range2 = light.GetRange() * light.GetRange();
+					const float range = light.GetRange();
+					const float range2 = range * range;
 
 					[branch]
 					if (dist2 < range2)
@@ -212,22 +208,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 						[branch]
 						if (NdotL > 0)
 						{
-							const float SpotFactor = dot(L, light.GetDirection());
-							const float spotCutOff = light.GetConeAngleCos();
+							const float spot_factor = dot(L, light.GetDirection());
+							const float spot_cutoff = light.GetConeAngleCos();
 
 							[branch]
-							if (SpotFactor > spotCutOff)
+							if (spot_factor > spot_cutoff)
 							{
-								const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+								const float3 lightColor = light.GetColor().rgb;
 
-								lighting.direct.diffuse = lightColor;
-
-								const float range2 = light.GetRange() * light.GetRange();
-								const float att = saturate(1.0 - (dist2 / range2));
-								float attenuation = att * att;
-								attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
-
-								lighting.direct.diffuse *= attenuation;
+								lighting.direct.diffuse = lightColor * attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 							}
 						}
 					}

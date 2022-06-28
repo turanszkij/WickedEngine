@@ -855,8 +855,9 @@ namespace wi::scene
 		};
 		LightType type = POINT;
 		float energy = 1.0f;
-		float range_local = 10.0f;
+		float range = 10.0f;
 		float fov = XM_PIDIV4;
+		float fov_inner = 0;
 
 		wi::vector<std::string> lensFlareNames;
 
@@ -864,7 +865,6 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		XMFLOAT3 position;
-		float range_global;
 		XMFLOAT3 direction;
 		XMFLOAT4 rotation;
 		XMFLOAT3 scale;
@@ -885,7 +885,7 @@ namespace wi::scene
 		inline bool IsVisualizerEnabled() const { return _flags & VISUALIZER; }
 		inline bool IsStatic() const { return _flags & LIGHTMAPONLY_STATIC; }
 
-		inline float GetRange() const { return range_global; }
+		inline float GetRange() const { return range; }
 
 		inline void SetType(LightType val) { type = val; }
 		inline LightType GetType() const { return type; }
@@ -1003,14 +1003,13 @@ namespace wi::scene
 
 		int type = ENTITY_TYPE_FORCEFIELD_POINT;
 		float gravity = 0.0f; // negative = deflector, positive = attractor
-		float range_local = 0.0f; // affection range
+		float range = 0.0f; // affection range
 
 		// Non-serialized attributes:
 		XMFLOAT3 position;
-		float range_global;
 		XMFLOAT3 direction;
 
-		inline float GetRange() const { return range_global; }
+		inline float GetRange() const { return range; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -1478,7 +1477,9 @@ namespace wi::scene
 			const XMFLOAT3& color = XMFLOAT3(1, 1, 1), 
 			float energy = 1, 
 			float range = 10,
-			LightComponent::LightType type = LightComponent::POINT
+			LightComponent::LightType type = LightComponent::POINT,
+			float fov = XM_PIDIV4,
+			float fov_inner = 0
 		);
 		wi::ecs::Entity Entity_CreateForce(
 			const std::string& name,

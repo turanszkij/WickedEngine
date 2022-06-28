@@ -735,7 +735,7 @@ namespace wi::scene
 				type = POINT; // fallback from old area light
 			}
 			archive >> energy;
-			archive >> range_local;
+			archive >> range;
 			archive >> fov;
 			if (archive.GetVersion() < 55)
 			{
@@ -756,6 +756,11 @@ namespace wi::scene
 				archive >> forced_shadow_resolution;
 			}
 
+			if (archive.GetVersion() >= 82)
+			{
+				archive >> fov_inner;
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				lensFlareRimTextures.resize(lensFlareNames.size());
 				for (size_t i = 0; i < lensFlareNames.size(); ++i)
@@ -774,7 +779,7 @@ namespace wi::scene
 			archive << color;
 			archive << (uint32_t)type;
 			archive << energy;
-			archive << range_local;
+			archive << range;
 			archive << fov;
 			if (archive.GetVersion() < 55)
 			{
@@ -801,6 +806,11 @@ namespace wi::scene
 			if (archive.GetVersion() >= 81)
 			{
 				archive << forced_shadow_resolution;
+			}
+
+			if (archive.GetVersion() >= 82)
+			{
+				archive << fov_inner;
 			}
 		}
 	}
@@ -861,14 +871,14 @@ namespace wi::scene
 			archive >> _flags;
 			archive >> type;
 			archive >> gravity;
-			archive >> range_local;
+			archive >> range;
 		}
 		else
 		{
 			archive << _flags;
 			archive << type;
 			archive << gravity;
-			archive << range_local;
+			archive << range;
 		}
 	}
 	void DecalComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)

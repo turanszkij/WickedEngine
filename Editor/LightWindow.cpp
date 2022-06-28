@@ -40,7 +40,7 @@ void LightWindow::Create(EditorComponent* editor)
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->range_local = args.fValue;
+			light->range = args.fValue;
 		}
 	});
 	rangeSlider.SetEnabled(false);
@@ -102,6 +102,20 @@ void LightWindow::Create(EditorComponent* editor)
 	fovSlider.SetEnabled(false);
 	fovSlider.SetTooltip("Adjust the cone aperture for spotlight.");
 	AddWidget(&fovSlider);
+
+	fovInnerSlider.Create(0, XM_PI - 0.01f, 0, 100000, "FOV (inner): ");
+	fovInnerSlider.SetSize(XMFLOAT2(100, hei));
+	fovInnerSlider.SetPos(XMFLOAT2(x, y += step));
+	fovInnerSlider.OnSlide([&](wi::gui::EventArgs args) {
+		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->fov_inner = args.fValue;
+		}
+		});
+	fovInnerSlider.SetEnabled(false);
+	fovInnerSlider.SetTooltip("Adjust the inner cone aperture for spotlight.\n(The inner cone will always be inside the outer/main cone)");
+	AddWidget(&fovInnerSlider);
 
 	shadowCheckBox.Create("Shadow: ");
 	shadowCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -314,11 +328,12 @@ void LightWindow::SetEntity(Entity entity)
 	{
 		energySlider.SetEnabled(true);
 		energySlider.SetValue(light->energy);
-		rangeSlider.SetValue(light->range_local);
+		rangeSlider.SetValue(light->range);
 		//radiusSlider.SetValue(light->radius);
 		//widthSlider.SetValue(light->width);
 		//heightSlider.SetValue(light->height);
 		fovSlider.SetValue(light->fov);
+		fovInnerSlider.SetValue(light->fov_inner);
 		shadowCheckBox.SetEnabled(true);
 		shadowCheckBox.SetCheck(light->IsCastingShadow());
 		haloCheckBox.SetEnabled(true);
@@ -355,6 +370,7 @@ void LightWindow::SetEntity(Entity entity)
 		widthSlider.SetEnabled(false);
 		heightSlider.SetEnabled(false);
 		fovSlider.SetEnabled(false);
+		fovInnerSlider.SetEnabled(false);
 		shadowCheckBox.SetEnabled(false);
 		haloCheckBox.SetEnabled(false);
 		volumetricsCheckBox.SetEnabled(false);
@@ -375,6 +391,7 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 	{
 		rangeSlider.SetEnabled(false);
 		fovSlider.SetEnabled(false);
+		fovInnerSlider.SetEnabled(false);
 	}
 	else
 	{
@@ -395,10 +412,12 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 			if (type == LightComponent::SPOT)
 			{
 				fovSlider.SetEnabled(true);
+				fovInnerSlider.SetEnabled(true);
 			}
 			else
 			{
 				fovSlider.SetEnabled(false);
+				fovInnerSlider.SetEnabled(false);
 			}
 		}
 	}
