@@ -317,7 +317,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 					float3 light_color = light.GetColor().rgb * shadow;
 
 					float attenuation = saturate(1 - (dist2 / range2));
-					float angularAttenuation = saturate(spot_factor * light.GetAngleScale() + light.GetAngleOffset());
+					float angularAttenuation = saturate(mad(spot_factor, light.GetAngleScale(), light.GetAngleOffset()));
 					attenuation *= angularAttenuation;
 					attenuation *= attenuation;
 					light_color *= attenuation;

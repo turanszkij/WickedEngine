@@ -43,7 +43,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			const float range = light.GetRange();
 			const float range2 = range * range;
 			float3 attenuation = saturate(1.0 - (dist2 / range2));
-			float angularAttenuation = saturate(spot_factor * light.GetAngleScale() + light.GetAngleOffset());
+			float angularAttenuation = saturate(mad(spot_factor, light.GetAngleScale(), light.GetAngleOffset()));
 			attenuation *= angularAttenuation;
 			attenuation *= attenuation;
 

@@ -223,7 +223,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 								lighting.direct.diffuse = lightColor;
 
 								float attenuation = saturate(1.0 - (dist2 / range2));
-								float angularAttenuation = saturate(spot_factor * light.GetAngleScale() + light.GetAngleOffset());
+								float angularAttenuation = saturate(mad(spot_factor, light.GetAngleScale(), light.GetAngleOffset()));
 								attenuation *= angularAttenuation;
 								attenuation *= attenuation;
 

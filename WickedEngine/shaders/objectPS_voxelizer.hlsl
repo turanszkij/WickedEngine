@@ -169,7 +169,7 @@ void main(PSInput input)
 								if (spot_factor > spot_cutoff)
 								{
 									float attenuation = saturate(1.0 - (dist2 / range2));
-									float angularAttenuation = saturate(spot_factor * light.GetAngleScale() + light.GetAngleOffset());
+									float angularAttenuation = saturate(mad(spot_factor, light.GetAngleScale(), light.GetAngleOffset()));
 									attenuation *= angularAttenuation;
 									attenuation *= attenuation;
 
