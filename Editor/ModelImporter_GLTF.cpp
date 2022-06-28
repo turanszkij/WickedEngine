@@ -1396,11 +1396,11 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
 	}
 
-	int cameraCounter = 0;
+	int cameraIndex = 0;
 	for (auto& x : state.gltfModel.cameras)
 	{
-		Entity entity = scene.cameras.GetEntity(cameraCounter);
-		CameraComponent& camera = scene.cameras[cameraCounter++];
+		Entity entity = scene.cameras.GetEntity(cameraIndex);
+		CameraComponent& camera = scene.cameras[cameraIndex++];
 		TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		transform.RotateRollPitchYaw(XMFLOAT3(XM_PI, 0, XM_PI));
 	}
