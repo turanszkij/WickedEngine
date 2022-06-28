@@ -187,6 +187,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 		}
 		break;
+	case WM_INPUT:
+		wi::input::rawinput::ParseMessage((void*)lParam);
+		break;
 	case WM_KILLFOCUS:
 		application.is_window_active = false;
 		break;
