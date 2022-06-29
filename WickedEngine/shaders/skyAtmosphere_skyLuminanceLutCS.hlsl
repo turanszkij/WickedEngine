@@ -24,7 +24,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 worldPosition = float3(0.0, viewHeight, 0.0);
 	float3 worldDirection = float3(0.0, 0.0, 1.0);
     
-	float3 sunIlluminance = GetSunEnergy() * GetSunColor();
+	float3 sunIlluminance = GetSunColor();
 	float3 sunDirection = GetSunDirection();
 	
 	SamplingParameters sampling;

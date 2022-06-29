@@ -734,9 +734,9 @@ namespace wi::scene
 			{
 				type = POINT; // fallback from old area light
 			}
-			archive >> energy;
+			archive >> intensity;
 			archive >> range;
-			archive >> fov;
+			archive >> outerConeAngle;
 			if (archive.GetVersion() < 55)
 			{
 				float shadowBias;
@@ -758,7 +758,19 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 82)
 			{
-				archive >> fov_inner;
+				archive >> innerConeAngle;
+			}
+
+			if (archive.GetVersion() < 83)
+			{
+				// Conversion from old light units to physical light units:
+				if (type != DIRECTIONAL)
+				{
+					BackCompatSetEnergy(intensity);
+				}
+				// Conversion from FOV to cone angle:
+				outerConeAngle *= 0.5f;
+				innerConeAngle *= 0.5f;
 			}
 
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
@@ -778,9 +790,9 @@ namespace wi::scene
 			archive << _flags;
 			archive << color;
 			archive << (uint32_t)type;
-			archive << energy;
+			archive << intensity;
 			archive << range;
-			archive << fov;
+			archive << outerConeAngle;
 			if (archive.GetVersion() < 55)
 			{
 				float shadowBias = 0;
@@ -810,7 +822,7 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 82)
 			{
-				archive << fov_inner;
+				archive << innerConeAngle;
 			}
 		}
 	}

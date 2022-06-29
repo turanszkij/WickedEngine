@@ -257,9 +257,8 @@ inline float3 clipspace_to_uv(in float3 clipspace)
 #define DEGAMMA(x)		(RemoveSRGBCurve_Fast(x))
 #define GAMMA(x)		(ApplySRGBCurve_Fast(x))
 
-inline float3 GetSunColor() { return GetWeather().sun_color; }
+inline float3 GetSunColor() { return GetWeather().sun_color; } // sun color with intensity applied
 inline float3 GetSunDirection() { return GetWeather().sun_direction; }
-inline float GetSunEnergy() { return GetWeather().sun_energy; }
 inline float3 GetHorizonColor() { return GetWeather().horizon.rgb; }
 inline float3 GetZenithColor() { return GetWeather().zenith.rgb; }
 inline float3 GetAmbientColor() { return GetWeather().ambient.rgb; }

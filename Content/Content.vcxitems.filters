@@ -204,6 +204,9 @@
     <None Include="$(MSBuildThisFileDirectory)scripts\spawn_many_lights.lua">
       <Filter>scripts</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)models\gltf_KHR_lights_punctual_test.glb">
+      <Filter>models</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\background.png">

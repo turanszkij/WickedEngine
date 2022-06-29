@@ -52,6 +52,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 		// Evaluate sample height for height fog calculation, given 0 for V:
 		attenuation *= GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0));
+		attenuation *= ComputeScattering(saturate(dot(L, -V)));
 		
 		accumulation += attenuation;
 

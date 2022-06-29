@@ -582,12 +582,16 @@ Describes an orientation in 3D space.
 - [outer]POINT : int
 - [outer]SPOT : int
 - SetRange(float value)
-- SetEnergy(float value)
+- SetIntensity(float value) -- Brightness of light in. The units that this is defined in depend on the type of light. Point and spot lights use luminous intensity in candela (lm/sr) while directional lights use illuminance in lux (lm/m2). https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
 - SetColor(Vector value)
 - SetCastShadow(bool value)
 - SetVolumetricsEnabled(bool value)
-- SetFOV(float value)
+- SetOuterConeAngle(float value) -- outer cone angle for spotlight in radians
+- SetInnerConeAngle(float value) -- inner cone angle for spotlight in radians (0 <= innerConeAngle <= outerConeAngle). Value of 0 disables inner cone angle
 - GetType() : int result
+
+- SetEnergy(float value) -- kept for backwards compatibility with non physical light units (before v0.70.0)
+- SetFOV(float value) -- kept for backwards compatibility with FOV angle (before v0.70.0)
 
 #### ObjectComponent
 - GetMeshID() : Entity

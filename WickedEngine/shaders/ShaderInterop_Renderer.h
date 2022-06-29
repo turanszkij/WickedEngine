@@ -501,7 +501,7 @@ struct ShaderEntity
 	}
 	inline float GetGravity()
 	{
-		return GetAngleOffset();
+		return GetConeAngleCos();
 	}
 
 #else
@@ -558,7 +558,7 @@ struct ShaderEntity
 	}
 	inline void SetGravity(float value)
 	{
-		SetAngleOffset(value);
+		SetConeAngleCos(value);
 	}
 
 #endif // __cplusplus
