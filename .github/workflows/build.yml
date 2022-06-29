@@ -39,7 +39,7 @@ jobs:
           LICENSE.md
           third_party_software.txt
           features.txt
-		  credits.txt
+          credits.txt
           Editor/images/
           Editor/terrain/
           Editor/sound/
@@ -58,7 +58,7 @@ jobs:
           LICENSE.md
           third_party_software.txt
           features.txt
-		  credits.txt
+          credits.txt
           Tests/images/
           Tests/sound/
           Tests/*.ini
@@ -112,7 +112,7 @@ jobs:
           LICENSE.md
           third_party_software.txt
           features.txt
-		  credits.txt
+          credits.txt
           Editor/images/
           Editor/terrain/
           Editor/sound/
@@ -131,7 +131,7 @@ jobs:
           LICENSE.md
           third_party_software.txt
           features.txt
-		  credits.txt
+          credits.txt
           Tests/images/
           Tests/sound/
           Tests/*.ini
@@ -183,7 +183,7 @@ jobs:
           LICENSE.md
           third_party_software.txt
           features.txt
-		  credits.txt
+          credits.txt
           Editor/images/
           Editor/terrain/
           Editor/sound/
@@ -202,7 +202,7 @@ jobs:
           LICENSE.md
           third_party_software.txt
           features.txt
-		  credits.txt
+          credits.txt
           Tests/images/
           Tests/sound/
           Tests/*.ini
