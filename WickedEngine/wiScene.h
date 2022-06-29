@@ -885,7 +885,13 @@ namespace wi::scene
 		inline bool IsVisualizerEnabled() const { return _flags & VISUALIZER; }
 		inline bool IsStatic() const { return _flags & LIGHTMAPONLY_STATIC; }
 
-		inline float GetRange() const { return range; }
+		inline float GetRange() const
+		{
+			float retval = range;
+			retval = std::max(0.001f, retval);
+			retval = std::min(retval, 65504.0f); // clamp to 16-bit float max value
+			return retval;
+		}
 
 		inline void SetType(LightType val) { type = val; }
 		inline LightType GetType() const { return type; }

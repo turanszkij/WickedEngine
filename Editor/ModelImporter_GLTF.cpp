@@ -1390,6 +1390,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		light.range = x.range > 0 ? float(x.range) : std::numeric_limits<float>::max();
 		light.outerConeAngle = float(x.spot.outerConeAngle);
 		light.innerConeAngle = float(x.spot.innerConeAngle);
+		light.SetCastShadow(true);
 
 		// In gltf, default light direction is forward, in engine, it's downwards, so apply a rotation:
 		TransformComponent& transform = *scene.transforms.GetComponent(entity);
