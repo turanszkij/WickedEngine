@@ -1386,10 +1386,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			light.color = XMFLOAT3(float(x.color[0]), float(x.color[1]), float(x.color[2]));
 		}
 
-		light.energy = float(x.intensity);
+		light.intensity = float(x.intensity);
 		light.range = x.range > 0 ? float(x.range) : std::numeric_limits<float>::max();
-		light.fov = float(x.spot.outerConeAngle) * 2; // *2: in engine, fov is a value directly used for shadow camera, in gltf, it's cone angle
-		light.fov_inner = float(x.spot.innerConeAngle) * 2; // *2: in engine, fov is a value directly used for shadow camera, in gltf, it's cone angle
+		light.outerConeAngle = float(x.spot.outerConeAngle);
+		light.innerConeAngle = float(x.spot.innerConeAngle);
 
 		// In gltf, default light direction is forward, in engine, it's downwards, so apply a rotation:
 		TransformComponent& transform = *scene.transforms.GetComponent(entity);

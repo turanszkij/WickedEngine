@@ -6,7 +6,7 @@
 // Custom Atmosphere based on: https://www.shadertoy.com/view/Ml2cWG
 // Cloud noise based on: https://www.shadertoy.com/view/4tdSWr
 
-float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Texture2D<float4> transmittanceLUT, Texture2D<float4> multiScatteringLUT, float3 rayOrigin, float3 rayDirection, float3 sunDirection, float sunEnergy, float3 sunColor, bool enableSun, bool darkMode, bool stationary)
+float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Texture2D<float4> transmittanceLUT, Texture2D<float4> multiScatteringLUT, float3 rayOrigin, float3 rayDirection, float3 sunDirection, float3 sunColor, bool enableSun, bool darkMode, bool stationary)
 {
     AtmosphereParameters atmosphere = GetWeather().atmosphere;
 
@@ -48,7 +48,7 @@ float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Textur
             const float startOffsetKm = 0.1; // 100m seems enough for long distances
             worldPosition += worldDirection * startOffsetKm;
 
-            float3 sunIlluminance = sunEnergy * sunColor;
+            float3 sunIlluminance = sunColor;
 
             SamplingParameters sampling;
             {
@@ -75,7 +75,7 @@ float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Textur
 
     if (enableSun)
     {
-        float3 sunIlluminance = sunEnergy * sunColor;
+        float3 sunIlluminance = sunColor;
         totalColor = luminance + GetSunLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, atmosphere, transmittanceLUT);
     }
     else
@@ -249,7 +249,6 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
 
     const float3 sunDirection = GetSunDirection();
     const float3 sunColor = GetSunColor();
-    const float sunEnergy = GetSunEnergy();
 
     float3 sky = float3(0, 0, 0);
 
@@ -263,7 +262,6 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
             GetCamera().position,           // Ray origin
             V,                          // Ray direction
             sunDirection,               // Position of the sun
-            sunEnergy,                  // Sun energy
             sunColor,                   // Sun Color
             sun_enabled,                // Use sun and total
             dark_enabled,               // Enable dark mode for light shafts etc.

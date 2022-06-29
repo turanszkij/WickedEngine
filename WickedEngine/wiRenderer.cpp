@@ -2224,7 +2224,7 @@ struct SHCAM
 };
 inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
-	shcam = SHCAM(light.position, light.rotation, 0.1f, light.GetRange(), light.fov);
+	shcam = SHCAM(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
 }
 inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, std::array<SHCAM, CASCADE_COUNT>& shcams)
 {
@@ -3534,7 +3534,7 @@ void UpdateRenderData(
 			range = std::max(0.001f, range);
 			range = std::min(range, 65504.0f); // clamp to 16-bit float max value
 			shaderentity.SetRange(range);
-			shaderentity.SetColor(float4(light.color.x* light.energy, light.color.y * light.energy, light.color.z * light.energy, 1));
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
 
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
@@ -3590,8 +3590,8 @@ void UpdateRenderData(
 			break;
 			case LightComponent::SPOT:
 			{
-				const float outerConeAngle = light.fov * 0.5f;
-				const float innerConeAngle = std::min(light.fov_inner * 0.5f, outerConeAngle);
+				const float outerConeAngle = light.outerConeAngle;
+				const float innerConeAngle = std::min(light.innerConeAngle, outerConeAngle);
 				const float outerConeAngleCos = std::cos(outerConeAngle);
 				const float innerConeAngleCos = std::cos(innerConeAngle);
 
@@ -4417,7 +4417,7 @@ void DrawLightVisualizers(
 
 					VolumeLightCB lcb;
 					lcb.xLightColor = XMFLOAT4(light.color.x, light.color.y, light.color.z, 1);
-					lcb.xLightEnerdis = XMFLOAT4(light.energy, light.GetRange(), light.fov, light.energy);
+					lcb.xLightEnerdis = XMFLOAT4(light.intensity, light.GetRange(), light.outerConeAngle, light.intensity);
 
 					if (type == LightComponent::POINT)
 					{
@@ -4434,9 +4434,9 @@ void DrawLightVisualizers(
 					}
 					else if (type == LightComponent::SPOT)
 					{
-						if (light.fov_inner > 0)
+						if (light.innerConeAngle > 0)
 						{
-							float coneS = (float)(std::min(light.fov_inner, light.fov) / 0.7853981852531433);
+							float coneS = (float)(std::min(light.innerConeAngle, light.outerConeAngle) * 2 / XM_PIDIV4);
 							lcb.xLightEnerdis.w = std::min(light.GetRange(), 65504.0f) * 0.1f; // scale
 							XMStoreFloat4x4(&lcb.xLightWorld,
 								XMMatrixScaling(coneS * lcb.xLightEnerdis.w, lcb.xLightEnerdis.w, coneS * lcb.xLightEnerdis.w) *
@@ -4449,7 +4449,7 @@ void DrawLightVisualizers(
 							device->Draw(192, 0, cmd); // cone
 						}
 
-						float coneS = (float)(light.fov / 0.7853981852531433);
+						float coneS = (float)(light.outerConeAngle * 2 / XM_PIDIV4);
 						lcb.xLightEnerdis.w = std::min(light.GetRange(), 65504.0f) * 0.1f; // scale
 						XMStoreFloat4x4(&lcb.xLightWorld,
 							XMMatrixScaling(coneS*lcb.xLightEnerdis.w, lcb.xLightEnerdis.w, coneS*lcb.xLightEnerdis.w)*
@@ -4528,7 +4528,7 @@ void DrawVolumeLights(
 					{
 						MiscCB miscCb;
 						miscCb.g_xColor.x = float(i);
-						const float coneS = (const float)(light.fov / XM_PIDIV4);
+						const float coneS = (const float)(light.outerConeAngle * 2 / XM_PIDIV4);
 						XMStoreFloat4x4(&miscCb.g_xTransform, 
 							XMMatrixScaling(coneS*light.GetRange(), light.GetRange(), coneS*light.GetRange())*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*

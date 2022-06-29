@@ -1,5 +1,6 @@
 This file contains changelog of wi::Archive versions
 
+83: physical light units
 82: serialized LightComponent::fov_inner
 81: serialized LightComponent::forced_shadow_resolution
 80: object draw distance

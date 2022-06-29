@@ -284,7 +284,7 @@ struct ShaderOcean
 struct ShaderWeather
 {
 	float3 sun_color;
-	float sun_energy;
+	float stars; // number of stars (0: disable stars, >0: increase number of stars)
 
 	float3 sun_direction;
 	uint most_important_light_index;
@@ -302,9 +302,6 @@ struct ShaderWeather
 	float cloud_shadow_amount;
 	float cloud_shadow_scale;
 	float cloud_shadow_speed;
-
-	float3 padding;
-	float stars; // number of stars (0: disable stars, >0: increase number of stars)
 
 	float4x4 stars_rotation;
 

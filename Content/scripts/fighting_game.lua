@@ -109,7 +109,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 				local light_component = scene.Component_CreateLight(entity)
 				light_component.SetType(POINT)
 				light_component.SetRange(8)
-				light_component.SetEnergy(4)
+				light_component.SetIntensity(20)
 				if(self:require_hitconfirm_guard()) then
 					light_component.SetColor(Vector(0,0.5,1)) -- guarded attack emits blueish light
 				else

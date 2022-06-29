@@ -277,10 +277,15 @@ namespace wi::lua::scene
 
 		int SetType(lua_State* L);
 		int SetRange(lua_State* L);
-		int SetEnergy(lua_State* L);
+		int SetIntensity(lua_State* L);
 		int SetColor(lua_State* L);
 		int SetCastShadow(lua_State* L);
 		int SetVolumetricsEnabled(lua_State* L);
+		int SetOuterConeAngle(lua_State* L);
+		int SetInnerConeAngle(lua_State* L);
+
+		// back-compat:
+		int SetEnergy(lua_State* L);
 		int SetFOV(lua_State* L);
 
 		int GetType(lua_State* L);

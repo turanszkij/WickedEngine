@@ -219,13 +219,13 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 
 inline float attenuation_pointlight(in float dist, in float dist2, in float range, in float range2)
 {
-#if 0
 	// GLTF recommendation: https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#range-property
-	return saturate(1 - pow(dist / range, 4)) / dist2;
-#else
-	// Old attenuation:
-	return sqr(saturate(1 - (dist2 / range2)));
-#endif
+	//return saturate(1 - pow(dist / range, 4)) / dist2;
+
+	// Removed pow(x, 4), and avoid zero divisions:
+	float dist_per_range = dist2 / max(0.0001, range2); // pow2
+	dist_per_range *= dist_per_range; // pow4
+	return saturate(1 - dist_per_range) / max(0.0001, dist2);
 }
 inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
 {

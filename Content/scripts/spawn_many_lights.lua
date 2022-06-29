@@ -22,7 +22,7 @@ for i=1,200 do
 	local light_component = scene.Component_CreateLight(entity)
 	light_component.SetType(POINT)
 	light_component.SetRange(12)
-	light_component.SetEnergy(6)
+	light_component.SetIntensity(40)
 	light_component.SetColor(Vector(1,0.5,0)) -- orange color
 	--light_component.SetColor(Vector(math.random(),math.random(),math.random())) -- random color
 	--light_component.SetVolumetricsEnabled(true)

@@ -1969,7 +1969,6 @@ namespace wi::scene
 
 		shaderscene.weather.sun_color = weather.sunColor;
 		shaderscene.weather.sun_direction = weather.sunDirection;
-		shaderscene.weather.sun_energy = weather.sunEnergy;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = weather.ambient;
 		shaderscene.weather.cloudiness = weather.cloudiness;
@@ -2223,11 +2222,11 @@ namespace wi::scene
 		const std::string& name,
 		const XMFLOAT3& position,
 		const XMFLOAT3& color,
-		float energy,
+		float intensity,
 		float range,
 		LightComponent::LightType type,
-		float fov,
-		float fov_inner)
+		float outerConeAngle,
+		float innerConeAngle)
 	{
 		Entity entity = CreateEntity();
 
@@ -2242,13 +2241,12 @@ namespace wi::scene
 		aabb_lights.Create(entity).createFromHalfWidth(position, XMFLOAT3(range, range, range));
 
 		LightComponent& light = lights.Create(entity);
-		light.energy = energy;
+		light.intensity = intensity;
 		light.range = range;
-		light.fov = XM_PIDIV4;
 		light.color = color;
 		light.SetType(type);
-		light.fov = fov;
-		light.fov_inner = fov_inner;
+		light.outerConeAngle = outerConeAngle;
+		light.innerConeAngle = innerConeAngle;
 
 		return entity;
 	}
@@ -3984,8 +3982,10 @@ namespace wi::scene
 				{
 					weather.most_important_light_index = args.jobIndex;
 					weather.sunColor = light.color;
+					weather.sunColor.x *= light.intensity;
+					weather.sunColor.y *= light.intensity;
+					weather.sunColor.z *= light.intensity;
 					weather.sunDirection = light.direction;
-					weather.sunEnergy = light.energy;
 					weather.stars_rotation_quaternion = light.rotation;
 				}
 				locker.unlock();
