@@ -944,7 +944,6 @@ void RenderPath3D::Render() const
 		wi::renderer::RefreshLightmaps(*scene, cmd, instanceInclusionMask_Lightmap);
 		wi::renderer::RefreshEnvProbes(visibility_main, cmd);
 		wi::renderer::RefreshImpostors(*scene, cmd);
-		wi::renderer::Workaround(visibility_main, 1, cmd);
 		});
 
 	// Voxel GI:

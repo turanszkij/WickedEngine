@@ -101,6 +101,15 @@ namespace wi
 			return;
 		}
 
+		static bool startup_workaround = false;
+		if (!startup_workaround)
+		{
+			startup_workaround = true;
+			CommandList cmd = graphicsDevice->BeginCommandList();
+			wi::renderer::Workaround(1, cmd);
+			graphicsDevice->SubmitCommandLists();
+		}
+
 		static bool startup_script = false;
 		if (!startup_script)
 		{
