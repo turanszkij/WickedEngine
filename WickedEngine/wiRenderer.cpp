@@ -2398,7 +2398,8 @@ void Workaround(const int bug , CommandList cmd)
 
 			//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
 			const PipelineState* pso = &PSO_object[0][RENDERPASS_VOXELIZE][BLENDMODE_OPAQUE][0][0][0];
-			
+
+			device->EventBegin("Workaround 1", cmd);
 			static RenderPass renderpass_clear;
 			if (!renderpass_clear.IsValid())
 			{
@@ -2410,6 +2411,7 @@ void Workaround(const int bug , CommandList cmd)
 			device->BindPipelineState(pso, cmd);
 			device->DrawIndexedInstanced(0, 0, 0, 0, 0, cmd); //PE: Just need predraw(cmd);
 			device->RenderPassEnd(cmd);
+			device->EventEnd(cmd);
 		}
 	}
 	return;
