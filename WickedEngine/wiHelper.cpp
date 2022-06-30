@@ -93,7 +93,8 @@ namespace wi::helper
 			directory = GetDirectoryFromPath(name);
 		}
 
-		DirectoryCreate(directory);
+		if(!directory.empty()) //PE: Crash if only filename is used with no folder.
+			DirectoryCreate(directory);
 
 		std::string filename = name;
 		if (filename.empty())
