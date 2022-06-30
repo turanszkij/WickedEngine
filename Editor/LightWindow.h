@@ -13,12 +13,13 @@ public:
 
 	void SetLightType(wi::scene::LightComponent::LightType type);
 
-	wi::gui::Slider energySlider;
+	wi::gui::Slider intensitySlider;
 	wi::gui::Slider rangeSlider;
 	wi::gui::Slider radiusSlider;
 	wi::gui::Slider widthSlider;
 	wi::gui::Slider heightSlider;
-	wi::gui::Slider fovSlider;
+	wi::gui::Slider outerConeAngleSlider;
+	wi::gui::Slider innerConeAngleSlider;
 	wi::gui::CheckBox	shadowCheckBox;
 	wi::gui::CheckBox	haloCheckBox;
 	wi::gui::CheckBox	volumetricsCheckBox;

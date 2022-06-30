@@ -145,7 +145,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					{
 						L = light.position - surface.P;
 						const float dist2 = dot(L, L);
-						const float range2 = light.GetRange() * light.GetRange();
+						const float range = light.GetRange();
+						const float range2 = range * range;
 
 						[branch]
 						if (dist2 < range2)
@@ -181,16 +182,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							surfaceToLight.create(surface, L);
 
 							[branch]
-							if (any(surfaceToLight.NdotL_sss))
+							if (any(surfaceToLight.NdotL_sss) && (dot(L, light.GetDirection()) > light.GetConeAngleCos()))
 							{
-								const float SpotFactor = dot(L, light.GetDirection());
-								const float spotCutOff = light.GetConeAngleCos();
-
-								[branch]
-								if (SpotFactor > spotCutOff)
-								{
-									ray.TMax = dist;
-								}
+								ray.TMax = dist;
 							}
 						}
 					}

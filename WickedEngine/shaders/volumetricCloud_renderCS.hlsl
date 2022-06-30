@@ -477,7 +477,7 @@ void RenderClouds(float3 rayOrigin, float3 rayDirection, float t, float steps, f
 	
 	AtmosphereParameters atmosphere = GetWeather().atmosphere;
 	
-	float3 sunIlluminance = GetSunColor() * GetSunEnergy();
+	float3 sunIlluminance = GetSunColor();
 	float3 sunDirection = GetSunDirection();
 	
 	float cosTheta = dot(rayDirection, sunDirection);

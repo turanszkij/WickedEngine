@@ -22,7 +22,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 worldPosition = float3(0.0, 0.0, viewHeight);
 	float3 worldDirection = float3(0.0f, sqrt(1.0 - viewZenithCosAngle * viewZenithCosAngle), viewZenithCosAngle);
 	float3 sunDirection = GetSunDirection();
-	float3 sunIlluminance = GetSunEnergy() * GetSunColor();
+	float3 sunIlluminance = GetSunColor();
 
 	SamplingParameters sampling;
     {

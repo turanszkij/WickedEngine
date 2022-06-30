@@ -24,7 +24,7 @@ groupshared float4 result_cache[CACHE_SIZE];
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
-	uint surfel_index = Gid.x;
+	uint surfel_index = surfelAliveBuffer[Gid.x];
 	Surfel surfel = surfelBuffer[surfel_index];
 	SurfelData surfel_data = surfelDataBuffer[surfel_index];
 	uint life = surfel_data.GetLife();

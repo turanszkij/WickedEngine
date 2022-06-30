@@ -427,8 +427,6 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
 					decalColor.a *= edgeBlend;
 					decalColor *= decal.GetColor();
-					// apply emissive:
-					lighting.direct.specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
 					// perform manual blending of decals:
 					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
 					decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
@@ -652,8 +650,6 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 						float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
 						decalColor.a *= edgeBlend;
 						decalColor *= decal.GetColor();
-						// apply emissive:
-						surface.emissiveColor += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
 						// perform manual blending of decals:
 						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
 						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);

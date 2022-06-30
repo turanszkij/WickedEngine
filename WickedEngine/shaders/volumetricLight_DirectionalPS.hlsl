@@ -50,7 +50,8 @@ float4 main(VertexToPixel input) : SV_TARGET
 				float3 attenuation = shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
 
 				// Evaluate sample height for height fog calculation, given 0 for V:
-				attenuation *= GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0)) * scattering;
+				attenuation *= GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0));
+				attenuation *= scattering;
 				
 				accumulation += attenuation;
 
@@ -75,5 +76,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 		atmosphere_transmittance = GetAtmosphericLightTransmittance(GetWeather().atmosphere, P, L, texture_transmittancelut);
 	}
 
-	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy() * atmosphere_transmittance, 1));
+	return max(0, float4(accumulation * light.GetColor().rgb * atmosphere_transmittance, 1));
 }

@@ -2157,11 +2157,15 @@ const char LightComponent_BindLua::className[] = "LightComponent";
 Luna<LightComponent_BindLua>::FunctionType LightComponent_BindLua::methods[] = {
 	lunamethod(LightComponent_BindLua, SetType),
 	lunamethod(LightComponent_BindLua, SetRange),
-	lunamethod(LightComponent_BindLua, SetEnergy),
+	lunamethod(LightComponent_BindLua, SetIntensity),
 	lunamethod(LightComponent_BindLua, SetColor),
 	lunamethod(LightComponent_BindLua, SetCastShadow),
 	lunamethod(LightComponent_BindLua, SetVolumetricsEnabled),
+	lunamethod(LightComponent_BindLua, SetOuterConeAngle),
+	lunamethod(LightComponent_BindLua, SetInnerConeAngle),
 	lunamethod(LightComponent_BindLua, GetType),
+
+	lunamethod(LightComponent_BindLua, SetEnergy),
 	lunamethod(LightComponent_BindLua, SetFOV),
 	{ NULL, NULL }
 };
@@ -2203,7 +2207,7 @@ int LightComponent_BindLua::SetRange(lua_State* L)
 	if (argc > 0)
 	{
 		float value = wi::lua::SGetFloat(L, 1);
-		component->range_local = value;
+		component->range = value;
 	}
 	else
 	{
@@ -2218,11 +2222,26 @@ int LightComponent_BindLua::SetEnergy(lua_State* L)
 	if (argc > 0)
 	{
 		float value = wi::lua::SGetFloat(L, 1);
-		component->energy = value;
+		component->BackCompatSetEnergy(value);
 	}
 	else
 	{
 		wi::lua::SError(L, "SetEnergy(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int LightComponent_BindLua::SetIntensity(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetFloat(L, 1);
+		component->intensity = value;
+	}
+	else
+	{
+		wi::lua::SError(L, "SetIntensity(float value) not enough arguments!");
 	}
 
 	return 0;
@@ -2283,11 +2302,41 @@ int LightComponent_BindLua::SetFOV(lua_State* L)
 	if (argc > 0)
 	{
 		float value = wi::lua::SGetFloat(L, 1);
-		component->fov = value;
+		component->outerConeAngle = value * 0.5f;
 	}
 	else
 	{
 		wi::lua::SError(L, "SetFOV(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int LightComponent_BindLua::SetOuterConeAngle(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetFloat(L, 1);
+		component->outerConeAngle = value;
+	}
+	else
+	{
+		wi::lua::SError(L, "SetOuterConeAngle(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int LightComponent_BindLua::SetInnerConeAngle(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetFloat(L, 1);
+		component->innerConeAngle = value;
+	}
+	else
+	{
+		wi::lua::SError(L, "SetInnerConeAngle(float value) not enough arguments!");
 	}
 
 	return 0;

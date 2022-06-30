@@ -109,7 +109,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 		ForceFieldComponent* force = wi::scene::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
-			force->range_local = args.fValue;
+			force->range = args.fValue;
 		}
 	});
 	rangeSlider.SetEnabled(false);
@@ -134,7 +134,7 @@ void ForceFieldWindow::SetEntity(Entity entity)
 	{
 		typeComboBox.SetSelected(force->type == ENTITY_TYPE_FORCEFIELD_POINT ? 0 : 1);
 		gravitySlider.SetValue(force->gravity);
-		rangeSlider.SetValue(force->range_local);
+		rangeSlider.SetValue(force->range);
 
 		gravitySlider.SetEnabled(true);
 		rangeSlider.SetEnabled(true);

@@ -31,7 +31,7 @@ GPU-based particles (emit from point, mesh, animated mesh)
 Soft particles
 Hair particle systems (grass/vegetation)
 Instanced rendering
-MSAA (Forward rendering only)
+MSAA
 FXAA
 TAA (Temporal Antialiasing)
 Supersampling
@@ -75,7 +75,6 @@ Lightmap baking (with GPU path tracing)
 Job system
 Inverse Kinematics
 Springs
-Terrain Rendering (material blending)
 Variable Rate Shading
 Real time ray tracing: ambient occlusion, shadows, reflections (DXR and Vulkan raytracing)
 Screen Space Contact Shadows
@@ -94,3 +93,4 @@ KHR_materials_clearcoat
 KHR_materials_specular
 KHR_materials_ior
 KHR_texture_basisu
+KHR_lights_punctual

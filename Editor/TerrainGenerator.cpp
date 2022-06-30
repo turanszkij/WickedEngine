@@ -578,7 +578,7 @@ void TerrainGenerator::Generation_Restart()
 		scene->Component_Attach(sunEntity, terrainEntity);
 		LightComponent& light = *scene->lights.GetComponent(sunEntity);
 		light.SetType(LightComponent::LightType::DIRECTIONAL);
-		light.energy = 16;
+		light.intensity = 16;
 		light.SetCastShadow(true);
 		//light.SetVolumetricsEnabled(true);
 		TransformComponent& transform = *scene->transforms.GetComponent(sunEntity);

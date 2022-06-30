@@ -3868,8 +3868,8 @@ using namespace vulkan_internal;
 				{
 					const SubresourceData& subresourceData = initial_data[initDataIdx++];
 					const uint32_t block_size = GetFormatBlockSize(desc->format);
-					const uint32_t num_blocks_x = width / block_size;
-					const uint32_t num_blocks_y = height / block_size;
+					const uint32_t num_blocks_x = std::max(1u, width / block_size);
+					const uint32_t num_blocks_y = std::max(1u, height / block_size);
 					const uint32_t dst_rowpitch = num_blocks_x * GetFormatStride(desc->format);
 					const uint32_t dst_slicepitch = dst_rowpitch * num_blocks_y;
 					const uint32_t src_rowpitch = subresourceData.row_pitch;

@@ -37,8 +37,9 @@ jobs:
           Content/
           README.md
           LICENSE.md
-          other_licenses.txt
+          third_party_software.txt
           features.txt
+          credits.txt
           Editor/images/
           Editor/terrain/
           Editor/sound/
@@ -55,8 +56,9 @@ jobs:
           Content/
           README.md
           LICENSE.md
-          other_licenses.txt
+          third_party_software.txt
           features.txt
+          credits.txt
           Tests/images/
           Tests/sound/
           Tests/*.ini
@@ -108,8 +110,9 @@ jobs:
           Content/
           README.md
           LICENSE.md
-          other_licenses.txt
+          third_party_software.txt
           features.txt
+          credits.txt
           Editor/images/
           Editor/terrain/
           Editor/sound/
@@ -126,8 +129,9 @@ jobs:
           Content/
           README.md
           LICENSE.md
-          other_licenses.txt
+          third_party_software.txt
           features.txt
+          credits.txt
           Tests/images/
           Tests/sound/
           Tests/*.ini
@@ -177,8 +181,9 @@ jobs:
           Content/
           README.md
           LICENSE.md
-          other_licenses.txt
+          third_party_software.txt
           features.txt
+          credits.txt
           Editor/images/
           Editor/terrain/
           Editor/sound/
@@ -195,8 +200,9 @@ jobs:
           Content/
           README.md
           LICENSE.md
-          other_licenses.txt
+          third_party_software.txt
           features.txt
+          credits.txt
           Tests/images/
           Tests/sound/
           Tests/*.ini
