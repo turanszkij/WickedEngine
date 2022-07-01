@@ -2387,32 +2387,29 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 
 void Workaround(const int bug , CommandList cmd)
 {
-	if (device->GetBackend() == BACKEND_DX12)
+	if (bug == 1)
 	{
-		if (bug == 1)
+		//PE: Strange DX12 bug, we must change the pso/pipeline state, just one time.
+		//PE: After this there will be no "black dots" or culling/depth errors.
+		//PE: This bug only happen on some nvidia cards ?
+		//PE: https://github.com/turanszkij/WickedEngine/issues/450#issuecomment-1143647323
+
+		//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
+		const PipelineState* pso = &PSO_object[0][RENDERPASS_VOXELIZE][BLENDMODE_OPAQUE][0][0][0];
+
+		device->EventBegin("Workaround 1", cmd);
+		static RenderPass renderpass_clear;
+		if (!renderpass_clear.IsValid())
 		{
-			//PE: Strange DX12 bug, we must change the pso/pipeline state, just one time.
-			//PE: After this there will be no "black dots" or culling/depth errors.
-			//PE: This bug only happen on some nvidia cards ?
-			//PE: https://github.com/turanszkij/WickedEngine/issues/450#issuecomment-1143647323
-
-			//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
-			const PipelineState* pso = &PSO_object[0][RENDERPASS_VOXELIZE][BLENDMODE_OPAQUE][0][0][0];
-
-			device->EventBegin("Workaround 1", cmd);
-			static RenderPass renderpass_clear;
-			if (!renderpass_clear.IsValid())
-			{
-				RenderPassDesc renderpassdesc;
-				renderpassdesc.flags = RenderPassDesc::Flags::EMPTY;
-				device->CreateRenderPass(&renderpassdesc, &renderpass_clear);
-			}
-			device->RenderPassBegin(&renderpass_clear, cmd);
-			device->BindPipelineState(pso, cmd);
-			device->DrawIndexedInstanced(0, 0, 0, 0, 0, cmd); //PE: Just need predraw(cmd);
-			device->RenderPassEnd(cmd);
-			device->EventEnd(cmd);
+			RenderPassDesc renderpassdesc;
+			renderpassdesc.flags = RenderPassDesc::Flags::EMPTY;
+			device->CreateRenderPass(&renderpassdesc, &renderpass_clear);
 		}
+		device->RenderPassBegin(&renderpass_clear, cmd);
+		device->BindPipelineState(pso, cmd);
+		device->DrawIndexedInstanced(0, 0, 0, 0, 0, cmd); //PE: Just need predraw(cmd);
+		device->RenderPassEnd(cmd);
+		device->EventEnd(cmd);
 	}
 	return;
 }

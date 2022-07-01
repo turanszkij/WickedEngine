@@ -105,9 +105,12 @@ namespace wi
 		if (!startup_workaround)
 		{
 			startup_workaround = true;
-			CommandList cmd = graphicsDevice->BeginCommandList();
-			wi::renderer::Workaround(1, cmd);
-			graphicsDevice->SubmitCommandLists();
+			if (dynamic_cast<GraphicsDevice_DX12*>(graphicsDevice.get()))
+			{
+				CommandList cmd = graphicsDevice->BeginCommandList();
+				wi::renderer::Workaround(1, cmd);
+				graphicsDevice->SubmitCommandLists();
+			}
 		}
 
 		static bool startup_script = false;

@@ -312,8 +312,6 @@ namespace wi::graphics
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
 
-		int GetBackend(void) override;
-
 		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override
 		{
 			const CommandList_DX12& commandlist = GetCommandList(cmd);

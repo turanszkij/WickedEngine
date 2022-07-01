@@ -6066,11 +6066,6 @@ using namespace dx12_internal;
 		}
 	}
 
-	int GraphicsDevice_DX12::GetBackend(void)
-	{
-		return(BACKEND_DX12);
-	}
-
 }
 
 #endif // WICKEDENGINE_BUILD_DX12

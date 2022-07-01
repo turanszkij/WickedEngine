@@ -7743,11 +7743,6 @@ using namespace vulkan_internal;
 		vkCmdInsertDebugUtilsLabelEXT(commandlist.GetCommandBuffer(), &label);
 	}
 
-	int GraphicsDevice_Vulkan::GetBackend(void)
-	{
-		return(BACKEND_VULKAN);
-	}
-
 }
 
 #endif // WICKEDENGINE_BUILD_VULKAN
