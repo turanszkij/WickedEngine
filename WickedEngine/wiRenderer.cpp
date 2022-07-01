@@ -27,7 +27,6 @@
 #include "shaders/ShaderInterop_DDGI.h"
 
 #include <algorithm>
-#include <array>
 #include <atomic>
 
 using namespace wi::primitive;
@@ -2226,7 +2225,7 @@ inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
 	shcam = SHCAM(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
 }
-inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, std::array<SHCAM, CASCADE_COUNT>& shcams)
+inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, SHCAM* shcams, size_t shcam_count)
 {
 	if (GetTemporalAAEnabled())
 	{
@@ -2249,6 +2248,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		referenceSplitClamp * 0.1f,		// mid-far split
 		referenceSplitClamp * 1.0f,		// far plane
 	};
+	assert(shcam_count <= CASCADE_COUNT);
 
 	// Unproject main frustum corners into world space (notice the reversed Z projection!):
 	const XMMATRIX unproj = camera.GetInvViewProjection();
@@ -2265,7 +2265,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	};
 
 	// Compute shadow cameras:
-	for (int cascade = 0; cascade < CASCADE_COUNT; ++cascade)
+	for (int cascade = 0; cascade < shcam_count; ++cascade)
 	{
 		// Compute cascade sub-frustum in light-view-space from the main frustum corners:
 		const float split_near = splits[cascade];
@@ -2329,7 +2329,16 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	}
 
 }
-
+inline void CreateCubemapCameras(const XMFLOAT3& position, float zNearP, float zFarP, SHCAM* shcams, size_t shcam_count)
+{
+	assert(shcam_count == 6);
+	shcams[0] = SHCAM(position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //+x
+	shcams[1] = SHCAM(position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //-x
+	shcams[2] = SHCAM(position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2); //+y
+	shcams[3] = SHCAM(position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2); //-y
+	shcams[4] = SHCAM(position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2); //+z
+	shcams[5] = SHCAM(position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2); //-z
+}
 
 ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& batch_aabb, RENDERPASS renderPass)
 {
@@ -3592,8 +3601,8 @@ void UpdateRenderData(
 
 				if (shadow)
 				{
-					std::array<SHCAM, CASCADE_COUNT> shcams;
-					CreateDirLightShadowCams(light, *vis.camera, shcams);
+					SHCAM shcams[CASCADE_COUNT];
+					CreateDirLightShadowCams(light, *vis.camera, shcams, arraysize(shcams));
 					std::memcpy(&matrixArray[matrixCounter++], &shcams[0].view_projection, sizeof(XMMATRIX));
 					std::memcpy(&matrixArray[matrixCounter++], &shcams[1].view_projection, sizeof(XMMATRIX));
 					std::memcpy(&matrixArray[matrixCounter++], &shcams[2].view_projection, sizeof(XMMATRIX));
@@ -4721,8 +4730,8 @@ void DrawShadowmaps(
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				std::array<SHCAM, CASCADE_COUNT> shcams;
-				CreateDirLightShadowCams(light, *vis.camera, shcams);
+				SHCAM shcams[CASCADE_COUNT];
+				CreateDirLightShadowCams(light, *vis.camera, shcams, arraysize(shcams));
 
 				for (uint32_t cascade = 0; cascade < CASCADE_COUNT; ++cascade)
 				{
@@ -4873,14 +4882,8 @@ void DrawShadowmaps(
 
 					const float zNearP = 0.1f;
 					const float zFarP = std::max(1.0f, light.GetRange());
-					SHCAM cameras[] = {
-						SHCAM(light.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
-						SHCAM(light.position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
-						SHCAM(light.position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
-						SHCAM(light.position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
-						SHCAM(light.position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
-						SHCAM(light.position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
-					};
+					SHCAM cameras[6];
+					CreateCubemapCameras(light.position, zNearP, zFarP, cameras, arraysize(cameras));
 					Viewport vp[arraysize(cameras)];
 					Frustum frusta[arraysize(cameras)];
 					uint32_t frustum_count = 0;
@@ -6290,15 +6293,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 	auto render_probe = [&](const EnvironmentProbeComponent& probe, const AABB& probe_aabb) {
 
-
-		const SHCAM cameras[] = {
-			SHCAM(probe.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
-			SHCAM(probe.position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
-			SHCAM(probe.position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
-			SHCAM(probe.position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
-			SHCAM(probe.position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
-			SHCAM(probe.position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
-		};
+		SHCAM cameras[6];
+		CreateCubemapCameras(probe.position, zNearP, zFarP, cameras, arraysize(cameras));
 		Frustum frusta[arraysize(cameras)];
 
 		CubemapRenderCB cb;
@@ -6488,6 +6484,9 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 	BindCommonResources(cmd);
 
+	barrier_stack.push_back(GPUBarrier::Image(&scene.impostorArray, ResourceState::SHADER_RESOURCE, ResourceState::RENDERTARGET));
+	barrier_stack_flush(cmd);
+
 	for (uint32_t impostorIndex = 0; impostorIndex < scene.impostors.GetCount(); ++impostorIndex)
 	{
 		const ImpostorComponent& impostor = scene.impostors[impostorIndex];
@@ -6552,6 +6551,9 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 		}
 
 	}
+
+	barrier_stack.push_back(GPUBarrier::Image(&scene.impostorArray, ResourceState::RENDERTARGET, ResourceState::SHADER_RESOURCE));
+	barrier_stack_flush(cmd);
 
 	device->EventEnd(cmd);
 }

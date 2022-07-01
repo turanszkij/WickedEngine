@@ -1707,8 +1707,14 @@ void EditorComponent::Update(float dt)
 					if (transform != nullptr)
 					{
 						transform->translation_local = {};
-						//transform->MatrixTransform(hovered.orientation);
+#if 0
+						// orient around surface normal:
+						transform->MatrixTransform(hovered.orientation);
+#else
+						// orient in random vertical rotation only:
+						transform->RotateRollPitchYaw(XMFLOAT3(0, wi::random::GetRandom(XM_PI), 0));
 						transform->Translate(hovered.position);
+#endif
 						transform->UpdateTransform();
 					}
 					if (hier != nullptr)
