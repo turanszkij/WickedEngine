@@ -41,6 +41,8 @@ Contributions:
 	- QOI image loader integration
 - Eddie Ataberk https://github.com/eddieataberk
 	- Physics improvements
+- Preben Eriksen https://github.com/plemsoft
+	- Fixes
 - matpx https://github.com/matpx
 	- Fixes
 
