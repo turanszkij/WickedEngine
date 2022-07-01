@@ -101,6 +101,7 @@ namespace wi
 			return;
 		}
 
+		#ifdef WICKEDENGINE_BUILD_DX12
 		static bool startup_workaround = false;
 		if (!startup_workaround)
 		{
@@ -112,6 +113,7 @@ namespace wi
 				graphicsDevice->SubmitCommandLists();
 			}
 		}
+		#endif
 
 		static bool startup_script = false;
 		if (!startup_script)
