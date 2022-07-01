@@ -2394,6 +2394,35 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 	return cb;
 }
 
+void Workaround(const int bug , CommandList cmd)
+{
+	if (bug == 1)
+	{
+		//PE: Strange DX12 bug, we must change the pso/pipeline state, just one time.
+		//PE: After this there will be no "black dots" or culling/depth errors.
+		//PE: This bug only happen on some nvidia cards ?
+		//PE: https://github.com/turanszkij/WickedEngine/issues/450#issuecomment-1143647323
+
+		//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
+		const PipelineState* pso = &PSO_object[0][RENDERPASS_VOXELIZE][BLENDMODE_OPAQUE][0][0][0];
+
+		device->EventBegin("Workaround 1", cmd);
+		static RenderPass renderpass_clear;
+		if (!renderpass_clear.IsValid())
+		{
+			RenderPassDesc renderpassdesc;
+			renderpassdesc.flags = RenderPassDesc::Flags::EMPTY;
+			device->CreateRenderPass(&renderpassdesc, &renderpass_clear);
+		}
+		device->RenderPassBegin(&renderpass_clear, cmd);
+		device->BindPipelineState(pso, cmd);
+		device->DrawIndexedInstanced(0, 0, 0, 0, 0, cmd); //PE: Just need predraw(cmd);
+		device->RenderPassEnd(cmd);
+		device->EventEnd(cmd);
+	}
+	return;
+}
+
 void RenderMeshes(
 	const Visibility& vis,
 	const RenderQueue& renderQueue,
@@ -3145,7 +3174,7 @@ void UpdatePerFrameData(
 	frameCB.voxelradiance_size = voxelSceneData.voxelsize;
 	frameCB.voxelradiance_size_rcp = 1.0f / (float)frameCB.voxelradiance_size;
 	frameCB.voxelradiance_resolution = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
-	frameCB.voxelradiance_resolution_rcp = 1.0f / (float)frameCB.voxelradiance_resolution;
+	frameCB.voxelradiance_resolution_rcp = GetVoxelRadianceEnabled() ? 1.0f / (float)frameCB.voxelradiance_resolution : 0; //PE: was inf.
 	frameCB.voxelradiance_mipcount = voxelSceneData.mips;
 	frameCB.voxelradiance_numcones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
 	frameCB.voxelradiance_numcones_rcp = 1.0f / (float)frameCB.voxelradiance_numcones;
@@ -6033,7 +6062,11 @@ void DrawDebugWorld(
 
 	if (GetRaytraceDebugBVHVisualizerEnabled())
 	{
-		RayTraceSceneBVH(scene, cmd);
+		//PE: Check if debug BVH is possible. or it will crash.
+		if (GetSurfelGIEnabled() || GetDDGIEnabled() )
+		{
+			RayTraceSceneBVH(scene, cmd);
+		}
 	}
 
 	device->EventEnd(cmd);
