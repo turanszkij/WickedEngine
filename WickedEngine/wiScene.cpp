@@ -3269,6 +3269,7 @@ namespace wi::scene
 			desc.array_size = 1;
 			desc.format = Format::D16_UNORM;
 			desc.layout = ResourceState::DEPTHSTENCIL;
+			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 			device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
 			device->SetName(&impostorDepthStencil, "impostorDepthStencil");
 
@@ -3276,7 +3277,7 @@ namespace wi::scene
 			desc.array_size = maxImpostorCount * impostorCaptureAngles * 3;
 			desc.format = Format::R8G8B8A8_UNORM;
 			desc.layout = ResourceState::SHADER_RESOURCE;
-
+			desc.misc_flags = ResourceMiscFlag::NONE;
 			device->CreateTexture(&desc, nullptr, &impostorArray);
 			device->SetName(&impostorArray, "impostorArray");
 
@@ -3296,9 +3297,9 @@ namespace wi::scene
 						&impostorArray,
 						RenderPassAttachment::LoadOp::CLEAR,
 						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::SHADER_RESOURCE,
 						ResourceState::RENDERTARGET,
-						ResourceState::SHADER_RESOURCE
+						ResourceState::RENDERTARGET,
+						ResourceState::RENDERTARGET
 					)
 				);
 				renderpassdesc.attachments.back().subresource = i * 3;
@@ -3308,9 +3309,9 @@ namespace wi::scene
 						&impostorArray,
 						RenderPassAttachment::LoadOp::CLEAR,
 						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::SHADER_RESOURCE,
 						ResourceState::RENDERTARGET,
-						ResourceState::SHADER_RESOURCE
+						ResourceState::RENDERTARGET,
+						ResourceState::RENDERTARGET
 					)
 				);
 				renderpassdesc.attachments.back().subresource = i * 3 + 1;
@@ -3320,9 +3321,9 @@ namespace wi::scene
 						&impostorArray,
 						RenderPassAttachment::LoadOp::CLEAR,
 						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::SHADER_RESOURCE,
 						ResourceState::RENDERTARGET,
-						ResourceState::SHADER_RESOURCE
+						ResourceState::RENDERTARGET,
+						ResourceState::RENDERTARGET
 					)
 				);
 				renderpassdesc.attachments.back().subresource = i * 3 + 2;
