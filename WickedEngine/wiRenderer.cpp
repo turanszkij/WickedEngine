@@ -1815,6 +1815,8 @@ void LoadBuffers()
 		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 		device->CreateBuffer(&desc, values, &luminance_dummy);
 		device->SetName(&luminance_dummy, "luminance_dummy");
+
+		static_assert(LUMINANCE_BUFFER_OFFSET_EXPOSURE == 0);
 	}
 }
 void SetUpStates()
