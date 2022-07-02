@@ -20,11 +20,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	color /= 4.0f;
 
 	float exposure = bloom.exposure;
-	[branch]
-	if (bloom.buffer_input_luminance >= 0)
-	{
-		exposure *= bindless_buffers[bloom.buffer_input_luminance].Load<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE);
-	}
+	exposure *= bindless_buffers[bloom.buffer_input_luminance].Load<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE);
 	color *= exposure;
 
 	color = min(color, 10); // clamp upper limit: avoid incredibly large values to overly dominate bloom (high speculars were causing problems)

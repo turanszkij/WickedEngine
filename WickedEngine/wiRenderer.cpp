@@ -144,6 +144,14 @@ Texture texture_detailNoise;
 Texture texture_curlNoise;
 Texture texture_weatherMap;
 
+// A dummy luminance buffer with exposure set to 1.
+// This avoids having to branch in shaders that consume the exposure value
+// when eye adaption is disabled.
+// It also works around an apparent bug in the drivers for certain GTX 10xx cards
+// where just testing if a bindless buffer descriptor is valid requires that it is valid.
+// See: https://github.com/turanszkij/WickedEngine/issues/450
+GPUBuffer luminance_dummy;
+
 // Direct reference to a renderable instance:
 struct RenderBatch
 {
@@ -1794,6 +1802,21 @@ void LoadBuffers()
 		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]);
 		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]");
+	}
+	{
+		// the dummy buffer is read-only so only the first 'exposure' value is needed,
+		// not the luminance or histogram values in the full version of the buffer used
+        // when eye adaption is enabled.
+		float values[1] = { 1 };
+
+		GPUBufferDesc desc;
+		desc.size = sizeof(values);
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+		device->CreateBuffer(&desc, values, &luminance_dummy);
+		device->SetName(&luminance_dummy, "luminance_dummy");
+
+		static_assert(LUMINANCE_BUFFER_OFFSET_EXPOSURE == 0);
 	}
 }
 void SetUpStates()
@@ -7610,7 +7633,7 @@ void ComputeBloom(
 		bloom.exposure = exposure;
 		bloom.texture_input = device->GetDescriptorIndex(&input, SubresourceType::SRV);
 		bloom.texture_output = device->GetDescriptorIndex(&res.texture_bloom, SubresourceType::UAV);
-		bloom.buffer_input_luminance = device->GetDescriptorIndex(buffer_luminance, SubresourceType::SRV);
+		bloom.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
 		device->PushConstants(&bloom, sizeof(bloom), cmd);
 
 		{
@@ -12319,7 +12342,7 @@ void Postprocess_Tonemap(
 	tonemap_push.exposure = exposure;
 	tonemap_push.dither = dither ? 1.0f : 0.0f;
 	tonemap_push.texture_input = device->GetDescriptorIndex(&input, SubresourceType::SRV);
-	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex(buffer_luminance, SubresourceType::SRV);
+	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
 	tonemap_push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SubresourceType::SRV);
 	tonemap_push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SubresourceType::SRV);
 	tonemap_push.texture_bloom = device->GetDescriptorIndex(texture_bloom, SubresourceType::SRV);

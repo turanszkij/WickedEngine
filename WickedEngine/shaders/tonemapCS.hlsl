@@ -62,11 +62,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		hdr = bindless_textures[tonemap_push.texture_input].SampleLevel(sampler_linear_clamp, uv, 0);
 	}
 
-	[branch]
-	if (tonemap_push.buffer_input_luminance >= 0)
-	{
-		exposure *= bindless_buffers[tonemap_push.buffer_input_luminance].Load<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE);
-	}
+	exposure *= bindless_buffers[tonemap_push.buffer_input_luminance].Load<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE);
 	hdr.rgb *= exposure;
 
 	[branch]
