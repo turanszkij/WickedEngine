@@ -5011,23 +5011,46 @@ using namespace vulkan_internal;
 			depthstencil.depthWriteEnable = pso->desc.dss->depth_write_mask == DepthWriteMask::ZERO ? VK_FALSE : VK_TRUE;
 			depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->depth_func);
 
-			depthstencil.stencilTestEnable = pso->desc.dss->stencil_enable ? VK_TRUE : VK_FALSE;
+			if (pso->desc.dss->stencil_enable)
+			{
+				depthstencil.stencilTestEnable = VK_TRUE;
 
-			depthstencil.front.compareMask = pso->desc.dss->stencil_read_mask;
-			depthstencil.front.writeMask = pso->desc.dss->stencil_write_mask;
-			depthstencil.front.reference = 0; // runtime supplied
-			depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->front_face.stencil_func);
-			depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_pass_op);
-			depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_fail_op);
-			depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_depth_fail_op);
+				depthstencil.front.compareMask = pso->desc.dss->stencil_read_mask;
+				depthstencil.front.writeMask = pso->desc.dss->stencil_write_mask;
+				depthstencil.front.reference = 0; // runtime supplied
+				depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->front_face.stencil_func);
+				depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_pass_op);
+				depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_fail_op);
+				depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_depth_fail_op);
 
-			depthstencil.back.compareMask = pso->desc.dss->stencil_read_mask;
-			depthstencil.back.writeMask = pso->desc.dss->stencil_write_mask;
-			depthstencil.back.reference = 0; // runtime supplied
-			depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->back_face.stencil_func);
-			depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_pass_op);
-			depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_fail_op);
-			depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_depth_fail_op);
+				depthstencil.back.compareMask = pso->desc.dss->stencil_read_mask;
+				depthstencil.back.writeMask = pso->desc.dss->stencil_write_mask;
+				depthstencil.back.reference = 0; // runtime supplied
+				depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->back_face.stencil_func);
+				depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_pass_op);
+				depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_fail_op);
+				depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_depth_fail_op);
+			}
+			else
+			{
+				depthstencil.stencilTestEnable = VK_FALSE;
+
+				depthstencil.front.compareMask = 0;
+				depthstencil.front.writeMask = 0;
+				depthstencil.front.reference = 0;
+				depthstencil.front.compareOp = VK_COMPARE_OP_NEVER;
+				depthstencil.front.passOp = VK_STENCIL_OP_KEEP;
+				depthstencil.front.failOp = VK_STENCIL_OP_KEEP;
+				depthstencil.front.depthFailOp = VK_STENCIL_OP_KEEP;
+
+				depthstencil.back.compareMask = 0;
+				depthstencil.back.writeMask = 0;
+				depthstencil.back.reference = 0; // runtime supplied
+				depthstencil.back.compareOp = VK_COMPARE_OP_NEVER;
+				depthstencil.back.passOp = VK_STENCIL_OP_KEEP;
+				depthstencil.back.failOp = VK_STENCIL_OP_KEEP;
+				depthstencil.back.depthFailOp = VK_STENCIL_OP_KEEP;
+			}
 
 			if (CheckCapability(GraphicsDeviceCapability::DEPTH_BOUNDS_TEST))
 			{
@@ -7374,7 +7397,7 @@ using namespace vulkan_internal;
 					barrierdesc.subresourceRange.baseMipLevel = (uint32_t)std::max(0, barrier.image.mip);
 					barrierdesc.subresourceRange.levelCount = 1;
 					barrierdesc.subresourceRange.baseArrayLayer = (uint32_t)std::max(0, barrier.image.slice);
-					barrierdesc.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS; // this should be 1 but cubemap array complains in debug layer...
+					barrierdesc.subresourceRange.layerCount = 1;
 				}
 				else
 				{
