@@ -757,8 +757,13 @@ namespace wi::scene
 			float height = 1;
 		} capsule;
 
+		// This will force LOD level for rigid body if it is a TRIANGLE_MESH shape:
+		//	The geometry for LOD level will be taken from MeshComponent.
+		//	The physics object will need to be recreated for it to take effect.
+		uint32_t mesh_lod = 0;
+
 		// Non-serialized attributes:
-		void* physicsobject = nullptr;
+		void* physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 		inline void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }

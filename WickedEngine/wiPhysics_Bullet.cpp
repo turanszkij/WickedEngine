@@ -140,22 +140,26 @@ namespace wi::physics
 		case RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH:
 			if(mesh != nullptr)
 			{
-				int totalVerts = (int)mesh->vertex_positions.size();
 				int totalTriangles = 0;
+				int* indices = nullptr;
 				uint32_t first_subset = 0;
 				uint32_t last_subset = 0;
-				mesh->GetLODSubsetRange(0, first_subset, last_subset);
+				mesh->GetLODSubsetRange(physicscomponent.mesh_lod, first_subset, last_subset);
 				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 				{
 					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+					if (indices == nullptr)
+					{
+						indices = (int*)(mesh->indices.data() + subset.indexOffset);
+					}
 					totalTriangles += int(subset.indexCount / 3);
 				}
 
 				btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray(
 					totalTriangles,
-					(int*)mesh->indices.data(),
+					indices,
 					3 * sizeof(int),
-					totalVerts,
+					int(mesh->vertex_positions.size()),
 					(btScalar*)mesh->vertex_positions.data(),
 					sizeof(XMFLOAT3)
 				);
@@ -253,22 +257,28 @@ namespace wi::physics
 			btVerts[i * 3 + 2] = btScalar(position.z);
 		}
 
-		const int iCount = (int)mesh.indices.size();
-		const int tCount = iCount / 3;
-		wi::vector<int> btInd(iCount);
-		for (int i = 0; i < iCount; ++i) 
+		wi::vector<int> btInd;
+		btInd.reserve(mesh.indices.size());
+		uint32_t first_subset = 0;
+		uint32_t last_subset = 0;
+		mesh.GetLODSubsetRange(0, first_subset, last_subset);
+		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 		{
-			uint32_t ind = mesh.indices[i];
-			uint32_t mappedIndex = physicscomponent.graphicsToPhysicsVertexMapping[ind];
-			btInd[i] = (int)mappedIndex;
+			const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+			const uint32_t* indices = mesh.indices.data() + subset.indexOffset;
+			for (uint32_t i = 0; i < subset.indexCount; ++i)
+			{
+				btInd.push_back((int)physicscomponent.graphicsToPhysicsVertexMapping[indices[i]]);
+			}
 		}
 
+		// This function uses new to allocate btSoftbody internally:
 		btSoftBody* softbody = btSoftBodyHelpers::CreateFromTriMesh(
-			dynamicsWorld.getWorldInfo()
-			, btVerts.data()
-			, btInd.data()
-			, tCount
-			, false
+			dynamicsWorld.getWorldInfo(),
+			btVerts.data(),
+			btInd.data(),
+			int(btInd.size() / 3),
+			false
 		);
 
 		if (softbody)

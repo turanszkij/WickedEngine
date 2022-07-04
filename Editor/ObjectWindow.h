@@ -32,6 +32,7 @@ public:
 	wi::gui::Slider restitutionSlider;
 	wi::gui::Slider lineardampingSlider;
 	wi::gui::Slider angulardampingSlider;
+	wi::gui::Slider physicsMeshLODSlider;
 	wi::gui::CheckBox disabledeactivationCheckBox;
 	wi::gui::CheckBox kinematicCheckBox;
 
