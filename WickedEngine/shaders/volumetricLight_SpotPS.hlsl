@@ -34,16 +34,15 @@ float4 main(VertexToPixel input) : SV_TARGET
 		const float dist = sqrt(dist2);
 		L /= dist;
 
-		float SpotFactor = dot(L, light.GetDirection());
-		float spotCutOff = light.GetConeAngleCos();
+		const float spot_factor = dot(L, light.GetDirection());
+		const float spot_cutoff = light.GetConeAngleCos();
 
 		[branch]
-		if (SpotFactor > spotCutOff)
+		if (spot_factor > spot_cutoff)
 		{
-			const float range2 = light.GetRange() * light.GetRange();
-			const float att = saturate(1.0 - (dist2 / range2));
-			float3 attenuation = att * att;
-			attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+			const float range = light.GetRange();
+			const float range2 = range * range;
+			float3 attenuation = attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 
 			[branch]
 			if (light.IsCastingShadow())
@@ -60,6 +59,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 			// Evaluate sample height for exponential fog calculation, given 0 for V:
 			attenuation *= GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0));
+			attenuation *= ComputeScattering(saturate(dot(L, -V)));
 
 			accumulation += attenuation;
 		}
@@ -70,5 +70,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	accumulation /= sampleCount;
 
-	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy(), 1));
+	return max(0, float4(accumulation * light.GetColor().rgb, 1));
 }

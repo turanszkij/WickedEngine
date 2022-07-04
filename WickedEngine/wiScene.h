@@ -757,8 +757,13 @@ namespace wi::scene
 			float height = 1;
 		} capsule;
 
+		// This will force LOD level for rigid body if it is a TRIANGLE_MESH shape:
+		//	The geometry for LOD level will be taken from MeshComponent.
+		//	The physics object will need to be recreated for it to take effect.
+		uint32_t mesh_lod = 0;
+
 		// Non-serialized attributes:
-		void* physicsobject = nullptr;
+		void* physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 		inline void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
@@ -854,9 +859,10 @@ namespace wi::scene
 			ENUM_FORCE_UINT32 = 0xFFFFFFFF,
 		};
 		LightType type = POINT;
-		float energy = 1.0f;
-		float range_local = 10.0f;
-		float fov = XM_PIDIV4;
+		float intensity = 1.0f; // Brightness of light in. The units that this is defined in depend on the type of light. Point and spot lights use luminous intensity in candela (lm/sr) while directional lights use illuminance in lux (lm/m2). https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
+		float range = 10.0f;
+		float outerConeAngle = XM_PIDIV4;
+		float innerConeAngle = 0; // default value is 0, means only outer cone angle is used 
 
 		wi::vector<std::string> lensFlareNames;
 
@@ -864,7 +870,6 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		XMFLOAT3 position;
-		float range_global;
 		XMFLOAT3 direction;
 		XMFLOAT4 rotation;
 		XMFLOAT3 scale;
@@ -885,10 +890,32 @@ namespace wi::scene
 		inline bool IsVisualizerEnabled() const { return _flags & VISUALIZER; }
 		inline bool IsStatic() const { return _flags & LIGHTMAPONLY_STATIC; }
 
-		inline float GetRange() const { return range_global; }
+		inline float GetRange() const
+		{
+			float retval = range;
+			retval = std::max(0.001f, retval);
+			retval = std::min(retval, 65504.0f); // clamp to 16-bit float max value
+			return retval;
+		}
 
 		inline void SetType(LightType val) { type = val; }
 		inline LightType GetType() const { return type; }
+
+		// Set energy amount with non physical light units (from before version 0.70.0):
+		inline void BackCompatSetEnergy(float energy)
+		{
+			switch (type)
+			{
+			case wi::scene::LightComponent::POINT:
+				intensity = energy * 20;
+				break;
+			case wi::scene::LightComponent::SPOT:
+				intensity = energy * 200;
+				break;
+			default:
+				break;
+			}
+		}
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -1003,14 +1030,13 @@ namespace wi::scene
 
 		int type = ENTITY_TYPE_FORCEFIELD_POINT;
 		float gravity = 0.0f; // negative = deflector, positive = attractor
-		float range_local = 0.0f; // affection range
+		float range = 0.0f; // affection range
 
 		// Non-serialized attributes:
 		XMFLOAT3 position;
-		float range_global;
 		XMFLOAT3 direction;
 
-		inline float GetRange() const { return range_global; }
+		inline float GetRange() const { return range; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -1156,7 +1182,6 @@ namespace wi::scene
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
-		float sunEnergy = 0;
 		float skyExposure = 1;
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -1476,9 +1501,11 @@ namespace wi::scene
 			const std::string& name, 
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0), 
 			const XMFLOAT3& color = XMFLOAT3(1, 1, 1), 
-			float energy = 1, 
+			float intensity = 1, 
 			float range = 10,
-			LightComponent::LightType type = LightComponent::POINT
+			LightComponent::LightType type = LightComponent::POINT,
+			float outerConeAngle = XM_PIDIV4,
+			float innerConeAngle = 0
 		);
 		wi::ecs::Entity Entity_CreateForce(
 			const std::string& name,

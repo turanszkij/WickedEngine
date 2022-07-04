@@ -1532,7 +1532,7 @@ void EditorComponent::Update(float dt)
 								TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
 								force.type = ENTITY_TYPE_FORCEFIELD_POINT;
 								force.gravity = -80;
-								force.range_local = 3;
+								force.range = 3;
 								transform.Translate(P);
 								break;
 							}
@@ -1707,8 +1707,14 @@ void EditorComponent::Update(float dt)
 					if (transform != nullptr)
 					{
 						transform->translation_local = {};
-						//transform->MatrixTransform(hovered.orientation);
+#if 0
+						// orient around surface normal:
+						transform->MatrixTransform(hovered.orientation);
+#else
+						// orient in random vertical rotation only:
+						transform->RotateRollPitchYaw(XMFLOAT3(0, wi::random::GetRandom(XM_PI), 0));
 						transform->Translate(hovered.position);
+#endif
 						transform->UpdateTransform();
 					}
 					if (hier != nullptr)

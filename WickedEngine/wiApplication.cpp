@@ -101,6 +101,20 @@ namespace wi
 			return;
 		}
 
+		#ifdef WICKEDENGINE_BUILD_DX12
+		static bool startup_workaround = false;
+		if (!startup_workaround)
+		{
+			startup_workaround = true;
+			if (dynamic_cast<GraphicsDevice_DX12*>(graphicsDevice.get()))
+			{
+				CommandList cmd = graphicsDevice->BeginCommandList();
+				wi::renderer::Workaround(1, cmd);
+				graphicsDevice->SubmitCommandLists();
+			}
+		}
+		#endif
+
 		static bool startup_script = false;
 		if (!startup_script)
 		{

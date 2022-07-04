@@ -580,7 +580,7 @@ void ObjectWindow::Create(EditorComponent* editor)
 	AddWidget(&lineardampingSlider);
 
 	angulardampingSlider.Create(0, 1, 0, 100000, "Angular Damping: ");
-	angulardampingSlider.SetTooltip("Set the mass amount for the physics engine.");
+	angulardampingSlider.SetTooltip("Set the angular damping amount for the physics engine.");
 	angulardampingSlider.SetSize(XMFLOAT2(100, hei));
 	angulardampingSlider.SetPos(XMFLOAT2(x, y += step));
 	angulardampingSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -591,6 +591,24 @@ void ObjectWindow::Create(EditorComponent* editor)
 		}
 		});
 	AddWidget(&angulardampingSlider);
+
+	physicsMeshLODSlider.Create(0, 6, 0, 6, "Physics Mesh LOD: ");
+	physicsMeshLODSlider.SetTooltip("Specify which LOD to use for triangle mesh physics.");
+	physicsMeshLODSlider.SetSize(XMFLOAT2(100, hei));
+	physicsMeshLODSlider.SetPos(XMFLOAT2(x, y += step));
+	physicsMeshLODSlider.OnSlide([&](wi::gui::EventArgs args) {
+		RigidBodyPhysicsComponent* physicscomponent = wi::scene::GetScene().rigidbodies.GetComponent(entity);
+		if (physicscomponent != nullptr)
+		{
+			if (physicscomponent->mesh_lod != uint32_t(args.iValue))
+			{
+				physicscomponent->physicsobject = nullptr; // will be recreated automatically
+				physicscomponent->mesh_lod = uint32_t(args.iValue);
+			}
+			physicscomponent->mesh_lod = uint32_t(args.iValue);
+		}
+		});
+	AddWidget(&physicsMeshLODSlider);
 
 	kinematicCheckBox.Create("Kinematic: ");
 	kinematicCheckBox.SetTooltip("Toggle kinematic behaviour.");
@@ -864,6 +882,7 @@ void ObjectWindow::SetEntity(Entity entity)
 		restitutionSlider.SetEnabled(true);
 		lineardampingSlider.SetEnabled(true);
 		angulardampingSlider.SetEnabled(true);
+		physicsMeshLODSlider.SetEnabled(true);
 
 		if (physicsComponent != nullptr)
 		{
@@ -872,6 +891,7 @@ void ObjectWindow::SetEntity(Entity entity)
 			restitutionSlider.SetValue(physicsComponent->restitution);
 			lineardampingSlider.SetValue(physicsComponent->damping_linear);
 			angulardampingSlider.SetValue(physicsComponent->damping_angular);
+			physicsMeshLODSlider.SetValue(float(physicsComponent->mesh_lod));
 
 			kinematicCheckBox.SetCheck(physicsComponent->IsKinematic());
 			disabledeactivationCheckBox.SetCheck(physicsComponent->IsDisableDeactivation());

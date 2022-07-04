@@ -49,7 +49,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		return;
 	}
     
-	float3 sunIlluminance = GetSunEnergy() * GetSunColor();
+	float3 sunIlluminance = GetSunColor();
 
 	SamplingParameters sampling;
     {

@@ -27,7 +27,6 @@
 #include "shaders/ShaderInterop_DDGI.h"
 
 #include <algorithm>
-#include <array>
 #include <atomic>
 
 using namespace wi::primitive;
@@ -144,6 +143,14 @@ Texture texture_shapeNoise;
 Texture texture_detailNoise;
 Texture texture_curlNoise;
 Texture texture_weatherMap;
+
+// A dummy luminance buffer with exposure set to 1.
+// This avoids having to branch in shaders that consume the exposure value
+// when eye adaption is disabled.
+// It also works around an apparent bug in the drivers for certain GTX 10xx cards
+// where just testing if a bindless buffer descriptor is valid requires that it is valid.
+// See: https://github.com/turanszkij/WickedEngine/issues/450
+GPUBuffer luminance_dummy;
 
 // Direct reference to a renderable instance:
 struct RenderBatch
@@ -1796,6 +1803,21 @@ void LoadBuffers()
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]);
 		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]");
 	}
+	{
+		// the dummy buffer is read-only so only the first 'exposure' value is needed,
+		// not the luminance or histogram values in the full version of the buffer used
+        // when eye adaption is enabled.
+		float values[1] = { 1 };
+
+		GPUBufferDesc desc;
+		desc.size = sizeof(values);
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+		device->CreateBuffer(&desc, values, &luminance_dummy);
+		device->SetName(&luminance_dummy, "luminance_dummy");
+
+		static_assert(LUMINANCE_BUFFER_OFFSET_EXPOSURE == 0);
+	}
 }
 void SetUpStates()
 {
@@ -2224,9 +2246,9 @@ struct SHCAM
 };
 inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
-	shcam = SHCAM(light.position, light.rotation, 0.1f, light.GetRange(), light.fov);
+	shcam = SHCAM(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
 }
-inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, std::array<SHCAM, CASCADE_COUNT>& shcams)
+inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, SHCAM* shcams, size_t shcam_count)
 {
 	if (GetTemporalAAEnabled())
 	{
@@ -2249,6 +2271,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		referenceSplitClamp * 0.1f,		// mid-far split
 		referenceSplitClamp * 1.0f,		// far plane
 	};
+	assert(shcam_count <= CASCADE_COUNT);
 
 	// Unproject main frustum corners into world space (notice the reversed Z projection!):
 	const XMMATRIX unproj = camera.GetInvViewProjection();
@@ -2265,7 +2288,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	};
 
 	// Compute shadow cameras:
-	for (int cascade = 0; cascade < CASCADE_COUNT; ++cascade)
+	for (int cascade = 0; cascade < shcam_count; ++cascade)
 	{
 		// Compute cascade sub-frustum in light-view-space from the main frustum corners:
 		const float split_near = splits[cascade];
@@ -2329,7 +2352,16 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	}
 
 }
-
+inline void CreateCubemapCameras(const XMFLOAT3& position, float zNearP, float zFarP, SHCAM* shcams, size_t shcam_count)
+{
+	assert(shcam_count == 6);
+	shcams[0] = SHCAM(position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //+x
+	shcams[1] = SHCAM(position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //-x
+	shcams[2] = SHCAM(position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2); //+y
+	shcams[3] = SHCAM(position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2); //-y
+	shcams[4] = SHCAM(position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2); //+z
+	shcams[5] = SHCAM(position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2); //-z
+}
 
 ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& batch_aabb, RENDERPASS renderPass)
 {
@@ -2383,6 +2415,35 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 	}
 
 	return cb;
+}
+
+void Workaround(const int bug , CommandList cmd)
+{
+	if (bug == 1)
+	{
+		//PE: Strange DX12 bug, we must change the pso/pipeline state, just one time.
+		//PE: After this there will be no "black dots" or culling/depth errors.
+		//PE: This bug only happen on some nvidia cards ?
+		//PE: https://github.com/turanszkij/WickedEngine/issues/450#issuecomment-1143647323
+
+		//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
+		const PipelineState* pso = &PSO_object[0][RENDERPASS_VOXELIZE][BLENDMODE_OPAQUE][0][0][0];
+
+		device->EventBegin("Workaround 1", cmd);
+		static RenderPass renderpass_clear;
+		if (!renderpass_clear.IsValid())
+		{
+			RenderPassDesc renderpassdesc;
+			renderpassdesc.flags = RenderPassDesc::Flags::EMPTY;
+			device->CreateRenderPass(&renderpassdesc, &renderpass_clear);
+		}
+		device->RenderPassBegin(&renderpass_clear, cmd);
+		device->BindPipelineState(pso, cmd);
+		device->DrawIndexedInstanced(0, 0, 0, 0, 0, cmd); //PE: Just need predraw(cmd);
+		device->RenderPassEnd(cmd);
+		device->EventEnd(cmd);
+	}
+	return;
 }
 
 void RenderMeshes(
@@ -3136,7 +3197,7 @@ void UpdatePerFrameData(
 	frameCB.voxelradiance_size = voxelSceneData.voxelsize;
 	frameCB.voxelradiance_size_rcp = 1.0f / (float)frameCB.voxelradiance_size;
 	frameCB.voxelradiance_resolution = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
-	frameCB.voxelradiance_resolution_rcp = 1.0f / (float)frameCB.voxelradiance_resolution;
+	frameCB.voxelradiance_resolution_rcp = GetVoxelRadianceEnabled() ? 1.0f / (float)frameCB.voxelradiance_resolution : 0; //PE: was inf.
 	frameCB.voxelradiance_mipcount = voxelSceneData.mips;
 	frameCB.voxelradiance_numcones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
 	frameCB.voxelradiance_numcones_rcp = 1.0f / (float)frameCB.voxelradiance_numcones;
@@ -3434,8 +3495,8 @@ void UpdateRenderData(
 			shaderentity.SetType(ENTITY_TYPE_DECAL);
 			shaderentity.position = decal.position;
 			shaderentity.SetRange(decal.range);
-			shaderentity.color = wi::math::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
-			shaderentity.SetEnergy(decal.emissive);
+			float emissive_mul = 1 + decal.emissive;
+			shaderentity.SetColor(float4(decal.color.x * emissive_mul, decal.color.y * emissive_mul, decal.color.z * emissive_mul, decal.color.w));
 
 			shaderentity.SetIndices(matrixCounter, 0);
 			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
@@ -3531,8 +3592,7 @@ void UpdateRenderData(
 			shaderentity.SetType(light.GetType());
 			shaderentity.position = light.position;
 			shaderentity.SetRange(light.GetRange());
-			shaderentity.color = wi::math::CompressColor(light.color);
-			shaderentity.SetEnergy(light.energy);
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
 
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
@@ -3564,8 +3624,8 @@ void UpdateRenderData(
 
 				if (shadow)
 				{
-					std::array<SHCAM, CASCADE_COUNT> shcams;
-					CreateDirLightShadowCams(light, *vis.camera, shcams);
+					SHCAM shcams[CASCADE_COUNT];
+					CreateDirLightShadowCams(light, *vis.camera, shcams, arraysize(shcams));
 					std::memcpy(&matrixArray[matrixCounter++], &shcams[0].view_projection, sizeof(XMMATRIX));
 					std::memcpy(&matrixArray[matrixCounter++], &shcams[1].view_projection, sizeof(XMMATRIX));
 					std::memcpy(&matrixArray[matrixCounter++], &shcams[2].view_projection, sizeof(XMMATRIX));
@@ -3588,7 +3648,18 @@ void UpdateRenderData(
 			break;
 			case LightComponent::SPOT:
 			{
-				shaderentity.SetConeAngleCos(cosf(light.fov * 0.5f));
+				const float outerConeAngle = light.outerConeAngle;
+				const float innerConeAngle = std::min(light.innerConeAngle, outerConeAngle);
+				const float outerConeAngleCos = std::cos(outerConeAngle);
+				const float innerConeAngleCos = std::cos(innerConeAngle);
+
+				// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
+				const float lightAngleScale = 1.0f / std::max(0.001f, innerConeAngleCos - outerConeAngleCos);
+				const float lightAngleOffset = -outerConeAngleCos * lightAngleScale;
+
+				shaderentity.SetConeAngleCos(outerConeAngleCos);
+				shaderentity.SetAngleScale(lightAngleScale);
+				shaderentity.SetAngleOffset(lightAngleOffset);
 				shaderentity.SetDirection(light.direction);
 
 				if (shadow)
@@ -3634,9 +3705,8 @@ void UpdateRenderData(
 
 			shaderentity.SetType(force.type);
 			shaderentity.position = force.position;
-			shaderentity.SetEnergy(force.gravity);
-			shaderentity.SetRange(1.0f / std::max(0.0001f, force.GetRange())); // avoid division in shader
-			shaderentity.SetConeAngleCos(force.GetRange()); // this will be the real range in the less common shaders...
+			shaderentity.SetGravity(force.gravity);
+			shaderentity.SetRange(std::max(0.001f, force.GetRange()));
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
 			shaderentity.SetDirection(force.direction);
 
@@ -4404,14 +4474,14 @@ void DrawLightVisualizers(
 				{
 
 					VolumeLightCB lcb;
-					lcb.lightColor = XMFLOAT4(light.color.x, light.color.y, light.color.z, 1);
-					lcb.lightEnerdis = XMFLOAT4(light.energy, light.GetRange(), light.fov, light.energy);
+					lcb.xLightColor = XMFLOAT4(light.color.x, light.color.y, light.color.z, 1);
+					lcb.xLightEnerdis = XMFLOAT4(light.intensity, light.GetRange(), light.outerConeAngle, light.intensity);
 
 					if (type == LightComponent::POINT)
 					{
-						lcb.lightEnerdis.w = light.GetRange()*light.energy*0.01f; // scale
-						XMStoreFloat4x4(&lcb.lightWorld, 
-							XMMatrixScaling(lcb.lightEnerdis.w, lcb.lightEnerdis.w, lcb.lightEnerdis.w)*
+						lcb.xLightEnerdis.w = light.GetRange() * 0.025f; // scale
+						XMStoreFloat4x4(&lcb.xLightWorld,
+							XMMatrixScaling(lcb.xLightEnerdis.w, lcb.xLightEnerdis.w, lcb.xLightEnerdis.w)*
 							camrot*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						);
@@ -4422,10 +4492,25 @@ void DrawLightVisualizers(
 					}
 					else if (type == LightComponent::SPOT)
 					{
-						float coneS = (float)(light.fov / 0.7853981852531433);
-						lcb.lightEnerdis.w = light.GetRange()*light.energy*0.03f; // scale
-						XMStoreFloat4x4(&lcb.lightWorld, 
-							XMMatrixScaling(coneS*lcb.lightEnerdis.w, lcb.lightEnerdis.w, coneS*lcb.lightEnerdis.w)*
+						if (light.innerConeAngle > 0)
+						{
+							float coneS = (float)(std::min(light.innerConeAngle, light.outerConeAngle) * 2 / XM_PIDIV4);
+							lcb.xLightEnerdis.w = light.GetRange() * 0.1f; // scale
+							XMStoreFloat4x4(&lcb.xLightWorld,
+								XMMatrixScaling(coneS * lcb.xLightEnerdis.w, lcb.xLightEnerdis.w, coneS * lcb.xLightEnerdis.w) *
+								XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+								XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
+							);
+
+							device->BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
+
+							device->Draw(192, 0, cmd); // cone
+						}
+
+						float coneS = (float)(light.outerConeAngle * 2 / XM_PIDIV4);
+						lcb.xLightEnerdis.w = light.GetRange() * 0.1f; // scale
+						XMStoreFloat4x4(&lcb.xLightWorld,
+							XMMatrixScaling(coneS*lcb.xLightEnerdis.w, lcb.xLightEnerdis.w, coneS*lcb.xLightEnerdis.w)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						);
@@ -4501,7 +4586,7 @@ void DrawVolumeLights(
 					{
 						MiscCB miscCb;
 						miscCb.g_xColor.x = float(i);
-						const float coneS = (const float)(light.fov / XM_PIDIV4);
+						const float coneS = (const float)(light.outerConeAngle * 2 / XM_PIDIV4);
 						XMStoreFloat4x4(&miscCb.g_xTransform, 
 							XMMatrixScaling(coneS*light.GetRange(), light.GetRange(), coneS*light.GetRange())*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
@@ -4668,8 +4753,8 @@ void DrawShadowmaps(
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				std::array<SHCAM, CASCADE_COUNT> shcams;
-				CreateDirLightShadowCams(light, *vis.camera, shcams);
+				SHCAM shcams[CASCADE_COUNT];
+				CreateDirLightShadowCams(light, *vis.camera, shcams, arraysize(shcams));
 
 				for (uint32_t cascade = 0; cascade < CASCADE_COUNT; ++cascade)
 				{
@@ -4820,14 +4905,8 @@ void DrawShadowmaps(
 
 					const float zNearP = 0.1f;
 					const float zFarP = std::max(1.0f, light.GetRange());
-					SHCAM cameras[] = {
-						SHCAM(light.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
-						SHCAM(light.position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
-						SHCAM(light.position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
-						SHCAM(light.position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
-						SHCAM(light.position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
-						SHCAM(light.position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
-					};
+					SHCAM cameras[6];
+					CreateCubemapCameras(light.position, zNearP, zFarP, cameras, arraysize(cameras));
 					Viewport vp[arraysize(cameras)];
 					Frustum frusta[arraysize(cameras)];
 					uint32_t frustum_count = 0;
@@ -6006,7 +6085,11 @@ void DrawDebugWorld(
 
 	if (GetRaytraceDebugBVHVisualizerEnabled())
 	{
-		RayTraceSceneBVH(scene, cmd);
+		//PE: Check if debug BVH is possible. or it will crash.
+		if (GetSurfelGIEnabled() || GetDDGIEnabled() )
+		{
+			RayTraceSceneBVH(scene, cmd);
+		}
 	}
 
 	device->EventEnd(cmd);
@@ -6233,15 +6316,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 	auto render_probe = [&](const EnvironmentProbeComponent& probe, const AABB& probe_aabb) {
 
-
-		const SHCAM cameras[] = {
-			SHCAM(probe.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
-			SHCAM(probe.position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
-			SHCAM(probe.position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
-			SHCAM(probe.position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
-			SHCAM(probe.position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
-			SHCAM(probe.position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
-		};
+		SHCAM cameras[6];
+		CreateCubemapCameras(probe.position, zNearP, zFarP, cameras, arraysize(cameras));
 		Frustum frusta[arraysize(cameras)];
 
 		CubemapRenderCB cb;
@@ -6431,6 +6507,9 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 	BindCommonResources(cmd);
 
+	barrier_stack.push_back(GPUBarrier::Image(&scene.impostorArray, ResourceState::SHADER_RESOURCE, ResourceState::RENDERTARGET));
+	barrier_stack_flush(cmd);
+
 	for (uint32_t impostorIndex = 0; impostorIndex < scene.impostors.GetCount(); ++impostorIndex)
 	{
 		const ImpostorComponent& impostor = scene.impostors[impostorIndex];
@@ -6495,6 +6574,9 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 		}
 
 	}
+
+	barrier_stack.push_back(GPUBarrier::Image(&scene.impostorArray, ResourceState::RENDERTARGET, ResourceState::SHADER_RESOURCE));
+	barrier_stack_flush(cmd);
 
 	device->EventEnd(cmd);
 }
@@ -7551,7 +7633,7 @@ void ComputeBloom(
 		bloom.exposure = exposure;
 		bloom.texture_input = device->GetDescriptorIndex(&input, SubresourceType::SRV);
 		bloom.texture_output = device->GetDescriptorIndex(&res.texture_bloom, SubresourceType::UAV);
-		bloom.buffer_input_luminance = device->GetDescriptorIndex(buffer_luminance, SubresourceType::SRV);
+		bloom.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
 		device->PushConstants(&bloom, sizeof(bloom), cmd);
 
 		{
@@ -12260,7 +12342,7 @@ void Postprocess_Tonemap(
 	tonemap_push.exposure = exposure;
 	tonemap_push.dither = dither ? 1.0f : 0.0f;
 	tonemap_push.texture_input = device->GetDescriptorIndex(&input, SubresourceType::SRV);
-	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex(buffer_luminance, SubresourceType::SRV);
+	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
 	tonemap_push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SubresourceType::SRV);
 	tonemap_push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SubresourceType::SRV);
 	tonemap_push.texture_bloom = device->GetDescriptorIndex(texture_bloom, SubresourceType::SRV);

@@ -19,19 +19,19 @@ void LightWindow::Create(EditorComponent* editor)
 	float hei = 18;
 	float step = hei + 2;
 
-	energySlider.Create(0.1f, 64, 0, 100000, "Energy: ");
-	energySlider.SetSize(XMFLOAT2(100, hei));
-	energySlider.SetPos(XMFLOAT2(x, y));
-	energySlider.OnSlide([&](wi::gui::EventArgs args) {
+	intensitySlider.Create(0, 1000, 0, 100000, "Intensity: ");
+	intensitySlider.SetSize(XMFLOAT2(100, hei));
+	intensitySlider.SetPos(XMFLOAT2(x, y));
+	intensitySlider.OnSlide([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->energy = args.fValue;
+			light->intensity = args.fValue;
 		}
 	});
-	energySlider.SetEnabled(false);
-	energySlider.SetTooltip("Adjust the light radiation amount inside the maximum range");
-	AddWidget(&energySlider);
+	intensitySlider.SetEnabled(false);
+	intensitySlider.SetTooltip("Brightness of light in. The units that this is defined in depend on the type of light. \nPoint and spot lights use luminous intensity in candela (lm/sr) while directional lights use illuminance in lux (lm/m2).");
+	AddWidget(&intensitySlider);
 
 	rangeSlider.Create(1, 1000, 0, 100000, "Range: ");
 	rangeSlider.SetSize(XMFLOAT2(100, hei));
@@ -40,68 +40,40 @@ void LightWindow::Create(EditorComponent* editor)
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->range_local = args.fValue;
+			light->range = args.fValue;
 		}
 	});
 	rangeSlider.SetEnabled(false);
 	rangeSlider.SetTooltip("Adjust the maximum range the light can affect.");
 	AddWidget(&rangeSlider);
 
-	//radiusSlider.Create(0.01f, 10, 0, 100000, "Radius: ");
-	//radiusSlider.SetSize(XMFLOAT2(100, hei));
-	//radiusSlider.SetPos(XMFLOAT2(x, y += step));
-	//radiusSlider.OnSlide([&](wi::gui::EventArgs args) {
-	//	LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
-	//	if (light != nullptr)
-	//	{
-	//		light->radius = args.fValue;
-	//	}
-	//});
-	//radiusSlider.SetEnabled(false);
-	//radiusSlider.SetTooltip("Adjust the radius of an area light.");
-	//AddWidget(&radiusSlider);
-
-	//widthSlider.Create(1, 10, 0, 100000, "Width: ");
-	//widthSlider.SetSize(XMFLOAT2(100, hei));
-	//widthSlider.SetPos(XMFLOAT2(x, y += step));
-	//widthSlider.OnSlide([&](wi::gui::EventArgs args) {
-	//	LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
-	//	if (light != nullptr)
-	//	{
-	//		light->width = args.fValue;
-	//	}
-	//});
-	//widthSlider.SetEnabled(false);
-	//widthSlider.SetTooltip("Adjust the width of an area light.");
-	//AddWidget(&widthSlider);
-
-	//heightSlider.Create(1, 10, 0, 100000, "Height: ");
-	//heightSlider.SetSize(XMFLOAT2(100, hei));
-	//heightSlider.SetPos(XMFLOAT2(x, y += step));
-	//heightSlider.OnSlide([&](wi::gui::EventArgs args) {
-	//	LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
-	//	if (light != nullptr)
-	//	{
-	//		light->height = args.fValue;
-	//	}
-	//});
-	//heightSlider.SetEnabled(false);
-	//heightSlider.SetTooltip("Adjust the height of an area light.");
-	//AddWidget(&heightSlider);
-
-	fovSlider.Create(0.1f, XM_PI - 0.01f, 0, 100000, "FOV: ");
-	fovSlider.SetSize(XMFLOAT2(100, hei));
-	fovSlider.SetPos(XMFLOAT2(x, y += step));
-	fovSlider.OnSlide([&](wi::gui::EventArgs args) {
+	outerConeAngleSlider.Create(0.1f, XM_PIDIV2 - 0.01f, 0, 100000, "Outer Cone Angle: ");
+	outerConeAngleSlider.SetSize(XMFLOAT2(100, hei));
+	outerConeAngleSlider.SetPos(XMFLOAT2(x, y += step));
+	outerConeAngleSlider.OnSlide([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->fov = args.fValue;
+			light->outerConeAngle = args.fValue;
 		}
 	});
-	fovSlider.SetEnabled(false);
-	fovSlider.SetTooltip("Adjust the cone aperture for spotlight.");
-	AddWidget(&fovSlider);
+	outerConeAngleSlider.SetEnabled(false);
+	outerConeAngleSlider.SetTooltip("Adjust the main cone aperture for spotlight.");
+	AddWidget(&outerConeAngleSlider);
+
+	innerConeAngleSlider.Create(0, XM_PI - 0.01f, 0, 100000, "Inner Cone Angle: ");
+	innerConeAngleSlider.SetSize(XMFLOAT2(100, hei));
+	innerConeAngleSlider.SetPos(XMFLOAT2(x, y += step));
+	innerConeAngleSlider.OnSlide([&](wi::gui::EventArgs args) {
+		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->innerConeAngle = args.fValue;
+		}
+		});
+	innerConeAngleSlider.SetEnabled(false);
+	innerConeAngleSlider.SetTooltip("Adjust the inner cone aperture for spotlight.\n(The inner cone will always be inside the outer cone)");
+	AddWidget(&innerConeAngleSlider);
 
 	shadowCheckBox.Create("Shadow: ");
 	shadowCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -168,6 +140,21 @@ void LightWindow::Create(EditorComponent* editor)
 		if (light != nullptr)
 		{
 			light->type = (LightComponent::LightType)typeSelectorComboBox.GetSelected();
+
+			switch (light->type)
+			{
+			case LightComponent::LightType::DIRECTIONAL:
+				light->intensity = 10;
+				break;
+			case LightComponent::LightType::SPOT:
+				light->intensity = 100;
+				break;
+			case LightComponent::LightType::POINT:
+				light->intensity = 20;
+				break;
+			default:
+				break;
+			}
 
 			wi::Archive& archive = editor->AdvanceHistory();
 			archive << EditorComponent::HISTORYOP_ADD;
@@ -312,13 +299,11 @@ void LightWindow::SetEntity(Entity entity)
 
 	if (light != nullptr)
 	{
-		energySlider.SetEnabled(true);
-		energySlider.SetValue(light->energy);
-		rangeSlider.SetValue(light->range_local);
-		//radiusSlider.SetValue(light->radius);
-		//widthSlider.SetValue(light->width);
-		//heightSlider.SetValue(light->height);
-		fovSlider.SetValue(light->fov);
+		intensitySlider.SetEnabled(true);
+		intensitySlider.SetValue(light->intensity);
+		rangeSlider.SetValue(light->range);
+		outerConeAngleSlider.SetValue(light->outerConeAngle);
+		innerConeAngleSlider.SetValue(light->innerConeAngle);
 		shadowCheckBox.SetEnabled(true);
 		shadowCheckBox.SetCheck(light->IsCastingShadow());
 		haloCheckBox.SetEnabled(true);
@@ -354,12 +339,13 @@ void LightWindow::SetEntity(Entity entity)
 		radiusSlider.SetEnabled(false);
 		widthSlider.SetEnabled(false);
 		heightSlider.SetEnabled(false);
-		fovSlider.SetEnabled(false);
+		outerConeAngleSlider.SetEnabled(false);
+		innerConeAngleSlider.SetEnabled(false);
 		shadowCheckBox.SetEnabled(false);
 		haloCheckBox.SetEnabled(false);
 		volumetricsCheckBox.SetEnabled(false);
 		staticCheckBox.SetEnabled(false);
-		energySlider.SetEnabled(false);
+		intensitySlider.SetEnabled(false);
 		colorPicker.SetEnabled(false);
 		shadowResolutionComboBox.SetEnabled(false);
 
@@ -374,32 +360,24 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 	if (type == LightComponent::DIRECTIONAL)
 	{
 		rangeSlider.SetEnabled(false);
-		fovSlider.SetEnabled(false);
+		outerConeAngleSlider.SetEnabled(false);
+		innerConeAngleSlider.SetEnabled(false);
 	}
 	else
 	{
-		//if (type == LightComponent::SPHERE || type == LightComponent::DISC || type == LightComponent::RECTANGLE || type == LightComponent::TUBE)
-		//{
-		//	rangeSlider.SetEnabled(false);
-		//	radiusSlider.SetEnabled(true);
-		//	widthSlider.SetEnabled(true);
-		//	heightSlider.SetEnabled(true);
-		//	fovSlider.SetEnabled(false);
-		//}
-		//else
+		rangeSlider.SetEnabled(true);
+		radiusSlider.SetEnabled(false);
+		widthSlider.SetEnabled(false);
+		heightSlider.SetEnabled(false);
+		if (type == LightComponent::SPOT)
 		{
-			rangeSlider.SetEnabled(true);
-			radiusSlider.SetEnabled(false);
-			widthSlider.SetEnabled(false);
-			heightSlider.SetEnabled(false);
-			if (type == LightComponent::SPOT)
-			{
-				fovSlider.SetEnabled(true);
-			}
-			else
-			{
-				fovSlider.SetEnabled(false);
-			}
+			outerConeAngleSlider.SetEnabled(true);
+			innerConeAngleSlider.SetEnabled(true);
+		}
+		else
+		{
+			outerConeAngleSlider.SetEnabled(false);
+			innerConeAngleSlider.SetEnabled(false);
 		}
 	}
 

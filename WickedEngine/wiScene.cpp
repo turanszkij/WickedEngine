@@ -1421,20 +1421,16 @@ namespace wi::scene
 	}
 	void CameraComponent::TransformCamera(const TransformComponent& transform)
 	{
-		XMVECTOR S, R, T;
-		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&transform.world));
+		XMMATRIX W = XMLoadFloat4x4(&transform.world);
 
-		XMVECTOR _Eye = T;
-		XMVECTOR _At = XMVectorSet(0, 0, 1, 0);
-		XMVECTOR _Up = XMVectorSet(0, 1, 0, 0);
-
-		XMMATRIX _Rot = XMMatrixRotationQuaternion(R);
-		_At = XMVector3TransformNormal(_At, _Rot);
-		_Up = XMVector3TransformNormal(_Up, _Rot);
-		XMStoreFloat3x3(&rotationMatrix, _Rot);
+		XMVECTOR _Eye = XMVector3Transform(XMVectorSet(0, 0, 0, 1), W);
+		XMVECTOR _At = XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 0, 1, 0), W));
+		XMVECTOR _Up = XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W));
 
 		XMMATRIX _V = XMMatrixLookToLH(_Eye, _At, _Up);
 		XMStoreFloat4x4(&View, _V);
+
+		XMStoreFloat3x3(&rotationMatrix, XMMatrixInverse(nullptr, _V));
 
 		XMStoreFloat3(&Eye, _Eye);
 		XMStoreFloat3(&At, _At);
@@ -1973,7 +1969,6 @@ namespace wi::scene
 
 		shaderscene.weather.sun_color = weather.sunColor;
 		shaderscene.weather.sun_direction = weather.sunDirection;
-		shaderscene.weather.sun_energy = weather.sunEnergy;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = weather.ambient;
 		shaderscene.weather.cloudiness = weather.cloudiness;
@@ -2227,9 +2222,11 @@ namespace wi::scene
 		const std::string& name,
 		const XMFLOAT3& position,
 		const XMFLOAT3& color,
-		float energy,
+		float intensity,
 		float range,
-		LightComponent::LightType type)
+		LightComponent::LightType type,
+		float outerConeAngle,
+		float innerConeAngle)
 	{
 		Entity entity = CreateEntity();
 
@@ -2244,11 +2241,12 @@ namespace wi::scene
 		aabb_lights.Create(entity).createFromHalfWidth(position, XMFLOAT3(range, range, range));
 
 		LightComponent& light = lights.Create(entity);
-		light.energy = energy;
-		light.range_local = range;
-		light.fov = XM_PIDIV4;
+		light.intensity = intensity;
+		light.range = range;
 		light.color = color;
 		light.SetType(type);
+		light.outerConeAngle = outerConeAngle;
+		light.innerConeAngle = innerConeAngle;
 
 		return entity;
 	}
@@ -2269,7 +2267,7 @@ namespace wi::scene
 
 		ForceFieldComponent& force = forces.Create(entity);
 		force.gravity = 0;
-		force.range_local = 0;
+		force.range = 0;
 		force.type = ENTITY_TYPE_FORCEFIELD_POINT;
 
 		return entity;
@@ -3271,6 +3269,7 @@ namespace wi::scene
 			desc.array_size = 1;
 			desc.format = Format::D16_UNORM;
 			desc.layout = ResourceState::DEPTHSTENCIL;
+			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 			device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
 			device->SetName(&impostorDepthStencil, "impostorDepthStencil");
 
@@ -3278,7 +3277,7 @@ namespace wi::scene
 			desc.array_size = maxImpostorCount * impostorCaptureAngles * 3;
 			desc.format = Format::R8G8B8A8_UNORM;
 			desc.layout = ResourceState::SHADER_RESOURCE;
-
+			desc.misc_flags = ResourceMiscFlag::NONE;
 			device->CreateTexture(&desc, nullptr, &impostorArray);
 			device->SetName(&impostorArray, "impostorArray");
 
@@ -3298,9 +3297,9 @@ namespace wi::scene
 						&impostorArray,
 						RenderPassAttachment::LoadOp::CLEAR,
 						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::SHADER_RESOURCE,
 						ResourceState::RENDERTARGET,
-						ResourceState::SHADER_RESOURCE
+						ResourceState::RENDERTARGET,
+						ResourceState::RENDERTARGET
 					)
 				);
 				renderpassdesc.attachments.back().subresource = i * 3;
@@ -3310,9 +3309,9 @@ namespace wi::scene
 						&impostorArray,
 						RenderPassAttachment::LoadOp::CLEAR,
 						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::SHADER_RESOURCE,
 						ResourceState::RENDERTARGET,
-						ResourceState::SHADER_RESOURCE
+						ResourceState::RENDERTARGET,
+						ResourceState::RENDERTARGET
 					)
 				);
 				renderpassdesc.attachments.back().subresource = i * 3 + 1;
@@ -3322,9 +3321,9 @@ namespace wi::scene
 						&impostorArray,
 						RenderPassAttachment::LoadOp::CLEAR,
 						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::SHADER_RESOURCE,
 						ResourceState::RENDERTARGET,
-						ResourceState::SHADER_RESOURCE
+						ResourceState::RENDERTARGET,
+						ResourceState::RENDERTARGET
 					)
 				);
 				renderpassdesc.attachments.back().subresource = i * 3 + 2;
@@ -3940,7 +3939,6 @@ namespace wi::scene
 			XMStoreFloat3(&force.position, T);
 			XMStoreFloat3(&force.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), W)));
 
-			force.range_global = force.range_local * std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 		});
 	}
 	void Scene::RunLightUpdateSystem(wi::jobsystem::context& ctx)
@@ -3975,8 +3973,6 @@ namespace wi::scene
 			XMStoreFloat3(&light.scale, S);
 			XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
 
-			light.range_global = light.range_local * std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
-
 			switch (light.type)
 			{
 			default:
@@ -3987,8 +3983,10 @@ namespace wi::scene
 				{
 					weather.most_important_light_index = args.jobIndex;
 					weather.sunColor = light.color;
+					weather.sunColor.x *= light.intensity;
+					weather.sunColor.y *= light.intensity;
+					weather.sunColor.z *= light.intensity;
 					weather.sunDirection = light.direction;
-					weather.sunEnergy = light.energy;
 					weather.stars_rotation_quaternion = light.rotation;
 				}
 				locker.unlock();
