@@ -13,6 +13,11 @@ runProcess(function()
 		local T = matrix.Translation(Vector(0,2,3))
 		local M = S:Multiply(R):Multiply(T)
 		DrawBox(M, Vector(0,1,1,1))
+
+		local capsule = Capsule(Vector(1,1,1), Vector(30,30,30), 1.5)
+		DrawCapsule(capsule, Vector(1,0,0,1))
+
+		DrawDebugText("Debug text", Vector(-5,4,2), Vector(0,1,0,1), 2, DEBUG_TEXT_CAMERA_FACING | DEBUG_TEXT_CAMERA_SCALING)
 		
 		render()
 	end

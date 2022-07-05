@@ -901,7 +901,7 @@ namespace wi::renderer
 		int pixel_height = 32;
 		float scaling = 1;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
-		enum FLAGS
+		enum FLAGS // do not change values, it's bound to lua manually!
 		{
 			NONE = 0,
 			DEPTH_TEST = 1 << 0,		// text can be occluded by geometry
