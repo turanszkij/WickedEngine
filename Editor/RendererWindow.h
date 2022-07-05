@@ -42,8 +42,9 @@ public:
 	wi::gui::Slider voxelRadianceConeTracingSlider;
 	wi::gui::Slider voxelRadianceRayStepSizeSlider;
 	wi::gui::Slider voxelRadianceMaxDistanceSlider;
+	wi::gui::CheckBox nameDebugCheckBox;
 	wi::gui::CheckBox physicsDebugCheckBox;
-	wi::gui::CheckBox partitionBoxesCheckBox;
+	wi::gui::CheckBox aabbDebugCheckBox;
 	wi::gui::CheckBox boneLinesCheckBox;
 	wi::gui::CheckBox debugEmittersCheckBox;
 	wi::gui::CheckBox debugForceFieldsCheckBox;

@@ -2126,12 +2126,12 @@ void EditorComponent::Compose(CommandList cmd) const
 	{
 		return;
 	}
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	// Draw selection outline to the screen:
 	const float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 	if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
-		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("Editor - Selection Outline", cmd);
 		wi::renderer::BindCommonResources(cmd);
 		float opacity = wi::math::Lerp(0.4f, 1.0f, selectionColorIntensity);
@@ -2442,6 +2442,65 @@ void EditorComponent::Compose(CommandList cmd) const
 		}
 	}
 
+	if (rendererWnd.nameDebugCheckBox.GetCheck())
+	{
+		device->EventBegin("Debug Names", cmd);
+		struct DebugNameEntitySorter
+		{
+			size_t name_index;
+			float distance;
+			XMFLOAT3 position;
+		};
+		static wi::vector<DebugNameEntitySorter> debugNameEntitiesSorted;
+		debugNameEntitiesSorted.clear();
+		for (size_t i = 0; i < scene.names.GetCount(); ++i)
+		{
+			Entity entity = scene.names.GetEntity(i);
+			const TransformComponent* transform = scene.transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				auto& x = debugNameEntitiesSorted.emplace_back();
+				x.name_index = i;
+				x.position = transform->GetPosition();
+				const ObjectComponent* object = scene.objects.GetComponent(entity);
+				if (object != nullptr)
+				{
+					x.position = object->center;
+				}
+				x.distance = wi::math::Distance(x.position, camera.Eye);
+			}
+		}
+		std::sort(debugNameEntitiesSorted.begin(), debugNameEntitiesSorted.end(), [](const DebugNameEntitySorter& a, const DebugNameEntitySorter& b)
+			{
+				return a.distance > b.distance;
+			});
+		for (auto& x : debugNameEntitiesSorted)
+		{
+			Entity entity = scene.names.GetEntity(x.name_index);
+			wi::font::Params params;
+			params.position = x.position;
+			params.size = wi::font::WIFONTSIZE_DEFAULT;
+			params.scaling = 1.0f / params.size * x.distance * 0.03f;
+			params.color = wi::Color::White();
+			for (auto& picked : translator.selected)
+			{
+				if (picked.entity == entity)
+				{
+					params.color = selectedEntityColor;
+					break;
+				}
+			}
+			params.h_align = wi::font::WIFALIGN_CENTER;
+			params.v_align = wi::font::WIFALIGN_CENTER;
+			params.softness = 0.1f;
+			params.shadowColor = wi::Color::Black();
+			params.shadow_softness = 0.5f;
+			params.customProjection = &VP;
+			params.customRotation = &R;
+			wi::font::Draw(scene.names[x.name_index].name, params, cmd);
+		}
+		device->EventEnd(cmd);
+	}
 
 	if (translator.enabled)
 	{

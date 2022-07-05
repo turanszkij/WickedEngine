@@ -9,7 +9,6 @@ if (WIN32)
 	set(TARGET_NAME WickedEngine_Windows)
 else ()
 	set(TARGET_NAME WickedEngine_Linux)
-	find_package(Vulkan REQUIRED)
 	find_package(SDL2 REQUIRED)
 	find_package(OpenImageDenoise QUIET)
 	find_package(Threads REQUIRED)
@@ -221,7 +220,6 @@ if (WIN32)
 else ()
 	target_link_libraries(${TARGET_NAME} PUBLIC
 		Threads::Threads
-		Vulkan::Vulkan
 		SDL2::SDL2
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
 	)
