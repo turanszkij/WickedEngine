@@ -6132,7 +6132,7 @@ void DrawDebugWorld(
 			params.color = wi::Color::fromFloat4(x.params.color);
 			params.h_align = wi::font::WIFALIGN_CENTER;
 			params.v_align = wi::font::WIFALIGN_CENTER;
-			params.softness = 0.01f;
+			params.softness = 0.1f;
 			params.shadowColor = wi::Color::Black();
 			params.shadow_softness = 0.8f;
 			params.customProjection = &VP;
