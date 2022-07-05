@@ -1,4 +1,4 @@
--- This script will draw some debug primitives in the world such as line, point, box
+-- This script will draw some debug primitives in the world such as line, point, box, capsule, text
 killProcesses()  -- stops all running lua coroutine processes
 
 backlog_post("---> START SCRIPT: debug_draw.lua")
