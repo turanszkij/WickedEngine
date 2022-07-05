@@ -893,6 +893,24 @@ namespace wi::renderer
 	};
 	void DrawTriangle(const RenderableTriangle& triangle, bool wireframe = false);
 
+	struct DebugText
+	{
+		const char* text = nullptr; // null terminated, this will be copied and stored internally, so you don't need to ensure lifetime
+		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		int pixel_height = 32;
+		float scaling = 1;
+		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
+		enum FLAGS
+		{
+			NONE = 0,
+			DEPTH_TEST = 1 << 0,		// text can be occluded by geometry
+			CAMERA_FACING = 1 << 1,		// text will be rotated to face the camera
+			CAMERA_SCALING = 1 << 2,	// text will be always the same size, independent of distance to camera
+		};
+		uint32_t flags = NONE;
+	};
+	void DrawDebugText(const DebugText& text);
+
 	struct PaintRadius
 	{
 		wi::ecs::Entity objectEntity = wi::ecs::INVALID_ENTITY;

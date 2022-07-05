@@ -2126,12 +2126,12 @@ void EditorComponent::Compose(CommandList cmd) const
 	{
 		return;
 	}
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	// Draw selection outline to the screen:
 	const float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 	if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
-		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("Editor - Selection Outline", cmd);
 		wi::renderer::BindCommonResources(cmd);
 		float opacity = wi::math::Lerp(0.4f, 1.0f, selectionColorIntensity);
@@ -2442,6 +2442,49 @@ void EditorComponent::Compose(CommandList cmd) const
 		}
 	}
 
+	if (rendererWnd.nameDebugCheckBox.GetCheck())
+	{
+		device->EventBegin("Debug Names", cmd);
+		for (size_t i = 0; i < scene.names.GetCount(); ++i)
+		{
+			Entity entity = scene.names.GetEntity(i);
+			const TransformComponent* transform = scene.transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				wi::font::Params params;
+				params.position = transform->GetPosition();
+				const ObjectComponent* object = scene.objects.GetComponent(entity);
+				if (object != nullptr)
+				{
+					params.position = object->center;
+				}
+				params.size = wi::font::WIFONTSIZE_DEFAULT;
+				params.scaling = 1.0f / params.size * wi::math::Distance(params.position, camera.Eye) * 0.03f;
+				params.color = inactiveEntityColor;
+				if (hovered.entity == entity)
+				{
+					params.color = hoveredEntityColor;
+				}
+				for (auto& picked : translator.selected)
+				{
+					if (picked.entity == entity)
+					{
+						params.color = selectedEntityColor;
+						break;
+					}
+				}
+				params.h_align = wi::font::WIFALIGN_CENTER;
+				params.v_align = wi::font::WIFALIGN_CENTER;
+				params.softness = 0.01f;
+				params.shadowColor = wi::Color::Black();
+				params.shadow_softness = 1;
+				params.customProjection = &VP;
+				params.customRotation = &R;
+				wi::font::Draw(scene.names[i].name, params, cmd);
+			}
+		}
+		device->EventEnd(cmd);
+	}
 
 	if (translator.enabled)
 	{

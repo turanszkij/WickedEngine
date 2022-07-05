@@ -53,13 +53,25 @@ namespace wi::physics
 		}
 		void draw3dText(const btVector3& location, const char* textString) override
 		{
+			wi::renderer::DebugText txt;
+			txt.text = textString;
+			txt.position.x = location.x();
+			txt.position.y = location.y();
+			txt.position.z = location.z();
+			txt.flags |= wi::renderer::DebugText::CAMERA_FACING;
+			txt.flags |= wi::renderer::DebugText::CAMERA_SCALING;
+			wi::renderer::DrawDebugText(txt);
 		}
 		void setDebugMode(int debugMode) override
 		{
 		}
 		int getDebugMode() const override
 		{
-			return DBG_DrawWireframe;
+			int retval = 0;
+			retval |= DBG_DrawWireframe;
+			//retval |= DBG_DrawFeaturesText;
+			//retval |= DBG_DrawText;
+			return retval;
 		}
 	};
 	DebugDraw debugDraw;

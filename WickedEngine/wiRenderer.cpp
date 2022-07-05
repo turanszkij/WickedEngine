@@ -20,6 +20,7 @@
 #include "wiShaderCompiler.h"
 #include "wiTimer.h"
 #include "wiUnorderedMap.h" // leave it here for shader dump!
+#include "wiFont.h"
 
 #include "shaders/ShaderInterop_Postprocess.h"
 #include "shaders/ShaderInterop_Raytracing.h"
@@ -132,6 +133,7 @@ wi::vector<RenderableLine2D> renderableLines2D;
 wi::vector<RenderablePoint> renderablePoints;
 wi::vector<RenderableTriangle> renderableTriangles_solid;
 wi::vector<RenderableTriangle> renderableTriangles_wireframe;
+wi::vector<uint8_t> debugTextStorage; // A stream of DebugText struct + text characters
 wi::vector<PaintRadius> paintrads;
 
 wi::SpinLock deferredMIPGenLock;
@@ -6090,6 +6092,48 @@ void DrawDebugWorld(
 		{
 			RayTraceSceneBVH(scene, cmd);
 		}
+	}
+
+	if (!debugTextStorage.empty())
+	{
+		device->EventBegin("DebugTexts", cmd);
+		const XMMATRIX VP = camera.GetViewProjection();
+		const XMMATRIX R = XMLoadFloat3x3(&camera.rotationMatrix);
+		size_t offset = 0;
+		while(offset < debugTextStorage.size())
+		{
+			DebugText& x = *(DebugText*)(debugTextStorage.data() + offset);
+			offset += sizeof(DebugText);
+			const char* text = (const char*)(debugTextStorage.data() + offset);
+			size_t len = strlen(text);
+			offset += len + 1;
+			wi::font::Params params;
+			params.position = x.position;
+			params.size = x.pixel_height;
+			params.scaling = 1.0f / params.size * x.scaling;
+			params.color = wi::Color::fromFloat4(x.color);
+			params.h_align = wi::font::WIFALIGN_CENTER;
+			params.v_align = wi::font::WIFALIGN_CENTER;
+			params.softness = 0.01f;
+			params.shadowColor = wi::Color::Black();
+			params.shadow_softness = 1;
+			params.customProjection = &VP;
+			if (x.flags & DebugText::DEPTH_TEST)
+			{
+				params.enableDepthTest();
+			}
+			if (x.flags & DebugText::CAMERA_FACING)
+			{
+				params.customRotation = &R;
+			}
+			if (x.flags & DebugText::CAMERA_SCALING)
+			{
+				params.scaling *= wi::math::Distance(x.position, camera.Eye) * 0.05f;
+			}
+			wi::font::Draw(text, len, params, cmd);
+		}
+		debugTextStorage.clear();
+		device->EventEnd(cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -12845,6 +12889,18 @@ void DrawTriangle(const RenderableTriangle& triangle, bool wireframe)
 	else
 	{
 		renderableTriangles_solid.push_back(triangle);
+	}
+}
+void DrawDebugText(const DebugText& text)
+{
+	for (size_t i = 0; i < sizeof(DebugText); ++i)
+	{
+		debugTextStorage.push_back(((uint8_t*)(&text))[i]);
+	}
+	size_t len = strlen(text.text) + 1;
+	for (size_t i = 0; i < len; ++i)
+	{
+		debugTextStorage.push_back(uint8_t(text.text[i]));
 	}
 }
 void DrawPaintRadius(const PaintRadius& paintrad)
