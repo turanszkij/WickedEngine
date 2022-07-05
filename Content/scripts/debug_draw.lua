@@ -18,6 +18,7 @@ runProcess(function()
 		DrawCapsule(capsule, Vector(1,0,0,1))
 
 		DrawDebugText("Debug text", Vector(-5,4,2), Vector(0,1,0,1), 2, DEBUG_TEXT_CAMERA_FACING | DEBUG_TEXT_CAMERA_SCALING)
+		DrawDebugText("Debug text behind", Vector(-5,4,4), Vector(0,0,1,1), 2, DEBUG_TEXT_CAMERA_FACING | DEBUG_TEXT_CAMERA_SCALING)
 		
 		render()
 	end

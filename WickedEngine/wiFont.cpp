@@ -285,10 +285,10 @@ namespace wi::font
 
 		BlendState bd;
 		bd.render_target[0].blend_enable = true;
-		bd.render_target[0].src_blend = Blend::ONE;
+		bd.render_target[0].src_blend = Blend::SRC_ALPHA;
 		bd.render_target[0].dest_blend = Blend::INV_SRC_ALPHA;
 		bd.render_target[0].blend_op = BlendOp::ADD;
-		bd.render_target[0].src_blend_alpha = Blend::ONE;
+		bd.render_target[0].src_blend_alpha = Blend::SRC_ALPHA;
 		bd.render_target[0].dest_blend_alpha = Blend::INV_SRC_ALPHA;
 		bd.render_target[0].blend_op_alpha = BlendOp::ADD;
 		bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;

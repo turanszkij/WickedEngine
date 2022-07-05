@@ -6099,38 +6099,56 @@ void DrawDebugWorld(
 		device->EventBegin("DebugTexts", cmd);
 		const XMMATRIX VP = camera.GetViewProjection();
 		const XMMATRIX R = XMLoadFloat3x3(&camera.rotationMatrix);
+		struct DebugTextSorter
+		{
+			const char* text;
+			size_t text_len;
+			DebugTextParams params;
+			float distance;
+		};
+		static thread_local wi::vector<DebugTextSorter> sorted_texts;
+		sorted_texts.clear();
 		size_t offset = 0;
 		while(offset < debugTextStorage.size())
 		{
-			const DebugTextParams& x = *(const DebugTextParams*)(debugTextStorage.data() + offset);
+			auto& x = sorted_texts.emplace_back();
+			x.params = *(const DebugTextParams*)(debugTextStorage.data() + offset);
 			offset += sizeof(DebugTextParams);
-			const char* text = (const char*)(debugTextStorage.data() + offset);
-			size_t len = strlen(text);
-			offset += len + 1;
+			x.text = (const char*)(debugTextStorage.data() + offset);
+			x.text_len = strlen(x.text);
+			offset += x.text_len + 1;
+			x.distance = wi::math::Distance(x.params.position, camera.Eye);
+
+		}
+		std::sort(sorted_texts.begin(), sorted_texts.end(), [](const DebugTextSorter& a, const DebugTextSorter& b) {
+			return a.distance > b.distance;
+			});
+		for (auto& x : sorted_texts)
+		{
 			wi::font::Params params;
-			params.position = x.position;
-			params.size = x.pixel_height;
-			params.scaling = 1.0f / params.size * x.scaling;
-			params.color = wi::Color::fromFloat4(x.color);
+			params.position = x.params.position;
+			params.size = x.params.pixel_height;
+			params.scaling = 1.0f / params.size * x.params.scaling;
+			params.color = wi::Color::fromFloat4(x.params.color);
 			params.h_align = wi::font::WIFALIGN_CENTER;
 			params.v_align = wi::font::WIFALIGN_CENTER;
 			params.softness = 0.01f;
 			params.shadowColor = wi::Color::Black();
-			params.shadow_softness = 1;
+			params.shadow_softness = 0.8f;
 			params.customProjection = &VP;
-			if (x.flags & DebugTextParams::DEPTH_TEST)
+			if (x.params.flags & DebugTextParams::DEPTH_TEST)
 			{
 				params.enableDepthTest();
 			}
-			if (x.flags & DebugTextParams::CAMERA_FACING)
+			if (x.params.flags & DebugTextParams::CAMERA_FACING)
 			{
 				params.customRotation = &R;
 			}
-			if (x.flags & DebugTextParams::CAMERA_SCALING)
+			if (x.params.flags & DebugTextParams::CAMERA_SCALING)
 			{
-				params.scaling *= wi::math::Distance(x.position, camera.Eye) * 0.05f;
+				params.scaling *= x.distance * 0.05f;
 			}
-			wi::font::Draw(text, len, params, cmd);
+			wi::font::Draw(x.text, x.text_len, params, cmd);
 		}
 		debugTextStorage.clear();
 		device->EventEnd(cmd);
