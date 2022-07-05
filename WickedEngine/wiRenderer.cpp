@@ -6102,8 +6102,8 @@ void DrawDebugWorld(
 		size_t offset = 0;
 		while(offset < debugTextStorage.size())
 		{
-			DebugText& x = *(DebugText*)(debugTextStorage.data() + offset);
-			offset += sizeof(DebugText);
+			const DebugTextParams& x = *(const DebugTextParams*)(debugTextStorage.data() + offset);
+			offset += sizeof(DebugTextParams);
 			const char* text = (const char*)(debugTextStorage.data() + offset);
 			size_t len = strlen(text);
 			offset += len + 1;
@@ -6118,15 +6118,15 @@ void DrawDebugWorld(
 			params.shadowColor = wi::Color::Black();
 			params.shadow_softness = 1;
 			params.customProjection = &VP;
-			if (x.flags & DebugText::DEPTH_TEST)
+			if (x.flags & DebugTextParams::DEPTH_TEST)
 			{
 				params.enableDepthTest();
 			}
-			if (x.flags & DebugText::CAMERA_FACING)
+			if (x.flags & DebugTextParams::CAMERA_FACING)
 			{
 				params.customRotation = &R;
 			}
-			if (x.flags & DebugText::CAMERA_SCALING)
+			if (x.flags & DebugTextParams::CAMERA_SCALING)
 			{
 				params.scaling *= wi::math::Distance(x.position, camera.Eye) * 0.05f;
 			}
@@ -12891,16 +12891,16 @@ void DrawTriangle(const RenderableTriangle& triangle, bool wireframe)
 		renderableTriangles_solid.push_back(triangle);
 	}
 }
-void DrawDebugText(const DebugText& text)
+void DrawDebugText(const char* text, const DebugTextParams& params)
 {
-	for (size_t i = 0; i < sizeof(DebugText); ++i)
+	for (size_t i = 0; i < sizeof(DebugTextParams); ++i)
 	{
-		debugTextStorage.push_back(((uint8_t*)(&text))[i]);
+		debugTextStorage.push_back(((uint8_t*)(&params))[i]);
 	}
-	size_t len = strlen(text.text) + 1;
+	size_t len = strlen(text) + 1;
 	for (size_t i = 0; i < len; ++i)
 	{
-		debugTextStorage.push_back(uint8_t(text.text[i]));
+		debugTextStorage.push_back(uint8_t(text[i]));
 	}
 }
 void DrawPaintRadius(const PaintRadius& paintrad)

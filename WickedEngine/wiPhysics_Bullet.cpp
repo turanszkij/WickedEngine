@@ -53,14 +53,14 @@ namespace wi::physics
 		}
 		void draw3dText(const btVector3& location, const char* textString) override
 		{
-			wi::renderer::DebugText txt;
-			txt.text = textString;
-			txt.position.x = location.x();
-			txt.position.y = location.y();
-			txt.position.z = location.z();
-			txt.flags |= wi::renderer::DebugText::CAMERA_FACING;
-			txt.flags |= wi::renderer::DebugText::CAMERA_SCALING;
-			wi::renderer::DrawDebugText(txt);
+			wi::renderer::DebugTextParams params;
+			params.position.x = location.x();
+			params.position.y = location.y();
+			params.position.z = location.z();
+			params.scaling = 0.6f;
+			params.flags |= wi::renderer::DebugTextParams::CAMERA_FACING;
+			params.flags |= wi::renderer::DebugTextParams::CAMERA_SCALING;
+			wi::renderer::DrawDebugText(textString, params);
 		}
 		void setDebugMode(int debugMode) override
 		{
@@ -69,8 +69,7 @@ namespace wi::physics
 		{
 			int retval = 0;
 			retval |= DBG_DrawWireframe;
-			//retval |= DBG_DrawFeaturesText;
-			//retval |= DBG_DrawText;
+			retval |= DBG_DrawText;
 			return retval;
 		}
 	};
@@ -551,6 +550,20 @@ namespace wi::physics
 						i--;
 						continue;
 					}
+
+					// If you need it, you can enable soft body node debug strings here:
+#if 0
+					if (IsDebugDrawEnabled())
+					{
+						btSoftBodyHelpers::DrawInfos(
+							softbody,
+							&debugDraw,
+							false,	// masses
+							true,	// areas
+							false	// stress
+						);
+					}
+#endif
 
 					MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 

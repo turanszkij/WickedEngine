@@ -880,6 +880,7 @@ namespace wi::renderer
 		float size = 1.0f;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 	};
+	// Add point to render in the next frame. It will be rendered in DrawDebugWorld() as an X
 	void DrawPoint(const RenderablePoint& point);
 
 	struct RenderableTriangle
@@ -891,11 +892,11 @@ namespace wi::renderer
 		XMFLOAT3 positionC = XMFLOAT3(0, 0, 0);
 		XMFLOAT4 colorC = XMFLOAT4(1, 1, 1, 1);
 	};
+	// Add triangle to render in the next frame. It will be rendered in DrawDebugWorld()
 	void DrawTriangle(const RenderableTriangle& triangle, bool wireframe = false);
 
-	struct DebugText
+	struct DebugTextParams
 	{
-		const char* text = nullptr; // null terminated, this will be copied and stored internally, so you don't need to ensure lifetime
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		int pixel_height = 32;
 		float scaling = 1;
@@ -909,7 +910,9 @@ namespace wi::renderer
 		};
 		uint32_t flags = NONE;
 	};
-	void DrawDebugText(const DebugText& text);
+	// Add text to render in the next frame. It will be rendered in DrawDebugWorld()
+	//	The memory to text doesn't need to be retained by the caller, as it will be copied internally
+	void DrawDebugText(const char* text, const DebugTextParams& params);
 
 	struct PaintRadius
 	{
