@@ -50,6 +50,10 @@ namespace wi::gui
 		return internal_state;
 	}
 
+	// This is used so that elements that support scroll could disable other scrolling elements:
+	//	As opposed to click and other interaction types, we don't want to disable scroll on every focused widget
+	//	because that would block scrolling the parent if a child element is hovered
+	static bool scroll_allowed = true;
 
 	void GUI::Update(const wi::Canvas& canvas, float dt)
 	{
@@ -59,6 +63,8 @@ namespace wi::gui
 		}
 
 		auto range = wi::profiler::BeginRangeCPU("GUI Update");
+
+		scroll_allowed = true;
 
 		XMFLOAT4 pointer = wi::input::GetPointer();
 		Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
@@ -792,7 +798,7 @@ namespace wi::gui
 				scrollbar_begin = translation.y;
 				scrollbar_end = scrollbar_begin + scale.y;
 				scrollbar_size = scrollbar_end - scrollbar_begin;
-				scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_length));
+				scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_length - scale.x));
 				scrollbar_length = std::max(scale.x * 2, scrollbar_size * scrollbar_granularity);
 			}
 			else
@@ -800,7 +806,7 @@ namespace wi::gui
 				scrollbar_begin = translation.x;
 				scrollbar_end = scrollbar_begin + scale.x;
 				scrollbar_size = scrollbar_end - scrollbar_begin;
-				scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_length));
+				scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_length - scale.y));
 				scrollbar_length = std::max(scale.y * 2, scrollbar_size * scrollbar_granularity);
 			}
 
@@ -958,8 +964,9 @@ namespace wi::gui
 		scrollbar.Update(canvas, dt);
 
 		Hitbox2D pointerHitbox = GetPointerHitbox();
-		if (pointerHitbox.intersects(hitBox) && !force_disable)
+		if (scroll_allowed && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
 		{
+			scroll_allowed = false;
 			state = FOCUS;
 			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
 			scrollbar.Scroll(wi::input::GetPointer().z * 20);
@@ -1643,8 +1650,9 @@ namespace wi::gui
 					Deactivate();
 					combostate = COMBOSTATE_INACTIVE;
 				}
-				else if (combostate == COMBOSTATE_HOVER)
+				else if (combostate == COMBOSTATE_HOVER && scroll_allowed)
 				{
+					scroll_allowed = false;
 					int scroll = (int)wi::input::GetPointer().z;
 					firstItemVisible -= scroll;
 					firstItemVisible = std::max(0, std::min((int)items.size() - maxVisibleItemCount, firstItemVisible));
@@ -2018,20 +2026,6 @@ namespace wi::gui
 				});
 			minimizeButton.SetTooltip("Minimize window");
 			AddWidget(&minimizeButton);
-
-			scrollbar_horizontal.SetColor(wi::Color(80, 80, 80, 100), wi::gui::IDLE);
-			scrollbar_horizontal.sprites_knob[ScrollBar::SCROLLBAR_INACTIVE].params.color = wi::Color(140, 140, 140, 140);
-			scrollbar_horizontal.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
-			scrollbar_horizontal.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
-			scrollbar_horizontal.knob_inset_border = XMFLOAT2(2, 4);
-			AddWidget(&scrollbar_horizontal);
-
-			scrollbar_vertical.SetColor(wi::Color(80, 80, 80, 100), wi::gui::IDLE);
-			scrollbar_vertical.sprites_knob[ScrollBar::SCROLLBAR_INACTIVE].params.color = wi::Color(140, 140, 140, 140);
-			scrollbar_vertical.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
-			scrollbar_vertical.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
-			scrollbar_vertical.knob_inset_border = XMFLOAT2(4, 2);
-			AddWidget(&scrollbar_vertical);
 		}
 		else
 		{
@@ -2041,6 +2035,20 @@ namespace wi::gui
 			label.font.params.h_align = wi::font::WIFALIGN_LEFT;
 			AddWidget(&label);
 		}
+
+		scrollbar_horizontal.SetColor(wi::Color(80, 80, 80, 100), wi::gui::IDLE);
+		scrollbar_horizontal.sprites_knob[ScrollBar::SCROLLBAR_INACTIVE].params.color = wi::Color(140, 140, 140, 140);
+		scrollbar_horizontal.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
+		scrollbar_horizontal.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
+		scrollbar_horizontal.knob_inset_border = XMFLOAT2(2, 4);
+		AddWidget(&scrollbar_horizontal);
+
+		scrollbar_vertical.SetColor(wi::Color(80, 80, 80, 100), wi::gui::IDLE);
+		scrollbar_vertical.sprites_knob[ScrollBar::SCROLLBAR_INACTIVE].params.color = wi::Color(140, 140, 140, 140);
+		scrollbar_vertical.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
+		scrollbar_vertical.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
+		scrollbar_vertical.knob_inset_border = XMFLOAT2(4, 2);
+		AddWidget(&scrollbar_vertical);
 
 
 		SetEnabled(true);
@@ -2173,6 +2181,8 @@ namespace wi::gui
 		float scroll_length_vertical = 0;
 		for (auto& widget : widgets)
 		{
+			if (!widget->IsVisible())
+				continue;
 			if (widget->parent == &scrollable_area)
 			{
 				scroll_length_horizontal = std::max(scroll_length_horizontal, widget->translation_local.x + widget->scale_local.x);
@@ -2233,10 +2243,12 @@ namespace wi::gui
 			return a->priority < b->priority;
 				});
 
-		if (pointerHitbox.intersects(hitBox) && !force_disable && !focus) // when window is in focus, but other widgets aren't
+		float scroll = wi::input::GetPointer().z * 20;
+		if (scroll && scroll_allowed && scrollbar_vertical.IsScrollbarRequired() && pointerHitbox.intersects(hitBox)) // when window is in focus, but other widgets aren't
 		{
+			scroll_allowed = false;
 			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-			scrollbar_vertical.Scroll(wi::input::GetPointer().z * 20);
+			scrollbar_vertical.Scroll(scroll);
 		}
 
 		if (IsMinimized())
@@ -3287,11 +3299,12 @@ namespace wi::gui
 			}
 			scrollbar.SetListLength(scroll_length);
 
-
-			if (GetState() == FOCUS)
+			float scroll = wi::input::GetPointer().z * 10;
+			if (scroll && scroll_allowed && scrollbar.IsScrollbarRequired() && GetState() == FOCUS)
 			{
+				scroll_allowed = false;
 				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-				scrollbar.Scroll(wi::input::GetPointer().z * 10);
+				scrollbar.Scroll(scroll);
 			}
 			const float scrollbar_width = 12;
 			scrollbar.SetSize(XMFLOAT2(scrollbar_width - 1, scale.y - 1 - item_height()));
