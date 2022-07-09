@@ -108,12 +108,13 @@ void TransformWindow::Create(EditorComponent* editor)
 
 
 	x = 250;
-	y = step * 2;
+	y = step;
 
 
 	rxInput.Create("");
 	rxInput.SetValue(0);
 	rxInput.SetDescription("Rotation X: ");
+	rxInput.SetTooltip("Quaternion.X [After input of this value, quaternion will be renormalized]");
 	rxInput.SetPos(XMFLOAT2(x, y += step));
 	rxInput.SetSize(XMFLOAT2(siz, hei));
 	rxInput.OnInputAccepted([&](wi::gui::EventArgs args) {
@@ -121,6 +122,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		if (transform != nullptr)
 		{
 			transform->rotation_local.x = args.fValue;
+			XMStoreFloat4(&transform->rotation_local, XMQuaternionNormalize(XMLoadFloat4(&transform->rotation_local)));
 			transform->SetDirty();
 		}
 		});
@@ -129,6 +131,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	ryInput.Create("");
 	ryInput.SetValue(0);
 	ryInput.SetDescription("Rotation Y: ");
+	ryInput.SetTooltip("Quaternion.Y [After input of this value, quaternion will be renormalized]");
 	ryInput.SetPos(XMFLOAT2(x, y += step));
 	ryInput.SetSize(XMFLOAT2(siz, hei));
 	ryInput.OnInputAccepted([&](wi::gui::EventArgs args) {
@@ -136,6 +139,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		if (transform != nullptr)
 		{
 			transform->rotation_local.y = args.fValue;
+			XMStoreFloat4(&transform->rotation_local, XMQuaternionNormalize(XMLoadFloat4(&transform->rotation_local)));
 			transform->SetDirty();
 		}
 		});
@@ -144,6 +148,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	rzInput.Create("");
 	rzInput.SetValue(0);
 	rzInput.SetDescription("Rotation Z: ");
+	rzInput.SetTooltip("Quaternion.Z [After input of this value, quaternion will be renormalized]");
 	rzInput.SetPos(XMFLOAT2(x, y += step));
 	rzInput.SetSize(XMFLOAT2(siz, hei));
 	rzInput.OnInputAccepted([&](wi::gui::EventArgs args) {
@@ -151,6 +156,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		if (transform != nullptr)
 		{
 			transform->rotation_local.z = args.fValue;
+			XMStoreFloat4(&transform->rotation_local, XMQuaternionNormalize(XMLoadFloat4(&transform->rotation_local)));
 			transform->SetDirty();
 		}
 		});
@@ -159,6 +165,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	rwInput.Create("");
 	rwInput.SetValue(1);
 	rwInput.SetDescription("Rotation W: ");
+	rwInput.SetTooltip("Quaternion.W [After input of this value, quaternion will be renormalized]");
 	rwInput.SetPos(XMFLOAT2(x, y += step));
 	rwInput.SetSize(XMFLOAT2(siz, hei));
 	rwInput.OnInputAccepted([&](wi::gui::EventArgs args) {
@@ -166,6 +173,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		if (transform != nullptr)
 		{
 			transform->rotation_local.w = args.fValue;
+			XMStoreFloat4(&transform->rotation_local, XMQuaternionNormalize(XMLoadFloat4(&transform->rotation_local)));
 			transform->SetDirty();
 		}
 		});
@@ -175,7 +183,7 @@ void TransformWindow::Create(EditorComponent* editor)
 
 
 	x = 400;
-	y = step * 2;
+	y = step;
 
 
 	sxInput.Create("");
