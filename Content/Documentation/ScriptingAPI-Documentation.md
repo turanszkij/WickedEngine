@@ -125,6 +125,11 @@ You can use the Renderer with the following functions, all of which are in the g
 - DrawBox(Matrix boxMatrix, opt Vector color)
 - DrawSphere(Sphere sphere, opt Vector color)
 - DrawCapsule(Capsule capsule, opt Vector color)
+- DrawDebugText(string text, opt Vector position, opt Vector color, opt float scaling, opt int flags)
+	DrawDebugText flags, these can be combined with binary OR operator:
+	[outer]DEBUG_TEXT_DEPTH_TEST		-- text can be occluded by geometry
+	[outer]DEBUG_TEXT_CAMERA_FACING		-- text will be rotated to face the camera
+	[outer]DEBUG_TEXT_CAMERA_SCALING	-- text will be always the same size, independent of distance to camera
 - PutWaterRipple(String imagename, Vector position)
 - PutDecal(Decal decal)
 - PutEnvProbe(Vector pos)

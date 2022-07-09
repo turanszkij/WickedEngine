@@ -880,6 +880,7 @@ namespace wi::renderer
 		float size = 1.0f;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 	};
+	// Add point to render in the next frame. It will be rendered in DrawDebugWorld() as an X
 	void DrawPoint(const RenderablePoint& point);
 
 	struct RenderableTriangle
@@ -891,7 +892,27 @@ namespace wi::renderer
 		XMFLOAT3 positionC = XMFLOAT3(0, 0, 0);
 		XMFLOAT4 colorC = XMFLOAT4(1, 1, 1, 1);
 	};
+	// Add triangle to render in the next frame. It will be rendered in DrawDebugWorld()
 	void DrawTriangle(const RenderableTriangle& triangle, bool wireframe = false);
+
+	struct DebugTextParams
+	{
+		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		int pixel_height = 32;
+		float scaling = 1;
+		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
+		enum FLAGS // do not change values, it's bound to lua manually!
+		{
+			NONE = 0,
+			DEPTH_TEST = 1 << 0,		// text can be occluded by geometry
+			CAMERA_FACING = 1 << 1,		// text will be rotated to face the camera
+			CAMERA_SCALING = 1 << 2,	// text will be always the same size, independent of distance to camera
+		};
+		uint32_t flags = NONE;
+	};
+	// Add text to render in the next frame. It will be rendered in DrawDebugWorld()
+	//	The memory to text doesn't need to be retained by the caller, as it will be copied internally
+	void DrawDebugText(const char* text, const DebugTextParams& params);
 
 	struct PaintRadius
 	{

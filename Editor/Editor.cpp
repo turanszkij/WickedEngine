@@ -934,20 +934,22 @@ void EditorComponent::Load()
 		ss += "Camera up: E, down: Q\n";
 		ss += "Duplicate entity: Ctrl + D\n";
 		ss += "Select All: Ctrl + A\n";
+		ss += "Deselect All: Escape\n";
 		ss += "Undo: Ctrl + Z\n";
 		ss += "Redo: Ctrl + Y\n";
 		ss += "Copy: Ctrl + C\n";
 		ss += "Cut: Ctrl + X\n";
 		ss += "Paste: Ctrl + V\n";
-		ss += "Delete: DELETE button\n";
+		ss += "Delete: Delete button\n";
+		ss += "Inspector mode: I button (hold), hovered entity information will be displayed near mouse position.\n";
 		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
 		ss += "Script Console / backlog: HOME button\n";
 		ss += "\n";
-		ss += "You can find sample scenes in the models directory. Try to load one.\n";
+		ss += "You can find sample scenes in the Content/models directory. Try to load one.\n";
 		ss += "You can also import models from .OBJ, .GLTF, .GLB files.\n";
 		ss += "You can find a program configuration file at Editor/config.ini\n";
-		ss += "You can find sample LUA scripts in the scripts directory. Try to load one.\n";
-		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start)\n";
+		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
+		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start, if exists)\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
 		ss += "https://github.com/turanszkij/WickedEngine\n";
 		ss += "\nDevblog: https://wickedengine.net/\n";
@@ -1308,6 +1310,8 @@ void EditorComponent::Update(float dt)
 			cameraWnd.camera_transform.UpdateTransform_Parented(cameraWnd.camera_target);
 		}
 
+		inspector_mode = wi::input::Down((wi::input::BUTTON)'I');
+
 		// Begin picking:
 		unsigned int pickMask = rendererWnd.GetPickType();
 		Ray pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this);
@@ -1477,7 +1481,8 @@ void EditorComponent::Update(float dt)
 				if (
 					wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) ||
 					wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT) ||
-					paintToolWnd.GetMode() != PaintToolWindow::MODE_DISABLED
+					paintToolWnd.GetMode() != PaintToolWindow::MODE_DISABLED ||
+					inspector_mode
 					)
 				{
 					hovered = wi::scene::Pick(pickRay, pickMask);
@@ -2126,12 +2131,12 @@ void EditorComponent::Compose(CommandList cmd) const
 	{
 		return;
 	}
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	// Draw selection outline to the screen:
 	const float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 	if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
-		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("Editor - Selection Outline", cmd);
 		wi::renderer::BindCommonResources(cmd);
 		float opacity = wi::math::Lerp(0.4f, 1.0f, selectionColorIntensity);
@@ -2442,10 +2447,87 @@ void EditorComponent::Compose(CommandList cmd) const
 		}
 	}
 
+	if (rendererWnd.nameDebugCheckBox.GetCheck())
+	{
+		device->EventBegin("Debug Names", cmd);
+		struct DebugNameEntitySorter
+		{
+			size_t name_index;
+			float distance;
+			XMFLOAT3 position;
+		};
+		static wi::vector<DebugNameEntitySorter> debugNameEntitiesSorted;
+		debugNameEntitiesSorted.clear();
+		for (size_t i = 0; i < scene.names.GetCount(); ++i)
+		{
+			Entity entity = scene.names.GetEntity(i);
+			const TransformComponent* transform = scene.transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				auto& x = debugNameEntitiesSorted.emplace_back();
+				x.name_index = i;
+				x.position = transform->GetPosition();
+				const ObjectComponent* object = scene.objects.GetComponent(entity);
+				if (object != nullptr)
+				{
+					x.position = object->center;
+				}
+				x.distance = wi::math::Distance(x.position, camera.Eye);
+			}
+		}
+		std::sort(debugNameEntitiesSorted.begin(), debugNameEntitiesSorted.end(), [](const DebugNameEntitySorter& a, const DebugNameEntitySorter& b)
+			{
+				return a.distance > b.distance;
+			});
+		for (auto& x : debugNameEntitiesSorted)
+		{
+			Entity entity = scene.names.GetEntity(x.name_index);
+			wi::font::Params params;
+			params.position = x.position;
+			params.size = wi::font::WIFONTSIZE_DEFAULT;
+			params.scaling = 1.0f / params.size * x.distance * 0.03f;
+			params.color = wi::Color::White();
+			for (auto& picked : translator.selected)
+			{
+				if (picked.entity == entity)
+				{
+					params.color = selectedEntityColor;
+					break;
+				}
+			}
+			params.h_align = wi::font::WIFALIGN_CENTER;
+			params.v_align = wi::font::WIFALIGN_CENTER;
+			params.softness = 0.1f;
+			params.shadowColor = wi::Color::Black();
+			params.shadow_softness = 0.5f;
+			params.customProjection = &VP;
+			params.customRotation = &R;
+			wi::font::Draw(scene.names[x.name_index].name, params, cmd);
+		}
+		device->EventEnd(cmd);
+	}
 
 	if (translator.enabled)
 	{
 		translator.Draw(camera, cmd);
+	}
+
+	if (inspector_mode)
+	{
+		std::string str;
+		str += "Entity: " + std::to_string(hovered.entity);
+		const NameComponent* name = scene.names.GetComponent(hovered.entity);
+		if (name != nullptr)
+		{
+			str += "\nName: " + name->name;
+		}
+		XMFLOAT4 pointer = wi::input::GetPointer();
+		wi::font::Params params;
+		params.position = XMFLOAT3(pointer.x - 10, pointer.y, 0);
+		params.shadowColor = wi::Color::Black();
+		params.h_align = wi::font::WIFALIGN_RIGHT;
+		params.v_align = wi::font::WIFALIGN_CENTER;
+		wi::font::Draw(str, params, cmd);
 	}
 
 	RenderPath2D::Compose(cmd);

@@ -528,9 +528,15 @@ void RendererWindow::Create(EditorComponent* editor)
 	// Visualizer toggles:
 	x = 540, y = 0;
 
+	nameDebugCheckBox.Create("Name visualizer: ");
+	nameDebugCheckBox.SetTooltip("Visualize the entity names in the scene");
+	nameDebugCheckBox.SetPos(XMFLOAT2(x, y));
+	nameDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	AddWidget(&nameDebugCheckBox);
+
 	physicsDebugCheckBox.Create("Physics visualizer: ");
 	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
-	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y));
+	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
 	physicsDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	physicsDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::physics::SetDebugDrawEnabled(args.bValue);
@@ -538,16 +544,16 @@ void RendererWindow::Create(EditorComponent* editor)
 	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
 	AddWidget(&physicsDebugCheckBox);
 
-	partitionBoxesCheckBox.Create("SPTree visualizer: ");
-	partitionBoxesCheckBox.SetTooltip("Visualize the scene bounding boxes");
-	partitionBoxesCheckBox.SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
-	partitionBoxesCheckBox.SetPos(XMFLOAT2(x, y += step));
-	partitionBoxesCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	partitionBoxesCheckBox.OnClick([](wi::gui::EventArgs args) {
+	aabbDebugCheckBox.Create("AABB visualizer: ");
+	aabbDebugCheckBox.SetTooltip("Visualize the scene bounding boxes");
+	aabbDebugCheckBox.SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
+	aabbDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
+	aabbDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	aabbDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugPartitionTree(args.bValue);
 	});
-	partitionBoxesCheckBox.SetCheck(wi::renderer::GetToDrawDebugPartitionTree());
-	AddWidget(&partitionBoxesCheckBox);
+	aabbDebugCheckBox.SetCheck(wi::renderer::GetToDrawDebugPartitionTree());
+	AddWidget(&aabbDebugCheckBox);
 
 	boneLinesCheckBox.Create("Bone line visualizer: ");
 	boneLinesCheckBox.SetTooltip("Visualize bones of armatures");

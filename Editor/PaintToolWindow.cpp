@@ -14,7 +14,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	this->editor = editor;
 
 	wi::gui::Window::Create("Paint Tool Window");
-	SetSize(XMFLOAT2(410, 610));
+	SetSize(XMFLOAT2(360, 540));
 
 	float x = 105;
 	float y = 0;
@@ -80,7 +80,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	y += step + 5;
 
 	infoLabel.Create("Paint Tool is disabled.");
-	infoLabel.SetSize(XMFLOAT2(400 - 20, 100));
+	infoLabel.SetSize(XMFLOAT2(GetScale().x - 20, 100));
 	infoLabel.SetPos(XMFLOAT2(10, y));
 	infoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&infoLabel);

@@ -24,19 +24,21 @@ using namespace wi::graphics;
 
 namespace wi::font
 {
-#define WHITESPACE_SIZE ((float(params.size) + params.spacingX) * params.scaling * 0.25f)
+#define WHITESPACE_SIZE ((float(params.size) + params.spacingX) * 0.25f)
 #define TAB_SIZE (WHITESPACE_SIZE * 4)
-#define LINEBREAK_SIZE ((float(params.size) + params.spacingY) * params.scaling)
+#define LINEBREAK_SIZE ((float(params.size) + params.spacingY))
 
 	namespace font_internal
 	{
 		static BlendState blendState;
 		static RasterizerState rasterizerState;
 		static DepthStencilState depthStencilState;
+		static DepthStencilState depthStencilState_depth_test;
 
 		static Shader vertexShader;
 		static Shader pixelShader;
 		static PipelineState PSO;
+		static PipelineState PSO_depth_test;
 
 		static thread_local wi::Canvas canvas;
 
@@ -180,10 +182,10 @@ namespace wi::font
 				else
 				{
 					const Glyph& glyph = glyph_lookup.at(hash);
-					const float glyphWidth = glyph.width * params.scaling;
-					const float glyphHeight = glyph.height * params.scaling;
-					const float glyphOffsetX = glyph.x * params.scaling;
-					const float glyphOffsetY = glyph.y * params.scaling;
+					const float glyphWidth = glyph.width;
+					const float glyphHeight = glyph.height;
+					const float glyphOffsetX = glyph.x;
+					const float glyphOffsetY = glyph.y;
 
 					const size_t vertexID = size_t(status.quadCount) * 4;
 					vertexList.resize(vertexID + 4);
@@ -212,7 +214,7 @@ namespace wi::font
 
 					int advance, lsb;
 					stbtt_GetCodepointHMetrics(&fontStyle.fontInfo, code, &advance, &lsb);
-					status.cursor.position.x += advance * fontScale * params.scaling;
+					status.cursor.position.x += advance * fontScale;
 
 					status.cursor.position.x += params.spacingX;
 
@@ -253,6 +255,9 @@ namespace wi::font
 		desc.rs = &rasterizerState;
 		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
 		wi::graphics::GetDevice()->CreatePipelineState(&desc, &PSO);
+
+		desc.dss = &depthStencilState_depth_test;
+		wi::graphics::GetDevice()->CreatePipelineState(&desc, &PSO_depth_test);
 	}
 	void Initialize()
 	{
@@ -268,7 +273,7 @@ namespace wi::font
 
 		RasterizerState rs;
 		rs.fill_mode = FillMode::SOLID;
-		rs.cull_mode = CullMode::FRONT;
+		rs.cull_mode = CullMode::NONE;
 		rs.front_counter_clockwise = true;
 		rs.depth_bias = 0;
 		rs.depth_bias_clamp = 0;
@@ -280,10 +285,10 @@ namespace wi::font
 
 		BlendState bd;
 		bd.render_target[0].blend_enable = true;
-		bd.render_target[0].src_blend = Blend::ONE;
+		bd.render_target[0].src_blend = Blend::SRC_ALPHA;
 		bd.render_target[0].dest_blend = Blend::INV_SRC_ALPHA;
 		bd.render_target[0].blend_op = BlendOp::ADD;
-		bd.render_target[0].src_blend_alpha = Blend::ONE;
+		bd.render_target[0].src_blend_alpha = Blend::SRC_ALPHA;
 		bd.render_target[0].dest_blend_alpha = Blend::INV_SRC_ALPHA;
 		bd.render_target[0].blend_op_alpha = BlendOp::ADD;
 		bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
@@ -294,6 +299,11 @@ namespace wi::font
 		dsd.depth_enable = false;
 		dsd.stencil_enable = false;
 		depthStencilState = dsd;
+
+		dsd.depth_enable = true;
+		dsd.depth_write_mask = DepthWriteMask::ZERO;
+		dsd.depth_func = ComparisonFunc::GREATER;
+		depthStencilState_depth_test = dsd;
 
 		static wi::eventhandler::Handle handle1 = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
@@ -436,23 +446,13 @@ namespace wi::font
 	}
 
 	template<typename T>
-	Cursor Draw_internal(const T* text, size_t text_length, const Params& params_in, CommandList cmd)
+	Cursor Draw_internal(const T* text, size_t text_length, const Params& params, CommandList cmd)
 	{
 		if (text_length <= 0)
 		{
 			return Cursor();
 		}
-		ParseStatus status = ParseText(text, text_length, params_in);
-
-		Params params = params_in;
-		if (params.h_align == WIFALIGN_CENTER)
-			params.posX -= status.cursor.size.x / 2;
-		else if (params.h_align == WIFALIGN_RIGHT)
-			params.posX -= status.cursor.size.x;
-		if (params.v_align == WIFALIGN_CENTER)
-			params.posY -= status.cursor.size.y / 2;
-		else if (params.v_align == WIFALIGN_BOTTOM)
-			params.posY -= status.cursor.size.y;
+		ParseStatus status = ParseText(text, text_length, params);
 
 		if (status.quadCount > 0)
 		{
@@ -475,7 +475,14 @@ namespace wi::font
 
 			device->EventBegin("Font", cmd);
 
-			device->BindPipelineState(&PSO, cmd);
+			if (params.isDepthTestEnabled())
+			{
+				device->BindPipelineState(&PSO_depth_test, cmd);
+			}
+			else
+			{
+				device->BindPipelineState(&PSO, cmd);
+			}
 
 			font.flags = 0;
 			if (params.isHDR10OutputMappingEnabled())
@@ -488,20 +495,47 @@ namespace wi::font
 				font.hdr_scaling = params.hdr_scaling;
 			}
 
-			// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
-			//	The canvas must be set to have dpi aware rendering
-			assert(canvas.width > 0);
-			assert(canvas.height > 0);
-			assert(canvas.dpi > 0);
-			const XMMATRIX Projection = canvas.GetProjection();
+			XMFLOAT3 offset = XMFLOAT3(0, 0, 0);
+			float vertical_flip = params.customProjection == nullptr ? 1.0f : -1.0f;
+			if (params.h_align == WIFALIGN_CENTER)
+				offset.x -= status.cursor.size.x / 2;
+			else if (params.h_align == WIFALIGN_RIGHT)
+				offset.x -= status.cursor.size.x;
+			if (params.v_align == WIFALIGN_CENTER)
+				offset.y -= status.cursor.size.y / 2 * vertical_flip;
+			else if (params.v_align == WIFALIGN_BOTTOM)
+				offset.y -= status.cursor.size.y * vertical_flip;
+
+			XMMATRIX M = XMMatrixTranslation(offset.x, offset.y, offset.z);
+			M = M * XMMatrixScaling(params.scaling, params.scaling, params.scaling);
+			M = M * XMMatrixRotationZ(params.rotation);
+
+			if (params.customRotation != nullptr)
+			{
+				M = M * (*params.customRotation);
+			}
+
+			M = M * XMMatrixTranslation(params.position.x, params.position.y, params.position.z);
+
+			if (params.customProjection != nullptr)
+			{
+				M = XMMatrixScaling(1, -1, 1) * M; // reason: screen projection is Y down (like UV-space) and that is the common case for image rendering. But custom projections will use the "world space"
+				M = M * (*params.customProjection);
+			}
+			else
+			{
+				// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
+				//	The canvas must be set to have dpi aware rendering
+				assert(canvas.width > 0);
+				assert(canvas.height > 0);
+				assert(canvas.dpi > 0);
+				M = M * canvas.GetProjection();
+			}
 
 			if (params.shadowColor.getA() > 0)
 			{
 				// font shadow render:
-				XMStoreFloat4x4(&font.transform,
-					XMMatrixTranslation((float)params.posX + params.shadow_offset_x, (float)params.posY + params.shadow_offset_y, 0)
-					* Projection
-				);
+				XMStoreFloat4x4(&font.transform, XMMatrixTranslation(params.shadow_offset_x, params.shadow_offset_y, 0) * M);
 				font.color = params.shadowColor.rgba;
 				font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, params.shadow_bolden));
 				font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, params.shadow_softness));
@@ -511,10 +545,7 @@ namespace wi::font
 			}
 
 			// font base render:
-			XMStoreFloat4x4(&font.transform,
-				XMMatrixTranslation((float)params.posX, (float)params.posY, 0)
-				* Projection
-			);
+			XMStoreFloat4x4(&font.transform, M);
 			font.color = params.color.rgba;
 			font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, params.bolden));
 			font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, params.softness));
