@@ -3514,17 +3514,20 @@ namespace wi::scene
 					}
 
 					SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
-					if (softbody != nullptr)
+					if (softbody != nullptr && mesh.streamoutBuffer.IsValid())
 					{
-						// this will be registered as soft body in the next physics update
-						softbody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER;
-
-						// soft body manipulated with the object matrix
-						softbody->worldMatrix = transform.world;
-
-						if (softbody->graphicsToPhysicsVertexMapping.empty())
+						if (wi::physics::IsSimulationEnabled())
 						{
-							softbody->CreateFromMesh(mesh);
+							// this will be registered as soft body in the next physics update
+							softbody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER;
+
+							// soft body manipulated with the object matrix
+							softbody->worldMatrix = transform.world;
+
+							if (softbody->graphicsToPhysicsVertexMapping.empty())
+							{
+								softbody->CreateFromMesh(mesh);
+							}
 						}
 
 						// simulation aabb will be used for soft bodies
