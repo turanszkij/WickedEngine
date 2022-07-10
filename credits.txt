@@ -43,6 +43,7 @@ Contributions:
 	- Physics improvements
 - Preben Eriksen https://github.com/plemsoft
 	- Fixes
+	- Extented Dear ImGui integration with a docking branch sample.
 - matpx https://github.com/matpx
 	- Fixes
 
