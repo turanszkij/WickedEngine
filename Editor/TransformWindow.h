@@ -12,12 +12,17 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::Button createButton;
+	wi::gui::Button clearButton;
 
 	wi::gui::ComboBox parentCombo;
 
 	wi::gui::TextInputField txInput;
 	wi::gui::TextInputField tyInput;
 	wi::gui::TextInputField tzInput;
+
+	wi::gui::TextInputField rollInput;
+	wi::gui::TextInputField pitchInput;
+	wi::gui::TextInputField yawInput;
 					 
 	wi::gui::TextInputField rxInput;
 	wi::gui::TextInputField ryInput;

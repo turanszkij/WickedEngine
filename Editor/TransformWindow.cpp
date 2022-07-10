@@ -40,6 +40,19 @@ void TransformWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&createButton);
 
+	clearButton.Create("Clear Transform");
+	clearButton.SetTooltip("Reset transform to identity");
+	clearButton.SetPos(XMFLOAT2(x, y += step));
+	clearButton.SetSize(XMFLOAT2(350, hei));
+	clearButton.OnClick([=](wi::gui::EventArgs args) {
+		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		if (transform != nullptr)
+		{
+			transform->ClearTransform();
+		}
+		});
+	AddWidget(&clearButton);
+
 	parentCombo.Create("Parent: ");
 	parentCombo.SetSize(XMFLOAT2(330, hei));
 	parentCombo.SetPos(XMFLOAT2(x, y += step));
@@ -111,9 +124,76 @@ void TransformWindow::Create(EditorComponent* editor)
 	y = step * 2;
 
 
+	rollInput.Create("");
+	rollInput.SetValue(0);
+	rollInput.SetDescription("Rotation X: ");
+	rollInput.SetTooltip("Roll (in degrees)\n Note: Euler angle rotations can result in precision loss from quaternion conversion!");
+	rollInput.SetPos(XMFLOAT2(x, y += step));
+	rollInput.SetSize(XMFLOAT2(siz, hei));
+	rollInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		if (transform != nullptr)
+		{
+			float roll = float(std::atof(rollInput.GetValue().c_str())) / 180.0f * XM_PI;
+			float pitch = float(std::atof(pitchInput.GetValue().c_str())) / 180.0f * XM_PI;
+			float yaw = float(std::atof(yawInput.GetValue().c_str())) / 180.0f * XM_PI;
+			XMVECTOR Q = XMQuaternionRotationRollPitchYaw(roll, pitch, yaw);
+			Q = XMQuaternionNormalize(Q);
+			XMStoreFloat4(&transform->rotation_local, Q);
+			transform->SetDirty();
+		}
+		});
+	AddWidget(&rollInput);
+
+	pitchInput.Create("");
+	pitchInput.SetValue(0);
+	pitchInput.SetDescription("Rotation Y: ");
+	pitchInput.SetTooltip("Pitch (in degrees)\n Note: Euler angle rotations can result in precision loss from quaternion conversion!");
+	pitchInput.SetPos(XMFLOAT2(x, y += step));
+	pitchInput.SetSize(XMFLOAT2(siz, hei));
+	pitchInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		if (transform != nullptr)
+		{
+			float roll = float(std::atof(rollInput.GetValue().c_str())) / 180.0f * XM_PI;
+			float pitch = float(std::atof(pitchInput.GetValue().c_str())) / 180.0f * XM_PI;
+			float yaw = float(std::atof(yawInput.GetValue().c_str())) / 180.0f * XM_PI;
+			XMVECTOR Q = XMQuaternionRotationRollPitchYaw(roll, pitch, yaw);
+			Q = XMQuaternionNormalize(Q);
+			XMStoreFloat4(&transform->rotation_local, Q);
+			transform->SetDirty();
+		}
+		});
+	AddWidget(&pitchInput);
+
+	yawInput.Create("");
+	yawInput.SetValue(0);
+	yawInput.SetDescription("Rotation Z: ");
+	yawInput.SetTooltip("Yaw (in degrees)\n Note: Euler angle rotations can result in precision loss from quaternion conversion!");
+	yawInput.SetPos(XMFLOAT2(x, y += step));
+	yawInput.SetSize(XMFLOAT2(siz, hei));
+	yawInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		if (transform != nullptr)
+		{
+			float roll = float(std::atof(rollInput.GetValue().c_str())) / 180.0f * XM_PI;
+			float pitch = float(std::atof(pitchInput.GetValue().c_str())) / 180.0f * XM_PI;
+			float yaw = float(std::atof(yawInput.GetValue().c_str())) / 180.0f * XM_PI;
+			XMVECTOR Q = XMQuaternionRotationRollPitchYaw(roll, pitch, yaw);
+			Q = XMQuaternionNormalize(Q);
+			XMStoreFloat4(&transform->rotation_local, Q);
+			transform->SetDirty();
+		}
+		});
+	AddWidget(&yawInput);
+
+
+	y += step * 0.5f;
+
 	rxInput.Create("");
 	rxInput.SetValue(0);
-	rxInput.SetDescription("Rotation X: ");
+	rxInput.SetDescription("Quaternion X: ");
+	rxInput.SetTooltip("Rotation Quaternion.X [After input of this value, quaternion will be renormalized]");
 	rxInput.SetPos(XMFLOAT2(x, y += step));
 	rxInput.SetSize(XMFLOAT2(siz, hei));
 	rxInput.OnInputAccepted([&](wi::gui::EventArgs args) {
@@ -121,6 +201,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		if (transform != nullptr)
 		{
 			transform->rotation_local.x = args.fValue;
+			XMStoreFloat4(&transform->rotation_local, XMQuaternionNormalize(XMLoadFloat4(&transform->rotation_local)));
 			transform->SetDirty();
 		}
 		});
@@ -128,7 +209,8 @@ void TransformWindow::Create(EditorComponent* editor)
 
 	ryInput.Create("");
 	ryInput.SetValue(0);
-	ryInput.SetDescription("Rotation Y: ");
+	ryInput.SetDescription("Quaternion Y: ");
+	ryInput.SetTooltip("Rotation Quaternion.Y [After input of this value, quaternion will be renormalized]");
 	ryInput.SetPos(XMFLOAT2(x, y += step));
 	ryInput.SetSize(XMFLOAT2(siz, hei));
 	ryInput.OnInputAccepted([&](wi::gui::EventArgs args) {
@@ -136,6 +218,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		if (transform != nullptr)
 		{
 			transform->rotation_local.y = args.fValue;
+			XMStoreFloat4(&transform->rotation_local, XMQuaternionNormalize(XMLoadFloat4(&transform->rotation_local)));
 			transform->SetDirty();
 		}
 		});
@@ -143,7 +226,8 @@ void TransformWindow::Create(EditorComponent* editor)
 
 	rzInput.Create("");
 	rzInput.SetValue(0);
-	rzInput.SetDescription("Rotation Z: ");
+	rzInput.SetDescription("Quaternion Z: ");
+	rzInput.SetTooltip("Rotation Quaternion.Z [After input of this value, quaternion will be renormalized]");
 	rzInput.SetPos(XMFLOAT2(x, y += step));
 	rzInput.SetSize(XMFLOAT2(siz, hei));
 	rzInput.OnInputAccepted([&](wi::gui::EventArgs args) {
@@ -151,6 +235,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		if (transform != nullptr)
 		{
 			transform->rotation_local.z = args.fValue;
+			XMStoreFloat4(&transform->rotation_local, XMQuaternionNormalize(XMLoadFloat4(&transform->rotation_local)));
 			transform->SetDirty();
 		}
 		});
@@ -158,7 +243,8 @@ void TransformWindow::Create(EditorComponent* editor)
 
 	rwInput.Create("");
 	rwInput.SetValue(1);
-	rwInput.SetDescription("Rotation W: ");
+	rwInput.SetDescription("Quaternion W: ");
+	rwInput.SetTooltip("Rotation Quaternion.W [After input of this value, quaternion will be renormalized]");
 	rwInput.SetPos(XMFLOAT2(x, y += step));
 	rwInput.SetSize(XMFLOAT2(siz, hei));
 	rwInput.OnInputAccepted([&](wi::gui::EventArgs args) {
@@ -166,6 +252,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		if (transform != nullptr)
 		{
 			transform->rotation_local.w = args.fValue;
+			XMStoreFloat4(&transform->rotation_local, XMQuaternionNormalize(XMLoadFloat4(&transform->rotation_local)));
 			transform->SetDirty();
 		}
 		});
@@ -242,6 +329,11 @@ void TransformWindow::SetEntity(Entity entity)
 		txInput.SetValue(transform->translation_local.x);
 		tyInput.SetValue(transform->translation_local.y);
 		tzInput.SetValue(transform->translation_local.z);
+
+		XMFLOAT3 roll_pitch_yaw = wi::math::QuaternionToRollPitchYaw(transform->rotation_local);
+		rollInput.SetValue(roll_pitch_yaw.x / XM_PI * 180.0f);
+		pitchInput.SetValue(roll_pitch_yaw.y / XM_PI * 180.0f);
+		yawInput.SetValue(roll_pitch_yaw.z / XM_PI * 180.0f);
 
 		rxInput.SetValue(transform->rotation_local.x);
 		ryInput.SetValue(transform->rotation_local.y);
