@@ -20,6 +20,9 @@ set (SOURCE_FILES
 	ImGui/imstb_truetype.h
 	ImGui/imgui_impl_sdl.cpp
 	ImGui/imgui_impl_sdl.h
+	ImGui/ImGuizmo.cpp
+	ImGui/ImGuizmo.h
+	ImGui/IconsMaterialDesign.h
 )
 
 if (WIN32)
