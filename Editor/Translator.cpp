@@ -328,7 +328,7 @@ void Translator::Update(const wi::Canvas& canvas)
 			{
 				angle /= XMVectorGetX(XMVector3Length(intersection - rayOrigin));
 				angle *= XM_2PI;
-				angle = std::fmodf(angle, XM_2PI);
+				angle = std::fmod(angle, XM_2PI);
 				transform.Rotate(XMQuaternionRotationAxis(XMLoadFloat3(&axis), angle));
 			}
 			if (isScalator)
@@ -462,12 +462,12 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 			{
 				const float cylinder_radius = 0.075f;
 				const Vertex verts[] = {
-					{XMFLOAT4(origin_size, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(origin_size, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(origin_size, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(origin_size, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
 				};
 				std::memcpy(dst, verts, sizeof(verts));
 				dst += sizeof(verts);
@@ -478,11 +478,11 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 				const float cone_radius = origin_size;
 				const Vertex verts[] = {
 					{XMFLOAT4(cylinder_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cone_radius, std::cosf(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sinf(angle1) * cone_radius, std::cosf(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
 					{XMFLOAT4(axis_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cone_radius, std::cosf(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sinf(angle1) * cone_radius, std::cosf(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
 				};
 				std::memcpy(dst, verts, sizeof(verts));
 				dst += sizeof(verts);
@@ -492,12 +492,12 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 				// cylinder cap:
 				const float cylinder_radius = 0.5f;
 				const Vertex verts[] = {
-					{XMFLOAT4(cylinder_length - origin_size, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length - origin_size, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length - origin_size, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length - origin_size, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length - origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length - origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
 				};
 				std::memcpy(dst, verts, sizeof(verts));
 				dst += sizeof(verts);
@@ -604,20 +604,21 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 			};
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
-			sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-
 			// xy
 			XMStoreFloat4x4(&sb.g_xTransform, matX);
+			sb.g_xColor = XMFLOAT4(0, 0, 1, 1);
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// xz
 			XMStoreFloat4x4(&sb.g_xTransform, matZ);
+			sb.g_xColor = XMFLOAT4(0, 1, 0, 1);
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// yz
 			XMStoreFloat4x4(&sb.g_xTransform, matY);
+			sb.g_xColor = XMFLOAT4(1, 0, 0, 1);
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 		}
@@ -650,19 +651,19 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 			// xy
 			XMStoreFloat4x4(&sb.g_xTransform, matX);
-			sb.g_xColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 0.5f);
+			sb.g_xColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 0.5f);
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// xz
 			XMStoreFloat4x4(&sb.g_xTransform, matZ);
-			sb.g_xColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 0.5f);
+			sb.g_xColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 0.5f);
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// yz
 			XMStoreFloat4x4(&sb.g_xTransform, matY);
-			sb.g_xColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 0.5f);
+			sb.g_xColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 0.5f);
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 		}
@@ -733,8 +734,8 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 				const float radius = 2;
 				const Vertex verts[] = {
 					{XMFLOAT4(0, 0, 0, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(0, std::cosf(angle0) * radius, std::sinf(angle0) * radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(0, std::cosf(angle1) * radius, std::sinf(angle1) * radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(0, std::cos(angle0) * radius, std::sin(angle0) * radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(0, std::cos(angle1) * radius, std::sin(angle1) * radius, 1), XMFLOAT4(1,1,1,1)},
 				};
 				std::memcpy(dst, verts, sizeof(verts));
 				dst += sizeof(verts);

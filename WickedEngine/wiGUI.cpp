@@ -284,8 +284,9 @@ namespace wi::gui
 			}
 
 			static const float _border = 2;
-			float textWidth = tooltipFont.TextWidth() + _border * 2;
-			float textHeight = tooltipFont.TextHeight() + _border * 2;
+			XMFLOAT2 textSize = tooltipFont.TextSize();
+			float textWidth = textSize.x + _border * 2;
+			float textHeight = textSize.y + _border * 2;
 
 			XMFLOAT2 pointer = GetPointerHitbox().pos;
 			tooltipFont.params.posX = pointer.x;
