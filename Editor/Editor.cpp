@@ -185,7 +185,7 @@ void EditorComponent::ResizeBuffers()
 		TextureDesc desc;
 		desc.width = renderPath->GetRenderResult().GetDesc().width;
 		desc.height = renderPath->GetRenderResult().GetDesc().height;
-		desc.format = Format::D16_UNORM;
+		desc.format = Format::D32_FLOAT;
 		desc.bind_flags = BindFlag::DEPTH_STENCIL;
 		desc.layout = ResourceState::DEPTHSTENCIL;
 		desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;

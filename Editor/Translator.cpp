@@ -19,6 +19,7 @@ namespace Translator_Internal
 	const float axis_length = 3.5f;
 	const float plane_min = 0.5f;
 	const float plane_max = 1.5f;
+	const float circle_width = 0.75f;
 
 	void LoadShaders()
 	{
@@ -137,207 +138,281 @@ void Translator::Update(const wi::Canvas& canvas)
 	{
 		PreTranslate();
 
+		const Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas, cam);
+		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
+		const XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
+
 		if (!dragging)
 		{
+			// Decide which state to enter for dragging:
 			XMMATRIX P = cam.GetProjection();
 			XMMATRIX V = cam.GetView();
 			XMMATRIX W = XMMatrixIdentity();
 			XMFLOAT3 p = transform.GetPosition();
 
-			dist = wi::math::Distance(p, cam.Eye) * 0.05f;
+			dist = std::max(wi::math::Distance(p, cam.Eye) * 0.05f, 0.0001f);
 
-			Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
-
-			AABB aabb_origin;
-			aabb_origin.createFromHalfWidth(p, XMFLOAT3(origin_size * dist, origin_size * dist, origin_size * dist));
-
-			XMFLOAT3 maxp;
-			XMStoreFloat3(&maxp, pos + XMVectorSet(axis_length, 0, 0, 0) * dist);
-			AABB aabb_x = AABB::Merge(AABB(p, maxp), aabb_origin);
-
-			XMStoreFloat3(&maxp, pos + XMVectorSet(0, axis_length, 0, 0) * dist);
-			AABB aabb_y = AABB::Merge(AABB(p, maxp), aabb_origin);
-
-			XMStoreFloat3(&maxp, pos + XMVectorSet(0, 0, axis_length, 0) * dist);
-			AABB aabb_z = AABB::Merge(AABB(p, maxp), aabb_origin);
-
-			XMFLOAT3 minp;
-			XMStoreFloat3(&minp, pos + XMVectorSet(plane_min, plane_min, 0, 0) * dist);
-			XMStoreFloat3(&maxp, pos + XMVectorSet(plane_max, plane_max, 0, 0) * dist);
-			AABB aabb_xy = AABB(minp, maxp);
-
-			XMStoreFloat3(&minp, pos + XMVectorSet(plane_min, 0, plane_min, 0) * dist);
-			XMStoreFloat3(&maxp, pos + XMVectorSet(plane_max, 0, plane_max, 0) * dist);
-			AABB aabb_xz = AABB(minp, maxp);
-
-			XMStoreFloat3(&minp, pos + XMVectorSet(0, plane_min, plane_min, 0) * dist);
-			XMStoreFloat3(&maxp, pos + XMVectorSet(0, plane_max, plane_max, 0) * dist);
-			AABB aabb_yz = AABB(minp, maxp);
-
-			if (!isRotator && aabb_origin.intersects(ray))
+			if (isRotator)
 			{
-				state = TRANSLATOR_XYZ;
-			}
-			else if (aabb_x.intersects(ray))
-			{
-				state = TRANSLATOR_X;
-			}
-			else if (aabb_y.intersects(ray))
-			{
-				state = TRANSLATOR_Y;
-			}
-			else if (aabb_z.intersects(ray))
-			{
-				state = TRANSLATOR_Z;
-			}
-			else if (!dragging)
-			{
+				XMVECTOR plane_zy = XMPlaneFromPointNormal(pos, XMVectorSet(1, 0, 0, 0));
+				XMVECTOR plane_xz = XMPlaneFromPointNormal(pos, XMVectorSet(0, 1, 0, 0));
+				XMVECTOR plane_xy = XMPlaneFromPointNormal(pos, XMVectorSet(0, 0, 1, 0));
+
+				XMVECTOR intersection = XMPlaneIntersectLine(plane_zy, rayOrigin, rayOrigin + rayDir * cam.zFarP);
+				float dist_x = XMVectorGetX(XMVector3LengthSq(intersection - rayOrigin));
+				float len_x = XMVectorGetX(XMVector3Length(intersection - pos)) / dist;
+				intersection = XMPlaneIntersectLine(plane_xz, rayOrigin, rayOrigin + rayDir * cam.zFarP);
+				float dist_y = XMVectorGetX(XMVector3LengthSq(intersection - rayOrigin));
+				float len_y = XMVectorGetX(XMVector3Length(intersection - pos)) / dist;
+				intersection = XMPlaneIntersectLine(plane_xy, rayOrigin, rayOrigin + rayDir * cam.zFarP);
+				float dist_z = XMVectorGetX(XMVector3LengthSq(intersection - rayOrigin));
+				float len_z = XMVectorGetX(XMVector3Length(intersection - pos)) / dist;
+
 				state = TRANSLATOR_IDLE;
+
+				const float range = circle_width * 0.5f;
+				const float perimeter = axis_length - range;
+				float best_dist = std::numeric_limits<float>::max();
+				if (std::abs(perimeter - len_x) <= range && dist_x < best_dist)
+				{
+					state = TRANSLATOR_X;
+					axis = XMFLOAT3(1, 0, 0);
+					best_dist = dist_x;
+				}
+				if (std::abs(perimeter - len_y) <= range && dist_y < best_dist)
+				{
+					state = TRANSLATOR_Y;
+					axis = XMFLOAT3(0, 1, 0);
+					best_dist = dist_y;
+				}
+				if (std::abs(perimeter - len_z) <= range && dist_z < best_dist)
+				{
+					state = TRANSLATOR_Z;
+					axis = XMFLOAT3(0, 0, 1);
+					best_dist = dist_z;
+				}
+				
 			}
-
-			if (state != TRANSLATOR_XYZ)
+			else
 			{
-				// these can overlap, so take closest one (by checking plane ray trace distance):
-				XMVECTOR origin = XMLoadFloat3(&ray.origin);
-				XMVECTOR direction = XMLoadFloat3(&ray.direction);
-				XMVECTOR N = XMVectorSet(0, 0, 1, 0);
+				AABB aabb_origin;
+				aabb_origin.createFromHalfWidth(p, XMFLOAT3(origin_size * dist, origin_size * dist, origin_size * dist));
 
-				float prio = FLT_MAX;
-				if (!isRotator && !isScalator && aabb_xy.intersects(ray))
+				XMFLOAT3 maxp;
+				XMStoreFloat3(&maxp, pos + XMVectorSet(axis_length, 0, 0, 0) * dist);
+				AABB aabb_x = AABB::Merge(AABB(p, maxp), aabb_origin);
+
+				XMStoreFloat3(&maxp, pos + XMVectorSet(0, axis_length, 0, 0) * dist);
+				AABB aabb_y = AABB::Merge(AABB(p, maxp), aabb_origin);
+
+				XMStoreFloat3(&maxp, pos + XMVectorSet(0, 0, axis_length, 0) * dist);
+				AABB aabb_z = AABB::Merge(AABB(p, maxp), aabb_origin);
+
+				XMFLOAT3 minp;
+				XMStoreFloat3(&minp, pos + XMVectorSet(plane_min, plane_min, 0, 0) * dist);
+				XMStoreFloat3(&maxp, pos + XMVectorSet(plane_max, plane_max, 0, 0) * dist);
+				AABB aabb_xy = AABB(minp, maxp);
+
+				XMStoreFloat3(&minp, pos + XMVectorSet(plane_min, 0, plane_min, 0) * dist);
+				XMStoreFloat3(&maxp, pos + XMVectorSet(plane_max, 0, plane_max, 0) * dist);
+				AABB aabb_xz = AABB(minp, maxp);
+
+				XMStoreFloat3(&minp, pos + XMVectorSet(0, plane_min, plane_min, 0) * dist);
+				XMStoreFloat3(&maxp, pos + XMVectorSet(0, plane_max, plane_max, 0) * dist);
+				AABB aabb_yz = AABB(minp, maxp);
+
+				if (!isRotator && aabb_origin.intersects(ray))
 				{
-					state = TRANSLATOR_XY;
-					prio = XMVectorGetX(XMVector3Dot(N, (origin - pos) / XMVectorAbs(XMVector3Dot(N, direction))));
+					state = TRANSLATOR_XYZ;
+				}
+				else if (aabb_x.intersects(ray))
+				{
+					state = TRANSLATOR_X;
+				}
+				else if (aabb_y.intersects(ray))
+				{
+					state = TRANSLATOR_Y;
+				}
+				else if (aabb_z.intersects(ray))
+				{
+					state = TRANSLATOR_Z;
+				}
+				else if (!dragging)
+				{
+					state = TRANSLATOR_IDLE;
 				}
 
-				N = XMVectorSet(0, 1, 0, 0);
-				float d = XMVectorGetX(XMVector3Dot(N, (origin - pos) / XMVectorAbs(XMVector3Dot(N, direction))));
-				if (!isRotator && !isScalator && d < prio && aabb_xz.intersects(ray))
+				if (state != TRANSLATOR_XYZ)
 				{
-					state = TRANSLATOR_XZ;
-					prio = d;
-				}
+					// these can overlap, so take closest one (by checking plane ray trace distance):
+					XMVECTOR N = XMVectorSet(0, 0, 1, 0);
 
-				N = XMVectorSet(1, 0, 0, 0);
-				d = XMVectorGetX(XMVector3Dot(N, (origin - pos) / XMVectorAbs(XMVector3Dot(N, direction))));
-				if (!isRotator && !isScalator && d < prio && aabb_yz.intersects(ray))
-				{
-					state = TRANSLATOR_YZ;
+					float prio = FLT_MAX;
+					if (!isRotator && !isScalator && aabb_xy.intersects(ray))
+					{
+						state = TRANSLATOR_XY;
+						prio = XMVectorGetX(XMVector3Dot(N, (rayOrigin - pos) / XMVectorAbs(XMVector3Dot(N, rayDir))));
+					}
+
+					N = XMVectorSet(0, 1, 0, 0);
+					float d = XMVectorGetX(XMVector3Dot(N, (rayOrigin - pos) / XMVectorAbs(XMVector3Dot(N, rayDir))));
+					if (!isRotator && !isScalator && d < prio && aabb_xz.intersects(ray))
+					{
+						state = TRANSLATOR_XZ;
+						prio = d;
+					}
+
+					N = XMVectorSet(1, 0, 0, 0);
+					d = XMVectorGetX(XMVector3Dot(N, (rayOrigin - pos) / XMVectorAbs(XMVector3Dot(N, rayDir))));
+					if (!isRotator && !isScalator && d < prio && aabb_yz.intersects(ray))
+					{
+						state = TRANSLATOR_YZ;
+					}
 				}
 			}
 		}
 
 		if (dragging || (state != TRANSLATOR_IDLE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT)))
 		{
-			XMVECTOR plane, planeNormal;
-			if (state == TRANSLATOR_X)
-			{
-				XMVECTOR axis = XMVectorSet(1, 0, 0, 0);
-				XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
-				planeNormal = XMVector3Cross(wrong, axis);
-				this->axis = XMFLOAT3(1, 0, 0);
-			}
-			else if (state == TRANSLATOR_Y)
-			{
-				XMVECTOR axis = XMVectorSet(0, 1, 0, 0);
-				XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
-				planeNormal = XMVector3Cross(wrong, axis);
-				this->axis = XMFLOAT3(0, 1, 0);
-			}
-			else if (state == TRANSLATOR_Z)
-			{
-				XMVECTOR axis = XMVectorSet(0, 0, 1, 0);
-				XMVECTOR wrong = XMVector3Cross(cam.GetUp(), axis);
-				planeNormal = XMVector3Cross(wrong, axis);
-				this->axis = XMFLOAT3(0, 0, 1);
-			}
-			else if (state == TRANSLATOR_XY)
-			{
-				planeNormal = XMVectorSet(0, 0, 1, 0);
-			}
-			else if (state == TRANSLATOR_XZ)
-			{
-				planeNormal = XMVectorSet(0, 1, 0, 0);
-			}
-			else if (state == TRANSLATOR_YZ)
-			{
-				planeNormal = XMVectorSet(1, 0, 0, 0);
-			}
-			else
-			{
-				// xyz
-				planeNormal = cam.GetAt();
-			}
-			plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
-
-			Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas, cam);
-			XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
-			XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
-			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(planeNormal, rayDir))) < 0.001f)
-				return;
-			XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);
-
-			if (!dragging)
-			{
-				dragStarted = true;
-				transform_start = transform;
-				XMStoreFloat3(&intersection_start, intersection);
-			}
-			XMVECTOR intersectionPrev = XMLoadFloat3(&intersection_start);
-
-			XMVECTOR deltaV;
-			if (state == TRANSLATOR_X)
-			{
-				XMVECTOR A = pos, B = pos + XMVectorSet(1, 0, 0, 0);
-				XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
-				XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
-				deltaV = P - PPrev;
-				angle = XMVectorGetX(deltaV);
-			}
-			else if (state == TRANSLATOR_Y)
-			{
-				XMVECTOR A = pos, B = pos + XMVectorSet(0, 1, 0, 0);
-				XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
-				XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
-				deltaV = P - PPrev;
-				angle = XMVectorGetY(deltaV);
-			}
-			else if (state == TRANSLATOR_Z)
-			{
-				XMVECTOR A = pos, B = pos + XMVectorSet(0, 0, 1, 0);
-				XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
-				XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
-				deltaV = P - PPrev;
-				angle = XMVectorGetZ(deltaV);
-			}
-			else
-			{
-				deltaV = intersection - intersectionPrev;
-
-				if (isScalator)
-				{
-					deltaV = XMVectorReplicate(XMVectorGetY(deltaV));
-				}
-			}
-
-			transform = transform_start;
-			if (isTranslator)
-			{
-				transform.Translate(deltaV);
-			}
+			// Dragging operation:
 			if (isRotator)
 			{
-				angle /= XMVectorGetX(XMVector3Length(intersection - rayOrigin));
-				angle *= XM_2PI;
-				angle = std::fmod(angle, XM_2PI);
-				transform.Rotate(XMQuaternionRotationAxis(XMLoadFloat3(&axis), angle));
+				XMVECTOR intersection = XMPlaneIntersectLine(XMPlaneFromPointNormal(pos, XMLoadFloat3(&axis)), rayOrigin, rayOrigin + rayDir * cam.zFarP);
+
+				if (!dragging)
+				{
+					dragStarted = true;
+					transform_start = transform;
+					XMStoreFloat3(&intersection_start, intersection);
+					angle_prev = 0;
+				}
+				XMVECTOR intersectionPrev = XMLoadFloat3(&intersection_start);
+
+				XMVECTOR o = XMVector3Normalize(intersectionPrev - pos);
+				XMVECTOR c = XMVector3Normalize(intersection - pos);
+				XMFLOAT3 original, current;
+				XMStoreFloat3(&original, o);
+				XMStoreFloat3(&current, c);
+				angle = wi::math::GetAngle(original, current, axis);
+
+				switch (state)
+				{
+				case Translator::TRANSLATOR_X:
+					angle_start = wi::math::GetAngle(XMFLOAT3(0, 1, 0), original, axis);
+					break;
+				case Translator::TRANSLATOR_Y:
+					angle_start = wi::math::GetAngle(XMFLOAT3(0, 0, 1), original, axis);
+					break;
+				case Translator::TRANSLATOR_Z:
+					angle_start = wi::math::GetAngle(XMFLOAT3(1, 0, 0), original, axis);
+					break;
+				default:
+					break;
+				}
+
+				transform.Rotate(XMQuaternionRotationAxis(XMLoadFloat3(&axis), angle - angle_prev));
+				angle_prev = angle;
 			}
-			if (isScalator)
+			else
 			{
-				XMFLOAT3 delta;
-				XMStoreFloat3(&delta, deltaV);
-				XMFLOAT3 scale = transform.GetScale();
-				scale = XMFLOAT3((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
-				transform.Scale(scale);
+				XMVECTOR plane, planeNormal;
+				if (state == TRANSLATOR_X)
+				{
+					XMVECTOR axis = XMVectorSet(1, 0, 0, 0);
+					XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
+					planeNormal = XMVector3Cross(wrong, axis);
+					this->axis = XMFLOAT3(1, 0, 0);
+				}
+				else if (state == TRANSLATOR_Y)
+				{
+					XMVECTOR axis = XMVectorSet(0, 1, 0, 0);
+					XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
+					planeNormal = XMVector3Cross(wrong, axis);
+					this->axis = XMFLOAT3(0, 1, 0);
+				}
+				else if (state == TRANSLATOR_Z)
+				{
+					XMVECTOR axis = XMVectorSet(0, 0, 1, 0);
+					XMVECTOR wrong = XMVector3Cross(cam.GetUp(), axis);
+					planeNormal = XMVector3Cross(wrong, axis);
+					this->axis = XMFLOAT3(0, 0, 1);
+				}
+				else if (state == TRANSLATOR_XY)
+				{
+					planeNormal = XMVectorSet(0, 0, 1, 0);
+				}
+				else if (state == TRANSLATOR_XZ)
+				{
+					planeNormal = XMVectorSet(0, 1, 0, 0);
+				}
+				else if (state == TRANSLATOR_YZ)
+				{
+					planeNormal = XMVectorSet(1, 0, 0, 0);
+				}
+				else
+				{
+					// xyz
+					planeNormal = cam.GetAt();
+				}
+				plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
+
+				if (XMVectorGetX(XMVectorAbs(XMVector3Dot(planeNormal, rayDir))) < 0.001f)
+					return;
+				XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir * cam.zFarP);
+
+				if (!dragging)
+				{
+					dragStarted = true;
+					transform_start = transform;
+					XMStoreFloat3(&intersection_start, intersection);
+				}
+				XMVECTOR intersectionPrev = XMLoadFloat3(&intersection_start);
+
+				XMVECTOR deltaV;
+				if (state == TRANSLATOR_X)
+				{
+					XMVECTOR A = pos, B = pos + XMVectorSet(1, 0, 0, 0);
+					XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
+					XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
+					deltaV = P - PPrev;
+				}
+				else if (state == TRANSLATOR_Y)
+				{
+					XMVECTOR A = pos, B = pos + XMVectorSet(0, 1, 0, 0);
+					XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
+					XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
+					deltaV = P - PPrev;
+				}
+				else if (state == TRANSLATOR_Z)
+				{
+					XMVECTOR A = pos, B = pos + XMVectorSet(0, 0, 1, 0);
+					XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
+					XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
+					deltaV = P - PPrev;
+				}
+				else
+				{
+					deltaV = intersection - intersectionPrev;
+
+					if (isScalator)
+					{
+						deltaV = XMVectorReplicate(XMVectorGetY(deltaV));
+					}
+				}
+
+				transform = transform_start;
+				if (isTranslator)
+				{
+					transform.Translate(deltaV);
+				}
+				if (isScalator)
+				{
+					XMFLOAT3 delta;
+					XMStoreFloat3(&delta, deltaV);
+					XMFLOAT3 scale = transform.GetScale();
+					scale = XMFLOAT3((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
+					transform.Scale(scale);
+				}
 			}
 
 			if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LCONTROL))
@@ -360,10 +435,17 @@ void Translator::Update(const wi::Canvas& canvas)
 				}
 				if (isScalator)
 				{
-					transform.scale_local.x = std::max(0.1f, std::round(transform.scale_local.x));
-					transform.scale_local.y = std::max(0.1f, std::round(transform.scale_local.y));
-					transform.scale_local.z = std::max(0.1f, std::round(transform.scale_local.z));
+					transform.scale_local.x = std::round(transform.scale_local.x);
+					transform.scale_local.y = std::round(transform.scale_local.y);
+					transform.scale_local.z = std::round(transform.scale_local.z);
 				}
+			}
+
+			if (isScalator)
+			{
+				transform.scale_local.x = std::max(0.001f, transform.scale_local.x);
+				transform.scale_local.y = std::max(0.001f, transform.scale_local.y);
+				transform.scale_local.z = std::max(0.001f, transform.scale_local.z);
 			}
 
 			transform.UpdateTransform();
@@ -421,6 +503,12 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	MiscCB sb;
 
 	XMMATRIX mat = XMMatrixScaling(dist, dist, dist)*XMMatrixTranslationFromVector(transform.GetPositionV()) * VP;
+
+	//if (isRotator)
+	//{
+	//	mat = XMMatrixRotationQuaternion(transform.GetRotationV()) * mat;
+	//}
+
 	XMMATRIX matX = mat;
 	XMMATRIX matY = XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat;
 	XMMATRIX matZ = XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat;
@@ -429,92 +517,106 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	{
 		device->BindPipelineState(&pso_solidpart, cmd);
 
-		const uint32_t segmentCount = 18;
-		const uint32_t cylinder_triangleCount = segmentCount * 2;
-		const uint32_t cone_triangleCount = cylinder_triangleCount;
 		uint32_t vertexCount = 0;
-		if (isTranslator)
-		{
-			vertexCount = (cylinder_triangleCount + cone_triangleCount) * 3;
-		}
-		else if (isRotator)
-		{
-			vertexCount = cylinder_triangleCount * 2 * 3;
-		}
-		else if (isScalator)
-		{
-			vertexCount = cylinder_triangleCount * 3 + arraysize(cubeVerts);
-		}
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
+		GraphicsDevice::GPUAllocation mem;
 
-		const float cone_length = 0.75f;
-		float cylinder_length = axis_length;
-		if (isTranslator)
+		if (isRotator)
 		{
-			cylinder_length -= cone_length;
-		}
-		uint8_t* dst = (uint8_t*)mem.data;
-		for (uint32_t i = 0; i < segmentCount; ++i)
-		{
-			const float angle0 = (float)i / (float)segmentCount * XM_2PI;
-			const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
-			// cylinder base:
+			const uint32_t segmentCount = 90;
+			const uint32_t circle_triangleCount = segmentCount * 2;
+			vertexCount = circle_triangleCount * 3;
+			mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
+			uint8_t* dst = (uint8_t*)mem.data;
+			for (uint32_t i = 0; i < segmentCount; ++i)
 			{
-				const float cylinder_radius = 0.075f;
-				const Vertex verts[] = {
-					{XMFLOAT4(origin_size, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-				};
-				std::memcpy(dst, verts, sizeof(verts));
-				dst += sizeof(verts);
-			}
-			if(isTranslator)
-			{
-				// cone cap:
-				const float cone_radius = origin_size;
-				const Vertex verts[] = {
-					{XMFLOAT4(cylinder_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(axis_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
-				};
-				std::memcpy(dst, verts, sizeof(verts));
-				dst += sizeof(verts);
-			}
-			else if (isRotator)
-			{
-				// cylinder cap:
-				const float cylinder_radius = 0.5f;
-				const Vertex verts[] = {
-					{XMFLOAT4(cylinder_length - origin_size, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length - origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(cylinder_length - origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-				};
-				std::memcpy(dst, verts, sizeof(verts));
-				dst += sizeof(verts);
-			}
-		}
+				const float angle0 = (float)i / (float)segmentCount * XM_2PI;
+				const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
 
-		if (isScalator)
+				// circle:
+				const float circle_radius = axis_length;
+				const float circle_radius_inner = circle_radius - circle_width;
+				const float circle_halfway = circle_radius - circle_width * 0.5f;
+				const Vertex verts[] = {
+					{XMFLOAT4(0, std::sin(angle0) * circle_radius_inner, std::cos(angle0) * circle_radius_inner, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(0, std::sin(angle1) * circle_radius_inner, std::cos(angle1) * circle_radius_inner, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(0, std::sin(angle0) * circle_radius, std::cos(angle0) * circle_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(0, std::sin(angle0) * circle_radius, std::cos(angle0) * circle_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(0, std::sin(angle1) * circle_radius, std::cos(angle1) * circle_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(0, std::sin(angle1) * circle_radius_inner, std::cos(angle1) * circle_radius_inner, 1), XMFLOAT4(1,1,1,1)},
+				};
+				std::memcpy(dst, verts, sizeof(verts));
+				dst += sizeof(verts);
+			}
+		}
+		else
 		{
-			// cube cap:
-			for (uint32_t i = 0; i < arraysize(cubeVerts); ++i)
+			const uint32_t segmentCount = 18;
+			const uint32_t cylinder_triangleCount = segmentCount * 2;
+			const uint32_t cone_triangleCount = cylinder_triangleCount;
+			if (isTranslator)
 			{
-				Vertex vert = cubeVerts[i];
-				vert.position.x = vert.position.x * origin_size + cylinder_length - origin_size;
-				vert.position.y = vert.position.y * origin_size;
-				vert.position.z = vert.position.z * origin_size;
-				std::memcpy(dst, &vert, sizeof(vert));
-				dst += sizeof(vert);
+				vertexCount = (cylinder_triangleCount + cone_triangleCount) * 3;
+			}
+			else if (isScalator)
+			{
+				vertexCount = cylinder_triangleCount * 3 + arraysize(cubeVerts);
+			}
+			mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
+
+			const float cone_length = 0.75f;
+			float cylinder_length = axis_length;
+			if (isTranslator)
+			{
+				cylinder_length -= cone_length;
+			}
+			uint8_t* dst = (uint8_t*)mem.data;
+			for (uint32_t i = 0; i < segmentCount; ++i)
+			{
+				const float angle0 = (float)i / (float)segmentCount * XM_2PI;
+				const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
+				// cylinder base:
+				{
+					const float cylinder_radius = 0.075f;
+					const Vertex verts[] = {
+						{XMFLOAT4(origin_size, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(cylinder_length, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					};
+					std::memcpy(dst, verts, sizeof(verts));
+					dst += sizeof(verts);
+				}
+				if (isTranslator)
+				{
+					// cone cap:
+					const float cone_radius = origin_size;
+					const Vertex verts[] = {
+						{XMFLOAT4(cylinder_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(axis_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+					};
+					std::memcpy(dst, verts, sizeof(verts));
+					dst += sizeof(verts);
+				}
+			}
+
+			if (isScalator)
+			{
+				// cube cap:
+				for (uint32_t i = 0; i < arraysize(cubeVerts); ++i)
+				{
+					Vertex vert = cubeVerts[i];
+					vert.position.x = vert.position.x * origin_size + cylinder_length - origin_size;
+					vert.position.y = vert.position.y * origin_size;
+					vert.position.z = vert.position.z * origin_size;
+					std::memcpy(dst, &vert, sizeof(vert));
+					dst += sizeof(vert);
+				}
 			}
 		}
 
@@ -549,6 +651,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	}
 
 	// Origin:
+	if(!isRotator)
 	{
 		device->BindPipelineState(&pso_solidpart, cmd);
 
@@ -728,10 +831,10 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 			uint8_t* dst = (uint8_t*)mem.data;
 			for (uint32_t i = 0; i < segmentCount; ++i)
 			{
-				const float angle0 = (float)i / (float)segmentCount * angle;
-				const float angle1 = (float)(i + 1) / (float)segmentCount * angle;
+				const float angle0 = (float)i / (float)segmentCount * angle + angle_start;
+				const float angle1 = (float)(i + 1) / (float)segmentCount * angle + angle_start;
 
-				const float radius = 2;
+				const float radius = axis_length;
 				const Vertex verts[] = {
 					{XMFLOAT4(0, 0, 0, 1), XMFLOAT4(1,1,1,1)},
 					{XMFLOAT4(0, std::cos(angle0) * radius, std::sin(angle0) * radius, 1), XMFLOAT4(1,1,1,1)},
@@ -772,8 +875,21 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		}
 		if (isRotator)
 		{
-			str += "Axis = " + std::to_string(axis.x) + ", " + std::to_string(axis.y) + ", " + std::to_string(axis.z);
-			str += "\nAngle = " + std::to_string(angle / XM_PI * 180) + " deg, " + std::to_string(angle) + "rad";
+			switch (state)
+			{
+			case Translator::TRANSLATOR_X:
+				str += "Axis = X";
+				break;
+			case Translator::TRANSLATOR_Y:
+				str += "Axis = Y";
+				break;
+			case Translator::TRANSLATOR_Z:
+				str += "Axis = Z";
+				break;
+			default:
+				break;
+			}
+			str += "\nAngle = " + std::to_string(int(angle / XM_PI * 180)) + " degrees";
 		}
 		if (isScalator)
 		{
@@ -809,6 +925,7 @@ void Translator::PreTranslate()
 		XMFLOAT3 center;
 		XMStoreFloat3(&center, centerV);
 		transform.translation_local = {};
+		//transform.ClearTransform();
 		transform.Translate(center);
 		transform.UpdateTransform();
 	}

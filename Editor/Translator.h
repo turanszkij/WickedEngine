@@ -14,6 +14,8 @@ private:
 	XMFLOAT3 intersection_start = XMFLOAT3(0, 0, 0);
 	XMFLOAT3 axis = XMFLOAT3(1, 0, 0);
 	float angle = 0;
+	float angle_start = 0;
+	float angle_prev = 0;
 public:
 
 	void Update(const wi::Canvas& canvas);
