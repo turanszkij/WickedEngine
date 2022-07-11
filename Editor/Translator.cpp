@@ -995,11 +995,8 @@ void Translator::PreTranslate()
 	if (count > 0)
 	{
 		centerV /= count;
-		XMFLOAT3 center;
-		XMStoreFloat3(&center, centerV);
-		transform.translation_local = {};
-		//transform.ClearTransform();
-		transform.Translate(center);
+		XMStoreFloat3(&transform.translation_local, centerV);
+		transform.SetDirty();
 		transform.UpdateTransform();
 	}
 
@@ -1011,11 +1008,7 @@ void Translator::PreTranslate()
 		TransformComponent* transform_selected = scene.transforms.GetComponent(x);
 		if (transform_selected != nullptr)
 		{
-			// selected to world space:
-			transform_selected->ApplyTransform();
-
-			// selected to translator local space:
-			transform_selected->MatrixTransform(B);
+			XMStoreFloat4x4(&transform_selected->world, XMLoadFloat4x4(&transform_selected->world) * B);
 		}
 	}
 }
@@ -1023,12 +1016,17 @@ void Translator::PostTranslate()
 {
 	Scene& scene = wi::scene::GetScene();
 
+	XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
+
 	for (auto& x : selectedEntitiesNonRecursive)
 	{
 		TransformComponent* transform_selected = scene.transforms.GetComponent(x);
 		if (transform_selected != nullptr)
 		{
-			transform_selected->UpdateTransform_Parented(transform);
+			XMMATRIX W = XMLoadFloat4x4(&transform_selected->world);
+			XMMATRIX W_parent = XMLoadFloat4x4(&transform.world);
+			W = W * W_parent;
+			XMStoreFloat4x4(&transform_selected->world, W);
 
 			// selected to world space:
 			transform_selected->ApplyTransform();
