@@ -19,7 +19,10 @@ namespace Translator_Internal
 	const float axis_length = 3.5f;
 	const float plane_min = 0.5f;
 	const float plane_max = 1.5f;
+	const float circle_radius = axis_length;
 	const float circle_width = 0.75f;
+	const float circle2_radius = circle_radius + 0.7f;
+	const float circle2_width = 0.3f;
 
 	void LoadShaders()
 	{
@@ -172,8 +175,8 @@ void Translator::Update(const wi::Canvas& canvas)
 
 				state = TRANSLATOR_IDLE;
 
-				const float range = circle_width * 0.5f;
-				const float perimeter = axis_length - range;
+				float range = circle_width * 0.5f;
+				float perimeter = circle_radius - range;
 				float best_dist = std::numeric_limits<float>::max();
 				if (std::abs(perimeter - len_x) <= range && dist_x < best_dist)
 				{
@@ -192,6 +195,18 @@ void Translator::Update(const wi::Canvas& canvas)
 					state = TRANSLATOR_Z;
 					axis = XMFLOAT3(0, 0, 1);
 					best_dist = dist_z;
+				}
+
+				XMVECTOR screen_normal = XMVector3Normalize(cam.GetEye() - pos);
+				XMVECTOR plane_screen = XMPlaneFromPointNormal(pos, screen_normal);
+				intersection = XMPlaneIntersectLine(plane_screen, rayOrigin, rayOrigin + rayDir * cam.zFarP);
+				float len_screen = XMVectorGetX(XMVector3Length(intersection - pos)) / dist;
+				range = circle2_width * 0.5f;
+				perimeter = circle2_radius - range;
+				if (std::abs(perimeter - len_screen) <= range)
+				{
+					state = TRANSLATOR_XYZ;
+					XMStoreFloat3(&axis, screen_normal);
 				}
 				
 			}
@@ -307,6 +322,14 @@ void Translator::Update(const wi::Canvas& canvas)
 					break;
 				case Translator::TRANSLATOR_Z:
 					angle_start = wi::math::GetAngle(XMFLOAT3(1, 0, 0), original, axis);
+					break;
+				case Translator::TRANSLATOR_XYZ:
+					{
+						XMMATRIX M = XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - cam.GetEye()), cam.GetUp()));
+						XMFLOAT3 ref;
+						XMStoreFloat3(&ref, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), M));
+						angle_start = wi::math::GetAngle(ref, original, axis);
+					}
 					break;
 				default:
 					break;
@@ -532,7 +555,6 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 				const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
 
 				// circle:
-				const float circle_radius = axis_length;
 				const float circle_radius_inner = circle_radius - circle_width;
 				const float circle_halfway = circle_radius - circle_width * 0.5f;
 				const Vertex verts[] = {
@@ -645,6 +667,56 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		// z
 		XMStoreFloat4x4(&sb.g_xTransform, matZ);
 		sb.g_xColor = state == TRANSLATOR_Z ? highlight_color : XMFLOAT4(channel_min, channel_min, 1, 1);
+		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+		device->Draw(vertexCount, 0, cmd);
+
+	}
+
+	if (isRotator)
+	{
+		// An other circle for rotator, a bit thinner and screen facing, so new geo:
+		const uint32_t segmentCount = 90;
+		const uint32_t circle2_triangleCount = segmentCount * 2;
+		uint32_t vertexCount = circle2_triangleCount * 3;
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
+		uint8_t* dst = (uint8_t*)mem.data;
+		for (uint32_t i = 0; i < segmentCount; ++i)
+		{
+			const float angle0 = (float)i / (float)segmentCount * XM_2PI;
+			const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
+
+			// circle:
+			const float circle2_radius_inner = circle2_radius - circle2_width;
+			const float circle2_halfway = circle2_radius - circle2_width * 0.5f;
+			const Vertex verts[] = {
+				{XMFLOAT4(0, std::sin(angle0) * circle2_radius_inner, std::cos(angle0) * circle2_radius_inner, 1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(0, std::sin(angle1) * circle2_radius_inner, std::cos(angle1) * circle2_radius_inner, 1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(0, std::sin(angle0) * circle2_radius, std::cos(angle0) * circle2_radius, 1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(0, std::sin(angle0) * circle2_radius, std::cos(angle0) * circle2_radius, 1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(0, std::sin(angle1) * circle2_radius, std::cos(angle1) * circle2_radius, 1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(0, std::sin(angle1) * circle2_radius_inner, std::cos(angle1) * circle2_radius_inner, 1), XMFLOAT4(1,1,1,1)},
+			};
+			std::memcpy(dst, verts, sizeof(verts));
+			dst += sizeof(verts);
+		}
+
+		const GPUBuffer* vbs[] = {
+			&mem.buffer,
+		};
+		const uint32_t strides[] = {
+			sizeof(Vertex),
+		};
+		const uint64_t offsets[] = {
+			mem.offset,
+		};
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+		XMStoreFloat4x4(&sb.g_xTransform,
+			XMMatrixRotationY(XM_PIDIV2) *
+			XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - camera.GetEye()), camera.GetUp())) *
+			mat
+		);
+		sb.g_xColor = state == TRANSLATOR_XYZ ? highlight_color : XMFLOAT4(1, 1, 1, 0.5f);
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 	}
@@ -804,24 +876,27 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		{
 			device->BindPipelineState(&pso_solidpart, cmd);
 
-			const uint32_t segmentCount = 180;
+			const uint32_t segmentCount = 90;
 			const uint32_t vertexCount = segmentCount * 3;
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
 
-			XMVECTOR ref = XMVectorZero();
 			switch (state)
 			{
 			case Translator::TRANSLATOR_X:
 				XMStoreFloat4x4(&sb.g_xTransform, matX);
-				ref = XMVectorSet(0, 0, 1, 0);
 				break;
 			case Translator::TRANSLATOR_Y:
 				XMStoreFloat4x4(&sb.g_xTransform, matY);
-				ref = XMVectorSet(1, 0, 0, 0);
 				break;
 			case Translator::TRANSLATOR_Z:
 				XMStoreFloat4x4(&sb.g_xTransform, matZ);
-				ref = XMVectorSet(1, 0, 0, 0);
+				break;
+			case Translator::TRANSLATOR_XYZ:
+				XMStoreFloat4x4(&sb.g_xTransform,
+					XMMatrixRotationY(XM_PIDIV2) *
+					XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - camera.GetEye()), camera.GetUp())) *
+					mat
+				);
 				break;
 			default:
 				break;
@@ -833,7 +908,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 				const float angle0 = (float)i / (float)segmentCount * angle + angle_start;
 				const float angle1 = (float)(i + 1) / (float)segmentCount * angle + angle_start;
 
-				const float radius = axis_length - circle_width;
+				const float radius = state == TRANSLATOR_XYZ ? (circle2_radius - circle2_width) : (circle_radius - circle_width);
 				const Vertex verts[] = {
 					{XMFLOAT4(0, 0, 0, 1), XMFLOAT4(1,1,1,1)},
 					{XMFLOAT4(0, std::cos(angle0) * radius, std::sin(angle0) * radius, 1), XMFLOAT4(1,1,1,1)},
@@ -884,6 +959,9 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 				break;
 			case Translator::TRANSLATOR_Z:
 				str += "Axis = Z";
+				break;
+			case Translator::TRANSLATOR_XYZ:
+				str += "Axis = Screen";
 				break;
 			default:
 				break;
