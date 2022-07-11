@@ -7,13 +7,14 @@
 class Translator
 {
 private:
-	XMFLOAT4 prevPointer = XMFLOAT4(0, 0, 0, 0);
-	XMFLOAT4X4 dragDeltaMatrix = wi::math::IDENTITY_MATRIX;
 	bool dragging = false;
 	bool dragStarted = false;
 	bool dragEnded = false;
+	wi::scene::TransformComponent transform_start;
+	XMFLOAT3 intersection_start = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 axis = XMFLOAT3(1, 0, 0);
+	float angle = 0;
 public:
-	void Create();
 
 	void Update(const wi::Canvas& canvas);
 	void Draw(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
@@ -51,7 +52,7 @@ public:
 	bool IsDragStarted() const { return dragStarted; };
 	// Check if the drag ended in this exact frame
 	bool IsDragEnded() const { return dragEnded; };
-	// Delta matrix from beginning to end of drag operation
-	XMFLOAT4X4 GetDragDeltaMatrix() const { return dragDeltaMatrix; }
+	wi::scene::TransformComponent GetDragStartTransform() const { return transform_start; }
+	wi::scene::TransformComponent GetCurrentTransform() const { return transform; }
 };
 

@@ -11,18 +11,15 @@ using namespace wi::scene;
 using namespace wi::graphics;
 using namespace wi::primitive;
 
-PipelineState pso_solidpart;
-PipelineState pso_wirepart;
-GPUBuffer vertexBuffer_Axis;
-GPUBuffer vertexBuffer_Plane;
-GPUBuffer vertexBuffer_Origin;
-uint32_t vertexCount_Axis = 0;
-uint32_t vertexCount_Plane = 0;
-uint32_t vertexCount_Origin = 0;
-float origin_size = 0.2f;
-
 namespace Translator_Internal
 {
+	PipelineState pso_solidpart;
+	PipelineState pso_wirepart;
+	const float origin_size = 0.2f;
+	const float axis_length = 3.5f;
+	const float plane_min = 0.5f;
+	const float plane_max = 1.5f;
+
 	void LoadShaders()
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
@@ -33,9 +30,9 @@ namespace Translator_Internal
 			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
 			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
 			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
-			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEFAULT);
 			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
-			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_ADDITIVE);
+			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
 
 			device->CreatePipelineState(&desc, &pso_solidpart);
@@ -47,7 +44,7 @@ namespace Translator_Internal
 			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
 			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
 			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
-			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEFAULT);
 			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
 			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
 			desc.pt = PrimitiveTopology::LINELIST;
@@ -55,106 +52,53 @@ namespace Translator_Internal
 			device->CreatePipelineState(&desc, &pso_wirepart);
 		}
 	}
+
+
+	struct Vertex
+	{
+		XMFLOAT4 position;
+		XMFLOAT4 color;
+	};
+	const Vertex cubeVerts[] = {
+		{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+		{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+	};
 }
-
-void Translator::Create()
-{
-	GraphicsDevice* device = wi::graphics::GetDevice();
-
-	if (!vertexBuffer_Axis.IsValid())
-	{
-		{
-			XMFLOAT4 verts[] = {
-				XMFLOAT4(0,0,0,1), XMFLOAT4(1,1,1,1),
-				XMFLOAT4(3,0,0,1), XMFLOAT4(1,1,1,1),
-			};
-			vertexCount_Axis = arraysize(verts) / 2;
-
-			GPUBufferDesc bd;
-			bd.usage = Usage::DEFAULT;
-			bd.size = sizeof(verts);
-			bd.bind_flags = BindFlag::VERTEX_BUFFER;
-
-			device->CreateBuffer(&bd, verts, &vertexBuffer_Axis);
-		}
-	}
-
-	if (!vertexBuffer_Plane.IsValid())
-	{
-		{
-			XMFLOAT4 verts[] = {
-				XMFLOAT4(0,0,0,1), XMFLOAT4(1,1,1,1),
-				XMFLOAT4(1,0,0,1), XMFLOAT4(1,1,1,1),
-				XMFLOAT4(1,1,0,1), XMFLOAT4(1,1,1,1),
-
-				XMFLOAT4(0,0,0,1), XMFLOAT4(1,1,1,1),
-				XMFLOAT4(1,1,0,1), XMFLOAT4(1,1,1,1),
-				XMFLOAT4(0,1,0,1), XMFLOAT4(1,1,1,1),
-			};
-			vertexCount_Plane = arraysize(verts) / 2;
-
-			GPUBufferDesc bd;
-			bd.usage = Usage::DEFAULT;
-			bd.size = sizeof(verts);
-			bd.bind_flags = BindFlag::VERTEX_BUFFER;
-
-			device->CreateBuffer(&bd, verts, &vertexBuffer_Plane);
-		}
-	}
-
-	if (!vertexBuffer_Origin.IsValid())
-	{
-		{
-			float edge = origin_size;
-			XMFLOAT4 verts[] = {
-				XMFLOAT4(-edge,edge,edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,-edge,edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,-edge,-edge,1), XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,edge,edge,1),	   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,-edge,edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,-edge,edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,edge,-edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,-edge,-edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,-edge,edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,edge,-edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,-edge,-edge,1), XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,-edge,-edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,-edge,edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,-edge,edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,-edge,-edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,edge,edge,1),	   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,edge,edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,edge,-edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,edge,-edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,edge,edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,-edge,-edge,1), XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,edge,edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,edge,edge,1),	   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,-edge,edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,edge,edge,1),	   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,edge,-edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,-edge,edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,edge,-edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,edge,-edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,-edge,-edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,-edge,-edge,1), XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,-edge,edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,-edge,-edge,1),  XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,edge,-edge,1),   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(edge,edge,edge,1),	   XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-edge,edge,-edge,1),  XMFLOAT4(1,1,1,1),
-			};
-			vertexCount_Origin = arraysize(verts) / 2;
-
-			GPUBufferDesc bd;
-			bd.usage = Usage::DEFAULT;
-			bd.size = sizeof(verts);
-			bd.bind_flags = BindFlag::VERTEX_BUFFER;
-
-			device->CreateBuffer(&bd, verts, &vertexBuffer_Origin);
-		}
-	}
-}
+using namespace Translator_Internal;
 
 void Translator::Update(const wi::Canvas& canvas)
 {
@@ -204,38 +148,33 @@ void Translator::Update(const wi::Canvas& canvas)
 
 			Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
 
-			XMVECTOR x, y, z, xy, xz, yz;
-
-			x = pos + XMVectorSet(3, 0, 0, 0) * dist;
-			y = pos + XMVectorSet(0, 3, 0, 0) * dist;
-			z = pos + XMVectorSet(0, 0, 3, 0) * dist;
-			xy = pos + XMVectorSet(1, 1, 0, 0) * dist;
-			xz = pos + XMVectorSet(1, 0, 1, 0) * dist;
-			yz = pos + XMVectorSet(0, 1, 1, 0) * dist;
-
 			AABB aabb_origin;
 			aabb_origin.createFromHalfWidth(p, XMFLOAT3(origin_size * dist, origin_size * dist, origin_size * dist));
 
 			XMFLOAT3 maxp;
-			XMStoreFloat3(&maxp, x);
+			XMStoreFloat3(&maxp, pos + XMVectorSet(axis_length, 0, 0, 0) * dist);
 			AABB aabb_x = AABB::Merge(AABB(p, maxp), aabb_origin);
 
-			XMStoreFloat3(&maxp, y);
+			XMStoreFloat3(&maxp, pos + XMVectorSet(0, axis_length, 0, 0) * dist);
 			AABB aabb_y = AABB::Merge(AABB(p, maxp), aabb_origin);
 
-			XMStoreFloat3(&maxp, z);
+			XMStoreFloat3(&maxp, pos + XMVectorSet(0, 0, axis_length, 0) * dist);
 			AABB aabb_z = AABB::Merge(AABB(p, maxp), aabb_origin);
 
-			XMStoreFloat3(&maxp, xy);
-			AABB aabb_xy = AABB(p, maxp);
+			XMFLOAT3 minp;
+			XMStoreFloat3(&minp, pos + XMVectorSet(plane_min, plane_min, 0, 0) * dist);
+			XMStoreFloat3(&maxp, pos + XMVectorSet(plane_max, plane_max, 0, 0) * dist);
+			AABB aabb_xy = AABB(minp, maxp);
 
-			XMStoreFloat3(&maxp, xz);
-			AABB aabb_xz = AABB(p, maxp);
+			XMStoreFloat3(&minp, pos + XMVectorSet(plane_min, 0, plane_min, 0) * dist);
+			XMStoreFloat3(&maxp, pos + XMVectorSet(plane_max, 0, plane_max, 0) * dist);
+			AABB aabb_xz = AABB(minp, maxp);
 
-			XMStoreFloat3(&maxp, yz);
-			AABB aabb_yz = AABB(p, maxp);
+			XMStoreFloat3(&minp, pos + XMVectorSet(0, plane_min, plane_min, 0) * dist);
+			XMStoreFloat3(&maxp, pos + XMVectorSet(0, plane_max, plane_max, 0) * dist);
+			AABB aabb_yz = AABB(minp, maxp);
 
-			if (aabb_origin.intersects(ray))
+			if (!isRotator && aabb_origin.intersects(ray))
 			{
 				state = TRANSLATOR_XYZ;
 			}
@@ -264,7 +203,7 @@ void Translator::Update(const wi::Canvas& canvas)
 				XMVECTOR N = XMVectorSet(0, 0, 1, 0);
 
 				float prio = FLT_MAX;
-				if (aabb_xy.intersects(ray))
+				if (!isRotator && !isScalator && aabb_xy.intersects(ray))
 				{
 					state = TRANSLATOR_XY;
 					prio = XMVectorGetX(XMVector3Dot(N, (origin - pos) / XMVectorAbs(XMVector3Dot(N, direction))));
@@ -272,7 +211,7 @@ void Translator::Update(const wi::Canvas& canvas)
 
 				N = XMVectorSet(0, 1, 0, 0);
 				float d = XMVectorGetX(XMVector3Dot(N, (origin - pos) / XMVectorAbs(XMVector3Dot(N, direction))));
-				if (d < prio && aabb_xz.intersects(ray))
+				if (!isRotator && !isScalator && d < prio && aabb_xz.intersects(ray))
 				{
 					state = TRANSLATOR_XZ;
 					prio = d;
@@ -280,7 +219,7 @@ void Translator::Update(const wi::Canvas& canvas)
 
 				N = XMVectorSet(1, 0, 0, 0);
 				d = XMVectorGetX(XMVector3Dot(N, (origin - pos) / XMVectorAbs(XMVector3Dot(N, direction))));
-				if (d < prio && aabb_yz.intersects(ray))
+				if (!isRotator && !isScalator && d < prio && aabb_yz.intersects(ray))
 				{
 					state = TRANSLATOR_YZ;
 				}
@@ -289,30 +228,27 @@ void Translator::Update(const wi::Canvas& canvas)
 
 		if (dragging || (state != TRANSLATOR_IDLE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT)))
 		{
-			if (!dragging)
-			{
-				dragStarted = true;
-				dragDeltaMatrix = wi::math::IDENTITY_MATRIX;
-			}
-
 			XMVECTOR plane, planeNormal;
 			if (state == TRANSLATOR_X)
 			{
 				XMVECTOR axis = XMVectorSet(1, 0, 0, 0);
 				XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
 				planeNormal = XMVector3Cross(wrong, axis);
+				this->axis = XMFLOAT3(1, 0, 0);
 			}
 			else if (state == TRANSLATOR_Y)
 			{
 				XMVECTOR axis = XMVectorSet(0, 1, 0, 0);
 				XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
 				planeNormal = XMVector3Cross(wrong, axis);
+				this->axis = XMFLOAT3(0, 1, 0);
 			}
 			else if (state == TRANSLATOR_Z)
 			{
 				XMVECTOR axis = XMVectorSet(0, 0, 1, 0);
-				XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
+				XMVECTOR wrong = XMVector3Cross(cam.GetUp(), axis);
 				planeNormal = XMVector3Cross(wrong, axis);
+				this->axis = XMFLOAT3(0, 0, 1);
 			}
 			else if (state == TRANSLATOR_XY)
 			{
@@ -333,15 +269,20 @@ void Translator::Update(const wi::Canvas& canvas)
 			}
 			plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
 
-			Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
+			Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas, cam);
 			XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 			XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
+			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(planeNormal, rayDir))) < 0.001f)
+				return;
 			XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);
 
-			ray = wi::renderer::GetPickRay((long)prevPointer.x, (long)prevPointer.y, canvas);
-			rayOrigin = XMLoadFloat3(&ray.origin);
-			rayDir = XMLoadFloat3(&ray.direction);
-			XMVECTOR intersectionPrev = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);
+			if (!dragging)
+			{
+				dragStarted = true;
+				transform_start = transform;
+				XMStoreFloat3(&intersection_start, intersection);
+			}
+			XMVECTOR intersectionPrev = XMLoadFloat3(&intersection_start);
 
 			XMVECTOR deltaV;
 			if (state == TRANSLATOR_X)
@@ -350,6 +291,7 @@ void Translator::Update(const wi::Canvas& canvas)
 				XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
 				XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
 				deltaV = P - PPrev;
+				angle = XMVectorGetX(deltaV);
 			}
 			else if (state == TRANSLATOR_Y)
 			{
@@ -357,6 +299,7 @@ void Translator::Update(const wi::Canvas& canvas)
 				XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
 				XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
 				deltaV = P - PPrev;
+				angle = XMVectorGetY(deltaV);
 			}
 			else if (state == TRANSLATOR_Z)
 			{
@@ -364,6 +307,7 @@ void Translator::Update(const wi::Canvas& canvas)
 				XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
 				XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
 				deltaV = P - PPrev;
+				angle = XMVectorGetZ(deltaV);
 			}
 			else
 			{
@@ -371,39 +315,57 @@ void Translator::Update(const wi::Canvas& canvas)
 
 				if (isScalator)
 				{
-					deltaV = XMVectorSplatY(deltaV);
+					deltaV = XMVectorReplicate(XMVectorGetY(deltaV));
 				}
 			}
 
-			XMFLOAT3 delta;
-			if (isRotator)
-			{
-				deltaV /= XMVector3Length(intersection - rayOrigin);
-				deltaV *= XM_2PI;
-			}
-			XMStoreFloat3(&delta, deltaV);
-
+			transform = transform_start;
 			if (isTranslator)
 			{
-				XMStoreFloat4x4(&dragDeltaMatrix, XMMatrixTranslation(delta.x, delta.y, delta.z) * XMLoadFloat4x4(&dragDeltaMatrix));
-				transform.Translate(delta);
+				transform.Translate(deltaV);
 			}
 			if (isRotator)
 			{
-				XMMATRIX R = XMMatrixRotationRollPitchYaw(delta.x, delta.y, delta.z);
-				XMStoreFloat4x4(&dragDeltaMatrix, R * XMLoadFloat4x4(&dragDeltaMatrix));
-				XMVECTOR Q = XMQuaternionRotationMatrix(R);
-				XMFLOAT4 quat;
-				XMStoreFloat4(&quat, Q);
-				transform.Rotate(quat);
+				angle /= XMVectorGetX(XMVector3Length(intersection - rayOrigin));
+				angle *= XM_2PI;
+				angle = std::fmodf(angle, XM_2PI);
+				transform.Rotate(XMQuaternionRotationAxis(XMLoadFloat3(&axis), angle));
 			}
 			if (isScalator)
 			{
+				XMFLOAT3 delta;
+				XMStoreFloat3(&delta, deltaV);
 				XMFLOAT3 scale = transform.GetScale();
 				scale = XMFLOAT3((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
-				XMStoreFloat4x4(&dragDeltaMatrix, XMMatrixScaling(scale.x, scale.y, scale.z) * XMLoadFloat4x4(&dragDeltaMatrix));
 				transform.Scale(scale);
 			}
+
+			if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LCONTROL))
+			{
+				if (isTranslator)
+				{
+					transform.translation_local.x = std::round(transform.translation_local.x);
+					transform.translation_local.y = std::round(transform.translation_local.y);
+					transform.translation_local.z = std::round(transform.translation_local.z);
+				}
+				if (isRotator)
+				{
+					XMFLOAT3 euler = wi::math::QuaternionToRollPitchYaw(transform.rotation_local);
+					euler.x = std::floor(euler.x / XM_PIDIV4) * XM_PIDIV4;
+					euler.y = std::floor(euler.y / XM_PIDIV4) * XM_PIDIV4;
+					euler.z = std::floor(euler.z / XM_PIDIV4) * XM_PIDIV4;
+					XMVECTOR Q = XMQuaternionRotationRollPitchYaw(euler.x, euler.y, euler.z);
+					Q = XMQuaternionNormalize(Q);
+					XMStoreFloat4(&transform.rotation_local, Q);
+				}
+				if (isScalator)
+				{
+					transform.scale_local.x = std::max(0.1f, std::round(transform.scale_local.x));
+					transform.scale_local.y = std::max(0.1f, std::round(transform.scale_local.y));
+					transform.scale_local.z = std::max(0.1f, std::round(transform.scale_local.z));
+				}
+			}
+
 			transform.UpdateTransform();
 
 			dragging = true;
@@ -429,12 +391,10 @@ void Translator::Update(const wi::Canvas& canvas)
 		}
 		dragging = false;
 	}
-
-	prevPointer = pointer;
 }
 void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 {
-	if (selected.empty())
+	if (!enabled || selected.empty())
 	{
 		return;
 	}
@@ -451,7 +411,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 	GraphicsDevice* device = wi::graphics::GetDevice();
 
-	device->EventBegin("Editor - Translator", cmd);
+	device->EventBegin("Translator", cmd);
 
 	CameraComponent cam_tmp = camera;
 	cam_tmp.jitter = XMFLOAT2(0, 0); // remove temporal jitter
@@ -465,80 +425,360 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	XMMATRIX matY = XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat;
 	XMMATRIX matZ = XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat;
 
-	// Planes:
+	// Axes:
 	{
 		device->BindPipelineState(&pso_solidpart, cmd);
+
+		const uint32_t segmentCount = 18;
+		const uint32_t cylinder_triangleCount = segmentCount * 2;
+		const uint32_t cone_triangleCount = cylinder_triangleCount;
+		uint32_t vertexCount = 0;
+		if (isTranslator)
+		{
+			vertexCount = (cylinder_triangleCount + cone_triangleCount) * 3;
+		}
+		else if (isRotator)
+		{
+			vertexCount = cylinder_triangleCount * 2 * 3;
+		}
+		else if (isScalator)
+		{
+			vertexCount = cylinder_triangleCount * 3 + arraysize(cubeVerts);
+		}
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
+
+		const float cone_length = 0.75f;
+		float cylinder_length = axis_length;
+		if (isTranslator)
+		{
+			cylinder_length -= cone_length;
+		}
+		uint8_t* dst = (uint8_t*)mem.data;
+		for (uint32_t i = 0; i < segmentCount; ++i)
+		{
+			const float angle0 = (float)i / (float)segmentCount * XM_2PI;
+			const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
+			// cylinder base:
+			{
+				const float cylinder_radius = 0.075f;
+				const Vertex verts[] = {
+					{XMFLOAT4(origin_size, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(origin_size, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(origin_size, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+				};
+				std::memcpy(dst, verts, sizeof(verts));
+				dst += sizeof(verts);
+			}
+			if(isTranslator)
+			{
+				// cone cap:
+				const float cone_radius = origin_size;
+				const Vertex verts[] = {
+					{XMFLOAT4(cylinder_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cone_radius, std::cosf(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sinf(angle1) * cone_radius, std::cosf(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(axis_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cone_radius, std::cosf(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sinf(angle1) * cone_radius, std::cosf(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+				};
+				std::memcpy(dst, verts, sizeof(verts));
+				dst += sizeof(verts);
+			}
+			else if (isRotator)
+			{
+				// cylinder cap:
+				const float cylinder_radius = 0.5f;
+				const Vertex verts[] = {
+					{XMFLOAT4(cylinder_length - origin_size, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length - origin_size, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sinf(angle0) * cylinder_radius, std::cosf(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(cylinder_length - origin_size, std::sinf(angle1) * cylinder_radius, std::cosf(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+				};
+				std::memcpy(dst, verts, sizeof(verts));
+				dst += sizeof(verts);
+			}
+		}
+
+		if (isScalator)
+		{
+			// cube cap:
+			for (uint32_t i = 0; i < arraysize(cubeVerts); ++i)
+			{
+				Vertex vert = cubeVerts[i];
+				vert.position.x = vert.position.x * origin_size + cylinder_length - origin_size;
+				vert.position.y = vert.position.y * origin_size;
+				vert.position.z = vert.position.z * origin_size;
+				std::memcpy(dst, &vert, sizeof(vert));
+				dst += sizeof(vert);
+			}
+		}
+
 		const GPUBuffer* vbs[] = {
-			&vertexBuffer_Plane,
+			&mem.buffer,
 		};
 		const uint32_t strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+			sizeof(Vertex),
 		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
+		const uint64_t offsets[] = {
+			mem.offset,
+		};
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+		// x
+		XMStoreFloat4x4(&sb.g_xTransform, matX);
+		sb.g_xColor = state == TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
+		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+		device->Draw(vertexCount, 0, cmd);
+
+		// y
+		XMStoreFloat4x4(&sb.g_xTransform, matY);
+		sb.g_xColor = state == TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
+		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+		device->Draw(vertexCount, 0, cmd);
+
+		// z
+		XMStoreFloat4x4(&sb.g_xTransform, matZ);
+		sb.g_xColor = state == TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
+		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+		device->Draw(vertexCount, 0, cmd);
 	}
-
-	// xy
-	XMStoreFloat4x4(&sb.g_xTransform, matX);
-	sb.g_xColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.4f, 0.4f, 0, 0.4f);
-	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-	device->Draw(vertexCount_Plane, 0, cmd);
-
-	// xz
-	XMStoreFloat4x4(&sb.g_xTransform, matZ);
-	sb.g_xColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.4f, 0.4f, 0, 0.4f);
-	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-	device->Draw(vertexCount_Plane, 0, cmd);
-
-	// yz
-	XMStoreFloat4x4(&sb.g_xTransform, matY);
-	sb.g_xColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.4f, 0.4f, 0, 0.4f);
-	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-	device->Draw(vertexCount_Plane, 0, cmd);
-
-	// Lines:
-	{
-		device->BindPipelineState(&pso_wirepart, cmd);
-		const GPUBuffer* vbs[] = {
-			&vertexBuffer_Axis,
-		};
-		const uint32_t strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-	}
-
-	// x
-	XMStoreFloat4x4(&sb.g_xTransform, matX);
-	sb.g_xColor = state == TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
-	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-	device->Draw(vertexCount_Axis, 0, cmd);
-
-	// y
-	XMStoreFloat4x4(&sb.g_xTransform, matY);
-	sb.g_xColor = state == TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
-	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-	device->Draw(vertexCount_Axis, 0, cmd);
-
-	// z
-	XMStoreFloat4x4(&sb.g_xTransform, matZ);
-	sb.g_xColor = state == TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
-	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-	device->Draw(vertexCount_Axis, 0, cmd);
 
 	// Origin:
 	{
 		device->BindPipelineState(&pso_solidpart, cmd);
+
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(cubeVerts), cmd);
+		std::memcpy(mem.data, cubeVerts, sizeof(cubeVerts));
 		const GPUBuffer* vbs[] = {
-			&vertexBuffer_Origin,
+			&mem.buffer,
 		};
 		const uint32_t strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+			sizeof(Vertex),
 		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		XMStoreFloat4x4(&sb.g_xTransform, mat);
-		sb.g_xColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.25f, 0.25f, 0.25f, 1);
+		const uint64_t offsets[] = {
+			mem.offset,
+		};
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(origin_size, origin_size, origin_size) * mat);
+		sb.g_xColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-		device->Draw(vertexCount_Origin, 0, cmd);
+		device->Draw(arraysize(cubeVerts), 0, cmd);
+	}
+
+	// Planes:
+	if (!isRotator && !isScalator)
+	{
+		// Wire part:
+		{
+			device->BindPipelineState(&pso_wirepart, cmd);
+
+			const Vertex verts[] = {
+				{XMFLOAT4(plane_min,plane_min,0,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(plane_min,plane_max,0,1), XMFLOAT4(1,1,1,1)},
+
+				{XMFLOAT4(plane_min,plane_max,0,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(plane_max,plane_max,0,1), XMFLOAT4(1,1,1,1)},
+
+				{XMFLOAT4(plane_max,plane_max,0,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(plane_max,plane_min,0,1), XMFLOAT4(1,1,1,1)},
+
+				{XMFLOAT4(plane_max,plane_min,0,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(plane_min,plane_min,0,1), XMFLOAT4(1,1,1,1)},
+			};
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(verts), cmd);
+			std::memcpy(mem.data, verts, sizeof(verts));
+			const GPUBuffer* vbs[] = {
+				&mem.buffer,
+			};
+			const uint32_t strides[] = {
+				sizeof(Vertex),
+			};
+			const uint64_t offsets[] = {
+				mem.offset,
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+			sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+
+			// xy
+			XMStoreFloat4x4(&sb.g_xTransform, matX);
+			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+			device->Draw(arraysize(verts), 0, cmd);
+
+			// xz
+			XMStoreFloat4x4(&sb.g_xTransform, matZ);
+			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+			device->Draw(arraysize(verts), 0, cmd);
+
+			// yz
+			XMStoreFloat4x4(&sb.g_xTransform, matY);
+			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+			device->Draw(arraysize(verts), 0, cmd);
+		}
+
+		// Quad part:
+		{
+			device->BindPipelineState(&pso_solidpart, cmd);
+
+			const Vertex verts[] = {
+				{XMFLOAT4(plane_min,plane_min,0,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(plane_max,plane_min,0,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(plane_max,plane_max,0,1), XMFLOAT4(1,1,1,1)},
+
+				{XMFLOAT4(plane_min,plane_min,0,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(plane_max,plane_max,0,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(plane_min,plane_max,0,1), XMFLOAT4(1,1,1,1)},
+			};
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(verts), cmd);
+			std::memcpy(mem.data, verts, sizeof(verts));
+			const GPUBuffer* vbs[] = {
+				&mem.buffer,
+			};
+			const uint32_t strides[] = {
+				sizeof(Vertex),
+			};
+			const uint64_t offsets[] = {
+				mem.offset,
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+			// xy
+			XMStoreFloat4x4(&sb.g_xTransform, matX);
+			sb.g_xColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 0.5f);
+			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+			device->Draw(arraysize(verts), 0, cmd);
+
+			// xz
+			XMStoreFloat4x4(&sb.g_xTransform, matZ);
+			sb.g_xColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 0.5f);
+			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+			device->Draw(arraysize(verts), 0, cmd);
+
+			// yz
+			XMStoreFloat4x4(&sb.g_xTransform, matY);
+			sb.g_xColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 0.5f);
+			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+			device->Draw(arraysize(verts), 0, cmd);
+		}
+	}
+
+
+	// Dragging visualizer:
+	if (dragging)
+	{
+		if (isTranslator)
+		{
+			device->BindPipelineState(&pso_wirepart, cmd);
+			const Vertex verts[] = {
+				{XMFLOAT4(transform_start.translation_local.x, transform_start.translation_local.y, transform_start.translation_local.z, 1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z, 1), XMFLOAT4(1,1,1,1)},
+			};
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(verts), cmd);
+			std::memcpy(mem.data, verts, sizeof(verts));
+			const GPUBuffer* vbs[] = {
+				&mem.buffer,
+			};
+			const uint32_t strides[] = {
+				sizeof(Vertex),
+			};
+			const uint64_t offsets[] = {
+				mem.offset,
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+			XMStoreFloat4x4(&sb.g_xTransform, VP);
+			sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+			device->Draw(arraysize(verts), 0, cmd);
+		}
+		else if (isRotator)
+		{
+			device->BindPipelineState(&pso_solidpart, cmd);
+
+			const uint32_t segmentCount = 180;
+			const uint32_t vertexCount = segmentCount * 3;
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
+
+			XMVECTOR ref = XMVectorZero();
+			switch (state)
+			{
+			case Translator::TRANSLATOR_X:
+				XMStoreFloat4x4(&sb.g_xTransform, matX);
+				ref = XMVectorSet(0, 0, 1, 0);
+				break;
+			case Translator::TRANSLATOR_Y:
+				XMStoreFloat4x4(&sb.g_xTransform, matY);
+				ref = XMVectorSet(1, 0, 0, 0);
+				break;
+			case Translator::TRANSLATOR_Z:
+				XMStoreFloat4x4(&sb.g_xTransform, matZ);
+				ref = XMVectorSet(1, 0, 0, 0);
+				break;
+			default:
+				break;
+			}
+
+			uint8_t* dst = (uint8_t*)mem.data;
+			for (uint32_t i = 0; i < segmentCount; ++i)
+			{
+				const float angle0 = (float)i / (float)segmentCount * angle;
+				const float angle1 = (float)(i + 1) / (float)segmentCount * angle;
+
+				const float radius = 2;
+				const Vertex verts[] = {
+					{XMFLOAT4(0, 0, 0, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(0, std::cosf(angle0) * radius, std::sinf(angle0) * radius, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(0, std::cosf(angle1) * radius, std::sinf(angle1) * radius, 1), XMFLOAT4(1,1,1,1)},
+				};
+				std::memcpy(dst, verts, sizeof(verts));
+				dst += sizeof(verts);
+			}
+
+			const GPUBuffer* vbs[] = {
+				&mem.buffer,
+			};
+			const uint32_t strides[] = {
+				sizeof(Vertex),
+			};
+			const uint64_t offsets[] = {
+				mem.offset,
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+			sb.g_xColor = XMFLOAT4(1, 1, 1, 0.5f);
+			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+			device->Draw(vertexCount, 0, cmd);
+		}
+
+		XMFLOAT4 pointer = wi::input::GetPointer();
+		wi::font::Params params;
+		params.posX = pointer.x - 10;
+		params.posY = pointer.y + 10;
+		params.v_align = wi::font::WIFALIGN_TOP;
+		params.h_align = wi::font::WIFALIGN_RIGHT;
+		params.scaling = 0.8f;
+		params.shadowColor = wi::Color::Black();
+		std::string str;
+		if (isTranslator)
+		{
+			str += "Offset = " + std::to_string(transform.translation_local.x - transform_start.translation_local.x) + ", " + std::to_string(transform.translation_local.y - transform_start.translation_local.y) + ", " + std::to_string(transform.translation_local.z - transform_start.translation_local.z);
+		}
+		if (isRotator)
+		{
+			str += "Axis = " + std::to_string(axis.x) + ", " + std::to_string(axis.y) + ", " + std::to_string(axis.z);
+			str += "\nAngle = " + std::to_string(angle / XM_PI * 180) + " deg, " + std::to_string(angle) + "rad";
+		}
+		if (isScalator)
+		{
+			str += "Scaling = " + std::to_string(transform.scale_local.x / transform_start.scale_local.x) + ", " + std::to_string(transform.scale_local.y / transform_start.scale_local.y) + ", " + std::to_string(transform.scale_local.z / transform_start.scale_local.z);
+		}
+		wi::font::Draw(str, params, cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -567,7 +807,7 @@ void Translator::PreTranslate()
 		centerV /= count;
 		XMFLOAT3 center;
 		XMStoreFloat3(&center, centerV);
-		transform.ClearTransform();
+		transform.translation_local = {};
 		transform.Translate(center);
 		transform.UpdateTransform();
 	}
