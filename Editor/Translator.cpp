@@ -335,6 +335,12 @@ void Translator::Update(const wi::Canvas& canvas)
 					break;
 				}
 
+				if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LCONTROL))
+				{
+					float snap = XM_PIDIV4;
+					angle = std::floor(angle / snap) * snap;
+				}
+
 				transform.Rotate(XMQuaternionRotationAxis(XMLoadFloat3(&axis), angle - angle_prev));
 				angle_prev = angle;
 			}
@@ -438,39 +444,29 @@ void Translator::Update(const wi::Canvas& canvas)
 					scale = XMFLOAT3((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
 					transform.Scale(scale);
 				}
-			}
 
-			if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LCONTROL))
-			{
-				if (isTranslator)
+				if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LCONTROL))
 				{
-					transform.translation_local.x = std::round(transform.translation_local.x);
-					transform.translation_local.y = std::round(transform.translation_local.y);
-					transform.translation_local.z = std::round(transform.translation_local.z);
+					if (isTranslator)
+					{
+						transform.translation_local.x = std::round(transform.translation_local.x);
+						transform.translation_local.y = std::round(transform.translation_local.y);
+						transform.translation_local.z = std::round(transform.translation_local.z);
+					}
+					if (isScalator)
+					{
+						transform.scale_local.x = std::round(transform.scale_local.x);
+						transform.scale_local.y = std::round(transform.scale_local.y);
+						transform.scale_local.z = std::round(transform.scale_local.z);
+					}
 				}
-				if (isRotator)
-				{
-					XMFLOAT3 euler = wi::math::QuaternionToRollPitchYaw(transform.rotation_local);
-					euler.x = std::floor(euler.x / XM_PIDIV4) * XM_PIDIV4;
-					euler.y = std::floor(euler.y / XM_PIDIV4) * XM_PIDIV4;
-					euler.z = std::floor(euler.z / XM_PIDIV4) * XM_PIDIV4;
-					XMVECTOR Q = XMQuaternionRotationRollPitchYaw(euler.x, euler.y, euler.z);
-					Q = XMQuaternionNormalize(Q);
-					XMStoreFloat4(&transform.rotation_local, Q);
-				}
+
 				if (isScalator)
 				{
-					transform.scale_local.x = std::round(transform.scale_local.x);
-					transform.scale_local.y = std::round(transform.scale_local.y);
-					transform.scale_local.z = std::round(transform.scale_local.z);
+					transform.scale_local.x = std::max(0.001f, transform.scale_local.x);
+					transform.scale_local.y = std::max(0.001f, transform.scale_local.y);
+					transform.scale_local.z = std::max(0.001f, transform.scale_local.z);
 				}
-			}
-
-			if (isScalator)
-			{
-				transform.scale_local.x = std::max(0.001f, transform.scale_local.x);
-				transform.scale_local.y = std::max(0.001f, transform.scale_local.y);
-				transform.scale_local.z = std::max(0.001f, transform.scale_local.z);
 			}
 
 			transform.UpdateTransform();
