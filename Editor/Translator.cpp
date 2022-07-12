@@ -337,7 +337,8 @@ void Translator::Update(const wi::Canvas& canvas)
 
 				if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LCONTROL))
 				{
-					angle = std::round(angle / angle_snap) * angle_snap;
+					// Snap mode:
+					angle = std::round(angle / rotate_snap) * rotate_snap;
 				}
 				angle = std::fmod(angle, XM_2PI);
 
@@ -448,17 +449,18 @@ void Translator::Update(const wi::Canvas& canvas)
 
 				if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LCONTROL))
 				{
+					// Snap mode:
 					if (isTranslator)
 					{
-						transform.translation_local.x = std::round(transform.translation_local.x);
-						transform.translation_local.y = std::round(transform.translation_local.y);
-						transform.translation_local.z = std::round(transform.translation_local.z);
+						transform.translation_local.x = std::round(transform.translation_local.x / translate_snap) * translate_snap;
+						transform.translation_local.y = std::round(transform.translation_local.y / translate_snap) * translate_snap;
+						transform.translation_local.z = std::round(transform.translation_local.z / translate_snap) * translate_snap;
 					}
 					if (isScalator)
 					{
-						transform.scale_local.x = std::round(transform.scale_local.x);
-						transform.scale_local.y = std::round(transform.scale_local.y);
-						transform.scale_local.z = std::round(transform.scale_local.z);
+						transform.scale_local.x = std::max(0.1f, std::round(transform.scale_local.x / scale_snap) * scale_snap);
+						transform.scale_local.y = std::max(0.1f, std::round(transform.scale_local.y / scale_snap) * scale_snap);
+						transform.scale_local.z = std::max(0.1f, std::round(transform.scale_local.z / scale_snap) * scale_snap);
 					}
 				}
 

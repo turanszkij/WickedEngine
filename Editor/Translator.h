@@ -30,7 +30,9 @@ public:
 	wi::vector<wi::ecs::Entity> selectedEntitiesNonRecursive; // selected entities that don't contain entities that would be included in recursive iterations
 
 	bool enabled = false;
-	float angle_snap = XM_PIDIV4;
+	float scale_snap = 1;
+	float rotate_snap = XM_PIDIV4;
+	float translate_snap = 1;
 
 	enum TRANSLATOR_STATE
 	{

@@ -310,6 +310,43 @@ void TransformWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&szInput);
 
+
+	x = 400;
+	y += step * 5;
+
+	snapScaleInput.Create("");
+	snapScaleInput.SetValue(1);
+	snapScaleInput.SetDescription("Snap mode unit for Scale: ");
+	snapScaleInput.SetPos(XMFLOAT2(x, y += step));
+	snapScaleInput.SetSize(XMFLOAT2(siz, hei));
+	snapScaleInput.SetValue(editor->translator.scale_snap);
+	snapScaleInput.OnInputAccepted([=](wi::gui::EventArgs args) {
+		editor->translator.scale_snap = args.fValue;
+		});
+	AddWidget(&snapScaleInput);
+
+	snapRotateInput.Create("");
+	snapRotateInput.SetValue(1);
+	snapRotateInput.SetDescription("Snap mode angle for Rotate (in degrees): ");
+	snapRotateInput.SetPos(XMFLOAT2(x, y += step));
+	snapRotateInput.SetSize(XMFLOAT2(siz, hei));
+	snapRotateInput.SetValue(editor->translator.rotate_snap / XM_PI * 180);
+	snapRotateInput.OnInputAccepted([=](wi::gui::EventArgs args) {
+		editor->translator.rotate_snap = args.fValue / 180.0f * XM_PI;
+		});
+	AddWidget(&snapRotateInput);
+
+	snapTranslateInput.Create("");
+	snapTranslateInput.SetValue(1);
+	snapTranslateInput.SetDescription("Snap mode unit for Translate: ");
+	snapTranslateInput.SetPos(XMFLOAT2(x, y += step));
+	snapTranslateInput.SetSize(XMFLOAT2(siz, hei));
+	snapTranslateInput.SetValue(editor->translator.translate_snap);
+	snapTranslateInput.OnInputAccepted([=](wi::gui::EventArgs args) {
+		editor->translator.translate_snap = args.fValue;
+		});
+	AddWidget(&snapTranslateInput);
+
 	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 750, 100, 0));
 	SetVisible(false);
 
