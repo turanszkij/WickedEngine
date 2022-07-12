@@ -880,28 +880,77 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	{
 		if (isTranslator)
 		{
-			device->BindPipelineState(&pso_wirepart, cmd);
-			const Vertex verts[] = {
-				{XMFLOAT4(transform_start.translation_local.x, transform_start.translation_local.y, transform_start.translation_local.z, 1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z, 1), XMFLOAT4(1,1,1,1)},
-			};
-			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(verts), cmd);
-			std::memcpy(mem.data, verts, sizeof(verts));
-			const GPUBuffer* vbs[] = {
-				&mem.buffer,
-			};
-			const uint32_t strides[] = {
-				sizeof(Vertex),
-			};
-			const uint64_t offsets[] = {
-				mem.offset,
-			};
-			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+			// Origin circle:
+			{
+				device->BindPipelineState(&pso_solidpart, cmd);
 
-			XMStoreFloat4x4(&sb.g_xTransform, VP);
-			sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-			device->Draw(arraysize(verts), 0, cmd);
+				const uint32_t segmentCount = 36;
+				const uint32_t vertexCount = segmentCount * 3;
+				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
+
+				uint8_t* dst = (uint8_t*)mem.data;
+				for (uint32_t i = 0; i < segmentCount; ++i)
+				{
+					const float angle0 = (float)i / (float)segmentCount * XM_2PI;
+					const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
+
+					const float radius = 0.2f * dist;
+					const Vertex verts[] = {
+						{XMFLOAT4(0, 0, 0, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(0, std::cos(angle0) * radius, std::sin(angle0) * radius, 1), XMFLOAT4(1,1,1,1)},
+						{XMFLOAT4(0, std::cos(angle1) * radius, std::sin(angle1) * radius, 1), XMFLOAT4(1,1,1,1)},
+					};
+					std::memcpy(dst, verts, sizeof(verts));
+					dst += sizeof(verts);
+				}
+
+				const GPUBuffer* vbs[] = {
+					&mem.buffer,
+				};
+				const uint32_t strides[] = {
+					sizeof(Vertex),
+				};
+				const uint64_t offsets[] = {
+					mem.offset,
+				};
+				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+				XMStoreFloat4x4(&sb.g_xTransform,
+					XMMatrixRotationY(XM_PIDIV2)*
+					XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform_start.GetPositionV() - camera.GetEye()), camera.GetUp()))*
+					XMMatrixTranslationFromVector(transform_start.GetPositionV())*
+					VP
+				);
+				sb.g_xColor = XMFLOAT4(1, 1, 1, 0.5f);
+				device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+				device->Draw(vertexCount, 0, cmd);
+			}
+
+			// Line:
+			{
+				device->BindPipelineState(&pso_wirepart, cmd);
+				const Vertex verts[] = {
+					{XMFLOAT4(transform_start.translation_local.x, transform_start.translation_local.y, transform_start.translation_local.z, 1), XMFLOAT4(1,1,1,1)},
+					{XMFLOAT4(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z, 1), XMFLOAT4(1,1,1,1)},
+				};
+				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(verts), cmd);
+				std::memcpy(mem.data, verts, sizeof(verts));
+				const GPUBuffer* vbs[] = {
+					&mem.buffer,
+				};
+				const uint32_t strides[] = {
+					sizeof(Vertex),
+				};
+				const uint64_t offsets[] = {
+					mem.offset,
+				};
+				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+				XMStoreFloat4x4(&sb.g_xTransform, VP);
+				sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+				device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+				device->Draw(arraysize(verts), 0, cmd);
+			}
 		}
 		else if (isRotator)
 		{
