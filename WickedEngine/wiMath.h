@@ -240,6 +240,7 @@ namespace wi::math
 	float GetPointSegmentDistance(const XMVECTOR& point, const XMVECTOR& segmentA, const XMVECTOR& segmentB);
 
 	float GetAngle(const XMFLOAT2& a, const XMFLOAT2& b);
+	float GetAngle(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT3& axis);
 	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C);
 	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp = false);
 

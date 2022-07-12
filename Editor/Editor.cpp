@@ -181,6 +181,36 @@ void EditorComponent::ResizeBuffers()
 		}
 	}
 
+	{
+		TextureDesc desc;
+		desc.width = renderPath->GetRenderResult().GetDesc().width;
+		desc.height = renderPath->GetRenderResult().GetDesc().height;
+		desc.format = Format::D32_FLOAT;
+		desc.bind_flags = BindFlag::DEPTH_STENCIL;
+		desc.layout = ResourceState::DEPTHSTENCIL;
+		desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+		device->CreateTexture(&desc, nullptr, &editor_depthbuffer);
+		device->SetName(&editor_depthbuffer, "editor_depthbuffer");
+
+		{
+			RenderPassDesc desc;
+			desc.attachments.push_back(
+				RenderPassAttachment::DepthStencil(
+					&editor_depthbuffer,
+					RenderPassAttachment::LoadOp::CLEAR,
+					RenderPassAttachment::StoreOp::DONTCARE
+				)
+			);
+			desc.attachments.push_back(
+				RenderPassAttachment::RenderTarget(
+					&renderPath->GetRenderResult(),
+					RenderPassAttachment::LoadOp::CLEAR,
+					RenderPassAttachment::StoreOp::STORE
+				)
+			);
+			device->CreateRenderPass(&desc, &renderpass_editor);
+		}
+	}
 }
 void EditorComponent::ResizeLayout()
 {
@@ -344,9 +374,6 @@ void EditorComponent::Load()
 	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { armatureTex = wi::resourcemanager::Load("images/armature.dds"); });
 	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { soundTex = wi::resourcemanager::Load("images/sound.dds"); });
 	// wait for ctx is at the end of this function!
-
-	translator.Create();
-	translator.enabled = false;
 
 
 
@@ -681,7 +708,7 @@ void EditorComponent::Load()
 
 
 	translatorCheckBox.Create("Transform: ");
-	translatorCheckBox.SetTooltip("Enable the transform tool");
+	translatorCheckBox.SetTooltip("Enable the transform tool.\nTip: hold Left Ctrl to enable snap transform.\nYou can configure snap mode units in the Transform settings.");
 	translatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		translator.enabled = args.bValue;
 	});
@@ -930,7 +957,8 @@ void EditorComponent::Load()
 		ss += "Look: Middle mouse button / arrow keys / controller right stick\n";
 		ss += "Select: Right mouse button\n";
 		ss += "Interact with water: Left mouse button when nothing is selected\n";
-		ss += "Camera speed: SHIFT button or controller R2/RT\n";
+		ss += "Camera speed: Left Shift button or controller R2/RT\n";
+		ss += "Snap transform: Left Ctrl (hold while transforming)\n";
 		ss += "Camera up: E, down: Q\n";
 		ss += "Duplicate entity: Ctrl + D\n";
 		ss += "Select All: Ctrl + A\n";
@@ -1885,9 +1913,13 @@ void EditorComponent::Update(float dt)
 
 	if (translator.IsDragEnded())
 	{
+		EntitySerializer seri;
 		wi::Archive& archive = AdvanceHistory();
 		archive << HISTORYOP_TRANSLATOR;
-		archive << translator.GetDragDeltaMatrix();
+		translator.transform_start.Serialize(archive, seri);
+		translator.transform.Serialize(archive, seri);
+		archive << translator.matrices_start;
+		archive << translator.matrices_current;
 	}
 
 	emitterWnd.UpdateData();
@@ -2074,45 +2106,455 @@ void EditorComponent::Render() const
 
 	renderPath->Render();
 
-	// Selection outline:
-	if(renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
+	// Editor custom render:
+	if (!cinemaModeCheckBox.GetCheck())
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		CommandList cmd = device->BeginCommandList();
+		device->EventBegin("Editor", cmd);
 
-		device->EventBegin("Editor - Selection Outline Mask", cmd);
-
-		Viewport vp;
-		vp.width = (float)rt_selectionOutline[0].GetDesc().width;
-		vp.height = (float)rt_selectionOutline[0].GetDesc().height;
-		device->BindViewports(1, &vp, cmd);
-
-		wi::image::Params fx;
-		fx.enableFullScreen();
-		fx.stencilComp = wi::image::STENCILMODE::STENCILMODE_EQUAL;
-
-		// We will specify the stencil ref in user-space, don't care about engine stencil refs here:
-		//	Otherwise would need to take into account engine ref and draw multiple permutations of stencil refs.
-		fx.stencilRefMode = wi::image::STENCILREFMODE_USER;
-
-		// Materials outline:
+		// Selection outline:
+		if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 		{
-			device->RenderPassBegin(&renderpass_selectionOutline[0], cmd);
+			device->EventBegin("Selection Outline Mask", cmd);
 
-			// Draw solid blocks of selected materials
-			fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_MATERIAL;
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			Viewport vp;
+			vp.width = (float)rt_selectionOutline[0].GetDesc().width;
+			vp.height = (float)rt_selectionOutline[0].GetDesc().height;
+			device->BindViewports(1, &vp, cmd);
 
-			device->RenderPassEnd(cmd);
+			wi::image::Params fx;
+			fx.enableFullScreen();
+			fx.stencilComp = wi::image::STENCILMODE::STENCILMODE_EQUAL;
+
+			// We will specify the stencil ref in user-space, don't care about engine stencil refs here:
+			//	Otherwise would need to take into account engine ref and draw multiple permutations of stencil refs.
+			fx.stencilRefMode = wi::image::STENCILREFMODE_USER;
+
+			// Materials outline:
+			{
+				device->RenderPassBegin(&renderpass_selectionOutline[0], cmd);
+
+				// Draw solid blocks of selected materials
+				fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_MATERIAL;
+				wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+
+				device->RenderPassEnd(cmd);
+			}
+
+			// Objects outline:
+			{
+				device->RenderPassBegin(&renderpass_selectionOutline[1], cmd);
+
+				// Draw solid blocks of selected objects
+				fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_OBJECT;
+				wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+
+				device->RenderPassEnd(cmd);
+			}
+
+			device->EventEnd(cmd);
 		}
 
-		// Objects outline:
+		// Full resolution:
 		{
-			device->RenderPassBegin(&renderpass_selectionOutline[1], cmd);
+			device->RenderPassBegin(&renderpass_editor, cmd);
 
-			// Draw solid blocks of selected objects
-			fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_OBJECT;
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			Viewport vp;
+			vp.width = (float)editor_depthbuffer.GetDesc().width;
+			vp.height = (float)editor_depthbuffer.GetDesc().height;
+			device->BindViewports(1, &vp, cmd);
+
+			// Draw selection outline to the screen:
+			const float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
+			if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
+			{
+				device->EventBegin("Selection Outline Edge", cmd);
+				wi::renderer::BindCommonResources(cmd);
+				float opacity = wi::math::Lerp(0.4f, 1.0f, selectionColorIntensity);
+				XMFLOAT4 col = selectionColor2;
+				col.w *= opacity;
+				wi::renderer::Postprocess_Outline(rt_selectionOutline[0], cmd, 0.1f, 1, col);
+				col = selectionColor;
+				col.w *= opacity;
+				wi::renderer::Postprocess_Outline(rt_selectionOutline[1], cmd, 0.1f, 1, col);
+				device->EventEnd(cmd);
+			}
+
+
+			const wi::Color inactiveEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 0.5f));
+			const wi::Color hoveredEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 1));
+			const XMFLOAT4 glow = wi::math::Lerp(wi::math::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
+			const wi::Color selectedEntityColor = wi::Color::fromFloat4(glow);
+
+			const CameraComponent& camera = wi::scene::GetCamera();
+
+			Scene& scene = wi::scene::GetScene();
+
+			// remove camera jittering
+			CameraComponent cam = *renderPath->camera;
+			cam.jitter = XMFLOAT2(0, 0);
+			cam.UpdateCamera();
+			const XMMATRIX VP = cam.GetViewProjection();
+
+			const XMMATRIX R = XMLoadFloat3x3(&cam.rotationMatrix);
+
+			wi::image::Params fx;
+			fx.customRotation = &R;
+			fx.customProjection = &VP;
+
+			if (rendererWnd.GetPickType() & PICK_LIGHT)
+			{
+				for (size_t i = 0; i < scene.lights.GetCount(); ++i)
+				{
+					const LightComponent& light = scene.lights[i];
+					Entity entity = scene.lights.GetEntity(i);
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+
+					fx.pos = transform.GetPosition();
+					fx.siz = XMFLOAT2(dist, dist);
+					fx.pivot = XMFLOAT2(0.5f, 0.5f);
+					fx.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fx.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fx.color = selectedEntityColor;
+							break;
+						}
+					}
+
+					switch (light.GetType())
+					{
+					case LightComponent::POINT:
+						wi::image::Draw(&pointLightTex.GetTexture(), fx, cmd);
+						break;
+					case LightComponent::SPOT:
+						wi::image::Draw(&spotLightTex.GetTexture(), fx, cmd);
+						break;
+					case LightComponent::DIRECTIONAL:
+						wi::image::Draw(&dirLightTex.GetTexture(), fx, cmd);
+						break;
+					default:
+						wi::image::Draw(&areaLightTex.GetTexture(), fx, cmd);
+						break;
+					}
+				}
+			}
+
+			if (rendererWnd.GetPickType() & PICK_DECAL)
+			{
+				for (size_t i = 0; i < scene.decals.GetCount(); ++i)
+				{
+					Entity entity = scene.decals.GetEntity(i);
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+
+					fx.pos = transform.GetPosition();
+					fx.siz = XMFLOAT2(dist, dist);
+					fx.pivot = XMFLOAT2(0.5f, 0.5f);
+					fx.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fx.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fx.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::image::Draw(&decalTex.GetTexture(), fx, cmd);
+
+				}
+			}
+
+			if (rendererWnd.GetPickType() & PICK_FORCEFIELD)
+			{
+				for (size_t i = 0; i < scene.forces.GetCount(); ++i)
+				{
+					Entity entity = scene.forces.GetEntity(i);
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+
+					fx.pos = transform.GetPosition();
+					fx.siz = XMFLOAT2(dist, dist);
+					fx.pivot = XMFLOAT2(0.5f, 0.5f);
+					fx.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fx.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fx.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::image::Draw(&forceFieldTex.GetTexture(), fx, cmd);
+				}
+			}
+
+			if (rendererWnd.GetPickType() & PICK_CAMERA)
+			{
+				for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
+				{
+					Entity entity = scene.cameras.GetEntity(i);
+
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+
+					fx.pos = transform.GetPosition();
+					fx.siz = XMFLOAT2(dist, dist);
+					fx.pivot = XMFLOAT2(0.5f, 0.5f);
+					fx.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fx.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fx.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::image::Draw(&cameraTex.GetTexture(), fx, cmd);
+				}
+			}
+
+			if (rendererWnd.GetPickType() & PICK_ARMATURE)
+			{
+				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+				{
+					Entity entity = scene.armatures.GetEntity(i);
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+
+					fx.pos = transform.GetPosition();
+					fx.siz = XMFLOAT2(dist, dist);
+					fx.pivot = XMFLOAT2(0.5f, 0.5f);
+					fx.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fx.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fx.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::image::Draw(&armatureTex.GetTexture(), fx, cmd);
+				}
+			}
+
+			if (rendererWnd.GetPickType() & PICK_EMITTER)
+			{
+				for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+				{
+					Entity entity = scene.emitters.GetEntity(i);
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+
+					fx.pos = transform.GetPosition();
+					fx.siz = XMFLOAT2(dist, dist);
+					fx.pivot = XMFLOAT2(0.5f, 0.5f);
+					fx.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fx.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fx.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::image::Draw(&emitterTex.GetTexture(), fx, cmd);
+				}
+			}
+
+			if (rendererWnd.GetPickType() & PICK_HAIR)
+			{
+				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+				{
+					Entity entity = scene.hairs.GetEntity(i);
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+
+					fx.pos = transform.GetPosition();
+					fx.siz = XMFLOAT2(dist, dist);
+					fx.pivot = XMFLOAT2(0.5f, 0.5f);
+					fx.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fx.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fx.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::image::Draw(&hairTex.GetTexture(), fx, cmd);
+				}
+			}
+
+			if (rendererWnd.GetPickType() & PICK_SOUND)
+			{
+				for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
+				{
+					Entity entity = scene.sounds.GetEntity(i);
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+
+					fx.pos = transform.GetPosition();
+					fx.siz = XMFLOAT2(dist, dist);
+					fx.pivot = XMFLOAT2(0.5f, 0.5f);
+					fx.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fx.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fx.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::image::Draw(&soundTex.GetTexture(), fx, cmd);
+				}
+			}
+
+			if (rendererWnd.nameDebugCheckBox.GetCheck())
+			{
+				device->EventBegin("Debug Names", cmd);
+				struct DebugNameEntitySorter
+				{
+					size_t name_index;
+					float distance;
+					XMFLOAT3 position;
+				};
+				static wi::vector<DebugNameEntitySorter> debugNameEntitiesSorted;
+				debugNameEntitiesSorted.clear();
+				for (size_t i = 0; i < scene.names.GetCount(); ++i)
+				{
+					Entity entity = scene.names.GetEntity(i);
+					const TransformComponent* transform = scene.transforms.GetComponent(entity);
+					if (transform != nullptr)
+					{
+						auto& x = debugNameEntitiesSorted.emplace_back();
+						x.name_index = i;
+						x.position = transform->GetPosition();
+						const ObjectComponent* object = scene.objects.GetComponent(entity);
+						if (object != nullptr)
+						{
+							x.position = object->center;
+						}
+						x.distance = wi::math::Distance(x.position, camera.Eye);
+					}
+				}
+				std::sort(debugNameEntitiesSorted.begin(), debugNameEntitiesSorted.end(), [](const DebugNameEntitySorter& a, const DebugNameEntitySorter& b)
+					{
+						return a.distance > b.distance;
+					});
+				for (auto& x : debugNameEntitiesSorted)
+				{
+					Entity entity = scene.names.GetEntity(x.name_index);
+					wi::font::Params params;
+					params.position = x.position;
+					params.size = wi::font::WIFONTSIZE_DEFAULT;
+					params.scaling = 1.0f / params.size * x.distance * 0.03f;
+					params.color = wi::Color::White();
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							params.color = selectedEntityColor;
+							break;
+						}
+					}
+					params.h_align = wi::font::WIFALIGN_CENTER;
+					params.v_align = wi::font::WIFALIGN_CENTER;
+					params.softness = 0.1f;
+					params.shadowColor = wi::Color::Black();
+					params.shadow_softness = 0.5f;
+					params.customProjection = &VP;
+					params.customRotation = &R;
+					wi::font::Draw(scene.names[x.name_index].name, params, cmd);
+				}
+				device->EventEnd(cmd);
+			}
+
+			if (inspector_mode)
+			{
+				std::string str;
+				str += "Entity: " + std::to_string(hovered.entity);
+				const NameComponent* name = scene.names.GetComponent(hovered.entity);
+				if (name != nullptr)
+				{
+					str += "\nName: " + name->name;
+				}
+				XMFLOAT4 pointer = wi::input::GetPointer();
+				wi::font::Params params;
+				params.position = XMFLOAT3(pointer.x - 10, pointer.y, 0);
+				params.shadowColor = wi::Color::Black();
+				params.h_align = wi::font::WIFALIGN_RIGHT;
+				params.v_align = wi::font::WIFALIGN_CENTER;
+				wi::font::Draw(str, params, cmd);
+			}
+
+
+			translator.Draw(wi::scene::GetCamera(), cmd);
 
 			device->RenderPassEnd(cmd);
 		}
@@ -2126,409 +2568,6 @@ void EditorComponent::Render() const
 void EditorComponent::Compose(CommandList cmd) const
 {
 	renderPath->Compose(cmd);
-
-	if (cinemaModeCheckBox.GetCheck())
-	{
-		return;
-	}
-	GraphicsDevice* device = wi::graphics::GetDevice();
-
-	// Draw selection outline to the screen:
-	const float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
-	if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
-	{
-		device->EventBegin("Editor - Selection Outline", cmd);
-		wi::renderer::BindCommonResources(cmd);
-		float opacity = wi::math::Lerp(0.4f, 1.0f, selectionColorIntensity);
-		XMFLOAT4 col = selectionColor2;
-		col.w *= opacity;
-		wi::renderer::Postprocess_Outline(rt_selectionOutline[0], cmd, 0.1f, 1, col);
-		col = selectionColor;
-		col.w *= opacity;
-		wi::renderer::Postprocess_Outline(rt_selectionOutline[1], cmd, 0.1f, 1, col);
-		device->EventEnd(cmd);
-	}
-
-	const CameraComponent& camera = wi::scene::GetCamera();
-
-	Scene& scene = wi::scene::GetScene();
-
-	const wi::Color inactiveEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 0.5f));
-	const wi::Color hoveredEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 1));
-	const XMFLOAT4 glow = wi::math::Lerp(wi::math::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
-	const wi::Color selectedEntityColor = wi::Color::fromFloat4(glow);
-
-	// remove camera jittering
-	CameraComponent cam = *renderPath->camera;
-	cam.jitter = XMFLOAT2(0, 0);
-	cam.UpdateCamera();
-	const XMMATRIX VP = cam.GetViewProjection();
-
-	const XMMATRIX R = XMLoadFloat3x3(&cam.rotationMatrix);
-
-	wi::image::Params fx;
-	fx.customRotation = &R;
-	fx.customProjection = &VP;
-	if (colorspace != ColorSpace::SRGB)
-	{
-		fx.enableLinearOutputMapping(GetHDRScaling());
-	}
-
-	if (rendererWnd.GetPickType() & PICK_LIGHT)
-	{
-		for (size_t i = 0; i < scene.lights.GetCount(); ++i)
-		{
-			const LightComponent& light = scene.lights[i];
-			Entity entity = scene.lights.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-			fx.pos = transform.GetPosition();
-			fx.siz = XMFLOAT2(dist, dist);
-			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.color = inactiveEntityColor;
-
-			if (hovered.entity == entity)
-			{
-				fx.color = hoveredEntityColor;
-			}
-			for (auto& picked : translator.selected)
-			{
-				if (picked.entity == entity)
-				{
-					fx.color = selectedEntityColor;
-					break;
-				}
-			}
-
-			switch (light.GetType())
-			{
-			case LightComponent::POINT:
-				wi::image::Draw(&pointLightTex.GetTexture(), fx, cmd);
-				break;
-			case LightComponent::SPOT:
-				wi::image::Draw(&spotLightTex.GetTexture(), fx, cmd);
-				break;
-			case LightComponent::DIRECTIONAL:
-				wi::image::Draw(&dirLightTex.GetTexture(), fx, cmd);
-				break;
-			default:
-				wi::image::Draw(&areaLightTex.GetTexture(), fx, cmd);
-				break;
-			}
-		}
-	}
-
-
-	if (rendererWnd.GetPickType() & PICK_DECAL)
-	{
-		for (size_t i = 0; i < scene.decals.GetCount(); ++i)
-		{
-			Entity entity = scene.decals.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-			fx.pos = transform.GetPosition();
-			fx.siz = XMFLOAT2(dist, dist);
-			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.color = inactiveEntityColor;
-
-			if (hovered.entity == entity)
-			{
-				fx.color = hoveredEntityColor;
-			}
-			for (auto& picked : translator.selected)
-			{
-				if (picked.entity == entity)
-				{
-					fx.color = selectedEntityColor;
-					break;
-				}
-			}
-
-
-			wi::image::Draw(&decalTex.GetTexture(), fx, cmd);
-
-		}
-	}
-
-	if (rendererWnd.GetPickType() & PICK_FORCEFIELD)
-	{
-		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
-		{
-			Entity entity = scene.forces.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-			fx.pos = transform.GetPosition();
-			fx.siz = XMFLOAT2(dist, dist);
-			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.color = inactiveEntityColor;
-
-			if (hovered.entity == entity)
-			{
-				fx.color = hoveredEntityColor;
-			}
-			for (auto& picked : translator.selected)
-			{
-				if (picked.entity == entity)
-				{
-					fx.color = selectedEntityColor;
-					break;
-				}
-			}
-
-
-			wi::image::Draw(&forceFieldTex.GetTexture(), fx, cmd);
-		}
-	}
-
-	if (rendererWnd.GetPickType() & PICK_CAMERA)
-	{
-		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
-		{
-			Entity entity = scene.cameras.GetEntity(i);
-
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-			fx.pos = transform.GetPosition();
-			fx.siz = XMFLOAT2(dist, dist);
-			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.color = inactiveEntityColor;
-
-			if (hovered.entity == entity)
-			{
-				fx.color = hoveredEntityColor;
-			}
-			for (auto& picked : translator.selected)
-			{
-				if (picked.entity == entity)
-				{
-					fx.color = selectedEntityColor;
-					break;
-				}
-			}
-
-
-			wi::image::Draw(&cameraTex.GetTexture(), fx, cmd);
-		}
-	}
-
-	if (rendererWnd.GetPickType() & PICK_ARMATURE)
-	{
-		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
-		{
-			Entity entity = scene.armatures.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-			fx.pos = transform.GetPosition();
-			fx.siz = XMFLOAT2(dist, dist);
-			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.color = inactiveEntityColor;
-
-			if (hovered.entity == entity)
-			{
-				fx.color = hoveredEntityColor;
-			}
-			for (auto& picked : translator.selected)
-			{
-				if (picked.entity == entity)
-				{
-					fx.color = selectedEntityColor;
-					break;
-				}
-			}
-
-
-			wi::image::Draw(&armatureTex.GetTexture(), fx, cmd);
-		}
-	}
-
-	if (rendererWnd.GetPickType() & PICK_EMITTER)
-	{
-		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
-		{
-			Entity entity = scene.emitters.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-			fx.pos = transform.GetPosition();
-			fx.siz = XMFLOAT2(dist, dist);
-			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.color = inactiveEntityColor;
-
-			if (hovered.entity == entity)
-			{
-				fx.color = hoveredEntityColor;
-			}
-			for (auto& picked : translator.selected)
-			{
-				if (picked.entity == entity)
-				{
-					fx.color = selectedEntityColor;
-					break;
-				}
-			}
-
-
-			wi::image::Draw(&emitterTex.GetTexture(), fx, cmd);
-		}
-	}
-
-	if (rendererWnd.GetPickType() & PICK_HAIR)
-	{
-		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
-		{
-			Entity entity = scene.hairs.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-			fx.pos = transform.GetPosition();
-			fx.siz = XMFLOAT2(dist, dist);
-			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.color = inactiveEntityColor;
-
-			if (hovered.entity == entity)
-			{
-				fx.color = hoveredEntityColor;
-			}
-			for (auto& picked : translator.selected)
-			{
-				if (picked.entity == entity)
-				{
-					fx.color = selectedEntityColor;
-					break;
-				}
-			}
-
-
-			wi::image::Draw(&hairTex.GetTexture(), fx, cmd);
-		}
-	}
-
-	if (rendererWnd.GetPickType() & PICK_SOUND)
-	{
-		for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
-		{
-			Entity entity = scene.sounds.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-			fx.pos = transform.GetPosition();
-			fx.siz = XMFLOAT2(dist, dist);
-			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-			fx.color = inactiveEntityColor;
-
-			if (hovered.entity == entity)
-			{
-				fx.color = hoveredEntityColor;
-			}
-			for (auto& picked : translator.selected)
-			{
-				if (picked.entity == entity)
-				{
-					fx.color = selectedEntityColor;
-					break;
-				}
-			}
-
-
-			wi::image::Draw(&soundTex.GetTexture(), fx, cmd);
-		}
-	}
-
-	if (rendererWnd.nameDebugCheckBox.GetCheck())
-	{
-		device->EventBegin("Debug Names", cmd);
-		struct DebugNameEntitySorter
-		{
-			size_t name_index;
-			float distance;
-			XMFLOAT3 position;
-		};
-		static wi::vector<DebugNameEntitySorter> debugNameEntitiesSorted;
-		debugNameEntitiesSorted.clear();
-		for (size_t i = 0; i < scene.names.GetCount(); ++i)
-		{
-			Entity entity = scene.names.GetEntity(i);
-			const TransformComponent* transform = scene.transforms.GetComponent(entity);
-			if (transform != nullptr)
-			{
-				auto& x = debugNameEntitiesSorted.emplace_back();
-				x.name_index = i;
-				x.position = transform->GetPosition();
-				const ObjectComponent* object = scene.objects.GetComponent(entity);
-				if (object != nullptr)
-				{
-					x.position = object->center;
-				}
-				x.distance = wi::math::Distance(x.position, camera.Eye);
-			}
-		}
-		std::sort(debugNameEntitiesSorted.begin(), debugNameEntitiesSorted.end(), [](const DebugNameEntitySorter& a, const DebugNameEntitySorter& b)
-			{
-				return a.distance > b.distance;
-			});
-		for (auto& x : debugNameEntitiesSorted)
-		{
-			Entity entity = scene.names.GetEntity(x.name_index);
-			wi::font::Params params;
-			params.position = x.position;
-			params.size = wi::font::WIFONTSIZE_DEFAULT;
-			params.scaling = 1.0f / params.size * x.distance * 0.03f;
-			params.color = wi::Color::White();
-			for (auto& picked : translator.selected)
-			{
-				if (picked.entity == entity)
-				{
-					params.color = selectedEntityColor;
-					break;
-				}
-			}
-			params.h_align = wi::font::WIFALIGN_CENTER;
-			params.v_align = wi::font::WIFALIGN_CENTER;
-			params.softness = 0.1f;
-			params.shadowColor = wi::Color::Black();
-			params.shadow_softness = 0.5f;
-			params.customProjection = &VP;
-			params.customRotation = &R;
-			wi::font::Draw(scene.names[x.name_index].name, params, cmd);
-		}
-		device->EventEnd(cmd);
-	}
-
-	if (translator.enabled)
-	{
-		translator.Draw(camera, cmd);
-	}
-
-	if (inspector_mode)
-	{
-		std::string str;
-		str += "Entity: " + std::to_string(hovered.entity);
-		const NameComponent* name = scene.names.GetComponent(hovered.entity);
-		if (name != nullptr)
-		{
-			str += "\nName: " + name->name;
-		}
-		XMFLOAT4 pointer = wi::input::GetPointer();
-		wi::font::Params params;
-		params.position = XMFLOAT3(pointer.x - 10, pointer.y, 0);
-		params.shadowColor = wi::Color::Black();
-		params.h_align = wi::font::WIFALIGN_RIGHT;
-		params.v_align = wi::font::WIFALIGN_CENTER;
-		wi::font::Draw(str, params, cmd);
-	}
 
 	RenderPath2D::Compose(cmd);
 }
@@ -2754,18 +2793,29 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 		{
 		case HISTORYOP_TRANSLATOR:
 			{
-				XMFLOAT4X4 delta;
-				archive >> delta;
+				EntitySerializer seri;
+				wi::scene::TransformComponent start;
+				wi::scene::TransformComponent end;
+				start.Serialize(archive, seri);
+				end.Serialize(archive, seri);
+				wi::vector<XMFLOAT4X4> matrices_start;
+				wi::vector<XMFLOAT4X4> matrices_end;
+				archive >> matrices_start;
+				archive >> matrices_end;
 				translator.enabled = true;
 
 				translator.PreTranslate();
-				XMMATRIX W = XMLoadFloat4x4(&delta);
 				if (undo)
 				{
-					W = XMMatrixInverse(nullptr, W);
+					translator.transform = start;
+					translator.matrices_current = matrices_start;
 				}
-				W = W * XMLoadFloat4x4(&translator.transform.world);
-				XMStoreFloat4x4(&translator.transform.world, W);
+				else
+				{
+					translator.transform = end;
+					translator.matrices_current = matrices_end;
+				}
+				translator.transform.UpdateTransform();
 				translator.PostTranslate();
 			}
 			break;

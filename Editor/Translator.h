@@ -7,13 +7,14 @@
 class Translator
 {
 private:
-	XMFLOAT4 prevPointer = XMFLOAT4(0, 0, 0, 0);
-	XMFLOAT4X4 dragDeltaMatrix = wi::math::IDENTITY_MATRIX;
 	bool dragging = false;
 	bool dragStarted = false;
 	bool dragEnded = false;
+	XMFLOAT3 intersection_start = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 axis = XMFLOAT3(1, 0, 0);
+	float angle = 0;
+	float angle_start = 0;
 public:
-	void Create();
 
 	void Update(const wi::Canvas& canvas);
 	void Draw(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
@@ -29,6 +30,9 @@ public:
 	wi::vector<wi::ecs::Entity> selectedEntitiesNonRecursive; // selected entities that don't contain entities that would be included in recursive iterations
 
 	bool enabled = false;
+	float scale_snap = 1;
+	float rotate_snap = XM_PIDIV4;
+	float translate_snap = 1;
 
 	enum TRANSLATOR_STATE
 	{
@@ -42,6 +46,9 @@ public:
 		TRANSLATOR_XYZ,
 	} state = TRANSLATOR_IDLE;
 
+	XMMATRIX GetMirrorMatrix(TRANSLATOR_STATE state, const wi::scene::CameraComponent& camera) const;
+	void WriteAxisText(TRANSLATOR_STATE axis, const wi::scene::CameraComponent& camera, char* text) const;
+
 	float dist = 1;
 
 	bool isTranslator = true, isScalator = false, isRotator = false;
@@ -51,7 +58,9 @@ public:
 	bool IsDragStarted() const { return dragStarted; };
 	// Check if the drag ended in this exact frame
 	bool IsDragEnded() const { return dragEnded; };
-	// Delta matrix from beginning to end of drag operation
-	XMFLOAT4X4 GetDragDeltaMatrix() const { return dragDeltaMatrix; }
+
+	wi::scene::TransformComponent transform_start;
+	wi::vector<XMFLOAT4X4> matrices_start;
+	wi::vector<XMFLOAT4X4> matrices_current;
 };
 
