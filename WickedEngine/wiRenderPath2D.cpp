@@ -92,7 +92,6 @@ namespace wi
 
 			device->CreateRenderPass(&desc, &renderpass_final);
 		}
-
 	}
 	void RenderPath2D::ResizeLayout()
 	{
@@ -135,20 +134,6 @@ namespace wi
 					break;
 				}
 			}
-		}
-
-		if (colorspace != ColorSpace::SRGB && (rtLinearColorSpace.desc.width != rtFinal.desc.width || rtLinearColorSpace.desc.height != rtFinal.desc.height))
-		{
-			TextureDesc desc = rtFinal.desc;
-			desc.format = Format::R16G16B16A16_FLOAT;
-			bool success = wi::graphics::GetDevice()->CreateTexture(&desc, nullptr, &rtLinearColorSpace);
-			assert(success);
-			wi::graphics::GetDevice()->SetName(&rtLinearColorSpace, "rtLinearColorSpace");
-
-			RenderPassDesc renderpassdesc;
-			renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtLinearColorSpace, RenderPassAttachment::LoadOp::CLEAR));
-			success = wi::graphics::GetDevice()->CreateRenderPass(&renderpassdesc, &renderpass_linearize);
-			assert(success);
 		}
 
 		RenderPath::Update(dt);
@@ -295,22 +280,6 @@ namespace wi
 
 		device->RenderPassEnd(cmd);
 
-		if (colorspace != ColorSpace::SRGB)
-		{
-			// Convert the regular SRGB result of the render path to linear space for HDR compositing:
-			device->RenderPassBegin(&renderpass_linearize, cmd);
-			wi::image::Params fx;
-			fx.enableFullScreen();
-			fx.enableLinearOutputMapping(hdr_scaling);
-			wi::image::Draw(&rtFinal, fx, cmd);
-			device->RenderPassEnd(cmd);
-			render_result = rtLinearColorSpace;
-		}
-		else
-		{
-			render_result = rtFinal;
-		}
-
 		RenderPath::Render();
 	}
 	void RenderPath2D::Compose(CommandList cmd) const
@@ -318,7 +287,12 @@ namespace wi
 		wi::image::Params fx;
 		fx.enableFullScreen();
 		fx.blendFlag = wi::enums::BLENDMODE_PREMULTIPLIED;
-		wi::image::Draw(&render_result, fx, cmd);
+		if (colorspace != ColorSpace::SRGB)
+		{
+			// Convert the regular SRGB result of the render path to linear space for HDR compositing:
+			fx.enableLinearOutputMapping(hdr_scaling);
+		}
+		wi::image::Draw(&GetRenderResult(), fx, cmd);
 
 		RenderPath::Compose(cmd);
 	}

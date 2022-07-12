@@ -99,6 +99,20 @@ namespace wi::math
 		}
 		return angle;
 	}
+	float GetAngle(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT3& axis)
+	{
+		XMVECTOR A = XMLoadFloat3(&a);
+		XMVECTOR B = XMLoadFloat3(&b);
+		float dp = XMVectorGetX(XMVector3Dot(A, B));
+		dp = wi::math::Clamp(dp, -1, 1);
+		float angle = std::acos(dp);
+		XMVECTOR CROSS = XMVector3Cross(A, B);
+		if (XMVectorGetX(XMVector3Dot(CROSS, XMLoadFloat3(&axis))) < 0)
+		{
+			angle = XM_2PI - angle;
+		}
+		return angle;
+	}
 	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C)
 	{
 		float deg = 0;

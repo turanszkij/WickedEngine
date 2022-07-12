@@ -21,15 +21,10 @@ namespace wi
 		wi::graphics::RenderPass renderpass_stenciled;
 		wi::graphics::RenderPass renderpass_final;
 
-		wi::graphics::Texture rtLinearColorSpace;
-		wi::graphics::RenderPass renderpass_linearize;
-
 		wi::gui::GUI GUI;
 
 		XMUINT2 current_buffersize{};
 		float current_layoutscale{};
-
-		mutable wi::graphics::Texture render_result = rtFinal;
 
 		float hdr_scaling = 9.0f;
 
@@ -44,7 +39,7 @@ namespace wi
 		void Render() const override;
 		void Compose(wi::graphics::CommandList cmd) const override;
 
-		const wi::graphics::Texture& GetRenderResult() const { return render_result; }
+		const wi::graphics::Texture& GetRenderResult() const { return rtFinal; }
 		virtual const wi::graphics::Texture* GetDepthStencil() const { return nullptr; }
 		virtual const wi::graphics::Texture* GetGUIBlurredBackground() const { return nullptr; }
 

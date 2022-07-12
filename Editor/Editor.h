@@ -149,6 +149,9 @@ public:
 	const XMFLOAT4 selectionColor = XMFLOAT4(1, 0.6f, 0, 1);
 	const XMFLOAT4 selectionColor2 = XMFLOAT4(0, 1, 0.6f, 0.35f);
 
+	wi::graphics::RenderPass renderpass_editor;
+	wi::graphics::Texture editor_depthbuffer;
+
 	Translator translator;
 	wi::scene::PickResult hovered;
 	bool inspector_mode = false;
