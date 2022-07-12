@@ -1916,8 +1916,10 @@ void EditorComponent::Update(float dt)
 		EntitySerializer seri;
 		wi::Archive& archive = AdvanceHistory();
 		archive << HISTORYOP_TRANSLATOR;
-		translator.GetDragStartTransform().Serialize(archive, seri);
-		translator.GetCurrentTransform().Serialize(archive, seri);
+		translator.transform_start.Serialize(archive, seri);
+		translator.transform.Serialize(archive, seri);
+		archive << translator.matrices_start;
+		archive << translator.matrices_current;
 	}
 
 	emitterWnd.UpdateData();
@@ -2796,16 +2798,22 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				wi::scene::TransformComponent end;
 				start.Serialize(archive, seri);
 				end.Serialize(archive, seri);
+				wi::vector<XMFLOAT4X4> matrices_start;
+				wi::vector<XMFLOAT4X4> matrices_end;
+				archive >> matrices_start;
+				archive >> matrices_end;
 				translator.enabled = true;
 
 				translator.PreTranslate();
 				if (undo)
 				{
 					translator.transform = start;
+					translator.matrices_current = matrices_start;
 				}
 				else
 				{
 					translator.transform = end;
+					translator.matrices_current = matrices_end;
 				}
 				translator.transform.UpdateTransform();
 				translator.PostTranslate();

@@ -10,12 +10,10 @@ private:
 	bool dragging = false;
 	bool dragStarted = false;
 	bool dragEnded = false;
-	wi::scene::TransformComponent transform_start;
 	XMFLOAT3 intersection_start = XMFLOAT3(0, 0, 0);
 	XMFLOAT3 axis = XMFLOAT3(1, 0, 0);
 	float angle = 0;
 	float angle_start = 0;
-	float angle_prev = 0;
 public:
 
 	void Update(const wi::Canvas& canvas);
@@ -32,6 +30,7 @@ public:
 	wi::vector<wi::ecs::Entity> selectedEntitiesNonRecursive; // selected entities that don't contain entities that would be included in recursive iterations
 
 	bool enabled = false;
+	float angle_snap = XM_PIDIV4;
 
 	enum TRANSLATOR_STATE
 	{
@@ -54,7 +53,9 @@ public:
 	bool IsDragStarted() const { return dragStarted; };
 	// Check if the drag ended in this exact frame
 	bool IsDragEnded() const { return dragEnded; };
-	wi::scene::TransformComponent GetDragStartTransform() const { return transform_start; }
-	wi::scene::TransformComponent GetCurrentTransform() const { return transform; }
+
+	wi::scene::TransformComponent transform_start;
+	wi::vector<XMFLOAT4X4> matrices_start;
+	wi::vector<XMFLOAT4X4> matrices_current;
 };
 

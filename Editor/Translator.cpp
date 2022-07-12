@@ -20,7 +20,7 @@ namespace Translator_Internal
 	const float plane_min = 0.5f;
 	const float plane_max = 1.5f;
 	const float circle_radius = axis_length;
-	const float circle_width = 0.75f;
+	const float circle_width = 1;
 	const float circle2_radius = circle_radius + 0.7f;
 	const float circle2_width = 0.3f;
 
@@ -301,7 +301,7 @@ void Translator::Update(const wi::Canvas& canvas)
 					dragStarted = true;
 					transform_start = transform;
 					XMStoreFloat3(&intersection_start, intersection);
-					angle_prev = 0;
+					matrices_start = matrices_current;
 				}
 				XMVECTOR intersectionPrev = XMLoadFloat3(&intersection_start);
 
@@ -337,12 +337,12 @@ void Translator::Update(const wi::Canvas& canvas)
 
 				if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LCONTROL))
 				{
-					float snap = XM_PIDIV4;
-					angle = std::floor(angle / snap) * snap;
+					angle = std::round(angle / angle_snap) * angle_snap;
 				}
+				angle = std::fmod(angle, XM_2PI);
 
-				transform.Rotate(XMQuaternionRotationAxis(XMLoadFloat3(&axis), angle - angle_prev));
-				angle_prev = angle;
+				transform = transform_start;
+				transform.Rotate(XMQuaternionRotationAxis(XMLoadFloat3(&axis), angle));
 			}
 			else
 			{
@@ -396,6 +396,7 @@ void Translator::Update(const wi::Canvas& canvas)
 					dragStarted = true;
 					transform_start = transform;
 					XMStoreFloat3(&intersection_start, intersection);
+					matrices_start = matrices_current;
 				}
 				XMVECTOR intersectionPrev = XMLoadFloat3(&intersection_start);
 
@@ -821,19 +822,19 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 			// xy
 			XMStoreFloat4x4(&sb.g_xTransform, matX);
-			sb.g_xColor = state == TRANSLATOR_XY ? highlight_color : XMFLOAT4(channel_min, channel_min, 1, 0.25f);
+			sb.g_xColor = state == TRANSLATOR_XY ? highlight_color : XMFLOAT4(channel_min, channel_min, 1, 0.4f);
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// xz
 			XMStoreFloat4x4(&sb.g_xTransform, matZ);
-			sb.g_xColor = state == TRANSLATOR_XZ ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 0.25f);
+			sb.g_xColor = state == TRANSLATOR_XZ ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 0.4f);
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// yz
 			XMStoreFloat4x4(&sb.g_xTransform, matY);
-			sb.g_xColor = state == TRANSLATOR_YZ ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 0.25f);
+			sb.g_xColor = state == TRANSLATOR_YZ ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 0.4f);
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 		}
@@ -1003,12 +1004,15 @@ void Translator::PreTranslate()
 	// translator "bind matrix"
 	XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
 
+	matrices_current.clear();
 	for (auto& x : selectedEntitiesNonRecursive)
 	{
 		TransformComponent* transform_selected = scene.transforms.GetComponent(x);
 		if (transform_selected != nullptr)
 		{
-			XMStoreFloat4x4(&transform_selected->world, XMLoadFloat4x4(&transform_selected->world) * B);
+			XMFLOAT4X4 m;
+			XMStoreFloat4x4(&m, XMLoadFloat4x4(&transform_selected->world) * B);
+			matrices_current.push_back(m);
 		}
 	}
 }
@@ -1016,14 +1020,15 @@ void Translator::PostTranslate()
 {
 	Scene& scene = wi::scene::GetScene();
 
-	XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
-
+	int i = 0;
 	for (auto& x : selectedEntitiesNonRecursive)
 	{
 		TransformComponent* transform_selected = scene.transforms.GetComponent(x);
 		if (transform_selected != nullptr)
 		{
-			XMMATRIX W = XMLoadFloat4x4(&transform_selected->world);
+			const XMFLOAT4X4& m = matrices_current[i++];
+
+			XMMATRIX W = XMLoadFloat4x4(&m);
 			XMMATRIX W_parent = XMLoadFloat4x4(&transform.world);
 			W = W * W_parent;
 			XMStoreFloat4x4(&transform_selected->world, W);
