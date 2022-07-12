@@ -851,7 +851,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		params.scaling = 0.04f * dist;
 		params.customProjection = &VP;
 		params.customRotation = &R;
-		params.shadowColor = wi::Color(0, 0, 0, 80);
+		params.shadowColor = wi::Color(0, 0, 0, 127);
 		params.shadow_softness = 0.8f;
 		XMVECTOR pos = transform.GetPositionV();
 
@@ -1196,7 +1196,6 @@ XMMATRIX Translator::GetMirrorMatrix(TRANSLATOR_STATE state, const CameraCompone
 
 	return mirror;
 }
-
 void Translator::WriteAxisText(TRANSLATOR_STATE axis, const wi::scene::CameraComponent& camera, char* text) const
 {
 	switch (axis)
