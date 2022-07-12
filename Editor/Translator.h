@@ -46,6 +46,9 @@ public:
 		TRANSLATOR_XYZ,
 	} state = TRANSLATOR_IDLE;
 
+	XMMATRIX GetMirrorMatrix(TRANSLATOR_STATE state, const wi::scene::CameraComponent& camera) const;
+	void WriteAxisText(TRANSLATOR_STATE axis, const wi::scene::CameraComponent& camera, char* text) const;
+
 	float dist = 1;
 
 	bool isTranslator = true, isScalator = false, isRotator = false;

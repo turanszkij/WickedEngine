@@ -708,7 +708,7 @@ void EditorComponent::Load()
 
 
 	translatorCheckBox.Create("Transform: ");
-	translatorCheckBox.SetTooltip("Enable the transform tool.\nTip: hold Left Ctrl to enable snap transform.");
+	translatorCheckBox.SetTooltip("Enable the transform tool.\nTip: hold Left Ctrl to enable snap transform.\nYou can configure snap mode units in the Transform settings.");
 	translatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		translator.enabled = args.bValue;
 	});
