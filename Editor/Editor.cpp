@@ -901,8 +901,8 @@ void EditorComponent::Load()
 		ss += "Wicked Engine Editor v";
 		ss += wi::version::GetVersionString();
 		ss += "\nCreated by Turánszki János";
-		ss += "\nWith help from others on GitHub: https://github.com/turanszkij/WickedEngine";
 		ss += "\n\nWebsite: https://wickedengine.net/";
+		ss += "\nGithub page: https://github.com/turanszkij/WickedEngine";
 		ss += "\nDiscord chat: https://discord.gg/CFjRYmE";
 		ss += "\nYou can support the project on Patreon: https://www.patreon.com/wickedengine";
 		ss += "\n\nControls\n";
@@ -911,7 +911,7 @@ void EditorComponent::Load()
 		ss += "Look: Middle mouse button / arrow keys / controller right stick\n";
 		ss += "Select: Right mouse button\n";
 		ss += "Interact with water: Left mouse button when nothing is selected\n";
-		ss += "Camera speed: Left Shift button or controller R2/RT\n";
+		ss += "Faster camera: Left Shift button or controller R2/RT\n";
 		ss += "Snap transform: Left Ctrl (hold while transforming)\n";
 		ss += "Camera up: E\n";
 		ss += "Camera down: Q\n";
@@ -941,7 +941,7 @@ void EditorComponent::Load()
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
 		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start, if exists)\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
-		ss += "https://github.com/turanszkij/WickedEngine\n";
+		ss += "https://github.com/turanszkij/WickedEngine/issues\n";
 
 		aboutLabel.Create("HelpLabel");
 		aboutLabel.SetText(ss);
