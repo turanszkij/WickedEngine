@@ -134,9 +134,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)images\arealight.dds">
-      <Filter>images</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)images\armature.dds">
       <Filter>images</Filter>
     </Image>
