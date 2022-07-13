@@ -1057,6 +1057,11 @@ void Translator::PreTranslate()
 {
 	Scene& scene = wi::scene::GetScene();
 
+	if (!dragging)
+	{
+		transform.ClearTransform();
+	}
+
 	// Find the center of all the entities that are selected:
 	XMVECTOR centerV = XMVectorSet(0, 0, 0, 0);
 	float count = 0;
