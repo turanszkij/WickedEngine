@@ -943,7 +943,7 @@ void EditorComponent::Load()
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
 		ss += "https://github.com/turanszkij/WickedEngine/issues\n";
 
-		aboutLabel.Create("HelpLabel");
+		aboutLabel.Create("AboutLabel");
 		aboutLabel.SetText(ss);
 		aboutLabel.SetVisible(false);
 		aboutLabel.SetColor(wi::Color(113, 183, 214, 100));
