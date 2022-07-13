@@ -39,7 +39,7 @@ class Editor;
 class EditorComponent : public wi::RenderPath2D
 {
 private:
-	wi::Resource pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
+	wi::Resource pointLightTex, spotLightTex, dirLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
 public:
 	MaterialWindow materialWnd;
 	PostprocessWindow postprocessWnd;
@@ -94,16 +94,15 @@ public:
 	wi::gui::CheckBox isTranslatorCheckBox;
 	wi::gui::Button saveButton;
 	wi::gui::ComboBox saveModeComboBox;
-	wi::gui::Button modelButton;
-	wi::gui::Button scriptButton;
+	wi::gui::Button openButton;
 	wi::gui::Button clearButton;
-	wi::gui::Button helpButton;
+	wi::gui::Button aboutButton;
 	wi::gui::Button exitButton;
 	wi::gui::CheckBox profilerEnabledCheckBox;
 	wi::gui::CheckBox physicsEnabledCheckBox;
 	wi::gui::CheckBox cinemaModeCheckBox;
 	wi::gui::ComboBox renderPathComboBox;
-	wi::gui::Label helpLabel;
+	wi::gui::Label aboutLabel;
 
 	wi::gui::TreeList sceneGraphView;
 	wi::unordered_set<wi::ecs::Entity> scenegraphview_added_items;

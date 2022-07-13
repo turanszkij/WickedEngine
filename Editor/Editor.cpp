@@ -302,41 +302,38 @@ void EditorComponent::ResizeLayout()
 
 	////////////////////////////////////////////////////////////////////////////////////
 
-	translatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4 - 25, 0));
+	translatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3 - 25, 0));
 	translatorCheckBox.SetSize(XMFLOAT2(18, 18));
 
-	isScalatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4 - 25 - 40 * 2, 22));
+	isScalatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3 - 25 - 40 * 2, 22));
 	isScalatorCheckBox.SetSize(XMFLOAT2(18, 18));
 
-	isRotatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4 - 25 - 40 * 1, 22));
+	isRotatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3 - 25 - 40 * 1, 22));
 	isRotatorCheckBox.SetSize(XMFLOAT2(18, 18));
 
-	isTranslatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4 - 25, 22));
+	isTranslatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3 - 25, 22));
 	isTranslatorCheckBox.SetSize(XMFLOAT2(18, 18));
 
-	saveButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 0));
+	saveButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
 	saveButton.SetSize(XMFLOAT2(100, 40));
 
-	modelButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
-	modelButton.SetSize(XMFLOAT2(100, 40));
-
-	scriptButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
-	scriptButton.SetSize(XMFLOAT2(100, 40));
+	openButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
+	openButton.SetSize(XMFLOAT2(100, 40));
 
 	clearButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 1, 0));
 	clearButton.SetSize(XMFLOAT2(100, 40));
 
-	helpButton.SetPos(XMFLOAT2(screenW - 50 - 55, 0));
-	helpButton.SetSize(XMFLOAT2(50, 40));
+	aboutButton.SetPos(XMFLOAT2(screenW - 50 - 55, 0));
+	aboutButton.SetSize(XMFLOAT2(50, 40));
 
-	helpLabel.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
-	helpLabel.SetPos(XMFLOAT2(screenW / 2.0f - helpLabel.scale.x / 2.0f, screenH / 2.0f - helpLabel.scale.y / 2.0f));
+	aboutLabel.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
+	aboutLabel.SetPos(XMFLOAT2(screenW / 2.0f - aboutLabel.scale.x / 2.0f, screenH / 2.0f - aboutLabel.scale.y / 2.0f));
 
 	exitButton.SetPos(XMFLOAT2(screenW - 50, 0));
 	exitButton.SetSize(XMFLOAT2(50, 40));
 
 	profilerEnabledCheckBox.SetSize(XMFLOAT2(20, 20));
-	profilerEnabledCheckBox.SetPos(XMFLOAT2(screenW - 530, 45));
+	profilerEnabledCheckBox.SetPos(XMFLOAT2(screenW - 460, 45));
 
 	physicsEnabledCheckBox.SetSize(XMFLOAT2(20, 20));
 	physicsEnabledCheckBox.SetPos(XMFLOAT2(screenW - 370, 45));
@@ -365,7 +362,6 @@ void EditorComponent::Load()
 	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { pointLightTex = wi::resourcemanager::Load("images/pointlight.dds"); });
 	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { spotLightTex = wi::resourcemanager::Load("images/spotlight.dds"); });
 	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { dirLightTex = wi::resourcemanager::Load("images/directional_light.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { areaLightTex = wi::resourcemanager::Load("images/arealight.dds"); });
 	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { decalTex = wi::resourcemanager::Load("images/decal.dds"); });
 	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { forceFieldTex = wi::resourcemanager::Load("images/forcefield.dds"); });
 	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { emitterTex = wi::resourcemanager::Load("images/emitter.dds"); });
@@ -537,8 +533,8 @@ void EditorComponent::Load()
 
 
 	///////////////////////
-	wi::Color option_color_idle = wi::Color(255, 145, 145, 100);
-	wi::Color option_color_focus = wi::Color(255, 197, 193, 200);
+	wi::Color option_color_idle = wi::Color(255, 100, 100, 100);
+	wi::Color option_color_focus = wi::Color(255, 200, 200, 200);
 
 
 	weatherWnd_Toggle.Create("Weather");
@@ -708,7 +704,7 @@ void EditorComponent::Load()
 
 
 	translatorCheckBox.Create("Transform: ");
-	translatorCheckBox.SetTooltip("Enable the transform tool.\nTip: hold Left Ctrl to enable snap transform.\nYou can configure snap mode units in the Transform settings.");
+	translatorCheckBox.SetTooltip("Enable the transform tool (Ctrl + T).\nTip: hold Left Ctrl to enable snap transform.\nYou can configure snap mode units in the Transform settings.");
 	translatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		translator.enabled = args.bValue;
 	});
@@ -755,8 +751,8 @@ void EditorComponent::Load()
 
 	saveButton.Create("Save");
 	saveButton.SetTooltip("Save the current scene");
-	saveButton.SetColor(wi::Color(0, 198, 101, 180), wi::gui::WIDGETSTATE::IDLE);
-	saveButton.SetColor(wi::Color(0, 255, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
+	saveButton.SetColor(wi::Color(50, 200, 100, 180), wi::gui::WIDGETSTATE::IDLE);
+	saveButton.SetColor(wi::Color(50, 255, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
 	saveButton.OnClick([&](wi::gui::EventArgs args) {
 
 		const bool dump_to_header = saveModeComboBox.GetSelected() == 2;
@@ -804,25 +800,32 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&saveButton);
 
 
-	modelButton.Create("Load Model");
-	modelButton.SetTooltip("Load a scene / import model into the editor...");
-	modelButton.SetColor(wi::Color(0, 89, 255, 180), wi::gui::WIDGETSTATE::IDLE);
-	modelButton.SetColor(wi::Color(112, 155, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
-	modelButton.OnClick([&](wi::gui::EventArgs args) {
+	openButton.Create("Open");
+	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...");
+	openButton.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
+	openButton.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
+	openButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
-		params.description = "Model formats (.wiscene, .obj, .gltf, .glb)";
+		params.description = ".wiscene, .obj, .gltf, .glb, .lua";
 		params.extensions.push_back("wiscene");
 		params.extensions.push_back("obj");
 		params.extensions.push_back("gltf");
 		params.extensions.push_back("glb");
+		params.extensions.push_back("lua");
 		wi::helper::FileDialog(params, [&](std::string fileName) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+
+				std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
+				if (!extension.compare("LUA"))
+				{
+					wi::lua::RunFile(fileName);
+					return;
+				}
 
 				size_t camera_count_prev = wi::scene::GetScene().cameras.GetCount();
 
 				main->loader.addLoadingFunction([=](wi::jobsystem::JobArgs args) {
-					std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
 
 					if (!extension.compare("WISCENE")) // engine-serialized
 					{
@@ -882,31 +885,13 @@ void EditorComponent::Load()
 			});
 		});
 	});
-	GetGUI().AddWidget(&modelButton);
+	GetGUI().AddWidget(&openButton);
 
 
-	scriptButton.Create("Load Script");
-	scriptButton.SetTooltip("Load a Lua script...");
-	scriptButton.SetColor(wi::Color(255, 33, 140, 180), wi::gui::WIDGETSTATE::IDLE);
-	scriptButton.SetColor(wi::Color(255, 100, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
-	scriptButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::helper::FileDialogParams params;
-		params.type = wi::helper::FileDialogParams::OPEN;
-		params.description = "Lua script";
-		params.extensions.push_back("lua");
-		wi::helper::FileDialog(params, [](std::string fileName) {
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				wi::lua::RunFile(fileName);
-			});
-		});
-	});
-	GetGUI().AddWidget(&scriptButton);
-
-
-	clearButton.Create("Clear World");
-	clearButton.SetTooltip("Delete everything from the scene. This operation is not undoable!");
-	clearButton.SetColor(wi::Color(255, 173, 43, 180), wi::gui::WIDGETSTATE::IDLE);
-	clearButton.SetColor(wi::Color(255, 235, 173, 255), wi::gui::WIDGETSTATE::FOCUS);
+	clearButton.Create("Clear");
+	clearButton.SetTooltip("Delete everything. This operation is not undoable!");
+	clearButton.SetColor(wi::Color(255, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
+	clearButton.SetColor(wi::Color(255, 230, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
 	clearButton.OnClick([&](wi::gui::EventArgs args) {
 
 		terragen.Generation_Cancel();
@@ -941,18 +926,25 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&clearButton);
 
 
-	helpButton.Create("?");
-	helpButton.SetTooltip("Help");
-	helpButton.SetColor(wi::Color(34, 158, 214, 180), wi::gui::WIDGETSTATE::IDLE);
-	helpButton.SetColor(wi::Color(113, 183, 214, 255), wi::gui::WIDGETSTATE::FOCUS);
-	helpButton.OnClick([&](wi::gui::EventArgs args) {
-		helpLabel.SetVisible(!helpLabel.IsVisible());
+	aboutButton.Create("?");
+	aboutButton.SetTooltip("About...");
+	aboutButton.SetColor(wi::Color(50, 160, 220, 180), wi::gui::WIDGETSTATE::IDLE);
+	aboutButton.SetColor(wi::Color(120, 200, 220, 255), wi::gui::WIDGETSTATE::FOCUS);
+	aboutButton.OnClick([&](wi::gui::EventArgs args) {
+		aboutLabel.SetVisible(!aboutLabel.IsVisible());
 	});
-	GetGUI().AddWidget(&helpButton);
+	GetGUI().AddWidget(&aboutButton);
 
 	{
 		std::string ss;
-		ss += "Help:\n";
+		ss += "Wicked Engine Editor v";
+		ss += wi::version::GetVersionString();
+		ss += "\nCreated by Turánszki János";
+		ss += "\nWith help from other developers on GiHub: https://github.com/turanszkij/WickedEngine";
+		ss += "\n\nWebsite: https://wickedengine.net/";
+		ss += "\nDiscord chat: https://discord.gg/CFjRYmE";
+		ss += "\nYou can support the project on Patreon: https://www.patreon.com/wickedengine";
+		ss += "\n\nHow to use:\n";
 		ss += "Move camera: WASD, or Contoller left stick or D-pad\n";
 		ss += "Look: Middle mouse button / arrow keys / controller right stick\n";
 		ss += "Select: Right mouse button\n";
@@ -962,38 +954,39 @@ void EditorComponent::Load()
 		ss += "Camera up: E, down: Q\n";
 		ss += "Duplicate entity: Ctrl + D\n";
 		ss += "Select All: Ctrl + A\n";
-		ss += "Deselect All: Escape\n";
+		ss += "Deselect All: Esc\n";
 		ss += "Undo: Ctrl + Z\n";
 		ss += "Redo: Ctrl + Y\n";
 		ss += "Copy: Ctrl + C\n";
 		ss += "Cut: Ctrl + X\n";
 		ss += "Paste: Ctrl + V\n";
 		ss += "Delete: Delete button\n";
+		ss += "Transform: Ctrl + T\n";
 		ss += "Inspector mode: I button (hold), hovered entity information will be displayed near mouse position.\n";
 		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
 		ss += "Script Console / backlog: HOME button\n";
 		ss += "\n";
 		ss += "You can find sample scenes in the Content/models directory. Try to load one.\n";
 		ss += "You can also import models from .OBJ, .GLTF, .GLB files.\n";
+#ifndef PLATFORM_UWP
 		ss += "You can find a program configuration file at Editor/config.ini\n";
+#endif // PLATFORM_UWP
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
 		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start, if exists)\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
 		ss += "https://github.com/turanszkij/WickedEngine\n";
-		ss += "\nDevblog: https://wickedengine.net/\n";
-		ss += "Discord: https://discord.gg/CFjRYmE\n";
 
-		helpLabel.Create("HelpLabel");
-		helpLabel.SetText(ss);
-		helpLabel.SetVisible(false);
-		helpLabel.SetColor(wi::Color(113, 183, 214, 100));
-		GetGUI().AddWidget(&helpLabel);
+		aboutLabel.Create("HelpLabel");
+		aboutLabel.SetText(ss);
+		aboutLabel.SetVisible(false);
+		aboutLabel.SetColor(wi::Color(113, 183, 214, 100));
+		GetGUI().AddWidget(&aboutLabel);
 	}
 
 	exitButton.Create("X");
 	exitButton.SetTooltip("Exit");
-	exitButton.SetColor(wi::Color(190, 0, 0, 180), wi::gui::WIDGETSTATE::IDLE);
-	exitButton.SetColor(wi::Color(255, 0, 0, 255), wi::gui::WIDGETSTATE::FOCUS);
+	exitButton.SetColor(wi::Color(190, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
+	exitButton.SetColor(wi::Color(255, 50, 50, 255), wi::gui::WIDGETSTATE::FOCUS);
 	exitButton.OnClick([this](wi::gui::EventArgs args) {
 		terragen.Generation_Cancel();
 		wi::platform::Exit();
@@ -1001,7 +994,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&exitButton);
 
 
-	profilerEnabledCheckBox.Create("Profiler Enabled: ");
+	profilerEnabledCheckBox.Create("Profiler: ");
 	profilerEnabledCheckBox.SetTooltip("Toggle Profiler On/Off");
 	profilerEnabledCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		wi::profiler::SetEnabled(args.bValue);
@@ -1009,7 +1002,7 @@ void EditorComponent::Load()
 	profilerEnabledCheckBox.SetCheck(wi::profiler::IsEnabled());
 	GetGUI().AddWidget(&profilerEnabledCheckBox);
 
-	physicsEnabledCheckBox.Create("Physics Simulation: ");
+	physicsEnabledCheckBox.Create("Physics: ");
 	physicsEnabledCheckBox.SetTooltip("Toggle Physics Simulation On/Off");
 	physicsEnabledCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		wi::physics::SetSimulationEnabled(args.bValue);
@@ -1075,8 +1068,8 @@ void EditorComponent::Load()
 
 
 	saveModeComboBox.Create("Save Mode: ");
-	saveModeComboBox.SetColor(wi::Color(0, 198, 101, 180), wi::gui::WIDGETSTATE::IDLE);
-	saveModeComboBox.SetColor(wi::Color(0, 255, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
+	saveModeComboBox.SetColor(wi::Color(50, 200, 100, 180), wi::gui::WIDGETSTATE::IDLE);
+	saveModeComboBox.SetColor(wi::Color(50, 255, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
 	saveModeComboBox.AddItem("Embed resources", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
 	saveModeComboBox.AddItem("No embedding", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
 	saveModeComboBox.AddItem("Dump to header", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
@@ -1139,7 +1132,7 @@ void EditorComponent::Load()
 
 	wi::jobsystem::Wait(ctx);
 
-    RenderPath2D::Load();
+	RenderPath2D::Load();
 }
 void EditorComponent::Start()
 {
@@ -1163,8 +1156,6 @@ void EditorComponent::Update(float dt)
 
 	Scene& scene = wi::scene::GetScene();
 	CameraComponent& camera = wi::scene::GetCamera();
-
-	translator.Update(camera, *this);
 
 	if (scene.forces.Contains(grass_interaction_entity))
 	{
@@ -1202,9 +1193,9 @@ void EditorComponent::Update(float dt)
 	bool deleting = wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE);
 
 	// Camera control:
-	XMFLOAT4 currentMouse = wi::input::GetPointer();
 	if (!wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
+		XMFLOAT4 currentMouse = wi::input::GetPointer();
 		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
 		static bool camControlStart = true;
 		if (camControlStart)
@@ -1537,7 +1528,7 @@ void EditorComponent::Update(float dt)
 						// if not water or softbody, put a decal on it:
 						static int decalselector = 0;
 						decalselector = (decalselector + 1) % 2;
-						Entity entity = scene.Entity_CreateDecal("editorDecal", (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
+						Entity entity = scene.Entity_CreateDecal("editorDecal", (decalselector == 0 ? "images/leaf.dds" : "images/logo_small.png"));
 						TransformComponent& transform = *scene.transforms.GetComponent(entity);
 						transform.MatrixTransform(hovered.orientation);
 						transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
@@ -1642,6 +1633,12 @@ void EditorComponent::Update(float dt)
 		// Control operations...
 		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
 		{
+			// Enable transform tool
+			if (wi::input::Press((wi::input::BUTTON)'T'))
+			{
+				translator.enabled = !translator.enabled;
+				translatorCheckBox.SetCheck(translator.enabled);
+			}
 			// Select All
 			if (wi::input::Press((wi::input::BUTTON)'A'))
 			{
@@ -1967,6 +1964,8 @@ void EditorComponent::Update(float dt)
 
 	RenderPath2D::Update(dt);
 
+	translator.Update(camera, *this);
+
 	renderPath->colorspace = colorspace;
 	renderPath->Update(dt);
 }
@@ -2243,7 +2242,6 @@ void EditorComponent::Render() const
 						wi::image::Draw(&dirLightTex.GetTexture(), fx, cmd);
 						break;
 					default:
-						wi::image::Draw(&areaLightTex.GetTexture(), fx, cmd);
 						break;
 					}
 				}
