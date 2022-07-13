@@ -122,7 +122,7 @@ void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
 	// Non recursive selection will be computed to not apply recursive operations two times
 	//	A recursive operation is for example translating a parent transform
 	//	An other recursive operation is serializing selected parent entities
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = *this->scene;
 	selectedEntitiesLookup.clear();
 	for (auto& x : selected)
 	{
@@ -504,7 +504,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		Translator_Internal::LoadShaders();
 	}
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = *this->scene;
 
 	GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -1055,7 +1055,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 void Translator::PreTranslate()
 {
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = *this->scene;
 
 	if (!dragging)
 	{
@@ -1101,7 +1101,7 @@ void Translator::PreTranslate()
 }
 void Translator::PostTranslate()
 {
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = *this->scene;
 
 	int i = 0;
 	for (auto& x : selectedEntitiesNonRecursive)

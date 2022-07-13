@@ -5,8 +5,9 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
-void HairParticleWindow::Create(EditorComponent* editor)
+void HairParticleWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Hair Particle System Window");
 	SetSize(XMFLOAT2(600, 260));
 
@@ -20,7 +21,7 @@ void HairParticleWindow::Create(EditorComponent* editor)
 	addButton.SetPos(XMFLOAT2(x, y));
 	addButton.SetSize(XMFLOAT2(200, hei));
 	addButton.OnClick([=](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		Entity entity = scene.Entity_CreateHair("editorHair");
 
 		wi::Archive& archive = editor->AdvanceHistory();
@@ -53,7 +54,7 @@ void HairParticleWindow::Create(EditorComponent* editor)
 			}
 			else
 			{
-				Scene& scene = wi::scene::GetScene();
+				Scene& scene = editor->GetCurrentScene();
 				hair->meshID = scene.meshes.GetEntity(args.iValue - 1);
 			}
 		}
@@ -267,7 +268,7 @@ wi::HairParticleSystem* HairParticleWindow::GetHair()
 		return nullptr;
 	}
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 	wi::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
 
 	return hair;
@@ -281,7 +282,7 @@ void HairParticleWindow::UpdateData()
 		return;
 	}
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 
 	meshComboBox.ClearItems();
 	meshComboBox.AddItem("NO MESH");

@@ -10,6 +10,7 @@ public:
 
 	void ResetCam();
 
+	EditorComponent* editor = nullptr;
 	wi::ecs::Entity proxy = wi::ecs::INVALID_ENTITY;
 	void SetEntity(wi::ecs::Entity entity);
 	void Update();

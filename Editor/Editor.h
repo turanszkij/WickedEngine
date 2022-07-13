@@ -102,6 +102,7 @@ public:
 	wi::gui::CheckBox physicsEnabledCheckBox;
 	wi::gui::CheckBox cinemaModeCheckBox;
 	wi::gui::ComboBox renderPathComboBox;
+	wi::gui::ComboBox sceneComboBox;
 	wi::gui::Label aboutLabel;
 
 	wi::gui::TreeList entityTree;
@@ -164,8 +165,6 @@ public:
 
 	wi::Archive clipboard;
 
-	wi::vector<wi::Archive> history;
-	int historyPos = -1;
 	enum HistoryOperationType
 	{
 		HISTORYOP_TRANSLATOR,
@@ -177,16 +176,51 @@ public:
 	};
 
 	void RecordSelection(wi::Archive& archive) const;
-	void RecordAddedEntity(wi::Archive& archive, wi::ecs::Entity entity) const;
-	void RecordAddedEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities) const;
+	void RecordAddedEntity(wi::Archive& archive, wi::ecs::Entity entity);
+	void RecordAddedEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities);
 
 	void ResetHistory();
 	wi::Archive& AdvanceHistory();
 	void ConsumeHistoryOperation(bool undo);
 
-	std::string savePath;
 	void Save(const std::string& filename);
 	void SaveAs();
+
+	struct EditorScene
+	{
+		std::string path;
+		wi::scene::Scene scene;
+		wi::vector<wi::Archive> history;
+		int historyPos = -1;
+	};
+	wi::vector<std::unique_ptr<EditorScene>> scenes;
+	int current_scene = 0;
+	EditorScene& GetCurrentEditorScene() { return *scenes[current_scene].get(); }
+	wi::scene::Scene& GetCurrentScene() { return scenes[current_scene].get()->scene; }
+	const wi::scene::Scene& GetCurrentScene() const { return scenes[current_scene].get()->scene; }
+	void SetCurrentScene(int index) { current_scene = index; this->renderPath->scene = &scenes[current_scene].get()->scene; }
+	void RefreshSceneList()
+	{
+		for (int i = 0; i < int(scenes.size()); ++i)
+		{
+			if (i >= sceneComboBox.GetItemCount())
+				return;
+			if (scenes[i]->path.empty())
+			{
+				sceneComboBox.SetItemText(i, "Untitled scene");
+			}
+			else
+			{
+				sceneComboBox.SetItemText(i, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(scenes[i]->path)));
+			}
+		}
+	}
+	void NewScene()
+	{
+		scenes.push_back(std::make_unique<EditorScene>());
+		SetCurrentScene(int(scenes.size()) - 1);
+		RefreshSceneList();
+	}
 };
 
 class Editor : public wi::Application

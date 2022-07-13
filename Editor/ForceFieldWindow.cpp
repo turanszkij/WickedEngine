@@ -6,8 +6,9 @@ using namespace wi::ecs;
 using namespace wi::scene;
 
 
-void ForceFieldWindow::Create(EditorComponent* editor)
+void ForceFieldWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Force Field Window");
 	SetSize(XMFLOAT2(420, 120));
 
@@ -20,8 +21,8 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 	addButton.SetSize(XMFLOAT2(150, hei));
 	addButton.SetPos(XMFLOAT2(x, y));
 	addButton.OnClick([=](wi::gui::EventArgs args) {
-		Entity entity = wi::scene::GetScene().Entity_CreateForce("editorForce");
-		ForceFieldComponent* force = wi::scene::GetScene().forces.GetComponent(entity);
+		Entity entity = editor->GetCurrentScene().Entity_CreateForce("editorForce");
+		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
 			switch (typeComboBox.GetSelected())
@@ -63,7 +64,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 	typeComboBox.SetPos(XMFLOAT2(x, y += step));
 	typeComboBox.SetSize(XMFLOAT2(200, hei));
 	typeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		ForceFieldComponent* force = wi::scene::GetScene().forces.GetComponent(entity);
+		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
 		if (force != nullptr && args.iValue >= 0)
 		{
 			switch (args.iValue)
@@ -91,7 +92,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 	gravitySlider.SetSize(XMFLOAT2(200, hei));
 	gravitySlider.SetPos(XMFLOAT2(x, y += step));
 	gravitySlider.OnSlide([&](wi::gui::EventArgs args) {
-		ForceFieldComponent* force = wi::scene::GetScene().forces.GetComponent(entity);
+		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
 			force->gravity = args.fValue;
@@ -106,7 +107,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 	rangeSlider.SetSize(XMFLOAT2(200, hei));
 	rangeSlider.SetPos(XMFLOAT2(x, y += step));
 	rangeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		ForceFieldComponent* force = wi::scene::GetScene().forces.GetComponent(entity);
+		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
 			force->range = args.fValue;
@@ -128,7 +129,7 @@ void ForceFieldWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	const ForceFieldComponent* force = wi::scene::GetScene().forces.GetComponent(entity);
+	const ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
 
 	if (force != nullptr)
 	{

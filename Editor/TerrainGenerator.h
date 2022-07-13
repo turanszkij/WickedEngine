@@ -52,7 +52,7 @@ struct ChunkData
 struct TerrainGenerator : public wi::gui::Window
 {
 	wi::ecs::Entity terrainEntity = wi::ecs::INVALID_ENTITY;
-	wi::scene::Scene* scene = &wi::scene::GetScene(); // by default it uses the global scene, but this can be changed
+	wi::scene::Scene* scene = nullptr;
 	wi::scene::MaterialComponent material_Base;
 	wi::scene::MaterialComponent material_Slope;
 	wi::scene::MaterialComponent material_LowAltitude;

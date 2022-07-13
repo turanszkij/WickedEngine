@@ -5,8 +5,9 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
-void AnimationWindow::Create(EditorComponent* editor)
+void AnimationWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Animation Window");
 	SetSize(XMFLOAT2(520, 140));
 
@@ -21,7 +22,7 @@ void AnimationWindow::Create(EditorComponent* editor)
 	animationsComboBox.SetPos(XMFLOAT2(x, y));
 	animationsComboBox.SetEnabled(false);
 	animationsComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		entity = wi::scene::GetScene().animations.GetEntity(args.iValue);
+		entity = editor->GetCurrentScene().animations.GetEntity(args.iValue);
 	});
 	animationsComboBox.SetTooltip("Choose an animation clip...");
 	AddWidget(&animationsComboBox);
@@ -31,7 +32,7 @@ void AnimationWindow::Create(EditorComponent* editor)
 	loopedCheckBox.SetSize(XMFLOAT2(hei, hei));
 	loopedCheckBox.SetPos(XMFLOAT2(150, y += step));
 	loopedCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		AnimationComponent* animation = wi::scene::GetScene().animations.GetComponent(entity);
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->SetLooped(args.bValue);
@@ -44,7 +45,7 @@ void AnimationWindow::Create(EditorComponent* editor)
 	playButton.SetSize(XMFLOAT2(100, hei));
 	playButton.SetPos(XMFLOAT2(200, y));
 	playButton.OnClick([&](wi::gui::EventArgs args) {
-		AnimationComponent* animation = wi::scene::GetScene().animations.GetComponent(entity);
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			if (animation->IsPlaying())
@@ -64,7 +65,7 @@ void AnimationWindow::Create(EditorComponent* editor)
 	stopButton.SetSize(XMFLOAT2(100, hei));
 	stopButton.SetPos(XMFLOAT2(310, y));
 	stopButton.OnClick([&](wi::gui::EventArgs args) {
-		AnimationComponent* animation = wi::scene::GetScene().animations.GetComponent(entity);
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->Stop();
@@ -76,7 +77,7 @@ void AnimationWindow::Create(EditorComponent* editor)
 	timerSlider.SetSize(XMFLOAT2(250, hei));
 	timerSlider.SetPos(XMFLOAT2(x, y += step));
 	timerSlider.OnSlide([&](wi::gui::EventArgs args) {
-		AnimationComponent* animation = wi::scene::GetScene().animations.GetComponent(entity);
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->timer = args.fValue;
@@ -90,7 +91,7 @@ void AnimationWindow::Create(EditorComponent* editor)
 	amountSlider.SetSize(XMFLOAT2(250, hei));
 	amountSlider.SetPos(XMFLOAT2(x, y += step));
 	amountSlider.OnSlide([&](wi::gui::EventArgs args) {
-		AnimationComponent* animation = wi::scene::GetScene().animations.GetComponent(entity);
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->amount = args.fValue;
@@ -104,7 +105,7 @@ void AnimationWindow::Create(EditorComponent* editor)
 	speedSlider.SetSize(XMFLOAT2(250, hei));
 	speedSlider.SetPos(XMFLOAT2(x, y += step));
 	speedSlider.OnSlide([&](wi::gui::EventArgs args) {
-		AnimationComponent* animation = wi::scene::GetScene().animations.GetComponent(entity);
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->speed = args.fValue;
@@ -125,7 +126,7 @@ void AnimationWindow::Update()
 {
 	animationsComboBox.ClearItems();
 	
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 
 	if (!scene.animations.Contains(entity))
 	{

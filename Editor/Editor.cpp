@@ -91,6 +91,11 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 		break;
 	}
 
+	if (scenes.empty())
+	{
+		NewScene();
+	}
+
 	renderPath->resolutionScale = resolutionScale;
 	renderPath->setBloomThreshold(3.0f);
 
@@ -332,22 +337,25 @@ void EditorComponent::ResizeLayout()
 	exitButton.SetPos(XMFLOAT2(screenW - 50, 0));
 	exitButton.SetSize(XMFLOAT2(50, 40));
 
-	profilerEnabledCheckBox.SetSize(XMFLOAT2(20, 20));
-	profilerEnabledCheckBox.SetPos(XMFLOAT2(screenW - 460, 45));
+	profilerEnabledCheckBox.SetSize(XMFLOAT2(18, 18));
+	profilerEnabledCheckBox.SetPos(XMFLOAT2(screenW - 485, 45));
 
-	physicsEnabledCheckBox.SetSize(XMFLOAT2(20, 20));
-	physicsEnabledCheckBox.SetPos(XMFLOAT2(screenW - 370, 45));
+	physicsEnabledCheckBox.SetSize(XMFLOAT2(18, 18));
+	physicsEnabledCheckBox.SetPos(XMFLOAT2(screenW - 390, 45));
 
-	cinemaModeCheckBox.SetSize(XMFLOAT2(20, 20));
-	cinemaModeCheckBox.SetPos(XMFLOAT2(screenW - 240, 45));
+	cinemaModeCheckBox.SetSize(XMFLOAT2(18, 18));
+	cinemaModeCheckBox.SetPos(XMFLOAT2(screenW - 260, 45));
 
-	renderPathComboBox.SetSize(XMFLOAT2(100, 20));
-	renderPathComboBox.SetPos(XMFLOAT2(screenW - 120, 45));
+	renderPathComboBox.SetSize(XMFLOAT2(120, 18));
+	renderPathComboBox.SetPos(XMFLOAT2(screenW - 140, 45));
 
-	saveModeComboBox.SetSize(XMFLOAT2(120, 20));
-	saveModeComboBox.SetPos(XMFLOAT2(screenW - 140, 70));
+	sceneComboBox.SetSize(XMFLOAT2(120, 18));
+	sceneComboBox.SetPos(XMFLOAT2(screenW - 140, 70));
 
-	pathTraceTargetSlider.SetSize(XMFLOAT2(200, 20));
+	saveModeComboBox.SetSize(XMFLOAT2(120, 18));
+	saveModeComboBox.SetPos(XMFLOAT2(screenW - 140, 95));
+
+	pathTraceTargetSlider.SetSize(XMFLOAT2(200, 18));
 	pathTraceTargetSlider.SetPos(XMFLOAT2(screenW - 240, 100));
 
 	pathTraceStatisticsLabel.SetSize(XMFLOAT2(240, 60));
@@ -370,7 +378,6 @@ void EditorComponent::Load()
 	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { armatureTex = wi::resourcemanager::Load("images/armature.dds"); });
 	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { soundTex = wi::resourcemanager::Load("images/sound.dds"); });
 	// wait for ctx is at the end of this function!
-
 
 
 	rendererWnd_Toggle.Create("Renderer");
@@ -454,7 +461,7 @@ void EditorComponent::Load()
 					//prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
 				}
 				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
-				wi::scene::GetScene().Merge(props_scene);
+				GetCurrentScene().Merge(props_scene);
 			}
 			// Rock prop:
 			{
@@ -484,7 +491,7 @@ void EditorComponent::Load()
 					prop.object.draw_distance = 400;
 				}
 				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
-				wi::scene::GetScene().Merge(props_scene);
+				GetCurrentScene().Merge(props_scene);
 			}
 			// Bush prop:
 			{
@@ -514,14 +521,14 @@ void EditorComponent::Load()
 					prop.object.draw_distance = 200;
 				}
 				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
-				wi::scene::GetScene().Merge(props_scene);
+				GetCurrentScene().Merge(props_scene);
 			}
 			terragen.init();
 			RefreshEntityTree();
 		}
 
 		terragen.SetVisible(!terragen.IsVisible());
-		if (terragen.IsVisible() && !wi::scene::GetScene().transforms.Contains(terragen.terrainEntity))
+		if (terragen.IsVisible() && !GetCurrentScene().transforms.Contains(terragen.terrainEntity))
 		{
 			terragen.Generation_Restart();
 			RefreshEntityTree();
@@ -782,50 +789,50 @@ void EditorComponent::Load()
 					return;
 				}
 
-				size_t camera_count_prev = wi::scene::GetScene().cameras.GetCount();
+				size_t camera_count_prev = GetCurrentScene().cameras.GetCount();
 
 				main->loader.addLoadingFunction([=](wi::jobsystem::JobArgs args) {
 
 					if (!extension.compare("WISCENE")) // engine-serialized
 					{
-						wi::scene::LoadModel(fileName);
-						savePath = fileName;
+						wi::scene::LoadModel(GetCurrentScene(), fileName);
+						GetCurrentEditorScene().path = fileName;
 					}
 					else if (!extension.compare("OBJ")) // wavefront-obj
 					{
 						Scene scene;
 						ImportModel_OBJ(fileName, scene);
-						wi::scene::GetScene().Merge(scene);
+						GetCurrentScene().Merge(scene);
 					}
 					else if (!extension.compare("GLTF")) // text-based gltf
 					{
 						Scene scene;
 						ImportModel_GLTF(fileName, scene);
-						wi::scene::GetScene().Merge(scene);
+						GetCurrentScene().Merge(scene);
 					}
 					else if (!extension.compare("GLB")) // binary gltf
 					{
 						Scene scene;
 						ImportModel_GLTF(fileName, scene);
-						wi::scene::GetScene().Merge(scene);
+						GetCurrentScene().Merge(scene);
 					}
 					});
 				main->loader.onFinished([=] {
 
 					// Detect when the new scene contains a new camera, and snap the camera onto it:
-					size_t camera_count = wi::scene::GetScene().cameras.GetCount();
+					size_t camera_count = GetCurrentScene().cameras.GetCount();
 					if (camera_count > 0 && camera_count > camera_count_prev)
 					{
-						Entity entity = wi::scene::GetScene().cameras.GetEntity(camera_count_prev);
+						Entity entity = GetCurrentScene().cameras.GetEntity(camera_count_prev);
 						if (entity != INVALID_ENTITY)
 						{
-							TransformComponent* camera_transform = wi::scene::GetScene().transforms.GetComponent(entity);
+							TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
 							if (camera_transform != nullptr)
 							{
 								cameraWnd.camera_transform = *camera_transform;
 							}
 
-							CameraComponent* cam = wi::scene::GetScene().cameras.GetComponent(entity);
+							CameraComponent* cam = GetCurrentScene().cameras.GetComponent(entity);
 							if (cam != nullptr)
 							{
 								wi::scene::GetCamera() = *cam;
@@ -839,6 +846,7 @@ void EditorComponent::Load()
 					main->ActivatePath(this, 0.2f, wi::Color::Black());
 					weatherWnd.Update();
 					RefreshEntityTree();
+					RefreshSceneList();
 					});
 				main->ActivatePath(&main->loader, 0.2f, wi::Color::Black());
 				ResetHistory();
@@ -860,7 +868,7 @@ void EditorComponent::Load()
 		new (&terragen) TerrainGenerator;
 
 		translator.selected.clear();
-		wi::scene::Scene& scene = wi::scene::GetScene();
+		wi::scene::Scene& scene = GetCurrentScene();
 		wi::renderer::ClearWorld(scene);
 		objectWnd.SetEntity(INVALID_ENTITY);
 		meshWnd.SetEntity(INVALID_ENTITY, -1);
@@ -882,7 +890,7 @@ void EditorComponent::Load()
 
 		RefreshEntityTree();
 		ResetHistory();
-		savePath.clear();
+		GetCurrentEditorScene().path.clear();
 	});
 	GetGUI().AddWidget(&clearButton);
 
@@ -1034,6 +1042,25 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&renderPathComboBox);
 
 
+	sceneComboBox.Create("Scene: ");
+	sceneComboBox.AddItem("Untitled Scene");
+	sceneComboBox.AddItem("[New Scene]");
+	sceneComboBox.OnSelect([&](wi::gui::EventArgs args) {
+		if (args.iValue >= int(scenes.size()))
+		{
+			NewScene();
+			sceneComboBox.AddItem("[New Scene]");
+		}
+		SetCurrentScene(args.iValue);
+		});
+	sceneComboBox.SetSelected(RENDERPATH_DEFAULT);
+	sceneComboBox.SetEnabled(true);
+	sceneComboBox.SetTooltip("Choose a scene");
+	sceneComboBox.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
+	sceneComboBox.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
+	GetGUI().AddWidget(&sceneComboBox);
+
+
 	saveModeComboBox.Create("Save Mode: ");
 	saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -1121,8 +1148,11 @@ void EditorComponent::Update(float dt)
 {
 	wi::profiler::range_id profrange = wi::profiler::BeginRangeCPU("Editor Update");
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = GetCurrentScene();
 	CameraComponent& camera = wi::scene::GetCamera();
+
+	terragen.scene = &scene;
+	translator.scene = &scene;
 
 	if (scene.forces.Contains(grass_interaction_entity))
 	{
@@ -1471,7 +1501,7 @@ void EditorComponent::Update(float dt)
 					inspector_mode
 					)
 				{
-					hovered = wi::scene::Pick(pickRay, pickMask);
+					hovered = wi::scene::Pick(pickRay, pickMask, ~0u, scene);
 				}
 			}
 		}
@@ -1609,13 +1639,13 @@ void EditorComponent::Update(float dt)
 			// Save
 			if (wi::input::Press((wi::input::BUTTON)'S'))
 			{
-				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || savePath.empty())
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || GetCurrentEditorScene().path.empty())
 				{
 					SaveAs();
 				}
 				else
 				{
-					Save(savePath);
+					Save(GetCurrentEditorScene().path);
 				}
 			}
 			// Select All
@@ -1956,7 +1986,7 @@ void EditorComponent::PostUpdate()
 }
 void EditorComponent::Render() const
 {
-	Scene& scene = wi::scene::GetScene();
+	const Scene& scene = GetCurrentScene();
 
 	// Hovered item boxes:
 	if (!cinemaModeCheckBox.GetCheck())
@@ -2167,7 +2197,7 @@ void EditorComponent::Render() const
 
 			const CameraComponent& camera = wi::scene::GetCamera();
 
-			Scene& scene = wi::scene::GetScene();
+			const Scene& scene = GetCurrentScene();
 
 			// remove camera jittering
 			CameraComponent cam = *renderPath->camera;
@@ -2555,7 +2585,7 @@ void EditorComponent::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		return;
 	}
-	const Scene& scene = wi::scene::GetScene();
+	const Scene& scene = GetCurrentScene();
 
 	wi::gui::TreeList::Item item;
 	item.level = level;
@@ -2589,7 +2619,7 @@ void EditorComponent::PushToEntityTree(wi::ecs::Entity entity, int level)
 }
 void EditorComponent::RefreshEntityTree()
 {
-	const Scene& scene = wi::scene::GetScene();
+	const Scene& scene = GetCurrentScene();
 
 	for (int i = 0; i < entityTree.GetItemCount(); ++i)
 	{
@@ -2712,14 +2742,14 @@ void EditorComponent::RecordSelection(wi::Archive& archive) const
 		archive << x.distance;
 	}
 }
-void EditorComponent::RecordAddedEntity(wi::Archive& archive, wi::ecs::Entity entity) const
+void EditorComponent::RecordAddedEntity(wi::Archive& archive, wi::ecs::Entity entity)
 {
 	const wi::vector<Entity> entities = { entity };
 	RecordAddedEntity(archive, entities);
 }
-void EditorComponent::RecordAddedEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities) const
+void EditorComponent::RecordAddedEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities)
 {
-	Scene& scene = GetScene();
+	Scene& scene = GetCurrentScene();
 	EntitySerializer seri;
 
 	archive << entities;
@@ -2731,35 +2761,39 @@ void EditorComponent::RecordAddedEntity(wi::Archive& archive, const wi::vector<w
 
 void EditorComponent::ResetHistory()
 {
-	historyPos = -1;
-	history.clear();
+	EditorScene& editorscene = GetCurrentEditorScene();
+	editorscene.historyPos = -1;
+	editorscene.history.clear();
 }
 wi::Archive& EditorComponent::AdvanceHistory()
 {
-	historyPos++;
+	EditorScene& editorscene = GetCurrentEditorScene();
+	editorscene.historyPos++;
 
-	while (static_cast<int>(history.size()) > historyPos)
+	while (static_cast<int>(editorscene.history.size()) > editorscene.historyPos)
 	{
-		history.pop_back();
+		editorscene.history.pop_back();
 	}
 
-	history.emplace_back();
-	history.back().SetReadModeAndResetPos(false);
+	editorscene.history.emplace_back();
+	editorscene.history.back().SetReadModeAndResetPos(false);
 
-	return history.back();
+	return editorscene.history.back();
 }
 void EditorComponent::ConsumeHistoryOperation(bool undo)
 {
-	if ((undo && historyPos >= 0) || (!undo && historyPos < (int)history.size() - 1))
+	EditorScene& editorscene = GetCurrentEditorScene();
+
+	if ((undo && editorscene.historyPos >= 0) || (!undo && editorscene.historyPos < (int)editorscene.history.size() - 1))
 	{
 		if (!undo)
 		{
-			historyPos++;
+			editorscene.historyPos++;
 		}
 
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = GetCurrentScene();
 
-		wi::Archive& archive = history[historyPos];
+		wi::Archive& archive = editorscene.history[editorscene.historyPos];
 		archive.SetReadModeAndResetPos(true);
 
 		int temp;
@@ -2954,7 +2988,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 		if (undo)
 		{
-			historyPos--;
+			editorscene.historyPos--;
 		}
 
 		scene.Update(0);
@@ -2970,7 +3004,7 @@ void EditorComponent::Save(const std::string& filename)
 	wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 	if (archive.IsOpen())
 	{
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = GetCurrentScene();
 
 		wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
 		wi::resourcemanager::SetMode(embed_mode);
@@ -2989,7 +3023,9 @@ void EditorComponent::Save(const std::string& filename)
 		return;
 	}
 
-	wi::backlog::post("Scene saved: " + savePath);
+	RefreshSceneList();
+
+	wi::backlog::post("Scene " + std::to_string(current_scene) + " saved: " + GetCurrentEditorScene().path);
 }
 void EditorComponent::SaveAs()
 {

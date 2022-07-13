@@ -9,7 +9,7 @@ void CameraWindow::ResetCam()
 {
 	move = {};
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 
 	CameraComponent& camera = wi::scene::GetCamera();
 	float width = camera.width;
@@ -28,8 +28,9 @@ void CameraWindow::ResetCam()
 	camera_target.UpdateTransform();
 }
 
-void CameraWindow::Create(EditorComponent* editor)
+void CameraWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Camera Window");
 	camera_transform.MatrixTransform(wi::scene::GetCamera().GetInvView());
 	camera_transform.UpdateTransform();
@@ -47,7 +48,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	farPlaneSlider.SetPos(XMFLOAT2(x, y));
 	farPlaneSlider.SetValue(wi::scene::GetCamera().zFarP);
 	farPlaneSlider.OnSlide([&](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.zFarP = args.fValue;
 		camera.UpdateCamera();
@@ -61,7 +62,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	nearPlaneSlider.SetPos(XMFLOAT2(x, y += step));
 	nearPlaneSlider.SetValue(wi::scene::GetCamera().zNearP);
 	nearPlaneSlider.OnSlide([&](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.zNearP = args.fValue;
 		camera.UpdateCamera();
@@ -74,7 +75,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	fovSlider.SetSize(XMFLOAT2(100, hei));
 	fovSlider.SetPos(XMFLOAT2(x, y += step));
 	fovSlider.OnSlide([&](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.fov = args.fValue / 180.f * XM_PI;
 		camera.UpdateCamera();
@@ -87,7 +88,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	focalLengthSlider.SetSize(XMFLOAT2(100, hei));
 	focalLengthSlider.SetPos(XMFLOAT2(x, y += step));
 	focalLengthSlider.OnSlide([&](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.focal_length = args.fValue;
 		camera.UpdateCamera();
@@ -100,7 +101,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	apertureSizeSlider.SetSize(XMFLOAT2(100, hei));
 	apertureSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	apertureSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.aperture_size = args.fValue;
 		camera.UpdateCamera();
@@ -113,7 +114,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	apertureShapeXSlider.SetSize(XMFLOAT2(100, hei));
 	apertureShapeXSlider.SetPos(XMFLOAT2(x, y += step));
 	apertureShapeXSlider.OnSlide([&](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.aperture_shape.x = args.fValue;
 		camera.UpdateCamera();
@@ -126,7 +127,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	apertureShapeYSlider.SetSize(XMFLOAT2(100, hei));
 	apertureShapeYSlider.SetPos(XMFLOAT2(x, y += step));
 	apertureShapeYSlider.OnSlide([&](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.aperture_shape.y = args.fValue;
 		camera.UpdateCamera();
@@ -173,7 +174,7 @@ void CameraWindow::Create(EditorComponent* editor)
 
 		const CameraComponent& camera = wi::scene::GetCamera();
 
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 
 		static int camcounter = 0;
 		Entity entity = scene.Entity_CreateCamera("cam" + std::to_string(camcounter), camera.width, camera.height, camera.zNearP, camera.zFarP, camera.fov);
@@ -224,7 +225,7 @@ void CameraWindow::SetEntity(Entity entity)
 {
 	proxy = entity;
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 
 	if (scene.cameras.GetComponent(entity) != nullptr)
 	{

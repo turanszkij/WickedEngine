@@ -6,8 +6,9 @@ using namespace wi::ecs;
 using namespace wi::scene;
 
 
-void NameWindow::Create(EditorComponent* editor)
+void NameWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Name Window");
 	SetSize(XMFLOAT2(360, 80));
 
@@ -22,10 +23,10 @@ void NameWindow::Create(EditorComponent* editor)
 	nameInput.SetPos(XMFLOAT2(x, y));
 	nameInput.SetSize(XMFLOAT2(siz, hei));
 	nameInput.OnInputAccepted([=](wi::gui::EventArgs args) {
-		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
+		NameComponent* name = editor->GetCurrentScene().names.GetComponent(entity);
 		if (name == nullptr)
 		{
-			name = &wi::scene::GetScene().names.Create(entity);
+			name = &editor->GetCurrentScene().names.Create(entity);
 		}
 		name->name = args.sValue;
 
@@ -47,7 +48,7 @@ void NameWindow::SetEntity(Entity entity)
 	{
 		SetEnabled(true);
 
-		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
+		NameComponent* name = editor->GetCurrentScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{
 			nameInput.SetValue(name->name);
