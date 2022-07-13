@@ -16,7 +16,7 @@ private:
 	float angle_start = 0;
 public:
 
-	void Update(const wi::Canvas& canvas);
+	void Update(const wi::scene::CameraComponent& camera, const wi::Canvas& canvas);
 	void Draw(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 
 	// Attach selection to translator temporarily

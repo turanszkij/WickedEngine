@@ -1161,10 +1161,10 @@ void EditorComponent::Update(float dt)
 {
 	wi::profiler::range_id profrange = wi::profiler::BeginRangeCPU("Editor Update");
 
-	translator.Update(*this);
-
 	Scene& scene = wi::scene::GetScene();
 	CameraComponent& camera = wi::scene::GetCamera();
+
+	translator.Update(camera, *this);
 
 	if (scene.forces.Contains(grass_interaction_entity))
 	{
