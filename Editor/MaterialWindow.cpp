@@ -441,7 +441,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 		{
 			*name = args.sValue;
 
-			editor->RefreshSceneGraphView();
+			editor->RefreshEntityTree();
 		}
 		});
 	AddWidget(&materialNameField);
@@ -459,7 +459,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 
 		editor->ClearSelected();
 		editor->AddSelected(entity);
-		editor->RefreshSceneGraphView();
+		editor->RefreshEntityTree();
 
 		editor->RecordSelection(archive);
 		editor->RecordAddedEntity(archive, entity);

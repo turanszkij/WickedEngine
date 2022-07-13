@@ -29,7 +29,7 @@ void NameWindow::Create(EditorComponent* editor)
 		}
 		name->name = args.sValue;
 
-		editor->RefreshSceneGraphView();
+		editor->RefreshEntityTree();
 	});
 	AddWidget(&nameInput);
 

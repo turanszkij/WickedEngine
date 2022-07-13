@@ -81,7 +81,7 @@ void SoundWindow::Create(EditorComponent* editor)
 				editor->RecordSelection(archive);
 				editor->RecordAddedEntity(archive, entity);
 
-				editor->RefreshSceneGraphView();
+				editor->RefreshEntityTree();
 				SetEntity(entity);
 			});
 		});
@@ -105,7 +105,7 @@ void SoundWindow::Create(EditorComponent* editor)
 		}
 		*name = args.sValue;
 
-		editor->RefreshSceneGraphView();
+		editor->RefreshEntityTree();
 	});
 	AddWidget(&nameField);
 	nameField.SetEnabled(false);

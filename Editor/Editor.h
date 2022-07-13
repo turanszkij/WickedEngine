@@ -104,11 +104,11 @@ public:
 	wi::gui::ComboBox renderPathComboBox;
 	wi::gui::Label aboutLabel;
 
-	wi::gui::TreeList sceneGraphView;
-	wi::unordered_set<wi::ecs::Entity> scenegraphview_added_items;
-	wi::unordered_set<wi::ecs::Entity> scenegraphview_opened_items;
-	void PushToSceneGraphView(wi::ecs::Entity entity, int level);
-	void RefreshSceneGraphView();
+	wi::gui::TreeList entityTree;
+	wi::unordered_set<wi::ecs::Entity> entitytree_added_items;
+	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
+	void PushToEntityTree(wi::ecs::Entity entity, int level);
+	void RefreshEntityTree();
 
 	wi::gui::Slider pathTraceTargetSlider;
 	wi::gui::Label pathTraceStatisticsLabel;

@@ -42,7 +42,7 @@ void DecalWindow::Create(EditorComponent* editor)
 		{
 			*name = args.sValue;
 
-			editor->RefreshSceneGraphView();
+			editor->RefreshEntityTree();
 		}
 	});
 	AddWidget(&decalNameField);

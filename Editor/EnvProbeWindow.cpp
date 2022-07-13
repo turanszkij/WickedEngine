@@ -66,7 +66,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 		editor->RecordSelection(archive);
 		editor->RecordAddedEntity(archive, entity);
 
-		editor->RefreshSceneGraphView();
+		editor->RefreshEntityTree();
 		SetEntity(entity);
 	});
 	AddWidget(&generateButton);

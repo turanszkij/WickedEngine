@@ -47,7 +47,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 			editor->RecordSelection(archive);
 			editor->RecordAddedEntity(archive, entity);
 
-			editor->RefreshSceneGraphView();
+			editor->RefreshEntityTree();
 			SetEntity(entity);
 		}
 		else

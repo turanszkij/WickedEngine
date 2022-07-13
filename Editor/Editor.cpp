@@ -353,8 +353,8 @@ void EditorComponent::ResizeLayout()
 	pathTraceStatisticsLabel.SetSize(XMFLOAT2(240, 60));
 	pathTraceStatisticsLabel.SetPos(XMFLOAT2(screenW - 240, 125));
 
-	sceneGraphView.SetSize(XMFLOAT2(260, 300));
-	sceneGraphView.SetPos(XMFLOAT2(0, screenH - sceneGraphView.scale_local.y));
+	entityTree.SetSize(XMFLOAT2(260, 300));
+	entityTree.SetPos(XMFLOAT2(0, screenH - entityTree.scale_local.y));
 }
 void EditorComponent::Load()
 {
@@ -517,14 +517,14 @@ void EditorComponent::Load()
 				wi::scene::GetScene().Merge(props_scene);
 			}
 			terragen.init();
-			RefreshSceneGraphView();
+			RefreshEntityTree();
 		}
 
 		terragen.SetVisible(!terragen.IsVisible());
 		if (terragen.IsVisible() && !wi::scene::GetScene().transforms.Contains(terragen.terrainEntity))
 		{
 			terragen.Generation_Restart();
-			RefreshSceneGraphView();
+			RefreshEntityTree();
 		}
 
 		});
@@ -533,8 +533,8 @@ void EditorComponent::Load()
 
 
 	///////////////////////
-	wi::Color option_color_idle = wi::Color(255, 100, 100, 100);
-	wi::Color option_color_focus = wi::Color(255, 200, 200, 200);
+	wi::Color option_color_idle = wi::Color(100, 150, 150, 100);
+	wi::Color option_color_focus = wi::Color(100, 200, 200, 200);
 
 
 	weatherWnd_Toggle.Create("Weather");
@@ -751,8 +751,8 @@ void EditorComponent::Load()
 
 	saveButton.Create("Save");
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)");
-	saveButton.SetColor(wi::Color(50, 200, 100, 180), wi::gui::WIDGETSTATE::IDLE);
-	saveButton.SetColor(wi::Color(50, 255, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
+	saveButton.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
+	saveButton.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
 	saveButton.OnClick([&](wi::gui::EventArgs args) {
 		SaveAs();
 	});
@@ -838,7 +838,7 @@ void EditorComponent::Load()
 
 					main->ActivatePath(this, 0.2f, wi::Color::Black());
 					weatherWnd.Update();
-					RefreshSceneGraphView();
+					RefreshEntityTree();
 					});
 				main->ActivatePath(&main->loader, 0.2f, wi::Color::Black());
 				ResetHistory();
@@ -880,7 +880,7 @@ void EditorComponent::Load()
 		layerWnd.SetEntity(INVALID_ENTITY);
 		nameWnd.SetEntity(INVALID_ENTITY);
 
-		RefreshSceneGraphView();
+		RefreshEntityTree();
 		ResetHistory();
 		savePath.clear();
 	});
@@ -901,11 +901,12 @@ void EditorComponent::Load()
 		ss += "Wicked Engine Editor v";
 		ss += wi::version::GetVersionString();
 		ss += "\nCreated by Turánszki János";
-		ss += "\nWith help from other developers on GiHub: https://github.com/turanszkij/WickedEngine";
+		ss += "\nWith help from others on GitHub: https://github.com/turanszkij/WickedEngine";
 		ss += "\n\nWebsite: https://wickedengine.net/";
 		ss += "\nDiscord chat: https://discord.gg/CFjRYmE";
 		ss += "\nYou can support the project on Patreon: https://www.patreon.com/wickedengine";
-		ss += "\n\nHow to use:\n";
+		ss += "\n\nControls\n";
+		ss += "------------\n";
 		ss += "Move camera: WASD, or Contoller left stick or D-pad\n";
 		ss += "Look: Middle mouse button / arrow keys / controller right stick\n";
 		ss += "Select: Right mouse button\n";
@@ -930,6 +931,8 @@ void EditorComponent::Load()
 		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
 		ss += "Script Console / backlog: HOME button\n";
 		ss += "\n";
+		ss += "\nTips\n";
+		ss += "-------\n";
 		ss += "You can find sample scenes in the Content/models directory. Try to load one.\n";
 		ss += "You can also import models from .OBJ, .GLTF, .GLB files.\n";
 #ifndef PLATFORM_UWP
@@ -988,8 +991,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&cinemaModeCheckBox);
 
 
-	sceneGraphView.Create("Scene graph view");
-	sceneGraphView.OnSelect([this](wi::gui::EventArgs args) {
+	entityTree.Create("Entities");
+	entityTree.OnSelect([this](wi::gui::EventArgs args) {
 
 		if (args.iValue < 0)
 			return;
@@ -1001,9 +1004,9 @@ void EditorComponent::Load()
 
 		translator.selected.clear();
 
-		for (int i = 0; i < sceneGraphView.GetItemCount(); ++i)
+		for (int i = 0; i < entityTree.GetItemCount(); ++i)
 		{
-			const wi::gui::TreeList::Item& item = sceneGraphView.GetItem(i);
+			const wi::gui::TreeList::Item& item = entityTree.GetItem(i);
 			if (item.selected)
 			{
 				wi::scene::PickResult pick;
@@ -1016,7 +1019,7 @@ void EditorComponent::Load()
 		RecordSelection(archive);
 
 		});
-	GetGUI().AddWidget(&sceneGraphView);
+	GetGUI().AddWidget(&entityTree);
 
 
 	renderPathComboBox.Create("Render Path: ");
@@ -1032,8 +1035,8 @@ void EditorComponent::Load()
 
 
 	saveModeComboBox.Create("Save Mode: ");
-	saveModeComboBox.SetColor(wi::Color(50, 200, 100, 180), wi::gui::WIDGETSTATE::IDLE);
-	saveModeComboBox.SetColor(wi::Color(50, 255, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
+	saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
+	saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
 	saveModeComboBox.AddItem("Embed resources", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
 	saveModeComboBox.AddItem("No embedding", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
 	saveModeComboBox.AddItem("Dump to header", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
@@ -1499,7 +1502,7 @@ void EditorComponent::Update(float dt)
 						transform.Scale(XMFLOAT3(2, 2, 2));
 						scene.Component_Attach(entity, hovered.entity);
 
-						RefreshSceneGraphView();
+						RefreshEntityTree();
 					}
 					else
 					{
@@ -1591,7 +1594,7 @@ void EditorComponent::Update(float dt)
 			// record NEW selection state...
 			RecordSelection(archive);
 
-			RefreshSceneGraphView();
+			RefreshEntityTree();
 		}
 
 		// Control operations...
@@ -1663,7 +1666,7 @@ void EditorComponent::Update(float dt)
 				RecordSelection(archive);
 				RecordAddedEntity(archive, addedEntities);
 
-				RefreshSceneGraphView();
+				RefreshEntityTree();
 			}
 			// Duplicate Instances
 			if (wi::input::Press((wi::input::BUTTON)'D'))
@@ -1691,7 +1694,7 @@ void EditorComponent::Update(float dt)
 				RecordSelection(archive);
 				RecordAddedEntity(archive, addedEntities);
 
-				RefreshSceneGraphView();
+				RefreshEntityTree();
 			}
 			// Put Instances
 			if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
@@ -1737,21 +1740,21 @@ void EditorComponent::Update(float dt)
 				RecordSelection(archive);
 				RecordAddedEntity(archive, addedEntities);
 
-				RefreshSceneGraphView();
+				RefreshEntityTree();
 			}
 			// Undo
 			if (wi::input::Press((wi::input::BUTTON)'Z'))
 			{
 				ConsumeHistoryOperation(true);
 
-				RefreshSceneGraphView();
+				RefreshEntityTree();
 			}
 			// Redo
 			if (wi::input::Press((wi::input::BUTTON)'Y'))
 			{
 				ConsumeHistoryOperation(false);
 
-				RefreshSceneGraphView();
+				RefreshEntityTree();
 			}
 		}
 
@@ -1777,7 +1780,7 @@ void EditorComponent::Update(float dt)
 
 		ClearSelected();
 
-		RefreshSceneGraphView();
+		RefreshEntityTree();
 	}
 
 	// Update window data bindings...
@@ -2546,9 +2549,9 @@ void EditorComponent::Compose(CommandList cmd) const
 	RenderPath2D::Compose(cmd);
 }
 
-void EditorComponent::PushToSceneGraphView(wi::ecs::Entity entity, int level)
+void EditorComponent::PushToEntityTree(wi::ecs::Entity entity, int level)
 {
-	if (scenegraphview_added_items.count(entity) != 0)
+	if (entitytree_added_items.count(entity) != 0)
 	{
 		return;
 	}
@@ -2558,7 +2561,7 @@ void EditorComponent::PushToSceneGraphView(wi::ecs::Entity entity, int level)
 	item.level = level;
 	item.userdata = entity;
 	item.selected = IsSelected(entity);
-	item.open = scenegraphview_opened_items.count(entity) != 0;
+	item.open = entitytree_opened_items.count(entity) != 0;
 	const NameComponent* name = scene.names.GetComponent(entity);
 	if (name == nullptr)
 	{
@@ -2572,50 +2575,50 @@ void EditorComponent::PushToSceneGraphView(wi::ecs::Entity entity, int level)
 	{
 		item.name = name->name;
 	}
-	sceneGraphView.AddItem(item);
+	entityTree.AddItem(item);
 
-	scenegraphview_added_items.insert(entity);
+	entitytree_added_items.insert(entity);
 
 	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 	{
 		if (scene.hierarchy[i].parentID == entity)
 		{
-			PushToSceneGraphView(scene.hierarchy.GetEntity(i), level + 1);
+			PushToEntityTree(scene.hierarchy.GetEntity(i), level + 1);
 		}
 	}
 }
-void EditorComponent::RefreshSceneGraphView()
+void EditorComponent::RefreshEntityTree()
 {
 	const Scene& scene = wi::scene::GetScene();
 
-	for (int i = 0; i < sceneGraphView.GetItemCount(); ++i)
+	for (int i = 0; i < entityTree.GetItemCount(); ++i)
 	{
-		const wi::gui::TreeList::Item& item = sceneGraphView.GetItem(i);
+		const wi::gui::TreeList::Item& item = entityTree.GetItem(i);
 		if (item.open)
 		{
-			scenegraphview_opened_items.insert((Entity)item.userdata);
+			entitytree_opened_items.insert((Entity)item.userdata);
 		}
 	}
 
-	sceneGraphView.ClearItems();
+	entityTree.ClearItems();
 
 	// Add hierarchy:
 	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 	{
-		PushToSceneGraphView(scene.hierarchy[i].parentID, 0);
+		PushToEntityTree(scene.hierarchy[i].parentID, 0);
 	}
 
 	// Any transform left that is not part of a hierarchy:
 	for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 	{
-		PushToSceneGraphView(scene.transforms.GetEntity(i), 0);
+		PushToEntityTree(scene.transforms.GetEntity(i), 0);
 	}
 
 	// Add materials:
 	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 	{
 		Entity entity = scene.materials.GetEntity(i);
-		if (scenegraphview_added_items.count(entity) != 0)
+		if (entitytree_added_items.count(entity) != 0)
 		{
 			continue;
 		}
@@ -2623,19 +2626,19 @@ void EditorComponent::RefreshSceneGraphView()
 		wi::gui::TreeList::Item item;
 		item.userdata = entity;
 		item.selected = IsSelected(entity);
-		item.open = scenegraphview_opened_items.count(entity) != 0;
+		item.open = entitytree_opened_items.count(entity) != 0;
 		const NameComponent* name = scene.names.GetComponent(entity);
 		item.name = name == nullptr ? std::to_string(entity) : name->name;
-		sceneGraphView.AddItem(item);
+		entityTree.AddItem(item);
 
-		scenegraphview_added_items.insert(entity);
+		entitytree_added_items.insert(entity);
 	}
 
 	// Add meshes:
 	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 	{
 		Entity entity = scene.meshes.GetEntity(i);
-		if (scenegraphview_added_items.count(entity) != 0)
+		if (entitytree_added_items.count(entity) != 0)
 		{
 			continue;
 		}
@@ -2643,16 +2646,16 @@ void EditorComponent::RefreshSceneGraphView()
 		wi::gui::TreeList::Item item;
 		item.userdata = entity;
 		item.selected = IsSelected(entity);
-		item.open = scenegraphview_opened_items.count(entity) != 0;
+		item.open = entitytree_opened_items.count(entity) != 0;
 		const NameComponent* name = scene.names.GetComponent(entity);
 		item.name = name == nullptr ? std::to_string(entity) : name->name;
-		sceneGraphView.AddItem(item);
+		entityTree.AddItem(item);
 
-		scenegraphview_added_items.insert(entity);
+		entitytree_added_items.insert(entity);
 	}
 
-	scenegraphview_added_items.clear();
-	scenegraphview_opened_items.clear();
+	entitytree_added_items.clear();
+	entitytree_opened_items.clear();
 }
 
 void EditorComponent::ClearSelected()
@@ -2957,7 +2960,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 		scene.Update(0);
 	}
 
-	RefreshSceneGraphView();
+	RefreshEntityTree();
 }
 
 void EditorComponent::Save(const std::string& filename)
