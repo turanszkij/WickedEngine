@@ -137,9 +137,6 @@
     <Image Include="$(MSBuildThisFileDirectory)images\armature.dds">
       <Filter>images</Filter>
     </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\blood1.png">
-      <Filter>images</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)images\camera.dds">
       <Filter>images</Filter>
     </Image>
