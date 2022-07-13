@@ -183,6 +183,10 @@ public:
 	void ResetHistory();
 	wi::Archive& AdvanceHistory();
 	void ConsumeHistoryOperation(bool undo);
+
+	std::string savePath;
+	void Save(const std::string& filename);
+	void SaveAs();
 };
 
 class Editor : public wi::Application

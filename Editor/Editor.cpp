@@ -750,52 +750,11 @@ void EditorComponent::Load()
 
 
 	saveButton.Create("Save");
-	saveButton.SetTooltip("Save the current scene");
+	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)");
 	saveButton.SetColor(wi::Color(50, 200, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	saveButton.SetColor(wi::Color(50, 255, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
 	saveButton.OnClick([&](wi::gui::EventArgs args) {
-
-		const bool dump_to_header = saveModeComboBox.GetSelected() == 2;
-
-		wi::helper::FileDialogParams params;
-		params.type = wi::helper::FileDialogParams::SAVE;
-		if (dump_to_header)
-		{
-			params.description = "C++ header (.h)";
-			params.extensions.push_back("h");
-		}
-		else
-		{
-			params.description = "Wicked Scene (.wiscene)";
-			params.extensions.push_back("wiscene");
-		}
-		wi::helper::FileDialog(params, [=](std::string fileName) {
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				std::string filename = wi::helper::ReplaceExtension(fileName, params.extensions.front());
-				wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
-				if (archive.IsOpen())
-				{
-					Scene& scene = wi::scene::GetScene();
-
-					wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
-					wi::resourcemanager::SetMode(embed_mode);
-
-					terragen.BakeVirtualTexturesToFiles();
-					scene.Serialize(archive);
-
-					if (dump_to_header)
-					{
-						archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
-					}
-
-					ResetHistory();
-				}
-				else
-				{
-					wi::helper::messageBox("Could not create " + fileName + "!");
-				}
-			});
-		});
+		SaveAs();
 	});
 	GetGUI().AddWidget(&saveButton);
 
@@ -830,6 +789,7 @@ void EditorComponent::Load()
 					if (!extension.compare("WISCENE")) // engine-serialized
 					{
 						wi::scene::LoadModel(fileName);
+						savePath = fileName;
 					}
 					else if (!extension.compare("OBJ")) // wavefront-obj
 					{
@@ -889,9 +849,9 @@ void EditorComponent::Load()
 
 
 	clearButton.Create("Clear");
-	clearButton.SetTooltip("Delete everything. This operation is not undoable!");
-	clearButton.SetColor(wi::Color(255, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
-	clearButton.SetColor(wi::Color(255, 230, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
+	clearButton.SetTooltip("Delete everything. This operation cannot be undone!");
+	clearButton.SetColor(wi::Color(255, 130, 100, 180), wi::gui::WIDGETSTATE::IDLE);
+	clearButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
 	clearButton.OnClick([&](wi::gui::EventArgs args) {
 
 		terragen.Generation_Cancel();
@@ -922,14 +882,15 @@ void EditorComponent::Load()
 
 		RefreshSceneGraphView();
 		ResetHistory();
+		savePath.clear();
 	});
 	GetGUI().AddWidget(&clearButton);
 
 
 	aboutButton.Create("?");
 	aboutButton.SetTooltip("About...");
-	aboutButton.SetColor(wi::Color(50, 160, 220, 180), wi::gui::WIDGETSTATE::IDLE);
-	aboutButton.SetColor(wi::Color(120, 200, 220, 255), wi::gui::WIDGETSTATE::FOCUS);
+	aboutButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
+	aboutButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
 	aboutButton.OnClick([&](wi::gui::EventArgs args) {
 		aboutLabel.SetVisible(!aboutLabel.IsVisible());
 	});
@@ -951,7 +912,8 @@ void EditorComponent::Load()
 		ss += "Interact with water: Left mouse button when nothing is selected\n";
 		ss += "Camera speed: Left Shift button or controller R2/RT\n";
 		ss += "Snap transform: Left Ctrl (hold while transforming)\n";
-		ss += "Camera up: E, down: Q\n";
+		ss += "Camera up: E\n";
+		ss += "Camera down: Q\n";
 		ss += "Duplicate entity: Ctrl + D\n";
 		ss += "Select All: Ctrl + A\n";
 		ss += "Deselect All: Esc\n";
@@ -961,6 +923,8 @@ void EditorComponent::Load()
 		ss += "Cut: Ctrl + X\n";
 		ss += "Paste: Ctrl + V\n";
 		ss += "Delete: Delete button\n";
+		ss += "Save As: Ctrl + Shift + S\n";
+		ss += "Save: Ctrl + S\n";
 		ss += "Transform: Ctrl + T\n";
 		ss += "Inspector mode: I button (hold), hovered entity information will be displayed near mouse position.\n";
 		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
@@ -985,8 +949,8 @@ void EditorComponent::Load()
 
 	exitButton.Create("X");
 	exitButton.SetTooltip("Exit");
-	exitButton.SetColor(wi::Color(190, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
-	exitButton.SetColor(wi::Color(255, 50, 50, 255), wi::gui::WIDGETSTATE::FOCUS);
+	exitButton.SetColor(wi::Color(160, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
+	exitButton.SetColor(wi::Color(200, 50, 50, 255), wi::gui::WIDGETSTATE::FOCUS);
 	exitButton.OnClick([this](wi::gui::EventArgs args) {
 		terragen.Generation_Cancel();
 		wi::platform::Exit();
@@ -1639,6 +1603,18 @@ void EditorComponent::Update(float dt)
 				translator.enabled = !translator.enabled;
 				translatorCheckBox.SetCheck(translator.enabled);
 			}
+			// Save
+			if (wi::input::Press((wi::input::BUTTON)'S'))
+			{
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || savePath.empty())
+				{
+					SaveAs();
+				}
+				else
+				{
+					Save(savePath);
+				}
+			}
 			// Select All
 			if (wi::input::Press((wi::input::BUTTON)'A'))
 			{
@@ -1953,7 +1929,7 @@ void EditorComponent::Update(float dt)
 		}
 		else
 		{
-			ss += "Denoiser not available\n";
+			ss += "Denoiser not available!\nTo find out how to enable the denoiser, visit the documentation.";
 		}
 		pathTraceStatisticsLabel.SetText(ss);
 	}
@@ -2982,4 +2958,56 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 	}
 
 	RefreshSceneGraphView();
+}
+
+void EditorComponent::Save(const std::string& filename)
+{
+	const bool dump_to_header = saveModeComboBox.GetSelected() == 2;
+
+	wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
+	if (archive.IsOpen())
+	{
+		Scene& scene = wi::scene::GetScene();
+
+		wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
+		wi::resourcemanager::SetMode(embed_mode);
+
+		terragen.BakeVirtualTexturesToFiles();
+		scene.Serialize(archive);
+
+		if (dump_to_header)
+		{
+			archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
+		}
+	}
+	else
+	{
+		wi::helper::messageBox("Could not create " + filename + "!");
+		return;
+	}
+
+	wi::backlog::post("Scene saved: " + savePath);
+}
+void EditorComponent::SaveAs()
+{
+	const bool dump_to_header = saveModeComboBox.GetSelected() == 2;
+
+	wi::helper::FileDialogParams params;
+	params.type = wi::helper::FileDialogParams::SAVE;
+	if (dump_to_header)
+	{
+		params.description = "C++ header (.h)";
+		params.extensions.push_back("h");
+	}
+	else
+	{
+		params.description = "Wicked Scene (.wiscene)";
+		params.extensions.push_back("wiscene");
+	}
+	wi::helper::FileDialog(params, [=](std::string fileName) {
+		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			std::string filename = wi::helper::ReplaceExtension(fileName, params.extensions.front());
+			Save(filename);
+			});
+		});
 }
