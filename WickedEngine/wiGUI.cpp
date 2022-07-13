@@ -2051,6 +2051,8 @@ namespace wi::gui
 		scrollbar_vertical.knob_inset_border = XMFLOAT2(4, 2);
 		AddWidget(&scrollbar_vertical);
 
+		scrollable_area.ClearTransform();
+
 
 		SetEnabled(true);
 		SetVisible(true);
