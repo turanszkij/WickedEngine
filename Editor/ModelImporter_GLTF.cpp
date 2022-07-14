@@ -190,7 +190,7 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 			node.name = "cam" + std::to_string(camID++);
 		}
 
-		entity = scene.Entity_CreateCamera(node.name, wi::scene::GetCamera().width, wi::scene::GetCamera().height);
+		entity = scene.Entity_CreateCamera(node.name, 16, 9);
 	}
 
 	auto ext_lights_punctual = node.extensions.find("KHR_lights_punctual");
