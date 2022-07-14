@@ -24,6 +24,7 @@ public:
 	// Apply translator to selection
 	void PostTranslate();
 
+	wi::scene::Scene* scene = nullptr;
 	wi::scene::TransformComponent transform;
 	wi::vector<wi::scene::PickResult> selected; // all the selected picks
 	wi::unordered_set<wi::ecs::Entity> selectedEntitiesLookup; // fast lookup for selected entities

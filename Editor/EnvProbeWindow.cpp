@@ -5,8 +5,9 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
-void EnvProbeWindow::Create(EditorComponent* editor)
+void EnvProbeWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Environment Probe Window");
 	SetSize(XMFLOAT2(420, 220));
 
@@ -25,7 +26,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 	realTimeCheckBox.SetPos(XMFLOAT2(x + 100, y));
 	realTimeCheckBox.SetEnabled(false);
 	realTimeCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		EnvironmentProbeComponent* probe = wi::scene::GetScene().probes.GetComponent(entity);
+		EnvironmentProbeComponent* probe = editor->GetCurrentScene().probes.GetComponent(entity);
 		if (probe != nullptr)
 		{
 			probe->SetRealTime(args.bValue);
@@ -39,7 +40,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 	msaaCheckBox.SetPos(XMFLOAT2(x + 200, y));
 	msaaCheckBox.SetEnabled(false);
 	msaaCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		EnvironmentProbeComponent* probe = wi::scene::GetScene().probes.GetComponent(entity);
+		EnvironmentProbeComponent* probe = editor->GetCurrentScene().probes.GetComponent(entity);
 		if (probe != nullptr)
 		{
 			probe->SetMSAA(args.bValue);
@@ -53,8 +54,8 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 	generateButton.SetPos(XMFLOAT2(x, y += step));
 	generateButton.OnClick([=](wi::gui::EventArgs args) {
 		XMFLOAT3 pos;
-		XMStoreFloat3(&pos, XMVectorAdd(wi::scene::GetCamera().GetEye(), wi::scene::GetCamera().GetAt() * 4));
-		Entity entity = wi::scene::GetScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
+		XMStoreFloat3(&pos, XMVectorAdd(editor->GetCurrentEditorScene().camera.GetEye(), editor->GetCurrentEditorScene().camera.GetAt() * 4));
+		Entity entity = editor->GetCurrentScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_ADD;
@@ -66,7 +67,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 		editor->RecordSelection(archive);
 		editor->RecordAddedEntity(archive, entity);
 
-		editor->RefreshSceneGraphView();
+		editor->RefreshEntityTree();
 		SetEntity(entity);
 	});
 	AddWidget(&generateButton);
@@ -76,7 +77,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 	refreshButton.SetPos(XMFLOAT2(x + 120, y));
 	refreshButton.SetEnabled(false);
 	refreshButton.OnClick([&](wi::gui::EventArgs args) {
-		EnvironmentProbeComponent* probe = wi::scene::GetScene().probes.GetComponent(entity);
+		EnvironmentProbeComponent* probe = editor->GetCurrentScene().probes.GetComponent(entity);
 		if (probe != nullptr)
 		{
 			probe->SetDirty();
@@ -89,7 +90,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 	refreshAllButton.SetPos(XMFLOAT2(x + 240, y));
 	refreshAllButton.SetEnabled(true);
 	refreshAllButton.OnClick([&](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
 			EnvironmentProbeComponent& probe = scene.probes[i];
@@ -111,7 +112,7 @@ void EnvProbeWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	const EnvironmentProbeComponent* probe = wi::scene::GetScene().probes.GetComponent(entity);
+	const EnvironmentProbeComponent* probe = editor->GetCurrentScene().probes.GetComponent(entity);
 
 	if (probe == nullptr)
 	{

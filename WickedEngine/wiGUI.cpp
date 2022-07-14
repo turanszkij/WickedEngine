@@ -1924,6 +1924,14 @@ namespace wi::gui
 			}
 		}
 	}
+	void ComboBox::SetItemText(int index, const std::string& text)
+	{
+		items[index].name = text;
+	}
+	void ComboBox::SetItemUserdata(int index, uint64_t userdata)
+	{
+		items[index].userdata = userdata;
+	}
 	std::string ComboBox::GetItemText(int index) const
 	{
 		if (index >= 0)

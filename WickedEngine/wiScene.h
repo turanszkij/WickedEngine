@@ -763,7 +763,7 @@ namespace wi::scene
 		uint32_t mesh_lod = 0;
 
 		// Non-serialized attributes:
-		void* physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
+		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 		inline void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
@@ -793,7 +793,7 @@ namespace wi::scene
 		wi::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
 
 		// Non-serialized attributes:
-		void* physicsobject = nullptr;
+		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
 		wi::vector<MeshComponent::Vertex_POS> vertex_positions_simulation; // graphics vertices after simulation (world space)
 		wi::vector<XMFLOAT4>vertex_tangents_tmp;
@@ -1338,7 +1338,7 @@ namespace wi::scene
 		};
 		uint32_t flags = EMPTY;
 
-
+		std::shared_ptr<void> physics_scene;
 		wi::SpinLock locker;
 		wi::primitive::AABB bounds;
 		wi::vector<wi::primitive::AABB> parallel_bounds;

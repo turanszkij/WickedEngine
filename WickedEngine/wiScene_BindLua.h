@@ -5,6 +5,15 @@
 
 namespace wi::lua::scene
 {
+	// If the application doesn't use the global scene, but manages it manually,
+	//	Then this can be used to override the global GetScene() in lua scripts with a custom scene
+	void SetGlobalScene(wi::scene::Scene* scene);
+	// If the application doesn't use the global camera, but manages it manually,
+	//	Then this can be used to override the global GetCamera() in lua scripts with a custom camera
+	void SetGlobalCamera(wi::scene::CameraComponent* camera);
+	wi::scene::Scene* GetGlobalScene();
+	wi::scene::CameraComponent* GetGlobalCamera();
+
 	void Bind();
 
 	class Scene_BindLua

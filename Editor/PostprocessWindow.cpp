@@ -6,8 +6,9 @@
 
 using namespace wi::graphics;
 
-void PostprocessWindow::Create(EditorComponent* editor)
+void PostprocessWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("PostProcess Window");
 	SetSize(XMFLOAT2(420, 400));
 

@@ -6,8 +6,9 @@ using namespace wi::ecs;
 using namespace wi::scene;
 
 
-void SpringWindow::Create(EditorComponent* editor)
+void SpringWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Spring Window");
 	SetSize(XMFLOAT2(460, 200));
 
@@ -34,7 +35,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	disabledCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disabledCheckBox.SetSize(XMFLOAT2(hei, hei));
 	disabledCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::GetScene().springs.GetComponent(entity)->SetDisabled(args.bValue);
+		editor->GetCurrentScene().springs.GetComponent(entity)->SetDisabled(args.bValue);
 		});
 	AddWidget(&disabledCheckBox);
 
@@ -43,7 +44,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	stretchCheckBox.SetPos(XMFLOAT2(x, y += step));
 	stretchCheckBox.SetSize(XMFLOAT2(hei, hei));
 	stretchCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::GetScene().springs.GetComponent(entity)->SetStretchEnabled(args.bValue);
+		editor->GetCurrentScene().springs.GetComponent(entity)->SetStretchEnabled(args.bValue);
 		});
 	AddWidget(&stretchCheckBox);
 
@@ -52,7 +53,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	gravityCheckBox.SetPos(XMFLOAT2(x, y += step));
 	gravityCheckBox.SetSize(XMFLOAT2(hei, hei));
 	gravityCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::GetScene().springs.GetComponent(entity)->SetGravityEnabled(args.bValue);
+		editor->GetCurrentScene().springs.GetComponent(entity)->SetGravityEnabled(args.bValue);
 		});
 	AddWidget(&gravityCheckBox);
 
@@ -61,7 +62,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	stiffnessSlider.SetPos(XMFLOAT2(x, y += step));
 	stiffnessSlider.SetSize(XMFLOAT2(siz, hei));
 	stiffnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::GetScene().springs.GetComponent(entity)->stiffness = args.fValue;
+		editor->GetCurrentScene().springs.GetComponent(entity)->stiffness = args.fValue;
 		});
 	AddWidget(&stiffnessSlider);
 
@@ -70,7 +71,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	dampingSlider.SetPos(XMFLOAT2(x, y += step));
 	dampingSlider.SetSize(XMFLOAT2(siz, hei));
 	dampingSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::GetScene().springs.GetComponent(entity)->damping = args.fValue;
+		editor->GetCurrentScene().springs.GetComponent(entity)->damping = args.fValue;
 		});
 	AddWidget(&dampingSlider);
 
@@ -79,7 +80,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	windSlider.SetPos(XMFLOAT2(x, y += step));
 	windSlider.SetSize(XMFLOAT2(siz, hei));
 	windSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::GetScene().springs.GetComponent(entity)->wind_affection = args.fValue;
+		editor->GetCurrentScene().springs.GetComponent(entity)->wind_affection = args.fValue;
 		});
 	AddWidget(&windSlider);
 
@@ -93,7 +94,7 @@ void SpringWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	const SpringComponent* spring = wi::scene::GetScene().springs.GetComponent(entity);
+	const SpringComponent* spring = editor->GetCurrentScene().springs.GetComponent(entity);
 
 	if (spring != nullptr)
 	{
@@ -111,7 +112,7 @@ void SpringWindow::SetEntity(Entity entity)
 		SetEnabled(false);
 	}
 
-	const TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+	const TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 	if (transform != nullptr)
 	{
 		createButton.SetEnabled(true);
@@ -120,7 +121,7 @@ void SpringWindow::SetEntity(Entity entity)
 		{
 			createButton.SetText("Create");
 			createButton.OnClick([=](wi::gui::EventArgs args) {
-				wi::scene::GetScene().springs.Create(entity);
+				editor->GetCurrentScene().springs.Create(entity);
 				SetEntity(entity);
 				});
 		}
@@ -128,7 +129,7 @@ void SpringWindow::SetEntity(Entity entity)
 		{
 			createButton.SetText("Remove");
 			createButton.OnClick([=](wi::gui::EventArgs args) {
-				wi::scene::GetScene().springs.Remove_KeepSorted(entity);
+				editor->GetCurrentScene().springs.Remove_KeepSorted(entity);
 				SetEntity(entity);
 				});
 		}

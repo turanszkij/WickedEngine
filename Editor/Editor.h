@@ -2,6 +2,7 @@
 #include "WickedEngine.h"
 #include "Translator.h"
 #include "TerrainGenerator.h"
+#include "wiScene_BindLua.h"
 
 #include "MaterialWindow.h"
 #include "PostprocessWindow.h"
@@ -39,7 +40,7 @@ class Editor;
 class EditorComponent : public wi::RenderPath2D
 {
 private:
-	wi::Resource pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
+	wi::Resource pointLightTex, spotLightTex, dirLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
 public:
 	MaterialWindow materialWnd;
 	PostprocessWindow postprocessWnd;
@@ -94,22 +95,22 @@ public:
 	wi::gui::CheckBox isTranslatorCheckBox;
 	wi::gui::Button saveButton;
 	wi::gui::ComboBox saveModeComboBox;
-	wi::gui::Button modelButton;
-	wi::gui::Button scriptButton;
-	wi::gui::Button clearButton;
-	wi::gui::Button helpButton;
+	wi::gui::Button openButton;
+	wi::gui::Button closeButton;
+	wi::gui::Button aboutButton;
 	wi::gui::Button exitButton;
 	wi::gui::CheckBox profilerEnabledCheckBox;
 	wi::gui::CheckBox physicsEnabledCheckBox;
 	wi::gui::CheckBox cinemaModeCheckBox;
 	wi::gui::ComboBox renderPathComboBox;
-	wi::gui::Label helpLabel;
+	wi::gui::ComboBox sceneComboBox;
+	wi::gui::Label aboutLabel;
 
-	wi::gui::TreeList sceneGraphView;
-	wi::unordered_set<wi::ecs::Entity> scenegraphview_added_items;
-	wi::unordered_set<wi::ecs::Entity> scenegraphview_opened_items;
-	void PushToSceneGraphView(wi::ecs::Entity entity, int level);
-	void RefreshSceneGraphView();
+	wi::gui::TreeList entityTree;
+	wi::unordered_set<wi::ecs::Entity> entitytree_added_items;
+	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
+	void PushToEntityTree(wi::ecs::Entity entity, int level);
+	void RefreshEntityTree();
 
 	wi::gui::Slider pathTraceTargetSlider;
 	wi::gui::Label pathTraceStatisticsLabel;
@@ -165,8 +166,6 @@ public:
 
 	wi::Archive clipboard;
 
-	wi::vector<wi::Archive> history;
-	int historyPos = -1;
 	enum HistoryOperationType
 	{
 		HISTORYOP_TRANSLATOR,
@@ -178,12 +177,73 @@ public:
 	};
 
 	void RecordSelection(wi::Archive& archive) const;
-	void RecordAddedEntity(wi::Archive& archive, wi::ecs::Entity entity) const;
-	void RecordAddedEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities) const;
+	void RecordAddedEntity(wi::Archive& archive, wi::ecs::Entity entity);
+	void RecordAddedEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities);
 
 	void ResetHistory();
 	wi::Archive& AdvanceHistory();
 	void ConsumeHistoryOperation(bool undo);
+
+	void Save(const std::string& filename);
+	void SaveAs();
+
+	struct EditorScene
+	{
+		std::string path;
+		wi::scene::Scene scene;
+		XMFLOAT3 cam_move = {};
+		wi::scene::CameraComponent camera;
+		wi::scene::TransformComponent camera_transform;
+		wi::scene::TransformComponent camera_target;
+		wi::vector<wi::Archive> history;
+		int historyPos = -1;
+	};
+	wi::vector<std::unique_ptr<EditorScene>> scenes;
+	int current_scene = 0;
+	EditorScene& GetCurrentEditorScene() { return *scenes[current_scene].get(); }
+	const EditorScene& GetCurrentEditorScene() const { return *scenes[current_scene].get(); }
+	wi::scene::Scene& GetCurrentScene() { return scenes[current_scene].get()->scene; }
+	const wi::scene::Scene& GetCurrentScene() const { return scenes[current_scene].get()->scene; }
+	void SetCurrentScene(int index)
+	{
+		current_scene = index;
+		this->renderPath->scene = &scenes[current_scene].get()->scene;
+		this->renderPath->camera = &scenes[current_scene].get()->camera;
+		wi::lua::scene::SetGlobalScene(this->renderPath->scene);
+		wi::lua::scene::SetGlobalCamera(this->renderPath->camera);
+		RefreshEntityTree();
+		RefreshSceneList();
+	}
+	void RefreshSceneList()
+	{
+		sceneComboBox.ClearItems();
+		for (int i = 0; i < int(scenes.size()); ++i)
+		{
+			if (scenes[i]->path.empty())
+			{
+				sceneComboBox.AddItem("Untitled");
+			}
+			else
+			{
+				sceneComboBox.AddItem(wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(scenes[i]->path)));
+			}
+		}
+		sceneComboBox.AddItem("[New]");
+		sceneComboBox.SetSelectedWithoutCallback(current_scene);
+		std::string tooltip = "Choose a scene";
+		if (!GetCurrentEditorScene().path.empty())
+		{
+			tooltip += "\nCurrent path: " + GetCurrentEditorScene().path;
+		}
+		sceneComboBox.SetTooltip(tooltip);
+	}
+	void NewScene()
+	{
+		scenes.push_back(std::make_unique<EditorScene>());
+		SetCurrentScene(int(scenes.size()) - 1);
+		RefreshSceneList();
+		cameraWnd.ResetCam();
+	}
 };
 
 class Editor : public wi::Application

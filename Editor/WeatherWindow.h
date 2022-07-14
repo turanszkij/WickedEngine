@@ -11,6 +11,8 @@ public:
 
 	void Update();
 
+	EditorComponent* editor = nullptr;
+
 	wi::scene::WeatherComponent& GetWeather() const;
 	void InvalidateProbes() const;
 

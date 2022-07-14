@@ -6,8 +6,9 @@ using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;
 
-void WeatherWindow::Create(EditorComponent* editor)
+void WeatherWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Weather Window");
 	SetSize(XMFLOAT2(660, 300));
 
@@ -277,7 +278,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 		weather.SetOceanEnabled(args.bValue);
 		if (!weather.IsOceanEnabled())
 		{
-			GetScene().ocean = {};
+			editor->GetCurrentScene().ocean = {};
 		}
 		});
 	AddWidget(&ocean_enabledCheckBox);
@@ -286,31 +287,31 @@ void WeatherWindow::Create(EditorComponent* editor)
 	ocean_patchSizeSlider.Create(1, 1000, 1000, 100000, "Patch size: ");
 	ocean_patchSizeSlider.SetSize(XMFLOAT2(100, hei));
 	ocean_patchSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	ocean_patchSizeSlider.SetValue(wi::scene::GetScene().weather.oceanParameters.patch_length);
+	ocean_patchSizeSlider.SetValue(editor->GetCurrentScene().weather.oceanParameters.patch_length);
 	ocean_patchSizeSlider.SetTooltip("Adjust water tiling patch size");
 	ocean_patchSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 		weather.oceanParameters.patch_length = args.fValue;
-		GetScene().ocean = {};
+		editor->GetCurrentScene().ocean = {};
 		});
 	AddWidget(&ocean_patchSizeSlider);
 
 	ocean_waveAmplitudeSlider.Create(0, 1000, 1000, 100000, "Wave amplitude: ");
 	ocean_waveAmplitudeSlider.SetSize(XMFLOAT2(100, hei));
 	ocean_waveAmplitudeSlider.SetPos(XMFLOAT2(x, y += step));
-	ocean_waveAmplitudeSlider.SetValue(wi::scene::GetScene().weather.oceanParameters.wave_amplitude);
+	ocean_waveAmplitudeSlider.SetValue(editor->GetCurrentScene().weather.oceanParameters.wave_amplitude);
 	ocean_waveAmplitudeSlider.SetTooltip("Adjust wave size");
 	ocean_waveAmplitudeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 		weather.oceanParameters.wave_amplitude = args.fValue;
-		GetScene().ocean = {};
+		editor->GetCurrentScene().ocean = {};
 		});
 	AddWidget(&ocean_waveAmplitudeSlider);
 
 	ocean_choppyScaleSlider.Create(0, 10, 1000, 100000, "Choppiness: ");
 	ocean_choppyScaleSlider.SetSize(XMFLOAT2(100, hei));
 	ocean_choppyScaleSlider.SetPos(XMFLOAT2(x, y += step));
-	ocean_choppyScaleSlider.SetValue(wi::scene::GetScene().weather.oceanParameters.choppy_scale);
+	ocean_choppyScaleSlider.SetValue(editor->GetCurrentScene().weather.oceanParameters.choppy_scale);
 	ocean_choppyScaleSlider.SetTooltip("Adjust wave choppiness");
 	ocean_choppyScaleSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
@@ -321,19 +322,19 @@ void WeatherWindow::Create(EditorComponent* editor)
 	ocean_windDependencySlider.Create(0, 1, 1000, 100000, "Wind dependency: ");
 	ocean_windDependencySlider.SetSize(XMFLOAT2(100, hei));
 	ocean_windDependencySlider.SetPos(XMFLOAT2(x, y += step));
-	ocean_windDependencySlider.SetValue(wi::scene::GetScene().weather.oceanParameters.wind_dependency);
+	ocean_windDependencySlider.SetValue(editor->GetCurrentScene().weather.oceanParameters.wind_dependency);
 	ocean_windDependencySlider.SetTooltip("Adjust wind contribution");
 	ocean_windDependencySlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 		weather.oceanParameters.wind_dependency = args.fValue;
-		GetScene().ocean = {};
+		editor->GetCurrentScene().ocean = {};
 		});
 	AddWidget(&ocean_windDependencySlider);
 
 	ocean_timeScaleSlider.Create(0, 4, 1000, 100000, "Time scale: ");
 	ocean_timeScaleSlider.SetSize(XMFLOAT2(100, hei));
 	ocean_timeScaleSlider.SetPos(XMFLOAT2(x, y += step));
-	ocean_timeScaleSlider.SetValue(wi::scene::GetScene().weather.oceanParameters.time_scale);
+	ocean_timeScaleSlider.SetValue(editor->GetCurrentScene().weather.oceanParameters.time_scale);
 	ocean_timeScaleSlider.SetTooltip("Adjust simulation speed");
 	ocean_timeScaleSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
@@ -382,7 +383,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 	ocean_resetButton.OnClick([=](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 		weather.oceanParameters = wi::Ocean::OceanParameters();
-		GetScene().ocean = {};
+		editor->GetCurrentScene().ocean = {};
 		});
 	AddWidget(&ocean_resetButton);
 
@@ -477,7 +478,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 	preset0Button.SetPos(XMFLOAT2(x, y += step));
 	preset0Button.OnClick([=](wi::gui::EventArgs args) {
 
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		scene.weathers.Clear();
 		scene.weather = WeatherComponent();
 
@@ -594,7 +595,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 	eliminateCoarseCascadesButton.SetPos(XMFLOAT2(x, y += step * 2));
 	eliminateCoarseCascadesButton.OnClick([=](wi::gui::EventArgs args) {
 
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
 			scene.objects[i].cascadeMask = 1;
@@ -610,7 +611,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 	ktxConvButton.SetPos(XMFLOAT2(x, y += step));
 	ktxConvButton.OnClick([=](wi::gui::EventArgs args) {
 
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 
 		wi::unordered_map<std::string, wi::Resource> conv;
 		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
@@ -664,7 +665,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 
 void WeatherWindow::Update()
 {
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 	if (scene.weathers.GetCount() > 0)
 	{
 		auto& weather = scene.weathers[0];
@@ -739,7 +740,7 @@ void WeatherWindow::Update()
 
 WeatherComponent& WeatherWindow::GetWeather() const
 {
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 	if (scene.weathers.GetCount() == 0)
 	{
 		scene.weathers.Create(CreateEntity());
@@ -749,7 +750,7 @@ WeatherComponent& WeatherWindow::GetWeather() const
 
 void WeatherWindow::InvalidateProbes() const
 {
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 
 	// Also, we invalidate all environment probes to reflect the sky changes.
 	for (size_t i = 0; i < scene.probes.GetCount(); ++i)

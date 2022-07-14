@@ -37,30 +37,30 @@ namespace wi::physics
 
 	// Apply force at body center
 	void ApplyForce(
-		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force
 	);
 	// Apply force at body local position
 	void ApplyForceAt(
-		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force,
 		const XMFLOAT3& at
 	);
 
 	// Apply impulse at body center
 	void ApplyImpulse(
-		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse
 	);
 	// Apply impulse at body local position
 	void ApplyImpulseAt(
-		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse,
 		const XMFLOAT3& at
 	);
 
 	void ApplyTorque(
-		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& torque
 	);
 }

@@ -3,8 +3,9 @@
 #include "Editor.h"
 #include "shaders/ShaderInterop_DDGI.h"
 
-void RendererWindow::Create(EditorComponent* editor)
+void RendererWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Renderer Window");
 
 	wi::renderer::SetToDrawDebugEnvProbes(true);
@@ -67,7 +68,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	resolutionScaleSlider.SetSize(XMFLOAT2(100, itemheight));
 	resolutionScaleSlider.SetPos(XMFLOAT2(x, y += step));
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
-	resolutionScaleSlider.OnSlide([editor](wi::gui::EventArgs args) {
+	resolutionScaleSlider.OnSlide([=](wi::gui::EventArgs args) {
 		if (editor->resolutionScale != args.fValue)
 		{
 			editor->renderPath->resolutionScale = args.fValue;
@@ -82,7 +83,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	GIBoostSlider.SetSize(XMFLOAT2(100, itemheight));
 	GIBoostSlider.SetPos(XMFLOAT2(x, y += step));
 	GIBoostSlider.SetValue(wi::renderer::GetGIBoost());
-	GIBoostSlider.OnSlide([editor](wi::gui::EventArgs args) {
+	GIBoostSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::renderer::SetGIBoost(args.fValue);
 		});
 	AddWidget(&GIBoostSlider);
@@ -237,7 +238,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	variableRateShadingClassificationCheckBox.SetTooltip("Enable classification of variable rate shading on the screen. Less important parts will be shaded with lesser resolution.\nRequires Tier2 support for variable shading rate");
 	variableRateShadingClassificationCheckBox.SetPos(XMFLOAT2(x, y += step));
 	variableRateShadingClassificationCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	variableRateShadingClassificationCheckBox.OnClick([editor](wi::gui::EventArgs args) {
+	variableRateShadingClassificationCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetVariableRateShadingClassification(args.bValue);
 		editor->ResizeBuffers();
 		});

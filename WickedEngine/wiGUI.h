@@ -336,6 +336,8 @@ namespace wi::gui
 		void SetSelectedByUserdata(uint64_t userdata);
 		void SetSelectedByUserdataWithoutCallback(uint64_t userdata); // SetSelectedByUserdata() but the OnSelect callback will not be executed
 		int GetSelected() const;
+		void SetItemText(int index, const std::string& text);
+		void SetItemUserdata(int index, uint64_t userdata);
 		std::string GetItemText(int index) const;
 		uint64_t GetItemUserData(int index) const;
 		size_t GetItemCount() const { return items.size(); }
