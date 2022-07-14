@@ -95,7 +95,7 @@ public:
 	wi::gui::Button saveButton;
 	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::Button openButton;
-	wi::gui::Button clearButton;
+	wi::gui::Button closeButton;
 	wi::gui::Button aboutButton;
 	wi::gui::Button exitButton;
 	wi::gui::CheckBox profilerEnabledCheckBox;

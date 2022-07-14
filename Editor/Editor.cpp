@@ -325,8 +325,8 @@ void EditorComponent::ResizeLayout()
 	openButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
 	openButton.SetSize(XMFLOAT2(100, 40));
 
-	clearButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 1, 0));
-	clearButton.SetSize(XMFLOAT2(100, 40));
+	closeButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 1, 0));
+	closeButton.SetSize(XMFLOAT2(100, 40));
 
 	aboutButton.SetPos(XMFLOAT2(screenW - 50 - 55, 0));
 	aboutButton.SetSize(XMFLOAT2(50, 40));
@@ -856,11 +856,11 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&openButton);
 
 
-	clearButton.Create("Clear");
-	clearButton.SetTooltip("Delete everything. This operation cannot be undone!");
-	clearButton.SetColor(wi::Color(255, 130, 100, 180), wi::gui::WIDGETSTATE::IDLE);
-	clearButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
-	clearButton.OnClick([&](wi::gui::EventArgs args) {
+	closeButton.Create("Close");
+	closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, and delete the scene.\nThis operation cannot be undone!");
+	closeButton.SetColor(wi::Color(255, 130, 100, 180), wi::gui::WIDGETSTATE::IDLE);
+	closeButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
+	closeButton.OnClick([&](wi::gui::EventArgs args) {
 
 		terragen.Generation_Cancel();
 		// This is to recreate the terragen from scratch, but it has implicitly deleted copy ctor so it's weird:
@@ -891,8 +891,15 @@ void EditorComponent::Load()
 		RefreshEntityTree();
 		ResetHistory();
 		GetCurrentEditorScene().path.clear();
+
+		scenes.erase(scenes.begin() + current_scene);
+		current_scene = std::max(0, current_scene - 1);
+		if (scenes.empty())
+		{
+			NewScene();
+		}
 	});
-	GetGUI().AddWidget(&clearButton);
+	GetGUI().AddWidget(&closeButton);
 
 
 	aboutButton.Create("?");
@@ -1689,7 +1696,7 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < count; ++i)
 				{
 					wi::scene::PickResult picked;
-					picked.entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE | Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
+					picked.entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE);
 					AddSelected(picked);
 					addedEntities.push_back(picked.entity);
 				}
@@ -3017,6 +3024,8 @@ void EditorComponent::Save(const std::string& filename)
 		{
 			archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
 		}
+
+		GetCurrentEditorScene().path = filename;
 	}
 	else
 	{
