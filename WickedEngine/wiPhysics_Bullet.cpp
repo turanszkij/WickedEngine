@@ -20,78 +20,140 @@ using namespace wi::scene;
 
 namespace wi::physics
 {
-	bool ENABLED = true;
-	bool SIMULATION_ENABLED = true;
-	bool DEBUGDRAW_ENABLED = false;
-	int ACCURACY = 10;
-	std::mutex physicsLock;
-
-	btVector3 gravity(0, -10, 0);
-	int softbodyIterationCount = 5;
-	btSoftBodyRigidBodyCollisionConfiguration collisionConfiguration;
-	btDbvtBroadphase overlappingPairCache;
-	btSequentialImpulseConstraintSolver solver;
-	btCollisionDispatcher dispatcher(&collisionConfiguration);
-	btSoftRigidDynamicsWorld dynamicsWorld(&dispatcher, &overlappingPairCache, &solver, &collisionConfiguration);
-
-	class DebugDraw : public btIDebugDraw
+	namespace bullet
 	{
-		void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override
+		bool ENABLED = true;
+		bool SIMULATION_ENABLED = true;
+		bool DEBUGDRAW_ENABLED = false;
+		int ACCURACY = 10;
+		int softbodyIterationCount = 5;
+		std::mutex physicsLock;
+
+		class DebugDraw : public btIDebugDraw
 		{
-			wi::renderer::RenderableLine line;
-			line.start = XMFLOAT3(from.x(), from.y(), from.z());
-			line.end = XMFLOAT3(to.x(), to.y(), to.z());
-			line.color_start = line.color_end = XMFLOAT4(color.x(), color.y(), color.z(), 1.0f);
-			wi::renderer::DrawLine(line);
-		}
-		void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) override
+			void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override
+			{
+				wi::renderer::RenderableLine line;
+				line.start = XMFLOAT3(from.x(), from.y(), from.z());
+				line.end = XMFLOAT3(to.x(), to.y(), to.z());
+				line.color_start = line.color_end = XMFLOAT4(color.x(), color.y(), color.z(), 1.0f);
+				wi::renderer::DrawLine(line);
+			}
+			void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) override
+			{
+			}
+			void reportErrorWarning(const char* warningString) override
+			{
+				wi::backlog::post(warningString);
+			}
+			void draw3dText(const btVector3& location, const char* textString) override
+			{
+				wi::renderer::DebugTextParams params;
+				params.position.x = location.x();
+				params.position.y = location.y();
+				params.position.z = location.z();
+				params.scaling = 0.6f;
+				params.flags |= wi::renderer::DebugTextParams::CAMERA_FACING;
+				params.flags |= wi::renderer::DebugTextParams::CAMERA_SCALING;
+				wi::renderer::DrawDebugText(textString, params);
+			}
+			void setDebugMode(int debugMode) override
+			{
+			}
+			int getDebugMode() const override
+			{
+				int retval = 0;
+				retval |= DBG_DrawWireframe;
+				retval |= DBG_DrawText;
+				return retval;
+			}
+		};
+		DebugDraw debugDraw;
+
+		struct PhysicsScene
 		{
-		}
-		void reportErrorWarning(const char* warningString) override
+			btVector3 gravity = btVector3(0, -10, 0);
+			btSoftBodyRigidBodyCollisionConfiguration collisionConfiguration;
+			btDbvtBroadphase overlappingPairCache;
+			btSequentialImpulseConstraintSolver solver;
+			btCollisionDispatcher dispatcher = btCollisionDispatcher(&collisionConfiguration);
+			btSoftRigidDynamicsWorld dynamicsWorld = btSoftRigidDynamicsWorld(&dispatcher, &overlappingPairCache, &solver, &collisionConfiguration);
+		};
+		PhysicsScene& GetPhysicsScene(Scene& scene)
 		{
-			wi::backlog::post(warningString);
+			if (scene.physics_scene == nullptr)
+			{
+				auto physics_scene = std::make_shared<PhysicsScene>();
+
+				physics_scene->dynamicsWorld.getSolverInfo().m_solverMode |= SOLVER_RANDMIZE_ORDER;
+				physics_scene->dynamicsWorld.getDispatchInfo().m_enableSatConvex = true;
+				physics_scene->dynamicsWorld.getSolverInfo().m_splitImpulse = true;
+				physics_scene->dynamicsWorld.setGravity(physics_scene->gravity);
+				physics_scene->dynamicsWorld.setDebugDrawer(&debugDraw);
+
+				btSoftBodyWorldInfo& softWorldInfo = physics_scene->dynamicsWorld.getWorldInfo();
+				softWorldInfo.air_density = btScalar(1.2f);
+				softWorldInfo.water_density = 0;
+				softWorldInfo.water_offset = 0;
+				softWorldInfo.water_normal = btVector3(0, 0, 0);
+				softWorldInfo.m_gravity.setValue(physics_scene->gravity.x(), physics_scene->gravity.y(), physics_scene->gravity.z());
+				softWorldInfo.m_sparsesdf.Initialize();
+
+				scene.physics_scene = physics_scene;
+			}
+			return *(PhysicsScene*)scene.physics_scene.get();
 		}
-		void draw3dText(const btVector3& location, const char* textString) override
+
+		struct RigidBody
 		{
-			wi::renderer::DebugTextParams params;
-			params.position.x = location.x();
-			params.position.y = location.y();
-			params.position.z = location.z();
-			params.scaling = 0.6f;
-			params.flags |= wi::renderer::DebugTextParams::CAMERA_FACING;
-			params.flags |= wi::renderer::DebugTextParams::CAMERA_SCALING;
-			wi::renderer::DrawDebugText(textString, params);
-		}
-		void setDebugMode(int debugMode) override
+			std::shared_ptr<void> physics_scene;
+			std::unique_ptr<btCollisionShape> shape;
+			std::unique_ptr<btRigidBody> rigidBody;
+			btDefaultMotionState motionState;
+			btTriangleIndexVertexArray triangles;
+			~RigidBody()
+			{
+				if (physics_scene == nullptr)
+					return;
+				btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
+				dynamicsWorld.removeRigidBody(rigidBody.get());
+			}
+		};
+		struct SoftBody
 		{
-		}
-		int getDebugMode() const override
+			std::shared_ptr<void> physics_scene;
+			std::unique_ptr<btSoftBody> softBody;
+			~SoftBody()
+			{
+				if (physics_scene == nullptr)
+					return;
+				btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
+				dynamicsWorld.removeSoftBody(softBody.get());
+			}
+		};
+
+		RigidBody& GetRigidBody(wi::scene::RigidBodyPhysicsComponent& physicscomponent)
 		{
-			int retval = 0;
-			retval |= DBG_DrawWireframe;
-			retval |= DBG_DrawText;
-			return retval;
+			if (physicscomponent.physicsobject == nullptr)
+			{
+				physicscomponent.physicsobject = std::make_shared<RigidBody>();
+			}
+			return *(RigidBody*)physicscomponent.physicsobject.get();
 		}
-	};
-	DebugDraw debugDraw;
+		SoftBody& GetSoftBody(wi::scene::SoftBodyPhysicsComponent& physicscomponent)
+		{
+			if (physicscomponent.physicsobject == nullptr)
+			{
+				physicscomponent.physicsobject = std::make_shared<SoftBody>();
+			}
+			return *(SoftBody*)physicscomponent.physicsobject.get();
+		}
+	}
+	using namespace bullet;
 
 	void Initialize()
 	{
 		wi::Timer timer;
-
-		dynamicsWorld.getSolverInfo().m_solverMode |= SOLVER_RANDMIZE_ORDER;
-		dynamicsWorld.getDispatchInfo().m_enableSatConvex = true;
-		dynamicsWorld.getSolverInfo().m_splitImpulse = true;
-		dynamicsWorld.setGravity(gravity);
-		dynamicsWorld.setDebugDrawer(&debugDraw);
-
-		btSoftBodyWorldInfo& softWorldInfo = dynamicsWorld.getWorldInfo();
-		softWorldInfo.air_density = btScalar(1.2f);
-		softWorldInfo.water_density = 0;
-		softWorldInfo.water_offset = 0;
-		softWorldInfo.water_normal = btVector3(0, 0, 0);
-		softWorldInfo.m_gravity.setValue(gravity.x(), gravity.y(), gravity.z());
-		softWorldInfo.m_sparsesdf.Initialize();
 
 		wi::backlog::post("wi::physics Initialized [Bullet] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
@@ -108,38 +170,39 @@ namespace wi::physics
 	int GetAccuracy() { return ACCURACY; }
 	void SetAccuracy(int value) { ACCURACY = value; }
 
-	void AddRigidBody(Entity entity, wi::scene::RigidBodyPhysicsComponent& physicscomponent, const wi::scene::TransformComponent& transform, const wi::scene::MeshComponent* mesh)
+	void AddRigidBody(
+		wi::scene::Scene& scene,
+		Entity entity,
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const wi::scene::TransformComponent& transform,
+		const wi::scene::MeshComponent* mesh
+	)
 	{
-		btCollisionShape* shape = nullptr;
+		RigidBody& physicsobject = GetRigidBody(physicscomponent);
 
 		switch (physicscomponent.shape)
 		{
 		case RigidBodyPhysicsComponent::CollisionShape::BOX:
-		{
-			shape = new btBoxShape(btVector3(physicscomponent.box.halfextents.x, physicscomponent.box.halfextents.y, physicscomponent.box.halfextents.z));
-		}
-		break;
-
+			physicsobject.shape = std::make_unique<btBoxShape>(btVector3(physicscomponent.box.halfextents.x, physicscomponent.box.halfextents.y, physicscomponent.box.halfextents.z));
+			break;
 		case RigidBodyPhysicsComponent::CollisionShape::SPHERE:
-		{
-			shape = new btSphereShape(btScalar(physicscomponent.sphere.radius));
-		}
-		break;
-
+			physicsobject.shape = std::make_unique<btSphereShape>(btScalar(physicscomponent.sphere.radius));
+			break;
 		case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
-			shape = new btCapsuleShape(btScalar(physicscomponent.capsule.radius), btScalar(physicscomponent.capsule.height));
+			physicsobject.shape = std::make_unique<btCapsuleShape>(btScalar(physicscomponent.capsule.radius), btScalar(physicscomponent.capsule.height));
 			break;
 
 		case RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL:
 			if(mesh != nullptr)
 			{
-				shape = new btConvexHullShape();
+				physicsobject.shape = std::make_unique<btConvexHullShape>();
+				btConvexHullShape* convexHull = (btConvexHullShape*)physicsobject.shape.get();
 				for (auto& pos : mesh->vertex_positions)
 				{
-					((btConvexHullShape*)shape)->addPoint(btVector3(pos.x, pos.y, pos.z));
+					convexHull->addPoint(btVector3(pos.x, pos.y, pos.z));
 				}
 				btVector3 S(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
-				shape->setLocalScaling(S);
+				physicsobject.shape->setLocalScaling(S);
 			}
 			else
 			{
@@ -166,20 +229,19 @@ namespace wi::physics
 					totalTriangles += int(subset.indexCount / 3);
 				}
 
-				btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray(
+				physicsobject.triangles = btTriangleIndexVertexArray(
 					totalTriangles,
 					indices,
-					3 * sizeof(int),
+					3 * int(sizeof(int)),
 					int(mesh->vertex_positions.size()),
 					(btScalar*)mesh->vertex_positions.data(),
-					sizeof(XMFLOAT3)
+					int(sizeof(XMFLOAT3))
 				);
 
 				bool useQuantizedAabbCompression = true;
-				shape = new btBvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
+				physicsobject.shape = std::make_unique<btBvhTriangleMeshShape>(&physicsobject.triangles, useQuantizedAabbCompression);
 				btVector3 S(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
-				shape->setLocalScaling(S);
-				shape->setUserPointer(indexVertexArrays);
+				physicsobject.shape->setLocalScaling(S);
 			}
 			else
 			{
@@ -189,7 +251,12 @@ namespace wi::physics
 			break;
 		}
 
-		if (shape != nullptr)
+		if (physicsobject.shape == nullptr)
+		{
+			physicscomponent.physicsobject = nullptr;
+			return;
+		}
+		else
 		{
 			// Use default margin for now
 			//shape->setMargin(btScalar(0.01));
@@ -206,7 +273,7 @@ namespace wi::physics
 			btVector3 localInertia(0, 0, 0);
 			if (isDynamic)
 			{
-				shape->calculateLocalInertia(mass, localInertia);
+				physicsobject.shape->calculateLocalInertia(mass, localInertia);
 			}
 			else
 			{
@@ -218,36 +285,42 @@ namespace wi::physics
 			shapeTransform.setIdentity();
 			shapeTransform.setOrigin(btVector3(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z));
 			shapeTransform.setRotation(btQuaternion(transform.rotation_local.x, transform.rotation_local.y, transform.rotation_local.z, transform.rotation_local.w));
-			btDefaultMotionState* myMotionState = new btDefaultMotionState(shapeTransform);
+			physicsobject.motionState = btDefaultMotionState(shapeTransform);
 
-			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, shape, localInertia);
+			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, &physicsobject.motionState, physicsobject.shape.get(), localInertia);
 			//rbInfo.m_friction = physicscomponent.friction;
 			//rbInfo.m_restitution = physicscomponent.restitution;
 			//rbInfo.m_linearDamping = physicscomponent.damping;
 			//rbInfo.m_angularDamping = physicscomponent.damping;
 
-			btRigidBody* rigidbody = new btRigidBody(rbInfo);
-			rigidbody->setUserIndex(entity);
+			physicsobject.rigidBody = std::make_unique<btRigidBody>(rbInfo);
+			physicsobject.rigidBody->setUserIndex(entity);
 
 			if (physicscomponent.IsKinematic())
 			{
-				rigidbody->setCollisionFlags(rigidbody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				physicsobject.rigidBody->setCollisionFlags(physicsobject.rigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
 			}
 			if (physicscomponent.IsDisableDeactivation())
 			{
-				rigidbody->setActivationState(DISABLE_DEACTIVATION);
+				physicsobject.rigidBody->setActivationState(DISABLE_DEACTIVATION);
 			}
 			if (physicscomponent.shape == RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH)
 			{
-				rigidbody->setActivationState(DISABLE_DEACTIVATION);
+				physicsobject.rigidBody->setActivationState(DISABLE_DEACTIVATION);
 			}
 
-			dynamicsWorld.addRigidBody(rigidbody);
-			physicscomponent.physicsobject = rigidbody;
+			physicsobject.physics_scene = scene.physics_scene;
+			GetPhysicsScene(scene).dynamicsWorld.addRigidBody(physicsobject.rigidBody.get());
 		}
 	}
-	void AddSoftBody(Entity entity, wi::scene::SoftBodyPhysicsComponent& physicscomponent, const wi::scene::MeshComponent& mesh)
+	void AddSoftBody(
+		wi::scene::Scene& scene,
+		Entity entity,
+		wi::scene::SoftBodyPhysicsComponent& physicscomponent,
+		const wi::scene::MeshComponent& mesh
+	)
 	{
+		SoftBody& physicsobject = GetSoftBody(physicscomponent);
 		physicscomponent.CreateFromMesh(mesh);
 
 		XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
@@ -283,14 +356,67 @@ namespace wi::physics
 			}
 		}
 
-		// This function uses new to allocate btSoftbody internally:
-		btSoftBody* softbody = btSoftBodyHelpers::CreateFromTriMesh(
-			dynamicsWorld.getWorldInfo(),
-			btVerts.data(),
-			btInd.data(),
-			int(btInd.size() / 3),
-			false
-		);
+		//// This function uses new to allocate btSoftbody internally:
+		//btSoftBody* softbody = btSoftBodyHelpers::CreateFromTriMesh(
+		//	GetPhysicsScene(scene).dynamicsWorld.getWorldInfo(),
+		//	btVerts.data(),
+		//	btInd.data(),
+		//	int(btInd.size() / 3),
+		//	false
+		//);
+
+		// Modified version of btSoftBodyHelpers::CreateFromTriMesh:
+		//	This version does not allocate btSoftbody with new
+		btSoftBody* softbody = nullptr;
+		{
+			btSoftBodyWorldInfo& worldInfo = GetPhysicsScene(scene).dynamicsWorld.getWorldInfo();
+			const btScalar* vertices = btVerts.data();
+			const int* triangles = btInd.data();
+			int ntriangles = int(btInd.size() / 3);
+			bool randomizeConstraints = false;
+
+			int		maxidx = 0;
+			int i, j, ni;
+
+			for (i = 0, ni = ntriangles * 3; i < ni; ++i)
+			{
+				maxidx = btMax(triangles[i], maxidx);
+			}
+			++maxidx;
+			btAlignedObjectArray<bool>		chks;
+			btAlignedObjectArray<btVector3>	vtx;
+			chks.resize(maxidx * maxidx, false);
+			vtx.resize(maxidx);
+			for (i = 0, j = 0, ni = maxidx * 3; i < ni; ++j, i += 3)
+			{
+				vtx[j] = btVector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+			}
+			//btSoftBody* psb = new btSoftBody(&worldInfo, vtx.size(), &vtx[0], 0);
+			physicsobject.softBody = std::make_unique<btSoftBody>(&worldInfo, vtx.size(), &vtx[0], nullptr);
+			softbody = physicsobject.softBody.get();
+			btSoftBody* psb = softbody;
+			for (i = 0, ni = ntriangles * 3; i < ni; i += 3)
+			{
+				const int idx[] = { triangles[i],triangles[i + 1],triangles[i + 2] };
+#define IDX(_x_,_y_) ((_y_)*maxidx+(_x_))
+				for (int j = 2, k = 0; k < 3; j = k++)
+				{
+					if (!chks[IDX(idx[j], idx[k])])
+					{
+						chks[IDX(idx[j], idx[k])] = true;
+						chks[IDX(idx[k], idx[j])] = true;
+						psb->appendLink(idx[j], idx[k]);
+					}
+				}
+#undef IDX
+				psb->appendFace(idx[0], idx[1], idx[2]);
+			}
+
+			if (randomizeConstraints)
+			{
+				psb->randomizeConstraints();
+			}
+		}
 
 		if (softbody)
 		{
@@ -342,8 +468,8 @@ namespace wi::physics
 
 			softbody->setPose(true, true);
 
-			dynamicsWorld.addSoftBody(softbody);
-			physicscomponent.physicsobject = softbody;
+			physicsobject.physics_scene = scene.physics_scene;
+			GetPhysicsScene(scene).dynamicsWorld.addSoftBody(softbody);
 		}
 	}
 
@@ -357,6 +483,8 @@ namespace wi::physics
 			return;
 
 		auto range = wi::profiler::BeginRangeCPU("Physics");
+
+		btSoftRigidDynamicsWorld& dynamicsWorld = GetPhysicsScene(scene).dynamicsWorld;
 
 		btVector3 wind = btVector3(scene.weather.windDirection.x, scene.weather.windDirection.y, scene.weather.windDirection.z);
 
@@ -376,13 +504,13 @@ namespace wi::physics
 					mesh = scene.meshes.GetComponent(object->meshID);
 				}
 				physicsLock.lock();
-				AddRigidBody(entity, physicscomponent, transform, mesh);
+				AddRigidBody(scene, entity, physicscomponent, transform, mesh);
 				physicsLock.unlock();
 			}
 
 			if (physicscomponent.physicsobject != nullptr)
 			{
-				btRigidBody* rigidbody = (btRigidBody*)physicscomponent.physicsobject;
+				btRigidBody* rigidbody = GetRigidBody(physicscomponent).rigidBody.get();
 
 				int activationState = rigidbody->getActivationState();
 				if (physicscomponent.IsDisableDeactivation())
@@ -444,24 +572,18 @@ namespace wi::physics
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::FORCE_RESET)
 			{
 				physicscomponent._flags &= ~SoftBodyPhysicsComponent::FORCE_RESET;
-				if (physicscomponent.physicsobject != nullptr)
-				{
-					btSoftBody* softbody = (btSoftBody*)physicscomponent.physicsobject;
-					delete softbody;
-					dynamicsWorld.removeSoftBody(softbody);
-					physicscomponent.physicsobject = nullptr;
-				}
+				physicscomponent.physicsobject = nullptr;
 			}
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::SAFE_TO_REGISTER && physicscomponent.physicsobject == nullptr)
 			{
 				physicsLock.lock();
-				AddSoftBody(entity, physicscomponent, mesh);
+				AddSoftBody(scene, entity, physicscomponent, mesh);
 				physicsLock.unlock();
 			}
 
 			if (physicscomponent.physicsobject != nullptr)
 			{
-				btSoftBody* softbody = (btSoftBody*)physicscomponent.physicsobject;
+				btSoftBody* softbody = GetSoftBody(physicscomponent).softBody.get();
 				softbody->m_cfg.kDF = physicscomponent.friction;
 				softbody->setWindVelocity(wind);
 
@@ -508,19 +630,6 @@ namespace wi::physics
 			if (rigidbody != nullptr)
 			{
 				RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
-				if (physicscomponent == nullptr || physicscomponent->physicsobject != rigidbody)
-				{
-					btCollisionShape* shape = rigidbody->getCollisionShape();
-					btTriangleIndexVertexArray* triangleinfo = (btTriangleIndexVertexArray*)shape->getUserPointer();
-					delete triangleinfo;
-					delete shape;
-					btMotionState* motionstate = rigidbody->getMotionState();
-					delete motionstate;
-					dynamicsWorld.removeRigidBody(rigidbody);
-					delete rigidbody;
-					i--;
-					continue;
-				}
 
 				// Feedback non-kinematic objects to system:
 				if (IsSimulationEnabled() && !physicscomponent->IsKinematic())
@@ -543,13 +652,6 @@ namespace wi::physics
 				if (softbody != nullptr)
 				{
 					SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(entity);
-					if (physicscomponent == nullptr || physicscomponent->physicsobject != softbody)
-					{
-						dynamicsWorld.removeSoftBody(softbody);
-						delete softbody;
-						i--;
-						continue;
-					}
 
 					// If you need it, you can enable soft body node debug strings here:
 #if 0
@@ -685,62 +787,57 @@ namespace wi::physics
 
 
 	void ApplyForce(
-		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force
 	)
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			btRigidBody* rigidbody = (btRigidBody*)physicscomponent.physicsobject;
-			rigidbody->applyCentralForce(btVector3(force.x, force.y, force.z));
+			GetRigidBody(physicscomponent).rigidBody->applyCentralForce(btVector3(force.x, force.y, force.z));
 		}
 	}
 	void ApplyForceAt(
-		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force,
 		const XMFLOAT3& at
 	)
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			btRigidBody* rigidbody = (btRigidBody*)physicscomponent.physicsobject;
-			rigidbody->applyForce(btVector3(force.x, force.y, force.z), btVector3(at.x, at.y, at.z));
+			GetRigidBody(physicscomponent).rigidBody->applyForce(btVector3(force.x, force.y, force.z), btVector3(at.x, at.y, at.z));
 		}
 	}
 
 	void ApplyImpulse(
-		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse
 	)
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			btRigidBody* rigidbody = (btRigidBody*)physicscomponent.physicsobject;
-			rigidbody->applyCentralImpulse(btVector3(impulse.x, impulse.y, impulse.z));
+			GetRigidBody(physicscomponent).rigidBody->applyCentralImpulse(btVector3(impulse.x, impulse.y, impulse.z));
 		}
 	}
 	void ApplyImpulseAt(
-		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse,
 		const XMFLOAT3& at
 	)
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			btRigidBody* rigidbody = (btRigidBody*)physicscomponent.physicsobject;
-			rigidbody->applyImpulse(btVector3(impulse.x, impulse.y, impulse.z), btVector3(at.x, at.y, at.z));
+			GetRigidBody(physicscomponent).rigidBody->applyImpulse(btVector3(impulse.x, impulse.y, impulse.z), btVector3(at.x, at.y, at.z));
 		}
 	}
 
 	void ApplyTorque(
-		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& torque
 	)
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			btRigidBody* rigidbody = (btRigidBody*)physicscomponent.physicsobject;
-			rigidbody->applyTorque(btVector3(torque.x, torque.y, torque.z));
+			GetRigidBody(physicscomponent).rigidBody->applyTorque(btVector3(torque.x, torque.y, torque.z));
 		}
 	}
 }
