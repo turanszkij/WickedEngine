@@ -360,7 +360,7 @@ namespace wi::lua::renderer
 			{
 				XMFLOAT3 pos;
 				XMStoreFloat3(&pos, XMLoadFloat4(v));
-				wi::scene::GetScene().PutWaterRipple(wi::lua::GetScriptPath() + name, pos);
+				GetGlobalScene()->PutWaterRipple(wi::lua::GetScriptPath() + name, pos);
 			}
 			else
 				wi::lua::SError(L, "PutWaterRipple(String imagename, Vector position) argument is not a Vector!");
@@ -375,7 +375,7 @@ namespace wi::lua::renderer
 		Scene_BindLua* scene = Luna<Scene_BindLua>::lightcheck(L, 1);
 		if (scene == nullptr)
 		{
-			wi::renderer::ClearWorld(wi::scene::GetScene());
+			wi::renderer::ClearWorld(*GetGlobalScene());
 		}
 		else
 		{

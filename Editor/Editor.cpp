@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Editor.h"
 #include "wiRenderer.h"
+#include "wiScene_BindLua.h"
 
 #include "ModelImporter.h"
 #include "Translator.h"

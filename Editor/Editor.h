@@ -2,6 +2,7 @@
 #include "WickedEngine.h"
 #include "Translator.h"
 #include "TerrainGenerator.h"
+#include "wiScene_BindLua.h"
 
 #include "MaterialWindow.h"
 #include "PostprocessWindow.h"
@@ -208,6 +209,8 @@ public:
 		current_scene = index;
 		this->renderPath->scene = &scenes[current_scene].get()->scene;
 		this->renderPath->camera = &scenes[current_scene].get()->camera;
+		wi::lua::scene::SetGlobalScene(this->renderPath->scene);
+		wi::lua::scene::SetGlobalCamera(this->renderPath->camera);
 		RefreshEntityTree();
 		RefreshSceneList();
 	}
