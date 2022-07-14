@@ -893,10 +893,9 @@ void EditorComponent::Load()
 		GetCurrentEditorScene().path.clear();
 
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-			scenes.erase(scenes.begin() + current_scene);
-			if (scenes.empty())
+			if (scenes.size() > 1)
 			{
-				NewScene();
+				scenes.erase(scenes.begin() + current_scene);
 			}
 			SetCurrentScene(std::max(0, current_scene - 1));
 			});
