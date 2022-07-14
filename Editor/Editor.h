@@ -209,22 +209,30 @@ public:
 		this->renderPath->scene = &scenes[current_scene].get()->scene;
 		this->renderPath->camera = &scenes[current_scene].get()->camera;
 		RefreshEntityTree();
+		RefreshSceneList();
 	}
 	void RefreshSceneList()
 	{
+		sceneComboBox.ClearItems();
 		for (int i = 0; i < int(scenes.size()); ++i)
 		{
-			if (i >= sceneComboBox.GetItemCount())
-				return;
 			if (scenes[i]->path.empty())
 			{
-				sceneComboBox.SetItemText(i, "Untitled scene");
+				sceneComboBox.AddItem("Untitled");
 			}
 			else
 			{
-				sceneComboBox.SetItemText(i, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(scenes[i]->path)));
+				sceneComboBox.AddItem(wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(scenes[i]->path)));
 			}
 		}
+		sceneComboBox.AddItem("[New]");
+		sceneComboBox.SetSelectedWithoutCallback(current_scene);
+		std::string tooltip = "Choose a scene";
+		if (!GetCurrentEditorScene().path.empty())
+		{
+			tooltip += "\nCurrent path: " + GetCurrentEditorScene().path;
+		}
+		sceneComboBox.SetTooltip(tooltip);
 	}
 	void NewScene()
 	{

@@ -892,12 +892,14 @@ void EditorComponent::Load()
 		ResetHistory();
 		GetCurrentEditorScene().path.clear();
 
-		scenes.erase(scenes.begin() + current_scene);
-		current_scene = std::max(0, current_scene - 1);
-		if (scenes.empty())
-		{
-			NewScene();
-		}
+		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			scenes.erase(scenes.begin() + current_scene);
+			if (scenes.empty())
+			{
+				NewScene();
+			}
+			SetCurrentScene(std::max(0, current_scene - 1));
+			});
 	});
 	GetGUI().AddWidget(&closeButton);
 
@@ -1050,19 +1052,14 @@ void EditorComponent::Load()
 
 
 	sceneComboBox.Create("Scene: ");
-	sceneComboBox.AddItem("Untitled Scene");
-	sceneComboBox.AddItem("[New Scene]");
 	sceneComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		if (args.iValue >= int(scenes.size()))
 		{
 			NewScene();
-			sceneComboBox.AddItem("[New Scene]");
 		}
 		SetCurrentScene(args.iValue);
 		});
-	sceneComboBox.SetSelected(RENDERPATH_DEFAULT);
 	sceneComboBox.SetEnabled(true);
-	sceneComboBox.SetTooltip("Choose a scene");
 	sceneComboBox.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
 	sceneComboBox.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
 	GetGUI().AddWidget(&sceneComboBox);
