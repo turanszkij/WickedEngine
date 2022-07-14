@@ -54,7 +54,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	generateButton.SetPos(XMFLOAT2(x, y += step));
 	generateButton.OnClick([=](wi::gui::EventArgs args) {
 		XMFLOAT3 pos;
-		XMStoreFloat3(&pos, XMVectorAdd(wi::scene::GetCamera().GetEye(), wi::scene::GetCamera().GetAt() * 4));
+		XMStoreFloat3(&pos, XMVectorAdd(editor->GetCurrentEditorScene().camera.GetEye(), editor->GetCurrentEditorScene().camera.GetAt() * 4));
 		Entity entity = editor->GetCurrentScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
 
 		wi::Archive& archive = editor->AdvanceHistory();

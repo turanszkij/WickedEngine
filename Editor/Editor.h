@@ -190,15 +190,26 @@ public:
 	{
 		std::string path;
 		wi::scene::Scene scene;
+		XMFLOAT3 cam_move = {};
+		wi::scene::CameraComponent camera;
+		wi::scene::TransformComponent camera_transform;
+		wi::scene::TransformComponent camera_target;
 		wi::vector<wi::Archive> history;
 		int historyPos = -1;
 	};
 	wi::vector<std::unique_ptr<EditorScene>> scenes;
 	int current_scene = 0;
 	EditorScene& GetCurrentEditorScene() { return *scenes[current_scene].get(); }
+	const EditorScene& GetCurrentEditorScene() const { return *scenes[current_scene].get(); }
 	wi::scene::Scene& GetCurrentScene() { return scenes[current_scene].get()->scene; }
 	const wi::scene::Scene& GetCurrentScene() const { return scenes[current_scene].get()->scene; }
-	void SetCurrentScene(int index) { current_scene = index; this->renderPath->scene = &scenes[current_scene].get()->scene; }
+	void SetCurrentScene(int index)
+	{
+		current_scene = index;
+		this->renderPath->scene = &scenes[current_scene].get()->scene;
+		this->renderPath->camera = &scenes[current_scene].get()->camera;
+		RefreshEntityTree();
+	}
 	void RefreshSceneList()
 	{
 		for (int i = 0; i < int(scenes.size()); ++i)
@@ -220,6 +231,7 @@ public:
 		scenes.push_back(std::make_unique<EditorScene>());
 		SetCurrentScene(int(scenes.size()) - 1);
 		RefreshSceneList();
+		cameraWnd.ResetCam();
 	}
 };
 

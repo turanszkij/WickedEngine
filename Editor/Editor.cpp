@@ -829,16 +829,16 @@ void EditorComponent::Load()
 							TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
 							if (camera_transform != nullptr)
 							{
-								cameraWnd.camera_transform = *camera_transform;
+								GetCurrentEditorScene().camera_transform = *camera_transform;
 							}
 
 							CameraComponent* cam = GetCurrentScene().cameras.GetComponent(entity);
 							if (cam != nullptr)
 							{
-								wi::scene::GetCamera() = *cam;
+								GetCurrentEditorScene().camera = *cam;
 								// camera aspect should be always for the current screen
-								wi::scene::GetCamera().width = (float)renderPath->GetInternalResolution().x;
-								wi::scene::GetCamera().height = (float)renderPath->GetInternalResolution().y;
+								GetCurrentEditorScene().camera.width = (float)renderPath->GetInternalResolution().x;
+								GetCurrentEditorScene().camera.height = (float)renderPath->GetInternalResolution().y;
 							}
 						}
 					}
@@ -1149,7 +1149,8 @@ void EditorComponent::Update(float dt)
 	wi::profiler::range_id profrange = wi::profiler::BeginRangeCPU("Editor Update");
 
 	Scene& scene = GetCurrentScene();
-	CameraComponent& camera = wi::scene::GetCamera();
+	EditorScene& editorscene = GetCurrentEditorScene();
+	CameraComponent& camera = editorscene.camera;
 
 	terragen.scene = &scene;
 	translator.scene = &scene;
@@ -1261,7 +1262,7 @@ void EditorComponent::Update(float dt)
 			const float clampedDT = std::min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
 
 			const float speed = ((wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) ? 10.0f : 1.0f) + rightTrigger.x * 10.0f) * cameraWnd.movespeedSlider.GetValue() * clampedDT;
-			XMVECTOR move = XMLoadFloat3(&cameraWnd.move);
+			XMVECTOR move = XMLoadFloat3(&editorscene.cam_move);
 			XMVECTOR moveNew = XMVectorSet(leftStick.x, 0, leftStick.y, 0);
 
 			if (!wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
@@ -1287,17 +1288,17 @@ void EditorComponent::Update(float dt)
 
 			if (abs(xDif) + abs(yDif) > 0 || moveLength > 0.0001f)
 			{
-				XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&cameraWnd.camera_transform.rotation_local));
+				XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&editorscene.camera_transform.rotation_local));
 				XMVECTOR move_rot = XMVector3TransformNormal(move, camRot);
 				XMFLOAT3 _move;
 				XMStoreFloat3(&_move, move_rot);
-				cameraWnd.camera_transform.Translate(_move);
-				cameraWnd.camera_transform.RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
+				editorscene.camera_transform.Translate(_move);
+				editorscene.camera_transform.RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
 				camera.SetDirty();
 			}
 
-			cameraWnd.camera_transform.UpdateTransform();
-			XMStoreFloat3(&cameraWnd.move, move);
+			editorscene.camera_transform.UpdateTransform();
+			XMStoreFloat3(&editorscene.cam_move, move);
 		}
 		else
 		{
@@ -1308,29 +1309,29 @@ void EditorComponent::Update(float dt)
 				XMVECTOR V = XMVectorAdd(camera.GetRight() * xDif, camera.GetUp() * yDif) * 10;
 				XMFLOAT3 vec;
 				XMStoreFloat3(&vec, V);
-				cameraWnd.camera_target.Translate(vec);
+				editorscene.camera_target.Translate(vec);
 			}
 			else if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || currentMouse.z != 0.0f)
 			{
-				cameraWnd.camera_transform.Translate(XMFLOAT3(0, 0, yDif * 4 + currentMouse.z));
-				cameraWnd.camera_transform.translation_local.z = std::min(0.0f, cameraWnd.camera_transform.translation_local.z);
+				editorscene.camera_transform.Translate(XMFLOAT3(0, 0, yDif * 4 + currentMouse.z));
+				editorscene.camera_transform.translation_local.z = std::min(0.0f, editorscene.camera_transform.translation_local.z);
 				camera.SetDirty();
 			}
 			else if (abs(xDif) + abs(yDif) > 0)
 			{
-				cameraWnd.camera_target.RotateRollPitchYaw(XMFLOAT3(yDif * 2, xDif * 2, 0));
+				editorscene.camera_target.RotateRollPitchYaw(XMFLOAT3(yDif * 2, xDif * 2, 0));
 				camera.SetDirty();
 			}
 
-			cameraWnd.camera_target.UpdateTransform();
-			cameraWnd.camera_transform.UpdateTransform_Parented(cameraWnd.camera_target);
+			editorscene.camera_target.UpdateTransform();
+			editorscene.camera_transform.UpdateTransform_Parented(editorscene.camera_target);
 		}
 
 		inspector_mode = wi::input::Down((wi::input::BUTTON)'I');
 
 		// Begin picking:
 		unsigned int pickMask = rendererWnd.GetPickType();
-		Ray pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this);
+		Ray pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this, camera);
 		{
 			hovered = wi::scene::PickResult();
 
@@ -1937,12 +1938,12 @@ void EditorComponent::Update(float dt)
 		TransformComponent* proxy = scene.transforms.GetComponent(cameraWnd.proxy);
 		if (proxy != nullptr)
 		{
-			cameraWnd.camera_transform.Lerp(cameraWnd.camera_transform, *proxy, 1.0f - cameraWnd.followSlider.GetValue());
-			cameraWnd.camera_transform.UpdateTransform();
+			editorscene.camera_transform.Lerp(editorscene.camera_transform, *proxy, 1.0f - cameraWnd.followSlider.GetValue());
+			editorscene.camera_transform.UpdateTransform();
 		}
 	}
 
-	camera.TransformCamera(cameraWnd.camera_transform);
+	camera.TransformCamera(editorscene.camera_transform);
 	camera.UpdateCamera();
 
 	wi::RenderPath3D_PathTracing* pathtracer = dynamic_cast<wi::RenderPath3D_PathTracing*>(renderPath.get());
@@ -2195,7 +2196,7 @@ void EditorComponent::Render() const
 			const XMFLOAT4 glow = wi::math::Lerp(wi::math::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
 			const wi::Color selectedEntityColor = wi::Color::fromFloat4(glow);
 
-			const CameraComponent& camera = wi::scene::GetCamera();
+			const CameraComponent& camera = GetCurrentEditorScene().camera;
 
 			const Scene& scene = GetCurrentScene();
 
@@ -2561,7 +2562,7 @@ void EditorComponent::Render() const
 			}
 
 
-			translator.Draw(wi::scene::GetCamera(), cmd);
+			translator.Draw(GetCurrentEditorScene().camera, cmd);
 
 			device->RenderPassEnd(cmd);
 		}

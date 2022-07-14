@@ -322,7 +322,7 @@ void PaintToolWindow::Update(float dt)
 	const bool wireframe = wireCheckBox.GetCheck();
 
 	Scene& scene = editor->GetCurrentScene();
-	const CameraComponent& camera = wi::scene::GetCamera();
+	const CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 	const XMVECTOR C = XMLoadFloat2(&pos);
 	const XMMATRIX VP = camera.GetViewProjection();
 	const XMVECTOR MUL = XMVectorSet(0.5f, -0.5f, 1, 1);

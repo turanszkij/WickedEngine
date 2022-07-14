@@ -7,33 +7,35 @@ using namespace wi::scene;
 
 void CameraWindow::ResetCam()
 {
-	move = {};
+	if (editor == nullptr)
+		return;
+	auto& editorscene = editor->GetCurrentEditorScene();
 
-	Scene& scene = editor->GetCurrentScene();
+	editorscene.cam_move = {};
 
-	CameraComponent& camera = wi::scene::GetCamera();
+	CameraComponent& camera = editorscene.camera;
 	float width = camera.width;
 	float height = camera.height;
 	camera = CameraComponent();
 	camera.width = width;
 	camera.height = height;
 
-	camera_transform.ClearTransform();
-	camera_transform.Translate(XMFLOAT3(0, 2, -10));
-	camera_transform.UpdateTransform();
-	camera.TransformCamera(camera_transform);
+	editorscene.camera_transform.ClearTransform();
+	editorscene.camera_transform.Translate(XMFLOAT3(0, 2, -10));
+	editorscene.camera_transform.UpdateTransform();
+	camera.TransformCamera(editorscene.camera_transform);
 	camera.UpdateCamera();
 
-	camera_target.ClearTransform();
-	camera_target.UpdateTransform();
+	editorscene.camera_target.ClearTransform();
+	editorscene.camera_target.UpdateTransform();
 }
 
 void CameraWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Camera Window");
-	camera_transform.MatrixTransform(wi::scene::GetCamera().GetInvView());
-	camera_transform.UpdateTransform();
+	editor->GetCurrentEditorScene().camera_transform.MatrixTransform(editor->GetCurrentEditorScene().camera.GetInvView());
+	editor->GetCurrentEditorScene().camera_transform.UpdateTransform();
 
 	SetSize(XMFLOAT2(380, 360));
 
@@ -46,10 +48,10 @@ void CameraWindow::Create(EditorComponent* _editor)
 	farPlaneSlider.SetTooltip("Controls the camera's far clip plane, geometry farther than this will be clipped.");
 	farPlaneSlider.SetSize(XMFLOAT2(100, hei));
 	farPlaneSlider.SetPos(XMFLOAT2(x, y));
-	farPlaneSlider.SetValue(wi::scene::GetCamera().zFarP);
+	farPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zFarP);
 	farPlaneSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
-		CameraComponent& camera = wi::scene::GetCamera();
+		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 		camera.zFarP = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
@@ -60,10 +62,10 @@ void CameraWindow::Create(EditorComponent* _editor)
 	nearPlaneSlider.SetTooltip("Controls the camera's near clip plane, geometry closer than this will be clipped.");
 	nearPlaneSlider.SetSize(XMFLOAT2(100, hei));
 	nearPlaneSlider.SetPos(XMFLOAT2(x, y += step));
-	nearPlaneSlider.SetValue(wi::scene::GetCamera().zNearP);
+	nearPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zNearP);
 	nearPlaneSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
-		CameraComponent& camera = wi::scene::GetCamera();
+		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 		camera.zNearP = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
@@ -76,7 +78,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	fovSlider.SetPos(XMFLOAT2(x, y += step));
 	fovSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
-		CameraComponent& camera = wi::scene::GetCamera();
+		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 		camera.fov = args.fValue / 180.f * XM_PI;
 		camera.UpdateCamera();
 		camera.SetDirty();
@@ -89,7 +91,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	focalLengthSlider.SetPos(XMFLOAT2(x, y += step));
 	focalLengthSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
-		CameraComponent& camera = wi::scene::GetCamera();
+		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 		camera.focal_length = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
@@ -102,7 +104,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	apertureSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	apertureSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
-		CameraComponent& camera = wi::scene::GetCamera();
+		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 		camera.aperture_size = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
@@ -115,7 +117,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	apertureShapeXSlider.SetPos(XMFLOAT2(x, y += step));
 	apertureShapeXSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
-		CameraComponent& camera = wi::scene::GetCamera();
+		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 		camera.aperture_shape.x = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
@@ -128,7 +130,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	apertureShapeYSlider.SetPos(XMFLOAT2(x, y += step));
 	apertureShapeYSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
-		CameraComponent& camera = wi::scene::GetCamera();
+		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 		camera.aperture_shape.y = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
@@ -172,7 +174,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	proxyButton.SetPos(XMFLOAT2(x, y += step * 2));
 	proxyButton.OnClick([=](wi::gui::EventArgs args) {
 
-		const CameraComponent& camera = wi::scene::GetCamera();
+		const CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 
 		Scene& scene = editor->GetCurrentScene();
 
@@ -242,7 +244,7 @@ void CameraWindow::SetEntity(Entity entity)
 
 void CameraWindow::Update()
 {
-	CameraComponent& camera = wi::scene::GetCamera();
+	CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 
 	farPlaneSlider.SetValue(camera.zFarP);
 	nearPlaneSlider.SetValue(camera.zNearP);
@@ -257,7 +259,7 @@ void CameraWindow::Update()
 	//	however this only works well for fps camera
 	if (fpsCheckBox.GetCheck())
 	{
-		camera_transform.ClearTransform();
-		camera_transform.MatrixTransform(camera.InvView);
+		editor->GetCurrentEditorScene().camera_transform.ClearTransform();
+		editor->GetCurrentEditorScene().camera_transform.MatrixTransform(camera.InvView);
 	}
 }

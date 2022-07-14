@@ -15,11 +15,6 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 	void Update();
 
-	XMFLOAT3 move = {};
-
-
-	wi::scene::TransformComponent camera_transform;
-	wi::scene::TransformComponent camera_target;
 
 	wi::gui::Slider farPlaneSlider;
 	wi::gui::Slider nearPlaneSlider;
