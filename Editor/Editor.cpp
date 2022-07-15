@@ -96,6 +96,10 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	{
 		NewScene();
 	}
+	else
+	{
+		SetCurrentScene(current_scene);
+	}
 
 	renderPath->resolutionScale = resolutionScale;
 	renderPath->setBloomThreshold(3.0f);
@@ -351,16 +355,16 @@ void EditorComponent::ResizeLayout()
 	renderPathComboBox.SetPos(XMFLOAT2(screenW - 140, 45));
 
 	sceneComboBox.SetSize(XMFLOAT2(120, 18));
-	sceneComboBox.SetPos(XMFLOAT2(screenW - 140, 70));
+	sceneComboBox.SetPos(XMFLOAT2(screenW - 140, 67));
 
 	saveModeComboBox.SetSize(XMFLOAT2(120, 18));
-	saveModeComboBox.SetPos(XMFLOAT2(screenW - 140, 95));
+	saveModeComboBox.SetPos(XMFLOAT2(screenW - 140, 89));
 
 	pathTraceTargetSlider.SetSize(XMFLOAT2(200, 18));
-	pathTraceTargetSlider.SetPos(XMFLOAT2(screenW - 240, 100));
+	pathTraceTargetSlider.SetPos(XMFLOAT2(screenW - 240, 111));
 
 	pathTraceStatisticsLabel.SetSize(XMFLOAT2(240, 60));
-	pathTraceStatisticsLabel.SetPos(XMFLOAT2(screenW - 240, 125));
+	pathTraceStatisticsLabel.SetPos(XMFLOAT2(screenW - 240, 133));
 
 	entityTree.SetSize(XMFLOAT2(260, 300));
 	entityTree.SetPos(XMFLOAT2(0, screenH - entityTree.scale_local.y));
