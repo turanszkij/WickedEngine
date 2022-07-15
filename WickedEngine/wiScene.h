@@ -1338,6 +1338,7 @@ namespace wi::scene
 		};
 		uint32_t flags = EMPTY;
 
+		CameraComponent camera; // for LOD and 3D sound update
 		std::shared_ptr<void> physics_scene;
 		wi::SpinLock locker;
 		wi::primitive::AABB bounds;
@@ -1566,8 +1567,6 @@ namespace wi::scene
 		void RunParticleUpdateSystem(wi::jobsystem::context& ctx);
 		void RunWeatherUpdateSystem(wi::jobsystem::context& ctx);
 		void RunSoundUpdateSystem(wi::jobsystem::context& ctx);
-
-		void UpdateLODsForCamera(const CameraComponent& camera);
 	};
 
 	// Returns skinned vertex position in armature local space
