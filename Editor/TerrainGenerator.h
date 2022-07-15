@@ -40,7 +40,9 @@ struct ChunkData
 	wi::ecs::Entity grass_entity = wi::ecs::INVALID_ENTITY;
 	wi::ecs::Entity props_entity = wi::ecs::INVALID_ENTITY;
 	const XMFLOAT3* mesh_vertex_positions = nullptr;
+	float prop_density_current = 1;
 	wi::HairParticleSystem grass;
+	float grass_density_current = 1;
 	std::mt19937 prop_rand;
 	wi::Color region_weights[vertexCount] = {};
 	wi::graphics::Texture region_weights_texture;
@@ -117,9 +119,10 @@ struct TerrainGenerator : public wi::gui::Window
 	wi::gui::Slider texlodSlider;
 	wi::gui::Slider generationSlider;
 	wi::gui::Slider propSlider;
+	wi::gui::Slider propDensitySlider;
+	wi::gui::Slider grassDensitySlider;
 	wi::gui::ComboBox presetCombo;
 	wi::gui::Slider scaleSlider;
-	wi::gui::Slider propDensitySlider;
 	wi::gui::Slider seedSlider;
 	wi::gui::Slider bottomLevelSlider;
 	wi::gui::Slider topLevelSlider;

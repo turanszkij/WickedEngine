@@ -228,6 +228,18 @@ void TerrainGenerator::init()
 	propSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&propSlider);
 
+	propDensitySlider.Create(0, 10, 1, 1000, "Prop Density: ");
+	propDensitySlider.SetTooltip("Modifies overall prop density.");
+	propDensitySlider.SetSize(XMFLOAT2(200, hei));
+	propDensitySlider.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&propDensitySlider);
+
+	grassDensitySlider.Create(0, 4, 1, 1000, "Grass Density: ");
+	grassDensitySlider.SetTooltip("Modifies overall grass density.");
+	grassDensitySlider.SetSize(XMFLOAT2(200, hei));
+	grassDensitySlider.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&grassDensitySlider);
+
 	presetCombo.Create("Preset: ");
 	presetCombo.SetTooltip("Select a terrain preset");
 	presetCombo.SetSize(XMFLOAT2(200, hei));
@@ -318,12 +330,6 @@ void TerrainGenerator::init()
 	scaleSlider.SetSize(XMFLOAT2(200, hei));
 	scaleSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&scaleSlider);
-
-	propDensitySlider.Create(1, 10, 1, 9, "Prop Density: ");
-	propDensitySlider.SetTooltip("Modifies overall prop density.");
-	propDensitySlider.SetSize(XMFLOAT2(200, hei));
-	propDensitySlider.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&propDensitySlider);
 
 	seedSlider.Create(1, 12345, 3926, 12344, "Seed: ");
 	seedSlider.SetTooltip("Seed for terrain randomness");
@@ -438,7 +444,6 @@ void TerrainGenerator::init()
 		Generation_Restart();
 	};
 	scaleSlider.OnSlide(generate_callback);
-	propDensitySlider.OnSlide(generate_callback);
 	seedSlider.OnSlide(generate_callback);
 	bottomLevelSlider.OnSlide(generate_callback);
 	topLevelSlider.OnSlide(generate_callback);
@@ -695,14 +700,14 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 			else
 			{
 				// Grass patch removal:
-				if (chunk_data.grass.meshID != INVALID_ENTITY && (dist > 1 || !grassCheckBox.GetCheck()))
+				if (chunk_data.grass.meshID != INVALID_ENTITY && (dist > 1 || !grassCheckBox.GetCheck() || std::abs(chunk_data.grass_density_current - grassDensitySlider.GetValue()) > std::numeric_limits<float>::epsilon()))
 				{
 					scene->Entity_Remove(chunk_data.grass_entity);
 					chunk_data.grass_entity = INVALID_ENTITY; // grass can be generated here by generation thread...
 				}
 
 				// Prop removal:
-				if (chunk_data.props_entity != INVALID_ENTITY && dist > int(propSlider.GetValue()))
+				if (chunk_data.props_entity != INVALID_ENTITY && (dist > int(propSlider.GetValue()) || std::abs(chunk_data.prop_density_current - propDensitySlider.GetValue()) > std::numeric_limits<float>::epsilon()))
 				{
 					scene->Entity_Remove(chunk_data.props_entity);
 					chunk_data.props_entity = INVALID_ENTITY; // prop can be generated here by generation thread...
@@ -1043,6 +1048,8 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 						chunk_data.grass_entity = CreateEntity();
 						wi::HairParticleSystem& grass = generation_scene.hairs.Create(chunk_data.grass_entity);
 						grass = chunk_data.grass;
+						chunk_data.grass_density_current = grassDensitySlider.GetValue();
+						grass.strandCount = uint32_t(grass.strandCount * chunk_data.grass_density_current);
 						generation_scene.materials.Create(chunk_data.grass_entity) = material_GrassParticle;
 						generation_scene.transforms.Create(chunk_data.grass_entity);
 						generation_scene.names.Create(chunk_data.grass_entity) = "grass";
@@ -1066,13 +1073,15 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 						generation_scene.transforms.Create(chunk_data.props_entity);
 						generation_scene.names.Create(chunk_data.props_entity) = "props";
 						generation_scene.Component_Attach(chunk_data.props_entity, chunk_data.entity, true);
-
-						int propDensity = int(propDensitySlider.GetValue());
+						chunk_data.prop_density_current = propDensitySlider.GetValue();
 
 						chunk_data.prop_rand.seed((uint32_t)chunk.compute_hash() ^ seed);
 						for (auto& prop : props)
 						{
-							std::uniform_int_distribution<uint32_t> gen_distr(prop.min_count_per_chunk * propDensity, prop.max_count_per_chunk * propDensity);
+							std::uniform_int_distribution<uint32_t> gen_distr(
+								uint32_t(prop.min_count_per_chunk * chunk_data.prop_density_current),
+								uint32_t(prop.max_count_per_chunk * chunk_data.prop_density_current)
+							);
 							int gen_count = gen_distr(chunk_data.prop_rand);
 							for (int i = 0; i < gen_count; ++i)
 							{
