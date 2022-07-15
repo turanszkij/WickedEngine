@@ -1006,7 +1006,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 				{
 					chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
 					chunk_data.grass.meshID = chunk_data.entity;
-					chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale);
+					chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale * chunk_scale); // chunk_scale * chunk_scale : grass density increases with squared amount with chunk scale (x*z)
 					chunk_data.grass.viewDistance = chunk_width * chunk_scale;
 				}
 

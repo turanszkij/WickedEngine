@@ -111,12 +111,12 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	// Destroy and recreate renderer and postprocess windows:
 
 	gui.RemoveWidget(&rendererWnd);
-	rendererWnd = RendererWindow();
+	rendererWnd = {};
 	rendererWnd.Create(this);
 	gui.AddWidget(&rendererWnd);
 
 	gui.RemoveWidget(&postprocessWnd);
-	postprocessWnd = PostprocessWindow();
+	postprocessWnd = {};
 	postprocessWnd.Create(this);
 	gui.AddWidget(&postprocessWnd);
 }
