@@ -183,6 +183,13 @@ void TerrainGenerator::init()
 	removalCheckBox.SetCheck(true);
 	AddWidget(&removalCheckBox);
 
+	grassCheckBox.Create("Grass: ");
+	grassCheckBox.SetTooltip("Specify whether grass generation is enabled.");
+	grassCheckBox.SetSize(XMFLOAT2(hei, hei));
+	grassCheckBox.SetPos(XMFLOAT2(x + 200, y));
+	grassCheckBox.SetCheck(true);
+	AddWidget(&grassCheckBox);
+
 	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "Mesh LOD Distance: ");
 	lodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
 	lodSlider.SetSize(XMFLOAT2(200, hei));
@@ -203,7 +210,7 @@ void TerrainGenerator::init()
 		});
 	AddWidget(&lodSlider);
 
-	texlodSlider.Create(0.01f, 0.05f, 0.01f, 10000, "Texture LOD Distance: ");
+	texlodSlider.Create(0.001f, 0.05f, 0.01f, 10000, "Texture LOD Distance: ");
 	texlodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
 	texlodSlider.SetSize(XMFLOAT2(200, hei));
 	texlodSlider.SetPos(XMFLOAT2(x, y += step));
@@ -214,6 +221,12 @@ void TerrainGenerator::init()
 	generationSlider.SetSize(XMFLOAT2(200, hei));
 	generationSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&generationSlider);
+
+	propSlider.Create(0, 16, 10, 16, "Prop Distance: ");
+	propSlider.SetTooltip("How far out props will be generated (value is in number of chunks)");
+	propSlider.SetSize(XMFLOAT2(200, hei));
+	propSlider.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&propSlider);
 
 	presetCombo.Create("Preset: ");
 	presetCombo.SetTooltip("Select a terrain preset");
@@ -299,6 +312,18 @@ void TerrainGenerator::init()
 		Generation_Restart();
 		});
 	AddWidget(&presetCombo);
+
+	scaleSlider.Create(1, 10, 1, 9, "Chunk Scale: ");
+	scaleSlider.SetTooltip("Size of one chunk in horizontal directions.\nLarger chunk scale will cover larger distance, but will have less detail per unit.");
+	scaleSlider.SetSize(XMFLOAT2(200, hei));
+	scaleSlider.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&scaleSlider);
+
+	propDensitySlider.Create(1, 10, 1, 9, "Prop Density: ");
+	propDensitySlider.SetTooltip("Modifies overall prop density.");
+	propDensitySlider.SetSize(XMFLOAT2(200, hei));
+	propDensitySlider.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&propDensitySlider);
 
 	seedSlider.Create(1, 12345, 3926, 12344, "Seed: ");
 	seedSlider.SetTooltip("Seed for terrain randomness");
@@ -412,6 +437,8 @@ void TerrainGenerator::init()
 	auto generate_callback = [=](wi::gui::EventArgs args) {
 		Generation_Restart();
 	};
+	scaleSlider.OnSlide(generate_callback);
+	propDensitySlider.OnSlide(generate_callback);
 	seedSlider.OnSlide(generate_callback);
 	bottomLevelSlider.OnSlide(generate_callback);
 	topLevelSlider.OnSlide(generate_callback);
@@ -601,6 +628,9 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 	// What was generated, will be merged in to the main scene
 	scene->Merge(generation_scene);
 
+	const float chunk_scale = scaleSlider.GetValue();
+	const float chunk_scale_rcp = 1.0f / chunk_scale;
+
 	if (centerToCamCheckBox.GetCheck())
 	{
 		center_chunk.x = (int)std::floor((camera.Eye.x + chunk_half_width) * chunk_width_rcp * chunk_scale_rcp);
@@ -665,13 +695,17 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 			else
 			{
 				// Grass patch removal:
-				if (chunk_data.grass.meshID != INVALID_ENTITY)
+				if (chunk_data.grass.meshID != INVALID_ENTITY && (dist > 1 || !grassCheckBox.GetCheck()))
 				{
-					if (dist > 1)
-					{
-						scene->Entity_Remove(chunk_data.grass_entity);
-						chunk_data.grass_exists = false; // grass can be generated here by generation thread...
-					}
+					scene->Entity_Remove(chunk_data.grass_entity);
+					chunk_data.grass_entity = INVALID_ENTITY; // grass can be generated here by generation thread...
+				}
+
+				// Prop removal:
+				if (chunk_data.props_entity != INVALID_ENTITY && dist > int(propSlider.GetValue()))
+				{
+					scene->Entity_Remove(chunk_data.props_entity);
+					chunk_data.props_entity = INVALID_ENTITY; // prop can be generated here by generation thread...
 				}
 			}
 		}
@@ -793,6 +827,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 		wi::Timer timer;
 		const float lodMultiplier = lodSlider.GetValue();
 		const int generation = (int)generationSlider.GetValue();
+		const int prop_generation = (int)propSlider.GetValue();
 		const float bottomLevel = bottomLevelSlider.GetValue();
 		const float topLevel = topLevelSlider.GetValue();
 		const float heightmapBlend = heightmapBlendSlider.GetValue();
@@ -829,8 +864,8 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 				TransformComponent& transform = *generation_scene.transforms.GetComponent(chunk_data.entity);
 				transform.ClearTransform();
-				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (chunk_width - 1)) * chunk_scale, 0, float(chunk.z * (chunk_width - 1)) * chunk_scale);
-				transform.Translate(chunk_pos);
+				chunk_data.position = XMFLOAT3(float(chunk.x * (chunk_width - 1)) * chunk_scale, 0, float(chunk.z * (chunk_width - 1)) * chunk_scale);
+				transform.Translate(chunk_data.position);
 				transform.UpdateTransform();
 
 				MaterialComponent& material = generation_scene.materials.Create(chunk_data.entity);
@@ -855,6 +890,8 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 				mesh.vertex_normals.resize(vertexCount);
 				mesh.vertex_uvset_0.resize(vertexCount);
 
+				chunk_data.mesh_vertex_positions = mesh.vertex_positions.data();
+
 				wi::HairParticleSystem grass = grass_properties;
 				grass.vertex_lengths.resize(vertexCount);
 				std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
@@ -874,7 +911,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 					for (int i = 0; i < arraysize(corners); ++i)
 					{
 						float height = 0;
-						const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x + corner_offsets[i].x, chunk_pos.z + z + corner_offsets[i].y);
+						const XMFLOAT2 world_pos = XMFLOAT2(chunk_data.position.x + x + corner_offsets[i].x, chunk_data.position.z + z + corner_offsets[i].y);
 						if (perlinBlend > 0)
 						{
 							XMFLOAT2 p = world_pos;
@@ -938,7 +975,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 					const XMFLOAT2 uv = XMFLOAT2(x * chunk_scale_rcp * chunk_width_rcp + 0.5f, z * chunk_scale_rcp * chunk_width_rcp + 0.5f);
 					mesh.vertex_uvset_0[index] = uv;
 
-					XMFLOAT3 vertex_pos(chunk_pos.x + x, height, chunk_pos.z + z);
+					XMFLOAT3 vertex_pos(chunk_data.position.x + x, height, chunk_data.position.z + z);
 
 					const float grass_noise_frequency = 0.1f;
 					const float grass_noise = perlin.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
@@ -958,80 +995,19 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 				wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 					mesh.CreateRenderData();
 					chunk_data.sphere.center = mesh.aabb.getCenter();
-					chunk_data.sphere.center.x += chunk_pos.x;
-					chunk_data.sphere.center.y += chunk_pos.y;
-					chunk_data.sphere.center.z += chunk_pos.z;
+					chunk_data.sphere.center.x += chunk_data.position.x;
+					chunk_data.sphere.center.y += chunk_data.position.y;
+					chunk_data.sphere.center.z += chunk_data.position.z;
 					chunk_data.sphere.radius = mesh.aabb.getRadius();
 					});
 
 				// If there were any vertices in this chunk that could be valid for grass, store the grass particle system:
 				if (grass_valid_vertex_count.load() > 0)
 				{
-					chunk_data.grass_entity = CreateEntity();
 					chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
 					chunk_data.grass.meshID = chunk_data.entity;
-					chunk_data.grass.strandCount = grass_valid_vertex_count.load() * 3;
-					chunk_data.grass.viewDistance = chunk_width;
-				}
-
-				// Prop placement:
-				chunk_data.prop_rand.seed((uint32_t)chunk.compute_hash() ^ seed);
-				for (auto& prop : props)
-				{
-					std::uniform_int_distribution<uint32_t> gen_distr(prop.min_count_per_chunk, prop.max_count_per_chunk);
-					int gen_count = gen_distr(chunk_data.prop_rand);
-					for (int i = 0; i < gen_count; ++i)
-					{
-						std::uniform_real_distribution<float> float_distr(0.0f, 1.0f);
-						std::uniform_int_distribution<uint32_t> ind_distr(0, lods[0].indexCount / 3 - 1);
-						uint32_t tri = ind_distr(chunk_data.prop_rand); // random triangle on the chunk mesh
-						uint32_t ind0 = mesh.indices[tri * 3 + 0];
-						uint32_t ind1 = mesh.indices[tri * 3 + 1];
-						uint32_t ind2 = mesh.indices[tri * 3 + 2];
-						const XMFLOAT3& pos0 = mesh.vertex_positions[ind0];
-						const XMFLOAT3& pos1 = mesh.vertex_positions[ind1];
-						const XMFLOAT3& pos2 = mesh.vertex_positions[ind2];
-						const XMFLOAT4 region0 = chunk_data.region_weights[ind0];
-						const XMFLOAT4 region1 = chunk_data.region_weights[ind1];
-						const XMFLOAT4 region2 = chunk_data.region_weights[ind2];
-						// random barycentric coords on the triangle:
-						float f = float_distr(chunk_data.prop_rand);
-						float g = float_distr(chunk_data.prop_rand);
-						if (f + g > 1)
-						{
-							f = 1 - f;
-							g = 1 - g;
-						}
-						XMFLOAT3 vertex_pos;
-						vertex_pos.x = pos0.x + f * (pos1.x - pos0.x) + g * (pos2.x - pos0.x);
-						vertex_pos.y = pos0.y + f * (pos1.y - pos0.y) + g * (pos2.y - pos0.y);
-						vertex_pos.z = pos0.z + f * (pos1.z - pos0.z) + g * (pos2.z - pos0.z);
-						vertex_pos.x += chunk_pos.x;
-						vertex_pos.z += chunk_pos.z;
-						XMFLOAT4 region;
-						region.x = region0.x + f * (region1.x - region0.x) + g * (region2.x - region0.x);
-						region.y = region0.y + f * (region1.y - region0.y) + g * (region2.y - region0.y);
-						region.z = region0.z + f * (region1.z - region0.z) + g * (region2.z - region0.z);
-						region.w = region0.w + f * (region1.w - region0.w) + g * (region2.w - region0.w);
-
-						const float noise = std::pow(perlin.compute(vertex_pos.x * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, vertex_pos.z * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power);
-						const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise;
-						if (chance > prop.threshold)
-						{
-							Entity entity = generation_scene.Entity_CreateObject(prop.name + std::to_string(i));
-							ObjectComponent* object = generation_scene.objects.GetComponent(entity);
-							*object = prop.object;
-							TransformComponent* transform = generation_scene.transforms.GetComponent(entity);
-							XMFLOAT3 offset = vertex_pos;
-							offset.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, float_distr(chunk_data.prop_rand));
-							transform->Translate(offset);
-							const float scaling = wi::math::Lerp(prop.min_size, prop.max_size, float_distr(chunk_data.prop_rand));
-							transform->Scale(XMFLOAT3(scaling, scaling, scaling));
-							transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * float_distr(chunk_data.prop_rand), 0));
-							transform->UpdateTransform();
-							generation_scene.Component_Attach(entity, chunk_data.entity);
-						}
-					}
+					chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale);
+					chunk_data.grass.viewDistance = chunk_width * chunk_scale;
 				}
 
 				// Create the blend weights texture for virtual texture update:
@@ -1052,27 +1028,103 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 				generated_something = true;
 			}
 
-			// Grass patch placement:
 			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
-			if (dist <= 1)
+
+			// Grass patch placement:
+			if (dist <= 1 && grassCheckBox.GetCheck())
 			{
 				it = chunks.find(chunk);
 				if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
 				{
 					ChunkData& chunk_data = it->second;
-					if (chunk_data.grass.meshID != INVALID_ENTITY)
+					if (chunk_data.grass_entity == INVALID_ENTITY && chunk_data.grass.meshID != INVALID_ENTITY)
 					{
-						if (!chunk_data.grass_exists)
+						// add patch for this chunk
+						chunk_data.grass_entity = CreateEntity();
+						wi::HairParticleSystem& grass = generation_scene.hairs.Create(chunk_data.grass_entity);
+						grass = chunk_data.grass;
+						generation_scene.materials.Create(chunk_data.grass_entity) = material_GrassParticle;
+						generation_scene.transforms.Create(chunk_data.grass_entity);
+						generation_scene.names.Create(chunk_data.grass_entity) = "grass";
+						generation_scene.Component_Attach(chunk_data.grass_entity, chunk_data.entity, true);
+						generated_something = true;
+					}
+				}
+			}
+
+			// Prop placement:
+			if (dist <= prop_generation)
+			{
+				it = chunks.find(chunk);
+				if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
+				{
+					ChunkData& chunk_data = it->second;
+
+					if (chunk_data.props_entity == INVALID_ENTITY)
+					{
+						chunk_data.props_entity = CreateEntity();
+						generation_scene.transforms.Create(chunk_data.props_entity);
+						generation_scene.names.Create(chunk_data.props_entity) = "props";
+						generation_scene.Component_Attach(chunk_data.props_entity, chunk_data.entity, true);
+
+						int propDensity = int(propDensitySlider.GetValue());
+
+						chunk_data.prop_rand.seed((uint32_t)chunk.compute_hash() ^ seed);
+						for (auto& prop : props)
 						{
-							// add patch for this chunk
-							wi::HairParticleSystem& grass = generation_scene.hairs.Create(chunk_data.grass_entity);
-							grass = chunk_data.grass;
-							generation_scene.materials.Create(chunk_data.grass_entity) = material_GrassParticle;
-							generation_scene.transforms.Create(chunk_data.grass_entity);
-							generation_scene.names.Create(chunk_data.grass_entity) = "grass";
-							generation_scene.Component_Attach(chunk_data.grass_entity, chunk_data.entity, true);
-							chunk_data.grass_exists = true; // don't generate more grass here
-							generated_something = true;
+							std::uniform_int_distribution<uint32_t> gen_distr(prop.min_count_per_chunk * propDensity, prop.max_count_per_chunk * propDensity);
+							int gen_count = gen_distr(chunk_data.prop_rand);
+							for (int i = 0; i < gen_count; ++i)
+							{
+								std::uniform_real_distribution<float> float_distr(0.0f, 1.0f);
+								std::uniform_int_distribution<uint32_t> ind_distr(0, lods[0].indexCount / 3 - 1);
+								uint32_t tri = ind_distr(chunk_data.prop_rand); // random triangle on the chunk mesh
+								uint32_t ind0 = indices[tri * 3 + 0];
+								uint32_t ind1 = indices[tri * 3 + 1];
+								uint32_t ind2 = indices[tri * 3 + 2];
+								const XMFLOAT3& pos0 = chunk_data.mesh_vertex_positions[ind0];
+								const XMFLOAT3& pos1 = chunk_data.mesh_vertex_positions[ind1];
+								const XMFLOAT3& pos2 = chunk_data.mesh_vertex_positions[ind2];
+								const XMFLOAT4 region0 = chunk_data.region_weights[ind0];
+								const XMFLOAT4 region1 = chunk_data.region_weights[ind1];
+								const XMFLOAT4 region2 = chunk_data.region_weights[ind2];
+								// random barycentric coords on the triangle:
+								float f = float_distr(chunk_data.prop_rand);
+								float g = float_distr(chunk_data.prop_rand);
+								if (f + g > 1)
+								{
+									f = 1 - f;
+									g = 1 - g;
+								}
+								XMFLOAT3 vertex_pos;
+								vertex_pos.x = pos0.x + f * (pos1.x - pos0.x) + g * (pos2.x - pos0.x);
+								vertex_pos.y = pos0.y + f * (pos1.y - pos0.y) + g * (pos2.y - pos0.y);
+								vertex_pos.z = pos0.z + f * (pos1.z - pos0.z) + g * (pos2.z - pos0.z);
+								XMFLOAT4 region;
+								region.x = region0.x + f * (region1.x - region0.x) + g * (region2.x - region0.x);
+								region.y = region0.y + f * (region1.y - region0.y) + g * (region2.y - region0.y);
+								region.z = region0.z + f * (region1.z - region0.z) + g * (region2.z - region0.z);
+								region.w = region0.w + f * (region1.w - region0.w) + g * (region2.w - region0.w);
+
+								const float noise = std::pow(perlin.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power);
+								const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise;
+								if (chance > prop.threshold)
+								{
+									Entity entity = generation_scene.Entity_CreateObject(prop.name + std::to_string(i));
+									ObjectComponent* object = generation_scene.objects.GetComponent(entity);
+									*object = prop.object;
+									TransformComponent* transform = generation_scene.transforms.GetComponent(entity);
+									XMFLOAT3 offset = vertex_pos;
+									offset.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, float_distr(chunk_data.prop_rand));
+									transform->Translate(offset);
+									const float scaling = wi::math::Lerp(prop.min_size, prop.max_size, float_distr(chunk_data.prop_rand));
+									transform->Scale(XMFLOAT3(scaling, scaling, scaling));
+									transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * float_distr(chunk_data.prop_rand), 0));
+									transform->UpdateTransform();
+									generation_scene.Component_Attach(entity, chunk_data.props_entity, true);
+									generated_something = true;
+								}
+							}
 						}
 					}
 				}
@@ -1212,3 +1264,4 @@ void TerrainGenerator::BakeVirtualTexturesToFiles()
 		}
 	}
 }
+

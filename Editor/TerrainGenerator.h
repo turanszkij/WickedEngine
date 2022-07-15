@@ -34,19 +34,19 @@ inline static const float chunk_half_width = (chunk_width - 1) * 0.5f;
 inline static const float chunk_width_rcp = 1.0f / (chunk_width - 1);
 inline static const uint32_t vertexCount = chunk_width * chunk_width;
 inline static const int max_lod = (int)std::log2(chunk_width - 3) + 1;
-inline static const float chunk_scale = 1;
-inline static const float chunk_scale_rcp = 1.0f / chunk_scale;
 struct ChunkData
 {
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	wi::ecs::Entity grass_entity = wi::ecs::INVALID_ENTITY;
+	wi::ecs::Entity props_entity = wi::ecs::INVALID_ENTITY;
+	const XMFLOAT3* mesh_vertex_positions = nullptr;
 	wi::HairParticleSystem grass;
-	bool grass_exists = false;
 	std::mt19937 prop_rand;
 	wi::Color region_weights[vertexCount] = {};
 	wi::graphics::Texture region_weights_texture;
 	uint32_t virtual_texture_resolution = 0;
 	wi::primitive::Sphere sphere;
+	XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 };
 
 struct TerrainGenerator : public wi::gui::Window
@@ -112,10 +112,14 @@ struct TerrainGenerator : public wi::gui::Window
 
 	wi::gui::CheckBox centerToCamCheckBox;
 	wi::gui::CheckBox removalCheckBox;
+	wi::gui::CheckBox grassCheckBox;
 	wi::gui::Slider lodSlider;
 	wi::gui::Slider texlodSlider;
 	wi::gui::Slider generationSlider;
+	wi::gui::Slider propSlider;
 	wi::gui::ComboBox presetCombo;
+	wi::gui::Slider scaleSlider;
+	wi::gui::Slider propDensitySlider;
 	wi::gui::Slider seedSlider;
 	wi::gui::Slider bottomLevelSlider;
 	wi::gui::Slider topLevelSlider;
@@ -148,5 +152,4 @@ struct TerrainGenerator : public wi::gui::Window
 	void Generation_Cancel();
 	// The virtual textures will be compressed and saved into resources. They can be serialized from there
 	void BakeVirtualTexturesToFiles();
-
 };
