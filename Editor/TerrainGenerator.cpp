@@ -700,7 +700,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 			else
 			{
 				// Grass patch removal:
-				if (chunk_data.grass.meshID != INVALID_ENTITY && (dist > 1 || !grassCheckBox.GetCheck() || std::abs(chunk_data.grass_density_current - grassDensitySlider.GetValue()) > std::numeric_limits<float>::epsilon()))
+				if (chunk_data.grass.meshID != INVALID_ENTITY && (dist > 1 || !grassCheckBox.GetCheck()))
 				{
 					scene->Entity_Remove(chunk_data.grass_entity);
 					chunk_data.grass_entity = INVALID_ENTITY; // grass can be generated here by generation thread...
@@ -712,6 +712,17 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 					scene->Entity_Remove(chunk_data.props_entity);
 					chunk_data.props_entity = INVALID_ENTITY; // prop can be generated here by generation thread...
 				}
+			}
+		}
+
+		// Grass density modification:
+		if (chunk_data.grass_entity != INVALID_ENTITY && std::abs(chunk_data.grass_density_current - grassDensitySlider.GetValue()) > std::numeric_limits<float>::epsilon())
+		{
+			wi::HairParticleSystem* grass = scene->hairs.GetComponent(chunk_data.grass_entity);
+			if (grass != nullptr)
+			{
+				chunk_data.grass_density_current = grassDensitySlider.GetValue();
+				grass->strandCount = uint32_t(chunk_data.grass.strandCount * chunk_data.grass_density_current);
 			}
 		}
 
