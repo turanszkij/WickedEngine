@@ -1359,7 +1359,11 @@ void Example_ImGuiRenderer::Update(float dt)
 		{
 			wi::lua::RunText(lua);
 			lua_history.push_back(lua);
+			#ifdef _WIN32
+			strcpy_s(lua, "");
+			#elif  __linux__
 			strcpy(lua, "");
+			#endif
 			bSetKeyBoardFocus = true;
 		}
 		if (ImGui::IsItemActive())
@@ -1384,7 +1388,11 @@ void Example_ImGuiRenderer::Update(float dt)
 			{
 				bool is_selected = false;
 				if (ImGui::Selectable(lua_history[i].c_str(), is_selected)) {
+					#ifdef _WIN32
+					strcpy_s(lua, lua_history[i].c_str());
+					#elif __linux__ 
 					strcpy(lua, lua_history[i].c_str());
+					#endif
 					bSetKeyBoardFocus = true;
 				}
 				if (is_selected)
