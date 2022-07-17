@@ -244,7 +244,7 @@ Entity is a number, it can reference components through ComponentManager contain
 [[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
 The logical scene representation using the Entity-Component System
 - GetScene <br/>
-Returns a global scene instance. The wi::renderer will use this scene instance to render the scene. The user can create multiple scenes as well, and merge those into the global scene so that those will be rendered as well.
+Returns a global scene instance. This is a convenience feature for simple applications that need a single scene. The RenderPath3D will use the global scene by default, but it can be set to a custom scene if needed.
 - LoadModel() <br/>
 There are two flavours to this. One of them immediately loads into the global scene. The other loads into a custom scene, which is usefult to manage the contents separately. This function will return an Entity that represents the root transform of the scene - if the attached parameter was true, otherwise it will return INVALID_ENTITY and no root transform will be created.
 - Pick <br/>

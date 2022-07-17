@@ -3645,6 +3645,28 @@ namespace wi::scene
 						wi::texturehelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.format);
 						device->SetName(&object.lightmap, "lightmap");
 					}
+
+					// LOD select:
+					{
+						const float distsq = wi::math::DistanceSquared(camera.Eye, object.center);
+						const float radius = object.radius;
+						const float radiussq = radius * radius;
+						if (distsq < radiussq)
+						{
+							object.lod = 0;
+						}
+						else
+						{
+							const MeshComponent* mesh = meshes.GetComponent(object.meshID);
+							if (mesh != nullptr && mesh->subsets_per_lod > 0)
+							{
+								const float dist = std::sqrt(distsq);
+								const float dist_to_sphere = dist - radius;
+								object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
+								object.lod = std::min(object.lod, mesh->GetLODCount() - 1);
+							}
+						}
+					}
 				}
 
 				aabb.layerMask = layerMask;
@@ -4213,7 +4235,6 @@ namespace wi::scene
 	}
 	void Scene::RunSoundUpdateSystem(wi::jobsystem::context& ctx)
 	{
-		const CameraComponent& camera = GetCamera();
 		wi::audio::SoundInstance3D instance3D;
 		instance3D.listenerPos = camera.Eye;
 		instance3D.listenerUp = camera.Up;
@@ -4247,37 +4268,6 @@ namespace wi::scene
 			}
 			wi::audio::SetVolume(sound.volume, &sound.soundinstance);
 		}
-	}
-
-	void Scene::UpdateLODsForCamera(const CameraComponent& camera)
-	{
-		wi::jobsystem::context ctx;
-		wi::jobsystem::Dispatch(ctx, (uint32_t)objects.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
-			ObjectComponent& object = objects[args.jobIndex];
-			if (object.meshID == INVALID_ENTITY)
-				return;
-			const AABB& aabb = aabb_objects[args.jobIndex];
-			const float distsq = wi::math::DistanceSquared(camera.Eye, aabb.getCenter());
-			const float radius = aabb.getRadius();
-			const float radiussq = radius * radius;
-			if (distsq < radiussq)
-			{
-				object.lod = 0;
-			}
-			else
-			{
-				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
-				if (mesh != nullptr && mesh->subsets_per_lod > 0)
-				{
-					const float dist = std::sqrt(distsq);
-					const float dist_to_sphere = dist - radius;
-					object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
-					object.lod = std::min(object.lod, mesh->GetLODCount() - 1);
-				}
-			}
-
-		});
-		wi::jobsystem::Wait(ctx);
 	}
 
 	void Scene::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)

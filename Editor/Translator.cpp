@@ -104,7 +104,7 @@ namespace Translator_Internal
 }
 using namespace Translator_Internal;
 
-void Translator::Update(const wi::Canvas& canvas)
+void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
 {
 	if (selected.empty())
 	{
@@ -117,13 +117,12 @@ void Translator::Update(const wi::Canvas& canvas)
 	dragEnded = false;
 
 	XMFLOAT4 pointer = wi::input::GetPointer();
-	const CameraComponent& cam = wi::scene::GetCamera();
 	XMVECTOR pos = transform.GetPositionV();
 
 	// Non recursive selection will be computed to not apply recursive operations two times
 	//	A recursive operation is for example translating a parent transform
 	//	An other recursive operation is serializing selected parent entities
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = *this->scene;
 	selectedEntitiesLookup.clear();
 	for (auto& x : selected)
 	{
@@ -143,7 +142,7 @@ void Translator::Update(const wi::Canvas& canvas)
 	{
 		PreTranslate();
 
-		const Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas, cam);
+		const Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas, camera);
 		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 		const XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
 
@@ -152,12 +151,12 @@ void Translator::Update(const wi::Canvas& canvas)
 			state = TRANSLATOR_IDLE;
 
 			// Decide which state to enter for dragging:
-			XMMATRIX P = cam.GetProjection();
-			XMMATRIX V = cam.GetView();
+			XMMATRIX P = camera.GetProjection();
+			XMMATRIX V = camera.GetView();
 			XMMATRIX W = XMMatrixIdentity();
 			XMFLOAT3 p = transform.GetPosition();
 
-			dist = std::max(wi::math::Distance(p, cam.Eye) * 0.05f, 0.0001f);
+			dist = std::max(wi::math::Distance(p, camera.Eye) * 0.05f, 0.0001f);
 
 			if (isRotator)
 			{
@@ -165,13 +164,13 @@ void Translator::Update(const wi::Canvas& canvas)
 				XMVECTOR plane_xz = XMPlaneFromPointNormal(pos, XMVectorSet(0, 1, 0, 0));
 				XMVECTOR plane_xy = XMPlaneFromPointNormal(pos, XMVectorSet(0, 0, 1, 0));
 
-				XMVECTOR intersection = XMPlaneIntersectLine(plane_zy, rayOrigin, rayOrigin + rayDir * cam.zFarP);
+				XMVECTOR intersection = XMPlaneIntersectLine(plane_zy, rayOrigin, rayOrigin + rayDir * camera.zFarP);
 				float dist_x = XMVectorGetX(XMVector3LengthSq(intersection - rayOrigin));
 				float len_x = XMVectorGetX(XMVector3Length(intersection - pos)) / dist;
-				intersection = XMPlaneIntersectLine(plane_xz, rayOrigin, rayOrigin + rayDir * cam.zFarP);
+				intersection = XMPlaneIntersectLine(plane_xz, rayOrigin, rayOrigin + rayDir * camera.zFarP);
 				float dist_y = XMVectorGetX(XMVector3LengthSq(intersection - rayOrigin));
 				float len_y = XMVectorGetX(XMVector3Length(intersection - pos)) / dist;
-				intersection = XMPlaneIntersectLine(plane_xy, rayOrigin, rayOrigin + rayDir * cam.zFarP);
+				intersection = XMPlaneIntersectLine(plane_xy, rayOrigin, rayOrigin + rayDir * camera.zFarP);
 				float dist_z = XMVectorGetX(XMVector3LengthSq(intersection - rayOrigin));
 				float len_z = XMVectorGetX(XMVector3Length(intersection - pos)) / dist;
 
@@ -197,9 +196,9 @@ void Translator::Update(const wi::Canvas& canvas)
 					best_dist = dist_z;
 				}
 
-				XMVECTOR screen_normal = XMVector3Normalize(cam.GetEye() - pos);
+				XMVECTOR screen_normal = XMVector3Normalize(camera.GetEye() - pos);
 				XMVECTOR plane_screen = XMPlaneFromPointNormal(pos, screen_normal);
-				intersection = XMPlaneIntersectLine(plane_screen, rayOrigin, rayOrigin + rayDir * cam.zFarP);
+				intersection = XMPlaneIntersectLine(plane_screen, rayOrigin, rayOrigin + rayDir * camera.zFarP);
 				float len_screen = XMVectorGetX(XMVector3Length(intersection - pos)) / dist;
 				range = circle2_width * 0.5f;
 				perimeter = circle2_radius - range;
@@ -216,26 +215,26 @@ void Translator::Update(const wi::Canvas& canvas)
 				aabb_origin.createFromHalfWidth(p, XMFLOAT3(origin_size * dist, origin_size * dist, origin_size * dist));
 
 				XMFLOAT3 maxp;
-				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(axis_length, 0, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_X, cam)));
+				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(axis_length, 0, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_X, camera)));
 				AABB aabb_x = AABB::Merge(AABB(wi::math::Min(p, maxp), wi::math::Max(p, maxp)), aabb_origin);
 
-				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(0, axis_length, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_Y, cam)));
+				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(0, axis_length, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_Y, camera)));
 				AABB aabb_y = AABB::Merge(AABB(wi::math::Min(p, maxp), wi::math::Max(p, maxp)), aabb_origin);
 
-				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(0, 0, axis_length, 0) * dist, GetMirrorMatrix(TRANSLATOR_Z, cam)));
+				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(0, 0, axis_length, 0) * dist, GetMirrorMatrix(TRANSLATOR_Z, camera)));
 				AABB aabb_z = AABB::Merge(AABB(wi::math::Min(p, maxp), wi::math::Max(p, maxp)), aabb_origin);
 
 				XMFLOAT3 minp;
-				XMStoreFloat3(&minp, pos + XMVector3Transform(XMVectorSet(plane_min, plane_min, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_XY, cam)));
-				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(plane_max, plane_max, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_XY, cam)));
+				XMStoreFloat3(&minp, pos + XMVector3Transform(XMVectorSet(plane_min, plane_min, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_XY, camera)));
+				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(plane_max, plane_max, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_XY, camera)));
 				AABB aabb_xy = AABB(wi::math::Min(minp, maxp), wi::math::Max(minp, maxp));
 
-				XMStoreFloat3(&minp, pos + XMVector3Transform(XMVectorSet(plane_min, 0, plane_min, 0) * dist, GetMirrorMatrix(TRANSLATOR_XZ, cam)));
-				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(plane_max, 0, plane_max, 0) * dist, GetMirrorMatrix(TRANSLATOR_XZ, cam)));
+				XMStoreFloat3(&minp, pos + XMVector3Transform(XMVectorSet(plane_min, 0, plane_min, 0) * dist, GetMirrorMatrix(TRANSLATOR_XZ, camera)));
+				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(plane_max, 0, plane_max, 0) * dist, GetMirrorMatrix(TRANSLATOR_XZ, camera)));
 				AABB aabb_xz = AABB(wi::math::Min(minp, maxp), wi::math::Max(minp, maxp));
 
-				XMStoreFloat3(&minp, pos + XMVector3Transform(XMVectorSet(0, plane_min, plane_min, 0) * dist, GetMirrorMatrix(TRANSLATOR_YZ, cam)));
-				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(0, plane_max, plane_max, 0) * dist, GetMirrorMatrix(TRANSLATOR_YZ, cam)));
+				XMStoreFloat3(&minp, pos + XMVector3Transform(XMVectorSet(0, plane_min, plane_min, 0) * dist, GetMirrorMatrix(TRANSLATOR_YZ, camera)));
+				XMStoreFloat3(&maxp, pos + XMVector3Transform(XMVectorSet(0, plane_max, plane_max, 0) * dist, GetMirrorMatrix(TRANSLATOR_YZ, camera)));
 				AABB aabb_yz = AABB(wi::math::Min(minp, maxp), wi::math::Max(minp, maxp));
 
 				if (aabb_origin.intersects(ray))
@@ -290,7 +289,7 @@ void Translator::Update(const wi::Canvas& canvas)
 			// Dragging operation:
 			if (isRotator)
 			{
-				XMVECTOR intersection = XMPlaneIntersectLine(XMPlaneFromPointNormal(pos, XMLoadFloat3(&axis)), rayOrigin, rayOrigin + rayDir * cam.zFarP);
+				XMVECTOR intersection = XMPlaneIntersectLine(XMPlaneFromPointNormal(pos, XMLoadFloat3(&axis)), rayOrigin, rayOrigin + rayDir * camera.zFarP);
 
 				if (!dragging)
 				{
@@ -321,7 +320,7 @@ void Translator::Update(const wi::Canvas& canvas)
 					break;
 				case Translator::TRANSLATOR_XYZ:
 					{
-						XMMATRIX M = XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - cam.GetEye()), cam.GetUp()));
+						XMMATRIX M = XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - camera.GetEye()), camera.GetUp()));
 						XMFLOAT3 ref;
 						XMStoreFloat3(&ref, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), M));
 						angle_start = wi::math::GetAngle(ref, original, axis);
@@ -347,21 +346,21 @@ void Translator::Update(const wi::Canvas& canvas)
 				if (state == TRANSLATOR_X)
 				{
 					XMVECTOR axis = XMVectorSet(1, 0, 0, 0);
-					XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
+					XMVECTOR wrong = XMVector3Cross(camera.GetAt(), axis);
 					planeNormal = XMVector3Cross(wrong, axis);
 					this->axis = XMFLOAT3(1, 0, 0);
 				}
 				else if (state == TRANSLATOR_Y)
 				{
 					XMVECTOR axis = XMVectorSet(0, 1, 0, 0);
-					XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
+					XMVECTOR wrong = XMVector3Cross(camera.GetAt(), axis);
 					planeNormal = XMVector3Cross(wrong, axis);
 					this->axis = XMFLOAT3(0, 1, 0);
 				}
 				else if (state == TRANSLATOR_Z)
 				{
 					XMVECTOR axis = XMVectorSet(0, 0, 1, 0);
-					XMVECTOR wrong = XMVector3Cross(cam.GetUp(), axis);
+					XMVECTOR wrong = XMVector3Cross(camera.GetUp(), axis);
 					planeNormal = XMVector3Cross(wrong, axis);
 					this->axis = XMFLOAT3(0, 0, 1);
 				}
@@ -380,13 +379,13 @@ void Translator::Update(const wi::Canvas& canvas)
 				else
 				{
 					// xyz
-					planeNormal = cam.GetAt();
+					planeNormal = camera.GetAt();
 				}
 				plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
 
 				if (XMVectorGetX(XMVectorAbs(XMVector3Dot(planeNormal, rayDir))) < 0.001f)
 					return;
-				XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir * cam.zFarP);
+				XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir * camera.zFarP);
 
 				if (!dragging)
 				{
@@ -436,9 +435,12 @@ void Translator::Update(const wi::Canvas& canvas)
 				}
 				if (isScalator)
 				{
+					deltaV = XMVector3TransformNormal(deltaV, GetMirrorMatrix(state, camera));
+					deltaV = XMVector3Rotate(deltaV, transform.GetRotationV());
 					XMFLOAT3 delta;
 					XMStoreFloat3(&delta, deltaV);
 					XMFLOAT3 scale = transform.GetScale();
+					scale = wi::math::Max(scale, XMFLOAT3(0.001f, 0.001f, 0.001f)); // no zero division
 					scale = XMFLOAT3((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
 					transform.Scale(scale);
 				}
@@ -454,17 +456,10 @@ void Translator::Update(const wi::Canvas& canvas)
 					}
 					if (isScalator)
 					{
-						transform.scale_local.x = std::max(0.1f, std::round(transform.scale_local.x / scale_snap) * scale_snap);
-						transform.scale_local.y = std::max(0.1f, std::round(transform.scale_local.y / scale_snap) * scale_snap);
-						transform.scale_local.z = std::max(0.1f, std::round(transform.scale_local.z / scale_snap) * scale_snap);
+						transform.scale_local.x = std::max(scale_snap, std::round(transform.scale_local.x / scale_snap) * scale_snap);
+						transform.scale_local.y = std::max(scale_snap, std::round(transform.scale_local.y / scale_snap) * scale_snap);
+						transform.scale_local.z = std::max(scale_snap, std::round(transform.scale_local.z / scale_snap) * scale_snap);
 					}
-				}
-
-				if (isScalator)
-				{
-					transform.scale_local.x = std::max(0.001f, transform.scale_local.x);
-					transform.scale_local.y = std::max(0.001f, transform.scale_local.y);
-					transform.scale_local.z = std::max(0.001f, transform.scale_local.z);
 				}
 			}
 
@@ -509,7 +504,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		Translator_Internal::LoadShaders();
 	}
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = *this->scene;
 
 	GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -1060,7 +1055,12 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 void Translator::PreTranslate()
 {
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = *this->scene;
+
+	if (!dragging)
+	{
+		transform.ClearTransform();
+	}
 
 	// Find the center of all the entities that are selected:
 	XMVECTOR centerV = XMVectorSet(0, 0, 0, 0);
@@ -1101,7 +1101,7 @@ void Translator::PreTranslate()
 }
 void Translator::PostTranslate()
 {
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = *this->scene;
 
 	int i = 0;
 	for (auto& x : selectedEntitiesNonRecursive)

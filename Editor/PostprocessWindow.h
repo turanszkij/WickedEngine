@@ -8,6 +8,8 @@ class PostprocessWindow : public wi::gui::Window
 public:
 	void Create(EditorComponent* editor);
 
+	EditorComponent* editor = nullptr;
+
 	wi::gui::Slider exposureSlider;
 	wi::gui::CheckBox lensFlareCheckBox;
 	wi::gui::CheckBox lightShaftsCheckBox;

@@ -6,8 +6,9 @@ using namespace wi::ecs;
 using namespace wi::scene;
 
 
-void IKWindow::Create(EditorComponent* editor)
+void IKWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Inverse Kinematics (IK) Window");
 	SetSize(XMFLOAT2(400, 150));
 
@@ -28,7 +29,7 @@ void IKWindow::Create(EditorComponent* editor)
 	targetCombo.SetPos(XMFLOAT2(x, y += step));
 	targetCombo.SetEnabled(false);
 	targetCombo.OnSelect([&](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		InverseKinematicsComponent* ik = scene.inverse_kinematics.GetComponent(entity);
 		if (ik != nullptr)
 		{
@@ -50,7 +51,7 @@ void IKWindow::Create(EditorComponent* editor)
 	disabledCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disabledCheckBox.SetSize(XMFLOAT2(hei, hei));
 	disabledCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::GetScene().inverse_kinematics.GetComponent(entity)->SetDisabled(args.bValue);
+		editor->GetCurrentScene().inverse_kinematics.GetComponent(entity)->SetDisabled(args.bValue);
 		});
 	AddWidget(&disabledCheckBox);
 
@@ -59,7 +60,7 @@ void IKWindow::Create(EditorComponent* editor)
 	chainLengthSlider.SetPos(XMFLOAT2(x, y += step));
 	chainLengthSlider.SetSize(XMFLOAT2(siz, hei));
 	chainLengthSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::GetScene().inverse_kinematics.GetComponent(entity)->chain_length = args.iValue;
+		editor->GetCurrentScene().inverse_kinematics.GetComponent(entity)->chain_length = args.iValue;
 		});
 	AddWidget(&chainLengthSlider);
 
@@ -68,7 +69,7 @@ void IKWindow::Create(EditorComponent* editor)
 	iterationCountSlider.SetPos(XMFLOAT2(x, y += step));
 	iterationCountSlider.SetSize(XMFLOAT2(siz, hei));
 	iterationCountSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::GetScene().inverse_kinematics.GetComponent(entity)->iteration_count = args.iValue;
+		editor->GetCurrentScene().inverse_kinematics.GetComponent(entity)->iteration_count = args.iValue;
 		});
 	AddWidget(&iterationCountSlider);
 
@@ -82,7 +83,7 @@ void IKWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 	const InverseKinematicsComponent* ik = scene.inverse_kinematics.GetComponent(entity);
 
 	if (ik != nullptr)
@@ -112,7 +113,7 @@ void IKWindow::SetEntity(Entity entity)
 		SetEnabled(false);
 	}
 
-	const TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+	const TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 	if (transform != nullptr)
 	{
 		createButton.SetEnabled(true);
@@ -121,7 +122,7 @@ void IKWindow::SetEntity(Entity entity)
 		{
 			createButton.SetText("Create");
 			createButton.OnClick([=](wi::gui::EventArgs args) {
-				wi::scene::GetScene().inverse_kinematics.Create(entity).chain_length = 1;
+				editor->GetCurrentScene().inverse_kinematics.Create(entity).chain_length = 1;
 				SetEntity(entity);
 				});
 		}
@@ -129,7 +130,7 @@ void IKWindow::SetEntity(Entity entity)
 		{
 			createButton.SetText("Remove");
 			createButton.OnClick([=](wi::gui::EventArgs args) {
-				wi::scene::GetScene().inverse_kinematics.Remove_KeepSorted(entity);
+				editor->GetCurrentScene().inverse_kinematics.Remove_KeepSorted(entity);
 				SetEntity(entity);
 				});
 		}

@@ -132,10 +132,17 @@ namespace wi::audio
 					0, 0, nullptr, &effectChain);
 				assert(SUCCEEDED(hr));
 
-				XAUDIO2FX_REVERB_PARAMETERS native;
-				ReverbConvertI3DL2ToNative(&reverbPresets[REVERB_PRESET_DEFAULT], &native);
-				HRESULT hr = reverbSubmix->SetEffectParameters(0, &native, sizeof(native));
-				assert(SUCCEEDED(hr));
+				if (reverbSubmix != nullptr)
+				{
+					XAUDIO2FX_REVERB_PARAMETERS native;
+					ReverbConvertI3DL2ToNative(&reverbPresets[REVERB_PRESET_DEFAULT], &native);
+					HRESULT hr = reverbSubmix->SetEffectParameters(0, &native, sizeof(native));
+					assert(SUCCEEDED(hr));
+				}
+				else
+				{
+					wi::backlog::post("wi::audio [XAudio2] Reverb Submix was not created successfully!", wi::backlog::LogLevel::Warning);
+				}
 			}
 
 			if (SUCCEEDED(hr))
@@ -348,7 +355,7 @@ namespace wi::audio
 			{ XAUDIO2_SEND_USEFILTER, instanceinternal->audio->reverbSubmix }, // this should be last to enable/disable reverb simply
 		};
 		XAUDIO2_VOICE_SENDS SFXSendList = { 
-			instance->IsEnableReverb() ? (uint32_t)arraysize(SFXSend) : 1, 
+			(instance->IsEnableReverb() && instanceinternal->audio->reverbSubmix != nullptr) ? (uint32_t)arraysize(SFXSend) : 1,
 			SFXSend 
 		};
 
@@ -526,7 +533,7 @@ namespace wi::audio
 			hr = instanceinternal->sourceVoice->SetOutputFilterParameters(instanceinternal->audio->submixVoices[instance->type], &FilterParametersDirect);
 			assert(SUCCEEDED(hr));
 
-			if (instance->IsEnableReverb())
+			if (instance->IsEnableReverb() && instanceinternal->audio->reverbSubmix != nullptr)
 			{
 				hr = instanceinternal->sourceVoice->SetOutputMatrix(instanceinternal->audio->reverbSubmix, settings.SrcChannelCount, 1, &settings.ReverbLevel);
 				assert(SUCCEEDED(hr));

@@ -7,8 +7,9 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
-void EmitterWindow::Create(EditorComponent* editor)
+void EmitterWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Emitter Window");
 	SetSize(XMFLOAT2(680, 420));
 
@@ -22,12 +23,12 @@ void EmitterWindow::Create(EditorComponent* editor)
 	emitterNameField.SetPos(XMFLOAT2(x, y));
 	emitterNameField.SetSize(XMFLOAT2(300, itemheight));
 	emitterNameField.OnInputAccepted([=](wi::gui::EventArgs args) {
-		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
+		NameComponent* name = editor->GetCurrentScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{
 			*name = args.sValue;
 
-			editor->RefreshSceneGraphView();
+			editor->RefreshEntityTree();
 		}
 	});
 	AddWidget(&emitterNameField);
@@ -36,7 +37,7 @@ void EmitterWindow::Create(EditorComponent* editor)
 	addButton.SetPos(XMFLOAT2(x, y += step));
 	addButton.SetSize(XMFLOAT2(150, itemheight));
 	addButton.OnClick([=](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		Entity entity = scene.Entity_CreateEmitter("editorEmitter");
 
 		wi::Archive& archive = editor->AdvanceHistory();
@@ -49,7 +50,7 @@ void EmitterWindow::Create(EditorComponent* editor)
 		editor->RecordSelection(archive);
 		editor->RecordAddedEntity(archive, entity);
 
-		editor->RefreshSceneGraphView();
+		editor->RefreshEntityTree();
 		SetEntity(entity);
 	});
 	addButton.SetTooltip("Add new emitter particle system.");
@@ -82,7 +83,7 @@ void EmitterWindow::Create(EditorComponent* editor)
 			}
 			else
 			{
-				Scene& scene = wi::scene::GetScene();
+				Scene& scene = editor->GetCurrentScene();
 				emitter->meshID = scene.meshes.GetEntity(args.iValue - 1);
 			}
 		}
@@ -746,7 +747,7 @@ wi::EmittedParticleSystem* EmitterWindow::GetEmitter()
 		return nullptr;
 	}
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 	wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(entity);
 
 	return emitter;
@@ -760,7 +761,7 @@ void EmitterWindow::UpdateData()
 		return;
 	}
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 
 	meshComboBox.ClearItems();
 	meshComboBox.AddItem("NO MESH");

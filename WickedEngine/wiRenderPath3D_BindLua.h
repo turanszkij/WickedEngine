@@ -3,6 +3,7 @@
 #include "wiLuna.h"
 #include "wiRenderPath3D.h"
 #include "wiRenderPath2D_BindLua.h"
+#include "wiScene_BindLua.h"
 
 namespace wi::lua
 {
@@ -23,6 +24,8 @@ namespace wi::lua
 		}
 		RenderPath3D_BindLua(lua_State* L)
 		{
+			renderpath.scene = wi::lua::scene::GetGlobalScene();
+			renderpath.camera = wi::lua::scene::GetGlobalCamera();
 			this->component = &renderpath;
 		}
 

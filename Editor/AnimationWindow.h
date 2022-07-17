@@ -7,7 +7,8 @@ class AnimationWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
-	
+
+	EditorComponent* editor = nullptr;
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 
 	wi::gui::ComboBox	animationsComboBox;

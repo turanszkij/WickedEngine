@@ -7,8 +7,9 @@ using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
 
-void SoundWindow::Create(EditorComponent* editor)
+void SoundWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Sound Window");
 	SetSize(XMFLOAT2(440, 220));
 
@@ -69,7 +70,7 @@ void SoundWindow::Create(EditorComponent* editor)
 		params.extensions = wi::resourcemanager::GetSupportedSoundExtensions();
 		wi::helper::FileDialog(params, [=](std::string fileName) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				Entity entity = GetScene().Entity_CreateSound("editorSound", fileName);
+				Entity entity = editor->GetCurrentScene().Entity_CreateSound("editorSound", fileName);
 
 				wi::Archive& archive = editor->AdvanceHistory();
 				archive << EditorComponent::HISTORYOP_ADD;
@@ -81,7 +82,7 @@ void SoundWindow::Create(EditorComponent* editor)
 				editor->RecordSelection(archive);
 				editor->RecordAddedEntity(archive, entity);
 
-				editor->RefreshSceneGraphView();
+				editor->RefreshEntityTree();
 				SetEntity(entity);
 			});
 		});
@@ -98,14 +99,14 @@ void SoundWindow::Create(EditorComponent* editor)
 	nameField.SetPos(XMFLOAT2(x, y += step));
 	nameField.SetSize(XMFLOAT2(300, hei));
 	nameField.OnInputAccepted([=](wi::gui::EventArgs args) {
-		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
+		NameComponent* name = editor->GetCurrentScene().names.GetComponent(entity);
 		if (name == nullptr)
 		{
-			name = &wi::scene::GetScene().names.Create(entity);
+			name = &editor->GetCurrentScene().names.Create(entity);
 		}
 		*name = args.sValue;
 
-		editor->RefreshSceneGraphView();
+		editor->RefreshEntityTree();
 	});
 	AddWidget(&nameField);
 	nameField.SetEnabled(false);
@@ -115,7 +116,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	playstopButton.SetPos(XMFLOAT2(x, y += step));
 	playstopButton.SetSize(XMFLOAT2(80, hei));
 	playstopButton.OnClick([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
 			if (sound->IsPlaying())
@@ -138,7 +139,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	loopedCheckbox.SetPos(XMFLOAT2(x + 150, y));
 	loopedCheckbox.SetSize(XMFLOAT2(hei, hei));
 	loopedCheckbox.OnClick([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
 			sound->SetLooped(args.bValue);
@@ -152,7 +153,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	reverbCheckbox.SetPos(XMFLOAT2(x + 240, y));
 	reverbCheckbox.SetSize(XMFLOAT2(hei, hei));
 	reverbCheckbox.OnClick([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
 			sound->soundinstance.SetEnableReverb(args.bValue);
@@ -167,7 +168,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	disable3dCheckbox.SetPos(XMFLOAT2(x + 300, y));
 	disable3dCheckbox.SetSize(XMFLOAT2(hei, hei));
 	disable3dCheckbox.OnClick([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
 			sound->SetDisable3D(args.bValue);
@@ -182,7 +183,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	volumeSlider.SetPos(XMFLOAT2(x + 60, y += step));
 	volumeSlider.SetSize(XMFLOAT2(240, hei));
 	volumeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
 			sound->volume = args.fValue;
@@ -195,7 +196,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	submixComboBox.SetPos(XMFLOAT2(x + 80, y += step));
 	submixComboBox.SetSize(XMFLOAT2(180, hei));
 	submixComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
 			sound->soundinstance.type = (wi::audio::SUBMIX_TYPE)args.iValue;
@@ -222,7 +223,7 @@ void SoundWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 	SoundComponent* sound = scene.sounds.GetComponent(entity);
 	NameComponent* name = scene.names.GetComponent(entity);
 

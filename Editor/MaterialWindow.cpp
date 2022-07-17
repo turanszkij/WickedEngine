@@ -6,8 +6,9 @@ using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
 
-void MaterialWindow::Create(EditorComponent* editor)
+void MaterialWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Material Window");
 	SetSize(XMFLOAT2(730, 620));
 
@@ -20,7 +21,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	shadowReceiveCheckBox.SetPos(XMFLOAT2(540, y));
 	shadowReceiveCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowReceiveCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetReceiveShadow(args.bValue);
 		});
@@ -31,7 +32,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	shadowCasterCheckBox.SetPos(XMFLOAT2(670, y));
 	shadowCasterCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowCasterCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetCastShadow(args.bValue);
 	});
@@ -42,7 +43,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	useVertexColorsCheckBox.SetPos(XMFLOAT2(670, y += step));
 	useVertexColorsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	useVertexColorsCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetUseVertexColors(args.bValue);
 	});
@@ -53,7 +54,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	specularGlossinessCheckBox.SetPos(XMFLOAT2(670, y += step));
 	specularGlossinessCheckBox.SetSize(XMFLOAT2(hei, hei));
 	specularGlossinessCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetUseSpecularGlossinessWorkflow(args.bValue);
 		SetEntity(entity);
@@ -65,7 +66,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	occlusionPrimaryCheckBox.SetPos(XMFLOAT2(670, y += step));
 	occlusionPrimaryCheckBox.SetSize(XMFLOAT2(hei, hei));
 	occlusionPrimaryCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetOcclusionEnabled_Primary(args.bValue);
 	});
@@ -76,7 +77,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	occlusionSecondaryCheckBox.SetPos(XMFLOAT2(670, y += step));
 	occlusionSecondaryCheckBox.SetSize(XMFLOAT2(hei, hei));
 	occlusionSecondaryCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetOcclusionEnabled_Secondary(args.bValue);
 	});
@@ -87,7 +88,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	windCheckBox.SetPos(XMFLOAT2(670, y += step));
 	windCheckBox.SetSize(XMFLOAT2(hei, hei));
 	windCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetUseWind(args.bValue);
 		});
@@ -98,7 +99,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	doubleSidedCheckBox.SetPos(XMFLOAT2(540, y));
 	doubleSidedCheckBox.SetSize(XMFLOAT2(hei, hei));
 	doubleSidedCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetDoubleSided(args.bValue);
 		});
@@ -115,7 +116,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	shaderTypeComboBox.SetPos(XMFLOAT2(x, y += step));
 	shaderTypeComboBox.SetSize(XMFLOAT2(wid, hei));
 	shaderTypeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
@@ -153,7 +154,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	blendModeComboBox.SetPos(XMFLOAT2(x, y += step));
 	blendModeComboBox.SetSize(XMFLOAT2(wid, hei));
 	blendModeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr && args.iValue >= 0)
 		{
 			material->userBlendMode = (wi::enums::BLENDMODE)args.iValue;
@@ -173,7 +174,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	shadingRateComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadingRateComboBox.SetSize(XMFLOAT2(wid, hei));
 	shadingRateComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->shadingRate = (ShadingRate)args.iValue;
@@ -201,7 +202,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	normalMapSlider.SetSize(XMFLOAT2(wid, hei));
 	normalMapSlider.SetPos(XMFLOAT2(x, y += step));
 	normalMapSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetNormalMapStrength(args.fValue);
 	});
@@ -212,7 +213,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	roughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	roughnessSlider.SetPos(XMFLOAT2(x, y += step));
 	roughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetRoughness(args.fValue);
 	});
@@ -223,7 +224,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	reflectanceSlider.SetSize(XMFLOAT2(wid, hei));
 	reflectanceSlider.SetPos(XMFLOAT2(x, y += step));
 	reflectanceSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetReflectance(args.fValue);
 	});
@@ -234,7 +235,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	metalnessSlider.SetSize(XMFLOAT2(wid, hei));
 	metalnessSlider.SetPos(XMFLOAT2(x, y += step));
 	metalnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetMetalness(args.fValue);
 	});
@@ -245,7 +246,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	alphaRefSlider.SetSize(XMFLOAT2(wid, hei));
 	alphaRefSlider.SetPos(XMFLOAT2(x, y += step));
 	alphaRefSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetAlphaRef(args.fValue);
 	});
@@ -256,7 +257,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	emissiveSlider.SetSize(XMFLOAT2(wid, hei));
 	emissiveSlider.SetPos(XMFLOAT2(x, y += step));
 	emissiveSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetEmissiveStrength(args.fValue);
 	});
@@ -267,7 +268,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	transmissionSlider.SetSize(XMFLOAT2(wid, hei));
 	transmissionSlider.SetPos(XMFLOAT2(x, y += step));
 	transmissionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetTransmissionAmount(args.fValue);
 		});
@@ -278,7 +279,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	refractionSlider.SetSize(XMFLOAT2(wid, hei));
 	refractionSlider.SetPos(XMFLOAT2(x, y += step));
 	refractionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetRefractionAmount(args.fValue);
 		});
@@ -289,7 +290,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	pomSlider.SetSize(XMFLOAT2(wid, hei));
 	pomSlider.SetPos(XMFLOAT2(x, y += step));
 	pomSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetParallaxOcclusionMapping(args.fValue);
 	});
@@ -300,7 +301,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	displacementMappingSlider.SetSize(XMFLOAT2(wid, hei));
 	displacementMappingSlider.SetPos(XMFLOAT2(x, y += step));
 	displacementMappingSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetDisplacementMapping(args.fValue);
 	});
@@ -311,7 +312,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	subsurfaceScatteringSlider.SetSize(XMFLOAT2(wid, hei));
 	subsurfaceScatteringSlider.SetPos(XMFLOAT2(x, y += step));
 	subsurfaceScatteringSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetSubsurfaceScatteringAmount(args.fValue);
 	});
@@ -322,7 +323,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texAnimFrameRateSlider.SetSize(XMFLOAT2(wid, hei));
 	texAnimFrameRateSlider.SetPos(XMFLOAT2(x, y += step));
 	texAnimFrameRateSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->texAnimFrameRate = args.fValue;
@@ -335,7 +336,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texAnimDirectionSliderU.SetSize(XMFLOAT2(wid, hei));
 	texAnimDirectionSliderU.SetPos(XMFLOAT2(x, y += step));
 	texAnimDirectionSliderU.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->texAnimDirection.x = args.fValue;
@@ -348,7 +349,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texAnimDirectionSliderV.SetSize(XMFLOAT2(wid, hei));
 	texAnimDirectionSliderV.SetPos(XMFLOAT2(x, y += step));
 	texAnimDirectionSliderV.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->texAnimDirection.y = args.fValue;
@@ -361,7 +362,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texMulSliderX.SetSize(XMFLOAT2(wid, hei));
 	texMulSliderX.SetPos(XMFLOAT2(x, y += step));
 	texMulSliderX.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->SetDirty();
@@ -375,7 +376,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texMulSliderY.SetSize(XMFLOAT2(wid, hei));
 	texMulSliderY.SetPos(XMFLOAT2(x, y += step));
 	texMulSliderY.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->SetDirty();
@@ -390,7 +391,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	sheenRoughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	sheenRoughnessSlider.SetPos(XMFLOAT2(x, y += step));
 	sheenRoughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->SetSheenRoughness(args.fValue);
@@ -403,7 +404,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	clearcoatSlider.SetSize(XMFLOAT2(wid, hei));
 	clearcoatSlider.SetPos(XMFLOAT2(x, y += step));
 	clearcoatSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->SetClearcoatFactor(args.fValue);
@@ -416,7 +417,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	clearcoatRoughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	clearcoatRoughnessSlider.SetPos(XMFLOAT2(x, y += step));
 	clearcoatRoughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->SetClearcoatRoughness(args.fValue);
@@ -436,12 +437,12 @@ void MaterialWindow::Create(EditorComponent* editor)
 	materialNameField.SetPos(XMFLOAT2(10, y));
 	materialNameField.SetSize(XMFLOAT2(300, hei));
 	materialNameField.OnInputAccepted([=](wi::gui::EventArgs args) {
-		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
+		NameComponent* name = editor->GetCurrentScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{
 			*name = args.sValue;
 
-			editor->RefreshSceneGraphView();
+			editor->RefreshEntityTree();
 		}
 		});
 	AddWidget(&materialNameField);
@@ -450,7 +451,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	newMaterialButton.SetPos(XMFLOAT2(10 + 5 + 300, y));
 	newMaterialButton.SetSize(XMFLOAT2(100, hei));
 	newMaterialButton.OnClick([=](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 		Entity entity = scene.Entity_CreateMaterial("editorMaterial");
 
 		wi::Archive& archive = editor->AdvanceHistory();
@@ -459,7 +460,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 
 		editor->ClearSelected();
 		editor->AddSelected(entity);
-		editor->RefreshSceneGraphView();
+		editor->RefreshEntityTree();
 
 		editor->RecordSelection(archive);
 		editor->RecordAddedEntity(archive, entity);
@@ -484,7 +485,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(true);
 	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			switch (colorComboBox.GetSelected())
@@ -616,7 +617,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 				break;
 			}
 
-			MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+			MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 			if (material == nullptr)
 				return;
 			textureSlotButton.SetImage(material->textures[args.iValue].resource);
@@ -634,7 +635,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	textureSlotButton.sprites[wi::gui::ACTIVE].params.color = wi::Color::White();
 	textureSlotButton.sprites[wi::gui::DEACTIVATING].params.color = wi::Color::Gray();
 	textureSlotButton.OnClick([this](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material == nullptr)
 			return;
 
@@ -678,7 +679,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	textureSlotUvsetField.SetPos(XMFLOAT2(x + textureSlotLabel.GetScale().x + 2, y));
 	textureSlotUvsetField.SetSize(XMFLOAT2(hei, hei));
 	textureSlotUvsetField.OnInputAccepted([this](wi::gui::EventArgs args) {
-		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			int slot = textureSlotComboBox.GetSelected();
@@ -700,7 +701,7 @@ void MaterialWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 	MaterialComponent* material = scene.materials.GetComponent(entity);
 
 	if (material != nullptr)

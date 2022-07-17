@@ -6,8 +6,9 @@ using namespace wi::ecs;
 using namespace wi::scene;
 
 
-void TransformWindow::Create(EditorComponent* editor)
+void TransformWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Transform Window");
 	SetSize(XMFLOAT2(480, 200));
 
@@ -23,7 +24,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	createButton.SetSize(XMFLOAT2(350, hei));
 	createButton.OnClick([=](wi::gui::EventArgs args) {
 		Entity entity = CreateEntity();
-		wi::scene::GetScene().transforms.Create(entity);
+		editor->GetCurrentScene().transforms.Create(entity);
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_ADD;
@@ -35,7 +36,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		editor->RecordSelection(archive);
 		editor->RecordAddedEntity(archive, entity);
 
-		editor->RefreshSceneGraphView();
+		editor->RefreshEntityTree();
 		SetEntity(entity);
 		});
 	AddWidget(&createButton);
@@ -45,7 +46,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	clearButton.SetPos(XMFLOAT2(x, y += step));
 	clearButton.SetSize(XMFLOAT2(350, hei));
 	clearButton.OnClick([=](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			transform->ClearTransform();
@@ -58,7 +59,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	parentCombo.SetPos(XMFLOAT2(x, y += step));
 	parentCombo.SetEnabled(false);
 	parentCombo.OnSelect([&](wi::gui::EventArgs args) {
-		Scene& scene = wi::scene::GetScene();
+		Scene& scene = editor->GetCurrentScene();
 
 		if (args.iValue == 0)
 		{
@@ -79,7 +80,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	txInput.SetPos(XMFLOAT2(x, y += step));
 	txInput.SetSize(XMFLOAT2(siz, hei));
 	txInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			transform->translation_local.x = args.fValue;
@@ -94,7 +95,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	tyInput.SetPos(XMFLOAT2(x, y += step));
 	tyInput.SetSize(XMFLOAT2(siz, hei));
 	tyInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			transform->translation_local.y = args.fValue;
@@ -109,7 +110,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	tzInput.SetPos(XMFLOAT2(x, y += step));
 	tzInput.SetSize(XMFLOAT2(siz, hei));
 	tzInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			transform->translation_local.z = args.fValue;
@@ -131,7 +132,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	rollInput.SetPos(XMFLOAT2(x, y += step));
 	rollInput.SetSize(XMFLOAT2(siz, hei));
 	rollInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			float roll = float(std::atof(rollInput.GetValue().c_str())) / 180.0f * XM_PI;
@@ -152,7 +153,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	pitchInput.SetPos(XMFLOAT2(x, y += step));
 	pitchInput.SetSize(XMFLOAT2(siz, hei));
 	pitchInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			float roll = float(std::atof(rollInput.GetValue().c_str())) / 180.0f * XM_PI;
@@ -173,7 +174,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	yawInput.SetPos(XMFLOAT2(x, y += step));
 	yawInput.SetSize(XMFLOAT2(siz, hei));
 	yawInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			float roll = float(std::atof(rollInput.GetValue().c_str())) / 180.0f * XM_PI;
@@ -197,7 +198,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	rxInput.SetPos(XMFLOAT2(x, y += step));
 	rxInput.SetSize(XMFLOAT2(siz, hei));
 	rxInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			transform->rotation_local.x = args.fValue;
@@ -214,7 +215,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	ryInput.SetPos(XMFLOAT2(x, y += step));
 	ryInput.SetSize(XMFLOAT2(siz, hei));
 	ryInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			transform->rotation_local.y = args.fValue;
@@ -231,7 +232,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	rzInput.SetPos(XMFLOAT2(x, y += step));
 	rzInput.SetSize(XMFLOAT2(siz, hei));
 	rzInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			transform->rotation_local.z = args.fValue;
@@ -248,7 +249,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	rwInput.SetPos(XMFLOAT2(x, y += step));
 	rwInput.SetSize(XMFLOAT2(siz, hei));
 	rwInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			transform->rotation_local.w = args.fValue;
@@ -271,7 +272,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	sxInput.SetPos(XMFLOAT2(x, y += step));
 	sxInput.SetSize(XMFLOAT2(siz, hei));
 	sxInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			transform->scale_local.x = args.fValue;
@@ -286,7 +287,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	syInput.SetPos(XMFLOAT2(x, y += step));
 	syInput.SetSize(XMFLOAT2(siz, hei));
 	syInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			transform->scale_local.y = args.fValue;
@@ -301,7 +302,7 @@ void TransformWindow::Create(EditorComponent* editor)
 	szInput.SetPos(XMFLOAT2(x, y += step));
 	szInput.SetSize(XMFLOAT2(siz, hei));
 	szInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		TransformComponent* transform = wi::scene::GetScene().transforms.GetComponent(entity);
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
 			transform->scale_local.z = args.fValue;
@@ -357,7 +358,7 @@ void TransformWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	Scene& scene = wi::scene::GetScene();
+	Scene& scene = editor->GetCurrentScene();
 	const TransformComponent* transform = scene.transforms.GetComponent(entity);
 
 	if (transform != nullptr)

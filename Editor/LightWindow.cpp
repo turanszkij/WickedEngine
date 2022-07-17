@@ -9,8 +9,9 @@ using namespace wi::graphics;
 using namespace wi::scene;
 
 
-void LightWindow::Create(EditorComponent* editor)
+void LightWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	wi::gui::Window::Create("Light Window");
 	SetSize(XMFLOAT2(650, 300));
 
@@ -23,7 +24,7 @@ void LightWindow::Create(EditorComponent* editor)
 	intensitySlider.SetSize(XMFLOAT2(100, hei));
 	intensitySlider.SetPos(XMFLOAT2(x, y));
 	intensitySlider.OnSlide([&](wi::gui::EventArgs args) {
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->intensity = args.fValue;
@@ -37,7 +38,7 @@ void LightWindow::Create(EditorComponent* editor)
 	rangeSlider.SetSize(XMFLOAT2(100, hei));
 	rangeSlider.SetPos(XMFLOAT2(x, y += step));
 	rangeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->range = args.fValue;
@@ -51,7 +52,7 @@ void LightWindow::Create(EditorComponent* editor)
 	outerConeAngleSlider.SetSize(XMFLOAT2(100, hei));
 	outerConeAngleSlider.SetPos(XMFLOAT2(x, y += step));
 	outerConeAngleSlider.OnSlide([&](wi::gui::EventArgs args) {
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->outerConeAngle = args.fValue;
@@ -65,7 +66,7 @@ void LightWindow::Create(EditorComponent* editor)
 	innerConeAngleSlider.SetSize(XMFLOAT2(100, hei));
 	innerConeAngleSlider.SetPos(XMFLOAT2(x, y += step));
 	innerConeAngleSlider.OnSlide([&](wi::gui::EventArgs args) {
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->innerConeAngle = args.fValue;
@@ -79,7 +80,7 @@ void LightWindow::Create(EditorComponent* editor)
 	shadowCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowCheckBox.SetPos(XMFLOAT2(x, y += step));
 	shadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->SetCastShadow(args.bValue);
@@ -93,7 +94,7 @@ void LightWindow::Create(EditorComponent* editor)
 	volumetricsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	volumetricsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	volumetricsCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->SetVolumetricsEnabled(args.bValue);
@@ -107,7 +108,7 @@ void LightWindow::Create(EditorComponent* editor)
 	haloCheckBox.SetSize(XMFLOAT2(hei, hei));
 	haloCheckBox.SetPos(XMFLOAT2(x, y += step));
 	haloCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->SetVisualizerEnabled(args.bValue);
@@ -121,7 +122,7 @@ void LightWindow::Create(EditorComponent* editor)
 	staticCheckBox.SetSize(XMFLOAT2(hei, hei));
 	staticCheckBox.SetPos(XMFLOAT2(x, y += step));
 	staticCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->SetStatic(args.bValue);
@@ -135,8 +136,8 @@ void LightWindow::Create(EditorComponent* editor)
 	addLightButton.SetPos(XMFLOAT2(x, y += step));
 	addLightButton.SetSize(XMFLOAT2(150, hei));
 	addLightButton.OnClick([=](wi::gui::EventArgs args) {
-		Entity entity = wi::scene::GetScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		Entity entity = editor->GetCurrentScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->type = (LightComponent::LightType)typeSelectorComboBox.GetSelected();
@@ -166,7 +167,7 @@ void LightWindow::Create(EditorComponent* editor)
 			editor->RecordSelection(archive);
 			editor->RecordAddedEntity(archive, entity);
 
-			editor->RefreshSceneGraphView();
+			editor->RefreshEntityTree();
 			SetEntity(entity);
 		}
 		else
@@ -183,7 +184,7 @@ void LightWindow::Create(EditorComponent* editor)
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(false);
 	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->color = args.color.toFloat3();
@@ -195,7 +196,7 @@ void LightWindow::Create(EditorComponent* editor)
 	typeSelectorComboBox.SetSize(XMFLOAT2(150, hei));
 	typeSelectorComboBox.SetPos(XMFLOAT2(x, y += step));
 	typeSelectorComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr && args.iValue >= 0)
 		{
 			light->SetType((LightComponent::LightType)args.iValue);
@@ -226,7 +227,7 @@ void LightWindow::Create(EditorComponent* editor)
 	shadowResolutionComboBox.AddItem("1024", 1024);
 	shadowResolutionComboBox.AddItem("2048", 2048);
 	shadowResolutionComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light == nullptr)
 			return;
 		light->forced_shadow_resolution = int(args.userdata);
@@ -250,7 +251,7 @@ void LightWindow::Create(EditorComponent* editor)
 		lensflare_Button[i].SetPos(XMFLOAT2(x, y += step));
 		lensflare_Button[i].SetSize(XMFLOAT2(260, hei));
 		lensflare_Button[i].OnClick([=](wi::gui::EventArgs args) {
-			LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+			LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 			if (light == nullptr)
 				return;
 
@@ -295,7 +296,7 @@ void LightWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	const LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
+	const LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 
 	if (light != nullptr)
 	{

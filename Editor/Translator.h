@@ -16,7 +16,7 @@ private:
 	float angle_start = 0;
 public:
 
-	void Update(const wi::Canvas& canvas);
+	void Update(const wi::scene::CameraComponent& camera, const wi::Canvas& canvas);
 	void Draw(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 
 	// Attach selection to translator temporarily
@@ -24,6 +24,7 @@ public:
 	// Apply translator to selection
 	void PostTranslate();
 
+	wi::scene::Scene* scene = nullptr;
 	wi::scene::TransformComponent transform;
 	wi::vector<wi::scene::PickResult> selected; // all the selected picks
 	wi::unordered_set<wi::ecs::Entity> selectedEntitiesLookup; // fast lookup for selected entities

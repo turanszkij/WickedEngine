@@ -12,6 +12,26 @@ using namespace wi::lua::primitive;
 namespace wi::lua::scene
 {
 
+static wi::scene::Scene* globalscene = &wi::scene::GetScene();
+static wi::scene::CameraComponent* globalcam = &wi::scene::GetCamera();
+
+void SetGlobalScene(wi::scene::Scene* scene)
+{
+	globalscene = scene;
+}
+void SetGlobalCamera(wi::scene::CameraComponent* camera)
+{
+	globalcam = camera;
+}
+wi::scene::Scene* GetGlobalScene()
+{
+	return globalscene;
+}
+wi::scene::CameraComponent* GetGlobalCamera()
+{
+	return globalcam;
+}
+
 int CreateEntity_BindLua(lua_State* L)
 {
 	Entity entity = CreateEntity();
@@ -21,12 +41,12 @@ int CreateEntity_BindLua(lua_State* L)
 
 int GetCamera(lua_State* L)
 {
-	Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(&wi::scene::GetCamera()));
+	Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(GetGlobalCamera()));
 	return 1;
 }
 int GetScene(lua_State* L)
 {
-	Luna<Scene_BindLua>::push(L, new Scene_BindLua(&wi::scene::GetScene()));
+	Luna<Scene_BindLua>::push(L, new Scene_BindLua(GetGlobalScene()));
 	return 1;
 }
 int LoadModel(lua_State* L)
@@ -83,7 +103,9 @@ int LoadModel(lua_State* L)
 					wi::lua::SError(L, "LoadModel(string fileName, opt Matrix transform) argument is not a matrix!");
 				}
 			}
-			Entity root = wi::scene::LoadModel(fileName, transform, true);
+			Scene scene;
+			Entity root = wi::scene::LoadModel(scene, fileName, transform, true);
+			GetGlobalScene()->Merge(scene);
 			wi::lua::SSetLongLong(L, root);
 			return 1;
 		}
@@ -104,7 +126,7 @@ int Pick(lua_State* L)
 		{
 			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
-			Scene* scene = &wi::scene::GetScene();
+			Scene* scene = GetGlobalScene();
 			if (argc > 1)
 			{
 				renderTypeMask = (uint32_t)wi::lua::SGetInt(L, 2);
@@ -154,7 +176,7 @@ int SceneIntersectSphere(lua_State* L)
 		{
 			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
-			Scene* scene = &wi::scene::GetScene();
+			Scene* scene = GetGlobalScene();
 			if (argc > 1)
 			{
 				renderTypeMask = (uint32_t)wi::lua::SGetInt(L, 2);
@@ -204,7 +226,7 @@ int SceneIntersectCapsule(lua_State* L)
 		{
 			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
-			Scene* scene = &wi::scene::GetScene();
+			Scene* scene = GetGlobalScene();
 			if (argc > 1)
 			{
 				renderTypeMask = (uint32_t)wi::lua::SGetInt(L, 2);
@@ -358,7 +380,6 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 Luna<Scene_BindLua>::PropertyType Scene_BindLua::properties[] = {
 	{ NULL, NULL }
 };
-
 
 int Scene_BindLua::Update(lua_State* L)
 {
