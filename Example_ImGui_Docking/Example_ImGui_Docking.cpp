@@ -23,11 +23,11 @@
 #endif
 
 
-#include "..\WickedEngine\wiProfiler.h"
-#include "..\WickedEngine\wiBacklog.h"
-#include "..\WickedEngine\wiPrimitive.h"
-#include "..\WickedEngine\wiRenderPath3D.h"
-#include "..\Editor\ModelImporter.h"
+#include "../WickedEngine/wiProfiler.h"
+#include "../WickedEngine/wiBacklog.h"
+#include "../WickedEngine/wiPrimitive.h"
+#include "../WickedEngine/wiRenderPath3D.h"
+#include "../Editor/ModelImporter.h"
 
 #include <fstream>
 #include <thread>
@@ -48,7 +48,9 @@ ImFont* customfont;
 ImFont* customfontlarge;
 ImFont* defaultfont;
 ImFont* iconfont;
+#ifdef _WIN32
 HWND hWnd = NULL;
+#endif
 wi::graphics::SwapChain myswapChain;
 void style_dark_ruda(void);
 void add_my_font(const char* fontpath);
@@ -170,7 +172,6 @@ void Example_ImGui::Initialize()
 	hWnd = window;
 	ImGui_ImplWin32_Init(window);
 #elif defined(SDL2)
-	hWnd = NULL;
 	ImGui_ImplSDL2_InitForVulkan(window);
 #endif
 
@@ -652,7 +653,7 @@ void Example_ImGuiRenderer::Update(float dt)
 				{
 					scene.Clear();
 					Scene scene;
-					ImportModel_GLTF(wiscene_file_items[current_scene], scene);
+					//ImportModel_GLTF(wiscene_file_items[current_scene], scene);
 					wi::scene::GetScene().Merge(scene);
 				}
 				else
@@ -1356,7 +1357,7 @@ void Example_ImGuiRenderer::Update(float dt)
 		{
 			wi::lua::RunText(lua);
 			lua_history.push_back(lua);
-			strcpy_s(lua, "");
+			strcpy(lua, "");
 			bSetKeyBoardFocus = true;
 		}
 		if (ImGui::IsItemActive())
@@ -1381,7 +1382,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			{
 				bool is_selected = false;
 				if (ImGui::Selectable(lua_history[i].c_str(), is_selected)) {
-					strcpy_s(lua, lua_history[i].c_str());
+					strcpy(lua, lua_history[i].c_str());
 					bSetKeyBoardFocus = true;
 				}
 				if (is_selected)
