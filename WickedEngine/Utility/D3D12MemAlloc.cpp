@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <utility>
 #include <cstdlib>
+#include <cstdint>
 #include <malloc.h> // for _aligned_malloc, _aligned_free
 #ifndef _WIN32
     #include <shared_mutex>
@@ -377,7 +378,15 @@ template <typename T>
 static T RoundDiv(T x, T y) { return (x + (y / (T)2)) / y; }
 template <typename T>
 static T DivideRoundingUp(T x, T y) { return (x + y - 1) / y; }
-    
+
+static WCHAR HexDigitToChar(UINT8 digit)
+{
+    if(digit < 10)
+        return L'0' + digit;
+    else
+        return L'A' + (digit - 10);
+}
+
 /*
 Performs binary search and returns iterator to first element that is greater or
 equal to `key`, according to comparison `cmp`.
@@ -1180,6 +1189,7 @@ public:
     void AddNewLine() { Add(L'\n'); }
     void AddNumber(UINT num);
     void AddNumber(UINT64 num);
+    void AddPointer(const void* ptr);
 
 private:
     Vector<WCHAR> m_Data;
@@ -1224,6 +1234,22 @@ void StringBuilder::AddNumber(UINT64 num)
     while (num);
     Add(p);
 }
+
+void StringBuilder::AddPointer(const void* ptr)
+{
+    WCHAR buf[21];
+    uintptr_t num = (uintptr_t)ptr;
+    buf[20] = L'\0';
+    WCHAR *p = &buf[20];
+    do
+    {
+        *--p = HexDigitToChar((UINT8)(num & 0xF));
+        num >>= 4;
+    }
+    while (num);
+    Add(p);
+}
+
 #endif // _D3D12MA_STRING_BUILDER_FUNCTIONS
 #endif // _D3D12MA_STRING_BUILDER
 
@@ -1267,6 +1293,7 @@ public:
     // Posts next part of an open string. The number is converted to decimal characters.
     void ContinueString(UINT num);
     void ContinueString(UINT64 num);
+    void ContinueString_Pointer(const void* ptr);
     // Posts next part of an open string. Pointer value is converted to characters
     // using "%p" formatting - shown as hexadecimal number, e.g.: 000000081276Ad00
     // void ContinueString_Pointer(const void* ptr);
@@ -1452,6 +1479,12 @@ void JsonWriter::ContinueString(UINT64 num)
     m_SB.AddNumber(num);
 }
 
+void JsonWriter::ContinueString_Pointer(const void* ptr)
+{
+    D3D12MA_ASSERT(m_InsideString);
+    m_SB.AddPointer(ptr);
+}
+
 void JsonWriter::EndString(LPCWSTR pStr)
 {
     D3D12MA_ASSERT(m_InsideString);
@@ -1524,7 +1557,9 @@ void JsonWriter::AddAllocationToObject(const Allocation& alloc)
     if (privateData)
     {
         WriteString(L"CustomData");
-        WriteNumber((uintptr_t)privateData);
+        BeginString();
+        ContinueString_Pointer(privateData);
+        EndString();
     }
 
     LPCWSTR name = alloc.GetName();
@@ -2975,10 +3010,10 @@ void BlockMetadata::PrintDetailedMap_Begin(JsonWriter& json,
     json.WriteNumber(unusedBytes);
 
     json.WriteString(L"Allocations");
-    json.WriteNumber(allocationCount);
+    json.WriteNumber((UINT64)allocationCount);
 
     json.WriteString(L"UnusedRanges");
-    json.WriteNumber(unusedRangeCount);
+    json.WriteNumber((UINT64)unusedRangeCount);
 
     json.WriteString(L"Suballocations");
     json.BeginArray();
@@ -5193,7 +5228,7 @@ bool BlockMetadata_TLSF::CreateAllocationRequest(
 
     // Round up to the next block
     UINT64 sizeForNextList = allocSize;
-    UINT64 smallSizeStep = SMALL_BUFFER_SIZE / (IsVirtual() ? 1 << SECOND_LEVEL_INDEX : 4);
+    UINT16 smallSizeStep = SMALL_BUFFER_SIZE / (IsVirtual() ? 1 << SECOND_LEVEL_INDEX : 4);
     if (allocSize > SMALL_BUFFER_SIZE)
     {
         sizeForNextList += (1ULL << (BitScanMSB(allocSize) - SECOND_LEVEL_INDEX));
@@ -6085,7 +6120,7 @@ private:
     D3D12MA_ATOMIC_UINT64 m_BlockBytes[DXGI_MEMORY_SEGMENT_GROUP_COUNT] = {};
     D3D12MA_ATOMIC_UINT64 m_AllocationBytes[DXGI_MEMORY_SEGMENT_GROUP_COUNT] = {};
 
-    D3D12MA_ATOMIC_UINT32 m_OperationsSinceBudgetFetch = 0;
+    D3D12MA_ATOMIC_UINT32 m_OperationsSinceBudgetFetch = {0};
     D3D12MA_RW_MUTEX m_BudgetMutex;
     UINT64 m_D3D12Usage[DXGI_MEMORY_SEGMENT_GROUP_COUNT] = {};
     UINT64 m_D3D12Budget[DXGI_MEMORY_SEGMENT_GROUP_COUNT] = {};
@@ -6320,7 +6355,7 @@ class AllocatorPimpl
     friend class Allocator;
     friend class Pool;
 public:
-    std::atomic_uint32_t m_RefCount = 1;
+    std::atomic_uint32_t m_RefCount = {1};
     CurrentBudgetData m_Budget;
 
     AllocatorPimpl(const ALLOCATION_CALLBACKS& allocationCallbacks, const ALLOCATOR_DESC& desc);
@@ -6547,6 +6582,8 @@ AllocatorPimpl::AllocatorPimpl(const ALLOCATION_CALLBACKS& allocationCallbacks, 
 
 HRESULT AllocatorPimpl::Init(const ALLOCATOR_DESC& desc)
 {
+    bool notZeroedSupported = false;
+
 #if D3D12MA_DXGI_1_4
     desc.pAdapter->QueryInterface(D3D12MA_IID_PPV_ARGS(&m_Adapter3));
 #endif
@@ -6557,6 +6594,12 @@ HRESULT AllocatorPimpl::Init(const ALLOCATOR_DESC& desc)
 
 #ifdef __ID3D12Device8_INTERFACE_DEFINED__
     m_Device->QueryInterface(D3D12MA_IID_PPV_ARGS(&m_Device8));
+    
+    D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7 = {};
+    if(SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &options7, sizeof(options7))))
+    {
+        notZeroedSupported = true;
+    }
 #endif
 
     HRESULT hr = m_Adapter->GetDesc(&m_AdapterDesc);
@@ -6589,8 +6632,10 @@ HRESULT AllocatorPimpl::Init(const ALLOCATOR_DESC& desc)
         CalcDefaultPoolParams(heapProps.Type, heapFlags, i);
 
 #ifdef __ID3D12Device8_INTERFACE_DEFINED__
-        if (desc.Flags & ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED)
+        if ((desc.Flags & ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED) != 0 && notZeroedSupported)
+        {
             heapFlags |= D3D12_HEAP_FLAG_CREATE_NOT_ZEROED;
+        }
 #endif
 
         m_BlockVectors[i] = D3D12MA_NEW(GetAllocs(), BlockVector)(
@@ -7146,11 +7191,11 @@ void AllocatorPimpl::BuildStatsString(WCHAR** ppStatsString, BOOL detailedMap)
                 json.WriteString(m_AdapterDesc.Description);
 
                 json.WriteString(L"DedicatedVideoMemory");
-                json.WriteNumber(m_AdapterDesc.DedicatedVideoMemory);
+                json.WriteNumber((UINT64)m_AdapterDesc.DedicatedVideoMemory);
                 json.WriteString(L"DedicatedSystemMemory");
-                json.WriteNumber(m_AdapterDesc.DedicatedSystemMemory);
+                json.WriteNumber((UINT64)m_AdapterDesc.DedicatedSystemMemory);
                 json.WriteString(L"SharedSystemMemory");
-                json.WriteNumber(m_AdapterDesc.SharedSystemMemory);
+                json.WriteNumber((UINT64)m_AdapterDesc.SharedSystemMemory);
                 
                 json.WriteString(L"ResourceHeapTier");
                 json.WriteNumber(static_cast<UINT>(m_D3D12Options.ResourceHeapTier));
@@ -7196,9 +7241,6 @@ void AllocatorPimpl::BuildStatsString(WCHAR** ppStatsString, BOOL detailedMap)
                             json.WriteString(L"DEFAULT");
                             json.BeginObject();
                             {
-                                json.WriteString(L"Flags");
-                                json.BeginArray(true);
-                                json.EndArray();
                                 json.WriteString(L"Stats");
                                 json.AddDetailedStatisticsInfoObject(stats.HeapType[0]);
                             }
@@ -7207,9 +7249,6 @@ void AllocatorPimpl::BuildStatsString(WCHAR** ppStatsString, BOOL detailedMap)
                         json.WriteString(L"UPLOAD");
                         json.BeginObject();
                         {
-                            json.WriteString(L"Flags");
-                            json.BeginArray(true);
-                            json.EndArray();
                             json.WriteString(L"Stats");
                             json.AddDetailedStatisticsInfoObject(stats.HeapType[1]);
                         }
@@ -7218,9 +7257,6 @@ void AllocatorPimpl::BuildStatsString(WCHAR** ppStatsString, BOOL detailedMap)
                         json.WriteString(L"READBACK");
                         json.BeginObject();
                         {
-                            json.WriteString(L"Flags");
-                            json.BeginArray(true);
-                            json.EndArray();
                             json.WriteString(L"Stats");
                             json.AddDetailedStatisticsInfoObject(stats.HeapType[2]);
                         }
@@ -7229,9 +7265,6 @@ void AllocatorPimpl::BuildStatsString(WCHAR** ppStatsString, BOOL detailedMap)
                         json.WriteString(L"CUSTOM");
                         json.BeginObject();
                         {
-                            json.WriteString(L"Flags");
-                            json.BeginArray(true);
-                            json.EndArray();
                             json.WriteString(L"Stats");
                             json.AddDetailedStatisticsInfoObject(customHeaps[!IsUMA()]);
                         }
@@ -7245,13 +7278,6 @@ void AllocatorPimpl::BuildStatsString(WCHAR** ppStatsString, BOOL detailedMap)
                     json.WriteString(L"L1");
                     json.BeginObject();
                     {
-                        json.WriteString(L"Flags");
-                        json.BeginArray(true);
-                        json.EndArray();
-
-                        json.WriteString(L"Size");
-                        json.WriteNumber(0U);
-
                         json.WriteString(L"Budget");
                         WriteBudgetToJson(json, localBudget);
 
@@ -7264,9 +7290,6 @@ void AllocatorPimpl::BuildStatsString(WCHAR** ppStatsString, BOOL detailedMap)
                             json.WriteString(L"DEFAULT");
                             json.BeginObject();
                             {
-                                json.WriteString(L"Flags");
-                                json.BeginArray(true);
-                                json.EndArray();
                                 json.WriteString(L"Stats");
                                 json.AddDetailedStatisticsInfoObject(stats.HeapType[0]);
                             }
@@ -7275,9 +7298,6 @@ void AllocatorPimpl::BuildStatsString(WCHAR** ppStatsString, BOOL detailedMap)
                             json.WriteString(L"CUSTOM");
                             json.BeginObject();
                             {
-                                json.WriteString(L"Flags");
-                                json.BeginArray(true);
-                                json.EndArray();
                                 json.WriteString(L"Stats");
                                 json.AddDetailedStatisticsInfoObject(customHeaps[0]);
                             }
@@ -7449,8 +7469,8 @@ void AllocatorPimpl::BuildStatsString(WCHAR** ppStatsString, BOOL detailedMap)
                         json.ContinueString(index++);
                         if (item->GetName())
                         {
-                            json.WriteString(L" - ");
-                            json.WriteString(item->GetName());
+                            json.ContinueString(L" - ");
+                            json.ContinueString(item->GetName());
                         }
                         json.EndString();
 
@@ -7749,9 +7769,10 @@ HRESULT AllocatorPimpl::CalcAllocationParams(const ALLOCATION_DESC& allocDesc, U
         msaaAlwaysCommitted = pool->GetBlockVector()->DeniesMsaaTextures();
         outBlockVector = pool->GetBlockVector();
 
-        outCommittedAllocationParams.m_ProtectedSession = pool->GetDesc().pProtectedSession;
-        outCommittedAllocationParams.m_HeapProperties = pool->GetDesc().HeapProperties;
-        outCommittedAllocationParams.m_HeapFlags = pool->GetDesc().HeapFlags;
+        const auto& desc = pool->GetDesc();
+        outCommittedAllocationParams.m_ProtectedSession = desc.pProtectedSession;
+        outCommittedAllocationParams.m_HeapProperties = desc.HeapProperties;
+        outCommittedAllocationParams.m_HeapFlags = desc.HeapFlags;
         outCommittedAllocationParams.m_List = pool->GetCommittedAllocationList();
     }
     else
@@ -9118,8 +9139,8 @@ bool DefragmentationContextPimpl::IncrementCounters(UINT64 bytes)
     // Early return when max found
     if (++m_PassStats.AllocationsMoved >= m_MaxPassAllocations || m_PassStats.BytesMoved >= m_MaxPassBytes)
     {
-        D3D12MA_ASSERT(m_PassStats.AllocationsMoved == m_MaxPassAllocations ||
-            m_PassStats.BytesMoved == m_MaxPassBytes && "Exceeded maximal pass threshold!");
+        D3D12MA_ASSERT((m_PassStats.AllocationsMoved == m_MaxPassAllocations ||
+            m_PassStats.BytesMoved == m_MaxPassBytes) && "Exceeded maximal pass threshold!");
         return true;
     }
     return false;
@@ -9449,8 +9470,8 @@ PoolPimpl::PoolPimpl(AllocatorPimpl* allocator, const POOL_DESC& desc)
         desc.MinBlockCount, maxBlockCount,
         explicitBlockSize,
         D3D12MA_MAX(desc.MinAllocationAlignment, (UINT64)D3D12MA_DEBUG_ALIGNMENT),
-        desc.Flags & POOL_FLAG_ALGORITHM_MASK,
-        desc.Flags & POOL_FLAG_MSAA_TEXTURES_ALWAYS_COMMITTED,
+        (desc.Flags & POOL_FLAG_ALGORITHM_MASK) != 0,
+        (desc.Flags & POOL_FLAG_MSAA_TEXTURES_ALWAYS_COMMITTED) != 0,
         desc.pProtectedSession);
 }
 
@@ -9699,6 +9720,7 @@ Allocation::Allocation(AllocatorPimpl* allocator, UINT64 size, UINT64 alignment,
     m_Size{ size },
     m_Alignment{ alignment },
     m_Resource{ NULL },
+    m_pPrivateData{ NULL },
     m_Name{ NULL }
 {
     D3D12MA_ASSERT(allocator);
