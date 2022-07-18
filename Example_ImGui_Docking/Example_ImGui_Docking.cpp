@@ -23,11 +23,11 @@
 #endif
 
 
-#include "..\WickedEngine\wiProfiler.h"
-#include "..\WickedEngine\wiBacklog.h"
-#include "..\WickedEngine\wiPrimitive.h"
-#include "..\WickedEngine\wiRenderPath3D.h"
-#include "..\Editor\ModelImporter.h"
+#include "../WickedEngine/wiProfiler.h"
+#include "../WickedEngine/wiBacklog.h"
+#include "../WickedEngine/wiPrimitive.h"
+#include "../WickedEngine/wiRenderPath3D.h"
+#include "../Editor/ModelImporter.h"
 
 #include <fstream>
 #include <thread>
@@ -48,7 +48,9 @@ ImFont* customfont;
 ImFont* customfontlarge;
 ImFont* defaultfont;
 ImFont* iconfont;
+#ifdef _WIN32
 HWND hWnd = NULL;
+#endif
 wi::graphics::SwapChain myswapChain;
 void style_dark_ruda(void);
 void add_my_font(const char* fontpath);
@@ -170,7 +172,6 @@ void Example_ImGui::Initialize()
 	hWnd = window;
 	ImGui_ImplWin32_Init(window);
 #elif defined(SDL2)
-	hWnd = NULL;
 	ImGui_ImplSDL2_InitForVulkan(window);
 #endif
 
@@ -1356,7 +1357,11 @@ void Example_ImGuiRenderer::Update(float dt)
 		{
 			wi::lua::RunText(lua);
 			lua_history.push_back(lua);
+			#ifdef _WIN32
 			strcpy_s(lua, "");
+			#elif  __linux__
+			strcpy(lua, "");
+			#endif
 			bSetKeyBoardFocus = true;
 		}
 		if (ImGui::IsItemActive())
@@ -1381,7 +1386,11 @@ void Example_ImGuiRenderer::Update(float dt)
 			{
 				bool is_selected = false;
 				if (ImGui::Selectable(lua_history[i].c_str(), is_selected)) {
+					#ifdef _WIN32
 					strcpy_s(lua, lua_history[i].c_str());
+					#elif __linux__ 
+					strcpy(lua, lua_history[i].c_str());
+					#endif
 					bSetKeyBoardFocus = true;
 				}
 				if (is_selected)

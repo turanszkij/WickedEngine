@@ -23,6 +23,7 @@ set (SOURCE_FILES
 	ImGui/ImGuizmo.cpp
 	ImGui/ImGuizmo.h
 	ImGui/IconsMaterialDesign.h
+	../Editor/ModelImporter_GLTF.cpp
 )
 
 if (WIN32)
@@ -69,5 +70,5 @@ endif ()
 add_custom_command(
 	TARGET Example_ImGui_Docking POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/WickedEngine/${LIB_DXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/../Content
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/Content
 )
