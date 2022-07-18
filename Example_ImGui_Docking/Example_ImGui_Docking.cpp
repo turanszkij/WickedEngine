@@ -653,9 +653,7 @@ void Example_ImGuiRenderer::Update(float dt)
 				{
 					scene.Clear();
 					Scene scene;
-					#ifdef _WIN32
-						ImportModel_GLTF(wiscene_file_items[current_scene], scene);
-					#endif
+					ImportModel_GLTF(wiscene_file_items[current_scene], scene);
 					wi::scene::GetScene().Merge(scene);
 				}
 				else
