@@ -9,7 +9,7 @@
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.01.0625 */
+ /* File created by MIDL compiler version 8.01.0628 */
 
 
 
@@ -43,7 +43,7 @@
 #endif
 
 #ifndef DECLSPEC_XFGVIRT
-#if _CONTROL_FLOW_GUARD_XFG
+#if defined(_CONTROL_FLOW_GUARD_XFG)
 #define DECLSPEC_XFGVIRT(base, func) __declspec(xfg_virtual(base, func))
 #else
 #define DECLSPEC_XFGVIRT(base, func)
@@ -94,9 +94,16 @@ typedef interface DirectMLTensorFlowCreatorID DirectMLTensorFlowCreatorID;
 #endif 	/* __DirectMLTensorFlowCreatorID_FWD_DEFINED__ */
 
 
+#ifndef __DirectMLPyTorchCreatorID_FWD_DEFINED__
+#define __DirectMLPyTorchCreatorID_FWD_DEFINED__
+typedef interface DirectMLPyTorchCreatorID DirectMLPyTorchCreatorID;
+
+#endif 	/* __DirectMLPyTorchCreatorID_FWD_DEFINED__ */
+
+
 /* header files for imported files */
-#include "OAIdl.h"
-#include "OCIdl.h"
+#include "oaidl.h"
+#include "ocidl.h"
 #include "d3d11on12.h"
 
 #ifdef __cplusplus
@@ -630,7 +637,79 @@ EXTERN_C const IID IID_DirectMLTensorFlowCreatorID;
 #endif 	/* __DirectMLTensorFlowCreatorID_INTERFACE_DEFINED__ */
 
 
-/* interface __MIDL_itf_d3d12compatibility_0000_0006 */
+#ifndef __DirectMLPyTorchCreatorID_INTERFACE_DEFINED__
+#define __DirectMLPyTorchCreatorID_INTERFACE_DEFINED__
+
+/* interface DirectMLPyTorchCreatorID */
+/* [unique][local][object][uuid] */ 
+
+
+EXTERN_C const IID IID_DirectMLPyTorchCreatorID;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("af029192-fba1-4b05-9116-235e06560354")
+    DirectMLPyTorchCreatorID : public IUnknown
+    {
+    public:
+    };
+    
+    
+#else 	/* C style interface */
+
+    typedef struct DirectMLPyTorchCreatorIDVtbl
+    {
+        BEGIN_INTERFACE
+        
+        DECLSPEC_XFGVIRT(IUnknown, QueryInterface)
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            DirectMLPyTorchCreatorID * This,
+            REFIID riid,
+            _COM_Outptr_  void **ppvObject);
+        
+        DECLSPEC_XFGVIRT(IUnknown, AddRef)
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            DirectMLPyTorchCreatorID * This);
+        
+        DECLSPEC_XFGVIRT(IUnknown, Release)
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            DirectMLPyTorchCreatorID * This);
+        
+        END_INTERFACE
+    } DirectMLPyTorchCreatorIDVtbl;
+
+    interface DirectMLPyTorchCreatorID
+    {
+        CONST_VTBL struct DirectMLPyTorchCreatorIDVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define DirectMLPyTorchCreatorID_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define DirectMLPyTorchCreatorID_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define DirectMLPyTorchCreatorID_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __DirectMLPyTorchCreatorID_INTERFACE_DEFINED__ */
+
+
+/* interface __MIDL_itf_d3d12compatibility_0000_0007 */
 /* [local] */ 
 
 #endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_GAMES) */
@@ -641,10 +720,11 @@ DEFINE_GUID(IID_D3D9On12CreatorID,0xfffcbb7f,0x15d3,0x42a2,0x84,0x1e,0x9d,0x8d,0
 DEFINE_GUID(IID_OpenGLOn12CreatorID,0x6bb3cd34,0x0d19,0x45ab,0x97,0xed,0xd7,0x20,0xba,0x3d,0xfc,0x80);
 DEFINE_GUID(IID_OpenCLOn12CreatorID,0x3f76bb74,0x91b5,0x4a88,0xb1,0x26,0x20,0xca,0x03,0x31,0xcd,0x60);
 DEFINE_GUID(IID_DirectMLTensorFlowCreatorID,0xcb7490ac,0x8a0f,0x44ec,0x9b,0x7b,0x6f,0x4c,0xaf,0xe8,0xe9,0xab);
+DEFINE_GUID(IID_DirectMLPyTorchCreatorID,0xaf029192,0xfba1,0x4b05,0x91,0x16,0x23,0x5e,0x06,0x56,0x03,0x54);
 
 
-extern RPC_IF_HANDLE __MIDL_itf_d3d12compatibility_0000_0006_v0_0_c_ifspec;
-extern RPC_IF_HANDLE __MIDL_itf_d3d12compatibility_0000_0006_v0_0_s_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12compatibility_0000_0007_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12compatibility_0000_0007_v0_0_s_ifspec;
 
 /* Additional Prototypes for ALL interfaces */
 
