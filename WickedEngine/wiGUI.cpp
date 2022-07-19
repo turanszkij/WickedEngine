@@ -1959,7 +1959,7 @@ namespace wi::gui
 
 
 	static const float windowcontrolSize = 20.0f;
-	void Window::Create(const std::string& name, bool window_controls)
+	void Window::Create(const std::string& name, WindowControls window_controls)
 	{
 		SetColor(wi::Color::Ghost());
 
@@ -1973,11 +1973,13 @@ namespace wi::gui
 		}
 
 		// Add controls
-		if (window_controls)
+		if (has_flag(window_controls, WindowControls::RESIZE_TOPLEFT))
 		{
 			// Add a resizer control to the upperleft corner
 			resizeDragger_UpperLeft.Create(name + "_resize_dragger_upper_left");
-			resizeDragger_UpperLeft.SetText("");
+			resizeDragger_UpperLeft.SetText("«|»");
+			resizeDragger_UpperLeft.SetTooltip("Resize window");
+			resizeDragger_UpperLeft.font.params.rotation = XM_PIDIV4;
 			resizeDragger_UpperLeft.OnDrag([this](EventArgs args) {
 				auto saved_parent = this->parent;
 				this->Detach();
@@ -1990,10 +1992,15 @@ namespace wi::gui
 				this->AttachTo(saved_parent);
 				});
 			AddWidget(&resizeDragger_UpperLeft);
+		}
 
+		if (has_flag(window_controls, WindowControls::RESIZE_BOTTOMRIGHT))
+		{
 			// Add a resizer control to the bottom right corner
 			resizeDragger_BottomRight.Create(name + "_resize_dragger_bottom_right");
-			resizeDragger_BottomRight.SetText("");
+			resizeDragger_BottomRight.SetText("«|»");
+			resizeDragger_BottomRight.SetTooltip("Resize window");
+			resizeDragger_BottomRight.font.params.rotation = XM_PIDIV4;
 			resizeDragger_BottomRight.OnDrag([this](EventArgs args) {
 				auto saved_parent = this->parent;
 				this->Detach();
@@ -2005,7 +2012,10 @@ namespace wi::gui
 				this->AttachTo(saved_parent);
 				});
 			AddWidget(&resizeDragger_BottomRight);
+		}
 
+		if (has_flag(window_controls, WindowControls::MOVE))
+		{
 			// Add a grabber onto the title bar
 			moveDragger.Create(name + "_move_dragger");
 			moveDragger.SetText(name);
@@ -2017,7 +2027,10 @@ namespace wi::gui
 				this->AttachTo(saved_parent);
 				});
 			AddWidget(&moveDragger);
+		}
 
+		if (has_flag(window_controls, WindowControls::CLOSE))
+		{
 			// Add close button to the top right corner
 			closeButton.Create(name + "_close_button");
 			closeButton.SetText("x");
@@ -2026,17 +2039,31 @@ namespace wi::gui
 				});
 			closeButton.SetTooltip("Close window");
 			AddWidget(&closeButton);
-
-			// Add minimize button to the top right corner
-			minimizeButton.Create(name + "_minimize_button");
-			minimizeButton.SetText("-");
-			minimizeButton.OnClick([this](EventArgs args) {
-				this->SetMinimized(!this->IsMinimized());
-				});
-			minimizeButton.SetTooltip("Minimize window");
-			AddWidget(&minimizeButton);
 		}
-		else
+
+		if (has_flag(window_controls, WindowControls::COLLAPSE))
+		{
+			// Add minimize button to the top right corner
+			collapseButton.Create(name + "_collapse_button");
+			collapseButton.SetText("-");
+			collapseButton.OnClick([this](EventArgs args) {
+				this->SetMinimized(!this->IsMinimized());
+				if (this->IsMinimized())
+				{
+					collapseButton.SetText("»");
+					collapseButton.font.params.rotation = XM_PIDIV2;
+				}
+				else
+				{
+					collapseButton.SetText("-");
+					collapseButton.font.params.rotation = 0;
+				}
+				});
+			collapseButton.SetTooltip("Collapse window");
+			AddWidget(&collapseButton);
+		}
+
+		if (!has_flag(window_controls, WindowControls::MOVE))
 		{
 			// Simple title bar
 			label.Create(name);
@@ -2140,12 +2167,19 @@ namespace wi::gui
 			closeButton.SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
 			closeButton.AttachTo(this);
 		}
-		if (minimizeButton.parent != nullptr)
+		if (collapseButton.parent != nullptr)
 		{
-			minimizeButton.Detach();
-			minimizeButton.SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-			minimizeButton.SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize * 2, translation.y));
-			minimizeButton.AttachTo(this);
+			collapseButton.Detach();
+			collapseButton.SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+			if (closeButton.parent != nullptr)
+			{
+				collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize * 2, translation.y));
+			}
+			else
+			{
+				collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
+			}
+			collapseButton.AttachTo(this);
 		}
 		if (resizeDragger_UpperLeft.parent != nullptr)
 		{
@@ -2163,9 +2197,25 @@ namespace wi::gui
 		}
 		if (label.parent != nullptr)
 		{
+			label.font.params = font.params;
 			label.Detach();
-			label.SetSize(XMFLOAT2(scale.x, windowcontrolSize));
-			label.SetPos(XMFLOAT2(translation.x, translation.y));
+			XMFLOAT2 label_size = XMFLOAT2(scale.x, windowcontrolSize);
+			XMFLOAT2 label_pos = XMFLOAT2(translation.x, translation.y);
+			if (resizeDragger_UpperLeft.parent != nullptr)
+			{
+				label_size.x -= windowcontrolSize;
+				label_pos.x += windowcontrolSize;
+			}
+			if (closeButton.parent != nullptr)
+			{
+				label_size.x -= windowcontrolSize;
+			}
+			if (collapseButton.parent != nullptr)
+			{
+				label_size.x -= windowcontrolSize;
+			}
+			label.SetSize(label_size);
+			label.SetPos(label_pos);
 			label.AttachTo(this);
 		}
 		if (scrollbar_horizontal.parent != nullptr)
@@ -2379,10 +2429,13 @@ namespace wi::gui
 	void Window::SetVisible(bool value)
 	{
 		Widget::SetVisible(value);
-		SetMinimized(!value);
-		for (auto& x : widgets)
+		//SetMinimized(!value);
+		if (!IsMinimized())
 		{
-			x->SetVisible(value);
+			for (auto& x : widgets)
+			{
+				x->SetVisible(value);
+			}
 		}
 	}
 	void Window::SetEnabled(bool value)
@@ -2392,7 +2445,7 @@ namespace wi::gui
 		{
 			if (x == &moveDragger)
 				continue;
-			if (x == &minimizeButton)
+			if (x == &collapseButton)
 				continue;
 			if (x == &closeButton)
 				continue;
@@ -2419,11 +2472,13 @@ namespace wi::gui
 		{
 			if (x == &moveDragger)
 				continue;
-			if (x == &minimizeButton)
+			if (x == &collapseButton)
 				continue;
 			if (x == &closeButton)
 				continue;
 			if (x == &resizeDragger_UpperLeft)
+				continue;
+			if (x == &label)
 				continue;
 			x->SetVisible(!value);
 		}
@@ -2550,7 +2605,7 @@ namespace wi::gui
 
 	static const float cp_width = 300;
 	static const float cp_height = 260;
-	void ColorPicker::Create(const std::string& name, bool window_controls)
+	void ColorPicker::Create(const std::string& name, WindowControls window_controls)
 	{
 		Window::Create(name, window_controls);
 

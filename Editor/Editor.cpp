@@ -231,84 +231,7 @@ void EditorComponent::ResizeLayout()
 	float screenW = GetLogicalWidth();
 	float screenH = GetLogicalHeight();
 
-	XMFLOAT2 option_size = XMFLOAT2(100, 34);
-	float x = screenW - option_size.x;
-	float y = screenH - option_size.y;
-	float step = (option_size.y + 2) * -1;
-	float hstep = (option_size.x + 2) * -1;
-
-	rendererWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
-	rendererWnd_Toggle.SetSize(option_size);
-
-	postprocessWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
-	postprocessWnd_Toggle.SetSize(option_size);
-
-	paintToolWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
-	paintToolWnd_Toggle.SetSize(option_size);
-
-	terrainWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
-	terrainWnd_Toggle.SetSize(option_size);
-
-	/////////////////////////
-
-	option_size.y = 16;
-	step = (option_size.y + 2) * -1;
-	x = screenW - option_size.x;
-	y = screenH - option_size.y;
-
-	weatherWnd_Toggle.SetPos(XMFLOAT2(x, y));
-	weatherWnd_Toggle.SetSize(option_size);
-
-	objectWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	objectWnd_Toggle.SetSize(option_size);
-
-	meshWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	meshWnd_Toggle.SetSize(option_size);
-
-	materialWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	materialWnd_Toggle.SetSize(option_size);
-
-	cameraWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	cameraWnd_Toggle.SetSize(option_size);
-
-	envProbeWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	envProbeWnd_Toggle.SetSize(option_size);
-
-	decalWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	decalWnd_Toggle.SetSize(option_size);
-
-	soundWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	soundWnd_Toggle.SetSize(option_size);
-
-	lightWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	lightWnd_Toggle.SetSize(option_size);
-
-	animWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	animWnd_Toggle.SetSize(option_size);
-
-	emitterWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	emitterWnd_Toggle.SetSize(option_size);
-
-	hairWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	hairWnd_Toggle.SetSize(option_size);
-
-	forceFieldWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	forceFieldWnd_Toggle.SetSize(option_size);
-
-	springWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	springWnd_Toggle.SetSize(option_size);
-
-	ikWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	ikWnd_Toggle.SetSize(option_size);
-
-	transformWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	transformWnd_Toggle.SetSize(option_size);
-
-	layerWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	layerWnd_Toggle.SetSize(option_size);
-
-	nameWnd_Toggle.SetPos(XMFLOAT2(x, y += step));
-	nameWnd_Toggle.SetSize(option_size);
+	componentWindow.SetPos(XMFLOAT2(screenW - componentWindow.GetScale().x, screenH - componentWindow.GetScale().y));
 
 	////////////////////////////////////////////////////////////////////////////////////
 
@@ -368,6 +291,25 @@ void EditorComponent::ResizeLayout()
 
 	entityTree.SetSize(XMFLOAT2(260, 300));
 	entityTree.SetPos(XMFLOAT2(0, screenH - entityTree.scale_local.y));
+
+
+	XMFLOAT2 option_size = XMFLOAT2(100, 34);
+	float step = option_size.y + 2;
+	float hstep = option_size.x + 2;
+	float x = entityTree.GetPosition().x + entityTree.GetScale().x - option_size.x;
+	float y = entityTree.GetPosition().y + entityTree.GetScale().y - option_size.y;
+
+	rendererWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
+	rendererWnd_Toggle.SetSize(option_size);
+
+	postprocessWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
+	postprocessWnd_Toggle.SetSize(option_size);
+
+	paintToolWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
+	paintToolWnd_Toggle.SetSize(option_size);
+
+	terrainWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
+	terrainWnd_Toggle.SetSize(option_size);
 }
 void EditorComponent::Load()
 {
@@ -542,174 +484,6 @@ void EditorComponent::Load()
 		});
 	GetGUI().AddWidget(&terrainWnd_Toggle);
 	GetGUI().AddWidget(&terragen);
-
-
-	///////////////////////
-	wi::Color option_color_idle = wi::Color(100, 150, 150, 100);
-	wi::Color option_color_focus = wi::Color(100, 200, 200, 200);
-
-
-	weatherWnd_Toggle.Create("Weather");
-	weatherWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	weatherWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	weatherWnd_Toggle.SetTooltip("Weather settings window");
-	weatherWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		weatherWnd.SetVisible(!weatherWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&weatherWnd_Toggle);
-
-	objectWnd_Toggle.Create("Object");
-	objectWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	objectWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	objectWnd_Toggle.SetTooltip("Object settings window");
-	objectWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		objectWnd.SetVisible(!objectWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&objectWnd_Toggle);
-
-	meshWnd_Toggle.Create("Mesh");
-	meshWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	meshWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	meshWnd_Toggle.SetTooltip("Mesh settings window");
-	meshWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		meshWnd.SetVisible(!meshWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&meshWnd_Toggle);
-
-	materialWnd_Toggle.Create("Material");
-	materialWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	materialWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	materialWnd_Toggle.SetTooltip("Material settings window");
-	materialWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		materialWnd.SetVisible(!materialWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&materialWnd_Toggle);
-
-	cameraWnd_Toggle.Create("Camera");
-	cameraWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	cameraWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	cameraWnd_Toggle.SetTooltip("Camera settings window");
-	cameraWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		cameraWnd.SetVisible(!cameraWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&cameraWnd_Toggle);
-
-	envProbeWnd_Toggle.Create("EnvProbe");
-	envProbeWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	envProbeWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	envProbeWnd_Toggle.SetTooltip("Environment probe settings window");
-	envProbeWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		envProbeWnd.SetVisible(!envProbeWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&envProbeWnd_Toggle);
-
-	decalWnd_Toggle.Create("Decal");
-	decalWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	decalWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	decalWnd_Toggle.SetTooltip("Decal settings window");
-	decalWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		decalWnd.SetVisible(!decalWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&decalWnd_Toggle);
-
-	soundWnd_Toggle.Create("Sound");
-	soundWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	soundWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	soundWnd_Toggle.SetTooltip("Sound settings window");
-	soundWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		soundWnd.SetVisible(!soundWnd.IsVisible());
-		});
-	GetGUI().AddWidget(&soundWnd_Toggle);
-
-	lightWnd_Toggle.Create("Light");
-	lightWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	lightWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	lightWnd_Toggle.SetTooltip("Light settings window");
-	lightWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		lightWnd.SetVisible(!lightWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&lightWnd_Toggle);
-
-	animWnd_Toggle.Create("Animation");
-	animWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	animWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	animWnd_Toggle.SetTooltip("Animation inspector window");
-	animWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		animWnd.SetVisible(!animWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&animWnd_Toggle);
-
-	emitterWnd_Toggle.Create("Emitter");
-	emitterWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	emitterWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	emitterWnd_Toggle.SetTooltip("Emitter Particle System properties");
-	emitterWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		emitterWnd.SetVisible(!emitterWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&emitterWnd_Toggle);
-
-	hairWnd_Toggle.Create("HairParticle");
-	hairWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	hairWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	hairWnd_Toggle.SetTooltip("Hair Particle System properties");
-	hairWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		hairWnd.SetVisible(!hairWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&hairWnd_Toggle);
-
-	forceFieldWnd_Toggle.Create("ForceField");
-	forceFieldWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	forceFieldWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	forceFieldWnd_Toggle.SetTooltip("Force Field properties");
-	forceFieldWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		forceFieldWnd.SetVisible(!forceFieldWnd.IsVisible());
-	});
-	GetGUI().AddWidget(&forceFieldWnd_Toggle);
-
-	springWnd_Toggle.Create("Spring");
-	springWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	springWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	springWnd_Toggle.SetTooltip("Spring properties");
-	springWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		springWnd.SetVisible(!springWnd.IsVisible());
-		});
-	GetGUI().AddWidget(&springWnd_Toggle);
-
-	ikWnd_Toggle.Create("IK");
-	ikWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	ikWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	ikWnd_Toggle.SetTooltip("Inverse Kinematics properties");
-	ikWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		ikWnd.SetVisible(!ikWnd.IsVisible());
-		});
-	GetGUI().AddWidget(&ikWnd_Toggle);
-
-	transformWnd_Toggle.Create("Transform");
-	transformWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	transformWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	transformWnd_Toggle.SetTooltip("Transform properties");
-	transformWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		transformWnd.SetVisible(!transformWnd.IsVisible());
-		});
-	GetGUI().AddWidget(&transformWnd_Toggle);
-
-	layerWnd_Toggle.Create("Layer");
-	layerWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	layerWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	layerWnd_Toggle.SetTooltip("Layer Component");
-	layerWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		layerWnd.SetVisible(!layerWnd.IsVisible());
-		});
-	GetGUI().AddWidget(&layerWnd_Toggle);
-
-	nameWnd_Toggle.Create("Name");
-	nameWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
-	nameWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
-	nameWnd_Toggle.SetTooltip("Name Component");
-	nameWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		nameWnd.SetVisible(!nameWnd.IsVisible());
-		});
-	GetGUI().AddWidget(&nameWnd_Toggle);
 
 
 	////////////////////////////////////////////////////////////////////////////////////
@@ -1039,6 +813,7 @@ void EditorComponent::Load()
 
 		// record NEW selection state...
 		RecordSelection(archive);
+		RefreshComponentWindow();
 
 		});
 	GetGUI().AddWidget(&entityTree);
@@ -1110,26 +885,52 @@ void EditorComponent::Load()
 	layerWnd.Create(this);
 	nameWnd.Create(this);
 
-	wi::gui::GUI& gui = GetGUI();
-	gui.AddWidget(&materialWnd);
-	gui.AddWidget(&weatherWnd);
-	gui.AddWidget(&objectWnd);
-	gui.AddWidget(&meshWnd);
-	gui.AddWidget(&cameraWnd);
-	gui.AddWidget(&envProbeWnd);
-	gui.AddWidget(&soundWnd);
-	gui.AddWidget(&decalWnd);
-	gui.AddWidget(&lightWnd);
-	gui.AddWidget(&animWnd);
-	gui.AddWidget(&emitterWnd);
-	gui.AddWidget(&hairWnd);
-	gui.AddWidget(&forceFieldWnd);
-	gui.AddWidget(&paintToolWnd);
-	gui.AddWidget(&springWnd);
-	gui.AddWidget(&ikWnd);
-	gui.AddWidget(&transformWnd);
-	gui.AddWidget(&layerWnd);
-	gui.AddWidget(&nameWnd);
+
+	componentWindow.Create("Components", wi::gui::Window::WindowControls::RESIZE_TOPLEFT);
+	componentWindow.SetSize(XMFLOAT2(300, 400));
+	componentWindow.font.params.h_align = wi::font::WIFALIGN_RIGHT;
+	GetGUI().AddWidget(&componentWindow);
+
+
+	componentWindow.AddWidget(&materialWnd);
+	componentWindow.AddWidget(&weatherWnd);
+	componentWindow.AddWidget(&objectWnd);
+	componentWindow.AddWidget(&meshWnd);
+	componentWindow.AddWidget(&cameraWnd);
+	componentWindow.AddWidget(&envProbeWnd);
+	componentWindow.AddWidget(&soundWnd);
+	componentWindow.AddWidget(&decalWnd);
+	componentWindow.AddWidget(&lightWnd);
+	componentWindow.AddWidget(&animWnd);
+	componentWindow.AddWidget(&emitterWnd);
+	componentWindow.AddWidget(&hairWnd);
+	componentWindow.AddWidget(&forceFieldWnd);
+	componentWindow.AddWidget(&paintToolWnd);
+	componentWindow.AddWidget(&springWnd);
+	componentWindow.AddWidget(&ikWnd);
+	componentWindow.AddWidget(&transformWnd);
+	componentWindow.AddWidget(&layerWnd);
+	componentWindow.AddWidget(&nameWnd);
+
+	materialWnd.SetVisible(false);
+	weatherWnd.SetVisible(false);
+	objectWnd.SetVisible(false);
+	meshWnd.SetVisible(false);
+	cameraWnd.SetVisible(false);
+	envProbeWnd.SetVisible(false);
+	soundWnd.SetVisible(false);
+	decalWnd.SetVisible(false);
+	lightWnd.SetVisible(false);
+	animWnd.SetVisible(false);
+	emitterWnd.SetVisible(false);
+	hairWnd.SetVisible(false);
+	forceFieldWnd.SetVisible(false);
+	paintToolWnd.SetVisible(false);
+	springWnd.SetVisible(false);
+	ikWnd.SetVisible(false);
+	transformWnd.SetVisible(false);
+	layerWnd.SetVisible(false);
+	nameWnd.SetVisible(false);
 
 	cameraWnd.ResetCam();
 
@@ -2702,6 +2503,238 @@ void EditorComponent::RefreshEntityTree()
 
 	entitytree_added_items.clear();
 	entitytree_opened_items.clear();
+
+	RefreshComponentWindow();
+}
+void EditorComponent::RefreshComponentWindow()
+{
+	if (translator.selected.empty())
+		return;
+
+	Entity entity = translator.selected.front().entity;
+
+	if (entity == INVALID_ENTITY)
+		return;
+
+	const wi::scene::Scene& scene = GetCurrentScene();
+	const float padding = 4;
+	XMFLOAT2 pos = XMFLOAT2(padding, padding);
+
+	if (scene.names.Contains(entity))
+	{
+		nameWnd.SetVisible(true);
+		nameWnd.SetPos(pos);
+		pos.y += nameWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		nameWnd.SetVisible(false);
+	}
+
+	if (scene.layers.Contains(entity))
+	{
+		layerWnd.SetVisible(true);
+		layerWnd.SetPos(pos);
+		pos.y += layerWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		layerWnd.SetVisible(false);
+	}
+
+	if (scene.transforms.Contains(entity))
+	{
+		transformWnd.SetVisible(true);
+		transformWnd.SetPos(pos);
+		pos.y += transformWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		transformWnd.SetVisible(false);
+	}
+
+	if (scene.inverse_kinematics.Contains(entity))
+	{
+		ikWnd.SetVisible(true);
+		ikWnd.SetPos(pos);
+		pos.y += ikWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		ikWnd.SetVisible(false);
+	}
+
+	if (scene.springs.Contains(entity))
+	{
+		springWnd.SetVisible(true);
+		springWnd.SetPos(pos);
+		pos.y += springWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		springWnd.SetVisible(false);
+	}
+
+	if (scene.forces.Contains(entity))
+	{
+		forceFieldWnd.SetVisible(true);
+		forceFieldWnd.SetPos(pos);
+		pos.y += forceFieldWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		forceFieldWnd.SetVisible(false);
+	}
+
+	if (scene.hairs.Contains(entity))
+	{
+		hairWnd.SetVisible(true);
+		hairWnd.SetPos(pos);
+		pos.y += hairWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		hairWnd.SetVisible(false);
+	}
+
+	if (scene.emitters.Contains(entity))
+	{
+		emitterWnd.SetVisible(true);
+		emitterWnd.SetPos(pos);
+		pos.y += emitterWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		emitterWnd.SetVisible(false);
+	}
+
+	if (scene.animations.Contains(entity))
+	{
+		animWnd.SetVisible(true);
+		animWnd.SetPos(pos);
+		pos.y += animWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		animWnd.SetVisible(false);
+	}
+
+	if (scene.lights.Contains(entity))
+	{
+		lightWnd.SetVisible(true);
+		lightWnd.SetPos(pos);
+		pos.y += lightWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		lightWnd.SetVisible(false);
+	}
+
+	if (scene.sounds.Contains(entity))
+	{
+		soundWnd.SetVisible(true);
+		soundWnd.SetPos(pos);
+		pos.y += soundWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		soundWnd.SetVisible(false);
+	}
+
+	if (scene.decals.Contains(entity))
+	{
+		decalWnd.SetVisible(true);
+		decalWnd.SetPos(pos);
+		pos.y += decalWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		decalWnd.SetVisible(false);
+	}
+
+	if (scene.probes.Contains(entity))
+	{
+		envProbeWnd.SetVisible(true);
+		envProbeWnd.SetPos(pos);
+		pos.y += envProbeWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		envProbeWnd.SetVisible(false);
+	}
+
+	if (scene.cameras.Contains(entity))
+	{
+		cameraWnd.SetVisible(true);
+		cameraWnd.SetPos(pos);
+		pos.y += cameraWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		cameraWnd.SetVisible(false);
+	}
+
+	if (scene.materials.Contains(entity))
+	{
+		materialWnd.SetVisible(true);
+		materialWnd.SetPos(pos);
+		pos.y += materialWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		materialWnd.SetVisible(false);
+	}
+
+	if (scene.meshes.Contains(entity))
+	{
+		meshWnd.SetVisible(true);
+		meshWnd.SetPos(pos);
+		pos.y += meshWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		meshWnd.SetVisible(false);
+	}
+
+	if (scene.objects.Contains(entity))
+	{
+		objectWnd.SetVisible(true);
+		objectWnd.SetPos(pos);
+		pos.y += objectWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		objectWnd.SetVisible(false);
+	}
+
+	if (scene.weathers.Contains(entity))
+	{
+		weatherWnd.SetVisible(true);
+		weatherWnd.SetPos(pos);
+		pos.y += weatherWnd.GetScale().y;
+		pos.y += padding;
+	}
+	else
+	{
+		weatherWnd.SetVisible(false);
+	}
 }
 
 void EditorComponent::ClearSelected()

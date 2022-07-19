@@ -9,7 +9,7 @@ using namespace wi::scene;
 void LayerWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Layer Window");
+	wi::gui::Window::Create("Layer", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(420, 290));
 
 	float x = 30;

@@ -12,7 +12,7 @@ using namespace wi::scene;
 void LightWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Light Window");
+	wi::gui::Window::Create("Light", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(650, 300));
 
 	float x = 450;
@@ -179,7 +179,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&addLightButton);
 
 
-	colorPicker.Create("Light Color", false);
+	colorPicker.Create("Light Color", wi::gui::Window::WindowControls::NONE);
 	colorPicker.SetPos(XMFLOAT2(10, 0));
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(false);

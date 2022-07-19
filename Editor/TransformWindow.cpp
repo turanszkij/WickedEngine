@@ -9,7 +9,7 @@ using namespace wi::scene;
 void TransformWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Transform Window");
+	wi::gui::Window::Create("Transform", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(480, 200));
 
 	float x = 100;

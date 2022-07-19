@@ -9,7 +9,7 @@ using namespace wi::scene;
 void DecalWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Decal Window");
+	wi::gui::Window::Create("Decal", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(420, 200));
 
 	float x = 200;

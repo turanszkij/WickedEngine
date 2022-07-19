@@ -9,7 +9,7 @@ using namespace wi::scene;
 void SpringWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Spring Window");
+	wi::gui::Window::Create("Spring", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(460, 200));
 
 	float x = 150;

@@ -9,7 +9,7 @@ using namespace wi::graphics;
 void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Weather Window");
+	wi::gui::Window::Create("Weather", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(660, 300));
 
 	float x = 180;
@@ -412,7 +412,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	y += 10;
 
-	colorPicker.Create("Color", false);
+	colorPicker.Create("Color", wi::gui::Window::WindowControls::NONE);
 	colorPicker.SetPos(XMFLOAT2(x, y += step));
 	colorPicker.SetVisible(false);
 	colorPicker.SetEnabled(true);

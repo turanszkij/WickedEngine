@@ -131,7 +131,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	pressureCheckBox.SetCheck(false);
 	AddWidget(&pressureCheckBox);
 
-	colorPicker.Create("Color", false);
+	colorPicker.Create("Color", wi::gui::Window::WindowControls::NONE);
 	colorPicker.SetPos(XMFLOAT2(10, y += step));
 	AddWidget(&colorPicker);
 

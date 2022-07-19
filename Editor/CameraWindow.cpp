@@ -33,7 +33,7 @@ void CameraWindow::ResetCam()
 void CameraWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Camera Window");
+	wi::gui::Window::Create("Camera", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	editor->GetCurrentEditorScene().camera_transform.MatrixTransform(editor->GetCurrentEditorScene().camera.GetInvView());
 	editor->GetCurrentEditorScene().camera_transform.UpdateTransform();
 

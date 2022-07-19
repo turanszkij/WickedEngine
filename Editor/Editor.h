@@ -71,24 +71,6 @@ public:
 	wi::gui::Button postprocessWnd_Toggle;
 	wi::gui::Button paintToolWnd_Toggle;
 	wi::gui::Button terrainWnd_Toggle;
-	wi::gui::Button weatherWnd_Toggle;
-	wi::gui::Button objectWnd_Toggle;
-	wi::gui::Button meshWnd_Toggle;
-	wi::gui::Button materialWnd_Toggle;
-	wi::gui::Button cameraWnd_Toggle;
-	wi::gui::Button envProbeWnd_Toggle;
-	wi::gui::Button decalWnd_Toggle;
-	wi::gui::Button soundWnd_Toggle;
-	wi::gui::Button lightWnd_Toggle;
-	wi::gui::Button animWnd_Toggle;
-	wi::gui::Button emitterWnd_Toggle;
-	wi::gui::Button hairWnd_Toggle;
-	wi::gui::Button forceFieldWnd_Toggle;
-	wi::gui::Button springWnd_Toggle;
-	wi::gui::Button ikWnd_Toggle;
-	wi::gui::Button transformWnd_Toggle;
-	wi::gui::Button layerWnd_Toggle;
-	wi::gui::Button nameWnd_Toggle;
 	wi::gui::CheckBox translatorCheckBox;
 	wi::gui::CheckBox isScalatorCheckBox;
 	wi::gui::CheckBox isRotatorCheckBox;
@@ -111,6 +93,9 @@ public:
 	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
 	void PushToEntityTree(wi::ecs::Entity entity, int level);
 	void RefreshEntityTree();
+
+	wi::gui::Window componentWindow;
+	void RefreshComponentWindow();
 
 	wi::gui::Slider pathTraceTargetSlider;
 	wi::gui::Label pathTraceStatisticsLabel;

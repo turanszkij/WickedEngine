@@ -260,7 +260,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create("Object Window");
+	wi::gui::Window::Create("Object", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(670, 320));
 
 	float x = 200;
@@ -795,7 +795,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	AddWidget(&colorComboBox);
 
-	colorPicker.Create("Object Color", false);
+	colorPicker.Create("Object Color", wi::gui::Window::WindowControls::NONE);
 	colorPicker.SetPos(XMFLOAT2(350, y += step));
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(true);

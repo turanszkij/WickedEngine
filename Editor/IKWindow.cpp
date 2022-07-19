@@ -9,7 +9,7 @@ using namespace wi::scene;
 void IKWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Inverse Kinematics (IK) Window");
+	wi::gui::Window::Create("Inverse Kinematics", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(400, 150));
 
 	float x = 120;

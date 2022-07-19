@@ -353,7 +353,7 @@ namespace wi::gui
 	{
 	protected:
 		Button closeButton;
-		Button minimizeButton;
+		Button collapseButton;
 		Button resizeDragger_UpperLeft;
 		Button resizeDragger_BottomRight;
 		Button moveDragger;
@@ -363,8 +363,22 @@ namespace wi::gui
 		wi::vector<Widget*> widgets;
 		bool minimized = false;
 		Widget scrollable_area;
+
 	public:
-		void Create(const std::string& name, bool window_controls = true);
+		enum class WindowControls
+		{
+			NONE = 0,
+			RESIZE_TOPLEFT = 1 << 0,
+			RESIZE_BOTTOMRIGHT = 1 << 1,
+			MOVE = 1 << 2,
+			CLOSE = 1 << 3,
+			COLLAPSE = 1 << 4,
+
+			RESIZE = RESIZE_TOPLEFT | RESIZE_BOTTOMRIGHT,
+			CLOSE_AND_COLLAPSE = CLOSE | COLLAPSE,
+			ALL = RESIZE | MOVE | CLOSE | COLLAPSE
+		};
+		void Create(const std::string& name, WindowControls window_controls = WindowControls::ALL);
 
 		void AddWidget(Widget* widget, bool scrollable = true);
 		void RemoveWidget(Widget* widget);
@@ -376,8 +390,10 @@ namespace wi::gui
 
 		void SetVisible(bool value) override;
 		void SetEnabled(bool value) override;
-		void SetMinimized(bool value);
-		bool IsMinimized() const;
+		void SetCollapsed(bool value);
+		bool IsCollapsed() const;
+		void SetMinimized(bool value); // Same as SetCollapsed()
+		bool IsMinimized() const; // Same as IsCollapsed()
 	};
 
 	// HSV-Color Picker
@@ -405,7 +421,7 @@ namespace wi::gui
 
 		void FireEvents();
 	public:
-		void Create(const std::string& name, bool window_controls = true);
+		void Create(const std::string& name, WindowControls window_controls = WindowControls::ALL);
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
@@ -462,3 +478,8 @@ namespace wi::gui
 	};
 
 }
+
+template<>
+struct enable_bitmask_operators<wi::gui::Window::WindowControls> {
+	static const bool enable = true;
+};

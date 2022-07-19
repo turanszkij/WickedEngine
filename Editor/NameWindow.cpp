@@ -9,7 +9,7 @@ using namespace wi::scene;
 void NameWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Name Window");
+	wi::gui::Window::Create("Name", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(360, 80));
 
 	float x = 60;
@@ -34,7 +34,6 @@ void NameWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&nameInput);
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 450, 200, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

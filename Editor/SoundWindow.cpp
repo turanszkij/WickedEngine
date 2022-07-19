@@ -10,7 +10,7 @@ using namespace wi::scene;
 void SoundWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Sound Window");
+	wi::gui::Window::Create("Sound", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(440, 220));
 
 	float x = 20;

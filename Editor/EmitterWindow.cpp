@@ -10,7 +10,7 @@ using namespace wi::scene;
 void EmitterWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Emitter Window");
+	wi::gui::Window::Create("Emitter", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(680, 420));
 
 	float x = 200;

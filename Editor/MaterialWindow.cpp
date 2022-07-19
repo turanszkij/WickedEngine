@@ -9,7 +9,7 @@ using namespace wi::scene;
 void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Material Window");
+	wi::gui::Window::Create("Material", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(730, 620));
 
 	float hei = 18;
@@ -480,7 +480,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	AddWidget(&colorComboBox);
 
-	colorPicker.Create("Color", false);
+	colorPicker.Create("Color", wi::gui::Window::WindowControls::NONE);
 	colorPicker.SetPos(XMFLOAT2(10, y += step));
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(true);

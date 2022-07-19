@@ -8,7 +8,7 @@ using namespace wi::scene;
 void HairParticleWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Hair Particle System Window");
+	wi::gui::Window::Create("Hair Particle System", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(600, 260));
 
 	float x = 160;
