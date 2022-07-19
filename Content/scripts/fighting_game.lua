@@ -1946,10 +1946,10 @@ runProcess(function()
 	help_text = help_text .. "\n\t Revolver action: A, B, C, D (Hit action buttons in quick succession)"
 	help_text = help_text .. "\n\t Airborne heat: 2B, 8, 8C (Uppercut, then jump cancel into Air Kick)"
 	local font = SpriteFont(help_text);
-	font.SetSize(14)
+	font.SetSize(16)
 	font.SetPos(Vector(10, GetScreenHeight() - 10))
 	font.SetAlign(WIFALIGN_LEFT, WIFALIGN_BOTTOM)
-	font.SetColor(0xFF4D21FF)
+	font.SetColor(0xFFADA3FF)
 	font.SetShadowColor(Vector(0,0,0,1))
 	path.AddFont(font)
 
