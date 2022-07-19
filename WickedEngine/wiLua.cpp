@@ -52,10 +52,10 @@ namespace wi::lua
 		{
 			std::string filename = SGetString(L, 1);
 			filename = script_path + filename;
-			script_path = wi::helper::GetDirectoryFromPath(filename);
 			wi::vector<uint8_t> filedata;
 			if (wi::helper::FileRead(filename, filedata))
 			{
+				script_path = wi::helper::GetDirectoryFromPath(filename);
 				std::string command = std::string(filedata.begin(), filedata.end());
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)
