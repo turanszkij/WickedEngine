@@ -12,6 +12,7 @@ Contributions:
 - Matteo De Carlo https://github.com/portaloffreedom
 	- Linux core systems
 	- Cmake
+	- Linux template
 - XThemeCore https://github.com/XthemeCore
 	- Morph targets
 - Amer Koleci https://github.com/amerkoleci
@@ -34,9 +35,10 @@ Contributions:
 	- Linux controller implementation
 	- Linux network implementation
 	- Fixes
-- Molasses https://github.com/MolassesLover
+- Maeve Garside https://github.com/MolassesLover
 	- Linux package files
 	- Visual Studio Code support improvement
+	- Linux template
 - Igor Alexey https://github.com/sororfortuna
 	- QOI image loader integration
 - Eddie Ataberk https://github.com/eddieataberk
