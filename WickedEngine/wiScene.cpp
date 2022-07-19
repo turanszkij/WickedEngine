@@ -2176,6 +2176,18 @@ namespace wi::scene
 
 		return root;
 	}
+	Entity Scene::Entity_CreateTransform(
+		const std::string& name
+	)
+	{
+		Entity entity = CreateEntity();
+
+		names.Create(entity) = name;
+
+		transforms.Create(entity);
+
+		return entity;
+	}
 	Entity Scene::Entity_CreateMaterial(
 		const std::string& name
 	)

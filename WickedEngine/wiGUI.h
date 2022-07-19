@@ -88,6 +88,8 @@ namespace wi::gui
 		void SetScriptTip(std::string&& value);
 		void SetPos(const XMFLOAT2& value);
 		void SetSize(const XMFLOAT2& value);
+		XMFLOAT2 GetPos() const;
+		virtual XMFLOAT2 GetSize() const;
 		WIDGETSTATE GetState() const;
 		virtual void SetEnabled(bool val);
 		bool IsEnabled() const;
@@ -363,6 +365,7 @@ namespace wi::gui
 		wi::vector<Widget*> widgets;
 		bool minimized = false;
 		Widget scrollable_area;
+		float control_size = 20;
 
 	public:
 		enum class WindowControls
@@ -394,6 +397,10 @@ namespace wi::gui
 		bool IsCollapsed() const;
 		void SetMinimized(bool value); // Same as SetCollapsed()
 		bool IsMinimized() const; // Same as IsCollapsed()
+		void SetControlSize(float value);
+		float GetControlSize() const;
+		XMFLOAT2 GetSize() const override; // For the window, the returned size can be modified by collapsed state
+		XMFLOAT2 GetWidgetAreaSize() const;
 	};
 
 	// HSV-Color Picker

@@ -8,7 +8,7 @@ using namespace wi::scene;
 void AnimationWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Animation", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Animation", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(520, 140));
 
 	float x = 140;
@@ -117,7 +117,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 
 
 
-	Translate(XMFLOAT3(100, 50, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 }

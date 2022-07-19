@@ -14,7 +14,7 @@ using namespace wi::scene;
 void MeshWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Mesh", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Mesh", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(580, 380));
 
 	float x = 150;
@@ -670,7 +670,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 	lodSloppyCheckBox.SetPos(XMFLOAT2(x + 280, y += step));
 	AddWidget(&lodSloppyCheckBox);
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 1000, 80, 0));
+
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY, -1);

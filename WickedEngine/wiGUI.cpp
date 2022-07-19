@@ -386,6 +386,16 @@ namespace wi::gui
 
 		scale = scale_local;
 	}
+	XMFLOAT2 Widget::GetPos() const
+	{
+		XMFLOAT3 transform_position = TransformComponent::GetPosition();
+		return *(XMFLOAT2*)&transform_position;
+	}
+	XMFLOAT2 Widget::GetSize() const
+	{
+		XMFLOAT3 transform_scale = TransformComponent::GetScale();
+		return *(XMFLOAT2*)&transform_scale;
+	}
 	WIDGETSTATE Widget::GetState() const
 	{
 		return state;
@@ -1958,7 +1968,6 @@ namespace wi::gui
 
 
 
-	static const float windowcontrolSize = 20.0f;
 	void Window::Create(const std::string& name, WindowControls window_controls)
 	{
 		SetColor(wi::Color::Ghost());
@@ -1977,8 +1986,8 @@ namespace wi::gui
 		{
 			// Add a resizer control to the upperleft corner
 			resizeDragger_UpperLeft.Create(name + "_resize_dragger_upper_left");
-			resizeDragger_UpperLeft.SetText("«|»");
 			resizeDragger_UpperLeft.SetTooltip("Resize window");
+			resizeDragger_UpperLeft.SetText("«|»");
 			resizeDragger_UpperLeft.font.params.rotation = XM_PIDIV4;
 			resizeDragger_UpperLeft.OnDrag([this](EventArgs args) {
 				auto saved_parent = this->parent;
@@ -1988,7 +1997,7 @@ namespace wi::gui
 				scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
 				this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 				this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-				this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(windowcontrolSize * 3, windowcontrolSize * 2, 1)); // don't allow resize to negative or too small
+				this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(control_size * 3, control_size * 2, 1)); // don't allow resize to negative or too small
 				this->AttachTo(saved_parent);
 				});
 			AddWidget(&resizeDragger_UpperLeft);
@@ -1998,8 +2007,8 @@ namespace wi::gui
 		{
 			// Add a resizer control to the bottom right corner
 			resizeDragger_BottomRight.Create(name + "_resize_dragger_bottom_right");
-			resizeDragger_BottomRight.SetText("«|»");
 			resizeDragger_BottomRight.SetTooltip("Resize window");
+			resizeDragger_BottomRight.SetText("«|»");
 			resizeDragger_BottomRight.font.params.rotation = XM_PIDIV4;
 			resizeDragger_BottomRight.OnDrag([this](EventArgs args) {
 				auto saved_parent = this->parent;
@@ -2008,7 +2017,7 @@ namespace wi::gui
 				scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
 				scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
 				this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-				this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(windowcontrolSize * 3, windowcontrolSize * 2, 1)); // don't allow resize to negative or too small
+				this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(control_size * 3, control_size * 2, 1)); // don't allow resize to negative or too small
 				this->AttachTo(saved_parent);
 				});
 			AddWidget(&resizeDragger_BottomRight);
@@ -2048,16 +2057,6 @@ namespace wi::gui
 			collapseButton.SetText("-");
 			collapseButton.OnClick([this](EventArgs args) {
 				this->SetMinimized(!this->IsMinimized());
-				if (this->IsMinimized())
-				{
-					collapseButton.SetText("»");
-					collapseButton.font.params.rotation = XM_PIDIV2;
-				}
-				else
-				{
-					collapseButton.SetText("-");
-					collapseButton.font.params.rotation = 0;
-				}
 				});
 			collapseButton.SetTooltip("Collapse window");
 			AddWidget(&collapseButton);
@@ -2147,7 +2146,7 @@ namespace wi::gui
 		if (parent == nullptr)
 		{
 			translation_local.x = wi::math::Clamp(translation_local.x, 0, canvas.GetLogicalWidth() - scale_local.x);
-			translation_local.y = wi::math::Clamp(translation_local.y, 0, canvas.GetLogicalHeight() - windowcontrolSize);
+			translation_local.y = wi::math::Clamp(translation_local.y, 0, canvas.GetLogicalHeight() - control_size);
 			SetDirty();
 		}
 
@@ -2156,63 +2155,63 @@ namespace wi::gui
 		if (moveDragger.parent != nullptr)
 		{
 			moveDragger.Detach();
-			moveDragger.SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
-			moveDragger.SetPos(XMFLOAT2(translation.x + windowcontrolSize, translation.y));
+			moveDragger.SetSize(XMFLOAT2(scale.x - control_size * 3, control_size));
+			moveDragger.SetPos(XMFLOAT2(translation.x + control_size, translation.y));
 			moveDragger.AttachTo(this);
 		}
 		if (closeButton.parent != nullptr)
 		{
 			closeButton.Detach();
-			closeButton.SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-			closeButton.SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
+			closeButton.SetSize(XMFLOAT2(control_size, control_size));
+			closeButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y));
 			closeButton.AttachTo(this);
 		}
 		if (collapseButton.parent != nullptr)
 		{
 			collapseButton.Detach();
-			collapseButton.SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+			collapseButton.SetSize(XMFLOAT2(control_size, control_size));
 			if (closeButton.parent != nullptr)
 			{
-				collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize * 2, translation.y));
+				collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size * 2, translation.y));
 			}
 			else
 			{
-				collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
+				collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y));
 			}
 			collapseButton.AttachTo(this);
 		}
 		if (resizeDragger_UpperLeft.parent != nullptr)
 		{
 			resizeDragger_UpperLeft.Detach();
-			resizeDragger_UpperLeft.SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+			resizeDragger_UpperLeft.SetSize(XMFLOAT2(control_size, control_size));
 			resizeDragger_UpperLeft.SetPos(XMFLOAT2(translation.x, translation.y));
 			resizeDragger_UpperLeft.AttachTo(this);
 		}
 		if (resizeDragger_BottomRight.parent != nullptr)
 		{
 			resizeDragger_BottomRight.Detach();
-			resizeDragger_BottomRight.SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-			resizeDragger_BottomRight.SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
+			resizeDragger_BottomRight.SetSize(XMFLOAT2(control_size, control_size));
+			resizeDragger_BottomRight.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + scale.y - control_size));
 			resizeDragger_BottomRight.AttachTo(this);
 		}
 		if (label.parent != nullptr)
 		{
 			label.font.params = font.params;
 			label.Detach();
-			XMFLOAT2 label_size = XMFLOAT2(scale.x, windowcontrolSize);
+			XMFLOAT2 label_size = XMFLOAT2(scale.x, control_size);
 			XMFLOAT2 label_pos = XMFLOAT2(translation.x, translation.y);
 			if (resizeDragger_UpperLeft.parent != nullptr)
 			{
-				label_size.x -= windowcontrolSize;
-				label_pos.x += windowcontrolSize;
+				label_size.x -= control_size;
+				label_pos.x += control_size;
 			}
 			if (closeButton.parent != nullptr)
 			{
-				label_size.x -= windowcontrolSize;
+				label_size.x -= control_size;
 			}
 			if (collapseButton.parent != nullptr)
 			{
-				label_size.x -= windowcontrolSize;
+				label_size.x -= control_size;
 			}
 			label.SetSize(label_size);
 			label.SetPos(label_pos);
@@ -2221,15 +2220,15 @@ namespace wi::gui
 		if (scrollbar_horizontal.parent != nullptr)
 		{
 			scrollbar_horizontal.Detach();
-			scrollbar_horizontal.SetSize(XMFLOAT2(scale.x - windowcontrolSize, windowcontrolSize));
-			scrollbar_horizontal.SetPos(XMFLOAT2(translation.x, translation.y + scale.y - windowcontrolSize));
+			scrollbar_horizontal.SetSize(XMFLOAT2(scale.x - control_size, control_size));
+			scrollbar_horizontal.SetPos(XMFLOAT2(translation.x, translation.y + scale.y - control_size));
 			scrollbar_horizontal.AttachTo(this);
 		}
 		if (scrollbar_vertical.parent != nullptr)
 		{
 			scrollbar_vertical.Detach();
-			scrollbar_vertical.SetSize(XMFLOAT2(windowcontrolSize, scale.y - 2 - windowcontrolSize * 2));
-			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + 1 + windowcontrolSize));
+			scrollbar_vertical.SetSize(XMFLOAT2(control_size, scale.y - 2 - control_size * 2));
+			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + 1 + control_size));
 			scrollbar_vertical.AttachTo(this);
 		}
 
@@ -2246,8 +2245,9 @@ namespace wi::gui
 				continue;
 			if (widget->parent == &scrollable_area)
 			{
-				scroll_length_horizontal = std::max(scroll_length_horizontal, widget->translation_local.x + widget->scale_local.x);
-				scroll_length_vertical = std::max(scroll_length_vertical, widget->translation_local.y + widget->scale_local.y);
+				XMFLOAT2 size = widget->GetSize();
+				scroll_length_horizontal = std::max(scroll_length_horizontal, widget->translation_local.x + size.x);
+				scroll_length_vertical = std::max(scroll_length_vertical, widget->translation_local.y + size.y);
 			}
 		}
 		scrollbar_horizontal.SetListLength(scroll_length_horizontal);
@@ -2255,19 +2255,19 @@ namespace wi::gui
 		scrollable_area.Detach();
 		scrollable_area.ClearTransform();
 		scrollable_area.Translate(translation);
-		scrollable_area.Translate(XMFLOAT3(scrollbar_horizontal.GetOffset(), windowcontrolSize + 1 + scrollbar_vertical.GetOffset(), 0));
+		scrollable_area.Translate(XMFLOAT3(scrollbar_horizontal.GetOffset(), control_size + 1 + scrollbar_vertical.GetOffset(), 0));
 		scrollable_area.Update(canvas, dt);
 		scrollable_area.AttachTo(this);
 		scrollable_area.scissorRect = scissorRect;
 		scrollable_area.scissorRect.left += 1;
-		scrollable_area.scissorRect.top += (int32_t)windowcontrolSize + 1;
+		scrollable_area.scissorRect.top += (int32_t)control_size + 1;
 		if (scrollbar_horizontal.parent != nullptr && scrollbar_horizontal.IsScrollbarRequired())
 		{
-			scrollable_area.scissorRect.bottom -= (int32_t)windowcontrolSize + 1;
+			scrollable_area.scissorRect.bottom -= (int32_t)control_size + 1;
 		}
 		if (scrollbar_vertical.parent != nullptr && scrollbar_vertical.IsScrollbarRequired())
 		{
-			scrollable_area.scissorRect.right -= (int32_t)windowcontrolSize + 1;
+			scrollable_area.scissorRect.right -= (int32_t)control_size + 1;
 		}
 		scrollable_area.active_area.pos.x = float(scrollable_area.scissorRect.left);
 		scrollable_area.active_area.pos.y = float(scrollable_area.scissorRect.top);
@@ -2314,7 +2314,7 @@ namespace wi::gui
 
 		if (IsMinimized())
 		{
-			hitBox.siz.y = windowcontrolSize;
+			hitBox.siz.y = control_size;
 		}
 
 		if (IsEnabled() && !IsMinimized())
@@ -2383,7 +2383,7 @@ namespace wi::gui
 		wi::image::Params fx(translation.x - 2, translation.y - 2, scale.x + 4, scale.y + 4, wi::Color(0, 0, 0, 100));
 		if (IsMinimized())
 		{
-			fx.siz.y = windowcontrolSize + 4;
+			fx.siz.y = control_size + 4;
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd); // shadow
 		}
 		else
@@ -2460,6 +2460,14 @@ namespace wi::gui
 			x->SetEnabled(value);
 		}
 	}
+	void Window::SetCollapsed(bool value)
+	{
+		SetMinimized(value);
+	}
+	bool Window::IsCollapsed() const
+	{
+		return IsMinimized();
+	}
 	void Window::SetMinimized(bool value)
 	{
 		minimized = value;
@@ -2482,11 +2490,53 @@ namespace wi::gui
 				continue;
 			x->SetVisible(!value);
 		}
+
+		if (IsMinimized())
+		{
+			collapseButton.SetText("»");
+			collapseButton.font.params.rotation = XM_PIDIV2;
+		}
+		else
+		{
+			collapseButton.SetText("-");
+			collapseButton.font.params.rotation = 0;
+		}
 	}
 	bool Window::IsMinimized() const
 	{
 		return minimized;
 	}
+	void Window::SetControlSize(float value)
+	{
+		control_size = value;
+	}
+	float Window::GetControlSize() const
+	{
+		return control_size;
+	}
+	XMFLOAT2 Window::GetSize() const
+	{
+		if (IsCollapsed())
+		{
+			return XMFLOAT2(control_size, control_size);
+		}
+		return Widget::GetSize();
+	}
+	XMFLOAT2 Window::GetWidgetAreaSize() const
+	{
+		XMFLOAT2 size = GetSize();
+		if (scrollbar_horizontal.IsScrollbarRequired())
+		{
+			size.y -= control_size;
+		}
+		if (scrollbar_vertical.IsScrollbarRequired())
+		{
+			size.x -= control_size;
+		}
+		return size;
+	}
+
+
 
 
 

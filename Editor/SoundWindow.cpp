@@ -10,7 +10,7 @@ using namespace wi::scene;
 void SoundWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Sound", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Sound", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(440, 220));
 
 	float x = 20;
@@ -211,7 +211,8 @@ void SoundWindow::Create(EditorComponent* _editor)
 	submixComboBox.SetScriptTip("SoundInstance::SetSubmixType(int submixType)");
 	AddWidget(&submixComboBox);
 
-	Translate(XMFLOAT3(400, 120, 0));
+
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

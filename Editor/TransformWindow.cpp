@@ -9,7 +9,7 @@ using namespace wi::scene;
 void TransformWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Transform", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Transform", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(480, 200));
 
 	float x = 100;
@@ -348,7 +348,8 @@ void TransformWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&snapTranslateInput);
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 750, 100, 0));
+
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

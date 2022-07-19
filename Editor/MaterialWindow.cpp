@@ -9,7 +9,7 @@ using namespace wi::scene;
 void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Material", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Material", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(730, 620));
 
 	float hei = 18;
@@ -689,7 +689,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	AddWidget(&textureSlotUvsetField);
 
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 880, 120, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

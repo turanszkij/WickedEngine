@@ -9,7 +9,7 @@ using namespace wi::scene;
 void ForceFieldWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Force Field", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Force Field", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(420, 120));
 
 	float x = 150;
@@ -119,7 +119,7 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 
 
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 720, 50, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

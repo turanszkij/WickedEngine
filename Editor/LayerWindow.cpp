@@ -9,7 +9,7 @@ using namespace wi::scene;
 void LayerWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Layer", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Layer", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(420, 290));
 
 	float x = 30;
@@ -81,7 +81,7 @@ void LayerWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&enableNoneButton);
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 450, 300, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

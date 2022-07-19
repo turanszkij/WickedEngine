@@ -9,7 +9,7 @@ using namespace wi::graphics;
 void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Weather", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Weather", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(660, 300));
 
 	float x = 180;
@@ -659,7 +659,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 
 
-	Translate(XMFLOAT3(130, 30, 0));
+	SetMinimized(true);
 	SetVisible(false);
 }
 

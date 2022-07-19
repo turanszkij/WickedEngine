@@ -12,7 +12,7 @@ using namespace wi::scene;
 void LightWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Light", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Light", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(650, 300));
 
 	float x = 450;
@@ -285,8 +285,7 @@ void LightWindow::Create(EditorComponent* _editor)
 		AddWidget(&lensflare_Button[i]);
 	}
 
-
-	Translate(XMFLOAT3(120, 30, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

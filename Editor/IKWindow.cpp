@@ -9,7 +9,7 @@ using namespace wi::scene;
 void IKWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Inverse Kinematics", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Inverse Kinematics", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(400, 150));
 
 	float x = 120;
@@ -73,7 +73,7 @@ void IKWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&iterationCountSlider);
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 740, 150, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

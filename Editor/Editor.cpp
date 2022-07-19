@@ -292,6 +292,9 @@ void EditorComponent::ResizeLayout()
 	entityTree.SetSize(XMFLOAT2(260, 300));
 	entityTree.SetPos(XMFLOAT2(0, screenH - entityTree.scale_local.y));
 
+	newCombo.SetSize(XMFLOAT2(200, 20));
+	newCombo.SetPos(XMFLOAT2(entityTree.GetPos().x + 60 - newCombo.GetSize().y - 1, entityTree.GetPos().y - newCombo.GetSize().y - 2));
+
 
 	XMFLOAT2 option_size = XMFLOAT2(100, 34);
 	float step = option_size.y + 2;
@@ -787,6 +790,110 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&cinemaModeCheckBox);
 
 
+
+
+	newCombo.Create("New: ");
+	newCombo.AddItem("...", ~0ull);
+	newCombo.AddItem("Transform", 0);
+	newCombo.AddItem("Material", 1);
+	newCombo.AddItem("Point Light", 2);
+	newCombo.AddItem("Spot Light", 3);
+	newCombo.AddItem("Directional Light", 4);
+	newCombo.AddItem("Environment Probe", 5);
+	newCombo.AddItem("Force", 6);
+	newCombo.AddItem("Decal", 7);
+	newCombo.AddItem("Sound", 8);
+	newCombo.OnSelect([&](wi::gui::EventArgs args) {
+		newCombo.SetSelectedWithoutCallback(0);
+		const EditorScene& editorscene = GetCurrentEditorScene();
+		const CameraComponent& camera = editorscene.camera;
+		Scene& scene = GetCurrentScene();
+		Entity entity = INVALID_ENTITY;
+
+		XMFLOAT3 in_front_of_camera;
+		XMStoreFloat3(&in_front_of_camera, XMVectorAdd(camera.GetEye(), camera.GetAt() * 4));
+
+		switch (args.userdata)
+		{
+		case 0:
+			entity = scene.Entity_CreateTransform("editorTransform");
+			break;
+		case 1:
+			entity = scene.Entity_CreateMaterial("editorMaterial");
+			break;
+		case 2:
+			entity = scene.Entity_CreateLight("editorPointLight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
+			scene.lights.GetComponent(entity)->type = LightComponent::POINT;
+			scene.lights.GetComponent(entity)->intensity = 20;
+			break;
+		case 3:
+			entity = scene.Entity_CreateLight("editorSpotLight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
+			scene.lights.GetComponent(entity)->type = LightComponent::SPOT;
+			scene.lights.GetComponent(entity)->intensity = 100;
+			break;
+		case 4:
+			entity = scene.Entity_CreateLight("editorDirectionalLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
+			scene.lights.GetComponent(entity)->type = LightComponent::DIRECTIONAL;
+			scene.lights.GetComponent(entity)->intensity = 10;
+			break;
+		case 5:
+			entity = scene.Entity_CreateEnvironmentProbe("editorEnvProbe", in_front_of_camera);
+			break;
+		case 6:
+			entity = scene.Entity_CreateForce("editorForce");
+			break;
+		case 7:
+			entity = scene.Entity_CreateDecal("editorDecal", "images/logo_small.png");
+			break;
+		case 8:
+			{
+				wi::helper::FileDialogParams params;
+				params.type = wi::helper::FileDialogParams::OPEN;
+				params.description = "Sound";
+				params.extensions = wi::resourcemanager::GetSupportedSoundExtensions();
+				wi::helper::FileDialog(params, [=](std::string fileName) {
+					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+						Entity entity = GetCurrentScene().Entity_CreateSound(wi::helper::GetFileNameFromPath(fileName), fileName);
+
+						wi::Archive& archive = AdvanceHistory();
+						archive << EditorComponent::HISTORYOP_ADD;
+						RecordSelection(archive);
+
+						ClearSelected();
+						AddSelected(entity);
+
+						RecordSelection(archive);
+						RecordAddedEntity(archive, entity);
+
+						RefreshEntityTree();
+						soundWnd.SetEntity(entity);
+						});
+					});
+				return;
+			}
+			break;
+		default:
+			break;
+		}
+		if (entity != INVALID_ENTITY)
+		{
+			wi::Archive& archive = AdvanceHistory();
+			archive << HISTORYOP_ADD;
+			RecordSelection(archive);
+
+			ClearSelected();
+			AddSelected(entity);
+
+			RecordSelection(archive);
+			RecordAddedEntity(archive, entity);
+		}
+		RefreshEntityTree();
+	});
+	newCombo.SetEnabled(true);
+	newCombo.SetTooltip("Create new entity");
+	GetGUI().AddWidget(&newCombo);
+
+
 	entityTree.Create("Entities");
 	entityTree.OnSelect([this](wi::gui::EventArgs args) {
 
@@ -813,7 +920,6 @@ void EditorComponent::Load()
 
 		// record NEW selection state...
 		RecordSelection(archive);
-		RefreshComponentWindow();
 
 		});
 	GetGUI().AddWidget(&entityTree);
@@ -886,7 +992,7 @@ void EditorComponent::Load()
 	nameWnd.Create(this);
 
 
-	componentWindow.Create("Components", wi::gui::Window::WindowControls::RESIZE_TOPLEFT);
+	componentWindow.Create("Components ", wi::gui::Window::WindowControls::RESIZE_TOPLEFT);
 	componentWindow.SetSize(XMFLOAT2(300, 400));
 	componentWindow.font.params.h_align = wi::font::WIFALIGN_RIGHT;
 	GetGUI().AddWidget(&componentWindow);
@@ -1789,6 +1895,7 @@ void EditorComponent::Update(float dt)
 	wi::profiler::EndRange(profrange);
 
 	RenderPath2D::Update(dt);
+	RefreshComponentWindow();
 
 	translator.Update(camera, *this);
 
@@ -2503,28 +2610,27 @@ void EditorComponent::RefreshEntityTree()
 
 	entitytree_added_items.clear();
 	entitytree_opened_items.clear();
-
-	RefreshComponentWindow();
 }
 void EditorComponent::RefreshComponentWindow()
 {
-	if (translator.selected.empty())
-		return;
-
-	Entity entity = translator.selected.front().entity;
-
-	if (entity == INVALID_ENTITY)
-		return;
+	PickResult picked;
+	if (!translator.selected.empty())
+	{
+		picked = translator.selected.front();
+	}
+	Entity entity = picked.entity;
 
 	const wi::scene::Scene& scene = GetCurrentScene();
 	const float padding = 4;
 	XMFLOAT2 pos = XMFLOAT2(padding, padding);
+	const float width = componentWindow.GetWidgetAreaSize().x - padding * 2;
 
 	if (scene.names.Contains(entity))
 	{
 		nameWnd.SetVisible(true);
 		nameWnd.SetPos(pos);
-		pos.y += nameWnd.GetScale().y;
+		nameWnd.SetSize(XMFLOAT2(width, nameWnd.GetScale().y));
+		pos.y += nameWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2536,7 +2642,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		layerWnd.SetVisible(true);
 		layerWnd.SetPos(pos);
-		pos.y += layerWnd.GetScale().y;
+		layerWnd.SetSize(XMFLOAT2(width, layerWnd.GetScale().y));
+		pos.y += layerWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2548,7 +2655,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		transformWnd.SetVisible(true);
 		transformWnd.SetPos(pos);
-		pos.y += transformWnd.GetScale().y;
+		transformWnd.SetSize(XMFLOAT2(width, transformWnd.GetScale().y));
+		pos.y += transformWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2560,7 +2668,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		ikWnd.SetVisible(true);
 		ikWnd.SetPos(pos);
-		pos.y += ikWnd.GetScale().y;
+		ikWnd.SetSize(XMFLOAT2(width, ikWnd.GetScale().y));
+		pos.y += ikWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2572,7 +2681,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		springWnd.SetVisible(true);
 		springWnd.SetPos(pos);
-		pos.y += springWnd.GetScale().y;
+		springWnd.SetSize(XMFLOAT2(width, springWnd.GetScale().y));
+		pos.y += springWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2584,7 +2694,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		forceFieldWnd.SetVisible(true);
 		forceFieldWnd.SetPos(pos);
-		pos.y += forceFieldWnd.GetScale().y;
+		forceFieldWnd.SetSize(XMFLOAT2(width, forceFieldWnd.GetScale().y));
+		pos.y += forceFieldWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2596,7 +2707,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		hairWnd.SetVisible(true);
 		hairWnd.SetPos(pos);
-		pos.y += hairWnd.GetScale().y;
+		hairWnd.SetSize(XMFLOAT2(width, hairWnd.GetScale().y));
+		pos.y += hairWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2608,7 +2720,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		emitterWnd.SetVisible(true);
 		emitterWnd.SetPos(pos);
-		pos.y += emitterWnd.GetScale().y;
+		emitterWnd.SetSize(XMFLOAT2(width, emitterWnd.GetScale().y));
+		pos.y += emitterWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2620,7 +2733,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		animWnd.SetVisible(true);
 		animWnd.SetPos(pos);
-		pos.y += animWnd.GetScale().y;
+		animWnd.SetSize(XMFLOAT2(width, animWnd.GetScale().y));
+		pos.y += animWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2632,7 +2746,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		lightWnd.SetVisible(true);
 		lightWnd.SetPos(pos);
-		pos.y += lightWnd.GetScale().y;
+		lightWnd.SetSize(XMFLOAT2(width, lightWnd.GetScale().y));
+		pos.y += lightWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2644,7 +2759,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		soundWnd.SetVisible(true);
 		soundWnd.SetPos(pos);
-		pos.y += soundWnd.GetScale().y;
+		soundWnd.SetSize(XMFLOAT2(width, soundWnd.GetScale().y));
+		pos.y += soundWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2656,7 +2772,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		decalWnd.SetVisible(true);
 		decalWnd.SetPos(pos);
-		pos.y += decalWnd.GetScale().y;
+		decalWnd.SetSize(XMFLOAT2(width, decalWnd.GetScale().y));
+		pos.y += decalWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2668,7 +2785,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		envProbeWnd.SetVisible(true);
 		envProbeWnd.SetPos(pos);
-		pos.y += envProbeWnd.GetScale().y;
+		envProbeWnd.SetSize(XMFLOAT2(width, envProbeWnd.GetScale().y));
+		pos.y += envProbeWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2680,7 +2798,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		cameraWnd.SetVisible(true);
 		cameraWnd.SetPos(pos);
-		pos.y += cameraWnd.GetScale().y;
+		cameraWnd.SetSize(XMFLOAT2(width, cameraWnd.GetScale().y));
+		pos.y += cameraWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2692,7 +2811,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		materialWnd.SetVisible(true);
 		materialWnd.SetPos(pos);
-		pos.y += materialWnd.GetScale().y;
+		materialWnd.SetSize(XMFLOAT2(width, materialWnd.GetScale().y));
+		pos.y += materialWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2704,7 +2824,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		meshWnd.SetVisible(true);
 		meshWnd.SetPos(pos);
-		pos.y += meshWnd.GetScale().y;
+		meshWnd.SetSize(XMFLOAT2(width, meshWnd.GetScale().y));
+		pos.y += meshWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2716,7 +2837,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		objectWnd.SetVisible(true);
 		objectWnd.SetPos(pos);
-		pos.y += objectWnd.GetScale().y;
+		objectWnd.SetSize(XMFLOAT2(width, objectWnd.GetScale().y));
+		pos.y += objectWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
@@ -2728,7 +2850,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		weatherWnd.SetVisible(true);
 		weatherWnd.SetPos(pos);
-		pos.y += weatherWnd.GetScale().y;
+		weatherWnd.SetSize(XMFLOAT2(width, weatherWnd.GetScale().y));
+		pos.y += weatherWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else

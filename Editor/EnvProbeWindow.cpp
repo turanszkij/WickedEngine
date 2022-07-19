@@ -8,7 +8,7 @@ using namespace wi::scene;
 void EnvProbeWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Environment Probe", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Environment Probe", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(420, 220));
 
 	float x = 5, y = 0, step = 35;
@@ -102,7 +102,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 
 
-	Translate(XMFLOAT3(100, 100, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

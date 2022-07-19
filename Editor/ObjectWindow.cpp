@@ -260,7 +260,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create("Object", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Object", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(670, 320));
 
 	float x = 200;
@@ -821,7 +821,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	AddWidget(&colorPicker);
 
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 720, 120, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

@@ -88,6 +88,7 @@ public:
 	wi::gui::ComboBox sceneComboBox;
 	wi::gui::Label aboutLabel;
 
+	wi::gui::ComboBox newCombo;
 	wi::gui::TreeList entityTree;
 	wi::unordered_set<wi::ecs::Entity> entitytree_added_items;
 	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;

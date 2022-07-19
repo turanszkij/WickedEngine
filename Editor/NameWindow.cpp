@@ -34,6 +34,7 @@ void NameWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&nameInput);
 
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

@@ -9,7 +9,7 @@ using namespace wi::scene;
 void SpringWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Spring", wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create("Spring", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(460, 200));
 
 	float x = 150;
@@ -84,7 +84,8 @@ void SpringWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&windSlider);
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 700, 80, 0));
+
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

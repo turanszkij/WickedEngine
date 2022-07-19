@@ -1489,6 +1489,9 @@ namespace wi::scene
 			EntitySerializeFlags flags = EntitySerializeFlags::RECURSIVE
 		);
 
+		wi::ecs::Entity Entity_CreateTransform(
+			const std::string& name
+		);
 		wi::ecs::Entity Entity_CreateMaterial(
 			const std::string& name
 		);
