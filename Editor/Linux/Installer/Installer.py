@@ -1,11 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #region Modules
 
-import os
+import subprocess
 import tkinter as Tk
 from tkinter import filedialog
-
 import ttkbootstrap as TkBootstrap
 from PIL import Image, ImageTk
 from ttkbootstrap.constants import *
@@ -16,7 +15,7 @@ from ttkbootstrap.dialogs import *
 #region Variables
 
 class WickedDirectories:
-    wickedRootDirectory = "$WICKED"
+    wickedRootDirectory = 'WICKED'
     wickedRootDirectorySelected = bool()
 
 #endregion
@@ -24,28 +23,13 @@ class WickedDirectories:
 #region Functions
 
 def Install():
-    if(WickedDirectories.wickedRootDirectorySelected):    
-        os.system('sudo cp ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/wicked-engine.desktop /usr/share/applications/wicked-engine.desktop')
-        os.system('sudo cp ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/wicked-engine.sh /usr/bin/wicked-engine')
-        os.system('sudo chmod +x ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/wicked-engine.sh')       
-        os.system('sudo chmod +x /usr/bin/wicked-engine')
+    if WickedDirectories.wickedRootDirectorySelected:    
+        os.system(f'sudo cp {WickedDirectories.wickedRootDirectory}/Editor/Linux/Installer/Distribution/wicked-engine.desktop /usr/share/applications/wicked-engine.desktop')
+        os.system(f'sudo cp {WickedDirectories.wickedRootDirectory}/Editor/Linux/Installer/Distribution/wicked-engine.sh /usr/bin/wicked-engine')
+        os.system(f'sudo chmod +x {WickedDirectories.wickedRootDirectory}/Editor/Linux/Installer/Distribution/wicked-engine.sh')       
+        os.system(f'sudo chmod +x /usr/bin/wicked-engine')
 
-        # Feel free to move this if in your fork it isn't the case.
         print("Finished installing!")
-
-        # The two following `if` statements are for package maintainers or distributors to edit and use!
-        # Please @MolassesLover on the Discord or create a GitHub issue if these statements break.
-
-        #if(checkButton_denoiser.offvalue):
-        #    pass
-        #else:
-        #    pass
-        
-        #if(checkButton_settings.offvalue):
-        #    pass
-        #else:
-        #    pass
-
     else:
         directoryWarning = Messagebox.ok("No Wicked Engine directory selected!", title = "Install Error")
 
