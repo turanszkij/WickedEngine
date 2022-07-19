@@ -2377,10 +2377,12 @@ namespace wi::gui
 			return;
 		}
 
+		GetDevice()->EventBegin(name.c_str(), cmd);
+
 		wi::Color color = GetColor();
 
 		// body
-		wi::image::Params fx(translation.x - 2, translation.y - 2, scale.x + 4, scale.y + 4, wi::Color(0, 0, 0, 100));
+		wi::image::Params fx(sprites[state].params.pos.x - 2, sprites[state].params.pos.y - 2, sprites[state].params.siz.x + 4, sprites[state].params.siz.y + 4, wi::Color(0, 0, 0, 100));
 		if (IsMinimized())
 		{
 			fx.siz.y = control_size + 4;
@@ -2389,7 +2391,7 @@ namespace wi::gui
 		else
 		{
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd); // shadow
-			sprites[state].Draw(cmd);
+			sprites[state].Draw(cmd); // base
 		}
 
 		for (size_t i = 0; i < widgets.size(); ++i)
@@ -2417,6 +2419,8 @@ namespace wi::gui
 		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(scrollable_area.active_area.pos.x, scrollable_area.active_area.pos.y, scrollable_area.active_area.siz.x, scrollable_area.active_area.siz.y, wi::Color(255,0,255,100)), cmd);
 		//Hitbox2D p = scrollable_area.GetPointerHitbox();
 		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(p.pos.x, p.pos.y, p.siz.x * 10, p.siz.y * 10, wi::Color(255,0,0,100)), cmd);
+
+		GetDevice()->EventEnd(cmd);
 	}
 	void Window::RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
 	{
@@ -2516,11 +2520,12 @@ namespace wi::gui
 	}
 	XMFLOAT2 Window::GetSize() const
 	{
+		XMFLOAT2 size = Widget::GetSize();
 		if (IsCollapsed())
 		{
-			return XMFLOAT2(control_size, control_size);
+			return XMFLOAT2(size.x, control_size);
 		}
-		return Widget::GetSize();
+		return size;
 	}
 	XMFLOAT2 Window::GetWidgetAreaSize() const
 	{
