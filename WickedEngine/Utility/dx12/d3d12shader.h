@@ -201,6 +201,9 @@ typedef struct _D3D12_SHADER_INPUT_BIND_DESC
 #define D3D_SHADER_REQUIRES_SAMPLER_DESCRIPTOR_HEAP_INDEXING                                0x04000000
 #define D3D_SHADER_REQUIRES_WAVE_MMA                                                        0x08000000
 #define D3D_SHADER_REQUIRES_ATOMIC_INT64_ON_DESCRIPTOR_HEAP_RESOURCE                        0x10000000
+#define D3D_SHADER_FEATURE_ADVANCED_TEXTURE_OPS                                             0x20000000
+#define D3D_SHADER_FEATURE_WRITEABLE_MSAA_TEXTURES                                          0x40000000
+
 
 typedef struct _D3D12_LIBRARY_DESC
 {

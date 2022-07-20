@@ -76,7 +76,7 @@ struct CD3DX12_VIEWPORT : public D3D12_VIEWPORT
         FLOAT minDepth = D3D12_MIN_DEPTH,
         FLOAT maxDepth = D3D12_MAX_DEPTH ) noexcept
     {
-        auto Desc = pResource->GetDesc();
+        const auto Desc = pResource->GetDesc();
         const UINT64 SubresourceWidth = Desc.Width >> mipSlice;
         const UINT64 SubresourceHeight = Desc.Height >> mipSlice;
         switch (Desc.Dimension)
@@ -305,6 +305,131 @@ struct CD3DX12_DEPTH_STENCIL_DESC1 : public D3D12_DEPTH_STENCIL_DESC1
         D.BackFace.StencilDepthFailOp  = BackFace.StencilDepthFailOp;
         D.BackFace.StencilPassOp       = BackFace.StencilPassOp;
         D.BackFace.StencilFunc         = BackFace.StencilFunc;
+        return D;
+    }
+};
+
+//------------------------------------------------------------------------------------------------
+struct CD3DX12_DEPTH_STENCIL_DESC2 : public D3D12_DEPTH_STENCIL_DESC2
+{
+    CD3DX12_DEPTH_STENCIL_DESC2() = default;
+    explicit CD3DX12_DEPTH_STENCIL_DESC2( const D3D12_DEPTH_STENCIL_DESC2& o ) noexcept :
+        D3D12_DEPTH_STENCIL_DESC2( o )
+    {}
+    explicit CD3DX12_DEPTH_STENCIL_DESC2( const D3D12_DEPTH_STENCIL_DESC1& o ) noexcept
+    {
+        DepthEnable                  = o.DepthEnable;
+        DepthWriteMask               = o.DepthWriteMask;
+        DepthFunc                    = o.DepthFunc;
+        StencilEnable                = o.StencilEnable;
+        FrontFace.StencilFailOp      = o.FrontFace.StencilFailOp;
+        FrontFace.StencilDepthFailOp = o.FrontFace.StencilDepthFailOp;
+        FrontFace.StencilPassOp      = o.FrontFace.StencilPassOp;
+        FrontFace.StencilFunc        = o.FrontFace.StencilFunc;
+        FrontFace.StencilReadMask    = o.StencilReadMask;
+        FrontFace.StencilWriteMask   = o.StencilWriteMask;
+
+        BackFace.StencilFailOp       = o.BackFace.StencilFailOp;
+        BackFace.StencilDepthFailOp  = o.BackFace.StencilDepthFailOp;
+        BackFace.StencilPassOp       = o.BackFace.StencilPassOp;
+        BackFace.StencilFunc         = o.BackFace.StencilFunc;
+        BackFace.StencilReadMask     = o.StencilReadMask;
+        BackFace.StencilWriteMask    = o.StencilWriteMask;
+        DepthBoundsTestEnable        = o.DepthBoundsTestEnable;
+    }
+    explicit CD3DX12_DEPTH_STENCIL_DESC2( const D3D12_DEPTH_STENCIL_DESC& o ) noexcept
+    {
+        DepthEnable                  = o.DepthEnable;
+        DepthWriteMask               = o.DepthWriteMask;
+        DepthFunc                    = o.DepthFunc;
+        StencilEnable                = o.StencilEnable;
+
+        FrontFace.StencilFailOp      = o.FrontFace.StencilFailOp;
+        FrontFace.StencilDepthFailOp = o.FrontFace.StencilDepthFailOp;
+        FrontFace.StencilPassOp      = o.FrontFace.StencilPassOp;
+        FrontFace.StencilFunc        = o.FrontFace.StencilFunc;
+        FrontFace.StencilReadMask    = o.StencilReadMask;
+        FrontFace.StencilWriteMask   = o.StencilWriteMask;
+
+        BackFace.StencilFailOp       = o.BackFace.StencilFailOp;
+        BackFace.StencilDepthFailOp  = o.BackFace.StencilDepthFailOp;
+        BackFace.StencilPassOp       = o.BackFace.StencilPassOp;
+        BackFace.StencilFunc         = o.BackFace.StencilFunc;
+        BackFace.StencilReadMask     = o.StencilReadMask;
+        BackFace.StencilWriteMask    = o.StencilWriteMask;
+
+        DepthBoundsTestEnable        = FALSE;
+    }
+    explicit CD3DX12_DEPTH_STENCIL_DESC2( CD3DX12_DEFAULT ) noexcept
+    {
+        DepthEnable = TRUE;
+        DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+        DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+        StencilEnable = FALSE;
+        const D3D12_DEPTH_STENCILOP_DESC1 defaultStencilOp =
+        { D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK };
+        FrontFace = defaultStencilOp;
+        BackFace = defaultStencilOp;
+        DepthBoundsTestEnable = FALSE;
+    }
+    explicit CD3DX12_DEPTH_STENCIL_DESC2(
+        BOOL depthEnable,
+        D3D12_DEPTH_WRITE_MASK depthWriteMask,
+        D3D12_COMPARISON_FUNC depthFunc,
+        BOOL stencilEnable,
+        D3D12_STENCIL_OP frontStencilFailOp,
+        D3D12_STENCIL_OP frontStencilDepthFailOp,
+        D3D12_STENCIL_OP frontStencilPassOp,
+        D3D12_COMPARISON_FUNC frontStencilFunc,
+        UINT8 frontStencilReadMask,
+        UINT8 frontStencilWriteMask,
+        D3D12_STENCIL_OP backStencilFailOp,
+        D3D12_STENCIL_OP backStencilDepthFailOp,
+        D3D12_STENCIL_OP backStencilPassOp,
+        D3D12_COMPARISON_FUNC backStencilFunc,
+        UINT8 backStencilReadMask,
+        UINT8 backStencilWriteMask,
+        BOOL depthBoundsTestEnable ) noexcept
+    {
+        DepthEnable = depthEnable;
+        DepthWriteMask = depthWriteMask;
+        DepthFunc = depthFunc;
+        StencilEnable = stencilEnable;
+
+        FrontFace.StencilFailOp = frontStencilFailOp;
+        FrontFace.StencilDepthFailOp = frontStencilDepthFailOp;
+        FrontFace.StencilPassOp = frontStencilPassOp;
+        FrontFace.StencilFunc = frontStencilFunc;
+        FrontFace.StencilReadMask = frontStencilReadMask;
+        FrontFace.StencilWriteMask = frontStencilWriteMask;
+
+        BackFace.StencilFailOp = backStencilFailOp;
+        BackFace.StencilDepthFailOp = backStencilDepthFailOp;
+        BackFace.StencilPassOp = backStencilPassOp;
+        BackFace.StencilFunc = backStencilFunc;
+        BackFace.StencilReadMask = backStencilReadMask;
+        BackFace.StencilWriteMask = backStencilWriteMask;
+
+        DepthBoundsTestEnable = depthBoundsTestEnable;
+    }
+
+    operator D3D12_DEPTH_STENCIL_DESC() const noexcept
+    {
+        D3D12_DEPTH_STENCIL_DESC D;
+        D.DepthEnable = DepthEnable;
+        D.DepthWriteMask = DepthWriteMask;
+        D.DepthFunc = DepthFunc;
+        D.StencilEnable = StencilEnable;
+        D.StencilReadMask = FrontFace.StencilReadMask;
+        D.StencilWriteMask = FrontFace.StencilWriteMask;
+        D.FrontFace.StencilFailOp = FrontFace.StencilFailOp;
+        D.FrontFace.StencilDepthFailOp = FrontFace.StencilDepthFailOp;
+        D.FrontFace.StencilPassOp = FrontFace.StencilPassOp;
+        D.FrontFace.StencilFunc = FrontFace.StencilFunc;
+        D.BackFace.StencilFailOp = BackFace.StencilFailOp;
+        D.BackFace.StencilDepthFailOp = BackFace.StencilDepthFailOp;
+        D.BackFace.StencilPassOp = BackFace.StencilPassOp;
+        D.BackFace.StencilFunc = BackFace.StencilFunc;
         return D;
     }
 };
@@ -807,7 +932,7 @@ struct CD3DX12_SUBRESOURCE_FOOTPRINT : public D3D12_SUBRESOURCE_FOOTPRINT
         Format = resDesc.Format;
         Width = UINT( resDesc.Width );
         Height = resDesc.Height;
-        Depth = (resDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? resDesc.DepthOrArraySize : 1);
+        Depth = (resDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? resDesc.DepthOrArraySize : 1u);
         RowPitch = rowPitch;
     }
 };
@@ -1679,7 +1804,7 @@ struct CD3DX12_GPU_DESCRIPTOR_HANDLE : public D3D12_GPU_DESCRIPTOR_HANDLE
 };
 
 //------------------------------------------------------------------------------------------------
-inline constexpr UINT D3D12CalcSubresource( UINT MipSlice, UINT ArraySlice, UINT PlaneSlice, UINT MipLevels, UINT ArraySize ) noexcept
+constexpr UINT D3D12CalcSubresource( UINT MipSlice, UINT ArraySlice, UINT PlaneSlice, UINT MipLevels, UINT ArraySize ) noexcept
 {
     return MipSlice + ArraySlice * MipLevels + PlaneSlice * MipLevels * ArraySize;
 }
@@ -1795,13 +1920,13 @@ struct CD3DX12_RESOURCE_DESC : public D3D12_RESOURCE_DESC
             mipLevels, format, 1, 0, layout, flags );
     }
     inline UINT16 Depth() const noexcept
-    { return (Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1); }
+    { return (Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1u); }
     inline UINT16 ArraySize() const noexcept
-    { return (Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1); }
+    { return (Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1u); }
     inline UINT8 PlaneCount(_In_ ID3D12Device* pDevice) const noexcept
     { return D3D12GetFormatPlaneCount(pDevice, Format); }
     inline UINT Subresources(_In_ ID3D12Device* pDevice) const noexcept
-    { return MipLevels * ArraySize() * PlaneCount(pDevice); }
+    { return static_cast<UINT>(MipLevels) * ArraySize() * PlaneCount(pDevice); }
     inline UINT CalcSubresource(UINT MipSlice, UINT ArraySlice, UINT PlaneSlice) noexcept
     { return D3D12CalcSubresource(MipSlice, ArraySlice, PlaneSlice, MipLevels, ArraySize()); }
 };
@@ -1829,6 +1954,20 @@ struct CD3DX12_RESOURCE_DESC1 : public D3D12_RESOURCE_DESC1
     explicit CD3DX12_RESOURCE_DESC1( const D3D12_RESOURCE_DESC1& o ) noexcept :
         D3D12_RESOURCE_DESC1( o )
     {}
+    explicit CD3DX12_RESOURCE_DESC1( const D3D12_RESOURCE_DESC& o ) noexcept
+    {
+        Dimension = o.Dimension;
+        Alignment = o.Alignment;
+        Width = o.Width;
+        Height = o.Height;
+        DepthOrArraySize = o.DepthOrArraySize;
+        MipLevels = o.MipLevels;
+        Format = o.Format;
+        SampleDesc = o.SampleDesc;
+        Layout = o.Layout;
+        Flags = o.Flags;
+        SamplerFeedbackMipRegion = {};
+    }
     CD3DX12_RESOURCE_DESC1(
         D3D12_RESOURCE_DIMENSION dimension,
         UINT64 alignment,
@@ -1920,13 +2059,13 @@ struct CD3DX12_RESOURCE_DESC1 : public D3D12_RESOURCE_DESC1
             mipLevels, format, 1, 0, layout, flags, 0, 0, 0 );
     }
     inline UINT16 Depth() const noexcept
-    { return (Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1); }
+    { return (Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1u); }
     inline UINT16 ArraySize() const noexcept
-    { return (Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1); }
+    { return (Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1u); }
     inline UINT8 PlaneCount(_In_ ID3D12Device* pDevice) const noexcept
     { return D3D12GetFormatPlaneCount(pDevice, Format); }
     inline UINT Subresources(_In_ ID3D12Device* pDevice) const noexcept
-    { return MipLevels * ArraySize() * PlaneCount(pDevice); }
+    { return static_cast<UINT>(MipLevels) * ArraySize() * PlaneCount(pDevice); }
     inline UINT CalcSubresource(UINT MipSlice, UINT ArraySlice, UINT PlaneSlice) noexcept
     { return D3D12CalcSubresource(MipSlice, ArraySlice, PlaneSlice, MipLevels, ArraySize()); }
 };
@@ -2026,7 +2165,7 @@ inline UINT64 GetRequiredIntermediateSize(
     _In_range_(0,D3D12_REQ_SUBRESOURCES) UINT FirstSubresource,
     _In_range_(0,D3D12_REQ_SUBRESOURCES-FirstSubresource) UINT NumSubresources) noexcept
 {
-    auto Desc = pDestinationResource->GetDesc();
+    const auto Desc = pDestinationResource->GetDesc();
     UINT64 RequiredSize = 0;
 
     ID3D12Device* pDevice = nullptr;
@@ -2052,8 +2191,8 @@ inline UINT64 UpdateSubresources(
     _In_reads_(NumSubresources) const D3D12_SUBRESOURCE_DATA* pSrcData) noexcept
 {
     // Minor validation
-    auto IntermediateDesc = pIntermediate->GetDesc();
-    auto DestinationDesc = pDestinationResource->GetDesc();
+    const auto IntermediateDesc = pIntermediate->GetDesc();
+    const auto DestinationDesc = pDestinationResource->GetDesc();
     if (IntermediateDesc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER ||
         IntermediateDesc.Width < RequiredSize + pLayouts[0].Offset ||
         RequiredSize > SIZE_T(-1) ||
@@ -2087,8 +2226,8 @@ inline UINT64 UpdateSubresources(
     {
         for (UINT i = 0; i < NumSubresources; ++i)
         {
-            CD3DX12_TEXTURE_COPY_LOCATION Dst(pDestinationResource, i + FirstSubresource);
-            CD3DX12_TEXTURE_COPY_LOCATION Src(pIntermediate, pLayouts[i]);
+            const CD3DX12_TEXTURE_COPY_LOCATION Dst(pDestinationResource, i + FirstSubresource);
+            const CD3DX12_TEXTURE_COPY_LOCATION Src(pIntermediate, pLayouts[i]);
             pCmdList->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
         }
     }
@@ -2111,8 +2250,8 @@ inline UINT64 UpdateSubresources(
     _In_reads_(NumSubresources) const D3D12_SUBRESOURCE_INFO* pSrcData) noexcept
 {
     // Minor validation
-    auto IntermediateDesc = pIntermediate->GetDesc();
-    auto DestinationDesc = pDestinationResource->GetDesc();
+    const auto IntermediateDesc = pIntermediate->GetDesc();
+    const auto DestinationDesc = pDestinationResource->GetDesc();
     if (IntermediateDesc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER ||
         IntermediateDesc.Width < RequiredSize + pLayouts[0].Offset ||
         RequiredSize > SIZE_T(-1) ||
@@ -2146,8 +2285,8 @@ inline UINT64 UpdateSubresources(
     {
         for (UINT i = 0; i < NumSubresources; ++i)
         {
-            CD3DX12_TEXTURE_COPY_LOCATION Dst(pDestinationResource, i + FirstSubresource);
-            CD3DX12_TEXTURE_COPY_LOCATION Src(pIntermediate, pLayouts[i]);
+            const CD3DX12_TEXTURE_COPY_LOCATION Dst(pDestinationResource, i + FirstSubresource);
+            const CD3DX12_TEXTURE_COPY_LOCATION Src(pIntermediate, pLayouts[i]);
             pCmdList->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
         }
     }
@@ -2166,7 +2305,7 @@ inline UINT64 UpdateSubresources(
     _In_reads_(NumSubresources) const D3D12_SUBRESOURCE_DATA* pSrcData) noexcept
 {
     UINT64 RequiredSize = 0;
-    auto MemToAlloc = static_cast<UINT64>(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(UINT) + sizeof(UINT64)) * NumSubresources;
+    const auto MemToAlloc = static_cast<UINT64>(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(UINT) + sizeof(UINT64)) * NumSubresources;
     if (MemToAlloc > SIZE_MAX)
     {
        return 0;
@@ -2180,13 +2319,13 @@ inline UINT64 UpdateSubresources(
     auto pRowSizesInBytes = reinterpret_cast<UINT64*>(pLayouts + NumSubresources);
     auto pNumRows = reinterpret_cast<UINT*>(pRowSizesInBytes + NumSubresources);
 
-    auto Desc = pDestinationResource->GetDesc();
+    const auto Desc = pDestinationResource->GetDesc();
     ID3D12Device* pDevice = nullptr;
     pDestinationResource->GetDevice(IID_ID3D12Device, reinterpret_cast<void**>(&pDevice));
     pDevice->GetCopyableFootprints(&Desc, FirstSubresource, NumSubresources, IntermediateOffset, pLayouts, pNumRows, pRowSizesInBytes, &RequiredSize);
     pDevice->Release();
 
-    UINT64 Result = UpdateSubresources(pCmdList, pDestinationResource, pIntermediate, FirstSubresource, NumSubresources, RequiredSize, pLayouts, pNumRows, pRowSizesInBytes, pSrcData);
+    const UINT64 Result = UpdateSubresources(pCmdList, pDestinationResource, pIntermediate, FirstSubresource, NumSubresources, RequiredSize, pLayouts, pNumRows, pRowSizesInBytes, pSrcData);
     HeapFree(GetProcessHeap(), 0, pMem);
     return Result;
 }
@@ -2201,10 +2340,10 @@ inline UINT64 UpdateSubresources(
     _In_range_(0,D3D12_REQ_SUBRESOURCES) UINT FirstSubresource,
     _In_range_(0,D3D12_REQ_SUBRESOURCES-FirstSubresource) UINT NumSubresources,
     _In_ const void* pResourceData,
-    _In_reads_(NumSubresources) D3D12_SUBRESOURCE_INFO* pSrcData) noexcept
+    _In_reads_(NumSubresources) const D3D12_SUBRESOURCE_INFO* pSrcData) noexcept
 {
     UINT64 RequiredSize = 0;
-    auto MemToAlloc = static_cast<UINT64>(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(UINT) + sizeof(UINT64)) * NumSubresources;
+    const auto MemToAlloc = static_cast<UINT64>(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(UINT) + sizeof(UINT64)) * NumSubresources;
     if (MemToAlloc > SIZE_MAX)
     {
         return 0;
@@ -2214,17 +2353,17 @@ inline UINT64 UpdateSubresources(
     {
         return 0;
     }
-    auto pLayouts = reinterpret_cast<D3D12_PLACED_SUBRESOURCE_FOOTPRINT*>(pMem);
+    auto pLayouts = static_cast<D3D12_PLACED_SUBRESOURCE_FOOTPRINT*>(pMem);
     auto pRowSizesInBytes = reinterpret_cast<UINT64*>(pLayouts + NumSubresources);
     auto pNumRows = reinterpret_cast<UINT*>(pRowSizesInBytes + NumSubresources);
 
-    auto Desc = pDestinationResource->GetDesc();
+    const auto Desc = pDestinationResource->GetDesc();
     ID3D12Device* pDevice = nullptr;
     pDestinationResource->GetDevice(IID_ID3D12Device, reinterpret_cast<void**>(&pDevice));
     pDevice->GetCopyableFootprints(&Desc, FirstSubresource, NumSubresources, IntermediateOffset, pLayouts, pNumRows, pRowSizesInBytes, &RequiredSize);
     pDevice->Release();
 
-    UINT64 Result = UpdateSubresources(pCmdList, pDestinationResource, pIntermediate, FirstSubresource, NumSubresources, RequiredSize, pLayouts, pNumRows, pRowSizesInBytes, pResourceData, pSrcData);
+    const UINT64 Result = UpdateSubresources(pCmdList, pDestinationResource, pIntermediate, FirstSubresource, NumSubresources, RequiredSize, pLayouts, pNumRows, pRowSizesInBytes, pResourceData, pSrcData);
     HeapFree(GetProcessHeap(), 0, pMem);
     return Result;
 }
@@ -2246,7 +2385,7 @@ inline UINT64 UpdateSubresources(
     UINT NumRows[MaxSubresources];
     UINT64 RowSizesInBytes[MaxSubresources];
 
-    auto Desc = pDestinationResource->GetDesc();
+    const auto Desc = pDestinationResource->GetDesc();
     ID3D12Device* pDevice = nullptr;
     pDestinationResource->GetDevice(IID_ID3D12Device, reinterpret_cast<void**>(&pDevice));
     pDevice->GetCopyableFootprints(&Desc, FirstSubresource, NumSubresources, IntermediateOffset, Layouts, NumRows, RowSizesInBytes, &RequiredSize);
@@ -2266,14 +2405,14 @@ inline UINT64 UpdateSubresources(
     _In_range_(0,MaxSubresources) UINT FirstSubresource,
     _In_range_(1,MaxSubresources-FirstSubresource) UINT NumSubresources,
     _In_ const void* pResourceData,
-    _In_reads_(NumSubresources) D3D12_SUBRESOURCE_INFO* pSrcData) noexcept
+    _In_reads_(NumSubresources) const D3D12_SUBRESOURCE_INFO* pSrcData) noexcept
 {
     UINT64 RequiredSize = 0;
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts[MaxSubresources];
     UINT NumRows[MaxSubresources];
     UINT64 RowSizesInBytes[MaxSubresources];
 
-    auto Desc = pDestinationResource->GetDesc();
+    const auto Desc = pDestinationResource->GetDesc();
     ID3D12Device* pDevice = nullptr;
     pDestinationResource->GetDevice(IID_ID3D12Device, reinterpret_cast<void**>(&pDevice));
     pDevice->GetCopyableFootprints(&Desc, FirstSubresource, NumSubresources, IntermediateOffset, Layouts, NumRows, RowSizesInBytes, &RequiredSize);
@@ -2283,7 +2422,7 @@ inline UINT64 UpdateSubresources(
 }
 
 //------------------------------------------------------------------------------------------------
-inline constexpr bool D3D12IsLayoutOpaque( D3D12_TEXTURE_LAYOUT Layout ) noexcept
+constexpr bool D3D12IsLayoutOpaque( D3D12_TEXTURE_LAYOUT Layout ) noexcept
 { return Layout == D3D12_TEXTURE_LAYOUT_UNKNOWN || Layout == D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE; }
 
 //------------------------------------------------------------------------------------------------
@@ -2390,7 +2529,7 @@ inline HRESULT D3DX12SerializeVersionedRootSignature(
 
                     if (SUCCEEDED(hr))
                     {
-                        CD3DX12_ROOT_SIGNATURE_DESC desc_1_0(desc_1_1.NumParameters, pParameters_1_0, desc_1_1.NumStaticSamplers, desc_1_1.pStaticSamplers, desc_1_1.Flags);
+                        const CD3DX12_ROOT_SIGNATURE_DESC desc_1_0(desc_1_1.NumParameters, pParameters_1_0, desc_1_1.NumStaticSamplers, desc_1_1.pStaticSamplers, desc_1_1.Flags);
                         hr = D3D12SerializeRootSignature(&desc_1_0, D3D_ROOT_SIGNATURE_VERSION_1, ppBlob, ppErrorBlob);
                     }
 
@@ -2449,16 +2588,16 @@ template <typename InnerStructType, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE Type, ty
 class alignas(void*) CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT
 {
 private:
-    D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type;
-    InnerStructType _Inner;
+    D3D12_PIPELINE_STATE_SUBOBJECT_TYPE pssType;
+    InnerStructType pssInner;
 public:
-    CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT() noexcept : _Type(Type), _Inner(DefaultArg()) {}
-    CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT(InnerStructType const& i) noexcept : _Type(Type), _Inner(i) {}
-    CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT& operator=(InnerStructType const& i) noexcept { _Type = Type; _Inner = i; return *this; }
-    operator InnerStructType const&() const noexcept { return _Inner; }
-    operator InnerStructType&() noexcept { return _Inner; }
-    InnerStructType* operator&() noexcept { return &_Inner; }
-    InnerStructType const* operator&() const noexcept { return &_Inner; }
+    CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT() noexcept : pssType(Type), pssInner(DefaultArg()) {}
+    CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT(InnerStructType const& i) noexcept : pssType(Type), pssInner(i) {}
+    CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT& operator=(InnerStructType const& i) noexcept { pssType = Type; pssInner = i; return *this; }
+    operator InnerStructType const&() const noexcept { return pssInner; }
+    operator InnerStructType&() noexcept { return pssInner; }
+    InnerStructType* operator&() noexcept { return &pssInner; }
+    InnerStructType const* operator&() const noexcept { return &pssInner; }
 };
 #pragma warning(pop)
 typedef CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT< D3D12_PIPELINE_STATE_FLAGS,         D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS>                             CD3DX12_PIPELINE_STATE_STREAM_FLAGS;
@@ -2479,6 +2618,7 @@ typedef CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT< D3D12_SHADER_BYTECODE,         
 typedef CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT< CD3DX12_BLEND_DESC,                 D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND,          CD3DX12_DEFAULT>   CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC;
 typedef CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT< CD3DX12_DEPTH_STENCIL_DESC,         D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL,  CD3DX12_DEFAULT>   CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL;
 typedef CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT< CD3DX12_DEPTH_STENCIL_DESC1,        D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL1, CD3DX12_DEFAULT>   CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1;
+typedef CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT< CD3DX12_DEPTH_STENCIL_DESC2,        D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL2, CD3DX12_DEFAULT>   CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL2;
 typedef CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT< DXGI_FORMAT,                        D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT>              CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT;
 typedef CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT< CD3DX12_RASTERIZER_DESC,            D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER,     CD3DX12_DEFAULT>   CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER;
 typedef CD3DX12_PIPELINE_STATE_STREAM_SUBOBJECT< D3D12_RT_FORMAT_ARRAY,              D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS>             CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS;
@@ -2511,6 +2651,7 @@ struct ID3DX12PipelineParserCallbacks
     virtual void BlendStateCb(const D3D12_BLEND_DESC&) {}
     virtual void DepthStencilStateCb(const D3D12_DEPTH_STENCIL_DESC&) {}
     virtual void DepthStencilState1Cb(const D3D12_DEPTH_STENCIL_DESC1&) {}
+    virtual void DepthStencilState2Cb(const D3D12_DEPTH_STENCIL_DESC2&) {}
     virtual void DSVFormatCb(DXGI_FORMAT) {}
     virtual void RasterizerStateCb(const D3D12_RASTERIZER_DESC&) {}
     virtual void RTVFormatsCb(const D3D12_RT_FORMAT_ARRAY&) {}
@@ -2546,6 +2687,129 @@ struct D3DX12_MESH_SHADER_PIPELINE_STATE_DESC
     D3D12_CACHED_PIPELINE_STATE   CachedPSO;
     D3D12_PIPELINE_STATE_FLAGS    Flags;
 };
+
+
+// Use CD3DX12_PIPELINE_STATE_STREAM3 for D3D12_DEPTH_STENCIL_DESC2 when CheckFeatureSupport returns true for Options14::IndependentFrontAndBackStencilSupported is true
+// Use CD3DX12_PIPELINE_STATE_STREAM2 for OS Build 19041+ (where there is a new mesh shader pipeline).
+// Use CD3DX12_PIPELINE_STATE_STREAM1 for OS Build 16299+ (where there is a new view instancing subobject).
+// Use CD3DX12_PIPELINE_STATE_STREAM for OS Build 15063+ support.
+struct CD3DX12_PIPELINE_STATE_STREAM3
+{
+    CD3DX12_PIPELINE_STATE_STREAM3() = default;
+    // Mesh and amplification shaders must be set manually, since they do not have representation in D3D12_GRAPHICS_PIPELINE_STATE_DESC
+    CD3DX12_PIPELINE_STATE_STREAM3(const D3D12_GRAPHICS_PIPELINE_STATE_DESC& Desc) noexcept
+        : Flags(Desc.Flags)
+        , NodeMask(Desc.NodeMask)
+        , pRootSignature(Desc.pRootSignature)
+        , InputLayout(Desc.InputLayout)
+        , IBStripCutValue(Desc.IBStripCutValue)
+        , PrimitiveTopologyType(Desc.PrimitiveTopologyType)
+        , VS(Desc.VS)
+        , GS(Desc.GS)
+        , StreamOutput(Desc.StreamOutput)
+        , HS(Desc.HS)
+        , DS(Desc.DS)
+        , PS(Desc.PS)
+        , BlendState(CD3DX12_BLEND_DESC(Desc.BlendState))
+        , DepthStencilState(CD3DX12_DEPTH_STENCIL_DESC2(Desc.DepthStencilState))
+        , DSVFormat(Desc.DSVFormat)
+        , RasterizerState(CD3DX12_RASTERIZER_DESC(Desc.RasterizerState))
+        , RTVFormats(CD3DX12_RT_FORMAT_ARRAY(Desc.RTVFormats, Desc.NumRenderTargets))
+        , SampleDesc(Desc.SampleDesc)
+        , SampleMask(Desc.SampleMask)
+        , CachedPSO(Desc.CachedPSO)
+        , ViewInstancingDesc(CD3DX12_VIEW_INSTANCING_DESC(CD3DX12_DEFAULT()))
+    {}
+    CD3DX12_PIPELINE_STATE_STREAM3(const D3DX12_MESH_SHADER_PIPELINE_STATE_DESC& Desc) noexcept
+        : Flags(Desc.Flags)
+        , NodeMask(Desc.NodeMask)
+        , pRootSignature(Desc.pRootSignature)
+        , PrimitiveTopologyType(Desc.PrimitiveTopologyType)
+        , PS(Desc.PS)
+        , AS(Desc.AS)
+        , MS(Desc.MS)
+        , BlendState(CD3DX12_BLEND_DESC(Desc.BlendState))
+        , DepthStencilState(CD3DX12_DEPTH_STENCIL_DESC2(Desc.DepthStencilState))
+        , DSVFormat(Desc.DSVFormat)
+        , RasterizerState(CD3DX12_RASTERIZER_DESC(Desc.RasterizerState))
+        , RTVFormats(CD3DX12_RT_FORMAT_ARRAY(Desc.RTVFormats, Desc.NumRenderTargets))
+        , SampleDesc(Desc.SampleDesc)
+        , SampleMask(Desc.SampleMask)
+        , CachedPSO(Desc.CachedPSO)
+        , ViewInstancingDesc(CD3DX12_VIEW_INSTANCING_DESC(CD3DX12_DEFAULT()))
+    {}
+    CD3DX12_PIPELINE_STATE_STREAM3(const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc) noexcept
+        : Flags(Desc.Flags)
+        , NodeMask(Desc.NodeMask)
+        , pRootSignature(Desc.pRootSignature)
+        , CS(CD3DX12_SHADER_BYTECODE(Desc.CS))
+        , CachedPSO(Desc.CachedPSO)
+    {
+        static_cast<D3D12_DEPTH_STENCIL_DESC2&>(DepthStencilState).DepthEnable = false;
+    }
+    CD3DX12_PIPELINE_STATE_STREAM_FLAGS Flags;
+    CD3DX12_PIPELINE_STATE_STREAM_NODE_MASK NodeMask;
+    CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
+    CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
+    CD3DX12_PIPELINE_STATE_STREAM_IB_STRIP_CUT_VALUE IBStripCutValue;
+    CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
+    CD3DX12_PIPELINE_STATE_STREAM_VS VS;
+    CD3DX12_PIPELINE_STATE_STREAM_GS GS;
+    CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT StreamOutput;
+    CD3DX12_PIPELINE_STATE_STREAM_HS HS;
+    CD3DX12_PIPELINE_STATE_STREAM_DS DS;
+    CD3DX12_PIPELINE_STATE_STREAM_PS PS;
+    CD3DX12_PIPELINE_STATE_STREAM_AS AS;
+    CD3DX12_PIPELINE_STATE_STREAM_MS MS;
+    CD3DX12_PIPELINE_STATE_STREAM_CS CS;
+    CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BlendState;
+    CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL2 DepthStencilState;
+    CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
+    CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RasterizerState;
+    CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
+    CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
+    CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK SampleMask;
+    CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO CachedPSO;
+    CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING ViewInstancingDesc;
+    
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsDescV0() const noexcept
+    {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC D;
+        D.Flags                 = this->Flags;
+        D.NodeMask              = this->NodeMask;
+        D.pRootSignature        = this->pRootSignature;
+        D.InputLayout           = this->InputLayout;
+        D.IBStripCutValue       = this->IBStripCutValue;
+        D.PrimitiveTopologyType = this->PrimitiveTopologyType;
+        D.VS                    = this->VS;
+        D.GS                    = this->GS;
+        D.StreamOutput          = this->StreamOutput;
+        D.HS                    = this->HS;
+        D.DS                    = this->DS;
+        D.PS                    = this->PS;
+        D.BlendState            = this->BlendState;
+        D.DepthStencilState     = CD3DX12_DEPTH_STENCIL_DESC2(D3D12_DEPTH_STENCIL_DESC2(this->DepthStencilState));
+        D.DSVFormat             = this->DSVFormat;
+        D.RasterizerState       = this->RasterizerState;
+        D.NumRenderTargets      = D3D12_RT_FORMAT_ARRAY(this->RTVFormats).NumRenderTargets;
+        memcpy(D.RTVFormats, D3D12_RT_FORMAT_ARRAY(this->RTVFormats).RTFormats, sizeof(D.RTVFormats));
+        D.SampleDesc            = this->SampleDesc;
+        D.SampleMask            = this->SampleMask;
+        D.CachedPSO             = this->CachedPSO;
+        return D;
+    }
+    D3D12_COMPUTE_PIPELINE_STATE_DESC ComputeDescV0() const noexcept
+    {
+        D3D12_COMPUTE_PIPELINE_STATE_DESC D;
+        D.Flags                 = this->Flags;
+        D.NodeMask              = this->NodeMask;
+        D.pRootSignature        = this->pRootSignature;
+        D.CS                    = this->CS;
+        D.CachedPSO             = this->CachedPSO;
+        return D;
+    }
+};
+
 
 // CD3DX12_PIPELINE_STATE_STREAM2 Works on OS Build 19041+ (where there is a new mesh shader pipeline).
 // Use CD3DX12_PIPELINE_STATE_STREAM1 for OS Build 16299+ (where there is a new view instancing subobject).
@@ -2992,6 +3256,71 @@ private:
 };
 
 
+struct CD3DX12_PIPELINE_STATE_STREAM3_PARSE_HELPER : public ID3DX12PipelineParserCallbacks
+{
+    CD3DX12_PIPELINE_STATE_STREAM3 PipelineStream;
+    CD3DX12_PIPELINE_STATE_STREAM3_PARSE_HELPER() noexcept
+        : SeenDSS(false)
+    {
+        // Adjust defaults to account for absent members.
+        PipelineStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+        // Depth disabled if no DSV format specified.
+        static_cast<D3D12_DEPTH_STENCIL_DESC2&>(PipelineStream.DepthStencilState).DepthEnable = false;
+    }
+
+    // ID3DX12PipelineParserCallbacks
+    void FlagsCb(D3D12_PIPELINE_STATE_FLAGS Flags) override { PipelineStream.Flags = Flags; }
+    void NodeMaskCb(UINT NodeMask) override { PipelineStream.NodeMask = NodeMask; }
+    void RootSignatureCb(ID3D12RootSignature* pRootSignature) override { PipelineStream.pRootSignature = pRootSignature; }
+    void InputLayoutCb(const D3D12_INPUT_LAYOUT_DESC& InputLayout) override { PipelineStream.InputLayout = InputLayout; }
+    void IBStripCutValueCb(D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBStripCutValue) override { PipelineStream.IBStripCutValue = IBStripCutValue; }
+    void PrimitiveTopologyTypeCb(D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType) override { PipelineStream.PrimitiveTopologyType = PrimitiveTopologyType; }
+    void VSCb(const D3D12_SHADER_BYTECODE& VS) override { PipelineStream.VS = VS; }
+    void GSCb(const D3D12_SHADER_BYTECODE& GS) override { PipelineStream.GS = GS; }
+    void StreamOutputCb(const D3D12_STREAM_OUTPUT_DESC& StreamOutput) override { PipelineStream.StreamOutput = StreamOutput; }
+    void HSCb(const D3D12_SHADER_BYTECODE& HS) override { PipelineStream.HS = HS; }
+    void DSCb(const D3D12_SHADER_BYTECODE& DS) override { PipelineStream.DS = DS; }
+    void PSCb(const D3D12_SHADER_BYTECODE& PS) override { PipelineStream.PS = PS; }
+    void CSCb(const D3D12_SHADER_BYTECODE& CS) override { PipelineStream.CS = CS; }
+    void ASCb(const D3D12_SHADER_BYTECODE& AS) override { PipelineStream.AS = AS; }
+    void MSCb(const D3D12_SHADER_BYTECODE& MS) override { PipelineStream.MS = MS; }
+    void BlendStateCb(const D3D12_BLEND_DESC& BlendState) override { PipelineStream.BlendState = CD3DX12_BLEND_DESC(BlendState); }
+    void DepthStencilStateCb(const D3D12_DEPTH_STENCIL_DESC& DepthStencilState) override
+    {
+        PipelineStream.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC2(DepthStencilState);
+        SeenDSS = true;
+    }
+    void DepthStencilState1Cb(const D3D12_DEPTH_STENCIL_DESC1& DepthStencilState) override
+    {
+        PipelineStream.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC2(DepthStencilState);
+        SeenDSS = true;
+    }
+    void DepthStencilState2Cb(const D3D12_DEPTH_STENCIL_DESC2& DepthStencilState) override
+    {
+        PipelineStream.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC2(DepthStencilState);
+        SeenDSS = true;
+    }
+    void DSVFormatCb(DXGI_FORMAT DSVFormat) override
+    {
+        PipelineStream.DSVFormat = DSVFormat;
+        if (!SeenDSS && DSVFormat != DXGI_FORMAT_UNKNOWN)
+        {
+            // Re-enable depth for the default state.
+            static_cast<D3D12_DEPTH_STENCIL_DESC2&>(PipelineStream.DepthStencilState).DepthEnable = true;
+        }
+    }
+    void RasterizerStateCb(const D3D12_RASTERIZER_DESC& RasterizerState) override { PipelineStream.RasterizerState = CD3DX12_RASTERIZER_DESC(RasterizerState); }
+    void RTVFormatsCb(const D3D12_RT_FORMAT_ARRAY& RTVFormats) override { PipelineStream.RTVFormats = RTVFormats; }
+    void SampleDescCb(const DXGI_SAMPLE_DESC& SampleDesc) override { PipelineStream.SampleDesc = SampleDesc; }
+    void SampleMaskCb(UINT SampleMask) override { PipelineStream.SampleMask = SampleMask; }
+    void ViewInstancingCb(const D3D12_VIEW_INSTANCING_DESC& ViewInstancingDesc) override { PipelineStream.ViewInstancingDesc = CD3DX12_VIEW_INSTANCING_DESC(ViewInstancingDesc); }
+    void CachedPSOCb(const D3D12_CACHED_PIPELINE_STATE& CachedPSO) override { PipelineStream.CachedPSO = CachedPSO; }
+
+private:
+    bool SeenDSS;
+};
+
 struct CD3DX12_PIPELINE_STATE_STREAM_PARSE_HELPER : public ID3DX12PipelineParserCallbacks
 {
     CD3DX12_PIPELINE_STATE_STREAM1 PipelineStream;
@@ -3055,6 +3384,8 @@ inline D3D12_PIPELINE_STATE_SUBOBJECT_TYPE D3DX12GetBaseSubobjectType(D3D12_PIPE
     switch (SubobjectType)
     {
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL1:
+        return D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL;
+    case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL2:
         return D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL;
     default:
         return SubobjectType;
@@ -3151,6 +3482,10 @@ inline HRESULT D3DX12ParsePipelineStream(const D3D12_PIPELINE_STATE_STREAM_DESC&
         case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL1:
             pCallbacks->DepthStencilState1Cb(*reinterpret_cast<decltype(CD3DX12_PIPELINE_STATE_STREAM::DepthStencilState)*>(pStream));
             SizeOfSubobject = sizeof(CD3DX12_PIPELINE_STATE_STREAM::DepthStencilState);
+            break;
+        case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL2:
+            pCallbacks->DepthStencilState2Cb(*reinterpret_cast<decltype(CD3DX12_PIPELINE_STATE_STREAM3::DepthStencilState)*>(pStream));
+            SizeOfSubobject = sizeof(CD3DX12_PIPELINE_STATE_STREAM3::DepthStencilState);
             break;
         case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_INPUT_LAYOUT:
             pCallbacks->InputLayoutCb(*reinterpret_cast<decltype(CD3DX12_PIPELINE_STATE_STREAM::InputLayout)*>(pStream));
@@ -3279,9 +3614,9 @@ inline bool operator==( const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC &a, const D3D
 //
 //================================================================================================
 #include <list>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 #ifndef D3DX12_USE_ATL
 #include <wrl/client.h>
 #define D3DX12_COM_PTR Microsoft::WRL::ComPtr
@@ -3792,7 +4127,7 @@ private:
     }
     void* Data() noexcept override { return &m_Desc; }
     D3D12_HIT_GROUP_DESC m_Desc;
-    static const UINT m_NumStrings = 4;
+    static constexpr UINT m_NumStrings = 4;
     CD3DX12_STATE_OBJECT_DESC::StringContainer
         m_Strings[m_NumStrings]; // one string for every entrypoint name
 };
@@ -4037,75 +4372,204 @@ private:
     D3D12_NODE_MASK m_Desc;
 };
 
-#endif // #ifndef D3DX12_NO_STATE_OBJECT_HELPERS
+#endif // !D3DX12_NO_STATE_OBJECT_HELPERS
+
+
+//================================================================================================
+// D3DX12 Enhanced Barrier Helpers
+//================================================================================================
+
+class CD3DX12_BARRIER_SUBRESOURCE_RANGE : public D3D12_BARRIER_SUBRESOURCE_RANGE
+{
+public:
+    CD3DX12_BARRIER_SUBRESOURCE_RANGE() = default;
+    CD3DX12_BARRIER_SUBRESOURCE_RANGE(const D3D12_BARRIER_SUBRESOURCE_RANGE &o) noexcept :
+        D3D12_BARRIER_SUBRESOURCE_RANGE(o)
+    {}
+    explicit CD3DX12_BARRIER_SUBRESOURCE_RANGE(UINT Subresource) noexcept :
+        D3D12_BARRIER_SUBRESOURCE_RANGE{ Subresource, 0, 0, 0, 0, 0 }
+    {}
+    CD3DX12_BARRIER_SUBRESOURCE_RANGE(
+        UINT FirstMipLevel,
+        UINT NumMips,
+        UINT FirstArraySlice,
+        UINT NumArraySlices,
+        UINT FirstPlane = 0,
+        UINT NumPlanes = 1) noexcept :
+        D3D12_BARRIER_SUBRESOURCE_RANGE
+        {
+            FirstMipLevel,
+            NumMips,
+            FirstArraySlice,
+            NumArraySlices,
+            FirstPlane,
+            NumPlanes
+        }
+    {}
+};
+
+class CD3DX12_GLOBAL_BARRIER : public D3D12_GLOBAL_BARRIER
+{
+public:
+    CD3DX12_GLOBAL_BARRIER() = default;
+    CD3DX12_GLOBAL_BARRIER(const D3D12_GLOBAL_BARRIER &o) noexcept : D3D12_GLOBAL_BARRIER(o){}
+    CD3DX12_GLOBAL_BARRIER(
+        D3D12_BARRIER_SYNC syncBefore,
+        D3D12_BARRIER_SYNC syncAfter,
+        D3D12_BARRIER_ACCESS accessBefore,
+        D3D12_BARRIER_ACCESS accessAfter) noexcept : D3D12_GLOBAL_BARRIER {
+            syncBefore,
+            syncAfter,
+            accessBefore,
+            accessAfter
+        }
+    {}
+};
+
+class CD3DX12_BUFFER_BARRIER : public D3D12_BUFFER_BARRIER
+{
+public:
+    CD3DX12_BUFFER_BARRIER() = default;
+    CD3DX12_BUFFER_BARRIER(const D3D12_BUFFER_BARRIER &o) noexcept : D3D12_BUFFER_BARRIER(o){}
+    CD3DX12_BUFFER_BARRIER(
+        D3D12_BARRIER_SYNC syncBefore,
+        D3D12_BARRIER_SYNC syncAfter,
+        D3D12_BARRIER_ACCESS accessBefore,
+        D3D12_BARRIER_ACCESS accessAfter,
+        ID3D12Resource *pRes) noexcept : D3D12_BUFFER_BARRIER {
+            syncBefore,
+            syncAfter,
+            accessBefore,
+            accessAfter,
+            pRes,
+            0, ULLONG_MAX
+        }
+    {}
+};
+
+class CD3DX12_TEXTURE_BARRIER : public D3D12_TEXTURE_BARRIER
+{
+public:
+    CD3DX12_TEXTURE_BARRIER() = default;
+    CD3DX12_TEXTURE_BARRIER(const D3D12_TEXTURE_BARRIER &o) noexcept : D3D12_TEXTURE_BARRIER(o){}
+    CD3DX12_TEXTURE_BARRIER(
+        D3D12_BARRIER_SYNC syncBefore,
+        D3D12_BARRIER_SYNC syncAfter,
+        D3D12_BARRIER_ACCESS accessBefore,
+        D3D12_BARRIER_ACCESS accessAfter,
+        D3D12_BARRIER_LAYOUT layoutBefore,
+        D3D12_BARRIER_LAYOUT layoutAfter,
+        ID3D12Resource *pRes,
+        const D3D12_BARRIER_SUBRESOURCE_RANGE &subresources,
+        D3D12_TEXTURE_BARRIER_FLAGS flag = D3D12_TEXTURE_BARRIER_FLAG_NONE) noexcept : D3D12_TEXTURE_BARRIER {
+            syncBefore,
+            syncAfter,
+            accessBefore,
+            accessAfter,
+            layoutBefore,
+            layoutAfter,
+            pRes,
+            subresources,
+            flag
+        }
+    {}
+};
+
+class CD3DX12_BARRIER_GROUP : public D3D12_BARRIER_GROUP
+{
+public:
+    CD3DX12_BARRIER_GROUP() = default;
+    CD3DX12_BARRIER_GROUP(const D3D12_BARRIER_GROUP &o) noexcept : D3D12_BARRIER_GROUP(o){}
+    CD3DX12_BARRIER_GROUP(UINT32 numBarriers, const D3D12_BUFFER_BARRIER *pBarriers) noexcept
+    {
+        Type = D3D12_BARRIER_TYPE_BUFFER;
+        NumBarriers = numBarriers;
+        pBufferBarriers = pBarriers;
+    }
+    CD3DX12_BARRIER_GROUP(UINT32 numBarriers, const D3D12_TEXTURE_BARRIER *pBarriers) noexcept
+    {
+        Type = D3D12_BARRIER_TYPE_TEXTURE;
+        NumBarriers = numBarriers;
+        pTextureBarriers = pBarriers;
+    }
+    CD3DX12_BARRIER_GROUP(UINT32 numBarriers, const D3D12_GLOBAL_BARRIER *pBarriers) noexcept
+    {
+        Type = D3D12_BARRIER_TYPE_GLOBAL;
+        NumBarriers = numBarriers;
+        pGlobalBarriers = pBarriers;
+    }
+};
 
 
 #ifndef D3DX12_NO_CHECK_FEATURE_SUPPORT_CLASS
 
-//------------------------------------------------------------------------------------------------
+//================================================================================================
+// D3DX12 Check Feature Support
+//================================================================================================
+
 #include <vector>
 
 class CD3DX12FeatureSupport
 {
 public: // Function declaration
     // Default constructor that creates an empty object
-    CD3DX12FeatureSupport();
+    CD3DX12FeatureSupport() noexcept;
 
     // Initialize data from the given device
     HRESULT Init(ID3D12Device* pDevice);
 
     // Retreives the status of the object. If an error occurred in the initialization process, the function returns the error code.
-    HRESULT GetStatus() const { return m_hStatus; }
+    HRESULT GetStatus() const noexcept { return m_hStatus; }
 
     // Getter functions for each feature class
     // D3D12_OPTIONS
-    BOOL DoublePrecisionFloatShaderOps() const;
-    BOOL OutputMergerLogicOp() const;
-    D3D12_SHADER_MIN_PRECISION_SUPPORT MinPrecisionSupport() const;
-    D3D12_TILED_RESOURCES_TIER TiledResourcesTier() const;
-    D3D12_RESOURCE_BINDING_TIER ResourceBindingTier() const;
-    BOOL PSSpecifiedStencilRefSupported() const;
-    BOOL TypedUAVLoadAdditionalFormats() const;
-    BOOL ROVsSupported() const;
-    D3D12_CONSERVATIVE_RASTERIZATION_TIER ConservativeRasterizationTier() const;
-    BOOL StandardSwizzle64KBSupported() const;
-    BOOL CrossAdapterRowMajorTextureSupported() const;
-    BOOL VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation() const;
-    D3D12_RESOURCE_HEAP_TIER ResourceHeapTier() const;
-    D3D12_CROSS_NODE_SHARING_TIER CrossNodeSharingTier() const;
-    UINT MaxGPUVirtualAddressBitsPerResource() const;
+    BOOL DoublePrecisionFloatShaderOps() const noexcept;
+    BOOL OutputMergerLogicOp() const noexcept;
+    D3D12_SHADER_MIN_PRECISION_SUPPORT MinPrecisionSupport() const noexcept;
+    D3D12_TILED_RESOURCES_TIER TiledResourcesTier() const noexcept;
+    D3D12_RESOURCE_BINDING_TIER ResourceBindingTier() const noexcept;
+    BOOL PSSpecifiedStencilRefSupported() const noexcept;
+    BOOL TypedUAVLoadAdditionalFormats() const noexcept;
+    BOOL ROVsSupported() const noexcept;
+    D3D12_CONSERVATIVE_RASTERIZATION_TIER ConservativeRasterizationTier() const noexcept;
+    BOOL StandardSwizzle64KBSupported() const noexcept;
+    BOOL CrossAdapterRowMajorTextureSupported() const noexcept;
+    BOOL VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation() const noexcept;
+    D3D12_RESOURCE_HEAP_TIER ResourceHeapTier() const noexcept;
+    D3D12_CROSS_NODE_SHARING_TIER CrossNodeSharingTier() const noexcept;
+    UINT MaxGPUVirtualAddressBitsPerResource() const noexcept;
 
     // FEATURE_LEVELS
-    D3D_FEATURE_LEVEL MaxSupportedFeatureLevel() const;
+    D3D_FEATURE_LEVEL MaxSupportedFeatureLevel() const noexcept;
 
     // FORMAT_SUPPORT
-    HRESULT FormatSupport(DXGI_FORMAT Format, D3D12_FORMAT_SUPPORT1& Support1, D3D12_FORMAT_SUPPORT2& Support2);
+    HRESULT FormatSupport(DXGI_FORMAT Format, D3D12_FORMAT_SUPPORT1& Support1, D3D12_FORMAT_SUPPORT2& Support2) const;
 
     // MUTLTISAMPLE_QUALITY_LEVELS
-    HRESULT MultisampleQualityLevels(DXGI_FORMAT Format, UINT SampleCount, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS Flags, UINT& NumQualityLevels);
+    HRESULT MultisampleQualityLevels(DXGI_FORMAT Format, UINT SampleCount, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS Flags, UINT& NumQualityLevels) const;
 
     // FORMAT_INFO
-    HRESULT FormatInfo(DXGI_FORMAT Format, UINT8& PlaneCount);
+    HRESULT FormatInfo(DXGI_FORMAT Format, UINT8& PlaneCount) const;
 
     // GPU_VIRTUAL_ADDRESS_SUPPORT
-    UINT MaxGPUVirtualAddressBitsPerProcess() const;
+    UINT MaxGPUVirtualAddressBitsPerProcess() const noexcept;
 
     // SHADER_MODEL
-    D3D_SHADER_MODEL HighestShaderModel() const;
+    D3D_SHADER_MODEL HighestShaderModel() const noexcept;
 
     // D3D12_OPTIONS1
-    BOOL WaveOps() const;
-    UINT WaveLaneCountMin() const;
-    UINT WaveLaneCountMax() const;
-    UINT TotalLaneCount() const;
-    BOOL ExpandedComputeResourceStates() const;
-    BOOL Int64ShaderOps() const;
+    BOOL WaveOps() const noexcept;
+    UINT WaveLaneCountMin() const noexcept;
+    UINT WaveLaneCountMax() const noexcept;
+    UINT TotalLaneCount() const noexcept;
+    BOOL ExpandedComputeResourceStates() const noexcept;
+    BOOL Int64ShaderOps() const noexcept;
 
     // PROTECTED_RESOURCE_SESSION_SUPPORT
     D3D12_PROTECTED_RESOURCE_SESSION_SUPPORT_FLAGS ProtectedResourceSessionSupport(UINT NodeIndex = 0) const;
 
     // ROOT_SIGNATURE
-    D3D_ROOT_SIGNATURE_VERSION HighestRootSignatureVersion() const;
+    D3D_ROOT_SIGNATURE_VERSION HighestRootSignatureVersion() const noexcept;
 
     // ARCHITECTURE1
     BOOL TileBasedRenderer(UINT NodeIndex = 0) const;
@@ -4114,83 +4578,105 @@ public: // Function declaration
     BOOL IsolatedMMU(UINT NodeIndex = 0) const;
 
     // D3D12_OPTIONS2
-    BOOL DepthBoundsTestSupported() const;
-    D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER ProgrammableSamplePositionsTier() const;
+    BOOL DepthBoundsTestSupported() const noexcept;
+    D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER ProgrammableSamplePositionsTier() const noexcept;
 
     // SHADER_CACHE
-    D3D12_SHADER_CACHE_SUPPORT_FLAGS ShaderCacheSupportFlags() const;
+    D3D12_SHADER_CACHE_SUPPORT_FLAGS ShaderCacheSupportFlags() const noexcept;
 
     // COMMAND_QUEUE_PRIORITY
     BOOL CommandQueuePrioritySupported(D3D12_COMMAND_LIST_TYPE CommandListType, UINT Priority);
 
     // D3D12_OPTIONS3
-    BOOL CopyQueueTimestampQueriesSupported() const;
-    BOOL CastingFullyTypedFormatSupported() const;
-    D3D12_COMMAND_LIST_SUPPORT_FLAGS WriteBufferImmediateSupportFlags() const;
-    D3D12_VIEW_INSTANCING_TIER ViewInstancingTier() const;
-    BOOL BarycentricsSupported() const;
+    BOOL CopyQueueTimestampQueriesSupported() const noexcept;
+    BOOL CastingFullyTypedFormatSupported() const noexcept;
+    D3D12_COMMAND_LIST_SUPPORT_FLAGS WriteBufferImmediateSupportFlags() const noexcept;
+    D3D12_VIEW_INSTANCING_TIER ViewInstancingTier() const noexcept;
+    BOOL BarycentricsSupported() const noexcept;
 
     // EXISTING_HEAPS
-    BOOL ExistingHeapsSupported() const;
+    BOOL ExistingHeapsSupported() const noexcept;
 
     // D3D12_OPTIONS4
-    BOOL MSAA64KBAlignedTextureSupported() const;
-    D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER SharedResourceCompatibilityTier() const;
-    BOOL Native16BitShaderOpsSupported() const;
+    BOOL MSAA64KBAlignedTextureSupported() const noexcept;
+    D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER SharedResourceCompatibilityTier() const noexcept;
+    BOOL Native16BitShaderOpsSupported() const noexcept;
 
     // SERIALIZATION
     D3D12_HEAP_SERIALIZATION_TIER HeapSerializationTier(UINT NodeIndex = 0) const;
 
     // CROSS_NODE
     // CrossNodeSharingTier handled in D3D12Options
-    BOOL CrossNodeAtomicShaderInstructions() const;
+    BOOL CrossNodeAtomicShaderInstructions() const noexcept;
 
     // D3D12_OPTIONS5
-    BOOL SRVOnlyTiledResourceTier3() const;
-    D3D12_RENDER_PASS_TIER RenderPassesTier() const;
-    D3D12_RAYTRACING_TIER RaytracingTier() const;
+    BOOL SRVOnlyTiledResourceTier3() const noexcept;
+    D3D12_RENDER_PASS_TIER RenderPassesTier() const noexcept;
+    D3D12_RAYTRACING_TIER RaytracingTier() const noexcept;
 
     // DISPLAYABLE
-    BOOL DisplayableTexture() const;
+    BOOL DisplayableTexture() const noexcept;
     // SharedResourceCompatibilityTier handled in D3D12Options4
 
     // D3D12_OPTIONS6
-    BOOL AdditionalShadingRatesSupported() const;
-    BOOL PerPrimitiveShadingRateSupportedWithViewportIndexing() const;
-    D3D12_VARIABLE_SHADING_RATE_TIER VariableShadingRateTier() const;
-    UINT ShadingRateImageTileSize() const;
-    BOOL BackgroundProcessingSupported() const;
+    BOOL AdditionalShadingRatesSupported() const noexcept;
+    BOOL PerPrimitiveShadingRateSupportedWithViewportIndexing() const noexcept;
+    D3D12_VARIABLE_SHADING_RATE_TIER VariableShadingRateTier() const noexcept;
+    UINT ShadingRateImageTileSize() const noexcept;
+    BOOL BackgroundProcessingSupported() const noexcept;
 
     // QUERY_META_COMMAND
-    HRESULT QueryMetaCommand(D3D12_FEATURE_DATA_QUERY_META_COMMAND& dQueryMetaCommand);
+    HRESULT QueryMetaCommand(D3D12_FEATURE_DATA_QUERY_META_COMMAND& dQueryMetaCommand) const;
 
     // D3D12_OPTIONS7
-    D3D12_MESH_SHADER_TIER MeshShaderTier() const;
-    D3D12_SAMPLER_FEEDBACK_TIER SamplerFeedbackTier() const;
+    D3D12_MESH_SHADER_TIER MeshShaderTier() const noexcept;
+    D3D12_SAMPLER_FEEDBACK_TIER SamplerFeedbackTier() const noexcept;
 
     // PROTECTED_RESOURCE_SESSION_TYPE_COUNT
     UINT ProtectedResourceSessionTypeCount(UINT NodeIndex = 0) const;
-    
+
     // PROTECTED_RESOURCE_SESSION_TYPES
     std::vector<GUID> ProtectedResourceSessionTypes(UINT NodeIndex = 0) const;
-    
+
     // D3D12_OPTIONS8
-    BOOL UnalignedBlockTexturesSupported() const;
+    BOOL UnalignedBlockTexturesSupported() const noexcept;
 
     // D3D12_OPTIONS9
-    BOOL MeshShaderPipelineStatsSupported() const;
-    BOOL MeshShaderSupportsFullRangeRenderTargetArrayIndex() const;
-    BOOL AtomicInt64OnTypedResourceSupported() const;
-    BOOL AtomicInt64OnGroupSharedSupported() const;
-    BOOL DerivativesInMeshAndAmplificationShadersSupported() const;
-    D3D12_WAVE_MMA_TIER WaveMMATier() const;
+    BOOL MeshShaderPipelineStatsSupported() const noexcept;
+    BOOL MeshShaderSupportsFullRangeRenderTargetArrayIndex() const noexcept;
+    BOOL AtomicInt64OnTypedResourceSupported() const noexcept;
+    BOOL AtomicInt64OnGroupSharedSupported() const noexcept;
+    BOOL DerivativesInMeshAndAmplificationShadersSupported() const noexcept;
+    D3D12_WAVE_MMA_TIER WaveMMATier() const noexcept;
 
     // D3D12_OPTIONS10
-    BOOL VariableRateShadingSumCombinerSupported() const;
-    BOOL MeshShaderPerPrimitiveShadingRateSupported() const;
+    BOOL VariableRateShadingSumCombinerSupported() const noexcept;
+    BOOL MeshShaderPerPrimitiveShadingRateSupported() const noexcept;
 
     // D3D12_OPTIONS11
-    BOOL AtomicInt64OnDescriptorHeapResourceSupported() const;
+    BOOL AtomicInt64OnDescriptorHeapResourceSupported() const noexcept;
+
+    // D3D12_OPTIONS12
+    D3D12_TRI_STATE MSPrimitivesPipelineStatisticIncludesCulledPrimitives() const noexcept;
+    BOOL EnhancedBarriersSupported() const noexcept;
+    BOOL RelaxedFormatCastingSupported() const noexcept;
+
+    // D3D12_OPTIONS13
+    BOOL UnrestrictedBufferTextureCopyPitchSupported() const noexcept;
+    BOOL UnrestrictedVertexElementAlignmentSupported() const noexcept;
+    BOOL InvertedViewportHeightFlipsYSupported() const noexcept;
+    BOOL InvertedViewportDepthFlipsZSupported() const noexcept;
+    BOOL TextureCopyBetweenDimensionsSupported() const noexcept;
+    BOOL AlphaBlendFactorSupported() const noexcept;
+
+    // D3D12_OPTIONS14
+    BOOL AdvancedTextureOpsSupported() const noexcept;
+    BOOL WriteableMSAATexturesSupported() const noexcept;
+    BOOL IndependentFrontAndBackStencilRefMaskSupported() const noexcept;
+
+    // D3D12_OPTIONS15
+    BOOL TriangleFanSupported() const noexcept;
+    BOOL DynamicIndexBufferStripCutSupported() const noexcept;
 
 private: // Private structs and helpers declaration
     struct ProtectedResourceSessionTypesLocal : D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPES
@@ -4209,9 +4695,9 @@ private: // Private structs and helpers declaration
 
     // Helper funcion to decide the highest feature level
     HRESULT QueryHighestFeatureLevel();
-    
+
     // Helper function to initialize local protected resource session types structs
-    HRESULT QueryProtectedResourceSessionTypes(UINT NodeIndex, UINT Count); 
+    HRESULT QueryProtectedResourceSessionTypes(UINT NodeIndex, UINT Count);
 
 private: // Member data
     // Pointer to the underlying device
@@ -4246,7 +4732,11 @@ private: // Member data
     D3D12_FEATURE_DATA_D3D12_OPTIONS8 m_dOptions8;
     D3D12_FEATURE_DATA_D3D12_OPTIONS9 m_dOptions9;
     D3D12_FEATURE_DATA_D3D12_OPTIONS10 m_dOptions10;
-    D3D12_FEATURE_DATA_D3D12_OPTIONS11 m_dOptions11;   
+    D3D12_FEATURE_DATA_D3D12_OPTIONS11 m_dOptions11;
+    D3D12_FEATURE_DATA_D3D12_OPTIONS12 m_dOptions12;
+    D3D12_FEATURE_DATA_D3D12_OPTIONS13 m_dOptions13;
+    D3D12_FEATURE_DATA_D3D12_OPTIONS14 m_dOptions14;
+    D3D12_FEATURE_DATA_D3D12_OPTIONS15 m_dOptions15;
 };
 
 // Implementations for CD3DX12FeatureSupport functions
@@ -4254,7 +4744,7 @@ private: // Member data
 // Macro to set up a getter function for each entry in feature support data
 // The getter function will have the same name as the feature option name
 #define FEATURE_SUPPORT_GET(RETTYPE,FEATURE,OPTION) \
-inline RETTYPE CD3DX12FeatureSupport::OPTION() const \
+inline RETTYPE CD3DX12FeatureSupport::OPTION() const noexcept \
 { \
     return FEATURE.OPTION; \
 }
@@ -4262,7 +4752,7 @@ inline RETTYPE CD3DX12FeatureSupport::OPTION() const \
 // Macro to set up a getter function for each entry in feature support data
 // Also specifies the name for the function which can be different from the feature name
 #define FEATURE_SUPPORT_GET_NAME(RETTYPE,FEATURE,OPTION,NAME) \
-inline RETTYPE CD3DX12FeatureSupport::NAME() const \
+inline RETTYPE CD3DX12FeatureSupport::NAME() const noexcept \
 {\
     return FEATURE.OPTION; \
 }
@@ -4283,14 +4773,39 @@ inline RETTYPE CD3DX12FeatureSupport::NAME(UINT NodeIndex) const \
     return FEATURE[NodeIndex].OPTION; \
 }
 
-inline CD3DX12FeatureSupport::CD3DX12FeatureSupport()
+inline CD3DX12FeatureSupport::CD3DX12FeatureSupport() noexcept
 : m_pDevice(nullptr)
 , m_hStatus(E_INVALIDARG)
+, m_dOptions{}
+, m_eMaxFeatureLevel{}
+, m_dGPUVASupport{}
+, m_dShaderModel{}
+, m_dOptions1{}
+, m_dRootSignature{}
+, m_dOptions2{}
+, m_dShaderCache{}
+, m_dCommandQueuePriority{}
+, m_dOptions3{}
+, m_dExistingHeaps{}
+, m_dOptions4{}
+, m_dCrossNode{}
+, m_dOptions5{}
+, m_dDisplayable{}
+, m_dOptions6{}
+, m_dOptions7{}
+, m_dOptions8{}
+, m_dOptions9{}
+, m_dOptions10{}
+, m_dOptions11{}
+, m_dOptions12{}
+, m_dOptions13{}
+, m_dOptions14{}
+, m_dOptions15{}
 {}
 
 inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
 {
-    if (!pDevice) 
+    if (!pDevice)
     {
         m_hStatus = E_INVALIDARG;
         return m_hStatus;
@@ -4299,13 +4814,13 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
     m_pDevice = pDevice;
 
     // Initialize static feature support data structures
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &m_dOptions, sizeof(m_dOptions)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &m_dOptions, sizeof(m_dOptions))))
     {
         m_dOptions.DoublePrecisionFloatShaderOps = false;
         m_dOptions.OutputMergerLogicOp = false;
         m_dOptions.MinPrecisionSupport = D3D12_SHADER_MIN_PRECISION_SUPPORT_NONE;
         m_dOptions.TiledResourcesTier = D3D12_TILED_RESOURCES_TIER_NOT_SUPPORTED;
-        m_dOptions.ResourceBindingTier = (D3D12_RESOURCE_BINDING_TIER)0;
+        m_dOptions.ResourceBindingTier = static_cast<D3D12_RESOURCE_BINDING_TIER>(0);
         m_dOptions.PSSpecifiedStencilRefSupported = false;
         m_dOptions.TypedUAVLoadAdditionalFormats = false;
         m_dOptions.ROVsSupported = false;
@@ -4315,16 +4830,16 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
         m_dOptions.CrossNodeSharingTier = D3D12_CROSS_NODE_SHARING_TIER_NOT_SUPPORTED;
         m_dOptions.CrossAdapterRowMajorTextureSupported = false;
         m_dOptions.VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation = false;
-        m_dOptions.ResourceHeapTier = (D3D12_RESOURCE_HEAP_TIER)0;
+        m_dOptions.ResourceHeapTier = static_cast<D3D12_RESOURCE_HEAP_TIER>(0);
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT, &m_dGPUVASupport, sizeof(m_dGPUVASupport)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT, &m_dGPUVASupport, sizeof(m_dGPUVASupport))))
     {
         m_dGPUVASupport.MaxGPUVirtualAddressBitsPerProcess = 0;
         m_dGPUVASupport.MaxGPUVirtualAddressBitsPerResource = 0;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &m_dOptions1, sizeof(m_dOptions1)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &m_dOptions1, sizeof(m_dOptions1))))
     {
         m_dOptions1.WaveOps = false;
         m_dOptions1.WaveLaneCountMax = 0;
@@ -4334,18 +4849,18 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
         m_dOptions1.Int64ShaderOps = 0;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &m_dOptions2, sizeof(m_dOptions2)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &m_dOptions2, sizeof(m_dOptions2))))
     {
         m_dOptions2.DepthBoundsTestSupported = false;
         m_dOptions2.ProgrammableSamplePositionsTier = D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER_NOT_SUPPORTED;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_CACHE, &m_dShaderCache, sizeof(m_dShaderCache)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_CACHE, &m_dShaderCache, sizeof(m_dShaderCache))))
     {
         m_dShaderCache.SupportFlags = D3D12_SHADER_CACHE_SUPPORT_NONE;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, &m_dOptions3, sizeof(m_dOptions3)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, &m_dOptions3, sizeof(m_dOptions3))))
     {
         m_dOptions3.CopyQueueTimestampQueriesSupported = false;
         m_dOptions3.CastingFullyTypedFormatSupported = false;
@@ -4354,38 +4869,38 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
         m_dOptions3.BarycentricsSupported = false;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_EXISTING_HEAPS, &m_dExistingHeaps, sizeof(m_dExistingHeaps)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_EXISTING_HEAPS, &m_dExistingHeaps, sizeof(m_dExistingHeaps))))
     {
         m_dExistingHeaps.Supported = false;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &m_dOptions4, sizeof(m_dOptions4)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &m_dOptions4, sizeof(m_dOptions4))))
     {
         m_dOptions4.MSAA64KBAlignedTextureSupported = false;
         m_dOptions4.Native16BitShaderOpsSupported = false;
         m_dOptions4.SharedResourceCompatibilityTier = D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_0;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_CROSS_NODE, &m_dCrossNode, sizeof(m_dCrossNode)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_CROSS_NODE, &m_dCrossNode, sizeof(m_dCrossNode))))
     {
         m_dCrossNode.SharingTier = D3D12_CROSS_NODE_SHARING_TIER_NOT_SUPPORTED;
         m_dCrossNode.AtomicShaderInstructions = false;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &m_dOptions5, sizeof(m_dOptions5)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &m_dOptions5, sizeof(m_dOptions5))))
     {
         m_dOptions5.SRVOnlyTiledResourceTier3 = false;
         m_dOptions5.RenderPassesTier = D3D12_RENDER_PASS_TIER_0;
         m_dOptions5.RaytracingTier = D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_DISPLAYABLE, &m_dDisplayable, sizeof(m_dDisplayable)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_DISPLAYABLE, &m_dDisplayable, sizeof(m_dDisplayable))))
     {
         m_dDisplayable.DisplayableTexture = false;
         m_dDisplayable.SharedResourceCompatibilityTier = D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_0;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &m_dOptions6, sizeof(m_dOptions6)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &m_dOptions6, sizeof(m_dOptions6))))
     {
         m_dOptions6.AdditionalShadingRatesSupported = false;
         m_dOptions6.PerPrimitiveShadingRateSupportedWithViewportIndexing = false;
@@ -4394,18 +4909,18 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
         m_dOptions6.BackgroundProcessingSupported = false;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &m_dOptions7, sizeof(m_dOptions7)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &m_dOptions7, sizeof(m_dOptions7))))
     {
         m_dOptions7.MeshShaderTier = D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
         m_dOptions7.SamplerFeedbackTier = D3D12_SAMPLER_FEEDBACK_TIER_NOT_SUPPORTED;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS8, &m_dOptions8, sizeof(m_dOptions8)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS8, &m_dOptions8, sizeof(m_dOptions8))))
     {
         m_dOptions8.UnalignedBlockTexturesSupported = false;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS9, &m_dOptions9, sizeof(m_dOptions9)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS9, &m_dOptions9, sizeof(m_dOptions9))))
     {
         m_dOptions9.MeshShaderPipelineStatsSupported = false;
         m_dOptions9.MeshShaderSupportsFullRangeRenderTargetArrayIndex = false;
@@ -4415,15 +4930,45 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
         m_dOptions9.WaveMMATier = D3D12_WAVE_MMA_TIER_NOT_SUPPORTED;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS10, &m_dOptions10, sizeof(m_dOptions10)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS10, &m_dOptions10, sizeof(m_dOptions10))))
     {
         m_dOptions10.MeshShaderPerPrimitiveShadingRateSupported = false;
         m_dOptions10.VariableRateShadingSumCombinerSupported = false;
     }
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS11, &m_dOptions11, sizeof(m_dOptions11)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS11, &m_dOptions11, sizeof(m_dOptions11))))
     {
         m_dOptions11.AtomicInt64OnDescriptorHeapResourceSupported = false;
+    }
+
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &m_dOptions12, sizeof(m_dOptions12))))
+    {
+        m_dOptions12.MSPrimitivesPipelineStatisticIncludesCulledPrimitives = D3D12_TRI_STATE::D3D12_TRI_STATE_UNKNOWN;
+        m_dOptions12.EnhancedBarriersSupported = false;
+        m_dOptions12.RelaxedFormatCastingSupported = false;
+    }
+
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS13, &m_dOptions13, sizeof(m_dOptions13))))
+    {
+        m_dOptions13.UnrestrictedBufferTextureCopyPitchSupported = false;
+        m_dOptions13.UnrestrictedVertexElementAlignmentSupported = false;
+        m_dOptions13.InvertedViewportHeightFlipsYSupported = false;
+        m_dOptions13.InvertedViewportDepthFlipsZSupported = false;
+        m_dOptions13.TextureCopyBetweenDimensionsSupported = false;
+        m_dOptions13.AlphaBlendFactorSupported = false;
+    }
+
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS14, &m_dOptions14, sizeof(m_dOptions14))))
+    {
+        m_dOptions14.AdvancedTextureOpsSupported = false;
+        m_dOptions14.WriteableMSAATexturesSupported = false;
+        m_dOptions14.IndependentFrontAndBackStencilRefMaskSupported = false;
+    }
+
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS15, &m_dOptions15, sizeof(m_dOptions15))))
+    {
+        m_dOptions15.TriangleFanSupported = false;
+        m_dOptions15.DynamicIndexBufferStripCutSupported = false;
     }
 
     // Initialize per-node feature support data structures
@@ -4433,10 +4978,10 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
     m_dSerialization.resize(uNodeCount);
     m_dProtectedResourceSessionTypeCount.resize(uNodeCount);
     m_dProtectedResourceSessionTypes.resize(uNodeCount);
-    for (UINT NodeIndex = 0; NodeIndex < uNodeCount; NodeIndex++) 
+    for (UINT NodeIndex = 0; NodeIndex < uNodeCount; NodeIndex++)
     {
         m_dProtectedResourceSessionSupport[NodeIndex].NodeIndex = NodeIndex;
-        if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_PROTECTED_RESOURCE_SESSION_SUPPORT, &m_dProtectedResourceSessionSupport[NodeIndex], sizeof(m_dProtectedResourceSessionSupport[NodeIndex])))) 
+        if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_PROTECTED_RESOURCE_SESSION_SUPPORT, &m_dProtectedResourceSessionSupport[NodeIndex], sizeof(m_dProtectedResourceSessionSupport[NodeIndex]))))
         {
             m_dProtectedResourceSessionSupport[NodeIndex].Support = D3D12_PROTECTED_RESOURCE_SESSION_SUPPORT_FLAG_NONE;
         }
@@ -4446,13 +4991,13 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
         {
             D3D12_FEATURE_DATA_ARCHITECTURE dArchLocal = {};
             dArchLocal.NodeIndex = NodeIndex;
-            if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &dArchLocal, sizeof(dArchLocal)))) 
+            if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &dArchLocal, sizeof(dArchLocal))))
             {
                 dArchLocal.TileBasedRenderer = false;
                 dArchLocal.UMA = false;
                 dArchLocal.CacheCoherentUMA = false;
             }
-            
+
             m_dArchitecture1[NodeIndex].TileBasedRenderer = dArchLocal.TileBasedRenderer;
             m_dArchitecture1[NodeIndex].UMA = dArchLocal.UMA;
             m_dArchitecture1[NodeIndex].CacheCoherentUMA = dArchLocal.CacheCoherentUMA;
@@ -4460,13 +5005,13 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
         }
 
         m_dSerialization[NodeIndex].NodeIndex = NodeIndex;
-        if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_SERIALIZATION, &m_dSerialization[NodeIndex], sizeof(m_dSerialization[NodeIndex])))) 
+        if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_SERIALIZATION, &m_dSerialization[NodeIndex], sizeof(m_dSerialization[NodeIndex]))))
         {
             m_dSerialization[NodeIndex].HeapSerializationTier = D3D12_HEAP_SERIALIZATION_TIER_0;
         }
 
         m_dProtectedResourceSessionTypeCount[NodeIndex].NodeIndex = NodeIndex;
-        if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_PROTECTED_RESOURCE_SESSION_TYPE_COUNT, &m_dProtectedResourceSessionTypeCount[NodeIndex], sizeof(m_dProtectedResourceSessionTypeCount[NodeIndex])))) 
+        if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_PROTECTED_RESOURCE_SESSION_TYPE_COUNT, &m_dProtectedResourceSessionTypeCount[NodeIndex], sizeof(m_dProtectedResourceSessionTypeCount[NodeIndex]))))
         {
             m_dProtectedResourceSessionTypeCount[NodeIndex].Count = 0;
         }
@@ -4477,22 +5022,22 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
     }
 
     // Initialize features that requires highest version check
-    if (FAILED(m_hStatus = QueryHighestShaderModel())) 
+    if (FAILED(m_hStatus = QueryHighestShaderModel()))
     {
         return m_hStatus;
     }
 
-    if (FAILED(m_hStatus = QueryHighestRootSignatureVersion())) 
+    if (FAILED(m_hStatus = QueryHighestRootSignatureVersion()))
     {
         return m_hStatus;
     }
 
     // Initialize Feature Levels data
-    if (FAILED(m_hStatus = QueryHighestFeatureLevel())) 
+    if (FAILED(m_hStatus = QueryHighestFeatureLevel()))
     {
         return m_hStatus;
     }
-    
+
     return m_hStatus;
 }
 
@@ -4512,7 +5057,7 @@ FEATURE_SUPPORT_GET(BOOL, m_dOptions, VPAndRTArrayIndexFromAnyShaderFeedingRaste
 FEATURE_SUPPORT_GET(D3D12_RESOURCE_HEAP_TIER, m_dOptions, ResourceHeapTier);
 
 // Special procedure for handling caps that is also part of other features
-inline D3D12_CROSS_NODE_SHARING_TIER CD3DX12FeatureSupport::CrossNodeSharingTier() const
+inline D3D12_CROSS_NODE_SHARING_TIER CD3DX12FeatureSupport::CrossNodeSharingTier() const noexcept
 {
     if (m_dCrossNode.SharingTier > D3D12_CROSS_NODE_SHARING_TIER_NOT_SUPPORTED)
     {
@@ -4524,13 +5069,13 @@ inline D3D12_CROSS_NODE_SHARING_TIER CD3DX12FeatureSupport::CrossNodeSharingTier
     }
 }
 
-inline UINT CD3DX12FeatureSupport::MaxGPUVirtualAddressBitsPerResource() const
+inline UINT CD3DX12FeatureSupport::MaxGPUVirtualAddressBitsPerResource() const noexcept
 {
-    if (m_dOptions.MaxGPUVirtualAddressBitsPerResource > 0) 
+    if (m_dOptions.MaxGPUVirtualAddressBitsPerResource > 0)
     {
         return m_dOptions.MaxGPUVirtualAddressBitsPerResource;
     }
-    else 
+    else
     {
         return m_dGPUVASupport.MaxGPUVirtualAddressBitsPerResource;
     }
@@ -4541,13 +5086,13 @@ inline UINT CD3DX12FeatureSupport::MaxGPUVirtualAddressBitsPerResource() const
 
 // 2: Feature Levels
 // Simply returns the highest supported feature level
-inline D3D_FEATURE_LEVEL CD3DX12FeatureSupport::MaxSupportedFeatureLevel() const
+inline D3D_FEATURE_LEVEL CD3DX12FeatureSupport::MaxSupportedFeatureLevel() const noexcept
 {
     return m_eMaxFeatureLevel;
 }
 
 // 3: Feature Format Support
-inline HRESULT CD3DX12FeatureSupport::FormatSupport(DXGI_FORMAT Format, D3D12_FORMAT_SUPPORT1& Support1, D3D12_FORMAT_SUPPORT2& Support2)
+inline HRESULT CD3DX12FeatureSupport::FormatSupport(DXGI_FORMAT Format, D3D12_FORMAT_SUPPORT1& Support1, D3D12_FORMAT_SUPPORT2& Support2) const
 {
     D3D12_FEATURE_DATA_FORMAT_SUPPORT dFormatSupport;
     dFormatSupport.Format = Format;
@@ -4557,12 +5102,12 @@ inline HRESULT CD3DX12FeatureSupport::FormatSupport(DXGI_FORMAT Format, D3D12_FO
 
     Support1 = dFormatSupport.Support1;
     Support2 = dFormatSupport.Support2; // Two outputs. Probably better just to take in the struct as an argument?
-    
+
     return result;
 }
 
 // 4: Multisample Quality Levels
-inline HRESULT CD3DX12FeatureSupport::MultisampleQualityLevels(DXGI_FORMAT Format, UINT SampleCount, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS Flags, UINT& NumQualityLevels)
+inline HRESULT CD3DX12FeatureSupport::MultisampleQualityLevels(DXGI_FORMAT Format, UINT SampleCount, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS Flags, UINT& NumQualityLevels) const
 {
     D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS dMultisampleQualityLevels;
     dMultisampleQualityLevels.Format = Format;
@@ -4570,12 +5115,12 @@ inline HRESULT CD3DX12FeatureSupport::MultisampleQualityLevels(DXGI_FORMAT Forma
     dMultisampleQualityLevels.Flags = Flags;
 
     HRESULT result = m_pDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &dMultisampleQualityLevels, sizeof(D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS));
-    
-    if (SUCCEEDED(result)) 
+
+    if (SUCCEEDED(result))
     {
         NumQualityLevels = dMultisampleQualityLevels.NumQualityLevels;
-    } 
-    else 
+    }
+    else
     {
         NumQualityLevels = 0;
     }
@@ -4584,7 +5129,7 @@ inline HRESULT CD3DX12FeatureSupport::MultisampleQualityLevels(DXGI_FORMAT Forma
 }
 
 // 5: Format Info
-inline HRESULT CD3DX12FeatureSupport::FormatInfo(DXGI_FORMAT Format, UINT8& PlaneCount)
+inline HRESULT CD3DX12FeatureSupport::FormatInfo(DXGI_FORMAT Format, UINT8& PlaneCount) const
 {
     D3D12_FEATURE_DATA_FORMAT_INFO dFormatInfo;
     dFormatInfo.Format = Format;
@@ -4594,7 +5139,7 @@ inline HRESULT CD3DX12FeatureSupport::FormatInfo(DXGI_FORMAT Format, UINT8& Plan
     {
         PlaneCount = 0;
     }
-    else 
+    else
     {
         PlaneCount = dFormatInfo.PlaneCount;
     }
@@ -4606,7 +5151,7 @@ inline HRESULT CD3DX12FeatureSupport::FormatInfo(DXGI_FORMAT Format, UINT8& Plan
 FEATURE_SUPPORT_GET(UINT, m_dGPUVASupport, MaxGPUVirtualAddressBitsPerProcess);
 
 // 7: Shader Model
-inline D3D_SHADER_MODEL CD3DX12FeatureSupport::HighestShaderModel() const
+inline D3D_SHADER_MODEL CD3DX12FeatureSupport::HighestShaderModel() const noexcept
 {
     return m_dShaderModel.HighestShaderModel;
 }
@@ -4626,7 +5171,7 @@ inline D3D12_PROTECTED_RESOURCE_SESSION_SUPPORT_FLAGS CD3DX12FeatureSupport::Pro
 }
 
 // 12: Root Signature
-inline D3D_ROOT_SIGNATURE_VERSION CD3DX12FeatureSupport::HighestRootSignatureVersion() const
+inline D3D_ROOT_SIGNATURE_VERSION CD3DX12FeatureSupport::HighestRootSignatureVersion() const noexcept
 {
     return m_dRootSignature.HighestVersion;
 }
@@ -4651,7 +5196,7 @@ inline BOOL CD3DX12FeatureSupport::CommandQueuePrioritySupported(D3D12_COMMAND_L
     m_dCommandQueuePriority.CommandListType = CommandListType;
     m_dCommandQueuePriority.Priority = Priority;
 
-    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_COMMAND_QUEUE_PRIORITY, &m_dCommandQueuePriority, sizeof(D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY)))) 
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_COMMAND_QUEUE_PRIORITY, &m_dCommandQueuePriority, sizeof(D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY))))
     {
         return false;
     }
@@ -4699,7 +5244,7 @@ FEATURE_SUPPORT_GET(BOOL, m_dOptions6, BackgroundProcessingSupported);
 
 // 31: Query Meta Command
 // Keep the original call routine
-inline HRESULT CD3DX12FeatureSupport::QueryMetaCommand(D3D12_FEATURE_DATA_QUERY_META_COMMAND& dQueryMetaCommand) 
+inline HRESULT CD3DX12FeatureSupport::QueryMetaCommand(D3D12_FEATURE_DATA_QUERY_META_COMMAND& dQueryMetaCommand) const
 {
     return m_pDevice->CheckFeatureSupport(D3D12_FEATURE_QUERY_META_COMMAND, &dQueryMetaCommand, sizeof(D3D12_FEATURE_DATA_QUERY_META_COMMAND));
 }
@@ -4732,6 +5277,28 @@ FEATURE_SUPPORT_GET(BOOL, m_dOptions10, MeshShaderPerPrimitiveShadingRateSupport
 // 40: Options11
 FEATURE_SUPPORT_GET(BOOL, m_dOptions11, AtomicInt64OnDescriptorHeapResourceSupported);
 
+// 41: Options12
+FEATURE_SUPPORT_GET(D3D12_TRI_STATE, m_dOptions12, MSPrimitivesPipelineStatisticIncludesCulledPrimitives);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions12, EnhancedBarriersSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions12, RelaxedFormatCastingSupported);
+
+// 42: Options13
+FEATURE_SUPPORT_GET(BOOL, m_dOptions13, UnrestrictedBufferTextureCopyPitchSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions13, UnrestrictedVertexElementAlignmentSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions13, InvertedViewportHeightFlipsYSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions13, InvertedViewportDepthFlipsZSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions13, TextureCopyBetweenDimensionsSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions13, AlphaBlendFactorSupported);
+
+// 43: Options14
+FEATURE_SUPPORT_GET(BOOL, m_dOptions14, AdvancedTextureOpsSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions14, WriteableMSAATexturesSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions14, IndependentFrontAndBackStencilRefMaskSupported);
+
+// 44: Options15
+FEATURE_SUPPORT_GET(BOOL, m_dOptions15, TriangleFanSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions15, DynamicIndexBufferStripCutSupported);
+
 // Helper function to decide the highest shader model supported by the system
 // Stores the result in m_dShaderModel
 // Must be updated whenever a new shader model is added to the d3d12.h header
@@ -4740,8 +5307,9 @@ inline HRESULT CD3DX12FeatureSupport::QueryHighestShaderModel()
     // Check support in descending order
     HRESULT result;
 
-    D3D_SHADER_MODEL allModelVersions[] = 
+    const D3D_SHADER_MODEL allModelVersions[] =
     {
+        D3D_SHADER_MODEL_6_8,
         D3D_SHADER_MODEL_6_7,
         D3D_SHADER_MODEL_6_6,
         D3D_SHADER_MODEL_6_5,
@@ -4752,27 +5320,26 @@ inline HRESULT CD3DX12FeatureSupport::QueryHighestShaderModel()
         D3D_SHADER_MODEL_6_0,
         D3D_SHADER_MODEL_5_1
     };
+    constexpr size_t numModelVersions = sizeof(allModelVersions) / sizeof(D3D_SHADER_MODEL);
 
-    UINT numModelVersions = sizeof(allModelVersions) / sizeof(D3D_SHADER_MODEL);
-
-    for (UINT i = 0; i < numModelVersions; i++) 
+    for (size_t i = 0; i < numModelVersions; i++)
     {
         m_dShaderModel.HighestShaderModel = allModelVersions[i];
         result = m_pDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &m_dShaderModel, sizeof(D3D12_FEATURE_DATA_SHADER_MODEL));
-        if (result != E_INVALIDARG) 
+        if (result != E_INVALIDARG)
         {
             // Indicates that the version is recognizable by the runtime and stored in the struct
             // Also terminate on unexpected error code
-            if (FAILED(result)) 
+            if (FAILED(result))
             {
-                m_dShaderModel.HighestShaderModel = (D3D_SHADER_MODEL)0;
+                m_dShaderModel.HighestShaderModel = static_cast<D3D_SHADER_MODEL>(0);
             }
             return result;
         }
     }
 
     // Shader model may not be supported. Continue the rest initializations
-    m_dShaderModel.HighestShaderModel = (D3D_SHADER_MODEL)0;
+    m_dShaderModel.HighestShaderModel = static_cast<D3D_SHADER_MODEL>(0);
     return S_OK;
 }
 
@@ -4782,23 +5349,23 @@ inline HRESULT CD3DX12FeatureSupport::QueryHighestRootSignatureVersion()
 {
     HRESULT result;
 
-    D3D_ROOT_SIGNATURE_VERSION allRootSignatureVersions[] = 
+    const D3D_ROOT_SIGNATURE_VERSION allRootSignatureVersions[] =
     {
         D3D_ROOT_SIGNATURE_VERSION_1_1,
         D3D_ROOT_SIGNATURE_VERSION_1_0,
         D3D_ROOT_SIGNATURE_VERSION_1,
     };
-    UINT numRootSignatureVersions = sizeof(allRootSignatureVersions) / sizeof(D3D_ROOT_SIGNATURE_VERSION);
+    constexpr size_t numRootSignatureVersions = sizeof(allRootSignatureVersions) / sizeof(D3D_ROOT_SIGNATURE_VERSION);
 
-    for (UINT i = 0; i < numRootSignatureVersions; i++) 
+    for (size_t i = 0; i < numRootSignatureVersions; i++)
     {
         m_dRootSignature.HighestVersion = allRootSignatureVersions[i];
         result = m_pDevice->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &m_dRootSignature, sizeof(D3D12_FEATURE_DATA_ROOT_SIGNATURE));
-        if (result != E_INVALIDARG) 
+        if (result != E_INVALIDARG)
         {
-            if (FAILED(result)) 
+            if (FAILED(result))
             {
-                m_dRootSignature.HighestVersion = (D3D_ROOT_SIGNATURE_VERSION)0;
+                m_dRootSignature.HighestVersion = static_cast<D3D_ROOT_SIGNATURE_VERSION>(0);
             }
             // If succeeded, the highest version is already written into the member struct
             return result;
@@ -4806,7 +5373,7 @@ inline HRESULT CD3DX12FeatureSupport::QueryHighestRootSignatureVersion()
     }
 
     // No version left. Set to invalid value and continue.
-    m_dRootSignature.HighestVersion = (D3D_ROOT_SIGNATURE_VERSION)0;
+    m_dRootSignature.HighestVersion = static_cast<D3D_ROOT_SIGNATURE_VERSION>(0);
     return S_OK;
 }
 
@@ -4817,7 +5384,7 @@ inline HRESULT CD3DX12FeatureSupport::QueryHighestFeatureLevel()
 
     // Check against a list of all feature levels present in d3dcommon.h
     // Needs to be updated for future feature levels
-    D3D_FEATURE_LEVEL allLevels[] = 
+    const D3D_FEATURE_LEVEL allLevels[] =
     {
         D3D_FEATURE_LEVEL_12_2,
         D3D_FEATURE_LEVEL_12_1,
@@ -4833,20 +5400,20 @@ inline HRESULT CD3DX12FeatureSupport::QueryHighestFeatureLevel()
     };
 
     D3D12_FEATURE_DATA_FEATURE_LEVELS dFeatureLevel;
-    dFeatureLevel.NumFeatureLevels = sizeof(allLevels) / sizeof(D3D_FEATURE_LEVEL);
+    dFeatureLevel.NumFeatureLevels = static_cast<UINT>(sizeof(allLevels) / sizeof(D3D_FEATURE_LEVEL));
     dFeatureLevel.pFeatureLevelsRequested = allLevels;
 
     result = m_pDevice->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &dFeatureLevel, sizeof(D3D12_FEATURE_DATA_FEATURE_LEVELS));
-    if (SUCCEEDED(result)) 
+    if (SUCCEEDED(result))
     {
         m_eMaxFeatureLevel = dFeatureLevel.MaxSupportedFeatureLevel;
-    } 
-    else 
+    }
+    else
     {
-        m_eMaxFeatureLevel = (D3D_FEATURE_LEVEL)0;
+        m_eMaxFeatureLevel = static_cast<D3D_FEATURE_LEVEL>(0);
 
-        if (result == DXGI_ERROR_UNSUPPORTED) 
-        { 
+        if (result == DXGI_ERROR_UNSUPPORTED)
+        {
             // Indicates that none supported. Continue initialization
             result = S_OK;
         }
@@ -4880,7 +5447,7 @@ inline HRESULT CD3DX12FeatureSupport::QueryProtectedResourceSessionTypes(UINT No
 
 // end CD3DX12FeatureSupport
 
-#endif // #ifndef D3DX12_NO_CHECK_FEATURE_SUPPORT_CLASS
+#endif // !D3DX12_NO_CHECK_FEATURE_SUPPORT_CLASS
 
 #undef D3DX12_COM_PTR
 #undef D3DX12_COM_PTR_GET
@@ -4889,5 +5456,4 @@ inline HRESULT CD3DX12FeatureSupport::QueryProtectedResourceSessionTypes(UINT No
 #endif // defined( __cplusplus )
 
 #endif //__D3DX12_H__
-
 
