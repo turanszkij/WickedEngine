@@ -18,7 +18,7 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 	float step = hei + 2;
 
 	typeComboBox.Create("Force Field type: ");
-	typeComboBox.SetPos(XMFLOAT2(x, y += step));
+	typeComboBox.SetPos(XMFLOAT2(x, y));
 	typeComboBox.SetSize(XMFLOAT2(200, hei));
 	typeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);

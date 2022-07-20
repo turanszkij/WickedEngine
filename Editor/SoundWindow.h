@@ -14,7 +14,6 @@ public:
 
 	wi::gui::ComboBox reverbComboBox;
 	wi::gui::Label filenameLabel;
-	wi::gui::TextInputField nameField;
 	wi::gui::Button playstopButton;
 	wi::gui::CheckBox loopedCheckbox;
 	wi::gui::CheckBox reverbCheckbox;

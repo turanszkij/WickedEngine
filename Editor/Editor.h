@@ -40,7 +40,16 @@ class Editor;
 class EditorComponent : public wi::RenderPath2D
 {
 private:
-	wi::Resource pointLightTex, spotLightTex, dirLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
+	wi::Resource pointLightTex;
+	wi::Resource spotLightTex;
+	wi::Resource dirLightTex;
+	wi::Resource decalTex;
+	wi::Resource forceFieldTex;
+	wi::Resource emitterTex;
+	wi::Resource hairTex;
+	wi::Resource cameraTex;
+	wi::Resource armatureTex;
+	wi::Resource soundTex;
 public:
 	MaterialWindow materialWnd;
 	PostprocessWindow postprocessWnd;

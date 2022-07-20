@@ -60,26 +60,9 @@ void SoundWindow::Create(EditorComponent* _editor)
 	y += step;
 
 	filenameLabel.Create("Filename");
-	filenameLabel.SetPos(XMFLOAT2(x, y += step));
+	filenameLabel.SetPos(XMFLOAT2(x, y));
 	filenameLabel.SetSize(XMFLOAT2(400, hei));
 	AddWidget(&filenameLabel);
-
-	nameField.Create("SoundName");
-	nameField.SetTooltip("Enter a sound name to identify this entity...");
-	nameField.SetPos(XMFLOAT2(x, y += step));
-	nameField.SetSize(XMFLOAT2(300, hei));
-	nameField.OnInputAccepted([=](wi::gui::EventArgs args) {
-		NameComponent* name = editor->GetCurrentScene().names.GetComponent(entity);
-		if (name == nullptr)
-		{
-			name = &editor->GetCurrentScene().names.Create(entity);
-		}
-		*name = args.sValue;
-
-		editor->RefreshEntityTree();
-	});
-	AddWidget(&nameField);
-	nameField.SetEnabled(false);
 
 	playstopButton.Create("Play");
 	playstopButton.SetTooltip("Play/Stop selected sound instance.");
@@ -201,15 +184,6 @@ void SoundWindow::SetEntity(Entity entity)
 	if (sound != nullptr)
 	{
 		filenameLabel.SetText(sound->filename);
-		if (name == nullptr)
-		{
-			nameField.SetText("Enter a sound name...");
-		}
-		else
-		{
-			nameField.SetText(name->name);
-		}
-		nameField.SetEnabled(true);
 		playstopButton.SetEnabled(true);
 		loopedCheckbox.SetEnabled(true);
 		loopedCheckbox.SetCheck(sound->IsLooped());
@@ -236,8 +210,6 @@ void SoundWindow::SetEntity(Entity entity)
 	else
 	{
 		filenameLabel.SetText("");
-		nameField.SetText("");
-		nameField.SetEnabled(false);
 		playstopButton.SetEnabled(false);
 		loopedCheckbox.SetEnabled(false);
 		reverbCheckbox.SetEnabled(false);

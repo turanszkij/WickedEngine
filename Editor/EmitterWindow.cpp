@@ -18,23 +18,8 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	float itemheight = 18;
 	float step = itemheight + 2;
 
-
-	emitterNameField.Create("EmitterName");
-	emitterNameField.SetPos(XMFLOAT2(x, y));
-	emitterNameField.SetSize(XMFLOAT2(300, itemheight));
-	emitterNameField.OnInputAccepted([=](wi::gui::EventArgs args) {
-		NameComponent* name = editor->GetCurrentScene().names.GetComponent(entity);
-		if (name != nullptr)
-		{
-			*name = args.sValue;
-
-			editor->RefreshEntityTree();
-		}
-	});
-	AddWidget(&emitterNameField);
-
 	restartButton.Create("Restart Emitter");
-	restartButton.SetPos(XMFLOAT2(x + 160, y));
+	restartButton.SetPos(XMFLOAT2(x, y));
 	restartButton.SetSize(XMFLOAT2(150, itemheight));
 	restartButton.OnClick([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -750,7 +735,6 @@ void EmitterWindow::UpdateData()
 		}
 	}
 
-	NameComponent* name = scene.names.GetComponent(entity);
 	NameComponent* meshName = scene.names.GetComponent(emitter->meshID);
 
 	std::string ss;
@@ -766,5 +750,4 @@ void EmitterWindow::UpdateData()
 
 	infoLabel.SetText(ss);
 
-	emitterNameField.SetText(name->name);
 }

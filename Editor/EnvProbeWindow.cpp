@@ -51,7 +51,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 	refreshButton.Create("Refresh");
 	refreshButton.SetTooltip("Re-renders the selected probe.");
-	refreshButton.SetPos(XMFLOAT2(x + 120, y));
+	refreshButton.SetPos(XMFLOAT2(x, y+= step));
 	refreshButton.SetEnabled(false);
 	refreshButton.OnClick([&](wi::gui::EventArgs args) {
 		EnvironmentProbeComponent* probe = editor->GetCurrentScene().probes.GetComponent(entity);
@@ -64,7 +64,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 	refreshAllButton.Create("Refresh All");
 	refreshAllButton.SetTooltip("Re-renders all probes in the scene.");
-	refreshAllButton.SetPos(XMFLOAT2(x + 240, y));
+	refreshAllButton.SetPos(XMFLOAT2(x + 120, y));
 	refreshAllButton.SetEnabled(true);
 	refreshAllButton.OnClick([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();

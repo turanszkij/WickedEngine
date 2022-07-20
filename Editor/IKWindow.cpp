@@ -18,15 +18,9 @@ void IKWindow::Create(EditorComponent* _editor)
 	float hei = 18;
 	float step = hei + 2;
 
-	createButton.Create("Create");
-	createButton.SetTooltip("Create/Remove IK Component to selected entity");
-	createButton.SetPos(XMFLOAT2(x, y));
-	createButton.SetSize(XMFLOAT2(siz, hei));
-	AddWidget(&createButton);
-
 	targetCombo.Create("Target: ");
 	targetCombo.SetSize(XMFLOAT2(siz, hei));
-	targetCombo.SetPos(XMFLOAT2(x, y += step));
+	targetCombo.SetPos(XMFLOAT2(x, y));
 	targetCombo.SetEnabled(false);
 	targetCombo.OnSelect([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
@@ -113,26 +107,4 @@ void IKWindow::SetEntity(Entity entity)
 		SetEnabled(false);
 	}
 
-	const TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
-	if (transform != nullptr)
-	{
-		createButton.SetEnabled(true);
-
-		if (ik == nullptr)
-		{
-			createButton.SetText("Create");
-			createButton.OnClick([=](wi::gui::EventArgs args) {
-				editor->GetCurrentScene().inverse_kinematics.Create(entity).chain_length = 1;
-				SetEntity(entity);
-				});
-		}
-		else
-		{
-			createButton.SetText("Remove");
-			createButton.OnClick([=](wi::gui::EventArgs args) {
-				editor->GetCurrentScene().inverse_kinematics.Remove_KeepSorted(entity);
-				SetEntity(entity);
-				});
-		}
-	}
 }

@@ -18,7 +18,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 
 	meshComboBox.Create("Mesh: ");
 	meshComboBox.SetSize(XMFLOAT2(300, hei));
-	meshComboBox.SetPos(XMFLOAT2(x, y += step));
+	meshComboBox.SetPos(XMFLOAT2(x, y));
 	meshComboBox.SetEnabled(false);
 	meshComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		auto hair = GetHair();
