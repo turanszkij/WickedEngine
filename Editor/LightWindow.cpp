@@ -132,52 +132,6 @@ void LightWindow::Create(EditorComponent* _editor)
 	staticCheckBox.SetTooltip("Static lights will only be used for baking into lightmaps.");
 	AddWidget(&staticCheckBox);
 
-	addLightButton.Create("Add Light");
-	addLightButton.SetPos(XMFLOAT2(x, y += step));
-	addLightButton.SetSize(XMFLOAT2(150, hei));
-	addLightButton.OnClick([=](wi::gui::EventArgs args) {
-		Entity entity = editor->GetCurrentScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
-		{
-			light->type = (LightComponent::LightType)typeSelectorComboBox.GetSelected();
-
-			switch (light->type)
-			{
-			case LightComponent::LightType::DIRECTIONAL:
-				light->intensity = 10;
-				break;
-			case LightComponent::LightType::SPOT:
-				light->intensity = 100;
-				break;
-			case LightComponent::LightType::POINT:
-				light->intensity = 20;
-				break;
-			default:
-				break;
-			}
-
-			wi::Archive& archive = editor->AdvanceHistory();
-			archive << EditorComponent::HISTORYOP_ADD;
-			editor->RecordSelection(archive);
-
-			editor->ClearSelected();
-			editor->AddSelected(entity);
-
-			editor->RecordSelection(archive);
-			editor->RecordAddedEntity(archive, entity);
-
-			editor->RefreshEntityTree();
-			SetEntity(entity);
-		}
-		else
-		{
-			assert(0);
-		}
-	});
-	addLightButton.SetTooltip("Add a light to the scene.");
-	AddWidget(&addLightButton);
-
 
 	colorPicker.Create("Light Color", wi::gui::Window::WindowControls::NONE);
 	colorPicker.SetPos(XMFLOAT2(10, 0));

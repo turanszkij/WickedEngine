@@ -59,36 +59,6 @@ void SoundWindow::Create(EditorComponent* _editor)
 
 	y += step;
 
-	addButton.Create("Add Sound");
-	addButton.SetTooltip("Add a sound file to the scene.");
-	addButton.SetPos(XMFLOAT2(x, y += step));
-	addButton.SetSize(XMFLOAT2(80, hei));
-	addButton.OnClick([=](wi::gui::EventArgs args) {
-		wi::helper::FileDialogParams params;
-		params.type = wi::helper::FileDialogParams::OPEN;
-		params.description = "Sound";
-		params.extensions = wi::resourcemanager::GetSupportedSoundExtensions();
-		wi::helper::FileDialog(params, [=](std::string fileName) {
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				Entity entity = editor->GetCurrentScene().Entity_CreateSound("editorSound", fileName);
-
-				wi::Archive& archive = editor->AdvanceHistory();
-				archive << EditorComponent::HISTORYOP_ADD;
-				editor->RecordSelection(archive);
-
-				editor->ClearSelected();
-				editor->AddSelected(entity);
-
-				editor->RecordSelection(archive);
-				editor->RecordAddedEntity(archive, entity);
-
-				editor->RefreshEntityTree();
-				SetEntity(entity);
-			});
-		});
-	});
-	AddWidget(&addButton);
-
 	filenameLabel.Create("Filename");
 	filenameLabel.SetPos(XMFLOAT2(x, y += step));
 	filenameLabel.SetSize(XMFLOAT2(400, hei));

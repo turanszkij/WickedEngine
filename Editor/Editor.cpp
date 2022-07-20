@@ -803,6 +803,10 @@ void EditorComponent::Load()
 	newCombo.AddItem("Force", 6);
 	newCombo.AddItem("Decal", 7);
 	newCombo.AddItem("Sound", 8);
+	newCombo.AddItem("Weather", 9);
+	newCombo.AddItem("Emitter", 10);
+	newCombo.AddItem("HairParticle", 11);
+	newCombo.AddItem("Camera", 12);
 	newCombo.OnSelect([&](wi::gui::EventArgs args) {
 		newCombo.SetSelectedWithoutCallback(0);
 		const EditorScene& editorscene = GetCurrentEditorScene();
@@ -816,34 +820,34 @@ void EditorComponent::Load()
 		switch (args.userdata)
 		{
 		case 0:
-			entity = scene.Entity_CreateTransform("editorTransform");
+			entity = scene.Entity_CreateTransform("transform");
 			break;
 		case 1:
-			entity = scene.Entity_CreateMaterial("editorMaterial");
+			entity = scene.Entity_CreateMaterial("material");
 			break;
 		case 2:
-			entity = scene.Entity_CreateLight("editorPointLight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
+			entity = scene.Entity_CreateLight("pointlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
 			scene.lights.GetComponent(entity)->type = LightComponent::POINT;
 			scene.lights.GetComponent(entity)->intensity = 20;
 			break;
 		case 3:
-			entity = scene.Entity_CreateLight("editorSpotLight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
+			entity = scene.Entity_CreateLight("spotlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
 			scene.lights.GetComponent(entity)->type = LightComponent::SPOT;
 			scene.lights.GetComponent(entity)->intensity = 100;
 			break;
 		case 4:
-			entity = scene.Entity_CreateLight("editorDirectionalLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
+			entity = scene.Entity_CreateLight("dirlight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
 			scene.lights.GetComponent(entity)->type = LightComponent::DIRECTIONAL;
 			scene.lights.GetComponent(entity)->intensity = 10;
 			break;
 		case 5:
-			entity = scene.Entity_CreateEnvironmentProbe("editorEnvProbe", in_front_of_camera);
+			entity = scene.Entity_CreateEnvironmentProbe("envprobe", in_front_of_camera);
 			break;
 		case 6:
-			entity = scene.Entity_CreateForce("editorForce");
+			entity = scene.Entity_CreateForce("force");
 			break;
 		case 7:
-			entity = scene.Entity_CreateDecal("editorDecal", "images/logo_small.png");
+			entity = scene.Entity_CreateDecal("decal", "images/logo_small.png");
 			break;
 		case 8:
 			{
@@ -871,6 +875,22 @@ void EditorComponent::Load()
 					});
 				return;
 			}
+			break;
+		case 9:
+			entity = CreateEntity();
+			scene.weathers.Create(entity);
+			scene.names.Create(entity) = "weather";
+			break;
+		case 10:
+			entity = scene.Entity_CreateEmitter("emitter");
+			break;
+		case 11:
+			entity = scene.Entity_CreateHair("hair");
+			break;
+		case 12:
+			entity = scene.Entity_CreateCamera("camera", camera.width, camera.height);
+			*scene.cameras.GetComponent(entity) = camera;
+			*scene.transforms.GetComponent(entity) = editorscene.camera_transform;
 			break;
 		default:
 			break;
@@ -1756,6 +1776,7 @@ void EditorComponent::Update(float dt)
 		transformWnd.SetEntity(INVALID_ENTITY);
 		layerWnd.SetEntity(INVALID_ENTITY);
 		nameWnd.SetEntity(INVALID_ENTITY);
+		weatherWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1787,6 +1808,7 @@ void EditorComponent::Update(float dt)
 		transformWnd.SetEntity(picked.entity);
 		layerWnd.SetEntity(picked.entity);
 		nameWnd.SetEntity(picked.entity);
+		weatherWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{
@@ -1857,7 +1879,7 @@ void EditorComponent::Update(float dt)
 	// Follow camera proxy:
 	if (cameraWnd.followCheckBox.IsEnabled() && cameraWnd.followCheckBox.GetCheck())
 	{
-		TransformComponent* proxy = scene.transforms.GetComponent(cameraWnd.proxy);
+		TransformComponent* proxy = scene.transforms.GetComponent(cameraWnd.entity);
 		if (proxy != nullptr)
 		{
 			editorscene.camera_transform.Lerp(editorscene.camera_transform, *proxy, 1.0f - cameraWnd.followSlider.GetValue());
@@ -2608,24 +2630,37 @@ void EditorComponent::RefreshEntityTree()
 		entitytree_added_items.insert(entity);
 	}
 
+	// Add weathers:
+	for (size_t i = 0; i < scene.weathers.GetCount(); ++i)
+	{
+		Entity entity = scene.weathers.GetEntity(i);
+		if (entitytree_added_items.count(entity) != 0)
+		{
+			continue;
+		}
+
+		wi::gui::TreeList::Item item;
+		item.userdata = entity;
+		item.selected = IsSelected(entity);
+		item.open = entitytree_opened_items.count(entity) != 0;
+		const NameComponent* name = scene.names.GetComponent(entity);
+		item.name = name == nullptr ? std::to_string(entity) : name->name;
+		entityTree.AddItem(item);
+
+		entitytree_added_items.insert(entity);
+	}
+
 	entitytree_added_items.clear();
 	entitytree_opened_items.clear();
 }
 void EditorComponent::RefreshComponentWindow()
 {
-	PickResult picked;
-	if (!translator.selected.empty())
-	{
-		picked = translator.selected.front();
-	}
-	Entity entity = picked.entity;
-
 	const wi::scene::Scene& scene = GetCurrentScene();
 	const float padding = 4;
 	XMFLOAT2 pos = XMFLOAT2(padding, padding);
 	const float width = componentWindow.GetWidgetAreaSize().x - padding * 2;
 
-	if (scene.names.Contains(entity))
+	if (scene.names.Contains(nameWnd.entity))
 	{
 		nameWnd.SetVisible(true);
 		nameWnd.SetPos(pos);
@@ -2638,7 +2673,7 @@ void EditorComponent::RefreshComponentWindow()
 		nameWnd.SetVisible(false);
 	}
 
-	if (scene.layers.Contains(entity))
+	if (scene.layers.Contains(layerWnd.entity))
 	{
 		layerWnd.SetVisible(true);
 		layerWnd.SetPos(pos);
@@ -2651,7 +2686,7 @@ void EditorComponent::RefreshComponentWindow()
 		layerWnd.SetVisible(false);
 	}
 
-	if (scene.transforms.Contains(entity))
+	if (scene.transforms.Contains(transformWnd.entity))
 	{
 		transformWnd.SetVisible(true);
 		transformWnd.SetPos(pos);
@@ -2664,7 +2699,7 @@ void EditorComponent::RefreshComponentWindow()
 		transformWnd.SetVisible(false);
 	}
 
-	if (scene.inverse_kinematics.Contains(entity))
+	if (scene.inverse_kinematics.Contains(ikWnd.entity))
 	{
 		ikWnd.SetVisible(true);
 		ikWnd.SetPos(pos);
@@ -2677,7 +2712,7 @@ void EditorComponent::RefreshComponentWindow()
 		ikWnd.SetVisible(false);
 	}
 
-	if (scene.springs.Contains(entity))
+	if (scene.springs.Contains(springWnd.entity))
 	{
 		springWnd.SetVisible(true);
 		springWnd.SetPos(pos);
@@ -2690,7 +2725,7 @@ void EditorComponent::RefreshComponentWindow()
 		springWnd.SetVisible(false);
 	}
 
-	if (scene.forces.Contains(entity))
+	if (scene.forces.Contains(forceFieldWnd.entity))
 	{
 		forceFieldWnd.SetVisible(true);
 		forceFieldWnd.SetPos(pos);
@@ -2703,7 +2738,7 @@ void EditorComponent::RefreshComponentWindow()
 		forceFieldWnd.SetVisible(false);
 	}
 
-	if (scene.hairs.Contains(entity))
+	if (scene.hairs.Contains(hairWnd.entity))
 	{
 		hairWnd.SetVisible(true);
 		hairWnd.SetPos(pos);
@@ -2716,7 +2751,7 @@ void EditorComponent::RefreshComponentWindow()
 		hairWnd.SetVisible(false);
 	}
 
-	if (scene.emitters.Contains(entity))
+	if (scene.emitters.Contains(emitterWnd.entity))
 	{
 		emitterWnd.SetVisible(true);
 		emitterWnd.SetPos(pos);
@@ -2729,7 +2764,7 @@ void EditorComponent::RefreshComponentWindow()
 		emitterWnd.SetVisible(false);
 	}
 
-	if (scene.animations.Contains(entity))
+	if (scene.animations.Contains(animWnd.entity))
 	{
 		animWnd.SetVisible(true);
 		animWnd.SetPos(pos);
@@ -2742,7 +2777,7 @@ void EditorComponent::RefreshComponentWindow()
 		animWnd.SetVisible(false);
 	}
 
-	if (scene.lights.Contains(entity))
+	if (scene.lights.Contains(lightWnd.entity))
 	{
 		lightWnd.SetVisible(true);
 		lightWnd.SetPos(pos);
@@ -2755,7 +2790,7 @@ void EditorComponent::RefreshComponentWindow()
 		lightWnd.SetVisible(false);
 	}
 
-	if (scene.sounds.Contains(entity))
+	if (scene.sounds.Contains(soundWnd.entity))
 	{
 		soundWnd.SetVisible(true);
 		soundWnd.SetPos(pos);
@@ -2768,7 +2803,7 @@ void EditorComponent::RefreshComponentWindow()
 		soundWnd.SetVisible(false);
 	}
 
-	if (scene.decals.Contains(entity))
+	if (scene.decals.Contains(decalWnd.entity))
 	{
 		decalWnd.SetVisible(true);
 		decalWnd.SetPos(pos);
@@ -2781,7 +2816,7 @@ void EditorComponent::RefreshComponentWindow()
 		decalWnd.SetVisible(false);
 	}
 
-	if (scene.probes.Contains(entity))
+	if (scene.probes.Contains(envProbeWnd.entity))
 	{
 		envProbeWnd.SetVisible(true);
 		envProbeWnd.SetPos(pos);
@@ -2794,7 +2829,7 @@ void EditorComponent::RefreshComponentWindow()
 		envProbeWnd.SetVisible(false);
 	}
 
-	if (scene.cameras.Contains(entity))
+	if (scene.cameras.Contains(cameraWnd.entity))
 	{
 		cameraWnd.SetVisible(true);
 		cameraWnd.SetPos(pos);
@@ -2807,7 +2842,7 @@ void EditorComponent::RefreshComponentWindow()
 		cameraWnd.SetVisible(false);
 	}
 
-	if (scene.materials.Contains(entity))
+	if (scene.materials.Contains(materialWnd.entity))
 	{
 		materialWnd.SetVisible(true);
 		materialWnd.SetPos(pos);
@@ -2820,7 +2855,7 @@ void EditorComponent::RefreshComponentWindow()
 		materialWnd.SetVisible(false);
 	}
 
-	if (scene.meshes.Contains(entity))
+	if (scene.meshes.Contains(meshWnd.entity))
 	{
 		meshWnd.SetVisible(true);
 		meshWnd.SetPos(pos);
@@ -2833,7 +2868,7 @@ void EditorComponent::RefreshComponentWindow()
 		meshWnd.SetVisible(false);
 	}
 
-	if (scene.objects.Contains(entity))
+	if (scene.objects.Contains(objectWnd.entity))
 	{
 		objectWnd.SetVisible(true);
 		objectWnd.SetPos(pos);
@@ -2846,7 +2881,7 @@ void EditorComponent::RefreshComponentWindow()
 		objectWnd.SetVisible(false);
 	}
 
-	if (scene.weathers.Contains(entity))
+	if (scene.weathers.Contains(weatherWnd.entity))
 	{
 		weatherWnd.SetVisible(true);
 		weatherWnd.SetPos(pos);

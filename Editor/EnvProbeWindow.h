@@ -15,7 +15,6 @@ public:
 	wi::gui::Label infoLabel;
 	wi::gui::CheckBox realTimeCheckBox;
 	wi::gui::CheckBox msaaCheckBox;
-	wi::gui::Button generateButton;
 	wi::gui::Button refreshButton;
 	wi::gui::Button refreshAllButton;
 };

@@ -33,29 +33,6 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&emitterNameField);
 
-	addButton.Create("Add Emitter");
-	addButton.SetPos(XMFLOAT2(x, y += step));
-	addButton.SetSize(XMFLOAT2(150, itemheight));
-	addButton.OnClick([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		Entity entity = scene.Entity_CreateEmitter("editorEmitter");
-
-		wi::Archive& archive = editor->AdvanceHistory();
-		archive << EditorComponent::HISTORYOP_ADD;
-		editor->RecordSelection(archive);
-
-		editor->ClearSelected();
-		editor->AddSelected(entity);
-
-		editor->RecordSelection(archive);
-		editor->RecordAddedEntity(archive, entity);
-
-		editor->RefreshEntityTree();
-		SetEntity(entity);
-	});
-	addButton.SetTooltip("Add new emitter particle system.");
-	AddWidget(&addButton);
-
 	restartButton.Create("Restart Emitter");
 	restartButton.SetPos(XMFLOAT2(x + 160, y));
 	restartButton.SetSize(XMFLOAT2(150, itemheight));
@@ -732,7 +709,6 @@ void EmitterWindow::SetEntity(Entity entity)
 
 		SetEnabled(false);
 
-		addButton.SetEnabled(true);
 	}
 
 }

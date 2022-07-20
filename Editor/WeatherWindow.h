@@ -13,6 +13,8 @@ public:
 
 	EditorComponent* editor = nullptr;
 
+	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+	void SetEntity(wi::ecs::Entity entity);
 	wi::scene::WeatherComponent& GetWeather() const;
 	void InvalidateProbes() const;
 

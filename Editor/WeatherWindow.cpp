@@ -663,6 +663,16 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	SetVisible(false);
 }
 
+void WeatherWindow::SetEntity(wi::ecs::Entity entity)
+{
+	this->entity = entity;
+	Scene& scene = editor->GetCurrentScene();
+	if (!scene.weathers.Contains(entity))
+	{
+		this->entity = INVALID_ENTITY;
+	}
+}
+
 void WeatherWindow::Update()
 {
 	Scene& scene = editor->GetCurrentScene();

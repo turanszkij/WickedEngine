@@ -225,7 +225,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 
 void CameraWindow::SetEntity(Entity entity)
 {
-	proxy = entity;
+	this->entity = entity;
 
 	Scene& scene = editor->GetCurrentScene();
 

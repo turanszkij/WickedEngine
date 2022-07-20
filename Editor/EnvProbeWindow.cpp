@@ -49,29 +49,6 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&msaaCheckBox);
 
-	generateButton.Create("Put");
-	generateButton.SetTooltip("Put down a new probe in front of the camera and capture the scene.");
-	generateButton.SetPos(XMFLOAT2(x, y += step));
-	generateButton.OnClick([=](wi::gui::EventArgs args) {
-		XMFLOAT3 pos;
-		XMStoreFloat3(&pos, XMVectorAdd(editor->GetCurrentEditorScene().camera.GetEye(), editor->GetCurrentEditorScene().camera.GetAt() * 4));
-		Entity entity = editor->GetCurrentScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
-
-		wi::Archive& archive = editor->AdvanceHistory();
-		archive << EditorComponent::HISTORYOP_ADD;
-		editor->RecordSelection(archive);
-
-		editor->ClearSelected();
-		editor->AddSelected(entity);
-
-		editor->RecordSelection(archive);
-		editor->RecordAddedEntity(archive, entity);
-
-		editor->RefreshEntityTree();
-		SetEntity(entity);
-	});
-	AddWidget(&generateButton);
-
 	refreshButton.Create("Refresh");
 	refreshButton.SetTooltip("Re-renders the selected probe.");
 	refreshButton.SetPos(XMFLOAT2(x + 120, y));

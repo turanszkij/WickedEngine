@@ -223,17 +223,6 @@ namespace wi::gui
 			state = IDLE;
 		}
 
-		hitBox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
-
-		if (!force_disable && GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && GetPointerHitbox().intersects(hitBox))
-		{
-			tooltipTimer++;
-		}
-		else
-		{
-			tooltipTimer = 0;
-		}
-
 		UpdateTransform();
 
 		if (parent != nullptr)
@@ -262,6 +251,17 @@ namespace wi::gui
 		}
 		font.params.posX = translation.x;
 		font.params.posY = translation.y;
+
+		hitBox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
+
+		if (!force_disable && GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && GetPointerHitbox().intersects(hitBox))
+		{
+			tooltipTimer++;
+		}
+		else
+		{
+			tooltipTimer = 0;
+		}
 	}
 	void Widget::RenderTooltip(const wi::Canvas& canvas, CommandList cmd) const
 	{

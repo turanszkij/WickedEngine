@@ -13,7 +13,6 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::ComboBox reverbComboBox;
-	wi::gui::Button addButton;
 	wi::gui::Label filenameLabel;
 	wi::gui::TextInputField nameField;
 	wi::gui::Button playstopButton;

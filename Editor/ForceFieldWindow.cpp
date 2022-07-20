@@ -17,49 +17,6 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 	float hei = 18;
 	float step = hei + 2;
 
-	addButton.Create("Add Force Field");
-	addButton.SetSize(XMFLOAT2(150, hei));
-	addButton.SetPos(XMFLOAT2(x, y));
-	addButton.OnClick([=](wi::gui::EventArgs args) {
-		Entity entity = editor->GetCurrentScene().Entity_CreateForce("editorForce");
-		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
-		if (force != nullptr)
-		{
-			switch (typeComboBox.GetSelected())
-			{
-			case 0:
-				force->type = ENTITY_TYPE_FORCEFIELD_POINT;
-				break;
-			case 1:
-				force->type = ENTITY_TYPE_FORCEFIELD_PLANE;
-				break;
-			default:
-				assert(0);
-				break;
-			}
-
-			wi::Archive& archive = editor->AdvanceHistory();
-			archive << EditorComponent::HISTORYOP_ADD;
-			editor->RecordSelection(archive);
-
-			editor->ClearSelected();
-			editor->AddSelected(entity);
-
-			editor->RecordSelection(archive);
-			editor->RecordAddedEntity(archive, entity);
-
-			editor->RefreshEntityTree();
-			SetEntity(entity);
-		}
-		else
-		{
-			assert(0);
-		}
-		});
-	addButton.SetEnabled(true);
-	addButton.SetTooltip("Add new Force Field to the simulation.");
-	AddWidget(&addButton);
-
 	typeComboBox.Create("Force Field type: ");
 	typeComboBox.SetPos(XMFLOAT2(x, y += step));
 	typeComboBox.SetSize(XMFLOAT2(200, hei));
@@ -147,5 +104,4 @@ void ForceFieldWindow::SetEntity(Entity entity)
 		rangeSlider.SetEnabled(false);
 	}
 
-	addButton.SetEnabled(true);
 }

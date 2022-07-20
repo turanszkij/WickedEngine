@@ -25,7 +25,6 @@ public:
 	wi::gui::CheckBox	haloCheckBox;
 	wi::gui::CheckBox	volumetricsCheckBox;
 	wi::gui::CheckBox	staticCheckBox;
-	wi::gui::Button addLightButton;
 	wi::gui::ColorPicker colorPicker;
 	wi::gui::ComboBox typeSelectorComboBox;
 	wi::gui::ComboBox shadowResolutionComboBox;

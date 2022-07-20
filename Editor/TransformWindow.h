@@ -12,7 +12,6 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::gui::Button createButton;
 	wi::gui::Button clearButton;
 
 	wi::gui::ComboBox parentCombo;
@@ -33,6 +32,9 @@ public:
 	wi::gui::TextInputField sxInput;
 	wi::gui::TextInputField syInput;
 	wi::gui::TextInputField szInput;
+
+	wi::gui::Button ikButton;
+	wi::gui::Button springButton;
 
 	wi::gui::TextInputField snapScaleInput;
 	wi::gui::TextInputField snapRotateInput;

@@ -447,28 +447,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&materialNameField);
 
-	newMaterialButton.Create("New Material");
-	newMaterialButton.SetPos(XMFLOAT2(10 + 5 + 300, y));
-	newMaterialButton.SetSize(XMFLOAT2(100, hei));
-	newMaterialButton.OnClick([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		Entity entity = scene.Entity_CreateMaterial("editorMaterial");
-
-		wi::Archive& archive = editor->AdvanceHistory();
-		archive << EditorComponent::HISTORYOP_ADD;
-		editor->RecordSelection(archive);
-
-		editor->ClearSelected();
-		editor->AddSelected(entity);
-		editor->RefreshEntityTree();
-
-		editor->RecordSelection(archive);
-		editor->RecordAddedEntity(archive, entity);
-
-		SetEntity(entity);
-		});
-	AddWidget(&newMaterialButton);
-
 	colorComboBox.Create("Color picker mode: ");
 	colorComboBox.SetSize(XMFLOAT2(120, hei));
 	colorComboBox.SetPos(XMFLOAT2(x + 150, y += step));
@@ -833,5 +811,4 @@ void MaterialWindow::SetEntity(Entity entity)
 		textureSlotUvsetField.SetText("");
 	}
 
-	newMaterialButton.SetEnabled(true);
 }

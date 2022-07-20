@@ -16,30 +16,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	float hei = 18;
 	float step = hei + 2;
 
-
-	addButton.Create("Add Hair Particle System");
-	addButton.SetPos(XMFLOAT2(x, y));
-	addButton.SetSize(XMFLOAT2(200, hei));
-	addButton.OnClick([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		Entity entity = scene.Entity_CreateHair("editorHair");
-
-		wi::Archive& archive = editor->AdvanceHistory();
-		archive << EditorComponent::HISTORYOP_ADD;
-		editor->RecordSelection(archive);
-
-		editor->ClearSelected();
-		editor->AddSelected(entity);
-
-		editor->RecordSelection(archive);
-		editor->RecordAddedEntity(archive, entity);
-
-		editor->RefreshEntityTree();
-		SetEntity(entity);
-	});
-	addButton.SetTooltip("Add new hair particle system.");
-	AddWidget(&addButton);
-
 	meshComboBox.Create("Mesh: ");
 	meshComboBox.SetSize(XMFLOAT2(300, hei));
 	meshComboBox.SetPos(XMFLOAT2(x, y += step));
@@ -258,7 +234,6 @@ void HairParticleWindow::SetEntity(Entity entity)
 		SetEnabled(false);
 	}
 
-	addButton.SetEnabled(true);
 }
 
 wi::HairParticleSystem* HairParticleWindow::GetHair()
