@@ -81,9 +81,10 @@ jobs:
 
     - name: Build
       run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=Release -D WICKED_LINUX_TEMPLATE=ON 
-        cmake --build build -j$(nproc)     
-        cd build    
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -D WICKED_LINUX_TEMPLATE=ON
+        make -j$(nproc)
         echo "---Generating Shader Dump---"
         cd WickedEngine
         ./offlineshadercompiler spirv rebuild shaderdump
