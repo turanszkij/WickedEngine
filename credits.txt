@@ -12,7 +12,6 @@ Contributions:
 - Matteo De Carlo https://github.com/portaloffreedom
 	- Linux core systems
 	- Cmake
-	- Linux template
 - XThemeCore https://github.com/XthemeCore
 	- Morph targets
 - Amer Koleci https://github.com/amerkoleci
