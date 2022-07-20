@@ -5,11 +5,7 @@ find_package(WickedEngine REQUIRED)
 
 set (SOURCE_FILES
     main.cpp
-    stdafx.cpp
     stdafx.h    
-    Icon.h
-    App.cpp
-    App.h
 )
 
 add_executable(Template_Linux ${SOURCE_FILES})
