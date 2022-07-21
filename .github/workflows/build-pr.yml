@@ -83,7 +83,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release
-        make -j $(nproc)
+        make -j$(nproc)
         echo "---Generating Shader Dump---"
         cd WickedEngine
         ./offlineshadercompiler spirv rebuild shaderdump
