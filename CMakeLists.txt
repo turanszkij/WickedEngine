@@ -38,3 +38,8 @@ if (WICKED_TESTS)
     add_subdirectory(Example_ImGui)
     add_subdirectory(Example_ImGui_Docking)
 endif()
+
+option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
+if (WICKED_LINUX_TEMPLATE)
+    add_subdirectory(Template_Linux)
+endif()
