@@ -308,6 +308,9 @@ void EditorComponent::ResizeLayout()
 	postprocessWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
 	postprocessWnd_Toggle.SetSize(option_size);
 
+	cameraWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
+	cameraWnd_Toggle.SetSize(option_size);
+
 	paintToolWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
 	paintToolWnd_Toggle.SetSize(option_size);
 
@@ -343,6 +346,13 @@ void EditorComponent::Load()
 		postprocessWnd.SetVisible(!postprocessWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&postprocessWnd_Toggle);
+
+	cameraWnd_Toggle.Create("Camera");
+	cameraWnd_Toggle.SetTooltip("Camera settings window");
+	cameraWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
+		cameraWnd.SetVisible(!cameraWnd.IsVisible());
+		});
+	GetGUI().AddWidget(&cameraWnd_Toggle);
 
 	paintToolWnd_Toggle.Create("Paint Tool");
 	paintToolWnd_Toggle.SetTooltip("Paint tool window");
@@ -848,6 +858,7 @@ void EditorComponent::Load()
 			break;
 		case 7:
 			entity = scene.Entity_CreateDecal("decal", "images/logo_small.png");
+			scene.transforms.GetComponent(entity)->RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
 			break;
 		case 8:
 			{
@@ -1011,9 +1022,11 @@ void EditorComponent::Load()
 	layerWnd.Create(this);
 	nameWnd.Create(this);
 
+	GetGUI().AddWidget(&cameraWnd);
+	GetGUI().AddWidget(&paintToolWnd);
 
 	componentWindow.Create("Components ", wi::gui::Window::WindowControls::RESIZE_TOPLEFT);
-	componentWindow.SetSize(XMFLOAT2(300, 400));
+	componentWindow.SetSize(XMFLOAT2(340, 300));
 	componentWindow.font.params.h_align = wi::font::WIFALIGN_RIGHT;
 	GetGUI().AddWidget(&componentWindow);
 
@@ -1022,7 +1035,6 @@ void EditorComponent::Load()
 	componentWindow.AddWidget(&weatherWnd);
 	componentWindow.AddWidget(&objectWnd);
 	componentWindow.AddWidget(&meshWnd);
-	componentWindow.AddWidget(&cameraWnd);
 	componentWindow.AddWidget(&envProbeWnd);
 	componentWindow.AddWidget(&soundWnd);
 	componentWindow.AddWidget(&decalWnd);
@@ -1031,7 +1043,6 @@ void EditorComponent::Load()
 	componentWindow.AddWidget(&emitterWnd);
 	componentWindow.AddWidget(&hairWnd);
 	componentWindow.AddWidget(&forceFieldWnd);
-	componentWindow.AddWidget(&paintToolWnd);
 	componentWindow.AddWidget(&springWnd);
 	componentWindow.AddWidget(&ikWnd);
 	componentWindow.AddWidget(&transformWnd);
@@ -1457,17 +1468,30 @@ void EditorComponent::Update(float dt)
 						// if water, then put a water ripple onto it:
 						scene.PutWaterRipple("images/ripple.png", hovered.position);
 					}
-					else if (decalWnd.placementCheckBox.GetCheck() && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+					else if (decalWnd.IsEnabled() && decalWnd.placementCheckBox.GetCheck() && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 					{
-						// if not water or softbody, put a decal on it:
-						static int decalselector = 0;
-						decalselector = (decalselector + 1) % 2;
-						Entity entity = scene.Entity_CreateDecal("editorDecal", (decalselector == 0 ? "images/leaf.dds" : "images/logo_small.png"));
+						// if not water, put a decal on it:
+						Entity entity = scene.Entity_CreateDecal("editorDecal", "");
+						// material and decal parameters will be copied from selected:
+						if (scene.decals.Contains(decalWnd.entity))
+						{
+							*scene.decals.GetComponent(entity) = *scene.decals.GetComponent(decalWnd.entity);
+						}
+						if (scene.materials.Contains(decalWnd.entity))
+						{
+							*scene.materials.GetComponent(entity) = *scene.materials.GetComponent(decalWnd.entity);
+						}
+						// place it on picked surface:
 						TransformComponent& transform = *scene.transforms.GetComponent(entity);
 						transform.MatrixTransform(hovered.orientation);
 						transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
-						transform.Scale(XMFLOAT3(2, 2, 2));
 						scene.Component_Attach(entity, hovered.entity);
+
+						wi::Archive& archive = AdvanceHistory();
+						archive << EditorComponent::HISTORYOP_ADD;
+						RecordSelection(archive);
+						RecordSelection(archive);
+						RecordAddedEntity(archive, entity);
 
 						RefreshEntityTree();
 					}
@@ -2829,18 +2853,18 @@ void EditorComponent::RefreshComponentWindow()
 		envProbeWnd.SetVisible(false);
 	}
 
-	if (scene.cameras.Contains(cameraWnd.entity))
-	{
-		cameraWnd.SetVisible(true);
-		cameraWnd.SetPos(pos);
-		cameraWnd.SetSize(XMFLOAT2(width, cameraWnd.GetScale().y));
-		pos.y += cameraWnd.GetSize().y;
-		pos.y += padding;
-	}
-	else
-	{
-		cameraWnd.SetVisible(false);
-	}
+	//if (scene.cameras.Contains(cameraWnd.entity))
+	//{
+	//	cameraWnd.SetVisible(true);
+	//	cameraWnd.SetPos(pos);
+	//	cameraWnd.SetSize(XMFLOAT2(width, cameraWnd.GetScale().y));
+	//	pos.y += cameraWnd.GetSize().y;
+	//	pos.y += padding;
+	//}
+	//else
+	//{
+	//	cameraWnd.SetVisible(false);
+	//}
 
 	if (scene.materials.Contains(materialWnd.entity))
 	{
@@ -2893,6 +2917,8 @@ void EditorComponent::RefreshComponentWindow()
 	{
 		weatherWnd.SetVisible(false);
 	}
+
+	componentWindow.Update(*this, 0);
 }
 
 void EditorComponent::ClearSelected()

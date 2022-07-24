@@ -155,9 +155,6 @@
     <Image Include="$(MSBuildThisFileDirectory)images\hair.dds">
       <Filter>images</Filter>
     </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\leaf.dds">
-      <Filter>images</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)images\logo_small.png">
       <Filter>images</Filter>
     </Image>

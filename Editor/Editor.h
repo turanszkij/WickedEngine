@@ -78,6 +78,7 @@ public:
 
 	wi::gui::Button rendererWnd_Toggle;
 	wi::gui::Button postprocessWnd_Toggle;
+	wi::gui::Button cameraWnd_Toggle;
 	wi::gui::Button paintToolWnd_Toggle;
 	wi::gui::Button terrainWnd_Toggle;
 	wi::gui::CheckBox translatorCheckBox;

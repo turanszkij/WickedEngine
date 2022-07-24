@@ -11,16 +11,17 @@ void EmitterWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Emitter", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(680, 420));
+	SetSize(XMFLOAT2(300, 200));
 
-	float x = 200;
+	float x = 130;
 	float y = 0;
 	float itemheight = 18;
 	float step = itemheight + 2;
+	float wid = 120;
 
 	restartButton.Create("Restart Emitter");
 	restartButton.SetPos(XMFLOAT2(x, y));
-	restartButton.SetSize(XMFLOAT2(150, itemheight));
+	restartButton.SetSize(XMFLOAT2(wid, itemheight));
 	restartButton.OnClick([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -32,7 +33,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&restartButton);
 
 	meshComboBox.Create("Mesh: ");
-	meshComboBox.SetSize(XMFLOAT2(300, itemheight));
+	meshComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	meshComboBox.SetPos(XMFLOAT2(x, y += step));
 	meshComboBox.SetEnabled(false);
 	meshComboBox.OnSelect([&](wi::gui::EventArgs args) {
@@ -55,16 +56,16 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 	shaderTypeComboBox.Create("ShaderType: ");
 	shaderTypeComboBox.SetPos(XMFLOAT2(x, y += step));
-	shaderTypeComboBox.SetSize(XMFLOAT2(300, itemheight));
-	shaderTypeComboBox.AddItem("SOFT");
-	shaderTypeComboBox.AddItem("SOFT + DISTORTION");
-	shaderTypeComboBox.AddItem("SIMPLEST");
-	shaderTypeComboBox.AddItem("SOFT + LIGHTING");
+	shaderTypeComboBox.SetSize(XMFLOAT2(wid, itemheight));
+	shaderTypeComboBox.AddItem("SIMPLE", wi::EmittedParticleSystem::PARTICLESHADERTYPE::SIMPLE);
+	shaderTypeComboBox.AddItem("SOFT", wi::EmittedParticleSystem::PARTICLESHADERTYPE::SOFT);
+	shaderTypeComboBox.AddItem("DISTORTION", wi::EmittedParticleSystem::PARTICLESHADERTYPE::SOFT_DISTORTION);
+	shaderTypeComboBox.AddItem("LIGHTING", wi::EmittedParticleSystem::PARTICLESHADERTYPE::SOFT_LIGHTING);
 	shaderTypeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->shaderType = (wi::EmittedParticleSystem::PARTICLESHADERTYPE)args.iValue;
+			emitter->shaderType = (wi::EmittedParticleSystem::PARTICLESHADERTYPE)args.userdata;
 		}
 	});
 	shaderTypeComboBox.SetEnabled(false);
@@ -72,7 +73,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&shaderTypeComboBox);
 
 
-	sortCheckBox.Create("Sorting Enabled: ");
+	sortCheckBox.Create("Sorting: ");
 	sortCheckBox.SetPos(XMFLOAT2(x, y += step));
 	sortCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	sortCheckBox.OnClick([&](wi::gui::EventArgs args) {
@@ -87,8 +88,8 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&sortCheckBox);
 
 
-	depthCollisionsCheckBox.Create("Depth Buffer Collisions Enabled: ");
-	depthCollisionsCheckBox.SetPos(XMFLOAT2(x + 250, y));
+	depthCollisionsCheckBox.Create("Depth Buffer: ");
+	depthCollisionsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	depthCollisionsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	depthCollisionsCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -103,7 +104,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 
 	sphCheckBox.Create("SPH - FluidSim: ");
-	sphCheckBox.SetPos(XMFLOAT2(x + 400, y));
+	sphCheckBox.SetPos(XMFLOAT2(x, y += step));
 	sphCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	sphCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -133,7 +134,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 
 	debugCheckBox.Create("DEBUG: ");
-	debugCheckBox.SetPos(XMFLOAT2(x + 120, y));
+	debugCheckBox.SetPos(XMFLOAT2(x, y += step));
 	debugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	debugCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -148,7 +149,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 
 	volumeCheckBox.Create("Volume: ");
-	volumeCheckBox.SetPos(XMFLOAT2(x + 250, y));
+	volumeCheckBox.SetPos(XMFLOAT2(x, y += step));
 	volumeCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	volumeCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -163,7 +164,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 
 	frameBlendingCheckBox.Create("Frame Blending: ");
-	frameBlendingCheckBox.SetPos(XMFLOAT2(x + 400, y));
+	frameBlendingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	frameBlendingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	frameBlendingCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -179,12 +180,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 
 	infoLabel.Create("EmitterInfo");
-	infoLabel.SetSize(XMFLOAT2(380, 120));
-	infoLabel.SetPos(XMFLOAT2(x, y += step));
+	infoLabel.SetSize(XMFLOAT2(GetSize().x - 20, 120));
+	infoLabel.SetPos(XMFLOAT2(10, y += step));
 	AddWidget(&infoLabel);
 
 
-	y += 125;
+	y += infoLabel.GetSize().y + 5;
 
 	frameRateInput.Create("");
 	frameRateInput.SetPos(XMFLOAT2(x, y));
@@ -202,7 +203,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&frameRateInput);
 
 	framesXInput.Create("");
-	framesXInput.SetPos(XMFLOAT2(x + 150, y));
+	framesXInput.SetPos(XMFLOAT2(x, y += step));
 	framesXInput.SetSize(XMFLOAT2(40, 18));
 	framesXInput.SetText("");
 	framesXInput.SetTooltip("How many horizontal frames there are in the spritesheet.");
@@ -217,7 +218,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&framesXInput);
 
 	framesYInput.Create("");
-	framesYInput.SetPos(XMFLOAT2(x + 300, y));
+	framesYInput.SetPos(XMFLOAT2(x, y += step));
 	framesYInput.SetSize(XMFLOAT2(40, 18));
 	framesYInput.SetText("");
 	framesYInput.SetTooltip("How many vertical frames there are in the spritesheet.");
@@ -247,7 +248,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&frameCountInput);
 
 	frameStartInput.Create("");
-	frameStartInput.SetPos(XMFLOAT2(x + 300, y));
+	frameStartInput.SetPos(XMFLOAT2(x, y += step));
 	frameStartInput.SetSize(XMFLOAT2(40, 18));
 	frameStartInput.SetText("");
 	frameStartInput.SetTooltip("Specifies the starting frame of the animation.");
@@ -313,7 +314,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	GravityXInput.SetValue(0);
 	GravityXInput.SetDescription("Gravity: ");
 	GravityXInput.SetTooltip("Vector X component");
-	GravityXInput.SetPos(XMFLOAT2(x + 200, y));
+	GravityXInput.SetPos(XMFLOAT2(x, y += step));
 	GravityXInput.SetSize(XMFLOAT2(38, itemheight));
 	GravityXInput.OnInputAccepted([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -327,7 +328,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	GravityYInput.Create("");
 	GravityYInput.SetValue(0);
 	GravityYInput.SetTooltip("Vector Y component");
-	GravityYInput.SetPos(XMFLOAT2(x + 240, y));
+	GravityYInput.SetPos(XMFLOAT2(x + 40, y));
 	GravityYInput.SetSize(XMFLOAT2(38, itemheight));
 	GravityYInput.OnInputAccepted([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -341,7 +342,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	GravityZInput.Create("");
 	GravityZInput.SetValue(0);
 	GravityZInput.SetTooltip("Vector Z component");
-	GravityZInput.SetPos(XMFLOAT2(x + 280, y));
+	GravityZInput.SetPos(XMFLOAT2(x + 80, y));
 	GravityZInput.SetSize(XMFLOAT2(38, itemheight));
 	GravityZInput.OnInputAccepted([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -352,8 +353,8 @@ void EmitterWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&GravityZInput);
 
-	maxParticlesSlider.Create(100.0f, 1000000.0f, 10000, 100000, "Max particle count: ");
-	maxParticlesSlider.SetSize(XMFLOAT2(360, itemheight));
+	maxParticlesSlider.Create(100.0f, 1000000.0f, 10000, 100000, "Max count: ");
+	maxParticlesSlider.SetSize(XMFLOAT2(wid, itemheight));
 	maxParticlesSlider.SetPos(XMFLOAT2(x, y += step));
 	maxParticlesSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -366,8 +367,8 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	maxParticlesSlider.SetTooltip("Set the maximum amount of particles this system can handle. This has an effect on the memory budget.");
 	AddWidget(&maxParticlesSlider);
 
-	emitCountSlider.Create(0.0f, 10000.0f, 1.0f, 100000, "Emit count per sec: ");
-	emitCountSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitCountSlider.Create(0.0f, 10000.0f, 1.0f, 100000, "Emit: ");
+	emitCountSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitCountSlider.SetPos(XMFLOAT2(x, y += step));
 	emitCountSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -381,7 +382,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&emitCountSlider);
 
 	emitSizeSlider.Create(0.01f, 10.0f, 1.0f, 100000, "Size: ");
-	emitSizeSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	emitSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -395,7 +396,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&emitSizeSlider);
 
 	emitRotationSlider.Create(0.0f, 1.0f, 0.0f, 100000, "Rotation: ");
-	emitRotationSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitRotationSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitRotationSlider.SetPos(XMFLOAT2(x, y += step));
 	emitRotationSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -409,7 +410,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&emitRotationSlider);
 
 	emitNormalSlider.Create(0.0f, 100.0f, 1.0f, 100000, "Normal factor: ");
-	emitNormalSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitNormalSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitNormalSlider.SetPos(XMFLOAT2(x, y += step));
 	emitNormalSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -423,7 +424,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&emitNormalSlider);
 
 	emitScalingSlider.Create(0.0f, 100.0f, 1.0f, 100000, "Scaling: ");
-	emitScalingSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitScalingSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitScalingSlider.SetPos(XMFLOAT2(x, y += step));
 	emitScalingSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -437,7 +438,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&emitScalingSlider);
 
 	emitLifeSlider.Create(0.0f, 100.0f, 1.0f, 10000, "Life span: ");
-	emitLifeSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitLifeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitLifeSlider.SetPos(XMFLOAT2(x, y += step));
 	emitLifeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -451,7 +452,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&emitLifeSlider);
 
 	emitRandomnessSlider.Create(0.0f, 1.0f, 1.0f, 100000, "Randomness: ");
-	emitRandomnessSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitRandomnessSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitRandomnessSlider.SetPos(XMFLOAT2(x, y += step));
 	emitRandomnessSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -465,7 +466,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&emitRandomnessSlider);
 
 	emitLifeRandomnessSlider.Create(0.0f, 2.0f, 0.0f, 100000, "Life randomness: ");
-	emitLifeRandomnessSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitLifeRandomnessSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitLifeRandomnessSlider.SetPos(XMFLOAT2(x, y += step));
 	emitLifeRandomnessSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -479,7 +480,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&emitLifeRandomnessSlider);
 
 	emitColorRandomnessSlider.Create(0.0f, 2.0f, 0.0f, 100000, "Color randomness: ");
-	emitColorRandomnessSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitColorRandomnessSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitColorRandomnessSlider.SetPos(XMFLOAT2(x, y += step));
 	emitColorRandomnessSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -493,7 +494,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&emitColorRandomnessSlider);
 
 	emitMotionBlurSlider.Create(0.0f, 1.0f, 1.0f, 100000, "Motion blur: ");
-	emitMotionBlurSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitMotionBlurSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitMotionBlurSlider.SetPos(XMFLOAT2(x, y += step));
 	emitMotionBlurSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -507,7 +508,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&emitMotionBlurSlider);
 
 	emitMassSlider.Create(0.1f, 100.0f, 1.0f, 100000, "Mass: ");
-	emitMassSlider.SetSize(XMFLOAT2(360, itemheight));
+	emitMassSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitMassSlider.SetPos(XMFLOAT2(x, y += step));
 	emitMassSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -523,7 +524,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 
 	timestepSlider.Create(-1, 0.016f, -1, 100000, "Timestep: ");
-	timestepSlider.SetSize(XMFLOAT2(360, itemheight));
+	timestepSlider.SetSize(XMFLOAT2(wid, itemheight));
 	timestepSlider.SetPos(XMFLOAT2(x, y += step));
 	timestepSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -539,7 +540,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 
 	dragSlider.Create(0, 1, 1, 100000, "Drag: ");
-	dragSlider.SetSize(XMFLOAT2(360, itemheight));
+	dragSlider.SetSize(XMFLOAT2(wid, itemheight));
 	dragSlider.SetPos(XMFLOAT2(x, y += step));
 	dragSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -553,7 +554,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&dragSlider);
 
 	restitutionSlider.Create(0, 1, 1, 100000, "Restitution: ");
-	restitutionSlider.SetSize(XMFLOAT2(360, itemheight));
+	restitutionSlider.SetSize(XMFLOAT2(wid, itemheight));
 	restitutionSlider.SetPos(XMFLOAT2(x, y += step));
 	restitutionSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -570,8 +571,8 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 	//////////////// SPH ////////////////////////////
 
-	sph_h_Slider.Create(0.1f, 100.0f, 1.0f, 100000, "SPH Smoothing Radius (h): ");
-	sph_h_Slider.SetSize(XMFLOAT2(360, itemheight));
+	sph_h_Slider.Create(0.1f, 100.0f, 1.0f, 100000, "SPH (h): ");
+	sph_h_Slider.SetSize(XMFLOAT2(wid, itemheight));
 	sph_h_Slider.SetPos(XMFLOAT2(x, y += step));
 	sph_h_Slider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -584,8 +585,8 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	sph_h_Slider.SetTooltip("Set the SPH parameter: smoothing radius");
 	AddWidget(&sph_h_Slider);
 
-	sph_K_Slider.Create(0.1f, 100.0f, 1.0f, 100000, "SPH Pressure Constant (K): ");
-	sph_K_Slider.SetSize(XMFLOAT2(360, itemheight));
+	sph_K_Slider.Create(0.1f, 100.0f, 1.0f, 100000, "SPH (K): ");
+	sph_K_Slider.SetSize(XMFLOAT2(wid, itemheight));
 	sph_K_Slider.SetPos(XMFLOAT2(x, y += step));
 	sph_K_Slider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -598,8 +599,8 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	sph_K_Slider.SetTooltip("Set the SPH parameter: pressure constant");
 	AddWidget(&sph_K_Slider);
 
-	sph_p0_Slider.Create(0.1f, 100.0f, 1.0f, 100000, "SPH Reference Density (p0): ");
-	sph_p0_Slider.SetSize(XMFLOAT2(360, itemheight));
+	sph_p0_Slider.Create(0.1f, 100.0f, 1.0f, 100000, "SPH (p0): ");
+	sph_p0_Slider.SetSize(XMFLOAT2(wid, itemheight));
 	sph_p0_Slider.SetPos(XMFLOAT2(x, y += step));
 	sph_p0_Slider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -612,8 +613,8 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	sph_p0_Slider.SetTooltip("Set the SPH parameter: reference density");
 	AddWidget(&sph_p0_Slider);
 
-	sph_e_Slider.Create(0, 10, 1.0f, 100000, "SPH Viscosity (e): ");
-	sph_e_Slider.SetSize(XMFLOAT2(360, itemheight));
+	sph_e_Slider.Create(0, 10, 1.0f, 100000, "SPH (e): ");
+	sph_e_Slider.SetSize(XMFLOAT2(wid, itemheight));
 	sph_e_Slider.SetPos(XMFLOAT2(x, y += step));
 	sph_e_Slider.OnSlide([&](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
@@ -644,7 +645,7 @@ void EmitterWindow::SetEntity(Entity entity)
 	{
 		SetEnabled(true);
 
-		shaderTypeComboBox.SetSelected((int)emitter->shaderType);
+		shaderTypeComboBox.SetSelectedByUserdataWithoutCallback((uint64_t)emitter->shaderType);
 
 		sortCheckBox.SetCheck(emitter->IsSorted());
 		depthCollisionsCheckBox.SetCheck(emitter->IsDepthCollisionEnabled());

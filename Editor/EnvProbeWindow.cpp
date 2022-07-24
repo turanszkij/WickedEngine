@@ -15,7 +15,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 	infoLabel.Create("");
 	infoLabel.SetText("Environment probes can be used to capture the scene from a specific location in a 360 degrees panorama. The probes will be used for reflections fallback, where a better reflection type is not available. The probes can affect the ambient colors slightly.\nTip: You can scale, rotate and move the probes to set up parallax correct rendering to affect a specific area only. The parallax correction will take effect inside the probe's bounds (indicated with a cyan colored box).");
-	infoLabel.SetSize(XMFLOAT2(400 - 10, 100));
+	infoLabel.SetSize(XMFLOAT2(300, 100));
 	infoLabel.SetPos(XMFLOAT2(x, y));
 	infoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&infoLabel);

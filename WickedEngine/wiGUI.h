@@ -199,6 +199,9 @@ namespace wi::gui
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+
+		void SetVertical(bool value) { vertical = value; }
+		bool IsVertical() const { return vertical; }
 	};
 
 	// Static box that holds text
