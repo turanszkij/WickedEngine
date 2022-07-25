@@ -724,19 +724,19 @@ namespace wi::gui
 	}
 	void Button::OnClick(std::function<void(EventArgs args)> func)
 	{
-		onClick = move(func);
+		onClick = func;
 	}
 	void Button::OnDragStart(std::function<void(EventArgs args)> func)
 	{
-		onDragStart = move(func);
+		onDragStart = func;
 	}
 	void Button::OnDrag(std::function<void(EventArgs args)> func)
 	{
-		onDrag = move(func);
+		onDrag = func;
 	}
 	void Button::OnDragEnd(std::function<void(EventArgs args)> func)
 	{
-		onDragEnd = move(func);
+		onDragEnd = func;
 	}
 
 
@@ -1168,7 +1168,7 @@ namespace wi::gui
 	}
 	void TextInputField::OnInputAccepted(std::function<void(EventArgs args)> func)
 	{
-		onInputAccepted = move(func);
+		onInputAccepted = func;
 	}
 	void TextInputField::AddInput(const char inputChar)
 	{
@@ -1391,7 +1391,7 @@ namespace wi::gui
 	}
 	void Slider::OnSlide(std::function<void(EventArgs args)> func)
 	{
-		onSlide = move(func);
+		onSlide = func;
 	}
 
 
@@ -1511,7 +1511,7 @@ namespace wi::gui
 	}
 	void CheckBox::OnClick(std::function<void(EventArgs args)> func)
 	{
-		onClick = move(func);
+		onClick = func;
 	}
 	void CheckBox::SetCheck(bool value)
 	{
@@ -1844,7 +1844,7 @@ namespace wi::gui
 	}
 	void ComboBox::OnSelect(std::function<void(EventArgs args)> func)
 	{
-		onSelect = move(func);
+		onSelect = func;
 	}
 	void ComboBox::AddItem(const std::string& name, uint64_t userdata)
 	{
@@ -2039,6 +2039,10 @@ namespace wi::gui
 			closeButton.SetText("x");
 			closeButton.OnClick([this](EventArgs args) {
 				this->SetVisible(false);
+				if (onClose)
+				{
+					onClose(args);
+				}
 				});
 			closeButton.SetTooltip("Close window");
 			AddWidget(&closeButton);
@@ -2377,17 +2381,21 @@ namespace wi::gui
 
 		wi::Color color = GetColor();
 
-		// body
-		wi::image::Params fx(sprites[state].params.pos.x - 2, sprites[state].params.pos.y - 2, sprites[state].params.siz.x + 4, sprites[state].params.siz.y + 4, wi::Color(0, 0, 0, 100));
-		if (IsMinimized())
+		// shadow:
+		if (shadow > 0)
 		{
-			fx.siz.y = control_size + 4;
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd); // shadow
+			wi::image::Params fx(sprites[state].params.pos.x - shadow, sprites[state].params.pos.y - shadow, sprites[state].params.siz.x + shadow * 2, sprites[state].params.siz.y + shadow * 2, wi::Color(0, 0, 0, 100));
+			if (IsMinimized())
+			{
+				fx.siz.y = control_size + shadow * 2;
+			}
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
-		else
+
+		// base:
+		if (!IsCollapsed())
 		{
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd); // shadow
-			sprites[state].Draw(cmd); // base
+			sprites[state].Draw(cmd);
 		}
 
 		for (size_t i = 0; i < widgets.size(); ++i)
@@ -2535,6 +2543,10 @@ namespace wi::gui
 			size.x -= control_size;
 		}
 		return size;
+	}
+	void Window::OnClose(std::function<void(EventArgs args)> func)
+	{
+		onClose = func;
 	}
 
 
@@ -3288,7 +3300,7 @@ namespace wi::gui
 	}
 	void ColorPicker::OnColorChanged(std::function<void(EventArgs args)> func)
 	{
-		onColorChanged = move(func);
+		onColorChanged = func;
 	}
 
 
@@ -3615,7 +3627,7 @@ namespace wi::gui
 	}
 	void TreeList::OnSelect(std::function<void(EventArgs args)> func)
 	{
-		onSelect = move(func);
+		onSelect = func;
 	}
 	void TreeList::AddItem(const Item& item)
 	{

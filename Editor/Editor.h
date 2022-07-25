@@ -164,17 +164,18 @@ public:
 
 	enum HistoryOperationType
 	{
-		HISTORYOP_TRANSLATOR,
-		HISTORYOP_SELECTION,
-		HISTORYOP_ADD,
-		HISTORYOP_DELETE,
-		HISTORYOP_PAINTTOOL,
+		HISTORYOP_TRANSLATOR,		// translator interaction
+		HISTORYOP_SELECTION,		// selection changed
+		HISTORYOP_ADD,				// entity added
+		HISTORYOP_DELETE,			// entity removed
+		HISTORYOP_COMPONENT_DATA,	// generic component data changed
+		HISTORYOP_PAINTTOOL,		// paint tool interaction
 		HISTORYOP_NONE
 	};
 
 	void RecordSelection(wi::Archive& archive) const;
-	void RecordAddedEntity(wi::Archive& archive, wi::ecs::Entity entity);
-	void RecordAddedEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities);
+	void RecordEntity(wi::Archive& archive, wi::ecs::Entity entity);
+	void RecordEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities);
 
 	void ResetHistory();
 	wi::Archive& AdvanceHistory();

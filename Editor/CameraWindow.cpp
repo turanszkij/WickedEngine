@@ -196,7 +196,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		editor->AddSelected(entity);
 
 		editor->RecordSelection(archive);
-		editor->RecordAddedEntity(archive, entity);
+		editor->RecordEntity(archive, entity);
 
 		editor->RefreshEntityTree();
 		SetEntity(entity);

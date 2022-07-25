@@ -369,6 +369,8 @@ namespace wi::gui
 		bool minimized = false;
 		Widget scrollable_area;
 		float control_size = 20;
+		float shadow = 2;
+		std::function<void(EventArgs args)> onClose;
 
 	public:
 		enum class WindowControls
@@ -404,6 +406,10 @@ namespace wi::gui
 		float GetControlSize() const;
 		XMFLOAT2 GetSize() const override; // For the window, the returned size can be modified by collapsed state
 		XMFLOAT2 GetWidgetAreaSize() const;
+		float GetShadowExpand() const { return shadow; }
+		void SetShadowExpand(float value) { shadow = value; }
+
+		void OnClose(std::function<void(EventArgs args)> func);
 	};
 
 	// HSV-Color Picker

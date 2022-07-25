@@ -9,13 +9,26 @@ using namespace wi::scene;
 void NameWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Name", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(360, 80));
+	wi::gui::Window::Create("Name", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	SetSize(XMFLOAT2(360, 50));
+
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().names.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 60;
 	float y = 0;
 	float step = 25;
-	float siz = 280;
+	float siz = 250;
 	float hei = 20;
 
 	nameInput.Create("");

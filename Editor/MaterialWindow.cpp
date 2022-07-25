@@ -686,9 +686,19 @@ void MaterialWindow::SetEntity(Entity entity)
 	{
 		SetEnabled(true);
 
-		const NameComponent& name = *scene.names.GetComponent(entity);
-
-		materialNameField.SetValue(name.name);
+		const NameComponent* name = scene.names.GetComponent(entity);
+		if (name == nullptr)
+		{
+			materialNameField.SetValue("[no_name] " + std::to_string(entity));
+		}
+		else if (name->name.empty())
+		{
+			materialNameField.SetValue("[name_empty] " + std::to_string(entity));
+		}
+		else
+		{
+			materialNameField.SetValue(name->name);
+		}
 		shadowReceiveCheckBox.SetCheck(material->IsReceiveShadow());
 		shadowCasterCheckBox.SetCheck(material->IsCastingShadow());
 		useVertexColorsCheckBox.SetCheck(material->IsUsingVertexColors());

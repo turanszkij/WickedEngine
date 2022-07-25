@@ -878,7 +878,7 @@ void EditorComponent::Load()
 						AddSelected(entity);
 
 						RecordSelection(archive);
-						RecordAddedEntity(archive, entity);
+						RecordEntity(archive, entity);
 
 						RefreshEntityTree();
 						soundWnd.SetEntity(entity);
@@ -916,7 +916,7 @@ void EditorComponent::Load()
 			AddSelected(entity);
 
 			RecordSelection(archive);
-			RecordAddedEntity(archive, entity);
+			RecordEntity(archive, entity);
 		}
 		RefreshEntityTree();
 	});
@@ -1068,6 +1068,27 @@ void EditorComponent::Load()
 	transformWnd.SetVisible(false);
 	layerWnd.SetVisible(false);
 	nameWnd.SetVisible(false);
+
+	const float shadow_expand = 1;
+	materialWnd.SetShadowExpand(shadow_expand);
+	weatherWnd.SetShadowExpand(shadow_expand);
+	objectWnd.SetShadowExpand(shadow_expand);
+	meshWnd.SetShadowExpand(shadow_expand);
+	cameraWnd.SetShadowExpand(shadow_expand);
+	envProbeWnd.SetShadowExpand(shadow_expand);
+	soundWnd.SetShadowExpand(shadow_expand);
+	decalWnd.SetShadowExpand(shadow_expand);
+	lightWnd.SetShadowExpand(shadow_expand);
+	animWnd.SetShadowExpand(shadow_expand);
+	emitterWnd.SetShadowExpand(shadow_expand);
+	hairWnd.SetShadowExpand(shadow_expand);
+	forceFieldWnd.SetShadowExpand(shadow_expand);
+	paintToolWnd.SetShadowExpand(shadow_expand);
+	springWnd.SetShadowExpand(shadow_expand);
+	ikWnd.SetShadowExpand(shadow_expand);
+	transformWnd.SetShadowExpand(shadow_expand);
+	layerWnd.SetShadowExpand(shadow_expand);
+	nameWnd.SetShadowExpand(shadow_expand);
 
 	cameraWnd.ResetCam();
 
@@ -1491,7 +1512,7 @@ void EditorComponent::Update(float dt)
 						archive << EditorComponent::HISTORYOP_ADD;
 						RecordSelection(archive);
 						RecordSelection(archive);
-						RecordAddedEntity(archive, entity);
+						RecordEntity(archive, entity);
 
 						RefreshEntityTree();
 					}
@@ -1661,7 +1682,7 @@ void EditorComponent::Update(float dt)
 				}
 
 				RecordSelection(archive);
-				RecordAddedEntity(archive, addedEntities);
+				RecordEntity(archive, addedEntities);
 
 				RefreshEntityTree();
 			}
@@ -1689,7 +1710,7 @@ void EditorComponent::Update(float dt)
 				}
 
 				RecordSelection(archive);
-				RecordAddedEntity(archive, addedEntities);
+				RecordEntity(archive, addedEntities);
 
 				RefreshEntityTree();
 			}
@@ -1735,7 +1756,7 @@ void EditorComponent::Update(float dt)
 				// because selection didn't change here, we record same selection state twice, it's not a bug:
 				RecordSelection(archive);
 				RecordSelection(archive);
-				RecordAddedEntity(archive, addedEntities);
+				RecordEntity(archive, addedEntities);
 
 				RefreshEntityTree();
 			}
@@ -2617,61 +2638,19 @@ void EditorComponent::RefreshEntityTree()
 	// Add materials:
 	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 	{
-		Entity entity = scene.materials.GetEntity(i);
-		if (entitytree_added_items.count(entity) != 0)
-		{
-			continue;
-		}
-
-		wi::gui::TreeList::Item item;
-		item.userdata = entity;
-		item.selected = IsSelected(entity);
-		item.open = entitytree_opened_items.count(entity) != 0;
-		const NameComponent* name = scene.names.GetComponent(entity);
-		item.name = name == nullptr ? std::to_string(entity) : name->name;
-		entityTree.AddItem(item);
-
-		entitytree_added_items.insert(entity);
+		PushToEntityTree(scene.materials.GetEntity(i), 0);
 	}
 
 	// Add meshes:
 	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 	{
-		Entity entity = scene.meshes.GetEntity(i);
-		if (entitytree_added_items.count(entity) != 0)
-		{
-			continue;
-		}
-
-		wi::gui::TreeList::Item item;
-		item.userdata = entity;
-		item.selected = IsSelected(entity);
-		item.open = entitytree_opened_items.count(entity) != 0;
-		const NameComponent* name = scene.names.GetComponent(entity);
-		item.name = name == nullptr ? std::to_string(entity) : name->name;
-		entityTree.AddItem(item);
-
-		entitytree_added_items.insert(entity);
+		PushToEntityTree(scene.meshes.GetEntity(i), 0);
 	}
 
 	// Add weathers:
 	for (size_t i = 0; i < scene.weathers.GetCount(); ++i)
 	{
-		Entity entity = scene.weathers.GetEntity(i);
-		if (entitytree_added_items.count(entity) != 0)
-		{
-			continue;
-		}
-
-		wi::gui::TreeList::Item item;
-		item.userdata = entity;
-		item.selected = IsSelected(entity);
-		item.open = entitytree_opened_items.count(entity) != 0;
-		const NameComponent* name = scene.names.GetComponent(entity);
-		item.name = name == nullptr ? std::to_string(entity) : name->name;
-		entityTree.AddItem(item);
-
-		entitytree_added_items.insert(entity);
+		PushToEntityTree(scene.weathers.GetEntity(i), 0);
 	}
 
 	entitytree_added_items.clear();
@@ -2975,12 +2954,12 @@ void EditorComponent::RecordSelection(wi::Archive& archive) const
 		archive << x.distance;
 	}
 }
-void EditorComponent::RecordAddedEntity(wi::Archive& archive, wi::ecs::Entity entity)
+void EditorComponent::RecordEntity(wi::Archive& archive, wi::ecs::Entity entity)
 {
 	const wi::vector<Entity> entities = { entity };
-	RecordAddedEntity(archive, entities);
+	RecordEntity(archive, entities);
 }
-void EditorComponent::RecordAddedEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities)
+void EditorComponent::RecordEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities)
 {
 	Scene& scene = GetCurrentScene();
 	EntitySerializer seri;
@@ -3208,6 +3187,45 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 					}
 				}
 
+			}
+			break;
+		case HISTORYOP_COMPONENT_DATA:
+			{
+				Scene before, after;
+				wi::vector<Entity> entities_before, entities_after;
+
+				archive >> entities_before;
+				for (auto& x : entities_before)
+				{
+					EntitySerializer seri;
+					seri.allow_remap = false;
+					before.Entity_Serialize(archive, seri);
+				}
+
+				archive >> entities_after;
+				for (auto& x : entities_after)
+				{
+					EntitySerializer seri;
+					seri.allow_remap = false;
+					after.Entity_Serialize(archive, seri);
+				}
+
+				if (undo)
+				{
+					for (auto& x : entities_before)
+					{
+						scene.Entity_Remove(x);
+					}
+					scene.Merge(before);
+				}
+				else
+				{
+					for (auto& x : entities_after)
+					{
+						scene.Entity_Remove(x);
+					}
+					scene.Merge(after);
+				}
 			}
 			break;
 		case HISTORYOP_PAINTTOOL:
