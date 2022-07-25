@@ -10,15 +10,16 @@ void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Material", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(730, 620));
+	SetSize(XMFLOAT2(300, 1200));
 
 	float hei = 18;
 	float step = hei + 2;
-	float x = 670, y = 0;
+	float x = 150, y = 0;
+	float wid = 130;
 
 	shadowReceiveCheckBox.Create("Receive Shadow: ");
 	shadowReceiveCheckBox.SetTooltip("Receives shadow or not?");
-	shadowReceiveCheckBox.SetPos(XMFLOAT2(540, y));
+	shadowReceiveCheckBox.SetPos(XMFLOAT2(x, y));
 	shadowReceiveCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowReceiveCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
@@ -29,7 +30,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 	shadowCasterCheckBox.Create("Cast Shadow: ");
 	shadowCasterCheckBox.SetTooltip("The subset will contribute to the scene shadows if enabled.");
-	shadowCasterCheckBox.SetPos(XMFLOAT2(670, y));
+	shadowCasterCheckBox.SetPos(XMFLOAT2(x, y += step));
 	shadowCasterCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowCasterCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
@@ -40,7 +41,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 	useVertexColorsCheckBox.Create("Use vertex colors: ");
 	useVertexColorsCheckBox.SetTooltip("Enable if you want to render the mesh with vertex colors (must have appropriate vertex buffer)");
-	useVertexColorsCheckBox.SetPos(XMFLOAT2(670, y += step));
+	useVertexColorsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	useVertexColorsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	useVertexColorsCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
@@ -49,9 +50,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&useVertexColorsCheckBox);
 
-	specularGlossinessCheckBox.Create("Specular-glossiness workflow: ");
+	specularGlossinessCheckBox.Create("Spec-gloss workflow: ");
 	specularGlossinessCheckBox.SetTooltip("If enabled, surface map will be viewed like it contains specular color (RGB) and smoothness (A)");
-	specularGlossinessCheckBox.SetPos(XMFLOAT2(670, y += step));
+	specularGlossinessCheckBox.SetPos(XMFLOAT2(x, y += step));
 	specularGlossinessCheckBox.SetSize(XMFLOAT2(hei, hei));
 	specularGlossinessCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
@@ -61,9 +62,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&specularGlossinessCheckBox);
 
-	occlusionPrimaryCheckBox.Create("Occlusion - Primary: ");
+	occlusionPrimaryCheckBox.Create("Occlusion 1: ");
 	occlusionPrimaryCheckBox.SetTooltip("If enabled, surface map's RED channel will be used as occlusion map");
-	occlusionPrimaryCheckBox.SetPos(XMFLOAT2(670, y += step));
+	occlusionPrimaryCheckBox.SetPos(XMFLOAT2(x, y += step));
 	occlusionPrimaryCheckBox.SetSize(XMFLOAT2(hei, hei));
 	occlusionPrimaryCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
@@ -72,9 +73,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&occlusionPrimaryCheckBox);
 
-	occlusionSecondaryCheckBox.Create("Occlusion - Secondary: ");
+	occlusionSecondaryCheckBox.Create("Occlusion 2: ");
 	occlusionSecondaryCheckBox.SetTooltip("If enabled, occlusion map's RED channel will be used as occlusion map");
-	occlusionSecondaryCheckBox.SetPos(XMFLOAT2(670, y += step));
+	occlusionSecondaryCheckBox.SetPos(XMFLOAT2(x, y += step));
 	occlusionSecondaryCheckBox.SetSize(XMFLOAT2(hei, hei));
 	occlusionSecondaryCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
@@ -85,7 +86,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 	windCheckBox.Create("Wind: ");
 	windCheckBox.SetTooltip("If enabled, vertex wind weights will affect how much wind offset affects the subset.");
-	windCheckBox.SetPos(XMFLOAT2(670, y += step));
+	windCheckBox.SetPos(XMFLOAT2(x, y += step));
 	windCheckBox.SetSize(XMFLOAT2(hei, hei));
 	windCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
@@ -96,7 +97,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 	doubleSidedCheckBox.Create("Double sided: ");
 	doubleSidedCheckBox.SetTooltip("Decide whether to render both sides of the material (It's also possible to set this behaviour per mesh).");
-	doubleSidedCheckBox.SetPos(XMFLOAT2(540, y));
+	doubleSidedCheckBox.SetPos(XMFLOAT2(x, y += step));
 	doubleSidedCheckBox.SetSize(XMFLOAT2(hei, hei));
 	doubleSidedCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
@@ -104,11 +105,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			material->SetDoubleSided(args.bValue);
 		});
 	AddWidget(&doubleSidedCheckBox);
-
-
-
-	x = 520;
-	float wid = 170;
 
 
 	shaderTypeComboBox.Create("Shader: ");
@@ -133,12 +129,12 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		}
 		});
 	shaderTypeComboBox.AddItem("PBR", MaterialComponent::SHADERTYPE_PBR);
-	shaderTypeComboBox.AddItem("PBR + Planar reflections", MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION);
-	shaderTypeComboBox.AddItem("PBR + Par. occl. mapping", MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING);
-	shaderTypeComboBox.AddItem("PBR + Anisotropic", MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC);
-	shaderTypeComboBox.AddItem("PBR + Cloth", MaterialComponent::SHADERTYPE_PBR_CLOTH);
-	shaderTypeComboBox.AddItem("PBR + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLEARCOAT);
-	shaderTypeComboBox.AddItem("PBR + Cloth + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT);
+	shaderTypeComboBox.AddItem("Planar reflections", MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION);
+	shaderTypeComboBox.AddItem("Par. occl. mapping", MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING);
+	shaderTypeComboBox.AddItem("Anisotropic", MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC);
+	shaderTypeComboBox.AddItem("Cloth", MaterialComponent::SHADERTYPE_PBR_CLOTH);
+	shaderTypeComboBox.AddItem("Clear coat", MaterialComponent::SHADERTYPE_PBR_CLEARCOAT);
+	shaderTypeComboBox.AddItem("Cloth + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT);
 	shaderTypeComboBox.AddItem("Water", MaterialComponent::SHADERTYPE_WATER);
 	shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
 	shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);
@@ -195,7 +191,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 
 	// Sliders:
-	wid = 150;
 
 	normalMapSlider.Create(0, 4, 1, 4000, "Normalmap: ");
 	normalMapSlider.SetTooltip("How much the normal map should distort the face normals (bumpiness).");
@@ -285,8 +280,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&refractionSlider);
 
-	pomSlider.Create(0, 0.1f, 0.0f, 1000, "Parallax Occlusion Mapping: ");
-	pomSlider.SetTooltip("Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
+	pomSlider.Create(0, 0.1f, 0.0f, 1000, "Par Occl Mapping: ");
 	pomSlider.SetSize(XMFLOAT2(wid, hei));
 	pomSlider.SetPos(XMFLOAT2(x, y += step));
 	pomSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -296,7 +290,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&pomSlider);
 
-	displacementMappingSlider.Create(0, 0.1f, 0.0f, 1000, "Displacement Mapping: ");
+	displacementMappingSlider.Create(0, 0.1f, 0.0f, 1000, "Displacement: ");
 	displacementMappingSlider.SetTooltip("Adjust how much the bump map should modulate the geometry when using tessellation.");
 	displacementMappingSlider.SetSize(XMFLOAT2(wid, hei));
 	displacementMappingSlider.SetPos(XMFLOAT2(x, y += step));
@@ -430,11 +424,10 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	hei = 20;
 	step = hei + 2;
 	x = 10;
-	y = 0;
 
 	materialNameField.Create("MaterialName");
 	materialNameField.SetTooltip("Set a name for the material...");
-	materialNameField.SetPos(XMFLOAT2(10, y));
+	materialNameField.SetPos(XMFLOAT2(10, y += step));
 	materialNameField.SetSize(XMFLOAT2(300, hei));
 	materialNameField.OnInputAccepted([=](wi::gui::EventArgs args) {
 		NameComponent* name = editor->GetCurrentScene().names.GetComponent(entity);
@@ -765,8 +758,8 @@ void MaterialWindow::SetEntity(Entity entity)
 			pomSlider.SetRange(0, 0.99f);
 			break;
 		case MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING:
-			pomSlider.SetText("Parallax Occlusion Mapping: ");
-			pomSlider.SetTooltip("Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
+			pomSlider.SetText("Par Occl Mapping: ");
+			pomSlider.SetTooltip("[Parallax Occlusion Mapping] Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
 			pomSlider.SetRange(0, 0.1f);
 			break;
 		default:

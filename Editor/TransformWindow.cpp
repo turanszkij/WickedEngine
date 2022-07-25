@@ -10,7 +10,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Transform", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(480, 200));
+	SetSize(XMFLOAT2(480, 400));
 
 	float x = 80;
 	float xx = x;

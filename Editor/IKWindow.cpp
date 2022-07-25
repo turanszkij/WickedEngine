@@ -14,7 +14,7 @@ void IKWindow::Create(EditorComponent* _editor)
 
 	float x = 120;
 	float y = 0;
-	float siz = 200;
+	float siz = 140;
 	float hei = 18;
 	float step = hei + 2;
 

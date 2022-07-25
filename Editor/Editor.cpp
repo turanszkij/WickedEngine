@@ -1550,7 +1550,6 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Select...
-		static bool selectAll = false;
 		if (wi::input::Press(wi::input::MOUSE_BUTTON_RIGHT) || selectAll || clear_selected)
 		{
 
@@ -1612,174 +1611,174 @@ void EditorComponent::Update(float dt)
 			RefreshEntityTree();
 		}
 
-		// Control operations...
-		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
+	}
+
+	// Control operations...
+	if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
+	{
+		// Toggle wireframe mode
+		if (wi::input::Press((wi::input::BUTTON)'W'))
 		{
-			// Toggle wireframe mode
-			if (wi::input::Press((wi::input::BUTTON)'W'))
+			wi::renderer::SetWireRender(!wi::renderer::IsWireRender());
+			rendererWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
+		}
+		// Enable transform tool
+		if (wi::input::Press((wi::input::BUTTON)'T'))
+		{
+			translator.enabled = !translator.enabled;
+			translatorCheckBox.SetCheck(translator.enabled);
+		}
+		// Save
+		if (wi::input::Press((wi::input::BUTTON)'S'))
+		{
+			if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || GetCurrentEditorScene().path.empty())
 			{
-				wi::renderer::SetWireRender(!wi::renderer::IsWireRender());
-				rendererWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
+				SaveAs();
 			}
-			// Enable transform tool
-			if (wi::input::Press((wi::input::BUTTON)'T'))
+			else
 			{
-				translator.enabled = !translator.enabled;
-				translatorCheckBox.SetCheck(translator.enabled);
-			}
-			// Save
-			if (wi::input::Press((wi::input::BUTTON)'S'))
-			{
-				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || GetCurrentEditorScene().path.empty())
-				{
-					SaveAs();
-				}
-				else
-				{
-					Save(GetCurrentEditorScene().path);
-				}
-			}
-			// Select All
-			if (wi::input::Press((wi::input::BUTTON)'A'))
-			{
-				selectAll = true;
-			}
-			// Copy/Cut
-			if (wi::input::Press((wi::input::BUTTON)'C') || wi::input::Press((wi::input::BUTTON)'X'))
-			{
-				auto& prevSel = translator.selectedEntitiesNonRecursive;
-
-				EntitySerializer seri;
-				clipboard.SetReadModeAndResetPos(false);
-				clipboard << prevSel.size();
-				for (auto& x : prevSel)
-				{
-					scene.Entity_Serialize(clipboard, seri, x);
-				}
-
-				if (wi::input::Press((wi::input::BUTTON)'X'))
-				{
-					deleting = true;
-				}
-			}
-			// Paste
-			if (wi::input::Press((wi::input::BUTTON)'V'))
-			{
-				wi::Archive& archive = AdvanceHistory();
-				archive << HISTORYOP_ADD;
-				RecordSelection(archive);
-
-				ClearSelected();
-
-				EntitySerializer seri;
-				clipboard.SetReadModeAndResetPos(true);
-				size_t count;
-				clipboard >> count;
-				wi::vector<Entity> addedEntities;
-				for (size_t i = 0; i < count; ++i)
-				{
-					wi::scene::PickResult picked;
-					picked.entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE);
-					AddSelected(picked);
-					addedEntities.push_back(picked.entity);
-				}
-
-				RecordSelection(archive);
-				RecordEntity(archive, addedEntities);
-
-				RefreshEntityTree();
-			}
-			// Duplicate Instances
-			if (wi::input::Press((wi::input::BUTTON)'D'))
-			{
-				wi::Archive& archive = AdvanceHistory();
-				archive << HISTORYOP_ADD;
-				RecordSelection(archive);
-
-				auto& prevSel = translator.selectedEntitiesNonRecursive;
-				wi::vector<Entity> addedEntities;
-				for (auto& x : prevSel)
-				{
-					wi::scene::PickResult picked;
-					picked.entity = scene.Entity_Duplicate(x);
-					addedEntities.push_back(picked.entity);
-				}
-
-				ClearSelected();
-
-				for (auto& x : addedEntities)
-				{
-					AddSelected(x);
-				}
-
-				RecordSelection(archive);
-				RecordEntity(archive, addedEntities);
-
-				RefreshEntityTree();
-			}
-			// Put Instances
-			if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
-			{
-				wi::vector<Entity> addedEntities;
-				EntitySerializer seri;
-				clipboard.SetReadModeAndResetPos(true);
-				size_t count;
-				clipboard >> count;
-				for (size_t i = 0; i < count; ++i)
-				{
-					Entity entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE | Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
-					const HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
-					if (hier != nullptr)
-					{
-						scene.Component_Detach(entity);
-					}
-					TransformComponent* transform = scene.transforms.GetComponent(entity);
-					if (transform != nullptr)
-					{
-						transform->translation_local = {};
-#if 0
-						// orient around surface normal:
-						transform->MatrixTransform(hovered.orientation);
-#else
-						// orient in random vertical rotation only:
-						transform->RotateRollPitchYaw(XMFLOAT3(0, wi::random::GetRandom(XM_PI), 0));
-						transform->Translate(hovered.position);
-#endif
-						transform->UpdateTransform();
-					}
-					if (hier != nullptr)
-					{
-						scene.Component_Attach(entity, hier->parentID);
-					}
-					addedEntities.push_back(entity);
-				}
-
-				wi::Archive& archive = AdvanceHistory();
-				archive << HISTORYOP_ADD;
-				// because selection didn't change here, we record same selection state twice, it's not a bug:
-				RecordSelection(archive);
-				RecordSelection(archive);
-				RecordEntity(archive, addedEntities);
-
-				RefreshEntityTree();
-			}
-			// Undo
-			if (wi::input::Press((wi::input::BUTTON)'Z'))
-			{
-				ConsumeHistoryOperation(true);
-
-				RefreshEntityTree();
-			}
-			// Redo
-			if (wi::input::Press((wi::input::BUTTON)'Y'))
-			{
-				ConsumeHistoryOperation(false);
-
-				RefreshEntityTree();
+				Save(GetCurrentEditorScene().path);
 			}
 		}
+		// Select All
+		if (wi::input::Press((wi::input::BUTTON)'A'))
+		{
+			selectAll = true;
+		}
+		// Copy/Cut
+		if (wi::input::Press((wi::input::BUTTON)'C') || wi::input::Press((wi::input::BUTTON)'X'))
+		{
+			auto& prevSel = translator.selectedEntitiesNonRecursive;
 
+			EntitySerializer seri;
+			clipboard.SetReadModeAndResetPos(false);
+			clipboard << prevSel.size();
+			for (auto& x : prevSel)
+			{
+				scene.Entity_Serialize(clipboard, seri, x);
+			}
+
+			if (wi::input::Press((wi::input::BUTTON)'X'))
+			{
+				deleting = true;
+			}
+		}
+		// Paste
+		if (wi::input::Press((wi::input::BUTTON)'V'))
+		{
+			wi::Archive& archive = AdvanceHistory();
+			archive << HISTORYOP_ADD;
+			RecordSelection(archive);
+
+			ClearSelected();
+
+			EntitySerializer seri;
+			clipboard.SetReadModeAndResetPos(true);
+			size_t count;
+			clipboard >> count;
+			wi::vector<Entity> addedEntities;
+			for (size_t i = 0; i < count; ++i)
+			{
+				wi::scene::PickResult picked;
+				picked.entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE);
+				AddSelected(picked);
+				addedEntities.push_back(picked.entity);
+			}
+
+			RecordSelection(archive);
+			RecordEntity(archive, addedEntities);
+
+			RefreshEntityTree();
+		}
+		// Duplicate Instances
+		if (wi::input::Press((wi::input::BUTTON)'D'))
+		{
+			wi::Archive& archive = AdvanceHistory();
+			archive << HISTORYOP_ADD;
+			RecordSelection(archive);
+
+			auto& prevSel = translator.selectedEntitiesNonRecursive;
+			wi::vector<Entity> addedEntities;
+			for (auto& x : prevSel)
+			{
+				wi::scene::PickResult picked;
+				picked.entity = scene.Entity_Duplicate(x);
+				addedEntities.push_back(picked.entity);
+			}
+
+			ClearSelected();
+
+			for (auto& x : addedEntities)
+			{
+				AddSelected(x);
+			}
+
+			RecordSelection(archive);
+			RecordEntity(archive, addedEntities);
+
+			RefreshEntityTree();
+		}
+		// Put Instances
+		if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+		{
+			wi::vector<Entity> addedEntities;
+			EntitySerializer seri;
+			clipboard.SetReadModeAndResetPos(true);
+			size_t count;
+			clipboard >> count;
+			for (size_t i = 0; i < count; ++i)
+			{
+				Entity entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE | Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
+				const HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+				if (hier != nullptr)
+				{
+					scene.Component_Detach(entity);
+				}
+				TransformComponent* transform = scene.transforms.GetComponent(entity);
+				if (transform != nullptr)
+				{
+					transform->translation_local = {};
+#if 0
+					// orient around surface normal:
+					transform->MatrixTransform(hovered.orientation);
+#else
+					// orient in random vertical rotation only:
+					transform->RotateRollPitchYaw(XMFLOAT3(0, wi::random::GetRandom(XM_PI), 0));
+					transform->Translate(hovered.position);
+#endif
+					transform->UpdateTransform();
+			}
+				if (hier != nullptr)
+				{
+					scene.Component_Attach(entity, hier->parentID);
+				}
+				addedEntities.push_back(entity);
+		}
+
+			wi::Archive& archive = AdvanceHistory();
+			archive << HISTORYOP_ADD;
+			// because selection didn't change here, we record same selection state twice, it's not a bug:
+			RecordSelection(archive);
+			RecordSelection(archive);
+			RecordEntity(archive, addedEntities);
+
+			RefreshEntityTree();
 	}
+		// Undo
+		if (wi::input::Press((wi::input::BUTTON)'Z'))
+		{
+			ConsumeHistoryOperation(true);
+
+			RefreshEntityTree();
+		}
+		// Redo
+		if (wi::input::Press((wi::input::BUTTON)'Y'))
+		{
+			ConsumeHistoryOperation(false);
+
+			RefreshEntityTree();
+		}
+		}
 
 	// Delete
 	if (deleting)

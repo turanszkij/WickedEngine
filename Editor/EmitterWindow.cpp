@@ -189,7 +189,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 	frameRateInput.Create("");
 	frameRateInput.SetPos(XMFLOAT2(x, y));
-	frameRateInput.SetSize(XMFLOAT2(40, 18));
+	frameRateInput.SetSize(XMFLOAT2(38, 18));
 	frameRateInput.SetText("");
 	frameRateInput.SetTooltip("Enter a value to enable looping sprite sheet animation (frames per second). Set 0 for animation along paritcle lifetime.");
 	frameRateInput.SetDescription("Frame Rate: ");
@@ -204,7 +204,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 	framesXInput.Create("");
 	framesXInput.SetPos(XMFLOAT2(x, y += step));
-	framesXInput.SetSize(XMFLOAT2(40, 18));
+	framesXInput.SetSize(XMFLOAT2(38, 18));
 	framesXInput.SetText("");
 	framesXInput.SetTooltip("How many horizontal frames there are in the spritesheet.");
 	framesXInput.SetDescription("Frames X: ");
@@ -219,7 +219,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 	framesYInput.Create("");
 	framesYInput.SetPos(XMFLOAT2(x, y += step));
-	framesYInput.SetSize(XMFLOAT2(40, 18));
+	framesYInput.SetSize(XMFLOAT2(38, 18));
 	framesYInput.SetText("");
 	framesYInput.SetTooltip("How many vertical frames there are in the spritesheet.");
 	framesYInput.SetDescription("Frames Y: ");
@@ -234,7 +234,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 	frameCountInput.Create("");
 	frameCountInput.SetPos(XMFLOAT2(x, y += step));
-	frameCountInput.SetSize(XMFLOAT2(40, 18));
+	frameCountInput.SetSize(XMFLOAT2(38, 18));
 	frameCountInput.SetText("");
 	frameCountInput.SetTooltip("Enter a value to enable the random sprite sheet frame selection's max frame number.");
 	frameCountInput.SetDescription("Frame Count: ");
@@ -249,7 +249,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 	frameStartInput.Create("");
 	frameStartInput.SetPos(XMFLOAT2(x, y += step));
-	frameStartInput.SetSize(XMFLOAT2(40, 18));
+	frameStartInput.SetSize(XMFLOAT2(38, 18));
 	frameStartInput.SetText("");
 	frameStartInput.SetTooltip("Specifies the starting frame of the animation.");
 	frameStartInput.SetDescription("Start Frame: ");

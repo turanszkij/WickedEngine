@@ -12,9 +12,9 @@ void SpringWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create("Spring", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(460, 200));
 
-	float x = 150;
+	float x = 120;
 	float y = 0;
-	float siz = 200;
+	float siz = 140;
 	float hei = 18;
 	float step = hei + 2;
 

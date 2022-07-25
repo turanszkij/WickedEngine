@@ -2427,17 +2427,8 @@ namespace wi::scene
 
 		ObjectComponent& object = objects.Create(entity);
 
-		// 2) Create a material, this will contain surface parameters, textures:
-		Entity entity_material = CreateEntity();
-
-		if (!name.empty())
-		{
-			names.Create(entity_material) = name + "material";
-		}
-
-		materials.Create(entity_material);
-
-		// 3) Create a mesh, this will contain vertex buffers:
+		// 2) Create a mesh, this will contain vertex buffers:
+		//	Here a separate mesh entity is created, to allow efficient instancing (not duplicating mesh data when duplicating objects)
 		Entity entity_mesh = CreateEntity();
 
 		if (!name.empty())
@@ -2564,7 +2555,8 @@ namespace wi::scene
 		// Subset maps a part of the mesh to a material:
 		MeshComponent::MeshSubset& subset = mesh.subsets.emplace_back();
 		subset.indexCount = uint32_t(mesh.indices.size());
-		subset.materialID = entity_material;
+		materials.Create(entity_mesh);
+		subset.materialID = entity_mesh; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
 
 		// vertex buffer GPU data will be packed and uploaded here:
 		mesh.CreateRenderData();

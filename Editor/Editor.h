@@ -158,6 +158,7 @@ public:
 	void AddSelected(wi::ecs::Entity entity);
 	void AddSelected(const wi::scene::PickResult& picked);
 	bool IsSelected(wi::ecs::Entity entity) const;
+	bool selectAll = false;
 
 
 	wi::Archive clipboard;

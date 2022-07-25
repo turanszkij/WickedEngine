@@ -357,12 +357,6 @@ namespace wi::gui
 	class Window :public Widget
 	{
 	protected:
-		Button closeButton;
-		Button collapseButton;
-		Button resizeDragger_UpperLeft;
-		Button resizeDragger_BottomRight;
-		Button moveDragger;
-		Label label;
 		ScrollBar scrollbar_vertical;
 		ScrollBar scrollbar_horizontal;
 		wi::vector<Widget*> widgets;
@@ -410,6 +404,13 @@ namespace wi::gui
 		void SetShadowExpand(float value) { shadow = value; }
 
 		void OnClose(std::function<void(EventArgs args)> func);
+
+		Button closeButton;
+		Button collapseButton;
+		Button resizeDragger_UpperLeft;
+		Button resizeDragger_BottomRight;
+		Button moveDragger;
+		Label label;
 	};
 
 	// HSV-Color Picker

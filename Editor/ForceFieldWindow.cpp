@@ -12,14 +12,15 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create("Force Field", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(420, 120));
 
-	float x = 150;
+	float x = 60;
 	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
+	float wid = 200;
 
-	typeComboBox.Create("Force Field type: ");
+	typeComboBox.Create("Type: ");
 	typeComboBox.SetPos(XMFLOAT2(x, y));
-	typeComboBox.SetSize(XMFLOAT2(200, hei));
+	typeComboBox.SetSize(XMFLOAT2(wid, hei));
 	typeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
 		if (force != nullptr && args.iValue >= 0)
@@ -46,7 +47,7 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 
 
 	gravitySlider.Create(-10, 10, 0, 100000, "Gravity: ");
-	gravitySlider.SetSize(XMFLOAT2(200, hei));
+	gravitySlider.SetSize(XMFLOAT2(wid, hei));
 	gravitySlider.SetPos(XMFLOAT2(x, y += step));
 	gravitySlider.OnSlide([&](wi::gui::EventArgs args) {
 		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
@@ -61,7 +62,7 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 
 
 	rangeSlider.Create(0.0f, 100.0f, 10, 100000, "Range: ");
-	rangeSlider.SetSize(XMFLOAT2(200, hei));
+	rangeSlider.SetSize(XMFLOAT2(wid, hei));
 	rangeSlider.SetPos(XMFLOAT2(x, y += step));
 	rangeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);

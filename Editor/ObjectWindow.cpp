@@ -261,17 +261,18 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create("Object", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(670, 320));
+	SetSize(XMFLOAT2(670, 840));
 
-	float x = 200;
+	float x = 140;
 	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
+	float wid = 130;
 
 	nameLabel.Create("NAMELABEL");
 	nameLabel.SetText("");
-	nameLabel.SetPos(XMFLOAT2(x - 30, y));
-	nameLabel.SetSize(XMFLOAT2(150, hei));
+	nameLabel.SetPos(XMFLOAT2(x, y));
+	nameLabel.SetSize(XMFLOAT2(wid, hei));
 	AddWidget(&nameLabel);
 
 	renderableCheckBox.Create("Renderable: ");
@@ -304,7 +305,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	ditherSlider.Create(0, 1, 0, 1000, "Transparency: ");
 	ditherSlider.SetTooltip("Adjust transparency of the object. Opaque materials will use dithered transparency in this case!");
-	ditherSlider.SetSize(XMFLOAT2(100, hei));
+	ditherSlider.SetSize(XMFLOAT2(wid, hei));
 	ditherSlider.SetPos(XMFLOAT2(x, y += step));
 	ditherSlider.OnSlide([&](wi::gui::EventArgs args) {
 		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
@@ -317,7 +318,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	cascadeMaskSlider.Create(0, 3, 0, 3, "Cascade Mask: ");
 	cascadeMaskSlider.SetTooltip("How many shadow cascades to skip when rendering this object into shadow maps? (0: skip none, it will be in all cascades, 1: skip first (biggest cascade), ...etc...");
-	cascadeMaskSlider.SetSize(XMFLOAT2(100, hei));
+	cascadeMaskSlider.SetSize(XMFLOAT2(wid, hei));
 	cascadeMaskSlider.SetPos(XMFLOAT2(x, y += step));
 	cascadeMaskSlider.OnSlide([&](wi::gui::EventArgs args) {
 		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
@@ -330,7 +331,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	lodSlider.Create(0.001f, 10, 1, 10000, "LOD Multiplier: ");
 	lodSlider.SetTooltip("How much the distance to camera will affect LOD selection. (If the mesh has lods)");
-	lodSlider.SetSize(XMFLOAT2(100, hei));
+	lodSlider.SetSize(XMFLOAT2(wid, hei));
 	lodSlider.SetPos(XMFLOAT2(x, y += step));
 	lodSlider.OnSlide([&](wi::gui::EventArgs args) {
 		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
@@ -345,13 +346,13 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	physicsLabel.Create("PHYSICSLABEL");
 	physicsLabel.SetText("PHYSICS SETTINGS");
-	physicsLabel.SetPos(XMFLOAT2(x - 30, y += step));
-	physicsLabel.SetSize(XMFLOAT2(150, hei));
+	physicsLabel.SetPos(XMFLOAT2(x, y += step));
+	physicsLabel.SetSize(XMFLOAT2(wid, hei));
 	AddWidget(&physicsLabel);
 
 
 	collisionShapeComboBox.Create("Collision Shape: ");
-	collisionShapeComboBox.SetSize(XMFLOAT2(100, hei));
+	collisionShapeComboBox.SetSize(XMFLOAT2(wid, hei));
 	collisionShapeComboBox.SetPos(XMFLOAT2(x, y += step));
 	collisionShapeComboBox.AddItem("DISABLED");
 	collisionShapeComboBox.AddItem("Box");
@@ -462,7 +463,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	AddWidget(&collisionShapeComboBox);
 
 	XSlider.Create(0, 10, 1, 100000, "X: ");
-	XSlider.SetSize(XMFLOAT2(100, hei));
+	XSlider.SetSize(XMFLOAT2(wid, hei));
 	XSlider.SetPos(XMFLOAT2(x, y += step));
 	XSlider.OnSlide([&](wi::gui::EventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
@@ -487,7 +488,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	AddWidget(&XSlider);
 
 	YSlider.Create(0, 10, 1, 100000, "Y: ");
-	YSlider.SetSize(XMFLOAT2(100, hei));
+	YSlider.SetSize(XMFLOAT2(wid, hei));
 	YSlider.SetPos(XMFLOAT2(x, y += step));
 	YSlider.OnSlide([&](wi::gui::EventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
@@ -509,7 +510,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	AddWidget(&YSlider);
 
 	ZSlider.Create(0, 10, 1, 100000, "Z: ");
-	ZSlider.SetSize(XMFLOAT2(100, hei));
+	ZSlider.SetSize(XMFLOAT2(wid, hei));
 	ZSlider.SetPos(XMFLOAT2(x, y += step));
 	ZSlider.OnSlide([&](wi::gui::EventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
@@ -529,7 +530,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	massSlider.Create(0, 10, 1, 100000, "Mass: ");
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
-	massSlider.SetSize(XMFLOAT2(100, hei));
+	massSlider.SetSize(XMFLOAT2(wid, hei));
 	massSlider.SetPos(XMFLOAT2(x, y += step));
 	massSlider.OnSlide([&](wi::gui::EventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
@@ -542,7 +543,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	frictionSlider.Create(0, 1, 0.5f, 100000, "Friction: ");
 	frictionSlider.SetTooltip("Set the friction amount for the physics engine.");
-	frictionSlider.SetSize(XMFLOAT2(100, hei));
+	frictionSlider.SetSize(XMFLOAT2(wid, hei));
 	frictionSlider.SetPos(XMFLOAT2(x, y += step));
 	frictionSlider.OnSlide([&](wi::gui::EventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
@@ -555,7 +556,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	restitutionSlider.Create(0, 1, 0, 100000, "Restitution: ");
 	restitutionSlider.SetTooltip("Set the restitution amount for the physics engine.");
-	restitutionSlider.SetSize(XMFLOAT2(100, hei));
+	restitutionSlider.SetSize(XMFLOAT2(wid, hei));
 	restitutionSlider.SetPos(XMFLOAT2(x, y += step));
 	restitutionSlider.OnSlide([&](wi::gui::EventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
@@ -568,7 +569,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	lineardampingSlider.Create(0, 1, 0, 100000, "Linear Damping: ");
 	lineardampingSlider.SetTooltip("Set the linear damping amount for the physics engine.");
-	lineardampingSlider.SetSize(XMFLOAT2(100, hei));
+	lineardampingSlider.SetSize(XMFLOAT2(wid, hei));
 	lineardampingSlider.SetPos(XMFLOAT2(x, y += step));
 	lineardampingSlider.OnSlide([&](wi::gui::EventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
@@ -581,7 +582,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	angulardampingSlider.Create(0, 1, 0, 100000, "Angular Damping: ");
 	angulardampingSlider.SetTooltip("Set the angular damping amount for the physics engine.");
-	angulardampingSlider.SetSize(XMFLOAT2(100, hei));
+	angulardampingSlider.SetSize(XMFLOAT2(wid, hei));
 	angulardampingSlider.SetPos(XMFLOAT2(x, y += step));
 	angulardampingSlider.OnSlide([&](wi::gui::EventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
@@ -594,7 +595,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	physicsMeshLODSlider.Create(0, 6, 0, 6, "Physics Mesh LOD: ");
 	physicsMeshLODSlider.SetTooltip("Specify which LOD to use for triangle mesh physics.");
-	physicsMeshLODSlider.SetSize(XMFLOAT2(100, hei));
+	physicsMeshLODSlider.SetSize(XMFLOAT2(wid, hei));
 	physicsMeshLODSlider.SetPos(XMFLOAT2(x, y += step));
 	physicsMeshLODSlider.OnSlide([&](wi::gui::EventArgs args) {
 		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
@@ -644,7 +645,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	lightmapResolutionSlider.Create(32, 1024, 128, 1024 - 32, "Lightmap resolution: ");
 	lightmapResolutionSlider.SetTooltip("Set the approximate resolution for this object's lightmap. This will be packed into the larger global lightmap later.");
-	lightmapResolutionSlider.SetSize(XMFLOAT2(100, hei));
+	lightmapResolutionSlider.SetSize(XMFLOAT2(wid, hei));
 	lightmapResolutionSlider.SetPos(XMFLOAT2(x, y += step));
 	lightmapResolutionSlider.OnSlide([&](wi::gui::EventArgs args) {
 		// unfortunately, we must be pow2 with full float lightmap format, otherwise it could be unlimited (but accumulation blending would suffer then)
@@ -654,7 +655,8 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	AddWidget(&lightmapResolutionSlider);
 
 	lightmapSourceUVSetComboBox.Create("UV Set: ");
-	lightmapSourceUVSetComboBox.SetPos(XMFLOAT2(x - 130, y += step));
+	lightmapSourceUVSetComboBox.SetPos(XMFLOAT2(x, y += step));
+	lightmapSourceUVSetComboBox.SetSize(XMFLOAT2(wid, hei));
 	lightmapSourceUVSetComboBox.AddItem("Copy UV 0");
 	lightmapSourceUVSetComboBox.AddItem("Copy UV 1");
 	lightmapSourceUVSetComboBox.AddItem("Keep Atlas");
@@ -666,7 +668,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	generateLightmapButton.Create("Generate Lightmap");
 	generateLightmapButton.SetTooltip("Render the lightmap for only this object. It will automatically combined with the global lightmap.");
 	generateLightmapButton.SetPos(XMFLOAT2(x, y));
-	generateLightmapButton.SetSize(XMFLOAT2(140, hei));
+	generateLightmapButton.SetSize(XMFLOAT2(wid, hei));
 	generateLightmapButton.OnClick([&](wi::gui::EventArgs args) {
 
 		Scene& scene = editor->GetCurrentScene();
@@ -747,7 +749,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	stopLightmapGenButton.Create("Stop Lightmap Gen");
 	stopLightmapGenButton.SetTooltip("Stop the lightmap rendering and save the lightmap.");
 	stopLightmapGenButton.SetPos(XMFLOAT2(x, y += step));
-	stopLightmapGenButton.SetSize(XMFLOAT2(140, hei));
+	stopLightmapGenButton.SetSize(XMFLOAT2(wid, hei));
 	stopLightmapGenButton.OnClick([&](wi::gui::EventArgs args) {
 
 		Scene& scene = editor->GetCurrentScene();
@@ -768,7 +770,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	clearLightmapButton.Create("Clear Lightmap");
 	clearLightmapButton.SetTooltip("Clear the lightmap from this object.");
 	clearLightmapButton.SetPos(XMFLOAT2(x, y += step));
-	clearLightmapButton.SetSize(XMFLOAT2(140, hei));
+	clearLightmapButton.SetSize(XMFLOAT2(wid, hei));
 	clearLightmapButton.OnClick([&](wi::gui::EventArgs args) {
 
 		Scene& scene = editor->GetCurrentScene();
@@ -785,18 +787,18 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&clearLightmapButton);
 
-	y = 10;
+	y += step;
 
 	colorComboBox.Create("Color picker mode: ");
-	colorComboBox.SetSize(XMFLOAT2(120, hei));
-	colorComboBox.SetPos(XMFLOAT2(x + 300, y += step));
+	colorComboBox.SetSize(XMFLOAT2(wid, hei));
+	colorComboBox.SetPos(XMFLOAT2(x, y += step));
 	colorComboBox.AddItem("Base color");
 	colorComboBox.AddItem("Emissive color");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	AddWidget(&colorComboBox);
 
 	colorPicker.Create("Object Color", wi::gui::Window::WindowControls::NONE);
-	colorPicker.SetPos(XMFLOAT2(350, y += step));
+	colorPicker.SetPos(XMFLOAT2(5, y += step));
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(true);
 	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {

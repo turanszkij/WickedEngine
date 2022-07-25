@@ -12,6 +12,7 @@ void NameWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create("Name", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(360, 50));
 
+	closeButton.SetTooltip("Delete NameComponent");
 	OnClose([=](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
