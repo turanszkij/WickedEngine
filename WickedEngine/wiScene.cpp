@@ -2407,6 +2407,170 @@ namespace wi::scene
 
 		return entity;
 	}
+	Entity Scene::Entity_CreateCube(
+		const std::string& name
+	)
+	{
+		// 1) Create an ObjectComponent, this can be used to instance a mesh:
+		Entity entity = CreateEntity();
+
+		if (!name.empty())
+		{
+			names.Create(entity) = name;
+		}
+
+		layers.Create(entity);
+
+		transforms.Create(entity);
+
+		aabb_objects.Create(entity);
+
+		ObjectComponent& object = objects.Create(entity);
+
+		// 2) Create a material, this will contain surface parameters, textures:
+		Entity entity_material = CreateEntity();
+
+		if (!name.empty())
+		{
+			names.Create(entity_material) = name + "material";
+		}
+
+		materials.Create(entity_material);
+
+		// 3) Create a mesh, this will contain vertex buffers:
+		Entity entity_mesh = CreateEntity();
+
+		if (!name.empty())
+		{
+			names.Create(entity_mesh) = name + "_mesh";
+		}
+
+		MeshComponent& mesh = meshes.Create(entity_mesh);
+
+		// object references the mesh entity (there can be multiple objects referencing one mesh):
+		object.meshID = entity_mesh;
+
+		mesh.vertex_positions = {
+			// -Z
+			XMFLOAT3(-1,1,	-1),
+			XMFLOAT3(-1,-1,	-1),
+			XMFLOAT3(1,-1,	-1),
+			XMFLOAT3(1,1,	-1),
+
+			// +Z
+			XMFLOAT3(-1,1,	1),
+			XMFLOAT3(-1,-1,	1),
+			XMFLOAT3(1,-1,	1),
+			XMFLOAT3(1,1,	1),
+
+			// -X
+			XMFLOAT3(-1, -1,1),
+			XMFLOAT3(-1, -1,-1),
+			XMFLOAT3(-1, 1,-1),
+			XMFLOAT3(-1, 1,1),
+
+			// +X
+			XMFLOAT3(1, -1,1),
+			XMFLOAT3(1, -1,-1),
+			XMFLOAT3(1, 1,-1),
+			XMFLOAT3(1, 1,1),
+
+			// -Y
+			XMFLOAT3(-1, -1,1),
+			XMFLOAT3(-1, -1,-1),
+			XMFLOAT3(1, -1,-1),
+			XMFLOAT3(1, -1,1),
+
+			// +Y
+			XMFLOAT3(-1, 1,1),
+			XMFLOAT3(-1, 1,-1),
+			XMFLOAT3(1, 1,-1),
+			XMFLOAT3(1, 1,1),
+		};
+
+		mesh.vertex_normals = {
+			XMFLOAT3(0,0,-1),
+			XMFLOAT3(0,0,-1),
+			XMFLOAT3(0,0,-1),
+			XMFLOAT3(0,0,-1),
+
+			XMFLOAT3(0,0,1),
+			XMFLOAT3(0,0,1),
+			XMFLOAT3(0,0,1),
+			XMFLOAT3(0,0,1),
+
+			XMFLOAT3(-1,0,0),
+			XMFLOAT3(-1,0,0),
+			XMFLOAT3(-1,0,0),
+			XMFLOAT3(-1,0,0),
+
+			XMFLOAT3(1,0,0),
+			XMFLOAT3(1,0,0),
+			XMFLOAT3(1,0,0),
+			XMFLOAT3(1,0,0),
+
+			XMFLOAT3(0,-1,0),
+			XMFLOAT3(0,-1,0),
+			XMFLOAT3(0,-1,0),
+			XMFLOAT3(0,-1,0),
+
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+		};
+
+		mesh.vertex_uvset_0 = {
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+		};
+
+		mesh.indices = {
+			0,			1,			2,			0,			2,			3,
+			0 + 4,		2 + 4,		1 + 4,		0 + 4,		3 + 4,		2 + 4,		// swapped winding
+			0 + 4 * 2,	1 + 4 * 2,	2 + 4 * 2,	0 + 4 * 2,	2 + 4 * 2,	3 + 4 * 2,
+			0 + 4 * 3,	2 + 4 * 3,	1 + 4 * 3,	0 + 4 * 3,	3 + 4 * 3,	2 + 4 * 3,	// swapped winding
+			0 + 4 * 4,	2 + 4 * 4,	1 + 4 * 4,	0 + 4 * 4,	3 + 4 * 4,	2 + 4 * 4,	// swapped winding
+			0 + 4 * 5,	1 + 4 * 5,	2 + 4 * 5,	0 + 4 * 5,	2 + 4 * 5,	3 + 4 * 5,
+		};
+
+		// Subset maps a part of the mesh to a material:
+		MeshComponent::MeshSubset& subset = mesh.subsets.emplace_back();
+		subset.indexCount = uint32_t(mesh.indices.size());
+		subset.materialID = entity_material;
+
+		// vertex buffer GPU data will be packed and uploaded here:
+		mesh.CreateRenderData();
+
+		return entity;
+	}
 
 	void Scene::Component_Attach(Entity entity, Entity parent, bool child_already_in_local_space)
 	{

@@ -1541,6 +1541,9 @@ namespace wi::scene
 			const std::string& filename,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
+		wi::ecs::Entity Entity_CreateCube(
+			const std::string& name
+		);
 
 		// Attaches an entity to a parent:
 		//	child_already_in_local_space	:	child won't be transformed from world space to local space

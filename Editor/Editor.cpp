@@ -817,6 +817,7 @@ void EditorComponent::Load()
 	newCombo.AddItem("Emitter", 10);
 	newCombo.AddItem("HairParticle", 11);
 	newCombo.AddItem("Camera", 12);
+	newCombo.AddItem("Cube", 13);
 	newCombo.OnSelect([&](wi::gui::EventArgs args) {
 		newCombo.SetSelectedWithoutCallback(0);
 		const EditorScene& editorscene = GetCurrentEditorScene();
@@ -903,6 +904,8 @@ void EditorComponent::Load()
 			*scene.cameras.GetComponent(entity) = camera;
 			*scene.transforms.GetComponent(entity) = editorscene.camera_transform;
 			break;
+		case 13:
+			entity = scene.Entity_CreateCube("cube");
 		default:
 			break;
 		}
