@@ -9,8 +9,22 @@ using namespace wi::scene;
 void DecalWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Decal", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create("Decal", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(300, 150));
+
+	closeButton.SetTooltip("Delete DecalComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().decals.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 200;
 	float y = 0;

@@ -2432,17 +2432,17 @@ namespace wi::scene
 
 		// 2) Create a mesh, this will contain vertex buffers:
 		//	Here a separate mesh entity is created, to allow efficient instancing (not duplicating mesh data when duplicating objects)
-		Entity entity_mesh = CreateEntity();
+		Entity entity_mesh_material = CreateEntity();
 
 		if (!name.empty())
 		{
-			names.Create(entity_mesh) = name + "_mesh";
+			names.Create(entity_mesh_material) = name + "_mesh_material";
 		}
 
-		MeshComponent& mesh = meshes.Create(entity_mesh);
+		MeshComponent& mesh = meshes.Create(entity_mesh_material);
 
 		// object references the mesh entity (there can be multiple objects referencing one mesh):
-		object.meshID = entity_mesh;
+		object.meshID = entity_mesh_material;
 
 		mesh.vertex_positions = {
 			// -Z
@@ -2558,8 +2558,79 @@ namespace wi::scene
 		// Subset maps a part of the mesh to a material:
 		MeshComponent::MeshSubset& subset = mesh.subsets.emplace_back();
 		subset.indexCount = uint32_t(mesh.indices.size());
-		materials.Create(entity_mesh);
-		subset.materialID = entity_mesh; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
+		materials.Create(entity_mesh_material);
+		subset.materialID = entity_mesh_material; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
+
+		// vertex buffer GPU data will be packed and uploaded here:
+		mesh.CreateRenderData();
+
+		return entity;
+	}
+	Entity Scene::Entity_CreatePlane(
+		const std::string& name
+	)
+	{
+		// 1) Create an ObjectComponent, this can be used to instance a mesh:
+		Entity entity = CreateEntity();
+
+		if (!name.empty())
+		{
+			names.Create(entity) = name;
+		}
+
+		layers.Create(entity);
+
+		transforms.Create(entity);
+
+		aabb_objects.Create(entity);
+
+		ObjectComponent& object = objects.Create(entity);
+
+		// 2) Create a mesh, this will contain vertex buffers:
+		//	Here a separate mesh entity is created, to allow efficient instancing (not duplicating mesh data when duplicating objects)
+		Entity entity_mesh_material = CreateEntity();
+
+		if (!name.empty())
+		{
+			names.Create(entity_mesh_material) = name + "_mesh_material";
+		}
+
+		MeshComponent& mesh = meshes.Create(entity_mesh_material);
+
+		// object references the mesh entity (there can be multiple objects referencing one mesh):
+		object.meshID = entity_mesh_material;
+
+		mesh.vertex_positions = {
+			// +Y
+			XMFLOAT3(-1, 0,1),
+			XMFLOAT3(-1, 0,-1),
+			XMFLOAT3(1, 0,-1),
+			XMFLOAT3(1, 0,1),
+		};
+
+		mesh.vertex_normals = {
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+		};
+
+		mesh.vertex_uvset_0 = {
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+		};
+
+		mesh.indices = {
+			0, 1, 2, 0, 2, 3,
+		};
+
+		// Subset maps a part of the mesh to a material:
+		MeshComponent::MeshSubset& subset = mesh.subsets.emplace_back();
+		subset.indexCount = uint32_t(mesh.indices.size());
+		materials.Create(entity_mesh_material);
+		subset.materialID = entity_mesh_material; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
 
 		// vertex buffer GPU data will be packed and uploaded here:
 		mesh.CreateRenderData();

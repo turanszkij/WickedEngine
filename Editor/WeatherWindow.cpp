@@ -9,8 +9,22 @@ using namespace wi::graphics;
 void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Weather", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create("Weather", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(660, 1300));
+
+	closeButton.SetTooltip("Delete WeatherComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().weathers.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 150;
 	float y = 0;

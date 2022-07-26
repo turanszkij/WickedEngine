@@ -817,13 +817,14 @@ void EditorComponent::Load()
 	newCombo.AddItem("Emitter", 10);
 	newCombo.AddItem("HairParticle", 11);
 	newCombo.AddItem("Camera", 12);
-	newCombo.AddItem("Cube", 13);
+	newCombo.AddItem("Cube Object", 13);
+	newCombo.AddItem("Plane Object", 14);
 	newCombo.OnSelect([&](wi::gui::EventArgs args) {
 		newCombo.SetSelectedWithoutCallback(0);
 		const EditorScene& editorscene = GetCurrentEditorScene();
 		const CameraComponent& camera = editorscene.camera;
 		Scene& scene = GetCurrentScene();
-		Entity entity = INVALID_ENTITY;
+		PickResult pick;
 
 		XMFLOAT3 in_front_of_camera;
 		XMStoreFloat3(&in_front_of_camera, XMVectorAdd(camera.GetEye(), camera.GetAt() * 4));
@@ -831,35 +832,35 @@ void EditorComponent::Load()
 		switch (args.userdata)
 		{
 		case 0:
-			entity = scene.Entity_CreateTransform("transform");
+			pick.entity = scene.Entity_CreateTransform("transform");
 			break;
 		case 1:
-			entity = scene.Entity_CreateMaterial("material");
+			pick.entity = scene.Entity_CreateMaterial("material");
 			break;
 		case 2:
-			entity = scene.Entity_CreateLight("pointlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
-			scene.lights.GetComponent(entity)->type = LightComponent::POINT;
-			scene.lights.GetComponent(entity)->intensity = 20;
+			pick.entity = scene.Entity_CreateLight("pointlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
+			scene.lights.GetComponent(pick.entity)->type = LightComponent::POINT;
+			scene.lights.GetComponent(pick.entity)->intensity = 20;
 			break;
 		case 3:
-			entity = scene.Entity_CreateLight("spotlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
-			scene.lights.GetComponent(entity)->type = LightComponent::SPOT;
-			scene.lights.GetComponent(entity)->intensity = 100;
+			pick.entity = scene.Entity_CreateLight("spotlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
+			scene.lights.GetComponent(pick.entity)->type = LightComponent::SPOT;
+			scene.lights.GetComponent(pick.entity)->intensity = 100;
 			break;
 		case 4:
-			entity = scene.Entity_CreateLight("dirlight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
-			scene.lights.GetComponent(entity)->type = LightComponent::DIRECTIONAL;
-			scene.lights.GetComponent(entity)->intensity = 10;
+			pick.entity = scene.Entity_CreateLight("dirlight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
+			scene.lights.GetComponent(pick.entity)->type = LightComponent::DIRECTIONAL;
+			scene.lights.GetComponent(pick.entity)->intensity = 10;
 			break;
 		case 5:
-			entity = scene.Entity_CreateEnvironmentProbe("envprobe", in_front_of_camera);
+			pick.entity = scene.Entity_CreateEnvironmentProbe("envprobe", in_front_of_camera);
 			break;
 		case 6:
-			entity = scene.Entity_CreateForce("force");
+			pick.entity = scene.Entity_CreateForce("force");
 			break;
 		case 7:
-			entity = scene.Entity_CreateDecal("decal", "images/logo_small.png");
-			scene.transforms.GetComponent(entity)->RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+			pick.entity = scene.Entity_CreateDecal("decal", "images/logo_small.png");
+			scene.transforms.GetComponent(pick.entity)->RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
 			break;
 		case 8:
 			{
@@ -889,37 +890,43 @@ void EditorComponent::Load()
 			}
 			break;
 		case 9:
-			entity = CreateEntity();
-			scene.weathers.Create(entity);
-			scene.names.Create(entity) = "weather";
+			pick.entity = CreateEntity();
+			scene.weathers.Create(pick.entity);
+			scene.names.Create(pick.entity) = "weather";
 			break;
 		case 10:
-			entity = scene.Entity_CreateEmitter("emitter");
+			pick.entity = scene.Entity_CreateEmitter("emitter");
 			break;
 		case 11:
-			entity = scene.Entity_CreateHair("hair");
+			pick.entity = scene.Entity_CreateHair("hair");
 			break;
 		case 12:
-			entity = scene.Entity_CreateCamera("camera", camera.width, camera.height);
-			*scene.cameras.GetComponent(entity) = camera;
-			*scene.transforms.GetComponent(entity) = editorscene.camera_transform;
+			pick.entity = scene.Entity_CreateCamera("camera", camera.width, camera.height);
+			*scene.cameras.GetComponent(pick.entity) = camera;
+			*scene.transforms.GetComponent(pick.entity) = editorscene.camera_transform;
 			break;
 		case 13:
-			entity = scene.Entity_CreateCube("cube");
+			pick.entity = scene.Entity_CreateCube("cube");
+			pick.subsetIndex = 0;
+			break;
+		case 14:
+			pick.entity = scene.Entity_CreatePlane("plane");
+			pick.subsetIndex = 0;
+			break;
 		default:
 			break;
 		}
-		if (entity != INVALID_ENTITY)
+		if (pick.entity != INVALID_ENTITY)
 		{
 			wi::Archive& archive = AdvanceHistory();
 			archive << HISTORYOP_ADD;
 			RecordSelection(archive);
 
 			ClearSelected();
-			AddSelected(entity);
+			AddSelected(pick);
 
 			RecordSelection(archive);
-			RecordEntity(archive, entity);
+			RecordEntity(archive, pick.entity);
 		}
 		RefreshEntityTree();
 	});
@@ -1047,6 +1054,8 @@ void EditorComponent::Load()
 	newComponentCombo.AddItem("Environment Probe", 8);
 	newComponentCombo.AddItem("Emitted Particle System", 9);
 	newComponentCombo.AddItem("Hair Particle System", 10);
+	newComponentCombo.AddItem("Decal", 11);
+	newComponentCombo.AddItem("Weather", 12);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(0);
 		if (translator.selected.empty())
@@ -1106,6 +1115,14 @@ void EditorComponent::Load()
 			if (scene.hairs.Contains(entity))
 				return;
 			break;
+		case 11:
+			if (scene.decals.Contains(entity))
+				return;
+			break;
+		case 12:
+			if (scene.weathers.Contains(entity))
+				return;
+			break;
 		default:
 			return;
 		}
@@ -1154,6 +1171,15 @@ void EditorComponent::Load()
 			if (!scene.materials.Contains(entity))
 				scene.materials.Create(entity);
 			scene.hairs.Create(entity);
+			break;
+		case 11:
+			if (!scene.materials.Contains(entity))
+				scene.materials.Create(entity);
+			scene.decals.Create(entity);
+			scene.aabb_decals.Create(entity);
+			break;
+		case 12:
+			scene.weathers.Create(entity);
 			break;
 		default:
 			break;
