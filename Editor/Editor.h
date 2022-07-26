@@ -76,27 +76,25 @@ public:
 
 	Editor* main = nullptr;
 
-	wi::gui::Button rendererWnd_Toggle;
-	wi::gui::Button postprocessWnd_Toggle;
-	wi::gui::Button cameraWnd_Toggle;
-	wi::gui::Button paintToolWnd_Toggle;
-	wi::gui::Button terrainWnd_Toggle;
-	wi::gui::CheckBox translatorCheckBox;
-	wi::gui::CheckBox isScalatorCheckBox;
-	wi::gui::CheckBox isRotatorCheckBox;
-	wi::gui::CheckBox isTranslatorCheckBox;
 	wi::gui::Button saveButton;
 	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::Button openButton;
 	wi::gui::Button closeButton;
 	wi::gui::Button aboutButton;
 	wi::gui::Button exitButton;
+	wi::gui::Label aboutLabel;
+
+	wi::gui::Window optionsWnd;
+	wi::gui::CheckBox translatorCheckBox;
+	wi::gui::CheckBox isScalatorCheckBox;
+	wi::gui::CheckBox isRotatorCheckBox;
+	wi::gui::CheckBox isTranslatorCheckBox;
 	wi::gui::CheckBox profilerEnabledCheckBox;
 	wi::gui::CheckBox physicsEnabledCheckBox;
 	wi::gui::CheckBox cinemaModeCheckBox;
 	wi::gui::ComboBox renderPathComboBox;
 	wi::gui::ComboBox sceneComboBox;
-	wi::gui::Label aboutLabel;
+	void RefreshOptionsWindow();
 
 	wi::gui::ComboBox newCombo;
 	wi::gui::TreeList entityTree;

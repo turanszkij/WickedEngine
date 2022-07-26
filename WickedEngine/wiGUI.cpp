@@ -72,8 +72,9 @@ namespace wi::gui
 		uint32_t priority = 0;
 
 		focus = false;
-		for (auto& widget : widgets)
+		for (size_t i = 0; i < widgets.size(); ++i)
 		{
+			Widget* widget = widgets[i]; // re index in loop, because widgets can be resized while updating!
 			widget->force_disable = focus;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
@@ -595,7 +596,7 @@ namespace wi::gui
 
 		Widget::Update(canvas, dt);
 
-		if (IsEnabled())
+		if (IsEnabled() && dt > 0)
 		{
 			hitBox.pos.x = translation.x;
 			hitBox.pos.y = translation.y;
@@ -776,7 +777,7 @@ namespace wi::gui
 		}
 		scrollbar_length = std::max(0.0f, scrollbar_length);
 
-		if (IsEnabled())
+		if (IsEnabled() && dt > 0)
 		{
 			if (state == FOCUS)
 			{
@@ -969,17 +970,20 @@ namespace wi::gui
 		scrollbar.SetSize(XMFLOAT2(scrollbar_width, scale.y));
 		scrollbar.Update(canvas, dt);
 
-		Hitbox2D pointerHitbox = GetPointerHitbox();
-		if (scroll_allowed && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
+		if (IsEnabled() && dt > 0)
 		{
-			scroll_allowed = false;
-			state = FOCUS;
-			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-			scrollbar.Scroll(wi::input::GetPointer().z * 20);
-		}
-		else
-		{
-			state = IDLE;
+			Hitbox2D pointerHitbox = GetPointerHitbox();
+			if (scroll_allowed && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
+			{
+				scroll_allowed = false;
+				state = FOCUS;
+				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+				scrollbar.Scroll(wi::input::GetPointer().z * 20);
+			}
+			else
+			{
+				state = IDLE;
+			}
 		}
 
 		if (scrollbar.IsScrollbarRequired())
@@ -1051,7 +1055,7 @@ namespace wi::gui
 
 		Widget::Update(canvas, dt);
 
-		if (IsEnabled())
+		if (IsEnabled() && dt > 0)
 		{
 			hitBox.pos.x = translation.x;
 			hitBox.pos.y = translation.y;
@@ -1280,7 +1284,7 @@ namespace wi::gui
 		valueInputField.force_disable = force_disable;
 		valueInputField.Update(canvas, dt);
 
-		if (IsEnabled())
+		if (IsEnabled() && dt > 0)
 		{
 			bool dragged = false;
 
@@ -1423,7 +1427,7 @@ namespace wi::gui
 
 		Widget::Update(canvas, dt);
 
-		if (IsEnabled())
+		if (IsEnabled() && dt > 0)
 		{
 
 			if (state == FOCUS)
@@ -1997,6 +2001,48 @@ namespace wi::gui
 			AddWidget(&resizeDragger_UpperLeft);
 		}
 
+		if (has_flag(window_controls, WindowControls::RESIZE_TOPRIGHT))
+		{
+			// Add a resizer control to the upperleft corner
+			resizeDragger_UpperRight.Create(name + "_resize_dragger_upper_right");
+			resizeDragger_UpperRight.SetTooltip("Resize window");
+			resizeDragger_UpperRight.SetText("«|»");
+			resizeDragger_UpperRight.font.params.rotation = XM_PIDIV4 * 3;
+			resizeDragger_UpperRight.OnDrag([this](EventArgs args) {
+				auto saved_parent = this->parent;
+				this->Detach();
+				XMFLOAT2 scaleDiff;
+				scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
+				scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
+				this->Translate(XMFLOAT3(0, args.deltaPos.y, 0));
+				this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+				this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(control_size * 3, control_size * 2, 1)); // don't allow resize to negative or too small
+				this->AttachTo(saved_parent);
+				});
+			AddWidget(&resizeDragger_UpperRight);
+		}
+
+		if (has_flag(window_controls, WindowControls::RESIZE_BOTTOMLEFT))
+		{
+			// Add a resizer control to the bottom right corner
+			resizeDragger_BottomLeft.Create(name + "_resize_dragger_bottom_left");
+			resizeDragger_BottomLeft.SetTooltip("Resize window");
+			resizeDragger_BottomLeft.SetText("«|»");
+			resizeDragger_BottomLeft.font.params.rotation = XM_PIDIV4 * 3;
+			resizeDragger_BottomLeft.OnDrag([this](EventArgs args) {
+				auto saved_parent = this->parent;
+				this->Detach();
+				XMFLOAT2 scaleDiff;
+				scaleDiff.x = (scale.x - args.deltaPos.x) / scale.x;
+				scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
+				this->Translate(XMFLOAT3(args.deltaPos.x, 0, 0));
+				this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+				this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(control_size * 3, control_size * 2, 1)); // don't allow resize to negative or too small
+				this->AttachTo(saved_parent);
+				});
+			AddWidget(&resizeDragger_BottomLeft);
+		}
+
 		if (has_flag(window_controls, WindowControls::RESIZE_BOTTOMRIGHT))
 		{
 			// Add a resizer control to the bottom right corner
@@ -2055,6 +2101,10 @@ namespace wi::gui
 			collapseButton.SetText("-");
 			collapseButton.OnClick([this](EventArgs args) {
 				this->SetMinimized(!this->IsMinimized());
+				if (onCollapse)
+				{
+					onCollapse({});
+				}
 				});
 			collapseButton.SetTooltip("Collapse/Expand window");
 			AddWidget(&collapseButton);
@@ -2132,12 +2182,16 @@ namespace wi::gui
 
 		moveDragger.force_disable = force_disable;
 		resizeDragger_UpperLeft.force_disable = force_disable;
+		resizeDragger_UpperRight.force_disable = force_disable;
+		resizeDragger_BottomLeft.force_disable = force_disable;
 		resizeDragger_BottomRight.force_disable = force_disable;
 		scrollbar_horizontal.force_disable = force_disable;
 		scrollbar_vertical.force_disable = force_disable;
 
 		moveDragger.Update(canvas, dt);
 		resizeDragger_UpperLeft.Update(canvas, dt);
+		resizeDragger_UpperRight.Update(canvas, dt);
+		resizeDragger_BottomLeft.Update(canvas, dt);
 		resizeDragger_BottomRight.Update(canvas, dt);
 		scrollbar_horizontal.Update(canvas, dt);
 		scrollbar_vertical.Update(canvas, dt);
@@ -2155,29 +2209,58 @@ namespace wi::gui
 		if (moveDragger.parent != nullptr)
 		{
 			moveDragger.Detach();
-			moveDragger.SetSize(XMFLOAT2(scale.x - control_size * 3, control_size));
-			moveDragger.SetPos(XMFLOAT2(translation.x + control_size, translation.y));
+			float rem = 0;
+			if (closeButton.parent != nullptr)
+			{
+				rem++;
+			}
+			if (collapseButton.parent != nullptr)
+			{
+				rem++;
+			}
+			if (resizeDragger_UpperLeft.parent != nullptr)
+			{
+				rem++;
+			}
+			if (resizeDragger_UpperRight.parent != nullptr)
+			{
+				rem++;
+			}
+			moveDragger.SetSize(XMFLOAT2(scale.x - control_size * rem, control_size));
+			float offset = 0;
+			if (resizeDragger_UpperLeft.parent != nullptr)
+			{
+				offset++;
+			}
+			moveDragger.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y));
 			moveDragger.AttachTo(this);
 		}
 		if (closeButton.parent != nullptr)
 		{
 			closeButton.Detach();
 			closeButton.SetSize(XMFLOAT2(control_size, control_size));
-			closeButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y));
+			float offset = 1;
+			if (resizeDragger_UpperRight.parent != nullptr)
+			{
+				offset++;
+			}
+			closeButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size * offset, translation.y));
 			closeButton.AttachTo(this);
 		}
 		if (collapseButton.parent != nullptr)
 		{
 			collapseButton.Detach();
 			collapseButton.SetSize(XMFLOAT2(control_size, control_size));
+			float offset = 1;
 			if (closeButton.parent != nullptr)
 			{
-				collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size * 2, translation.y));
+				offset++;
 			}
-			else
+			if (resizeDragger_UpperRight.parent != nullptr)
 			{
-				collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y));
+				offset++;
 			}
+			collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size * offset, translation.y));
 			collapseButton.AttachTo(this);
 		}
 		if (resizeDragger_UpperLeft.parent != nullptr)
@@ -2186,6 +2269,20 @@ namespace wi::gui
 			resizeDragger_UpperLeft.SetSize(XMFLOAT2(control_size, control_size));
 			resizeDragger_UpperLeft.SetPos(XMFLOAT2(translation.x, translation.y));
 			resizeDragger_UpperLeft.AttachTo(this);
+		}
+		if (resizeDragger_UpperRight.parent != nullptr)
+		{
+			resizeDragger_UpperRight.Detach();
+			resizeDragger_UpperRight.SetSize(XMFLOAT2(control_size, control_size));
+			resizeDragger_UpperRight.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y));
+			resizeDragger_UpperRight.AttachTo(this);
+		}
+		if (resizeDragger_BottomLeft.parent != nullptr)
+		{
+			resizeDragger_BottomLeft.Detach();
+			resizeDragger_BottomLeft.SetSize(XMFLOAT2(control_size, control_size));
+			resizeDragger_BottomLeft.SetPos(XMFLOAT2(translation.x, translation.y + scale.y - control_size));
+			resizeDragger_BottomLeft.AttachTo(this);
 		}
 		if (resizeDragger_BottomRight.parent != nullptr)
 		{
@@ -2220,14 +2317,24 @@ namespace wi::gui
 		if (scrollbar_horizontal.parent != nullptr)
 		{
 			scrollbar_horizontal.Detach();
-			scrollbar_horizontal.SetSize(XMFLOAT2(scale.x - control_size, control_size));
-			scrollbar_horizontal.SetPos(XMFLOAT2(translation.x, translation.y + scale.y - control_size));
+			float offset = 0;
+			if (resizeDragger_BottomLeft.parent != nullptr)
+			{
+				offset++;
+			}
+			scrollbar_horizontal.SetSize(XMFLOAT2(scale.x - control_size * (offset + 1), control_size));
+			scrollbar_horizontal.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y + scale.y - control_size));
 			scrollbar_horizontal.AttachTo(this);
 		}
 		if (scrollbar_vertical.parent != nullptr)
 		{
 			scrollbar_vertical.Detach();
-			scrollbar_vertical.SetSize(XMFLOAT2(control_size, scale.y - 2 - control_size * 2));
+			float offset = 1;
+			if (resizeDragger_BottomRight.parent != nullptr)
+			{
+				offset++;
+			}
+			scrollbar_vertical.SetSize(XMFLOAT2(control_size, scale.y - (control_size + 1) * offset));
 			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + 1 + control_size));
 			scrollbar_vertical.AttachTo(this);
 		}
@@ -2276,8 +2383,9 @@ namespace wi::gui
 		
 
 		bool focus = false;
-		for (auto& widget : widgets)
+		for (size_t i = 0; i < widgets.size(); ++i)
 		{
+			Widget* widget = widgets[i]; // re index in loop, because widgets can be resized while updating!
 			widget->force_disable = force_disable || focus;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
@@ -2317,7 +2425,7 @@ namespace wi::gui
 			hitBox.siz.y = control_size;
 		}
 
-		if (IsEnabled() && !IsMinimized())
+		if (IsEnabled() && !IsMinimized() && dt > 0)
 		{
 			if (state == FOCUS)
 			{
@@ -2459,6 +2567,10 @@ namespace wi::gui
 				continue;
 			if (x == &resizeDragger_UpperLeft)
 				continue;
+			if (x == &resizeDragger_UpperRight)
+				continue;
+			if (x == &resizeDragger_BottomLeft)
+				continue;
 			if (x == &resizeDragger_BottomRight)
 				continue;
 			if (x == &scrollbar_horizontal)
@@ -2480,6 +2592,10 @@ namespace wi::gui
 	{
 		minimized = value;
 
+		if (resizeDragger_BottomLeft.parent != nullptr)
+		{
+			resizeDragger_BottomLeft.SetVisible(!value);
+		}
 		if (resizeDragger_BottomRight.parent != nullptr)
 		{
 			resizeDragger_BottomRight.SetVisible(!value);
@@ -2493,6 +2609,8 @@ namespace wi::gui
 			if (x == &closeButton)
 				continue;
 			if (x == &resizeDragger_UpperLeft)
+				continue;
+			if (x == &resizeDragger_UpperRight)
 				continue;
 			if (x == &label)
 				continue;
@@ -2547,6 +2665,10 @@ namespace wi::gui
 	void Window::OnClose(std::function<void(EventArgs args)> func)
 	{
 		onClose = func;
+	}
+	void Window::OnCollapse(std::function<void(EventArgs args)> func)
+	{
+		onCollapse = func;
 	}
 
 
@@ -2780,7 +2902,7 @@ namespace wi::gui
 
 		Window::Update(canvas, dt);
 
-		if (IsEnabled())
+		if (IsEnabled() && dt > 0)
 		{
 
 			if (state == DEACTIVATING)
@@ -3370,7 +3492,34 @@ namespace wi::gui
 
 		Widget::Update(canvas, dt);
 
-		if (IsEnabled())
+		// compute control-list height
+		float scroll_length = 0;
+		{
+			int parent_level = 0;
+			bool parent_open = true;
+			for (const Item& item : items)
+			{
+				if (!parent_open && item.level > parent_level)
+				{
+					continue;
+				}
+				parent_open = item.open;
+				parent_level = item.level;
+				scroll_length += item_height();
+			}
+		}
+		scrollbar.SetListLength(scroll_length);
+
+		const float scrollbar_width = 12;
+		scrollbar.SetSize(XMFLOAT2(scrollbar_width - 1, scale.y - 1 - item_height()));
+		scrollbar.SetPos(XMFLOAT2(translation.x + 1 + scale.x - scrollbar_width, translation.y + 1 + item_height()));
+		scrollbar.Update(canvas, dt);
+		if (scrollbar.GetState() > IDLE)
+		{
+			Deactivate();
+		}
+
+		if (IsEnabled() && dt > 0)
 		{
 			if (state == FOCUS)
 			{
@@ -3410,38 +3559,12 @@ namespace wi::gui
 				}
 			}
 
-			// compute control-list height
-			float scroll_length = 0;
-			{
-				int parent_level = 0;
-				bool parent_open = true;
-				for (const Item& item : items)
-				{
-					if (!parent_open && item.level > parent_level)
-					{
-						continue;
-					}
-					parent_open = item.open;
-					parent_level = item.level;
-					scroll_length += item_height();
-				}
-			}
-			scrollbar.SetListLength(scroll_length);
-
 			float scroll = wi::input::GetPointer().z * 10;
-			if (scroll && scroll_allowed && scrollbar.IsScrollbarRequired() && GetState() == FOCUS)
+			if (scroll && scroll_allowed && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
 			{
 				scroll_allowed = false;
 				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
 				scrollbar.Scroll(scroll);
-			}
-			const float scrollbar_width = 12;
-			scrollbar.SetSize(XMFLOAT2(scrollbar_width - 1, scale.y - 1 - item_height()));
-			scrollbar.SetPos(XMFLOAT2(translation.x + 1 + scale.x - scrollbar_width, translation.y + 1 + item_height()));
-			scrollbar.Update(canvas, dt);
-			if (scrollbar.GetState() > IDLE)
-			{
-				Deactivate();
 			}
 
 			Hitbox2D itemlist_box = GetHitbox_ListArea();

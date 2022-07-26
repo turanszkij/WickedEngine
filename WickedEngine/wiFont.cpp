@@ -145,6 +145,8 @@ namespace wi::font
 					}
 					status.cursor.position.x -= word_offset;
 					status.cursor.position.y += LINEBREAK_SIZE;
+					status.cursor.size.x = std::max(status.cursor.size.x, status.cursor.position.x);
+					status.cursor.size.y = std::max(status.cursor.size.y, status.cursor.position.y + LINEBREAK_SIZE);
 				}
 			};
 

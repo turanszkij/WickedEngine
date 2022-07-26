@@ -16,6 +16,8 @@ using namespace wi::primitive;
 using namespace wi::scene;
 using namespace wi::ecs;
 
+const float shadow_expand = 1;
+
 void Editor::Initialize()
 {
 	Application::Initialize();
@@ -106,19 +108,19 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 	renderPath->Load();
 
-	wi::gui::GUI& gui = GetGUI();
-
 	// Destroy and recreate renderer and postprocess windows:
 
-	gui.RemoveWidget(&rendererWnd);
+	optionsWnd.RemoveWidget(&rendererWnd);
 	rendererWnd = {};
 	rendererWnd.Create(this);
-	gui.AddWidget(&rendererWnd);
+	rendererWnd.SetShadowExpand(shadow_expand);
+	optionsWnd.AddWidget(&rendererWnd);
 
-	gui.RemoveWidget(&postprocessWnd);
+	optionsWnd.RemoveWidget(&postprocessWnd);
 	postprocessWnd = {};
 	postprocessWnd.Create(this);
-	gui.AddWidget(&postprocessWnd);
+	postprocessWnd.SetShadowExpand(shadow_expand);
+	optionsWnd.AddWidget(&postprocessWnd);
 }
 
 void EditorComponent::ResizeBuffers()
@@ -231,21 +233,11 @@ void EditorComponent::ResizeLayout()
 	float screenW = GetLogicalWidth();
 	float screenH = GetLogicalHeight();
 
+	optionsWnd.SetPos(XMFLOAT2(0, screenH - optionsWnd.GetScale().y));
+
 	componentWindow.SetPos(XMFLOAT2(screenW - componentWindow.GetScale().x, screenH - componentWindow.GetScale().y));
 
 	////////////////////////////////////////////////////////////////////////////////////
-
-	translatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3 - 25, 0));
-	translatorCheckBox.SetSize(XMFLOAT2(18, 18));
-
-	isScalatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3 - 25 - 40 * 2, 22));
-	isScalatorCheckBox.SetSize(XMFLOAT2(18, 18));
-
-	isRotatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3 - 25 - 40 * 1, 22));
-	isRotatorCheckBox.SetSize(XMFLOAT2(18, 18));
-
-	isTranslatorCheckBox.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3 - 25, 22));
-	isTranslatorCheckBox.SetSize(XMFLOAT2(18, 18));
 
 	saveButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
 	saveButton.SetSize(XMFLOAT2(100, 40));
@@ -264,58 +256,6 @@ void EditorComponent::ResizeLayout()
 
 	exitButton.SetPos(XMFLOAT2(screenW - 50, 0));
 	exitButton.SetSize(XMFLOAT2(50, 40));
-
-	profilerEnabledCheckBox.SetSize(XMFLOAT2(18, 18));
-	profilerEnabledCheckBox.SetPos(XMFLOAT2(screenW - 485, 45));
-
-	physicsEnabledCheckBox.SetSize(XMFLOAT2(18, 18));
-	physicsEnabledCheckBox.SetPos(XMFLOAT2(screenW - 390, 45));
-
-	cinemaModeCheckBox.SetSize(XMFLOAT2(18, 18));
-	cinemaModeCheckBox.SetPos(XMFLOAT2(screenW - 260, 45));
-
-	renderPathComboBox.SetSize(XMFLOAT2(120, 18));
-	renderPathComboBox.SetPos(XMFLOAT2(screenW - 140, 45));
-
-	sceneComboBox.SetSize(XMFLOAT2(120, 18));
-	sceneComboBox.SetPos(XMFLOAT2(screenW - 140, 67));
-
-	saveModeComboBox.SetSize(XMFLOAT2(120, 18));
-	saveModeComboBox.SetPos(XMFLOAT2(screenW - 140, 89));
-
-	pathTraceTargetSlider.SetSize(XMFLOAT2(200, 18));
-	pathTraceTargetSlider.SetPos(XMFLOAT2(screenW - 240, 111));
-
-	pathTraceStatisticsLabel.SetSize(XMFLOAT2(240, 60));
-	pathTraceStatisticsLabel.SetPos(XMFLOAT2(screenW - 240, 133));
-
-	entityTree.SetSize(XMFLOAT2(260, 300));
-	entityTree.SetPos(XMFLOAT2(0, screenH - entityTree.scale_local.y));
-
-	newCombo.SetSize(XMFLOAT2(200, 20));
-	newCombo.SetPos(XMFLOAT2(entityTree.GetPos().x + 60 - newCombo.GetSize().y - 1, entityTree.GetPos().y - newCombo.GetSize().y - 2));
-
-
-	XMFLOAT2 option_size = XMFLOAT2(100, 34);
-	float step = option_size.y + 2;
-	float hstep = option_size.x + 2;
-	float x = entityTree.GetPosition().x + entityTree.GetScale().x - option_size.x;
-	float y = entityTree.GetPosition().y + entityTree.GetScale().y - option_size.y;
-
-	rendererWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
-	rendererWnd_Toggle.SetSize(option_size);
-
-	postprocessWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
-	postprocessWnd_Toggle.SetSize(option_size);
-
-	cameraWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
-	cameraWnd_Toggle.SetSize(option_size);
-
-	paintToolWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
-	paintToolWnd_Toggle.SetSize(option_size);
-
-	terrainWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
-	terrainWnd_Toggle.SetSize(option_size);
 }
 void EditorComponent::Load()
 {
@@ -333,219 +273,9 @@ void EditorComponent::Load()
 	// wait for ctx is at the end of this function!
 
 
-	rendererWnd_Toggle.Create("Renderer");
-	rendererWnd_Toggle.SetTooltip("Renderer settings window");
-	rendererWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		rendererWnd.SetVisible(!rendererWnd.IsVisible());
-		});
-	GetGUI().AddWidget(&rendererWnd_Toggle);
-
-	postprocessWnd_Toggle.Create("PostProcess");
-	postprocessWnd_Toggle.SetTooltip("Postprocess settings window");
-	postprocessWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		postprocessWnd.SetVisible(!postprocessWnd.IsVisible());
-		});
-	GetGUI().AddWidget(&postprocessWnd_Toggle);
-
-	cameraWnd_Toggle.Create("Camera");
-	cameraWnd_Toggle.SetTooltip("Camera settings window");
-	cameraWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		cameraWnd.SetVisible(!cameraWnd.IsVisible());
-		});
-	GetGUI().AddWidget(&cameraWnd_Toggle);
-
-	paintToolWnd_Toggle.Create("Paint Tool");
-	paintToolWnd_Toggle.SetTooltip("Paint tool window");
-	paintToolWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-		paintToolWnd.SetVisible(!paintToolWnd.IsVisible());
-		});
-	GetGUI().AddWidget(&paintToolWnd_Toggle);
-
-	terrainWnd_Toggle.Create("Terrain");
-	terrainWnd_Toggle.SetTooltip("Terrain Generator");
-	terrainWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
-
-		if (terragen.terrainEntity == INVALID_ENTITY)
-		{
-			// Customize terrain generator before it's initialized:
-			terragen.material_Base.SetRoughness(1);
-			terragen.material_Base.SetReflectance(0.005f);
-			terragen.material_Slope.SetRoughness(0.1f);
-			terragen.material_LowAltitude.SetRoughness(1);
-			terragen.material_HighAltitude.SetRoughness(1);
-			terragen.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "terrain/base.jpg";
-			terragen.material_Base.textures[MaterialComponent::NORMALMAP].name = "terrain/base_nor.jpg";
-			terragen.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "terrain/slope.jpg";
-			terragen.material_Slope.textures[MaterialComponent::NORMALMAP].name = "terrain/slope_nor.jpg";
-			terragen.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/low_altitude.jpg";
-			terragen.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/low_altitude_nor.jpg";
-			terragen.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/high_altitude.jpg";
-			terragen.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/high_altitude_nor.jpg";
-			terragen.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = "terrain/grassparticle.png";
-			terragen.material_GrassParticle.alphaRef = 0.75f;
-			terragen.grass_properties.length = 5;
-			terragen.grass_properties.frameCount = 2;
-			terragen.grass_properties.framesX = 1;
-			terragen.grass_properties.framesY = 2;
-			terragen.grass_properties.frameStart = 0;
-			terragen.material_Base.CreateRenderData();
-			terragen.material_Slope.CreateRenderData();
-			terragen.material_LowAltitude.CreateRenderData();
-			terragen.material_HighAltitude.CreateRenderData();
-			terragen.material_GrassParticle.CreateRenderData();
-			// Tree prop:
-			{
-				Scene props_scene;
-				wi::scene::LoadModel(props_scene, "terrain/tree.wiscene");
-				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
-				prop.name = "tree";
-				prop.min_count_per_chunk = 0;
-				prop.max_count_per_chunk = 10;
-				prop.region = 0;
-				prop.region_power = 2;
-				prop.noise_frequency = 0.1f;
-				prop.noise_power = 1;
-				prop.threshold = 0.4f;
-				prop.min_size = 2.0f;
-				prop.max_size = 8.0f;
-				prop.min_y_offset = -0.5f;
-				prop.max_y_offset = -0.5f;
-				prop.mesh_entity = props_scene.Entity_FindByName("tree_mesh");
-				props_scene.impostors.Create(prop.mesh_entity).swapInDistance = 200;
-				Entity object_entity = props_scene.Entity_FindByName("tree_object");
-				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
-				if (object != nullptr)
-				{
-					prop.object = *object;
-					prop.object.lod_distance_multiplier = 0.05f;
-					//prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
-				}
-				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
-				GetCurrentScene().Merge(props_scene);
-			}
-			// Rock prop:
-			{
-				Scene props_scene;
-				wi::scene::LoadModel(props_scene, "terrain/rock.wiscene");
-				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
-				prop.name = "rock";
-				prop.min_count_per_chunk = 0;
-				prop.max_count_per_chunk = 8;
-				prop.region = 0;
-				prop.region_power = 1;
-				prop.noise_frequency = 0.005f;
-				prop.noise_power = 2;
-				prop.threshold = 0.5f;
-				prop.min_size = 0.02f;
-				prop.max_size = 4.0f;
-				prop.min_y_offset = -2;
-				prop.max_y_offset = 0.5f;
-				prop.mesh_entity = props_scene.Entity_FindByName("rock_mesh");
-				Entity object_entity = props_scene.Entity_FindByName("rock_object");
-				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
-				if (object != nullptr)
-				{
-					prop.object = *object;
-					prop.object.lod_distance_multiplier = 0.02f;
-					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
-					prop.object.draw_distance = 400;
-				}
-				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
-				GetCurrentScene().Merge(props_scene);
-			}
-			// Bush prop:
-			{
-				Scene props_scene;
-				wi::scene::LoadModel(props_scene, "terrain/bush.wiscene");
-				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
-				prop.name = "bush";
-				prop.min_count_per_chunk = 0;
-				prop.max_count_per_chunk = 10;
-				prop.region = 0;
-				prop.region_power = 4;
-				prop.noise_frequency = 0.01f;
-				prop.noise_power = 4;
-				prop.threshold = 0.1f;
-				prop.min_size = 0.1f;
-				prop.max_size = 1.5f;
-				prop.min_y_offset = -1;
-				prop.max_y_offset = 0;
-				prop.mesh_entity = props_scene.Entity_FindByName("bush_mesh");
-				Entity object_entity = props_scene.Entity_FindByName("bush_object");
-				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
-				if (object != nullptr)
-				{
-					prop.object = *object;
-					prop.object.lod_distance_multiplier = 0.05f;
-					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
-					prop.object.draw_distance = 200;
-				}
-				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
-				GetCurrentScene().Merge(props_scene);
-			}
-			terragen.init();
-			RefreshEntityTree();
-		}
-
-		terragen.SetVisible(!terragen.IsVisible());
-		if (terragen.IsVisible() && !GetCurrentScene().transforms.Contains(terragen.terrainEntity))
-		{
-			terragen.Generation_Restart();
-			RefreshEntityTree();
-		}
-
-		});
-	GetGUI().AddWidget(&terrainWnd_Toggle);
-	GetGUI().AddWidget(&terragen);
 
 
-	////////////////////////////////////////////////////////////////////////////////////
 
-
-	translatorCheckBox.Create("Transform: ");
-	translatorCheckBox.SetTooltip("Enable the transform tool (Ctrl + T).\nTip: hold Left Ctrl to enable snap transform.\nYou can configure snap mode units in the Transform settings.");
-	translatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		translator.enabled = args.bValue;
-	});
-	GetGUI().AddWidget(&translatorCheckBox);
-
-	isScalatorCheckBox.Create("S: ");
-	isRotatorCheckBox.Create("R: ");
-	isTranslatorCheckBox.Create("T: ");
-	{
-		isScalatorCheckBox.SetTooltip("Scale");
-		isScalatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
-			translator.isScalator = args.bValue;
-			translator.isTranslator = false;
-			translator.isRotator = false;
-			isTranslatorCheckBox.SetCheck(false);
-			isRotatorCheckBox.SetCheck(false);
-		});
-		isScalatorCheckBox.SetCheck(translator.isScalator);
-		GetGUI().AddWidget(&isScalatorCheckBox);
-
-		isRotatorCheckBox.SetTooltip("Rotate");
-		isRotatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
-			translator.isRotator = args.bValue;
-			translator.isScalator = false;
-			translator.isTranslator = false;
-			isScalatorCheckBox.SetCheck(false);
-			isTranslatorCheckBox.SetCheck(false);
-		});
-		isRotatorCheckBox.SetCheck(translator.isRotator);
-		GetGUI().AddWidget(&isRotatorCheckBox);
-
-		isTranslatorCheckBox.SetTooltip("Translate (Move)");
-		isTranslatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
-			translator.isTranslator = args.bValue;
-			translator.isScalator = false;
-			translator.isRotator = false;
-			isScalatorCheckBox.SetCheck(false);
-			isRotatorCheckBox.SetCheck(false);
-		});
-		isTranslatorCheckBox.SetCheck(translator.isTranslator);
-		GetGUI().AddWidget(&isTranslatorCheckBox);
-	}
 
 
 	saveButton.Create("Save");
@@ -554,7 +284,7 @@ void EditorComponent::Load()
 	saveButton.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
 	saveButton.OnClick([&](wi::gui::EventArgs args) {
 		SaveAs();
-	});
+		});
 	GetGUI().AddWidget(&saveButton);
 
 
@@ -642,9 +372,9 @@ void EditorComponent::Load()
 					});
 				main->ActivatePath(&main->loader, 0.2f, wi::Color::Black());
 				ResetHistory();
+				});
 			});
 		});
-	});
 	GetGUI().AddWidget(&openButton);
 
 
@@ -655,9 +385,8 @@ void EditorComponent::Load()
 	closeButton.OnClick([&](wi::gui::EventArgs args) {
 
 		terragen.Generation_Cancel();
-		// This is to recreate the terragen from scratch, but it has implicitly deleted copy ctor so it's weird:
-		terragen.~TerrainGenerator();
-		new (&terragen) TerrainGenerator;
+		terragen.terrainEntity = INVALID_ENTITY;
+		terragen.SetCollapsed(true);
 
 		translator.selected.clear();
 		wi::scene::Scene& scene = GetCurrentScene();
@@ -691,7 +420,7 @@ void EditorComponent::Load()
 			}
 			SetCurrentScene(std::max(0, current_scene - 1));
 			});
-	});
+		});
 	GetGUI().AddWidget(&closeButton);
 
 
@@ -701,7 +430,7 @@ void EditorComponent::Load()
 	aboutButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
 	aboutButton.OnClick([&](wi::gui::EventArgs args) {
 		aboutLabel.SetVisible(!aboutLabel.IsVisible());
-	});
+		});
 	GetGUI().AddWidget(&aboutButton);
 
 	{
@@ -766,8 +495,67 @@ void EditorComponent::Load()
 	exitButton.OnClick([this](wi::gui::EventArgs args) {
 		terragen.Generation_Cancel();
 		wi::platform::Exit();
-	});
+		});
 	GetGUI().AddWidget(&exitButton);
+
+
+
+	////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+	optionsWnd.Create("Options", wi::gui::Window::WindowControls::RESIZE_TOPRIGHT);
+	optionsWnd.SetPos(XMFLOAT2(100, 120));
+	optionsWnd.SetSize(XMFLOAT2(340, 400));
+	GetGUI().AddWidget(&optionsWnd);
+
+	translatorCheckBox.Create("Transform: ");
+	translatorCheckBox.SetTooltip("Enable the transform tool (Ctrl + T).\nTip: hold Left Ctrl to enable snap transform.\nYou can configure snap mode units in the Transform settings.");
+	translatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		translator.enabled = args.bValue;
+	});
+	optionsWnd.AddWidget(&translatorCheckBox);
+
+	isScalatorCheckBox.Create("S: ");
+	isRotatorCheckBox.Create("R: ");
+	isTranslatorCheckBox.Create("T: ");
+	{
+		isScalatorCheckBox.SetTooltip("Scale");
+		isScalatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
+			translator.isScalator = args.bValue;
+			translator.isTranslator = false;
+			translator.isRotator = false;
+			isTranslatorCheckBox.SetCheck(false);
+			isRotatorCheckBox.SetCheck(false);
+		});
+		isScalatorCheckBox.SetCheck(translator.isScalator);
+		optionsWnd.AddWidget(&isScalatorCheckBox);
+
+		isRotatorCheckBox.SetTooltip("Rotate");
+		isRotatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
+			translator.isRotator = args.bValue;
+			translator.isScalator = false;
+			translator.isTranslator = false;
+			isScalatorCheckBox.SetCheck(false);
+			isTranslatorCheckBox.SetCheck(false);
+		});
+		isRotatorCheckBox.SetCheck(translator.isRotator);
+		optionsWnd.AddWidget(&isRotatorCheckBox);
+
+		isTranslatorCheckBox.SetTooltip("Translate (Move)");
+		isTranslatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
+			translator.isTranslator = args.bValue;
+			translator.isScalator = false;
+			translator.isRotator = false;
+			isScalatorCheckBox.SetCheck(false);
+			isRotatorCheckBox.SetCheck(false);
+		});
+		isTranslatorCheckBox.SetCheck(translator.isTranslator);
+		optionsWnd.AddWidget(&isTranslatorCheckBox);
+	}
 
 
 	profilerEnabledCheckBox.Create("Profiler: ");
@@ -776,7 +564,7 @@ void EditorComponent::Load()
 		wi::profiler::SetEnabled(args.bValue);
 		});
 	profilerEnabledCheckBox.SetCheck(wi::profiler::IsEnabled());
-	GetGUI().AddWidget(&profilerEnabledCheckBox);
+	optionsWnd.AddWidget(&profilerEnabledCheckBox);
 
 	physicsEnabledCheckBox.Create("Physics: ");
 	physicsEnabledCheckBox.SetTooltip("Toggle Physics Simulation On/Off");
@@ -784,7 +572,7 @@ void EditorComponent::Load()
 		wi::physics::SetSimulationEnabled(args.bValue);
 	});
 	physicsEnabledCheckBox.SetCheck(wi::physics::IsSimulationEnabled());
-	GetGUI().AddWidget(&physicsEnabledCheckBox);
+	optionsWnd.AddWidget(&physicsEnabledCheckBox);
 
 	cinemaModeCheckBox.Create("Cinema Mode: ");
 	cinemaModeCheckBox.SetTooltip("Toggle Cinema Mode (All HUD disabled). Press ESC to exit.");
@@ -797,7 +585,7 @@ void EditorComponent::Load()
 		wi::profiler::SetEnabled(false);
 		main->infoDisplay.active = false;
 	});
-	GetGUI().AddWidget(&cinemaModeCheckBox);
+	optionsWnd.AddWidget(&cinemaModeCheckBox);
 
 
 
@@ -932,10 +720,11 @@ void EditorComponent::Load()
 	});
 	newCombo.SetEnabled(true);
 	newCombo.SetTooltip("Create new entity");
-	GetGUI().AddWidget(&newCombo);
+	optionsWnd.AddWidget(&newCombo);
 
 
 	entityTree.Create("Entities");
+	entityTree.SetSize(XMFLOAT2(300, 300));
 	entityTree.OnSelect([this](wi::gui::EventArgs args) {
 
 		if (args.iValue < 0)
@@ -963,7 +752,7 @@ void EditorComponent::Load()
 		RecordSelection(archive);
 
 		});
-	GetGUI().AddWidget(&entityTree);
+	optionsWnd.AddWidget(&entityTree);
 
 
 	renderPathComboBox.Create("Render Path: ");
@@ -971,43 +760,23 @@ void EditorComponent::Load()
 	renderPathComboBox.AddItem("Path Tracing");
 	renderPathComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		ChangeRenderPath((RENDERPATH)args.iValue);
-	});
+		});
 	renderPathComboBox.SetSelected(RENDERPATH_DEFAULT);
 	renderPathComboBox.SetEnabled(true);
 	renderPathComboBox.SetTooltip("Choose a render path...");
-	GetGUI().AddWidget(&renderPathComboBox);
+	optionsWnd.AddWidget(&renderPathComboBox);
 
 
-	sceneComboBox.Create("Scene: ");
-	sceneComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		if (args.iValue >= int(scenes.size()))
-		{
-			NewScene();
-		}
-		SetCurrentScene(args.iValue);
-		});
-	sceneComboBox.SetEnabled(true);
-	sceneComboBox.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
-	sceneComboBox.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
-	GetGUI().AddWidget(&sceneComboBox);
-
-
-	saveModeComboBox.Create("Save Mode: ");
-	saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
-	saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
-	saveModeComboBox.AddItem("Embed resources", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
-	saveModeComboBox.AddItem("No embedding", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
-	saveModeComboBox.AddItem("Dump to header", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
-	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.");
-	GetGUI().AddWidget(&saveModeComboBox);
-
-
-	pathTraceTargetSlider.Create(1, 2048, 1024, 2047, "Path tracing sample count: ");
+	pathTraceTargetSlider.Create(1, 2048, 1024, 2047, "Sample count: ");
+	pathTraceTargetSlider.SetSize(XMFLOAT2(200, 18));
 	pathTraceTargetSlider.SetTooltip("The path tracing will perform this many samples per pixel.");
-	GetGUI().AddWidget(&pathTraceTargetSlider);
+	optionsWnd.AddWidget(&pathTraceTargetSlider);
+	pathTraceTargetSlider.SetVisible(false);
 
 	pathTraceStatisticsLabel.Create("Path tracing statistics");
-	GetGUI().AddWidget(&pathTraceStatisticsLabel);
+	pathTraceStatisticsLabel.SetSize(XMFLOAT2(240, 60));
+	optionsWnd.AddWidget(&pathTraceStatisticsLabel);
+	pathTraceStatisticsLabel.SetVisible(false);
 
 	// Renderer and Postprocess windows are created in ChangeRenderPath(), because they deal with
 	//	RenderPath related information as well, so it's easier to reset them when changing
@@ -1016,7 +785,6 @@ void EditorComponent::Load()
 	weatherWnd.Create(this);
 	objectWnd.Create(this);
 	meshWnd.Create(this);
-	cameraWnd.Create(this);
 	envProbeWnd.Create(this);
 	soundWnd.Create(this);
 	decalWnd.Create(this);
@@ -1025,18 +793,14 @@ void EditorComponent::Load()
 	emitterWnd.Create(this);
 	hairWnd.Create(this);
 	forceFieldWnd.Create(this);
-	paintToolWnd.Create(this);
 	springWnd.Create(this);
 	ikWnd.Create(this);
 	transformWnd.Create(this);
 	layerWnd.Create(this);
 	nameWnd.Create(this);
 
-	GetGUI().AddWidget(&cameraWnd);
-	GetGUI().AddWidget(&paintToolWnd);
-
 	componentWindow.Create("Components ", wi::gui::Window::WindowControls::RESIZE_TOPLEFT);
-	componentWindow.SetSize(XMFLOAT2(340, 300));
+	componentWindow.SetSize(optionsWnd.GetSize());
 	componentWindow.font.params.h_align = wi::font::WIFALIGN_RIGHT;
 	GetGUI().AddWidget(&componentWindow);
 
@@ -1221,7 +985,6 @@ void EditorComponent::Load()
 	weatherWnd.SetVisible(false);
 	objectWnd.SetVisible(false);
 	meshWnd.SetVisible(false);
-	cameraWnd.SetVisible(false);
 	envProbeWnd.SetVisible(false);
 	soundWnd.SetVisible(false);
 	decalWnd.SetVisible(false);
@@ -1230,19 +993,16 @@ void EditorComponent::Load()
 	emitterWnd.SetVisible(false);
 	hairWnd.SetVisible(false);
 	forceFieldWnd.SetVisible(false);
-	paintToolWnd.SetVisible(false);
 	springWnd.SetVisible(false);
 	ikWnd.SetVisible(false);
 	transformWnd.SetVisible(false);
 	layerWnd.SetVisible(false);
 	nameWnd.SetVisible(false);
 
-	const float shadow_expand = 1;
 	materialWnd.SetShadowExpand(shadow_expand);
 	weatherWnd.SetShadowExpand(shadow_expand);
 	objectWnd.SetShadowExpand(shadow_expand);
 	meshWnd.SetShadowExpand(shadow_expand);
-	cameraWnd.SetShadowExpand(shadow_expand);
 	envProbeWnd.SetShadowExpand(shadow_expand);
 	soundWnd.SetShadowExpand(shadow_expand);
 	decalWnd.SetShadowExpand(shadow_expand);
@@ -1251,14 +1011,185 @@ void EditorComponent::Load()
 	emitterWnd.SetShadowExpand(shadow_expand);
 	hairWnd.SetShadowExpand(shadow_expand);
 	forceFieldWnd.SetShadowExpand(shadow_expand);
-	paintToolWnd.SetShadowExpand(shadow_expand);
 	springWnd.SetShadowExpand(shadow_expand);
 	ikWnd.SetShadowExpand(shadow_expand);
 	transformWnd.SetShadowExpand(shadow_expand);
 	layerWnd.SetShadowExpand(shadow_expand);
 	nameWnd.SetShadowExpand(shadow_expand);
 
+
+
+	cameraWnd.Create(this);
 	cameraWnd.ResetCam();
+	cameraWnd.SetShadowExpand(shadow_expand);
+	cameraWnd.SetCollapsed(true);
+	optionsWnd.AddWidget(&cameraWnd);
+
+	paintToolWnd.Create(this);
+	paintToolWnd.SetShadowExpand(shadow_expand);
+	paintToolWnd.SetCollapsed(true);
+	optionsWnd.AddWidget(&paintToolWnd);
+
+
+
+	sceneComboBox.Create("Scene: ");
+	sceneComboBox.OnSelect([&](wi::gui::EventArgs args) {
+		if (args.iValue >= int(scenes.size()))
+		{
+			NewScene();
+		}
+		SetCurrentScene(args.iValue);
+		});
+	sceneComboBox.SetEnabled(true);
+	sceneComboBox.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
+	sceneComboBox.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
+	optionsWnd.AddWidget(&sceneComboBox);
+
+
+	saveModeComboBox.Create("Save Mode: ");
+	saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
+	saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
+	saveModeComboBox.AddItem("Embed resources", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.AddItem("No embedding", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
+	saveModeComboBox.AddItem("Dump to header", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.");
+	optionsWnd.AddWidget(&saveModeComboBox);
+
+	terragen.Create();
+	terragen.SetShadowExpand(shadow_expand);
+	terragen.OnCollapse([&](wi::gui::EventArgs args) {
+
+		if (terragen.terrainEntity == INVALID_ENTITY)
+		{
+			// Customize terrain generator before it's initialized:
+			terragen.material_Base.SetRoughness(1);
+			terragen.material_Base.SetReflectance(0.005f);
+			terragen.material_Slope.SetRoughness(0.1f);
+			terragen.material_LowAltitude.SetRoughness(1);
+			terragen.material_HighAltitude.SetRoughness(1);
+			terragen.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "terrain/base.jpg";
+			terragen.material_Base.textures[MaterialComponent::NORMALMAP].name = "terrain/base_nor.jpg";
+			terragen.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "terrain/slope.jpg";
+			terragen.material_Slope.textures[MaterialComponent::NORMALMAP].name = "terrain/slope_nor.jpg";
+			terragen.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/low_altitude.jpg";
+			terragen.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/low_altitude_nor.jpg";
+			terragen.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/high_altitude.jpg";
+			terragen.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/high_altitude_nor.jpg";
+			terragen.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = "terrain/grassparticle.png";
+			terragen.material_GrassParticle.alphaRef = 0.75f;
+			terragen.grass_properties.length = 5;
+			terragen.grass_properties.frameCount = 2;
+			terragen.grass_properties.framesX = 1;
+			terragen.grass_properties.framesY = 2;
+			terragen.grass_properties.frameStart = 0;
+			terragen.material_Base.CreateRenderData();
+			terragen.material_Slope.CreateRenderData();
+			terragen.material_LowAltitude.CreateRenderData();
+			terragen.material_HighAltitude.CreateRenderData();
+			terragen.material_GrassParticle.CreateRenderData();
+			// Tree prop:
+			{
+				Scene props_scene;
+				wi::scene::LoadModel(props_scene, "terrain/tree.wiscene");
+				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
+				prop.name = "tree";
+				prop.min_count_per_chunk = 0;
+				prop.max_count_per_chunk = 10;
+				prop.region = 0;
+				prop.region_power = 2;
+				prop.noise_frequency = 0.1f;
+				prop.noise_power = 1;
+				prop.threshold = 0.4f;
+				prop.min_size = 2.0f;
+				prop.max_size = 8.0f;
+				prop.min_y_offset = -0.5f;
+				prop.max_y_offset = -0.5f;
+				prop.mesh_entity = props_scene.Entity_FindByName("tree_mesh");
+				props_scene.impostors.Create(prop.mesh_entity).swapInDistance = 200;
+				Entity object_entity = props_scene.Entity_FindByName("tree_object");
+				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
+				if (object != nullptr)
+				{
+					prop.object = *object;
+					prop.object.lod_distance_multiplier = 0.05f;
+					//prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+				}
+				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
+				GetCurrentScene().Merge(props_scene);
+			}
+			// Rock prop:
+			{
+				Scene props_scene;
+				wi::scene::LoadModel(props_scene, "terrain/rock.wiscene");
+				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
+				prop.name = "rock";
+				prop.min_count_per_chunk = 0;
+				prop.max_count_per_chunk = 8;
+				prop.region = 0;
+				prop.region_power = 1;
+				prop.noise_frequency = 0.005f;
+				prop.noise_power = 2;
+				prop.threshold = 0.5f;
+				prop.min_size = 0.02f;
+				prop.max_size = 4.0f;
+				prop.min_y_offset = -2;
+				prop.max_y_offset = 0.5f;
+				prop.mesh_entity = props_scene.Entity_FindByName("rock_mesh");
+				Entity object_entity = props_scene.Entity_FindByName("rock_object");
+				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
+				if (object != nullptr)
+				{
+					prop.object = *object;
+					prop.object.lod_distance_multiplier = 0.02f;
+					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+					prop.object.draw_distance = 400;
+				}
+				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
+				GetCurrentScene().Merge(props_scene);
+			}
+			// Bush prop:
+			{
+				Scene props_scene;
+				wi::scene::LoadModel(props_scene, "terrain/bush.wiscene");
+				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
+				prop.name = "bush";
+				prop.min_count_per_chunk = 0;
+				prop.max_count_per_chunk = 10;
+				prop.region = 0;
+				prop.region_power = 4;
+				prop.noise_frequency = 0.01f;
+				prop.noise_power = 4;
+				prop.threshold = 0.1f;
+				prop.min_size = 0.1f;
+				prop.max_size = 1.5f;
+				prop.min_y_offset = -1;
+				prop.max_y_offset = 0;
+				prop.mesh_entity = props_scene.Entity_FindByName("bush_mesh");
+				Entity object_entity = props_scene.Entity_FindByName("bush_object");
+				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
+				if (object != nullptr)
+				{
+					prop.object = *object;
+					prop.object.lod_distance_multiplier = 0.05f;
+					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+					prop.object.draw_distance = 200;
+				}
+				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
+				GetCurrentScene().Merge(props_scene);
+			}
+
+			terragen.init();
+			RefreshEntityTree();
+		}
+
+		if (!terragen.IsCollapsed() && !GetCurrentScene().transforms.Contains(terragen.terrainEntity))
+		{
+			terragen.Generation_Restart();
+			RefreshEntityTree();
+		}
+
+	});
+	optionsWnd.AddWidget(&terragen);
 
 	wi::jobsystem::Wait(ctx);
 
@@ -2147,6 +2078,7 @@ void EditorComponent::Update(float dt)
 
 	RenderPath2D::Update(dt);
 	RefreshComponentWindow();
+	RefreshOptionsWindow();
 
 	translator.Update(camera, *this);
 
@@ -2769,6 +2701,96 @@ void EditorComponent::Compose(CommandList cmd) const
 	RenderPath2D::Compose(cmd);
 }
 
+void EditorComponent::RefreshOptionsWindow()
+{
+	const float padding = 4;
+	XMFLOAT2 pos = XMFLOAT2(padding, padding);
+	const float width = optionsWnd.GetWidgetAreaSize().x - padding * 2;
+	float x_off = 100;
+
+	translatorCheckBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	isScalatorCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 60, pos.y));
+	isRotatorCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 60 * 2, pos.y));
+	isTranslatorCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 60 * 3, pos.y));
+	pos.y += translatorCheckBox.GetSize().y;
+	pos.y += padding;
+
+	cinemaModeCheckBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	profilerEnabledCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 80, pos.y));
+	physicsEnabledCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 60 * 3, pos.y));
+	pos.y += cinemaModeCheckBox.GetSize().y;
+	pos.y += padding;
+
+	sceneComboBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	sceneComboBox.SetSize(XMFLOAT2(width - x_off - sceneComboBox.GetScale().y - 1, sceneComboBox.GetScale().y));
+	pos.y += sceneComboBox.GetSize().y;
+	pos.y += padding;
+
+	saveModeComboBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	saveModeComboBox.SetSize(XMFLOAT2(width - x_off - saveModeComboBox.GetScale().y - 1, saveModeComboBox.GetScale().y));
+	pos.y += newCombo.GetSize().y;
+	pos.y += padding;
+
+	renderPathComboBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	renderPathComboBox.SetSize(XMFLOAT2(width - x_off - renderPathComboBox.GetScale().y - 1, renderPathComboBox.GetScale().y));
+	pos.y += newCombo.GetSize().y;
+	pos.y += padding;
+
+	if (pathTraceTargetSlider.IsVisible())
+	{
+		pathTraceTargetSlider.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+		pathTraceTargetSlider.SetSize(XMFLOAT2(width - x_off - pathTraceTargetSlider.GetScale().y * 2 - 1, pathTraceTargetSlider.GetScale().y));
+		pos.y += pathTraceTargetSlider.GetSize().y;
+		pos.y += padding;
+	}
+
+	if (pathTraceStatisticsLabel.IsVisible())
+	{
+		pathTraceStatisticsLabel.SetPos(pos);
+		pathTraceStatisticsLabel.SetSize(XMFLOAT2(width, pathTraceStatisticsLabel.GetScale().y));
+		pos.y += pathTraceStatisticsLabel.GetSize().y;
+		pos.y += padding;
+	}
+
+	rendererWnd.SetPos(pos);
+	rendererWnd.SetSize(XMFLOAT2(width, rendererWnd.GetScale().y));
+	pos.y += rendererWnd.GetSize().y;
+	pos.y += padding;
+
+	postprocessWnd.SetPos(pos);
+	postprocessWnd.SetSize(XMFLOAT2(width, postprocessWnd.GetScale().y));
+	pos.y += postprocessWnd.GetSize().y;
+	pos.y += padding;
+
+	cameraWnd.SetPos(pos);
+	cameraWnd.SetSize(XMFLOAT2(width, cameraWnd.GetScale().y));
+	pos.y += cameraWnd.GetSize().y;
+	pos.y += padding;
+
+	paintToolWnd.SetPos(pos);
+	paintToolWnd.SetSize(XMFLOAT2(width, paintToolWnd.GetScale().y));
+	pos.y += paintToolWnd.GetSize().y;
+	pos.y += padding;
+
+	terragen.SetPos(pos);
+	terragen.SetSize(XMFLOAT2(width, terragen.GetScale().y));
+	pos.y += terragen.GetSize().y;
+	pos.y += padding;
+
+	x_off = 45;
+	newCombo.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	newCombo.SetSize(XMFLOAT2(width - x_off - newCombo.GetScale().y - 1, newCombo.GetScale().y));
+	pos.y += newCombo.GetSize().y;
+	pos.y += padding;
+
+	entityTree.SetPos(pos);
+	entityTree.SetSize(XMFLOAT2(width, std::max(entityTree.GetScale().y, GetLogicalHeight() - pos.y)));
+	pos.y += entityTree.GetSize().y;
+	pos.y += padding;
+
+
+	optionsWnd.Update(*this, 0);
+}
 void EditorComponent::PushToEntityTree(wi::ecs::Entity entity, int level)
 {
 	if (entitytree_added_items.count(entity) != 0)

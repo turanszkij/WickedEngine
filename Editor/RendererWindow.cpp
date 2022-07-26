@@ -6,13 +6,13 @@
 void RendererWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Renderer Window");
+	wi::gui::Window::Create("Renderer", wi::gui::Window::WindowControls::COLLAPSE);
 
 	wi::renderer::SetToDrawDebugEnvProbes(true);
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 400));
+	SetSize(XMFLOAT2(580, 620));
 
 	float step = 20, itemheight = 18;
 	float x = 220, y = 0;
@@ -738,7 +738,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 
 	Translate(XMFLOAT3(100, 50, 0));
-	SetVisible(false);
+	SetMinimized(true);
 }
 
 uint32_t RendererWindow::GetPickType() const

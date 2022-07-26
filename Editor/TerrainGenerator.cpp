@@ -15,153 +15,12 @@ enum PRESET
 	PRESET_ARCTIC,
 };
 
-void TerrainGenerator::init()
+void TerrainGenerator::Create()
 {
-	terrainEntity = CreateEntity();
-
-	indices.clear();
-	lods.clear();
-	lods.resize(max_lod);
-	for (int lod = 0; lod < max_lod; ++lod)
-	{
-		lods[lod].indexOffset = (uint32_t)indices.size();
-
-		if (lod == 0)
-		{
-			for (int x = 0; x < chunk_width - 1; x++)
-			{
-				for (int z = 0; z < chunk_width - 1; z++)
-				{
-					int lowerLeft = x + z * chunk_width;
-					int lowerRight = (x + 1) + z * chunk_width;
-					int topLeft = x + (z + 1) * chunk_width;
-					int topRight = (x + 1) + (z + 1) * chunk_width;
-
-					indices.push_back(topLeft);
-					indices.push_back(lowerLeft);
-					indices.push_back(lowerRight);
-
-					indices.push_back(topLeft);
-					indices.push_back(lowerRight);
-					indices.push_back(topRight);
-				}
-			}
-		}
-		else
-		{
-			const int step = 1 << lod;
-			// inner grid:
-			for (int x = 1; x < chunk_width - 2; x += step)
-			{
-				for (int z = 1; z < chunk_width - 2; z += step)
-				{
-					int lowerLeft = x + z * chunk_width;
-					int lowerRight = (x + step) + z * chunk_width;
-					int topLeft = x + (z + step) * chunk_width;
-					int topRight = (x + step) + (z + step) * chunk_width;
-
-					indices.push_back(topLeft);
-					indices.push_back(lowerLeft);
-					indices.push_back(lowerRight);
-
-					indices.push_back(topLeft);
-					indices.push_back(lowerRight);
-					indices.push_back(topRight);
-				}
-			}
-			// bottom border:
-			for (int x = 0; x < chunk_width - 1; ++x)
-			{
-				const int z = 0;
-				int current = x + z * chunk_width;
-				int neighbor = x + 1 + z * chunk_width;
-				int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z + 1) * chunk_width;
-
-				indices.push_back(current);
-				indices.push_back(neighbor);
-				indices.push_back(connection);
-
-				if (((x - 1) % (step)) == step / 2) // halfway fill triangle
-				{
-					int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z + 1) * chunk_width;
-
-					indices.push_back(current);
-					indices.push_back(connection);
-					indices.push_back(connection1);
-				}
-			}
-			// top border:
-			for (int x = 0; x < chunk_width - 1; ++x)
-			{
-				const int z = chunk_width - 1;
-				int current = x + z * chunk_width;
-				int neighbor = x + 1 + z * chunk_width;
-				int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z - 1) * chunk_width;
-
-				indices.push_back(current);
-				indices.push_back(connection);
-				indices.push_back(neighbor);
-
-				if (((x - 1) % (step)) == step / 2) // halfway fill triangle
-				{
-					int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z - 1) * chunk_width;
-
-					indices.push_back(current);
-					indices.push_back(connection1);
-					indices.push_back(connection);
-				}
-			}
-			// left border:
-			for (int z = 0; z < chunk_width - 1; ++z)
-			{
-				const int x = 0;
-				int current = x + z * chunk_width;
-				int neighbor = x + (z + 1) * chunk_width;
-				int connection = x + 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
-
-				indices.push_back(current);
-				indices.push_back(connection);
-				indices.push_back(neighbor);
-
-				if (((z - 1) % (step)) == step / 2) // halfway fill triangle
-				{
-					int connection1 = x + 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
-
-					indices.push_back(current);
-					indices.push_back(connection1);
-					indices.push_back(connection);
-				}
-			}
-			// right border:
-			for (int z = 0; z < chunk_width - 1; ++z)
-			{
-				const int x = chunk_width - 1;
-				int current = x + z * chunk_width;
-				int neighbor = x + (z + 1) * chunk_width;
-				int connection = x - 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
-
-				indices.push_back(current);
-				indices.push_back(neighbor);
-				indices.push_back(connection);
-
-				if (((z - 1) % (step)) == step / 2) // halfway fill triangle
-				{
-					int connection1 = x - 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
-
-					indices.push_back(current);
-					indices.push_back(connection);
-					indices.push_back(connection1);
-				}
-			}
-		}
-
-		lods[lod].indexCount = (uint32_t)indices.size() - lods[lod].indexOffset;
-	}
-
 	RemoveWidgets();
 	ClearTransform();
 
-	wi::gui::Window::Create("TerraGen (Preview version)");
+	wi::gui::Window::Create("Terrain Generator", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(420, 300));
 
 	float x = 160;
@@ -549,9 +408,151 @@ void TerrainGenerator::init()
 
 	heightmap = {};
 
-	SetPos(XMFLOAT2(50, 110));
-	SetVisible(false);
-	SetEnabled(true);
+	SetCollapsed(true);
+}
+
+void TerrainGenerator::init()
+{
+	terrainEntity = CreateEntity();
+
+	indices.clear();
+	lods.clear();
+	lods.resize(max_lod);
+	for (int lod = 0; lod < max_lod; ++lod)
+	{
+		lods[lod].indexOffset = (uint32_t)indices.size();
+
+		if (lod == 0)
+		{
+			for (int x = 0; x < chunk_width - 1; x++)
+			{
+				for (int z = 0; z < chunk_width - 1; z++)
+				{
+					int lowerLeft = x + z * chunk_width;
+					int lowerRight = (x + 1) + z * chunk_width;
+					int topLeft = x + (z + 1) * chunk_width;
+					int topRight = (x + 1) + (z + 1) * chunk_width;
+
+					indices.push_back(topLeft);
+					indices.push_back(lowerLeft);
+					indices.push_back(lowerRight);
+
+					indices.push_back(topLeft);
+					indices.push_back(lowerRight);
+					indices.push_back(topRight);
+				}
+			}
+		}
+		else
+		{
+			const int step = 1 << lod;
+			// inner grid:
+			for (int x = 1; x < chunk_width - 2; x += step)
+			{
+				for (int z = 1; z < chunk_width - 2; z += step)
+				{
+					int lowerLeft = x + z * chunk_width;
+					int lowerRight = (x + step) + z * chunk_width;
+					int topLeft = x + (z + step) * chunk_width;
+					int topRight = (x + step) + (z + step) * chunk_width;
+
+					indices.push_back(topLeft);
+					indices.push_back(lowerLeft);
+					indices.push_back(lowerRight);
+
+					indices.push_back(topLeft);
+					indices.push_back(lowerRight);
+					indices.push_back(topRight);
+				}
+			}
+			// bottom border:
+			for (int x = 0; x < chunk_width - 1; ++x)
+			{
+				const int z = 0;
+				int current = x + z * chunk_width;
+				int neighbor = x + 1 + z * chunk_width;
+				int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z + 1) * chunk_width;
+
+				indices.push_back(current);
+				indices.push_back(neighbor);
+				indices.push_back(connection);
+
+				if (((x - 1) % (step)) == step / 2) // halfway fill triangle
+				{
+					int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z + 1) * chunk_width;
+
+					indices.push_back(current);
+					indices.push_back(connection);
+					indices.push_back(connection1);
+				}
+			}
+			// top border:
+			for (int x = 0; x < chunk_width - 1; ++x)
+			{
+				const int z = chunk_width - 1;
+				int current = x + z * chunk_width;
+				int neighbor = x + 1 + z * chunk_width;
+				int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z - 1) * chunk_width;
+
+				indices.push_back(current);
+				indices.push_back(connection);
+				indices.push_back(neighbor);
+
+				if (((x - 1) % (step)) == step / 2) // halfway fill triangle
+				{
+					int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z - 1) * chunk_width;
+
+					indices.push_back(current);
+					indices.push_back(connection1);
+					indices.push_back(connection);
+				}
+			}
+			// left border:
+			for (int z = 0; z < chunk_width - 1; ++z)
+			{
+				const int x = 0;
+				int current = x + z * chunk_width;
+				int neighbor = x + (z + 1) * chunk_width;
+				int connection = x + 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
+
+				indices.push_back(current);
+				indices.push_back(connection);
+				indices.push_back(neighbor);
+
+				if (((z - 1) % (step)) == step / 2) // halfway fill triangle
+				{
+					int connection1 = x + 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
+
+					indices.push_back(current);
+					indices.push_back(connection1);
+					indices.push_back(connection);
+				}
+			}
+			// right border:
+			for (int z = 0; z < chunk_width - 1; ++z)
+			{
+				const int x = chunk_width - 1;
+				int current = x + z * chunk_width;
+				int neighbor = x + (z + 1) * chunk_width;
+				int connection = x - 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
+
+				indices.push_back(current);
+				indices.push_back(neighbor);
+				indices.push_back(connection);
+
+				if (((z - 1) % (step)) == step / 2) // halfway fill triangle
+				{
+					int connection1 = x - 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
+
+					indices.push_back(current);
+					indices.push_back(connection);
+					indices.push_back(connection1);
+				}
+			}
+		}
+
+		lods[lod].indexCount = (uint32_t)indices.size() - lods[lod].indexOffset;
+	}
 
 	presetCombo.SetSelectedByUserdata(PRESET_HILLS);
 }

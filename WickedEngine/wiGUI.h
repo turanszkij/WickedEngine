@@ -365,22 +365,26 @@ namespace wi::gui
 		float control_size = 20;
 		float shadow = 2;
 		std::function<void(EventArgs args)> onClose;
+		std::function<void(EventArgs args)> onCollapse;
 
 	public:
 		enum class WindowControls
 		{
 			NONE = 0,
 			RESIZE_TOPLEFT = 1 << 0,
-			RESIZE_BOTTOMRIGHT = 1 << 1,
-			MOVE = 1 << 2,
-			CLOSE = 1 << 3,
-			COLLAPSE = 1 << 4,
+			RESIZE_TOPRIGHT = 1 << 1,
+			RESIZE_BOTTOMLEFT = 1 << 2,
+			RESIZE_BOTTOMRIGHT = 1 << 3,
+			MOVE = 1 << 4,
+			CLOSE = 1 << 5,
+			COLLAPSE = 1 << 6,
 
-			RESIZE = RESIZE_TOPLEFT | RESIZE_BOTTOMRIGHT,
+			RESIZE = RESIZE_TOPLEFT | RESIZE_TOPRIGHT | RESIZE_BOTTOMLEFT | RESIZE_BOTTOMRIGHT,
 			CLOSE_AND_COLLAPSE = CLOSE | COLLAPSE,
-			ALL = RESIZE | MOVE | CLOSE | COLLAPSE
+			ALL = RESIZE | MOVE | CLOSE | COLLAPSE,
+			DEFAULT = RESIZE_TOPLEFT | RESIZE_BOTTOMRIGHT | CLOSE_AND_COLLAPSE | MOVE,
 		};
-		void Create(const std::string& name, WindowControls window_controls = WindowControls::ALL);
+		void Create(const std::string& name, WindowControls window_controls = WindowControls::DEFAULT);
 
 		void AddWidget(Widget* widget, bool scrollable = true);
 		void RemoveWidget(Widget* widget);
@@ -404,10 +408,13 @@ namespace wi::gui
 		void SetShadowExpand(float value) { shadow = value; }
 
 		void OnClose(std::function<void(EventArgs args)> func);
+		void OnCollapse(std::function<void(EventArgs args)> func);
 
 		Button closeButton;
 		Button collapseButton;
 		Button resizeDragger_UpperLeft;
+		Button resizeDragger_UpperRight;
+		Button resizeDragger_BottomLeft;
 		Button resizeDragger_BottomRight;
 		Button moveDragger;
 		Label label;

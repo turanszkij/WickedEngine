@@ -33,11 +33,11 @@ void CameraWindow::ResetCam()
 void CameraWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Camera");
+	wi::gui::Window::Create("Camera", wi::gui::Window::WindowControls::COLLAPSE);
 	editor->GetCurrentEditorScene().camera_transform.MatrixTransform(editor->GetCurrentEditorScene().camera.GetInvView());
 	editor->GetCurrentEditorScene().camera_transform.UpdateTransform();
 
-	SetSize(XMFLOAT2(320, 200));
+	SetSize(XMFLOAT2(320, 360));
 
 	float x = 150;
 	float y = 0;
@@ -219,7 +219,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 
 	SetPos(XMFLOAT2(100, 100));
 
-	SetVisible(false);
+	SetMinimized(true);
 }
 
 void CameraWindow::SetEntity(Entity entity)

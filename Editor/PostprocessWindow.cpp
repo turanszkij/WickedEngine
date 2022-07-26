@@ -9,8 +9,8 @@ using namespace wi::graphics;
 void PostprocessWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("PostProcess Window");
-	SetSize(XMFLOAT2(420, 400));
+	wi::gui::Window::Create("PostProcess", wi::gui::Window::WindowControls::COLLAPSE);
+	SetSize(XMFLOAT2(420, 500));
 
 	float x = 150;
 	float y = 0;
@@ -394,6 +394,6 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 
 	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 500, 80, 0));
-	SetVisible(false);
+	SetMinimized(true);
 
 }
