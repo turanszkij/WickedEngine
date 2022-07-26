@@ -1056,6 +1056,7 @@ void EditorComponent::Load()
 	newComponentCombo.AddItem("Hair Particle System", 10);
 	newComponentCombo.AddItem("Decal", 11);
 	newComponentCombo.AddItem("Weather", 12);
+	newComponentCombo.AddItem("Force Field", 13);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(0);
 		if (translator.selected.empty())
@@ -1123,6 +1124,10 @@ void EditorComponent::Load()
 			if (scene.weathers.Contains(entity))
 				return;
 			break;
+		case 13:
+			if (scene.forces.Contains(entity))
+				return;
+			break;
 		default:
 			return;
 		}
@@ -1180,6 +1185,9 @@ void EditorComponent::Load()
 			break;
 		case 12:
 			scene.weathers.Create(entity);
+			break;
+		case 13:
+			scene.forces.Create(entity);
 			break;
 		default:
 			break;
