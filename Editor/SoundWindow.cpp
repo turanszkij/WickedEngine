@@ -13,14 +13,15 @@ void SoundWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create("Sound", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(440, 220));
 
-	float x = 20;
+	float x = 60;
 	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
+	float wid = 200;
 
 	reverbComboBox.Create("Reverb: ");
-	reverbComboBox.SetPos(XMFLOAT2(x + 80, y));
-	reverbComboBox.SetSize(XMFLOAT2(180, hei));
+	reverbComboBox.SetPos(XMFLOAT2(x, y));
+	reverbComboBox.SetSize(XMFLOAT2(wid, hei));
 	reverbComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		wi::audio::SetReverb((wi::audio::REVERB_PRESET)args.iValue);
 	});
@@ -61,7 +62,8 @@ void SoundWindow::Create(EditorComponent* _editor)
 
 	filenameLabel.Create("Filename");
 	filenameLabel.SetPos(XMFLOAT2(x, y));
-	filenameLabel.SetSize(XMFLOAT2(400, hei));
+	filenameLabel.SetSize(XMFLOAT2(wid, hei));
+	filenameLabel.font.params.h_align = wi::font::WIFALIGN_RIGHT;
 	AddWidget(&filenameLabel);
 
 	playstopButton.Create("Play");
@@ -89,7 +91,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 
 	loopedCheckbox.Create("Looped: ");
 	loopedCheckbox.SetTooltip("Enable looping for the selected sound instance.");
-	loopedCheckbox.SetPos(XMFLOAT2(x + 150, y));
+	loopedCheckbox.SetPos(XMFLOAT2(x, y += step));
 	loopedCheckbox.SetSize(XMFLOAT2(hei, hei));
 	loopedCheckbox.OnClick([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
@@ -103,7 +105,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 
 	reverbCheckbox.Create("Reverb: ");
 	reverbCheckbox.SetTooltip("Enable/disable reverb.");
-	reverbCheckbox.SetPos(XMFLOAT2(x + 240, y));
+	reverbCheckbox.SetPos(XMFLOAT2(x, y += step));
 	reverbCheckbox.SetSize(XMFLOAT2(hei, hei));
 	reverbCheckbox.OnClick([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
@@ -118,7 +120,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 
 	disable3dCheckbox.Create("2D: ");
 	disable3dCheckbox.SetTooltip("Sounds in the scene are 3D spatial by default. Select this to disable 3D effect.");
-	disable3dCheckbox.SetPos(XMFLOAT2(x + 300, y));
+	disable3dCheckbox.SetPos(XMFLOAT2(x, y += step));
 	disable3dCheckbox.SetSize(XMFLOAT2(hei, hei));
 	disable3dCheckbox.OnClick([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
@@ -133,8 +135,8 @@ void SoundWindow::Create(EditorComponent* _editor)
 
 	volumeSlider.Create(0, 1, 1, 1000, "Volume: ");
 	volumeSlider.SetTooltip("Set volume level for the selected sound instance.");
-	volumeSlider.SetPos(XMFLOAT2(x + 60, y += step));
-	volumeSlider.SetSize(XMFLOAT2(240, hei));
+	volumeSlider.SetPos(XMFLOAT2(x, y += step));
+	volumeSlider.SetSize(XMFLOAT2(wid, hei));
 	volumeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
@@ -146,8 +148,8 @@ void SoundWindow::Create(EditorComponent* _editor)
 	volumeSlider.SetEnabled(false);
 
 	submixComboBox.Create("Submix: ");
-	submixComboBox.SetPos(XMFLOAT2(x + 80, y += step));
-	submixComboBox.SetSize(XMFLOAT2(180, hei));
+	submixComboBox.SetPos(XMFLOAT2(x, y += step));
+	submixComboBox.SetSize(XMFLOAT2(wid, hei));
 	submixComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
 		if (sound != nullptr)

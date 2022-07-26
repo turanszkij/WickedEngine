@@ -185,10 +185,13 @@ void MeshWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&tessellationFactorSlider);
 
+	float mod_x = x - 20;
+	float mod_wid = wid + 40;
+
 	flipCullingButton.Create("Flip Culling");
 	flipCullingButton.SetTooltip("Flip faces to reverse triangle culling order.");
-	flipCullingButton.SetSize(XMFLOAT2(wid, hei));
-	flipCullingButton.SetPos(XMFLOAT2(x, y += step));
+	flipCullingButton.SetSize(XMFLOAT2(mod_wid, hei));
+	flipCullingButton.SetPos(XMFLOAT2(mod_x, y += step));
 	flipCullingButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
@@ -201,8 +204,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	flipNormalsButton.Create("Flip Normals");
 	flipNormalsButton.SetTooltip("Flip surface normals.");
-	flipNormalsButton.SetSize(XMFLOAT2(wid, hei));
-	flipNormalsButton.SetPos(XMFLOAT2(x, y += step));
+	flipNormalsButton.SetSize(XMFLOAT2(mod_wid, hei));
+	flipNormalsButton.SetPos(XMFLOAT2(mod_x, y += step));
 	flipNormalsButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
@@ -213,10 +216,10 @@ void MeshWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&flipNormalsButton);
 
-	computeNormalsSmoothButton.Create("Comp Normals [SMOOTH]");
+	computeNormalsSmoothButton.Create("Compute Normals [SMOOTH]");
 	computeNormalsSmoothButton.SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per vertex. This can reduce vertex count, but is slow.");
-	computeNormalsSmoothButton.SetSize(XMFLOAT2(wid, hei));
-	computeNormalsSmoothButton.SetPos(XMFLOAT2(x, y += step));
+	computeNormalsSmoothButton.SetSize(XMFLOAT2(mod_wid, hei));
+	computeNormalsSmoothButton.SetPos(XMFLOAT2(mod_x, y += step));
 	computeNormalsSmoothButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
@@ -227,10 +230,10 @@ void MeshWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&computeNormalsSmoothButton);
 
-	computeNormalsHardButton.Create("Comp Normals [HARD]");
+	computeNormalsHardButton.Create("Compute Normals [HARD]");
 	computeNormalsHardButton.SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per face. This can increase vertex count.");
-	computeNormalsHardButton.SetSize(XMFLOAT2(wid, hei));
-	computeNormalsHardButton.SetPos(XMFLOAT2(x, y += step));
+	computeNormalsHardButton.SetSize(XMFLOAT2(mod_wid, hei));
+	computeNormalsHardButton.SetPos(XMFLOAT2(mod_x, y += step));
 	computeNormalsHardButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
@@ -243,8 +246,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	recenterButton.Create("Recenter");
 	recenterButton.SetTooltip("Recenter mesh to AABB center.");
-	recenterButton.SetSize(XMFLOAT2(wid, hei));
-	recenterButton.SetPos(XMFLOAT2(x, y += step));
+	recenterButton.SetSize(XMFLOAT2(mod_wid, hei));
+	recenterButton.SetPos(XMFLOAT2(mod_x, y += step));
 	recenterButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
@@ -257,8 +260,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	recenterToBottomButton.Create("RecenterToBottom");
 	recenterToBottomButton.SetTooltip("Recenter mesh to AABB bottom.");
-	recenterToBottomButton.SetSize(XMFLOAT2(wid, hei));
-	recenterToBottomButton.SetPos(XMFLOAT2(x, y += step));
+	recenterToBottomButton.SetSize(XMFLOAT2(mod_wid, hei));
+	recenterToBottomButton.SetPos(XMFLOAT2(mod_x, y += step));
 	recenterToBottomButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
@@ -271,8 +274,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	mergeButton.Create("Merge Selected");
 	mergeButton.SetTooltip("Merges selected objects/meshes into one.");
-	mergeButton.SetSize(XMFLOAT2(wid, hei));
-	mergeButton.SetPos(XMFLOAT2(x, y += step));
+	mergeButton.SetSize(XMFLOAT2(mod_wid, hei));
+	mergeButton.SetPos(XMFLOAT2(mod_x, y += step));
 	mergeButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		MeshComponent merged_mesh;
@@ -453,8 +456,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	optimizeButton.Create("Optimize");
 	optimizeButton.SetTooltip("Run the meshoptimizer library.");
-	optimizeButton.SetSize(XMFLOAT2(wid, hei));
-	optimizeButton.SetPos(XMFLOAT2(x, y += step));
+	optimizeButton.SetSize(XMFLOAT2(mod_wid, hei));
+	optimizeButton.SetPos(XMFLOAT2(mod_x, y += step));
 	optimizeButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)

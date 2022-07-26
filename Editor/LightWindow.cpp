@@ -13,16 +13,36 @@ void LightWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Light", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(650, 300));
+	SetSize(XMFLOAT2(650, 800));
 
-	float x = 450;
+	float x = 130;
 	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
+	float wid = 130;
+
+
+	float mod_x = 10;
+
+	colorPicker.Create("Light Color", wi::gui::Window::WindowControls::NONE);
+	colorPicker.SetPos(XMFLOAT2(mod_x, y));
+	colorPicker.SetVisible(true);
+	colorPicker.SetEnabled(false);
+	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->color = args.color.toFloat3();
+		}
+		});
+	AddWidget(&colorPicker);
+
+	float mod_wid = colorPicker.GetScale().x;
+	y += colorPicker.GetScale().y + 5;
 
 	intensitySlider.Create(0, 1000, 0, 100000, "Intensity: ");
-	intensitySlider.SetSize(XMFLOAT2(100, hei));
-	intensitySlider.SetPos(XMFLOAT2(x, y));
+	intensitySlider.SetSize(XMFLOAT2(wid, hei));
+	intensitySlider.SetPos(XMFLOAT2(x, y += step));
 	intensitySlider.OnSlide([&](wi::gui::EventArgs args) {
 		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)
@@ -35,7 +55,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&intensitySlider);
 
 	rangeSlider.Create(1, 1000, 0, 100000, "Range: ");
-	rangeSlider.SetSize(XMFLOAT2(100, hei));
+	rangeSlider.SetSize(XMFLOAT2(wid, hei));
 	rangeSlider.SetPos(XMFLOAT2(x, y += step));
 	rangeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
@@ -49,7 +69,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&rangeSlider);
 
 	outerConeAngleSlider.Create(0.1f, XM_PIDIV2 - 0.01f, 0, 100000, "Outer Cone Angle: ");
-	outerConeAngleSlider.SetSize(XMFLOAT2(100, hei));
+	outerConeAngleSlider.SetSize(XMFLOAT2(wid, hei));
 	outerConeAngleSlider.SetPos(XMFLOAT2(x, y += step));
 	outerConeAngleSlider.OnSlide([&](wi::gui::EventArgs args) {
 		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
@@ -63,7 +83,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&outerConeAngleSlider);
 
 	innerConeAngleSlider.Create(0, XM_PI - 0.01f, 0, 100000, "Inner Cone Angle: ");
-	innerConeAngleSlider.SetSize(XMFLOAT2(100, hei));
+	innerConeAngleSlider.SetSize(XMFLOAT2(wid, hei));
 	innerConeAngleSlider.SetPos(XMFLOAT2(x, y += step));
 	innerConeAngleSlider.OnSlide([&](wi::gui::EventArgs args) {
 		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
@@ -132,22 +152,8 @@ void LightWindow::Create(EditorComponent* _editor)
 	staticCheckBox.SetTooltip("Static lights will only be used for baking into lightmaps.");
 	AddWidget(&staticCheckBox);
 
-
-	colorPicker.Create("Light Color", wi::gui::Window::WindowControls::NONE);
-	colorPicker.SetPos(XMFLOAT2(10, 0));
-	colorPicker.SetVisible(true);
-	colorPicker.SetEnabled(false);
-	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
-		{
-			light->color = args.color.toFloat3();
-		}
-	});
-	AddWidget(&colorPicker);
-
 	typeSelectorComboBox.Create("Type: ");
-	typeSelectorComboBox.SetSize(XMFLOAT2(150, hei));
+	typeSelectorComboBox.SetSize(XMFLOAT2(wid, hei));
 	typeSelectorComboBox.SetPos(XMFLOAT2(x, y += step));
 	typeSelectorComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
@@ -160,17 +166,13 @@ void LightWindow::Create(EditorComponent* _editor)
 	typeSelectorComboBox.AddItem("Directional");
 	typeSelectorComboBox.AddItem("Point");
 	typeSelectorComboBox.AddItem("Spot");
-	//typeSelectorComboBox.AddItem("Sphere");
-	//typeSelectorComboBox.AddItem("Disc");
-	//typeSelectorComboBox.AddItem("Rectangle");
-	//typeSelectorComboBox.AddItem("Tube");
 	typeSelectorComboBox.SetTooltip("Choose the light source type...");
 	typeSelectorComboBox.SetSelected((int)LightComponent::POINT);
 	AddWidget(&typeSelectorComboBox);
 
 	shadowResolutionComboBox.Create("Shadow resolution: ");
 	shadowResolutionComboBox.SetTooltip("You can force a fixed resolution for this light's shadow map to avoid dynamic scaling.\nIf you leave it as dynamic, the resolution will be scaled between 0 and the max shadow resolution in the renderer for this light type, based on light's distance and size.");
-	shadowResolutionComboBox.SetSize(XMFLOAT2(150, hei));
+	shadowResolutionComboBox.SetSize(XMFLOAT2(wid, hei));
 	shadowResolutionComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadowResolutionComboBox.AddItem("Dynamic", uint64_t(-1));
 	shadowResolutionComboBox.AddItem("32", 32);
@@ -189,12 +191,11 @@ void LightWindow::Create(EditorComponent* _editor)
 	shadowResolutionComboBox.SetSelected(0);
 	AddWidget(&shadowResolutionComboBox);
 
-	y += step;
-	x -= 100;
+	y += step * 0.5f;
 
 	lensflare_Label.Create("Lens flare textures: ");
-	lensflare_Label.SetPos(XMFLOAT2(x, y += step));
-	lensflare_Label.SetSize(XMFLOAT2(140, hei));
+	lensflare_Label.SetPos(XMFLOAT2(mod_x, y += step));
+	lensflare_Label.SetSize(XMFLOAT2(wid, hei));
 	AddWidget(&lensflare_Label);
 
 	for (size_t i = 0; i < arraysize(lensflare_Button); ++i)
@@ -202,8 +203,8 @@ void LightWindow::Create(EditorComponent* _editor)
 		lensflare_Button[i].Create("LensFlareSlot");
 		lensflare_Button[i].SetText("");
 		lensflare_Button[i].SetTooltip("Load a lensflare texture to this slot");
-		lensflare_Button[i].SetPos(XMFLOAT2(x, y += step));
-		lensflare_Button[i].SetSize(XMFLOAT2(260, hei));
+		lensflare_Button[i].SetPos(XMFLOAT2(mod_x, y += step));
+		lensflare_Button[i].SetSize(XMFLOAT2(mod_wid, hei));
 		lensflare_Button[i].OnClick([=](wi::gui::EventArgs args) {
 			LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 			if (light == nullptr)
