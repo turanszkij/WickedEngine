@@ -21,8 +21,25 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	float mod_x = 10;
 
+	primaryButton.Create("Set as primary weather");
+	primaryButton.SetTooltip("This will be set as the primary weather used in rendering");
+	primaryButton.SetPos(XMFLOAT2(mod_x, y));
+	primaryButton.OnClick([=](wi::gui::EventArgs args) {
+
+		Scene& scene = editor->GetCurrentScene();
+		if (!scene.weathers.Contains(entity))
+			return;
+		size_t current = scene.weathers.GetIndex(entity);
+		scene.weathers.MoveItem(current, 0);
+
+		// Also, we invalidate all environment probes to reflect the sky changes.
+		InvalidateProbes();
+
+		});
+	AddWidget(&primaryButton);
+
 	colorComboBox.Create("Color picker mode: ");
-	colorComboBox.SetPos(XMFLOAT2(x, y));
+	colorComboBox.SetPos(XMFLOAT2(x, y += step));
 	colorComboBox.AddItem("Ambient color");
 	colorComboBox.AddItem("Horizon color");
 	colorComboBox.AddItem("Zenith color");
@@ -63,6 +80,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	float mod_wid = colorPicker.GetScale().x;
 	colorComboBox.SetSize(XMFLOAT2(mod_wid - x + mod_x - hei - 1, hei));
+	primaryButton.SetSize(XMFLOAT2(mod_wid, hei));
 
 	heightFogCheckBox.Create("Height fog: ");
 	heightFogCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -469,9 +487,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	preset0Button.SetPos(XMFLOAT2(mod_x, y += step));
 	preset0Button.OnClick([=](wi::gui::EventArgs args) {
 
-		Scene& scene = editor->GetCurrentScene();
-		scene.weathers.Clear();
-		scene.weather = WeatherComponent();
+		auto& weather = GetWeather();
+		weather = WeatherComponent();
 
 		InvalidateProbes();
 
@@ -669,7 +686,7 @@ void WeatherWindow::Update()
 	Scene& scene = editor->GetCurrentScene();
 	if (scene.weathers.GetCount() > 0)
 	{
-		auto& weather = scene.weathers[0];
+		auto& weather = GetWeather();
 
 		if (!weather.skyMapName.empty())
 		{
@@ -742,11 +759,11 @@ void WeatherWindow::Update()
 WeatherComponent& WeatherWindow::GetWeather() const
 {
 	Scene& scene = editor->GetCurrentScene();
-	if (scene.weathers.GetCount() == 0)
+	if (!scene.weathers.Contains(entity))
 	{
-		scene.weathers.Create(CreateEntity());
+		return scene.weather;
 	}
-	return scene.weathers[0];
+	return *scene.weathers.GetComponent(entity);
 }
 
 void WeatherWindow::InvalidateProbes() const

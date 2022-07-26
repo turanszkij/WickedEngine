@@ -18,6 +18,7 @@ public:
 	wi::scene::WeatherComponent& GetWeather() const;
 	void InvalidateProbes() const;
 
+	wi::gui::Button primaryButton;
 	wi::gui::CheckBox heightFogCheckBox;
 	wi::gui::Slider fogStartSlider;
 	wi::gui::Slider fogEndSlider;
