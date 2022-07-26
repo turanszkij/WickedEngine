@@ -10,8 +10,22 @@ using namespace wi::scene;
 void EmitterWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Emitter", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create("Emitter", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(300, 900));
+
+	closeButton.SetTooltip("Delete EmittedParticleSystem");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().emitters.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 130;
 	float y = 0;

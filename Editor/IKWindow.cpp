@@ -9,8 +9,22 @@ using namespace wi::scene;
 void IKWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Inverse Kinematics", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create("Inverse Kinematics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(400, 150));
+
+	closeButton.SetTooltip("Delete InverseKinematicsComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().inverse_kinematics.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 120;
 	float y = 0;

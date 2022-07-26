@@ -261,7 +261,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create("Object", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(670, 840));
+	SetSize(XMFLOAT2(670, 860));
 
 	float x = 140;
 	float y = 0;
@@ -667,7 +667,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	generateLightmapButton.Create("Generate Lightmap");
 	generateLightmapButton.SetTooltip("Render the lightmap for only this object. It will automatically combined with the global lightmap.");
-	generateLightmapButton.SetPos(XMFLOAT2(x, y));
+	generateLightmapButton.SetPos(XMFLOAT2(x, y += step));
 	generateLightmapButton.SetSize(XMFLOAT2(wid, hei));
 	generateLightmapButton.OnClick([&](wi::gui::EventArgs args) {
 

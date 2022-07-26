@@ -9,8 +9,22 @@ using namespace wi::scene;
 void TransformWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Transform", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(480, 400));
+	wi::gui::Window::Create("Transform", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	SetSize(XMFLOAT2(480, 360));
+
+	closeButton.SetTooltip("Delete TransformComponent\nNote that a lot of components won't work correctly without a TransformComponent!");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().transforms.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 80;
 	float xx = x;
@@ -301,44 +315,6 @@ void TransformWindow::Create(EditorComponent* _editor)
 	x = xx;
 	y += step * 0.5f;
 
-	ikButton.Create("Create IK");
-	ikButton.SetTooltip("Create/Remove an Inverse Kinematics Component for this entity");
-	ikButton.SetPos(XMFLOAT2(x, y += step));
-	ikButton.SetSize(XMFLOAT2(wid + hei + 1, hei));
-	ikButton.OnClick([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		if (scene.inverse_kinematics.Contains(entity))
-		{
-			scene.inverse_kinematics.Remove(entity);
-			ikButton.SetText("Create IK");
-		}
-		else
-		{
-			scene.inverse_kinematics.Create(entity);
-			ikButton.SetText("Remove IK");
-		}
-		});
-	AddWidget(&ikButton);
-
-	springButton.Create("Create Spring");
-	springButton.SetTooltip("Create/Remove a Spring Component for this entity");
-	springButton.SetPos(XMFLOAT2(x, y += step));
-	springButton.SetSize(XMFLOAT2(wid + hei + 1, hei));
-	springButton.OnClick([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		if (scene.springs.Contains(entity))
-		{
-			scene.springs.Remove(entity);
-			springButton.SetText("Create Spring");
-		}
-		else
-		{
-			scene.springs.Create(entity);
-			springButton.SetText("Remove Spring");
-		}
-		});
-	AddWidget(&springButton);
-
 	x = 250;
 
 	snapScaleInput.Create("");
@@ -408,24 +384,6 @@ void TransformWindow::SetEntity(Entity entity)
 		sxInput.SetValue(transform->scale_local.x);
 		syInput.SetValue(transform->scale_local.y);
 		szInput.SetValue(transform->scale_local.z);
-
-		if (scene.inverse_kinematics.Contains(entity))
-		{
-			ikButton.SetText("Remove IK");
-		}
-		else
-		{
-			ikButton.SetText("Create IK");
-		}
-
-		if (scene.springs.Contains(entity))
-		{
-			springButton.SetText("Remove Spring");
-		}
-		else
-		{
-			springButton.SetText("Create Spring");
-		}
 
 		SetEnabled(true);
 	}

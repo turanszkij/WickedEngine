@@ -12,6 +12,7 @@ public:
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	void SetEntity(wi::ecs::Entity entity);
 
+	wi::gui::Button openButton;
 	wi::gui::ComboBox reverbComboBox;
 	wi::gui::Label filenameLabel;
 	wi::gui::Button playstopButton;

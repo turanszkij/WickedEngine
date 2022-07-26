@@ -8,8 +8,22 @@ using namespace wi::scene;
 void EnvProbeWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Environment Probe", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create("Environment Probe", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(420, 220));
+
+	closeButton.SetTooltip("Delete EnvironmentProbeComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().probes.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 5, y = 0, step = 35;
 

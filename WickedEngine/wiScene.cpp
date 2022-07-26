@@ -2396,10 +2396,13 @@ namespace wi::scene
 
 		names.Create(entity) = name;
 
-		SoundComponent& sound = sounds.Create(entity);
-		sound.filename = filename;
-		sound.soundResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
-		wi::audio::CreateSoundInstance(&sound.soundResource.GetSound(), &sound.soundinstance);
+		if (!filename.empty())
+		{
+			SoundComponent& sound = sounds.Create(entity);
+			sound.filename = filename;
+			sound.soundResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+			wi::audio::CreateSoundInstance(&sound.soundResource.GetSound(), &sound.soundinstance);
+		}
 
 		TransformComponent& transform = transforms.Create(entity);
 		transform.Translate(position);
@@ -3181,6 +3184,8 @@ namespace wi::scene
 
 			ArmatureComponent& armature = armatures[args.jobIndex];
 			Entity entity = armatures.GetEntity(args.jobIndex);
+			if (!transforms.Contains(entity))
+				return;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			// The transform world matrices are in world space, but skinning needs them in armature-local space, 
@@ -3879,6 +3884,8 @@ namespace wi::scene
 		{
 			DecalComponent& decal = decals[i];
 			Entity entity = decals.GetEntity(i);
+			if (!transforms.Contains(entity))
+				continue;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			decal.world = transform.world;
 
@@ -4069,6 +4076,8 @@ namespace wi::scene
 		{
 			EnvironmentProbeComponent& probe = probes[probeIndex];
 			Entity entity = probes.GetEntity(probeIndex);
+			if (!transforms.Contains(entity))
+				continue;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			probe.position = transform.GetPosition();
@@ -4123,6 +4132,8 @@ namespace wi::scene
 
 			ForceFieldComponent& force = forces[args.jobIndex];
 			Entity entity = forces.GetEntity(args.jobIndex);
+			if (!transforms.Contains(entity))
+				return;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			XMMATRIX W = XMLoadFloat4x4(&transform.world);
@@ -4142,6 +4153,8 @@ namespace wi::scene
 
 			LightComponent& light = lights[args.jobIndex];
 			Entity entity = lights.GetEntity(args.jobIndex);
+			if (!transforms.Contains(entity))
+				return;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			AABB& aabb = aabb_lights[args.jobIndex];
 
@@ -4200,6 +4213,8 @@ namespace wi::scene
 
 			HairParticleSystem& hair = hairs[args.jobIndex];
 			Entity entity = hairs.GetEntity(args.jobIndex);
+			if (!transforms.Contains(entity))
+				return;
 
 			const LayerComponent* layer = layers.GetComponent(entity);
 			if (layer != nullptr)
@@ -4283,6 +4298,8 @@ namespace wi::scene
 
 			EmittedParticleSystem& emitter = emitters[args.jobIndex];
 			Entity entity = emitters.GetEntity(args.jobIndex);
+			if (!transforms.Contains(entity))
+				return;
 
 			MaterialComponent* material = materials.GetComponent(entity);
 			if (material != nullptr)

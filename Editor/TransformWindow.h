@@ -33,9 +33,6 @@ public:
 	wi::gui::TextInputField syInput;
 	wi::gui::TextInputField szInput;
 
-	wi::gui::Button ikButton;
-	wi::gui::Button springButton;
-
 	wi::gui::TextInputField snapScaleInput;
 	wi::gui::TextInputField snapRotateInput;
 	wi::gui::TextInputField snapTranslateInput;

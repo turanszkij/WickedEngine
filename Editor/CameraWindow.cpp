@@ -185,8 +185,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		CameraComponent& cam = *scene.cameras.GetComponent(entity);
 		cam = camera;
 
-		TransformComponent& transform = *scene.transforms.GetComponent(entity);
-		transform.MatrixTransform(camera.InvView);
+		scene.transforms.GetComponent(entity)->MatrixTransform(camera.InvView);
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_ADD;

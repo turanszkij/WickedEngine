@@ -105,6 +105,7 @@ public:
 	void PushToEntityTree(wi::ecs::Entity entity, int level);
 	void RefreshEntityTree();
 
+	wi::gui::ComboBox newComponentCombo;
 	wi::gui::Window componentWindow;
 	void RefreshComponentWindow();
 

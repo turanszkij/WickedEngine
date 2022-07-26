@@ -12,8 +12,23 @@ using namespace wi::scene;
 void LightWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Light", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create("Light", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(650, 700));
+
+	closeButton.SetTooltip("Delete LightComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().lights.Remove(entity);
+		editor->GetCurrentScene().aabb_lights.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 130;
 	float y = 0;

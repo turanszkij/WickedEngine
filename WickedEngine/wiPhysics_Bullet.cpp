@@ -494,7 +494,7 @@ namespace wi::physics
 			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
 			Entity entity = scene.rigidbodies.GetEntity(args.jobIndex);
 
-			if (physicscomponent.physicsobject == nullptr)
+			if (physicscomponent.physicsobject == nullptr && scene.transforms.Contains(entity))
 			{
 				TransformComponent& transform = *scene.transforms.GetComponent(entity);
 				const ObjectComponent* object = scene.objects.GetComponent(entity);
@@ -531,7 +531,7 @@ namespace wi::physics
 				rigidbody->setRestitution(physicscomponent.restitution);
 
 				// For kinematic object, system updates physics state, else the physics updates system state:
-				if (physicscomponent.IsKinematic() || !IsSimulationEnabled())
+				if ((physicscomponent.IsKinematic() || !IsSimulationEnabled()) && scene.transforms.Contains(entity))
 				{
 					TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
@@ -632,7 +632,7 @@ namespace wi::physics
 				RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
 
 				// Feedback non-kinematic objects to system:
-				if (IsSimulationEnabled() && !physicscomponent->IsKinematic())
+				if (IsSimulationEnabled() && !physicscomponent->IsKinematic() && scene.transforms.Contains(entity))
 				{
 					TransformComponent& transform = *scene.transforms.GetComponent(entity);
 	

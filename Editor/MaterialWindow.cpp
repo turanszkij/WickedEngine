@@ -9,8 +9,22 @@ using namespace wi::scene;
 void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Material", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create("Material", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(300, 1200));
+
+	closeButton.SetTooltip("Delete MaterialComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().materials.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float hei = 18;
 	float step = hei + 2;

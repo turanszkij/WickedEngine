@@ -1033,6 +1033,136 @@ void EditorComponent::Load()
 	componentWindow.font.params.h_align = wi::font::WIFALIGN_RIGHT;
 	GetGUI().AddWidget(&componentWindow);
 
+	newComponentCombo.Create("Add: ");
+	newComponentCombo.SetTooltip("Add a component to the first selected entity.");
+	newComponentCombo.AddItem("...", ~0ull);
+	newComponentCombo.AddItem("Name", 0);
+	newComponentCombo.AddItem("Layer", 1);
+	newComponentCombo.AddItem("Transform", 2);
+	newComponentCombo.AddItem("Light", 3);
+	newComponentCombo.AddItem("Matetial", 4);
+	newComponentCombo.AddItem("Spring", 5);
+	newComponentCombo.AddItem("Inverse Kinematics", 6);
+	newComponentCombo.AddItem("Sound", 7);
+	newComponentCombo.AddItem("Environment Probe", 8);
+	newComponentCombo.AddItem("Emitted Particle System", 9);
+	newComponentCombo.AddItem("Hair Particle System", 10);
+	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
+		newComponentCombo.SetSelectedWithoutCallback(0);
+		if (translator.selected.empty())
+			return;
+		Scene& scene = GetCurrentScene();
+		Entity entity = translator.selected.front().entity;
+		if (entity == INVALID_ENTITY)
+		{
+			assert(0);
+			return;
+		}
+
+		// Can early exit before creating history entry!
+		switch (args.userdata)
+		{
+		case 0:
+			if(scene.names.Contains(entity))
+				return;
+			break;
+		case 1:
+			if (scene.layers.Contains(entity))
+				return;
+			break;
+		case 2:
+			if (scene.transforms.Contains(entity))
+				return;
+			break;
+		case 3:
+			if (scene.lights.Contains(entity))
+				return;
+			break;
+		case 4:
+			if (scene.materials.Contains(entity))
+				return;
+			break;
+		case 5:
+			if (scene.springs.Contains(entity))
+				return;
+			break;
+		case 6:
+			if (scene.inverse_kinematics.Contains(entity))
+				return;
+			break;
+		case 7:
+			if (scene.inverse_kinematics.Contains(entity))
+				return;
+			break;
+		case 8:
+			if (scene.probes.Contains(entity))
+				return;
+			break;
+		case 9:
+			if (scene.emitters.Contains(entity))
+				return;
+			break;
+		case 10:
+			if (scene.hairs.Contains(entity))
+				return;
+			break;
+		default:
+			return;
+		}
+
+		wi::Archive& archive = AdvanceHistory();
+		archive << HISTORYOP_COMPONENT_DATA;
+		RecordEntity(archive, entity);
+
+		switch (args.userdata)
+		{
+		case 0:
+			scene.names.Create(entity);
+			break;
+		case 1:
+			scene.layers.Create(entity);
+			break;
+		case 2:
+			scene.transforms.Create(entity);
+			break;
+		case 3:
+			scene.lights.Create(entity);
+			scene.aabb_lights.Create(entity);
+			break;
+		case 4:
+			scene.materials.Create(entity);
+			break;
+		case 5:
+			scene.springs.Create(entity);
+			break;
+		case 6:
+			scene.inverse_kinematics.Create(entity);
+			break;
+		case 7:
+			scene.sounds.Create(entity);
+			break;
+		case 8:
+			scene.probes.Create(entity);
+			break;
+		case 9:
+			if (!scene.materials.Contains(entity))
+				scene.materials.Create(entity);
+			scene.emitters.Create(entity);
+			break;
+		case 10:
+			if (!scene.materials.Contains(entity))
+				scene.materials.Create(entity);
+			scene.hairs.Create(entity);
+			break;
+		default:
+			break;
+		}
+
+		RecordEntity(archive, entity);
+
+		});
+	componentWindow.AddWidget(&newComponentCombo);
+
 
 	componentWindow.AddWidget(&materialWnd);
 	componentWindow.AddWidget(&weatherWnd);
@@ -1311,6 +1441,8 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.lights.GetCount(); ++i)
 				{
 					Entity entity = scene.lights.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
@@ -1328,6 +1460,8 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 				{
 					Entity entity = scene.decals.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
@@ -1345,6 +1479,8 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 				{
 					Entity entity = scene.forces.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
@@ -1362,6 +1498,8 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 				{
 					Entity entity = scene.emitters.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
@@ -1379,6 +1517,8 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 				{
 					Entity entity = scene.hairs.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
@@ -1396,6 +1536,8 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 				{
 					Entity entity = scene.probes.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					if (Sphere(transform.GetPosition(), 1).intersects(pickRay))
@@ -1415,7 +1557,8 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 				{
 					Entity entity = scene.cameras.GetEntity(i);
-
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
@@ -1433,6 +1576,8 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 				{
 					Entity entity = scene.armatures.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
@@ -1450,6 +1595,8 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
 				{
 					Entity entity = scene.sounds.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
@@ -2210,6 +2357,8 @@ void EditorComponent::Render() const
 				{
 					const LightComponent& light = scene.lights[i];
 					Entity entity = scene.lights.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
@@ -2254,6 +2403,8 @@ void EditorComponent::Render() const
 				for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 				{
 					Entity entity = scene.decals.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
@@ -2287,6 +2438,8 @@ void EditorComponent::Render() const
 				for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 				{
 					Entity entity = scene.forces.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
@@ -2319,7 +2472,8 @@ void EditorComponent::Render() const
 				for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 				{
 					Entity entity = scene.cameras.GetEntity(i);
-
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
@@ -2352,6 +2506,8 @@ void EditorComponent::Render() const
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 				{
 					Entity entity = scene.armatures.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
@@ -2384,6 +2540,8 @@ void EditorComponent::Render() const
 				for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 				{
 					Entity entity = scene.emitters.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
@@ -2416,6 +2574,8 @@ void EditorComponent::Render() const
 				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 				{
 					Entity entity = scene.hairs.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
@@ -2448,6 +2608,8 @@ void EditorComponent::Render() const
 				for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
 				{
 					Entity entity = scene.sounds.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
@@ -2637,22 +2799,96 @@ void EditorComponent::RefreshEntityTree()
 		PushToEntityTree(scene.transforms.GetEntity(i), 0);
 	}
 
-	// Add materials:
+	// Add any left over entities that might not have had a transform:
+
+	for (size_t i = 0; i < scene.lights.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.lights.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.decals.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.decals.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.cameras.GetEntity(i), 0);
+	}
+
 	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 	{
 		PushToEntityTree(scene.materials.GetEntity(i), 0);
 	}
 
-	// Add meshes:
 	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 	{
 		PushToEntityTree(scene.meshes.GetEntity(i), 0);
 	}
 
-	// Add weathers:
+	for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.armatures.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.objects.GetEntity(i), 0);
+	}
+
 	for (size_t i = 0; i < scene.weathers.GetCount(); ++i)
 	{
 		PushToEntityTree(scene.weathers.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.sounds.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.hairs.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.emitters.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.animations.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.animations.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.probes.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.probes.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.forces.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.forces.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.rigidbodies.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.softbodies.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.springs.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.springs.GetEntity(i), 0);
+	}
+
+	for (size_t i = 0; i < scene.inverse_kinematics.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.inverse_kinematics.GetEntity(i), 0);
 	}
 
 	entitytree_added_items.clear();
@@ -2664,6 +2900,19 @@ void EditorComponent::RefreshComponentWindow()
 	const float padding = 4;
 	XMFLOAT2 pos = XMFLOAT2(padding, padding);
 	const float width = componentWindow.GetWidgetAreaSize().x - padding * 2;
+
+	if (!translator.selected.empty())
+	{
+		newComponentCombo.SetVisible(true);
+		newComponentCombo.SetPos(XMFLOAT2(pos.x + 35, pos.y));
+		newComponentCombo.SetSize(XMFLOAT2(width - 35 - 21, 20));
+		pos.y += newComponentCombo.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		newComponentCombo.SetVisible(false);
+	}
 
 	if (scene.names.Contains(nameWnd.entity))
 	{
