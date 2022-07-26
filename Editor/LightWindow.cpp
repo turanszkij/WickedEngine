@@ -13,7 +13,7 @@ void LightWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Light", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(650, 800));
+	SetSize(XMFLOAT2(650, 700));
 
 	float x = 130;
 	float y = 0;
@@ -42,7 +42,7 @@ void LightWindow::Create(EditorComponent* _editor)
 
 	intensitySlider.Create(0, 1000, 0, 100000, "Intensity: ");
 	intensitySlider.SetSize(XMFLOAT2(wid, hei));
-	intensitySlider.SetPos(XMFLOAT2(x, y += step));
+	intensitySlider.SetPos(XMFLOAT2(x, y));
 	intensitySlider.OnSlide([&](wi::gui::EventArgs args) {
 		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 		if (light != nullptr)

@@ -11,13 +11,13 @@ void EmitterWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Emitter", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(300, 200));
+	SetSize(XMFLOAT2(300, 900));
 
 	float x = 130;
 	float y = 0;
 	float itemheight = 18;
 	float step = itemheight + 2;
-	float wid = 120;
+	float wid = 140;
 
 	restartButton.Create("Restart Emitter");
 	restartButton.SetPos(XMFLOAT2(x, y));
