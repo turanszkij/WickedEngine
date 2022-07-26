@@ -1143,6 +1143,7 @@ void EditorComponent::Load()
 			break;
 		case 8:
 			scene.probes.Create(entity);
+			scene.aabb_probes.Create(entity);
 			break;
 		case 9:
 			if (!scene.materials.Contains(entity))

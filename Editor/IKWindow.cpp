@@ -10,7 +10,7 @@ void IKWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Inverse Kinematics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(400, 150));
+	SetSize(XMFLOAT2(400, 110));
 
 	closeButton.SetTooltip("Delete InverseKinematicsComponent");
 	OnClose([=](wi::gui::EventArgs args) {

@@ -19,6 +19,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->GetCurrentScene().probes.Remove(entity);
+		editor->GetCurrentScene().aabb_probes.Remove(entity);
 
 		editor->RecordEntity(archive, entity);
 
