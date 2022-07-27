@@ -255,7 +255,7 @@ namespace wi::gui
 
 		hitBox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
 
-		if (!force_disable && GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && GetPointerHitbox().intersects(hitBox))
+		if (!force_disable && GetState() != WIDGETSTATE::ACTIVE && !tooltipFont.text.empty() && GetPointerHitbox().intersects(hitBox))
 		{
 			tooltipTimer++;
 		}
@@ -276,18 +276,20 @@ namespace wi::gui
 			float screenwidth = canvas.GetLogicalWidth();
 			float screenheight = canvas.GetLogicalHeight();
 
-			wi::font::Params fontProps = wi::font::Params(0, 0, wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP);
-			fontProps.color = wi::Color(25, 25, 25, 255);
-			wi::SpriteFont tooltipFont = wi::SpriteFont(tooltip, fontProps);
-			if (!scriptTip.empty())
-			{
-				tooltipFont.SetText(tooltip + "\n" + scriptTip);
-			}
+			tooltipFont.params = wi::font::Params(0, 0, wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP);
+			tooltipFont.params.color = wi::Color(25, 25, 25, 255);
 
 			static const float _border = 2;
 			XMFLOAT2 textSize = tooltipFont.TextSize();
 			float textWidth = textSize.x + _border * 2;
 			float textHeight = textSize.y + _border * 2;
+
+			if (!scripttipFont.text.empty())
+			{
+				XMFLOAT2 scriptTipSize = scripttipFont.TextSize();
+				textWidth = std::max(textWidth, scriptTipSize.x);
+				textHeight += scriptTipSize.y;
+			}
 
 			XMFLOAT2 pointer = GetPointerHitbox().pos;
 			tooltipFont.params.posX = pointer.x;
@@ -314,14 +316,13 @@ namespace wi::gui
 			wi::image::Draw(wi::texturehelper::getWhite(),
 				wi::image::Params(tooltipFont.params.posX - _border, tooltipFont.params.posY - _border,
 					textWidth, textHeight, wi::Color(255, 234, 165)), cmd);
-			tooltipFont.SetText(tooltip);
 			tooltipFont.Draw(cmd);
-			if (!scriptTip.empty())
+			if (!scripttipFont.text.empty())
 			{
-				tooltipFont.SetText(scriptTip);
-				tooltipFont.params.posY += (int)(textHeight / 2);
-				tooltipFont.params.color = wi::Color(25, 25, 25, 110);
-				tooltipFont.Draw(cmd);
+				scripttipFont.params = tooltipFont.params;
+				scripttipFont.params.posY += (int)(textHeight / 2);
+				scripttipFont.params.color = wi::Color(25, 25, 25, 110);
+				scripttipFont.Draw(cmd);
 			}
 		}
 	}
@@ -355,19 +356,19 @@ namespace wi::gui
 	}
 	void Widget::SetTooltip(const std::string& value)
 	{
-		tooltip = value;
+		tooltipFont.SetText(value);
 	}
 	void Widget::SetTooltip(std::string&& value)
 	{
-		tooltip = std::move(value);
+		tooltipFont.SetText(std::move(value));
 	}
 	void Widget::SetScriptTip(const std::string& value)
 	{
-		scriptTip = value;
+		scripttipFont.SetText(value);
 	}
 	void Widget::SetScriptTip(std::string&& value)
 	{
-		scriptTip = std::move(value);
+		scripttipFont.SetText(std::move(value));
 	}
 	void Widget::SetPos(const XMFLOAT2& value)
 	{
@@ -1264,13 +1265,13 @@ namespace wi::gui
 		Widget::Update(canvas, dt);
 
 		valueInputField.Detach();
-		valueInputField.SetSize(XMFLOAT2(std::max(scale.y * 2, wi::font::TextWidth(valueInputField.GetText(), valueInputField.font.params) + 4), scale.y));
-		valueInputField.SetPos(XMFLOAT2(translation.x + scale.x + 2, translation.y));
+		valueInputField.SetSize(XMFLOAT2(std::max(scale.y, wi::font::TextWidth(valueInputField.GetText(), valueInputField.font.params) + 4), scale.y));
+		valueInputField.SetPos(XMFLOAT2(translation.x + scale.x + 1, translation.y));
 		valueInputField.AttachTo(this);
 
 		scissorRect.bottom = (int32_t)std::ceil(translation.y + scale.y);
 		scissorRect.left = (int32_t)std::floor(translation.x);
-		scissorRect.right = (int32_t)std::ceil(translation.x + scale.x + 20 + scale.y * 2); // include the valueInputField
+		scissorRect.right = (int32_t)std::ceil(translation.x + scale.x + 1 + valueInputField.GetSize().x);
 		scissorRect.top = (int32_t)std::floor(translation.y);
 
 		for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
@@ -1386,6 +1387,7 @@ namespace wi::gui
 		// knob
 		sprites_knob[state].Draw(cmd);
 
+		// input field
 		valueInputField.Render(canvas, cmd);
 	}
 	void Slider::RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
@@ -1540,10 +1542,21 @@ namespace wi::gui
 		font.params.h_align = wi::font::WIFALIGN_RIGHT;
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
 	}
-	float ComboBox::GetItemOffset(int index) const
+	float ComboBox::GetDropOffset(const wi::Canvas& canvas) const
+	{
+		float screenheight = canvas.GetLogicalHeight();
+		int last_item = std::min(maxVisibleItemCount, int(items.size()) - firstItemVisible);
+		float total_height = (maxVisibleItemCount + 1) * scale.y;
+		if (translation.y + total_height > screenheight)
+		{
+			return -total_height - 1;
+		}
+		return 1;
+	}
+	float ComboBox::GetItemOffset(const wi::Canvas& canvas, int index) const
 	{
 		index = std::max(firstItemVisible, index) - firstItemVisible;
-		return scale.y * (index + 1) + 1;
+		return scale.y * (index + 1) + GetDropOffset(canvas);
 	}
 	bool ComboBox::HasScrollbar() const
 	{
@@ -1560,6 +1573,8 @@ namespace wi::gui
 
 		if (IsEnabled() && dt > 0)
 		{
+			float drop_offset = GetDropOffset(canvas);
+
 			if (state == FOCUS)
 			{
 				state = IDLE;
@@ -1618,7 +1633,7 @@ namespace wi::gui
 				Activate();
 			}
 
-			const float scrollbar_begin = translation.y + scale.y + 1 + scale.y * 0.5f;
+			const float scrollbar_begin = translation.y + scale.y + drop_offset + scale.y * 0.5f;
 			const float scrollbar_end = scrollbar_begin + std::max(0.0f, (float)std::min(maxVisibleItemCount, (int)items.size()) - 1) * scale.y;
 
 			if (state == ACTIVE)
@@ -1628,7 +1643,7 @@ namespace wi::gui
 				{
 					if (combostate != COMBOSTATE_SELECTING && combostate != COMBOSTATE_INACTIVE)
 					{
-						if (combostate == COMBOSTATE_SCROLLBAR_GRABBED || pointerHitbox.intersects(Hitbox2D(XMFLOAT2(translation.x + scale.x + 1, translation.y + scale.y + 1), XMFLOAT2(scale.y, (float)std::min(maxVisibleItemCount, (int)items.size()) * scale.y))))
+						if (combostate == COMBOSTATE_SCROLLBAR_GRABBED || pointerHitbox.intersects(Hitbox2D(XMFLOAT2(translation.x + scale.x + 1, translation.y + scale.y + drop_offset), XMFLOAT2(scale.y, (float)std::min(maxVisibleItemCount, (int)items.size()) * scale.y))))
 						{
 							if (click_down)
 							{
@@ -1676,7 +1691,7 @@ namespace wi::gui
 					{
 						Hitbox2D itembox;
 						itembox.pos.x = translation.x;
-						itembox.pos.y = translation.y + GetItemOffset(i);
+						itembox.pos.y = translation.y + GetItemOffset(canvas, i);
 						itembox.siz.x = scale.x;
 						itembox.siz.y = scale.y;
 						if (pointerHitbox.intersects(itembox))
@@ -1738,6 +1753,8 @@ namespace wi::gui
 		}
 		const XMMATRIX Projection = canvas.GetProjection();
 
+		float drop_offset = GetDropOffset(canvas);
+
 		// control-arrow-background
 		wi::image::Params fx = sprites[state].params;
 		fx.pos = XMFLOAT3(translation.x + scale.x + 1, translation.y, 0);
@@ -1751,7 +1768,7 @@ namespace wi::gui
 			MiscCB cb;
 			cb.g_xColor = sprites[ACTIVE].params.color;
 			XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(scale.y * 0.25f, scale.y * 0.25f, 1) *
-				XMMatrixRotationZ(XM_PIDIV2) *
+				XMMatrixRotationZ(drop_offset < 0 ? -XM_PIDIV2 : XM_PIDIV2) *
 				XMMatrixTranslation(translation.x + scale.x + 1 + scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) *
 				Projection
 			);
@@ -1781,19 +1798,20 @@ namespace wi::gui
 		// drop-down
 		if (state == ACTIVE)
 		{
+
 			if (HasScrollbar())
 			{
 				Rect rect;
 				rect.left = int(translation.x + scale.x + 1);
 				rect.right = int(translation.x + scale.x + 1 + scale.y);
-				rect.top = int(translation.y + scale.y + 1);
-				rect.bottom = int(translation.y + scale.y + 1 + scale.y * maxVisibleItemCount);
+				rect.top = int(translation.y + scale.y + drop_offset);
+				rect.bottom = int(translation.y + scale.y + drop_offset + scale.y * maxVisibleItemCount);
 				ApplyScissor(canvas, rect, cmd, false);
 
 				// control-scrollbar-base
 				{
 					fx = sprites[state].params;
-					fx.pos = XMFLOAT3(translation.x + scale.x + 1, translation.y + scale.y + 1, 0);
+					fx.pos = XMFLOAT3(translation.x + scale.x + 1, translation.y + scale.y + drop_offset, 0);
 					fx.siz = XMFLOAT2(scale.y, scale.y * maxVisibleItemCount);
 					fx.color = wi::math::Lerp(wi::Color::Transparent(), sprites[IDLE].params.color, 0.5f);
 					wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
@@ -1811,14 +1829,14 @@ namespace wi::gui
 						col = wi::Color::fromFloat4(sprites[ACTIVE].params.color);
 					}
 					wi::image::Draw(wi::texturehelper::getWhite()
-						, wi::image::Params(translation.x + scale.x + 1, translation.y + scale.y + 1 + scrollbar_delta, scale.y, scale.y, col), cmd);
+						, wi::image::Params(translation.x + scale.x + 1, translation.y + scale.y + drop_offset + scrollbar_delta, scale.y, scale.y, col), cmd);
 				}
 			}
 
 			Rect rect;
 			rect.left = int(translation.x);
 			rect.right = rect.left + int(scale.x);
-			rect.top = int(translation.y + scale.y + 1);
+			rect.top = int(translation.y + scale.y + drop_offset);
 			rect.bottom = rect.top + int(scale.y * maxVisibleItemCount);
 			ApplyScissor(canvas, rect, cmd, false);
 
@@ -1826,7 +1844,7 @@ namespace wi::gui
 			for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
 			{
 				fx = sprites[state].params;
-				fx.pos = XMFLOAT3(translation.x, translation.y + GetItemOffset(i), 0);
+				fx.pos = XMFLOAT3(translation.x, translation.y + GetItemOffset(canvas, i), 0);
 				fx.siz = XMFLOAT2(scale.x, scale.y);
 				fx.color = wi::math::Lerp(wi::Color::Transparent(), sprites[IDLE].params.color, 0.5f);
 				if (hovered == i)
@@ -1841,7 +1859,7 @@ namespace wi::gui
 					}
 				}
 				wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
-				wi::font::Draw(items[i].name, wi::font::Params(translation.x + scale.x * 0.5f, translation.y + scale.y * 0.5f + GetItemOffset(i), wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_CENTER, wi::font::WIFALIGN_CENTER,
+				wi::font::Draw(items[i].name, wi::font::Params(translation.x + scale.x * 0.5f, translation.y + scale.y * 0.5f + GetItemOffset(canvas, i), wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_CENTER, wi::font::WIFALIGN_CENTER,
 					font.params.color, font.params.shadowColor), cmd);
 			}
 		}
@@ -3595,7 +3613,7 @@ namespace wi::gui
 						continue;
 					}
 
-					tooltip.clear();
+					tooltipFont.text.clear();
 
 					if (open_box.intersects(pointerHitbox))
 					{

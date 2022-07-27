@@ -12,15 +12,17 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create("PostProcess", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(420, 500));
 
-	float x = 150;
+	float x = 110;
 	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
+	float wid = 140;
+	float mod_wid = 60;
 
 	exposureSlider.Create(0.0f, 3.0f, 1, 10000, "Exposure: ");
 	exposureSlider.SetTooltip("Set the tonemap exposure value");
 	exposureSlider.SetScriptTip("RenderPath3D::SetExposure(float value)");
-	exposureSlider.SetSize(XMFLOAT2(100, hei));
+	exposureSlider.SetSize(XMFLOAT2(wid, hei));
 	exposureSlider.SetPos(XMFLOAT2(x, y));
 	exposureSlider.SetValue(editor->renderPath->getExposure());
 	exposureSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -53,7 +55,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 	aoComboBox.Create("AO: ");
 	aoComboBox.SetTooltip("Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing");
 	aoComboBox.SetScriptTip("RenderPath3D::SetAO(int value)");
-	aoComboBox.SetSize(XMFLOAT2(150, hei));
+	aoComboBox.SetSize(XMFLOAT2(wid, hei));
 	aoComboBox.SetPos(XMFLOAT2(x, y += step));
 	aoComboBox.AddItem("Disabled");
 	aoComboBox.AddItem("SSAO");
@@ -93,7 +95,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	aoPowerSlider.Create(0.25f, 8.0f, 2, 1000, "Power: ");
 	aoPowerSlider.SetTooltip("Set SSAO Power. Higher values produce darker, more pronounced effect");
-	aoPowerSlider.SetSize(XMFLOAT2(100, hei));
+	aoPowerSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	aoPowerSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	aoPowerSlider.SetValue((float)editor->renderPath->getAOPower());
 	aoPowerSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -103,7 +105,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	aoRangeSlider.Create(1.0f, 100.0f, 1, 1000, "Range: ");
 	aoRangeSlider.SetTooltip("Set AO ray length. Only for SSAO and RTAO");
-	aoRangeSlider.SetSize(XMFLOAT2(100, hei));
+	aoRangeSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	aoRangeSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	aoRangeSlider.SetValue((float)editor->renderPath->getAOPower());
 	aoRangeSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -113,7 +115,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	aoSampleCountSlider.Create(1, 16, 9, 15, "Sample Count: ");
 	aoSampleCountSlider.SetTooltip("Set AO ray count. Only for SSAO");
-	aoSampleCountSlider.SetSize(XMFLOAT2(100, hei));
+	aoSampleCountSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	aoSampleCountSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	aoSampleCountSlider.SetValue((float)editor->renderPath->getAOPower());
 	aoSampleCountSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -132,11 +134,11 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&ssrCheckBox);
 
-	raytracedReflectionsCheckBox.Create("Ray Traced Reflections: ");
+	raytracedReflectionsCheckBox.Create("RT Reflections: ");
 	raytracedReflectionsCheckBox.SetTooltip("Enable Ray Traced Reflections. Only if GPU supports raytracing.");
 	raytracedReflectionsCheckBox.SetScriptTip("RenderPath3D::SetRaytracedReflectionsEnabled(bool value)");
 	raytracedReflectionsCheckBox.SetSize(XMFLOAT2(hei, hei));
-	raytracedReflectionsCheckBox.SetPos(XMFLOAT2(x + 200, y));
+	raytracedReflectionsCheckBox.SetPos(XMFLOAT2(x + 140, y));
 	raytracedReflectionsCheckBox.SetCheck(editor->renderPath->getRaytracedReflectionEnabled());
 	raytracedReflectionsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setRaytracedReflectionsEnabled(args.bValue);
@@ -156,7 +158,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	screenSpaceShadowsRangeSlider.Create(0.1f, 10.0f, 1, 1000, "Range: ");
 	screenSpaceShadowsRangeSlider.SetTooltip("Range of contact shadows");
-	screenSpaceShadowsRangeSlider.SetSize(XMFLOAT2(100, hei));
+	screenSpaceShadowsRangeSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	screenSpaceShadowsRangeSlider.SetPos(XMFLOAT2(x + 100, y));
 	screenSpaceShadowsRangeSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowRange());
 	screenSpaceShadowsRangeSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -166,7 +168,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	screenSpaceShadowsStepCountSlider.Create(4, 128, 16, 128 - 4, "Sample Count: ");
 	screenSpaceShadowsStepCountSlider.SetTooltip("Sample count of contact shadows. Higher values are better quality but slower.");
-	screenSpaceShadowsStepCountSlider.SetSize(XMFLOAT2(100, hei));
+	screenSpaceShadowsStepCountSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	screenSpaceShadowsStepCountSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	screenSpaceShadowsStepCountSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowSampleCount());
 	screenSpaceShadowsStepCountSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -186,7 +188,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	eyeAdaptionKeySlider.Create(0.01f, 0.5f, 0.1f, 10000, "Key: ");
 	eyeAdaptionKeySlider.SetTooltip("Set the key value for eye adaption.");
-	eyeAdaptionKeySlider.SetSize(XMFLOAT2(100, hei));
+	eyeAdaptionKeySlider.SetSize(XMFLOAT2(mod_wid, hei));
 	eyeAdaptionKeySlider.SetPos(XMFLOAT2(x + 100, y));
 	eyeAdaptionKeySlider.SetValue(editor->renderPath->getEyeAdaptionKey());
 	eyeAdaptionKeySlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -196,7 +198,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	eyeAdaptionRateSlider.Create(0.01f, 4, 0.5f, 10000, "Rate: ");
 	eyeAdaptionRateSlider.SetTooltip("Set the eye adaption rate (speed of adjustment)");
-	eyeAdaptionRateSlider.SetSize(XMFLOAT2(100, hei));
+	eyeAdaptionRateSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	eyeAdaptionRateSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	eyeAdaptionRateSlider.SetValue(editor->renderPath->getEyeAdaptionRate());
 	eyeAdaptionRateSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -218,7 +220,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 	motionBlurStrengthSlider.Create(0.1f, 400, 100, 10000, "Strength: ");
 	motionBlurStrengthSlider.SetTooltip("Set the camera shutter speed for motion blur (higher value means stronger blur).");
 	motionBlurStrengthSlider.SetScriptTip("RenderPath3D::SetMotionBlurStrength(float value)");
-	motionBlurStrengthSlider.SetSize(XMFLOAT2(100, hei));
+	motionBlurStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	motionBlurStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
 	motionBlurStrengthSlider.SetValue(editor->renderPath->getMotionBlurStrength());
 	motionBlurStrengthSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -240,7 +242,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 	depthOfFieldScaleSlider.Create(1.0f, 20, 100, 1000, "Strength: ");
 	depthOfFieldScaleSlider.SetTooltip("Set depth of field strength. This is used to scale the Camera's ApertureSize setting");
 	depthOfFieldScaleSlider.SetScriptTip("RenderPath3D::SetDepthOfFieldStrength(float value)");
-	depthOfFieldScaleSlider.SetSize(XMFLOAT2(100, hei));
+	depthOfFieldScaleSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	depthOfFieldScaleSlider.SetPos(XMFLOAT2(x + 100, y));
 	depthOfFieldScaleSlider.SetValue(editor->renderPath->getDepthOfFieldStrength());
 	depthOfFieldScaleSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -261,7 +263,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	bloomStrengthSlider.Create(0.0f, 10, 1, 1000, "Threshold: ");
 	bloomStrengthSlider.SetTooltip("Set bloom threshold. The values below this will not glow on the screen.");
-	bloomStrengthSlider.SetSize(XMFLOAT2(100, hei));
+	bloomStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	bloomStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
 	bloomStrengthSlider.SetValue(editor->renderPath->getBloomThreshold());
 	bloomStrengthSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -314,7 +316,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 	sharpenFilterAmountSlider.Create(0, 4, 1, 1000, "Amount: ");
 	sharpenFilterAmountSlider.SetTooltip("Set sharpness filter strength.");
 	sharpenFilterAmountSlider.SetScriptTip("RenderPath3D::SetSharpenFilterAmount(float value)");
-	sharpenFilterAmountSlider.SetSize(XMFLOAT2(100, hei));
+	sharpenFilterAmountSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	sharpenFilterAmountSlider.SetPos(XMFLOAT2(x + 100, y));
 	sharpenFilterAmountSlider.SetValue(editor->renderPath->getSharpenFilterAmount());
 	sharpenFilterAmountSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -334,7 +336,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	outlineThresholdSlider.Create(0, 1, 0.1f, 1000, "Threshold: ");
 	outlineThresholdSlider.SetTooltip("Outline edge detection threshold. Increase if not enough otlines are detected, decrease if too many outlines are detected.");
-	outlineThresholdSlider.SetSize(XMFLOAT2(100, hei));
+	outlineThresholdSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	outlineThresholdSlider.SetPos(XMFLOAT2(x + 100, y));
 	outlineThresholdSlider.SetValue(editor->renderPath->getOutlineThreshold());
 	outlineThresholdSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -344,7 +346,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	outlineThicknessSlider.Create(0, 4, 1, 1000, "Thickness: ");
 	outlineThicknessSlider.SetTooltip("Set outline thickness.");
-	outlineThicknessSlider.SetSize(XMFLOAT2(100, hei));
+	outlineThicknessSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	outlineThicknessSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	outlineThicknessSlider.SetValue(editor->renderPath->getOutlineThickness());
 	outlineThicknessSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -352,7 +354,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&outlineThicknessSlider);
 
-	chromaticaberrationCheckBox.Create("Chromatic Aberration: ");
+	chromaticaberrationCheckBox.Create("Chromatic A.: ");
 	chromaticaberrationCheckBox.SetTooltip("Toggle the full screen chromatic aberration effect. This simulates lens distortion at screen edges.");
 	chromaticaberrationCheckBox.SetSize(XMFLOAT2(hei, hei));
 	chromaticaberrationCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -364,7 +366,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	chromaticaberrationSlider.Create(0, 4, 1.0f, 1000, "Amount: ");
 	chromaticaberrationSlider.SetTooltip("The lens distortion amount.");
-	chromaticaberrationSlider.SetSize(XMFLOAT2(100, hei));
+	chromaticaberrationSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	chromaticaberrationSlider.SetPos(XMFLOAT2(x + 100, y));
 	chromaticaberrationSlider.SetValue(editor->renderPath->getChromaticAberrationAmount());
 	chromaticaberrationSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -384,7 +386,7 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 
 	fsrSlider.Create(0, 2, 1.0f, 1000, "Sharpness: ");
 	fsrSlider.SetTooltip("The sharpening amount to apply for FSR upscaling.");
-	fsrSlider.SetSize(XMFLOAT2(100, hei));
+	fsrSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	fsrSlider.SetPos(XMFLOAT2(x + 100, y));
 	fsrSlider.SetValue(editor->renderPath->getFSRSharpness());
 	fsrSlider.OnSlide([=](wi::gui::EventArgs args) {

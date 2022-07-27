@@ -67,11 +67,11 @@ namespace wi::gui
 		int tooltipTimer = 0;
 	protected:
 		std::string name;
-		std::string tooltip;
-		std::string scriptTip;
 		bool enabled = true;
 		bool visible = true;
 		WIDGETSTATE state = IDLE;
+		mutable wi::SpriteFont tooltipFont;
+		mutable wi::SpriteFont scripttipFont;
 
 	public:
 		Widget();
@@ -326,7 +326,8 @@ namespace wi::gui
 		};
 		wi::vector<Item> items;
 
-		float GetItemOffset(int index) const;
+		float GetDropOffset(const wi::Canvas& canvas) const;
+		float GetItemOffset(const wi::Canvas& canvas, int index) const;
 	public:
 		void Create(const std::string& name);
 
@@ -382,9 +383,8 @@ namespace wi::gui
 			RESIZE = RESIZE_TOPLEFT | RESIZE_TOPRIGHT | RESIZE_BOTTOMLEFT | RESIZE_BOTTOMRIGHT,
 			CLOSE_AND_COLLAPSE = CLOSE | COLLAPSE,
 			ALL = RESIZE | MOVE | CLOSE | COLLAPSE,
-			DEFAULT = RESIZE_TOPLEFT | RESIZE_BOTTOMRIGHT | CLOSE_AND_COLLAPSE | MOVE,
 		};
-		void Create(const std::string& name, WindowControls window_controls = WindowControls::DEFAULT);
+		void Create(const std::string& name, WindowControls window_controls = WindowControls::ALL);
 
 		void AddWidget(Widget* widget, bool scrollable = true);
 		void RemoveWidget(Widget* widget);
