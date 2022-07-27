@@ -26,6 +26,8 @@
 #include "LayerWindow.h"
 #include "NameWindow.h"
 
+#include "IconsFontAwesome6.h" // icon descriptions, source: https://github.com/juliettef/IconFontCppHeaders
+
 class EditorLoadingScreen : public wi::LoadingScreen
 {
 private:

@@ -6,6 +6,8 @@
 #include "ModelImporter.h"
 #include "Translator.h"
 
+#include "FontAwesomeV6.h" // font TTF data
+
 #include <string>
 #include <cassert>
 #include <cmath>
@@ -73,7 +75,6 @@ void EditorLoadingScreen::Update(float dt)
 
 	LoadingScreen::Update(dt);
 }
-
 
 void EditorComponent::ChangeRenderPath(RENDERPATH path)
 {
@@ -272,13 +273,13 @@ void EditorComponent::Load()
 	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { soundTex = wi::resourcemanager::Load("images/sound.dds"); });
 	// wait for ctx is at the end of this function!
 
+	// Font icon is from #include "FontAwesomeV6.h"
+	//	We will not directly use this font style, but let the font renderer fall back on it
+	//	when an icon character is not found in the default font.
+	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, sizeof(font_awesome_v6));
 
 
-
-
-
-
-	saveButton.Create("Save");
+	saveButton.Create(ICON_FA_FLOPPY_DISK " Save");
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)");
 	saveButton.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	saveButton.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -288,7 +289,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&saveButton);
 
 
-	openButton.Create("Open");
+	openButton.Create(ICON_FA_FOLDER_OPEN " Open");
 	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...");
 	openButton.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
 	openButton.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -378,7 +379,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&openButton);
 
 
-	closeButton.Create("Close");
+	closeButton.Create(ICON_FA_TRASH " Close");
 	closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, and delete the scene.\nThis operation cannot be undone!");
 	closeButton.SetColor(wi::Color(255, 130, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	closeButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -424,7 +425,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&closeButton);
 
 
-	aboutButton.Create("?");
+	aboutButton.Create(ICON_FA_QUESTION);
 	aboutButton.SetTooltip("About...");
 	aboutButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
 	aboutButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -488,7 +489,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&aboutLabel);
 	}
 
-	exitButton.Create("X");
+	exitButton.Create(ICON_FA_XMARK);
 	exitButton.SetTooltip("Exit");
 	exitButton.SetColor(wi::Color(160, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
 	exitButton.SetColor(wi::Color(200, 50, 50, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -958,6 +959,8 @@ void EditorComponent::Load()
 		}
 
 		RecordEntity(archive, entity);
+
+		RefreshEntityTree();
 
 		});
 	componentWindow.AddWidget(&newComponentCombo);
@@ -2804,18 +2807,106 @@ void EditorComponent::PushToEntityTree(wi::ecs::Entity entity, int level)
 	item.userdata = entity;
 	item.selected = IsSelected(entity);
 	item.open = entitytree_opened_items.count(entity) != 0;
+
+	// Icons:
+	if (scene.layers.Contains(entity))
+	{
+		item.name += ICON_FA_LAYER_GROUP " ";
+	}
+	if (scene.transforms.Contains(entity))
+	{
+		item.name += ICON_FA_LOCATION_DOT " ";
+	}
+	if (scene.meshes.Contains(entity))
+	{
+		item.name += ICON_FA_CUBE " ";
+	}
+	if (scene.objects.Contains(entity))
+	{
+		item.name += ICON_FA_CUBES " ";
+	}
+	if (scene.rigidbodies.Contains(entity))
+	{
+		item.name += ICON_FA_CUBES_STACKED " ";
+	}
+	if (scene.softbodies.Contains(entity))
+	{
+		item.name += ICON_FA_FLAG " ";
+	}
+	if (scene.emitters.Contains(entity))
+	{
+		item.name += ICON_FA_DROPLET " ";
+	}
+	if (scene.hairs.Contains(entity))
+	{
+		item.name += ICON_FA_SEEDLING " ";
+	}
+	if (scene.forces.Contains(entity))
+	{
+		item.name += ICON_FA_WIND " ";
+	}
+	if (scene.sounds.Contains(entity))
+	{
+		item.name += ICON_FA_VOLUME_HIGH " ";
+	}
+	if (scene.decals.Contains(entity))
+	{
+		item.name += ICON_FA_SHOE_PRINTS " ";
+	}
+	if (scene.cameras.Contains(entity))
+	{
+		item.name += ICON_FA_VIDEO " ";
+	}
+	if (scene.probes.Contains(entity))
+	{
+		item.name += ICON_FA_EARTH_ASIA " ";
+	}
+	if (scene.animations.Contains(entity))
+	{
+		item.name += ICON_FA_PLAY " ";
+	}
+	if (scene.armatures.Contains(entity))
+	{
+		item.name += ICON_FA_PERSON " ";
+	}
+	if (scene.lights.Contains(entity))
+	{
+		const LightComponent* light = scene.lights.GetComponent(entity);
+		switch (light->type)
+		{
+		default:
+			item.name += ICON_FA_LIGHTBULB " ";
+			break;
+		case LightComponent::DIRECTIONAL:
+			item.name += ICON_FA_SUN " ";
+			break;
+		}
+	}
+	if (scene.materials.Contains(entity))
+	{
+		item.name += ICON_FA_FILL_DRIP " ";
+	}
+	if (scene.weathers.Contains(entity))
+	{
+		item.name += ICON_FA_CLOUD " ";
+	}
+	if (entity == terragen.terrainEntity)
+	{
+		item.name += ICON_FA_MOUNTAIN_SUN " ";
+	}
+
 	const NameComponent* name = scene.names.GetComponent(entity);
 	if (name == nullptr)
 	{
-		item.name = "[no_name] " + std::to_string(entity);
+		item.name += "[no_name] " + std::to_string(entity);
 	}
 	else if(name->name.empty())
 	{
-		item.name = "[name_empty] " + std::to_string(entity);
+		item.name += "[name_empty] " + std::to_string(entity);
 	}
 	else
 	{
-		item.name = name->name;
+		item.name += name->name;
 	}
 	entityTree.AddItem(item);
 

@@ -9,7 +9,7 @@ using namespace wi::scene;
 void TransformWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Transform", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_FA_LOCATION_DOT " Transform" , wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(480, 360));
 
 	closeButton.SetTooltip("Delete TransformComponent\nNote that a lot of components won't work correctly without a TransformComponent!");

@@ -128,6 +128,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Editor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)EmitterWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)EnvProbeWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)FontAwesomeV6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForceFieldWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HairParticleWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IKWindow.h" />

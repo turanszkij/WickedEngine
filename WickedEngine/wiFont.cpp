@@ -44,42 +44,6 @@ namespace wi::font
 
 		static Texture texture;
 
-		struct Glyph
-		{
-			float x;
-			float y;
-			float width;
-			float height;
-			float tc_left;
-			float tc_right;
-			float tc_top;
-			float tc_bottom;
-		};
-		static wi::unordered_map<int32_t, Glyph> glyph_lookup;
-		static wi::unordered_map<int32_t, wi::rectpacker::Rect> rect_lookup;
-		struct SDF
-		{
-			static constexpr int padding = 5;
-			static constexpr unsigned char onedge_value = 180;
-			static constexpr float pixel_dist_scale = float(onedge_value) / float(padding);
-			int width;
-			int height;
-			int xoff;
-			int yoff;
-			wi::vector<uint8_t> bitmap;
-		};
-		static wi::unordered_map<int32_t, SDF> sdf_lookup;
-		// pack glyph identifiers to a 32-bit hash:
-		//	height:	10 bits	(height supported: 0 - 1023)
-		//	style:	6 bits	(number of font styles supported: 0 - 63)
-		//	code:	16 bits (character code range supported: 0 - 65535)
-		constexpr int32_t glyphhash(int code, int style, int height) { return ((code & 0xFFFF) << 16) | ((style & 0x3F) << 10) | (height & 0x3FF); }
-		constexpr int codefromhash(int64_t hash) { return int((hash >> 16) & 0xFFFF); }
-		constexpr int stylefromhash(int64_t hash) { return int((hash >> 10) & 0x3F); }
-		constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x3FF); }
-		static wi::unordered_set<int32_t> pendingGlyphs;
-		static wi::SpinLock glyphLock;
-
 		struct FontStyle
 		{
 			std::string name;
@@ -110,7 +74,44 @@ namespace wi::font
 				}
 			}
 		};
-		static wi::vector<FontStyle> fontStyles;
+		static wi::vector<std::unique_ptr<FontStyle>> fontStyles;
+
+		struct Glyph
+		{
+			float x;
+			float y;
+			float width;
+			float height;
+			float tc_left;
+			float tc_right;
+			float tc_top;
+			float tc_bottom;
+			const FontStyle* fontStyle = nullptr;
+		};
+		static wi::unordered_map<int32_t, Glyph> glyph_lookup;
+		static wi::unordered_map<int32_t, wi::rectpacker::Rect> rect_lookup;
+		struct SDF
+		{
+			static constexpr int padding = 5;
+			static constexpr unsigned char onedge_value = 180;
+			static constexpr float pixel_dist_scale = float(onedge_value) / float(padding);
+			int width;
+			int height;
+			int xoff;
+			int yoff;
+			wi::vector<uint8_t> bitmap;
+		};
+		static wi::unordered_map<int32_t, SDF> sdf_lookup;
+		// pack glyph identifiers to a 32-bit hash:
+		//	height:	10 bits	(height supported: 0 - 1023)
+		//	style:	6 bits	(number of font styles supported: 0 - 63)
+		//	code:	16 bits (character code range supported: 0 - 65535)
+		constexpr int32_t glyphhash(int code, int style, int height) { return ((code & 0xFFFF) << 16) | ((style & 0x3F) << 10) | (height & 0x3FF); }
+		constexpr int codefromhash(int64_t hash) { return int((hash >> 16) & 0xFFFF); }
+		constexpr int stylefromhash(int64_t hash) { return int((hash >> 10) & 0x3F); }
+		constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x3FF); }
+		static wi::unordered_set<int32_t> pendingGlyphs;
+		static wi::SpinLock glyphLock;
 
 		struct ParseStatus
 		{
@@ -121,15 +122,11 @@ namespace wi::font
 		};
 
 		static thread_local wi::vector<FontVertex> vertexList;
-
-		template<typename T>
-		ParseStatus ParseText(const T* text, size_t text_length, Params params)
+		ParseStatus ParseText(const wchar_t* text, size_t text_length, Params params)
 		{
 			ParseStatus status;
 			status.cursor = params.cursor;
 
-			const FontStyle& fontStyle = fontStyles[params.style];
-			const float fontScale = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, (float)params.size);
 			vertexList.clear();
 
 			auto word_wrap = [&] {
@@ -153,8 +150,7 @@ namespace wi::font
 			status.cursor.size.y = status.cursor.position.y + LINEBREAK_SIZE;
 			for (size_t i = 0; i < text_length; ++i)
 			{
-				T character = text[i];
-				int code = (int)character;
+				int code = (int)text[i];
 				const int32_t hash = glyphhash(code, params.style, params.size);
 
 				if (glyph_lookup.count(hash) == 0)
@@ -188,6 +184,7 @@ namespace wi::font
 					const float glyphHeight = glyph.height;
 					const float glyphOffsetX = glyph.x;
 					const float glyphOffsetY = glyph.y;
+					const float fontScale = stbtt_ScaleForPixelHeight(&glyph.fontStyle->fontInfo, (float)params.size);
 
 					const size_t vertexID = size_t(status.quadCount) * 4;
 					vertexList.resize(vertexID + 4);
@@ -215,7 +212,7 @@ namespace wi::font
 					vertexList[vertexID + 3].uv = float2(glyph.tc_right, glyph.tc_bottom);
 
 					int advance, lsb;
-					stbtt_GetCodepointHMetrics(&fontStyle.fontInfo, code, &advance, &lsb);
+					stbtt_GetCodepointHMetrics(&glyph.fontStyle->fontInfo, code, &advance, &lsb);
 					status.cursor.position.x += advance * fontScale;
 
 					status.cursor.position.x += params.spacingX;
@@ -223,7 +220,7 @@ namespace wi::font
 					if (text_length > 1 && i < text_length - 1 && text[i + 1])
 					{
 						int code_next = (int)text[i + 1];
-						int kern = stbtt_GetCodepointKernAdvance(&fontStyle.fontInfo, code, code_next);
+						int kern = stbtt_GetCodepointKernAdvance(&glyph.fontStyle->fontInfo, code, code_next);
 						status.cursor.position.x += kern * fontScale;
 					}
 				}
@@ -236,6 +233,17 @@ namespace wi::font
 
 			return status;
 		}
+
+		thread_local static std::string char_temp_buffer;
+		thread_local static std::wstring wchar_temp_buffer;
+		ParseStatus ParseText(const char* text, size_t text_length, Params params)
+		{
+			// the temp buffers are used to avoid allocations of string objects:
+			char_temp_buffer = text;
+			wi::helper::StringConvert(char_temp_buffer, wchar_temp_buffer);
+			return ParseText(wchar_temp_buffer.c_str(), wchar_temp_buffer.length(), params);
+		}
+
 		void CommitText(void* vertexList_GPU)
 		{
 			std::memcpy(vertexList_GPU, vertexList.data(), sizeof(FontVertex) * vertexList.size());
@@ -323,18 +331,30 @@ namespace wi::font
 			for (int32_t hash : pendingGlyphs)
 			{
 				const int code = codefromhash(hash);
-				const int style = stylefromhash(hash);
+				int style = stylefromhash(hash);
 				const float height = (float)heightfromhash(hash);
-				FontStyle& fontStyle = fontStyles[style];
+				FontStyle* fontStyle = fontStyles[style].get();
+				int glyphIndex = stbtt_FindGlyphIndex(&fontStyle->fontInfo, code);
+				if (glyphIndex == 0)
+				{
+					// Try fallback to an other font style that has this character:
+					style = 0;
+					while (glyphIndex == 0 && style < fontStyles.size())
+					{
+						fontStyle = fontStyles[style].get();
+						glyphIndex = stbtt_FindGlyphIndex(&fontStyle->fontInfo, code);
+						style++;
+					}
+				}
 
-				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
+				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle->fontInfo, height);
 
 				SDF& sdf = sdf_lookup[hash];
 				sdf.width = 0;
 				sdf.height = 0;
 				sdf.xoff = 0;
 				sdf.yoff = 0;
-				unsigned char* bitmap = stbtt_GetCodepointSDF(&fontStyle.fontInfo, fontScaling, code, sdf.padding, sdf.onedge_value, sdf.pixel_dist_scale, &sdf.width, &sdf.height, &sdf.xoff, &sdf.yoff);
+				unsigned char* bitmap = stbtt_GetGlyphSDF(&fontStyle->fontInfo, fontScaling, glyphIndex, sdf.padding, sdf.onedge_value, sdf.pixel_dist_scale, &sdf.width, &sdf.height, &sdf.xoff, &sdf.yoff);
 				sdf.bitmap.resize(sdf.width * sdf.height);
 				std::memcpy(sdf.bitmap.data(), bitmap, sdf.bitmap.size());
 				stbtt_FreeSDF(bitmap, nullptr);
@@ -347,9 +367,10 @@ namespace wi::font
 
 				Glyph& glyph = glyph_lookup[hash];
 				glyph.x = float(sdf.xoff);
-				glyph.y = float(sdf.yoff) + float(fontStyle.ascent) * fontScaling;
+				glyph.y = float(sdf.yoff) + float(fontStyle->ascent) * fontScaling;
 				glyph.width = float(sdf.width);
 				glyph.height = float(sdf.height);
+				glyph.fontStyle = fontStyle;
 			}
 			pendingGlyphs.clear();
 
@@ -381,7 +402,6 @@ namespace wi::font
 					const wchar_t code = codefromhash(hash);
 					const int style = stylefromhash(hash);
 					const float height = (float)heightfromhash(hash);
-					const FontStyle& fontStyle = fontStyles[style];
 					Glyph& glyph = glyph_lookup[hash];
 					SDF& sdf = sdf_lookup[hash];
 
@@ -422,28 +442,28 @@ namespace wi::font
 	{
 		for (size_t i = 0; i < fontStyles.size(); i++)
 		{
-			const FontStyle& fontStyle = fontStyles[i];
+			const FontStyle& fontStyle = *fontStyles[i];
 			if (!fontStyle.name.compare(fontName))
 			{
 				return int(i);
 			}
 		}
-		fontStyles.emplace_back();
-		fontStyles.back().Create(fontName);
+		fontStyles.push_back(std::make_unique<FontStyle>());
+		fontStyles.back()->Create(fontName);
 		return int(fontStyles.size() - 1);
 	}
 	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size)
 	{
 		for (size_t i = 0; i < fontStyles.size(); i++)
 		{
-			const FontStyle& fontStyle = fontStyles[i];
+			const FontStyle& fontStyle = *fontStyles[i];
 			if (!fontStyle.name.compare(fontName))
 			{
 				return int(i);
 			}
 		}
-		fontStyles.emplace_back();
-		fontStyles.back().Create(fontName, data, size);
+		fontStyles.push_back(std::make_unique<FontStyle>());
+		fontStyles.back()->Create(fontName, data, size);
 		return int(fontStyles.size() - 1);
 	}
 

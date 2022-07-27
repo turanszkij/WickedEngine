@@ -9,7 +9,7 @@ using namespace wi::scene;
 void DecalWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Decal", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_FA_SHOE_PRINTS " Decal", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(300, 150));
 
 	closeButton.SetTooltip("Delete DecalComponent");

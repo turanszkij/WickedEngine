@@ -14,7 +14,7 @@ using namespace wi::scene;
 void MeshWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Mesh", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create(ICON_FA_CUBE " Mesh", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(580, 720));
 
 	float x = 95;

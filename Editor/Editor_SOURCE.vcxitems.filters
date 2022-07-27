@@ -109,6 +109,7 @@
       <Filter>meshoptimizer</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)TerrainGenerator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)FontAwesomeV6.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

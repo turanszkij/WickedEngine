@@ -10,7 +10,7 @@ using namespace wi::scene;
 void SoundWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Sound", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_FA_VOLUME_HIGH " Sound", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(440, 220));
 
 	closeButton.SetTooltip("Delete SoundComponent");

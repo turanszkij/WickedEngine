@@ -1791,8 +1791,17 @@ namespace wi::gui
 
 		if (selected >= 0)
 		{
-			wi::font::Draw(items[selected].name, wi::font::Params(translation.x + scale.x * 0.5f, translation.y + scale.y * 0.5f, wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_CENTER, wi::font::WIFALIGN_CENTER,
-				font.params.color, font.params.shadowColor), cmd);
+			wi::font::Params fp = wi::font::Params(
+				translation.x + scale.x * 0.5f,
+				translation.y + scale.y * 0.5f,
+				wi::font::WIFONTSIZE_DEFAULT,
+				wi::font::WIFALIGN_CENTER,
+				wi::font::WIFALIGN_CENTER,
+				font.params.color,
+				font.params.shadowColor
+			);
+			fp.style = font.params.style;
+			wi::font::Draw(items[selected].name, fp, cmd);
 		}
 
 		// drop-down
@@ -1859,8 +1868,18 @@ namespace wi::gui
 					}
 				}
 				wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
-				wi::font::Draw(items[i].name, wi::font::Params(translation.x + scale.x * 0.5f, translation.y + scale.y * 0.5f + GetItemOffset(canvas, i), wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_CENTER, wi::font::WIFALIGN_CENTER,
-					font.params.color, font.params.shadowColor), cmd);
+
+				wi::font::Params fp = wi::font::Params(
+					translation.x + scale.x * 0.5f,
+					translation.y + scale.y * 0.5f + GetItemOffset(canvas, i),
+					wi::font::WIFONTSIZE_DEFAULT,
+					wi::font::WIFALIGN_CENTER,
+					wi::font::WIFALIGN_CENTER,
+					font.params.color,
+					font.params.shadowColor
+				);
+				fp.style = font.params.style;
+				wi::font::Draw(items[i].name, fp, cmd);
 			}
 		}
 	}
@@ -3762,8 +3781,17 @@ namespace wi::gui
 			}
 
 			// Item name text:
-			wi::font::Draw(item.name, wi::font::Params(name_box.pos.x + 1, name_box.pos.y + name_box.siz.y * 0.5f, wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_CENTER,
-				font.params.color, font.params.shadowColor), cmd);
+			wi::font::Params fp = wi::font::Params(
+				name_box.pos.x + 1,
+				name_box.pos.y + name_box.siz.y * 0.5f,
+				wi::font::WIFONTSIZE_DEFAULT,
+				wi::font::WIFALIGN_LEFT,
+				wi::font::WIFALIGN_CENTER,
+				font.params.color,
+				font.params.shadowColor
+			);
+			fp.style = font.params.style;
+			wi::font::Draw(item.name, fp, cmd);
 		}
 	}
 	void TreeList::OnSelect(std::function<void(EventArgs args)> func)

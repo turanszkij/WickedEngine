@@ -9,7 +9,7 @@ using namespace wi::scene;
 void LayerWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Layer", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_FA_LAYER_GROUP " Layer", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(300, 350));
 
 	closeButton.SetTooltip("Delete LayerComponent");
