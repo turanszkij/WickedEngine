@@ -280,6 +280,7 @@ void EditorComponent::Load()
 
 
 	saveButton.Create(ICON_FA_FLOPPY_DISK " Save");
+	saveButton.font.params.shadowColor = wi::Color::Transparent();
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)");
 	saveButton.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	saveButton.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -290,6 +291,7 @@ void EditorComponent::Load()
 
 
 	openButton.Create(ICON_FA_FOLDER_OPEN " Open");
+	openButton.font.params.shadowColor = wi::Color::Transparent();
 	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...");
 	openButton.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
 	openButton.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -380,6 +382,7 @@ void EditorComponent::Load()
 
 
 	closeButton.Create(ICON_FA_TRASH " Close");
+	closeButton.font.params.shadowColor = wi::Color::Transparent();
 	closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, and delete the scene.\nThis operation cannot be undone!");
 	closeButton.SetColor(wi::Color(255, 130, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	closeButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -425,7 +428,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&closeButton);
 
 
-	aboutButton.Create(ICON_FA_QUESTION);
+	aboutButton.Create(ICON_FA_CIRCLE_QUESTION);
+	aboutButton.font.params.shadowColor = wi::Color::Transparent();
 	aboutButton.SetTooltip("About...");
 	aboutButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
 	aboutButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -489,7 +493,8 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&aboutLabel);
 	}
 
-	exitButton.Create(ICON_FA_XMARK);
+	exitButton.Create(ICON_FA_CIRCLE_XMARK);
+	exitButton.font.params.shadowColor = wi::Color::Transparent();
 	exitButton.SetTooltip("Exit");
 	exitButton.SetColor(wi::Color(160, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
 	exitButton.SetColor(wi::Color(200, 50, 50, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -2787,7 +2792,7 @@ void EditorComponent::RefreshOptionsWindow()
 	pos.y += padding;
 
 	entityTree.SetPos(pos);
-	entityTree.SetSize(XMFLOAT2(width, std::max(entityTree.GetScale().y, GetLogicalHeight() - pos.y)));
+	entityTree.SetSize(XMFLOAT2(width, std::max(entityTree.scale_local.y, GetLogicalHeight() - pos.y)));
 	pos.y += entityTree.GetSize().y;
 	pos.y += padding;
 

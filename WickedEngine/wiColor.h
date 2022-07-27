@@ -68,6 +68,7 @@ namespace wi
 		static constexpr Color Gray() { return Color(127, 127, 127, 255); }
 		static constexpr Color Ghost() { return Color(127, 127, 127, 127); }
 		static constexpr Color Booger() { return Color(127, 127, 127, 200); }
+		static constexpr Color Shadow() { return Color(0, 0, 0, 127); }
 
 		static constexpr Color Warning() { return 0xFF66FFFF; } // light yellow
 		static constexpr Color Error() { return 0xFF6666FF; } // light red

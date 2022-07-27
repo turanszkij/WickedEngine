@@ -48,7 +48,7 @@ namespace wi::font
 		wi::Color shadowColor; // transparent disables, any other color enables shadow under text
 		float h_wrap = -1; // wrap start width (-1 default for no wrap) (logical canvas units)
 		int style = 0; // 0: use default font style, other values can be taken from the wi::font::AddFontStyle() funtion's return value
-		float softness = 0.06f; // value in [0,1] range
+		float softness = 0.08f; // value in [0,1] range
 		float bolden = 0; // value in [0,1] range
 		float shadow_softness = 0.5f; // value in [0,1] range
 		float shadow_bolden = 0.1f; // value in [0,1] range
@@ -103,7 +103,7 @@ namespace wi::font
 		Params(
 			wi::Color color,
 			wi::Color shadowColor = wi::Color(0, 0, 0, 0),
-			float softness = 0.06f,
+			float softness = 0.08f,
 			float bolden = 0,
 			float shadow_softness = 0.5f,
 			float shadow_bolden = 0.1f,

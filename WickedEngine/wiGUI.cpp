@@ -197,7 +197,7 @@ namespace wi::gui
 		sprites[FOCUS].params.color = wi::Color::Gray();
 		sprites[ACTIVE].params.color = wi::Color::White();
 		sprites[DEACTIVATING].params.color = wi::Color::Gray();
-		font.params.shadowColor = wi::Color::Black();
+		font.params.shadowColor = wi::Color::Shadow();
 		font.params.shadow_bolden = 0.2f;
 		font.params.shadow_softness = 0.2f;
 
@@ -3606,6 +3606,8 @@ namespace wi::gui
 
 			Hitbox2D itemlist_box = GetHitbox_ListArea();
 
+			tooltipFont.text.clear();
+
 			// control-list
 			item_highlight = -1;
 			opener_highlight = -1;
@@ -3631,8 +3633,6 @@ namespace wi::gui
 					{
 						continue;
 					}
-
-					tooltipFont.text.clear();
 
 					if (open_box.intersects(pointerHitbox))
 					{
