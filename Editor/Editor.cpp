@@ -470,6 +470,7 @@ void EditorComponent::Load()
 		ss += "Save: Ctrl + S\n";
 		ss += "Transform: Ctrl + T\n";
 		ss += "Wireframe mode: Ctrl + W\n";
+		ss += "Color grading reference: Ctrl + G (color grading palette reference will be displayed in top left corner)\n";
 		ss += "Inspector mode: I button (hold), hovered entity information will be displayed near mouse position.\n";
 		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
 		ss += "Script Console / backlog: HOME button\n";
@@ -1734,9 +1735,16 @@ void EditorComponent::Update(float dt)
 
 	}
 
+	main->infoDisplay.colorgrading_helper = false;
+
 	// Control operations...
 	if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
 	{
+		// Color Grading helper
+		if (wi::input::Down((wi::input::BUTTON)'G'))
+		{
+			main->infoDisplay.colorgrading_helper = true;
+		}
 		// Toggle wireframe mode
 		if (wi::input::Press((wi::input::BUTTON)'W'))
 		{
