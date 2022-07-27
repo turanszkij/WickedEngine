@@ -717,6 +717,13 @@ namespace wi::gui
 			return;
 		}
 
+		// shadow:
+		if (shadow > 0)
+		{
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+		}
+
 		font_description.Draw(cmd);
 
 		ApplyScissor(canvas, scissorRect, cmd);
@@ -1001,6 +1008,13 @@ namespace wi::gui
 			return;
 		}
 
+		// shadow:
+		if (shadow > 0)
+		{
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+		}
+
 		wi::Color color = GetColor();
 
 		ApplyScissor(canvas, scissorRect, cmd);
@@ -1153,6 +1167,13 @@ namespace wi::gui
 		if (!IsVisible())
 		{
 			return;
+		}
+
+		// shadow:
+		if (shadow > 0)
+		{
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
 		font_description.Draw(cmd);
@@ -1377,6 +1398,13 @@ namespace wi::gui
 			return;
 		}
 
+		// shadow:
+		if (shadow > 0)
+		{
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+		}
+
 		font.Draw(cmd);
 
 		ApplyScissor(canvas, scissorRect, cmd);
@@ -1499,6 +1527,13 @@ namespace wi::gui
 		if (!IsVisible())
 		{
 			return;
+		}
+
+		// shadow:
+		if (shadow > 0)
+		{
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
 		font.Draw(cmd);
@@ -1723,6 +1758,13 @@ namespace wi::gui
 			return;
 		}
 		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		// shadow:
+		if (shadow > 0)
+		{
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + 1 + scale.y + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+		}
 
 		wi::Color color = GetColor();
 		if (combostate != COMBOSTATE_INACTIVE)
@@ -2021,6 +2063,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the upperleft corner
 			resizeDragger_UpperLeft.Create(name + "_resize_dragger_upper_left");
+			resizeDragger_UpperLeft.SetShadowRadius(0);
 			resizeDragger_UpperLeft.SetTooltip("Resize window");
 			resizeDragger_UpperLeft.SetText("«|»");
 			resizeDragger_UpperLeft.font.params.rotation = XM_PIDIV4;
@@ -2042,6 +2085,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the upperleft corner
 			resizeDragger_UpperRight.Create(name + "_resize_dragger_upper_right");
+			resizeDragger_UpperRight.SetShadowRadius(0);
 			resizeDragger_UpperRight.SetTooltip("Resize window");
 			resizeDragger_UpperRight.SetText("«|»");
 			resizeDragger_UpperRight.font.params.rotation = XM_PIDIV4 * 3;
@@ -2063,6 +2107,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the bottom right corner
 			resizeDragger_BottomLeft.Create(name + "_resize_dragger_bottom_left");
+			resizeDragger_BottomLeft.SetShadowRadius(0);
 			resizeDragger_BottomLeft.SetTooltip("Resize window");
 			resizeDragger_BottomLeft.SetText("«|»");
 			resizeDragger_BottomLeft.font.params.rotation = XM_PIDIV4 * 3;
@@ -2084,6 +2129,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the bottom right corner
 			resizeDragger_BottomRight.Create(name + "_resize_dragger_bottom_right");
+			resizeDragger_BottomRight.SetShadowRadius(0);
 			resizeDragger_BottomRight.SetTooltip("Resize window");
 			resizeDragger_BottomRight.SetText("«|»");
 			resizeDragger_BottomRight.font.params.rotation = XM_PIDIV4;
@@ -2104,6 +2150,7 @@ namespace wi::gui
 		{
 			// Add a grabber onto the title bar
 			moveDragger.Create(name + "_move_dragger");
+			moveDragger.SetShadowRadius(0);
 			moveDragger.SetText(name);
 			moveDragger.font.params.h_align = wi::font::WIFALIGN_LEFT;
 			moveDragger.OnDrag([this](EventArgs args) {
@@ -2119,6 +2166,7 @@ namespace wi::gui
 		{
 			// Add close button to the top right corner
 			closeButton.Create(name + "_close_button");
+			closeButton.SetShadowRadius(0);
 			closeButton.SetText("x");
 			closeButton.OnClick([this](EventArgs args) {
 				this->SetVisible(false);
@@ -2135,6 +2183,7 @@ namespace wi::gui
 		{
 			// Add minimize button to the top right corner
 			collapseButton.Create(name + "_collapse_button");
+			collapseButton.SetShadowRadius(0);
 			collapseButton.SetText("-");
 			collapseButton.OnClick([this](EventArgs args) {
 				this->SetMinimized(!this->IsMinimized());
@@ -2151,6 +2200,7 @@ namespace wi::gui
 		{
 			// Simple title bar
 			label.Create(name);
+			label.SetShadowRadius(0);
 			label.SetText(name);
 			label.font.params.h_align = wi::font::WIFALIGN_LEFT;
 			AddWidget(&label);
@@ -2529,7 +2579,7 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(sprites[state].params.pos.x - shadow, sprites[state].params.pos.y - shadow, sprites[state].params.siz.x + shadow * 2, sprites[state].params.siz.y + shadow * 2, wi::Color(0, 0, 0, 100));
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
 			if (IsMinimized())
 			{
 				fx.siz.y = control_size + shadow * 2;
@@ -3679,6 +3729,13 @@ namespace wi::gui
 			return;
 		}
 		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		// shadow:
+		if (shadow > 0)
+		{
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+		}
 
 		// control-base
 		sprites[state].Draw(cmd);

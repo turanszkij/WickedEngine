@@ -13,5 +13,7 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::TextInputField nameInput;
+
+	void Update();
 };
 

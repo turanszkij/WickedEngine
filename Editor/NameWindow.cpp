@@ -10,7 +10,7 @@ void NameWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Name", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(360, 50));
+	SetSize(XMFLOAT2(360, 60));
 
 	closeButton.SetTooltip("Delete NameComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -73,4 +73,10 @@ void NameWindow::SetEntity(Entity entity)
 		SetEnabled(false);
 		nameInput.SetValue("Select entity to modify name...");
 	}
+}
+
+void NameWindow::Update()
+{
+	nameInput.SetPos(XMFLOAT2(60, 0));
+	nameInput.SetSize(XMFLOAT2(GetSize().x - 65, nameInput.GetSize().y));
 }

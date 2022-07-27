@@ -114,13 +114,13 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	optionsWnd.RemoveWidget(&rendererWnd);
 	rendererWnd = {};
 	rendererWnd.Create(this);
-	rendererWnd.SetShadowExpand(shadow_expand);
+	rendererWnd.SetShadowRadius(shadow_expand);
 	optionsWnd.AddWidget(&rendererWnd);
 
 	optionsWnd.RemoveWidget(&postprocessWnd);
 	postprocessWnd = {};
 	postprocessWnd.Create(this);
-	postprocessWnd.SetShadowExpand(shadow_expand);
+	postprocessWnd.SetShadowRadius(shadow_expand);
 	optionsWnd.AddWidget(&postprocessWnd);
 }
 
@@ -517,6 +517,7 @@ void EditorComponent::Load()
 	optionsWnd.Create("Options", wi::gui::Window::WindowControls::RESIZE_TOPRIGHT);
 	optionsWnd.SetPos(XMFLOAT2(100, 120));
 	optionsWnd.SetSize(XMFLOAT2(340, 400));
+	optionsWnd.SetShadowRadius(2);
 	GetGUI().AddWidget(&optionsWnd);
 
 	translatorCheckBox.Create("Transform: ");
@@ -809,6 +810,7 @@ void EditorComponent::Load()
 	componentWindow.Create("Components ", wi::gui::Window::WindowControls::RESIZE_TOPLEFT);
 	componentWindow.SetSize(optionsWnd.GetSize());
 	componentWindow.font.params.h_align = wi::font::WIFALIGN_RIGHT;
+	componentWindow.SetShadowRadius(2);
 	GetGUI().AddWidget(&componentWindow);
 
 	newComponentCombo.Create("Add: ");
@@ -1008,34 +1010,34 @@ void EditorComponent::Load()
 	layerWnd.SetVisible(false);
 	nameWnd.SetVisible(false);
 
-	materialWnd.SetShadowExpand(shadow_expand);
-	weatherWnd.SetShadowExpand(shadow_expand);
-	objectWnd.SetShadowExpand(shadow_expand);
-	meshWnd.SetShadowExpand(shadow_expand);
-	envProbeWnd.SetShadowExpand(shadow_expand);
-	soundWnd.SetShadowExpand(shadow_expand);
-	decalWnd.SetShadowExpand(shadow_expand);
-	lightWnd.SetShadowExpand(shadow_expand);
-	animWnd.SetShadowExpand(shadow_expand);
-	emitterWnd.SetShadowExpand(shadow_expand);
-	hairWnd.SetShadowExpand(shadow_expand);
-	forceFieldWnd.SetShadowExpand(shadow_expand);
-	springWnd.SetShadowExpand(shadow_expand);
-	ikWnd.SetShadowExpand(shadow_expand);
-	transformWnd.SetShadowExpand(shadow_expand);
-	layerWnd.SetShadowExpand(shadow_expand);
-	nameWnd.SetShadowExpand(shadow_expand);
+	materialWnd.SetShadowRadius(shadow_expand);
+	weatherWnd.SetShadowRadius(shadow_expand);
+	objectWnd.SetShadowRadius(shadow_expand);
+	meshWnd.SetShadowRadius(shadow_expand);
+	envProbeWnd.SetShadowRadius(shadow_expand);
+	soundWnd.SetShadowRadius(shadow_expand);
+	decalWnd.SetShadowRadius(shadow_expand);
+	lightWnd.SetShadowRadius(shadow_expand);
+	animWnd.SetShadowRadius(shadow_expand);
+	emitterWnd.SetShadowRadius(shadow_expand);
+	hairWnd.SetShadowRadius(shadow_expand);
+	forceFieldWnd.SetShadowRadius(shadow_expand);
+	springWnd.SetShadowRadius(shadow_expand);
+	ikWnd.SetShadowRadius(shadow_expand);
+	transformWnd.SetShadowRadius(shadow_expand);
+	layerWnd.SetShadowRadius(shadow_expand);
+	nameWnd.SetShadowRadius(shadow_expand);
 
 
 
 	cameraWnd.Create(this);
 	cameraWnd.ResetCam();
-	cameraWnd.SetShadowExpand(shadow_expand);
+	cameraWnd.SetShadowRadius(shadow_expand);
 	cameraWnd.SetCollapsed(true);
 	optionsWnd.AddWidget(&cameraWnd);
 
 	paintToolWnd.Create(this);
-	paintToolWnd.SetShadowExpand(shadow_expand);
+	paintToolWnd.SetShadowRadius(shadow_expand);
 	paintToolWnd.SetCollapsed(true);
 	optionsWnd.AddWidget(&paintToolWnd);
 
@@ -1065,7 +1067,7 @@ void EditorComponent::Load()
 	optionsWnd.AddWidget(&saveModeComboBox);
 
 	terragen.Create();
-	terragen.SetShadowExpand(shadow_expand);
+	terragen.SetShadowRadius(shadow_expand);
 	terragen.OnCollapse([&](wi::gui::EventArgs args) {
 
 		if (terragen.terrainEntity == INVALID_ENTITY)
@@ -2864,7 +2866,7 @@ void EditorComponent::PushToEntityTree(wi::ecs::Entity entity, int level)
 	}
 	if (scene.decals.Contains(entity))
 	{
-		item.name += ICON_FA_SHOE_PRINTS " ";
+		item.name += ICON_FA_NOTE_STICKY " ";
 	}
 	if (scene.cameras.Contains(entity))
 	{
@@ -3085,6 +3087,7 @@ void EditorComponent::RefreshComponentWindow()
 		nameWnd.SetVisible(true);
 		nameWnd.SetPos(pos);
 		nameWnd.SetSize(XMFLOAT2(width, nameWnd.GetScale().y));
+		nameWnd.Update();
 		pos.y += nameWnd.GetSize().y;
 		pos.y += padding;
 	}

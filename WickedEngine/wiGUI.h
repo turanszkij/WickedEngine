@@ -69,6 +69,7 @@ namespace wi::gui
 		std::string name;
 		bool enabled = true;
 		bool visible = true;
+		float shadow = 1;
 		WIDGETSTATE state = IDLE;
 		mutable wi::SpriteFont tooltipFont;
 		mutable wi::SpriteFont scripttipFont;
@@ -100,6 +101,8 @@ namespace wi::gui
 		wi::Color GetColor() const;
 		// last param default: set color for all states
 		void SetImage(wi::Resource textureResource, WIDGETSTATE state = WIDGETSTATE_COUNT);
+		float GetShadowRadius() const { return shadow; }
+		void SetShadowRadius(float value) { shadow = value; }
 
 		virtual void Update(const wi::Canvas& canvas, float dt);
 		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const {}
@@ -364,7 +367,6 @@ namespace wi::gui
 		bool minimized = false;
 		Widget scrollable_area;
 		float control_size = 20;
-		float shadow = 2;
 		std::function<void(EventArgs args)> onClose;
 		std::function<void(EventArgs args)> onCollapse;
 
@@ -404,8 +406,6 @@ namespace wi::gui
 		float GetControlSize() const;
 		XMFLOAT2 GetSize() const override; // For the window, the returned size can be modified by collapsed state
 		XMFLOAT2 GetWidgetAreaSize() const;
-		float GetShadowExpand() const { return shadow; }
-		void SetShadowExpand(float value) { shadow = value; }
 
 		void OnClose(std::function<void(EventArgs args)> func);
 		void OnCollapse(std::function<void(EventArgs args)> func);
