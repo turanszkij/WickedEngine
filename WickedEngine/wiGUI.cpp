@@ -1545,8 +1545,8 @@ namespace wi::gui
 	float ComboBox::GetDropOffset(const wi::Canvas& canvas) const
 	{
 		float screenheight = canvas.GetLogicalHeight();
-		int last_item = std::min(maxVisibleItemCount, int(items.size()) - firstItemVisible);
-		float total_height = (maxVisibleItemCount + 1) * scale.y;
+		int visible_items = std::min(maxVisibleItemCount, int(items.size()) - firstItemVisible);
+		float total_height = (visible_items + 1) * scale.y;
 		if (translation.y + total_height > screenheight)
 		{
 			return -total_height - 1;

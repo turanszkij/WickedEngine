@@ -3039,6 +3039,11 @@ void EditorComponent::RefreshEntityTree()
 		PushToEntityTree(scene.inverse_kinematics.GetEntity(i), 0);
 	}
 
+	for (size_t i = 0; i < scene.names.GetCount(); ++i)
+	{
+		PushToEntityTree(scene.names.GetEntity(i), 0);
+	}
+
 	entitytree_added_items.clear();
 	entitytree_opened_items.clear();
 }

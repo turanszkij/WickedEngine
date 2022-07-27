@@ -122,7 +122,7 @@ namespace wi::font
 		};
 
 		static thread_local wi::vector<FontVertex> vertexList;
-		ParseStatus ParseText(const wchar_t* text, size_t text_length, Params params)
+		ParseStatus ParseText(const wchar_t* text, size_t text_length, const Params& params)
 		{
 			ParseStatus status;
 			status.cursor = params.cursor;
@@ -236,7 +236,7 @@ namespace wi::font
 
 		thread_local static std::string char_temp_buffer;
 		thread_local static std::wstring wchar_temp_buffer;
-		ParseStatus ParseText(const char* text, size_t text_length, Params params)
+		ParseStatus ParseText(const char* text, size_t text_length, const Params& params)
 		{
 			// the temp buffers are used to avoid allocations of string objects:
 			char_temp_buffer = text;

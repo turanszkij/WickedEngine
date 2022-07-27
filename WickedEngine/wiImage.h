@@ -131,14 +131,39 @@ namespace wi::image
 		constexpr void disableLinearOutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_LINEAR; }
 
 		Params() = default;
-		Params(float width, float height) :
+
+		Params(
+			float width,
+			float height
+		) :
 			siz(width, height)
 		{}
-		Params(float posX, float posY, float width, float height, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1)) :
+
+		Params(
+			float posX,
+			float posY,
+			float width,
+			float height,
+			const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1)
+		) :
 			pos(posX, posY, 0),
 			siz(width, height),
 			color(color)
 		{}
+
+		Params(
+			const XMFLOAT4& color,
+			wi::enums::BLENDMODE blendFlag = wi::enums::BLENDMODE_ALPHA,
+			bool background = false
+		) :
+			color(color),
+			blendFlag(blendFlag)
+		{
+			if (background)
+			{
+				enableBackground();
+			}
+		}
 	};
 
 

@@ -110,6 +110,7 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)TerrainGenerator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)FontAwesomeV6.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)IconsFontAwesome6.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

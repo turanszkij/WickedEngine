@@ -99,6 +99,26 @@ namespace wi::font
 			color(color),
 			shadowColor(shadowColor)
 		{}
+
+		Params(
+			wi::Color color,
+			wi::Color shadowColor = wi::Color(0, 0, 0, 0),
+			float softness = 0.06f,
+			float bolden = 0,
+			float shadow_softness = 0.5f,
+			float shadow_bolden = 0.1f,
+			float shadow_offset_x = 0,
+			float shadow_offset_y = 0
+		) :
+			color(color),
+			shadowColor(shadowColor),
+			softness(softness),
+			bolden(bolden),
+			shadow_softness(shadow_softness),
+			shadow_bolden(shadow_bolden),
+			shadow_offset_x(shadow_offset_x),
+			shadow_offset_y(shadow_offset_y)
+		{}
 	};
 
 	// Initializes the font renderer
