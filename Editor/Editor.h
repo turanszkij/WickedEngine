@@ -82,6 +82,9 @@ public:
 	wi::gui::CheckBox profilerEnabledCheckBox;
 	wi::gui::CheckBox physicsEnabledCheckBox;
 	wi::gui::CheckBox cinemaModeCheckBox;
+	wi::gui::CheckBox infoDisplayCheckBox;
+	wi::gui::CheckBox fpsCheckBox;
+	wi::gui::CheckBox otherinfoCheckBox;
 	wi::gui::ComboBox themeCombo;
 	wi::gui::ComboBox renderPathComboBox;
 	wi::gui::ComboBox saveModeComboBox;

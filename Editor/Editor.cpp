@@ -29,12 +29,12 @@ void Editor::Initialize()
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
-	infoDisplay.fpsinfo = true;
-	infoDisplay.resolution = true;
+	//infoDisplay.fpsinfo = true;
+	//infoDisplay.resolution = true;
 	//infoDisplay.logical_size = true;
-	infoDisplay.colorspace = true;
-	infoDisplay.heap_allocation_counter = true;
-	infoDisplay.vram_usage = true;
+	//infoDisplay.colorspace = true;
+	//infoDisplay.heap_allocation_counter = true;
+	//infoDisplay.vram_usage = true;
 
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
@@ -579,6 +579,35 @@ void EditorComponent::Load()
 		main->infoDisplay.active = false;
 	});
 	optionsWnd.AddWidget(&cinemaModeCheckBox);
+
+	infoDisplayCheckBox.Create("Info Display: ");
+	infoDisplayCheckBox.SetTooltip("Toggle the information display (the text in top left corner).");
+	infoDisplayCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		main->infoDisplay.active = args.bValue;
+		});
+	optionsWnd.AddWidget(&infoDisplayCheckBox);
+	infoDisplayCheckBox.SetCheck(main->infoDisplay.active);
+
+	fpsCheckBox.Create("FPS: ");
+	fpsCheckBox.SetTooltip("Toggle the FPS display.");
+	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		main->infoDisplay.fpsinfo = args.bValue;
+		});
+	optionsWnd.AddWidget(&fpsCheckBox);
+	fpsCheckBox.SetCheck(main->infoDisplay.fpsinfo);
+
+	otherinfoCheckBox.Create("Advanced: ");
+	otherinfoCheckBox.SetTooltip("Toggle advanced data in the info display.");
+	otherinfoCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		main->infoDisplay.heap_allocation_counter = args.bValue;
+		main->infoDisplay.vram_usage = args.bValue;
+		main->infoDisplay.colorspace = args.bValue;
+		main->infoDisplay.resolution = args.bValue;
+		main->infoDisplay.logical_size = args.bValue;
+		main->infoDisplay.pipeline_count = args.bValue;
+		});
+	optionsWnd.AddWidget(&otherinfoCheckBox);
+	otherinfoCheckBox.SetCheck(main->infoDisplay.heap_allocation_counter);
 
 
 
@@ -1243,7 +1272,7 @@ void EditorComponent::Load()
 			widget.SetColor(theme_color_focus, wi::gui::FOCUS);
 			widget.SetColor(theme_color_active, wi::gui::ACTIVE);
 			widget.SetColor(theme_color_deactivating, wi::gui::DEACTIVATING);
-			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.6f), wi::gui::WIDGET_ID_WINDOW_BASE);
+			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.7f), wi::gui::WIDGET_ID_WINDOW_BASE);
 
 			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.75f), wi::gui::WIDGET_ID_SLIDER_BASE_IDLE);
 			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_FOCUS);
@@ -1330,6 +1359,7 @@ void EditorComponent::Update(float dt)
 			}
 			GetGUI().SetVisible(true);
 			main->infoDisplay.active = true;
+			wi::profiler::SetEnabled(profilerEnabledCheckBox.GetCheck());
 
 			cinemaModeCheckBox.SetCheck(false);
 		}
@@ -2787,6 +2817,12 @@ void EditorComponent::RefreshOptionsWindow()
 	pos.y += translatorCheckBox.GetSize().y;
 	pos.y += padding;
 
+	infoDisplayCheckBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	fpsCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 80, pos.y));
+	otherinfoCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 60 * 3, pos.y));
+	pos.y += infoDisplayCheckBox.GetSize().y;
+	pos.y += padding;
+
 	cinemaModeCheckBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
 	profilerEnabledCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 80, pos.y));
 	physicsEnabledCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 60 * 3, pos.y));
@@ -2867,7 +2903,7 @@ void EditorComponent::RefreshOptionsWindow()
 	pos.y += padding;
 
 	entityTree.SetPos(pos);
-	entityTree.SetSize(XMFLOAT2(width, std::max(entityTree.scale_local.y, GetLogicalHeight() - pos.y)));
+	entityTree.SetSize(XMFLOAT2(width, std::max(GetLogicalHeight() * 0.75f, GetLogicalHeight() - pos.y)));
 	pos.y += entityTree.GetSize().y;
 	pos.y += padding;
 
