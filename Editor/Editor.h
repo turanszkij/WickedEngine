@@ -68,7 +68,6 @@ public:
 	Editor* main = nullptr;
 
 	wi::gui::Button saveButton;
-	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::Button openButton;
 	wi::gui::Button closeButton;
 	wi::gui::Button aboutButton;
@@ -83,7 +82,9 @@ public:
 	wi::gui::CheckBox profilerEnabledCheckBox;
 	wi::gui::CheckBox physicsEnabledCheckBox;
 	wi::gui::CheckBox cinemaModeCheckBox;
+	wi::gui::ComboBox themeCombo;
 	wi::gui::ComboBox renderPathComboBox;
+	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::ComboBox sceneComboBox;
 	void RefreshOptionsWindow();
 

@@ -437,36 +437,36 @@ namespace wi::gui
 		state = DEACTIVATING;
 		tooltipTimer = 0;
 	}
-	void Widget::SetColor(wi::Color color, WIDGETSTATE state)
+	void Widget::SetColor(wi::Color color, int id)
 	{
-		if (state == WIDGETSTATE_COUNT)
+		if (id < 0)
 		{
-			for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
+			for (int i = 0; i < arraysize(sprites); ++i)
 			{
 				sprites[i].params.color = color;
 			}
 		}
-		else
+		else if(id < arraysize(sprites))
 		{
-			sprites[state].params.color = color;
+			sprites[id].params.color = color;
 		}
 	}
 	wi::Color Widget::GetColor() const
 	{
 		return wi::Color::fromFloat4(sprites[GetState()].params.color);
 	}
-	void Widget::SetImage(wi::Resource textureResource, WIDGETSTATE state)
+	void Widget::SetImage(wi::Resource textureResource, int id)
 	{
-		if (state == WIDGETSTATE_COUNT)
+		if (id < 0)
 		{
-			for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
+			for (int i = 0; i < arraysize(sprites); ++i)
 			{
 				sprites[i].textureResource = textureResource;
 			}
 		}
-		else
+		else if (id < arraysize(sprites))
 		{
-			sprites[state].textureResource = textureResource;
+			sprites[id].textureResource = textureResource;
 		}
 	}
 
@@ -917,6 +917,22 @@ namespace wi::gui
 		sprites_knob[scrollbar_state].Draw(cmd);
 
 	}
+	void ScrollBar::SetColor(wi::Color color, int id)
+	{
+		Widget::SetColor(color, id);
+
+		if (id > WIDGET_ID_SCROLLBAR_BEGIN && id < WIDGET_ID_SCROLLBAR_END)
+		{
+			if (id >= WIDGET_ID_SCROLLBAR_KNOB_INACTIVE)
+			{
+				sprites_knob[id - WIDGET_ID_SCROLLBAR_KNOB_INACTIVE].params.color = color;
+			}
+			else if (id >= WIDGET_ID_SCROLLBAR_BASE_IDLE)
+			{
+				sprites[id - WIDGET_ID_SCROLLBAR_BASE_IDLE].params.color = color;
+			}
+		}
+	}
 
 
 
@@ -1023,6 +1039,11 @@ namespace wi::gui
 		font.Draw(cmd);
 
 		scrollbar.Render(canvas, cmd);
+	}
+	void Label::SetColor(wi::Color color, int id)
+	{
+		Widget::SetColor(color, id);
+		scrollbar.SetColor(color, id);
 	}
 
 
@@ -1427,6 +1448,23 @@ namespace wi::gui
 	void Slider::OnSlide(std::function<void(EventArgs args)> func)
 	{
 		onSlide = func;
+	}
+	void Slider::SetColor(wi::Color color, int id)
+	{
+		Widget::SetColor(color, id);
+		valueInputField.SetColor(color, id);
+
+		if (id > WIDGET_ID_SLIDER_BEGIN && id < WIDGET_ID_SLIDER_END)
+		{
+			if (id >= WIDGET_ID_SLIDER_KNOB_IDLE)
+			{
+				sprites_knob[id - WIDGET_ID_SLIDER_KNOB_IDLE].params.color = color;
+			}
+			else if (id >= WIDGET_ID_SLIDER_BASE_IDLE)
+			{
+				sprites[id - WIDGET_ID_SLIDER_BASE_IDLE].params.color = color;
+			}
+		}
 	}
 
 
@@ -1865,7 +1903,7 @@ namespace wi::gui
 					fx = sprites[state].params;
 					fx.pos = XMFLOAT3(translation.x + scale.x + 1, translation.y + scale.y + drop_offset, 0);
 					fx.siz = XMFLOAT2(scale.y, scale.y * maxVisibleItemCount);
-					fx.color = wi::math::Lerp(wi::Color::Transparent(), sprites[IDLE].params.color, 0.5f);
+					fx.color = drop_color;
 					wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 				}
 
@@ -1880,8 +1918,17 @@ namespace wi::gui
 					{
 						col = wi::Color::fromFloat4(sprites[ACTIVE].params.color);
 					}
-					wi::image::Draw(wi::texturehelper::getWhite()
-						, wi::image::Params(translation.x + scale.x + 1, translation.y + scale.y + drop_offset + scrollbar_delta, scale.y, scale.y, col), cmd);
+					wi::image::Draw(
+						wi::texturehelper::getWhite(),
+						wi::image::Params(
+							translation.x + scale.x + 1,
+							translation.y + scale.y + drop_offset + scrollbar_delta,
+							scale.y,
+							scale.y,
+							col
+						),
+						cmd
+					);
 				}
 			}
 
@@ -1898,7 +1945,7 @@ namespace wi::gui
 				fx = sprites[state].params;
 				fx.pos = XMFLOAT3(translation.x, translation.y + GetItemOffset(canvas, i), 0);
 				fx.siz = XMFLOAT2(scale.x, scale.y);
-				fx.color = wi::math::Lerp(wi::Color::Transparent(), sprites[IDLE].params.color, 0.5f);
+				fx.color = drop_color;
 				if (hovered == i)
 				{
 					if (combostate == COMBOSTATE_HOVER)
@@ -2039,6 +2086,15 @@ namespace wi::gui
 	int ComboBox::GetSelected() const
 	{
 		return selected;
+	}
+	void ComboBox::SetColor(wi::Color color, int id)
+	{
+		Widget::SetColor(color, id);
+
+		if (id == WIDGET_ID_COMBO_DROPDOWN)
+		{
+			drop_color = color;
+		}
 	}
 
 
@@ -2757,6 +2813,19 @@ namespace wi::gui
 	void Window::OnCollapse(std::function<void(EventArgs args)> func)
 	{
 		onCollapse = func;
+	}
+	void Window::SetColor(wi::Color color, int id)
+	{
+		Widget::SetColor(color, id);
+		for (auto& widget : widgets)
+		{
+			widget->SetColor(color, id);
+		}
+
+		if (id == WIDGET_ID_WINDOW_BASE)
+		{
+			sprites[IDLE].params.color = color;
+		}
 	}
 
 
@@ -3888,6 +3957,11 @@ namespace wi::gui
 	const TreeList::Item& TreeList::GetItem(int index) const
 	{
 		return items[index];
+	}
+	void TreeList::SetColor(wi::Color color, int id)
+	{
+		Widget::SetColor(color, id);
+		scrollbar.SetColor(color, id);
 	}
 
 
