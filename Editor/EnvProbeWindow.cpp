@@ -8,14 +8,29 @@ using namespace wi::scene;
 void EnvProbeWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Environment Probe Window");
+	wi::gui::Window::Create(ICON_ENVIRONMENTPROBE " Environment Probe", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(420, 220));
+
+	closeButton.SetTooltip("Delete EnvironmentProbeComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().probes.Remove(entity);
+		editor->GetCurrentScene().aabb_probes.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 5, y = 0, step = 35;
 
 	infoLabel.Create("");
 	infoLabel.SetText("Environment probes can be used to capture the scene from a specific location in a 360 degrees panorama. The probes will be used for reflections fallback, where a better reflection type is not available. The probes can affect the ambient colors slightly.\nTip: You can scale, rotate and move the probes to set up parallax correct rendering to affect a specific area only. The parallax correction will take effect inside the probe's bounds (indicated with a cyan colored box).");
-	infoLabel.SetSize(XMFLOAT2(400 - 10, 100));
+	infoLabel.SetSize(XMFLOAT2(300, 100));
 	infoLabel.SetPos(XMFLOAT2(x, y));
 	infoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&infoLabel);
@@ -49,32 +64,9 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&msaaCheckBox);
 
-	generateButton.Create("Put");
-	generateButton.SetTooltip("Put down a new probe in front of the camera and capture the scene.");
-	generateButton.SetPos(XMFLOAT2(x, y += step));
-	generateButton.OnClick([=](wi::gui::EventArgs args) {
-		XMFLOAT3 pos;
-		XMStoreFloat3(&pos, XMVectorAdd(editor->GetCurrentEditorScene().camera.GetEye(), editor->GetCurrentEditorScene().camera.GetAt() * 4));
-		Entity entity = editor->GetCurrentScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
-
-		wi::Archive& archive = editor->AdvanceHistory();
-		archive << EditorComponent::HISTORYOP_ADD;
-		editor->RecordSelection(archive);
-
-		editor->ClearSelected();
-		editor->AddSelected(entity);
-
-		editor->RecordSelection(archive);
-		editor->RecordAddedEntity(archive, entity);
-
-		editor->RefreshEntityTree();
-		SetEntity(entity);
-	});
-	AddWidget(&generateButton);
-
 	refreshButton.Create("Refresh");
 	refreshButton.SetTooltip("Re-renders the selected probe.");
-	refreshButton.SetPos(XMFLOAT2(x + 120, y));
+	refreshButton.SetPos(XMFLOAT2(x, y+= step));
 	refreshButton.SetEnabled(false);
 	refreshButton.OnClick([&](wi::gui::EventArgs args) {
 		EnvironmentProbeComponent* probe = editor->GetCurrentScene().probes.GetComponent(entity);
@@ -87,7 +79,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 	refreshAllButton.Create("Refresh All");
 	refreshAllButton.SetTooltip("Re-renders all probes in the scene.");
-	refreshAllButton.SetPos(XMFLOAT2(x + 240, y));
+	refreshAllButton.SetPos(XMFLOAT2(x + 120, y));
 	refreshAllButton.SetEnabled(true);
 	refreshAllButton.OnClick([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
@@ -102,7 +94,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 
 
-	Translate(XMFLOAT3(100, 100, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

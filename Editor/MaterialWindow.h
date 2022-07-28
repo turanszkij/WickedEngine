@@ -13,7 +13,6 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::TextInputField materialNameField;
-	wi::gui::Button newMaterialButton;
 	wi::gui::CheckBox shadowReceiveCheckBox;
 	wi::gui::CheckBox shadowCasterCheckBox;
 	wi::gui::CheckBox useVertexColorsCheckBox;

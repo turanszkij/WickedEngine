@@ -384,7 +384,16 @@ namespace wi
 				infodisplay_str += "Graphics pipelines active: " + std::to_string(graphicsDevice->GetActivePipelineCount()) + "\n";
 			}
 
-			wi::font::Params params = wi::font::Params(4, 4, infoDisplay.size, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, wi::Color(255, 255, 255, 255), wi::Color(0, 0, 0, 255));
+			wi::font::Params params = wi::font::Params(
+				4,
+				4,
+				infoDisplay.size,
+				wi::font::WIFALIGN_LEFT,
+				wi::font::WIFALIGN_TOP,
+				wi::Color::White(),
+				wi::Color::Shadow()
+			);
+			params.shadow_softness = 0.4f;
 
 			// Explanation: this compose pass is in LINEAR space if display output is linear or HDR10
 			//	If HDR10, the HDR10 output mapping will be performed on whole image later when drawing to swapchain

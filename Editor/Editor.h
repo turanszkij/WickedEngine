@@ -26,6 +26,8 @@
 #include "LayerWindow.h"
 #include "NameWindow.h"
 
+#include "IconDefinitions.h"
+
 class EditorLoadingScreen : public wi::LoadingScreen
 {
 private:
@@ -39,8 +41,6 @@ public:
 class Editor;
 class EditorComponent : public wi::RenderPath2D
 {
-private:
-	wi::Resource pointLightTex, spotLightTex, dirLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
 public:
 	MaterialWindow materialWnd;
 	PostprocessWindow postprocessWnd;
@@ -67,50 +67,55 @@ public:
 
 	Editor* main = nullptr;
 
-	wi::gui::Button rendererWnd_Toggle;
-	wi::gui::Button postprocessWnd_Toggle;
-	wi::gui::Button paintToolWnd_Toggle;
-	wi::gui::Button terrainWnd_Toggle;
-	wi::gui::Button weatherWnd_Toggle;
-	wi::gui::Button objectWnd_Toggle;
-	wi::gui::Button meshWnd_Toggle;
-	wi::gui::Button materialWnd_Toggle;
-	wi::gui::Button cameraWnd_Toggle;
-	wi::gui::Button envProbeWnd_Toggle;
-	wi::gui::Button decalWnd_Toggle;
-	wi::gui::Button soundWnd_Toggle;
-	wi::gui::Button lightWnd_Toggle;
-	wi::gui::Button animWnd_Toggle;
-	wi::gui::Button emitterWnd_Toggle;
-	wi::gui::Button hairWnd_Toggle;
-	wi::gui::Button forceFieldWnd_Toggle;
-	wi::gui::Button springWnd_Toggle;
-	wi::gui::Button ikWnd_Toggle;
-	wi::gui::Button transformWnd_Toggle;
-	wi::gui::Button layerWnd_Toggle;
-	wi::gui::Button nameWnd_Toggle;
-	wi::gui::CheckBox translatorCheckBox;
-	wi::gui::CheckBox isScalatorCheckBox;
-	wi::gui::CheckBox isRotatorCheckBox;
-	wi::gui::CheckBox isTranslatorCheckBox;
 	wi::gui::Button saveButton;
-	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::Button openButton;
 	wi::gui::Button closeButton;
 	wi::gui::Button aboutButton;
 	wi::gui::Button exitButton;
+	wi::gui::Label aboutLabel;
+
+	wi::gui::Window optionsWnd;
+	wi::gui::CheckBox translatorCheckBox;
+	wi::gui::CheckBox isScalatorCheckBox;
+	wi::gui::CheckBox isRotatorCheckBox;
+	wi::gui::CheckBox isTranslatorCheckBox;
 	wi::gui::CheckBox profilerEnabledCheckBox;
 	wi::gui::CheckBox physicsEnabledCheckBox;
 	wi::gui::CheckBox cinemaModeCheckBox;
+	wi::gui::CheckBox infoDisplayCheckBox;
+	wi::gui::CheckBox fpsCheckBox;
+	wi::gui::CheckBox otherinfoCheckBox;
+	wi::gui::ComboBox themeCombo;
 	wi::gui::ComboBox renderPathComboBox;
+	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::ComboBox sceneComboBox;
-	wi::gui::Label aboutLabel;
+	void RefreshOptionsWindow();
 
+	enum class Filter : uint64_t
+	{
+		Transform = 1 << 0,
+		Material = 1 << 1,
+		Mesh = 1 << 2,
+		Object = 1 << 3,
+		EnvironmentProbe = 1 << 4,
+		Decal = 1 << 5,
+		Sound = 1 << 6,
+		Weather = 1 << 7,
+		Light = 1 << 8,
+
+		All = ~0ull,
+	} filter = Filter::All;
+	wi::gui::ComboBox newCombo;
+	wi::gui::ComboBox filterCombo;
 	wi::gui::TreeList entityTree;
 	wi::unordered_set<wi::ecs::Entity> entitytree_added_items;
 	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
 	void PushToEntityTree(wi::ecs::Entity entity, int level);
 	void RefreshEntityTree();
+
+	wi::gui::ComboBox newComponentCombo;
+	wi::gui::Window componentWindow;
+	void RefreshComponentWindow();
 
 	wi::gui::Slider pathTraceTargetSlider;
 	wi::gui::Label pathTraceStatisticsLabel;
@@ -162,23 +167,26 @@ public:
 	void AddSelected(wi::ecs::Entity entity);
 	void AddSelected(const wi::scene::PickResult& picked);
 	bool IsSelected(wi::ecs::Entity entity) const;
+	bool selectAll = false;
+	wi::unordered_set<wi::ecs::Entity> selectAllStorage;
 
 
 	wi::Archive clipboard;
 
 	enum HistoryOperationType
 	{
-		HISTORYOP_TRANSLATOR,
-		HISTORYOP_SELECTION,
-		HISTORYOP_ADD,
-		HISTORYOP_DELETE,
-		HISTORYOP_PAINTTOOL,
+		HISTORYOP_TRANSLATOR,		// translator interaction
+		HISTORYOP_SELECTION,		// selection changed
+		HISTORYOP_ADD,				// entity added
+		HISTORYOP_DELETE,			// entity removed
+		HISTORYOP_COMPONENT_DATA,	// generic component data changed
+		HISTORYOP_PAINTTOOL,		// paint tool interaction
 		HISTORYOP_NONE
 	};
 
 	void RecordSelection(wi::Archive& archive) const;
-	void RecordAddedEntity(wi::Archive& archive, wi::ecs::Entity entity);
-	void RecordAddedEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities);
+	void RecordEntity(wi::Archive& archive, wi::ecs::Entity entity);
+	void RecordEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities);
 
 	void ResetHistory();
 	wi::Archive& AdvanceHistory();
@@ -255,3 +263,8 @@ public:
 	void Initialize() override;
 };
 
+
+template<>
+struct enable_bitmask_operators<EditorComponent::Filter> {
+	static const bool enable = true;
+};

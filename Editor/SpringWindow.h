@@ -12,7 +12,6 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::gui::Button createButton;
 	wi::gui::CheckBox debugCheckBox;
 	wi::gui::CheckBox disabledCheckBox;
 	wi::gui::CheckBox stretchCheckBox;

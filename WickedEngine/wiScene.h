@@ -16,6 +16,7 @@
 #include "wiECS.h"
 #include "wiVector.h"
 #include "wiRectPacker.h"
+#include "wiUnorderedSet.h"
 
 #include <string>
 #include <memory>
@@ -1460,6 +1461,8 @@ namespace wi::scene
 		// Merge an other scene into this.
 		//	The contents of the other scene will be lost (and moved to this)!
 		void Merge(Scene& other);
+		// Finds all entities in the scene that have any components attached
+		void FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const;
 
 		// Removes (deletes) a specific entity from the scene (if it exists):
 		//	recursive	: also removes children if true
@@ -1489,6 +1492,9 @@ namespace wi::scene
 			EntitySerializeFlags flags = EntitySerializeFlags::RECURSIVE
 		);
 
+		wi::ecs::Entity Entity_CreateTransform(
+			const std::string& name
+		);
 		wi::ecs::Entity Entity_CreateMaterial(
 			const std::string& name
 		);
@@ -1537,6 +1543,12 @@ namespace wi::scene
 			const std::string& name,
 			const std::string& filename,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
+		);
+		wi::ecs::Entity Entity_CreateCube(
+			const std::string& name
+		);
+		wi::ecs::Entity Entity_CreatePlane(
+			const std::string& name
 		);
 
 		// Attaches an entity to a parent:

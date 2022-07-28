@@ -9,60 +9,32 @@ using namespace wi::scene;
 void ForceFieldWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Force Field Window");
+	wi::gui::Window::Create(ICON_FORCE " Force Field", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(420, 120));
 
-	float x = 150;
+	closeButton.SetTooltip("Delete ForceFieldComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().forces.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
+
+	float x = 60;
 	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
+	float wid = 200;
 
-	addButton.Create("Add Force Field");
-	addButton.SetSize(XMFLOAT2(150, hei));
-	addButton.SetPos(XMFLOAT2(x, y));
-	addButton.OnClick([=](wi::gui::EventArgs args) {
-		Entity entity = editor->GetCurrentScene().Entity_CreateForce("editorForce");
-		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
-		if (force != nullptr)
-		{
-			switch (typeComboBox.GetSelected())
-			{
-			case 0:
-				force->type = ENTITY_TYPE_FORCEFIELD_POINT;
-				break;
-			case 1:
-				force->type = ENTITY_TYPE_FORCEFIELD_PLANE;
-				break;
-			default:
-				assert(0);
-				break;
-			}
-
-			wi::Archive& archive = editor->AdvanceHistory();
-			archive << EditorComponent::HISTORYOP_ADD;
-			editor->RecordSelection(archive);
-
-			editor->ClearSelected();
-			editor->AddSelected(entity);
-
-			editor->RecordSelection(archive);
-			editor->RecordAddedEntity(archive, entity);
-
-			editor->RefreshEntityTree();
-			SetEntity(entity);
-		}
-		else
-		{
-			assert(0);
-		}
-		});
-	addButton.SetEnabled(true);
-	addButton.SetTooltip("Add new Force Field to the simulation.");
-	AddWidget(&addButton);
-
-	typeComboBox.Create("Force Field type: ");
-	typeComboBox.SetPos(XMFLOAT2(x, y += step));
-	typeComboBox.SetSize(XMFLOAT2(200, hei));
+	typeComboBox.Create("Type: ");
+	typeComboBox.SetPos(XMFLOAT2(x, y));
+	typeComboBox.SetSize(XMFLOAT2(wid, hei));
 	typeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
 		if (force != nullptr && args.iValue >= 0)
@@ -89,7 +61,7 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 
 
 	gravitySlider.Create(-10, 10, 0, 100000, "Gravity: ");
-	gravitySlider.SetSize(XMFLOAT2(200, hei));
+	gravitySlider.SetSize(XMFLOAT2(wid, hei));
 	gravitySlider.SetPos(XMFLOAT2(x, y += step));
 	gravitySlider.OnSlide([&](wi::gui::EventArgs args) {
 		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
@@ -104,7 +76,7 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 
 
 	rangeSlider.Create(0.0f, 100.0f, 10, 100000, "Range: ");
-	rangeSlider.SetSize(XMFLOAT2(200, hei));
+	rangeSlider.SetSize(XMFLOAT2(wid, hei));
 	rangeSlider.SetPos(XMFLOAT2(x, y += step));
 	rangeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
@@ -119,7 +91,7 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 
 
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 720, 50, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
@@ -147,5 +119,4 @@ void ForceFieldWindow::SetEntity(Entity entity)
 		rangeSlider.SetEnabled(false);
 	}
 
-	addButton.SetEnabled(true);
 }

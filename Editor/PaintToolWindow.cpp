@@ -13,18 +13,22 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create("Paint Tool Window");
-	SetSize(XMFLOAT2(360, 540));
+	wi::gui::Window::Create("Paint Tool", wi::gui::Window::WindowControls::COLLAPSE);
+	SetSize(XMFLOAT2(360, 560));
 
 	float x = 105;
 	float y = 0;
 	float hei = 20;
 	float step = hei + 4;
+	float wid = 160;
+
+	colorPicker.Create("Color", wi::gui::Window::WindowControls::NONE);
+	float mod_wid = colorPicker.GetScale().x;
 
 	modeComboBox.Create("Mode: ");
 	modeComboBox.SetTooltip("Choose paint tool mode");
 	modeComboBox.SetPos(XMFLOAT2(x, y));
-	modeComboBox.SetSize(XMFLOAT2(200, hei));
+	modeComboBox.SetSize(XMFLOAT2(wid, hei));
 	modeComboBox.AddItem("Disabled");
 	modeComboBox.AddItem("Texture");
 	modeComboBox.AddItem("Vertexcolor");
@@ -80,8 +84,8 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	y += step + 5;
 
 	infoLabel.Create("Paint Tool is disabled.");
-	infoLabel.SetSize(XMFLOAT2(GetScale().x - 20, 100));
-	infoLabel.SetPos(XMFLOAT2(10, y));
+	infoLabel.SetSize(XMFLOAT2(mod_wid - 10, 100));
+	infoLabel.SetPos(XMFLOAT2(5, y));
 	infoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&infoLabel);
 
@@ -89,50 +93,49 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 
 	radiusSlider.Create(1.0f, 500.0f, 50, 10000, "Brush Radius: ");
 	radiusSlider.SetTooltip("Set the brush radius in pixel units");
-	radiusSlider.SetSize(XMFLOAT2(200, hei));
+	radiusSlider.SetSize(XMFLOAT2(wid, hei));
 	radiusSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&radiusSlider);
 
 	amountSlider.Create(0, 1, 1, 10000, "Brush Amount: ");
 	amountSlider.SetTooltip("Set the brush amount. 0 = minimum affection, 1 = maximum affection");
-	amountSlider.SetSize(XMFLOAT2(200, hei));
+	amountSlider.SetSize(XMFLOAT2(wid, hei));
 	amountSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&amountSlider);
 
 	falloffSlider.Create(0, 16, 0, 10000, "Brush Falloff: ");
 	falloffSlider.SetTooltip("Set the brush power. 0 = no falloff, 1 = linear falloff, more = falloff power");
-	falloffSlider.SetSize(XMFLOAT2(200, hei));
+	falloffSlider.SetSize(XMFLOAT2(wid, hei));
 	falloffSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&falloffSlider);
 
 	spacingSlider.Create(0, 500, 1, 500, "Brush Spacing: ");
 	spacingSlider.SetTooltip("Brush spacing means how much brush movement (in pixels) starts a new stroke. 0 = new stroke every frame, 100 = every 100 pixel movement since last stroke will start a new stroke.");
-	spacingSlider.SetSize(XMFLOAT2(200, hei));
+	spacingSlider.SetSize(XMFLOAT2(wid, hei));
 	spacingSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&spacingSlider);
 
 	backfaceCheckBox.Create("Backfaces: ");
 	backfaceCheckBox.SetTooltip("Set whether to paint on backfaces of geometry or not");
 	backfaceCheckBox.SetSize(XMFLOAT2(hei, hei));
-	backfaceCheckBox.SetPos(XMFLOAT2(x, y += step));
+	backfaceCheckBox.SetPos(XMFLOAT2(x - 20, y += step));
 	AddWidget(&backfaceCheckBox);
 
 	wireCheckBox.Create("Wireframe: ");
 	wireCheckBox.SetTooltip("Set whether to draw wireframe on top of geometry or not");
 	wireCheckBox.SetSize(XMFLOAT2(hei, hei));
-	wireCheckBox.SetPos(XMFLOAT2(x + 100, y));
+	wireCheckBox.SetPos(XMFLOAT2(x - 20 + 100, y));
 	wireCheckBox.SetCheck(true);
 	AddWidget(&wireCheckBox);
 
 	pressureCheckBox.Create("Pressure: ");
 	pressureCheckBox.SetTooltip("Set whether to use pressure sensitivity (for example pen tablet)");
 	pressureCheckBox.SetSize(XMFLOAT2(hei, hei));
-	pressureCheckBox.SetPos(XMFLOAT2(x + 200, y));
+	pressureCheckBox.SetPos(XMFLOAT2(x - 20 + 200, y));
 	pressureCheckBox.SetCheck(false);
 	AddWidget(&pressureCheckBox);
 
-	colorPicker.Create("Color", false);
-	colorPicker.SetPos(XMFLOAT2(10, y += step));
+	colorPicker.SetPos(XMFLOAT2(5, y += step));
 	AddWidget(&colorPicker);
 
 	y += colorPicker.GetScale().y;
@@ -140,7 +143,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	textureSlotComboBox.Create("Texture Slot: ");
 	textureSlotComboBox.SetTooltip("Choose texture slot of the selected material to paint (texture paint mode only)");
 	textureSlotComboBox.SetPos(XMFLOAT2(x, y += step));
-	textureSlotComboBox.SetSize(XMFLOAT2(200, hei));
+	textureSlotComboBox.SetSize(XMFLOAT2(wid, hei));
 	textureSlotComboBox.AddItem("BaseColor (RGBA)", MaterialComponent::BASECOLORMAP);
 	textureSlotComboBox.AddItem("Normal (RGB)", MaterialComponent::NORMALMAP);
 	textureSlotComboBox.AddItem("SurfaceMap (RGBA)", MaterialComponent::SURFACEMAP);
@@ -158,7 +161,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 
 	saveTextureButton.Create("Save Texture");
 	saveTextureButton.SetTooltip("Save edited texture.");
-	saveTextureButton.SetSize(XMFLOAT2(200, hei));
+	saveTextureButton.SetSize(XMFLOAT2(wid, hei));
 	saveTextureButton.SetPos(XMFLOAT2(x, y += step));
 	saveTextureButton.OnClick([this] (wi::gui::EventArgs args) {
 
@@ -255,7 +258,8 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	AddWidget(&revealTextureButton);
 
 	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 550, 50, 0));
-	SetVisible(false);
+
+	SetMinimized(true);
 }
 
 void PaintToolWindow::Update(float dt)

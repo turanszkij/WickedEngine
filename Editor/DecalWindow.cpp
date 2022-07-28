@@ -9,8 +9,22 @@ using namespace wi::scene;
 void DecalWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Decal Window");
-	SetSize(XMFLOAT2(420, 200));
+	wi::gui::Window::Create(ICON_DECAL " Decal", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	SetSize(XMFLOAT2(300, 150));
+
+	closeButton.SetTooltip("Delete DecalComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().decals.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 200;
 	float y = 0;
@@ -28,27 +42,13 @@ void DecalWindow::Create(EditorComponent* _editor)
 
 	infoLabel.Create("");
 	infoLabel.SetText("Selecting decals will select the according material. Set decal properties (texture, color, etc.) in the Material window.");
-	infoLabel.SetSize(XMFLOAT2(400 - 20, 100));
+	infoLabel.SetSize(XMFLOAT2(300, 100));
 	infoLabel.SetPos(XMFLOAT2(10, y));
 	infoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&infoLabel);
 	y += infoLabel.GetScale().y - step + 5;
 
-	decalNameField.Create("Decal Name");
-	decalNameField.SetPos(XMFLOAT2(10, y+=step));
-	decalNameField.SetSize(XMFLOAT2(300, hei));
-	decalNameField.OnInputAccepted([=](wi::gui::EventArgs args) {
-		NameComponent* name = editor->GetCurrentScene().names.GetComponent(entity);
-		if (name != nullptr)
-		{
-			*name = args.sValue;
-
-			editor->RefreshEntityTree();
-		}
-	});
-	AddWidget(&decalNameField);
-
-	Translate(XMFLOAT3(30, 30, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
@@ -63,14 +63,10 @@ void DecalWindow::SetEntity(Entity entity)
 
 	if (decal != nullptr)
 	{
-		const NameComponent& name = *scene.names.GetComponent(entity);
-
-		decalNameField.SetValue(name.name);
-		decalNameField.SetEnabled(true);
+		SetEnabled(true);
 	}
 	else
 	{
-		decalNameField.SetValue("No decal selected");
-		decalNameField.SetEnabled(false);
+		SetEnabled(false);
 	}
 }

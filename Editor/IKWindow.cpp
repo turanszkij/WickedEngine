@@ -9,24 +9,32 @@ using namespace wi::scene;
 void IKWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Inverse Kinematics (IK) Window");
-	SetSize(XMFLOAT2(400, 150));
+	wi::gui::Window::Create("Inverse Kinematics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	SetSize(XMFLOAT2(400, 110));
+
+	closeButton.SetTooltip("Delete InverseKinematicsComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().inverse_kinematics.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 120;
 	float y = 0;
-	float siz = 200;
+	float siz = 140;
 	float hei = 18;
 	float step = hei + 2;
 
-	createButton.Create("Create");
-	createButton.SetTooltip("Create/Remove IK Component to selected entity");
-	createButton.SetPos(XMFLOAT2(x, y));
-	createButton.SetSize(XMFLOAT2(siz, hei));
-	AddWidget(&createButton);
-
 	targetCombo.Create("Target: ");
 	targetCombo.SetSize(XMFLOAT2(siz, hei));
-	targetCombo.SetPos(XMFLOAT2(x, y += step));
+	targetCombo.SetPos(XMFLOAT2(x, y));
 	targetCombo.SetEnabled(false);
 	targetCombo.OnSelect([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
@@ -73,7 +81,7 @@ void IKWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&iterationCountSlider);
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 740, 150, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
@@ -113,26 +121,4 @@ void IKWindow::SetEntity(Entity entity)
 		SetEnabled(false);
 	}
 
-	const TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
-	if (transform != nullptr)
-	{
-		createButton.SetEnabled(true);
-
-		if (ik == nullptr)
-		{
-			createButton.SetText("Create");
-			createButton.OnClick([=](wi::gui::EventArgs args) {
-				editor->GetCurrentScene().inverse_kinematics.Create(entity).chain_length = 1;
-				SetEntity(entity);
-				});
-		}
-		else
-		{
-			createButton.SetText("Remove");
-			createButton.OnClick([=](wi::gui::EventArgs args) {
-				editor->GetCurrentScene().inverse_kinematics.Remove_KeepSorted(entity);
-				SetEntity(entity);
-				});
-		}
-	}
 }

@@ -15,6 +15,5 @@ public:
 	wi::gui::ComboBox typeComboBox;
 	wi::gui::Slider gravitySlider;
 	wi::gui::Slider rangeSlider;
-	wi::gui::Button addButton;
 };
 

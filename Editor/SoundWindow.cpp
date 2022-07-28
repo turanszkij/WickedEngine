@@ -10,20 +10,164 @@ using namespace wi::scene;
 void SoundWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Sound Window");
+	wi::gui::Window::Create(ICON_SOUND " Sound", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(440, 220));
 
-	float x = 20;
+	closeButton.SetTooltip("Delete SoundComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().sounds.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
+
+	float x = 60;
 	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
+	float wid = 200;
+
+
+	openButton.Create("Open File");
+	openButton.SetPos(XMFLOAT2(x, y));
+	openButton.SetSize(XMFLOAT2(wid, hei));
+	openButton.OnClick([&](wi::gui::EventArgs args) {
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Sound";
+			params.extensions = wi::resourcemanager::GetSupportedSoundExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					sound->filename = fileName;
+					sound->soundResource = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+					});
+				});
+		}
+		});
+	AddWidget(&openButton);
+
+	filenameLabel.Create("Filename");
+	filenameLabel.SetPos(XMFLOAT2(x, y += step));
+	filenameLabel.SetSize(XMFLOAT2(wid, hei));
+	filenameLabel.font.params.h_align = wi::font::WIFALIGN_RIGHT;
+	AddWidget(&filenameLabel);
+
+	playstopButton.Create("Play");
+	playstopButton.SetTooltip("Play/Stop selected sound instance.");
+	playstopButton.SetPos(XMFLOAT2(x, y += step));
+	playstopButton.SetSize(XMFLOAT2(wid, hei));
+	playstopButton.OnClick([&](wi::gui::EventArgs args) {
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			if (sound->IsPlaying())
+			{
+				sound->Stop();
+				playstopButton.SetText("Play");
+			}
+			else
+			{
+				sound->Play();
+				playstopButton.SetText("Stop");
+			}
+		}
+	});
+	AddWidget(&playstopButton);
+	playstopButton.SetEnabled(false);
+
+	loopedCheckbox.Create("Looped: ");
+	loopedCheckbox.SetTooltip("Enable looping for the selected sound instance.");
+	loopedCheckbox.SetPos(XMFLOAT2(x, y += step));
+	loopedCheckbox.SetSize(XMFLOAT2(hei, hei));
+	loopedCheckbox.OnClick([&](wi::gui::EventArgs args) {
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->SetLooped(args.bValue);
+		}
+	});
+	AddWidget(&loopedCheckbox);
+	loopedCheckbox.SetEnabled(false);
+
+	reverbCheckbox.Create("Reverb: ");
+	reverbCheckbox.SetTooltip("Enable/disable reverb.");
+	reverbCheckbox.SetPos(XMFLOAT2(x, y += step));
+	reverbCheckbox.SetSize(XMFLOAT2(hei, hei));
+	reverbCheckbox.OnClick([&](wi::gui::EventArgs args) {
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->soundinstance.SetEnableReverb(args.bValue);
+			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+		}
+	});
+	AddWidget(&reverbCheckbox);
+	reverbCheckbox.SetEnabled(false);
+
+	disable3dCheckbox.Create("2D: ");
+	disable3dCheckbox.SetTooltip("Sounds in the scene are 3D spatial by default. Select this to disable 3D effect.");
+	disable3dCheckbox.SetPos(XMFLOAT2(x, y += step));
+	disable3dCheckbox.SetSize(XMFLOAT2(hei, hei));
+	disable3dCheckbox.OnClick([&](wi::gui::EventArgs args) {
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->SetDisable3D(args.bValue);
+			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+		}
+	});
+	AddWidget(&disable3dCheckbox);
+	loopedCheckbox.SetEnabled(false);
+
+	volumeSlider.Create(0, 1, 1, 1000, "Volume: ");
+	volumeSlider.SetTooltip("Set volume level for the selected sound instance.");
+	volumeSlider.SetPos(XMFLOAT2(x, y += step));
+	volumeSlider.SetSize(XMFLOAT2(wid, hei));
+	volumeSlider.OnSlide([&](wi::gui::EventArgs args) {
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->volume = args.fValue;
+		}
+	});
+	AddWidget(&volumeSlider);
+	volumeSlider.SetEnabled(false);
+
+	submixComboBox.Create("Submix: ");
+	submixComboBox.SetPos(XMFLOAT2(x, y += step));
+	submixComboBox.SetSize(XMFLOAT2(wid, hei));
+	submixComboBox.OnSelect([&](wi::gui::EventArgs args) {
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->soundinstance.type = (wi::audio::SUBMIX_TYPE)args.iValue;
+			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+		}
+	});
+	submixComboBox.AddItem("SOUNDEFFECT");
+	submixComboBox.AddItem("MUSIC");
+	submixComboBox.AddItem("USER0");
+	submixComboBox.AddItem("USER1");
+	submixComboBox.SetTooltip("Set the submix channel of the sound. \nSound properties like volume can be set per sound, or per submix channel.");
+	submixComboBox.SetScriptTip("SoundInstance::SetSubmixType(int submixType)");
+	AddWidget(&submixComboBox);
 
 	reverbComboBox.Create("Reverb: ");
-	reverbComboBox.SetPos(XMFLOAT2(x + 80, y));
-	reverbComboBox.SetSize(XMFLOAT2(180, hei));
+	reverbComboBox.SetPos(XMFLOAT2(x, y += step));
+	reverbComboBox.SetSize(XMFLOAT2(wid, hei));
 	reverbComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		wi::audio::SetReverb((wi::audio::REVERB_PRESET)args.iValue);
-	});
+		});
 	reverbComboBox.AddItem("DEFAULT");
 	reverbComboBox.AddItem("GENERIC");
 	reverbComboBox.AddItem("FOREST");
@@ -57,161 +201,8 @@ void SoundWindow::Create(EditorComponent* _editor)
 	reverbComboBox.SetTooltip("Set the global reverb setting. Sound instances need to enable reverb to take effect!");
 	AddWidget(&reverbComboBox);
 
-	y += step;
 
-	addButton.Create("Add Sound");
-	addButton.SetTooltip("Add a sound file to the scene.");
-	addButton.SetPos(XMFLOAT2(x, y += step));
-	addButton.SetSize(XMFLOAT2(80, hei));
-	addButton.OnClick([=](wi::gui::EventArgs args) {
-		wi::helper::FileDialogParams params;
-		params.type = wi::helper::FileDialogParams::OPEN;
-		params.description = "Sound";
-		params.extensions = wi::resourcemanager::GetSupportedSoundExtensions();
-		wi::helper::FileDialog(params, [=](std::string fileName) {
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				Entity entity = editor->GetCurrentScene().Entity_CreateSound("editorSound", fileName);
-
-				wi::Archive& archive = editor->AdvanceHistory();
-				archive << EditorComponent::HISTORYOP_ADD;
-				editor->RecordSelection(archive);
-
-				editor->ClearSelected();
-				editor->AddSelected(entity);
-
-				editor->RecordSelection(archive);
-				editor->RecordAddedEntity(archive, entity);
-
-				editor->RefreshEntityTree();
-				SetEntity(entity);
-			});
-		});
-	});
-	AddWidget(&addButton);
-
-	filenameLabel.Create("Filename");
-	filenameLabel.SetPos(XMFLOAT2(x, y += step));
-	filenameLabel.SetSize(XMFLOAT2(400, hei));
-	AddWidget(&filenameLabel);
-
-	nameField.Create("SoundName");
-	nameField.SetTooltip("Enter a sound name to identify this entity...");
-	nameField.SetPos(XMFLOAT2(x, y += step));
-	nameField.SetSize(XMFLOAT2(300, hei));
-	nameField.OnInputAccepted([=](wi::gui::EventArgs args) {
-		NameComponent* name = editor->GetCurrentScene().names.GetComponent(entity);
-		if (name == nullptr)
-		{
-			name = &editor->GetCurrentScene().names.Create(entity);
-		}
-		*name = args.sValue;
-
-		editor->RefreshEntityTree();
-	});
-	AddWidget(&nameField);
-	nameField.SetEnabled(false);
-
-	playstopButton.Create("Play");
-	playstopButton.SetTooltip("Play/Stop selected sound instance.");
-	playstopButton.SetPos(XMFLOAT2(x, y += step));
-	playstopButton.SetSize(XMFLOAT2(80, hei));
-	playstopButton.OnClick([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
-		if (sound != nullptr)
-		{
-			if (sound->IsPlaying())
-			{
-				sound->Stop();
-				playstopButton.SetText("Play");
-			}
-			else
-			{
-				sound->Play();
-				playstopButton.SetText("Stop");
-			}
-		}
-	});
-	AddWidget(&playstopButton);
-	playstopButton.SetEnabled(false);
-
-	loopedCheckbox.Create("Looped: ");
-	loopedCheckbox.SetTooltip("Enable looping for the selected sound instance.");
-	loopedCheckbox.SetPos(XMFLOAT2(x + 150, y));
-	loopedCheckbox.SetSize(XMFLOAT2(hei, hei));
-	loopedCheckbox.OnClick([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
-		if (sound != nullptr)
-		{
-			sound->SetLooped(args.bValue);
-		}
-	});
-	AddWidget(&loopedCheckbox);
-	loopedCheckbox.SetEnabled(false);
-
-	reverbCheckbox.Create("Reverb: ");
-	reverbCheckbox.SetTooltip("Enable/disable reverb.");
-	reverbCheckbox.SetPos(XMFLOAT2(x + 240, y));
-	reverbCheckbox.SetSize(XMFLOAT2(hei, hei));
-	reverbCheckbox.OnClick([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
-		if (sound != nullptr)
-		{
-			sound->soundinstance.SetEnableReverb(args.bValue);
-			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
-		}
-	});
-	AddWidget(&reverbCheckbox);
-	reverbCheckbox.SetEnabled(false);
-
-	disable3dCheckbox.Create("2D: ");
-	disable3dCheckbox.SetTooltip("Sounds in the scene are 3D spatial by default. Select this to disable 3D effect.");
-	disable3dCheckbox.SetPos(XMFLOAT2(x + 300, y));
-	disable3dCheckbox.SetSize(XMFLOAT2(hei, hei));
-	disable3dCheckbox.OnClick([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
-		if (sound != nullptr)
-		{
-			sound->SetDisable3D(args.bValue);
-			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
-		}
-	});
-	AddWidget(&disable3dCheckbox);
-	loopedCheckbox.SetEnabled(false);
-
-	volumeSlider.Create(0, 1, 1, 1000, "Volume: ");
-	volumeSlider.SetTooltip("Set volume level for the selected sound instance.");
-	volumeSlider.SetPos(XMFLOAT2(x + 60, y += step));
-	volumeSlider.SetSize(XMFLOAT2(240, hei));
-	volumeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
-		if (sound != nullptr)
-		{
-			sound->volume = args.fValue;
-		}
-	});
-	AddWidget(&volumeSlider);
-	volumeSlider.SetEnabled(false);
-
-	submixComboBox.Create("Submix: ");
-	submixComboBox.SetPos(XMFLOAT2(x + 80, y += step));
-	submixComboBox.SetSize(XMFLOAT2(180, hei));
-	submixComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
-		if (sound != nullptr)
-		{
-			sound->soundinstance.type = (wi::audio::SUBMIX_TYPE)args.iValue;
-			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
-		}
-	});
-	submixComboBox.AddItem("SOUNDEFFECT");
-	submixComboBox.AddItem("MUSIC");
-	submixComboBox.AddItem("USER0");
-	submixComboBox.AddItem("USER1");
-	submixComboBox.SetTooltip("Set the submix channel of the sound. \nSound properties like volume can be set per sound, or per submix channel.");
-	submixComboBox.SetScriptTip("SoundInstance::SetSubmixType(int submixType)");
-	AddWidget(&submixComboBox);
-
-	Translate(XMFLOAT3(400, 120, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
@@ -230,15 +221,6 @@ void SoundWindow::SetEntity(Entity entity)
 	if (sound != nullptr)
 	{
 		filenameLabel.SetText(sound->filename);
-		if (name == nullptr)
-		{
-			nameField.SetText("Enter a sound name...");
-		}
-		else
-		{
-			nameField.SetText(name->name);
-		}
-		nameField.SetEnabled(true);
 		playstopButton.SetEnabled(true);
 		loopedCheckbox.SetEnabled(true);
 		loopedCheckbox.SetCheck(sound->IsLooped());
@@ -265,8 +247,6 @@ void SoundWindow::SetEntity(Entity entity)
 	else
 	{
 		filenameLabel.SetText("");
-		nameField.SetText("");
-		nameField.SetEnabled(false);
 		playstopButton.SetEnabled(false);
 		loopedCheckbox.SetEnabled(false);
 		reverbCheckbox.SetEnabled(false);

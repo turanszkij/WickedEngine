@@ -143,6 +143,8 @@ struct TerrainGenerator : public wi::gui::Window
 	wi::gui::Slider region2Slider;
 	wi::gui::Slider region3Slider;
 
+	void Create();
+
 	// This needs to be called at least once before using the terrain generator
 	void init();
 

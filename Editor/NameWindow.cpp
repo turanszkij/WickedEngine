@@ -9,13 +9,27 @@ using namespace wi::scene;
 void NameWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Name Window");
-	SetSize(XMFLOAT2(360, 80));
+	wi::gui::Window::Create("Name", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	SetSize(XMFLOAT2(360, 60));
+
+	closeButton.SetTooltip("Delete NameComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().names.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
 
 	float x = 60;
 	float y = 0;
 	float step = 25;
-	float siz = 280;
+	float siz = 250;
 	float hei = 20;
 
 	nameInput.Create("");
@@ -34,7 +48,7 @@ void NameWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&nameInput);
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 450, 200, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
@@ -59,4 +73,10 @@ void NameWindow::SetEntity(Entity entity)
 		SetEnabled(false);
 		nameInput.SetValue("Select entity to modify name...");
 	}
+}
+
+void NameWindow::Update()
+{
+	nameInput.SetPos(XMFLOAT2(60, 0));
+	nameInput.SetSize(XMFLOAT2(GetSize().x - 65, nameInput.GetSize().y));
 }

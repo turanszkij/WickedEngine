@@ -5201,7 +5201,7 @@ void DrawDebugWorld(
 			for (Entity entity : armature.boneCollection)
 			{
 				const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
-				if (hierarchy == nullptr)
+				if (hierarchy == nullptr || !scene.transforms.Contains(entity) || !scene.transforms.Contains(hierarchy->parentID))
 				{
 					continue;
 				}
@@ -5777,13 +5777,13 @@ void DrawDebugWorld(
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
 			const EnvironmentProbeComponent& probe = scene.probes[i];
+			Entity entity = scene.probes.GetEntity(i);
 
-			if (probe.textureIndex < 0)
+			if (probe.textureIndex < 0 || !scene.transforms.Contains(entity))
 			{
 				continue;
 			}
 
-			Entity entity = scene.probes.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMLoadFloat4x4(&transform.world)*camera.GetViewProjection());
@@ -5895,6 +5895,10 @@ void DrawDebugWorld(
 		{
 			const wi::EmittedParticleSystem& emitter = scene.emitters[i];
 			Entity entity = scene.emitters.GetEntity(i);
+			if (!scene.transforms.Contains(entity))
+			{
+				continue;
+			}
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 			const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
 
@@ -5948,10 +5952,24 @@ void DrawDebugWorld(
 
 		for (auto& x : paintrads)
 		{
+			if (!scene.transforms.Contains(x.objectEntity) ||
+				!scene.objects.Contains(x.objectEntity)
+				)
+			{
+				continue;
+			}
 			const ObjectComponent& object = *scene.objects.GetComponent(x.objectEntity);
 			const TransformComponent& transform = *scene.transforms.GetComponent(x.objectEntity);
+			if (scene.meshes.GetCount() < object.mesh_index)
+			{
+				continue;
+			}
 			const MeshComponent& mesh = scene.meshes[object.mesh_index];
 			const MeshComponent::MeshSubset& subset = mesh.subsets[x.subset];
+			if (!scene.materials.Contains(subset.materialID))
+			{
+				continue;
+			}
 			const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstancePointer), cmd);

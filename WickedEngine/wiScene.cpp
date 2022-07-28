@@ -2100,6 +2100,37 @@ namespace wi::scene
 
 		bounds = AABB::Merge(bounds, other.bounds);
 	}
+	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
+	{
+		entities.insert(names.GetEntityArray().begin(), names.GetEntityArray().end());
+		entities.insert(layers.GetEntityArray().begin(), layers.GetEntityArray().end());
+		entities.insert(transforms.GetEntityArray().begin(), transforms.GetEntityArray().end());
+		entities.insert(hierarchy.GetEntityArray().begin(), hierarchy.GetEntityArray().end());
+		entities.insert(materials.GetEntityArray().begin(), materials.GetEntityArray().end());
+		entities.insert(meshes.GetEntityArray().begin(), meshes.GetEntityArray().end());
+		entities.insert(impostors.GetEntityArray().begin(), impostors.GetEntityArray().end());
+		entities.insert(objects.GetEntityArray().begin(), objects.GetEntityArray().end());
+		entities.insert(aabb_objects.GetEntityArray().begin(), aabb_objects.GetEntityArray().end());
+		entities.insert(rigidbodies.GetEntityArray().begin(), rigidbodies.GetEntityArray().end());
+		entities.insert(softbodies.GetEntityArray().begin(), softbodies.GetEntityArray().end());
+		entities.insert(armatures.GetEntityArray().begin(), armatures.GetEntityArray().end());
+		entities.insert(lights.GetEntityArray().begin(), lights.GetEntityArray().end());
+		entities.insert(aabb_lights.GetEntityArray().begin(), aabb_lights.GetEntityArray().end());
+		entities.insert(cameras.GetEntityArray().begin(), cameras.GetEntityArray().end());
+		entities.insert(probes.GetEntityArray().begin(), probes.GetEntityArray().end());
+		entities.insert(aabb_probes.GetEntityArray().begin(), aabb_probes.GetEntityArray().end());
+		entities.insert(forces.GetEntityArray().begin(), forces.GetEntityArray().end());
+		entities.insert(decals.GetEntityArray().begin(), decals.GetEntityArray().end());
+		entities.insert(aabb_decals.GetEntityArray().begin(), aabb_decals.GetEntityArray().end());
+		entities.insert(animations.GetEntityArray().begin(), animations.GetEntityArray().end());
+		entities.insert(animation_datas.GetEntityArray().begin(), animation_datas.GetEntityArray().end());
+		entities.insert(emitters.GetEntityArray().begin(), emitters.GetEntityArray().end());
+		entities.insert(hairs.GetEntityArray().begin(), hairs.GetEntityArray().end());
+		entities.insert(weathers.GetEntityArray().begin(), weathers.GetEntityArray().end());
+		entities.insert(sounds.GetEntityArray().begin(), sounds.GetEntityArray().end());
+		entities.insert(inverse_kinematics.GetEntityArray().begin(), inverse_kinematics.GetEntityArray().end());
+		entities.insert(springs.GetEntityArray().begin(), springs.GetEntityArray().end());
+	}
 
 	void Scene::Entity_Remove(Entity entity, bool recursive)
 	{
@@ -2175,6 +2206,18 @@ namespace wi::scene
 		Entity root = Entity_Serialize(archive, seri, INVALID_ENTITY, EntitySerializeFlags::RECURSIVE | EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
 
 		return root;
+	}
+	Entity Scene::Entity_CreateTransform(
+		const std::string& name
+	)
+	{
+		Entity entity = CreateEntity();
+
+		names.Create(entity) = name;
+
+		transforms.Create(entity);
+
+		return entity;
 	}
 	Entity Scene::Entity_CreateMaterial(
 		const std::string& name
@@ -2384,14 +2427,244 @@ namespace wi::scene
 
 		names.Create(entity) = name;
 
-		SoundComponent& sound = sounds.Create(entity);
-		sound.filename = filename;
-		sound.soundResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
-		wi::audio::CreateSoundInstance(&sound.soundResource.GetSound(), &sound.soundinstance);
+		if (!filename.empty())
+		{
+			SoundComponent& sound = sounds.Create(entity);
+			sound.filename = filename;
+			sound.soundResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+			wi::audio::CreateSoundInstance(&sound.soundResource.GetSound(), &sound.soundinstance);
+		}
 
 		TransformComponent& transform = transforms.Create(entity);
 		transform.Translate(position);
 		transform.UpdateTransform();
+
+		return entity;
+	}
+	Entity Scene::Entity_CreateCube(
+		const std::string& name
+	)
+	{
+		// 1) Create an ObjectComponent, this can be used to instance a mesh:
+		Entity entity = CreateEntity();
+
+		if (!name.empty())
+		{
+			names.Create(entity) = name;
+		}
+
+		layers.Create(entity);
+
+		transforms.Create(entity);
+
+		aabb_objects.Create(entity);
+
+		ObjectComponent& object = objects.Create(entity);
+
+		// 2) Create a mesh, this will contain vertex buffers:
+		//	Here a separate mesh entity is created, to allow efficient instancing (not duplicating mesh data when duplicating objects)
+		Entity entity_mesh_material = CreateEntity();
+
+		if (!name.empty())
+		{
+			names.Create(entity_mesh_material) = name + "_mesh_material";
+		}
+
+		MeshComponent& mesh = meshes.Create(entity_mesh_material);
+
+		// object references the mesh entity (there can be multiple objects referencing one mesh):
+		object.meshID = entity_mesh_material;
+
+		mesh.vertex_positions = {
+			// -Z
+			XMFLOAT3(-1,1,	-1),
+			XMFLOAT3(-1,-1,	-1),
+			XMFLOAT3(1,-1,	-1),
+			XMFLOAT3(1,1,	-1),
+
+			// +Z
+			XMFLOAT3(-1,1,	1),
+			XMFLOAT3(-1,-1,	1),
+			XMFLOAT3(1,-1,	1),
+			XMFLOAT3(1,1,	1),
+
+			// -X
+			XMFLOAT3(-1, -1,1),
+			XMFLOAT3(-1, -1,-1),
+			XMFLOAT3(-1, 1,-1),
+			XMFLOAT3(-1, 1,1),
+
+			// +X
+			XMFLOAT3(1, -1,1),
+			XMFLOAT3(1, -1,-1),
+			XMFLOAT3(1, 1,-1),
+			XMFLOAT3(1, 1,1),
+
+			// -Y
+			XMFLOAT3(-1, -1,1),
+			XMFLOAT3(-1, -1,-1),
+			XMFLOAT3(1, -1,-1),
+			XMFLOAT3(1, -1,1),
+
+			// +Y
+			XMFLOAT3(-1, 1,1),
+			XMFLOAT3(-1, 1,-1),
+			XMFLOAT3(1, 1,-1),
+			XMFLOAT3(1, 1,1),
+		};
+
+		mesh.vertex_normals = {
+			XMFLOAT3(0,0,-1),
+			XMFLOAT3(0,0,-1),
+			XMFLOAT3(0,0,-1),
+			XMFLOAT3(0,0,-1),
+
+			XMFLOAT3(0,0,1),
+			XMFLOAT3(0,0,1),
+			XMFLOAT3(0,0,1),
+			XMFLOAT3(0,0,1),
+
+			XMFLOAT3(-1,0,0),
+			XMFLOAT3(-1,0,0),
+			XMFLOAT3(-1,0,0),
+			XMFLOAT3(-1,0,0),
+
+			XMFLOAT3(1,0,0),
+			XMFLOAT3(1,0,0),
+			XMFLOAT3(1,0,0),
+			XMFLOAT3(1,0,0),
+
+			XMFLOAT3(0,-1,0),
+			XMFLOAT3(0,-1,0),
+			XMFLOAT3(0,-1,0),
+			XMFLOAT3(0,-1,0),
+
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+		};
+
+		mesh.vertex_uvset_0 = {
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+		};
+
+		mesh.indices = {
+			0,			1,			2,			0,			2,			3,
+			0 + 4,		2 + 4,		1 + 4,		0 + 4,		3 + 4,		2 + 4,		// swapped winding
+			0 + 4 * 2,	1 + 4 * 2,	2 + 4 * 2,	0 + 4 * 2,	2 + 4 * 2,	3 + 4 * 2,
+			0 + 4 * 3,	2 + 4 * 3,	1 + 4 * 3,	0 + 4 * 3,	3 + 4 * 3,	2 + 4 * 3,	// swapped winding
+			0 + 4 * 4,	2 + 4 * 4,	1 + 4 * 4,	0 + 4 * 4,	3 + 4 * 4,	2 + 4 * 4,	// swapped winding
+			0 + 4 * 5,	1 + 4 * 5,	2 + 4 * 5,	0 + 4 * 5,	2 + 4 * 5,	3 + 4 * 5,
+		};
+
+		// Subset maps a part of the mesh to a material:
+		MeshComponent::MeshSubset& subset = mesh.subsets.emplace_back();
+		subset.indexCount = uint32_t(mesh.indices.size());
+		materials.Create(entity_mesh_material);
+		subset.materialID = entity_mesh_material; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
+
+		// vertex buffer GPU data will be packed and uploaded here:
+		mesh.CreateRenderData();
+
+		return entity;
+	}
+	Entity Scene::Entity_CreatePlane(
+		const std::string& name
+	)
+	{
+		// 1) Create an ObjectComponent, this can be used to instance a mesh:
+		Entity entity = CreateEntity();
+
+		if (!name.empty())
+		{
+			names.Create(entity) = name;
+		}
+
+		layers.Create(entity);
+
+		transforms.Create(entity);
+
+		aabb_objects.Create(entity);
+
+		ObjectComponent& object = objects.Create(entity);
+
+		// 2) Create a mesh, this will contain vertex buffers:
+		//	Here a separate mesh entity is created, to allow efficient instancing (not duplicating mesh data when duplicating objects)
+		Entity entity_mesh_material = CreateEntity();
+
+		if (!name.empty())
+		{
+			names.Create(entity_mesh_material) = name + "_mesh_material";
+		}
+
+		MeshComponent& mesh = meshes.Create(entity_mesh_material);
+
+		// object references the mesh entity (there can be multiple objects referencing one mesh):
+		object.meshID = entity_mesh_material;
+
+		mesh.vertex_positions = {
+			// +Y
+			XMFLOAT3(-1, 0,1),
+			XMFLOAT3(-1, 0,-1),
+			XMFLOAT3(1, 0,-1),
+			XMFLOAT3(1, 0,1),
+		};
+
+		mesh.vertex_normals = {
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+			XMFLOAT3(0,1,0),
+		};
+
+		mesh.vertex_uvset_0 = {
+			XMFLOAT2(0,0),
+			XMFLOAT2(0,1),
+			XMFLOAT2(1,1),
+			XMFLOAT2(1,0),
+		};
+
+		mesh.indices = {
+			0, 1, 2, 0, 2, 3,
+		};
+
+		// Subset maps a part of the mesh to a material:
+		MeshComponent::MeshSubset& subset = mesh.subsets.emplace_back();
+		subset.indexCount = uint32_t(mesh.indices.size());
+		materials.Create(entity_mesh_material);
+		subset.materialID = entity_mesh_material; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
+
+		// vertex buffer GPU data will be packed and uploaded here:
+		mesh.CreateRenderData();
 
 		return entity;
 	}
@@ -3013,6 +3286,8 @@ namespace wi::scene
 
 			ArmatureComponent& armature = armatures[args.jobIndex];
 			Entity entity = armatures.GetEntity(args.jobIndex);
+			if (!transforms.Contains(entity))
+				return;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			// The transform world matrices are in world space, but skinning needs them in armature-local space, 
@@ -3711,6 +3986,8 @@ namespace wi::scene
 		{
 			DecalComponent& decal = decals[i];
 			Entity entity = decals.GetEntity(i);
+			if (!transforms.Contains(entity))
+				continue;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			decal.world = transform.world;
 
@@ -3901,6 +4178,8 @@ namespace wi::scene
 		{
 			EnvironmentProbeComponent& probe = probes[probeIndex];
 			Entity entity = probes.GetEntity(probeIndex);
+			if (!transforms.Contains(entity))
+				continue;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			probe.position = transform.GetPosition();
@@ -3955,6 +4234,8 @@ namespace wi::scene
 
 			ForceFieldComponent& force = forces[args.jobIndex];
 			Entity entity = forces.GetEntity(args.jobIndex);
+			if (!transforms.Contains(entity))
+				return;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			XMMATRIX W = XMLoadFloat4x4(&transform.world);
@@ -3974,6 +4255,8 @@ namespace wi::scene
 
 			LightComponent& light = lights[args.jobIndex];
 			Entity entity = lights.GetEntity(args.jobIndex);
+			if (!transforms.Contains(entity))
+				return;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			AABB& aabb = aabb_lights[args.jobIndex];
 
@@ -4032,6 +4315,8 @@ namespace wi::scene
 
 			HairParticleSystem& hair = hairs[args.jobIndex];
 			Entity entity = hairs.GetEntity(args.jobIndex);
+			if (!transforms.Contains(entity))
+				return;
 
 			const LayerComponent* layer = layers.GetComponent(entity);
 			if (layer != nullptr)
@@ -4115,6 +4400,8 @@ namespace wi::scene
 
 			EmittedParticleSystem& emitter = emitters[args.jobIndex];
 			Entity entity = emitters.GetEntity(args.jobIndex);
+			if (!transforms.Contains(entity))
+				return;
 
 			MaterialComponent* material = materials.GetComponent(entity);
 			if (material != nullptr)

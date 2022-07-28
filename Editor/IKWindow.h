@@ -12,7 +12,6 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::gui::Button createButton;
 	wi::gui::ComboBox targetCombo;
 	wi::gui::CheckBox disabledCheckBox;
 	wi::gui::Slider chainLengthSlider;

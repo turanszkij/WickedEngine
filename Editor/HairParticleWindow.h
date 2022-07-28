@@ -18,7 +18,6 @@ public:
 
 	wi::HairParticleSystem* GetHair();
 
-	wi::gui::Button addButton;
 	wi::gui::ComboBox	meshComboBox;
 	wi::gui::Slider lengthSlider;
 	wi::gui::Slider stiffnessSlider;

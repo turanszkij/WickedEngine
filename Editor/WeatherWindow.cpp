@@ -9,18 +9,96 @@ using namespace wi::graphics;
 void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Weather Window");
-	SetSize(XMFLOAT2(660, 300));
+	wi::gui::Window::Create(ICON_WEATHER " Weather", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	SetSize(XMFLOAT2(660, 1300));
 
-	float x = 180;
+	closeButton.SetTooltip("Delete WeatherComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().weathers.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
+
+	float x = 150;
 	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
+	float wid = 110;
 
+
+	float mod_x = 10;
+
+	primaryButton.Create("Set as primary weather");
+	primaryButton.SetTooltip("This will be set as the primary weather used in rendering");
+	primaryButton.SetPos(XMFLOAT2(mod_x, y));
+	primaryButton.OnClick([=](wi::gui::EventArgs args) {
+
+		Scene& scene = editor->GetCurrentScene();
+		if (!scene.weathers.Contains(entity))
+			return;
+		size_t current = scene.weathers.GetIndex(entity);
+		scene.weathers.MoveItem(current, 0);
+
+		// Also, we invalidate all environment probes to reflect the sky changes.
+		InvalidateProbes();
+
+		});
+	AddWidget(&primaryButton);
+
+	colorComboBox.Create("Color picker mode: ");
+	colorComboBox.SetPos(XMFLOAT2(x, y += step));
+	colorComboBox.AddItem("Ambient color");
+	colorComboBox.AddItem("Horizon color");
+	colorComboBox.AddItem("Zenith color");
+	colorComboBox.AddItem("Ocean color");
+	colorComboBox.AddItem("V. Cloud color");
+	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
+	AddWidget(&colorComboBox);
+
+	colorPicker.Create("Color", wi::gui::Window::WindowControls::NONE);
+	colorPicker.SetPos(XMFLOAT2(mod_x, y += step));
+	colorPicker.SetVisible(false);
+	colorPicker.SetEnabled(true);
+	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		switch (colorComboBox.GetSelected())
+		{
+		default:
+		case 0:
+			weather.ambient = args.color.toFloat3();
+			break;
+		case 1:
+			weather.horizon = args.color.toFloat3();
+			break;
+		case 2:
+			weather.zenith = args.color.toFloat3();
+			break;
+		case 3:
+			weather.oceanParameters.waterColor = args.color.toFloat4();
+			break;
+		case 4:
+			weather.volumetricCloudParameters.Albedo = args.color.toFloat3();
+			break;
+		}
+		});
+	AddWidget(&colorPicker);
+
+	y += colorPicker.GetScale().y + 5;
+
+	float mod_wid = colorPicker.GetScale().x;
+	colorComboBox.SetSize(XMFLOAT2(mod_wid - x + mod_x - hei - 1, hei));
+	primaryButton.SetSize(XMFLOAT2(mod_wid, hei));
 
 	heightFogCheckBox.Create("Height fog: ");
 	heightFogCheckBox.SetSize(XMFLOAT2(hei, hei));
-	heightFogCheckBox.SetPos(XMFLOAT2(x + 100, y));
+	heightFogCheckBox.SetPos(XMFLOAT2(x, y));
 	heightFogCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 		weather.SetHeightFog(args.bValue);
@@ -28,7 +106,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&heightFogCheckBox);
 
 	fogStartSlider.Create(0, 5000, 0, 100000, "Fog Start: ");
-	fogStartSlider.SetSize(XMFLOAT2(100, hei));
+	fogStartSlider.SetSize(XMFLOAT2(wid, hei));
 	fogStartSlider.SetPos(XMFLOAT2(x, y += step));
 	fogStartSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().fogStart = args.fValue;
@@ -36,7 +114,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&fogStartSlider);
 
 	fogEndSlider.Create(1, 5000, 1000, 10000, "Fog End: ");
-	fogEndSlider.SetSize(XMFLOAT2(100, hei));
+	fogEndSlider.SetSize(XMFLOAT2(wid, hei));
 	fogEndSlider.SetPos(XMFLOAT2(x, y += step));
 	fogEndSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().fogEnd = args.fValue;
@@ -44,7 +122,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&fogEndSlider);
 
 	fogHeightStartSlider.Create(-100, 100, 1, 10000, "Fog Height Start: ");
-	fogHeightStartSlider.SetSize(XMFLOAT2(100, hei));
+	fogHeightStartSlider.SetSize(XMFLOAT2(wid, hei));
 	fogHeightStartSlider.SetPos(XMFLOAT2(x, y += step));
 	fogHeightStartSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().fogHeightStart = args.fValue;
@@ -52,7 +130,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&fogHeightStartSlider);
 
 	fogHeightEndSlider.Create(-100, 100, 3, 10000, "Fog Height End: ");
-	fogHeightEndSlider.SetSize(XMFLOAT2(100, hei));
+	fogHeightEndSlider.SetSize(XMFLOAT2(wid, hei));
 	fogHeightEndSlider.SetPos(XMFLOAT2(x, y += step));
 	fogHeightEndSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().fogHeightEnd = args.fValue;
@@ -60,7 +138,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&fogHeightEndSlider);
 
 	fogHeightSkySlider.Create(0, 1, 0, 10000, "Fog Height Sky: ");
-	fogHeightSkySlider.SetSize(XMFLOAT2(100, hei));
+	fogHeightSkySlider.SetSize(XMFLOAT2(wid, hei));
 	fogHeightSkySlider.SetPos(XMFLOAT2(x, y += step));
 	fogHeightSkySlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().fogHeightSky = args.fValue;
@@ -68,7 +146,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&fogHeightSkySlider);
 
 	cloudinessSlider.Create(0, 1, 0.0f, 10000, "Cloudiness: ");
-	cloudinessSlider.SetSize(XMFLOAT2(100, hei));
+	cloudinessSlider.SetSize(XMFLOAT2(wid, hei));
 	cloudinessSlider.SetPos(XMFLOAT2(x, y += step));
 	cloudinessSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().cloudiness = args.fValue;
@@ -76,7 +154,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&cloudinessSlider);
 
 	cloudScaleSlider.Create(0.00005f, 0.001f, 0.0005f, 10000, "Cloud Scale: ");
-	cloudScaleSlider.SetSize(XMFLOAT2(100, hei));
+	cloudScaleSlider.SetSize(XMFLOAT2(wid, hei));
 	cloudScaleSlider.SetPos(XMFLOAT2(x, y += step));
 	cloudScaleSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().cloudScale = args.fValue;
@@ -84,15 +162,15 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&cloudScaleSlider);
 
 	cloudSpeedSlider.Create(0.001f, 0.2f, 0.1f, 10000, "Cloud Speed: ");
-	cloudSpeedSlider.SetSize(XMFLOAT2(100, hei));
+	cloudSpeedSlider.SetSize(XMFLOAT2(wid, hei));
 	cloudSpeedSlider.SetPos(XMFLOAT2(x, y += step));
 	cloudSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().cloudSpeed = args.fValue;
 	});
 	AddWidget(&cloudSpeedSlider);
 
-	cloudShadowAmountSlider.Create(0, 1, 0, 10000, "Cloud Shadow Amount: ");
-	cloudShadowAmountSlider.SetSize(XMFLOAT2(100, hei));
+	cloudShadowAmountSlider.Create(0, 1, 0, 10000, "Cloud Shadow: ");
+	cloudShadowAmountSlider.SetSize(XMFLOAT2(wid, hei));
 	cloudShadowAmountSlider.SetPos(XMFLOAT2(x, y += step));
 	cloudShadowAmountSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().cloud_shadow_amount = args.fValue;
@@ -100,7 +178,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&cloudShadowAmountSlider);
 
 	cloudShadowSpeedSlider.Create(0, 1, 0.2f, 10000, "Cloud Shadow Speed: ");
-	cloudShadowSpeedSlider.SetSize(XMFLOAT2(100, hei));
+	cloudShadowSpeedSlider.SetSize(XMFLOAT2(wid, hei));
 	cloudShadowSpeedSlider.SetPos(XMFLOAT2(x, y += step));
 	cloudShadowSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().cloud_shadow_speed = args.fValue;
@@ -108,7 +186,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&cloudShadowSpeedSlider);
 
 	cloudShadowScaleSlider.Create(0.0001f, 0.02f, 0.005f, 10000, "Cloud Shadow Scale: ");
-	cloudShadowScaleSlider.SetSize(XMFLOAT2(100, hei));
+	cloudShadowScaleSlider.SetSize(XMFLOAT2(wid, hei));
 	cloudShadowScaleSlider.SetPos(XMFLOAT2(x, y += step));
 	cloudShadowScaleSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().cloud_shadow_scale = args.fValue;
@@ -116,7 +194,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&cloudShadowScaleSlider);
 
 	windSpeedSlider.Create(0.0f, 4.0f, 1.0f, 10000, "Wind Speed: ");
-	windSpeedSlider.SetSize(XMFLOAT2(100, hei));
+	windSpeedSlider.SetSize(XMFLOAT2(wid, hei));
 	windSpeedSlider.SetPos(XMFLOAT2(x, y += step));
 	windSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().windSpeed = args.fValue;
@@ -124,7 +202,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&windSpeedSlider);
 
 	windMagnitudeSlider.Create(0.0f, 0.2f, 0.0f, 10000, "Wind Magnitude: ");
-	windMagnitudeSlider.SetSize(XMFLOAT2(100, hei));
+	windMagnitudeSlider.SetSize(XMFLOAT2(wid, hei));
 	windMagnitudeSlider.SetPos(XMFLOAT2(x, y += step));
 	windMagnitudeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		UpdateWind();
@@ -132,7 +210,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&windMagnitudeSlider);
 
 	windDirectionSlider.Create(0, 1, 0, 10000, "Wind Direction: ");
-	windDirectionSlider.SetSize(XMFLOAT2(100, hei));
+	windDirectionSlider.SetSize(XMFLOAT2(wid, hei));
 	windDirectionSlider.SetPos(XMFLOAT2(x, y += step));
 	windDirectionSlider.OnSlide([&](wi::gui::EventArgs args) {
 		UpdateWind();
@@ -140,7 +218,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&windDirectionSlider);
 
 	windWaveSizeSlider.Create(0, 1, 0, 10000, "Wind Wave Size: ");
-	windWaveSizeSlider.SetSize(XMFLOAT2(100, hei));
+	windWaveSizeSlider.SetSize(XMFLOAT2(wid, hei));
 	windWaveSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	windWaveSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().windWaveSize = args.fValue;
@@ -148,7 +226,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&windWaveSizeSlider);
 
 	windRandomnessSlider.Create(0, 10, 5, 10000, "Wind Randomness: ");
-	windRandomnessSlider.SetSize(XMFLOAT2(100, hei));
+	windRandomnessSlider.SetSize(XMFLOAT2(wid, hei));
 	windRandomnessSlider.SetPos(XMFLOAT2(x, y += step));
 	windRandomnessSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().windRandomness = args.fValue;
@@ -156,7 +234,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&windRandomnessSlider);
 
 	skyExposureSlider.Create(0, 4, 1, 10000, "Sky Exposure: ");
-	skyExposureSlider.SetSize(XMFLOAT2(100, hei));
+	skyExposureSlider.SetSize(XMFLOAT2(wid, hei));
 	skyExposureSlider.SetPos(XMFLOAT2(x, y += step));
 	skyExposureSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().skyExposure = args.fValue;
@@ -165,7 +243,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	starsSlider.Create(0, 1, 0.5f, 10000, "Stars: ");
 	starsSlider.SetTooltip("Amount of stars in the night sky (0 to disable). \nIt will only work with the realistic sky enabled. \nThey will be more visible at night time.");
-	starsSlider.SetSize(XMFLOAT2(100, hei));
+	starsSlider.SetSize(XMFLOAT2(wid, hei));
 	starsSlider.SetPos(XMFLOAT2(x, y += step));
 	starsSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().stars = args.fValue;
@@ -189,7 +267,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	realisticskyCheckBox.Create("Realistic sky: ");
 	realisticskyCheckBox.SetTooltip("Physically based sky rendering model.");
 	realisticskyCheckBox.SetSize(XMFLOAT2(hei, hei));
-	realisticskyCheckBox.SetPos(XMFLOAT2(x + 120, y));
+	realisticskyCheckBox.SetPos(XMFLOAT2(x, y += step));
 	realisticskyCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 		weather.SetRealisticSky(args.bValue);
@@ -200,10 +278,39 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&realisticskyCheckBox);
 
+
+	volumetricCloudsCheckBox.Create("Volumetric clouds: ");
+	volumetricCloudsCheckBox.SetTooltip("Enable volumetric cloud rendering, which is separate from the simple cloud parameters.");
+	volumetricCloudsCheckBox.SetSize(XMFLOAT2(hei, hei));
+	volumetricCloudsCheckBox.SetPos(XMFLOAT2(x, y += step));
+	volumetricCloudsCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetVolumetricClouds(args.bValue);
+		});
+	AddWidget(&volumetricCloudsCheckBox);
+
+	coverageAmountSlider.Create(0, 10, 0, 1000, "Coverage amount: ");
+	coverageAmountSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageAmountSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageAmountSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.CoverageAmount = args.fValue;
+		});
+	AddWidget(&coverageAmountSlider);
+
+	coverageMinimumSlider.Create(1, 2, 1, 1000, "Coverage minimmum: ");
+	coverageMinimumSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageMinimumSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageMinimumSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.CoverageMinimum = args.fValue;
+		});
+	AddWidget(&coverageMinimumSlider);
+
 	skyButton.Create("Load Sky");
 	skyButton.SetTooltip("Load a skybox cubemap texture...");
-	skyButton.SetSize(XMFLOAT2(240, hei));
-	skyButton.SetPos(XMFLOAT2(x-100, y += step));
+	skyButton.SetSize(XMFLOAT2(mod_wid, hei));
+	skyButton.SetPos(XMFLOAT2(mod_x, y += step));
 	skyButton.OnClick([=](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 
@@ -237,8 +344,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	colorgradingButton.Create("Load Color Grading LUT");
 	colorgradingButton.SetTooltip("Load a color grading lookup texture. It must be a 256x16 RGBA image!");
-	colorgradingButton.SetSize(XMFLOAT2(240, hei));
-	colorgradingButton.SetPos(XMFLOAT2(x - 100, y += step));
+	colorgradingButton.SetSize(XMFLOAT2(mod_wid, hei));
+	colorgradingButton.SetPos(XMFLOAT2(mod_x, y += step));
 	colorgradingButton.OnClick([=](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 
@@ -270,9 +377,9 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 
 	// Ocean params:
-	ocean_enabledCheckBox.Create("Ocean simulation enabled: ");
+	ocean_enabledCheckBox.Create("Ocean simulation: ");
 	ocean_enabledCheckBox.SetSize(XMFLOAT2(hei, hei));
-	ocean_enabledCheckBox.SetPos(XMFLOAT2(x + 100, y += step));
+	ocean_enabledCheckBox.SetPos(XMFLOAT2(x, y += step));
 	ocean_enabledCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 		weather.SetOceanEnabled(args.bValue);
@@ -285,7 +392,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 
 	ocean_patchSizeSlider.Create(1, 1000, 1000, 100000, "Patch size: ");
-	ocean_patchSizeSlider.SetSize(XMFLOAT2(100, hei));
+	ocean_patchSizeSlider.SetSize(XMFLOAT2(wid, hei));
 	ocean_patchSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	ocean_patchSizeSlider.SetValue(editor->GetCurrentScene().weather.oceanParameters.patch_length);
 	ocean_patchSizeSlider.SetTooltip("Adjust water tiling patch size");
@@ -297,7 +404,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&ocean_patchSizeSlider);
 
 	ocean_waveAmplitudeSlider.Create(0, 1000, 1000, 100000, "Wave amplitude: ");
-	ocean_waveAmplitudeSlider.SetSize(XMFLOAT2(100, hei));
+	ocean_waveAmplitudeSlider.SetSize(XMFLOAT2(wid, hei));
 	ocean_waveAmplitudeSlider.SetPos(XMFLOAT2(x, y += step));
 	ocean_waveAmplitudeSlider.SetValue(editor->GetCurrentScene().weather.oceanParameters.wave_amplitude);
 	ocean_waveAmplitudeSlider.SetTooltip("Adjust wave size");
@@ -309,7 +416,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&ocean_waveAmplitudeSlider);
 
 	ocean_choppyScaleSlider.Create(0, 10, 1000, 100000, "Choppiness: ");
-	ocean_choppyScaleSlider.SetSize(XMFLOAT2(100, hei));
+	ocean_choppyScaleSlider.SetSize(XMFLOAT2(wid, hei));
 	ocean_choppyScaleSlider.SetPos(XMFLOAT2(x, y += step));
 	ocean_choppyScaleSlider.SetValue(editor->GetCurrentScene().weather.oceanParameters.choppy_scale);
 	ocean_choppyScaleSlider.SetTooltip("Adjust wave choppiness");
@@ -320,7 +427,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&ocean_choppyScaleSlider);
 
 	ocean_windDependencySlider.Create(0, 1, 1000, 100000, "Wind dependency: ");
-	ocean_windDependencySlider.SetSize(XMFLOAT2(100, hei));
+	ocean_windDependencySlider.SetSize(XMFLOAT2(wid, hei));
 	ocean_windDependencySlider.SetPos(XMFLOAT2(x, y += step));
 	ocean_windDependencySlider.SetValue(editor->GetCurrentScene().weather.oceanParameters.wind_dependency);
 	ocean_windDependencySlider.SetTooltip("Adjust wind contribution");
@@ -332,7 +439,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&ocean_windDependencySlider);
 
 	ocean_timeScaleSlider.Create(0, 4, 1000, 100000, "Time scale: ");
-	ocean_timeScaleSlider.SetSize(XMFLOAT2(100, hei));
+	ocean_timeScaleSlider.SetSize(XMFLOAT2(wid, hei));
 	ocean_timeScaleSlider.SetPos(XMFLOAT2(x, y += step));
 	ocean_timeScaleSlider.SetValue(editor->GetCurrentScene().weather.oceanParameters.time_scale);
 	ocean_timeScaleSlider.SetTooltip("Adjust simulation speed");
@@ -343,7 +450,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&ocean_timeScaleSlider);
 
 	ocean_heightSlider.Create(-100, 100, 0, 100000, "Water level: ");
-	ocean_heightSlider.SetSize(XMFLOAT2(100, hei));
+	ocean_heightSlider.SetSize(XMFLOAT2(wid, hei));
 	ocean_heightSlider.SetPos(XMFLOAT2(x, y += step));
 	ocean_heightSlider.SetValue(0);
 	ocean_heightSlider.SetTooltip("Adjust water level");
@@ -354,7 +461,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&ocean_heightSlider);
 
 	ocean_detailSlider.Create(1, 10, 0, 9, "Surface Detail: ");
-	ocean_detailSlider.SetSize(XMFLOAT2(100, hei));
+	ocean_detailSlider.SetSize(XMFLOAT2(wid, hei));
 	ocean_detailSlider.SetPos(XMFLOAT2(x, y += step));
 	ocean_detailSlider.SetValue(4);
 	ocean_detailSlider.SetTooltip("Adjust surface tessellation resolution. High values can decrease performance.");
@@ -364,8 +471,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&ocean_detailSlider);
 
-	ocean_toleranceSlider.Create(1, 10, 0, 1000, "Displacement Tolerance: ");
-	ocean_toleranceSlider.SetSize(XMFLOAT2(100, hei));
+	ocean_toleranceSlider.Create(1, 10, 0, 1000, "Tolerance: ");
+	ocean_toleranceSlider.SetSize(XMFLOAT2(wid, hei));
 	ocean_toleranceSlider.SetPos(XMFLOAT2(x, y += step));
 	ocean_toleranceSlider.SetValue(2);
 	ocean_toleranceSlider.SetTooltip("Big waves can introduce glitches on screen borders, this can fix that but surface detail will decrease.");
@@ -376,10 +483,10 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&ocean_toleranceSlider);
 
 
-	ocean_resetButton.Create("Reset Ocean to default");
+	ocean_resetButton.Create("Reset Ocean");
 	ocean_resetButton.SetTooltip("Reset ocean to default values.");
-	ocean_resetButton.SetSize(XMFLOAT2(240, hei));
-	ocean_resetButton.SetPos(XMFLOAT2(x - 100, y += step));
+	ocean_resetButton.SetSize(XMFLOAT2(mod_wid, hei));
+	ocean_resetButton.SetPos(XMFLOAT2(mod_x, y += step));
 	ocean_resetButton.OnClick([=](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 		weather.oceanParameters = wi::Ocean::OceanParameters();
@@ -388,99 +495,14 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&ocean_resetButton);
 
 
-
-
-
-
-
-
-
-
-	x = 340;
-	y = 0;
-
-	colorComboBox.Create("Color picker mode: ");
-	colorComboBox.SetSize(XMFLOAT2(120, hei));
-	colorComboBox.SetPos(XMFLOAT2(x + 150, y));
-	colorComboBox.AddItem("Ambient color");
-	colorComboBox.AddItem("Horizon color");
-	colorComboBox.AddItem("Zenith color");
-	colorComboBox.AddItem("Ocean color");
-	colorComboBox.AddItem("V. Cloud color");
-	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
-	AddWidget(&colorComboBox);
-
-	y += 10;
-
-	colorPicker.Create("Color", false);
-	colorPicker.SetPos(XMFLOAT2(x, y += step));
-	colorPicker.SetVisible(false);
-	colorPicker.SetEnabled(true);
-	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
-		auto& weather = GetWeather();
-		switch (colorComboBox.GetSelected())
-		{
-		default:
-		case 0:
-			weather.ambient = args.color.toFloat3();
-			break;
-		case 1:
-			weather.horizon = args.color.toFloat3();
-			break;
-		case 2:
-			weather.zenith = args.color.toFloat3();
-			break;
-		case 3:
-			weather.oceanParameters.waterColor = args.color.toFloat4();
-			break;
-		case 4:
-			weather.volumetricCloudParameters.Albedo = args.color.toFloat3();
-			break;
-		}
-	});
-	AddWidget(&colorPicker);
-
-	y += colorPicker.GetScale().y;
-
-
-	volumetricCloudsCheckBox.Create("Volumetric clouds: ");
-	volumetricCloudsCheckBox.SetTooltip("Enable volumetric cloud rendering, which is separate from the simple cloud parameters.");
-	volumetricCloudsCheckBox.SetSize(XMFLOAT2(hei, hei));
-	volumetricCloudsCheckBox.SetPos(XMFLOAT2(x + 280, y += step));
-	volumetricCloudsCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		auto& weather = GetWeather();
-		weather.SetVolumetricClouds(args.bValue);
-		});
-	AddWidget(&volumetricCloudsCheckBox);
-
-	coverageAmountSlider.Create(0, 10, 0, 1000, "Coverage amount: ");
-	coverageAmountSlider.SetSize(XMFLOAT2(100, hei));
-	coverageAmountSlider.SetPos(XMFLOAT2(x + 150, y += step));
-	coverageAmountSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto& weather = GetWeather();
-		weather.volumetricCloudParameters.CoverageAmount = args.fValue;
-		});
-	AddWidget(&coverageAmountSlider);
-
-	coverageMinimumSlider.Create(1, 2, 1, 1000, "Coverage minimmum: ");
-	coverageMinimumSlider.SetSize(XMFLOAT2(100, hei));
-	coverageMinimumSlider.SetPos(XMFLOAT2(x + 150, y += step));
-	coverageMinimumSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto& weather = GetWeather();
-		weather.volumetricCloudParameters.CoverageMinimum = args.fValue;
-		});
-	AddWidget(&coverageMinimumSlider);
-
-
 	preset0Button.Create("WeatherPreset - Default");
 	preset0Button.SetTooltip("Apply this weather preset to the world.");
-	preset0Button.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
-	preset0Button.SetPos(XMFLOAT2(x, y += step));
+	preset0Button.SetSize(XMFLOAT2(mod_wid, hei));
+	preset0Button.SetPos(XMFLOAT2(mod_x, y += step));
 	preset0Button.OnClick([=](wi::gui::EventArgs args) {
 
-		Scene& scene = editor->GetCurrentScene();
-		scene.weathers.Clear();
-		scene.weather = WeatherComponent();
+		auto& weather = GetWeather();
+		weather = WeatherComponent();
 
 		InvalidateProbes();
 
@@ -489,8 +511,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	preset1Button.Create("WeatherPreset - Daytime");
 	preset1Button.SetTooltip("Apply this weather preset to the world.");
-	preset1Button.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
-	preset1Button.SetPos(XMFLOAT2(x, y += step));
+	preset1Button.SetSize(XMFLOAT2(mod_wid, hei));
+	preset1Button.SetPos(XMFLOAT2(mod_x, y += step));
 	preset1Button.OnClick([=](wi::gui::EventArgs args) {
 
 		auto& weather = GetWeather();
@@ -509,8 +531,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	preset2Button.Create("WeatherPreset - Sunset");
 	preset2Button.SetTooltip("Apply this weather preset to the world.");
-	preset2Button.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
-	preset2Button.SetPos(XMFLOAT2(x, y += step));
+	preset2Button.SetSize(XMFLOAT2(mod_wid, hei));
+	preset2Button.SetPos(XMFLOAT2(mod_x, y += step));
 	preset2Button.OnClick([=](wi::gui::EventArgs args) {
 
 		auto& weather = GetWeather();
@@ -529,8 +551,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	preset3Button.Create("WeatherPreset - Cloudy");
 	preset3Button.SetTooltip("Apply this weather preset to the world.");
-	preset3Button.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
-	preset3Button.SetPos(XMFLOAT2(x, y += step));
+	preset3Button.SetSize(XMFLOAT2(mod_wid, hei));
+	preset3Button.SetPos(XMFLOAT2(mod_x, y += step));
 	preset3Button.OnClick([=](wi::gui::EventArgs args) {
 
 		auto& weather = GetWeather();
@@ -549,8 +571,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	preset4Button.Create("WeatherPreset - Night");
 	preset4Button.SetTooltip("Apply this weather preset to the world.");
-	preset4Button.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
-	preset4Button.SetPos(XMFLOAT2(x, y += step));
+	preset4Button.SetSize(XMFLOAT2(mod_wid, hei));
+	preset4Button.SetPos(XMFLOAT2(mod_x, y += step));
 	preset4Button.OnClick([=](wi::gui::EventArgs args) {
 
 		auto& weather = GetWeather();
@@ -569,8 +591,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	preset5Button.Create("WeatherPreset - White Furnace");
 	preset5Button.SetTooltip("The white furnace mode sets the environment to fully white, it is useful to test energy conservation of light and materials. \nIf you don't see it as fully white, it is because the tone mapping.");
-	preset5Button.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
-	preset5Button.SetPos(XMFLOAT2(x, y += step));
+	preset5Button.SetSize(XMFLOAT2(mod_wid, hei));
+	preset5Button.SetPos(XMFLOAT2(mod_x, y += step));
 	preset5Button.OnClick([=](wi::gui::EventArgs args) {
 
 		auto& weather = GetWeather();
@@ -591,8 +613,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	eliminateCoarseCascadesButton.Create("EliminateCoarseCascades");
 	eliminateCoarseCascadesButton.SetTooltip("Eliminate the coarse cascade mask for every object in the scene.");
-	eliminateCoarseCascadesButton.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
-	eliminateCoarseCascadesButton.SetPos(XMFLOAT2(x, y += step * 2));
+	eliminateCoarseCascadesButton.SetSize(XMFLOAT2(mod_wid, hei));
+	eliminateCoarseCascadesButton.SetPos(XMFLOAT2(mod_x, y += step * 2));
 	eliminateCoarseCascadesButton.OnClick([=](wi::gui::EventArgs args) {
 
 		Scene& scene = editor->GetCurrentScene();
@@ -607,8 +629,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 	ktxConvButton.Create("KTX2 Convert");
 	ktxConvButton.SetTooltip("All material textures in the scene will be converted to KTX2 format.\nTHIS MIGHT TAKE LONG, SO GET YOURSELF A COFFEE OR TEA!");
-	ktxConvButton.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
-	ktxConvButton.SetPos(XMFLOAT2(x, y += step));
+	ktxConvButton.SetSize(XMFLOAT2(mod_wid, hei));
+	ktxConvButton.SetPos(XMFLOAT2(mod_x, y += step));
 	ktxConvButton.OnClick([=](wi::gui::EventArgs args) {
 
 		Scene& scene = editor->GetCurrentScene();
@@ -659,8 +681,18 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 
 
-	Translate(XMFLOAT3(130, 30, 0));
+	SetMinimized(true);
 	SetVisible(false);
+}
+
+void WeatherWindow::SetEntity(wi::ecs::Entity entity)
+{
+	this->entity = entity;
+	Scene& scene = editor->GetCurrentScene();
+	if (!scene.weathers.Contains(entity))
+	{
+		this->entity = INVALID_ENTITY;
+	}
 }
 
 void WeatherWindow::Update()
@@ -668,7 +700,7 @@ void WeatherWindow::Update()
 	Scene& scene = editor->GetCurrentScene();
 	if (scene.weathers.GetCount() > 0)
 	{
-		auto& weather = scene.weathers[0];
+		auto& weather = GetWeather();
 
 		if (!weather.skyMapName.empty())
 		{
@@ -741,11 +773,11 @@ void WeatherWindow::Update()
 WeatherComponent& WeatherWindow::GetWeather() const
 {
 	Scene& scene = editor->GetCurrentScene();
-	if (scene.weathers.GetCount() == 0)
+	if (!scene.weathers.Contains(entity))
 	{
-		scene.weathers.Create(CreateEntity());
+		return scene.weather;
 	}
-	return scene.weathers[0];
+	return *scene.weathers.GetComponent(entity);
 }
 
 void WeatherWindow::InvalidateProbes() const

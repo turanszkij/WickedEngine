@@ -8,41 +8,32 @@ using namespace wi::scene;
 void HairParticleWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Hair Particle System Window");
+	wi::gui::Window::Create(ICON_HAIR " Hair Particle System", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(600, 260));
 
-	float x = 160;
+	closeButton.SetTooltip("Delete HairParticleSystem");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().hairs.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
+
+	float x = 120;
 	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
-
-
-	addButton.Create("Add Hair Particle System");
-	addButton.SetPos(XMFLOAT2(x, y));
-	addButton.SetSize(XMFLOAT2(200, hei));
-	addButton.OnClick([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		Entity entity = scene.Entity_CreateHair("editorHair");
-
-		wi::Archive& archive = editor->AdvanceHistory();
-		archive << EditorComponent::HISTORYOP_ADD;
-		editor->RecordSelection(archive);
-
-		editor->ClearSelected();
-		editor->AddSelected(entity);
-
-		editor->RecordSelection(archive);
-		editor->RecordAddedEntity(archive, entity);
-
-		editor->RefreshEntityTree();
-		SetEntity(entity);
-	});
-	addButton.SetTooltip("Add new hair particle system.");
-	AddWidget(&addButton);
+	float wid = 150;
 
 	meshComboBox.Create("Mesh: ");
-	meshComboBox.SetSize(XMFLOAT2(300, hei));
-	meshComboBox.SetPos(XMFLOAT2(x, y += step));
+	meshComboBox.SetSize(XMFLOAT2(wid, hei));
+	meshComboBox.SetPos(XMFLOAT2(x, y));
 	meshComboBox.SetEnabled(false);
 	meshComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		auto hair = GetHair();
@@ -63,7 +54,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&meshComboBox);
 
 	countSlider.Create(0, 100000, 1000, 100000, "Strand Count: ");
-	countSlider.SetSize(XMFLOAT2(360, hei));
+	countSlider.SetSize(XMFLOAT2(wid, hei));
 	countSlider.SetPos(XMFLOAT2(x, y += step));
 	countSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto hair = GetHair();
@@ -76,8 +67,8 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	countSlider.SetTooltip("Set hair strand count");
 	AddWidget(&countSlider);
 
-	lengthSlider.Create(0, 4, 1, 100000, "Particle Length: ");
-	lengthSlider.SetSize(XMFLOAT2(360, hei));
+	lengthSlider.Create(0, 4, 1, 100000, "Length: ");
+	lengthSlider.SetSize(XMFLOAT2(wid, hei));
 	lengthSlider.SetPos(XMFLOAT2(x, y += step));
 	lengthSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto hair = GetHair();
@@ -90,8 +81,8 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	lengthSlider.SetTooltip("Set hair strand length");
 	AddWidget(&lengthSlider);
 
-	stiffnessSlider.Create(0, 20, 5, 100000, "Particle Stiffness: ");
-	stiffnessSlider.SetSize(XMFLOAT2(360, hei));
+	stiffnessSlider.Create(0, 20, 5, 100000, "Stiffness: ");
+	stiffnessSlider.SetSize(XMFLOAT2(wid, hei));
 	stiffnessSlider.SetPos(XMFLOAT2(x, y += step));
 	stiffnessSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto hair = GetHair();
@@ -104,8 +95,8 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	stiffnessSlider.SetTooltip("Set hair strand stiffness, how much it tries to get back to rest position.");
 	AddWidget(&stiffnessSlider);
 
-	randomnessSlider.Create(0, 1, 0.2f, 100000, "Particle Randomness: ");
-	randomnessSlider.SetSize(XMFLOAT2(360, hei));
+	randomnessSlider.Create(0, 1, 0.2f, 100000, "Randomness: ");
+	randomnessSlider.SetSize(XMFLOAT2(wid, hei));
 	randomnessSlider.SetPos(XMFLOAT2(x, y += step));
 	randomnessSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto hair = GetHair();
@@ -119,7 +110,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&randomnessSlider);
 
 	segmentcountSlider.Create(1, 10, 1, 9, "Segment Count: ");
-	segmentcountSlider.SetSize(XMFLOAT2(360, hei));
+	segmentcountSlider.SetSize(XMFLOAT2(wid, hei));
 	segmentcountSlider.SetPos(XMFLOAT2(x, y += step));
 	segmentcountSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto hair = GetHair();
@@ -133,7 +124,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&segmentcountSlider);
 
 	randomSeedSlider.Create(1, 12345, 1, 12344, "Random seed: ");
-	randomSeedSlider.SetSize(XMFLOAT2(360, hei));
+	randomSeedSlider.SetSize(XMFLOAT2(wid, hei));
 	randomSeedSlider.SetPos(XMFLOAT2(x, y += step));
 	randomSeedSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto hair = GetHair();
@@ -147,7 +138,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&randomSeedSlider);
 
 	viewDistanceSlider.Create(0, 1000, 100, 10000, "View distance: ");
-	viewDistanceSlider.SetSize(XMFLOAT2(360, hei));
+	viewDistanceSlider.SetSize(XMFLOAT2(wid, hei));
 	viewDistanceSlider.SetPos(XMFLOAT2(x, y += step));
 	viewDistanceSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto hair = GetHair();
@@ -176,7 +167,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&framesXInput);
 
 	framesYInput.Create("");
-	framesYInput.SetPos(XMFLOAT2(x + 250, y));
+	framesYInput.SetPos(XMFLOAT2(x, y += step));
 	framesYInput.SetSize(XMFLOAT2(40, hei));
 	framesYInput.SetText("");
 	framesYInput.SetTooltip("How many vertical frames there are in the spritesheet.");
@@ -208,7 +199,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&frameCountInput);
 
 	frameStartInput.Create("");
-	frameStartInput.SetPos(XMFLOAT2(x + 250, y));
+	frameStartInput.SetPos(XMFLOAT2(x, y += step));
 	frameStartInput.SetSize(XMFLOAT2(40, hei));
 	frameStartInput.SetText("");
 	frameStartInput.SetTooltip("Specifies the first frame of the sheet that can be used.");
@@ -225,7 +216,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 
 
 
-	Translate(XMFLOAT3(200, 50, 0));
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(entity);
@@ -258,7 +249,6 @@ void HairParticleWindow::SetEntity(Entity entity)
 		SetEnabled(false);
 	}
 
-	addButton.SetEnabled(true);
 }
 
 wi::HairParticleSystem* HairParticleWindow::GetHair()

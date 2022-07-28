@@ -6,16 +6,19 @@
 void RendererWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Renderer Window");
+	wi::gui::Window::Create("Renderer", wi::gui::Window::WindowControls::COLLAPSE);
 
 	wi::renderer::SetToDrawDebugEnvProbes(true);
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 400));
+	SetSize(XMFLOAT2(580, 1120));
 
-	float step = 20, itemheight = 18;
-	float x = 220, y = 0;
+	float step = 20;
+	float itemheight = 18;
+	float x = 160;
+	float y = 0;
+	float wid = 110;
 
 	vsyncCheckBox.Create("VSync: ");
 	vsyncCheckBox.SetTooltip("Toggle vertical sync");
@@ -29,7 +32,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 	AddWidget(&vsyncCheckBox);
 
 	swapchainComboBox.Create("Swapchain format: ");
-	swapchainComboBox.SetSize(XMFLOAT2(100, itemheight));
+	swapchainComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	swapchainComboBox.SetPos(XMFLOAT2(x, y += step));
 	swapchainComboBox.SetTooltip("Choose between different display output formats.\nIf the display doesn't support the selected format, it will switch back to a reasonable default.\nHDR formats will be only selectable when the current display supports HDR output");
 	AddWidget(&swapchainComboBox);
@@ -48,7 +51,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 	visibilityComputeShadingCheckBox.Create("VCS: ");
 	visibilityComputeShadingCheckBox.SetTooltip("Visibility Compute Shading (experimental)\nThis will shade the scene in compute shaders instead of pixel shaders\nThis has a higher initial performance cost, but it will be faster in high polygon scenes");
-	visibilityComputeShadingCheckBox.SetPos(XMFLOAT2(x + 120, y));
+	visibilityComputeShadingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	visibilityComputeShadingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	visibilityComputeShadingCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		if (args.bValue)
@@ -65,7 +68,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 	resolutionScaleSlider.Create(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");
 	resolutionScaleSlider.SetTooltip("Adjust the internal rendering resolution.");
-	resolutionScaleSlider.SetSize(XMFLOAT2(100, itemheight));
+	resolutionScaleSlider.SetSize(XMFLOAT2(wid, itemheight));
 	resolutionScaleSlider.SetPos(XMFLOAT2(x, y += step));
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	resolutionScaleSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -80,7 +83,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 	GIBoostSlider.Create(1, 10, 1.0f, 1000.0f, "GI Boost: ");
 	GIBoostSlider.SetTooltip("Adjust the strength of GI.\nNote that values other than 1.0 will cause mismatch with path tracing reference!");
-	GIBoostSlider.SetSize(XMFLOAT2(100, itemheight));
+	GIBoostSlider.SetSize(XMFLOAT2(wid, itemheight));
 	GIBoostSlider.SetPos(XMFLOAT2(x, y += step));
 	GIBoostSlider.SetValue(wi::renderer::GetGIBoost());
 	GIBoostSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -136,7 +139,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 	ddgiRayCountSlider.Create(32, DDGI_MAX_RAYCOUNT, 64, DDGI_MAX_RAYCOUNT - 32, "DDGI RayCount: ");
 	ddgiRayCountSlider.SetTooltip("Adjust the ray count per DDGI probe.");
-	ddgiRayCountSlider.SetSize(XMFLOAT2(100, itemheight));
+	ddgiRayCountSlider.SetSize(XMFLOAT2(wid, itemheight));
 	ddgiRayCountSlider.SetPos(XMFLOAT2(x, y += step));
 	ddgiRayCountSlider.SetValue((float)wi::renderer::GetDDGIRayCount());
 	ddgiRayCountSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -164,7 +167,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 	voxelRadianceDebugCheckBox.SetCheck(wi::renderer::GetToDrawVoxelHelper());
 	AddWidget(&voxelRadianceDebugCheckBox);
 
-	voxelRadianceSecondaryBounceCheckBox.Create("Secondary Light Bounce: ");
+	voxelRadianceSecondaryBounceCheckBox.Create("Voxel GI 2nd Bounce: ");
 	voxelRadianceSecondaryBounceCheckBox.SetTooltip("Toggle secondary light bounce computation for Voxel GI.");
 	voxelRadianceSecondaryBounceCheckBox.SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceSecondaryBounceCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
@@ -186,7 +189,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 	voxelRadianceVoxelSizeSlider.Create(0.25, 2, 1, 7, "Voxel GI Voxel Size: ");
 	voxelRadianceVoxelSizeSlider.SetTooltip("Adjust the voxel size for Voxel GI calculations.");
-	voxelRadianceVoxelSizeSlider.SetSize(XMFLOAT2(100, itemheight));
+	voxelRadianceVoxelSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	voxelRadianceVoxelSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceVoxelSizeSlider.SetValue(wi::renderer::GetVoxelRadianceVoxelSize());
 	voxelRadianceVoxelSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -196,7 +199,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 	voxelRadianceConeTracingSlider.Create(1, 16, 8, 15, "Voxel GI NumCones: ");
 	voxelRadianceConeTracingSlider.SetTooltip("Adjust the number of cones sampled in the radiance gathering phase.");
-	voxelRadianceConeTracingSlider.SetSize(XMFLOAT2(100, itemheight));
+	voxelRadianceConeTracingSlider.SetSize(XMFLOAT2(wid, itemheight));
 	voxelRadianceConeTracingSlider.SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceConeTracingSlider.SetValue((float)wi::renderer::GetVoxelRadianceNumCones());
 	voxelRadianceConeTracingSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -204,9 +207,9 @@ void RendererWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&voxelRadianceConeTracingSlider);
 
-	voxelRadianceRayStepSizeSlider.Create(0.5f, 2.0f, 0.5f, 10000, "Voxel GI Ray Step Size: ");
+	voxelRadianceRayStepSizeSlider.Create(0.5f, 2.0f, 0.5f, 10000, "Voxel GI Ray Step: ");
 	voxelRadianceRayStepSizeSlider.SetTooltip("Adjust the precision of ray marching for cone tracing step. Lower values = more precision but slower performance.");
-	voxelRadianceRayStepSizeSlider.SetSize(XMFLOAT2(100, itemheight));
+	voxelRadianceRayStepSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	voxelRadianceRayStepSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceRayStepSizeSlider.SetValue(wi::renderer::GetVoxelRadianceRayStepSize());
 	voxelRadianceRayStepSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -214,9 +217,9 @@ void RendererWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&voxelRadianceRayStepSizeSlider);
 
-	voxelRadianceMaxDistanceSlider.Create(0, 100, 10, 10000, "Voxel GI Max Distance: ");
+	voxelRadianceMaxDistanceSlider.Create(0, 100, 10, 10000, "Voxel GI Distance: ");
 	voxelRadianceMaxDistanceSlider.SetTooltip("Adjust max raymarching distance for voxel GI.");
-	voxelRadianceMaxDistanceSlider.SetSize(XMFLOAT2(100, itemheight));
+	voxelRadianceMaxDistanceSlider.SetSize(XMFLOAT2(wid, itemheight));
 	voxelRadianceMaxDistanceSlider.SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceMaxDistanceSlider.SetValue(wi::renderer::GetVoxelRadianceMaxDistance());
 	voxelRadianceMaxDistanceSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -290,7 +293,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 	speedMultiplierSlider.Create(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider.SetTooltip("Adjust the global speed (time multiplier)");
-	speedMultiplierSlider.SetSize(XMFLOAT2(100, itemheight));
+	speedMultiplierSlider.SetSize(XMFLOAT2(wid, itemheight));
 	speedMultiplierSlider.SetPos(XMFLOAT2(x, y += step));
 	speedMultiplierSlider.SetValue(wi::renderer::GetGameSpeed());
 	speedMultiplierSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -333,8 +336,8 @@ void RendererWindow::Create(EditorComponent* _editor)
 	shadowTypeComboBox.SetTooltip("Choose between shadowmaps and ray traced shadows (if available).\n(ray traced shadows need hardware raytracing support)");
 	AddWidget(&shadowTypeComboBox);
 
-	shadowProps2DComboBox.Create("2D Shadowmap resolution: ");
-	shadowProps2DComboBox.SetSize(XMFLOAT2(100, itemheight));
+	shadowProps2DComboBox.Create("2D Shadowmap res: ");
+	shadowProps2DComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	shadowProps2DComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadowProps2DComboBox.AddItem("Off");
 	shadowProps2DComboBox.AddItem("128");
@@ -377,8 +380,8 @@ void RendererWindow::Create(EditorComponent* _editor)
 	shadowProps2DComboBox.SetScriptTip("SetShadowProps2D(int resolution, int count, int softShadowQuality)");
 	AddWidget(&shadowProps2DComboBox);
 
-	shadowPropsCubeComboBox.Create("Cube Shadowmap resolution: ");
-	shadowPropsCubeComboBox.SetSize(XMFLOAT2(100, itemheight));
+	shadowPropsCubeComboBox.Create("Cube Shadowmap res: ");
+	shadowPropsCubeComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	shadowPropsCubeComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadowPropsCubeComboBox.AddItem("Off");
 	shadowPropsCubeComboBox.AddItem("128");
@@ -417,7 +420,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 	AddWidget(&shadowPropsCubeComboBox);
 
 	MSAAComboBox.Create("MSAA: ");
-	MSAAComboBox.SetSize(XMFLOAT2(100, itemheight));
+	MSAAComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	MSAAComboBox.SetPos(XMFLOAT2(x, y += step));
 	MSAAComboBox.AddItem("Off");
 	MSAAComboBox.AddItem("2");
@@ -469,7 +472,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 	AddWidget(&temporalAADebugCheckBox);
 
 	textureQualityComboBox.Create("Texture Quality: ");
-	textureQualityComboBox.SetSize(XMFLOAT2(100, itemheight));
+	textureQualityComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	textureQualityComboBox.SetPos(XMFLOAT2(x, y += step));
 	textureQualityComboBox.AddItem("Nearest");
 	textureQualityComboBox.AddItem("Bilinear");
@@ -505,7 +508,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 	mipLodBiasSlider.Create(-2, 2, 0, 100000, "MipLOD Bias: ");
 	mipLodBiasSlider.SetTooltip("Bias the rendered mip map level of the material textures.");
-	mipLodBiasSlider.SetSize(XMFLOAT2(100, itemheight));
+	mipLodBiasSlider.SetSize(XMFLOAT2(wid, itemheight));
 	mipLodBiasSlider.SetPos(XMFLOAT2(x, y += step));
 	mipLodBiasSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER)->GetDesc();
@@ -516,7 +519,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 	raytraceBounceCountSlider.Create(1, 10, 1, 9, "Raytrace Bounces: ");
 	raytraceBounceCountSlider.SetTooltip("How many light bounces to compute when doing ray tracing.");
-	raytraceBounceCountSlider.SetSize(XMFLOAT2(100, itemheight));
+	raytraceBounceCountSlider.SetSize(XMFLOAT2(wid, itemheight));
 	raytraceBounceCountSlider.SetPos(XMFLOAT2(x, y += step));
 	raytraceBounceCountSlider.SetValue((float)wi::renderer::GetRaytraceBounceCount());
 	raytraceBounceCountSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -527,11 +530,11 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 
 	// Visualizer toggles:
-	x = 540, y = 0;
+	y += step;
 
 	nameDebugCheckBox.Create("Name visualizer: ");
 	nameDebugCheckBox.SetTooltip("Visualize the entity names in the scene");
-	nameDebugCheckBox.SetPos(XMFLOAT2(x, y));
+	nameDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
 	nameDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	AddWidget(&nameDebugCheckBox);
 
@@ -589,7 +592,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 	debugForceFieldsCheckBox.SetCheck(wi::renderer::GetToDrawDebugForceFields());
 	AddWidget(&debugForceFieldsCheckBox);
 
-	debugRaytraceBVHCheckBox.Create("Raytrace BVH visualizer: ");
+	debugRaytraceBVHCheckBox.Create("RT BVH visualizer: ");
 	debugRaytraceBVHCheckBox.SetTooltip("Visualize scene BVH if raytracing is enabled");
 	debugRaytraceBVHCheckBox.SetPos(XMFLOAT2(x, y += step));
 	debugRaytraceBVHCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
@@ -609,7 +612,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 	envProbesCheckBox.SetCheck(wi::renderer::GetToDrawDebugEnvProbes());
 	AddWidget(&envProbesCheckBox);
 
-	cameraVisCheckBox.Create("Camera Proxy visualizer: ");
+	cameraVisCheckBox.Create("Camera visualizer: ");
 	cameraVisCheckBox.SetTooltip("Toggle visualization of camera proxies in the scene");
 	cameraVisCheckBox.SetPos(XMFLOAT2(x, y += step));
 	cameraVisCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
@@ -630,9 +633,12 @@ void RendererWindow::Create(EditorComponent* _editor)
 	AddWidget(&gridHelperCheckBox);
 
 
+	y += step;
+
+
 	pickTypeObjectCheckBox.Create("Pick Objects: ");
 	pickTypeObjectCheckBox.SetTooltip("Enable if you want to pick objects with the pointer");
-	pickTypeObjectCheckBox.SetPos(XMFLOAT2(x, y += step * 2));
+	pickTypeObjectCheckBox.SetPos(XMFLOAT2(x, y += step));
 	pickTypeObjectCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	pickTypeObjectCheckBox.SetCheck(true);
 	AddWidget(&pickTypeObjectCheckBox);
@@ -701,10 +707,12 @@ void RendererWindow::Create(EditorComponent* _editor)
 	AddWidget(&pickTypeSoundCheckBox);
 
 
+	step++;
+
 
 	freezeCullingCameraCheckBox.Create("Freeze culling camera: ");
 	freezeCullingCameraCheckBox.SetTooltip("Freeze culling camera update. Scene culling will not be updated with the view");
-	freezeCullingCameraCheckBox.SetPos(XMFLOAT2(x, y += step * 2));
+	freezeCullingCameraCheckBox.SetPos(XMFLOAT2(x, y += step));
 	freezeCullingCameraCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	freezeCullingCameraCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetFreezeCullingCameraEnabled(args.bValue);
@@ -738,7 +746,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 
 
 	Translate(XMFLOAT3(100, 50, 0));
-	SetVisible(false);
+	SetMinimized(true);
 }
 
 uint32_t RendererWindow::GetPickType() const

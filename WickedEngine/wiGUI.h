@@ -61,17 +61,63 @@ namespace wi::gui
 		WIDGETSTATE_COUNT,
 	};
 
+	// These can be used to target a setting for a specific widget control and state:
+	enum WIDGET_ID
+	{
+		// IDs for normal widget states:
+		WIDGET_ID_IDLE = IDLE,
+		WIDGET_ID_FOCUS = FOCUS,
+		WIDGET_ID_ACTIVE = ACTIVE,
+		WIDGET_ID_DEACTIVATING = DEACTIVATING,
+
+		// IDs for special widget states:
+
+		// Slider:
+		WIDGET_ID_SLIDER_BEGIN, // do not use!
+		WIDGET_ID_SLIDER_BASE_IDLE,
+		WIDGET_ID_SLIDER_BASE_FOCUS,
+		WIDGET_ID_SLIDER_BASE_ACTIVE,
+		WIDGET_ID_SLIDER_BASE_DEACTIVATING,
+		WIDGET_ID_SLIDER_KNOB_IDLE,
+		WIDGET_ID_SLIDER_KNOB_FOCUS,
+		WIDGET_ID_SLIDER_KNOB_ACTIVE,
+		WIDGET_ID_SLIDER_KNOB_DEACTIVATING,
+		WIDGET_ID_SLIDER_END, // do not use!
+
+		// Scrollbar:
+		WIDGET_ID_SCROLLBAR_BEGIN, // do not use!
+		WIDGET_ID_SCROLLBAR_BASE_IDLE,
+		WIDGET_ID_SCROLLBAR_BASE_FOCUS,
+		WIDGET_ID_SCROLLBAR_BASE_ACTIVE,
+		WIDGET_ID_SCROLLBAR_BASE_DEACTIVATING,
+		WIDGET_ID_SCROLLBAR_KNOB_INACTIVE,
+		WIDGET_ID_SCROLLBAR_KNOB_HOVER,
+		WIDGET_ID_SCROLLBAR_KNOB_GRABBED,
+		WIDGET_ID_SCROLLBAR_END, // do not use!
+
+		// Combo box:
+		WIDGET_ID_COMBO_DROPDOWN,
+
+		// Window:
+		WIDGET_ID_WINDOW_BASE,
+
+		// other user-defined widget states can be specified after this:
+		//	And you will of course need to handle it yourself in a SetColor() override for example
+		WIDGET_ID_USER,
+	};
+
 	class Widget : public wi::scene::TransformComponent
 	{
 	private:
 		int tooltipTimer = 0;
 	protected:
 		std::string name;
-		std::string tooltip;
-		std::string scriptTip;
 		bool enabled = true;
 		bool visible = true;
+		float shadow = 1;
 		WIDGETSTATE state = IDLE;
+		mutable wi::SpriteFont tooltipFont;
+		mutable wi::SpriteFont scripttipFont;
 
 	public:
 		Widget();
@@ -88,16 +134,20 @@ namespace wi::gui
 		void SetScriptTip(std::string&& value);
 		void SetPos(const XMFLOAT2& value);
 		void SetSize(const XMFLOAT2& value);
+		XMFLOAT2 GetPos() const;
+		virtual XMFLOAT2 GetSize() const;
 		WIDGETSTATE GetState() const;
 		virtual void SetEnabled(bool val);
 		bool IsEnabled() const;
 		virtual void SetVisible(bool val);
 		bool IsVisible() const;
 		// last param default: set color for all states
-		void SetColor(wi::Color color, WIDGETSTATE state = WIDGETSTATE_COUNT);
+		virtual void SetColor(wi::Color color, int id = -1);
 		wi::Color GetColor() const;
 		// last param default: set color for all states
-		void SetImage(wi::Resource textureResource, WIDGETSTATE state = WIDGETSTATE_COUNT);
+		virtual void SetImage(wi::Resource textureResource, int id = -1);
+		float GetShadowRadius() const { return shadow; }
+		void SetShadowRadius(float value) { shadow = value; }
 
 		virtual void Update(const wi::Canvas& canvas, float dt);
 		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const {}
@@ -197,19 +247,25 @@ namespace wi::gui
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		void SetColor(wi::Color color, int id = -1) override;
+
+		void SetVertical(bool value) { vertical = value; }
+		bool IsVertical() const { return vertical; }
 	};
 
 	// Static box that holds text
 	class Label : public Widget
 	{
 	protected:
-		ScrollBar scrollbar;
-		float scrollbar_width = 18;
 	public:
 		void Create(const std::string& name);
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		void SetColor(wi::Color color, int id = -1) override;
+
+		float scrollbar_width = 18;
+		ScrollBar scrollbar;
 	};
 
 	// Text input box
@@ -249,8 +305,6 @@ namespace wi::gui
 		float start = 0, end = 1;
 		float step = 1000;
 		float value = 0;
-
-		TextInputField valueInputField;
 	public:
 		// start : slider minimum value
 		// end : slider maximum value
@@ -267,8 +321,11 @@ namespace wi::gui
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		void SetColor(wi::Color color, int id = -1) override;
 
 		void OnSlide(std::function<void(EventArgs args)> func);
+
+		TextInputField valueInputField;
 	};
 
 	// Two-state clickable box
@@ -321,7 +378,10 @@ namespace wi::gui
 		};
 		wi::vector<Item> items;
 
-		float GetItemOffset(int index) const;
+		wi::Color drop_color = wi::Color::Ghost();
+
+		float GetDropOffset(const wi::Canvas& canvas) const;
+		float GetItemOffset(const wi::Canvas& canvas, int index) const;
 	public:
 		void Create(const std::string& name);
 
@@ -344,6 +404,7 @@ namespace wi::gui
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		void SetColor(wi::Color color, int id = -1) override;
 
 		void OnSelect(std::function<void(EventArgs args)> func);
 	};
@@ -352,32 +413,69 @@ namespace wi::gui
 	class Window :public Widget
 	{
 	protected:
-		Button closeButton;
-		Button minimizeButton;
-		Button resizeDragger_UpperLeft;
-		Button resizeDragger_BottomRight;
-		Button moveDragger;
-		Label label;
-		ScrollBar scrollbar_vertical;
-		ScrollBar scrollbar_horizontal;
 		wi::vector<Widget*> widgets;
 		bool minimized = false;
 		Widget scrollable_area;
-	public:
-		void Create(const std::string& name, bool window_controls = true);
+		float control_size = 20;
+		std::function<void(EventArgs args)> onClose;
+		std::function<void(EventArgs args)> onCollapse;
 
-		void AddWidget(Widget* widget, bool scrollable = true);
+	public:
+		enum class WindowControls
+		{
+			NONE = 0,
+			RESIZE_TOPLEFT = 1 << 0,
+			RESIZE_TOPRIGHT = 1 << 1,
+			RESIZE_BOTTOMLEFT = 1 << 2,
+			RESIZE_BOTTOMRIGHT = 1 << 3,
+			MOVE = 1 << 4,
+			CLOSE = 1 << 5,
+			COLLAPSE = 1 << 6,
+
+			RESIZE = RESIZE_TOPLEFT | RESIZE_TOPRIGHT | RESIZE_BOTTOMLEFT | RESIZE_BOTTOMRIGHT,
+			CLOSE_AND_COLLAPSE = CLOSE | COLLAPSE,
+			ALL = RESIZE | MOVE | CLOSE | COLLAPSE,
+		};
+		void Create(const std::string& name, WindowControls window_controls = WindowControls::ALL);
+
+		enum class AttachmentOptions
+		{
+			NONE = 0,
+			SCROLLABLE = 1 << 0,
+		};
+		void AddWidget(Widget* widget, AttachmentOptions options = AttachmentOptions::SCROLLABLE);
 		void RemoveWidget(Widget* widget);
 		void RemoveWidgets();
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		void SetColor(wi::Color color, int id = -1) override;
 
 		void SetVisible(bool value) override;
 		void SetEnabled(bool value) override;
-		void SetMinimized(bool value);
-		bool IsMinimized() const;
+		void SetCollapsed(bool value);
+		bool IsCollapsed() const;
+		void SetMinimized(bool value); // Same as SetCollapsed()
+		bool IsMinimized() const; // Same as IsCollapsed()
+		void SetControlSize(float value);
+		float GetControlSize() const;
+		XMFLOAT2 GetSize() const override; // For the window, the returned size can be modified by collapsed state
+		XMFLOAT2 GetWidgetAreaSize() const;
+
+		void OnClose(std::function<void(EventArgs args)> func);
+		void OnCollapse(std::function<void(EventArgs args)> func);
+
+		Button closeButton;
+		Button collapseButton;
+		Button resizeDragger_UpperLeft;
+		Button resizeDragger_UpperRight;
+		Button resizeDragger_BottomLeft;
+		Button resizeDragger_BottomRight;
+		Button moveDragger;
+		Label label;
+		ScrollBar scrollbar_vertical;
+		ScrollBar scrollbar_horizontal;
 	};
 
 	// HSV-Color Picker
@@ -395,17 +493,9 @@ namespace wi::gui
 		float saturation = 0.0f;	// [0, 1]
 		float luminance = 1.0f;		// [0, 1]
 
-		TextInputField text_R;
-		TextInputField text_G;
-		TextInputField text_B;
-		TextInputField text_H;
-		TextInputField text_S;
-		TextInputField text_V;
-		Slider alphaSlider;
-
 		void FireEvents();
 	public:
-		void Create(const std::string& name, bool window_controls = true);
+		void Create(const std::string& name, WindowControls window_controls = WindowControls::ALL);
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
@@ -414,6 +504,14 @@ namespace wi::gui
 		void SetPickColor(wi::Color value);
 
 		void OnColorChanged(std::function<void(EventArgs args)> func);
+
+		TextInputField text_R;
+		TextInputField text_G;
+		TextInputField text_B;
+		TextInputField text_H;
+		TextInputField text_S;
+		TextInputField text_V;
+		Slider alphaSlider;
 	};
 
 	// List of items in a tree (parent-child relationships)
@@ -432,8 +530,6 @@ namespace wi::gui
 		std::function<void(EventArgs args)> onSelect;
 		int item_highlight = -1;
 		int opener_highlight = -1;
-
-		ScrollBar scrollbar;
 
 		wi::primitive::Hitbox2D GetHitbox_ListArea() const;
 		wi::primitive::Hitbox2D GetHitbox_Item(int visible_count, int level) const;
@@ -457,8 +553,21 @@ namespace wi::gui
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		void SetColor(wi::Color color, int id = -1) override;
 
 		void OnSelect(std::function<void(EventArgs args)> func);
+
+		ScrollBar scrollbar;
 	};
 
 }
+
+template<>
+struct enable_bitmask_operators<wi::gui::Window::WindowControls> {
+	static const bool enable = true;
+};
+
+template<>
+struct enable_bitmask_operators<wi::gui::Window::AttachmentOptions> {
+	static const bool enable = true;
+};

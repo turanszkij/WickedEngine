@@ -14,6 +14,5 @@ public:
 
 	wi::gui::CheckBox placementCheckBox;
 	wi::gui::Label infoLabel;
-	wi::gui::TextInputField decalNameField;
 };
 

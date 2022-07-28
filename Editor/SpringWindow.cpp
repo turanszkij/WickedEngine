@@ -9,24 +9,32 @@ using namespace wi::scene;
 void SpringWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Spring Window");
-	SetSize(XMFLOAT2(460, 200));
+	wi::gui::Window::Create("Spring", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	SetSize(XMFLOAT2(460, 180));
 
-	float x = 150;
+	closeButton.SetTooltip("Delete SpringComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().springs.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->RefreshEntityTree();
+		});
+
+	float x = 120;
 	float y = 0;
-	float siz = 200;
+	float siz = 140;
 	float hei = 18;
 	float step = hei + 2;
 
-	createButton.Create("Create");
-	createButton.SetTooltip("Create/Remove Spring Component to selected entity");
-	createButton.SetPos(XMFLOAT2(x, y));
-	createButton.SetSize(XMFLOAT2(siz, hei));
-	AddWidget(&createButton);
-
 	debugCheckBox.Create("DEBUG: ");
 	debugCheckBox.SetTooltip("Enabling this will visualize springs as small yellow X-es in the scene");
-	debugCheckBox.SetPos(XMFLOAT2(x, y += step));
+	debugCheckBox.SetPos(XMFLOAT2(x, y));
 	debugCheckBox.SetSize(XMFLOAT2(hei, hei));
 	AddWidget(&debugCheckBox);
 
@@ -84,7 +92,8 @@ void SpringWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&windSlider);
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 700, 80, 0));
+
+	SetMinimized(true);
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
@@ -110,29 +119,6 @@ void SpringWindow::SetEntity(Entity entity)
 	else
 	{
 		SetEnabled(false);
-	}
-
-	const TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
-	if (transform != nullptr)
-	{
-		createButton.SetEnabled(true);
-
-		if (spring == nullptr)
-		{
-			createButton.SetText("Create");
-			createButton.OnClick([=](wi::gui::EventArgs args) {
-				editor->GetCurrentScene().springs.Create(entity);
-				SetEntity(entity);
-				});
-		}
-		else
-		{
-			createButton.SetText("Remove");
-			createButton.OnClick([=](wi::gui::EventArgs args) {
-				editor->GetCurrentScene().springs.Remove_KeepSorted(entity);
-				SetEntity(entity);
-				});
-		}
 	}
 
 	debugCheckBox.SetEnabled(true);

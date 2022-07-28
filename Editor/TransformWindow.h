@@ -12,7 +12,6 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::gui::Button createButton;
 	wi::gui::Button clearButton;
 
 	wi::gui::ComboBox parentCombo;

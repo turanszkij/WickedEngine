@@ -329,6 +329,12 @@ namespace wi::ecs
 		//	0 <= index < GetCount()
 		inline const Component& operator[](size_t index) const { return components[index]; }
 
+		// Returns the tightly packed [read only] entity array
+		inline const wi::vector<Entity>& GetEntityArray() const { return entities; }
+
+		// Returns the tightly packed [read only] component array
+		inline const wi::vector<Component>& GetComponentArray() const { return components; }
+
 	private:
 		// This is a linear array of alive components
 		wi::vector<Component> components;
