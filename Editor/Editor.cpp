@@ -1242,9 +1242,9 @@ void EditorComponent::Load()
 	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		// Dark theme defaults:
-		wi::Color theme_color_idle = wi::Color(100, 130, 150, 100);
+		wi::Color theme_color_idle = wi::Color(100, 130, 150, 150);
 		wi::Color theme_color_focus = wi::Color(100, 180, 200, 200);
-		wi::Color dark_point = wi::Color::Black(); // darker elements will lerp towards this
+		wi::Color dark_point = wi::Color(0, 0, 20, 200); // darker elements will lerp towards this
 
 		switch (args.iValue)
 		{
@@ -1254,13 +1254,13 @@ void EditorComponent::Load()
 			// Bright:
 			theme_color_idle = wi::Color(190, 200, 210, 190);
 			theme_color_focus = wi::Color(200, 220, 250, 230);
-			dark_point = wi::Color(80, 80, 90, 255);
+			dark_point = wi::Color(80, 80, 90, 200);
 			break;
 		case 2:
 			// Soft:
 			theme_color_idle = wi::Color(200, 180, 190, 190);
 			theme_color_focus = wi::Color(240, 190, 200, 230);
-			dark_point = wi::Color(70, 50, 60, 255);
+			dark_point = wi::Color(70, 50, 60, 220);
 			break;
 		}
 
