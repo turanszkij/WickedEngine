@@ -1229,6 +1229,7 @@ namespace wi::gui
 		SetSize(XMFLOAT2(200, 40));
 
 		valueInputField.Create(name + "_endInputField");
+		valueInputField.SetShadowRadius(0);
 		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Enter \"reset\" to reset slider to initial state.");
 		valueInputField.SetValue(end);
 		valueInputField.OnInputAccepted([this, start, end, defaultValue](EventArgs args) {
@@ -1401,7 +1402,7 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + 1 + valueInputField.GetSize().x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -2078,7 +2079,7 @@ namespace wi::gui
 				this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(control_size * 3, control_size * 2, 1)); // don't allow resize to negative or too small
 				this->AttachTo(saved_parent);
 				});
-			AddWidget(&resizeDragger_UpperLeft);
+			AddWidget(&resizeDragger_UpperLeft, AttachmentOptions::NONE);
 		}
 
 		if (has_flag(window_controls, WindowControls::RESIZE_TOPRIGHT))
@@ -2100,7 +2101,7 @@ namespace wi::gui
 				this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(control_size * 3, control_size * 2, 1)); // don't allow resize to negative or too small
 				this->AttachTo(saved_parent);
 				});
-			AddWidget(&resizeDragger_UpperRight);
+			AddWidget(&resizeDragger_UpperRight, AttachmentOptions::NONE);
 		}
 
 		if (has_flag(window_controls, WindowControls::RESIZE_BOTTOMLEFT))
@@ -2122,7 +2123,7 @@ namespace wi::gui
 				this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(control_size * 3, control_size * 2, 1)); // don't allow resize to negative or too small
 				this->AttachTo(saved_parent);
 				});
-			AddWidget(&resizeDragger_BottomLeft);
+			AddWidget(&resizeDragger_BottomLeft, AttachmentOptions::NONE);
 		}
 
 		if (has_flag(window_controls, WindowControls::RESIZE_BOTTOMRIGHT))
@@ -2143,7 +2144,7 @@ namespace wi::gui
 				this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(control_size * 3, control_size * 2, 1)); // don't allow resize to negative or too small
 				this->AttachTo(saved_parent);
 				});
-			AddWidget(&resizeDragger_BottomRight);
+			AddWidget(&resizeDragger_BottomRight, AttachmentOptions::NONE);
 		}
 
 		if (has_flag(window_controls, WindowControls::MOVE))
@@ -2159,7 +2160,7 @@ namespace wi::gui
 				this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 				this->AttachTo(saved_parent);
 				});
-			AddWidget(&moveDragger);
+			AddWidget(&moveDragger, AttachmentOptions::NONE);
 		}
 
 		if (has_flag(window_controls, WindowControls::CLOSE))
@@ -2176,7 +2177,7 @@ namespace wi::gui
 				}
 				});
 			closeButton.SetTooltip("Close window");
-			AddWidget(&closeButton);
+			AddWidget(&closeButton, AttachmentOptions::NONE);
 		}
 
 		if (has_flag(window_controls, WindowControls::COLLAPSE))
@@ -2193,7 +2194,7 @@ namespace wi::gui
 				}
 				});
 			collapseButton.SetTooltip("Collapse/Expand window");
-			AddWidget(&collapseButton);
+			AddWidget(&collapseButton, AttachmentOptions::NONE);
 		}
 
 		if (!has_flag(window_controls, WindowControls::MOVE))
@@ -2203,7 +2204,7 @@ namespace wi::gui
 			label.SetShadowRadius(0);
 			label.SetText(name);
 			label.font.params.h_align = wi::font::WIFALIGN_LEFT;
-			AddWidget(&label);
+			AddWidget(&label, AttachmentOptions::NONE);
 		}
 
 		scrollbar_horizontal.SetVertical(false);
@@ -2229,11 +2230,11 @@ namespace wi::gui
 		SetVisible(true);
 		SetMinimized(false);
 	}
-	void Window::AddWidget(Widget* widget, bool scrollable)
+	void Window::AddWidget(Widget* widget, AttachmentOptions options)
 	{
 		widget->SetEnabled(this->IsEnabled());
 		widget->SetVisible(this->IsVisible());
-		if (scrollable)
+		if (has_flag(options, AttachmentOptions::SCROLLABLE))
 		{
 			widget->AttachTo(&scrollable_area);
 		}

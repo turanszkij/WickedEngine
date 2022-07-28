@@ -388,7 +388,12 @@ namespace wi::gui
 		};
 		void Create(const std::string& name, WindowControls window_controls = WindowControls::ALL);
 
-		void AddWidget(Widget* widget, bool scrollable = true);
+		enum class AttachmentOptions
+		{
+			NONE = 0,
+			SCROLLABLE = 1 << 0,
+		};
+		void AddWidget(Widget* widget, AttachmentOptions options = AttachmentOptions::SCROLLABLE);
 		void RemoveWidget(Widget* widget);
 		void RemoveWidgets();
 
@@ -505,5 +510,10 @@ namespace wi::gui
 
 template<>
 struct enable_bitmask_operators<wi::gui::Window::WindowControls> {
+	static const bool enable = true;
+};
+
+template<>
+struct enable_bitmask_operators<wi::gui::Window::AttachmentOptions> {
 	static const bool enable = true;
 };
