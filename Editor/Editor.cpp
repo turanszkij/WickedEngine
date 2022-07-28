@@ -1296,11 +1296,13 @@ void EditorComponent::Load()
 		set_theme(optionsWnd);
 		set_theme(componentWindow);
 
-		sceneComboBox.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
-		sceneComboBox.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
+		sceneComboBox.SetColor(wi::Color(50, 100, 255, 180), wi::gui::IDLE);
+		sceneComboBox.SetColor(wi::Color(120, 160, 255, 255), wi::gui::FOCUS);
 
-		saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
-		saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
+		saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
+		saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
+
+		materialWnd.textureSlotButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 
 		});
 	optionsWnd.AddWidget(&themeCombo);
