@@ -260,7 +260,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create(ICON_FA_CUBES " Object", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create(ICON_OBJECT " Object", wi::gui::Window::WindowControls::COLLAPSE);
 	SetSize(XMFLOAT2(670, 860));
 
 	float x = 140;

@@ -2100,6 +2100,37 @@ namespace wi::scene
 
 		bounds = AABB::Merge(bounds, other.bounds);
 	}
+	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
+	{
+		entities.insert(names.GetEntityArray().begin(), names.GetEntityArray().end());
+		entities.insert(layers.GetEntityArray().begin(), layers.GetEntityArray().end());
+		entities.insert(transforms.GetEntityArray().begin(), transforms.GetEntityArray().end());
+		entities.insert(hierarchy.GetEntityArray().begin(), hierarchy.GetEntityArray().end());
+		entities.insert(materials.GetEntityArray().begin(), materials.GetEntityArray().end());
+		entities.insert(meshes.GetEntityArray().begin(), meshes.GetEntityArray().end());
+		entities.insert(impostors.GetEntityArray().begin(), impostors.GetEntityArray().end());
+		entities.insert(objects.GetEntityArray().begin(), objects.GetEntityArray().end());
+		entities.insert(aabb_objects.GetEntityArray().begin(), aabb_objects.GetEntityArray().end());
+		entities.insert(rigidbodies.GetEntityArray().begin(), rigidbodies.GetEntityArray().end());
+		entities.insert(softbodies.GetEntityArray().begin(), softbodies.GetEntityArray().end());
+		entities.insert(armatures.GetEntityArray().begin(), armatures.GetEntityArray().end());
+		entities.insert(lights.GetEntityArray().begin(), lights.GetEntityArray().end());
+		entities.insert(aabb_lights.GetEntityArray().begin(), aabb_lights.GetEntityArray().end());
+		entities.insert(cameras.GetEntityArray().begin(), cameras.GetEntityArray().end());
+		entities.insert(probes.GetEntityArray().begin(), probes.GetEntityArray().end());
+		entities.insert(aabb_probes.GetEntityArray().begin(), aabb_probes.GetEntityArray().end());
+		entities.insert(forces.GetEntityArray().begin(), forces.GetEntityArray().end());
+		entities.insert(decals.GetEntityArray().begin(), decals.GetEntityArray().end());
+		entities.insert(aabb_decals.GetEntityArray().begin(), aabb_decals.GetEntityArray().end());
+		entities.insert(animations.GetEntityArray().begin(), animations.GetEntityArray().end());
+		entities.insert(animation_datas.GetEntityArray().begin(), animation_datas.GetEntityArray().end());
+		entities.insert(emitters.GetEntityArray().begin(), emitters.GetEntityArray().end());
+		entities.insert(hairs.GetEntityArray().begin(), hairs.GetEntityArray().end());
+		entities.insert(weathers.GetEntityArray().begin(), weathers.GetEntityArray().end());
+		entities.insert(sounds.GetEntityArray().begin(), sounds.GetEntityArray().end());
+		entities.insert(inverse_kinematics.GetEntityArray().begin(), inverse_kinematics.GetEntityArray().end());
+		entities.insert(springs.GetEntityArray().begin(), springs.GetEntityArray().end());
+	}
 
 	void Scene::Entity_Remove(Entity entity, bool recursive)
 	{

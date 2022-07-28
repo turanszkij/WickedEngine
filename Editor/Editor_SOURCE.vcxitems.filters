@@ -111,6 +111,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)TerrainGenerator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)FontAwesomeV6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IconsFontAwesome6.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)IconDefinitions.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
@@ -136,40 +137,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)images\armature.dds">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\camera.dds">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\decal.dds">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\directional_light.dds">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\emitter.dds">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\forcefield.dds">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\hair.dds">
-      <Filter>images</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)images\logo_small.png">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\pointlight.dds">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\sound.dds">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\spotlight.dds">
-      <Filter>images</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)images\ripple.png">
       <Filter>images</Filter>
     </Image>
     <Image Include="$(MSBuildThisFileDirectory)terrain\base.jpg">

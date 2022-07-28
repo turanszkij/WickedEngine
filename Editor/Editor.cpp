@@ -260,26 +260,13 @@ void EditorComponent::ResizeLayout()
 }
 void EditorComponent::Load()
 {
-	wi::jobsystem::context ctx;
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { pointLightTex = wi::resourcemanager::Load("images/pointlight.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { spotLightTex = wi::resourcemanager::Load("images/spotlight.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { dirLightTex = wi::resourcemanager::Load("images/directional_light.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { decalTex = wi::resourcemanager::Load("images/decal.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { forceFieldTex = wi::resourcemanager::Load("images/forcefield.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { emitterTex = wi::resourcemanager::Load("images/emitter.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { hairTex = wi::resourcemanager::Load("images/hair.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { cameraTex = wi::resourcemanager::Load("images/camera.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { armatureTex = wi::resourcemanager::Load("images/armature.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { soundTex = wi::resourcemanager::Load("images/sound.dds"); });
-	// wait for ctx is at the end of this function!
-
 	// Font icon is from #include "FontAwesomeV6.h"
 	//	We will not directly use this font style, but let the font renderer fall back on it
 	//	when an icon character is not found in the default font.
 	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, sizeof(font_awesome_v6));
 
 
-	saveButton.Create(ICON_FA_FLOPPY_DISK " Save");
+	saveButton.Create(ICON_SAVE " Save");
 	saveButton.font.params.shadowColor = wi::Color::Transparent();
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)");
 	saveButton.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
@@ -290,7 +277,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&saveButton);
 
 
-	openButton.Create(ICON_FA_FOLDER_OPEN " Open");
+	openButton.Create(ICON_OPEN " Open");
 	openButton.font.params.shadowColor = wi::Color::Transparent();
 	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...");
 	openButton.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
@@ -381,7 +368,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&openButton);
 
 
-	closeButton.Create(ICON_FA_TRASH " Close");
+	closeButton.Create(ICON_CLOSE " Close");
 	closeButton.font.params.shadowColor = wi::Color::Transparent();
 	closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, and delete the scene.\nThis operation cannot be undone!");
 	closeButton.SetColor(wi::Color(255, 130, 100, 180), wi::gui::WIDGETSTATE::IDLE);
@@ -428,7 +415,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&closeButton);
 
 
-	aboutButton.Create(ICON_FA_CIRCLE_QUESTION);
+	aboutButton.Create(ICON_HELP);
 	aboutButton.font.params.shadowColor = wi::Color::Transparent();
 	aboutButton.SetTooltip("About...");
 	aboutButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
@@ -494,7 +481,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&aboutLabel);
 	}
 
-	exitButton.Create(ICON_FA_CIRCLE_XMARK);
+	exitButton.Create(ICON_EXIT);
 	exitButton.font.params.shadowColor = wi::Color::Transparent();
 	exitButton.SetTooltip("Exit");
 	exitButton.SetColor(wi::Color(160, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
@@ -731,6 +718,25 @@ void EditorComponent::Load()
 	optionsWnd.AddWidget(&newCombo);
 
 
+	filterCombo.Create("Filter: ");
+	filterCombo.AddItem("All ", (uint64_t)Filter::All);
+	filterCombo.AddItem("Transform " ICON_TRANSFORM, (uint64_t)Filter::Transform);
+	filterCombo.AddItem("Material " ICON_MATERIAL, (uint64_t)Filter::Material);
+	filterCombo.AddItem("Mesh " ICON_MESH, (uint64_t)Filter::Mesh);
+	filterCombo.AddItem("Object " ICON_OBJECT, (uint64_t)Filter::Object);
+	filterCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, (uint64_t)Filter::EnvironmentProbe);
+	filterCombo.AddItem("Decal " ICON_DECAL, (uint64_t)Filter::Decal);
+	filterCombo.AddItem("Sound " ICON_SOUND, (uint64_t)Filter::Sound);
+	filterCombo.AddItem("Weather " ICON_WEATHER, (uint64_t)Filter::Weather);
+	filterCombo.AddItem("Light " ICON_POINTLIGHT, (uint64_t)Filter::Light);
+	filterCombo.SetTooltip("Apply filtering to the Entities");
+	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
+		filter = (Filter)args.userdata;
+		RefreshEntityTree();
+		});
+	optionsWnd.AddWidget(&filterCombo);
+
+
 	entityTree.Create("Entities");
 	entityTree.SetSize(XMFLOAT2(300, 300));
 	entityTree.OnSelect([this](wi::gui::EventArgs args) {
@@ -817,19 +823,19 @@ void EditorComponent::Load()
 	newComponentCombo.SetTooltip("Add a component to the first selected entity.");
 	newComponentCombo.AddItem("...", ~0ull);
 	newComponentCombo.AddItem("Name", 0);
-	newComponentCombo.AddItem("Layer", 1);
-	newComponentCombo.AddItem("Transform", 2);
-	newComponentCombo.AddItem("Light", 3);
-	newComponentCombo.AddItem("Matetial", 4);
+	newComponentCombo.AddItem("Layer " ICON_LAYER, 1);
+	newComponentCombo.AddItem("Transform " ICON_TRANSFORM, 2);
+	newComponentCombo.AddItem("Light " ICON_POINTLIGHT, 3);
+	newComponentCombo.AddItem("Matetial " ICON_MATERIAL, 4);
 	newComponentCombo.AddItem("Spring", 5);
 	newComponentCombo.AddItem("Inverse Kinematics", 6);
-	newComponentCombo.AddItem("Sound", 7);
-	newComponentCombo.AddItem("Environment Probe", 8);
-	newComponentCombo.AddItem("Emitted Particle System", 9);
-	newComponentCombo.AddItem("Hair Particle System", 10);
-	newComponentCombo.AddItem("Decal", 11);
-	newComponentCombo.AddItem("Weather", 12);
-	newComponentCombo.AddItem("Force Field", 13);
+	newComponentCombo.AddItem("Sound " ICON_SOUND, 7);
+	newComponentCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, 8);
+	newComponentCombo.AddItem("Emitted Particle System " ICON_EMITTER, 9);
+	newComponentCombo.AddItem("Hair Particle System " ICON_HAIR, 10);
+	newComponentCombo.AddItem("Decal " ICON_DECAL, 11);
+	newComponentCombo.AddItem("Weather " ICON_WEATHER, 12);
+	newComponentCombo.AddItem("Force Field " ICON_FORCE, 13);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(0);
 		if (translator.selected.empty())
@@ -1201,8 +1207,6 @@ void EditorComponent::Load()
 
 	});
 	optionsWnd.AddWidget(&terragen);
-
-	wi::jobsystem::Wait(ctx);
 
 	RenderPath2D::Load();
 }
@@ -1688,12 +1692,11 @@ void EditorComponent::Update(float dt)
 				selectAll = false;
 				ClearSelected();
 
-				for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+				selectAllStorage.clear();
+				scene.FindAllEntities(selectAllStorage);
+				for (auto& entity : selectAllStorage)
 				{
-					Entity entity = scene.transforms.GetEntity(i);
-					wi::scene::PickResult picked;
-					picked.entity = entity;
-					AddSelected(picked);
+					AddSelected(entity);
 				}
 			}
 			else if (hovered.entity != INVALID_ENTITY)
@@ -2332,9 +2335,15 @@ void EditorComponent::Render() const
 
 			const XMMATRIX R = XMLoadFloat3x3(&cam.rotationMatrix);
 
-			wi::image::Params fx;
-			fx.customRotation = &R;
-			fx.customProjection = &VP;
+			wi::font::Params fp;
+			fp.customRotation = &R;
+			fp.customProjection = &VP;
+			fp.size = 32; // icon font render quality
+			const float scaling = 0.0025f;
+			fp.h_align = wi::font::WIFALIGN_CENTER;
+			fp.v_align = wi::font::WIFALIGN_CENTER;
+			fp.shadowColor = wi::Color::Shadow();
+			fp.shadow_softness = 1;
 
 			if (rendererWnd.GetPickType() & PICK_LIGHT)
 			{
@@ -2346,22 +2355,19 @@ void EditorComponent::Render() const
 						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-					fx.pos = transform.GetPosition();
-					fx.siz = XMFLOAT2(dist, dist);
-					fx.pivot = XMFLOAT2(0.5f, 0.5f);
-					fx.color = inactiveEntityColor;
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
 
 					if (hovered.entity == entity)
 					{
-						fx.color = hoveredEntityColor;
+						fp.color = hoveredEntityColor;
 					}
 					for (auto& picked : translator.selected)
 					{
 						if (picked.entity == entity)
 						{
-							fx.color = selectedEntityColor;
+							fp.color = selectedEntityColor;
 							break;
 						}
 					}
@@ -2369,13 +2375,13 @@ void EditorComponent::Render() const
 					switch (light.GetType())
 					{
 					case LightComponent::POINT:
-						wi::image::Draw(&pointLightTex.GetTexture(), fx, cmd);
+						wi::font::Draw(ICON_POINTLIGHT, fp, cmd);
 						break;
 					case LightComponent::SPOT:
-						wi::image::Draw(&spotLightTex.GetTexture(), fx, cmd);
+						wi::font::Draw(ICON_SPOTLIGHT, fp, cmd);
 						break;
 					case LightComponent::DIRECTIONAL:
-						wi::image::Draw(&dirLightTex.GetTexture(), fx, cmd);
+						wi::font::Draw(ICON_DIRECTIONALLIGHT, fp, cmd);
 						break;
 					default:
 						break;
@@ -2392,28 +2398,25 @@ void EditorComponent::Render() const
 						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-					fx.pos = transform.GetPosition();
-					fx.siz = XMFLOAT2(dist, dist);
-					fx.pivot = XMFLOAT2(0.5f, 0.5f);
-					fx.color = inactiveEntityColor;
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
 
 					if (hovered.entity == entity)
 					{
-						fx.color = hoveredEntityColor;
+						fp.color = hoveredEntityColor;
 					}
 					for (auto& picked : translator.selected)
 					{
 						if (picked.entity == entity)
 						{
-							fx.color = selectedEntityColor;
+							fp.color = selectedEntityColor;
 							break;
 						}
 					}
 
 
-					wi::image::Draw(&decalTex.GetTexture(), fx, cmd);
+					wi::font::Draw(ICON_DECAL, fp, cmd);
 
 				}
 			}
@@ -2427,28 +2430,25 @@ void EditorComponent::Render() const
 						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-					fx.pos = transform.GetPosition();
-					fx.siz = XMFLOAT2(dist, dist);
-					fx.pivot = XMFLOAT2(0.5f, 0.5f);
-					fx.color = inactiveEntityColor;
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
 
 					if (hovered.entity == entity)
 					{
-						fx.color = hoveredEntityColor;
+						fp.color = hoveredEntityColor;
 					}
 					for (auto& picked : translator.selected)
 					{
 						if (picked.entity == entity)
 						{
-							fx.color = selectedEntityColor;
+							fp.color = selectedEntityColor;
 							break;
 						}
 					}
 
 
-					wi::image::Draw(&forceFieldTex.GetTexture(), fx, cmd);
+					wi::font::Draw(ICON_FORCE, fp, cmd);
 				}
 			}
 
@@ -2461,28 +2461,25 @@ void EditorComponent::Render() const
 						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-					fx.pos = transform.GetPosition();
-					fx.siz = XMFLOAT2(dist, dist);
-					fx.pivot = XMFLOAT2(0.5f, 0.5f);
-					fx.color = inactiveEntityColor;
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
 
 					if (hovered.entity == entity)
 					{
-						fx.color = hoveredEntityColor;
+						fp.color = hoveredEntityColor;
 					}
 					for (auto& picked : translator.selected)
 					{
 						if (picked.entity == entity)
 						{
-							fx.color = selectedEntityColor;
+							fp.color = selectedEntityColor;
 							break;
 						}
 					}
 
 
-					wi::image::Draw(&cameraTex.GetTexture(), fx, cmd);
+					wi::font::Draw(ICON_CAMERA, fp, cmd);
 				}
 			}
 
@@ -2495,28 +2492,25 @@ void EditorComponent::Render() const
 						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-					fx.pos = transform.GetPosition();
-					fx.siz = XMFLOAT2(dist, dist);
-					fx.pivot = XMFLOAT2(0.5f, 0.5f);
-					fx.color = inactiveEntityColor;
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
 
 					if (hovered.entity == entity)
 					{
-						fx.color = hoveredEntityColor;
+						fp.color = hoveredEntityColor;
 					}
 					for (auto& picked : translator.selected)
 					{
 						if (picked.entity == entity)
 						{
-							fx.color = selectedEntityColor;
+							fp.color = selectedEntityColor;
 							break;
 						}
 					}
 
 
-					wi::image::Draw(&armatureTex.GetTexture(), fx, cmd);
+					wi::font::Draw(ICON_ARMATURE, fp, cmd);
 				}
 			}
 
@@ -2529,28 +2523,25 @@ void EditorComponent::Render() const
 						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-					fx.pos = transform.GetPosition();
-					fx.siz = XMFLOAT2(dist, dist);
-					fx.pivot = XMFLOAT2(0.5f, 0.5f);
-					fx.color = inactiveEntityColor;
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
 
 					if (hovered.entity == entity)
 					{
-						fx.color = hoveredEntityColor;
+						fp.color = hoveredEntityColor;
 					}
 					for (auto& picked : translator.selected)
 					{
 						if (picked.entity == entity)
 						{
-							fx.color = selectedEntityColor;
+							fp.color = selectedEntityColor;
 							break;
 						}
 					}
 
 
-					wi::image::Draw(&emitterTex.GetTexture(), fx, cmd);
+					wi::font::Draw(ICON_EMITTER, fp, cmd);
 				}
 			}
 
@@ -2563,28 +2554,25 @@ void EditorComponent::Render() const
 						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-					fx.pos = transform.GetPosition();
-					fx.siz = XMFLOAT2(dist, dist);
-					fx.pivot = XMFLOAT2(0.5f, 0.5f);
-					fx.color = inactiveEntityColor;
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
 
 					if (hovered.entity == entity)
 					{
-						fx.color = hoveredEntityColor;
+						fp.color = hoveredEntityColor;
 					}
 					for (auto& picked : translator.selected)
 					{
 						if (picked.entity == entity)
 						{
-							fx.color = selectedEntityColor;
+							fp.color = selectedEntityColor;
 							break;
 						}
 					}
 
 
-					wi::image::Draw(&hairTex.GetTexture(), fx, cmd);
+					wi::font::Draw(ICON_HAIR, fp, cmd);
 				}
 			}
 
@@ -2597,28 +2585,25 @@ void EditorComponent::Render() const
 						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
-
-					fx.pos = transform.GetPosition();
-					fx.siz = XMFLOAT2(dist, dist);
-					fx.pivot = XMFLOAT2(0.5f, 0.5f);
-					fx.color = inactiveEntityColor;
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
 
 					if (hovered.entity == entity)
 					{
-						fx.color = hoveredEntityColor;
+						fp.color = hoveredEntityColor;
 					}
 					for (auto& picked : translator.selected)
 					{
 						if (picked.entity == entity)
 						{
-							fx.color = selectedEntityColor;
+							fp.color = selectedEntityColor;
 							break;
 						}
 					}
 
 
-					wi::image::Draw(&soundTex.GetTexture(), fx, cmd);
+					wi::font::Draw(ICON_SOUND, fp, cmd);
 				}
 			}
 
@@ -2796,9 +2781,15 @@ void EditorComponent::RefreshOptionsWindow()
 	pos.y += padding;
 
 	x_off = 45;
+
 	newCombo.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
 	newCombo.SetSize(XMFLOAT2(width - x_off - newCombo.GetScale().y - 1, newCombo.GetScale().y));
 	pos.y += newCombo.GetSize().y;
+	pos.y += padding;
+
+	filterCombo.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	filterCombo.SetSize(XMFLOAT2(width - x_off - filterCombo.GetScale().y - 1, filterCombo.GetScale().y));
+	pos.y += filterCombo.GetSize().y;
 	pos.y += padding;
 
 	entityTree.SetPos(pos);
@@ -2826,63 +2817,63 @@ void EditorComponent::PushToEntityTree(wi::ecs::Entity entity, int level)
 	// Icons:
 	if (scene.layers.Contains(entity))
 	{
-		item.name += ICON_FA_LAYER_GROUP " ";
+		item.name += ICON_LAYER " ";
 	}
 	if (scene.transforms.Contains(entity))
 	{
-		item.name += ICON_FA_LOCATION_DOT " ";
+		item.name += ICON_TRANSFORM " ";
 	}
 	if (scene.meshes.Contains(entity))
 	{
-		item.name += ICON_FA_CUBE " ";
+		item.name += ICON_MESH " ";
 	}
 	if (scene.objects.Contains(entity))
 	{
-		item.name += ICON_FA_CUBES " ";
+		item.name += ICON_OBJECT " ";
 	}
 	if (scene.rigidbodies.Contains(entity))
 	{
-		item.name += ICON_FA_CUBES_STACKED " ";
+		item.name += ICON_RIGIDBODY " ";
 	}
 	if (scene.softbodies.Contains(entity))
 	{
-		item.name += ICON_FA_FLAG " ";
+		item.name += ICON_SOFTBODY " ";
 	}
 	if (scene.emitters.Contains(entity))
 	{
-		item.name += ICON_FA_DROPLET " ";
+		item.name += ICON_EMITTER " ";
 	}
 	if (scene.hairs.Contains(entity))
 	{
-		item.name += ICON_FA_SEEDLING " ";
+		item.name += ICON_HAIR " ";
 	}
 	if (scene.forces.Contains(entity))
 	{
-		item.name += ICON_FA_WIND " ";
+		item.name += ICON_FORCE " ";
 	}
 	if (scene.sounds.Contains(entity))
 	{
-		item.name += ICON_FA_VOLUME_HIGH " ";
+		item.name += ICON_SOUND " ";
 	}
 	if (scene.decals.Contains(entity))
 	{
-		item.name += ICON_FA_NOTE_STICKY " ";
+		item.name += ICON_DECAL " ";
 	}
 	if (scene.cameras.Contains(entity))
 	{
-		item.name += ICON_FA_VIDEO " ";
+		item.name += ICON_CAMERA " ";
 	}
 	if (scene.probes.Contains(entity))
 	{
-		item.name += ICON_FA_EARTH_ASIA " ";
+		item.name += ICON_ENVIRONMENTPROBE " ";
 	}
 	if (scene.animations.Contains(entity))
 	{
-		item.name += ICON_FA_PLAY " ";
+		item.name += ICON_ANIMATION " ";
 	}
 	if (scene.armatures.Contains(entity))
 	{
-		item.name += ICON_FA_PERSON " ";
+		item.name += ICON_ARMATURE " ";
 	}
 	if (scene.lights.Contains(entity))
 	{
@@ -2890,24 +2881,28 @@ void EditorComponent::PushToEntityTree(wi::ecs::Entity entity, int level)
 		switch (light->type)
 		{
 		default:
-			item.name += ICON_FA_LIGHTBULB " ";
+		case LightComponent::POINT:
+			item.name += ICON_POINTLIGHT " ";
+			break;
+		case LightComponent::SPOT:
+			item.name += ICON_SPOTLIGHT " ";
 			break;
 		case LightComponent::DIRECTIONAL:
-			item.name += ICON_FA_SUN " ";
+			item.name += ICON_DIRECTIONALLIGHT " ";
 			break;
 		}
 	}
 	if (scene.materials.Contains(entity))
 	{
-		item.name += ICON_FA_FILL_DRIP " ";
+		item.name += ICON_MATERIAL " ";
 	}
 	if (scene.weathers.Contains(entity))
 	{
-		item.name += ICON_FA_CLOUD " ";
+		item.name += ICON_WEATHER " ";
 	}
 	if (entity == terragen.terrainEntity)
 	{
-		item.name += ICON_FA_MOUNTAIN_SUN " ";
+		item.name += ICON_TERRAIN " ";
 	}
 
 	const NameComponent* name = scene.names.GetComponent(entity);
@@ -2950,113 +2945,176 @@ void EditorComponent::RefreshEntityTree()
 
 	entityTree.ClearItems();
 
-	// Add hierarchy:
-	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.hierarchy[i].parentID, 0);
+		// Add hierarchy:
+		for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.hierarchy[i].parentID, 0);
+		}
 	}
 
-	// Any transform left that is not part of a hierarchy:
-	for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+	if (has_flag(filter, Filter::Transform))
 	{
-		PushToEntityTree(scene.transforms.GetEntity(i), 0);
+		// Any transform left that is not part of a hierarchy:
+		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.transforms.GetEntity(i), 0);
+		}
 	}
 
-	// Add any left over entities that might not have had a transform:
+	// Add any left over entities that might not have had a hierarchy or transform:
 
-	for (size_t i = 0; i < scene.lights.GetCount(); ++i)
+	if (has_flag(filter, Filter::Light))
 	{
-		PushToEntityTree(scene.lights.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.lights.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.lights.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.decals.GetCount(); ++i)
+	if (has_flag(filter, Filter::Decal))
 	{
-		PushToEntityTree(scene.decals.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.decals.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.decals.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.cameras.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.cameras.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+	if (has_flag(filter, Filter::Material))
 	{
-		PushToEntityTree(scene.materials.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.materials.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+	if (has_flag(filter, Filter::Mesh))
 	{
-		PushToEntityTree(scene.meshes.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.meshes.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.armatures.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.armatures.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	if (has_flag(filter, Filter::Object))
 	{
-		PushToEntityTree(scene.objects.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.objects.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.weathers.GetCount(); ++i)
+	if (has_flag(filter, Filter::Weather))
 	{
-		PushToEntityTree(scene.weathers.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.weathers.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.weathers.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
+	if (has_flag(filter, Filter::Sound))
 	{
-		PushToEntityTree(scene.sounds.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.sounds.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.hairs.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.hairs.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.emitters.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.emitters.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.animations.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.animations.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.animations.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.animations.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.probes.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.probes.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.probes.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.forces.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.forces.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.forces.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.rigidbodies.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.rigidbodies.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.softbodies.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.softbodies.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.springs.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.springs.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.springs.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.springs.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.inverse_kinematics.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.inverse_kinematics.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.inverse_kinematics.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.inverse_kinematics.GetEntity(i), 0);
+		}
 	}
 
-	for (size_t i = 0; i < scene.names.GetCount(); ++i)
+	if (has_flag(filter, Filter::All))
 	{
-		PushToEntityTree(scene.names.GetEntity(i), 0);
+		for (size_t i = 0; i < scene.names.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.names.GetEntity(i), 0);
+		}
 	}
 
 	entitytree_added_items.clear();

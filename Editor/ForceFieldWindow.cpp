@@ -9,7 +9,7 @@ using namespace wi::scene;
 void ForceFieldWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create(ICON_FA_WIND " Force Field", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_FORCE " Force Field", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(420, 120));
 
 	closeButton.SetTooltip("Delete ForceFieldComponent");

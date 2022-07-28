@@ -16,6 +16,7 @@
 #include "wiECS.h"
 #include "wiVector.h"
 #include "wiRectPacker.h"
+#include "wiUnorderedSet.h"
 
 #include <string>
 #include <memory>
@@ -1460,6 +1461,8 @@ namespace wi::scene
 		// Merge an other scene into this.
 		//	The contents of the other scene will be lost (and moved to this)!
 		void Merge(Scene& other);
+		// Finds all entities in the scene that have any components attached
+		void FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const;
 
 		// Removes (deletes) a specific entity from the scene (if it exists):
 		//	recursive	: also removes children if true

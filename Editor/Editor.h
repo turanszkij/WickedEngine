@@ -26,7 +26,7 @@
 #include "LayerWindow.h"
 #include "NameWindow.h"
 
-#include "IconsFontAwesome6.h" // icon descriptions, source: https://github.com/juliettef/IconFontCppHeaders
+#include "IconDefinitions.h"
 
 class EditorLoadingScreen : public wi::LoadingScreen
 {
@@ -41,17 +41,6 @@ public:
 class Editor;
 class EditorComponent : public wi::RenderPath2D
 {
-private:
-	wi::Resource pointLightTex;
-	wi::Resource spotLightTex;
-	wi::Resource dirLightTex;
-	wi::Resource decalTex;
-	wi::Resource forceFieldTex;
-	wi::Resource emitterTex;
-	wi::Resource hairTex;
-	wi::Resource cameraTex;
-	wi::Resource armatureTex;
-	wi::Resource soundTex;
 public:
 	MaterialWindow materialWnd;
 	PostprocessWindow postprocessWnd;
@@ -98,7 +87,22 @@ public:
 	wi::gui::ComboBox sceneComboBox;
 	void RefreshOptionsWindow();
 
+	enum class Filter : uint64_t
+	{
+		Transform = 1 << 0,
+		Material = 1 << 1,
+		Mesh = 1 << 2,
+		Object = 1 << 3,
+		EnvironmentProbe = 1 << 4,
+		Decal = 1 << 5,
+		Sound = 1 << 6,
+		Weather = 1 << 7,
+		Light = 1 << 8,
+
+		All = ~0ull,
+	} filter = Filter::All;
 	wi::gui::ComboBox newCombo;
+	wi::gui::ComboBox filterCombo;
 	wi::gui::TreeList entityTree;
 	wi::unordered_set<wi::ecs::Entity> entitytree_added_items;
 	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
@@ -160,6 +164,7 @@ public:
 	void AddSelected(const wi::scene::PickResult& picked);
 	bool IsSelected(wi::ecs::Entity entity) const;
 	bool selectAll = false;
+	wi::unordered_set<wi::ecs::Entity> selectAllStorage;
 
 
 	wi::Archive clipboard;
@@ -254,3 +259,8 @@ public:
 	void Initialize() override;
 };
 
+
+template<>
+struct enable_bitmask_operators<EditorComponent::Filter> {
+	static const bool enable = true;
+};
