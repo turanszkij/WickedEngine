@@ -813,6 +813,11 @@ namespace wi::gui
 	{
 		onDragEnd = func;
 	}
+	void Button::SetTheme(const Theme& theme, int id)
+	{
+		Widget::SetTheme(theme, id);
+		theme.font.Apply(font_description.params);
+	}
 
 
 

@@ -1326,6 +1326,7 @@ void EditorComponent::Load()
 
 			if ((Theme)args.userdata == Theme::Hacking)
 			{
+				widget.SetColor(wi::Color(0, 200, 0, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
 				widget.SetColor(wi::Color(0, 200, 0, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
 			}
 
@@ -1340,6 +1341,8 @@ void EditorComponent::Load()
 		saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
 
 		materialWnd.textureSlotButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		paintToolWnd.brushTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		paintToolWnd.revealTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 
 		});
 	optionsWnd.AddWidget(&themeCombo);

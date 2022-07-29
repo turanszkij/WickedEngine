@@ -271,6 +271,7 @@ namespace wi::gui
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		void SetTheme(const Theme& theme, int id = -1) override;
 
 		void OnClick(std::function<void(EventArgs args)> func);
 		void OnDragStart(std::function<void(EventArgs args)> func);
