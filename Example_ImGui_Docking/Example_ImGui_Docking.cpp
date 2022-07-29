@@ -748,7 +748,7 @@ void Example_ImGuiRenderer::Update(float dt)
 									filename += " (" + std::to_string((int)iwidth) + "x" + std::to_string((int)iheight) + ")";
 
 									ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2((ImGui::GetContentRegionAvail().x * 0.5f) - (ImGui::CalcTextSize(filename.c_str()).x * 0.5f), 0.0f));
-									ImGui::Text(filename.c_str());
+									ImGui::Text("%s", filename.c_str());
 									ImGui::EndTooltip();
 								}
 								ImGui::NextColumn();
@@ -1296,7 +1296,7 @@ void Example_ImGuiRenderer::Update(float dt)
 					current_debug_image++;
 					std::string title = debug_texture_name[i];
 					ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2((ImGui::GetContentRegionAvail().x * 0.5f) - (ImGui::CalcTextSize(title.c_str()).x * 0.5f), 0.0f));
-					ImGui::Text(title.c_str());
+					ImGui::Text("%s", title.c_str());
 					float img_width = ImGui::GetContentRegionAvail().x - 2.0f;
 					float iheight = (float) lpTexture->desc.height;
 					float iwidth = (float) lpTexture->desc.width;
@@ -1310,7 +1310,7 @@ void Example_ImGuiRenderer::Update(float dt)
 						ImGui::BeginTooltip();
 						ImGui::ImageButton(lpTexture, ImVec2(800, 800 * height_ratio));
 						ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2((ImGui::GetContentRegionAvail().x * 0.5f) - (ImGui::CalcTextSize(title.c_str()).x * 0.5f), 0.0f));
-						ImGui::Text(title.c_str());
+						ImGui::Text("%s", title.c_str());
 						ImGui::EndTooltip();
 					}
 
@@ -1419,7 +1419,7 @@ void Example_ImGuiRenderer::Update(float dt)
 		}
 
 		ImGui::BeginChild("##log", ImVec2(0.0f, 0.0f), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-		ImGui::Text(lastlog.c_str());
+		ImGui::Text("%s", lastlog.c_str());
 
 		if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() || bScrollToLastLine)
 			ImGui::SetScrollHereY(1.0f);
@@ -1566,7 +1566,7 @@ void Example_ImGuiRenderer::igTextTitle(const char* text)
 	if (customfontlarge) ImGui::PushFont(customfontlarge);
 	float textwidth = ImGui::CalcTextSize(text).x;
 	ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2((w * 0.5f) - (textwidth * 0.5f) - (window->DC.Indent.x * 0.5f), 0.0f));
-	ImGui::Text(text);
+	ImGui::Text("%s", text);
 	if (customfontlarge) ImGui::PopFont();
 }
 
