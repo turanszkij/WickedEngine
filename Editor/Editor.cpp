@@ -1233,34 +1233,57 @@ void EditorComponent::Load()
 
 
 
+	enum class Theme
+	{
+		Dark,
+		Bright,
+		Soft,
+		Hacking,
+	};
 
 	themeCombo.Create("Theme: ");
 	themeCombo.SetTooltip("Choose a color theme...");
-	themeCombo.AddItem("Dark");
-	themeCombo.AddItem("Bright");
-	themeCombo.AddItem("Soft");
+	themeCombo.AddItem("Dark", (uint64_t)Theme::Dark);
+	themeCombo.AddItem("Bright", (uint64_t)Theme::Bright);
+	themeCombo.AddItem("Soft", (uint64_t)Theme::Soft);
+	themeCombo.AddItem("Hacking", (uint64_t)Theme::Hacking);
 	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		// Dark theme defaults:
 		wi::Color theme_color_idle = wi::Color(100, 130, 150, 150);
 		wi::Color theme_color_focus = wi::Color(100, 180, 200, 200);
 		wi::Color dark_point = wi::Color(0, 0, 20, 200); // darker elements will lerp towards this
+		wi::gui::Theme theme;
+		theme.image.background = true;
+		theme.image.blendFlag = wi::enums::BLENDMODE_OPAQUE;
+		theme.font.color = wi::Color(160, 240, 250, 255);
+		theme.shadow_color = wi::Color(100, 180, 200, 100);
 
-		switch (args.iValue)
+		switch ((Theme)args.userdata)
 		{
 		default:
 			break;
-		case 1:
-			// Bright:
-			theme_color_idle = wi::Color(190, 200, 210, 190);
-			theme_color_focus = wi::Color(200, 220, 250, 230);
-			dark_point = wi::Color(80, 80, 90, 200);
+		case Theme::Bright:
+			theme_color_idle = wi::Color(200, 210, 220, 230);
+			theme_color_focus = wi::Color(210, 230, 255, 250);
+			dark_point = wi::Color(180, 180, 190, 230);
+			theme.shadow_color = wi::Color::Shadow();
+			theme.font.color = wi::Color(10, 10, 10, 255);
 			break;
-		case 2:
-			// Soft:
+		case Theme::Soft:
 			theme_color_idle = wi::Color(200, 180, 190, 190);
 			theme_color_focus = wi::Color(240, 190, 200, 230);
-			dark_point = wi::Color(70, 50, 60, 220);
+			dark_point = wi::Color(100, 80, 90, 220);
+			theme.shadow_color = wi::Color(240, 190, 200, 100);
+			theme.font.color = wi::Color(255, 230, 240, 255);
+			break;
+		case Theme::Hacking:
+			theme_color_idle = wi::Color(0, 0, 0, 255);
+			theme_color_focus = wi::Color(10, 230, 30, 255);
+			dark_point = wi::Color(0, 0, 0, 255);
+			theme.shadow_color = wi::Color(0, 250, 0, 200);
+			theme.font.color = wi::Color(100, 250, 100, 255);
+			theme.font.shadow_color = wi::Color::Shadow();
 			break;
 		}
 
@@ -1268,6 +1291,9 @@ void EditorComponent::Load()
 		wi::Color theme_color_deactivating = wi::Color::lerp(theme_color_focus, wi::Color::White(), 0.5f);
 
 		auto set_theme = [&](wi::gui::Window& widget) {
+			widget.SetTheme(theme); // set basic params to all states
+
+			// customize colors for specific states:
 			widget.SetColor(theme_color_idle, wi::gui::IDLE);
 			widget.SetColor(theme_color_focus, wi::gui::FOCUS);
 			widget.SetColor(theme_color_active, wi::gui::ACTIVE);
@@ -1292,6 +1318,12 @@ void EditorComponent::Load()
 			widget.SetColor(theme_color_active, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_GRABBED);
 
 			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_COMBO_DROPDOWN);
+
+			if ((Theme)args.userdata == Theme::Hacking)
+			{
+				widget.SetColor(wi::Color(0, 200, 0, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
+			}
+
 		};
 		set_theme(optionsWnd);
 		set_theme(componentWindow);
@@ -1360,7 +1392,7 @@ void EditorComponent::Update(float dt)
 				renderPath->GetGUI().SetVisible(true);
 			}
 			GetGUI().SetVisible(true);
-			main->infoDisplay.active = true;
+			main->infoDisplay.active = infoDisplayCheckBox.GetCheck();
 			wi::profiler::SetEnabled(profilerEnabledCheckBox.GetCheck());
 
 			cinemaModeCheckBox.SetCheck(false);

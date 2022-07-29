@@ -106,6 +106,63 @@ namespace wi::gui
 		WIDGET_ID_USER,
 	};
 
+	struct Theme
+	{
+		// Reduced version of wi::image::Params, excluding position, alignment, etc.
+		struct Image
+		{
+			XMFLOAT4 color = wi::image::Params().color;
+			wi::enums::BLENDMODE blendFlag = wi::image::Params().blendFlag;
+			wi::image::SAMPLEMODE sampleFlag = wi::image::Params().sampleFlag;
+			wi::image::QUALITY quality = wi::image::Params().quality;
+			bool background = wi::image::Params().isBackgroundEnabled();
+		} image;
+
+		// Reduced version of wi::font::Params, excluding position, alignment, etc.
+		struct Font
+		{
+			wi::Color color = wi::font::Params().color;
+			wi::Color shadow_color = wi::font::Params().shadowColor;
+			int style = wi::font::Params().style;
+			float softness = wi::font::Params().softness;
+			float bolden = wi::font::Params().bolden;
+			float shadow_softness = wi::font::Params().shadow_softness;
+			float shadow_bolden = wi::font::Params().shadow_bolden;
+			float shadow_offset_x = wi::font::Params().shadow_offset_x;
+			float shadow_offset_y = wi::font::Params().shadow_offset_y;
+		} font;
+
+		wi::Color shadow_color = wi::Color::Shadow(); // shadow color for whole widget
+
+		void ApplyImageParams(wi::image::Params& params) const
+		{
+			params.color = image.color;
+			params.blendFlag = image.blendFlag;
+			params.sampleFlag = image.sampleFlag;
+			params.quality = image.quality;
+			if (image.background)
+			{
+				params.enableBackground();
+			}
+			else
+			{
+				params.disableBackground();
+			}
+		}
+		void ApplyFontParams(wi::font::Params& params) const
+		{
+			params.color = font.color;
+			params.shadowColor = font.shadow_color;
+			params.style = font.style;
+			params.softness = font.softness;
+			params.bolden = font.bolden;
+			params.shadow_softness = font.shadow_softness;
+			params.shadow_bolden = font.shadow_bolden;
+			params.shadow_offset_x = font.shadow_offset_x;
+			params.shadow_offset_y = font.shadow_offset_y;
+		}
+	};
+
 	class Widget : public wi::scene::TransformComponent
 	{
 	private:
@@ -114,7 +171,8 @@ namespace wi::gui
 		std::string name;
 		bool enabled = true;
 		bool visible = true;
-		float shadow = 1;
+		float shadow = 1; // shadow radius
+		wi::Color shadow_color = wi::Color::Shadow();
 		WIDGETSTATE state = IDLE;
 		mutable wi::SpriteFont tooltipFont;
 		mutable wi::SpriteFont scripttipFont;
@@ -141,17 +199,20 @@ namespace wi::gui
 		bool IsEnabled() const;
 		virtual void SetVisible(bool val);
 		bool IsVisible() const;
-		// last param default: set color for all states
-		virtual void SetColor(wi::Color color, int id = -1);
 		wi::Color GetColor() const;
-		// last param default: set color for all states
-		virtual void SetImage(wi::Resource textureResource, int id = -1);
 		float GetShadowRadius() const { return shadow; }
 		void SetShadowRadius(float value) { shadow = value; }
 
 		virtual void Update(const wi::Canvas& canvas, float dt);
 		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const {}
 		virtual void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
+
+		// last param default: set color for all states
+		//	you can specify a WIDGET_ID here, or your own custom ID if you use your own widget type
+		virtual void SetColor(wi::Color color, int id = -1);
+		virtual void SetShadowColor(wi::Color color);
+		virtual void SetImage(wi::Resource textureResource, int id = -1);
+		virtual void SetTheme(const Theme& theme, int id = -1);
 
 		wi::Sprite sprites[WIDGETSTATE_COUNT];
 		wi::SpriteFont font;
@@ -248,6 +309,7 @@ namespace wi::gui
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
+		void SetTheme(const Theme& theme, int id = -1) override;
 
 		void SetVertical(bool value) { vertical = value; }
 		bool IsVertical() const { return vertical; }
@@ -263,6 +325,7 @@ namespace wi::gui
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
+		void SetTheme(const Theme& theme, int id = -1) override;
 
 		float scrollbar_width = 18;
 		ScrollBar scrollbar;
@@ -293,6 +356,7 @@ namespace wi::gui
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		void SetTheme(const Theme& theme, int id = -1) override;
 
 		void OnInputAccepted(std::function<void(EventArgs args)> func);
 	};
@@ -322,6 +386,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
+		void SetTheme(const Theme& theme, int id = -1) override;
 
 		void OnSlide(std::function<void(EventArgs args)> func);
 
@@ -336,8 +401,6 @@ namespace wi::gui
 		bool checked = false;
 	public:
 		void Create(const std::string& name);
-
-		wi::Sprite sprites_check[WIDGETSTATE_COUNT];
 
 		void SetCheck(bool value);
 		bool GetCheck() const;
@@ -405,6 +468,7 @@ namespace wi::gui
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
+		void SetTheme(const Theme& theme, int id = -1) override;
 
 		void OnSelect(std::function<void(EventArgs args)> func);
 	};
@@ -451,6 +515,8 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
+		void SetShadowColor(wi::Color color) override;
+		void SetTheme(const Theme& theme, int id = -1) override;
 
 		void SetVisible(bool value) override;
 		void SetEnabled(bool value) override;
@@ -554,6 +620,7 @@ namespace wi::gui
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
+		void SetTheme(const Theme& theme, int id = -1) override;
 
 		void OnSelect(std::function<void(EventArgs args)> func);
 

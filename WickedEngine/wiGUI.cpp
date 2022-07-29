@@ -437,6 +437,11 @@ namespace wi::gui
 		state = DEACTIVATING;
 		tooltipTimer = 0;
 	}
+	wi::Color Widget::GetColor() const
+	{
+		return wi::Color::fromFloat4(sprites[GetState()].params.color);
+	}
+
 	void Widget::SetColor(wi::Color color, int id)
 	{
 		if (id < 0)
@@ -446,14 +451,14 @@ namespace wi::gui
 				sprites[i].params.color = color;
 			}
 		}
-		else if(id < arraysize(sprites))
+		else if (id < arraysize(sprites))
 		{
 			sprites[id].params.color = color;
 		}
 	}
-	wi::Color Widget::GetColor() const
+	void Widget::SetShadowColor(wi::Color color)
 	{
-		return wi::Color::fromFloat4(sprites[GetState()].params.color);
+		shadow_color = color;
 	}
 	void Widget::SetImage(wi::Resource textureResource, int id)
 	{
@@ -468,6 +473,22 @@ namespace wi::gui
 		{
 			sprites[id].textureResource = textureResource;
 		}
+	}
+	void Widget::SetTheme(const Theme& theme, int id)
+	{
+		if (id < 0)
+		{
+			for (int i = 0; i < arraysize(sprites); ++i)
+			{
+				theme.ApplyImageParams(sprites[i].params);
+			}
+		}
+		else if (id < arraysize(sprites))
+		{
+			theme.ApplyImageParams(sprites[id].params);
+		}
+		theme.ApplyFontParams(font.params);
+		SetShadowColor(theme.shadow_color);
 	}
 
 	void Widget::AttachTo(Widget* parent)
@@ -720,7 +741,7 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, shadow_color);
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -933,6 +954,22 @@ namespace wi::gui
 			}
 		}
 	}
+	void ScrollBar::SetTheme(const Theme& theme, int id)
+	{
+		Widget::SetTheme(theme, id);
+
+		if (id > WIDGET_ID_SCROLLBAR_BEGIN && id < WIDGET_ID_SCROLLBAR_END)
+		{
+			if (id >= WIDGET_ID_SCROLLBAR_KNOB_INACTIVE)
+			{
+				theme.ApplyImageParams(sprites_knob[id - WIDGET_ID_SCROLLBAR_KNOB_INACTIVE].params);
+			}
+			else if (id >= WIDGET_ID_SCROLLBAR_BASE_IDLE)
+			{
+				theme.ApplyImageParams(sprites[id - WIDGET_ID_SCROLLBAR_BASE_IDLE].params);
+			}
+		}
+	}
 
 
 
@@ -1027,7 +1064,7 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, shadow_color);
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1044,6 +1081,11 @@ namespace wi::gui
 	{
 		Widget::SetColor(color, id);
 		scrollbar.SetColor(color, id);
+	}
+	void Label::SetTheme(const Theme& theme, int id)
+	{
+		Widget::SetTheme(theme, id);
+		scrollbar.SetTheme(theme, id);
 	}
 
 
@@ -1193,7 +1235,7 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, shadow_color);
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1231,6 +1273,11 @@ namespace wi::gui
 			value_new.pop_back();
 		}
 		font_input.SetText(value_new);
+	}
+	void TextInputField::SetTheme(const Theme& theme, int id)
+	{
+		Widget::SetTheme(theme, id);
+		theme.ApplyFontParams(font_description.params);
 	}
 
 
@@ -1423,7 +1470,7 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + 1 + valueInputField.GetSize().x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + 1 + valueInputField.GetSize().x + shadow * 2, scale.y + shadow * 2, shadow_color);
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1466,6 +1513,23 @@ namespace wi::gui
 			}
 		}
 	}
+	void Slider::SetTheme(const Theme& theme, int id)
+	{
+		Widget::SetTheme(theme, id);
+		valueInputField.SetTheme(theme, id);
+
+		if (id > WIDGET_ID_SLIDER_BEGIN && id < WIDGET_ID_SLIDER_END)
+		{
+			if (id >= WIDGET_ID_SLIDER_KNOB_IDLE)
+			{
+				theme.ApplyImageParams(sprites_knob[id - WIDGET_ID_SLIDER_KNOB_IDLE].params);
+			}
+			else if (id >= WIDGET_ID_SLIDER_BASE_IDLE)
+			{
+				theme.ApplyImageParams(sprites[id - WIDGET_ID_SLIDER_BASE_IDLE].params);
+			}
+		}
+	}
 
 
 
@@ -1480,12 +1544,6 @@ namespace wi::gui
 
 		font.params.h_align = wi::font::WIFALIGN_RIGHT;
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
-
-		for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
-		{
-			sprites_check[i].params = sprites[i].params;
-			sprites_check[i].params.color = wi::math::Lerp(sprites[i].params.color, wi::Color::White().toFloat4(), 0.8f);
-		}
 	}
 	void CheckBox::Update(const wi::Canvas& canvas, float dt)
 	{
@@ -1556,10 +1614,6 @@ namespace wi::gui
 		}
 
 		font.params.posY = translation.y + scale.y * 0.5f;
-
-		sprites_check[state].params.pos.x = translation.x + scale.x * 0.25f;
-		sprites_check[state].params.pos.y = translation.y + scale.y * 0.25f;
-		sprites_check[state].params.siz = XMFLOAT2(scale.x * 0.5f, scale.y * 0.5f);
 	}
 	void CheckBox::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -1571,7 +1625,13 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Params fx(
+				translation.x - shadow,
+				translation.y - shadow,
+				scale.x + shadow * 2,
+				scale.y + shadow * 2,
+				shadow_color
+			);
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1585,7 +1645,14 @@ namespace wi::gui
 		// check
 		if (GetCheck())
 		{
-			sprites_check[state].Draw(cmd);
+			wi::image::Params params(
+				translation.x + scale.x * 0.25f,
+				translation.y + scale.y * 0.25f,
+				scale.x * 0.5f,
+				scale.y * 0.5f
+			);
+			params.color = font.params.color;
+			wi::image::Draw(wi::texturehelper::getWhite(), params, cmd);
 		}
 
 	}
@@ -1801,7 +1868,7 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + 1 + scale.y + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + 1 + scale.y + shadow * 2, scale.y + shadow * 2, shadow_color);
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1847,7 +1914,7 @@ namespace wi::gui
 			device->BindPipelineState(&gui_internal().PSO_colored, cmd);
 
 			MiscCB cb;
-			cb.g_xColor = sprites[ACTIVE].params.color;
+			cb.g_xColor = font.params.color;
 			XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(scale.y * 0.25f, scale.y * 0.25f, 1) *
 				XMMatrixRotationZ(drop_offset < 0 ? -XM_PIDIV2 : XM_PIDIV2) *
 				XMMatrixTranslation(translation.x + scale.x + 1 + scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) *
@@ -2094,6 +2161,15 @@ namespace wi::gui
 		if (id == WIDGET_ID_COMBO_DROPDOWN)
 		{
 			drop_color = color;
+		}
+	}
+	void ComboBox::SetTheme(const Theme& theme, int id)
+	{
+		Widget::SetTheme(theme, id);
+
+		if (id == WIDGET_ID_COMBO_DROPDOWN)
+		{
+			drop_color = wi::Color::fromFloat4(theme.image.color);
 		}
 	}
 
@@ -2511,7 +2587,7 @@ namespace wi::gui
 		scrollable_area.AttachTo(this);
 		scrollable_area.scissorRect = scissorRect;
 		scrollable_area.scissorRect.left += 1;
-		scrollable_area.scissorRect.top += (int32_t)control_size + 1;
+		scrollable_area.scissorRect.top += (int32_t)control_size;
 		if (scrollbar_horizontal.parent != nullptr && scrollbar_horizontal.IsScrollbarRequired())
 		{
 			scrollable_area.scissorRect.bottom -= (int32_t)control_size + 1;
@@ -2636,7 +2712,7 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, shadow_color);
 			if (IsMinimized())
 			{
 				fx.siz.y = control_size + shadow * 2;
@@ -2825,6 +2901,22 @@ namespace wi::gui
 		if (id == WIDGET_ID_WINDOW_BASE)
 		{
 			sprites[IDLE].params.color = color;
+		}
+	}
+	void Window::SetShadowColor(wi::Color color)
+	{
+		Widget::SetShadowColor(color);
+		for (auto& widget : widgets)
+		{
+			widget->SetShadowColor(color);
+		}
+	}
+	void Window::SetTheme(const Theme& theme, int id)
+	{
+		Widget::SetTheme(theme, id);
+		for (auto& widget : widgets)
+		{
+			widget->SetTheme(theme, id);
 		}
 	}
 
@@ -3803,7 +3895,7 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, wi::Color::Shadow());
+			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, shadow_color);
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -3962,6 +4054,11 @@ namespace wi::gui
 	{
 		Widget::SetColor(color, id);
 		scrollbar.SetColor(color, id);
+	}
+	void TreeList::SetTheme(const Theme& theme, int id)
+	{
+		Widget::SetTheme(theme, id);
+		scrollbar.SetTheme(theme, id);
 	}
 
 
