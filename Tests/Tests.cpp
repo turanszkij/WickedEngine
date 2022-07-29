@@ -75,11 +75,13 @@ void TestsRenderer::Load()
 	setReflectionsEnabled(true);
 	setFXAAEnabled(false);
 
+	wi::gui::GUI& gui = GetGUI();
+
 	label.Create("Label1");
 	label.SetText("Wicked Engine Test Framework");
 	label.font.params.h_align = wi::font::WIFALIGN_CENTER;
 	label.SetSize(XMFLOAT2(240,20));
-	GetGUI().AddWidget(&label);
+	gui.AddWidget(&label);
 
 	static wi::audio::Sound sound;
 	static wi::audio::SoundInstance soundinstance;
@@ -91,8 +93,6 @@ void TestsRenderer::Load()
 	audioTest.SetText("Play Test Audio");
 	audioTest.SetSize(XMFLOAT2(200, 20));
 	audioTest.SetPos(XMFLOAT2(10, 110));
-	audioTest.SetColor(wi::Color(255, 205, 43, 200), wi::gui::IDLE);
-	audioTest.SetColor(wi::Color(255, 235, 173, 255), wi::gui::FOCUS);
 	audioTest.OnClick([&](wi::gui::EventArgs args) {
 		static bool playing = false;
 
@@ -116,43 +116,33 @@ void TestsRenderer::Load()
 
 		playing = !playing;
 	});
-	GetGUI().AddWidget(&audioTest);
+	gui.AddWidget(&audioTest);
 
 
 	volume.Create(0, 100, 50, 100, "Volume");
 	volume.SetText("Volume: ");
-	volume.SetSize(XMFLOAT2(100, 20));
+	volume.SetSize(XMFLOAT2(120, 20));
 	volume.SetPos(XMFLOAT2(65, 140));
-	volume.sprites_knob[wi::gui::IDLE].params.color = wi::Color(255, 205, 43, 200);
-	volume.sprites_knob[wi::gui::FOCUS].params.color = wi::Color(255, 235, 173, 255);
-	volume.sprites[wi::gui::IDLE].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::gui::WIDGETSTATE::IDLE].params.color, 0.5f);
-	volume.sprites[wi::gui::FOCUS].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::gui::WIDGETSTATE::FOCUS].params.color, 0.5f);
 	volume.OnSlide([](wi::gui::EventArgs args) {
 		wi::audio::SetVolume(args.fValue / 100.0f, &soundinstance);
 	});
-	GetGUI().AddWidget(&volume);
+	gui.AddWidget(&volume);
 
 	direction.Create(-1, 1, 0, 10000, "Direction");
 	direction.SetText("Direction: ");
-	direction.SetSize(XMFLOAT2(100, 20));
+	direction.SetSize(XMFLOAT2(120, 20));
 	direction.SetPos(XMFLOAT2(65, 170));
-	direction.sprites_knob[wi::gui::IDLE].params.color = wi::Color(255, 205, 43, 200);
-	direction.sprites_knob[wi::gui::FOCUS].params.color = wi::Color(255, 235, 173, 255);
-	direction.sprites[wi::gui::IDLE].params.color = wi::math::Lerp(wi::Color::Transparent(), direction.sprites_knob[wi::gui::WIDGETSTATE::IDLE].params.color, 0.5f);
-	direction.sprites[wi::gui::FOCUS].params.color = wi::math::Lerp(wi::Color::Transparent(), direction.sprites_knob[wi::gui::WIDGETSTATE::FOCUS].params.color, 0.5f);
 	direction.OnSlide([](wi::gui::EventArgs args) {
 		wi::audio::SoundInstance3D instance3D;
 		instance3D.emitterPos = XMFLOAT3(args.fValue, 0, 0);
 		wi::audio::Update3D(&soundinstance, instance3D);
 		});
-	GetGUI().AddWidget(&direction);
+	gui.AddWidget(&direction);
 
 	testSelector.Create("TestSelector");
 	testSelector.SetText("Demo: ");
 	testSelector.SetSize(XMFLOAT2(140, 20));
 	testSelector.SetPos(XMFLOAT2(50, 220));
-	testSelector.SetColor(wi::Color(255, 205, 43, 200), wi::gui::IDLE);
-	testSelector.SetColor(wi::Color(255, 235, 173, 255), wi::gui::FOCUS);
 	testSelector.AddItem("HelloWorld", HELLOWORLD);
 	testSelector.AddItem("Model", MODEL);
 	testSelector.AddItem("EmittedParticle 1", EMITTEDPARTICLE1);
@@ -436,7 +426,55 @@ void TestsRenderer::Load()
 
 	});
 	testSelector.SetSelected(0);
-	GetGUI().AddWidget(&testSelector);
+	gui.AddWidget(&testSelector);
+
+	// Set a theme globally:
+	{
+		wi::Color theme_color_idle = wi::Color(100, 130, 150, 150);
+		wi::Color theme_color_focus = wi::Color(100, 180, 200, 200);
+		wi::Color dark_point = wi::Color(0, 0, 20, 200); // darker elements will lerp towards this
+		wi::gui::Theme theme;
+		theme.image.background = true;
+		theme.image.blendFlag = wi::enums::BLENDMODE_OPAQUE;
+		theme.font.color = wi::Color(160, 240, 250, 255);
+		theme.shadow_color = wi::Color(100, 180, 200, 100);
+
+		theme.tooltipImage = theme.image;
+		theme.tooltipImage.color = theme_color_idle;
+		theme.tooltipFont = theme.font;
+		theme.tooltip_shadow_color = theme.shadow_color;
+
+		wi::Color theme_color_active = wi::Color::White();
+		wi::Color theme_color_deactivating = wi::Color::lerp(theme_color_focus, wi::Color::White(), 0.5f);
+
+		gui.SetTheme(theme); // set basic params to all states
+
+		// customize colors for specific states:
+		gui.SetColor(theme_color_idle, wi::gui::IDLE);
+		gui.SetColor(theme_color_focus, wi::gui::FOCUS);
+		gui.SetColor(theme_color_active, wi::gui::ACTIVE);
+		gui.SetColor(theme_color_deactivating, wi::gui::DEACTIVATING);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.7f), wi::gui::WIDGET_ID_WINDOW_BASE);
+
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.75f), wi::gui::WIDGET_ID_SLIDER_BASE_IDLE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_FOCUS);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.85f), wi::gui::WIDGET_ID_SLIDER_BASE_ACTIVE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_DEACTIVATING);
+		gui.SetColor(theme_color_idle, wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
+		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_SLIDER_KNOB_FOCUS);
+		gui.SetColor(theme_color_active, wi::gui::WIDGET_ID_SLIDER_KNOB_ACTIVE);
+		gui.SetColor(theme_color_deactivating, wi::gui::WIDGET_ID_SLIDER_KNOB_DEACTIVATING);
+
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.75f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_IDLE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_FOCUS);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.85f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_ACTIVE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_DEACTIVATING);
+		gui.SetColor(theme_color_idle, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
+		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_HOVER);
+		gui.SetColor(theme_color_active, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_GRABBED);
+
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_COMBO_DROPDOWN);
+	}
 
     RenderPath3D::Load();
 }

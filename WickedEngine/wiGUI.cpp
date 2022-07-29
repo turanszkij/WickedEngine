@@ -188,6 +188,27 @@ namespace wi::gui
 
 		return focus;
 	}
+	void GUI::SetColor(wi::Color color, int id)
+	{
+		for (auto& widget : widgets)
+		{
+			widget->SetColor(color, id);
+		}
+	}
+	void GUI::SetShadowColor(wi::Color color)
+	{
+		for (auto& widget : widgets)
+		{
+			widget->SetShadowColor(color);
+		}
+	}
+	void GUI::SetTheme(const Theme& theme, int id)
+	{
+		for (auto& widget : widgets)
+		{
+			widget->SetTheme(theme, id);
+		}
+	}
 
 
 
@@ -200,6 +221,9 @@ namespace wi::gui
 		font.params.shadowColor = wi::Color::Shadow();
 		font.params.shadow_bolden = 0.2f;
 		font.params.shadow_softness = 0.2f;
+
+		tooltipSprite.params.color = wi::Color(255, 234, 165);
+		tooltipFont.params.color = wi::Color(25, 25, 25, 255);
 
 		for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 		{
@@ -276,8 +300,9 @@ namespace wi::gui
 			float screenwidth = canvas.GetLogicalWidth();
 			float screenheight = canvas.GetLogicalHeight();
 
-			tooltipFont.params = wi::font::Params(0, 0, wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP);
-			tooltipFont.params.color = wi::Color(25, 25, 25, 255);
+			tooltipFont.params.position = {};
+			tooltipFont.params.h_align = wi::font::WIFALIGN_LEFT;
+			tooltipFont.params.v_align = wi::font::WIFALIGN_TOP;
 
 			static const float _border = 2;
 			XMFLOAT2 textSize = tooltipFont.TextSize();
@@ -313,15 +338,32 @@ namespace wi::gui
 				tooltipFont.params.posY += 40;
 			}
 
-			wi::image::Draw(wi::texturehelper::getWhite(),
-				wi::image::Params(tooltipFont.params.posX - _border, tooltipFont.params.posY - _border,
-					textWidth, textHeight, wi::Color(255, 234, 165)), cmd);
+			tooltipSprite.params.pos.x = tooltipFont.params.posX - _border;
+			tooltipSprite.params.pos.y = tooltipFont.params.posY - _border;
+			tooltipSprite.params.siz.x = textWidth;
+			tooltipSprite.params.siz.y = textHeight;
+
+			if (shadow > 0)
+			{
+				wi::image::Params fx(
+					tooltipSprite.params.pos.x - shadow,
+					tooltipSprite.params.pos.y - shadow,
+					tooltipSprite.params.siz.x + shadow * 2,
+					tooltipSprite.params.siz.y + shadow * 2,
+					tooltip_shadow_color
+				);
+				wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			}
+
+			tooltipSprite.Draw(cmd);
+
 			tooltipFont.Draw(cmd);
+
 			if (!scripttipFont.text.empty())
 			{
 				scripttipFont.params = tooltipFont.params;
 				scripttipFont.params.posY += (int)(textHeight / 2);
-				scripttipFont.params.color = wi::Color(25, 25, 25, 110);
+				scripttipFont.params.color = wi::Color::lerp(tooltipFont.params.color, wi::Color::Transparent(), 0.25f);
 				scripttipFont.Draw(cmd);
 			}
 		}
@@ -480,15 +522,18 @@ namespace wi::gui
 		{
 			for (int i = 0; i < arraysize(sprites); ++i)
 			{
-				theme.ApplyImageParams(sprites[i].params);
+				theme.image.Apply(sprites[i].params);
 			}
 		}
 		else if (id < arraysize(sprites))
 		{
-			theme.ApplyImageParams(sprites[id].params);
+			theme.image.Apply(sprites[id].params);
 		}
-		theme.ApplyFontParams(font.params);
+		theme.font.Apply(font.params);
 		SetShadowColor(theme.shadow_color);
+		theme.tooltipFont.Apply(tooltipFont.params);
+		theme.tooltipImage.Apply(tooltipSprite.params);
+		tooltip_shadow_color = theme.tooltip_shadow_color;
 	}
 
 	void Widget::AttachTo(Widget* parent)
@@ -962,11 +1007,11 @@ namespace wi::gui
 		{
 			if (id >= WIDGET_ID_SCROLLBAR_KNOB_INACTIVE)
 			{
-				theme.ApplyImageParams(sprites_knob[id - WIDGET_ID_SCROLLBAR_KNOB_INACTIVE].params);
+				theme.image.Apply(sprites_knob[id - WIDGET_ID_SCROLLBAR_KNOB_INACTIVE].params);
 			}
 			else if (id >= WIDGET_ID_SCROLLBAR_BASE_IDLE)
 			{
-				theme.ApplyImageParams(sprites[id - WIDGET_ID_SCROLLBAR_BASE_IDLE].params);
+				theme.image.Apply(sprites[id - WIDGET_ID_SCROLLBAR_BASE_IDLE].params);
 			}
 		}
 	}
@@ -1277,7 +1322,7 @@ namespace wi::gui
 	void TextInputField::SetTheme(const Theme& theme, int id)
 	{
 		Widget::SetTheme(theme, id);
-		theme.ApplyFontParams(font_description.params);
+		theme.font.Apply(font_description.params);
 	}
 
 
@@ -1522,11 +1567,11 @@ namespace wi::gui
 		{
 			if (id >= WIDGET_ID_SLIDER_KNOB_IDLE)
 			{
-				theme.ApplyImageParams(sprites_knob[id - WIDGET_ID_SLIDER_KNOB_IDLE].params);
+				theme.image.Apply(sprites_knob[id - WIDGET_ID_SLIDER_KNOB_IDLE].params);
 			}
 			else if (id >= WIDGET_ID_SLIDER_BASE_IDLE)
 			{
-				theme.ApplyImageParams(sprites[id - WIDGET_ID_SLIDER_BASE_IDLE].params);
+				theme.image.Apply(sprites[id - WIDGET_ID_SLIDER_BASE_IDLE].params);
 			}
 		}
 	}

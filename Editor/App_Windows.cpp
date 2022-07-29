@@ -132,11 +132,6 @@ public:
 
 		CoreApplication::Resuming({ this, &ViewProvider::OnResuming });
 
-		main.infoDisplay.active = true;
-		main.infoDisplay.watermark = true;
-		main.infoDisplay.resolution = true;
-		main.infoDisplay.fpsinfo = true;
-
 		uwp_copy_assets();
 	}
 

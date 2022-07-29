@@ -1287,6 +1287,11 @@ void EditorComponent::Load()
 			break;
 		}
 
+		theme.tooltipImage = theme.image;
+		theme.tooltipImage.color = theme_color_idle;
+		theme.tooltipFont = theme.font;
+		theme.tooltip_shadow_color = theme.shadow_color;
+
 		wi::Color theme_color_active = wi::Color::White();
 		wi::Color theme_color_deactivating = wi::Color::lerp(theme_color_focus, wi::Color::White(), 0.5f);
 

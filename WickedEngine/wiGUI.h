@@ -14,29 +14,6 @@
 
 namespace wi::gui
 {
-	class Widget;
-
-	class GUI
-	{
-	private:
-		wi::vector<Widget*> widgets;
-		bool focus = false;
-		bool visible = true;
-	public:
-
-		void Update(const wi::Canvas& canvas, float dt);
-		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
-
-		void AddWidget(Widget* widget);
-		void RemoveWidget(Widget* widget);
-		Widget* GetWidget(const std::string& name);
-
-		// returns true if any gui element has the focus
-		bool HasFocus();
-
-		void SetVisible(bool value) { visible = value; }
-		bool IsVisible() { return visible; }
-	};
 
 	struct EventArgs
 	{
@@ -116,6 +93,22 @@ namespace wi::gui
 			wi::image::SAMPLEMODE sampleFlag = wi::image::Params().sampleFlag;
 			wi::image::QUALITY quality = wi::image::Params().quality;
 			bool background = wi::image::Params().isBackgroundEnabled();
+
+			void Apply(wi::image::Params& params) const
+			{
+				params.color = color;
+				params.blendFlag = blendFlag;
+				params.sampleFlag = sampleFlag;
+				params.quality = quality;
+				if (background)
+				{
+					params.enableBackground();
+				}
+				else
+				{
+					params.disableBackground();
+				}
+			}
 		} image;
 
 		// Reduced version of wi::font::Params, excluding position, alignment, etc.
@@ -130,37 +123,54 @@ namespace wi::gui
 			float shadow_bolden = wi::font::Params().shadow_bolden;
 			float shadow_offset_x = wi::font::Params().shadow_offset_x;
 			float shadow_offset_y = wi::font::Params().shadow_offset_y;
+
+			void Apply(wi::font::Params& params) const
+			{
+				params.color = color;
+				params.shadowColor = shadow_color;
+				params.style = style;
+				params.softness = softness;
+				params.bolden = bolden;
+				params.shadow_softness = shadow_softness;
+				params.shadow_bolden = shadow_bolden;
+				params.shadow_offset_x = shadow_offset_x;
+				params.shadow_offset_y = shadow_offset_y;
+			}
 		} font;
 
 		wi::Color shadow_color = wi::Color::Shadow(); // shadow color for whole widget
 
-		void ApplyImageParams(wi::image::Params& params) const
-		{
-			params.color = image.color;
-			params.blendFlag = image.blendFlag;
-			params.sampleFlag = image.sampleFlag;
-			params.quality = image.quality;
-			if (image.background)
-			{
-				params.enableBackground();
-			}
-			else
-			{
-				params.disableBackground();
-			}
-		}
-		void ApplyFontParams(wi::font::Params& params) const
-		{
-			params.color = font.color;
-			params.shadowColor = font.shadow_color;
-			params.style = font.style;
-			params.softness = font.softness;
-			params.bolden = font.bolden;
-			params.shadow_softness = font.shadow_softness;
-			params.shadow_bolden = font.shadow_bolden;
-			params.shadow_offset_x = font.shadow_offset_x;
-			params.shadow_offset_y = font.shadow_offset_y;
-		}
+		Image tooltipImage;
+		Font tooltipFont;
+		wi::Color tooltip_shadow_color = wi::Color::Shadow();
+	};
+
+	class Widget;
+
+	class GUI
+	{
+	private:
+		wi::vector<Widget*> widgets;
+		bool focus = false;
+		bool visible = true;
+	public:
+
+		void Update(const wi::Canvas& canvas, float dt);
+		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
+
+		void AddWidget(Widget* widget);
+		void RemoveWidget(Widget* widget);
+		Widget* GetWidget(const std::string& name);
+
+		// returns true if any gui element has the focus
+		bool HasFocus();
+
+		void SetVisible(bool value) { visible = value; }
+		bool IsVisible() { return visible; }
+
+		void SetColor(wi::Color color, int id = -1);
+		void SetShadowColor(wi::Color color);
+		void SetTheme(const Theme& theme, int id = -1);
 	};
 
 	class Widget : public wi::scene::TransformComponent
@@ -174,6 +184,8 @@ namespace wi::gui
 		float shadow = 1; // shadow radius
 		wi::Color shadow_color = wi::Color::Shadow();
 		WIDGETSTATE state = IDLE;
+		wi::Color tooltip_shadow_color = wi::Color::Shadow();
+		mutable wi::Sprite tooltipSprite;
 		mutable wi::SpriteFont tooltipFont;
 		mutable wi::SpriteFont scripttipFont;
 
