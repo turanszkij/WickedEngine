@@ -242,23 +242,25 @@ void EditorComponent::ResizeLayout()
 
 	////////////////////////////////////////////////////////////////////////////////////
 
+	float hei = 25;
+
 	saveButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
-	saveButton.SetSize(XMFLOAT2(100, 40));
+	saveButton.SetSize(XMFLOAT2(100, hei));
 
 	openButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
-	openButton.SetSize(XMFLOAT2(100, 40));
+	openButton.SetSize(XMFLOAT2(100, hei));
 
 	closeButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 1, 0));
-	closeButton.SetSize(XMFLOAT2(100, 40));
+	closeButton.SetSize(XMFLOAT2(100, hei));
 
 	aboutButton.SetPos(XMFLOAT2(screenW - 50 - 55, 0));
-	aboutButton.SetSize(XMFLOAT2(50, 40));
+	aboutButton.SetSize(XMFLOAT2(50, hei));
 
 	aboutLabel.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 	aboutLabel.SetPos(XMFLOAT2(screenW / 2.0f - aboutLabel.scale.x / 2.0f, screenH / 2.0f - aboutLabel.scale.y / 2.0f));
 
 	exitButton.SetPos(XMFLOAT2(screenW - 50, 0));
-	exitButton.SetSize(XMFLOAT2(50, 40));
+	exitButton.SetSize(XMFLOAT2(50, hei));
 }
 void EditorComponent::Load()
 {
@@ -1085,6 +1087,8 @@ void EditorComponent::Load()
 		SetCurrentScene(args.iValue);
 		});
 	sceneComboBox.SetEnabled(true);
+	sceneComboBox.SetColor(wi::Color(50, 100, 255, 180), wi::gui::IDLE);
+	sceneComboBox.SetColor(wi::Color(120, 160, 255, 255), wi::gui::FOCUS);
 	optionsWnd.AddWidget(&sceneComboBox);
 
 
@@ -1093,7 +1097,11 @@ void EditorComponent::Load()
 	saveModeComboBox.AddItem("No embedding", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
 	saveModeComboBox.AddItem("Dump to header", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
 	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.");
+	saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
+	saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
 	optionsWnd.AddWidget(&saveModeComboBox);
+
+
 
 	terragen.Create();
 	terragen.SetShadowRadius(shadow_expand);
@@ -1268,7 +1276,7 @@ void EditorComponent::Load()
 			theme_color_focus = wi::Color(210, 230, 255, 250);
 			dark_point = wi::Color(180, 180, 190, 230);
 			theme.shadow_color = wi::Color::Shadow();
-			theme.font.color = wi::Color(10, 10, 10, 255);
+			theme.font.color = wi::Color(50, 50, 80, 255);
 			break;
 		case Theme::Soft:
 			theme_color_idle = wi::Color(200, 180, 190, 190);
@@ -1295,54 +1303,47 @@ void EditorComponent::Load()
 		wi::Color theme_color_active = wi::Color::White();
 		wi::Color theme_color_deactivating = wi::Color::lerp(theme_color_focus, wi::Color::White(), 0.5f);
 
-		auto set_theme = [&](wi::gui::Window& widget) {
-			widget.SetTheme(theme); // set basic params to all states
+		// Customize whole gui:
+		wi::gui::GUI& gui = GetGUI();
+		gui.SetTheme(theme); // set basic params to all states
 
-			// customize colors for specific states:
-			widget.SetColor(theme_color_idle, wi::gui::IDLE);
-			widget.SetColor(theme_color_focus, wi::gui::FOCUS);
-			widget.SetColor(theme_color_active, wi::gui::ACTIVE);
-			widget.SetColor(theme_color_deactivating, wi::gui::DEACTIVATING);
-			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.7f), wi::gui::WIDGET_ID_WINDOW_BASE);
+		// customize colors for specific states:
+		gui.SetColor(theme_color_idle, wi::gui::IDLE);
+		gui.SetColor(theme_color_focus, wi::gui::FOCUS);
+		gui.SetColor(theme_color_active, wi::gui::ACTIVE);
+		gui.SetColor(theme_color_deactivating, wi::gui::DEACTIVATING);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.7f), wi::gui::WIDGET_ID_WINDOW_BASE);
 
-			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.75f), wi::gui::WIDGET_ID_SLIDER_BASE_IDLE);
-			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_FOCUS);
-			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.85f), wi::gui::WIDGET_ID_SLIDER_BASE_ACTIVE);
-			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_DEACTIVATING);
-			widget.SetColor(theme_color_idle, wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
-			widget.SetColor(theme_color_focus, wi::gui::WIDGET_ID_SLIDER_KNOB_FOCUS);
-			widget.SetColor(theme_color_active, wi::gui::WIDGET_ID_SLIDER_KNOB_ACTIVE);
-			widget.SetColor(theme_color_deactivating, wi::gui::WIDGET_ID_SLIDER_KNOB_DEACTIVATING);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.75f), wi::gui::WIDGET_ID_SLIDER_BASE_IDLE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_FOCUS);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.85f), wi::gui::WIDGET_ID_SLIDER_BASE_ACTIVE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_DEACTIVATING);
+		gui.SetColor(theme_color_idle, wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
+		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_SLIDER_KNOB_FOCUS);
+		gui.SetColor(theme_color_active, wi::gui::WIDGET_ID_SLIDER_KNOB_ACTIVE);
+		gui.SetColor(theme_color_deactivating, wi::gui::WIDGET_ID_SLIDER_KNOB_DEACTIVATING);
 
-			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.75f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_IDLE);
-			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_FOCUS);
-			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.85f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_ACTIVE);
-			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_DEACTIVATING);
-			widget.SetColor(theme_color_idle, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
-			widget.SetColor(theme_color_focus, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_HOVER);
-			widget.SetColor(theme_color_active, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_GRABBED);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.75f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_IDLE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_FOCUS);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.85f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_ACTIVE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_DEACTIVATING);
+		gui.SetColor(theme_color_idle, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
+		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_HOVER);
+		gui.SetColor(theme_color_active, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_GRABBED);
 
-			widget.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_COMBO_DROPDOWN);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_COMBO_DROPDOWN);
 
-			if ((Theme)args.userdata == Theme::Hacking)
-			{
-				widget.SetColor(wi::Color(0, 200, 0, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
-				widget.SetColor(wi::Color(0, 200, 0, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
-			}
+		if ((Theme)args.userdata == Theme::Hacking)
+		{
+			gui.SetColor(wi::Color(0, 200, 0, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
+			gui.SetColor(wi::Color(0, 200, 0, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
+		}
 
-		};
-		set_theme(optionsWnd);
-		set_theme(componentWindow);
-
-		sceneComboBox.SetColor(wi::Color(50, 100, 255, 180), wi::gui::IDLE);
-		sceneComboBox.SetColor(wi::Color(120, 160, 255, 255), wi::gui::FOCUS);
-
-		saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
-		saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
-
+		// customize individual elements:
 		materialWnd.textureSlotButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		paintToolWnd.brushTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		paintToolWnd.revealTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		aboutLabel.sprites[wi::gui::FOCUS] = aboutLabel.sprites[wi::gui::IDLE];
 
 		});
 	optionsWnd.AddWidget(&themeCombo);
@@ -2853,8 +2854,8 @@ void EditorComponent::RefreshOptionsWindow()
 	float x_off = 100;
 
 	translatorCheckBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
-	isScalatorCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 60, pos.y));
-	isRotatorCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 60 * 2, pos.y));
+	isScalatorCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 80, pos.y));
+	isRotatorCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 80 + 50, pos.y));
 	isTranslatorCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 60 * 3, pos.y));
 	pos.y += translatorCheckBox.GetSize().y;
 	pos.y += padding;
