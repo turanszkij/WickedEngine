@@ -25,6 +25,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)IKWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LayerWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LightWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MaterialWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\allocator.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
@@ -137,6 +138,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)json.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LayerWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LightWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MaterialWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)meshoptimizer\meshoptimizer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MeshWindow.h" />

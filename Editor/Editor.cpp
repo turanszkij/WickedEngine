@@ -28,7 +28,7 @@ void Editor::Initialize()
 	wi::resourcemanager::SetMode(wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
 
 	infoDisplay.active = true;
-	infoDisplay.watermark = true;
+	infoDisplay.watermark = false; // can be toggled instead on gui
 	//infoDisplay.fpsinfo = true;
 	//infoDisplay.resolution = true;
 	//infoDisplay.logical_size = true;
@@ -244,23 +244,26 @@ void EditorComponent::ResizeLayout()
 
 	float hei = 25;
 
-	saveButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
+	saveButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44 - 104 * 3, 0));
 	saveButton.SetSize(XMFLOAT2(100, hei));
 
-	openButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
+	openButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44 - 104 * 2, 0));
 	openButton.SetSize(XMFLOAT2(100, hei));
 
-	closeButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 1, 0));
+	closeButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44 - 104 * 1, 0));
 	closeButton.SetSize(XMFLOAT2(100, hei));
 
-	aboutButton.SetPos(XMFLOAT2(screenW - 50 - 55, 0));
-	aboutButton.SetSize(XMFLOAT2(50, hei));
+	logButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44, 0));
+	logButton.SetSize(XMFLOAT2(40, hei));
+
+	aboutButton.SetPos(XMFLOAT2(screenW - 40 - 44, 0));
+	aboutButton.SetSize(XMFLOAT2(40, hei));
 
 	aboutLabel.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 	aboutLabel.SetPos(XMFLOAT2(screenW / 2.0f - aboutLabel.scale.x / 2.0f, screenH / 2.0f - aboutLabel.scale.y / 2.0f));
 
-	exitButton.SetPos(XMFLOAT2(screenW - 50, 0));
-	exitButton.SetSize(XMFLOAT2(50, hei));
+	exitButton.SetPos(XMFLOAT2(screenW - 40, 0));
+	exitButton.SetSize(XMFLOAT2(40, hei));
 }
 void EditorComponent::Load()
 {
@@ -272,6 +275,7 @@ void EditorComponent::Load()
 
 	saveButton.Create(ICON_SAVE " Save");
 	saveButton.font.params.shadowColor = wi::Color::Transparent();
+	saveButton.SetShadowRadius(2);
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)");
 	saveButton.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	saveButton.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
@@ -282,6 +286,7 @@ void EditorComponent::Load()
 
 
 	openButton.Create(ICON_OPEN " Open");
+	openButton.SetShadowRadius(2);
 	openButton.font.params.shadowColor = wi::Color::Transparent();
 	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...");
 	openButton.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
@@ -373,6 +378,7 @@ void EditorComponent::Load()
 
 
 	closeButton.Create(ICON_CLOSE " Close");
+	closeButton.SetShadowRadius(2);
 	closeButton.font.params.shadowColor = wi::Color::Transparent();
 	closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, and delete the scene.\nThis operation cannot be undone!");
 	closeButton.SetColor(wi::Color(255, 130, 100, 180), wi::gui::WIDGETSTATE::IDLE);
@@ -419,7 +425,20 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&closeButton);
 
 
+	logButton.Create(ICON_BACKLOG);
+	logButton.SetShadowRadius(2);
+	logButton.font.params.shadowColor = wi::Color::Transparent();
+	logButton.SetTooltip("Open the backlog");
+	logButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
+	logButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
+	logButton.OnClick([&](wi::gui::EventArgs args) {
+		wi::backlog::Toggle();
+		});
+	GetGUI().AddWidget(&logButton);
+
+
 	aboutButton.Create(ICON_HELP);
+	aboutButton.SetShadowRadius(2);
 	aboutButton.font.params.shadowColor = wi::Color::Transparent();
 	aboutButton.SetTooltip("About...");
 	aboutButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
@@ -486,6 +505,7 @@ void EditorComponent::Load()
 	}
 
 	exitButton.Create(ICON_EXIT);
+	exitButton.SetShadowRadius(2);
 	exitButton.font.params.shadowColor = wi::Color::Transparent();
 	exitButton.SetTooltip("Exit");
 	exitButton.SetColor(wi::Color(160, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
@@ -503,7 +523,7 @@ void EditorComponent::Load()
 
 	optionsWnd.Create("Options", wi::gui::Window::WindowControls::RESIZE_TOPRIGHT);
 	optionsWnd.SetPos(XMFLOAT2(100, 120));
-	optionsWnd.SetSize(XMFLOAT2(340, 400));
+	optionsWnd.SetSize(XMFLOAT2(340, 500));
 	optionsWnd.SetShadowRadius(2);
 	GetGUI().AddWidget(&optionsWnd);
 
@@ -578,20 +598,19 @@ void EditorComponent::Load()
 		}
 		GetGUI().SetVisible(false);
 		wi::profiler::SetEnabled(false);
-		main->infoDisplay.active = false;
 	});
 	optionsWnd.AddWidget(&cinemaModeCheckBox);
 
-	infoDisplayCheckBox.Create("Info Display: ");
-	infoDisplayCheckBox.SetTooltip("Toggle the information display (the text in top left corner).");
-	infoDisplayCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		main->infoDisplay.active = args.bValue;
+	versionCheckBox.Create("Version: ");
+	versionCheckBox.SetTooltip("Toggle the engine version display text in top left corner.");
+	versionCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		main->infoDisplay.watermark = args.bValue;
 		});
-	optionsWnd.AddWidget(&infoDisplayCheckBox);
-	infoDisplayCheckBox.SetCheck(main->infoDisplay.active);
+	optionsWnd.AddWidget(&versionCheckBox);
+	versionCheckBox.SetCheck(main->infoDisplay.watermark);
 
 	fpsCheckBox.Create("FPS: ");
-	fpsCheckBox.SetTooltip("Toggle the FPS display.");
+	fpsCheckBox.SetTooltip("Toggle the FPS display text in top left corner.");
 	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		main->infoDisplay.fpsinfo = args.bValue;
 		});
@@ -599,7 +618,7 @@ void EditorComponent::Load()
 	fpsCheckBox.SetCheck(main->infoDisplay.fpsinfo);
 
 	otherinfoCheckBox.Create("Advanced: ");
-	otherinfoCheckBox.SetTooltip("Toggle advanced data in the info display.");
+	otherinfoCheckBox.SetTooltip("Toggle advanced data in the info display text in top left corner.");
 	otherinfoCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		main->infoDisplay.heap_allocation_counter = args.bValue;
 		main->infoDisplay.vram_usage = args.bValue;
@@ -615,6 +634,9 @@ void EditorComponent::Load()
 
 
 	newCombo.Create("New: ");
+	newCombo.selected_font.anim.typewriter.looped = true;
+	newCombo.selected_font.anim.typewriter.time = 2;
+	newCombo.selected_font.anim.typewriter.character_start = 1;
 	newCombo.AddItem("...", ~0ull);
 	newCombo.AddItem("Transform", 0);
 	newCombo.AddItem("Material", 1);
@@ -849,6 +871,9 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&componentWindow);
 
 	newComponentCombo.Create("Add: ");
+	newComponentCombo.selected_font.anim.typewriter.looped = true;
+	newComponentCombo.selected_font.anim.typewriter.time = 2;
+	newComponentCombo.selected_font.anim.typewriter.character_start = 1;
 	newComponentCombo.SetTooltip("Add a component to the first selected entity.");
 	newComponentCombo.AddItem("...", ~0ull);
 	newComponentCombo.AddItem("Name", 0);
@@ -1076,6 +1101,8 @@ void EditorComponent::Load()
 	paintToolWnd.SetCollapsed(true);
 	optionsWnd.AddWidget(&paintToolWnd);
 
+	materialPickerWnd.Create(this);
+	optionsWnd.AddWidget(&materialPickerWnd);
 
 
 	sceneComboBox.Create("Scene: ");
@@ -1264,7 +1291,7 @@ void EditorComponent::Load()
 		wi::gui::Theme theme;
 		theme.image.background = true;
 		theme.image.blendFlag = wi::enums::BLENDMODE_OPAQUE;
-		theme.font.color = wi::Color(160, 240, 250, 255);
+		theme.font.color = wi::Color(130, 210, 220, 255);
 		theme.shadow_color = wi::Color(80, 140, 180, 100);
 
 		switch ((Theme)args.userdata)
@@ -1401,7 +1428,6 @@ void EditorComponent::Update(float dt)
 				renderPath->GetGUI().SetVisible(true);
 			}
 			GetGUI().SetVisible(true);
-			main->infoDisplay.active = infoDisplayCheckBox.GetCheck();
 			wi::profiler::SetEnabled(profilerEnabledCheckBox.GetCheck());
 
 			cinemaModeCheckBox.SetCheck(false);
@@ -2087,7 +2113,6 @@ void EditorComponent::Update(float dt)
 		hairWnd.SetEntity(INVALID_ENTITY);
 		meshWnd.SetEntity(INVALID_ENTITY, -1);
 		materialWnd.SetEntity(INVALID_ENTITY);
-		lightWnd.SetEntity(INVALID_ENTITY);
 		soundWnd.SetEntity(INVALID_ENTITY);
 		decalWnd.SetEntity(INVALID_ENTITY);
 		envProbeWnd.SetEntity(INVALID_ENTITY);
@@ -2242,6 +2267,7 @@ void EditorComponent::Update(float dt)
 	RenderPath2D::Update(dt);
 	RefreshComponentWindow();
 	RefreshOptionsWindow();
+	materialPickerWnd.Update();
 
 	translator.Update(camera, *this);
 
@@ -2860,10 +2886,10 @@ void EditorComponent::RefreshOptionsWindow()
 	pos.y += translatorCheckBox.GetSize().y;
 	pos.y += padding;
 
-	infoDisplayCheckBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	versionCheckBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
 	fpsCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 80, pos.y));
 	otherinfoCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 60 * 3, pos.y));
-	pos.y += infoDisplayCheckBox.GetSize().y;
+	pos.y += versionCheckBox.GetSize().y;
 	pos.y += padding;
 
 	cinemaModeCheckBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
@@ -2921,6 +2947,11 @@ void EditorComponent::RefreshOptionsWindow()
 	cameraWnd.SetPos(pos);
 	cameraWnd.SetSize(XMFLOAT2(width, cameraWnd.GetScale().y));
 	pos.y += cameraWnd.GetSize().y;
+	pos.y += padding;
+
+	materialPickerWnd.SetPos(pos);
+	materialPickerWnd.SetSize(XMFLOAT2(width, materialPickerWnd.GetScale().y));
+	pos.y += materialPickerWnd.GetSize().y;
 	pos.y += padding;
 
 	paintToolWnd.SetPos(pos);
@@ -3086,6 +3117,7 @@ void EditorComponent::PushToEntityTree(wi::ecs::Entity entity, int level)
 void EditorComponent::RefreshEntityTree()
 {
 	const Scene& scene = GetCurrentScene();
+	materialPickerWnd.RecreateButtons();
 
 	for (int i = 0; i < entityTree.GetItemCount(); ++i)
 	{

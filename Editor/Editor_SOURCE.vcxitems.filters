@@ -74,6 +74,7 @@
       <Filter>meshoptimizer</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)TerrainGenerator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -112,6 +113,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)FontAwesomeV6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IconsFontAwesome6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IconDefinitions.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

@@ -5,6 +5,7 @@
 #include "wiScene_BindLua.h"
 
 #include "MaterialWindow.h"
+#include "MaterialPickerWindow.h"
 #include "PostprocessWindow.h"
 #include "WeatherWindow.h"
 #include "ObjectWindow.h"
@@ -43,6 +44,7 @@ class EditorComponent : public wi::RenderPath2D
 {
 public:
 	MaterialWindow materialWnd;
+	MaterialPickerWindow materialPickerWnd;
 	PostprocessWindow postprocessWnd;
 	WeatherWindow weatherWnd;
 	ObjectWindow objectWnd;
@@ -70,6 +72,7 @@ public:
 	wi::gui::Button saveButton;
 	wi::gui::Button openButton;
 	wi::gui::Button closeButton;
+	wi::gui::Button logButton;
 	wi::gui::Button aboutButton;
 	wi::gui::Button exitButton;
 	wi::gui::Label aboutLabel;
@@ -82,7 +85,7 @@ public:
 	wi::gui::CheckBox profilerEnabledCheckBox;
 	wi::gui::CheckBox physicsEnabledCheckBox;
 	wi::gui::CheckBox cinemaModeCheckBox;
-	wi::gui::CheckBox infoDisplayCheckBox;
+	wi::gui::CheckBox versionCheckBox;
 	wi::gui::CheckBox fpsCheckBox;
 	wi::gui::CheckBox otherinfoCheckBox;
 	wi::gui::ComboBox themeCombo;
