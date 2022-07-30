@@ -45,6 +45,7 @@ void MaterialPickerWindow::RecreateButtons()
 		wi::gui::Button& button = buttons[i];
 		button.Create("");
 		AddWidget(&button);
+		button.SetVisible(false);
 
 		button.OnClick([entity, this](wi::gui::EventArgs args) {
 
@@ -132,16 +133,16 @@ void MaterialPickerWindow::Update()
 		{
 			if (preview_size >= 75)
 			{
-				button.SetDescription(name->name);
+				button.SetText(name->name);
 			}
 			else
 			{
-				button.SetDescription("");
+				button.SetText("");
 			}
 			button.SetTooltip(name->name);
 		}
-		button.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
-		button.font_description.params.v_align = wi::font::WIFALIGN_TOP;
+		button.font.params.h_align = wi::font::WIFALIGN_CENTER;
+		button.font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 
 		button.SetSize(XMFLOAT2(preview_size, preview_size));
 		button.SetPos(XMFLOAT2((i % cells) * (preview_size + border) + border, offset_y));
