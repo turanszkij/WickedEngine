@@ -746,22 +746,27 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 				texture_lod = uint32_t(dist_to_sphere * texlodMultiplier);
 			}
 
-			uint32_t chunk_required_texture_resolution = uint32_t(max_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
-			chunk_required_texture_resolution = std::max(8u, chunk_required_texture_resolution);
-			if (chunk_data.virtual_texture_resolution != chunk_required_texture_resolution)
-			{
-				chunk_data.virtual_texture_resolution = chunk_required_texture_resolution;
+			chunk_data.required_texture_resolution = uint32_t(max_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
+			chunk_data.required_texture_resolution = std::max(8u, chunk_data.required_texture_resolution);
+			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
 
-				MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
-				if (material != nullptr)
+			if (material != nullptr)
+			{
+				for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
 				{
-					for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+					if (virtual_texture_available[i])
 					{
-						if (virtual_texture_available[i])
+						uint32_t current_resolution = 0;
+						if (material->textures[i].resource.IsValid())
+						{
+							current_resolution = material->textures[i].resource.GetTexture().GetDesc().width;
+						}
+
+						if (current_resolution != chunk_data.required_texture_resolution)
 						{
 							TextureDesc desc;
-							desc.width = chunk_required_texture_resolution;
-							desc.height = chunk_required_texture_resolution;
+							desc.width = chunk_data.required_texture_resolution;
+							desc.height = chunk_data.required_texture_resolution;
 							desc.format = Format::R8G8B8A8_UNORM;
 							desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 							Texture texture;
@@ -773,9 +778,9 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 							virtual_texture_barriers_end.push_back(GPUBarrier::Image(&material->textures[i].resource.GetTexture(), ResourceState::UNORDERED_ACCESS, desc.layout));
 						}
 					}
-
-					virtual_texture_updates.push_back(chunk);
 				}
+
+				virtual_texture_updates.push_back(chunk);
 
 			}
 		}
@@ -816,9 +821,9 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 			if (material != nullptr)
 			{
 				// Shrink the uvs to avoid wrap sampling across edge by object rendering shaders:
-				float virtual_texture_resolution_rcp = 1.0f / float(chunk_data.virtual_texture_resolution);
-				material->texMulAdd.x = float(chunk_data.virtual_texture_resolution - 1) * virtual_texture_resolution_rcp;
-				material->texMulAdd.y = float(chunk_data.virtual_texture_resolution - 1) * virtual_texture_resolution_rcp;
+				float virtual_texture_resolution_rcp = 1.0f / float(chunk_data.required_texture_resolution);
+				material->texMulAdd.x = float(chunk_data.required_texture_resolution - 1) * virtual_texture_resolution_rcp;
+				material->texMulAdd.y = float(chunk_data.required_texture_resolution - 1) * virtual_texture_resolution_rcp;
 				material->texMulAdd.z = 0.5f * virtual_texture_resolution_rcp;
 				material->texMulAdd.w = 0.5f * virtual_texture_resolution_rcp;
 
@@ -831,7 +836,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 				}
 			}
 
-			device->Dispatch(chunk_data.virtual_texture_resolution / 8u, chunk_data.virtual_texture_resolution / 8u, 1, cmd);
+			device->Dispatch(chunk_data.required_texture_resolution / 8u, chunk_data.required_texture_resolution / 8u, 1, cmd);
 		}
 
 		device->Barrier(virtual_texture_barriers_end.data(), (uint32_t)virtual_texture_barriers_end.size(), cmd);

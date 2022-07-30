@@ -46,7 +46,7 @@ struct ChunkData
 	std::mt19937 prop_rand;
 	wi::Color region_weights[vertexCount] = {};
 	wi::graphics::Texture region_weights_texture;
-	uint32_t virtual_texture_resolution = 0;
+	uint32_t required_texture_resolution = 0;
 	wi::primitive::Sphere sphere;
 	XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 };
