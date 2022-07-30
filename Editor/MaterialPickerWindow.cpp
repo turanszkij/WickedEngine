@@ -81,6 +81,8 @@ void MaterialPickerWindow::Update()
 
 	wi::gui::Theme theme;
 	theme.image.CopyFrom(sprites[wi::gui::IDLE].params);
+	theme.image.background = false;
+	theme.image.blendFlag = wi::enums::BLENDMODE_ALPHA;
 	theme.font.CopyFrom(font.params);
 	theme.shadow_color = wi::Color::lerp(theme.font.color, wi::Color::Transparent(), 0.25f);
 	theme.tooltipFont.CopyFrom(tooltipFont.params);
@@ -101,11 +103,11 @@ void MaterialPickerWindow::Update()
 
 		button.SetTheme(theme);
 		button.SetColor(wi::Color::White());
-		button.SetShadowRadius(5);
+		button.SetShadowRadius(3);
 
 		if (this->entity != entity)
 		{
-			button.SetColor(wi::Color(255, 255, 255, 200), wi::gui::IDLE);
+			button.SetColor(wi::Color(255, 255, 255, 150), wi::gui::IDLE);
 			button.SetShadowRadius(0);
 		}
 
