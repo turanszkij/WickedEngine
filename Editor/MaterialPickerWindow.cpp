@@ -75,6 +75,11 @@ void MaterialPickerWindow::Update()
 	}
 
 	const wi::scene::Scene& scene = editor->GetCurrentScene();
+	if (buttons.size() != scene.materials.GetCount())
+	{
+		RecreateButtons();
+		return;
+	}
 
 	zoomSlider.SetPos(XMFLOAT2(55, 0));
 	zoomSlider.SetSize(XMFLOAT2(GetWidgetAreaSize().x - 100 - 5, 20));
@@ -88,8 +93,8 @@ void MaterialPickerWindow::Update()
 	theme.tooltipFont.CopyFrom(tooltipFont.params);
 	theme.tooltipImage.CopyFrom(tooltipSprite.params);
 
-	const float border = 20;
 	const float preview_size = zoomSlider.GetValue();
+	const float border = 20 * preview_size / 100.0f;
 	int cells = std::max(1, int(GetWidgetAreaSize().x / (preview_size + border)));
 	float offset_y = border + zoomSlider.GetSize().y;
 
