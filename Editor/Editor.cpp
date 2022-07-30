@@ -1395,7 +1395,6 @@ void EditorComponent::Update(float dt)
 	animWnd.Update();
 	weatherWnd.Update();
 	paintToolWnd.Update(dt);
-	materialPickerWnd.Update();
 
 	selectionOutlineTimer += dt;
 
@@ -2253,6 +2252,7 @@ void EditorComponent::Update(float dt)
 	RenderPath2D::Update(dt);
 	RefreshComponentWindow();
 	RefreshOptionsWindow();
+	materialPickerWnd.Update();
 
 	translator.Update(camera, *this);
 

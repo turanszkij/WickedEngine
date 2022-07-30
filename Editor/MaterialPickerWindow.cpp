@@ -76,8 +76,8 @@ void MaterialPickerWindow::Update()
 
 	const wi::scene::Scene& scene = editor->GetCurrentScene();
 
-	zoomSlider.SetPos(XMFLOAT2(50, 0));
-	zoomSlider.SetSize(XMFLOAT2(GetSize().x - 100, 20));
+	zoomSlider.SetPos(XMFLOAT2(55, 0));
+	zoomSlider.SetSize(XMFLOAT2(GetWidgetAreaSize().x - 100 - 5, 20));
 
 	wi::gui::Theme theme;
 	theme.image.CopyFrom(sprites[wi::gui::IDLE].params);
@@ -90,7 +90,7 @@ void MaterialPickerWindow::Update()
 
 	const float border = 20;
 	const float preview_size = zoomSlider.GetValue();
-	int cells = std::max(1, int(GetSize().x / (preview_size + border)));
+	int cells = std::max(1, int(GetWidgetAreaSize().x / (preview_size + border)));
 	float offset_y = border + zoomSlider.GetSize().y;
 
 	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
@@ -125,7 +125,15 @@ void MaterialPickerWindow::Update()
 		const NameComponent* name = scene.names.GetComponent(entity);
 		if (name != nullptr)
 		{
-			button.SetDescription(name->name);
+			if (preview_size >= 75)
+			{
+				button.SetDescription(name->name);
+			}
+			else
+			{
+				button.SetDescription("");
+			}
+			button.SetTooltip(name->name);
 		}
 		button.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 		button.font_description.params.v_align = wi::font::WIFALIGN_TOP;
