@@ -28,7 +28,7 @@ void Editor::Initialize()
 	wi::resourcemanager::SetMode(wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
 
 	infoDisplay.active = true;
-	infoDisplay.watermark = true;
+	infoDisplay.watermark = false; // can be toggled instead on gui
 	//infoDisplay.fpsinfo = true;
 	//infoDisplay.resolution = true;
 	//infoDisplay.logical_size = true;
@@ -393,6 +393,7 @@ void EditorComponent::Load()
 		decalWnd.SetEntity(INVALID_ENTITY);
 		envProbeWnd.SetEntity(INVALID_ENTITY);
 		materialWnd.SetEntity(INVALID_ENTITY);
+		materialPickerWnd.SetEntity(INVALID_ENTITY);
 		emitterWnd.SetEntity(INVALID_ENTITY);
 		hairWnd.SetEntity(INVALID_ENTITY);
 		forceFieldWnd.SetEntity(INVALID_ENTITY);
@@ -503,7 +504,7 @@ void EditorComponent::Load()
 
 	optionsWnd.Create("Options", wi::gui::Window::WindowControls::RESIZE_TOPRIGHT);
 	optionsWnd.SetPos(XMFLOAT2(100, 120));
-	optionsWnd.SetSize(XMFLOAT2(340, 400));
+	optionsWnd.SetSize(XMFLOAT2(340, 500));
 	optionsWnd.SetShadowRadius(2);
 	GetGUI().AddWidget(&optionsWnd);
 
@@ -578,20 +579,19 @@ void EditorComponent::Load()
 		}
 		GetGUI().SetVisible(false);
 		wi::profiler::SetEnabled(false);
-		main->infoDisplay.active = false;
 	});
 	optionsWnd.AddWidget(&cinemaModeCheckBox);
 
-	infoDisplayCheckBox.Create("Info Display: ");
-	infoDisplayCheckBox.SetTooltip("Toggle the information display (the text in top left corner).");
-	infoDisplayCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		main->infoDisplay.active = args.bValue;
+	versionCheckBox.Create("Version: ");
+	versionCheckBox.SetTooltip("Toggle the engine version display text in top left corner.");
+	versionCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		main->infoDisplay.watermark = args.bValue;
 		});
-	optionsWnd.AddWidget(&infoDisplayCheckBox);
-	infoDisplayCheckBox.SetCheck(main->infoDisplay.active);
+	optionsWnd.AddWidget(&versionCheckBox);
+	versionCheckBox.SetCheck(main->infoDisplay.watermark);
 
 	fpsCheckBox.Create("FPS: ");
-	fpsCheckBox.SetTooltip("Toggle the FPS display.");
+	fpsCheckBox.SetTooltip("Toggle the FPS display text in top left corner.");
 	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		main->infoDisplay.fpsinfo = args.bValue;
 		});
@@ -599,7 +599,7 @@ void EditorComponent::Load()
 	fpsCheckBox.SetCheck(main->infoDisplay.fpsinfo);
 
 	otherinfoCheckBox.Create("Advanced: ");
-	otherinfoCheckBox.SetTooltip("Toggle advanced data in the info display.");
+	otherinfoCheckBox.SetTooltip("Toggle advanced data in the info display text in top left corner.");
 	otherinfoCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		main->infoDisplay.heap_allocation_counter = args.bValue;
 		main->infoDisplay.vram_usage = args.bValue;
@@ -615,6 +615,9 @@ void EditorComponent::Load()
 
 
 	newCombo.Create("New: ");
+	newCombo.selected_font.anim.typewriter.looped = true;
+	newCombo.selected_font.anim.typewriter.time = 2;
+	newCombo.selected_font.anim.typewriter.character_start = 1;
 	newCombo.AddItem("...", ~0ull);
 	newCombo.AddItem("Transform", 0);
 	newCombo.AddItem("Material", 1);
@@ -849,6 +852,9 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&componentWindow);
 
 	newComponentCombo.Create("Add: ");
+	newComponentCombo.selected_font.anim.typewriter.looped = true;
+	newComponentCombo.selected_font.anim.typewriter.time = 2;
+	newComponentCombo.selected_font.anim.typewriter.character_start = 1;
 	newComponentCombo.SetTooltip("Add a component to the first selected entity.");
 	newComponentCombo.AddItem("...", ~0ull);
 	newComponentCombo.AddItem("Name", 0);
@@ -1076,6 +1082,8 @@ void EditorComponent::Load()
 	paintToolWnd.SetCollapsed(true);
 	optionsWnd.AddWidget(&paintToolWnd);
 
+	materialPickerWnd.Create(this);
+	optionsWnd.AddWidget(&materialPickerWnd);
 
 
 	sceneComboBox.Create("Scene: ");
@@ -1387,6 +1395,7 @@ void EditorComponent::Update(float dt)
 	animWnd.Update();
 	weatherWnd.Update();
 	paintToolWnd.Update(dt);
+	materialPickerWnd.Update();
 
 	selectionOutlineTimer += dt;
 
@@ -1401,7 +1410,6 @@ void EditorComponent::Update(float dt)
 				renderPath->GetGUI().SetVisible(true);
 			}
 			GetGUI().SetVisible(true);
-			main->infoDisplay.active = infoDisplayCheckBox.GetCheck();
 			wi::profiler::SetEnabled(profilerEnabledCheckBox.GetCheck());
 
 			cinemaModeCheckBox.SetCheck(false);
@@ -2087,6 +2095,7 @@ void EditorComponent::Update(float dt)
 		hairWnd.SetEntity(INVALID_ENTITY);
 		meshWnd.SetEntity(INVALID_ENTITY, -1);
 		materialWnd.SetEntity(INVALID_ENTITY);
+		materialPickerWnd.SetEntity(INVALID_ENTITY);
 		lightWnd.SetEntity(INVALID_ENTITY);
 		soundWnd.SetEntity(INVALID_ENTITY);
 		decalWnd.SetEntity(INVALID_ENTITY);
@@ -2144,6 +2153,7 @@ void EditorComponent::Update(float dt)
 				if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
 				{
 					materialWnd.SetEntity(mesh->subsets[picked.subsetIndex].materialID);
+					materialPickerWnd.SetEntity(mesh->subsets[picked.subsetIndex].materialID);
 				}
 			}
 		}
@@ -2151,6 +2161,7 @@ void EditorComponent::Update(float dt)
 		{
 			meshWnd.SetEntity(picked.entity, picked.subsetIndex);
 			materialWnd.SetEntity(picked.entity);
+			materialPickerWnd.SetEntity(picked.entity);
 		}
 
 	}
@@ -2860,10 +2871,10 @@ void EditorComponent::RefreshOptionsWindow()
 	pos.y += translatorCheckBox.GetSize().y;
 	pos.y += padding;
 
-	infoDisplayCheckBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	versionCheckBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
 	fpsCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 80, pos.y));
 	otherinfoCheckBox.SetPos(XMFLOAT2(pos.x + x_off + 60 * 3, pos.y));
-	pos.y += infoDisplayCheckBox.GetSize().y;
+	pos.y += versionCheckBox.GetSize().y;
 	pos.y += padding;
 
 	cinemaModeCheckBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
@@ -2921,6 +2932,11 @@ void EditorComponent::RefreshOptionsWindow()
 	cameraWnd.SetPos(pos);
 	cameraWnd.SetSize(XMFLOAT2(width, cameraWnd.GetScale().y));
 	pos.y += cameraWnd.GetSize().y;
+	pos.y += padding;
+
+	materialPickerWnd.SetPos(pos);
+	materialPickerWnd.SetSize(XMFLOAT2(width, materialPickerWnd.GetScale().y));
+	pos.y += materialPickerWnd.GetSize().y;
 	pos.y += padding;
 
 	paintToolWnd.SetPos(pos);
@@ -3086,6 +3102,7 @@ void EditorComponent::PushToEntityTree(wi::ecs::Entity entity, int level)
 void EditorComponent::RefreshEntityTree()
 {
 	const Scene& scene = GetCurrentScene();
+	materialPickerWnd.RecreateButtons();
 
 	for (int i = 0; i < entityTree.GetItemCount(); ++i)
 	{

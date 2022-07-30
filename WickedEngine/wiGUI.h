@@ -109,6 +109,21 @@ namespace wi::gui
 					params.disableBackground();
 				}
 			}
+			void CopyFrom(const wi::image::Params& params)
+			{
+				color = params.color;
+				blendFlag = params.blendFlag;
+				sampleFlag = params.sampleFlag;
+				quality = params.quality;
+				if (params.isBackgroundEnabled())
+				{
+					background = true;
+				}
+				else
+				{
+					background = false;
+				}
+			}
 		} image;
 
 		// Reduced version of wi::font::Params, excluding position, alignment, etc.
@@ -135,6 +150,18 @@ namespace wi::gui
 				params.shadow_bolden = shadow_bolden;
 				params.shadow_offset_x = shadow_offset_x;
 				params.shadow_offset_y = shadow_offset_y;
+			}
+			void CopyFrom(const wi::font::Params& params)
+			{
+				color = params.color;
+				shadow_color = params.shadowColor;
+				style = params.style;
+				softness = params.softness;
+				bolden = params.bolden;
+				shadow_softness = params.shadow_softness;
+				shadow_bolden = params.shadow_bolden;
+				shadow_offset_x = params.shadow_offset_x;
+				shadow_offset_y = params.shadow_offset_y;
 			}
 		} font;
 
@@ -484,6 +511,8 @@ namespace wi::gui
 		void SetTheme(const Theme& theme, int id = -1) override;
 
 		void OnSelect(std::function<void(EventArgs args)> func);
+
+		wi::SpriteFont selected_font;
 	};
 
 	// Widget container

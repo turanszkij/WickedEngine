@@ -287,6 +287,9 @@ namespace wi::gui
 		{
 			tooltipTimer = 0;
 		}
+
+		sprites[state].Update(dt);
+		font.Update(dt);
 	}
 	void Widget::RenderTooltip(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -775,6 +778,32 @@ namespace wi::gui
 
 		font_description.params.posX = translation.x - 2;
 		font_description.params.posY = translation.y + scale.y * 0.5f;
+		switch (font_description.params.h_align)
+		{
+		case wi::font::WIFALIGN_LEFT:
+			font_description.params.posX = translation.x + scale.x;
+			break;
+		case wi::font::WIFALIGN_RIGHT:
+			font_description.params.posX = translation.x;
+			break;
+		case wi::font::WIFALIGN_CENTER:
+		default:
+			font_description.params.posX = translation.x + scale.x * 0.5f;
+			break;
+		}
+		switch (font_description.params.v_align)
+		{
+		case wi::font::WIFALIGN_TOP:
+			font_description.params.posY = translation.y + scale.y;
+			break;
+		case wi::font::WIFALIGN_BOTTOM:
+			font_description.params.posY = translation.y;
+			break;
+		case wi::font::WIFALIGN_CENTER:
+		default:
+			font_description.params.posY = translation.y + scale.y * 0.5f;
+			break;
+		}
 	}
 	void Button::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -1269,6 +1298,32 @@ namespace wi::gui
 		font.params.posY = translation.y + scale.y * 0.5f;
 		font_description.params.posX = translation.x - 2;
 		font_description.params.posY = translation.y + scale.y * 0.5f;
+		switch (font_description.params.h_align)
+		{
+		case wi::font::WIFALIGN_LEFT:
+			font_description.params.posX = translation.x + scale.x;
+			break;
+		case wi::font::WIFALIGN_RIGHT:
+			font_description.params.posX = translation.x;
+			break;
+		case wi::font::WIFALIGN_CENTER:
+		default:
+			font_description.params.posX = translation.x + scale.x * 0.5f;
+			break;
+		}
+		switch (font_description.params.v_align)
+		{
+		case wi::font::WIFALIGN_TOP:
+			font_description.params.posY = translation.y + scale.y;
+			break;
+		case wi::font::WIFALIGN_BOTTOM:
+			font_description.params.posY = translation.y;
+			break;
+		case wi::font::WIFALIGN_CENTER:
+		default:
+			font_description.params.posY = translation.y + scale.y * 0.5f;
+			break;
+		}
 
 		if (state == ACTIVE)
 		{
@@ -1732,6 +1787,10 @@ namespace wi::gui
 
 		font.params.h_align = wi::font::WIFALIGN_RIGHT;
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
+
+		selected_font = font;
+		selected_font.params.h_align = wi::font::WIFALIGN_CENTER;
+		selected_font.params.v_align = wi::font::WIFALIGN_CENTER;
 	}
 	float ComboBox::GetDropOffset(const wi::Canvas& canvas) const
 	{
@@ -1906,6 +1965,14 @@ namespace wi::gui
 		font.params.posY = translation.y + sprites[state].params.siz.y * 0.5f;
 
 		selected = std::min((int)items.size(), selected);
+
+		if (selected >= 0)
+		{
+			selected_font.SetText(items[selected].name);
+			selected_font.params.posX = translation.x + scale.x * 0.5f;
+			selected_font.params.posY = translation.y + scale.y * 0.5f;
+			selected_font.Update(dt);
+		}
 	}
 	void ComboBox::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -1989,17 +2056,7 @@ namespace wi::gui
 
 		if (selected >= 0)
 		{
-			wi::font::Params fp = wi::font::Params(
-				translation.x + scale.x * 0.5f,
-				translation.y + scale.y * 0.5f,
-				wi::font::WIFONTSIZE_DEFAULT,
-				wi::font::WIFALIGN_CENTER,
-				wi::font::WIFALIGN_CENTER,
-				font.params.color,
-				font.params.shadowColor
-			);
-			fp.style = font.params.style;
-			wi::font::Draw(items[selected].name, fp, cmd);
+			selected_font.Draw(cmd);
 		}
 
 		// drop-down
@@ -2221,6 +2278,7 @@ namespace wi::gui
 		{
 			drop_color = wi::Color::fromFloat4(theme.image.color);
 		}
+		theme.font.Apply(selected_font.params);
 	}
 
 
