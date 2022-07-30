@@ -396,7 +396,6 @@ void EditorComponent::Load()
 		decalWnd.SetEntity(INVALID_ENTITY);
 		envProbeWnd.SetEntity(INVALID_ENTITY);
 		materialWnd.SetEntity(INVALID_ENTITY);
-		materialPickerWnd.SetEntity(INVALID_ENTITY);
 		emitterWnd.SetEntity(INVALID_ENTITY);
 		hairWnd.SetEntity(INVALID_ENTITY);
 		forceFieldWnd.SetEntity(INVALID_ENTITY);
@@ -2108,8 +2107,6 @@ void EditorComponent::Update(float dt)
 		hairWnd.SetEntity(INVALID_ENTITY);
 		meshWnd.SetEntity(INVALID_ENTITY, -1);
 		materialWnd.SetEntity(INVALID_ENTITY);
-		materialPickerWnd.SetEntity(INVALID_ENTITY);
-		lightWnd.SetEntity(INVALID_ENTITY);
 		soundWnd.SetEntity(INVALID_ENTITY);
 		decalWnd.SetEntity(INVALID_ENTITY);
 		envProbeWnd.SetEntity(INVALID_ENTITY);
@@ -2166,7 +2163,6 @@ void EditorComponent::Update(float dt)
 				if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
 				{
 					materialWnd.SetEntity(mesh->subsets[picked.subsetIndex].materialID);
-					materialPickerWnd.SetEntity(mesh->subsets[picked.subsetIndex].materialID);
 				}
 			}
 		}
@@ -2174,7 +2170,6 @@ void EditorComponent::Update(float dt)
 		{
 			meshWnd.SetEntity(picked.entity, picked.subsetIndex);
 			materialWnd.SetEntity(picked.entity);
-			materialPickerWnd.SetEntity(picked.entity);
 		}
 
 	}

@@ -16,16 +16,8 @@ void MaterialPickerWindow::Create(EditorComponent* _editor)
 	AddWidget(&zoomSlider);
 
 	SetCollapsed(true);
-
-	SetEntity(INVALID_ENTITY);
 }
 
-
-
-void MaterialPickerWindow::SetEntity(Entity entity)
-{
-	this->entity = entity;
-}
 
 void MaterialPickerWindow::RecreateButtons()
 {
@@ -54,11 +46,23 @@ void MaterialPickerWindow::RecreateButtons()
 			// record PREVIOUS selection state...
 			editor->RecordSelection(archive);
 
-			if (!wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT))
+			if (!editor->translator.selected.empty() && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT))
 			{
-				editor->ClearSelected();
+				// Union selection:
+				wi::vector<wi::scene::PickResult> saved = editor->translator.selected;
+				editor->translator.selected.clear();
+				for (const wi::scene::PickResult& picked : saved)
+				{
+					editor->AddSelected(picked);
+				}
+				editor->AddSelected(entity);
 			}
-			editor->AddSelected(entity);
+			else
+			{
+				// Replace selection:
+				editor->translator.selected.clear();
+				editor->AddSelected(entity);
+			}
 
 			// record NEW selection state...
 			editor->RecordSelection(archive);
@@ -109,12 +113,17 @@ void MaterialPickerWindow::Update()
 
 		button.SetTheme(theme);
 		button.SetColor(wi::Color::White());
-		button.SetShadowRadius(3);
+		button.SetColor(wi::Color(255, 255, 255, 150), wi::gui::IDLE);
+		button.SetShadowRadius(0);
 
-		if (this->entity != entity)
+		for (auto& picked : editor->translator.selected)
 		{
-			button.SetColor(wi::Color(255, 255, 255, 150), wi::gui::IDLE);
-			button.SetShadowRadius(0);
+			if (picked.entity == entity)
+			{
+				button.SetColor(wi::Color::White());
+				button.SetShadowRadius(3);
+				break;
+			}
 		}
 
 		// find first good texture that we can show:
