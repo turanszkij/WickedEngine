@@ -72,6 +72,7 @@ public:
 	wi::gui::Button saveButton;
 	wi::gui::Button openButton;
 	wi::gui::Button closeButton;
+	wi::gui::Button logButton;
 	wi::gui::Button aboutButton;
 	wi::gui::Button exitButton;
 	wi::gui::Label aboutLabel;

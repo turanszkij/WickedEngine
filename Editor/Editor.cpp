@@ -244,23 +244,26 @@ void EditorComponent::ResizeLayout()
 
 	float hei = 25;
 
-	saveButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
+	saveButton.SetPos(XMFLOAT2(screenW - 40 - 45 - 45 - 105 * 3, 0));
 	saveButton.SetSize(XMFLOAT2(100, hei));
 
-	openButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
+	openButton.SetPos(XMFLOAT2(screenW - 40 - 45 - 45 - 105 * 2, 0));
 	openButton.SetSize(XMFLOAT2(100, hei));
 
-	closeButton.SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 1, 0));
+	closeButton.SetPos(XMFLOAT2(screenW - 40 - 45 - 45 - 105 * 1, 0));
 	closeButton.SetSize(XMFLOAT2(100, hei));
 
-	aboutButton.SetPos(XMFLOAT2(screenW - 50 - 55, 0));
-	aboutButton.SetSize(XMFLOAT2(50, hei));
+	logButton.SetPos(XMFLOAT2(screenW - 40 - 45 - 45, 0));
+	logButton.SetSize(XMFLOAT2(40, hei));
+
+	aboutButton.SetPos(XMFLOAT2(screenW - 40 - 45, 0));
+	aboutButton.SetSize(XMFLOAT2(40, hei));
 
 	aboutLabel.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 	aboutLabel.SetPos(XMFLOAT2(screenW / 2.0f - aboutLabel.scale.x / 2.0f, screenH / 2.0f - aboutLabel.scale.y / 2.0f));
 
-	exitButton.SetPos(XMFLOAT2(screenW - 50, 0));
-	exitButton.SetSize(XMFLOAT2(50, hei));
+	exitButton.SetPos(XMFLOAT2(screenW - 40, 0));
+	exitButton.SetSize(XMFLOAT2(40, hei));
 }
 void EditorComponent::Load()
 {
@@ -418,6 +421,17 @@ void EditorComponent::Load()
 			});
 		});
 	GetGUI().AddWidget(&closeButton);
+
+
+	logButton.Create(ICON_BACKLOG);
+	logButton.font.params.shadowColor = wi::Color::Transparent();
+	logButton.SetTooltip("Open the backlog");
+	logButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
+	logButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
+	logButton.OnClick([&](wi::gui::EventArgs args) {
+		wi::backlog::Toggle();
+		});
+	GetGUI().AddWidget(&logButton);
 
 
 	aboutButton.Create(ICON_HELP);
@@ -1272,7 +1286,7 @@ void EditorComponent::Load()
 		wi::gui::Theme theme;
 		theme.image.background = true;
 		theme.image.blendFlag = wi::enums::BLENDMODE_OPAQUE;
-		theme.font.color = wi::Color(160, 240, 250, 255);
+		theme.font.color = wi::Color(130, 210, 220, 255);
 		theme.shadow_color = wi::Color(80, 140, 180, 100);
 
 		switch ((Theme)args.userdata)
