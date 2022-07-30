@@ -1258,9 +1258,9 @@ void EditorComponent::Load()
 	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		// Dark theme defaults:
-		wi::Color theme_color_idle = wi::Color(100, 130, 150, 150);
-		wi::Color theme_color_focus = wi::Color(100, 180, 200, 200);
-		wi::Color dark_point = wi::Color(0, 0, 20, 200); // darker elements will lerp towards this
+		wi::Color theme_color_idle = wi::Color(50, 80, 100, 200);
+		wi::Color theme_color_focus = wi::Color(90, 170, 190, 220);
+		wi::Color dark_point = wi::Color(10, 10, 30, 220); // darker elements will lerp towards this
 		wi::gui::Theme theme;
 		theme.image.background = true;
 		theme.image.blendFlag = wi::enums::BLENDMODE_OPAQUE;
