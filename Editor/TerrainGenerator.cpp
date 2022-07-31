@@ -752,6 +752,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 			if (material != nullptr)
 			{
+				bool need_update = false;
 				for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
 				{
 					if (virtual_texture_available[i])
@@ -764,6 +765,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 						if (current_resolution != chunk_data.required_texture_resolution)
 						{
+							need_update = true;
 							TextureDesc desc;
 							desc.width = chunk_data.required_texture_resolution;
 							desc.height = chunk_data.required_texture_resolution;
@@ -780,7 +782,10 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 					}
 				}
 
-				virtual_texture_updates.push_back(chunk);
+				if (need_update)
+				{
+					virtual_texture_updates.push_back(chunk);
+				}
 
 			}
 		}

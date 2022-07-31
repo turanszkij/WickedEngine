@@ -45,6 +45,7 @@ add_subdirectory(Utility)
 set(HEADER_FILES
 		WickedEngine.h
 		CommonInclude.h
+		logo.h
 		sdl2.h
 		wiApplication.h
 		wiApplication_BindLua.h

@@ -211,6 +211,7 @@ namespace wi::gui
 		float shadow = 1; // shadow radius
 		wi::Color shadow_color = wi::Color::Shadow();
 		WIDGETSTATE state = IDLE;
+		float tooltip_shadow = 1; // shadow radius
 		wi::Color tooltip_shadow_color = wi::Color::Shadow();
 		mutable wi::Sprite tooltipSprite;
 		mutable wi::SpriteFont tooltipFont;
@@ -242,6 +243,7 @@ namespace wi::gui
 		float GetShadowRadius() const { return shadow; }
 		void SetShadowRadius(float value) { shadow = value; }
 
+		virtual void ResizeLayout() {};
 		virtual void Update(const wi::Canvas& canvas, float dt);
 		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const {}
 		virtual void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
@@ -449,6 +451,8 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 
 		void OnClick(std::function<void(EventArgs args)> func);
+
+		static void SetCheckText(const std::string& text);
 	};
 
 	// Drop-down list
@@ -553,6 +557,7 @@ namespace wi::gui
 		void RemoveWidget(Widget* widget);
 		void RemoveWidgets();
 
+		void ResizeLayout() override;
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;

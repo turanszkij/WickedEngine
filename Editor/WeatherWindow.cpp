@@ -23,7 +23,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 		editor->RecordEntity(archive, entity);
 
-		editor->RefreshEntityTree();
+		editor->optionsWnd.RefreshEntityTree();
 		});
 
 	float x = 150;
@@ -767,6 +767,10 @@ void WeatherWindow::Update()
 		volumetricCloudsCheckBox.SetCheck(weather.IsVolumetricClouds());
 		coverageAmountSlider.SetValue(weather.volumetricCloudParameters.CoverageAmount);
 		coverageMinimumSlider.SetValue(weather.volumetricCloudParameters.CoverageMinimum);
+	}
+	else
+	{
+		scene.weather = {};
 	}
 }
 

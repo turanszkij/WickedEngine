@@ -421,8 +421,10 @@ void PaintToolWindow::Update(float dt)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 
-
-			wi::renderer::GenerateMipChain(editTexture, wi::renderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
+			if (editTexture.desc.mip_levels > 1)
+			{
+				wi::renderer::GenerateMipChain(editTexture, wi::renderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
+			}
 		}
 
 		wi::renderer::PaintRadius paintrad;

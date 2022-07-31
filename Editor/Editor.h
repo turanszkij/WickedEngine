@@ -1,31 +1,9 @@
 #pragma once
 #include "WickedEngine.h"
 #include "Translator.h"
-#include "TerrainGenerator.h"
 #include "wiScene_BindLua.h"
-
-#include "MaterialWindow.h"
-#include "MaterialPickerWindow.h"
-#include "PostprocessWindow.h"
-#include "WeatherWindow.h"
-#include "ObjectWindow.h"
-#include "MeshWindow.h"
-#include "CameraWindow.h"
-#include "RendererWindow.h"
-#include "EnvProbeWindow.h"
-#include "DecalWindow.h"
-#include "LightWindow.h"
-#include "AnimationWindow.h"
-#include "EmitterWindow.h"
-#include "HairParticleWindow.h"
-#include "ForceFieldWindow.h"
-#include "SoundWindow.h"
-#include "PaintToolWindow.h"
-#include "SpringWindow.h"
-#include "IKWindow.h"
-#include "TransformWindow.h"
-#include "LayerWindow.h"
-#include "NameWindow.h"
+#include "OptionsWindow.h"
+#include "ComponentsWindow.h"
 
 #include "IconDefinitions.h"
 
@@ -43,30 +21,6 @@ class Editor;
 class EditorComponent : public wi::RenderPath2D
 {
 public:
-	MaterialWindow materialWnd;
-	MaterialPickerWindow materialPickerWnd;
-	PostprocessWindow postprocessWnd;
-	WeatherWindow weatherWnd;
-	ObjectWindow objectWnd;
-	MeshWindow meshWnd;
-	CameraWindow cameraWnd;
-	RendererWindow rendererWnd;
-	EnvProbeWindow envProbeWnd;
-	DecalWindow decalWnd;
-	SoundWindow soundWnd;
-	LightWindow lightWnd;
-	AnimationWindow animWnd;
-	EmitterWindow emitterWnd;
-	HairParticleWindow hairWnd;
-	ForceFieldWindow forceFieldWnd;
-	PaintToolWindow paintToolWnd;
-	SpringWindow springWnd;
-	IKWindow ikWnd;
-	TransformWindow transformWnd;
-	LayerWindow layerWnd;
-	NameWindow nameWnd;
-	TerrainGenerator terragen;
-
 	Editor* main = nullptr;
 
 	wi::gui::Button saveButton;
@@ -77,51 +31,8 @@ public:
 	wi::gui::Button exitButton;
 	wi::gui::Label aboutLabel;
 
-	wi::gui::Window optionsWnd;
-	wi::gui::CheckBox translatorCheckBox;
-	wi::gui::CheckBox isScalatorCheckBox;
-	wi::gui::CheckBox isRotatorCheckBox;
-	wi::gui::CheckBox isTranslatorCheckBox;
-	wi::gui::CheckBox profilerEnabledCheckBox;
-	wi::gui::CheckBox physicsEnabledCheckBox;
-	wi::gui::CheckBox cinemaModeCheckBox;
-	wi::gui::CheckBox versionCheckBox;
-	wi::gui::CheckBox fpsCheckBox;
-	wi::gui::CheckBox otherinfoCheckBox;
-	wi::gui::ComboBox themeCombo;
-	wi::gui::ComboBox renderPathComboBox;
-	wi::gui::ComboBox saveModeComboBox;
-	wi::gui::ComboBox sceneComboBox;
-	void RefreshOptionsWindow();
-
-	enum class Filter : uint64_t
-	{
-		Transform = 1 << 0,
-		Material = 1 << 1,
-		Mesh = 1 << 2,
-		Object = 1 << 3,
-		EnvironmentProbe = 1 << 4,
-		Decal = 1 << 5,
-		Sound = 1 << 6,
-		Weather = 1 << 7,
-		Light = 1 << 8,
-
-		All = ~0ull,
-	} filter = Filter::All;
-	wi::gui::ComboBox newCombo;
-	wi::gui::ComboBox filterCombo;
-	wi::gui::TreeList entityTree;
-	wi::unordered_set<wi::ecs::Entity> entitytree_added_items;
-	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
-	void PushToEntityTree(wi::ecs::Entity entity, int level);
-	void RefreshEntityTree();
-
-	wi::gui::ComboBox newComponentCombo;
-	wi::gui::Window componentWindow;
-	void RefreshComponentWindow();
-
-	wi::gui::Slider pathTraceTargetSlider;
-	wi::gui::Label pathTraceStatisticsLabel;
+	OptionsWindow optionsWnd;
+	ComponentsWindow componentsWnd;
 
 	std::unique_ptr<wi::RenderPath3D> renderPath;
 	enum RENDERPATH
@@ -222,38 +133,38 @@ public:
 		this->renderPath->camera = &scenes[current_scene].get()->camera;
 		wi::lua::scene::SetGlobalScene(this->renderPath->scene);
 		wi::lua::scene::SetGlobalCamera(this->renderPath->camera);
-		RefreshEntityTree();
+		optionsWnd.RefreshEntityTree();
 		RefreshSceneList();
 	}
 	void RefreshSceneList()
 	{
-		sceneComboBox.ClearItems();
+		optionsWnd.sceneComboBox.ClearItems();
 		for (int i = 0; i < int(scenes.size()); ++i)
 		{
 			if (scenes[i]->path.empty())
 			{
-				sceneComboBox.AddItem("Untitled");
+				optionsWnd.sceneComboBox.AddItem("Untitled");
 			}
 			else
 			{
-				sceneComboBox.AddItem(wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(scenes[i]->path)));
+				optionsWnd.sceneComboBox.AddItem(wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(scenes[i]->path)));
 			}
 		}
-		sceneComboBox.AddItem("[New]");
-		sceneComboBox.SetSelectedWithoutCallback(current_scene);
+		optionsWnd.sceneComboBox.AddItem("[New]");
+		optionsWnd.sceneComboBox.SetSelectedWithoutCallback(current_scene);
 		std::string tooltip = "Choose a scene";
 		if (!GetCurrentEditorScene().path.empty())
 		{
 			tooltip += "\nCurrent path: " + GetCurrentEditorScene().path;
 		}
-		sceneComboBox.SetTooltip(tooltip);
+		optionsWnd.sceneComboBox.SetTooltip(tooltip);
 	}
 	void NewScene()
 	{
 		scenes.push_back(std::make_unique<EditorScene>());
 		SetCurrentScene(int(scenes.size()) - 1);
 		RefreshSceneList();
-		cameraWnd.ResetCam();
+		optionsWnd.cameraWnd.ResetCam();
 	}
 };
 
@@ -264,10 +175,4 @@ public:
 	EditorLoadingScreen loader;
 
 	void Initialize() override;
-};
-
-
-template<>
-struct enable_bitmask_operators<EditorComponent::Filter> {
-	static const bool enable = true;
 };

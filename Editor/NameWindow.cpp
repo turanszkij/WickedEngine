@@ -23,7 +23,7 @@ void NameWindow::Create(EditorComponent* _editor)
 
 		editor->RecordEntity(archive, entity);
 
-		editor->RefreshEntityTree();
+		editor->optionsWnd.RefreshEntityTree();
 		});
 
 	float x = 60;
@@ -44,7 +44,7 @@ void NameWindow::Create(EditorComponent* _editor)
 		}
 		name->name = args.sValue;
 
-		editor->RefreshEntityTree();
+		editor->optionsWnd.RefreshEntityTree();
 	});
 	AddWidget(&nameInput);
 

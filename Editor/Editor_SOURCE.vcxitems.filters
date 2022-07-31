@@ -75,6 +75,8 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)TerrainGenerator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)OptionsWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ComponentsWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -114,6 +116,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)IconsFontAwesome6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IconDefinitions.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)OptionsWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ComponentsWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
@@ -128,9 +132,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="images">
-      <UniqueIdentifier>{caf55722-5ff7-41fe-b606-f376e784aa2f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="meshoptimizer">
       <UniqueIdentifier>{49c521c0-5dca-4fce-b8c5-a334d1746d98}</UniqueIdentifier>
     </Filter>
@@ -139,9 +140,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)images\logo_small.png">
-      <Filter>images</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)terrain\base.jpg">
       <Filter>terrain</Filter>
     </Image>
