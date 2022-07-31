@@ -768,6 +768,10 @@ void WeatherWindow::Update()
 		coverageAmountSlider.SetValue(weather.volumetricCloudParameters.CoverageAmount);
 		coverageMinimumSlider.SetValue(weather.volumetricCloudParameters.CoverageMinimum);
 	}
+	else
+	{
+		scene.weather = {};
+	}
 }
 
 WeatherComponent& WeatherWindow::GetWeather() const
