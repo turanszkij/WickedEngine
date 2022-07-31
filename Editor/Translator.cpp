@@ -138,7 +138,7 @@ void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
 		}
 	}
 
-	if (enabled)
+	if (IsEnabled())
 	{
 		PreTranslate();
 
@@ -491,7 +491,7 @@ void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
 }
 void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 {
-	if (!enabled || selected.empty())
+	if (!IsEnabled() || selected.empty())
 	{
 		return;
 	}

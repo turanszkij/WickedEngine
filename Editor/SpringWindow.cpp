@@ -23,7 +23,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 
 		editor->RecordEntity(archive, entity);
 
-		editor->RefreshEntityTree();
+		editor->optionsWnd.RefreshEntityTree();
 		});
 
 	float x = 120;

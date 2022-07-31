@@ -242,6 +242,7 @@ namespace wi::gui
 		float GetShadowRadius() const { return shadow; }
 		void SetShadowRadius(float value) { shadow = value; }
 
+		virtual void ResizeLayout() {};
 		virtual void Update(const wi::Canvas& canvas, float dt);
 		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const {}
 		virtual void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
@@ -553,6 +554,7 @@ namespace wi::gui
 		void RemoveWidget(Widget* widget);
 		void RemoveWidgets();
 
+		void ResizeLayout() override;
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;

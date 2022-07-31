@@ -69,11 +69,13 @@ void MaterialPickerWindow::RecreateButtons()
 			});
 	}
 
-	Update();
+	ResizeLayout();
 }
 
-void MaterialPickerWindow::Update()
+void MaterialPickerWindow::ResizeLayout()
 {
+	wi::gui::Window::ResizeLayout();
+
 	if (editor == nullptr || IsCollapsed() || !IsVisible())
 	{
 		return;
@@ -160,6 +162,4 @@ void MaterialPickerWindow::Update()
 			offset_y += preview_size + border;
 		}
 	}
-
-	wi::gui::Window::Update(*editor, 0);
 }

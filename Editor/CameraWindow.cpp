@@ -198,7 +198,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		editor->RecordSelection(archive);
 		editor->RecordEntity(archive, entity);
 
-		editor->RefreshEntityTree();
+		editor->optionsWnd.RefreshEntityTree();
 		SetEntity(entity);
 	});
 	AddWidget(&proxyButton);

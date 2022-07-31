@@ -30,7 +30,6 @@ public:
 	wi::unordered_set<wi::ecs::Entity> selectedEntitiesLookup; // fast lookup for selected entities
 	wi::vector<wi::ecs::Entity> selectedEntitiesNonRecursive; // selected entities that don't contain entities that would be included in recursive iterations
 
-	bool enabled = false;
 	float scale_snap = 1;
 	float rotate_snap = XM_PIDIV4;
 	float translate_snap = 1;
@@ -52,7 +51,23 @@ public:
 
 	float dist = 1;
 
-	bool isTranslator = true, isScalator = false, isRotator = false;
+	bool isTranslator = true;
+	bool isScalator = false;
+	bool isRotator = false;
+	bool IsEnabled() const { return isTranslator || isRotator || isScalator; }
+	void SetEnabled(bool value)
+	{
+		if (value && !IsEnabled())
+		{
+			isTranslator = true;
+		}
+		else if (!value && IsEnabled())
+		{
+			isTranslator = false;
+			isScalator = false;
+			isRotator = false;
+		}
+	}
 
 
 	// Check if the drag started in this exact frame

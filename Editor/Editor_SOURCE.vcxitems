@@ -16,6 +16,7 @@
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)AnimationWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)CameraWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ComponentsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)DecalWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Editor.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)EmitterWindow.cpp" />
@@ -92,6 +93,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_OBJ.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NameWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ObjectWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)OptionsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)PaintToolWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)PostprocessWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RendererWindow.cpp" />
@@ -125,6 +127,7 @@
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CameraWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ComponentsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)DecalWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Editor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)EmitterWindow.h" />
@@ -145,6 +148,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ModelImporter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NameWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ObjectWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)OptionsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)PaintToolWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)PostprocessWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RendererWindow.h" />

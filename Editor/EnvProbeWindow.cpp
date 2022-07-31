@@ -23,7 +23,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 		editor->RecordEntity(archive, entity);
 
-		editor->RefreshEntityTree();
+		editor->optionsWnd.RefreshEntityTree();
 		});
 
 	float x = 5, y = 0, step = 35;

@@ -2534,138 +2534,7 @@ namespace wi::gui
 
 		Widget::Update(canvas, dt);
 
-		if (moveDragger.parent != nullptr)
-		{
-			moveDragger.Detach();
-			float rem = 0;
-			if (closeButton.parent != nullptr)
-			{
-				rem++;
-			}
-			if (collapseButton.parent != nullptr)
-			{
-				rem++;
-			}
-			if (resizeDragger_UpperLeft.parent != nullptr)
-			{
-				rem++;
-			}
-			if (resizeDragger_UpperRight.parent != nullptr)
-			{
-				rem++;
-			}
-			moveDragger.SetSize(XMFLOAT2(scale.x - control_size * rem, control_size));
-			float offset = 0;
-			if (resizeDragger_UpperLeft.parent != nullptr)
-			{
-				offset++;
-			}
-			moveDragger.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y));
-			moveDragger.AttachTo(this);
-		}
-		if (closeButton.parent != nullptr)
-		{
-			closeButton.Detach();
-			closeButton.SetSize(XMFLOAT2(control_size, control_size));
-			float offset = 1;
-			if (resizeDragger_UpperRight.parent != nullptr)
-			{
-				offset++;
-			}
-			closeButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size * offset, translation.y));
-			closeButton.AttachTo(this);
-		}
-		if (collapseButton.parent != nullptr)
-		{
-			collapseButton.Detach();
-			collapseButton.SetSize(XMFLOAT2(control_size, control_size));
-			float offset = 1;
-			if (closeButton.parent != nullptr)
-			{
-				offset++;
-			}
-			if (resizeDragger_UpperRight.parent != nullptr)
-			{
-				offset++;
-			}
-			collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size * offset, translation.y));
-			collapseButton.AttachTo(this);
-		}
-		if (resizeDragger_UpperLeft.parent != nullptr)
-		{
-			resizeDragger_UpperLeft.Detach();
-			resizeDragger_UpperLeft.SetSize(XMFLOAT2(control_size, control_size));
-			resizeDragger_UpperLeft.SetPos(XMFLOAT2(translation.x, translation.y));
-			resizeDragger_UpperLeft.AttachTo(this);
-		}
-		if (resizeDragger_UpperRight.parent != nullptr)
-		{
-			resizeDragger_UpperRight.Detach();
-			resizeDragger_UpperRight.SetSize(XMFLOAT2(control_size, control_size));
-			resizeDragger_UpperRight.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y));
-			resizeDragger_UpperRight.AttachTo(this);
-		}
-		if (resizeDragger_BottomLeft.parent != nullptr)
-		{
-			resizeDragger_BottomLeft.Detach();
-			resizeDragger_BottomLeft.SetSize(XMFLOAT2(control_size, control_size));
-			resizeDragger_BottomLeft.SetPos(XMFLOAT2(translation.x, translation.y + scale.y - control_size));
-			resizeDragger_BottomLeft.AttachTo(this);
-		}
-		if (resizeDragger_BottomRight.parent != nullptr)
-		{
-			resizeDragger_BottomRight.Detach();
-			resizeDragger_BottomRight.SetSize(XMFLOAT2(control_size, control_size));
-			resizeDragger_BottomRight.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + scale.y - control_size));
-			resizeDragger_BottomRight.AttachTo(this);
-		}
-		if (label.parent != nullptr)
-		{
-			label.font.params = font.params;
-			label.Detach();
-			XMFLOAT2 label_size = XMFLOAT2(scale.x, control_size);
-			XMFLOAT2 label_pos = XMFLOAT2(translation.x, translation.y);
-			if (resizeDragger_UpperLeft.parent != nullptr)
-			{
-				label_size.x -= control_size;
-				label_pos.x += control_size;
-			}
-			if (closeButton.parent != nullptr)
-			{
-				label_size.x -= control_size;
-			}
-			if (collapseButton.parent != nullptr)
-			{
-				label_size.x -= control_size;
-			}
-			label.SetSize(label_size);
-			label.SetPos(label_pos);
-			label.AttachTo(this);
-		}
-		if (scrollbar_horizontal.parent != nullptr)
-		{
-			scrollbar_horizontal.Detach();
-			float offset = 0;
-			if (resizeDragger_BottomLeft.parent != nullptr)
-			{
-				offset++;
-			}
-			scrollbar_horizontal.SetSize(XMFLOAT2(scale.x - control_size * (offset + 1), control_size));
-			scrollbar_horizontal.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y + scale.y - control_size));
-			scrollbar_horizontal.AttachTo(this);
-		}
-		if (scrollbar_vertical.parent != nullptr)
-		{
-			scrollbar_vertical.Detach();
-			float offset = 1;
-			if (resizeDragger_BottomRight.parent != nullptr)
-			{
-				offset++;
-			}
-			scrollbar_vertical.SetSize(XMFLOAT2(control_size, scale.y - (control_size + 1) * offset));
-			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + 1 + control_size));
-			scrollbar_vertical.AttachTo(this);
-		}
+		ResizeLayout();
 
 		Hitbox2D pointerHitbox = GetPointerHitbox();
 
@@ -2687,6 +2556,8 @@ namespace wi::gui
 		}
 		scrollbar_horizontal.SetListLength(scroll_length_horizontal);
 		scrollbar_vertical.SetListLength(scroll_length_vertical);
+		scrollbar_horizontal.Update(canvas, 0);
+		scrollbar_vertical.Update(canvas, 0);
 		scrollable_area.Detach();
 		scrollable_area.ClearTransform();
 		scrollable_area.Translate(translation);
@@ -2831,7 +2702,7 @@ namespace wi::gui
 		// base:
 		if (!IsCollapsed())
 		{
-			sprites[state].Draw(cmd);
+			sprites[IDLE].Draw(cmd);
 		}
 
 		for (size_t i = 0; i < widgets.size(); ++i)
@@ -3025,6 +2896,147 @@ namespace wi::gui
 		for (auto& widget : widgets)
 		{
 			widget->SetTheme(theme, id);
+		}
+	}
+	void Window::ResizeLayout()
+	{
+		Widget::ResizeLayout();
+		for (auto& widget : widgets)
+		{
+			widget->ResizeLayout();
+		}
+
+		if (moveDragger.parent != nullptr)
+		{
+			moveDragger.Detach();
+			float rem = 0;
+			if (closeButton.parent != nullptr)
+			{
+				rem++;
+			}
+			if (collapseButton.parent != nullptr)
+			{
+				rem++;
+			}
+			if (resizeDragger_UpperLeft.parent != nullptr)
+			{
+				rem++;
+			}
+			if (resizeDragger_UpperRight.parent != nullptr)
+			{
+				rem++;
+			}
+			moveDragger.SetSize(XMFLOAT2(scale.x - control_size * rem, control_size));
+			float offset = 0;
+			if (resizeDragger_UpperLeft.parent != nullptr)
+			{
+				offset++;
+			}
+			moveDragger.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y));
+			moveDragger.AttachTo(this);
+		}
+		if (closeButton.parent != nullptr)
+		{
+			closeButton.Detach();
+			closeButton.SetSize(XMFLOAT2(control_size, control_size));
+			float offset = 1;
+			if (resizeDragger_UpperRight.parent != nullptr)
+			{
+				offset++;
+			}
+			closeButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size * offset, translation.y));
+			closeButton.AttachTo(this);
+		}
+		if (collapseButton.parent != nullptr)
+		{
+			collapseButton.Detach();
+			collapseButton.SetSize(XMFLOAT2(control_size, control_size));
+			float offset = 1;
+			if (closeButton.parent != nullptr)
+			{
+				offset++;
+			}
+			if (resizeDragger_UpperRight.parent != nullptr)
+			{
+				offset++;
+			}
+			collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size * offset, translation.y));
+			collapseButton.AttachTo(this);
+		}
+		if (resizeDragger_UpperLeft.parent != nullptr)
+		{
+			resizeDragger_UpperLeft.Detach();
+			resizeDragger_UpperLeft.SetSize(XMFLOAT2(control_size, control_size));
+			resizeDragger_UpperLeft.SetPos(XMFLOAT2(translation.x, translation.y));
+			resizeDragger_UpperLeft.AttachTo(this);
+		}
+		if (resizeDragger_UpperRight.parent != nullptr)
+		{
+			resizeDragger_UpperRight.Detach();
+			resizeDragger_UpperRight.SetSize(XMFLOAT2(control_size, control_size));
+			resizeDragger_UpperRight.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y));
+			resizeDragger_UpperRight.AttachTo(this);
+		}
+		if (resizeDragger_BottomLeft.parent != nullptr)
+		{
+			resizeDragger_BottomLeft.Detach();
+			resizeDragger_BottomLeft.SetSize(XMFLOAT2(control_size, control_size));
+			resizeDragger_BottomLeft.SetPos(XMFLOAT2(translation.x, translation.y + scale.y - control_size));
+			resizeDragger_BottomLeft.AttachTo(this);
+		}
+		if (resizeDragger_BottomRight.parent != nullptr)
+		{
+			resizeDragger_BottomRight.Detach();
+			resizeDragger_BottomRight.SetSize(XMFLOAT2(control_size, control_size));
+			resizeDragger_BottomRight.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + scale.y - control_size));
+			resizeDragger_BottomRight.AttachTo(this);
+		}
+		if (label.parent != nullptr)
+		{
+			label.font.params = font.params;
+			label.Detach();
+			XMFLOAT2 label_size = XMFLOAT2(scale.x, control_size);
+			XMFLOAT2 label_pos = XMFLOAT2(translation.x, translation.y);
+			if (resizeDragger_UpperLeft.parent != nullptr)
+			{
+				label_size.x -= control_size;
+				label_pos.x += control_size;
+			}
+			if (closeButton.parent != nullptr)
+			{
+				label_size.x -= control_size;
+			}
+			if (collapseButton.parent != nullptr)
+			{
+				label_size.x -= control_size;
+			}
+			label.SetSize(label_size);
+			label.SetPos(label_pos);
+			label.AttachTo(this);
+		}
+		if (scrollbar_horizontal.parent != nullptr)
+		{
+			scrollbar_horizontal.Detach();
+			float offset = 0;
+			if (resizeDragger_BottomLeft.parent != nullptr)
+			{
+				offset++;
+			}
+			scrollbar_horizontal.SetSize(XMFLOAT2(GetWidgetAreaSize().x - control_size * (offset + 1), control_size));
+			scrollbar_horizontal.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y + scale.y - control_size));
+			scrollbar_horizontal.AttachTo(this);
+		}
+		if (scrollbar_vertical.parent != nullptr)
+		{
+			scrollbar_vertical.Detach();
+			float offset = 1;
+			if (resizeDragger_BottomRight.parent != nullptr)
+			{
+				offset++;
+			}
+			scrollbar_vertical.SetSize(XMFLOAT2(control_size, GetWidgetAreaSize().y - (control_size + 1) * offset));
+			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + 1 + control_size));
+			scrollbar_vertical.AttachTo(this);
 		}
 	}
 

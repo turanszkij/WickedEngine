@@ -3731,7 +3731,7 @@ namespace wi::scene
 			object.SetRequestPlanarReflection(false);
 			object.fadeDistance = object.draw_distance;
 
-			if (object.meshID != INVALID_ENTITY)
+			if (object.meshID != INVALID_ENTITY && meshes.Contains(object.meshID) && transforms.Contains(entity))
 			{
 				// These will only be valid for a single frame:
 				object.mesh_index = (uint32_t)meshes.GetIndex(object.meshID);
