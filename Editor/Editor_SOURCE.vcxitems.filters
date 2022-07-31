@@ -132,9 +132,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="images">
-      <UniqueIdentifier>{caf55722-5ff7-41fe-b606-f376e784aa2f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="meshoptimizer">
       <UniqueIdentifier>{49c521c0-5dca-4fce-b8c5-a334d1746d98}</UniqueIdentifier>
     </Filter>
@@ -143,9 +140,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)images\logo_small.png">
-      <Filter>images</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)terrain\base.jpg">
       <Filter>terrain</Filter>
     </Image>

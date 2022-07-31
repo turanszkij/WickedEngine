@@ -5,6 +5,7 @@
 #include "wiSpinLock.h"
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
+#include "logo.h"
 
 using namespace wi::graphics;
 
@@ -16,6 +17,7 @@ namespace wi::texturehelper
 
 	enum HELPERTEXTURES
 	{
+		HELPERTEXTURE_LOGO,
 		HELPERTEXTURE_RANDOM64X64,
 		HELPERTEXTURE_COLORGRADEDEFAULT,
 		HELPERTEXTURE_NORMALMAPDEFAULT,
@@ -33,6 +35,12 @@ namespace wi::texturehelper
 		wi::Timer timer;
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		// Logo
+		{
+			CreateTexture(helperTextures[HELPERTEXTURE_LOGO], wicked_engine_logo, 256, 256);
+			device->SetName(&helperTextures[HELPERTEXTURE_LOGO], "HELPERTEXTURE_LOGO");
+		}
 
 		// Random64x64
 		{
@@ -155,51 +163,46 @@ namespace wi::texturehelper
 		wi::backlog::post("wi::texturehelper Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
+	const Texture* getLogo()
+	{
+		return &helperTextures[HELPERTEXTURE_LOGO];
+	}
 	const Texture* getRandom64x64()
 	{
 		return &helperTextures[HELPERTEXTURE_RANDOM64X64];
 	}
-
 	const Texture* getColorGradeDefault()
 	{
 		return &helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT];
 	}
-
 	const Texture* getNormalMapDefault()
 	{
 		return getColor(wi::Color(127, 127, 255, 255));
 	}
-
 	const Texture* getBlackCubeMap()
 	{
 		return &helperTextures[HELPERTEXTURE_BLACKCUBEMAP];
 	}
-
 	const Texture* getUINT4()
 	{
 		return &helperTextures[HELPERTEXTURE_UINT4];
 	}
-
 	const Texture* getBlueNoise()
 	{
 		return &helperTextures[HELPERTEXTURE_BLUENOISE];
 	}
-
 	const Texture* getWhite()
 	{
 		return getColor(wi::Color(255, 255, 255, 255));
 	}
-
 	const Texture* getBlack()
 	{
 		return getColor(wi::Color(0, 0, 0, 255));
 	}
-
 	const Texture* getTransparent()
 	{
 		return getColor(wi::Color(0, 0, 0, 0));
 	}
-
 	const Texture* getColor(wi::Color color)
 	{
 		colorlock.lock();

@@ -40,7 +40,6 @@ jobs:
           third_party_software.txt
           features.txt
           credits.txt
-          Editor/images/
           Editor/terrain/
           Editor/sound/
           Editor/*.ini
@@ -110,7 +109,6 @@ jobs:
           third_party_software.txt
           features.txt
           credits.txt
-          Editor/images/
           Editor/terrain/
           Editor/sound/
           Editor/*.ini
@@ -181,7 +179,6 @@ jobs:
           third_party_software.txt
           features.txt
           credits.txt
-          Editor/images/
           Editor/terrain/
           Editor/sound/
           Editor/*.ini

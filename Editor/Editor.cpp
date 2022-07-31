@@ -54,7 +54,7 @@ void EditorLoadingScreen::Load()
 	font.anim.typewriter.character_start = 7;
 	AddFont(&font);
 
-	sprite = wi::Sprite("images/logo_small.png");
+	sprite.textureResource.SetTexture(*wi::texturehelper::getLogo()); // use embedded asset
 	sprite.anim.opa = 1;
 	sprite.anim.repeatable = true;
 	sprite.params.siz = XMFLOAT2(128, 128);
