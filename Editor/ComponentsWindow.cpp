@@ -245,6 +245,7 @@ void ComponentsWindow::Update(float dt)
 
 void ComponentsWindow::ResizeLayout()
 {
+	wi::gui::Window::ResizeLayout();
 	const wi::scene::Scene& scene = editor->GetCurrentScene();
 	const float padding = 4;
 	XMFLOAT2 pos = XMFLOAT2(padding, padding);
@@ -497,6 +498,4 @@ void ComponentsWindow::ResizeLayout()
 	{
 		weatherWnd.SetVisible(false);
 	}
-
-	wi::gui::Window::ResizeLayout();
 }

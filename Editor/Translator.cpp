@@ -284,7 +284,7 @@ void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
 			}
 		}
 
-		if (dragging || (state != TRANSLATOR_IDLE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT)))
+		if (dragging || (state != TRANSLATOR_IDLE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) && interactable))
 		{
 			// Dragging operation:
 			if (isRotator)
@@ -1070,6 +1070,7 @@ void Translator::PreTranslate()
 		TransformComponent* transform = scene.transforms.GetComponent(x.entity);
 		if (transform != nullptr)
 		{
+			transform->UpdateTransform();
 			centerV = XMVectorAdd(centerV, transform->GetPositionV());
 			count += 1.0f;
 		}

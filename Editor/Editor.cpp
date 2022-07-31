@@ -584,9 +584,12 @@ void EditorComponent::Update(float dt)
 
 	bool deleting = wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE);
 
+	translator.interactable = false;
+
 	// Camera control:
 	if (!wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
+		translator.interactable = true;
 		XMFLOAT4 currentMouse = wi::input::GetPointer();
 		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
 		static bool camControlStart = true;

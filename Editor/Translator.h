@@ -51,6 +51,7 @@ public:
 
 	float dist = 1;
 
+	bool interactable = true;
 	bool isTranslator = true;
 	bool isScalator = false;
 	bool isRotator = false;

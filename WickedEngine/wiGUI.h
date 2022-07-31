@@ -211,6 +211,7 @@ namespace wi::gui
 		float shadow = 1; // shadow radius
 		wi::Color shadow_color = wi::Color::Shadow();
 		WIDGETSTATE state = IDLE;
+		float tooltip_shadow = 1; // shadow radius
 		wi::Color tooltip_shadow_color = wi::Color::Shadow();
 		mutable wi::Sprite tooltipSprite;
 		mutable wi::SpriteFont tooltipFont;

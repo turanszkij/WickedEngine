@@ -13,9 +13,9 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create("Options", wi::gui::Window::WindowControls::RESIZE_TOPRIGHT);
 	SetShadowRadius(2);
 
-	isScalatorCheckBox.Create(ICON_SCALE "  ");
-	isRotatorCheckBox.Create(ICON_ROTATE "  ");
 	isTranslatorCheckBox.Create(ICON_TRANSLATE "  ");
+	isRotatorCheckBox.Create(ICON_ROTATE "  ");
+	isScalatorCheckBox.Create(ICON_SCALE "  ");
 	{
 		isScalatorCheckBox.SetTooltip("Scale");
 		isScalatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
@@ -625,6 +625,7 @@ void OptionsWindow::Update(float dt)
 
 void OptionsWindow::ResizeLayout()
 {
+	wi::gui::Window::ResizeLayout();
 	const float padding = 4;
 	XMFLOAT2 pos = XMFLOAT2(padding, padding);
 	const float width = GetWidgetAreaSize().x - padding * 2;
@@ -730,8 +731,6 @@ void OptionsWindow::ResizeLayout()
 	entityTree.SetSize(XMFLOAT2(width, std::max(editor->GetLogicalHeight() * 0.75f, editor->GetLogicalHeight() - pos.y)));
 	pos.y += entityTree.GetSize().y;
 	pos.y += padding;
-
-	wi::gui::Window::ResizeLayout();
 }
 
 

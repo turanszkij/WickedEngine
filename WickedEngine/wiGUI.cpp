@@ -75,7 +75,7 @@ namespace wi::gui
 		focus = false;
 		for (size_t i = 0; i < widgets.size(); ++i)
 		{
-			Widget* widget = widgets[i]; // re index in loop, because widgets can be resized while updating!
+			Widget* widget = widgets[i]; // re index in loop, because widgets can be realloced while updating!
 			widget->force_disable = focus;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
@@ -347,13 +347,13 @@ namespace wi::gui
 			tooltipSprite.params.siz.x = textWidth;
 			tooltipSprite.params.siz.y = textHeight;
 
-			if (shadow > 0)
+			if (tooltip_shadow > 0)
 			{
 				wi::image::Params fx(
-					tooltipSprite.params.pos.x - shadow,
-					tooltipSprite.params.pos.y - shadow,
-					tooltipSprite.params.siz.x + shadow * 2,
-					tooltipSprite.params.siz.y + shadow * 2,
+					tooltipSprite.params.pos.x - tooltip_shadow,
+					tooltipSprite.params.pos.y - tooltip_shadow,
+					tooltipSprite.params.siz.x + tooltip_shadow * 2,
+					tooltipSprite.params.siz.y + tooltip_shadow * 2,
 					tooltip_shadow_color
 				);
 				wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
@@ -2586,7 +2586,6 @@ namespace wi::gui
 		scrollable_area.ClearTransform();
 		scrollable_area.Translate(translation);
 		scrollable_area.Translate(XMFLOAT3(scrollbar_horizontal.GetOffset(), control_size + 1 + scrollbar_vertical.GetOffset(), 0));
-		scrollable_area.Update(canvas, dt);
 		scrollable_area.AttachTo(this);
 		scrollable_area.scissorRect = scissorRect;
 		scrollable_area.scissorRect.left += 1;
@@ -2608,7 +2607,7 @@ namespace wi::gui
 		bool focus = false;
 		for (size_t i = 0; i < widgets.size(); ++i)
 		{
-			Widget* widget = widgets[i]; // re index in loop, because widgets can be resized while updating!
+			Widget* widget = widgets[i]; // re index in loop, because widgets can be realloced while updating!
 			widget->force_disable = force_disable || focus;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
