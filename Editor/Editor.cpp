@@ -63,6 +63,8 @@ void EditorLoadingScreen::Load()
 	sprite.params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 	AddSprite(&sprite);
 
+	wi::gui::CheckBox::SetCheckText(ICON_CHECK);
+
 	LoadingScreen::Load();
 }
 void EditorLoadingScreen::Update(float dt)

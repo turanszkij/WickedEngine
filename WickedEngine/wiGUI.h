@@ -450,6 +450,8 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 
 		void OnClick(std::function<void(EventArgs args)> func);
+
+		static void SetCheckText(const std::string& text);
 	};
 
 	// Drop-down list
