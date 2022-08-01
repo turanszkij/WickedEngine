@@ -50,4 +50,10 @@ namespace wi::backlog
 	void UnblockLuaExecution();
 
 	void SetLogLevel(LogLevel newLevel);
+
+
+	// These are no longer used, but kept here to not break user code:
+	inline void input(const char input) {}
+	inline void acceptInput() {}
+	inline void deletefromInput() {}
 };
