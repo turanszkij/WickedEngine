@@ -125,6 +125,95 @@ function killProcesses()
 	WAITING_ON_TIME = {}
 end
 
+-- Kill one process, has to know the coroutine first
+function killProcess(co)
+    for signalName, threads in pairs(WAITING_ON_SIGNAL) do
+        for index, co in ipairs(threads) do
+            threads[index] = nil
+            break
+        end
+    end
+    if WAITING_ON_TIME[co] ~= nil then
+        WAITING_ON_TIME[co] = nil
+    end
+end
+
+-- Track processes by PID and File, used for hot reloading
+local PROCESSES_PID = {}
+local PROCESSES_FILE = {}
+
+-- This is the globals part for launching processes that can be hot reloaded
+-- There is a hook function that exists on the script side (hook data)
+function Internal_launchProcess(file, pid, func)
+    local co = coroutine.create(func)
+    local success, errorMsg = coroutine.resume(co)
+	if not success then
+		error("[Lua Error] "..errorMsg)
+	end
+    PROCESSES_PID[pid] = co
+    if PROCESSES_FILE[file] == nil then
+        PROCESSES_FILE[file] = {}
+    end
+    table.insert(PROCESSES_FILE[file], pid)
+	return success, co
+end
+
+-- To kill processes by PID and File is exposed using these two functions below
+function killProcessPID(pid)
+    if PROCESSES_PID[pid] ~= nil then
+        killProcess(PROCESSES_PID[pid])
+    end
+    PROCESSES_PID[pid] = nil
+end
+
+-- KIll process by file which each file has sets of PID, then kill by all PIDs known by the file
+function killProcessFile(file)
+    if type(PROCESSES_FILE[file]) == "table" then
+        for _, pid in ipairs(PROCESSES_FILE[file]) do
+            killProcessPID(pid)
+        end
+    end
+    PROCESSES_FILE[file] = nil
+end
+
+-- Track user data by PID, important for hot reloading
+local PROCESSES_DATA = {}
+function Internal_SyncSubTable(target,source)
+    for key, value in pairs(source) do
+        backlog_post("key>"..key)
+        if type(target[key]) == type(source[key]) then 
+            if type(target[key]) == "table" then
+                Internal_SyncSubTable(target[key], source[key])
+            else
+                source[key] = target[key]
+            end
+        else
+            target[key] = source[key]
+        end
+    end
+end
+function Internal_syncData(file, pid, name, mdata)
+    if type(PROCESSES_DATA[pid]) == "table" then
+        if type(PROCESSES_DATA[pid][name]) == type(mdata) then
+            backlog_post("pre>"..name)
+            if type(mdata) == "table" then
+                Internal_SyncSubTable(PROCESSES_DATA[pid][name], mdata)
+            else
+                mdata = PROCESSES_DATA[pid][name]
+            end
+            backlog_post("post>"..name)
+        end
+    else
+        PROCESSES_DATA[pid] = {}
+    end
+    Internal_launchProcess(file, pid, function()
+        while true do
+            PROCESSES_DATA[pid][name] = mdata
+            update()
+        end
+    end)
+end
+
 -- Store the delta time for the current frame
 local lastDeltaTime = 0
 function setDeltaTime(dt)

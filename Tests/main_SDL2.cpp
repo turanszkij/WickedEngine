@@ -30,6 +30,10 @@ int sdl_loop(Tests &tests)
                             break;
                         case SDL_WINDOWEVENT_FOCUS_GAINED:
                             tests.is_window_active = true;
+
+                            wi::backlog::post("[Scripts check] Checking and updating scripts list...");
+                            wi::lua::CheckLoadedScriptsOutdated();
+                            
                             if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
                             {
                                 std::thread([] {

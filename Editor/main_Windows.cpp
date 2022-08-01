@@ -250,6 +250,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_SETFOCUS:
 		editor.is_window_active = true;
+
+        wi::backlog::post("[Scripts check] Checking and updating scripts list...");
+        wi::lua::CheckLoadedScriptsOutdated();
+
 		if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
 		{
 			std::thread([] {

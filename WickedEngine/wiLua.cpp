@@ -21,8 +21,10 @@
 #include "wiNetwork_BindLua.h"
 #include "wiPrimitive_BindLua.h"
 #include "wiTimer.h"
+#include "wiUnorderedMap.h"
 #include "wiVector.h"
 
+#include <filesystem>
 #include <memory>
 
 namespace wi::lua
@@ -85,6 +87,83 @@ namespace wi::lua
 		return 0;
 	}
 
+	wi::unordered_map<size_t, std::string> scripts;
+	wi::unordered_map<std::string, wi::vector<size_t>> scripts_filerefs;
+	wi::unordered_map<std::string, std::chrono::time_point<
+		std::filesystem::__file_clock,
+		std::chrono::duration<long, std::ratio<1, 1000000000>>>> scripts_last_updated;
+	wi::unordered_map<size_t, std::string> GetScriptList(){
+		return scripts;
+	}
+	size_t Internal_GenScriptPID(){
+		static std::atomic<size_t> next{ 1 };
+		return next.fetch_add(1);
+	}
+	void Internal_MapFileRefs(){
+		scripts_filerefs.clear();
+		for(auto kval : scripts){
+			scripts_filerefs[kval.second].push_back(kval.first);
+		}
+		scripts_last_updated.clear();
+		for(auto kval : scripts_filerefs){
+			scripts_last_updated[kval.first] = std::filesystem::last_write_time(kval.first);
+		}
+	}
+
+	int Internal_ExeFile(lua_State* L)
+	{
+		int argc = SGetArgCount(L);
+
+		if (argc > 0)
+		{
+			std::string filename = SGetString(L, 1);
+			filename = wi::helper::GetCurrentPath()+"/"+filename;
+			wi::vector<uint8_t> filedata;
+
+			if (wi::helper::FileRead(filename, filedata))
+			{
+				size_t PID;
+				if(argc >= 2){
+					PID = SGetInt(L, 2);
+				}else{
+					PID = Internal_GenScriptPID();
+				}
+				scripts[PID] = filename;
+				Internal_MapFileRefs();
+
+				std::string command = "SCRIPT_PATH=\""+filename+"\" \n";
+				command += "SCRIPT_PID="+std::to_string(PID)+" \n";
+				command += "local launchProcess = function(func) \nsuccess, co = Internal_launchProcess(SCRIPT_PATH, SCRIPT_PID, func) \nreturn success, co \nend \n";
+				command += "local syncData = function(name, mdata) \nmdata = Internal_syncData(SCRIPT_PATH, SCRIPT_PID, name, mdata) \nend \n";
+				command += std::string(filedata.begin(), filedata.end());
+				int status = luaL_loadstring(L, command.c_str());
+				if (status == 0)
+				{
+					status = lua_pcall(L, 0, LUA_MULTRET, 0);
+				}
+				else
+				{
+					const char* str = lua_tostring(L, -1);
+
+					if (str == nullptr)
+						return 0;
+
+					std::string ss;
+					ss += WILUA_ERROR_PREFIX;
+					ss += str;
+					wi::backlog::post(ss, wi::backlog::LogLevel::Error);
+					lua_pop(L, 1); // remove error message
+				}
+			}
+		}
+		else
+		{
+			SError(L, "exefile(string filename) not enough arguments!");
+		}
+
+		return 0;
+	}
+
 	void Initialize()
 	{
 		wi::Timer timer;
@@ -92,6 +171,7 @@ namespace wi::lua
 		luainternal.m_luaState = luaL_newstate();
 		luaL_openlibs(luainternal.m_luaState);
 		RegisterFunc("dofile", Internal_DoFile);
+		RegisterFunc("exefile", Internal_ExeFile);
 		RunText(wiLua_Globals);
 
 		Application_BindLua::Bind();
@@ -276,6 +356,27 @@ namespace wi::lua
 	void KillProcesses()
 	{
 		RunText("killProcesses();");
+	}
+
+	void CheckLoadedScriptsOutdated(){
+		for(auto& kval : scripts_last_updated){
+			const auto latest_changes = std::filesystem::last_write_time(kval.first);
+			if(latest_changes > kval.second){
+				auto L = GetLuaState();
+				lua_getglobal(L, "killProcessFile");
+				lua_pushstring(L, kval.first.c_str());
+				lua_call(L, 1, 0);
+
+				auto list = scripts_filerefs[kval.first];
+				for (auto pid : list){
+					wi::helper::MakePathRelative(wi::helper::GetCurrentPath(), kval.first);
+					lua_getglobal(L, "exefile");
+					lua_pushstring(L, kval.first.c_str());
+					lua_pushinteger(L, pid);
+					lua_call(L, 2, 0);
+				}
+			}
+		}
 	}
 
 	std::string SGetString(lua_State* L, int stackpos)

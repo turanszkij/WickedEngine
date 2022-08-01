@@ -5,6 +5,7 @@
 #include <fstream>
 
 #include "Assets/Icon.c"
+#include "wiLua.h"
 
 using namespace std;
 
@@ -35,6 +36,10 @@ int sdl_loop(Editor &editor)
                             break;
                         case SDL_WINDOWEVENT_FOCUS_GAINED:
                             editor.is_window_active = true;
+                            
+                            wi::backlog::post("[Scripts check] Checking and updating scripts list...");
+                            wi::lua::CheckLoadedScriptsOutdated();
+
                             if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
                             {
                                 std::thread([] {

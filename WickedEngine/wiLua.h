@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiMath.h"
+#include "wiUnorderedMap.h"
 
 #include <string>
 
@@ -47,6 +48,10 @@ namespace wi::lua
 	void AddInt(const std::string& name, int data);
 	//returns the path of the last executed script:
 	const std::string& GetScriptPath();
+	//returns scripts list for tracking
+	wi::unordered_map<size_t, std::string> GetScriptList();
+	//for hot reload feature to work, add this code to the part where the window reloads
+	void CheckLoadedScriptsOutdated();
 
 	//set delta time to use with lua
 	void SetDeltaTime(double dt);
