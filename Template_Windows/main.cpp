@@ -169,8 +169,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (wParam)
 		{
 		case VK_BACK:
-			if (wi::backlog::isActive())
-				wi::backlog::deletefromInput();
 			wi::gui::TextInputField::DeleteFromInput();
 			break;
 		case VK_RETURN:

@@ -395,6 +395,7 @@ namespace wi::gui
 		// There can only be ONE active text input field, so these methods modify the active one
 		static void AddInput(const char inputChar);
 		static void DeleteFromInput();
+		void SetAsActive();
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;

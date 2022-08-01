@@ -1175,6 +1175,8 @@ namespace wi::gui
 
 
 	wi::SpriteFont TextInputField::font_input;
+	int caret_pos = 0;
+	wi::Timer caret_timer;
 	void TextInputField::Create(const std::string& name)
 	{
 		SetName(name);
@@ -1265,9 +1267,7 @@ namespace wi::gui
 
 			if (clicked)
 			{
-				Activate();
-
-				font_input.SetText(font.GetText());
+				SetAsActive();
 			}
 
 			if (state == ACTIVE)
@@ -1279,11 +1279,14 @@ namespace wi::gui
 					font.SetText(font_input.GetText());
 					font_input.text.clear();
 
-					EventArgs args;
-					args.sValue = font.GetTextA();
-					args.iValue = atoi(args.sValue.c_str());
-					args.fValue = (float)atof(args.sValue.c_str());
-					onInputAccepted(args);
+					if (onInputAccepted)
+					{
+						EventArgs args;
+						args.sValue = font.GetTextA();
+						args.iValue = atoi(args.sValue.c_str());
+						args.fValue = (float)atof(args.sValue.c_str());
+						onInputAccepted(args);
+					}
 
 					Deactivate();
 				}
@@ -1293,6 +1296,35 @@ namespace wi::gui
 					// cancel input 
 					font_input.text.clear();
 					Deactivate();
+				}
+				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_LEFT) && caret_pos > 0)
+				{
+					// caret repositioning left:
+					caret_pos--;
+					caret_timer.record();
+				}
+				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_RIGHT) && caret_pos < font_input.GetText().size())
+				{
+					// caret repositioning right:
+					caret_pos++;
+					caret_timer.record();
+				}
+				else if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) && intersectsPointer)
+				{
+					// caret repositioning by mouse click:
+					caret_pos = (int)font_input.GetText().size();
+					const std::wstring& str = font_input.GetText();
+					float pos = font_input.params.position.x;
+					for (size_t i = 0; i < str.size(); ++i)
+					{
+						XMFLOAT2 size = wi::font::TextSize(str.c_str() + i, 1, font_input.params);
+						pos += size.x;
+						if (pos > pointerHitbox.pos.x)
+						{
+							caret_pos = int(i);
+							break;
+						}
+					}
 				}
 
 			}
@@ -1332,6 +1364,9 @@ namespace wi::gui
 		if (state == ACTIVE)
 		{
 			font_input.params = font.params;
+			// todo: make customizable:
+			font_input.params.color = wi::Color::Black();
+			font_input.params.shadowColor = wi::Color::Transparent();
 		}
 	}
 	void TextInputField::Render(const wi::Canvas& canvas, CommandList cmd) const
@@ -1357,6 +1392,19 @@ namespace wi::gui
 		if (state == ACTIVE)
 		{
 			font_input.Draw(cmd);
+
+			// caret:
+			if(std::fmod(caret_timer.elapsed_seconds(), 1) < 0.5f)
+			{
+				wi::font::Params params = font_input.params;
+				XMFLOAT2 size = wi::font::TextSize(font_input.GetText().c_str(), caret_pos, font_input.params);
+				params.posX += size.x;
+				params.color = wi::Color::lerp(params.color, wi::Color::Transparent(), 0.25f);
+				params.size += 4;
+				params.posY -= 2;
+				params.h_align = wi::font::WIFALIGN_CENTER;
+				wi::font::Draw(L"|", params, cmd);
+			}
 		}
 		else
 		{
@@ -1370,25 +1418,35 @@ namespace wi::gui
 	}
 	void TextInputField::AddInput(const char inputChar)
 	{
-		std::string value_new = font_input.GetTextA();
-		value_new.push_back(inputChar);
-		font_input.SetText(value_new);
+		std::wstring value_new = font_input.GetText();
+		if (value_new.size() >= caret_pos)
+		{
+			value_new.insert(value_new.begin() + caret_pos, inputChar);
+			font_input.SetText(value_new);
+			caret_pos = std::min((int)font_input.GetText().size(), caret_pos + 1);
+		}
 	}
 	void TextInputField::DeleteFromInput()
 	{
-		std::string value_new = font_input.GetTextA();
-		if (!value_new.empty())
+		std::wstring value_new = font_input.GetText();
+		if (caret_pos > 0 && value_new.size() > caret_pos - 1)
 		{
-			value_new.pop_back();
+			value_new.erase(value_new.begin() + caret_pos - 1);
+			font_input.SetText(value_new);
+			caret_pos = std::max(0, caret_pos - 1);
 		}
-		font_input.SetText(value_new);
 	}
 	void TextInputField::SetTheme(const Theme& theme, int id)
 	{
 		Widget::SetTheme(theme, id);
 		theme.font.Apply(font_description.params);
 	}
-
+	void TextInputField::SetAsActive()
+	{
+		Activate();
+		font_input.SetText(font.GetText());
+		caret_pos = (int)font_input.GetText().size();
+	}
 
 
 
