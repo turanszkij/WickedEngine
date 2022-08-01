@@ -1439,10 +1439,7 @@ namespace wi::gui
 
 		if (id > WIDGET_ID_TEXTINPUTFIELD_BEGIN && id < WIDGET_ID_TEXTINPUTFIELD_END)
 		{
-			if (id >= WIDGET_ID_TEXTINPUTFIELD_IDLE)
-			{
-				sprites[id - WIDGET_ID_TEXTINPUTFIELD_IDLE].params.color = color;
-			}
+			sprites[id - WIDGET_ID_TEXTINPUTFIELD_IDLE].params.color = color;
 		}
 	}
 	void TextInputField::SetTheme(const Theme& theme, int id)
