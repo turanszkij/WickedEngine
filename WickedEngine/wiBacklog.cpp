@@ -135,11 +135,19 @@ namespace wi::backlog
 					});
 					inputField.SetColor(wi::Color(30, 40, 60, 200), wi::gui::IDLE);
 					inputField.SetColor(wi::Color(70, 150, 170, 220), wi::gui::FOCUS);
+					inputField.SetColor(wi::Color(70, 150, 170, 220), wi::gui::ACTIVE);
+					inputField.SetColor(wi::Color(70, 150, 170, 220), wi::gui::DEACTIVATING);
 					inputField.SetShadowRadius(5);
 					inputField.SetShadowColor(wi::Color(80, 140, 180, 100));
+					inputField.font.params.color = wi::Color(160, 240, 250, 255);
+					inputField.font.params.shadowColor = wi::Color::Transparent();
 				}
 				inputField.SetSize(XMFLOAT2(canvas.GetLogicalWidth() - 20, 20));
 				inputField.SetPos(XMFLOAT2(10, canvas.GetLogicalHeight() - 30));
+				if (inputField.GetState() != wi::gui::ACTIVE)
+				{
+					inputField.SetAsActive();
+				}
 				inputField.Update(canvas, dt);
 			}
 		}

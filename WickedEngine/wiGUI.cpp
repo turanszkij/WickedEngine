@@ -1364,9 +1364,6 @@ namespace wi::gui
 		if (state == ACTIVE)
 		{
 			font_input.params = font.params;
-			// todo: make customizable:
-			font_input.params.color = wi::Color::Black();
-			font_input.params.shadowColor = wi::Color::Transparent();
 		}
 	}
 	void TextInputField::Render(const wi::Canvas& canvas, CommandList cmd) const
@@ -1399,7 +1396,7 @@ namespace wi::gui
 				wi::font::Params params = font_input.params;
 				XMFLOAT2 size = wi::font::TextSize(font_input.GetText().c_str(), caret_pos, font_input.params);
 				params.posX += size.x;
-				params.color = wi::Color::lerp(params.color, wi::Color::Transparent(), 0.25f);
+				params.color = wi::Color::lerp(params.color, wi::Color::Transparent(), 0.1f);
 				params.size += 4;
 				params.posY -= 2;
 				params.h_align = wi::font::WIFALIGN_CENTER;
@@ -1434,6 +1431,18 @@ namespace wi::gui
 			value_new.erase(value_new.begin() + caret_pos - 1);
 			font_input.SetText(value_new);
 			caret_pos = std::max(0, caret_pos - 1);
+		}
+	}
+	void TextInputField::SetColor(wi::Color color, int id)
+	{
+		Widget::SetColor(color, id);
+
+		if (id > WIDGET_ID_TEXTINPUTFIELD_BEGIN && id < WIDGET_ID_TEXTINPUTFIELD_END)
+		{
+			if (id >= WIDGET_ID_TEXTINPUTFIELD_IDLE)
+			{
+				sprites[id - WIDGET_ID_TEXTINPUTFIELD_IDLE].params.color = color;
+			}
 		}
 	}
 	void TextInputField::SetTheme(const Theme& theme, int id)

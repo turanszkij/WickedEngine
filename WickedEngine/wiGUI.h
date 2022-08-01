@@ -49,6 +49,14 @@ namespace wi::gui
 
 		// IDs for special widget states:
 
+		// TextInputField:
+		WIDGET_ID_TEXTINPUTFIELD_BEGIN, // do not use!
+		WIDGET_ID_TEXTINPUTFIELD_IDLE,
+		WIDGET_ID_TEXTINPUTFIELD_FOCUS,
+		WIDGET_ID_TEXTINPUTFIELD_ACTIVE,
+		WIDGET_ID_TEXTINPUTFIELD_DEACTIVATING,
+		WIDGET_ID_TEXTINPUTFIELD_END, // do not use!
+
 		// Slider:
 		WIDGET_ID_SLIDER_BEGIN, // do not use!
 		WIDGET_ID_SLIDER_BASE_IDLE,
@@ -399,6 +407,7 @@ namespace wi::gui
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
 
 		void OnInputAccepted(std::function<void(EventArgs args)> func);
