@@ -275,10 +275,10 @@ namespace wi::lua
 	}
 	bool RunFile(const std::string& filename)
 	{
-		script_path = wi::helper::GetDirectoryFromPath(filename);
 		wi::vector<uint8_t> filedata;
 		if (wi::helper::FileRead(filename, filedata))
 		{
+			script_path = wi::helper::GetDirectoryFromPath(filename);
 			return RunText(std::string(filedata.begin(), filedata.end()));
 		}
 		return false;

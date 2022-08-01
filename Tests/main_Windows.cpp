@@ -162,8 +162,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (wParam)
 		{
 		case VK_BACK:
-			if (wi::backlog::isActive())
-				wi::backlog::deletefromInput();
 			wi::gui::TextInputField::DeleteFromInput();
 			break;
 		case VK_RETURN:
@@ -171,10 +169,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		default:
 		{
 			const char c = (const char)(TCHAR)wParam;
-			if (wi::backlog::isActive())
-			{
-				wi::backlog::input(c);
-			}
 			wi::gui::TextInputField::AddInput(c);
 		}
 		break;
