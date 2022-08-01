@@ -133,10 +133,7 @@ namespace wi::backlog
 						}
 						inputField.SetText("");
 					});
-					inputField.SetColor(wi::Color(30, 40, 60, 200), wi::gui::IDLE);
-					inputField.SetColor(wi::Color(70, 150, 170, 220), wi::gui::FOCUS);
-					inputField.SetColor(wi::Color(70, 150, 170, 220), wi::gui::ACTIVE);
-					inputField.SetColor(wi::Color(70, 150, 170, 220), wi::gui::DEACTIVATING);
+					inputField.SetColor(wi::Color(30, 40, 60, 200)); // all states the same, it's gonna be always active anyway
 					inputField.SetShadowRadius(5);
 					inputField.SetShadowColor(wi::Color(80, 140, 180, 100));
 					inputField.font.params.color = wi::Color(160, 240, 250, 255);
