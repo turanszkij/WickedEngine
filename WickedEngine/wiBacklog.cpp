@@ -10,6 +10,7 @@
 #include "wiInput.h"
 #include "wiPlatform.h"
 #include "wiHelper.h"
+#include "wiGUI.h"
 
 #include <mutex>
 #include <deque>
@@ -33,12 +34,13 @@ namespace wi::backlog
 	const size_t deletefromline = 500;
 	float pos = 5;
 	float scroll = 0;
-	std::string inputArea;
 	int historyPos = 0;
 	wi::font::Params font_params;
 	wi::SpinLock logLock;
 	Texture backgroundTex;
 	bool refitscroll = false;
+	wi::gui::TextInputField inputField;
+	wi::gui::Button toggleButton;
 
 	bool locked = false;
 	bool blockLuaExec = false;
@@ -97,10 +99,6 @@ namespace wi::backlog
 				{
 					historyNext();
 				}
-				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ENTER))
-				{
-					acceptInput();
-				}
 				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_PAGEUP))
 				{
 					Scroll(1000.0f * dt);
@@ -109,6 +107,74 @@ namespace wi::backlog
 				{
 					Scroll(-1000.0f * dt);
 				}
+
+				static bool created = false;
+				if (!created)
+				{
+					created = true;
+					inputField.Create("");
+					inputField.OnInputAccepted([](wi::gui::EventArgs args) {
+						historyPos = 0;
+						post(args.sValue);
+						LogEntry entry;
+						entry.text = args.sValue;
+						entry.level = LogLevel::Default;
+						history.push_back(entry);
+						if (history.size() > deletefromline)
+						{
+							history.pop_front();
+						}
+						if (!blockLuaExec)
+						{
+							wi::lua::RunText(args.sValue);
+						}
+						else
+						{
+							post("Lua execution is disabled", LogLevel::Error);
+						}
+						inputField.SetText("");
+					});
+					wi::Color theme_color_idle = wi::Color(30, 40, 60, 200);
+					wi::Color theme_color_focus = wi::Color(70, 150, 170, 220);
+					wi::Color theme_color_active = wi::Color::White();
+					wi::Color theme_color_deactivating = wi::Color::lerp(theme_color_focus, wi::Color::White(), 0.5f);
+					inputField.SetColor(theme_color_idle); // all states the same, it's gonna be always active anyway
+					inputField.SetShadowRadius(5);
+					inputField.SetShadowColor(wi::Color(80, 140, 180, 100));
+					inputField.font.params.color = wi::Color(160, 240, 250, 255);
+					inputField.font.params.shadowColor = wi::Color::Transparent();
+
+					toggleButton.Create("V");
+					toggleButton.OnClick([](wi::gui::EventArgs args) {
+						Toggle();
+						});
+					toggleButton.SetColor(theme_color_idle, wi::gui::IDLE);
+					toggleButton.SetColor(theme_color_focus, wi::gui::FOCUS);
+					toggleButton.SetColor(theme_color_active, wi::gui::ACTIVE);
+					toggleButton.SetColor(theme_color_deactivating, wi::gui::DEACTIVATING);
+					toggleButton.SetShadowRadius(5);
+					toggleButton.SetShadowColor(wi::Color(80, 140, 180, 100));
+					toggleButton.font.params.color = wi::Color(160, 240, 250, 255);
+					toggleButton.font.params.rotation = XM_PI;
+					toggleButton.font.params.size = 24;
+					toggleButton.font.params.scaling = 3;
+					toggleButton.font.params.shadowColor = wi::Color::Transparent();
+				}
+				inputField.SetSize(XMFLOAT2(canvas.GetLogicalWidth() - 20, 20));
+				inputField.SetPos(XMFLOAT2(10, canvas.GetLogicalHeight() - 30));
+				if (inputField.GetState() != wi::gui::ACTIVE)
+				{
+					inputField.SetAsActive();
+				}
+				inputField.Update(canvas, dt);
+
+				toggleButton.SetSize(XMFLOAT2(100, 100));
+				toggleButton.SetPos(XMFLOAT2(canvas.GetLogicalWidth() - toggleButton.GetSize().x - 20, 20));
+				toggleButton.Update(canvas, dt);
+			}
+			else
+			{
+				inputField.Deactivate();
 			}
 		}
 
@@ -145,32 +211,24 @@ namespace wi::backlog
 			}
 			wi::image::Draw(&backgroundTex, fx, cmd);
 
-			fx.pos = XMFLOAT3(5, canvas.GetLogicalHeight() - 30, 0);
-			fx.siz = XMFLOAT2(canvas.GetLogicalWidth() - 10, 25);
-			fx.color = XMFLOAT4(1, 1, 1, 0.2f);
 			if (colorspace != ColorSpace::SRGB)
 			{
-				fx.enableLinearOutputMapping(9);
+				inputField.sprites[inputField.GetState()].params.enableLinearOutputMapping(9);
+				inputField.font.params.enableLinearOutputMapping(9);
+				toggleButton.sprites[inputField.GetState()].params.enableLinearOutputMapping(9);
+				toggleButton.font.params.enableLinearOutputMapping(9);
 			}
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
-
-			wi::font::Params params = wi::font::Params(10, canvas.GetLogicalHeight() - 10, wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_BOTTOM);
-			params.h_wrap = canvas.GetLogicalWidth() - params.posX;
-			params.v_align = wi::font::WIFALIGN_BOTTOM;
-			params.shadowColor = 0x10000000u;
-			params.shadow_offset_x = 2;
-			params.shadow_offset_y = 2;
-			params.shadow_softness = 1;
-			if (colorspace != ColorSpace::SRGB)
-			{
-				params.enableLinearOutputMapping(9);
-			}
-			wi::font::Draw(inputArea, params, cmd);
+			inputField.Render(canvas, cmd);
 
 			Rect rect;
 			rect.left = 0;
 			rect.right = (int32_t)canvas.GetPhysicalWidth();
 			rect.top = 0;
+			rect.bottom = (int32_t)canvas.GetPhysicalHeight();
+			wi::graphics::GetDevice()->BindScissorRects(1, &rect, cmd);
+
+			toggleButton.Render(canvas, cmd);
+
 			rect.bottom = int32_t(canvas.LogicalToPhysical(canvas.GetLogicalHeight() - 35));
 			wi::graphics::GetDevice()->BindScissorRects(1, &rect, cmd);
 
@@ -302,48 +360,14 @@ namespace wi::backlog
 			write_logfile(); // will lock mutex
 		}
 	}
-	void input(const char input)
-	{
-		std::scoped_lock lock(logLock);
-		inputArea += input;
-	}
-	void acceptInput()
-	{
-		historyPos = 0;
-		post(inputArea.c_str());
-		LogEntry entry;
-		entry.text = inputArea;
-		entry.level = LogLevel::Default;
-		history.push_back(entry);
-		if (history.size() > deletefromline)
-		{
-			history.pop_front();
-		}
-		if (!blockLuaExec)
-		{
-			wi::lua::RunText(inputArea);
-		}
-		else
-		{
-			post("Lua execution is disabled", LogLevel::Error);
-		}
-		inputArea.clear();
-	}
-	void deletefromInput()
-	{
-		std::scoped_lock lock(logLock);
-		if (!inputArea.empty())
-		{
-			inputArea.pop_back();
-		}
-	}
 
 	void historyPrev()
 	{
 		std::scoped_lock lock(logLock);
 		if (!history.empty())
 		{
-			inputArea = history[history.size() - 1 - historyPos].text;
+			inputField.SetText(history[history.size() - 1 - historyPos].text);
+			inputField.SetAsActive();
 			if ((size_t)historyPos < history.size() - 1)
 			{
 				historyPos++;
@@ -359,7 +383,8 @@ namespace wi::backlog
 			{
 				historyPos--;
 			}
-			inputArea = history[history.size() - 1 - historyPos].text;
+			inputField.SetText(history[history.size() - 1 - historyPos].text);
+			inputField.SetAsActive();
 		}
 	}
 

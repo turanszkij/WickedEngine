@@ -33,9 +33,6 @@ namespace wi::backlog
 	std::string getText();
 	void clear();
 	void post(const std::string& input, LogLevel level = LogLevel::Default);
-	void input(const char input);
-	void acceptInput();
-	void deletefromInput();
 
 	void historyPrev();
 	void historyNext();
@@ -53,4 +50,10 @@ namespace wi::backlog
 	void UnblockLuaExecution();
 
 	void SetLogLevel(LogLevel newLevel);
+
+
+	// These are no longer used, but kept here to not break user code:
+	inline void input(const char input) {}
+	inline void acceptInput() {}
+	inline void deletefromInput() {}
 };
