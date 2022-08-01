@@ -147,6 +147,10 @@ namespace wi::backlog
 				}
 				inputField.Update(canvas, dt);
 			}
+			else
+			{
+				inputField.Deactivate();
+			}
 		}
 
 		if (enabled)
