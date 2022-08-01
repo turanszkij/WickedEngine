@@ -58,7 +58,7 @@ namespace wi::gui
 
 	void GUI::Update(const wi::Canvas& canvas, float dt)
 	{
-		if (!visible)
+		if (!visible || wi::backlog::isActive())
 		{
 			return;
 		}
