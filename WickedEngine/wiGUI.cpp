@@ -1290,12 +1290,15 @@ namespace wi::gui
 
 					Deactivate();
 				}
-				else if ((wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) && !intersectsPointer) ||
-					wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
+				//else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_BACKSPACE))
+				//{
+				//	// delete input...
+				//	DeleteFromInput(-1);
+				//}
+				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE))
 				{
-					// cancel input 
-					font_input.text.clear();
-					Deactivate();
+					// delete input...
+					DeleteFromInput(1);
 				}
 				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_LEFT) && caret_pos > 0)
 				{
@@ -1308,6 +1311,13 @@ namespace wi::gui
 					// caret repositioning right:
 					caret_pos++;
 					caret_timer.record();
+				}
+				else if ((wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) && !intersectsPointer) ||
+					wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
+				{
+					// cancel input 
+					font_input.text.clear();
+					Deactivate();
 				}
 				else if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) && intersectsPointer)
 				{
@@ -1413,8 +1423,18 @@ namespace wi::gui
 	{
 		onInputAccepted = func;
 	}
-	void TextInputField::AddInput(const char inputChar)
+	void TextInputField::AddInput(const wchar_t inputChar)
 	{
+		switch (inputChar)
+		{
+		case '\b':	// BACKSPACE
+		case '\n':	// ENTER
+		case '\r':	// ENTER
+		case 127:	// DEL
+			return;
+		default:
+			break;
+		}
 		std::wstring value_new = font_input.GetText();
 		if (value_new.size() >= caret_pos)
 		{
@@ -1423,15 +1443,30 @@ namespace wi::gui
 			caret_pos = std::min((int)font_input.GetText().size(), caret_pos + 1);
 		}
 	}
-	void TextInputField::DeleteFromInput()
+	void TextInputField::AddInput(const char inputChar)
+	{
+		AddInput((wchar_t)inputChar);
+	}
+	void TextInputField::DeleteFromInput(int direction)
 	{
 		std::wstring value_new = font_input.GetText();
-		if (caret_pos > 0 && value_new.size() > caret_pos - 1)
+		if (direction < 0)
 		{
-			value_new.erase(value_new.begin() + caret_pos - 1);
-			font_input.SetText(value_new);
-			caret_pos = std::max(0, caret_pos - 1);
+			if (caret_pos > 0 && value_new.size() > caret_pos - 1)
+			{
+				value_new.erase(value_new.begin() + caret_pos - 1);
+				caret_pos = std::max(0, caret_pos - 1);
+			}
 		}
+		else
+		{
+			if (value_new.size() > caret_pos)
+			{
+				value_new.erase(value_new.begin() + caret_pos);
+				caret_pos = std::min((int)value_new.size(), caret_pos);
+			}
+		}
+		font_input.SetText(value_new);
 	}
 	void TextInputField::SetColor(wi::Color color, int id)
 	{

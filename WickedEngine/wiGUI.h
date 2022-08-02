@@ -401,8 +401,9 @@ namespace wi::gui
 		const std::string GetDescription() const { return font_description.GetTextA(); }
 
 		// There can only be ONE active text input field, so these methods modify the active one
+		static void AddInput(const wchar_t inputChar);
 		static void AddInput(const char inputChar);
-		static void DeleteFromInput();
+		static void DeleteFromInput(int direction = -1);
 		void SetAsActive();
 
 		void Update(const wi::Canvas& canvas, float dt) override;
