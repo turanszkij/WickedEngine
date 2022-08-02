@@ -49,7 +49,9 @@ namespace wi::lua
 	//returns the path of the last executed script:
 	const std::string& GetScriptPath();
 	//returns scripts list for tracking
-	wi::unordered_map<size_t, std::string> GetScriptList();
+	wi::unordered_map<uint32_t, std::string>& GetScriptList();
+	//set a custom callback when there are script load events
+	void AddScriptListUpdateCallback(const std::function<void()>& callback);
 	//for hot reload feature to work, add this code to the part where the window reloads
 	void CheckLoadedScriptsOutdated();
 

@@ -141,46 +141,75 @@ end
 -- Track processes by PID and File, used for hot reloading
 local PROCESSES_PID = {}
 local PROCESSES_FILE = {}
+-- Track user data by PID, useful when keeping data across reloads
+local PROCESSES_DATA = {}
 
 -- This is the globals part for launching processes that can be hot reloaded
 -- There is a hook function that exists on the script side (hook data)
-function Internal_launchProcess(file, pid, func)
+function Internal_runProcess(file, pid, func)
     local co = coroutine.create(func)
     local success, errorMsg = coroutine.resume(co)
 	if not success then
 		error("[Lua Error] "..errorMsg)
 	end
-    PROCESSES_PID[pid] = co
+    if (file == "") and (pid == 0) then
+        return success, co
+    end
+
+    if PROCESSES_PID[pid] == nil then
+        PROCESSES_PID[pid] = {}
+    end
+    PROCESSES_PID[pid][1] = file
+    if PROCESSES_PID[pid][2] == nil then
+        PROCESSES_PID[pid][2] = {}
+    end
+    table.insert(PROCESSES_PID[pid][2], co)
     if PROCESSES_FILE[file] == nil then
         PROCESSES_FILE[file] = {}
     end
-    table.insert(PROCESSES_FILE[file], pid)
+    PROCESSES_FILE[file][pid] = 1
 	return success, co
 end
 
 -- To kill processes by PID and File is exposed using these two functions below
-function killProcessPID(pid)
-    if PROCESSES_PID[pid] ~= nil then
-        killProcess(PROCESSES_PID[pid])
+function killProcessPID(...)
+    local argc = {...}
+    if #argc > 0 then
+        local pid = argc[1]
+        if PROCESSES_PID[pid] ~= nil then
+            for _, co in ipairs(PROCESSES_PID[pid][2]) do
+                killProcess(co)
+            end
+        end
+        PROCESSES_PID[pid] = nil
+        if #argc < 2 then
+            PROCESSES_DATA[pid] = nil
+            untrack_pid(pid)
+        end
     end
-    PROCESSES_PID[pid] = nil
 end
 
 -- KIll process by file which each file has sets of PID, then kill by all PIDs known by the file
-function killProcessFile(file)
-    if type(PROCESSES_FILE[file]) == "table" then
-        for _, pid in ipairs(PROCESSES_FILE[file]) do
-            killProcessPID(pid)
+function killProcessFile(...)
+    local argc = {...}
+    if #argc > 0 then
+        local file = argc[1]
+        if PROCESSES_FILE[file] ~= nil then
+            for pid, _ in pairs(PROCESSES_FILE[file]) do
+                if #argc >= 2 then
+                    killProcessPID(pid, true)
+                else
+                    killProcessPID(pid)
+                end
+            end
         end
+        PROCESSES_FILE[file] = nil
     end
-    PROCESSES_FILE[file] = nil
 end
 
--- Track user data by PID, important for hot reloading
-local PROCESSES_DATA = {}
+-- User data sync handling
 function Internal_SyncSubTable(target,source)
     for key, value in pairs(source) do
-        backlog_post("key>"..key)
         if type(target[key]) == type(source[key]) then 
             if type(target[key]) == "table" then
                 Internal_SyncSubTable(target[key], source[key])
@@ -195,18 +224,16 @@ end
 function Internal_syncData(file, pid, name, mdata)
     if type(PROCESSES_DATA[pid]) == "table" then
         if type(PROCESSES_DATA[pid][name]) == type(mdata) then
-            backlog_post("pre>"..name)
             if type(mdata) == "table" then
                 Internal_SyncSubTable(PROCESSES_DATA[pid][name], mdata)
             else
                 mdata = PROCESSES_DATA[pid][name]
             end
-            backlog_post("post>"..name)
         end
     else
         PROCESSES_DATA[pid] = {}
     end
-    Internal_launchProcess(file, pid, function()
+    Internal_runProcess(file, pid, function()
         while true do
             PROCESSES_DATA[pid][name] = mdata
             update()
@@ -261,5 +288,4 @@ end
 function math.round(x)
 	return x + 0.5 - ( x + 0.5 ) % 1;
 end
-
 )";
