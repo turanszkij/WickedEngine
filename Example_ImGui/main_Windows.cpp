@@ -175,7 +175,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		default:
 		{
-			const char c = (const char)(TCHAR)wParam;
+			const wchar_t c = (const wchar_t)wParam;
 			wi::gui::TextInputField::AddInput(c);
 		}
 		break;

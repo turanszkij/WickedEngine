@@ -246,7 +246,7 @@ protected:
 
 		if (args.EventType() == CoreAcceleratorKeyEventType::Character && args.VirtualKey() != VirtualKey::Enter)
 		{
-			char c = (char)args.VirtualKey();
+			wchar_t c = (wchar_t)args.VirtualKey();
 
 			if (c == '\b')
 			{
