@@ -31,9 +31,9 @@ namespace wi::lua
 	//post error to backlog and/or debug output
 	void PostErrorMsg();
 	//run a script from file
-	bool RunFile(const std::string& filename);
+	bool RunFile(const std::string& filename, bool fixed_path = false);
 	//run a script from param
-	bool RunText(const std::string& script);
+	bool RunText(std::string script, const std::string& filename = "", bool fixed_path = false);
 	//register function to use in scripts
 	bool RegisterFunc(const std::string& name, lua_CFunction function);
 	//register class

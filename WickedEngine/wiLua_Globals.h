@@ -145,7 +145,7 @@ local PROCESSES_FILE = {}
 local PROCESSES_DATA = {}
 
 -- This is the globals part for launching processes that can be hot reloaded
--- There is a hook function that exists on the script side (hook data)
+-- There is a hook function that exists on the script side
 function Internal_runProcess(file, pid, func)
     local co = coroutine.create(func)
     local success, errorMsg = coroutine.resume(co)
@@ -208,30 +208,27 @@ function killProcessFile(...)
 end
 
 -- User data sync handling
-function Internal_SyncSubTable(target,source)
-    for key, value in pairs(source) do
-        if type(target[key]) == type(source[key]) then 
-            if type(target[key]) == "table" then
-                Internal_SyncSubTable(target[key], source[key])
-            else
-                source[key] = target[key]
+function Internal_SyncSubTable(storage,source)
+    if type(source) == type(storage) then
+        if type(source) == "table" then
+            for key, value in pairs(source) do
+                Internal_SyncSubTable(storage[key],source[key])
             end
         else
-            target[key] = source[key]
+            source = storage
         end
+    else
+        storage = source
     end
 end
 function Internal_syncData(file, pid, name, mdata)
-    if type(PROCESSES_DATA[pid]) == "table" then
-        if type(PROCESSES_DATA[pid][name]) == type(mdata) then
-            if type(mdata) == "table" then
-                Internal_SyncSubTable(PROCESSES_DATA[pid][name], mdata)
-            else
-                mdata = PROCESSES_DATA[pid][name]
-            end
-        end
-    else
+    if PROCESSES_DATA[pid] == nil then
         PROCESSES_DATA[pid] = {}
+    end
+    if PROCESSES_DATA[pid][name] == nil then
+        PROCESSES_DATA[pid][name] = mdata
+    else
+        Internal_SyncSubTable(PROCESSES_DATA[pid][name], mdata)
     end
     Internal_runProcess(file, pid, function()
         while true do

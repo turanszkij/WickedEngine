@@ -29,6 +29,7 @@
 #include <chrono>
 #include <filesystem>
 #include <memory>
+#include <string>
 
 namespace wi::lua
 {
@@ -49,49 +50,6 @@ namespace wi::lua
 	LuaInternal luainternal;
 	std::string script_path;
 
-	/*
-	int Internal_DoFile(lua_State* L)
-	{
-		int argc = SGetArgCount(L);
-
-		if (argc > 0)
-		{
-			std::string filename = SGetString(L, 1);
-			filename = script_path + filename;
-			wi::vector<uint8_t> filedata;
-			if (wi::helper::FileRead(filename, filedata))
-			{
-				script_path = wi::helper::GetDirectoryFromPath(filename);
-				std::string command = std::string(filedata.begin(), filedata.end());
-				command += "local runProcess = function(func) \nsuccess, co = Internal_runProcess("", 0, func) \nreturn success, co \nend \n";
-				int status = luaL_loadstring(L, command.c_str());
-				if (status == 0)
-				{
-					status = lua_pcall(L, 0, LUA_MULTRET, 0);
-				}
-				else
-				{
-					const char* str = lua_tostring(L, -1);
-
-					if (str == nullptr)
-						return 0;
-
-					std::string ss;
-					ss += WILUA_ERROR_PREFIX;
-					ss += str;
-					wi::backlog::post(ss, wi::backlog::LogLevel::Error);
-					lua_pop(L, 1); // remove error message
-				}
-			}
-		}
-		else
-		{
-			SError(L, "dofile(string filename) not enough arguments!");
-		}
-
-		return 0;
-	}*/
-
 	wi::unordered_map<uint32_t, std::string> scripts; 
 	wi::unordered_map<uint32_t, bool> scripts_fixedpath;
 
@@ -104,8 +62,8 @@ namespace wi::lua
 		return scripts;
 	}
 	uint32_t Internal_GenScriptPID(){
-		static std::atomic<uint32_t> next{ 1 };
-		return next.fetch_add(1);
+		static std::atomic<uint32_t> scriptpid_next{ 1 };
+		return scriptpid_next.fetch_add(1);
 	}
 	void Internal_MapFileRefs(){
 		scripts_filerefs.clear();
@@ -117,6 +75,36 @@ namespace wi::lua
 			scripts_last_updated[kval.first] = std::filesystem::last_write_time(kval.first);
 		}
 	}
+	void Internal_InjectScript(std::string& script, const std::string& filename = "", bool fixed_path = false, uint32_t PID = 0){
+		static const std::string persistent_inject = R"(
+			local runProcess = function(func) 
+				success, co = Internal_runProcess(SCRIPT_FILE, SCRIPT_PID, func)
+				return success, co
+			end
+			local syncData = function(name, mdata)
+				Internal_syncData(SCRIPT_FILE, SCRIPT_PID, name, mdata)
+			end
+		)";
+
+		if(PID == 0){
+			PID = Internal_GenScriptPID();
+		}
+
+		if(filename != ""){
+			scripts[PID] = filename;
+			scripts_fixedpath[PID] = fixed_path;
+			for(auto& callback : script_load_callbacks){
+				callback();
+			}
+			Internal_MapFileRefs();
+		}
+
+		std::string dynamic_inject = "SCRIPT_FILE=\""+filename+"\" \n";
+		dynamic_inject += "SCRIPT_PID=\""+std::to_string(PID)+"\" \n";
+		dynamic_inject += "SCRIPT_DIR=\""+wi::helper::GetDirectoryFromPath(filename)+"\" \n";
+		dynamic_inject += persistent_inject;
+		script = dynamic_inject + script;
+	}
 
 	int Internal_DoFile(lua_State* L)
 	{
@@ -125,7 +113,7 @@ namespace wi::lua
 		if (argc > 0)
 		{
 			bool fixedpath = false;
-			size_t PID = 0;
+			uint32_t PID = 0;
 
 			std::string filename = SGetString(L, 1);
 			bool has_set_mode = lua_isboolean(L, 2);
@@ -134,29 +122,16 @@ namespace wi::lua
 			int PID_get = (has_set_mode)? 3 : 2;
 			if(argc >= PID_get) PID = SGetInt(L, PID_get);
 
-			if(fixedpath) filename = wi::helper::GetCurrentPath()+"/"+filename;
-			else filename = script_path + filename;
+			if(!fixedpath) filename = script_path + filename;
 			wi::vector<uint8_t> filedata;
 
 			if (wi::helper::FileRead(filename, filedata))
 			{
 				if(!fixedpath) script_path = wi::helper::GetDirectoryFromPath(filename);
-				if(PID == 0){
-					PID = Internal_GenScriptPID();
-				}
-				scripts[PID] = filename;
-				scripts_fixedpath[PID] = fixedpath;
-				for(auto& callback : script_load_callbacks){
-					callback();
-				}
-				Internal_MapFileRefs();
 
-				std::string command = "SCRIPT_PATH=\""+filename+"\" \n";
-				command += "SCRIPT_PID=\""+std::to_string(PID)+"\" \n";
-				command += "SCRIPT_DIR=\""+wi::helper::GetDirectoryFromPath(filename)+"/\" \n";
-				command += "local runProcess = function(func) \nsuccess, co = Internal_runProcess(SCRIPT_PATH, SCRIPT_PID, func) \nreturn success, co \nend \n";
-				command += "local syncData = function(name, mdata) \nmdata = Internal_syncData(SCRIPT_PATH, SCRIPT_PID, name, mdata) \nend \n";
-				command += std::string(filedata.begin(), filedata.end());
+				std::string command = std::string(filedata.begin(), filedata.end());
+				Internal_InjectScript(command, filename, fixedpath, PID);
+
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)
 				{
@@ -273,13 +248,13 @@ namespace wi::lua
 			lua_pop(luainternal.m_luaState, 1); // remove error message
 		}
 	}
-	bool RunFile(const std::string& filename)
+	bool RunFile(const std::string& filename, bool fixed_path)
 	{
 		wi::vector<uint8_t> filedata;
 		if (wi::helper::FileRead(filename, filedata))
 		{
-			script_path = wi::helper::GetDirectoryFromPath(filename);
-			return RunText(std::string(filedata.begin(), filedata.end()));
+			if(!fixed_path) script_path = wi::helper::GetDirectoryFromPath(filename);
+			return RunText(std::string(filedata.begin(), filedata.end()), filename, fixed_path);
 		}
 		return false;
 	}
@@ -293,8 +268,9 @@ namespace wi::lua
 		}
 		return true;
 	}
-	bool RunText(const std::string& script)
+	bool RunText(std::string script, const std::string& filename, bool fixed_path)
 	{
+		Internal_InjectScript(script, filename, fixed_path);
 		luainternal.m_status = luaL_loadstring(luainternal.m_luaState, script.c_str());
 		if (Success())
 		{
