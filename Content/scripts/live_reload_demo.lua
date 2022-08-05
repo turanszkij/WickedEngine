@@ -34,6 +34,17 @@ D("tt", {
 -- add a new member to the table and see if D.tt.counter are kept persistent!
 
 local proc_success, proc_coroutine = runProcess(function()
+	-- If you want to do stuff once but never again on the next sequence of reloads, you can do it like this 
+	-- (apply to any scripts you have their PID tracked on script too)
+	if not Script_Initialized(SCRIPT_PID) then
+		backlog_post("\n")
+		backlog_post("== Script INFO ==")
+		backlog_post("SCRIPT_FILE: "..SCRIPT_FILE)
+		backlog_post("SCRIPT_PID: "..SCRIPT_PID)
+		backlog_post("SCRIPT_DIR: "..SCRIPT_DIR)
+		backlog_post("\n")
+	end
+
     ClearWorld()
 	local prevPath = application.GetActivePath()
 	local path = RenderPath3D()
@@ -60,7 +71,7 @@ local proc_success, proc_coroutine = runProcess(function()
 
 	-- Down below is a small demo to open a file on another script and open it relative to that script's path
 	local subscript_PID = dofile(SCRIPT_DIR .. "subscript_demo/load_dojo.lua", true)
-	backlog_post("subscript PID: "..type(subscript_PID))
+	backlog_post("subscript PID: "..subscript_PID)
 
 	while true do
 		D.counter = D.counter + 0.00001

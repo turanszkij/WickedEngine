@@ -170,6 +170,15 @@ function Internal_runProcess(file, pid, func)
 	return success, co
 end
 
+-- To check if the script has already been initialized
+function Script_Initialized(pid)
+    local result = true
+    if PROCESSES_DATA[pid]._INITIALIZED == 0 then
+        result = false
+    end
+    return result
+end
+
 -- To kill processes by PID and File is exposed using these two functions below
 function killProcessPID(...)
     local argc = {...}

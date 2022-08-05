@@ -82,7 +82,10 @@ namespace wi::lua
 				return success, co
 			end
 			if _ENV.PROCESSES_DATA[SCRIPT_PID] == nil then
-				_ENV.PROCESSES_DATA[SCRIPT_PID] = {}
+				_ENV.PROCESSES_DATA[SCRIPT_PID] = { _INITIALIZED = -1 }
+			end
+			if _ENV.PROCESSES_DATA[SCRIPT_PID]._INITIALIZED < 1 then
+				_ENV.PROCESSES_DATA[SCRIPT_PID]._INITIALIZED = _ENV.PROCESSES_DATA[SCRIPT_PID]._INITIALIZED + 1
 			end
 			local D = _ENV.PROCESSES_DATA[SCRIPT_PID]
 			setmetatable(D, {
@@ -148,7 +151,8 @@ namespace wi::lua
 				if (status == 0)
 				{
 					status = lua_pcall(L, 0, LUA_MULTRET, 0);
-					SSetString(L, std::to_string(PID));
+					auto return_PID = std::to_string(PID);
+					SSetString(L, return_PID);
 				}
 				else
 				{
@@ -170,7 +174,7 @@ namespace wi::lua
 			SError(L, "dofile(string filename) not enough arguments!");
 		}
 
-		return 0;
+		return 1;
 	}
 
 	int Internal_UntrackPID(lua_State *L){
