@@ -1,6 +1,8 @@
 #ifndef WI_VOLUMETRICCLOUDS_HF
 #define WI_VOLUMETRICCLOUDS_HF 
 
+#define HALF_FLT_MAX 65504.0
+
 // Amazing noise and weather creation, modified from: https://github.com/greje656/clouds
 
 /////////////////////////////////////////////// Perlin Noise ///////////////////////////////////////////////

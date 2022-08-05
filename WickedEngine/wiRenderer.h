@@ -620,7 +620,7 @@ namespace wi::renderer
 		wi::graphics::Texture texture_cloudDepth;
 		wi::graphics::Texture texture_reproject[2];
 		wi::graphics::Texture texture_reproject_depth[2];
-		wi::graphics::Texture texture_temporal[2];
+		wi::graphics::Texture texture_reproject_additional[2];
 		wi::graphics::Texture texture_cloudMask;
 	};
 	void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution);

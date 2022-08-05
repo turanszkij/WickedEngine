@@ -636,15 +636,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 		else
 		{
-			texture_render[DTid.xy] = float4(0.0, 0.0, 0.0, 0.0); // Inverted alpha
-			texture_cloudDepth[DTid.xy] = FLT_MAX;
+			texture_render[DTid.xy] = float4(0.0, 0.0, 0.0, 0.0);
+			texture_cloudDepth[DTid.xy] = HALF_FLT_MAX;
 			return;
 		}
 
 		if (tMax <= tMin || tMin > GetWeather().volumetric_clouds.RenderDistance)
 		{
-			texture_render[DTid.xy] = float4(0.0, 0.0, 0.0, 0.0); // Inverted alpha
-			texture_cloudDepth[DTid.xy] = FLT_MAX;
+			texture_render[DTid.xy] = float4(0.0, 0.0, 0.0, 0.0);
+			texture_cloudDepth[DTid.xy] = HALF_FLT_MAX;
 			return;
 		}
 		
@@ -653,7 +653,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r;
 		float3 depthWorldPosition = reconstruct_position(uv, depth);
 		tToDepthBuffer = length(depthWorldPosition - rayOrigin);
-		tMax = depth == 0.0 ? tMax : min(tMax, tToDepthBuffer); // Exclude skybox
+
+		// Exclude skybox to allow infinite distance
+		tMax = depth == 0.0 ? tMax : min(tMax, tToDepthBuffer);
+
+		// Set infinite distance value to half precision for reprojection, which is rendertarget precision
+		tToDepthBuffer = depth == 0.0 ? HALF_FLT_MAX : tToDepthBuffer;
 		
 		const float marchingDistance = min(GetWeather().volumetric_clouds.MaxMarchingDistance, tMax - tMin);
 		tMax = tMin + marchingDistance;

@@ -947,9 +947,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)fsr_sharpenCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_temporalCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)surfel_coverageCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
