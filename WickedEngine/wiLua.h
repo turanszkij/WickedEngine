@@ -48,8 +48,9 @@ namespace wi::lua
 	void AddInt(const std::string& name, int data);
 	//returns the path of the last executed script:
 	const std::string& GetScriptPath();
-	//helper for adding wicked's default local script file variables into your custom file load script
-	void Encapsulate_Script(std::string& script, std::string filename = "", bool fixed_path = false, uint32_t PID = 1);
+	//helper for adding wicked's default local script file variables into your custom file load script, this function returns the script PID
+	//(which you can also have your own custom injections! do your own injection first, then call this function with the injected script!)
+	uint32_t Encapsulate_Script(std::string& script, std::string filename = "", bool fixed_path = false, uint32_t PID = 0);
 	//returns scripts list for tracking
 	wi::unordered_map<uint32_t, std::string>& GetScriptList();
 	//set a custom callback when there are script load events

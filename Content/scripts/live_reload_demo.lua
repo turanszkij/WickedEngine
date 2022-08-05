@@ -54,8 +54,13 @@ local proc_success, proc_coroutine = runProcess(function()
 	-- To run script in the new fixed path mode use dofile("your_script.lua", true)
 	-- To run script in the old dynamic path mode use dofile("your_script.lua") as usual
 
+	-- Also running a script can now return its PID, which you can use to kill the script you just launched in this script
+	-- Not only that, you can also modify this script's synced variables (their D table) by accessing them like this: PROCESSES_DATA[your launched script's PID]
+	-- Perhaps useful for Inter Process Communication (IPC)
+
 	-- Down below is a small demo to open a file on another script and open it relative to that script's path
-	dofile(SCRIPT_DIR .. "subscript_demo/load_dojo.lua", true)
+	local subscript_PID = dofile(SCRIPT_DIR .. "subscript_demo/load_dojo.lua", true)
+	backlog_post("subscript PID: "..type(subscript_PID))
 
 	while true do
 		D.counter = D.counter + 0.00001
@@ -65,6 +70,8 @@ local proc_success, proc_coroutine = runProcess(function()
 			-- restore previous component
 			-- so if you loaded this script from the editor, you can go back to the editor with ESC
 			-- This is an example to exit a script using killProcessPID
+			-- Usually, killing process by PID will also remove the tracked data, to keep data and tracking, add true to the argument
+			--    e.g. killProcessPID(SCRIPT_PID, true)
 			killProcessPID(SCRIPT_PID)
 			backlog_post("EXIT")
 			application.SetActivePath(prevPath)

@@ -141,6 +141,7 @@ end
 -- Track processes by PID and File, used for hot reloading
 local PROCESSES_PID = {}
 local PROCESSES_FILE = {}
+PROCESSES_DATA = {}
 
 -- This is the globals part for launching processes that can be hot reloaded
 -- There is a hook function that exists on the script side
@@ -181,6 +182,7 @@ function killProcessPID(...)
         end
         PROCESSES_PID[pid] = nil
         if #argc < 2 then
+            PROCESSES_DATA[pid] = nil
             untrack_pid(pid)
         end
     end

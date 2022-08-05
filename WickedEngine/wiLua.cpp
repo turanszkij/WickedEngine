@@ -62,7 +62,7 @@ namespace wi::lua
 		return scripts;
 	}
 	uint32_t Internal_GenScriptPID(){
-		static std::atomic<uint32_t> scriptpid_next{ 1 };
+		static std::atomic<uint32_t> scriptpid_next{ 0 + 1 };
 		return scriptpid_next.fetch_add(1);
 	}
 	void Internal_MapFileRefs(){
@@ -75,14 +75,11 @@ namespace wi::lua
 			scripts_last_updated[kval.first] = std::filesystem::last_write_time(kval.first);
 		}
 	}
-	void Encapsulate_Script(std::string& script, std::string filename, bool fixed_path, uint32_t PID){
+	uint32_t Encapsulate_Script(std::string& script, std::string filename, bool fixed_path, uint32_t PID){
 		static const std::string persistent_inject = R"(
 			local runProcess = function(func) 
 				success, co = Internal_runProcess(SCRIPT_FILE, SCRIPT_PID, func)
 				return success, co
-			end
-			if _ENV.PROCESSES_DATA == nil then
-				_ENV.PROCESSES_DATA = {}
 			end
 			if _ENV.PROCESSES_DATA[SCRIPT_PID] == nil then
 				_ENV.PROCESSES_DATA[SCRIPT_PID] = {}
@@ -117,6 +114,8 @@ namespace wi::lua
 		dynamic_inject += "local SCRIPT_DIR=\""+wi::helper::GetDirectoryFromPath(filename)+"\" \n";
 		dynamic_inject += persistent_inject;
 		script = dynamic_inject + script;
+
+		return PID;
 	}
 
 	int Internal_DoFile(lua_State* L)
@@ -143,12 +142,13 @@ namespace wi::lua
 				if(!fixedpath) script_path = wi::helper::GetDirectoryFromPath(filename);
 
 				std::string command = std::string(filedata.begin(), filedata.end());
-				Encapsulate_Script(command, filename, fixedpath, PID);
+				PID = Encapsulate_Script(command, filename, fixedpath, PID);
 
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)
 				{
 					status = lua_pcall(L, 0, LUA_MULTRET, 0);
+					SSetString(L, std::to_string(PID));
 				}
 				else
 				{
