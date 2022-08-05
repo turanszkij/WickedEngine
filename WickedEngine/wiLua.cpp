@@ -75,15 +75,28 @@ namespace wi::lua
 			scripts_last_updated[kval.first] = std::filesystem::last_write_time(kval.first);
 		}
 	}
-	void Internal_InjectScript(std::string& script, const std::string& filename = "", bool fixed_path = false, uint32_t PID = 0){
+	void Internal_EncapsulateScript(std::string& script, const std::string& filename = "-", bool fixed_path = false, uint32_t PID = 1){
 		static const std::string persistent_inject = R"(
 			local runProcess = function(func) 
 				success, co = Internal_runProcess(SCRIPT_FILE, SCRIPT_PID, func)
 				return success, co
 			end
-			local syncData = function(name, mdata)
-				Internal_syncData(SCRIPT_FILE, SCRIPT_PID, name, mdata)
+			if _ENV.PROCESSES_DATA == nil then
+				_ENV.PROCESSES_DATA = {}
 			end
+			if _ENV.PROCESSES_DATA[SCRIPT_PID] == nil then
+				_ENV.PROCESSES_DATA[SCRIPT_PID] = {}
+			end
+			local D = _ENV.PROCESSES_DATA[SCRIPT_PID]
+			setmetatable(D, {
+				__call = function(self, key, value)
+					if self[key] == nil then
+						self[key] = value
+					else
+						Internal_SyncSubTable(self[key],value)
+					end
+				end
+			})
 		)";
 
 		if(PID == 0){
@@ -99,9 +112,9 @@ namespace wi::lua
 			Internal_MapFileRefs();
 		}
 
-		std::string dynamic_inject = "SCRIPT_FILE=\""+filename+"\" \n";
-		dynamic_inject += "SCRIPT_PID=\""+std::to_string(PID)+"\" \n";
-		dynamic_inject += "SCRIPT_DIR=\""+wi::helper::GetDirectoryFromPath(filename)+"\" \n";
+		std::string dynamic_inject = "local SCRIPT_FILE=\""+filename+"\" \n";
+		dynamic_inject += "local SCRIPT_PID=\""+std::to_string(PID)+"\" \n";
+		dynamic_inject += "local SCRIPT_DIR=\""+wi::helper::GetDirectoryFromPath(filename)+"\" \n";
 		dynamic_inject += persistent_inject;
 		script = dynamic_inject + script;
 	}
@@ -130,7 +143,7 @@ namespace wi::lua
 				if(!fixedpath) script_path = wi::helper::GetDirectoryFromPath(filename);
 
 				std::string command = std::string(filedata.begin(), filedata.end());
-				Internal_InjectScript(command, filename, fixedpath, PID);
+				Internal_EncapsulateScript(command, filename, fixedpath, PID);
 
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)
@@ -270,7 +283,7 @@ namespace wi::lua
 	}
 	bool RunText(std::string script, const std::string& filename, bool fixed_path)
 	{
-		Internal_InjectScript(script, filename, fixed_path);
+		Internal_EncapsulateScript(script, filename, fixed_path);
 		luainternal.m_status = luaL_loadstring(luainternal.m_luaState, script.c_str());
 		if (Success())
 		{

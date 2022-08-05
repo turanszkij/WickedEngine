@@ -1,6 +1,7 @@
 -- Lua script live reload demo
 -- This is a script which showcases the new live-reload behavior and also the new path system for scripts
--- Live reload is done by loading the script by file, editing the script, and focus again on the editor window to see the changes
+-- Live reload is done by loading the script by file, editing the script, and focus again on the 
+-- editor window to see the changes
 
 -- There also exist an API to create a custom live-reload function if you have your own, 
 -- for example: live reload with efsw to immediately see changes without the need to focus again on the window
@@ -12,17 +13,24 @@
 -- KillProcessPID(SCRIPT_PID)  >>> To kill all processes within one instance of the script
 --    SCRIPT_PID are a local exposed to each script for the user to track and kill one full script
 -- KillProcessFile(SCRIPT_FILE)  >> To kill all instances of scripts which originates from one file
---    SCRIPT_PID are a local exposed to each script for the user to track and kill all instances of scripts that uses the same file
+--    SCRIPT_PID are a local exposed to each script for the user to track and kill all 
+--    instances of scripts that uses the same file
 
-local counter = 0
--- Use this code to preserve data when the script reloads
--- Details of usage:
---     syncData("Header_Name", your_variable)
--- your_variable can be any varible, including a table
--- specifically with table, syncData will try to preserve the overall data structure even if you modify only a section of the table
--- use it at the initialization part of the script (execute it only once)
--- Header namespace are specific to one script PID, so other scripts and instances can use the same namespace
-syncData("counter",counter)
+-- Here's an example on how to keep script data among reloads
+-- Use D table to keep track of variables across reloads
+-- To initialize data, use the code below, can be used for normal variables or table
+-- Initialization can be done anywhere, just make sure the data are'nt accessed first before it is being used
+D("counter",0)
+-- To access the data you can use D.counter or D["counter"]
+-- Specifically for tables, if you modify a subtree of the table, 
+-- only that subtree will be reset/modified while the others are kept persistent
+-- Example for table:
+D("tt", {
+	counter = 0,
+	hello = "Hi!"
+})
+-- Change the D.counter in the example below into D.tt.counter, and then either change the data type of hello OR
+-- add a new member to the table and see if D.tt.counter are kept persistent!
 
 local proc_success, proc_coroutine = runProcess(function() 
     ClearWorld()
@@ -44,11 +52,13 @@ local proc_success, proc_coroutine = runProcess(function()
 
 	-- To run script in the new path mode use dofile("your_script.lua", true)
 	-- To run script in the old path mode use dofile("your_script.lua") as usual
-	LoadModel(SCRIPT_DIR .. "../models/dojo.wiscene")
+
+	-- Down below is a small demo to open a file on another script and open it relative to that script's path
+	dofile(SCRIPT_DIR .. "subscript_demo/load_dojo.lua", true)
 
 	while true do
-		counter = counter + 0.00001
-		font.SetText(SCRIPT_PID.."\nHello there! I'm Dr. Okabe, THE mad scientist. \nEl. Psy. Kongroo. \nUniverse alteration index: " .. counter)
-		fixedupdate()
+		D.counter = D.counter + 0.00001
+		font.SetText("File source: " .. SCRIPT_DIR .. "\nHello there! I'm Dr. Okabe, THE mad scientist. \nEl. Psy. Kongroo. \nUniverse alteration index: " .. D.counter)
+		update()
 	end
 end)

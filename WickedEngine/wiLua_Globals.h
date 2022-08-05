@@ -141,8 +141,6 @@ end
 -- Track processes by PID and File, used for hot reloading
 local PROCESSES_PID = {}
 local PROCESSES_FILE = {}
--- Track user data by PID, useful when keeping data across reloads
-local PROCESSES_DATA = {}
 
 -- This is the globals part for launching processes that can be hot reloaded
 -- There is a hook function that exists on the script side
@@ -152,7 +150,7 @@ function Internal_runProcess(file, pid, func)
 	if not success then
 		error("[Lua Error] "..errorMsg)
 	end
-    if (file == "") and (pid == 0) then
+    if (file == "-") and (pid == 1) then
         return success, co
     end
 
@@ -212,30 +210,16 @@ function Internal_SyncSubTable(storage,source)
     if type(source) == type(storage) then
         if type(source) == "table" then
             for key, value in pairs(source) do
-                Internal_SyncSubTable(storage[key],source[key])
+                if storage[key] ~= nil then
+                    Internal_SyncSubTable(storage[key],source[key])
+                else
+                    storage[key] = source[key]
+                end
             end
-        else
-            source = storage
         end
     else
         storage = source
     end
-end
-function Internal_syncData(file, pid, name, mdata)
-    if PROCESSES_DATA[pid] == nil then
-        PROCESSES_DATA[pid] = {}
-    end
-    if PROCESSES_DATA[pid][name] == nil then
-        PROCESSES_DATA[pid][name] = mdata
-    else
-        Internal_SyncSubTable(PROCESSES_DATA[pid][name], mdata)
-    end
-    Internal_runProcess(file, pid, function()
-        while true do
-            PROCESSES_DATA[pid][name] = mdata
-            update()
-        end
-    end)
 end
 
 -- Store the delta time for the current frame
