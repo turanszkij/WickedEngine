@@ -29,6 +29,7 @@ public:
 	wi::gui::CheckBox otherinfoCheckBox;
 	wi::gui::ComboBox themeCombo;
 	wi::gui::ComboBox renderPathComboBox;
+	wi::gui::ComboBox scriptModeComboBox;
 	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::ComboBox sceneComboBox;
 	wi::gui::Slider pathTraceTargetSlider;

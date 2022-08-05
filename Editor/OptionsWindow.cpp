@@ -358,6 +358,13 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	sceneComboBox.SetColor(wi::Color(120, 160, 255, 255), wi::gui::FOCUS);
 	AddWidget(&sceneComboBox);
 
+	scriptModeComboBox.Create("Script Mode: ");
+	scriptModeComboBox.AddItem("Dynamic Path (Old)", false);
+	scriptModeComboBox.AddItem("Fixed Path (New)", true);
+	scriptModeComboBox.SetTooltip("Choose whether to run script in old dynamic path mode or the new fixed path mode (which uses SCRIPT_DIR for getting script's current path instead of the old one which automatically set its current path to you)");
+	scriptModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
+	scriptModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
+	AddWidget(&scriptModeComboBox);
 
 	saveModeComboBox.Create("Save Mode: ");
 	saveModeComboBox.AddItem("Embed resources", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
@@ -655,6 +662,11 @@ void OptionsWindow::ResizeLayout()
 	sceneComboBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
 	sceneComboBox.SetSize(XMFLOAT2(width - x_off - sceneComboBox.GetScale().y - 1, sceneComboBox.GetScale().y));
 	pos.y += sceneComboBox.GetSize().y;
+	pos.y += padding;
+
+	scriptModeComboBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	scriptModeComboBox.SetSize(XMFLOAT2(width - x_off - scriptModeComboBox.GetScale().y - 1, scriptModeComboBox.GetScale().y));
+	pos.y += scriptModeComboBox.GetSize().y;
 	pos.y += padding;
 
 	saveModeComboBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));

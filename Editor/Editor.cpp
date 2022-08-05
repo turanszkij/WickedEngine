@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Editor.h"
+#include "wiHelper.h"
 #include "wiRenderer.h"
 #include "wiScene_BindLua.h"
 
@@ -304,7 +305,7 @@ void EditorComponent::Load()
 				std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
 				if (!extension.compare("LUA"))
 				{
-					wi::lua::RunFile(fileName);
+					wi::lua::RunFile(fileName, optionsWnd.scriptModeComboBox.GetItemUserData(optionsWnd.scriptModeComboBox.GetSelected()));
 					return;
 				}
 

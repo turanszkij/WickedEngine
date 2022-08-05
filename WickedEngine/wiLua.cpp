@@ -75,7 +75,7 @@ namespace wi::lua
 			scripts_last_updated[kval.first] = std::filesystem::last_write_time(kval.first);
 		}
 	}
-	void Internal_EncapsulateScript(std::string& script, const std::string& filename = "-", bool fixed_path = false, uint32_t PID = 1){
+	void Encapsulate_Script(std::string& script, std::string filename, bool fixed_path, uint32_t PID){
 		static const std::string persistent_inject = R"(
 			local runProcess = function(func) 
 				success, co = Internal_runProcess(SCRIPT_FILE, SCRIPT_PID, func)
@@ -143,7 +143,7 @@ namespace wi::lua
 				if(!fixedpath) script_path = wi::helper::GetDirectoryFromPath(filename);
 
 				std::string command = std::string(filedata.begin(), filedata.end());
-				Internal_EncapsulateScript(command, filename, fixedpath, PID);
+				Encapsulate_Script(command, filename, fixedpath, PID);
 
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)
@@ -267,7 +267,9 @@ namespace wi::lua
 		if (wi::helper::FileRead(filename, filedata))
 		{
 			if(!fixed_path) script_path = wi::helper::GetDirectoryFromPath(filename);
-			return RunText(std::string(filedata.begin(), filedata.end()), filename, fixed_path);
+			auto script = std::string(filedata.begin(), filedata.end());
+			Encapsulate_Script(script, filename, fixed_path);
+			return RunText(script, filename, fixed_path);
 		}
 		return false;
 	}
@@ -283,7 +285,6 @@ namespace wi::lua
 	}
 	bool RunText(std::string script, const std::string& filename, bool fixed_path)
 	{
-		Internal_EncapsulateScript(script, filename, fixed_path);
 		luainternal.m_status = luaL_loadstring(luainternal.m_luaState, script.c_str());
 		if (Success())
 		{
@@ -383,6 +384,7 @@ namespace wi::lua
 
 	void CheckLoadedScriptsOutdated(){
 		for(auto& kval : scripts_last_updated){
+			wi::backlog::post(kval.first);
 			const auto latest_changes = std::filesystem::last_write_time(kval.first);
 			if(latest_changes > kval.second){
 				auto L = GetLuaState();
@@ -393,7 +395,6 @@ namespace wi::lua
 
 				auto list = scripts_filerefs[kval.first];
 				for (auto pid : list){
-					wi::helper::MakePathRelative(wi::helper::GetCurrentPath(), kval.first);
 					lua_getglobal(L, "dofile");
 					lua_pushstring(L, kval.first.c_str());
 					if(scripts_fixedpath[pid]) lua_pushboolean(L, true);

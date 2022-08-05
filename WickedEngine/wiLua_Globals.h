@@ -181,7 +181,6 @@ function killProcessPID(...)
         end
         PROCESSES_PID[pid] = nil
         if #argc < 2 then
-            PROCESSES_DATA[pid] = nil
             untrack_pid(pid)
         end
     end
