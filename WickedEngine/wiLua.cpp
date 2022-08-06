@@ -42,7 +42,32 @@ namespace wi::lua
 		}
 	};
 	LuaInternal luainternal;
-	std::string script_path;
+
+	uint32_t Internal_GenScriptPID(){
+		static std::atomic<uint32_t> scriptpid_next{ 0 + 1 };
+		return scriptpid_next.fetch_add(1);
+	}
+
+	uint32_t Internal_EncapsulateScript(std::string& script, std::string filename = "", uint32_t PID = 0){
+		static const std::string persistent_inject = R"(
+			local runProcess = function(func) 
+				success, co = Internal_runProcess(SCRIPT_FILE, SCRIPT_PID, func)
+				return success, co
+			end
+		)";
+
+		if(PID == 0){
+			PID = Internal_GenScriptPID();
+		}
+
+		std::string dynamic_inject = "local function SCRIPT_FILE() return \""+filename+"\" end\n";
+		dynamic_inject += "local function SCRIPT_PID() return \""+std::to_string(PID)+"\" end\n";
+		dynamic_inject += "local function SCRIPT_DIR() return \""+wi::helper::GetDirectoryFromPath(filename)+"\" end\n";
+		dynamic_inject += persistent_inject;
+		script = dynamic_inject + script;
+
+		return PID;
+	}
 
 	int Internal_DoFile(lua_State* L)
 	{
@@ -50,17 +75,25 @@ namespace wi::lua
 
 		if (argc > 0)
 		{
+			bool fixedpath = false;
+			uint32_t PID = 0;
+
 			std::string filename = SGetString(L, 1);
-			filename = script_path + filename;
+			if(argc >= 2) PID = SGetInt(L, 2);
+
 			wi::vector<uint8_t> filedata;
+
 			if (wi::helper::FileRead(filename, filedata))
 			{
-				script_path = wi::helper::GetDirectoryFromPath(filename);
 				std::string command = std::string(filedata.begin(), filedata.end());
+				PID = Internal_EncapsulateScript(command, filename, PID);
+
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)
 				{
 					status = lua_pcall(L, 0, LUA_MULTRET, 0);
+					auto return_PID = std::to_string(PID);
+					SSetString(L, return_PID);
 				}
 				else
 				{
@@ -82,7 +115,7 @@ namespace wi::lua
 			SError(L, "dofile(string filename) not enough arguments!");
 		}
 
-		return 0;
+		return 1;
 	}
 
 	void Initialize()
@@ -161,10 +194,11 @@ namespace wi::lua
 	}
 	bool RunFile(const std::string& filename)
 	{
-		script_path = wi::helper::GetDirectoryFromPath(filename);
 		wi::vector<uint8_t> filedata;
 		if (wi::helper::FileRead(filename, filedata))
 		{
+			auto script = std::string(filedata.begin(), filedata.end());
+			Internal_EncapsulateScript(script, filename);
 			return RunText(std::string(filedata.begin(), filedata.end()));
 		}
 		return false;
@@ -237,10 +271,6 @@ namespace wi::lua
 	{
 		lua_pushinteger(luainternal.m_luaState, data);
 		lua_setfield(luainternal.m_luaState, -2, name.c_str());
-	}
-	const std::string& GetScriptPath()
-	{
-		return script_path;
 	}
 
 	void SetDeltaTime(double dt)
