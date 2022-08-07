@@ -53,5 +53,11 @@ float4 main(VertextoPixel input) : SV_TARGET
 		color.rgb *= image.hdr_scaling;
 	}
 
+	if (image.border_soften > 0)
+	{
+		float edge = max(abs(input.edge.x), abs(input.edge.y));
+		color.a *= smoothstep(0, image.border_soften, 1 - edge);
+	}
+
 	return color;
 }

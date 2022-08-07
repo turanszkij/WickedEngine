@@ -613,6 +613,25 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		paintToolWnd.brushTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		paintToolWnd.revealTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->aboutLabel.sprites[wi::gui::FOCUS] = editor->aboutLabel.sprites[wi::gui::IDLE];
+		for (int i = 0; i < arraysize(sprites); ++i)
+		{
+			sprites[i].params.enableCornerRounding();
+			sprites[i].params.corners_rounding[1].radius = 10;
+			resizeDragger_UpperRight.sprites[i].params.enableCornerRounding();
+			resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = 10;
+		}
+		for (int i = 0; i < arraysize(editor->componentsWnd.sprites); ++i)
+		{
+			editor->componentsWnd.sprites[i].params.enableCornerRounding();
+			editor->componentsWnd.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->componentsWnd.resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
+			editor->componentsWnd.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = 10;
+		}
+		for (int i = 0; i < arraysize(editor->saveButton.sprites); ++i)
+		{
+			editor->saveButton.sprites[i].params.enableCornerRounding();
+			editor->saveButton.sprites[i].params.corners_rounding[2].radius = 10;
+		}
 
 		});
 	AddWidget(&themeCombo);

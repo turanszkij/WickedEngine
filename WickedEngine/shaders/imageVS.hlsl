@@ -1,9 +1,17 @@
 #include "globals.hlsli"
 #include "imageHF.hlsli"
 
+static const float2 QUAD_EDGE[] = {
+	float2(-1, 1),
+	float2(1, 1),
+	float2(-1, -1),
+	float2(1, -1),
+};
+
 VertextoPixel main(uint vI : SV_VertexID)
 {
 	VertextoPixel Out;
+	Out.edge = 0;
 
 	[branch]
 	if (image.flags & IMAGE_FLAG_FULLSCREEN)
@@ -12,38 +20,24 @@ VertextoPixel main(uint vI : SV_VertexID)
 	}
 	else
 	{
-		// This vertex shader generates a trianglestrip like this:
-		//	1--2
-		//	  /
-		//	 /
-		//	3--4
-
-		// If the corners are push constants, they cannot be indexed dynamically
-		//	(This was only a problem on AMD in practice)
-		switch (vI)
-		{
-		default:
-		case 0:
-			Out.pos = image.corners0;
-			break;
-		case 1:
-			Out.pos = image.corners1;
-			break;
-		case 2:
-			Out.pos = image.corners2;
-			break;
-		case 3:
-			Out.pos = image.corners3;
-			break;
-		}
+		Out.pos = bindless_buffers[image.buffer_index].Load<float4>(image.buffer_offset + vI * sizeof(float4));
 
 		// Set up inverse bilinear interpolation
-		Out.q = Out.pos.xy - image.corners0.xy;
-		Out.b1 = image.corners1.xy - image.corners0.xy;
-		Out.b2 = image.corners2.xy - image.corners0.xy;
-		Out.b3 = image.corners0.xy - image.corners1.xy - image.corners2.xy + image.corners3.xy;
+		Out.q = Out.pos.xy - unpack_half2(image.b0);
+
+		if (image.flags & IMAGE_FLAG_CORNER_ROUNDING)
+		{
+			// triangle fan, complex shape; center vertex is not edge, rest are edge:
+			Out.edge = vI == 0 ? 0 : 1;
+		}
+		else
+		{
+			// simple rectange shape, edge weight is based on uvs:
+			Out.edge = QUAD_EDGE[vI];
+		}
 	}
 
+	Out.screen = Out.pos;
 	return Out;
 }
 
