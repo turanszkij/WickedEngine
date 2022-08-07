@@ -83,7 +83,7 @@ function runProcess(func)
 	if not success then
 		error("[Lua Error] "..errorMsg)
 	end
-	return success
+	return success, co
 end
 
 -- Signal helpers
