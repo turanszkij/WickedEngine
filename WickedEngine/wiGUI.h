@@ -101,6 +101,8 @@ namespace wi::gui
 			wi::image::SAMPLEMODE sampleFlag = wi::image::Params().sampleFlag;
 			wi::image::QUALITY quality = wi::image::Params().quality;
 			bool background = wi::image::Params().isBackgroundEnabled();
+			bool corner_rounding = wi::image::Params().isCornerRoundingEnabled();
+			wi::image::Params::Rounding corners_rounding[arraysize(wi::image::Params().corners_rounding)];
 
 			void Apply(wi::image::Params& params) const
 			{
@@ -116,6 +118,15 @@ namespace wi::gui
 				{
 					params.disableBackground();
 				}
+				if (corner_rounding)
+				{
+					params.enableCornerRounding();
+				}
+				else
+				{
+					params.disableCornerRounding();
+				}
+				std::memcpy(params.corners_rounding, corners_rounding, sizeof(corners_rounding));
 			}
 			void CopyFrom(const wi::image::Params& params)
 			{
@@ -131,6 +142,15 @@ namespace wi::gui
 				{
 					background = false;
 				}
+				if (params.isCornerRoundingEnabled())
+				{
+					corner_rounding = true;
+				}
+				else
+				{
+					corner_rounding = false;
+				}
+				std::memcpy(corners_rounding, params.corners_rounding, sizeof(corners_rounding));
 			}
 		} image;
 

@@ -7,6 +7,7 @@ static const uint IMAGE_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084 = 1u << 1u;
 static const uint IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR = 1u << 2u;
 static const uint IMAGE_FLAG_FULLSCREEN = 1u << 3u;
 static const uint IMAGE_FLAG_MIRROR = 1u << 4u;
+static const uint IMAGE_FLAG_CORNER_ROUNDING = 1u << 5u;
 
 struct ImageConstants
 {
@@ -24,8 +25,8 @@ struct ImageConstants
 
 	int texture_mask_index;
 	int texture_background_index;
+	float border_soften;
 	int padding0;
-	int padding1;
 
 	// parameters for inverse bilinear interpolation:
 	uint b0; // packed half2

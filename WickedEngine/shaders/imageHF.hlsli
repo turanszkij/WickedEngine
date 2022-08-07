@@ -13,6 +13,7 @@ struct VertextoPixel
 	float4 pos : SV_POSITION;
 	float4 screen : TEXCOORD0;
 	float2 q : TEXCOORD1;
+	float2 edge : TEXCOORD2;
 
 	float2 uv_screen()
 	{

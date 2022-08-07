@@ -124,6 +124,10 @@ namespace wi::image
 			image.flags |= IMAGE_FLAG_FULLSCREEN;
 		}
 
+		image.border_soften = params.border_soften;
+
+		size_t vertex_size = sizeof(float4);
+
 		STRIP_MODE strip_mode = STRIP_ON;
 		uint32_t index_count = 0;
 
@@ -179,6 +183,7 @@ namespace wi::image
 			{
 				// The rounded corner mode will use a triangle fan structure (implemrnted by indexed triangle list):
 				strip_mode = STRIP_OFF;
+				image.flags |= IMAGE_FLAG_CORNER_ROUNDING;
 				size_t vertex_count = 1; // start with center vertex
 				const int min_segment_count = 2;
 				for (int i = 0; i < arraysize(params.corners_rounding); ++i)
@@ -345,7 +350,6 @@ namespace wi::image
 			{
 			case wi::image::STRIP_OFF:
 				device->DrawIndexed(index_count, 0, 0, cmd); // corner rounding with indexed geometry
-				//device->Draw(index_count, 0, cmd); // corner rounding with indexed geometry
 				break;
 			case wi::image::STRIP_ON:
 			default:
@@ -389,7 +393,6 @@ namespace wi::image
 							break;
 						case STRIP_OFF:
 							desc.pt = PrimitiveTopology::TRIANGLELIST;
-							//desc.pt = PrimitiveTopology::LINESTRIP;
 							break;
 						}
 						device->CreatePipelineState(&desc, &imagePSO[j][k][m][n]);

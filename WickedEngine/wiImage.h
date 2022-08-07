@@ -87,6 +87,8 @@ namespace wi::image
 			int segments = 18; // how many segments to add to smoothing curve
 		} corners_rounding[4]; // specify rounding corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
 
+		float border_soften = 0; // how much alpha softening to apply to image border in range [0, 1] (0: disable)
+
 		uint8_t stencilRef = 0;
 		STENCILMODE stencilComp = STENCILMODE_DISABLED;
 		STENCILREFMODE stencilRefMode = STENCILREFMODE_ALL;

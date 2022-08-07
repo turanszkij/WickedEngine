@@ -14,14 +14,6 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	font.params.h_align = wi::font::WIFALIGN_RIGHT;
 	SetShadowRadius(2);
 
-	for (int i = 0; i < arraysize(sprites); ++i)
-	{
-		sprites[i].params.enableCornerRounding();
-		sprites[i].params.corners_rounding[0].radius = 10;
-		resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
-		resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = 10;
-	}
-
 
 	materialWnd.Create(editor);
 	weatherWnd.Create(editor);
