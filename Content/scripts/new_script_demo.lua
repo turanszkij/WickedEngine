@@ -11,6 +11,8 @@
 --    SCRIPT_PID() are a local variable exposed to each script for the user to track and kill all 
 --    instances of scripts that uses the same file
 
+-- Now you can track even the coroutine that the script has
+-- You can exactly kill this one coroutine by killing them like this: killProcess(proc_coroutine)
 local proc_success, proc_coroutine = runProcess(function()
 	-- If you want to do stuff once but never again on the next sequence of reloads, you can do it like this 
 	-- (apply to any scripts you have their PID tracked on script too)
