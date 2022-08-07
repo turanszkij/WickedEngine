@@ -30,11 +30,9 @@ namespace wi::lua
 		if (argc > 0)
 		{
 			name = wi::lua::SGetString(L, 1);
-			name = wi::lua::GetScriptPath() + name;
 			if (argc > 1)
 			{
 				mask = wi::lua::SGetString(L, 2);
-				mask = wi::lua::GetScriptPath() + mask;
 			}
 		}
 		sprite = wi::Sprite(name, mask);

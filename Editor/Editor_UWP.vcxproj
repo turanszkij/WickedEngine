@@ -152,6 +152,17 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="C:\PROJECTS\WickedEngine\Content\scripts\script_identifiers.lua">
+      <FileType>Document</FileType>
+    </None>
+    <None Update="C:\PROJECTS\WickedEngine\Content\scripts\script_pid.lua">
+      <FileType>Document</FileType>
+    </None>
+    <None Update="C:\PROJECTS\WickedEngine\Content\scripts\script_tracking.lua">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VSINSTALLDIR)\Common7\IDE\Extensions\Microsoft\VsGraphics\ImageContentTask.targets" />

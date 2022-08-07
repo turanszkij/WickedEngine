@@ -360,7 +360,7 @@ namespace wi::lua::renderer
 			{
 				XMFLOAT3 pos;
 				XMStoreFloat3(&pos, XMLoadFloat4(v));
-				GetGlobalScene()->PutWaterRipple(wi::lua::GetScriptPath() + name, pos);
+				GetGlobalScene()->PutWaterRipple(name, pos);
 			}
 			else
 				wi::lua::SError(L, "PutWaterRipple(String imagename, Vector position) argument is not a Vector!");

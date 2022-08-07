@@ -45,8 +45,6 @@ namespace wi::lua
 	void AddFuncArray(const luaL_Reg* functions);
 	//add int member to registered object
 	void AddInt(const std::string& name, int data);
-	//returns the path of the last executed script:
-	const std::string& GetScriptPath();
 
 	//set delta time to use with lua
 	void SetDeltaTime(double dt);
