@@ -67,6 +67,8 @@ namespace wi::image
 		}
 
 		ImageConstants image = {};
+		image.buffer_index = -1;
+		image.buffer_offset = 0;
 		image.texture_base_index = device->GetDescriptorIndex(texture, SubresourceType::SRV);
 		image.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SubresourceType::SRV);
 		if (params.isBackgroundEnabled())
@@ -80,15 +82,6 @@ namespace wi::image
 		image.sampler_index = device->GetDescriptorIndex(sampler);
 		if (image.sampler_index < 0)
 			return;
-
-		const RenderPass* renderpass = device->GetCurrentRenderPass(cmd);
-		assert(renderpass != nullptr); // image renderer must draw inside render pass!
-		assert(!renderpass->GetDesc().attachments.empty());
-		assert(renderpass->GetDesc().attachments.front().texture != nullptr);
-		image.output_resolution.x = renderpass->GetDesc().attachments.front().texture->GetDesc().width;
-		image.output_resolution.y = renderpass->GetDesc().attachments.front().texture->GetDesc().height;
-		image.output_resolution_rcp.x = 1.0f / image.output_resolution.x;
-		image.output_resolution_rcp.y = 1.0f / image.output_resolution.y;
 
 		XMFLOAT4 color = params.color;
 		const float darken = 1 - params.fade;
@@ -125,18 +118,25 @@ namespace wi::image
 			image.flags |= IMAGE_FLAG_FULLSCREEN;
 		}
 
-		XMMATRIX M = XMMatrixScaling(params.scale.x * params.siz.x, params.scale.y * params.siz.y, 1);
-		M = M * XMMatrixRotationZ(params.rotation);
-
-		if (params.customRotation != nullptr)
+		if (params.isFullScreenEnabled())
 		{
-			M = M * (*params.customRotation);
+			// full screen triangle, no vertex buffer:
+			image.buffer_index = -1;
+			image.buffer_offset = 0;
 		}
-
-		M = M * XMMatrixTranslation(params.pos.x, params.pos.y, params.pos.z);
-
-		if (!params.isFullScreenEnabled())
+		else
 		{
+			// vertex buffer:
+			XMMATRIX M = XMMatrixScaling(params.scale.x * params.siz.x, params.scale.y * params.siz.y, 1);
+			M = M * XMMatrixRotationZ(params.rotation);
+
+			if (params.customRotation != nullptr)
+			{
+				M = M * (*params.customRotation);
+			}
+
+			M = M * XMMatrixTranslation(params.pos.x, params.pos.y, params.pos.z);
+
 			if (params.customProjection != nullptr)
 			{
 				M = XMMatrixScaling(1, -1, 1) * M; // reason: screen projection is Y down (like UV-space) and that is the common case for image rendering. But custom projections will use the "world space"
@@ -151,28 +151,40 @@ namespace wi::image
 				assert(canvas.dpi > 0);
 				M = M * canvas.GetProjection();
 			}
+
+			float4 corners[4];
+
+			XMVECTOR V = XMVectorSet(params.corners[0].x - params.pivot.x, params.corners[0].y - params.pivot.y, 0, 1);
+			V = XMVector2Transform(V, M); // division by w will happen on GPU
+			XMStoreFloat4(corners + 0, V);
+
+			V = XMVectorSet(params.corners[1].x - params.pivot.x, params.corners[1].y - params.pivot.y, 0, 1);
+			V = XMVector2Transform(V, M); // division by w will happen on GPU
+			XMStoreFloat4(corners + 1, V);
+
+			V = XMVectorSet(params.corners[2].x - params.pivot.x, params.corners[2].y - params.pivot.y, 0, 1);
+			V = XMVector2Transform(V, M); // division by w will happen on GPU
+			XMStoreFloat4(corners + 2, V);
+
+			V = XMVectorSet(params.corners[3].x - params.pivot.x, params.corners[3].y - params.pivot.y, 0, 1);
+			V = XMVector2Transform(V, M); // division by w will happen on GPU
+			XMStoreFloat4(corners + 3, V);
+
+			image.b0 = XMHALF2(corners[0].x, corners[0].y).v;
+			image.b1 = XMHALF2(corners[1].x - corners[0].x, corners[1].y - corners[0].y).v;
+			image.b2 = XMHALF2(corners[2].x - corners[0].x, corners[2].y - corners[0].y).v;
+			image.b3 = XMHALF2(corners[0].x - corners[1].x - corners[2].x + corners[3].x, corners[0].y - corners[1].y - corners[2].y + corners[3].y).v;
+
+			size_t vertexCount = 4;
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(float4) * vertexCount, cmd);
+			std::memcpy(mem.data, corners, sizeof(corners));
+			image.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+			image.buffer_offset = (uint)mem.offset;
 		}
-
-		XMVECTOR V = XMVectorSet(params.corners[0].x - params.pivot.x, params.corners[0].y - params.pivot.y, 0, 1);
-		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&image.corners0, V);
-
-		V = XMVectorSet(params.corners[1].x - params.pivot.x, params.corners[1].y - params.pivot.y, 0, 1);
-		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&image.corners1, V);
-
-		V = XMVectorSet(params.corners[2].x - params.pivot.x, params.corners[2].y - params.pivot.y, 0, 1);
-		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&image.corners2, V);
-
-		V = XMVectorSet(params.corners[3].x - params.pivot.x, params.corners[3].y - params.pivot.y, 0, 1);
-		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&image.corners3, V);
 
 		if (params.isMirrorEnabled())
 		{
-			std::swap(image.corners0, image.corners1);
-			std::swap(image.corners2, image.corners3);
+			image.flags |= IMAGE_FLAG_MIRROR;
 		}
 
 		const TextureDesc& desc = texture->GetDesc();
