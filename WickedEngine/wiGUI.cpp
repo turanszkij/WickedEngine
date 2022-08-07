@@ -816,7 +816,12 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, shadow_color);
+			wi::image::Params fx = sprites[state].params;
+			fx.pos.x -= shadow;
+			fx.pos.y -= shadow;
+			fx.siz.x += shadow * 2;
+			fx.siz.y += shadow * 2;
+			fx.color = shadow_color;
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1147,7 +1152,12 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, shadow_color);
+			wi::image::Params fx = sprites[state].params;
+			fx.pos.x -= shadow;
+			fx.pos.y -= shadow;
+			fx.siz.x += shadow * 2;
+			fx.siz.y += shadow * 2;
+			fx.color = shadow_color;
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1392,7 +1402,12 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, shadow_color);
+			wi::image::Params fx = sprites[state].params;
+			fx.pos.x -= shadow;
+			fx.pos.y -= shadow;
+			fx.siz.x += shadow * 2;
+			fx.siz.y += shadow * 2;
+			fx.color = shadow_color;
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1724,7 +1739,12 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + 1 + valueInputField.GetSize().x + shadow * 2, scale.y + shadow * 2, shadow_color);
+			wi::image::Params fx = sprites[state].params;
+			fx.pos.x -= shadow;
+			fx.pos.y -= shadow;
+			fx.siz.x += shadow * 2 + 1 + valueInputField.GetSize().x;
+			fx.siz.y += shadow * 2;
+			fx.color = shadow_color;
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1879,13 +1899,12 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(
-				translation.x - shadow,
-				translation.y - shadow,
-				scale.x + shadow * 2,
-				scale.y + shadow * 2,
-				shadow_color
-			);
+			wi::image::Params fx = sprites[state].params;
+			fx.pos.x -= shadow;
+			fx.pos.y -= shadow;
+			fx.siz.x += shadow * 2;
+			fx.siz.y += shadow * 2;
+			fx.color = shadow_color;
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -2157,7 +2176,12 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + 1 + scale.y + shadow * 2, scale.y + shadow * 2, shadow_color);
+			wi::image::Params fx = sprites[state].params;
+			fx.pos.x -= shadow;
+			fx.pos.y -= shadow;
+			fx.siz.x += shadow * 2 + 1 + scale.y;
+			fx.siz.y += shadow * 2;
+			fx.color = shadow_color;
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -2862,7 +2886,12 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, shadow_color);
+			wi::image::Params fx = sprites[state].params;
+			fx.pos.x -= shadow;
+			fx.pos.y -= shadow;
+			fx.siz.x += shadow * 2;
+			fx.siz.y += shadow * 2;
+			fx.color = shadow_color;
 			if (IsMinimized())
 			{
 				fx.siz.y = control_size + shadow * 2;
@@ -3176,6 +3205,10 @@ namespace wi::gui
 			{
 				label_size.x -= control_size;
 				label_pos.x += control_size;
+			}
+			if (resizeDragger_UpperRight.parent != nullptr)
+			{
+				label_size.x -= control_size;
 			}
 			if (closeButton.parent != nullptr)
 			{
@@ -4190,7 +4223,12 @@ namespace wi::gui
 		// shadow:
 		if (shadow > 0)
 		{
-			wi::image::Params fx(translation.x - shadow, translation.y - shadow, scale.x + shadow * 2, scale.y + shadow * 2, shadow_color);
+			wi::image::Params fx = sprites[state].params;
+			fx.pos.x -= shadow;
+			fx.pos.y -= shadow;
+			fx.siz.x += shadow * 2;
+			fx.siz.y += shadow * 2;
+			fx.color = shadow_color;
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 

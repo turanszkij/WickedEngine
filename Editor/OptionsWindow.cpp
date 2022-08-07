@@ -13,6 +13,14 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create("Options", wi::gui::Window::WindowControls::RESIZE_TOPRIGHT);
 	SetShadowRadius(2);
 
+	for (int i = 0; i < arraysize(sprites); ++i)
+	{
+		sprites[i].params.enableCornerRounding();
+		sprites[i].params.corners_rounding[1].radius = 10;
+		resizeDragger_UpperRight.sprites[i].params.enableCornerRounding();
+		resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = 10;
+	}
+
 	isTranslatorCheckBox.Create(ICON_TRANSLATE "  ");
 	isRotatorCheckBox.Create(ICON_ROTATE "  ");
 	isScalatorCheckBox.Create(ICON_SCALE "  ");

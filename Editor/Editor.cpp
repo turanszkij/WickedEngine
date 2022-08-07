@@ -273,6 +273,11 @@ void EditorComponent::Load()
 
 	saveButton.Create(ICON_SAVE " Save");
 	saveButton.font.params.shadowColor = wi::Color::Transparent();
+	for (int i = 0; i < arraysize(saveButton.sprites); ++i)
+	{
+		saveButton.sprites[i].params.enableCornerRounding();
+		saveButton.sprites[i].params.corners_rounding[2].radius = 10;
+	}
 	saveButton.SetShadowRadius(2);
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)");
 	saveButton.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);

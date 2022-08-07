@@ -228,11 +228,25 @@ namespace wi::math
 	// a, b, c: trangle side lengths
 	float TriangleArea(float a, float b, float c);
 
-	XMFLOAT3 getCubicHermiteSplinePos(const XMFLOAT3& startPos, const XMFLOAT3& endPos
-							, const XMFLOAT3& startTangent, const XMFLOAT3& endTangent
-							, float atInterval);
-	XMFLOAT3 getQuadraticBezierPos(const XMFLOAT3& a,const XMFLOAT3&b, const XMFLOAT3& c, float t);
-	XMFLOAT3 getQuadraticBezierPos(const XMFLOAT4& a,const XMFLOAT4&b, const XMFLOAT4& c, float t);
+	XMFLOAT3 GetCubicHermiteSplinePos(
+		const XMFLOAT3& startPos,
+		const XMFLOAT3& endPos,
+		const XMFLOAT3& startTangent,
+		const XMFLOAT3& endTangent,
+		float atInterval
+	);
+	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT3& a,const XMFLOAT3&b, const XMFLOAT3& c, float t);
+	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT4& a, const XMFLOAT4& b, const XMFLOAT4& c, float t);
+	inline XMVECTOR GetQuadraticBezierPos(const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float t)
+	{
+		// XMVECTOR optimized version
+		const float param0 = std::pow(1 - t, 2.0f);
+		const float param1 = 2 * (1 - t) * t;
+		const float param2 = std::pow(t, 2.0f);
+		const XMVECTOR param = XMVectorSet(param0, param1, param2, 1);
+		const XMMATRIX M = XMMATRIX(a, b, c, XMVectorSet(0, 0, 0, 1));
+		return XMVector3TransformNormal(param, M);
+	}
 
 	XMFLOAT3 QuaternionToRollPitchYaw(const XMFLOAT4& quaternion);
 
@@ -293,7 +307,6 @@ namespace wi::math
 		XMStoreFloat3PK(&pk, XMLoadFloat3(&color));
 		return pk.v;
 	}
-
 
 
 
