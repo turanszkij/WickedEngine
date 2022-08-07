@@ -4227,7 +4227,7 @@ namespace wi::gui
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x += shadow * 2;
-			fx.siz.y += shadow * 2;
+			fx.siz.y = scale.y + shadow * 2;
 			fx.color = shadow_color;
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
