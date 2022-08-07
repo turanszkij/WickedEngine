@@ -58,7 +58,7 @@ namespace wi::gui
 
 	void GUI::Update(const wi::Canvas& canvas, float dt)
 	{
-		if (!visible)
+		if (!visible || wi::backlog::isActive())
 		{
 			return;
 		}
@@ -996,7 +996,10 @@ namespace wi::gui
 		}
 
 		if (!IsScrollbarRequired())
+		{
 			state = IDLE;
+			list_offset = 0;
+		}
 	}
 	void ScrollBar::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -1172,6 +1175,10 @@ namespace wi::gui
 
 
 	wi::SpriteFont TextInputField::font_input;
+	int caret_pos = 0;
+	int caret_begin = 0;
+	int caret_delay = 0;
+	wi::Timer caret_timer;
 	void TextInputField::Create(const std::string& name)
 	{
 		SetName(name);
@@ -1232,7 +1239,6 @@ namespace wi::gui
 				state = IDLE;
 			}
 
-			bool clicked = false;
 			// hover the button
 			if (intersectsPointer)
 			{
@@ -1242,29 +1248,10 @@ namespace wi::gui
 				}
 			}
 
+			bool clicked = false;
 			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 			{
-				if (state == FOCUS)
-				{
-					// activate
-					clicked = true;
-				}
-			}
-
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
-			{
-				if (state == DEACTIVATING)
-				{
-					// Keep pressed until mouse is released
-					Activate();
-				}
-			}
-
-			if (clicked)
-			{
-				Activate();
-
-				font_input.SetText(font.GetText());
+				clicked = true;
 			}
 
 			if (state == ACTIVE)
@@ -1272,26 +1259,90 @@ namespace wi::gui
 				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ENTER))
 				{
 					// accept input...
-
 					font.SetText(font_input.GetText());
 					font_input.text.clear();
 
-					EventArgs args;
-					args.sValue = font.GetTextA();
-					args.iValue = atoi(args.sValue.c_str());
-					args.fValue = (float)atof(args.sValue.c_str());
-					onInputAccepted(args);
+					if (onInputAccepted)
+					{
+						EventArgs args;
+						args.sValue = font.GetTextA();
+						args.iValue = atoi(args.sValue.c_str());
+						args.fValue = (float)atof(args.sValue.c_str());
+						onInputAccepted(args);
+					}
 
 					Deactivate();
 				}
-				else if ((wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) && !intersectsPointer) ||
-					wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
+				//else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_BACKSPACE))
+				//{
+				//	// delete input...
+				//	DeleteFromInput(-1);
+				//}
+				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE))
+				{
+					// delete input...
+					DeleteFromInput(1);
+				}
+				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_LEFT) && caret_pos > 0)
+				{
+					// caret repositioning left:
+					caret_pos--;
+					if (!wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LSHIFT) && !wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_RSHIFT))
+					{
+						caret_begin = caret_pos;
+					}
+					caret_timer.record();
+				}
+				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_RIGHT) && caret_pos < font_input.GetText().size())
+				{
+					// caret repositioning right:
+					caret_pos++;
+					if (!wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LSHIFT) && !wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_RSHIFT))
+					{
+						caret_begin = caret_pos;
+					}
+					caret_timer.record();
+				}
+				else if ((clicked && !intersectsPointer) || wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
 				{
 					// cancel input 
 					font_input.text.clear();
 					Deactivate();
 				}
+				else if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				{
+					// caret repositioning by mouse click:
+					caret_timer.record();
+					caret_pos = (int)font_input.GetText().size();
+					const std::wstring& str = font_input.GetText();
+					float pos = font_input.params.position.x;
+					for (size_t i = 0; i < str.size(); ++i)
+					{
+						XMFLOAT2 size = wi::font::TextSize(str.c_str() + i, 1, font_input.params);
+						pos += size.x;
+						if (pos > pointerHitbox.pos.x)
+						{
+							caret_pos = int(i);
+							break;
+						}
+					}
+					if (clicked && intersectsPointer)
+					{
+						caret_begin = caret_pos;
+					}
+					if (caret_delay < 1) // fix for bug: first click creates incorrect highlight state
+					{
+						caret_delay++;
+						caret_begin = caret_pos;
+					}
+				}
 
+			}
+
+			if (clicked && state == FOCUS)
+			{
+				// activate
+				SetAsActive();
 			}
 		}
 
@@ -1354,6 +1405,47 @@ namespace wi::gui
 		if (state == ACTIVE)
 		{
 			font_input.Draw(cmd);
+
+			// caret:
+			if(std::fmod(caret_timer.elapsed_seconds(), 1) < 0.5f)
+			{
+				wi::font::Params params = font_input.params;
+				XMFLOAT2 size = wi::font::TextSize(font_input.GetText().c_str(), caret_pos, font_input.params);
+				params.posX += size.x;
+				params.color = wi::Color::lerp(params.color, wi::Color::Transparent(), 0.1f);
+				params.size += 4;
+				params.posY -= 2;
+				params.h_align = wi::font::WIFALIGN_CENTER;
+				wi::font::Draw(L"|", params, cmd);
+			}
+
+			// selection:
+			if(caret_pos != caret_begin)
+			{
+				int start = std::min(caret_begin, caret_pos);
+				int end = std::max(caret_begin, caret_pos);
+				const std::wstring& str = font_input.GetText();
+				float pos_start = font_input.params.position.x + wi::font::TextSize(str.c_str(), start, font_input.params).x;
+				float pos_end = font_input.params.position.x + wi::font::TextSize(str.c_str(), end, font_input.params).x;
+				float width = pos_end - pos_start;
+				wi::image::Params params;
+				params.pos.x = pos_start;
+				params.pos.y = translation.y + 1;
+				params.siz.x = width;
+				params.siz.y = scale.y - 2;
+				params.blendFlag = wi::enums::BLENDMODE_ALPHA;
+				params.color = wi::Color::lerp(font_input.params.color, wi::Color::Transparent(), 0.5f);
+				wi::image::Draw(wi::texturehelper::getWhite(), params, cmd);
+			}
+
+			//Rect scissorRect;
+			//scissorRect.bottom = (int32_t)(canvas.GetPhysicalHeight());
+			//scissorRect.left = (int32_t)(0);
+			//scissorRect.right = (int32_t)(canvas.GetPhysicalWidth());
+			//scissorRect.top = (int32_t)(0);
+			//GraphicsDevice* device = wi::graphics::GetDevice();
+			//device->BindScissorRects(1, &scissorRect, cmd);
+			//wi::font::Draw("caret_begin = " + std::to_string(caret_begin) + "\ncaret_pos = " + std::to_string(caret_pos), wi::font::Params(0, 20), cmd);
 		}
 		else
 		{
@@ -1365,27 +1457,90 @@ namespace wi::gui
 	{
 		onInputAccepted = func;
 	}
+	void TextInputField::AddInput(const wchar_t inputChar)
+	{
+		switch (inputChar)
+		{
+		case '\b':	// BACKSPACE
+		case '\n':	// ENTER
+		case '\r':	// ENTER
+		case 127:	// DEL
+			return;
+		default:
+			break;
+		}
+		std::wstring value_new = font_input.GetText();
+		if (value_new.size() >= caret_pos)
+		{
+			if (caret_begin != caret_pos)
+			{
+				int offset = std::min(caret_pos, caret_begin);
+				value_new.erase(offset, std::abs(caret_pos - caret_begin));
+				caret_pos = offset;
+			}
+			value_new.insert(value_new.begin() + caret_pos, inputChar);
+			font_input.SetText(value_new);
+			caret_pos = std::min((int)font_input.GetText().size(), caret_pos + 1);
+		}
+		caret_begin = caret_pos;
+	}
 	void TextInputField::AddInput(const char inputChar)
 	{
-		std::string value_new = font_input.GetTextA();
-		value_new.push_back(inputChar);
+		AddInput((wchar_t)inputChar);
+	}
+	void TextInputField::DeleteFromInput(int direction)
+	{
+		std::wstring value_new = font_input.GetText();
+		if (caret_begin != caret_pos)
+		{
+			int offset = std::min(caret_pos, caret_begin);
+			value_new.erase(offset, std::abs(caret_pos - caret_begin));
+			caret_pos = offset;
+		}
+		else
+		{
+			if (direction < 0)
+			{
+				if (caret_pos > 0 && value_new.size() > caret_pos - 1)
+				{
+					value_new.erase(value_new.begin() + caret_pos - 1);
+					caret_pos = std::max(0, caret_pos - 1);
+				}
+			}
+			else
+			{
+				if (value_new.size() > caret_pos)
+				{
+					value_new.erase(value_new.begin() + caret_pos);
+					caret_pos = std::min((int)value_new.size(), caret_pos);
+				}
+			}
+		}
+		caret_begin = caret_pos;
 		font_input.SetText(value_new);
 	}
-	void TextInputField::DeleteFromInput()
+	void TextInputField::SetColor(wi::Color color, int id)
 	{
-		std::string value_new = font_input.GetTextA();
-		if (!value_new.empty())
+		Widget::SetColor(color, id);
+
+		if (id > WIDGET_ID_TEXTINPUTFIELD_BEGIN && id < WIDGET_ID_TEXTINPUTFIELD_END)
 		{
-			value_new.pop_back();
+			sprites[id - WIDGET_ID_TEXTINPUTFIELD_IDLE].params.color = color;
 		}
-		font_input.SetText(value_new);
 	}
 	void TextInputField::SetTheme(const Theme& theme, int id)
 	{
 		Widget::SetTheme(theme, id);
 		theme.font.Apply(font_description.params);
 	}
-
+	void TextInputField::SetAsActive()
+	{
+		Activate();
+		font_input.SetText(font.GetText());
+		caret_pos = (int)font_input.GetText().size();
+		caret_begin = caret_pos;
+		caret_delay = 0;
+	}
 
 
 
@@ -1473,10 +1628,7 @@ namespace wi::gui
 		for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
 		{
 			sprites_knob[i].params.siz.x = 16.0f;
-			valueInputField.SetColor(wi::Color::fromFloat4(this->sprites_knob[i].params.color), (WIDGETSTATE)i);
 		}
-		valueInputField.font.params.color = this->font.params.color;
-		valueInputField.font.params.shadowColor = this->font.params.shadowColor;
 		valueInputField.SetEnabled(enabled);
 		valueInputField.force_disable = force_disable;
 		valueInputField.Update(canvas, dt);
@@ -1510,10 +1662,6 @@ namespace wi::gui
 			}
 
 			const float knobWidth = sprites_knob[state].params.siz.x;
-			hitBox.pos.x = translation.x - knobWidth * 0.5f;
-			hitBox.pos.y = translation.y;
-			hitBox.siz.x = scale.x + knobWidth;
-			hitBox.siz.y = scale.y;
 
 			Hitbox2D pointerHitbox = GetPointerHitbox();
 
@@ -2753,6 +2901,10 @@ namespace wi::gui
 		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(scrollable_area.active_area.pos.x, scrollable_area.active_area.pos.y, scrollable_area.active_area.siz.x, scrollable_area.active_area.siz.y, wi::Color(255,0,255,100)), cmd);
 		//Hitbox2D p = scrollable_area.GetPointerHitbox();
 		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(p.pos.x, p.pos.y, p.siz.x * 10, p.siz.y * 10, wi::Color(255,0,0,100)), cmd);
+		//if (!IsCollapsed())
+		//{
+		//	wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(scrollable_area.translation.x, scrollable_area.translation.y, scale.x, 10, wi::Color(255,0,255,100)), cmd);
+		//}
 
 		GetDevice()->EventEnd(cmd);
 	}

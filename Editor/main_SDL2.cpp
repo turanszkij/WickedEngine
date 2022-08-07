@@ -60,8 +60,6 @@ int sdl_loop(Editor &editor)
                     if(event.key.keysym.scancode == SDL_SCANCODE_BACKSPACE 
                         || event.key.keysym.scancode == SDL_SCANCODE_DELETE
                         || event.key.keysym.scancode == SDL_SCANCODE_KP_BACKSPACE){
-                            if (wi::backlog::isActive())
-                                wi::backlog::deletefromInput();
                             wi::gui::TextInputField::DeleteFromInput();
                             textinput_action_delete = true;
                         }
@@ -69,8 +67,6 @@ int sdl_loop(Editor &editor)
                 case SDL_TEXTINPUT:
                     if(!textinput_action_delete){
                         if(event.text.text[0] >= 21){
-                            if (wi::backlog::isActive())
-                                wi::backlog::input(event.text.text[0]);
                             wi::gui::TextInputField::AddInput(event.text.text[0]);
                         }
                     }

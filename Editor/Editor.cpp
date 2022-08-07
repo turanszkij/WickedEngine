@@ -54,7 +54,6 @@ void EditorLoadingScreen::Load()
 	font.anim.typewriter.character_start = 7;
 	AddFont(&font);
 
-	sprite.textureResource.SetTexture(*wi::texturehelper::getLogo()); // use embedded asset
 	sprite.anim.opa = 1;
 	sprite.anim.repeatable = true;
 	sprite.params.siz = XMFLOAT2(128, 128);
@@ -72,6 +71,7 @@ void EditorLoadingScreen::Update(float dt)
 	font.params.posX = GetLogicalWidth()*0.5f - font.TextWidth() * 0.5f;
 	font.params.posY = GetLogicalHeight()*0.5f;
 	sprite.params.pos = XMFLOAT3(GetLogicalWidth()*0.5f, GetLogicalHeight()*0.5f - font.TextHeight(), 0);
+	sprite.textureResource.SetTexture(*wi::texturehelper::getLogo()); // use embedded asset
 
 	LoadingScreen::Update(dt);
 }
@@ -582,13 +582,13 @@ void EditorComponent::Update(float dt)
 		}
 	}
 
-	bool deleting = wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE);
-
 	translator.interactable = false;
+	bool deleting = false;
 
 	// Camera control:
 	if (!wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
+		deleting = wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE);
 		translator.interactable = true;
 		XMFLOAT4 currentMouse = wi::input::GetPointer();
 		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
