@@ -51,8 +51,14 @@ namespace wi::lua
 	uint32_t Internal_EncapsulateScript(std::string& script, std::string filename = "", uint32_t PID = 0){
 		static const std::string persistent_inject = R"(
 			local runProcess = function(func) 
-				success, co = Internal_runProcess(SCRIPT_FILE, SCRIPT_PID, func)
+				success, co = Internal_runProcess(SCRIPT_FILE(), SCRIPT_PID(), func)
 				return success, co
+			end
+			if _ENV.PROCESSES_DATA[SCRIPT_PID()] == nil then
+				_ENV.PROCESSES_DATA[SCRIPT_PID()] = { _INITIALIZED = -1 }
+			end
+			if _ENV.PROCESSES_DATA[SCRIPT_PID()]._INITIALIZED < 1 then
+				_ENV.PROCESSES_DATA[SCRIPT_PID()]._INITIALIZED = _ENV.PROCESSES_DATA[SCRIPT_PID()]._INITIALIZED + 1
 			end
 		)";
 
@@ -199,7 +205,7 @@ namespace wi::lua
 		{
 			auto script = std::string(filedata.begin(), filedata.end());
 			Internal_EncapsulateScript(script, filename);
-			return RunText(std::string(filedata.begin(), filedata.end()));
+			return RunText(script);
 		}
 		return false;
 	}

@@ -1,0 +1,1 @@
+LoadModel(SCRIPT_DIR() .. "../../models/dojo.wiscene")

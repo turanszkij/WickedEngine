@@ -284,7 +284,7 @@ Character = {
 		local waterRay = Ray(head_transform.GetPosition(),Vector(0,-1,0))
 		local w,wp,wn = Pick(waterRay,PICK_WATER)
 		if(w ~= INVALID_ENTITY and self.velocity.Length() > 2) then
-			PutWaterRipple("../models/ripple.png",wp)
+			PutWaterRipple(SCRIPT_DIR() .. "../models/ripple.png",wp)
 		end
 		
 	end,
@@ -420,9 +420,9 @@ runProcess(function()
 	font.SetShadowColor(Vector(0,0,0,1))
 	path.AddFont(font)
 
-	LoadModel("../models/playground.wiscene")
+	LoadModel(SCRIPT_DIR() .. "../models/playground.wiscene")
 	
-	player:Create(LoadModel("../models/girl.wiscene"))
+	player:Create(LoadModel(SCRIPT_DIR() .. "../models/girl.wiscene"))
 	camera:Create(player)
 	
 	while true do
@@ -442,7 +442,7 @@ runProcess(function()
 			backlog_post("RELOAD")
 			killProcesses()
 			application.SetActivePath(prevPath)
-			dofile("character_controller_tps.lua")
+			dofile(SCRIPT_DIR() .. "character_controller_tps.lua")
 			return
 		end
 		

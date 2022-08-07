@@ -125,9 +125,23 @@ function killProcesses()
 	WAITING_ON_TIME = {}
 end
 
+-- Kill one process, has to know the coroutine first
+function killProcess(co)
+    for signalName, threads in pairs(WAITING_ON_SIGNAL) do
+        for index, co in ipairs(threads) do
+            threads[index] = nil
+            break
+        end
+    end
+    if WAITING_ON_TIME[co] ~= nil then
+        WAITING_ON_TIME[co] = nil
+    end
+end
+
 -- Track processes by PID and File, useful when you want to kill specifically by file or pid
 local PROCESSES_PID = {}
 local PROCESSES_FILE = {}
+PROCESSES_DATA = {}
 
 -- This is for the new runprocess which now handles tracking script PID and file
 -- There is a hook function that exists on the script side
