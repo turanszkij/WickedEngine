@@ -1,7 +1,7 @@
 -- Simplistic random dungeon generator lua script
 --	You can call this from Editor for example, and it will load a complete dungeon from set pieces
 
-local modelpath = "../models/"
+local modelpath = script_dir() .. "../models/"
 
 dungeon={
 	

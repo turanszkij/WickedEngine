@@ -5,7 +5,7 @@ backlog_post("---> START SCRIPT: move_object.lua")
 
 scene = GetScene()
 scene.Clear()
-LoadModel("../models/teapot.wiscene")
+LoadModel(script_dir() .. "../models/teapot.wiscene")
 top_entity = scene.Entity_FindByName("Top") -- query the teapot lid object by name
 transform_component = scene.Component_GetTransform(top_entity)
 rest_matrix = transform_component.GetMatrix()

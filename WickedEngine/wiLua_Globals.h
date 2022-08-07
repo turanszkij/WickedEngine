@@ -83,7 +83,7 @@ function runProcess(func)
 	if not success then
 		error("[Lua Error] "..errorMsg)
 	end
-	return success
+	return success, co
 end
 
 -- Signal helpers
@@ -123,6 +123,96 @@ end
 function killProcesses()
 	WAITING_ON_SIGNAL = {}
 	WAITING_ON_TIME = {}
+end
+
+-- Kill one process, has to know the coroutine first
+function killProcess(co)
+    for signalName, threads in pairs(WAITING_ON_SIGNAL) do
+        for index, co in ipairs(threads) do
+            threads[index] = nil
+            break
+        end
+    end
+    if WAITING_ON_TIME[co] ~= nil then
+        WAITING_ON_TIME[co] = nil
+    end
+end
+
+-- Track processes by PID and File, useful when you want to kill specifically by file or pid
+local PROCESSES_PID = {}
+local PROCESSES_FILE = {}
+PROCESSES_DATA = {}
+
+-- This is for the new runprocess which now handles tracking script PID and file
+-- There is a hook function that exists on the script side
+function Internal_runProcess(file, pid, func)
+    local co = coroutine.create(func)
+    local success, errorMsg = coroutine.resume(co)
+	if not success then
+		error("[Lua Error] "..errorMsg)
+	end
+    if (file == "-") and (pid == 1) then
+        return success, co
+    end
+
+    if PROCESSES_PID[pid] == nil then
+        PROCESSES_PID[pid] = {}
+    end
+    PROCESSES_PID[pid][1] = file
+    if PROCESSES_PID[pid][2] == nil then
+        PROCESSES_PID[pid][2] = {}
+    end
+    table.insert(PROCESSES_PID[pid][2], co)
+    if PROCESSES_FILE[file] == nil then
+        PROCESSES_FILE[file] = {}
+    end
+    PROCESSES_FILE[file][pid] = 1
+	return success, co
+end
+
+-- To check if the script has already been initialized
+function Script_Initialized(pid)
+    local result = true
+    if PROCESSES_DATA[pid]._INITIALIZED == 0 then
+        result = false
+    end
+    return result
+end
+
+-- To kill processes by PID and File is exposed using these two functions below
+function killProcessPID(...)
+    local argc = {...}
+    if #argc > 0 then
+        local pid = argc[1]
+        if PROCESSES_PID[pid] ~= nil then
+            for _, co in ipairs(PROCESSES_PID[pid][2]) do
+                killProcess(co)
+            end
+        end
+        PROCESSES_PID[pid] = nil
+        if #argc < 2 then
+            PROCESSES_DATA[pid] = nil
+            untrack_pid(pid)
+        end
+    end
+end
+
+-- Kill process by file which each file has sets of PID, then kill by all PIDs known by the file
+function killProcessFile(...)
+    local argc = {...}
+    if #argc > 0 then
+        local file = argc[1]
+        if PROCESSES_FILE[file] ~= nil then
+            for pid, _ in pairs(PROCESSES_FILE[file]) do
+                if #argc >= 2 then
+                    killProcessPID(pid, true)
+                else
+                    killProcessPID(pid)
+                end
+            end
+        end
+        PROCESSES_FILE[file] = nil
+    end
 end
 
 -- Store the delta time for the current frame
