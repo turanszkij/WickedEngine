@@ -204,8 +204,6 @@ namespace wi::graphics
 		virtual void EventEnd(CommandList cmd) = 0;
 		virtual void SetMarker(const char* name, CommandList cmd) = 0;
 
-		virtual const RenderPass* GetCurrentRenderPass(CommandList cmd) const = 0;
-
 
 		// Some useful helpers:
 
