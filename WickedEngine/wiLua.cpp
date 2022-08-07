@@ -48,17 +48,17 @@ namespace wi::lua
 		return scriptpid_next.fetch_add(1);
 	}
 
-	uint32_t Internal_EncapsulateScript(std::string& script, std::string filename = "", uint32_t PID = 0){
+	uint32_t Internal_EncapsulateScript(std::string& script, const std::string& filename = "", uint32_t PID = 0){
 		static const std::string persistent_inject = R"(
 			local runProcess = function(func) 
-				success, co = Internal_runProcess(SCRIPT_FILE(), SCRIPT_PID(), func)
+				success, co = Internal_runProcess(script_file(), script_pid(), func)
 				return success, co
 			end
-			if _ENV.PROCESSES_DATA[SCRIPT_PID()] == nil then
-				_ENV.PROCESSES_DATA[SCRIPT_PID()] = { _INITIALIZED = -1 }
+			if _ENV.PROCESSES_DATA[script_pid()] == nil then
+				_ENV.PROCESSES_DATA[script_pid()] = { _INITIALIZED = -1 }
 			end
-			if _ENV.PROCESSES_DATA[SCRIPT_PID()]._INITIALIZED < 1 then
-				_ENV.PROCESSES_DATA[SCRIPT_PID()]._INITIALIZED = _ENV.PROCESSES_DATA[SCRIPT_PID()]._INITIALIZED + 1
+			if _ENV.PROCESSES_DATA[script_pid()]._INITIALIZED < 1 then
+				_ENV.PROCESSES_DATA[script_pid()]._INITIALIZED = _ENV.PROCESSES_DATA[script_pid()]._INITIALIZED + 1
 			end
 		)";
 
@@ -66,9 +66,15 @@ namespace wi::lua
 			PID = Internal_GenScriptPID();
 		}
 
-		std::string dynamic_inject = "local function SCRIPT_FILE() return \""+filename+"\" end\n";
-		dynamic_inject += "local function SCRIPT_PID() return \""+std::to_string(PID)+"\" end\n";
-		dynamic_inject += "local function SCRIPT_DIR() return \""+wi::helper::GetDirectoryFromPath(filename)+"\" end\n";
+		// Make sure the file path doesn't contain backslash characters, replace them with forward slash.
+		//	- backslash would be recognized by lua as escape character
+		//	- the path string could be coming from unknown location (content, programmer, filepicker), so always do this
+		std::string filepath = filename;
+		std::replace(filepath.begin(), filepath.end(), '\\', '/');
+
+		std::string dynamic_inject = "local function script_file() return \""+ filepath +"\" end\n";
+		dynamic_inject += "local function script_pid() return \""+std::to_string(PID)+"\" end\n";
+		dynamic_inject += "local function script_dir() return \""+wi::helper::GetDirectoryFromPath(filepath)+"\" end\n";
 		dynamic_inject += persistent_inject;
 		script = dynamic_inject + script;
 
