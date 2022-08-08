@@ -1418,7 +1418,10 @@ void EditorComponent::Update(float dt)
 
 	RenderPath2D::Update(dt);
 
-	translator.Update(camera, *this);
+	if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
+	{
+		translator.Update(camera, *this);
+	}
 
 	renderPath->colorspace = colorspace;
 	renderPath->Update(dt);
@@ -1554,8 +1557,6 @@ void EditorComponent::Render() const
 		XMStoreFloat4x4(&selectionBox, selectedAABB.getAsBoxMatrix());
 		wi::renderer::DrawBox(selectionBox, XMFLOAT4(1, 1, 1, 1));
 	}
-
-	optionsWnd.paintToolWnd.DrawBrush();
 
 	renderPath->Render();
 
@@ -2003,7 +2004,11 @@ void EditorComponent::Render() const
 			}
 
 
-			translator.Draw(GetCurrentEditorScene().camera, cmd);
+			optionsWnd.paintToolWnd.DrawBrush(*this, cmd);
+			if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
+			{
+				translator.Draw(GetCurrentEditorScene().camera, cmd);
+			}
 
 			device->RenderPassEnd(cmd);
 		}

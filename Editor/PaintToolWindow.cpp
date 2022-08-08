@@ -980,27 +980,104 @@ void PaintToolWindow::Update(float dt)
 
 	}
 }
-void PaintToolWindow::DrawBrush() const
+
+
+namespace PaintTool_Internal
+{
+	PipelineState pso;
+
+	void LoadShaders()
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		{
+			PipelineStateDesc desc;
+
+			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
+			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
+
+			device->CreatePipelineState(&desc, &pso);
+		}
+	}
+
+	struct Vertex
+	{
+		XMFLOAT4 position;
+		XMFLOAT4 color;
+	};
+}
+using namespace PaintTool_Internal;
+
+void PaintToolWindow::DrawBrush(const wi::Canvas& canvas, CommandList cmd) const
 {
 	const MODE mode = GetMode();
 	if (mode == MODE_DISABLED || mode == MODE_TEXTURE || entity == INVALID_ENTITY || wi::backlog::isActive())
 		return;
 
-	const int segmentcount = 36;
-	const float radius = radiusSlider.GetValue();
-
-	for (int i = 0; i < segmentcount; i += 1)
+	static bool shaders_loaded = false;
+	if (!shaders_loaded)
 	{
-		const float angle0 = rot + (float)i / (float)segmentcount * XM_2PI;
-		const float angle1 = rot + (float)(i + 1) / (float)segmentcount * XM_2PI;
-		wi::renderer::RenderableLine2D line;
-		line.start.x = pos.x + sinf(angle0) * radius;
-		line.start.y = pos.y + cosf(angle0) * radius;
-		line.end.x = pos.x + sinf(angle1) * radius;
-		line.end.y = pos.y + cosf(angle1) * radius;
-		line.color_end = line.color_start = i%2 == 0 ? XMFLOAT4(0, 0, 0, 0.8f): XMFLOAT4(1,1,1,1);
-		wi::renderer::DrawLine(line);
+		shaders_loaded = true;
+		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+		LoadShaders();
 	}
+
+	GraphicsDevice* device = wi::graphics::GetDevice();
+
+	device->EventBegin("Paint Tool", cmd);
+	device->BindPipelineState(&pso, cmd);
+
+	const uint32_t segmentCount = 36;
+	const uint32_t circle_triangleCount = segmentCount * 2;
+	uint32_t vertexCount = circle_triangleCount * 3;
+	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
+	uint8_t* dst = (uint8_t*)mem.data;
+	for (uint32_t i = 0; i < segmentCount; ++i)
+	{
+		const float angle0 = (float)i / (float)segmentCount * XM_2PI;
+		const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
+
+		// circle:
+		const float radius = radiusSlider.GetValue();
+		const float radius_outer = radius + 8;
+		float brightness = i % 2 == 0 ? 1.0f : 0.0f;
+		XMFLOAT4 color_inner = XMFLOAT4(brightness, brightness, brightness, 1);
+		XMFLOAT4 color_outer = XMFLOAT4(brightness, brightness, brightness, 0);
+		const Vertex verts[] = {
+			{XMFLOAT4(std::sin(angle0) * radius, std::cos(angle0) * radius, 0, 1), color_inner},
+			{XMFLOAT4(std::sin(angle1) * radius, std::cos(angle1) * radius, 0, 1), color_inner},
+			{XMFLOAT4(std::sin(angle0) * radius_outer, std::cos(angle0) * radius_outer, 0, 1), color_outer},
+			{XMFLOAT4(std::sin(angle0) * radius_outer, std::cos(angle0) * radius_outer, 0, 1), color_outer},
+			{XMFLOAT4(std::sin(angle1) * radius_outer, std::cos(angle1) * radius_outer, 0, 1), color_outer},
+			{XMFLOAT4(std::sin(angle1) * radius, std::cos(angle1) * radius, 0, 1), color_inner},
+		};
+		std::memcpy(dst, verts, sizeof(verts));
+		dst += sizeof(verts);
+	}
+
+	const GPUBuffer* vbs[] = {
+		&mem.buffer,
+	};
+	const uint32_t strides[] = {
+		sizeof(Vertex),
+	};
+	const uint64_t offsets[] = {
+		mem.offset,
+	};
+	device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+	MiscCB sb;
+	XMStoreFloat4x4(&sb.g_xTransform, XMMatrixRotationZ(rot) * XMMatrixTranslation(pos.x, pos.y, 0) * canvas.GetProjection());
+	sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+	device->Draw(vertexCount, 0, cmd);
+
+	device->EventEnd(cmd);
 
 }
 
