@@ -353,4 +353,12 @@ float DilatePerlinWorley(float p, float w, float x)
     }
 }
 
+// Calculates checkerboard undersampling position
+int ComputeCheckerBoardIndex(int2 renderCoord, int subPixelIndex)
+{
+	const int localOffset = (renderCoord.x & 1 + renderCoord.y & 1) & 1;
+	const int checkerBoardLocation = (subPixelIndex + localOffset) & 0x3;
+	return checkerBoardLocation;
+}
+
 #endif // WI_VOLUMETRICCLOUDS_HF

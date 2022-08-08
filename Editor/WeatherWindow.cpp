@@ -289,7 +289,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&volumetricCloudsCheckBox);
 
-	coverageAmountSlider.Create(0, 10, 0, 1000, "Coverage amount: ");
+	coverageAmountSlider.Create(0, 10, 1, 1000, "Coverage amount: ");
 	coverageAmountSlider.SetSize(XMFLOAT2(wid, hei));
 	coverageAmountSlider.SetPos(XMFLOAT2(x, y += step));
 	coverageAmountSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -298,7 +298,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&coverageAmountSlider);
 
-	coverageMinimumSlider.Create(1, 2, 1, 1000, "Coverage minimmum: ");
+	coverageMinimumSlider.Create(0, 1, 0, 1000, "Coverage minimmum: ");
 	coverageMinimumSlider.SetSize(XMFLOAT2(wid, hei));
 	coverageMinimumSlider.SetPos(XMFLOAT2(x, y += step));
 	coverageMinimumSlider.OnSlide([&](wi::gui::EventArgs args) {

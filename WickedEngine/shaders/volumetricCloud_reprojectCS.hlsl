@@ -20,22 +20,6 @@ static const float temporalResponse = 0.9;
 // When moving fast reprojection cannot catch up. This value eliminates the ghosting but results in clipping artefacts
 //#define ADDITIONAL_BOX_CLAMP
 
-// This function compute the checkerboard undersampling position
-int ComputeCheckerBoardIndex(int2 renderCoord, int subPixelIndex)
-{
-	const int localOffset = (renderCoord.x & 1 + renderCoord.y & 1) & 1;
-	const int checkerBoardLocation = (subPixelIndex + localOffset) & 0x3;
-	return checkerBoardLocation;
-}
-
-// Computes post-projection depth from linear depth
-float getInverseLinearDepth(float lin, float near, float far)
-{
-	float z_n = ((lin - 2 * far) * near + far * lin) / (lin * near - far * lin);
-	float z = (z_n + 1) / 2;
-	return z;
-}
-
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
@@ -64,7 +48,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 screenPosition = float2(x, y);
 
 	float currentCloudLinearDepth = cloud_depth_current.SampleLevel(sampler_point_clamp, uv, 0).x;
-	float currentCloudDepth = getInverseLinearDepth(currentCloudLinearDepth, GetCamera().z_near, GetCamera().z_far);
+	float currentCloudDepth = compute_inverse_lineardepth(currentCloudLinearDepth, GetCamera().z_near, GetCamera().z_far);
 	
 	float4 thisClip = float4(screenPosition, currentCloudDepth, 1.0);
 	
