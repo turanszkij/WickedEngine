@@ -159,18 +159,17 @@ namespace wi::backlog
 					toggleButton.font.params.size = 24;
 					toggleButton.font.params.scaling = 3;
 					toggleButton.font.params.shadowColor = wi::Color::Transparent();
+					for (int i = 0; i < arraysize(toggleButton.sprites); ++i)
+					{
+						toggleButton.sprites[i].params.enableCornerRounding();
+						toggleButton.sprites[i].params.corners_rounding[2].radius = 50;
+					}
 				}
-				inputField.SetSize(XMFLOAT2(canvas.GetLogicalWidth() - 20, 20));
-				inputField.SetPos(XMFLOAT2(10, canvas.GetLogicalHeight() - 30));
 				if (inputField.GetState() != wi::gui::ACTIVE)
 				{
 					inputField.SetAsActive();
 				}
-				inputField.Update(canvas, dt);
 
-				toggleButton.SetSize(XMFLOAT2(100, 100));
-				toggleButton.SetPos(XMFLOAT2(canvas.GetLogicalWidth() - toggleButton.GetSize().x - 20, 20));
-				toggleButton.Update(canvas, dt);
 			}
 			else
 			{
@@ -187,6 +186,14 @@ namespace wi::backlog
 			pos -= speed * dt;
 		}
 		pos = wi::math::Clamp(pos, -canvas.GetLogicalHeight(), 0);
+
+		inputField.SetSize(XMFLOAT2(canvas.GetLogicalWidth() - 20, 20));
+		inputField.SetPos(XMFLOAT2(10, canvas.GetLogicalHeight() - 30 + pos));
+		inputField.Update(canvas, dt);
+
+		toggleButton.SetSize(XMFLOAT2(100, 100));
+		toggleButton.SetPos(XMFLOAT2(canvas.GetLogicalWidth() - toggleButton.GetSize().x - 20, 20 + pos));
+		toggleButton.Update(canvas, dt);
 	}
 	void Draw(
 		const wi::Canvas& canvas,

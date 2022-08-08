@@ -48,10 +48,10 @@ namespace wi::font
 		wi::Color shadowColor; // transparent disables, any other color enables shadow under text
 		float h_wrap = -1; // wrap start width (-1 default for no wrap) (logical canvas units)
 		int style = 0; // 0: use default font style, other values can be taken from the wi::font::AddFontStyle() funtion's return value
-		float softness = 0.08f; // value in [0,1] range
-		float bolden = 0; // value in [0,1] range
-		float shadow_softness = 0.5f; // value in [0,1] range
-		float shadow_bolden = 0.1f; // value in [0,1] range
+		float softness = 0.1f; // value in [0,1] range (requires SDF rendering to be enabled)
+		float bolden = 0; // value in [0,1] range (requires SDF rendering to be enabled)
+		float shadow_softness = 0.5f; // value in [0,1] range (requires SDF rendering to be enabled)
+		float shadow_bolden = 0.1f; // value in [0,1] range (requires SDF rendering to be enabled)
 		float shadow_offset_x = 0; // offset for shadow under the text in logical canvas coordinates
 		float shadow_offset_y = 0; // offset for shadow under the text in logical canvas coordinates
 		Cursor cursor; // cursor can be used to continue text drawing by taking the Draw's return value (optional)
@@ -62,22 +62,27 @@ namespace wi::font
 		enum FLAGS
 		{
 			EMPTY = 0,
+			SDF_RENDERING = 1 << 0,
 			OUTPUT_COLOR_SPACE_HDR10_ST2084 = 1 << 1,
 			OUTPUT_COLOR_SPACE_LINEAR = 1 << 2,
 			DEPTH_TEST = 1 << 3,
 		};
-		uint32_t _flags = EMPTY;
+		uint32_t _flags = SDF_RENDERING;
 
+		constexpr bool isSDFRenderingEnabled() const { return _flags & SDF_RENDERING; }
 		constexpr bool isHDR10OutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		constexpr bool isLinearOutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_LINEAR; }
 		constexpr bool isDepthTestEnabled() const { return _flags & DEPTH_TEST; }
 
+		// enable Signed Distance Field (SDF) font rendering (enabled by default)
+		constexpr void enableSDFRendering() { _flags |= SDF_RENDERING; }
 		// enable HDR10 output mapping, if this image can be interpreted in linear space and converted to HDR10 display format
 		constexpr void enableHDR10OutputMapping() { _flags |= OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		// enable linear output mapping, which means removing gamma curve and outputting in linear space (useful for blending in HDR space)
 		constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
 		constexpr void enableDepthTest() { _flags |= DEPTH_TEST; }
 
+		constexpr void disableSDFRendering() { _flags &= ~SDF_RENDERING; }
 		constexpr void disableHDR10OutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		constexpr void disableLinearOutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_LINEAR; }
 		constexpr void disableDepthTest() { _flags &= ~DEPTH_TEST; }
