@@ -522,6 +522,10 @@ void EditorComponent::Load()
 
 	optionsWnd.themeCombo.SetSelected(0);
 
+	static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(TerrainGenerator::EVENT_THEME_RESET, [=](uint64_t) {
+		optionsWnd.themeCombo.SetSelected(optionsWnd.themeCombo.GetSelected());
+		});
+
 	RenderPath2D::Load();
 }
 void EditorComponent::Start()
