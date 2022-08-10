@@ -1044,7 +1044,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\volk.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\arial.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\liberation_sans.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiShaderCompiler.h">

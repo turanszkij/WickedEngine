@@ -15,7 +15,7 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/DirectXMathMisc.inl
 		${CMAKE_CURRENT_SOURCE_DIR}/DirectXMathVector.inl
 		${CMAKE_CURRENT_SOURCE_DIR}/DirectXPackedVector.inl
-		${CMAKE_CURRENT_SOURCE_DIR}/arial.h
+		${CMAKE_CURRENT_SOURCE_DIR}/liberation_sans.h
 		${CMAKE_CURRENT_SOURCE_DIR}/portable-file-dialogs.h
 		${CMAKE_CURRENT_SOURCE_DIR}/sal.h
 		${CMAKE_CURRENT_SOURCE_DIR}/tinyddsloader.h
