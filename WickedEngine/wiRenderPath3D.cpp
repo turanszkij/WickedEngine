@@ -889,7 +889,8 @@ void RenderPath3D::Render() const
 		{
 			wi::renderer::Postprocess_VolumetricClouds(
 				volumetriccloudResources,
-				cmd
+				cmd,
+				scene->weather.volumetricCloudsWeatherMap.IsValid() ? &scene->weather.volumetricCloudsWeatherMap.GetTexture() : nullptr
 			);
 		}
 
@@ -988,7 +989,8 @@ void RenderPath3D::Render() const
 			{
 				wi::renderer::Postprocess_VolumetricClouds(
 					volumetriccloudResources_reflection,
-					cmd
+					cmd,
+					scene->weather.volumetricCloudsWeatherMap.IsValid() ? &scene->weather.volumetricCloudsWeatherMap.GetTexture() : nullptr
 				);
 			}
 

@@ -1167,6 +1167,16 @@ namespace wi::scene
 			{
 				archive >> stars;
 			}
+
+			if (archive.GetVersion() >= 84)
+			{
+				archive >> volumetricCloudsWeatherMapName;
+				if (!volumetricCloudsWeatherMapName.empty())
+				{
+					volumetricCloudsWeatherMapName = dir + volumetricCloudsWeatherMapName;
+					volumetricCloudsWeatherMap = wi::resourcemanager::Load(volumetricCloudsWeatherMapName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+				}
+			}
 		}
 		else
 		{
@@ -1201,6 +1211,7 @@ namespace wi::scene
 
 			wi::helper::MakePathRelative(dir, skyMapName);
 			wi::helper::MakePathRelative(dir, colorGradingMapName);
+			wi::helper::MakePathRelative(dir, volumetricCloudsWeatherMapName);
 
 			if (archive.GetVersion() >= 32)
 			{
@@ -1311,6 +1322,11 @@ namespace wi::scene
 			if (archive.GetVersion() >= 78)
 			{
 				archive << stars;
+			}
+
+			if (archive.GetVersion() >= 84)
+			{
+				archive << volumetricCloudsWeatherMapName;
 			}
 		}
 	}

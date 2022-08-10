@@ -62,6 +62,7 @@ public:
 	wi::gui::CheckBox volumetricCloudsCheckBox;
 	wi::gui::Slider coverageAmountSlider;
 	wi::gui::Slider coverageMinimumSlider;
+	wi::gui::Button volumetricCloudsWeatherMapButton;
 
 	wi::gui::Button preset0Button;
 	wi::gui::Button preset1Button;

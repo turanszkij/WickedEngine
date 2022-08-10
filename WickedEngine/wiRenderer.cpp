@@ -12018,7 +12018,8 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 }
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
-	CommandList cmd
+	CommandList cmd,
+	const Texture* weatherMap
 )
 {
 	device->EventBegin("Postprocess_VolumetricClouds", cmd);
@@ -12046,7 +12047,15 @@ void Postprocess_VolumetricClouds(
 		device->BindResource(&texture_shapeNoise, 1, cmd);
 		device->BindResource(&texture_detailNoise, 2, cmd);
 		device->BindResource(&texture_curlNoise, 3, cmd);
-		device->BindResource(&texture_weatherMap, 4, cmd);
+
+		if (weatherMap != nullptr)
+		{
+			device->BindResource(weatherMap, 4, cmd);
+		}
+		else
+		{
+			device->BindResource(&texture_weatherMap, 4, cmd);
+		}
 
 		const GPUResource* uavs[] = {
 			&res.texture_cloudRender,

@@ -626,7 +626,8 @@ namespace wi::renderer
 	void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution);
 	void Postprocess_VolumetricClouds(
 		const VolumetricCloudResources& res,
-		wi::graphics::CommandList cmd
+		wi::graphics::CommandList cmd,
+		const wi::graphics::Texture* weatherMap = nullptr
 	);
 	void Postprocess_FXAA(
 		const wi::graphics::Texture& input,
