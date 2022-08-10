@@ -5984,6 +5984,8 @@ void DrawDebugWorld(
 			cb.xPaintRadCenter = x.center;
 			cb.xPaintRadRadius = x.radius;
 			cb.xPaintRadUVSET = x.uvset;
+			cb.xPaintRadBrushRotation = x.rotation;
+			cb.xPaintRadBrushShape = x.shape;
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PaintRadiusCB), cmd);
 
 			ObjectPushConstants push;

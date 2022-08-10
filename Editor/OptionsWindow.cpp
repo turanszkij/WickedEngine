@@ -96,7 +96,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	AddWidget(&fpsCheckBox);
 	fpsCheckBox.SetCheck(editor->main->infoDisplay.fpsinfo);
 
-	otherinfoCheckBox.Create("Advanced: ");
+	otherinfoCheckBox.Create("Info: ");
 	otherinfoCheckBox.SetTooltip("Toggle advanced data in the info display text in top left corner.");
 	otherinfoCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.heap_allocation_counter = args.bValue;

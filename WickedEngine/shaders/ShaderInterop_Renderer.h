@@ -870,16 +870,23 @@ struct PaintTextureCB
 	float xPaintBrushFalloff;
 	uint xPaintBrushColor;
 	uint xPaintReveal;
+	float xPaintBrushRotation;
+
+	uint xPaintBrushShape;
 	uint padding0;
+	uint padding1;
+	uint padding2;
 };
 
 CBUFFER(PaintRadiusCB, CBSLOT_RENDERER_MISC)
 {
 	uint2 xPaintRadResolution;
 	uint2 xPaintRadCenter;
+
 	uint xPaintRadUVSET;
 	float xPaintRadRadius;
-	uint2 pad;
+	float xPaintRadBrushRotation;
+	uint xPaintRadBrushShape;
 };
 
 struct SkinningPushConstants

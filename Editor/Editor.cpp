@@ -452,9 +452,8 @@ void EditorComponent::Load()
 		ss += wi::version::GetVersionString();
 		ss += "\nCreated by Turánszki János";
 		ss += "\n\nWebsite: https://wickedengine.net/";
-		ss += "\nGithub page: https://github.com/turanszkij/WickedEngine";
+		ss += "\nSource code: https://github.com/turanszkij/WickedEngine";
 		ss += "\nDiscord chat: https://discord.gg/CFjRYmE";
-		ss += "\nYou can support the project on Patreon: https://www.patreon.com/wickedengine";
 		ss += "\n\nControls\n";
 		ss += "------------\n";
 		ss += "Move camera: WASD, or Contoller left stick or D-pad\n";

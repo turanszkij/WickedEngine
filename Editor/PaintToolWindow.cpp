@@ -14,7 +14,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create("Paint Tool", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(360, 560));
+	SetSize(XMFLOAT2(360, 600));
 
 	float x = 105;
 	float y = 0;
@@ -29,17 +29,17 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	modeComboBox.SetTooltip("Choose paint tool mode");
 	modeComboBox.SetPos(XMFLOAT2(x, y));
 	modeComboBox.SetSize(XMFLOAT2(wid, hei));
-	modeComboBox.AddItem("Disabled");
-	modeComboBox.AddItem("Texture");
-	modeComboBox.AddItem("Vertexcolor");
-	modeComboBox.AddItem("Sculpting - Add");
-	modeComboBox.AddItem("Sculpting - Subtract");
-	modeComboBox.AddItem("Softbody - Pinning");
-	modeComboBox.AddItem("Softbody - Physics");
-	modeComboBox.AddItem("Hairparticle - Add Triangle");
-	modeComboBox.AddItem("Hairparticle - Remove Triangle");
-	modeComboBox.AddItem("Hairparticle - Length (Alpha)");
-	modeComboBox.AddItem("Wind weight (Alpha)");
+	modeComboBox.AddItem(ICON_DISABLED " Disabled");
+	modeComboBox.AddItem(ICON_MATERIAL " Texture");
+	modeComboBox.AddItem(ICON_MESH " Vertexcolor");
+	modeComboBox.AddItem(ICON_MESH " Sculpting - Add");
+	modeComboBox.AddItem(ICON_MESH " Sculpting - Subtract");
+	modeComboBox.AddItem(ICON_SOFTBODY " Softbody - Pinning");
+	modeComboBox.AddItem(ICON_SOFTBODY " Softbody - Physics");
+	modeComboBox.AddItem(ICON_HAIR " Hairparticle - Add Triangle");
+	modeComboBox.AddItem(ICON_HAIR " Hairparticle - Remove Triangle");
+	modeComboBox.AddItem(ICON_HAIR " Hairparticle - Length (Alpha)");
+	modeComboBox.AddItem(ICON_MESH " Wind weight (Alpha)");
 	modeComboBox.SetSelected(0);
 	modeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		switch (args.iValue)
@@ -115,6 +115,12 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	spacingSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&spacingSlider);
 
+	rotationSlider.Create(0, 1, 0, 10000, "Brush Rotation: ");
+	rotationSlider.SetTooltip("Brush rotation randomness. This will affect the splat mode brush texture.");
+	rotationSlider.SetSize(XMFLOAT2(wid, hei));
+	rotationSlider.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&rotationSlider);
+
 	backfaceCheckBox.Create("Backfaces: ");
 	backfaceCheckBox.SetTooltip("Set whether to paint on backfaces of geometry or not");
 	backfaceCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -134,6 +140,16 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	pressureCheckBox.SetPos(XMFLOAT2(x - 20 + 200, y));
 	pressureCheckBox.SetCheck(false);
 	AddWidget(&pressureCheckBox);
+
+	axisCombo.Create("Axis Lock: ");
+	axisCombo.SetTooltip("You can lock modification to an axis here.");
+	axisCombo.SetPos(XMFLOAT2(x, y));
+	axisCombo.SetSize(XMFLOAT2(wid, hei));
+	axisCombo.AddItem(ICON_DISABLED, (uint64_t)AxisLock::Disabled);
+	axisCombo.AddItem("X " ICON_LEFT_RIGHT, (uint64_t)AxisLock::X);
+	axisCombo.AddItem("Y " ICON_UP_DOWN, (uint64_t)AxisLock::Y);
+	axisCombo.AddItem("Z " ICON_UPRIGHT_DOWNLEFT, (uint64_t)AxisLock::Z);
+	AddWidget(&axisCombo);
 
 	colorPicker.SetPos(XMFLOAT2(5, y += step));
 	AddWidget(&colorPicker);
@@ -158,6 +174,15 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	textureSlotComboBox.AddItem("ClearcoatNormMap (R)", MaterialComponent::CLEARCOATNORMALMAP);
 	textureSlotComboBox.SetSelected(0);
 	AddWidget(&textureSlotComboBox);
+
+	brushShapeComboBox.Create("Brush Shape: ");
+	brushShapeComboBox.SetTooltip("Choose shape for brush masking effect");
+	brushShapeComboBox.SetPos(XMFLOAT2(x, y += step));
+	brushShapeComboBox.SetSize(XMFLOAT2(wid, hei));
+	brushShapeComboBox.AddItem(ICON_CIRCLE);
+	brushShapeComboBox.AddItem(ICON_SQUARE);
+	brushShapeComboBox.SetSelected(0);
+	AddWidget(&brushShapeComboBox);
 
 	saveTextureButton.Create("Save Texture");
 	saveTextureButton.SetTooltip("Save edited texture.");
@@ -268,17 +293,30 @@ void PaintToolWindow::Update(float dt)
 
 	if (GetMode() == MODE_TEXTURE)
 	{
+		rotationSlider.SetVisible(true);
 		textureSlotComboBox.SetVisible(true);
+		brushShapeComboBox.SetVisible(true);
 		saveTextureButton.SetVisible(true);
 		brushTextureButton.SetVisible(true);
 		revealTextureButton.SetVisible(true);
 	}
 	else
 	{
+		rotationSlider.SetVisible(false);
 		textureSlotComboBox.SetVisible(false);
+		brushShapeComboBox.SetVisible(false);
 		saveTextureButton.SetVisible(false);
 		brushTextureButton.SetVisible(false);
 		revealTextureButton.SetVisible(false);
+	}
+
+	if (GetMode() == MODE_SCULPTING_ADD || GetMode() == MODE_SCULPTING_SUBTRACT)
+	{
+		axisCombo.SetVisible(true);
+	}
+	else
+	{
+		axisCombo.SetVisible(false);
 	}
 
 	rot -= dt;
@@ -333,6 +371,7 @@ void PaintToolWindow::Update(float dt)
 	const XMVECTOR ADD = XMVectorSet(0.5f, 0.5f, 0, 0);
 	const XMVECTOR SCREEN = XMVectorSet((float)editor->GetLogicalWidth(), (float)editor->GetLogicalHeight(), 1, 1);
 	const XMVECTOR F = camera.GetAt();
+	const float brush_rotation = wi::random::GetRandom(0.0f, rotationSlider.GetValue() * XM_2PI);
 
 	switch (mode)
 	{
@@ -406,10 +445,16 @@ void PaintToolWindow::Update(float dt)
 			PaintTextureCB cb;
 			cb.xPaintBrushCenter = center;
 			cb.xPaintBrushRadius = (uint32_t)pressure_radius;
+			if (brushShapeComboBox.GetSelected() == 1)
+			{
+				cb.xPaintBrushRadius = (uint)std::ceil((float(cb.xPaintBrushRadius) * 2 / std::sqrt(2.0f))); // square shape, diagonal dispatch size
+			}
 			cb.xPaintBrushAmount = amount;
 			cb.xPaintBrushFalloff = falloff;
 			cb.xPaintBrushColor = color.rgba;
 			cb.xPaintReveal = revealTex.IsValid() ? 1 : 0;
+			cb.xPaintBrushRotation = brush_rotation;
+			cb.xPaintBrushShape = (uint)brushShapeComboBox.GetSelected();
 			device->PushConstants(&cb, sizeof(cb), cmd);
 
 			const uint diameter = cb.xPaintBrushRadius * 2;
@@ -435,6 +480,8 @@ void PaintToolWindow::Update(float dt)
 		paintrad.uvset = uvset;
 		paintrad.dimensions.x = desc.width;
 		paintrad.dimensions.y = desc.height;
+		paintrad.rotation = brush_rotation;
+		paintrad.shape = (uint)brushShapeComboBox.GetSelected();
 		wi::renderer::DrawPaintRadius(paintrad);
 	}
 	break;
@@ -641,11 +688,32 @@ void PaintToolWindow::Update(float dt)
 
 		const XMMATRIX W = XMLoadFloat4x4(&transform->world);
 
-		if (sculpting_normal.x < FLT_EPSILON && sculpting_normal.y < FLT_EPSILON && sculpting_normal.z < FLT_EPSILON)
+		XMVECTOR sculptDir;
+		AxisLock axis_lock = (AxisLock)axisCombo.GetItemUserData(axisCombo.GetSelected());
+		switch (axis_lock)
 		{
-			sculpting_normal = editor->hovered.normal;
+		default:
+		case PaintToolWindow::AxisLock::Disabled:
+			if (sculpting_normal.x < FLT_EPSILON && sculpting_normal.y < FLT_EPSILON && sculpting_normal.z < FLT_EPSILON)
+			{
+				sculpting_normal = editor->hovered.normal;
+			}
+			sculptDir = XMVector3TransformNormal(XMVector3Normalize(XMLoadFloat3(&sculpting_normal)), XMMatrixInverse(nullptr, W));
+			break;
+		case PaintToolWindow::AxisLock::X:
+			sculpting_normal = XMFLOAT3(1, 0, 0);
+			sculptDir = XMLoadFloat3(&sculpting_normal);
+			break;
+		case PaintToolWindow::AxisLock::Y:
+			sculpting_normal = XMFLOAT3(0, 1, 0);
+			sculptDir = XMLoadFloat3(&sculpting_normal);
+			break;
+		case PaintToolWindow::AxisLock::Z:
+			sculpting_normal = XMFLOAT3(0, 0, 1);
+			sculptDir = XMLoadFloat3(&sculpting_normal);
+			break;
 		}
-		XMVECTOR sculptDir = XMVector3TransformNormal(XMVector3Normalize(XMLoadFloat3(&sculpting_normal)), XMMatrixInverse(nullptr, W));
+
 
 		bool rebuild = false;
 		if (painting)
@@ -1461,4 +1529,60 @@ void PaintToolWindow::ReplaceEditTextureSlot(wi::scene::MaterialComponent& mater
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
 	material.textures[sel].resource.SetTexture(texture);
 	material.SetDirty();
+}
+
+void PaintToolWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 110;
+		const float margin_right = 30;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 30;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add(modeComboBox);
+	add_fullwidth(infoLabel);
+	add(radiusSlider);
+	add(amountSlider);
+	add(falloffSlider);
+	add(spacingSlider);
+	add(rotationSlider);
+	add_right(backfaceCheckBox);
+	add_right(wireCheckBox);
+	add_right(pressureCheckBox);
+	add(textureSlotComboBox);
+	add(brushShapeComboBox);
+	add(axisCombo);
+	add(saveTextureButton);
+	add_right(brushTextureButton);
+	add_right(revealTextureButton);
+
+	colorPicker.SetPos(XMFLOAT2(padding, y));
 }

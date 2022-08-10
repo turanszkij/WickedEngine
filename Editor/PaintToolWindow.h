@@ -38,14 +38,17 @@ public:
 	wi::gui::Slider amountSlider;
 	wi::gui::Slider falloffSlider;
 	wi::gui::Slider spacingSlider;
+	wi::gui::Slider rotationSlider;
 	wi::gui::CheckBox backfaceCheckBox;
 	wi::gui::CheckBox wireCheckBox;
 	wi::gui::CheckBox pressureCheckBox;
 	wi::gui::ColorPicker colorPicker;
 	wi::gui::ComboBox textureSlotComboBox;
+	wi::gui::ComboBox brushShapeComboBox;
 	wi::gui::Button saveTextureButton;
 	wi::gui::Button brushTextureButton;
 	wi::gui::Button revealTextureButton;
+	wi::gui::ComboBox axisCombo;
 
 	void Update(float dt);
 	void DrawBrush(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
@@ -69,7 +72,17 @@ public:
 	MODE GetMode() const;
 	void SetEntity(wi::ecs::Entity value, int subsetindex = -1);
 
+	enum class AxisLock
+	{
+		Disabled,
+		X,
+		Y,
+		Z
+	};
+
 	wi::Archive* currentHistory = nullptr;
 	void RecordHistory(bool start, wi::graphics::CommandList cmd = wi::graphics::CommandList());
 	void ConsumeHistoryOperation(wi::Archive& archive, bool undo);
+
+	void ResizeLayout() override;
 };
