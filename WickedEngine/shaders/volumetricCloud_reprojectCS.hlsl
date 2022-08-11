@@ -15,7 +15,7 @@ RWTexture2D<float2> output_depth : register(u1);
 RWTexture2D<float> output_additional : register(u2);
 RWTexture2D<unorm float4> output_cloudMask : register(u3);
 
-static const float temporalResponse = 0.9;
+static const float2 temporalResponseMinMax = float2(0.5, 0.9);
 
 // When moving fast reprojection cannot catch up. This value eliminates the ghosting but results in clipping artefacts
 //#define ADDITIONAL_BOX_CLAMP
@@ -23,8 +23,13 @@ static const float temporalResponse = 0.9;
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint2 renderCoord = DTid.xy / 2;
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
+	
+	uint2 renderResolution = postprocess.resolution / 2;
+	uint2 renderCoord = DTid.xy / 2;
+
+	uint2 minRenderCoord = uint2(0, 0);
+	uint2 maxRenderCoord = renderResolution - 1;
 	
 #if 0
 	
@@ -100,8 +105,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	
 	if (validHistory)
 	{
-		float4 newResult = cloud_current[renderCoord];
-		float2 newDepthResult = cloud_depth_current[renderCoord];
+		float4 newResult = cloud_current[clamp(renderCoord, minRenderCoord, maxRenderCoord)];
+		float2 newDepthResult = cloud_depth_current[clamp(renderCoord, minRenderCoord, maxRenderCoord)];
 
 		float4 previousResult = cloud_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 		float2 previousDepthResult = cloud_depth_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
@@ -121,7 +126,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			{
 				result = newResult;
 				depthResult = newDepthResult;
-				additionalResult = 0.0;
+				additionalResult = temporalResponseMinMax.x;
 			}
 			else
 			{
@@ -136,7 +141,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					{
 						int2 offset = int2(x, y);
 						int2 neighborCoord = renderCoord + offset;
-
+						neighborCoord = clamp(neighborCoord, minRenderCoord, maxRenderCoord);
+						
 						float4 neighborResult = cloud_current[neighborCoord];
 
 						m1 += neighborResult;
@@ -155,7 +161,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				
 				result = lerp(newResult, previousResult, previousAdditionalResult);
 				depthResult = newDepthResult;
-				additionalResult = temporalResponse;
+				additionalResult = temporalResponseMinMax.y;
 			}
 		}
 		else
@@ -177,7 +183,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 						int2 offset = int2(x, y);
 						int2 neighborCoord = renderCoord + offset;
-						
+						neighborCoord = clamp(neighborCoord, minRenderCoord, maxRenderCoord);
+
 						float2 neighboorDepthResult = cloud_depth_current[neighborCoord];
 						float neighborClosestDepth = abs(tToDepthBuffer - neighboorDepthResult.y);
 
@@ -189,7 +196,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							
 							result = neighborResult;
 							depthResult = neighboorDepthResult;
-							additionalResult = 0.0;
+							additionalResult = temporalResponseMinMax.x;
+
+
 						}
 					}
 				}
@@ -198,7 +207,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			{
 #ifdef ADDITIONAL_BOX_CLAMP
 				// Simple box clamping from neighbour pixels
-				
 				float4 resultAABBMin = FLT_MAX;
 				float4 resultAABBMax = 0.0;
 				float2 depthResultAABBMin = FLT_MAX;
@@ -208,7 +216,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				{
 					for (int x = -1; x <= 1; x++)
 					{
-						// If it's middle then skip. We only evaluate neighbor samples
+					// If it's middle then skip. We only evaluate neighbor samples
 						if ((abs(x) + abs(y)) == 0)
 							continue;
 
@@ -232,7 +240,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 				result = clamp(result, resultAABBMin, resultAABBMax);
 				depthResult = clamp(depthResult, depthResultAABBMin, depthResultAABBMax);
-#endif // ADDITOINAL_CLIPPING
+#endif // ADDITIONAL_CLIPPING
 			}
 		}
 	}
@@ -240,9 +248,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		result = cloud_current.SampleLevel(sampler_linear_clamp, uv, 0);
 		depthResult = cloud_depth_current.SampleLevel(sampler_linear_clamp, uv, 0);
-		additionalResult = 0.0;
+		additionalResult = temporalResponseMinMax.x;
 	}
-
+	
 	output[DTid.xy] = result;
 	output_depth[DTid.xy] = depthResult;
 	output_additional[DTid.xy] = additionalResult;
