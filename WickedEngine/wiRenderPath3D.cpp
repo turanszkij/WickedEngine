@@ -596,7 +596,8 @@ void RenderPath3D::Update(float dt)
 		getSSREnabled() ||
 		getRaytracedReflectionEnabled() ||
 		wi::renderer::GetRaytracedShadowsEnabled() ||
-		getAO() == AO::AO_RTAO
+		getAO() == AO::AO_RTAO ||
+		wi::renderer::GetVariableRateShadingClassification()
 		)
 	{
 		if (!rtVelocity.IsValid())
