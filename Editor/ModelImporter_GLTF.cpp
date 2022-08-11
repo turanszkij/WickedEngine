@@ -991,6 +991,23 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 							mesh.vertex_boneindices[vertexOffset + i].w = joint.ind[3];
 						}
 					}
+					else if (stride == 16)
+					{
+						struct JointTmp
+						{
+							uint32_t ind[4];
+						};
+
+						for (size_t i = 0; i < vertexCount; ++i)
+						{
+							const JointTmp& joint = ((JointTmp*)data)[i];
+
+							mesh.vertex_boneindices[vertexOffset + i].x = joint.ind[0];
+							mesh.vertex_boneindices[vertexOffset + i].y = joint.ind[1];
+							mesh.vertex_boneindices[vertexOffset + i].z = joint.ind[2];
+							mesh.vertex_boneindices[vertexOffset + i].w = joint.ind[3];
+						}
+					}
 					else
 					{
 						assert(0);

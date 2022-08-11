@@ -314,7 +314,9 @@ void EditorComponent::Load()
 
 					if (!extension.compare("WISCENE")) // engine-serialized
 					{
-						wi::scene::LoadModel(GetCurrentScene(), fileName);
+						Scene scene;
+						wi::scene::LoadModel(scene, fileName);
+						GetCurrentScene().Merge(scene);
 						GetCurrentEditorScene().path = fileName;
 					}
 					else if (!extension.compare("OBJ")) // wavefront-obj
@@ -481,6 +483,7 @@ void EditorComponent::Load()
 		ss += "Inspector mode: I button (hold), hovered entity information will be displayed near mouse position.\n";
 		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
 		ss += "Script Console / backlog: HOME button\n";
+		ss += "Bone picking: First select an armature, only then bone picking becomes available. As long as you have an armature or bone selected, bone picking will remain active.\n";
 		ss += "\n";
 		ss += "\nTips\n";
 		ss += "-------\n";
@@ -562,7 +565,10 @@ void EditorComponent::Update(float dt)
 	optionsWnd.Update(dt);
 	componentsWnd.Update(dt);
 
+	// Pulsating selection color update:
 	selectionOutlineTimer += dt;
+
+	CheckBonePickingEnabled();
 
 	bool clear_selected = false;
 	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
@@ -905,6 +911,61 @@ void EditorComponent::Update(float dt)
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
+					}
+				}
+			}
+			if (bone_picking)
+			{
+				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+				{
+					const ArmatureComponent& armature = scene.armatures[i];
+					for (Entity entity : armature.boneCollection)
+					{
+						if (!scene.transforms.Contains(entity))
+							continue;
+						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+						XMVECTOR a = transform.GetPositionV();
+						XMVECTOR b = a + XMVectorSet(0, 1, 0, 0);
+						// Search for child to connect bone tip:
+						bool child_found = false;
+						for (Entity child : armature.boneCollection)
+						{
+							const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+							if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+							{
+								const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+								b = child_transform.GetPositionV();
+								child_found = true;
+								break;
+							}
+						}
+						if (!child_found)
+						{
+							// No child, try to guess bone tip compared to parent (if it has parent):
+							const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
+							if (hierarchy != nullptr && scene.transforms.Contains(hierarchy->parentID))
+							{
+								const TransformComponent& parent_transform = *scene.transforms.GetComponent(hierarchy->parentID);
+								XMVECTOR ab = a - parent_transform.GetPositionV();
+								b = a + ab;
+							}
+						}
+						XMVECTOR ab = XMVector3Normalize(b - a);
+
+						wi::primitive::Capsule capsule;
+						capsule.radius = wi::math::Distance(a, b) * 0.1f;
+						a -= ab * capsule.radius;
+						b += ab * capsule.radius;
+						XMStoreFloat3(&capsule.base, a);
+						XMStoreFloat3(&capsule.tip, b);
+
+						float dis = -1;
+						if (pickRay.intersects(capsule, dis) && dis < hovered.distance)
+						{
+							hovered = wi::scene::PickResult();
+							hovered.entity = entity;
+							hovered.distance = dis;
+						}
 					}
 				}
 			}
@@ -1622,8 +1683,12 @@ void EditorComponent::Render() const
 			vp.height = (float)editor_depthbuffer.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
 
+			// Selection color:
+			float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
+			XMFLOAT4 glow = wi::math::Lerp(wi::math::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
+			wi::Color selectedEntityColor = wi::Color::fromFloat4(glow);
+
 			// Draw selection outline to the screen:
-			const float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 			if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 			{
 				device->EventBegin("Selection Outline Edge", cmd);
@@ -1637,12 +1702,6 @@ void EditorComponent::Render() const
 				wi::renderer::Postprocess_Outline(rt_selectionOutline[1], cmd, 0.1f, 1, col);
 				device->EventEnd(cmd);
 			}
-
-
-			const wi::Color inactiveEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 0.5f));
-			const wi::Color hoveredEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 1));
-			const XMFLOAT4 glow = wi::math::Lerp(wi::math::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
-			const wi::Color selectedEntityColor = wi::Color::fromFloat4(glow);
 
 			const CameraComponent& camera = GetCurrentEditorScene().camera;
 
@@ -1925,6 +1984,194 @@ void EditorComponent::Render() const
 
 
 					wi::font::Draw(ICON_SOUND, fp, cmd);
+				}
+			}
+			if (bone_picking)
+			{
+				static PipelineState pso;
+				if (!pso.IsValid())
+				{
+					static auto LoadShaders = [] {
+						PipelineStateDesc desc;
+						desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+						desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+						desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+						desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+						desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
+						desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
+						desc.pt = PrimitiveTopology::TRIANGLELIST;
+						wi::graphics::GetDevice()->CreatePipelineState(&desc, &pso);
+					};
+					static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+					LoadShaders();
+				}
+
+				size_t bone_count = 0;
+				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+				{
+					const ArmatureComponent& armature = scene.armatures[i];
+					bone_count += armature.boneCollection.size();
+				}
+
+				if (bone_count > 0)
+				{
+					struct Vertex
+					{
+						XMFLOAT4 position;
+						XMFLOAT4 color;
+					};
+					const size_t segment_count = 18 + 1 + 18 + 1;
+					const size_t vb_size = sizeof(Vertex) * (bone_count * (segment_count + 1 + 1));
+					const size_t ib_size = sizeof(uint32_t) * bone_count * (segment_count + 1) * 3;
+					GraphicsDevice::GPUAllocation mem = device->AllocateGPU(vb_size + ib_size, cmd);
+					Vertex* vertices = (Vertex*)mem.data;
+					uint32_t* indices = (uint32_t*)((uint8_t*)mem.data + vb_size);
+					uint32_t vertex_count = 0;
+					uint32_t index_count = 0;
+
+					const XMVECTOR Eye = camera.GetEye();
+					const XMVECTOR Unit = XMVectorSet(0, 1, 0, 0);
+
+					for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+					{
+						const ArmatureComponent& armature = scene.armatures[i];
+						for (Entity entity : armature.boneCollection)
+						{
+							if (!scene.transforms.Contains(entity))
+								continue;
+							const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+							XMVECTOR a = transform.GetPositionV();
+							XMVECTOR b = a + XMVectorSet(0, 1, 0, 0);
+							// Search for child to connect bone tip:
+							bool child_found = false;
+							for (Entity child : armature.boneCollection)
+							{
+								const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+								if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+								{
+									const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+									b = child_transform.GetPositionV();
+									child_found = true;
+									break;
+								}
+							}
+							if (!child_found)
+							{
+								// No child, try to guess bone tip compared to parent (if it has parent):
+								const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
+								if (hierarchy != nullptr && scene.transforms.Contains(hierarchy->parentID))
+								{
+									const TransformComponent& parent_transform = *scene.transforms.GetComponent(hierarchy->parentID);
+									XMVECTOR ab = a - parent_transform.GetPositionV();
+									b = a + ab;
+								}
+							}
+							XMVECTOR ab = XMVector3Normalize(b - a);
+
+							wi::primitive::Capsule capsule;
+							capsule.radius = wi::math::Distance(a, b) * 0.1f;
+							a -= ab * capsule.radius;
+							b += ab * capsule.radius;
+							XMStoreFloat3(&capsule.base, a);
+							XMStoreFloat3(&capsule.tip, b);
+							XMFLOAT4 color = inactiveEntityColor;
+
+							if (hovered.entity == entity)
+							{
+								color = hoveredEntityColor;
+							}
+							for (auto& picked : translator.selected)
+							{
+								if (picked.entity == entity)
+								{
+									color = selectedEntityColor;
+									break;
+								}
+							}
+
+							XMVECTOR Base = XMLoadFloat3(&capsule.base);
+							XMVECTOR Tip = XMLoadFloat3(&capsule.tip);
+							XMVECTOR Radius = XMVectorReplicate(capsule.radius);
+							XMVECTOR Normal = XMVector3Normalize(Tip - Base);
+							XMVECTOR Tangent = XMVector3Normalize(XMVector3Cross(Normal, Base - Eye));
+							XMVECTOR Binormal = XMVector3Normalize(XMVector3Cross(Tangent, Normal));
+							XMVECTOR LineEndOffset = Normal * Radius;
+							XMVECTOR A = Base + LineEndOffset;
+							XMVECTOR B = Tip - LineEndOffset;
+							XMVECTOR AB = Unit * XMVector3Length(B - A);
+							XMMATRIX M = { Tangent,Normal,Binormal,XMVectorSetW(A, 1) };
+
+							uint32_t center_vertex_index = vertex_count;
+							Vertex center_vertex;
+							XMStoreFloat4(&center_vertex.position, A);
+							center_vertex.position.w = 1;
+							center_vertex.color = color;
+							center_vertex.color.w = 0;
+							std::memcpy(vertices + vertex_count, &center_vertex, sizeof(center_vertex));
+							vertex_count++;
+
+							for (size_t i = 0; i < segment_count; ++i)
+							{
+								XMVECTOR segment_pos;
+								const float angle0 = XM_PIDIV2 + (float)i / (float)segment_count * XM_2PI;
+								if (i < 18)
+								{
+									segment_pos = XMVectorSet(sinf(angle0) * capsule.radius, cosf(angle0) * capsule.radius, 0, 1);
+								}
+								else if (i == 18)
+								{
+									segment_pos = XMVectorSet(sinf(angle0) * capsule.radius, cosf(angle0) * capsule.radius, 0, 1);
+								}
+								else if (i > 18 && i < 18 + 1 + 18)
+								{
+									segment_pos = AB + XMVectorSet(sinf(angle0) * capsule.radius * 0.5f, cosf(angle0) * capsule.radius * 0.5f, 0, 1);
+								}
+								else
+								{
+									segment_pos = AB + XMVectorSet(sinf(angle0) * capsule.radius * 0.5f, cosf(angle0) * capsule.radius * 0.5f, 0, 1);
+								}
+								segment_pos = XMVector3Transform(segment_pos, M);
+
+								Vertex vertex;
+								XMStoreFloat4(&vertex.position, segment_pos);
+								vertex.position.w = 1;
+								vertex.color = color;
+								//vertex.color.w = 0;
+								std::memcpy(vertices + vertex_count, &vertex, sizeof(vertex));
+								uint32_t ind[] = { center_vertex_index,vertex_count - 1,vertex_count };
+								std::memcpy(indices + index_count, ind, sizeof(ind));
+								index_count += arraysize(ind);
+								vertex_count++;
+							}
+							// closing triangle fan:
+							uint32_t ind[] = { center_vertex_index,vertex_count - 1,center_vertex_index+1 };
+							std::memcpy(indices + index_count, ind, sizeof(ind));
+							index_count += arraysize(ind);
+						}
+					}
+
+					device->EventBegin("Bone capsules", cmd);
+					device->BindPipelineState(&pso, cmd);
+
+					MiscCB sb;
+					XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
+					sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+					device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+
+					const GPUBuffer* vbs[] = {
+						&mem.buffer,
+					};
+					const uint32_t strides[] = {
+						sizeof(Vertex)
+					};
+					const uint64_t offsets[] = {
+						mem.offset,
+					};
+					device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+					device->BindIndexBuffer(&mem.buffer, IndexBufferFormat::UINT32, mem.offset + vb_size, cmd);
+
+					device->DrawIndexed(index_count, 0, 0, cmd);
+					device->EventEnd(cmd);
 				}
 			}
 
@@ -2437,5 +2684,37 @@ void EditorComponent::SaveAs()
 			Save(filename);
 			});
 		});
+}
+
+void EditorComponent::CheckBonePickingEnabled()
+{
+	// Check if armature or bone is selected to allow bone picking:
+	//	(Don't want to always enable bone picking, because it can make the screen look very busy.)
+	Scene& scene = GetCurrentScene();
+
+	bone_picking = false;
+	for (size_t i = 0; i < scene.armatures.GetCount() && !bone_picking; ++i)
+	{
+		Entity entity = scene.armatures.GetEntity(i);
+		for (auto& x : translator.selected)
+		{
+			if (entity == x.entity)
+			{
+				bone_picking = true;
+				break;
+			}
+		}
+		for (Entity bone : scene.armatures[i].boneCollection)
+		{
+			for (auto& x : translator.selected)
+			{
+				if (bone == x.entity)
+				{
+					bone_picking = true;
+					break;
+				}
+			}
+		}
+	}
 }
 

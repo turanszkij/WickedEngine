@@ -68,6 +68,8 @@ public:
 	float selectionOutlineTimer = 0;
 	const XMFLOAT4 selectionColor = XMFLOAT4(1, 0.6f, 0, 1);
 	const XMFLOAT4 selectionColor2 = XMFLOAT4(0, 1, 0.6f, 0.35f);
+	const wi::Color inactiveEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 0.5f));
+	const wi::Color hoveredEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 1));
 
 	wi::graphics::RenderPass renderpass_editor;
 	wi::graphics::Texture editor_depthbuffer;
@@ -84,6 +86,8 @@ public:
 	bool selectAll = false;
 	wi::unordered_set<wi::ecs::Entity> selectAllStorage;
 
+	bool bone_picking = false;
+	void CheckBonePickingEnabled();
 
 	wi::Archive clipboard;
 

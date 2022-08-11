@@ -727,6 +727,7 @@ A ray is defined by an origin Vector and a normalized direction Vector. It can b
 - [constructor]Ray(Vector origin,direction)
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
+- Intersects(Capsule capsule) : bool result
 - GetOrigin() : Vector result
 - GetDirection() : Vector result
 
@@ -759,6 +760,7 @@ Sphere defined by center Vector and radius. Can be intersected with other primit
 It's like two spheres connected by a cylinder. Base and Tip are the two endpoints, radius is the cylinder's radius.
 - [constructor]Capsule(Vector base, tip, float radius)
 - Intersects(Capsule other) : bool result, Vector position, indicent_normal, float penetration_depth
+- Intersects(Ray ray) : bool result
 - GetBase() : Vector result
 - GetTip() : Vector result
 - GetRadius() : float result

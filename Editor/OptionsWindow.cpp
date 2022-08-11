@@ -860,6 +860,18 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_TERRAIN " ";
 	}
+	for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+	{
+		const ArmatureComponent& armature = scene.armatures[i];
+		for (Entity bone : armature.boneCollection)
+		{
+			if (entity == bone)
+			{
+				item.name += ICON_BONE " ";
+				break;
+			}
+		}
+	}
 
 	const NameComponent* name = scene.names.GetComponent(entity);
 	if (name == nullptr)

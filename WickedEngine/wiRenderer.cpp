@@ -5200,23 +5200,41 @@ void DrawDebugWorld(
 			int j = 0;
 			for (Entity entity : armature.boneCollection)
 			{
-				const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
-				if (hierarchy == nullptr || !scene.transforms.Contains(entity) || !scene.transforms.Contains(hierarchy->parentID))
-				{
+				if (!scene.transforms.Contains(entity))
 					continue;
-				}
 				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-				const TransformComponent& parent = *scene.transforms.GetComponent(hierarchy->parentID);
-
-				XMMATRIX transform_world = XMLoadFloat4x4(&transform.world);
-				XMMATRIX parent_world = XMLoadFloat4x4(&parent.world);
-
-				XMVECTOR a = XMVector3Transform(XMVectorSet(0, 0, 0, 1), transform_world);
-				XMVECTOR b = XMVector3Transform(XMVectorSet(0, 0, 0, 1), parent_world);
+				XMVECTOR a = transform.GetPositionV();
+				XMVECTOR b = a + XMVectorSet(0, 1, 0, 0);
+				// Search for child to connect bone tip:
+				bool child_found = false;
+				for (Entity child : armature.boneCollection)
+				{
+					const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+					if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+					{
+						const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+						b = child_transform.GetPositionV();
+						child_found = true;
+						break;
+					}
+				}
+				if (!child_found)
+				{
+					// No child, try to guess bone tip compared to parent (if it has parent):
+					const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
+					if (hierarchy != nullptr && scene.transforms.Contains(hierarchy->parentID))
+					{
+						const TransformComponent& parent_transform = *scene.transforms.GetComponent(hierarchy->parentID);
+						XMVECTOR ab = a - parent_transform.GetPositionV();
+						b = a + ab;
+					}
+				}
 
 				LineSegment segment;
 				XMStoreFloat4(&segment.a, a);
 				XMStoreFloat4(&segment.b, b);
+				segment.a.w = 1;
+				segment.b.w = 1;
 				segment.colorA = XMFLOAT4(1, 1, 1, 1);
 				segment.colorB = XMFLOAT4(1, 0, 1, 1);
 
@@ -5706,10 +5724,12 @@ void DrawDebugWorld(
 				}
 				a = XMVector3Transform(a, M);
 				b = XMVector3Transform(b, M);
-				LineSegment& line = linearray[j++];
+				LineSegment line;
 				XMStoreFloat4(&line.a, a);
 				XMStoreFloat4(&line.b, b);
 				line.colorA = line.colorB = it.second;
+				std::memcpy(linearray + j, &line, sizeof(line));
+				j++;
 			}
 
 		}

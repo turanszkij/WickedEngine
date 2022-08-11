@@ -106,6 +106,8 @@ namespace wi::primitive
 			return AABB::Merge(base_aabb, tip_aabb);
 		}
 		bool intersects(const Capsule& b, XMFLOAT3& position, XMFLOAT3& incident_normal, float& penetration_depth) const;
+		bool intersects(const Ray& b) const;
+		bool intersects(const Ray& b, float& t) const;
 	};
 	struct Ray
 	{
@@ -125,6 +127,8 @@ namespace wi::primitive
 		}
 		bool intersects(const AABB& b) const;
 		bool intersects(const Sphere& b) const;
+		bool intersects(const Capsule& b) const;
+		bool intersects(const Capsule& b, float& t) const;
 	};
 
 	struct Frustum
