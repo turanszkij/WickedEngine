@@ -14,7 +14,7 @@
 #include "wiUnorderedSet.h"
 #include "wiVector.h"
 
-#include "Utility/arial.h"
+#include "Utility/liberation_sans.h"
 #include "Utility/stb_truetype.h"
 
 #include <fstream>
@@ -283,7 +283,7 @@ namespace wi::font
 		// add default font if there is none yet:
 		if (fontStyles.empty())
 		{
-			AddFontStyle("arial", arial, sizeof(arial));
+			AddFontStyle("Liberation Sans", liberation_sans, sizeof(liberation_sans));
 		}
 
 		GraphicsDevice* device = wi::graphics::GetDevice();

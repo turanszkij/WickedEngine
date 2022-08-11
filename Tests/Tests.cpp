@@ -702,8 +702,8 @@ void TestsRenderer::RunFontTest()
 	static wi::SpriteFont font;
 	static wi::SpriteFont font_upscaled;
 
-	font.SetText("This is Arial, size 32 wi::font");
-	font_upscaled.SetText("This is Arial, size 14 wi::font, but upscaled to 32");
+	font.SetText("This is Liberation Sans, size 32 wi::font");
+	font_upscaled.SetText("This is Liberation Sans, size 14 wi::font, but upscaled to 32");
 
 	font.params.posX = GetLogicalWidth() / 2.0f;
 	font.params.posY = GetLogicalHeight() / 6.0f;
