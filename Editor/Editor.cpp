@@ -452,10 +452,6 @@ void EditorComponent::Load()
 		std::string ss;
 		ss += "Wicked Engine Editor v";
 		ss += wi::version::GetVersionString();
-		ss += "\nCreated by Turánszki János";
-		ss += "\n\nWebsite: https://wickedengine.net/";
-		ss += "\nSource code: https://github.com/turanszkij/WickedEngine";
-		ss += "\nDiscord chat: https://discord.gg/CFjRYmE";
 		ss += "\n\nControls\n";
 		ss += "------------\n";
 		ss += "Move camera: WASD, or Contoller left stick or D-pad\n";
@@ -496,6 +492,11 @@ void EditorComponent::Load()
 		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start, if exists)\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
 		ss += "https://github.com/turanszkij/WickedEngine/issues\n";
+		ss += "\n\nWebsite: https://wickedengine.net/";
+		ss += "\nSource code: https://github.com/turanszkij/WickedEngine";
+		ss += "\nDiscord chat: https://discord.gg/CFjRYmE";
+		ss += "\n";
+		ss += wi::version::GetCreditsString();
 
 		aboutLabel.Create("AboutLabel");
 		aboutLabel.SetText(ss);
