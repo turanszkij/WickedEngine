@@ -36,11 +36,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Supplementary", "Supplement
 		.github\workflows\build-nightly.yml = .github\workflows\build-nightly.yml
 		.github\workflows\build-pr.yml = .github\workflows\build-pr.yml
 		.github\workflows\build.yml = .github\workflows\build.yml
-		credits.txt = credits.txt
 		features.txt = features.txt
 		LICENSE.txt = LICENSE.txt
 		README.md = README.md
-		third_party_software.txt = third_party_software.txt
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OfflineShaderCompiler", "WickedEngine\OfflineShaderCompiler.vcxproj", "{3B74A7FE-CED7-4723-8824-AC708A865B98}"
