@@ -17,6 +17,42 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	float wid = 200;
 	float step = hei + 2;
 
+	modeComboBox.Create("Sampling: ");
+	modeComboBox.SetSize(XMFLOAT2(wid, hei));
+	modeComboBox.SetPos(XMFLOAT2(x, y));
+	modeComboBox.SetEnabled(false);
+	modeComboBox.AddItem("Step", AnimationComponent::AnimationSampler::Mode::STEP);
+	modeComboBox.AddItem("Linear", AnimationComponent::AnimationSampler::Mode::LINEAR);
+	modeComboBox.AddItem("Cubic spline", AnimationComponent::AnimationSampler::Mode::CUBICSPLINE);
+	modeComboBox.OnSelect([&](wi::gui::EventArgs args) {
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			for (const AnimationComponent::AnimationChannel& channel : animation->channels)
+			{
+				assert(channel.samplerIndex < (int)animation->samplers.size());
+				AnimationComponent::AnimationSampler& sampler = animation->samplers[channel.samplerIndex];
+				sampler.mode = (AnimationComponent::AnimationSampler::Mode)args.userdata;
+
+				if (sampler.mode == AnimationComponent::AnimationSampler::Mode::CUBICSPLINE)
+				{
+					const AnimationDataComponent* animationdata = editor->GetCurrentScene().animation_datas.GetComponent(sampler.data);
+					if (animationdata == nullptr)
+					{
+						sampler.mode = AnimationComponent::AnimationSampler::Mode::LINEAR;
+					}
+					else if(animationdata->keyframe_data.size() != animationdata->keyframe_times.size() * 3 * 3)
+					{
+						sampler.mode = AnimationComponent::AnimationSampler::Mode::LINEAR;
+					}
+				}
+
+			}
+		}
+	});
+	modeComboBox.SetTooltip("Choose how animation data is interpreted between keyframes.\nNote that Cubic spline sampling requires spline animation data, otherwise, it will fall back to Linear!");
+	AddWidget(&modeComboBox);
+
 	loopedCheckBox.Create("Looped: ");
 	loopedCheckBox.SetTooltip("Toggle animation looping behaviour.");
 	loopedCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -140,6 +176,14 @@ void AnimationWindow::Update()
 	else
 	{
 		playButton.SetText("Play");
+	}
+
+	for (const AnimationComponent::AnimationChannel& channel : animation.channels)
+	{
+		assert(channel.samplerIndex < (int)animation.samplers.size());
+		AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
+		modeComboBox.SetSelectedByUserdataWithoutCallback(sampler.mode);
+		break; // feed back the first sampler's mode into the gui
 	}
 
 	loopedCheckBox.SetCheck(animation.IsLooped());
