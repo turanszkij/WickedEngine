@@ -1151,7 +1151,7 @@ namespace wi::scene
 
 		inline void Play() { _flags |= PLAYING; }
 		inline void Pause() { _flags &= ~PLAYING; }
-		inline void Stop() { Pause(); timer = 0.0f; }
+		inline void Stop() { Pause(); timer = 0.0f; last_update_time = timer; }
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
