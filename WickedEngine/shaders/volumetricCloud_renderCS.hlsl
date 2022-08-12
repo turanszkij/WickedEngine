@@ -2,6 +2,7 @@
 #include "volumetricCloudsHF.hlsli"
 #include "skyAtmosphere.hlsli"
 #include "ShaderInterop_Postprocess.h"
+#include "lightingHF.hlsli"
 
 /**
  * Cloud pass:
@@ -35,6 +36,9 @@ RWTexture2D<float2> texture_cloudDepth : register(u1);
 
 // Octaves for multiple-scattering approximation. 1 means single-scattering only.
 #define MS_COUNT 2
+
+// Because the lights color is limited to half-float precision, we can only set intensity to 65504 which in some cases isn't enough.
+#define LOCAL_LIGHTS_INTENSITY_MULTIPLIER 100000.0
 
 float GetHeightFractionForPoint(AtmosphereParameters atmosphere, float3 pos)
 {
@@ -348,6 +352,77 @@ float3 SampleAmbientLight(float heightFraction)
 	}
 }
 
+float3 SampleLocalLights(float3 worldPosition)
+{
+	float3 localLightLuminance = 0;
+	
+	[loop]
+	for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
+	{
+		ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
+
+		if (light.GetFlags() & ENTITY_FLAG_LIGHT_VOLUMETRICS)
+		{
+			float3 L = 0;
+			float dist = 0;
+			float3 lightColor = 0;
+
+			// Only point and spot lights are available for now
+			switch (light.GetType())
+			{
+			case ENTITY_TYPE_POINTLIGHT:
+			{
+				L = light.position - worldPosition;
+				const float dist2 = dot(L, L);
+				const float range = light.GetRange();
+				const float range2 = range * range;
+
+				[branch]
+				if (dist2 < range2)
+				{
+					dist = sqrt(dist2);
+
+					lightColor = light.GetColor().rgb;
+					lightColor = min(lightColor, HALF_FLT_MAX) * LOCAL_LIGHTS_INTENSITY_MULTIPLIER; 
+					lightColor *= attenuation_pointlight(dist, dist2, range, range2);
+				}
+			}
+			break;
+			case ENTITY_TYPE_SPOTLIGHT:
+			{
+				L = light.position - worldPosition;
+				const float dist2 = dot(L, L);
+				const float range = light.GetRange();
+				const float range2 = range * range;
+
+				[branch]
+				if (dist2 < range2)
+				{
+					dist = sqrt(dist2);
+					L /= dist;
+
+					const float spotFactor = dot(L, light.GetDirection());
+					const float spotCutoff = light.GetConeAngleCos();
+
+					[branch]
+					if (spotFactor > spotCutoff)
+					{
+						lightColor = light.GetColor().rgb;
+						lightColor = min(lightColor, HALF_FLT_MAX) * LOCAL_LIGHTS_INTENSITY_MULTIPLIER;
+						lightColor *= attenuation_spotlight(dist, dist2, range, range2, spotFactor, light.GetAngleScale(), light.GetAngleOffset());
+					}
+				}
+			}
+			break;
+			}
+
+			localLightLuminance += lightColor * UniformPhase();
+		}
+	}
+
+	return localLightLuminance;
+}
+
 void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPosition, float3 worldPosition, float3 sunDirection, float3 sunIlluminance, float cosTheta,
 	float stepSize, float heightFraction, float cloudDensity, float3 weatherData, float3 windOffset, float3 windDirection, float2 coverageWindOffset, float lod,
 	inout float3 luminance, inout float3 transmittanceToView, inout float depthWeightedSum, inout float depthWeightsSum)
@@ -396,7 +471,11 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 	depthWeightedSum += depthWeight * length(worldPosition - startPosition);
 	depthWeightsSum += depthWeight;
 
+	
+	// Sample local lights
+	float3 localLightLuminance = SampleLocalLights(worldPosition);
 
+	
 	// Analytical scattering integration based on multiple scattering
 	
 	[unroll]
@@ -406,10 +485,11 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 		const float3 extinctionCoefficients = participatingMedia.extinctionCoefficients[ms];
 		const float3 transmittanceToLight = participatingMedia.transmittanceToLight[ms];
 		
-		float3 sunSkyLuminance = transmittanceToLight * sunIlluminance * participatingMediaPhase.phase[ms];
-		sunSkyLuminance += (ms == 0 ? environmentLuminance : float3(0.0, 0.0, 0.0)); // only apply at last
+		float3 lightLuminance = transmittanceToLight * sunIlluminance * participatingMediaPhase.phase[ms];
+		lightLuminance += (ms == 0 ? environmentLuminance : float3(0.0, 0.0, 0.0)); // only apply at last
+		lightLuminance += localLightLuminance;
 		
-		const float3 scatteredLuminance = (sunSkyLuminance * scatteringCoefficients) * WeatherDensity(weatherData); // + emission. Light can be emitted when media reach high heat. Could be used to make lightning
+		const float3 scatteredLuminance = (lightLuminance * scatteringCoefficients) * WeatherDensity(weatherData); // + emission. Light can be emitted when media reach high heat. Could be used to make lightning
 
 		
 		// See slide 28 at http://www.frostbite.com/2015/08/physically-based-unified-volumetric-rendering-in-frostbite/ 

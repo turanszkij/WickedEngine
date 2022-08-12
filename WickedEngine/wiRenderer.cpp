@@ -3678,6 +3678,11 @@ void UpdateRenderData(
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
 			}
 
+			if (light.IsVolumetricsEnabled())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICS);
+			}
+
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
 		}

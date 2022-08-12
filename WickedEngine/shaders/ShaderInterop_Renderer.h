@@ -604,6 +604,7 @@ static const uint ENTITY_TYPE_FORCEFIELD_POINT = 200;
 static const uint ENTITY_TYPE_FORCEFIELD_PLANE = 201;
 
 static const uint ENTITY_FLAG_LIGHT_STATIC = 1 << 0;
+static const uint ENTITY_FLAG_LIGHT_VOLUMETRICS = 1 << 1;
 
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
