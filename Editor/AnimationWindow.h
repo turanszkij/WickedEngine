@@ -19,7 +19,14 @@ public:
 	wi::gui::Slider	timerSlider;
 	wi::gui::Slider	amountSlider;
 	wi::gui::Slider	speedSlider;
+	wi::gui::TextInputField startInput;
+	wi::gui::TextInputField endInput;
+
+	wi::gui::ComboBox recordCombo;
+	wi::gui::TreeList keyframesList;
 
 	void Update();
+
+	void RefreshKeyframesList();
 };
 

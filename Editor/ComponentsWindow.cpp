@@ -54,6 +54,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Decal " ICON_DECAL, 11);
 	newComponentCombo.AddItem("Weather " ICON_WEATHER, 12);
 	newComponentCombo.AddItem("Force Field " ICON_FORCE, 13);
+	newComponentCombo.AddItem("Animation " ICON_ANIMATION, 14);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(0);
 		if (editor->translator.selected.empty())
@@ -125,6 +126,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			if (scene.forces.Contains(entity))
 				return;
 			break;
+		case 14:
+			if (scene.animations.Contains(entity))
+				return;
+			break;
 		default:
 			return;
 		}
@@ -185,6 +190,9 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case 13:
 			scene.forces.Create(entity);
+			break;
+		case 14:
+			scene.animations.Create(entity);
 			break;
 		default:
 			break;

@@ -117,21 +117,22 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	newCombo.selected_font.anim.typewriter.time = 2;
 	newCombo.selected_font.anim.typewriter.character_start = 1;
 	newCombo.AddItem("...", ~0ull);
-	newCombo.AddItem("Transform", 0);
-	newCombo.AddItem("Material", 1);
-	newCombo.AddItem("Point Light", 2);
-	newCombo.AddItem("Spot Light", 3);
-	newCombo.AddItem("Directional Light", 4);
-	newCombo.AddItem("Environment Probe", 5);
-	newCombo.AddItem("Force", 6);
-	newCombo.AddItem("Decal", 7);
-	newCombo.AddItem("Sound", 8);
-	newCombo.AddItem("Weather", 9);
-	newCombo.AddItem("Emitter", 10);
-	newCombo.AddItem("HairParticle", 11);
-	newCombo.AddItem("Camera", 12);
-	newCombo.AddItem("Cube Object", 13);
-	newCombo.AddItem("Plane Object", 14);
+	newCombo.AddItem("Transform " ICON_TRANSFORM, 0);
+	newCombo.AddItem("Material " ICON_MATERIAL, 1);
+	newCombo.AddItem("Point Light " ICON_POINTLIGHT, 2);
+	newCombo.AddItem("Spot Light " ICON_SPOTLIGHT, 3);
+	newCombo.AddItem("Directional Light " ICON_DIRECTIONALLIGHT, 4);
+	newCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, 5);
+	newCombo.AddItem("Force " ICON_FORCE, 6);
+	newCombo.AddItem("Decal " ICON_DECAL, 7);
+	newCombo.AddItem("Sound " ICON_SOUND, 8);
+	newCombo.AddItem("Weather " ICON_WEATHER, 9);
+	newCombo.AddItem("Emitter " ICON_EMITTER, 10);
+	newCombo.AddItem("HairParticle " ICON_HAIR, 11);
+	newCombo.AddItem("Camera " ICON_CAMERA, 12);
+	newCombo.AddItem("Cube Object " ICON_CUBE, 13);
+	newCombo.AddItem("Plane Object " ICON_SQUARE, 14);
+	newCombo.AddItem("Animation " ICON_ANIMATION, 15);
 	newCombo.OnSelect([&](wi::gui::EventArgs args) {
 		newCombo.SetSelectedWithoutCallback(0);
 		const EditorComponent::EditorScene& editorscene = editor->GetCurrentEditorScene();
@@ -225,6 +226,11 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		case 14:
 			pick.entity = scene.Entity_CreatePlane("plane");
 			pick.subsetIndex = 0;
+			break;
+		case 15:
+			pick.entity = CreateEntity();
+			scene.animations.Create(pick.entity);
+			scene.names.Create(pick.entity) = "animation";
 			break;
 		default:
 			break;

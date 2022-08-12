@@ -4135,6 +4135,23 @@ namespace wi::gui
 				clicked = true;
 			}
 
+			if (onDelete && state == FOCUS && wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE))
+			{
+				int index = 0;
+				for (auto& item : items)
+				{
+					if (item.selected)
+					{
+						EventArgs args;
+						args.iValue = index;
+						args.sValue = items[index].name;
+						args.userdata = items[index].userdata;
+						onDelete(args);
+					}
+					index++;
+				}
+			}
+
 			bool click_down = false;
 			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 			{
@@ -4359,6 +4376,10 @@ namespace wi::gui
 	void TreeList::OnSelect(std::function<void(EventArgs args)> func)
 	{
 		onSelect = func;
+	}
+	void TreeList::OnDelete(std::function<void(EventArgs args)> func)
+	{
+		onDelete = func;
 	}
 	void TreeList::AddItem(const Item& item)
 	{

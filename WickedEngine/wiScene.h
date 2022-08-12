@@ -1142,6 +1142,7 @@ namespace wi::scene
 
 		// Non-serialzied attributes:
 		wi::vector<float> morph_weights_temp;
+		float last_update_time = 0;
 
 		inline bool IsPlaying() const { return _flags & PLAYING; }
 		inline bool IsLooped() const { return _flags & LOOPED; }

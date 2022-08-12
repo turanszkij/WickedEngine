@@ -672,6 +672,7 @@ namespace wi::gui
 		};
 	protected:
 		std::function<void(EventArgs args)> onSelect;
+		std::function<void(EventArgs args)> onDelete;
 		int item_highlight = -1;
 		int opener_highlight = -1;
 
@@ -701,6 +702,7 @@ namespace wi::gui
 		void SetTheme(const Theme& theme, int id = -1) override;
 
 		void OnSelect(std::function<void(EventArgs args)> func);
+		void OnDelete(std::function<void(EventArgs args)> func);
 
 		ScrollBar scrollbar;
 	};

@@ -2737,10 +2737,11 @@ namespace wi::scene
 		for (size_t i = 0; i < animations.GetCount(); ++i)
 		{
 			AnimationComponent& animation = animations[i];
-			if (!animation.IsPlaying() && animation.timer == 0.0f)
+			if (!animation.IsPlaying() && animation.last_update_time == animation.timer)
 			{
 				continue;
 			}
+			animation.last_update_time = animation.timer;
 
 			for (const AnimationComponent::AnimationChannel& channel : animation.channels)
 			{
@@ -2752,25 +2753,42 @@ namespace wi::scene
 					continue;
 				}
 
-				int keyLeft = 0;
-				int keyRight = 0;
+				float timeFirst = std::numeric_limits<float>::max();
+				float timeLast = std::numeric_limits<float>::min();
+				int keyLeft = 0;	float timeLeft = std::numeric_limits<float>::min();
+				int keyRight = 0;	float timeRight = std::numeric_limits<float>::max();
 
-				if (animationdata->keyframe_times.back() < animation.timer)
+				// search for usable keyframes:
+				for (int k = 0; k < (int)animationdata->keyframe_times.size(); ++k)
 				{
-					// Rightmost keyframe is already outside animation, so just snap to last keyframe:
-					keyLeft = keyRight = (int)animationdata->keyframe_times.size() - 1;
+					const float time = animationdata->keyframe_times[k];
+					if (time < timeFirst)
+					{
+						timeFirst = time;
+					}
+					if (time > timeLast)
+					{
+						timeLast = time;
+					}
+					if (time <= animation.timer && time > timeLeft)
+					{
+						timeLeft = time;
+						keyLeft = k;
+					}
+					if (time >= animation.timer && time < timeRight)
+					{
+						timeRight = time;
+						keyRight = k;
+					}
 				}
-				else
+				if (animation.timer < timeFirst || animation.timer > timeLast)
 				{
-					// Search for the right keyframe (greater/equal to anim time):
-					while (animationdata->keyframe_times[keyRight++] < animation.timer) {}
-					keyRight--;
-
-					// Left keyframe is just near right:
-					keyLeft = std::max(0, keyRight - 1);
+					// timer is outside range of keyframes, don't update animation:
+					continue;
 				}
 
-				float left = animationdata->keyframe_times[keyLeft];
+				const float left = animationdata->keyframe_times[keyLeft];
+				const float right = animationdata->keyframe_times[keyRight];
 
 				TransformComponent transform;
 
@@ -2800,26 +2818,27 @@ namespace wi::scene
 				default:
 				case AnimationComponent::AnimationSampler::Mode::STEP:
 				{
-					// Nearest neighbor method (snap to left):
+					// Nearest neighbor method:
+					const int key = wi::math::InverseLerp(timeLeft, timeRight, animation.timer) > 0.5f ? keyRight : keyLeft;
 					switch (channel.path)
 					{
 					default:
 					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
 					{
 						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						transform.translation_local = ((const XMFLOAT3*)animationdata->keyframe_data.data())[keyLeft];
+						transform.translation_local = ((const XMFLOAT3*)animationdata->keyframe_data.data())[key];
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Path::ROTATION:
 					{
 						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
-						transform.rotation_local = ((const XMFLOAT4*)animationdata->keyframe_data.data())[keyLeft];
+						transform.rotation_local = ((const XMFLOAT4*)animationdata->keyframe_data.data())[key];
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Path::SCALE:
 					{
 						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						transform.scale_local = ((const XMFLOAT3*)animationdata->keyframe_data.data())[keyLeft];
+						transform.scale_local = ((const XMFLOAT3*)animationdata->keyframe_data.data())[key];
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
@@ -2827,7 +2846,7 @@ namespace wi::scene
 						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
 						for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
 						{
-							animation.morph_weights_temp[j] = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
+							animation.morph_weights_temp[j] = animationdata->keyframe_data[key * animation.morph_weights_temp.size() + j];
 						}
 					}
 					break;
@@ -2844,7 +2863,6 @@ namespace wi::scene
 					}
 					else
 					{
-						float right = animationdata->keyframe_times[keyRight];
 						t = (animation.timer - left) / (right - left);
 					}
 
@@ -2888,7 +2906,7 @@ namespace wi::scene
 						for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
 						{
 							float vLeft = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
-							float vRight = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
+							float vRight = animationdata->keyframe_data[keyRight * animation.morph_weights_temp.size() + j];
 							float vAnim = wi::math::Lerp(vLeft, vRight, t);
 							animation.morph_weights_temp[j] = vAnim;
 						}
@@ -2907,7 +2925,6 @@ namespace wi::scene
 					}
 					else
 					{
-						float right = animationdata->keyframe_times[keyRight];
 						t = (animation.timer - left) / (right - left);
 					}
 
@@ -2961,8 +2978,8 @@ namespace wi::scene
 						{
 							float vLeft = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 1];
 							float vLeftTanOut = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 2];
-							float vRightTanIn = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 0];
-							float vRight = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 1];
+							float vRightTanIn = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 0];
+							float vRight = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 1];
 							float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
 							animation.morph_weights_temp[j] = vAnim;
 						}

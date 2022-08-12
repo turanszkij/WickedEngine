@@ -8,14 +8,28 @@ using namespace wi::scene;
 void AnimationWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create(ICON_ANIMATION " Animation", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(520, 140));
+	wi::gui::Window::Create(ICON_ANIMATION " Animation", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	SetSize(XMFLOAT2(520, 400));
+
+	closeButton.SetTooltip("Delete Animation");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().animations.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->optionsWnd.RefreshEntityTree();
+		});
 
 	float x = 80;
 	float y = 0;
 	float hei = 18;
 	float wid = 200;
-	float step = hei + 2;
+	float step = hei + 4;
 
 	modeComboBox.Create("Sampling: ");
 	modeComboBox.SetSize(XMFLOAT2(wid, hei));
@@ -41,7 +55,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 					{
 						sampler.mode = AnimationComponent::AnimationSampler::Mode::LINEAR;
 					}
-					else if(animationdata->keyframe_data.size() != animationdata->keyframe_times.size() * 3 * 3)
+					else if (animationdata->keyframe_data.size() != animationdata->keyframe_times.size() * 3 * 3)
 					{
 						sampler.mode = AnimationComponent::AnimationSampler::Mode::LINEAR;
 					}
@@ -141,6 +155,291 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	speedSlider.SetTooltip("Set the animation speed.");
 	AddWidget(&speedSlider);
 
+	startInput.Create("Start");
+	startInput.SetDescription("Start time: ");
+	startInput.SetSize(XMFLOAT2(wid, hei));
+	startInput.SetPos(XMFLOAT2(x, y += step));
+	startInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			animation->start = args.fValue;
+		}
+		});
+	startInput.SetTooltip("Set the animation start in seconds. This will be the loop's starting point.");
+	AddWidget(&startInput);
+
+	endInput.Create("End");
+	endInput.SetDescription("End time: ");
+	endInput.SetSize(XMFLOAT2(wid, hei));
+	endInput.SetPos(XMFLOAT2(x, y += step));
+	endInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			animation->end = args.fValue;
+		}
+		});
+	endInput.SetTooltip("Set the animation end in seconds. This is relative to 0, not the animation start.");
+	AddWidget(&endInput);
+
+
+	recordCombo.Create("Record: ");
+	recordCombo.selected_font.anim.typewriter.looped = true;
+	recordCombo.selected_font.anim.typewriter.time = 2;
+	recordCombo.selected_font.anim.typewriter.character_start = 1;
+	recordCombo.SetSize(XMFLOAT2(wid, hei));
+	recordCombo.SetPos(XMFLOAT2(x, y += step));
+	recordCombo.AddItem("...");
+	recordCombo.AddItem("Transform " ICON_TRANSLATE " " ICON_ROTATE " " ICON_SCALE);
+	recordCombo.AddItem("Position " ICON_TRANSLATE);
+	recordCombo.AddItem("Rotation " ICON_ROTATE);
+	recordCombo.AddItem("Scale " ICON_SCALE);
+	recordCombo.AddItem("Morph weights " ICON_MESH);
+	recordCombo.OnSelect([&](wi::gui::EventArgs args) {
+		if (args.iValue == 0)
+			return;
+
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+
+		AnimationComponent* animation = scene.animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			const float current_time = animation->timer;
+
+			wi::vector<AnimationComponent::AnimationChannel::Path> paths;
+
+			switch (args.iValue)
+			{
+			default:
+			case 1:
+				paths.push_back(AnimationComponent::AnimationChannel::Path::TRANSLATION);
+				paths.push_back(AnimationComponent::AnimationChannel::Path::ROTATION);
+				paths.push_back(AnimationComponent::AnimationChannel::Path::SCALE);
+				break;
+			case 2:
+				paths.push_back(AnimationComponent::AnimationChannel::Path::TRANSLATION);
+				break;
+			case 3:
+				paths.push_back(AnimationComponent::AnimationChannel::Path::ROTATION);
+				break;
+			case 4:
+				paths.push_back(AnimationComponent::AnimationChannel::Path::SCALE);
+				break;
+			case 5:
+				paths.push_back(AnimationComponent::AnimationChannel::Path::WEIGHTS);
+				break;
+			}
+
+			for (auto path : paths)
+			{
+				for (auto& selected : editor->translator.selected)
+				{
+					int channelIndex = -1;
+					for (int i = 0; i < (int)animation->channels.size(); ++i)
+					{
+						// Search for channel for this path and target:
+						auto& channel = animation->channels[i];
+						if (channel.path == path && channel.target == selected.entity)
+						{
+							channelIndex = i;
+							break;
+						}
+					}
+					if (channelIndex < 0)
+					{
+						// No channel found for this path and target, create it:
+						channelIndex = (int)animation->channels.size();
+						auto& channel = animation->channels.emplace_back();
+						channel.samplerIndex = (int)animation->samplers.size();
+						channel.target = selected.entity;
+						channel.path = path;
+						auto& sam = animation->samplers.emplace_back();
+						Entity animation_data_entity = CreateEntity();
+						scene.animation_datas.Create(animation_data_entity);
+						sam.data = animation_data_entity;
+					}
+					auto& channel = animation->channels[channelIndex];
+
+					AnimationDataComponent* animation_data = scene.animation_datas.GetComponent(animation->samplers[channel.samplerIndex].data);
+					if (animation_data != nullptr)
+					{
+						animation_data->keyframe_times.push_back(current_time);
+
+						switch (channel.path)
+						{
+						case wi::scene::AnimationComponent::AnimationChannel::TRANSLATION:
+						{
+							const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
+							if (transform != nullptr)
+							{
+								animation_data->keyframe_data.push_back(transform->translation_local.x);
+								animation_data->keyframe_data.push_back(transform->translation_local.y);
+								animation_data->keyframe_data.push_back(transform->translation_local.z);
+							}
+							else
+							{
+								animation_data->keyframe_times.pop_back();
+								animation->channels.pop_back();
+							}
+						}
+						break;
+						case wi::scene::AnimationComponent::AnimationChannel::ROTATION:
+						{
+							const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
+							if (transform != nullptr)
+							{
+								animation_data->keyframe_data.push_back(transform->rotation_local.x);
+								animation_data->keyframe_data.push_back(transform->rotation_local.y);
+								animation_data->keyframe_data.push_back(transform->rotation_local.z);
+								animation_data->keyframe_data.push_back(transform->rotation_local.w);
+							}
+							else
+							{
+								animation_data->keyframe_times.pop_back();
+								animation->channels.pop_back();
+							}
+						}
+						break;
+						case wi::scene::AnimationComponent::AnimationChannel::SCALE:
+						{
+							const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
+							if (transform != nullptr)
+							{
+								animation_data->keyframe_data.push_back(transform->scale_local.x);
+								animation_data->keyframe_data.push_back(transform->scale_local.y);
+								animation_data->keyframe_data.push_back(transform->scale_local.z);
+							}
+							else
+							{
+								animation_data->keyframe_times.pop_back();
+								animation->channels.pop_back();
+							}
+						}
+						break;
+						case wi::scene::AnimationComponent::AnimationChannel::WEIGHTS:
+						{
+							const MeshComponent* mesh = scene.meshes.GetComponent(channel.target);
+							if (mesh == nullptr && scene.objects.Contains(selected.entity))
+							{
+								// Also try query mesh of selected object:
+								ObjectComponent* object = scene.objects.GetComponent(selected.entity);
+								mesh = scene.meshes.GetComponent(object->meshID);
+								channel.target = selected.entity;
+							}
+							if (mesh != nullptr && !mesh->targets.empty())
+							{
+								for (const MeshComponent::MeshMorphTarget& morph : mesh->targets)
+								{
+									animation_data->keyframe_data.push_back(morph.weight);
+								}
+							}
+							else
+							{
+								animation_data->keyframe_times.pop_back();
+								animation->channels.pop_back();
+							}
+						}
+						break;
+						default:
+							break;
+						}
+					}
+				}
+			}
+		}
+		recordCombo.SetSelectedWithoutCallback(0);
+		RefreshKeyframesList();
+	});
+	recordCombo.SetTooltip("Record selected entities' specified channels into the animation at the current time.");
+	AddWidget(&recordCombo);
+
+
+	keyframesList.Create("Keyframes");
+	keyframesList.SetSize(XMFLOAT2(wid, 200));
+	keyframesList.SetPos(XMFLOAT2(x, y += step));
+	keyframesList.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		AnimationComponent* animation = scene.animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			uint32_t channelIndex = args.userdata & 0xFFFFFFFF;
+			uint32_t timeIndex = uint32_t(args.userdata >> 32ull) & 0xFFFFFFFF;
+			if (animation->channels.size() > channelIndex)
+			{
+				const AnimationComponent::AnimationChannel& channel = animation->channels[channelIndex];
+				const AnimationComponent::AnimationSampler& sam = animation->samplers[channel.samplerIndex];
+				const AnimationDataComponent* animation_data = scene.animation_datas.GetComponent(sam.data);
+				if (animation_data != nullptr && animation_data->keyframe_times.size() > timeIndex)
+				{
+					wi::vector<float> tmp = animation_data->keyframe_times;
+					std::sort(tmp.begin(), tmp.end());
+					float time = tmp[timeIndex];
+					animation->timer = time;
+				}
+			}
+		}
+	});
+	keyframesList.OnDelete([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		AnimationComponent* animation = scene.animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			uint32_t channelIndex = args.userdata & 0xFFFFFFFF;
+			uint32_t timeIndex = uint32_t(args.userdata >> 32ull) & 0xFFFFFFFF;
+			if (animation->channels.size() > channelIndex)
+			{
+				const AnimationComponent::AnimationChannel& channel = animation->channels[channelIndex];
+				const AnimationComponent::AnimationSampler& sam = animation->samplers[channel.samplerIndex];
+				AnimationDataComponent* animation_data = scene.animation_datas.GetComponent(sam.data);
+				if (animation_data != nullptr && animation_data->keyframe_times.size() > timeIndex)
+				{
+					// specific keyframe deletion:
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
+						animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * 3, animation_data->keyframe_data.begin() + timeIndex * 3 + 3);
+						break;
+					case AnimationComponent::AnimationChannel::Path::ROTATION:
+						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
+						animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * 4, animation_data->keyframe_data.begin() + timeIndex * 4 + 4);
+						break;
+					case AnimationComponent::AnimationChannel::Path::SCALE:
+						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
+						animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * 3, animation_data->keyframe_data.begin() + timeIndex * 3 + 3);
+						break;
+					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
+						{
+							MeshComponent* mesh = scene.meshes.GetComponent(channel.target);
+							if (mesh == nullptr && scene.objects.Contains(channel.target))
+							{
+								// Also try query mesh of selected object:
+								ObjectComponent* object = scene.objects.GetComponent(channel.target);
+								mesh = scene.meshes.GetComponent(object->meshID);
+							}
+							if (mesh != nullptr)
+							{
+								animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
+								animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * mesh->targets.size(), animation_data->keyframe_data.begin() + timeIndex * mesh->targets.size() + mesh->targets.size());
+							}
+						}
+						break;
+					default:
+						break;
+					}
+				}
+				else
+				{
+					// entire channel deletion:
+					animation->channels.erase(animation->channels.begin() + channelIndex);
+				}
+			}
+		}
+		RefreshKeyframesList();
+	});
+	AddWidget(&keyframesList);
+
 
 
 	SetMinimized(true);
@@ -150,7 +449,17 @@ void AnimationWindow::Create(EditorComponent* _editor)
 
 void AnimationWindow::SetEntity(Entity entity)
 {
-	this->entity = entity;
+	if (this->entity != entity)
+	{
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+
+		AnimationComponent* animation = scene.animations.GetComponent(entity);
+		if (animation != nullptr || IsCollapsed())
+		{
+			this->entity = entity;
+			RefreshKeyframesList();
+		}
+	}
 }
 
 void AnimationWindow::Update()
@@ -178,18 +487,95 @@ void AnimationWindow::Update()
 		playButton.SetText("Play");
 	}
 
-	for (const AnimationComponent::AnimationChannel& channel : animation.channels)
+	if(!animation.samplers.empty())
 	{
-		assert(channel.samplerIndex < (int)animation.samplers.size());
-		AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
-		modeComboBox.SetSelectedByUserdataWithoutCallback(sampler.mode);
-		break; // feed back the first sampler's mode into the gui
+		modeComboBox.SetSelectedByUserdataWithoutCallback(animation.samplers[0].mode);
+	}
+	else
+	{
+		modeComboBox.SetSelectedByUserdataWithoutCallback(AnimationComponent::AnimationSampler().mode);
 	}
 
 	loopedCheckBox.SetCheck(animation.IsLooped());
 
-	timerSlider.SetRange(0, animation.GetLength());
+	timerSlider.SetRange(animation.start, animation.end);
 	timerSlider.SetValue(animation.timer);
 	amountSlider.SetValue(animation.amount);
 	speedSlider.SetValue(animation.speed);
+	startInput.SetValue(animation.start);
+	endInput.SetValue(animation.end);
+}
+
+
+void AnimationWindow::RefreshKeyframesList()
+{
+	Scene& scene = editor->GetCurrentScene();
+
+	if (!scene.animations.Contains(entity))
+	{
+		SetEntity(INVALID_ENTITY);
+		return;
+	}
+
+	AnimationComponent& animation = *scene.animations.GetComponent(entity);
+
+	keyframesList.ClearItems();
+	uint32_t channelIndex = 0;
+	for (const AnimationComponent::AnimationChannel& channel : animation.channels)
+	{
+		wi::gui::TreeList::Item item;
+		switch (channel.path)
+		{
+		default:
+		case wi::scene::AnimationComponent::AnimationChannel::TRANSLATION:
+			item.name += ICON_TRANSLATE " ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::ROTATION:
+			item.name += ICON_ROTATE " ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::SCALE:
+			item.name += ICON_SCALE " ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::WEIGHTS:
+			item.name += ICON_MESH " ";
+			break;
+		}
+		const NameComponent* name = scene.names.GetComponent(channel.target);
+		if (name == nullptr)
+		{
+			item.name += "[no_name] " + std::to_string(channel.target);
+		}
+		else if (name->name.empty())
+		{
+			item.name += "[name_empty] " + std::to_string(channel.target);
+		}
+		else
+		{
+			item.name += name->name;
+		}
+
+		item.userdata = 0ull;
+		item.userdata |= channelIndex & 0xFFFFFFFF;
+		item.userdata |= uint64_t(0xFFFFFFFF) << 32ull; // invalid time index, means entire channel
+		keyframesList.AddItem(item);
+
+		auto& sam = animation.samplers[channel.samplerIndex];
+		AnimationDataComponent* animation_data = scene.animation_datas.GetComponent(sam.data);
+		if (animation_data != nullptr)
+		{
+			uint32_t timeIndex = 0;
+			for (float time : animation_data->keyframe_times)
+			{
+				wi::gui::TreeList::Item item2;
+				item2.name = std::to_string(time);
+				item2.level = 1;
+				item2.userdata = 0ull;
+				item2.userdata |= channelIndex & 0xFFFFFFFF;
+				item2.userdata |= uint64_t(timeIndex & 0xFFFFFFFF) << 32ull;
+				keyframesList.AddItem(item2);
+				timeIndex++;
+			}
+		}
+		channelIndex++;
+	}
 }
