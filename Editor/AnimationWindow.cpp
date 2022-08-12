@@ -78,6 +78,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 			animation->SetLooped(args.bValue);
 		}
 	});
+	loopedCheckBox.SetCheckText(ICON_LOOP);
 	AddWidget(&loopedCheckBox);
 
 	playButton.Create("Play");
@@ -196,6 +197,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	recordCombo.AddItem("Rotation " ICON_ROTATE);
 	recordCombo.AddItem("Scale " ICON_SCALE);
 	recordCombo.AddItem("Morph weights " ICON_MESH);
+	recordCombo.AddItem("Close loop " ICON_LOOP);
 	recordCombo.OnSelect([&](wi::gui::EventArgs args) {
 		if (args.iValue == 0)
 			return;
@@ -207,142 +209,221 @@ void AnimationWindow::Create(EditorComponent* _editor)
 		{
 			const float current_time = animation->timer;
 
-			wi::vector<AnimationComponent::AnimationChannel::Path> paths;
-
-			switch (args.iValue)
+			if (args.iValue == 6)
 			{
-			default:
-			case 1:
-				paths.push_back(AnimationComponent::AnimationChannel::Path::TRANSLATION);
-				paths.push_back(AnimationComponent::AnimationChannel::Path::ROTATION);
-				paths.push_back(AnimationComponent::AnimationChannel::Path::SCALE);
-				break;
-			case 2:
-				paths.push_back(AnimationComponent::AnimationChannel::Path::TRANSLATION);
-				break;
-			case 3:
-				paths.push_back(AnimationComponent::AnimationChannel::Path::ROTATION);
-				break;
-			case 4:
-				paths.push_back(AnimationComponent::AnimationChannel::Path::SCALE);
-				break;
-			case 5:
-				paths.push_back(AnimationComponent::AnimationChannel::Path::WEIGHTS);
-				break;
-			}
-
-			for (auto path : paths)
-			{
-				for (auto& selected : editor->translator.selected)
+				// Close loop:
+				for (auto& channel : animation->channels)
 				{
-					int channelIndex = -1;
-					for (int i = 0; i < (int)animation->channels.size(); ++i)
-					{
-						// Search for channel for this path and target:
-						auto& channel = animation->channels[i];
-						if (channel.path == path && channel.target == selected.entity)
-						{
-							channelIndex = i;
-							break;
-						}
-					}
-					if (channelIndex < 0)
-					{
-						// No channel found for this path and target, create it:
-						channelIndex = (int)animation->channels.size();
-						auto& channel = animation->channels.emplace_back();
-						channel.samplerIndex = (int)animation->samplers.size();
-						channel.target = selected.entity;
-						channel.path = path;
-						auto& sam = animation->samplers.emplace_back();
-						Entity animation_data_entity = CreateEntity();
-						scene.animation_datas.Create(animation_data_entity);
-						sam.data = animation_data_entity;
-					}
-					auto& channel = animation->channels[channelIndex];
-
-					AnimationDataComponent* animation_data = scene.animation_datas.GetComponent(animation->samplers[channel.samplerIndex].data);
+					auto& sam = animation->samplers[channel.samplerIndex];
+					AnimationDataComponent* animation_data = scene.animation_datas.GetComponent(sam.data);
 					if (animation_data != nullptr)
 					{
+						// Search for leftmost keyframe:
+						int keyFirst = 0;
+						float timeFirst = std::numeric_limits<float>::max();
+						for (int k = 0; k < (int)animation_data->keyframe_times.size(); ++k)
+						{
+							const float time = animation_data->keyframe_times[k];
+							if (time < timeFirst)
+							{
+								timeFirst = time;
+								keyFirst = k;
+							}
+						}
+
+						// Duplicate first frame to current position:
 						animation_data->keyframe_times.push_back(current_time);
 
 						switch (channel.path)
 						{
 						case wi::scene::AnimationComponent::AnimationChannel::TRANSLATION:
 						{
-							const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
-							if (transform != nullptr)
-							{
-								animation_data->keyframe_data.push_back(transform->translation_local.x);
-								animation_data->keyframe_data.push_back(transform->translation_local.y);
-								animation_data->keyframe_data.push_back(transform->translation_local.z);
-							}
-							else
-							{
-								animation_data->keyframe_times.pop_back();
-								animation->channels.pop_back();
-							}
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 0]);
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 1]);
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 2]);
 						}
 						break;
 						case wi::scene::AnimationComponent::AnimationChannel::ROTATION:
 						{
-							const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
-							if (transform != nullptr)
-							{
-								animation_data->keyframe_data.push_back(transform->rotation_local.x);
-								animation_data->keyframe_data.push_back(transform->rotation_local.y);
-								animation_data->keyframe_data.push_back(transform->rotation_local.z);
-								animation_data->keyframe_data.push_back(transform->rotation_local.w);
-							}
-							else
-							{
-								animation_data->keyframe_times.pop_back();
-								animation->channels.pop_back();
-							}
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 4 + 0]);
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 4 + 1]);
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 4 + 2]);
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 4 + 3]);
 						}
 						break;
 						case wi::scene::AnimationComponent::AnimationChannel::SCALE:
 						{
-							const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
-							if (transform != nullptr)
-							{
-								animation_data->keyframe_data.push_back(transform->scale_local.x);
-								animation_data->keyframe_data.push_back(transform->scale_local.y);
-								animation_data->keyframe_data.push_back(transform->scale_local.z);
-							}
-							else
-							{
-								animation_data->keyframe_times.pop_back();
-								animation->channels.pop_back();
-							}
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 0]);
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 1]);
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 2]);
 						}
 						break;
 						case wi::scene::AnimationComponent::AnimationChannel::WEIGHTS:
 						{
 							const MeshComponent* mesh = scene.meshes.GetComponent(channel.target);
-							if (mesh == nullptr && scene.objects.Contains(selected.entity))
+							if (mesh == nullptr && scene.objects.Contains(channel.target))
 							{
 								// Also try query mesh of selected object:
-								ObjectComponent* object = scene.objects.GetComponent(selected.entity);
+								ObjectComponent* object = scene.objects.GetComponent(channel.target);
 								mesh = scene.meshes.GetComponent(object->meshID);
-								channel.target = selected.entity;
 							}
 							if (mesh != nullptr && !mesh->targets.empty())
 							{
+								int idx = 0;
 								for (const MeshComponent::MeshMorphTarget& morph : mesh->targets)
 								{
-									animation_data->keyframe_data.push_back(morph.weight);
+									animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * mesh->targets.size() + idx]);
+									idx++;
 								}
-							}
-							else
-							{
-								animation_data->keyframe_times.pop_back();
-								animation->channels.pop_back();
 							}
 						}
 						break;
 						default:
 							break;
+						}
+					}
+				}
+			}
+			else
+			{
+				// Add keyframe type:
+				wi::vector<AnimationComponent::AnimationChannel::Path> paths;
+
+				switch (args.iValue)
+				{
+				default:
+				case 1:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::TRANSLATION);
+					paths.push_back(AnimationComponent::AnimationChannel::Path::ROTATION);
+					paths.push_back(AnimationComponent::AnimationChannel::Path::SCALE);
+					break;
+				case 2:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::TRANSLATION);
+					break;
+				case 3:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::ROTATION);
+					break;
+				case 4:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::SCALE);
+					break;
+				case 5:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::WEIGHTS);
+					break;
+				}
+
+				for (auto path : paths)
+				{
+					for (auto& selected : editor->translator.selected)
+					{
+						int channelIndex = -1;
+						for (int i = 0; i < (int)animation->channels.size(); ++i)
+						{
+							// Search for channel for this path and target:
+							auto& channel = animation->channels[i];
+							if (channel.path == path && channel.target == selected.entity)
+							{
+								channelIndex = i;
+								break;
+							}
+						}
+						if (channelIndex < 0)
+						{
+							// No channel found for this path and target, create it:
+							channelIndex = (int)animation->channels.size();
+							auto& channel = animation->channels.emplace_back();
+							channel.samplerIndex = (int)animation->samplers.size();
+							channel.target = selected.entity;
+							channel.path = path;
+							auto& sam = animation->samplers.emplace_back();
+							Entity animation_data_entity = CreateEntity();
+							scene.animation_datas.Create(animation_data_entity);
+							sam.data = animation_data_entity;
+						}
+						auto& channel = animation->channels[channelIndex];
+
+						AnimationDataComponent* animation_data = scene.animation_datas.GetComponent(animation->samplers[channel.samplerIndex].data);
+						if (animation_data != nullptr)
+						{
+							animation_data->keyframe_times.push_back(current_time);
+
+							switch (channel.path)
+							{
+							case wi::scene::AnimationComponent::AnimationChannel::TRANSLATION:
+							{
+								const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
+								if (transform != nullptr)
+								{
+									animation_data->keyframe_data.push_back(transform->translation_local.x);
+									animation_data->keyframe_data.push_back(transform->translation_local.y);
+									animation_data->keyframe_data.push_back(transform->translation_local.z);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::ROTATION:
+							{
+								const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
+								if (transform != nullptr)
+								{
+									animation_data->keyframe_data.push_back(transform->rotation_local.x);
+									animation_data->keyframe_data.push_back(transform->rotation_local.y);
+									animation_data->keyframe_data.push_back(transform->rotation_local.z);
+									animation_data->keyframe_data.push_back(transform->rotation_local.w);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::SCALE:
+							{
+								const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
+								if (transform != nullptr)
+								{
+									animation_data->keyframe_data.push_back(transform->scale_local.x);
+									animation_data->keyframe_data.push_back(transform->scale_local.y);
+									animation_data->keyframe_data.push_back(transform->scale_local.z);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::WEIGHTS:
+							{
+								const MeshComponent* mesh = scene.meshes.GetComponent(channel.target);
+								if (mesh == nullptr && scene.objects.Contains(selected.entity))
+								{
+									// Also try query mesh of selected object:
+									ObjectComponent* object = scene.objects.GetComponent(selected.entity);
+									mesh = scene.meshes.GetComponent(object->meshID);
+									channel.target = selected.entity;
+								}
+								if (mesh != nullptr && !mesh->targets.empty())
+								{
+									for (const MeshComponent::MeshMorphTarget& morph : mesh->targets)
+									{
+										animation_data->keyframe_data.push_back(morph.weight);
+									}
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							default:
+								break;
+							}
 						}
 					}
 				}
