@@ -409,6 +409,7 @@ void EditorComponent::Load()
 		componentsWnd.transformWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.layerWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.nameWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.animWnd.SetEntity(INVALID_ENTITY);
 
 		optionsWnd.RefreshEntityTree();
 		ResetHistory();
@@ -1338,6 +1339,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.layerWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.nameWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.weatherWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.animWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1370,6 +1372,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.layerWnd.SetEntity(picked.entity);
 		componentsWnd.nameWnd.SetEntity(picked.entity);
 		componentsWnd.weatherWnd.SetEntity(picked.entity);
+		componentsWnd.animWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{

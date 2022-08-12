@@ -10,8 +10,8 @@ public:
 
 	EditorComponent* editor = nullptr;
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+	void SetEntity(wi::ecs::Entity entity);
 
-	wi::gui::ComboBox	animationsComboBox;
 	wi::gui::CheckBox loopedCheckBox;
 	wi::gui::Button	playButton;
 	wi::gui::Button	stopButton;

@@ -262,6 +262,10 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Sound " ICON_SOUND, (uint64_t)Filter::Sound);
 	filterCombo.AddItem("Weather " ICON_WEATHER, (uint64_t)Filter::Weather);
 	filterCombo.AddItem("Light " ICON_POINTLIGHT, (uint64_t)Filter::Light);
+	filterCombo.AddItem("Animation " ICON_ANIMATION, (uint64_t)Filter::Animation);
+	filterCombo.AddItem("Force " ICON_FORCE, (uint64_t)Filter::Force);
+	filterCombo.AddItem("Emitter " ICON_EMITTER, (uint64_t)Filter::Emitter);
+	filterCombo.AddItem("Hairparticle " ICON_HAIR, (uint64_t)Filter::Hairparticle);
 	filterCombo.SetTooltip("Apply filtering to the Entities");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
@@ -1006,7 +1010,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Hairparticle))
 	{
 		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 		{
@@ -1014,7 +1018,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Emitter))
 	{
 		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 		{
@@ -1022,7 +1026,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Animation))
 	{
 		for (size_t i = 0; i < scene.animations.GetCount(); ++i)
 		{
@@ -1030,7 +1034,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::EnvironmentProbe))
 	{
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
@@ -1038,7 +1042,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Force))
 	{
 		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 		{

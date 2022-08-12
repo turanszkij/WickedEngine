@@ -1121,6 +1121,11 @@ namespace wi::gui
 
 		if (IsEnabled() && dt > 0)
 		{
+			if (state == ACTIVE)
+			{
+				Deactivate();
+			}
+
 			Hitbox2D pointerHitbox = GetPointerHitbox();
 			if (scroll_allowed && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
 			{
@@ -1132,6 +1137,11 @@ namespace wi::gui
 			else
 			{
 				state = IDLE;
+			}
+
+			if (pointerHitbox.intersects(hitBox) && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			{
+				Activate();
 			}
 		}
 
@@ -1165,7 +1175,7 @@ namespace wi::gui
 
 		ApplyScissor(canvas, scissorRect, cmd);
 
-		sprites[state].Draw(cmd);
+		sprites[IDLE].Draw(cmd);
 		font.Draw(cmd);
 
 		scrollbar.Render(canvas, cmd);

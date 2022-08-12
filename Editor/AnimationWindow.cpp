@@ -17,17 +17,6 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	float wid = 200;
 	float step = hei + 2;
 
-
-	animationsComboBox.Create("Animation: ");
-	animationsComboBox.SetSize(XMFLOAT2(wid, hei));
-	animationsComboBox.SetPos(XMFLOAT2(x, y));
-	animationsComboBox.SetEnabled(false);
-	animationsComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		entity = editor->GetCurrentScene().animations.GetEntity(args.iValue);
-	});
-	animationsComboBox.SetTooltip("Choose an animation clip...");
-	AddWidget(&animationsComboBox);
-
 	loopedCheckBox.Create("Looped: ");
 	loopedCheckBox.SetTooltip("Toggle animation looping behaviour.");
 	loopedCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -123,18 +112,16 @@ void AnimationWindow::Create(EditorComponent* _editor)
 
 }
 
+void AnimationWindow::SetEntity(Entity entity)
+{
+	this->entity = entity;
+}
+
 void AnimationWindow::Update()
 {
-	animationsComboBox.ClearItems();
-	
 	Scene& scene = editor->GetCurrentScene();
 
 	if (!scene.animations.Contains(entity))
-	{
-		entity = INVALID_ENTITY;
-	}
-
-	if (scene.animations.GetCount() == 0)
 	{
 		SetEnabled(false);
 		return;
@@ -144,43 +131,21 @@ void AnimationWindow::Update()
 		SetEnabled(true);
 	}
 
-	for (size_t i = 0; i < scene.animations.GetCount(); ++i)
-	{
-		Entity e = scene.animations.GetEntity(i);
-		NameComponent& name = *scene.names.GetComponent(e);
-		animationsComboBox.AddItem(name.name.empty() ? std::to_string(e) : name.name);
+	AnimationComponent& animation = *scene.animations.GetComponent(entity);
 
-		if (e == entity)
-		{
-			animationsComboBox.SetSelected((int)i);
-		}
+	if (animation.IsPlaying())
+	{
+		playButton.SetText("Pause");
+	}
+	else
+	{
+		playButton.SetText("Play");
 	}
 
-	if (entity == INVALID_ENTITY && scene.animations.GetCount() > 0)
-	{
-		entity = scene.animations.GetEntity(0);
-		animationsComboBox.SetSelected(0);
-	}
+	loopedCheckBox.SetCheck(animation.IsLooped());
 
-	int selected = animationsComboBox.GetSelected();
-	if (selected >= 0 && selected < (int)scene.animations.GetCount())
-	{
-		AnimationComponent& animation = scene.animations[selected];
-
-		if (animation.IsPlaying())
-		{
-			playButton.SetText("Pause");
-		}
-		else
-		{
-			playButton.SetText("Play");
-		}
-
-		loopedCheckBox.SetCheck(animation.IsLooped());
-
-		timerSlider.SetRange(0, animation.GetLength());
-		timerSlider.SetValue(animation.timer);
-		amountSlider.SetValue(animation.amount);
-		speedSlider.SetValue(animation.speed);
-	}
+	timerSlider.SetRange(0, animation.GetLength());
+	timerSlider.SetValue(animation.timer);
+	amountSlider.SetValue(animation.amount);
+	speedSlider.SetValue(animation.speed);
 }

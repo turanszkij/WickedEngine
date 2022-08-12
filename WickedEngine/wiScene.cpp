@@ -2745,15 +2745,7 @@ namespace wi::scene
 			for (const AnimationComponent::AnimationChannel& channel : animation.channels)
 			{
 				assert(channel.samplerIndex < (int)animation.samplers.size());
-				AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
-				if (sampler.data == INVALID_ENTITY)
-				{
-					// backwards-compatibility mode
-					sampler.data = CreateEntity();
-					animation_datas.Create(sampler.data) = sampler.backwards_compatibility_data;
-					sampler.backwards_compatibility_data.keyframe_times.clear();
-					sampler.backwards_compatibility_data.keyframe_data.clear();
-				}
+				const AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
 				const AnimationDataComponent* animationdata = animation_datas.GetComponent(sampler.data);
 				if (animationdata == nullptr)
 				{

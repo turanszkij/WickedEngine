@@ -51,6 +51,10 @@ public:
 		Sound = 1 << 6,
 		Weather = 1 << 7,
 		Light = 1 << 8,
+		Animation = 1 << 9,
+		Force = 1 << 10,
+		Emitter = 1 << 11,
+		Hairparticle = 1 << 12,
 
 		All = ~0ull,
 	} filter = Filter::All;

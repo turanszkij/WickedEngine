@@ -1452,6 +1452,28 @@ namespace wi::scene
 			animation_datas.Serialize(archive, seri);
 		}
 
+		if (archive.GetVersion() < 46)
+		{
+			// Fixing the animation import from archive that didn't have separate animation data components:
+			for (size_t i = 0; i < animations.GetCount(); ++i)
+			{
+				AnimationComponent& animation = animations[i];
+				for (const AnimationComponent::AnimationChannel& channel : animation.channels)
+				{
+					assert(channel.samplerIndex < (int)animation.samplers.size());
+					AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
+					if (sampler.data == INVALID_ENTITY)
+					{
+						// backwards-compatibility mode
+						sampler.data = CreateEntity();
+						animation_datas.Create(sampler.data) = sampler.backwards_compatibility_data;
+						sampler.backwards_compatibility_data.keyframe_times.clear();
+						sampler.backwards_compatibility_data.keyframe_data.clear();
+					}
+				}
+			}
+		}
+
 		wi::backlog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
 	}
 
