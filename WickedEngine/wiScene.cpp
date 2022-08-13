@@ -1657,9 +1657,9 @@ namespace wi::scene
 
 		wi::jobsystem::Wait(ctx); // dependencies
 
-		RunSpringUpdateSystem(ctx);
-
 		RunInverseKinematicsUpdateSystem(ctx);
+
+		RunSpringUpdateSystem(ctx);
 
 		RunArmatureUpdateSystem(ctx);
 
@@ -3192,6 +3192,12 @@ namespace wi::scene
 	}
 	void Scene::RunInverseKinematicsUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		if (inverse_kinematics.GetCount() > 0)
+		{
+			ik_temp.resize(transforms.GetCount());
+			ik_temp = transforms.GetComponentArray(); // make copy
+		}
+
 		bool recompute_hierarchy = false;
 		for (size_t i = 0; i < inverse_kinematics.GetCount(); ++i)
 		{
@@ -3201,13 +3207,15 @@ namespace wi::scene
 				continue;
 			}
 			Entity entity = inverse_kinematics.GetEntity(i);
-			TransformComponent* transform = transforms.GetComponent(entity);
-			TransformComponent* target = transforms.GetComponent(ik.target);
+			size_t transform_index = transforms.GetIndex(entity);
+			size_t target_index = transforms.GetIndex(ik.target);
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
-			if (transform == nullptr || target == nullptr || hier == nullptr)
+			if (transform_index == ~0ull || target_index == ~0ull || hier == nullptr)
 			{
 				continue;
 			}
+			TransformComponent* transform = &ik_temp[transform_index];
+			TransformComponent* target = &ik_temp[target_index];
 
 			const XMVECTOR target_pos = target->GetPositionV();
 			for (uint32_t iteration = 0; iteration < ik.iteration_count; ++iteration)
@@ -3223,7 +3231,10 @@ namespace wi::scene
 					stack[chain] = child_transform;
 
 					// Compute required parent rotation that moves ik transform closer to target transform:
-					TransformComponent* parent_transform = transforms.GetComponent(parent_entity);
+					size_t parent_index = transforms.GetIndex(parent_entity);
+					if (parent_index == ~0ull)
+						continue;
+					TransformComponent* parent_transform = &ik_temp[parent_index];
 					const XMVECTOR parent_pos = parent_transform->GetPositionV();
 					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform->GetPositionV() - parent_pos);
 					const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
@@ -3241,10 +3252,14 @@ namespace wi::scene
 					if (hier_parent != nullptr)
 					{
 						Entity parent_of_parent_entity = hier_parent->parentID;
-						const TransformComponent* transform_parent_of_parent = transforms.GetComponent(parent_of_parent_entity);
-						XMMATRIX parent_of_parent_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent_of_parent->world));
-						parent_transform->MatrixTransform(parent_of_parent_inverse);
-						// Do not call UpdateTransform() here, to keep parent world matrix in world space!
+						size_t parent_of_parent_index = transforms.GetIndex(parent_of_parent_entity);
+						if (parent_of_parent_index != ~0ull)
+						{
+							const TransformComponent* transform_parent_of_parent = &ik_temp[parent_of_parent_index];
+							XMMATRIX parent_of_parent_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent_of_parent->world));
+							parent_transform->MatrixTransform(parent_of_parent_inverse);
+							// Do not call UpdateTransform() here, to keep parent world matrix in world space!
+						}
 					}
 
 					// update chain from parent to children:
@@ -3280,12 +3295,23 @@ namespace wi::scene
 				const HierarchyComponent& parentcomponent = hierarchy[i];
 				Entity entity = hierarchy.GetEntity(i);
 
-				TransformComponent* transform_child = transforms.GetComponent(entity);
-				TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
-				if (transform_child != nullptr && transform_parent != nullptr)
+				size_t transform_index = transforms.GetIndex(entity);
+				size_t parent_index = transforms.GetIndex(parentcomponent.parentID);
+				if (transform_index != ~0ull && parent_index != ~0ull)
 				{
+					TransformComponent* transform_child = &ik_temp[transform_index];
+					TransformComponent* transform_parent = &ik_temp[parent_index];
 					transform_child->UpdateTransform_Parented(*transform_parent);
 				}
+			}
+		}
+
+		if (inverse_kinematics.GetCount() > 0)
+		{
+			for (size_t i = 0; i < transforms.GetCount(); ++i)
+			{
+				// IK shouldn't modify local space, so only update the world matrices!
+				transforms[i].world = ik_temp[i].world;
 			}
 		}
 	}

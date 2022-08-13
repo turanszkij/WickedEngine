@@ -1445,6 +1445,7 @@ namespace wi::scene
 		uint32_t impostorMaterialOffset = ~0u;
 
 		mutable std::atomic_bool lightmap_refresh_needed{ false };
+		wi::vector<TransformComponent> ik_temp;
 
 		// Ocean GPU state:
 		wi::Ocean ocean;

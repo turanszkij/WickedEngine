@@ -648,7 +648,7 @@ void AnimationWindow::RefreshKeyframesList()
 			for (float time : animation_data->keyframe_times)
 			{
 				wi::gui::TreeList::Item item2;
-				item2.name = std::to_string(time);
+				item2.name = std::to_string(time) + " sec";
 				item2.level = 1;
 				item2.userdata = 0ull;
 				item2.userdata |= channelIndex & 0xFFFFFFFF;
