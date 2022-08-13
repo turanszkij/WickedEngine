@@ -1259,8 +1259,8 @@ namespace wi::scene
 		uint32_t _flags = EMPTY;
 
 		wi::ecs::Entity target = wi::ecs::INVALID_ENTITY; // which entity to follow (must have a transform component)
-		uint32_t chain_length = ~0u; // ~0 means: compute until the root
-		uint32_t iteration_count = 1;
+		uint32_t chain_length = 0; // recursive depth
+		uint32_t iteration_count = 1; // computation step count. Increase this too for greater chain length
 
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
 		inline bool IsDisabled() const { return _flags & DISABLED; }

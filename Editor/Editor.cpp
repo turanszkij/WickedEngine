@@ -62,7 +62,7 @@ void EditorLoadingScreen::Load()
 	sprite.params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 	AddSprite(&sprite);
 
-	wi::gui::CheckBox::SetCheckText(ICON_CHECK);
+	wi::gui::CheckBox::SetCheckTextGlobal(ICON_CHECK);
 
 	LoadingScreen::Load();
 }
@@ -2078,6 +2078,15 @@ void EditorComponent::Render() const
 							XMStoreFloat3(&capsule.base, a);
 							XMStoreFloat3(&capsule.tip, b);
 							XMFLOAT4 color = inactiveEntityColor;
+
+							if (scene.springs.Contains(entity))
+							{
+								color = wi::Color(255, 70, 165, uint8_t(color.w * 255));
+							}
+							if (scene.inverse_kinematics.Contains(entity))
+							{
+								color = wi::Color(49, 190, 103, uint8_t(color.w * 255));
+							}
 
 							if (hovered.entity == entity)
 							{

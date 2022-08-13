@@ -1818,7 +1818,7 @@ namespace wi::gui
 
 
 
-	std::wstring check_text;
+	std::wstring check_text_global;
 	void CheckBox::Create(const std::string& name)
 	{
 		SetName(name);
@@ -1928,19 +1928,7 @@ namespace wi::gui
 		// check
 		if (GetCheck())
 		{
-			if (check_text.empty())
-			{
-				// simple square:
-				wi::image::Params params(
-					translation.x + scale.x * 0.25f,
-					translation.y + scale.y * 0.25f,
-					scale.x * 0.5f,
-					scale.y * 0.5f
-				);
-				params.color = font.params.color;
-				wi::image::Draw(wi::texturehelper::getWhite(), params, cmd);
-			}
-			else
+			if (!check_text.empty())
 			{
 				// render text symbol:
 				wi::font::Params params;
@@ -1952,6 +1940,31 @@ namespace wi::gui
 				params.scaling = 0.75f;
 				params.color = font.params.color;
 				wi::font::Draw(check_text, params, cmd);
+			}
+			else if (!check_text_global.empty())
+			{
+				// render text symbol:
+				wi::font::Params params;
+				params.posX = translation.x + scale.x * 0.5f;
+				params.posY = translation.y + scale.y * 0.5f;
+				params.h_align = wi::font::WIFALIGN_CENTER;
+				params.v_align = wi::font::WIFALIGN_CENTER;
+				params.size = int(scale.y);
+				params.scaling = 0.75f;
+				params.color = font.params.color;
+				wi::font::Draw(check_text_global, params, cmd);
+			}
+			else
+			{
+				// simple square:
+				wi::image::Params params(
+					translation.x + scale.x * 0.25f,
+					translation.y + scale.y * 0.25f,
+					scale.x * 0.5f,
+					scale.y * 0.5f
+				);
+				params.color = font.params.color;
+				wi::image::Draw(wi::texturehelper::getWhite(), params, cmd);
 			}
 		}
 
@@ -1969,6 +1982,10 @@ namespace wi::gui
 		return checked;
 	}
 
+	void CheckBox::SetCheckTextGlobal(const std::string& text)
+	{
+		wi::helper::StringConvert(text, check_text_global);
+	}
 	void CheckBox::SetCheckText(const std::string& text)
 	{
 		wi::helper::StringConvert(text, check_text);

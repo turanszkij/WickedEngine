@@ -472,6 +472,7 @@ namespace wi::gui
 	protected:
 		std::function<void(EventArgs args)> onClick;
 		bool checked = false;
+		std::wstring check_text;
 	public:
 		void Create(const std::string& name);
 
@@ -483,7 +484,8 @@ namespace wi::gui
 
 		void OnClick(std::function<void(EventArgs args)> func);
 
-		static void SetCheckText(const std::string& text);
+		static void SetCheckTextGlobal(const std::string& text);
+		void SetCheckText(const std::string& text);
 	};
 
 	// Drop-down list
