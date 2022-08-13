@@ -20,7 +20,6 @@ elseif(UNIX)
     add_compile_definitions(SDL2=1)
     set(DXC_TARGET "dxc")
 endif()
-
 add_subdirectory(WickedEngine)
 
 option(WICKED_EDITOR "Build WickedEngine editor" ON)
