@@ -2807,7 +2807,13 @@ namespace wi::scene
 						continue;
 					animation.morph_weights_temp.resize(target_mesh->targets.size());
 				}
-				else if (channel.path == AnimationComponent::AnimationChannel::Path::LIGHT)
+				else if (
+					channel.path == AnimationComponent::AnimationChannel::Path::LIGHT_COLOR ||
+					channel.path == AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY ||
+					channel.path == AnimationComponent::AnimationChannel::Path::LIGHT_RANGE ||
+					channel.path == AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE ||
+					channel.path == AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE
+					)
 				{
 					target_light = lights.GetComponent(channel.target);
 					if (target_light == nullptr)
@@ -2859,15 +2865,34 @@ namespace wi::scene
 						}
 					}
 					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT:
+					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
 					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * sizeof(LightComponent::AnimationData) / sizeof(float));
-						const LightComponent::AnimationData& data = ((const LightComponent::AnimationData*)animationdata->keyframe_data.data())[key];
-						light.color = data.color;
-						light.intensity = data.intensity;
-						light.range = data.range;
-						light.innerConeAngle = data.innerConeAngle;
-						light.outerConeAngle = data.outerConeAngle;
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+						light.color = ((const XMFLOAT3*)animationdata->keyframe_data.data())[key];
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						light.intensity = animationdata->keyframe_data[key];
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						light.range = animationdata->keyframe_data[key];
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						light.innerConeAngle = animationdata->keyframe_data[key];
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						light.outerConeAngle = animationdata->keyframe_data[key];
 					}
 					break;
 					}
@@ -2932,16 +2957,50 @@ namespace wi::scene
 						}
 					}
 					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT:
+					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
 					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * sizeof(LightComponent::AnimationData) / sizeof(float));
-						const LightComponent::AnimationData& data_left = ((const LightComponent::AnimationData*)animationdata->keyframe_data.data())[keyLeft];
-						const LightComponent::AnimationData& data_right = ((const LightComponent::AnimationData*)animationdata->keyframe_data.data())[keyRight];
-						light.color = wi::math::Lerp(data_left.color, data_right.color, t);
-						light.intensity = wi::math::Lerp(data_left.intensity, data_right.intensity, t);
-						light.range = wi::math::Lerp(data_left.range, data_right.range, t);
-						light.innerConeAngle = wi::math::Lerp(data_left.innerConeAngle, data_right.innerConeAngle, t);
-						light.outerConeAngle = wi::math::Lerp(data_left.outerConeAngle, data_right.outerConeAngle, t);
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
+						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
+						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
+						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
+						XMStoreFloat3(&light.color, vAnim);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						float vLeft = animationdata->keyframe_data[keyLeft];
+						float vRight = animationdata->keyframe_data[keyRight];
+						float vAnim = wi::math::Lerp(vLeft, vRight, t);
+						light.intensity = vAnim;
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						float vLeft = animationdata->keyframe_data[keyLeft];
+						float vRight = animationdata->keyframe_data[keyRight];
+						float vAnim = wi::math::Lerp(vLeft, vRight, t);
+						light.range = vAnim;
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						float vLeft = animationdata->keyframe_data[keyLeft];
+						float vRight = animationdata->keyframe_data[keyRight];
+						float vAnim = wi::math::Lerp(vLeft, vRight, t);
+						light.innerConeAngle = vAnim;
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						float vLeft = animationdata->keyframe_data[keyLeft];
+						float vRight = animationdata->keyframe_data[keyRight];
+						float vAnim = wi::math::Lerp(vLeft, vRight, t);
+						light.outerConeAngle = vAnim;
 					}
 					break;
 					}
@@ -3017,8 +3076,61 @@ namespace wi::scene
 						}
 					}
 					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT:
-					assert(0); // todo: implement, test
+					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
+						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
+						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
+						XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
+						XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
+						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
+						XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+						XMStoreFloat3(&light.color, vAnim);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
+						float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
+						float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
+						float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
+						float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+						light.intensity = vAnim;
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
+						float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
+						float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
+						float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
+						float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+						light.range = vAnim;
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
+						float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
+						float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
+						float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
+						float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+						light.innerConeAngle = vAnim;
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+						float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
+						float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
+						float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
+						float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
+						float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+						light.outerConeAngle = vAnim;
+					}
 					break;
 					}
 				}

@@ -882,15 +882,6 @@ namespace wi::scene
 
 		wi::vector<wi::Resource> lensFlareRimTextures;
 
-		struct AnimationData
-		{
-			XMFLOAT3 color;
-			float intensity;
-			float range;
-			float innerConeAngle;
-			float outerConeAngle;
-		};
-
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetVolumetricsEnabled(bool value) { if (value) { _flags |= VOLUMETRICS; } else { _flags &= ~VOLUMETRICS; } }
 		inline void SetVisualizerEnabled(bool value) { if (value) { _flags |= VISUALIZER; } else { _flags &= ~VISUALIZER; } }
@@ -1122,7 +1113,11 @@ namespace wi::scene
 				ROTATION,
 				SCALE,
 				WEIGHTS,
-				LIGHT,
+				LIGHT_COLOR,
+				LIGHT_INTENSITY,
+				LIGHT_RANGE,
+				LIGHT_INNERCONE,
+				LIGHT_OUTERCONE,
 				UNKNOWN,
 				TYPE_FORCE_UINT32 = 0xFFFFFFFF
 			} path = TRANSLATION;
