@@ -4,11 +4,13 @@
 #include "wiArchive.h"
 #include "wiJobSystem.h"
 #include "wiUnorderedMap.h"
+#include "wiUnorderedSet.h"
 #include "wiVector.h"
 
 #include <cstdint>
 #include <cassert>
 #include <atomic>
+#include <memory>
 
 // Entity-Component System
 namespace wi::ecs
@@ -345,6 +347,284 @@ namespace wi::ecs
 
 		// Disallow this to be copied by mistake
 		ComponentManager(const ComponentManager&) = delete;
+	};
+
+	// The ComponentManager_Generic is a container interface for ContainerManager, abstracts underlying ComponentManager
+	//  
+	// How to initialize:
+	// wi::ecs::ComponentManager_Generic names = wi::ecs::ComponentManager_MakeGeneric(NameComponent);
+	class ComponentManager_Generic
+	{
+	public:
+		std::shared_ptr<void> componentManager;
+		ComponentManager_Generic(
+			std::shared_ptr<void> _componentManager,
+			std::function<void(std::shared_ptr<void>)> _impl_Clear,
+			std::function<void(std::shared_ptr<void>,std::shared_ptr<void>)> _impl_Copy,
+			std::function<void(std::shared_ptr<void>,std::shared_ptr<void>)> _impl_Merge,
+			std::function<void(std::shared_ptr<void>,wi::Archive&,EntitySerializer&)> _impl_Serialize,
+			std::function<void(std::shared_ptr<void>,Entity,wi::Archive&,EntitySerializer&)> _impl_Entity_Serialize,
+			std::function<void(std::shared_ptr<void>,Entity)> _impl_Create,
+			std::function<void(std::shared_ptr<void>,Entity)> _impl_Remove,
+			std::function<void(std::shared_ptr<void>,Entity)> _impl_Remove_KeepSorted,
+			std::function<void(std::shared_ptr<void>,size_t,size_t)> _impl_MoveItem,
+			std::function<bool(std::shared_ptr<void>,Entity)> _impl_Contains,
+			std::function<size_t(std::shared_ptr<void>,Entity)> _impl_GetIndex,
+			std::function<size_t(std::shared_ptr<void>)> _impl_GetCount,
+			std::function<size_t(std::shared_ptr<void>,size_t)> _impl_GetEntity,
+			std::function<std::shared_ptr<wi::vector<Entity>>(std::shared_ptr<void>)> _impl_GetEntityArray
+		){
+			componentManager = _componentManager;
+			impl_Clear = _impl_Clear;
+			impl_Copy = _impl_Copy;
+			impl_Merge = _impl_Merge;
+			impl_Serialize = _impl_Serialize;
+			impl_Entity_Serialize = _impl_Entity_Serialize;
+			impl_Create = _impl_Create;
+			impl_Remove = _impl_Remove;
+			impl_Remove_KeepSorted = _impl_Remove_KeepSorted;
+			impl_MoveItem = _impl_MoveItem;
+			impl_Contains = _impl_Contains;
+			impl_GetIndex = _impl_GetIndex;
+			impl_GetCount = _impl_GetCount;
+			impl_GetEntity = _impl_GetEntity;
+			impl_GetEntityArray = _impl_GetEntityArray;
+		}
+		inline void Clear(){ impl_Clear(componentManager); }
+		inline void Copy(std::shared_ptr<void> other){ impl_Copy(componentManager, other); }
+		inline void Merge(std::shared_ptr<void> other){ impl_Copy(componentManager, other); }
+		inline void Serialize(wi::Archive& archive, EntitySerializer& seri){ impl_Serialize(componentManager, archive, seri); }
+		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri){ impl_Entity_Serialize(componentManager, entity, archive, seri); }
+		inline void Create(Entity entity){ impl_Create(componentManager, entity); }
+		inline void Remove(Entity entity){ impl_Remove(componentManager, entity); }
+		inline void Remove_KeepSorted(Entity entity){ impl_Remove_KeepSorted(componentManager, entity); }
+		inline void MoveItem(size_t index_from, size_t index_to){ impl_MoveItem(componentManager, index_from, index_to); }
+		inline bool Contains(Entity entity) const{ return impl_Contains(componentManager, entity); }
+		inline size_t GetIndex(Entity entity) const{ return impl_GetIndex(componentManager, entity); }
+		inline size_t GetCount() const{ return impl_GetCount(componentManager); }
+		inline const wi::vector<Entity>& GetEntityArray() const{ return *impl_GetEntityArray(componentManager).get(); }
+	private:
+		std::function<void(std::shared_ptr<void>)> impl_Clear;
+		std::function<void(std::shared_ptr<void>,std::shared_ptr<void>)> impl_Copy;
+		std::function<void(std::shared_ptr<void>,std::shared_ptr<void>)> impl_Merge;
+		std::function<void(std::shared_ptr<void>,wi::Archive&,EntitySerializer&)> impl_Serialize;
+		std::function<void(std::shared_ptr<void>,Entity,wi::Archive&,EntitySerializer&)> impl_Entity_Serialize;
+		std::function<void(std::shared_ptr<void>,Entity)> impl_Create;
+		std::function<void(std::shared_ptr<void>,Entity)> impl_Remove;
+		std::function<void(std::shared_ptr<void>,Entity)> impl_Remove_KeepSorted;
+		std::function<void(std::shared_ptr<void>,size_t,size_t)> impl_MoveItem;
+		std::function<bool(std::shared_ptr<void>,Entity)> impl_Contains;
+		std::function<size_t(std::shared_ptr<void>,Entity)> impl_GetIndex;
+		std::function<size_t(std::shared_ptr<void>)> impl_GetCount;
+		std::function<size_t(std::shared_ptr<void>,size_t)> impl_GetEntity;
+		std::function<std::shared_ptr<wi::vector<Entity>>(std::shared_ptr<void>)> impl_GetEntityArray;
+	};
+
+	// This is a macro to quicky convert ComponentManager into generic container
+	#define ComponentManager_MakeGeneric(ComponentType,ComponentManagerVariable) ComponentManager_Generic( \
+		ComponentManagerVariable, \
+		[=](std::shared_ptr<void> compMgr_ptr){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			compMgr->Clear(); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr, std::shared_ptr<void> other_ptr){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			auto other = static_cast< ComponentManager< ComponentType > *>(other_ptr.get()); \
+			compMgr->Copy(*other); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr, std::shared_ptr<void> other_ptr){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			auto other = static_cast< ComponentManager< ComponentType > *>(other_ptr.get()); \
+			compMgr->Merge(*other); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr, wi::Archive& archive, EntitySerializer& seri){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			compMgr->Serialize(archive, seri); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr, Entity entity, wi::Archive& archive, EntitySerializer& seri){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			if(archive.IsReadMode()) { \
+				auto component = compMgr->Create(entity); \
+				component.Serialize(archive, seri); \
+			} else { \
+				auto component = compMgr->GetComponent(entity); \
+				if (component != nullptr) { \
+					component->Serialize(archive, seri); \
+				} \
+			} \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr, Entity entity){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			compMgr->Create(entity); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr, Entity entity){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			compMgr->Remove(entity); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr, Entity entity){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			compMgr->Remove_KeepSorted(entity); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr, size_t index_from, size_t index_to){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			compMgr->MoveItem(index_from, index_to); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr, Entity entity){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			return compMgr->Contains(entity); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr, Entity entity){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			return compMgr->GetIndex(entity); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			return compMgr->GetCount(); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr, size_t index){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			return compMgr->GetEntity(index); \
+		}, \
+		[=](std::shared_ptr<void> compMgr_ptr){ \
+			auto compMgr = static_cast< ComponentManager< ComponentType > *>(compMgr_ptr.get()); \
+			return std::make_shared<wi::vector<Entity>>(compMgr->GetEntityArray()); \
+		} \
+	)
+
+	// This is macro to quickly create an initializer
+	#define ComponentManager_Generic_CreateInitializer( ComponentType ) [=](){ \
+		auto generic = std::make_shared<ComponentManager_Generic>(wi::ecs::ComponentManager_MakeGeneric( ComponentType , std::make_shared<ComponentManager>())); \
+		return generic; \
+	}
+
+	// This is a container that stores componentManager initializers, required for ComponentManagerContainer
+	struct ComponentManagerListInitializer
+	{
+		wi::unordered_map<std::string, std::shared_ptr<std::function<std::shared_ptr<ComponentManager_Generic>()>>> initializers;
+		// Register your own ComponentManager initializer here
+		// How to use:
+		// RegsiterInitializer("names",ComponentManager_Generic_CreateInitializer(NameComponent))
+		void RegisterInitializer(std::string name, std::function<std::shared_ptr<ComponentManager_Generic>()> initialize_func){
+			initializers[name] = std::make_shared<std::function<std::shared_ptr<ComponentManager_Generic>()>>(initialize_func);
+		}
+		// This will be called on the ComponentManagerContainer to build and initialize the list
+		void Initialize(wi::unordered_map<std::string, std::shared_ptr<ComponentManager_Generic>>& componentList){
+			for(auto& init_kval : initializers){
+				componentList[init_kval.first] = (*init_kval.second.get())();
+			}
+		}
+	};
+
+	// This is a container that stores ComponentManagers, for use with scene data manipulation, initializing, and serializing whole data in group
+	struct ComponentManagerContainer
+	{
+		wi::unordered_map<std::string, std::shared_ptr<ComponentManager_Generic>> componentList;
+		//Do your own custom initializer
+		ComponentManagerContainer();
+		//Initialize immediately
+		ComponentManagerContainer(std::shared_ptr<ComponentManagerListInitializer> initializer){
+			initializer->Initialize(componentList);
+		}
+		//Initialize at a late stage, if you wish it to be
+		void Initialize(std::shared_ptr<ComponentManagerListInitializer> initializer){
+			initializer->Initialize(componentList);
+		}
+		// Set the custom initializer
+		// Get one ComponentManager_Generic by name
+		ComponentManager_Generic& GetComponentManager_Generic(std::string name){
+			return *componentList[name].get();
+		}
+		// Get one ComponentManager by name
+		std::shared_ptr<void> GetComponentManager(std::string name){
+			return componentList[name]->componentManager;
+		}
+		
+		// Bulk functions for handling all contained ComponentManagers
+		// Clear all data on all ContainerManagers
+		void Clear(){
+			for(auto& componentManager_kval : componentList){
+				componentManager_kval.second->Clear();
+			}
+		}
+		// Copy data from one ComponentManagerContainer to another
+		void Copy(ComponentManagerContainer& other){
+			for(auto& componentManager_kval : componentList){
+				componentManager_kval.second->Copy(GetComponentManager(componentManager_kval.first));
+			}
+		}
+		// Merge data from one ComponentManagerContainer to another
+		void Merge(ComponentManagerContainer& other){
+			for(auto& componentManager_kval : componentList){
+				componentManager_kval.second->Merge(GetComponentManager(componentManager_kval.first));
+			}
+		}
+		// Serialize all components to an archive
+		void Serialize(wi::Archive& archive, EntitySerializer& seri){
+			for(auto& componentManager_kval : componentList){
+				if(archive.IsReadMode()){
+					std::string component_id;
+					archive >> component_id;
+					if(component_id == componentManager_kval.first){
+						componentManager_kval.second->Serialize(archive, seri);
+					}
+				}else{
+					archive << componentManager_kval.first;
+					componentManager_kval.second->Serialize(archive, seri);
+				}
+			}
+		}
+		void Entity_Serialize(Entity entity, wi::Archive& archive,EntitySerializer& seri){
+			for(auto& componentManager_kval : componentList){
+				bool component_exists;
+				if(archive.IsReadMode()){
+					archive >> component_exists;
+					if(component_exists){
+						componentManager_kval.second->Entity_Serialize(entity, archive, seri);
+					}
+				}else{
+					component_exists = componentManager_kval.second->Contains(entity);
+					archive << component_exists;
+					if(component_exists){
+						componentManager_kval.second->Entity_Serialize(entity, archive, seri);
+					}
+				}
+			}
+		}
+		// Remove an entity from all ComponentManager
+		void Remove(Entity entity){
+			for(auto& componentManager_kval : componentList){
+				componentManager_kval.second->Remove(entity);
+			}
+		}
+		// Remove an entity from all ComponentManager while keeping the ordering on all ComponentManager
+		void Remove_KeepSorted(Entity entity){
+			for(auto& componentManager_kval : componentList){
+				componentManager_kval.second->Remove_KeepSorted(entity);
+			}
+		}
+		// Check from all ComponentManager if an entity exists
+		bool Contains(Entity entity){
+			for(auto& componentManager_kval : componentList){
+				if(componentManager_kval.second->Contains(entity)){
+					return true;
+				}
+			}
+			return false;
+		}
+		std::shared_ptr<wi::unordered_set<wi::ecs::Entity>> GetEntityArray(){
+			auto entities = std::make_shared<wi::unordered_set<wi::ecs::Entity>>();
+			for(auto& componentManager_kval : componentList){
+				entities->insert(componentManager_kval.second->GetEntityArray().begin(), componentManager_kval.second->GetEntityArray().end());
+			}
+			return entities;
+		}
+		const std::shared_ptr<wi::unordered_set<wi::ecs::Entity>> GetEntityArray() const{
+			auto entities = std::make_shared<wi::unordered_set<wi::ecs::Entity>>();
+			for(auto& componentManager_kval : componentList){
+				entities->insert(componentManager_kval.second->GetEntityArray().begin(), componentManager_kval.second->GetEntityArray().end());
+			}
+			return entities;
+		}
 	};
 }
 

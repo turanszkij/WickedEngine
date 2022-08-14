@@ -29,6 +29,8 @@ namespace wi
 
 namespace wi::scene
 {
+	void Init_Check();
+
 	struct NameComponent
 	{
 		std::string name;
@@ -1301,36 +1303,75 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
+	void RegisterComponentManager(std::string name, std::function<std::shared_ptr<wi::ecs::ComponentManager_Generic>()> initialize_func);
 	struct Scene
 	{
-		wi::ecs::ComponentManager<NameComponent> names;
-		wi::ecs::ComponentManager<LayerComponent> layers;
-		wi::ecs::ComponentManager<TransformComponent> transforms;
-		wi::ecs::ComponentManager<HierarchyComponent> hierarchy;
-		wi::ecs::ComponentManager<MaterialComponent> materials;
-		wi::ecs::ComponentManager<MeshComponent> meshes;
-		wi::ecs::ComponentManager<ImpostorComponent> impostors;
-		wi::ecs::ComponentManager<ObjectComponent> objects;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_objects;
-		wi::ecs::ComponentManager<RigidBodyPhysicsComponent> rigidbodies;
-		wi::ecs::ComponentManager<SoftBodyPhysicsComponent> softbodies;
-		wi::ecs::ComponentManager<ArmatureComponent> armatures;
-		wi::ecs::ComponentManager<LightComponent> lights;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_lights;
-		wi::ecs::ComponentManager<CameraComponent> cameras;
-		wi::ecs::ComponentManager<EnvironmentProbeComponent> probes;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_probes;
-		wi::ecs::ComponentManager<ForceFieldComponent> forces;
-		wi::ecs::ComponentManager<DecalComponent> decals;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_decals;
-		wi::ecs::ComponentManager<AnimationComponent> animations;
-		wi::ecs::ComponentManager<AnimationDataComponent> animation_datas;
-		wi::ecs::ComponentManager<EmittedParticleSystem> emitters;
-		wi::ecs::ComponentManager<HairParticleSystem> hairs;
-		wi::ecs::ComponentManager<WeatherComponent> weathers;
-		wi::ecs::ComponentManager<SoundComponent> sounds;
-		wi::ecs::ComponentManager<InverseKinematicsComponent> inverse_kinematics;
-		wi::ecs::ComponentManager<SpringComponent> springs;
+		//This is the actual storage, but access them through the normal means
+		std::shared_ptr<wi::ecs::ComponentManager<NameComponent>> names_ptr = std::make_shared<wi::ecs::ComponentManager<NameComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<LayerComponent>> layers_ptr = std::make_shared<wi::ecs::ComponentManager<LayerComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<TransformComponent>> transforms_ptr = std::make_shared<wi::ecs::ComponentManager<TransformComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<HierarchyComponent>> hierarchy_ptr = std::make_shared<wi::ecs::ComponentManager<HierarchyComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<MaterialComponent>> materials_ptr = std::make_shared<wi::ecs::ComponentManager<MaterialComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<MeshComponent>> meshes_ptr = std::make_shared<wi::ecs::ComponentManager<MeshComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<ImpostorComponent>> impostors_ptr = std::make_shared<wi::ecs::ComponentManager<ImpostorComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<ObjectComponent>> objects_ptr = std::make_shared<wi::ecs::ComponentManager<ObjectComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<wi::primitive::AABB>> aabb_objects_ptr = std::make_shared<wi::ecs::ComponentManager<wi::primitive::AABB>>();
+		std::shared_ptr<wi::ecs::ComponentManager<RigidBodyPhysicsComponent>> rigidbodies_ptr = std::make_shared<wi::ecs::ComponentManager<RigidBodyPhysicsComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<SoftBodyPhysicsComponent>> softbodies_ptr = std::make_shared<wi::ecs::ComponentManager<SoftBodyPhysicsComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<ArmatureComponent>> armatures_ptr = std::make_shared<wi::ecs::ComponentManager<ArmatureComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<LightComponent>> lights_ptr = std::make_shared<wi::ecs::ComponentManager<LightComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<wi::primitive::AABB>> aabb_lights_ptr = std::make_shared<wi::ecs::ComponentManager<wi::primitive::AABB>>();
+		std::shared_ptr<wi::ecs::ComponentManager<CameraComponent>> cameras_ptr = std::make_shared<wi::ecs::ComponentManager<CameraComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<EnvironmentProbeComponent>> probes_ptr = std::make_shared<wi::ecs::ComponentManager<EnvironmentProbeComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<wi::primitive::AABB>> aabb_probes_ptr = std::make_shared<wi::ecs::ComponentManager<wi::primitive::AABB>>();
+		std::shared_ptr<wi::ecs::ComponentManager<ForceFieldComponent>> forces_ptr = std::make_shared<wi::ecs::ComponentManager<ForceFieldComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<DecalComponent>> decals_ptr = std::make_shared<wi::ecs::ComponentManager<DecalComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<wi::primitive::AABB>> aabb_decals_ptr = std::make_shared<wi::ecs::ComponentManager<wi::primitive::AABB>>();
+		std::shared_ptr<wi::ecs::ComponentManager<AnimationComponent>> animations_ptr = std::make_shared<wi::ecs::ComponentManager<AnimationComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<AnimationDataComponent>> animation_datas_ptr = std::make_shared<wi::ecs::ComponentManager<AnimationDataComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<EmittedParticleSystem>> emitters_ptr = std::make_shared<wi::ecs::ComponentManager<EmittedParticleSystem>>();
+		std::shared_ptr<wi::ecs::ComponentManager<HairParticleSystem>> hairs_ptr = std::make_shared<wi::ecs::ComponentManager<HairParticleSystem>>();
+		std::shared_ptr<wi::ecs::ComponentManager<WeatherComponent>> weathers_ptr = std::make_shared<wi::ecs::ComponentManager<WeatherComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<SoundComponent>> sounds_ptr = std::make_shared<wi::ecs::ComponentManager<SoundComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<InverseKinematicsComponent>> inverse_kinematics_ptr = std::make_shared<wi::ecs::ComponentManager<InverseKinematicsComponent>>();
+		std::shared_ptr<wi::ecs::ComponentManager<SpringComponent>> springs_ptr = std::make_shared<wi::ecs::ComponentManager<SpringComponent>>();
+
+
+		//This is for access
+		wi::ecs::ComponentManager<NameComponent>& names = *names_ptr.get();
+		wi::ecs::ComponentManager<LayerComponent>& layers = *layers_ptr.get();
+		wi::ecs::ComponentManager<TransformComponent>& transforms = *transforms_ptr.get();
+		wi::ecs::ComponentManager<HierarchyComponent>& hierarchy = *hierarchy_ptr.get();
+		wi::ecs::ComponentManager<MaterialComponent>& materials = *materials_ptr.get();
+		wi::ecs::ComponentManager<MeshComponent>& meshes = *meshes_ptr.get();
+		wi::ecs::ComponentManager<ImpostorComponent>& impostors = *impostors_ptr.get();
+		wi::ecs::ComponentManager<ObjectComponent>& objects = *objects_ptr.get();
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_objects = *aabb_objects_ptr.get();
+		wi::ecs::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies = *rigidbodies_ptr.get();
+		wi::ecs::ComponentManager<SoftBodyPhysicsComponent>& softbodies = *softbodies_ptr.get();
+		wi::ecs::ComponentManager<ArmatureComponent>& armatures = *armatures_ptr.get();
+		wi::ecs::ComponentManager<LightComponent>& lights = *lights_ptr.get();
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_lights = *aabb_lights_ptr.get();
+		wi::ecs::ComponentManager<CameraComponent>& cameras = *cameras_ptr.get();
+		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = *probes_ptr.get();
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_probes = *aabb_probes_ptr.get();
+		wi::ecs::ComponentManager<ForceFieldComponent>& forces = *forces_ptr.get();
+		wi::ecs::ComponentManager<DecalComponent>& decals = *decals_ptr.get();
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_decals = *aabb_decals_ptr.get();
+		wi::ecs::ComponentManager<AnimationComponent>& animations = *animations_ptr.get();
+		wi::ecs::ComponentManager<AnimationDataComponent>& animation_datas = *animation_datas_ptr.get();
+		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = *emitters_ptr.get();
+		wi::ecs::ComponentManager<HairParticleSystem>& hairs = *hairs_ptr.get();
+		wi::ecs::ComponentManager<WeatherComponent>& weathers = *weathers_ptr.get();
+		wi::ecs::ComponentManager<SoundComponent>& sounds = *sounds_ptr.get();
+		wi::ecs::ComponentManager<InverseKinematicsComponent>& inverse_kinematics = *inverse_kinematics_ptr.get();
+		wi::ecs::ComponentManager<SpringComponent>& springs = *springs_ptr.get();
+
+		// This is for the new modular ECS system, which now stores components dynamically and able to do actions in bulk!
+		wi::ecs::ComponentManagerContainer component_container;
+
+		// Initialize Scene
+		Scene();
 
 		// Non-serialized attributes:
 		float dt = 0;

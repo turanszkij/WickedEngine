@@ -1,4 +1,5 @@
 #include "wiScene.h"
+#include "wiECS.h"
 #include "wiTextureHelper.h"
 #include "wiResourceManager.h"
 #include "wiPhysics.h"
@@ -14,6 +15,7 @@
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
+#include <memory>
 
 using namespace wi::ecs;
 using namespace wi::enums;
@@ -1467,7 +1469,43 @@ namespace wi::scene
 
 
 
+	std::shared_ptr<wi::ecs::ComponentManagerListInitializer> SceneInitializers = std::make_shared<wi::ecs::ComponentManagerListInitializer>();
+	void RegisterComponentManager(std::string name, std::function<std::shared_ptr<wi::ecs::ComponentManager_Generic> ()> &initialize_func){
+		SceneInitializers->RegisterInitializer(name, initialize_func);
+	}
 	const uint32_t small_subtask_groupsize = 64u;
+
+	Scene::Scene(){
+		component_container.componentList["names"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(NameComponent,names_ptr));
+		component_container.componentList["layers"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(LayerComponent,layers_ptr));
+		component_container.componentList["transforms"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(TransformComponent,transforms_ptr));
+		component_container.componentList["hierarchy"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(HierarchyComponent,hierarchy_ptr));
+		component_container.componentList["materials"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(MaterialComponent,materials_ptr));
+		component_container.componentList["meshes"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(MeshComponent,meshes_ptr));
+		component_container.componentList["impostors"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(ImpostorComponent,impostors_ptr));
+		component_container.componentList["objects"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(ObjectComponent,objects_ptr));
+		component_container.componentList["aabb_objects"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(wi::primitive::AABB,aabb_objects_ptr));
+		component_container.componentList["rigidbodies"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(RigidBodyPhysicsComponent,rigidbodies_ptr));
+		component_container.componentList["softbodies"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(SoftBodyPhysicsComponent,softbodies_ptr));
+		component_container.componentList["armatures"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(ArmatureComponent,armatures_ptr));
+		component_container.componentList["lights"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(LightComponent,lights_ptr));
+		component_container.componentList["aabb_lights"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(wi::primitive::AABB,aabb_lights_ptr));
+		component_container.componentList["cameras"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(CameraComponent,cameras_ptr));
+		component_container.componentList["probes"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(EnvironmentProbeComponent,probes_ptr));
+		component_container.componentList["aabb_probes"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(wi::primitive::AABB,aabb_probes_ptr));
+		component_container.componentList["forces"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(ForceFieldComponent,forces_ptr));
+		component_container.componentList["decals"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(DecalComponent,decals_ptr));
+		component_container.componentList["aabb_decals"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(wi::primitive::AABB,aabb_decals_ptr));
+		component_container.componentList["animations"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(AnimationComponent,animations_ptr));
+		component_container.componentList["animation_datas"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(AnimationDataComponent,animation_datas_ptr));
+		component_container.componentList["emitters"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(EmittedParticleSystem,emitters_ptr));
+		component_container.componentList["hairs"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(HairParticleSystem,hairs_ptr));
+		component_container.componentList["weathers"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(WeatherComponent,weathers_ptr));
+		component_container.componentList["sounds"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(SoundComponent,sounds_ptr));
+		component_container.componentList["inverse_kinematics"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(InverseKinematicsComponent,inverse_kinematics_ptr));
+		component_container.componentList["springs"] = std::make_shared<ComponentManager_Generic>(ComponentManager_MakeGeneric(SpringComponent,springs_ptr));
+		component_container.Initialize(SceneInitializers);
+	}
 
 	void Scene::Update(float dt)
 	{
@@ -2025,34 +2063,7 @@ namespace wi::scene
 	}
 	void Scene::Clear()
 	{
-		names.Clear();
-		layers.Clear();
-		transforms.Clear();
-		hierarchy.Clear();
-		materials.Clear();
-		meshes.Clear();
-		impostors.Clear();
-		objects.Clear();
-		aabb_objects.Clear();
-		rigidbodies.Clear();
-		softbodies.Clear();
-		armatures.Clear();
-		lights.Clear();
-		aabb_lights.Clear();
-		cameras.Clear();
-		probes.Clear();
-		aabb_probes.Clear();
-		forces.Clear();
-		decals.Clear();
-		aabb_decals.Clear();
-		animations.Clear();
-		animation_datas.Clear();
-		emitters.Clear();
-		hairs.Clear();
-		weathers.Clear();
-		sounds.Clear();
-		inverse_kinematics.Clear();
-		springs.Clear();
+		component_container.Clear();
 
 		TLAS = RaytracingAccelerationStructure();
 		BVH.Clear();
@@ -2069,67 +2080,16 @@ namespace wi::scene
 	}
 	void Scene::Merge(Scene& other)
 	{
-		names.Merge(other.names);
-		layers.Merge(other.layers);
-		transforms.Merge(other.transforms);
-		hierarchy.Merge(other.hierarchy);
-		materials.Merge(other.materials);
-		meshes.Merge(other.meshes);
-		impostors.Merge(other.impostors);
-		objects.Merge(other.objects);
-		aabb_objects.Merge(other.aabb_objects);
-		rigidbodies.Merge(other.rigidbodies);
-		softbodies.Merge(other.softbodies);
-		armatures.Merge(other.armatures);
-		lights.Merge(other.lights);
-		aabb_lights.Merge(other.aabb_lights);
-		cameras.Merge(other.cameras);
-		probes.Merge(other.probes);
-		aabb_probes.Merge(other.aabb_probes);
-		forces.Merge(other.forces);
-		decals.Merge(other.decals);
-		aabb_decals.Merge(other.aabb_decals);
-		animations.Merge(other.animations);
-		animation_datas.Merge(other.animation_datas);
-		emitters.Merge(other.emitters);
-		hairs.Merge(other.hairs);
-		weathers.Merge(other.weathers);
-		sounds.Merge(other.sounds);
-		inverse_kinematics.Merge(other.inverse_kinematics);
-		springs.Merge(other.springs);
+		component_container.Merge(other.component_container);
 
 		bounds = AABB::Merge(bounds, other.bounds);
+
+		
 	}
 	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
 	{
-		entities.insert(names.GetEntityArray().begin(), names.GetEntityArray().end());
-		entities.insert(layers.GetEntityArray().begin(), layers.GetEntityArray().end());
-		entities.insert(transforms.GetEntityArray().begin(), transforms.GetEntityArray().end());
-		entities.insert(hierarchy.GetEntityArray().begin(), hierarchy.GetEntityArray().end());
-		entities.insert(materials.GetEntityArray().begin(), materials.GetEntityArray().end());
-		entities.insert(meshes.GetEntityArray().begin(), meshes.GetEntityArray().end());
-		entities.insert(impostors.GetEntityArray().begin(), impostors.GetEntityArray().end());
-		entities.insert(objects.GetEntityArray().begin(), objects.GetEntityArray().end());
-		entities.insert(aabb_objects.GetEntityArray().begin(), aabb_objects.GetEntityArray().end());
-		entities.insert(rigidbodies.GetEntityArray().begin(), rigidbodies.GetEntityArray().end());
-		entities.insert(softbodies.GetEntityArray().begin(), softbodies.GetEntityArray().end());
-		entities.insert(armatures.GetEntityArray().begin(), armatures.GetEntityArray().end());
-		entities.insert(lights.GetEntityArray().begin(), lights.GetEntityArray().end());
-		entities.insert(aabb_lights.GetEntityArray().begin(), aabb_lights.GetEntityArray().end());
-		entities.insert(cameras.GetEntityArray().begin(), cameras.GetEntityArray().end());
-		entities.insert(probes.GetEntityArray().begin(), probes.GetEntityArray().end());
-		entities.insert(aabb_probes.GetEntityArray().begin(), aabb_probes.GetEntityArray().end());
-		entities.insert(forces.GetEntityArray().begin(), forces.GetEntityArray().end());
-		entities.insert(decals.GetEntityArray().begin(), decals.GetEntityArray().end());
-		entities.insert(aabb_decals.GetEntityArray().begin(), aabb_decals.GetEntityArray().end());
-		entities.insert(animations.GetEntityArray().begin(), animations.GetEntityArray().end());
-		entities.insert(animation_datas.GetEntityArray().begin(), animation_datas.GetEntityArray().end());
-		entities.insert(emitters.GetEntityArray().begin(), emitters.GetEntityArray().end());
-		entities.insert(hairs.GetEntityArray().begin(), hairs.GetEntityArray().end());
-		entities.insert(weathers.GetEntityArray().begin(), weathers.GetEntityArray().end());
-		entities.insert(sounds.GetEntityArray().begin(), sounds.GetEntityArray().end());
-		entities.insert(inverse_kinematics.GetEntityArray().begin(), inverse_kinematics.GetEntityArray().end());
-		entities.insert(springs.GetEntityArray().begin(), springs.GetEntityArray().end());
+		auto entity_list = component_container.GetEntityArray().get();
+		entities.insert(entity_list->begin(), entity_list->end());
 	}
 
 	void Scene::Entity_Remove(Entity entity, bool recursive)
@@ -2152,34 +2112,7 @@ namespace wi::scene
 			}
 		}
 
-		names.Remove(entity);
-		layers.Remove(entity);
-		transforms.Remove(entity);
-		hierarchy.Remove(entity);
-		materials.Remove(entity);
-		meshes.Remove(entity);
-		impostors.Remove(entity);
-		objects.Remove(entity);
-		aabb_objects.Remove(entity);
-		rigidbodies.Remove(entity);
-		softbodies.Remove(entity);
-		armatures.Remove(entity);
-		lights.Remove(entity);
-		aabb_lights.Remove(entity);
-		cameras.Remove(entity);
-		probes.Remove(entity);
-		aabb_probes.Remove(entity);
-		forces.Remove(entity);
-		decals.Remove(entity);
-		aabb_decals.Remove(entity);
-		animations.Remove(entity);
-		animation_datas.Remove(entity);
-		emitters.Remove(entity);
-		hairs.Remove(entity);
-		weathers.Remove(entity);
-		sounds.Remove(entity);
-		inverse_kinematics.Remove(entity);
-		springs.Remove(entity);
+		component_container.Remove(entity);
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)
 	{
