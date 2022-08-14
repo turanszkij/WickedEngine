@@ -272,6 +272,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Force " ICON_FORCE, (uint64_t)Filter::Force);
 	filterCombo.AddItem("Emitter " ICON_EMITTER, (uint64_t)Filter::Emitter);
 	filterCombo.AddItem("Hairparticle " ICON_HAIR, (uint64_t)Filter::Hairparticle);
+	filterCombo.AddItem("Inverse Kinematics " ICON_IK, (uint64_t)Filter::IK);
 	filterCombo.SetTooltip("Apply filtering to the Entities");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
@@ -642,6 +643,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			editor->saveButton.sprites[i].params.enableCornerRounding();
 			editor->saveButton.sprites[i].params.corners_rounding[2].radius = 10;
 		}
+		editor->componentsWnd.weatherWnd.default_sky_horizon = dark_point;
+		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
 
 		});
 	AddWidget(&themeCombo);
@@ -866,11 +869,16 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_WEATHER " ";
 	}
+	if (scene.inverse_kinematics.Contains(entity))
+	{
+		item.name += ICON_IK " ";
+	}
 	if (entity == terragen.terrainEntity)
 	{
 		item.name += ICON_TERRAIN " ";
 	}
-	for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+	bool bone_found = false;
+	for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
 	{
 		const ArmatureComponent& armature = scene.armatures[i];
 		for (Entity bone : armature.boneCollection)
@@ -878,6 +886,7 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 			if (entity == bone)
 			{
 				item.name += ICON_BONE " ";
+				bone_found = true;
 				break;
 			}
 		}
@@ -1080,7 +1089,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::IK))
 	{
 		for (size_t i = 0; i < scene.inverse_kinematics.GetCount(); ++i)
 		{

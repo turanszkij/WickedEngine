@@ -81,8 +81,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	loopedCheckBox.SetCheckText(ICON_LOOP);
 	AddWidget(&loopedCheckBox);
 
-	playButton.Create("Play");
-	playButton.SetTooltip("Play/Pause animation.");
+	playButton.Create(ICON_PLAY);
 	playButton.SetSize(XMFLOAT2(100, hei));
 	playButton.SetPos(XMFLOAT2(loopedCheckBox.GetPos().x + loopedCheckBox.GetSize().x + 5, y));
 	playButton.OnClick([&](wi::gui::EventArgs args) {
@@ -101,9 +100,9 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&playButton);
 
-	stopButton.Create("Stop");
-	stopButton.SetTooltip("Stop animation.");
-	stopButton.SetSize(XMFLOAT2(100, hei));
+	stopButton.Create(ICON_STOP);
+	stopButton.SetTooltip("Stop");
+	stopButton.SetSize(XMFLOAT2(70, hei));
 	stopButton.SetPos(XMFLOAT2(playButton.GetPos().x + playButton.GetSize().x + 5, y));
 	stopButton.OnClick([&](wi::gui::EventArgs args) {
 		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
@@ -197,7 +196,12 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	recordCombo.AddItem("Rotation " ICON_ROTATE);
 	recordCombo.AddItem("Scale " ICON_SCALE);
 	recordCombo.AddItem("Morph weights " ICON_MESH);
-	recordCombo.AddItem("Close loop " ICON_LOOP);
+	recordCombo.AddItem("Light [color] " ICON_POINTLIGHT);
+	recordCombo.AddItem("Light [intensity] " ICON_POINTLIGHT);
+	recordCombo.AddItem("Light [range] " ICON_POINTLIGHT);
+	recordCombo.AddItem("Light [inner cone] " ICON_POINTLIGHT);
+	recordCombo.AddItem("Light [outer cone] " ICON_POINTLIGHT);
+	recordCombo.AddItem("Close loop " ICON_LOOP, ~0ull);
 	recordCombo.OnSelect([&](wi::gui::EventArgs args) {
 		if (args.iValue == 0)
 			return;
@@ -209,7 +213,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 		{
 			const float current_time = animation->timer;
 
-			if (args.iValue == 6)
+			if (args.userdata == ~0ull)
 			{
 				// Close loop:
 				for (auto& channel : animation->channels)
@@ -237,6 +241,8 @@ void AnimationWindow::Create(EditorComponent* _editor)
 						switch (channel.path)
 						{
 						case wi::scene::AnimationComponent::AnimationChannel::TRANSLATION:
+						case wi::scene::AnimationComponent::AnimationChannel::SCALE:
+						case wi::scene::AnimationComponent::AnimationChannel::LIGHT_COLOR:
 						{
 							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 0]);
 							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 1]);
@@ -249,13 +255,6 @@ void AnimationWindow::Create(EditorComponent* _editor)
 							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 4 + 1]);
 							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 4 + 2]);
 							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 4 + 3]);
-						}
-						break;
-						case wi::scene::AnimationComponent::AnimationChannel::SCALE:
-						{
-							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 0]);
-							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 1]);
-							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 2]);
 						}
 						break;
 						case wi::scene::AnimationComponent::AnimationChannel::WEIGHTS:
@@ -278,6 +277,14 @@ void AnimationWindow::Create(EditorComponent* _editor)
 							}
 						}
 						break;
+						case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INTENSITY:
+						case wi::scene::AnimationComponent::AnimationChannel::LIGHT_RANGE:
+						case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INNERCONE:
+						case wi::scene::AnimationComponent::AnimationChannel::LIGHT_OUTERCONE:
+						{
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst]);
+						}
+						break;
 						default:
 							break;
 						}
@@ -287,7 +294,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 			else
 			{
 				// Add keyframe type:
-				wi::vector<AnimationComponent::AnimationChannel::Path> paths;
+				wi::vector<AnimationComponent::AnimationChannel::Path> paths; // stack allocation would be better here..
 
 				switch (args.iValue)
 				{
@@ -308,6 +315,21 @@ void AnimationWindow::Create(EditorComponent* _editor)
 					break;
 				case 5:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::WEIGHTS);
+					break;
+				case 6:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::LIGHT_COLOR);
+					break;
+				case 7:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY);
+					break;
+				case 8:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::LIGHT_RANGE);
+					break;
+				case 9:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE);
+					break;
+				case 10:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE);
 					break;
 				}
 
@@ -421,6 +443,78 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								}
 							}
 							break;
+							case wi::scene::AnimationComponent::AnimationChannel::LIGHT_COLOR:
+							{
+								const LightComponent* light = scene.lights.GetComponent(channel.target);
+								if (light != nullptr)
+								{
+									animation_data->keyframe_data.push_back(light->color.x);
+									animation_data->keyframe_data.push_back(light->color.y);
+									animation_data->keyframe_data.push_back(light->color.z);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INTENSITY:
+							{
+								const LightComponent* light = scene.lights.GetComponent(channel.target);
+								if (light != nullptr)
+								{
+									animation_data->keyframe_data.push_back(light->intensity);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::LIGHT_RANGE:
+							{
+								const LightComponent* light = scene.lights.GetComponent(channel.target);
+								if (light != nullptr)
+								{
+									animation_data->keyframe_data.push_back(light->range);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INNERCONE:
+							{
+								const LightComponent* light = scene.lights.GetComponent(channel.target);
+								if (light != nullptr)
+								{
+									animation_data->keyframe_data.push_back(light->innerConeAngle);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::LIGHT_OUTERCONE:
+							{
+								const LightComponent* light = scene.lights.GetComponent(channel.target);
+								if (light != nullptr)
+								{
+									animation_data->keyframe_data.push_back(light->outerConeAngle);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
 							default:
 								break;
 							}
@@ -438,7 +532,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 
 	keyframesList.Create("Keyframes");
 	keyframesList.SetSize(XMFLOAT2(wid, 200));
-	keyframesList.SetPos(XMFLOAT2(x, y += step));
+	keyframesList.SetPos(XMFLOAT2(4, y += step));
 	keyframesList.OnSelect([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		AnimationComponent* animation = scene.animations.GetComponent(entity);
@@ -453,9 +547,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 				const AnimationDataComponent* animation_data = scene.animation_datas.GetComponent(sam.data);
 				if (animation_data != nullptr && animation_data->keyframe_times.size() > timeIndex)
 				{
-					wi::vector<float> tmp = animation_data->keyframe_times;
-					std::sort(tmp.begin(), tmp.end());
-					float time = tmp[timeIndex];
+					float time = animation_data->keyframe_times[timeIndex];
 					animation->timer = time;
 				}
 			}
@@ -479,16 +571,14 @@ void AnimationWindow::Create(EditorComponent* _editor)
 					switch (channel.path)
 					{
 					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+					case AnimationComponent::AnimationChannel::Path::SCALE:
+					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
 						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
 						animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * 3, animation_data->keyframe_data.begin() + timeIndex * 3 + 3);
 						break;
 					case AnimationComponent::AnimationChannel::Path::ROTATION:
 						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
 						animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * 4, animation_data->keyframe_data.begin() + timeIndex * 4 + 4);
-						break;
-					case AnimationComponent::AnimationChannel::Path::SCALE:
-						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
-						animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * 3, animation_data->keyframe_data.begin() + timeIndex * 3 + 3);
 						break;
 					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
 						{
@@ -505,6 +595,12 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * mesh->targets.size(), animation_data->keyframe_data.begin() + timeIndex * mesh->targets.size() + mesh->targets.size());
 							}
 						}
+						break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
 						break;
 					default:
 						break;
@@ -561,11 +657,13 @@ void AnimationWindow::Update()
 
 	if (animation.IsPlaying())
 	{
-		playButton.SetText("Pause");
+		playButton.SetText(ICON_PAUSE);
+		playButton.SetTooltip("Pause");
 	}
 	else
 	{
-		playButton.SetText("Play");
+		playButton.SetText(ICON_PLAY);
+		playButton.SetTooltip("Play");
 	}
 
 	if(!animation.samplers.empty())
@@ -607,7 +705,6 @@ void AnimationWindow::RefreshKeyframesList()
 		wi::gui::TreeList::Item item;
 		switch (channel.path)
 		{
-		default:
 		case wi::scene::AnimationComponent::AnimationChannel::TRANSLATION:
 			item.name += ICON_TRANSLATE " ";
 			break;
@@ -619,6 +716,23 @@ void AnimationWindow::RefreshKeyframesList()
 			break;
 		case wi::scene::AnimationComponent::AnimationChannel::WEIGHTS:
 			item.name += ICON_MESH " ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::LIGHT_COLOR:
+			item.name += ICON_POINTLIGHT " [color] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INTENSITY:
+			item.name += ICON_POINTLIGHT " [intensity] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::LIGHT_RANGE:
+			item.name += ICON_POINTLIGHT " [range] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INNERCONE:
+			item.name += ICON_POINTLIGHT " [inner cone] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::LIGHT_OUTERCONE:
+			item.name += ICON_POINTLIGHT " [outer cone] ";
+			break;
+		default:
 			break;
 		}
 		const NameComponent* name = scene.names.GetComponent(channel.target);
@@ -659,4 +773,13 @@ void AnimationWindow::RefreshKeyframesList()
 		}
 		channelIndex++;
 	}
+}
+
+
+void AnimationWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x - padding * 2;
+	keyframesList.SetSize(XMFLOAT2(width, keyframesList.GetSize().y));
 }

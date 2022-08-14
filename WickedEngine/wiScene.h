@@ -845,7 +845,6 @@ namespace wi::scene
 			LIGHTMAPONLY_STATIC = 1 << 3,
 		};
 		uint32_t _flags = EMPTY;
-		XMFLOAT3 color = XMFLOAT3(1, 1, 1);
 
 		enum LightType 
 		{
@@ -860,6 +859,8 @@ namespace wi::scene
 			ENUM_FORCE_UINT32 = 0xFFFFFFFF,
 		};
 		LightType type = POINT;
+
+		XMFLOAT3 color = XMFLOAT3(1, 1, 1);
 		float intensity = 1.0f; // Brightness of light in. The units that this is defined in depend on the type of light. Point and spot lights use luminous intensity in candela (lm/sr) while directional lights use illuminance in lux (lm/m2). https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
 		float range = 10.0f;
 		float outerConeAngle = XM_PIDIV4;
@@ -1112,6 +1113,11 @@ namespace wi::scene
 				ROTATION,
 				SCALE,
 				WEIGHTS,
+				LIGHT_COLOR,
+				LIGHT_INTENSITY,
+				LIGHT_RANGE,
+				LIGHT_INNERCONE,
+				LIGHT_OUTERCONE,
 				UNKNOWN,
 				TYPE_FORCE_UINT32 = 0xFFFFFFFF
 			} path = TRANSLATION;
@@ -1445,7 +1451,7 @@ namespace wi::scene
 		uint32_t impostorMaterialOffset = ~0u;
 
 		mutable std::atomic_bool lightmap_refresh_needed{ false };
-		wi::vector<TransformComponent> ik_temp;
+		wi::vector<TransformComponent> transforms_temp;
 
 		// Ocean GPU state:
 		wi::Ocean ocean;
