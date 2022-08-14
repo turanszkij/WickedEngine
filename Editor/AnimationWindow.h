@@ -28,5 +28,7 @@ public:
 	void Update();
 
 	void RefreshKeyframesList();
+
+	void ResizeLayout() override;
 };
 

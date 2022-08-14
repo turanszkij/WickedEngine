@@ -2791,9 +2791,11 @@ namespace wi::scene
 				const float right = animationdata->keyframe_times[keyRight];
 
 				TransformComponent transform;
+				LightComponent light;
 
 				TransformComponent* target_transform = nullptr;
 				MeshComponent* target_mesh = nullptr;
+				LightComponent* target_light = nullptr;
 
 				if (channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS)
 				{
@@ -2804,6 +2806,13 @@ namespace wi::scene
 					if (target_mesh == nullptr)
 						continue;
 					animation.morph_weights_temp.resize(target_mesh->targets.size());
+				}
+				else if (channel.path == AnimationComponent::AnimationChannel::Path::LIGHT)
+				{
+					target_light = lights.GetComponent(channel.target);
+					if (target_light == nullptr)
+						continue;
+					light = *target_light;
 				}
 				else
 				{
@@ -2848,6 +2857,17 @@ namespace wi::scene
 						{
 							animation.morph_weights_temp[j] = animationdata->keyframe_data[key * animation.morph_weights_temp.size() + j];
 						}
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * sizeof(LightComponent::AnimationData) / sizeof(float));
+						const LightComponent::AnimationData& data = ((const LightComponent::AnimationData*)animationdata->keyframe_data.data())[key];
+						light.color = data.color;
+						light.intensity = data.intensity;
+						light.range = data.range;
+						light.innerConeAngle = data.innerConeAngle;
+						light.outerConeAngle = data.outerConeAngle;
 					}
 					break;
 					}
@@ -2910,6 +2930,18 @@ namespace wi::scene
 							float vAnim = wi::math::Lerp(vLeft, vRight, t);
 							animation.morph_weights_temp[j] = vAnim;
 						}
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT:
+					{
+						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * sizeof(LightComponent::AnimationData) / sizeof(float));
+						const LightComponent::AnimationData& data_left = ((const LightComponent::AnimationData*)animationdata->keyframe_data.data())[keyLeft];
+						const LightComponent::AnimationData& data_right = ((const LightComponent::AnimationData*)animationdata->keyframe_data.data())[keyRight];
+						light.color = wi::math::Lerp(data_left.color, data_right.color, t);
+						light.intensity = wi::math::Lerp(data_left.intensity, data_right.intensity, t);
+						light.range = wi::math::Lerp(data_left.range, data_right.range, t);
+						light.innerConeAngle = wi::math::Lerp(data_left.innerConeAngle, data_right.innerConeAngle, t);
+						light.outerConeAngle = wi::math::Lerp(data_left.outerConeAngle, data_right.outerConeAngle, t);
 					}
 					break;
 					}
@@ -2985,16 +3017,19 @@ namespace wi::scene
 						}
 					}
 					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT:
+					assert(0); // todo: implement, test
+					break;
 					}
 				}
 				break;
 				}
 
+				const float t = animation.amount;
+
 				if (target_transform != nullptr)
 				{
 					target_transform->SetDirty();
-
-					const float t = animation.amount;
 
 					const XMVECTOR aS = XMLoadFloat3(&target_transform->scale_local);
 					const XMVECTOR aR = XMLoadFloat4(&target_transform->rotation_local);
@@ -3015,14 +3050,21 @@ namespace wi::scene
 
 				if (target_mesh != nullptr)
 				{
-					const float t = animation.amount;
-
 					for (size_t j = 0; j < target_mesh->targets.size(); ++j)
 					{
 						target_mesh->targets[j].weight = wi::math::Lerp(target_mesh->targets[j].weight, animation.morph_weights_temp[j], t);
 					}
 
 					target_mesh->dirty_morph = true;
+				}
+
+				if (target_light != nullptr)
+				{
+					target_light->color = wi::math::Lerp(target_light->color, light.color, t);
+					target_light->intensity = wi::math::Lerp(target_light->intensity, light.intensity, t);
+					target_light->range = wi::math::Lerp(target_light->range, light.range, t);
+					target_light->innerConeAngle = wi::math::Lerp(target_light->innerConeAngle, light.innerConeAngle, t);
+					target_light->outerConeAngle = wi::math::Lerp(target_light->outerConeAngle, light.outerConeAngle, t);
 				}
 
 			}
@@ -3109,6 +3151,12 @@ namespace wi::scene
 		const XMVECTOR windDir = XMLoadFloat3(&weather.windDirection);
 		const XMVECTOR gravity = XMVectorSet(0, -9.8f, 0, 0);
 
+		if (springs.GetCount() > 0)
+		{
+			transforms_temp.resize(transforms.GetCount());
+			transforms_temp = transforms.GetComponentArray(); // make copy
+		}
+
 		for (size_t i = 0; i < springs.GetCount(); ++i)
 		{
 			SpringComponent& spring = springs[i];
@@ -3117,31 +3165,34 @@ namespace wi::scene
 				continue;
 			}
 			Entity entity = springs.GetEntity(i);
-			TransformComponent* transform = transforms.GetComponent(entity);
-			if (transform == nullptr)
+			size_t transform_index = transforms.GetIndex(entity);
+			if (transform_index == ~0ull)
 			{
 				assert(0);
 				continue;
 			}
+			TransformComponent& transform = transforms_temp[transform_index];
 
 			if (spring.IsResetting())
 			{
 				spring.Reset(false);
-				spring.center_of_mass = transform->GetPosition();
+				spring.center_of_mass = transform.GetPosition();
 				spring.velocity = XMFLOAT3(0, 0, 0);
 			}
 
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
-			TransformComponent* parent_transform = hier == nullptr ? nullptr : transforms.GetComponent(hier->parentID);
-			if (parent_transform != nullptr)
+			size_t parent_index = hier == nullptr ? ~0ull : transforms.GetIndex(hier->parentID);
+			//TransformComponent* parent_transform = hier == nullptr ? nullptr : transforms.GetComponent(hier->parentID);
+			if (parent_index != ~0ull)
 			{
 				// Spring hierarchy resolve depends on spring component order!
 				//	It works best when parent spring is located before child spring!
 				//	It will work the other way, but results will be less convincing
-				transform->UpdateTransform_Parented(*parent_transform);
+				const TransformComponent& parent_transform = transforms_temp[parent_index];
+				transform.UpdateTransform_Parented(parent_transform);
 			}
 
-			const XMVECTOR position_current = transform->GetPositionV();
+			const XMVECTOR position_current = transform.GetPositionV();
 			XMVECTOR position_prev = XMLoadFloat3(&spring.center_of_mass);
 			XMVECTOR force = (position_current - position_prev) * spring.stiffness;
 
@@ -3158,9 +3209,10 @@ namespace wi::scene
 			velocity += force * dt;
 			XMVECTOR position_target = position_prev + velocity * dt;
 
-			if (parent_transform != nullptr)
+			if (parent_index != ~0ull)
 			{
-				const XMVECTOR position_parent = parent_transform->GetPositionV();
+				TransformComponent& parent_transform = transforms_temp[parent_index];
+				const XMVECTOR position_parent = parent_transform.GetPositionV();
 				const XMVECTOR parent_to_child = position_current - position_parent;
 				const XMVECTOR parent_to_target = position_target - position_parent;
 
@@ -3177,25 +3229,34 @@ namespace wi::scene
 				const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_child, dir_parent_to_target));
 				const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_child, dir_parent_to_target))); // don't use std::acos!
 				const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
-				TransformComponent saved_parent = *parent_transform;
+				TransformComponent saved_parent = parent_transform;
 				saved_parent.ApplyTransform();
 				saved_parent.Rotate(Q);
 				saved_parent.UpdateTransform();
-				std::swap(saved_parent.world, parent_transform->world); // only store temporary result, not modifying actual local space!
+				std::swap(saved_parent.world, parent_transform.world); // only store temporary result, not modifying actual local space!
 			}
 
 			XMStoreFloat3(&spring.center_of_mass, position_target);
 			velocity *= spring.damping;
 			XMStoreFloat3(&spring.velocity, velocity);
-			*((XMFLOAT3*)&transform->world._41) = spring.center_of_mass;
+			*((XMFLOAT3*)&transform.world._41) = spring.center_of_mass;
+		}
+
+		if (springs.GetCount() > 0)
+		{
+			for (size_t i = 0; i < transforms.GetCount(); ++i)
+			{
+				// IK shouldn't modify local space, so only update the world matrices!
+				transforms[i].world = transforms_temp[i].world;
+			}
 		}
 	}
 	void Scene::RunInverseKinematicsUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		if (inverse_kinematics.GetCount() > 0)
 		{
-			ik_temp.resize(transforms.GetCount());
-			ik_temp = transforms.GetComponentArray(); // make copy
+			transforms_temp.resize(transforms.GetCount());
+			transforms_temp = transforms.GetComponentArray(); // make copy
 		}
 
 		bool recompute_hierarchy = false;
@@ -3214,15 +3275,15 @@ namespace wi::scene
 			{
 				continue;
 			}
-			TransformComponent* transform = &ik_temp[transform_index];
-			TransformComponent* target = &ik_temp[target_index];
+			TransformComponent& transform = transforms_temp[transform_index];
+			TransformComponent& target = transforms_temp[target_index];
 
-			const XMVECTOR target_pos = target->GetPositionV();
+			const XMVECTOR target_pos = target.GetPositionV();
 			for (uint32_t iteration = 0; iteration < ik.iteration_count; ++iteration)
 			{
 				TransformComponent* stack[32] = {};
 				Entity parent_entity = hier->parentID;
-				TransformComponent* child_transform = transform;
+				TransformComponent* child_transform = &transform;
 				for (uint32_t chain = 0; chain < std::min(ik.chain_length, (uint32_t)arraysize(stack)); ++chain)
 				{
 					recompute_hierarchy = true; // any IK will trigger a full transform hierarchy recompute step at the end(**)
@@ -3234,19 +3295,19 @@ namespace wi::scene
 					size_t parent_index = transforms.GetIndex(parent_entity);
 					if (parent_index == ~0ull)
 						continue;
-					TransformComponent* parent_transform = &ik_temp[parent_index];
-					const XMVECTOR parent_pos = parent_transform->GetPositionV();
-					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform->GetPositionV() - parent_pos);
+					TransformComponent& parent_transform = transforms_temp[parent_index];
+					const XMVECTOR parent_pos = parent_transform.GetPositionV();
+					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform.GetPositionV() - parent_pos);
 					const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
 					const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_ik, dir_parent_to_target));
 					const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target)));
 					const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
 
 					// parent to world space:
-					parent_transform->ApplyTransform();
+					parent_transform.ApplyTransform();
 					// rotate parent:
-					parent_transform->Rotate(Q);
-					parent_transform->UpdateTransform();
+					parent_transform.Rotate(Q);
+					parent_transform.UpdateTransform();
 					// parent back to local space (if parent has parent):
 					const HierarchyComponent* hier_parent = hierarchy.GetComponent(parent_entity);
 					if (hier_parent != nullptr)
@@ -3255,15 +3316,15 @@ namespace wi::scene
 						size_t parent_of_parent_index = transforms.GetIndex(parent_of_parent_entity);
 						if (parent_of_parent_index != ~0ull)
 						{
-							const TransformComponent* transform_parent_of_parent = &ik_temp[parent_of_parent_index];
+							const TransformComponent* transform_parent_of_parent = &transforms_temp[parent_of_parent_index];
 							XMMATRIX parent_of_parent_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent_of_parent->world));
-							parent_transform->MatrixTransform(parent_of_parent_inverse);
+							parent_transform.MatrixTransform(parent_of_parent_inverse);
 							// Do not call UpdateTransform() here, to keep parent world matrix in world space!
 						}
 					}
 
 					// update chain from parent to children:
-					const TransformComponent* recurse_parent = parent_transform;
+					const TransformComponent* recurse_parent = &parent_transform;
 					for (int recurse_chain = (int)chain; recurse_chain >= 0; --recurse_chain)
 					{
 						stack[recurse_chain]->UpdateTransform_Parented(*recurse_parent);
@@ -3277,7 +3338,7 @@ namespace wi::scene
 					}
 
 					// move up in the chain by one:
-					child_transform = parent_transform;
+					child_transform = &parent_transform;
 					parent_entity = hier_parent->parentID;
 					assert(chain < (uint32_t)arraysize(stack) - 1); // if this is encountered, just extend stack array size
 
@@ -3299,8 +3360,8 @@ namespace wi::scene
 				size_t parent_index = transforms.GetIndex(parentcomponent.parentID);
 				if (transform_index != ~0ull && parent_index != ~0ull)
 				{
-					TransformComponent* transform_child = &ik_temp[transform_index];
-					TransformComponent* transform_parent = &ik_temp[parent_index];
+					TransformComponent* transform_child = &transforms_temp[transform_index];
+					TransformComponent* transform_parent = &transforms_temp[parent_index];
 					transform_child->UpdateTransform_Parented(*transform_parent);
 				}
 			}
@@ -3311,7 +3372,7 @@ namespace wi::scene
 			for (size_t i = 0; i < transforms.GetCount(); ++i)
 			{
 				// IK shouldn't modify local space, so only update the world matrices!
-				transforms[i].world = ik_temp[i].world;
+				transforms[i].world = transforms_temp[i].world;
 			}
 		}
 	}

@@ -9,7 +9,7 @@ using namespace wi::scene;
 void IKWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Inverse Kinematics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_IK " Inverse Kinematics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(400, 110));
 
 	closeButton.SetTooltip("Delete InverseKinematicsComponent");

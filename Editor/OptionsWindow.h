@@ -55,6 +55,7 @@ public:
 		Force = 1 << 10,
 		Emitter = 1 << 11,
 		Hairparticle = 1 << 12,
+		IK = 1 << 13,
 
 		All = ~0ull,
 	} filter = Filter::All;
