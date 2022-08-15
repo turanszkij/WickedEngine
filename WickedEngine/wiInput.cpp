@@ -43,7 +43,10 @@ namespace wi::input
 	wi::platform::window_type window = nullptr;
 	wi::Canvas canvas;
 	KeyboardState keyboard;
+	KEYBOARD_INPUT_MODE keyboard_mode;
 	MouseState mouse;
+
+	void SetKeyboardInputMode(KEYBOARD_INPUT_MODE mode){ keyboard_mode = mode; }
 
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
@@ -80,6 +83,16 @@ namespace wi::input
 	};
 	wi::vector<Controller> controllers;
 	std::atomic_bool initialized{ false };
+
+	BUTTON KEY(uint32_t key){
+		//Translate only for character-based keys only!
+		if((key >= CHARACTER_RANGE_START) && (keyboard_mode == KEYBOARD_INPUT_MODE_VIRTUAL)){
+#ifdef SDL2
+			return sdlinput::KeyRemap(key);
+#endif
+		}
+		return (BUTTON)key;
+	};
 
 	void Initialize()
 	{
@@ -407,9 +420,6 @@ namespace wi::input
 		else if (playerindex == 0) // keyboard or mouse
 		{
 			uint8_t keycode = (uint8_t)button;
-#ifdef SDL2
-			bool keycode_converted = false;
-#endif
 
 			switch (button)
 			{
@@ -518,7 +528,7 @@ namespace wi::input
 #ifdef _WIN32
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
 #elif SDL2
-			return keyboard.buttons[keycode] == 1;
+			return keyboard.buttons[keycode] == 1; //TODO
 
 #else
 #error KEYBOARD INPUT NOT SUPPORTED

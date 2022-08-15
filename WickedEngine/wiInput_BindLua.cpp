@@ -1,4 +1,7 @@
 #include "wiInput_BindLua.h"
+#include "wiInput.h"
+#include "wiLua.h"
+#include "wiLuna.h"
 #include "wiMath_BindLua.h"
 
 namespace wi::lua
@@ -17,6 +20,8 @@ namespace wi::lua
 		lunamethod(Input_BindLua, GetAnalog),
 		lunamethod(Input_BindLua, GetTouches),
 		lunamethod(Input_BindLua, SetControllerFeedback),
+		lunamethod(Input_BindLua, SetKeyboardInputMode),
+		lunamethod(Input_BindLua, KEY),
 		{ NULL, NULL }
 	};
 	Luna<Input_BindLua>::PropertyType Input_BindLua::properties[] = {
@@ -181,6 +186,33 @@ namespace wi::lua
 		return 0;
 	}
 
+	int Input_BindLua::SetKeyboardInputMode(lua_State *L){
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			int keyboard_mode = wi::lua::SGetInt(L, 1);
+			input::SetKeyboardInputMode((input::KEYBOARD_INPUT_MODE) keyboard_mode);
+		}
+		else
+			wi::lua::SError(L, "SetKeyboardInputMode(KeyboardMode mode) not enough arguments!");
+		return 0;
+	};
+
+	int Input_BindLua::KEY(lua_State *L){
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			int key = wi::lua::SGetInt(L, 1);
+			auto remapped = input::KEY((input::KEYBOARD_INPUT_MODE) key);
+
+			wi::lua::SSetInt(L, remapped);
+			return 1;
+		}
+		else
+			wi::lua::SError(L, "KEY(Key key) not enough arguments!");
+		return 0;
+	}
+
 	void Input_BindLua::Bind()
 	{
 		static bool initialized = false;
@@ -252,6 +284,10 @@ namespace wi::lua
 			wi::lua::RunText("TOUCHSTATE_PRESSED		= 0");
 			wi::lua::RunText("TOUCHSTATE_RELEASED	= 1");
 			wi::lua::RunText("TOUCHSTATE_MOVED		= 2");
+
+			//Keyboard input mode
+			wi::lua::RunText("KEYBOARD_INPUT_MODE_RAW			= 0");
+			wi::lua::RunText("KEYBOARD_INPUT_MODE_VIRTUAL		= 1");
 		}
 
 		Touch_BindLua::Bind();

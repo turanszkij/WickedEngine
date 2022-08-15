@@ -1,4 +1,6 @@
 #include "wiSDLInput.h"
+#include "wiInput.h"
+#include <SDL_keyboard.h>
 
 #ifdef SDL2
 #include <SDL2/SDL.h>
@@ -318,6 +320,11 @@ namespace wi::input::sdlinput
         for(int index = 0; index < controllers.size(); ++index){
             controller_mapped.insert({controllers[index].internalID, index});
         }
+    }
+
+    BUTTON KeyRemap(uint32_t key){
+        SDL_Keycode stub;
+        return (BUTTON)to_wicked(SDL_GetScancodeFromKey(key+32),stub);
     }
 
     void GetKeyboardState(wi::input::KeyboardState* state) {

@@ -15,6 +15,9 @@ namespace wi::input::sdlinput
 	// Updates the state of raw input devices, call once per frame
 	void Update();
 
+	// Use SDL internal remap function to remap keyboard
+	BUTTON KeyRemap(uint32_t key);
+
 	// Writes the keyboard state into state parameter
 	void GetKeyboardState(wi::input::KeyboardState* state);
 

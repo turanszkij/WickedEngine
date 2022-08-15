@@ -117,9 +117,19 @@ namespace wi::input
 	//	These things can occasionally be updated outside engine's loop, depending on operating system messages
 	void ClearForNextFrame();
 
+	enum KEYBOARD_INPUT_MODE{
+		KEYBOARD_INPUT_MODE_RAW,
+		KEYBOARD_INPUT_MODE_VIRTUAL
+	};
+	// Set keyboard to read key map straight up from raw data OR from virtual map
+	void SetKeyboardInputMode(KEYBOARD_INPUT_MODE mode);
+
 	const KeyboardState& GetKeyboardState();
 	const MouseState& GetMouseState();
 	
+	// especially for keyboard, if you want input_remappable key input, use this!
+	// example Down(KEY('a'));
+	BUTTON KEY(uint32_t key);
 	// check if a button is down
 	bool Down(BUTTON button, int playerindex = 0);
 	// check if a button is pressed once

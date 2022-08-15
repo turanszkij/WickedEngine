@@ -25,6 +25,8 @@ namespace wi::lua
 		int GetAnalog(lua_State* L);
 		int GetTouches(lua_State* L);
 		int SetControllerFeedback(lua_State* L);
+		int SetKeyboardInputMode(lua_State*L);
+		int KEY(lua_State *L);
 
 		static void Bind();
 	};

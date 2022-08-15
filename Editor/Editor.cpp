@@ -675,12 +675,12 @@ void EditorComponent::Update(float dt)
 			if (!wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
 			{
 				// Only move camera if control not pressed
-				if (wi::input::Down((wi::input::BUTTON)'A') || wi::input::Down(wi::input::GAMEPAD_BUTTON_LEFT)) { moveNew += XMVectorSet(-1, 0, 0, 0); }
-				if (wi::input::Down((wi::input::BUTTON)'D') || wi::input::Down(wi::input::GAMEPAD_BUTTON_RIGHT)) { moveNew += XMVectorSet(1, 0, 0, 0); }
-				if (wi::input::Down((wi::input::BUTTON)'W') || wi::input::Down(wi::input::GAMEPAD_BUTTON_UP)) { moveNew += XMVectorSet(0, 0, 1, 0); }
-				if (wi::input::Down((wi::input::BUTTON)'S') || wi::input::Down(wi::input::GAMEPAD_BUTTON_DOWN)) { moveNew += XMVectorSet(0, 0, -1, 0); }
-				if (wi::input::Down((wi::input::BUTTON)'E') || wi::input::Down(wi::input::GAMEPAD_BUTTON_2)) { moveNew += XMVectorSet(0, 1, 0, 0); }
-				if (wi::input::Down((wi::input::BUTTON)'Q') || wi::input::Down(wi::input::GAMEPAD_BUTTON_1)) { moveNew += XMVectorSet(0, -1, 0, 0); }
+				if (wi::input::Down(wi::input::KEY('A')) || wi::input::Down(wi::input::GAMEPAD_BUTTON_LEFT)) { moveNew += XMVectorSet(-1, 0, 0, 0); }
+				if (wi::input::Down(wi::input::KEY('D')) || wi::input::Down(wi::input::GAMEPAD_BUTTON_RIGHT)) { moveNew += XMVectorSet(1, 0, 0, 0); }
+				if (wi::input::Down(wi::input::KEY('W')) || wi::input::Down(wi::input::GAMEPAD_BUTTON_UP)) { moveNew += XMVectorSet(0, 0, 1, 0); }
+				if (wi::input::Down(wi::input::KEY('S')) || wi::input::Down(wi::input::GAMEPAD_BUTTON_DOWN)) { moveNew += XMVectorSet(0, 0, -1, 0); }
+				if (wi::input::Down(wi::input::KEY('E')) || wi::input::Down(wi::input::GAMEPAD_BUTTON_2)) { moveNew += XMVectorSet(0, 1, 0, 0); }
+				if (wi::input::Down(wi::input::KEY('Q')) || wi::input::Down(wi::input::GAMEPAD_BUTTON_1)) { moveNew += XMVectorSet(0, -1, 0, 0); }
 				moveNew += XMVector3Normalize(moveNew);
 			}
 			moveNew *= speed;
@@ -734,7 +734,7 @@ void EditorComponent::Update(float dt)
 			editorscene.camera_transform.UpdateTransform_Parented(editorscene.camera_target);
 		}
 
-		inspector_mode = wi::input::Down((wi::input::BUTTON)'I');
+		inspector_mode = wi::input::Down(wi::input::KEY('I'));
 
 		// Begin picking:
 		unsigned int pickMask = optionsWnd.rendererWnd.GetPickType();
@@ -1127,18 +1127,18 @@ void EditorComponent::Update(float dt)
 	if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
 	{
 		// Color Grading helper
-		if (wi::input::Down((wi::input::BUTTON)'G'))
+		if (wi::input::Down(wi::input::KEY('G')))
 		{
 			main->infoDisplay.colorgrading_helper = true;
 		}
 		// Toggle wireframe mode
-		if (wi::input::Press((wi::input::BUTTON)'W'))
+		if (wi::input::Press(wi::input::KEY('W')))
 		{
 			wi::renderer::SetWireRender(!wi::renderer::IsWireRender());
 			optionsWnd.rendererWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
 		}
 		// Enable transform tool
-		if (wi::input::Press((wi::input::BUTTON)'T'))
+		if (wi::input::Press(wi::input::KEY('T')))
 		{
 			translator.SetEnabled(!translator.IsEnabled());
 			optionsWnd.isTranslatorCheckBox.SetCheck(translator.isTranslator);
@@ -1146,7 +1146,7 @@ void EditorComponent::Update(float dt)
 			optionsWnd.isScalatorCheckBox.SetCheck(translator.isScalator);
 		}
 		// Save
-		if (wi::input::Press((wi::input::BUTTON)'S'))
+		if (wi::input::Press(wi::input::KEY('S')))
 		{
 			if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || GetCurrentEditorScene().path.empty())
 			{
@@ -1158,12 +1158,12 @@ void EditorComponent::Update(float dt)
 			}
 		}
 		// Select All
-		if (wi::input::Press((wi::input::BUTTON)'A'))
+		if (wi::input::Press(wi::input::KEY('A')))
 		{
 			selectAll = true;
 		}
 		// Copy/Cut
-		if (wi::input::Press((wi::input::BUTTON)'C') || wi::input::Press((wi::input::BUTTON)'X'))
+		if (wi::input::Press(wi::input::KEY('C')) || wi::input::Press(wi::input::KEY('X')))
 		{
 			auto& prevSel = translator.selectedEntitiesNonRecursive;
 
@@ -1175,13 +1175,13 @@ void EditorComponent::Update(float dt)
 				scene.Entity_Serialize(clipboard, seri, x);
 			}
 
-			if (wi::input::Press((wi::input::BUTTON)'X'))
+			if (wi::input::Press(wi::input::KEY('X')))
 			{
 				deleting = true;
 			}
 		}
 		// Paste
-		if (wi::input::Press((wi::input::BUTTON)'V'))
+		if (wi::input::Press(wi::input::KEY('V')))
 		{
 			wi::Archive& archive = AdvanceHistory();
 			archive << HISTORYOP_ADD;
@@ -1208,7 +1208,7 @@ void EditorComponent::Update(float dt)
 			optionsWnd.RefreshEntityTree();
 		}
 		// Duplicate Instances
-		if (wi::input::Press((wi::input::BUTTON)'D'))
+		if (wi::input::Press(wi::input::KEY('D')))
 		{
 			wi::Archive& archive = AdvanceHistory();
 			archive << HISTORYOP_ADD;
@@ -1282,14 +1282,14 @@ void EditorComponent::Update(float dt)
 			optionsWnd.RefreshEntityTree();
 	}
 		// Undo
-		if (wi::input::Press((wi::input::BUTTON)'Z'))
+		if (wi::input::Press(wi::input::KEY('Z')))
 		{
 			ConsumeHistoryOperation(true);
 
 			optionsWnd.RefreshEntityTree();
 		}
 		// Redo
-		if (wi::input::Press((wi::input::BUTTON)'Y'))
+		if (wi::input::Press(wi::input::KEY('Y')))
 		{
 			ConsumeHistoryOperation(false);
 
