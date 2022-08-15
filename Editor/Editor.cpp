@@ -292,11 +292,12 @@ void EditorComponent::Load()
 	openButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
-		params.description = ".wiscene, .obj, .gltf, .glb, .lua";
+		params.description = ".wiscene, .obj, .gltf, .glb, .vrm, .lua";
 		params.extensions.push_back("wiscene");
 		params.extensions.push_back("obj");
 		params.extensions.push_back("gltf");
 		params.extensions.push_back("glb");
+		params.extensions.push_back("vrm");
 		params.extensions.push_back("lua");
 		wi::helper::FileDialog(params, [&](std::string fileName) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
@@ -331,7 +332,7 @@ void EditorComponent::Load()
 						ImportModel_GLTF(fileName, scene);
 						GetCurrentScene().Merge(scene);
 					}
-					else if (!extension.compare("GLB")) // binary gltf
+					else if (!extension.compare("GLB") || !extension.compare("VRM")) // binary gltf
 					{
 						Scene scene;
 						ImportModel_GLTF(fileName, scene);
@@ -489,7 +490,7 @@ void EditorComponent::Load()
 		ss += "\nTips\n";
 		ss += "-------\n";
 		ss += "You can find sample scenes in the Content/models directory. Try to load one.\n";
-		ss += "You can also import models from .OBJ, .GLTF, .GLB files.\n";
+		ss += "You can also import models from .OBJ, .GLTF, .GLB, .VRM files.\n";
 #ifndef PLATFORM_UWP
 		ss += "You can find a program configuration file at Editor/config.ini\n";
 #endif // PLATFORM_UWP

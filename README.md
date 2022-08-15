@@ -189,6 +189,7 @@ The native model format is the <b>WISCENE</b> format. Any application using Wick
 In addition, the Editor supports the importing of some common model formats (the list will potentially grow): 
 - <b>OBJ</b>
 - <b>GLTF 2.0</b>
+- <b>VRM</b>
 
 The preferred workflow is to import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
 
