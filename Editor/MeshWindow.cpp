@@ -510,9 +510,9 @@ void MeshWindow::Create(EditorComponent* _editor)
 	morphTargetCombo.SetPos(XMFLOAT2(x, y += step));
 	morphTargetCombo.OnSelect([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
-		if (mesh != nullptr && args.iValue < (int)mesh->targets.size())
+		if (mesh != nullptr && args.iValue < (int)mesh->morph_targets.size())
 		{
-			morphTargetSlider.SetValue(mesh->targets[args.iValue].weight);
+			morphTargetSlider.SetValue(mesh->morph_targets[args.iValue].weight);
 		}
 	});
 	morphTargetCombo.SetTooltip("Choose a morph target to edit weight.");
@@ -524,9 +524,9 @@ void MeshWindow::Create(EditorComponent* _editor)
 	morphTargetSlider.SetPos(XMFLOAT2(x, y += step));
 	morphTargetSlider.OnSlide([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
-		if (mesh != nullptr && morphTargetCombo.GetSelected() < (int)mesh->targets.size())
+		if (mesh != nullptr && morphTargetCombo.GetSelected() < (int)mesh->morph_targets.size())
 		{
-			mesh->targets[morphTargetCombo.GetSelected()].weight = args.fValue;
+			mesh->morph_targets[morphTargetCombo.GetSelected()].weight = args.fValue;
 			mesh->dirty_morph = true;
 		}
 	});
@@ -761,17 +761,17 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 
 		uint8_t selected = morphTargetCombo.GetSelected();
 		morphTargetCombo.ClearItems();
-		for (size_t i = 0; i < mesh->targets.size(); i++)
+		for (size_t i = 0; i < mesh->morph_targets.size(); i++)
 		{
 			morphTargetCombo.AddItem(std::to_string(i).c_str());
 		}
-		if (selected < mesh->targets.size())
+		if (selected < mesh->morph_targets.size())
 		{
 			morphTargetCombo.SetSelected(selected);
 		}
 		SetEnabled(true);
 
-		if (mesh->targets.empty())
+		if (mesh->morph_targets.empty())
 		{
 			morphTargetCombo.SetEnabled(false);
 			morphTargetSlider.SetEnabled(false);

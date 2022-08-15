@@ -266,12 +266,12 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								ObjectComponent* object = scene.objects.GetComponent(channel.target);
 								mesh = scene.meshes.GetComponent(object->meshID);
 							}
-							if (mesh != nullptr && !mesh->targets.empty())
+							if (mesh != nullptr && !mesh->morph_targets.empty())
 							{
 								int idx = 0;
-								for (const MeshComponent::MeshMorphTarget& morph : mesh->targets)
+								for (const MeshComponent::MorphTarget& morph : mesh->morph_targets)
 								{
-									animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * mesh->targets.size() + idx]);
+									animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * mesh->morph_targets.size() + idx]);
 									idx++;
 								}
 							}
@@ -429,9 +429,9 @@ void AnimationWindow::Create(EditorComponent* _editor)
 									mesh = scene.meshes.GetComponent(object->meshID);
 									channel.target = selected.entity;
 								}
-								if (mesh != nullptr && !mesh->targets.empty())
+								if (mesh != nullptr && !mesh->morph_targets.empty())
 								{
-									for (const MeshComponent::MeshMorphTarget& morph : mesh->targets)
+									for (const MeshComponent::MorphTarget& morph : mesh->morph_targets)
 									{
 										animation_data->keyframe_data.push_back(morph.weight);
 									}
@@ -592,7 +592,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 							if (mesh != nullptr)
 							{
 								animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
-								animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * mesh->targets.size(), animation_data->keyframe_data.begin() + timeIndex * mesh->targets.size() + mesh->targets.size());
+								animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * mesh->morph_targets.size(), animation_data->keyframe_data.begin() + timeIndex * mesh->morph_targets.size() + mesh->morph_targets.size());
 							}
 						}
 						break;
