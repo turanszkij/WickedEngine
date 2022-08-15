@@ -3294,7 +3294,6 @@ namespace wi::scene
 
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
 			size_t parent_index = hier == nullptr ? ~0ull : transforms.GetIndex(hier->parentID);
-			//TransformComponent* parent_transform = hier == nullptr ? nullptr : transforms.GetComponent(hier->parentID);
 			if (parent_index != ~0ull)
 			{
 				// Spring hierarchy resolve depends on spring component order!
@@ -3358,7 +3357,7 @@ namespace wi::scene
 		{
 			for (size_t i = 0; i < transforms.GetCount(); ++i)
 			{
-				// IK shouldn't modify local space, so only update the world matrices!
+				// Springs shouldn't modify local space, so only update the world matrices!
 				transforms[i].world = transforms_temp[i].world;
 			}
 		}
