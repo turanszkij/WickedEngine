@@ -2025,7 +2025,10 @@ namespace wi::scene
 	}
 	void Scene::Clear()
 	{
-		componentLibrary.Clear();
+		for(auto& componentManager : componentLibrary.componentManagers)
+		{
+			componentManager->Clear();
+		}
 
 		TLAS = RaytracingAccelerationStructure();
 		BVH.Clear();
@@ -2042,14 +2045,18 @@ namespace wi::scene
 	}
 	void Scene::Merge(Scene& other)
 	{
-		componentLibrary.Merge(other.componentLibrary);
+		for(size_t i = 0; i < other.componentLibrary.componentManagers.size(); ++i){
+			auto& other_compmgr = *other.componentLibrary.componentManagers[i];
+			componentLibrary.componentManagers[i]->Merge(other_compmgr);
+		}
 
 		bounds = AABB::Merge(bounds, other.bounds);
 	}
 	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
 	{
-		auto& entity_list = componentLibrary.GetEntityArray();
-		entities.insert(entity_list.begin(), entity_list.end());
+		for(auto& componentManager : componentLibrary.componentManagers){
+			entities.insert(componentManager->GetEntityArray().begin(),componentManager->GetEntityArray().end());
+		}
 	}
 
 	void Scene::Entity_Remove(Entity entity, bool recursive)
@@ -2072,7 +2079,9 @@ namespace wi::scene
 			}
 		}
 
-		componentLibrary.Remove(entity);
+		for(auto& componentManager : componentLibrary.componentManagers){
+			componentManager->Remove(entity);
+		}
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)
 	{

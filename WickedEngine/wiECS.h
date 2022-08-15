@@ -428,73 +428,11 @@ namespace wi::ecs
 
 
 		// Bulk operations
-
-		// Clear the whole library
-		inline void Clear(){
-			for(auto& componentManager : componentManagers)
-			{
-				componentManager->Clear();
-			}
-		}
-
 		// Perform deep copy of all the contents of "other" into this
 		inline void Copy(const ComponentLibrary& other){
 			for(size_t i = 0; i < other.componentManagers.size(); ++i){
 				auto& other_compmgr = *other.componentManagers[i];
 				componentManagers[i]->Copy(other_compmgr);
-			}
-		}
-
-		// Merge in an other component manager library of the same type to this. 
-		//	The other component manager MUST NOT contain any of the same entities!
-		//	The other component manager is not retained after this operation!
-		inline void Merge(ComponentLibrary& other){
-			for(size_t i = 0; i < other.componentManagers.size(); ++i){
-				auto& other_compmgr = *other.componentManagers[i];
-				componentManagers[i]->Merge(other_compmgr);
-			}
-		}
-
-		// Serialize the whole library
-		inline void Serialize(wi::Archive& archive, EntitySerializer& seri){
-			for(auto& componentManager : componentManagers){
-				if(archive.IsReadMode())
-				{
-					uint64_t getLibraryVersion;
-					bool exist;
-					archive >> getLibraryVersion;
-					archive >> exist;
-					if(exist && (libraryVersion >= getLibraryVersion)){
-						componentManager->Serialize(archive, seri);
-					}
-				}
-				else
-				{
-					archive << libraryVersion;
-					archive << true;
-					componentManager->Serialize(archive, seri);
-				}
-			}
-		}
-
-		// Serialize the one entity and all of the components registered in this library
-		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri){
-			for(auto& componentManager : componentManagers){
-				componentManager->Component_Serialize(entity, archive, seri);
-			}
-		}
-
-		// Remove an entity from the library
-		inline void Remove(Entity entity){
-			for(auto& componentManager : componentManagers){
-				componentManager->Remove(entity);
-			}
-		}
-
-		// Remove an entity from the library while keeping the current ordering
-		inline void Remove_KeepSorted(Entity entity){
-			for(auto& componentManager : componentManagers){
-				componentManager->Remove_KeepSorted(entity);
 			}
 		}
 
@@ -506,15 +444,6 @@ namespace wi::ecs
 				if (contains) break;
 			}
 			return contains;
-		}
-
-		// Returns the tightly packed [read only] entity array
-		inline const wi::unordered_set<wi::ecs::Entity>& GetEntityArray() const{
-			std::shared_ptr<wi::unordered_set<wi::ecs::Entity>> entities = std::make_shared<wi::unordered_set<wi::ecs::Entity>>();
-			for(auto& componentManager : componentManagers){
-				entities->insert(componentManager->GetEntityArray().begin(),componentManager->GetEntityArray().end());
-			}
-			return *entities.get();
 		}
 	};
 }

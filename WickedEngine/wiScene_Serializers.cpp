@@ -1408,7 +1408,24 @@ namespace wi::scene
 
 		if(archive.GetVersion() >= 84)
 		{
-			componentLibrary.Serialize(archive, seri);
+			for(auto& componentManager : componentLibrary.componentManagers){
+				if(archive.IsReadMode())
+				{
+					uint64_t getLibraryVersion;
+					bool exist;
+					archive >> getLibraryVersion;
+					archive >> exist;
+					if(exist && (componentLibrary.libraryVersion >= getLibraryVersion)){
+						componentManager->Serialize(archive, seri);
+					}
+				}
+				else
+				{
+					archive << componentLibrary.libraryVersion;
+					archive << true;
+					componentManager->Serialize(archive, seri);
+				}
+			}
 		}
 		else
 		{
@@ -1501,7 +1518,10 @@ namespace wi::scene
 		
 		if (archive.GetVersion() >= 84)
 		{
-			componentLibrary.Entity_Serialize(entity, archive, seri);
+			for(auto& componentManager : componentLibrary.componentManagers){
+				componentManager->Component_Serialize(entity, archive, seri);
+			}
+
 			if (archive.IsReadMode())
 			{
 				// Wait the job system, because from this point, component managers could be resized
