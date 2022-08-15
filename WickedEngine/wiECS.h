@@ -422,7 +422,7 @@ namespace wi::ecs
 		// Create an instance of ComponentManager of a certain data type
 		// Once added, cannot be removed!
 		template<typename T> inline ComponentManager<T>& Register(){
-			componentManagers.push_back(new ComponentManager<T>);
+			componentManagers.push_back(std::make_unique<ComponentManager<T>>());
 			return static_cast<ComponentManager<T>&>(*componentManagers.back());
 		}
 
