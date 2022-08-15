@@ -4,11 +4,14 @@
 #include "wiArchive.h"
 #include "wiJobSystem.h"
 #include "wiUnorderedMap.h"
+#include "wiUnorderedSet.h"
 #include "wiVector.h"
 
 #include <cstdint>
 #include <cassert>
 #include <atomic>
+#include <any>
+#include <memory>
 
 // Entity-Component System
 namespace wi::ecs
@@ -70,9 +73,35 @@ namespace wi::ecs
 		}
 	}
 
+	// To make sure your component is able to be serialized, inherit this struct!
+	// A Must if you work with ComponentManager
+	struct Component_Serializable{
+		virtual void Serialize(wi::Archive& archive, EntitySerializer& seri) = 0;	
+	};
+
+	// This is an interface class to implement a ComponentManager, 
+	// inherit this class if you want to work with ComponentLibrary
+	class ComponentManager_Interface
+	{
+	public:
+		virtual void Copy(const ComponentManager_Interface& other) = 0;
+		virtual void Merge(ComponentManager_Interface& other) = 0;
+		virtual void Clear() = 0;
+		virtual void Serialize(wi::Archive& archive, EntitySerializer& seri) = 0;
+		virtual void Component_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri) = 0;
+		virtual void Remove(Entity entity) = 0;
+		virtual void Remove_KeepSorted(Entity entity) = 0;
+		virtual void MoveItem(size_t index_from, size_t index_to) = 0;
+		virtual bool Contains(Entity entity) const = 0;
+		virtual size_t GetIndex(Entity entity) const = 0;
+		virtual size_t GetCount() const = 0;
+		virtual Entity GetEntity(size_t index) const = 0;
+		virtual const wi::vector<Entity>& GetEntityArray() const = 0;
+	};
+
 	// The ComponentManager is a container that stores components and matches them with entities
 	template<typename Component>
-	class ComponentManager
+	class ComponentManager : public ComponentManager_Interface
 	{
 	public:
 
@@ -122,6 +151,14 @@ namespace wi::ecs
 			other.Clear();
 		}
 
+		inline void Copy(const ComponentManager_Interface& other){
+			Copy((ComponentManager<Component>&)other);
+		}
+
+		inline void Merge(ComponentManager_Interface& other){
+			Merge((ComponentManager<Component>&)other);
+		}
+
 		// Read/Write everything to an archive depending on the archive state
 		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
 		{
@@ -157,6 +194,34 @@ namespace wi::ecs
 				for (Entity entity : entities)
 				{
 					SerializeEntity(archive, entity, seri);
+				}
+			}
+		}
+
+		//Read/write one single component onto an archive, make sure entity are serialized first
+		inline void Component_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
+		{
+			if (archive.IsReadMode())
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = this->Create(entity);
+					component.Serialize(archive, seri);
+				}
+			}
+			else
+			{
+				auto component = this->GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seri);
+				}
+				else
+				{
+					archive << false;
 				}
 			}
 		}
@@ -345,6 +410,119 @@ namespace wi::ecs
 
 		// Disallow this to be copied by mistake
 		ComponentManager(const ComponentManager&) = delete;
+	};
+
+	// This is the class to store all ComponentManagers,
+	// this is useful for bulk operation of all attached components within an entity
+	class ComponentLibrary{
+	public:
+		uint64_t libraryVersion;
+		wi::vector<ComponentManager_Interface*> componentManagers;
+
+		//Create a Component Library and set up its version
+		ComponentLibrary(uint64_t iLibraryVersion = 0){ libraryVersion = iLibraryVersion; }
+
+		// Set library version, making sure different changes 
+		// between your component library are able to be serialized properly
+		void SetLibraryVersion(uint64_t& iLibraryVersion){ libraryVersion = iLibraryVersion; }
+
+		// Create an instance of ComponentManager of a certain data type
+		// Once added, cannot be removed!
+		template<typename T> inline ComponentManager<T>& Add(){
+			componentManagers.push_back(new ComponentManager<T>);
+			return static_cast<ComponentManager<T>&>(*componentManagers.back());
+		}
+
+
+		// Bulk operations
+
+		// Clear the whole library
+		inline void Clear(){
+			for(auto& componentManager : componentManagers)
+			{
+				componentManager->Clear();
+			}
+		}
+
+		// Perform deep copy of all the contents of "other" into this
+		inline void Copy(const ComponentLibrary& other){
+			for(size_t i = 0; i < other.componentManagers.size(); ++i){
+				auto& other_compmgr = *other.componentManagers[i];
+				componentManagers[i]->Copy(other_compmgr);
+			}
+		}
+
+		// Merge in an other component manager library of the same type to this. 
+		//	The other component manager MUST NOT contain any of the same entities!
+		//	The other component manager is not retained after this operation!
+		inline void Merge(ComponentLibrary& other){
+			for(size_t i = 0; i < other.componentManagers.size(); ++i){
+				auto& other_compmgr = *other.componentManagers[i];
+				componentManagers[i]->Merge(other_compmgr);
+			}
+		}
+
+		// Serialize the whole library
+		inline void Serialize(wi::Archive& archive, EntitySerializer& seri){
+			for(auto& componentManager : componentManagers){
+				if(archive.IsReadMode())
+				{
+					uint64_t getLibraryVersion;
+					bool exist;
+					archive >> getLibraryVersion;
+					archive >> exist;
+					if(exist && (libraryVersion >= getLibraryVersion)){
+						componentManager->Serialize(archive, seri);
+					}
+				}
+				else
+				{
+					archive << libraryVersion;
+					archive << true;
+					componentManager->Serialize(archive, seri);
+				}
+			}
+		}
+
+		// Serialize the one entity and all of the components registered in this library
+		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri){
+			for(auto& componentManager : componentManagers){
+				componentManager->Component_Serialize(entity, archive, seri);
+			}
+		}
+
+		// Remove an entity from the library
+		inline void Remove(Entity entity){
+			for(auto& componentManager : componentManagers){
+				componentManager->Remove(entity);
+			}
+		}
+
+		// Remove an entity from the library while keeping the current ordering
+		inline void Remove_KeepSorted(Entity entity){
+			for(auto& componentManager : componentManagers){
+				componentManager->Remove_KeepSorted(entity);
+			}
+		}
+
+		// Check if any component exists for a given entity or not
+		inline bool Contains(Entity entity) const{
+			bool contains = false;
+			for(auto& componentManager : componentManagers){
+				contains = componentManager->Contains(entity);
+				if (contains) break;
+			}
+			return contains;
+		}
+
+		// Returns the tightly packed [read only] entity array
+		inline const wi::unordered_set<wi::ecs::Entity>& GetEntityArray() const{
+			std::shared_ptr<wi::unordered_set<wi::ecs::Entity>> entities = std::make_shared<wi::unordered_set<wi::ecs::Entity>>();
+			for(auto& componentManager : componentManagers){
+				entities->insert(componentManager->GetEntityArray().begin(),componentManager->GetEntityArray().end());
+			}
+			return *entities.get();
+		}
 	};
 }
 

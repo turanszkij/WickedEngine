@@ -29,7 +29,7 @@ namespace wi
 
 namespace wi::scene
 {
-	struct NameComponent
+	struct NameComponent : public wi::ecs::Component_Serializable
 	{
 		std::string name;
 
@@ -40,7 +40,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct LayerComponent
+	struct LayerComponent : public wi::ecs::Component_Serializable
 	{
 		uint32_t layerMask = ~0u;
 
@@ -52,7 +52,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 	
-	struct TransformComponent
+	struct TransformComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -106,7 +106,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct HierarchyComponent
+	struct HierarchyComponent : public wi::ecs::Component_Serializable
 	{
 		wi::ecs::Entity parentID = wi::ecs::INVALID_ENTITY;
 		uint32_t layerMask_bind; // saved child layermask at the time of binding
@@ -114,7 +114,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct MaterialComponent
+	struct MaterialComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -323,7 +323,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct MeshComponent
+	struct MeshComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -608,7 +608,7 @@ namespace wi::scene
 
 	};
 
-	struct ImpostorComponent
+	struct ImpostorComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -629,7 +629,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ObjectComponent
+	struct ObjectComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -718,7 +718,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct RigidBodyPhysicsComponent
+	struct RigidBodyPhysicsComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -775,7 +775,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct SoftBodyPhysicsComponent
+	struct SoftBodyPhysicsComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -811,7 +811,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ArmatureComponent
+	struct ArmatureComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -834,7 +834,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct LightComponent
+	struct LightComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -922,7 +922,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct CameraComponent
+	struct CameraComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -993,7 +993,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct EnvironmentProbeComponent
+	struct EnvironmentProbeComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -1022,7 +1022,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ForceFieldComponent
+	struct ForceFieldComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -1043,7 +1043,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct DecalComponent
+	struct DecalComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -1067,7 +1067,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct AnimationDataComponent
+	struct AnimationDataComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -1081,7 +1081,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct AnimationComponent
+	struct AnimationComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -1163,7 +1163,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct WeatherComponent
+	struct WeatherComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -1227,7 +1227,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct SoundComponent
+	struct SoundComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -1255,7 +1255,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct InverseKinematicsComponent
+	struct InverseKinematicsComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -1274,7 +1274,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct SpringComponent
+	struct SpringComponent : public wi::ecs::Component_Serializable
 	{
 		enum FLAGS
 		{
@@ -1309,34 +1309,36 @@ namespace wi::scene
 
 	struct Scene
 	{
-		wi::ecs::ComponentManager<NameComponent> names;
-		wi::ecs::ComponentManager<LayerComponent> layers;
-		wi::ecs::ComponentManager<TransformComponent> transforms;
-		wi::ecs::ComponentManager<HierarchyComponent> hierarchy;
-		wi::ecs::ComponentManager<MaterialComponent> materials;
-		wi::ecs::ComponentManager<MeshComponent> meshes;
-		wi::ecs::ComponentManager<ImpostorComponent> impostors;
-		wi::ecs::ComponentManager<ObjectComponent> objects;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_objects;
-		wi::ecs::ComponentManager<RigidBodyPhysicsComponent> rigidbodies;
-		wi::ecs::ComponentManager<SoftBodyPhysicsComponent> softbodies;
-		wi::ecs::ComponentManager<ArmatureComponent> armatures;
-		wi::ecs::ComponentManager<LightComponent> lights;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_lights;
-		wi::ecs::ComponentManager<CameraComponent> cameras;
-		wi::ecs::ComponentManager<EnvironmentProbeComponent> probes;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_probes;
-		wi::ecs::ComponentManager<ForceFieldComponent> forces;
-		wi::ecs::ComponentManager<DecalComponent> decals;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_decals;
-		wi::ecs::ComponentManager<AnimationComponent> animations;
-		wi::ecs::ComponentManager<AnimationDataComponent> animation_datas;
-		wi::ecs::ComponentManager<EmittedParticleSystem> emitters;
-		wi::ecs::ComponentManager<HairParticleSystem> hairs;
-		wi::ecs::ComponentManager<WeatherComponent> weathers;
-		wi::ecs::ComponentManager<SoundComponent> sounds;
-		wi::ecs::ComponentManager<InverseKinematicsComponent> inverse_kinematics;
-		wi::ecs::ComponentManager<SpringComponent> springs;
+		wi::ecs::ComponentLibrary componentLibrary;
+
+		wi::ecs::ComponentManager<NameComponent>& names = componentLibrary.Add<NameComponent>();
+		wi::ecs::ComponentManager<LayerComponent>& layers = componentLibrary.Add<LayerComponent>();;
+		wi::ecs::ComponentManager<TransformComponent>& transforms = componentLibrary.Add<TransformComponent>();
+		wi::ecs::ComponentManager<HierarchyComponent>& hierarchy = componentLibrary.Add<HierarchyComponent>();
+		wi::ecs::ComponentManager<MaterialComponent>& materials = componentLibrary.Add<MaterialComponent>();
+		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Add<MeshComponent>();
+		wi::ecs::ComponentManager<ImpostorComponent>& impostors = componentLibrary.Add<ImpostorComponent>();
+		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Add<ObjectComponent>();
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_objects = componentLibrary.Add<wi::primitive::AABB>();
+		wi::ecs::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies = componentLibrary.Add<RigidBodyPhysicsComponent>();
+		wi::ecs::ComponentManager<SoftBodyPhysicsComponent>& softbodies = componentLibrary.Add<SoftBodyPhysicsComponent>();
+		wi::ecs::ComponentManager<ArmatureComponent>& armatures = componentLibrary.Add<ArmatureComponent>();
+		wi::ecs::ComponentManager<LightComponent>& lights = componentLibrary.Add<LightComponent>();
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_lights = componentLibrary.Add<wi::primitive::AABB>();
+		wi::ecs::ComponentManager<CameraComponent>& cameras = componentLibrary.Add<CameraComponent>();
+		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = componentLibrary.Add<EnvironmentProbeComponent>();
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_probes = componentLibrary.Add<wi::primitive::AABB>();
+		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Add<ForceFieldComponent>();
+		wi::ecs::ComponentManager<DecalComponent>& decals = componentLibrary.Add<DecalComponent>();
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_decals = componentLibrary.Add<wi::primitive::AABB>();
+		wi::ecs::ComponentManager<AnimationComponent>& animations = componentLibrary.Add<AnimationComponent>();
+		wi::ecs::ComponentManager<AnimationDataComponent>& animation_datas = componentLibrary.Add<AnimationDataComponent>();
+		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = componentLibrary.Add<EmittedParticleSystem>();
+		wi::ecs::ComponentManager<HairParticleSystem>& hairs = componentLibrary.Add<HairParticleSystem>();
+		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Add<WeatherComponent>();
+		wi::ecs::ComponentManager<SoundComponent>& sounds = componentLibrary.Add<SoundComponent>();
+		wi::ecs::ComponentManager<InverseKinematicsComponent>& inverse_kinematics = componentLibrary.Add<InverseKinematicsComponent>();
+		wi::ecs::ComponentManager<SpringComponent>& springs = componentLibrary.Add<SpringComponent>();
 
 		// Non-serialized attributes:
 		float dt = 0;

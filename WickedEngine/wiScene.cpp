@@ -2025,34 +2025,7 @@ namespace wi::scene
 	}
 	void Scene::Clear()
 	{
-		names.Clear();
-		layers.Clear();
-		transforms.Clear();
-		hierarchy.Clear();
-		materials.Clear();
-		meshes.Clear();
-		impostors.Clear();
-		objects.Clear();
-		aabb_objects.Clear();
-		rigidbodies.Clear();
-		softbodies.Clear();
-		armatures.Clear();
-		lights.Clear();
-		aabb_lights.Clear();
-		cameras.Clear();
-		probes.Clear();
-		aabb_probes.Clear();
-		forces.Clear();
-		decals.Clear();
-		aabb_decals.Clear();
-		animations.Clear();
-		animation_datas.Clear();
-		emitters.Clear();
-		hairs.Clear();
-		weathers.Clear();
-		sounds.Clear();
-		inverse_kinematics.Clear();
-		springs.Clear();
+		componentLibrary.Clear();
 
 		TLAS = RaytracingAccelerationStructure();
 		BVH.Clear();
@@ -2069,67 +2042,14 @@ namespace wi::scene
 	}
 	void Scene::Merge(Scene& other)
 	{
-		names.Merge(other.names);
-		layers.Merge(other.layers);
-		transforms.Merge(other.transforms);
-		hierarchy.Merge(other.hierarchy);
-		materials.Merge(other.materials);
-		meshes.Merge(other.meshes);
-		impostors.Merge(other.impostors);
-		objects.Merge(other.objects);
-		aabb_objects.Merge(other.aabb_objects);
-		rigidbodies.Merge(other.rigidbodies);
-		softbodies.Merge(other.softbodies);
-		armatures.Merge(other.armatures);
-		lights.Merge(other.lights);
-		aabb_lights.Merge(other.aabb_lights);
-		cameras.Merge(other.cameras);
-		probes.Merge(other.probes);
-		aabb_probes.Merge(other.aabb_probes);
-		forces.Merge(other.forces);
-		decals.Merge(other.decals);
-		aabb_decals.Merge(other.aabb_decals);
-		animations.Merge(other.animations);
-		animation_datas.Merge(other.animation_datas);
-		emitters.Merge(other.emitters);
-		hairs.Merge(other.hairs);
-		weathers.Merge(other.weathers);
-		sounds.Merge(other.sounds);
-		inverse_kinematics.Merge(other.inverse_kinematics);
-		springs.Merge(other.springs);
+		componentLibrary.Merge(other.componentLibrary);
 
 		bounds = AABB::Merge(bounds, other.bounds);
 	}
 	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
 	{
-		entities.insert(names.GetEntityArray().begin(), names.GetEntityArray().end());
-		entities.insert(layers.GetEntityArray().begin(), layers.GetEntityArray().end());
-		entities.insert(transforms.GetEntityArray().begin(), transforms.GetEntityArray().end());
-		entities.insert(hierarchy.GetEntityArray().begin(), hierarchy.GetEntityArray().end());
-		entities.insert(materials.GetEntityArray().begin(), materials.GetEntityArray().end());
-		entities.insert(meshes.GetEntityArray().begin(), meshes.GetEntityArray().end());
-		entities.insert(impostors.GetEntityArray().begin(), impostors.GetEntityArray().end());
-		entities.insert(objects.GetEntityArray().begin(), objects.GetEntityArray().end());
-		entities.insert(aabb_objects.GetEntityArray().begin(), aabb_objects.GetEntityArray().end());
-		entities.insert(rigidbodies.GetEntityArray().begin(), rigidbodies.GetEntityArray().end());
-		entities.insert(softbodies.GetEntityArray().begin(), softbodies.GetEntityArray().end());
-		entities.insert(armatures.GetEntityArray().begin(), armatures.GetEntityArray().end());
-		entities.insert(lights.GetEntityArray().begin(), lights.GetEntityArray().end());
-		entities.insert(aabb_lights.GetEntityArray().begin(), aabb_lights.GetEntityArray().end());
-		entities.insert(cameras.GetEntityArray().begin(), cameras.GetEntityArray().end());
-		entities.insert(probes.GetEntityArray().begin(), probes.GetEntityArray().end());
-		entities.insert(aabb_probes.GetEntityArray().begin(), aabb_probes.GetEntityArray().end());
-		entities.insert(forces.GetEntityArray().begin(), forces.GetEntityArray().end());
-		entities.insert(decals.GetEntityArray().begin(), decals.GetEntityArray().end());
-		entities.insert(aabb_decals.GetEntityArray().begin(), aabb_decals.GetEntityArray().end());
-		entities.insert(animations.GetEntityArray().begin(), animations.GetEntityArray().end());
-		entities.insert(animation_datas.GetEntityArray().begin(), animation_datas.GetEntityArray().end());
-		entities.insert(emitters.GetEntityArray().begin(), emitters.GetEntityArray().end());
-		entities.insert(hairs.GetEntityArray().begin(), hairs.GetEntityArray().end());
-		entities.insert(weathers.GetEntityArray().begin(), weathers.GetEntityArray().end());
-		entities.insert(sounds.GetEntityArray().begin(), sounds.GetEntityArray().end());
-		entities.insert(inverse_kinematics.GetEntityArray().begin(), inverse_kinematics.GetEntityArray().end());
-		entities.insert(springs.GetEntityArray().begin(), springs.GetEntityArray().end());
+		auto& entity_list = componentLibrary.GetEntityArray();
+		entities.insert(entity_list.begin(), entity_list.end());
 	}
 
 	void Scene::Entity_Remove(Entity entity, bool recursive)
@@ -2152,34 +2072,7 @@ namespace wi::scene
 			}
 		}
 
-		names.Remove(entity);
-		layers.Remove(entity);
-		transforms.Remove(entity);
-		hierarchy.Remove(entity);
-		materials.Remove(entity);
-		meshes.Remove(entity);
-		impostors.Remove(entity);
-		objects.Remove(entity);
-		aabb_objects.Remove(entity);
-		rigidbodies.Remove(entity);
-		softbodies.Remove(entity);
-		armatures.Remove(entity);
-		lights.Remove(entity);
-		aabb_lights.Remove(entity);
-		cameras.Remove(entity);
-		probes.Remove(entity);
-		aabb_probes.Remove(entity);
-		forces.Remove(entity);
-		decals.Remove(entity);
-		aabb_decals.Remove(entity);
-		animations.Remove(entity);
-		animation_datas.Remove(entity);
-		emitters.Remove(entity);
-		hairs.Remove(entity);
-		weathers.Remove(entity);
-		sounds.Remove(entity);
-		inverse_kinematics.Remove(entity);
-		springs.Remove(entity);
+		componentLibrary.Remove(entity);
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)
 	{
