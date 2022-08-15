@@ -52,6 +52,16 @@ void PostprocessWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&lightShaftsCheckBox);
 
+	lightShaftsStrengthStrengthSlider.Create(0, 1, 0.05f, 1000, "Strength: ");
+	lightShaftsStrengthStrengthSlider.SetTooltip("Set light shaft strength.");
+	lightShaftsStrengthStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
+	lightShaftsStrengthStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
+	lightShaftsStrengthStrengthSlider.SetValue(editor->renderPath->getLightShaftsStrength());
+	lightShaftsStrengthStrengthSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setLightShaftsStrength(args.fValue);
+		});
+	AddWidget(&lightShaftsStrengthStrengthSlider);
+
 	aoComboBox.Create("AO: ");
 	aoComboBox.SetTooltip("Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing");
 	aoComboBox.SetScriptTip("RenderPath3D::SetAO(int value)");

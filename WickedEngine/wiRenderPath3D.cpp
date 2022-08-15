@@ -1327,7 +1327,13 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 			{
 				XMFLOAT2 sun;
 				XMStoreFloat2(&sun, sunPos);
-				wi::renderer::Postprocess_LightShafts(*renderpass_lightshafts.desc.attachments.back().texture, rtSun[1], cmd, sun);
+				wi::renderer::Postprocess_LightShafts(
+					*renderpass_lightshafts.desc.attachments.back().texture,
+					rtSun[1],
+					cmd,
+					sun,
+					getLightShaftsStrength()
+				);
 			}
 		}
 		device->EventEnd(cmd);

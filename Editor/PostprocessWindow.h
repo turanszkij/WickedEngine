@@ -13,6 +13,7 @@ public:
 	wi::gui::Slider exposureSlider;
 	wi::gui::CheckBox lensFlareCheckBox;
 	wi::gui::CheckBox lightShaftsCheckBox;
+	wi::gui::Slider lightShaftsStrengthStrengthSlider;
 	wi::gui::ComboBox aoComboBox;
 	wi::gui::Slider aoPowerSlider;
 	wi::gui::Slider aoRangeSlider;

@@ -36,7 +36,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 	}
 
-	color*= postprocess.params0.w;
+	color *= postprocess.params0.w;
 
 	output[DTid.xy] = float4(color, 1);
 }

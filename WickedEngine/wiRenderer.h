@@ -557,7 +557,8 @@ namespace wi::renderer
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
-		const XMFLOAT2& center
+		const XMFLOAT2& center,
+		float strength = 0.1f
 	);
 	struct DepthOfFieldResources
 	{

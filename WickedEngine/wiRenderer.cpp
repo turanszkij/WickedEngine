@@ -11225,7 +11225,8 @@ void Postprocess_LightShafts(
 	const Texture& input,
 	const Texture& output,
 	CommandList cmd,
-	const XMFLOAT2& center
+	const XMFLOAT2& center,
+	float strength
 )
 {
 	device->EventBegin("Postprocess_LightShafts", cmd);
@@ -11242,10 +11243,10 @@ void Postprocess_LightShafts(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	postprocess.params0.x = 0.65f;	// density
-	postprocess.params0.y = 0.25f;	// weight
-	postprocess.params0.z = 0.945f;	// decay
-	postprocess.params0.w = 0.2f;		// exposure
+	postprocess.params0.x = 0.65f;		// density
+	postprocess.params0.y = 0.25f;		// weight
+	postprocess.params0.z = 0.945f;		// decay
+	postprocess.params0.w = strength;	// exposure
 	postprocess.params1.x = center.x;
 	postprocess.params1.y = center.y;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
