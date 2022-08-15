@@ -1518,12 +1518,12 @@ namespace wi::scene
 		
 		if (archive.GetVersion() >= 84)
 		{
-			for(auto& componentManager : componentLibrary.componentManagers){
-				componentManager->Component_Serialize(entity, archive, seri);
-			}
-
 			if (archive.IsReadMode())
 			{
+				for(auto& componentManager : componentLibrary.componentManagers){
+					componentManager->Component_Serialize_R(entity, archive, seri);
+				}
+				
 				// Wait the job system, because from this point, component managers could be resized
 				//	due to more serialization tasks in recursive operation
 				//	The pointers must not be invalidated while serialization jobs are not finished
@@ -1551,6 +1551,10 @@ namespace wi::scene
 			}
 			else
 			{
+				for(auto& componentManager : componentLibrary.componentManagers){
+					componentManager->Component_Serialize_W(entity, archive, seri);
+				}
+
 				// Wait the job system, because from this point, component managers could be resized
 				//	due to more serialization tasks in recursive operation
 				//	The pointers must not be invalidated while serialization jobs are not finished

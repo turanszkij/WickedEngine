@@ -81,7 +81,8 @@ namespace wi::ecs
 		virtual void Merge(ComponentManager_Interface& other) = 0;
 		virtual void Clear() = 0;
 		virtual void Serialize(wi::Archive& archive, EntitySerializer& seri) = 0;
-		virtual void Component_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri) = 0;
+		virtual void Component_Serialize_R(Entity entity, wi::Archive& archive, EntitySerializer& seri) = 0;
+		virtual void Component_Serialize_W(Entity entity, wi::Archive& archive, EntitySerializer& seri) = 0;
 		virtual void Remove(Entity entity) = 0;
 		virtual void Remove_KeepSorted(Entity entity) = 0;
 		virtual void MoveItem(size_t index_from, size_t index_to) = 0;
@@ -191,31 +192,30 @@ namespace wi::ecs
 			}
 		}
 
-		//Read/write one single component onto an archive, make sure entity are serialized first
-		inline void Component_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
+		//Read one single component onto an archive, make sure entity are serialized first
+		inline void Component_Serialize_R(Entity entity, wi::Archive& archive, EntitySerializer& seri)
 		{
-			if (archive.IsReadMode())
+			bool component_exists;
+			archive >> component_exists;
+			if (component_exists)
 			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = this->Create(entity);
-					component.Serialize(archive, seri);
-				}
+				auto& component = this->Create(entity);
+				component.Serialize(archive, seri);
+			}
+		}
+
+		//Write one single component onto an archive, make sure entity are serialized first
+		inline void Component_Serialize_W(Entity entity, wi::Archive& archive, EntitySerializer& seri)
+		{
+			auto component = this->GetComponent(entity);
+			if (component != nullptr)
+			{
+				archive << true;
+				component->Serialize(archive, seri);
 			}
 			else
 			{
-				auto component = this->GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
+				archive << false;
 			}
 		}
 
@@ -410,7 +410,7 @@ namespace wi::ecs
 	class ComponentLibrary{
 	public:
 		uint64_t libraryVersion;
-		wi::vector<ComponentManager_Interface*> componentManagers;
+		wi::vector<std::unique_ptr<ComponentManager_Interface>> componentManagers;
 
 		//Create a Component Library and set up its version
 		ComponentLibrary(uint64_t iLibraryVersion = 0){ libraryVersion = iLibraryVersion; }
@@ -421,7 +421,7 @@ namespace wi::ecs
 
 		// Create an instance of ComponentManager of a certain data type
 		// Once added, cannot be removed!
-		template<typename T> inline ComponentManager<T>& Add(){
+		template<typename T> inline ComponentManager<T>& Register(){
 			componentManagers.push_back(new ComponentManager<T>);
 			return static_cast<ComponentManager<T>&>(*componentManagers.back());
 		}
