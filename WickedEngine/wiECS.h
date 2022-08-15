@@ -10,7 +10,6 @@
 #include <cstdint>
 #include <cassert>
 #include <atomic>
-#include <any>
 #include <memory>
 
 // Entity-Component System
@@ -72,12 +71,6 @@ namespace wi::ecs
 			archive << entity;
 		}
 	}
-
-	// To make sure your component is able to be serialized, inherit this struct!
-	// A Must if you work with ComponentManager
-	struct Component_Serializable{
-		virtual void Serialize(wi::Archive& archive, EntitySerializer& seri) = 0;	
-	};
 
 	// This is an interface class to implement a ComponentManager, 
 	// inherit this class if you want to work with ComponentLibrary

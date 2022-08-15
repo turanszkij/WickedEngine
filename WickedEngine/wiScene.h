@@ -29,7 +29,7 @@ namespace wi
 
 namespace wi::scene
 {
-	struct NameComponent : public wi::ecs::Component_Serializable
+	struct NameComponent
 	{
 		std::string name;
 
@@ -40,7 +40,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct LayerComponent : public wi::ecs::Component_Serializable
+	struct LayerComponent
 	{
 		uint32_t layerMask = ~0u;
 
@@ -52,7 +52,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 	
-	struct TransformComponent : public wi::ecs::Component_Serializable
+	struct TransformComponent
 	{
 		enum FLAGS
 		{
@@ -106,7 +106,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct HierarchyComponent : public wi::ecs::Component_Serializable
+	struct HierarchyComponent
 	{
 		wi::ecs::Entity parentID = wi::ecs::INVALID_ENTITY;
 		uint32_t layerMask_bind; // saved child layermask at the time of binding
@@ -114,7 +114,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct MaterialComponent : public wi::ecs::Component_Serializable
+	struct MaterialComponent
 	{
 		enum FLAGS
 		{
@@ -323,7 +323,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct MeshComponent : public wi::ecs::Component_Serializable
+	struct MeshComponent
 	{
 		enum FLAGS
 		{
@@ -608,7 +608,7 @@ namespace wi::scene
 
 	};
 
-	struct ImpostorComponent : public wi::ecs::Component_Serializable
+	struct ImpostorComponent
 	{
 		enum FLAGS
 		{
@@ -629,7 +629,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ObjectComponent : public wi::ecs::Component_Serializable
+	struct ObjectComponent
 	{
 		enum FLAGS
 		{
@@ -718,7 +718,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct RigidBodyPhysicsComponent : public wi::ecs::Component_Serializable
+	struct RigidBodyPhysicsComponent
 	{
 		enum FLAGS
 		{
@@ -775,7 +775,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct SoftBodyPhysicsComponent : public wi::ecs::Component_Serializable
+	struct SoftBodyPhysicsComponent
 	{
 		enum FLAGS
 		{
@@ -811,7 +811,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ArmatureComponent : public wi::ecs::Component_Serializable
+	struct ArmatureComponent
 	{
 		enum FLAGS
 		{
@@ -834,7 +834,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct LightComponent : public wi::ecs::Component_Serializable
+	struct LightComponent
 	{
 		enum FLAGS
 		{
@@ -922,7 +922,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct CameraComponent : public wi::ecs::Component_Serializable
+	struct CameraComponent
 	{
 		enum FLAGS
 		{
@@ -993,7 +993,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct EnvironmentProbeComponent : public wi::ecs::Component_Serializable
+	struct EnvironmentProbeComponent
 	{
 		enum FLAGS
 		{
@@ -1022,7 +1022,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ForceFieldComponent : public wi::ecs::Component_Serializable
+	struct ForceFieldComponent
 	{
 		enum FLAGS
 		{
@@ -1043,7 +1043,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct DecalComponent : public wi::ecs::Component_Serializable
+	struct DecalComponent
 	{
 		enum FLAGS
 		{
@@ -1067,7 +1067,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct AnimationDataComponent : public wi::ecs::Component_Serializable
+	struct AnimationDataComponent
 	{
 		enum FLAGS
 		{
@@ -1081,7 +1081,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct AnimationComponent : public wi::ecs::Component_Serializable
+	struct AnimationComponent
 	{
 		enum FLAGS
 		{
@@ -1163,7 +1163,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct WeatherComponent : public wi::ecs::Component_Serializable
+	struct WeatherComponent
 	{
 		enum FLAGS
 		{
@@ -1227,7 +1227,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct SoundComponent : public wi::ecs::Component_Serializable
+	struct SoundComponent
 	{
 		enum FLAGS
 		{
@@ -1255,7 +1255,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct InverseKinematicsComponent : public wi::ecs::Component_Serializable
+	struct InverseKinematicsComponent
 	{
 		enum FLAGS
 		{
@@ -1274,7 +1274,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct SpringComponent : public wi::ecs::Component_Serializable
+	struct SpringComponent
 	{
 		enum FLAGS
 		{
