@@ -1501,7 +1501,7 @@ namespace wi::scene
 		
 		if (archive.GetVersion() >= 84)
 		{
-			componentLibrary.Serialize(archive, seri);
+			componentLibrary.Entity_Serialize(entity, archive, seri);
 
 			if (archive.IsReadMode())
 			{

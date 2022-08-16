@@ -81,8 +81,7 @@ namespace wi::ecs
 		virtual void Merge(ComponentManager_Interface& other) = 0;
 		virtual void Clear() = 0;
 		virtual void Serialize(wi::Archive& archive, EntitySerializer& seri) = 0;
-		virtual void Component_Serialize_R(Entity entity, wi::Archive& archive, EntitySerializer& seri) = 0;
-		virtual void Component_Serialize_W(Entity entity, wi::Archive& archive, EntitySerializer& seri) = 0;
+		virtual void Component_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri) = 0;
 		virtual void Remove(Entity entity) = 0;
 		virtual void Remove_KeepSorted(Entity entity) = 0;
 		virtual void MoveItem(size_t index_from, size_t index_to) = 0;
@@ -193,29 +192,30 @@ namespace wi::ecs
 		}
 
 		//Read one single component onto an archive, make sure entity are serialized first
-		inline void Component_Serialize_R(Entity entity, wi::Archive& archive, EntitySerializer& seri)
+		inline void Component_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
 		{
-			bool component_exists;
-			archive >> component_exists;
-			if (component_exists)
+			if(archive.IsReadMode())
 			{
-				auto& component = this->Create(entity);
-				component.Serialize(archive, seri);
-			}
-		}
-
-		//Write one single component onto an archive, make sure entity are serialized first
-		inline void Component_Serialize_W(Entity entity, wi::Archive& archive, EntitySerializer& seri)
-		{
-			auto component = this->GetComponent(entity);
-			if (component != nullptr)
-			{
-				archive << true;
-				component->Serialize(archive, seri);
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = this->Create(entity);
+					component.Serialize(archive, seri);
+				}
 			}
 			else
 			{
-				archive << false;
+				auto component = this->GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seri);
+				}
+				else
+				{
+					archive << false;
+				}
 			}
 		}
 
@@ -472,24 +472,21 @@ namespace wi::ecs
 		}
 
 		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri){
-			if (archive.IsReadMode())
-			{
-				for(auto& componentManager : componentManagers){
+			for(auto& componentManager : componentManagers){
+				if (archive.IsReadMode()){
 					uint64_t archiveVersion;
 					uint64_t componentVersion;
 					archive >> archiveVersion;
 					archive >> componentVersion;
 					if((archive.GetVersion() >= archiveVersion) && (componentVersion >= libraryVersion)){
-						componentManager->Component_Serialize_R(entity, archive, seri);
+						componentManager->Component_Serialize(entity, archive, seri);
 					}
 				}
-			}
-			else 
-			{
-				for(auto& componentManager : componentManagers){
+				else 
+				{
 					archive << archive.GetVersion();
 					archive << libraryVersion;
-					componentManager->Serialize(archive, seri);
+					componentManager->Component_Serialize(entity, archive, seri);
 				}
 			}
 		}
