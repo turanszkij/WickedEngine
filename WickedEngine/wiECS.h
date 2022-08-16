@@ -454,20 +454,26 @@ namespace wi::ecs
 
 		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
 		{
-			for(auto& componentManager : componentManagers)
+			if(archive.IsReadMode())
 			{
-				if(archive.IsReadMode())
+				size_t componentmanager_count = 0;
+				archive >> componentmanager_count;
+				for (size_t i = 0; i < componentmanager_count; ++i)
 				{
 					uint64_t archiveVersion;
 					uint64_t componentVersion;
 					archive >> archiveVersion;
 					archive >> componentVersion;
-					if((archive.GetVersion() >= archiveVersion) && (libraryVersion >= componentVersion))
+					if ((archive.GetVersion() >= archiveVersion) && (libraryVersion >= componentVersion))
 					{
-						componentManager->Serialize(archive, seri);
+						componentManagers[i]->Serialize(archive, seri);
 					}
 				}
-				else
+			}
+			else
+			{
+				archive << componentManagers.size();
+				for (auto& componentManager : componentManagers)
 				{
 					archive << archive.GetVersion();
 					archive << libraryVersion;
@@ -478,20 +484,26 @@ namespace wi::ecs
 
 		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
 		{
-			for(auto& componentManager : componentManagers)
+			if (archive.IsReadMode())
 			{
-				if (archive.IsReadMode())
+				size_t componentmanager_count = 0;
+				archive >> componentmanager_count;
+				for (size_t i = 0; i < componentmanager_count; ++i)
 				{
 					uint64_t archiveVersion;
 					uint64_t componentVersion;
 					archive >> archiveVersion;
 					archive >> componentVersion;
-					if((archive.GetVersion() >= archiveVersion) && (libraryVersion >= componentVersion))
+					if ((archive.GetVersion() >= archiveVersion) && (libraryVersion >= componentVersion))
 					{
-						componentManager->Component_Serialize(entity, archive, seri);
+						componentManagers[i]->Component_Serialize(entity, archive, seri);
 					}
 				}
-				else 
+			}
+			else 
+			{
+				archive << componentManagers.size();
+				for (auto& componentManager : componentManagers)
 				{
 					archive << archive.GetVersion();
 					archive << libraryVersion;
