@@ -143,7 +143,11 @@ struct LoaderState
 	tinygltf::Model gltfModel;
 	Scene* scene;
 	wi::unordered_map<int, Entity> entityMap;  // node -> entity
+	Entity rootEntity = INVALID_ENTITY;
 };
+
+void Import_Extension_VRM(LoaderState& state);
+void Import_Extension_VRMC(LoaderState& state);
 
 // Recursively loads nodes and resolves hierarchy:
 void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
@@ -314,15 +318,15 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		wi::helper::messageBox(err, "GLTF error!");
 	}
 
-	Entity rootEntity = CreateEntity();
-	scene.transforms.Create(rootEntity);
-	scene.names.Create(rootEntity) = name;
+	state.rootEntity = CreateEntity();
+	scene.transforms.Create(state.rootEntity);
+	scene.names.Create(state.rootEntity) = name;
 
 	// Create materials:
 	for (auto& x : state.gltfModel.materials)
 	{
 		Entity materialEntity = scene.Entity_CreateMaterial(x.name);
-		scene.Component_Attach(materialEntity, rootEntity);
+		scene.Component_Attach(materialEntity, state.rootEntity);
 
 		MaterialComponent& material = *scene.materials.GetComponent(materialEntity);
 
@@ -768,7 +772,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	for (auto& x : state.gltfModel.meshes)
 	{
 		Entity meshEntity = scene.Entity_CreateMesh(x.name);
-		scene.Component_Attach(meshEntity, rootEntity);
+		scene.Component_Attach(meshEntity, state.rootEntity);
 		MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
 
 		mesh.morph_targets.resize(x.weights.size());
@@ -1327,7 +1331,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		scene.names.Create(armatureEntity) = skin.name;
 		scene.layers.Create(armatureEntity);
 		scene.transforms.Create(armatureEntity);
-		scene.Component_Attach(armatureEntity, rootEntity);
+		scene.Component_Attach(armatureEntity, state.rootEntity);
 		ArmatureComponent& armature = scene.armatures.Create(armatureEntity);
 
 		if (skin.inverseBindMatrices >= 0)
@@ -1348,7 +1352,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	const tinygltf::Scene &gltfScene = state.gltfModel.scenes[std::max(0, state.gltfModel.defaultScene)];
 	for (size_t i = 0; i < gltfScene.nodes.size(); i++)
 	{
-		LoadNode(gltfScene.nodes[i], rootEntity, state);
+		LoadNode(gltfScene.nodes[i], state.rootEntity, state);
 	}
 
 	// Create armature-bone mappings:
@@ -1376,7 +1380,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	{
 		Entity entity = CreateEntity();
 		scene.names.Create(entity) = anim.name;
-		scene.Component_Attach(entity, rootEntity);
+		scene.Component_Attach(entity, state.rootEntity);
 		AnimationComponent& animationcomponent = scene.animations.Create(entity);
 		animationcomponent.samplers.resize(anim.samplers.size());
 		animationcomponent.channels.resize(anim.channels.size());
@@ -1399,7 +1403,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 
 			animationcomponent.samplers[i].data = CreateEntity();
-			scene.Component_Attach(animationcomponent.samplers[i].data, rootEntity);
+			scene.Component_Attach(animationcomponent.samplers[i].data, state.rootEntity);
 			AnimationDataComponent& animationdata = scene.animation_datas.Create(animationcomponent.samplers[i].data);
 
 			// AnimationSampler input = keyframe times
@@ -1561,20 +1565,317 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 	if (transform_to_LH)
 	{
-		TransformComponent& transform = *scene.transforms.GetComponent(rootEntity);
+		TransformComponent& transform = *scene.transforms.GetComponent(state.rootEntity);
 		transform.scale_local.z = -transform.scale_local.z;
 		transform.SetDirty();
 	}
 
-	auto vrm = state.gltfModel.extensions.find("VRM");
-	if (vrm != state.gltfModel.extensions.end())
-	{
-		// Rotate VRM humanoid character to face in -Z:
-		TransformComponent& transform = *scene.transforms.GetComponent(rootEntity);
-		transform.RotateRollPitchYaw(XMFLOAT3(0, XM_PI, 0));
-	}
+	Import_Extension_VRM(state);
+	Import_Extension_VRMC(state);
 
 	// Update the scene, to have up to date values immediately after loading:
 	//	For example, snap to camera functionality relies on this
 	scene.Update(0);
+}
+
+void Import_Extension_VRM(LoaderState& state)
+{
+	auto ext_vrm = state.gltfModel.extensions.find("VRM");
+	if (ext_vrm != state.gltfModel.extensions.end())
+	{
+		// Rotate VRM humanoid character to face -Z:
+		TransformComponent& transform = *state.scene->transforms.GetComponent(state.rootEntity);
+		transform.RotateRollPitchYaw(XMFLOAT3(0, XM_PI, 0));
+
+		if (ext_vrm->second.Has("secondaryAnimation"))
+		{
+			const auto& secondaryAnimation = ext_vrm->second.Get("secondaryAnimation");
+			if (secondaryAnimation.Has("boneGroups"))
+			{
+				const auto& boneGroups = secondaryAnimation.Get("boneGroups");
+				for (size_t boneGroup_index = 0; boneGroup_index < boneGroups.ArrayLen(); ++boneGroup_index)
+				{
+					const auto& boneGroup = boneGroups.Get(int(boneGroup_index));
+					SpringComponent component;
+
+					if (boneGroup.Has("dragForce"))
+					{
+						auto& value = boneGroup.Get("dragForce");
+						component.dragForce = float(value.GetNumberAsDouble());
+					}
+					if (boneGroup.Has("gravityDir"))
+					{
+						auto& value = boneGroup.Get("gravityDir");
+						if (value.Has("x"))
+						{
+							component.gravityDir.x = float(value.Get("x").GetNumberAsDouble());
+						}
+						if (value.Has("y"))
+						{
+							component.gravityDir.y = float(value.Get("y").GetNumberAsDouble());
+						}
+						if (value.Has("z"))
+						{
+							component.gravityDir.z = float(value.Get("z").GetNumberAsDouble());
+						}
+					}
+					//if (boneGroup.Has("center"))
+					//{
+					//	auto& value = boneGroup.Get("center");
+					//	center = float(value.GetNumberAsDouble());
+					//}
+					if (boneGroup.Has("gravityPower"))
+					{
+						auto& value = boneGroup.Get("gravityPower");
+						component.gravityPower = float(value.GetNumberAsDouble());
+					}
+					if (boneGroup.Has("hitRadius"))
+					{
+						auto& value = boneGroup.Get("hitRadius");
+						component.hitRadius = float(value.GetNumberAsDouble());
+					}
+					if (boneGroup.Has("stiffiness")) // yes, not stiffness, but stiffiness
+					{
+						auto& value = boneGroup.Get("stiffiness");
+						component.stiffnessForce = float(value.GetNumberAsDouble());
+					}
+					if (boneGroup.Has("colliderGroups"))
+					{
+						const auto& colliderGroups = boneGroup.Get("colliderGroups");
+						for (size_t collider_group_index = 0; collider_group_index < colliderGroups.ArrayLen(); ++collider_group_index)
+						{
+							int colliderGroupIndex = colliderGroups.Get(int(collider_group_index)).GetNumberAsInt();
+							const auto& colliderGroup = secondaryAnimation.Get("colliderGroups").Get(colliderGroupIndex);
+
+							Entity transformID = INVALID_ENTITY;
+							if (colliderGroup.Has("node"))
+							{
+								auto& value = colliderGroup.Get("node");
+								int node = value.GetNumberAsInt();
+								transformID = state.entityMap[node];
+							}
+							if (colliderGroup.Has("colliders"))
+							{
+								const auto& colliders = colliderGroup.Get("colliders");
+								for (size_t collider_index = 0; collider_index < colliders.ArrayLen(); ++collider_index)
+								{
+									Entity colliderID = CreateEntity();
+									component.colliders.push_back(colliderID);
+									ColliderComponent& collider_component = state.scene->colliders.Create(colliderID);
+									collider_component.transformID = transformID;
+
+									const auto& collider = colliders.Get(int(collider_index));
+									if (collider.Has("offset"))
+									{
+										auto& value = collider.Get("offset");
+										if (value.Has("x"))
+										{
+											collider_component.offset.x = float(value.Get("x").GetNumberAsDouble());
+										}
+										if (value.Has("y"))
+										{
+											collider_component.offset.y = float(value.Get("y").GetNumberAsDouble());
+										}
+										if (value.Has("z"))
+										{
+											collider_component.offset.z = float(value.Get("z").GetNumberAsDouble());
+										}
+									}
+									if (collider.Has("radius"))
+									{
+										auto& value = collider.Get("radius");
+										collider_component.radius = float(value.GetNumberAsDouble());
+									}
+								}
+							}
+						}
+					}
+					if (boneGroup.Has("bones"))
+					{
+						auto& bones = boneGroup.Get("bones");
+						for (size_t bone_index = 0; bone_index < bones.ArrayLen(); ++bone_index)
+						{
+							const auto& bone = bones.Get(int(bone_index));
+							int node = bone.GetNumberAsInt();
+							Entity entity = state.entityMap[node];
+							state.scene->springs.Create(entity) = component;
+
+							wi::vector<int> stack = state.gltfModel.nodes[node].children;
+							while (!stack.empty())
+							{
+								int child_node = stack.back();
+								stack.pop_back();
+								Entity child_entity = state.entityMap[child_node];
+								state.scene->springs.Create(child_entity) = component;
+								stack.insert(stack.end(), state.gltfModel.nodes[child_node].children.begin(), state.gltfModel.nodes[child_node].children.end());
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+}
+
+void Import_Extension_VRMC(LoaderState& state)
+{
+	auto ext_vrmc_springbone = state.gltfModel.extensions.find("VRMC_springBone");
+	if (ext_vrmc_springbone != state.gltfModel.extensions.end())
+	{
+		// Colliders:
+		if (ext_vrmc_springbone->second.Has("colliders"))
+		{
+			const auto& colliders = ext_vrmc_springbone->second.Get("colliders");
+			for (size_t collider_index = 0; collider_index < colliders.ArrayLen(); ++collider_index)
+			{
+				const auto& collider = colliders.Get(int(collider_index));
+				ColliderComponent component;
+
+				if (collider.Has("shape"))
+				{
+					const auto& shape = collider.Get("shape");
+					if (shape.Has("capsule"))
+					{
+						auto& capsule = shape.Get("capsule");
+						component.shape = ColliderComponent::Shape::Capsule;
+
+						if (capsule.Has("offset"))
+						{
+							auto& value = capsule.Get("offset");
+							component.offset.x = float(value.Get(0).GetNumberAsDouble());
+							component.offset.y = float(value.Get(1).GetNumberAsDouble());
+							component.offset.z = float(value.Get(2).GetNumberAsDouble());
+						}
+						if (capsule.Has("radius"))
+						{
+							auto& value = capsule.Get("radius");
+							component.radius = float(value.GetNumberAsDouble());
+						}
+						if (capsule.Has("tail"))
+						{
+							auto& value = capsule.Get("tail");
+							component.tail.x = float(value.Get(0).GetNumberAsDouble());
+							component.tail.y = float(value.Get(1).GetNumberAsDouble());
+							component.tail.z = float(value.Get(2).GetNumberAsDouble());
+						}
+					}
+					if (shape.Has("sphere"))
+					{
+						auto& sphere = shape.Get("sphere");
+						component.shape = ColliderComponent::Shape::Sphere;
+
+						if (sphere.Has("offset"))
+						{
+							auto& value = sphere.Get("offset");
+							component.offset.x = float(value.Get(0).GetNumberAsDouble());
+							component.offset.y = float(value.Get(1).GetNumberAsDouble());
+							component.offset.z = float(value.Get(2).GetNumberAsDouble());
+						}
+						if (sphere.Has("radius"))
+						{
+							auto& value = sphere.Get("radius");
+							component.radius = float(value.GetNumberAsDouble());
+						}
+					}
+				}
+				if (collider.Has("node"))
+				{
+					const auto& node = collider.Get("node");
+					int node_index = node.GetNumberAsInt();
+					Entity entity = state.entityMap[node_index];
+					component.transformID = entity;
+					state.scene->colliders.Create(CreateEntity()) = component;
+				}
+			}
+		}
+
+		// Springs:
+		if (ext_vrmc_springbone->second.Has("springs"))
+		{
+			const auto& springs = ext_vrmc_springbone->second.Get("springs");
+			for (size_t spring_index = 0; spring_index < springs.ArrayLen(); ++spring_index)
+			{
+				const auto& spring = springs.Get(int(spring_index));
+				//if (spring.Has("center"))
+				//{
+				//	const auto& center = spring.Get("center");
+				//}
+				wi::vector<Entity> colliderIDs;
+				if (spring.Has("colliderGroups"))
+				{
+					// collider group references:
+					const auto& colliderGroups = spring.Get("colliderGroups");
+					for (size_t collider_group_index = 0; collider_group_index < colliderGroups.ArrayLen(); ++collider_group_index)
+					{
+						const auto& colliderGroup = ext_vrmc_springbone->second.Get("colliderGroups").Get(int(collider_group_index));
+						if (colliderGroup.Has("colliders"))
+						{
+							const auto& colliders = colliderGroup.Get("colliders");
+							for (size_t collider_index = 0; collider_index < colliders.ArrayLen(); ++collider_index)
+							{
+								int collider = colliders.Get(int(collider_index)).GetNumberAsInt();
+								colliderIDs.push_back(state.scene->colliders.GetEntity(collider));
+							}
+						}
+					}
+				}
+				if (spring.Has("joints"))
+				{
+					const auto& joints = spring.Get("joints");
+					for (size_t joint_index = 0; joint_index < joints.ArrayLen(); ++joint_index)
+					{
+						const auto& joint = joints.Get(int(joint_index));
+						SpringComponent component;
+						component.colliders = colliderIDs;
+
+						if (joint.Has("dragForce"))
+						{
+							auto& value = joint.Get("dragForce");
+							component.dragForce = float(value.GetNumberAsDouble());
+						}
+						if (joint.Has("gravityDir"))
+						{
+							auto& value = joint.Get("gravityDir");
+							component.gravityDir.x = float(value.Get(0).GetNumberAsDouble());
+							component.gravityDir.y = float(value.Get(1).GetNumberAsDouble());
+							component.gravityDir.z = float(value.Get(2).GetNumberAsDouble());
+						}
+						if (joint.Has("gravityPower"))
+						{
+							auto& value = joint.Get("gravityPower");
+							component.gravityPower = float(value.GetNumberAsDouble());
+						}
+						if (joint.Has("hitRadius"))
+						{
+							auto& value = joint.Get("hitRadius");
+							component.hitRadius = float(value.GetNumberAsDouble());
+						}
+						if (joint.Has("stiffness"))
+						{
+							auto& value = joint.Get("stiffness");
+							component.stiffnessForce = float(value.GetNumberAsDouble());
+						}
+						if (joint.Has("node"))
+						{
+							auto& value = joint.Get("node");
+							int node = value.GetNumberAsInt();
+							Entity entity = state.entityMap[node];
+							state.scene->springs.Create(entity) = component;
+						}
+					}
+				}
+				if (spring.Has("name"))
+				{
+					const auto& name = spring.Get("name");
+				}
+			}
+
+			if (ext_vrmc_springbone->second.Has("colliders"))
+			{
+				const auto& colliders = ext_vrmc_springbone->second.Get("colliders");
+			}
+
+		}
+	}
 }

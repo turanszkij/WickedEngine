@@ -2053,6 +2053,7 @@ namespace wi::scene
 		sounds.Clear();
 		inverse_kinematics.Clear();
 		springs.Clear();
+		colliders.Clear();
 
 		TLAS = RaytracingAccelerationStructure();
 		BVH.Clear();
@@ -2097,6 +2098,7 @@ namespace wi::scene
 		sounds.Merge(other.sounds);
 		inverse_kinematics.Merge(other.inverse_kinematics);
 		springs.Merge(other.springs);
+		colliders.Merge(other.colliders);
 
 		bounds = AABB::Merge(bounds, other.bounds);
 	}
@@ -3258,16 +3260,50 @@ namespace wi::scene
 	}
 	void Scene::RunSpringUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		for (size_t i = 0; i < colliders.GetCount(); ++i)
+		{
+			ColliderComponent& collider = colliders[i];
+			if (!transforms.Contains(collider.transformID))
+				continue;
+
+			const TransformComponent& transform = *transforms.GetComponent(collider.transformID);
+
+			XMMATRIX W = XMLoadFloat4x4(&transform.world);
+			XMVECTOR offset = XMLoadFloat3(&collider.offset);
+			XMVECTOR tail = XMLoadFloat3(&collider.tail);
+			XMVECTOR radius = XMVectorReplicate(collider.radius);
+			offset = XMVector3Transform(offset, W);
+			tail = XMVector3Transform(tail, W);
+			radius = XMVector3TransformNormal(radius, W);
+
+			XMStoreFloat3(&collider.sphere.center, offset);
+			collider.sphere.radius = std::max(XMVectorGetX(radius), std::max(XMVectorGetY(radius), XMVectorGetZ(radius)));
+
+			collider.capsule.radius = collider.sphere.radius;
+			XMVECTOR N = XMVector3Normalize(offset - tail);
+			offset += N * collider.capsule.radius;
+			tail -= N * collider.capsule.radius;
+			XMStoreFloat3(&collider.capsule.base, offset);
+			XMStoreFloat3(&collider.capsule.tip, tail);
+
+#if 0
+			// Debug collider shape:
+			switch (collider.shape)
+			{
+			default:
+			case ColliderComponent::Shape::Sphere:
+				wi::renderer::DrawSphere(collider.sphere, XMFLOAT4(1, 0, 1, 1));
+				break;
+			case ColliderComponent::Shape::Capsule:
+				wi::renderer::DrawCapsule(collider.capsule, XMFLOAT4(1, 1, 0, 1));
+				break;
+			}
+#endif
+		}
+
 		static float time = 0;
 		time += dt;
 		const XMVECTOR windDir = XMLoadFloat3(&weather.windDirection);
-		const XMVECTOR gravity = XMVectorSet(0, -9.8f, 0, 0);
-
-		if (springs.GetCount() > 0)
-		{
-			transforms_temp.resize(transforms.GetCount());
-			transforms_temp = transforms.GetComponentArray(); // make copy
-		}
 
 		for (size_t i = 0; i < springs.GetCount(); ++i)
 		{
@@ -3283,14 +3319,10 @@ namespace wi::scene
 				assert(0);
 				continue;
 			}
-			TransformComponent& transform = transforms_temp[transform_index];
+			TransformComponent& transform = transforms[transform_index];
 
-			if (spring.IsResetting())
-			{
-				spring.Reset(false);
-				spring.center_of_mass = transform.GetPosition();
-				spring.velocity = XMFLOAT3(0, 0, 0);
-			}
+			XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
+			XMVECTOR rotation_parent_world = XMQuaternionIdentity();
 
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
 			size_t parent_index = hier == nullptr ? ~0ull : transforms.GetIndex(hier->parentID);
@@ -3299,67 +3331,150 @@ namespace wi::scene
 				// Spring hierarchy resolve depends on spring component order!
 				//	It works best when parent spring is located before child spring!
 				//	It will work the other way, but results will be less convincing
-				const TransformComponent& parent_transform = transforms_temp[parent_index];
+				const TransformComponent& parent_transform = transforms[parent_index];
 				transform.UpdateTransform_Parented(parent_transform);
+				rotation_parent_world = parent_transform.GetRotationV();
 			}
 
-			const XMVECTOR position_current = transform.GetPositionV();
-			XMVECTOR position_prev = XMLoadFloat3(&spring.center_of_mass);
-			XMVECTOR force = (position_current - position_prev) * spring.stiffness;
+			XMVECTOR position_root = transform.GetPositionV();
+			XMVECTOR rotation_combined = XMQuaternionNormalize(XMQuaternionMultiply(rotation_parent_world, rotation_local));
+
+			if (spring.IsResetting() && dt > 0)
+			{
+				spring.Reset(false);
+				spring.center_of_mass = transform.GetPosition();
+				spring.velocity = XMFLOAT3(0, 0, 0);
+
+				XMVECTOR tail = position_root + XMVectorSet(0, 1, 0, 0);
+				// Search for child to find the rest pose tail position:
+				bool child_found = false;
+				for (size_t j = 0; j < hierarchy.GetCount(); ++j)
+				{
+					const HierarchyComponent& hier = hierarchy[j];
+					Entity child = hierarchy.GetEntity(j);
+					if (hier.parentID == entity && transforms.Contains(child))
+					{
+						const TransformComponent& child_transform = *transforms.GetComponent(child);
+						tail = child_transform.GetPositionV();
+						child_found = true;
+						break;
+					}
+				}
+				if (!child_found)
+				{
+					// No child, try to guess tail position compared to parent (if it has parent):
+					const HierarchyComponent* hier = hierarchy.GetComponent(entity);
+					if (hier != nullptr && transforms.Contains(hier->parentID))
+					{
+						const TransformComponent& parent_transform = *transforms.GetComponent(hier->parentID);
+						XMVECTOR ab = position_root - parent_transform.GetPositionV();
+						tail = position_root + ab;
+					}
+				}
+				XMVECTOR axis = tail - position_root;
+				XMVECTOR length = XMVector3Length(axis);
+				//axis = XMVector3Rotate(axis, XMQuaternionNormalize(XMQuaternionInverse(rotation_combined)));
+				axis /= length;
+				XMStoreFloat3(&spring.boneAxis, axis);
+				XMStoreFloat3(&spring.currentTail, tail);
+				spring.prevTail = spring.currentTail;
+				spring.boneLength = XMVectorGetX(length);
+			}
+
+			XMVECTOR boneAxis = XMLoadFloat3(&spring.boneAxis);
+			//boneAxis = XMVector3Rotate(boneAxis, rotation_combined);
+
+			const float boneLength = spring.boneLength;
+			const float dragForce = spring.dragForce;
+			const float stiffnessForce = spring.stiffnessForce;
+			const XMVECTOR gravityDir = XMLoadFloat3(&spring.gravityDir);
+			const float gravityPower = spring.gravityPower;
+
+#if 0
+			// Debug axis:
+			wi::renderer::RenderableLine line;
+			line.color_start = line.color_end = XMFLOAT4(1, 1, 0, 1);
+			XMStoreFloat3(&line.start, position_root);
+			XMStoreFloat3(&line.end, position_root + boneAxis * boneLength);
+			wi::renderer::DrawLine(line);
+#endif
+
+			const XMVECTOR tail_current = XMLoadFloat3(&spring.currentTail);
+			const XMVECTOR tail_prev = XMLoadFloat3(&spring.prevTail);
+
+			XMVECTOR inertia = (tail_current - tail_prev) * (1 - dragForce);
+			XMVECTOR stiffness = boneAxis * stiffnessForce;
+			XMVECTOR external = XMVectorZero();
 
 			if (spring.wind_affection > 0)
 			{
-				force += std::sin(time * weather.windSpeed + XMVectorGetX(XMVector3Dot(position_current, windDir))) * windDir * spring.wind_affection;
+				external += std::sin(time * weather.windSpeed + XMVectorGetX(XMVector3Dot(tail_current, windDir))) * windDir * spring.wind_affection;
 			}
 			if (spring.IsGravityEnabled())
 			{
-				force += gravity;
+				external += gravityDir * gravityPower;
 			}
 
-			XMVECTOR velocity = XMLoadFloat3(&spring.velocity);
-			velocity += force * dt;
-			XMVECTOR position_target = position_prev + velocity * dt;
+			XMVECTOR tail_next = tail_current + inertia + dt * (stiffness + external);
+			XMVECTOR to_tail = XMVector3Normalize(tail_next - position_root);
 
-			if (parent_index != ~0ull)
+			if (!spring.IsStretchEnabled())
 			{
-				TransformComponent& parent_transform = transforms_temp[parent_index];
-				const XMVECTOR position_parent = parent_transform.GetPositionV();
-				const XMVECTOR parent_to_child = position_current - position_parent;
-				const XMVECTOR parent_to_target = position_target - position_parent;
+				// Limit offset to keep distance from parent:
+				tail_next = position_root + to_tail * boneLength;
+			}
 
-				if (!spring.IsStretchEnabled())
+#if 1
+			// Collider checks:
+			for (Entity collider_entity : spring.colliders)
+			{
+				if (!colliders.Contains(collider_entity))
+					continue;
+				const ColliderComponent& collider = *colliders.GetComponent(collider_entity);
+
+				wi::primitive::Sphere tail_sphere;
+				XMStoreFloat3(&tail_sphere.center, tail_next); // tail_sphere center can change within loop!
+				tail_sphere.radius = spring.hitRadius;
+				float dist = 0;
+				XMFLOAT3 direction = {};
+				switch (collider.shape)
 				{
-					// Limit offset to keep distance from parent:
-					const XMVECTOR len = XMVector3Length(parent_to_child);
-					position_target = position_parent + XMVector3Normalize(parent_to_target) * len;
+				default:
+				case ColliderComponent::Shape::Sphere:
+					tail_sphere.intersects(collider.sphere, dist, direction);
+					break;
+				case ColliderComponent::Shape::Capsule:
+					tail_sphere.intersects(collider.capsule, dist, direction);
+					break;
 				}
 
-				// Parent rotation to point to new child position:
-				const XMVECTOR dir_parent_to_child = XMVector3Normalize(parent_to_child);
-				const XMVECTOR dir_parent_to_target = XMVector3Normalize(parent_to_target);
-				const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_child, dir_parent_to_target));
-				const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_child, dir_parent_to_target))); // don't use std::acos!
-				const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
-				TransformComponent saved_parent = parent_transform;
-				saved_parent.ApplyTransform();
-				saved_parent.Rotate(Q);
-				saved_parent.UpdateTransform();
-				std::swap(saved_parent.world, parent_transform.world); // only store temporary result, not modifying actual local space!
-			}
+				if (dist < 0)
+				{
+					tail_next = tail_next - XMLoadFloat3(&direction) * dist;
+					to_tail = XMVector3Normalize(tail_next - position_root);
 
-			XMStoreFloat3(&spring.center_of_mass, position_target);
-			velocity *= spring.damping;
-			XMStoreFloat3(&spring.velocity, velocity);
-			*((XMFLOAT3*)&transform.world._41) = spring.center_of_mass;
-		}
-
-		if (springs.GetCount() > 0)
-		{
-			for (size_t i = 0; i < transforms.GetCount(); ++i)
-			{
-				// Springs shouldn't modify local space, so only update the world matrices!
-				transforms[i].world = transforms_temp[i].world;
+					if (!spring.IsStretchEnabled())
+					{
+						// Limit offset to keep distance from parent:
+						tail_next = position_root + to_tail * boneLength;
+					}
+				}
 			}
+#endif
+
+			XMStoreFloat3(&spring.prevTail, tail_current);
+			XMStoreFloat3(&spring.currentTail, tail_next);
+
+			// Rotate to face tail position:
+			const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(boneAxis, to_tail));
+			const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(boneAxis, to_tail)));
+			const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
+			TransformComponent tmp = transform;
+			tmp.ApplyTransform();
+			tmp.Rotate(Q);
+			tmp.UpdateTransform();
+			std::swap(tmp.world, transform.world); // only store temporary result, not modifying actual local space!
+
 		}
 	}
 	void Scene::RunInverseKinematicsUpdateSystem(wi::jobsystem::context& ctx)

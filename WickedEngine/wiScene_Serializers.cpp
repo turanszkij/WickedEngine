@@ -1366,8 +1366,8 @@ namespace wi::scene
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			archive >> stiffness;
-			archive >> damping;
+			archive >> stiffnessForce;
+			archive >> dragForce;
 			archive >> wind_affection;
 
 			Reset();
@@ -1375,8 +1375,8 @@ namespace wi::scene
 		else
 		{
 			archive << _flags;
-			archive << stiffness;
-			archive << damping;
+			archive << stiffnessForce;
+			archive << dragForce;
 			archive << wind_affection;
 		}
 	}

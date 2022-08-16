@@ -65,23 +65,23 @@ void SpringWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&gravityCheckBox);
 
-	stiffnessSlider.Create(0, 1000, 100, 100000, "Stiffness: ");
+	stiffnessSlider.Create(0, 1, 0.1f, 100000, "Stiffness: ");
 	stiffnessSlider.SetTooltip("The stiffness affects how strongly the spring tries to orient itself to rest pose (higher values increase the jiggliness)");
 	stiffnessSlider.SetPos(XMFLOAT2(x, y += step));
 	stiffnessSlider.SetSize(XMFLOAT2(siz, hei));
 	stiffnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		editor->GetCurrentScene().springs.GetComponent(entity)->stiffness = args.fValue;
+		editor->GetCurrentScene().springs.GetComponent(entity)->stiffnessForce = args.fValue;
 		});
 	AddWidget(&stiffnessSlider);
 
-	dampingSlider.Create(0, 1, 0.8f, 100000, "Damping: ");
-	dampingSlider.SetTooltip("The damping affects how fast energy is lost (higher values make the spring come to rest faster)");
-	dampingSlider.SetPos(XMFLOAT2(x, y += step));
-	dampingSlider.SetSize(XMFLOAT2(siz, hei));
-	dampingSlider.OnSlide([&](wi::gui::EventArgs args) {
-		editor->GetCurrentScene().springs.GetComponent(entity)->damping = args.fValue;
+	dragSlider.Create(0, 1, 0.8f, 100000, "Drag: ");
+	dragSlider.SetTooltip("The drag affects how fast energy is lost (higher values make the spring come to rest faster)");
+	dragSlider.SetPos(XMFLOAT2(x, y += step));
+	dragSlider.SetSize(XMFLOAT2(siz, hei));
+	dragSlider.OnSlide([&](wi::gui::EventArgs args) {
+		editor->GetCurrentScene().springs.GetComponent(entity)->dragForce = args.fValue;
 		});
-	AddWidget(&dampingSlider);
+	AddWidget(&dragSlider);
 
 	windSlider.Create(0, 1, 0, 100000, "Wind affection: ");
 	windSlider.SetTooltip("How much the global wind effect affects the spring");
@@ -112,8 +112,8 @@ void SpringWindow::SetEntity(Entity entity)
 		disabledCheckBox.SetCheck(spring->IsDisabled());
 		stretchCheckBox.SetCheck(spring->IsStretchEnabled());
 		gravityCheckBox.SetCheck(spring->IsGravityEnabled());
-		stiffnessSlider.SetValue(spring->stiffness);
-		dampingSlider.SetValue(spring->damping);
+		stiffnessSlider.SetValue(spring->stiffnessForce);
+		dragSlider.SetValue(spring->dragForce);
 		windSlider.SetValue(spring->wind_affection);
 	}
 	else

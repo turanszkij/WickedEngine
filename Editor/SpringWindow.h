@@ -17,7 +17,7 @@ public:
 	wi::gui::CheckBox stretchCheckBox;
 	wi::gui::CheckBox gravityCheckBox;
 	wi::gui::Slider stiffnessSlider;
-	wi::gui::Slider dampingSlider;
+	wi::gui::Slider dragSlider;
 	wi::gui::Slider windSlider;
 };
 
