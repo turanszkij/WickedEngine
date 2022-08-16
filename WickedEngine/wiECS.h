@@ -419,7 +419,7 @@ namespace wi::ecs
 
 		// Set library version, making sure different changes 
 		// between your component library are able to be serialized properly
-		void SetLibraryVersion(uint64_t& iLibraryVersion){ libraryVersion = iLibraryVersion; }
+		void SetLibraryVersion(uint64_t iLibraryVersion){ libraryVersion = iLibraryVersion; }
 
 		// Create an instance of ComponentManager of a certain data type
 		// Once added, cannot be removed!
