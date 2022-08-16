@@ -407,12 +407,11 @@ namespace wi::ecs
 
 	// This is the class to store all ComponentManagers,
 	// this is useful for bulk operation of all attached components within an entity
-	class ComponentLibrary{
+	class ComponentLibrary
+	{
 	public:
-		uint64_t libraryVersion;
+		uint64_t libraryVersion = 0;
 		wi::vector<std::unique_ptr<ComponentManager_Interface>> componentManagers;
-		wi::vector<uint64_t> componentVersions;
-		wi::vector<uint64_t> archiveVersions;
 
 		//Create a Component Library and set up its version
 		ComponentLibrary(uint64_t iLibraryVersion = 0){ libraryVersion = iLibraryVersion; }
@@ -423,42 +422,48 @@ namespace wi::ecs
 
 		// Create an instance of ComponentManager of a certain data type
 		// Once added, cannot be removed!
-		template<typename T> inline ComponentManager<T>& Register(uint64_t componentVersion = 0, uint64_t archiveVersion = 0){
+		template<typename T> inline ComponentManager<T>& Register()
+		{
 			componentManagers.push_back(std::make_unique<ComponentManager<T>>());
-			componentVersions.push_back(componentVersion);
-			archiveVersions.push_back(archiveVersion);
 			return static_cast<ComponentManager<T>&>(*componentManagers.back());
 		}
 
 
 		// Bulk operations
 		// Perform deep copy of all the contents of "other" into this
-		inline void Copy(const ComponentLibrary& other){
-			for(size_t i = 0; i < other.componentManagers.size(); ++i){
+		inline void Copy(const ComponentLibrary& other)
+		{
+			for(size_t i = 0; i < other.componentManagers.size(); ++i)
+			{
 				auto& other_compmgr = *other.componentManagers[i];
 				componentManagers[i]->Copy(other_compmgr);
 			}
 		}
 
 		// Check if any component exists for a given entity or not
-		inline bool Contains(Entity entity) const{
+		inline bool Contains(Entity entity) const
+		{
 			bool contains = false;
-			for(auto& componentManager : componentManagers){
+			for(auto& componentManager : componentManagers)
+			{
 				contains = componentManager->Contains(entity);
 				if (contains) break;
 			}
 			return contains;
 		}
 
-		inline void Serialize(wi::Archive& archive, EntitySerializer& seri){
-			for(auto& componentManager : componentManagers){
+		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
+		{
+			for(auto& componentManager : componentManagers)
+			{
 				if(archive.IsReadMode())
 				{
 					uint64_t archiveVersion;
 					uint64_t componentVersion;
 					archive >> archiveVersion;
 					archive >> componentVersion;
-					if((archive.GetVersion() >= archiveVersion) && (componentVersion >= libraryVersion)){
+					if((archive.GetVersion() >= archiveVersion) && (libraryVersion >= componentVersion))
+					{
 						componentManager->Serialize(archive, seri);
 					}
 				}
@@ -471,14 +476,18 @@ namespace wi::ecs
 			}
 		}
 
-		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri){
-			for(auto& componentManager : componentManagers){
-				if (archive.IsReadMode()){
+		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
+		{
+			for(auto& componentManager : componentManagers)
+			{
+				if (archive.IsReadMode())
+				{
 					uint64_t archiveVersion;
 					uint64_t componentVersion;
 					archive >> archiveVersion;
 					archive >> componentVersion;
-					if((archive.GetVersion() >= archiveVersion) && (componentVersion >= libraryVersion)){
+					if((archive.GetVersion() >= archiveVersion) && (libraryVersion >= componentVersion))
+					{
 						componentManager->Component_Serialize(entity, archive, seri);
 					}
 				}

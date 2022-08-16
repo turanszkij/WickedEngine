@@ -1408,10 +1408,12 @@ namespace wi::scene
 
 		if(archive.GetVersion() >= 84)
 		{
+			// New scene serialization path with component library:
 			componentLibrary.Serialize(archive, seri);
 		}
 		else
 		{
+			// Old serialization path with hard coded componentn types:
 			names.Serialize(archive, seri);
 			layers.Serialize(archive, seri);
 			transforms.Serialize(archive, seri);
@@ -1501,6 +1503,7 @@ namespace wi::scene
 		
 		if (archive.GetVersion() >= 84)
 		{
+			// New entity serialization path with component library:
 			componentLibrary.Entity_Serialize(entity, archive, seri);
 
 			if (archive.IsReadMode())
@@ -1562,6 +1565,7 @@ namespace wi::scene
 		}
 		else
 		{
+			// Old entity serialization path code for hard coded component types:
 			if (archive.IsReadMode())
 			{
 				// Check for each components if it exists, and if yes, READ it:

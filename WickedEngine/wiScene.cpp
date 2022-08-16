@@ -2045,7 +2045,8 @@ namespace wi::scene
 	}
 	void Scene::Merge(Scene& other)
 	{
-		for(size_t i = 0; i < other.componentLibrary.componentManagers.size(); ++i){
+		for(size_t i = 0; i < other.componentLibrary.componentManagers.size(); ++i)
+		{
 			auto& other_compmgr = *other.componentLibrary.componentManagers[i];
 			componentLibrary.componentManagers[i]->Merge(other_compmgr);
 		}
@@ -2054,7 +2055,8 @@ namespace wi::scene
 	}
 	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
 	{
-		for(auto& componentManager : componentLibrary.componentManagers){
+		for(auto& componentManager : componentLibrary.componentManagers)
+		{
 			entities.insert(componentManager->GetEntityArray().begin(),componentManager->GetEntityArray().end());
 		}
 	}
