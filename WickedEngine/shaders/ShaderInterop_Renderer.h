@@ -11,9 +11,9 @@ struct ShaderScene
 	int meshletbuffer;
 
 	int envmaparray;
+	int envmapdeptharray;
 	int globalenvmap;
 	int impostorInstanceOffset;
-	int padding1;
 
 	int TLAS;
 	int BVH_counter;
@@ -892,6 +892,22 @@ struct SkinningPushConstants
 
 	int so_pos_nor_wind;
 	int so_tan;
+};
+
+struct VolumetricCloudCapturePushConstants
+{
+	uint2 resolution;
+	float2 resolution_rcp;
+
+	uint arrayIndex;
+	int texture_input;
+	int texture_input_depth;
+	int texture_output;
+
+	int MaxStepCount;
+	float LODMin;
+	float ShadowSampleCount;
+	float GroundContributionSampleCount;
 };
 
 
