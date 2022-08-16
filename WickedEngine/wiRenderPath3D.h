@@ -39,6 +39,7 @@ namespace wi
 		float eyeadaptionKey = 0.115f;
 		float eyeadaptionRate = 1;
 		float fsrSharpness = 1.0f;
+		float lightShaftsStrength = 0.2f;
 
 		AO ao = AO_DISABLED;
 		bool fxaaEnabled = false;
@@ -185,6 +186,7 @@ namespace wi
 		constexpr float getEyeAdaptionKey() const { return eyeadaptionKey; }
 		constexpr float getEyeAdaptionRate() const { return eyeadaptionRate; }
 		constexpr float getFSRSharpness() const { return fsrSharpness; }
+		constexpr float getLightShaftsStrength() const { return lightShaftsStrength; }
 
 		constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 		constexpr AO getAO() const { return ao; }
@@ -228,6 +230,7 @@ namespace wi
 		constexpr void setEyeAdaptionKey(float value) { eyeadaptionKey = value; }
 		constexpr void setEyeAdaptionRate(float value) { eyeadaptionRate = value; }
 		constexpr void setFSRSharpness(float value) { fsrSharpness = value; }
+		constexpr void setLightShaftsStrength(float value) { lightShaftsStrength = value; }
 
 		void setAO(AO value);
 		void setSSREnabled(bool value);

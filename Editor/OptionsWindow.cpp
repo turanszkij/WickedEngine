@@ -528,10 +528,10 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 	themeCombo.Create("Theme: ");
 	themeCombo.SetTooltip("Choose a color theme...");
-	themeCombo.AddItem("Dark", (uint64_t)Theme::Dark);
-	themeCombo.AddItem("Bright", (uint64_t)Theme::Bright);
-	themeCombo.AddItem("Soft", (uint64_t)Theme::Soft);
-	themeCombo.AddItem("Hacking", (uint64_t)Theme::Hacking);
+	themeCombo.AddItem("Dark " ICON_DARK, (uint64_t)Theme::Dark);
+	themeCombo.AddItem("Bright " ICON_BRIGHT, (uint64_t)Theme::Bright);
+	themeCombo.AddItem("Soft " ICON_SOFT, (uint64_t)Theme::Soft);
+	themeCombo.AddItem("Hacking " ICON_HACKING, (uint64_t)Theme::Hacking);
 	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		// Dark theme defaults:

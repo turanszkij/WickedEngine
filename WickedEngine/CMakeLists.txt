@@ -4,6 +4,14 @@ include(GNUInstallDirs)
 set(INSTALL_LOCAL_CONFIGDIR "${CMAKE_BINARY_DIR}/cmake")
 set(INSTALL_CONFIGDIR "${CMAKE_INSTALL_LIBDIR}/cmake/WickedEngine")
 
+if (WICKED_DYNAMIC_LIBRARY)
+	set(WICKED_LIBRARY_TYPE SHARED)
+	message(STATUS "Building WickedEngine as a shared library")
+else()
+	set(WICKED_LIBRARY_TYPE STATIC)
+	message(STATUS "Building WickedEngine as a static library")
+endif()
+
 if (WIN32)
 	# TODO: Choose whether to use SDL2 on windows as well
 	set(TARGET_NAME WickedEngine_Windows)
@@ -130,7 +138,7 @@ set(HEADER_FILES
 		wiXInput.h
 		)
 
-add_library(${TARGET_NAME} STATIC
+add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	wiLoadingScreen.cpp
 	wiLoadingScreen_BindLua.cpp
 	wiApplication.cpp

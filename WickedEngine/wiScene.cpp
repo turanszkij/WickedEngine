@@ -548,7 +548,7 @@ namespace wi::scene
 
 		// vertexBuffer - POSITION + NORMAL + WIND:
 		{
-			if (!targets.empty())
+			if (!morph_targets.empty())
 			{
 				vertex_positions_morphed.resize(vertex_positions.size());
 				dirty_morph = true;
@@ -2709,7 +2709,7 @@ namespace wi::scene
 					target_mesh = meshes.GetComponent(object->meshID);
 					if (target_mesh == nullptr)
 						continue;
-					animation.morph_weights_temp.resize(target_mesh->targets.size());
+					animation.morph_weights_temp.resize(target_mesh->morph_targets.size());
 				}
 				else if (
 					channel.path == AnimationComponent::AnimationChannel::Path::LIGHT_COLOR ||
@@ -3066,9 +3066,9 @@ namespace wi::scene
 
 				if (target_mesh != nullptr)
 				{
-					for (size_t j = 0; j < target_mesh->targets.size(); ++j)
+					for (size_t j = 0; j < target_mesh->morph_targets.size(); ++j)
 					{
-						target_mesh->targets[j].weight = wi::math::Lerp(target_mesh->targets[j].weight, animation.morph_weights_temp[j], t);
+						target_mesh->morph_targets[j].weight = wi::math::Lerp(target_mesh->morph_targets[j].weight, animation.morph_weights_temp[j], t);
 					}
 
 					target_mesh->dirty_morph = true;
@@ -3198,7 +3198,6 @@ namespace wi::scene
 
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
 			size_t parent_index = hier == nullptr ? ~0ull : transforms.GetIndex(hier->parentID);
-			//TransformComponent* parent_transform = hier == nullptr ? nullptr : transforms.GetComponent(hier->parentID);
 			if (parent_index != ~0ull)
 			{
 				// Spring hierarchy resolve depends on spring component order!
@@ -3262,7 +3261,7 @@ namespace wi::scene
 		{
 			for (size_t i = 0; i < transforms.GetCount(); ++i)
 			{
-				// IK shouldn't modify local space, so only update the world matrices!
+				// Springs shouldn't modify local space, so only update the world matrices!
 				transforms[i].world = transforms_temp[i].world;
 			}
 		}
@@ -3478,7 +3477,7 @@ namespace wi::scene
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
 			// Update morph targets if needed:
-			if (mesh.dirty_morph && !mesh.targets.empty())
+			if (mesh.dirty_morph && !mesh.morph_targets.empty())
 			{
 			    XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 			    XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
@@ -3489,17 +3488,17 @@ namespace wi::scene
 					XMFLOAT3 nor = mesh.vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : mesh.vertex_normals[i];
 					const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
 
-					for (const MeshComponent::MeshMorphTarget& target : mesh.targets)
+					for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
 					{
-						pos.x += target.weight * target.vertex_positions[i].x;
-						pos.y += target.weight * target.vertex_positions[i].y;
-						pos.z += target.weight * target.vertex_positions[i].z;
+						pos.x += morph.weight * morph.vertex_positions[i].x;
+						pos.y += morph.weight * morph.vertex_positions[i].y;
+						pos.z += morph.weight * morph.vertex_positions[i].z;
 
-						if (!target.vertex_normals.empty())
+						if (!morph.vertex_normals.empty())
 						{
-							nor.x += target.weight * target.vertex_normals[i].x;
-							nor.y += target.weight * target.vertex_normals[i].y;
-							nor.z += target.weight * target.vertex_normals[i].z;
+							nor.x += morph.weight * morph.vertex_normals[i].x;
+							nor.y += morph.weight * morph.vertex_normals[i].y;
+							nor.z += morph.weight * morph.vertex_normals[i].z;
 						}
 					}
 

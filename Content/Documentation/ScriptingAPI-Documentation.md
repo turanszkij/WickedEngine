@@ -708,6 +708,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetDitherEnabled(bool value)
 - SetDepthOfFieldEnabled(bool value)
 - SetDepthOfFieldStrength(float value)
+- SetLightShaftsStrength(float value)
 - SetMSAASampleCount(int count)
 - SetSharpenFilterEnabled(bool value)
 - SetSharpenFilterAmount(float value)

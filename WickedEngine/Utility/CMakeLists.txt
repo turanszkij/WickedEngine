@@ -169,4 +169,7 @@ add_library(Utility STATIC
 		${HEADER_FILES_zstd}
 		)
 
-set_property(TARGET "Utility" PROPERTY FOLDER "ThirdParty")
+set_target_properties("Utility" PROPERTIES
+	FOLDER "ThirdParty"
+	POSITION_INDEPENDENT_CODE ${WICKED_DYNAMIC_LIBRARY}
+)

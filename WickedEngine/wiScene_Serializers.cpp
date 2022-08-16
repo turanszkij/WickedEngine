@@ -398,12 +398,12 @@ namespace wi::scene
 			{
 			    size_t targetCount;
 			    archive >> targetCount;
-			    targets.resize(targetCount);
+			    morph_targets.resize(targetCount);
 			    for (size_t i = 0; i < targetCount; ++i)
 			    {
-					archive >> targets[i].vertex_positions;
-					archive >> targets[i].vertex_normals;
-					archive >> targets[i].weight;
+					archive >> morph_targets[i].vertex_positions;
+					archive >> morph_targets[i].vertex_normals;
+					archive >> morph_targets[i].weight;
 			    }
 			}
 
@@ -467,12 +467,12 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 53)
 			{
-			    archive << targets.size();
-			    for (size_t i = 0; i < targets.size(); ++i)
+			    archive << morph_targets.size();
+			    for (size_t i = 0; i < morph_targets.size(); ++i)
 			    {
-					archive << targets[i].vertex_positions;
-					archive << targets[i].vertex_normals;
-					archive << targets[i].weight;
+					archive << morph_targets[i].vertex_positions;
+					archive << morph_targets[i].vertex_normals;
+					archive << morph_targets[i].weight;
 			    }
 			}
 

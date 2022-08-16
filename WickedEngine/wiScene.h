@@ -364,14 +364,13 @@ namespace wi::scene
 		float tessellationFactor = 0.0f;
 		wi::ecs::Entity armatureID = wi::ecs::INVALID_ENTITY;
 
-		// Morph Targets
-		struct MeshMorphTarget
+		struct MorphTarget
 		{
 		    wi::vector<XMFLOAT3> vertex_positions;
 		    wi::vector<XMFLOAT3> vertex_normals;
-		    float_t weight;
+		    float weight;
 		};
-		wi::vector<MeshMorphTarget> targets;
+		wi::vector<MorphTarget> morph_targets;
 
 		uint32_t subsets_per_lod = 0; // this needs to be specified if there are multiple LOD levels
 
