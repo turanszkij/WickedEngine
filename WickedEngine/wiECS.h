@@ -411,6 +411,8 @@ namespace wi::ecs
 	public:
 		uint64_t libraryVersion;
 		wi::vector<std::unique_ptr<ComponentManager_Interface>> componentManagers;
+		wi::vector<uint64_t> componentVersions;
+		wi::vector<uint64_t> archiveVersions;
 
 		//Create a Component Library and set up its version
 		ComponentLibrary(uint64_t iLibraryVersion = 0){ libraryVersion = iLibraryVersion; }
@@ -421,8 +423,10 @@ namespace wi::ecs
 
 		// Create an instance of ComponentManager of a certain data type
 		// Once added, cannot be removed!
-		template<typename T> inline ComponentManager<T>& Register(){
+		template<typename T> inline ComponentManager<T>& Register(uint64_t componentVersion = 0, uint64_t archiveVersion = 0){
 			componentManagers.push_back(std::make_unique<ComponentManager<T>>());
+			componentVersions.push_back(componentVersion);
+			archiveVersions.push_back(archiveVersion);
 			return static_cast<ComponentManager<T>&>(*componentManagers.back());
 		}
 
@@ -444,6 +448,50 @@ namespace wi::ecs
 				if (contains) break;
 			}
 			return contains;
+		}
+
+		inline void Serialize(wi::Archive& archive, EntitySerializer& seri){
+			for(auto& componentManager : componentManagers){
+				if(archive.IsReadMode())
+				{
+					uint64_t archiveVersion;
+					uint64_t componentVersion;
+					archive >> archiveVersion;
+					archive >> componentVersion;
+					if((archive.GetVersion() >= archiveVersion) && (componentVersion >= libraryVersion)){
+						componentManager->Serialize(archive, seri);
+					}
+				}
+				else
+				{
+					archive << archive.GetVersion();
+					archive << libraryVersion;
+					componentManager->Serialize(archive, seri);
+				}
+			}
+		}
+
+		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri){
+			if (archive.IsReadMode())
+			{
+				for(auto& componentManager : componentManagers){
+					uint64_t archiveVersion;
+					uint64_t componentVersion;
+					archive >> archiveVersion;
+					archive >> componentVersion;
+					if((archive.GetVersion() >= archiveVersion) && (componentVersion >= libraryVersion)){
+						componentManager->Component_Serialize_R(entity, archive, seri);
+					}
+				}
+			}
+			else 
+			{
+				for(auto& componentManager : componentManagers){
+					archive << archive.GetVersion();
+					archive << libraryVersion;
+					componentManager->Serialize(archive, seri);
+				}
+			}
 		}
 	};
 }
