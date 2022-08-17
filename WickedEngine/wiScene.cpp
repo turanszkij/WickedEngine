@@ -3206,16 +3206,6 @@ namespace wi::scene
 		time += dt;
 		const XMVECTOR windDir = XMLoadFloat3(&weather.windDirection);
 
-		if (GetAsyncKeyState('K') < 0)
-		{
-
-			for (size_t i = 0; i < springs.GetCount(); ++i)
-			{
-				SpringComponent& spring = springs[i];
-				spring.Reset();
-			}
-		}
-
 		for (size_t i = 0; i < springs.GetCount(); ++i)
 		{
 			SpringComponent& spring = springs[i];
