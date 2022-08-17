@@ -2025,9 +2025,9 @@ namespace wi::scene
 	}
 	void Scene::Clear()
 	{
-		for(auto& componentManager_kval : componentLibrary.componentManagers)
+		for(auto& entry : componentLibrary.entries)
 		{
-			componentManager_kval.second->Clear();
+			entry.second.component_manager->Clear();
 		}
 
 		TLAS = RaytracingAccelerationStructure();
@@ -2045,16 +2045,18 @@ namespace wi::scene
 	}
 	void Scene::Merge(Scene& other)
 	{
-		for(auto& componentManager_kval : componentLibrary.componentManagers){
-			componentManager_kval.second->Merge(*other.componentLibrary.componentManagers[componentManager_kval.first]);
+		for (auto& entry : componentLibrary.entries)
+		{
+			entry.second.component_manager->Merge(*other.componentLibrary.entries[entry.first].component_manager);
 		}
 
 		bounds = AABB::Merge(bounds, other.bounds);
 	}
 	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
 	{
-		for(auto& componentManager_kval : componentLibrary.componentManagers){
-			entities.insert(componentManager_kval.second->GetEntityArray().begin(),componentManager_kval.second->GetEntityArray().end());
+		for (auto& entry : componentLibrary.entries)
+		{
+			entities.insert(entry.second.component_manager->GetEntityArray().begin(), entry.second.component_manager->GetEntityArray().end());
 		}
 	}
 
@@ -2078,8 +2080,9 @@ namespace wi::scene
 			}
 		}
 
-		for(auto& componentManager_kval : componentLibrary.componentManagers){
-			componentManager_kval.second->Remove(entity);
+		for (auto& entry : componentLibrary.entries)
+		{
+			entry.second.component_manager->Remove(entity);
 		}
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)

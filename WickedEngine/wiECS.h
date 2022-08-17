@@ -5,7 +5,6 @@
 #include "wiHelper.h"
 #include "wiJobSystem.h"
 #include "wiUnorderedMap.h"
-#include "wiUnorderedSet.h"
 #include "wiVector.h"
 
 #include <cstdint>
@@ -35,10 +34,18 @@ namespace wi::ecs
 		wi::jobsystem::context ctx; // allow components to spawn serialization subtasks
 		wi::unordered_map<uint64_t, Entity> remap;
 		bool allow_remap = true;
+		uint64_t version = 0; // The ComponentLibrary serialization will modify this by the registered component's version number
 
 		~EntitySerializer()
 		{
 			wi::jobsystem::Wait(ctx); // automatically wait for all subtasks after serialization
+		}
+
+		// Returns the library version of the currently serializing Component
+		//	If not using ComponentLibrary, it returns version set by the user.
+		uint64_t GetVersion() const
+		{
+			return version;
 		}
 	};
 	// This is the safe way to serialize an entity
@@ -146,11 +153,13 @@ namespace wi::ecs
 			other.Clear();
 		}
 
-		inline void Copy(const ComponentManager_Interface& other){
+		inline void Copy(const ComponentManager_Interface& other)
+		{
 			Copy((ComponentManager<Component>&)other);
 		}
 
-		inline void Merge(ComponentManager_Interface& other){
+		inline void Merge(ComponentManager_Interface& other)
+		{
 			Merge((ComponentManager<Component>&)other);
 		}
 
@@ -407,97 +416,114 @@ namespace wi::ecs
 		ComponentManager(const ComponentManager&) = delete;
 	};
 
-	// This is the class to store all ComponentManagers,
+	// This is the class to store all component managers,
 	// this is useful for bulk operation of all attached components within an entity
 	class ComponentLibrary
 	{
 	public:
-		wi::unordered_map<uint32_t, std::unique_ptr<ComponentManager_Interface>> componentManagers;
+		struct LibraryEntry
+		{
+			std::unique_ptr<ComponentManager_Interface> component_manager;
+			uint64_t version = 0;
+		};
+		wi::unordered_map<std::string, LibraryEntry> entries;
 
 		// Create an instance of ComponentManager of a certain data type
-		// Once added, cannot be removed!
-		template<typename T> inline ComponentManager<T>& Register(std::string name){
-			uint64_t name_hashed = wi::helper::string_hash(name.c_str());
-			componentManagers[name_hashed] = std::make_unique<ComponentManager<T>>();
-			return static_cast<ComponentManager<T>&>(*componentManagers[name_hashed]);
+		//	The name must be unique, it will be used in serialization
+		//	version is optional, it will be propagated to ComponentManager::Serialize() inside the EntitySerializer parameter
+		template<typename T>
+		inline ComponentManager<T>& Register(std::string name, uint64_t version = 0)
+		{
+			entries[name].component_manager = std::make_unique<ComponentManager<T>>();
+			entries[name].version = version;
+			return static_cast<ComponentManager<T>&>(*entries[name].component_manager);
 		}
 
-
-		// Bulk operations
-		// Perform deep copy of all the contents of "other" into this
-		inline void Copy(const ComponentLibrary& other){
-			for(auto& componentManager_kval : componentManagers){
-				auto find_other_componentManager = other.componentManagers.find(componentManager_kval.first);
-				if(find_other_componentManager != nullptr){
-					componentManagers[componentManager_kval.first]->Copy(*find_other_componentManager->second);
-				}
-			}
-		}
-
-		// Check if any component exists for a given entity or not
-		inline uint32_t Contains(Entity entity) const{
-			uint32_t contains = false;
-			for(auto& componentManager_kval : componentManagers){
-				contains += componentManager_kval.second->Contains(entity);
-			}
-			return contains;
-		}
-
-		inline void Serialize(wi::Archive& archive, EntitySerializer& seri){
-			if(archive.IsReadMode()){
+		// Serialize all registered component managers
+		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
+		{
+			if(archive.IsReadMode())
+			{
 				bool has_next = false;
-				do{
+				do
+				{
 					archive >> has_next;
-					if(has_next){
-						uint64_t component_type;
-						archive >> component_type;
-						wi::vector<uint8_t> datablock_raw;
-						archive >> datablock_raw;
-						if(componentManagers.find(component_type) != componentManagers.end()){
-							auto datablock = wi::Archive(datablock_raw.data());
-							datablock.SetReadModeAndResetPos(true);
-							componentManagers[component_type]->Serialize(datablock, seri);
+					if(has_next)
+					{
+						std::string name;
+						archive >> name;
+						archive >> seri.version;
+						uint64_t jump_size = 0;
+						archive >> jump_size;
+						auto it = entries.find(name);
+						if(it != entries.end())
+						{
+							it->second.component_manager->Serialize(archive, seri);
+						}
+						else
+						{
+							// component manager of this name was not registered, skip serialization by jumping over the data
+							archive.Jump(jump_size);
 						}
 					}
-				}while(has_next);
-			}else{
-				for(auto& componentManager_kval : componentManagers){
+				}
+				while(has_next);
+			}
+			else
+			{
+				for(auto& it : entries)
+				{
 					archive << true;
-					archive << componentManager_kval.first;
-					wi::Archive datablock;
-					datablock.SetReadModeAndResetPos(false);
-					componentManager_kval.second->Serialize(datablock, seri);
-					archive << *datablock.GetDataBlock();
+					archive << it.first; // name
+					archive << it.second.version;
+					size_t offset = archive.WriteUnknownJumpPosition(); // we will be able to jump from here...
+					it.second.component_manager->Serialize(archive, seri);
+					archive.PatchUnknownJumpPosition(offset); // ...to here, if this component manager was not registered
 				}
 				archive << false;
 			}
 		}
 
-		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri){
-			if(archive.IsReadMode()){
+		// Serialize all components for one entity
+		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
+		{
+			if(archive.IsReadMode())
+			{
 				bool has_next = false;
-				do{
+				do
+				{
 					archive >> has_next;
-					if(has_next){
-						uint64_t component_type;
-						archive >> component_type;
-						wi::vector<uint8_t> datablock_raw;
-						archive >> datablock_raw;
-						if(componentManagers.find(component_type) != componentManagers.end()){
-							auto datablock = wi::Archive(datablock_raw.data());
-							datablock.SetReadModeAndResetPos(true);
-							componentManagers[component_type]->Component_Serialize(entity, datablock, seri);
+					if(has_next)
+					{
+						std::string name;
+						archive >> name;
+						archive >> seri.version;
+						uint64_t jump_size = 0;
+						archive >> jump_size;
+						auto it = entries.find(name);
+						if (it != entries.end())
+						{
+							it->second.component_manager->Component_Serialize(entity, archive, seri);
+						}
+						else
+						{
+							// component manager of this name was not registered, skip serialization by jumping over the data
+							archive.Jump(jump_size);
 						}
 					}
-				}while(has_next);
-			}else{
-				for(auto& componentManager_kval : componentManagers){
+				}
+				while(has_next);
+			}
+			else
+			{
+				for(auto& it : entries)
+				{
 					archive << true;
-					archive << componentManager_kval.first;
-					wi::Archive datablock;
-					datablock.SetReadModeAndResetPos(false);
-					componentManager_kval.second->Component_Serialize(entity, datablock, seri);
-					archive << *datablock.GetDataBlock();
+					archive << it.first; // name
+					archive << it.second.version;
+					size_t offset = archive.WriteUnknownJumpPosition(); // we will be able to jump from here..
+					it.second.component_manager->Component_Serialize(entity, archive, seri);
+					archive.PatchUnknownJumpPosition(offset); // ...to here, if this component manager was not registered
 				}
 				archive << false;
 			}
