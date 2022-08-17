@@ -3170,18 +3170,17 @@ namespace wi::scene
 
 			const TransformComponent& transform = *transforms.GetComponent(collider.transformID);
 
+			XMFLOAT3 scale = transform.GetScale();
+			collider.sphere.radius = collider.radius * std::max(scale.x, std::max(scale.y, scale.z));
+			collider.capsule.radius = collider.sphere.radius;
+
 			XMMATRIX W = XMLoadFloat4x4(&transform.world);
 			XMVECTOR offset = XMLoadFloat3(&collider.offset);
 			XMVECTOR tail = XMLoadFloat3(&collider.tail);
-			XMVECTOR radius = XMVectorReplicate(collider.radius);
 			offset = XMVector3Transform(offset, W);
 			tail = XMVector3Transform(tail, W);
-			radius = XMVector3TransformNormal(radius, W);
 
 			XMStoreFloat3(&collider.sphere.center, offset);
-			collider.sphere.radius = std::max(XMVectorGetX(radius), std::max(XMVectorGetY(radius), XMVectorGetZ(radius)));
-
-			collider.capsule.radius = collider.sphere.radius;
 			XMVECTOR N = XMVector3Normalize(offset - tail);
 			offset += N * collider.capsule.radius;
 			tail -= N * collider.capsule.radius;
@@ -3207,6 +3206,16 @@ namespace wi::scene
 		time += dt;
 		const XMVECTOR windDir = XMLoadFloat3(&weather.windDirection);
 
+		if (GetAsyncKeyState('K') < 0)
+		{
+
+			for (size_t i = 0; i < springs.GetCount(); ++i)
+			{
+				SpringComponent& spring = springs[i];
+				spring.Reset();
+			}
+		}
+
 		for (size_t i = 0; i < springs.GetCount(); ++i)
 		{
 			SpringComponent& spring = springs[i];
@@ -3225,6 +3234,7 @@ namespace wi::scene
 
 			XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
 			XMVECTOR rotation_parent_world = XMQuaternionIdentity();
+			XMMATRIX parentWorldMatrix = XMMatrixIdentity();
 
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
 			size_t parent_index = hier == nullptr ? ~0ull : transforms.GetIndex(hier->parentID);
@@ -3236,6 +3246,7 @@ namespace wi::scene
 				const TransformComponent& parent_transform = transforms[parent_index];
 				transform.UpdateTransform_Parented(parent_transform);
 				rotation_parent_world = parent_transform.GetRotationV();
+				parentWorldMatrix = XMLoadFloat4x4(&parent_transform.world);
 			}
 
 			XMVECTOR position_root = transform.GetPositionV();
@@ -3282,7 +3293,7 @@ namespace wi::scene
 			}
 
 			XMVECTOR boneAxis = XMLoadFloat3(&spring.boneAxis);
-			//boneAxis = XMVector3Rotate(boneAxis, rotation_combined);
+			//boneAxis = XMVector3Normalize(XMVector3Rotate(boneAxis, rotation_combined));
 
 			const float boneLength = spring.boneLength;
 			const float dragForce = spring.dragForce;
@@ -3290,7 +3301,7 @@ namespace wi::scene
 			const XMVECTOR gravityDir = XMLoadFloat3(&spring.gravityDir);
 			const float gravityPower = spring.gravityPower;
 
-#if 0
+#if 1
 			// Debug axis:
 			wi::renderer::RenderableLine line;
 			line.color_start = line.color_end = XMFLOAT4(1, 1, 0, 1);
@@ -3326,13 +3337,17 @@ namespace wi::scene
 
 #if 1
 			// Collider checks:
+			//	apply scaling to radius:
+			XMFLOAT3 scale = transform.GetScale();
+			const float hitRadius = spring.hitRadius * std::max(scale.x, std::max(scale.y, scale.z));
+
 			for (size_t collider_index = 0; collider_index < colliders.GetCount(); ++collider_index)
 			{
 				const ColliderComponent& collider = colliders[collider_index];
 
 				wi::primitive::Sphere tail_sphere;
 				XMStoreFloat3(&tail_sphere.center, tail_next); // tail_sphere center can change within loop!
-				tail_sphere.radius = spring.hitRadius;
+				tail_sphere.radius = hitRadius;
 				float dist = 0;
 				XMFLOAT3 direction = {};
 				switch (collider.shape)

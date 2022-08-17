@@ -10,7 +10,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Spring", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(460, 180));
+	SetSize(XMFLOAT2(460, 200));
 
 	closeButton.SetTooltip("Delete SpringComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -32,9 +32,22 @@ void SpringWindow::Create(EditorComponent* _editor)
 	float hei = 18;
 	float step = hei + 2;
 
+	resetAllButton.Create("Reset All");
+	resetAllButton.SetTooltip("Reset all springs in the scene to initial pose.");
+	resetAllButton.SetPos(XMFLOAT2(x, y));
+	resetAllButton.SetSize(XMFLOAT2(siz, hei));
+	resetAllButton.OnClick([&](wi::gui::EventArgs args) {
+		auto& scene = editor->GetCurrentScene();
+		for (size_t i = 0; i < scene.springs.GetCount(); ++i)
+		{
+			scene.springs[i].Reset();
+		}
+	});
+	AddWidget(&resetAllButton);
+
 	debugCheckBox.Create("DEBUG: ");
 	debugCheckBox.SetTooltip("Enabling this will visualize springs as small yellow X-es in the scene");
-	debugCheckBox.SetPos(XMFLOAT2(x, y));
+	debugCheckBox.SetPos(XMFLOAT2(x, y += step));
 	debugCheckBox.SetSize(XMFLOAT2(hei, hei));
 	AddWidget(&debugCheckBox);
 
