@@ -2,6 +2,7 @@
 #define WI_ENTITY_COMPONENT_SYSTEM_H
 
 #include "wiArchive.h"
+#include "wiHelper.h"
 #include "wiJobSystem.h"
 #include "wiUnorderedMap.h"
 #include "wiUnorderedSet.h"
@@ -11,6 +12,7 @@
 #include <cassert>
 #include <atomic>
 #include <memory>
+#include <string>
 
 // Entity-Component System
 namespace wi::ecs
@@ -410,105 +412,76 @@ namespace wi::ecs
 	class ComponentLibrary
 	{
 	public:
-		uint64_t libraryVersion = 0;
-		wi::vector<std::unique_ptr<ComponentManager_Interface>> componentManagers;
-
-		//Create a Component Library and set up its version
-		ComponentLibrary(uint64_t iLibraryVersion = 0){ libraryVersion = iLibraryVersion; }
-
-		// Set library version, making sure different changes 
-		// between your component library are able to be serialized properly
-		void SetLibraryVersion(uint64_t iLibraryVersion){ libraryVersion = iLibraryVersion; }
+		wi::unordered_map<uint32_t, std::unique_ptr<ComponentManager_Interface>> componentManagers;
 
 		// Create an instance of ComponentManager of a certain data type
 		// Once added, cannot be removed!
-		template<typename T> inline ComponentManager<T>& Register()
-		{
-			componentManagers.push_back(std::make_unique<ComponentManager<T>>());
-			return static_cast<ComponentManager<T>&>(*componentManagers.back());
+		template<typename T> inline ComponentManager<T>& Register(std::string name){
+			uint64_t name_hashed = wi::helper::string_hash(name.c_str());
+			componentManagers[name_hashed] = std::make_unique<ComponentManager<T>>();
+			return static_cast<ComponentManager<T>&>(*componentManagers[name_hashed]);
 		}
 
 
 		// Bulk operations
 		// Perform deep copy of all the contents of "other" into this
-		inline void Copy(const ComponentLibrary& other)
-		{
-			for(size_t i = 0; i < other.componentManagers.size(); ++i)
-			{
-				auto& other_compmgr = *other.componentManagers[i];
-				componentManagers[i]->Copy(other_compmgr);
+		inline void Copy(const ComponentLibrary& other){
+			for(auto& componentManager_kval : componentManagers){
+				auto find_other_componentManager = other.componentManagers.find(componentManager_kval.first);
+				if(find_other_componentManager != nullptr){
+					componentManagers[componentManager_kval.first]->Copy(*find_other_componentManager->second);
+				}
 			}
 		}
 
 		// Check if any component exists for a given entity or not
-		inline bool Contains(Entity entity) const
-		{
-			bool contains = false;
-			for(auto& componentManager : componentManagers)
-			{
-				contains = componentManager->Contains(entity);
-				if (contains) break;
+		inline uint32_t Contains(Entity entity) const{
+			uint32_t contains = false;
+			for(auto& componentManager_kval : componentManagers){
+				contains += componentManager_kval.second->Contains(entity);
 			}
 			return contains;
 		}
 
-		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
-		{
-			if(archive.IsReadMode())
-			{
-				size_t componentmanager_count = 0;
-				archive >> componentmanager_count;
-				for (size_t i = 0; i < componentmanager_count; ++i)
-				{
-					uint64_t archiveVersion;
-					uint64_t componentVersion;
-					archive >> archiveVersion;
-					archive >> componentVersion;
-					if ((archive.GetVersion() >= archiveVersion) && (libraryVersion >= componentVersion))
-					{
-						componentManagers[i]->Serialize(archive, seri);
+		inline void Serialize(wi::Archive& archive, EntitySerializer& seri){
+			if(archive.IsReadMode()){
+				bool has_next = false;
+				do{
+					archive >> has_next;
+					if(has_next){
+						uint64_t component_type;
+						archive >> component_type;
+						componentManagers[component_type]->Serialize(archive, seri);
 					}
+				}while(has_next);
+			}else{
+				for(auto& componentManager_kval : componentManagers){
+					archive << true;
+					archive << componentManager_kval.first;
+					componentManager_kval.second->Serialize(archive, seri);
 				}
-			}
-			else
-			{
-				archive << componentManagers.size();
-				for (auto& componentManager : componentManagers)
-				{
-					archive << archive.GetVersion();
-					archive << libraryVersion;
-					componentManager->Serialize(archive, seri);
-				}
+				archive << false;
 			}
 		}
 
-		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
-		{
-			if (archive.IsReadMode())
-			{
-				size_t componentmanager_count = 0;
-				archive >> componentmanager_count;
-				for (size_t i = 0; i < componentmanager_count; ++i)
-				{
-					uint64_t archiveVersion;
-					uint64_t componentVersion;
-					archive >> archiveVersion;
-					archive >> componentVersion;
-					if ((archive.GetVersion() >= archiveVersion) && (libraryVersion >= componentVersion))
-					{
-						componentManagers[i]->Component_Serialize(entity, archive, seri);
+		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri){
+			if(archive.IsReadMode()){
+				bool has_next = false;
+				do{
+					archive >> has_next;
+					if(has_next){
+						uint64_t component_type;
+						archive >> component_type;
+						componentManagers[component_type]->Component_Serialize(entity, archive, seri);
 					}
+				}while(has_next);
+			}else{
+				for(auto& componentManager_kval : componentManagers){
+					archive << true;
+					archive << componentManager_kval.first;
+					componentManager_kval.second->Component_Serialize(entity, archive, seri);
 				}
-			}
-			else 
-			{
-				archive << componentManagers.size();
-				for (auto& componentManager : componentManagers)
-				{
-					archive << archive.GetVersion();
-					archive << libraryVersion;
-					componentManager->Component_Serialize(entity, archive, seri);
-				}
+				archive << false;
 			}
 		}
 	};
