@@ -1283,15 +1283,20 @@ namespace wi::scene
 			STRETCH_ENABLED = 1 << 2,
 			GRAVITY_ENABLED = 1 << 3,
 		};
-		uint32_t _flags = RESET;
+		uint32_t _flags = RESET | GRAVITY_ENABLED;
 
-		float stiffness = 100;
-		float damping = 0.8f;
-		float wind_affection = 0;
+		float stiffnessForce = 0.5f;
+		float dragForce = 0.5f;
+		float windForce = 0.5f;
+		float hitRadius = 0;
+		float gravityPower = 0.5f;
+		XMFLOAT3 gravityDir = {};
 
 		// Non-serialized attributes:
-		XMFLOAT3 center_of_mass;
-		XMFLOAT3 velocity;
+		XMFLOAT3 prevTail = {};
+		XMFLOAT3 currentTail = {};
+		XMFLOAT3 boneAxis = {};
+		float boneLength = 0;
 
 		inline void Reset(bool value = true) { if (value) { _flags |= RESET; } else { _flags &= ~RESET; } }
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
@@ -1302,6 +1307,33 @@ namespace wi::scene
 		inline bool IsDisabled() const { return _flags & DISABLED; }
 		inline bool IsStretchEnabled() const { return _flags & STRETCH_ENABLED; }
 		inline bool IsGravityEnabled() const { return _flags & GRAVITY_ENABLED; }
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
+
+	struct ColliderComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		enum class Shape
+		{
+			Sphere,
+			Capsule,
+		};
+		Shape shape;
+
+		wi::ecs::Entity transformID = wi::ecs::INVALID_ENTITY;
+		float radius = 0;
+		XMFLOAT3 offset = {};
+		XMFLOAT3 tail = {};
+
+		// Non-serialized attributes:
+		wi::primitive::Sphere sphere;
+		wi::primitive::Capsule capsule;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -1337,7 +1369,8 @@ namespace wi::scene
 		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Register<WeatherComponent>("wi::scene::Scene::weathers");
 		wi::ecs::ComponentManager<SoundComponent>& sounds = componentLibrary.Register<SoundComponent>("wi::scene::Scene::sounds");
 		wi::ecs::ComponentManager<InverseKinematicsComponent>& inverse_kinematics = componentLibrary.Register<InverseKinematicsComponent>("wi::scene::Scene::inverse_kinematics");
-		wi::ecs::ComponentManager<SpringComponent>& springs = componentLibrary.Register<SpringComponent>("wi::scene::Scene::springs");
+		wi::ecs::ComponentManager<SpringComponent>& springs = componentLibrary.Register<SpringComponent>("wi::scene::Scene::springs", 1); // version = 1
+		wi::ecs::ComponentManager<ColliderComponent>& colliders = componentLibrary.Register<ColliderComponent>("wi::scene::Scene::colliders");
 
 		// Non-serialized attributes:
 		float dt = 0;

@@ -873,6 +873,10 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_IK " ";
 	}
+	if (scene.colliders.Contains(entity))
+	{
+		item.name += ICON_COLLIDER " ";
+	}
 	if (entity == terragen.terrainEntity)
 	{
 		item.name += ICON_TERRAIN " ";
@@ -1086,6 +1090,14 @@ void OptionsWindow::RefreshEntityTree()
 		for (size_t i = 0; i < scene.springs.GetCount(); ++i)
 		{
 			PushToEntityTree(scene.springs.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::All))
+	{
+		for (size_t i = 0; i < scene.colliders.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.colliders.GetEntity(i), 0);
 		}
 	}
 

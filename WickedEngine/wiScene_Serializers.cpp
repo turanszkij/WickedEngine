@@ -1366,18 +1366,55 @@ namespace wi::scene
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			archive >> stiffness;
-			archive >> damping;
-			archive >> wind_affection;
+			archive >> stiffnessForce;
+			archive >> dragForce;
+			archive >> windForce;
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> hitRadius;
+				archive >> gravityPower;
+				archive >> gravityDir;
+			}
 
 			Reset();
 		}
 		else
 		{
 			archive << _flags;
-			archive << stiffness;
-			archive << damping;
-			archive << wind_affection;
+			archive << stiffnessForce;
+			archive << dragForce;
+			archive << windForce;
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << hitRadius;
+				archive << gravityPower;
+				archive << gravityDir;
+			}
+		}
+	}
+	void ColliderComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			int ishape = 0;
+			archive >> ishape;
+			shape = (Shape)ishape;
+			SerializeEntity(archive, transformID, seri);
+			archive >> radius;
+			archive >> offset;
+			archive >> tail;
+		}
+		else
+		{
+			archive << _flags;
+			archive << (int)shape;
+			SerializeEntity(archive, transformID, seri);
+			archive << radius;
+			archive << offset;
+			archive << tail;
 		}
 	}
 

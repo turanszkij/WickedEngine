@@ -10,7 +10,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Spring", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(460, 180));
+	SetSize(XMFLOAT2(460, 200));
 
 	closeButton.SetTooltip("Delete SpringComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -32,9 +32,22 @@ void SpringWindow::Create(EditorComponent* _editor)
 	float hei = 18;
 	float step = hei + 2;
 
+	resetAllButton.Create("Reset All");
+	resetAllButton.SetTooltip("Reset all springs in the scene to initial pose.");
+	resetAllButton.SetPos(XMFLOAT2(x, y));
+	resetAllButton.SetSize(XMFLOAT2(siz, hei));
+	resetAllButton.OnClick([&](wi::gui::EventArgs args) {
+		auto& scene = editor->GetCurrentScene();
+		for (size_t i = 0; i < scene.springs.GetCount(); ++i)
+		{
+			scene.springs[i].Reset();
+		}
+	});
+	AddWidget(&resetAllButton);
+
 	debugCheckBox.Create("DEBUG: ");
 	debugCheckBox.SetTooltip("Enabling this will visualize springs as small yellow X-es in the scene");
-	debugCheckBox.SetPos(XMFLOAT2(x, y));
+	debugCheckBox.SetPos(XMFLOAT2(x, y += step));
 	debugCheckBox.SetSize(XMFLOAT2(hei, hei));
 	AddWidget(&debugCheckBox);
 
@@ -65,30 +78,30 @@ void SpringWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&gravityCheckBox);
 
-	stiffnessSlider.Create(0, 1000, 100, 100000, "Stiffness: ");
+	stiffnessSlider.Create(0, 1, 0.1f, 100000, "Stiffness: ");
 	stiffnessSlider.SetTooltip("The stiffness affects how strongly the spring tries to orient itself to rest pose (higher values increase the jiggliness)");
 	stiffnessSlider.SetPos(XMFLOAT2(x, y += step));
 	stiffnessSlider.SetSize(XMFLOAT2(siz, hei));
 	stiffnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		editor->GetCurrentScene().springs.GetComponent(entity)->stiffness = args.fValue;
+		editor->GetCurrentScene().springs.GetComponent(entity)->stiffnessForce = args.fValue;
 		});
 	AddWidget(&stiffnessSlider);
 
-	dampingSlider.Create(0, 1, 0.8f, 100000, "Damping: ");
-	dampingSlider.SetTooltip("The damping affects how fast energy is lost (higher values make the spring come to rest faster)");
-	dampingSlider.SetPos(XMFLOAT2(x, y += step));
-	dampingSlider.SetSize(XMFLOAT2(siz, hei));
-	dampingSlider.OnSlide([&](wi::gui::EventArgs args) {
-		editor->GetCurrentScene().springs.GetComponent(entity)->damping = args.fValue;
+	dragSlider.Create(0, 1, 0.8f, 100000, "Drag: ");
+	dragSlider.SetTooltip("The drag affects how fast energy is lost (higher values make the spring come to rest faster)");
+	dragSlider.SetPos(XMFLOAT2(x, y += step));
+	dragSlider.SetSize(XMFLOAT2(siz, hei));
+	dragSlider.OnSlide([&](wi::gui::EventArgs args) {
+		editor->GetCurrentScene().springs.GetComponent(entity)->dragForce = args.fValue;
 		});
-	AddWidget(&dampingSlider);
+	AddWidget(&dragSlider);
 
 	windSlider.Create(0, 1, 0, 100000, "Wind affection: ");
 	windSlider.SetTooltip("How much the global wind effect affects the spring");
 	windSlider.SetPos(XMFLOAT2(x, y += step));
 	windSlider.SetSize(XMFLOAT2(siz, hei));
 	windSlider.OnSlide([&](wi::gui::EventArgs args) {
-		editor->GetCurrentScene().springs.GetComponent(entity)->wind_affection = args.fValue;
+		editor->GetCurrentScene().springs.GetComponent(entity)->windForce = args.fValue;
 		});
 	AddWidget(&windSlider);
 
@@ -112,9 +125,9 @@ void SpringWindow::SetEntity(Entity entity)
 		disabledCheckBox.SetCheck(spring->IsDisabled());
 		stretchCheckBox.SetCheck(spring->IsStretchEnabled());
 		gravityCheckBox.SetCheck(spring->IsGravityEnabled());
-		stiffnessSlider.SetValue(spring->stiffness);
-		dampingSlider.SetValue(spring->damping);
-		windSlider.SetValue(spring->wind_affection);
+		stiffnessSlider.SetValue(spring->stiffnessForce);
+		dragSlider.SetValue(spring->dragForce);
+		windSlider.SetValue(spring->windForce);
 	}
 	else
 	{

@@ -1558,14 +1558,27 @@ void EditorComponent::Render() const
 		// Spring visualizer:
 		if (componentsWnd.springWnd.debugCheckBox.GetCheck())
 		{
+			for (size_t i = 0; i < scene.colliders.GetCount(); ++i)
+			{
+				ColliderComponent& collider = scene.colliders[i];
+				switch (collider.shape)
+				{
+				default:
+				case ColliderComponent::Shape::Sphere:
+					wi::renderer::DrawSphere(collider.sphere, XMFLOAT4(1, 0, 1, 1));
+					break;
+				case ColliderComponent::Shape::Capsule:
+					wi::renderer::DrawCapsule(collider.capsule, XMFLOAT4(1, 1, 0, 1));
+					break;
+				}
+			}
 			for (size_t i = 0; i < scene.springs.GetCount(); ++i)
 			{
 				const SpringComponent& spring = scene.springs[i];
-				wi::renderer::RenderablePoint point;
-				point.position = spring.center_of_mass;
-				point.size = 0.05f;
-				point.color = XMFLOAT4(1, 1, 0, 1);
-				wi::renderer::DrawPoint(point);
+				wi::primitive::Sphere sphere;
+				sphere.center = spring.currentTail;
+				sphere.radius = spring.hitRadius;
+				wi::renderer::DrawSphere(sphere, XMFLOAT4(1, 1, 0, 1));
 			}
 		}
 	}

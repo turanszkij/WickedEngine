@@ -2623,7 +2623,7 @@ int SpringComponent_BindLua::SetStiffness(lua_State* L)
 	if (argc > 0)
 	{
 		float value = wi::lua::SGetFloat(L, 1);
-		component->stiffness = value;
+		component->stiffnessForce = value;
 	}
 	else
 	{
@@ -2637,7 +2637,7 @@ int SpringComponent_BindLua::SetDamping(lua_State* L)
 	if (argc > 0)
 	{
 		float value = wi::lua::SGetFloat(L, 1);
-		component->damping = value;
+		component->stiffnessForce = value;
 	}
 	else
 	{
@@ -2651,7 +2651,7 @@ int SpringComponent_BindLua::SetWindAffection(lua_State* L)
 	if (argc > 0)
 	{
 		float value = wi::lua::SGetFloat(L, 1);
-		component->wind_affection = value;
+		component->windForce = value;
 	}
 	else
 	{

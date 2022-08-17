@@ -11,6 +11,7 @@ namespace wi::primitive
 	struct Sphere;
 	struct Ray;
 	struct AABB;
+	struct Capsule;
 
 	struct AABB
 	{
@@ -82,6 +83,11 @@ namespace wi::primitive
 		Sphere(const XMFLOAT3& c, float r) :center(c), radius(r) {}
 		bool intersects(const AABB& b) const;
 		bool intersects(const Sphere& b) const;
+		bool intersects(const Sphere& b, float& dist) const;
+		bool intersects(const Sphere& b, float& dist, XMFLOAT3& direction) const;
+		bool intersects(const Capsule& b) const;
+		bool intersects(const Capsule& b, float& dist) const;
+		bool intersects(const Capsule& b, float& dist, XMFLOAT3& direction) const;
 		bool intersects(const Ray& b) const;
 	};
 	struct Capsule
