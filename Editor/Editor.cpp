@@ -1561,11 +1561,10 @@ void EditorComponent::Render() const
 			for (size_t i = 0; i < scene.springs.GetCount(); ++i)
 			{
 				const SpringComponent& spring = scene.springs[i];
-				wi::renderer::RenderablePoint point;
-				point.position = spring.center_of_mass;
-				point.size = 0.05f;
-				point.color = XMFLOAT4(1, 1, 0, 1);
-				wi::renderer::DrawPoint(point);
+				wi::primitive::Sphere sphere;
+				sphere.center = spring.currentTail;
+				sphere.radius = spring.hitRadius;
+				wi::renderer::DrawSphere(sphere, XMFLOAT4(1, 1, 0, 1));
 			}
 		}
 	}

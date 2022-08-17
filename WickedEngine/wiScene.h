@@ -1285,17 +1285,14 @@ namespace wi::scene
 		};
 		uint32_t _flags = RESET | GRAVITY_ENABLED;
 
-		float hitRadius = 0;
 		float stiffnessForce = 0;
+		float dragForce = 0;
+		float windForce = 0;
+		float hitRadius = 0;
 		float gravityPower = 0;
 		XMFLOAT3 gravityDir = {};
-		float dragForce = 0;
-		float wind_affection = 0;
 
 		// Non-serialized attributes:
-		XMFLOAT3 center_of_mass;
-		XMFLOAT3 velocity;
-
 		XMFLOAT3 prevTail = {};
 		XMFLOAT3 currentTail = {};
 		XMFLOAT3 boneAxis = {};
@@ -1343,35 +1340,37 @@ namespace wi::scene
 
 	struct Scene
 	{
-		wi::ecs::ComponentManager<NameComponent> names;
-		wi::ecs::ComponentManager<LayerComponent> layers;
-		wi::ecs::ComponentManager<TransformComponent> transforms;
-		wi::ecs::ComponentManager<HierarchyComponent> hierarchy;
-		wi::ecs::ComponentManager<MaterialComponent> materials;
-		wi::ecs::ComponentManager<MeshComponent> meshes;
-		wi::ecs::ComponentManager<ImpostorComponent> impostors;
-		wi::ecs::ComponentManager<ObjectComponent> objects;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_objects;
-		wi::ecs::ComponentManager<RigidBodyPhysicsComponent> rigidbodies;
-		wi::ecs::ComponentManager<SoftBodyPhysicsComponent> softbodies;
-		wi::ecs::ComponentManager<ArmatureComponent> armatures;
-		wi::ecs::ComponentManager<LightComponent> lights;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_lights;
-		wi::ecs::ComponentManager<CameraComponent> cameras;
-		wi::ecs::ComponentManager<EnvironmentProbeComponent> probes;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_probes;
-		wi::ecs::ComponentManager<ForceFieldComponent> forces;
-		wi::ecs::ComponentManager<DecalComponent> decals;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_decals;
-		wi::ecs::ComponentManager<AnimationComponent> animations;
-		wi::ecs::ComponentManager<AnimationDataComponent> animation_datas;
-		wi::ecs::ComponentManager<EmittedParticleSystem> emitters;
-		wi::ecs::ComponentManager<HairParticleSystem> hairs;
-		wi::ecs::ComponentManager<WeatherComponent> weathers;
-		wi::ecs::ComponentManager<SoundComponent> sounds;
-		wi::ecs::ComponentManager<InverseKinematicsComponent> inverse_kinematics;
-		wi::ecs::ComponentManager<SpringComponent> springs;
-		wi::ecs::ComponentManager<ColliderComponent> colliders;
+		wi::ecs::ComponentLibrary componentLibrary;
+
+		wi::ecs::ComponentManager<NameComponent>& names = componentLibrary.Register<NameComponent>("wi::scene::Scene::names");
+		wi::ecs::ComponentManager<LayerComponent>& layers = componentLibrary.Register<LayerComponent>("wi::scene::Scene::layers");
+		wi::ecs::ComponentManager<TransformComponent>& transforms = componentLibrary.Register<TransformComponent>("wi::scene::Scene::transforms");
+		wi::ecs::ComponentManager<HierarchyComponent>& hierarchy = componentLibrary.Register<HierarchyComponent>("wi::scene::Scene::hierarchy");
+		wi::ecs::ComponentManager<MaterialComponent>& materials = componentLibrary.Register<MaterialComponent>("wi::scene::Scene::materials");
+		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Register<MeshComponent>("wi::scene::Scene::meshes");
+		wi::ecs::ComponentManager<ImpostorComponent>& impostors = componentLibrary.Register<ImpostorComponent>("wi::scene::Scene::impostors");
+		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Register<ObjectComponent>("wi::scene::Scene::objects");
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_objects = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_objects");
+		wi::ecs::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies = componentLibrary.Register<RigidBodyPhysicsComponent>("wi::scene::Scene::rigidbodies");
+		wi::ecs::ComponentManager<SoftBodyPhysicsComponent>& softbodies = componentLibrary.Register<SoftBodyPhysicsComponent>("wi::scene::Scene::softbodies");
+		wi::ecs::ComponentManager<ArmatureComponent>& armatures = componentLibrary.Register<ArmatureComponent>("wi::scene::Scene::armatures");
+		wi::ecs::ComponentManager<LightComponent>& lights = componentLibrary.Register<LightComponent>("wi::scene::Scene::lights");
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_lights = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_lights");
+		wi::ecs::ComponentManager<CameraComponent>& cameras = componentLibrary.Register<CameraComponent>("wi::scene::Scene::cameras");
+		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = componentLibrary.Register<EnvironmentProbeComponent>("wi::scene::Scene::probes");
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_probes = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_probes");
+		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Register<ForceFieldComponent>("wi::scene::Scene::forces");
+		wi::ecs::ComponentManager<DecalComponent>& decals = componentLibrary.Register<DecalComponent>("wi::scene::Scene::decals");
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_decals = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_decals");
+		wi::ecs::ComponentManager<AnimationComponent>& animations = componentLibrary.Register<AnimationComponent>("wi::scene::Scene::animations");
+		wi::ecs::ComponentManager<AnimationDataComponent>& animation_datas = componentLibrary.Register<AnimationDataComponent>("wi::scene::Scene::animation_datas");
+		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = componentLibrary.Register<EmittedParticleSystem>("wi::scene::Scene::emitters");
+		wi::ecs::ComponentManager<HairParticleSystem>& hairs = componentLibrary.Register<HairParticleSystem>("wi::scene::Scene::hairs");
+		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Register<WeatherComponent>("wi::scene::Scene::weathers");
+		wi::ecs::ComponentManager<SoundComponent>& sounds = componentLibrary.Register<SoundComponent>("wi::scene::Scene::sounds");
+		wi::ecs::ComponentManager<InverseKinematicsComponent>& inverse_kinematics = componentLibrary.Register<InverseKinematicsComponent>("wi::scene::Scene::inverse_kinematics");
+		wi::ecs::ComponentManager<SpringComponent>& springs = componentLibrary.Register<SpringComponent>("wi::scene::Scene::springs", 1); // version = 1
+		wi::ecs::ComponentManager<ColliderComponent>& colliders = componentLibrary.Register<ColliderComponent>("wi::scene::Scene::colliders");
 
 		// Non-serialized attributes:
 		float dt = 0;

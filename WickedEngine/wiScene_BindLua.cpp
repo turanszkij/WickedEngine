@@ -2651,7 +2651,7 @@ int SpringComponent_BindLua::SetWindAffection(lua_State* L)
 	if (argc > 0)
 	{
 		float value = wi::lua::SGetFloat(L, 1);
-		component->wind_affection = value;
+		component->windForce = value;
 	}
 	else
 	{

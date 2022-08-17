@@ -88,7 +88,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 	windSlider.SetPos(XMFLOAT2(x, y += step));
 	windSlider.SetSize(XMFLOAT2(siz, hei));
 	windSlider.OnSlide([&](wi::gui::EventArgs args) {
-		editor->GetCurrentScene().springs.GetComponent(entity)->wind_affection = args.fValue;
+		editor->GetCurrentScene().springs.GetComponent(entity)->windForce = args.fValue;
 		});
 	AddWidget(&windSlider);
 
@@ -114,7 +114,7 @@ void SpringWindow::SetEntity(Entity entity)
 		gravityCheckBox.SetCheck(spring->IsGravityEnabled());
 		stiffnessSlider.SetValue(spring->stiffnessForce);
 		dragSlider.SetValue(spring->dragForce);
-		windSlider.SetValue(spring->wind_affection);
+		windSlider.SetValue(spring->windForce);
 	}
 	else
 	{
