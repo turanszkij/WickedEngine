@@ -3187,7 +3187,7 @@ namespace wi::scene
 			XMStoreFloat3(&collider.capsule.base, offset);
 			XMStoreFloat3(&collider.capsule.tip, tail);
 
-#if 1
+#if 0
 			// Debug collider shape:
 			switch (collider.shape)
 			{
@@ -3250,7 +3250,7 @@ namespace wi::scene
 			}
 
 			XMVECTOR position_root = transform.GetPositionV();
-			XMVECTOR rotation_combined = XMQuaternionNormalize(XMQuaternionMultiply(rotation_parent_world, rotation_local));
+			//XMVECTOR rotation_combined = XMQuaternionNormalize(XMQuaternionMultiply(rotation_parent_world, rotation_local));
 
 			if (spring.IsResetting() && dt > 0)
 			{
@@ -3301,7 +3301,7 @@ namespace wi::scene
 			const XMVECTOR gravityDir = XMLoadFloat3(&spring.gravityDir);
 			const float gravityPower = spring.gravityPower;
 
-#if 1
+#if 0
 			// Debug axis:
 			wi::renderer::RenderableLine line;
 			line.color_start = line.color_end = XMFLOAT4(1, 1, 0, 1);
@@ -3386,7 +3386,7 @@ namespace wi::scene
 			tmp.ApplyTransform();
 			tmp.Rotate(Q);
 			tmp.UpdateTransform();
-			std::swap(tmp.world, transform.world); // only store temporary result, not modifying actual local space!
+			transform.world = tmp.world; // only store world space result, not modifying actual local space!
 
 		}
 	}
