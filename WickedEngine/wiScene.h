@@ -1285,11 +1285,11 @@ namespace wi::scene
 		};
 		uint32_t _flags = RESET | GRAVITY_ENABLED;
 
-		float stiffnessForce = 0;
-		float dragForce = 0;
-		float windForce = 0;
+		float stiffnessForce = 0.5f;
+		float dragForce = 0.5f;
+		float windForce = 0.5f;
 		float hitRadius = 0;
-		float gravityPower = 0;
+		float gravityPower = 0.5f;
 		XMFLOAT3 gravityDir = {};
 
 		// Non-serialized attributes:
