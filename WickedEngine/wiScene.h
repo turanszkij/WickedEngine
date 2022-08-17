@@ -1290,7 +1290,6 @@ namespace wi::scene
 		float gravityPower = 0;
 		XMFLOAT3 gravityDir = {};
 		float dragForce = 0;
-		wi::vector<wi::ecs::Entity> colliders;
 		float wind_affection = 0;
 
 		// Non-serialized attributes:

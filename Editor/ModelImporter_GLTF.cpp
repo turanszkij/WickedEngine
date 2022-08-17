@@ -1660,7 +1660,7 @@ void Import_Extension_VRM(LoaderState& state)
 								for (size_t collider_index = 0; collider_index < colliders.ArrayLen(); ++collider_index)
 								{
 									Entity colliderID = CreateEntity();
-									component.colliders.push_back(colliderID);
+									//component.colliders.push_back(colliderID); // for now, we will just use all colliders in the scene for every spring
 									ColliderComponent& collider_component = state.scene->colliders.Create(colliderID);
 									collider_component.transformID = transformID;
 
@@ -1801,25 +1801,25 @@ void Import_Extension_VRMC(LoaderState& state)
 				//{
 				//	const auto& center = spring.Get("center");
 				//}
-				wi::vector<Entity> colliderIDs;
-				if (spring.Has("colliderGroups"))
-				{
-					// collider group references:
-					const auto& colliderGroups = spring.Get("colliderGroups");
-					for (size_t collider_group_index = 0; collider_group_index < colliderGroups.ArrayLen(); ++collider_group_index)
-					{
-						const auto& colliderGroup = ext_vrmc_springbone->second.Get("colliderGroups").Get(int(collider_group_index));
-						if (colliderGroup.Has("colliders"))
-						{
-							const auto& colliders = colliderGroup.Get("colliders");
-							for (size_t collider_index = 0; collider_index < colliders.ArrayLen(); ++collider_index)
-							{
-								int collider = colliders.Get(int(collider_index)).GetNumberAsInt();
-								colliderIDs.push_back(state.scene->colliders.GetEntity(collider));
-							}
-						}
-					}
-				}
+				//wi::vector<Entity> colliderIDs;
+				//if (spring.Has("colliderGroups"))
+				//{
+				//	// collider group references:
+				//	const auto& colliderGroups = spring.Get("colliderGroups");
+				//	for (size_t collider_group_index = 0; collider_group_index < colliderGroups.ArrayLen(); ++collider_group_index)
+				//	{
+				//		const auto& colliderGroup = ext_vrmc_springbone->second.Get("colliderGroups").Get(int(collider_group_index));
+				//		if (colliderGroup.Has("colliders"))
+				//		{
+				//			const auto& colliders = colliderGroup.Get("colliders");
+				//			for (size_t collider_index = 0; collider_index < colliders.ArrayLen(); ++collider_index)
+				//			{
+				//				int collider = colliders.Get(int(collider_index)).GetNumberAsInt();
+				//				colliderIDs.push_back(state.scene->colliders.GetEntity(collider));
+				//			}
+				//		}
+				//	}
+				//}
 				if (spring.Has("joints"))
 				{
 					const auto& joints = spring.Get("joints");
@@ -1827,7 +1827,7 @@ void Import_Extension_VRMC(LoaderState& state)
 					{
 						const auto& joint = joints.Get(int(joint_index));
 						SpringComponent component;
-						component.colliders = colliderIDs;
+						//component.colliders = colliderIDs; // for now, we will just use all colliders in the scene for every spring
 
 						if (joint.Has("dragForce"))
 						{

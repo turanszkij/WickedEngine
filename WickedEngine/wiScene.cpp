@@ -3426,11 +3426,9 @@ namespace wi::scene
 
 #if 1
 			// Collider checks:
-			for (Entity collider_entity : spring.colliders)
+			for (size_t collider_index = 0; collider_index < colliders.GetCount(); ++collider_index)
 			{
-				if (!colliders.Contains(collider_entity))
-					continue;
-				const ColliderComponent& collider = *colliders.GetComponent(collider_entity);
+				const ColliderComponent& collider = colliders[collider_index];
 
 				wi::primitive::Sphere tail_sphere;
 				XMStoreFloat3(&tail_sphere.center, tail_next); // tail_sphere center can change within loop!
