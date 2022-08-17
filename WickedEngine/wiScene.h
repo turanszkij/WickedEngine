@@ -1337,6 +1337,8 @@ namespace wi::scene
 		// Non-serialized attributes:
 		wi::primitive::Sphere sphere;
 		wi::primitive::Capsule capsule;
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct Scene

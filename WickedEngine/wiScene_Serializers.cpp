@@ -1380,6 +1380,29 @@ namespace wi::scene
 			archive << wind_affection;
 		}
 	}
+	void ColliderComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			int ishape = 0;
+			archive >> ishape;
+			shape = (Shape)ishape;
+			SerializeEntity(archive, transformID, seri);
+			archive >> radius;
+			archive >> offset;
+			archive >> tail;
+		}
+		else
+		{
+			archive << _flags;
+			archive << (int)shape;
+			SerializeEntity(archive, transformID, seri);
+			archive << radius;
+			archive << offset;
+			archive << tail;
+		}
+	}
 
 	void Scene::Serialize(wi::Archive& archive)
 	{
