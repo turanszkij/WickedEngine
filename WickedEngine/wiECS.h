@@ -452,12 +452,12 @@ namespace wi::ecs
 					{
 						std::string name;
 						archive >> name;
-						archive >> seri.version;
 						uint64_t jump_size = 0;
 						archive >> jump_size;
 						auto it = entries.find(name);
 						if(it != entries.end())
 						{
+							archive >> seri.version;
 							it->second.component_manager->Serialize(archive, seri);
 						}
 						else
@@ -475,8 +475,8 @@ namespace wi::ecs
 				{
 					archive << true;
 					archive << it.first; // name
-					archive << it.second.version;
 					size_t offset = archive.WriteUnknownJumpPosition(); // we will be able to jump from here...
+					archive << it.second.version;
 					it.second.component_manager->Serialize(archive, seri);
 					archive.PatchUnknownJumpPosition(offset); // ...to here, if this component manager was not registered
 				}
@@ -497,12 +497,12 @@ namespace wi::ecs
 					{
 						std::string name;
 						archive >> name;
-						archive >> seri.version;
 						uint64_t jump_size = 0;
 						archive >> jump_size;
 						auto it = entries.find(name);
 						if (it != entries.end())
 						{
+							archive >> seri.version;
 							it->second.component_manager->Component_Serialize(entity, archive, seri);
 						}
 						else
@@ -520,8 +520,8 @@ namespace wi::ecs
 				{
 					archive << true;
 					archive << it.first; // name
+					size_t offset = archive.WriteUnknownJumpPosition(); // we will be able to jump from here...
 					archive << it.second.version;
-					size_t offset = archive.WriteUnknownJumpPosition(); // we will be able to jump from here..
 					it.second.component_manager->Component_Serialize(entity, archive, seri);
 					archive.PatchUnknownJumpPosition(offset); // ...to here, if this component manager was not registered
 				}
