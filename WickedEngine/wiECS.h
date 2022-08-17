@@ -451,14 +451,23 @@ namespace wi::ecs
 					if(has_next){
 						uint64_t component_type;
 						archive >> component_type;
-						componentManagers[component_type]->Serialize(archive, seri);
+						wi::vector<uint8_t> datablock_raw;
+						archive >> datablock_raw;
+						if(componentManagers.find(component_type) != componentManagers.end()){
+							auto datablock = wi::Archive(datablock_raw.data());
+							datablock.SetReadModeAndResetPos(true);
+							componentManagers[component_type]->Serialize(datablock, seri);
+						}
 					}
 				}while(has_next);
 			}else{
 				for(auto& componentManager_kval : componentManagers){
 					archive << true;
 					archive << componentManager_kval.first;
-					componentManager_kval.second->Serialize(archive, seri);
+					wi::Archive datablock;
+					datablock.SetReadModeAndResetPos(false);
+					componentManager_kval.second->Serialize(datablock, seri);
+					archive << *datablock.GetDataBlock();
 				}
 				archive << false;
 			}
@@ -472,14 +481,23 @@ namespace wi::ecs
 					if(has_next){
 						uint64_t component_type;
 						archive >> component_type;
-						componentManagers[component_type]->Component_Serialize(entity, archive, seri);
+						wi::vector<uint8_t> datablock_raw;
+						archive >> datablock_raw;
+						if(componentManagers.find(component_type) != componentManagers.end()){
+							auto datablock = wi::Archive(datablock_raw.data());
+							datablock.SetReadModeAndResetPos(true);
+							componentManagers[component_type]->Component_Serialize(entity, datablock, seri);
+						}
 					}
 				}while(has_next);
 			}else{
 				for(auto& componentManager_kval : componentManagers){
 					archive << true;
 					archive << componentManager_kval.first;
-					componentManager_kval.second->Component_Serialize(entity, archive, seri);
+					wi::Archive datablock;
+					datablock.SetReadModeAndResetPos(false);
+					componentManager_kval.second->Component_Serialize(entity, datablock, seri);
+					archive << *datablock.GetDataBlock();
 				}
 				archive << false;
 			}

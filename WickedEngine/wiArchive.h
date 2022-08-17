@@ -42,6 +42,7 @@ namespace wi
 		Archive& operator=(Archive&&) = default;
 
 		const uint8_t* GetData() const { return data_ptr; }
+		const wi::vector<uint8_t>* GetDataBlock() const { return &DATA; }
 		constexpr uint64_t GetVersion() const { return version; }
 		constexpr bool IsReadMode() const { return readMode; }
 		// This can set the archive into either read or write mode, and it will reset it's position
