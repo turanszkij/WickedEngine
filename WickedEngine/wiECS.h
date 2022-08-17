@@ -477,6 +477,7 @@ namespace wi::ecs
 					archive << it.first; // name
 					size_t offset = archive.WriteUnknownJumpPosition(); // we will be able to jump from here...
 					archive << it.second.version;
+					seri.version = it.second.version;
 					it.second.component_manager->Serialize(archive, seri);
 					archive.PatchUnknownJumpPosition(offset); // ...to here, if this component manager was not registered
 				}
@@ -522,6 +523,7 @@ namespace wi::ecs
 					archive << it.first; // name
 					size_t offset = archive.WriteUnknownJumpPosition(); // we will be able to jump from here...
 					archive << it.second.version;
+					seri.version = it.second.version;
 					it.second.component_manager->Component_Serialize(entity, archive, seri);
 					archive.PatchUnknownJumpPosition(offset); // ...to here, if this component manager was not registered
 				}
