@@ -5835,7 +5835,8 @@ void DrawDebugWorld(
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_GRID], cmd);
 
-		static float col = 0.7f;
+		static float alpha = 0.75f;
+		const float channel_min = 0.2f;
 		static uint32_t gridVertexCount = 0;
 		static GPUBuffer grid;
 		if (!grid.IsValid())
@@ -5848,18 +5849,18 @@ void DrawDebugWorld(
 			for (int i = 0; i <= a; ++i)
 			{
 				verts[count++] = XMFLOAT4(i - a * 0.5f, h, -a * 0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (i == a / 2 ? XMFLOAT4(channel_min, channel_min, 1, alpha) : XMFLOAT4(1, 1, 1, alpha));
 
 				verts[count++] = XMFLOAT4(i - a * 0.5f, h, +a * 0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (i == a / 2 ? XMFLOAT4(channel_min, channel_min, 1, alpha) : XMFLOAT4(1, 1, 1, alpha));
 			}
 			for (int j = 0; j <= a; ++j)
 			{
 				verts[count++] = XMFLOAT4(-a * 0.5f, h, j - a * 0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, channel_min, channel_min, alpha) : XMFLOAT4(1, 1, 1, alpha));
 
 				verts[count++] = XMFLOAT4(+a * 0.5f, h, j - a * 0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, channel_min, channel_min, alpha) : XMFLOAT4(1, 1, 1, alpha));
 			}
 
 			gridVertexCount = arraysize(verts) / 2;
