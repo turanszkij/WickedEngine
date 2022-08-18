@@ -3,22 +3,7 @@
 
 class EditorComponent;
 
-enum PICKTYPE
-{
-	PICK_VOID				= 0,
-	PICK_OBJECT				= wi::enums::RENDERTYPE_ALL,
-	PICK_LIGHT				= 8,
-	PICK_DECAL				= 16,
-	PICK_ENVPROBE			= 32,
-	PICK_FORCEFIELD			= 64,
-	PICK_EMITTER			= 128,
-	PICK_HAIR				= 256,
-	PICK_CAMERA				= 512,
-	PICK_ARMATURE			= 1024,
-	PICK_SOUND				= 2048,
-};
-
-class RendererWindow : public wi::gui::Window
+class GraphicsWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
@@ -27,6 +12,7 @@ public:
 
 	wi::gui::CheckBox vsyncCheckBox;
 	wi::gui::ComboBox swapchainComboBox;
+	wi::gui::ComboBox renderPathComboBox;
 	wi::gui::CheckBox occlusionCullingCheckBox;
 	wi::gui::CheckBox visibilityComputeShadingCheckBox;
 	wi::gui::Slider resolutionScaleSlider;
@@ -63,16 +49,6 @@ public:
 	wi::gui::CheckBox envProbesCheckBox;
 	wi::gui::CheckBox gridHelperCheckBox;
 	wi::gui::CheckBox cameraVisCheckBox;
-	wi::gui::CheckBox pickTypeObjectCheckBox;
-	wi::gui::CheckBox pickTypeEnvProbeCheckBox;
-	wi::gui::CheckBox pickTypeLightCheckBox;
-	wi::gui::CheckBox pickTypeDecalCheckBox;
-	wi::gui::CheckBox pickTypeForceFieldCheckBox;
-	wi::gui::CheckBox pickTypeEmitterCheckBox;
-	wi::gui::CheckBox pickTypeHairCheckBox;
-	wi::gui::CheckBox pickTypeCameraCheckBox;
-	wi::gui::CheckBox pickTypeArmatureCheckBox;
-	wi::gui::CheckBox pickTypeSoundCheckBox;
 	wi::gui::Slider speedMultiplierSlider;
 	wi::gui::CheckBox transparentShadowsCheckBox;
 	wi::gui::ComboBox shadowTypeComboBox;
@@ -84,12 +60,51 @@ public:
 	wi::gui::ComboBox textureQualityComboBox;
 	wi::gui::Slider mipLodBiasSlider;
 	wi::gui::Slider raytraceBounceCountSlider;
-
 	wi::gui::CheckBox freezeCullingCameraCheckBox;
 	wi::gui::CheckBox disableAlbedoMapsCheckBox;
 	wi::gui::CheckBox forceDiffuseLightingCheckBox;
 
-    uint32_t GetPickType() const;
+	wi::gui::Slider exposureSlider;
+	wi::gui::CheckBox lensFlareCheckBox;
+	wi::gui::CheckBox lightShaftsCheckBox;
+	wi::gui::Slider lightShaftsStrengthStrengthSlider;
+	wi::gui::ComboBox aoComboBox;
+	wi::gui::Slider aoPowerSlider;
+	wi::gui::Slider aoRangeSlider;
+	wi::gui::Slider aoSampleCountSlider;
+	wi::gui::CheckBox ssrCheckBox;
+	wi::gui::CheckBox raytracedReflectionsCheckBox;
+	wi::gui::CheckBox screenSpaceShadowsCheckBox;
+	wi::gui::Slider screenSpaceShadowsStepCountSlider;
+	wi::gui::Slider screenSpaceShadowsRangeSlider;
+	wi::gui::CheckBox eyeAdaptionCheckBox;
+	wi::gui::Slider eyeAdaptionKeySlider;
+	wi::gui::Slider eyeAdaptionRateSlider;
+	wi::gui::CheckBox motionBlurCheckBox;
+	wi::gui::Slider motionBlurStrengthSlider;
+	wi::gui::CheckBox depthOfFieldCheckBox;
+	wi::gui::Slider depthOfFieldScaleSlider;
+	wi::gui::CheckBox bloomCheckBox;
+	wi::gui::Slider bloomStrengthSlider;
+	wi::gui::CheckBox fxaaCheckBox;
+	wi::gui::CheckBox colorGradingCheckBox;
+	wi::gui::CheckBox ditherCheckBox;
+	wi::gui::CheckBox sharpenFilterCheckBox;
+	wi::gui::Slider sharpenFilterAmountSlider;
+	wi::gui::CheckBox outlineCheckBox;
+	wi::gui::Slider outlineThresholdSlider;
+	wi::gui::Slider outlineThicknessSlider;
+	wi::gui::CheckBox chromaticaberrationCheckBox;
+	wi::gui::Slider chromaticaberrationSlider;
+	wi::gui::CheckBox fsrCheckBox;
+	wi::gui::Slider fsrSlider;
+
+	enum RENDERPATH
+	{
+		RENDERPATH_DEFAULT,
+		RENDERPATH_PATHTRACING,
+	};
+	void ChangeRenderPath(RENDERPATH path);
 
 	void UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain);
 	void Update();

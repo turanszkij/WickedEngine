@@ -95,8 +95,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ObjectWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)OptionsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)PaintToolWindow.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)PostprocessWindow.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)RendererWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GraphicsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SoundWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SpringWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)stdafx.cpp">
@@ -150,8 +149,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ObjectWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)OptionsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)PaintToolWindow.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)PostprocessWindow.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)RendererWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GraphicsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SoundWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpringWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)stdafx.h" />

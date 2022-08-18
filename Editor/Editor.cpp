@@ -76,57 +76,9 @@ void EditorLoadingScreen::Update(float dt)
 	LoadingScreen::Update(dt);
 }
 
-void EditorComponent::ChangeRenderPath(RENDERPATH path)
-{
-	switch (path)
-	{
-	case EditorComponent::RENDERPATH_DEFAULT:
-		renderPath = std::make_unique<wi::RenderPath3D>();
-		optionsWnd.pathTraceTargetSlider.SetVisible(false);
-		optionsWnd.pathTraceStatisticsLabel.SetVisible(false);
-		break;
-	case EditorComponent::RENDERPATH_PATHTRACING:
-		renderPath = std::make_unique<wi::RenderPath3D_PathTracing>();
-		optionsWnd.pathTraceTargetSlider.SetVisible(true);
-		optionsWnd.pathTraceStatisticsLabel.SetVisible(true);
-		break;
-	default:
-		assert(0);
-		break;
-	}
-
-	if (scenes.empty())
-	{
-		NewScene();
-	}
-	else
-	{
-		SetCurrentScene(current_scene);
-	}
-
-	renderPath->resolutionScale = resolutionScale;
-	renderPath->setBloomThreshold(3.0f);
-
-	renderPath->Load();
-
-	// Destroy and recreate renderer and postprocess windows:
-
-	optionsWnd.RemoveWidget(&optionsWnd.rendererWnd);
-	optionsWnd.rendererWnd = {};
-	optionsWnd.rendererWnd.Create(this);
-	optionsWnd.AddWidget(&optionsWnd.rendererWnd);
-
-	optionsWnd.RemoveWidget(&optionsWnd.postprocessWnd);
-	optionsWnd.postprocessWnd = {};
-	optionsWnd.postprocessWnd.Create(this);
-	optionsWnd.AddWidget(&optionsWnd.postprocessWnd);
-
-	optionsWnd.themeCombo.SetSelected(optionsWnd.themeCombo.GetSelected()); // destroyed windows need theme set again
-}
-
 void EditorComponent::ResizeBuffers()
 {
-	optionsWnd.rendererWnd.UpdateSwapChainFormats(&main->swapChain);
+	optionsWnd.graphicsWnd.UpdateSwapChainFormats(&main->swapChain);
 
 	init(main->canvas);
 	RenderPath2D::ResizeBuffers();
@@ -738,12 +690,11 @@ void EditorComponent::Update(float dt)
 		inspector_mode = wi::input::Down((wi::input::BUTTON)'I');
 
 		// Begin picking:
-		unsigned int pickMask = optionsWnd.rendererWnd.GetPickType();
 		Ray pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this, camera);
 		{
 			hovered = wi::scene::PickResult();
 
-			if (pickMask & PICK_LIGHT)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Light))
 			{
 				for (size_t i = 0; i < scene.lights.GetCount(); ++i)
 				{
@@ -762,7 +713,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_DECAL)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Decal))
 			{
 				for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 				{
@@ -781,7 +732,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_FORCEFIELD)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Force))
 			{
 				for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 				{
@@ -800,7 +751,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_EMITTER)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Emitter))
 			{
 				for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 				{
@@ -819,7 +770,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_HAIR)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Hairparticle))
 			{
 				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 				{
@@ -838,7 +789,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_ENVPROBE)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::EnvironmentProbe))
 			{
 				for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 				{
@@ -859,7 +810,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_CAMERA)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Camera))
 			{
 				for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 				{
@@ -878,7 +829,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_ARMATURE)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Armature))
 			{
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 				{
@@ -897,7 +848,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_SOUND)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Sound))
 			{
 				for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
 				{
@@ -973,7 +924,7 @@ void EditorComponent::Update(float dt)
 				}
 			}
 
-			if ((pickMask & PICK_OBJECT) && hovered.entity == INVALID_ENTITY)
+			if (hovered.entity == INVALID_ENTITY)
 			{
 				// Object picking only when mouse button down, because it can be slow with high polycount
 				if (
@@ -983,7 +934,7 @@ void EditorComponent::Update(float dt)
 					inspector_mode
 					)
 				{
-					hovered = wi::scene::Pick(pickRay, pickMask, ~0u, scene);
+					hovered = wi::scene::Pick(pickRay, ~0u, ~0u, scene);
 				}
 			}
 		}
@@ -1136,7 +1087,7 @@ void EditorComponent::Update(float dt)
 		if (wi::input::Press((wi::input::BUTTON)'W'))
 		{
 			wi::renderer::SetWireRender(!wi::renderer::IsWireRender());
-			optionsWnd.rendererWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
+			optionsWnd.graphicsWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
 		}
 		// Enable transform tool
 		if (wi::input::Press((wi::input::BUTTON)'T'))
@@ -1743,7 +1694,7 @@ void EditorComponent::Render() const
 			fp.shadowColor = wi::Color::Shadow();
 			fp.shadow_softness = 1;
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_LIGHT)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Light))
 			{
 				for (size_t i = 0; i < scene.lights.GetCount(); ++i)
 				{
@@ -1787,7 +1738,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_DECAL)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Decal))
 			{
 				for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 				{
@@ -1819,7 +1770,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_FORCEFIELD)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Force))
 			{
 				for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 				{
@@ -1850,7 +1801,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_CAMERA)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Camera))
 			{
 				for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 				{
@@ -1881,7 +1832,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_ARMATURE)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Armature))
 			{
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 				{
@@ -1912,7 +1863,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_EMITTER)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Emitter))
 			{
 				for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 				{
@@ -1943,7 +1894,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_HAIR)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Hairparticle))
 			{
 				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 				{
@@ -1974,7 +1925,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_SOUND)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Sound))
 			{
 				for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
 				{
@@ -2203,7 +2154,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.nameDebugCheckBox.GetCheck())
+			if (optionsWnd.graphicsWnd.nameDebugCheckBox.GetCheck())
 			{
 				device->EventBegin("Debug Names", cmd);
 				struct DebugNameEntitySorter

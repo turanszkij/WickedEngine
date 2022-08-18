@@ -772,7 +772,7 @@ void WeatherWindow::Update()
 	{
 		scene.weather = {};
 		scene.weather.SetSimpleSky(true);
-		scene.weather.ambient = XMFLOAT3(1, 1, 1);
+		scene.weather.ambient = XMFLOAT3(0.5f, 0.5f, 0.5f);
 		scene.weather.zenith = default_sky_zenith;
 		scene.weather.horizon = default_sky_horizon;
 	}

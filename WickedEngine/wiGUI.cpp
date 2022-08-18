@@ -312,6 +312,7 @@ namespace wi::gui
 			XMFLOAT2 textSize = tooltipFont.TextSize();
 			float textWidth = textSize.x + _border * 2;
 			float textHeight = textSize.y + _border * 2;
+			const float textHeightWithoutScriptTip = textHeight;
 
 			if (!scripttipFont.text.empty())
 			{
@@ -344,8 +345,8 @@ namespace wi::gui
 
 			tooltipSprite.params.pos.x = tooltipFont.params.posX - _border;
 			tooltipSprite.params.pos.y = tooltipFont.params.posY - _border;
-			tooltipSprite.params.siz.x = textWidth;
-			tooltipSprite.params.siz.y = textHeight;
+			tooltipSprite.params.siz.x = textWidth + _border * 2;
+			tooltipSprite.params.siz.y = textHeight + _border * 2;
 
 			if (tooltip_shadow > 0)
 			{
@@ -366,7 +367,7 @@ namespace wi::gui
 			if (!scripttipFont.text.empty())
 			{
 				scripttipFont.params = tooltipFont.params;
-				scripttipFont.params.posY += (int)(textHeight / 2);
+				scripttipFont.params.posY += textHeightWithoutScriptTip;
 				scripttipFont.params.color = wi::Color::lerp(tooltipFont.params.color, wi::Color::Transparent(), 0.25f);
 				scripttipFont.Draw(cmd);
 			}
