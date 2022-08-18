@@ -537,7 +537,7 @@ float CalculateAtmosphereBlend(float tDepth)
 	return fade;
 }
  
-void RenderClouds(uint3 DTid, float2 uv, float depth, float3 rayOrigin, float3 rayDirection, inout float4 cloudColor, inout float2 cloudDepth)
+void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition, float3 rayOrigin, float3 rayDirection, inout float4 cloudColor, inout float2 cloudDepth)
 {	
 	AtmosphereParameters atmosphere = GetWeather().atmosphere;
 	
@@ -597,7 +597,6 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 rayOrigin, float3 r
 		}
 		
 		// Depth buffer intersection
-		float3 depthWorldPosition = reconstruct_position(uv, depth);
 		tToDepthBuffer = length(depthWorldPosition - rayOrigin);
 
 		// Exclude skybox to allow infinite distance
@@ -730,26 +729,26 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 rayOrigin, float3 r
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	TextureCubeArray input = bindless_cubearrays[capture.texture_input];
-	TextureCubeArray input_depth = bindless_cubearrays[capture.texture_input_depth];
+	TextureCubeArray input_depth = bindless_cubearrays[capture.texture_input_depth]; // Current capture with only 6 slices (cube)
 	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[capture.texture_output];
-
-	uint textureIndex = DTid.z + capture.arrayIndex * 6;
 
 	const float2 uv = (DTid.xy + 0.5) * capture.resolution_rcp;
 	const float3 N = uv_to_cubemap(uv, DTid.z);
-	const float depth = input_depth.SampleLevel(sampler_point_clamp, float4(N, capture.arrayIndex), 0).r;
+	const float depth = input_depth.SampleLevel(sampler_point_clamp, float4(N, DTid.z), 0).r;
+
+	float3 depthWorldPosition = reconstruct_position(uv, depth, xCubemapRenderCams[DTid.z].inverse_view_projection);
 
 	float3 rayOrigin = GetCamera().position;
 	float3 rayDirection = normalize(N);
 
 	float4 cloudColor = 0;
 	float2 cloudDepth = 0;
-	RenderClouds(DTid, uv, depth, rayOrigin, rayDirection, cloudColor, cloudDepth);
+	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudDepth);
 
 	float4 composite = input.SampleLevel(sampler_linear_clamp, float4(N, capture.arrayIndex), 0);
 
     // Output
-	output[uint3(DTid.xy, textureIndex)] = float4(composite.rgb * (1.0 - cloudColor.a) + cloudColor.rgb, composite.a * (1.0 - cloudColor.a));
+	output[uint3(DTid.xy, DTid.z + capture.arrayIndex * 6)] = float4(composite.rgb * (1.0 - cloudColor.a) + cloudColor.rgb, composite.a * (1.0 - cloudColor.a));
 }
 #else
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
@@ -771,12 +770,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float4 unprojected = mul(GetCamera().inverse_view_projection, float4(screenPosition, 0, 1));
 	unprojected.xyz /= unprojected.w;
 
+	float3 depthWorldPosition = reconstruct_position(uv, depth);
+
 	float3 rayOrigin = GetCamera().position;
 	float3 rayDirection = normalize(unprojected.xyz - rayOrigin);
 	
 	float4 cloudColor = 0;
 	float2 cloudDepth = 0;
-	RenderClouds(DTid, uv, depth, rayOrigin, rayDirection, cloudColor, cloudDepth);
+	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudDepth);
 	
     // Output
 	texture_render[DTid.xy] = cloudColor;

@@ -1426,7 +1426,7 @@ namespace wi::scene
 		wi::graphics::Texture envrenderingDepthBuffer_MSAA;
 		wi::graphics::Texture envrenderingColorBuffer_MSAA;
 		wi::graphics::Texture envmapArray;
-		wi::graphics::Texture envmapDepthArray;
+		wi::graphics::Texture envmapDepth;
 		wi::vector<wi::graphics::RenderPass> renderpasses_envmap;
 		wi::vector<wi::graphics::RenderPass> renderpasses_envmap_MSAA;
 

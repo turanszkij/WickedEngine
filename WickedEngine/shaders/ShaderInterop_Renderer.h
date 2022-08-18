@@ -11,9 +11,9 @@ struct ShaderScene
 	int meshletbuffer;
 
 	int envmaparray;
-	int envmapdeptharray;
 	int globalenvmap;
 	int impostorInstanceOffset;
+	int padding1;
 
 	int TLAS;
 	int BVH_counter;
@@ -813,6 +813,7 @@ struct LensFlarePush
 struct CubemapRenderCam
 {
 	float4x4 view_projection;
+	float4x4 inverse_view_projection;
 	uint4 properties;
 };
 CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)

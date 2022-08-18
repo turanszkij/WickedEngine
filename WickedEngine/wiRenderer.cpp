@@ -2224,6 +2224,7 @@ static const uint32_t CASCADE_COUNT = 3;
 struct SHCAM
 {
 	XMMATRIX view_projection;
+	XMMATRIX inverse_view_projection;
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
 
@@ -2238,6 +2239,7 @@ struct SHCAM
 		const XMMATRIX V = XMMatrixLookToLH(E, to, up);
 		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, 1, farPlane, nearPlane);
 		view_projection = XMMatrixMultiply(V, P);
+		inverse_view_projection = XMMatrixInverse(nullptr, view_projection);
 		frustum.Create(view_projection);
 		
 		BoundingFrustum::CreateFromMatrix(boundingfrustum, P);
@@ -6410,6 +6412,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		{
 			frusta[i] = cameras[i].frustum;
 			XMStoreFloat4x4(&cb.xCubemapRenderCams[i].view_projection, cameras[i].view_projection);
+			XMStoreFloat4x4(&cb.xCubemapRenderCams[i].inverse_view_projection, cameras[i].view_projection);
 			cb.xCubemapRenderCams[i].properties = uint4(i, 0, 0, 0);
 		}
 		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
@@ -6505,7 +6508,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			push.resolution_rcp.y = 1.0f / push.resolution.y;
 			push.arrayIndex = arrayIndex;
 			push.texture_input = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::SRV);
-			push.texture_input_depth = device->GetDescriptorIndex(&vis.scene->envmapDepthArray, SubresourceType::SRV);
+			push.texture_input_depth = device->GetDescriptorIndex(&vis.scene->envmapDepth, SubresourceType::SRV);
 			push.texture_output = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::UAV);
 
 			if (probe.IsRealTime())

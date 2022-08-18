@@ -1944,7 +1944,6 @@ namespace wi::scene
 		shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
 		shaderscene.meshletbuffer = device->GetDescriptorIndex(&meshletBuffer, SubresourceType::SRV);
 		shaderscene.envmaparray = device->GetDescriptorIndex(&envmapArray, SubresourceType::SRV);
-		shaderscene.envmapdeptharray = device->GetDescriptorIndex(&envmapDepthArray, SubresourceType::SRV);
 		if (weather.skyMap.IsValid())
 		{
 			shaderscene.globalenvmap = device->GetDescriptorIndex(&weather.skyMap.GetTexture(), SubresourceType::SRV);
@@ -4070,48 +4069,39 @@ namespace wi::scene
 			device->CreateTexture(&desc, nullptr, &envmapArray);
 			device->SetName(&envmapArray, "envmapArray");
 
+			desc.array_size = 6;
 			desc.mip_levels = 1;
-			desc.layout = ResourceState::DEPTHSTENCIL;
-			desc.format = Format::R32G8X24_TYPELESS;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::DEPTH_STENCIL;
-			device->CreateTexture(&desc, nullptr, &envmapDepthArray);
-			device->SetName(&envmapDepthArray, "envmapDepthArray");
+			desc.format = Format::R16_TYPELESS;
+			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+			desc.layout = ResourceState::SHADER_RESOURCE;
+			device->CreateTexture(&desc, nullptr, &envmapDepth);
+			device->SetName(&envmapDepth, "envmapDepth");
 
-			auto initialize_cube_array = [&](Texture& textureArray, SubresourceType subresourceType, bool hasUAV) {
+			// Cube arrays per mip level:
+			for (uint32_t i = 0; i < envmapArray.desc.mip_levels; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, 0, envmapArray.desc.array_size, i, 1);
+				assert(subresource_index == i);
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::UAV, 0, envmapArray.desc.array_size, i, 1);
+				assert(subresource_index == i);
+			}
 
-				// Cube arrays per mip level:
-				for (uint32_t i = 0; i < textureArray.desc.mip_levels; ++i)
-				{
-					int subresource_index;
-					subresource_index = device->CreateSubresource(&textureArray, subresourceType, 0, desc.array_size, i, 1);
-					assert(subresource_index == i);
+			// individual cubes with mips:
+			for (uint32_t i = 0; i < envmapCount; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, i * 6, 6, 0, -1);
+				assert(subresource_index == envmapArray.desc.mip_levels + i);
+			}
 
-					if (hasUAV)
-					{
-						subresource_index = device->CreateSubresource(&textureArray, SubresourceType::UAV, 0, desc.array_size, i, 1);
-						assert(subresource_index == i);
-					}
-				}
-
-				// individual cubes with mips:
-				for (uint32_t i = 0; i < envmapCount; ++i)
-				{
-					int subresource_index;
-					subresource_index = device->CreateSubresource(&textureArray, subresourceType, i * 6, 6, 0, -1);
-					assert(subresource_index == textureArray.desc.mip_levels + i);
-				}
-
-				// individual cubes only mip0:
-				for (uint32_t i = 0; i < envmapCount; ++i)
-				{
-					int subresource_index;
-					subresource_index = device->CreateSubresource(&textureArray, subresourceType, i * 6, 6, 0, 1);
-					assert(subresource_index == textureArray.desc.mip_levels + envmapCount + i);
-				}
-			};
-
-			initialize_cube_array(envmapArray, SubresourceType::SRV, true);
-			initialize_cube_array(envmapDepthArray, SubresourceType::DSV, false);
+			// individual cubes only mip0:
+			for (uint32_t i = 0; i < envmapCount; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, i * 6, 6, 0, 1);
+				assert(subresource_index == envmapArray.desc.mip_levels + envmapCount + i);
+			}
 
 			renderpasses_envmap.resize(envmapCount);
 			renderpasses_envmap_MSAA.resize(envmapCount);
@@ -4141,14 +4131,14 @@ namespace wi::scene
 							subresource_index
 						)
 					);
+
 					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::DepthStencil(&envmapDepthArray,
+						RenderPassAttachment::DepthStencil(&envmapDepth,
 							RenderPassAttachment::LoadOp::CLEAR,
 							RenderPassAttachment::StoreOp::STORE,
-							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::SHADER_RESOURCE,
 							ResourceState::DEPTHSTENCIL,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							envmapDepthArray.desc.mip_levels + envmapCount + i // subresource: individual cubes only mip0
+							ResourceState::SHADER_RESOURCE
 						)
 					);
 					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[i]);
