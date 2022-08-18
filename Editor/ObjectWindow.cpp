@@ -747,7 +747,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	AddWidget(&generateLightmapButton);
 
 	stopLightmapGenButton.Create("Stop Lightmap Gen");
-	stopLightmapGenButton.SetTooltip("Stop the lightmap rendering and save the lightmap.");
+	stopLightmapGenButton.SetTooltip("Stop the lightmap rendering and save the lightmap.\nIf denoiser is enabled, this is the point at which lightmap will be denoised, which could take a while.");
 	stopLightmapGenButton.SetPos(XMFLOAT2(x, y += step));
 	stopLightmapGenButton.SetSize(XMFLOAT2(wid, hei));
 	stopLightmapGenButton.OnClick([&](wi::gui::EventArgs args) {

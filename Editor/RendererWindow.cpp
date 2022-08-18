@@ -12,9 +12,9 @@ void RendererWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1120));
+	SetSize(XMFLOAT2(580, 1180));
 
-	float step = 20;
+	float step = 21;
 	float itemheight = 18;
 	float x = 160;
 	float y = 0;
@@ -118,7 +118,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 	AddWidget(&surfelGIDebugComboBox);
 
 	ddgiCheckBox.Create("DDGI: ");
-	ddgiCheckBox.SetTooltip("Toggle Dynamic Diffuse Global Illumination (DDGI).");
+	ddgiCheckBox.SetTooltip("Toggle Dynamic Diffuse Global Illumination (DDGI).\nNote that DDGI probes that were loaded with the scene will still be active if this is turned off, but they won't be updated.");
 	ddgiCheckBox.SetPos(XMFLOAT2(x, y += step));
 	ddgiCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	ddgiCheckBox.OnClick([](wi::gui::EventArgs args) {
@@ -137,7 +137,7 @@ void RendererWindow::Create(EditorComponent* _editor)
 	ddgiDebugCheckBox.SetCheck(wi::renderer::GetDDGIDebugEnabled());
 	AddWidget(&ddgiDebugCheckBox);
 
-	ddgiRayCountSlider.Create(32, DDGI_MAX_RAYCOUNT, 64, DDGI_MAX_RAYCOUNT - 32, "DDGI RayCount: ");
+	ddgiRayCountSlider.Create(0, DDGI_MAX_RAYCOUNT, 64, DDGI_MAX_RAYCOUNT, "DDGI RayCount: ");
 	ddgiRayCountSlider.SetTooltip("Adjust the ray count per DDGI probe.");
 	ddgiRayCountSlider.SetSize(XMFLOAT2(wid, itemheight));
 	ddgiRayCountSlider.SetPos(XMFLOAT2(x, y += step));
@@ -146,6 +146,46 @@ void RendererWindow::Create(EditorComponent* _editor)
 		wi::renderer::SetDDGIRayCount((uint32_t)args.iValue);
 		});
 	AddWidget(&ddgiRayCountSlider);
+
+	ddgiX.Create("");
+	ddgiX.SetTooltip("Probe count in X dimension.");
+	ddgiX.SetDescription("DDGI Probes: ");
+	ddgiX.SetPos(XMFLOAT2(x, y += step));
+	ddgiX.SetSize(XMFLOAT2(40, itemheight));
+	ddgiX.OnInputAccepted([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		auto grid_dimensions = scene.ddgi.grid_dimensions;
+		grid_dimensions.x = (uint32_t)args.iValue;
+		scene.ddgi = {}; // reset ddgi
+		scene.ddgi.grid_dimensions = grid_dimensions;
+	});
+	AddWidget(&ddgiX);
+
+	ddgiY.Create("");
+	ddgiY.SetTooltip("Probe count in Y dimension.");
+	ddgiY.SetPos(XMFLOAT2(x + 45, y));
+	ddgiY.SetSize(XMFLOAT2(40, itemheight));
+	ddgiY.OnInputAccepted([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		auto grid_dimensions = scene.ddgi.grid_dimensions;
+		grid_dimensions.y = (uint32_t)args.iValue;
+		scene.ddgi = {}; // reset ddgi
+		scene.ddgi.grid_dimensions = grid_dimensions;
+		});
+	AddWidget(&ddgiY);
+
+	ddgiZ.Create("");
+	ddgiZ.SetTooltip("Probe count in Z dimension.");
+	ddgiZ.SetPos(XMFLOAT2(x + 45 * 2, y));
+	ddgiZ.SetSize(XMFLOAT2(40, itemheight));
+	ddgiZ.OnInputAccepted([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		auto grid_dimensions = scene.ddgi.grid_dimensions;
+		grid_dimensions.z = (uint32_t)args.iValue;
+		scene.ddgi = {}; // reset ddgi
+		scene.ddgi.grid_dimensions = grid_dimensions;
+		});
+	AddWidget(&ddgiZ);
 
 	voxelRadianceCheckBox.Create("Voxel GI: ");
 	voxelRadianceCheckBox.SetTooltip("Toggle voxel Global Illumination computation.");
@@ -864,4 +904,16 @@ void RendererWindow::UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain)
 		bool success = wi::graphics::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
 		assert(success);
 		});
+}
+
+void RendererWindow::Update()
+{
+	if (IsCollapsed())
+		return;
+
+	const wi::scene::Scene& scene = editor->GetCurrentScene();
+
+	ddgiX.SetValue(std::to_string(scene.ddgi.grid_dimensions.x));
+	ddgiY.SetValue(std::to_string(scene.ddgi.grid_dimensions.y));
+	ddgiZ.SetValue(std::to_string(scene.ddgi.grid_dimensions.z));
 }

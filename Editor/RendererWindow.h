@@ -35,6 +35,9 @@ public:
 	wi::gui::ComboBox surfelGIDebugComboBox;
 	wi::gui::CheckBox ddgiCheckBox;
 	wi::gui::CheckBox ddgiDebugCheckBox;
+	wi::gui::TextInputField ddgiX;
+	wi::gui::TextInputField ddgiY;
+	wi::gui::TextInputField ddgiZ;
 	wi::gui::Slider ddgiRayCountSlider;
 	wi::gui::CheckBox voxelRadianceCheckBox;
 	wi::gui::CheckBox voxelRadianceDebugCheckBox;
@@ -89,5 +92,6 @@ public:
     uint32_t GetPickType() const;
 
 	void UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain);
+	void Update();
 };
 

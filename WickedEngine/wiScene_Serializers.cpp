@@ -6,6 +6,7 @@
 #include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiVector.h"
+#include "shaders/ShaderInterop_DDGI.h"
 
 using namespace wi::ecs;
 
@@ -1520,7 +1521,130 @@ namespace wi::scene
 			}
 		}
 
+		// Additional data serializations:
+		if (archive.GetVersion() >= 85)
+		{
+			ddgi.Serialize(archive);
+		}
+
 		wi::backlog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
+	}
+
+	void Scene::DDGI::Serialize(wi::Archive& archive)
+	{
+		using namespace wi::graphics;
+		GraphicsDevice* device = GetDevice();
+
+		if (archive.IsReadMode())
+		{
+			archive >> frame_index;
+			archive >> grid_dimensions;
+
+			wi::vector<uint8_t> data;
+
+			// color texture:
+			{
+				archive >> data;
+
+				TextureDesc desc;
+				desc.width = DDGI_COLOR_TEXELS * grid_dimensions.x * grid_dimensions.y;
+				desc.height = DDGI_COLOR_TEXELS * grid_dimensions.z;
+				desc.format = Format::R16G16B16A16_FLOAT;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+
+				SubresourceData initdata;
+				initdata.data_ptr = data.data();
+				initdata.row_pitch = desc.width * GetFormatStride(desc.format);
+
+				device->CreateTexture(&desc, &initdata, &color_texture[0]);
+				device->SetName(&color_texture[0], "ddgi.color_texture[serialized]");
+			}
+
+			// depth texture:
+			{
+				archive >> data;
+
+				TextureDesc desc;
+				desc.width = DDGI_DEPTH_TEXELS * grid_dimensions.x * grid_dimensions.y;
+				desc.height = DDGI_DEPTH_TEXELS * grid_dimensions.z;
+				desc.format = Format::R16G16_FLOAT;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+
+				SubresourceData initdata;
+				initdata.data_ptr = data.data();
+				initdata.row_pitch = desc.width * GetFormatStride(desc.format);
+
+				device->CreateTexture(&desc, &initdata, &depth_texture[0]);
+				device->SetName(&depth_texture[0], "ddgi.depth_texture[seriaized]");
+			}
+
+			// offset buffer:
+			{
+				archive >> data;
+
+				GPUBufferDesc desc;
+				desc.stride = sizeof(DDGIProbeOffset);
+				desc.size = desc.stride * grid_dimensions.x * grid_dimensions.y * grid_dimensions.z;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				device->CreateBuffer(&desc, data.data(), &offset_buffer);
+				device->SetName(&offset_buffer, "ddgi.offset_buffer[serialized]");
+			}
+		}
+		else
+		{
+			archive << frame_index;
+			archive << grid_dimensions;
+
+			wi::vector<uint8_t> data;
+			bool success = wi::helper::saveTextureToMemory(color_texture[0], data);
+			assert(success);
+			archive << data;
+
+			data.clear();
+			success = wi::helper::saveTextureToMemory(depth_texture[0], data);
+			assert(success);
+			archive << data;
+
+			// Download and serialize offset buffer:
+			{
+				GPUBufferDesc desc = offset_buffer.desc;
+				desc.usage = wi::graphics::Usage::READBACK;
+				desc.bind_flags = {};
+				desc.misc_flags = {};
+				GPUBuffer staging;
+				success = device->CreateBuffer(&desc, nullptr, &staging);
+				assert(success);
+
+				CommandList cmd = device->BeginCommandList();
+
+				{
+					GPUBarrier barriers[] = {
+						GPUBarrier::Buffer(&offset_buffer,ResourceState::SHADER_RESOURCE,ResourceState::COPY_SRC),
+					};
+					device->Barrier(barriers, arraysize(barriers), cmd);
+				}
+
+				device->CopyResource(&staging, &offset_buffer, cmd);
+
+				{
+					GPUBarrier barriers[] = {
+						GPUBarrier::Buffer(&offset_buffer,ResourceState::COPY_SRC,ResourceState::SHADER_RESOURCE),
+					};
+					device->Barrier(barriers, arraysize(barriers), cmd);
+				}
+
+				device->SubmitCommandLists();
+				device->WaitForGPU();
+
+				// serialize like vector<uint8_t>:
+				archive << staging.mapped_size;
+				for (size_t i = 0; i < staging.mapped_size; ++i)
+				{
+					archive << ((uint8_t*)staging.mapped_data)[i];
+				}
+			}
+		}
 	}
 
 	Entity Scene::Entity_Serialize(

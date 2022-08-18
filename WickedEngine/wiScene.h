@@ -1450,11 +1450,17 @@ namespace wi::scene
 		wi::graphics::Texture surfelMomentsTexture[2];
 
 		// DDGI resources:
-		uint ddgi_frameIndex = 0;
-		wi::graphics::GPUBuffer ddgiRayBuffer;
-		wi::graphics::GPUBuffer ddgiOffsetBuffer;
-		wi::graphics::Texture ddgiColorTexture[2];
-		wi::graphics::Texture ddgiDepthTexture[2];
+		struct DDGI
+		{
+			uint frame_index = 0;
+			uint3 grid_dimensions = uint3(32, 8, 32); // The scene extents will be subdivided into a grid of this resolution, each grid cell will have one probe
+			wi::graphics::GPUBuffer ray_buffer;
+			wi::graphics::GPUBuffer offset_buffer;
+			wi::graphics::Texture color_texture[2];
+			wi::graphics::Texture depth_texture[2];
+
+			void Serialize(wi::Archive& archive);
+		} ddgi;
 
 		// Environment probe cubemap array state:
 		static constexpr uint32_t envmapCount = 16;
