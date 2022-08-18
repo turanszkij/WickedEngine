@@ -13,6 +13,8 @@ public:
 	wi::gui::CheckBox vsyncCheckBox;
 	wi::gui::ComboBox swapchainComboBox;
 	wi::gui::ComboBox renderPathComboBox;
+	wi::gui::Slider pathTraceTargetSlider;
+	wi::gui::Label pathTraceStatisticsLabel;
 	wi::gui::CheckBox occlusionCullingCheckBox;
 	wi::gui::CheckBox visibilityComputeShadingCheckBox;
 	wi::gui::Slider resolutionScaleSlider;
@@ -33,22 +35,6 @@ public:
 	wi::gui::Slider voxelRadianceConeTracingSlider;
 	wi::gui::Slider voxelRadianceRayStepSizeSlider;
 	wi::gui::Slider voxelRadianceMaxDistanceSlider;
-	wi::gui::CheckBox nameDebugCheckBox;
-	wi::gui::CheckBox physicsDebugCheckBox;
-	wi::gui::CheckBox aabbDebugCheckBox;
-	wi::gui::CheckBox boneLinesCheckBox;
-	wi::gui::CheckBox debugEmittersCheckBox;
-	wi::gui::CheckBox debugForceFieldsCheckBox;
-	wi::gui::CheckBox debugRaytraceBVHCheckBox;
-	wi::gui::CheckBox wireFrameCheckBox;
-	wi::gui::CheckBox variableRateShadingClassificationCheckBox;
-	wi::gui::CheckBox variableRateShadingClassificationDebugCheckBox;
-	wi::gui::CheckBox advancedLightCullingCheckBox;
-	wi::gui::CheckBox debugLightCullingCheckBox;
-	wi::gui::CheckBox tessellationCheckBox;
-	wi::gui::CheckBox envProbesCheckBox;
-	wi::gui::CheckBox gridHelperCheckBox;
-	wi::gui::CheckBox cameraVisCheckBox;
 	wi::gui::Slider speedMultiplierSlider;
 	wi::gui::CheckBox transparentShadowsCheckBox;
 	wi::gui::ComboBox shadowTypeComboBox;
@@ -99,6 +85,23 @@ public:
 	wi::gui::CheckBox fsrCheckBox;
 	wi::gui::Slider fsrSlider;
 
+	wi::gui::CheckBox nameDebugCheckBox;
+	wi::gui::CheckBox physicsDebugCheckBox;
+	wi::gui::CheckBox aabbDebugCheckBox;
+	wi::gui::CheckBox boneLinesCheckBox;
+	wi::gui::CheckBox debugEmittersCheckBox;
+	wi::gui::CheckBox debugForceFieldsCheckBox;
+	wi::gui::CheckBox debugRaytraceBVHCheckBox;
+	wi::gui::CheckBox wireFrameCheckBox;
+	wi::gui::CheckBox variableRateShadingClassificationCheckBox;
+	wi::gui::CheckBox variableRateShadingClassificationDebugCheckBox;
+	wi::gui::CheckBox advancedLightCullingCheckBox;
+	wi::gui::CheckBox debugLightCullingCheckBox;
+	wi::gui::CheckBox tessellationCheckBox;
+	wi::gui::CheckBox envProbesCheckBox;
+	wi::gui::CheckBox gridHelperCheckBox;
+	wi::gui::CheckBox cameraVisCheckBox;
+
 	enum RENDERPATH
 	{
 		RENDERPATH_DEFAULT,
@@ -108,5 +111,7 @@ public:
 
 	void UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain);
 	void Update();
+
+	void ResizeLayout() override;
 };
 

@@ -29,8 +29,6 @@ public:
 	wi::gui::ComboBox themeCombo;
 	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::ComboBox sceneComboBox;
-	wi::gui::Slider pathTraceTargetSlider;
-	wi::gui::Label pathTraceStatisticsLabel;
 	GraphicsWindow graphicsWnd;
 	CameraWindow cameraWnd;
 	MaterialPickerWindow materialPickerWnd;

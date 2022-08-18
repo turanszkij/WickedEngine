@@ -14,7 +14,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1500));
+	SetSize(XMFLOAT2(580, 1750));
 
 	float step = 21;
 	float itemheight = 18;
@@ -40,18 +40,46 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&swapchainComboBox);
 	UpdateSwapChainFormats(&editor->main->swapChain);
 
+	resolutionScaleSlider.Create(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");
+	resolutionScaleSlider.SetTooltip("Adjust the internal rendering resolution.");
+	resolutionScaleSlider.SetSize(XMFLOAT2(wid, itemheight));
+	resolutionScaleSlider.SetPos(XMFLOAT2(x, y += step));
+	resolutionScaleSlider.OnSlide([=](wi::gui::EventArgs args) {
+		if (editor->resolutionScale != args.fValue)
+		{
+			editor->renderPath->resolutionScale = args.fValue;
+			editor->resolutionScale = args.fValue;
+			editor->ResizeBuffers();
+		}
+		});
+	AddWidget(&resolutionScaleSlider);
+
 	renderPathComboBox.Create("Render Path: ");
 	renderPathComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	renderPathComboBox.SetPos(XMFLOAT2(x, y += step));
-	renderPathComboBox.AddItem("Default");
-	renderPathComboBox.AddItem("Path Tracing");
+	renderPathComboBox.AddItem("Default", RENDERPATH_DEFAULT);
+	renderPathComboBox.AddItem("Path Tracing", RENDERPATH_PATHTRACING);
 	renderPathComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		ChangeRenderPath((RENDERPATH)args.iValue);
+		ChangeRenderPath((RENDERPATH)args.userdata);
 		});
 	renderPathComboBox.SetEnabled(true);
 	renderPathComboBox.SetTooltip("Choose a render path...\nPath tracing will use fallback raytracing with non-raytracing GPU, which will be slow.\nChanging render path will reset some graphics settings!");
-	renderPathComboBox.SetSelected(RENDERPATH_DEFAULT);
 	AddWidget(&renderPathComboBox);
+
+	pathTraceTargetSlider.Create(1, 2048, 1024, 2047, "Sample count: ");
+	pathTraceTargetSlider.SetSize(XMFLOAT2(wid, itemheight));
+	pathTraceTargetSlider.SetPos(XMFLOAT2(x, y += step));
+	pathTraceTargetSlider.SetTooltip("The path tracing will perform this many samples per pixel.");
+	AddWidget(&pathTraceTargetSlider);
+
+	pathTraceStatisticsLabel.Create("Path tracing statistics");
+	pathTraceStatisticsLabel.SetSize(XMFLOAT2(wid, 60));
+	pathTraceStatisticsLabel.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&pathTraceStatisticsLabel);
+
+
+	renderPathComboBox.SetSelected(RENDERPATH_DEFAULT);
+
 
 	occlusionCullingCheckBox.Create("Occlusion Culling: ");
 	occlusionCullingCheckBox.SetTooltip("Toggle occlusion culling. This can boost framerate if many objects are occluded in the scene.");
@@ -79,20 +107,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&visibilityComputeShadingCheckBox);
-
-	resolutionScaleSlider.Create(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");
-	resolutionScaleSlider.SetTooltip("Adjust the internal rendering resolution.");
-	resolutionScaleSlider.SetSize(XMFLOAT2(wid, itemheight));
-	resolutionScaleSlider.SetPos(XMFLOAT2(x, y += step));
-	resolutionScaleSlider.OnSlide([=](wi::gui::EventArgs args) {
-		if (editor->resolutionScale != args.fValue)
-		{
-			editor->renderPath->resolutionScale = args.fValue;
-			editor->resolutionScale = args.fValue;
-			editor->ResizeBuffers();
-		}
-	});
-	AddWidget(&resolutionScaleSlider);
 
 	GIBoostSlider.Create(1, 10, 1.0f, 1000.0f, "GI Boost: ");
 	GIBoostSlider.SetTooltip("Adjust the strength of GI.\nNote that values other than 1.0 will cause mismatch with path tracing reference!");
@@ -333,7 +347,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	debugLightCullingCheckBox.SetCheck(wi::renderer::GetDebugLightCulling());
 	AddWidget(&debugLightCullingCheckBox);
 
-	tessellationCheckBox.Create("Tessellation Enabled: ");
+	tessellationCheckBox.Create("Tessellation: ");
 	tessellationCheckBox.SetTooltip("Enable tessellation feature. You also need to specify a tessellation factor for individual objects.");
 	tessellationCheckBox.SetPos(XMFLOAT2(x, y += step));
 	tessellationCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
@@ -554,7 +568,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&mipLodBiasSlider);
 
 	raytraceBounceCountSlider.Create(1, 10, 1, 9, "Raytrace Bounces: ");
-	raytraceBounceCountSlider.SetTooltip("How many light bounces to compute when doing ray tracing.");
+	raytraceBounceCountSlider.SetTooltip("How many light bounces to compute when doing these ray tracing effects:\n- Path tracing\n- Lightmap baking");
 	raytraceBounceCountSlider.SetSize(XMFLOAT2(wid, itemheight));
 	raytraceBounceCountSlider.SetPos(XMFLOAT2(x, y += step));
 	raytraceBounceCountSlider.SetValue((float)wi::renderer::GetRaytraceBounceCount());
@@ -605,7 +619,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wid = 140;
 	float mod_wid = 60;
 
-	exposureSlider.Create(0.0f, 3.0f, 1, 10000, "Exposure: ");
+	exposureSlider.Create(0.0f, 3.0f, 1, 10000, "Tonemap Exposure: ");
 	exposureSlider.SetTooltip("Set the tonemap exposure value");
 	exposureSlider.SetScriptTip("RenderPath3D::SetExposure(float value)");
 	exposureSlider.SetSize(XMFLOAT2(wid, hei));
@@ -751,7 +765,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&screenSpaceShadowsRangeSlider);
 
-	screenSpaceShadowsStepCountSlider.Create(4, 128, 16, 128 - 4, "Sample Count: ");
+	screenSpaceShadowsStepCountSlider.Create(4, 128, 16, 128 - 4, "Samples: ");
 	screenSpaceShadowsStepCountSlider.SetTooltip("Sample count of contact shadows. Higher values are better quality but slower.");
 	screenSpaceShadowsStepCountSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	screenSpaceShadowsStepCountSlider.SetPos(XMFLOAT2(x + 100, y += step));
@@ -1192,13 +1206,9 @@ void GraphicsWindow::ChangeRenderPath(RENDERPATH path)
 	{
 	case RENDERPATH_DEFAULT:
 		editor->renderPath = std::make_unique<wi::RenderPath3D>();
-		editor->optionsWnd.pathTraceTargetSlider.SetVisible(false);
-		editor->optionsWnd.pathTraceStatisticsLabel.SetVisible(false);
 		break;
 	case RENDERPATH_PATHTRACING:
 		editor->renderPath = std::make_unique<wi::RenderPath3D_PathTracing>();
-		editor->optionsWnd.pathTraceTargetSlider.SetVisible(true);
-		editor->optionsWnd.pathTraceStatisticsLabel.SetVisible(true);
 		break;
 	default:
 		assert(0);
@@ -1219,4 +1229,240 @@ void GraphicsWindow::ChangeRenderPath(RENDERPATH path)
 
 	editor->renderPath->Load();
 	editor->ResizeBuffers();
+}
+
+void GraphicsWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 155;
+		const float margin_right = 45;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 45;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	RENDERPATH renderpath = (RENDERPATH)renderPathComboBox.GetItemUserData(renderPathComboBox.GetSelected());
+
+	add_right(vsyncCheckBox);
+	add(swapchainComboBox);
+	add(renderPathComboBox);
+	add(resolutionScaleSlider);
+	add(speedMultiplierSlider);
+	add(textureQualityComboBox);
+	add(mipLodBiasSlider);
+
+	if (renderpath == RENDERPATH_PATHTRACING)
+	{
+		shadowTypeComboBox.SetVisible(false);
+		shadowProps2DComboBox.SetVisible(false);
+		shadowPropsCubeComboBox.SetVisible(false);
+		MSAAComboBox.SetVisible(false);
+		temporalAADebugCheckBox.SetVisible(false);
+		temporalAACheckBox.SetVisible(false);
+		variableRateShadingClassificationDebugCheckBox.SetVisible(false);
+		variableRateShadingClassificationCheckBox.SetVisible(false);
+		debugLightCullingCheckBox.SetVisible(false);
+		advancedLightCullingCheckBox.SetVisible(false);
+		occlusionCullingCheckBox.SetVisible(false);
+		visibilityComputeShadingCheckBox.SetVisible(false);
+		tessellationCheckBox.SetVisible(false);
+		transparentShadowsCheckBox.SetVisible(false);
+	}
+	else
+	{
+		shadowTypeComboBox.SetVisible(true);
+		shadowProps2DComboBox.SetVisible(true);
+		shadowPropsCubeComboBox.SetVisible(true);
+		MSAAComboBox.SetVisible(true);
+		temporalAADebugCheckBox.SetVisible(true);
+		temporalAACheckBox.SetVisible(true);
+		variableRateShadingClassificationDebugCheckBox.SetVisible(true);
+		variableRateShadingClassificationCheckBox.SetVisible(true);
+		debugLightCullingCheckBox.SetVisible(true);
+		advancedLightCullingCheckBox.SetVisible(true);
+		occlusionCullingCheckBox.SetVisible(true);
+		visibilityComputeShadingCheckBox.SetVisible(true);
+		tessellationCheckBox.SetVisible(true);
+		transparentShadowsCheckBox.SetVisible(true);
+
+		add(shadowTypeComboBox);
+		add(shadowProps2DComboBox);
+		add(shadowPropsCubeComboBox);
+		add(MSAAComboBox);
+		add_right(temporalAADebugCheckBox);
+		temporalAACheckBox.SetPos(XMFLOAT2(temporalAADebugCheckBox.GetPos().x - temporalAACheckBox.GetSize().x - 70, temporalAADebugCheckBox.GetPos().y));
+		add_right(variableRateShadingClassificationDebugCheckBox);
+		variableRateShadingClassificationCheckBox.SetPos(XMFLOAT2(variableRateShadingClassificationDebugCheckBox.GetPos().x - variableRateShadingClassificationCheckBox.GetSize().x - 70, variableRateShadingClassificationDebugCheckBox.GetPos().y));
+		add_right(debugLightCullingCheckBox);
+		advancedLightCullingCheckBox.SetPos(XMFLOAT2(debugLightCullingCheckBox.GetPos().x - advancedLightCullingCheckBox.GetSize().x - 70, debugLightCullingCheckBox.GetPos().y));
+		add_right(occlusionCullingCheckBox);
+		add_right(visibilityComputeShadingCheckBox);
+		add_right(tessellationCheckBox);
+		add_right(transparentShadowsCheckBox);
+	}
+
+	y += jump;
+
+	add(raytraceBounceCountSlider);
+
+	if (renderpath == RENDERPATH_PATHTRACING)
+	{
+		pathTraceTargetSlider.SetVisible(true);
+		pathTraceStatisticsLabel.SetVisible(true);
+		add(pathTraceTargetSlider);
+		add(pathTraceStatisticsLabel);
+
+		GIBoostSlider.SetVisible(false);
+		surfelGIDebugComboBox.SetVisible(false);
+		surfelGICheckBox.SetVisible(false);
+		ddgiDebugCheckBox.SetVisible(false);
+		ddgiCheckBox.SetVisible(false);
+		ddgiZ.SetVisible(false);
+		ddgiY.SetVisible(false);
+		ddgiX.SetVisible(false);
+		ddgiRayCountSlider.SetVisible(false);
+		voxelRadianceDebugCheckBox.SetVisible(false);
+		voxelRadianceCheckBox.SetVisible(false);
+		voxelRadianceSecondaryBounceCheckBox.SetVisible(false);
+		voxelRadianceReflectionsCheckBox.SetVisible(false);
+		voxelRadianceVoxelSizeSlider.SetVisible(false);
+		voxelRadianceConeTracingSlider.SetVisible(false);
+		voxelRadianceRayStepSizeSlider.SetVisible(false);
+		voxelRadianceMaxDistanceSlider.SetVisible(false);
+	}
+	else
+	{
+		pathTraceTargetSlider.SetVisible(false);
+		pathTraceStatisticsLabel.SetVisible(false);
+
+
+		GIBoostSlider.SetVisible(true);
+		surfelGIDebugComboBox.SetVisible(true);
+		surfelGICheckBox.SetVisible(true);
+		ddgiDebugCheckBox.SetVisible(true);
+		ddgiCheckBox.SetVisible(true);
+		ddgiZ.SetVisible(true);
+		ddgiY.SetVisible(true);
+		ddgiX.SetVisible(true);
+		ddgiRayCountSlider.SetVisible(true);
+		voxelRadianceDebugCheckBox.SetVisible(true);
+		voxelRadianceCheckBox.SetVisible(true);
+		voxelRadianceSecondaryBounceCheckBox.SetVisible(true);
+		voxelRadianceReflectionsCheckBox.SetVisible(true);
+		voxelRadianceVoxelSizeSlider.SetVisible(true);
+		voxelRadianceConeTracingSlider.SetVisible(true);
+		voxelRadianceRayStepSizeSlider.SetVisible(true);
+		voxelRadianceMaxDistanceSlider.SetVisible(true);
+
+		add(GIBoostSlider);
+
+		y += jump;
+
+		add_right(surfelGIDebugComboBox);
+		surfelGICheckBox.SetPos(XMFLOAT2(surfelGIDebugComboBox.GetPos().x - surfelGICheckBox.GetSize().x - padding, surfelGIDebugComboBox.GetPos().y));
+
+		y += jump;
+
+		add_right(ddgiCheckBox);
+		add_right(ddgiDebugCheckBox);
+		add_right(ddgiZ);
+		ddgiY.SetPos(XMFLOAT2(ddgiZ.GetPos().x - ddgiY.GetSize().x - padding, ddgiZ.GetPos().y));
+		ddgiX.SetPos(XMFLOAT2(ddgiY.GetPos().x - ddgiX.GetSize().x - padding, ddgiY.GetPos().y));
+		add(ddgiRayCountSlider);
+
+		y += jump;
+
+		add_right(voxelRadianceCheckBox);
+		add_right(voxelRadianceDebugCheckBox);
+		add_right(voxelRadianceSecondaryBounceCheckBox);
+		add_right(voxelRadianceReflectionsCheckBox);
+		add(voxelRadianceVoxelSizeSlider);
+		add(voxelRadianceConeTracingSlider);
+		add(voxelRadianceRayStepSizeSlider);
+		add(voxelRadianceMaxDistanceSlider);
+	}
+
+
+	y += jump;
+
+	add(exposureSlider);
+	add_right(lensFlareCheckBox);
+	add_right(lightShaftsStrengthStrengthSlider);
+	lightShaftsCheckBox.SetPos(XMFLOAT2(lightShaftsStrengthStrengthSlider.GetPos().x - lightShaftsCheckBox.GetSize().x - 80, lightShaftsStrengthStrengthSlider.GetPos().y));
+	add(aoComboBox);
+	add(aoPowerSlider);
+	add(aoRangeSlider);
+	add(aoSampleCountSlider);
+	add_right(ssrCheckBox);
+	add_right(raytracedReflectionsCheckBox);
+	add_right(screenSpaceShadowsStepCountSlider);
+	screenSpaceShadowsCheckBox.SetPos(XMFLOAT2(screenSpaceShadowsStepCountSlider.GetPos().x - screenSpaceShadowsCheckBox.GetSize().x - 80, screenSpaceShadowsStepCountSlider.GetPos().y));
+	add_right(screenSpaceShadowsRangeSlider);
+	add_right(eyeAdaptionKeySlider);
+	eyeAdaptionCheckBox.SetPos(XMFLOAT2(eyeAdaptionKeySlider.GetPos().x - eyeAdaptionCheckBox.GetSize().x - 80, eyeAdaptionKeySlider.GetPos().y));
+	add_right(eyeAdaptionRateSlider);
+	add_right(motionBlurStrengthSlider);
+	motionBlurCheckBox.SetPos(XMFLOAT2(motionBlurStrengthSlider.GetPos().x - motionBlurCheckBox.GetSize().x - 80, motionBlurStrengthSlider.GetPos().y));
+	add_right(depthOfFieldScaleSlider);
+	depthOfFieldCheckBox.SetPos(XMFLOAT2(depthOfFieldScaleSlider.GetPos().x - depthOfFieldCheckBox.GetSize().x - 80, depthOfFieldScaleSlider.GetPos().y));
+	add_right(bloomStrengthSlider);
+	bloomCheckBox.SetPos(XMFLOAT2(bloomStrengthSlider.GetPos().x - bloomCheckBox.GetSize().x - 80, bloomStrengthSlider.GetPos().y));
+	add_right(fxaaCheckBox);
+	add_right(colorGradingCheckBox);
+	add_right(ditherCheckBox);
+	add_right(sharpenFilterAmountSlider);
+	sharpenFilterCheckBox.SetPos(XMFLOAT2(sharpenFilterAmountSlider.GetPos().x - sharpenFilterCheckBox.GetSize().x - 80, sharpenFilterAmountSlider.GetPos().y));
+	add_right(outlineThresholdSlider);
+	outlineCheckBox.SetPos(XMFLOAT2(outlineThresholdSlider.GetPos().x - outlineCheckBox.GetSize().x - 80, outlineThresholdSlider.GetPos().y));
+	add_right(outlineThicknessSlider);
+	add_right(chromaticaberrationSlider);
+	chromaticaberrationCheckBox.SetPos(XMFLOAT2(chromaticaberrationSlider.GetPos().x - chromaticaberrationCheckBox.GetSize().x - 80, chromaticaberrationSlider.GetPos().y));
+	add_right(fsrSlider);
+	fsrCheckBox.SetPos(XMFLOAT2(fsrSlider.GetPos().x - fsrCheckBox.GetSize().x - 80, fsrSlider.GetPos().y));
+
+	y += jump;
+
+	add_right(freezeCullingCameraCheckBox);
+	add_right(disableAlbedoMapsCheckBox);
+	add_right(forceDiffuseLightingCheckBox);
+	add_right(wireFrameCheckBox);
+	add_right(nameDebugCheckBox);
+	add_right(physicsDebugCheckBox);
+	add_right(aabbDebugCheckBox);
+	add_right(boneLinesCheckBox);
+	add_right(debugEmittersCheckBox);
+	add_right(debugForceFieldsCheckBox);
+	add_right(debugRaytraceBVHCheckBox);
+	add_right(envProbesCheckBox);
+	add_right(gridHelperCheckBox);
+	add_right(cameraVisCheckBox);
+
+
 }

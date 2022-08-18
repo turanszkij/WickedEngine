@@ -314,18 +314,6 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&entityTree);
 
-
-	pathTraceTargetSlider.Create(1, 2048, 1024, 2047, "Sample count: ");
-	pathTraceTargetSlider.SetSize(XMFLOAT2(200, 18));
-	pathTraceTargetSlider.SetTooltip("The path tracing will perform this many samples per pixel.");
-	AddWidget(&pathTraceTargetSlider);
-	pathTraceTargetSlider.SetVisible(false);
-
-	pathTraceStatisticsLabel.Create("Path tracing statistics");
-	pathTraceStatisticsLabel.SetSize(XMFLOAT2(240, 60));
-	AddWidget(&pathTraceStatisticsLabel);
-	pathTraceStatisticsLabel.SetVisible(false);
-
 	// Renderer and Postprocess windows are created in ChangeRenderPath(), because they deal with
 	//	RenderPath related information as well, so it's easier to reset them when changing
 
@@ -691,22 +679,6 @@ void OptionsWindow::ResizeLayout()
 	themeCombo.SetSize(XMFLOAT2(width - x_off - themeCombo.GetScale().y - 1, themeCombo.GetScale().y));
 	pos.y += themeCombo.GetSize().y;
 	pos.y += padding;
-
-	if (pathTraceTargetSlider.IsVisible())
-	{
-		pathTraceTargetSlider.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
-		pathTraceTargetSlider.SetSize(XMFLOAT2(width - x_off - pathTraceTargetSlider.GetScale().y * 2 - 1, pathTraceTargetSlider.GetScale().y));
-		pos.y += pathTraceTargetSlider.GetSize().y;
-		pos.y += padding;
-	}
-
-	if (pathTraceStatisticsLabel.IsVisible())
-	{
-		pathTraceStatisticsLabel.SetPos(pos);
-		pathTraceStatisticsLabel.SetSize(XMFLOAT2(width, pathTraceStatisticsLabel.GetScale().y));
-		pos.y += pathTraceStatisticsLabel.GetSize().y;
-		pos.y += padding;
-	}
 
 	graphicsWnd.SetPos(pos);
 	graphicsWnd.SetSize(XMFLOAT2(width, graphicsWnd.GetScale().y));

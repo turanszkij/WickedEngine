@@ -1413,7 +1413,7 @@ void EditorComponent::Update(float dt)
 	wi::RenderPath3D_PathTracing* pathtracer = dynamic_cast<wi::RenderPath3D_PathTracing*>(renderPath.get());
 	if (pathtracer != nullptr)
 	{
-		pathtracer->setTargetSampleCount((int)optionsWnd.pathTraceTargetSlider.GetValue());
+		pathtracer->setTargetSampleCount((int)optionsWnd.graphicsWnd.pathTraceTargetSlider.GetValue());
 
 		std::string ss;
 		ss += "Sample count: " + std::to_string(pathtracer->getCurrentSampleCount()) + "\n";
@@ -1429,7 +1429,7 @@ void EditorComponent::Update(float dt)
 		{
 			ss += "Denoiser not available!\nTo find out how to enable the denoiser, visit the documentation.";
 		}
-		optionsWnd.pathTraceStatisticsLabel.SetText(ss);
+		optionsWnd.graphicsWnd.pathTraceStatisticsLabel.SetText(ss);
 	}
 
 	optionsWnd.terragen.Generation_Update(camera);
