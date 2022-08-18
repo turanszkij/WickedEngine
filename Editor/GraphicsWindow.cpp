@@ -73,7 +73,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&pathTraceTargetSlider);
 
 	pathTraceStatisticsLabel.Create("Path tracing statistics");
-	pathTraceStatisticsLabel.SetSize(XMFLOAT2(wid, 60));
+	pathTraceStatisticsLabel.SetSize(XMFLOAT2(wid, 70));
 	pathTraceStatisticsLabel.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&pathTraceStatisticsLabel);
 
@@ -1337,7 +1337,7 @@ void GraphicsWindow::ResizeLayout()
 		pathTraceTargetSlider.SetVisible(true);
 		pathTraceStatisticsLabel.SetVisible(true);
 		add(pathTraceTargetSlider);
-		add(pathTraceStatisticsLabel);
+		add_fullwidth(pathTraceStatisticsLabel);
 
 		GIBoostSlider.SetVisible(false);
 		surfelGIDebugComboBox.SetVisible(false);

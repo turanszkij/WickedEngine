@@ -3037,6 +3037,9 @@ namespace wi::gui
 			resizeDragger_BottomRight.SetVisible(!value);
 		}
 
+		scrollbar_horizontal.SetVisible(!value);
+		scrollbar_vertical.SetVisible(!value);
+
 		if (IsMinimized())
 		{
 			collapseButton.SetText("»");
