@@ -33,6 +33,15 @@ struct ShaderScene
 
 	struct DDGI
 	{
+		uint3 grid_dimensions;
+		uint probe_count;
+
+		uint2 color_texture_resolution;
+		float2 color_texture_resolution_rcp;
+
+		uint2 depth_texture_resolution;
+		float2 depth_texture_resolution_rcp;
+
 		float3 grid_min;
 		int color_texture;
 

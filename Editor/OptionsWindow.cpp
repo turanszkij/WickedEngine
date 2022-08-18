@@ -656,6 +656,7 @@ void OptionsWindow::Update(float dt)
 {
 	cameraWnd.Update();
 	paintToolWnd.Update(dt);
+	rendererWnd.Update();
 }
 
 void OptionsWindow::ResizeLayout()

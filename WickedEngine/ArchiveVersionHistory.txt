@@ -1,5 +1,6 @@
 This file contains changelog of wi::Archive versions
 
+85: DDGI serialization
 84: component library serialization
 83: physical light units
 82: serialized LightComponent::fov_inner

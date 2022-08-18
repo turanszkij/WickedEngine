@@ -1837,57 +1837,59 @@ namespace wi::scene
 
 		if (wi::renderer::GetDDGIEnabled())
 		{
-			ddgi_frameIndex++;
-			if (!ddgiColorTexture[0].IsValid())
+			ddgi.frame_index++;
+			if (!ddgi.color_texture[1].IsValid()) // if just color_texture[0] is valid, it could be that ddgi was serialized, that's why we check color_texture[1] here
 			{
-				ddgi_frameIndex = 0;
+				ddgi.frame_index = 0;
+
+				const uint32_t probe_count = ddgi.grid_dimensions.x * ddgi.grid_dimensions.y * ddgi.grid_dimensions.z;
 
 				GPUBufferDesc buf;
 				buf.stride = sizeof(DDGIRayDataPacked);
-				buf.size = buf.stride * DDGI_PROBE_COUNT * DDGI_MAX_RAYCOUNT;
+				buf.size = buf.stride * probe_count * DDGI_MAX_RAYCOUNT;
 				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				device->CreateBuffer(&buf, nullptr, &ddgiRayBuffer);
-				device->SetName(&ddgiRayBuffer, "ddgiRayBuffer");
+				device->CreateBuffer(&buf, nullptr, &ddgi.ray_buffer);
+				device->SetName(&ddgi.ray_buffer, "ddgi.ray_buffer");
 
 				buf.stride = sizeof(DDGIProbeOffset);
-				buf.size = buf.stride * DDGI_PROBE_COUNT;
+				buf.size = buf.stride * probe_count;
 				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-				device->CreateBuffer(&buf, nullptr, &ddgiOffsetBuffer);
-				device->SetName(&ddgiOffsetBuffer, "ddgiOffsetBuffer");
+				device->CreateBuffer(&buf, nullptr, &ddgi.offset_buffer);
+				device->SetName(&ddgi.offset_buffer, "ddgi.offset_buffer");
 
 				TextureDesc tex;
-				tex.width = DDGI_COLOR_TEXTURE_WIDTH;
-				tex.height = DDGI_COLOR_TEXTURE_HEIGHT;
+				tex.width = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
+				tex.height = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.z;
 				//tex.format = Format::R11G11B10_FLOAT; // not enough precision with this format, causes green hue in GI
 				tex.format = Format::R16G16B16A16_FLOAT;
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-				device->CreateTexture(&tex, nullptr, &ddgiColorTexture[0]);
-				device->SetName(&ddgiColorTexture[0], "ddgiColorTexture[0]");
-				device->CreateTexture(&tex, nullptr, &ddgiColorTexture[1]);
-				device->SetName(&ddgiColorTexture[1], "ddgiColorTexture[1]");
+				device->CreateTexture(&tex, nullptr, &ddgi.color_texture[0]);
+				device->SetName(&ddgi.color_texture[0], "ddgi.color_texture[0]");
+				device->CreateTexture(&tex, nullptr, &ddgi.color_texture[1]);
+				device->SetName(&ddgi.color_texture[1], "ddgi.color_texture[1]");
 
-				tex.width = DDGI_DEPTH_TEXTURE_WIDTH;
-				tex.height = DDGI_DEPTH_TEXTURE_HEIGHT;
+				tex.width = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
+				tex.height = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.z;
 				tex.format = Format::R16G16_FLOAT;
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-				device->CreateTexture(&tex, nullptr, &ddgiDepthTexture[0]);
-				device->SetName(&ddgiDepthTexture[0], "ddgiDepthTexture[0]");
-				device->CreateTexture(&tex, nullptr, &ddgiDepthTexture[1]);
-				device->SetName(&ddgiDepthTexture[1], "ddgiDepthTexture[1]");
+				device->CreateTexture(&tex, nullptr, &ddgi.depth_texture[0]);
+				device->SetName(&ddgi.depth_texture[0], "ddgi.depth_texture[0]");
+				device->CreateTexture(&tex, nullptr, &ddgi.depth_texture[1]);
+				device->SetName(&ddgi.depth_texture[1], "ddgi.depth_texture[1]");
 			}
-			std::swap(ddgiColorTexture[0], ddgiColorTexture[1]);
-			std::swap(ddgiDepthTexture[0], ddgiDepthTexture[1]);
+			std::swap(ddgi.color_texture[0], ddgi.color_texture[1]);
+			std::swap(ddgi.depth_texture[0], ddgi.depth_texture[1]);
 		}
-		else if (ddgiColorTexture[0].IsValid())
+		else if (ddgi.color_texture[1].IsValid()) // if just color_texture[0] is valid, it could be that ddgi was serialized, that's why we check color_texture[1] here
 		{
-			ddgiRayBuffer = {};
-			ddgiOffsetBuffer = {};
-			ddgiColorTexture[0] = {};
-			ddgiColorTexture[1] = {};
-			ddgiDepthTexture[0] = {};
-			ddgiDepthTexture[1] = {};
+			ddgi.ray_buffer = {};
+			ddgi.offset_buffer = {};
+			ddgi.color_texture[0] = {};
+			ddgi.color_texture[1] = {};
+			ddgi.depth_texture[0] = {};
+			ddgi.depth_texture[1] = {};
 		}
 
 		impostor_ib_format = (((objects.GetCount() * 4) < 655536) ? Format::R16_UINT : Format::R32_UINT);
@@ -1999,9 +2001,15 @@ namespace wi::scene
 		shaderscene.weather.stars = weather.stars;
 		XMStoreFloat4x4(&shaderscene.weather.stars_rotation, XMMatrixRotationQuaternion(XMLoadFloat4(&weather.stars_rotation_quaternion)));
 
-		shaderscene.ddgi.color_texture = device->GetDescriptorIndex(&ddgiColorTexture[0], SubresourceType::SRV);
-		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgiDepthTexture[0], SubresourceType::SRV);
-		shaderscene.ddgi.offset_buffer = device->GetDescriptorIndex(&ddgiOffsetBuffer, SubresourceType::SRV);
+		shaderscene.ddgi.grid_dimensions = ddgi.grid_dimensions;
+		shaderscene.ddgi.probe_count = ddgi.grid_dimensions.x * ddgi.grid_dimensions.y * ddgi.grid_dimensions.z;
+		shaderscene.ddgi.color_texture_resolution = uint2(ddgi.color_texture[0].desc.width, ddgi.color_texture[0].desc.height);
+		shaderscene.ddgi.color_texture_resolution_rcp = float2(1.0f / shaderscene.ddgi.color_texture_resolution.x, 1.0f / shaderscene.ddgi.color_texture_resolution.y);
+		shaderscene.ddgi.depth_texture_resolution = uint2(ddgi.depth_texture[0].desc.width, ddgi.depth_texture[0].desc.height);
+		shaderscene.ddgi.depth_texture_resolution_rcp = float2(1.0f / shaderscene.ddgi.depth_texture_resolution.x, 1.0f / shaderscene.ddgi.depth_texture_resolution.y);
+		shaderscene.ddgi.color_texture = device->GetDescriptorIndex(&ddgi.color_texture[0], SubresourceType::SRV);
+		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgi.depth_texture[0], SubresourceType::SRV);
+		shaderscene.ddgi.offset_buffer = device->GetDescriptorIndex(&ddgi.offset_buffer, SubresourceType::SRV);
 		shaderscene.ddgi.grid_min.x = shaderscene.aabb_min.x - 1;
 		shaderscene.ddgi.grid_min.y = shaderscene.aabb_min.y - 1;
 		shaderscene.ddgi.grid_min.z = shaderscene.aabb_min.z - 1;
@@ -2015,9 +2023,9 @@ namespace wi::scene
 		shaderscene.ddgi.grid_extents_rcp.x = 1.0f / shaderscene.ddgi.grid_extents.x;
 		shaderscene.ddgi.grid_extents_rcp.y = 1.0f / shaderscene.ddgi.grid_extents.y;
 		shaderscene.ddgi.grid_extents_rcp.z = 1.0f / shaderscene.ddgi.grid_extents.z;
-		shaderscene.ddgi.cell_size.x = shaderscene.ddgi.grid_extents.x / (DDGI_GRID_DIMENSIONS.x - 1);
-		shaderscene.ddgi.cell_size.y = shaderscene.ddgi.grid_extents.y / (DDGI_GRID_DIMENSIONS.y - 1);
-		shaderscene.ddgi.cell_size.z = shaderscene.ddgi.grid_extents.z / (DDGI_GRID_DIMENSIONS.z - 1);
+		shaderscene.ddgi.cell_size.x = shaderscene.ddgi.grid_extents.x / (ddgi.grid_dimensions.x - 1);
+		shaderscene.ddgi.cell_size.y = shaderscene.ddgi.grid_extents.y / (ddgi.grid_dimensions.y - 1);
+		shaderscene.ddgi.cell_size.z = shaderscene.ddgi.grid_extents.z / (ddgi.grid_dimensions.z - 1);
 		shaderscene.ddgi.cell_size_rcp.x = 1.0f / shaderscene.ddgi.cell_size.x;
 		shaderscene.ddgi.cell_size_rcp.y = 1.0f / shaderscene.ddgi.cell_size.y;
 		shaderscene.ddgi.cell_size_rcp.z = 1.0f / shaderscene.ddgi.cell_size.z;
@@ -2042,6 +2050,8 @@ namespace wi::scene
 		surfelStatsBuffer = {};
 		surfelGridBuffer = {};
 		surfelCellBuffer = {};
+
+		ddgi = {};
 	}
 	void Scene::Merge(Scene& other)
 	{
@@ -2051,6 +2061,11 @@ namespace wi::scene
 		}
 
 		bounds = AABB::Merge(bounds, other.bounds);
+
+		if (!ddgi.color_texture[0].IsValid() && other.ddgi.color_texture[0].IsValid())
+		{
+			ddgi = std::move(other.ddgi);
+		}
 	}
 	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
 	{
