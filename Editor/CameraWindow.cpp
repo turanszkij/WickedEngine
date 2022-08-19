@@ -142,6 +142,14 @@ void CameraWindow::Create(EditorComponent* _editor)
 	movespeedSlider.Create(1, 100, 10, 10000, "Movement Speed: ");
 	movespeedSlider.SetSize(XMFLOAT2(wid, hei));
 	movespeedSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("camera").Has("move_speed"))
+	{
+		movespeedSlider.SetValue(editor->main->config.GetSection("camera").GetFloat("move_speed"));
+	}
+	movespeedSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("camera").Set("move_speed", args.fValue);
+		editor->main->config.Commit();
+		});
 	AddWidget(&movespeedSlider);
 
 	accelerationSlider.Create(0.01f, 1, 0.18f, 10000, "Acceleration: ");

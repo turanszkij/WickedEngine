@@ -533,7 +533,11 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		{
 		default:
 			break;
+		case Theme::Dark:
+			editor->main->config.GetSection("options").Set("theme", "Dark");
+			break;
 		case Theme::Bright:
+			editor->main->config.GetSection("options").Set("theme", "Bright");
 			theme_color_idle = wi::Color(200, 210, 220, 230);
 			theme_color_focus = wi::Color(210, 230, 255, 250);
 			dark_point = wi::Color(180, 180, 190, 230);
@@ -541,6 +545,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			theme.font.color = wi::Color(50, 50, 80, 255);
 			break;
 		case Theme::Soft:
+			editor->main->config.GetSection("options").Set("theme", "Soft");
 			theme_color_idle = wi::Color(200, 180, 190, 190);
 			theme_color_focus = wi::Color(240, 190, 200, 230);
 			dark_point = wi::Color(100, 80, 90, 220);
@@ -548,6 +553,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			theme.font.color = wi::Color(255, 230, 240, 255);
 			break;
 		case Theme::Hacking:
+			editor->main->config.GetSection("options").Set("theme", "Hacking");
 			theme_color_idle = wi::Color(0, 0, 0, 255);
 			theme_color_focus = wi::Color(10, 230, 30, 255);
 			dark_point = wi::Color(0, 0, 0, 255);
@@ -556,6 +562,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			theme.font.shadow_color = wi::Color::Shadow();
 			break;
 		}
+		editor->main->config.Commit();
 
 		theme.tooltipImage = theme.image;
 		theme.tooltipImage.color = theme_color_idle;

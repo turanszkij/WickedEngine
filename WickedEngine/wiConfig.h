@@ -22,6 +22,7 @@ namespace wi::config
 		void Set(const std::string& name, bool value);
 		void Set(const std::string& name, int value);
 		void Set(const std::string& name, float value);
+		void Set(const std::string& name, const char* value);
 		void Set(const std::string& name, const std::string& value);
 
 	protected:
@@ -35,6 +36,7 @@ namespace wi::config
 		// Write back the config file with the current keys and values
 		void Commit();
 		// Get access to a named section. If it doesn't exist, then the root section will be returned
+		Section& GetSection(const char* name);
 		Section& GetSection(const std::string& name);
 
 	private:

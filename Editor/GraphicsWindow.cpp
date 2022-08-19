@@ -27,14 +27,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	vsyncCheckBox.SetScriptTip("SetVSyncEnabled(opt bool enabled)");
 	vsyncCheckBox.SetPos(XMFLOAT2(x, y));
 	vsyncCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	bool vsync = editor->main->config.GetSection("graphics").GetBool("vsync");
-	if (vsync != editor->main->swapChain.desc.vsync)
-	{
-		wi::eventhandler::SetVSync(vsync);
-	}
-	vsyncCheckBox.SetCheck(vsync);
+	vsyncCheckBox.SetCheck(editor->main->config.GetSection("graphics").GetBool("vsync"));
 	vsyncCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::eventhandler::SetVSync(args.bValue);
 		editor->main->config.GetSection("graphics").Set("vsync", args.bValue);
 		editor->main->config.Commit();
 	});
@@ -361,10 +355,13 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	tessellationCheckBox.SetTooltip("Enable tessellation feature. You also need to specify a tessellation factor for individual objects.");
 	tessellationCheckBox.SetPos(XMFLOAT2(x, y += step));
 	tessellationCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	wi::renderer::SetTessellationEnabled(editor->main->config.GetSection("graphics").GetBool("tessellation"));
+	tessellationCheckBox.SetCheck(wi::renderer::GetTessellationEnabled());
 	tessellationCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetTessellationEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("tessellation", args.bValue);
+		editor->main->config.Commit();
 	});
-	tessellationCheckBox.SetCheck(wi::renderer::GetTessellationEnabled());
 	AddWidget(&tessellationCheckBox);
 	tessellationCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::TESSELLATION));
 
@@ -382,9 +379,12 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	transparentShadowsCheckBox.SetTooltip("Enables color tinted shadows and refraction caustics effects for transparent objects and water.");
 	transparentShadowsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	transparentShadowsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	wi::renderer::SetTransparentShadowsEnabled(editor->main->config.GetSection("graphics").GetBool("transparent_shadows"));
 	transparentShadowsCheckBox.SetCheck(wi::renderer::GetTransparentShadowsEnabled());
 	transparentShadowsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetTransparentShadowsEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("transparent_shadows", args.bValue);
+		editor->main->config.Commit();
 	});
 	AddWidget(&transparentShadowsCheckBox);
 
@@ -514,10 +514,13 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	temporalAACheckBox.SetTooltip("Toggle Temporal Anti Aliasing. It is a supersampling techique which is performed across multiple frames.");
 	temporalAACheckBox.SetPos(XMFLOAT2(x, y += step));
 	temporalAACheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	temporalAACheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetTemporalAAEnabled(args.bValue);
-	});
+	wi::renderer::SetTemporalAAEnabled(editor->main->config.GetSection("graphics").GetBool("temporal_anti_aliasing"));
 	temporalAACheckBox.SetCheck(wi::renderer::GetTemporalAAEnabled());
+	temporalAACheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::renderer::SetTemporalAAEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("temporal_anti_aliasing", args.bValue);
+		editor->main->config.Commit();
+	});
 	AddWidget(&temporalAACheckBox);
 
 	temporalAADebugCheckBox.Create("DEBUGJitter: ");
@@ -1163,6 +1166,11 @@ void GraphicsWindow::UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain)
 
 void GraphicsWindow::Update()
 {
+	if (vsyncCheckBox.GetCheck() != editor->main->swapChain.desc.vsync)
+	{
+		wi::eventhandler::SetVSync(vsyncCheckBox.GetCheck());
+	}
+
 	if (IsCollapsed())
 		return;
 

@@ -476,7 +476,27 @@ void EditorComponent::Load()
 	componentsWnd.Create(this);
 	GetGUI().AddWidget(&componentsWnd);
 
-	optionsWnd.themeCombo.SetSelected(0);
+	std::string theme = main->config.GetSection("options").GetText("theme");
+	if(theme.empty())
+	{
+		optionsWnd.themeCombo.SetSelected(0);
+	}
+	else if (!theme.compare("Dark"))
+	{
+		optionsWnd.themeCombo.SetSelected(0);
+	}
+	else if (!theme.compare("Bright"))
+	{
+		optionsWnd.themeCombo.SetSelected(1);
+	}
+	else if (!theme.compare("Soft"))
+	{
+		optionsWnd.themeCombo.SetSelected(2);
+	}
+	else if (!theme.compare("Hacking"))
+	{
+		optionsWnd.themeCombo.SetSelected(3);
+	}
 
 	static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(TerrainGenerator::EVENT_THEME_RESET, [=](uint64_t) {
 		optionsWnd.themeCombo.SetSelected(optionsWnd.themeCombo.GetSelected());

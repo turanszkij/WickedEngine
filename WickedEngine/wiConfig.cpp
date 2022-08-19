@@ -81,6 +81,10 @@ namespace wi::config
 	{
 		values[name] = std::to_string(value);
 	}
+	void Section::Set(const std::string& name, const char* value)
+	{
+		values[name] = value;
+	}
 	void Section::Set(const std::string& name, const std::string& value)
 	{
 		values[name] = value;
@@ -247,6 +251,15 @@ namespace wi::config
 			text += line.comment + "\n";
 		}
 		wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
+	}
+	Section& File::GetSection(const char* name)
+	{
+		auto it = sections.find(name);
+		if (it == sections.end())
+		{
+			return *this;
+		}
+		return it->second;
 	}
 	Section& File::GetSection(const std::string& name)
 	{
