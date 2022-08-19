@@ -33,7 +33,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&vsyncCheckBox);
 
-	swapchainComboBox.Create("Swapchain format: ");
+	swapchainComboBox.Create("Display Output: ");
 	swapchainComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	swapchainComboBox.SetPos(XMFLOAT2(x, y += step));
 	swapchainComboBox.SetTooltip("Choose between different display output formats.\nIf the display doesn't support the selected format, it will switch back to a reasonable default.\nHDR formats will be only selectable when the current display supports HDR output");
@@ -92,7 +92,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	occlusionCullingCheckBox.SetCheck(wi::renderer::GetOcclusionCullingEnabled());
 	AddWidget(&occlusionCullingCheckBox);
 
-	visibilityComputeShadingCheckBox.Create("Visibility CS: ");
+	visibilityComputeShadingCheckBox.Create("Visibility Compute Shading: ");
 	visibilityComputeShadingCheckBox.SetTooltip("Visibility Compute Shading (experimental)\nThis will shade the scene in compute shaders instead of pixel shaders\nThis has a higher initial performance cost, but it will be faster in high polygon scenes.\nIt is not compatible with MSAA and tessellation.");
 	visibilityComputeShadingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	visibilityComputeShadingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
@@ -746,7 +746,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&raytracedReflectionsCheckBox);
 	raytracedReflectionsCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
-	screenSpaceShadowsCheckBox.Create("SS Shadows: ");
+	screenSpaceShadowsCheckBox.Create("Screen Shadows: ");
 	screenSpaceShadowsCheckBox.SetTooltip("Enable screen space contact shadows. This can add small shadows details to shadow maps in screen space.");
 	screenSpaceShadowsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	screenSpaceShadowsCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -935,7 +935,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&outlineThicknessSlider);
 
-	chromaticaberrationCheckBox.Create("Chromatic A.: ");
+	chromaticaberrationCheckBox.Create("Chromatic Aberration: ");
 	chromaticaberrationCheckBox.SetTooltip("Toggle the full screen chromatic aberration effect. This simulates lens distortion at screen edges.");
 	chromaticaberrationCheckBox.SetSize(XMFLOAT2(hei, hei));
 	chromaticaberrationCheckBox.SetPos(XMFLOAT2(x, y += step));
