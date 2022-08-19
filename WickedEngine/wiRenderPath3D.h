@@ -88,6 +88,7 @@ namespace wi
 		wi::graphics::Texture rtGUIBlurredBackground[3];	// downsampled, gaussian blurred scene for GUI
 		wi::graphics::Texture rtShadingRate; // UINT8 shading rate per tile
 		wi::graphics::Texture rtFSR[2]; // FSR upscaling result (full resolution LDR)
+		wi::graphics::Texture rtOutlineSource; // linear depth but only the regions which have outline stencil
 
 		wi::graphics::Texture rtPostprocess; // ping-pong with main scene RT in post-process chain
 
@@ -107,6 +108,7 @@ namespace wi
 		wi::graphics::RenderPass renderpass_volumetriclight;
 		wi::graphics::RenderPass renderpass_particledistortion;
 		wi::graphics::RenderPass renderpass_waterripples;
+		wi::graphics::RenderPass renderpass_outline_source;
 
 		wi::graphics::Texture debugUAV; // debug UAV can be used by some shaders...
 		wi::renderer::TiledLightResources tiledLightResources;

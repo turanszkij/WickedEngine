@@ -3759,7 +3759,18 @@ namespace wi::scene
 			material.engineStencilRef = STENCILREF_DEFAULT;
 			if (material.IsCustomShader())
 			{
-				material.engineStencilRef = STENCILREF_CUSTOMSHADER;
+				if (material.IsOutlineEnabled())
+				{
+					material.engineStencilRef = STENCILREF_CUSTOMSHADER_OUTLINE;
+				}
+				else
+				{
+					material.engineStencilRef = STENCILREF_CUSTOMSHADER;
+				}
+			}
+			else if (material.IsOutlineEnabled())
+			{
+				material.engineStencilRef = STENCILREF_OUTLINE;
 			}
 
 			if (material.IsDirty())
