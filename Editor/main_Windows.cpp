@@ -117,34 +117,36 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
-   int w = CW_USEDEFAULT, h = 0;
+   int width = CW_USEDEFAULT;
+   int height = 0;
+   bool fullscreen = false;
    bool borderless = false;
 
    if (editor.config.Open("config.ini"))
    {
-	   if (editor.config.Has("ResolutionWidth"))
+	   if (editor.config.Has("width"))
 	   {
-		   w = editor.config.GetInt("ResolutionWidth");
-		   h = editor.config.GetInt("ResolutionHeight");
-		   if (h == 0)
-		   {
-			   h = 600;
-		   }
+		   width = editor.config.GetInt("width");
+		   height = editor.config.GetInt("height");
 	   }
-	   borderless = editor.config.GetBool("Borderless");
-	   editor.allow_hdr = editor.config.GetBool("AllowHDR");
+	   fullscreen = editor.config.GetBool("fullscreen");
+	   borderless = editor.config.GetBool("borderless");
+	   editor.allow_hdr = editor.config.GetBool("allow_hdr");
    }
 
    HWND hWnd = NULL;
 
-   if (borderless)
+   if (borderless || fullscreen)
    {
+	   width = std::max(100, width);
+	   height = std::max(100, height);
+
 	   hWnd = CreateWindowEx(
 		   WS_EX_APPWINDOW,
 		   szWindowClass,
 		   szTitle,
 		   WS_POPUP,
-		   CW_USEDEFAULT, 0, w, h,
+		   CW_USEDEFAULT, 0, width, height,
 		   NULL,
 		   NULL,
 		   hInstance,
@@ -157,7 +159,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 		   szWindowClass,
 		   szTitle,
 		   WS_OVERLAPPEDWINDOW,
-		   CW_USEDEFAULT, 0, w, h,
+		   CW_USEDEFAULT, 0, width, height,
 		   NULL,
 		   NULL,
 		   hInstance,
@@ -168,6 +170,17 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    if (!hWnd)
    {
       return FALSE;
+   }
+
+   if (fullscreen)
+   {
+	   HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+	   MONITORINFO info;
+	   info.cbSize = sizeof(MONITORINFO);
+	   GetMonitorInfo(monitor, &info);
+	   width = info.rcMonitor.right - info.rcMonitor.left;
+	   height = info.rcMonitor.bottom - info.rcMonitor.top;
+	   MoveWindow(hWnd, 0, 0, width, height, FALSE);
    }
 
    editor.SetWindow(hWnd);

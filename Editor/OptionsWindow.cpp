@@ -357,6 +357,11 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.");
 	saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
 	saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
+	saveModeComboBox.SetSelected(editor->main->config.GetSection("options").GetInt("save_mode"));
+	saveModeComboBox.OnSelect([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("options").Set("save_mode", args.iValue);
+		editor->main->config.Commit();
+	});
 	AddWidget(&saveModeComboBox);
 
 

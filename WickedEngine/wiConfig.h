@@ -33,7 +33,7 @@ namespace wi::config
 		// Open a config file (.ini format)
 		bool Open(const std::string& filename);
 		// Write back the config file with the current keys and values
-		void CommitChanges();
+		void Commit();
 		// Get access to a named section. If it doesn't exist, then the root section will be returned
 		Section& GetSection(const std::string& name);
 

@@ -27,9 +27,16 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	vsyncCheckBox.SetScriptTip("SetVSyncEnabled(opt bool enabled)");
 	vsyncCheckBox.SetPos(XMFLOAT2(x, y));
 	vsyncCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
+	bool vsync = editor->main->config.GetSection("graphics").GetBool("vsync");
+	if (vsync != editor->main->swapChain.desc.vsync)
+	{
+		wi::eventhandler::SetVSync(vsync);
+	}
+	vsyncCheckBox.SetCheck(vsync);
 	vsyncCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::eventhandler::SetVSync(args.bValue);
+		editor->main->config.GetSection("graphics").Set("vsync", args.bValue);
+		editor->main->config.Commit();
 	});
 	AddWidget(&vsyncCheckBox);
 
@@ -86,9 +93,12 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	occlusionCullingCheckBox.SetScriptTip("SetOcclusionCullingEnabled(bool enabled)");
 	occlusionCullingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	occlusionCullingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	occlusionCullingCheckBox.OnClick([](wi::gui::EventArgs args) {
+	occlusionCullingCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetOcclusionCullingEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("occlusion_culling", args.bValue);
+		editor->main->config.Commit();
 	});
+	wi::renderer::SetOcclusionCullingEnabled(editor->main->config.GetSection("graphics").GetBool("occlusion_culling"));
 	occlusionCullingCheckBox.SetCheck(wi::renderer::GetOcclusionCullingEnabled());
 	AddWidget(&occlusionCullingCheckBox);
 

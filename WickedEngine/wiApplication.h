@@ -88,7 +88,7 @@ namespace wi
 		virtual void Compose(wi::graphics::CommandList cmd);
 
 		// You need to call this before calling Run() or Initialize() if you want to render
-		void SetWindow(wi::platform::window_type, bool fullscreen = false);
+		void SetWindow(wi::platform::window_type);
 
 
 		struct InfoDisplayer

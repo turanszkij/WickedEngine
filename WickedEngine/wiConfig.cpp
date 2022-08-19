@@ -92,6 +92,7 @@ namespace wi::config
 		if (!wi::helper::FileRead(filename, filedata))
 			return false;
 
+		this->filename = filename;
 		std::string text = std::string(filedata.begin(), filedata.end());
 		std::string key;
 		std::string value;
@@ -214,7 +215,7 @@ namespace wi::config
 		}
 		return true;
 	}
-	void File::CommitChanges()
+	void File::Commit()
 	{
 		std::string text;
 		for (auto& line : opened_order)

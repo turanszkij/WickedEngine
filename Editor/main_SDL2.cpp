@@ -117,26 +117,28 @@ int main(int argc, char *argv[])
         throw sdl2::SDLError("Error creating SDL2 system");
     }
 
-    int w = 1920, h = 1080;
+	int width = 1920;
+	int height = 1080;
+	bool fullscreen = false;
 
 	if (editor.config.Open("config.ini"))
 	{
-		if (editor.config.Has("ResolutionWidth"))
+		if (editor.config.Has("width"))
 		{
-			w = editor.config.GetInt("ResolutionWidth");
-			h = editor.config.GetInt("ResolutionHeight");
-			if (h == 0)
-			{
-				h = 600;
-			}
+			width = editor.config.GetInt("width");
+			height = editor.config.GetInt("height");
 		}
-		editor.allow_hdr = editor.config.GetBool("AllowHDR");
+		fullscreen = editor.config.GetBool("fullscreen");
+		editor.allow_hdr = editor.config.GetBool("allow_hdr");
 	}
+
+	width = std::max(100, width);
+	height = std::max(100, height);
 
     sdl2::window_ptr_t window = sdl2::make_window(
             "Wicked Engine Editor",
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-            w, h,
+            width, height,
             SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (!window) {
         throw sdl2::SDLError("Error creating window");
