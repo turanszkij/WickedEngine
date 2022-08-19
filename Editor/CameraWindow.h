@@ -32,5 +32,7 @@ public:
 	wi::gui::Button proxyButton;
 	wi::gui::CheckBox followCheckBox;
 	wi::gui::Slider followSlider;
+
+	void ResizeLayout() override;
 };
 

@@ -21,8 +21,7 @@ set (SOURCE_FILES
 	NameWindow.cpp
 	ObjectWindow.cpp
 	PaintToolWindow.cpp
-	PostprocessWindow.cpp
-	RendererWindow.cpp
+	GraphicsWindow.cpp
 	SoundWindow.cpp
 	SpringWindow.cpp
 	stdafx.cpp

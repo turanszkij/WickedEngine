@@ -273,6 +273,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Emitter " ICON_EMITTER, (uint64_t)Filter::Emitter);
 	filterCombo.AddItem("Hairparticle " ICON_HAIR, (uint64_t)Filter::Hairparticle);
 	filterCombo.AddItem("Inverse Kinematics " ICON_IK, (uint64_t)Filter::IK);
+	filterCombo.AddItem("Camera " ICON_CAMERA, (uint64_t)Filter::Camera);
+	filterCombo.AddItem("Armature " ICON_ARMATURE, (uint64_t)Filter::Armature);
 	filterCombo.SetTooltip("Apply filtering to the Entities");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
@@ -312,36 +314,14 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&entityTree);
 
-
-	renderPathComboBox.Create("Render Path: ");
-	renderPathComboBox.AddItem("Default");
-	renderPathComboBox.AddItem("Path Tracing");
-	renderPathComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		editor->ChangeRenderPath((EditorComponent::RENDERPATH)args.iValue);
-		});
-	renderPathComboBox.SetSelected(EditorComponent::RENDERPATH_DEFAULT);
-	renderPathComboBox.SetEnabled(true);
-	renderPathComboBox.SetTooltip("Choose a render path...");
-	AddWidget(&renderPathComboBox);
-
-
-	pathTraceTargetSlider.Create(1, 2048, 1024, 2047, "Sample count: ");
-	pathTraceTargetSlider.SetSize(XMFLOAT2(200, 18));
-	pathTraceTargetSlider.SetTooltip("The path tracing will perform this many samples per pixel.");
-	AddWidget(&pathTraceTargetSlider);
-	pathTraceTargetSlider.SetVisible(false);
-
-	pathTraceStatisticsLabel.Create("Path tracing statistics");
-	pathTraceStatisticsLabel.SetSize(XMFLOAT2(240, 60));
-	AddWidget(&pathTraceStatisticsLabel);
-	pathTraceStatisticsLabel.SetVisible(false);
-
 	// Renderer and Postprocess windows are created in ChangeRenderPath(), because they deal with
 	//	RenderPath related information as well, so it's easier to reset them when changing
 
 
 
-
+	graphicsWnd.Create(editor);
+	graphicsWnd.SetCollapsed(true);
+	AddWidget(&graphicsWnd);
 
 	cameraWnd.Create(editor);
 	cameraWnd.ResetCam();
@@ -656,7 +636,7 @@ void OptionsWindow::Update(float dt)
 {
 	cameraWnd.Update();
 	paintToolWnd.Update(dt);
-	rendererWnd.Update();
+	graphicsWnd.Update();
 }
 
 void OptionsWindow::ResizeLayout()
@@ -700,35 +680,9 @@ void OptionsWindow::ResizeLayout()
 	pos.y += themeCombo.GetSize().y;
 	pos.y += padding;
 
-	renderPathComboBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
-	renderPathComboBox.SetSize(XMFLOAT2(width - x_off - renderPathComboBox.GetScale().y - 1, renderPathComboBox.GetScale().y));
-	pos.y += renderPathComboBox.GetSize().y;
-	pos.y += padding;
-
-	if (pathTraceTargetSlider.IsVisible())
-	{
-		pathTraceTargetSlider.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
-		pathTraceTargetSlider.SetSize(XMFLOAT2(width - x_off - pathTraceTargetSlider.GetScale().y * 2 - 1, pathTraceTargetSlider.GetScale().y));
-		pos.y += pathTraceTargetSlider.GetSize().y;
-		pos.y += padding;
-	}
-
-	if (pathTraceStatisticsLabel.IsVisible())
-	{
-		pathTraceStatisticsLabel.SetPos(pos);
-		pathTraceStatisticsLabel.SetSize(XMFLOAT2(width, pathTraceStatisticsLabel.GetScale().y));
-		pos.y += pathTraceStatisticsLabel.GetSize().y;
-		pos.y += padding;
-	}
-
-	rendererWnd.SetPos(pos);
-	rendererWnd.SetSize(XMFLOAT2(width, rendererWnd.GetScale().y));
-	pos.y += rendererWnd.GetSize().y;
-	pos.y += padding;
-
-	postprocessWnd.SetPos(pos);
-	postprocessWnd.SetSize(XMFLOAT2(width, postprocessWnd.GetScale().y));
-	pos.y += postprocessWnd.GetSize().y;
+	graphicsWnd.SetPos(pos);
+	graphicsWnd.SetSize(XMFLOAT2(width, graphicsWnd.GetScale().y));
+	pos.y += graphicsWnd.GetSize().y;
 	pos.y += padding;
 
 	cameraWnd.SetPos(pos);
@@ -974,7 +928,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Camera))
 	{
 		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 		{
@@ -998,7 +952,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Armature))
 	{
 		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 		{

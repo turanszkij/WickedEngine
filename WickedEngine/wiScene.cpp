@@ -275,6 +275,7 @@ namespace wi::scene
 		material.layerMask = layerMask;
 		material.transmission = transmission;
 		material.shaderType = (uint)shaderType;
+		material.userdata = userdata;
 
 		material.options = 0;
 		if (IsUsingVertexColors())

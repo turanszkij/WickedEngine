@@ -38,7 +38,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	editor->GetCurrentEditorScene().camera_transform.MatrixTransform(editor->GetCurrentEditorScene().camera.GetInvView());
 	editor->GetCurrentEditorScene().camera_transform.UpdateTransform();
 
-	SetSize(XMFLOAT2(320, 360));
+	SetSize(XMFLOAT2(320, 390));
 
 	float x = 140;
 	float y = 0;
@@ -263,4 +263,62 @@ void CameraWindow::Update()
 		editor->GetCurrentEditorScene().camera_transform.ClearTransform();
 		editor->GetCurrentEditorScene().camera_transform.MatrixTransform(camera.InvView);
 	}
+}
+
+void CameraWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 155;
+		const float margin_right = 45;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 45;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add(farPlaneSlider);
+	add(nearPlaneSlider);
+	add(fovSlider);
+	add(focalLengthSlider);
+	add(apertureSizeSlider);
+	add(apertureShapeXSlider);
+	add(apertureShapeYSlider);
+	add(movespeedSlider);
+	add(rotationspeedSlider);
+	add(accelerationSlider);
+	add(resetButton);
+	add_right(fpsCheckBox);
+
+	y += 20;
+
+	add(proxyButton);
+	add_right(followCheckBox);
+	add(followSlider);
+
 }

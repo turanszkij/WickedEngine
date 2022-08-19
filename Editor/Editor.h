@@ -35,12 +35,6 @@ public:
 	ComponentsWindow componentsWnd;
 
 	std::unique_ptr<wi::RenderPath3D> renderPath;
-	enum RENDERPATH
-	{
-		RENDERPATH_DEFAULT,
-		RENDERPATH_PATHTRACING,
-	};
-	void ChangeRenderPath(RENDERPATH path);
 	const wi::graphics::Texture* GetGUIBlurredBackground() const override { return renderPath->GetGUIBlurredBackground(); }
 
 	void ResizeBuffers() override;

@@ -214,6 +214,11 @@ namespace wi::scene
 				archive >> textures[SPECULARMAP].uvset;
 			}
 
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> userdata;
+			}
+
 			for (auto& x : textures)
 			{
 				if (!x.name.empty())
@@ -338,6 +343,11 @@ namespace wi::scene
 			{
 				archive << textures[SPECULARMAP].name;
 				archive << textures[SPECULARMAP].uvset;
+			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << userdata;
 			}
 		}
 	}

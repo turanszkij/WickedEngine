@@ -310,8 +310,9 @@ namespace wi::gui
 
 			static const float _border = 2;
 			XMFLOAT2 textSize = tooltipFont.TextSize();
-			float textWidth = textSize.x + _border * 2;
-			float textHeight = textSize.y + _border * 2;
+			float textWidth = textSize.x;
+			float textHeight = textSize.y;
+			const float textHeightWithoutScriptTip = textHeight;
 
 			if (!scripttipFont.text.empty())
 			{
@@ -344,8 +345,8 @@ namespace wi::gui
 
 			tooltipSprite.params.pos.x = tooltipFont.params.posX - _border;
 			tooltipSprite.params.pos.y = tooltipFont.params.posY - _border;
-			tooltipSprite.params.siz.x = textWidth;
-			tooltipSprite.params.siz.y = textHeight;
+			tooltipSprite.params.siz.x = textWidth + _border * 2;
+			tooltipSprite.params.siz.y = textHeight + _border * 2;
 
 			if (tooltip_shadow > 0)
 			{
@@ -366,7 +367,7 @@ namespace wi::gui
 			if (!scripttipFont.text.empty())
 			{
 				scripttipFont.params = tooltipFont.params;
-				scripttipFont.params.posY += (int)(textHeight / 2);
+				scripttipFont.params.posY += textHeightWithoutScriptTip;
 				scripttipFont.params.color = wi::Color::lerp(tooltipFont.params.color, wi::Color::Transparent(), 0.25f);
 				scripttipFont.Draw(cmd);
 			}
@@ -470,6 +471,10 @@ namespace wi::gui
 	}
 	bool Widget::IsVisible() const
 	{
+		if (parent != nullptr && !parent->IsVisible())
+		{
+			return false;
+		}
 		return visible;
 	}
 	void Widget::Activate()
@@ -3022,6 +3027,7 @@ namespace wi::gui
 	{
 		minimized = value;
 
+		scrollable_area.SetVisible(!value);
 		if (resizeDragger_BottomLeft.parent != nullptr)
 		{
 			resizeDragger_BottomLeft.SetVisible(!value);
@@ -3030,22 +3036,9 @@ namespace wi::gui
 		{
 			resizeDragger_BottomRight.SetVisible(!value);
 		}
-		for (auto& x : widgets)
-		{
-			if (x == &moveDragger)
-				continue;
-			if (x == &collapseButton)
-				continue;
-			if (x == &closeButton)
-				continue;
-			if (x == &resizeDragger_UpperLeft)
-				continue;
-			if (x == &resizeDragger_UpperRight)
-				continue;
-			if (x == &label)
-				continue;
-			x->SetVisible(!value);
-		}
+
+		scrollbar_horizontal.SetVisible(!value);
+		scrollbar_vertical.SetVisible(!value);
 
 		if (IsMinimized())
 		{
