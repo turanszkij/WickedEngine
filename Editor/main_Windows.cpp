@@ -117,44 +117,52 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
-   int x = CW_USEDEFAULT, y = 0, w = CW_USEDEFAULT, h = 0;
-   bool fullscreen = false;
+   int w = CW_USEDEFAULT, h = 0;
    bool borderless = false;
-   bool allow_hdr = true;
-   std::string voidStr = "";
 
-   std::ifstream file("config.ini");
-   if (file.is_open())
+   if (editor.config.Open("config.ini"))
    {
-	   int enabled;
-	   file >> voidStr >> enabled;
-	   if (enabled != 0)
+	   if (editor.config.Has("ResolutionWidth"))
 	   {
-		   file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> fullscreen >> voidStr >> borderless >> voidStr >> allow_hdr;
-		   editor.allow_hdr = allow_hdr;
+		   w = editor.config.GetInt("ResolutionWidth");
+		   h = editor.config.GetInt("ResolutionHeight");
+		   if (h == 0)
+		   {
+			   h = 600;
+		   }
 	   }
+	   borderless = editor.config.GetBool("Borderless");
+	   editor.allow_hdr = editor.config.GetBool("AllowHDR");
    }
-   file.close();
 
    HWND hWnd = NULL;
 
    if (borderless)
    {
-	   hWnd = CreateWindowEx(WS_EX_APPWINDOW,
-		     szWindowClass,
-		     szTitle,
-		     WS_POPUP,
-		     x, y, w, h,
-		     NULL,
-		     NULL,
-		     hInstance,
-		     NULL
-		    );
+	   hWnd = CreateWindowEx(
+		   WS_EX_APPWINDOW,
+		   szWindowClass,
+		   szTitle,
+		   WS_POPUP,
+		   CW_USEDEFAULT, 0, w, h,
+		   NULL,
+		   NULL,
+		   hInstance,
+		   NULL
+	   );
    }
    else
    {
-	   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-		   x, y, w, h, NULL, NULL, hInstance, NULL);
+	   hWnd = CreateWindow(
+		   szWindowClass,
+		   szTitle,
+		   WS_OVERLAPPEDWINDOW,
+		   CW_USEDEFAULT, 0, w, h,
+		   NULL,
+		   NULL,
+		   hInstance,
+		   NULL
+	   );
    }
 
    if (!hWnd)
@@ -162,7 +170,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   editor.SetWindow(hWnd, fullscreen);
+   editor.SetWindow(hWnd);
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);

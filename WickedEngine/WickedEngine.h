@@ -69,6 +69,7 @@
 #include "wiUnorderedSet.h"
 #include "wiVector.h"
 #include "wiNoise.h"
+#include "wiConfig.h"
 
 #ifdef _WIN32
 #ifdef PLATFORM_UWP
