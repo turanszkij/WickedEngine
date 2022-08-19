@@ -21,6 +21,7 @@ public:
 	wi::gui::CheckBox occlusionSecondaryCheckBox;
 	wi::gui::CheckBox windCheckBox;
 	wi::gui::CheckBox doubleSidedCheckBox;
+	wi::gui::CheckBox outlineCheckBox;
 	wi::gui::Slider normalMapSlider;
 	wi::gui::Slider roughnessSlider;
 	wi::gui::Slider reflectanceSlider;

@@ -288,8 +288,12 @@ void Bind()
 		wi::lua::RunText("STENCILREF_EMPTY = 0");
 		wi::lua::RunText("STENCILREF_DEFAULT = 1");
 		wi::lua::RunText("STENCILREF_CUSTOMSHADER = 2");
-		wi::lua::RunText("STENCILREF_SKIN = 3");
-		wi::lua::RunText("STENCILREF_SNOW = 4");
+		wi::lua::RunText("STENCILREF_OUTLINE = 3");
+		wi::lua::RunText("STENCILREF_CUSTOMSHADER_OUTLINE = 4");
+
+
+		wi::lua::RunText("STENCILREF_SKIN = 3"); // deprecated
+		wi::lua::RunText("STENCILREF_SNOW = 4"); // deprecated
 
 		wi::lua::RegisterFunc("GetCamera", GetCamera);
 		wi::lua::RegisterFunc("GetScene", GetScene);

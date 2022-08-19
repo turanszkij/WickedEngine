@@ -909,7 +909,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&sharpenFilterAmountSlider);
 
 	outlineCheckBox.Create("Cartoon Outline: ");
-	outlineCheckBox.SetTooltip("Toggle the full screen cartoon outline effect.");
+	outlineCheckBox.SetTooltip("Toggle the cartoon outline effect. Only those materials will be outlined that have Outline enabled.");
 	outlineCheckBox.SetSize(XMFLOAT2(hei, hei));
 	outlineCheckBox.SetPos(XMFLOAT2(x, y += step));
 	outlineCheckBox.OnClick([=](wi::gui::EventArgs args) {
@@ -944,7 +944,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&chromaticaberrationCheckBox);
 
-	chromaticaberrationSlider.Create(0, 4, 1.0f, 1000, "Amount: ");
+	chromaticaberrationSlider.Create(0, 40, 1.0f, 1000, "Amount: ");
 	chromaticaberrationSlider.SetTooltip("The lens distortion amount.");
 	chromaticaberrationSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	chromaticaberrationSlider.SetPos(XMFLOAT2(x + 100, y));
@@ -1194,7 +1194,7 @@ void GraphicsWindow::Update()
 	outlineCheckBox.SetCheck(editor->renderPath->getOutlineEnabled());
 	outlineThresholdSlider.SetValue(editor->renderPath->getOutlineThreshold());
 	outlineThicknessSlider.SetValue(editor->renderPath->getOutlineThickness());
-	chromaticaberrationCheckBox.SetCheck(editor->renderPath->getOutlineEnabled());
+	chromaticaberrationCheckBox.SetCheck(editor->renderPath->getChromaticAberrationEnabled());
 	chromaticaberrationSlider.SetValue(editor->renderPath->getChromaticAberrationAmount());
 	fsrCheckBox.SetCheck(editor->renderPath->getFSREnabled());
 	fsrSlider.SetValue(editor->renderPath->getFSRSharpness());

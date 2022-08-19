@@ -120,6 +120,17 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&doubleSidedCheckBox);
 
+	outlineCheckBox.Create("Cartoon Outline: ");
+	outlineCheckBox.SetTooltip("Enable cartoon outline. The Cartoon Outline graphics setting also needs to be enabled for it to show up.");
+	outlineCheckBox.SetPos(XMFLOAT2(x, y += step));
+	outlineCheckBox.SetSize(XMFLOAT2(hei, hei));
+	outlineCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetOutlineEnabled(args.bValue);
+		});
+	AddWidget(&outlineCheckBox);
+
 
 	shaderTypeComboBox.Create("Shader: ");
 	shaderTypeComboBox.SetTooltip("Select a shader for this material. \nCustom shaders (*) will also show up here (see wi::renderer:RegisterCustomShader() for more info.)\nNote that custom shaders (*) can't select between blend modes, as they are created with an explicit blend mode.");
@@ -714,6 +725,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		occlusionSecondaryCheckBox.SetCheck(material->IsOcclusionEnabled_Secondary());
 		windCheckBox.SetCheck(material->IsUsingWind());
 		doubleSidedCheckBox.SetCheck(material->IsDoubleSided());
+		outlineCheckBox.SetCheck(material->IsOutlineEnabled());
 		normalMapSlider.SetValue(material->normalMapStrength);
 		roughnessSlider.SetValue(material->roughness);
 		reflectanceSlider.SetValue(material->reflectance);
