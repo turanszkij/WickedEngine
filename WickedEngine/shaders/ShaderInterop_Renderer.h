@@ -134,6 +134,8 @@ struct ShaderMaterial
 	int			texture_specularmap_index;
 	uint		shaderType;
 
+	uint4		userdata;
+
 	void init()
 	{
 		baseColor = float4(1, 1, 1, 1);
@@ -196,6 +198,7 @@ struct ShaderMaterial
 		texture_specularmap_index = -1;
 		shaderType = 0;
 
+		userdata = uint4(0, 0, 0, 0);
 	}
 
 #ifndef __cplusplus
