@@ -130,6 +130,12 @@ namespace wi::config
 				}
 				break;
 			case '\n':
+				while (!value.empty() && (value.back() == ' ' || value.back() == '\t'))
+				{
+					// trailing whitespaces from values are removed and added as comment:
+					comment = value.back() + comment;
+					value.pop_back();
+				}
 				opened_order.emplace_back();
 				opened_order.back().section_label = section_label;
 				section_label.clear();
