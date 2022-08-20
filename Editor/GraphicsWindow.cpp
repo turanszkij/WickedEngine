@@ -589,9 +589,15 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	raytraceBounceCountSlider.SetTooltip("How many light bounces to compute when doing these ray tracing effects:\n- Path tracing\n- Lightmap baking");
 	raytraceBounceCountSlider.SetSize(XMFLOAT2(wid, itemheight));
 	raytraceBounceCountSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("raytracing_bounce_count"))
+	{
+		wi::renderer::SetRaytraceBounceCount(editor->main->config.GetSection("graphics").GetInt("raytracing_bounce_count"));
+	}
 	raytraceBounceCountSlider.SetValue((float)wi::renderer::GetRaytraceBounceCount());
 	raytraceBounceCountSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::renderer::SetRaytraceBounceCount((uint32_t)args.iValue);
+		editor->main->config.GetSection("graphics").Set("raytracing_bounces", args.iValue);
+		editor->main->config.Commit();
 	});
 	AddWidget(&raytraceBounceCountSlider);
 
@@ -642,8 +648,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	exposureSlider.SetScriptTip("RenderPath3D::SetExposure(float value)");
 	exposureSlider.SetSize(XMFLOAT2(wid, hei));
 	exposureSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("tonemap_exposure"))
+	{
+		editor->renderPath->setExposure(editor->main->config.GetSection("graphics").GetFloat("tonemap_exposure"));
+	}
 	exposureSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setExposure(args.fValue);
+		editor->main->config.GetSection("graphics").Set("tonemap_exposure", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&exposureSlider);
 
@@ -652,8 +664,11 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	lensFlareCheckBox.SetScriptTip("RenderPath3D::SetLensFlareEnabled(bool value)");
 	lensFlareCheckBox.SetSize(XMFLOAT2(hei, hei));
 	lensFlareCheckBox.SetPos(XMFLOAT2(x, y += step));
+	editor->renderPath->setLensFlareEnabled(editor->main->config.GetSection("graphics").GetBool("lensflare"));
 	lensFlareCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setLensFlareEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("lensflare", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&lensFlareCheckBox);
 
@@ -662,8 +677,11 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	lightShaftsCheckBox.SetScriptTip("RenderPath3D::SetLightShaftsEnabled(bool value)");
 	lightShaftsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	lightShaftsCheckBox.SetPos(XMFLOAT2(x, y += step));
+	editor->renderPath->setLightShaftsEnabled(editor->main->config.GetSection("graphics").GetBool("lightshafts"));
 	lightShaftsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setLightShaftsEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("lightshafts", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&lightShaftsCheckBox);
 
@@ -671,14 +689,21 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	lightShaftsStrengthStrengthSlider.SetTooltip("Set light shaft strength.");
 	lightShaftsStrengthStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	lightShaftsStrengthStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").GetBool("lightshafts_strength"))
+	{
+		editor->renderPath->setLightShaftsStrength(editor->main->config.GetSection("graphics").GetFloat("lightshafts_strength"));
+	}
 	lightShaftsStrengthStrengthSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setLightShaftsStrength(args.fValue);
+		editor->main->config.GetSection("graphics").Set("lightshafts_strength", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&lightShaftsStrengthStrengthSlider);
 
 	aoComboBox.Create("AO: ");
 	aoComboBox.SetTooltip("Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing");
 	aoComboBox.SetScriptTip("RenderPath3D::SetAO(int value)");
+	int ao = editor->main->config.GetSection("graphics").GetInt("ambient_occlusion");
 	aoComboBox.SetSize(XMFLOAT2(wid, hei));
 	aoComboBox.SetPos(XMFLOAT2(x, y += step));
 	aoComboBox.AddItem("Disabled");
@@ -688,40 +713,32 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	if (wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
 		aoComboBox.AddItem("RTAO");
+		ao = std::min(ao, 4);
+	}
+	else
+	{
+		ao = std::min(ao, 3);
 	}
 	aoComboBox.OnSelect([=](wi::gui::EventArgs args) {
 		editor->renderPath->setAO((wi::RenderPath3D::AO)args.iValue);
-
-		switch (editor->renderPath->getAO())
-		{
-		case wi::RenderPath3D::AO_SSAO:
-			aoRangeSlider.SetEnabled(true);
-			aoRangeSlider.SetValue(2.0f);
-			aoSampleCountSlider.SetEnabled(true);
-			aoSampleCountSlider.SetValue(9.0f);
-			break;
-		case wi::RenderPath3D::AO_RTAO:
-			aoRangeSlider.SetEnabled(true);
-			aoRangeSlider.SetValue(10.0f);
-			aoSampleCountSlider.SetEnabled(false);
-			break;
-		default:
-			aoRangeSlider.SetEnabled(false);
-			aoSampleCountSlider.SetEnabled(false);
-			break;
-		}
-
-		editor->renderPath->setAORange(aoRangeSlider.GetValue());
-		editor->renderPath->setAOSampleCount((uint32_t)aoSampleCountSlider.GetValue());
+		editor->main->config.GetSection("graphics").Set("ambient_occlusion", args.iValue);
+		editor->main->config.Commit();
 		});
+	aoComboBox.SetSelected(ao);
 	AddWidget(&aoComboBox);
 
 	aoPowerSlider.Create(0.25f, 8.0f, 2, 1000, "Power: ");
 	aoPowerSlider.SetTooltip("Set SSAO Power. Higher values produce darker, more pronounced effect");
 	aoPowerSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	aoPowerSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	if (editor->main->config.GetSection("graphics").GetBool("ambient_occlusion_power"))
+	{
+		editor->renderPath->setAOPower(editor->main->config.GetSection("graphics").GetFloat("ambient_occlusion_power"));
+	}
 	aoPowerSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setAOPower(args.fValue);
+		editor->main->config.GetSection("graphics").Set("ambient_occlusion_power", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&aoPowerSlider);
 
@@ -729,8 +746,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	aoRangeSlider.SetTooltip("Set AO ray length. Only for SSAO and RTAO");
 	aoRangeSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	aoRangeSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	if (editor->main->config.GetSection("graphics").GetBool("ambient_occlusion_range"))
+	{
+		editor->renderPath->setAORange(editor->main->config.GetSection("graphics").GetFloat("ambient_occlusion_range"));
+	}
 	aoRangeSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setAORange(args.fValue);
+		editor->main->config.GetSection("graphics").Set("ambient_occlusion_range", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&aoRangeSlider);
 
@@ -748,8 +771,11 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	ssrCheckBox.SetScriptTip("RenderPath3D::SetSSREnabled(bool value)");
 	ssrCheckBox.SetSize(XMFLOAT2(hei, hei));
 	ssrCheckBox.SetPos(XMFLOAT2(x, y += step));
+	editor->renderPath->setSSREnabled(editor->main->config.GetSection("graphics").GetBool("screen_space_reflections"));
 	ssrCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setSSREnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("screen_space_reflections", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&ssrCheckBox);
 
@@ -758,8 +784,11 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	raytracedReflectionsCheckBox.SetScriptTip("RenderPath3D::SetRaytracedReflectionsEnabled(bool value)");
 	raytracedReflectionsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	raytracedReflectionsCheckBox.SetPos(XMFLOAT2(x + 140, y));
+	editor->renderPath->setRaytracedReflectionsEnabled(editor->main->config.GetSection("graphics").GetBool("raytraced_reflections"));
 	raytracedReflectionsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setRaytracedReflectionsEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("raytraced_reflections", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&raytracedReflectionsCheckBox);
 	raytracedReflectionsCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
@@ -768,9 +797,11 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	screenSpaceShadowsCheckBox.SetTooltip("Enable screen space contact shadows. This can add small shadows details to shadow maps in screen space.");
 	screenSpaceShadowsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	screenSpaceShadowsCheckBox.SetPos(XMFLOAT2(x, y += step));
-	screenSpaceShadowsCheckBox.SetCheck(wi::renderer::GetScreenSpaceShadowsEnabled());
+	wi::renderer::SetScreenSpaceShadowsEnabled(editor->main->config.GetSection("graphics").GetBool("screen_space_shadows"));
 	screenSpaceShadowsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetScreenSpaceShadowsEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("screen_space_shadows", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&screenSpaceShadowsCheckBox);
 
@@ -796,8 +827,11 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	eyeAdaptionCheckBox.SetTooltip("Enable eye adaption for the overall screen luminance");
 	eyeAdaptionCheckBox.SetSize(XMFLOAT2(hei, hei));
 	eyeAdaptionCheckBox.SetPos(XMFLOAT2(x, y += step));
+	editor->renderPath->setEyeAdaptionEnabled(editor->main->config.GetSection("graphics").GetBool("eye_adaption"));
 	eyeAdaptionCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setEyeAdaptionEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("eye_adaption", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&eyeAdaptionCheckBox);
 
@@ -865,7 +899,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	bloomCheckBox.SetSize(XMFLOAT2(hei, hei));
 	bloomCheckBox.SetPos(XMFLOAT2(x, y += step));
 	editor->renderPath->setBloomEnabled(editor->main->config.GetSection("graphics").GetBool("bloom"));
-	bloomCheckBox.SetCheck(editor->renderPath->getBloomEnabled());
 	bloomCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setBloomEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("bloom", args.bValue);
@@ -878,7 +911,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	bloomStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	bloomStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
 	editor->renderPath->setBloomThreshold(editor->main->config.GetSection("graphics").GetFloat("bloom_threshold"));
-	bloomStrengthSlider.SetValue(editor->renderPath->getBloomThreshold());
 	bloomStrengthSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setBloomThreshold(args.fValue);
 		editor->main->config.GetSection("graphics").Set("bloom_threshold", args.fValue);
@@ -1206,10 +1238,27 @@ void GraphicsWindow::Update()
 	lightShaftsStrengthStrengthSlider.SetValue(editor->renderPath->getLightShaftsStrength());
 	aoComboBox.SetSelectedWithoutCallback(editor->renderPath->getAO());
 	aoPowerSlider.SetValue((float)editor->renderPath->getAOPower());
-	aoRangeSlider.SetValue((float)editor->renderPath->getAOPower());
-	aoSampleCountSlider.SetValue((float)editor->renderPath->getAOPower());
+
+	aoRangeSlider.SetEnabled(false);
+	aoSampleCountSlider.SetEnabled(false);
+	switch (editor->renderPath->getAO())
+	{
+	case wi::RenderPath3D::AO_SSAO:
+		aoRangeSlider.SetEnabled(true);
+		aoSampleCountSlider.SetEnabled(true);
+		break;
+	case wi::RenderPath3D::AO_RTAO:
+		aoRangeSlider.SetEnabled(true);
+		break;
+	default:
+		break;
+	}
+
+	aoRangeSlider.SetValue((float)editor->renderPath->getAORange());
+	aoSampleCountSlider.SetValue((float)editor->renderPath->getAOSampleCount());
 	ssrCheckBox.SetCheck(editor->renderPath->getSSREnabled());
 	raytracedReflectionsCheckBox.SetCheck(editor->renderPath->getRaytracedReflectionEnabled());
+	screenSpaceShadowsCheckBox.SetCheck(wi::renderer::GetScreenSpaceShadowsEnabled());
 	screenSpaceShadowsRangeSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowRange());
 	screenSpaceShadowsStepCountSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowSampleCount());
 	eyeAdaptionCheckBox.SetCheck(editor->renderPath->getEyeAdaptionEnabled());
