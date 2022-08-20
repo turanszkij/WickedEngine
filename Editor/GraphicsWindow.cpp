@@ -27,7 +27,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	vsyncCheckBox.SetScriptTip("SetVSyncEnabled(opt bool enabled)");
 	vsyncCheckBox.SetPos(XMFLOAT2(x, y));
 	vsyncCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	vsyncCheckBox.SetCheck(editor->main->config.GetSection("graphics").GetBool("vsync"));
+	if (editor->main->config.GetSection("graphics").Has("vsync"))
+	{
+		vsyncCheckBox.SetCheck(editor->main->config.GetSection("graphics").GetBool("vsync"));
+	}
+	else
+	{
+		vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
+	}
 	vsyncCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("graphics").Set("vsync", args.bValue);
 		editor->main->config.Commit();
@@ -567,7 +574,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->main->config.GetSection("graphics").Set("texture_quality", args.iValue);
 		editor->main->config.Commit();
 	});
-	textureQualityComboBox.SetSelected(editor->main->config.GetSection("graphics").GetInt("texture_quality"));
+	if (editor->main->config.GetSection("graphics").Has("texture_quality"))
+	{
+		textureQualityComboBox.SetSelected(editor->main->config.GetSection("graphics").GetInt("texture_quality"));
+	}
+	else
+	{
+		textureQualityComboBox.SetSelected(3);
+	}
 	textureQualityComboBox.SetTooltip("Choose a texture sampling method for material textures.");
 	AddWidget(&textureQualityComboBox);
 

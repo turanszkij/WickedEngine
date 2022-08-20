@@ -7,23 +7,26 @@
 
 namespace wi::config
 {
+	struct File;
 	struct Section
 	{
+		friend struct File;
+
 		// Check whether the key exists:
-		bool Has(const std::string& name) const;
+		bool Has(const char* name) const;
 
 		// Get the associated value for the key:
-		bool GetBool(const std::string& name) const;
-		int GetInt(const std::string& name) const;
-		float GetFloat(const std::string& name) const;
-		std::string GetText(const std::string& name) const;
+		bool GetBool(const char* name) const;
+		int GetInt(const char* name) const;
+		float GetFloat(const char* name) const;
+		std::string GetText(const char* name) const;
 
 		// Set the associated value for the key:
-		void Set(const std::string& name, bool value);
-		void Set(const std::string& name, int value);
-		void Set(const std::string& name, float value);
-		void Set(const std::string& name, const char* value);
-		void Set(const std::string& name, const std::string& value);
+		void Set(const char* name, bool value);
+		void Set(const char* name, int value);
+		void Set(const char* name, float value);
+		void Set(const char* name, const char* value);
+		void Set(const char* name, const std::string& value);
 
 	protected:
 		std::unordered_map<std::string, std::string> values;
@@ -32,12 +35,11 @@ namespace wi::config
 	struct File : public Section
 	{
 		// Open a config file (.ini format)
-		bool Open(const std::string& filename);
+		bool Open(const char* filename);
 		// Write back the config file with the current keys and values
 		void Commit();
-		// Get access to a named section. If it doesn't exist, then the root section will be returned
+		// Get access to a named section. If it doesn't exist, then it will be created
 		Section& GetSection(const char* name);
-		Section& GetSection(const std::string& name);
 
 	private:
 		std::string filename;

@@ -404,6 +404,7 @@ A four component floating point vector. Provides efficient calculations with SIM
 - Lerp(Vector v1,v2, float t) : Vector result
 - QuaternionMultiply(Vector v1,v2) : Vector result
 - QuaternionFromRollPitchYaw(Vector rotXYZ) : Vector result
+- QuaternionToRollPitchYaw(Vector quaternion) : Vector result
 - QuaternionSlerp(Vector v1,v2, float t) : Vector result
 
 ### Matrix

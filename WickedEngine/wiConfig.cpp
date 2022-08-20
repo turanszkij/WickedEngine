@@ -1,14 +1,16 @@
 #include "wiConfig.h"
 #include "wiHelper.h"
 
+#include <unordered_set>
+
 namespace wi::config
 {
-	bool Section::Has(const std::string& name) const
+	bool Section::Has(const char* name) const
 	{
 		return values.find(name) != values.end();
 	}
 
-	bool Section::GetBool(const std::string& name) const
+	bool Section::GetBool(const char* name) const
 	{
 		auto it = values.find(name);
 		if (it == values.end())
@@ -25,7 +27,7 @@ namespace wi::config
 		}
 		return std::stoi(it->second) != 0;
 	}
-	int Section::GetInt(const std::string& name) const
+	int Section::GetInt(const char* name) const
 	{
 		auto it = values.find(name);
 		if (it == values.end())
@@ -42,7 +44,7 @@ namespace wi::config
 		}
 		return std::stoi(it->second);
 	}
-	float Section::GetFloat(const std::string& name) const
+	float Section::GetFloat(const char* name) const
 	{
 		auto it = values.find(name);
 		if (it == values.end())
@@ -59,7 +61,7 @@ namespace wi::config
 		}
 		return std::stof(it->second);
 	}
-	std::string Section::GetText(const std::string& name) const
+	std::string Section::GetText(const char* name) const
 	{
 		auto it = values.find(name);
 		if (it == values.end())
@@ -69,34 +71,34 @@ namespace wi::config
 		return it->second;
 	}
 
-	void Section::Set(const std::string& name, bool value)
+	void Section::Set(const char* name, bool value)
 	{
 		values[name] = value ? "true" : "false";
 	}
-	void Section::Set(const std::string& name, int value)
+	void Section::Set(const char* name, int value)
 	{
 		values[name] = std::to_string(value);
 	}
-	void Section::Set(const std::string& name, float value)
+	void Section::Set(const char* name, float value)
 	{
 		values[name] = std::to_string(value);
 	}
-	void Section::Set(const std::string& name, const char* value)
+	void Section::Set(const char* name, const char* value)
 	{
 		values[name] = value;
 	}
-	void Section::Set(const std::string& name, const std::string& value)
+	void Section::Set(const char* name, const std::string& value)
 	{
 		values[name] = value;
 	}
 
-	bool File::Open(const std::string& filename)
+	bool File::Open(const char* filename)
 	{
+		this->filename = filename; // even if file couldn't be loaded, we remember the filename so it can be created on commit
 		wi::vector<uint8_t> filedata;
 		if (!wi::helper::FileRead(filename, filedata))
 			return false;
 
-		this->filename = filename;
 		std::string text = std::string(filedata.begin(), filedata.end());
 		std::string key;
 		std::string value;
@@ -148,7 +150,7 @@ namespace wi::config
 				if (!key.empty())
 				{
 					opened_order.back().key = key;
-					current_section->Set(key, value);
+					current_section->Set(key.c_str(), value);
 				}
 				key.clear();
 				value.clear();
@@ -227,6 +229,8 @@ namespace wi::config
 	}
 	void File::Commit()
 	{
+		std::unordered_map<Section*, std::unordered_set<std::string>> committed_values;
+		Section* section = this;
 		std::string text;
 		for (auto& line : opened_order)
 		{
@@ -235,39 +239,63 @@ namespace wi::config
 				if (!line.key.empty())
 				{
 					text += line.key + " = " + values[line.key];
+					committed_values[section].insert(line.key);
 				}
 			}
 			else
 			{
 				if (!line.section_label.empty())
 				{
+					// Commit unformatted left over values for previous section:
+					for (auto& it : section->values)
+					{
+						if (committed_values[section].count(it.first) == 0)
+						{
+							text += it.first + " = " + it.second + "\n";
+						}
+					}
+					// Begin new section:
+					section = &sections[line.section_label];
 					text += "[" + line.section_label + "]";
 				}
 				if (!line.key.empty())
 				{
-					text += line.key + " = " + sections[line.section_id].GetText(line.key);
+					text += line.key + " = " + sections[line.section_id].GetText(line.key.c_str());
+					committed_values[section].insert(line.key);
 				}
 			}
 			text += line.comment + "\n";
+		}
+
+		// Commit left over unformatted sections and values:
+		for (auto& it : values)
+		{
+			if (committed_values[this].count(it.first) == 0)
+			{
+				text += it.first + " = " + it.second + "\n";
+			}
+		}
+		for (auto& it : sections)
+		{
+			if (it.second.values.empty())
+				continue;
+			if (committed_values.count(&it.second) == 0)
+			{
+				text += "\n[" + it.first + "]\n";
+				committed_values[&it.second] = {};
+			}
+			for (auto& it2 : it.second.values)
+			{
+				if (committed_values[&it.second].count(it2.first) == 0)
+				{
+					text += it2.first + " = " + it2.second + "\n";
+				}
+			}
 		}
 		wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
 	}
 	Section& File::GetSection(const char* name)
 	{
-		auto it = sections.find(name);
-		if (it == sections.end())
-		{
-			return *this;
-		}
-		return it->second;
-	}
-	Section& File::GetSection(const std::string& name)
-	{
-		auto it = sections.find(name);
-		if (it == sections.end())
-		{
-			return *this;
-		}
-		return it->second;
+		return sections[name];
 	}
 }
