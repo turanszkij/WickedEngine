@@ -229,6 +229,10 @@ if (WIN32)
 
 	set(LIBDXCOMPILER "dxcompiler.dll")
 else ()
+	# `ska::flat_hash_map` has issues on linux because of the hash function being identity
+	# in same cases. Use `robin_hood::unordered_flat_map` instead
+	target_compile_definitions(${TARGET_NAME} PUBLIC WI_UNORDERED_MAP_TYPE=2)
+
 	target_link_libraries(${TARGET_NAME} PUBLIC
 		Threads::Threads
 		SDL2::SDL2

@@ -100,17 +100,17 @@ namespace wi
 			SOUND,
 		};
 		static const wi::unordered_map<std::string, DataType> types = {
-			std::make_pair("BASIS", DataType::IMAGE),
-			std::make_pair("KTX2", DataType::IMAGE),
-			std::make_pair("JPG", DataType::IMAGE),
-			std::make_pair("JPEG", DataType::IMAGE),
-			std::make_pair("PNG", DataType::IMAGE),
-			std::make_pair("BMP", DataType::IMAGE),
-			std::make_pair("DDS", DataType::IMAGE),
-			std::make_pair("TGA", DataType::IMAGE),
-			std::make_pair("QOI", DataType::IMAGE),
-			std::make_pair("WAV", DataType::SOUND),
-			std::make_pair("OGG", DataType::SOUND),
+			{"BASIS", DataType::IMAGE},
+			{"KTX2", DataType::IMAGE},
+			{"JPG", DataType::IMAGE},
+			{"JPEG", DataType::IMAGE},
+			{"PNG", DataType::IMAGE},
+			{"BMP", DataType::IMAGE},
+			{"DDS", DataType::IMAGE},
+			{"TGA", DataType::IMAGE},
+			{"QOI", DataType::IMAGE},
+			{"WAV", DataType::SOUND},
+			{"OGG", DataType::SOUND},
 		};
 		wi::vector<std::string> GetSupportedImageExtensions()
 		{

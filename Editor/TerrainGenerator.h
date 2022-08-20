@@ -62,12 +62,7 @@ struct TerrainGenerator : public wi::gui::Window
 	wi::scene::MaterialComponent material_HighAltitude;
 	wi::scene::MaterialComponent material_GrassParticle;
 	wi::HairParticleSystem grass_properties;
-#ifdef PLATFORM_LINUX
-	// TODO: investigate why wi::unordered_map is crashing terrain generator on Linux
-	std::unordered_map<Chunk, ChunkData> chunks;
-#else
 	wi::unordered_map<Chunk, ChunkData> chunks;
-#endif
 	wi::vector<uint32_t> indices;
 	struct LOD
 	{
