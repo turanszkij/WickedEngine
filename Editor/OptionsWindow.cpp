@@ -82,22 +82,38 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 	versionCheckBox.Create("Version: ");
 	versionCheckBox.SetTooltip("Toggle the engine version display text in top left corner.");
+	editor->main->infoDisplay.watermark = editor->main->config.GetSection("options").GetBool("version");
+	versionCheckBox.SetCheck(editor->main->infoDisplay.watermark);
 	versionCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.watermark = args.bValue;
+		editor->main->config.GetSection("options").Set("version", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&versionCheckBox);
 	versionCheckBox.SetCheck(editor->main->infoDisplay.watermark);
 
 	fpsCheckBox.Create("FPS: ");
 	fpsCheckBox.SetTooltip("Toggle the FPS display text in top left corner.");
+	editor->main->infoDisplay.fpsinfo = editor->main->config.GetSection("options").GetBool("fps");
+	fpsCheckBox.SetCheck(editor->main->infoDisplay.fpsinfo);
 	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.fpsinfo = args.bValue;
+		editor->main->config.GetSection("options").Set("fps", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&fpsCheckBox);
 	fpsCheckBox.SetCheck(editor->main->infoDisplay.fpsinfo);
 
 	otherinfoCheckBox.Create("Info: ");
 	otherinfoCheckBox.SetTooltip("Toggle advanced data in the info display text in top left corner.");
+	bool info = editor->main->config.GetSection("options").GetBool("info");
+	editor->main->infoDisplay.heap_allocation_counter = info;
+	editor->main->infoDisplay.vram_usage = info;
+	editor->main->infoDisplay.colorspace = info;
+	editor->main->infoDisplay.resolution = info;
+	editor->main->infoDisplay.logical_size = info;
+	editor->main->infoDisplay.pipeline_count = info;
+	otherinfoCheckBox.SetCheck(info);
 	otherinfoCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.heap_allocation_counter = args.bValue;
 		editor->main->infoDisplay.vram_usage = args.bValue;
@@ -105,6 +121,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		editor->main->infoDisplay.resolution = args.bValue;
 		editor->main->infoDisplay.logical_size = args.bValue;
 		editor->main->infoDisplay.pipeline_count = args.bValue;
+		editor->main->config.GetSection("options").Set("info", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&otherinfoCheckBox);
 	otherinfoCheckBox.SetCheck(editor->main->infoDisplay.heap_allocation_counter);
@@ -324,7 +342,6 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	AddWidget(&graphicsWnd);
 
 	cameraWnd.Create(editor);
-	cameraWnd.ResetCam();
 	cameraWnd.SetCollapsed(true);
 	AddWidget(&cameraWnd);
 
