@@ -443,9 +443,7 @@ void EditorComponent::Load()
 		ss += "-------\n";
 		ss += "You can find sample scenes in the Content/models directory. Try to load one.\n";
 		ss += "You can also import models from .OBJ, .GLTF, .GLB, .VRM files.\n";
-#ifndef PLATFORM_UWP
 		ss += "You can find a program configuration file at Editor/config.ini\n";
-#endif // PLATFORM_UWP
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
 		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start, if exists)\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
