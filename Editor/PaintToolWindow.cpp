@@ -138,7 +138,12 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	pressureCheckBox.SetTooltip("Set whether to use pressure sensitivity (for example pen tablet)");
 	pressureCheckBox.SetSize(XMFLOAT2(hei, hei));
 	pressureCheckBox.SetPos(XMFLOAT2(x - 20 + 200, y));
-	pressureCheckBox.SetCheck(false);
+	pressureCheckBox.SetCheck(editor->main->config.GetSection("paint_tool").GetBool("pressure"));
+	pressureCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("paint_tool").Set("pressure", args.bValue);
+		editor->main->config.Commit();
+		});
+	pressureCheckBox.SetCheckText(ICON_PEN);
 	AddWidget(&pressureCheckBox);
 
 	axisCombo.Create("Axis Lock: ");

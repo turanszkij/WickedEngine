@@ -258,6 +258,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_INPUT:
 		wi::input::rawinput::ParseMessage((void*)lParam);
 		break;
+	case WM_POINTERDOWN:
+	case WM_POINTERUPDATE:
+		{
+			POINTER_PEN_INFO pen_info = {};
+			if (GetPointerPenInfo(GET_POINTERID_WPARAM(wParam), &pen_info))
+			{
+				ScreenToClient(hWnd, &pen_info.pointerInfo.ptPixelLocation);
+				const float dpiscaling = (float)GetDpiForWindow(hWnd) / 96.0f;
+				wi::input::Pen pen;
+				pen.position = XMFLOAT2(pen_info.pointerInfo.ptPixelLocation.x / dpiscaling, pen_info.pointerInfo.ptPixelLocation.y / dpiscaling);
+				pen.pressure = float(pen_info.pressure) / 1024.0f;
+				wi::input::SetPen(pen);
+			}
+		}
+		break;
 	case WM_KILLFOCUS:
 		editor.is_window_active = false;
 		break;
