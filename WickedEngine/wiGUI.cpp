@@ -1730,9 +1730,9 @@ namespace wi::gui
 				onSlide(args);
 				Activate();
 			}
-
-			valueInputField.SetValue(value);
 		}
+
+		valueInputField.SetValue(value);
 
 		font.params.posY = translation.y + scale.y * 0.5f;
 

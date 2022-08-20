@@ -117,44 +117,57 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
-   int x = CW_USEDEFAULT, y = 0, w = CW_USEDEFAULT, h = 0;
+   int width = CW_USEDEFAULT;
+   int height = 0;
    bool fullscreen = false;
    bool borderless = false;
-   bool allow_hdr = true;
-   std::string voidStr = "";
 
-   std::ifstream file("config.ini");
-   if (file.is_open())
+   wi::Timer timer;
+   if (editor.config.Open("config.ini"))
    {
-	   int enabled;
-	   file >> voidStr >> enabled;
-	   if (enabled != 0)
+	   if (editor.config.Has("width"))
 	   {
-		   file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> fullscreen >> voidStr >> borderless >> voidStr >> allow_hdr;
-		   editor.allow_hdr = allow_hdr;
+		   width = editor.config.GetInt("width");
+		   height = editor.config.GetInt("height");
 	   }
+	   fullscreen = editor.config.GetBool("fullscreen");
+	   borderless = editor.config.GetBool("borderless");
+	   editor.allow_hdr = editor.config.GetBool("allow_hdr");
+
+	   wi::backlog::post("config.ini loaded in " + std::to_string(timer.elapsed_milliseconds()) + " milliseconds\n");
    }
-   file.close();
 
    HWND hWnd = NULL;
 
-   if (borderless)
+   if (borderless || fullscreen)
    {
-	   hWnd = CreateWindowEx(WS_EX_APPWINDOW,
-		     szWindowClass,
-		     szTitle,
-		     WS_POPUP,
-		     x, y, w, h,
-		     NULL,
-		     NULL,
-		     hInstance,
-		     NULL
-		    );
+	   width = std::max(100, width);
+	   height = std::max(100, height);
+
+	   hWnd = CreateWindowEx(
+		   WS_EX_APPWINDOW,
+		   szWindowClass,
+		   szTitle,
+		   WS_POPUP,
+		   CW_USEDEFAULT, 0, width, height,
+		   NULL,
+		   NULL,
+		   hInstance,
+		   NULL
+	   );
    }
    else
    {
-	   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-		   x, y, w, h, NULL, NULL, hInstance, NULL);
+	   hWnd = CreateWindow(
+		   szWindowClass,
+		   szTitle,
+		   WS_OVERLAPPEDWINDOW,
+		   CW_USEDEFAULT, 0, width, height,
+		   NULL,
+		   NULL,
+		   hInstance,
+		   NULL
+	   );
    }
 
    if (!hWnd)
@@ -162,7 +175,18 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   editor.SetWindow(hWnd, fullscreen);
+   if (fullscreen)
+   {
+	   HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+	   MONITORINFO info;
+	   info.cbSize = sizeof(MONITORINFO);
+	   GetMonitorInfo(monitor, &info);
+	   width = info.rcMonitor.right - info.rcMonitor.left;
+	   height = info.rcMonitor.bottom - info.rcMonitor.top;
+	   MoveWindow(hWnd, 0, 0, width, height, FALSE);
+   }
+
+   editor.SetWindow(hWnd);
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
@@ -236,6 +260,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_INPUT:
 		wi::input::rawinput::ParseMessage((void*)lParam);
+		break;
+	case WM_POINTERDOWN:
+	case WM_POINTERUPDATE:
+		{
+			POINTER_PEN_INFO pen_info = {};
+			if (GetPointerPenInfo(GET_POINTERID_WPARAM(wParam), &pen_info))
+			{
+				ScreenToClient(hWnd, &pen_info.pointerInfo.ptPixelLocation);
+				const float dpiscaling = (float)GetDpiForWindow(hWnd) / 96.0f;
+				wi::input::Pen pen;
+				pen.position = XMFLOAT2(pen_info.pointerInfo.ptPixelLocation.x / dpiscaling, pen_info.pointerInfo.ptPixelLocation.y / dpiscaling);
+				pen.pressure = float(pen_info.pressure) / 1024.0f;
+				wi::input::SetPen(pen);
+			}
+		}
 		break;
 	case WM_KILLFOCUS:
 		editor.is_window_active = false;

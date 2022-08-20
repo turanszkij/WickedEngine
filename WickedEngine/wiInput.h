@@ -137,6 +137,15 @@ namespace wi::input
 	// send various feedback to the controller
 	void SetControllerFeedback(const ControllerFeedback& data, int playerindex = 0);
 
+	// これはペンです
+	struct Pen
+	{
+		XMFLOAT2 position;
+		float pressure;
+	};
+	// Set pen params, this will override mouse params
+	void SetPen(const Pen& pen);
+
 	struct Touch
 	{
 		enum TOUCHSTATE

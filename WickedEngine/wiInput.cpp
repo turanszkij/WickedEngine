@@ -44,6 +44,8 @@ namespace wi::input
 	wi::Canvas canvas;
 	KeyboardState keyboard;
 	MouseState mouse;
+	Pen pen;
+	bool pen_override = false;
 
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
@@ -218,6 +220,14 @@ namespace wi::input
 		}
 
 #endif
+
+		if (pen_override)
+		{
+			mouse.position = pen.position;
+			mouse.left_button_press = pen.pressure > 0;
+			mouse.pressure = pen.pressure;
+			pen_override = false;
+		}
 
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
 		for (int i = 0; i < wi::input::xinput::GetMaxControllerCount(); ++i)
@@ -657,6 +667,12 @@ namespace wi::input
 				wi::input::sdlinput::SetControllerFeedback(data, controller.deviceIndex);
 			}
 		}
+	}
+
+	void SetPen(const Pen& _pen)
+	{
+		pen = _pen;
+		pen_override = true;
 	}
 
 	const wi::vector<Touch>& GetTouches()

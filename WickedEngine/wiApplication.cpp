@@ -454,7 +454,7 @@ namespace wi
 		wi::profiler::EndRange(range); // Compose
 	}
 
-	void Application::SetWindow(wi::platform::window_type window, bool fullscreen)
+	void Application::SetWindow(wi::platform::window_type window)
 	{
 		this->window = window;
 

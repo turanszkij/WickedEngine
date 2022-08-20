@@ -443,9 +443,7 @@ void EditorComponent::Load()
 		ss += "-------\n";
 		ss += "You can find sample scenes in the Content/models directory. Try to load one.\n";
 		ss += "You can also import models from .OBJ, .GLTF, .GLB, .VRM files.\n";
-#ifndef PLATFORM_UWP
 		ss += "You can find a program configuration file at Editor/config.ini\n";
-#endif // PLATFORM_UWP
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
 		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start, if exists)\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
@@ -476,7 +474,27 @@ void EditorComponent::Load()
 	componentsWnd.Create(this);
 	GetGUI().AddWidget(&componentsWnd);
 
-	optionsWnd.themeCombo.SetSelected(0);
+	std::string theme = main->config.GetSection("options").GetText("theme");
+	if(theme.empty())
+	{
+		optionsWnd.themeCombo.SetSelected(0);
+	}
+	else if (!theme.compare("Dark"))
+	{
+		optionsWnd.themeCombo.SetSelected(0);
+	}
+	else if (!theme.compare("Bright"))
+	{
+		optionsWnd.themeCombo.SetSelected(1);
+	}
+	else if (!theme.compare("Soft"))
+	{
+		optionsWnd.themeCombo.SetSelected(2);
+	}
+	else if (!theme.compare("Hacking"))
+	{
+		optionsWnd.themeCombo.SetSelected(3);
+	}
 
 	static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(TerrainGenerator::EVENT_THEME_RESET, [=](uint64_t) {
 		optionsWnd.themeCombo.SetSelected(optionsWnd.themeCombo.GetSelected());

@@ -171,6 +171,7 @@ class Editor : public wi::Application
 public:
 	EditorComponent renderComponent;
 	EditorLoadingScreen loader;
+	wi::config::File config;
 
 	void Initialize() override;
 };

@@ -97,25 +97,25 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	radiusSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&radiusSlider);
 
-	amountSlider.Create(0, 1, 1, 10000, "Brush Amount: ");
+	amountSlider.Create(0, 1, 1, 10000, "Power: ");
 	amountSlider.SetTooltip("Set the brush amount. 0 = minimum affection, 1 = maximum affection");
 	amountSlider.SetSize(XMFLOAT2(wid, hei));
 	amountSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&amountSlider);
 
-	falloffSlider.Create(0, 16, 0, 10000, "Brush Falloff: ");
-	falloffSlider.SetTooltip("Set the brush power. 0 = no falloff, 1 = linear falloff, more = falloff power");
+	falloffSlider.Create(0, 16, 0, 10000, "Smoothness: ");
+	falloffSlider.SetTooltip("Set the brush power. 0 = hard, greater values will be smoother");
 	falloffSlider.SetSize(XMFLOAT2(wid, hei));
 	falloffSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&falloffSlider);
 
-	spacingSlider.Create(0, 500, 1, 500, "Brush Spacing: ");
+	spacingSlider.Create(0, 500, 1, 500, "Spacing: ");
 	spacingSlider.SetTooltip("Brush spacing means how much brush movement (in pixels) starts a new stroke. 0 = new stroke every frame, 100 = every 100 pixel movement since last stroke will start a new stroke.");
 	spacingSlider.SetSize(XMFLOAT2(wid, hei));
 	spacingSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&spacingSlider);
 
-	rotationSlider.Create(0, 1, 0, 10000, "Brush Rotation: ");
+	rotationSlider.Create(0, 1, 0, 10000, "Rotation: ");
 	rotationSlider.SetTooltip("Brush rotation randomness. This will affect the splat mode brush texture.");
 	rotationSlider.SetSize(XMFLOAT2(wid, hei));
 	rotationSlider.SetPos(XMFLOAT2(x, y += step));
@@ -125,6 +125,14 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	backfaceCheckBox.SetTooltip("Set whether to paint on backfaces of geometry or not");
 	backfaceCheckBox.SetSize(XMFLOAT2(hei, hei));
 	backfaceCheckBox.SetPos(XMFLOAT2(x - 20, y += step));
+	if (editor->main->config.GetSection("paint_tool").Has("backfaces"))
+	{
+		backfaceCheckBox.SetCheck(editor->main->config.GetSection("paint_tool").GetBool("backfaces"));
+	}
+	backfaceCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("paint_tool").Set("backfaces", args.bValue);
+		editor->main->config.Commit();
+		});
 	AddWidget(&backfaceCheckBox);
 
 	wireCheckBox.Create("Wireframe: ");
@@ -132,13 +140,29 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	wireCheckBox.SetSize(XMFLOAT2(hei, hei));
 	wireCheckBox.SetPos(XMFLOAT2(x - 20 + 100, y));
 	wireCheckBox.SetCheck(true);
+	if (editor->main->config.GetSection("paint_tool").Has("wireframe"))
+	{
+		wireCheckBox.SetCheck(editor->main->config.GetSection("paint_tool").GetBool("wireframe"));
+	}
+	wireCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("paint_tool").Set("wireframe", args.bValue);
+		editor->main->config.Commit();
+		});
 	AddWidget(&wireCheckBox);
 
 	pressureCheckBox.Create("Pressure: ");
 	pressureCheckBox.SetTooltip("Set whether to use pressure sensitivity (for example pen tablet)");
 	pressureCheckBox.SetSize(XMFLOAT2(hei, hei));
 	pressureCheckBox.SetPos(XMFLOAT2(x - 20 + 200, y));
-	pressureCheckBox.SetCheck(false);
+	if (editor->main->config.GetSection("paint_tool").Has("pressure"))
+	{
+		pressureCheckBox.SetCheck(editor->main->config.GetSection("paint_tool").GetBool("pressure"));
+	}
+	pressureCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("paint_tool").Set("pressure", args.bValue);
+		editor->main->config.Commit();
+		});
+	pressureCheckBox.SetCheckText(ICON_PEN);
 	AddWidget(&pressureCheckBox);
 
 	axisCombo.Create("Axis Lock: ");

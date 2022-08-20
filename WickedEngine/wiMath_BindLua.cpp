@@ -19,7 +19,6 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, TransformCoord),
 		lunamethod(Vector_BindLua, Length),
 		lunamethod(Vector_BindLua, Normalize),
-		lunamethod(Vector_BindLua, QuaternionNormalize),
 		lunamethod(Vector_BindLua, Add),
 		lunamethod(Vector_BindLua, Subtract),
 		lunamethod(Vector_BindLua, Multiply),
@@ -28,9 +27,10 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, Lerp),
 		lunamethod(Vector_BindLua, Slerp),
 		lunamethod(Vector_BindLua, Clamp),
-		lunamethod(Vector_BindLua, Normalize),
+		lunamethod(Vector_BindLua, QuaternionNormalize),
 		lunamethod(Vector_BindLua, QuaternionMultiply),
 		lunamethod(Vector_BindLua, QuaternionFromRollPitchYaw),
+		lunamethod(Vector_BindLua, QuaternionToRollPitchYaw),
 		{ NULL, NULL }
 	};
 	Luna<Vector_BindLua>::PropertyType Vector_BindLua::properties[] = {
@@ -382,6 +382,22 @@ namespace wi::lua
 			}
 		}
 		wi::lua::SError(L, "QuaternionFromRollPitchYaw(Vector rotXYZ) not enough arguments!");
+		return 0;
+	}
+	int Vector_BindLua::QuaternionToRollPitchYaw(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (v1)
+			{
+				XMFLOAT3 xyz = wi::math::QuaternionToRollPitchYaw(*v1);
+				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMFLOAT4(xyz.x, xyz.y, xyz.z, 0)));
+				return 1;
+			}
+		}
+		wi::lua::SError(L, "QuaternionToRollPitchYaw(Vector quaternion) not enough arguments!");
 		return 0;
 	}
 	int Vector_BindLua::Slerp(lua_State* L)

@@ -82,22 +82,38 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 	versionCheckBox.Create("Version: ");
 	versionCheckBox.SetTooltip("Toggle the engine version display text in top left corner.");
+	editor->main->infoDisplay.watermark = editor->main->config.GetSection("options").GetBool("version");
+	versionCheckBox.SetCheck(editor->main->infoDisplay.watermark);
 	versionCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.watermark = args.bValue;
+		editor->main->config.GetSection("options").Set("version", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&versionCheckBox);
 	versionCheckBox.SetCheck(editor->main->infoDisplay.watermark);
 
 	fpsCheckBox.Create("FPS: ");
 	fpsCheckBox.SetTooltip("Toggle the FPS display text in top left corner.");
+	editor->main->infoDisplay.fpsinfo = editor->main->config.GetSection("options").GetBool("fps");
+	fpsCheckBox.SetCheck(editor->main->infoDisplay.fpsinfo);
 	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.fpsinfo = args.bValue;
+		editor->main->config.GetSection("options").Set("fps", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&fpsCheckBox);
 	fpsCheckBox.SetCheck(editor->main->infoDisplay.fpsinfo);
 
 	otherinfoCheckBox.Create("Info: ");
 	otherinfoCheckBox.SetTooltip("Toggle advanced data in the info display text in top left corner.");
+	bool info = editor->main->config.GetSection("options").GetBool("info");
+	editor->main->infoDisplay.heap_allocation_counter = info;
+	editor->main->infoDisplay.vram_usage = info;
+	editor->main->infoDisplay.colorspace = info;
+	editor->main->infoDisplay.resolution = info;
+	editor->main->infoDisplay.logical_size = info;
+	editor->main->infoDisplay.pipeline_count = info;
+	otherinfoCheckBox.SetCheck(info);
 	otherinfoCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.heap_allocation_counter = args.bValue;
 		editor->main->infoDisplay.vram_usage = args.bValue;
@@ -105,6 +121,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		editor->main->infoDisplay.resolution = args.bValue;
 		editor->main->infoDisplay.logical_size = args.bValue;
 		editor->main->infoDisplay.pipeline_count = args.bValue;
+		editor->main->config.GetSection("options").Set("info", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&otherinfoCheckBox);
 	otherinfoCheckBox.SetCheck(editor->main->infoDisplay.heap_allocation_counter);
@@ -324,7 +342,6 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	AddWidget(&graphicsWnd);
 
 	cameraWnd.Create(editor);
-	cameraWnd.ResetCam();
 	cameraWnd.SetCollapsed(true);
 	AddWidget(&cameraWnd);
 
@@ -357,6 +374,11 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.");
 	saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
 	saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
+	saveModeComboBox.SetSelected(editor->main->config.GetSection("options").GetInt("save_mode"));
+	saveModeComboBox.OnSelect([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("options").Set("save_mode", args.iValue);
+		editor->main->config.Commit();
+	});
 	AddWidget(&saveModeComboBox);
 
 
@@ -528,7 +550,11 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		{
 		default:
 			break;
+		case Theme::Dark:
+			editor->main->config.GetSection("options").Set("theme", "Dark");
+			break;
 		case Theme::Bright:
+			editor->main->config.GetSection("options").Set("theme", "Bright");
 			theme_color_idle = wi::Color(200, 210, 220, 230);
 			theme_color_focus = wi::Color(210, 230, 255, 250);
 			dark_point = wi::Color(180, 180, 190, 230);
@@ -536,6 +562,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			theme.font.color = wi::Color(50, 50, 80, 255);
 			break;
 		case Theme::Soft:
+			editor->main->config.GetSection("options").Set("theme", "Soft");
 			theme_color_idle = wi::Color(200, 180, 190, 190);
 			theme_color_focus = wi::Color(240, 190, 200, 230);
 			dark_point = wi::Color(100, 80, 90, 220);
@@ -543,6 +570,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			theme.font.color = wi::Color(255, 230, 240, 255);
 			break;
 		case Theme::Hacking:
+			editor->main->config.GetSection("options").Set("theme", "Hacking");
 			theme_color_idle = wi::Color(0, 0, 0, 255);
 			theme_color_focus = wi::Color(10, 230, 30, 255);
 			dark_point = wi::Color(0, 0, 0, 255);
@@ -551,6 +579,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			theme.font.shadow_color = wi::Color::Shadow();
 			break;
 		}
+		editor->main->config.Commit();
 
 		theme.tooltipImage = theme.image;
 		theme.tooltipImage.color = theme_color_idle;

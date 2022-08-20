@@ -46,10 +46,16 @@ void CameraWindow::Create(EditorComponent* _editor)
 	float step = hei + 2;
 	float wid = 120;
 
+	ResetCam();
+
 	farPlaneSlider.Create(100, 10000, 5000, 100000, "Far Plane: ");
 	farPlaneSlider.SetTooltip("Controls the camera's far clip plane, geometry farther than this will be clipped.");
 	farPlaneSlider.SetSize(XMFLOAT2(wid, hei));
 	farPlaneSlider.SetPos(XMFLOAT2(x, y));
+	if (editor->main->config.GetSection("camera").Has("far"))
+	{
+		editor->GetCurrentEditorScene().camera.zFarP = editor->main->config.GetSection("camera").GetFloat("far");
+	}
 	farPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zFarP);
 	farPlaneSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
@@ -57,6 +63,8 @@ void CameraWindow::Create(EditorComponent* _editor)
 		camera.zFarP = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
+		editor->main->config.GetSection("camera").Set("far", args.fValue);
+		editor->main->config.Commit();
 	});
 	AddWidget(&farPlaneSlider);
 
@@ -64,6 +72,10 @@ void CameraWindow::Create(EditorComponent* _editor)
 	nearPlaneSlider.SetTooltip("Controls the camera's near clip plane, geometry closer than this will be clipped.");
 	nearPlaneSlider.SetSize(XMFLOAT2(wid, hei));
 	nearPlaneSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("camera").Has("near"))
+	{
+		editor->GetCurrentEditorScene().camera.zNearP = editor->main->config.GetSection("camera").GetFloat("near");
+	}
 	nearPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zNearP);
 	nearPlaneSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
@@ -71,6 +83,8 @@ void CameraWindow::Create(EditorComponent* _editor)
 		camera.zNearP = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
+		editor->main->config.GetSection("camera").Set("near", args.fValue);
+		editor->main->config.Commit();
 	});
 	AddWidget(&nearPlaneSlider);
 
@@ -78,12 +92,19 @@ void CameraWindow::Create(EditorComponent* _editor)
 	fovSlider.SetTooltip("Controls the camera's top-down field of view (in degrees)");
 	fovSlider.SetSize(XMFLOAT2(wid, hei));
 	fovSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("camera").Has("fov"))
+	{
+		editor->GetCurrentEditorScene().camera.fov = editor->main->config.GetSection("camera").GetFloat("fov") / 180.f * XM_PI;
+	}
+	fovSlider.SetValue(editor->GetCurrentEditorScene().camera.fov / XM_PI * 180.f);
 	fovSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 		camera.fov = args.fValue / 180.f * XM_PI;
 		camera.UpdateCamera();
 		camera.SetDirty();
+		editor->main->config.GetSection("camera").Set("fov", args.fValue);
+		editor->main->config.Commit();
 	});
 	AddWidget(&fovSlider);
 
@@ -142,16 +163,40 @@ void CameraWindow::Create(EditorComponent* _editor)
 	movespeedSlider.Create(1, 100, 10, 10000, "Movement Speed: ");
 	movespeedSlider.SetSize(XMFLOAT2(wid, hei));
 	movespeedSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("camera").Has("move_speed"))
+	{
+		movespeedSlider.SetValue(editor->main->config.GetSection("camera").GetFloat("move_speed"));
+	}
+	movespeedSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("camera").Set("move_speed", args.fValue);
+		editor->main->config.Commit();
+		});
 	AddWidget(&movespeedSlider);
 
 	accelerationSlider.Create(0.01f, 1, 0.18f, 10000, "Acceleration: ");
 	accelerationSlider.SetSize(XMFLOAT2(wid, hei));
 	accelerationSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("camera").Has("acceleration"))
+	{
+		accelerationSlider.SetValue(editor->main->config.GetSection("camera").GetFloat("acceleration"));
+	}
+	accelerationSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("camera").Set("acceleration", args.fValue);
+		editor->main->config.Commit();
+		});
 	AddWidget(&accelerationSlider);
 
 	rotationspeedSlider.Create(0.1f, 2, 1, 10000, "Rotation Speed: ");
 	rotationspeedSlider.SetSize(XMFLOAT2(wid, hei));
 	rotationspeedSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("camera").Has("rotation_speed"))
+	{
+		rotationspeedSlider.SetValue(editor->main->config.GetSection("camera").GetFloat("rotation_speed"));
+	}
+	rotationspeedSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("camera").Set("rotation_speed", args.fValue);
+		editor->main->config.Commit();
+		});
 	AddWidget(&rotationspeedSlider);
 
 	resetButton.Create("Reset Camera");
@@ -159,6 +204,12 @@ void CameraWindow::Create(EditorComponent* _editor)
 	resetButton.SetPos(XMFLOAT2(x, y += step));
 	resetButton.OnClick([&](wi::gui::EventArgs args) {
 		ResetCam();
+
+		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
+		editor->main->config.GetSection("camera").Set("near", camera.zNearP);
+		editor->main->config.GetSection("camera").Set("far", camera.zFarP);
+		editor->main->config.GetSection("camera").Set("fov", camera.fov / XM_PI * 180.f);
+		editor->main->config.Commit();
 	});
 	AddWidget(&resetButton);
 
@@ -166,6 +217,11 @@ void CameraWindow::Create(EditorComponent* _editor)
 	fpsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	fpsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	fpsCheckBox.SetCheck(true);
+	fpsCheckBox.SetCheck(editor->main->config.GetSection("camera").GetBool("fps"));
+	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("camera").Set("fps", args.bValue);
+		editor->main->config.Commit();
+		});
 	AddWidget(&fpsCheckBox);
 
 

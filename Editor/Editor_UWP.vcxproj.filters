@@ -37,5 +37,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="config.ini" />
   </ItemGroup>
 </Project>
