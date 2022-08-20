@@ -530,9 +530,13 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	MSAAComboBox.AddItem("2", 2);
 	MSAAComboBox.AddItem("4", 4);
 	MSAAComboBox.AddItem("8", 8);
+	if (editor->main->config.GetSection("graphics").Has("msaa"))
+	{
+		MSAAComboBox.SetSelectedWithoutCallback(editor->main->config.GetSection("graphics").GetInt("msaa"));
+	}
 	MSAAComboBox.OnSelect([=](wi::gui::EventArgs args) {
-		editor->renderPath->setMSAASampleCount((uint32_t)args.userdata);
-		editor->ResizeBuffers();
+		editor->main->config.GetSection("graphics").Set("msaa", args.iValue);
+		editor->main->config.Commit();
 	});
 	MSAAComboBox.SetTooltip("Multisampling Anti Aliasing quality. ");
 	AddWidget(&MSAAComboBox);
@@ -541,7 +545,10 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	temporalAACheckBox.SetTooltip("Toggle Temporal Anti Aliasing. It is a supersampling techique which is performed across multiple frames.");
 	temporalAACheckBox.SetPos(XMFLOAT2(x, y += step));
 	temporalAACheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	wi::renderer::SetTemporalAAEnabled(editor->main->config.GetSection("graphics").GetBool("temporal_anti_aliasing"));
+	if (editor->main->config.GetSection("graphics").Has("temporal_anti_aliasing"))
+	{
+		wi::renderer::SetTemporalAAEnabled(editor->main->config.GetSection("graphics").GetBool("temporal_anti_aliasing"));
+	}
 	temporalAACheckBox.SetCheck(wi::renderer::GetTemporalAAEnabled());
 	temporalAACheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetTemporalAAEnabled(args.bValue);
@@ -1378,6 +1385,11 @@ void GraphicsWindow::Update()
 	if (editor->resolutionScale != editor->renderPath->resolutionScale)
 	{
 		editor->renderPath->resolutionScale = editor->resolutionScale;
+		editor->ResizeBuffers();
+	}
+	if (MSAAComboBox.GetItemUserData(MSAAComboBox.GetSelected()) != editor->renderPath->getMSAASampleCount())
+	{
+		editor->renderPath->setMSAASampleCount((uint32_t)MSAAComboBox.GetItemUserData(MSAAComboBox.GetSelected()));
 		editor->ResizeBuffers();
 	}
 
