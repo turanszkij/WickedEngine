@@ -34,7 +34,6 @@ namespace wi::lua
 		int TransformCoord(lua_State* L);
 		int Length(lua_State* L);
 		int Normalize(lua_State* L);
-		int QuaternionNormalize(lua_State* L);
 		int Clamp(lua_State* L);
 		int Saturate(lua_State* L);
 
@@ -46,8 +45,10 @@ namespace wi::lua
 		int Lerp(lua_State* L);
 
 
+		int QuaternionNormalize(lua_State* L);
 		int QuaternionMultiply(lua_State* L);
 		int QuaternionFromRollPitchYaw(lua_State* L);
+		int QuaternionToRollPitchYaw(lua_State* L);
 		int Slerp(lua_State* L);
 
 		static void Bind();
