@@ -564,8 +564,10 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 
 		wi::renderer::ModifyObjectSampler(desc);
 
+		editor->main->config.GetSection("graphics").Set("texture_quality", args.iValue);
+		editor->main->config.Commit();
 	});
-	textureQualityComboBox.SetSelected(3);
+	textureQualityComboBox.SetSelected(editor->main->config.GetSection("graphics").GetInt("texture_quality"));
 	textureQualityComboBox.SetTooltip("Choose a texture sampling method for material textures.");
 	AddWidget(&textureQualityComboBox);
 
@@ -573,10 +575,13 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	mipLodBiasSlider.SetTooltip("Bias the rendered mip map level of the material textures.");
 	mipLodBiasSlider.SetSize(XMFLOAT2(wid, itemheight));
 	mipLodBiasSlider.SetPos(XMFLOAT2(x, y += step));
+	mipLodBiasSlider.SetValue(editor->main->config.GetSection("graphics").GetFloat("mip_lod_bias"));
 	mipLodBiasSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER)->GetDesc();
 		desc.mip_lod_bias = wi::math::Clamp(args.fValue, -15.9f, 15.9f);
 		wi::renderer::ModifyObjectSampler(desc);
+		editor->main->config.GetSection("graphics").Set("mip_lod_bias", args.fValue);
+		editor->main->config.Commit();
 	});
 	AddWidget(&mipLodBiasSlider);
 
@@ -859,8 +864,12 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	bloomCheckBox.SetScriptTip("RenderPath3D::SetBloomEnabled(bool value)");
 	bloomCheckBox.SetSize(XMFLOAT2(hei, hei));
 	bloomCheckBox.SetPos(XMFLOAT2(x, y += step));
+	editor->renderPath->setBloomEnabled(editor->main->config.GetSection("graphics").GetBool("bloom"));
+	bloomCheckBox.SetCheck(editor->renderPath->getBloomEnabled());
 	bloomCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setBloomEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("bloom", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&bloomCheckBox);
 
@@ -868,8 +877,12 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	bloomStrengthSlider.SetTooltip("Set bloom threshold. The values below this will not glow on the screen.");
 	bloomStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	bloomStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
+	editor->renderPath->setBloomThreshold(editor->main->config.GetSection("graphics").GetFloat("bloom_threshold"));
+	bloomStrengthSlider.SetValue(editor->renderPath->getBloomThreshold());
 	bloomStrengthSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setBloomThreshold(args.fValue);
+		editor->main->config.GetSection("graphics").Set("bloom_threshold", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&bloomStrengthSlider);
 
@@ -878,8 +891,12 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	fxaaCheckBox.SetScriptTip("RenderPath3D::SetFXAAEnabled(bool value)");
 	fxaaCheckBox.SetSize(XMFLOAT2(hei, hei));
 	fxaaCheckBox.SetPos(XMFLOAT2(x, y += step));
+	editor->renderPath->setFXAAEnabled(editor->main->config.GetSection("graphics").GetBool("fxaa"));
+	fxaaCheckBox.SetCheck(editor->renderPath->getFXAAEnabled());
 	fxaaCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setFXAAEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("fxaa", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&fxaaCheckBox);
 
