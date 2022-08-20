@@ -122,6 +122,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    bool fullscreen = false;
    bool borderless = false;
 
+   wi::Timer timer;
    if (editor.config.Open("config.ini"))
    {
 	   if (editor.config.Has("width"))
@@ -132,6 +133,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	   fullscreen = editor.config.GetBool("fullscreen");
 	   borderless = editor.config.GetBool("borderless");
 	   editor.allow_hdr = editor.config.GetBool("allow_hdr");
+
+	   wi::backlog::post("config.ini loaded in " + std::to_string(timer.elapsed_milliseconds()) + " milliseconds\n");
    }
 
    HWND hWnd = NULL;

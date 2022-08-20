@@ -121,6 +121,7 @@ int main(int argc, char *argv[])
 	int height = 1080;
 	bool fullscreen = false;
 
+	wi::Timer timer;
 	if (editor.config.Open("config.ini"))
 	{
 		if (editor.config.Has("width"))
@@ -130,6 +131,8 @@ int main(int argc, char *argv[])
 		}
 		fullscreen = editor.config.GetBool("fullscreen");
 		editor.allow_hdr = editor.config.GetBool("allow_hdr");
+
+		wi::backlog::post("config.ini loaded in " + std::to_string(timer.elapsed_milliseconds()) + " milliseconds\n");
 	}
 
 	width = std::max(100, width);

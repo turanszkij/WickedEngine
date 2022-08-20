@@ -52,13 +52,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	resolutionScaleSlider.SetTooltip("Adjust the internal rendering resolution.");
 	resolutionScaleSlider.SetSize(XMFLOAT2(wid, itemheight));
 	resolutionScaleSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("resolution_scale"))
+	{
+		editor->resolutionScale = editor->main->config.GetSection("graphics").GetFloat("resolution_scale");
+	}
 	resolutionScaleSlider.OnSlide([=](wi::gui::EventArgs args) {
-		if (editor->resolutionScale != args.fValue)
-		{
-			editor->renderPath->resolutionScale = args.fValue;
-			editor->resolutionScale = args.fValue;
-			editor->ResizeBuffers();
-		}
+		editor->resolutionScale = args.fValue;
+		editor->main->config.GetSection("graphics").Set("resolution_scale", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&resolutionScaleSlider);
 
@@ -99,14 +100,20 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->main->config.GetSection("graphics").Set("occlusion_culling", args.bValue);
 		editor->main->config.Commit();
 	});
-	wi::renderer::SetOcclusionCullingEnabled(editor->main->config.GetSection("graphics").GetBool("occlusion_culling"));
-	occlusionCullingCheckBox.SetCheck(wi::renderer::GetOcclusionCullingEnabled());
+	if (editor->main->config.GetSection("graphics").Has("occlusion_culling"))
+	{
+		wi::renderer::SetOcclusionCullingEnabled(editor->main->config.GetSection("graphics").GetBool("occlusion_culling"));
+	}
 	AddWidget(&occlusionCullingCheckBox);
 
 	visibilityComputeShadingCheckBox.Create("Visibility Compute Shading: ");
 	visibilityComputeShadingCheckBox.SetTooltip("Visibility Compute Shading (experimental)\nThis will shade the scene in compute shaders instead of pixel shaders\nThis has a higher initial performance cost, but it will be faster in high polygon scenes.\nIt is not compatible with MSAA and tessellation.");
 	visibilityComputeShadingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	visibilityComputeShadingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	if (editor->main->config.GetSection("graphics").Has("visibility_compute_shading"))
+	{
+		editor->renderPath->visibility_shading_in_compute = editor->main->config.GetSection("graphics").GetBool("visibility_compute_shading");
+	}
 	visibilityComputeShadingCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		if (args.bValue)
 		{
@@ -116,6 +123,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		{
 			editor->renderPath->visibility_shading_in_compute = false;
 		}
+		editor->main->config.GetSection("graphics").Set("visibility_compute_shading", args.bValue);
+		editor->main->config.Commit();
 	});
 	AddWidget(&visibilityComputeShadingCheckBox);
 
@@ -123,9 +132,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	GIBoostSlider.SetTooltip("Adjust the strength of GI.\nNote that values other than 1.0 will cause mismatch with path tracing reference!");
 	GIBoostSlider.SetSize(XMFLOAT2(wid, itemheight));
 	GIBoostSlider.SetPos(XMFLOAT2(x, y += step));
-	GIBoostSlider.SetValue(wi::renderer::GetGIBoost());
+	if (editor->main->config.GetSection("graphics").Has("gi_boost"))
+	{
+		wi::renderer::SetGIBoost(editor->main->config.GetSection("graphics").GetFloat("gi_boost"));
+	}
 	GIBoostSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::renderer::SetGIBoost(args.fValue);
+		editor->main->config.GetSection("graphics").Set("gi_boost", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&GIBoostSlider);
 
@@ -362,7 +376,10 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	tessellationCheckBox.SetTooltip("Enable tessellation feature. You also need to specify a tessellation factor for individual objects.");
 	tessellationCheckBox.SetPos(XMFLOAT2(x, y += step));
 	tessellationCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	wi::renderer::SetTessellationEnabled(editor->main->config.GetSection("graphics").GetBool("tessellation"));
+	if (editor->main->config.GetSection("graphics").Has("tessellation"))
+	{
+		wi::renderer::SetTessellationEnabled(editor->main->config.GetSection("graphics").GetBool("tessellation"));
+	}
 	tessellationCheckBox.SetCheck(wi::renderer::GetTessellationEnabled());
 	tessellationCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetTessellationEnabled(args.bValue);
@@ -386,7 +403,10 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	transparentShadowsCheckBox.SetTooltip("Enables color tinted shadows and refraction caustics effects for transparent objects and water.");
 	transparentShadowsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	transparentShadowsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	wi::renderer::SetTransparentShadowsEnabled(editor->main->config.GetSection("graphics").GetBool("transparent_shadows"));
+	if (editor->main->config.GetSection("graphics").Has("transparent_shadows"))
+	{
+		wi::renderer::SetTransparentShadowsEnabled(editor->main->config.GetSection("graphics").GetBool("transparent_shadows"));
+	}
 	transparentShadowsCheckBox.SetCheck(wi::renderer::GetTransparentShadowsEnabled());
 	transparentShadowsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetTransparentShadowsEnabled(args.bValue);
@@ -823,8 +843,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	screenSpaceShadowsRangeSlider.SetTooltip("Range of contact shadows");
 	screenSpaceShadowsRangeSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	screenSpaceShadowsRangeSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("screen_space_shadows_range"))
+	{
+		editor->renderPath->setScreenSpaceShadowRange(editor->main->config.GetSection("graphics").GetFloat("screen_space_shadows_range"));
+	}
 	screenSpaceShadowsRangeSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setScreenSpaceShadowRange(args.fValue);
+		editor->main->config.GetSection("graphics").Set("screen_space_shadows_range", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&screenSpaceShadowsRangeSlider);
 
@@ -832,8 +858,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	screenSpaceShadowsStepCountSlider.SetTooltip("Sample count of contact shadows. Higher values are better quality but slower.");
 	screenSpaceShadowsStepCountSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	screenSpaceShadowsStepCountSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	if (editor->main->config.GetSection("graphics").Has("screen_space_shadows_samples"))
+	{
+		editor->renderPath->setScreenSpaceShadowSampleCount(editor->main->config.GetSection("graphics").GetInt("screen_space_shadows_samples"));
+	}
 	screenSpaceShadowsStepCountSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setScreenSpaceShadowSampleCount(args.iValue);
+		editor->main->config.GetSection("graphics").Set("screen_space_shadows_samples", args.iValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&screenSpaceShadowsStepCountSlider);
 
@@ -853,8 +885,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	eyeAdaptionKeySlider.SetTooltip("Set the key value for eye adaption.");
 	eyeAdaptionKeySlider.SetSize(XMFLOAT2(mod_wid, hei));
 	eyeAdaptionKeySlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("eye_adaption_key"))
+	{
+		editor->renderPath->setEyeAdaptionKey(editor->main->config.GetSection("graphics").GetFloat("eye_adaption_key"));
+	}
 	eyeAdaptionKeySlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setEyeAdaptionKey(args.fValue);
+		editor->main->config.GetSection("graphics").Set("eye_adaption_key", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&eyeAdaptionKeySlider);
 
@@ -862,8 +900,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	eyeAdaptionRateSlider.SetTooltip("Set the eye adaption rate (speed of adjustment)");
 	eyeAdaptionRateSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	eyeAdaptionRateSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	if (editor->main->config.GetSection("graphics").Has("eye_adaption_rate"))
+	{
+		editor->renderPath->setEyeAdaptionRate(editor->main->config.GetSection("graphics").GetFloat("eye_adaption_rate"));
+	}
 	eyeAdaptionRateSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setEyeAdaptionRate(args.fValue);
+		editor->main->config.GetSection("graphics").Set("eye_adaption_rate", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&eyeAdaptionRateSlider);
 
@@ -872,8 +916,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	motionBlurCheckBox.SetScriptTip("RenderPath3D::SetMotionBlurEnabled(bool value)");
 	motionBlurCheckBox.SetSize(XMFLOAT2(hei, hei));
 	motionBlurCheckBox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("motion_blur"))
+	{
+		editor->renderPath->setMotionBlurEnabled(editor->main->config.GetSection("graphics").GetBool("motion_blur"));
+	}
 	motionBlurCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setMotionBlurEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("motion_blur", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&motionBlurCheckBox);
 
@@ -882,8 +932,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	motionBlurStrengthSlider.SetScriptTip("RenderPath3D::SetMotionBlurStrength(float value)");
 	motionBlurStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	motionBlurStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("motion_blur_strength"))
+	{
+		editor->renderPath->setMotionBlurStrength(editor->main->config.GetSection("graphics").GetFloat("motion_blur_strength"));
+	}
 	motionBlurStrengthSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setMotionBlurStrength(args.fValue);
+		editor->main->config.GetSection("graphics").Set("motion_blur_strength", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&motionBlurStrengthSlider);
 
@@ -892,8 +948,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	depthOfFieldCheckBox.SetScriptTip("RenderPath3D::SetDepthOfFieldEnabled(bool value)");
 	depthOfFieldCheckBox.SetSize(XMFLOAT2(hei, hei));
 	depthOfFieldCheckBox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("depth_of_field"))
+	{
+		editor->renderPath->setDepthOfFieldEnabled(editor->main->config.GetSection("graphics").GetBool("depth_of_field"));
+	}
 	depthOfFieldCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setDepthOfFieldEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("depth_of_field", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&depthOfFieldCheckBox);
 
@@ -902,8 +964,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	depthOfFieldScaleSlider.SetScriptTip("RenderPath3D::SetDepthOfFieldStrength(float value)");
 	depthOfFieldScaleSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	depthOfFieldScaleSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("depth_of_field_strength"))
+	{
+		editor->renderPath->setDepthOfFieldStrength(editor->main->config.GetSection("graphics").GetFloat("depth_of_field_strength"));
+	}
 	depthOfFieldScaleSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setDepthOfFieldStrength(args.fValue);
+		editor->main->config.GetSection("graphics").Set("depth_of_field_strength", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&depthOfFieldScaleSlider);
 
@@ -912,7 +980,10 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	bloomCheckBox.SetScriptTip("RenderPath3D::SetBloomEnabled(bool value)");
 	bloomCheckBox.SetSize(XMFLOAT2(hei, hei));
 	bloomCheckBox.SetPos(XMFLOAT2(x, y += step));
-	editor->renderPath->setBloomEnabled(editor->main->config.GetSection("graphics").GetBool("bloom"));
+	if (editor->main->config.GetSection("graphics").Has("bloom"))
+	{
+		editor->renderPath->setBloomEnabled(editor->main->config.GetSection("graphics").GetBool("bloom"));
+	}
 	bloomCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setBloomEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("bloom", args.bValue);
@@ -924,7 +995,10 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	bloomStrengthSlider.SetTooltip("Set bloom threshold. The values below this will not glow on the screen.");
 	bloomStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	bloomStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
-	editor->renderPath->setBloomThreshold(editor->main->config.GetSection("graphics").GetFloat("bloom_threshold"));
+	if (editor->main->config.GetSection("graphics").Has("bloom_threshold"))
+	{
+		editor->renderPath->setBloomThreshold(editor->main->config.GetSection("graphics").GetFloat("bloom_threshold"));
+	}
 	bloomStrengthSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setBloomThreshold(args.fValue);
 		editor->main->config.GetSection("graphics").Set("bloom_threshold", args.fValue);
@@ -937,8 +1011,10 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	fxaaCheckBox.SetScriptTip("RenderPath3D::SetFXAAEnabled(bool value)");
 	fxaaCheckBox.SetSize(XMFLOAT2(hei, hei));
 	fxaaCheckBox.SetPos(XMFLOAT2(x, y += step));
-	editor->renderPath->setFXAAEnabled(editor->main->config.GetSection("graphics").GetBool("fxaa"));
-	fxaaCheckBox.SetCheck(editor->renderPath->getFXAAEnabled());
+	if (editor->main->config.GetSection("graphics").Has("fxaa"))
+	{
+		editor->renderPath->setFXAAEnabled(editor->main->config.GetSection("graphics").GetBool("fxaa"));
+	}
 	fxaaCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setFXAAEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("fxaa", args.bValue);
@@ -950,8 +1026,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	colorGradingCheckBox.SetTooltip("Enable color grading of the final render. An additional lookup texture must be set in the Weather!");
 	colorGradingCheckBox.SetSize(XMFLOAT2(hei, hei));
 	colorGradingCheckBox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("color_grading"))
+	{
+		editor->renderPath->setColorGradingEnabled(editor->main->config.GetSection("graphics").GetBool("color_grading"));
+	}
 	colorGradingCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setColorGradingEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("color_grading", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&colorGradingCheckBox);
 
@@ -959,8 +1041,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	ditherCheckBox.SetTooltip("Toggle the full screen dithering effect. This helps to reduce color banding.");
 	ditherCheckBox.SetSize(XMFLOAT2(hei, hei));
 	ditherCheckBox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("dithering"))
+	{
+		editor->renderPath->setDitherEnabled(editor->main->config.GetSection("graphics").GetBool("dithering"));
+	}
 	ditherCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setDitherEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("dithering", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&ditherCheckBox);
 
@@ -969,27 +1057,45 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	sharpenFilterCheckBox.SetScriptTip("RenderPath3D::SetSharpenFilterEnabled(bool value)");
 	sharpenFilterCheckBox.SetSize(XMFLOAT2(hei, hei));
 	sharpenFilterCheckBox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("sharpen"))
+	{
+		editor->renderPath->setSharpenFilterEnabled(editor->main->config.GetSection("graphics").GetBool("sharpen"));
+	}
 	sharpenFilterCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setSharpenFilterEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("sharpen", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&sharpenFilterCheckBox);
 
-	sharpenFilterAmountSlider.Create(0, 4, 1, 1000, "Amount: ");
+	sharpenFilterAmountSlider.Create(0, 4, 1, 1000, "Strength: ");
 	sharpenFilterAmountSlider.SetTooltip("Set sharpness filter strength.");
 	sharpenFilterAmountSlider.SetScriptTip("RenderPath3D::SetSharpenFilterAmount(float value)");
 	sharpenFilterAmountSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	sharpenFilterAmountSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("sharpen_strength"))
+	{
+		editor->renderPath->setSharpenFilterAmount(editor->main->config.GetSection("graphics").GetFloat("sharpen_strength"));
+	}
 	sharpenFilterAmountSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setSharpenFilterAmount(args.fValue);
+		editor->main->config.GetSection("graphics").Set("sharpen_strength", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&sharpenFilterAmountSlider);
 
 	outlineCheckBox.Create("Cartoon Outline: ");
-	outlineCheckBox.SetTooltip("Toggle the cartoon outline effect. Only those materials will be outlined that have Outline enabled.");
+	outlineCheckBox.SetTooltip("Toggle the cartoon outline effect. Only those materials will be outlined that have Cartoon Outline enabled.");
 	outlineCheckBox.SetSize(XMFLOAT2(hei, hei));
 	outlineCheckBox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("cartoon_outline"))
+	{
+		editor->renderPath->setOutlineEnabled(editor->main->config.GetSection("graphics").GetBool("cartoon_outline"));
+	}
 	outlineCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setOutlineEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("cartoon_outline", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&outlineCheckBox);
 
@@ -997,8 +1103,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	outlineThresholdSlider.SetTooltip("Outline edge detection threshold. Increase if not enough otlines are detected, decrease if too many outlines are detected.");
 	outlineThresholdSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	outlineThresholdSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("cartoon_outline_threshold"))
+	{
+		editor->renderPath->setOutlineThreshold(editor->main->config.GetSection("graphics").GetFloat("cartoon_outline_threshold"));
+	}
 	outlineThresholdSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setOutlineThreshold(args.fValue);
+		editor->main->config.GetSection("graphics").Set("cartoon_outline_threshold", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&outlineThresholdSlider);
 
@@ -1006,8 +1118,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	outlineThicknessSlider.SetTooltip("Set outline thickness.");
 	outlineThicknessSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	outlineThicknessSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	if (editor->main->config.GetSection("graphics").Has("cartoon_outline_thickness"))
+	{
+		editor->renderPath->setOutlineThickness(editor->main->config.GetSection("graphics").GetFloat("cartoon_outline_thickness"));
+	}
 	outlineThicknessSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setOutlineThickness(args.fValue);
+		editor->main->config.GetSection("graphics").Set("cartoon_outline_thickness", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&outlineThicknessSlider);
 
@@ -1015,17 +1133,29 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	chromaticaberrationCheckBox.SetTooltip("Toggle the full screen chromatic aberration effect. This simulates lens distortion at screen edges.");
 	chromaticaberrationCheckBox.SetSize(XMFLOAT2(hei, hei));
 	chromaticaberrationCheckBox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("chromatic_aberration"))
+	{
+		editor->renderPath->setChromaticAberrationEnabled(editor->main->config.GetSection("graphics").GetBool("chromatic_aberration"));
+	}
 	chromaticaberrationCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setChromaticAberrationEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("chromatic_aberration", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&chromaticaberrationCheckBox);
 
-	chromaticaberrationSlider.Create(0, 40, 1.0f, 1000, "Amount: ");
+	chromaticaberrationSlider.Create(0, 40, 1.0f, 1000, "Strength: ");
 	chromaticaberrationSlider.SetTooltip("The lens distortion amount.");
 	chromaticaberrationSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	chromaticaberrationSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("chromatic_aberration_strength"))
+	{
+		editor->renderPath->setChromaticAberrationAmount(editor->main->config.GetSection("graphics").GetFloat("chromatic_aberration_strength"));
+	}
 	chromaticaberrationSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setChromaticAberrationAmount(args.fValue);
+		editor->main->config.GetSection("graphics").Set("chromatic_aberration_strength", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&chromaticaberrationSlider);
 
@@ -1033,8 +1163,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	fsrCheckBox.SetTooltip("FidelityFX FSR Upscaling. Use this only with Temporal AA or MSAA when the resolution scaling is lowered.");
 	fsrCheckBox.SetSize(XMFLOAT2(hei, hei));
 	fsrCheckBox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("fsr"))
+	{
+		editor->renderPath->setFSREnabled(editor->main->config.GetSection("graphics").GetBool("fsr"));
+	}
 	fsrCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setFSREnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("fsr", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&fsrCheckBox);
 
@@ -1042,8 +1178,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	fsrSlider.SetTooltip("The sharpening amount to apply for FSR upscaling.");
 	fsrSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	fsrSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("fsr_sharpness"))
+	{
+		editor->renderPath->setFSRSharpness(editor->main->config.GetSection("graphics").GetFloat("fsr_sharpness"));
+	}
 	fsrSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setFSRSharpness(args.fValue);
+		editor->main->config.GetSection("graphics").Set("fsr_sharpness", args.fValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&fsrSlider);
 
@@ -1233,6 +1375,11 @@ void GraphicsWindow::Update()
 	{
 		wi::eventhandler::SetVSync(vsyncCheckBox.GetCheck());
 	}
+	if (editor->resolutionScale != editor->renderPath->resolutionScale)
+	{
+		editor->renderPath->resolutionScale = editor->resolutionScale;
+		editor->ResizeBuffers();
+	}
 
 	if (IsCollapsed())
 		return;
@@ -1243,6 +1390,8 @@ void GraphicsWindow::Update()
 	ddgiY.SetValue(std::to_string(scene.ddgi.grid_dimensions.y));
 	ddgiZ.SetValue(std::to_string(scene.ddgi.grid_dimensions.z));
 
+	occlusionCullingCheckBox.SetCheck(wi::renderer::GetOcclusionCullingEnabled());
+	GIBoostSlider.SetValue(wi::renderer::GetGIBoost());
 	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->visibility_shading_in_compute);
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
