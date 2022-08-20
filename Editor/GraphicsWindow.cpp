@@ -478,8 +478,17 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		default:
 			break;
 		}
+		editor->main->config.GetSection("graphics").Set("shadow_resolution_2d", args.iValue);
+		editor->main->config.Commit();
 	});
-	shadowProps2DComboBox.SetSelected(4);
+	if (editor->main->config.GetSection("graphics").Has("shadow_resolution_2d"))
+	{
+		shadowProps2DComboBox.SetSelected(editor->main->config.GetSection("graphics").GetInt("shadow_resolution_2d"));
+	}
+	else
+	{
+		shadowProps2DComboBox.SetSelected(4);
+	}
 	shadowProps2DComboBox.SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights)...\nThis specifies the maximum shadow resolution for these light types, but that can dynamically change unless they are set to a fixed resolution individually.");
 	shadowProps2DComboBox.SetScriptTip("SetShadowProps2D(int resolution, int count, int softShadowQuality)");
 	AddWidget(&shadowProps2DComboBox);
@@ -517,8 +526,17 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		default:
 			break;
 		}
+		editor->main->config.GetSection("graphics").Set("shadow_resolution_cube", args.iValue);
+		editor->main->config.Commit();
 	});
-	shadowPropsCubeComboBox.SetSelected(2);
+	if (editor->main->config.GetSection("graphics").Has("shadow_resolution_cube"))
+	{
+		shadowPropsCubeComboBox.SetSelected(editor->main->config.GetSection("graphics").GetInt("shadow_resolution_cube"));
+	}
+	else
+	{
+		shadowPropsCubeComboBox.SetSelected(2);
+	}
 	shadowPropsCubeComboBox.SetTooltip("Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...\nThis specifies the maximum shadow resolution for these light types, but that can dynamically change unless they are set to a fixed resolution individually.");
 	shadowPropsCubeComboBox.SetScriptTip("SetShadowPropsCube(int resolution, int count)");
 	AddWidget(&shadowPropsCubeComboBox);
