@@ -24,9 +24,9 @@
 #include <cstring>
 #include <cwchar>
 #include <fstream>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstdarg>
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <typeindex>
 #include <typeinfo>

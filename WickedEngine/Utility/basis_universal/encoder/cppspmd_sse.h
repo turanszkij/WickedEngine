@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <assert.h>
-#include <math.h>
+#include <cmath>
 #include <utility>
 #include <algorithm>
 

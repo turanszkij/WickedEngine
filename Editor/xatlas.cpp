@@ -37,14 +37,14 @@ Copyright (c) 2012 Brandon Pelfrey
 #include <condition_variable>
 #include <mutex>
 #include <thread>
-#include <assert.h>
-#include <float.h> // FLT_MAX
-#include <limits.h>
-#include <math.h>
+#include <cassert>
+#include <cfloat> // FLT_MAX
+#include <climits>
+#include <cmath>
 #define __STDC_LIMIT_MACROS
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include "xatlas.h"
 
 #ifndef XA_DEBUG

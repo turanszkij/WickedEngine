@@ -1,10 +1,10 @@
 // This file is part of meshoptimizer library; see meshoptimizer.h for version/license details
 #include "meshoptimizer.h"
 
-#include <assert.h>
-#include <float.h>
-#include <math.h>
-#include <string.h>
+#include <cassert>
+#include <cfloat>
+#include <cmath>
+#include <cstring>
 
 #ifndef TRACE
 #define TRACE 0

@@ -1,9 +1,9 @@
 // This file is part of meshoptimizer library; see meshoptimizer.h for version/license details
 #include "meshoptimizer.h"
 
-#include <assert.h>
-#include <limits.h>
-#include <string.h>
+#include <cassert>
+#include <climits>
+#include <cstring>
 
 // This work is based on:
 // Francine Evans, Steven Skiena and Amitabh Varshney. Optimizing Triangle Strips for Fast Rendering. 1996

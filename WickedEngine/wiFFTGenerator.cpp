@@ -3,9 +3,9 @@
 #include "wiRenderer.h"
 #include "shaders/ShaderInterop_FFTGenerator.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cassert>
 
 using namespace wi::graphics;
 

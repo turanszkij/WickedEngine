@@ -1,9 +1,9 @@
 // This file is part of meshoptimizer library; see meshoptimizer.h for version/license details
 #include "meshoptimizer.h"
 
-#include <assert.h>
-#include <float.h>
-#include <string.h>
+#include <cassert>
+#include <cfloat>
+#include <cstring>
 
 // This work is based on:
 // Fabian Giesen. Decoding Morton codes. 2009

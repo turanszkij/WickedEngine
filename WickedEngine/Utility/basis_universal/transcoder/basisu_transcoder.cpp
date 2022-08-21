@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #include "basisu_transcoder.h"
-#include <limits.h>
+#include <climits>
 #include "basisu_containers_impl.h"
 
 #ifndef BASISD_IS_BIG_ENDIAN
@@ -16992,7 +16992,7 @@ namespace basist
 		{
 			m_format = basist::basis_tex_format::cETC1S;
 			
-			// 3.10.2: "Whether the image has 1 or 2 slices can be determined from the DFD’s sample count."
+			// 3.10.2: "Whether the image has 1 or 2 slices can be determined from the DFDï¿½s sample count."
 			// If m_has_alpha is true it may be 2-channel RRRG or 4-channel RGBA, but we let the caller deal with that.
 			m_has_alpha = (m_header.m_dfd_byte_length == 60);
 			

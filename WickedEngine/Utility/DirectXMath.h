@@ -114,8 +114,8 @@
 #   pragma warning(disable:4514 4820)
 #endif
 // C4514/4820: Off by default noise
-#include <math.h>
-#include <float.h>
+#include <cmath>
+#include <cfloat>
 #ifndef __APPLE__
 #	include <malloc.h>
 #endif
@@ -170,26 +170,17 @@
 #ifdef _MSC_VER
 #   include <sal.h>
 #else
-#	define _In_
-#	define _In_reads_(n)
-#	define _In_reads_bytes_(n)
-#	define _Out_
-#	define _Out_writes_(n)
-#	define _Out_writes_bytes_(n)
-#	define _Out_opt_
-#	define _Success_(expr)
-#	define _Use_decl_annotations_
-#	define _Analysis_assume_(expr)
+#include "dxc/Support/WinAdapter.h"
 #endif
 
-#include <assert.h>
+#include <cassert>
 
 #ifdef _MSC_VER
 #   pragma warning(push)
 #   pragma warning(disable : 4005 4668)
 #endif
 // C4005/4668: Old header issue
-#include <stdint.h>
+#include <cstdint>
 #ifdef _MSC_VER
 #   pragma warning(pop)
 #endif

@@ -45,21 +45,21 @@
 
 #endif // _MSC_VER
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <stdarg.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cmath>
+#include <cstdarg>
+#include <cstring>
 #include <memory.h>
-#include <limits.h>
-#include <stdint.h>
+#include <climits>
+#include <cstdint>
 
 #include <algorithm>
 #include <limits>
 #include <functional>
 #include <iterator>
 #include <type_traits>
-#include <assert.h>
+#include <cassert>
 #include <random>
 
 #include "basisu_containers.h"
