@@ -121,7 +121,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	rotationSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&rotationSlider);
 
-	stabilizerSlider.Create(0, 15, 8, 15, "Stabilizer: ");
+	stabilizerSlider.Create(1, 15, 8, 14, "Stabilizer: ");
 	stabilizerSlider.SetTooltip("The stabilizer generates a small delay between user input and painting, which will be used to compute a smoother paint stroke..");
 	stabilizerSlider.SetSize(XMFLOAT2(wid, hei));
 	stabilizerSlider.SetPos(XMFLOAT2(x, y += step));
@@ -368,6 +368,7 @@ void PaintToolWindow::Update(float dt)
 	if (editor->GetGUI().HasFocus() || wi::backlog::isActive())
 	{
 		pos = posNew;
+		strokes.clear();
 		return;
 	}
 
@@ -376,7 +377,10 @@ void PaintToolWindow::Update(float dt)
 	{
 		stroke_dist = FLT_MAX;
 		sculpting_normal = XMFLOAT3(0, 0, 0);
-		strokes.clear();
+		if (!strokes.empty())
+		{
+			strokes.pop_front();
+		}
 	}
 
 	auto pointer = wi::input::GetPointer();
@@ -417,15 +421,14 @@ void PaintToolWindow::Update(float dt)
 	const XMVECTOR spline_p2 = strokes.size() < 3 ? spline_p1 : XMVectorSet(strokes[2].position.x, strokes[2].position.y, strokes[2].pressure, 0);
 	const XMVECTOR spline_p3 = strokes.size() < 4 ? spline_p2 : XMVectorSet(strokes[3].position.x, strokes[3].position.y, strokes[3].pressure, 0);
 
-	int substep_count = 1;
-	if (stabilizer > 0)
-	{
-		substep_count += (int)std::ceil(wi::math::Distance(pos, posNew) / (radius * pressureNew));
-		substep_count = std::min(10, substep_count);
-	}
+	int substep_count = (int)std::ceil(wi::math::Distance(pos, posNew) / (radius * pressureNew));
+	substep_count = std::max(1, std::min(100, substep_count));
+
 	for (int substep = 0; substep < substep_count; ++substep)
 	{
 		const float t = float(substep) / float(substep_count);
+
+		float pressure = 1;
 		const XMVECTOR spline_p = XMVectorCatmullRom(
 			spline_p0,
 			spline_p1,
@@ -437,7 +440,7 @@ void PaintToolWindow::Update(float dt)
 		XMStoreFloat2(&pos_eval, spline_p);
 		stroke_dist += wi::math::Distance(pos, pos_eval);
 		pos = pos_eval;
-		const float pressure = XMVectorGetZ(spline_p);
+		pressure = XMVectorGetZ(spline_p);
 		const float pressure_radius = radius * pressure;
 		bool pointer_moved = false;
 		if (stroke_dist >= spacing)
@@ -445,7 +448,7 @@ void PaintToolWindow::Update(float dt)
 			pointer_moved = true;
 			stroke_dist = 0;
 		}
-		const bool painting = strokes.size() >= stabilizer && pointer_moved && pointer_down;
+		const bool painting = pointer_moved && strokes.size() >= stabilizer;
 
 		Scene& scene = editor->GetCurrentScene();
 		const CameraComponent& camera = editor->GetCurrentEditorScene().camera;
@@ -1271,7 +1274,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 	}
 	else
 	{
-		if (!history_needs_recording_end || wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+		if (!history_needs_recording_end || !strokes.empty())
 			return;
 		history_needs_recording_end = false;
 		history_needs_recording_start = false;
