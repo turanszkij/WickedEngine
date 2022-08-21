@@ -101,8 +101,10 @@ namespace wi::ecs
 	};
 
 	// The ComponentManager is a container that stores components and matches them with entities
+	//	Note: final keyword is used to indicate this is a final implementation.
+	//	This allows function inlining and avoid calls, improves performance considerably
 	template<typename Component>
-	class ComponentManager : public ComponentManager_Interface
+	class ComponentManager final : public ComponentManager_Interface
 	{
 	public:
 
