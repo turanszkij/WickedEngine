@@ -117,7 +117,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp);
 		device->SetName(&rtSceneCopy_tmp, "rtSceneCopy_tmp");
 
-		for (uint32_t i = 0; i < rtSceneCopy.GetDesc().mip_levels; ++i)
+		for (long int i = 0; i < rtSceneCopy.GetDesc().mip_levels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&rtSceneCopy, SubresourceType::SRV, 0, 1, i, 1);
@@ -235,7 +235,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Copy1);
 		device->SetName(&depthBuffer_Copy1, "depthBuffer_Copy1");
 
-		for (uint32_t i = 0; i < depthBuffer_Copy.desc.mip_levels; ++i)
+		for (long int i = 0; i < depthBuffer_Copy.desc.mip_levels; ++i)
 		{
 			int subresource = 0;
 			subresource = device->CreateSubresource(&depthBuffer_Copy, SubresourceType::SRV, 0, 1, i, 1);
@@ -271,7 +271,7 @@ void RenderPath3D::ResizeBuffers()
 
 		for (uint32_t i = 0; i < desc.mip_levels; ++i)
 		{
-			int subresource_index;
+			uint32_t subresource_index;
 			subresource_index = device->CreateSubresource(&rtLinearDepth, SubresourceType::SRV, 0, 1, i, 1);
 			assert(subresource_index == i);
 			subresource_index = device->CreateSubresource(&rtLinearDepth, SubresourceType::UAV, 0, 1, i, 1);

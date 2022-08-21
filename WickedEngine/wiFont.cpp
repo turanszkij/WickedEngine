@@ -345,7 +345,7 @@ namespace wi::font
 				{
 					// Try fallback to an other font style that has this character:
 					style = 0;
-					while (glyphIndex == 0 && style < fontStyles.size())
+					while (glyphIndex == 0 && style < (int)fontStyles.size())
 					{
 						fontStyle = fontStyles[style].get();
 						glyphIndex = stbtt_FindGlyphIndex(&fontStyle->fontInfo, code);

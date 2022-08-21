@@ -629,7 +629,7 @@ namespace wi::audio
 		
 			FAudioVoice_GetVoiceDetails(masteringVoice, &masteringVoiceDetails);
 
-			for (int i=0; i<SUBMIX_TYPE_COUNT; ++i){
+			for (unsigned int i=0; i<SUBMIX_TYPE_COUNT; ++i){
 				res = FAudio_CreateSubmixVoice(
 					audioEngine, 
 					&submixVoices[i], 

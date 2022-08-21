@@ -3342,9 +3342,9 @@ using namespace vulkan_internal;
 
 		for (auto& commandlist : commandlists)
 		{
-			for (int buffer = 0; buffer < BUFFERCOUNT; ++buffer)
+			for (uint32_t buffer = 0; buffer < BUFFERCOUNT; ++buffer)
 			{
-				for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+				for (unsigned int queue = 0; queue < QUEUE_COUNT; ++queue)
 				{
 					vkDestroyCommandPool(device, commandlist->commandPools[buffer][queue], nullptr);
 				}
@@ -6302,7 +6302,7 @@ using namespace vulkan_internal;
 		if (queue == QUEUE_GRAPHICS)
 		{
 			VkRect2D scissors[16];
-			for (int i = 0; i < arraysize(scissors); ++i)
+			for (size_t i = 0; i < arraysize(scissors); ++i)
 			{
 				scissors[i].offset.x = 0;
 				scissors[i].offset.y = 0;
@@ -6765,7 +6765,7 @@ using namespace vulkan_internal;
 				}
 			}
 		}
-		for (int i = count; i < arraysize(commandlist.vb_strides); ++i)
+		for (uint32_t i = count; i < arraysize(commandlist.vb_strides); ++i)
 		{
 			commandlist.vb_strides[i] = 0;
 		}

@@ -2297,7 +2297,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	};
 
 	// Compute shadow cameras:
-	for (int cascade = 0; cascade < shcam_count; ++cascade)
+	for (size_t cascade = 0; cascade < shcam_count; ++cascade)
 	{
 		// Compute cascade sub-frustum in light-view-space from the main frustum corners:
 		const float split_near = splits[cascade];
@@ -2316,7 +2316,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 		// Compute cascade bounding sphere center:
 		XMVECTOR center = XMVectorZero();
-		for (int j = 0; j < arraysize(corners); ++j)
+		for (size_t j = 0; j < arraysize(corners); ++j)
 		{
 			center = XMVectorAdd(center, corners[j]);
 		}
@@ -2324,7 +2324,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 		// Compute cascade bounding sphere radius:
 		float radius = 0;
-		for (int j = 0; j < arraysize(corners); ++j)
+		for (size_t j = 0; j < arraysize(corners); ++j)
 		{
 			radius = std::max(radius, XMVectorGetX(XMVector3Length(XMVectorSubtract(corners[j], center))));
 		}
@@ -3359,7 +3359,7 @@ void UpdatePerFrameData(
 		device->CreateTexture(&shape_desc, nullptr, &texture_shapeNoise);
 		device->SetName(&texture_shapeNoise, "texture_shapeNoise");
 
-		for (uint32_t i = 0; i < texture_shapeNoise.GetDesc().mip_levels; ++i)
+		for (long int i = 0; i < texture_shapeNoise.GetDesc().mip_levels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&texture_shapeNoise, SubresourceType::SRV, 0, 1, i, 1);
@@ -3380,7 +3380,7 @@ void UpdatePerFrameData(
 		device->CreateTexture(&detail_desc, nullptr, &texture_detailNoise);
 		device->SetName(&texture_detailNoise, "texture_detailNoise");
 
-		for (uint32_t i = 0; i < texture_detailNoise.GetDesc().mip_levels; ++i)
+		for (long int i = 0; i < texture_detailNoise.GetDesc().mip_levels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&texture_detailNoise, SubresourceType::SRV, 0, 1, i, 1);
@@ -4467,7 +4467,7 @@ void DrawLightVisualizers(
 
 		XMMATRIX camrot = XMLoadFloat3x3(&vis.camera->rotationMatrix);
 
-		for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+		for (uint32_t type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
 			device->BindPipelineState(&PSO_lightvisualizer[type], cmd);
 
@@ -4547,7 +4547,7 @@ void DrawVolumeLights(
 
 		XMMATRIX VP = vis.camera->GetViewProjection();
 
-		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+		for (unsigned int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
 			const PipelineState& pso = PSO_volumetriclight[type];
 
@@ -7546,7 +7546,7 @@ void BindCameraCB(
 	cb.clip_plane = camera.clipPlane;
 
 	static_assert(arraysize(camera.frustum.planes) == arraysize(cb.frustum.planes), "Mismatch!");
-	for (int i = 0; i < arraysize(camera.frustum.planes); ++i)
+	for (size_t i = 0; i < arraysize(camera.frustum.planes); ++i)
 	{
 		cb.frustum.planes[i] = camera.frustum.planes[i];
 	}
@@ -7692,7 +7692,7 @@ void CreateBloomResources(BloomResources& res, XMUINT2 resolution)
 	device->CreateTexture(&desc, nullptr, &res.texture_temp);
 	device->SetName(&res.texture_temp, "bloom.texture_temp");
 
-	for (uint32_t i = 0; i < res.texture_bloom.desc.mip_levels; ++i)
+	for (long int i = 0; i < res.texture_bloom.desc.mip_levels; ++i)
 	{
 		int subresource_index;
 		subresource_index = device->CreateSubresource(&res.texture_bloom, SubresourceType::SRV, 0, 1, i, 1);
@@ -10248,7 +10248,7 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	desc.mip_levels = 1 + (uint32_t)std::floor(std::log2f(std::max((float)desc.width, (float)desc.height)));
 	device->CreateTexture(&desc, nullptr, &res.texture_depth_hierarchy);
 
-	for (uint32_t i = 0; i < desc.mip_levels; ++i)
+	for (long int i = 0; i < desc.mip_levels; ++i)
 	{
 		int subresource_index;
 		subresource_index = device->CreateSubresource(&res.texture_depth_hierarchy, SubresourceType::SRV, 0, 1, i, 1);
@@ -13032,7 +13032,7 @@ void SetVoxelRadianceEnabled(bool enabled)
 
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE]);
 
-		for (uint32_t i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc().mip_levels; ++i)
+		for (long int i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc().mip_levels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE], SubresourceType::SRV, 0, 1, i, 1);
@@ -13046,7 +13046,7 @@ void SetVoxelRadianceEnabled(bool enabled)
 		const TextureDesc& desc = textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc();
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 
-		for (uint32_t i = 0; i < desc.mip_levels; ++i)
+		for (long int i = 0; i < desc.mip_levels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], SubresourceType::SRV, 0, 1, i, 1);
