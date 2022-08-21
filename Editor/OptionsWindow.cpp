@@ -134,7 +134,9 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	newCombo.selected_font.anim.typewriter.looped = true;
 	newCombo.selected_font.anim.typewriter.time = 2;
 	newCombo.selected_font.anim.typewriter.character_start = 1;
-	newCombo.AddItem("...", ~0ull);
+	newCombo.SetInvalidSelectionText("...");
+	newCombo.AddItem("Cube " ICON_CUBE, 13);
+	newCombo.AddItem("Plane " ICON_SQUARE, 14);
 	newCombo.AddItem("Transform " ICON_TRANSFORM, 0);
 	newCombo.AddItem("Material " ICON_MATERIAL, 1);
 	newCombo.AddItem("Point Light " ICON_POINTLIGHT, 2);
@@ -148,11 +150,9 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	newCombo.AddItem("Emitter " ICON_EMITTER, 10);
 	newCombo.AddItem("HairParticle " ICON_HAIR, 11);
 	newCombo.AddItem("Camera " ICON_CAMERA, 12);
-	newCombo.AddItem("Cube Object " ICON_CUBE, 13);
-	newCombo.AddItem("Plane Object " ICON_SQUARE, 14);
 	newCombo.AddItem("Animation " ICON_ANIMATION, 15);
 	newCombo.OnSelect([&](wi::gui::EventArgs args) {
-		newCombo.SetSelectedWithoutCallback(0);
+		newCombo.SetSelectedWithoutCallback(-1);
 		const EditorComponent::EditorScene& editorscene = editor->GetCurrentEditorScene();
 		const CameraComponent& camera = editorscene.camera;
 		Scene& scene = editor->GetCurrentScene();

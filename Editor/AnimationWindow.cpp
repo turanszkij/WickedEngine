@@ -190,7 +190,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	recordCombo.selected_font.anim.typewriter.character_start = 1;
 	recordCombo.SetSize(XMFLOAT2(wid, hei));
 	recordCombo.SetPos(XMFLOAT2(x, y += step));
-	recordCombo.AddItem("...");
+	recordCombo.SetInvalidSelectionText("...");
 	recordCombo.AddItem("Transform " ICON_TRANSLATE " " ICON_ROTATE " " ICON_SCALE);
 	recordCombo.AddItem("Position " ICON_TRANSLATE);
 	recordCombo.AddItem("Rotation " ICON_ROTATE);
@@ -203,9 +203,6 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	recordCombo.AddItem("Light [outer cone] " ICON_POINTLIGHT);
 	recordCombo.AddItem("Close loop " ICON_LOOP, ~0ull);
 	recordCombo.OnSelect([&](wi::gui::EventArgs args) {
-		if (args.iValue == 0)
-			return;
-
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 
 		AnimationComponent* animation = scene.animations.GetComponent(entity);
@@ -299,36 +296,36 @@ void AnimationWindow::Create(EditorComponent* _editor)
 				switch (args.iValue)
 				{
 				default:
+				case 0:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::TRANSLATION);
+					paths.push_back(AnimationComponent::AnimationChannel::Path::ROTATION);
+					paths.push_back(AnimationComponent::AnimationChannel::Path::SCALE);
+					break;
 				case 1:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::TRANSLATION);
-					paths.push_back(AnimationComponent::AnimationChannel::Path::ROTATION);
-					paths.push_back(AnimationComponent::AnimationChannel::Path::SCALE);
 					break;
 				case 2:
-					paths.push_back(AnimationComponent::AnimationChannel::Path::TRANSLATION);
-					break;
-				case 3:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::ROTATION);
 					break;
-				case 4:
+				case 3:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::SCALE);
 					break;
-				case 5:
+				case 4:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::WEIGHTS);
 					break;
-				case 6:
+				case 5:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::LIGHT_COLOR);
 					break;
-				case 7:
+				case 6:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY);
 					break;
-				case 8:
+				case 7:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::LIGHT_RANGE);
 					break;
-				case 9:
+				case 8:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE);
 					break;
-				case 10:
+				case 9:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE);
 					break;
 				}
@@ -523,7 +520,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 				}
 			}
 		}
-		recordCombo.SetSelectedWithoutCallback(0);
+		recordCombo.SetSelectedWithoutCallback(-1);
 		RefreshKeyframesList();
 	});
 	recordCombo.SetTooltip("Record selected entities' specified channels into the animation at the current time.");

@@ -469,25 +469,25 @@ void TerrainGenerator::Create()
 	addModifierCombo.SetTooltip("Add a new modifier that will affect terrain generation.");
 	addModifierCombo.SetSize(XMFLOAT2(wid, hei));
 	addModifierCombo.SetPos(XMFLOAT2(x, y += step));
-	addModifierCombo.AddItem("...");
+	addModifierCombo.SetInvalidSelectionText("...");
 	addModifierCombo.AddItem("Perlin Noise");
 	addModifierCombo.AddItem("Voronoi Noise");
 	addModifierCombo.AddItem("Heightmap Image");
 	addModifierCombo.OnSelect([this](wi::gui::EventArgs args) {
 
-		addModifierCombo.SetSelectedWithoutCallback(0);
+		addModifierCombo.SetSelectedWithoutCallback(-1);
 		Generation_Cancel();
 		switch (args.iValue)
 		{
 		default:
 			break;
-		case 1:
+		case 0:
 			AddModifier(new PerlinModifier);
 			break;
-		case 2:
+		case 1:
 			AddModifier(new VoronoiModifier);
 			break;
-		case 3:
+		case 2:
 			AddModifier(new HeightmapModifier);
 			break;
 		}

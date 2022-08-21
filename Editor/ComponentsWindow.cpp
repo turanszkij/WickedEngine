@@ -39,7 +39,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.selected_font.anim.typewriter.time = 2;
 	newComponentCombo.selected_font.anim.typewriter.character_start = 1;
 	newComponentCombo.SetTooltip("Add a component to the first selected entity.");
-	newComponentCombo.AddItem("...", ~0ull);
+	newComponentCombo.SetInvalidSelectionText("...");
 	newComponentCombo.AddItem("Name", 0);
 	newComponentCombo.AddItem("Layer " ICON_LAYER, 1);
 	newComponentCombo.AddItem("Transform " ICON_TRANSFORM, 2);
@@ -56,7 +56,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Force Field " ICON_FORCE, 13);
 	newComponentCombo.AddItem("Animation " ICON_ANIMATION, 14);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
-		newComponentCombo.SetSelectedWithoutCallback(0);
+		newComponentCombo.SetSelectedWithoutCallback(-1);
 		if (editor->translator.selected.empty())
 			return;
 		Scene& scene = editor->GetCurrentScene();

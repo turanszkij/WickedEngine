@@ -519,6 +519,7 @@ namespace wi::gui
 		wi::vector<Item> items;
 
 		wi::Color drop_color = wi::Color::Ghost();
+		std::wstring invalid_selection_text;
 
 		float GetDropOffset(const wi::Canvas& canvas) const;
 		float GetItemOffset(const wi::Canvas& canvas, int index) const;
@@ -541,6 +542,7 @@ namespace wi::gui
 		std::string GetItemText(int index) const;
 		uint64_t GetItemUserData(int index) const;
 		size_t GetItemCount() const { return items.size(); }
+		void SetInvalidSelectionText(const std::string& text);
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;

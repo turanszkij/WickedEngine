@@ -2192,10 +2192,14 @@ namespace wi::gui
 		if (selected >= 0)
 		{
 			selected_font.SetText(items[selected].name);
-			selected_font.params.posX = translation.x + scale.x * 0.5f;
-			selected_font.params.posY = translation.y + scale.y * 0.5f;
-			selected_font.Update(dt);
 		}
+		else
+		{
+			selected_font.SetText(invalid_selection_text);
+		}
+		selected_font.params.posX = translation.x + scale.x * 0.5f;
+		selected_font.params.posY = translation.y + scale.y * 0.5f;
+		selected_font.Update(dt);
 	}
 	void ComboBox::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -2282,10 +2286,7 @@ namespace wi::gui
 		// control-base
 		sprites[state].Draw(cmd);
 
-		if (selected >= 0)
-		{
-			selected_font.Draw(cmd);
-		}
+		selected_font.Draw(cmd);
 
 		// drop-down
 		if (state == ACTIVE)
@@ -2385,7 +2386,7 @@ namespace wi::gui
 		items.back().name = name;
 		items.back().userdata = userdata;
 
-		if (selected < 0)
+		if (selected < 0 && invalid_selection_text.empty())
 		{
 			selected = 0;
 		}
@@ -2468,6 +2469,10 @@ namespace wi::gui
 	void ComboBox::SetItemUserdata(int index, uint64_t userdata)
 	{
 		items[index].userdata = userdata;
+	}
+	void ComboBox::SetInvalidSelectionText(const std::string& text)
+	{
+		wi::helper::StringConvert(text, invalid_selection_text);
 	}
 	std::string ComboBox::GetItemText(int index) const
 	{
