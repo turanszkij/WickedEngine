@@ -103,8 +103,8 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	amountSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&amountSlider);
 
-	smoothnessSlider.Create(0, 16, 0, 10000, "Smoothness: ");
-	smoothnessSlider.SetTooltip("Set the brush smoothness. 0 = hard, greater values will be smoother");
+	smoothnessSlider.Create(0, 2, 1, 10000, "Smoothness: ");
+	smoothnessSlider.SetTooltip("Set the brush smoothness. 0 = hard, increase for more smoothness");
 	smoothnessSlider.SetSize(XMFLOAT2(wid, hei));
 	smoothnessSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&smoothnessSlider);
@@ -671,7 +671,7 @@ void PaintToolWindow::Update(float dt)
 						{
 							RecordHistory(true);
 							rebuild = true;
-							const float affection = amount * wi::math::SmoothStep(0, smoothness, pressure_radius / dist);
+							const float affection = amount * wi::math::SmoothStep(0, smoothness, 1 - dist / pressure_radius);
 
 							switch (mode)
 							{
@@ -825,7 +825,7 @@ void PaintToolWindow::Update(float dt)
 						const float dist = XMVectorGetX(XMVector2Length(C - P));
 						if (z >= 0 && z <= 1 && dist <= pressure_radius)
 						{
-							const float affection = amount * wi::math::SmoothStep(0, smoothness, pressure_radius / dist);
+							const float affection = amount * wi::math::SmoothStep(0, smoothness, 1 - dist / pressure_radius);
 							sculpting_indices.push_back({ j, affection });
 						}
 					}
@@ -1057,7 +1057,7 @@ void PaintToolWindow::Update(float dt)
 							case MODE_HAIRPARTICLE_LENGTH:
 								if (hair->vertex_lengths[j] > 0) // don't change distribution
 								{
-									const float affection = amount * wi::math::SmoothStep(0, smoothness, pressure_radius / dist);
+									const float affection = amount * wi::math::SmoothStep(0, smoothness, 1 - dist / pressure_radius);
 									hair->vertex_lengths[j] = wi::math::Lerp(hair->vertex_lengths[j], color_float.w, affection);
 									// don't let it "remove" the vertex by keeping its length above zero:
 									//	(because if removed, distribution also changes which might be distracting)

@@ -49,7 +49,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	const float2 reveal_uv_dy = reveal_uv - reveal_uv_quad_y;
 	float4 reveal_color = texture_reveal.SampleGrad(sampler_linear_clamp, reveal_uv, reveal_uv_dx, reveal_uv_dy);
 
-	const float affection = push.xPaintBrushAmount * smoothstep(0, push.xPaintBrushSmoothness, radius / dist);
+	const float affection = push.xPaintBrushAmount * smoothstep(0, push.xPaintBrushSmoothness, 1 - dist / radius);
 	if (affection > 0 && dist < radius)
 	{
 		if (push.xPaintReveal)
