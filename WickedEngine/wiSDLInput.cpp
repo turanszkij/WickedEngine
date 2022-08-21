@@ -273,6 +273,8 @@ namespace wi::input::sdlinput
                 return wi::input::KEYBOARD_BUTTON_PAGEDOWN;
             case SDL_SCANCODE_PAGEUP:
                 return wi::input::KEYBOARD_BUTTON_PAGEUP;
+			default:
+				break;
         }
 
 

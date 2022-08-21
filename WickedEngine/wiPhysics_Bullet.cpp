@@ -249,6 +249,8 @@ namespace wi::physics
 				assert(0);
 			}
 			break;
+		default:
+			break;
 		}
 
 		if (physicsobject.shape == nullptr)

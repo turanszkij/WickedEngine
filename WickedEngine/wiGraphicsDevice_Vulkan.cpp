@@ -1996,6 +1996,20 @@ using namespace vulkan_internal;
 					}
 					break;
 
+					case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+						break;
+					case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+						break;
+					case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+						break;
+					case VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK:
+						break;
+					case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV:
+						break;
+					case VK_DESCRIPTOR_TYPE_MUTABLE_VALVE:
+						break;
+					case VK_DESCRIPTOR_TYPE_MAX_ENUM:
+						break;
 					}
 				}
 			}
@@ -5753,6 +5767,8 @@ using namespace vulkan_internal;
 				view_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
 				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 				break;
+			default:
+				assert(0);
 			}
 
 			Texture_Vulkan::TextureSubresource subresource;
@@ -5879,6 +5895,8 @@ using namespace vulkan_internal;
 				view_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
 				view_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 				break;
+			default:
+				assert(0);
 			}
 
 			VkImageView dsv;
@@ -7242,6 +7260,8 @@ using namespace vulkan_internal;
 			break;
 		case GpuQueryType::OCCLUSION:
 			vkCmdBeginQuery(commandlist.GetCommandBuffer(), internal_state->pool, index, VK_QUERY_CONTROL_PRECISE_BIT);
+			break;
+		case GpuQueryType::TIMESTAMP:
 			break;
 		}
 	}

@@ -397,6 +397,8 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	case RENDERPASS_VOXELIZE:
 		realVS = VSTYPE_VOXELIZER;
 		break;
+	default:
+		break;
 	}
 
 	return realVS;
@@ -434,6 +436,8 @@ SHADERTYPE GetGSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 			}
 		}
 		break;
+	default:
+		break;
 	}
 
 	return realGS;
@@ -457,6 +461,8 @@ SHADERTYPE GetHSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest)
 		case RENDERPASS_MAIN:
 			return HSTYPE_OBJECT;
 			break;
+		default:
+			break;
 		}
 	}
 
@@ -479,6 +485,8 @@ SHADERTYPE GetDSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest)
 			}
 		case RENDERPASS_MAIN:
 			return DSTYPE_OBJECT;
+		default:
+			break;
 		}
 	}
 
@@ -2539,9 +2547,8 @@ void RenderMeshes(
 			{
 				if (IsWireRender())
 				{
-					switch (renderPass)
+					if (renderPass == RENDERPASS_MAIN)
 					{
-					case RENDERPASS_MAIN:
 						pso = tessellatorRequested ? &PSO_object_wire_tessellation : &PSO_object_wire;
 					}
 				}
@@ -3118,6 +3125,8 @@ void UpdatePerFrameData(
 								break;
 							case LightComponent::POINT:
 								light.shadow_rect.w /= 6;
+								break;
+							case LightComponent::SPOT:
 								break;
 							}
 						}
