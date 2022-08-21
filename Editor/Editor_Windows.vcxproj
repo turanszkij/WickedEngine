@@ -139,10 +139,6 @@
     <CopyFileToFolders Include="..\WickedEngine\dxil.dll">
       <FileType>Document</FileType>
     </CopyFileToFolders>
-    <None Include="config.ini">
-      <FileType>Discomap</FileType>
-      <DeploymentContent>true</DeploymentContent>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WickedEngine\WickedEngine_Windows.vcxproj">

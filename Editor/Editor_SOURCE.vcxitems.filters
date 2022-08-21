@@ -128,6 +128,7 @@
     <None Include="$(MSBuildThisFileDirectory)terrain\tree.wiscene">
       <Filter>terrain</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)config.ini" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="meshoptimizer">

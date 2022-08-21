@@ -261,7 +261,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_INPUT:
 		wi::input::rawinput::ParseMessage((void*)lParam);
 		break;
-	case WM_POINTERDOWN:
 	case WM_POINTERUPDATE:
 		{
 			POINTER_PEN_INFO pen_info = {};

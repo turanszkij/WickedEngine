@@ -1,6 +1,8 @@
 #pragma once
 #include "WickedEngine.h"
 
+#include <deque>
+
 class EditorComponent;
 
 class PaintToolWindow : public wi::gui::Window
@@ -9,6 +11,7 @@ class PaintToolWindow : public wi::gui::Window
 	float stroke_dist = 0;
 	bool history_needs_recording_start = false;
 	bool history_needs_recording_end = false;
+	size_t history_redo_jump_position = 0;
 	size_t history_textureIndex = 0;
 	wi::vector<wi::graphics::Texture> history_textures; // we'd like to keep history textures in GPU memory to avoid GPU readback
 	wi::graphics::Texture GetEditTextureSlot(const wi::scene::MaterialComponent& material, int* uvset = nullptr);
@@ -25,20 +28,26 @@ class PaintToolWindow : public wi::gui::Window
 	wi::Resource brushTex;
 	wi::Resource revealTex;
 
+	struct Stroke
+	{
+		XMFLOAT2 position;
+		float pressure;
+	};
+	std::deque<Stroke> strokes;
+
 public:
 	void Create(EditorComponent* editor);
 
 	EditorComponent* editor = nullptr;
-	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
-	int subset = -1;
 
 	wi::gui::ComboBox modeComboBox;
 	wi::gui::Label infoLabel;
 	wi::gui::Slider radiusSlider;
 	wi::gui::Slider amountSlider;
-	wi::gui::Slider falloffSlider;
+	wi::gui::Slider smoothnessSlider;
 	wi::gui::Slider spacingSlider;
 	wi::gui::Slider rotationSlider;
+	wi::gui::Slider stabilizerSlider;
 	wi::gui::CheckBox backfaceCheckBox;
 	wi::gui::CheckBox wireCheckBox;
 	wi::gui::CheckBox pressureCheckBox;
@@ -70,7 +79,6 @@ public:
 		MODE_WIND,
 	};
 	MODE GetMode() const;
-	void SetEntity(wi::ecs::Entity value, int subsetindex = -1);
 
 	enum class AxisLock
 	{
