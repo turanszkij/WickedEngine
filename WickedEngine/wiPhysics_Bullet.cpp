@@ -679,7 +679,6 @@ namespace wi::physics
 					for (size_t ind = 0; ind < physicscomponent->vertex_positions_simulation.size(); ++ind)
 					{
 						uint32_t physicsInd = physicscomponent->graphicsToPhysicsVertexMapping[ind];
-						float weight = physicscomponent->weights[physicsInd];
 
 						btSoftBody::Node& node = softbody->m_nodes[physicsInd];
 

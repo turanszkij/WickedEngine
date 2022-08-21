@@ -3248,7 +3248,7 @@ namespace wi::scene
 			}
 			TransformComponent& transform = transforms[transform_index];
 
-			XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
+			//XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
 			XMVECTOR rotation_parent_world = XMQuaternionIdentity();
 			XMMATRIX parentWorldMatrix = XMMatrixIdentity();
 
@@ -3598,7 +3598,6 @@ namespace wi::scene
 
 			Entity entity = meshes.GetEntity(args.jobIndex);
 			MeshComponent& mesh = meshes[args.jobIndex];
-			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			if (!mesh.streamoutBuffer.IsValid())
 			{
