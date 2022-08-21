@@ -32,6 +32,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	transformWnd.Create(editor);
 	layerWnd.Create(editor);
 	nameWnd.Create(editor);
+	scriptWnd.Create(editor);
 
 
 	newComponentCombo.Create("Add: ");
@@ -55,6 +56,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Weather " ICON_WEATHER, 12);
 	newComponentCombo.AddItem("Force Field " ICON_FORCE, 13);
 	newComponentCombo.AddItem("Animation " ICON_ANIMATION, 14);
+	newComponentCombo.AddItem("Script " ICON_SCRIPT, 15);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(-1);
 		if (editor->translator.selected.empty())
@@ -128,6 +130,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case 14:
 			if (scene.animations.Contains(entity))
+				return;
+			break;
+		case 15:
+			if (scene.scripts.Contains(entity))
 				return;
 			break;
 		default:
@@ -208,6 +214,9 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		case 14:
 			scene.animations.Create(entity);
 			break;
+		case 15:
+			scene.scripts.Create(entity);
+			break;
 		default:
 			break;
 		}
@@ -237,6 +246,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&transformWnd);
 	AddWidget(&layerWnd);
 	AddWidget(&nameWnd);
+	AddWidget(&scriptWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -255,6 +265,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	transformWnd.SetVisible(false);
 	layerWnd.SetVisible(false);
 	nameWnd.SetVisible(false);
+	scriptWnd.SetVisible(false);
 
 
 	SetSize(editor->optionsWnd.GetSize());
@@ -519,5 +530,18 @@ void ComponentsWindow::ResizeLayout()
 	else
 	{
 		weatherWnd.SetVisible(false);
+	}
+
+	if (scene.scripts.Contains(scriptWnd.entity))
+	{
+		scriptWnd.SetVisible(true);
+		scriptWnd.SetPos(pos);
+		scriptWnd.SetSize(XMFLOAT2(width, scriptWnd.GetScale().y));
+		pos.y += scriptWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		scriptWnd.SetVisible(false);
 	}
 }

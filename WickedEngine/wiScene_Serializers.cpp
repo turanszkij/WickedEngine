@@ -1428,6 +1428,31 @@ namespace wi::scene
 			archive << tail;
 		}
 	}
+	void ScriptComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		const std::string& dir = archive.GetSourceDirectory();
+
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> filename;
+
+			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
+				filename = dir + filename;
+				resource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+				});
+		}
+		else
+		{
+			if (!dir.empty())
+			{
+				wi::helper::MakePathRelative(dir, filename);
+			}
+
+			archive << _flags;
+			archive << filename;
+		}
+	}
 
 	void Scene::Serialize(wi::Archive& archive)
 	{

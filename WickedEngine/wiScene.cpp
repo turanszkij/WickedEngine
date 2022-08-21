@@ -11,6 +11,7 @@
 #include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
+#include "wiLua.h"
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
@@ -1611,6 +1612,8 @@ namespace wi::scene
 				std::memcpy(instanceArrayMapped + i, &inst, sizeof(inst));
 			}
 		});
+
+		RunScriptUpdateSystem(ctx);
 
 		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
 
@@ -4806,6 +4809,24 @@ namespace wi::scene
 				wi::audio::ExitLoop(&sound.soundinstance);
 			}
 			wi::audio::SetVolume(sound.volume, &sound.soundinstance);
+		}
+	}
+	void Scene::RunScriptUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		for (size_t i = 0; i < scripts.GetCount(); ++i)
+		{
+			ScriptComponent& script = scripts[i];
+			Entity entity = scripts.GetEntity(i);
+
+			if (script.IsPlaying())
+			{
+				if (script.script.empty() && script.resource.IsValid())
+				{
+					script.script += "local function GetEntity() return " + std::to_string(entity) + "; end\n";
+					script.script += script.resource.GetScript();
+				}
+				wi::lua::RunText(script.script);
+			}
 		}
 	}
 
