@@ -346,7 +346,6 @@ void EditorComponent::Load()
 		wi::scene::Scene& scene = GetCurrentScene();
 		wi::renderer::ClearWorld(scene);
 		optionsWnd.cameraWnd.SetEntity(INVALID_ENTITY);
-		optionsWnd.paintToolWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
 		componentsWnd.lightWnd.SetEntity(INVALID_ENTITY);
@@ -1294,7 +1293,6 @@ void EditorComponent::Update(float dt)
 	if (translator.selected.empty())
 	{
 		optionsWnd.cameraWnd.SetEntity(INVALID_ENTITY);
-		optionsWnd.paintToolWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.emitterWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.hairWnd.SetEntity(INVALID_ENTITY);
@@ -1329,7 +1327,6 @@ void EditorComponent::Update(float dt)
 		}
 
 		optionsWnd.cameraWnd.SetEntity(picked.entity);
-		optionsWnd.paintToolWnd.SetEntity(picked.entity, picked.subsetIndex);
 		componentsWnd.emitterWnd.SetEntity(picked.entity);
 		componentsWnd.hairWnd.SetEntity(picked.entity);
 		componentsWnd.lightWnd.SetEntity(picked.entity);

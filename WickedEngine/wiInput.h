@@ -140,8 +140,8 @@ namespace wi::input
 	// これはペンです
 	struct Pen
 	{
-		XMFLOAT2 position;
-		float pressure;
+		XMFLOAT2 position = {};
+		float pressure = 0;
 	};
 	// Set pen params, this will override mouse params
 	void SetPen(const Pen& pen);

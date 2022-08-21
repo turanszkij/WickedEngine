@@ -879,7 +879,7 @@ struct PaintTextureCB
 	uint xPaintBrushRadius;
 	float xPaintBrushAmount;
 
-	float xPaintBrushFalloff;
+	float xPaintBrushSmoothness;
 	uint xPaintBrushColor;
 	uint xPaintReveal;
 	float xPaintBrushRotation;
