@@ -421,9 +421,6 @@ namespace wi::input
 		else if (playerindex == 0) // keyboard or mouse
 		{
 			uint8_t keycode = (uint8_t)button;
-#ifdef SDL2
-			bool keycode_converted = false;
-#endif
 
 			switch (button)
 			{

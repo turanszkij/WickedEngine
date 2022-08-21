@@ -87,7 +87,6 @@ namespace wi::lua
 
 		if (argc > 0)
 		{
-			bool fixedpath = false;
 			uint32_t PID = 0;
 
 			std::string filename = SGetString(L, 1);

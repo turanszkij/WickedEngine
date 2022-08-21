@@ -5358,8 +5358,6 @@ using namespace vulkan_internal;
 
 		if (validAttachmentCount > 0)
 		{
-			const TextureDesc& texdesc = renderpass->desc.attachments[0].texture->desc;
-
 			internal_state->beginInfo.clearValueCount = validAttachmentCount;
 			internal_state->beginInfo.pClearValues = internal_state->clearColors;
 
@@ -7634,7 +7632,6 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		auto& binder = commandlist.binder;
 
 		if (commandlist.active_pso != nullptr)
 		{

@@ -2271,7 +2271,6 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	const XMVECTOR to = XMVector3TransformNormal(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), lightRotation);
 	const XMVECTOR up = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), lightRotation);
 	const XMMATRIX lightView = XMMatrixLookToLH(XMVectorZero(), to, up); // important to not move (zero out eye vector) the light view matrix itself because texel snapping must be done on projection matrix!
-	const float nearPlane = camera.zNearP;
 	const float farPlane = camera.zFarP;
 	const float referenceFarPlane = 800.0f; // cascade splits here were tested with this depth range
 	const float referenceSplitClamp = std::min(1.0f, referenceFarPlane / farPlane); // if far plane is greater than reference, do not increase cascade sizes further
@@ -3468,8 +3467,6 @@ void UpdateRenderData(
 		ShaderEntity* entityArray = (ShaderEntity*)allocation_entityarray.data;
 		XMMATRIX* matrixArray = (XMMATRIX*)allocation_matrixarray.data;
 
-		const XMMATRIX viewMatrix = vis.camera->GetView();
-
 		uint32_t entityCounter = 0;
 		uint32_t matrixCounter = 0;
 
@@ -4092,7 +4089,6 @@ void UpdateRenderDataAsync(
 			const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
 			Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
 			const TransformComponent& transform = *vis.scene->transforms.GetComponent(entity);
-			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 			const MeshComponent* mesh = vis.scene->meshes.GetComponent(emitter.meshID);
 			const uint32_t instanceIndex = uint32_t(vis.scene->objects.GetCount() + vis.scene->hairs.GetCount()) + emitterIndex;
 
@@ -4232,7 +4228,6 @@ void OcclusionCulling_Reset(const Visibility& vis, CommandList cmd)
 		return;
 	}
 
-	int query_write = vis.scene->queryheap_idx;
 	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
 
 	device->QueryReset(
@@ -4471,7 +4466,6 @@ void DrawLightVisualizers(
 		BindCommonResources(cmd);
 
 		XMMATRIX camrot = XMLoadFloat3x3(&vis.camera->rotationMatrix);
-		XMMATRIX VP = vis.camera->GetViewProjection();
 
 		for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
@@ -4779,8 +4773,6 @@ void DrawShadowmaps(
 							const ObjectComponent& object = vis.scene->objects[i];
 							if (object.IsRenderable() && object.IsCastingShadow() && (cascade < (CASCADE_COUNT - object.cascadeMask)))
 							{
-								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-
 								renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 								if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
@@ -4833,8 +4825,6 @@ void DrawShadowmaps(
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
-							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-
 							renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
@@ -4893,8 +4883,6 @@ void DrawShadowmaps(
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
-							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-
 							renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
@@ -5989,7 +5977,6 @@ void DrawDebugWorld(
 				continue;
 			}
 			const ObjectComponent& object = *scene.objects.GetComponent(x.objectEntity);
-			const TransformComponent& transform = *scene.transforms.GetComponent(x.objectEntity);
 			if (scene.meshes.GetCount() < object.mesh_index)
 			{
 				continue;
@@ -6000,7 +5987,6 @@ void DrawDebugWorld(
 			{
 				continue;
 			}
-			const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstancePointer), cmd);
 			ShaderMeshInstancePointer poi;
@@ -6122,7 +6108,6 @@ void DrawDebugWorld(
 		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 		{
 			const CameraComponent& cam = scene.cameras[i];
-			Entity entity = scene.cameras.GetEntity(i);
 
 			const float aspect = cam.width / cam.height;
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(aspect * 0.5f, 0.5f, 0.5f) * cam.GetInvView()*camera.GetViewProjection());
@@ -6673,7 +6658,6 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 				{
 					continue;
 				}
-				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 				ObjectPushConstants push;
 				push.geometryIndex = mesh.geometryOffset + subsetIndex;

@@ -1176,8 +1176,6 @@ namespace wi::gui
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
-		wi::Color color = GetColor();
-
 		ApplyScissor(canvas, scissorRect, cmd);
 
 		sprites[IDLE].Draw(cmd);
@@ -1691,10 +1689,7 @@ namespace wi::gui
 				}
 			}
 
-			const float knobWidth = sprites_knob[state].params.siz.x;
-
 			Hitbox2D pointerHitbox = GetPointerHitbox();
-
 
 			if (pointerHitbox.intersects(hitBox))
 			{
