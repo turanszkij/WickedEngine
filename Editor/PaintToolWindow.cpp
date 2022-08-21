@@ -121,6 +121,20 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	rotationSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&rotationSlider);
 
+	stabilizerSlider.Create(0, 15, 8, 15, "Stabilizer: ");
+	stabilizerSlider.SetTooltip("The stabilizer generates a small delay between user input and painting, which will be used to compute a smoother paint stroke..");
+	stabilizerSlider.SetSize(XMFLOAT2(wid, hei));
+	stabilizerSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("paint_tool").Has("stabilizer"))
+	{
+		stabilizerSlider.SetValue((float)editor->main->config.GetSection("paint_tool").GetInt("stabilizer"));
+	}
+	stabilizerSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("paint_tool").Set("stabilizer", args.iValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&stabilizerSlider);
+
 	backfaceCheckBox.Create("Backfaces: ");
 	backfaceCheckBox.SetTooltip("Set whether to paint on backfaces of geometry or not");
 	backfaceCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -378,6 +392,7 @@ void PaintToolWindow::Update(float dt)
 	const bool backfaces = backfaceCheckBox.GetCheck();
 	const bool wireframe = wireCheckBox.GetCheck();
 	const float spacing = spacingSlider.GetValue();
+	const size_t stabilizer = (size_t)stabilizerSlider.GetValue();
 	CommandList cmd;
 
 	if (pointer_down)
@@ -403,10 +418,10 @@ void PaintToolWindow::Update(float dt)
 	const XMVECTOR spline_p3 = strokes.size() < 4 ? spline_p2 : XMVectorSet(strokes[3].position.x, strokes[3].position.y, strokes[3].pressure, 0);
 
 	int substep_count = 1;
-	if (strokes.size() >= 4)
+	if (stabilizer > 0)
 	{
 		substep_count += (int)std::ceil(wi::math::Distance(pos, posNew) / (radius * pressureNew));
-		substep_count = std::min(100, substep_count);
+		substep_count = std::min(10, substep_count);
 	}
 	for (int substep = 0; substep < substep_count; ++substep)
 	{
@@ -546,7 +561,7 @@ void PaintToolWindow::Update(float dt)
 						wi::renderer::GenerateMipChain(editTexture, wi::renderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
 					}
 				}
-				else if(substep == 0)
+				if(substep == substep_count - 1)
 				{
 					wi::renderer::PaintRadius paintrad;
 					paintrad.objectEntity = selected.entity;
@@ -1602,6 +1617,7 @@ void PaintToolWindow::ResizeLayout()
 	add(smoothnessSlider);
 	add(spacingSlider);
 	add(rotationSlider);
+	add(stabilizerSlider);
 	add_right(backfaceCheckBox);
 	wireCheckBox.SetPos(XMFLOAT2(backfaceCheckBox.GetPos().x - wireCheckBox.GetSize().x - 100, backfaceCheckBox.GetPos().y));
 	add_right(pressureCheckBox);

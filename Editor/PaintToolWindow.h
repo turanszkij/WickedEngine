@@ -34,7 +34,6 @@ class PaintToolWindow : public wi::gui::Window
 		float pressure;
 	};
 	std::deque<Stroke> strokes;
-	size_t stabilizer = 8; // must be >=4 (catmull-rom spline)
 
 public:
 	void Create(EditorComponent* editor);
@@ -48,6 +47,7 @@ public:
 	wi::gui::Slider smoothnessSlider;
 	wi::gui::Slider spacingSlider;
 	wi::gui::Slider rotationSlider;
+	wi::gui::Slider stabilizerSlider;
 	wi::gui::CheckBox backfaceCheckBox;
 	wi::gui::CheckBox wireCheckBox;
 	wi::gui::CheckBox pressureCheckBox;
