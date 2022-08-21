@@ -2786,7 +2786,7 @@ void UpdateVisibility(Visibility& vis)
 
 				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
 				{
-					if (!light.IsStatic() && light.GetType() != LightComponent::DIRECTIONAL || light.occlusionquery < 0)
+					if ((!light.IsStatic() && light.GetType() != LightComponent::DIRECTIONAL) || light.occlusionquery < 0)
 					{
 						if (!aabb.intersects(vis.camera->Eye))
 						{
@@ -6583,7 +6583,10 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			const EnvironmentProbeComponent& probe = vis.scene->probes[i];
 			const AABB& probe_aabb = vis.scene->aabb_probes[i];
 
-			if ((probe_aabb.layerMask & vis.layerMask) && probe.render_dirty && probe.textureIndex >= 0 && probe.textureIndex < vis.scene->envmapCount)
+			if ((probe_aabb.layerMask & vis.layerMask)
+			   && probe.render_dirty
+			   && probe.textureIndex >= 0
+			   && probe.textureIndex < vis.scene->envmapCount)
 			{
 				probe.render_dirty = false;
 				render_probe(probe, probe_aabb);

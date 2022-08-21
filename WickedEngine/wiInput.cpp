@@ -427,17 +427,14 @@ namespace wi::input
 				if (mouse.left_button_press) 
 					return true;
 				return false;
-				break;
 			case wi::input::MOUSE_BUTTON_RIGHT:
 				if (mouse.right_button_press) 
 					return true;
 				return false;
-				break;
 			case wi::input::MOUSE_BUTTON_MIDDLE:
 				if (mouse.middle_button_press) 
 					return true;
 				return false;
-				break;
 #ifdef _WIN32
 			case wi::input::KEYBOARD_BUTTON_UP:
 				keycode = VK_UP;

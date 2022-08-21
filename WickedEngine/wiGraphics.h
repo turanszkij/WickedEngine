@@ -1201,10 +1201,7 @@ namespace wi::graphics
 
 		default:
 			assert(0); // didn't catch format!
-			break;
 		}
-
-		return 16u;
 	}
 
 	constexpr uint32_t AlignTo(uint32_t value, uint32_t alignment)

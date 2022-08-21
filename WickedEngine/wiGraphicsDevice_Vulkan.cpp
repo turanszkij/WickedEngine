@@ -376,32 +376,23 @@ namespace vulkan_internal
 		{
 		case wi::graphics::StencilOp::KEEP:
 			return VK_STENCIL_OP_KEEP;
-			break;
 		case wi::graphics::StencilOp::ZERO:
 			return VK_STENCIL_OP_ZERO;
-			break;
 		case wi::graphics::StencilOp::REPLACE:
 			return VK_STENCIL_OP_REPLACE;
-			break;
 		case wi::graphics::StencilOp::INCR_SAT:
 			return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
-			break;
 		case wi::graphics::StencilOp::DECR_SAT:
 			return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
-			break;
 		case wi::graphics::StencilOp::INVERT:
 			return VK_STENCIL_OP_INVERT;
-			break;
 		case wi::graphics::StencilOp::INCR:
 			return VK_STENCIL_OP_INCREMENT_AND_WRAP;
-			break;
 		case wi::graphics::StencilOp::DECR:
 			return VK_STENCIL_OP_DECREMENT_AND_WRAP;
-			break;
 		default:
-			break;
+			return VK_STENCIL_OP_KEEP;
 		}
-		return VK_STENCIL_OP_KEEP;
 	}
 	constexpr VkImageLayout _ConvertImageLayout(ResourceState value)
 	{
@@ -426,8 +417,9 @@ namespace vulkan_internal
 			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		case ResourceState::SHADING_RATE_SOURCE:
 			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
+		default:
+			return VK_IMAGE_LAYOUT_UNDEFINED;
 		}
-		return VK_IMAGE_LAYOUT_UNDEFINED;
 	}
 	constexpr VkShaderStageFlags _ConvertStageFlags(ShaderStage value)
 	{

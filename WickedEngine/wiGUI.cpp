@@ -2393,16 +2393,9 @@ namespace wi::gui
 	}
 	void ComboBox::RemoveItem(int index)
 	{
-		wi::vector<Item> newItems(0);
-		newItems.reserve(items.size());
-		for (size_t i = 0; i < items.size(); ++i)
-		{
-			if (i != index)
-			{
-				newItems.push_back(items[i]);
-			}
+		if (index >= 0 && (size_t)index < items.size()) {
+			items.erase(items.begin() + index);
 		}
-		items = newItems;
 
 		if (items.empty())
 		{

@@ -342,15 +342,15 @@ namespace wi::lua
 		lunamethod(DrawRectAnim_BindLua, GetFrameRate),
 		lunamethod(DrawRectAnim_BindLua, GetFrameCount),
 		lunamethod(DrawRectAnim_BindLua, GetHorizontalFrameCount),
-		{ NULL, NULL }
+		{ nullptr, nullptr }
 	};
 	Luna<DrawRectAnim_BindLua>::PropertyType DrawRectAnim_BindLua::properties[] = {
-		{ NULL, NULL }
+		{ nullptr, nullptr }
 	};
 
-	DrawRectAnim_BindLua::DrawRectAnim_BindLua(const wi::Sprite::Anim::DrawRectAnim& data) :anim(anim)
-	{
-	}
+	DrawRectAnim_BindLua::DrawRectAnim_BindLua(const wi::Sprite::Anim::DrawRectAnim& data)
+		:anim(data)
+	{}
 
 	DrawRectAnim_BindLua::DrawRectAnim_BindLua(lua_State* L)
 	{
@@ -358,8 +358,7 @@ namespace wi::lua
 	}
 
 	DrawRectAnim_BindLua::~DrawRectAnim_BindLua()
-	{
-	}
+	{}
 
 	int DrawRectAnim_BindLua::SetFrameRate(lua_State* L)
 	{

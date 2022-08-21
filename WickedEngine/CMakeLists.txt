@@ -240,6 +240,9 @@ else ()
 	)
 	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
 
+	# enable all warnings and set them as errors
+	#target_compile_options(${TARGET_NAME} PRIVATE -Wall -Werror -Wno-error=unknown-pragmas)
+
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)
 
 	set(LIBDXCOMPILER "libdxcompiler.so")
