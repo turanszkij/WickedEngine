@@ -17,6 +17,7 @@
 #include "TransformWindow.h"
 #include "LayerWindow.h"
 #include "NameWindow.h"
+#include "ScriptWindow.h"
 
 class EditorComponent;
 
@@ -47,4 +48,5 @@ public:
 	TransformWindow transformWnd;
 	LayerWindow layerWnd;
 	NameWindow nameWnd;
+	ScriptWindow scriptWnd;
 };

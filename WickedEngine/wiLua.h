@@ -61,6 +61,13 @@ namespace wi::lua
 	//kill every running background task (coroutine)
 	void KillProcesses();
 
+	// Generates a unique identifier for a script instance:
+	uint32_t GeneratePID();
+
+	// Adds some local management functions to the script
+	//	returns the PID
+	uint32_t AttachScriptParameters(std::string& script, const std::string& filename = "", uint32_t PID = GeneratePID());
+
 	//Following functions are "static", operating on specified lua state:
 
 	//get string from lua on stack position

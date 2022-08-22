@@ -135,8 +135,6 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	newCombo.selected_font.anim.typewriter.time = 2;
 	newCombo.selected_font.anim.typewriter.character_start = 1;
 	newCombo.SetInvalidSelectionText("...");
-	newCombo.AddItem("Cube " ICON_CUBE, 13);
-	newCombo.AddItem("Plane " ICON_SQUARE, 14);
 	newCombo.AddItem("Transform " ICON_TRANSFORM, 0);
 	newCombo.AddItem("Material " ICON_MATERIAL, 1);
 	newCombo.AddItem("Point Light " ICON_POINTLIGHT, 2);
@@ -150,7 +148,10 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	newCombo.AddItem("Emitter " ICON_EMITTER, 10);
 	newCombo.AddItem("HairParticle " ICON_HAIR, 11);
 	newCombo.AddItem("Camera " ICON_CAMERA, 12);
+	newCombo.AddItem("Cube " ICON_CUBE, 13);
+	newCombo.AddItem("Plane " ICON_SQUARE, 14);
 	newCombo.AddItem("Animation " ICON_ANIMATION, 15);
+	newCombo.AddItem("Script " ICON_SCRIPT, 16);
 	newCombo.OnSelect([&](wi::gui::EventArgs args) {
 		newCombo.SetSelectedWithoutCallback(-1);
 		const EditorComponent::EditorScene& editorscene = editor->GetCurrentEditorScene();
@@ -250,6 +251,11 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			scene.animations.Create(pick.entity);
 			scene.names.Create(pick.entity) = "animation";
 			break;
+		case 16:
+			pick.entity = CreateEntity();
+			scene.scripts.Create(pick.entity);
+			scene.names.Create(pick.entity) = "script";
+			break;
 		default:
 			break;
 		}
@@ -293,6 +299,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Inverse Kinematics " ICON_IK, (uint64_t)Filter::IK);
 	filterCombo.AddItem("Camera " ICON_CAMERA, (uint64_t)Filter::Camera);
 	filterCombo.AddItem("Armature " ICON_ARMATURE, (uint64_t)Filter::Armature);
+	filterCombo.AddItem("Script " ICON_SCRIPT, (uint64_t)Filter::Script);
 	filterCombo.SetTooltip("Apply filtering to the Entities");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
@@ -861,6 +868,10 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_COLLIDER " ";
 	}
+	if (scene.scripts.Contains(entity))
+	{
+		item.name += ICON_SCRIPT " ";
+	}
 	if (entity == terragen.terrainEntity)
 	{
 		item.name += ICON_TERRAIN " ";
@@ -1077,7 +1088,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Collider))
 	{
 		for (size_t i = 0; i < scene.colliders.GetCount(); ++i)
 		{
@@ -1098,6 +1109,14 @@ void OptionsWindow::RefreshEntityTree()
 		for (size_t i = 0; i < scene.names.GetCount(); ++i)
 		{
 			PushToEntityTree(scene.names.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::Script))
+	{
+		for (size_t i = 0; i < scene.scripts.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.scripts.GetEntity(i), 0);
 		}
 	}
 

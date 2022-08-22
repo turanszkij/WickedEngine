@@ -77,6 +77,6 @@ void NameWindow::SetEntity(Entity entity)
 
 void NameWindow::Update()
 {
-	nameInput.SetPos(XMFLOAT2(60, 0));
+	nameInput.SetPos(XMFLOAT2(60, 4));
 	nameInput.SetSize(XMFLOAT2(GetSize().x - 65, nameInput.GetSize().y));
 }

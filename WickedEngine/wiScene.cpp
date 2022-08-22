@@ -11,6 +11,7 @@
 #include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
+#include "wiLua.h"
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
@@ -1466,6 +1467,13 @@ namespace wi::scene
 		UpdateCamera();
 	}
 
+	void ScriptComponent::CreateFromFile(const std::string& filename)
+	{
+		this->filename = filename;
+		resource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+		script.clear(); // will be created on first Update()
+	}
+
 
 
 	const uint32_t small_subtask_groupsize = 64u;
@@ -1611,6 +1619,8 @@ namespace wi::scene
 				std::memcpy(instanceArrayMapped + i, &inst, sizeof(inst));
 			}
 		});
+
+		RunScriptUpdateSystem(ctx);
 
 		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
 
@@ -4806,6 +4816,30 @@ namespace wi::scene
 				wi::audio::ExitLoop(&sound.soundinstance);
 			}
 			wi::audio::SetVolume(sound.volume, &sound.soundinstance);
+		}
+	}
+	void Scene::RunScriptUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		for (size_t i = 0; i < scripts.GetCount(); ++i)
+		{
+			ScriptComponent& script = scripts[i];
+			Entity entity = scripts.GetEntity(i);
+
+			if (script.IsPlaying())
+			{
+				if (script.script.empty() && script.resource.IsValid())
+				{
+					script.script += "local function GetEntity() return " + std::to_string(entity) + "; end\n";
+					script.script += script.resource.GetScript();
+					wi::lua::AttachScriptParameters(script.script, script.filename);
+				}
+				wi::lua::RunText(script.script);
+
+				if (script.IsPlayingOnlyOnce())
+				{
+					script.Stop();
+				}
+			}
 		}
 	}
 

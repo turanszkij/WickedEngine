@@ -456,7 +456,8 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_CreateLight(Entity entity) : LightComponent result  -- attach a light component to an entity. The returned LightComponent is associated with the entity and can be manipulated
 - Component_CreateObject(Entity entity) : ObjectComponent result  -- attach an object component to an entity. The returned ObjectComponent is associated with the entity and can be manipulated
 - Component_CreateInverseKinematics(Entity entity) : InverseKinematicsComponent result  -- attach an IK component to an entity. The returned InverseKinematicsComponent is associated with the entity and can be manipulated
-- Component_CreateSpring(Entity entity) : SpringComponent result  -- attach a spring component to an entity. The returned InverseKinematicsComponent is associated with the entity and can be manipulated
+- Component_CreateSpring(Entity entity) : SpringComponent result  -- attach a spring component to an entity. The returned SpringKinematicsComponent is associated with the entity and can be manipulated
+- Component_CreateSpring(Entity entity) : ScriptComponent result  -- attach a script component to an entity. The returned ScriptKinematicsComponent is associated with the entity and can be manipulated
 
 - Component_GetName(Entity entity) : NameComponent? result  -- query the name component of the entity (if exists)
 - Component_GetLayer(Entity entity) : LayerComponent? result  -- query the layer component of the entity (if exists)
@@ -469,6 +470,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetObject(Entity entity) : ObjectComponent? result  -- query the object component of the entity (if exists)
 - Component_GetInverseKinematics(Entity entity) : InverseKinematicsComponent? result  -- query the IK component of the entity (if exists)
 - Component_GetSpring(Entity entity) : SpringComponent? result  -- query the spring component of the entity (if exists)
+- Component_GetSpring(Entity entity) : ScriptComponent? result  -- query the script component of the entity (if exists)
 
 - Component_GetNameArray() : NameComponent[] result  -- returns the array of all components of this type
 - Component_GetLayerArray() : LayerComponent[] result  -- returns the array of all components of this type
@@ -480,7 +482,8 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetLightArray() : LightComponent[] result  -- returns the array of all components of this type
 - Component_GetObjectArray() : ObjectComponent[] result  -- returns the array of all components of this type
 - Component_GetInverseKinematicsArray() : InverseKinematicsComponent[] result  -- returns the array of all components of this type
-- Component_GetSpringArray() : InverseKinematicsComponent[] result  -- returns the array of all components of this type
+- Component_GetSpringArray() : SpringComponent[] result  -- returns the array of all components of this type
+- Component_GetScriptArray() : ScriptComponent[] result  -- returns the array of all components of this type
 
 - Entity_GetNameArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetLayerArray() : Entity[] result  -- returns the array of all entities that have this component type
@@ -493,6 +496,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetObjectArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetInverseKinematicsArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetSpringArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetScriptArray() : Entity[] result  -- returns the array of all entities that have this component type
 
 - Component_Attach(Entity entity,parent)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer)
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
@@ -623,6 +627,14 @@ Enables jiggle effect on transforms such as bones for example.
 - SetStiffness(float value)
 - SetDamping(float value)
 - SetWindAffection(float value)
+
+#### ScriptComponent
+A lua script bound to an entity
+- CreateFromFile(string filename)
+- Play()
+- IsPlaying() : bool result
+- SetPlayOnce(bool once = true)
+- Stop()
 
 ## Canvas
 This is used to describe a drawable area

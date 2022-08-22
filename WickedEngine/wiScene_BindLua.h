@@ -48,6 +48,7 @@ namespace wi::lua::scene
 		int Component_CreateObject(lua_State* L);
 		int Component_CreateInverseKinematics(lua_State* L);
 		int Component_CreateSpring(lua_State* L);
+		int Component_CreateScript(lua_State* L);
 
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
@@ -60,6 +61,7 @@ namespace wi::lua::scene
 		int Component_GetObject(lua_State* L);
 		int Component_GetInverseKinematics(lua_State* L);
 		int Component_GetSpring(lua_State* L);
+		int Component_GetScript(lua_State* L);
 
 		int Component_GetNameArray(lua_State* L);
 		int Component_GetLayerArray(lua_State* L);
@@ -72,6 +74,7 @@ namespace wi::lua::scene
 		int Component_GetObjectArray(lua_State* L);
 		int Component_GetInverseKinematicsArray(lua_State* L);
 		int Component_GetSpringArray(lua_State* L);
+		int Component_GetScriptArray(lua_State* L);
 
 		int Entity_GetNameArray(lua_State* L);
 		int Entity_GetLayerArray(lua_State* L);
@@ -84,6 +87,7 @@ namespace wi::lua::scene
 		int Entity_GetObjectArray(lua_State* L);
 		int Entity_GetInverseKinematicsArray(lua_State* L);
 		int Entity_GetSpringArray(lua_State* L);
+		int Entity_GetScriptArray(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
@@ -364,6 +368,27 @@ namespace wi::lua::scene
 		int SetStiffness(lua_State* L);
 		int SetDamping(lua_State* L);
 		int SetWindAffection(lua_State* L);
+	};
+
+	class ScriptComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wi::scene::ScriptComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<ScriptComponent_BindLua>::FunctionType methods[];
+		static Luna<ScriptComponent_BindLua>::PropertyType properties[];
+
+		ScriptComponent_BindLua(wi::scene::ScriptComponent* component) :component(component) {}
+		ScriptComponent_BindLua(lua_State* L);
+		~ScriptComponent_BindLua();
+
+		int CreateFromFile(lua_State* L);
+		int Play(lua_State* L);
+		int IsPlaying(lua_State* L);
+		int SetPlayOnce(lua_State* L);
+		int Stop(lua_State* L);
 	};
 
 }

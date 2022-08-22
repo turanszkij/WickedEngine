@@ -53,6 +53,8 @@ public:
 		IK = 1 << 13,
 		Camera = 1 << 14,
 		Armature = 1 << 15,
+		Collider = 1 << 16,
+		Script = 1 << 17,
 
 		All = ~0ull,
 	} filter = Filter::All;

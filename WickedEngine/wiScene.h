@@ -1342,6 +1342,34 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
+	struct ScriptComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			PLAYING = 1 << 0,
+			PLAY_ONCE = 1 << 1,
+		};
+		uint32_t _flags = EMPTY;
+
+		std::string filename;
+
+		// Non-serialized attributes:
+		std::string script;
+		wi::Resource resource;
+
+		inline void Play() { _flags |= PLAYING; }
+		inline void SetPlayOnce(bool once = true) { if (once) { _flags |= PLAY_ONCE; } else { _flags &= ~PLAY_ONCE; } }
+		inline void Stop() { _flags &= ~PLAYING; }
+
+		inline bool IsPlaying() const { return _flags & PLAYING; }
+		inline bool IsPlayingOnlyOnce() const { return _flags & PLAY_ONCE; }
+
+		void CreateFromFile(const std::string& filename);
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
+
 	struct Scene
 	{
 		wi::ecs::ComponentLibrary componentLibrary;
@@ -1375,6 +1403,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<InverseKinematicsComponent>& inverse_kinematics = componentLibrary.Register<InverseKinematicsComponent>("wi::scene::Scene::inverse_kinematics");
 		wi::ecs::ComponentManager<SpringComponent>& springs = componentLibrary.Register<SpringComponent>("wi::scene::Scene::springs", 1); // version = 1
 		wi::ecs::ComponentManager<ColliderComponent>& colliders = componentLibrary.Register<ColliderComponent>("wi::scene::Scene::colliders");
+		wi::ecs::ComponentManager<ScriptComponent>& scripts = componentLibrary.Register<ScriptComponent>("wi::scene::Scene::scripts");
 
 		// Non-serialized attributes:
 		float dt = 0;
@@ -1631,6 +1660,7 @@ namespace wi::scene
 		void RunParticleUpdateSystem(wi::jobsystem::context& ctx);
 		void RunWeatherUpdateSystem(wi::jobsystem::context& ctx);
 		void RunSoundUpdateSystem(wi::jobsystem::context& ctx);
+		void RunScriptUpdateSystem(wi::jobsystem::context& ctx);
 	};
 
 	// Returns skinned vertex position in armature local space

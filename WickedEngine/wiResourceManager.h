@@ -20,11 +20,13 @@ namespace wi
 		const wi::vector<uint8_t>& GetFileData() const;
 		const wi::graphics::Texture& GetTexture() const;
 		const wi::audio::Sound& GetSound() const;
+		const std::string& GetScript() const;
 
 		void SetFileData(const wi::vector<uint8_t>& data);
 		void SetFileData(wi::vector<uint8_t>&& data);
 		void SetTexture(const wi::graphics::Texture& texture);
 		void SetSound(const wi::audio::Sound& sound);
+		void SetScript(const std::string& script);
 	};
 
 	namespace resourcemanager
@@ -39,6 +41,7 @@ namespace wi
 		Mode GetMode();
 		wi::vector<std::string> GetSupportedImageExtensions();
 		wi::vector<std::string> GetSupportedSoundExtensions();
+		wi::vector<std::string> GetSupportedScriptExtensions();
 
 		// Order of these must not change as the flags can be serialized!
 		enum class Flags
