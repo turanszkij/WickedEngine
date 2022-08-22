@@ -211,7 +211,7 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 add_library(WickedEngine ALIAS ${TARGET_NAME})
 set_target_properties(${TARGET_NAME} PROPERTIES PUBLIC_HEADER "${HEADER_FILES}")
 
-target_include_directories(${TARGET_NAME} PUBLIC
+target_include_directories(${TARGET_NAME} SYSTEM PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine>
 )
@@ -227,6 +227,8 @@ if (WIN32)
 		UNICODE _UNICODE
 	)
 
+	target_compile_options(${TARGET_NAME} PRIVATE /W3)
+
 	set(LIBDXCOMPILER "dxcompiler.dll")
 else ()
 	# `ska::flat_hash_map` has issues on linux because of the hash function being identity
@@ -239,6 +241,14 @@ else ()
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
 	)
 	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
+
+	# add some warnings and set them as errors
+	# read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
+	target_compile_options(${TARGET_NAME} PRIVATE
+			-Wuninitialized
+			-Winit-self
+			-Wreturn-type
+			-Werror)
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)
 
