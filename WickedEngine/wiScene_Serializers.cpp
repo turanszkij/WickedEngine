@@ -1443,19 +1443,19 @@ namespace wi::scene
 			}
 
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
-				filename = dir + filename;
-				resource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+				CreateFromFile(dir + filename);
 				});
 		}
 		else
 		{
+			std::string relative_filename = filename; // don't modify actual filename, because script_file() and script_dir() can rely on it
 			if (!dir.empty())
 			{
-				wi::helper::MakePathRelative(dir, filename);
+				wi::helper::MakePathRelative(dir, relative_filename);
 			}
 
 			archive << _flags;
-			archive << filename;
+			archive << relative_filename;
 		}
 	}
 

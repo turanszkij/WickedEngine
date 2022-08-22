@@ -49,8 +49,7 @@ void ScriptWindow::Create(EditorComponent* _editor)
 			params.extensions = wi::resourcemanager::GetSupportedScriptExtensions();
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					script->resource = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
-					script->filename = fileName;
+					script->CreateFromFile(fileName);
 					fileButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 					});
 				});

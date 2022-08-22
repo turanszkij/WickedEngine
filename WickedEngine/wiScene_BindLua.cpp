@@ -314,6 +314,7 @@ void Bind()
 		Luna<ObjectComponent_BindLua>::Register(L);
 		Luna<InverseKinematicsComponent_BindLua>::Register(L);
 		Luna<SpringComponent_BindLua>::Register(L);
+		Luna<ScriptComponent_BindLua>::Register(L);
 	}
 }
 
@@ -335,6 +336,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateObject),
 	lunamethod(Scene_BindLua, Component_CreateInverseKinematics),
 	lunamethod(Scene_BindLua, Component_CreateSpring),
+	lunamethod(Scene_BindLua, Component_CreateScript),
 
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
@@ -347,6 +349,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetObject),
 	lunamethod(Scene_BindLua, Component_GetInverseKinematics),
 	lunamethod(Scene_BindLua, Component_GetSpring),
+	lunamethod(Scene_BindLua, Component_GetScript),
 
 	lunamethod(Scene_BindLua, Component_GetNameArray),
 	lunamethod(Scene_BindLua, Component_GetLayerArray),
@@ -359,6 +362,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetObjectArray),
 	lunamethod(Scene_BindLua, Component_GetInverseKinematicsArray),
 	lunamethod(Scene_BindLua, Component_GetSpringArray),
+	lunamethod(Scene_BindLua, Component_GetScriptArray),
 
 	lunamethod(Scene_BindLua, Entity_GetNameArray),
 	lunamethod(Scene_BindLua, Entity_GetLayerArray),
@@ -371,6 +375,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetObjectArray),
 	lunamethod(Scene_BindLua, Entity_GetInverseKinematicsArray),
 	lunamethod(Scene_BindLua, Entity_GetSpringArray),
+	lunamethod(Scene_BindLua, Entity_GetScriptArray),
 
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
@@ -596,6 +601,23 @@ int Scene_BindLua::Component_CreateSpring(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Component_CreateSpring(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_CreateScript(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		ScriptComponent& component = scene->scripts.Create(entity);
+		Luna<ScriptComponent_BindLua>::push(L, new ScriptComponent_BindLua(&component));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateScript(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -842,6 +864,28 @@ int Scene_BindLua::Component_GetSpring(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetScript(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		ScriptComponent* component = scene->scripts.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<ScriptComponent_BindLua>::push(L, new ScriptComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetScript(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetNameArray(lua_State* L)
 {
@@ -964,6 +1008,17 @@ int Scene_BindLua::Component_GetSpringArray(lua_State* L)
 	}
 	return 1;
 }
+int Scene_BindLua::Component_GetScriptArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->scripts.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->scripts.GetCount(); ++i)
+	{
+		Luna<ScriptComponent_BindLua>::push(L, new ScriptComponent_BindLua(&scene->scripts[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
 
 int Scene_BindLua::Entity_GetNameArray(lua_State* L)
 {
@@ -1082,6 +1137,17 @@ int Scene_BindLua::Entity_GetSpringArray(lua_State* L)
 	for (size_t i = 0; i < scene->springs.GetCount(); ++i)
 	{
 		wi::lua::SSetLongLong(L, scene->springs.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetScriptArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->scripts.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->scripts.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->scripts.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -2661,6 +2727,79 @@ int SpringComponent_BindLua::SetWindAffection(lua_State* L)
 	{
 		wi::lua::SError(L, "SetWindAffection(float value) not enough arguments!");
 	}
+	return 0;
+}
+
+
+
+
+
+
+
+const char ScriptComponent_BindLua::className[] = "ScriptComponent";
+
+Luna<ScriptComponent_BindLua>::FunctionType ScriptComponent_BindLua::methods[] = {
+	lunamethod(ScriptComponent_BindLua, CreateFromFile),
+	lunamethod(ScriptComponent_BindLua, Play),
+	lunamethod(ScriptComponent_BindLua, IsPlaying),
+	lunamethod(ScriptComponent_BindLua, SetPlayOnce),
+	lunamethod(ScriptComponent_BindLua, Stop),
+	{ NULL, NULL }
+};
+Luna<ScriptComponent_BindLua>::PropertyType ScriptComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+ScriptComponent_BindLua::ScriptComponent_BindLua(lua_State* L)
+{
+	owning = true;
+	component = new ScriptComponent;
+}
+ScriptComponent_BindLua::~ScriptComponent_BindLua()
+{
+	if (owning)
+	{
+		delete component;
+	}
+}
+
+int ScriptComponent_BindLua::CreateFromFile(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->CreateFromFile(wi::lua::SGetString(L, 1));
+	}
+	else
+	{
+		wi::lua::SError(L, "CreateFromFile(string filename) not enough arguments!");
+	}
+	return 0;
+}
+int ScriptComponent_BindLua::Play(lua_State* L)
+{
+	component->Play();
+	return 0;
+}
+int ScriptComponent_BindLua::IsPlaying(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsPlaying());
+	return 1;
+}
+int ScriptComponent_BindLua::SetPlayOnce(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	bool once = true;
+	if (argc > 0)
+	{
+		once = wi::lua::SGetBool(L, 1);
+	}
+	component->SetPlayOnce(once);
+	return 0;
+}
+int ScriptComponent_BindLua::Stop(lua_State* L)
+{
+	component->Stop();
 	return 0;
 }
 

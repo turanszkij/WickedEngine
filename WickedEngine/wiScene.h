@@ -1365,6 +1365,8 @@ namespace wi::scene
 		inline bool IsPlaying() const { return _flags & PLAYING; }
 		inline bool IsPlayingOnlyOnce() const { return _flags & PLAY_ONCE; }
 
+		void CreateFromFile(const std::string& filename);
+
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 

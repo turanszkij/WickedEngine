@@ -1467,6 +1467,13 @@ namespace wi::scene
 		UpdateCamera();
 	}
 
+	void ScriptComponent::CreateFromFile(const std::string& filename)
+	{
+		this->filename = filename;
+		resource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+		script.clear(); // will be created on first Update()
+	}
+
 
 
 	const uint32_t small_subtask_groupsize = 64u;
