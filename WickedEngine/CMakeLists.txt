@@ -246,6 +246,7 @@ else ()
 	# read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
 	target_compile_options(${TARGET_NAME} PRIVATE
 			-Wuninitialized
+			-Wwrite-strings
 			-Winit-self
 			-Wreturn-type
 			-Werror)
