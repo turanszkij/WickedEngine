@@ -47,10 +47,10 @@ namespace wi::lua
 		lunamethod(ImageParams_BindLua, DisableBackgroundBlur),
 		lunamethod(ImageParams_BindLua, EnableBackground),
 		lunamethod(ImageParams_BindLua, DisableBackground),
-		{ NULL, NULL }
+		{ nullptr, nullptr }
 	};
 	Luna<ImageParams_BindLua>::PropertyType ImageParams_BindLua::properties[] = {
-		{ NULL, NULL }
+		{ nullptr, nullptr }
 	};
 
 

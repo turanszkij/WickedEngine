@@ -28,10 +28,10 @@ namespace wi::lua
 		lunamethod(SpriteAnim_BindLua, GetScaleY),
 		lunamethod(SpriteAnim_BindLua, GetMovingTexAnim),
 		lunamethod(SpriteAnim_BindLua, GetDrawRecAnim),
-		{ NULL, NULL }
+		{ nullptr, nullptr }
 	};
 	Luna<SpriteAnim_BindLua>::PropertyType SpriteAnim_BindLua::properties[] = {
-		{ NULL, NULL }
+		{ nullptr, nullptr }
 	};
 
 	SpriteAnim_BindLua::SpriteAnim_BindLua(const wi::Sprite::Anim& anim) :anim(anim)
@@ -264,10 +264,10 @@ namespace wi::lua
 
 		lunamethod(MovingTexAnim_BindLua, GetSpeedX),
 		lunamethod(MovingTexAnim_BindLua, GetSpeedY),
-		{ NULL, NULL }
+		{ nullptr, nullptr }
 	};
 	Luna<MovingTexAnim_BindLua>::PropertyType MovingTexAnim_BindLua::properties[] = {
-		{ NULL, NULL }
+		{ nullptr, nullptr }
 	};
 
 	MovingTexAnim_BindLua::MovingTexAnim_BindLua(const wi::Sprite::Anim::MovingTexAnim& anim) :anim(anim)
@@ -348,7 +348,7 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 
-	DrawRectAnim_BindLua::DrawRectAnim_BindLua(const wi::Sprite::Anim::DrawRectAnim& data) :anim(anim)
+	DrawRectAnim_BindLua::DrawRectAnim_BindLua(const wi::Sprite::Anim::DrawRectAnim& anim) :anim(anim)
 	{
 	}
 
