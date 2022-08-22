@@ -33,6 +33,8 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	layerWnd.Create(editor);
 	nameWnd.Create(editor);
 	scriptWnd.Create(editor);
+	rigidWnd.Create(editor);
+	softWnd.Create(editor);
 
 
 	newComponentCombo.Create("Add: ");
@@ -57,6 +59,8 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Force Field " ICON_FORCE, 13);
 	newComponentCombo.AddItem("Animation " ICON_ANIMATION, 14);
 	newComponentCombo.AddItem("Script " ICON_SCRIPT, 15);
+	newComponentCombo.AddItem("Rigid Body " ICON_RIGIDBODY, 16);
+	newComponentCombo.AddItem("Soft Body " ICON_SOFTBODY, 17);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(-1);
 		if (editor->translator.selected.empty())
@@ -134,6 +138,14 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case 15:
 			if (scene.scripts.Contains(entity))
+				return;
+			break;
+		case 16:
+			if (scene.rigidbodies.Contains(entity))
+				return;
+			break;
+		case 17:
+			if (scene.softbodies.Contains(entity))
 				return;
 			break;
 		default:
@@ -217,6 +229,12 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		case 15:
 			scene.scripts.Create(entity);
 			break;
+		case 16:
+			scene.rigidbodies.Create(entity);
+			break;
+		case 17:
+			scene.softbodies.Create(entity);
+			break;
 		default:
 			break;
 		}
@@ -247,6 +265,8 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&layerWnd);
 	AddWidget(&nameWnd);
 	AddWidget(&scriptWnd);
+	AddWidget(&rigidWnd);
+	AddWidget(&softWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -266,6 +286,8 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	layerWnd.SetVisible(false);
 	nameWnd.SetVisible(false);
 	scriptWnd.SetVisible(false);
+	rigidWnd.SetVisible(false);
+	softWnd.SetVisible(false);
 
 
 	SetSize(editor->optionsWnd.GetSize());
@@ -506,6 +528,19 @@ void ComponentsWindow::ResizeLayout()
 		meshWnd.SetVisible(false);
 	}
 
+	if (scene.softbodies.Contains(softWnd.entity))
+	{
+		softWnd.SetVisible(true);
+		softWnd.SetPos(pos);
+		softWnd.SetSize(XMFLOAT2(width, softWnd.GetScale().y));
+		pos.y += softWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		softWnd.SetVisible(false);
+	}
+
 	if (scene.objects.Contains(objectWnd.entity))
 	{
 		objectWnd.SetVisible(true);
@@ -517,6 +552,19 @@ void ComponentsWindow::ResizeLayout()
 	else
 	{
 		objectWnd.SetVisible(false);
+	}
+
+	if (scene.rigidbodies.Contains(rigidWnd.entity))
+	{
+		rigidWnd.SetVisible(true);
+		rigidWnd.SetPos(pos);
+		rigidWnd.SetSize(XMFLOAT2(width, rigidWnd.GetScale().y));
+		pos.y += rigidWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		rigidWnd.SetVisible(false);
 	}
 
 	if (scene.weathers.Contains(weatherWnd.entity))

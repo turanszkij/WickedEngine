@@ -29,6 +29,8 @@ set (SOURCE_FILES
 	TransformWindow.cpp
 	Translator.cpp
 	WeatherWindow.cpp
+	RigidBodyPhysicsWindow.cpp
+	SoftBodyPhysicsWindow.cpp
 	OptionsWindow.cpp
 	ComponentsWindow.cpp
 	TerrainGenerator.cpp
