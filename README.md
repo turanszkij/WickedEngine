@@ -6,8 +6,8 @@
 [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij"><img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social" alt="follow on Twitter"></a>
 <br/>
-[![Steam](https://img.shields.io/badge/Wicked_Engine-Steam-383838.svg?style=for-the-badge&logo=steam)](https://store.steampowered.com/app/1967460/Wicked_Engine/)
-[![Store](https://img.shields.io/badge/Wicked_Engine-Microsoft_Store-748FB2.svg?style=for-the-badge&logo=microsoft)](https://www.microsoft.com/store/productId/9PPMV065W9QJ)
+[![Steam](https://img.shields.io/badge/Download-Steam-383838.svg?style=for-the-badge&logo=steam)](https://store.steampowered.com/app/1967460/Wicked_Engine/)
+[![Store](https://img.shields.io/badge/Download-Microsoft_Store-748FB2.svg?style=for-the-badge&logo=microsoft)](https://www.microsoft.com/store/productId/9PPMV065W9QJ)
 
 
 <br/>
