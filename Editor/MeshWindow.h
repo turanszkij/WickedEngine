@@ -17,10 +17,6 @@ public:
 	wi::gui::ComboBox subsetComboBox;
 	wi::gui::ComboBox subsetMaterialComboBox;
 	wi::gui::CheckBox doubleSidedCheckBox;
-	wi::gui::CheckBox softbodyCheckBox;
-	wi::gui::Slider massSlider;
-	wi::gui::Slider frictionSlider;
-	wi::gui::Slider restitutionSlider;
 	wi::gui::Button impostorCreateButton;
 	wi::gui::Slider impostorDistanceSlider;
 	wi::gui::Slider tessellationFactorSlider;

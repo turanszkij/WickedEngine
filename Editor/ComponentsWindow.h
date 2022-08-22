@@ -18,6 +18,8 @@
 #include "LayerWindow.h"
 #include "NameWindow.h"
 #include "ScriptWindow.h"
+#include "RigidBodyWindow.h"
+#include "SoftBodyWindow.h"
 
 class EditorComponent;
 
@@ -49,4 +51,6 @@ public:
 	LayerWindow layerWnd;
 	NameWindow nameWnd;
 	ScriptWindow scriptWnd;
+	RigidBodyWindow rigidWnd;
+	SoftBodyWindow softWnd;
 };

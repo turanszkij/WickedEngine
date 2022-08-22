@@ -77,6 +77,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)OptionsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ComponentsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ScriptWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)RigidBodyWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)SoftBodyWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -118,6 +120,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)OptionsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ComponentsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ScriptWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)RigidBodyWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)SoftBodyWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
