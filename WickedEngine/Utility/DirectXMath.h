@@ -170,16 +170,7 @@
 #ifdef _MSC_VER
 #   include <sal.h>
 #else
-#	define _In_
-#	define _In_reads_(n)
-#	define _In_reads_bytes_(n)
-#	define _Out_
-#	define _Out_writes_(n)
-#	define _Out_writes_bytes_(n)
-#	define _Out_opt_
-#	define _Success_(expr)
-#	define _Use_decl_annotations_
-#	define _Analysis_assume_(expr)
+#include "dxc/Support/WinAdapter.h"
 #endif
 
 #include <assert.h>

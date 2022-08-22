@@ -746,8 +746,6 @@ void RenderPath3D::Render() const
 	device->WaitCommandList(cmd, cmd_prepareframe);
 	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
-		GraphicsDevice* device = wi::graphics::GetDevice();
-
 		wi::renderer::BindCameraCB(
 			*camera,
 			camera_previous,
@@ -1556,8 +1554,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 	{
 		if (wi::renderer::GetTemporalAAEnabled() && !wi::renderer::GetTemporalAADebugEnabled())
 		{
-			GraphicsDevice* device = wi::graphics::GetDevice();
-
 			wi::renderer::Postprocess_TemporalAA(
 				temporalAAResources,
 				*rt_read,

@@ -449,8 +449,6 @@ namespace wi
 	{
 		wi::Timer timer;
 
-		GraphicsDevice* device = wi::graphics::GetDevice();
-
 		RasterizerState ras_desc;
 		ras_desc.fill_mode = FillMode::SOLID;
 		ras_desc.cull_mode = CullMode::NONE;

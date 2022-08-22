@@ -4,7 +4,7 @@ static const struct {
   uint  	 width;
   uint  	 height;
   uint  	 bytes_per_pixel; /* 2:RGB16, 3:RGB, 4:RGBA */ 
-  char  	*comment;
+  const char  	*comment;
   unsigned char	 pixel_data[64 * 64 * 4 + 1];
 } gimp_image = {
   64, 64, 4,

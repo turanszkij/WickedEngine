@@ -286,8 +286,6 @@ namespace wi::font
 			AddFontStyle("Liberation Sans", liberation_sans, sizeof(liberation_sans));
 		}
 
-		GraphicsDevice* device = wi::graphics::GetDevice();
-
 		RasterizerState rs;
 		rs.fill_mode = FillMode::SOLID;
 		rs.cull_mode = CullMode::NONE;
@@ -423,9 +421,9 @@ namespace wi::font
 					rect.h -= 2;
 
 					const int32_t hash = rect.id;
-					const wchar_t code = codefromhash(hash);
-					const int style = stylefromhash(hash);
-					const float height = (float)heightfromhash(hash);
+					//const wchar_t code = codefromhash(hash);
+					//const int style = stylefromhash(hash);
+					//const float height = (float)heightfromhash(hash);
 					Glyph& glyph = glyph_lookup[hash];
 					Bitmap& bitmap = bitmap_lookup[hash];
 

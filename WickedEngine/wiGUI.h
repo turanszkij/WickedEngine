@@ -17,16 +17,16 @@ namespace wi::gui
 
 	struct EventArgs
 	{
-		XMFLOAT2 clickPos;
-		XMFLOAT2 startPos;
-		XMFLOAT2 deltaPos;
-		XMFLOAT2 endPos;
-		float fValue;
-		bool bValue;
-		int iValue;
-		wi::Color color;
-		std::string sValue;
-		uint64_t userdata;
+		XMFLOAT2 clickPos = {0,0};
+		XMFLOAT2 startPos = {0,0};
+		XMFLOAT2 deltaPos = {0,0};
+		XMFLOAT2 endPos = {0,0};
+		float fValue = 0;
+		bool bValue = false;
+		int iValue = 0;
+		wi::Color color = wi::Color::Black();
+		std::string sValue = "";
+		uint64_t userdata = 0;
 	};
 
 	enum WIDGETSTATE

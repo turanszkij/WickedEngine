@@ -303,6 +303,7 @@ namespace wi::input::sdlinput
             case SDL_CONTROLLER_BUTTON_RIGHTSTICK: btnenum = wi::input::GAMEPAD_BUTTON_8; break;
             case SDL_CONTROLLER_BUTTON_BACK: btnenum = wi::input::GAMEPAD_BUTTON_9; break;
             case SDL_CONTROLLER_BUTTON_START: btnenum = wi::input::GAMEPAD_BUTTON_10; break;
+			default: assert(0); return;
         }
         btnenum = 1 << (btnenum - wi::input::GAMEPAD_RANGE_START - 1);
         if(pressed){

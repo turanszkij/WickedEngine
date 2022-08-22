@@ -126,8 +126,6 @@ namespace wi::image
 
 		image.border_soften = params.border_soften;
 
-		size_t vertex_size = sizeof(float4);
-
 		STRIP_MODE strip_mode = STRIP_ON;
 		uint32_t index_count = 0;
 
