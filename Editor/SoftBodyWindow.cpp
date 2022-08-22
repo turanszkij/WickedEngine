@@ -39,6 +39,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 		SoftBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
+			physicscomponent->physicsobject = {};
 			physicscomponent->mass = args.fValue;
 		}
 		});
@@ -52,6 +53,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 		SoftBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
+			physicscomponent->physicsobject = {};
 			physicscomponent->friction = args.fValue;
 		}
 		});
@@ -65,6 +67,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 		SoftBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
+			physicscomponent->physicsobject = {};
 			physicscomponent->restitution = args.fValue;
 		}
 		});

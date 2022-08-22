@@ -1349,7 +1349,6 @@ void EditorComponent::Update(float dt)
 		componentsWnd.animWnd.SetEntity(picked.entity);
 		componentsWnd.scriptWnd.SetEntity(picked.entity);
 		componentsWnd.rigidWnd.SetEntity(picked.entity);
-		componentsWnd.softWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{
@@ -1357,6 +1356,7 @@ void EditorComponent::Update(float dt)
 			if (object != nullptr) // maybe it was deleted...
 			{
 				componentsWnd.meshWnd.SetEntity(object->meshID, picked.subsetIndex);
+				componentsWnd.softWnd.SetEntity(object->meshID);
 
 				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 				if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
@@ -1368,6 +1368,7 @@ void EditorComponent::Update(float dt)
 		else
 		{
 			componentsWnd.meshWnd.SetEntity(picked.entity, picked.subsetIndex);
+			componentsWnd.softWnd.SetEntity(picked.entity);
 			componentsWnd.materialWnd.SetEntity(picked.entity);
 		}
 

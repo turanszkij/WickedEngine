@@ -219,6 +219,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->mass = args.fValue;
+			physicscomponent->physicsobject = {};
 		}
 		});
 	AddWidget(&massSlider);
@@ -232,6 +233,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->friction = args.fValue;
+			physicscomponent->physicsobject = {};
 		}
 		});
 	AddWidget(&frictionSlider);
@@ -245,6 +247,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->restitution = args.fValue;
+			physicscomponent->physicsobject = {};
 		}
 		});
 	AddWidget(&restitutionSlider);
@@ -258,6 +261,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->damping_linear = args.fValue;
+			physicscomponent->physicsobject = {};
 		}
 		});
 	AddWidget(&lineardampingSlider);
@@ -271,6 +275,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->damping_angular = args.fValue;
+			physicscomponent->physicsobject = {};
 		}
 		});
 	AddWidget(&angulardampingSlider);
@@ -289,6 +294,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 				physicscomponent->mesh_lod = uint32_t(args.iValue);
 			}
 			physicscomponent->mesh_lod = uint32_t(args.iValue);
+			physicscomponent->physicsobject = {};
 		}
 		});
 	AddWidget(&physicsMeshLODSlider);
@@ -303,6 +309,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->SetKinematic(args.bValue);
+			physicscomponent->physicsobject = {};
 		}
 		});
 	AddWidget(&kinematicCheckBox);
@@ -317,6 +324,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->SetDisableDeactivation(args.bValue);
+			physicscomponent->physicsobject = {};
 		}
 		});
 	AddWidget(&disabledeactivationCheckBox);
