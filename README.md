@@ -1,4 +1,4 @@
-<img align="left" src="Content/logo_small.png" width="140px"/>
+<img align="left" src="Content/logo_small.png" width="180px"/>
 
 # Wicked Engine
 
