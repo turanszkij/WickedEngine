@@ -24,6 +24,7 @@ set (SOURCE_FILES
 	GraphicsWindow.cpp
 	SoundWindow.cpp
 	SpringWindow.cpp
+	ScriptWindow.cpp
 	stdafx.cpp
 	TransformWindow.cpp
 	Translator.cpp
