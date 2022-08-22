@@ -60,6 +60,7 @@ namespace wi::lua
 
 	//kill every running background task (coroutine)
 	void KillProcesses();
+	uint32_t GeneratePID();
 
 	//Following functions are "static", operating on specified lua state:
 

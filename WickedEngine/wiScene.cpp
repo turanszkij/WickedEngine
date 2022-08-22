@@ -4822,6 +4822,12 @@ namespace wi::scene
 			{
 				if (script.script.empty() && script.resource.IsValid())
 				{
+					script.script_file = script.filename;
+					std::replace(script.script_file.begin(), script.script_file.end(), '\\', '/');
+					script.script_dir = wi::helper::GetDirectoryFromPath(script.script_file);
+					script.script += "local function script_file() return \"" + script.script_file + "\"; end\n";
+					script.script += "local function script_dir() return \"" + script.script_dir + "\"; end\n";
+					script.script += "local function script_pid() return " + std::to_string(wi::lua::GeneratePID()) + "; end\n";
 					script.script += "local function GetEntity() return " + std::to_string(entity) + "; end\n";
 					script.script += script.resource.GetScript();
 				}

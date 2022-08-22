@@ -43,7 +43,8 @@ namespace wi::lua
 	};
 	LuaInternal luainternal;
 
-	uint32_t Internal_GenScriptPID(){
+	uint32_t GeneratePID()
+	{
 		static std::atomic<uint32_t> scriptpid_next{ 0 + 1 };
 		return scriptpid_next.fetch_add(1);
 	}
@@ -63,7 +64,7 @@ namespace wi::lua
 		)";
 
 		if(PID == 0){
-			PID = Internal_GenScriptPID();
+			PID = GeneratePID();
 		}
 
 		// Make sure the file path doesn't contain backslash characters, replace them with forward slash.
