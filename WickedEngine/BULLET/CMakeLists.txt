@@ -452,7 +452,7 @@ add_library(Bullet STATIC
     ${Bullet_HEADERS_LinearMath}
 )
 
-target_include_directories(Bullet PUBLIC
+target_include_directories(Bullet SYSTEM PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 	$<INSTALL_INTERFACE:include/WickedEngine/BULLET>
 )

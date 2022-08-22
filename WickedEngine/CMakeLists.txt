@@ -211,7 +211,7 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 add_library(WickedEngine ALIAS ${TARGET_NAME})
 set_target_properties(${TARGET_NAME} PROPERTIES PUBLIC_HEADER "${HEADER_FILES}")
 
-target_include_directories(${TARGET_NAME} PUBLIC
+target_include_directories(${TARGET_NAME} SYSTEM PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine>
 )
@@ -227,6 +227,8 @@ if (WIN32)
 		UNICODE _UNICODE
 	)
 
+	target_compile_options(${TARGET_NAME} PRIVATE /W3)
+
 	set(LIBDXCOMPILER "dxcompiler.dll")
 else ()
 	# `ska::flat_hash_map` has issues on linux because of the hash function being identity
@@ -240,8 +242,80 @@ else ()
 	)
 	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
 
-	# enable all warnings and set them as errors
-	#target_compile_options(${TARGET_NAME} PRIVATE -Wall -Werror -Wno-error=unknown-pragmas)
+	# add some warnings and set them as errors
+	# read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
+	target_compile_options(${TARGET_NAME} PRIVATE
+			#-Wall
+			-Waddress
+			-Warray-bounds=1
+			-Warray-compare
+			-Wbool-compare
+			-Wbool-operation
+			-Wc++11-compat  -Wc++14-compat
+			-Wcatch-value
+			-Wchar-subscripts
+			-Wcomment
+			-Wdangling-pointer=2
+			-Wformat
+			-Wformat-overflow
+			-Wformat-truncation
+			-Wint-in-bool-context
+			-Winit-self
+			-Wlogical-not-parentheses
+			-Wmaybe-uninitialized
+			-Wmemset-elt-size
+			-Wmemset-transposed-args
+			-Wmisleading-indentation
+			-Wmismatched-dealloc
+			-Wmismatched-new-delete
+			-Wmissing-attributes
+			-Wmultistatement-macros
+			-Wnarrowing
+			-Wnonnull
+			-Wnonnull-compare
+			-Wopenmp-simd
+			#-Wparentheses
+			-Wpessimizing-move
+			-Wrange-loop-construct
+			-Wreorder
+			-Wrestrict
+			-Wreturn-type
+			-Wsequence-point
+			#-Wsign-compare
+			-Wsizeof-array-div
+			-Wsizeof-pointer-div
+			-Wsizeof-pointer-memaccess
+			#-Wstrict-aliasing
+			-Wstrict-overflow=1
+			#-Wswitch
+			-Wtautological-compare
+			-Wtrigraphs
+			-Wuninitialized
+			#-Wunused-function
+			-Wunused-label
+			-Wunused-value
+			#-Wunused-variable
+			-Wuse-after-free=3
+			-Wvolatile-register-var
+			-Wzero-length-bounds
+
+			#-Wextra
+			-Wclobbered
+			-Wcast-function-type
+			-Wdeprecated-copy
+			-Wempty-body
+			#-Wignored-qualifiers
+			#-Wimplicit-fallthrough=3
+			#-Wmissing-field-initializers
+			-Wstring-compare
+			-Wredundant-move
+			-Wtype-limits
+			-Wuninitialized
+			-Wshift-negative-value
+			#-Wunused-parameter
+			-Wunused-but-set-parameter
+
+			-Werror)
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)
 
