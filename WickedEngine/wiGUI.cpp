@@ -4013,7 +4013,7 @@ namespace wi::gui
 	{
 		if (onColorChanged == nullptr)
 			return;
-		EventArgs args;
+		EventArgs args = {};
 		args.color = GetPickColor();
 		onColorChanged(args);
 	}
@@ -4406,7 +4406,7 @@ namespace wi::gui
 			item.selected = false;
 		}
 
-		EventArgs args;
+		EventArgs args = {};
 		args.iValue = -1;
 		onSelect(args);
 	}
