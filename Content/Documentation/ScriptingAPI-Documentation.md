@@ -632,7 +632,7 @@ Enables jiggle effect on transforms such as bones for example.
 A lua script bound to an entity
 - CreateFromFile(string filename)
 - Play()
-- IsPlaying : bool result
+- IsPlaying() : bool result
 - SetPlayOnce(bool once = true)
 - Stop()
 
