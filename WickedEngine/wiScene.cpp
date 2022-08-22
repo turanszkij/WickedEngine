@@ -1482,6 +1482,12 @@ namespace wi::scene
 	{
 		this->dt = dt;
 
+		wi::jobsystem::context ctx;
+
+		// Script system runs first, because it could create new entities and components
+		//	So GPU persistent resources need to be created accordingly for them too:
+		RunScriptUpdateSystem(ctx);
+
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		instanceArraySize = objects.GetCount() + hairs.GetCount() + emitters.GetCount();
@@ -1596,8 +1602,6 @@ namespace wi::scene
 			queryAllocator.store(0);
 		}
 
-		wi::jobsystem::context ctx;
-
 		// Scan mesh subset counts to allocate GPU geometry data:
 		geometryAllocator.store(0u);
 		wi::jobsystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
@@ -1619,8 +1623,6 @@ namespace wi::scene
 				std::memcpy(instanceArrayMapped + i, &inst, sizeof(inst));
 			}
 		});
-
-		RunScriptUpdateSystem(ctx);
 
 		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
 
