@@ -4827,6 +4827,11 @@ namespace wi::scene
 					wi::lua::AttachScriptParameters(script.script, script.filename);
 				}
 				wi::lua::RunText(script.script);
+
+				if (script.IsPlayingOnlyOnce())
+				{
+					script.Stop();
+				}
 			}
 		}
 	}

@@ -13,8 +13,10 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::Button fileButton;
+	wi::gui::CheckBox playonceCheckBox;
 	wi::gui::Button playstopButton;
 
+	void Update(const wi::Canvas& canvas, float dt) override;
 	void ResizeLayout() override;
 };
 

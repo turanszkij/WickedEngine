@@ -1348,6 +1348,7 @@ namespace wi::scene
 		{
 			EMPTY = 0,
 			PLAYING = 1 << 0,
+			PLAY_ONCE = 1 << 1,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -1358,9 +1359,11 @@ namespace wi::scene
 		wi::Resource resource;
 
 		inline void Play() { _flags |= PLAYING; }
+		inline void SetPlayOnce(bool once = true) { if (once) { _flags |= PLAY_ONCE; } else { _flags &= ~PLAY_ONCE; } }
 		inline void Stop() { _flags &= ~PLAYING; }
 
 		inline bool IsPlaying() const { return _flags & PLAYING; }
+		inline bool IsPlayingOnlyOnce() const { return _flags & PLAY_ONCE; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

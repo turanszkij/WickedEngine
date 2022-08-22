@@ -1437,6 +1437,11 @@ namespace wi::scene
 			archive >> _flags;
 			archive >> filename;
 
+			if (IsPlayingOnlyOnce())
+			{
+				Play();
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				filename = dir + filename;
 				resource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);

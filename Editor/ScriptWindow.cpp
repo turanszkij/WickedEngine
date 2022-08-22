@@ -58,7 +58,20 @@ void ScriptWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&fileButton);
 
-	playstopButton.Create(ICON_PLAY);
+	playonceCheckBox.Create("Once: ");
+	playonceCheckBox.SetTooltip("Play the script only one time, and stop immediately.\nUseful for having custom update frequency logic in the script.");
+	playonceCheckBox.SetSize(XMFLOAT2(hei, hei));
+	playonceCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		wi::scene::ScriptComponent* script = scene.scripts.GetComponent(entity);
+		if (script == nullptr)
+			return;
+
+		script->SetPlayOnce(args.bValue);
+	});
+	AddWidget(&playonceCheckBox);
+
+	playstopButton.Create("");
 	playstopButton.SetTooltip("Play / Stop script");
 	playstopButton.SetSize(XMFLOAT2(wid, hei));
 	playstopButton.OnClick([=](wi::gui::EventArgs args) {
@@ -70,12 +83,10 @@ void ScriptWindow::Create(EditorComponent* _editor)
 		if (script->IsPlaying())
 		{
 			script->Stop();
-			playstopButton.SetText(ICON_PLAY);
 		}
 		else
 		{
 			script->Play();
-			playstopButton.SetText(ICON_STOP);
 		}
 	});
 	AddWidget(&playstopButton);
@@ -99,15 +110,6 @@ void ScriptWindow::SetEntity(wi::ecs::Entity entity)
 		if (script->resource.IsValid())
 		{
 			fileButton.SetText(wi::helper::GetFileNameFromPath(script->filename));
-
-			if (script->IsPlaying())
-			{
-				playstopButton.SetText(ICON_STOP);
-			}
-			else
-			{
-				playstopButton.SetText(ICON_PLAY);
-			}
 		}
 		else
 		{
@@ -116,6 +118,24 @@ void ScriptWindow::SetEntity(wi::ecs::Entity entity)
 	}
 }
 
+void ScriptWindow::Update(const wi::Canvas& canvas, float dt)
+{
+	wi::scene::Scene& scene = editor->GetCurrentScene();
+	wi::scene::ScriptComponent* script = scene.scripts.GetComponent(entity);
+	if (script != nullptr)
+	{
+		if (script->IsPlaying())
+		{
+			playstopButton.SetText(ICON_STOP);
+		}
+		else
+		{
+			playstopButton.SetText(ICON_PLAY);
+		}
+	}
+
+	wi::gui::Window::Update(canvas, dt);
+}
 void ScriptWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
@@ -127,11 +147,16 @@ void ScriptWindow::ResizeLayout()
 	wi::scene::ScriptComponent* script = scene.scripts.GetComponent(entity);
 	if (script != nullptr && script->resource.IsValid())
 	{
-		playstopButton.SetPos(XMFLOAT2(60, fileButton.GetPos().y + fileButton.GetSize().y + 4));
-		playstopButton.SetSize(XMFLOAT2(GetSize().x - 65, playstopButton.GetSize().y));
+		playstopButton.SetVisible(true);
+		playstopButton.SetPos(XMFLOAT2(84, fileButton.GetPos().y + fileButton.GetSize().y + 4));
+		playstopButton.SetSize(XMFLOAT2(GetSize().x - 90, playstopButton.GetSize().y));
+
+		playonceCheckBox.SetVisible(true);
+		playonceCheckBox.SetPos(XMFLOAT2(playstopButton.GetPos().x - playonceCheckBox.GetSize().x - 4, playstopButton.GetPos().y));
 	}
 	else
 	{
 		playstopButton.SetVisible(false);
+		playonceCheckBox.SetVisible(false);
 	}
 }
