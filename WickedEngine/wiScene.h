@@ -1355,8 +1355,6 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		std::string script;
-		std::string script_file;
-		std::string script_dir;
 		wi::Resource resource;
 
 		inline void Play() { _flags |= PLAYING; }

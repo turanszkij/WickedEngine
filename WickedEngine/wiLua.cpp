@@ -49,7 +49,8 @@ namespace wi::lua
 		return scriptpid_next.fetch_add(1);
 	}
 
-	uint32_t Internal_EncapsulateScript(std::string& script, const std::string& filename = "", uint32_t PID = 0){
+	uint32_t AttachScriptParameters(std::string& script, const std::string& filename, uint32_t PID)
+	{
 		static const std::string persistent_inject = R"(
 			local runProcess = function(func) 
 				success, co = Internal_runProcess(script_file(), script_pid(), func)
@@ -63,19 +64,15 @@ namespace wi::lua
 			end
 		)";
 
-		if(PID == 0){
-			PID = GeneratePID();
-		}
-
 		// Make sure the file path doesn't contain backslash characters, replace them with forward slash.
 		//	- backslash would be recognized by lua as escape character
 		//	- the path string could be coming from unknown location (content, programmer, filepicker), so always do this
 		std::string filepath = filename;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/');
 
-		std::string dynamic_inject = "local function script_file() return \""+ filepath +"\" end\n";
-		dynamic_inject += "local function script_pid() return \""+std::to_string(PID)+"\" end\n";
-		dynamic_inject += "local function script_dir() return \""+wi::helper::GetDirectoryFromPath(filepath)+"\" end\n";
+		std::string dynamic_inject = "local function script_file() return \"" + filepath + "\" end\n";
+		dynamic_inject += "local function script_pid() return \"" + std::to_string(PID) + "\" end\n";
+		dynamic_inject += "local function script_dir() return \"" + wi::helper::GetDirectoryFromPath(filepath) + "\" end\n";
 		dynamic_inject += persistent_inject;
 		script = dynamic_inject + script;
 
@@ -99,7 +96,7 @@ namespace wi::lua
 			if (wi::helper::FileRead(filename, filedata))
 			{
 				std::string command = std::string(filedata.begin(), filedata.end());
-				PID = Internal_EncapsulateScript(command, filename, PID);
+				PID = AttachScriptParameters(command, filename, PID);
 
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)
@@ -211,7 +208,7 @@ namespace wi::lua
 		if (wi::helper::FileRead(filename, filedata))
 		{
 			auto script = std::string(filedata.begin(), filedata.end());
-			Internal_EncapsulateScript(script, filename);
+			AttachScriptParameters(script, filename);
 			return RunText(script);
 		}
 		return false;
