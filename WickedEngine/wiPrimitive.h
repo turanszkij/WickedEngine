@@ -130,7 +130,7 @@ namespace wi::primitive
 		{
 			XMStoreFloat3(&origin, newOrigin);
 			XMStoreFloat3(&direction, newDirection);
-			XMStoreFloat3(&direction_inverse, XMVectorDivide(XMVectorReplicate(1.0f), newDirection));
+			XMStoreFloat3(&direction_inverse, XMVectorReciprocal(newDirection));
 			TMin = newTMin;
 			TMax = newTMax;
 		}
