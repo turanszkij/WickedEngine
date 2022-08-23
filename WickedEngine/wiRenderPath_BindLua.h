@@ -16,6 +16,7 @@ namespace wi::lua
 		RenderPath_BindLua() = default;
 		RenderPath_BindLua(RenderPath* component) :component(component) {}
 		RenderPath_BindLua(lua_State* L) {}
+		virtual ~RenderPath_BindLua() = default;
 
 		virtual int GetLayerMask(lua_State* L);
 		virtual int SetLayerMask(lua_State* L);
