@@ -16,6 +16,7 @@
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)AnimationWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)CameraWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ColliderWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ComponentsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)DecalWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Editor.cpp" />
@@ -129,6 +130,7 @@
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CameraWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ColliderWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ComponentsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)DecalWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Editor.h" />

@@ -1413,7 +1413,11 @@ namespace wi::scene
 			int ishape = 0;
 			archive >> ishape;
 			shape = (Shape)ishape;
-			SerializeEntity(archive, transformID, seri);
+			if (seri.GetVersion() < 1)
+			{
+				Entity transformID;
+				SerializeEntity(archive, transformID, seri);
+			}
 			archive >> radius;
 			archive >> offset;
 			archive >> tail;
@@ -1422,7 +1426,6 @@ namespace wi::scene
 		{
 			archive << _flags;
 			archive << (int)shape;
-			SerializeEntity(archive, transformID, seri);
 			archive << radius;
 			archive << offset;
 			archive << tail;

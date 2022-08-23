@@ -76,6 +76,7 @@ bool freezeCullingCamera = false;
 bool debugEnvProbes = false;
 bool debugForceFields = false;
 bool debugCameras = false;
+bool debugColliders = false;
 bool gridHelper = false;
 bool voxelHelper = false;
 bool advancedLightCulling = true;
@@ -5089,6 +5090,24 @@ void DrawDebugWorld(
 	device->EventBegin("DrawDebugWorld", cmd);
 
 	BindCommonResources(cmd);
+
+	if (GetToDrawDebugColliders())
+	{
+		for (size_t i = 0; i < scene.colliders.GetCount(); ++i)
+		{
+			ColliderComponent& collider = scene.colliders[i];
+			switch (collider.shape)
+			{
+			default:
+			case ColliderComponent::Shape::Sphere:
+				DrawSphere(collider.sphere, XMFLOAT4(1, 0, 1, 1));
+				break;
+			case ColliderComponent::Shape::Capsule:
+				DrawCapsule(collider.capsule, XMFLOAT4(1, 1, 0, 1));
+				break;
+			}
+		}
+	}
 
 	if (debugPartitionTree)
 	{
@@ -12980,6 +12999,8 @@ void SetToDrawDebugForceFields(bool param) { debugForceFields = param; }
 bool GetToDrawDebugForceFields() { return debugForceFields; }
 void SetToDrawDebugCameras(bool param) { debugCameras = param; }
 bool GetToDrawDebugCameras() { return debugCameras; }
+void SetToDrawDebugColliders(bool param) { debugColliders = param; }
+bool GetToDrawDebugColliders() { return debugColliders; }
 bool GetToDrawGridHelper() { return gridHelper; }
 void SetToDrawGridHelper(bool value) { gridHelper = value; }
 bool GetToDrawVoxelHelper() { return voxelHelper; }

@@ -779,6 +779,8 @@ namespace wi::renderer
 	bool GetToDrawDebugForceFields();
 	void SetToDrawDebugCameras(bool param);
 	bool GetToDrawDebugCameras();
+	void SetToDrawDebugColliders(bool param);
+	bool GetToDrawDebugColliders();
 	bool GetToDrawGridHelper();
 	void SetToDrawGridHelper(bool value);
 	bool GetToDrawVoxelHelper();

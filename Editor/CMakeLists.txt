@@ -31,6 +31,7 @@ set (SOURCE_FILES
 	WeatherWindow.cpp
 	RigidBodyWindow.cpp
 	SoftBodyWindow.cpp
+	ColliderWindow.cpp
 	OptionsWindow.cpp
 	ComponentsWindow.cpp
 	TerrainGenerator.cpp
