@@ -61,6 +61,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 						float3 A = entity.position;
 						float3 B = entity.GetColliderTip();
 						float3 N = normalize(A - B);
+						A -= N * range;
+						B += N * range;
 						float3 C = closest_point_on_segment(A, B, particle.position);
 						float3 dir = C - particle.position;
 						float dist = length(dir);

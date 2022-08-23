@@ -133,6 +133,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					float3 A = entity.position;
 					float3 B = entity.GetColliderTip();
 					float3 N = normalize(A - B);
+					A -= N * range;
+					B += N * range;
 					float3 C = closest_point_on_segment(A, B, tip);
 					float3 dir = C- tip;
 					float dist = length(dir);
