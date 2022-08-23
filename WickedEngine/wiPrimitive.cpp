@@ -271,8 +271,8 @@ namespace wi::primitive
 		XMVECTOR A = XMLoadFloat3(&b.base);
 		XMVECTOR B = XMLoadFloat3(&b.tip);
 		XMVECTOR N = XMVector3Normalize(A - B);
-		A += N * b.radius;
-		B -= N * b.radius;
+		A -= N * b.radius;
+		B += N * b.radius;
 		XMVECTOR C = XMLoadFloat3(&center);
 		dist = wi::math::GetPointSegmentDistance(C, A, B);
 		dist = dist - radius - b.radius;
@@ -283,8 +283,8 @@ namespace wi::primitive
 		XMVECTOR A = XMLoadFloat3(&b.base);
 		XMVECTOR B = XMLoadFloat3(&b.tip);
 		XMVECTOR N = XMVector3Normalize(A - B);
-		A += N * b.radius;
-		B -= N * b.radius;
+		A -= N * b.radius;
+		B += N * b.radius;
 		XMVECTOR C = XMLoadFloat3(&center);
 		dist = wi::math::GetPointSegmentDistance(C, A, B);
 		XMStoreFloat3(&direction, (C - wi::math::ClosestPointOnLineSegment(A, B, C)) / dist);
