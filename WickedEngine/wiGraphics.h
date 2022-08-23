@@ -1042,9 +1042,10 @@ namespace wi::graphics
 		case Format::R32G8X24_TYPELESS:
 		case Format::R24G8_TYPELESS:
 			return true;
+		default:
+			return false;
 		}
 
-		return false;
 	}
 	constexpr bool IsFormatUnorm(Format format)
 	{
@@ -1063,9 +1064,9 @@ namespace wi::graphics
 		case Format::R16_UNORM:
 		case Format::R8_UNORM:
 			return true;
+		default:
+			return false;
 		}
-
-		return false;
 	}
 	constexpr bool IsFormatBlockCompressed(Format format)
 	{
@@ -1086,9 +1087,9 @@ namespace wi::graphics
 		case Format::BC7_UNORM:
 		case Format::BC7_UNORM_SRGB:
 			return true;
+		default:
+			return false;
 		}
-
-		return false;
 	}
 	constexpr bool IsFormatStencilSupport(Format format)
 	{
@@ -1099,9 +1100,9 @@ namespace wi::graphics
 		case Format::R24G8_TYPELESS:
 		case Format::D24_UNORM_S8_UINT:
 			return true;
+		default:
+			return false;
 		}
-
-		return false;
 	}
 	constexpr uint32_t GetFormatBlockSize(Format format)
 	{
@@ -1201,10 +1202,8 @@ namespace wi::graphics
 
 		default:
 			assert(0); // didn't catch format!
-			break;
+			return 16u;
 		}
-
-		return 16u;
 	}
 
 	constexpr uint32_t AlignTo(uint32_t value, uint32_t alignment)
