@@ -515,6 +515,10 @@ struct ShaderEntity
 	{
 		return GetConeAngleCos();
 	}
+	inline float3 GetColliderTip()
+	{
+		return shadowAtlasMulAdd.xyz;
+	}
 
 #else
 	// Application-side:
@@ -572,6 +576,10 @@ struct ShaderEntity
 	{
 		SetConeAngleCos(value);
 	}
+	inline void SetColliderTip(float3 value)
+	{
+		shadowAtlasMulAdd = float4(value.x, value.y, value.z, 0);
+	}
 
 #endif // __cplusplus
 };
@@ -607,13 +615,20 @@ struct ShaderFrustum
 #endif // __cplusplus
 };
 
-static const uint ENTITY_TYPE_DIRECTIONALLIGHT = 0;
-static const uint ENTITY_TYPE_POINTLIGHT = 1;
-static const uint ENTITY_TYPE_SPOTLIGHT = 2;
-static const uint ENTITY_TYPE_DECAL = 100;
-static const uint ENTITY_TYPE_ENVMAP = 101;
-static const uint ENTITY_TYPE_FORCEFIELD_POINT = 200;
-static const uint ENTITY_TYPE_FORCEFIELD_PLANE = 201;
+enum SHADER_ENTITY_TYPE
+{
+	ENTITY_TYPE_DIRECTIONALLIGHT,
+	ENTITY_TYPE_POINTLIGHT,
+	ENTITY_TYPE_SPOTLIGHT,
+	ENTITY_TYPE_DECAL,
+	ENTITY_TYPE_ENVMAP,
+	ENTITY_TYPE_FORCEFIELD_POINT,
+	ENTITY_TYPE_FORCEFIELD_PLANE,
+	ENTITY_TYPE_COLLIDER_SPHERE,
+	ENTITY_TYPE_COLLIDER_CAPSULE,
+
+	ENTITY_TYPE_COUNT
+};
 
 static const uint ENTITY_FLAG_LIGHT_STATIC = 1 << 0;
 
@@ -688,7 +703,7 @@ struct FrameCB
 	uint		forcefieldarray_count;		// indexing into entity array
 
 	uint		envprobearray_offset;		// indexing into entity array
-	uint		envprobearray_count;			// indexing into entity array
+	uint		envprobearray_count;		// indexing into entity array
 	uint		temporalaa_samplerotation;
 	float		blue_noise_phase;
 

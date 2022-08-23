@@ -3214,7 +3214,7 @@ void UpdatePerFrameData(
 	frameCB.lightarray_offset = frameCB.envprobearray_offset + frameCB.envprobearray_count;
 	frameCB.lightarray_count = (uint)vis.visibleLights.size();
 	frameCB.forcefieldarray_offset = frameCB.lightarray_offset + frameCB.lightarray_count;
-	frameCB.forcefieldarray_count = (uint)vis.scene->forces.GetCount();
+	frameCB.forcefieldarray_count = uint(vis.scene->forces.GetCount() + vis.scene->colliders.GetCount());
 
 	frameCB.envprobe_mipcount = 0;
 	frameCB.envprobe_mipcount_rcp = 1.0f;
@@ -3675,6 +3675,50 @@ void UpdateRenderData(
 			if (light.IsStatic())
 			{
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
+			}
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			entityCounter++;
+		}
+
+		// Write colliders into entity array:
+		for (size_t i = 0; i < vis.scene->colliders.GetCount(); ++i)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				assert(0); // too many entities!
+				entityCounter--;
+				break;
+			}
+			ShaderEntity shaderentity = {};
+
+			const ColliderComponent& collider = vis.scene->colliders[i];
+
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->colliders.GetEntity(i);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			switch (collider.shape)
+			{
+			case ColliderComponent::Shape::Sphere:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_SPHERE);
+				shaderentity.position = collider.sphere.center;
+				shaderentity.SetRange(collider.sphere.radius);
+				break;
+			case ColliderComponent::Shape::Capsule:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_CAPSULE);
+				shaderentity.position = collider.capsule.base;
+				shaderentity.SetColliderTip(collider.capsule.tip);
+				shaderentity.SetRange(collider.capsule.radius);
+				break;
+			default:
+				assert(0);
+				break;
 			}
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));

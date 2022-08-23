@@ -251,8 +251,13 @@ namespace wi::primitive
 	}
 	bool Sphere::intersects(const Sphere& b, float& dist, XMFLOAT3& direction) const
 	{
-		dist = wi::math::Distance(center, b.center);
-		XMStoreFloat3(&direction, (XMLoadFloat3(&center) - XMLoadFloat3(&b.center)) / dist);
+		XMVECTOR A = XMLoadFloat3(&center);
+		XMVECTOR B = XMLoadFloat3(&b.center);
+		XMVECTOR DIR = A - B;
+		XMVECTOR DIST = XMVector3Length(DIR);
+		DIR = DIR / DIST;
+		XMStoreFloat3(&direction, DIR);
+		dist = XMVectorGetX(DIST);
 		dist = dist - radius - b.radius;
 		return dist < 0;
 	}

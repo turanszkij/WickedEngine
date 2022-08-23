@@ -116,30 +116,59 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		float3 tip = base + normal * len;
 
-		// Accumulate forces:
+		// Accumulate forces, apply colliders:
 		float3 force = 0;
         for (uint i = 0; i < GetFrame().forcefieldarray_count; ++i)
         {
-			ShaderEntity forceField = load_entity(GetFrame().forcefieldarray_offset + i);
+			ShaderEntity entity = load_entity(GetFrame().forcefieldarray_offset + i);
 
 			[branch]
-			if (forceField.layerMask & xHairLayerMask)
+			if (entity.layerMask & xHairLayerMask)
 			{
-				//float3 dir = forceField.position - PointOnLineSegmentNearestPoint(base, tip, forceField.position);
-				float3 dir = forceField.position - tip;
-				float dist;
-				if (forceField.GetType() == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
-				{
-					//dist = length(dir);
-					dist = length(forceField.position - closest_point_on_segment(base, tip, forceField.position));
-				}
-				else // planar force field
-				{
-					dist = dot(forceField.GetDirection(), dir);
-					dir = forceField.GetDirection();
-				}
+				const float range = entity.GetRange();
+				const uint type = entity.GetType();
 
-				force += dir * forceField.GetGravity() * (1 - saturate(dist / forceField.GetRange()));
+				if (type == ENTITY_TYPE_COLLIDER_CAPSULE)
+				{
+					float3 A = entity.position;
+					float3 B = entity.GetColliderTip();
+					float3 N = normalize(A - B);
+					float3 C = closest_point_on_segment(A, B, tip);
+					float3 dir = C- tip;
+					float dist = length(dir);
+					dir /= dist;
+					dist = dist - range - len;
+					if (dist < 0)
+					{
+						tip = tip - dir * dist;
+					}
+				}
+				else
+				{
+					float3 closest_point = closest_point_on_segment(base, tip, entity.position);
+					float3 dir = entity.position - closest_point;
+					float dist = length(dir);
+					dir /= dist;
+
+					switch (type)
+					{
+					case ENTITY_TYPE_FORCEFIELD_POINT:
+						force += dir * entity.GetGravity() * (1 - saturate(dist / range));
+						break;
+					case ENTITY_TYPE_FORCEFIELD_PLANE:
+						force += entity.GetDirection() * entity.GetGravity() * (1 - saturate(dist / range));
+						break;
+					case ENTITY_TYPE_COLLIDER_SPHERE:
+						dist = dist - range - len;
+						if (dist < 0)
+						{
+							tip = tip - dir * dist;
+						}
+						break;
+					default:
+						break;
+					}
+				}
 			}
         }
 

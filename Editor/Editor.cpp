@@ -1003,28 +1003,28 @@ void EditorComponent::Update(float dt)
 					}
 					else
 					{
-						// Check for interactive grass (hair particle that is child of hovered object:
-						for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
-						{
-							Entity entity = scene.hairs.GetEntity(i);
-							HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
-							if (hier != nullptr && hier->parentID == hovered.entity)
-							{
-								XMVECTOR P = XMLoadFloat3(&hovered.position);
-								P += XMLoadFloat3(&hovered.normal) * 2;
-								if (grass_interaction_entity == INVALID_ENTITY)
-								{
-									grass_interaction_entity = CreateEntity();
-								}
-								ForceFieldComponent& force = scene.forces.Create(grass_interaction_entity);
-								TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
-								force.type = ENTITY_TYPE_FORCEFIELD_POINT;
-								force.gravity = -80;
-								force.range = 3;
-								transform.Translate(P);
-								break;
-							}
-						}
+						//// Check for interactive grass (hair particle that is child of hovered object:
+						//for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+						//{
+						//	Entity entity = scene.hairs.GetEntity(i);
+						//	HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+						//	if (hier != nullptr && hier->parentID == hovered.entity)
+						//	{
+						//		XMVECTOR P = XMLoadFloat3(&hovered.position);
+						//		P += XMLoadFloat3(&hovered.normal) * 2;
+						//		if (grass_interaction_entity == INVALID_ENTITY)
+						//		{
+						//			grass_interaction_entity = CreateEntity();
+						//		}
+						//		ForceFieldComponent& force = scene.forces.Create(grass_interaction_entity);
+						//		TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
+						//		force.type = ENTITY_TYPE_FORCEFIELD_POINT;
+						//		force.gravity = -80;
+						//		force.range = 3;
+						//		transform.Translate(P);
+						//		break;
+						//	}
+						//}
 					}
 				}
 
