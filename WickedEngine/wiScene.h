@@ -1330,7 +1330,6 @@ namespace wi::scene
 		};
 		Shape shape;
 
-		wi::ecs::Entity transformID = wi::ecs::INVALID_ENTITY;
 		float radius = 0;
 		XMFLOAT3 offset = {};
 		XMFLOAT3 tail = {};
@@ -1405,7 +1404,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<SoundComponent>& sounds = componentLibrary.Register<SoundComponent>("wi::scene::Scene::sounds");
 		wi::ecs::ComponentManager<InverseKinematicsComponent>& inverse_kinematics = componentLibrary.Register<InverseKinematicsComponent>("wi::scene::Scene::inverse_kinematics");
 		wi::ecs::ComponentManager<SpringComponent>& springs = componentLibrary.Register<SpringComponent>("wi::scene::Scene::springs", 1); // version = 1
-		wi::ecs::ComponentManager<ColliderComponent>& colliders = componentLibrary.Register<ColliderComponent>("wi::scene::Scene::colliders");
+		wi::ecs::ComponentManager<ColliderComponent>& colliders = componentLibrary.Register<ColliderComponent>("wi::scene::Scene::colliders", 1); // version = 1
 		wi::ecs::ComponentManager<ScriptComponent>& scripts = componentLibrary.Register<ScriptComponent>("wi::scene::Scene::scripts");
 
 		// Non-serialized attributes:
@@ -1648,6 +1647,7 @@ namespace wi::scene
 		void RunAnimationUpdateSystem(wi::jobsystem::context& ctx);
 		void RunTransformUpdateSystem(wi::jobsystem::context& ctx);
 		void RunHierarchyUpdateSystem(wi::jobsystem::context& ctx);
+		void RunColliderUpdateSystem(wi::jobsystem::context& ctx);
 		void RunSpringUpdateSystem(wi::jobsystem::context& ctx);
 		void RunInverseKinematicsUpdateSystem(wi::jobsystem::context& ctx);
 		void RunArmatureUpdateSystem(wi::jobsystem::context& ctx);

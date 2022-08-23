@@ -12,7 +12,6 @@ public:
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::gui::Label physicsLabel;
 	wi::gui::ComboBox collisionShapeComboBox;
 	wi::gui::Slider XSlider;
 	wi::gui::Slider YSlider;

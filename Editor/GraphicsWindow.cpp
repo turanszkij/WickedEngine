@@ -14,7 +14,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1750));
+	SetSize(XMFLOAT2(580, 1760));
 
 	float step = 21;
 	float itemheight = 18;
@@ -1310,6 +1310,16 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	cameraVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugCameras());
 	AddWidget(&cameraVisCheckBox);
 
+	colliderVisCheckBox.Create("Collider visualizer: ");
+	colliderVisCheckBox.SetTooltip("Toggle visualization of colliders in the scene");
+	colliderVisCheckBox.SetPos(XMFLOAT2(x, y += step));
+	colliderVisCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	colliderVisCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawDebugColliders(args.bValue);
+		});
+	colliderVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugColliders());
+	AddWidget(&colliderVisCheckBox);
+
 	gridHelperCheckBox.Create("Grid helper: ");
 	gridHelperCheckBox.SetTooltip("Toggle showing of unit visualizer grid in the world origin");
 	gridHelperCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -1730,6 +1740,7 @@ void GraphicsWindow::ResizeLayout()
 	add_right(disableAlbedoMapsCheckBox);
 	add_right(forceDiffuseLightingCheckBox);
 	add_right(wireFrameCheckBox);
+	add_right(gridHelperCheckBox);
 	add_right(nameDebugCheckBox);
 	add_right(physicsDebugCheckBox);
 	add_right(aabbDebugCheckBox);
@@ -1738,8 +1749,8 @@ void GraphicsWindow::ResizeLayout()
 	add_right(debugForceFieldsCheckBox);
 	add_right(debugRaytraceBVHCheckBox);
 	add_right(envProbesCheckBox);
-	add_right(gridHelperCheckBox);
 	add_right(cameraVisCheckBox);
+	add_right(colliderVisCheckBox);
 
 
 }
