@@ -3196,6 +3196,20 @@ namespace wi::scene
 			tail -= N * collider.capsule.radius;
 			XMStoreFloat3(&collider.capsule.base, offset);
 			XMStoreFloat3(&collider.capsule.tip, tail);
+
+			if (collider.shape == ColliderComponent::Shape::Plane)
+			{
+				collider.planeOrigin = collider.sphere.center;
+				XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
+				XMStoreFloat3(&collider.planeNormal, N);
+
+				XMMATRIX PLANE = XMMatrixScaling(collider.radius, 1, collider.radius);
+				PLANE = PLANE * XMMatrixTranslationFromVector(XMLoadFloat3(&collider.offset));
+				PLANE = PLANE * W;
+				PLANE = XMMatrixInverse(nullptr, PLANE);
+				XMStoreFloat4x4(&collider.planeProjection, PLANE);
+			}
 		}
 	}
 	void Scene::RunSpringUpdateSystem(wi::jobsystem::context& ctx)

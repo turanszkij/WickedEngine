@@ -1327,6 +1327,7 @@ namespace wi::scene
 		{
 			Sphere,
 			Capsule,
+			Plane,
 		};
 		Shape shape;
 
@@ -1337,6 +1338,9 @@ namespace wi::scene
 		// Non-serialized attributes:
 		wi::primitive::Sphere sphere;
 		wi::primitive::Capsule capsule;
+		XMFLOAT3 planeOrigin = {};
+		XMFLOAT3 planeNormal = {};
+		XMFLOAT4X4 planeProjection = wi::math::IDENTITY_MATRIX;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

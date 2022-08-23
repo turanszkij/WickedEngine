@@ -167,6 +167,22 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 							tip = tip - dir * dist;
 						}
 						break;
+					case ENTITY_TYPE_COLLIDER_PLANE:
+						dir = normalize(entity.GetDirection());
+						dist = plane_point_distance(entity.position, dir, closest_point);
+						dist = dist - len;
+						if (dist < 0)
+						{
+							float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
+							const float3 clipSpacePos = mul(planeProjection, float4(closest_point, 1)).xyz;
+							const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+							[branch]
+							if (is_saturated(uvw))
+							{
+								tip = tip + dir * dist;
+							}
+						}
+						break;
 					default:
 						break;
 					}

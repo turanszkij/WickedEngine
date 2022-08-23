@@ -21,8 +21,8 @@ RWByteAddressBuffer vertexBuffer_COL : register(u9);
 RWStructuredBuffer<uint> culledIndirectionBuffer : register(u10);
 RWStructuredBuffer<uint> culledIndirectionBuffer2 : register(u11);
 
-#define SPH_FLOOR_COLLISION
-#define SPH_BOX_COLLISION
+//#define SPH_FLOOR_COLLISION
+//#define SPH_BOX_COLLISION
 
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
@@ -45,7 +45,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 		if (particle.life > 0)
 		{
-			// simulate:
+			// process forces and colliders:
 			for (uint i = 0; i < GetFrame().forcefieldarray_count; ++i)
 			{
 				ShaderEntity entity = load_entity(GetFrame().forcefieldarray_offset + i);
@@ -96,24 +96,27 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 								particle.velocity = reflect(particle.velocity, dir);
 							}
 							break;
+						case ENTITY_TYPE_COLLIDER_PLANE:
+							dir = normalize(entity.GetDirection());
+							dist = plane_point_distance(entity.position, dir, particle.position);
+							dist = dist - particleSize;
+							if (dist < 0)
+							{
+								float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
+								const float3 clipSpacePos = mul(planeProjection, float4(particle.position, 1)).xyz;
+								const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+								[branch]
+								if (is_saturated(uvw))
+								{
+									particle.position = particle.position - dir * dist;
+									particle.velocity = reflect(particle.velocity, dir);
+								}
+							}
+							break;
 						default:
 							break;
 						}
 					}
-
-					//float3 dir = entity.position - particle.position;
-					//float dist;
-					//if (entity.GetType() == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
-					//{
-					//	dist = length(dir);
-					//}
-					//else // planar force field
-					//{
-					//	dist = dot(entity.GetDirection(), dir);
-					//	dir = entity.GetDirection();
-					//}
-					//
-					//particle.force += dir * entity.GetGravity() * (1 - saturate(dist / entity.GetRange()));
 				}
 			}
 

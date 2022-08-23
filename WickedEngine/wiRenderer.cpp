@@ -3716,6 +3716,13 @@ void UpdateRenderData(
 				shaderentity.SetColliderTip(collider.capsule.tip);
 				shaderentity.SetRange(collider.capsule.radius);
 				break;
+			case ColliderComponent::Shape::Plane:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_PLANE);
+				shaderentity.position = collider.planeOrigin;
+				shaderentity.SetDirection(collider.planeNormal);
+				shaderentity.SetIndices(matrixCounter, ~0u);
+				std::memcpy(&matrixArray[matrixCounter++], &collider.planeProjection, sizeof(collider.planeProjection));
+				break;
 			default:
 				assert(0);
 				break;
@@ -5147,7 +5154,36 @@ void DrawDebugWorld(
 				DrawSphere(collider.sphere, XMFLOAT4(1, 0, 1, 1));
 				break;
 			case ColliderComponent::Shape::Capsule:
-				DrawCapsule(collider.capsule, XMFLOAT4(1, 1, 0, 1));
+				DrawCapsule(collider.capsule, XMFLOAT4(1, 0, 1, 1));
+				break;
+			case ColliderComponent::Shape::Plane:
+				{
+					RenderableLine line;
+					line.color_start = XMFLOAT4(1, 0, 1, 1);
+					line.color_end = XMFLOAT4(1, 0, 1, 1);
+					XMMATRIX planeMatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&collider.planeProjection));
+					XMVECTOR P0 = XMVector3Transform(XMVectorSet(-1, 0, -1, 1), planeMatrix);
+					XMVECTOR P1 = XMVector3Transform(XMVectorSet(1, 0, -1, 1), planeMatrix);
+					XMVECTOR P2 = XMVector3Transform(XMVectorSet(1, 0, 1, 1), planeMatrix);
+					XMVECTOR P3 = XMVector3Transform(XMVectorSet(-1, 0, 1, 1), planeMatrix);
+					XMStoreFloat3(&line.start, P0);
+					XMStoreFloat3(&line.end, P1);
+					DrawLine(line);
+					XMStoreFloat3(&line.start, P1);
+					XMStoreFloat3(&line.end, P2);
+					DrawLine(line);
+					XMStoreFloat3(&line.start, P2);
+					XMStoreFloat3(&line.end, P3);
+					DrawLine(line);
+					XMStoreFloat3(&line.start, P3);
+					XMStoreFloat3(&line.end, P0);
+					DrawLine(line);
+					XMVECTOR O = XMLoadFloat3(&collider.planeOrigin);
+					XMVECTOR N = XMLoadFloat3(&collider.planeNormal);
+					XMStoreFloat3(&line.start, O);
+					XMStoreFloat3(&line.end, O + N);
+					DrawLine(line);
+				}
 				break;
 			}
 		}
