@@ -99,6 +99,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 						case ENTITY_TYPE_COLLIDER_PLANE:
 							dir = normalize(entity.GetDirection());
 							dist = plane_point_distance(entity.position, dir, particle.position);
+							if (dist < 0)
+							{
+								dir *= -1;
+								dist = abs(dist);
+							}
 							dist = dist - particleSize;
 							if (dist < 0)
 							{

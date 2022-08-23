@@ -170,6 +170,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					case ENTITY_TYPE_COLLIDER_PLANE:
 						dir = normalize(entity.GetDirection());
 						dist = plane_point_distance(entity.position, dir, closest_point);
+						if (dist < 0)
+						{
+							dir *= -1;
+							dist = abs(dist);
+						}
 						dist = dist - len;
 						if (dist < 0)
 						{
