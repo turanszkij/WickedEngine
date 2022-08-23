@@ -249,6 +249,8 @@ else ()
 			-Wwrite-strings
 			-Winit-self
 			-Wreturn-type
+			-Wreorder
+			-Werror=delete-non-virtual-dtor
 			-Werror)
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)

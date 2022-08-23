@@ -376,32 +376,23 @@ namespace vulkan_internal
 		{
 		case wi::graphics::StencilOp::KEEP:
 			return VK_STENCIL_OP_KEEP;
-			break;
 		case wi::graphics::StencilOp::ZERO:
 			return VK_STENCIL_OP_ZERO;
-			break;
 		case wi::graphics::StencilOp::REPLACE:
 			return VK_STENCIL_OP_REPLACE;
-			break;
 		case wi::graphics::StencilOp::INCR_SAT:
 			return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
-			break;
 		case wi::graphics::StencilOp::DECR_SAT:
 			return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
-			break;
 		case wi::graphics::StencilOp::INVERT:
 			return VK_STENCIL_OP_INVERT;
-			break;
 		case wi::graphics::StencilOp::INCR:
 			return VK_STENCIL_OP_INCREMENT_AND_WRAP;
-			break;
 		case wi::graphics::StencilOp::DECR:
 			return VK_STENCIL_OP_DECREMENT_AND_WRAP;
-			break;
 		default:
-			break;
+			return VK_STENCIL_OP_KEEP;
 		}
-		return VK_STENCIL_OP_KEEP;
 	}
 	constexpr VkImageLayout _ConvertImageLayout(ResourceState value)
 	{
@@ -426,8 +417,9 @@ namespace vulkan_internal
 			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		case ResourceState::SHADING_RATE_SOURCE:
 			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
+		default:
+			return VK_IMAGE_LAYOUT_UNDEFINED;
 		}
-		return VK_IMAGE_LAYOUT_UNDEFINED;
 	}
 	constexpr VkShaderStageFlags _ConvertStageFlags(ShaderStage value)
 	{
@@ -2004,7 +1996,9 @@ using namespace vulkan_internal;
 					}
 					break;
 
+					default: break;
 					}
+
 				}
 			}
 
@@ -5759,6 +5753,9 @@ using namespace vulkan_internal;
 				view_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
 				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 				break;
+			default:
+				assert(0);
+				break;
 			}
 
 			Texture_Vulkan::TextureSubresource subresource;
@@ -5884,6 +5881,9 @@ using namespace vulkan_internal;
 			case Format::R32G8X24_TYPELESS:
 				view_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
 				view_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			default:
+				assert(0);
 				break;
 			}
 
@@ -7248,6 +7248,8 @@ using namespace vulkan_internal;
 			break;
 		case GpuQueryType::OCCLUSION:
 			vkCmdBeginQuery(commandlist.GetCommandBuffer(), internal_state->pool, index, VK_QUERY_CONTROL_PRECISE_BIT);
+			break;
+		case GpuQueryType::TIMESTAMP:
 			break;
 		}
 	}

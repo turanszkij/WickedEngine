@@ -337,6 +337,9 @@ namespace wi::input
 				case Controller::SDLINPUT:
 					connected = wi::input::sdlinput::GetControllerState(&controller.state, controller.deviceIndex);
 					break;
+				case Controller::DISCONNECTED:
+					connected = false;
+					break;
 			}
 
 			if (!connected)
@@ -410,6 +413,7 @@ namespace wi::input
 				case GAMEPAD_BUTTON_8: return state.buttons & (1 << (GAMEPAD_BUTTON_8 - GAMEPAD_RANGE_START - 1));
 				case GAMEPAD_BUTTON_9: return state.buttons & (1 << (GAMEPAD_BUTTON_9 - GAMEPAD_RANGE_START - 1));
 				case GAMEPAD_BUTTON_10: return state.buttons & (1 << (GAMEPAD_BUTTON_10 - GAMEPAD_RANGE_START - 1));
+				default: break;
 				}
 
 			}
@@ -424,17 +428,14 @@ namespace wi::input
 				if (mouse.left_button_press) 
 					return true;
 				return false;
-				break;
 			case wi::input::MOUSE_BUTTON_RIGHT:
 				if (mouse.right_button_press) 
 					return true;
 				return false;
-				break;
 			case wi::input::MOUSE_BUTTON_MIDDLE:
 				if (mouse.middle_button_press) 
 					return true;
 				return false;
-				break;
 #ifdef _WIN32
 			case wi::input::KEYBOARD_BUTTON_UP:
 				keycode = VK_UP;
@@ -521,6 +522,7 @@ namespace wi::input
 				keycode = VK_PRIOR;
 				break;
 #endif // _WIN32
+				default: break;
 			}
 #ifdef _WIN32
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);

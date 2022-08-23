@@ -15,7 +15,8 @@ namespace wi
 	{
 		CreateEmpty();
 	}
-	Archive::Archive(const std::string& fileName, bool readMode) : fileName(fileName), readMode(readMode)
+	Archive::Archive(const std::string& fileName, bool readMode)
+		: readMode(readMode), fileName(fileName)
 	{
 		if (!fileName.empty())
 		{

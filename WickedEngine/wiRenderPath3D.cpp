@@ -1311,6 +1311,8 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 				instanceInclusionMask_RTAO
 			);
 			break;
+		case AO_DISABLED:
+			break;
 		}
 	}
 }
