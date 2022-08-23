@@ -101,6 +101,7 @@ public:
 	wi::gui::CheckBox envProbesCheckBox;
 	wi::gui::CheckBox gridHelperCheckBox;
 	wi::gui::CheckBox cameraVisCheckBox;
+	wi::gui::CheckBox colliderVisCheckBox;
 
 	enum RENDERPATH
 	{

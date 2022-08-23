@@ -35,6 +35,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	scriptWnd.Create(editor);
 	rigidWnd.Create(editor);
 	softWnd.Create(editor);
+	colliderWnd.Create(editor);
 
 
 	newComponentCombo.Create("Add: ");
@@ -61,6 +62,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Script " ICON_SCRIPT, 15);
 	newComponentCombo.AddItem("Rigid Body " ICON_RIGIDBODY, 16);
 	newComponentCombo.AddItem("Soft Body " ICON_SOFTBODY, 17);
+	newComponentCombo.AddItem("Collider " ICON_COLLIDER, 18);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(-1);
 		if (editor->translator.selected.empty())
@@ -146,6 +148,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case 17:
 			if (scene.softbodies.Contains(entity))
+				return;
+			break;
+		case 18:
+			if (scene.colliders.Contains(entity))
 				return;
 			break;
 		default:
@@ -235,6 +241,9 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		case 17:
 			scene.softbodies.Create(entity);
 			break;
+		case 18:
+			scene.colliders.Create(entity);
+			break;
 		default:
 			break;
 		}
@@ -267,6 +276,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&scriptWnd);
 	AddWidget(&rigidWnd);
 	AddWidget(&softWnd);
+	AddWidget(&colliderWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -288,6 +298,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	scriptWnd.SetVisible(false);
 	rigidWnd.SetVisible(false);
 	softWnd.SetVisible(false);
+	colliderWnd.SetVisible(false);
 
 
 	SetSize(editor->optionsWnd.GetSize());
@@ -578,6 +589,19 @@ void ComponentsWindow::ResizeLayout()
 	else
 	{
 		weatherWnd.SetVisible(false);
+	}
+
+	if (scene.colliders.Contains(colliderWnd.entity))
+	{
+		colliderWnd.SetVisible(true);
+		colliderWnd.SetPos(pos);
+		colliderWnd.SetSize(XMFLOAT2(width, colliderWnd.GetScale().y));
+		pos.y += colliderWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		colliderWnd.SetVisible(false);
 	}
 
 	if (scene.scripts.Contains(scriptWnd.entity))

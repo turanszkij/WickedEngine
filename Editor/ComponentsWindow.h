@@ -20,6 +20,7 @@
 #include "ScriptWindow.h"
 #include "RigidBodyWindow.h"
 #include "SoftBodyWindow.h"
+#include "ColliderWindow.h"
 
 class EditorComponent;
 
@@ -53,4 +54,5 @@ public:
 	ScriptWindow scriptWnd;
 	RigidBodyWindow rigidWnd;
 	SoftBodyWindow softWnd;
+	ColliderWindow colliderWnd;
 };

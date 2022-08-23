@@ -1672,6 +1672,8 @@ namespace wi::scene
 
 		RunInverseKinematicsUpdateSystem(ctx);
 
+		RunColliderUpdateSystem(ctx);
+
 		RunSpringUpdateSystem(ctx);
 
 		RunArmatureUpdateSystem(ctx);
@@ -3168,21 +3170,21 @@ namespace wi::scene
 
 		});
 	}
-	void Scene::RunSpringUpdateSystem(wi::jobsystem::context& ctx)
+	void Scene::RunColliderUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		for (size_t i = 0; i < colliders.GetCount(); ++i)
 		{
 			ColliderComponent& collider = colliders[i];
-			if (!transforms.Contains(collider.transformID))
+			Entity entity = colliders.GetEntity(i);
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			if (transform == nullptr)
 				continue;
 
-			const TransformComponent& transform = *transforms.GetComponent(collider.transformID);
-
-			XMFLOAT3 scale = transform.GetScale();
+			XMFLOAT3 scale = transform->GetScale();
 			collider.sphere.radius = collider.radius * std::max(scale.x, std::max(scale.y, scale.z));
 			collider.capsule.radius = collider.sphere.radius;
 
-			XMMATRIX W = XMLoadFloat4x4(&transform.world);
+			XMMATRIX W = XMLoadFloat4x4(&transform->world);
 			XMVECTOR offset = XMLoadFloat3(&collider.offset);
 			XMVECTOR tail = XMLoadFloat3(&collider.tail);
 			offset = XMVector3Transform(offset, W);
@@ -3194,22 +3196,10 @@ namespace wi::scene
 			tail -= N * collider.capsule.radius;
 			XMStoreFloat3(&collider.capsule.base, offset);
 			XMStoreFloat3(&collider.capsule.tip, tail);
-
-#if 0
-			// Debug collider shape:
-			switch (collider.shape)
-			{
-			default:
-			case ColliderComponent::Shape::Sphere:
-				wi::renderer::DrawSphere(collider.sphere, XMFLOAT4(1, 0, 1, 1));
-				break;
-			case ColliderComponent::Shape::Capsule:
-				wi::renderer::DrawCapsule(collider.capsule, XMFLOAT4(1, 1, 0, 1));
-				break;
-			}
-#endif
 		}
-
+	}
+	void Scene::RunSpringUpdateSystem(wi::jobsystem::context& ctx)
+	{
 		static float time = 0;
 		time += dt;
 		const XMVECTOR windDir = XMLoadFloat3(&weather.windDirection);

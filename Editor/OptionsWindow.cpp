@@ -152,6 +152,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	newCombo.AddItem("Plane " ICON_SQUARE, 14);
 	newCombo.AddItem("Animation " ICON_ANIMATION, 15);
 	newCombo.AddItem("Script " ICON_SCRIPT, 16);
+	newCombo.AddItem("Collider " ICON_COLLIDER, 17);
 	newCombo.OnSelect([&](wi::gui::EventArgs args) {
 		newCombo.SetSelectedWithoutCallback(-1);
 		const EditorComponent::EditorScene& editorscene = editor->GetCurrentEditorScene();
@@ -255,6 +256,12 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			pick.entity = CreateEntity();
 			scene.scripts.Create(pick.entity);
 			scene.names.Create(pick.entity) = "script";
+			break;
+		case 17:
+			pick.entity = CreateEntity();
+			scene.colliders.Create(pick.entity);
+			scene.transforms.Create(pick.entity);
+			scene.names.Create(pick.entity) = "collider";
 			break;
 		default:
 			break;

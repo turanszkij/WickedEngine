@@ -365,6 +365,7 @@ void EditorComponent::Load()
 		componentsWnd.scriptWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.rigidWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.colliderWnd.SetEntity(INVALID_ENTITY);
 
 		optionsWnd.RefreshEntityTree();
 		ResetHistory();
@@ -1315,6 +1316,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.scriptWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.rigidWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.colliderWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1349,6 +1351,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.animWnd.SetEntity(picked.entity);
 		componentsWnd.scriptWnd.SetEntity(picked.entity);
 		componentsWnd.rigidWnd.SetEntity(picked.entity);
+		componentsWnd.colliderWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{
@@ -1534,20 +1537,6 @@ void EditorComponent::Render() const
 		// Spring visualizer:
 		if (componentsWnd.springWnd.debugCheckBox.GetCheck())
 		{
-			for (size_t i = 0; i < scene.colliders.GetCount(); ++i)
-			{
-				ColliderComponent& collider = scene.colliders[i];
-				switch (collider.shape)
-				{
-				default:
-				case ColliderComponent::Shape::Sphere:
-					wi::renderer::DrawSphere(collider.sphere, XMFLOAT4(1, 0, 1, 1));
-					break;
-				case ColliderComponent::Shape::Capsule:
-					wi::renderer::DrawCapsule(collider.capsule, XMFLOAT4(1, 1, 0, 1));
-					break;
-				}
-			}
 			for (size_t i = 0; i < scene.springs.GetCount(); ++i)
 			{
 				const SpringComponent& spring = scene.springs[i];

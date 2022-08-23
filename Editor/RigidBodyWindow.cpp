@@ -36,12 +36,11 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	collisionShapeComboBox.Create("Collision Shape: ");
 	collisionShapeComboBox.SetSize(XMFLOAT2(wid, hei));
 	collisionShapeComboBox.SetPos(XMFLOAT2(x, y));
-	collisionShapeComboBox.AddItem("DISABLED");
-	collisionShapeComboBox.AddItem("Box");
-	collisionShapeComboBox.AddItem("Sphere");
-	collisionShapeComboBox.AddItem("Capsule");
-	collisionShapeComboBox.AddItem("Convex Hull");
-	collisionShapeComboBox.AddItem("Triangle Mesh");
+	collisionShapeComboBox.AddItem("Box", RigidBodyPhysicsComponent::CollisionShape::BOX);
+	collisionShapeComboBox.AddItem("Sphere", RigidBodyPhysicsComponent::CollisionShape::SPHERE);
+	collisionShapeComboBox.AddItem("Capsule", RigidBodyPhysicsComponent::CollisionShape::CAPSULE);
+	collisionShapeComboBox.AddItem("Convex Hull", RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL);
+	collisionShapeComboBox.AddItem("Triangle Mesh", RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH);
 	collisionShapeComboBox.OnSelect([&](wi::gui::EventArgs args)
 		{
 			if (entity == INVALID_ENTITY)
@@ -49,94 +48,61 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 			Scene& scene = editor->GetCurrentScene();
 			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
-
-			if (args.iValue == 0)
-			{
-				if (physicscomponent != nullptr)
-				{
-					scene.rigidbodies.Remove(entity);
-				}
-				return;
-			}
-
 			if (physicscomponent == nullptr)
+				return;
+
+			XSlider.SetEnabled(false);
+			YSlider.SetEnabled(false);
+			ZSlider.SetEnabled(false);
+			XSlider.SetText("-");
+			YSlider.SetText("-");
+			ZSlider.SetText("-");
+
+			RigidBodyPhysicsComponent::CollisionShape shape = (RigidBodyPhysicsComponent::CollisionShape)args.userdata;
+			if (physicscomponent->shape != shape)
 			{
-				physicscomponent = &scene.rigidbodies.Create(entity);
-				physicscomponent->SetKinematic(kinematicCheckBox.GetCheck());
-				physicscomponent->SetDisableDeactivation(disabledeactivationCheckBox.GetCheck());
-				physicscomponent->shape = (RigidBodyPhysicsComponent::CollisionShape)collisionShapeComboBox.GetSelected();
+				physicscomponent->physicsobject = nullptr;
+				physicscomponent->shape = shape;
 			}
 
-			if (physicscomponent != nullptr)
+			switch (shape)
 			{
-				XSlider.SetEnabled(false);
-				YSlider.SetEnabled(false);
-				ZSlider.SetEnabled(false);
-				XSlider.SetText("-");
+			case RigidBodyPhysicsComponent::CollisionShape::BOX:
+				XSlider.SetEnabled(true);
+				YSlider.SetEnabled(true);
+				ZSlider.SetEnabled(true);
+				XSlider.SetText("Width");
+				YSlider.SetText("Height");
+				ZSlider.SetText("Depth");
+				XSlider.SetValue(physicscomponent->box.halfextents.x);
+				YSlider.SetValue(physicscomponent->box.halfextents.y);
+				ZSlider.SetValue(physicscomponent->box.halfextents.z);
+				break;
+			case RigidBodyPhysicsComponent::CollisionShape::SPHERE:
+				XSlider.SetEnabled(true);
+				XSlider.SetText("Radius");
 				YSlider.SetText("-");
 				ZSlider.SetText("-");
-
-				switch (args.iValue)
+				XSlider.SetValue(physicscomponent->sphere.radius);
+				break;
+			case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
+				if (physicscomponent->shape != RigidBodyPhysicsComponent::CollisionShape::CAPSULE)
 				{
-				case 1:
-					if (physicscomponent->shape != RigidBodyPhysicsComponent::CollisionShape::BOX)
-					{
-						physicscomponent->physicsobject = nullptr;
-						physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::BOX;
-					}
-					XSlider.SetEnabled(true);
-					YSlider.SetEnabled(true);
-					ZSlider.SetEnabled(true);
-					XSlider.SetText("Width");
-					YSlider.SetText("Height");
-					ZSlider.SetText("Depth");
-					XSlider.SetValue(physicscomponent->box.halfextents.x);
-					YSlider.SetValue(physicscomponent->box.halfextents.y);
-					ZSlider.SetValue(physicscomponent->box.halfextents.z);
-					break;
-				case 2:
-					if (physicscomponent->shape != RigidBodyPhysicsComponent::CollisionShape::SPHERE)
-					{
-						physicscomponent->physicsobject = nullptr;
-						physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::SPHERE;
-					}
-					XSlider.SetEnabled(true);
-					XSlider.SetText("Radius");
-					YSlider.SetText("-");
-					ZSlider.SetText("-");
-					XSlider.SetValue(physicscomponent->sphere.radius);
-					break;
-				case 3:
-					if (physicscomponent->shape != RigidBodyPhysicsComponent::CollisionShape::CAPSULE)
-					{
-						physicscomponent->physicsobject = nullptr;
-						physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::CAPSULE;
-					}
-					XSlider.SetEnabled(true);
-					YSlider.SetEnabled(true);
-					XSlider.SetText("Height");
-					YSlider.SetText("Radius");
-					ZSlider.SetText("-");
-					XSlider.SetValue(physicscomponent->capsule.height);
-					YSlider.SetValue(physicscomponent->capsule.radius);
-					break;
-				case 4:
-					if (physicscomponent->shape != RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL)
-					{
-						physicscomponent->physicsobject = nullptr;
-						physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL;
-					}
-					break;
-				case 5:
-					if (physicscomponent->shape != RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH)
-					{
-						physicscomponent->physicsobject = nullptr;
-						physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH;
-					}
-					break;
-				default:
-					break;
+					physicscomponent->physicsobject = nullptr;
+					physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::CAPSULE;
 				}
+				XSlider.SetEnabled(true);
+				YSlider.SetEnabled(true);
+				XSlider.SetText("Height");
+				YSlider.SetText("Radius");
+				ZSlider.SetText("-");
+				XSlider.SetValue(physicscomponent->capsule.height);
+				YSlider.SetValue(physicscomponent->capsule.radius);
+				break;
+			case RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL:
+			case RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH:
+			default:
+				break;
 			}
 		});
 	collisionShapeComboBox.SetSelected(0);
@@ -209,6 +175,10 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		}
 		});
 	AddWidget(&ZSlider);
+
+	XSlider.SetText("Width");
+	YSlider.SetText("Height");
+	ZSlider.SetText("Depth");
 
 	massSlider.Create(0, 10, 1, 100000, "Mass: ");
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
