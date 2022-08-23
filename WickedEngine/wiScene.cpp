@@ -3361,6 +3361,24 @@ namespace wi::scene
 				case ColliderComponent::Shape::Capsule:
 					tail_sphere.intersects(collider.capsule, dist, direction);
 					break;
+				case ColliderComponent::Shape::Plane:
+					dist = wi::math::GetPlanePointDistance(XMLoadFloat3(&collider.planeOrigin), XMLoadFloat3(&collider.planeNormal), tail_next);
+					dist = dist - tail_sphere.radius;
+					if (dist < 0)
+					{
+						direction = collider.planeNormal;
+						XMMATRIX planeProjection = XMLoadFloat4x4(&collider.planeProjection);
+						XMVECTOR clipSpacePos = XMVector3Transform(tail_next, planeProjection);
+						XMVECTOR uvw = clipSpacePos * XMVectorSet(0.5f, -0.5f, 0.5f, 1) + XMVectorSet(0.5f, 0.5f, 0.5f, 0);
+						XMVECTOR uvw_sat = XMVectorSaturate(uvw);
+						if (std::abs(XMVectorGetX(uvw) - XMVectorGetX(uvw_sat)) > std::numeric_limits<float>::epsilon())
+							dist = 1; // force no collision
+						else if (std::abs(XMVectorGetY(uvw) - XMVectorGetY(uvw_sat)) > std::numeric_limits<float>::epsilon())
+							dist = 1; // force no collision
+						else if (std::abs(XMVectorGetZ(uvw) - XMVectorGetZ(uvw_sat)) > std::numeric_limits<float>::epsilon())
+							dist = 1; // force no collision
+					}
+					break;
 				}
 
 				if (dist < 0)
