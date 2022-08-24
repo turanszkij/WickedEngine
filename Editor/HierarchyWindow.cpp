@@ -77,25 +77,30 @@ void HierarchyWindow::SetEntity(Entity entity)
 
 	Scene& scene = editor->GetCurrentScene();
 
+	entities.clear();
+	scene.FindAllEntities(entities);
+
 	parentCombo.ClearItems();
 	parentCombo.AddItem("NO PARENT " ICON_DISABLED);
 	HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
-	for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+	for (auto candidate_parent_entity : entities)
 	{
-		Entity candidate_parent_entity = scene.transforms.GetEntity(i);
 		if (candidate_parent_entity == entity)
 		{
 			continue; // Don't list selected (don't allow attach to self)
 		}
 
+		// Don't allow creating a loop:
 		bool loop = false;
-		for (size_t j = 0; j < scene.hierarchy.GetCount(); ++j)
+		const HierarchyComponent* candidate_hier = scene.hierarchy.GetComponent(candidate_parent_entity);
+		while (candidate_hier != nullptr && loop == false)
 		{
-			if (scene.hierarchy[j].parentID == entity)
+			if (candidate_hier->parentID == entity)
 			{
 				loop = true;
 				break;
 			}
+			candidate_hier = scene.hierarchy.GetComponent(candidate_hier->parentID);
 		}
 		if (loop)
 		{
