@@ -3,7 +3,7 @@
 
 class EditorComponent;
 
-class NameWindow : public wi::gui::Window
+class HierarchyWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
@@ -12,7 +12,7 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::gui::TextInputField nameInput;
+	wi::gui::ComboBox parentCombo;
 
 	void ResizeLayout() override;
 };

@@ -944,6 +944,8 @@ void OptionsWindow::RefreshEntityTree()
 		// Add hierarchy:
 		for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 		{
+			if (scene.hierarchy[i].parentID == INVALID_ENTITY)
+				continue;
 			PushToEntityTree(scene.hierarchy[i].parentID, 0);
 		}
 	}

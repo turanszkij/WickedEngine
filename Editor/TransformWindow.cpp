@@ -28,7 +28,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 
 	float x = 80;
 	float xx = x;
-	float y = 0;
+	float y = 4;
 	float step = 25;
 	float siz = 50;
 	float hei = 20;
@@ -53,32 +53,6 @@ void TransformWindow::Create(EditorComponent* _editor)
 		}
 		});
 	AddWidget(&clearButton);
-
-	parentCombo.Create("Parent: ");
-	parentCombo.SetSize(XMFLOAT2(wid, hei));
-	parentCombo.SetPos(XMFLOAT2(x, y += step));
-	parentCombo.SetEnabled(false);
-	parentCombo.OnSelect([&](wi::gui::EventArgs args) {
-
-		wi::Archive& archive = editor->AdvanceHistory();
-		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
-		editor->RecordEntity(archive, entity);
-
-		Scene& scene = editor->GetCurrentScene();
-		if (args.iValue == 0)
-		{
-			scene.Component_Detach(entity);
-		}
-		else
-		{
-		    scene.Component_Attach(entity, (Entity)args.userdata);
-		}
-
-		editor->RecordEntity(archive, entity);
-
-	});
-	parentCombo.SetTooltip("Choose a parent entity (also works if selected entity has no transform)");
-	AddWidget(&parentCombo);
 
 	txInput.Create("");
 	txInput.SetValue(0);
@@ -126,12 +100,12 @@ void TransformWindow::Create(EditorComponent* _editor)
 	AddWidget(&tzInput);
 
 	x = 250;
-	y = step;
+	y = 4 + step;
 
 	sxInput.Create("");
 	sxInput.SetValue(1);
 	sxInput.SetDescription("Scale X: ");
-	sxInput.SetPos(XMFLOAT2(x, y += step));
+	sxInput.SetPos(XMFLOAT2(x, y));
 	sxInput.SetSize(XMFLOAT2(siz, hei));
 	sxInput.OnInputAccepted([&](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
@@ -174,7 +148,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	AddWidget(&szInput);
 
 	x = xx;
-	y = step * 4.5f;
+	y = step * 4;
 
 
 	rollInput.Create("");
@@ -241,7 +215,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	AddWidget(&yawInput);
 
 	x = 250;
-	y = step * 4.5f;
+	y = step * 4;
 
 	rxInput.Create("");
 	rxInput.SetValue(0);
@@ -390,40 +364,5 @@ void TransformWindow::SetEntity(Entity entity)
 	else
 	{
 		SetEnabled(false);
-	}
-
-	parentCombo.SetEnabled(true);
-	parentCombo.ClearItems();
-	parentCombo.AddItem("NO PARENT");
-	HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
-	for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
-	{
-		Entity candidate_parent_entity = scene.transforms.GetEntity(i);
-		if (candidate_parent_entity == entity)
-		{
-			continue; // Don't list selected (don't allow attach to self)
-		}
-
-		bool loop = false;
-		for (size_t j = 0; j < scene.hierarchy.GetCount(); ++j)
-		{
-			if (scene.hierarchy[j].parentID == entity)
-			{
-				loop = true;
-				break;
-			}
-		}
-		if (loop)
-		{
-			continue;
-		}
-
-		const NameComponent* name = scene.names.GetComponent(candidate_parent_entity);
-		parentCombo.AddItem(name == nullptr ? std::to_string(candidate_parent_entity) : name->name, candidate_parent_entity);
-
-		if (hier != nullptr && hier->parentID == candidate_parent_entity)
-		{
-			parentCombo.SetSelectedWithoutCallback((int)parentCombo.GetItemCount() - 1);
-		}
 	}
 }

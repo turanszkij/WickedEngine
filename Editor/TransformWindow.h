@@ -14,8 +14,6 @@ public:
 
 	wi::gui::Button clearButton;
 
-	wi::gui::ComboBox parentCombo;
-
 	wi::gui::TextInputField txInput;
 	wi::gui::TextInputField tyInput;
 	wi::gui::TextInputField tzInput;
