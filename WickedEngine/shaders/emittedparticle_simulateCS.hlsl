@@ -21,8 +21,8 @@ RWByteAddressBuffer vertexBuffer_COL : register(u9);
 RWStructuredBuffer<uint> culledIndirectionBuffer : register(u10);
 RWStructuredBuffer<uint> culledIndirectionBuffer2 : register(u11);
 
-#define SPH_FLOOR_COLLISION
-#define SPH_BOX_COLLISION
+//#define SPH_FLOOR_COLLISION
+//#define SPH_BOX_COLLISION
 
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
@@ -40,29 +40,105 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		Particle particle = particleBuffer[particleIndex];
 		uint v0 = particleIndex * 4;
 
+		const float lifeLerp = 1 - particle.life / particle.maxLife;
+		const float particleSize = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
+
+		// integrate:
+		particle.force += xParticleGravity;
+		particle.velocity += particle.force * dt;
+		particle.position += particle.velocity * dt;
+
+		// reset force for next frame:
+		particle.force = 0;
+
+		// drag: 
+		particle.velocity *= xParticleDrag;
+
 		if (particle.life > 0)
 		{
-			// simulate:
+			// process forces and colliders:
 			for (uint i = 0; i < GetFrame().forcefieldarray_count; ++i)
 			{
-				ShaderEntity forceField = load_entity(GetFrame().forcefieldarray_offset + i);
+				ShaderEntity entity = load_entity(GetFrame().forcefieldarray_offset + i);
 
 				[branch]
-				if (forceField.layerMask & xEmitterLayerMask)
+				if (entity.layerMask & xEmitterLayerMask)
 				{
-					float3 dir = forceField.position - particle.position;
-					float dist;
-					if (forceField.GetType() == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
-					{
-						dist = length(dir);
-					}
-					else // planar force field
-					{
-						dist = dot(forceField.GetDirection(), dir);
-						dir = forceField.GetDirection();
-					}
+					const float range = entity.GetRange();
+					const uint type = entity.GetType();
 
-					particle.force += dir * forceField.GetGravity() * (1 - saturate(dist / forceField.GetRange()));
+					if (type == ENTITY_TYPE_COLLIDER_CAPSULE)
+					{
+						float3 A = entity.position;
+						float3 B = entity.GetColliderTip();
+						float3 N = normalize(A - B);
+						A -= N * range;
+						B += N * range;
+						float3 C = closest_point_on_segment(A, B, particle.position);
+						float3 dir = C - particle.position;
+						float dist = length(dir);
+						dir /= dist;
+						dist = dist - range - particleSize;
+						if (dist < 0)
+						{
+							particle.velocity = reflect(particle.velocity, dir);
+							float3 offset_velocity = dir * dist;
+							particle.position = particle.position + offset_velocity;
+							particle.velocity += offset_velocity;
+						}
+					}
+					else
+					{
+						float3 dir = entity.position - particle.position;
+						float dist = length(dir);
+						dir /= dist;
+
+						switch (type)
+						{
+						case ENTITY_TYPE_FORCEFIELD_POINT:
+							particle.force += dir * entity.GetGravity() * (1 - saturate(dist / range));
+							break;
+						case ENTITY_TYPE_FORCEFIELD_PLANE:
+							particle.force += entity.GetDirection() * entity.GetGravity() * (1 - saturate(dist / range));
+							break;
+						case ENTITY_TYPE_COLLIDER_SPHERE:
+							dist = dist - range - particleSize;
+							if (dist < 0)
+							{
+								particle.velocity = reflect(particle.velocity, dir);
+								float3 offset_velocity = dir * dist;
+								particle.position = particle.position + offset_velocity;
+								particle.velocity += offset_velocity;
+							}
+							break;
+						case ENTITY_TYPE_COLLIDER_PLANE:
+							dir = normalize(entity.GetDirection());
+							dist = plane_point_distance(entity.position, dir, particle.position);
+							if (dist < 0)
+							{
+								dir *= -1;
+								dist = abs(dist);
+							}
+							dist = dist - particleSize;
+							if (dist < 0)
+							{
+								float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
+								const float3 clipSpacePos = mul(planeProjection, float4(particle.position, 1)).xyz;
+								const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+								[branch]
+								if (is_saturated(uvw))
+								{
+									particle.velocity = reflect(particle.velocity, dir);
+									float3 offset_velocity = -dir * dist;
+									particle.position = particle.position + offset_velocity;
+									particle.velocity += offset_velocity;
+								}
+							}
+							break;
+						default:
+							break;
+						}
+					}
 				}
 			}
 
@@ -81,9 +157,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				float depth0 = texture_depth_history[pixel];
 				float surfaceLinearDepth = compute_lineardepth(depth0);
 				float surfaceThickness = 1.5f;
-
-				float lifeLerp = 1 - particle.life / particle.maxLife;
-				float particleSize = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
 
 				// check if particle is colliding with the depth buffer, but not completely behind it:
 				if ((pos2D.w + particleSize > surfaceLinearDepth) && (pos2D.w - particleSize < surfaceLinearDepth + surfaceThickness))
@@ -105,20 +178,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				}
 			}
 #endif // DEPTHCOLLISIONS
-
-			// integrate:
-			particle.force += xParticleGravity;
-			particle.velocity += particle.force * dt;
-			particle.position += particle.velocity * dt;
-
-			// reset force for next frame:
-			particle.force = 0;
-
-			// drag: 
-			particle.velocity *= xParticleDrag;
-
-			float lifeLerp = 1 - particle.life / particle.maxLife;
-			float particleSize = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
 
 			[branch]
 			if (xEmitterOptions & EMITTER_OPTION_BIT_SPH_ENABLED)

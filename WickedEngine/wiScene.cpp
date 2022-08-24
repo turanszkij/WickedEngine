@@ -3196,6 +3196,20 @@ namespace wi::scene
 			tail -= N * collider.capsule.radius;
 			XMStoreFloat3(&collider.capsule.base, offset);
 			XMStoreFloat3(&collider.capsule.tip, tail);
+
+			if (collider.shape == ColliderComponent::Shape::Plane)
+			{
+				collider.planeOrigin = collider.sphere.center;
+				XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
+				XMStoreFloat3(&collider.planeNormal, N);
+
+				XMMATRIX PLANE = XMMatrixScaling(collider.radius, 1, collider.radius);
+				PLANE = PLANE * XMMatrixTranslationFromVector(XMLoadFloat3(&collider.offset));
+				PLANE = PLANE * W;
+				PLANE = XMMatrixInverse(nullptr, PLANE);
+				XMStoreFloat4x4(&collider.planeProjection, PLANE);
+			}
 		}
 	}
 	void Scene::RunSpringUpdateSystem(wi::jobsystem::context& ctx)
@@ -3346,6 +3360,31 @@ namespace wi::scene
 					break;
 				case ColliderComponent::Shape::Capsule:
 					tail_sphere.intersects(collider.capsule, dist, direction);
+					break;
+				case ColliderComponent::Shape::Plane:
+					dist = wi::math::GetPlanePointDistance(XMLoadFloat3(&collider.planeOrigin), XMLoadFloat3(&collider.planeNormal), tail_next);
+					direction = collider.planeNormal;
+					if (dist < 0)
+					{
+						direction.x *= -1;
+						direction.y *= -1;
+						direction.z *= -1;
+						dist = std::abs(dist);
+					}
+					dist = dist - tail_sphere.radius;
+					if (dist < 0)
+					{
+						XMMATRIX planeProjection = XMLoadFloat4x4(&collider.planeProjection);
+						XMVECTOR clipSpacePos = XMVector3Transform(tail_next, planeProjection);
+						XMVECTOR uvw = clipSpacePos * XMVectorSet(0.5f, -0.5f, 0.5f, 1) + XMVectorSet(0.5f, 0.5f, 0.5f, 0);
+						XMVECTOR uvw_sat = XMVectorSaturate(uvw);
+						if (std::abs(XMVectorGetX(uvw) - XMVectorGetX(uvw_sat)) > std::numeric_limits<float>::epsilon())
+							dist = 1; // force no collision
+						else if (std::abs(XMVectorGetY(uvw) - XMVectorGetY(uvw_sat)) > std::numeric_limits<float>::epsilon())
+							dist = 1; // force no collision
+						else if (std::abs(XMVectorGetZ(uvw) - XMVectorGetZ(uvw_sat)) > std::numeric_limits<float>::epsilon())
+							dist = 1; // force no collision
+					}
 					break;
 				}
 

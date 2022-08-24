@@ -37,6 +37,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	shapeCombo.SetPos(XMFLOAT2(x, y));
 	shapeCombo.AddItem("Sphere", (uint64_t)ColliderComponent::Shape::Sphere);
 	shapeCombo.AddItem("Capsule", (uint64_t)ColliderComponent::Shape::Capsule);
+	shapeCombo.AddItem("Plane", (uint64_t)ColliderComponent::Shape::Plane);
 	shapeCombo.OnSelect([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		ColliderComponent* collider = scene.colliders.GetComponent(entity);

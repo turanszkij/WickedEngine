@@ -1001,7 +1001,7 @@ void EditorComponent::Update(float dt)
 
 						optionsWnd.RefreshEntityTree();
 					}
-					else
+					else if(translator.selected.empty())
 					{
 						// Check for interactive grass (hair particle that is child of hovered object:
 						for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
