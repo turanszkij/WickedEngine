@@ -43,6 +43,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		const float lifeLerp = 1 - particle.life / particle.maxLife;
 		const float particleSize = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
 
+		// integrate:
+		particle.force += xParticleGravity;
+		particle.velocity += particle.force * dt;
+		particle.position += particle.velocity * dt;
+
+		// reset force for next frame:
+		particle.force = 0;
+
+		// drag: 
+		particle.velocity *= xParticleDrag;
+
 		if (particle.life > 0)
 		{
 			// process forces and colliders:
@@ -70,8 +81,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 						dist = dist - range - particleSize;
 						if (dist < 0)
 						{
-							particle.position = particle.position + dir * dist;
 							particle.velocity = reflect(particle.velocity, dir);
+							float3 offset_velocity = dir * dist;
+							particle.position = particle.position + offset_velocity;
+							particle.velocity += offset_velocity;
 						}
 					}
 					else
@@ -92,8 +105,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 							dist = dist - range - particleSize;
 							if (dist < 0)
 							{
-								particle.position = particle.position + dir * dist;
 								particle.velocity = reflect(particle.velocity, dir);
+								float3 offset_velocity = dir * dist;
+								particle.position = particle.position + offset_velocity;
+								particle.velocity += offset_velocity;
 							}
 							break;
 						case ENTITY_TYPE_COLLIDER_PLANE:
@@ -113,8 +128,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 								[branch]
 								if (is_saturated(uvw))
 								{
-									particle.position = particle.position - dir * dist;
 									particle.velocity = reflect(particle.velocity, dir);
+									float3 offset_velocity = -dir * dist;
+									particle.position = particle.position + offset_velocity;
+									particle.velocity += offset_velocity;
 								}
 							}
 							break;
@@ -161,17 +178,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				}
 			}
 #endif // DEPTHCOLLISIONS
-
-			// integrate:
-			particle.force += xParticleGravity;
-			particle.velocity += particle.force * dt;
-			particle.position += particle.velocity * dt;
-
-			// reset force for next frame:
-			particle.force = 0;
-
-			// drag: 
-			particle.velocity *= xParticleDrag;
 
 			[branch]
 			if (xEmitterOptions & EMITTER_OPTION_BIT_SPH_ENABLED)
