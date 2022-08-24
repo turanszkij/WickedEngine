@@ -32,6 +32,7 @@ set (SOURCE_FILES
 	RigidBodyWindow.cpp
 	SoftBodyWindow.cpp
 	ColliderWindow.cpp
+	HierarchyWindow.cpp
 	OptionsWindow.cpp
 	ComponentsWindow.cpp
 	TerrainGenerator.cpp
