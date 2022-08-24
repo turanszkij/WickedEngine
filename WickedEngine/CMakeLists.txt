@@ -246,12 +246,16 @@ else ()
 	# read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
 	target_compile_options(${TARGET_NAME} PRIVATE
 			-Wuninitialized
+			-Wmaybe-uninitialized
 			-Wwrite-strings
 			-Winit-self
 			-Wreturn-type
 			-Wreorder
 			-Werror=delete-non-virtual-dtor
-			-Werror)
+			-Werror
+			#uncomment this to stop the compilation at the first error
+			# -Wfatal-errors
+			)
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)
 
