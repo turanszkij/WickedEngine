@@ -289,7 +289,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 
 	filterCombo.Create("Filter: ");
-	filterCombo.AddItem("All ", (uint64_t)Filter::All);
+	filterCombo.AddItem("All " ICON_FILTER, (uint64_t)Filter::All);
 	filterCombo.AddItem("Transform " ICON_TRANSFORM, (uint64_t)Filter::Transform);
 	filterCombo.AddItem("Material " ICON_MATERIAL, (uint64_t)Filter::Material);
 	filterCombo.AddItem("Mesh " ICON_MESH, (uint64_t)Filter::Mesh);
