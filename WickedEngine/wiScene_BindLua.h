@@ -425,6 +425,9 @@ namespace wi::lua::scene
 		int IsPlaying(lua_State* L);
 		int SetPlayOnce(lua_State* L);
 		int Stop(lua_State* L);
+
+		int PrependCustomParameters(lua_State* L);
+		int AppendCustomParameters(lua_State* L);
 	};
 
 	class RigidBodyPhysicsComponent_BindLua
@@ -522,13 +525,31 @@ namespace wi::lua::scene
 		bool owning = false;
 		wi::scene::WeatherComponent* component = nullptr;
 
+		void InitParameters();
+
 		static const char className[];
 		static Luna<WeatherComponent_BindLua>::FunctionType methods[];
 		static Luna<WeatherComponent_BindLua>::PropertyType properties[];
 
-		WeatherComponent_BindLua(wi::scene::WeatherComponent* component) :component(component) {}
+		WeatherComponent_BindLua(wi::scene::WeatherComponent* component) :component(component) { InitParameters(); }
 		WeatherComponent_BindLua(lua_State* L);
 		~WeatherComponent_BindLua();
+
+		wi::unordered_map<std::string, XMFLOAT3*> weatherparams_xmfloat3;
+		wi::unordered_map<std::string, float*> weatherparams_float;
+
+		wi::unordered_map<std::string, int*> oceanparams_int;
+		wi::unordered_map<std::string, uint32_t*> oceanparams_uint32;
+		wi::unordered_map<std::string, XMFLOAT2*> oceanparams_xmfloat2;
+		wi::unordered_map<std::string, XMFLOAT4*> oceanparams_xmfloat4;
+		wi::unordered_map<std::string, float*> oceanparams_float;
+
+		wi::unordered_map<std::string, XMFLOAT3*> atmosphereparams_xmfloat3;
+		wi::unordered_map<std::string, float*> atmosphereparams_float;
+
+		wi::unordered_map<std::string, XMFLOAT3*> volumetriccloudparams_xmfloat3;
+		wi::unordered_map<std::string, XMFLOAT4*> volumetriccloudparams_xmfloat4;
+		wi::unordered_map<std::string, float*> volumetriccloudparams_float;
 
 		int GetWeatherParams(lua_State* L);
 		int GetOceanParams(lua_State* L);

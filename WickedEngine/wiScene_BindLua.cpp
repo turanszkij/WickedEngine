@@ -3276,6 +3276,8 @@ Luna<ScriptComponent_BindLua>::FunctionType ScriptComponent_BindLua::methods[] =
 	lunamethod(ScriptComponent_BindLua, IsPlaying),
 	lunamethod(ScriptComponent_BindLua, SetPlayOnce),
 	lunamethod(ScriptComponent_BindLua, Stop),
+	lunamethod(ScriptComponent_BindLua, PrependCustomParameters),
+	lunamethod(ScriptComponent_BindLua, AppendCustomParameters),
 	{ NULL, NULL }
 };
 Luna<ScriptComponent_BindLua>::PropertyType ScriptComponent_BindLua::properties[] = {
@@ -3332,6 +3334,32 @@ int ScriptComponent_BindLua::SetPlayOnce(lua_State* L)
 int ScriptComponent_BindLua::Stop(lua_State* L)
 {
 	component->Stop();
+	return 0;
+}
+int ScriptComponent_BindLua::PrependCustomParameters(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->customparameters_prepend = wi::lua::SGetString(L, 1);
+	}
+	else
+	{
+		wi::lua::SError(L, "PrependCustomParameters(string parameters) not enough arguments!");
+	}
+	return 0;
+}
+int ScriptComponent_BindLua::AppendCustomParameters(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->customparameters_append = wi::lua::SGetString(L, 1);
+	}
+	else
+	{
+		wi::lua::SError(L, "AppendCustomParameters(string parameters) not enough arguments!");
+	}
 	return 0;
 }
 
@@ -3885,39 +3913,93 @@ WeatherComponent_BindLua::~WeatherComponent_BindLua()
 	}
 }
 
+void WeatherComponent_BindLua::InitParameters(){
+	// Weather Parameters
+	weatherparams_xmfloat3["sunColor"] = &component->sunColor;
+	weatherparams_xmfloat3["sunDirection"] = &component->sunDirection;
+	weatherparams_xmfloat3["horizon"] = &component->horizon;
+	weatherparams_xmfloat3["zenith"] = &component->zenith;
+	weatherparams_xmfloat3["ambient"] = &component->ambient;
+	weatherparams_xmfloat3["windDirection"] = &component->ambient;
+	weatherparams_float["skyExposure"] = &component->skyExposure;
+	weatherparams_float["fogStart"] = &component->fogStart;
+	weatherparams_float["fogEnd"] = &component->fogEnd;
+	weatherparams_float["fogHeightStart"] = &component->fogHeightStart;
+	weatherparams_float["fogHeightSky"] = &component->fogHeightSky;
+	weatherparams_float["cloudiness"] = &component->cloudiness;
+	weatherparams_float["cloudScale"] = &component->cloudScale;
+	weatherparams_float["cloudSpeed"] = &component->cloudSpeed;
+	weatherparams_float["cloud_shadow_amount"] = &component->cloud_shadow_amount;
+	weatherparams_float["cloud_shadow_scale"] = &component->cloud_shadow_scale;
+	weatherparams_float["cloud_shadow_speed"] = &component->cloud_shadow_speed;
+	weatherparams_float["windRandomness"] = &component->windRandomness;
+	weatherparams_float["windWaveSize"] = &component->windWaveSize;
+	weatherparams_float["windSpeed"] = &component->windSpeed;
+	weatherparams_float["stars"] = &component->stars;
+
+	//Ocean Parameters
+	oceanparams_int["dmap_dim"] = &component->oceanParameters.dmap_dim;
+	oceanparams_uint32["dmap_dim"] = &component->oceanParameters.surfaceDetail;
+	oceanparams_xmfloat2["wind_dir"] = &component->oceanParameters.wind_dir;
+	oceanparams_xmfloat4["waterColor"] = &component->oceanParameters.waterColor;
+	oceanparams_float["patch_length"] = &component->oceanParameters.patch_length;
+	oceanparams_float["time_scale"] = &component->oceanParameters.time_scale;
+	oceanparams_float["wave_amplitude"] = &component->oceanParameters.wave_amplitude;
+	oceanparams_float["wind_speed"] = &component->oceanParameters.wind_speed;
+	oceanparams_float["wind_dependency"] = &component->oceanParameters.wind_dependency;
+	oceanparams_float["choppy_scale"] = &component->oceanParameters.choppy_scale;
+	oceanparams_float["waterHeight"] = &component->oceanParameters.waterHeight;
+	oceanparams_float["surfaceDisplacementTolerance"] = &component->oceanParameters.surfaceDisplacementTolerance;
+
+	//Weather Parameters
+	atmosphereparams_xmfloat3["planetCenter"] = &component->atmosphereParameters.planetCenter;
+	atmosphereparams_xmfloat3["rayleighScattering"] = &component->atmosphereParameters.rayleighScattering;
+	atmosphereparams_xmfloat3["mieScattering"] = &component->atmosphereParameters.mieScattering;
+	atmosphereparams_xmfloat3["mieExtinction"] = &component->atmosphereParameters.mieExtinction;
+	atmosphereparams_xmfloat3["mieAbsorption"] = &component->atmosphereParameters.mieAbsorption;
+	atmosphereparams_xmfloat3["absorptionExtinction"] = &component->atmosphereParameters.absorptionExtinction;
+	atmosphereparams_xmfloat3["groundAlbedo"] = &component->atmosphereParameters.groundAlbedo;
+	atmosphereparams_float["bottomRadius"] = &component->atmosphereParameters.bottomRadius;
+	atmosphereparams_float["topRadius"] = &component->atmosphereParameters.topRadius;
+	atmosphereparams_float["rayleighDensityExpScale"] = &component->atmosphereParameters.rayleighDensityExpScale;
+	atmosphereparams_float["mieDensityExpScale"] = &component->atmosphereParameters.mieDensityExpScale;
+	atmosphereparams_float["miePhaseG"] = &component->atmosphereParameters.miePhaseG;
+	atmosphereparams_float["absorptionDensity0LayerWidth"] = &component->atmosphereParameters.absorptionDensity0LayerWidth;
+	atmosphereparams_float["absorptionDensity0ConstantTerm"] = &component->atmosphereParameters.absorptionDensity0ConstantTerm;
+	atmosphereparams_float["absorptionDensity0LinearTerm"] = &component->atmosphereParameters.absorptionDensity0LinearTerm;
+	atmosphereparams_float["absorptionDensity1ConstantTerm"] = &component->atmosphereParameters.absorptionDensity1ConstantTerm;
+	atmosphereparams_float["absorptionDensity1LinearTerm"] = &component->atmosphereParameters.absorptionDensity1LinearTerm;
+
+	//Volumetric Cloud Parameters
+	volumetriccloudparams_xmfloat3["Albedo"] = &component->volumetricCloudParameters.Albedo;
+	volumetriccloudparams_xmfloat3["ExtinctionCoefficient"] = &component->volumetricCloudParameters.ExtinctionCoefficient;
+	volumetriccloudparams_xmfloat4["CloudGradientSmall"] = &component->volumetricCloudParameters.CloudGradientSmall;
+	volumetriccloudparams_xmfloat4["CloudGradientMedium"] = &component->volumetricCloudParameters.CloudGradientMedium;
+	volumetriccloudparams_xmfloat4["CloudGradientLarge"] = &component->volumetricCloudParameters.CloudGradientLarge;
+	volumetriccloudparams_float["CloudAmbientGroundMultiplier"] = &component->volumetricCloudParameters.CloudAmbientGroundMultiplier;
+	volumetriccloudparams_float["CoverageAmount"] = &component->volumetricCloudParameters.CoverageAmount;
+	volumetriccloudparams_float["CoverageMinimum"] = &component->volumetricCloudParameters.CoverageMinimum;
+	volumetriccloudparams_float["HorizonBlendAmount"] = &component->volumetricCloudParameters.HorizonBlendAmount;
+	volumetriccloudparams_float["HorizonBlendPower"] = &component->volumetricCloudParameters.HorizonBlendPower;
+	volumetriccloudparams_float["WeatherDensityAmount"] = &component->volumetricCloudParameters.WeatherDensityAmount;
+	volumetriccloudparams_float["CloudStartHeight"] = &component->volumetricCloudParameters.CloudStartHeight;
+	volumetriccloudparams_float["SkewAlongWindDirection"] = &component->volumetricCloudParameters.SkewAlongWindDirection;
+	volumetriccloudparams_float["TotalNoiseScale"] = &component->volumetricCloudParameters.TotalNoiseScale;
+	volumetriccloudparams_float["DetailScale"] = &component->volumetricCloudParameters.DetailScale;
+	volumetriccloudparams_float["WeatherScale"] = &component->volumetricCloudParameters.WeatherScale;
+	volumetriccloudparams_float["CurlScale"] = &component->volumetricCloudParameters.CurlScale;
+	volumetriccloudparams_float["ShapeNoiseHeightGradientAmount"] = &component->volumetricCloudParameters.ShapeNoiseHeightGradientAmount;
+	volumetriccloudparams_float["ShapeNoiseMultiplier"] = &component->volumetricCloudParameters.ShapeNoiseMultiplier;
+}
+
 int WeatherComponent_BindLua::GetWeatherParams(lua_State* L)
 {
-	wi::unordered_map<std::string, XMFLOAT3*> export_xmfloat3;
-	export_xmfloat3["sunColor"] = &component->sunColor;
-	export_xmfloat3["sunDirection"] = &component->sunDirection;
-	export_xmfloat3["horizon"] = &component->horizon;
-	export_xmfloat3["zenith"] = &component->zenith;
-	export_xmfloat3["ambient"] = &component->ambient;
-	export_xmfloat3["windDirection"] = &component->ambient;
-
-	wi::unordered_map<std::string, float*> export_float;
-	export_float["skyExposure"] = &component->skyExposure;
-	export_float["fogStart"] = &component->fogStart;
-	export_float["fogEnd"] = &component->fogEnd;
-	export_float["fogHeightStart"] = &component->fogHeightStart;
-	export_float["fogHeightSky"] = &component->fogHeightSky;
-	export_float["cloudiness"] = &component->cloudiness;
-	export_float["cloudScale"] = &component->cloudScale;
-	export_float["cloudSpeed"] = &component->cloudSpeed;
-	export_float["cloud_shadow_amount"] = &component->cloud_shadow_amount;
-	export_float["cloud_shadow_scale"] = &component->cloud_shadow_scale;
-	export_float["cloud_shadow_speed"] = &component->cloud_shadow_speed;
-	export_float["windRandomness"] = &component->windRandomness;
-	export_float["windWaveSize"] = &component->windWaveSize;
-	export_float["windSpeed"] = &component->windSpeed;
-	export_float["stars"] = &component->stars;
-
 	lua_newtable(L);
-	for (auto& pair_xmfloat3 : export_xmfloat3){
+	for (auto& pair_xmfloat3 : weatherparams_xmfloat3){
 		wi::lua::SSetFloat3(L, *pair_xmfloat3.second);
 		lua_setfield(L, -2, pair_xmfloat3.first.c_str());
 	}
-	for (auto& pair_float : export_float){
+	for (auto& pair_float : weatherparams_float){
 		wi::lua::SSetFloat(L, *pair_float.second);
 		lua_setfield(L, -2, pair_float.first.c_str());
 	}
@@ -3931,38 +4013,13 @@ int WeatherComponent_BindLua::SetWeatherParams(lua_State* L)
 	{
 		bool error = false;
 
-		wi::unordered_map<std::string, XMFLOAT3*> import_xmfloat3;
-		import_xmfloat3["sunColor"] = &component->sunColor;
-		import_xmfloat3["sunDirection"] = &component->sunDirection;
-		import_xmfloat3["horizon"] = &component->horizon;
-		import_xmfloat3["zenith"] = &component->zenith;
-		import_xmfloat3["ambient"] = &component->ambient;
-		import_xmfloat3["windDirection"] = &component->ambient;
-
-		wi::unordered_map<std::string, float*> import_float;
-		import_float["skyExposure"] = &component->skyExposure;
-		import_float["fogStart"] = &component->fogStart;
-		import_float["fogEnd"] = &component->fogEnd;
-		import_float["fogHeightStart"] = &component->fogHeightStart;
-		import_float["fogHeightSky"] = &component->fogHeightSky;
-		import_float["cloudiness"] = &component->cloudiness;
-		import_float["cloudScale"] = &component->cloudScale;
-		import_float["cloudSpeed"] = &component->cloudSpeed;
-		import_float["cloud_shadow_amount"] = &component->cloud_shadow_amount;
-		import_float["cloud_shadow_scale"] = &component->cloud_shadow_scale;
-		import_float["cloud_shadow_speed"] = &component->cloud_shadow_speed;
-		import_float["windRandomness"] = &component->windRandomness;
-		import_float["windWaveSize"] = &component->windWaveSize;
-		import_float["windSpeed"] = &component->windSpeed;
-		import_float["stars"] = &component->stars;
-
 		lua_pushnil(L);
 		while(lua_next(L, 1))
 		{
 			std::string header = wi::lua::SGetString(L, -2);
 			
-			auto find_header_xmfloat3 = import_xmfloat3.find(header);
-			if(find_header_xmfloat3 != import_xmfloat3.end())
+			auto find_header_xmfloat3 = weatherparams_xmfloat3.find(header);
+			if(find_header_xmfloat3 != weatherparams_xmfloat3.end())
 			{
 				auto xmfloat3 = Luna<Vector_BindLua>::lightcheck(L, -1);
 				if(xmfloat3)
@@ -3975,8 +4032,8 @@ int WeatherComponent_BindLua::SetWeatherParams(lua_State* L)
 				}
 			}
 
-			auto find_header_float = import_float.find(header);
-			if(find_header_float != import_float.end())
+			auto find_header_float = weatherparams_float.find(header);
+			if(find_header_float != weatherparams_float.end())
 			{
 				if(lua_type(L, -1) == LUA_TNUMBER)
 				{
@@ -4009,46 +4066,24 @@ int WeatherComponent_BindLua::SetWeatherParams(lua_State* L)
 }
 int WeatherComponent_BindLua::GetOceanParams(lua_State* L)
 {
-	wi::unordered_map<std::string, int*> export_int;
-	export_int["dmap_dim"] = &component->oceanParameters.dmap_dim;
-
-	wi::unordered_map<std::string, uint32_t*> export_uint32;
-	export_uint32["dmap_dim"] = &component->oceanParameters.surfaceDetail;
-
-	wi::unordered_map<std::string, XMFLOAT2*> export_xmfloat2;
-	export_xmfloat2["wind_dir"] = &component->oceanParameters.wind_dir;
-
-	wi::unordered_map<std::string, XMFLOAT4*> export_xmfloat4;
-	export_xmfloat4["waterColor"] = &component->oceanParameters.waterColor;
-
-	wi::unordered_map<std::string, float*> export_float;
-	export_float["patch_length"] = &component->oceanParameters.patch_length;
-	export_float["time_scale"] = &component->oceanParameters.time_scale;
-	export_float["wave_amplitude"] = &component->oceanParameters.wave_amplitude;
-	export_float["wind_speed"] = &component->oceanParameters.wind_speed;
-	export_float["wind_dependency"] = &component->oceanParameters.wind_dependency;
-	export_float["choppy_scale"] = &component->oceanParameters.choppy_scale;
-	export_float["waterHeight"] = &component->oceanParameters.waterHeight;
-	export_float["surfaceDisplacementTolerance"] = &component->oceanParameters.surfaceDisplacementTolerance;
-
 	lua_newtable(L);
-	for (auto& pair_int : export_int){
+	for (auto& pair_int : oceanparams_int){
 		wi::lua::SSetInt(L, *pair_int.second);
 		lua_setfield(L, -2, pair_int.first.c_str());
 	}
-	for (auto& pair_uint32 : export_uint32){
+	for (auto& pair_uint32 : oceanparams_uint32){
 		wi::lua::SSetInt(L, *pair_uint32.second);
 		lua_setfield(L, -2, pair_uint32.first.c_str());
 	}
-	for (auto& pair_xmfloat2 : export_xmfloat2){
+	for (auto& pair_xmfloat2 : oceanparams_xmfloat2){
 		wi::lua::SSetFloat2(L, *pair_xmfloat2.second);
 		lua_setfield(L, -2, pair_xmfloat2.first.c_str());
 	}
-	for (auto& pair_xmfloat4 : export_xmfloat4){
+	for (auto& pair_xmfloat4 : oceanparams_xmfloat4){
 		wi::lua::SSetFloat4(L, *pair_xmfloat4.second);
 		lua_setfield(L, -2, pair_xmfloat4.first.c_str());
 	}
-	for (auto& pair_float : export_float){
+	for (auto& pair_float : oceanparams_float){
 		wi::lua::SSetFloat(L, *pair_float.second);
 		lua_setfield(L, -2, pair_float.first.c_str());
 	}
@@ -4062,35 +4097,13 @@ int WeatherComponent_BindLua::SetOceanParams(lua_State* L)
 	{
 		bool error = false;
 
-		wi::unordered_map<std::string, int*> import_int;
-		import_int["dmap_dim"] = &component->oceanParameters.dmap_dim;
-
-		wi::unordered_map<std::string, uint32_t*> import_uint32;
-		import_uint32["dmap_dim"] = &component->oceanParameters.surfaceDetail;
-
-		wi::unordered_map<std::string, XMFLOAT2*> import_xmfloat2;
-		import_xmfloat2["wind_dir"] = &component->oceanParameters.wind_dir;
-
-		wi::unordered_map<std::string, XMFLOAT4*> import_xmfloat4;
-		import_xmfloat4["waterColor"] = &component->oceanParameters.waterColor;
-
-		wi::unordered_map<std::string, float*> import_float;
-		import_float["patch_length"] = &component->oceanParameters.patch_length;
-		import_float["time_scale"] = &component->oceanParameters.time_scale;
-		import_float["wave_amplitude"] = &component->oceanParameters.wave_amplitude;
-		import_float["wind_speed"] = &component->oceanParameters.wind_speed;
-		import_float["wind_dependency"] = &component->oceanParameters.wind_dependency;
-		import_float["choppy_scale"] = &component->oceanParameters.choppy_scale;
-		import_float["waterHeight"] = &component->oceanParameters.waterHeight;
-		import_float["surfaceDisplacementTolerance"] = &component->oceanParameters.surfaceDisplacementTolerance;
-
 		lua_pushnil(L);
 		while(lua_next(L, 1))
 		{
 			std::string header = wi::lua::SGetString(L, -2);
 
-			auto find_header_xmfloat2 = import_xmfloat2.find(header);
-			if(find_header_xmfloat2 != import_xmfloat2.end())
+			auto find_header_xmfloat2 = oceanparams_xmfloat2.find(header);
+			if(find_header_xmfloat2 != oceanparams_xmfloat2.end())
 			{
 				auto xmfloat2 = Luna<Vector_BindLua>::lightcheck(L, -1);
 				if(xmfloat2)
@@ -4103,8 +4116,8 @@ int WeatherComponent_BindLua::SetOceanParams(lua_State* L)
 				}
 			}
 			
-			auto find_header_xmfloat4 = import_xmfloat4.find(header);
-			if(find_header_xmfloat4 != import_xmfloat4.end())
+			auto find_header_xmfloat4 = oceanparams_xmfloat4.find(header);
+			if(find_header_xmfloat4 != oceanparams_xmfloat4.end())
 			{
 				auto xmfloat4 = Luna<Vector_BindLua>::lightcheck(L, -1);
 				if(xmfloat4)
@@ -4117,8 +4130,8 @@ int WeatherComponent_BindLua::SetOceanParams(lua_State* L)
 				}
 			}
 
-			auto find_header_float = import_float.find(header);
-			if(find_header_float != import_float.end())
+			auto find_header_float = oceanparams_float.find(header);
+			if(find_header_float != oceanparams_float.end())
 			{
 				if(lua_type(L, -1) == LUA_TNUMBER)
 				{
@@ -4130,8 +4143,8 @@ int WeatherComponent_BindLua::SetOceanParams(lua_State* L)
 				}
 			}
 
-			auto find_header_int = import_int.find(header);
-			if(find_header_int != import_int.end())
+			auto find_header_int = oceanparams_int.find(header);
+			if(find_header_int != oceanparams_int.end())
 			{
 				if(lua_type(L, -1) == LUA_TNUMBER)
 				{
@@ -4143,8 +4156,8 @@ int WeatherComponent_BindLua::SetOceanParams(lua_State* L)
 				}
 			}
 
-			auto find_header_uint32 = import_uint32.find(header);
-			if(find_header_uint32 != import_uint32.end())
+			auto find_header_uint32 = oceanparams_uint32.find(header);
+			if(find_header_uint32 != oceanparams_uint32.end())
 			{
 				if(lua_type(L, -1) == LUA_TNUMBER)
 				{
@@ -4177,33 +4190,12 @@ int WeatherComponent_BindLua::SetOceanParams(lua_State* L)
 }
 int WeatherComponent_BindLua::GetAtmosphereParams(lua_State* L)
 {
-	wi::unordered_map<std::string, XMFLOAT3*> export_xmfloat3;
-	export_xmfloat3["planetCenter"] = &component->atmosphereParameters.planetCenter;
-	export_xmfloat3["rayleighScattering"] = &component->atmosphereParameters.rayleighScattering;
-	export_xmfloat3["mieScattering"] = &component->atmosphereParameters.mieScattering;
-	export_xmfloat3["mieExtinction"] = &component->atmosphereParameters.mieExtinction;
-	export_xmfloat3["mieAbsorption"] = &component->atmosphereParameters.mieAbsorption;
-	export_xmfloat3["absorptionExtinction"] = &component->atmosphereParameters.absorptionExtinction;
-	export_xmfloat3["groundAlbedo"] = &component->atmosphereParameters.groundAlbedo;
-
-	wi::unordered_map<std::string, float*> export_float;
-	export_float["bottomRadius"] = &component->atmosphereParameters.bottomRadius;
-	export_float["topRadius"] = &component->atmosphereParameters.topRadius;
-	export_float["rayleighDensityExpScale"] = &component->atmosphereParameters.rayleighDensityExpScale;
-	export_float["mieDensityExpScale"] = &component->atmosphereParameters.mieDensityExpScale;
-	export_float["miePhaseG"] = &component->atmosphereParameters.miePhaseG;
-	export_float["absorptionDensity0LayerWidth"] = &component->atmosphereParameters.absorptionDensity0LayerWidth;
-	export_float["absorptionDensity0ConstantTerm"] = &component->atmosphereParameters.absorptionDensity0ConstantTerm;
-	export_float["absorptionDensity0LinearTerm"] = &component->atmosphereParameters.absorptionDensity0LinearTerm;
-	export_float["absorptionDensity1ConstantTerm"] = &component->atmosphereParameters.absorptionDensity1ConstantTerm;
-	export_float["absorptionDensity1LinearTerm"] = &component->atmosphereParameters.absorptionDensity1LinearTerm;
-
 	lua_newtable(L);
-	for (auto& pair_xmfloat3 : export_xmfloat3){
+	for (auto& pair_xmfloat3 : atmosphereparams_xmfloat3){
 		wi::lua::SSetFloat3(L, *pair_xmfloat3.second);
 		lua_setfield(L, -2, pair_xmfloat3.first.c_str());
 	}
-	for (auto& pair_float : export_float){
+	for (auto& pair_float : atmosphereparams_float){
 		wi::lua::SSetFloat(L, *pair_float.second);
 		lua_setfield(L, -2, pair_float.first.c_str());
 	}
@@ -4217,34 +4209,13 @@ int WeatherComponent_BindLua::SetAtmosphereParams(lua_State* L)
 	{
 		bool error = false;
 
-		wi::unordered_map<std::string, XMFLOAT3*> import_xmfloat3;
-		import_xmfloat3["planetCenter"] = &component->atmosphereParameters.planetCenter;
-		import_xmfloat3["rayleighScattering"] = &component->atmosphereParameters.rayleighScattering;
-		import_xmfloat3["mieScattering"] = &component->atmosphereParameters.mieScattering;
-		import_xmfloat3["mieExtinction"] = &component->atmosphereParameters.mieExtinction;
-		import_xmfloat3["mieAbsorption"] = &component->atmosphereParameters.mieAbsorption;
-		import_xmfloat3["absorptionExtinction"] = &component->atmosphereParameters.absorptionExtinction;
-		import_xmfloat3["groundAlbedo"] = &component->atmosphereParameters.groundAlbedo;
-
-		wi::unordered_map<std::string, float*> import_float;
-		import_float["bottomRadius"] = &component->atmosphereParameters.bottomRadius;
-		import_float["topRadius"] = &component->atmosphereParameters.topRadius;
-		import_float["rayleighDensityExpScale"] = &component->atmosphereParameters.rayleighDensityExpScale;
-		import_float["mieDensityExpScale"] = &component->atmosphereParameters.mieDensityExpScale;
-		import_float["miePhaseG"] = &component->atmosphereParameters.miePhaseG;
-		import_float["absorptionDensity0LayerWidth"] = &component->atmosphereParameters.absorptionDensity0LayerWidth;
-		import_float["absorptionDensity0ConstantTerm"] = &component->atmosphereParameters.absorptionDensity0ConstantTerm;
-		import_float["absorptionDensity0LinearTerm"] = &component->atmosphereParameters.absorptionDensity0LinearTerm;
-		import_float["absorptionDensity1ConstantTerm"] = &component->atmosphereParameters.absorptionDensity1ConstantTerm;
-		import_float["absorptionDensity1LinearTerm"] = &component->atmosphereParameters.absorptionDensity1LinearTerm;
-
 		lua_pushnil(L);
 		while(lua_next(L, 1))
 		{
 			std::string header = wi::lua::SGetString(L, -2);
 			
-			auto find_header_xmfloat3 = import_xmfloat3.find(header);
-			if(find_header_xmfloat3 != import_xmfloat3.end())
+			auto find_header_xmfloat3 = atmosphereparams_xmfloat3.find(header);
+			if(find_header_xmfloat3 != atmosphereparams_xmfloat3.end())
 			{
 				auto xmfloat3 = Luna<Vector_BindLua>::lightcheck(L, -1);
 				if(xmfloat3)
@@ -4257,8 +4228,8 @@ int WeatherComponent_BindLua::SetAtmosphereParams(lua_State* L)
 				}
 			}
 
-			auto find_header_float = import_float.find(header);
-			if(find_header_float != import_float.end())
+			auto find_header_float = atmosphereparams_float.find(header);
+			if(find_header_float != atmosphereparams_float.end())
 			{
 				if(lua_type(L, -1) == LUA_TNUMBER)
 				{
@@ -4291,41 +4262,16 @@ int WeatherComponent_BindLua::SetAtmosphereParams(lua_State* L)
 }
 int WeatherComponent_BindLua::GetVolumetricCloudParams(lua_State* L)
 {
-	wi::unordered_map<std::string, XMFLOAT3*> export_xmfloat3;
-	export_xmfloat3["Albedo"] = &component->volumetricCloudParameters.Albedo;
-	export_xmfloat3["ExtinctionCoefficient"] = &component->volumetricCloudParameters.ExtinctionCoefficient;
-
-	wi::unordered_map<std::string, XMFLOAT4*> export_xmfloat4;
-	export_xmfloat4["CloudGradientSmall"] = &component->volumetricCloudParameters.CloudGradientSmall;
-	export_xmfloat4["CloudGradientMedium"] = &component->volumetricCloudParameters.CloudGradientMedium;
-	export_xmfloat4["CloudGradientLarge"] = &component->volumetricCloudParameters.CloudGradientLarge;
-
-	wi::unordered_map<std::string, float*> export_float;
-	export_float["CloudAmbientGroundMultiplier"] = &component->volumetricCloudParameters.CloudAmbientGroundMultiplier;
-	export_float["CoverageAmount"] = &component->volumetricCloudParameters.CoverageAmount;
-	export_float["CoverageMinimum"] = &component->volumetricCloudParameters.CoverageMinimum;
-	export_float["HorizonBlendAmount"] = &component->volumetricCloudParameters.HorizonBlendAmount;
-	export_float["HorizonBlendPower"] = &component->volumetricCloudParameters.HorizonBlendPower;
-	export_float["WeatherDensityAmount"] = &component->volumetricCloudParameters.WeatherDensityAmount;
-	export_float["CloudStartHeight"] = &component->volumetricCloudParameters.CloudStartHeight;
-	export_float["SkewAlongWindDirection"] = &component->volumetricCloudParameters.SkewAlongWindDirection;
-	export_float["TotalNoiseScale"] = &component->volumetricCloudParameters.TotalNoiseScale;
-	export_float["DetailScale"] = &component->volumetricCloudParameters.DetailScale;
-	export_float["WeatherScale"] = &component->volumetricCloudParameters.WeatherScale;
-	export_float["CurlScale"] = &component->volumetricCloudParameters.CurlScale;
-	export_float["ShapeNoiseHeightGradientAmount"] = &component->volumetricCloudParameters.ShapeNoiseHeightGradientAmount;
-	export_float["ShapeNoiseMultiplier"] = &component->volumetricCloudParameters.ShapeNoiseMultiplier;
-	
 	lua_newtable(L);
-	for (auto& pair_xmfloat3 : export_xmfloat3){
+	for (auto& pair_xmfloat3 : volumetriccloudparams_xmfloat3){
 		wi::lua::SSetFloat3(L, *pair_xmfloat3.second);
 		lua_setfield(L, -2, pair_xmfloat3.first.c_str());
 	}
-	for (auto& pair_xmfloat4 : export_xmfloat4){
+	for (auto& pair_xmfloat4 : volumetriccloudparams_xmfloat4){
 		wi::lua::SSetFloat4(L, *pair_xmfloat4.second);
 		lua_setfield(L, -2, pair_xmfloat4.first.c_str());
 	}
-	for (auto& pair_float : export_float){
+	for (auto& pair_float : volumetriccloudparams_float){
 		wi::lua::SSetFloat(L, *pair_float.second);
 		lua_setfield(L, -2, pair_float.first.c_str());
 	}
@@ -4338,39 +4284,14 @@ int WeatherComponent_BindLua::SetVolumetricCloudParams(lua_State* L)
 	if (argc > 0)
 	{
 		bool error = false;
-
-		wi::unordered_map<std::string, XMFLOAT3*> import_xmfloat3;
-		import_xmfloat3["Albedo"] = &component->volumetricCloudParameters.Albedo;
-		import_xmfloat3["ExtinctionCoefficient"] = &component->volumetricCloudParameters.ExtinctionCoefficient;
-
-		wi::unordered_map<std::string, XMFLOAT4*> import_xmfloat4;
-		import_xmfloat4["CloudGradientSmall"] = &component->volumetricCloudParameters.CloudGradientSmall;
-		import_xmfloat4["CloudGradientMedium"] = &component->volumetricCloudParameters.CloudGradientMedium;
-		import_xmfloat4["CloudGradientLarge"] = &component->volumetricCloudParameters.CloudGradientLarge;
-
-		wi::unordered_map<std::string, float*> import_float;
-		import_float["CloudAmbientGroundMultiplier"] = &component->volumetricCloudParameters.CloudAmbientGroundMultiplier;
-		import_float["CoverageAmount"] = &component->volumetricCloudParameters.CoverageAmount;
-		import_float["CoverageMinimum"] = &component->volumetricCloudParameters.CoverageMinimum;
-		import_float["HorizonBlendAmount"] = &component->volumetricCloudParameters.HorizonBlendAmount;
-		import_float["HorizonBlendPower"] = &component->volumetricCloudParameters.HorizonBlendPower;
-		import_float["WeatherDensityAmount"] = &component->volumetricCloudParameters.WeatherDensityAmount;
-		import_float["CloudStartHeight"] = &component->volumetricCloudParameters.CloudStartHeight;
-		import_float["SkewAlongWindDirection"] = &component->volumetricCloudParameters.SkewAlongWindDirection;
-		import_float["TotalNoiseScale"] = &component->volumetricCloudParameters.TotalNoiseScale;
-		import_float["DetailScale"] = &component->volumetricCloudParameters.DetailScale;
-		import_float["WeatherScale"] = &component->volumetricCloudParameters.WeatherScale;
-		import_float["CurlScale"] = &component->volumetricCloudParameters.CurlScale;
-		import_float["ShapeNoiseHeightGradientAmount"] = &component->volumetricCloudParameters.ShapeNoiseHeightGradientAmount;
-		import_float["ShapeNoiseMultiplier"] = &component->volumetricCloudParameters.ShapeNoiseMultiplier;
 	
 		lua_pushnil(L);
 		while(lua_next(L, 1))
 		{
 			std::string header = wi::lua::SGetString(L, -2);
 			
-			auto find_header_xmfloat3 = import_xmfloat3.find(header);
-			if(find_header_xmfloat3 != import_xmfloat3.end())
+			auto find_header_xmfloat3 = volumetriccloudparams_xmfloat3.find(header);
+			if(find_header_xmfloat3 != volumetriccloudparams_xmfloat3.end())
 			{
 				auto xmfloat3 = Luna<Vector_BindLua>::lightcheck(L, -1);
 				if(xmfloat3)
@@ -4383,8 +4304,8 @@ int WeatherComponent_BindLua::SetVolumetricCloudParams(lua_State* L)
 				}
 			}
 
-			auto find_header_xmfloat4 = import_xmfloat4.find(header);
-			if(find_header_xmfloat4 != import_xmfloat4.end())
+			auto find_header_xmfloat4 = volumetriccloudparams_xmfloat4.find(header);
+			if(find_header_xmfloat4 != volumetriccloudparams_xmfloat4.end())
 			{
 				auto xmfloat4 = Luna<Vector_BindLua>::lightcheck(L, -1);
 				if(xmfloat4)
@@ -4397,8 +4318,8 @@ int WeatherComponent_BindLua::SetVolumetricCloudParams(lua_State* L)
 				}
 			}
 
-			auto find_header_float = import_float.find(header);
-			if(find_header_float != import_float.end())
+			auto find_header_float = volumetriccloudparams_float.find(header);
+			if(find_header_float != volumetriccloudparams_float.end())
 			{
 				if(lua_type(L, -1) == LUA_TNUMBER)
 				{

@@ -1354,6 +1354,9 @@ namespace wi::scene
 
 		std::string filename;
 
+		std::string customparameters_prepend;
+		std::string customparameters_append;
+
 		// Non-serialized attributes:
 		std::string script;
 		wi::Resource resource;
