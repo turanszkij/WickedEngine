@@ -10,7 +10,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_COLLIDER " Collider", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 260));
+	SetSize(XMFLOAT2(670, 280));
 
 	closeButton.SetTooltip("Delete ColliderComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -154,7 +154,6 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	SetEntity(INVALID_ENTITY);
 }
 
-
 void ColliderWindow::SetEntity(Entity entity)
 {
 	if (this->entity == entity)
@@ -177,4 +176,58 @@ void ColliderWindow::SetEntity(Entity entity)
 		tailY.SetValue(collider->tail.y);
 		tailZ.SetValue(collider->tail.z);
 	}
+}
+
+void ColliderWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	const float margin_left = 80;
+	const float margin_right = 40;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add(shapeCombo);
+	add(radiusSlider);
+
+	y += jump;
+
+	add(offsetX);
+	add(offsetY);
+	add(offsetZ);
+
+	y += jump;
+
+	add(tailX);
+	add(tailY);
+	add(tailZ);
+
 }

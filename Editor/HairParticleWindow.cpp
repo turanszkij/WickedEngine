@@ -109,19 +109,19 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	randomnessSlider.SetTooltip("Set hair length randomization factor. This will affect randomness of hair lengths.");
 	AddWidget(&randomnessSlider);
 
-	segmentcountSlider.Create(1, 10, 1, 9, "Segment Count: ");
-	segmentcountSlider.SetSize(XMFLOAT2(wid, hei));
-	segmentcountSlider.SetPos(XMFLOAT2(x, y += step));
-	segmentcountSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto hair = GetHair();
-		if (hair != nullptr)
-		{
-			hair->segmentCount = (uint32_t)args.iValue;
-		}
-	});
-	segmentcountSlider.SetEnabled(false);
-	segmentcountSlider.SetTooltip("Set hair strand segment count. This will affect simulation quality and performance.");
-	AddWidget(&segmentcountSlider);
+	//segmentcountSlider.Create(1, 10, 1, 9, "Segment Count: ");
+	//segmentcountSlider.SetSize(XMFLOAT2(wid, hei));
+	//segmentcountSlider.SetPos(XMFLOAT2(x, y += step));
+	//segmentcountSlider.OnSlide([&](wi::gui::EventArgs args) {
+	//	auto hair = GetHair();
+	//	if (hair != nullptr)
+	//	{
+	//		hair->segmentCount = (uint32_t)args.iValue;
+	//	}
+	//});
+	//segmentcountSlider.SetEnabled(false);
+	//segmentcountSlider.SetTooltip("Set hair strand segment count. This will affect simulation quality and performance.");
+	//AddWidget(&segmentcountSlider);
 
 	randomSeedSlider.Create(1, 12345, 1, 12344, "Random seed: ");
 	randomSeedSlider.SetSize(XMFLOAT2(wid, hei));
@@ -156,7 +156,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	framesXInput.SetSize(XMFLOAT2(40, hei));
 	framesXInput.SetText("");
 	framesXInput.SetTooltip("How many horizontal frames there are in the spritesheet.");
-	framesXInput.SetDescription("Frames X: ");
+	framesXInput.SetDescription("Frames: ");
 	framesXInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		auto hair = GetHair();
 		if (hair != nullptr)
@@ -171,7 +171,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	framesYInput.SetSize(XMFLOAT2(40, hei));
 	framesYInput.SetText("");
 	framesYInput.SetTooltip("How many vertical frames there are in the spritesheet.");
-	framesYInput.SetDescription("Frames Y: ");
 	framesYInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		auto hair = GetHair();
 		if (hair != nullptr)
@@ -234,7 +233,7 @@ void HairParticleWindow::SetEntity(Entity entity)
 		stiffnessSlider.SetValue(hair->stiffness);
 		randomnessSlider.SetValue(hair->randomness);
 		countSlider.SetValue((float)hair->strandCount);
-		segmentcountSlider.SetValue((float)hair->segmentCount);
+		//segmentcountSlider.SetValue((float)hair->segmentCount);
 		randomSeedSlider.SetValue((float)hair->randomSeed);
 		viewDistanceSlider.SetValue(hair->viewDistance);
 		framesXInput.SetValue((int)hair->framesX);
@@ -287,4 +286,65 @@ void HairParticleWindow::UpdateData()
 			meshComboBox.SetSelected((int)i + 1);
 		}
 	}
+}
+
+void HairParticleWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	const float margin_left = 100;
+	const float margin_right = 40;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add(meshComboBox);
+	add(lengthSlider);
+	add(stiffnessSlider);
+	add(randomnessSlider);
+	add(countSlider);
+	add(randomSeedSlider);
+	add(viewDistanceSlider);
+
+	const float l = margin_left;
+	const float r = width - margin_right;
+	const float w = ((r - l) - padding) / 2.0f;
+	framesXInput.SetSize(XMFLOAT2(w, framesXInput.GetSize().y));
+	framesYInput.SetSize(XMFLOAT2(w, framesYInput.GetSize().y));
+	framesXInput.SetPos(XMFLOAT2(margin_left, y));
+	framesYInput.SetPos(XMFLOAT2(framesXInput.GetPos().x + w + padding, y));
+
+	y += framesYInput.GetSize().y;
+	y += padding;
+
+	add(frameCountInput);
+	add(frameStartInput);
+
 }

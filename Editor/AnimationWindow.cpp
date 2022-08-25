@@ -9,7 +9,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_ANIMATION " Animation", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(520, 400));
+	SetSize(XMFLOAT2(520, 410));
 
 	closeButton.SetTooltip("Delete Animation");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -777,6 +777,58 @@ void AnimationWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
 	const float padding = 4;
-	const float width = GetWidgetAreaSize().x - padding * 2;
-	keyframesList.SetSize(XMFLOAT2(width, keyframesList.GetSize().y));
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	const float margin_left = 80;
+	const float margin_right = 40;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add(modeComboBox);
+
+	loopedCheckBox.SetPos(XMFLOAT2(margin_left, y));
+	const float l = loopedCheckBox.GetPos().x + loopedCheckBox.GetSize().x + padding;
+	const float r = width - margin_right - padding;
+	const float diff = r - l;
+	playButton.SetSize(XMFLOAT2(diff * 0.5f, playButton.GetSize().y));
+	stopButton.SetSize(playButton.GetSize());
+	playButton.SetPos(XMFLOAT2(loopedCheckBox.GetPos().x + loopedCheckBox.GetSize().x + padding, y));
+	stopButton.SetPos(XMFLOAT2(playButton.GetPos().x + playButton.GetSize().x + padding, y));
+	y += stopButton.GetSize().y;
+	y += padding;
+
+	add(timerSlider);
+	add(amountSlider);
+	add(speedSlider);
+	add(startInput);
+	add(endInput);
+	add(recordCombo);
+	add_fullwidth(keyframesList);
 }

@@ -10,7 +10,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create("Spring", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(460, 200));
+	SetSize(XMFLOAT2(460, 220));
 
 	closeButton.SetTooltip("Delete SpringComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -135,4 +135,52 @@ void SpringWindow::SetEntity(Entity entity)
 	}
 
 	debugCheckBox.SetEnabled(true);
+}
+
+void SpringWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	const float margin_left = 120;
+	const float margin_right = 40;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_fullwidth(resetAllButton);
+	add_right(debugCheckBox);
+	add_right(disabledCheckBox);
+	add_right(stretchCheckBox);
+	add_right(gravityCheckBox);
+	add(stiffnessSlider);
+	add(dragSlider);
+	add(windSlider);
+
 }
