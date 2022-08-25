@@ -2913,7 +2913,7 @@ int ObjectComponent_BindLua::GetCascadeMask(lua_State *L){
 	return 1;
 }
 int ObjectComponent_BindLua::GetRendertypeMask(lua_State *L){
-	wi::lua::SSetLongLong(L, component->cascadeMask);
+	wi::lua::SSetLongLong(L, component->rendertypeMask);
 	return 1;
 }
 int ObjectComponent_BindLua::GetColor(lua_State* L)
