@@ -76,7 +76,10 @@ namespace wi::ecs
 		}
 		else
 		{
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 			archive << entity;
+#pragma GCC diagnostic pop
 		}
 	}
 
