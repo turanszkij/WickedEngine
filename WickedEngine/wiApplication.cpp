@@ -133,8 +133,7 @@ namespace wi
 
 		wi::profiler::BeginFrame();
 
-		deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
-		timer.record();
+		deltaTime = float(std::max(0.0, timer.record_elapsed_seconds()));
 
 		wi::input::Update(window, canvas);
 
