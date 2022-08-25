@@ -1014,6 +1014,8 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER], "volumetricCloud_renderCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE], "volumetricCloud_renderCS_capture.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_REPROJECT], "volumetricCloud_reprojectCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_RENDER], "volumetricCloud_shadow_renderCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_FILTER], "volumetricCloud_shadow_filterCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FXAA], "fxaaCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_TEMPORALAA], "temporalaaCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SHARPEN], "sharpenCS.cso"); });
@@ -1761,6 +1763,17 @@ void LoadBuffers()
 		device->SetName(&textures[TEXTYPE_2D_SHEENLUT], "textures[TEXTYPE_2D_SHEENLUT]");
 	}
 
+	{
+		TextureDesc desc;
+		desc.type = TextureDesc::Type::TEXTURE_2D;
+		desc.width = 512;
+		desc.height = 512;
+		desc.format = Format::R11G11B10_FLOAT;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW]);
+		device->SetName(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], "textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW]");
+	}
 	{
 		TextureDesc desc;
 		desc.type = TextureDesc::Type::TEXTURE_2D;
@@ -3174,7 +3187,7 @@ void UpdatePerFrameData(
 						);
 						device->CreateRenderPass(&renderpassdesc, &renderpass_shadowMapAtlas);
 					}
-
+					
 					break;
 				}
 				else
@@ -3188,6 +3201,45 @@ void UpdatePerFrameData(
 			}
 		}
 		wi::profiler::EndRange(range);
+	}
+
+	// Calculate volumetric cloud shadow data:
+	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
+	{
+		const float cloudShadowSnapLength = 5000.0f;
+		const float cloudShadowExtent = 35000.0f; // The cloud shadow bounding box size
+		const float cloudShadowNearPlane = 0.0f;
+		const float cloudShadowFarPlane = cloudShadowExtent * 2.0;
+
+		const float metersToSkyUnit = 0.001f; // Engine units are in meters (must be same as skyAtmosphere.hlsli)
+		const float skyUnitToMeters = 1.0f / metersToSkyUnit;
+
+		XMVECTOR atmosphereCenter = XMLoadFloat3(&vis.scene->weather.atmosphereParameters.planetCenter);
+		XMVECTOR sunDirection = XMLoadFloat3(&vis.scene->weather.sunDirection);
+		const float planetRadius = vis.scene->weather.atmosphereParameters.bottomRadius;
+
+		// Point on the surface of the planet relative to camera position and planet normal
+		XMVECTOR lookAtPosition = XMVector3Normalize(vis.camera->GetEye() - (atmosphereCenter * skyUnitToMeters));
+		lookAtPosition = (atmosphereCenter + lookAtPosition * planetRadius) * skyUnitToMeters;
+
+		// Snap with user defined value
+		lookAtPosition = XMVectorFloor(XMVectorAdd(lookAtPosition, XMVectorReplicate(0.5f * cloudShadowSnapLength)) / cloudShadowSnapLength) * cloudShadowSnapLength;
+
+		XMVECTOR lightPosition = lookAtPosition + sunDirection * cloudShadowExtent; // far plane not needed here
+
+		const XMMATRIX lightRotation = XMMatrixRotationQuaternion(XMLoadFloat4(&scene.weather.stars_rotation_quaternion)); // We only care about prioritized directional light anyway
+		const XMVECTOR up = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), lightRotation);
+
+		XMMATRIX cloudShadowProjection = XMMatrixOrthographicOffCenterLH(-cloudShadowExtent, cloudShadowExtent, -cloudShadowExtent, cloudShadowExtent, cloudShadowNearPlane, cloudShadowFarPlane);
+		XMMATRIX cloudShadowView = XMMatrixLookAtLH(lightPosition, lookAtPosition, up);
+
+		XMMATRIX cloudShadowLightSpaceMatrix = XMMatrixMultiply(cloudShadowView, cloudShadowProjection);
+		XMMATRIX cloudShadowLightSpaceMatrixInverse = XMMatrixInverse(nullptr, cloudShadowLightSpaceMatrix);
+
+		XMStoreFloat4x4(&frameCB.cloudShadowLightSpaceMatrix, cloudShadowLightSpaceMatrix);
+		XMStoreFloat4x4(&frameCB.cloudShadowLightSpaceMatrixInverse, cloudShadowLightSpaceMatrixInverse);
+		frameCB.cloudShadowFarPlaneKm = cloudShadowFarPlane * metersToSkyUnit;
+		frameCB.texture_volumetricclouds_shadow_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], SubresourceType::SRV);
 	}
 
 	// Update CPU-side frame constant buffer:
@@ -3314,7 +3366,11 @@ void UpdatePerFrameData(
 			frameCB.options |= OPTION_BIT_STATIC_SKY_HDR;
 		}
 	}
-
+	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
+	{
+		frameCB.options |= OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS;
+	}
+	
 	frameCB.scene = vis.scene->shaderscene;
 
 	frameCB.sampler_objectshader_index = device->GetDescriptorIndex(&samplers[SAMPLER_OBJECTSHADER]);
@@ -3681,9 +3737,9 @@ void UpdateRenderData(
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
 			}
 
-			if (light.IsVolumetricsEnabled())
+			if (light.IsVolumetricCloudsEnabled())
 			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICS);
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
 			}
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
@@ -3941,10 +3997,15 @@ void UpdateRenderDataAsync(
 
 	BindCommonResources(cmd);
 
+	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
+	{
+		ComputeVolumetricCloudShadows(cmd, vis.scene->weather.volumetricCloudsWeatherMap.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMap.GetTexture() : nullptr);
+	}
+
 	if (vis.scene->weather.IsRealisticSky())
 	{
 		// Render Atmospheric Scattering textures for lighting and sky
-		RenderAtmosphericScatteringTextures(cmd);
+		ComputeAtmosphericScatteringTextures(cmd);
 	}
 
 	// Precompute static volumetric cloud textures:
@@ -6183,7 +6244,114 @@ void DrawDebugWorld(
 }
 
 
-void RenderAtmosphericScatteringTextures(CommandList cmd)
+void ComputeVolumetricCloudShadows(
+	CommandList cmd,
+	const Texture* weatherMap)
+{
+	device->EventBegin("RenderVolumetricCloudShadows", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Volumetric Clouds Shadow", cmd);
+
+	BindCommonResources(cmd);
+
+	const TextureDesc& desc = textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc();
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.width;
+	postprocess.resolution.y = desc.height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+
+	// Cloud shadow render pass:
+	{
+		device->EventBegin("Volumetric Cloud Rendering Shadow", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_RENDER], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+		device->BindResource(&texture_shapeNoise, 0, cmd);
+		device->BindResource(&texture_detailNoise, 1, cmd);
+		device->BindResource(&texture_curlNoise, 2, cmd);
+
+		if (weatherMap != nullptr)
+		{
+			device->BindResource(weatherMap, 3, cmd);
+		}
+		else
+		{
+			device->BindResource(&texture_weatherMap, 3, cmd);
+		}
+
+		const GPUResource* uavs[] = {
+			&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW],
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout, ResourceState::UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(
+			(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	// Cloud shadow filter pass:
+	{
+		device->EventBegin("Volumetric Cloud Filter Shadow", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_FILTER], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+		device->BindResource(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], 0, cmd);
+
+		const GPUResource* uavs[] = {
+			&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW],
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout, ResourceState::UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(
+			(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+
+void ComputeAtmosphericScatteringTextures(CommandList cmd)
 {
 	device->EventBegin("ComputeAtmosphericScatteringTextures", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Atmospheric Scattering Textures", cmd);
@@ -6351,6 +6519,7 @@ void RefreshAtmosphericScatteringTextures(CommandList cmd)
 
 	device->EventEnd(cmd);
 }
+
 void DrawSky(const Scene& scene, CommandList cmd)
 {
 	device->EventBegin("DrawSky", cmd);
@@ -12131,9 +12300,9 @@ void Postprocess_VolumetricClouds(
 	postprocess.params0.z = 1.0f / postprocess.params0.x;
 	postprocess.params0.w = 1.0f / postprocess.params0.y;
 
-	// Cloud pass:
+	// Cloud render pass:
 	{
-		device->EventBegin("Volumetric Cloud Rendering", cmd);
+		device->EventBegin("Volumetric Cloud Render", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
@@ -12193,7 +12362,7 @@ void Postprocess_VolumetricClouds(
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
 
-	// Reprojection pass:
+	// Cloud reprojection pass:
 	{
 		device->EventBegin("Volumetric Cloud Reproject", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_REPROJECT], cmd);

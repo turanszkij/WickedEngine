@@ -206,8 +206,13 @@ namespace wi::renderer
 	// Render mip levels for textures that reqested it:
 	void ProcessDeferredMipGenRequests(wi::graphics::CommandList cmd);
 
+	// Compute volumetric cloud shadow data
+	void ComputeVolumetricCloudShadows(
+		wi::graphics::CommandList cmd,
+		const wi::graphics::Texture* weatherMap = nullptr
+	);
 	// Compute essential atmospheric scattering textures for skybox, fog and clouds
-	void RenderAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
+	void ComputeAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
 	// Update atmospheric scattering primarily for environment probes.
 	void RefreshAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
 	// Draw skydome centered to camera.

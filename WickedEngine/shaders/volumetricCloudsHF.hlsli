@@ -1,5 +1,7 @@
 #ifndef WI_VOLUMETRICCLOUDS_HF
 #define WI_VOLUMETRICCLOUDS_HF 
+#include "globals.hlsli"
+#include "skyAtmosphere.hlsli"
 
 #define HALF_FLT_MAX 65504.0
 
@@ -359,6 +361,103 @@ int ComputeCheckerBoardIndex(int2 renderCoord, int subPixelIndex)
 	const int localOffset = (renderCoord.x & 1 + renderCoord.y & 1) & 1;
 	const int checkerBoardLocation = (subPixelIndex + localOffset) & 0x3;
 	return checkerBoardLocation;
+}
+
+////////////////////////////////////// Cloud Model ////////////////////////////////////////////////
+
+float GetHeightFractionForPoint(AtmosphereParameters atmosphere, float3 pos)
+{
+	float planetRadius = atmosphere.bottomRadius * SKY_UNIT_TO_M;
+	float3 planetCenterWorld = atmosphere.planetCenter * SKY_UNIT_TO_M;
+
+	return saturate((distance(pos, planetCenterWorld) - (planetRadius + GetWeather().volumetric_clouds.CloudStartHeight)) / GetWeather().volumetric_clouds.CloudThickness);
+}
+
+float SampleGradient(float4 gradient, float heightFraction)
+{
+	return smoothstep(gradient.x, gradient.y, heightFraction) - smoothstep(gradient.z, gradient.w, heightFraction);
+}
+
+float GetDensityHeightGradient(float heightFraction, float3 weatherData)
+{
+	float cloudType = weatherData.g;
+    
+	float smallType = 1.0f - saturate(cloudType * 2.0f);
+	float mediumType = 1.0f - abs(cloudType - 0.5f) * 2.0f;
+	float largeType = saturate(cloudType - 0.5f) * 2.0f;
+
+	float4 cloudGradient =
+		(GetWeather().volumetric_clouds.CloudGradientSmall * smallType) +
+		(GetWeather().volumetric_clouds.CloudGradientMedium * mediumType) +
+		(GetWeather().volumetric_clouds.CloudGradientLarge * largeType);
+	
+	return SampleGradient(cloudGradient, heightFraction);
+}
+
+float3 SampleWeather(Texture2D<float4> texture_weatherMap, float3 pos, float heightFraction, float2 coverageWindOffset)
+{
+	float4 weatherData = texture_weatherMap.SampleLevel(sampler_linear_wrap, (pos.xz + coverageWindOffset) * GetWeather().volumetric_clouds.WeatherScale, 0);
+	
+    // Apply effects for coverage
+	weatherData.r = RemapClamped(weatherData.r * GetWeather().volumetric_clouds.CoverageAmount, 0.0, 1.0, GetWeather().volumetric_clouds.CoverageMinimum, 1.0);
+	weatherData.g = RemapClamped(weatherData.g * GetWeather().volumetric_clouds.TypeAmount, 0.0, 1.0, GetWeather().volumetric_clouds.TypeOverall, 1.0);
+    
+	// Apply anvil clouds to coverage
+	weatherData.r = pow(weatherData.r, max(Remap(pow(1.0 - heightFraction, GetWeather().volumetric_clouds.AnvilOverhangHeight), 0.7, 0.8, 1.0, GetWeather().volumetric_clouds.AnvilAmount + 1.0), 0.0));
+	
+	return weatherData.rgb;
+}
+
+float WeatherDensity(float3 weatherData)
+{
+	const float wetness = saturate(weatherData.b);
+	return lerp(1.0, 1.0 - GetWeather().volumetric_clouds.WeatherDensityAmount, wetness);
+}
+
+float SampleCloudDensity(Texture3D<float4> texture_shapeNoise, Texture3D<float4> texture_detailNoise, Texture2D<float4> texture_curlNoise, float3 p, float heightFraction, float3 weatherData, float3 windOffset, float3 windDirection, float lod, bool sampleDetail)
+{
+	float3 pos = p + windOffset;
+	pos += heightFraction * windDirection * GetWeather().volumetric_clouds.SkewAlongWindDirection;
+        
+	float4 lowFrequencyNoises = texture_shapeNoise.SampleLevel(sampler_linear_wrap, pos * GetWeather().volumetric_clouds.TotalNoiseScale, lod);
+
+	// Create an FBM out of the low-frequency Perlin-Worley Noises
+	float lowFrequencyFBM = (lowFrequencyNoises.g * 0.625) + (lowFrequencyNoises.b * 0.25) + (lowFrequencyNoises.a * 0.125);
+	lowFrequencyFBM = saturate(lowFrequencyFBM);
+
+	float cloudSample = Remap(lowFrequencyNoises.r, -(1.0 - lowFrequencyFBM), 1.0, 0.0, 1.0);
+
+	// Apply height gradients
+	float densityHeightGradient = GetDensityHeightGradient(heightFraction, weatherData);
+	cloudSample *= densityHeightGradient;
+
+	float cloudCoverage = weatherData.r;
+
+	// Apply Coverage to sample
+	cloudSample = Remap(cloudSample, 1.0 - cloudCoverage, 1.0, 0.0, 1.0);
+	cloudSample *= cloudCoverage;
+	
+    // Erode with detail noise if cloud sample > 0
+	if (cloudSample > 0.0 && sampleDetail)
+	{
+        // Apply our curl noise to erode with tiny details.
+		float3 curlNoise = DecodeCurlNoise(texture_curlNoise.SampleLevel(sampler_linear_wrap, p.xz * GetWeather().volumetric_clouds.CurlScale * GetWeather().volumetric_clouds.TotalNoiseScale, 0).rgb);
+		pos += float3(curlNoise.r, curlNoise.b, curlNoise.g) * (1.0 - heightFraction) * GetWeather().volumetric_clouds.CurlNoiseModifier;
+
+		float3 highFrequencyNoises = texture_detailNoise.SampleLevel(sampler_linear_wrap, pos * GetWeather().volumetric_clouds.DetailScale * GetWeather().volumetric_clouds.TotalNoiseScale, lod).rgb;
+    
+        // Create an FBM out of the high-frequency Worley Noises
+		float highFrequencyFBM = (highFrequencyNoises.r * 0.625) + (highFrequencyNoises.g * 0.25) + (highFrequencyNoises.b * 0.125);
+		highFrequencyFBM = saturate(highFrequencyFBM);
+    
+        // Dilate detail noise based on height
+		float highFrequenceNoiseModifier = lerp(1.0 - highFrequencyFBM, highFrequencyFBM, saturate(heightFraction * GetWeather().volumetric_clouds.DetailNoiseHeightFraction));
+        
+        // Erode with base of clouds
+		cloudSample = Remap(cloudSample, highFrequenceNoiseModifier * GetWeather().volumetric_clouds.DetailNoiseModifier, 1.0, 0.0, 1.0);
+	}
+	
+	return max(cloudSample, 0.0);
 }
 
 #endif // WI_VOLUMETRICCLOUDS_HF

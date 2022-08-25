@@ -38,7 +38,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	for (uint i = 0; i < sampleCount; ++i)
 	{
 		bool valid = false;
-
+		
 		for (uint cascade = 0; cascade < GetFrame().shadow_cascade_count; ++cascade)
 		{
 			float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(P, 1)).xyz; // ortho matrix, no divide by .w
@@ -49,6 +49,11 @@ float4 main(VertexToPixel input) : SV_TARGET
 			{
 				float3 attenuation = shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
 
+				if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
+				{
+					attenuation *= shadow_2D_volumetricclouds(P);
+				}
+				
 				// Evaluate sample height for height fog calculation, given 0 for V:
 				attenuation *= GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0));
 				attenuation *= scattering;

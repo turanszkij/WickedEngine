@@ -60,6 +60,7 @@ public:
 
 	// volumetric clouds:
 	wi::gui::CheckBox volumetricCloudsCheckBox;
+	wi::gui::CheckBox volumetricCloudsShadowsCheckBox;
 	wi::gui::Slider coverageAmountSlider;
 	wi::gui::Slider coverageMinimumSlider;
 	wi::gui::Button volumetricCloudsWeatherMapButton;

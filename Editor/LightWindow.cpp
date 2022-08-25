@@ -167,6 +167,20 @@ void LightWindow::Create(EditorComponent* _editor)
 	staticCheckBox.SetTooltip("Static lights will only be used for baking into lightmaps.");
 	AddWidget(&staticCheckBox);
 
+	volumetricCloudsCheckBox.Create("Volumetric Clouds: ");
+	volumetricCloudsCheckBox.SetSize(XMFLOAT2(hei, hei));
+	volumetricCloudsCheckBox.SetPos(XMFLOAT2(x, y += step));
+	volumetricCloudsCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->SetVolumetricCloudsEnabled(args.bValue);
+		}
+	});
+	volumetricCloudsCheckBox.SetEnabled(false);
+	volumetricCloudsCheckBox.SetTooltip("When enabled light emission will affect volumetric clouds.");
+	AddWidget(&volumetricCloudsCheckBox);
+
 	typeSelectorComboBox.Create("Type: ");
 	typeSelectorComboBox.SetSize(XMFLOAT2(wid, hei));
 	typeSelectorComboBox.SetPos(XMFLOAT2(x, y += step));
@@ -282,6 +296,8 @@ void LightWindow::SetEntity(Entity entity)
 		volumetricsCheckBox.SetCheck(light->IsVolumetricsEnabled());
 		staticCheckBox.SetEnabled(true);
 		staticCheckBox.SetCheck(light->IsStatic());
+		volumetricCloudsCheckBox.SetEnabled(true);
+		volumetricCloudsCheckBox.SetCheck(light->IsVolumetricCloudsEnabled());
 		colorPicker.SetEnabled(true);
 		colorPicker.SetPickColor(wi::Color::fromFloat3(light->color));
 		typeSelectorComboBox.SetSelected((int)light->GetType());
@@ -315,6 +331,7 @@ void LightWindow::SetEntity(Entity entity)
 		haloCheckBox.SetEnabled(false);
 		volumetricsCheckBox.SetEnabled(false);
 		staticCheckBox.SetEnabled(false);
+		volumetricCloudsCheckBox.SetEnabled(false);
 		intensitySlider.SetEnabled(false);
 		colorPicker.SetEnabled(false);
 		shadowResolutionComboBox.SetEnabled(false);

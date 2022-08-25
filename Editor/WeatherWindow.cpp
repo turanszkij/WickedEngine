@@ -289,6 +289,16 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&volumetricCloudsCheckBox);
 
+	volumetricCloudsShadowsCheckBox.Create("Volumetric clouds shadows: ");
+	volumetricCloudsShadowsCheckBox.SetTooltip("Compute shadows for volumetric clouds that will be used for geometry and lighting.");
+	volumetricCloudsShadowsCheckBox.SetSize(XMFLOAT2(hei, hei));
+	volumetricCloudsShadowsCheckBox.SetPos(XMFLOAT2(x, y += step));
+	volumetricCloudsShadowsCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetVolumetricCloudsShadows(args.bValue);
+		});
+	AddWidget(&volumetricCloudsShadowsCheckBox);
+
 	coverageAmountSlider.Create(0, 10, 1, 1000, "Coverage amount: ");
 	coverageAmountSlider.SetSize(XMFLOAT2(wid, hei));
 	coverageAmountSlider.SetPos(XMFLOAT2(x, y += step));
@@ -802,6 +812,7 @@ void WeatherWindow::Update()
 		ocean_toleranceSlider.SetValue(weather.oceanParameters.surfaceDisplacementTolerance);
 
 		volumetricCloudsCheckBox.SetCheck(weather.IsVolumetricClouds());
+		volumetricCloudsShadowsCheckBox.SetCheck(weather.IsVolumetricCloudsShadows());
 		coverageAmountSlider.SetValue(weather.volumetricCloudParameters.CoverageAmount);
 		coverageMinimumSlider.SetValue(weather.volumetricCloudParameters.CoverageMinimum);
 	}
