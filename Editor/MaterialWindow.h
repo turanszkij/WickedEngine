@@ -22,6 +22,9 @@ public:
 	wi::gui::CheckBox windCheckBox;
 	wi::gui::CheckBox doubleSidedCheckBox;
 	wi::gui::CheckBox outlineCheckBox;
+	wi::gui::ComboBox shaderTypeComboBox;
+	wi::gui::ComboBox blendModeComboBox;
+	wi::gui::ComboBox shadingRateComboBox;
 	wi::gui::Slider normalMapSlider;
 	wi::gui::Slider roughnessSlider;
 	wi::gui::Slider reflectanceSlider;
@@ -38,9 +41,6 @@ public:
 	wi::gui::Slider texMulSliderX;
 	wi::gui::Slider texMulSliderY;
 	wi::gui::Slider alphaRefSlider;
-	wi::gui::ComboBox shaderTypeComboBox;
-	wi::gui::ComboBox blendModeComboBox;
-	wi::gui::ComboBox shadingRateComboBox;
 	wi::gui::Slider sheenRoughnessSlider;
 	wi::gui::Slider clearcoatSlider;
 	wi::gui::Slider clearcoatRoughnessSlider;
@@ -52,5 +52,7 @@ public:
 	wi::gui::Button textureSlotButton;
 	wi::gui::Label textureSlotLabel;
 	wi::gui::TextInputField textureSlotUvsetField;
+
+	void ResizeLayout() override;
 };
 

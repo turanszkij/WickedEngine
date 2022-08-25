@@ -76,10 +76,16 @@ namespace wi::ecs
 		}
 		else
 		{
+#ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif // _WIN32
+
 			archive << entity;
+
+#ifndef _WIN32
 #pragma GCC diagnostic pop
+#endif // _WIN32
 		}
 	}
 
