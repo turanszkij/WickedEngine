@@ -16,9 +16,12 @@
 // In this case, DirectXMath is coming from supplied source code
 //	On platforms that don't have Windows SDK, the source code for DirectXMath is provided
 //	as part of the engine utilities
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
 #include "Utility/DirectXMath.h"
 #include "Utility/DirectXPackedVector.h"
 #include "Utility/DirectXCollision.h"
+#pragma GCC diagnostic pop
 #endif
 
 using namespace DirectX;
