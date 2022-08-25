@@ -74,5 +74,7 @@ public:
 	wi::gui::Button preset5Button;
 	wi::gui::Button eliminateCoarseCascadesButton;
 	wi::gui::Button ktxConvButton;
+
+	void ResizeLayout() override;
 };
 

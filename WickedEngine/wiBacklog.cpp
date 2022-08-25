@@ -108,6 +108,8 @@ namespace wi::backlog
 					Scroll(-1000.0f * dt);
 				}
 
+				Scroll(wi::input::GetPointer().z * 20);
+
 				static bool created = false;
 				if (!created)
 				{
