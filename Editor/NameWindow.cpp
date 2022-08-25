@@ -75,8 +75,10 @@ void NameWindow::SetEntity(Entity entity)
 	}
 }
 
-void NameWindow::Update()
+void NameWindow::ResizeLayout()
 {
+	wi::gui::Window::ResizeLayout();
+
 	nameInput.SetPos(XMFLOAT2(60, 4));
 	nameInput.SetSize(XMFLOAT2(GetSize().x - 65, nameInput.GetSize().y));
 }

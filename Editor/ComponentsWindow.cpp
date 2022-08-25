@@ -36,6 +36,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	rigidWnd.Create(editor);
 	softWnd.Create(editor);
 	colliderWnd.Create(editor);
+	hierarchyWnd.Create(editor);
 
 
 	newComponentCombo.Create("Add: ");
@@ -46,6 +47,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.SetInvalidSelectionText("...");
 	newComponentCombo.AddItem("Name", 0);
 	newComponentCombo.AddItem("Layer " ICON_LAYER, 1);
+	newComponentCombo.AddItem("Hierarchy " ICON_HIERARCHY, 19);
 	newComponentCombo.AddItem("Transform " ICON_TRANSFORM, 2);
 	newComponentCombo.AddItem("Light " ICON_POINTLIGHT, 3);
 	newComponentCombo.AddItem("Matetial " ICON_MATERIAL, 4);
@@ -154,6 +156,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			if (scene.colliders.Contains(entity))
 				return;
 			break;
+		case 19:
+			if (scene.hierarchy.Contains(entity))
+				return;
+			break;
 		default:
 			return;
 		}
@@ -244,6 +250,9 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		case 18:
 			scene.colliders.Create(entity);
 			break;
+		case 19:
+			scene.hierarchy.Create(entity);
+			break;
 		default:
 			break;
 		}
@@ -277,6 +286,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&rigidWnd);
 	AddWidget(&softWnd);
 	AddWidget(&colliderWnd);
+	AddWidget(&hierarchyWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -299,6 +309,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	rigidWnd.SetVisible(false);
 	softWnd.SetVisible(false);
 	colliderWnd.SetVisible(false);
+	hierarchyWnd.SetVisible(false);
 
 
 	SetSize(editor->optionsWnd.GetSize());
@@ -335,13 +346,25 @@ void ComponentsWindow::ResizeLayout()
 		nameWnd.SetVisible(true);
 		nameWnd.SetPos(pos);
 		nameWnd.SetSize(XMFLOAT2(width, nameWnd.GetScale().y));
-		nameWnd.Update();
 		pos.y += nameWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
 	{
 		nameWnd.SetVisible(false);
+	}
+
+	if (scene.hierarchy.Contains(hierarchyWnd.entity))
+	{
+		hierarchyWnd.SetVisible(true);
+		hierarchyWnd.SetPos(pos);
+		hierarchyWnd.SetSize(XMFLOAT2(width, hierarchyWnd.GetScale().y));
+		pos.y += hierarchyWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		hierarchyWnd.SetVisible(false);
 	}
 
 	if (scene.layers.Contains(layerWnd.entity))

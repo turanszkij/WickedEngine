@@ -80,6 +80,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)RigidBodyWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SoftBodyWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ColliderWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)HierarchyWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -124,6 +125,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)RigidBodyWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SoftBodyWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ColliderWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)HierarchyWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

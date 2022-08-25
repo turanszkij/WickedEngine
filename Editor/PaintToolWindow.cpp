@@ -1615,6 +1615,7 @@ void PaintToolWindow::ResizeLayout()
 
 	add(modeComboBox);
 	add_fullwidth(infoLabel);
+	add_fullwidth(colorPicker);
 	add(radiusSlider);
 	add(amountSlider);
 	add(smoothnessSlider);
@@ -1630,6 +1631,4 @@ void PaintToolWindow::ResizeLayout()
 	add(saveTextureButton);
 	add_right(brushTextureButton);
 	add_right(revealTextureButton);
-
-	colorPicker.SetPos(XMFLOAT2(padding, y));
 }

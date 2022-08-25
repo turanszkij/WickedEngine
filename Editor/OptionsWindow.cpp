@@ -580,7 +580,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			theme_color_idle = wi::Color(200, 180, 190, 190);
 			theme_color_focus = wi::Color(240, 190, 200, 230);
 			dark_point = wi::Color(100, 80, 90, 220);
-			theme.shadow_color = wi::Color(240, 190, 200, 100);
+			theme.shadow_color = wi::Color(240, 190, 200, 180);
 			theme.font.color = wi::Color(255, 230, 240, 255);
 			break;
 		case Theme::Hacking:
@@ -944,6 +944,8 @@ void OptionsWindow::RefreshEntityTree()
 		// Add hierarchy:
 		for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 		{
+			if (scene.hierarchy[i].parentID == INVALID_ENTITY)
+				continue;
 			PushToEntityTree(scene.hierarchy[i].parentID, 0);
 		}
 	}

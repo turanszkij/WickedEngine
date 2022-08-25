@@ -3070,6 +3070,7 @@ namespace wi::gui
 	XMFLOAT2 Window::GetWidgetAreaSize() const
 	{
 		XMFLOAT2 size = GetSize();
+		size.y -= control_size;
 		if (scrollbar_horizontal.IsScrollbarRequired())
 		{
 			size.y -= control_size;
@@ -3783,12 +3784,12 @@ namespace wi::gui
 			}
 			// preview
 			{
-				float _width = 20;
+				float _width = 50;
 				Vertex vertices[] = {
-					{ XMFLOAT4(-_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) },
 					{ XMFLOAT4(-_width, _width, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(_width, _width, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(0, _width, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(-_width, 0, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(0, 0, 0, 1),XMFLOAT4(1,1,1,1) },
 				};
 
 				GPUBufferDesc desc;
@@ -3959,7 +3960,7 @@ namespace wi::gui
 		{
 			XMStoreFloat4x4(&cb.g_xTransform,
 				XMMatrixScaling(sca, sca, 1) *
-				XMMatrixTranslation(translation.x + scale.x - 40 * sca, translation.y + 50, 0) *
+				XMMatrixTranslation(translation.x + scale.x - sca - 4, translation.y + control_size + 4, 0) *
 				Projection
 			);
 			cb.g_xColor = final_color.toFloat4();
@@ -3973,6 +3974,47 @@ namespace wi::gui
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 			device->Draw((uint32_t)(vb_preview.GetDesc().size / sizeof(Vertex)), 0, cmd);
 		}
+	}
+	void ColorPicker::ResizeLayout()
+	{
+		wi::gui::Window::ResizeLayout();
+		const float padding = 4;
+		const float width = GetWidgetAreaSize().x;
+		float y = GetWidgetAreaSize().y;
+		float jump = 20;
+
+		auto add = [&](wi::gui::Widget& widget) {
+			if (!widget.IsVisible())
+				return;
+			const float margin_left = 20;
+			const float margin_right = 120;
+			y -= widget.GetSize().y;
+			y -= padding;
+			widget.SetPos(XMFLOAT2(margin_left, y));
+			widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		};
+		auto add_right = [&](wi::gui::Widget& widget) {
+			if (!widget.IsVisible())
+				return;
+			const float margin_right = padding;
+			y -= widget.GetSize().y;
+			y -= padding;
+			widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		};
+
+		add(alphaSlider);
+		y += alphaSlider.GetSize().y;
+		y += padding;
+
+		add_right(text_V);
+		add_right(text_S);
+		add_right(text_H);
+
+		y -= jump;
+
+		add_right(text_B);
+		add_right(text_G);
+		add_right(text_R);
 	}
 	wi::Color ColorPicker::GetPickColor() const
 	{
