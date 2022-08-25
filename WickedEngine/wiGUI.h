@@ -17,15 +17,15 @@ namespace wi::gui
 
 	struct EventArgs
 	{
-		XMFLOAT2 clickPos = {0,0};
-		XMFLOAT2 startPos = {0,0};
-		XMFLOAT2 deltaPos = {0,0};
-		XMFLOAT2 endPos = {0,0};
+		XMFLOAT2 clickPos = {};
+		XMFLOAT2 startPos = {};
+		XMFLOAT2 deltaPos = {};
+		XMFLOAT2 endPos = {};
 		float fValue = 0;
 		bool bValue = false;
 		int iValue = 0;
-		wi::Color color = wi::Color::Black();
-		std::string sValue = "";
+		wi::Color color;
+		std::string sValue;
 		uint64_t userdata = 0;
 	};
 
@@ -86,7 +86,7 @@ namespace wi::gui
 		// Window:
 		WIDGET_ID_WINDOW_BASE,
 
-		// other user-defined widget states can be specified after this:
+		// other user-defined widget states can be specified after this (but in user's own enum):
 		//	And you will of course need to handle it yourself in a SetColor() override for example
 		WIDGET_ID_USER,
 	};
