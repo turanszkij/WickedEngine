@@ -625,13 +625,11 @@ namespace wi::lua::scene
 		~ColliderComponent_BindLua();
 
 		int GetShape(lua_State* L);
-		int GetTransformID(lua_State* L);
 		int GetRadius(lua_State* L);
 		int GetOffset(lua_State* L);
 		int GetTail(lua_State* L);
 
 		int SetShape(lua_State* L);
-		int SetTransformID(lua_State* L);
 		int SetRadius(lua_State* L);
 		int SetOffset(lua_State* L);
 		int SetTail(lua_State* L);

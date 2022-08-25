@@ -4622,12 +4622,10 @@ const char ColliderComponent_BindLua::className[] = "ColliderComponent";
 
 Luna<ColliderComponent_BindLua>::FunctionType ColliderComponent_BindLua::methods[] = {
 	lunamethod(ColliderComponent_BindLua, GetShape),
-	lunamethod(ColliderComponent_BindLua, GetTransformID),
 	lunamethod(ColliderComponent_BindLua, GetRadius),
 	lunamethod(ColliderComponent_BindLua, GetOffset),
 	lunamethod(ColliderComponent_BindLua, GetTail),
 	lunamethod(ColliderComponent_BindLua, SetShape),
-	lunamethod(ColliderComponent_BindLua, SetTransformID),
 	lunamethod(ColliderComponent_BindLua, SetRadius),
 	lunamethod(ColliderComponent_BindLua, SetOffset),
 	lunamethod(ColliderComponent_BindLua, SetTail),
@@ -4665,24 +4663,6 @@ int ColliderComponent_BindLua::SetShape(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetShape(int type) not enough arguments!");
-	}
-	return 0;
-}
-int ColliderComponent_BindLua::GetTransformID(lua_State* L)
-{
-	wi::lua::SSetInt(L, component->transformID);
-	return 1;
-}
-int ColliderComponent_BindLua::SetTransformID(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->transformID = wi::lua::SGetInt(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetTransformID(int entity) not enough arguments!");
 	}
 	return 0;
 }
