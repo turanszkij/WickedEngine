@@ -5754,7 +5754,6 @@ using namespace vulkan_internal;
 				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 				break;
 			default:
-				assert(0);
 				break;
 			}
 
@@ -5883,7 +5882,6 @@ using namespace vulkan_internal;
 				view_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 				break;
 			default:
-				assert(0);
 				break;
 			}
 

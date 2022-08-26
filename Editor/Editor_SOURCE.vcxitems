@@ -24,6 +24,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)EnvProbeWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForceFieldWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HairParticleWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)HierarchyWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)IKWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LayerWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LightWindow.cpp" />
@@ -139,6 +140,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)FontAwesomeV6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForceFieldWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HairParticleWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)HierarchyWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IconDefinitions.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IconsFontAwesome6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IKWindow.h" />

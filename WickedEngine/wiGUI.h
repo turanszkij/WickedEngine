@@ -647,6 +647,7 @@ namespace wi::gui
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		void ResizeLayout() override;
 
 		wi::Color GetPickColor() const;
 		void SetPickColor(wi::Color value);
