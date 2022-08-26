@@ -108,6 +108,8 @@ namespace wi::backlog
 					Scroll(-1000.0f * dt);
 				}
 
+				Scroll(wi::input::GetPointer().z * 20);
+
 				static bool created = false;
 				if (!created)
 				{
@@ -236,7 +238,7 @@ namespace wi::backlog
 
 			toggleButton.Render(canvas, cmd);
 
-			rect.bottom = int32_t(canvas.LogicalToPhysical(canvas.GetLogicalHeight() - 35));
+			rect.bottom = int32_t(canvas.LogicalToPhysical(inputField.GetPos().y - 15));
 			wi::graphics::GetDevice()->BindScissorRects(1, &rect, cmd);
 
 			DrawOutputText(canvas, cmd, colorspace);

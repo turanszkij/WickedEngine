@@ -10,7 +10,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_WEATHER " Weather", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(660, 1300));
+	SetSize(XMFLOAT2(660, 1400));
 
 	closeButton.SetTooltip("Delete WeatherComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -806,4 +806,100 @@ void WeatherWindow::UpdateWind()
 	dir = XMVector3TransformNormal(dir, rot);
 	dir *= windMagnitudeSlider.GetValue();
 	XMStoreFloat3(&GetWeather().windDirection, dir);
+}
+
+void WeatherWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 150;
+		const float margin_right = 50;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 50;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_fullwidth(primaryButton);
+	add_right(simpleskyCheckBox);
+	add_right(realisticskyCheckBox);
+	add(colorComboBox);
+	add_fullwidth(colorPicker);
+	add_fullwidth(skyButton);
+	add_fullwidth(colorgradingButton);
+	add_right(heightFogCheckBox);
+	add(fogStartSlider);
+	add(fogEndSlider);
+	add(fogHeightStartSlider);
+	add(fogHeightEndSlider);
+	add(fogHeightSkySlider);
+	add(cloudinessSlider);
+	add(cloudScaleSlider);
+	add(cloudSpeedSlider);
+	add(cloudShadowAmountSlider);
+	add(cloudShadowScaleSlider);
+	add(cloudShadowSpeedSlider);
+	add(windSpeedSlider);
+	add(windMagnitudeSlider);
+	add(windDirectionSlider);
+	add(windWaveSizeSlider);
+	add(windRandomnessSlider);
+	add(skyExposureSlider);
+	add(starsSlider);
+
+	y += jump;
+
+	add_right(volumetricCloudsCheckBox);
+	add(coverageAmountSlider);
+	add(coverageMinimumSlider);
+
+	y += jump;
+
+	add_right(ocean_enabledCheckBox);
+	add(ocean_patchSizeSlider);
+	add(ocean_waveAmplitudeSlider);
+	add(ocean_choppyScaleSlider);
+	add(ocean_windDependencySlider);
+	add(ocean_timeScaleSlider);
+	add(ocean_heightSlider);
+	add(ocean_detailSlider);
+	add(ocean_toleranceSlider);
+	add_fullwidth(ocean_resetButton);
+
+	y += jump;
+
+	add_fullwidth(preset0Button);
+	add_fullwidth(preset1Button);
+	add_fullwidth(preset2Button);
+	add_fullwidth(preset3Button);
+	add_fullwidth(preset4Button);
+	add_fullwidth(preset5Button);
+	add_fullwidth(eliminateCoarseCascadesButton);
+	add_fullwidth(ktxConvButton);
+
 }

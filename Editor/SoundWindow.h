@@ -21,4 +21,6 @@ public:
 	wi::gui::CheckBox disable3dCheckbox;
 	wi::gui::Slider volumeSlider;
 	wi::gui::ComboBox submixComboBox;
+
+	void ResizeLayout() override;
 };

@@ -20,5 +20,7 @@ public:
 	wi::gui::Slider stiffnessSlider;
 	wi::gui::Slider dragSlider;
 	wi::gui::Slider windSlider;
+
+	void ResizeLayout() override;
 };
 

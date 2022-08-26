@@ -261,7 +261,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_OBJECT " Object", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 860));
+	SetSize(XMFLOAT2(670, 600));
 
 	closeButton.SetTooltip("Delete ObjectComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -579,5 +579,58 @@ void ObjectWindow::SetEntity(Entity entity)
 		SetEnabled(false);
 	}
 
+
+}
+
+
+void ObjectWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 140;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_right(renderableCheckBox);
+	add_right(shadowCheckBox);
+	add(ditherSlider);
+	add(cascadeMaskSlider);
+	add(lodSlider);
+	add(colorComboBox);
+	add_fullwidth(colorPicker);
+	add(lightmapResolutionSlider);
+	add(lightmapSourceUVSetComboBox);
+	add(generateLightmapButton);
+	add(stopLightmapGenButton);
+	add(clearLightmapButton);
 
 }

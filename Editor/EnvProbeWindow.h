@@ -17,5 +17,7 @@ public:
 	wi::gui::CheckBox msaaCheckBox;
 	wi::gui::Button refreshButton;
 	wi::gui::Button refreshAllButton;
+
+	void ResizeLayout() override;
 };
 

@@ -83,6 +83,8 @@ public:
 	bool bone_picking = false;
 	void CheckBonePickingEnabled();
 
+	void UpdateTopMenuAnimation();
+
 	wi::Archive clipboard;
 
 	enum HistoryOperationType
@@ -106,6 +108,7 @@ public:
 
 	void Save(const std::string& filename);
 	void SaveAs();
+	bool deleting = false;
 
 	struct EditorScene
 	{

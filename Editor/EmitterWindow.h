@@ -62,5 +62,6 @@ public:
 	wi::gui::TextInputField frameCountInput;
 	wi::gui::TextInputField frameStartInput;
 
+	void ResizeLayout() override;
 };
 

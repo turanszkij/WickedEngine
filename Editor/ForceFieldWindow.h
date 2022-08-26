@@ -15,5 +15,7 @@ public:
 	wi::gui::ComboBox typeComboBox;
 	wi::gui::Slider gravitySlider;
 	wi::gui::Slider rangeSlider;
+
+	void ResizeLayout() override;
 };
 
