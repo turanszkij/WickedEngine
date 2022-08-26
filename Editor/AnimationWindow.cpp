@@ -211,6 +211,12 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	recordCombo.AddItem("Camera [aperture shape] " ICON_CAMERA);
 	recordCombo.AddItem("Script [play] " ICON_SCRIPT);
 	recordCombo.AddItem("Script [stop] " ICON_SCRIPT);
+	recordCombo.AddItem("Material [color] " ICON_MATERIAL);
+	recordCombo.AddItem("Material [emissive] " ICON_MATERIAL);
+	recordCombo.AddItem("Material [roughness] " ICON_MATERIAL);
+	recordCombo.AddItem("Material [metalness] " ICON_MATERIAL);
+	recordCombo.AddItem("Material [reflectance] " ICON_MATERIAL);
+	recordCombo.AddItem("Material [texmuladd] " ICON_MATERIAL);
 	recordCombo.AddItem("Close loop " ICON_LOOP, ~0ull);
 	recordCombo.OnSelect([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -370,6 +376,24 @@ void AnimationWindow::Create(EditorComponent* _editor)
 					break;
 				case 19:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::SCRIPT_STOP);
+					break;
+				case 20:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR);
+					break;
+				case 21:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE);
+					break;
+				case 22:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS);
+					break;
+				case 23:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS);
+					break;
+				case 24:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE);
+					break;
+				case 25:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD);
 					break;
 				}
 
@@ -670,6 +694,99 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								}
 							}
 							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
+							{
+								const MaterialComponent* material = scene.materials.GetComponent(channel.target);
+								if (material != nullptr)
+								{
+									animation_data->keyframe_data.push_back(material->baseColor.x);
+									animation_data->keyframe_data.push_back(material->baseColor.y);
+									animation_data->keyframe_data.push_back(material->baseColor.z);
+									animation_data->keyframe_data.push_back(material->baseColor.w);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
+							{
+								const MaterialComponent* material = scene.materials.GetComponent(channel.target);
+								if (material != nullptr)
+								{
+									animation_data->keyframe_data.push_back(material->emissiveColor.x);
+									animation_data->keyframe_data.push_back(material->emissiveColor.y);
+									animation_data->keyframe_data.push_back(material->emissiveColor.z);
+									animation_data->keyframe_data.push_back(material->emissiveColor.w);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
+							{
+								const MaterialComponent* material = scene.materials.GetComponent(channel.target);
+								if (material != nullptr)
+								{
+									animation_data->keyframe_data.push_back(material->roughness);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
+							{
+								const MaterialComponent* material = scene.materials.GetComponent(channel.target);
+								if (material != nullptr)
+								{
+									animation_data->keyframe_data.push_back(material->metalness);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
+							{
+								const MaterialComponent* material = scene.materials.GetComponent(channel.target);
+								if (material != nullptr)
+								{
+									animation_data->keyframe_data.push_back(material->reflectance);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
+							{
+								const MaterialComponent* material = scene.materials.GetComponent(channel.target);
+								if (material != nullptr)
+								{
+									animation_data->keyframe_data.push_back(material->texMulAdd.x);
+									animation_data->keyframe_data.push_back(material->texMulAdd.y);
+									animation_data->keyframe_data.push_back(material->texMulAdd.z);
+									animation_data->keyframe_data.push_back(material->texMulAdd.w);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
 							default:
 								break;
 							}
@@ -922,6 +1039,24 @@ void AnimationWindow::RefreshKeyframesList()
 			break;
 		case wi::scene::AnimationComponent::AnimationChannel::Path::SCRIPT_STOP:
 			item.name += ICON_SCRIPT " [stop] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
+			item.name += ICON_MATERIAL " [color] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
+			item.name += ICON_MATERIAL " [emissive] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
+			item.name += ICON_MATERIAL " [roughness] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
+			item.name += ICON_MATERIAL " [metalness] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
+			item.name += ICON_MATERIAL " [reflectance] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
+			item.name += ICON_MATERIAL " [texmuladd] ";
 			break;
 		default:
 			break;

@@ -2264,6 +2264,22 @@ void EditorComponent::AddSelected(Entity entity)
 }
 void EditorComponent::AddSelected(const PickResult& picked)
 {
+	wi::scene::Scene& scene = GetCurrentScene();
+	if (picked.subsetIndex >= 0)
+	{
+		const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
+		if (object != nullptr) // maybe it was deleted...
+		{
+			AddSelected(object->meshID);
+
+			const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+			if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
+			{
+				AddSelected(mesh->subsets[picked.subsetIndex].materialID);
+			}
+		}
+	}
+
 	bool removal = false;
 	for (size_t i = 0; i < translator.selected.size(); ++i)
 	{

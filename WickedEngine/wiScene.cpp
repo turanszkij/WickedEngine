@@ -1366,6 +1366,15 @@ namespace wi::scene
 		case wi::scene::AnimationComponent::AnimationChannel::Path::SCRIPT_STOP:
 			return PathDataType::Event;
 
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
+			return PathDataType::Float4;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
+			return PathDataType::Float;
+
 		default:
 			assert(0);
 			break;
@@ -2777,6 +2786,7 @@ namespace wi::scene
 				EmittedParticleSystem* target_emitter = nullptr;
 				CameraComponent* target_camera = nullptr;
 				ScriptComponent* target_script = nullptr;
+				MaterialComponent* target_material = nullptr;
 
 				if (
 					channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION ||
@@ -2909,6 +2919,38 @@ namespace wi::scene
 					target_script = scripts.GetComponent(channel.target);
 					if (target_script == nullptr)
 						continue;
+				}
+				else if (
+					channel.path >= AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_MATERIAL_RANGE_END
+					)
+				{
+					target_material = materials.GetComponent(channel.target);
+					if (target_material == nullptr)
+						continue;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
+						interpolator.f4 = target_material->baseColor;
+						break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
+						interpolator.f4 = target_material->emissiveColor;
+						break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
+						interpolator.f = target_material->roughness;
+						break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
+						interpolator.f = target_material->metalness;
+						break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
+						interpolator.f = target_material->reflectance;
+						break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
+						interpolator.f4 = target_material->texMulAdd;
+						break;
+					default:
+						break;
+					}
 				}
 				else
 				{
@@ -3280,6 +3322,47 @@ namespace wi::scene
 					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
 					{
 						target_camera->aperture_shape = wi::math::Lerp(target_camera->aperture_shape, interpolator.f2, t);
+					}
+					break;
+					default:
+						break;
+					}
+				}
+
+				if (target_material != nullptr)
+				{
+					target_material->SetDirty();
+
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
+					{
+						target_material->baseColor = wi::math::Lerp(target_material->baseColor, interpolator.f4, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
+					{
+						target_material->baseColor = wi::math::Lerp(target_material->emissiveColor, interpolator.f4, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
+					{
+						target_material->roughness = wi::math::Lerp(target_material->roughness, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
+					{
+						target_material->metalness = wi::math::Lerp(target_material->metalness, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
+					{
+						target_material->reflectance = wi::math::Lerp(target_material->reflectance, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
+					{
+						target_material->texMulAdd = wi::math::Lerp(target_material->texMulAdd, interpolator.f4, t);
 					}
 					break;
 					default:

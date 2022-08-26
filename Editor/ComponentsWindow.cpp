@@ -43,7 +43,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.selected_font.anim.typewriter.looped = true;
 	newComponentCombo.selected_font.anim.typewriter.time = 2;
 	newComponentCombo.selected_font.anim.typewriter.character_start = 1;
-	newComponentCombo.SetTooltip("Add a component to the first selected entity.");
+	newComponentCombo.SetTooltip("Add a component to the last selected entity.");
 	newComponentCombo.SetInvalidSelectionText("...");
 	newComponentCombo.AddItem("Name", 0);
 	newComponentCombo.AddItem("Layer " ICON_LAYER, 1);
@@ -70,7 +70,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		if (editor->translator.selected.empty())
 			return;
 		Scene& scene = editor->GetCurrentScene();
-		Entity entity = editor->translator.selected.front().entity;
+		Entity entity = editor->translator.selected.back().entity;
 		if (entity == INVALID_ENTITY)
 		{
 			assert(0);

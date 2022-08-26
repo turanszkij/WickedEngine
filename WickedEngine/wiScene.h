@@ -1144,7 +1144,17 @@ namespace wi::scene
 
 				SCRIPT_PLAY,
 				SCRIPT_STOP,
+				// additional script paths can go here...
 				_SCRIPT_RANGE_END = SCRIPT_PLAY + 1000,
+
+				MATERIAL_COLOR,
+				MATERIAL_EMISSIVE,
+				MATERIAL_ROUGHNESS,
+				MATERIAL_METALNESS,
+				MATERIAL_REFLECTANCE,
+				MATERIAL_TEXMULADD,
+				// additional material paths can go here...
+				_MATERIAL_RANGE_END = MATERIAL_COLOR + 1000,
 
 				UNKNOWN,
 			} path = Path::UNKNOWN;
