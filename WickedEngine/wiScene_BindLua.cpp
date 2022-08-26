@@ -4,8 +4,6 @@
 #include "wiEmittedParticle.h"
 #include "wiTexture_BindLua.h"
 #include "wiPrimitive_BindLua.h"
-#include <LUA/lua.h>
-#include <Utility/DirectXMath.h>
 #include <string>
 #include <wiBacklog.h>
 #include <wiECS.h>
