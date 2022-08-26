@@ -34,6 +34,10 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 	Luna<Vector_BindLua>::PropertyType Vector_BindLua::properties[] = {
+		lunaproperty(Vector_BindLua, X),
+		lunaproperty(Vector_BindLua, Y),
+		lunaproperty(Vector_BindLua, Z),
+		lunaproperty(Vector_BindLua, W),
 		{ NULL, NULL }
 	};
 
