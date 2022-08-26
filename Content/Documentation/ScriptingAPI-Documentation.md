@@ -36,6 +36,12 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		11. [ObjectComponent](#objectcomponent)
 		12. [InverseKinematicsComponent](#inversekinematicscomponent)
 		13. [SpringComponent](#springcomponent)
+		14. [RigidBodyPhsyicsComponent](#rigidbodyphysicscomponent)
+		15. [SoftBodyPhsyicsComponent](#softbodyphysicscomponent)
+		16. [ForceFieldComponent](#forcefieldcomponent)
+		17. [WeatherComponent](#weathercomponent)
+		18. [SoundComponent](#soundcomponent)
+		19. [ColliderComponent](#collidercomponent)
 	10. [Canvas](#canvas)
 	11. [High Level Interface](#high-level-interface)
 		1. [MainComponent](#maincomponent)
@@ -378,6 +384,12 @@ The reverb types are built in presets that can mimic a specific kind of environm
 
 ### Vector
 A four component floating point vector. Provides efficient calculations with SIMD support.
+- X : float
+- Y : float
+- Z : float
+
+</br>
+
 - [outer]vector
 - [constructor]Vector(opt float x, opt float y, opt float z, opt float w)
 - GetX() : float result
@@ -506,11 +518,13 @@ The scene holds components. Entity handles can be used to retrieve associated co
 
 #### NameComponent
 Holds a string that can more easily identify an entity to humans than an entity ID. 
+- Name : string
 - SetName(string value)  -- set the name
 - GetName() : string result  -- query the name string
 
 #### LayerComponent
 An integer mask that can be used to group entities together for certain operations such as: picking, rendering, etc.
+- LayerMask : float
 - SetLayerMask(int value)  -- set layer mask
 - GetLayerMask() : int result  -- query layer mask
 
@@ -530,6 +544,15 @@ Describes an orientation in 3D space.
 - GetScale() : Vector resultXYZ  -- query the scaling in world space
 
 #### CameraComponent
+- FOV : float
+- NearPlane : float
+- FarPlane : float
+- FocalDistance : float
+- ApertureSize : float
+- ApertureShape : float
+
+</br>
+
 - UpdateCamera()  -- update the camera matrices
 - TransformCamera(TransformComponent transform)  -- copies the transform's orientation to the camera. Camera matrices are not updated immediately. They will be updated by the Scene::Update() (if the camera is part of the scene), or by manually calling UpdateCamera()
 - GetFOV() : float result
@@ -555,6 +578,11 @@ Describes an orientation in 3D space.
 - GetUpDirection() : Vector result
 
 #### AnimationComponent
+- Timer : float
+- Amount : float
+
+</br>
+
 - Play()
 - Stop()
 - Pause()
@@ -574,6 +602,19 @@ Describes an orientation in 3D space.
 - GetStencilRef() : int result
 
 #### EmitterComponent
+- EmitCount : float  -- emitted particle count per second
+- Size : float  -- particle starting size
+- Life : float  -- particle lifetime
+- NormalFactor : float  -- normal factor that modulates emit velocities
+- Randomness : float  -- general randomness factor
+- LifeRandomness : float  -- lifetime randomness factor
+- ScaleX : float  -- scaling along lifetime in X axis
+- ScaleY : float  -- scaling along lifetime in Y axis
+- Rotation : float  -- rotation speed
+- MotionBlurAmount : float  -- set the motion elongation factor
+
+</br>
+
 - Burst(int value)  -- spawns a specific amount of particles immediately
 - SetEmitCount(float value)  -- set the emitted particle count per second
 - SetSize(float value)  -- set particle starting size
@@ -587,6 +628,20 @@ Describes an orientation in 3D space.
 - SetMotionBlurAmount(float value)  -- set the motion elongation factor
 
 #### LightComponent
+- Type : int  -- light type, see accepted values below (by default it is a point light)
+- [outer]DIRECTIONAL : int
+- [outer]POINT : int
+- [outer]SPOT : int
+- Range : float
+- Intensity : float -- Brightness of light in. The units that this is defined in depend on the type of light. Point and spot lights use luminous intensity in candela (lm/sr) while directional lights use illuminance in lux (lm/m2). https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
+- Color : Vector
+- CastShadow : bool
+- VolumetricsEnabled : bool
+- OuterConeAngle : float -- outer cone angle for spotlight in radians
+- InnerConeAngle : float -- inner cone angle for spotlight in radians
+
+</br>
+
 - SetType(int type)  -- set light type, see accepted values below (by default it is a point light)
 - [outer]DIRECTIONAL : int
 - [outer]POINT : int
@@ -600,19 +655,48 @@ Describes an orientation in 3D space.
 - SetInnerConeAngle(float value) -- inner cone angle for spotlight in radians (0 <= innerConeAngle <= outerConeAngle). Value of 0 disables inner cone angle
 - GetType() : int result
 
+</br>
+
 - SetEnergy(float value) -- kept for backwards compatibility with non physical light units (before v0.70.0)
 - SetFOV(float value) -- kept for backwards compatibility with FOV angle (before v0.70.0)
 
 #### ObjectComponent
+- MeshID : Entity
+- CascadeMask : int
+- RendertypeMask : int
+- Color : Vector
+- EmissiveColor : Vector
+- UserStencilRef : int
+- LodDistanceMultiplier : float
+- DrawDistance : float
+
+</br>
+
 - GetMeshID() : Entity
+- GetCascadeMask() : int
+- GetRendertypeMask() : int
 - GetColor() : Vector
+- GetEmissiveColor() : Vector
 - GetUserStencilRef() : int
+- GetLodDistanceMultiplier() : float
+- GetDrawDistance() : float
 - SetMeshID(Entity entity)
+- SetCascadeMask(int value)
+- SetRendertypeMask(int value)
 - SetColor(Vector value)
+- GetEmissiveColor(Vector value)
 - SetUserStencilRef(int value)
+- GetLodDistanceMultiplier(float value)
+- GetDrawDistance(float value)
 
 #### InverseKinematicsComponent
 Describes an Inverse Kinematics effector.
+- Target : Entity
+- ChainLength : int
+- IterationCount : int
+
+</br>
+
 - SetTarget(Entity entity) -- Sets the target entity (The IK entity and its parent hierarchy chain will try to reach the target)
 - SetChainLength(int value) -- Sets the chain length, in other words, how many parents will be computed by the IK system
 - SetIterationCount(int value) -- Sets the accuracy of the IK system simulation
@@ -635,6 +719,84 @@ A lua script bound to an entity
 - IsPlaying() : bool result
 - SetPlayOnce(bool once = true)
 - Stop()
+
+#### RigidBodyPhysicsComponent
+Describes a Rigid Body Physics object.
+- Shape : int
+- Mass : float
+- Friction : float
+- Restitution : float
+- LinearDamping : float
+- AngularDamping : float
+- BoxParams : Vector
+- SphereParams : float
+- CapsuleParams : table
+- [inner]radius : float
+- [inner]height : float
+- TargetMeshLOD : int
+
+</br>
+
+- IsDisableDeactivation() : bool return -- Check if the rigidbody is able to deactivate after inactivity
+- IsKinematic() : bool return -- Check if the rigidbody is movable or just static
+- SetDisableDeactivation(bool value = true) -- Sets if the rigidbody is able to deactivate after inactivity
+- SetKinematic(bool value = true) -- Sets if the rigidbody is movable or just static
+
+#### SoftBodyPhysicsComponent
+Describes a Soft Body Physics object.
+- Mass : float
+- Friction : float
+- Restitution : float
+
+#### ForceFieldComponent
+Describes a Force Field effector.
+- Type : int
+- Gravity : float
+- Range : float
+
+#### WeatherComponent
+Describes a Rigid Body Physics object.
+- WeatherParams: table -- Returns a table to modify weather parameters
+- OceanParams : table -- Returns a table to modify ocean parameters (if ocean is enabled)
+- AtmosphereParams : table -- Returns a table to modify atmosphere parameters
+- VolumetricCloudParams : table -- Returns a table to modify volumetric cloud parameters
+- SkyMapName : string -- Resource name for sky texture
+- ColorGradingMapName : string -- Resource name for color grading map
+
+</br>
+
+- IsOceanEnabled() : bool return -- Check if weather's ocean simulation is enabled
+- IsSimpleSky() : bool return -- Check if weather's sky is rendered in a simple, unrealistic way
+- IsRealisticSky() : bool return -- Check if weather's sky is rendered in a physically correct, realistic way
+- IsVolumetricClouds() : bool return -- Check if weather is rendering volumetric clouds
+- IsHeightFog() : bool return -- Check if weather is rendering height fog visual effect
+- SetOceanEnabled(bool value) -- Sets if weather's ocean simulation is enabled or not
+- SetSimpleSky(bool value) -- Sets if weather's sky is rendered in a simple, unrealistic way or not
+- SetRealisticSky(bool value) -- Sets if weather's sky is rendered in a physically correct, realistic way or not
+- SetVolumetricClouds(bool value) -- Sets if weather is rendering volumetric clouds or not
+- SetHeightFog(bool value) -- Sets if weather is rendering height fog visual effect or not
+
+#### SoundComponent
+Describes a Sound object.
+- Filename : string
+- Volume : float
+
+</br>
+
+- Play() -- Plays the sound
+- Stop() -- Stop the sound
+- SetLoop(bool value = true) -- Sets if the sound is looping when playing
+- SetDisable3D(bool value = true) -- Disable/Enable 3D sounds
+- IsPlaying() : bool result -- Check if sound is playing
+- IsLooped() : bool result -- Check if sound is looping
+- IsDisabled() : bool result -- Check if sound is disabled
+
+#### ColliderComponent
+Describes a Sound object.
+- Shape : int -- Shape of the collider
+- Radius : float
+- Offset : Vector
+- Tail : Vector
 
 ## Canvas
 This is used to describe a drawable area
