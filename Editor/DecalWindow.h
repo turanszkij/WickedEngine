@@ -14,5 +14,7 @@ public:
 
 	wi::gui::CheckBox placementCheckBox;
 	wi::gui::Label infoLabel;
+
+	void ResizeLayout() override;
 };
 

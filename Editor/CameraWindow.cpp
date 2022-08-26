@@ -217,7 +217,10 @@ void CameraWindow::Create(EditorComponent* _editor)
 	fpsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	fpsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	fpsCheckBox.SetCheck(true);
-	fpsCheckBox.SetCheck(editor->main->config.GetSection("camera").GetBool("fps"));
+	if (editor->main->config.GetSection("camera").Has("fps"))
+	{
+		fpsCheckBox.SetCheck(editor->main->config.GetSection("camera").GetBool("fps"));
+	}
 	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("camera").Set("fps", args.bValue);
 		editor->main->config.Commit();

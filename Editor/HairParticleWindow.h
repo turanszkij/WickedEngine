@@ -18,7 +18,7 @@ public:
 
 	wi::HairParticleSystem* GetHair();
 
-	wi::gui::ComboBox	meshComboBox;
+	wi::gui::ComboBox meshComboBox;
 	wi::gui::Slider lengthSlider;
 	wi::gui::Slider stiffnessSlider;
 	wi::gui::Slider randomnessSlider;
@@ -31,5 +31,6 @@ public:
 	wi::gui::TextInputField frameCountInput;
 	wi::gui::TextInputField frameStartInput;
 
+	void ResizeLayout() override;
 };
 

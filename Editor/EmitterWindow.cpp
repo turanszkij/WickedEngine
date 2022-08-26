@@ -11,7 +11,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_EMITTER " Emitter", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 900));
+	SetSize(XMFLOAT2(300, 940));
 
 	closeButton.SetTooltip("Delete EmittedParticleSystem");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -221,7 +221,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	framesXInput.SetSize(XMFLOAT2(38, 18));
 	framesXInput.SetText("");
 	framesXInput.SetTooltip("How many horizontal frames there are in the spritesheet.");
-	framesXInput.SetDescription("Frames X: ");
+	framesXInput.SetDescription("Frames: ");
 	framesXInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -236,7 +236,6 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	framesYInput.SetSize(XMFLOAT2(38, 18));
 	framesYInput.SetText("");
 	framesYInput.SetTooltip("How many vertical frames there are in the spritesheet.");
-	framesYInput.SetDescription("Frames Y: ");
 	framesYInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -765,4 +764,112 @@ void EmitterWindow::UpdateData()
 
 	infoLabel.SetText(ss);
 
+}
+
+void EmitterWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	const float margin_left = 130;
+	const float margin_right = 40;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_fullwidth(infoLabel);
+	add_fullwidth(restartButton);
+	add(meshComboBox);
+	add(shaderTypeComboBox);
+	add_right(sortCheckBox);
+	add_right(depthCollisionsCheckBox);
+	add_right(sphCheckBox);
+	add_right(pauseCheckBox);
+	add_right(debugCheckBox);
+	add_right(volumeCheckBox);
+	add_right(frameBlendingCheckBox);
+	add(maxParticlesSlider);
+	add(emitCountSlider);
+	add(emitSizeSlider);
+	add(emitRotationSlider);
+	add(emitNormalSlider);
+	add(emitScalingSlider);
+	add(emitLifeSlider);
+	add(emitLifeRandomnessSlider);
+	add(emitRandomnessSlider);
+	add(emitColorRandomnessSlider);
+	add(emitMotionBlurSlider);
+	add(emitMassSlider);
+	add(timestepSlider);
+	add(dragSlider);
+	add(restitutionSlider);
+
+	const float l = margin_left;
+	const float r = width - margin_right;
+	float w = ((r - l) - padding * 2) / 3.0f;
+	VelocityXInput.SetSize(XMFLOAT2(w, VelocityXInput.GetSize().y));
+	VelocityYInput.SetSize(XMFLOAT2(w, VelocityYInput.GetSize().y));
+	VelocityZInput.SetSize(XMFLOAT2(w, VelocityZInput.GetSize().y));
+	GravityXInput.SetSize(XMFLOAT2(w, GravityXInput.GetSize().y));
+	GravityYInput.SetSize(XMFLOAT2(w, GravityYInput.GetSize().y));
+	GravityZInput.SetSize(XMFLOAT2(w, GravityZInput.GetSize().y));
+
+	VelocityXInput.SetPos(XMFLOAT2(margin_left, y));
+	VelocityYInput.SetPos(XMFLOAT2(VelocityXInput.GetPos().x + w + padding, y));
+	VelocityZInput.SetPos(XMFLOAT2(VelocityYInput.GetPos().x + w + padding, y));
+
+	y += VelocityZInput.GetSize().y;
+	y += padding;
+
+	GravityXInput.SetPos(XMFLOAT2(margin_left, y));
+	GravityYInput.SetPos(XMFLOAT2(GravityXInput.GetPos().x + w + padding, y));
+	GravityZInput.SetPos(XMFLOAT2(GravityYInput.GetPos().x + w + padding, y));
+
+	y += GravityZInput.GetSize().y;
+	y += padding;
+
+	add(frameRateInput);
+
+	w = ((r - l) - padding) / 2.0f;
+	framesXInput.SetSize(XMFLOAT2(w, framesXInput.GetSize().y));
+	framesYInput.SetSize(XMFLOAT2(w, framesYInput.GetSize().y));
+	framesXInput.SetPos(XMFLOAT2(margin_left, y));
+	framesYInput.SetPos(XMFLOAT2(framesXInput.GetPos().x + w + padding, y));
+
+	y += framesYInput.GetSize().y;
+	y += padding;
+
+	add(frameCountInput);
+	add(frameStartInput);
+
+	add(sph_h_Slider);
+	add(sph_K_Slider);
+	add(sph_p0_Slider);
+	add(sph_e_Slider);
 }

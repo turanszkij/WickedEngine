@@ -10,7 +10,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_RIGIDBODY " Rigid Body Physics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 280));
+	SetSize(XMFLOAT2(670, 300));
 
 	closeButton.SetTooltip("Delete RigidBodyPhysicsComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -250,7 +250,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&angulardampingSlider);
 
-	physicsMeshLODSlider.Create(0, 6, 0, 6, "Physics Mesh LOD: ");
+	physicsMeshLODSlider.Create(0, 6, 0, 6, "Use Mesh LOD: ");
 	physicsMeshLODSlider.SetTooltip("Specify which LOD to use for triangle mesh physics.");
 	physicsMeshLODSlider.SetSize(XMFLOAT2(wid, hei));
 	physicsMeshLODSlider.SetPos(XMFLOAT2(x, y += step));
@@ -359,5 +359,58 @@ void RigidBodyWindow::SetEntity(Entity entity)
 		kinematicCheckBox.SetCheck(false);
 		disabledeactivationCheckBox.SetCheck(false);
 	}
+
+}
+
+
+void RigidBodyWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	const float margin_left = 120;
+	const float margin_right = 40;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add(collisionShapeComboBox);
+	add(XSlider);
+	add(YSlider);
+	add(ZSlider);
+	add(massSlider);
+	add(frictionSlider);
+	add(restitutionSlider);
+	add(lineardampingSlider);
+	add(angulardampingSlider);
+	add(physicsMeshLODSlider);
+	add_right(disabledeactivationCheckBox);
+	add_right(kinematicCheckBox);
 
 }

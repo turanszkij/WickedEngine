@@ -3229,7 +3229,6 @@ namespace wi::scene
 			size_t transform_index = transforms.GetIndex(entity);
 			if (transform_index == ~0ull)
 			{
-				assert(0);
 				continue;
 			}
 			TransformComponent& transform = transforms[transform_index];

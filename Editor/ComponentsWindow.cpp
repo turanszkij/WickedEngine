@@ -52,7 +52,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Light " ICON_POINTLIGHT, 3);
 	newComponentCombo.AddItem("Matetial " ICON_MATERIAL, 4);
 	newComponentCombo.AddItem("Spring", 5);
-	newComponentCombo.AddItem("Inverse Kinematics", 6);
+	newComponentCombo.AddItem("Inverse Kinematics " ICON_IK, 6);
 	newComponentCombo.AddItem("Sound " ICON_SOUND, 7);
 	newComponentCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, 8);
 	newComponentCombo.AddItem("Emitted Particle System " ICON_EMITTER, 9);

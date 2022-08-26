@@ -344,6 +344,11 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		editor->RecordSelection(archive);
 
 		});
+	entityTree.OnDelete([=](wi::gui::EventArgs args) {
+		// Deletions will be performed in a batch next frame:
+		//	We don't delete here, because this callback will execute once for each item
+		editor->deleting = true;
+	});
 	AddWidget(&entityTree);
 
 	// Renderer and Postprocess windows are created in ChangeRenderPath(), because they deal with
@@ -673,7 +678,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	AddWidget(&themeCombo);
 
 
-	SetSize(XMFLOAT2(340, 500));
+	SetSize(XMFLOAT2(338, 500));
 }
 void OptionsWindow::Update(float dt)
 {

@@ -190,30 +190,9 @@ void EditorComponent::ResizeLayout()
 
 	componentsWnd.SetPos(XMFLOAT2(screenW - componentsWnd.GetScale().x, screenH - componentsWnd.GetScale().y));
 
-	////////////////////////////////////////////////////////////////////////////////////
-
-	float hei = 25;
-
-	saveButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44 - 104 * 3, 0));
-	saveButton.SetSize(XMFLOAT2(100, hei));
-
-	openButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44 - 104 * 2, 0));
-	openButton.SetSize(XMFLOAT2(100, hei));
-
-	closeButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44 - 104 * 1, 0));
-	closeButton.SetSize(XMFLOAT2(100, hei));
-
-	logButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44, 0));
-	logButton.SetSize(XMFLOAT2(40, hei));
-
-	aboutButton.SetPos(XMFLOAT2(screenW - 40 - 44, 0));
-	aboutButton.SetSize(XMFLOAT2(40, hei));
-
 	aboutLabel.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 	aboutLabel.SetPos(XMFLOAT2(screenW / 2.0f - aboutLabel.scale.x / 2.0f, screenH / 2.0f - aboutLabel.scale.y / 2.0f));
 
-	exitButton.SetPos(XMFLOAT2(screenW - 40, 0));
-	exitButton.SetSize(XMFLOAT2(40, hei));
 }
 void EditorComponent::Load()
 {
@@ -223,7 +202,7 @@ void EditorComponent::Load()
 	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, sizeof(font_awesome_v6));
 
 
-	saveButton.Create(ICON_SAVE " Save");
+	saveButton.Create("");
 	saveButton.font.params.shadowColor = wi::Color::Transparent();
 	saveButton.SetShadowRadius(2);
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)");
@@ -235,7 +214,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&saveButton);
 
 
-	openButton.Create(ICON_OPEN " Open");
+	openButton.Create("");
 	openButton.SetShadowRadius(2);
 	openButton.font.params.shadowColor = wi::Color::Transparent();
 	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...");
@@ -330,7 +309,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&openButton);
 
 
-	closeButton.Create(ICON_CLOSE " Close");
+	closeButton.Create("");
 	closeButton.SetShadowRadius(2);
 	closeButton.font.params.shadowColor = wi::Color::Transparent();
 	closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, and delete the scene.\nThis operation cannot be undone!");
@@ -383,7 +362,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&closeButton);
 
 
-	logButton.Create(ICON_BACKLOG);
+	logButton.Create("");
 	logButton.SetShadowRadius(2);
 	logButton.font.params.shadowColor = wi::Color::Transparent();
 	logButton.SetTooltip("Open the backlog (toggle with HOME button)");
@@ -395,7 +374,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&logButton);
 
 
-	aboutButton.Create(ICON_HELP);
+	aboutButton.Create("");
 	aboutButton.SetShadowRadius(2);
 	aboutButton.font.params.shadowColor = wi::Color::Transparent();
 	aboutButton.SetTooltip("About...");
@@ -460,7 +439,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&aboutLabel);
 	}
 
-	exitButton.Create(ICON_EXIT);
+	exitButton.Create("");
 	exitButton.SetShadowRadius(2);
 	exitButton.font.params.shadowColor = wi::Color::Transparent();
 	exitButton.SetTooltip("Exit");
@@ -545,6 +524,7 @@ void EditorComponent::Update(float dt)
 	selectionOutlineTimer += dt;
 
 	CheckBonePickingEnabled();
+	UpdateTopMenuAnimation();
 
 	bool clear_selected = false;
 	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
@@ -568,7 +548,6 @@ void EditorComponent::Update(float dt)
 	}
 
 	translator.interactable = false;
-	bool deleting = false;
 
 	// Camera control:
 	if (!wi::backlog::isActive() && !GetGUI().HasFocus())
@@ -1274,6 +1253,7 @@ void EditorComponent::Update(float dt)
 	// Delete
 	if (deleting)
 	{
+		deleting = false;
 		wi::Archive& archive = AdvanceHistory();
 		archive << HISTORYOP_DELETE;
 		RecordSelection(archive);
@@ -2714,3 +2694,34 @@ void EditorComponent::CheckBonePickingEnabled()
 	}
 }
 
+void EditorComponent::UpdateTopMenuAnimation()
+{
+	float screenW = GetLogicalWidth();
+	float screenH = GetLogicalHeight();
+	float hei = 25;
+	float wid_idle = 40;
+	float wid_focus = wid_idle * 2.5f;
+	float padding = 4;
+	float lerp = 0.3f;
+
+	exitButton.SetText(exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_EXIT " Exit" : ICON_EXIT);
+	aboutButton.SetText(aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_HELP " About" : ICON_HELP);
+	logButton.SetText(logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BACKLOG " Backlog" : ICON_BACKLOG);
+	closeButton.SetText(closeButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_CLOSE " Close" : ICON_CLOSE);
+	openButton.SetText(openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_OPEN " Open" : ICON_OPEN);
+	saveButton.SetText(saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_SAVE " Save" : ICON_SAVE);
+
+	exitButton.SetSize(XMFLOAT2(wi::math::Lerp(exitButton.GetSize().x, exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	aboutButton.SetSize(XMFLOAT2(wi::math::Lerp(aboutButton.GetSize().x, aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	logButton.SetSize(XMFLOAT2(wi::math::Lerp(logButton.GetSize().x, logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	closeButton.SetSize(XMFLOAT2(wi::math::Lerp(closeButton.GetSize().x, closeButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	openButton.SetSize(XMFLOAT2(wi::math::Lerp(openButton.GetSize().x, openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	saveButton.SetSize(XMFLOAT2(wi::math::Lerp(saveButton.GetSize().x, saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+
+	exitButton.SetPos(XMFLOAT2(screenW - exitButton.GetSize().x, 0));
+	aboutButton.SetPos(XMFLOAT2(exitButton.GetPos().x - aboutButton.GetSize().x - padding, 0));
+	logButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - logButton.GetSize().x - padding, 0));
+	closeButton.SetPos(XMFLOAT2(logButton.GetPos().x - closeButton.GetSize().x - padding, 0));
+	openButton.SetPos(XMFLOAT2(closeButton.GetPos().x - openButton.GetSize().x - padding, 0));
+	saveButton.SetPos(XMFLOAT2(openButton.GetPos().x - saveButton.GetSize().x - padding, 0));
+}

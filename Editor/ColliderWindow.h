@@ -20,5 +20,7 @@ public:
 	wi::gui::Slider tailX;
 	wi::gui::Slider tailY;
 	wi::gui::Slider tailZ;
+
+	void ResizeLayout() override;
 };
 
