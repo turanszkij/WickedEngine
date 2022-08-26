@@ -38,6 +38,7 @@ namespace wi::lua::scene
 		int Clear(lua_State* L);
 		int Merge(lua_State* L);
 
+		int Entity_Create(lua_State* L);
 		int Entity_FindByName(lua_State* L);
 		int Entity_Remove(lua_State* L);
 		int Entity_Duplicate(lua_State* L);
@@ -120,6 +121,9 @@ namespace wi::lua::scene
 		int Component_DetachChildren(lua_State* L);
 
 		int GetBounds(lua_State* L);
+
+		int GetWeather(lua_State* L);
+		int SetWeather(lua_State* L);
 	};
 
 	class NameComponent_BindLua
@@ -298,6 +302,17 @@ namespace wi::lua::scene
 		int SetScaleY(lua_State* L);
 		int SetRotation(lua_State* L);
 		int SetMotionBlurAmount(lua_State* L);
+
+		int GetEmitCount(lua_State* L);
+		int GetSize(lua_State* L);
+		int GetLife(lua_State* L);
+		int GetNormalFactor(lua_State* L);
+		int GetRandomness(lua_State* L);
+		int GetLifeRandomness(lua_State* L);
+		int GetScaleX(lua_State* L);
+		int GetScaleY(lua_State* L);
+		int GetRotation(lua_State* L);
+		int GetMotionBlurAmount(lua_State* L);
 	};
 
 	class LightComponent_BindLua
@@ -318,16 +333,25 @@ namespace wi::lua::scene
 		int SetRange(lua_State* L);
 		int SetIntensity(lua_State* L);
 		int SetColor(lua_State* L);
-		int SetCastShadow(lua_State* L);
-		int SetVolumetricsEnabled(lua_State* L);
 		int SetOuterConeAngle(lua_State* L);
 		int SetInnerConeAngle(lua_State* L);
+
+		int GetType(lua_State* L);
+		int GetRange(lua_State* L);
+		int GetIntensity(lua_State* L);
+		int GetColor(lua_State* L);
+		int GetOuterConeAngle(lua_State* L);
+		int GetInnerConeAngle(lua_State* L);
+
+		int SetCastShadow(lua_State* L);
+		int SetVolumetricsEnabled(lua_State* L);
+
+		int IsCastShadow(lua_State* L);
+		int IsVolumetricsEnabled(lua_State* L);
 
 		// back-compat:
 		int SetEnergy(lua_State* L);
 		int SetFOV(lua_State* L);
-
-		int GetType(lua_State* L);
 	};
 
 	class ObjectComponent_BindLua

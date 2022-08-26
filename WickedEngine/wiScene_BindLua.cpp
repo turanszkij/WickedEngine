@@ -7,6 +7,8 @@
 #include <LUA/lua.h>
 #include <Utility/DirectXMath.h>
 #include <string>
+#include <wiBacklog.h>
+#include <wiECS.h>
 #include <wiLua.h>
 #include <wiUnorderedMap.h>
 
@@ -337,6 +339,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Update),
 	lunamethod(Scene_BindLua, Clear),
 	lunamethod(Scene_BindLua, Merge),
+	lunamethod(Scene_BindLua, Entity_Create),
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
 	lunamethod(Scene_BindLua, Entity_Duplicate),
@@ -421,6 +424,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	{ NULL, NULL }
 };
 Luna<Scene_BindLua>::PropertyType Scene_BindLua::properties[] = {
+	lunaproperty(Scene_BindLua, Weather),
 	{ NULL, NULL }
 };
 
@@ -465,6 +469,12 @@ int Scene_BindLua::Merge(lua_State* L)
 	return 0;
 }
 
+int Scene_BindLua::Entity_Create(lua_State* L)
+{
+	Entity entity = wi::ecs::CreateEntity();
+	wi::lua::SSetLongLong(L, entity);
+	return 1;
+}
 int Scene_BindLua::Entity_FindByName(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -1625,6 +1635,33 @@ int Scene_BindLua::GetBounds(lua_State* L)
 	return 1;
 }
 
+int Scene_BindLua::GetWeather(lua_State* L)
+{
+	Luna<WeatherComponent_BindLua>::push(L, new WeatherComponent_BindLua(&scene->weather));
+	return 1;
+}
+int Scene_BindLua::SetWeather(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		WeatherComponent_BindLua* component = Luna<WeatherComponent_BindLua>::lightcheck(L, 1);
+		if (component != nullptr)
+		{
+			scene->weather = *(component->component);
+		}
+		else
+		{
+			wi::lua::SError(L, "SetWeather(WeatherComponent weather) argument is not a component!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetWeather(WeatherComponent weather) not enough arguments!");
+	}
+	return 0;
+}
+
 
 
 
@@ -1638,6 +1675,7 @@ Luna<NameComponent_BindLua>::FunctionType NameComponent_BindLua::methods[] = {
 	{ NULL, NULL }
 };
 Luna<NameComponent_BindLua>::PropertyType NameComponent_BindLua::properties[] = {
+	lunaproperty(NameComponent_BindLua, Name),
 	{ NULL, NULL }
 };
 
@@ -1686,6 +1724,7 @@ Luna<LayerComponent_BindLua>::FunctionType LayerComponent_BindLua::methods[] = {
 	{ NULL, NULL }
 };
 Luna<LayerComponent_BindLua>::PropertyType LayerComponent_BindLua::properties[] = {
+	lunaproperty(LayerComponent_BindLua, LayerMask),
 	{ NULL, NULL }
 };
 
@@ -2009,6 +2048,11 @@ Luna<CameraComponent_BindLua>::FunctionType CameraComponent_BindLua::methods[] =
 	{ NULL, NULL }
 };
 Luna<CameraComponent_BindLua>::PropertyType CameraComponent_BindLua::properties[] = {
+	lunaproperty(CameraComponent_BindLua, FOV),
+	lunaproperty(CameraComponent_BindLua, NearPlane),
+	lunaproperty(CameraComponent_BindLua, FarPlane),
+	lunaproperty(CameraComponent_BindLua, ApertureSize),
+	lunaproperty(CameraComponent_BindLua, ApertureShape),
 	{ NULL, NULL }
 };
 
@@ -2236,6 +2280,8 @@ Luna<AnimationComponent_BindLua>::FunctionType AnimationComponent_BindLua::metho
 	{ NULL, NULL }
 };
 Luna<AnimationComponent_BindLua>::PropertyType AnimationComponent_BindLua::properties[] = {
+	lunaproperty(AnimationComponent_BindLua, Timer),
+	lunaproperty(AnimationComponent_BindLua, Amount),
 	{ NULL, NULL }
 };
 
@@ -2480,6 +2526,16 @@ Luna<EmitterComponent_BindLua>::FunctionType EmitterComponent_BindLua::methods[]
 	{ NULL, NULL }
 };
 Luna<EmitterComponent_BindLua>::PropertyType EmitterComponent_BindLua::properties[] = {
+	lunaproperty(EmitterComponent_BindLua, EmitCount),
+	lunaproperty(EmitterComponent_BindLua, Size),
+	lunaproperty(EmitterComponent_BindLua, Life),
+	lunaproperty(EmitterComponent_BindLua, NormalFactor),
+	lunaproperty(EmitterComponent_BindLua, Randomness),
+	lunaproperty(EmitterComponent_BindLua, LifeRandomness),
+	lunaproperty(EmitterComponent_BindLua, ScaleX),
+	lunaproperty(EmitterComponent_BindLua, ScaleY),
+	lunaproperty(EmitterComponent_BindLua, Rotation),
+	lunaproperty(EmitterComponent_BindLua, MotionBlurAmount),
 	{ NULL, NULL }
 };
 
@@ -2510,6 +2566,11 @@ int EmitterComponent_BindLua::Burst(lua_State* L)
 
 	return 0;
 }
+int EmitterComponent_BindLua::GetEmitCount(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->count);
+	return 1;
+}
 int EmitterComponent_BindLua::SetEmitCount(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2523,6 +2584,11 @@ int EmitterComponent_BindLua::SetEmitCount(lua_State* L)
 	}
 
 	return 0;
+}
+int EmitterComponent_BindLua::GetSize(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->size);
+	return 1;
 }
 int EmitterComponent_BindLua::SetSize(lua_State* L)
 {
@@ -2538,6 +2604,11 @@ int EmitterComponent_BindLua::SetSize(lua_State* L)
 
 	return 0;
 }
+int EmitterComponent_BindLua::GetLife(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->life);
+	return 1;
+}
 int EmitterComponent_BindLua::SetLife(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2551,6 +2622,11 @@ int EmitterComponent_BindLua::SetLife(lua_State* L)
 	}
 
 	return 0;
+}
+int EmitterComponent_BindLua::GetNormalFactor(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->normal_factor);
+	return 1;
 }
 int EmitterComponent_BindLua::SetNormalFactor(lua_State* L)
 {
@@ -2566,6 +2642,11 @@ int EmitterComponent_BindLua::SetNormalFactor(lua_State* L)
 
 	return 0;
 }
+int EmitterComponent_BindLua::GetRandomness(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->random_factor);
+	return 1;
+}
 int EmitterComponent_BindLua::SetRandomness(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2579,6 +2660,11 @@ int EmitterComponent_BindLua::SetRandomness(lua_State* L)
 	}
 
 	return 0;
+}
+int EmitterComponent_BindLua::GetLifeRandomness(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->random_life);
+	return 1;
 }
 int EmitterComponent_BindLua::SetLifeRandomness(lua_State* L)
 {
@@ -2594,6 +2680,11 @@ int EmitterComponent_BindLua::SetLifeRandomness(lua_State* L)
 
 	return 0;
 }
+int EmitterComponent_BindLua::GetScaleX(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->scaleX);
+	return 1;
+}
 int EmitterComponent_BindLua::SetScaleX(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2607,6 +2698,11 @@ int EmitterComponent_BindLua::SetScaleX(lua_State* L)
 	}
 
 	return 0;
+}
+int EmitterComponent_BindLua::GetScaleY(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->scaleY);
+	return 1;
 }
 int EmitterComponent_BindLua::SetScaleY(lua_State* L)
 {
@@ -2622,6 +2718,11 @@ int EmitterComponent_BindLua::SetScaleY(lua_State* L)
 
 	return 0;
 }
+int EmitterComponent_BindLua::GetRotation(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->rotation);
+	return 1;
+}
 int EmitterComponent_BindLua::SetRotation(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2635,6 +2736,11 @@ int EmitterComponent_BindLua::SetRotation(lua_State* L)
 	}
 
 	return 0;
+}
+int EmitterComponent_BindLua::GetMotionBlurAmount(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->motionBlurAmount);
+	return 1;
 }
 int EmitterComponent_BindLua::SetMotionBlurAmount(lua_State* L)
 {
@@ -2673,11 +2779,20 @@ Luna<LightComponent_BindLua>::FunctionType LightComponent_BindLua::methods[] = {
 	lunamethod(LightComponent_BindLua, SetInnerConeAngle),
 	lunamethod(LightComponent_BindLua, GetType),
 
+	lunamethod(LightComponent_BindLua, IsCastShadow),
+	lunamethod(LightComponent_BindLua, IsVolumetricsEnabled),
+
 	lunamethod(LightComponent_BindLua, SetEnergy),
 	lunamethod(LightComponent_BindLua, SetFOV),
 	{ NULL, NULL }
 };
 Luna<LightComponent_BindLua>::PropertyType LightComponent_BindLua::properties[] = {
+	lunaproperty(LightComponent_BindLua, Type),
+	lunaproperty(LightComponent_BindLua, Range),
+	lunaproperty(LightComponent_BindLua, Intensity),
+	lunaproperty(LightComponent_BindLua, Color),
+	lunaproperty(LightComponent_BindLua, OuterConeAngle),
+	lunaproperty(LightComponent_BindLua, InnerConeAngle),
 	{ NULL, NULL }
 };
 
@@ -2694,6 +2809,11 @@ LightComponent_BindLua::~LightComponent_BindLua()
 	}
 }
 
+int LightComponent_BindLua::GetType(lua_State* L)
+{
+	wi::lua::SSetInt(L, (int)component->type);
+	return 1;
+}
 int LightComponent_BindLua::SetType(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2708,6 +2828,11 @@ int LightComponent_BindLua::SetType(lua_State* L)
 	}
 
 	return 0;
+}
+int LightComponent_BindLua::GetRange(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->range);
+	return 1;
 }
 int LightComponent_BindLua::SetRange(lua_State* L)
 {
@@ -2739,6 +2864,11 @@ int LightComponent_BindLua::SetEnergy(lua_State* L)
 
 	return 0;
 }
+int LightComponent_BindLua::GetIntensity(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->intensity);
+	return 1;
+}
 int LightComponent_BindLua::SetIntensity(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2753,6 +2883,11 @@ int LightComponent_BindLua::SetIntensity(lua_State* L)
 	}
 
 	return 0;
+}
+int LightComponent_BindLua::GetColor(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&component->color)));
+	return 1;
 }
 int LightComponent_BindLua::SetColor(lua_State* L)
 {
@@ -2776,6 +2911,11 @@ int LightComponent_BindLua::SetColor(lua_State* L)
 
 	return 0;
 }
+int LightComponent_BindLua::IsCastShadow(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsCastingShadow());
+	return 1;
+}
 int LightComponent_BindLua::SetCastShadow(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2789,6 +2929,11 @@ int LightComponent_BindLua::SetCastShadow(lua_State* L)
 	}
 
 	return 0;
+}
+int LightComponent_BindLua::IsVolumetricsEnabled(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsVolumetricsEnabled());
+	return 1;
 }
 int LightComponent_BindLua::SetVolumetricsEnabled(lua_State* L)
 {
@@ -2819,6 +2964,11 @@ int LightComponent_BindLua::SetFOV(lua_State* L)
 
 	return 0;
 }
+int LightComponent_BindLua::GetOuterConeAngle(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->outerConeAngle);
+	return 1;
+}
 int LightComponent_BindLua::SetOuterConeAngle(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2834,6 +2984,11 @@ int LightComponent_BindLua::SetOuterConeAngle(lua_State* L)
 
 	return 0;
 }
+int LightComponent_BindLua::GetInnerConeAngle(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->innerConeAngle);
+	return 1;
+}
 int LightComponent_BindLua::SetInnerConeAngle(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2848,12 +3003,6 @@ int LightComponent_BindLua::SetInnerConeAngle(lua_State* L)
 	}
 
 	return 0;
-}
-
-int LightComponent_BindLua::GetType(lua_State* L)
-{
-	wi::lua::SSetInt(L, (int)component->GetType());
-	return 1;
 }
 
 
@@ -2886,6 +3035,13 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	{ NULL, NULL }
 };
 Luna<ObjectComponent_BindLua>::PropertyType ObjectComponent_BindLua::properties[] = {
+	lunaproperty(ObjectComponent_BindLua, MeshID),
+	lunaproperty(ObjectComponent_BindLua, CascadeMask),
+	lunaproperty(ObjectComponent_BindLua, RendertypeMask),
+	lunaproperty(ObjectComponent_BindLua, Color),
+	lunaproperty(ObjectComponent_BindLua, EmissiveColor),
+	lunaproperty(ObjectComponent_BindLua, UserStencilRef),
+	lunaproperty(ObjectComponent_BindLua, DrawDistance),
 	{ NULL, NULL }
 };
 
@@ -3096,6 +3252,9 @@ Luna<InverseKinematicsComponent_BindLua>::FunctionType InverseKinematicsComponen
 	{ NULL, NULL }
 };
 Luna<InverseKinematicsComponent_BindLua>::PropertyType InverseKinematicsComponent_BindLua::properties[] = {
+	lunaproperty(InverseKinematicsComponent_BindLua, Target),
+	lunaproperty(InverseKinematicsComponent_BindLua, ChainLength),
+	lunaproperty(InverseKinematicsComponent_BindLua, IterationCount),
 	{ NULL, NULL }
 };
 
@@ -3372,29 +3531,19 @@ int ScriptComponent_BindLua::AppendCustomParameters(lua_State* L)
 const char RigidBodyPhysicsComponent_BindLua::className[] = "RigidBodyPhysicsComponent";
 
 Luna<RigidBodyPhysicsComponent_BindLua>::FunctionType RigidBodyPhysicsComponent_BindLua::methods[] = {
-	lunamethod(RigidBodyPhysicsComponent_BindLua, GetShape),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, GetMass),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, GetFriction),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, GetRestitution),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, GetLinearDamping),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, GetAngularDamping),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, GetBoxParams),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, GetSphereParams),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, GetCapsuleParams),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, GetTargetMeshLOD),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, SetShape),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, SetMass),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, SetFriction),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, SetRestitution),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, SetLinearDamping),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, SetAngularDamping),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, SetBoxParams),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, SetSphereParams),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, SetCapsuleParams),
-	lunamethod(RigidBodyPhysicsComponent_BindLua, SetTargetMeshLOD),
 	{ NULL, NULL }
 };
 Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType RigidBodyPhysicsComponent_BindLua::properties[] = {
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, Shape),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, Mass),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, Friction),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, Restitution),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, LinearDamping),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, AngularDamping),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, BoxParams),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, SphereParams),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, CapsuleParams),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, TargetMeshLOD),
 	{ NULL, NULL }
 };
 
@@ -3700,15 +3849,12 @@ int RigidBodyPhysicsComponent_BindLua::SetKinematic(lua_State* L)
 const char SoftBodyPhysicsComponent_BindLua::className[] = "SoftBodyPhysicsComponent";
 
 Luna<SoftBodyPhysicsComponent_BindLua>::FunctionType SoftBodyPhysicsComponent_BindLua::methods[] = {
-	lunamethod(SoftBodyPhysicsComponent_BindLua, GetMass),
-	lunamethod(SoftBodyPhysicsComponent_BindLua, GetFriction),
-	lunamethod(SoftBodyPhysicsComponent_BindLua, GetRestitution),
-	lunamethod(SoftBodyPhysicsComponent_BindLua, SetMass),
-	lunamethod(SoftBodyPhysicsComponent_BindLua, SetFriction),
-	lunamethod(SoftBodyPhysicsComponent_BindLua, SetRestitution),
 	{ NULL, NULL }
 };
 Luna<SoftBodyPhysicsComponent_BindLua>::PropertyType SoftBodyPhysicsComponent_BindLua::properties[] = {
+	lunaproperty(SoftBodyPhysicsComponent_BindLua, Mass),
+	lunaproperty(SoftBodyPhysicsComponent_BindLua, Friction),
+	lunaproperty(SoftBodyPhysicsComponent_BindLua, Restitution),
 	{ NULL, NULL }
 };
 
@@ -3789,15 +3935,12 @@ int SoftBodyPhysicsComponent_BindLua::SetRestitution(lua_State* L)
 const char ForceFieldComponent_BindLua::className[] = "ForceFieldComponent";
 
 Luna<ForceFieldComponent_BindLua>::FunctionType ForceFieldComponent_BindLua::methods[] = {
-	lunamethod(ForceFieldComponent_BindLua, GetType),
-	lunamethod(ForceFieldComponent_BindLua, GetGravity),
-	lunamethod(ForceFieldComponent_BindLua, GetRange),
-	lunamethod(ForceFieldComponent_BindLua, SetType),
-	lunamethod(ForceFieldComponent_BindLua, SetGravity),
-	lunamethod(ForceFieldComponent_BindLua, SetRange),
 	{ NULL, NULL }
 };
 Luna<ForceFieldComponent_BindLua>::PropertyType ForceFieldComponent_BindLua::properties[] = {
+	lunaproperty(ForceFieldComponent_BindLua, Type),
+	lunaproperty(ForceFieldComponent_BindLua, Gravity),
+	lunaproperty(ForceFieldComponent_BindLua, Range),
 	{ NULL, NULL }
 };
 
@@ -3889,14 +4032,22 @@ Luna<WeatherComponent_BindLua>::FunctionType WeatherComponent_BindLua::methods[]
 	lunamethod(WeatherComponent_BindLua, IsOceanEnabled),
 	lunamethod(WeatherComponent_BindLua, IsSimpleSky),
 	lunamethod(WeatherComponent_BindLua, IsRealisticSky),
+	lunamethod(WeatherComponent_BindLua, IsVolumetricClouds),
 	lunamethod(WeatherComponent_BindLua, IsHeightFog),
 	lunamethod(WeatherComponent_BindLua, SetOceanEnabled),
 	lunamethod(WeatherComponent_BindLua, SetSimpleSky),
 	lunamethod(WeatherComponent_BindLua, SetRealisticSky),
+	lunamethod(WeatherComponent_BindLua, SetVolumetricClouds),
 	lunamethod(WeatherComponent_BindLua, SetHeightFog),
 	{ NULL, NULL }
 };
 Luna<WeatherComponent_BindLua>::PropertyType WeatherComponent_BindLua::properties[] = {
+	lunaproperty(WeatherComponent_BindLua, WeatherParams),
+	lunaproperty(WeatherComponent_BindLua, OceanParams),
+	lunaproperty(WeatherComponent_BindLua, AtmosphereParams),
+	lunaproperty(WeatherComponent_BindLua, VolumetricCloudParams),
+	lunaproperty(WeatherComponent_BindLua, SkyMapName),
+	lunaproperty(WeatherComponent_BindLua, ColorGradingMapName),
 	{ NULL, NULL }
 };
 
@@ -3920,7 +4071,7 @@ void WeatherComponent_BindLua::InitParameters(){
 	weatherparams_xmfloat3["horizon"] = &component->horizon;
 	weatherparams_xmfloat3["zenith"] = &component->zenith;
 	weatherparams_xmfloat3["ambient"] = &component->ambient;
-	weatherparams_xmfloat3["windDirection"] = &component->ambient;
+	weatherparams_xmfloat3["windDirection"] = &component->windDirection;
 	weatherparams_float["skyExposure"] = &component->skyExposure;
 	weatherparams_float["fogStart"] = &component->fogStart;
 	weatherparams_float["fogEnd"] = &component->fogEnd;
@@ -3951,7 +4102,7 @@ void WeatherComponent_BindLua::InitParameters(){
 	oceanparams_float["waterHeight"] = &component->oceanParameters.waterHeight;
 	oceanparams_float["surfaceDisplacementTolerance"] = &component->oceanParameters.surfaceDisplacementTolerance;
 
-	//Weather Parameters
+	//Atmosphere Parameters
 	atmosphereparams_xmfloat3["planetCenter"] = &component->atmosphereParameters.planetCenter;
 	atmosphereparams_xmfloat3["rayleighScattering"] = &component->atmosphereParameters.rayleighScattering;
 	atmosphereparams_xmfloat3["mieScattering"] = &component->atmosphereParameters.mieScattering;
@@ -3996,7 +4147,7 @@ int WeatherComponent_BindLua::GetWeatherParams(lua_State* L)
 {
 	lua_newtable(L);
 	for (auto& pair_xmfloat3 : weatherparams_xmfloat3){
-		wi::lua::SSetFloat3(L, *pair_xmfloat3.second);
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(pair_xmfloat3.second)));
 		lua_setfield(L, -2, pair_xmfloat3.first.c_str());
 	}
 	for (auto& pair_float : weatherparams_float){
@@ -4076,11 +4227,11 @@ int WeatherComponent_BindLua::GetOceanParams(lua_State* L)
 		lua_setfield(L, -2, pair_uint32.first.c_str());
 	}
 	for (auto& pair_xmfloat2 : oceanparams_xmfloat2){
-		wi::lua::SSetFloat2(L, *pair_xmfloat2.second);
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(pair_xmfloat2.second)));
 		lua_setfield(L, -2, pair_xmfloat2.first.c_str());
 	}
 	for (auto& pair_xmfloat4 : oceanparams_xmfloat4){
-		wi::lua::SSetFloat4(L, *pair_xmfloat4.second);
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(pair_xmfloat4.second)));
 		lua_setfield(L, -2, pair_xmfloat4.first.c_str());
 	}
 	for (auto& pair_float : oceanparams_float){
@@ -4192,7 +4343,7 @@ int WeatherComponent_BindLua::GetAtmosphereParams(lua_State* L)
 {
 	lua_newtable(L);
 	for (auto& pair_xmfloat3 : atmosphereparams_xmfloat3){
-		wi::lua::SSetFloat3(L, *pair_xmfloat3.second);
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(pair_xmfloat3.second)));
 		lua_setfield(L, -2, pair_xmfloat3.first.c_str());
 	}
 	for (auto& pair_float : atmosphereparams_float){
@@ -4264,11 +4415,11 @@ int WeatherComponent_BindLua::GetVolumetricCloudParams(lua_State* L)
 {
 	lua_newtable(L);
 	for (auto& pair_xmfloat3 : volumetriccloudparams_xmfloat3){
-		wi::lua::SSetFloat3(L, *pair_xmfloat3.second);
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(pair_xmfloat3.second)));
 		lua_setfield(L, -2, pair_xmfloat3.first.c_str());
 	}
 	for (auto& pair_xmfloat4 : volumetriccloudparams_xmfloat4){
-		wi::lua::SSetFloat4(L, *pair_xmfloat4.second);
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(pair_xmfloat4.second)));
 		lua_setfield(L, -2, pair_xmfloat4.first.c_str());
 	}
 	for (auto& pair_float : volumetriccloudparams_float){
@@ -4505,6 +4656,8 @@ Luna<SoundComponent_BindLua>::FunctionType SoundComponent_BindLua::methods[] = {
 	{ NULL, NULL }
 };
 Luna<SoundComponent_BindLua>::PropertyType SoundComponent_BindLua::properties[] = {
+	lunaproperty(SoundComponent_BindLua, Filename),
+	lunaproperty(SoundComponent_BindLua, Volume),
 	{ NULL, NULL }
 };
 
@@ -4621,17 +4774,13 @@ int SoundComponent_BindLua::SetDisable3D(lua_State* L)
 const char ColliderComponent_BindLua::className[] = "ColliderComponent";
 
 Luna<ColliderComponent_BindLua>::FunctionType ColliderComponent_BindLua::methods[] = {
-	lunamethod(ColliderComponent_BindLua, GetShape),
-	lunamethod(ColliderComponent_BindLua, GetRadius),
-	lunamethod(ColliderComponent_BindLua, GetOffset),
-	lunamethod(ColliderComponent_BindLua, GetTail),
-	lunamethod(ColliderComponent_BindLua, SetShape),
-	lunamethod(ColliderComponent_BindLua, SetRadius),
-	lunamethod(ColliderComponent_BindLua, SetOffset),
-	lunamethod(ColliderComponent_BindLua, SetTail),
 	{ NULL, NULL }
 };
 Luna<ColliderComponent_BindLua>::PropertyType ColliderComponent_BindLua::properties[] = {
+	lunaproperty(ColliderComponent_BindLua, Shape),
+	lunaproperty(ColliderComponent_BindLua, Radius),
+	lunaproperty(ColliderComponent_BindLua, Offset),
+	lunaproperty(ColliderComponent_BindLua, Tail),
 	{ NULL, NULL }
 };
 
