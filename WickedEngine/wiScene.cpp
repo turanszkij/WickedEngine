@@ -1523,6 +1523,19 @@ namespace wi::scene
 
 		UpdateCamera();
 	}
+	void CameraComponent::Lerp(const CameraComponent& a, const CameraComponent& b, float t)
+	{
+		SetDirty();
+
+		width = wi::math::Lerp(a.width, b.width, t);
+		height = wi::math::Lerp(a.height, b.height, t);
+		zNearP = wi::math::Lerp(a.zNearP, b.zNearP, t);
+		zFarP = wi::math::Lerp(a.zFarP, b.zFarP, t);
+		fov = wi::math::Lerp(a.fov, b.fov, t);
+		focal_length = wi::math::Lerp(a.focal_length, b.focal_length, t);
+		aperture_size = wi::math::Lerp(a.aperture_size, b.aperture_size, t);
+		aperture_shape = wi::math::Lerp(a.aperture_shape, b.aperture_shape, t);
+	}
 
 	void ScriptComponent::CreateFromFile(const std::string& filename)
 	{

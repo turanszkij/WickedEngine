@@ -993,6 +993,8 @@ namespace wi::scene
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsCustomProjectionEnabled() const { return _flags & CUSTOM_PROJECTION; }
 
+		void Lerp(const CameraComponent& a, const CameraComponent& b, float t);
+
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 

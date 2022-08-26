@@ -4,6 +4,7 @@ set (SOURCE_FILES
 	#$<$<STREQUAL:${PLATFORM},Windows>:App_${PLATFORM}.cpp>
 	AnimationWindow.cpp
 	CameraWindow.cpp
+	CameraComponentWindow.cpp
 	DecalWindow.cpp
 	Editor.cpp
 	EmitterWindow.cpp

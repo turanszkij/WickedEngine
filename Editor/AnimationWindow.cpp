@@ -9,9 +9,9 @@ void AnimationWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_ANIMATION " Animation", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(520, 410));
+	SetSize(XMFLOAT2(520, 430));
 
-	closeButton.SetTooltip("Delete Animation");
+	closeButton.SetTooltip("Delete AnimationComponent");
 	OnClose([=](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
