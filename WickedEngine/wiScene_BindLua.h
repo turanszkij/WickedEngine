@@ -449,9 +449,6 @@ namespace wi::lua::scene
 		int IsPlaying(lua_State* L);
 		int SetPlayOnce(lua_State* L);
 		int Stop(lua_State* L);
-
-		int PrependCustomParameters(lua_State* L);
-		int AppendCustomParameters(lua_State* L);
 	};
 
 	class RigidBodyPhysicsComponent_BindLua

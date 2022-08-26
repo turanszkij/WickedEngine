@@ -3433,8 +3433,6 @@ Luna<ScriptComponent_BindLua>::FunctionType ScriptComponent_BindLua::methods[] =
 	lunamethod(ScriptComponent_BindLua, IsPlaying),
 	lunamethod(ScriptComponent_BindLua, SetPlayOnce),
 	lunamethod(ScriptComponent_BindLua, Stop),
-	lunamethod(ScriptComponent_BindLua, PrependCustomParameters),
-	lunamethod(ScriptComponent_BindLua, AppendCustomParameters),
 	{ NULL, NULL }
 };
 Luna<ScriptComponent_BindLua>::PropertyType ScriptComponent_BindLua::properties[] = {
@@ -3491,32 +3489,6 @@ int ScriptComponent_BindLua::SetPlayOnce(lua_State* L)
 int ScriptComponent_BindLua::Stop(lua_State* L)
 {
 	component->Stop();
-	return 0;
-}
-int ScriptComponent_BindLua::PrependCustomParameters(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->customparameters_prepend = wi::lua::SGetString(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "PrependCustomParameters(string parameters) not enough arguments!");
-	}
-	return 0;
-}
-int ScriptComponent_BindLua::AppendCustomParameters(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->customparameters_append = wi::lua::SGetString(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "AppendCustomParameters(string parameters) not enough arguments!");
-	}
 	return 0;
 }
 
