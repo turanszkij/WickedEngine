@@ -35,5 +35,6 @@ public:
 	wi::gui::TextInputField snapRotateInput;
 	wi::gui::TextInputField snapTranslateInput;
 
+	void ResizeLayout() override;
 };
 

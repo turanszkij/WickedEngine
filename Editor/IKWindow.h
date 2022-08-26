@@ -16,5 +16,7 @@ public:
 	wi::gui::CheckBox disabledCheckBox;
 	wi::gui::Slider chainLengthSlider;
 	wi::gui::Slider iterationCountSlider;
+
+	void ResizeLayout() override;
 };
 

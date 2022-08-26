@@ -9,7 +9,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_SOFTBODY " Soft Body Physics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(580, 120));
+	SetSize(XMFLOAT2(580, 200));
 
 	closeButton.SetTooltip("Delete MeshComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -30,6 +30,11 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	float hei = 18;
 	float step = hei + 2;
 	float wid = 170;
+
+	infoLabel.Create("");
+	infoLabel.SetText("Soft body physics must be used together with a MeshComponent, otherwise it will have no effect.\nYou can use the Paint Tool to pin or soften soft body vertices.");
+	infoLabel.SetSize(XMFLOAT2(100, 90));
+	AddWidget(&infoLabel);
 
 	massSlider.Create(0, 10, 1, 100000, "Mass: ");
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
@@ -81,7 +86,6 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	SetEntity(INVALID_ENTITY);
 }
 
-
 void SoftBodyWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
@@ -95,4 +99,48 @@ void SoftBodyWindow::SetEntity(Entity entity)
 		frictionSlider.SetValue(physicscomponent->friction);
 		restitutionSlider.SetValue(physicscomponent->restitution);
 	}
+}
+
+void SoftBodyWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	const float margin_left = 120;
+	const float margin_right = 40;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_fullwidth(infoLabel);
+	add(massSlider);
+	add(frictionSlider);
+	add(restitutionSlider);
+
 }

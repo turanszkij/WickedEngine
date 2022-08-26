@@ -68,7 +68,7 @@ void LayerWindow::Create(EditorComponent* _editor)
 
 	y += step * 7;
 
-	enableAllButton.Create("Enable ALL");
+	enableAllButton.Create("ALL " ICON_CHECK);
 	enableAllButton.SetPos(XMFLOAT2(x, y));
 	enableAllButton.OnClick([this](wi::gui::EventArgs args) {
 		LayerComponent* layer = editor->GetCurrentScene().layers.GetComponent(entity);
@@ -82,7 +82,7 @@ void LayerWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&enableAllButton);
 
-	enableNoneButton.Create("Enable NONE");
+	enableNoneButton.Create("NONE " ICON_DISABLED);
 	enableNoneButton.SetPos(XMFLOAT2(x + 120, y));
 	enableNoneButton.OnClick([this](wi::gui::EventArgs args) {
 		LayerComponent* layer = editor->GetCurrentScene().layers.GetComponent(entity);
@@ -142,4 +142,64 @@ void LayerWindow::SetEntity(Entity entity)
 	{
 		SetEnabled(false);
 	}
+}
+
+void LayerWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 80;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_fullwidth(label);
+	enableAllButton.SetSize(XMFLOAT2(width * 0.5f - padding * 1.5f, enableAllButton.GetSize().y));
+	enableNoneButton.SetSize(enableAllButton.GetSize());
+	enableNoneButton.SetPos(XMFLOAT2(width - padding - enableNoneButton.GetSize().x, y));
+	enableAllButton.SetPos(XMFLOAT2(enableNoneButton.GetPos().x - padding - enableAllButton.GetSize().x, y));
+	y += enableNoneButton.GetSize().y;
+	y += padding;
+
+	float off_x = padding;
+	for (uint32_t i = 0; i < arraysize(layers); ++i)
+	{
+		layers[i].SetPos(XMFLOAT2(off_x, y));
+		off_x += 50;
+		if (off_x + layers[i].GetSize().x > width - padding)
+		{
+			off_x = padding;
+			y += layers[i].GetSize().y;
+			y += padding;
+		}
+	}
+
 }

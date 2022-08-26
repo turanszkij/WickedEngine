@@ -37,5 +37,7 @@ public:
 	wi::gui::Slider lodQualitySlider;
 	wi::gui::Slider lodErrorSlider;
 	wi::gui::CheckBox lodSloppyCheckBox;
+
+	void ResizeLayout() override;
 };
 

@@ -261,6 +261,8 @@ namespace wi::gui
 		XMStoreFloat3(&translation, T);
 		XMStoreFloat3(&scale, S);
 
+		scale = wi::math::Max(scale, XMFLOAT3(0.001f, 0.001f, 0.001f));
+
 		scissorRect.bottom = (int32_t)std::ceil(translation.y + scale.y);
 		scissorRect.left = (int32_t)std::floor(translation.x);
 		scissorRect.right = (int32_t)std::ceil(translation.x + scale.x);
@@ -431,6 +433,7 @@ namespace wi::gui
 		SetDirty();
 		scale_local.x = value.x;
 		scale_local.y = value.y;
+		scale_local = wi::math::Max(scale_local, XMFLOAT3(0.001f, 0.001f, 0.001f));
 		UpdateTransform();
 
 		scale = scale_local;

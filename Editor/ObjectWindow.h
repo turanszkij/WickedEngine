@@ -26,5 +26,7 @@ public:
 	wi::gui::Button generateLightmapButton;
 	wi::gui::Button stopLightmapGenButton;
 	wi::gui::Button clearLightmapButton;
+
+	void ResizeLayout() override;
 };
 

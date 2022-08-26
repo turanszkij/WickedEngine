@@ -15,7 +15,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MESH " Mesh", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(580, 650));
+	SetSize(XMFLOAT2(580, 700));
 
 	closeButton.SetTooltip("Delete MeshComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -718,4 +718,67 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 	}
 
 	mergeButton.SetEnabled(true);
+}
+
+void MeshWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 100;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_fullwidth(meshInfoLabel);
+	add(subsetComboBox);
+	add(subsetMaterialComboBox);
+	add_right(doubleSidedCheckBox);
+	add_fullwidth(impostorCreateButton);
+	add(impostorDistanceSlider);
+	add(tessellationFactorSlider);
+	add_fullwidth(flipCullingButton);
+	add_fullwidth(flipNormalsButton);
+	add_fullwidth(computeNormalsSmoothButton);
+	add_fullwidth(computeNormalsHardButton);
+	add_fullwidth(recenterButton);
+	add_fullwidth(recenterToBottomButton);
+	add_fullwidth(mergeButton);
+	add_fullwidth(optimizeButton);
+
+	add(morphTargetCombo);
+	add(morphTargetSlider);
+
+	add_fullwidth(lodgenButton);
+	add(lodCountSlider);
+	add(lodQualitySlider);
+	add(lodErrorSlider);
+	add_right(lodSloppyCheckBox);
 }
