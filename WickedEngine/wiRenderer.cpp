@@ -5209,11 +5209,34 @@ void DrawDebugWorld(
 
 			if (cam.aperture_size > 0)
 			{
+				// focal length line:
 				RenderableLine linne;
 				linne.color_start = linne.color_end = XMFLOAT4(1, 1, 1, 1);
 				linne.start = cam.Eye;
-				XMStoreFloat3(&linne.end, cam.GetEye() + cam.GetAt() * cam.focal_length);
+				XMVECTOR L = cam.GetEye() + cam.GetAt() * cam.focal_length;
+				XMStoreFloat3(&linne.end, L);
 				DrawLine(linne);
+
+				// aperture size/shape circle:
+				int segmentcount = 36;
+				for (int j = 0; j < segmentcount; ++j)
+				{
+					const float angle0 = float(j) / float(segmentcount) * XM_2PI;
+					const float angle1 = float(j + 1) / float(segmentcount) * XM_2PI;
+					linne.start = XMFLOAT3(std::sin(angle0), std::cos(angle0), 0);
+					linne.end = XMFLOAT3(std::sin(angle1), std::cos(angle1), 0);
+					XMVECTOR S = XMLoadFloat3(&linne.start);
+					XMVECTOR E = XMLoadFloat3(&linne.end);
+					XMMATRIX R = XMLoadFloat3x3(&cam.rotationMatrix);
+					XMMATRIX APERTURE = R * XMMatrixScaling(cam.aperture_size * cam.aperture_shape.x, cam.aperture_size * cam.aperture_shape.y, cam.aperture_size);
+					S = XMVector3TransformNormal(S, APERTURE);
+					E = XMVector3TransformNormal(E, APERTURE);
+					S += L;
+					E += L;
+					XMStoreFloat3(&linne.start, S);
+					XMStoreFloat3(&linne.end, E);
+					DrawLine(linne);
+				}
 			}
 		}
 
