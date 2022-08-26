@@ -1325,6 +1325,54 @@ namespace wi::scene
 		descriptor_srv = device->GetDescriptorIndex(&boneBuffer, SubresourceType::SRV);
 	}
 
+	AnimationComponent::AnimationChannel::PathDataType AnimationComponent::AnimationChannel::GetPathDataType() const
+	{
+		switch (path)
+		{
+		case wi::scene::AnimationComponent::AnimationChannel::Path::TRANSLATION:
+			return PathDataType::Float3;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::ROTATION:
+			return PathDataType::Float4;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SCALE:
+			return PathDataType::Float3;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::WEIGHTS:
+			return PathDataType::Weights;
+
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+			return PathDataType::Float3;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+			return PathDataType::Float;
+
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_PLAY:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_STOP:
+			return PathDataType::Event;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
+			return PathDataType::Float;
+
+		case wi::scene::AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
+			return PathDataType::Float;
+
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
+			return PathDataType::Float;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
+			return PathDataType::Float2;
+
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SCRIPT_STOP:
+			return PathDataType::Event;
+
+		default:
+			assert(0);
+			break;
+		}
+		return PathDataType::Event;
+	}
+
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
 		vertex_positions_simulation.resize(mesh.vertex_positions.size());
@@ -2667,6 +2715,8 @@ namespace wi::scene
 					continue;
 				}
 
+				const AnimationComponent::AnimationChannel::PathDataType path_data_type = channel.GetPathDataType();
+
 				float timeFirst = std::numeric_limits<float>::max();
 				float timeLast = std::numeric_limits<float>::min();
 				int keyLeft = 0;	float timeLeft = std::numeric_limits<float>::min();
@@ -2695,23 +2745,64 @@ namespace wi::scene
 						keyRight = k;
 					}
 				}
-				if (animation.timer < timeFirst || animation.timer > timeLast)
+				if (path_data_type != AnimationComponent::AnimationChannel::PathDataType::Event)
 				{
-					// timer is outside range of keyframes, don't update animation:
-					continue;
+					if (animation.timer < timeFirst || animation.timer > timeLast)
+					{
+						// timer is outside range of keyframes, don't update animation:
+						continue;
+					}
+				}
+				else
+				{
+					timeLeft = std::max(timeLeft, timeFirst);
+					timeRight = std::max(timeRight, timeLast);
 				}
 
 				const float left = animationdata->keyframe_times[keyLeft];
 				const float right = animationdata->keyframe_times[keyRight];
 
-				TransformComponent transform;
-				LightComponent light;
+				union Interpolator
+				{
+					XMFLOAT4 f4 = {};
+					XMFLOAT3 f3;
+					XMFLOAT2 f2;
+					float f;
+				} interpolator;
 
 				TransformComponent* target_transform = nullptr;
 				MeshComponent* target_mesh = nullptr;
 				LightComponent* target_light = nullptr;
+				SoundComponent* target_sound = nullptr;
+				EmittedParticleSystem* target_emitter = nullptr;
+				CameraComponent* target_camera = nullptr;
+				ScriptComponent* target_script = nullptr;
 
-				if (channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS)
+				if (
+					channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION ||
+					channel.path == AnimationComponent::AnimationChannel::Path::ROTATION ||
+					channel.path == AnimationComponent::AnimationChannel::Path::SCALE
+					)
+				{
+					target_transform = transforms.GetComponent(channel.target);
+					if (target_transform == nullptr)
+						continue;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+						interpolator.f3 = target_transform->translation_local;
+						break;
+					case AnimationComponent::AnimationChannel::Path::ROTATION:
+						interpolator.f4 = target_transform->rotation_local;
+						break;
+					case AnimationComponent::AnimationChannel::Path::SCALE:
+						interpolator.f3 = target_transform->scale_local;
+						break;
+					default:
+						break;
+					}
+				}
+				else if (channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS)
 				{
 					ObjectComponent* object = objects.GetComponent(channel.target);
 					if (object == nullptr)
@@ -2722,356 +2813,377 @@ namespace wi::scene
 					animation.morph_weights_temp.resize(target_mesh->morph_targets.size());
 				}
 				else if (
-					channel.path == AnimationComponent::AnimationChannel::Path::LIGHT_COLOR ||
-					channel.path == AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY ||
-					channel.path == AnimationComponent::AnimationChannel::Path::LIGHT_RANGE ||
-					channel.path == AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE ||
-					channel.path == AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE
+					channel.path >= AnimationComponent::AnimationChannel::Path::LIGHT_COLOR &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_LIGHT_RANGE_END
 					)
 				{
 					target_light = lights.GetComponent(channel.target);
 					if (target_light == nullptr)
 						continue;
-					light = *target_light;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+						interpolator.f3 = target_light->color;
+						break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+						interpolator.f = target_light->intensity;
+						break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+						interpolator.f = target_light->range;
+						break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+						interpolator.f = target_light->innerConeAngle;
+						break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+						interpolator.f = target_light->outerConeAngle;
+						break;
+					default:
+						break;
+					}
+				}
+				else if (
+					channel.path >= AnimationComponent::AnimationChannel::Path::SOUND_PLAY &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_SOUND_RANGE_END
+					)
+				{
+					target_sound = sounds.GetComponent(channel.target);
+					if (target_sound == nullptr)
+						continue;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
+						interpolator.f = target_sound->volume;
+						break;
+					default:
+						break;
+					}
+				}
+				else if (
+					channel.path >= AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_EMITTER_RANGE_END
+					)
+				{
+					target_emitter = emitters.GetComponent(channel.target);
+					if (target_emitter == nullptr)
+						continue;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
+						interpolator.f = target_emitter->count;
+						break;
+					default:
+						break;
+					}
+				}
+				else if (
+					channel.path >= AnimationComponent::AnimationChannel::Path::CAMERA_FOV &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_CAMERA_RANGE_END
+					)
+				{
+					target_camera = cameras.GetComponent(channel.target);
+					if (target_camera == nullptr)
+						continue;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
+						interpolator.f = target_camera->fov;
+						break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
+						interpolator.f = target_camera->focal_length;
+						break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
+						interpolator.f = target_camera->aperture_size;
+						break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
+						interpolator.f2 = target_camera->aperture_shape;
+						break;
+					default:
+						break;
+					}
+				}
+				else if (
+					channel.path >= AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_SCRIPT_RANGE_END
+					)
+				{
+					target_script = scripts.GetComponent(channel.target);
+					if (target_script == nullptr)
+						continue;
 				}
 				else
 				{
-					target_transform = transforms.GetComponent(channel.target);
-					if (target_transform == nullptr)
-						continue;
-					transform = *target_transform;
+					assert(0);
+					continue;
 				}
 
-				switch (sampler.mode)
+				if (path_data_type == AnimationComponent::AnimationChannel::PathDataType::Event)
 				{
-				default:
-				case AnimationComponent::AnimationSampler::Mode::STEP:
+					// No path data, only event trigger:
+					if (keyLeft == channel.next_event && animation.timer >= timeLeft)
+					{
+						channel.next_event++;
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::SOUND_PLAY:
+							target_sound->Play();
+							break;
+						case AnimationComponent::AnimationChannel::Path::SOUND_STOP:
+							target_sound->Stop();
+							break;
+						case AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY:
+							target_script->Play();
+							break;
+						case AnimationComponent::AnimationChannel::Path::SCRIPT_STOP:
+							target_script->Stop();
+							break;
+						default:
+							break;
+						}
+					}
+				}
+				else
 				{
-					// Nearest neighbor method:
-					const int key = wi::math::InverseLerp(timeLeft, timeRight, animation.timer) > 0.5f ? keyRight : keyLeft;
-					switch (channel.path)
+					// Path data interpolation:
+					switch (sampler.mode)
 					{
 					default:
-					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+					case AnimationComponent::AnimationSampler::Mode::STEP:
 					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						transform.translation_local = ((const XMFLOAT3*)animationdata->keyframe_data.data())[key];
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::ROTATION:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
-						transform.rotation_local = ((const XMFLOAT4*)animationdata->keyframe_data.data())[key];
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::SCALE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						transform.scale_local = ((const XMFLOAT3*)animationdata->keyframe_data.data())[key];
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
-						for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+						// Nearest neighbor method:
+						const int key = wi::math::InverseLerp(timeLeft, timeRight, animation.timer) > 0.5f ? keyRight : keyLeft;
+						switch (path_data_type)
 						{
-							animation.morph_weights_temp[j] = animationdata->keyframe_data[key * animation.morph_weights_temp.size() + j];
+						default:
+						case AnimationComponent::AnimationChannel::PathDataType::Float:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+							interpolator.f = animationdata->keyframe_data[key];
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float2:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2);
+							interpolator.f2 = ((const XMFLOAT2*)animationdata->keyframe_data.data())[key];
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float3:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+							interpolator.f3 = ((const XMFLOAT3*)animationdata->keyframe_data.data())[key];
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float4:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
+							interpolator.f4 = ((const XMFLOAT4*)animationdata->keyframe_data.data())[key];
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Weights:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
+							for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+							{
+								animation.morph_weights_temp[j] = animationdata->keyframe_data[key * animation.morph_weights_temp.size() + j];
+							}
+						}
+						break;
 						}
 					}
 					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+					case AnimationComponent::AnimationSampler::Mode::LINEAR:
 					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						light.color = ((const XMFLOAT3*)animationdata->keyframe_data.data())[key];
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						light.intensity = animationdata->keyframe_data[key];
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						light.range = animationdata->keyframe_data[key];
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						light.innerConeAngle = animationdata->keyframe_data[key];
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						light.outerConeAngle = animationdata->keyframe_data[key];
-					}
-					break;
-					}
-				}
-				break;
-				case AnimationComponent::AnimationSampler::Mode::LINEAR:
-				{
-					// Linear interpolation method:
-					float t;
-					if (keyLeft == keyRight)
-					{
-						t = 0;
-					}
-					else
-					{
-						t = (animation.timer - left) / (right - left);
-					}
-
-					switch (channel.path)
-					{
-					default:
-					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
-						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-						XMStoreFloat3(&transform.translation_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::ROTATION:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
-						const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
-						XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
-						XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
-						vAnim = XMQuaternionNormalize(vAnim);
-						XMStoreFloat4(&transform.rotation_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::SCALE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
-						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-						XMStoreFloat3(&transform.scale_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
-						for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+						// Linear interpolation method:
+						float t;
+						if (keyLeft == keyRight)
 						{
-							float vLeft = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
-							float vRight = animationdata->keyframe_data[keyRight * animation.morph_weights_temp.size() + j];
+							t = 0;
+						}
+						else
+						{
+							t = (animation.timer - left) / (right - left);
+						}
+
+						switch (path_data_type)
+						{
+						default:
+						case AnimationComponent::AnimationChannel::PathDataType::Float:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+							float vLeft = animationdata->keyframe_data[keyLeft];
+							float vRight = animationdata->keyframe_data[keyRight];
 							float vAnim = wi::math::Lerp(vLeft, vRight, t);
-							animation.morph_weights_temp[j] = vAnim;
+							interpolator.f = vAnim;
 						}
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
-						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-						XMStoreFloat3(&light.color, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						float vLeft = animationdata->keyframe_data[keyLeft];
-						float vRight = animationdata->keyframe_data[keyRight];
-						float vAnim = wi::math::Lerp(vLeft, vRight, t);
-						light.intensity = vAnim;
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						float vLeft = animationdata->keyframe_data[keyLeft];
-						float vRight = animationdata->keyframe_data[keyRight];
-						float vAnim = wi::math::Lerp(vLeft, vRight, t);
-						light.range = vAnim;
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						float vLeft = animationdata->keyframe_data[keyLeft];
-						float vRight = animationdata->keyframe_data[keyRight];
-						float vAnim = wi::math::Lerp(vLeft, vRight, t);
-						light.innerConeAngle = vAnim;
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						float vLeft = animationdata->keyframe_data[keyLeft];
-						float vRight = animationdata->keyframe_data[keyRight];
-						float vAnim = wi::math::Lerp(vLeft, vRight, t);
-						light.outerConeAngle = vAnim;
-					}
-					break;
-					}
-				}
-				break;
-				case AnimationComponent::AnimationSampler::Mode::CUBICSPLINE:
-				{
-					// Cubic Spline interpolation method:
-					float t;
-					if (keyLeft == keyRight)
-					{
-						t = 0;
-					}
-					else
-					{
-						t = (animation.timer - left) / (right - left);
-					}
-
-					const float t2 = t * t;
-					const float t3 = t2 * t;
-
-					switch (channel.path)
-					{
-					default:
-					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
-						XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
-						XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
-						XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-						XMStoreFloat3(&transform.translation_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::ROTATION:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4 * 3);
-						const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft * 3 + 1]);
-						XMVECTOR vLeftTanOut = dt * XMLoadFloat4(&data[keyLeft * 3 + 2]);
-						XMVECTOR vRightTanIn = dt * XMLoadFloat4(&data[keyRight * 3 + 0]);
-						XMVECTOR vRight = XMLoadFloat4(&data[keyRight * 3 + 1]);
-						XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-						vAnim = XMQuaternionNormalize(vAnim);
-						XMStoreFloat4(&transform.rotation_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::SCALE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
-						XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
-						XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
-						XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-						XMStoreFloat3(&transform.scale_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size() * 3);
-						for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float2:
 						{
-							float vLeft = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 1];
-							float vLeftTanOut = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 2];
-							float vRightTanIn = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 0];
-							float vRight = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 1];
-							float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-							animation.morph_weights_temp[j] = vAnim;
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2);
+							const XMFLOAT2* data = (const XMFLOAT2*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat2(&data[keyLeft]);
+							XMVECTOR vRight = XMLoadFloat2(&data[keyRight]);
+							XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
+							XMStoreFloat2(&interpolator.f2, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float3:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+							const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
+							XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
+							XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
+							XMStoreFloat3(&interpolator.f3, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float4:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
+							const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
+							XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
+							XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
+							vAnim = XMQuaternionNormalize(vAnim);
+							XMStoreFloat4(&interpolator.f4, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Weights:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
+							for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+							{
+								float vLeft = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
+								float vRight = animationdata->keyframe_data[keyRight * animation.morph_weights_temp.size() + j];
+								float vAnim = wi::math::Lerp(vLeft, vRight, t);
+								animation.morph_weights_temp[j] = vAnim;
+							}
+						}
+						break;
 						}
 					}
 					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+					case AnimationComponent::AnimationSampler::Mode::CUBICSPLINE:
 					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
-						XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
-						XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
-						XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-						XMStoreFloat3(&light.color, vAnim);
+						// Cubic Spline interpolation method:
+						float t;
+						if (keyLeft == keyRight)
+						{
+							t = 0;
+						}
+						else
+						{
+							t = (animation.timer - left) / (right - left);
+						}
+
+						const float t2 = t * t;
+						const float t3 = t2 * t;
+
+						switch (path_data_type)
+						{
+						default:
+						case AnimationComponent::AnimationChannel::PathDataType::Float:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+							float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
+							float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
+							float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
+							float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
+							float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+							interpolator.f = vAnim;
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float2:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2 * 3);
+							const XMFLOAT2* data = (const XMFLOAT2*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat2(&data[keyLeft * 3 + 1]);
+							XMVECTOR vLeftTanOut = dt * XMLoadFloat2(&data[keyLeft * 3 + 2]);
+							XMVECTOR vRightTanIn = dt * XMLoadFloat2(&data[keyRight * 3 + 0]);
+							XMVECTOR vRight = XMLoadFloat2(&data[keyRight * 3 + 1]);
+							XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+							XMStoreFloat2(&interpolator.f2, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float3:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
+							const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
+							XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
+							XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
+							XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
+							XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+							XMStoreFloat3(&interpolator.f3, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float4:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4 * 3);
+							const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft * 3 + 1]);
+							XMVECTOR vLeftTanOut = dt * XMLoadFloat4(&data[keyLeft * 3 + 2]);
+							XMVECTOR vRightTanIn = dt * XMLoadFloat4(&data[keyRight * 3 + 0]);
+							XMVECTOR vRight = XMLoadFloat4(&data[keyRight * 3 + 1]);
+							XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+							vAnim = XMQuaternionNormalize(vAnim);
+							XMStoreFloat4(&interpolator.f4, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Weights:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size() * 3);
+							for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+							{
+								float vLeft = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 1];
+								float vLeftTanOut = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 2];
+								float vRightTanIn = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 0];
+								float vRight = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 1];
+								float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+								animation.morph_weights_temp[j] = vAnim;
+							}
+						}
+						break;
+						}
 					}
 					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
-						float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
-						float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
-						float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
-						float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-						light.intensity = vAnim;
 					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
-						float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
-						float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
-						float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
-						float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-						light.range = vAnim;
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
-						float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
-						float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
-						float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
-						float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-						light.innerConeAngle = vAnim;
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-						float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
-						float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
-						float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
-						float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
-						float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-						light.outerConeAngle = vAnim;
-					}
-					break;
-					}
-				}
-				break;
 				}
 
+				// The interpolated raw values will be blended on top of component values:
 				const float t = animation.amount;
 
 				if (target_transform != nullptr)
 				{
 					target_transform->SetDirty();
 
-					const XMVECTOR aS = XMLoadFloat3(&target_transform->scale_local);
-					const XMVECTOR aR = XMLoadFloat4(&target_transform->rotation_local);
-					const XMVECTOR aT = XMLoadFloat3(&target_transform->translation_local);
-
-					const XMVECTOR bS = XMLoadFloat3(&transform.scale_local);
-					const XMVECTOR bR = XMLoadFloat4(&transform.rotation_local);
-					const XMVECTOR bT = XMLoadFloat3(&transform.translation_local);
-
-					const XMVECTOR S = XMVectorLerp(aS, bS, t);
-					const XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
-					const XMVECTOR T = XMVectorLerp(aT, bT, t);
-
-					XMStoreFloat3(&target_transform->scale_local, S);
-					XMStoreFloat4(&target_transform->rotation_local, R);
-					XMStoreFloat3(&target_transform->translation_local, T);
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+					{
+						const XMVECTOR aT = XMLoadFloat3(&target_transform->translation_local);
+						const XMVECTOR bT = XMLoadFloat3(&interpolator.f3);
+						const XMVECTOR T = XMVectorLerp(aT, bT, t);
+						XMStoreFloat3(&target_transform->translation_local, T);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::ROTATION:
+					{
+						const XMVECTOR aR = XMLoadFloat4(&target_transform->rotation_local);
+						const XMVECTOR bR = XMLoadFloat4(&interpolator.f4);
+						const XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
+						XMStoreFloat4(&target_transform->rotation_local, R);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::SCALE:
+					{
+						const XMVECTOR aS = XMLoadFloat3(&target_transform->scale_local);
+						const XMVECTOR bS = XMLoadFloat3(&interpolator.f3);
+						const XMVECTOR S = XMVectorLerp(aS, bS, t);
+						XMStoreFloat3(&target_transform->scale_local, S);
+					}
+					break;
+					default:
+						break;
+					}
 				}
 
 				if (target_mesh != nullptr)
@@ -3086,11 +3198,93 @@ namespace wi::scene
 
 				if (target_light != nullptr)
 				{
-					target_light->color = wi::math::Lerp(target_light->color, light.color, t);
-					target_light->intensity = wi::math::Lerp(target_light->intensity, light.intensity, t);
-					target_light->range = wi::math::Lerp(target_light->range, light.range, t);
-					target_light->innerConeAngle = wi::math::Lerp(target_light->innerConeAngle, light.innerConeAngle, t);
-					target_light->outerConeAngle = wi::math::Lerp(target_light->outerConeAngle, light.outerConeAngle, t);
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+					{
+						target_light->color = wi::math::Lerp(target_light->color, interpolator.f3, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+					{
+						target_light->intensity = wi::math::Lerp(target_light->intensity, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+					{
+						target_light->range = wi::math::Lerp(target_light->range, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+					{
+						target_light->innerConeAngle = wi::math::Lerp(target_light->innerConeAngle, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+					{
+						target_light->outerConeAngle = wi::math::Lerp(target_light->outerConeAngle, interpolator.f, t);
+					}
+					break;
+					default:
+						break;
+					}
+				}
+
+				if (target_sound != nullptr)
+				{
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
+					{
+						target_sound->volume = wi::math::Lerp(target_sound->volume, interpolator.f, t);
+					}
+					break;
+					default:
+						break;
+					}
+				}
+
+				if (target_emitter != nullptr)
+				{
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
+					{
+						target_emitter->count = wi::math::Lerp(target_emitter->count, interpolator.f, t);
+					}
+					break;
+					default:
+						break;
+					}
+				}
+
+				if (target_camera != nullptr)
+				{
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
+					{
+						target_camera->fov = wi::math::Lerp(target_camera->fov, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
+					{
+						target_camera->focal_length = wi::math::Lerp(target_camera->focal_length, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
+					{
+						target_camera->aperture_size = wi::math::Lerp(target_camera->aperture_size, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
+					{
+						target_camera->aperture_shape = wi::math::Lerp(target_camera->aperture_shape, interpolator.f2, t);
+					}
+					break;
+					default:
+						break;
+					}
 				}
 
 			}
@@ -3103,6 +3297,10 @@ namespace wi::scene
 			if (animation.IsLooped() && animation.timer > animation.end)
 			{
 				animation.timer = animation.start;
+				for (auto& channel : animation.channels)
+				{
+					channel.next_event = 0;
+				}
 			}
 		}
 	}

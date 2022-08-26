@@ -201,6 +201,16 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	recordCombo.AddItem("Light [range] " ICON_POINTLIGHT);
 	recordCombo.AddItem("Light [inner cone] " ICON_POINTLIGHT);
 	recordCombo.AddItem("Light [outer cone] " ICON_POINTLIGHT);
+	recordCombo.AddItem("Sound [play] " ICON_SOUND);
+	recordCombo.AddItem("Sound [stop] " ICON_SOUND);
+	recordCombo.AddItem("Sound [volume] " ICON_SOUND);
+	recordCombo.AddItem("Emitter [emit count] " ICON_EMITTER);
+	recordCombo.AddItem("Camera [fov] " ICON_CAMERA);
+	recordCombo.AddItem("Camera [focal length] " ICON_CAMERA);
+	recordCombo.AddItem("Camera [aperture size] " ICON_CAMERA);
+	recordCombo.AddItem("Camera [aperture shape] " ICON_CAMERA);
+	recordCombo.AddItem("Script [play] " ICON_SCRIPT);
+	recordCombo.AddItem("Script [stop] " ICON_SCRIPT);
 	recordCombo.AddItem("Close loop " ICON_LOOP, ~0ull);
 	recordCombo.OnSelect([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -235,18 +245,29 @@ void AnimationWindow::Create(EditorComponent* _editor)
 						// Duplicate first frame to current position:
 						animation_data->keyframe_times.push_back(current_time);
 
-						switch (channel.path)
+						const AnimationComponent::AnimationChannel::PathDataType path_data_type = channel.GetPathDataType();
+
+						switch (path_data_type)
 						{
-						case wi::scene::AnimationComponent::AnimationChannel::TRANSLATION:
-						case wi::scene::AnimationComponent::AnimationChannel::SCALE:
-						case wi::scene::AnimationComponent::AnimationChannel::LIGHT_COLOR:
+						case AnimationComponent::AnimationChannel::PathDataType::Float:
+						{
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst]);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float2:
+						{
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 2 + 0]);
+							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 2 + 1]);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float3:
 						{
 							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 0]);
 							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 1]);
 							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 3 + 2]);
 						}
 						break;
-						case wi::scene::AnimationComponent::AnimationChannel::ROTATION:
+						case AnimationComponent::AnimationChannel::PathDataType::Float4:
 						{
 							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 4 + 0]);
 							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 4 + 1]);
@@ -254,7 +275,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst * 4 + 3]);
 						}
 						break;
-						case wi::scene::AnimationComponent::AnimationChannel::WEIGHTS:
+						case AnimationComponent::AnimationChannel::PathDataType::Weights:
 						{
 							const MeshComponent* mesh = scene.meshes.GetComponent(channel.target);
 							if (mesh == nullptr && scene.objects.Contains(channel.target))
@@ -272,14 +293,6 @@ void AnimationWindow::Create(EditorComponent* _editor)
 									idx++;
 								}
 							}
-						}
-						break;
-						case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INTENSITY:
-						case wi::scene::AnimationComponent::AnimationChannel::LIGHT_RANGE:
-						case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INNERCONE:
-						case wi::scene::AnimationComponent::AnimationChannel::LIGHT_OUTERCONE:
-						{
-							animation_data->keyframe_data.push_back(animation_data->keyframe_data[keyFirst]);
 						}
 						break;
 						default:
@@ -328,6 +341,36 @@ void AnimationWindow::Create(EditorComponent* _editor)
 				case 9:
 					paths.push_back(AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE);
 					break;
+				case 10:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::SOUND_PLAY);
+					break;
+				case 11:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::SOUND_STOP);
+					break;
+				case 12:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::SOUND_VOLUME);
+					break;
+				case 13:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT);
+					break;
+				case 14:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::CAMERA_FOV);
+					break;
+				case 15:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH);
+					break;
+				case 16:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE);
+					break;
+				case 17:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE);
+					break;
+				case 18:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY);
+					break;
+				case 19:
+					paths.push_back(AnimationComponent::AnimationChannel::Path::SCRIPT_STOP);
+					break;
 				}
 
 				for (auto path : paths)
@@ -367,7 +410,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 
 							switch (channel.path)
 							{
-							case wi::scene::AnimationComponent::AnimationChannel::TRANSLATION:
+							case wi::scene::AnimationComponent::AnimationChannel::Path::TRANSLATION:
 							{
 								const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
 								if (transform != nullptr)
@@ -383,7 +426,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								}
 							}
 							break;
-							case wi::scene::AnimationComponent::AnimationChannel::ROTATION:
+							case wi::scene::AnimationComponent::AnimationChannel::Path::ROTATION:
 							{
 								const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
 								if (transform != nullptr)
@@ -400,7 +443,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								}
 							}
 							break;
-							case wi::scene::AnimationComponent::AnimationChannel::SCALE:
+							case wi::scene::AnimationComponent::AnimationChannel::Path::SCALE:
 							{
 								const TransformComponent* transform = scene.transforms.GetComponent(channel.target);
 								if (transform != nullptr)
@@ -416,7 +459,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								}
 							}
 							break;
-							case wi::scene::AnimationComponent::AnimationChannel::WEIGHTS:
+							case wi::scene::AnimationComponent::AnimationChannel::Path::WEIGHTS:
 							{
 								const MeshComponent* mesh = scene.meshes.GetComponent(channel.target);
 								if (mesh == nullptr && scene.objects.Contains(selected.entity))
@@ -440,7 +483,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								}
 							}
 							break;
-							case wi::scene::AnimationComponent::AnimationChannel::LIGHT_COLOR:
+							case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
 							{
 								const LightComponent* light = scene.lights.GetComponent(channel.target);
 								if (light != nullptr)
@@ -456,7 +499,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								}
 							}
 							break;
-							case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INTENSITY:
+							case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
 							{
 								const LightComponent* light = scene.lights.GetComponent(channel.target);
 								if (light != nullptr)
@@ -470,7 +513,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								}
 							}
 							break;
-							case wi::scene::AnimationComponent::AnimationChannel::LIGHT_RANGE:
+							case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
 							{
 								const LightComponent* light = scene.lights.GetComponent(channel.target);
 								if (light != nullptr)
@@ -484,7 +527,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								}
 							}
 							break;
-							case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INNERCONE:
+							case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
 							{
 								const LightComponent* light = scene.lights.GetComponent(channel.target);
 								if (light != nullptr)
@@ -498,12 +541,127 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								}
 							}
 							break;
-							case wi::scene::AnimationComponent::AnimationChannel::LIGHT_OUTERCONE:
+							case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
 							{
 								const LightComponent* light = scene.lights.GetComponent(channel.target);
 								if (light != nullptr)
 								{
 									animation_data->keyframe_data.push_back(light->outerConeAngle);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_PLAY:
+							case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_STOP:
+							{
+								const SoundComponent* sound = scene.sounds.GetComponent(channel.target);
+								if (sound != nullptr)
+								{
+									// no data
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
+							{
+								const SoundComponent* sound = scene.sounds.GetComponent(channel.target);
+								if (sound != nullptr)
+								{
+									animation_data->keyframe_data.push_back(sound->volume);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
+							{
+								const wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(channel.target);
+								if (emitter != nullptr)
+								{
+									animation_data->keyframe_data.push_back(emitter->count);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
+							{
+								const CameraComponent* camera = scene.cameras.GetComponent(channel.target);
+								if (camera != nullptr)
+								{
+									animation_data->keyframe_data.push_back(camera->fov);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
+							{
+								const CameraComponent* camera = scene.cameras.GetComponent(channel.target);
+								if (camera != nullptr)
+								{
+									animation_data->keyframe_data.push_back(camera->focal_length);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
+							{
+								const CameraComponent* camera = scene.cameras.GetComponent(channel.target);
+								if (camera != nullptr)
+								{
+									animation_data->keyframe_data.push_back(camera->aperture_size);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
+							{
+								const CameraComponent* camera = scene.cameras.GetComponent(channel.target);
+								if (camera != nullptr)
+								{
+									animation_data->keyframe_data.push_back(camera->aperture_shape.x);
+									animation_data->keyframe_data.push_back(camera->aperture_shape.y);
+								}
+								else
+								{
+									animation_data->keyframe_times.pop_back();
+									animation->channels.pop_back();
+								}
+							}
+							break;
+							case wi::scene::AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY:
+							case wi::scene::AnimationComponent::AnimationChannel::Path::SCRIPT_STOP:
+							{
+								const ScriptComponent* script = scene.scripts.GetComponent(channel.target);
+								if (script != nullptr)
+								{
+									// no data
 								}
 								else
 								{
@@ -562,22 +720,34 @@ void AnimationWindow::Create(EditorComponent* _editor)
 				const AnimationComponent::AnimationChannel& channel = animation->channels[channelIndex];
 				const AnimationComponent::AnimationSampler& sam = animation->samplers[channel.samplerIndex];
 				AnimationDataComponent* animation_data = scene.animation_datas.GetComponent(sam.data);
+
 				if (animation_data != nullptr && animation_data->keyframe_times.size() > timeIndex)
 				{
 					// specific keyframe deletion:
-					switch (channel.path)
+					const AnimationComponent::AnimationChannel::PathDataType path_data_type = channel.GetPathDataType();
+
+					switch (path_data_type)
 					{
-					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
-					case AnimationComponent::AnimationChannel::Path::SCALE:
-					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+					case AnimationComponent::AnimationChannel::PathDataType::Event:
+						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
+						break;
+					case AnimationComponent::AnimationChannel::PathDataType::Float:
+						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
+						animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex);
+						break;
+					case AnimationComponent::AnimationChannel::PathDataType::Float2:
+						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
+						animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * 2, animation_data->keyframe_data.begin() + timeIndex * 2 + 2);
+						break;
+					case AnimationComponent::AnimationChannel::PathDataType::Float3:
 						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
 						animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * 3, animation_data->keyframe_data.begin() + timeIndex * 3 + 3);
 						break;
-					case AnimationComponent::AnimationChannel::Path::ROTATION:
+					case AnimationComponent::AnimationChannel::PathDataType::Float4:
 						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
 						animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * 4, animation_data->keyframe_data.begin() + timeIndex * 4 + 4);
 						break;
-					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
+					case AnimationComponent::AnimationChannel::PathDataType::Weights:
 						{
 							MeshComponent* mesh = scene.meshes.GetComponent(channel.target);
 							if (mesh == nullptr && scene.objects.Contains(channel.target))
@@ -592,12 +762,6 @@ void AnimationWindow::Create(EditorComponent* _editor)
 								animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * mesh->morph_targets.size(), animation_data->keyframe_data.begin() + timeIndex * mesh->morph_targets.size() + mesh->morph_targets.size());
 							}
 						}
-						break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
-					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
-					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
-						animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
 						break;
 					default:
 						break;
@@ -702,32 +866,62 @@ void AnimationWindow::RefreshKeyframesList()
 		wi::gui::TreeList::Item item;
 		switch (channel.path)
 		{
-		case wi::scene::AnimationComponent::AnimationChannel::TRANSLATION:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::TRANSLATION:
 			item.name += ICON_TRANSLATE " ";
 			break;
-		case wi::scene::AnimationComponent::AnimationChannel::ROTATION:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::ROTATION:
 			item.name += ICON_ROTATE " ";
 			break;
-		case wi::scene::AnimationComponent::AnimationChannel::SCALE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SCALE:
 			item.name += ICON_SCALE " ";
 			break;
-		case wi::scene::AnimationComponent::AnimationChannel::WEIGHTS:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::WEIGHTS:
 			item.name += ICON_MESH " ";
 			break;
-		case wi::scene::AnimationComponent::AnimationChannel::LIGHT_COLOR:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
 			item.name += ICON_POINTLIGHT " [color] ";
 			break;
-		case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INTENSITY:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
 			item.name += ICON_POINTLIGHT " [intensity] ";
 			break;
-		case wi::scene::AnimationComponent::AnimationChannel::LIGHT_RANGE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
 			item.name += ICON_POINTLIGHT " [range] ";
 			break;
-		case wi::scene::AnimationComponent::AnimationChannel::LIGHT_INNERCONE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
 			item.name += ICON_POINTLIGHT " [inner cone] ";
 			break;
-		case wi::scene::AnimationComponent::AnimationChannel::LIGHT_OUTERCONE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
 			item.name += ICON_POINTLIGHT " [outer cone] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_PLAY:
+			item.name += ICON_SOUND " [play] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_STOP:
+			item.name += ICON_SOUND " [stop] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
+			item.name += ICON_SOUND " [volume] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
+			item.name += ICON_EMITTER " [emit count] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
+			item.name += ICON_CAMERA " [fov] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
+			item.name += ICON_CAMERA " [focal length] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
+			item.name += ICON_CAMERA " [aperture size] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
+			item.name += ICON_CAMERA " [aperture shape] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY:
+			item.name += ICON_SCRIPT " [play] ";
+			break;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SCRIPT_STOP:
+			item.name += ICON_SCRIPT " [stop] ";
 			break;
 		default:
 			break;
@@ -782,7 +976,7 @@ void AnimationWindow::ResizeLayout()
 	float jump = 20;
 
 	const float margin_left = 80;
-	const float margin_right = 40;
+	const float margin_right = 50;
 
 	auto add = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())

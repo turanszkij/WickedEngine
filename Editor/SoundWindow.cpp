@@ -72,12 +72,12 @@ void SoundWindow::Create(EditorComponent* _editor)
 			if (sound->IsPlaying())
 			{
 				sound->Stop();
-				playstopButton.SetText("Play");
+				playstopButton.SetText(ICON_PLAY);
 			}
 			else
 			{
 				sound->Play();
-				playstopButton.SetText("Stop");
+				playstopButton.SetText(ICON_STOP);
 			}
 		}
 	});

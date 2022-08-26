@@ -1110,20 +1110,60 @@ namespace wi::scene
 			wi::ecs::Entity target = wi::ecs::INVALID_ENTITY;
 			int samplerIndex = -1;
 
-			enum Path
+			enum class Path
 			{
 				TRANSLATION,
 				ROTATION,
 				SCALE,
 				WEIGHTS,
+
 				LIGHT_COLOR,
 				LIGHT_INTENSITY,
 				LIGHT_RANGE,
 				LIGHT_INNERCONE,
 				LIGHT_OUTERCONE,
+				// additional light paths can go here...
+				_LIGHT_RANGE_END = LIGHT_COLOR + 1000,
+
+				SOUND_PLAY,
+				SOUND_STOP,
+				SOUND_VOLUME,
+				// additional sound paths can go here...
+				_SOUND_RANGE_END = SOUND_PLAY + 1000,
+
+				EMITTER_EMITCOUNT,
+				// additional emitter paths can go here...
+				_EMITTER_RANGE_END = EMITTER_EMITCOUNT + 1000,
+
+				CAMERA_FOV,
+				CAMERA_FOCAL_LENGTH,
+				CAMERA_APERTURE_SIZE,
+				CAMERA_APERTURE_SHAPE,
+				// additional camera paths can go here...
+				_CAMERA_RANGE_END = CAMERA_FOV + 1000,
+
+				SCRIPT_PLAY,
+				SCRIPT_STOP,
+				_SCRIPT_RANGE_END = SCRIPT_PLAY + 1000,
+
 				UNKNOWN,
-				TYPE_FORCE_UINT32 = 0xFFFFFFFF
-			} path = TRANSLATION;
+			} path = Path::UNKNOWN;
+
+			enum class PathDataType
+			{
+				Event,
+				Float,
+				Float2,
+				Float3,
+				Float4,
+				Weights,
+
+				Count,
+			};
+			PathDataType GetPathDataType() const;
+
+			// Non-serialized attributes:
+			mutable int next_event = 0;
 		};
 		struct AnimationSampler
 		{
