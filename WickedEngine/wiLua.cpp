@@ -49,7 +49,7 @@ namespace wi::lua
 		return scriptpid_next.fetch_add(1);
 	}
 
-	uint32_t AttachScriptParameters(std::string& script, const std::string& filename, uint32_t PID)
+	uint32_t AttachScriptParameters(std::string& script, const std::string& filename, uint32_t PID,  const std::string& customparameters_prepend,  const std::string& customparameters_append)
 	{
 		static const std::string persistent_inject = R"(
 			local runProcess = function(func) 
@@ -74,7 +74,7 @@ namespace wi::lua
 		dynamic_inject += "local function script_pid() return \"" + std::to_string(PID) + "\" end\n";
 		dynamic_inject += "local function script_dir() return \"" + wi::helper::GetDirectoryFromPath(filepath) + "\" end\n";
 		dynamic_inject += persistent_inject;
-		script = dynamic_inject + script;
+		script = dynamic_inject + customparameters_prepend + script + customparameters_append;
 
 		return PID;
 	}
@@ -89,13 +89,17 @@ namespace wi::lua
 
 			std::string filename = SGetString(L, 1);
 			if(argc >= 2) PID = SGetInt(L, 2);
+			std::string customparameters_prepend;
+			if(argc >= 3) customparameters_prepend = SGetString(L, 3);
+			std::string customparameters_append;
+			if(argc >= 4) customparameters_prepend = SGetString(L, 4);
 
 			wi::vector<uint8_t> filedata;
 
 			if (wi::helper::FileRead(filename, filedata))
 			{
 				std::string command = std::string(filedata.begin(), filedata.end());
-				PID = AttachScriptParameters(command, filename, PID);
+				PID = AttachScriptParameters(command, filename, PID, customparameters_prepend, customparameters_append);
 
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)

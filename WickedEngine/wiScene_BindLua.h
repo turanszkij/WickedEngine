@@ -2,6 +2,7 @@
 #include "wiLua.h"
 #include "wiLuna.h"
 #include "wiScene.h"
+#include <LUA/lua.h>
 
 namespace wi::lua::scene
 {
@@ -37,6 +38,7 @@ namespace wi::lua::scene
 		int Clear(lua_State* L);
 		int Merge(lua_State* L);
 
+		int Entity_Create(lua_State* L);
 		int Entity_FindByName(lua_State* L);
 		int Entity_Remove(lua_State* L);
 		int Entity_Duplicate(lua_State* L);
@@ -46,9 +48,16 @@ namespace wi::lua::scene
 		int Component_CreateTransform(lua_State* L);
 		int Component_CreateLight(lua_State* L);
 		int Component_CreateObject(lua_State* L);
+		int Component_CreateMaterial(lua_State* L);
 		int Component_CreateInverseKinematics(lua_State* L);
 		int Component_CreateSpring(lua_State* L);
 		int Component_CreateScript(lua_State* L);
+		int Component_CreateRigidBodyPhysics(lua_State* L);
+		int Component_CreateSoftBodyPhysics(lua_State* L);
+		int Component_CreateForceField(lua_State* L);
+		int Component_CreateWeather(lua_State* L);
+		int Component_CreateSound(lua_State* L);
+		int Component_CreateCollider(lua_State* L);
 
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
@@ -62,6 +71,12 @@ namespace wi::lua::scene
 		int Component_GetInverseKinematics(lua_State* L);
 		int Component_GetSpring(lua_State* L);
 		int Component_GetScript(lua_State* L);
+		int Component_GetRigidBodyPhysics(lua_State* L);
+		int Component_GetSoftBodyPhysics(lua_State* L);
+		int Component_GetForceField(lua_State* L);
+		int Component_GetWeather(lua_State* L);
+		int Component_GetSound(lua_State* L);
+		int Component_GetCollider(lua_State* L);
 
 		int Component_GetNameArray(lua_State* L);
 		int Component_GetLayerArray(lua_State* L);
@@ -75,6 +90,12 @@ namespace wi::lua::scene
 		int Component_GetInverseKinematicsArray(lua_State* L);
 		int Component_GetSpringArray(lua_State* L);
 		int Component_GetScriptArray(lua_State* L);
+		int Component_GetRigidBodyPhysicsArray(lua_State* L);
+		int Component_GetSoftBodyPhysicsArray(lua_State* L);
+		int Component_GetForceFieldArray(lua_State* L);
+		int Component_GetWeatherArray(lua_State* L);
+		int Component_GetSoundArray(lua_State* L);
+		int Component_GetColliderArray(lua_State* L);
 
 		int Entity_GetNameArray(lua_State* L);
 		int Entity_GetLayerArray(lua_State* L);
@@ -88,12 +109,21 @@ namespace wi::lua::scene
 		int Entity_GetInverseKinematicsArray(lua_State* L);
 		int Entity_GetSpringArray(lua_State* L);
 		int Entity_GetScriptArray(lua_State* L);
+		int Entity_GetRigidBodyPhysicsArray(lua_State* L);
+		int Entity_GetSoftBodyPhysicsArray(lua_State* L);
+		int Entity_GetForceFieldArray(lua_State* L);
+		int Entity_GetWeatherArray(lua_State* L);
+		int Entity_GetSoundArray(lua_State* L);
+		int Entity_GetColliderArray(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
 		int Component_DetachChildren(lua_State* L);
 
 		int GetBounds(lua_State* L);
+
+		int GetWeather(lua_State* L);
+		int SetWeather(lua_State* L);
 	};
 
 	class NameComponent_BindLua
@@ -272,6 +302,17 @@ namespace wi::lua::scene
 		int SetScaleY(lua_State* L);
 		int SetRotation(lua_State* L);
 		int SetMotionBlurAmount(lua_State* L);
+
+		int GetEmitCount(lua_State* L);
+		int GetSize(lua_State* L);
+		int GetLife(lua_State* L);
+		int GetNormalFactor(lua_State* L);
+		int GetRandomness(lua_State* L);
+		int GetLifeRandomness(lua_State* L);
+		int GetScaleX(lua_State* L);
+		int GetScaleY(lua_State* L);
+		int GetRotation(lua_State* L);
+		int GetMotionBlurAmount(lua_State* L);
 	};
 
 	class LightComponent_BindLua
@@ -292,16 +333,25 @@ namespace wi::lua::scene
 		int SetRange(lua_State* L);
 		int SetIntensity(lua_State* L);
 		int SetColor(lua_State* L);
-		int SetCastShadow(lua_State* L);
-		int SetVolumetricsEnabled(lua_State* L);
 		int SetOuterConeAngle(lua_State* L);
 		int SetInnerConeAngle(lua_State* L);
+
+		int GetType(lua_State* L);
+		int GetRange(lua_State* L);
+		int GetIntensity(lua_State* L);
+		int GetColor(lua_State* L);
+		int GetOuterConeAngle(lua_State* L);
+		int GetInnerConeAngle(lua_State* L);
+
+		int SetCastShadow(lua_State* L);
+		int SetVolumetricsEnabled(lua_State* L);
+
+		int IsCastShadow(lua_State* L);
+		int IsVolumetricsEnabled(lua_State* L);
 
 		// back-compat:
 		int SetEnergy(lua_State* L);
 		int SetFOV(lua_State* L);
-
-		int GetType(lua_State* L);
 	};
 
 	class ObjectComponent_BindLua
@@ -319,12 +369,22 @@ namespace wi::lua::scene
 		~ObjectComponent_BindLua();
 
 		int GetMeshID(lua_State* L);
+		int GetCascadeMask(lua_State* L);
+		int GetRendertypeMask(lua_State* L);
 		int GetColor(lua_State* L);
+		int GetEmissiveColor(lua_State* L);
 		int GetUserStencilRef(lua_State* L);
+		int GetLodDistanceMultiplier(lua_State* L);
+		int GetDrawDistance(lua_State* L);
 
 		int SetMeshID(lua_State* L);
+		int SetCascadeMask(lua_State* L);
+		int SetRendertypeMask(lua_State* L);
 		int SetColor(lua_State* L);
+		int SetEmissiveColor(lua_State* L);
 		int SetUserStencilRef(lua_State* L);
+		int SetLodDistanceMultiplier(lua_State* L);
+		int SetDrawDistance(lua_State* L);
 	};
 
 	class InverseKinematicsComponent_BindLua
@@ -391,5 +451,209 @@ namespace wi::lua::scene
 		int Stop(lua_State* L);
 	};
 
+	class RigidBodyPhysicsComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wi::scene::RigidBodyPhysicsComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<RigidBodyPhysicsComponent_BindLua>::FunctionType methods[];
+		static Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType properties[];
+
+		RigidBodyPhysicsComponent_BindLua(wi::scene::RigidBodyPhysicsComponent* component) :component(component) {}
+		RigidBodyPhysicsComponent_BindLua(lua_State* L);
+		~RigidBodyPhysicsComponent_BindLua();
+
+		int GetShape(lua_State* L);
+		int GetMass(lua_State* L);
+		int GetFriction(lua_State* L);
+		int GetRestitution(lua_State* L);
+		int GetLinearDamping(lua_State* L);
+		int GetAngularDamping(lua_State* L);
+		int GetBoxParams(lua_State* L);
+		int GetSphereParams(lua_State* L);
+		int GetCapsuleParams(lua_State* L);
+		int GetTargetMeshLOD(lua_State* L);
+
+		int SetShape(lua_State* L);
+		int SetMass(lua_State* L);
+		int SetFriction(lua_State* L);
+		int SetRestitution(lua_State* L);
+		int SetLinearDamping(lua_State* L);
+		int SetAngularDamping(lua_State* L);
+		int SetBoxParams(lua_State* L);
+		int SetSphereParams(lua_State* L);
+		int SetCapsuleParams(lua_State* L);
+		int SetTargetMeshLOD(lua_State* L);
+
+		int SetDisableDeactivation(lua_State* L);
+		int SetKinematic(lua_State* L);
+
+		int IsDisableDeactivation(lua_State* L);
+		int IsKinematic(lua_State* L);
+	};
+
+	class SoftBodyPhysicsComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wi::scene::SoftBodyPhysicsComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<SoftBodyPhysicsComponent_BindLua>::FunctionType methods[];
+		static Luna<SoftBodyPhysicsComponent_BindLua>::PropertyType properties[];
+
+		SoftBodyPhysicsComponent_BindLua(wi::scene::SoftBodyPhysicsComponent* component) :component(component) {}
+		SoftBodyPhysicsComponent_BindLua(lua_State* L);
+		~SoftBodyPhysicsComponent_BindLua();
+
+		int GetMass(lua_State* L);
+		int GetFriction(lua_State* L);
+		int GetRestitution(lua_State* L);
+
+		int SetMass(lua_State* L);
+		int SetFriction(lua_State* L);
+		int SetRestitution(lua_State* L);
+	};
+
+	class ForceFieldComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wi::scene::ForceFieldComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<ForceFieldComponent_BindLua>::FunctionType methods[];
+		static Luna<ForceFieldComponent_BindLua>::PropertyType properties[];
+
+		ForceFieldComponent_BindLua(wi::scene::ForceFieldComponent* component) :component(component) {}
+		ForceFieldComponent_BindLua(lua_State* L);
+		~ForceFieldComponent_BindLua();
+
+		int GetType(lua_State* L);
+		int GetGravity(lua_State* L);
+		int GetRange(lua_State* L);
+
+		int SetType(lua_State* L);
+		int SetGravity(lua_State* L);
+		int SetRange(lua_State* L);
+	};
+
+	class WeatherComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wi::scene::WeatherComponent* component = nullptr;
+
+		void InitParameters();
+
+		static const char className[];
+		static Luna<WeatherComponent_BindLua>::FunctionType methods[];
+		static Luna<WeatherComponent_BindLua>::PropertyType properties[];
+
+		WeatherComponent_BindLua(wi::scene::WeatherComponent* component) :component(component) { InitParameters(); }
+		WeatherComponent_BindLua(lua_State* L);
+		~WeatherComponent_BindLua();
+
+		wi::unordered_map<std::string, XMFLOAT3*> weatherparams_xmfloat3;
+		wi::unordered_map<std::string, float*> weatherparams_float;
+
+		wi::unordered_map<std::string, int*> oceanparams_int;
+		wi::unordered_map<std::string, uint32_t*> oceanparams_uint32;
+		wi::unordered_map<std::string, XMFLOAT2*> oceanparams_xmfloat2;
+		wi::unordered_map<std::string, XMFLOAT4*> oceanparams_xmfloat4;
+		wi::unordered_map<std::string, float*> oceanparams_float;
+
+		wi::unordered_map<std::string, XMFLOAT3*> atmosphereparams_xmfloat3;
+		wi::unordered_map<std::string, float*> atmosphereparams_float;
+
+		wi::unordered_map<std::string, XMFLOAT3*> volumetriccloudparams_xmfloat3;
+		wi::unordered_map<std::string, XMFLOAT4*> volumetriccloudparams_xmfloat4;
+		wi::unordered_map<std::string, float*> volumetriccloudparams_float;
+
+		int GetWeatherParams(lua_State* L);
+		int GetOceanParams(lua_State* L);
+		int GetAtmosphereParams(lua_State* L);
+		int GetVolumetricCloudParams(lua_State* L);
+
+		int SetWeatherParams(lua_State* L);
+		int SetOceanParams(lua_State* L);
+		int SetAtmosphereParams(lua_State* L);
+		int SetVolumetricCloudParams(lua_State* L);
+
+		int IsOceanEnabled(lua_State* L);
+		int IsSimpleSky(lua_State* L);
+		int IsRealisticSky(lua_State* L);
+		int IsVolumetricClouds(lua_State* L);
+		int IsHeightFog(lua_State* L);
+
+		int SetOceanEnabled(lua_State* L);
+		int SetSimpleSky(lua_State* L);
+		int SetRealisticSky(lua_State* L);
+		int SetVolumetricClouds(lua_State* L);
+		int SetHeightFog(lua_State* L);
+
+		int GetSkyMapName(lua_State* L);
+		int GetColorGradingMapName(lua_State* L);
+
+		int SetSkyMapName(lua_State* L);
+		int SetColorGradingMapName(lua_State* L);
+	};
+	
+	class SoundComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wi::scene::SoundComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<SoundComponent_BindLua>::FunctionType methods[];
+		static Luna<SoundComponent_BindLua>::PropertyType properties[];
+
+		SoundComponent_BindLua(wi::scene::SoundComponent* component) :component(component) {}
+		SoundComponent_BindLua(lua_State* L);
+		~SoundComponent_BindLua();
+
+		int SetFilename(lua_State* L);
+		int SetVolume(lua_State* L);
+
+		int GetFilename(lua_State* L);
+		int GetVolume(lua_State* L);
+
+		int IsPlaying(lua_State* L);
+		int IsLooped(lua_State* L);
+		int IsDisable3D(lua_State* L);
+
+		int Play(lua_State* L);
+		int Stop(lua_State* L);
+		int SetLooped(lua_State* L);
+		int SetDisable3D(lua_State* L);
+	};
+
+	class ColliderComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wi::scene::ColliderComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<ColliderComponent_BindLua>::FunctionType methods[];
+		static Luna<ColliderComponent_BindLua>::PropertyType properties[];
+
+		ColliderComponent_BindLua(wi::scene::ColliderComponent* component) :component(component) {}
+		ColliderComponent_BindLua(lua_State* L);
+		~ColliderComponent_BindLua();
+
+		int GetShape(lua_State* L);
+		int GetRadius(lua_State* L);
+		int GetOffset(lua_State* L);
+		int GetTail(lua_State* L);
+
+		int SetShape(lua_State* L);
+		int SetRadius(lua_State* L);
+		int SetOffset(lua_State* L);
+		int SetTail(lua_State* L);
+	};
 }
 

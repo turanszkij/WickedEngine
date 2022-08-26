@@ -4,6 +4,7 @@
 //modified to fit with Wicked Engine, removed warnings
 
 #define lunamethod(class, name) {#name, &class::name}
+#define lunaproperty(class, name) {#name, &class::Get##name, &class::Set##name}
 
 template < class T > class Luna {
 public:

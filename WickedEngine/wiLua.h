@@ -66,7 +66,7 @@ namespace wi::lua
 
 	// Adds some local management functions to the script
 	//	returns the PID
-	uint32_t AttachScriptParameters(std::string& script, const std::string& filename = "", uint32_t PID = GeneratePID());
+	uint32_t AttachScriptParameters(std::string& script, const std::string& filename = "", uint32_t PID = GeneratePID(), const std::string& customparameters_prepend = "",  const std::string& customparameters_append = "");
 
 	//Following functions are "static", operating on specified lua state:
 
