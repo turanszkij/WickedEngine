@@ -775,12 +775,6 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		scene.Component_Attach(meshEntity, state.rootEntity);
 		MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
 
-		mesh.morph_targets.resize(x.weights.size());
-		for (size_t i = 0; i < mesh.morph_targets.size(); i++)
-		{
-			mesh.morph_targets[i].weight = static_cast<float_t>(x.weights[i]);
-		}
-
 		for (auto& prim : x.primitives)
 		{
 			assert(prim.indices >= 0);
@@ -1217,6 +1211,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					}
 				}
 
+				mesh.morph_targets.resize(prim.targets.size());
 				for (size_t i = 0; i < mesh.morph_targets.size(); i++)
 				{
 					for (auto& attr : prim.targets[i])
@@ -1225,22 +1220,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						int attr_data = attr.second;
 
 						const tinygltf::Accessor& accessor = state.gltfModel.accessors[attr_data];
-						const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
-						const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
-
-						int stride = accessor.ByteStride(bufferView);
-						size_t vertexCount = accessor.count;
-
-						const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
 						if (!attr_name.compare("POSITION"))
 						{
-							mesh.morph_targets[i].vertex_positions.resize(vertexOffset + vertexCount);
-							for (size_t j = 0; j < vertexCount; ++j)
-							{
-								mesh.morph_targets[i].vertex_positions[vertexOffset + j] = ((XMFLOAT3*)data)[j];
-							}
-
 							if (accessor.sparse.isSparse)
 							{
 								auto& sparse = accessor.sparse;
@@ -1250,38 +1232,54 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 								const tinygltf::Buffer& sparse_values_buffer = state.gltfModel.buffers[sparse_values_view.buffer];
 								const uint8_t* sparse_indices_data = sparse_indices_buffer.data.data() + sparse.indices.byteOffset + sparse_indices_view.byteOffset;
 								const uint8_t* sparse_values_data = sparse_values_buffer.data.data() + sparse.values.byteOffset + sparse_values_view.byteOffset;
+								mesh.morph_targets[i].vertex_positions.resize(sparse.count);
+								mesh.morph_targets[i].sparse_indices.resize(sparse.count);
+
 								switch (sparse.indices.componentType)
 								{
 								default:
 								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
 									for (int s = 0; s < sparse.count; ++s)
 									{
-										mesh.morph_targets[i].vertex_positions[sparse_indices_data[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
+										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + sparse_indices_data[s];
+										mesh.morph_targets[i].vertex_positions[s] = ((const XMFLOAT3*)sparse_values_data)[s];
 									}
 									break;
 								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
 									for (int s = 0; s < sparse.count; ++s)
 									{
-										mesh.morph_targets[i].vertex_positions[((const uint16_t*)sparse_indices_data)[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
+										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + ((const uint16_t*)sparse_indices_data)[s];
+										mesh.morph_targets[i].vertex_positions[s] = ((const XMFLOAT3*)sparse_values_data)[s];
 									}
 									break;
 								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
 									for (int s = 0; s < sparse.count; ++s)
 									{
-										mesh.morph_targets[i].vertex_positions[((const uint32_t*)sparse_indices_data)[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
+										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + ((const uint32_t*)sparse_indices_data)[s];
+										mesh.morph_targets[i].vertex_positions[s] = ((const XMFLOAT3*)sparse_values_data)[s];
 									}
 									break;
+								}
+							}
+							else
+							{
+								const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+								const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
+
+								int stride = accessor.ByteStride(bufferView);
+								size_t vertexCount = accessor.count;
+
+								const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+								mesh.morph_targets[i].vertex_positions.resize(vertexOffset + vertexCount);
+								for (size_t j = 0; j < vertexCount; ++j)
+								{
+									mesh.morph_targets[i].vertex_positions[vertexOffset + j] = ((XMFLOAT3*)data)[j];
 								}
 							}
 						}
 						else if (!attr_name.compare("NORMAL"))
 						{
-							mesh.morph_targets[i].vertex_normals.resize(vertexOffset + vertexCount);
-							for (size_t j = 0; j < vertexCount; ++j)
-							{
-								mesh.morph_targets[i].vertex_normals[vertexOffset + j] = ((XMFLOAT3*)data)[j];
-							}
-
 							if (accessor.sparse.isSparse)
 							{
 								auto& sparse = accessor.sparse;
@@ -1291,31 +1289,57 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 								const tinygltf::Buffer& sparse_values_buffer = state.gltfModel.buffers[sparse_values_view.buffer];
 								const uint8_t* sparse_indices_data = sparse_indices_buffer.data.data() + sparse.indices.byteOffset + sparse_indices_view.byteOffset;
 								const uint8_t* sparse_values_data = sparse_values_buffer.data.data() + sparse.values.byteOffset + sparse_values_view.byteOffset;
+								mesh.morph_targets[i].vertex_normals.resize(sparse.count);
+								mesh.morph_targets[i].sparse_indices.resize(sparse.count);
+
 								switch (sparse.indices.componentType)
 								{
 								default:
 								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
 									for (int s = 0; s < sparse.count; ++s)
 									{
-										mesh.morph_targets[i].vertex_normals[sparse_indices_data[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
+										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + sparse_indices_data[s];
+										mesh.morph_targets[i].vertex_normals[s] = ((const XMFLOAT3*)sparse_values_data)[s];
 									}
 									break;
 								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
 									for (int s = 0; s < sparse.count; ++s)
 									{
-										mesh.morph_targets[i].vertex_normals[((const uint16_t*)sparse_indices_data)[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
+										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + ((const uint16_t*)sparse_indices_data)[s];
+										mesh.morph_targets[i].vertex_normals[s] = ((const XMFLOAT3*)sparse_values_data)[s];
 									}
 									break;
 								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
 									for (int s = 0; s < sparse.count; ++s)
 									{
-										mesh.morph_targets[i].vertex_normals[((const uint32_t*)sparse_indices_data)[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
+										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + ((const uint32_t*)sparse_indices_data)[s];
+										mesh.morph_targets[i].vertex_normals[s] = ((const XMFLOAT3*)sparse_values_data)[s];
 									}
 									break;
 								}
 							}
+							else
+							{
+								const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+								const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
+
+								int stride = accessor.ByteStride(bufferView);
+								size_t vertexCount = accessor.count;
+
+								const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+								mesh.morph_targets[i].vertex_normals.resize(vertexOffset + vertexCount);
+								for (size_t j = 0; j < vertexCount; ++j)
+								{
+									mesh.morph_targets[i].vertex_normals[vertexOffset + j] = ((XMFLOAT3*)data)[j];
+								}
+							}
 						}
 					}
+				}
+				for (size_t i = 0; i < x.weights.size(); i++)
+				{
+					mesh.morph_targets[i].weight = static_cast<float_t>(x.weights[i]);
 				}
 			}
 
@@ -1586,6 +1610,66 @@ void Import_Extension_VRM(LoaderState& state)
 		// Rotate VRM humanoid character to face -Z:
 		TransformComponent& transform = *state.scene->transforms.GetComponent(state.rootEntity);
 		transform.RotateRollPitchYaw(XMFLOAT3(0, XM_PI, 0));
+
+		if (ext_vrm->second.Has("blendShapeMaster"))
+		{
+			const auto& blendShapeMaster = ext_vrm->second.Get("blendShapeMaster");
+			if (blendShapeMaster.Has("blendShapeGroups"))
+			{
+				const auto& blendShapeGroups = blendShapeMaster.Get("blendShapeGroups");
+				for (size_t blendShapeGroup_index = 0; blendShapeGroup_index < blendShapeGroups.ArrayLen(); ++blendShapeGroup_index)
+				{
+					const auto& blendShapeGroup = blendShapeGroups.Get(int(blendShapeGroup_index));
+					Entity entity = CreateEntity();
+					ExpressionComponent& component = state.scene->expressions.Create(entity);
+					state.scene->Component_Attach(entity, state.rootEntity);
+
+					if (blendShapeGroup.Has("name"))
+					{
+						const auto& value = blendShapeGroup.Get("name");
+						state.scene->names.Create(entity) = value.Get<std::string>();
+					}
+					if (blendShapeGroup.Has("presetName"))
+					{
+						const auto& value = blendShapeGroup.Get("presetName");
+						component.presetName = value.Get<std::string>();
+					}
+					if (blendShapeGroup.Has("isBinary"))
+					{
+						const auto& value = blendShapeGroup.Get("isBinary");
+						if (value.Get<bool>())
+						{
+							component._flags |= ExpressionComponent::BINARY;
+						}
+					}
+					if (blendShapeGroup.Has("binds"))
+					{
+						const auto& binds = blendShapeGroup.Get("binds");
+						for (size_t bind_index = 0; bind_index < binds.ArrayLen(); ++bind_index)
+						{
+							const auto& bind = binds.Get(int(bind_index));
+							ExpressionComponent::MorphTargetBinding& morph_target_binding = component.morph_target_bindings.emplace_back();
+
+							if (bind.Has("mesh"))
+							{
+								const auto& value = bind.Get("mesh");
+								morph_target_binding.meshID = state.scene->meshes.GetEntity(value.GetNumberAsInt());
+							}
+							if (bind.Has("index"))
+							{
+								const auto& value = bind.Get("index");
+								morph_target_binding.index = value.GetNumberAsInt();
+							}
+							if (bind.Has("weight"))
+							{
+								const auto& value = bind.Get("weight");
+								morph_target_binding.weight = float(value.GetNumberAsInt()) / 100.0f;
+							}
+						}
+					}
+				}
+			}
+		}
 
 		if (ext_vrm->second.Has("secondaryAnimation"))
 		{

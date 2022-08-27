@@ -1734,6 +1734,8 @@ namespace wi::scene
 		}
 		geometryArrayMapped = (ShaderGeometry*)geometryUploadBuffer[device->GetBufferIndex()].mapped_data;
 
+		RunExpressionUpdateSystem(ctx);
+
 		RunMeshUpdateSystem(ctx);
 
 		RunMaterialUpdateSystem(ctx);
@@ -3464,6 +3466,30 @@ namespace wi::scene
 
 		});
 	}
+	void Scene::RunExpressionUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		for (size_t i = 0; i < expressions.GetCount(); ++i)
+		{
+			const ExpressionComponent& expression = expressions[i];
+
+			if (expression.weight > 0)
+			{
+				for (const ExpressionComponent::MorphTargetBinding& morph_target_binding : expression.morph_target_bindings)
+				{
+					MeshComponent* mesh = meshes.GetComponent(morph_target_binding.meshID);
+					if (mesh != nullptr && (int)mesh->morph_targets.size() > morph_target_binding.index)
+					{
+						float weight = morph_target_binding.weight * expression.weight;
+						if (mesh->morph_targets[morph_target_binding.index].weight != weight)
+						{
+							mesh->morph_targets[morph_target_binding.index].weight = weight;
+							mesh->dirty_morph = true;
+						}
+					}
+				}
+			}
+		}
+	}
 	void Scene::RunColliderUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		for (size_t i = 0; i < colliders.GetCount(); ++i)
@@ -3925,25 +3951,51 @@ namespace wi::scene
 			    XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 			    XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
-			    for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
-			    {
-					XMFLOAT3 pos = mesh.vertex_positions[i];
-					XMFLOAT3 nor = mesh.vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : mesh.vertex_normals[i];
-					const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
+				mesh.morph_temp_pos = mesh.vertex_positions;
+				mesh.morph_temp_nor = mesh.vertex_normals;
 
-					for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
+				for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
+				{
+					if (morph.sparse_indices.empty())
 					{
-						pos.x += morph.weight * morph.vertex_positions[i].x;
-						pos.y += morph.weight * morph.vertex_positions[i].y;
-						pos.z += morph.weight * morph.vertex_positions[i].z;
-
-						if (!morph.vertex_normals.empty())
+						for (size_t i = 0; i < morph.vertex_positions.size(); ++i)
 						{
-							nor.x += morph.weight * morph.vertex_normals[i].x;
-							nor.y += morph.weight * morph.vertex_normals[i].y;
-							nor.z += morph.weight * morph.vertex_normals[i].z;
+							mesh.morph_temp_pos[i].x += morph.weight * morph.vertex_positions[i].x;
+							mesh.morph_temp_pos[i].y += morph.weight * morph.vertex_positions[i].y;
+							mesh.morph_temp_pos[i].z += morph.weight * morph.vertex_positions[i].z;
+
+							if (!morph.vertex_normals.empty())
+							{
+								mesh.morph_temp_nor[i].x += morph.weight * morph.vertex_normals[i].x;
+								mesh.morph_temp_nor[i].y += morph.weight * morph.vertex_normals[i].y;
+								mesh.morph_temp_nor[i].z += morph.weight * morph.vertex_normals[i].z;
+							}
 						}
 					}
+					else
+					{
+						for (size_t i = 0; i < morph.sparse_indices.size(); ++i)
+						{
+							const uint32_t ind = morph.sparse_indices[i];
+							mesh.morph_temp_pos[ind].x += morph.weight * morph.vertex_positions[i].x;
+							mesh.morph_temp_pos[ind].y += morph.weight * morph.vertex_positions[i].y;
+							mesh.morph_temp_pos[ind].z += morph.weight * morph.vertex_positions[i].z;
+
+							if (!morph.vertex_normals.empty())
+							{
+								mesh.morph_temp_nor[ind].x += morph.weight * morph.vertex_normals[i].x;
+								mesh.morph_temp_nor[ind].y += morph.weight * morph.vertex_normals[i].y;
+								mesh.morph_temp_nor[ind].z += morph.weight * morph.vertex_normals[i].z;
+							}
+						}
+					}
+				}
+
+			    for (size_t i = 0; i < mesh.morph_temp_pos.size(); ++i)
+			    {
+					XMFLOAT3 pos = mesh.morph_temp_pos[i];
+					XMFLOAT3 nor = mesh.morph_temp_nor.empty() ? XMFLOAT3(1, 1, 1) : mesh.morph_temp_nor[i];
+					const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
 
 					XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
 					mesh.vertex_positions_morphed[i].FromFULL(pos, nor, wind);

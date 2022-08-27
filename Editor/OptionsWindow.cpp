@@ -307,6 +307,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Camera " ICON_CAMERA, (uint64_t)Filter::Camera);
 	filterCombo.AddItem("Armature " ICON_ARMATURE, (uint64_t)Filter::Armature);
 	filterCombo.AddItem("Script " ICON_SCRIPT, (uint64_t)Filter::Script);
+	filterCombo.AddItem("Expression " ICON_EXPRESSION, (uint64_t)Filter::Expression);
 	filterCombo.SetTooltip("Apply filtering to the Entities");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
@@ -884,6 +885,10 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_SCRIPT " ";
 	}
+	if (scene.expressions.Contains(entity))
+	{
+		item.name += ICON_EXPRESSION " ";
+	}
 	if (entity == terragen.terrainEntity)
 	{
 		item.name += ICON_TERRAIN " ";
@@ -1131,6 +1136,14 @@ void OptionsWindow::RefreshEntityTree()
 		for (size_t i = 0; i < scene.scripts.GetCount(); ++i)
 		{
 			PushToEntityTree(scene.scripts.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::Expression))
+	{
+		for (size_t i = 0; i < scene.expressions.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.expressions.GetEntity(i), 0);
 		}
 	}
 

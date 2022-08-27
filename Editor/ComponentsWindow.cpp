@@ -38,6 +38,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	colliderWnd.Create(editor);
 	hierarchyWnd.Create(editor);
 	cameraComponentWnd.Create(editor);
+	expressionWnd.Create(editor);
 
 
 	newComponentCombo.Create("Add: ");
@@ -46,12 +47,12 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.selected_font.anim.typewriter.character_start = 1;
 	newComponentCombo.SetTooltip("Add a component to the last selected entity.");
 	newComponentCombo.SetInvalidSelectionText("...");
-	newComponentCombo.AddItem("Name", 0);
+	newComponentCombo.AddItem("Name " ICON_NAME, 0);
 	newComponentCombo.AddItem("Layer " ICON_LAYER, 1);
 	newComponentCombo.AddItem("Hierarchy " ICON_HIERARCHY, 19);
 	newComponentCombo.AddItem("Transform " ICON_TRANSFORM, 2);
 	newComponentCombo.AddItem("Light " ICON_POINTLIGHT, 3);
-	newComponentCombo.AddItem("Matetial " ICON_MATERIAL, 4);
+	newComponentCombo.AddItem("Material " ICON_MATERIAL, 4);
 	newComponentCombo.AddItem("Spring", 5);
 	newComponentCombo.AddItem("Inverse Kinematics " ICON_IK, 6);
 	newComponentCombo.AddItem("Sound " ICON_SOUND, 7);
@@ -297,6 +298,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&colliderWnd);
 	AddWidget(&hierarchyWnd);
 	AddWidget(&cameraComponentWnd);
+	AddWidget(&expressionWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -321,6 +323,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	colliderWnd.SetVisible(false);
 	hierarchyWnd.SetVisible(false);
 	cameraComponentWnd.SetVisible(false);
+	expressionWnd.SetVisible(false);
 
 
 	SetSize(editor->optionsWnd.GetSize());
@@ -662,5 +665,18 @@ void ComponentsWindow::ResizeLayout()
 	else
 	{
 		scriptWnd.SetVisible(false);
+	}
+
+	if (scene.expressions.Contains(expressionWnd.entity))
+	{
+		expressionWnd.SetVisible(true);
+		expressionWnd.SetPos(pos);
+		expressionWnd.SetSize(XMFLOAT2(width, expressionWnd.GetScale().y));
+		pos.y += expressionWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		expressionWnd.SetVisible(false);
 	}
 }

@@ -415,6 +415,10 @@ namespace wi::scene
 					archive >> morph_targets[i].vertex_positions;
 					archive >> morph_targets[i].vertex_normals;
 					archive >> morph_targets[i].weight;
+					if (seri.GetVersion() >= 1)
+					{
+						archive >> morph_targets[i].sparse_indices;
+					}
 			    }
 			}
 
@@ -484,6 +488,10 @@ namespace wi::scene
 					archive << morph_targets[i].vertex_positions;
 					archive << morph_targets[i].vertex_normals;
 					archive << morph_targets[i].weight;
+					if (seri.GetVersion() >= 1)
+					{
+						archive << morph_targets[i].sparse_indices;
+					}
 			    }
 			}
 
@@ -1459,6 +1467,39 @@ namespace wi::scene
 
 			archive << _flags;
 			archive << relative_filename;
+		}
+	}
+	void ExpressionComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> presetName;
+			archive >> weight;
+
+			size_t count = 0;
+			archive >> count;
+			morph_target_bindings.resize(count);
+			for (size_t i = 0; i < count; ++i)
+			{
+				SerializeEntity(archive, morph_target_bindings[i].meshID, seri);
+				archive >> morph_target_bindings[i].index;
+				archive >> morph_target_bindings[i].weight;
+			}
+		}
+		else
+		{
+			archive << _flags;
+			archive << presetName;
+			archive << weight;
+
+			archive << morph_target_bindings.size();
+			for (size_t i = 0; i < morph_target_bindings.size(); ++i)
+			{
+				SerializeEntity(archive, morph_target_bindings[i].meshID, seri);
+				archive << morph_target_bindings[i].index;
+				archive << morph_target_bindings[i].weight;
+			}
 		}
 	}
 

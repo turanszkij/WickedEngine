@@ -372,7 +372,8 @@ namespace wi::scene
 		{
 		    wi::vector<XMFLOAT3> vertex_positions;
 		    wi::vector<XMFLOAT3> vertex_normals;
-		    float weight;
+			wi::vector<uint32_t> sparse_indices; // optional, these can be used to target vertices indirectly
+			float weight = 0;
 		};
 		wi::vector<MorphTarget> morph_targets;
 
@@ -608,6 +609,8 @@ namespace wi::scene
 		
 		// Non serialized attributes:
 		wi::vector<Vertex_POS> vertex_positions_morphed;
+		wi::vector<XMFLOAT3> morph_temp_pos;
+		wi::vector<XMFLOAT3> morph_temp_nor;
 
 	};
 
@@ -1425,6 +1428,33 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
+	struct ExpressionComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			BINARY = 1 << 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		std::string presetName;
+		float weight = 0;
+
+		struct MorphTargetBinding
+		{
+			wi::ecs::Entity meshID = wi::ecs::INVALID_ENTITY;
+			int index = 0;
+			float weight = 0;
+		};
+		wi::vector<MorphTargetBinding> morph_target_bindings;
+
+		constexpr bool IsBinary() const { return _flags & BINARY; }
+
+		constexpr void SetBinary(bool value = true) { if (value) { _flags |= BINARY; } else { _flags &= ~BINARY; } }
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
+
 	struct Scene
 	{
 		wi::ecs::ComponentLibrary componentLibrary;
@@ -1434,7 +1464,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<TransformComponent>& transforms = componentLibrary.Register<TransformComponent>("wi::scene::Scene::transforms");
 		wi::ecs::ComponentManager<HierarchyComponent>& hierarchy = componentLibrary.Register<HierarchyComponent>("wi::scene::Scene::hierarchy");
 		wi::ecs::ComponentManager<MaterialComponent>& materials = componentLibrary.Register<MaterialComponent>("wi::scene::Scene::materials", 1); // version = 1
-		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Register<MeshComponent>("wi::scene::Scene::meshes");
+		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Register<MeshComponent>("wi::scene::Scene::meshes", 1); // version = 1
 		wi::ecs::ComponentManager<ImpostorComponent>& impostors = componentLibrary.Register<ImpostorComponent>("wi::scene::Scene::impostors");
 		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Register<ObjectComponent>("wi::scene::Scene::objects");
 		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_objects = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_objects");
@@ -1459,6 +1489,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<SpringComponent>& springs = componentLibrary.Register<SpringComponent>("wi::scene::Scene::springs", 1); // version = 1
 		wi::ecs::ComponentManager<ColliderComponent>& colliders = componentLibrary.Register<ColliderComponent>("wi::scene::Scene::colliders", 1); // version = 1
 		wi::ecs::ComponentManager<ScriptComponent>& scripts = componentLibrary.Register<ScriptComponent>("wi::scene::Scene::scripts");
+		wi::ecs::ComponentManager<ExpressionComponent>& expressions = componentLibrary.Register<ExpressionComponent>("wi::scene::Scene::expressions");
 
 		// Non-serialized attributes:
 		float dt = 0;
@@ -1700,6 +1731,7 @@ namespace wi::scene
 		void RunAnimationUpdateSystem(wi::jobsystem::context& ctx);
 		void RunTransformUpdateSystem(wi::jobsystem::context& ctx);
 		void RunHierarchyUpdateSystem(wi::jobsystem::context& ctx);
+		void RunExpressionUpdateSystem(wi::jobsystem::context& ctx);
 		void RunColliderUpdateSystem(wi::jobsystem::context& ctx);
 		void RunSpringUpdateSystem(wi::jobsystem::context& ctx);
 		void RunInverseKinematicsUpdateSystem(wi::jobsystem::context& ctx);

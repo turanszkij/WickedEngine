@@ -55,6 +55,7 @@ public:
 		Armature = 1 << 15,
 		Collider = 1 << 16,
 		Script = 1 << 17,
+		Expression = 1 << 18,
 
 		All = ~0ull,
 	} filter = Filter::All;
