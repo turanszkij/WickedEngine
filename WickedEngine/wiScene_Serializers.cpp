@@ -1474,7 +1474,6 @@ namespace wi::scene
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			archive >> presetName;
 			archive >> weight;
 
 			size_t count = 0;
@@ -1490,7 +1489,6 @@ namespace wi::scene
 		else
 		{
 			archive << _flags;
-			archive << presetName;
 			archive << weight;
 
 			archive << morph_target_bindings.size();

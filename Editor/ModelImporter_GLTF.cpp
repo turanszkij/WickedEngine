@@ -1629,10 +1629,10 @@ void Import_Extension_VRM(LoaderState& state)
 						const auto& value = blendShapeGroup.Get("name");
 						state.scene->names.Create(entity) = value.Get<std::string>();
 					}
-					if (blendShapeGroup.Has("presetName"))
+					if (blendShapeGroup.Has("presetName") && !state.scene->names.Contains(entity))
 					{
 						const auto& value = blendShapeGroup.Get("presetName");
-						component.presetName = value.Get<std::string>();
+						state.scene->names.Create(entity) = value.Get<std::string>();
 					}
 					if (blendShapeGroup.Has("isBinary"))
 					{
@@ -1805,6 +1805,58 @@ void Import_Extension_VRM(LoaderState& state)
 
 void Import_Extension_VRMC(LoaderState& state)
 {
+	auto ext_vrm = state.gltfModel.extensions.find("VRMC_vrm");
+	if (ext_vrm != state.gltfModel.extensions.end())
+	{
+		if (ext_vrm->second.Has("expressions"))
+		{
+			const auto& expressions = ext_vrm->second.Get("expressions");
+			if (expressions.Has("preset"))
+			{
+				const auto& presets = expressions.Get("preset");
+				for (auto& presetName : presets.Keys())
+				{
+					const auto& preset = presets.Get(presetName);
+					Entity entity = CreateEntity();
+					ExpressionComponent& component = state.scene->expressions.Create(entity);
+					state.scene->Component_Attach(entity, state.rootEntity);
+					state.scene->names.Create(entity) = presetName;
+
+					if (preset.Has("isBinary"))
+					{
+						const auto& value = preset.Get("isBinary");
+						component.SetBinary(value.Get<bool>());
+					}
+					if (preset.Has("morphTargetBinds"))
+					{
+						const auto& morpTargetBinds = preset.Get("morphTargetBinds");
+						for (size_t morphTargetBind_index = 0; morphTargetBind_index < morpTargetBinds.ArrayLen(); ++morphTargetBind_index)
+						{
+							const auto& morphTargetBind = morpTargetBinds.Get(int(morphTargetBind_index));
+							ExpressionComponent::MorphTargetBinding& morph_target_binding = component.morph_target_bindings.emplace_back();
+
+							if (morphTargetBind.Has("node"))
+							{
+								const auto& value = morphTargetBind.Get("node");
+								morph_target_binding.meshID = state.scene->meshes.GetEntity(state.gltfModel.nodes[value.GetNumberAsInt()].mesh);
+							}
+							if (morphTargetBind.Has("index"))
+							{
+								const auto& value = morphTargetBind.Get("index");
+								morph_target_binding.index = value.GetNumberAsInt();
+							}
+							if (morphTargetBind.Has("weight"))
+							{
+								const auto& value = morphTargetBind.Get("weight");
+								morph_target_binding.weight = float(value.GetNumberAsDouble());
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	auto ext_vrmc_springbone = state.gltfModel.extensions.find("VRMC_springBone");
 	if (ext_vrmc_springbone != state.gltfModel.extensions.end())
 	{

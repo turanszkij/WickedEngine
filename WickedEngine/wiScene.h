@@ -1438,7 +1438,6 @@ namespace wi::scene
 		};
 		uint32_t _flags = EMPTY;
 
-		std::string presetName;
 		float weight = 0;
 
 		struct MorphTargetBinding
