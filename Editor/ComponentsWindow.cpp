@@ -37,13 +37,14 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	softWnd.Create(editor);
 	colliderWnd.Create(editor);
 	hierarchyWnd.Create(editor);
+	cameraComponentWnd.Create(editor);
 
 
 	newComponentCombo.Create("Add: ");
 	newComponentCombo.selected_font.anim.typewriter.looped = true;
 	newComponentCombo.selected_font.anim.typewriter.time = 2;
 	newComponentCombo.selected_font.anim.typewriter.character_start = 1;
-	newComponentCombo.SetTooltip("Add a component to the first selected entity.");
+	newComponentCombo.SetTooltip("Add a component to the last selected entity.");
 	newComponentCombo.SetInvalidSelectionText("...");
 	newComponentCombo.AddItem("Name", 0);
 	newComponentCombo.AddItem("Layer " ICON_LAYER, 1);
@@ -65,12 +66,13 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Rigid Body " ICON_RIGIDBODY, 16);
 	newComponentCombo.AddItem("Soft Body " ICON_SOFTBODY, 17);
 	newComponentCombo.AddItem("Collider " ICON_COLLIDER, 18);
+	newComponentCombo.AddItem("Camera " ICON_CAMERA, 20);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(-1);
 		if (editor->translator.selected.empty())
 			return;
 		Scene& scene = editor->GetCurrentScene();
-		Entity entity = editor->translator.selected.front().entity;
+		Entity entity = editor->translator.selected.back().entity;
 		if (entity == INVALID_ENTITY)
 		{
 			assert(0);
@@ -158,6 +160,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case 19:
 			if (scene.hierarchy.Contains(entity))
+				return;
+			break;
+		case 20:
+			if (scene.cameras.Contains(entity))
 				return;
 			break;
 		default:
@@ -253,6 +259,9 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		case 19:
 			scene.hierarchy.Create(entity);
 			break;
+		case 20:
+			scene.cameras.Create(entity);
+			break;
 		default:
 			break;
 		}
@@ -287,6 +296,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&softWnd);
 	AddWidget(&colliderWnd);
 	AddWidget(&hierarchyWnd);
+	AddWidget(&cameraComponentWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -310,6 +320,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	softWnd.SetVisible(false);
 	colliderWnd.SetVisible(false);
 	hierarchyWnd.SetVisible(false);
+	cameraComponentWnd.SetVisible(false);
 
 
 	SetSize(editor->optionsWnd.GetSize());
@@ -625,6 +636,19 @@ void ComponentsWindow::ResizeLayout()
 	else
 	{
 		colliderWnd.SetVisible(false);
+	}
+
+	if (scene.cameras.Contains(cameraComponentWnd.entity))
+	{
+		cameraComponentWnd.SetVisible(true);
+		cameraComponentWnd.SetPos(pos);
+		cameraComponentWnd.SetSize(XMFLOAT2(width, cameraComponentWnd.GetScale().y));
+		pos.y += cameraComponentWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		cameraComponentWnd.SetVisible(false);
 	}
 
 	if (scene.scripts.Contains(scriptWnd.entity))

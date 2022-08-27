@@ -346,6 +346,7 @@ void EditorComponent::Load()
 		componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.colliderWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.hierarchyWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
 
 		optionsWnd.RefreshEntityTree();
 		ResetHistory();
@@ -1299,6 +1300,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.colliderWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.hierarchyWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1335,6 +1337,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.rigidWnd.SetEntity(picked.entity);
 		componentsWnd.colliderWnd.SetEntity(picked.entity);
 		componentsWnd.hierarchyWnd.SetEntity(picked.entity);
+		componentsWnd.cameraComponentWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{
@@ -1415,6 +1418,12 @@ void EditorComponent::Update(float dt)
 		{
 			editorscene.camera_transform.Lerp(editorscene.camera_transform, *proxy, 1.0f - optionsWnd.cameraWnd.followSlider.GetValue());
 			editorscene.camera_transform.UpdateTransform();
+		}
+
+		CameraComponent* proxy_camera = scene.cameras.GetComponent(optionsWnd.cameraWnd.entity);
+		if (proxy_camera != nullptr)
+		{
+			editorscene.camera.Lerp(editorscene.camera, *proxy_camera, 1.0f - optionsWnd.cameraWnd.followSlider.GetValue());
 		}
 	}
 
@@ -2264,6 +2273,22 @@ void EditorComponent::AddSelected(Entity entity)
 }
 void EditorComponent::AddSelected(const PickResult& picked)
 {
+	wi::scene::Scene& scene = GetCurrentScene();
+	if (picked.subsetIndex >= 0)
+	{
+		const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
+		if (object != nullptr) // maybe it was deleted...
+		{
+			AddSelected(object->meshID);
+
+			const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+			if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
+			{
+				AddSelected(mesh->subsets[picked.subsetIndex].materialID);
+			}
+		}
+	}
+
 	bool removal = false;
 	for (size_t i = 0; i < translator.selected.size(); ++i)
 	{

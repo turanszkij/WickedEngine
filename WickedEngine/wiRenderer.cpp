@@ -5142,6 +5142,107 @@ void DrawDebugWorld(
 
 	BindCommonResources(cmd);
 
+	if (debugCameras)
+	{
+		device->EventBegin("DebugCameras", cmd);
+
+		static GPUBuffer wirecamVB;
+		static GPUBuffer wirecamIB;
+		if (!wirecamVB.IsValid())
+		{
+			XMFLOAT4 verts[] = {
+				XMFLOAT4(-0.1f,-0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0.1f,-0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0.1f,0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-0.1f,0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-1,-1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(1,-1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-1,1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0,1.5f,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0,0,-1,1),	XMFLOAT4(1,1,1,1),
+			};
+
+			GPUBufferDesc bd;
+			bd.usage = Usage::DEFAULT;
+			bd.size = sizeof(verts);
+			bd.bind_flags = BindFlag::VERTEX_BUFFER;
+			device->CreateBuffer(&bd, verts, &wirecamVB);
+
+			uint16_t indices[] = {
+				0,1,1,2,0,3,0,4,1,5,4,5,
+				5,6,4,7,2,6,3,7,2,3,6,7,
+				6,8,7,8,
+				0,2,1,3
+			};
+
+			bd.usage = Usage::DEFAULT;
+			bd.size = sizeof(indices);
+			bd.bind_flags = BindFlag::INDEX_BUFFER;
+			device->CreateBuffer(&bd, indices, &wirecamIB);
+		}
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+
+		const GPUBuffer* vbs[] = {
+			&wirecamVB,
+		};
+		const uint32_t strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
+		device->BindIndexBuffer(&wirecamIB, IndexBufferFormat::UINT16, 0, cmd);
+
+		MiscCB sb;
+		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+
+		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
+		{
+			const CameraComponent& cam = scene.cameras[i];
+
+			const float aspect = cam.width / cam.height;
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(aspect * 0.5f, 0.5f, 0.5f) * cam.GetInvView() * camera.GetViewProjection());
+
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+
+			device->DrawIndexed(32, 0, 0, cmd);
+
+			if (cam.aperture_size > 0)
+			{
+				// focal length line:
+				RenderableLine linne;
+				linne.color_start = linne.color_end = XMFLOAT4(1, 1, 1, 1);
+				linne.start = cam.Eye;
+				XMVECTOR L = cam.GetEye() + cam.GetAt() * cam.focal_length;
+				XMStoreFloat3(&linne.end, L);
+				DrawLine(linne);
+
+				// aperture size/shape circle:
+				int segmentcount = 36;
+				for (int j = 0; j < segmentcount; ++j)
+				{
+					const float angle0 = float(j) / float(segmentcount) * XM_2PI;
+					const float angle1 = float(j + 1) / float(segmentcount) * XM_2PI;
+					linne.start = XMFLOAT3(std::sin(angle0), std::cos(angle0), 0);
+					linne.end = XMFLOAT3(std::sin(angle1), std::cos(angle1), 0);
+					XMVECTOR S = XMLoadFloat3(&linne.start);
+					XMVECTOR E = XMLoadFloat3(&linne.end);
+					XMMATRIX R = XMLoadFloat3x3(&cam.rotationMatrix);
+					XMMATRIX APERTURE = R * XMMatrixScaling(cam.aperture_size * cam.aperture_shape.x, cam.aperture_size * cam.aperture_shape.y, cam.aperture_size);
+					S = XMVector3TransformNormal(S, APERTURE);
+					E = XMVector3TransformNormal(E, APERTURE);
+					S += L;
+					E += L;
+					XMStoreFloat3(&linne.start, S);
+					XMStoreFloat3(&linne.end, E);
+					DrawLine(linne);
+				}
+			}
+		}
+
+		device->EventEnd(cmd);
+	}
+
 	if (GetToDrawDebugColliders())
 	{
 		for (size_t i = 0; i < scene.colliders.GetCount(); ++i)
@@ -6135,76 +6236,6 @@ void DrawDebugWorld(
 				device->Draw(14, 0, cmd); // box
 				break;
 			}
-		}
-
-		device->EventEnd(cmd);
-	}
-
-
-	if (debugCameras)
-	{
-		device->EventBegin("DebugCameras", cmd);
-
-		static GPUBuffer wirecamVB;
-		static GPUBuffer wirecamIB;
-		if (!wirecamVB.IsValid())
-		{
-			XMFLOAT4 verts[] = {
-				XMFLOAT4(-0.1f,-0.1f,-1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(0.1f,-0.1f,-1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(0.1f,0.1f,-1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-0.1f,0.1f,-1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-1,-1,1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(1,-1,1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-1,1,1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(0,1.5f,1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(0,0,-1,1),	XMFLOAT4(1,1,1,1),
-			};
-
-			GPUBufferDesc bd;
-			bd.usage = Usage::DEFAULT;
-			bd.size = sizeof(verts);
-			bd.bind_flags = BindFlag::VERTEX_BUFFER;
-			device->CreateBuffer(&bd, verts, &wirecamVB);
-
-			uint16_t indices[] = {
-				0,1,1,2,0,3,0,4,1,5,4,5,
-				5,6,4,7,2,6,3,7,2,3,6,7,
-				6,8,7,8,
-				0,2,1,3
-			};
-
-			bd.usage = Usage::DEFAULT;
-			bd.size = sizeof(indices);
-			bd.bind_flags = BindFlag::INDEX_BUFFER;
-			device->CreateBuffer(&bd, indices, &wirecamIB);
-		}
-
-		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
-
-		const GPUBuffer* vbs[] = {
-			&wirecamVB,
-		};
-		const uint32_t strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->BindIndexBuffer(&wirecamIB, IndexBufferFormat::UINT16, 0, cmd);
-
-		MiscCB sb;
-		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-
-		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
-		{
-			const CameraComponent& cam = scene.cameras[i];
-
-			const float aspect = cam.width / cam.height;
-			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(aspect * 0.5f, 0.5f, 0.5f) * cam.GetInvView()*camera.GetViewProjection());
-
-			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
-
-			device->DrawIndexed(32, 0, 0, cmd);
 		}
 
 		device->EventEnd(cmd);

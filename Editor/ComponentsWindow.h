@@ -22,6 +22,7 @@
 #include "SoftBodyWindow.h"
 #include "ColliderWindow.h"
 #include "HierarchyWindow.h"
+#include "CameraComponentWindow.h"
 
 class EditorComponent;
 
@@ -57,4 +58,5 @@ public:
 	SoftBodyWindow softWnd;
 	ColliderWindow colliderWnd;
 	HierarchyWindow hierarchyWnd;
+	CameraComponentWindow cameraComponentWnd;
 };

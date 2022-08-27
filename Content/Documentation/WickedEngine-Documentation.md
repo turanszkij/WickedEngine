@@ -32,11 +32,14 @@ This is a reference for the C++ features of Wicked Engine
 		15. [EnvironmentProbeComponent](#environmentprobecomponent)
 		16. [ForceFieldComponent](#forcefieldcomponent)
 		17. [DecalComponent](#decalcomponent)
+		18. [AnimationDataComponent](#animationdatacomponent)
 		18. [AnimationComponent](#animationcomponent)
 		19. [WeatherComponent](#weathercomponent)
 		20. [SoundComponent](#soundcomponent)
 		21. [InverseKinematicsComponent](#inversekinematicscomponent)
 		22. [SpringComponent](#springcomponent)
+		22. [ColliderComponent](#collidercomponent)
+		22. [ScriptComponent](#scriptcomponent)
 		23. [Scene](#scene)
 	3. [Job System](#job-system)
 	4. [Initializer](#initializer)
@@ -345,6 +348,9 @@ It is expected that an entity that has EnvironmentProbeComponent, also has Trans
 [[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
 It is expected that an entity that has DecalComponent, also has TransformComponent and [AABB](#aabb) (axis aligned bounding box) component.
 
+#### AnimationDataComponent
+[[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
+
 #### AnimationComponent
 [[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
 
@@ -365,6 +371,14 @@ If animations are also playing on the affected entities, the IK system will over
 #### SpringComponent
 [[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
 An entity can have a `SpringComponent` to achieve a "jiggle" or "soft" animation effect programatically. The effect will work automatically if the transform is changed by animation system for example, or in any other way. The parameter `stiffness` specifies how fast the transform tries to go back to its initial position. The parameter `damping` specifies how fast the transform comes to rest position. The `wind_affection` parameter specifies how much the global wind applies to the spring.
+
+#### ColiderComponent
+[[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
+The collider component will specify a collider shape to be used in simple fake physics simulations. It will affect Springs and GPU particle effect.
+
+#### ScriptComponent
+[[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
+ScriptComponent can reference a lua script and run it every frame, while also providing some additional data to script like a local GetEntity() function. The script can be written to reference additional component data by using its unique GetEntity() function. A ScriptComponent can also call other scripts, which can be used to implement multiple scripts on one entity.
 
 #### Scene
 [[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
@@ -519,7 +533,7 @@ Unordered Access Views, in other words resources with read-write access. `GPUBuf
 - Constant buffers<br/>
 Only `GPUBuffer`s can be set as constant buffers if they were created with a `BindFlags` in their description that has the `CONSTANT_BUFFER` bit set. The resource can't be a constant buffer at the same time when it is also a shader resource or a UAV or a vertex buffer or an index buffer. Use the `GraphicsDevice::BindConstantBuffer()` function to bind constant buffers.
 - Samplers<br/>
-Only `Sampler` can be bound as sampler. Use the `GraphicsDevice::BindSampler()` function to bind samplers. Additionally, you can specify auto samplers and common samplers and avoid binding them every time.
+Only `Sampler` can be bound as sampler. Use the `GraphicsDevice::BindSampler()` function to bind samplers.
 
 There are some limitations on the maximum value of slots that can be used, these are defined as compile time constants in [Graphics device SharedInternals](../WickedEngine/wiGraphicsDevice_SharedInternals.h). The user can modify these and recompile the engine if the predefined slots are not enough. This could slightly affect performance.
 
@@ -590,13 +604,8 @@ Shaders still need to be created with `GraphicsDevice::CreateShader()` in a simi
 - `PS`: Pixel Shader
 - `CS`: Compute Shader
 - `LIB`: Library shader
-- `ShaderStage::COUNT`: Invalid Shader. This can be used to enumerate through all shader stages like:
 
-```cpp
-device->BindResource(, myTexture, 5, cmd); // Binds myTexture to slot 5
-```
-
-Depending on the graphics device implementation, the shader code must be different format. For example, DirectX expects HLSL shaders, Vulkan expects SPIR-V shaders. The engine can only use precompiled shader bytecodes, shader compilation from high level source code is not supported. Usually shaders are compiled into bytecode and saved to files (with .cso extension) by Visual Studio if they are included in the project. These files can be loaded to memory and provided as input buffers to the CreateShader() function.
+Depending on the graphics device implementation, the shader code must be different format. For example, DirectX expects DXIL shaders, Vulkan expects SPIR-V shaders. The engine can compile HLSL shader source code to DXIL or SPIRV format with the [Shader Compiler](#shader-compiler).
 
 ##### Render Passes
 Render passes are defining regions in GPU execution where a number of render targets or depth buffers will be used to render into them. Render targets and depth buffers are defined as `RenderPassAttachment`s. The `RenderPassAttachment`s have a pointer to the texture, state the resource type (`RENDERTARGET`, `DEPTH_STENCIL` or `RESOLVE`), state the [subresource](#subresources) index, the load and store operations, and the layout transitions for the textures.
