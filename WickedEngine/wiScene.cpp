@@ -3468,24 +3468,45 @@ namespace wi::scene
 	}
 	void Scene::RunExpressionUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		// Pass 1: reset targets that will be modified by expressions:
 		for (size_t i = 0; i < expressions.GetCount(); ++i)
 		{
 			const ExpressionComponent& expression = expressions[i];
+			if (!expression.IsDirty())
+				continue;
 
-			if (expression.weight > 0)
+			for (const ExpressionComponent::MorphTargetBinding& morph_target_binding : expression.morph_target_bindings)
 			{
-				for (const ExpressionComponent::MorphTargetBinding& morph_target_binding : expression.morph_target_bindings)
+				MeshComponent* mesh = meshes.GetComponent(morph_target_binding.meshID);
+				if (mesh != nullptr && (int)mesh->morph_targets.size() > morph_target_binding.index)
 				{
-					MeshComponent* mesh = meshes.GetComponent(morph_target_binding.meshID);
-					if (mesh != nullptr && (int)mesh->morph_targets.size() > morph_target_binding.index)
+					MeshComponent::MorphTarget& morph_target = mesh->morph_targets[morph_target_binding.index];
+					if (morph_target.weight > 0)
 					{
-						float weight = morph_target_binding.weight * expression.weight;
-						if (mesh->morph_targets[morph_target_binding.index].weight != weight)
-						{
-							mesh->morph_targets[morph_target_binding.index].weight = weight;
-							mesh->dirty_morph = true;
-						}
+						morph_target.weight = 0;
+						mesh->dirty_morph = true;
 					}
+				}
+			}
+		}
+
+		// Pass 2: apply expressions:
+		for (size_t i = 0; i < expressions.GetCount(); ++i)
+		{
+			ExpressionComponent& expression = expressions[i];
+			if (!expression.IsDirty())
+				continue;
+
+			expression.SetDirty(false);
+
+			for (const ExpressionComponent::MorphTargetBinding& morph_target_binding : expression.morph_target_bindings)
+			{
+				MeshComponent* mesh = meshes.GetComponent(morph_target_binding.meshID);
+				if (mesh != nullptr && (int)mesh->morph_targets.size() > morph_target_binding.index)
+				{
+					MeshComponent::MorphTarget& morph_target = mesh->morph_targets[morph_target_binding.index];
+					const float blend = expression.IsBinary() ? (expression.weight > 0 ? 1 : 0) : expression.weight;
+					morph_target.weight = wi::math::Lerp(morph_target.weight, morph_target_binding.weight, blend);
 				}
 			}
 		}

@@ -41,6 +41,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 			return;
 
 		expression->SetBinary(args.bValue);
+		expression->SetDirty();
 	});
 	AddWidget(&binaryCheckBox);
 
@@ -54,6 +55,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 			return;
 
 		expression->weight = args.fValue;
+		expression->SetDirty();
 		});
 	AddWidget(&weightSlider);
 

@@ -1433,7 +1433,8 @@ namespace wi::scene
 		enum FLAGS
 		{
 			EMPTY = 0,
-			BINARY = 1 << 0,
+			DIRTY = 1 << 0,
+			BINARY = 1 << 1,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -1448,8 +1449,10 @@ namespace wi::scene
 		};
 		wi::vector<MorphTargetBinding> morph_target_bindings;
 
+		constexpr bool IsDirty() const { return _flags & DIRTY; }
 		constexpr bool IsBinary() const { return _flags & BINARY; }
 
+		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		constexpr void SetBinary(bool value = true) { if (value) { _flags |= BINARY; } else { _flags &= ~BINARY; } }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
