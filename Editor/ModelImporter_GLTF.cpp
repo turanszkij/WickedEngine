@@ -1613,6 +1613,8 @@ void Import_Extension_VRM(LoaderState& state)
 
 		if (ext_vrm->second.Has("blendShapeMaster"))
 		{
+			// https://github.com/vrm-c/vrm-specification/tree/master/specification/0.0#vrm-extension-morph-setting-jsonextensionsvrmblendshapemaster
+
 			const auto& blendShapeMaster = ext_vrm->second.Get("blendShapeMaster");
 			if (blendShapeMaster.Has("blendShapeGroups"))
 			{
@@ -1673,6 +1675,8 @@ void Import_Extension_VRM(LoaderState& state)
 
 		if (ext_vrm->second.Has("secondaryAnimation"))
 		{
+			// https://github.com/vrm-c/vrm-specification/tree/master/specification/0.0#vrm-extension-spring-bone-settings-jsonextensionsvrmsecondaryanimation
+
 			const auto& secondaryAnimation = ext_vrm->second.Get("secondaryAnimation");
 			if (secondaryAnimation.Has("boneGroups"))
 			{
@@ -1810,47 +1814,68 @@ void Import_Extension_VRMC(LoaderState& state)
 	{
 		if (ext_vrm->second.Has("expressions"))
 		{
+			// https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0-beta/expressions.md#vrmc_vrmexpressions
+
 			const auto& expressions = ext_vrm->second.Get("expressions");
-			if (expressions.Has("preset"))
+			static const char* expression_types[] = {
+				"preset",
+				"custom",
+			};
+
+			for (auto& expression_type : expression_types)
 			{
-				const auto& presets = expressions.Get("preset");
-				for (auto& presetName : presets.Keys())
+				if (expressions.Has(expression_type))
 				{
-					const auto& preset = presets.Get(presetName);
-					Entity entity = CreateEntity();
-					ExpressionComponent& component = state.scene->expressions.Create(entity);
-					state.scene->Component_Attach(entity, state.rootEntity);
-					state.scene->names.Create(entity) = presetName;
+					const auto& names = expressions.Get(expression_type);
+					for (auto& name : names.Keys())
+					{
+						const auto& expression = names.Get(name);
+						Entity entity = CreateEntity();
+						ExpressionComponent& component = state.scene->expressions.Create(entity);
+						state.scene->Component_Attach(entity, state.rootEntity);
+						state.scene->names.Create(entity) = name;
 
-					if (preset.Has("isBinary"))
-					{
-						const auto& value = preset.Get("isBinary");
-						component.SetBinary(value.Get<bool>());
-					}
-					if (preset.Has("morphTargetBinds"))
-					{
-						const auto& morpTargetBinds = preset.Get("morphTargetBinds");
-						for (size_t morphTargetBind_index = 0; morphTargetBind_index < morpTargetBinds.ArrayLen(); ++morphTargetBind_index)
+						if (expression.Has("isBinary"))
 						{
-							const auto& morphTargetBind = morpTargetBinds.Get(int(morphTargetBind_index));
-							ExpressionComponent::MorphTargetBinding& morph_target_binding = component.morph_target_bindings.emplace_back();
+							const auto& value = expression.Get("isBinary");
+							component.SetBinary(value.Get<bool>());
+						}
+						if (expression.Has("morphTargetBinds"))
+						{
+							const auto& morpTargetBinds = expression.Get("morphTargetBinds");
+							for (size_t morphTargetBind_index = 0; morphTargetBind_index < morpTargetBinds.ArrayLen(); ++morphTargetBind_index)
+							{
+								const auto& morphTargetBind = morpTargetBinds.Get(int(morphTargetBind_index));
+								ExpressionComponent::MorphTargetBinding& morph_target_binding = component.morph_target_bindings.emplace_back();
 
-							if (morphTargetBind.Has("node"))
-							{
-								const auto& value = morphTargetBind.Get("node");
-								morph_target_binding.meshID = state.scene->meshes.GetEntity(state.gltfModel.nodes[value.GetNumberAsInt()].mesh);
-							}
-							if (morphTargetBind.Has("index"))
-							{
-								const auto& value = morphTargetBind.Get("index");
-								morph_target_binding.index = value.GetNumberAsInt();
-							}
-							if (morphTargetBind.Has("weight"))
-							{
-								const auto& value = morphTargetBind.Get("weight");
-								morph_target_binding.weight = float(value.GetNumberAsDouble());
+								if (morphTargetBind.Has("node"))
+								{
+									const auto& value = morphTargetBind.Get("node");
+									morph_target_binding.meshID = state.scene->meshes.GetEntity(state.gltfModel.nodes[value.GetNumberAsInt()].mesh);
+								}
+								if (morphTargetBind.Has("index"))
+								{
+									const auto& value = morphTargetBind.Get("index");
+									morph_target_binding.index = value.GetNumberAsInt();
+								}
+								if (morphTargetBind.Has("weight"))
+								{
+									const auto& value = morphTargetBind.Get("weight");
+									morph_target_binding.weight = float(value.GetNumberAsDouble());
+								}
 							}
 						}
+						//if (expression.Has("materialColorBinds"))
+						//{
+						//	const auto& materialColorBinds = expression.Get("materialColorBinds");
+						//	// TODO: find example model and implement
+						//}
+						//if (expression.Has("textureTransformBinds "))
+						//{
+						//	const auto& textureTransformBinds = expression.Get("textureTransformBinds");
+						//	// TODO: find example model and implement
+						//}
+
 					}
 				}
 			}
@@ -1860,6 +1885,8 @@ void Import_Extension_VRMC(LoaderState& state)
 	auto ext_vrmc_springbone = state.gltfModel.extensions.find("VRMC_springBone");
 	if (ext_vrmc_springbone != state.gltfModel.extensions.end())
 	{
+		// https://github.com/vrm-c/vrm-specification/tree/master/specification/VRMC_springBone-1.0-beta
+
 		// Colliders:
 		if (ext_vrmc_springbone->second.Has("colliders"))
 		{

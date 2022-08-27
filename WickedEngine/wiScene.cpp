@@ -3484,7 +3484,6 @@ namespace wi::scene
 					if (morph_target.weight > 0)
 					{
 						morph_target.weight = 0;
-						mesh->dirty_morph = true;
 					}
 				}
 			}
@@ -3507,6 +3506,7 @@ namespace wi::scene
 					MeshComponent::MorphTarget& morph_target = mesh->morph_targets[morph_target_binding.index];
 					const float blend = expression.IsBinary() ? (expression.weight > 0 ? 1 : 0) : expression.weight;
 					morph_target.weight = wi::math::Lerp(morph_target.weight, morph_target_binding.weight, blend);
+					mesh->dirty_morph = true;
 				}
 			}
 		}
