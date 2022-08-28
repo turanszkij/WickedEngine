@@ -120,12 +120,8 @@ struct VolumetricCloudParameters
 
 	float WeatherScale;
 	float CurlScale;
-	float ShapeNoiseHeightGradientAmount;
-	float ShapeNoiseMultiplier;
-
-	float2 ShapeNoiseMinMax;
-	float ShapeNoisePower;
 	float DetailNoiseModifier;
+	float padding0;
 
 	float DetailNoiseHeightFraction;
 	float CurlNoiseModifier;
@@ -133,7 +129,7 @@ struct VolumetricCloudParameters
 	float CoverageMinimum;
 
 	float TypeAmount;
-	float TypeOverall;
+	float TypeMinimum;
 	float AnvilAmount; // Anvil clouds disabled by default.
 	float AnvilOverhangHeight;
 
@@ -143,7 +139,7 @@ struct VolumetricCloudParameters
 	float WindAngle;
 	float WindUpAmount;
 
-	float2 padding0;
+	float2 padding1;
 	float CoverageWindSpeed;
 	float CoverageWindAngle;
 
@@ -164,7 +160,7 @@ struct VolumetricCloudParameters
 	float BigStepMarch; // How long inital rays should be until they hit something. Lower values may give a better image but may be slower.
 	float TransmittanceThreshold; // Default: 0.005. If the clouds transmittance has reached it's desired opacity, there's no need to keep raymarching for performance.
 
-	float2 padding1;
+	float2 padding2;
 	float ShadowSampleCount;
 	float GroundContributionSampleCount;
 
@@ -197,11 +193,6 @@ struct VolumetricCloudParameters
 		WeatherScale = 0.000025f;
 		CurlScale = 0.3f;
 
-		ShapeNoiseHeightGradientAmount = 0.2f;
-		ShapeNoiseMultiplier = 0.8f;
-		ShapeNoisePower = 6.0f;
-		ShapeNoiseMinMax = float2(0.25f, 1.1f);
-
 		DetailNoiseModifier = 0.2f;
 		DetailNoiseHeightFraction = 10.0f;
 		CurlNoiseModifier = 500.0f;
@@ -209,7 +200,7 @@ struct VolumetricCloudParameters
 		CoverageAmount = 1.0f;
 		CoverageMinimum = 0.0f;
 		TypeAmount = 1.0f;
-		TypeOverall = 0.0f;
+		TypeMinimum = 0.0f;
 		AnvilAmount = 0.0f;
 		AnvilOverhangHeight = 3.0f;
 

@@ -1116,17 +1116,24 @@ namespace wi::scene
 				archive >> volumetricCloudParameters.DetailScale;
 				archive >> volumetricCloudParameters.WeatherScale;
 				archive >> volumetricCloudParameters.CurlScale;
-				archive >> volumetricCloudParameters.ShapeNoiseHeightGradientAmount;
-				archive >> volumetricCloudParameters.ShapeNoiseMultiplier;
-				archive >> volumetricCloudParameters.ShapeNoiseMinMax;
-				archive >> volumetricCloudParameters.ShapeNoisePower;
+				if (archive.GetVersion() < 84)
+				{
+					float ShapeNoiseHeightGradientAmount;
+					float ShapeNoiseMultiplier;
+					XMFLOAT2 ShapeNoiseMinMax;
+					float ShapeNoisePower;
+					archive >> ShapeNoiseHeightGradientAmount;
+					archive >> ShapeNoiseMultiplier;
+					archive >> ShapeNoiseMinMax;
+					archive >> ShapeNoisePower;
+				}
 				archive >> volumetricCloudParameters.DetailNoiseModifier;
 				archive >> volumetricCloudParameters.DetailNoiseHeightFraction;
 				archive >> volumetricCloudParameters.CurlNoiseModifier;
 				archive >> volumetricCloudParameters.CoverageAmount;
 				archive >> volumetricCloudParameters.CoverageMinimum;
 				archive >> volumetricCloudParameters.TypeAmount;
-				archive >> volumetricCloudParameters.TypeOverall;
+				archive >> volumetricCloudParameters.TypeMinimum;
 				archive >> volumetricCloudParameters.AnvilAmount;
 				archive >> volumetricCloudParameters.AnvilOverhangHeight;
 				archive >> volumetricCloudParameters.AnimationMultiplier;
@@ -1148,6 +1155,15 @@ namespace wi::scene
 				archive >> volumetricCloudParameters.TransmittanceThreshold;
 				archive >> volumetricCloudParameters.ShadowSampleCount;
 				archive >> volumetricCloudParameters.GroundContributionSampleCount;
+
+				if (archive.GetVersion() < 84)
+				{
+					volumetricCloudParameters.HorizonBlendAmount *= 0.00001f;
+					volumetricCloudParameters.TotalNoiseScale *= 0.0004f;
+					volumetricCloudParameters.WeatherScale *= 0.0004f;
+					volumetricCloudParameters.CoverageAmount = std::max(0.0f, volumetricCloudParameters.CoverageAmount / 2.0f);
+					volumetricCloudParameters.CoverageMinimum = std::max(0.0f, volumetricCloudParameters.CoverageMinimum - 1.0f);
+				}
 			}
 
 			if (archive.GetVersion() >= 71)
@@ -1272,17 +1288,24 @@ namespace wi::scene
 				archive << volumetricCloudParameters.DetailScale;
 				archive << volumetricCloudParameters.WeatherScale;
 				archive << volumetricCloudParameters.CurlScale;
-				archive << volumetricCloudParameters.ShapeNoiseHeightGradientAmount;
-				archive << volumetricCloudParameters.ShapeNoiseMultiplier;
-				archive << volumetricCloudParameters.ShapeNoiseMinMax;
-				archive << volumetricCloudParameters.ShapeNoisePower;
+				if (archive.GetVersion() < 84)
+				{
+					float ShapeNoiseHeightGradientAmount = 0;
+					float ShapeNoiseMultiplier = 0;
+					XMFLOAT2 ShapeNoiseMinMax = XMFLOAT2(0, 0);
+					float ShapeNoisePower = 0;
+					archive << ShapeNoiseHeightGradientAmount;
+					archive << ShapeNoiseMultiplier;
+					archive << ShapeNoiseMinMax;
+					archive << ShapeNoisePower;
+				}
 				archive << volumetricCloudParameters.DetailNoiseModifier;
 				archive << volumetricCloudParameters.DetailNoiseHeightFraction;
 				archive << volumetricCloudParameters.CurlNoiseModifier;
 				archive << volumetricCloudParameters.CoverageAmount;
 				archive << volumetricCloudParameters.CoverageMinimum;
 				archive << volumetricCloudParameters.TypeAmount;
-				archive << volumetricCloudParameters.TypeOverall;
+				archive << volumetricCloudParameters.TypeMinimum;
 				archive << volumetricCloudParameters.AnvilAmount;
 				archive << volumetricCloudParameters.AnvilOverhangHeight;
 				archive << volumetricCloudParameters.AnimationMultiplier;

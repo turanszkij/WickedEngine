@@ -399,7 +399,7 @@ float3 SampleWeather(Texture2D<float4> texture_weatherMap, float3 pos, float hei
 	
     // Apply effects for coverage
 	weatherData.r = RemapClamped(weatherData.r * GetWeather().volumetric_clouds.CoverageAmount, 0.0, 1.0, GetWeather().volumetric_clouds.CoverageMinimum, 1.0);
-	weatherData.g = RemapClamped(weatherData.g * GetWeather().volumetric_clouds.TypeAmount, 0.0, 1.0, GetWeather().volumetric_clouds.TypeOverall, 1.0);
+	weatherData.g = RemapClamped(weatherData.g * GetWeather().volumetric_clouds.TypeAmount, 0.0, 1.0, GetWeather().volumetric_clouds.TypeMinimum, 1.0);
     
 	// Apply anvil clouds to coverage
 	weatherData.r = pow(weatherData.r, max(Remap(pow(1.0 - heightFraction, GetWeather().volumetric_clouds.AnvilOverhangHeight), 0.7, 0.8, 1.0, GetWeather().volumetric_clouds.AnvilAmount + 1.0), 0.0));
