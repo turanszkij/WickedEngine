@@ -8,7 +8,7 @@ ClearWorld()
 
 local scene = GetScene()
 
-local sun_entity = scene.Entity_Create()
+local sun_entity = CreateEntity()
 local sun_name = scene.Component_CreateName(sun_entity)
 sun_name.SetName("THE SUN")
 scene.Component_CreateLayer(sun_entity)
@@ -18,7 +18,7 @@ local sun = scene.Component_CreateLight(sun_entity)
 sun.Type = 0
 sun.Intensity = 10.0
 
-local weather_entity = scene.Entity_Create()
+local weather_entity = CreateEntity()
 local weather_name = scene.Component_CreateName(weather_entity)
 weather_name.SetName("My Animated Weather")
 local weather = scene.Component_CreateWeather(weather_entity)
@@ -26,10 +26,10 @@ weather.SetRealisticSky(true)
 weather.SetVolumetricClouds(true)
 weather.skyExposure = 1.2
 
-weather.VolumetricCloudParams.CloudStartHeight = -100.0
-weather.VolumetricCloudParams.WeatherScale = 0.04
-weather.VolumetricCloudParams.WeatherDensityAmount = 0.5
-weather.VolumetricCloudParams.SkewAlongWindDirection = 5.0
+weather.VolumetricCloudParameters.CloudStartHeight = -100.0
+weather.VolumetricCloudParameters.WeatherScale = 0.04
+weather.VolumetricCloudParameters.WeatherDensityAmount = 0.5
+weather.VolumetricCloudParameters.SkewAlongWindDirection = 5.0
 
 runProcess(function()
     while true do
