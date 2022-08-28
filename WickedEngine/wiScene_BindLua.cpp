@@ -1775,6 +1775,8 @@ Luna<TransformComponent_BindLua>::FunctionType TransformComponent_BindLua::metho
 	lunamethod(TransformComponent_BindLua, GetPosition),
 	lunamethod(TransformComponent_BindLua, GetRotation),
 	lunamethod(TransformComponent_BindLua, GetScale),
+	lunamethod(TransformComponent_BindLua, IsDirty),
+	lunamethod(TransformComponent_BindLua, SetDirty),
 	{ NULL, NULL }
 };
 Luna<TransformComponent_BindLua>::PropertyType TransformComponent_BindLua::properties[] = {
@@ -1788,6 +1790,7 @@ TransformComponent_BindLua::TransformComponent_BindLua(lua_State *L)
 {
 	owning = true;
 	component = new TransformComponent;
+	BuildBindings();
 }
 TransformComponent_BindLua::~TransformComponent_BindLua()
 {
@@ -2005,6 +2008,23 @@ int TransformComponent_BindLua::GetScale(lua_State* L)
 	XMVECTOR V = component->GetScaleV();
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
 	return 1;
+}
+int TransformComponent_BindLua::IsDirty(lua_State *L)
+{
+	wi::lua::SSetBool(L, component->IsDirty());
+	return 1;
+}
+int TransformComponent_BindLua::SetDirty(lua_State *L)
+{
+	bool value = true;
+	int argc = wi::lua::SGetArgCount(L);
+	if(argc > 0)
+	{
+		value = wi::lua::SGetBool(L, 1);
+	}
+
+	component->SetDirty(value);
+	return 0;
 }
 
 
@@ -2433,6 +2453,7 @@ MaterialComponent_BindLua::MaterialComponent_BindLua(lua_State *L)
 {
 	owning = true;
 	component = new MaterialComponent;
+	BuildBindings();
 }
 MaterialComponent_BindLua::~MaterialComponent_BindLua()
 {
@@ -3573,6 +3594,7 @@ RigidBodyPhysicsComponent_BindLua::RigidBodyPhysicsComponent_BindLua(lua_State* 
 {
 	owning = true;
 	component = new RigidBodyPhysicsComponent;
+	BuildBindings();
 }
 RigidBodyPhysicsComponent_BindLua::~RigidBodyPhysicsComponent_BindLua()
 {
@@ -3646,6 +3668,7 @@ SoftBodyPhysicsComponent_BindLua::SoftBodyPhysicsComponent_BindLua(lua_State* L)
 {
 	owning = true;
 	component = new SoftBodyPhysicsComponent;
+	BuildBindings();
 }
 SoftBodyPhysicsComponent_BindLua::~SoftBodyPhysicsComponent_BindLua()
 {
@@ -3695,6 +3718,7 @@ ForceFieldComponent_BindLua::ForceFieldComponent_BindLua(lua_State* L)
 {
 	owning = true;
 	component = new ForceFieldComponent;
+	BuildBindings();
 }
 ForceFieldComponent_BindLua::~ForceFieldComponent_BindLua()
 {
@@ -3735,6 +3759,7 @@ Weather_OceanParams_BindLua::Weather_OceanParams_BindLua(lua_State* L)
 {
 	owning = true;
 	parameter = new wi::Ocean::OceanParameters;
+	BuildBindings();
 }
 Weather_OceanParams_BindLua::~Weather_OceanParams_BindLua()
 {
@@ -3797,6 +3822,7 @@ Weather_AtmosphereParams_BindLua::Weather_AtmosphereParams_BindLua(lua_State* L)
 {
 	owning = true;
 	parameter = new AtmosphereParameters;
+	BuildBindings();
 }
 Weather_AtmosphereParams_BindLua::~Weather_AtmosphereParams_BindLua()
 {
@@ -3871,6 +3897,7 @@ Weather_VolumetricCloudParams_BindLua::Weather_VolumetricCloudParams_BindLua(lua
 {
 	owning = true;
 	parameter = new VolumetricCloudParameters;
+	BuildBindings();
 }
 Weather_VolumetricCloudParams_BindLua::~Weather_VolumetricCloudParams_BindLua()
 {
@@ -3953,6 +3980,7 @@ WeatherComponent_BindLua::WeatherComponent_BindLua(lua_State* L)
 {
 	owning = true;
 	component = new WeatherComponent;
+	BuildBindings();
 }
 WeatherComponent_BindLua::~WeatherComponent_BindLua()
 {
@@ -4126,6 +4154,7 @@ SoundComponent_BindLua::SoundComponent_BindLua(lua_State* L)
 {
 	owning = true;
 	component = new SoundComponent;
+	BuildBindings();
 }
 SoundComponent_BindLua::~SoundComponent_BindLua()
 {
@@ -4213,6 +4242,7 @@ ColliderComponent_BindLua::ColliderComponent_BindLua(lua_State* L)
 {
 	owning = true;
 	component = new ColliderComponent;
+	BuildBindings();
 }
 ColliderComponent_BindLua::~ColliderComponent_BindLua()
 {

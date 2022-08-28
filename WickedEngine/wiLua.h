@@ -135,7 +135,7 @@ namespace wi::lua
 	class IntProperty final : public LuaProperty
 	{
 	public:
-		int *data;
+		int *data = nullptr;
 		IntProperty(){}
 		IntProperty(int* data): data(data) {}
 		int Get(lua_State* L);
@@ -145,7 +145,7 @@ namespace wi::lua
 	class LongProperty final : public LuaProperty
 	{
 	public:
-		long* data;
+		long* data = nullptr;
 		LongProperty(){}
 		LongProperty(long* data): data(data) {}
 		int Get(lua_State* L);
@@ -155,7 +155,7 @@ namespace wi::lua
 	class LongLongProperty final : public LuaProperty
 	{
 	public:
-		long long* data;
+		long long* data = nullptr;
 		LongLongProperty(){}
 		LongLongProperty(long long* data): data(data) {}
 		int Get(lua_State* L);
@@ -165,7 +165,7 @@ namespace wi::lua
 	class FloatProperty final : public LuaProperty
 	{
 	public:
-		float* data;
+		float* data = nullptr;
 		FloatProperty(){}
 		FloatProperty(float* data): data(data) {}
 		int Get(lua_State* L);
@@ -175,7 +175,7 @@ namespace wi::lua
 	class DoubleProperty final : public LuaProperty
 	{
 	public:
-		double* data;
+		double* data = nullptr;
 		DoubleProperty(){}
 		DoubleProperty(double* data): data(data) {}
 		int Get(lua_State* L);
@@ -185,7 +185,7 @@ namespace wi::lua
 	class StringProperty final : public LuaProperty
 	{
 	public:
-		std::string* data;
+		std::string* data = nullptr;
 		StringProperty(){}
 		StringProperty(std::string* data): data(data) {}
 		int Get(lua_State* L);
@@ -195,7 +195,7 @@ namespace wi::lua
 	class BoolProperty final : public LuaProperty
 	{
 	public:
-		bool* data;
+		bool* data = nullptr;
 		BoolProperty(){}
 		BoolProperty(bool* data): data(data) {}
 		int Get(lua_State* L);

@@ -172,12 +172,14 @@ namespace wi::lua::scene
 		static Luna<TransformComponent_BindLua>::FunctionType methods[];
 		static Luna<TransformComponent_BindLua>::PropertyType properties[];
 
-		TransformComponent_BindLua(wi::scene::TransformComponent* component) :component(component)
+		inline void BuildBindings()
 		{
 			Translation_local = VectorProperty(&component->translation_local);
 			Rotation_local = VectorProperty(&component->rotation_local);
 			Scale_local = VectorProperty(&component->scale_local);
 		}
+
+		TransformComponent_BindLua(wi::scene::TransformComponent* component) :component(component) { BuildBindings(); }
 		TransformComponent_BindLua(lua_State *L);
 		~TransformComponent_BindLua();
 
@@ -201,6 +203,8 @@ namespace wi::lua::scene
 		int GetPosition(lua_State* L);
 		int GetRotation(lua_State* L);
 		int GetScale(lua_State* L);
+		int IsDirty(lua_State* L);
+		int SetDirty(lua_State* L);
 	};
 
 	class CameraComponent_BindLua
@@ -279,7 +283,7 @@ namespace wi::lua::scene
 		static Luna<MaterialComponent_BindLua>::FunctionType methods[];
 		static Luna<MaterialComponent_BindLua>::PropertyType properties[];
 
-		MaterialComponent_BindLua(wi::scene::MaterialComponent* component) :component(component)
+		inline void BuildBindings()
 		{
 			ShaderType = IntProperty(reinterpret_cast<int*>(&component->shaderType));
 			UserBlendMode = IntProperty(reinterpret_cast<int*>(&component->roughness));
@@ -305,6 +309,8 @@ namespace wi::lua::scene
 			texAnimElapsedTime = FloatProperty(&component->roughness);
 			customShaderID = IntProperty(&component->customShaderID);
 		}
+
+		MaterialComponent_BindLua(wi::scene::MaterialComponent* component) :component(component) { BuildBindings(); }
 		MaterialComponent_BindLua(lua_State *L);
 		~MaterialComponent_BindLua();
 
@@ -551,7 +557,7 @@ namespace wi::lua::scene
 		static Luna<RigidBodyPhysicsComponent_BindLua>::FunctionType methods[];
 		static Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType properties[];
 
-		RigidBodyPhysicsComponent_BindLua(wi::scene::RigidBodyPhysicsComponent* component) :component(component)
+		inline void BuildBindings()
 		{
 			Shape = IntProperty(reinterpret_cast<int*>(&component->shape));
 			Mass = FloatProperty(&component->mass);
@@ -565,6 +571,8 @@ namespace wi::lua::scene
 			CapsuleParams_Height = FloatProperty(&component->capsule.height);
 			TargetMeshLOD = LongLongProperty(reinterpret_cast<long long*>(&component->mesh_lod));
 		}
+
+		RigidBodyPhysicsComponent_BindLua(wi::scene::RigidBodyPhysicsComponent* component) :component(component) { BuildBindings(); }
 		RigidBodyPhysicsComponent_BindLua(lua_State* L);
 		~RigidBodyPhysicsComponent_BindLua();
 
@@ -609,12 +617,14 @@ namespace wi::lua::scene
 		static Luna<SoftBodyPhysicsComponent_BindLua>::FunctionType methods[];
 		static Luna<SoftBodyPhysicsComponent_BindLua>::PropertyType properties[];
 
-		SoftBodyPhysicsComponent_BindLua(wi::scene::SoftBodyPhysicsComponent* component) :component(component)
+		inline void BuildBindings()
 		{
 			Mass = wi::lua::FloatProperty(&component->mass);
 			Friction = wi::lua::FloatProperty(&component->friction);
 			Restitution = wi::lua::FloatProperty(&component->restitution);
 		}
+
+		SoftBodyPhysicsComponent_BindLua(wi::scene::SoftBodyPhysicsComponent* component) :component(component) { BuildBindings(); }
 		SoftBodyPhysicsComponent_BindLua(lua_State* L);
 		~SoftBodyPhysicsComponent_BindLua();
 
@@ -641,12 +651,14 @@ namespace wi::lua::scene
 		static Luna<ForceFieldComponent_BindLua>::FunctionType methods[];
 		static Luna<ForceFieldComponent_BindLua>::PropertyType properties[];
 
-		ForceFieldComponent_BindLua(wi::scene::ForceFieldComponent* component) :component(component)
+		inline void BuildBindings()
 		{
 			Type = IntProperty(reinterpret_cast<int*>(&component->type));
 			Gravity = FloatProperty(&component->gravity);
 			Range = FloatProperty(&component->range);
 		}
+
+		ForceFieldComponent_BindLua(wi::scene::ForceFieldComponent* component) :component(component) { BuildBindings(); }
 		ForceFieldComponent_BindLua(lua_State* L);
 		~ForceFieldComponent_BindLua();
 
@@ -669,7 +681,7 @@ namespace wi::lua::scene
 		static Luna<Weather_OceanParams_BindLua>::FunctionType methods[];
 		static Luna<Weather_OceanParams_BindLua>::PropertyType properties[];
 
-		Weather_OceanParams_BindLua(wi::Ocean::OceanParameters* parameter) :parameter(parameter)
+		inline void BuildBindings()
 		{
 			dmap_dim = IntProperty(&parameter->dmap_dim);
 			patch_length = FloatProperty(&parameter->patch_length);
@@ -680,6 +692,8 @@ namespace wi::lua::scene
 			wind_dependency = FloatProperty(&parameter->wind_dependency);
 			choppy_scale = FloatProperty(&parameter->choppy_scale);
 		}
+
+		Weather_OceanParams_BindLua(wi::Ocean::OceanParameters* parameter) :parameter(parameter) { BuildBindings(); }
 		Weather_OceanParams_BindLua(lua_State* L);
 		~Weather_OceanParams_BindLua();
 
@@ -729,7 +743,7 @@ namespace wi::lua::scene
 		static Luna<Weather_AtmosphereParams_BindLua>::FunctionType methods[];
 		static Luna<Weather_AtmosphereParams_BindLua>::PropertyType properties[];
 
-		Weather_AtmosphereParams_BindLua(AtmosphereParameters* parameter) :parameter(parameter)
+		inline void BuildBindings()
 		{
 			bottomRadius = FloatProperty(&parameter->bottomRadius);
 			topRadius = FloatProperty(&parameter->topRadius);
@@ -751,6 +765,8 @@ namespace wi::lua::scene
 			absorptionExtinction = VectorProperty(&parameter->absorptionExtinction);
 			groundAlbedo = VectorProperty(&parameter->groundAlbedo);
 		}
+
+		Weather_AtmosphereParams_BindLua(AtmosphereParameters* parameter) :parameter(parameter) { BuildBindings(); }
 		Weather_AtmosphereParams_BindLua(lua_State* L);
 		~Weather_AtmosphereParams_BindLua();
 
@@ -815,7 +831,7 @@ namespace wi::lua::scene
 		static Luna<Weather_VolumetricCloudParams_BindLua>::FunctionType methods[];
 		static Luna<Weather_VolumetricCloudParams_BindLua>::PropertyType properties[];
 
-		Weather_VolumetricCloudParams_BindLua(VolumetricCloudParameters* parameter) :parameter(parameter)
+		inline void BuildBindings()
 		{
 			Albedo = VectorProperty(&parameter->Albedo);
 			CloudAmbientGroundMultiplier = FloatProperty(&parameter->CloudAmbientGroundMultiplier);
@@ -857,6 +873,9 @@ namespace wi::lua::scene
 			CloudGradientMedium = VectorProperty(&parameter->CloudGradientMedium);
 			CloudGradientLarge = VectorProperty(&parameter->CloudGradientLarge);
 		}
+
+
+		Weather_VolumetricCloudParams_BindLua(VolumetricCloudParameters* parameter) :parameter(parameter) { BuildBindings(); }
 		Weather_VolumetricCloudParams_BindLua(lua_State* L);
 		~Weather_VolumetricCloudParams_BindLua();
 
@@ -961,7 +980,7 @@ namespace wi::lua::scene
 		static Luna<WeatherComponent_BindLua>::FunctionType methods[];
 		static Luna<WeatherComponent_BindLua>::PropertyType properties[];
 
-		WeatherComponent_BindLua(wi::scene::WeatherComponent* component) :component(component)
+		inline void BuildBindings()
 		{
 			sunColor = VectorProperty(&component->sunColor);
 			sunDirection = VectorProperty(&component->sunDirection);
@@ -990,6 +1009,8 @@ namespace wi::lua::scene
 			AtmosphereParameters = Weather_AtmosphereParams_Property(&component->atmosphereParameters);
 			VolumetricCloudParameters = Weather_VolumetricCloudParams_Property(&component->volumetricCloudParameters);
 		}
+
+		WeatherComponent_BindLua(wi::scene::WeatherComponent* component) :component(component) { BuildBindings(); }
 		WeatherComponent_BindLua(lua_State* L);
 		~WeatherComponent_BindLua();
 
@@ -1076,11 +1097,13 @@ namespace wi::lua::scene
 		static Luna<SoundComponent_BindLua>::FunctionType methods[];
 		static Luna<SoundComponent_BindLua>::PropertyType properties[];
 
-		SoundComponent_BindLua(wi::scene::SoundComponent* component) :component(component)
+		inline void BuildBindings()
 		{
 			Filename = StringProperty(&component->filename);
 			Volume = FloatProperty(&component->volume);
 		}
+
+		SoundComponent_BindLua(wi::scene::SoundComponent* component) :component(component) { BuildBindings(); }
 		SoundComponent_BindLua(lua_State* L);
 		~SoundComponent_BindLua();
 
@@ -1110,13 +1133,15 @@ namespace wi::lua::scene
 		static Luna<ColliderComponent_BindLua>::FunctionType methods[];
 		static Luna<ColliderComponent_BindLua>::PropertyType properties[];
 
-		ColliderComponent_BindLua(wi::scene::ColliderComponent* component) :component(component)
+		inline void BuildBindings()
 		{
 			Shape = IntProperty(reinterpret_cast<int*>(&component->shape));
 			Radius = FloatProperty(&component->radius);
 			Offset = VectorProperty(&component->offset);
 			Tail = VectorProperty(&component->tail);
 		}
+
+		ColliderComponent_BindLua(wi::scene::ColliderComponent* component) :component(component) { BuildBindings(); }
 		ColliderComponent_BindLua(lua_State* L);
 		~ColliderComponent_BindLua();
 		
