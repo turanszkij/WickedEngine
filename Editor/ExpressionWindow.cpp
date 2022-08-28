@@ -10,7 +10,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_EXPRESSION " Expression Mastering", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 450));
+	SetSize(XMFLOAT2(670, 500));
 
 	closeButton.SetTooltip("Delete ExpressionComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -103,6 +103,9 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 		const ExpressionComponent::Expression& expression = expression_mastering->expressions[args.iValue];
 		binaryCheckBox.SetCheck(expression.IsBinary());
 		weightSlider.SetValue(expression.weight);
+		overrideMouthCombo.SetSelectedByUserdataWithoutCallback((uint64_t)expression.override_mouth);
+		overrideBlinkCombo.SetSelectedByUserdataWithoutCallback((uint64_t)expression.override_blink);
+		overrideLookCombo.SetSelectedByUserdataWithoutCallback((uint64_t)expression.override_look);
 		});
 	AddWidget(&expressionList);
 
@@ -155,6 +158,90 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&weightSlider);
 
+	overrideMouthCombo.Create("Override Mouth: ");
+	overrideMouthCombo.SetSize(XMFLOAT2(wid, hei));
+	overrideMouthCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
+	overrideMouthCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
+	overrideMouthCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
+	overrideMouthCombo.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
+		if (expression_mastering == nullptr)
+			return;
+		if (args.iValue >= expression_mastering->expressions.size())
+			return;
+
+		int count = expressionList.GetItemCount();
+		for (int i = 0; i < count; ++i)
+		{
+			if (!expressionList.GetItem(i).selected)
+				continue;
+			if (i >= expression_mastering->expressions.size())
+				return;
+
+			ExpressionComponent::Expression& expression = expression_mastering->expressions[i];
+			expression.override_mouth = (ExpressionComponent::Override)args.userdata;
+			expression.SetDirty();
+		}
+	});
+	AddWidget(&overrideMouthCombo);
+
+	overrideBlinkCombo.Create("Override Blink: ");
+	overrideBlinkCombo.SetSize(XMFLOAT2(wid, hei));
+	overrideBlinkCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
+	overrideBlinkCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
+	overrideBlinkCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
+	overrideBlinkCombo.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
+		if (expression_mastering == nullptr)
+			return;
+		if (args.iValue >= expression_mastering->expressions.size())
+			return;
+
+		int count = expressionList.GetItemCount();
+		for (int i = 0; i < count; ++i)
+		{
+			if (!expressionList.GetItem(i).selected)
+				continue;
+			if (i >= expression_mastering->expressions.size())
+				return;
+
+			ExpressionComponent::Expression& expression = expression_mastering->expressions[i];
+			expression.override_blink = (ExpressionComponent::Override)args.userdata;
+			expression.SetDirty();
+		}
+		});
+	AddWidget(&overrideBlinkCombo);
+
+	overrideLookCombo.Create("Override Look: ");
+	overrideLookCombo.SetSize(XMFLOAT2(wid, hei));
+	overrideLookCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
+	overrideLookCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
+	overrideLookCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
+	overrideLookCombo.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
+		if (expression_mastering == nullptr)
+			return;
+		if (args.iValue >= expression_mastering->expressions.size())
+			return;
+
+		int count = expressionList.GetItemCount();
+		for (int i = 0; i < count; ++i)
+		{
+			if (!expressionList.GetItem(i).selected)
+				continue;
+			if (i >= expression_mastering->expressions.size())
+				return;
+
+			ExpressionComponent::Expression& expression = expression_mastering->expressions[i];
+			expression.override_look = (ExpressionComponent::Override)args.userdata;
+			expression.SetDirty();
+		}
+		});
+	AddWidget(&overrideLookCombo);
+
 
 	SetMinimized(true);
 	SetVisible(false);
@@ -197,8 +284,8 @@ void ExpressionWindow::ResizeLayout()
 	float y = padding;
 	float jump = 20;
 
-	const float margin_left = 100;
-	const float margin_right = 50;
+	const float margin_left = 110;
+	const float margin_right = 45;
 
 	auto add = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
@@ -234,5 +321,8 @@ void ExpressionWindow::ResizeLayout()
 	add_fullwidth(expressionList);
 	add_right(binaryCheckBox);
 	add(weightSlider);
+	add(overrideMouthCombo);
+	add(overrideBlinkCombo);
+	add(overrideLookCombo);
 
 }

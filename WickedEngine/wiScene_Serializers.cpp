@@ -1502,7 +1502,7 @@ namespace wi::scene
 				archive >> value;
 				expression.override_blink = (Override)value;
 				archive >> value;
-				expression.override_lookAt = (Override)value;
+				expression.override_look = (Override)value;
 
 				size_t count = 0;
 				archive >> count;
@@ -1538,7 +1538,7 @@ namespace wi::scene
 				archive << (uint32_t)expression.preset;
 				archive << (uint32_t)expression.override_mouth;
 				archive << (uint32_t)expression.override_blink;
-				archive << (uint32_t)expression.override_lookAt;
+				archive << (uint32_t)expression.override_look;
 
 				archive << expression.morph_target_bindings.size();
 				for (size_t i = 0; i < expression.morph_target_bindings.size(); ++i)

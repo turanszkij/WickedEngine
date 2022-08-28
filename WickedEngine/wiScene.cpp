@@ -3550,9 +3550,40 @@ namespace wi::scene
 				}
 			}
 
+			float overrideMouthBlend = 0;
+			float overrideBlinkBlend = 0;
+			float overrideLookBlend = 0;
+
 			// Pass 1: reset targets that will be modified by expressions:
+			//	Also accumulate override weights
 			for(ExpressionComponent::Expression& expression : expression_mastering.expressions)
 			{
+				const float blend = expression.IsBinary() ? (expression.weight > 0 ? 1 : 0) : expression.weight;
+				if (expression.override_mouth == ExpressionComponent::Override::Block)
+				{
+					overrideMouthBlend += 1;
+				}
+				if (expression.override_mouth == ExpressionComponent::Override::Blend)
+				{
+					overrideMouthBlend += blend;
+				}
+				if (expression.override_blink == ExpressionComponent::Override::Block)
+				{
+					overrideBlinkBlend += 1;
+				}
+				if (expression.override_blink == ExpressionComponent::Override::Blend)
+				{
+					overrideBlinkBlend += blend;
+				}
+				if (expression.override_look == ExpressionComponent::Override::Block)
+				{
+					overrideLookBlend += 1;
+				}
+				if (expression.override_look == ExpressionComponent::Override::Blend)
+				{
+					overrideLookBlend += blend;
+				}
+
 				if (!expression.IsDirty())
 					continue;
 
@@ -3570,6 +3601,50 @@ namespace wi::scene
 				}
 			}
 
+			// Override weights are factored in:
+			const int mouths[] = {
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Aa],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Ih],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Ou],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Ee],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Oh],
+			};
+			for (int mouth : mouths)
+			{
+				if (mouth >= 0 && mouth < expression_mastering.expressions.size())
+				{
+					ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
+					expression.weight *= 1 - wi::math::saturate(overrideMouthBlend);
+				}
+			}
+			const int blinks[] = {
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Blink],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::BlinkLeft],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::BlinkRight],
+			};
+			for (int blink : blinks)
+			{
+				if (blink >= 0 && blink < expression_mastering.expressions.size())
+				{
+					ExpressionComponent::Expression& expression = expression_mastering.expressions[blink];
+					expression.weight *= 1 - wi::math::saturate(overrideBlinkBlend);
+				}
+			}
+			const int looks[] = {
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookUp],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookDown],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookLeft],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookRight],
+			};
+			for (int look : looks)
+			{
+				if (look >= 0 && look < expression_mastering.expressions.size())
+				{
+					ExpressionComponent::Expression& expression = expression_mastering.expressions[look];
+					expression.weight *= 1 - wi::math::saturate(overrideLookBlend);
+				}
+			}
+
 			// Pass 2: apply expressions:
 			for (ExpressionComponent::Expression& expression : expression_mastering.expressions)
 			{
@@ -3577,6 +3652,7 @@ namespace wi::scene
 					continue;
 
 				expression.SetDirty(false);
+				const float blend = expression.IsBinary() ? (expression.weight > 0 ? 1 : 0) : expression.weight;
 
 				for (const ExpressionComponent::Expression::MorphTargetBinding& morph_target_binding : expression.morph_target_bindings)
 				{
@@ -3584,7 +3660,6 @@ namespace wi::scene
 					if (mesh != nullptr && (int)mesh->morph_targets.size() > morph_target_binding.index)
 					{
 						MeshComponent::MorphTarget& morph_target = mesh->morph_targets[morph_target_binding.index];
-						const float blend = expression.IsBinary() ? (expression.weight > 0 ? 1 : 0) : expression.weight;
 						morph_target.weight = wi::math::Lerp(morph_target.weight, morph_target_binding.weight, blend);
 						mesh->dirty_morph = true;
 					}

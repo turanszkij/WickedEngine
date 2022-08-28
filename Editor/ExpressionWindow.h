@@ -20,6 +20,9 @@ public:
 	wi::gui::TreeList expressionList;
 	wi::gui::Slider weightSlider;
 	wi::gui::CheckBox binaryCheckBox;
+	wi::gui::ComboBox overrideMouthCombo;
+	wi::gui::ComboBox overrideBlinkCombo;
+	wi::gui::ComboBox overrideLookCombo;
 
 	void ResizeLayout() override;
 };

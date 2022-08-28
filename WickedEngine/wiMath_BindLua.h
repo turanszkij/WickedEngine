@@ -65,10 +65,10 @@ namespace wi::lua
 		int Get(lua_State*L);
 		int Set(lua_State*L);
 	private:
-		XMFLOAT2* data_f2;
-		XMFLOAT3* data_f3;
-		XMFLOAT4* data_f4;
-		XMVECTOR* data_v;
+		XMFLOAT2* data_f2 = nullptr;
+		XMFLOAT3* data_f3 = nullptr;
+		XMFLOAT4* data_f4 = nullptr;
+		XMVECTOR* data_v = nullptr;
 	};
 
 	class Matrix_BindLua : public XMFLOAT4X4

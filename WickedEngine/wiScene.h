@@ -1507,7 +1507,7 @@ namespace wi::scene
 			Preset preset = Preset::Count;
 			Override override_mouth = Override::None;
 			Override override_blink = Override::None;
-			Override override_lookAt = Override::None;
+			Override override_look = Override::None;
 
 			struct MorphTargetBinding
 			{
