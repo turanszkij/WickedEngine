@@ -124,6 +124,84 @@ namespace wi::lua
 	//push null to lua stack
 	void SSetNull(lua_State* L);
 
+	//get-setters template for custom types
+	class LuaProperty
+	{
+	public:
+		virtual int Get(lua_State*L) = 0;
+		virtual int Set(lua_State*L) = 0;
+	};
+	//get-setters for int type
+	class IntProperty final : public LuaProperty
+	{
+	public:
+		int *data;
+		IntProperty(){}
+		IntProperty(int* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for long type
+	class LongProperty final : public LuaProperty
+	{
+	public:
+		long* data;
+		LongProperty(){}
+		LongProperty(long* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for long long type
+	class LongLongProperty final : public LuaProperty
+	{
+	public:
+		long long* data;
+		LongLongProperty(){}
+		LongLongProperty(long long* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for int type
+	class FloatProperty final : public LuaProperty
+	{
+	public:
+		float* data;
+		FloatProperty(){}
+		FloatProperty(float* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for double type
+	class DoubleProperty final : public LuaProperty
+	{
+	public:
+		double* data;
+		DoubleProperty(){}
+		DoubleProperty(double* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for string type
+	class StringProperty final : public LuaProperty
+	{
+	public:
+		std::string* data;
+		StringProperty(){}
+		StringProperty(std::string* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for bool type
+	class BoolProperty final : public LuaProperty
+	{
+	public:
+		bool* data;
+		BoolProperty(){}
+		BoolProperty(bool* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+
 	//throw error
 	void SError(lua_State* L, const std::string& error = "");
 	

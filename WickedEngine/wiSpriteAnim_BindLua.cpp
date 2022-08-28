@@ -31,6 +31,16 @@ namespace wi::lua
 		{ nullptr, nullptr }
 	};
 	Luna<SpriteAnim_BindLua>::PropertyType SpriteAnim_BindLua::properties[] = {
+		lunaproperty(SpriteAnim_BindLua, Rot),
+		lunaproperty(SpriteAnim_BindLua, Rotation),
+		lunaproperty(SpriteAnim_BindLua, Opacity),
+		lunaproperty(SpriteAnim_BindLua, Fade),
+		lunaproperty(SpriteAnim_BindLua, Repeatable),
+		lunaproperty(SpriteAnim_BindLua, Velocity),
+		lunaproperty(SpriteAnim_BindLua, ScaleX),
+		lunaproperty(SpriteAnim_BindLua, ScaleY),
+		lunaproperty(SpriteAnim_BindLua, MovingTexAnim),
+		lunaproperty(SpriteAnim_BindLua, DrawRecAnim),
 		{ nullptr, nullptr }
 	};
 

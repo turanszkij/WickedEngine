@@ -276,6 +276,8 @@ namespace wi::lua::primitive
 		{ NULL, NULL }
 	};
 	Luna<Sphere_BindLua>::PropertyType Sphere_BindLua::properties[] = {
+		lunaproperty(Sphere_BindLua, Center),
+		lunaproperty(Sphere_BindLua, Radius),
 		{ NULL, NULL }
 	};
 
@@ -399,6 +401,9 @@ namespace wi::lua::primitive
 		{ NULL, NULL }
 	};
 	Luna<Capsule_BindLua>::PropertyType Capsule_BindLua::properties[] = {
+		lunaproperty(Capsule_BindLua, Base),
+		lunaproperty(Capsule_BindLua, Tip),
+		lunaproperty(Capsule_BindLua, Radius),
 		{ NULL, NULL }
 	};
 

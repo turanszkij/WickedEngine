@@ -437,6 +437,53 @@ namespace wi::lua
 
 
 
+	int VectorProperty::Get(lua_State* L)
+	{
+		if(data_f2)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(data_f2)));
+		}
+		if(data_f3)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(data_f3)));
+		}
+		if(data_f4)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(data_f4)));
+		}
+		if(data_v)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(*data_v));
+		}
+		return 1;
+	}
+	int VectorProperty::Set(lua_State* L)
+	{
+		Vector_BindLua* get = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if(get)
+		{
+			if(data_f2)
+			{
+				XMStoreFloat2(data_f2, XMLoadFloat4(get));
+			}
+			if(data_f3)
+			{
+				XMStoreFloat3(data_f3, XMLoadFloat4(get));
+			}
+			if(data_f4)
+			{
+				*data_f4 = *get;
+			}
+			if(data_v)
+			{
+				*data_v = XMLoadFloat4(get);
+			}
+		}
+		return 0;
+	}
+
+
+
 
 
 	const char Matrix_BindLua::className[] = "Matrix";
@@ -757,4 +804,34 @@ namespace wi::lua
 		}
 	}
 
+
+
+	int MatrixProperty::Get(lua_State *L)
+	{
+		if(data_f4x4)
+		{
+			Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(*data_f4x4));
+		}
+		if(data_m)
+		{
+			Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(*data_m));
+		}
+		return 1;
+	}
+	int MatrixProperty::Set(lua_State *L)
+	{
+		Matrix_BindLua* get = Luna<Matrix_BindLua>::check(L, 1);
+		if(get)
+		{
+			if(data_f4x4)
+			{
+				*data_f4x4 = *get;
+			}
+			if(data_m)
+			{
+				*data_m = XMLoadFloat4x4(get);
+			}
+		}
+		return 0;
+	}
 }

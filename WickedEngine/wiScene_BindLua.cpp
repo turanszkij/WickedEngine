@@ -323,6 +323,9 @@ void Bind()
 		Luna<RigidBodyPhysicsComponent_BindLua>::Register(L);
 		Luna<SoftBodyPhysicsComponent_BindLua>::Register(L);
 		Luna<ForceFieldComponent_BindLua>::Register(L);
+		Luna<Weather_OceanParams_BindLua>::Register(L);
+		Luna<Weather_AtmosphereParams_BindLua>::Register(L);
+		Luna<Weather_VolumetricCloudParams_BindLua>::Register(L);
 		Luna<WeatherComponent_BindLua>::Register(L);
 		Luna<SoundComponent_BindLua>::Register(L);
 		Luna<ColliderComponent_BindLua>::Register(L);
@@ -337,7 +340,6 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Update),
 	lunamethod(Scene_BindLua, Clear),
 	lunamethod(Scene_BindLua, Merge),
-	lunamethod(Scene_BindLua, Entity_Create),
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
 	lunamethod(Scene_BindLua, Entity_Duplicate),
@@ -467,12 +469,6 @@ int Scene_BindLua::Merge(lua_State* L)
 	return 0;
 }
 
-int Scene_BindLua::Entity_Create(lua_State* L)
-{
-	Entity entity = wi::ecs::CreateEntity();
-	wi::lua::SSetLongLong(L, entity);
-	return 1;
-}
 int Scene_BindLua::Entity_FindByName(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -1782,6 +1778,9 @@ Luna<TransformComponent_BindLua>::FunctionType TransformComponent_BindLua::metho
 	{ NULL, NULL }
 };
 Luna<TransformComponent_BindLua>::PropertyType TransformComponent_BindLua::properties[] = {
+	lunaproperty(TransformComponent_BindLua, Translation_local),
+	lunaproperty(TransformComponent_BindLua, Rotation_local),
+	lunaproperty(TransformComponent_BindLua, Scale_local),
 	{ NULL, NULL }
 };
 
@@ -2399,6 +2398,34 @@ Luna<MaterialComponent_BindLua>::FunctionType MaterialComponent_BindLua::methods
 	{ NULL, NULL }
 };
 Luna<MaterialComponent_BindLua>::PropertyType MaterialComponent_BindLua::properties[] = {
+	lunaproperty(MaterialComponent_BindLua, BaseColor),
+	lunaproperty(MaterialComponent_BindLua, EmissiveColor),
+	lunaproperty(MaterialComponent_BindLua, EngineStencilRef),
+	lunaproperty(MaterialComponent_BindLua, UserStencilRef),
+
+	lunaproperty(MaterialComponent_BindLua, ShaderType),
+	lunaproperty(MaterialComponent_BindLua, UserBlendMode),
+	lunaproperty(MaterialComponent_BindLua, SpecularColor),
+	lunaproperty(MaterialComponent_BindLua, SubsurfaceScattering),
+	lunaproperty(MaterialComponent_BindLua, TexMulAdd),
+	lunaproperty(MaterialComponent_BindLua, Roughness),
+	lunaproperty(MaterialComponent_BindLua, Reflectance),
+	lunaproperty(MaterialComponent_BindLua, Metalness),
+	lunaproperty(MaterialComponent_BindLua, NormalMapStrength),
+	lunaproperty(MaterialComponent_BindLua, ParallaxOcclusionMapping),
+	lunaproperty(MaterialComponent_BindLua, DisplacementMapping),
+	lunaproperty(MaterialComponent_BindLua, Refraction),
+	lunaproperty(MaterialComponent_BindLua, Transmission),
+	lunaproperty(MaterialComponent_BindLua, AlphaRef),
+	lunaproperty(MaterialComponent_BindLua, SheenColor),
+	lunaproperty(MaterialComponent_BindLua, SheenRoughness),
+	lunaproperty(MaterialComponent_BindLua, Clearcoat),
+	lunaproperty(MaterialComponent_BindLua, ClearcoatRoughness),
+	lunaproperty(MaterialComponent_BindLua, ShadingRate),
+	lunaproperty(MaterialComponent_BindLua, TexAnimDirection),
+	lunaproperty(MaterialComponent_BindLua, TexAnimFrameRate),
+	lunaproperty(MaterialComponent_BindLua, texAnimElapsedTime),
+	lunaproperty(MaterialComponent_BindLua, customShaderID),
 	{ NULL, NULL }
 };
 
@@ -2415,6 +2442,11 @@ MaterialComponent_BindLua::~MaterialComponent_BindLua()
 	}
 }
 
+int MaterialComponent_BindLua::GetBaseColor(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(component->baseColor));
+	return 1;
+}
 int MaterialComponent_BindLua::SetBaseColor(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2438,6 +2470,11 @@ int MaterialComponent_BindLua::SetBaseColor(lua_State* L)
 	}
 
 	return 0;
+}
+int MaterialComponent_BindLua::GetEmissiveColor(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(component->emissiveColor));
+	return 1;
 }
 int MaterialComponent_BindLua::SetEmissiveColor(lua_State* L)
 {
@@ -2463,6 +2500,11 @@ int MaterialComponent_BindLua::SetEmissiveColor(lua_State* L)
 
 	return 0;
 }
+int MaterialComponent_BindLua::GetEngineStencilRef(lua_State* L)
+{
+	wi::lua::SSetInt(L, (int)component->engineStencilRef);
+	return 1;
+}
 int MaterialComponent_BindLua::SetEngineStencilRef(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2476,6 +2518,11 @@ int MaterialComponent_BindLua::SetEngineStencilRef(lua_State* L)
 	}
 
 	return 0;
+}
+int MaterialComponent_BindLua::GetUserStencilRef(lua_State* L)
+{
+	wi::lua::SSetInt(L, (int)component->userStencilRef);
+	return 1;
 }
 int MaterialComponent_BindLua::SetUserStencilRef(lua_State* L)
 {
@@ -3501,6 +3548,10 @@ int ScriptComponent_BindLua::Stop(lua_State* L)
 const char RigidBodyPhysicsComponent_BindLua::className[] = "RigidBodyPhysicsComponent";
 
 Luna<RigidBodyPhysicsComponent_BindLua>::FunctionType RigidBodyPhysicsComponent_BindLua::methods[] = {
+	lunamethod(RigidBodyPhysicsComponent_BindLua, IsDisableDeactivation),
+	lunamethod(RigidBodyPhysicsComponent_BindLua, IsKinematic),
+	lunamethod(RigidBodyPhysicsComponent_BindLua, SetDisableDeactivation),
+	lunamethod(RigidBodyPhysicsComponent_BindLua, SetKinematic),
 	{ NULL, NULL }
 };
 Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType RigidBodyPhysicsComponent_BindLua::properties[] = {
@@ -3510,9 +3561,10 @@ Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType RigidBodyPhysicsComponent_
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, Restitution),
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, LinearDamping),
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, AngularDamping),
-	lunaproperty(RigidBodyPhysicsComponent_BindLua, BoxParams),
-	lunaproperty(RigidBodyPhysicsComponent_BindLua, SphereParams),
-	lunaproperty(RigidBodyPhysicsComponent_BindLua, CapsuleParams),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, BoxParams_HalfExtents),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, SphereParams_Radius),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, CapsuleParams_Radius),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, CapsuleParams_Height),
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, TargetMeshLOD),
 	{ NULL, NULL }
 };
@@ -3530,247 +3582,6 @@ RigidBodyPhysicsComponent_BindLua::~RigidBodyPhysicsComponent_BindLua()
 	}
 }
 
-int RigidBodyPhysicsComponent_BindLua::GetShape(lua_State* L)
-{
-	wi::lua::SSetInt(L, component->shape);
-	return 1;
-}
-int RigidBodyPhysicsComponent_BindLua::SetShape(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->shape = (RigidBodyPhysicsComponent::CollisionShape)wi::lua::SGetInt(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetShape(enum shape) not enough arguments!");
-	}
-	return 0;
-}
-int RigidBodyPhysicsComponent_BindLua::GetMass(lua_State* L)
-{
-	wi::lua::SSetFloat(L, component->mass);
-	return 1;
-}
-int RigidBodyPhysicsComponent_BindLua::SetMass(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->mass = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetMass(float value) not enough arguments!");
-	}
-	return 0;
-}
-int RigidBodyPhysicsComponent_BindLua::GetFriction(lua_State* L)
-{
-	wi::lua::SSetFloat(L, component->friction);
-	return 1;
-}
-int RigidBodyPhysicsComponent_BindLua::SetFriction(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->friction = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetMass(float value) not enough arguments!");
-	}
-	return 0;
-}
-int RigidBodyPhysicsComponent_BindLua::GetRestitution(lua_State* L)
-{
-	wi::lua::SSetFloat(L, component->restitution);
-	return 1;
-}
-int RigidBodyPhysicsComponent_BindLua::SetRestitution(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->restitution = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetRestitution(float value) not enough arguments!");
-	}
-	return 0;
-}
-int RigidBodyPhysicsComponent_BindLua::GetLinearDamping(lua_State* L)
-{
-	wi::lua::SSetFloat(L, component->damping_linear);
-	return 1;
-}
-int RigidBodyPhysicsComponent_BindLua::SetLinearDamping(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->damping_linear = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetLinearDamping(float value) not enough arguments!");
-	}
-	return 0;
-}
-int RigidBodyPhysicsComponent_BindLua::GetAngularDamping(lua_State* L)
-{
-	wi::lua::SSetFloat(L, component->damping_angular);
-	return 1;
-}
-int RigidBodyPhysicsComponent_BindLua::SetAngularDamping(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->damping_angular = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetAngularDamping(float value) not enough arguments!");
-	}
-	return 0;
-}
-int RigidBodyPhysicsComponent_BindLua::GetBoxParams(lua_State* L)
-{
-	lua_newtable(L);
-	XMVECTOR V = XMLoadFloat3(&component->box.halfextents);
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
-	lua_setfield(L, -2, "halfextents");
-	return 1;
-}
-int RigidBodyPhysicsComponent_BindLua::SetBoxParams(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		bool error = false;
-		lua_pushnil(L);
-		Vector_BindLua* halfextents = Luna<Vector_BindLua>::lightcheck(L, -1);
-		if (halfextents != nullptr)
-		{
-			XMStoreFloat3(&component->box.halfextents, XMLoadFloat4(halfextents));
-		}
-		else error = true;
-
-		if (error)
-		{
-			wi::lua::SError(L,"SetBoxParams(table params) supplied data is invalid!");
-		}
-	}
-	else
-	{
-		wi::lua::SError(L, "SetBoxParams(table params) not enough arguments!");
-	}
-	return 0;
-}
-int RigidBodyPhysicsComponent_BindLua::GetSphereParams(lua_State* L)
-{
-	lua_newtable(L);
-	wi::lua::SSetFloat(L, component->sphere.radius);
-	lua_setfield(L, -2, "radius");
-	return 1;
-}
-int RigidBodyPhysicsComponent_BindLua::SetSphereParams(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		bool error = false;
-		lua_pushnil(L);
-		if (lua_type(L, -1) == LUA_TNUMBER)
-		{
-			component->sphere.radius = wi::lua::SGetFloat(L, -1);
-		}
-		else error = true;
-
-		if (error)
-		{
-			wi::lua::SError(L,"SetSphereParams(table params) supplied data is invalid!");
-		}
-	}
-	else
-	{
-		wi::lua::SError(L, "SetSphereParams(table params) not enough arguments!");
-	}
-	return 0;
-}
-int RigidBodyPhysicsComponent_BindLua::GetCapsuleParams(lua_State* L)
-{
-	lua_newtable(L);
-	wi::lua::SSetFloat(L, component->capsule.radius);
-	lua_setfield(L, -2, "radius");
-	wi::lua::SSetFloat(L, component->capsule.height);
-	lua_setfield(L, -2, "height");
-	return 1;
-}
-int RigidBodyPhysicsComponent_BindLua::SetCapsuleParams(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		bool error = false;
-
-		lua_pushnil(L);
-		while(lua_next(L, 1))
-		{
-			std::string header = wi::lua::SGetString(L, -2);
-			if (lua_type(L, -1) == LUA_TNUMBER)
-			{
-				if(header == "radius")
-				{
-					component->capsule.radius = wi::lua::SGetFloat(L, -1);
-				}
-				if(header == "height")
-				{
-					component->capsule.height = wi::lua::SGetFloat(L, -1);
-				}
-			}
-			else
-			{
-				error = true;
-				break;
-			}
-
-			lua_pop(L, 1);
-		}
-
-		if (error)
-		{
-			wi::lua::SError(L,"SetCapsuleParams(table params) supplied data is invalid!");
-		}
-	}
-	else
-	{
-		wi::lua::SError(L, "SetCapsuleParams(table params) not enough arguments!");
-	}
-	return 0;
-}
-int RigidBodyPhysicsComponent_BindLua::GetTargetMeshLOD(lua_State* L)
-{
-	wi::lua::SSetInt(L, component->mesh_lod);
-	return 1;
-}
-int RigidBodyPhysicsComponent_BindLua::SetTargetMeshLOD(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->mesh_lod = wi::lua::SGetInt(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetAngularDamping(float value) not enough arguments!");
-	}
-	return 0;
-}
 int RigidBodyPhysicsComponent_BindLua::IsDisableDeactivation(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsDisableDeactivation());
@@ -3819,6 +3630,9 @@ int RigidBodyPhysicsComponent_BindLua::SetKinematic(lua_State* L)
 const char SoftBodyPhysicsComponent_BindLua::className[] = "SoftBodyPhysicsComponent";
 
 Luna<SoftBodyPhysicsComponent_BindLua>::FunctionType SoftBodyPhysicsComponent_BindLua::methods[] = {
+	lunamethod(SoftBodyPhysicsComponent_BindLua, SetDisableDeactivation),
+	lunamethod(SoftBodyPhysicsComponent_BindLua, IsDisableDeactivation),
+	lunamethod(SoftBodyPhysicsComponent_BindLua, CreateFromMesh),
 	{ NULL, NULL }
 };
 Luna<SoftBodyPhysicsComponent_BindLua>::PropertyType SoftBodyPhysicsComponent_BindLua::properties[] = {
@@ -3841,58 +3655,21 @@ SoftBodyPhysicsComponent_BindLua::~SoftBodyPhysicsComponent_BindLua()
 	}
 }
 
-int SoftBodyPhysicsComponent_BindLua::GetMass(lua_State* L)
+int SoftBodyPhysicsComponent_BindLua::SetDisableDeactivation(lua_State *L)
 {
-	wi::lua::SSetFloat(L, component->mass);
-	return 1;
-}
-int SoftBodyPhysicsComponent_BindLua::SetMass(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->mass = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetMass(float value) not enough arguments!");
-	}
+	bool value = wi::lua::SGetBool(L, 1);
+	component->SetDisableDeactivation(value);
 	return 0;
 }
-int SoftBodyPhysicsComponent_BindLua::GetFriction(lua_State* L)
+int SoftBodyPhysicsComponent_BindLua::IsDisableDeactivation(lua_State *L)
 {
-	wi::lua::SSetFloat(L, component->friction);
+	wi::lua::SSetBool(L, component->IsDisableDeactivation());
 	return 1;
 }
-int SoftBodyPhysicsComponent_BindLua::SetFriction(lua_State* L)
+int SoftBodyPhysicsComponent_BindLua::CreateFromMesh(lua_State *L)
 {
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->friction = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetMass(float value) not enough arguments!");
-	}
-	return 0;
-}
-int SoftBodyPhysicsComponent_BindLua::GetRestitution(lua_State* L)
-{
-	wi::lua::SSetFloat(L, component->restitution);
-	return 1;
-}
-int SoftBodyPhysicsComponent_BindLua::SetRestitution(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->restitution = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetRestitution(float value) not enough arguments!");
-	}
+	//TODO
+	//wi::lua::SSetBool(L, component->IsDisableDeactivation());
 	return 0;
 }
 
@@ -3927,57 +3704,193 @@ ForceFieldComponent_BindLua::~ForceFieldComponent_BindLua()
 	}
 }
 
-int ForceFieldComponent_BindLua::GetType(lua_State* L)
+
+
+
+
+
+
+const char Weather_OceanParams_BindLua::className[] = "OceanParameters";
+
+Luna<Weather_OceanParams_BindLua>::FunctionType Weather_OceanParams_BindLua::methods[] = {
+	{ NULL, NULL }
+};
+Luna<Weather_OceanParams_BindLua>::PropertyType Weather_OceanParams_BindLua::properties[] = {
+	lunaproperty(Weather_OceanParams_BindLua, dmap_dim),
+	lunaproperty(Weather_OceanParams_BindLua, patch_length),
+	lunaproperty(Weather_OceanParams_BindLua, time_scale),
+	lunaproperty(Weather_OceanParams_BindLua, wave_amplitude),
+	lunaproperty(Weather_OceanParams_BindLua, wind_dir),
+	lunaproperty(Weather_OceanParams_BindLua, wind_speed),
+	lunaproperty(Weather_OceanParams_BindLua, wind_dependency),
+	lunaproperty(Weather_OceanParams_BindLua, choppy_scale),
+	lunaproperty(Weather_OceanParams_BindLua, waterColor),
+	lunaproperty(Weather_OceanParams_BindLua, waterHeight),
+	lunaproperty(Weather_OceanParams_BindLua, surfaceDetail),
+	lunaproperty(Weather_OceanParams_BindLua, surfaceDisplacement),
+	{ NULL, NULL }
+};
+
+Weather_OceanParams_BindLua::Weather_OceanParams_BindLua(lua_State* L)
 {
-	wi::lua::SSetInt(L, component->type);
+	owning = true;
+	parameter = new wi::Ocean::OceanParameters;
+}
+Weather_OceanParams_BindLua::~Weather_OceanParams_BindLua()
+{
+	if (owning)
+	{
+		delete parameter;
+	}
+}
+
+int Weather_OceanParams_Property::Get(lua_State *L)
+{
+	Luna<Weather_OceanParams_BindLua>::push(L, new Weather_OceanParams_BindLua(data));
 	return 1;
 }
-int ForceFieldComponent_BindLua::SetType(lua_State* L)
+int Weather_OceanParams_Property::Set(lua_State *L)
 {
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
+	Weather_OceanParams_BindLua* get = Luna<Weather_OceanParams_BindLua>::lightcheck(L, 1);
+	if(get)
 	{
-		component->type = wi::lua::SGetInt(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetType(int type) not enough arguments!");
+		*data = *get->parameter;
 	}
 	return 0;
 }
-int ForceFieldComponent_BindLua::GetGravity(lua_State* L)
+
+
+
+
+
+
+
+const char Weather_AtmosphereParams_BindLua::className[] = "AtmosphereParameters";
+
+Luna<Weather_AtmosphereParams_BindLua>::FunctionType Weather_AtmosphereParams_BindLua::methods[] = {
+	{ NULL, NULL }
+};
+Luna<Weather_AtmosphereParams_BindLua>::PropertyType Weather_AtmosphereParams_BindLua::properties[] = {
+	lunaproperty(Weather_AtmosphereParams_BindLua, bottomRadius),
+	lunaproperty(Weather_AtmosphereParams_BindLua, topRadius),
+	lunaproperty(Weather_AtmosphereParams_BindLua, planetCenter),
+	lunaproperty(Weather_AtmosphereParams_BindLua, rayleighDensityExpScale),
+	lunaproperty(Weather_AtmosphereParams_BindLua, rayleighScattering),
+	lunaproperty(Weather_AtmosphereParams_BindLua, mieDensityExpScale),
+	lunaproperty(Weather_AtmosphereParams_BindLua, mieScattering),
+	lunaproperty(Weather_AtmosphereParams_BindLua, mieExtinction),
+	lunaproperty(Weather_AtmosphereParams_BindLua, mieAbsorption),
+	lunaproperty(Weather_AtmosphereParams_BindLua, miePhaseG),
+
+	lunaproperty(Weather_AtmosphereParams_BindLua, absorptionDensity0LayerWidth),
+	lunaproperty(Weather_AtmosphereParams_BindLua, absorptionDensity0ConstantTerm),
+	lunaproperty(Weather_AtmosphereParams_BindLua, absorptionDensity0LinearTerm),
+	lunaproperty(Weather_AtmosphereParams_BindLua, absorptionDensity1ConstantTerm),
+	lunaproperty(Weather_AtmosphereParams_BindLua, absorptionDensity1LinearTerm),
+
+	lunaproperty(Weather_AtmosphereParams_BindLua, absorptionExtinction),
+	lunaproperty(Weather_AtmosphereParams_BindLua, groundAlbedo),
+	{ NULL, NULL }
+};
+
+Weather_AtmosphereParams_BindLua::Weather_AtmosphereParams_BindLua(lua_State* L)
 {
-	wi::lua::SSetFloat(L, component->gravity);
+	owning = true;
+	parameter = new AtmosphereParameters;
+}
+Weather_AtmosphereParams_BindLua::~Weather_AtmosphereParams_BindLua()
+{
+	if (owning)
+	{
+		delete parameter;
+	}
+}
+
+int Weather_AtmosphereParams_Property::Get(lua_State *L)
+{
+	Luna<Weather_AtmosphereParams_BindLua>::push(L, new Weather_AtmosphereParams_BindLua(data));
 	return 1;
 }
-int ForceFieldComponent_BindLua::SetGravity(lua_State* L)
+int Weather_AtmosphereParams_Property::Set(lua_State *L)
 {
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
+	Weather_AtmosphereParams_BindLua* get = Luna<Weather_AtmosphereParams_BindLua>::lightcheck(L, 1);
+	if(get)
 	{
-		component->gravity = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetGravity(float value) not enough arguments!");
+		*data = *get->parameter;
 	}
 	return 0;
 }
-int ForceFieldComponent_BindLua::GetRange(lua_State* L)
+
+
+
+
+
+
+
+const char Weather_VolumetricCloudParams_BindLua::className[] = "VolumetricCloudParameters";
+
+Luna<Weather_VolumetricCloudParams_BindLua>::FunctionType Weather_VolumetricCloudParams_BindLua::methods[] = {
+	{ NULL, NULL }
+};
+Luna<Weather_VolumetricCloudParams_BindLua>::PropertyType Weather_VolumetricCloudParams_BindLua::properties[] = {
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,Albedo),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,CloudAmbientGroundMultiplier),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,ExtinctionCoefficient),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,HorizonBlendAmount),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,HorizonBlendPower),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,WeatherDensityAmount),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,CloudStartHeight),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,CloudThickness),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,SkewAlongWindDirection),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,TotalNoiseScale),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,DetailScale),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,WeatherScale),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,CurlScale),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,ShapeNoiseHeightGradientAmount),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,ShapeNoiseMultiplier),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,ShapeNoiseMinMax),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,ShapeNoisePower),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,DetailNoiseModifier),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,TypeAmount),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,TypeOverall),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,AnvilAmount),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,AnvilOverhangHeight),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,AnimationMultiplier),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,WindSpeed),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,WindAngle),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,WindUpAmount),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,CoverageWindSpeed),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,CoverageWindAngle),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,CloudGradientSmall),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,CloudGradientMedium),
+	lunaproperty(Weather_VolumetricCloudParams_BindLua,CloudGradientLarge),
+	{ NULL, NULL }
+};
+
+Weather_VolumetricCloudParams_BindLua::Weather_VolumetricCloudParams_BindLua(lua_State* L)
 {
-	wi::lua::SSetFloat(L, component->range);
+	owning = true;
+	parameter = new VolumetricCloudParameters;
+}
+Weather_VolumetricCloudParams_BindLua::~Weather_VolumetricCloudParams_BindLua()
+{
+	if (owning)
+	{
+		delete parameter;
+	}
+}
+
+int Weather_VolumetricCloudParams_Property::Get(lua_State *L)
+{
+	Luna<Weather_VolumetricCloudParams_BindLua>::push(L, new Weather_VolumetricCloudParams_BindLua(data));
 	return 1;
 }
-int ForceFieldComponent_BindLua::SetRange(lua_State* L)
+int Weather_VolumetricCloudParams_Property::Set(lua_State *L)
 {
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
+	Weather_VolumetricCloudParams_BindLua* get = Luna<Weather_VolumetricCloudParams_BindLua>::lightcheck(L, 1);
+	if(get)
 	{
-		component->range = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetRange(float value) not enough arguments!");
+		*data = *get->parameter;
 	}
 	return 0;
 }
@@ -3991,14 +3904,6 @@ int ForceFieldComponent_BindLua::SetRange(lua_State* L)
 const char WeatherComponent_BindLua::className[] = "WeatherComponent";
 
 Luna<WeatherComponent_BindLua>::FunctionType WeatherComponent_BindLua::methods[] = {
-	lunamethod(WeatherComponent_BindLua, GetWeatherParams),
-	lunamethod(WeatherComponent_BindLua, GetOceanParams),
-	lunamethod(WeatherComponent_BindLua, GetAtmosphereParams),
-	lunamethod(WeatherComponent_BindLua, GetVolumetricCloudParams),
-	lunamethod(WeatherComponent_BindLua, SetWeatherParams),
-	lunamethod(WeatherComponent_BindLua, SetOceanParams),
-	lunamethod(WeatherComponent_BindLua, SetAtmosphereParams),
-	lunamethod(WeatherComponent_BindLua, SetVolumetricCloudParams),
 	lunamethod(WeatherComponent_BindLua, IsOceanEnabled),
 	lunamethod(WeatherComponent_BindLua, IsSimpleSky),
 	lunamethod(WeatherComponent_BindLua, IsRealisticSky),
@@ -4012,10 +3917,33 @@ Luna<WeatherComponent_BindLua>::FunctionType WeatherComponent_BindLua::methods[]
 	{ NULL, NULL }
 };
 Luna<WeatherComponent_BindLua>::PropertyType WeatherComponent_BindLua::properties[] = {
-	lunaproperty(WeatherComponent_BindLua, WeatherParams),
-	lunaproperty(WeatherComponent_BindLua, OceanParams),
-	lunaproperty(WeatherComponent_BindLua, AtmosphereParams),
-	lunaproperty(WeatherComponent_BindLua, VolumetricCloudParams),
+	lunaproperty(WeatherComponent_BindLua, sunColor),
+	lunaproperty(WeatherComponent_BindLua, sunDirection),
+	lunaproperty(WeatherComponent_BindLua, skyExposure),
+	lunaproperty(WeatherComponent_BindLua, horizon),
+	lunaproperty(WeatherComponent_BindLua, zenith),
+	lunaproperty(WeatherComponent_BindLua, ambient),
+	lunaproperty(WeatherComponent_BindLua, fogStart),
+	lunaproperty(WeatherComponent_BindLua, fogEnd),
+	lunaproperty(WeatherComponent_BindLua, fogHeightStart),
+	lunaproperty(WeatherComponent_BindLua, fogHeightEnd),
+	lunaproperty(WeatherComponent_BindLua, fogHeightSky),
+	lunaproperty(WeatherComponent_BindLua, cloudiness),
+	lunaproperty(WeatherComponent_BindLua, cloudScale),
+	lunaproperty(WeatherComponent_BindLua, cloudSpeed),
+	lunaproperty(WeatherComponent_BindLua, cloud_shadow_amount),
+	lunaproperty(WeatherComponent_BindLua, cloud_shadow_scale),
+	lunaproperty(WeatherComponent_BindLua, cloud_shadow_speed),
+	lunaproperty(WeatherComponent_BindLua, windDirection),
+	lunaproperty(WeatherComponent_BindLua, windRandomness),
+	lunaproperty(WeatherComponent_BindLua, windWaveSize),
+	lunaproperty(WeatherComponent_BindLua, windSpeed),
+	lunaproperty(WeatherComponent_BindLua, stars),
+
+	lunaproperty(WeatherComponent_BindLua, OceanParameters),
+	lunaproperty(WeatherComponent_BindLua, AtmosphereParameters),
+	lunaproperty(WeatherComponent_BindLua, VolumetricCloudParameters),
+
 	lunaproperty(WeatherComponent_BindLua, SkyMapName),
 	lunaproperty(WeatherComponent_BindLua, ColorGradingMapName),
 	{ NULL, NULL }
@@ -4034,443 +3962,6 @@ WeatherComponent_BindLua::~WeatherComponent_BindLua()
 	}
 }
 
-void WeatherComponent_BindLua::InitParameters(){
-	// Weather Parameters
-	weatherparams_xmfloat3["sunColor"] = &component->sunColor;
-	weatherparams_xmfloat3["sunDirection"] = &component->sunDirection;
-	weatherparams_xmfloat3["horizon"] = &component->horizon;
-	weatherparams_xmfloat3["zenith"] = &component->zenith;
-	weatherparams_xmfloat3["ambient"] = &component->ambient;
-	weatherparams_xmfloat3["windDirection"] = &component->windDirection;
-	weatherparams_float["skyExposure"] = &component->skyExposure;
-	weatherparams_float["fogStart"] = &component->fogStart;
-	weatherparams_float["fogEnd"] = &component->fogEnd;
-	weatherparams_float["fogHeightStart"] = &component->fogHeightStart;
-	weatherparams_float["fogHeightSky"] = &component->fogHeightSky;
-	weatherparams_float["cloudiness"] = &component->cloudiness;
-	weatherparams_float["cloudScale"] = &component->cloudScale;
-	weatherparams_float["cloudSpeed"] = &component->cloudSpeed;
-	weatherparams_float["cloud_shadow_amount"] = &component->cloud_shadow_amount;
-	weatherparams_float["cloud_shadow_scale"] = &component->cloud_shadow_scale;
-	weatherparams_float["cloud_shadow_speed"] = &component->cloud_shadow_speed;
-	weatherparams_float["windRandomness"] = &component->windRandomness;
-	weatherparams_float["windWaveSize"] = &component->windWaveSize;
-	weatherparams_float["windSpeed"] = &component->windSpeed;
-	weatherparams_float["stars"] = &component->stars;
-
-	//Ocean Parameters
-	oceanparams_int["dmap_dim"] = &component->oceanParameters.dmap_dim;
-	oceanparams_uint32["dmap_dim"] = &component->oceanParameters.surfaceDetail;
-	oceanparams_xmfloat2["wind_dir"] = &component->oceanParameters.wind_dir;
-	oceanparams_xmfloat4["waterColor"] = &component->oceanParameters.waterColor;
-	oceanparams_float["patch_length"] = &component->oceanParameters.patch_length;
-	oceanparams_float["time_scale"] = &component->oceanParameters.time_scale;
-	oceanparams_float["wave_amplitude"] = &component->oceanParameters.wave_amplitude;
-	oceanparams_float["wind_speed"] = &component->oceanParameters.wind_speed;
-	oceanparams_float["wind_dependency"] = &component->oceanParameters.wind_dependency;
-	oceanparams_float["choppy_scale"] = &component->oceanParameters.choppy_scale;
-	oceanparams_float["waterHeight"] = &component->oceanParameters.waterHeight;
-	oceanparams_float["surfaceDisplacementTolerance"] = &component->oceanParameters.surfaceDisplacementTolerance;
-
-	//Atmosphere Parameters
-	atmosphereparams_xmfloat3["planetCenter"] = &component->atmosphereParameters.planetCenter;
-	atmosphereparams_xmfloat3["rayleighScattering"] = &component->atmosphereParameters.rayleighScattering;
-	atmosphereparams_xmfloat3["mieScattering"] = &component->atmosphereParameters.mieScattering;
-	atmosphereparams_xmfloat3["mieExtinction"] = &component->atmosphereParameters.mieExtinction;
-	atmosphereparams_xmfloat3["mieAbsorption"] = &component->atmosphereParameters.mieAbsorption;
-	atmosphereparams_xmfloat3["absorptionExtinction"] = &component->atmosphereParameters.absorptionExtinction;
-	atmosphereparams_xmfloat3["groundAlbedo"] = &component->atmosphereParameters.groundAlbedo;
-	atmosphereparams_float["bottomRadius"] = &component->atmosphereParameters.bottomRadius;
-	atmosphereparams_float["topRadius"] = &component->atmosphereParameters.topRadius;
-	atmosphereparams_float["rayleighDensityExpScale"] = &component->atmosphereParameters.rayleighDensityExpScale;
-	atmosphereparams_float["mieDensityExpScale"] = &component->atmosphereParameters.mieDensityExpScale;
-	atmosphereparams_float["miePhaseG"] = &component->atmosphereParameters.miePhaseG;
-	atmosphereparams_float["absorptionDensity0LayerWidth"] = &component->atmosphereParameters.absorptionDensity0LayerWidth;
-	atmosphereparams_float["absorptionDensity0ConstantTerm"] = &component->atmosphereParameters.absorptionDensity0ConstantTerm;
-	atmosphereparams_float["absorptionDensity0LinearTerm"] = &component->atmosphereParameters.absorptionDensity0LinearTerm;
-	atmosphereparams_float["absorptionDensity1ConstantTerm"] = &component->atmosphereParameters.absorptionDensity1ConstantTerm;
-	atmosphereparams_float["absorptionDensity1LinearTerm"] = &component->atmosphereParameters.absorptionDensity1LinearTerm;
-
-	//Volumetric Cloud Parameters
-	volumetriccloudparams_xmfloat3["Albedo"] = &component->volumetricCloudParameters.Albedo;
-	volumetriccloudparams_xmfloat3["ExtinctionCoefficient"] = &component->volumetricCloudParameters.ExtinctionCoefficient;
-	volumetriccloudparams_xmfloat4["CloudGradientSmall"] = &component->volumetricCloudParameters.CloudGradientSmall;
-	volumetriccloudparams_xmfloat4["CloudGradientMedium"] = &component->volumetricCloudParameters.CloudGradientMedium;
-	volumetriccloudparams_xmfloat4["CloudGradientLarge"] = &component->volumetricCloudParameters.CloudGradientLarge;
-	volumetriccloudparams_float["CloudAmbientGroundMultiplier"] = &component->volumetricCloudParameters.CloudAmbientGroundMultiplier;
-	volumetriccloudparams_float["CoverageAmount"] = &component->volumetricCloudParameters.CoverageAmount;
-	volumetriccloudparams_float["CoverageMinimum"] = &component->volumetricCloudParameters.CoverageMinimum;
-	volumetriccloudparams_float["HorizonBlendAmount"] = &component->volumetricCloudParameters.HorizonBlendAmount;
-	volumetriccloudparams_float["HorizonBlendPower"] = &component->volumetricCloudParameters.HorizonBlendPower;
-	volumetriccloudparams_float["WeatherDensityAmount"] = &component->volumetricCloudParameters.WeatherDensityAmount;
-	volumetriccloudparams_float["CloudStartHeight"] = &component->volumetricCloudParameters.CloudStartHeight;
-	volumetriccloudparams_float["SkewAlongWindDirection"] = &component->volumetricCloudParameters.SkewAlongWindDirection;
-	volumetriccloudparams_float["TotalNoiseScale"] = &component->volumetricCloudParameters.TotalNoiseScale;
-	volumetriccloudparams_float["DetailScale"] = &component->volumetricCloudParameters.DetailScale;
-	volumetriccloudparams_float["WeatherScale"] = &component->volumetricCloudParameters.WeatherScale;
-	volumetriccloudparams_float["CurlScale"] = &component->volumetricCloudParameters.CurlScale;
-	volumetriccloudparams_float["ShapeNoiseHeightGradientAmount"] = &component->volumetricCloudParameters.ShapeNoiseHeightGradientAmount;
-	volumetriccloudparams_float["ShapeNoiseMultiplier"] = &component->volumetricCloudParameters.ShapeNoiseMultiplier;
-}
-
-int WeatherComponent_BindLua::GetWeatherParams(lua_State* L)
-{
-	lua_newtable(L);
-	for (auto& pair_xmfloat3 : weatherparams_xmfloat3){
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(pair_xmfloat3.second)));
-		lua_setfield(L, -2, pair_xmfloat3.first.c_str());
-	}
-	for (auto& pair_float : weatherparams_float){
-		wi::lua::SSetFloat(L, *pair_float.second);
-		lua_setfield(L, -2, pair_float.first.c_str());
-	}
-
-	return 1;
-}
-int WeatherComponent_BindLua::SetWeatherParams(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		bool error = false;
-
-		lua_pushnil(L);
-		while(lua_next(L, 1))
-		{
-			std::string header = wi::lua::SGetString(L, -2);
-			
-			auto find_header_xmfloat3 = weatherparams_xmfloat3.find(header);
-			if(find_header_xmfloat3 != weatherparams_xmfloat3.end())
-			{
-				auto xmfloat3 = Luna<Vector_BindLua>::lightcheck(L, -1);
-				if(xmfloat3)
-				{
-					XMStoreFloat3(find_header_xmfloat3->second, XMLoadFloat4(xmfloat3));
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-
-			auto find_header_float = weatherparams_float.find(header);
-			if(find_header_float != weatherparams_float.end())
-			{
-				if(lua_type(L, -1) == LUA_TNUMBER)
-				{
-					*(find_header_float->second) = wi::lua::SGetFloat(L, -1);
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-
-			if(error)
-			{
-				break;
-			}			
-
-			lua_pop(L, 1);
-		}
-
-		if (error)
-		{
-			wi::lua::SError(L,"SetWeatherParams(table params) supplied data is invalid!");
-		}
-	}
-	else
-	{
-		wi::lua::SError(L, "SetWeatherParams(table params) not enough arguments!");
-	}
-	return 0;
-}
-int WeatherComponent_BindLua::GetOceanParams(lua_State* L)
-{
-	lua_newtable(L);
-	for (auto& pair_int : oceanparams_int){
-		wi::lua::SSetInt(L, *pair_int.second);
-		lua_setfield(L, -2, pair_int.first.c_str());
-	}
-	for (auto& pair_uint32 : oceanparams_uint32){
-		wi::lua::SSetInt(L, *pair_uint32.second);
-		lua_setfield(L, -2, pair_uint32.first.c_str());
-	}
-	for (auto& pair_xmfloat2 : oceanparams_xmfloat2){
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(pair_xmfloat2.second)));
-		lua_setfield(L, -2, pair_xmfloat2.first.c_str());
-	}
-	for (auto& pair_xmfloat4 : oceanparams_xmfloat4){
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(pair_xmfloat4.second)));
-		lua_setfield(L, -2, pair_xmfloat4.first.c_str());
-	}
-	for (auto& pair_float : oceanparams_float){
-		wi::lua::SSetFloat(L, *pair_float.second);
-		lua_setfield(L, -2, pair_float.first.c_str());
-	}
-
-	return 1;
-}
-int WeatherComponent_BindLua::SetOceanParams(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		bool error = false;
-
-		lua_pushnil(L);
-		while(lua_next(L, 1))
-		{
-			std::string header = wi::lua::SGetString(L, -2);
-
-			auto find_header_xmfloat2 = oceanparams_xmfloat2.find(header);
-			if(find_header_xmfloat2 != oceanparams_xmfloat2.end())
-			{
-				auto xmfloat2 = Luna<Vector_BindLua>::lightcheck(L, -1);
-				if(xmfloat2)
-				{
-					XMStoreFloat2(find_header_xmfloat2->second, XMLoadFloat4(xmfloat2));
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-			
-			auto find_header_xmfloat4 = oceanparams_xmfloat4.find(header);
-			if(find_header_xmfloat4 != oceanparams_xmfloat4.end())
-			{
-				auto xmfloat4 = Luna<Vector_BindLua>::lightcheck(L, -1);
-				if(xmfloat4)
-				{
-					XMStoreFloat4(find_header_xmfloat4->second, XMLoadFloat4(xmfloat4));
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-
-			auto find_header_float = oceanparams_float.find(header);
-			if(find_header_float != oceanparams_float.end())
-			{
-				if(lua_type(L, -1) == LUA_TNUMBER)
-				{
-					*(find_header_float->second) = wi::lua::SGetFloat(L, -1);
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-
-			auto find_header_int = oceanparams_int.find(header);
-			if(find_header_int != oceanparams_int.end())
-			{
-				if(lua_type(L, -1) == LUA_TNUMBER)
-				{
-					*(find_header_int->second) = wi::lua::SGetInt(L, -1);
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-
-			auto find_header_uint32 = oceanparams_uint32.find(header);
-			if(find_header_uint32 != oceanparams_uint32.end())
-			{
-				if(lua_type(L, -1) == LUA_TNUMBER)
-				{
-					*(find_header_uint32->second) = wi::lua::SGetInt(L, -1);
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-
-			if(error)
-			{
-				break;
-			}			
-
-			lua_pop(L, 1);
-		}
-
-		if (error)
-		{
-			wi::lua::SError(L,"SetOceanParams(table params) supplied data is invalid!");
-		}
-	}
-	else
-	{
-		wi::lua::SError(L, "SetOceanParams(table params) not enough arguments!");
-	}
-	return 0;
-}
-int WeatherComponent_BindLua::GetAtmosphereParams(lua_State* L)
-{
-	lua_newtable(L);
-	for (auto& pair_xmfloat3 : atmosphereparams_xmfloat3){
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(pair_xmfloat3.second)));
-		lua_setfield(L, -2, pair_xmfloat3.first.c_str());
-	}
-	for (auto& pair_float : atmosphereparams_float){
-		wi::lua::SSetFloat(L, *pair_float.second);
-		lua_setfield(L, -2, pair_float.first.c_str());
-	}
-
-	return 1;
-}
-int WeatherComponent_BindLua::SetAtmosphereParams(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		bool error = false;
-
-		lua_pushnil(L);
-		while(lua_next(L, 1))
-		{
-			std::string header = wi::lua::SGetString(L, -2);
-			
-			auto find_header_xmfloat3 = atmosphereparams_xmfloat3.find(header);
-			if(find_header_xmfloat3 != atmosphereparams_xmfloat3.end())
-			{
-				auto xmfloat3 = Luna<Vector_BindLua>::lightcheck(L, -1);
-				if(xmfloat3)
-				{
-					XMStoreFloat3(find_header_xmfloat3->second, XMLoadFloat4(xmfloat3));
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-
-			auto find_header_float = atmosphereparams_float.find(header);
-			if(find_header_float != atmosphereparams_float.end())
-			{
-				if(lua_type(L, -1) == LUA_TNUMBER)
-				{
-					*(find_header_float->second) = wi::lua::SGetFloat(L, -1);
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-
-			if(error)
-			{
-				break;
-			}			
-
-			lua_pop(L, 1);
-		}
-
-		if (error)
-		{
-			wi::lua::SError(L,"SetWeatherParams(table params) supplied data is invalid!");
-		}
-	}
-	else
-	{
-		wi::lua::SError(L, "SetWeatherParams(table params) not enough arguments!");
-	}
-	return 0;
-}
-int WeatherComponent_BindLua::GetVolumetricCloudParams(lua_State* L)
-{
-	lua_newtable(L);
-	for (auto& pair_xmfloat3 : volumetriccloudparams_xmfloat3){
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(pair_xmfloat3.second)));
-		lua_setfield(L, -2, pair_xmfloat3.first.c_str());
-	}
-	for (auto& pair_xmfloat4 : volumetriccloudparams_xmfloat4){
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(pair_xmfloat4.second)));
-		lua_setfield(L, -2, pair_xmfloat4.first.c_str());
-	}
-	for (auto& pair_float : volumetriccloudparams_float){
-		wi::lua::SSetFloat(L, *pair_float.second);
-		lua_setfield(L, -2, pair_float.first.c_str());
-	}
-
-	return 1;
-}
-int WeatherComponent_BindLua::SetVolumetricCloudParams(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		bool error = false;
-	
-		lua_pushnil(L);
-		while(lua_next(L, 1))
-		{
-			std::string header = wi::lua::SGetString(L, -2);
-			
-			auto find_header_xmfloat3 = volumetriccloudparams_xmfloat3.find(header);
-			if(find_header_xmfloat3 != volumetriccloudparams_xmfloat3.end())
-			{
-				auto xmfloat3 = Luna<Vector_BindLua>::lightcheck(L, -1);
-				if(xmfloat3)
-				{
-					XMStoreFloat3(find_header_xmfloat3->second, XMLoadFloat4(xmfloat3));
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-
-			auto find_header_xmfloat4 = volumetriccloudparams_xmfloat4.find(header);
-			if(find_header_xmfloat4 != volumetriccloudparams_xmfloat4.end())
-			{
-				auto xmfloat4 = Luna<Vector_BindLua>::lightcheck(L, -1);
-				if(xmfloat4)
-				{
-					XMStoreFloat4(find_header_xmfloat4->second, XMLoadFloat4(xmfloat4));
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-
-			auto find_header_float = volumetriccloudparams_float.find(header);
-			if(find_header_float != volumetriccloudparams_float.end())
-			{
-				if(lua_type(L, -1) == LUA_TNUMBER)
-				{
-					*(find_header_float->second) = wi::lua::SGetFloat(L, -1);
-				}
-				else
-				{ 
-					error = true;
-				}
-			}
-
-			if(error)
-			{
-				break;
-			}			
-
-			lua_pop(L, 1);
-		}
-
-		if (error)
-		{
-			wi::lua::SError(L,"SetWeatherParams(table params) supplied data is invalid!");
-		}
-	}
-	else
-	{
-		wi::lua::SError(L, "SetWeatherParams(table params) not enough arguments!");
-	}
-	return 0;
-}
 int WeatherComponent_BindLua::IsOceanEnabled(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsOceanEnabled());
@@ -4644,42 +4135,6 @@ SoundComponent_BindLua::~SoundComponent_BindLua()
 	}
 }
 
-int SoundComponent_BindLua::GetFilename(lua_State* L)
-{
-	wi::lua::SSetString(L, component->filename);
-	return 1;
-}
-int SoundComponent_BindLua::SetFilename(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->filename = wi::lua::SGetString(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetFilename(string filename) not enough arguments!");
-	}
-	return 0;
-}
-int SoundComponent_BindLua::GetVolume(lua_State* L)
-{
-	wi::lua::SSetFloat(L, component->volume);
-	return 1;
-}
-int SoundComponent_BindLua::SetVolume(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->volume = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetVolume(float value) not enough arguments!");
-	}
-	return 0;
-}
 int SoundComponent_BindLua::IsPlaying(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsPlaying());
@@ -4765,89 +4220,6 @@ ColliderComponent_BindLua::~ColliderComponent_BindLua()
 	{
 		delete component;
 	}
-}
-
-int ColliderComponent_BindLua::GetShape(lua_State* L)
-{
-	wi::lua::SSetInt(L, (uint32_t)component->shape);
-	return 1;
-}
-int ColliderComponent_BindLua::SetShape(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->shape = (ColliderComponent::Shape)wi::lua::SGetInt(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetShape(int type) not enough arguments!");
-	}
-	return 0;
-}
-int ColliderComponent_BindLua::GetRadius(lua_State* L)
-{
-	wi::lua::SSetFloat(L, component->radius);
-	return 1;
-}
-int ColliderComponent_BindLua::SetRadius(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->radius = wi::lua::SGetFloat(L, 1);
-	}
-	else
-	{
-		wi::lua::SError(L, "SetRadius(float value) not enough arguments!");
-	}
-	return 0;
-}
-int ColliderComponent_BindLua::GetOffset(lua_State* L)
-{
-	XMVECTOR V = XMLoadFloat3(&component->offset);
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
-	return 1;
-}
-int ColliderComponent_BindLua::SetOffset(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		Vector_BindLua* offset = Luna<Vector_BindLua>::lightcheck(L, 1);
-		if(offset)
-		{
-			XMStoreFloat3(&component->offset, XMLoadFloat4(offset));
-		}
-	}
-	else
-	{
-		wi::lua::SError(L, "SetOffset(vector value) not enough arguments!");
-	}
-	return 0;
-}
-int ColliderComponent_BindLua::GetTail(lua_State* L)
-{
-	XMVECTOR V = XMLoadFloat3(&component->tail);
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
-	return 1;
-}
-int ColliderComponent_BindLua::SetTail(lua_State* L)
-{
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		Vector_BindLua* tail = Luna<Vector_BindLua>::lightcheck(L, 1);
-		if(tail)
-		{
-			XMStoreFloat3(&component->tail, XMLoadFloat4(tail));
-		}
-	}
-	else
-	{
-		wi::lua::SError(L, "SetTail(vector value) not enough arguments!");
-	}
-	return 0;
 }
 
 }

@@ -8,7 +8,7 @@ namespace wi::lua
 	const char SpriteFont_BindLua::className[] = "SpriteFont";
 
 	Luna<SpriteFont_BindLua>::FunctionType SpriteFont_BindLua::methods[] = {
-		lunamethod(SpriteFont_BindLua, GetText),
+		lunamethod(SpriteFont_BindLua, SetText),
 		lunamethod(SpriteFont_BindLua, SetSize),
 		lunamethod(SpriteFont_BindLua, SetPos),
 		lunamethod(SpriteFont_BindLua, SetSpacing),
@@ -22,7 +22,7 @@ namespace wi::lua
 		lunamethod(SpriteFont_BindLua, SetShadowOffset),
 
 		lunamethod(SpriteFont_BindLua, SetStyle),
-		lunamethod(SpriteFont_BindLua, SetText),
+		lunamethod(SpriteFont_BindLua, GetText),
 		lunamethod(SpriteFont_BindLua, GetSize),
 		lunamethod(SpriteFont_BindLua, GetPos),
 		lunamethod(SpriteFont_BindLua, GetSpacing),
@@ -38,6 +38,18 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 	Luna<SpriteFont_BindLua>::PropertyType SpriteFont_BindLua::properties[] = {
+		lunaproperty(SpriteFont_BindLua, Text),
+		lunaproperty(SpriteFont_BindLua, Size),
+		lunaproperty(SpriteFont_BindLua, Pos),
+		lunaproperty(SpriteFont_BindLua, Spacing),
+		lunaproperty(SpriteFont_BindLua, Align),
+		lunaproperty(SpriteFont_BindLua, Color),
+		lunaproperty(SpriteFont_BindLua, ShadowColor),
+		lunaproperty(SpriteFont_BindLua, Bolden),
+		lunaproperty(SpriteFont_BindLua, Softness),
+		lunaproperty(SpriteFont_BindLua, ShadowBolden),
+		lunaproperty(SpriteFont_BindLua, ShadowSoftness),
+		lunaproperty(SpriteFont_BindLua, ShadowOffset),
 		{ NULL, NULL }
 	};
 
