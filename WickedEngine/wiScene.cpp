@@ -1734,6 +1734,8 @@ namespace wi::scene
 		}
 		geometryArrayMapped = (ShaderGeometry*)geometryUploadBuffer[device->GetBufferIndex()].mapped_data;
 
+		RunExpressionUpdateSystem(ctx);
+
 		RunMeshUpdateSystem(ctx);
 
 		RunMaterialUpdateSystem(ctx);
@@ -3464,6 +3466,207 @@ namespace wi::scene
 
 		});
 	}
+	void Scene::RunExpressionUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		for (size_t i = 0; i < expressions.GetCount(); ++i)
+		{
+			ExpressionComponent& expression_mastering = expressions[i];
+
+			// Procedural blink:
+			expression_mastering.blink_timer += expression_mastering.blink_frequency * dt;
+			if (expression_mastering.blink_timer >= 1)
+			{
+				int blink = expression_mastering.presets[(int)ExpressionComponent::Preset::Blink];
+				if (blink >= 0 && blink < expression_mastering.expressions.size())
+				{
+					ExpressionComponent::Expression& expression = expression_mastering.expressions[blink];
+					expression_mastering.blink_count = std::max(1, expression_mastering.blink_count);
+					float one_blink_length = expression_mastering.blink_length * expression_mastering.blink_frequency;
+					float all_blink_length = one_blink_length * (float)expression_mastering.blink_count;
+					float blink_index = std::floor(wi::math::Lerp(0, (float)expression_mastering.blink_count, (expression_mastering.blink_timer - 1) / all_blink_length));
+					float blink_trim = 1 + one_blink_length * blink_index;
+					float blink_state = wi::math::InverseLerp(0, one_blink_length, expression_mastering.blink_timer - blink_trim);
+					if (blink_state < 0.5f)
+					{
+						// closing
+						expression.weight = wi::math::Lerp(0, 1, wi::math::saturate(blink_state * 2));
+					}
+					else
+					{
+						// opening
+						expression.weight = wi::math::Lerp(1, 0, wi::math::saturate((blink_state - 0.5f) * 2));
+					}
+					if (expression_mastering.blink_timer >= 1 + all_blink_length)
+					{
+						expression.weight = 0;
+						expression_mastering.blink_timer = 0;
+					}
+					expression.SetDirty();
+				}
+			}
+
+			// Procedural look:
+			if (expression_mastering.look_timer == 0)
+			{
+				// Roll new random look direction for next look away event:
+				float vertical = wi::random::GetRandom(-1.0f, 1.0f);
+				float horizontal = wi::random::GetRandom(-1.0f, 1.0f);
+				expression_mastering.look_weights[0] = wi::math::saturate(vertical);
+				expression_mastering.look_weights[1] = wi::math::saturate(-vertical);
+				expression_mastering.look_weights[2] = wi::math::saturate(horizontal);
+				expression_mastering.look_weights[3] = wi::math::saturate(-horizontal);
+			}
+			expression_mastering.look_timer += expression_mastering.look_frequency * dt;
+			if (expression_mastering.look_timer >= 1)
+			{
+				int looks[] = {
+					expression_mastering.presets[(int)ExpressionComponent::Preset::LookDown],
+					expression_mastering.presets[(int)ExpressionComponent::Preset::LookUp],
+					expression_mastering.presets[(int)ExpressionComponent::Preset::LookLeft],
+					expression_mastering.presets[(int)ExpressionComponent::Preset::LookRight],
+				};
+				for (int idx = 0; idx<arraysize(looks); ++idx)
+				{
+					int look = looks[idx];
+					const float weight = expression_mastering.look_weights[idx];
+					if (look >= 0 && look < expression_mastering.expressions.size())
+					{
+						ExpressionComponent::Expression& expression = expression_mastering.expressions[look];
+						float look_state = wi::math::InverseLerp(0, expression_mastering.look_length * expression_mastering.look_frequency, expression_mastering.look_timer - 1);
+						if (look_state < 0.25f)
+						{
+							expression.weight = wi::math::Lerp(0, weight, wi::math::saturate(look_state * 4));
+						}
+						else
+						{
+							expression.weight = wi::math::Lerp(weight, 0, wi::math::saturate((look_state - 0.75f) * 4));
+						}
+						expression.SetDirty();
+					}
+				}
+				if (expression_mastering.look_timer >= 1 + expression_mastering.look_length * expression_mastering.look_frequency)
+				{
+					expression_mastering.look_timer = 0;
+				}
+			}
+
+			float overrideMouthBlend = 0;
+			float overrideBlinkBlend = 0;
+			float overrideLookBlend = 0;
+
+			// Pass 1: reset targets that will be modified by expressions:
+			//	Also accumulate override weights
+			for(ExpressionComponent::Expression& expression : expression_mastering.expressions)
+			{
+				const float blend = expression.IsBinary() ? (expression.weight > 0 ? 1 : 0) : expression.weight;
+				if (expression.override_mouth == ExpressionComponent::Override::Block)
+				{
+					overrideMouthBlend += 1;
+				}
+				if (expression.override_mouth == ExpressionComponent::Override::Blend)
+				{
+					overrideMouthBlend += blend;
+				}
+				if (expression.override_blink == ExpressionComponent::Override::Block)
+				{
+					overrideBlinkBlend += 1;
+				}
+				if (expression.override_blink == ExpressionComponent::Override::Blend)
+				{
+					overrideBlinkBlend += blend;
+				}
+				if (expression.override_look == ExpressionComponent::Override::Block)
+				{
+					overrideLookBlend += 1;
+				}
+				if (expression.override_look == ExpressionComponent::Override::Blend)
+				{
+					overrideLookBlend += blend;
+				}
+
+				if (!expression.IsDirty())
+					continue;
+
+				for (const ExpressionComponent::Expression::MorphTargetBinding& morph_target_binding : expression.morph_target_bindings)
+				{
+					MeshComponent* mesh = meshes.GetComponent(morph_target_binding.meshID);
+					if (mesh != nullptr && (int)mesh->morph_targets.size() > morph_target_binding.index)
+					{
+						MeshComponent::MorphTarget& morph_target = mesh->morph_targets[morph_target_binding.index];
+						if (morph_target.weight > 0)
+						{
+							morph_target.weight = 0;
+						}
+					}
+				}
+			}
+
+			// Override weights are factored in:
+			const int mouths[] = {
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Aa],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Ih],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Ou],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Ee],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Oh],
+			};
+			for (int mouth : mouths)
+			{
+				if (mouth >= 0 && mouth < expression_mastering.expressions.size())
+				{
+					ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
+					expression.weight *= 1 - wi::math::saturate(overrideMouthBlend);
+				}
+			}
+			const int blinks[] = {
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Blink],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::BlinkLeft],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::BlinkRight],
+			};
+			for (int blink : blinks)
+			{
+				if (blink >= 0 && blink < expression_mastering.expressions.size())
+				{
+					ExpressionComponent::Expression& expression = expression_mastering.expressions[blink];
+					expression.weight *= 1 - wi::math::saturate(overrideBlinkBlend);
+				}
+			}
+			const int looks[] = {
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookUp],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookDown],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookLeft],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookRight],
+			};
+			for (int look : looks)
+			{
+				if (look >= 0 && look < expression_mastering.expressions.size())
+				{
+					ExpressionComponent::Expression& expression = expression_mastering.expressions[look];
+					expression.weight *= 1 - wi::math::saturate(overrideLookBlend);
+				}
+			}
+
+			// Pass 2: apply expressions:
+			for (ExpressionComponent::Expression& expression : expression_mastering.expressions)
+			{
+				if (!expression.IsDirty())
+					continue;
+
+				expression.SetDirty(false);
+				const float blend = expression.IsBinary() ? (expression.weight > 0 ? 1 : 0) : expression.weight;
+
+				for (const ExpressionComponent::Expression::MorphTargetBinding& morph_target_binding : expression.morph_target_bindings)
+				{
+					MeshComponent* mesh = meshes.GetComponent(morph_target_binding.meshID);
+					if (mesh != nullptr && (int)mesh->morph_targets.size() > morph_target_binding.index)
+					{
+						MeshComponent::MorphTarget& morph_target = mesh->morph_targets[morph_target_binding.index];
+						morph_target.weight = wi::math::Lerp(morph_target.weight, morph_target_binding.weight, blend);
+						mesh->dirty_morph = true;
+					}
+				}
+			}
+		}
+	}
 	void Scene::RunColliderUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		for (size_t i = 0; i < colliders.GetCount(); ++i)
@@ -3925,25 +4128,53 @@ namespace wi::scene
 			    XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 			    XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
-			    for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
-			    {
-					XMFLOAT3 pos = mesh.vertex_positions[i];
-					XMFLOAT3 nor = mesh.vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : mesh.vertex_normals[i];
-					const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
+				mesh.morph_temp_pos = mesh.vertex_positions;
+				mesh.morph_temp_nor = mesh.vertex_normals;
 
-					for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
+				for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
+				{
+					if (morph.weight <= 0)
+						continue;
+					if (morph.sparse_indices.empty())
 					{
-						pos.x += morph.weight * morph.vertex_positions[i].x;
-						pos.y += morph.weight * morph.vertex_positions[i].y;
-						pos.z += morph.weight * morph.vertex_positions[i].z;
-
-						if (!morph.vertex_normals.empty())
+						for (size_t i = 0; i < morph.vertex_positions.size(); ++i)
 						{
-							nor.x += morph.weight * morph.vertex_normals[i].x;
-							nor.y += morph.weight * morph.vertex_normals[i].y;
-							nor.z += morph.weight * morph.vertex_normals[i].z;
+							mesh.morph_temp_pos[i].x += morph.weight * morph.vertex_positions[i].x;
+							mesh.morph_temp_pos[i].y += morph.weight * morph.vertex_positions[i].y;
+							mesh.morph_temp_pos[i].z += morph.weight * morph.vertex_positions[i].z;
+
+							if (!morph.vertex_normals.empty())
+							{
+								mesh.morph_temp_nor[i].x += morph.weight * morph.vertex_normals[i].x;
+								mesh.morph_temp_nor[i].y += morph.weight * morph.vertex_normals[i].y;
+								mesh.morph_temp_nor[i].z += morph.weight * morph.vertex_normals[i].z;
+							}
 						}
 					}
+					else
+					{
+						for (size_t i = 0; i < morph.sparse_indices.size(); ++i)
+						{
+							const uint32_t ind = morph.sparse_indices[i];
+							mesh.morph_temp_pos[ind].x += morph.weight * morph.vertex_positions[i].x;
+							mesh.morph_temp_pos[ind].y += morph.weight * morph.vertex_positions[i].y;
+							mesh.morph_temp_pos[ind].z += morph.weight * morph.vertex_positions[i].z;
+
+							if (!morph.vertex_normals.empty())
+							{
+								mesh.morph_temp_nor[ind].x += morph.weight * morph.vertex_normals[i].x;
+								mesh.morph_temp_nor[ind].y += morph.weight * morph.vertex_normals[i].y;
+								mesh.morph_temp_nor[ind].z += morph.weight * morph.vertex_normals[i].z;
+							}
+						}
+					}
+				}
+
+			    for (size_t i = 0; i < mesh.morph_temp_pos.size(); ++i)
+			    {
+					XMFLOAT3 pos = mesh.morph_temp_pos[i];
+					XMFLOAT3 nor = mesh.morph_temp_nor.empty() ? XMFLOAT3(1, 1, 1) : mesh.morph_temp_nor[i];
+					const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
 
 					XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
 					mesh.vertex_positions_morphed[i].FromFULL(pos, nor, wind);

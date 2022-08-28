@@ -23,6 +23,7 @@
 #include "ColliderWindow.h"
 #include "HierarchyWindow.h"
 #include "CameraComponentWindow.h"
+#include "ExpressionWindow.h"
 
 class EditorComponent;
 
@@ -59,4 +60,5 @@ public:
 	ColliderWindow colliderWnd;
 	HierarchyWindow hierarchyWnd;
 	CameraComponentWindow cameraComponentWnd;
+	ExpressionWindow expressionWnd;
 };

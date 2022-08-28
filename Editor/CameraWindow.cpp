@@ -361,6 +361,7 @@ void CameraWindow::ResizeLayout()
 		y += padding;
 	};
 
+	add_fullwidth(resetButton);
 	add(farPlaneSlider);
 	add(nearPlaneSlider);
 	add(fovSlider);
@@ -371,12 +372,11 @@ void CameraWindow::ResizeLayout()
 	add(movespeedSlider);
 	add(rotationspeedSlider);
 	add(accelerationSlider);
-	add(resetButton);
 	add_right(fpsCheckBox);
 
 	y += 20;
 
-	add(proxyButton);
+	add_fullwidth(proxyButton);
 	add_right(followCheckBox);
 	add(followSlider);
 

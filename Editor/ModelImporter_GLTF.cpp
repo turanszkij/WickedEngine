@@ -140,6 +140,7 @@ namespace tinygltf
 
 struct LoaderState
 {
+	std::string name;
 	tinygltf::Model gltfModel;
 	Scene* scene;
 	wi::unordered_map<int, Entity> entityMap;  // node -> entity
@@ -321,6 +322,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	state.rootEntity = CreateEntity();
 	scene.transforms.Create(state.rootEntity);
 	scene.names.Create(state.rootEntity) = name;
+	state.name = name;
 
 	// Create materials:
 	for (auto& x : state.gltfModel.materials)
@@ -775,12 +777,6 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		scene.Component_Attach(meshEntity, state.rootEntity);
 		MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
 
-		mesh.morph_targets.resize(x.weights.size());
-		for (size_t i = 0; i < mesh.morph_targets.size(); i++)
-		{
-			mesh.morph_targets[i].weight = static_cast<float_t>(x.weights[i]);
-		}
-
 		for (auto& prim : x.primitives)
 		{
 			assert(prim.indices >= 0);
@@ -1216,109 +1212,143 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						}
 					}
 				}
+			}
 
-				for (size_t i = 0; i < mesh.morph_targets.size(); i++)
+
+			mesh.morph_targets.resize(prim.targets.size());
+			for (size_t i = 0; i < prim.targets.size(); i++)
+			{
+				MeshComponent::MorphTarget& morph_target = mesh.morph_targets[i];
+				for (auto& attr : prim.targets[i])
 				{
-					for (auto& attr : prim.targets[i])
+					const std::string& attr_name = attr.first;
+					int attr_data = attr.second;
+
+					const tinygltf::Accessor& accessor = state.gltfModel.accessors[attr_data];
+
+					if (!attr_name.compare("POSITION"))
 					{
-						const std::string& attr_name = attr.first;
-						int attr_data = attr.second;
-
-						const tinygltf::Accessor& accessor = state.gltfModel.accessors[attr_data];
-						const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
-						const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
-
-						int stride = accessor.ByteStride(bufferView);
-						size_t vertexCount = accessor.count;
-
-						const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-
-						if (!attr_name.compare("POSITION"))
+						if (accessor.sparse.isSparse)
 						{
-							mesh.morph_targets[i].vertex_positions.resize(vertexOffset + vertexCount);
-							for (size_t j = 0; j < vertexCount; ++j)
-							{
-								mesh.morph_targets[i].vertex_positions[vertexOffset + j] = ((XMFLOAT3*)data)[j];
-							}
+							auto& sparse = accessor.sparse;
+							const tinygltf::BufferView& sparse_indices_view = state.gltfModel.bufferViews[sparse.indices.bufferView];
+							const tinygltf::BufferView& sparse_values_view = state.gltfModel.bufferViews[sparse.values.bufferView];
+							const tinygltf::Buffer& sparse_indices_buffer = state.gltfModel.buffers[sparse_indices_view.buffer];
+							const tinygltf::Buffer& sparse_values_buffer = state.gltfModel.buffers[sparse_values_view.buffer];
+							const uint8_t* sparse_indices_data = sparse_indices_buffer.data.data() + sparse.indices.byteOffset + sparse_indices_view.byteOffset;
+							const uint8_t* sparse_values_data = sparse_values_buffer.data.data() + sparse.values.byteOffset + sparse_values_view.byteOffset;
+							const size_t sparseOffset = morph_target.sparse_indices.size();
+							morph_target.vertex_positions.resize(sparseOffset + sparse.count);
+							morph_target.sparse_indices.resize(sparseOffset + sparse.count);
 
-							if (accessor.sparse.isSparse)
+							switch (sparse.indices.componentType)
 							{
-								auto& sparse = accessor.sparse;
-								const tinygltf::BufferView& sparse_indices_view = state.gltfModel.bufferViews[sparse.indices.bufferView];
-								const tinygltf::BufferView& sparse_values_view = state.gltfModel.bufferViews[sparse.values.bufferView];
-								const tinygltf::Buffer& sparse_indices_buffer = state.gltfModel.buffers[sparse_indices_view.buffer];
-								const tinygltf::Buffer& sparse_values_buffer = state.gltfModel.buffers[sparse_values_view.buffer];
-								const uint8_t* sparse_indices_data = sparse_indices_buffer.data.data() + sparse.indices.byteOffset + sparse_indices_view.byteOffset;
-								const uint8_t* sparse_values_data = sparse_values_buffer.data.data() + sparse.values.byteOffset + sparse_values_view.byteOffset;
-								switch (sparse.indices.componentType)
+							default:
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+								for (int s = 0; s < sparse.count; ++s)
 								{
-								default:
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].vertex_positions[sparse_indices_data[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].vertex_positions[((const uint16_t*)sparse_indices_data)[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].vertex_positions[((const uint32_t*)sparse_indices_data)[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + sparse_indices_data[s];
+									morph_target.vertex_positions[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
 								}
+								break;
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+								for (int s = 0; s < sparse.count; ++s)
+								{
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + ((const uint16_t*)sparse_indices_data)[s];
+									morph_target.vertex_positions[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
+								}
+								break;
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+								for (int s = 0; s < sparse.count; ++s)
+								{
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + ((const uint32_t*)sparse_indices_data)[s];
+									morph_target.vertex_positions[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
+								}
+								break;
 							}
 						}
-						else if (!attr_name.compare("NORMAL"))
+						else
 						{
-							mesh.morph_targets[i].vertex_normals.resize(vertexOffset + vertexCount);
+							const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+							const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
+
+							int stride = accessor.ByteStride(bufferView);
+							size_t vertexCount = accessor.count;
+
+							const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+							morph_target.vertex_positions.resize(vertexOffset + vertexCount);
 							for (size_t j = 0; j < vertexCount; ++j)
 							{
-								mesh.morph_targets[i].vertex_normals[vertexOffset + j] = ((XMFLOAT3*)data)[j];
+								morph_target.vertex_positions[vertexOffset + j] = ((XMFLOAT3*)data)[j];
 							}
+						}
+					}
+					else if (!attr_name.compare("NORMAL"))
+					{
+						if (accessor.sparse.isSparse)
+						{
+							auto& sparse = accessor.sparse;
+							const tinygltf::BufferView& sparse_indices_view = state.gltfModel.bufferViews[sparse.indices.bufferView];
+							const tinygltf::BufferView& sparse_values_view = state.gltfModel.bufferViews[sparse.values.bufferView];
+							const tinygltf::Buffer& sparse_indices_buffer = state.gltfModel.buffers[sparse_indices_view.buffer];
+							const tinygltf::Buffer& sparse_values_buffer = state.gltfModel.buffers[sparse_values_view.buffer];
+							const uint8_t* sparse_indices_data = sparse_indices_buffer.data.data() + sparse.indices.byteOffset + sparse_indices_view.byteOffset;
+							const uint8_t* sparse_values_data = sparse_values_buffer.data.data() + sparse.values.byteOffset + sparse_values_view.byteOffset;
+							const size_t sparseOffset = morph_target.sparse_indices.size();
+							morph_target.vertex_normals.resize(sparseOffset + sparse.count);
+							morph_target.sparse_indices.resize(sparseOffset + sparse.count);
 
-							if (accessor.sparse.isSparse)
+							switch (sparse.indices.componentType)
 							{
-								auto& sparse = accessor.sparse;
-								const tinygltf::BufferView& sparse_indices_view = state.gltfModel.bufferViews[sparse.indices.bufferView];
-								const tinygltf::BufferView& sparse_values_view = state.gltfModel.bufferViews[sparse.values.bufferView];
-								const tinygltf::Buffer& sparse_indices_buffer = state.gltfModel.buffers[sparse_indices_view.buffer];
-								const tinygltf::Buffer& sparse_values_buffer = state.gltfModel.buffers[sparse_values_view.buffer];
-								const uint8_t* sparse_indices_data = sparse_indices_buffer.data.data() + sparse.indices.byteOffset + sparse_indices_view.byteOffset;
-								const uint8_t* sparse_values_data = sparse_values_buffer.data.data() + sparse.values.byteOffset + sparse_values_view.byteOffset;
-								switch (sparse.indices.componentType)
+							default:
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+								for (int s = 0; s < sparse.count; ++s)
 								{
-								default:
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].vertex_normals[sparse_indices_data[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].vertex_normals[((const uint16_t*)sparse_indices_data)[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].vertex_normals[((const uint32_t*)sparse_indices_data)[s]] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + sparse_indices_data[s];
+									morph_target.vertex_normals[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
 								}
+								break;
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+								for (int s = 0; s < sparse.count; ++s)
+								{
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + ((const uint16_t*)sparse_indices_data)[s];
+									morph_target.vertex_normals[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
+								}
+								break;
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+								for (int s = 0; s < sparse.count; ++s)
+								{
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + ((const uint32_t*)sparse_indices_data)[s];
+									morph_target.vertex_normals[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
+								}
+								break;
+							}
+						}
+						else
+						{
+							const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+							const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
+
+							int stride = accessor.ByteStride(bufferView);
+							size_t vertexCount = accessor.count;
+
+							const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+							morph_target.vertex_normals.resize(vertexOffset + vertexCount);
+							for (size_t j = 0; j < vertexCount; ++j)
+							{
+								morph_target.vertex_normals[vertexOffset + j] = ((XMFLOAT3*)data)[j];
 							}
 						}
 					}
 				}
 			}
+		}
 
+		for (size_t i = 0; i < x.weights.size(); i++)
+		{
+			mesh.morph_targets[i].weight = static_cast<float_t>(x.weights[i]);
 		}
 
 		mesh.CreateRenderData();
@@ -1587,8 +1617,146 @@ void Import_Extension_VRM(LoaderState& state)
 		TransformComponent& transform = *state.scene->transforms.GetComponent(state.rootEntity);
 		transform.RotateRollPitchYaw(XMFLOAT3(0, XM_PI, 0));
 
+		if (ext_vrm->second.Has("blendShapeMaster"))
+		{
+			// https://github.com/vrm-c/vrm-specification/tree/master/specification/0.0#vrm-extension-morph-setting-jsonextensionsvrmblendshapemaster
+			Entity entity = CreateEntity();
+			ExpressionComponent& component = state.scene->expressions.Create(entity);
+			state.scene->Component_Attach(entity, state.rootEntity);
+			state.scene->names.Create(entity) = state.name + "_blendShapeMaster";
+
+			const auto& blendShapeMaster = ext_vrm->second.Get("blendShapeMaster");
+			if (blendShapeMaster.Has("blendShapeGroups"))
+			{
+				const auto& blendShapeGroups = blendShapeMaster.Get("blendShapeGroups");
+				for (size_t blendShapeGroup_index = 0; blendShapeGroup_index < blendShapeGroups.ArrayLen(); ++blendShapeGroup_index)
+				{
+					const auto& blendShapeGroup = blendShapeGroups.Get(int(blendShapeGroup_index));
+					ExpressionComponent::Expression& expression = component.expressions.emplace_back();
+
+					if (blendShapeGroup.Has("name"))
+					{
+						const auto& value = blendShapeGroup.Get("name");
+						expression.name = value.Get<std::string>();
+					}
+					if (blendShapeGroup.Has("presetName"))
+					{
+						const auto& value = blendShapeGroup.Get("presetName");
+						std::string presetName = wi::helper::toUpper(value.Get<std::string>());
+
+						if (!presetName.compare("JOY"))
+						{
+							expression.preset = ExpressionComponent::Preset::Happy;
+						}
+						else if (!presetName.compare("ANGRY"))
+						{
+							expression.preset = ExpressionComponent::Preset::Angry;
+						}
+						else if (!presetName.compare("SORROW"))
+						{
+							expression.preset = ExpressionComponent::Preset::Sad;
+						}
+						else if (!presetName.compare("FUN"))
+						{
+							expression.preset = ExpressionComponent::Preset::Relaxed;
+						}
+						else if (!presetName.compare("A"))
+						{
+							expression.preset = ExpressionComponent::Preset::Aa;
+						}
+						else if (!presetName.compare("I"))
+						{
+							expression.preset = ExpressionComponent::Preset::Ih;
+						}
+						else if (!presetName.compare("U"))
+						{
+							expression.preset = ExpressionComponent::Preset::Ou;
+						}
+						else if (!presetName.compare("E"))
+						{
+							expression.preset = ExpressionComponent::Preset::Ee;
+						}
+						else if (!presetName.compare("O"))
+						{
+							expression.preset = ExpressionComponent::Preset::Oh;
+						}
+						else if (!presetName.compare("BLINK"))
+						{
+							expression.preset = ExpressionComponent::Preset::Blink;
+						}
+						else if (!presetName.compare("BLINK_L"))
+						{
+							expression.preset = ExpressionComponent::Preset::BlinkLeft;
+						}
+						else if (!presetName.compare("BLINK_R"))
+						{
+							expression.preset = ExpressionComponent::Preset::BlinkRight;
+						}
+						else if (!presetName.compare("LOOKUP"))
+						{
+							expression.preset = ExpressionComponent::Preset::LookUp;
+						}
+						else if (!presetName.compare("LOOKDOWN"))
+						{
+							expression.preset = ExpressionComponent::Preset::LookDown;
+						}
+						else if (!presetName.compare("LOOKLEFT"))
+						{
+							expression.preset = ExpressionComponent::Preset::LookLeft;
+						}
+						else if (!presetName.compare("LOOKRIGHT"))
+						{
+							expression.preset = ExpressionComponent::Preset::LookRight;
+						}
+						else if (!presetName.compare("NEUTRAL"))
+						{
+							expression.preset = ExpressionComponent::Preset::Neutral;
+						}
+
+						const size_t preset_index = (size_t)expression.preset;
+						if (preset_index < arraysize(component.presets))
+						{
+							component.presets[preset_index] = (int)component.expressions.size() - 1;
+						}
+					}
+					if (blendShapeGroup.Has("isBinary"))
+					{
+						const auto& value = blendShapeGroup.Get("isBinary");
+						expression.SetBinary(value.Get<bool>());
+					}
+					if (blendShapeGroup.Has("binds"))
+					{
+						const auto& binds = blendShapeGroup.Get("binds");
+						for (size_t bind_index = 0; bind_index < binds.ArrayLen(); ++bind_index)
+						{
+							const auto& bind = binds.Get(int(bind_index));
+							ExpressionComponent::Expression::MorphTargetBinding& morph_target_binding = expression.morph_target_bindings.emplace_back();
+
+							if (bind.Has("mesh"))
+							{
+								const auto& value = bind.Get("mesh");
+								morph_target_binding.meshID = state.scene->meshes.GetEntity(value.GetNumberAsInt());
+							}
+							if (bind.Has("index"))
+							{
+								const auto& value = bind.Get("index");
+								morph_target_binding.index = value.GetNumberAsInt();
+							}
+							if (bind.Has("weight"))
+							{
+								const auto& value = bind.Get("weight");
+								morph_target_binding.weight = float(value.GetNumberAsInt()) / 100.0f;
+							}
+						}
+					}
+				}
+			}
+		}
+
 		if (ext_vrm->second.Has("secondaryAnimation"))
 		{
+			// https://github.com/vrm-c/vrm-specification/tree/master/specification/0.0#vrm-extension-spring-bone-settings-jsonextensionsvrmsecondaryanimation
+
 			const auto& secondaryAnimation = ext_vrm->second.Get("secondaryAnimation");
 			if (secondaryAnimation.Has("boneGroups"))
 			{
@@ -1721,9 +1889,182 @@ void Import_Extension_VRM(LoaderState& state)
 
 void Import_Extension_VRMC(LoaderState& state)
 {
+	auto ext_vrm = state.gltfModel.extensions.find("VRMC_vrm");
+	if (ext_vrm != state.gltfModel.extensions.end())
+	{
+		if (ext_vrm->second.Has("expressions"))
+		{
+			// https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0-beta/expressions.md#vrmc_vrmexpressions
+			Entity entity = CreateEntity();
+			ExpressionComponent& component = state.scene->expressions.Create(entity);
+			state.scene->Component_Attach(entity, state.rootEntity);
+			state.scene->names.Create(entity) = state.name + "_expressions";
+
+			const auto& expressions = ext_vrm->second.Get("expressions");
+			static const char* expression_types[] = {
+				"preset",
+				"custom",
+			};
+
+			for (auto& expression_type : expression_types)
+			{
+				if (expressions.Has(expression_type))
+				{
+					const auto& names = expressions.Get(expression_type);
+					for (auto& name : names.Keys())
+					{
+						const auto& vrm_expression = names.Get(name);
+						ExpressionComponent::Expression& expression = component.expressions.emplace_back();
+
+						if (!strcmp(expression_type, "preset"))
+						{
+							std::string presetName = wi::helper::toUpper(name);
+							if (!presetName.compare("HAPPY"))
+							{
+								expression.preset = ExpressionComponent::Preset::Happy;
+							}
+							else if (!presetName.compare("ANGRY"))
+							{
+								expression.preset = ExpressionComponent::Preset::Angry;
+							}
+							else if (!presetName.compare("SAD"))
+							{
+								expression.preset = ExpressionComponent::Preset::Sad;
+							}
+							else if (!presetName.compare("RELAXED"))
+							{
+								expression.preset = ExpressionComponent::Preset::Relaxed;
+							}
+							else if (!presetName.compare("SURPRISED"))
+							{
+								expression.preset = ExpressionComponent::Preset::Surprised;
+							}
+							else if (!presetName.compare("AA"))
+							{
+								expression.preset = ExpressionComponent::Preset::Aa;
+							}
+							else if (!presetName.compare("IH"))
+							{
+								expression.preset = ExpressionComponent::Preset::Ih;
+							}
+							else if (!presetName.compare("OU"))
+							{
+								expression.preset = ExpressionComponent::Preset::Ou;
+							}
+							else if (!presetName.compare("EE"))
+							{
+								expression.preset = ExpressionComponent::Preset::Ee;
+							}
+							else if (!presetName.compare("OH"))
+							{
+								expression.preset = ExpressionComponent::Preset::Oh;
+							}
+							else if (!presetName.compare("BLINK"))
+							{
+								expression.preset = ExpressionComponent::Preset::Blink;
+							}
+							else if (!presetName.compare("BLINKLEFT"))
+							{
+								expression.preset = ExpressionComponent::Preset::BlinkLeft;
+							}
+							else if (!presetName.compare("BLINKRIGHT"))
+							{
+								expression.preset = ExpressionComponent::Preset::BlinkRight;
+							}
+							else if (!presetName.compare("LOOKUP"))
+							{
+								expression.preset = ExpressionComponent::Preset::LookUp;
+							}
+							else if (!presetName.compare("LOOKDOWN"))
+							{
+								expression.preset = ExpressionComponent::Preset::LookDown;
+							}
+							else if (!presetName.compare("LOOKLEFT"))
+							{
+								expression.preset = ExpressionComponent::Preset::LookLeft;
+							}
+							else if (!presetName.compare("LOOKRIGHT"))
+							{
+								expression.preset = ExpressionComponent::Preset::LookRight;
+							}
+							else if (!presetName.compare("NEUTRAL"))
+							{
+								expression.preset = ExpressionComponent::Preset::Neutral;
+							}
+
+							const size_t preset_index = (size_t)expression.preset;
+							if (preset_index < arraysize(component.presets))
+							{
+								component.presets[preset_index] = (int)component.expressions.size() - 1;
+							}
+						}
+						expression.name = name;
+
+						if (vrm_expression.Has("isBinary"))
+						{
+							const auto& value = vrm_expression.Get("isBinary");
+							expression.SetBinary(value.Get<bool>());
+						}
+						if (vrm_expression.Has("overrideMouth"))
+						{
+							const auto& value = vrm_expression.Get("overrideMouth");
+							const std::string& override_enum = value.Get<std::string>();
+							if (!override_enum.compare("block"))
+							{
+								expression.override_mouth = ExpressionComponent::Override::Block;
+							}
+							if (!override_enum.compare("blend"))
+							{
+								expression.override_mouth = ExpressionComponent::Override::Blend;
+							}
+						}
+						if (vrm_expression.Has("morphTargetBinds"))
+						{
+							const auto& morpTargetBinds = vrm_expression.Get("morphTargetBinds");
+							for (size_t morphTargetBind_index = 0; morphTargetBind_index < morpTargetBinds.ArrayLen(); ++morphTargetBind_index)
+							{
+								const auto& morphTargetBind = morpTargetBinds.Get(int(morphTargetBind_index));
+								ExpressionComponent::Expression::MorphTargetBinding& morph_target_binding = expression.morph_target_bindings.emplace_back();
+
+								if (morphTargetBind.Has("node"))
+								{
+									const auto& value = morphTargetBind.Get("node");
+									morph_target_binding.meshID = state.scene->meshes.GetEntity(state.gltfModel.nodes[value.GetNumberAsInt()].mesh);
+								}
+								if (morphTargetBind.Has("index"))
+								{
+									const auto& value = morphTargetBind.Get("index");
+									morph_target_binding.index = value.GetNumberAsInt();
+								}
+								if (morphTargetBind.Has("weight"))
+								{
+									const auto& value = morphTargetBind.Get("weight");
+									morph_target_binding.weight = float(value.GetNumberAsDouble());
+								}
+							}
+						}
+						//if (vrm_expression.Has("materialColorBinds"))
+						//{
+						//	const auto& materialColorBinds = vrm_expression.Get("materialColorBinds");
+						//	// TODO: find example model and implement
+						//}
+						//if (vrm_expression.Has("textureTransformBinds "))
+						//{
+						//	const auto& textureTransformBinds = vrm_expression.Get("textureTransformBinds");
+						//	// TODO: find example model and implement
+						//}
+
+					}
+				}
+			}
+		}
+	}
+
 	auto ext_vrmc_springbone = state.gltfModel.extensions.find("VRMC_springBone");
 	if (ext_vrmc_springbone != state.gltfModel.extensions.end())
 	{
+		// https://github.com/vrm-c/vrm-specification/tree/master/specification/VRMC_springBone-1.0-beta
+
 		// Colliders:
 		if (ext_vrmc_springbone->second.Has("colliders"))
 		{

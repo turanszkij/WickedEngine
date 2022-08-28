@@ -34,6 +34,7 @@ set (SOURCE_FILES
 	SoftBodyWindow.cpp
 	ColliderWindow.cpp
 	HierarchyWindow.cpp
+	ExpressionWindow.cpp
 	OptionsWindow.cpp
 	ComponentsWindow.cpp
 	TerrainGenerator.cpp

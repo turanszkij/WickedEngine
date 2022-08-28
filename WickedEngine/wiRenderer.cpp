@@ -3839,7 +3839,7 @@ void UpdateRenderData(
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
 
-			if (mesh.dirty_morph)
+			if (mesh.dirty_morph && !mesh.vertex_positions_morphed.empty())
 			{
 				mesh.dirty_morph = false;
 				GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh.vb_pos_nor_wind.size, cmd);
