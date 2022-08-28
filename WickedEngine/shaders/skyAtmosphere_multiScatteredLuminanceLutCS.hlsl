@@ -16,7 +16,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	float2 pixelPosition = float2(DTid.xy) + 0.5;
 	float2 uv = pixelPosition * rcp(multiScatteringLUTRes);
-
     
 	uv = float2(FromSubUvsToUnit(uv.x, multiScatteringLUTRes.x), FromSubUvsToUnit(uv.y, multiScatteringLUTRes.y));
 
@@ -39,11 +38,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		sampling.variableSampleCount = false;
 		sampling.sampleCountIni = 20; // a minimum set of step is required for accuracy unfortunately
 	}
-	const bool ground = true;
-	const float depthBufferWorldPos = 0.0;
+	const float tDepth = 0.0;
 	const bool opaque = false;
+	const bool ground = true;
 	const bool mieRayPhase = false;
 	const bool multiScatteringApprox = false;
+	const bool volumetricCloudShadow = false;
 
 	const float sphereSolidAngle = 4.0 * PI;
 	const float isotropicPhase = 1.0 / sphereSolidAngle;
@@ -68,7 +68,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		worldDirection.z = cosPhi;
 		SingleScatteringResult result = IntegrateScatteredLuminance(
             atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance,
-            sampling, ground, depthBufferWorldPos, opaque, mieRayPhase, multiScatteringApprox, transmittanceLUT, multiScatteringLUT);
+            sampling, tDepth, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, transmittanceLUT, multiScatteringLUT);
 
 		MultiScatAs1SharedMem[DTid.z] = result.multiScatAs1 * sphereSolidAngle / (sqrtSample * sqrtSample);
 		LSharedMem[DTid.z] = result.L * sphereSolidAngle / (sqrtSample * sqrtSample);

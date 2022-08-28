@@ -1,8 +1,8 @@
 #include "globals.hlsli"
 #include "volumetricCloudsHF.hlsli"
 #include "skyAtmosphere.hlsli"
-#include "ShaderInterop_Postprocess.h"
 #include "lightingHF.hlsli"
+#include "ShaderInterop_Postprocess.h"
 
 /**
  * Cloud pass:
@@ -610,17 +610,55 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 
 	
 	float tDepth = depthWeightsSum == 0.0 ? tMax : depthWeightedSum / max(depthWeightsSum, 0.0000000001);
-	//float3 absoluteWorldPosition = rayOrigin + rayDirection * tDepth; // Could be used for other effects later that require worldPosition
+	//float3 cloudWorldPosition = rayOrigin + rayDirection * tDepth;
 
 	float approxTransmittance = dot(transmittanceToView.rgb, 1.0 / 3.0);
 	float grayScaleTransmittance = approxTransmittance < GetWeather().volumetric_clouds.TransmittanceThreshold ? 0.0 : approxTransmittance;
+	
+	// Apply aerial perspective
+	if (depthWeightsSum > 0.0 && GetFrame().options & OPTION_BIT_REALISTIC_SKY)
+	{
+		float3 worldPosition = GetCameraPlanetPos(atmosphere, rayOrigin);
+		float3 worldDirection = rayDirection;
+		
+		// Move to top atmosphere as the starting point for ray marching.
+		// This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
+		if (MoveToTopAtmosphere(worldPosition, worldDirection, atmosphere.topRadius))
+		{
+			SamplingParameters sampling;
+			{
+				sampling.variableSampleCount = true;
+				sampling.sampleCountIni = 0.0f;
+				sampling.rayMarchMinMaxSPP = float2(10, 25);
+				sampling.distanceSPPMaxInv = 0.01;
+#ifdef VOLUMETRICCLOUD_CAPTURE
+				sampling.perPixelNoise = false;
+#else
+				sampling.perPixelNoise = true;
+#endif
+			}
+			const bool opaque = true;
+			const bool ground = false;
+			const bool mieRayPhase = true;
+			const bool multiScatteringApprox = true;
+			const bool volumetricCloudShadow = true;
+			SingleScatteringResult ss = IntegrateScatteredLuminance(
+				atmosphere, DTid.xy, worldPosition, worldDirection, sunDirection, sunIlluminance,
+				sampling, tDepth * M_TO_SKY_UNIT, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, texture_transmittancelut, texture_multiscatteringlut);
 
+			float transmittance = dot(ss.transmittance, float3(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f));
+			float4 aerialPerspective = float4(ss.L, transmittance);
+			
+			luminance = aerialPerspective.a * luminance + aerialPerspective.rgb * (1.0 - approxTransmittance);
+			//luminance = aerialPerspective.rgb * (1.0 - approxTransmittance); // Debug
+		}
+	}
+	
 	float4 color = float4(luminance, 1.0 - grayScaleTransmittance);
 	
     // Blend clouds with horizon
 	if (depthWeightsSum > 0.0)
 	{
-		// Only apply to clouds
 		float atmosphereBlend = CalculateAtmosphereBlend(tDepth);
 		color *= 1.0 - atmosphereBlend;
 	}

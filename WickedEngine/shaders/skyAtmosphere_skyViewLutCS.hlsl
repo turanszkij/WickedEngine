@@ -57,15 +57,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		sampling.sampleCountIni = 30;
 		sampling.rayMarchMinMaxSPP = float2(4, 14);
 		sampling.distanceSPPMaxInv = 0.01;
+		sampling.perPixelNoise = false;
 	}
+	const float tDepth = 0.0;
 	const bool ground = false;
-	const float depthBufferWorldPos = 0.0;
 	const bool opaque = false;
 	const bool mieRayPhase = true;
 	const bool multiScatteringApprox = true;
+	const bool volumetricCloudShadow = false;
 	SingleScatteringResult ss = IntegrateScatteredLuminance(
         atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance,
-        sampling, ground, depthBufferWorldPos, opaque, mieRayPhase, multiScatteringApprox, transmittanceLUT, multiScatteringLUT);
+        sampling, tDepth, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, transmittanceLUT, multiScatteringLUT);
 
 	float3 L = ss.L;
     

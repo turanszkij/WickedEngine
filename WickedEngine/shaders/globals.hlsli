@@ -210,6 +210,9 @@ struct PrimitiveID
 #define sqr(a)		((a)*(a))
 #define pow5(x) pow(x, 5)
 
+#define M_TO_SKY_UNIT 0.001f // Engine units are in meters
+#define SKY_UNIT_TO_M (1.0 / M_TO_SKY_UNIT)
+
 // attribute computation with barycentric interpolation
 //	a0 : attribute at triangle corner 0
 //	a1 : attribute at triangle corner 1

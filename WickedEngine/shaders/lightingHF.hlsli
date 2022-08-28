@@ -116,32 +116,6 @@ inline float3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized)
 	return sample_shadow(shadow_uv, remapped_distance);
 }
 
-inline float shadow_2D_volumetricclouds(float3 P)
-{
-	// Project into shadow map space (no need to divide by .w because ortho projection!):
-	float3 shadow_pos = mul(GetFrame().cloudShadowLightSpaceMatrix, float4(P, 1)).xyz;
-	float3 shadow_uv = clipspace_to_uv(shadow_pos);
-
-	[branch]
-	if (is_saturated(shadow_uv))
-	{
-		float cloudShadowSampleZ = shadow_pos.z;
-
-		Texture2D texture_volumetricclouds_shadow = bindless_textures[GetFrame().texture_volumetricclouds_shadow_index];
-		float3 cloudShadowData = texture_volumetricclouds_shadow.SampleLevel(sampler_linear_clamp, shadow_uv.xy, 0.0f).rgb;
-
-		float sampleDepthKm = saturate(1.0 - cloudShadowSampleZ) * GetFrame().cloudShadowFarPlaneKm;
-		
-		float opticalDepth = cloudShadowData.g * (max(0.0f, cloudShadowData.r - sampleDepthKm) * SKY_UNIT_TO_M);
-		opticalDepth = min(cloudShadowData.b, opticalDepth);
-
-		float transmittance = saturate(exp(-opticalDepth));
-		return transmittance;
-	}
-
-	return 1.0;
-}
-
 inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
 {
 	float3 L = light.GetDirection();
