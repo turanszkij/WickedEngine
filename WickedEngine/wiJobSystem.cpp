@@ -187,7 +187,7 @@ namespace wi::jobsystem
 				handle_error_en(ret, std::string(" pthread_setaffinity_np[" + std::to_string(threadID) + ']').c_str());
 
 			// Name the thread
-			std::string thread_name = "wi::jobsystem_" + std::to_string(threadID);
+			std::string thread_name = "wi::job::" + std::to_string(threadID);
 			ret = pthread_setname_np(worker.native_handle(), thread_name.c_str());
 			if (ret != 0)
 				handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());
