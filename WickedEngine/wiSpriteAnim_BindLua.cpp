@@ -277,6 +277,8 @@ namespace wi::lua
 		{ nullptr, nullptr }
 	};
 	Luna<MovingTexAnim_BindLua>::PropertyType MovingTexAnim_BindLua::properties[] = {
+		lunaproperty(MovingTexAnim_BindLua, SpeedX),
+		lunaproperty(MovingTexAnim_BindLua, SpeedY),
 		{ nullptr, nullptr }
 	};
 
@@ -355,6 +357,9 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 	Luna<DrawRectAnim_BindLua>::PropertyType DrawRectAnim_BindLua::properties[] = {
+		lunaproperty(DrawRectAnim_BindLua, FrameRate),
+		lunaproperty(DrawRectAnim_BindLua, FrameCount),
+		lunaproperty(DrawRectAnim_BindLua, HorizontalFrameCount),
 		{ NULL, NULL }
 	};
 
