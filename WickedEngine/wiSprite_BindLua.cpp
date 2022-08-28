@@ -16,6 +16,8 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 	Luna<Sprite_BindLua>::PropertyType Sprite_BindLua::properties[] = {
+		lunaproperty(Sprite_BindLua, Params),
+		lunaproperty(Sprite_BindLua, Anim),
 		{ NULL, NULL }
 	};
 
