@@ -188,6 +188,9 @@ namespace wi::lua::scene
 		int GetPosition(lua_State* L);
 		int GetRotation(lua_State* L);
 		int GetScale(lua_State* L);
+		int SetPosition(lua_State* L);
+		int SetRotation(lua_State* L);
+		int SetScale(lua_State* L);
 	};
 
 	class CameraComponent_BindLua
