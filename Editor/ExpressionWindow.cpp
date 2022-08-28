@@ -19,7 +19,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
 
-		editor->GetCurrentScene().colliders.Remove(entity);
+		editor->GetCurrentScene().expressions.Remove(entity);
 
 		editor->RecordEntity(archive, entity);
 
@@ -67,7 +67,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	AddWidget(&blinkCountSlider);
 
 	lookFrequencySlider.Create(0, 1, 0, 1000, "Looks: ");
-	blinkFrequencySlider.SetTooltip("Specifies the number of look aways per second.");
+	lookFrequencySlider.SetTooltip("Specifies the number of look-aways per second.");
 	lookFrequencySlider.SetSize(XMFLOAT2(wid, hei));
 	lookFrequencySlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -159,6 +159,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	AddWidget(&weightSlider);
 
 	overrideMouthCombo.Create("Override Mouth: ");
+	overrideMouthCombo.SetTooltip("Lip sync override control");
 	overrideMouthCombo.SetSize(XMFLOAT2(wid, hei));
 	overrideMouthCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideMouthCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
@@ -187,6 +188,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	AddWidget(&overrideMouthCombo);
 
 	overrideBlinkCombo.Create("Override Blink: ");
+	overrideBlinkCombo.SetTooltip("Blink override control");
 	overrideBlinkCombo.SetSize(XMFLOAT2(wid, hei));
 	overrideBlinkCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideBlinkCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
@@ -215,6 +217,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	AddWidget(&overrideBlinkCombo);
 
 	overrideLookCombo.Create("Override Look: ");
+	overrideLookCombo.SetTooltip("Look-away override control");
 	overrideLookCombo.SetSize(XMFLOAT2(wid, hei));
 	overrideLookCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideLookCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);

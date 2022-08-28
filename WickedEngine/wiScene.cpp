@@ -4133,6 +4133,8 @@ namespace wi::scene
 
 				for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
 				{
+					if (morph.weight <= 0)
+						continue;
 					if (morph.sparse_indices.empty())
 					{
 						for (size_t i = 0; i < morph.vertex_positions.size(); ++i)

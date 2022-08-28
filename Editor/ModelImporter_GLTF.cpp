@@ -1212,139 +1212,143 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						}
 					}
 				}
+			}
 
-				mesh.morph_targets.resize(prim.targets.size());
-				for (size_t i = 0; i < mesh.morph_targets.size(); i++)
+
+			mesh.morph_targets.resize(prim.targets.size());
+			for (size_t i = 0; i < prim.targets.size(); i++)
+			{
+				MeshComponent::MorphTarget& morph_target = mesh.morph_targets[i];
+				for (auto& attr : prim.targets[i])
 				{
-					for (auto& attr : prim.targets[i])
+					const std::string& attr_name = attr.first;
+					int attr_data = attr.second;
+
+					const tinygltf::Accessor& accessor = state.gltfModel.accessors[attr_data];
+
+					if (!attr_name.compare("POSITION"))
 					{
-						const std::string& attr_name = attr.first;
-						int attr_data = attr.second;
-
-						const tinygltf::Accessor& accessor = state.gltfModel.accessors[attr_data];
-
-						if (!attr_name.compare("POSITION"))
+						if (accessor.sparse.isSparse)
 						{
-							if (accessor.sparse.isSparse)
+							auto& sparse = accessor.sparse;
+							const tinygltf::BufferView& sparse_indices_view = state.gltfModel.bufferViews[sparse.indices.bufferView];
+							const tinygltf::BufferView& sparse_values_view = state.gltfModel.bufferViews[sparse.values.bufferView];
+							const tinygltf::Buffer& sparse_indices_buffer = state.gltfModel.buffers[sparse_indices_view.buffer];
+							const tinygltf::Buffer& sparse_values_buffer = state.gltfModel.buffers[sparse_values_view.buffer];
+							const uint8_t* sparse_indices_data = sparse_indices_buffer.data.data() + sparse.indices.byteOffset + sparse_indices_view.byteOffset;
+							const uint8_t* sparse_values_data = sparse_values_buffer.data.data() + sparse.values.byteOffset + sparse_values_view.byteOffset;
+							const size_t sparseOffset = morph_target.sparse_indices.size();
+							morph_target.vertex_positions.resize(sparseOffset + sparse.count);
+							morph_target.sparse_indices.resize(sparseOffset + sparse.count);
+
+							switch (sparse.indices.componentType)
 							{
-								auto& sparse = accessor.sparse;
-								const tinygltf::BufferView& sparse_indices_view = state.gltfModel.bufferViews[sparse.indices.bufferView];
-								const tinygltf::BufferView& sparse_values_view = state.gltfModel.bufferViews[sparse.values.bufferView];
-								const tinygltf::Buffer& sparse_indices_buffer = state.gltfModel.buffers[sparse_indices_view.buffer];
-								const tinygltf::Buffer& sparse_values_buffer = state.gltfModel.buffers[sparse_values_view.buffer];
-								const uint8_t* sparse_indices_data = sparse_indices_buffer.data.data() + sparse.indices.byteOffset + sparse_indices_view.byteOffset;
-								const uint8_t* sparse_values_data = sparse_values_buffer.data.data() + sparse.values.byteOffset + sparse_values_view.byteOffset;
-								mesh.morph_targets[i].vertex_positions.resize(sparse.count);
-								mesh.morph_targets[i].sparse_indices.resize(sparse.count);
-
-								switch (sparse.indices.componentType)
+							default:
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+								for (int s = 0; s < sparse.count; ++s)
 								{
-								default:
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + sparse_indices_data[s];
-										mesh.morph_targets[i].vertex_positions[s] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + ((const uint16_t*)sparse_indices_data)[s];
-										mesh.morph_targets[i].vertex_positions[s] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + ((const uint32_t*)sparse_indices_data)[s];
-										mesh.morph_targets[i].vertex_positions[s] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + sparse_indices_data[s];
+									morph_target.vertex_positions[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
 								}
-							}
-							else
-							{
-								const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
-								const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
-
-								int stride = accessor.ByteStride(bufferView);
-								size_t vertexCount = accessor.count;
-
-								const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-
-								mesh.morph_targets[i].vertex_positions.resize(vertexOffset + vertexCount);
-								for (size_t j = 0; j < vertexCount; ++j)
+								break;
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+								for (int s = 0; s < sparse.count; ++s)
 								{
-									mesh.morph_targets[i].vertex_positions[vertexOffset + j] = ((XMFLOAT3*)data)[j];
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + ((const uint16_t*)sparse_indices_data)[s];
+									morph_target.vertex_positions[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
 								}
+								break;
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+								for (int s = 0; s < sparse.count; ++s)
+								{
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + ((const uint32_t*)sparse_indices_data)[s];
+									morph_target.vertex_positions[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
+								}
+								break;
 							}
 						}
-						else if (!attr_name.compare("NORMAL"))
+						else
 						{
-							if (accessor.sparse.isSparse)
-							{
-								auto& sparse = accessor.sparse;
-								const tinygltf::BufferView& sparse_indices_view = state.gltfModel.bufferViews[sparse.indices.bufferView];
-								const tinygltf::BufferView& sparse_values_view = state.gltfModel.bufferViews[sparse.values.bufferView];
-								const tinygltf::Buffer& sparse_indices_buffer = state.gltfModel.buffers[sparse_indices_view.buffer];
-								const tinygltf::Buffer& sparse_values_buffer = state.gltfModel.buffers[sparse_values_view.buffer];
-								const uint8_t* sparse_indices_data = sparse_indices_buffer.data.data() + sparse.indices.byteOffset + sparse_indices_view.byteOffset;
-								const uint8_t* sparse_values_data = sparse_values_buffer.data.data() + sparse.values.byteOffset + sparse_values_view.byteOffset;
-								mesh.morph_targets[i].vertex_normals.resize(sparse.count);
-								mesh.morph_targets[i].sparse_indices.resize(sparse.count);
+							const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+							const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
 
-								switch (sparse.indices.componentType)
-								{
-								default:
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + sparse_indices_data[s];
-										mesh.morph_targets[i].vertex_normals[s] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + ((const uint16_t*)sparse_indices_data)[s];
-										mesh.morph_targets[i].vertex_normals[s] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
-								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-									for (int s = 0; s < sparse.count; ++s)
-									{
-										mesh.morph_targets[i].sparse_indices[s] = vertexOffset + ((const uint32_t*)sparse_indices_data)[s];
-										mesh.morph_targets[i].vertex_normals[s] = ((const XMFLOAT3*)sparse_values_data)[s];
-									}
-									break;
-								}
+							int stride = accessor.ByteStride(bufferView);
+							size_t vertexCount = accessor.count;
+
+							const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+							morph_target.vertex_positions.resize(vertexOffset + vertexCount);
+							for (size_t j = 0; j < vertexCount; ++j)
+							{
+								morph_target.vertex_positions[vertexOffset + j] = ((XMFLOAT3*)data)[j];
 							}
-							else
+						}
+					}
+					else if (!attr_name.compare("NORMAL"))
+					{
+						if (accessor.sparse.isSparse)
+						{
+							auto& sparse = accessor.sparse;
+							const tinygltf::BufferView& sparse_indices_view = state.gltfModel.bufferViews[sparse.indices.bufferView];
+							const tinygltf::BufferView& sparse_values_view = state.gltfModel.bufferViews[sparse.values.bufferView];
+							const tinygltf::Buffer& sparse_indices_buffer = state.gltfModel.buffers[sparse_indices_view.buffer];
+							const tinygltf::Buffer& sparse_values_buffer = state.gltfModel.buffers[sparse_values_view.buffer];
+							const uint8_t* sparse_indices_data = sparse_indices_buffer.data.data() + sparse.indices.byteOffset + sparse_indices_view.byteOffset;
+							const uint8_t* sparse_values_data = sparse_values_buffer.data.data() + sparse.values.byteOffset + sparse_values_view.byteOffset;
+							const size_t sparseOffset = morph_target.sparse_indices.size();
+							morph_target.vertex_normals.resize(sparseOffset + sparse.count);
+							morph_target.sparse_indices.resize(sparseOffset + sparse.count);
+
+							switch (sparse.indices.componentType)
 							{
-								const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
-								const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
-
-								int stride = accessor.ByteStride(bufferView);
-								size_t vertexCount = accessor.count;
-
-								const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-
-								mesh.morph_targets[i].vertex_normals.resize(vertexOffset + vertexCount);
-								for (size_t j = 0; j < vertexCount; ++j)
+							default:
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+								for (int s = 0; s < sparse.count; ++s)
 								{
-									mesh.morph_targets[i].vertex_normals[vertexOffset + j] = ((XMFLOAT3*)data)[j];
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + sparse_indices_data[s];
+									morph_target.vertex_normals[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
 								}
+								break;
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+								for (int s = 0; s < sparse.count; ++s)
+								{
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + ((const uint16_t*)sparse_indices_data)[s];
+									morph_target.vertex_normals[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
+								}
+								break;
+							case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+								for (int s = 0; s < sparse.count; ++s)
+								{
+									morph_target.sparse_indices[sparseOffset + s] = vertexOffset + ((const uint32_t*)sparse_indices_data)[s];
+									morph_target.vertex_normals[sparseOffset + s] = ((const XMFLOAT3*)sparse_values_data)[s];
+								}
+								break;
+							}
+						}
+						else
+						{
+							const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+							const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
+
+							int stride = accessor.ByteStride(bufferView);
+							size_t vertexCount = accessor.count;
+
+							const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+							morph_target.vertex_normals.resize(vertexOffset + vertexCount);
+							for (size_t j = 0; j < vertexCount; ++j)
+							{
+								morph_target.vertex_normals[vertexOffset + j] = ((XMFLOAT3*)data)[j];
 							}
 						}
 					}
 				}
-				for (size_t i = 0; i < x.weights.size(); i++)
-				{
-					mesh.morph_targets[i].weight = static_cast<float_t>(x.weights[i]);
-				}
 			}
+		}
 
+		for (size_t i = 0; i < x.weights.size(); i++)
+		{
+			mesh.morph_targets[i].weight = static_cast<float_t>(x.weights[i]);
 		}
 
 		mesh.CreateRenderData();
