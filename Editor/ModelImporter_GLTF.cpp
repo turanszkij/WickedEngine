@@ -1623,7 +1623,7 @@ void Import_Extension_VRM(LoaderState& state)
 			Entity entity = CreateEntity();
 			ExpressionComponent& component = state.scene->expressions.Create(entity);
 			state.scene->Component_Attach(entity, state.rootEntity);
-			state.scene->names.Create(entity) = state.name + "_expression_mastering";
+			state.scene->names.Create(entity) = state.name + "_blendShapeMaster";
 
 			const auto& blendShapeMaster = ext_vrm->second.Get("blendShapeMaster");
 			if (blendShapeMaster.Has("blendShapeGroups"))
@@ -1898,7 +1898,7 @@ void Import_Extension_VRMC(LoaderState& state)
 			Entity entity = CreateEntity();
 			ExpressionComponent& component = state.scene->expressions.Create(entity);
 			state.scene->Component_Attach(entity, state.rootEntity);
-			state.scene->names.Create(entity) = state.name + "_expression_mastering";
+			state.scene->names.Create(entity) = state.name + "_expressions";
 
 			const auto& expressions = ext_vrm->second.Get("expressions");
 			static const char* expression_types[] = {

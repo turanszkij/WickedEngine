@@ -1474,7 +1474,7 @@ namespace wi::scene
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			for (int index : presets)
+			for (int& index : presets)
 			{
 				archive >> index;
 			}
@@ -1513,6 +1513,8 @@ namespace wi::scene
 					archive >> expression.morph_target_bindings[i].index;
 					archive >> expression.morph_target_bindings[i].weight;
 				}
+
+				expression.SetDirty();
 			}
 		}
 		else
