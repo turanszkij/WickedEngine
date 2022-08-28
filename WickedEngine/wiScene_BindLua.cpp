@@ -1775,15 +1775,12 @@ Luna<TransformComponent_BindLua>::FunctionType TransformComponent_BindLua::metho
 	lunamethod(TransformComponent_BindLua, GetPosition),
 	lunamethod(TransformComponent_BindLua, GetRotation),
 	lunamethod(TransformComponent_BindLua, GetScale),
-	lunamethod(TransformComponent_BindLua, SetPosition),
-	lunamethod(TransformComponent_BindLua, SetRotation),
-	lunamethod(TransformComponent_BindLua, SetScale),
 	{ NULL, NULL }
 };
 Luna<TransformComponent_BindLua>::PropertyType TransformComponent_BindLua::properties[] = {
-	lunaproperty(TransformComponent_BindLua, Position),
-	lunaproperty(TransformComponent_BindLua, Rotation),
-	lunaproperty(TransformComponent_BindLua, Scale),
+	lunaproperty(TransformComponent_BindLua, Translation_local),
+	lunaproperty(TransformComponent_BindLua, Rotation_local),
+	lunaproperty(TransformComponent_BindLua, Scale_local),
 	{ NULL, NULL }
 };
 
@@ -1997,43 +1994,16 @@ int TransformComponent_BindLua::GetPosition(lua_State* L)
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
 	return 1;
 }
-int TransformComponent_BindLua::SetPosition(lua_State* L)
-{
-	Vector_BindLua* get = Luna<Vector_BindLua>::lightcheck(L, 1);
-	if (get != nullptr)
-	{
-		XMStoreFloat3(&component->translation_local, XMLoadFloat4(get));
-	}
-	return 1;
-}
 int TransformComponent_BindLua::GetRotation(lua_State* L)
 {
 	XMVECTOR V = component->GetRotationV();
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
 	return 1;
 }
-int TransformComponent_BindLua::SetRotation(lua_State* L)
-{
-	Vector_BindLua* get = Luna<Vector_BindLua>::lightcheck(L, 1);
-	if (get != nullptr)
-	{
-		XMStoreFloat4(&component->rotation_local, XMLoadFloat4(get));
-	}
-	return 1;
-}
 int TransformComponent_BindLua::GetScale(lua_State* L)
 {
 	XMVECTOR V = component->GetScaleV();
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
-	return 1;
-}
-int TransformComponent_BindLua::SetScale(lua_State* L)
-{
-	Vector_BindLua* get = Luna<Vector_BindLua>::lightcheck(L, 1);
-	if (get != nullptr)
-	{
-		XMStoreFloat3(&component->scale_local, XMLoadFloat4(get));
-	}
 	return 1;
 }
 

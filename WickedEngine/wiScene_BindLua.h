@@ -172,9 +172,22 @@ namespace wi::lua::scene
 		static Luna<TransformComponent_BindLua>::FunctionType methods[];
 		static Luna<TransformComponent_BindLua>::PropertyType properties[];
 
-		TransformComponent_BindLua(wi::scene::TransformComponent* component) :component(component) {}
+		TransformComponent_BindLua(wi::scene::TransformComponent* component) :component(component)
+		{
+			Translation_local = VectorProperty(&component->translation_local);
+			Rotation_local = VectorProperty(&component->rotation_local);
+			Scale_local = VectorProperty(&component->scale_local);
+		}
 		TransformComponent_BindLua(lua_State *L);
 		~TransformComponent_BindLua();
+
+		VectorProperty Translation_local;
+		VectorProperty Rotation_local;
+		VectorProperty Scale_local;
+
+		PropertyFunction(Translation_local)
+		PropertyFunction(Rotation_local)
+		PropertyFunction(Scale_local)
 
 		int Scale(lua_State* L);
 		int Rotate(lua_State* L);
@@ -188,9 +201,6 @@ namespace wi::lua::scene
 		int GetPosition(lua_State* L);
 		int GetRotation(lua_State* L);
 		int GetScale(lua_State* L);
-		int SetPosition(lua_State* L);
-		int SetRotation(lua_State* L);
-		int SetScale(lua_State* L);
 	};
 
 	class CameraComponent_BindLua

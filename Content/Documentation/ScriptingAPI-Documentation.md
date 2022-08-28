@@ -576,9 +576,9 @@ An integer mask that can be used to group entities together for certain operatio
 
 #### TransformComponent
 Describes an orientation in 3D space.
-- Position : Vector XYZ  -- query the position in world space
-- Rotation : Vector Quaternion  -- query the rotation as a quaternion in world space
-- Scale : Vector XYZ  -- query the scaling in world space
+- Translation_local : Vector XYZ  -- query the position in world space
+- Rotation_local : Vector Quaternion  -- query the rotation as a quaternion in world space
+- Scale_local : Vector XYZ  -- query the scaling in world space
 
 </br>
 

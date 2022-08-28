@@ -2,6 +2,8 @@
 #include "CommonInclude.h"
 #include "wiMath.h"
 
+#include <string>
+
 extern "C"
 {
 #include "LUA/lua.h"
