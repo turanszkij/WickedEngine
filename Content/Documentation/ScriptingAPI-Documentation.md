@@ -277,6 +277,11 @@ Animate Sprites easily with this helper.
 
 #### MovingTexAnim
 Move texture continuously along the sprite.
+- SpeedX : float
+- SpeedY : float
+
+</br>
+
 - [constructor]MovingTexAnim(opt float speedX,speedY)
 - SetSpeedX(float val)
 - SetSpeedY(float val)
@@ -285,8 +290,13 @@ Move texture continuously along the sprite.
 
 #### DrawRecAnim
 Animate sprite frame by frame.
+- FrameRate : float
+- FrameCount : int
+- HorizontalFrameCount : int
+
+</br>
+
 - [constructor]DrawRecAnim()
-- SetOnFrameChangeWait(float val)
 - SetFrameRate(float val)
 - SetFrameCount(int val)
 - SetHorizontalFrameCount(int val)
