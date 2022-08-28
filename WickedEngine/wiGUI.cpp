@@ -1627,6 +1627,10 @@ namespace wi::gui
 	{
 		this->value = value;
 	}
+	void Slider::SetValue(int value)
+	{
+		this->value = float(value);
+	}
 	float Slider::GetValue() const
 	{
 		return value;
@@ -4434,6 +4438,12 @@ namespace wi::gui
 	void TreeList::AddItem(const Item& item)
 	{
 		items.push_back(item);
+	}
+	void TreeList::AddItem(const std::string& name)
+	{
+		Item item;
+		item.name = name;
+		AddItem(item);
 	}
 	void TreeList::ClearItems()
 	{

@@ -9,8 +9,8 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create(ICON_EXPRESSION " Expression", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 80));
+	wi::gui::Window::Create(ICON_EXPRESSION " Expression Mastering", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	SetSize(XMFLOAT2(670, 450));
 
 	closeButton.SetTooltip("Delete ExpressionComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -32,16 +32,100 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	float step = hei + 2;
 	float wid = 220;
 
+	blinkFrequencySlider.Create(0, 1, 0, 1000, "Blinks: ");
+	blinkFrequencySlider.SetTooltip("Specifies the number of blinks per second.");
+	blinkFrequencySlider.SetSize(XMFLOAT2(wid, hei));
+	blinkFrequencySlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
+		if (expression_mastering == nullptr)
+			return;
+		expression_mastering->blink_frequency = args.fValue;
+		});
+	AddWidget(&blinkFrequencySlider);
+
+	blinkLengthSlider.Create(0, 1, 0, 1000, "Blink Length: ");
+	blinkLengthSlider.SetSize(XMFLOAT2(wid, hei));
+	blinkLengthSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
+		if (expression_mastering == nullptr)
+			return;
+		expression_mastering->blink_length = args.fValue;
+		});
+	AddWidget(&blinkLengthSlider);
+
+	blinkCountSlider.Create(1, 4, 2, 3, "Blink Count: ");
+	blinkCountSlider.SetSize(XMFLOAT2(wid, hei));
+	blinkCountSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
+		if (expression_mastering == nullptr)
+			return;
+		expression_mastering->blink_count = args.iValue;
+		});
+	AddWidget(&blinkCountSlider);
+
+	lookFrequencySlider.Create(0, 1, 0, 1000, "Looks: ");
+	blinkFrequencySlider.SetTooltip("Specifies the number of look aways per second.");
+	lookFrequencySlider.SetSize(XMFLOAT2(wid, hei));
+	lookFrequencySlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
+		if (expression_mastering == nullptr)
+			return;
+		expression_mastering->look_frequency = args.fValue;
+		});
+	AddWidget(&lookFrequencySlider);
+
+	lookLengthSlider.Create(0, 1, 0, 1000, "Look Length: ");
+	lookLengthSlider.SetSize(XMFLOAT2(wid, hei));
+	lookLengthSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
+		if (expression_mastering == nullptr)
+			return;
+		expression_mastering->look_length = args.fValue;
+		});
+	AddWidget(&lookLengthSlider);
+
+	expressionList.Create("Expressions: ");
+	expressionList.SetSize(XMFLOAT2(wid, 200));
+	expressionList.SetPos(XMFLOAT2(4, y += step));
+	expressionList.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
+		if (expression_mastering == nullptr)
+			return;
+		if (args.iValue >= expression_mastering->expressions.size())
+			return;
+
+		const ExpressionComponent::Expression& expression = expression_mastering->expressions[args.iValue];
+		binaryCheckBox.SetCheck(expression.IsBinary());
+		weightSlider.SetValue(expression.weight);
+		});
+	AddWidget(&expressionList);
+
 	binaryCheckBox.Create("Binary: ");
 	binaryCheckBox.SetSize(XMFLOAT2(hei, hei));
 	binaryCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ExpressionComponent* expression = scene.expressions.GetComponent(entity);
-		if (expression == nullptr)
+		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
+		if (expression_mastering == nullptr)
 			return;
 
-		expression->SetBinary(args.bValue);
-		expression->SetDirty();
+		int count = expressionList.GetItemCount();
+		for (int i = 0; i < count; ++i)
+		{
+			if (!expressionList.GetItem(i).selected)
+				continue;
+			if (i >= expression_mastering->expressions.size())
+				return;
+
+			ExpressionComponent::Expression& expression = expression_mastering->expressions[i];
+			expression.SetBinary(args.bValue);
+			expression.SetDirty();
+		}
 	});
 	AddWidget(&binaryCheckBox);
 
@@ -50,13 +134,25 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	weightSlider.SetPos(XMFLOAT2(x, y += step));
 	weightSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ExpressionComponent* expression = scene.expressions.GetComponent(entity);
-		if (expression == nullptr)
+		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
+		if (expression_mastering == nullptr)
+			return;
+		if (args.iValue >= expression_mastering->expressions.size())
 			return;
 
-		expression->weight = args.fValue;
-		expression->SetDirty();
-		});
+		int count = expressionList.GetItemCount();
+		for (int i = 0; i < count; ++i)
+		{
+			if (!expressionList.GetItem(i).selected)
+				continue;
+			if (i >= expression_mastering->expressions.size())
+				return;
+
+			ExpressionComponent::Expression& expression = expression_mastering->expressions[i];
+			expression.weight = args.fValue;
+			expression.SetDirty();
+		}
+	});
 	AddWidget(&weightSlider);
 
 
@@ -75,12 +171,21 @@ void ExpressionWindow::SetEntity(Entity entity)
 
 	Scene& scene = editor->GetCurrentScene();
 
-	const ExpressionComponent* expression = scene.expressions.GetComponent(entity);
+	const ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
 
-	if (expression != nullptr)
+	if (expression_mastering != nullptr)
 	{
-		binaryCheckBox.SetCheck(expression->IsBinary());
-		weightSlider.SetValue(expression->weight);
+		blinkFrequencySlider.SetValue(expression_mastering->blink_frequency);
+		blinkLengthSlider.SetValue(expression_mastering->blink_length);
+		blinkCountSlider.SetValue(expression_mastering->blink_count);
+		lookFrequencySlider.SetValue(expression_mastering->look_frequency);
+		lookLengthSlider.SetValue(expression_mastering->look_length);
+
+		expressionList.ClearItems();
+		for (const ExpressionComponent::Expression& expression : expression_mastering->expressions)
+		{
+			expressionList.AddItem(expression.name);
+		}
 	}
 }
 
@@ -92,7 +197,7 @@ void ExpressionWindow::ResizeLayout()
 	float y = padding;
 	float jump = 20;
 
-	const float margin_left = 60;
+	const float margin_left = 100;
 	const float margin_right = 50;
 
 	auto add = [&](wi::gui::Widget& widget) {
@@ -121,6 +226,12 @@ void ExpressionWindow::ResizeLayout()
 		y += padding;
 	};
 
+	add(blinkFrequencySlider);
+	add(blinkLengthSlider);
+	add(blinkCountSlider);
+	add(lookFrequencySlider);
+	add(lookLengthSlider);
+	add_fullwidth(expressionList);
 	add_right(binaryCheckBox);
 	add(weightSlider);
 

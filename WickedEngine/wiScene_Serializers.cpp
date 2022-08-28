@@ -1474,29 +1474,79 @@ namespace wi::scene
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			archive >> weight;
-
-			size_t count = 0;
-			archive >> count;
-			morph_target_bindings.resize(count);
-			for (size_t i = 0; i < count; ++i)
+			for (int index : presets)
 			{
-				SerializeEntity(archive, morph_target_bindings[i].meshID, seri);
-				archive >> morph_target_bindings[i].index;
-				archive >> morph_target_bindings[i].weight;
+				archive >> index;
+			}
+			archive >> blink_frequency;
+			archive >> blink_length;
+			archive >> blink_count;
+			archive >> look_frequency;
+			archive >> look_length;
+
+			size_t expression_count = 0;
+			archive >> expression_count;
+			expressions.resize(expression_count);
+			for (size_t expression_index = 0; expression_index < expression_count; ++expression_index)
+			{
+				Expression& expression = expressions[expression_index];
+				archive >> expression.name;
+				archive >> expression.weight;
+
+				uint32_t value = 0;
+				archive >> value;
+				expression.preset = (Preset)value;
+
+				archive >> value;
+				expression.override_mouth = (Override)value;
+				archive >> value;
+				expression.override_blink = (Override)value;
+				archive >> value;
+				expression.override_lookAt = (Override)value;
+
+				size_t count = 0;
+				archive >> count;
+				expression.morph_target_bindings.resize(count);
+				for (size_t i = 0; i < count; ++i)
+				{
+					SerializeEntity(archive, expression.morph_target_bindings[i].meshID, seri);
+					archive >> expression.morph_target_bindings[i].index;
+					archive >> expression.morph_target_bindings[i].weight;
+				}
 			}
 		}
 		else
 		{
 			archive << _flags;
-			archive << weight;
-
-			archive << morph_target_bindings.size();
-			for (size_t i = 0; i < morph_target_bindings.size(); ++i)
+			for (int index : presets)
 			{
-				SerializeEntity(archive, morph_target_bindings[i].meshID, seri);
-				archive << morph_target_bindings[i].index;
-				archive << morph_target_bindings[i].weight;
+				archive << index;
+			}
+			archive << blink_frequency;
+			archive << blink_length;
+			archive << blink_count;
+			archive << look_frequency;
+			archive << look_length;
+
+			archive << expressions.size();
+			for (size_t expression_index = 0; expression_index < expressions.size(); ++expression_index)
+			{
+				Expression& expression = expressions[expression_index];
+				archive << expression.name;
+				archive << expression.weight;
+
+				archive << (uint32_t)expression.preset;
+				archive << (uint32_t)expression.override_mouth;
+				archive << (uint32_t)expression.override_blink;
+				archive << (uint32_t)expression.override_lookAt;
+
+				archive << expression.morph_target_bindings.size();
+				for (size_t i = 0; i < expression.morph_target_bindings.size(); ++i)
+				{
+					SerializeEntity(archive, expression.morph_target_bindings[i].meshID, seri);
+					archive << expression.morph_target_bindings[i].index;
+					archive << expression.morph_target_bindings[i].weight;
+				}
 			}
 		}
 	}

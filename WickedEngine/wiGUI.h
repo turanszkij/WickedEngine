@@ -452,6 +452,7 @@ namespace wi::gui
 		wi::Sprite sprites_knob[WIDGETSTATE_COUNT];
 
 		void SetValue(float value);
+		void SetValue(int value);
 		float GetValue() const;
 		void SetRange(float start, float end);
 
@@ -692,6 +693,7 @@ namespace wi::gui
 		void Create(const std::string& name);
 
 		void AddItem(const Item& item);
+		void AddItem(const std::string& name);
 		void ClearItems();
 		bool HasScrollbar() const;
 

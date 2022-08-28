@@ -140,6 +140,7 @@ namespace tinygltf
 
 struct LoaderState
 {
+	std::string name;
 	tinygltf::Model gltfModel;
 	Scene* scene;
 	wi::unordered_map<int, Entity> entityMap;  // node -> entity
@@ -321,6 +322,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	state.rootEntity = CreateEntity();
 	scene.transforms.Create(state.rootEntity);
 	scene.names.Create(state.rootEntity) = name;
+	state.name = name;
 
 	// Create materials:
 	for (auto& x : state.gltfModel.materials)
@@ -1614,6 +1616,10 @@ void Import_Extension_VRM(LoaderState& state)
 		if (ext_vrm->second.Has("blendShapeMaster"))
 		{
 			// https://github.com/vrm-c/vrm-specification/tree/master/specification/0.0#vrm-extension-morph-setting-jsonextensionsvrmblendshapemaster
+			Entity entity = CreateEntity();
+			ExpressionComponent& component = state.scene->expressions.Create(entity);
+			state.scene->Component_Attach(entity, state.rootEntity);
+			state.scene->names.Create(entity) = state.name + "_expression_mastering";
 
 			const auto& blendShapeMaster = ext_vrm->second.Get("blendShapeMaster");
 			if (blendShapeMaster.Has("blendShapeGroups"))
@@ -1622,27 +1628,97 @@ void Import_Extension_VRM(LoaderState& state)
 				for (size_t blendShapeGroup_index = 0; blendShapeGroup_index < blendShapeGroups.ArrayLen(); ++blendShapeGroup_index)
 				{
 					const auto& blendShapeGroup = blendShapeGroups.Get(int(blendShapeGroup_index));
-					Entity entity = CreateEntity();
-					ExpressionComponent& component = state.scene->expressions.Create(entity);
-					state.scene->Component_Attach(entity, state.rootEntity);
+					ExpressionComponent::Expression& expression = component.expressions.emplace_back();
 
 					if (blendShapeGroup.Has("name"))
 					{
 						const auto& value = blendShapeGroup.Get("name");
-						state.scene->names.Create(entity) = value.Get<std::string>();
+						expression.name = value.Get<std::string>();
 					}
-					if (blendShapeGroup.Has("presetName") && !state.scene->names.Contains(entity))
+					if (blendShapeGroup.Has("presetName"))
 					{
 						const auto& value = blendShapeGroup.Get("presetName");
-						state.scene->names.Create(entity) = value.Get<std::string>();
+						std::string presetName = wi::helper::toUpper(value.Get<std::string>());
+
+						if (!presetName.compare("JOY"))
+						{
+							expression.preset = ExpressionComponent::Preset::Happy;
+						}
+						else if (!presetName.compare("ANGRY"))
+						{
+							expression.preset = ExpressionComponent::Preset::Angry;
+						}
+						else if (!presetName.compare("SORROW"))
+						{
+							expression.preset = ExpressionComponent::Preset::Sad;
+						}
+						else if (!presetName.compare("FUN"))
+						{
+							expression.preset = ExpressionComponent::Preset::Relaxed;
+						}
+						else if (!presetName.compare("A"))
+						{
+							expression.preset = ExpressionComponent::Preset::Aa;
+						}
+						else if (!presetName.compare("I"))
+						{
+							expression.preset = ExpressionComponent::Preset::Ih;
+						}
+						else if (!presetName.compare("U"))
+						{
+							expression.preset = ExpressionComponent::Preset::Ou;
+						}
+						else if (!presetName.compare("E"))
+						{
+							expression.preset = ExpressionComponent::Preset::Ee;
+						}
+						else if (!presetName.compare("O"))
+						{
+							expression.preset = ExpressionComponent::Preset::Oh;
+						}
+						else if (!presetName.compare("BLINK"))
+						{
+							expression.preset = ExpressionComponent::Preset::Blink;
+						}
+						else if (!presetName.compare("BLINK_L"))
+						{
+							expression.preset = ExpressionComponent::Preset::BlinkLeft;
+						}
+						else if (!presetName.compare("BLINK_R"))
+						{
+							expression.preset = ExpressionComponent::Preset::BlinkRight;
+						}
+						else if (!presetName.compare("LOOKUP"))
+						{
+							expression.preset = ExpressionComponent::Preset::LookUp;
+						}
+						else if (!presetName.compare("LOOKDOWN"))
+						{
+							expression.preset = ExpressionComponent::Preset::LookDown;
+						}
+						else if (!presetName.compare("LOOKLEFT"))
+						{
+							expression.preset = ExpressionComponent::Preset::LookLeft;
+						}
+						else if (!presetName.compare("LOOKRIGHT"))
+						{
+							expression.preset = ExpressionComponent::Preset::LookRight;
+						}
+						else if (!presetName.compare("NEUTRAL"))
+						{
+							expression.preset = ExpressionComponent::Preset::Neutral;
+						}
+
+						const size_t preset_index = (size_t)expression.preset;
+						if (preset_index < arraysize(component.presets))
+						{
+							component.presets[preset_index] = (int)component.expressions.size() - 1;
+						}
 					}
 					if (blendShapeGroup.Has("isBinary"))
 					{
 						const auto& value = blendShapeGroup.Get("isBinary");
-						if (value.Get<bool>())
-						{
-							component._flags |= ExpressionComponent::BINARY;
-						}
+						expression.SetBinary(value.Get<bool>());
 					}
 					if (blendShapeGroup.Has("binds"))
 					{
@@ -1650,7 +1726,7 @@ void Import_Extension_VRM(LoaderState& state)
 						for (size_t bind_index = 0; bind_index < binds.ArrayLen(); ++bind_index)
 						{
 							const auto& bind = binds.Get(int(bind_index));
-							ExpressionComponent::MorphTargetBinding& morph_target_binding = component.morph_target_bindings.emplace_back();
+							ExpressionComponent::Expression::MorphTargetBinding& morph_target_binding = expression.morph_target_bindings.emplace_back();
 
 							if (bind.Has("mesh"))
 							{
@@ -1815,6 +1891,10 @@ void Import_Extension_VRMC(LoaderState& state)
 		if (ext_vrm->second.Has("expressions"))
 		{
 			// https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0-beta/expressions.md#vrmc_vrmexpressions
+			Entity entity = CreateEntity();
+			ExpressionComponent& component = state.scene->expressions.Create(entity);
+			state.scene->Component_Attach(entity, state.rootEntity);
+			state.scene->names.Create(entity) = state.name + "_expression_mastering";
 
 			const auto& expressions = ext_vrm->second.Get("expressions");
 			static const char* expression_types[] = {
@@ -1829,24 +1909,118 @@ void Import_Extension_VRMC(LoaderState& state)
 					const auto& names = expressions.Get(expression_type);
 					for (auto& name : names.Keys())
 					{
-						const auto& expression = names.Get(name);
-						Entity entity = CreateEntity();
-						ExpressionComponent& component = state.scene->expressions.Create(entity);
-						state.scene->Component_Attach(entity, state.rootEntity);
-						state.scene->names.Create(entity) = name;
+						const auto& vrm_expression = names.Get(name);
+						ExpressionComponent::Expression& expression = component.expressions.emplace_back();
 
-						if (expression.Has("isBinary"))
+						if (!strcmp(expression_type, "preset"))
 						{
-							const auto& value = expression.Get("isBinary");
-							component.SetBinary(value.Get<bool>());
+							std::string presetName = wi::helper::toUpper(name);
+							if (!presetName.compare("HAPPY"))
+							{
+								expression.preset = ExpressionComponent::Preset::Happy;
+							}
+							else if (!presetName.compare("ANGRY"))
+							{
+								expression.preset = ExpressionComponent::Preset::Angry;
+							}
+							else if (!presetName.compare("SAD"))
+							{
+								expression.preset = ExpressionComponent::Preset::Sad;
+							}
+							else if (!presetName.compare("RELAXED"))
+							{
+								expression.preset = ExpressionComponent::Preset::Relaxed;
+							}
+							else if (!presetName.compare("SURPRISED"))
+							{
+								expression.preset = ExpressionComponent::Preset::Surprised;
+							}
+							else if (!presetName.compare("AA"))
+							{
+								expression.preset = ExpressionComponent::Preset::Aa;
+							}
+							else if (!presetName.compare("IH"))
+							{
+								expression.preset = ExpressionComponent::Preset::Ih;
+							}
+							else if (!presetName.compare("OU"))
+							{
+								expression.preset = ExpressionComponent::Preset::Ou;
+							}
+							else if (!presetName.compare("EE"))
+							{
+								expression.preset = ExpressionComponent::Preset::Ee;
+							}
+							else if (!presetName.compare("OH"))
+							{
+								expression.preset = ExpressionComponent::Preset::Oh;
+							}
+							else if (!presetName.compare("BLINK"))
+							{
+								expression.preset = ExpressionComponent::Preset::Blink;
+							}
+							else if (!presetName.compare("BLINKLEFT"))
+							{
+								expression.preset = ExpressionComponent::Preset::BlinkLeft;
+							}
+							else if (!presetName.compare("BLINKRIGHT"))
+							{
+								expression.preset = ExpressionComponent::Preset::BlinkRight;
+							}
+							else if (!presetName.compare("LOOKUP"))
+							{
+								expression.preset = ExpressionComponent::Preset::LookUp;
+							}
+							else if (!presetName.compare("LOOKDOWN"))
+							{
+								expression.preset = ExpressionComponent::Preset::LookDown;
+							}
+							else if (!presetName.compare("LOOKLEFT"))
+							{
+								expression.preset = ExpressionComponent::Preset::LookLeft;
+							}
+							else if (!presetName.compare("LOOKRIGHT"))
+							{
+								expression.preset = ExpressionComponent::Preset::LookRight;
+							}
+							else if (!presetName.compare("NEUTRAL"))
+							{
+								expression.preset = ExpressionComponent::Preset::Neutral;
+							}
+
+							const size_t preset_index = (size_t)expression.preset;
+							if (preset_index < arraysize(component.presets))
+							{
+								component.presets[preset_index] = (int)component.expressions.size() - 1;
+							}
 						}
-						if (expression.Has("morphTargetBinds"))
+						expression.name = name;
+
+						if (vrm_expression.Has("isBinary"))
 						{
-							const auto& morpTargetBinds = expression.Get("morphTargetBinds");
+							const auto& value = vrm_expression.Get("isBinary");
+							expression.SetBinary(value.Get<bool>());
+						}
+						if (vrm_expression.Has("overrideMouth"))
+						{
+							const auto& value = vrm_expression.Get("overrideMouth");
+							const std::string& override_enum = value.Get<std::string>();
+							if (!override_enum.compare("block"))
+							{
+								expression.override_mouth = ExpressionComponent::Override::Block;
+							}
+							if (!override_enum.compare("blend"))
+							{
+								expression.override_mouth = ExpressionComponent::Override::Blend;
+							}
+						}
+						if (vrm_expression.Has("morphTargetBinds"))
+						{
+							const auto& morpTargetBinds = vrm_expression.Get("morphTargetBinds");
 							for (size_t morphTargetBind_index = 0; morphTargetBind_index < morpTargetBinds.ArrayLen(); ++morphTargetBind_index)
 							{
 								const auto& morphTargetBind = morpTargetBinds.Get(int(morphTargetBind_index));
-								ExpressionComponent::MorphTargetBinding& morph_target_binding = component.morph_target_bindings.emplace_back();
+								ExpressionComponent::Expression::MorphTargetBinding& morph_target_binding = expression.morph_target_bindings.emplace_back();
 
 								if (morphTargetBind.Has("node"))
 								{
@@ -1865,14 +2039,14 @@ void Import_Extension_VRMC(LoaderState& state)
 								}
 							}
 						}
-						//if (expression.Has("materialColorBinds"))
+						//if (vrm_expression.Has("materialColorBinds"))
 						//{
-						//	const auto& materialColorBinds = expression.Get("materialColorBinds");
+						//	const auto& materialColorBinds = vrm_expression.Get("materialColorBinds");
 						//	// TODO: find example model and implement
 						//}
-						//if (expression.Has("textureTransformBinds "))
+						//if (vrm_expression.Has("textureTransformBinds "))
 						//{
-						//	const auto& textureTransformBinds = expression.Get("textureTransformBinds");
+						//	const auto& textureTransformBinds = vrm_expression.Get("textureTransformBinds");
 						//	// TODO: find example model and implement
 						//}
 

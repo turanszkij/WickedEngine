@@ -12,8 +12,14 @@ public:
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::gui::CheckBox binaryCheckBox;
+	wi::gui::Slider blinkFrequencySlider;
+	wi::gui::Slider blinkLengthSlider;
+	wi::gui::Slider blinkCountSlider;
+	wi::gui::Slider lookFrequencySlider;
+	wi::gui::Slider lookLengthSlider;
+	wi::gui::TreeList expressionList;
 	wi::gui::Slider weightSlider;
+	wi::gui::CheckBox binaryCheckBox;
 
 	void ResizeLayout() override;
 };
