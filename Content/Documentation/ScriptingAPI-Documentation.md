@@ -144,6 +144,11 @@ You can use the Renderer with the following functions, all of which are in the g
 
 ### Sprite
 Render images on the screen.
+- Params : ImageParams
+- Anim : SpriteAnim 
+
+</br>
+
 - [constructor]Sprite(opt string texture, opt string maskTexture)
 - SetParams(ImageParams effects)
 - GetParams() : ImageParams result
@@ -152,6 +157,19 @@ Render images on the screen.
 
 #### ImageParams
 Specify Sprite properties, like position, size, etc.
+- Pos : Vector
+- Size : Vector
+- Pivot : Vector
+- Color : Vector
+- Opacity : float
+- Fade : float
+- Rotation : float
+- MipLevel : float
+- TexOffset : Vector
+- TexOffset2 : Vector
+
+</br>
+
 - [constructor]ImageParams(opt float width, opt float height)
 - [constructor]ImageParams(float posX, float posY, float width, opt float height)
 - GetPos() : Vector result
@@ -222,6 +240,19 @@ Specify Sprite properties, like position, size, etc.
 
 #### SpriteAnim
 Animate Sprites easily with this helper.
+- Rot : float
+- Rotation : float
+- Opacity : float
+- Fade : float
+- Repeatable : boolean
+- Velocity : Vector
+- ScaleX : float
+- ScaleY : float
+- MovingTexAnim : GetMovingTexAnim
+- DrawRectAnim : GetDrawRectAnim
+
+</br>
+
 - [constructor]SpriteAnim()
 - SetRot(float val)
 - SetRotation(float val)
@@ -265,6 +296,21 @@ Animate sprite frame by frame.
 
 ### SpriteFont
 Gives you the ability to render text with a custom font.
+- Text : string
+- Size : int
+- Pos : Vector
+- Spacing : Vector
+- Align : WIFALIGN halign
+- Color : Vector
+- ShadowColor : Vector
+- Bolden : float
+- Softness : float
+- ShadowBolden : float
+- ShadowSoftness : float
+- ShadowOffset : Vector
+
+</br>
+
 - [constructor]SpriteFont(opt string text)
 - SetStyle(string fontstyle, opt int size = 16)
 - SetText(opt string text)
@@ -595,6 +641,36 @@ Describes an orientation in 3D space.
 - GetAmount() : float result
 
 #### MaterialComponent
+- BaseColor : Vector
+- EmissiveColor : Vector
+- EngineStencilRef : int
+- UserStencilRef : int
+- ShaderType : int
+- UserBlendMode : int
+- SpecularColor : Vector
+- SubsurfaceScattering : Vector
+- TexMulAdd : Vector
+- Roughness : float
+- Reflectance : float
+- Metalness : float
+- NormalMapStrength : float
+- ParallaxOcclusionMapping : float
+- DisplacementMapping : float
+- Refraction : float
+- Transmission : float
+- AlphaRef : float
+- SheenColor : Vector
+- SheenRoughness : float
+- Clearcoat : float
+- ClearcoatRoughness : float
+- ShadingRate : int
+- TexAnimDirection : Vector
+- TexAnimFrameRate : float
+- texAnimElapsedTime : float
+- customShaderID : int
+
+</br>
+
 - SetBaseColor(Vector value)
 - SetEmissiveColor(Vector value)
 - SetEngineStencilRef(int value)
@@ -728,11 +804,10 @@ Describes a Rigid Body Physics object.
 - Restitution : float
 - LinearDamping : float
 - AngularDamping : float
-- BoxParams : Vector
-- SphereParams : float
-- CapsuleParams : table
-- [inner]radius : float
-- [inner]height : float
+- BoxParams_HalfExtents : Vector
+- SphereParams_Radius : floatd
+- CapsuleParams_Radius : float
+- CapsuleParams_Reight : float
 - TargetMeshLOD : int
 
 </br>
@@ -756,10 +831,9 @@ Describes a Force Field effector.
 
 #### WeatherComponent
 Describes a Rigid Body Physics object.
-- WeatherParams: table -- Returns a table to modify weather parameters
-- OceanParams : table -- Returns a table to modify ocean parameters (if ocean is enabled)
-- AtmosphereParams : table -- Returns a table to modify atmosphere parameters
-- VolumetricCloudParams : table -- Returns a table to modify volumetric cloud parameters
+- OceanParameters : OceanParameters -- Returns a table to modify ocean parameters (if ocean is enabled)
+- AtmosphereParameters : AtmosphereParameters -- Returns a table to modify atmosphere parameters
+- VolumetricCloudParameters : VolumetricCloudParameters -- Returns a table to modify volumetric cloud parameters
 - SkyMapName : string -- Resource name for sky texture
 - ColorGradingMapName : string -- Resource name for color grading map
 
@@ -923,6 +997,11 @@ Axis Aligned Bounding Box. Can be intersected with other primitives.
 
 #### Sphere
 Sphere defined by center Vector and radius. Can be intersected with other primitives.
+- Center : Vector
+- Radius : float
+
+</br>
+
 - [constructor]Sphere(Vector center, float radius)
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
@@ -934,6 +1013,12 @@ Sphere defined by center Vector and radius. Can be intersected with other primit
 
 #### Capsule
 It's like two spheres connected by a cylinder. Base and Tip are the two endpoints, radius is the cylinder's radius.
+- Base : Vector
+- Tip : Vector
+- Radius : float
+
+</br>
+
 - [constructor]Capsule(Vector base, tip, float radius)
 - Intersects(Capsule other) : bool result, Vector position, indicent_normal, float penetration_depth
 - Intersects(Ray ray) : bool result

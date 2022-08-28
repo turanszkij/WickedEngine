@@ -436,6 +436,78 @@ namespace wi::lua
 		lua_pushnil(L);
 	}
 
+	int IntProperty::Get(lua_State* L)
+	{
+		SSetInt(L, *data);
+		return 1;
+	}
+	int IntProperty::Set(lua_State* L)
+	{
+		*data = SGetInt(L, 1);
+		return 0;
+	}
+	int LongProperty::Get(lua_State* L)
+	{
+		SSetLong(L, *data);
+		return 1;
+	}
+	int LongProperty::Set(lua_State* L)
+	{
+		*data = SGetLong(L, 1);
+		return 0;
+	}
+	int LongLongProperty::Get(lua_State* L)
+	{
+		SSetLongLong(L, *data);
+		return 1;
+	}
+	int LongLongProperty::Set(lua_State* L)
+	{
+		*data = SGetLongLong(L, 1);
+		return 0;
+	}
+	int FloatProperty::Get(lua_State* L)
+	{
+		SSetFloat(L, *data);
+		return 1;
+	}
+	int FloatProperty::Set(lua_State* L)
+	{
+		*data = SGetFloat(L, 1);
+		return 0;
+	}
+	int DoubleProperty::Get(lua_State* L)
+	{
+		SSetDouble(L, *data);
+		return 1;
+	}
+	int DoubleProperty::Set(lua_State* L)
+	{
+		*data = SGetDouble(L, 1);
+		return 0;
+	}
+	int StringProperty::Get(lua_State* L)
+	{
+		SSetString(L, *data);
+		return 1;
+	}
+	int StringProperty::Set(lua_State* L)
+	{
+		*data = SGetString(L, 1);
+		return 0;
+	}
+	int BoolProperty::Get(lua_State* L)
+	{
+		SSetBool(L, *data);
+		return 1;
+	}
+	int BoolProperty::Set(lua_State* L)
+	{
+		*data = SGetBool(L, 1);
+		return 0;
+	}
+
+
 	void SError(lua_State* L, const std::string& error)
 	{
 		//retrieve line number for error info

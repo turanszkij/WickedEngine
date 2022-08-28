@@ -50,6 +50,15 @@ namespace wi::lua
 		{ nullptr, nullptr }
 	};
 	Luna<ImageParams_BindLua>::PropertyType ImageParams_BindLua::properties[] = {
+		lunaproperty(ImageParams_BindLua, Pos),
+		lunaproperty(ImageParams_BindLua, Size),
+		lunaproperty(ImageParams_BindLua, Pivot),
+		lunaproperty(ImageParams_BindLua, Color),
+		lunaproperty(ImageParams_BindLua, Opacity),
+		lunaproperty(ImageParams_BindLua, Fade),
+		lunaproperty(ImageParams_BindLua, Rotation),
+		lunaproperty(ImageParams_BindLua, TexOffset),
+		lunaproperty(ImageParams_BindLua, TexOffset2),
 		{ nullptr, nullptr }
 	};
 

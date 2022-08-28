@@ -3,6 +3,7 @@
 #include "wiLuna.h"
 #include "wiScene.h"
 #include <LUA/lua.h>
+#include <wiMath_BindLua.h>
 
 namespace wi::lua::scene
 {
@@ -38,7 +39,6 @@ namespace wi::lua::scene
 		int Clear(lua_State* L);
 		int Merge(lua_State* L);
 
-		int Entity_Create(lua_State* L);
 		int Entity_FindByName(lua_State* L);
 		int Entity_Remove(lua_State* L);
 		int Entity_Duplicate(lua_State* L);
@@ -266,14 +266,91 @@ namespace wi::lua::scene
 		static Luna<MaterialComponent_BindLua>::FunctionType methods[];
 		static Luna<MaterialComponent_BindLua>::PropertyType properties[];
 
-		MaterialComponent_BindLua(wi::scene::MaterialComponent* component) :component(component) {}
+		MaterialComponent_BindLua(wi::scene::MaterialComponent* component) :component(component)
+		{
+			ShaderType = IntProperty(reinterpret_cast<int*>(&component->shaderType));
+			UserBlendMode = IntProperty(reinterpret_cast<int*>(&component->roughness));
+			SpecularColor = VectorProperty(&component->specularColor);
+			SubsurfaceScattering = VectorProperty(&component->subsurfaceScattering);
+			TexMulAdd = VectorProperty(&component->texMulAdd);
+			Roughness = FloatProperty(&component->roughness);
+			Reflectance = FloatProperty(&component->reflectance);
+			Metalness = FloatProperty(&component->metalness);
+			NormalMapStrength = FloatProperty(&component->normalMapStrength);
+			ParallaxOcclusionMapping = FloatProperty(&component->parallaxOcclusionMapping);
+			DisplacementMapping = FloatProperty(&component->displacementMapping);
+			Refraction = FloatProperty(&component->refraction);
+			Transmission = FloatProperty(&component->transmission);
+			AlphaRef = FloatProperty(&component->alphaRef);
+			SheenColor = VectorProperty(&component->sheenColor);
+			SheenRoughness = FloatProperty(&component->sheenRoughness);
+			Clearcoat = FloatProperty(&component->clearcoat);
+			ClearcoatRoughness = FloatProperty(&component->clearcoatRoughness);
+			ShadingRate = IntProperty(reinterpret_cast<int*>(&component->roughness));
+			TexAnimDirection = VectorProperty(&component->texAnimDirection);
+			TexAnimFrameRate = FloatProperty(&component->roughness);
+			texAnimElapsedTime = FloatProperty(&component->roughness);
+			customShaderID = IntProperty(&component->customShaderID);
+		}
 		MaterialComponent_BindLua(lua_State *L);
 		~MaterialComponent_BindLua();
 
+		IntProperty ShaderType;
+		IntProperty UserBlendMode;
+		VectorProperty SpecularColor;
+		VectorProperty SubsurfaceScattering;
+		VectorProperty TexMulAdd;
+		FloatProperty Roughness;
+		FloatProperty Reflectance;
+		FloatProperty Metalness;
+		FloatProperty NormalMapStrength;
+		FloatProperty ParallaxOcclusionMapping;
+		FloatProperty DisplacementMapping;
+		FloatProperty Refraction;
+		FloatProperty Transmission;
+		FloatProperty AlphaRef;
+		VectorProperty SheenColor;
+		FloatProperty SheenRoughness;
+		FloatProperty Clearcoat;
+		FloatProperty ClearcoatRoughness;
+		IntProperty ShadingRate;
+		VectorProperty TexAnimDirection;
+		FloatProperty TexAnimFrameRate;
+		FloatProperty texAnimElapsedTime;
+		IntProperty customShaderID;
+
+		PropertyFunction(ShaderType)
+		PropertyFunction(UserBlendMode)
+		PropertyFunction(SpecularColor)
+		PropertyFunction(SubsurfaceScattering)
+		PropertyFunction(TexMulAdd)
+		PropertyFunction(Roughness)
+		PropertyFunction(Reflectance)
+		PropertyFunction(Metalness)
+		PropertyFunction(NormalMapStrength)
+		PropertyFunction(ParallaxOcclusionMapping)
+		PropertyFunction(DisplacementMapping)
+		PropertyFunction(Refraction)
+		PropertyFunction(Transmission)
+		PropertyFunction(AlphaRef)
+		PropertyFunction(SheenColor)
+		PropertyFunction(SheenRoughness)
+		PropertyFunction(Clearcoat)
+		PropertyFunction(ClearcoatRoughness)
+		PropertyFunction(ShadingRate)
+		PropertyFunction(TexAnimDirection)
+		PropertyFunction(TexAnimFrameRate)
+		PropertyFunction(texAnimElapsedTime)
+		PropertyFunction(customShaderID)
+
 		int SetBaseColor(lua_State* L);
+		int GetBaseColor(lua_State* L);
 		int SetEmissiveColor(lua_State* L);
+		int GetEmissiveColor(lua_State* L);
 		int SetEngineStencilRef(lua_State* L);
+		int GetEngineStencilRef(lua_State* L);
 		int SetUserStencilRef(lua_State* L);
+		int GetUserStencilRef(lua_State* L);
 		int GetStencilRef(lua_State* L);
 	};
 
@@ -461,31 +538,46 @@ namespace wi::lua::scene
 		static Luna<RigidBodyPhysicsComponent_BindLua>::FunctionType methods[];
 		static Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType properties[];
 
-		RigidBodyPhysicsComponent_BindLua(wi::scene::RigidBodyPhysicsComponent* component) :component(component) {}
+		RigidBodyPhysicsComponent_BindLua(wi::scene::RigidBodyPhysicsComponent* component) :component(component)
+		{
+			Shape = IntProperty(reinterpret_cast<int*>(&component->shape));
+			Mass = FloatProperty(&component->mass);
+			Friction = FloatProperty(&component->friction);
+			Restitution = FloatProperty(&component->restitution);
+			LinearDamping = FloatProperty(&component->damping_linear);
+			AngularDamping = FloatProperty(&component->damping_angular);
+			BoxParams_HalfExtents = VectorProperty(&component->box.halfextents);
+			SphereParams_Radius = FloatProperty(&component->sphere.radius);
+			CapsuleParams_Radius = FloatProperty(&component->capsule.radius);
+			CapsuleParams_Height = FloatProperty(&component->capsule.height);
+			TargetMeshLOD = LongLongProperty(reinterpret_cast<long long*>(&component->mesh_lod));
+		}
 		RigidBodyPhysicsComponent_BindLua(lua_State* L);
 		~RigidBodyPhysicsComponent_BindLua();
 
-		int GetShape(lua_State* L);
-		int GetMass(lua_State* L);
-		int GetFriction(lua_State* L);
-		int GetRestitution(lua_State* L);
-		int GetLinearDamping(lua_State* L);
-		int GetAngularDamping(lua_State* L);
-		int GetBoxParams(lua_State* L);
-		int GetSphereParams(lua_State* L);
-		int GetCapsuleParams(lua_State* L);
-		int GetTargetMeshLOD(lua_State* L);
-
-		int SetShape(lua_State* L);
-		int SetMass(lua_State* L);
-		int SetFriction(lua_State* L);
-		int SetRestitution(lua_State* L);
-		int SetLinearDamping(lua_State* L);
-		int SetAngularDamping(lua_State* L);
-		int SetBoxParams(lua_State* L);
-		int SetSphereParams(lua_State* L);
-		int SetCapsuleParams(lua_State* L);
-		int SetTargetMeshLOD(lua_State* L);
+		IntProperty Shape;
+		FloatProperty Mass;
+		FloatProperty Friction;
+		FloatProperty Restitution;
+		FloatProperty LinearDamping;
+		FloatProperty AngularDamping;
+		VectorProperty BoxParams_HalfExtents;
+		FloatProperty SphereParams_Radius;
+		FloatProperty CapsuleParams_Radius;
+		FloatProperty CapsuleParams_Height;
+		LongLongProperty TargetMeshLOD;
+		
+		PropertyFunction(Shape)
+		PropertyFunction(Mass)
+		PropertyFunction(Friction)
+		PropertyFunction(Restitution)
+		PropertyFunction(LinearDamping)
+		PropertyFunction(AngularDamping)
+		PropertyFunction(BoxParams_HalfExtents)
+		PropertyFunction(SphereParams_Radius)
+		PropertyFunction(CapsuleParams_Radius)
+		PropertyFunction(CapsuleParams_Height)
+		PropertyFunction(TargetMeshLOD)
 
 		int SetDisableDeactivation(lua_State* L);
 		int SetKinematic(lua_State* L);
@@ -504,17 +596,26 @@ namespace wi::lua::scene
 		static Luna<SoftBodyPhysicsComponent_BindLua>::FunctionType methods[];
 		static Luna<SoftBodyPhysicsComponent_BindLua>::PropertyType properties[];
 
-		SoftBodyPhysicsComponent_BindLua(wi::scene::SoftBodyPhysicsComponent* component) :component(component) {}
+		SoftBodyPhysicsComponent_BindLua(wi::scene::SoftBodyPhysicsComponent* component) :component(component)
+		{
+			Mass = wi::lua::FloatProperty(&component->mass);
+			Friction = wi::lua::FloatProperty(&component->friction);
+			Restitution = wi::lua::FloatProperty(&component->restitution);
+		}
 		SoftBodyPhysicsComponent_BindLua(lua_State* L);
 		~SoftBodyPhysicsComponent_BindLua();
 
-		int GetMass(lua_State* L);
-		int GetFriction(lua_State* L);
-		int GetRestitution(lua_State* L);
+		wi::lua::FloatProperty Mass;
+		wi::lua::FloatProperty Friction;
+		wi::lua::FloatProperty Restitution;
 
-		int SetMass(lua_State* L);
-		int SetFriction(lua_State* L);
-		int SetRestitution(lua_State* L);
+		PropertyFunction(Mass)
+		PropertyFunction(Friction)
+		PropertyFunction(Restitution)
+
+		int SetDisableDeactivation(lua_State* L);
+		int IsDisableDeactivation(lua_State* L);
+		int CreateFromMesh(lua_State* L);
 	};
 
 	class ForceFieldComponent_BindLua
@@ -527,17 +628,314 @@ namespace wi::lua::scene
 		static Luna<ForceFieldComponent_BindLua>::FunctionType methods[];
 		static Luna<ForceFieldComponent_BindLua>::PropertyType properties[];
 
-		ForceFieldComponent_BindLua(wi::scene::ForceFieldComponent* component) :component(component) {}
+		ForceFieldComponent_BindLua(wi::scene::ForceFieldComponent* component) :component(component)
+		{
+			Type = IntProperty(reinterpret_cast<int*>(&component->type));
+			Gravity = FloatProperty(&component->gravity);
+			Range = FloatProperty(&component->range);
+		}
 		ForceFieldComponent_BindLua(lua_State* L);
 		~ForceFieldComponent_BindLua();
 
-		int GetType(lua_State* L);
-		int GetGravity(lua_State* L);
-		int GetRange(lua_State* L);
+		IntProperty Type;
+		FloatProperty Gravity;
+		FloatProperty Range;
 
-		int SetType(lua_State* L);
-		int SetGravity(lua_State* L);
-		int SetRange(lua_State* L);
+		PropertyFunction(Type)
+		PropertyFunction(Gravity)
+		PropertyFunction(Range)
+	};
+
+	class Weather_OceanParams_BindLua
+	{
+	public:
+		bool owning = false;
+		wi::Ocean::OceanParameters* parameter = nullptr;
+
+		static const char className[];
+		static Luna<Weather_OceanParams_BindLua>::FunctionType methods[];
+		static Luna<Weather_OceanParams_BindLua>::PropertyType properties[];
+
+		Weather_OceanParams_BindLua(wi::Ocean::OceanParameters* parameter) :parameter(parameter)
+		{
+			dmap_dim = IntProperty(&parameter->dmap_dim);
+			patch_length = FloatProperty(&parameter->patch_length);
+			time_scale = FloatProperty(&parameter->time_scale);
+			wave_amplitude = FloatProperty(&parameter->wave_amplitude);
+			wind_dir = VectorProperty(&parameter->wind_dir);
+			wind_speed = FloatProperty(&parameter->wind_speed);
+			wind_dependency = FloatProperty(&parameter->wind_dependency);
+			choppy_scale = FloatProperty(&parameter->choppy_scale);
+		}
+		Weather_OceanParams_BindLua(lua_State* L);
+		~Weather_OceanParams_BindLua();
+
+		IntProperty dmap_dim;
+		FloatProperty patch_length;
+		FloatProperty time_scale;
+		FloatProperty wave_amplitude;
+		VectorProperty wind_dir;
+		FloatProperty wind_speed;
+		FloatProperty wind_dependency;
+		FloatProperty choppy_scale;
+		VectorProperty waterColor;
+		FloatProperty waterHeight;
+		LongLongProperty surfaceDetail;
+		FloatProperty surfaceDisplacement;
+
+		PropertyFunction(dmap_dim)
+		PropertyFunction(patch_length)
+		PropertyFunction(time_scale)
+		PropertyFunction(wave_amplitude)
+		PropertyFunction(wind_dir)
+		PropertyFunction(wind_speed)
+		PropertyFunction(wind_dependency)
+		PropertyFunction(choppy_scale)
+		PropertyFunction(waterColor)
+		PropertyFunction(waterHeight)
+		PropertyFunction(surfaceDetail)
+		PropertyFunction(surfaceDisplacement)
+	};
+	class Weather_OceanParams_Property final : public LuaProperty
+	{
+	public:
+		wi::Ocean::OceanParameters* data;
+		Weather_OceanParams_Property(){}
+		Weather_OceanParams_Property(wi::Ocean::OceanParameters* data) :data(data){}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+
+	class Weather_AtmosphereParams_BindLua
+	{
+	public:
+		bool owning = false;
+		AtmosphereParameters* parameter = nullptr;
+
+		static const char className[];
+		static Luna<Weather_AtmosphereParams_BindLua>::FunctionType methods[];
+		static Luna<Weather_AtmosphereParams_BindLua>::PropertyType properties[];
+
+		Weather_AtmosphereParams_BindLua(AtmosphereParameters* parameter) :parameter(parameter)
+		{
+			bottomRadius = FloatProperty(&parameter->bottomRadius);
+			topRadius = FloatProperty(&parameter->topRadius);
+			planetCenter = VectorProperty(&parameter->planetCenter);
+			rayleighDensityExpScale = FloatProperty(&parameter->rayleighDensityExpScale);
+			rayleighScattering = VectorProperty(&parameter->rayleighScattering);
+			mieDensityExpScale = FloatProperty(&parameter->mieDensityExpScale);
+			mieScattering = VectorProperty(&parameter->mieScattering);
+			mieExtinction = VectorProperty(&parameter->mieExtinction);
+			mieAbsorption = VectorProperty(&parameter->mieAbsorption);
+			miePhaseG = FloatProperty(&parameter->miePhaseG);
+
+			absorptionDensity0LayerWidth = FloatProperty(&parameter->absorptionDensity0LayerWidth);
+			absorptionDensity0ConstantTerm = FloatProperty(&parameter->absorptionDensity0ConstantTerm);
+			absorptionDensity0LinearTerm = FloatProperty(&parameter->absorptionDensity0LinearTerm);
+			absorptionDensity1ConstantTerm = FloatProperty(&parameter->absorptionDensity1ConstantTerm);
+			absorptionDensity1LinearTerm = FloatProperty(&parameter->absorptionDensity1LinearTerm);
+
+			absorptionExtinction = VectorProperty(&parameter->absorptionExtinction);
+			groundAlbedo = VectorProperty(&parameter->groundAlbedo);
+		}
+		Weather_AtmosphereParams_BindLua(lua_State* L);
+		~Weather_AtmosphereParams_BindLua();
+
+		FloatProperty bottomRadius;
+		FloatProperty topRadius;
+		VectorProperty planetCenter;
+		FloatProperty rayleighDensityExpScale;
+		VectorProperty rayleighScattering;
+		FloatProperty mieDensityExpScale;
+		VectorProperty mieScattering;
+		VectorProperty mieExtinction;
+		VectorProperty mieAbsorption;
+		FloatProperty miePhaseG;
+
+		FloatProperty absorptionDensity0LayerWidth;
+		FloatProperty absorptionDensity0ConstantTerm;
+		FloatProperty absorptionDensity0LinearTerm;
+		FloatProperty absorptionDensity1ConstantTerm;
+		FloatProperty absorptionDensity1LinearTerm;
+
+		VectorProperty absorptionExtinction;
+		VectorProperty groundAlbedo;
+
+
+		PropertyFunction(bottomRadius)
+		PropertyFunction(topRadius)
+		PropertyFunction(planetCenter)
+		PropertyFunction(rayleighDensityExpScale)
+		PropertyFunction(rayleighScattering)
+		PropertyFunction(mieDensityExpScale)
+		PropertyFunction(mieScattering)
+		PropertyFunction(mieExtinction)
+		PropertyFunction(mieAbsorption)
+		PropertyFunction(miePhaseG)
+
+		PropertyFunction(absorptionDensity0LayerWidth)
+		PropertyFunction(absorptionDensity0ConstantTerm)
+		PropertyFunction(absorptionDensity0LinearTerm)
+		PropertyFunction(absorptionDensity1ConstantTerm)
+		PropertyFunction(absorptionDensity1LinearTerm)
+
+		PropertyFunction(absorptionExtinction)
+		PropertyFunction(groundAlbedo)
+	};
+	class Weather_AtmosphereParams_Property final : public LuaProperty
+	{
+	public:
+		AtmosphereParameters* data;
+		Weather_AtmosphereParams_Property(){}
+		Weather_AtmosphereParams_Property(AtmosphereParameters* data) :data(data){}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+
+	class Weather_VolumetricCloudParams_BindLua
+	{
+	public:
+		bool owning = false;
+		VolumetricCloudParameters* parameter = nullptr;
+
+		static const char className[];
+		static Luna<Weather_VolumetricCloudParams_BindLua>::FunctionType methods[];
+		static Luna<Weather_VolumetricCloudParams_BindLua>::PropertyType properties[];
+
+		Weather_VolumetricCloudParams_BindLua(VolumetricCloudParameters* parameter) :parameter(parameter)
+		{
+			Albedo = VectorProperty(&parameter->Albedo);
+			CloudAmbientGroundMultiplier = FloatProperty(&parameter->CloudAmbientGroundMultiplier);
+			ExtinctionCoefficient = VectorProperty(&parameter->ExtinctionCoefficient);
+
+			HorizonBlendAmount = FloatProperty(&parameter->HorizonBlendAmount);
+			HorizonBlendPower = FloatProperty(&parameter->HorizonBlendPower);
+			WeatherDensityAmount = FloatProperty(&parameter->WeatherDensityAmount);
+			CloudStartHeight = FloatProperty(&parameter->CloudStartHeight);
+
+			CloudThickness = FloatProperty(&parameter->CloudThickness);
+			SkewAlongWindDirection = FloatProperty(&parameter->SkewAlongWindDirection);
+			TotalNoiseScale = FloatProperty(&parameter->TotalNoiseScale);
+			DetailScale = FloatProperty(&parameter->DetailScale);
+
+			WeatherScale = FloatProperty(&parameter->WeatherScale);
+			CurlScale = FloatProperty(&parameter->CurlScale);
+			ShapeNoiseHeightGradientAmount = FloatProperty(&parameter->ShapeNoiseHeightGradientAmount);
+			ShapeNoiseMultiplier = FloatProperty(&parameter->ShapeNoiseMultiplier);
+
+			ShapeNoiseMinMax = VectorProperty(&parameter->ShapeNoiseMinMax);
+			ShapeNoisePower = FloatProperty(&parameter->ShapeNoisePower);
+			DetailNoiseModifier = FloatProperty(&parameter->DetailNoiseModifier);
+
+			TypeAmount = FloatProperty(&parameter->TypeAmount);
+			TypeOverall = FloatProperty(&parameter->TypeOverall);
+			AnvilAmount = FloatProperty(&parameter->AnvilAmount);
+			AnvilOverhangHeight = FloatProperty(&parameter->AnvilOverhangHeight);
+
+			AnimationMultiplier = FloatProperty(&parameter->AnimationMultiplier);
+			WindSpeed = FloatProperty(&parameter->WindSpeed);
+			WindAngle = FloatProperty(&parameter->WindAngle);
+			WindUpAmount = FloatProperty(&parameter->WindUpAmount);
+
+			CoverageWindSpeed = FloatProperty(&parameter->CoverageWindSpeed);
+			CoverageWindAngle = FloatProperty(&parameter->CoverageWindAngle);
+
+			CloudGradientSmall = VectorProperty(&parameter->CloudGradientSmall);
+			CloudGradientMedium = VectorProperty(&parameter->CloudGradientMedium);
+			CloudGradientLarge = VectorProperty(&parameter->CloudGradientLarge);
+		}
+		Weather_VolumetricCloudParams_BindLua(lua_State* L);
+		~Weather_VolumetricCloudParams_BindLua();
+
+		VectorProperty Albedo;
+		FloatProperty CloudAmbientGroundMultiplier;
+		VectorProperty ExtinctionCoefficient;
+
+		FloatProperty HorizonBlendAmount;
+		FloatProperty HorizonBlendPower;
+		FloatProperty WeatherDensityAmount;
+		FloatProperty CloudStartHeight;
+
+		FloatProperty CloudThickness;
+		FloatProperty SkewAlongWindDirection;
+		FloatProperty TotalNoiseScale;
+		FloatProperty DetailScale;
+
+		FloatProperty WeatherScale;
+		FloatProperty CurlScale;
+		FloatProperty ShapeNoiseHeightGradientAmount;
+		FloatProperty ShapeNoiseMultiplier;
+
+		VectorProperty ShapeNoiseMinMax;
+		FloatProperty ShapeNoisePower;
+		FloatProperty DetailNoiseModifier;
+
+		FloatProperty TypeAmount;
+		FloatProperty TypeOverall;
+		FloatProperty AnvilAmount;
+		FloatProperty AnvilOverhangHeight;
+
+		FloatProperty AnimationMultiplier;
+		FloatProperty WindSpeed;
+		FloatProperty WindAngle;
+		FloatProperty WindUpAmount;
+
+		FloatProperty CoverageWindSpeed;
+		FloatProperty CoverageWindAngle;
+
+		VectorProperty CloudGradientSmall;
+		VectorProperty CloudGradientMedium;
+		VectorProperty CloudGradientLarge;
+
+		PropertyFunction(Albedo)
+		PropertyFunction(CloudAmbientGroundMultiplier)
+		PropertyFunction(ExtinctionCoefficient)
+
+		PropertyFunction(HorizonBlendAmount)
+		PropertyFunction(HorizonBlendPower)
+		PropertyFunction(WeatherDensityAmount)
+		PropertyFunction(CloudStartHeight)
+
+		PropertyFunction(CloudThickness)
+		PropertyFunction(SkewAlongWindDirection)
+		PropertyFunction(TotalNoiseScale)
+		PropertyFunction(DetailScale)
+
+		PropertyFunction(WeatherScale)
+		PropertyFunction(CurlScale)
+		PropertyFunction(ShapeNoiseHeightGradientAmount)
+		PropertyFunction(ShapeNoiseMultiplier)
+
+		PropertyFunction(ShapeNoiseMinMax)
+		PropertyFunction(ShapeNoisePower)
+		PropertyFunction(DetailNoiseModifier)
+
+		PropertyFunction(TypeAmount)
+		PropertyFunction(TypeOverall)
+		PropertyFunction(AnvilAmount)
+		PropertyFunction(AnvilOverhangHeight)
+
+		PropertyFunction(AnimationMultiplier)
+		PropertyFunction(WindSpeed)
+		PropertyFunction(WindAngle)
+		PropertyFunction(WindUpAmount)
+
+		PropertyFunction(CoverageWindSpeed)
+		PropertyFunction(CoverageWindAngle)
+
+		PropertyFunction(CloudGradientSmall)
+		PropertyFunction(CloudGradientMedium)
+		PropertyFunction(CloudGradientLarge)
+
+	};
+	class Weather_VolumetricCloudParams_Property final : public LuaProperty
+	{
+	public:
+		VolumetricCloudParameters* data;
+		Weather_VolumetricCloudParams_Property(){}
+		Weather_VolumetricCloudParams_Property(VolumetricCloudParameters* data) :data(data){}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
 	};
 
 	class WeatherComponent_BindLua
@@ -546,41 +944,95 @@ namespace wi::lua::scene
 		bool owning = false;
 		wi::scene::WeatherComponent* component = nullptr;
 
-		void InitParameters();
-
 		static const char className[];
 		static Luna<WeatherComponent_BindLua>::FunctionType methods[];
 		static Luna<WeatherComponent_BindLua>::PropertyType properties[];
 
-		WeatherComponent_BindLua(wi::scene::WeatherComponent* component) :component(component) { InitParameters(); }
+		WeatherComponent_BindLua(wi::scene::WeatherComponent* component) :component(component)
+		{
+			sunColor = VectorProperty(&component->sunColor);
+			sunDirection = VectorProperty(&component->sunDirection);
+			skyExposure = FloatProperty(&component->skyExposure);
+			horizon = VectorProperty(&component->horizon);
+			zenith = VectorProperty(&component->zenith);
+			ambient = VectorProperty(&component->ambient);
+			fogStart = FloatProperty(&component->fogStart);
+			fogEnd = FloatProperty(&component->fogEnd);
+			fogHeightStart = FloatProperty(&component->fogHeightStart);
+			fogHeightEnd = FloatProperty(&component->fogHeightEnd);
+			fogHeightSky = FloatProperty(&component->fogHeightSky);
+			cloudiness = FloatProperty(&component->cloudiness);
+			cloudScale = FloatProperty(&component->cloudScale);
+			cloudSpeed = FloatProperty(&component->cloudSpeed);
+			cloud_shadow_amount = FloatProperty(&component->cloud_shadow_amount);
+			cloud_shadow_scale = FloatProperty(&component->cloud_shadow_scale);
+			cloud_shadow_speed = FloatProperty(&component->cloud_shadow_speed);
+			windDirection = VectorProperty(&component->windDirection);
+			windRandomness = FloatProperty(&component->windRandomness);
+			windWaveSize = FloatProperty(&component->windWaveSize);
+			windSpeed = FloatProperty(&component->windSpeed);
+			stars = FloatProperty(&component->stars);
+
+			OceanParameters = Weather_OceanParams_Property(&component->oceanParameters);
+			AtmosphereParameters = Weather_AtmosphereParams_Property(&component->atmosphereParameters);
+			VolumetricCloudParameters = Weather_VolumetricCloudParams_Property(&component->volumetricCloudParameters);
+		}
 		WeatherComponent_BindLua(lua_State* L);
 		~WeatherComponent_BindLua();
 
-		wi::unordered_map<std::string, XMFLOAT3*> weatherparams_xmfloat3;
-		wi::unordered_map<std::string, float*> weatherparams_float;
+		VectorProperty sunColor;
+		VectorProperty sunDirection;
+		FloatProperty skyExposure;
+		VectorProperty horizon;
+		VectorProperty zenith;
+		VectorProperty ambient;
+		FloatProperty fogStart;
+		FloatProperty fogEnd;
+		FloatProperty fogHeightStart;
+		FloatProperty fogHeightEnd;
+		FloatProperty fogHeightSky;
+		FloatProperty cloudiness;
+		FloatProperty cloudScale;
+		FloatProperty cloudSpeed;
+		FloatProperty cloud_shadow_amount;
+		FloatProperty cloud_shadow_scale;
+		FloatProperty cloud_shadow_speed;
+		VectorProperty windDirection;
+		FloatProperty windRandomness;
+		FloatProperty windWaveSize;
+		FloatProperty windSpeed;
+		FloatProperty stars;
 
-		wi::unordered_map<std::string, int*> oceanparams_int;
-		wi::unordered_map<std::string, uint32_t*> oceanparams_uint32;
-		wi::unordered_map<std::string, XMFLOAT2*> oceanparams_xmfloat2;
-		wi::unordered_map<std::string, XMFLOAT4*> oceanparams_xmfloat4;
-		wi::unordered_map<std::string, float*> oceanparams_float;
+		PropertyFunction(sunColor)
+		PropertyFunction(sunDirection)
+		PropertyFunction(skyExposure)
+		PropertyFunction(horizon)
+		PropertyFunction(zenith)
+		PropertyFunction(ambient)
+		PropertyFunction(fogStart)
+		PropertyFunction(fogEnd)
+		PropertyFunction(fogHeightStart)
+		PropertyFunction(fogHeightEnd)
+		PropertyFunction(fogHeightSky)
+		PropertyFunction(cloudiness)
+		PropertyFunction(cloudScale)
+		PropertyFunction(cloudSpeed)
+		PropertyFunction(cloud_shadow_amount)
+		PropertyFunction(cloud_shadow_scale)
+		PropertyFunction(cloud_shadow_speed)
+		PropertyFunction(windDirection)
+		PropertyFunction(windRandomness)
+		PropertyFunction(windWaveSize)
+		PropertyFunction(windSpeed)
+		PropertyFunction(stars)
 
-		wi::unordered_map<std::string, XMFLOAT3*> atmosphereparams_xmfloat3;
-		wi::unordered_map<std::string, float*> atmosphereparams_float;
-
-		wi::unordered_map<std::string, XMFLOAT3*> volumetriccloudparams_xmfloat3;
-		wi::unordered_map<std::string, XMFLOAT4*> volumetriccloudparams_xmfloat4;
-		wi::unordered_map<std::string, float*> volumetriccloudparams_float;
-
-		int GetWeatherParams(lua_State* L);
-		int GetOceanParams(lua_State* L);
-		int GetAtmosphereParams(lua_State* L);
-		int GetVolumetricCloudParams(lua_State* L);
-
-		int SetWeatherParams(lua_State* L);
-		int SetOceanParams(lua_State* L);
-		int SetAtmosphereParams(lua_State* L);
-		int SetVolumetricCloudParams(lua_State* L);
+		Weather_OceanParams_Property OceanParameters;
+		Weather_AtmosphereParams_Property AtmosphereParameters;
+		Weather_VolumetricCloudParams_Property VolumetricCloudParameters;
+		
+		PropertyFunction(OceanParameters)
+		PropertyFunction(AtmosphereParameters)
+		PropertyFunction(VolumetricCloudParameters)
 
 		int IsOceanEnabled(lua_State* L);
 		int IsSimpleSky(lua_State* L);
@@ -611,15 +1063,19 @@ namespace wi::lua::scene
 		static Luna<SoundComponent_BindLua>::FunctionType methods[];
 		static Luna<SoundComponent_BindLua>::PropertyType properties[];
 
-		SoundComponent_BindLua(wi::scene::SoundComponent* component) :component(component) {}
+		SoundComponent_BindLua(wi::scene::SoundComponent* component) :component(component)
+		{
+			Filename = StringProperty(&component->filename);
+			Volume = FloatProperty(&component->volume);
+		}
 		SoundComponent_BindLua(lua_State* L);
 		~SoundComponent_BindLua();
 
-		int SetFilename(lua_State* L);
-		int SetVolume(lua_State* L);
+		StringProperty Filename;
+		FloatProperty Volume;
 
-		int GetFilename(lua_State* L);
-		int GetVolume(lua_State* L);
+		PropertyFunction(Filename)
+		PropertyFunction(Volume)
 
 		int IsPlaying(lua_State* L);
 		int IsLooped(lua_State* L);
@@ -641,19 +1097,25 @@ namespace wi::lua::scene
 		static Luna<ColliderComponent_BindLua>::FunctionType methods[];
 		static Luna<ColliderComponent_BindLua>::PropertyType properties[];
 
-		ColliderComponent_BindLua(wi::scene::ColliderComponent* component) :component(component) {}
+		ColliderComponent_BindLua(wi::scene::ColliderComponent* component) :component(component)
+		{
+			Shape = IntProperty(reinterpret_cast<int*>(&component->shape));
+			Radius = FloatProperty(&component->radius);
+			Offset = VectorProperty(&component->offset);
+			Tail = VectorProperty(&component->tail);
+		}
 		ColliderComponent_BindLua(lua_State* L);
 		~ColliderComponent_BindLua();
+		
+		IntProperty Shape;
+		FloatProperty Radius;
+		VectorProperty Offset;
+		VectorProperty Tail;
 
-		int GetShape(lua_State* L);
-		int GetRadius(lua_State* L);
-		int GetOffset(lua_State* L);
-		int GetTail(lua_State* L);
-
-		int SetShape(lua_State* L);
-		int SetRadius(lua_State* L);
-		int SetOffset(lua_State* L);
-		int SetTail(lua_State* L);
+		PropertyFunction(Shape)
+		PropertyFunction(Radius)
+		PropertyFunction(Offset)
+		PropertyFunction(Tail)
 	};
 }
 

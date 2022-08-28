@@ -24,17 +24,12 @@ weather_name.SetName("My Animated Weather")
 local weather = scene.Component_CreateWeather(weather_entity)
 weather.SetRealisticSky(true)
 weather.SetVolumetricClouds(true)
+weather.skyExposure = 1.2
 
--- This is similiar to cloudparams = weather.GetVolumetricCloudParams()
-local cloudparams = weather.VolumetricCloudParams
-for key, _ in pairs(cloudparams) do
-    backlog_post("cloudparams." .. key)
-end
-cloudparams.CloudStartHeight = -100.0
-cloudparams.WeatherScale = 0.04
-cloudparams.WeatherDensityAmount = 0.5
-cloudparams.SkewAlongWindDirection = 5.0
-weather.VolumetricCloudParams = cloudparams
+weather.VolumetricCloudParams.CloudStartHeight = -100.0
+weather.VolumetricCloudParams.WeatherScale = 0.04
+weather.VolumetricCloudParams.WeatherDensityAmount = 0.5
+weather.VolumetricCloudParams.SkewAlongWindDirection = 5.0
 
 runProcess(function()
     while true do

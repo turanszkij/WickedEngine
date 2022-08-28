@@ -53,6 +53,23 @@ namespace wi::lua
 
 		static void Bind();
 	};
+	class VectorProperty final : public LuaProperty
+	{
+	public:
+		VectorProperty(){}
+		VectorProperty(XMFLOAT2* data): data_f2(data) {}
+		VectorProperty(XMFLOAT3* data): data_f3(data) {}
+		VectorProperty(XMFLOAT4* data): data_f4(data) {}
+		VectorProperty(XMVECTOR* data): data_v(data) {}
+		
+		int Get(lua_State*L);
+		int Set(lua_State*L);
+	private:
+		XMFLOAT2* data_f2;
+		XMFLOAT3* data_f3;
+		XMFLOAT4* data_f4;
+		XMVECTOR* data_v;
+	};
 
 	class Matrix_BindLua : public XMFLOAT4X4
 	{
@@ -85,5 +102,17 @@ namespace wi::lua
 
 		static void Bind();
 	};
-
+	class MatrixProperty final : public LuaProperty
+	{
+	public:
+		MatrixProperty(){}
+		MatrixProperty(XMFLOAT4X4* data): data_f4x4(data) {}
+		MatrixProperty(XMMATRIX* data): data_m(data) {}
+		
+		int Get(lua_State*L);
+		int Set(lua_State*L);
+	private:
+		XMFLOAT4X4* data_f4x4;
+		XMMATRIX* data_m;
+	};
 }
