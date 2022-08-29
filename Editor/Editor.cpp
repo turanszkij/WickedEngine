@@ -348,6 +348,7 @@ void EditorComponent::Load()
 		componentsWnd.hierarchyWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.armatureWnd.SetEntity(INVALID_ENTITY);
 
 		optionsWnd.RefreshEntityTree();
 		ResetHistory();
@@ -954,7 +955,7 @@ void EditorComponent::Update(float dt)
 					if (translator.selected.empty() && object->GetRenderTypes() & wi::enums::RENDERTYPE_WATER)
 					{
 						// if water, then put a water ripple onto it:
-						scene.PutWaterRipple("images/ripple.png", hovered.position);
+						scene.PutWaterRipple("../Content/models/ripple.png", hovered.position);
 					}
 					else if (componentsWnd.decalWnd.IsEnabled() && componentsWnd.decalWnd.placementCheckBox.GetCheck() && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 					{
@@ -1303,6 +1304,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.hierarchyWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.armatureWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1341,6 +1343,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.hierarchyWnd.SetEntity(picked.entity);
 		componentsWnd.cameraComponentWnd.SetEntity(picked.entity);
 		componentsWnd.expressionWnd.SetEntity(picked.entity);
+		componentsWnd.armatureWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{

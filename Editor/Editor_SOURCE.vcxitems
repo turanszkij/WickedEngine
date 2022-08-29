@@ -15,6 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)AnimationWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ArmatureWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)CameraComponentWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)CameraWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ColliderWindow.cpp" />
@@ -132,6 +133,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ArmatureWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CameraComponentWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CameraWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ColliderWindow.h" />

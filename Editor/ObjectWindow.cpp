@@ -284,6 +284,24 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	float step = hei + 2;
 	float wid = 130;
 
+	meshCombo.Create("Mesh: ");
+	meshCombo.SetSize(XMFLOAT2(wid, hei));
+	meshCombo.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object == nullptr)
+			return;
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		object->meshID = (Entity)args.userdata;
+
+		editor->RecordEntity(archive, entity);
+		});
+	AddWidget(&meshCombo);
+
 	renderableCheckBox.Create("Renderable: ");
 	renderableCheckBox.SetTooltip("Set object to be participating in rendering.");
 	renderableCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -556,6 +574,23 @@ void ObjectWindow::SetEntity(Entity entity)
 	{
 		SetEnabled(true);
 
+		meshCombo.ClearItems();
+		meshCombo.AddItem("INVALID_ENTITY", (uint64_t)INVALID_ENTITY);
+		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+		{
+			Entity meshID = scene.meshes.GetEntity(i);
+			const NameComponent* name = scene.names.GetComponent(meshID);
+			if (name == nullptr)
+			{
+				meshCombo.AddItem(std::to_string(meshID), (uint64_t)meshID);
+			}
+			else
+			{
+				meshCombo.AddItem(name->name, (uint64_t)meshID);
+			}
+		}
+		meshCombo.SetSelectedByUserdataWithoutCallback(object->meshID);
+
 		renderableCheckBox.SetCheck(object->IsRenderable());
 		shadowCheckBox.SetCheck(object->IsCastingShadow());
 		cascadeMaskSlider.SetValue((float)object->cascadeMask);
@@ -591,11 +626,12 @@ void ObjectWindow::ResizeLayout()
 	float y = padding;
 	float jump = 20;
 
+	float margin_left = 140;
+	float margin_right = 40;
+
 	auto add = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
-		const float margin_left = 140;
-		const float margin_right = 40;
 		widget.SetPos(XMFLOAT2(margin_left, y));
 		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
 		y += widget.GetSize().y;
@@ -604,7 +640,6 @@ void ObjectWindow::ResizeLayout()
 	auto add_right = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
-		const float margin_right = 40;
 		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
 		y += widget.GetSize().y;
 		y += padding;
@@ -620,6 +655,12 @@ void ObjectWindow::ResizeLayout()
 		y += padding;
 	};
 
+	margin_left = 80;
+
+	add(meshCombo);
+
+	margin_left = 140;
+
 	add_right(renderableCheckBox);
 	add_right(shadowCheckBox);
 	add(ditherSlider);
@@ -628,6 +669,9 @@ void ObjectWindow::ResizeLayout()
 	add(colorComboBox);
 	add_fullwidth(colorPicker);
 	add(lightmapResolutionSlider);
+
+	margin_left = 80;
+
 	add(lightmapSourceUVSetComboBox);
 	add(generateLightmapButton);
 	add(stopLightmapGenButton);
