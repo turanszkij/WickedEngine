@@ -672,12 +672,12 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	TextureCubeArray input = bindless_cubearrays[capture.texture_input];
-	TextureCubeArray input_depth = bindless_cubearrays[capture.texture_input_depth]; // Current capture with only 6 slices (cube)
+	TextureCube input_depth = bindless_cubemaps[capture.texture_input_depth]; // Current capture with only 6 slices (cube)
 	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[capture.texture_output];
 
 	const float2 uv = (DTid.xy + 0.5) * capture.resolution_rcp;
 	const float3 N = uv_to_cubemap(uv, DTid.z);
-	const float depth = input_depth.SampleLevel(sampler_point_clamp, float4(N, DTid.z), 0).r;
+	const float depth = input_depth.SampleLevel(sampler_point_clamp, N, 0).r;
 
 	float3 depthWorldPosition = reconstruct_position(uv, depth, xCubemapRenderCams[DTid.z].inverse_view_projection);
 
