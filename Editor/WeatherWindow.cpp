@@ -923,8 +923,10 @@ void WeatherWindow::ResizeLayout()
 	y += jump;
 
 	add_right(volumetricCloudsCheckBox);
+	add_right(volumetricCloudsShadowsCheckBox);
 	add(coverageAmountSlider);
 	add(coverageMinimumSlider);
+	add_fullwidth(volumetricCloudsWeatherMapButton);
 
 	y += jump;
 

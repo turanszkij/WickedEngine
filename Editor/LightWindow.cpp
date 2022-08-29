@@ -411,6 +411,7 @@ void LightWindow::ResizeLayout()
 	add_right(haloCheckBox);
 	add_right(volumetricsCheckBox);
 	add_right(staticCheckBox);
+	add_right(volumetricCloudsCheckBox);
 	add(shadowResolutionComboBox);
 
 	y += jump;

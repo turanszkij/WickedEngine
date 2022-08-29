@@ -849,15 +849,10 @@ namespace wi::lua::scene
 
 			WeatherScale = FloatProperty(&parameter->WeatherScale);
 			CurlScale = FloatProperty(&parameter->CurlScale);
-			ShapeNoiseHeightGradientAmount = FloatProperty(&parameter->ShapeNoiseHeightGradientAmount);
-			ShapeNoiseMultiplier = FloatProperty(&parameter->ShapeNoiseMultiplier);
-
-			ShapeNoiseMinMax = VectorProperty(&parameter->ShapeNoiseMinMax);
-			ShapeNoisePower = FloatProperty(&parameter->ShapeNoisePower);
 			DetailNoiseModifier = FloatProperty(&parameter->DetailNoiseModifier);
 
 			TypeAmount = FloatProperty(&parameter->TypeAmount);
-			TypeOverall = FloatProperty(&parameter->TypeOverall);
+			TypeMinimum = FloatProperty(&parameter->TypeMinimum);
 			AnvilAmount = FloatProperty(&parameter->AnvilAmount);
 			AnvilOverhangHeight = FloatProperty(&parameter->AnvilOverhangHeight);
 
@@ -895,15 +890,10 @@ namespace wi::lua::scene
 
 		FloatProperty WeatherScale;
 		FloatProperty CurlScale;
-		FloatProperty ShapeNoiseHeightGradientAmount;
-		FloatProperty ShapeNoiseMultiplier;
-
-		VectorProperty ShapeNoiseMinMax;
-		FloatProperty ShapeNoisePower;
 		FloatProperty DetailNoiseModifier;
 
 		FloatProperty TypeAmount;
-		FloatProperty TypeOverall;
+		FloatProperty TypeMinimum;
 		FloatProperty AnvilAmount;
 		FloatProperty AnvilOverhangHeight;
 
@@ -935,15 +925,10 @@ namespace wi::lua::scene
 
 		PropertyFunction(WeatherScale)
 		PropertyFunction(CurlScale)
-		PropertyFunction(ShapeNoiseHeightGradientAmount)
-		PropertyFunction(ShapeNoiseMultiplier)
-
-		PropertyFunction(ShapeNoiseMinMax)
-		PropertyFunction(ShapeNoisePower)
 		PropertyFunction(DetailNoiseModifier)
 
 		PropertyFunction(TypeAmount)
-		PropertyFunction(TypeOverall)
+		PropertyFunction(TypeMinimum)
 		PropertyFunction(AnvilAmount)
 		PropertyFunction(AnvilOverhangHeight)
 
