@@ -1135,7 +1135,7 @@ namespace wi::scene
 				archive >> volumetricCloudParameters.DetailScale;
 				archive >> volumetricCloudParameters.WeatherScale;
 				archive >> volumetricCloudParameters.CurlScale;
-				if (archive.GetVersion() < 84)
+				if (archive.GetVersion() < 86)
 				{
 					float ShapeNoiseHeightGradientAmount;
 					float ShapeNoiseMultiplier;
@@ -1175,12 +1175,12 @@ namespace wi::scene
 				archive >> volumetricCloudParameters.ShadowSampleCount;
 				archive >> volumetricCloudParameters.GroundContributionSampleCount;
 
-				if (archive.GetVersion() < 84)
+				if (archive.GetVersion() < 86)
 				{
 					volumetricCloudParameters.HorizonBlendAmount *= 0.00001f;
 					volumetricCloudParameters.TotalNoiseScale *= 0.0004f;
 					volumetricCloudParameters.WeatherScale *= 0.0004f;
-					volumetricCloudParameters.CoverageAmount = std::max(0.0f, volumetricCloudParameters.CoverageAmount / 2.0f);
+					volumetricCloudParameters.CoverageAmount /= 2.0f;
 					volumetricCloudParameters.CoverageMinimum = std::max(0.0f, volumetricCloudParameters.CoverageMinimum - 1.0f);
 				}
 			}
@@ -1203,7 +1203,7 @@ namespace wi::scene
 				archive >> stars;
 			}
 
-			if (archive.GetVersion() >= 84)
+			if (archive.GetVersion() >= 86)
 			{
 				archive >> volumetricCloudsWeatherMapName;
 				if (!volumetricCloudsWeatherMapName.empty())
@@ -1307,7 +1307,7 @@ namespace wi::scene
 				archive << volumetricCloudParameters.DetailScale;
 				archive << volumetricCloudParameters.WeatherScale;
 				archive << volumetricCloudParameters.CurlScale;
-				if (archive.GetVersion() < 84)
+				if (archive.GetVersion() < 86)
 				{
 					float ShapeNoiseHeightGradientAmount = 0;
 					float ShapeNoiseMultiplier = 0;
@@ -1366,7 +1366,7 @@ namespace wi::scene
 				archive << stars;
 			}
 
-			if (archive.GetVersion() >= 84)
+			if (archive.GetVersion() >= 86)
 			{
 				archive << volumetricCloudsWeatherMapName;
 			}
