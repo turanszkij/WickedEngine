@@ -4862,17 +4862,24 @@ namespace wi::scene
 			desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 			desc.usage = Usage::DEFAULT;
 			desc.layout = ResourceState::SHADER_RESOURCE;
-
 			device->CreateTexture(&desc, nullptr, &envmapArray);
 			device->SetName(&envmapArray, "envmapArray");
+
+			desc.array_size = 6;
+			desc.mip_levels = 1;
+			desc.format = Format::R16_TYPELESS;
+			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+			desc.layout = ResourceState::SHADER_RESOURCE;
+			device->CreateTexture(&desc, nullptr, &envmapDepth);
+			device->SetName(&envmapDepth, "envmapDepth");
 
 			// Cube arrays per mip level:
 			for (uint32_t i = 0; i < envmapArray.desc.mip_levels; ++i)
 			{
 				int subresource_index;
-				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, 0, desc.array_size, i, 1);
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, 0, envmapArray.desc.array_size, i, 1);
 				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::UAV, 0, desc.array_size, i, 1);
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::UAV, 0, envmapArray.desc.array_size, i, 1);
 				assert(subresource_index == i);
 			}
 
@@ -4918,6 +4925,16 @@ namespace wi::scene
 							ResourceState::RENDERTARGET,
 							ResourceState::SHADER_RESOURCE,
 							subresource_index
+						)
+					);
+
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::DepthStencil(&envmapDepth,
+							RenderPassAttachment::LoadOp::CLEAR,
+							RenderPassAttachment::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::SHADER_RESOURCE
 						)
 					);
 					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[i]);

@@ -138,6 +138,11 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 				shadow *= saturate(cloud_shadow + 1 - GetWeather().cloud_shadow_amount * 2);
 			}
 
+			if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
+			{
+				shadow *= shadow_2D_volumetricclouds(surface.P);
+			}
+				
 #ifdef SHADOW_MASK_ENABLED
 			[branch]
 			if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0)

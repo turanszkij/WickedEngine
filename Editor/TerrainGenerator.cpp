@@ -794,8 +794,8 @@ void TerrainGenerator::Generation_Restart()
 		weather.ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		weather.SetRealisticSky(true);
 		weather.SetVolumetricClouds(true);
-		weather.volumetricCloudParameters.CoverageAmount = 0.4f;
-		weather.volumetricCloudParameters.CoverageMinimum = 1.35f;
+		weather.volumetricCloudParameters.CoverageAmount = 0.5f;
+		weather.volumetricCloudParameters.CoverageMinimum = 0.05f;
 		if (presetCombo.GetItemUserData(presetCombo.GetSelected()) == PRESET_ISLANDS)
 		{
 			weather.SetOceanEnabled(true);

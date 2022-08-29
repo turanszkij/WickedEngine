@@ -56,16 +56,18 @@ float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Textur
                 sampling.sampleCountIni = 0.0f;
                 sampling.rayMarchMinMaxSPP = float2(4, 14);
                 sampling.distanceSPPMaxInv = 0.01;
-            }
-            const bool ground = false;
-            const float depthBufferWorldPos = 0.0;
+				sampling.perPixelNoise = false;
+			}
+			const float2 pixelPosition = float2(0.0, 0.0);
+            const float tDepth = 0.0;
             const bool opaque = false;
+            const bool ground = false;
             const bool mieRayPhase = true;
             const bool multiScatteringApprox = true;
-            const float2 pixPos = float2(0, 0);
+            const bool volumetricCloudShadow = false;
             SingleScatteringResult ss = IntegrateScatteredLuminance(
-                atmosphere, pixPos, worldPosition, worldDirection, sunDirection, sunIlluminance,
-                sampling, ground, depthBufferWorldPos, opaque, mieRayPhase, multiScatteringApprox, transmittanceLUT, multiScatteringLUT);
+                atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance,
+                sampling, tDepth, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, transmittanceLUT, multiScatteringLUT);
 
             luminance = ss.L;
         }

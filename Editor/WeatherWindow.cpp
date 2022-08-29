@@ -289,7 +289,17 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&volumetricCloudsCheckBox);
 
-	coverageAmountSlider.Create(0, 10, 0, 1000, "Coverage amount: ");
+	volumetricCloudsShadowsCheckBox.Create("Volumetric clouds shadows: ");
+	volumetricCloudsShadowsCheckBox.SetTooltip("Compute shadows for volumetric clouds that will be used for geometry and lighting.");
+	volumetricCloudsShadowsCheckBox.SetSize(XMFLOAT2(hei, hei));
+	volumetricCloudsShadowsCheckBox.SetPos(XMFLOAT2(x, y += step));
+	volumetricCloudsShadowsCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetVolumetricCloudsShadows(args.bValue);
+		});
+	AddWidget(&volumetricCloudsShadowsCheckBox);
+
+	coverageAmountSlider.Create(0, 10, 1, 1000, "Coverage amount: ");
 	coverageAmountSlider.SetSize(XMFLOAT2(wid, hei));
 	coverageAmountSlider.SetPos(XMFLOAT2(x, y += step));
 	coverageAmountSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -298,7 +308,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&coverageAmountSlider);
 
-	coverageMinimumSlider.Create(1, 2, 1, 1000, "Coverage minimmum: ");
+	coverageMinimumSlider.Create(0, 1, 0, 1000, "Coverage minimmum: ");
 	coverageMinimumSlider.SetSize(XMFLOAT2(wid, hei));
 	coverageMinimumSlider.SetPos(XMFLOAT2(x, y += step));
 	coverageMinimumSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -373,6 +383,38 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 		});
 	AddWidget(&colorgradingButton);
+
+	volumetricCloudsWeatherMapButton.Create("Load Volumetric Clouds Weather Map");
+	volumetricCloudsWeatherMapButton.SetTooltip("Load a weather map for volumetric clouds. Red channel is coverage, green is type and blue is water density (rain).");
+	volumetricCloudsWeatherMapButton.SetSize(XMFLOAT2(mod_wid, hei));
+	volumetricCloudsWeatherMapButton.SetPos(XMFLOAT2(mod_x, y += step));
+	volumetricCloudsWeatherMapButton.OnClick([=](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+
+		if (!weather.volumetricCloudsWeatherMap.IsValid())
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					auto& weather = GetWeather();
+					weather.volumetricCloudsWeatherMapName = fileName;
+					weather.volumetricCloudsWeatherMap = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					volumetricCloudsWeatherMapButton.SetText(wi::helper::GetFileNameFromPath(fileName));
+					});
+				});
+		}
+		else
+		{
+			weather.volumetricCloudsWeatherMap = {};
+			weather.volumetricCloudsWeatherMapName.clear();
+			volumetricCloudsWeatherMapButton.SetText("Load Volumetric Clouds Weather Map");
+		}
+
+		});
+	AddWidget(&volumetricCloudsWeatherMapButton);
 
 
 
@@ -712,6 +754,11 @@ void WeatherWindow::Update()
 			colorgradingButton.SetText(wi::helper::GetFileNameFromPath(weather.colorGradingMapName));
 		}
 
+		if (!weather.volumetricCloudsWeatherMapName.empty())
+		{
+			volumetricCloudsWeatherMapButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapName));
+		}
+
 		heightFogCheckBox.SetCheck(weather.IsHeightFog());
 		fogStartSlider.SetValue(weather.fogStart);
 		fogEndSlider.SetValue(weather.fogEnd);
@@ -765,6 +812,7 @@ void WeatherWindow::Update()
 		ocean_toleranceSlider.SetValue(weather.oceanParameters.surfaceDisplacementTolerance);
 
 		volumetricCloudsCheckBox.SetCheck(weather.IsVolumetricClouds());
+		volumetricCloudsShadowsCheckBox.SetCheck(weather.IsVolumetricCloudsShadows());
 		coverageAmountSlider.SetValue(weather.volumetricCloudParameters.CoverageAmount);
 		coverageMinimumSlider.SetValue(weather.volumetricCloudParameters.CoverageMinimum);
 	}
@@ -875,8 +923,10 @@ void WeatherWindow::ResizeLayout()
 	y += jump;
 
 	add_right(volumetricCloudsCheckBox);
+	add_right(volumetricCloudsShadowsCheckBox);
 	add(coverageAmountSlider);
 	add(coverageMinimumSlider);
+	add_fullwidth(volumetricCloudsWeatherMapButton);
 
 	y += jump;
 

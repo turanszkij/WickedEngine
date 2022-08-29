@@ -83,14 +83,6 @@ uint3 hash33(uint3 x)
 	return uint3(n, n * 16807u, n * 48271u); //see: http://random.mat.sbg.ac.at/results/karl/server/node4.html
 }
 
-// Computes post-projection depth from linear depth
-float getInverseLinearDepth(float lin, float near, float far)
-{
-	float z_n = ((lin - 2 * far) * near + far * lin) / (lin * near - far * lin);
-	float z = (z_n + 1) / 2;
-	return z;
-}
-
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
@@ -164,7 +156,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	// Convert to post-projection depth so we can construct dual source reprojection buffers later
 	const float lineardepth = texture_lineardepth[DTid.xy] * GetCamera().z_far;
-	float reprojectionDepth = getInverseLinearDepth(lineardepth + closestRayLength, GetCamera().z_near, GetCamera().z_far);
+	float reprojectionDepth = compute_inverse_lineardepth(lineardepth + closestRayLength, GetCamera().z_near, GetCamera().z_far);
 
 	texture_resolve[DTid.xy] = max(result, 0.00001f);
 	texture_resolve_variance[DTid.xy] = resolveVariance;

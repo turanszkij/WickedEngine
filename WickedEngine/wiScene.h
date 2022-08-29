@@ -849,6 +849,7 @@ namespace wi::scene
 			VOLUMETRICS = 1 << 1,
 			VISUALIZER = 1 << 2,
 			LIGHTMAPONLY_STATIC = 1 << 3,
+			VOLUMETRICCLOUDS = 1 << 4,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -892,11 +893,13 @@ namespace wi::scene
 		inline void SetVolumetricsEnabled(bool value) { if (value) { _flags |= VOLUMETRICS; } else { _flags &= ~VOLUMETRICS; } }
 		inline void SetVisualizerEnabled(bool value) { if (value) { _flags |= VISUALIZER; } else { _flags &= ~VISUALIZER; } }
 		inline void SetStatic(bool value) { if (value) { _flags |= LIGHTMAPONLY_STATIC; } else { _flags &= ~LIGHTMAPONLY_STATIC; } }
+		inline void SetVolumetricCloudsEnabled(bool value) { if (value) { _flags |= VOLUMETRICCLOUDS; } else { _flags &= ~VOLUMETRICCLOUDS; } }
 
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsVolumetricsEnabled() const { return _flags & VOLUMETRICS; }
 		inline bool IsVisualizerEnabled() const { return _flags & VISUALIZER; }
 		inline bool IsStatic() const { return _flags & LIGHTMAPONLY_STATIC; }
+		inline bool IsVolumetricCloudsEnabled() const { return _flags & VOLUMETRICCLOUDS; }
 
 		inline float GetRange() const
 		{
@@ -1231,6 +1234,7 @@ namespace wi::scene
 			REALISTIC_SKY = 1 << 2,
 			VOLUMETRIC_CLOUDS = 1 << 3,
 			HEIGHT_FOG = 1 << 4,
+			VOLUMETRIC_CLOUDS_SHADOWS = 1 << 5,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -1239,12 +1243,14 @@ namespace wi::scene
 		inline bool IsRealisticSky() const { return _flags & REALISTIC_SKY; }
 		inline bool IsVolumetricClouds() const { return _flags & VOLUMETRIC_CLOUDS; }
 		inline bool IsHeightFog() const { return _flags & HEIGHT_FOG; }
+		inline bool IsVolumetricCloudsShadows() const { return _flags & VOLUMETRIC_CLOUDS_SHADOWS; }
 
 		inline void SetOceanEnabled(bool value = true) { if (value) { _flags |= OCEAN_ENABLED; } else { _flags &= ~OCEAN_ENABLED; } }
 		inline void SetSimpleSky(bool value = true) { if (value) { _flags |= SIMPLE_SKY; } else { _flags &= ~SIMPLE_SKY; } }
 		inline void SetRealisticSky(bool value = true) { if (value) { _flags |= REALISTIC_SKY; } else { _flags &= ~REALISTIC_SKY; } }
 		inline void SetVolumetricClouds(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS; } else { _flags &= ~VOLUMETRIC_CLOUDS; } }
 		inline void SetHeightFog(bool value = true) { if (value) { _flags |= HEIGHT_FOG; } else { _flags &= ~HEIGHT_FOG; } }
+		inline void SetVolumetricCloudsShadows(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS_SHADOWS; } else { _flags &= ~VOLUMETRIC_CLOUDS_SHADOWS; } }
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
@@ -1275,11 +1281,13 @@ namespace wi::scene
 
 		std::string skyMapName;
 		std::string colorGradingMapName;
+		std::string volumetricCloudsWeatherMapName;
 
 		// Non-serialized attributes:
 		uint32_t most_important_light_index = ~0u;
 		wi::Resource skyMap;
 		wi::Resource colorGradingMap;
+		wi::Resource volumetricCloudsWeatherMap;
 		XMFLOAT4 stars_rotation_quaternion = XMFLOAT4(0, 0, 0, 1);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
@@ -1668,6 +1676,7 @@ namespace wi::scene
 		wi::graphics::Texture envrenderingDepthBuffer_MSAA;
 		wi::graphics::Texture envrenderingColorBuffer_MSAA;
 		wi::graphics::Texture envmapArray;
+		wi::graphics::Texture envmapDepth;
 		wi::vector<wi::graphics::RenderPass> renderpasses_envmap;
 		wi::vector<wi::graphics::RenderPass> renderpasses_envmap_MSAA;
 

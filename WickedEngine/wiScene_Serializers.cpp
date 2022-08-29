@@ -1135,17 +1135,24 @@ namespace wi::scene
 				archive >> volumetricCloudParameters.DetailScale;
 				archive >> volumetricCloudParameters.WeatherScale;
 				archive >> volumetricCloudParameters.CurlScale;
-				archive >> volumetricCloudParameters.ShapeNoiseHeightGradientAmount;
-				archive >> volumetricCloudParameters.ShapeNoiseMultiplier;
-				archive >> volumetricCloudParameters.ShapeNoiseMinMax;
-				archive >> volumetricCloudParameters.ShapeNoisePower;
+				if (archive.GetVersion() < 86)
+				{
+					float ShapeNoiseHeightGradientAmount;
+					float ShapeNoiseMultiplier;
+					XMFLOAT2 ShapeNoiseMinMax;
+					float ShapeNoisePower;
+					archive >> ShapeNoiseHeightGradientAmount;
+					archive >> ShapeNoiseMultiplier;
+					archive >> ShapeNoiseMinMax;
+					archive >> ShapeNoisePower;
+				}
 				archive >> volumetricCloudParameters.DetailNoiseModifier;
 				archive >> volumetricCloudParameters.DetailNoiseHeightFraction;
 				archive >> volumetricCloudParameters.CurlNoiseModifier;
 				archive >> volumetricCloudParameters.CoverageAmount;
 				archive >> volumetricCloudParameters.CoverageMinimum;
 				archive >> volumetricCloudParameters.TypeAmount;
-				archive >> volumetricCloudParameters.TypeOverall;
+				archive >> volumetricCloudParameters.TypeMinimum;
 				archive >> volumetricCloudParameters.AnvilAmount;
 				archive >> volumetricCloudParameters.AnvilOverhangHeight;
 				archive >> volumetricCloudParameters.AnimationMultiplier;
@@ -1167,6 +1174,15 @@ namespace wi::scene
 				archive >> volumetricCloudParameters.TransmittanceThreshold;
 				archive >> volumetricCloudParameters.ShadowSampleCount;
 				archive >> volumetricCloudParameters.GroundContributionSampleCount;
+
+				if (archive.GetVersion() < 86)
+				{
+					volumetricCloudParameters.HorizonBlendAmount *= 0.00001f;
+					volumetricCloudParameters.TotalNoiseScale *= 0.0004f;
+					volumetricCloudParameters.WeatherScale *= 0.0004f;
+					volumetricCloudParameters.CoverageAmount /= 2.0f;
+					volumetricCloudParameters.CoverageMinimum = std::max(0.0f, volumetricCloudParameters.CoverageMinimum - 1.0f);
+				}
 			}
 
 			if (archive.GetVersion() >= 71)
@@ -1185,6 +1201,16 @@ namespace wi::scene
 			if (archive.GetVersion() >= 78)
 			{
 				archive >> stars;
+			}
+
+			if (archive.GetVersion() >= 86)
+			{
+				archive >> volumetricCloudsWeatherMapName;
+				if (!volumetricCloudsWeatherMapName.empty())
+				{
+					volumetricCloudsWeatherMapName = dir + volumetricCloudsWeatherMapName;
+					volumetricCloudsWeatherMap = wi::resourcemanager::Load(volumetricCloudsWeatherMapName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+				}
 			}
 		}
 		else
@@ -1220,6 +1246,7 @@ namespace wi::scene
 
 			wi::helper::MakePathRelative(dir, skyMapName);
 			wi::helper::MakePathRelative(dir, colorGradingMapName);
+			wi::helper::MakePathRelative(dir, volumetricCloudsWeatherMapName);
 
 			if (archive.GetVersion() >= 32)
 			{
@@ -1280,17 +1307,24 @@ namespace wi::scene
 				archive << volumetricCloudParameters.DetailScale;
 				archive << volumetricCloudParameters.WeatherScale;
 				archive << volumetricCloudParameters.CurlScale;
-				archive << volumetricCloudParameters.ShapeNoiseHeightGradientAmount;
-				archive << volumetricCloudParameters.ShapeNoiseMultiplier;
-				archive << volumetricCloudParameters.ShapeNoiseMinMax;
-				archive << volumetricCloudParameters.ShapeNoisePower;
+				if (archive.GetVersion() < 86)
+				{
+					float ShapeNoiseHeightGradientAmount = 0;
+					float ShapeNoiseMultiplier = 0;
+					XMFLOAT2 ShapeNoiseMinMax = XMFLOAT2(0, 0);
+					float ShapeNoisePower = 0;
+					archive << ShapeNoiseHeightGradientAmount;
+					archive << ShapeNoiseMultiplier;
+					archive << ShapeNoiseMinMax;
+					archive << ShapeNoisePower;
+				}
 				archive << volumetricCloudParameters.DetailNoiseModifier;
 				archive << volumetricCloudParameters.DetailNoiseHeightFraction;
 				archive << volumetricCloudParameters.CurlNoiseModifier;
 				archive << volumetricCloudParameters.CoverageAmount;
 				archive << volumetricCloudParameters.CoverageMinimum;
 				archive << volumetricCloudParameters.TypeAmount;
-				archive << volumetricCloudParameters.TypeOverall;
+				archive << volumetricCloudParameters.TypeMinimum;
 				archive << volumetricCloudParameters.AnvilAmount;
 				archive << volumetricCloudParameters.AnvilOverhangHeight;
 				archive << volumetricCloudParameters.AnimationMultiplier;
@@ -1330,6 +1364,11 @@ namespace wi::scene
 			if (archive.GetVersion() >= 78)
 			{
 				archive << stars;
+			}
+
+			if (archive.GetVersion() >= 86)
+			{
+				archive << volumetricCloudsWeatherMapName;
 			}
 		}
 	}
