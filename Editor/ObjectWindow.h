@@ -12,6 +12,7 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
+	wi::gui::ComboBox meshCombo;
 	wi::gui::CheckBox renderableCheckBox;
 	wi::gui::CheckBox shadowCheckBox;
 	wi::gui::Slider ditherSlider;

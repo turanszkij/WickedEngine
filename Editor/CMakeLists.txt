@@ -35,6 +35,7 @@ set (SOURCE_FILES
 	ColliderWindow.cpp
 	HierarchyWindow.cpp
 	ExpressionWindow.cpp
+	ArmatureWindow.cpp
 	OptionsWindow.cpp
 	ComponentsWindow.cpp
 	TerrainGenerator.cpp

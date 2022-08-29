@@ -348,6 +348,7 @@ void EditorComponent::Load()
 		componentsWnd.hierarchyWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.armatureWnd.SetEntity(INVALID_ENTITY);
 
 		optionsWnd.RefreshEntityTree();
 		ResetHistory();
@@ -1303,6 +1304,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.hierarchyWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.armatureWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1341,6 +1343,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.hierarchyWnd.SetEntity(picked.entity);
 		componentsWnd.cameraComponentWnd.SetEntity(picked.entity);
 		componentsWnd.expressionWnd.SetEntity(picked.entity);
+		componentsWnd.armatureWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{

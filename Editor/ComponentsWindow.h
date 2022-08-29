@@ -24,6 +24,7 @@
 #include "HierarchyWindow.h"
 #include "CameraComponentWindow.h"
 #include "ExpressionWindow.h"
+#include "ArmatureWindow.h"
 
 class EditorComponent;
 
@@ -61,4 +62,5 @@ public:
 	HierarchyWindow hierarchyWnd;
 	CameraComponentWindow cameraComponentWnd;
 	ExpressionWindow expressionWnd;
+	ArmatureWindow armatureWnd;
 };
