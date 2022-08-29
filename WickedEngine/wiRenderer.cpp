@@ -6815,7 +6815,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			push.resolution_rcp.y = 1.0f / push.resolution.y;
 			push.arrayIndex = arrayIndex;
 			push.texture_input = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::SRV);
-			push.texture_input_depth = device->GetDescriptorIndex(&vis.scene->envmapDepth, SubresourceType::SRV);
+			push.texture_input_depth = device->GetDescriptorIndex(&vis.scene->envrenderingDepthBuffer, SubresourceType::SRV);
 			push.texture_output = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::UAV);
 
 			if (probe.IsRealTime())

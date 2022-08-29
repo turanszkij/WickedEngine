@@ -4839,8 +4839,6 @@ namespace wi::scene
 			desc.format = Format::D16_UNORM;
 			desc.layout = ResourceState::DEPTHSTENCIL;
 			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
-			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
-			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
 			desc.sample_count = envmapMSAASampleCount;
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer_MSAA);
 			device->SetName(&envrenderingDepthBuffer_MSAA, "envrenderingDepthBuffer_MSAA");
@@ -4870,8 +4868,9 @@ namespace wi::scene
 			desc.format = Format::R16_TYPELESS;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 			desc.layout = ResourceState::SHADER_RESOURCE;
-			device->CreateTexture(&desc, nullptr, &envmapDepth);
-			device->SetName(&envmapDepth, "envmapDepth");
+			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
+			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
+
 
 			// Cube arrays per mip level:
 			for (uint32_t i = 0; i < envmapArray.desc.mip_levels; ++i)
@@ -4914,7 +4913,10 @@ namespace wi::scene
 						RenderPassAttachment::DepthStencil(
 							&envrenderingDepthBuffer,
 							RenderPassAttachment::LoadOp::CLEAR,
-							RenderPassAttachment::StoreOp::DONTCARE
+							RenderPassAttachment::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::SHADER_RESOURCE
 						)
 					);
 					renderpassdesc.attachments.push_back(
@@ -4925,16 +4927,6 @@ namespace wi::scene
 							ResourceState::RENDERTARGET,
 							ResourceState::SHADER_RESOURCE,
 							subresource_index
-						)
-					);
-
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::DepthStencil(&envmapDepth,
-							RenderPassAttachment::LoadOp::CLEAR,
-							RenderPassAttachment::StoreOp::STORE,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::DEPTHSTENCIL,
-							ResourceState::SHADER_RESOURCE
 						)
 					);
 					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[i]);
@@ -4965,6 +4957,13 @@ namespace wi::scene
 							ResourceState::SHADER_RESOURCE,
 							ResourceState::SHADER_RESOURCE,
 							envmapArray.desc.mip_levels + envmapCount + i // subresource: individual cubes only mip0
+						)
+					);
+					renderpassdesc.attachments.push_back(
+						RenderPassAttachment::ResolveDepth(&envrenderingDepthBuffer,
+							RenderPassAttachment::DepthResolveMode::Max,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::SHADER_RESOURCE
 						)
 					);
 					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap_MSAA[i]);

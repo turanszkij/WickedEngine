@@ -55,6 +55,7 @@ namespace wi::graphics
 		VkPhysicalDeviceFragmentShadingRatePropertiesKHR fragment_shading_rate_properties = {};
 		VkPhysicalDeviceMeshShaderPropertiesNV mesh_shader_properties = {};
 		VkPhysicalDeviceMemoryProperties2 memory_properties_2 = {};
+		VkPhysicalDeviceDepthStencilResolveProperties depth_stencil_resolve_properties = {};
 
 		VkPhysicalDeviceFeatures2 features2 = {};
 		VkPhysicalDeviceVulkan11Features features_1_1 = {};

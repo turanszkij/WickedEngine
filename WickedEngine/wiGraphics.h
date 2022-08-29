@@ -631,7 +631,8 @@ namespace wi::graphics
 		{
 			RENDERTARGET,
 			DEPTH_STENCIL,
-			RESOLVE,
+			RESOLVE, // resolve render target (color)
+			RESOLVE_DEPTH,
 			SHADING_RATE_SOURCE
 		} type = Type::RENDERTARGET;
 		enum class LoadOp
@@ -650,6 +651,11 @@ namespace wi::graphics
 		ResourceState initial_layout = ResourceState::UNDEFINED;	// layout before the render pass
 		ResourceState subpass_layout = ResourceState::UNDEFINED;	// layout within the render pass
 		ResourceState final_layout = ResourceState::UNDEFINED;		// layout after the render pass
+		enum class DepthResolveMode
+		{
+			Min,
+			Max,
+		} depth_resolve_mode = DepthResolveMode::Min;
 
 		static RenderPassAttachment RenderTarget(
 			const Texture* resource = nullptr,
@@ -708,6 +714,24 @@ namespace wi::graphics
 			attachment.initial_layout = initial_layout;
 			attachment.final_layout = final_layout;
 			attachment.subresource = subresource_SRV;
+			return attachment;
+		}
+
+		static RenderPassAttachment ResolveDepth(
+			const Texture* resource = nullptr,
+			DepthResolveMode depth_resolve_mode = DepthResolveMode::Min,
+			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
+			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
+			int subresource_SRV = -1
+		)
+		{
+			RenderPassAttachment attachment;
+			attachment.type = Type::RESOLVE_DEPTH;
+			attachment.texture = resource;
+			attachment.initial_layout = initial_layout;
+			attachment.final_layout = final_layout;
+			attachment.subresource = subresource_SRV;
+			attachment.depth_resolve_mode = depth_resolve_mode;
 			return attachment;
 		}
 
