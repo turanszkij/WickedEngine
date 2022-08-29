@@ -562,7 +562,8 @@ namespace wi::renderer
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
-		const XMFLOAT2& center
+		const XMFLOAT2& center,
+		float strength = 0.1f
 	);
 	struct DepthOfFieldResources
 	{
@@ -784,6 +785,8 @@ namespace wi::renderer
 	bool GetToDrawDebugForceFields();
 	void SetToDrawDebugCameras(bool param);
 	bool GetToDrawDebugCameras();
+	void SetToDrawDebugColliders(bool param);
+	bool GetToDrawDebugColliders();
 	bool GetToDrawGridHelper();
 	void SetToDrawGridHelper(bool value);
 	bool GetToDrawVoxelHelper();
@@ -926,8 +929,10 @@ namespace wi::renderer
 		int subset = -1;
 		uint32_t uvset = 0;
 		float radius = 0;
-		XMUINT2 center;
-		XMUINT2 dimensions;
+		XMUINT2 center = {};
+		XMUINT2 dimensions = {};
+		float rotation = 0;
+		uint shape = 0; // 0: circle, 1 : square
 	};
 	void DrawPaintRadius(const PaintRadius& paintrad);
 

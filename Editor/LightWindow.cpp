@@ -13,7 +13,7 @@ void LightWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_POINTLIGHT " Light", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(650, 700));
+	SetSize(XMFLOAT2(650, 740));
 
 	closeButton.SetTooltip("Delete LightComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -322,9 +322,6 @@ void LightWindow::SetEntity(Entity entity)
 	else
 	{
 		rangeSlider.SetEnabled(false);
-		radiusSlider.SetEnabled(false);
-		widthSlider.SetEnabled(false);
-		heightSlider.SetEnabled(false);
 		outerConeAngleSlider.SetEnabled(false);
 		innerConeAngleSlider.SetEnabled(false);
 		shadowCheckBox.SetEnabled(false);
@@ -353,9 +350,6 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 	else
 	{
 		rangeSlider.SetEnabled(true);
-		radiusSlider.SetEnabled(false);
-		widthSlider.SetEnabled(false);
-		heightSlider.SetEnabled(false);
 		if (type == LightComponent::SPOT)
 		{
 			outerConeAngleSlider.SetEnabled(true);
@@ -367,5 +361,67 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 			innerConeAngleSlider.SetEnabled(false);
 		}
 	}
+
+}
+
+void LightWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 140;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_fullwidth(colorPicker);
+	add(typeSelectorComboBox);
+	add(intensitySlider);
+	add(rangeSlider);
+	add(outerConeAngleSlider);
+	add(innerConeAngleSlider);
+	add_right(shadowCheckBox);
+	add_right(haloCheckBox);
+	add_right(volumetricsCheckBox);
+	add_right(staticCheckBox);
+	add(shadowResolutionComboBox);
+
+	y += jump;
+
+	add_fullwidth(lensflare_Label);
+	add_fullwidth(lensflare_Button[0]);
+	add_fullwidth(lensflare_Button[1]);
+	add_fullwidth(lensflare_Button[2]);
+	add_fullwidth(lensflare_Button[3]);
+	add_fullwidth(lensflare_Button[4]);
+	add_fullwidth(lensflare_Button[5]);
+	add_fullwidth(lensflare_Button[6]);
 
 }

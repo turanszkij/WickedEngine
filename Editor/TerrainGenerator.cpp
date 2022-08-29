@@ -7,6 +7,268 @@ using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;
 
+
+struct PerlinModifier : public TerrainGenerator::Modifier
+{
+	wi::gui::Slider octavesSlider;
+	wi::noise::Perlin perlin_noise;
+
+	PerlinModifier() : Modifier("Perlin Noise")
+	{
+		octavesSlider.Create(1, 8, 6, 7, "Octaves: ");
+		octavesSlider.SetTooltip("Octave count for the perlin noise");
+		octavesSlider.SetSize(XMFLOAT2(100, 20));
+		AddWidget(&octavesSlider);
+
+		SetSize(XMFLOAT2(200, 140));
+	}
+
+	void ResizeLayout() override
+	{
+		Modifier::ResizeLayout();
+		const float padding = 4;
+		const float width = GetWidgetAreaSize().x;
+		float y = padding;
+
+		auto add = [&](wi::gui::Widget& widget) {
+			const float margin_left = 100;
+			const float margin_right = 50;
+			widget.SetPos(XMFLOAT2(margin_left, y));
+			widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+			y += widget.GetSize().y;
+			y += padding;
+		};
+
+		add(blendCombo);
+		add(blendSlider);
+		add(frequencySlider);
+
+		add(octavesSlider);
+	}
+
+	void Seed(uint32_t seed) override
+	{
+		perlin_noise.init(seed);
+	}
+	void SetCallback(std::function<void(wi::gui::EventArgs args)> func) override
+	{
+		Modifier::SetCallback(func);
+		octavesSlider.OnSlide(func);
+	}
+	void Apply(const XMFLOAT2& world_pos, float& height) override
+	{
+		XMFLOAT2 p = world_pos;
+		p.x *= frequencySlider.GetValue();
+		p.y *= frequencySlider.GetValue();
+		Blend(height, perlin_noise.compute(p.x, p.y, 0, (int)octavesSlider.GetValue()) * 0.5f + 0.5f);
+	}
+};
+struct VoronoiModifier : public TerrainGenerator::Modifier
+{
+	wi::gui::Slider fadeSlider;
+	wi::gui::Slider shapeSlider;
+	wi::gui::Slider falloffSlider;
+	wi::gui::Slider perturbationSlider;
+	wi::noise::Perlin perlin_noise;
+	float seed = 0;
+
+	VoronoiModifier() : Modifier("Voronoi Noise")
+	{
+		fadeSlider.Create(0, 100, 2.59f, 10000, "Fade: ");
+		fadeSlider.SetTooltip("Fade out voronoi regions by distance from cell's center");
+		fadeSlider.SetSize(XMFLOAT2(100, 20));
+		AddWidget(&fadeSlider);
+
+		shapeSlider.Create(0, 1, 0.7f, 10000, "Shape: ");
+		shapeSlider.SetTooltip("How much the voronoi shape will be kept");
+		shapeSlider.SetSize(XMFLOAT2(100, 20));
+		AddWidget(&shapeSlider);
+
+		falloffSlider.Create(0, 8, 6, 10000, "Falloff: ");
+		falloffSlider.SetTooltip("Controls the falloff of the voronoi distance fade effect");
+		falloffSlider.SetSize(XMFLOAT2(100, 20));
+		AddWidget(&falloffSlider);
+
+		perturbationSlider.Create(0, 1, 0.1f, 10000, "Perturbation: ");
+		perturbationSlider.SetTooltip("Controls the random look of voronoi region edges");
+		perturbationSlider.SetSize(XMFLOAT2(100, 20));
+		AddWidget(&perturbationSlider);
+
+		SetSize(XMFLOAT2(200, 200));
+	}
+
+	void ResizeLayout() override
+	{
+		Modifier::ResizeLayout();
+		const float padding = 4;
+		const float width = GetWidgetAreaSize().x;
+		float y = padding;
+
+		auto add = [&](wi::gui::Widget& widget) {
+			const float margin_left = 100;
+			const float margin_right = 50;
+			widget.SetPos(XMFLOAT2(margin_left, y));
+			widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+			y += widget.GetSize().y;
+			y += padding;
+		};
+
+		add(blendCombo);
+		add(blendSlider);
+		add(frequencySlider);
+
+		add(fadeSlider);
+		add(shapeSlider);
+		add(falloffSlider);
+		add(perturbationSlider);
+	}
+
+	void Seed(uint32_t seed) override
+	{
+		perlin_noise.init(seed);
+		this->seed = (float)seed;
+	}
+	void SetCallback(std::function<void(wi::gui::EventArgs args)> func) override
+	{
+		Modifier::SetCallback(func);
+		fadeSlider.OnSlide(func);
+		shapeSlider.OnSlide(func);
+		falloffSlider.OnSlide(func);
+		perturbationSlider.OnSlide(func);
+	}
+	void Apply(const XMFLOAT2& world_pos, float& height) override
+	{
+		XMFLOAT2 p = world_pos;
+		p.x *= frequencySlider.GetValue();
+		p.y *= frequencySlider.GetValue();
+		if (perturbationSlider.GetValue() > 0)
+		{
+			const float angle = perlin_noise.compute(p.x, p.y, 0, 6) * XM_2PI;
+			p.x += std::sin(angle) * perturbationSlider.GetValue();
+			p.y += std::cos(angle) * perturbationSlider.GetValue();
+		}
+		wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, seed);
+		float weight = std::pow(1 - wi::math::saturate((res.distance - shapeSlider.GetValue()) * fadeSlider.GetValue()), std::max(0.0001f, falloffSlider.GetValue()));
+		Blend(height, weight);
+	}
+};
+struct HeightmapModifier : public TerrainGenerator::Modifier
+{
+	wi::gui::Slider scaleSlider;
+	wi::gui::Button loadButton;
+
+	wi::vector<uint8_t> data;
+	int width = 0;
+	int height = 0;
+
+	HeightmapModifier() : Modifier("Heightmap")
+	{
+		blendSlider.SetValue(1);
+		frequencySlider.SetValue(1);
+
+		scaleSlider.Create(0, 1, 0.1f, 1000, "Scale: ");
+		scaleSlider.SetSize(XMFLOAT2(100, 20));
+		AddWidget(&scaleSlider);
+
+		loadButton.Create("Load Heightmap...");
+		loadButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be placed in the world center.");
+		AddWidget(&loadButton);
+
+		SetSize(XMFLOAT2(200, 180));
+	}
+
+	void ResizeLayout() override
+	{
+		Modifier::ResizeLayout();
+		const float padding = 4;
+		const float width = GetWidgetAreaSize().x;
+		float y = padding;
+
+		auto add = [&](wi::gui::Widget& widget) {
+			const float margin_left = 100;
+			const float margin_right = 50;
+			widget.SetPos(XMFLOAT2(margin_left, y));
+			widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+			y += widget.GetSize().y;
+			y += padding;
+		};
+
+		add(blendCombo);
+		add(blendSlider);
+		add(frequencySlider);
+
+		add(scaleSlider);
+		add(loadButton);
+	}
+
+	void SetCallback(std::function<void(wi::gui::EventArgs args)> func) override
+	{
+		Modifier::SetCallback(func);
+
+		scaleSlider.OnSlide(func);
+
+		loadButton.OnClick([=](wi::gui::EventArgs args) {
+
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+
+					data.clear();
+					width = 0;
+					height = 0;
+					int bpp = 0;
+					stbi_uc* rgba = stbi_load(fileName.c_str(), &width, &height, &bpp, 1);
+					if (rgba != nullptr)
+					{
+						data.resize(width * height);
+						for (int i = 0; i < width * height; ++i)
+						{
+							data[i] = rgba[i];
+						}
+						stbi_image_free(rgba);
+
+						func(args); // callback after heightmap load confirmation
+					}
+					});
+				});
+			});
+	}
+	void Apply(const XMFLOAT2& world_pos, float& height) override
+	{
+		XMFLOAT2 p = world_pos;
+		p.x *= frequencySlider.GetValue();
+		p.y *= frequencySlider.GetValue();
+		XMFLOAT2 pixel = XMFLOAT2(p.x + width * 0.5f, p.y + this->height * 0.5f);
+		if (pixel.x >= 0 && pixel.x < width && pixel.y >= 0 && pixel.y < this->height)
+		{
+			const int idx = int(pixel.x) + int(pixel.y) * width;
+			Blend(height, ((float)data[idx] / 255.0f) * scaleSlider.GetValue());
+		}
+	}
+};
+
+void TerrainGenerator::AddModifier(Modifier* modifier)
+{
+	modifiers.emplace_back().reset(modifier);
+	auto generate_callback = [=](wi::gui::EventArgs args) {
+		Generation_Restart();
+	};
+	modifier->SetCallback(generate_callback);
+	AddWidget(modifier);
+
+	modifier->OnClose([=](wi::gui::EventArgs args) {
+		// Can't delete modifier in itself, so add to a deferred deletion queue:
+		modifiers_to_remove.push_back(modifier);
+		});
+
+	wi::eventhandler::FireEvent(EVENT_THEME_RESET, 0);
+}
+
+
+
 enum PRESET
 {
 	PRESET_HILLS,
@@ -21,7 +283,7 @@ void TerrainGenerator::Create()
 	ClearTransform();
 
 	wi::gui::Window::Create("Terrain Generator", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(420, 750));
+	SetSize(XMFLOAT2(420, 840));
 
 	float x = 140;
 	float y = 0;
@@ -108,7 +370,21 @@ void TerrainGenerator::Create()
 	presetCombo.AddItem("Islands", PRESET_ISLANDS);
 	presetCombo.AddItem("Mountains", PRESET_MOUNTAINS);
 	presetCombo.AddItem("Arctic", PRESET_ARCTIC);
-	presetCombo.OnSelect([=](wi::gui::EventArgs args) {
+	presetCombo.OnSelect([this](wi::gui::EventArgs args) {
+
+		Generation_Cancel();
+		for (auto& modifier : modifiers)
+		{
+			RemoveWidget(modifier.get());
+		}
+		modifiers.clear();
+		AddModifier(new PerlinModifier);
+		AddModifier(new VoronoiModifier);
+		PerlinModifier& perlin = *(PerlinModifier*)modifiers[0].get();
+		VoronoiModifier& voronoi = *(VoronoiModifier*)modifiers[1].get();
+		perlin.blendCombo.SetSelectedByUserdata((uint64_t)Modifier::BlendMode::Additive);
+		voronoi.blendCombo.SetSelectedByUserdata((uint64_t)Modifier::BlendMode::Multiply);
+
 		switch (args.userdata)
 		{
 		default:
@@ -116,15 +392,15 @@ void TerrainGenerator::Create()
 			seedSlider.SetValue(5333);
 			bottomLevelSlider.SetValue(-60);
 			topLevelSlider.SetValue(380);
-			perlinBlendSlider.SetValue(0.5f);
-			perlinFrequencySlider.SetValue(0.0008f);
-			perlinOctavesSlider.SetValue(6);
-			voronoiBlendSlider.SetValue(0.5f);
-			voronoiFrequencySlider.SetValue(0.001f);
-			voronoiFadeSlider.SetValue(2.59f);
-			voronoiShapeSlider.SetValue(0.7f);
-			voronoiFalloffSlider.SetValue(6);
-			voronoiPerturbationSlider.SetValue(0.1f);
+			perlin.blendSlider.SetValue(0.5f);
+			perlin.frequencySlider.SetValue(0.0008f);
+			perlin.octavesSlider.SetValue(6);
+			voronoi.blendSlider.SetValue(0.5f);
+			voronoi.frequencySlider.SetValue(0.001f);
+			voronoi.fadeSlider.SetValue(2.59f);
+			voronoi.shapeSlider.SetValue(0.7f);
+			voronoi.falloffSlider.SetValue(6);
+			voronoi.perturbationSlider.SetValue(0.1f);
 			region1Slider.SetValue(1);
 			region2Slider.SetValue(2);
 			region3Slider.SetValue(8);
@@ -133,15 +409,15 @@ void TerrainGenerator::Create()
 			seedSlider.SetValue(4691);
 			bottomLevelSlider.SetValue(-79);
 			topLevelSlider.SetValue(520);
-			perlinBlendSlider.SetValue(0.5f);
-			perlinFrequencySlider.SetValue(0.000991f);
-			perlinOctavesSlider.SetValue(6);
-			voronoiBlendSlider.SetValue(0.5f);
-			voronoiFrequencySlider.SetValue(0.000317f);
-			voronoiFadeSlider.SetValue(8.2f);
-			voronoiShapeSlider.SetValue(0.126f);
-			voronoiFalloffSlider.SetValue(1.392f);
-			voronoiPerturbationSlider.SetValue(0.126f);
+			perlin.blendSlider.SetValue(0.5f);
+			perlin.frequencySlider.SetValue(0.000991f);
+			perlin.octavesSlider.SetValue(6);
+			voronoi.blendSlider.SetValue(0.5f);
+			voronoi.frequencySlider.SetValue(0.000317f);
+			voronoi.fadeSlider.SetValue(8.2f);
+			voronoi.shapeSlider.SetValue(0.126f);
+			voronoi.falloffSlider.SetValue(1.392f);
+			voronoi.perturbationSlider.SetValue(0.126f);
 			region1Slider.SetValue(8);
 			region2Slider.SetValue(0.7f);
 			region3Slider.SetValue(8);
@@ -150,15 +426,15 @@ void TerrainGenerator::Create()
 			seedSlider.SetValue(8863);
 			bottomLevelSlider.SetValue(0);
 			topLevelSlider.SetValue(2960);
-			perlinBlendSlider.SetValue(0.5f);
-			perlinFrequencySlider.SetValue(0.00279f);
-			perlinOctavesSlider.SetValue(8);
-			voronoiBlendSlider.SetValue(0.5f);
-			voronoiFrequencySlider.SetValue(0.000496f);
-			voronoiFadeSlider.SetValue(5.2f);
-			voronoiShapeSlider.SetValue(0.412f);
-			voronoiFalloffSlider.SetValue(1.456f);
-			voronoiPerturbationSlider.SetValue(0.092f);
+			perlin.blendSlider.SetValue(0.5f);
+			perlin.frequencySlider.SetValue(0.00279f);
+			perlin.octavesSlider.SetValue(8);
+			voronoi.blendSlider.SetValue(0.5f);
+			voronoi.frequencySlider.SetValue(0.000496f);
+			voronoi.fadeSlider.SetValue(5.2f);
+			voronoi.shapeSlider.SetValue(0.412f);
+			voronoi.falloffSlider.SetValue(1.456f);
+			voronoi.perturbationSlider.SetValue(0.092f);
 			region1Slider.SetValue(1);
 			region2Slider.SetValue(1);
 			region3Slider.SetValue(0.8f);
@@ -167,15 +443,15 @@ void TerrainGenerator::Create()
 			seedSlider.SetValue(2124);
 			bottomLevelSlider.SetValue(-50);
 			topLevelSlider.SetValue(40);
-			perlinBlendSlider.SetValue(1);
-			perlinFrequencySlider.SetValue(0.002f);
-			perlinOctavesSlider.SetValue(4);
-			voronoiBlendSlider.SetValue(1);
-			voronoiFrequencySlider.SetValue(0.004f);
-			voronoiFadeSlider.SetValue(1.8f);
-			voronoiShapeSlider.SetValue(0.518f);
-			voronoiFalloffSlider.SetValue(0.2f);
-			voronoiPerturbationSlider.SetValue(0.298f);
+			perlin.blendSlider.SetValue(1);
+			perlin.frequencySlider.SetValue(0.002f);
+			perlin.octavesSlider.SetValue(4);
+			voronoi.blendSlider.SetValue(1);
+			voronoi.frequencySlider.SetValue(0.004f);
+			voronoi.fadeSlider.SetValue(1.8f);
+			voronoi.shapeSlider.SetValue(0.518f);
+			voronoi.falloffSlider.SetValue(0.2f);
+			voronoi.perturbationSlider.SetValue(0.298f);
 			region1Slider.SetValue(8);
 			region2Slider.SetValue(8);
 			region3Slider.SetValue(0);
@@ -184,6 +460,41 @@ void TerrainGenerator::Create()
 		Generation_Restart();
 		});
 	AddWidget(&presetCombo);
+
+
+	addModifierCombo.Create("Add Modifier: ");
+	addModifierCombo.selected_font.anim.typewriter.looped = true;
+	addModifierCombo.selected_font.anim.typewriter.time = 2;
+	addModifierCombo.selected_font.anim.typewriter.character_start = 1;
+	addModifierCombo.SetTooltip("Add a new modifier that will affect terrain generation.");
+	addModifierCombo.SetSize(XMFLOAT2(wid, hei));
+	addModifierCombo.SetPos(XMFLOAT2(x, y += step));
+	addModifierCombo.SetInvalidSelectionText("...");
+	addModifierCombo.AddItem("Perlin Noise");
+	addModifierCombo.AddItem("Voronoi Noise");
+	addModifierCombo.AddItem("Heightmap Image");
+	addModifierCombo.OnSelect([this](wi::gui::EventArgs args) {
+
+		addModifierCombo.SetSelectedWithoutCallback(-1);
+		Generation_Cancel();
+		switch (args.iValue)
+		{
+		default:
+			break;
+		case 0:
+			AddModifier(new PerlinModifier);
+			break;
+		case 1:
+			AddModifier(new VoronoiModifier);
+			break;
+		case 2:
+			AddModifier(new HeightmapModifier);
+			break;
+		}
+		Generation_Restart();
+
+		});
+	AddWidget(&addModifierCombo);
 
 	scaleSlider.Create(1, 10, 1, 9, "Chunk Scale: ");
 	scaleSlider.SetTooltip("Size of one chunk in horizontal directions.\nLarger chunk scale will cover larger distance, but will have less detail per unit.");
@@ -209,77 +520,11 @@ void TerrainGenerator::Create()
 	topLevelSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&topLevelSlider);
 
-	perlinBlendSlider.Create(0, 1, 0.5f, 10000, "Perlin Blend: ");
-	perlinBlendSlider.SetTooltip("Amount of perlin noise to use");
-	perlinBlendSlider.SetSize(XMFLOAT2(wid, hei));
-	perlinBlendSlider.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&perlinBlendSlider);
-
-	perlinFrequencySlider.Create(0.0001f, 0.01f, 0.0008f, 10000, "Perlin Frequency: ");
-	perlinFrequencySlider.SetTooltip("Frequency for the perlin noise");
-	perlinFrequencySlider.SetSize(XMFLOAT2(wid, hei));
-	perlinFrequencySlider.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&perlinFrequencySlider);
-
-	perlinOctavesSlider.Create(1, 8, 6, 7, "Perlin Octaves: ");
-	perlinOctavesSlider.SetTooltip("Octave count for the perlin noise");
-	perlinOctavesSlider.SetSize(XMFLOAT2(wid, hei));
-	perlinOctavesSlider.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&perlinOctavesSlider);
-
-	voronoiBlendSlider.Create(0, 1, 0.5f, 10000, "Voronoi Blend: ");
-	voronoiBlendSlider.SetTooltip("Amount of voronoi to use for elevation");
-	voronoiBlendSlider.SetSize(XMFLOAT2(wid, hei));
-	voronoiBlendSlider.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&voronoiBlendSlider);
-
-	voronoiFrequencySlider.Create(0.0001f, 0.01f, 0.001f, 10000, "Voronoi Frequency: ");
-	voronoiFrequencySlider.SetTooltip("Voronoi can create distinctly elevated areas, the more cells there are, smaller the consecutive areas");
-	voronoiFrequencySlider.SetSize(XMFLOAT2(wid, hei));
-	voronoiFrequencySlider.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&voronoiFrequencySlider);
-
-	voronoiFadeSlider.Create(0, 100, 2.59f, 10000, "Voronoi Fade: ");
-	voronoiFadeSlider.SetTooltip("Fade out voronoi regions by distance from cell's center");
-	voronoiFadeSlider.SetSize(XMFLOAT2(wid, hei));
-	voronoiFadeSlider.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&voronoiFadeSlider);
-
-	voronoiShapeSlider.Create(0, 1, 0.7f, 10000, "Voronoi Shape: ");
-	voronoiShapeSlider.SetTooltip("How much the voronoi shape will be kept");
-	voronoiShapeSlider.SetSize(XMFLOAT2(wid, hei));
-	voronoiShapeSlider.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&voronoiShapeSlider);
-
-	voronoiFalloffSlider.Create(0, 8, 6, 10000, "Voronoi Falloff: ");
-	voronoiFalloffSlider.SetTooltip("Controls the falloff of the voronoi distance fade effect");
-	voronoiFalloffSlider.SetSize(XMFLOAT2(wid, hei));
-	voronoiFalloffSlider.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&voronoiFalloffSlider);
-
-	voronoiPerturbationSlider.Create(0, 1, 0.1f, 10000, "Voronoi Perturbation: ");
-	voronoiPerturbationSlider.SetTooltip("Controls the random look of voronoi region edges");
-	voronoiPerturbationSlider.SetSize(XMFLOAT2(wid, hei));
-	voronoiPerturbationSlider.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&voronoiPerturbationSlider);
-
 	saveHeightmapButton.Create("Save Heightmap...");
 	saveHeightmapButton.SetTooltip("Save a heightmap texture from the currently generated terrain, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be normalized into 8bit PNG format which can result in precision loss!");
 	saveHeightmapButton.SetSize(XMFLOAT2(wid, hei));
 	saveHeightmapButton.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&saveHeightmapButton);
-
-	heightmapButton.Create("Load Heightmap...");
-	heightmapButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be placed in the world center.");
-	heightmapButton.SetSize(XMFLOAT2(wid, hei));
-	heightmapButton.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&heightmapButton);
-
-	heightmapBlendSlider.Create(0, 1, 1, 10000, "Heightmap Blend: ");
-	heightmapBlendSlider.SetTooltip("Amount of displacement coming from the heightmap texture");
-	heightmapBlendSlider.SetSize(XMFLOAT2(wid, hei));
-	heightmapBlendSlider.SetPos(XMFLOAT2(x, y += step));
-	AddWidget(&heightmapBlendSlider);
 
 	region1Slider.Create(0, 8, 1, 10000, "Slope Region: ");
 	region1Slider.SetTooltip("The region's falloff power");
@@ -307,16 +552,6 @@ void TerrainGenerator::Create()
 	seedSlider.OnSlide(generate_callback);
 	bottomLevelSlider.OnSlide(generate_callback);
 	topLevelSlider.OnSlide(generate_callback);
-	perlinFrequencySlider.OnSlide(generate_callback);
-	perlinBlendSlider.OnSlide(generate_callback);
-	perlinOctavesSlider.OnSlide(generate_callback);
-	voronoiBlendSlider.OnSlide(generate_callback);
-	voronoiFrequencySlider.OnSlide(generate_callback);
-	voronoiFadeSlider.OnSlide(generate_callback);
-	voronoiShapeSlider.OnSlide(generate_callback);
-	voronoiFalloffSlider.OnSlide(generate_callback);
-	voronoiPerturbationSlider.OnSlide(generate_callback);
-	heightmapBlendSlider.OnSlide(generate_callback);
 	region1Slider.OnSlide(generate_callback);
 	region2Slider.OnSlide(generate_callback);
 	region3Slider.OnSlide(generate_callback);
@@ -340,11 +575,11 @@ void TerrainGenerator::Create()
 					}
 				}
 
-				HeightmapTexture saved_heightmap;
-				saved_heightmap.width = int(aabb.getHalfWidth().x * 2 + 1);
-				saved_heightmap.height = int(aabb.getHalfWidth().z * 2 + 1);
-				saved_heightmap.data.resize(saved_heightmap.width * saved_heightmap.height);
-				std::fill(saved_heightmap.data.begin(), saved_heightmap.data.end(), 0u);
+				wi::vector<uint8_t> data;
+				int width = int(aabb.getHalfWidth().x * 2 + 1);
+				int height = int(aabb.getHalfWidth().z * 2 + 1);
+				data.resize(width * height);
+				std::fill(data.begin(), data.end(), 0u);
 
 				for (auto& chunk : chunks)
 				{
@@ -363,51 +598,24 @@ void TerrainGenerator::Create()
 								XMStoreFloat3(&p, P);
 								p.x -= aabb._min.x;
 								p.z -= aabb._min.z;
-								int coord = int(p.x) + int(p.z) * saved_heightmap.width;
-								saved_heightmap.data[coord] = uint8_t(wi::math::InverseLerp(aabb._min.y, aabb._max.y, p.y) * 255u);
+								int coord = int(p.x) + int(p.z) * width;
+								data[coord] = uint8_t(wi::math::InverseLerp(aabb._min.y, aabb._max.y, p.y) * 255u);
 							}
 						}
 					}
 				}
 
 				wi::graphics::TextureDesc desc;
-				desc.width = uint32_t(saved_heightmap.width);
-				desc.height = uint32_t(saved_heightmap.height);
+				desc.width = uint32_t(width);
+				desc.height = uint32_t(height);
 				desc.format = wi::graphics::Format::R8_UNORM;
-				bool success = wi::helper::saveTextureToFile(saved_heightmap.data, desc, wi::helper::ReplaceExtension(fileName, "PNG"));
+				bool success = wi::helper::saveTextureToFile(data, desc, wi::helper::ReplaceExtension(fileName, "PNG"));
 				assert(success);
 
 				});
 			});
 		});
 
-	heightmapButton.OnClick([=](wi::gui::EventArgs args) {
-
-		wi::helper::FileDialogParams params;
-		params.type = wi::helper::FileDialogParams::OPEN;
-		params.description = "Texture";
-		params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
-		wi::helper::FileDialog(params, [=](std::string fileName) {
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-
-				heightmap = {};
-				int bpp = 0;
-				stbi_uc* rgba = stbi_load(fileName.c_str(), &heightmap.width, &heightmap.height, &bpp, 1);
-				if (rgba != nullptr)
-				{
-					heightmap.data.resize(heightmap.width * heightmap.height);
-					for (int i = 0; i < heightmap.width * heightmap.height; ++i)
-					{
-						heightmap.data[i] = rgba[i];
-					}
-					stbi_image_free(rgba);
-					Generation_Restart();
-				}
-				});
-			});
-		});
-
-	heightmap = {};
 
 	SetCollapsed(true);
 }
@@ -569,8 +777,12 @@ void TerrainGenerator::Generation_Restart()
 	scene->transforms.Create(terrainEntity);
 	scene->names.Create(terrainEntity) = "terrain";
 
-	const uint32_t seed = (uint32_t)seedSlider.GetValue();
-	perlin.init(seed);
+	uint32_t seed = (uint32_t)seedSlider.GetValue();
+	perlin_noise.init(seed);
+	for (auto& modifier : modifiers)
+	{
+		modifier->Seed(seed);
+	}
 
 	// Add some nice weather and lighting if there is none yet:
 	if (scene->weathers.GetCount() == 0)
@@ -625,6 +837,25 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 {
 	// The generation task is always cancelled every frame so we are sure that generation is not running at this point
 	Generation_Cancel();
+
+	// Check whether any modifiers were "closed", and we will really remove them here if so:
+	if (!modifiers_to_remove.empty())
+	{
+		for (auto& modifier : modifiers_to_remove)
+		{
+			RemoveWidget(modifier);
+			for (auto it = modifiers.begin(); it != modifiers.end(); ++it)
+			{
+				if (it->get() == modifier)
+				{
+					modifiers.erase(it);
+					break;
+				}
+			}
+		}
+		Generation_Restart();
+		modifiers_to_remove.clear();
+	}
 
 	if (terrainEntity == INVALID_ENTITY || !scene->transforms.Contains(terrainEntity))
 	{
@@ -858,17 +1089,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 		const int prop_generation = (int)propSlider.GetValue();
 		const float bottomLevel = bottomLevelSlider.GetValue();
 		const float topLevel = topLevelSlider.GetValue();
-		const float heightmapBlend = heightmapBlendSlider.GetValue();
-		const float perlinBlend = perlinBlendSlider.GetValue();
 		const uint32_t seed = (uint32_t)seedSlider.GetValue();
-		const int perlinOctaves = (int)perlinOctavesSlider.GetValue();
-		const float perlinFrequency = perlinFrequencySlider.GetValue();
-		const float voronoiBlend = voronoiBlendSlider.GetValue();
-		const float voronoiFrequency = voronoiFrequencySlider.GetValue();
-		const float voronoiFade = voronoiFadeSlider.GetValue();
-		const float voronoiShape = voronoiShapeSlider.GetValue();
-		const float voronoiFalloff = voronoiFalloffSlider.GetValue();
-		const float voronoiPerturbation = voronoiPerturbationSlider.GetValue();
 		const float region1 = region1Slider.GetValue();
 		const float region2 = region2Slider.GetValue();
 		const float region3 = region3Slider.GetValue();
@@ -940,36 +1161,9 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 					{
 						float height = 0;
 						const XMFLOAT2 world_pos = XMFLOAT2(chunk_data.position.x + x + corner_offsets[i].x, chunk_data.position.z + z + corner_offsets[i].y);
-						if (perlinBlend > 0)
+						for (auto& modifier : modifiers)
 						{
-							XMFLOAT2 p = world_pos;
-							p.x *= perlinFrequency;
-							p.y *= perlinFrequency;
-							height += (perlin.compute(p.x, p.y, 0, perlinOctaves) * 0.5f + 0.5f) * perlinBlend;
-						}
-						if (voronoiBlend > 0)
-						{
-							XMFLOAT2 p = world_pos;
-							p.x *= voronoiFrequency;
-							p.y *= voronoiFrequency;
-							if (voronoiPerturbation > 0)
-							{
-								const float angle = perlin.compute(p.x, p.y, 0, 6) * XM_2PI;
-								p.x += std::sin(angle) * voronoiPerturbation;
-								p.y += std::cos(angle) * voronoiPerturbation;
-							}
-							wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)seed);
-							float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
-							height *= weight * voronoiBlend;
-						}
-						if (!heightmap.data.empty())
-						{
-							XMFLOAT2 pixel = XMFLOAT2(world_pos.x + heightmap.width * 0.5f, world_pos.y + heightmap.height * 0.5f);
-							if (pixel.x >= 0 && pixel.x < heightmap.width && pixel.y >= 0 && pixel.y < heightmap.height)
-							{
-								const int idx = int(pixel.x) + int(pixel.y) * heightmap.width;
-								height = ((float)heightmap.data[idx] / 255.0f) * heightmapBlend;
-							}
+							modifier->Apply(world_pos, height);
 						}
 						height = wi::math::Lerp(bottomLevel, topLevel, height);
 						corners[i] = XMVectorSet(world_pos.x, height, world_pos.y, 0);
@@ -1006,7 +1200,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 					XMFLOAT3 vertex_pos(chunk_data.position.x + x, height, chunk_data.position.z + z);
 
 					const float grass_noise_frequency = 0.1f;
-					const float grass_noise = perlin.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
+					const float grass_noise = perlin_noise.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
 					const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 8.0f) * grass_noise;
 					if (region_grass > 0.1f)
 					{
@@ -1138,7 +1332,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 								region.z = region0.z + f * (region1.z - region0.z) + g * (region2.z - region0.z);
 								region.w = region0.w + f * (region1.w - region0.w) + g * (region2.w - region0.w);
 
-								const float noise = std::pow(perlin.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power);
+								const float noise = std::pow(perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power);
 								const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise;
 								if (chance > prop.threshold)
 								{
@@ -1297,3 +1491,60 @@ void TerrainGenerator::BakeVirtualTexturesToFiles()
 	}
 }
 
+
+void TerrainGenerator::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+
+	auto add = [&] (wi::gui::Widget& widget) {
+		const float margin_left = 150;
+		const float margin_right = 45;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_checkbox = [&](wi::gui::CheckBox& widget) {
+		const float margin_right = 45;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_window = [&](wi::gui::Window& widget) {
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_checkbox(centerToCamCheckBox);
+	add_checkbox(removalCheckBox);
+	add_checkbox(grassCheckBox);
+	add(lodSlider);
+	add(texlodSlider);
+	add(generationSlider);
+	add(propSlider);
+	add(propDensitySlider);
+	add(grassDensitySlider);
+	add(presetCombo);
+	add(scaleSlider);
+	add(seedSlider);
+	add(bottomLevelSlider);
+	add(topLevelSlider);
+	add(region1Slider);
+	add(region2Slider);
+	add(region3Slider);
+	add(saveHeightmapButton);
+	add(addModifierCombo);
+
+	for (auto& modifier : modifiers)
+	{
+		add_window(*modifier);
+	}
+
+}

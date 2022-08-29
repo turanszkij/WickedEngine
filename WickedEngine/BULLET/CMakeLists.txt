@@ -452,8 +452,12 @@ add_library(Bullet STATIC
     ${Bullet_HEADERS_LinearMath}
 )
 
-target_include_directories(Bullet PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:include/WickedEngine/BULLET>
-        )
-set_property(TARGET "Bullet" PROPERTY FOLDER "ThirdParty")
+target_include_directories(Bullet SYSTEM PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+	$<INSTALL_INTERFACE:include/WickedEngine/BULLET>
+)
+
+set_target_properties(Bullet PROPERTIES
+	FOLDER "ThirdParty"
+	POSITION_INDEPENDENT_CODE ${WICKED_DYNAMIC_LIBRARY}
+)

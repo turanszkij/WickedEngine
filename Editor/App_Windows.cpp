@@ -133,6 +133,14 @@ public:
 		CoreApplication::Resuming({ this, &ViewProvider::OnResuming });
 
 		uwp_copy_assets();
+
+		//wi::Timer timer;
+		//if (editor.config.Open("config.ini"))
+		//{
+		//	editor.allow_hdr = editor.config.GetBool("allow_hdr");
+
+		//	wi::backlog::post("config.ini loaded in " + std::to_string(timer.elapsed_milliseconds()) + " milliseconds\n");
+		//}
 	}
 
 	void Uninitialize() noexcept
@@ -171,7 +179,7 @@ public:
 		m_logicalWidth = window.Bounds().Width;
 		m_logicalHeight = window.Bounds().Height;
 
-		main.SetWindow(&window);
+		editor.SetWindow(&window);
 	}
 
 	void Load(winrt::hstring const&) noexcept
@@ -184,7 +192,7 @@ public:
 		{
 			if (m_visible)
 			{
-				main.Run();
+				editor.Run();
 
 				CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
 			}
@@ -218,7 +226,7 @@ protected:
 
 	void OnWindowSizeChanged(CoreWindow const& sender, WindowSizeChangedEventArgs const& /*args*/)
 	{
-		main.SetWindow(&sender);
+		editor.SetWindow(&sender);
 	}
 
 	void OnVisibilityChanged(CoreWindow const& /*sender*/, VisibilityChangedEventArgs const& args)
@@ -262,7 +270,7 @@ protected:
 
 	void OnDpiChanged(DisplayInformation const& sender, IInspectable const& /*args*/)
 	{
-		main.SetWindow(&CoreWindow::GetForCurrentThread());
+		editor.SetWindow(&CoreWindow::GetForCurrentThread());
 	}
 
 	void OnDisplayContentsInvalidated(DisplayInformation const& /*sender*/, IInspectable const& /*args*/)
@@ -275,7 +283,7 @@ private:
 	float m_DPI = 96;
 	float m_logicalWidth = 800;
 	float m_logicalHeight = 600;
-	Editor main;
+	Editor editor;
 
 	inline int ConvertDipsToPixels(float dips) const noexcept
 	{

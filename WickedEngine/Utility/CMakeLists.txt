@@ -15,7 +15,7 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/DirectXMathMisc.inl
 		${CMAKE_CURRENT_SOURCE_DIR}/DirectXMathVector.inl
 		${CMAKE_CURRENT_SOURCE_DIR}/DirectXPackedVector.inl
-		${CMAKE_CURRENT_SOURCE_DIR}/arial.h
+		${CMAKE_CURRENT_SOURCE_DIR}/liberation_sans.h
 		${CMAKE_CURRENT_SOURCE_DIR}/portable-file-dialogs.h
 		${CMAKE_CURRENT_SOURCE_DIR}/sal.h
 		${CMAKE_CURRENT_SOURCE_DIR}/tinyddsloader.h
@@ -169,4 +169,7 @@ add_library(Utility STATIC
 		${HEADER_FILES_zstd}
 		)
 
-set_property(TARGET "Utility" PROPERTY FOLDER "ThirdParty")
+set_target_properties("Utility" PROPERTIES
+	FOLDER "ThirdParty"
+	POSITION_INDEPENDENT_CODE ${WICKED_DYNAMIC_LIBRARY}
+)

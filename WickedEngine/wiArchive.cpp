@@ -5,7 +5,7 @@ namespace wi
 {
 
 	// this should always be only INCREMENTED and only if a new serialization is implemeted somewhere!
-	static constexpr uint64_t __archiveVersion = 84;
+	static constexpr uint64_t __archiveVersion = 86;
 	// this is the version number of which below the archive is not compatible with the current version
 	static constexpr uint64_t __archiveVersionBarrier = 22;
 
@@ -15,7 +15,8 @@ namespace wi
 	{
 		CreateEmpty();
 	}
-	Archive::Archive(const std::string& fileName, bool readMode) : fileName(fileName), readMode(readMode)
+	Archive::Archive(const std::string& fileName, bool readMode)
+		: readMode(readMode), fileName(fileName)
 	{
 		if (!fileName.empty())
 		{

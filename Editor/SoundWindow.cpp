@@ -11,7 +11,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_SOUND " Sound", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(440, 220));
+	SetSize(XMFLOAT2(440, 200));
 
 	closeButton.SetTooltip("Delete SoundComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -34,7 +34,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	float wid = 200;
 
 
-	openButton.Create("Open File");
+	openButton.Create("Open File " ICON_OPEN);
 	openButton.SetPos(XMFLOAT2(x, y));
 	openButton.SetSize(XMFLOAT2(wid, hei));
 	openButton.OnClick([&](wi::gui::EventArgs args) {
@@ -59,10 +59,9 @@ void SoundWindow::Create(EditorComponent* _editor)
 	filenameLabel.Create("Filename");
 	filenameLabel.SetPos(XMFLOAT2(x, y += step));
 	filenameLabel.SetSize(XMFLOAT2(wid, hei));
-	filenameLabel.font.params.h_align = wi::font::WIFALIGN_RIGHT;
 	AddWidget(&filenameLabel);
 
-	playstopButton.Create("Play");
+	playstopButton.Create(ICON_PLAY);
 	playstopButton.SetTooltip("Play/Stop selected sound instance.");
 	playstopButton.SetPos(XMFLOAT2(x, y += step));
 	playstopButton.SetSize(XMFLOAT2(wid, hei));
@@ -73,12 +72,12 @@ void SoundWindow::Create(EditorComponent* _editor)
 			if (sound->IsPlaying())
 			{
 				sound->Stop();
-				playstopButton.SetText("Play");
+				playstopButton.SetText(ICON_PLAY);
 			}
 			else
 			{
 				sound->Play();
-				playstopButton.SetText("Stop");
+				playstopButton.SetText(ICON_STOP);
 			}
 		}
 	});
@@ -89,6 +88,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	loopedCheckbox.SetTooltip("Enable looping for the selected sound instance.");
 	loopedCheckbox.SetPos(XMFLOAT2(x, y += step));
 	loopedCheckbox.SetSize(XMFLOAT2(hei, hei));
+	loopedCheckbox.SetCheckText(ICON_LOOP);
 	loopedCheckbox.OnClick([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
@@ -212,6 +212,8 @@ void SoundWindow::Create(EditorComponent* _editor)
 
 void SoundWindow::SetEntity(Entity entity)
 {
+	if (this->entity == entity)
+		return;
 	this->entity = entity;
 
 	Scene& scene = editor->GetCurrentScene();
@@ -220,7 +222,7 @@ void SoundWindow::SetEntity(Entity entity)
 
 	if (sound != nullptr)
 	{
-		filenameLabel.SetText(sound->filename);
+		filenameLabel.SetText(wi::helper::GetFileNameFromPath(sound->filename));
 		playstopButton.SetEnabled(true);
 		loopedCheckbox.SetEnabled(true);
 		loopedCheckbox.SetCheck(sound->IsLooped());
@@ -232,11 +234,11 @@ void SoundWindow::SetEntity(Entity entity)
 		volumeSlider.SetValue(sound->volume);
 		if (sound->IsPlaying())
 		{
-			playstopButton.SetText("Stop");
+			playstopButton.SetText(ICON_STOP);
 		}
 		else
 		{
-			playstopButton.SetText("Play");
+			playstopButton.SetText(ICON_PLAY);
 		}
 		submixComboBox.SetEnabled(true);
 		if (submixComboBox.GetSelected() != (int)sound->soundinstance.type)
@@ -254,5 +256,54 @@ void SoundWindow::SetEntity(Entity entity)
 		volumeSlider.SetEnabled(false);
 		submixComboBox.SetEnabled(false);
 	}
+}
+
+
+void SoundWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 80;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_fullwidth(openButton);
+	add(reverbComboBox);
+	add_fullwidth(filenameLabel);
+	add(playstopButton);
+	loopedCheckbox.SetPos(XMFLOAT2(playstopButton.GetPos().x - loopedCheckbox.GetSize().x - 2, playstopButton.GetPos().y));
+	add_right(reverbCheckbox);
+	disable3dCheckbox.SetPos(XMFLOAT2(reverbCheckbox.GetPos().x - disable3dCheckbox.GetSize().x - 100 - 2, reverbCheckbox.GetPos().y));
+	add(volumeSlider);
+	add(submixComboBox);
 }
 

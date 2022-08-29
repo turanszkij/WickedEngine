@@ -702,8 +702,8 @@ void TestsRenderer::RunFontTest()
 	static wi::SpriteFont font;
 	static wi::SpriteFont font_upscaled;
 
-	font.SetText("This is Arial, size 32 wi::font");
-	font_upscaled.SetText("This is Arial, size 14 wi::font, but upscaled to 32");
+	font.SetText("This is Liberation Sans, size 32 wi::font");
+	font_upscaled.SetText("This is Liberation Sans, size 14 wi::font, but upscaled to 32");
 
 	font.params.posX = GetLogicalWidth() / 2.0f;
 	font.params.posY = GetLogicalHeight() / 6.0f;
@@ -740,20 +740,9 @@ void TestsRenderer::RunFontTest()
 	font_aligned2.params.shadow_softness = 1;
 	font_aligned2.params.shadow_offset_x = 2;
 	font_aligned2.params.shadow_offset_y = 2;
-	font_aligned2.SetText("Right aligned, downscaled, purple soft shadow with offset");
+	font_aligned2.SetText("Right aligned, downscaled, purple shadow with offset");
 	AddFont(&font_aligned2);
 
-	std::string ss;
-	std::ifstream file("font_test.txt");
-	if (file.is_open())
-	{
-		while (!file.eof())
-		{
-			std::string s;
-			file >> s;
-			ss += s + "\t";
-		}
-	}
 	static wi::SpriteFont font_japanese;
 	font_japanese = font_aligned2;
 	font_japanese.params.scaling = 1;
@@ -762,7 +751,7 @@ void TestsRenderer::RunFontTest()
 	font_japanese.params.shadowColor = wi::Color::Transparent();
 	font_japanese.params.h_align = wi::font::WIFALIGN_CENTER;
 	font_japanese.params.size = 34;
-	font_japanese.SetText(ss);
+	font_japanese.SetText("ウィケッドエンジンです。よろしくお願いします。 Привет! (ʘ‿ʘ)");
 	AddFont(&font_japanese);
 
 	static wi::SpriteFont font_colored;
@@ -774,6 +763,17 @@ void TestsRenderer::RunFontTest()
 	font_colored.params.posY = font_japanese.params.posY + font_japanese.TextHeight();
 	font_colored.SetText("Colored font");
 	AddFont(&font_colored);
+
+	static wi::SpriteFont font_nosdf;
+	font_nosdf.params.disableSDFRendering();
+	font_nosdf.params.color = wi::Color::White();
+	font_nosdf.params.h_align = wi::font::WIFALIGN_CENTER;
+	font_nosdf.params.v_align = wi::font::WIFALIGN_TOP;
+	font_nosdf.params.size = 24;
+	font_nosdf.params.posX = GetLogicalWidth() / 2;
+	font_nosdf.params.posY = font_colored.params.posY + font_colored.TextHeight();
+	font_nosdf.SetText("SDF rendering disabled for this text.");
+	AddFont(&font_nosdf);
 }
 void TestsRenderer::RunSpriteTest()
 {

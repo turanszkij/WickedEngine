@@ -558,7 +558,7 @@ int main(int argc, char* argv[])
 			std::string name_repl = name;
 			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
-			ss += "std::pair<std::string, ShaderDumpEntry>(\"" + name + "\", {" + name_repl + ",sizeof(" + name_repl + ")}),\n";
+			ss += "{\"" + name + "\", {" + name_repl + ",sizeof(" + name_repl + ")}},\n";
 		}
 		ss += "};\n"; // map end
 		ss += "}\n"; // namespace end

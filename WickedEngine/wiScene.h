@@ -131,6 +131,7 @@ namespace wi::scene
 			USE_WIND = 1 << 9,
 			DISABLE_RECEIVE_SHADOW = 1 << 10,
 			DOUBLE_SIDED = 1 << 11,
+			OUTLINE = 1 << 12,
 		};
 		uint32_t _flags = CAST_SHADOW;
 
@@ -233,6 +234,7 @@ namespace wi::scene
 		TextureMap textures[TEXTURESLOT_COUNT];
 
 		int customShaderID = -1;
+		uint4 userdata = uint4(0, 0, 0, 0); // can be accessed by custom shader
 
 		// Non-serialized attributes:
 		uint32_t layerMask = ~0u;
@@ -270,6 +272,7 @@ namespace wi::scene
 		inline bool IsOcclusionEnabled_Secondary() const { return _flags & OCCLUSION_SECONDARY; }
 		inline bool IsCustomShader() const { return customShaderID >= 0; }
 		inline bool IsDoubleSided() const { return  _flags & DOUBLE_SIDED; }
+		inline bool IsOutlineEnabled() const { return  _flags & OUTLINE; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
 		inline void SetSpecularColor(const XMFLOAT4& value) { SetDirty(); specularColor = value; }
@@ -307,6 +310,7 @@ namespace wi::scene
 		inline void SetCustomShaderID(int id) { customShaderID = id; }
 		inline void DisableCustomShader() { customShaderID = -1; }
 		inline void SetDoubleSided(bool value = true) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
+		inline void SetOutlineEnabled(bool value = true) { if (value) { _flags |= OUTLINE; } else { _flags &= ~OUTLINE; } }
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
@@ -364,14 +368,14 @@ namespace wi::scene
 		float tessellationFactor = 0.0f;
 		wi::ecs::Entity armatureID = wi::ecs::INVALID_ENTITY;
 
-		// Morph Targets
-		struct MeshMorphTarget
+		struct MorphTarget
 		{
 		    wi::vector<XMFLOAT3> vertex_positions;
 		    wi::vector<XMFLOAT3> vertex_normals;
-		    float_t weight;
+			wi::vector<uint32_t> sparse_indices; // optional, these can be used to target vertices indirectly
+			float weight = 0;
 		};
-		wi::vector<MeshMorphTarget> targets;
+		wi::vector<MorphTarget> morph_targets;
 
 		uint32_t subsets_per_lod = 0; // this needs to be specified if there are multiple LOD levels
 
@@ -605,6 +609,8 @@ namespace wi::scene
 		
 		// Non serialized attributes:
 		wi::vector<Vertex_POS> vertex_positions_morphed;
+		wi::vector<XMFLOAT3> morph_temp_pos;
+		wi::vector<XMFLOAT3> morph_temp_nor;
 
 	};
 
@@ -846,7 +852,6 @@ namespace wi::scene
 			VOLUMETRICCLOUDS = 1 << 4,
 		};
 		uint32_t _flags = EMPTY;
-		XMFLOAT3 color = XMFLOAT3(1, 1, 1);
 
 		enum LightType 
 		{
@@ -861,6 +866,8 @@ namespace wi::scene
 			ENUM_FORCE_UINT32 = 0xFFFFFFFF,
 		};
 		LightType type = POINT;
+
+		XMFLOAT3 color = XMFLOAT3(1, 1, 1);
 		float intensity = 1.0f; // Brightness of light in. The units that this is defined in depend on the type of light. Point and spot lights use luminous intensity in candela (lm/sr) while directional lights use illuminance in lux (lm/m2). https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
 		float range = 10.0f;
 		float outerConeAngle = XM_PIDIV4;
@@ -992,6 +999,8 @@ namespace wi::scene
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsCustomProjectionEnabled() const { return _flags & CUSTOM_PROJECTION; }
 
+		void Lerp(const CameraComponent& a, const CameraComponent& b, float t);
+
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
@@ -1109,15 +1118,70 @@ namespace wi::scene
 			wi::ecs::Entity target = wi::ecs::INVALID_ENTITY;
 			int samplerIndex = -1;
 
-			enum Path
+			enum class Path
 			{
 				TRANSLATION,
 				ROTATION,
 				SCALE,
 				WEIGHTS,
+
+				LIGHT_COLOR,
+				LIGHT_INTENSITY,
+				LIGHT_RANGE,
+				LIGHT_INNERCONE,
+				LIGHT_OUTERCONE,
+				// additional light paths can go here...
+				_LIGHT_RANGE_END = LIGHT_COLOR + 1000,
+
+				SOUND_PLAY,
+				SOUND_STOP,
+				SOUND_VOLUME,
+				// additional sound paths can go here...
+				_SOUND_RANGE_END = SOUND_PLAY + 1000,
+
+				EMITTER_EMITCOUNT,
+				// additional emitter paths can go here...
+				_EMITTER_RANGE_END = EMITTER_EMITCOUNT + 1000,
+
+				CAMERA_FOV,
+				CAMERA_FOCAL_LENGTH,
+				CAMERA_APERTURE_SIZE,
+				CAMERA_APERTURE_SHAPE,
+				// additional camera paths can go here...
+				_CAMERA_RANGE_END = CAMERA_FOV + 1000,
+
+				SCRIPT_PLAY,
+				SCRIPT_STOP,
+				// additional script paths can go here...
+				_SCRIPT_RANGE_END = SCRIPT_PLAY + 1000,
+
+				MATERIAL_COLOR,
+				MATERIAL_EMISSIVE,
+				MATERIAL_ROUGHNESS,
+				MATERIAL_METALNESS,
+				MATERIAL_REFLECTANCE,
+				MATERIAL_TEXMULADD,
+				// additional material paths can go here...
+				_MATERIAL_RANGE_END = MATERIAL_COLOR + 1000,
+
 				UNKNOWN,
-				TYPE_FORCE_UINT32 = 0xFFFFFFFF
-			} path = TRANSLATION;
+			} path = Path::UNKNOWN;
+
+			enum class PathDataType
+			{
+				Event,
+				Float,
+				Float2,
+				Float3,
+				Float4,
+				Weights,
+
+				Count,
+			};
+			PathDataType GetPathDataType() const;
+
+			// Non-serialized attributes:
+			mutable int next_event = 0;
 		};
 		struct AnimationSampler
 		{
@@ -1145,6 +1209,7 @@ namespace wi::scene
 
 		// Non-serialzied attributes:
 		wi::vector<float> morph_weights_temp;
+		float last_update_time = 0;
 
 		inline bool IsPlaying() const { return _flags & PLAYING; }
 		inline bool IsLooped() const { return _flags & LOOPED; }
@@ -1153,7 +1218,7 @@ namespace wi::scene
 
 		inline void Play() { _flags |= PLAYING; }
 		inline void Pause() { _flags &= ~PLAYING; }
-		inline void Stop() { Pause(); timer = 0.0f; }
+		inline void Stop() { Pause(); timer = 0.0f; last_update_time = timer; }
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
@@ -1266,8 +1331,8 @@ namespace wi::scene
 		uint32_t _flags = EMPTY;
 
 		wi::ecs::Entity target = wi::ecs::INVALID_ENTITY; // which entity to follow (must have a transform component)
-		uint32_t chain_length = ~0u; // ~0 means: compute until the root
-		uint32_t iteration_count = 1;
+		uint32_t chain_length = 0; // recursive depth
+		uint32_t iteration_count = 1; // computation step count. Increase this too for greater chain length
 
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
 		inline bool IsDisabled() const { return _flags & DISABLED; }
@@ -1285,15 +1350,20 @@ namespace wi::scene
 			STRETCH_ENABLED = 1 << 2,
 			GRAVITY_ENABLED = 1 << 3,
 		};
-		uint32_t _flags = RESET;
+		uint32_t _flags = RESET | GRAVITY_ENABLED;
 
-		float stiffness = 100;
-		float damping = 0.8f;
-		float wind_affection = 0;
+		float stiffnessForce = 0.5f;
+		float dragForce = 0.5f;
+		float windForce = 0.5f;
+		float hitRadius = 0;
+		float gravityPower = 0.5f;
+		XMFLOAT3 gravityDir = {};
 
 		// Non-serialized attributes:
-		XMFLOAT3 center_of_mass;
-		XMFLOAT3 velocity;
+		XMFLOAT3 prevTail = {};
+		XMFLOAT3 currentTail = {};
+		XMFLOAT3 boneAxis = {};
+		float boneLength = 0;
 
 		inline void Reset(bool value = true) { if (value) { _flags |= RESET; } else { _flags &= ~RESET; } }
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
@@ -1308,36 +1378,204 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
+	struct ColliderComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		enum class Shape
+		{
+			Sphere,
+			Capsule,
+			Plane,
+		};
+		Shape shape;
+
+		float radius = 0;
+		XMFLOAT3 offset = {};
+		XMFLOAT3 tail = {};
+
+		// Non-serialized attributes:
+		wi::primitive::Sphere sphere;
+		wi::primitive::Capsule capsule;
+		XMFLOAT3 planeOrigin = {};
+		XMFLOAT3 planeNormal = {};
+		XMFLOAT4X4 planeProjection = wi::math::IDENTITY_MATRIX;
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
+
+	struct ScriptComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			PLAYING = 1 << 0,
+			PLAY_ONCE = 1 << 1,
+		};
+		uint32_t _flags = EMPTY;
+
+		std::string filename;
+
+		// Non-serialized attributes:
+		std::string script;
+		wi::Resource resource;
+
+		inline void Play() { _flags |= PLAYING; }
+		inline void SetPlayOnce(bool once = true) { if (once) { _flags |= PLAY_ONCE; } else { _flags &= ~PLAY_ONCE; } }
+		inline void Stop() { _flags &= ~PLAYING; }
+
+		inline bool IsPlaying() const { return _flags & PLAYING; }
+		inline bool IsPlayingOnlyOnce() const { return _flags & PLAY_ONCE; }
+
+		void CreateFromFile(const std::string& filename);
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
+
+	struct ExpressionComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		// Preset expressions can have common behaviours assigned:
+		//	https://github.com/vrm-c/vrm-specification/blob/bd205a6c3839993f2729e4e7c3a74af89877cfce/specification/VRMC_vrm-1.0-beta/expressions.md#preset-expressions
+		enum class Preset
+		{
+			// Emotions:
+			Happy,		// Changed from joy
+			Angry,		// anger
+			Sad,		// Changed from sorrow
+			Relaxed,	// Comfortable. Changed from fun
+			Surprised,	// surprised. Added new in VRM 1.0
+
+			// Lip sync procedural:
+			//	Procedural: A value that can be automatically generated by the system.
+			//	- Analyze microphone input, generate from text, etc.
+			Aa,			// aa
+			Ih,			// i
+			Ou,			// u
+			Ee,			// eh
+			Oh,			// oh
+
+			// Blink procedural:
+			//	Procedural: A value that can be automatically generated by the system.
+			//	- Randomly blink, etc.
+			Blink,		// close both eyelids
+			BlinkLeft,	// Close the left eyelid
+			BlinkRight,	// Close right eyelid
+
+			// Gaze procedural:
+			//	Procedural: A value that can be automatically generated by the system.
+			//	- The VRM LookAt will generate a value for the gaze point from time to time (see LookAt Expression Type).
+			LookUp,		// For models where the line of sight moves with Expression instead of bone. See eye control.
+			LookDown,	// For models where the line of sight moves with Expression instead of bone. See eye control.
+			LookLeft,	// For models whose line of sight moves with Expression instead of bone. See eye control.
+			LookRight,	// For models where the line of sight moves with Expression instead of bone. See eye control.
+
+			// Other:
+			Neutral,	// left for backwards compatibility.
+
+			Count,
+		};
+		int presets[size_t(Preset::Count)] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+
+		enum class Override
+		{
+			None,
+			Block,
+			Blend,
+		};
+
+		float blink_frequency = 0;	// number of blinks per second
+		float blink_length = 0.1f;	// blink's completion time in seconds
+		int blink_count = 2;
+		float look_frequency = 0;	// number of lookAt changes per second
+		float look_length = 0.6f;	// lookAt's completion time in seconds
+
+		struct Expression
+		{
+			enum FLAGS
+			{
+				EMPTY = 0,
+				DIRTY = 1 << 0,
+				BINARY = 1 << 1,
+			};
+			uint32_t _flags = EMPTY;
+
+			std::string name;
+			float weight = 0;
+
+			Preset preset = Preset::Count;
+			Override override_mouth = Override::None;
+			Override override_blink = Override::None;
+			Override override_look = Override::None;
+
+			struct MorphTargetBinding
+			{
+				wi::ecs::Entity meshID = wi::ecs::INVALID_ENTITY;
+				int index = 0;
+				float weight = 0;
+			};
+			wi::vector<MorphTargetBinding> morph_target_bindings;
+
+			constexpr bool IsDirty() const { return _flags & DIRTY; }
+			constexpr bool IsBinary() const { return _flags & BINARY; }
+
+			constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
+			constexpr void SetBinary(bool value = true) { if (value) { _flags |= BINARY; } else { _flags &= ~BINARY; } }
+		};
+		wi::vector<Expression> expressions;
+
+		// Non-serialized attributes:
+		float blink_timer = 0;
+		float look_timer = 0;
+		float look_weights[4] = {};
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
+
 	struct Scene
 	{
-		wi::ecs::ComponentManager<NameComponent> names;
-		wi::ecs::ComponentManager<LayerComponent> layers;
-		wi::ecs::ComponentManager<TransformComponent> transforms;
-		wi::ecs::ComponentManager<HierarchyComponent> hierarchy;
-		wi::ecs::ComponentManager<MaterialComponent> materials;
-		wi::ecs::ComponentManager<MeshComponent> meshes;
-		wi::ecs::ComponentManager<ImpostorComponent> impostors;
-		wi::ecs::ComponentManager<ObjectComponent> objects;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_objects;
-		wi::ecs::ComponentManager<RigidBodyPhysicsComponent> rigidbodies;
-		wi::ecs::ComponentManager<SoftBodyPhysicsComponent> softbodies;
-		wi::ecs::ComponentManager<ArmatureComponent> armatures;
-		wi::ecs::ComponentManager<LightComponent> lights;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_lights;
-		wi::ecs::ComponentManager<CameraComponent> cameras;
-		wi::ecs::ComponentManager<EnvironmentProbeComponent> probes;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_probes;
-		wi::ecs::ComponentManager<ForceFieldComponent> forces;
-		wi::ecs::ComponentManager<DecalComponent> decals;
-		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_decals;
-		wi::ecs::ComponentManager<AnimationComponent> animations;
-		wi::ecs::ComponentManager<AnimationDataComponent> animation_datas;
-		wi::ecs::ComponentManager<EmittedParticleSystem> emitters;
-		wi::ecs::ComponentManager<HairParticleSystem> hairs;
-		wi::ecs::ComponentManager<WeatherComponent> weathers;
-		wi::ecs::ComponentManager<SoundComponent> sounds;
-		wi::ecs::ComponentManager<InverseKinematicsComponent> inverse_kinematics;
-		wi::ecs::ComponentManager<SpringComponent> springs;
+		wi::ecs::ComponentLibrary componentLibrary;
+
+		wi::ecs::ComponentManager<NameComponent>& names = componentLibrary.Register<NameComponent>("wi::scene::Scene::names");
+		wi::ecs::ComponentManager<LayerComponent>& layers = componentLibrary.Register<LayerComponent>("wi::scene::Scene::layers");
+		wi::ecs::ComponentManager<TransformComponent>& transforms = componentLibrary.Register<TransformComponent>("wi::scene::Scene::transforms");
+		wi::ecs::ComponentManager<HierarchyComponent>& hierarchy = componentLibrary.Register<HierarchyComponent>("wi::scene::Scene::hierarchy");
+		wi::ecs::ComponentManager<MaterialComponent>& materials = componentLibrary.Register<MaterialComponent>("wi::scene::Scene::materials", 1); // version = 1
+		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Register<MeshComponent>("wi::scene::Scene::meshes", 1); // version = 1
+		wi::ecs::ComponentManager<ImpostorComponent>& impostors = componentLibrary.Register<ImpostorComponent>("wi::scene::Scene::impostors");
+		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Register<ObjectComponent>("wi::scene::Scene::objects");
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_objects = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_objects");
+		wi::ecs::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies = componentLibrary.Register<RigidBodyPhysicsComponent>("wi::scene::Scene::rigidbodies");
+		wi::ecs::ComponentManager<SoftBodyPhysicsComponent>& softbodies = componentLibrary.Register<SoftBodyPhysicsComponent>("wi::scene::Scene::softbodies");
+		wi::ecs::ComponentManager<ArmatureComponent>& armatures = componentLibrary.Register<ArmatureComponent>("wi::scene::Scene::armatures");
+		wi::ecs::ComponentManager<LightComponent>& lights = componentLibrary.Register<LightComponent>("wi::scene::Scene::lights");
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_lights = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_lights");
+		wi::ecs::ComponentManager<CameraComponent>& cameras = componentLibrary.Register<CameraComponent>("wi::scene::Scene::cameras");
+		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = componentLibrary.Register<EnvironmentProbeComponent>("wi::scene::Scene::probes");
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_probes = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_probes");
+		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Register<ForceFieldComponent>("wi::scene::Scene::forces");
+		wi::ecs::ComponentManager<DecalComponent>& decals = componentLibrary.Register<DecalComponent>("wi::scene::Scene::decals");
+		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_decals = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_decals");
+		wi::ecs::ComponentManager<AnimationComponent>& animations = componentLibrary.Register<AnimationComponent>("wi::scene::Scene::animations");
+		wi::ecs::ComponentManager<AnimationDataComponent>& animation_datas = componentLibrary.Register<AnimationDataComponent>("wi::scene::Scene::animation_datas");
+		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = componentLibrary.Register<EmittedParticleSystem>("wi::scene::Scene::emitters");
+		wi::ecs::ComponentManager<HairParticleSystem>& hairs = componentLibrary.Register<HairParticleSystem>("wi::scene::Scene::hairs");
+		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Register<WeatherComponent>("wi::scene::Scene::weathers");
+		wi::ecs::ComponentManager<SoundComponent>& sounds = componentLibrary.Register<SoundComponent>("wi::scene::Scene::sounds");
+		wi::ecs::ComponentManager<InverseKinematicsComponent>& inverse_kinematics = componentLibrary.Register<InverseKinematicsComponent>("wi::scene::Scene::inverse_kinematics");
+		wi::ecs::ComponentManager<SpringComponent>& springs = componentLibrary.Register<SpringComponent>("wi::scene::Scene::springs", 1); // version = 1
+		wi::ecs::ComponentManager<ColliderComponent>& colliders = componentLibrary.Register<ColliderComponent>("wi::scene::Scene::colliders", 1); // version = 1
+		wi::ecs::ComponentManager<ScriptComponent>& scripts = componentLibrary.Register<ScriptComponent>("wi::scene::Scene::scripts");
+		wi::ecs::ComponentManager<ExpressionComponent>& expressions = componentLibrary.Register<ExpressionComponent>("wi::scene::Scene::expressions");
 
 		// Non-serialized attributes:
 		float dt = 0;
@@ -1417,11 +1655,17 @@ namespace wi::scene
 		wi::graphics::Texture surfelMomentsTexture[2];
 
 		// DDGI resources:
-		uint ddgi_frameIndex = 0;
-		wi::graphics::GPUBuffer ddgiRayBuffer;
-		wi::graphics::GPUBuffer ddgiOffsetBuffer;
-		wi::graphics::Texture ddgiColorTexture[2];
-		wi::graphics::Texture ddgiDepthTexture[2];
+		struct DDGI
+		{
+			uint frame_index = 0;
+			uint3 grid_dimensions = uint3(32, 8, 32); // The scene extents will be subdivided into a grid of this resolution, each grid cell will have one probe
+			wi::graphics::GPUBuffer ray_buffer;
+			wi::graphics::GPUBuffer offset_buffer;
+			wi::graphics::Texture color_texture[2];
+			wi::graphics::Texture depth_texture[2];
+
+			void Serialize(wi::Archive& archive);
+		} ddgi;
 
 		// Environment probe cubemap array state:
 		static constexpr uint32_t envmapCount = 16;
@@ -1453,6 +1697,7 @@ namespace wi::scene
 		uint32_t impostorMaterialOffset = ~0u;
 
 		mutable std::atomic_bool lightmap_refresh_needed{ false };
+		wi::vector<TransformComponent> transforms_temp;
 
 		// Ocean GPU state:
 		wi::Ocean ocean;
@@ -1573,6 +1818,8 @@ namespace wi::scene
 		void RunAnimationUpdateSystem(wi::jobsystem::context& ctx);
 		void RunTransformUpdateSystem(wi::jobsystem::context& ctx);
 		void RunHierarchyUpdateSystem(wi::jobsystem::context& ctx);
+		void RunExpressionUpdateSystem(wi::jobsystem::context& ctx);
+		void RunColliderUpdateSystem(wi::jobsystem::context& ctx);
 		void RunSpringUpdateSystem(wi::jobsystem::context& ctx);
 		void RunInverseKinematicsUpdateSystem(wi::jobsystem::context& ctx);
 		void RunArmatureUpdateSystem(wi::jobsystem::context& ctx);
@@ -1588,6 +1835,7 @@ namespace wi::scene
 		void RunParticleUpdateSystem(wi::jobsystem::context& ctx);
 		void RunWeatherUpdateSystem(wi::jobsystem::context& ctx);
 		void RunSoundUpdateSystem(wi::jobsystem::context& ctx);
+		void RunScriptUpdateSystem(wi::jobsystem::context& ctx);
 	};
 
 	// Returns skinned vertex position in armature local space

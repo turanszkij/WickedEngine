@@ -53,6 +53,7 @@ struct ChunkData
 
 struct TerrainGenerator : public wi::gui::Window
 {
+	static constexpr int EVENT_THEME_RESET = 12345;
 	wi::ecs::Entity terrainEntity = wi::ecs::INVALID_ENTITY;
 	wi::scene::Scene* scene = nullptr;
 	wi::scene::MaterialComponent material_Base;
@@ -69,15 +70,8 @@ struct TerrainGenerator : public wi::gui::Window
 		uint32_t indexCount = 0;
 	};
 	wi::vector<LOD> lods;
-	wi::noise::Perlin perlin;
 	Chunk center_chunk = {};
-
-	struct HeightmapTexture
-	{
-		wi::vector<uint8_t> data;
-		int width = 0;
-		int height = 0;
-	} heightmap;
+	wi::noise::Perlin perlin_noise;
 
 	struct Prop
 	{
@@ -126,22 +120,77 @@ struct TerrainGenerator : public wi::gui::Window
 	wi::gui::Slider seedSlider;
 	wi::gui::Slider bottomLevelSlider;
 	wi::gui::Slider topLevelSlider;
-	wi::gui::Slider perlinBlendSlider;
-	wi::gui::Slider perlinFrequencySlider;
-	wi::gui::Slider perlinOctavesSlider;
-	wi::gui::Slider voronoiBlendSlider;
-	wi::gui::Slider voronoiFrequencySlider;
-	wi::gui::Slider voronoiFadeSlider;
-	wi::gui::Slider voronoiShapeSlider;
-	wi::gui::Slider voronoiFalloffSlider;
-	wi::gui::Slider voronoiPerturbationSlider;
 	wi::gui::Button saveHeightmapButton;
-	wi::gui::Button heightmapButton;
-	wi::gui::Slider heightmapBlendSlider;
+	wi::gui::ComboBox addModifierCombo;
 
 	wi::gui::Slider region1Slider;
 	wi::gui::Slider region2Slider;
 	wi::gui::Slider region3Slider;
+
+	struct Modifier : public wi::gui::Window
+	{
+		wi::gui::ComboBox blendCombo;
+		wi::gui::Slider blendSlider;
+		wi::gui::Slider frequencySlider;
+
+		enum class BlendMode
+		{
+			Normal,
+			Multiply,
+			Additive,
+		};
+
+		Modifier(const std::string& name)
+		{
+			wi::gui::Window::Create(name, wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+			SetSize(XMFLOAT2(200, 100));
+
+			blendCombo.Create("Blend Mode: ");
+			blendCombo.SetSize(XMFLOAT2(100, 20));
+			blendCombo.AddItem("Normal", (uint64_t)BlendMode::Normal);
+			blendCombo.AddItem("Additive", (uint64_t)BlendMode::Additive);
+			blendCombo.AddItem("Multiply", (uint64_t)BlendMode::Multiply);
+			AddWidget(&blendCombo);
+
+			blendSlider.Create(0, 1, 0.5f, 10000, "Blend: ");
+			blendSlider.SetSize(XMFLOAT2(100, 20));
+			blendSlider.SetTooltip("Blending amount");
+			AddWidget(&blendSlider);
+
+			frequencySlider.Create(0.0001f, 0.01f, 0.0008f, 10000, "Frequency: ");
+			frequencySlider.SetSize(XMFLOAT2(100, 20));
+			frequencySlider.SetTooltip("Frequency for the tiling");
+			AddWidget(&frequencySlider);
+		}
+
+		virtual void Seed(uint32_t seed) {}
+		virtual void SetCallback(std::function<void(wi::gui::EventArgs args)> func)
+		{
+			blendCombo.OnSelect(func);
+			blendSlider.OnSlide(func);
+			frequencySlider.OnSlide(func);
+		}
+		virtual void Apply(const XMFLOAT2& world_pos, float& height) = 0;
+		void Blend(float& height, float value)
+		{
+			switch ((BlendMode)blendCombo.GetItemUserData(blendCombo.GetSelected()))
+			{
+			default:
+			case BlendMode::Normal:
+				height = wi::math::Lerp(height, value, blendSlider.GetValue());
+				break;
+			case BlendMode::Multiply:
+				height *= value * blendSlider.GetValue();
+				break;
+			case BlendMode::Additive:
+				height += value * blendSlider.GetValue();
+				break;
+			}
+		}
+	};
+	wi::vector<std::unique_ptr<Modifier>> modifiers;
+	wi::vector<Modifier*> modifiers_to_remove;
+	void AddModifier(Modifier* modifier);
 
 	void Create();
 
@@ -157,4 +206,6 @@ struct TerrainGenerator : public wi::gui::Window
 	void Generation_Cancel();
 	// The virtual textures will be compressed and saved into resources. They can be serialized from there
 	void BakeVirtualTexturesToFiles();
+
+	void ResizeLayout() override;
 };

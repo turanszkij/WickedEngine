@@ -17,10 +17,6 @@ public:
 	wi::gui::ComboBox subsetComboBox;
 	wi::gui::ComboBox subsetMaterialComboBox;
 	wi::gui::CheckBox doubleSidedCheckBox;
-	wi::gui::CheckBox softbodyCheckBox;
-	wi::gui::Slider massSlider;
-	wi::gui::Slider frictionSlider;
-	wi::gui::Slider restitutionSlider;
 	wi::gui::Button impostorCreateButton;
 	wi::gui::Slider impostorDistanceSlider;
 	wi::gui::Slider tessellationFactorSlider;
@@ -41,5 +37,7 @@ public:
 	wi::gui::Slider lodQualitySlider;
 	wi::gui::Slider lodErrorSlider;
 	wi::gui::CheckBox lodSloppyCheckBox;
+
+	void ResizeLayout() override;
 };
 

@@ -23,17 +23,22 @@ namespace wi::math
 	}
 
 
-	XMFLOAT3 getCubicHermiteSplinePos(const XMFLOAT3& startPos, const XMFLOAT3& endPos
-		, const XMFLOAT3& startTangent, const XMFLOAT3& endTangent
-		, float atInterval){
-		float x, y, z, t; float r1 = 1.0f, r4 = 1.0f;
+	XMFLOAT3 GetCubicHermiteSplinePos(
+		const XMFLOAT3& startPos,
+		const XMFLOAT3& endPos,
+		const XMFLOAT3& startTangent,
+		const XMFLOAT3& endTangent,
+		float atInterval
+	)
+	{
+		float x, y, z, t;
 		t = atInterval;
 		x = (2 * t*t*t - 3 * t*t + 1)*startPos.x + (-2 * t*t*t + 3 * t*t)*endPos.x + (t*t*t - 2 * t*t + t)*startTangent.x + (t*t*t - t*t)*endTangent.x;
 		y = (2 * t*t*t - 3 * t*t + 1)*startPos.y + (-2 * t*t*t + 3 * t*t)*endPos.y + (t*t*t - 2 * t*t + 1)*startTangent.y + (t*t*t - t*t)*endTangent.y;
 		z = (2 * t*t*t - 3 * t*t + 1)*startPos.z + (-2 * t*t*t + 3 * t*t)*endPos.z + (t*t*t - 2 * t*t + 1)*startTangent.z + (t*t*t - t*t)*endTangent.z;
 		return XMFLOAT3(x, y, z);
 	}
-	XMFLOAT3 getQuadraticBezierPos(const XMFLOAT3& a, const XMFLOAT3&b, const XMFLOAT3& c, float t){
+	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT3& a, const XMFLOAT3&b, const XMFLOAT3& c, float t){
 		float param0, param1, param2;
 		param0 = powf(1 - t, 2);
 		param1 = 2 * (1 - t)*t;
@@ -43,8 +48,8 @@ namespace wi::math
 		float z = param0*a.z + param1*b.z + param2*c.z;
 		return XMFLOAT3(x, y, z);
 	}
-	XMFLOAT3 getQuadraticBezierPos(const XMFLOAT4& a, const XMFLOAT4&b, const XMFLOAT4& c, float t){
-		return getQuadraticBezierPos(XMFLOAT3(a.x, a.y, a.z), XMFLOAT3(b.x, b.y, b.z), XMFLOAT3(c.x, c.y, c.z), t);
+	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT4& a, const XMFLOAT4&b, const XMFLOAT4& c, float t){
+		return GetQuadraticBezierPos(XMFLOAT3(a.x, a.y, a.z), XMFLOAT3(b.x, b.y, b.z), XMFLOAT3(c.x, c.y, c.z), t);
 	}
 	
 	XMFLOAT3 QuaternionToRollPitchYaw(const XMFLOAT4& quaternion)

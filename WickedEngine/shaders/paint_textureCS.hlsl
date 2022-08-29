@@ -13,7 +13,27 @@ void main( uint3 DTid : SV_DispatchThreadID )
 {
 	const uint2 pixel = push.xPaintBrushCenter + DTid.xy - push.xPaintBrushRadius.xx;
 
-	const float2 brush_uv = (DTid.xy + 0.5) / (push.xPaintBrushRadius.xx * 2);
+	const float2x2 rot = float2x2(
+		cos(push.xPaintBrushRotation), -sin(push.xPaintBrushRotation),
+		sin(push.xPaintBrushRotation), cos(push.xPaintBrushRotation)
+		);
+	const float2 diff = mul((float2)push.xPaintBrushCenter - (float2)pixel, rot);
+
+	float dist = 0;
+	float radius = (float)push.xPaintBrushRadius;
+	switch (push.xPaintBrushShape)
+	{
+	default:
+	case 0:
+		dist = length(diff);
+		break;
+	case 1:
+		dist = max(abs(diff.x), abs(diff.y));
+		radius /= SQRT2;
+		break;
+	}
+
+	const float2 brush_uv = (diff / radius) * 0.5 + 0.5;
 	const float2 brush_uv_quad_x = QuadReadAcrossX(brush_uv);
 	const float2 brush_uv_quad_y = QuadReadAcrossY(brush_uv);
 	const float2 brush_uv_dx = brush_uv - brush_uv_quad_x;
@@ -29,9 +49,8 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	const float2 reveal_uv_dy = reveal_uv - reveal_uv_quad_y;
 	float4 reveal_color = texture_reveal.SampleGrad(sampler_linear_clamp, reveal_uv, reveal_uv_dx, reveal_uv_dy);
 
-	const float dist = distance((float2)pixel, (float2)push.xPaintBrushCenter);
-	const float affection = push.xPaintBrushAmount * pow(1 - saturate(dist / (float)push.xPaintBrushRadius), push.xPaintBrushFalloff);
-	if (affection > 0 && dist < (float)push.xPaintBrushRadius)
+	const float affection = push.xPaintBrushAmount * smoothstep(0, push.xPaintBrushSmoothness, 1 - dist / radius);
+	if (affection > 0 && dist < radius)
 	{
 		if (push.xPaintReveal)
 		{
@@ -39,4 +58,8 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		}
 		output[pixel] = lerp(output[pixel], brush_color, affection);
 	}
+	//else
+	//{
+	//	output[pixel] = float4(1,0,0,1);
+	//}
 }

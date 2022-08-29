@@ -34,7 +34,7 @@ namespace wi::lua
 			Sound_BindLua* sound = Luna<Sound_BindLua>::lightcheck(L, 2);
 			if (sound != nullptr)
 			{
-				bool result = wi::audio::CreateSound(wi::lua::GetScriptPath() + wi::lua::SGetString(L, 1), &sound->sound);
+				bool result = wi::audio::CreateSound(wi::lua::SGetString(L, 1), &sound->sound);
 				wi::lua::SSetBool(L, result);
 			}
 			else

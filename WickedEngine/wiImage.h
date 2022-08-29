@@ -55,6 +55,7 @@ namespace wi::image
 			BACKGROUND = 1 << 5,
 			OUTPUT_COLOR_SPACE_HDR10_ST2084 = 1 << 6,
 			OUTPUT_COLOR_SPACE_LINEAR = 1 << 7,
+			CORNER_ROUNDING = 1 << 8,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -80,6 +81,14 @@ namespace wi::image
 		const XMMATRIX* customRotation = nullptr;
 		const XMMATRIX* customProjection = nullptr;
 
+		struct Rounding
+		{
+			float radius = 0; // the radius of corner (in logical pixel units)
+			int segments = 18; // how many segments to add to smoothing curve
+		} corners_rounding[4]; // specify rounding corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
+
+		float border_soften = 0; // how much alpha softening to apply to image border in range [0, 1] (0: disable)
+
 		uint8_t stencilRef = 0;
 		STENCILMODE stencilComp = STENCILMODE_DISABLED;
 		STENCILREFMODE stencilRefMode = STENCILREFMODE_ALL;
@@ -100,6 +109,7 @@ namespace wi::image
 		constexpr bool isBackgroundEnabled() const { return _flags & BACKGROUND; }
 		constexpr bool isHDR10OutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		constexpr bool isLinearOutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_LINEAR; }
+		constexpr bool isCornerRoundingEnabled() const { return _flags & CORNER_ROUNDING; }
 
 		// enables draw rectangle for base texture (cutout texture outside draw rectangle)
 		constexpr void enableDrawRect(const XMFLOAT4& rect) { _flags |= DRAWRECT; drawRect = rect; }
@@ -118,6 +128,7 @@ namespace wi::image
 		constexpr void enableHDR10OutputMapping() { _flags |= OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		// enable linear output mapping, which means removing gamma curve and outputting in linear space (useful for blending in HDR space)
 		constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
+		constexpr void enableCornerRounding(float scaling = 1.0f) { _flags |= CORNER_ROUNDING; hdr_scaling = scaling; }
 
 		// disable draw rectangle for base texture (whole texture will be drawn, no cutout)
 		constexpr void disableDrawRect() { _flags &= ~DRAWRECT; }
@@ -129,6 +140,7 @@ namespace wi::image
 		constexpr void disableBackground() { _flags &= ~BACKGROUND; }
 		constexpr void disableHDR10OutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		constexpr void disableLinearOutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_LINEAR; }
+		constexpr void disableCornerRounding() { _flags &= ~CORNER_ROUNDING; }
 
 		Params() = default;
 

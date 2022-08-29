@@ -133,8 +133,7 @@ namespace wi
 
 		wi::profiler::BeginFrame();
 
-		deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
-		timer.record();
+		deltaTime = float(std::max(0.0, timer.record_elapsed_seconds()));
 
 		wi::input::Update(window, canvas);
 
@@ -404,19 +403,25 @@ namespace wi
 
 			params.cursor = wi::font::Draw(infodisplay_str, params, cmd);
 
-			if (infoDisplay.vram_usage)
+			// VRAM:
 			{
 				GraphicsDevice::MemoryUsage vram = graphicsDevice->GetMemoryUsage();
+				bool warn = false;
 				if (vram.usage > vram.budget)
 				{
 					params.color = wi::Color::Error();
+					warn = true;
 				}
 				else if (float(vram.usage) / float(vram.budget) > 0.9f)
 				{
 					params.color = wi::Color::Warning();
+					warn = true;
 				}
-				params.cursor = wi::font::Draw("VRAM usage: " + std::to_string(vram.usage / 1024 / 1024) + "MB / " + std::to_string(vram.budget / 1024 / 1024) + "MB\n", params, cmd);
-				params.color = wi::Color::White();
+				if (infoDisplay.vram_usage || warn)
+				{
+					params.cursor = wi::font::Draw("VRAM usage: " + std::to_string(vram.usage / 1024 / 1024) + "MB / " + std::to_string(vram.budget / 1024 / 1024) + "MB\n", params, cmd);
+					params.color = wi::Color::White();
+				}
 			}
 
 			// Write warnings below:
@@ -454,7 +459,7 @@ namespace wi
 		wi::profiler::EndRange(range); // Compose
 	}
 
-	void Application::SetWindow(wi::platform::window_type window, bool fullscreen)
+	void Application::SetWindow(wi::platform::window_type window)
 	{
 		this->window = window;
 

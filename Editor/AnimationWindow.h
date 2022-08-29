@@ -10,15 +10,25 @@ public:
 
 	EditorComponent* editor = nullptr;
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+	void SetEntity(wi::ecs::Entity entity);
 
-	wi::gui::ComboBox	animationsComboBox;
+	wi::gui::ComboBox modeComboBox;
 	wi::gui::CheckBox loopedCheckBox;
 	wi::gui::Button	playButton;
 	wi::gui::Button	stopButton;
 	wi::gui::Slider	timerSlider;
 	wi::gui::Slider	amountSlider;
 	wi::gui::Slider	speedSlider;
+	wi::gui::TextInputField startInput;
+	wi::gui::TextInputField endInput;
+
+	wi::gui::ComboBox recordCombo;
+	wi::gui::TreeList keyframesList;
 
 	void Update();
+
+	void RefreshKeyframesList();
+
+	void ResizeLayout() override;
 };
 

@@ -12,12 +12,15 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
+	wi::gui::Button resetAllButton;
 	wi::gui::CheckBox debugCheckBox;
 	wi::gui::CheckBox disabledCheckBox;
 	wi::gui::CheckBox stretchCheckBox;
 	wi::gui::CheckBox gravityCheckBox;
 	wi::gui::Slider stiffnessSlider;
-	wi::gui::Slider dampingSlider;
+	wi::gui::Slider dragSlider;
 	wi::gui::Slider windSlider;
+
+	void ResizeLayout() override;
 };
 

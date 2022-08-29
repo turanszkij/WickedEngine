@@ -28,10 +28,20 @@ namespace wi::lua
 		lunamethod(SpriteAnim_BindLua, GetScaleY),
 		lunamethod(SpriteAnim_BindLua, GetMovingTexAnim),
 		lunamethod(SpriteAnim_BindLua, GetDrawRecAnim),
-		{ NULL, NULL }
+		{ nullptr, nullptr }
 	};
 	Luna<SpriteAnim_BindLua>::PropertyType SpriteAnim_BindLua::properties[] = {
-		{ NULL, NULL }
+		lunaproperty(SpriteAnim_BindLua, Rot),
+		lunaproperty(SpriteAnim_BindLua, Rotation),
+		lunaproperty(SpriteAnim_BindLua, Opacity),
+		lunaproperty(SpriteAnim_BindLua, Fade),
+		lunaproperty(SpriteAnim_BindLua, Repeatable),
+		lunaproperty(SpriteAnim_BindLua, Velocity),
+		lunaproperty(SpriteAnim_BindLua, ScaleX),
+		lunaproperty(SpriteAnim_BindLua, ScaleY),
+		lunaproperty(SpriteAnim_BindLua, MovingTexAnim),
+		lunaproperty(SpriteAnim_BindLua, DrawRecAnim),
+		{ nullptr, nullptr }
 	};
 
 	SpriteAnim_BindLua::SpriteAnim_BindLua(const wi::Sprite::Anim& anim) :anim(anim)
@@ -264,10 +274,12 @@ namespace wi::lua
 
 		lunamethod(MovingTexAnim_BindLua, GetSpeedX),
 		lunamethod(MovingTexAnim_BindLua, GetSpeedY),
-		{ NULL, NULL }
+		{ nullptr, nullptr }
 	};
 	Luna<MovingTexAnim_BindLua>::PropertyType MovingTexAnim_BindLua::properties[] = {
-		{ NULL, NULL }
+		lunaproperty(MovingTexAnim_BindLua, SpeedX),
+		lunaproperty(MovingTexAnim_BindLua, SpeedY),
+		{ nullptr, nullptr }
 	};
 
 	MovingTexAnim_BindLua::MovingTexAnim_BindLua(const wi::Sprite::Anim::MovingTexAnim& anim) :anim(anim)
@@ -345,10 +357,13 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 	Luna<DrawRectAnim_BindLua>::PropertyType DrawRectAnim_BindLua::properties[] = {
+		lunaproperty(DrawRectAnim_BindLua, FrameRate),
+		lunaproperty(DrawRectAnim_BindLua, FrameCount),
+		lunaproperty(DrawRectAnim_BindLua, HorizontalFrameCount),
 		{ NULL, NULL }
 	};
 
-	DrawRectAnim_BindLua::DrawRectAnim_BindLua(const wi::Sprite::Anim::DrawRectAnim& data) :anim(anim)
+	DrawRectAnim_BindLua::DrawRectAnim_BindLua(const wi::Sprite::Anim::DrawRectAnim& anim) :anim(anim)
 	{
 	}
 

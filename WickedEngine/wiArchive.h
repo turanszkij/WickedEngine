@@ -64,6 +64,31 @@ namespace wi
 		//	The file's name will include the directory as well
 		const std::string& GetSourceFileName() const;
 
+		// Appends the current archive write offset as uint64_t to the archive
+		//	Returns the previous write offset of the archive, which can be used by PatchUnknownJumpPosition()
+		//	to write the current archive position to that previous position
+		size_t WriteUnknownJumpPosition()
+		{
+			size_t pos_prev = pos;
+			_write(uint64_t(pos));
+			return pos_prev;
+		}
+		// Writes the current archive write offset to the specified archive write offset.
+		//	It can be used with Jump() to skip parts of the archive when reading
+		void PatchUnknownJumpPosition(size_t offset)
+		{
+			assert(!readMode);
+			assert(!DATA.empty());
+			assert(offset + sizeof(uint64_t) < DATA.size());
+			*(uint64_t*)(DATA.data() + offset) = uint64_t(pos);
+		}
+		// Modifies the current archive offset
+		//	It can be used in conjunction with WriteUnknownJumpPosition() and PatchUnknownJumpPosition()
+		void Jump(uint64_t jump_pos)
+		{
+			pos = jump_pos;
+		}
+
 		// It could be templated but we have to be extremely careful of different datasizes on different platforms
 		// because serialized data should be interchangeable!
 		// So providing exact copy operations for exact types enforces platform agnosticism

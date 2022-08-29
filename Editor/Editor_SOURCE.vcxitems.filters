@@ -19,8 +19,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)NameWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ObjectWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)PaintToolWindow.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)PostprocessWindow.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)RendererWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GraphicsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SoundWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SpringWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TransformWindow.cpp" />
@@ -77,6 +76,13 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)OptionsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ComponentsWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ScriptWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)RigidBodyWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)SoftBodyWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ColliderWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)HierarchyWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)CameraComponentWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ExpressionWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -97,8 +103,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)NameWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ObjectWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)PaintToolWindow.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)PostprocessWindow.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)RendererWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GraphicsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SoundWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpringWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)tiny_gltf.h" />
@@ -118,6 +123,13 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)OptionsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ComponentsWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ScriptWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)RigidBodyWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)SoftBodyWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ColliderWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)HierarchyWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)CameraComponentWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ExpressionWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
@@ -130,6 +142,7 @@
     <None Include="$(MSBuildThisFileDirectory)terrain\tree.wiscene">
       <Filter>terrain</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)config.ini" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="meshoptimizer">

@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.8)
 
+
+option(WICKED_DYNAMIC_LIBRARY "Build WickedEngine as a dynamic library" OFF)
+
+option(WICKED_EDITOR "Build WickedEngine editor" ON)
+option(WICKED_TESTS "Build WickedEngine tests" ON)
+option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
+option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
+
+
 # Configure CMake global variables
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,23 +32,19 @@ endif()
 
 add_subdirectory(WickedEngine)
 
-option(WICKED_EDITOR "Build WickedEngine editor" ON)
 if (WICKED_EDITOR)
     add_subdirectory(Editor)
 endif()
 
-option(WICKED_TESTS "Build WickedEngine tests" ON)
 if (WICKED_TESTS)
     add_subdirectory(Tests)
 endif()
 
-option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
-if (WICKED_TESTS)
+if (WICKED_IMGUI_EXAMPLE)
     add_subdirectory(Example_ImGui)
     add_subdirectory(Example_ImGui_Docking)
 endif()
 
-option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
 if (WICKED_LINUX_TEMPLATE)
     add_subdirectory(Template_Linux)
 endif()

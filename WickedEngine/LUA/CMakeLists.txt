@@ -69,7 +69,10 @@ if (UNIX)
     target_compile_definitions(LUA PUBLIC LUA_USE_POSIX=1)
 endif()
 
-set_property(TARGET "LUA" PROPERTY FOLDER "ThirdParty")
+set_target_properties(LUA PROPERTIES
+	FOLDER "ThirdParty"
+	POSITION_INDEPENDENT_CODE ${WICKED_DYNAMIC_LIBRARY}
+)
 
 install(FILES ${LUA_HEADERS}
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/LUA/")

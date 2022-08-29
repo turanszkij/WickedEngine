@@ -87,8 +87,16 @@ namespace wi::lua::primitive
 				return 1;
 			}
 
+			Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
+			if (capsule)
+			{
+				bool intersects = ray.intersects(capsule->capsule);
+				wi::lua::SSetBool(L, intersects);
+				return 1;
+			}
+
 		}
-		wi::lua::SError(L, "[Intersects(AABB), Intersects(Sphere)] no matching arguments! ");
+		wi::lua::SError(L, "[Intersects(AABB), Intersects(Sphere), Intersects(Capsule)] no matching arguments! ");
 		return 0;
 	}
 	int Ray_BindLua::GetOrigin(lua_State* L)
@@ -268,6 +276,8 @@ namespace wi::lua::primitive
 		{ NULL, NULL }
 	};
 	Luna<Sphere_BindLua>::PropertyType Sphere_BindLua::properties[] = {
+		lunaproperty(Sphere_BindLua, Center),
+		lunaproperty(Sphere_BindLua, Radius),
 		{ NULL, NULL }
 	};
 
@@ -391,6 +401,9 @@ namespace wi::lua::primitive
 		{ NULL, NULL }
 	};
 	Luna<Capsule_BindLua>::PropertyType Capsule_BindLua::properties[] = {
+		lunaproperty(Capsule_BindLua, Base),
+		lunaproperty(Capsule_BindLua, Tip),
+		lunaproperty(Capsule_BindLua, Radius),
 		{ NULL, NULL }
 	};
 
@@ -441,8 +454,15 @@ namespace wi::lua::primitive
 				wi::lua::SSetFloat(L, depth);
 				return 4;
 			}
+
+			Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
+			if (ray)
+			{
+				wi::lua::SSetBool(L, capsule.intersects(ray->ray));
+				return 1;
+			}
 		}
-		wi::lua::SError(L, "Intersects(Capsule other) no matching arguments! ");
+		wi::lua::SError(L, "Intersects(Capsule/Ray other) no matching arguments! ");
 		return 0;
 	}
 	int Capsule_BindLua::GetAABB(lua_State* L)

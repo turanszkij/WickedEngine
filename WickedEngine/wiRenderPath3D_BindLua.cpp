@@ -48,6 +48,7 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetExposure),
 		lunamethod(RenderPath3D_BindLua, SetMotionBlurStrength),
 		lunamethod(RenderPath3D_BindLua, SetDepthOfFieldStrength),
+		lunamethod(RenderPath3D_BindLua, SetLightShaftsStrength),
 		{ NULL, NULL }
 	};
 	Luna<RenderPath3D_BindLua>::PropertyType RenderPath3D_BindLua::properties[] = {
@@ -379,6 +380,21 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetDepthOfFieldStrength(float value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetLightShaftsStrength(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetLightShaftsStrength(float value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setLightShaftsStrength(wi::lua::SGetFloat(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetLightShaftsStrength(float value) not enough arguments!");
 		return 0;
 	}
 

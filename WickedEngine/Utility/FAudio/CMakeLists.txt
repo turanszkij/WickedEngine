@@ -46,7 +46,7 @@ set(PUBLIC_HEADERS
 	)
 
 # Source lists
-add_library(FAudio
+add_library(FAudio STATIC
 	# Public Headers
 	${PUBLIC_HEADERS}
 	# Internal Headers
@@ -90,9 +90,11 @@ target_include_directories(FAudio PUBLIC
 )
 
 # Soname
-set_target_properties(FAudio PROPERTIES OUTPUT_NAME "FAudio"
+set_target_properties(FAudio PROPERTIES
+	OUTPUT_NAME "FAudio"
 	VERSION ${LIB_VERSION}
 	SOVERSION ${LIB_MAJOR_VERSION}
+	POSITION_INDEPENDENT_CODE ${WICKED_DYNAMIC_LIBRARY}
 )
 
 # SDL2 Dependency

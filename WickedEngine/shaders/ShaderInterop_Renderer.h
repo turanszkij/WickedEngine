@@ -33,6 +33,15 @@ struct ShaderScene
 
 	struct DDGI
 	{
+		uint3 grid_dimensions;
+		uint probe_count;
+
+		uint2 color_texture_resolution;
+		float2 color_texture_resolution_rcp;
+
+		uint2 depth_texture_resolution;
+		float2 depth_texture_resolution_rcp;
+
 		float3 grid_min;
 		int color_texture;
 
@@ -125,6 +134,8 @@ struct ShaderMaterial
 	int			texture_specularmap_index;
 	uint		shaderType;
 
+	uint4		userdata;
+
 	void init()
 	{
 		baseColor = float4(1, 1, 1, 1);
@@ -187,6 +198,7 @@ struct ShaderMaterial
 		texture_specularmap_index = -1;
 		shaderType = 0;
 
+		userdata = uint4(0, 0, 0, 0);
 	}
 
 #ifndef __cplusplus
@@ -503,6 +515,10 @@ struct ShaderEntity
 	{
 		return GetConeAngleCos();
 	}
+	inline float3 GetColliderTip()
+	{
+		return shadowAtlasMulAdd.xyz;
+	}
 
 #else
 	// Application-side:
@@ -560,6 +576,10 @@ struct ShaderEntity
 	{
 		SetConeAngleCos(value);
 	}
+	inline void SetColliderTip(float3 value)
+	{
+		shadowAtlasMulAdd = float4(value.x, value.y, value.z, 0);
+	}
 
 #endif // __cplusplus
 };
@@ -595,13 +615,21 @@ struct ShaderFrustum
 #endif // __cplusplus
 };
 
-static const uint ENTITY_TYPE_DIRECTIONALLIGHT = 0;
-static const uint ENTITY_TYPE_POINTLIGHT = 1;
-static const uint ENTITY_TYPE_SPOTLIGHT = 2;
-static const uint ENTITY_TYPE_DECAL = 100;
-static const uint ENTITY_TYPE_ENVMAP = 101;
-static const uint ENTITY_TYPE_FORCEFIELD_POINT = 200;
-static const uint ENTITY_TYPE_FORCEFIELD_PLANE = 201;
+enum SHADER_ENTITY_TYPE
+{
+	ENTITY_TYPE_DIRECTIONALLIGHT,
+	ENTITY_TYPE_POINTLIGHT,
+	ENTITY_TYPE_SPOTLIGHT,
+	ENTITY_TYPE_DECAL,
+	ENTITY_TYPE_ENVMAP,
+	ENTITY_TYPE_FORCEFIELD_POINT,
+	ENTITY_TYPE_FORCEFIELD_PLANE,
+	ENTITY_TYPE_COLLIDER_SPHERE,
+	ENTITY_TYPE_COLLIDER_CAPSULE,
+	ENTITY_TYPE_COLLIDER_PLANE,
+
+	ENTITY_TYPE_COUNT
+};
 
 static const uint ENTITY_FLAG_LIGHT_STATIC = 1 << 0;
 static const uint ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS = 1 << 1;
@@ -685,7 +713,7 @@ struct FrameCB
 	uint		forcefieldarray_count;		// indexing into entity array
 
 	uint		envprobearray_offset;		// indexing into entity array
-	uint		envprobearray_count;			// indexing into entity array
+	uint		envprobearray_count;		// indexing into entity array
 	uint		temporalaa_samplerotation;
 	float		blue_noise_phase;
 
@@ -877,19 +905,26 @@ struct PaintTextureCB
 	uint xPaintBrushRadius;
 	float xPaintBrushAmount;
 
-	float xPaintBrushFalloff;
+	float xPaintBrushSmoothness;
 	uint xPaintBrushColor;
 	uint xPaintReveal;
+	float xPaintBrushRotation;
+
+	uint xPaintBrushShape;
 	uint padding0;
+	uint padding1;
+	uint padding2;
 };
 
 CBUFFER(PaintRadiusCB, CBSLOT_RENDERER_MISC)
 {
 	uint2 xPaintRadResolution;
 	uint2 xPaintRadCenter;
+
 	uint xPaintRadUVSET;
 	float xPaintRadRadius;
-	uint2 pad;
+	float xPaintRadBrushRotation;
+	uint xPaintRadBrushShape;
 };
 
 struct SkinningPushConstants

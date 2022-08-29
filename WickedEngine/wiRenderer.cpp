@@ -76,6 +76,7 @@ bool freezeCullingCamera = false;
 bool debugEnvProbes = false;
 bool debugForceFields = false;
 bool debugCameras = false;
+bool debugColliders = false;
 bool gridHelper = false;
 bool voxelHelper = false;
 bool advancedLightCulling = true;
@@ -2278,7 +2279,6 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	const XMVECTOR to = XMVector3TransformNormal(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), lightRotation);
 	const XMVECTOR up = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), lightRotation);
 	const XMMATRIX lightView = XMMatrixLookToLH(XMVectorZero(), to, up); // important to not move (zero out eye vector) the light view matrix itself because texel snapping must be done on projection matrix!
-	const float nearPlane = camera.zNearP;
 	const float farPlane = camera.zFarP;
 	const float referenceFarPlane = 800.0f; // cascade splits here were tested with this depth range
 	const float referenceSplitClamp = std::min(1.0f, referenceFarPlane / farPlane); // if far plane is greater than reference, do not increase cascade sizes further
@@ -3268,7 +3268,7 @@ void UpdatePerFrameData(
 	frameCB.lightarray_offset = frameCB.envprobearray_offset + frameCB.envprobearray_count;
 	frameCB.lightarray_count = (uint)vis.visibleLights.size();
 	frameCB.forcefieldarray_offset = frameCB.lightarray_offset + frameCB.lightarray_count;
-	frameCB.forcefieldarray_count = (uint)vis.scene->forces.GetCount();
+	frameCB.forcefieldarray_count = uint(vis.scene->forces.GetCount() + vis.scene->colliders.GetCount());
 
 	frameCB.envprobe_mipcount = 0;
 	frameCB.envprobe_mipcount_rcp = 1.0f;
@@ -3517,8 +3517,6 @@ void UpdateRenderData(
 		ShaderEntity* entityArray = (ShaderEntity*)allocation_entityarray.data;
 		XMMATRIX* matrixArray = (XMMATRIX*)allocation_matrixarray.data;
 
-		const XMMATRIX viewMatrix = vis.camera->GetView();
-
 		uint32_t entityCounter = 0;
 		uint32_t matrixCounter = 0;
 
@@ -3746,6 +3744,57 @@ void UpdateRenderData(
 			entityCounter++;
 		}
 
+		// Write colliders into entity array:
+		for (size_t i = 0; i < vis.scene->colliders.GetCount(); ++i)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				assert(0); // too many entities!
+				entityCounter--;
+				break;
+			}
+			ShaderEntity shaderentity = {};
+
+			const ColliderComponent& collider = vis.scene->colliders[i];
+
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->colliders.GetEntity(i);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			switch (collider.shape)
+			{
+			case ColliderComponent::Shape::Sphere:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_SPHERE);
+				shaderentity.position = collider.sphere.center;
+				shaderentity.SetRange(collider.sphere.radius);
+				break;
+			case ColliderComponent::Shape::Capsule:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_CAPSULE);
+				shaderentity.position = collider.capsule.base;
+				shaderentity.SetColliderTip(collider.capsule.tip);
+				shaderentity.SetRange(collider.capsule.radius);
+				break;
+			case ColliderComponent::Shape::Plane:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_PLANE);
+				shaderentity.position = collider.planeOrigin;
+				shaderentity.SetDirection(collider.planeNormal);
+				shaderentity.SetIndices(matrixCounter, ~0u);
+				std::memcpy(&matrixArray[matrixCounter++], &collider.planeProjection, sizeof(collider.planeProjection));
+				break;
+			default:
+				assert(0);
+				break;
+			}
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			entityCounter++;
+		}
+
 		// Write force fields into entity array:
 		for (size_t i = 0; i < vis.scene->forces.GetCount(); ++i)
 		{
@@ -3853,7 +3902,7 @@ void UpdateRenderData(
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
 
-			if (mesh.dirty_morph)
+			if (mesh.dirty_morph && !mesh.vertex_positions_morphed.empty())
 			{
 				mesh.dirty_morph = false;
 				GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh.vb_pos_nor_wind.size, cmd);
@@ -4151,7 +4200,6 @@ void UpdateRenderDataAsync(
 			const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
 			Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
 			const TransformComponent& transform = *vis.scene->transforms.GetComponent(entity);
-			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 			const MeshComponent* mesh = vis.scene->meshes.GetComponent(emitter.meshID);
 			const uint32_t instanceIndex = uint32_t(vis.scene->objects.GetCount() + vis.scene->hairs.GetCount()) + emitterIndex;
 
@@ -4291,7 +4339,6 @@ void OcclusionCulling_Reset(const Visibility& vis, CommandList cmd)
 		return;
 	}
 
-	int query_write = vis.scene->queryheap_idx;
 	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
 
 	device->QueryReset(
@@ -4530,7 +4577,6 @@ void DrawLightVisualizers(
 		BindCommonResources(cmd);
 
 		XMMATRIX camrot = XMLoadFloat3x3(&vis.camera->rotationMatrix);
-		XMMATRIX VP = vis.camera->GetViewProjection();
 
 		for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
@@ -4838,8 +4884,6 @@ void DrawShadowmaps(
 							const ObjectComponent& object = vis.scene->objects[i];
 							if (object.IsRenderable() && object.IsCastingShadow() && (cascade < (CASCADE_COUNT - object.cascadeMask)))
 							{
-								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-
 								renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 								if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
@@ -4892,8 +4936,6 @@ void DrawShadowmaps(
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
-							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-
 							renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
@@ -4952,8 +4994,6 @@ void DrawShadowmaps(
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
-							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-
 							renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
@@ -5170,6 +5210,154 @@ void DrawDebugWorld(
 
 	BindCommonResources(cmd);
 
+	if (debugCameras)
+	{
+		device->EventBegin("DebugCameras", cmd);
+
+		static GPUBuffer wirecamVB;
+		static GPUBuffer wirecamIB;
+		if (!wirecamVB.IsValid())
+		{
+			XMFLOAT4 verts[] = {
+				XMFLOAT4(-0.1f,-0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0.1f,-0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0.1f,0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-0.1f,0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-1,-1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(1,-1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-1,1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0,1.5f,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0,0,-1,1),	XMFLOAT4(1,1,1,1),
+			};
+
+			GPUBufferDesc bd;
+			bd.usage = Usage::DEFAULT;
+			bd.size = sizeof(verts);
+			bd.bind_flags = BindFlag::VERTEX_BUFFER;
+			device->CreateBuffer(&bd, verts, &wirecamVB);
+
+			uint16_t indices[] = {
+				0,1,1,2,0,3,0,4,1,5,4,5,
+				5,6,4,7,2,6,3,7,2,3,6,7,
+				6,8,7,8,
+				0,2,1,3
+			};
+
+			bd.usage = Usage::DEFAULT;
+			bd.size = sizeof(indices);
+			bd.bind_flags = BindFlag::INDEX_BUFFER;
+			device->CreateBuffer(&bd, indices, &wirecamIB);
+		}
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+
+		const GPUBuffer* vbs[] = {
+			&wirecamVB,
+		};
+		const uint32_t strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
+		device->BindIndexBuffer(&wirecamIB, IndexBufferFormat::UINT16, 0, cmd);
+
+		MiscCB sb;
+		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+
+		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
+		{
+			const CameraComponent& cam = scene.cameras[i];
+
+			const float aspect = cam.width / cam.height;
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(aspect * 0.5f, 0.5f, 0.5f) * cam.GetInvView() * camera.GetViewProjection());
+
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+
+			device->DrawIndexed(32, 0, 0, cmd);
+
+			if (cam.aperture_size > 0)
+			{
+				// focal length line:
+				RenderableLine linne;
+				linne.color_start = linne.color_end = XMFLOAT4(1, 1, 1, 1);
+				linne.start = cam.Eye;
+				XMVECTOR L = cam.GetEye() + cam.GetAt() * cam.focal_length;
+				XMStoreFloat3(&linne.end, L);
+				DrawLine(linne);
+
+				// aperture size/shape circle:
+				int segmentcount = 36;
+				for (int j = 0; j < segmentcount; ++j)
+				{
+					const float angle0 = float(j) / float(segmentcount) * XM_2PI;
+					const float angle1 = float(j + 1) / float(segmentcount) * XM_2PI;
+					linne.start = XMFLOAT3(std::sin(angle0), std::cos(angle0), 0);
+					linne.end = XMFLOAT3(std::sin(angle1), std::cos(angle1), 0);
+					XMVECTOR S = XMLoadFloat3(&linne.start);
+					XMVECTOR E = XMLoadFloat3(&linne.end);
+					XMMATRIX R = XMLoadFloat3x3(&cam.rotationMatrix);
+					XMMATRIX APERTURE = R * XMMatrixScaling(cam.aperture_size * cam.aperture_shape.x, cam.aperture_size * cam.aperture_shape.y, cam.aperture_size);
+					S = XMVector3TransformNormal(S, APERTURE);
+					E = XMVector3TransformNormal(E, APERTURE);
+					S += L;
+					E += L;
+					XMStoreFloat3(&linne.start, S);
+					XMStoreFloat3(&linne.end, E);
+					DrawLine(linne);
+				}
+			}
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	if (GetToDrawDebugColliders())
+	{
+		for (size_t i = 0; i < scene.colliders.GetCount(); ++i)
+		{
+			ColliderComponent& collider = scene.colliders[i];
+			switch (collider.shape)
+			{
+			default:
+			case ColliderComponent::Shape::Sphere:
+				DrawSphere(collider.sphere, XMFLOAT4(1, 0, 1, 1));
+				break;
+			case ColliderComponent::Shape::Capsule:
+				DrawCapsule(collider.capsule, XMFLOAT4(1, 0, 1, 1));
+				break;
+			case ColliderComponent::Shape::Plane:
+				{
+					RenderableLine line;
+					line.color_start = XMFLOAT4(1, 0, 1, 1);
+					line.color_end = XMFLOAT4(1, 0, 1, 1);
+					XMMATRIX planeMatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&collider.planeProjection));
+					XMVECTOR P0 = XMVector3Transform(XMVectorSet(-1, 0, -1, 1), planeMatrix);
+					XMVECTOR P1 = XMVector3Transform(XMVectorSet(1, 0, -1, 1), planeMatrix);
+					XMVECTOR P2 = XMVector3Transform(XMVectorSet(1, 0, 1, 1), planeMatrix);
+					XMVECTOR P3 = XMVector3Transform(XMVectorSet(-1, 0, 1, 1), planeMatrix);
+					XMStoreFloat3(&line.start, P0);
+					XMStoreFloat3(&line.end, P1);
+					DrawLine(line);
+					XMStoreFloat3(&line.start, P1);
+					XMStoreFloat3(&line.end, P2);
+					DrawLine(line);
+					XMStoreFloat3(&line.start, P2);
+					XMStoreFloat3(&line.end, P3);
+					DrawLine(line);
+					XMStoreFloat3(&line.start, P3);
+					XMStoreFloat3(&line.end, P0);
+					DrawLine(line);
+					XMVECTOR O = XMLoadFloat3(&collider.planeOrigin);
+					XMVECTOR N = XMLoadFloat3(&collider.planeNormal);
+					XMStoreFloat3(&line.start, O);
+					XMStoreFloat3(&line.end, O + N);
+					DrawLine(line);
+				}
+				break;
+			}
+		}
+	}
+
 	if (debugPartitionTree)
 	{
 		// Actually, there is no SPTree any more, so this will just render all aabbs...
@@ -5268,23 +5456,41 @@ void DrawDebugWorld(
 			int j = 0;
 			for (Entity entity : armature.boneCollection)
 			{
-				const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
-				if (hierarchy == nullptr || !scene.transforms.Contains(entity) || !scene.transforms.Contains(hierarchy->parentID))
-				{
+				if (!scene.transforms.Contains(entity))
 					continue;
-				}
 				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-				const TransformComponent& parent = *scene.transforms.GetComponent(hierarchy->parentID);
-
-				XMMATRIX transform_world = XMLoadFloat4x4(&transform.world);
-				XMMATRIX parent_world = XMLoadFloat4x4(&parent.world);
-
-				XMVECTOR a = XMVector3Transform(XMVectorSet(0, 0, 0, 1), transform_world);
-				XMVECTOR b = XMVector3Transform(XMVectorSet(0, 0, 0, 1), parent_world);
+				XMVECTOR a = transform.GetPositionV();
+				XMVECTOR b = a + XMVectorSet(0, 1, 0, 0);
+				// Search for child to connect bone tip:
+				bool child_found = false;
+				for (Entity child : armature.boneCollection)
+				{
+					const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+					if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+					{
+						const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+						b = child_transform.GetPositionV();
+						child_found = true;
+						break;
+					}
+				}
+				if (!child_found)
+				{
+					// No child, try to guess bone tip compared to parent (if it has parent):
+					const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
+					if (hierarchy != nullptr && scene.transforms.Contains(hierarchy->parentID))
+					{
+						const TransformComponent& parent_transform = *scene.transforms.GetComponent(hierarchy->parentID);
+						XMVECTOR ab = a - parent_transform.GetPositionV();
+						b = a + ab;
+					}
+				}
 
 				LineSegment segment;
 				XMStoreFloat4(&segment.a, a);
 				XMStoreFloat4(&segment.b, b);
+				segment.a.w = 1;
+				segment.b.w = 1;
 				segment.colorA = XMFLOAT4(1, 1, 1, 1);
 				segment.colorB = XMFLOAT4(1, 0, 1, 1);
 
@@ -5774,10 +5980,12 @@ void DrawDebugWorld(
 				}
 				a = XMVector3Transform(a, M);
 				b = XMVector3Transform(b, M);
-				LineSegment& line = linearray[j++];
+				LineSegment line;
 				XMStoreFloat4(&line.a, a);
 				XMStoreFloat4(&line.b, b);
 				line.colorA = line.colorB = it.second;
+				std::memcpy(linearray + j, &line, sizeof(line));
+				j++;
 			}
 
 		}
@@ -5866,12 +6074,12 @@ void DrawDebugWorld(
 	}
 
 
-	if (GetDDGIDebugEnabled() && GetDDGIEnabled())
+	if (GetDDGIDebugEnabled() && scene.ddgi.color_texture[0].IsValid())
 	{
 		device->EventBegin("Debug DDGI", cmd);
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_DDGI], cmd);
-		device->DrawInstanced(2880, DDGI_GRID_DIMENSIONS.x * DDGI_GRID_DIMENSIONS.y * DDGI_GRID_DIMENSIONS.z, 0, 0, cmd); // uv-sphere
+		device->DrawInstanced(2880, scene.shaderscene.ddgi.probe_count, 0, 0, cmd); // uv-sphere
 
 		device->EventEnd(cmd);
 	}
@@ -5883,7 +6091,8 @@ void DrawDebugWorld(
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_GRID], cmd);
 
-		static float col = 0.7f;
+		static float alpha = 0.75f;
+		const float channel_min = 0.2f;
 		static uint32_t gridVertexCount = 0;
 		static GPUBuffer grid;
 		if (!grid.IsValid())
@@ -5896,18 +6105,18 @@ void DrawDebugWorld(
 			for (int i = 0; i <= a; ++i)
 			{
 				verts[count++] = XMFLOAT4(i - a * 0.5f, h, -a * 0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (i == a / 2 ? XMFLOAT4(channel_min, channel_min, 1, alpha) : XMFLOAT4(1, 1, 1, alpha));
 
 				verts[count++] = XMFLOAT4(i - a * 0.5f, h, +a * 0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (i == a / 2 ? XMFLOAT4(channel_min, channel_min, 1, alpha) : XMFLOAT4(1, 1, 1, alpha));
 			}
 			for (int j = 0; j <= a; ++j)
 			{
 				verts[count++] = XMFLOAT4(-a * 0.5f, h, j - a * 0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, channel_min, channel_min, alpha) : XMFLOAT4(1, 1, 1, alpha));
 
 				verts[count++] = XMFLOAT4(+a * 0.5f, h, j - a * 0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, channel_min, channel_min, alpha) : XMFLOAT4(1, 1, 1, alpha));
 			}
 
 			gridVertexCount = arraysize(verts) / 2;
@@ -6027,7 +6236,6 @@ void DrawDebugWorld(
 				continue;
 			}
 			const ObjectComponent& object = *scene.objects.GetComponent(x.objectEntity);
-			const TransformComponent& transform = *scene.transforms.GetComponent(x.objectEntity);
 			if (scene.meshes.GetCount() < object.mesh_index)
 			{
 				continue;
@@ -6038,7 +6246,6 @@ void DrawDebugWorld(
 			{
 				continue;
 			}
-			const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstancePointer), cmd);
 			ShaderMeshInstancePointer poi;
@@ -6052,6 +6259,8 @@ void DrawDebugWorld(
 			cb.xPaintRadCenter = x.center;
 			cb.xPaintRadRadius = x.radius;
 			cb.xPaintRadUVSET = x.uvset;
+			cb.xPaintRadBrushRotation = x.rotation;
+			cb.xPaintRadBrushShape = x.shape;
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PaintRadiusCB), cmd);
 
 			ObjectPushConstants push;
@@ -6095,77 +6304,6 @@ void DrawDebugWorld(
 				device->Draw(14, 0, cmd); // box
 				break;
 			}
-		}
-
-		device->EventEnd(cmd);
-	}
-
-
-	if (debugCameras)
-	{
-		device->EventBegin("DebugCameras", cmd);
-
-		static GPUBuffer wirecamVB;
-		static GPUBuffer wirecamIB;
-		if (!wirecamVB.IsValid())
-		{
-			XMFLOAT4 verts[] = {
-				XMFLOAT4(-0.1f,-0.1f,-1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(0.1f,-0.1f,-1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(0.1f,0.1f,-1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-0.1f,0.1f,-1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-1,-1,1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(1,-1,1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(-1,1,1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(0,1.5f,1,1),	XMFLOAT4(1,1,1,1),
-				XMFLOAT4(0,0,-1,1),	XMFLOAT4(1,1,1,1),
-			};
-
-			GPUBufferDesc bd;
-			bd.usage = Usage::DEFAULT;
-			bd.size = sizeof(verts);
-			bd.bind_flags = BindFlag::VERTEX_BUFFER;
-			device->CreateBuffer(&bd, verts, &wirecamVB);
-
-			uint16_t indices[] = {
-				0,1,1,2,0,3,0,4,1,5,4,5,
-				5,6,4,7,2,6,3,7,2,3,6,7,
-				6,8,7,8,
-				0,2,1,3
-			};
-
-			bd.usage = Usage::DEFAULT;
-			bd.size = sizeof(indices);
-			bd.bind_flags = BindFlag::INDEX_BUFFER;
-			device->CreateBuffer(&bd, indices, &wirecamIB);
-		}
-
-		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
-
-		const GPUBuffer* vbs[] = {
-			&wirecamVB,
-		};
-		const uint32_t strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->BindIndexBuffer(&wirecamIB, IndexBufferFormat::UINT16, 0, cmd);
-
-		MiscCB sb;
-		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-
-		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
-		{
-			const CameraComponent& cam = scene.cameras[i];
-			Entity entity = scene.cameras.GetEntity(i);
-
-			const float aspect = cam.width / cam.height;
-			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(aspect * 0.5f, 0.5f, 0.5f) * cam.GetInvView()*camera.GetViewProjection());
-
-			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
-
-			device->DrawIndexed(32, 0, 0, cmd);
 		}
 
 		device->EventEnd(cmd);
@@ -6899,7 +7037,6 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 				{
 					continue;
 				}
-				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 				ObjectPushConstants push;
 				push.geometryIndex = mesh.geometryOffset + subsetIndex;
@@ -8752,6 +8889,9 @@ void DDGI(
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 		return;
 
+	if (GetDDGIRayCount() == 0)
+		return;
+
 	auto prof_range = wi::profiler::BeginRangeGPU("DDGI", cmd);
 	device->EventBegin("DDGI", cmd);
 
@@ -8759,7 +8899,7 @@ void DDGI(
 
 	DDGIPushConstants push;
 	push.instanceInclusionMask = instanceInclusionMask;
-	push.frameIndex = scene.ddgi_frameIndex;
+	push.frameIndex = scene.ddgi.frame_index;
 	push.rayCount = std::min(GetDDGIRayCount(), DDGI_MAX_RAYCOUNT);
 
 	// Raytracing:
@@ -8782,11 +8922,11 @@ void DDGI(
 		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		const GPUResource* uavs[] = {
-			&scene.ddgiRayBuffer
+			&scene.ddgi.ray_buffer
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(DDGI_PROBE_COUNT, 1, 1, cmd);
+		device->Dispatch(scene.shaderscene.ddgi.probe_count, 1, 1, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -8794,10 +8934,10 @@ void DDGI(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
-			GPUBarrier::Buffer(&scene.ddgiRayBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
-			GPUBarrier::Image(&scene.ddgiColorTexture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&scene.ddgiDepthTexture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Buffer(&scene.ddgiOffsetBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Buffer(&scene.ddgi.ray_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Image(&scene.ddgi.color_texture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&scene.ddgi.depth_texture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Buffer(&scene.ddgi.offset_buffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -8810,16 +8950,16 @@ void DDGI(
 		device->PushConstants(&push, sizeof(push), cmd);
 
 		const GPUResource* res[] = {
-			&scene.ddgiRayBuffer,
+			&scene.ddgi.ray_buffer,
 		};
 		device->BindResources(res, 0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
-			&scene.ddgiColorTexture[1],
+			&scene.ddgi.color_texture[1],
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(DDGI_PROBE_COUNT, 1, 1, cmd);
+		device->Dispatch(scene.shaderscene.ddgi.probe_count, 1, 1, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -8832,26 +8972,26 @@ void DDGI(
 		device->PushConstants(&push, sizeof(push), cmd);
 
 		const GPUResource* res[] = {
-			&scene.ddgiRayBuffer,
+			&scene.ddgi.ray_buffer,
 		};
 		device->BindResources(res, 0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
-			&scene.ddgiDepthTexture[1],
-			&scene.ddgiOffsetBuffer,
+			&scene.ddgi.depth_texture[1],
+			&scene.ddgi.offset_buffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(DDGI_PROBE_COUNT, 1, 1, cmd);
+		device->Dispatch(scene.shaderscene.ddgi.probe_count, 1, 1, cmd);
 
 		device->EventEnd(cmd);
 	}
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&scene.ddgiColorTexture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
-			GPUBarrier::Image(&scene.ddgiDepthTexture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
-			GPUBarrier::Buffer(&scene.ddgiOffsetBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Image(&scene.ddgi.color_texture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Image(&scene.ddgi.depth_texture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Buffer(&scene.ddgi.offset_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -11464,7 +11604,8 @@ void Postprocess_LightShafts(
 	const Texture& input,
 	const Texture& output,
 	CommandList cmd,
-	const XMFLOAT2& center
+	const XMFLOAT2& center,
+	float strength
 )
 {
 	device->EventBegin("Postprocess_LightShafts", cmd);
@@ -11481,10 +11622,10 @@ void Postprocess_LightShafts(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	postprocess.params0.x = 0.65f;	// density
-	postprocess.params0.y = 0.25f;	// weight
-	postprocess.params0.z = 0.945f;	// decay
-	postprocess.params0.w = 0.2f;		// exposure
+	postprocess.params0.x = 0.65f;		// density
+	postprocess.params0.y = 0.25f;		// weight
+	postprocess.params0.z = 0.945f;		// decay
+	postprocess.params0.w = strength;	// exposure
 	postprocess.params1.x = center.x;
 	postprocess.params1.y = center.y;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
@@ -13198,6 +13339,8 @@ void SetToDrawDebugForceFields(bool param) { debugForceFields = param; }
 bool GetToDrawDebugForceFields() { return debugForceFields; }
 void SetToDrawDebugCameras(bool param) { debugCameras = param; }
 bool GetToDrawDebugCameras() { return debugCameras; }
+void SetToDrawDebugColliders(bool param) { debugColliders = param; }
+bool GetToDrawDebugColliders() { return debugColliders; }
 bool GetToDrawGridHelper() { return gridHelper; }
 void SetToDrawGridHelper(bool value) { gridHelper = value; }
 bool GetToDrawVoxelHelper() { return voxelHelper; }

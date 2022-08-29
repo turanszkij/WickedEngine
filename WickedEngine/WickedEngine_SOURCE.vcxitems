@@ -229,9 +229,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransformUtil.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiConfig.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNoise.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\arial.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\liberation_sans.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.h" />
@@ -498,6 +499,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuickprof.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiConfig.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp" />

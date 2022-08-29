@@ -8,7 +8,7 @@ Font rendering (True Type)
 Networking (UDP)
 3D mesh rendering
 Skeletal animation
-Morph target animation
+Morph target animation (with sparse accessor)
 Physically based rendering
 Animated texturing
 Normal mapping
@@ -74,7 +74,7 @@ Entity-Component System (Data oriented design)
 Lightmap baking (with GPU path tracing)
 Job system
 Inverse Kinematics
-Springs
+Springs, Colliders
 Variable Rate Shading
 Real time ray tracing: ambient occlusion, shadows, reflections (DXR and Vulkan raytracing)
 Screen Space Contact Shadows
@@ -83,8 +83,9 @@ Surfel GI
 HDR display output
 Dynamic Diffuse Global Illumination (DDGI)
 Procedural terrain generator
+Expressions
 
-GLTF 2.0 extensions supported:
+GLTF 2.0 - KHR extensions supported:
 KHR_materials_unlit
 KHR_materials_transmission
 KHR_materials_pbrSpecularGlossiness
@@ -94,3 +95,11 @@ KHR_materials_specular
 KHR_materials_ior
 KHR_texture_basisu
 KHR_lights_punctual
+
+GLTF 2.0 - VRM 0.0 extensions supported:
+VRM_secondaryAnimation
+VRM_blendShapeMaster
+
+GLTF 2.0 - VRM 1.0 extensions supported:
+VRMC_springBone
+VRMC_vrm_expressions

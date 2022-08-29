@@ -4,6 +4,11 @@
 //modified to fit with Wicked Engine, removed warnings
 
 #define lunamethod(class, name) {#name, &class::name}
+#define lunaproperty(class, name) {#name, &class::Get##name, &class::Set##name}
+
+#define PropertyFunction(property) \
+int Get##property (lua_State* L) { return property.Get(L); }\
+int Set##property (lua_State* L) { return property.Set(L); }
 
 template < class T > class Luna {
 public:

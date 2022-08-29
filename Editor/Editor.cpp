@@ -62,7 +62,7 @@ void EditorLoadingScreen::Load()
 	sprite.params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 	AddSprite(&sprite);
 
-	wi::gui::CheckBox::SetCheckText(ICON_CHECK);
+	wi::gui::CheckBox::SetCheckTextGlobal(ICON_CHECK);
 
 	LoadingScreen::Load();
 }
@@ -76,57 +76,9 @@ void EditorLoadingScreen::Update(float dt)
 	LoadingScreen::Update(dt);
 }
 
-void EditorComponent::ChangeRenderPath(RENDERPATH path)
-{
-	switch (path)
-	{
-	case EditorComponent::RENDERPATH_DEFAULT:
-		renderPath = std::make_unique<wi::RenderPath3D>();
-		optionsWnd.pathTraceTargetSlider.SetVisible(false);
-		optionsWnd.pathTraceStatisticsLabel.SetVisible(false);
-		break;
-	case EditorComponent::RENDERPATH_PATHTRACING:
-		renderPath = std::make_unique<wi::RenderPath3D_PathTracing>();
-		optionsWnd.pathTraceTargetSlider.SetVisible(true);
-		optionsWnd.pathTraceStatisticsLabel.SetVisible(true);
-		break;
-	default:
-		assert(0);
-		break;
-	}
-
-	if (scenes.empty())
-	{
-		NewScene();
-	}
-	else
-	{
-		SetCurrentScene(current_scene);
-	}
-
-	renderPath->resolutionScale = resolutionScale;
-	renderPath->setBloomThreshold(3.0f);
-
-	renderPath->Load();
-
-	// Destroy and recreate renderer and postprocess windows:
-
-	optionsWnd.RemoveWidget(&optionsWnd.rendererWnd);
-	optionsWnd.rendererWnd = {};
-	optionsWnd.rendererWnd.Create(this);
-	optionsWnd.AddWidget(&optionsWnd.rendererWnd);
-
-	optionsWnd.RemoveWidget(&optionsWnd.postprocessWnd);
-	optionsWnd.postprocessWnd = {};
-	optionsWnd.postprocessWnd.Create(this);
-	optionsWnd.AddWidget(&optionsWnd.postprocessWnd);
-
-	optionsWnd.themeCombo.SetSelected(optionsWnd.themeCombo.GetSelected()); // destroyed windows need theme set again
-}
-
 void EditorComponent::ResizeBuffers()
 {
-	optionsWnd.rendererWnd.UpdateSwapChainFormats(&main->swapChain);
+	optionsWnd.graphicsWnd.UpdateSwapChainFormats(&main->swapChain);
 
 	init(main->canvas);
 	RenderPath2D::ResizeBuffers();
@@ -238,30 +190,9 @@ void EditorComponent::ResizeLayout()
 
 	componentsWnd.SetPos(XMFLOAT2(screenW - componentsWnd.GetScale().x, screenH - componentsWnd.GetScale().y));
 
-	////////////////////////////////////////////////////////////////////////////////////
-
-	float hei = 25;
-
-	saveButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44 - 104 * 3, 0));
-	saveButton.SetSize(XMFLOAT2(100, hei));
-
-	openButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44 - 104 * 2, 0));
-	openButton.SetSize(XMFLOAT2(100, hei));
-
-	closeButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44 - 104 * 1, 0));
-	closeButton.SetSize(XMFLOAT2(100, hei));
-
-	logButton.SetPos(XMFLOAT2(screenW - 40 - 44 - 44, 0));
-	logButton.SetSize(XMFLOAT2(40, hei));
-
-	aboutButton.SetPos(XMFLOAT2(screenW - 40 - 44, 0));
-	aboutButton.SetSize(XMFLOAT2(40, hei));
-
 	aboutLabel.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 	aboutLabel.SetPos(XMFLOAT2(screenW / 2.0f - aboutLabel.scale.x / 2.0f, screenH / 2.0f - aboutLabel.scale.y / 2.0f));
 
-	exitButton.SetPos(XMFLOAT2(screenW - 40, 0));
-	exitButton.SetSize(XMFLOAT2(40, hei));
 }
 void EditorComponent::Load()
 {
@@ -271,7 +202,7 @@ void EditorComponent::Load()
 	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, sizeof(font_awesome_v6));
 
 
-	saveButton.Create(ICON_SAVE " Save");
+	saveButton.Create("");
 	saveButton.font.params.shadowColor = wi::Color::Transparent();
 	saveButton.SetShadowRadius(2);
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)");
@@ -283,7 +214,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&saveButton);
 
 
-	openButton.Create(ICON_OPEN " Open");
+	openButton.Create("");
 	openButton.SetShadowRadius(2);
 	openButton.font.params.shadowColor = wi::Color::Transparent();
 	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...");
@@ -292,11 +223,12 @@ void EditorComponent::Load()
 	openButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
-		params.description = ".wiscene, .obj, .gltf, .glb, .lua";
+		params.description = ".wiscene, .obj, .gltf, .glb, .vrm, .lua";
 		params.extensions.push_back("wiscene");
 		params.extensions.push_back("obj");
 		params.extensions.push_back("gltf");
 		params.extensions.push_back("glb");
+		params.extensions.push_back("vrm");
 		params.extensions.push_back("lua");
 		wi::helper::FileDialog(params, [&](std::string fileName) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
@@ -314,7 +246,9 @@ void EditorComponent::Load()
 
 					if (!extension.compare("WISCENE")) // engine-serialized
 					{
-						wi::scene::LoadModel(GetCurrentScene(), fileName);
+						Scene scene;
+						wi::scene::LoadModel(scene, fileName);
+						GetCurrentScene().Merge(scene);
 						GetCurrentEditorScene().path = fileName;
 					}
 					else if (!extension.compare("OBJ")) // wavefront-obj
@@ -329,7 +263,7 @@ void EditorComponent::Load()
 						ImportModel_GLTF(fileName, scene);
 						GetCurrentScene().Merge(scene);
 					}
-					else if (!extension.compare("GLB")) // binary gltf
+					else if (!extension.compare("GLB") || !extension.compare("VRM")) // binary gltf
 					{
 						Scene scene;
 						ImportModel_GLTF(fileName, scene);
@@ -375,7 +309,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&openButton);
 
 
-	closeButton.Create(ICON_CLOSE " Close");
+	closeButton.Create("");
 	closeButton.SetShadowRadius(2);
 	closeButton.font.params.shadowColor = wi::Color::Transparent();
 	closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, and delete the scene.\nThis operation cannot be undone!");
@@ -391,7 +325,6 @@ void EditorComponent::Load()
 		wi::scene::Scene& scene = GetCurrentScene();
 		wi::renderer::ClearWorld(scene);
 		optionsWnd.cameraWnd.SetEntity(INVALID_ENTITY);
-		optionsWnd.paintToolWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
 		componentsWnd.lightWnd.SetEntity(INVALID_ENTITY);
@@ -407,6 +340,14 @@ void EditorComponent::Load()
 		componentsWnd.transformWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.layerWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.nameWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.animWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.scriptWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.rigidWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.colliderWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.hierarchyWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
 
 		optionsWnd.RefreshEntityTree();
 		ResetHistory();
@@ -423,7 +364,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&closeButton);
 
 
-	logButton.Create(ICON_BACKLOG);
+	logButton.Create("");
 	logButton.SetShadowRadius(2);
 	logButton.font.params.shadowColor = wi::Color::Transparent();
 	logButton.SetTooltip("Open the backlog (toggle with HOME button)");
@@ -435,7 +376,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&logButton);
 
 
-	aboutButton.Create(ICON_HELP);
+	aboutButton.Create("");
 	aboutButton.SetShadowRadius(2);
 	aboutButton.font.params.shadowColor = wi::Color::Transparent();
 	aboutButton.SetTooltip("About...");
@@ -452,9 +393,8 @@ void EditorComponent::Load()
 		ss += wi::version::GetVersionString();
 		ss += "\nCreated by Turánszki János";
 		ss += "\n\nWebsite: https://wickedengine.net/";
-		ss += "\nGithub page: https://github.com/turanszkij/WickedEngine";
+		ss += "\nSource code: https://github.com/turanszkij/WickedEngine";
 		ss += "\nDiscord chat: https://discord.gg/CFjRYmE";
-		ss += "\nYou can support the project on Patreon: https://www.patreon.com/wickedengine";
 		ss += "\n\nControls\n";
 		ss += "------------\n";
 		ss += "Move camera: WASD, or Contoller left stick or D-pad\n";
@@ -482,14 +422,13 @@ void EditorComponent::Load()
 		ss += "Inspector mode: I button (hold), hovered entity information will be displayed near mouse position.\n";
 		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
 		ss += "Script Console / backlog: HOME button\n";
+		ss += "Bone picking: First select an armature, only then bone picking becomes available. As long as you have an armature or bone selected, bone picking will remain active.\n";
 		ss += "\n";
 		ss += "\nTips\n";
 		ss += "-------\n";
 		ss += "You can find sample scenes in the Content/models directory. Try to load one.\n";
-		ss += "You can also import models from .OBJ, .GLTF, .GLB files.\n";
-#ifndef PLATFORM_UWP
+		ss += "You can also import models from .OBJ, .GLTF, .GLB, .VRM files.\n";
 		ss += "You can find a program configuration file at Editor/config.ini\n";
-#endif // PLATFORM_UWP
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
 		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start, if exists)\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
@@ -502,7 +441,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&aboutLabel);
 	}
 
-	exitButton.Create(ICON_EXIT);
+	exitButton.Create("");
 	exitButton.SetShadowRadius(2);
 	exitButton.font.params.shadowColor = wi::Color::Transparent();
 	exitButton.SetTooltip("Exit");
@@ -520,7 +459,31 @@ void EditorComponent::Load()
 	componentsWnd.Create(this);
 	GetGUI().AddWidget(&componentsWnd);
 
-	optionsWnd.themeCombo.SetSelected(0);
+	std::string theme = main->config.GetSection("options").GetText("theme");
+	if(theme.empty())
+	{
+		optionsWnd.themeCombo.SetSelected(0);
+	}
+	else if (!theme.compare("Dark"))
+	{
+		optionsWnd.themeCombo.SetSelected(0);
+	}
+	else if (!theme.compare("Bright"))
+	{
+		optionsWnd.themeCombo.SetSelected(1);
+	}
+	else if (!theme.compare("Soft"))
+	{
+		optionsWnd.themeCombo.SetSelected(2);
+	}
+	else if (!theme.compare("Hacking"))
+	{
+		optionsWnd.themeCombo.SetSelected(3);
+	}
+
+	static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(TerrainGenerator::EVENT_THEME_RESET, [=](uint64_t) {
+		optionsWnd.themeCombo.SetSelected(optionsWnd.themeCombo.GetSelected());
+		});
 
 	RenderPath2D::Load();
 }
@@ -559,7 +522,11 @@ void EditorComponent::Update(float dt)
 	optionsWnd.Update(dt);
 	componentsWnd.Update(dt);
 
+	// Pulsating selection color update:
 	selectionOutlineTimer += dt;
+
+	CheckBonePickingEnabled();
+	UpdateTopMenuAnimation();
 
 	bool clear_selected = false;
 	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
@@ -583,7 +550,6 @@ void EditorComponent::Update(float dt)
 	}
 
 	translator.interactable = false;
-	bool deleting = false;
 
 	// Camera control:
 	if (!wi::backlog::isActive() && !GetGUI().HasFocus())
@@ -727,12 +693,11 @@ void EditorComponent::Update(float dt)
 		inspector_mode = wi::input::Down((wi::input::BUTTON)'I');
 
 		// Begin picking:
-		unsigned int pickMask = optionsWnd.rendererWnd.GetPickType();
 		Ray pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this, camera);
 		{
 			hovered = wi::scene::PickResult();
 
-			if (pickMask & PICK_LIGHT)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Light))
 			{
 				for (size_t i = 0; i < scene.lights.GetCount(); ++i)
 				{
@@ -751,7 +716,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_DECAL)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Decal))
 			{
 				for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 				{
@@ -770,7 +735,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_FORCEFIELD)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Force))
 			{
 				for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 				{
@@ -789,7 +754,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_EMITTER)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Emitter))
 			{
 				for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 				{
@@ -808,7 +773,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_HAIR)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Hairparticle))
 			{
 				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 				{
@@ -827,7 +792,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_ENVPROBE)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::EnvironmentProbe))
 			{
 				for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 				{
@@ -848,7 +813,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_CAMERA)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Camera))
 			{
 				for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 				{
@@ -867,7 +832,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_ARMATURE)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Armature))
 			{
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 				{
@@ -886,7 +851,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (pickMask & PICK_SOUND)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Sound))
 			{
 				for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
 				{
@@ -905,8 +870,64 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
+			if (bone_picking)
+			{
+				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+				{
+					const ArmatureComponent& armature = scene.armatures[i];
+					for (Entity entity : armature.boneCollection)
+					{
+						if (!scene.transforms.Contains(entity))
+							continue;
+						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+						XMVECTOR a = transform.GetPositionV();
+						XMVECTOR b = a + XMVectorSet(0, 1, 0, 0);
+						// Search for child to connect bone tip:
+						bool child_found = false;
+						for (Entity child : armature.boneCollection)
+						{
+							const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+							if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+							{
+								const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+								b = child_transform.GetPositionV();
+								child_found = true;
+								break;
+							}
+						}
+						if (!child_found)
+						{
+							// No child, try to guess bone tip compared to parent (if it has parent):
+							const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
+							if (hierarchy != nullptr && scene.transforms.Contains(hierarchy->parentID))
+							{
+								const TransformComponent& parent_transform = *scene.transforms.GetComponent(hierarchy->parentID);
+								XMVECTOR ab = a - parent_transform.GetPositionV();
+								b = a + ab;
+							}
+						}
+						XMVECTOR ab = XMVector3Normalize(b - a);
 
-			if ((pickMask & PICK_OBJECT) && hovered.entity == INVALID_ENTITY)
+						wi::primitive::Capsule capsule;
+						capsule.radius = wi::math::Distance(a, b) * 0.1f;
+						capsule.radius = wi::math::Clamp(capsule.radius, 0.01f, 0.1f);
+						a -= ab * capsule.radius;
+						b += ab * capsule.radius;
+						XMStoreFloat3(&capsule.base, a);
+						XMStoreFloat3(&capsule.tip, b);
+
+						float dis = -1;
+						if (pickRay.intersects(capsule, dis) && dis < hovered.distance)
+						{
+							hovered = wi::scene::PickResult();
+							hovered.entity = entity;
+							hovered.distance = dis;
+						}
+					}
+				}
+			}
+
+			if (hovered.entity == INVALID_ENTITY)
 			{
 				// Object picking only when mouse button down, because it can be slow with high polycount
 				if (
@@ -916,7 +937,7 @@ void EditorComponent::Update(float dt)
 					inspector_mode
 					)
 				{
-					hovered = wi::scene::Pick(pickRay, pickMask, ~0u, scene);
+					hovered = wi::scene::Pick(pickRay, ~0u, ~0u, scene);
 				}
 			}
 		}
@@ -962,7 +983,7 @@ void EditorComponent::Update(float dt)
 
 						optionsWnd.RefreshEntityTree();
 					}
-					else
+					else if(translator.selected.empty())
 					{
 						// Check for interactive grass (hair particle that is child of hovered object:
 						for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
@@ -1069,7 +1090,7 @@ void EditorComponent::Update(float dt)
 		if (wi::input::Press((wi::input::BUTTON)'W'))
 		{
 			wi::renderer::SetWireRender(!wi::renderer::IsWireRender());
-			optionsWnd.rendererWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
+			optionsWnd.graphicsWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
 		}
 		// Enable transform tool
 		if (wi::input::Press((wi::input::BUTTON)'T'))
@@ -1234,6 +1255,7 @@ void EditorComponent::Update(float dt)
 	// Delete
 	if (deleting)
 	{
+		deleting = false;
 		wi::Archive& archive = AdvanceHistory();
 		archive << HISTORYOP_DELETE;
 		RecordSelection(archive);
@@ -1258,7 +1280,6 @@ void EditorComponent::Update(float dt)
 	if (translator.selected.empty())
 	{
 		optionsWnd.cameraWnd.SetEntity(INVALID_ENTITY);
-		optionsWnd.paintToolWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.emitterWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.hairWnd.SetEntity(INVALID_ENTITY);
@@ -1274,6 +1295,14 @@ void EditorComponent::Update(float dt)
 		componentsWnd.layerWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.nameWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.weatherWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.animWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.scriptWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.rigidWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.colliderWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.hierarchyWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1292,7 +1321,6 @@ void EditorComponent::Update(float dt)
 		}
 
 		optionsWnd.cameraWnd.SetEntity(picked.entity);
-		optionsWnd.paintToolWnd.SetEntity(picked.entity, picked.subsetIndex);
 		componentsWnd.emitterWnd.SetEntity(picked.entity);
 		componentsWnd.hairWnd.SetEntity(picked.entity);
 		componentsWnd.lightWnd.SetEntity(picked.entity);
@@ -1306,6 +1334,13 @@ void EditorComponent::Update(float dt)
 		componentsWnd.layerWnd.SetEntity(picked.entity);
 		componentsWnd.nameWnd.SetEntity(picked.entity);
 		componentsWnd.weatherWnd.SetEntity(picked.entity);
+		componentsWnd.animWnd.SetEntity(picked.entity);
+		componentsWnd.scriptWnd.SetEntity(picked.entity);
+		componentsWnd.rigidWnd.SetEntity(picked.entity);
+		componentsWnd.colliderWnd.SetEntity(picked.entity);
+		componentsWnd.hierarchyWnd.SetEntity(picked.entity);
+		componentsWnd.cameraComponentWnd.SetEntity(picked.entity);
+		componentsWnd.expressionWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{
@@ -1313,6 +1348,7 @@ void EditorComponent::Update(float dt)
 			if (object != nullptr) // maybe it was deleted...
 			{
 				componentsWnd.meshWnd.SetEntity(object->meshID, picked.subsetIndex);
+				componentsWnd.softWnd.SetEntity(object->meshID);
 
 				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 				if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
@@ -1324,6 +1360,7 @@ void EditorComponent::Update(float dt)
 		else
 		{
 			componentsWnd.meshWnd.SetEntity(picked.entity, picked.subsetIndex);
+			componentsWnd.softWnd.SetEntity(picked.entity);
 			componentsWnd.materialWnd.SetEntity(picked.entity);
 		}
 
@@ -1385,6 +1422,12 @@ void EditorComponent::Update(float dt)
 			editorscene.camera_transform.Lerp(editorscene.camera_transform, *proxy, 1.0f - optionsWnd.cameraWnd.followSlider.GetValue());
 			editorscene.camera_transform.UpdateTransform();
 		}
+
+		CameraComponent* proxy_camera = scene.cameras.GetComponent(optionsWnd.cameraWnd.entity);
+		if (proxy_camera != nullptr)
+		{
+			editorscene.camera.Lerp(editorscene.camera, *proxy_camera, 1.0f - optionsWnd.cameraWnd.followSlider.GetValue());
+		}
 	}
 
 	camera.TransformCamera(editorscene.camera_transform);
@@ -1393,7 +1436,7 @@ void EditorComponent::Update(float dt)
 	wi::RenderPath3D_PathTracing* pathtracer = dynamic_cast<wi::RenderPath3D_PathTracing*>(renderPath.get());
 	if (pathtracer != nullptr)
 	{
-		pathtracer->setTargetSampleCount((int)optionsWnd.pathTraceTargetSlider.GetValue());
+		pathtracer->setTargetSampleCount((int)optionsWnd.graphicsWnd.pathTraceTargetSlider.GetValue());
 
 		std::string ss;
 		ss += "Sample count: " + std::to_string(pathtracer->getCurrentSampleCount()) + "\n";
@@ -1409,7 +1452,7 @@ void EditorComponent::Update(float dt)
 		{
 			ss += "Denoiser not available!\nTo find out how to enable the denoiser, visit the documentation.";
 		}
-		optionsWnd.pathTraceStatisticsLabel.SetText(ss);
+		optionsWnd.graphicsWnd.pathTraceStatisticsLabel.SetText(ss);
 	}
 
 	optionsWnd.terragen.Generation_Update(camera);
@@ -1418,7 +1461,10 @@ void EditorComponent::Update(float dt)
 
 	RenderPath2D::Update(dt);
 
-	translator.Update(camera, *this);
+	if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
+	{
+		translator.Update(camera, *this);
+	}
 
 	renderPath->colorspace = colorspace;
 	renderPath->Update(dt);
@@ -1489,11 +1535,10 @@ void EditorComponent::Render() const
 			for (size_t i = 0; i < scene.springs.GetCount(); ++i)
 			{
 				const SpringComponent& spring = scene.springs[i];
-				wi::renderer::RenderablePoint point;
-				point.position = spring.center_of_mass;
-				point.size = 0.05f;
-				point.color = XMFLOAT4(1, 1, 0, 1);
-				wi::renderer::DrawPoint(point);
+				wi::primitive::Sphere sphere;
+				sphere.center = spring.currentTail;
+				sphere.radius = spring.hitRadius;
+				wi::renderer::DrawSphere(sphere, XMFLOAT4(1, 1, 0, 1));
 			}
 		}
 	}
@@ -1554,8 +1599,6 @@ void EditorComponent::Render() const
 		XMStoreFloat4x4(&selectionBox, selectedAABB.getAsBoxMatrix());
 		wi::renderer::DrawBox(selectionBox, XMFLOAT4(1, 1, 1, 1));
 	}
-
-	optionsWnd.paintToolWnd.DrawBrush();
 
 	renderPath->Render();
 
@@ -1618,8 +1661,12 @@ void EditorComponent::Render() const
 			vp.height = (float)editor_depthbuffer.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
 
+			// Selection color:
+			float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
+			XMFLOAT4 glow = wi::math::Lerp(wi::math::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
+			wi::Color selectedEntityColor = wi::Color::fromFloat4(glow);
+
 			// Draw selection outline to the screen:
-			const float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 			if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 			{
 				device->EventBegin("Selection Outline Edge", cmd);
@@ -1633,12 +1680,6 @@ void EditorComponent::Render() const
 				wi::renderer::Postprocess_Outline(rt_selectionOutline[1], cmd, 0.1f, 1, col);
 				device->EventEnd(cmd);
 			}
-
-
-			const wi::Color inactiveEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 0.5f));
-			const wi::Color hoveredEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 1));
-			const XMFLOAT4 glow = wi::math::Lerp(wi::math::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
-			const wi::Color selectedEntityColor = wi::Color::fromFloat4(glow);
 
 			const CameraComponent& camera = GetCurrentEditorScene().camera;
 
@@ -1662,7 +1703,7 @@ void EditorComponent::Render() const
 			fp.shadowColor = wi::Color::Shadow();
 			fp.shadow_softness = 1;
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_LIGHT)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Light))
 			{
 				for (size_t i = 0; i < scene.lights.GetCount(); ++i)
 				{
@@ -1706,7 +1747,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_DECAL)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Decal))
 			{
 				for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 				{
@@ -1738,7 +1779,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_FORCEFIELD)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Force))
 			{
 				for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 				{
@@ -1769,7 +1810,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_CAMERA)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Camera))
 			{
 				for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 				{
@@ -1800,7 +1841,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_ARMATURE)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Armature))
 			{
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 				{
@@ -1831,7 +1872,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_EMITTER)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Emitter))
 			{
 				for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 				{
@@ -1862,7 +1903,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_HAIR)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Hairparticle))
 			{
 				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 				{
@@ -1893,7 +1934,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.rendererWnd.GetPickType() & PICK_SOUND)
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Sound))
 			{
 				for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
 				{
@@ -1923,8 +1964,206 @@ void EditorComponent::Render() const
 					wi::font::Draw(ICON_SOUND, fp, cmd);
 				}
 			}
+			if (bone_picking)
+			{
+				static PipelineState pso;
+				if (!pso.IsValid())
+				{
+					static auto LoadShaders = [] {
+						PipelineStateDesc desc;
+						desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+						desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+						desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+						desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+						desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
+						desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
+						desc.pt = PrimitiveTopology::TRIANGLELIST;
+						wi::graphics::GetDevice()->CreatePipelineState(&desc, &pso);
+					};
+					static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+					LoadShaders();
+				}
 
-			if (optionsWnd.rendererWnd.nameDebugCheckBox.GetCheck())
+				size_t bone_count = 0;
+				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+				{
+					const ArmatureComponent& armature = scene.armatures[i];
+					bone_count += armature.boneCollection.size();
+				}
+
+				if (bone_count > 0)
+				{
+					struct Vertex
+					{
+						XMFLOAT4 position;
+						XMFLOAT4 color;
+					};
+					const size_t segment_count = 18 + 1 + 18 + 1;
+					const size_t vb_size = sizeof(Vertex) * (bone_count * (segment_count + 1 + 1));
+					const size_t ib_size = sizeof(uint32_t) * bone_count * (segment_count + 1) * 3;
+					GraphicsDevice::GPUAllocation mem = device->AllocateGPU(vb_size + ib_size, cmd);
+					Vertex* vertices = (Vertex*)mem.data;
+					uint32_t* indices = (uint32_t*)((uint8_t*)mem.data + vb_size);
+					uint32_t vertex_count = 0;
+					uint32_t index_count = 0;
+
+					const XMVECTOR Eye = camera.GetEye();
+					const XMVECTOR Unit = XMVectorSet(0, 1, 0, 0);
+
+					for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+					{
+						const ArmatureComponent& armature = scene.armatures[i];
+						for (Entity entity : armature.boneCollection)
+						{
+							if (!scene.transforms.Contains(entity))
+								continue;
+							const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+							XMVECTOR a = transform.GetPositionV();
+							XMVECTOR b = a + XMVectorSet(0, 1, 0, 0);
+							// Search for child to connect bone tip:
+							bool child_found = false;
+							for (Entity child : armature.boneCollection)
+							{
+								const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+								if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+								{
+									const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+									b = child_transform.GetPositionV();
+									child_found = true;
+									break;
+								}
+							}
+							if (!child_found)
+							{
+								// No child, try to guess bone tip compared to parent (if it has parent):
+								const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
+								if (hierarchy != nullptr && scene.transforms.Contains(hierarchy->parentID))
+								{
+									const TransformComponent& parent_transform = *scene.transforms.GetComponent(hierarchy->parentID);
+									XMVECTOR ab = a - parent_transform.GetPositionV();
+									b = a + ab;
+								}
+							}
+							XMVECTOR ab = XMVector3Normalize(b - a);
+
+							wi::primitive::Capsule capsule;
+							capsule.radius = wi::math::Distance(a, b) * 0.1f;
+							capsule.radius = wi::math::Clamp(capsule.radius, 0.01f, 0.1f);
+							a -= ab * capsule.radius;
+							b += ab * capsule.radius;
+							XMStoreFloat3(&capsule.base, a);
+							XMStoreFloat3(&capsule.tip, b);
+							XMFLOAT4 color = inactiveEntityColor;
+
+							if (scene.springs.Contains(entity))
+							{
+								color = wi::Color(255, 70, 165, uint8_t(color.w * 255));
+							}
+							if (scene.inverse_kinematics.Contains(entity))
+							{
+								color = wi::Color(49, 190, 103, uint8_t(color.w * 255));
+							}
+
+							if (hovered.entity == entity)
+							{
+								color = hoveredEntityColor;
+							}
+							for (auto& picked : translator.selected)
+							{
+								if (picked.entity == entity)
+								{
+									color = selectedEntityColor;
+									break;
+								}
+							}
+
+							XMVECTOR Base = XMLoadFloat3(&capsule.base);
+							XMVECTOR Tip = XMLoadFloat3(&capsule.tip);
+							XMVECTOR Radius = XMVectorReplicate(capsule.radius);
+							XMVECTOR Normal = XMVector3Normalize(Tip - Base);
+							XMVECTOR Tangent = XMVector3Normalize(XMVector3Cross(Normal, Base - Eye));
+							XMVECTOR Binormal = XMVector3Normalize(XMVector3Cross(Tangent, Normal));
+							XMVECTOR LineEndOffset = Normal * Radius;
+							XMVECTOR A = Base + LineEndOffset;
+							XMVECTOR B = Tip - LineEndOffset;
+							XMVECTOR AB = Unit * XMVector3Length(B - A);
+							XMMATRIX M = { Tangent,Normal,Binormal,XMVectorSetW(A, 1) };
+
+							uint32_t center_vertex_index = vertex_count;
+							Vertex center_vertex;
+							XMStoreFloat4(&center_vertex.position, A);
+							center_vertex.position.w = 1;
+							center_vertex.color = color;
+							center_vertex.color.w = 0;
+							std::memcpy(vertices + vertex_count, &center_vertex, sizeof(center_vertex));
+							vertex_count++;
+
+							for (size_t i = 0; i < segment_count; ++i)
+							{
+								XMVECTOR segment_pos;
+								const float angle0 = XM_PIDIV2 + (float)i / (float)segment_count * XM_2PI;
+								if (i < 18)
+								{
+									segment_pos = XMVectorSet(sinf(angle0) * capsule.radius, cosf(angle0) * capsule.radius, 0, 1);
+								}
+								else if (i == 18)
+								{
+									segment_pos = XMVectorSet(sinf(angle0) * capsule.radius, cosf(angle0) * capsule.radius, 0, 1);
+								}
+								else if (i > 18 && i < 18 + 1 + 18)
+								{
+									segment_pos = AB + XMVectorSet(sinf(angle0) * capsule.radius * 0.5f, cosf(angle0) * capsule.radius * 0.5f, 0, 1);
+								}
+								else
+								{
+									segment_pos = AB + XMVectorSet(sinf(angle0) * capsule.radius * 0.5f, cosf(angle0) * capsule.radius * 0.5f, 0, 1);
+								}
+								segment_pos = XMVector3Transform(segment_pos, M);
+
+								Vertex vertex;
+								XMStoreFloat4(&vertex.position, segment_pos);
+								vertex.position.w = 1;
+								vertex.color = color;
+								//vertex.color.w = 0;
+								std::memcpy(vertices + vertex_count, &vertex, sizeof(vertex));
+								uint32_t ind[] = { center_vertex_index,vertex_count - 1,vertex_count };
+								std::memcpy(indices + index_count, ind, sizeof(ind));
+								index_count += arraysize(ind);
+								vertex_count++;
+							}
+							// closing triangle fan:
+							uint32_t ind[] = { center_vertex_index,vertex_count - 1,center_vertex_index+1 };
+							std::memcpy(indices + index_count, ind, sizeof(ind));
+							index_count += arraysize(ind);
+						}
+					}
+
+					device->EventBegin("Bone capsules", cmd);
+					device->BindPipelineState(&pso, cmd);
+
+					MiscCB sb;
+					XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
+					sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+					device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+
+					const GPUBuffer* vbs[] = {
+						&mem.buffer,
+					};
+					const uint32_t strides[] = {
+						sizeof(Vertex)
+					};
+					const uint64_t offsets[] = {
+						mem.offset,
+					};
+					device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+					device->BindIndexBuffer(&mem.buffer, IndexBufferFormat::UINT32, mem.offset + vb_size, cmd);
+
+					device->DrawIndexed(index_count, 0, 0, cmd);
+					device->EventEnd(cmd);
+				}
+			}
+
+			if (optionsWnd.graphicsWnd.nameDebugCheckBox.GetCheck())
 			{
 				device->EventBegin("Debug Names", cmd);
 				struct DebugNameEntitySorter
@@ -2003,7 +2242,11 @@ void EditorComponent::Render() const
 			}
 
 
-			translator.Draw(GetCurrentEditorScene().camera, cmd);
+			optionsWnd.paintToolWnd.DrawBrush(*this, cmd);
+			if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
+			{
+				translator.Draw(GetCurrentEditorScene().camera, cmd);
+			}
 
 			device->RenderPassEnd(cmd);
 		}
@@ -2033,6 +2276,22 @@ void EditorComponent::AddSelected(Entity entity)
 }
 void EditorComponent::AddSelected(const PickResult& picked)
 {
+	wi::scene::Scene& scene = GetCurrentScene();
+	if (picked.subsetIndex >= 0)
+	{
+		const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
+		if (object != nullptr) // maybe it was deleted...
+		{
+			AddSelected(object->meshID);
+
+			const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+			if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
+			{
+				AddSelected(mesh->subsets[picked.subsetIndex].materialID);
+			}
+		}
+	}
+
 	bool removal = false;
 	for (size_t i = 0; i < translator.selected.size(); ++i)
 	{
@@ -2431,3 +2690,66 @@ void EditorComponent::SaveAs()
 		});
 }
 
+void EditorComponent::CheckBonePickingEnabled()
+{
+	// Check if armature or bone is selected to allow bone picking:
+	//	(Don't want to always enable bone picking, because it can make the screen look very busy.)
+	Scene& scene = GetCurrentScene();
+
+	bone_picking = false;
+	for (size_t i = 0; i < scene.armatures.GetCount() && !bone_picking; ++i)
+	{
+		Entity entity = scene.armatures.GetEntity(i);
+		for (auto& x : translator.selected)
+		{
+			if (entity == x.entity)
+			{
+				bone_picking = true;
+				break;
+			}
+		}
+		for (Entity bone : scene.armatures[i].boneCollection)
+		{
+			for (auto& x : translator.selected)
+			{
+				if (bone == x.entity)
+				{
+					bone_picking = true;
+					break;
+				}
+			}
+		}
+	}
+}
+
+void EditorComponent::UpdateTopMenuAnimation()
+{
+	float screenW = GetLogicalWidth();
+	float screenH = GetLogicalHeight();
+	float hei = 25;
+	float wid_idle = 40;
+	float wid_focus = wid_idle * 2.5f;
+	float padding = 4;
+	float lerp = 0.3f;
+
+	exitButton.SetText(exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_EXIT " Exit" : ICON_EXIT);
+	aboutButton.SetText(aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_HELP " About" : ICON_HELP);
+	logButton.SetText(logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BACKLOG " Backlog" : ICON_BACKLOG);
+	closeButton.SetText(closeButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_CLOSE " Close" : ICON_CLOSE);
+	openButton.SetText(openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_OPEN " Open" : ICON_OPEN);
+	saveButton.SetText(saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_SAVE " Save" : ICON_SAVE);
+
+	exitButton.SetSize(XMFLOAT2(wi::math::Lerp(exitButton.GetSize().x, exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	aboutButton.SetSize(XMFLOAT2(wi::math::Lerp(aboutButton.GetSize().x, aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	logButton.SetSize(XMFLOAT2(wi::math::Lerp(logButton.GetSize().x, logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	closeButton.SetSize(XMFLOAT2(wi::math::Lerp(closeButton.GetSize().x, closeButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	openButton.SetSize(XMFLOAT2(wi::math::Lerp(openButton.GetSize().x, openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	saveButton.SetSize(XMFLOAT2(wi::math::Lerp(saveButton.GetSize().x, saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+
+	exitButton.SetPos(XMFLOAT2(screenW - exitButton.GetSize().x, 0));
+	aboutButton.SetPos(XMFLOAT2(exitButton.GetPos().x - aboutButton.GetSize().x - padding, 0));
+	logButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - logButton.GetSize().x - padding, 0));
+	closeButton.SetPos(XMFLOAT2(logButton.GetPos().x - closeButton.GetSize().x - padding, 0));
+	openButton.SetPos(XMFLOAT2(closeButton.GetPos().x - openButton.GetSize().x - padding, 0));
+	saveButton.SetPos(XMFLOAT2(openButton.GetPos().x - saveButton.GetSize().x - padding, 0));
+}

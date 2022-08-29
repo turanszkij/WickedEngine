@@ -1,6 +1,8 @@
 This file contains changelog of wi::Archive versions
 
-84: serialized volumetric clouds weather map, removed unused values and remapped values from VolumetricCloudParameters
+86: serialized volumetric clouds weather map, removed unused values and remapped values from VolumetricCloudParameters
+85: DDGI serialization
+84: component library serialization
 83: physical light units
 82: serialized LightComponent::fov_inner
 81: serialized LightComponent::forced_shadow_resolution

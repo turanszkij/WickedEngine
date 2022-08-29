@@ -82,22 +82,38 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 	versionCheckBox.Create("Version: ");
 	versionCheckBox.SetTooltip("Toggle the engine version display text in top left corner.");
+	editor->main->infoDisplay.watermark = editor->main->config.GetSection("options").GetBool("version");
+	versionCheckBox.SetCheck(editor->main->infoDisplay.watermark);
 	versionCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.watermark = args.bValue;
+		editor->main->config.GetSection("options").Set("version", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&versionCheckBox);
 	versionCheckBox.SetCheck(editor->main->infoDisplay.watermark);
 
 	fpsCheckBox.Create("FPS: ");
 	fpsCheckBox.SetTooltip("Toggle the FPS display text in top left corner.");
+	editor->main->infoDisplay.fpsinfo = editor->main->config.GetSection("options").GetBool("fps");
+	fpsCheckBox.SetCheck(editor->main->infoDisplay.fpsinfo);
 	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.fpsinfo = args.bValue;
+		editor->main->config.GetSection("options").Set("fps", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&fpsCheckBox);
 	fpsCheckBox.SetCheck(editor->main->infoDisplay.fpsinfo);
 
-	otherinfoCheckBox.Create("Advanced: ");
+	otherinfoCheckBox.Create("Info: ");
 	otherinfoCheckBox.SetTooltip("Toggle advanced data in the info display text in top left corner.");
+	bool info = editor->main->config.GetSection("options").GetBool("info");
+	editor->main->infoDisplay.heap_allocation_counter = info;
+	editor->main->infoDisplay.vram_usage = info;
+	editor->main->infoDisplay.colorspace = info;
+	editor->main->infoDisplay.resolution = info;
+	editor->main->infoDisplay.logical_size = info;
+	editor->main->infoDisplay.pipeline_count = info;
+	otherinfoCheckBox.SetCheck(info);
 	otherinfoCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.heap_allocation_counter = args.bValue;
 		editor->main->infoDisplay.vram_usage = args.bValue;
@@ -105,6 +121,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		editor->main->infoDisplay.resolution = args.bValue;
 		editor->main->infoDisplay.logical_size = args.bValue;
 		editor->main->infoDisplay.pipeline_count = args.bValue;
+		editor->main->config.GetSection("options").Set("info", args.bValue);
+		editor->main->config.Commit();
 		});
 	AddWidget(&otherinfoCheckBox);
 	otherinfoCheckBox.SetCheck(editor->main->infoDisplay.heap_allocation_counter);
@@ -116,24 +134,27 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	newCombo.selected_font.anim.typewriter.looped = true;
 	newCombo.selected_font.anim.typewriter.time = 2;
 	newCombo.selected_font.anim.typewriter.character_start = 1;
-	newCombo.AddItem("...", ~0ull);
-	newCombo.AddItem("Transform", 0);
-	newCombo.AddItem("Material", 1);
-	newCombo.AddItem("Point Light", 2);
-	newCombo.AddItem("Spot Light", 3);
-	newCombo.AddItem("Directional Light", 4);
-	newCombo.AddItem("Environment Probe", 5);
-	newCombo.AddItem("Force", 6);
-	newCombo.AddItem("Decal", 7);
-	newCombo.AddItem("Sound", 8);
-	newCombo.AddItem("Weather", 9);
-	newCombo.AddItem("Emitter", 10);
-	newCombo.AddItem("HairParticle", 11);
-	newCombo.AddItem("Camera", 12);
-	newCombo.AddItem("Cube Object", 13);
-	newCombo.AddItem("Plane Object", 14);
+	newCombo.SetInvalidSelectionText("...");
+	newCombo.AddItem("Transform " ICON_TRANSFORM, 0);
+	newCombo.AddItem("Material " ICON_MATERIAL, 1);
+	newCombo.AddItem("Point Light " ICON_POINTLIGHT, 2);
+	newCombo.AddItem("Spot Light " ICON_SPOTLIGHT, 3);
+	newCombo.AddItem("Directional Light " ICON_DIRECTIONALLIGHT, 4);
+	newCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, 5);
+	newCombo.AddItem("Force " ICON_FORCE, 6);
+	newCombo.AddItem("Decal " ICON_DECAL, 7);
+	newCombo.AddItem("Sound " ICON_SOUND, 8);
+	newCombo.AddItem("Weather " ICON_WEATHER, 9);
+	newCombo.AddItem("Emitter " ICON_EMITTER, 10);
+	newCombo.AddItem("HairParticle " ICON_HAIR, 11);
+	newCombo.AddItem("Camera " ICON_CAMERA, 12);
+	newCombo.AddItem("Cube " ICON_CUBE, 13);
+	newCombo.AddItem("Plane " ICON_SQUARE, 14);
+	newCombo.AddItem("Animation " ICON_ANIMATION, 15);
+	newCombo.AddItem("Script " ICON_SCRIPT, 16);
+	newCombo.AddItem("Collider " ICON_COLLIDER, 17);
 	newCombo.OnSelect([&](wi::gui::EventArgs args) {
-		newCombo.SetSelectedWithoutCallback(0);
+		newCombo.SetSelectedWithoutCallback(-1);
 		const EditorComponent::EditorScene& editorscene = editor->GetCurrentEditorScene();
 		const CameraComponent& camera = editorscene.camera;
 		Scene& scene = editor->GetCurrentScene();
@@ -226,6 +247,22 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			pick.entity = scene.Entity_CreatePlane("plane");
 			pick.subsetIndex = 0;
 			break;
+		case 15:
+			pick.entity = CreateEntity();
+			scene.animations.Create(pick.entity);
+			scene.names.Create(pick.entity) = "animation";
+			break;
+		case 16:
+			pick.entity = CreateEntity();
+			scene.scripts.Create(pick.entity);
+			scene.names.Create(pick.entity) = "script";
+			break;
+		case 17:
+			pick.entity = CreateEntity();
+			scene.colliders.Create(pick.entity);
+			scene.transforms.Create(pick.entity);
+			scene.names.Create(pick.entity) = "collider";
+			break;
 		default:
 			break;
 		}
@@ -252,7 +289,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 
 	filterCombo.Create("Filter: ");
-	filterCombo.AddItem("All ", (uint64_t)Filter::All);
+	filterCombo.AddItem("All " ICON_FILTER, (uint64_t)Filter::All);
 	filterCombo.AddItem("Transform " ICON_TRANSFORM, (uint64_t)Filter::Transform);
 	filterCombo.AddItem("Material " ICON_MATERIAL, (uint64_t)Filter::Material);
 	filterCombo.AddItem("Mesh " ICON_MESH, (uint64_t)Filter::Mesh);
@@ -262,6 +299,15 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Sound " ICON_SOUND, (uint64_t)Filter::Sound);
 	filterCombo.AddItem("Weather " ICON_WEATHER, (uint64_t)Filter::Weather);
 	filterCombo.AddItem("Light " ICON_POINTLIGHT, (uint64_t)Filter::Light);
+	filterCombo.AddItem("Animation " ICON_ANIMATION, (uint64_t)Filter::Animation);
+	filterCombo.AddItem("Force " ICON_FORCE, (uint64_t)Filter::Force);
+	filterCombo.AddItem("Emitter " ICON_EMITTER, (uint64_t)Filter::Emitter);
+	filterCombo.AddItem("Hairparticle " ICON_HAIR, (uint64_t)Filter::Hairparticle);
+	filterCombo.AddItem("Inverse Kinematics " ICON_IK, (uint64_t)Filter::IK);
+	filterCombo.AddItem("Camera " ICON_CAMERA, (uint64_t)Filter::Camera);
+	filterCombo.AddItem("Armature " ICON_ARMATURE, (uint64_t)Filter::Armature);
+	filterCombo.AddItem("Script " ICON_SCRIPT, (uint64_t)Filter::Script);
+	filterCombo.AddItem("Expression " ICON_EXPRESSION, (uint64_t)Filter::Expression);
 	filterCombo.SetTooltip("Apply filtering to the Entities");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
@@ -299,41 +345,23 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		editor->RecordSelection(archive);
 
 		});
+	entityTree.OnDelete([=](wi::gui::EventArgs args) {
+		// Deletions will be performed in a batch next frame:
+		//	We don't delete here, because this callback will execute once for each item
+		editor->deleting = true;
+	});
 	AddWidget(&entityTree);
-
-
-	renderPathComboBox.Create("Render Path: ");
-	renderPathComboBox.AddItem("Default");
-	renderPathComboBox.AddItem("Path Tracing");
-	renderPathComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		editor->ChangeRenderPath((EditorComponent::RENDERPATH)args.iValue);
-		});
-	renderPathComboBox.SetSelected(EditorComponent::RENDERPATH_DEFAULT);
-	renderPathComboBox.SetEnabled(true);
-	renderPathComboBox.SetTooltip("Choose a render path...");
-	AddWidget(&renderPathComboBox);
-
-
-	pathTraceTargetSlider.Create(1, 2048, 1024, 2047, "Sample count: ");
-	pathTraceTargetSlider.SetSize(XMFLOAT2(200, 18));
-	pathTraceTargetSlider.SetTooltip("The path tracing will perform this many samples per pixel.");
-	AddWidget(&pathTraceTargetSlider);
-	pathTraceTargetSlider.SetVisible(false);
-
-	pathTraceStatisticsLabel.Create("Path tracing statistics");
-	pathTraceStatisticsLabel.SetSize(XMFLOAT2(240, 60));
-	AddWidget(&pathTraceStatisticsLabel);
-	pathTraceStatisticsLabel.SetVisible(false);
 
 	// Renderer and Postprocess windows are created in ChangeRenderPath(), because they deal with
 	//	RenderPath related information as well, so it's easier to reset them when changing
 
 
 
-
+	graphicsWnd.Create(editor);
+	graphicsWnd.SetCollapsed(true);
+	AddWidget(&graphicsWnd);
 
 	cameraWnd.Create(editor);
-	cameraWnd.ResetCam();
 	cameraWnd.SetCollapsed(true);
 	AddWidget(&cameraWnd);
 
@@ -366,6 +394,11 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.");
 	saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
 	saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
+	saveModeComboBox.SetSelected(editor->main->config.GetSection("options").GetInt("save_mode"));
+	saveModeComboBox.OnSelect([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("options").Set("save_mode", args.iValue);
+		editor->main->config.Commit();
+	});
 	AddWidget(&saveModeComboBox);
 
 
@@ -517,10 +550,10 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 	themeCombo.Create("Theme: ");
 	themeCombo.SetTooltip("Choose a color theme...");
-	themeCombo.AddItem("Dark", (uint64_t)Theme::Dark);
-	themeCombo.AddItem("Bright", (uint64_t)Theme::Bright);
-	themeCombo.AddItem("Soft", (uint64_t)Theme::Soft);
-	themeCombo.AddItem("Hacking", (uint64_t)Theme::Hacking);
+	themeCombo.AddItem("Dark " ICON_DARK, (uint64_t)Theme::Dark);
+	themeCombo.AddItem("Bright " ICON_BRIGHT, (uint64_t)Theme::Bright);
+	themeCombo.AddItem("Soft " ICON_SOFT, (uint64_t)Theme::Soft);
+	themeCombo.AddItem("Hacking " ICON_HACKING, (uint64_t)Theme::Hacking);
 	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		// Dark theme defaults:
@@ -537,7 +570,11 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		{
 		default:
 			break;
+		case Theme::Dark:
+			editor->main->config.GetSection("options").Set("theme", "Dark");
+			break;
 		case Theme::Bright:
+			editor->main->config.GetSection("options").Set("theme", "Bright");
 			theme_color_idle = wi::Color(200, 210, 220, 230);
 			theme_color_focus = wi::Color(210, 230, 255, 250);
 			dark_point = wi::Color(180, 180, 190, 230);
@@ -545,13 +582,15 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			theme.font.color = wi::Color(50, 50, 80, 255);
 			break;
 		case Theme::Soft:
+			editor->main->config.GetSection("options").Set("theme", "Soft");
 			theme_color_idle = wi::Color(200, 180, 190, 190);
 			theme_color_focus = wi::Color(240, 190, 200, 230);
 			dark_point = wi::Color(100, 80, 90, 220);
-			theme.shadow_color = wi::Color(240, 190, 200, 100);
+			theme.shadow_color = wi::Color(240, 190, 200, 180);
 			theme.font.color = wi::Color(255, 230, 240, 255);
 			break;
 		case Theme::Hacking:
+			editor->main->config.GetSection("options").Set("theme", "Hacking");
 			theme_color_idle = wi::Color(0, 0, 0, 255);
 			theme_color_focus = wi::Color(10, 230, 30, 255);
 			dark_point = wi::Color(0, 0, 0, 255);
@@ -560,6 +599,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			theme.font.shadow_color = wi::Color::Shadow();
 			break;
 		}
+		editor->main->config.Commit();
 
 		theme.tooltipImage = theme.image;
 		theme.tooltipImage.color = theme_color_idle;
@@ -613,17 +653,39 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		paintToolWnd.brushTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		paintToolWnd.revealTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->aboutLabel.sprites[wi::gui::FOCUS] = editor->aboutLabel.sprites[wi::gui::IDLE];
+		for (int i = 0; i < arraysize(sprites); ++i)
+		{
+			sprites[i].params.enableCornerRounding();
+			sprites[i].params.corners_rounding[1].radius = 10;
+			resizeDragger_UpperRight.sprites[i].params.enableCornerRounding();
+			resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = 10;
+		}
+		for (int i = 0; i < arraysize(editor->componentsWnd.sprites); ++i)
+		{
+			editor->componentsWnd.sprites[i].params.enableCornerRounding();
+			editor->componentsWnd.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->componentsWnd.resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
+			editor->componentsWnd.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = 10;
+		}
+		for (int i = 0; i < arraysize(editor->saveButton.sprites); ++i)
+		{
+			editor->saveButton.sprites[i].params.enableCornerRounding();
+			editor->saveButton.sprites[i].params.corners_rounding[2].radius = 10;
+		}
+		editor->componentsWnd.weatherWnd.default_sky_horizon = dark_point;
+		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
 
 		});
 	AddWidget(&themeCombo);
 
 
-	SetSize(XMFLOAT2(340, 500));
+	SetSize(XMFLOAT2(338, 500));
 }
 void OptionsWindow::Update(float dt)
 {
 	cameraWnd.Update();
 	paintToolWnd.Update(dt);
+	graphicsWnd.Update();
 }
 
 void OptionsWindow::ResizeLayout()
@@ -667,35 +729,9 @@ void OptionsWindow::ResizeLayout()
 	pos.y += themeCombo.GetSize().y;
 	pos.y += padding;
 
-	renderPathComboBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
-	renderPathComboBox.SetSize(XMFLOAT2(width - x_off - renderPathComboBox.GetScale().y - 1, renderPathComboBox.GetScale().y));
-	pos.y += renderPathComboBox.GetSize().y;
-	pos.y += padding;
-
-	if (pathTraceTargetSlider.IsVisible())
-	{
-		pathTraceTargetSlider.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
-		pathTraceTargetSlider.SetSize(XMFLOAT2(width - x_off - pathTraceTargetSlider.GetScale().y * 2 - 1, pathTraceTargetSlider.GetScale().y));
-		pos.y += pathTraceTargetSlider.GetSize().y;
-		pos.y += padding;
-	}
-
-	if (pathTraceStatisticsLabel.IsVisible())
-	{
-		pathTraceStatisticsLabel.SetPos(pos);
-		pathTraceStatisticsLabel.SetSize(XMFLOAT2(width, pathTraceStatisticsLabel.GetScale().y));
-		pos.y += pathTraceStatisticsLabel.GetSize().y;
-		pos.y += padding;
-	}
-
-	rendererWnd.SetPos(pos);
-	rendererWnd.SetSize(XMFLOAT2(width, rendererWnd.GetScale().y));
-	pos.y += rendererWnd.GetSize().y;
-	pos.y += padding;
-
-	postprocessWnd.SetPos(pos);
-	postprocessWnd.SetSize(XMFLOAT2(width, postprocessWnd.GetScale().y));
-	pos.y += postprocessWnd.GetSize().y;
+	graphicsWnd.SetPos(pos);
+	graphicsWnd.SetSize(XMFLOAT2(width, graphicsWnd.GetScale().y));
+	pos.y += graphicsWnd.GetSize().y;
 	pos.y += padding;
 
 	cameraWnd.SetPos(pos);
@@ -837,9 +873,39 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_WEATHER " ";
 	}
+	if (scene.inverse_kinematics.Contains(entity))
+	{
+		item.name += ICON_IK " ";
+	}
+	if (scene.colliders.Contains(entity))
+	{
+		item.name += ICON_COLLIDER " ";
+	}
+	if (scene.scripts.Contains(entity))
+	{
+		item.name += ICON_SCRIPT " ";
+	}
+	if (scene.expressions.Contains(entity))
+	{
+		item.name += ICON_EXPRESSION " ";
+	}
 	if (entity == terragen.terrainEntity)
 	{
 		item.name += ICON_TERRAIN " ";
+	}
+	bool bone_found = false;
+	for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
+	{
+		const ArmatureComponent& armature = scene.armatures[i];
+		for (Entity bone : armature.boneCollection)
+		{
+			if (entity == bone)
+			{
+				item.name += ICON_BONE " ";
+				bone_found = true;
+				break;
+			}
+		}
 	}
 
 	const NameComponent* name = scene.names.GetComponent(entity);
@@ -888,6 +954,8 @@ void OptionsWindow::RefreshEntityTree()
 		// Add hierarchy:
 		for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 		{
+			if (scene.hierarchy[i].parentID == INVALID_ENTITY)
+				continue;
 			PushToEntityTree(scene.hierarchy[i].parentID, 0);
 		}
 	}
@@ -919,7 +987,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Camera))
 	{
 		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 		{
@@ -943,7 +1011,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Armature))
 	{
 		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 		{
@@ -975,7 +1043,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Hairparticle))
 	{
 		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 		{
@@ -983,7 +1051,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Emitter))
 	{
 		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 		{
@@ -991,7 +1059,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Animation))
 	{
 		for (size_t i = 0; i < scene.animations.GetCount(); ++i)
 		{
@@ -999,7 +1067,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::EnvironmentProbe))
 	{
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
@@ -1007,7 +1075,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Force))
 	{
 		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 		{
@@ -1039,7 +1107,15 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Collider))
+	{
+		for (size_t i = 0; i < scene.colliders.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.colliders.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::IK))
 	{
 		for (size_t i = 0; i < scene.inverse_kinematics.GetCount(); ++i)
 		{
@@ -1052,6 +1128,22 @@ void OptionsWindow::RefreshEntityTree()
 		for (size_t i = 0; i < scene.names.GetCount(); ++i)
 		{
 			PushToEntityTree(scene.names.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::Script))
+	{
+		for (size_t i = 0; i < scene.scripts.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.scripts.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::Expression))
+	{
+		for (size_t i = 0; i < scene.expressions.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.expressions.GetEntity(i), 0);
 		}
 	}
 

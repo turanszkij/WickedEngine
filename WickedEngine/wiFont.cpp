@@ -14,7 +14,7 @@
 #include "wiUnorderedSet.h"
 #include "wiVector.h"
 
-#include "Utility/arial.h"
+#include "Utility/liberation_sans.h"
 #include "Utility/stb_truetype.h"
 
 #include <fstream>
@@ -90,28 +90,35 @@ namespace wi::font
 		};
 		static wi::unordered_map<int32_t, Glyph> glyph_lookup;
 		static wi::unordered_map<int32_t, wi::rectpacker::Rect> rect_lookup;
-		struct SDF
+		struct Bitmap
 		{
-			static constexpr int padding = 5;
-			static constexpr unsigned char onedge_value = 180;
-			static constexpr float pixel_dist_scale = float(onedge_value) / float(padding);
 			int width;
 			int height;
 			int xoff;
 			int yoff;
-			wi::vector<uint8_t> bitmap;
+			wi::vector<uint8_t> data;
 		};
-		static wi::unordered_map<int32_t, SDF> sdf_lookup;
+		static wi::unordered_map<int32_t, Bitmap> bitmap_lookup;
+		namespace SDF
+		{
+			static constexpr int padding = 5;
+			static constexpr unsigned char onedge_value = 180;
+			static constexpr float pixel_dist_scale = float(onedge_value) / float(padding);
+		}
 		// pack glyph identifiers to a 32-bit hash:
 		//	height:	10 bits	(height supported: 0 - 1023)
-		//	style:	6 bits	(number of font styles supported: 0 - 63)
+		//	sdf:	1 bit
+		//	style:	5 bits	(number of font styles supported: 0 - 31)
 		//	code:	16 bits (character code range supported: 0 - 65535)
-		constexpr int32_t glyphhash(int code, int style, int height) { return ((code & 0xFFFF) << 16) | ((style & 0x3F) << 10) | (height & 0x3FF); }
-		constexpr int codefromhash(int64_t hash) { return int((hash >> 16) & 0xFFFF); }
-		constexpr int stylefromhash(int64_t hash) { return int((hash >> 10) & 0x3F); }
-		constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x3FF); }
+		constexpr int32_t glyphhash(int code, bool sdf, int style, int height) { return ((code & 0xFFFF) << 16) | (int(sdf) << 15) | ((style & 0x1F) << 10) | (height & 0x3FF); }
+		constexpr int codefromhash(int32_t hash) { return int((hash >> 16) & 0xFFFF); }
+		constexpr bool sdffromhash(int32_t hash) { return bool((hash >> 15) & 0x1); }
+		constexpr int stylefromhash(int32_t hash) { return int((hash >> 10) & 0x1F); }
+		constexpr int heightfromhash(int32_t hash) { return int((hash >> 0) & 0x3FF); }
 		static wi::unordered_set<int32_t> pendingGlyphs;
 		static wi::SpinLock glyphLock;
+		static const float upscaling = 2;
+		static const float upscaling_rcp = 1.0f / upscaling;
 
 		struct ParseStatus
 		{
@@ -151,7 +158,7 @@ namespace wi::font
 			for (size_t i = 0; i < text_length; ++i)
 			{
 				int code = (int)text[i];
-				const int32_t hash = glyphhash(code, params.style, params.size);
+				const int32_t hash = glyphhash(code, params.isSDFRenderingEnabled(), params.style, params.size);
 
 				if (glyph_lookup.count(hash) == 0)
 				{
@@ -276,10 +283,8 @@ namespace wi::font
 		// add default font if there is none yet:
 		if (fontStyles.empty())
 		{
-			AddFontStyle("arial", arial, sizeof(arial));
+			AddFontStyle("Liberation Sans", liberation_sans, sizeof(liberation_sans));
 		}
-
-		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		RasterizerState rs;
 		rs.fill_mode = FillMode::SOLID;
@@ -331,6 +336,7 @@ namespace wi::font
 			for (int32_t hash : pendingGlyphs)
 			{
 				const int code = codefromhash(hash);
+				bool is_sdf = sdffromhash(hash);
 				int style = stylefromhash(hash);
 				const float height = (float)heightfromhash(hash);
 				FontStyle* fontStyle = fontStyles[style].get();
@@ -347,29 +353,40 @@ namespace wi::font
 					}
 				}
 
-				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle->fontInfo, height);
+				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle->fontInfo, height * upscaling);
 
-				SDF& sdf = sdf_lookup[hash];
-				sdf.width = 0;
-				sdf.height = 0;
-				sdf.xoff = 0;
-				sdf.yoff = 0;
-				unsigned char* bitmap = stbtt_GetGlyphSDF(&fontStyle->fontInfo, fontScaling, glyphIndex, sdf.padding, sdf.onedge_value, sdf.pixel_dist_scale, &sdf.width, &sdf.height, &sdf.xoff, &sdf.yoff);
-				sdf.bitmap.resize(sdf.width * sdf.height);
-				std::memcpy(sdf.bitmap.data(), bitmap, sdf.bitmap.size());
-				stbtt_FreeSDF(bitmap, nullptr);
+				Bitmap& bitmap = bitmap_lookup[hash];
+				bitmap.width = 0;
+				bitmap.height = 0;
+				bitmap.xoff = 0;
+				bitmap.yoff = 0;
+
+				if (is_sdf)
+				{
+					unsigned char* data = stbtt_GetGlyphSDF(&fontStyle->fontInfo, fontScaling, glyphIndex, SDF::padding, SDF::onedge_value, SDF::pixel_dist_scale, &bitmap.width, &bitmap.height, &bitmap.xoff, &bitmap.yoff);
+					bitmap.data.resize(bitmap.width * bitmap.height);
+					std::memcpy(bitmap.data.data(), data, bitmap.data.size());
+					stbtt_FreeSDF(data, nullptr);
+				}
+				else
+				{
+					unsigned char* data = stbtt_GetGlyphBitmap(&fontStyle->fontInfo, fontScaling, fontScaling, glyphIndex, &bitmap.width, &bitmap.height, &bitmap.xoff, &bitmap.yoff);
+					bitmap.data.resize(bitmap.width * bitmap.height);
+					std::memcpy(bitmap.data.data(), data, bitmap.data.size());
+					stbtt_FreeBitmap(data, nullptr);
+				}
 
 				wi::rectpacker::Rect rect = {};
-				rect.w = sdf.width;
-				rect.h = sdf.height;
+				rect.w = bitmap.width + 2;
+				rect.h = bitmap.height + 2;
 				rect.id = hash;
 				rect_lookup[hash] = rect;
 
 				Glyph& glyph = glyph_lookup[hash];
-				glyph.x = float(sdf.xoff);
-				glyph.y = float(sdf.yoff) + float(fontStyle->ascent) * fontScaling;
-				glyph.width = float(sdf.width);
-				glyph.height = float(sdf.height);
+				glyph.x = float(bitmap.xoff) * upscaling_rcp;
+				glyph.y = (float(bitmap.yoff) + float(fontStyle->ascent) * fontScaling) * upscaling_rcp;
+				glyph.width = float(bitmap.width) * upscaling_rcp;
+				glyph.height = float(bitmap.height) * upscaling_rcp;
 				glyph.fontStyle = fontStyle;
 			}
 			pendingGlyphs.clear();
@@ -386,30 +403,35 @@ namespace wi::font
 			if (packer.pack(4096))
 			{
 				// Retrieve texture atlas dimensions:
-				const int bitmapWidth = packer.width;
-				const int bitmapHeight = packer.height;
-				const float inv_width = 1.0f / bitmapWidth;
-				const float inv_height = 1.0f / bitmapHeight;
+				const int atlasWidth = packer.width;
+				const int atlasHeight = packer.height;
+				const float inv_width = 1.0f / atlasWidth;
+				const float inv_height = 1.0f / atlasHeight;
 
 				// Create the CPU-side texture atlas and fill with transparency (0):
-				wi::vector<uint8_t> bitmap(size_t(bitmapWidth) * size_t(bitmapHeight));
-				std::fill(bitmap.begin(), bitmap.end(), 0);
+				wi::vector<uint8_t> atlas(size_t(atlasWidth) * size_t(atlasHeight));
+				std::fill(atlas.begin(), atlas.end(), 0);
 
 				// Iterate all packed glyph rectangles:
 				for (auto& rect : packer.rects)
 				{
-					const int32_t hash = rect.id;
-					const wchar_t code = codefromhash(hash);
-					const int style = stylefromhash(hash);
-					const float height = (float)heightfromhash(hash);
-					Glyph& glyph = glyph_lookup[hash];
-					SDF& sdf = sdf_lookup[hash];
+					rect.x += 1;
+					rect.y += 1;
+					rect.w -= 2;
+					rect.h -= 2;
 
-					for (int row = 0; row < sdf.height; ++row)
+					const int32_t hash = rect.id;
+					//const wchar_t code = codefromhash(hash);
+					//const int style = stylefromhash(hash);
+					//const float height = (float)heightfromhash(hash);
+					Glyph& glyph = glyph_lookup[hash];
+					Bitmap& bitmap = bitmap_lookup[hash];
+
+					for (int row = 0; row < bitmap.height; ++row)
 					{
-						uint8_t* dst = bitmap.data() + rect.x + (rect.y + row) * bitmapWidth;
-						uint8_t* src = sdf.bitmap.data() + row * sdf.width;
-						std::memcpy(dst, src, sdf.width);
+						uint8_t* dst = atlas.data() + rect.x + (rect.y + row) * atlasWidth;
+						uint8_t* src = bitmap.data.data() + row * bitmap.width;
+						std::memcpy(dst, src, bitmap.width);
 					}
 
 					// Compute texture coordinates for the glyph:
@@ -425,7 +447,7 @@ namespace wi::font
 				}
 
 				// Upload the CPU-side texture atlas bitmap to the GPU:
-				wi::texturehelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, Format::R8_UNORM);
+				wi::texturehelper::CreateTexture(texture, atlas.data(), atlasWidth, atlasHeight, Format::R8_UNORM);
 			}
 			else
 			{
@@ -507,6 +529,10 @@ namespace wi::font
 			}
 
 			font.flags = 0;
+			if (params.isSDFRenderingEnabled())
+			{
+				font.flags |= FONT_FLAG_SDF_RENDERING;
+			}
 			if (params.isHDR10OutputMappingEnabled())
 			{
 				font.flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;

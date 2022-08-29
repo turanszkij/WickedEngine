@@ -11,14 +11,13 @@ float Wedge2D(float2 v, float2 w)
 struct VertextoPixel
 {
 	float4 pos : SV_POSITION;
-	float2 q : TEXCOORD3;
-	float2 b1 : TEXCOORD4;
-	float2 b2 : TEXCOORD5;
-	float2 b3 : TEXCOORD6;
+	float4 screen : TEXCOORD0;
+	float2 q : TEXCOORD1;
+	float2 edge : TEXCOORD2;
 
 	float2 uv_screen()
 	{
-		return pos.xy * image.output_resolution_rcp;
+		return clipspace_to_uv(screen.xy / screen.w);
 	}
 	float4 compute_uvs()
 	{
@@ -34,6 +33,9 @@ struct VertextoPixel
 		else
 		{
 			// Quad interpolation: http://reedbeta.com/blog/quadrilateral-interpolation-part-2/
+			float2 b1 = unpack_half2(image.b1);
+			float2 b2 = unpack_half2(image.b2);
+			float2 b3 = unpack_half2(image.b3);
 
 			// Set up quadratic formula
 			float A = Wedge2D(b2, b3);
@@ -66,6 +68,12 @@ struct VertextoPixel
 
 			uv0 = mad(uv, texMulAdd.xy, texMulAdd.zw);
 			uv1 = mad(uv, texMulAdd2.xy, texMulAdd2.zw);
+		}
+
+		if (image.flags & IMAGE_FLAG_MIRROR)
+		{
+			uv0.x = 1 - uv0.x;
+			uv1.x = 1 - uv1.x;
 		}
 
 		return float4(uv0, uv1);

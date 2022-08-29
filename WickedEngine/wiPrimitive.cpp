@@ -238,10 +238,61 @@ namespace wi::primitive
 		double distanceSquared = wi::math::Distance(closestPointInAabb, center);
 		return distanceSquared < radius;
 	}
-	bool Sphere::intersects(const Sphere& b)const {
-		return wi::math::Distance(center, b.center) <= radius + b.radius;
+	bool Sphere::intersects(const Sphere& b)const
+	{
+		float dist = 0;
+		return intersects(b, dist);
 	}
-	bool Sphere::intersects(const Ray& b) const {
+	bool Sphere::intersects(const Sphere& b, float& dist) const
+	{
+		dist = wi::math::Distance(center, b.center);
+		dist = dist - radius - b.radius;
+		return dist < 0;
+	}
+	bool Sphere::intersects(const Sphere& b, float& dist, XMFLOAT3& direction) const
+	{
+		XMVECTOR A = XMLoadFloat3(&center);
+		XMVECTOR B = XMLoadFloat3(&b.center);
+		XMVECTOR DIR = A - B;
+		XMVECTOR DIST = XMVector3Length(DIR);
+		DIR = DIR / DIST;
+		XMStoreFloat3(&direction, DIR);
+		dist = XMVectorGetX(DIST);
+		dist = dist - radius - b.radius;
+		return dist < 0;
+	}
+	bool Sphere::intersects(const Capsule& b) const
+	{
+		float dist = 0;
+		return intersects(b, dist);
+	}
+	bool Sphere::intersects(const Capsule& b, float& dist) const
+	{
+		XMVECTOR A = XMLoadFloat3(&b.base);
+		XMVECTOR B = XMLoadFloat3(&b.tip);
+		XMVECTOR N = XMVector3Normalize(A - B);
+		A -= N * b.radius;
+		B += N * b.radius;
+		XMVECTOR C = XMLoadFloat3(&center);
+		dist = wi::math::GetPointSegmentDistance(C, A, B);
+		dist = dist - radius - b.radius;
+		return dist < 0;
+	}
+	bool Sphere::intersects(const Capsule& b, float& dist, XMFLOAT3& direction) const
+	{
+		XMVECTOR A = XMLoadFloat3(&b.base);
+		XMVECTOR B = XMLoadFloat3(&b.tip);
+		XMVECTOR N = XMVector3Normalize(A - B);
+		A -= N * b.radius;
+		B += N * b.radius;
+		XMVECTOR C = XMLoadFloat3(&center);
+		dist = wi::math::GetPointSegmentDistance(C, A, B);
+		XMStoreFloat3(&direction, (C - wi::math::ClosestPointOnLineSegment(A, B, C)) / dist);
+		dist = dist - radius - b.radius;
+		return dist < 0;
+	}
+	bool Sphere::intersects(const Ray& b) const
+	{
 		XMVECTOR o = XMLoadFloat3(&b.origin);
 		XMVECTOR r = XMLoadFloat3(&b.direction);
 		XMVECTOR dist = XMVector3LinePointDistance(o, o + r, XMLoadFloat3(&center));
@@ -312,6 +363,35 @@ namespace wi::primitive
 
 		return penetration_depth > 0;
 	}
+	bool Capsule::intersects(const Ray& ray) const
+	{
+		XMVECTOR A = XMLoadFloat3(&base);
+		XMVECTOR B = XMLoadFloat3(&tip);
+		XMVECTOR L = XMVector3Normalize(A - B);
+		XMVECTOR O = XMLoadFloat3(&ray.origin);
+		XMVECTOR D = XMLoadFloat3(&ray.direction);
+		XMVECTOR C = XMVector3Normalize(XMVector3Cross(L, A - O));
+		XMVECTOR N = XMVector3Cross(L, C);
+		XMVECTOR Plane = XMPlaneFromPointNormal(A, N);
+		XMVECTOR I = XMPlaneIntersectLine(Plane, O, O + D * ray.TMax);
+		float dist = wi::math::GetPointSegmentDistance(I, A - L * radius, B + L * radius);
+		return dist <= radius;
+	}
+	bool Capsule::intersects(const Ray& ray, float& t) const
+	{
+		XMVECTOR A = XMLoadFloat3(&base);
+		XMVECTOR B = XMLoadFloat3(&tip);
+		XMVECTOR L = XMVector3Normalize(A - B);
+		XMVECTOR O = XMLoadFloat3(&ray.origin);
+		XMVECTOR D = XMLoadFloat3(&ray.direction);
+		XMVECTOR C = XMVector3Normalize(XMVector3Cross(L, A - O));
+		XMVECTOR N = XMVector3Cross(L, C);
+		XMVECTOR Plane = XMPlaneFromPointNormal(A, N);
+		XMVECTOR I = XMPlaneIntersectLine(Plane, O, O + D * ray.TMax);
+		float dist = wi::math::GetPointSegmentDistance(I, A - L * radius, B + L * radius);
+		t = XMVectorGetX(XMVector3Length(I - O));
+		return dist <= radius;
+	}
 
 
 
@@ -321,6 +401,12 @@ namespace wi::primitive
 	}
 	bool Ray::intersects(const Sphere& b) const {
 		return b.intersects(*this);
+	}
+	bool Ray::intersects(const Capsule& b) const {
+		return b.intersects(*this);
+	}
+	bool Ray::intersects(const Capsule& b, float& t) const {
+		return b.intersects(*this, t);
 	}
 
 

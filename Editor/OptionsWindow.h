@@ -1,7 +1,6 @@
 #pragma once
 #include "WickedEngine.h"
-#include "RendererWindow.h"
-#include "PostprocessWindow.h"
+#include "GraphicsWindow.h"
 #include "CameraWindow.h"
 #include "MaterialPickerWindow.h"
 #include "PaintToolWindow.h"
@@ -28,13 +27,9 @@ public:
 	wi::gui::CheckBox fpsCheckBox;
 	wi::gui::CheckBox otherinfoCheckBox;
 	wi::gui::ComboBox themeCombo;
-	wi::gui::ComboBox renderPathComboBox;
 	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::ComboBox sceneComboBox;
-	wi::gui::Slider pathTraceTargetSlider;
-	wi::gui::Label pathTraceStatisticsLabel;
-	RendererWindow rendererWnd;
-	PostprocessWindow postprocessWnd;
+	GraphicsWindow graphicsWnd;
 	CameraWindow cameraWnd;
 	MaterialPickerWindow materialPickerWnd;
 	PaintToolWindow paintToolWnd;
@@ -51,6 +46,16 @@ public:
 		Sound = 1 << 6,
 		Weather = 1 << 7,
 		Light = 1 << 8,
+		Animation = 1 << 9,
+		Force = 1 << 10,
+		Emitter = 1 << 11,
+		Hairparticle = 1 << 12,
+		IK = 1 << 13,
+		Camera = 1 << 14,
+		Armature = 1 << 15,
+		Collider = 1 << 16,
+		Script = 1 << 17,
+		Expression = 1 << 18,
 
 		All = ~0ull,
 	} filter = Filter::All;

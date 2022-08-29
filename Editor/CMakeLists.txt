@@ -4,6 +4,7 @@ set (SOURCE_FILES
 	#$<$<STREQUAL:${PLATFORM},Windows>:App_${PLATFORM}.cpp>
 	AnimationWindow.cpp
 	CameraWindow.cpp
+	CameraComponentWindow.cpp
 	DecalWindow.cpp
 	Editor.cpp
 	EmitterWindow.cpp
@@ -21,14 +22,19 @@ set (SOURCE_FILES
 	NameWindow.cpp
 	ObjectWindow.cpp
 	PaintToolWindow.cpp
-	PostprocessWindow.cpp
-	RendererWindow.cpp
+	GraphicsWindow.cpp
 	SoundWindow.cpp
 	SpringWindow.cpp
+	ScriptWindow.cpp
 	stdafx.cpp
 	TransformWindow.cpp
 	Translator.cpp
 	WeatherWindow.cpp
+	RigidBodyWindow.cpp
+	SoftBodyWindow.cpp
+	ColliderWindow.cpp
+	HierarchyWindow.cpp
+	ExpressionWindow.cpp
 	OptionsWindow.cpp
 	ComponentsWindow.cpp
 	TerrainGenerator.cpp

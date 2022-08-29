@@ -5,7 +5,7 @@ backlog_post("---> START SCRIPT: emitter_burst.lua")
 
 scene = GetScene()
 scene.Clear()
-LoadModel("../models/emitter_smoke.wiscene")
+LoadModel(script_dir() .. "../models/emitter_smoke.wiscene")
 emitter_entity = scene.Entity_FindByName("smoke")  -- query the emitter entity by name
 emitter_component = scene.Component_GetEmitter(emitter_entity)
 emitter_component.SetEmitCount(0)  -- don't emit continuously

@@ -17,16 +17,16 @@ namespace wi::gui
 
 	struct EventArgs
 	{
-		XMFLOAT2 clickPos;
-		XMFLOAT2 startPos;
-		XMFLOAT2 deltaPos;
-		XMFLOAT2 endPos;
-		float fValue;
-		bool bValue;
-		int iValue;
+		XMFLOAT2 clickPos = {};
+		XMFLOAT2 startPos = {};
+		XMFLOAT2 deltaPos = {};
+		XMFLOAT2 endPos = {};
+		float fValue = 0;
+		bool bValue = false;
+		int iValue = 0;
 		wi::Color color;
 		std::string sValue;
-		uint64_t userdata;
+		uint64_t userdata = 0;
 	};
 
 	enum WIDGETSTATE
@@ -86,7 +86,7 @@ namespace wi::gui
 		// Window:
 		WIDGET_ID_WINDOW_BASE,
 
-		// other user-defined widget states can be specified after this:
+		// other user-defined widget states can be specified after this (but in user's own enum):
 		//	And you will of course need to handle it yourself in a SetColor() override for example
 		WIDGET_ID_USER,
 	};
@@ -101,6 +101,8 @@ namespace wi::gui
 			wi::image::SAMPLEMODE sampleFlag = wi::image::Params().sampleFlag;
 			wi::image::QUALITY quality = wi::image::Params().quality;
 			bool background = wi::image::Params().isBackgroundEnabled();
+			bool corner_rounding = wi::image::Params().isCornerRoundingEnabled();
+			wi::image::Params::Rounding corners_rounding[arraysize(wi::image::Params().corners_rounding)];
 
 			void Apply(wi::image::Params& params) const
 			{
@@ -116,6 +118,15 @@ namespace wi::gui
 				{
 					params.disableBackground();
 				}
+				if (corner_rounding)
+				{
+					params.enableCornerRounding();
+				}
+				else
+				{
+					params.disableCornerRounding();
+				}
+				std::memcpy(params.corners_rounding, corners_rounding, sizeof(corners_rounding));
 			}
 			void CopyFrom(const wi::image::Params& params)
 			{
@@ -131,6 +142,15 @@ namespace wi::gui
 				{
 					background = false;
 				}
+				if (params.isCornerRoundingEnabled())
+				{
+					corner_rounding = true;
+				}
+				else
+				{
+					corner_rounding = false;
+				}
+				std::memcpy(corners_rounding, params.corners_rounding, sizeof(corners_rounding));
 			}
 		} image;
 
@@ -432,6 +452,7 @@ namespace wi::gui
 		wi::Sprite sprites_knob[WIDGETSTATE_COUNT];
 
 		void SetValue(float value);
+		void SetValue(int value);
 		float GetValue() const;
 		void SetRange(float start, float end);
 
@@ -452,6 +473,7 @@ namespace wi::gui
 	protected:
 		std::function<void(EventArgs args)> onClick;
 		bool checked = false;
+		std::wstring check_text;
 	public:
 		void Create(const std::string& name);
 
@@ -463,7 +485,8 @@ namespace wi::gui
 
 		void OnClick(std::function<void(EventArgs args)> func);
 
-		static void SetCheckText(const std::string& text);
+		static void SetCheckTextGlobal(const std::string& text);
+		void SetCheckText(const std::string& text);
 	};
 
 	// Drop-down list
@@ -497,6 +520,7 @@ namespace wi::gui
 		wi::vector<Item> items;
 
 		wi::Color drop_color = wi::Color::Ghost();
+		std::wstring invalid_selection_text;
 
 		float GetDropOffset(const wi::Canvas& canvas) const;
 		float GetItemOffset(const wi::Canvas& canvas, int index) const;
@@ -519,6 +543,7 @@ namespace wi::gui
 		std::string GetItemText(int index) const;
 		uint64_t GetItemUserData(int index) const;
 		size_t GetItemCount() const { return items.size(); }
+		void SetInvalidSelectionText(const std::string& text);
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
@@ -623,6 +648,7 @@ namespace wi::gui
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		void ResizeLayout() override;
 
 		wi::Color GetPickColor() const;
 		void SetPickColor(wi::Color value);
@@ -652,6 +678,7 @@ namespace wi::gui
 		};
 	protected:
 		std::function<void(EventArgs args)> onSelect;
+		std::function<void(EventArgs args)> onDelete;
 		int item_highlight = -1;
 		int opener_highlight = -1;
 
@@ -666,6 +693,7 @@ namespace wi::gui
 		void Create(const std::string& name);
 
 		void AddItem(const Item& item);
+		void AddItem(const std::string& name);
 		void ClearItems();
 		bool HasScrollbar() const;
 
@@ -681,6 +709,7 @@ namespace wi::gui
 		void SetTheme(const Theme& theme, int id = -1) override;
 
 		void OnSelect(std::function<void(EventArgs args)> func);
+		void OnDelete(std::function<void(EventArgs args)> func);
 
 		ScrollBar scrollbar;
 	};

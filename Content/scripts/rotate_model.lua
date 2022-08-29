@@ -5,7 +5,7 @@ backlog_post("---> START SCRIPT: rotate_model.lua")
 
 scene = GetScene()
 scene.Clear()
-model_entity = LoadModel("../models/teapot.wiscene")
+model_entity = LoadModel(script_dir() .. "../models/teapot.wiscene")
 transform_component = scene.Component_GetTransform(model_entity)
 
 runProcess(function()

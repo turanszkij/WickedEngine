@@ -17,6 +17,13 @@
 #include "TransformWindow.h"
 #include "LayerWindow.h"
 #include "NameWindow.h"
+#include "ScriptWindow.h"
+#include "RigidBodyWindow.h"
+#include "SoftBodyWindow.h"
+#include "ColliderWindow.h"
+#include "HierarchyWindow.h"
+#include "CameraComponentWindow.h"
+#include "ExpressionWindow.h"
 
 class EditorComponent;
 
@@ -47,4 +54,11 @@ public:
 	TransformWindow transformWnd;
 	LayerWindow layerWnd;
 	NameWindow nameWnd;
+	ScriptWindow scriptWnd;
+	RigidBodyWindow rigidWnd;
+	SoftBodyWindow softWnd;
+	ColliderWindow colliderWnd;
+	HierarchyWindow hierarchyWnd;
+	CameraComponentWindow cameraComponentWnd;
+	ExpressionWindow expressionWnd;
 };

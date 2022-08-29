@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <cassert>
 #include <atomic>
+#include <memory>
+#include <string>
 
 // Entity-Component System
 namespace wi::ecs
@@ -31,10 +33,18 @@ namespace wi::ecs
 		wi::jobsystem::context ctx; // allow components to spawn serialization subtasks
 		wi::unordered_map<uint64_t, Entity> remap;
 		bool allow_remap = true;
+		uint64_t version = 0; // The ComponentLibrary serialization will modify this by the registered component's version number
 
 		~EntitySerializer()
 		{
 			wi::jobsystem::Wait(ctx); // automatically wait for all subtasks after serialization
+		}
+
+		// Returns the library version of the currently serializing Component
+		//	If not using ComponentLibrary, it returns version set by the user.
+		uint64_t GetVersion() const
+		{
+			return version;
 		}
 	};
 	// This is the safe way to serialize an entity
@@ -66,13 +76,44 @@ namespace wi::ecs
 		}
 		else
 		{
+#ifndef _WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif // _WIN32
+
 			archive << entity;
+
+#ifndef _WIN32
+#pragma GCC diagnostic pop
+#endif // _WIN32
 		}
 	}
 
+	// This is an interface class to implement a ComponentManager, 
+	// inherit this class if you want to work with ComponentLibrary
+	class ComponentManager_Interface
+	{
+	public:
+		virtual void Copy(const ComponentManager_Interface& other) = 0;
+		virtual void Merge(ComponentManager_Interface& other) = 0;
+		virtual void Clear() = 0;
+		virtual void Serialize(wi::Archive& archive, EntitySerializer& seri) = 0;
+		virtual void Component_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri) = 0;
+		virtual void Remove(Entity entity) = 0;
+		virtual void Remove_KeepSorted(Entity entity) = 0;
+		virtual void MoveItem(size_t index_from, size_t index_to) = 0;
+		virtual bool Contains(Entity entity) const = 0;
+		virtual size_t GetIndex(Entity entity) const = 0;
+		virtual size_t GetCount() const = 0;
+		virtual Entity GetEntity(size_t index) const = 0;
+		virtual const wi::vector<Entity>& GetEntityArray() const = 0;
+	};
+
 	// The ComponentManager is a container that stores components and matches them with entities
+	//	Note: final keyword is used to indicate this is a final implementation.
+	//	This allows function inlining and avoid calls, improves performance considerably
 	template<typename Component>
-	class ComponentManager
+	class ComponentManager final : public ComponentManager_Interface
 	{
 	public:
 
@@ -122,6 +163,16 @@ namespace wi::ecs
 			other.Clear();
 		}
 
+		inline void Copy(const ComponentManager_Interface& other)
+		{
+			Copy((ComponentManager<Component>&)other);
+		}
+
+		inline void Merge(ComponentManager_Interface& other)
+		{
+			Merge((ComponentManager<Component>&)other);
+		}
+
 		// Read/Write everything to an archive depending on the archive state
 		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
 		{
@@ -157,6 +208,34 @@ namespace wi::ecs
 				for (Entity entity : entities)
 				{
 					SerializeEntity(archive, entity, seri);
+				}
+			}
+		}
+
+		//Read one single component onto an archive, make sure entity are serialized first
+		inline void Component_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
+		{
+			if(archive.IsReadMode())
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = this->Create(entity);
+					component.Serialize(archive, seri);
+				}
+			}
+			else
+			{
+				auto component = this->GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seri);
+				}
+				else
+				{
+					archive << false;
 				}
 			}
 		}
@@ -345,6 +424,122 @@ namespace wi::ecs
 
 		// Disallow this to be copied by mistake
 		ComponentManager(const ComponentManager&) = delete;
+	};
+
+	// This is the class to store all component managers,
+	// this is useful for bulk operation of all attached components within an entity
+	class ComponentLibrary
+	{
+	public:
+		struct LibraryEntry
+		{
+			std::unique_ptr<ComponentManager_Interface> component_manager;
+			uint64_t version = 0;
+		};
+		wi::unordered_map<std::string, LibraryEntry> entries;
+
+		// Create an instance of ComponentManager of a certain data type
+		//	The name must be unique, it will be used in serialization
+		//	version is optional, it will be propagated to ComponentManager::Serialize() inside the EntitySerializer parameter
+		template<typename T>
+		inline ComponentManager<T>& Register(std::string name, uint64_t version = 0)
+		{
+			entries[name].component_manager = std::make_unique<ComponentManager<T>>();
+			entries[name].version = version;
+			return static_cast<ComponentManager<T>&>(*entries[name].component_manager);
+		}
+
+		// Serialize all registered component managers
+		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
+		{
+			if(archive.IsReadMode())
+			{
+				bool has_next = false;
+				do
+				{
+					archive >> has_next;
+					if(has_next)
+					{
+						std::string name;
+						archive >> name;
+						uint64_t jump_size = 0;
+						archive >> jump_size;
+						auto it = entries.find(name);
+						if(it != entries.end())
+						{
+							archive >> seri.version;
+							it->second.component_manager->Serialize(archive, seri);
+						}
+						else
+						{
+							// component manager of this name was not registered, skip serialization by jumping over the data
+							archive.Jump(jump_size);
+						}
+					}
+				}
+				while(has_next);
+			}
+			else
+			{
+				for(auto& it : entries)
+				{
+					archive << true;
+					archive << it.first; // name
+					size_t offset = archive.WriteUnknownJumpPosition(); // we will be able to jump from here...
+					archive << it.second.version;
+					seri.version = it.second.version;
+					it.second.component_manager->Serialize(archive, seri);
+					archive.PatchUnknownJumpPosition(offset); // ...to here, if this component manager was not registered
+				}
+				archive << false;
+			}
+		}
+
+		// Serialize all components for one entity
+		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
+		{
+			if(archive.IsReadMode())
+			{
+				bool has_next = false;
+				do
+				{
+					archive >> has_next;
+					if(has_next)
+					{
+						std::string name;
+						archive >> name;
+						uint64_t jump_size = 0;
+						archive >> jump_size;
+						auto it = entries.find(name);
+						if (it != entries.end())
+						{
+							archive >> seri.version;
+							it->second.component_manager->Component_Serialize(entity, archive, seri);
+						}
+						else
+						{
+							// component manager of this name was not registered, skip serialization by jumping over the data
+							archive.Jump(jump_size);
+						}
+					}
+				}
+				while(has_next);
+			}
+			else
+			{
+				for(auto& it : entries)
+				{
+					archive << true;
+					archive << it.first; // name
+					size_t offset = archive.WriteUnknownJumpPosition(); // we will be able to jump from here...
+					archive << it.second.version;
+					seri.version = it.second.version;
+					it.second.component_manager->Component_Serialize(entity, archive, seri);
+					archive.PatchUnknownJumpPosition(offset); // ...to here, if this component manager was not registered
+				}
+				archive << false;
+			}
+		}
 	};
 }
 

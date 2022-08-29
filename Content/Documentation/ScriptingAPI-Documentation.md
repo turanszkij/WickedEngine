@@ -36,6 +36,12 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		11. [ObjectComponent](#objectcomponent)
 		12. [InverseKinematicsComponent](#inversekinematicscomponent)
 		13. [SpringComponent](#springcomponent)
+		14. [RigidBodyPhsyicsComponent](#rigidbodyphysicscomponent)
+		15. [SoftBodyPhsyicsComponent](#softbodyphysicscomponent)
+		16. [ForceFieldComponent](#forcefieldcomponent)
+		17. [WeatherComponent](#weathercomponent)
+		18. [SoundComponent](#soundcomponent)
+		19. [ColliderComponent](#collidercomponent)
 	10. [Canvas](#canvas)
 	11. [High Level Interface](#high-level-interface)
 		1. [MainComponent](#maincomponent)
@@ -138,6 +144,11 @@ You can use the Renderer with the following functions, all of which are in the g
 
 ### Sprite
 Render images on the screen.
+- Params : ImageParams
+- Anim : SpriteAnim 
+
+</br>
+
 - [constructor]Sprite(opt string texture, opt string maskTexture)
 - SetParams(ImageParams effects)
 - GetParams() : ImageParams result
@@ -146,6 +157,19 @@ Render images on the screen.
 
 #### ImageParams
 Specify Sprite properties, like position, size, etc.
+- Pos : Vector
+- Size : Vector
+- Pivot : Vector
+- Color : Vector
+- Opacity : float
+- Fade : float
+- Rotation : float
+- MipLevel : float
+- TexOffset : Vector
+- TexOffset2 : Vector
+
+</br>
+
 - [constructor]ImageParams(opt float width, opt float height)
 - [constructor]ImageParams(float posX, float posY, float width, opt float height)
 - GetPos() : Vector result
@@ -216,6 +240,19 @@ Specify Sprite properties, like position, size, etc.
 
 #### SpriteAnim
 Animate Sprites easily with this helper.
+- Rot : float
+- Rotation : float
+- Opacity : float
+- Fade : float
+- Repeatable : boolean
+- Velocity : Vector
+- ScaleX : float
+- ScaleY : float
+- MovingTexAnim : GetMovingTexAnim
+- DrawRectAnim : GetDrawRectAnim
+
+</br>
+
 - [constructor]SpriteAnim()
 - SetRot(float val)
 - SetRotation(float val)
@@ -240,6 +277,11 @@ Animate Sprites easily with this helper.
 
 #### MovingTexAnim
 Move texture continuously along the sprite.
+- SpeedX : float
+- SpeedY : float
+
+</br>
+
 - [constructor]MovingTexAnim(opt float speedX,speedY)
 - SetSpeedX(float val)
 - SetSpeedY(float val)
@@ -248,8 +290,13 @@ Move texture continuously along the sprite.
 
 #### DrawRecAnim
 Animate sprite frame by frame.
+- FrameRate : float
+- FrameCount : int
+- HorizontalFrameCount : int
+
+</br>
+
 - [constructor]DrawRecAnim()
-- SetOnFrameChangeWait(float val)
 - SetFrameRate(float val)
 - SetFrameCount(int val)
 - SetHorizontalFrameCount(int val)
@@ -259,6 +306,21 @@ Animate sprite frame by frame.
 
 ### SpriteFont
 Gives you the ability to render text with a custom font.
+- Text : string
+- Size : int
+- Pos : Vector
+- Spacing : Vector
+- Align : WIFALIGN halign
+- Color : Vector
+- ShadowColor : Vector
+- Bolden : float
+- Softness : float
+- ShadowBolden : float
+- ShadowSoftness : float
+- ShadowOffset : Vector
+
+</br>
+
 - [constructor]SpriteFont(opt string text)
 - SetStyle(string fontstyle, opt int size = 16)
 - SetText(opt string text)
@@ -378,6 +440,12 @@ The reverb types are built in presets that can mimic a specific kind of environm
 
 ### Vector
 A four component floating point vector. Provides efficient calculations with SIMD support.
+- X : float
+- Y : float
+- Z : float
+
+</br>
+
 - [outer]vector
 - [constructor]Vector(opt float x, opt float y, opt float z, opt float w)
 - GetX() : float result
@@ -404,6 +472,7 @@ A four component floating point vector. Provides efficient calculations with SIM
 - Lerp(Vector v1,v2, float t) : Vector result
 - QuaternionMultiply(Vector v1,v2) : Vector result
 - QuaternionFromRollPitchYaw(Vector rotXYZ) : Vector result
+- QuaternionToRollPitchYaw(Vector quaternion) : Vector result
 - QuaternionSlerp(Vector v1,v2, float t) : Vector result
 
 ### Matrix
@@ -455,7 +524,8 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_CreateLight(Entity entity) : LightComponent result  -- attach a light component to an entity. The returned LightComponent is associated with the entity and can be manipulated
 - Component_CreateObject(Entity entity) : ObjectComponent result  -- attach an object component to an entity. The returned ObjectComponent is associated with the entity and can be manipulated
 - Component_CreateInverseKinematics(Entity entity) : InverseKinematicsComponent result  -- attach an IK component to an entity. The returned InverseKinematicsComponent is associated with the entity and can be manipulated
-- Component_CreateSpring(Entity entity) : SpringComponent result  -- attach a spring component to an entity. The returned InverseKinematicsComponent is associated with the entity and can be manipulated
+- Component_CreateSpring(Entity entity) : SpringComponent result  -- attach a spring component to an entity. The returned SpringKinematicsComponent is associated with the entity and can be manipulated
+- Component_CreateSpring(Entity entity) : ScriptComponent result  -- attach a script component to an entity. The returned ScriptKinematicsComponent is associated with the entity and can be manipulated
 
 - Component_GetName(Entity entity) : NameComponent? result  -- query the name component of the entity (if exists)
 - Component_GetLayer(Entity entity) : LayerComponent? result  -- query the layer component of the entity (if exists)
@@ -468,6 +538,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetObject(Entity entity) : ObjectComponent? result  -- query the object component of the entity (if exists)
 - Component_GetInverseKinematics(Entity entity) : InverseKinematicsComponent? result  -- query the IK component of the entity (if exists)
 - Component_GetSpring(Entity entity) : SpringComponent? result  -- query the spring component of the entity (if exists)
+- Component_GetSpring(Entity entity) : ScriptComponent? result  -- query the script component of the entity (if exists)
 
 - Component_GetNameArray() : NameComponent[] result  -- returns the array of all components of this type
 - Component_GetLayerArray() : LayerComponent[] result  -- returns the array of all components of this type
@@ -479,7 +550,8 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetLightArray() : LightComponent[] result  -- returns the array of all components of this type
 - Component_GetObjectArray() : ObjectComponent[] result  -- returns the array of all components of this type
 - Component_GetInverseKinematicsArray() : InverseKinematicsComponent[] result  -- returns the array of all components of this type
-- Component_GetSpringArray() : InverseKinematicsComponent[] result  -- returns the array of all components of this type
+- Component_GetSpringArray() : SpringComponent[] result  -- returns the array of all components of this type
+- Component_GetScriptArray() : ScriptComponent[] result  -- returns the array of all components of this type
 
 - Entity_GetNameArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetLayerArray() : Entity[] result  -- returns the array of all entities that have this component type
@@ -492,6 +564,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetObjectArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetInverseKinematicsArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetSpringArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetScriptArray() : Entity[] result  -- returns the array of all entities that have this component type
 
 - Component_Attach(Entity entity,parent)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer)
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
@@ -501,16 +574,24 @@ The scene holds components. Entity handles can be used to retrieve associated co
 
 #### NameComponent
 Holds a string that can more easily identify an entity to humans than an entity ID. 
+- Name : string
 - SetName(string value)  -- set the name
 - GetName() : string result  -- query the name string
 
 #### LayerComponent
 An integer mask that can be used to group entities together for certain operations such as: picking, rendering, etc.
+- LayerMask : float
 - SetLayerMask(int value)  -- set layer mask
 - GetLayerMask() : int result  -- query layer mask
 
 #### TransformComponent
 Describes an orientation in 3D space.
+- Translation_local : Vector XYZ  -- query the position in world space
+- Rotation_local : Vector Quaternion  -- query the rotation as a quaternion in world space
+- Scale_local : Vector XYZ  -- query the scaling in world space
+
+</br>
+
 - Scale(Vector vectorXYZ)  -- Applies scaling
 - Rotate(Vector vectorRollPitchYaw)  -- Applies rotation as roll,pitch,yaw
 - Translate(Vector vectorXYZ)  -- Applies translation (position offset)
@@ -525,6 +606,15 @@ Describes an orientation in 3D space.
 - GetScale() : Vector resultXYZ  -- query the scaling in world space
 
 #### CameraComponent
+- FOV : float
+- NearPlane : float
+- FarPlane : float
+- FocalDistance : float
+- ApertureSize : float
+- ApertureShape : float
+
+</br>
+
 - UpdateCamera()  -- update the camera matrices
 - TransformCamera(TransformComponent transform)  -- copies the transform's orientation to the camera. Camera matrices are not updated immediately. They will be updated by the Scene::Update() (if the camera is part of the scene), or by manually calling UpdateCamera()
 - GetFOV() : float result
@@ -550,6 +640,11 @@ Describes an orientation in 3D space.
 - GetUpDirection() : Vector result
 
 #### AnimationComponent
+- Timer : float
+- Amount : float
+
+</br>
+
 - Play()
 - Stop()
 - Pause()
@@ -562,6 +657,36 @@ Describes an orientation in 3D space.
 - GetAmount() : float result
 
 #### MaterialComponent
+- BaseColor : Vector
+- EmissiveColor : Vector
+- EngineStencilRef : int
+- UserStencilRef : int
+- ShaderType : int
+- UserBlendMode : int
+- SpecularColor : Vector
+- SubsurfaceScattering : Vector
+- TexMulAdd : Vector
+- Roughness : float
+- Reflectance : float
+- Metalness : float
+- NormalMapStrength : float
+- ParallaxOcclusionMapping : float
+- DisplacementMapping : float
+- Refraction : float
+- Transmission : float
+- AlphaRef : float
+- SheenColor : Vector
+- SheenRoughness : float
+- Clearcoat : float
+- ClearcoatRoughness : float
+- ShadingRate : int
+- TexAnimDirection : Vector
+- TexAnimFrameRate : float
+- texAnimElapsedTime : float
+- customShaderID : int
+
+</br>
+
 - SetBaseColor(Vector value)
 - SetEmissiveColor(Vector value)
 - SetEngineStencilRef(int value)
@@ -569,6 +694,19 @@ Describes an orientation in 3D space.
 - GetStencilRef() : int result
 
 #### EmitterComponent
+- EmitCount : float  -- emitted particle count per second
+- Size : float  -- particle starting size
+- Life : float  -- particle lifetime
+- NormalFactor : float  -- normal factor that modulates emit velocities
+- Randomness : float  -- general randomness factor
+- LifeRandomness : float  -- lifetime randomness factor
+- ScaleX : float  -- scaling along lifetime in X axis
+- ScaleY : float  -- scaling along lifetime in Y axis
+- Rotation : float  -- rotation speed
+- MotionBlurAmount : float  -- set the motion elongation factor
+
+</br>
+
 - Burst(int value)  -- spawns a specific amount of particles immediately
 - SetEmitCount(float value)  -- set the emitted particle count per second
 - SetSize(float value)  -- set particle starting size
@@ -582,6 +720,20 @@ Describes an orientation in 3D space.
 - SetMotionBlurAmount(float value)  -- set the motion elongation factor
 
 #### LightComponent
+- Type : int  -- light type, see accepted values below (by default it is a point light)
+- [outer]DIRECTIONAL : int
+- [outer]POINT : int
+- [outer]SPOT : int
+- Range : float
+- Intensity : float -- Brightness of light in. The units that this is defined in depend on the type of light. Point and spot lights use luminous intensity in candela (lm/sr) while directional lights use illuminance in lux (lm/m2). https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
+- Color : Vector
+- CastShadow : bool
+- VolumetricsEnabled : bool
+- OuterConeAngle : float -- outer cone angle for spotlight in radians
+- InnerConeAngle : float -- inner cone angle for spotlight in radians
+
+</br>
+
 - SetType(int type)  -- set light type, see accepted values below (by default it is a point light)
 - [outer]DIRECTIONAL : int
 - [outer]POINT : int
@@ -595,19 +747,48 @@ Describes an orientation in 3D space.
 - SetInnerConeAngle(float value) -- inner cone angle for spotlight in radians (0 <= innerConeAngle <= outerConeAngle). Value of 0 disables inner cone angle
 - GetType() : int result
 
+</br>
+
 - SetEnergy(float value) -- kept for backwards compatibility with non physical light units (before v0.70.0)
 - SetFOV(float value) -- kept for backwards compatibility with FOV angle (before v0.70.0)
 
 #### ObjectComponent
+- MeshID : Entity
+- CascadeMask : int
+- RendertypeMask : int
+- Color : Vector
+- EmissiveColor : Vector
+- UserStencilRef : int
+- LodDistanceMultiplier : float
+- DrawDistance : float
+
+</br>
+
 - GetMeshID() : Entity
+- GetCascadeMask() : int
+- GetRendertypeMask() : int
 - GetColor() : Vector
+- GetEmissiveColor() : Vector
 - GetUserStencilRef() : int
+- GetLodDistanceMultiplier() : float
+- GetDrawDistance() : float
 - SetMeshID(Entity entity)
+- SetCascadeMask(int value)
+- SetRendertypeMask(int value)
 - SetColor(Vector value)
+- GetEmissiveColor(Vector value)
 - SetUserStencilRef(int value)
+- GetLodDistanceMultiplier(float value)
+- GetDrawDistance(float value)
 
 #### InverseKinematicsComponent
 Describes an Inverse Kinematics effector.
+- Target : Entity
+- ChainLength : int
+- IterationCount : int
+
+</br>
+
 - SetTarget(Entity entity) -- Sets the target entity (The IK entity and its parent hierarchy chain will try to reach the target)
 - SetChainLength(int value) -- Sets the chain length, in other words, how many parents will be computed by the IK system
 - SetIterationCount(int value) -- Sets the accuracy of the IK system simulation
@@ -622,6 +803,90 @@ Enables jiggle effect on transforms such as bones for example.
 - SetStiffness(float value)
 - SetDamping(float value)
 - SetWindAffection(float value)
+
+#### ScriptComponent
+A lua script bound to an entity
+- CreateFromFile(string filename)
+- Play()
+- IsPlaying() : bool result
+- SetPlayOnce(bool once = true)
+- Stop()
+
+#### RigidBodyPhysicsComponent
+Describes a Rigid Body Physics object.
+- Shape : int
+- Mass : float
+- Friction : float
+- Restitution : float
+- LinearDamping : float
+- AngularDamping : float
+- BoxParams_HalfExtents : Vector
+- SphereParams_Radius : floatd
+- CapsuleParams_Radius : float
+- CapsuleParams_Reight : float
+- TargetMeshLOD : int
+
+</br>
+
+- IsDisableDeactivation() : bool return -- Check if the rigidbody is able to deactivate after inactivity
+- IsKinematic() : bool return -- Check if the rigidbody is movable or just static
+- SetDisableDeactivation(bool value = true) -- Sets if the rigidbody is able to deactivate after inactivity
+- SetKinematic(bool value = true) -- Sets if the rigidbody is movable or just static
+
+#### SoftBodyPhysicsComponent
+Describes a Soft Body Physics object.
+- Mass : float
+- Friction : float
+- Restitution : float
+
+#### ForceFieldComponent
+Describes a Force Field effector.
+- Type : int
+- Gravity : float
+- Range : float
+
+#### WeatherComponent
+Describes a Rigid Body Physics object.
+- OceanParameters : OceanParameters -- Returns a table to modify ocean parameters (if ocean is enabled)
+- AtmosphereParameters : AtmosphereParameters -- Returns a table to modify atmosphere parameters
+- VolumetricCloudParameters : VolumetricCloudParameters -- Returns a table to modify volumetric cloud parameters
+- SkyMapName : string -- Resource name for sky texture
+- ColorGradingMapName : string -- Resource name for color grading map
+
+</br>
+
+- IsOceanEnabled() : bool return -- Check if weather's ocean simulation is enabled
+- IsSimpleSky() : bool return -- Check if weather's sky is rendered in a simple, unrealistic way
+- IsRealisticSky() : bool return -- Check if weather's sky is rendered in a physically correct, realistic way
+- IsVolumetricClouds() : bool return -- Check if weather is rendering volumetric clouds
+- IsHeightFog() : bool return -- Check if weather is rendering height fog visual effect
+- SetOceanEnabled(bool value) -- Sets if weather's ocean simulation is enabled or not
+- SetSimpleSky(bool value) -- Sets if weather's sky is rendered in a simple, unrealistic way or not
+- SetRealisticSky(bool value) -- Sets if weather's sky is rendered in a physically correct, realistic way or not
+- SetVolumetricClouds(bool value) -- Sets if weather is rendering volumetric clouds or not
+- SetHeightFog(bool value) -- Sets if weather is rendering height fog visual effect or not
+
+#### SoundComponent
+Describes a Sound object.
+- Filename : string
+- Volume : float
+
+</br>
+
+- Play() -- Plays the sound
+- Stop() -- Stop the sound
+- SetLoop(bool value = true) -- Sets if the sound is looping when playing
+- SetDisable3D(bool value = true) -- Disable/Enable 3D sounds
+- IsPlaying() : bool result -- Check if sound is playing
+- IsLooped() : bool result -- Check if sound is looping
+- IsDisabled() : bool result -- Check if sound is disabled
+
+#### ColliderComponent
+Describes a Sound object.
+- Shape : int -- Shape of the collider
+- Radius : float
+- Offset : Vector
+- Tail : Vector
 
 ## Canvas
 This is used to describe a drawable area
@@ -708,6 +973,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetDitherEnabled(bool value)
 - SetDepthOfFieldEnabled(bool value)
 - SetDepthOfFieldStrength(float value)
+- SetLightShaftsStrength(float value)
 - SetMSAASampleCount(int count)
 - SetSharpenFilterEnabled(bool value)
 - SetSharpenFilterAmount(float value)
@@ -727,6 +993,7 @@ A ray is defined by an origin Vector and a normalized direction Vector. It can b
 - [constructor]Ray(Vector origin,direction)
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
+- Intersects(Capsule capsule) : bool result
 - GetOrigin() : Vector result
 - GetDirection() : Vector result
 
@@ -746,6 +1013,11 @@ Axis Aligned Bounding Box. Can be intersected with other primitives.
 
 #### Sphere
 Sphere defined by center Vector and radius. Can be intersected with other primitives.
+- Center : Vector
+- Radius : float
+
+</br>
+
 - [constructor]Sphere(Vector center, float radius)
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
@@ -757,8 +1029,15 @@ Sphere defined by center Vector and radius. Can be intersected with other primit
 
 #### Capsule
 It's like two spheres connected by a cylinder. Base and Tip are the two endpoints, radius is the cylinder's radius.
+- Base : Vector
+- Tip : Vector
+- Radius : float
+
+</br>
+
 - [constructor]Capsule(Vector base, tip, float radius)
 - Intersects(Capsule other) : bool result, Vector position, indicent_normal, float penetration_depth
+- Intersects(Ray ray) : bool result
 - GetBase() : Vector result
 - GetTip() : Vector result
 - GetRadius() : float result

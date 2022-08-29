@@ -14,8 +14,22 @@ using namespace wi::scene;
 void MeshWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create(ICON_MESH " Mesh", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(580, 720));
+	wi::gui::Window::Create(ICON_MESH " Mesh", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	SetSize(XMFLOAT2(580, 700));
+
+	closeButton.SetTooltip("Delete MeshComponent");
+	OnClose([=](wi::gui::EventArgs args) {
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		editor->GetCurrentScene().meshes.Remove(entity);
+
+		editor->RecordEntity(archive, entity);
+
+		editor->optionsWnd.RefreshEntityTree();
+		});
 
 	float x = 95;
 	float y = 0;
@@ -64,80 +78,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&doubleSidedCheckBox);
-
-	softbodyCheckBox.Create("Soft body: ");
-	softbodyCheckBox.SetTooltip("Enable soft body simulation. Tip: Use the Paint Tool to control vertex pinning.");
-	softbodyCheckBox.SetSize(XMFLOAT2(hei, hei));
-	softbodyCheckBox.SetPos(XMFLOAT2(x, y += step));
-	softbodyCheckBox.OnClick([&](wi::gui::EventArgs args) {
-
-		Scene& scene = editor->GetCurrentScene();
-		SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(entity);
-
-		if (args.bValue)
-		{
-			if (physicscomponent == nullptr)
-			{
-				SoftBodyPhysicsComponent& softbody = scene.softbodies.Create(entity);
-				softbody.friction = frictionSlider.GetValue();
-				softbody.restitution = restitutionSlider.GetValue();
-				softbody.mass = massSlider.GetValue();
-			}
-		}
-		else
-		{
-			if (physicscomponent != nullptr)
-			{
-				scene.softbodies.Remove(entity);
-				MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
-				if (mesh != nullptr)
-				{
-					mesh->CreateRenderData();
-				}
-			}
-		}
-
-	});
-	AddWidget(&softbodyCheckBox);
-
-	massSlider.Create(0, 10, 1, 100000, "Mass: ");
-	massSlider.SetTooltip("Set the mass amount for the physics engine.");
-	massSlider.SetSize(XMFLOAT2(wid, hei));
-	massSlider.SetPos(XMFLOAT2(x, y += step));
-	massSlider.OnSlide([&](wi::gui::EventArgs args) {
-		SoftBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().softbodies.GetComponent(entity);
-		if (physicscomponent != nullptr)
-		{
-			physicscomponent->mass = args.fValue;
-		}
-	});
-	AddWidget(&massSlider);
-
-	frictionSlider.Create(0, 1, 0.5f, 100000, "Friction: ");
-	frictionSlider.SetTooltip("Set the friction amount for the physics engine.");
-	frictionSlider.SetSize(XMFLOAT2(wid, hei));
-	frictionSlider.SetPos(XMFLOAT2(x, y += step));
-	frictionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		SoftBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().softbodies.GetComponent(entity);
-		if (physicscomponent != nullptr)
-		{
-			physicscomponent->friction = args.fValue;
-		}
-	});
-	AddWidget(&frictionSlider);
-
-	restitutionSlider.Create(0, 1, 0, 100000, "Restitution: ");
-	restitutionSlider.SetTooltip("Set the restitution amount for the physics engine.");
-	restitutionSlider.SetSize(XMFLOAT2(wid, hei));
-	restitutionSlider.SetPos(XMFLOAT2(x, y += step));
-	restitutionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		SoftBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().softbodies.GetComponent(entity);
-		if (physicscomponent != nullptr)
-		{
-			physicscomponent->restitution = args.fValue;
-		}
-		});
-	AddWidget(&restitutionSlider);
 
 	impostorCreateButton.Create("Create Impostor");
 	impostorCreateButton.SetTooltip("Create an impostor image of the mesh. The mesh will be replaced by this image when far away, to render faster.");
@@ -510,9 +450,9 @@ void MeshWindow::Create(EditorComponent* _editor)
 	morphTargetCombo.SetPos(XMFLOAT2(x, y += step));
 	morphTargetCombo.OnSelect([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
-		if (mesh != nullptr && args.iValue < (int)mesh->targets.size())
+		if (mesh != nullptr && args.iValue < (int)mesh->morph_targets.size())
 		{
-			morphTargetSlider.SetValue(mesh->targets[args.iValue].weight);
+			morphTargetSlider.SetValue(mesh->morph_targets[args.iValue].weight);
 		}
 	});
 	morphTargetCombo.SetTooltip("Choose a morph target to edit weight.");
@@ -524,9 +464,9 @@ void MeshWindow::Create(EditorComponent* _editor)
 	morphTargetSlider.SetPos(XMFLOAT2(x, y += step));
 	morphTargetSlider.OnSlide([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
-		if (mesh != nullptr && morphTargetCombo.GetSelected() < (int)mesh->targets.size())
+		if (mesh != nullptr && morphTargetCombo.GetSelected() < (int)mesh->morph_targets.size())
 		{
-			mesh->targets[morphTargetCombo.GetSelected()].weight = args.fValue;
+			mesh->morph_targets[morphTargetCombo.GetSelected()].weight = args.fValue;
 			mesh->dirty_morph = true;
 		}
 	});
@@ -748,30 +688,19 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		}
 		tessellationFactorSlider.SetValue(mesh->GetTessellationFactor());
 
-		softbodyCheckBox.SetCheck(false);
-
-		SoftBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().softbodies.GetComponent(entity);
-		if (physicscomponent != nullptr)
-		{
-			softbodyCheckBox.SetCheck(true);
-			massSlider.SetValue(physicscomponent->mass);
-			frictionSlider.SetValue(physicscomponent->friction);
-			restitutionSlider.SetValue(physicscomponent->restitution);
-		}
-
 		uint8_t selected = morphTargetCombo.GetSelected();
 		morphTargetCombo.ClearItems();
-		for (size_t i = 0; i < mesh->targets.size(); i++)
+		for (size_t i = 0; i < mesh->morph_targets.size(); i++)
 		{
 			morphTargetCombo.AddItem(std::to_string(i).c_str());
 		}
-		if (selected < mesh->targets.size())
+		if (selected < mesh->morph_targets.size())
 		{
 			morphTargetCombo.SetSelected(selected);
 		}
 		SetEnabled(true);
 
-		if (mesh->targets.empty())
+		if (mesh->morph_targets.empty())
 		{
 			morphTargetCombo.SetEnabled(false);
 			morphTargetSlider.SetEnabled(false);
@@ -789,4 +718,67 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 	}
 
 	mergeButton.SetEnabled(true);
+}
+
+void MeshWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 100;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_fullwidth(meshInfoLabel);
+	add(subsetComboBox);
+	add(subsetMaterialComboBox);
+	add_right(doubleSidedCheckBox);
+	add_fullwidth(impostorCreateButton);
+	add(impostorDistanceSlider);
+	add(tessellationFactorSlider);
+	add_fullwidth(flipCullingButton);
+	add_fullwidth(flipNormalsButton);
+	add_fullwidth(computeNormalsSmoothButton);
+	add_fullwidth(computeNormalsHardButton);
+	add_fullwidth(recenterButton);
+	add_fullwidth(recenterToBottomButton);
+	add_fullwidth(mergeButton);
+	add_fullwidth(optimizeButton);
+
+	add(morphTargetCombo);
+	add(morphTargetSlider);
+
+	add_fullwidth(lodgenButton);
+	add(lodCountSlider);
+	add(lodQualitySlider);
+	add(lodErrorSlider);
+	add_right(lodSloppyCheckBox);
 }

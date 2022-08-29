@@ -18,6 +18,9 @@ public:
 	wi::scene::WeatherComponent& GetWeather() const;
 	void InvalidateProbes() const;
 
+	XMFLOAT3 default_sky_horizon = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 default_sky_zenith = XMFLOAT3(0, 0, 0);
+
 	wi::gui::Button primaryButton;
 	wi::gui::CheckBox heightFogCheckBox;
 	wi::gui::Slider fogStartSlider;
@@ -73,5 +76,7 @@ public:
 	wi::gui::Button preset5Button;
 	wi::gui::Button eliminateCoarseCascadesButton;
 	wi::gui::Button ktxConvButton;
+
+	void ResizeLayout() override;
 };
 

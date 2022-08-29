@@ -1031,6 +1031,13 @@ inline float dither(in float2 pixel)
 	return ditherMask8(pixel);
 }
 
+
+
+float plane_point_distance(float3 planeOrigin, float3 planeNormal, float3 P)
+{
+	return dot(planeNormal, P - planeOrigin);
+}
+
 // o		: ray origin
 // d		: ray direction
 // center	: sphere center

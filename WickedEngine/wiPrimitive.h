@@ -11,6 +11,7 @@ namespace wi::primitive
 	struct Sphere;
 	struct Ray;
 	struct AABB;
+	struct Capsule;
 
 	struct AABB
 	{
@@ -82,6 +83,11 @@ namespace wi::primitive
 		Sphere(const XMFLOAT3& c, float r) :center(c), radius(r) {}
 		bool intersects(const AABB& b) const;
 		bool intersects(const Sphere& b) const;
+		bool intersects(const Sphere& b, float& dist) const;
+		bool intersects(const Sphere& b, float& dist, XMFLOAT3& direction) const;
+		bool intersects(const Capsule& b) const;
+		bool intersects(const Capsule& b, float& dist) const;
+		bool intersects(const Capsule& b, float& dist, XMFLOAT3& direction) const;
 		bool intersects(const Ray& b) const;
 	};
 	struct Capsule
@@ -106,6 +112,8 @@ namespace wi::primitive
 			return AABB::Merge(base_aabb, tip_aabb);
 		}
 		bool intersects(const Capsule& b, XMFLOAT3& position, XMFLOAT3& incident_normal, float& penetration_depth) const;
+		bool intersects(const Ray& b) const;
+		bool intersects(const Ray& b, float& t) const;
 	};
 	struct Ray
 	{
@@ -115,16 +123,21 @@ namespace wi::primitive
 		float TMax = std::numeric_limits<float>::max();
 		XMFLOAT3 direction_inverse;
 
-		Ray(const XMFLOAT3& newOrigin = XMFLOAT3(0, 0, 0), const XMFLOAT3& newDirection = XMFLOAT3(0, 0, 1), float newTMin = 0, float newTMax = std::numeric_limits<float>::max()) : Ray(XMLoadFloat3(&newOrigin), XMLoadFloat3(&newDirection), TMin, TMax) {}
-		Ray(const XMVECTOR& newOrigin, const XMVECTOR& newDirection, float newTMin = 0, float newTMax = std::numeric_limits<float>::max()) {
+		Ray(const XMFLOAT3& newOrigin = XMFLOAT3(0, 0, 0), const XMFLOAT3& newDirection = XMFLOAT3(0, 0, 1), float newTMin = 0, float newTMax = std::numeric_limits<float>::max()) :
+			Ray(XMLoadFloat3(&newOrigin), XMLoadFloat3(&newDirection), newTMin, newTMax)
+		{}
+		Ray(const XMVECTOR& newOrigin, const XMVECTOR& newDirection, float newTMin = 0, float newTMax = std::numeric_limits<float>::max())
+		{
 			XMStoreFloat3(&origin, newOrigin);
 			XMStoreFloat3(&direction, newDirection);
-			XMStoreFloat3(&direction_inverse, XMVectorDivide(XMVectorReplicate(1.0f), newDirection));
+			XMStoreFloat3(&direction_inverse, XMVectorReciprocal(newDirection));
 			TMin = newTMin;
 			TMax = newTMax;
 		}
 		bool intersects(const AABB& b) const;
 		bool intersects(const Sphere& b) const;
+		bool intersects(const Capsule& b) const;
+		bool intersects(const Capsule& b, float& t) const;
 	};
 
 	struct Frustum

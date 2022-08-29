@@ -32,21 +32,29 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	transformWnd.Create(editor);
 	layerWnd.Create(editor);
 	nameWnd.Create(editor);
+	scriptWnd.Create(editor);
+	rigidWnd.Create(editor);
+	softWnd.Create(editor);
+	colliderWnd.Create(editor);
+	hierarchyWnd.Create(editor);
+	cameraComponentWnd.Create(editor);
+	expressionWnd.Create(editor);
 
 
 	newComponentCombo.Create("Add: ");
 	newComponentCombo.selected_font.anim.typewriter.looped = true;
 	newComponentCombo.selected_font.anim.typewriter.time = 2;
 	newComponentCombo.selected_font.anim.typewriter.character_start = 1;
-	newComponentCombo.SetTooltip("Add a component to the first selected entity.");
-	newComponentCombo.AddItem("...", ~0ull);
-	newComponentCombo.AddItem("Name", 0);
+	newComponentCombo.SetTooltip("Add a component to the last selected entity.");
+	newComponentCombo.SetInvalidSelectionText("...");
+	newComponentCombo.AddItem("Name " ICON_NAME, 0);
 	newComponentCombo.AddItem("Layer " ICON_LAYER, 1);
+	newComponentCombo.AddItem("Hierarchy " ICON_HIERARCHY, 19);
 	newComponentCombo.AddItem("Transform " ICON_TRANSFORM, 2);
 	newComponentCombo.AddItem("Light " ICON_POINTLIGHT, 3);
-	newComponentCombo.AddItem("Matetial " ICON_MATERIAL, 4);
+	newComponentCombo.AddItem("Material " ICON_MATERIAL, 4);
 	newComponentCombo.AddItem("Spring", 5);
-	newComponentCombo.AddItem("Inverse Kinematics", 6);
+	newComponentCombo.AddItem("Inverse Kinematics " ICON_IK, 6);
 	newComponentCombo.AddItem("Sound " ICON_SOUND, 7);
 	newComponentCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, 8);
 	newComponentCombo.AddItem("Emitted Particle System " ICON_EMITTER, 9);
@@ -54,12 +62,18 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Decal " ICON_DECAL, 11);
 	newComponentCombo.AddItem("Weather " ICON_WEATHER, 12);
 	newComponentCombo.AddItem("Force Field " ICON_FORCE, 13);
+	newComponentCombo.AddItem("Animation " ICON_ANIMATION, 14);
+	newComponentCombo.AddItem("Script " ICON_SCRIPT, 15);
+	newComponentCombo.AddItem("Rigid Body " ICON_RIGIDBODY, 16);
+	newComponentCombo.AddItem("Soft Body " ICON_SOFTBODY, 17);
+	newComponentCombo.AddItem("Collider " ICON_COLLIDER, 18);
+	newComponentCombo.AddItem("Camera " ICON_CAMERA, 20);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
-		newComponentCombo.SetSelectedWithoutCallback(0);
+		newComponentCombo.SetSelectedWithoutCallback(-1);
 		if (editor->translator.selected.empty())
 			return;
 		Scene& scene = editor->GetCurrentScene();
-		Entity entity = editor->translator.selected.front().entity;
+		Entity entity = editor->translator.selected.back().entity;
 		if (entity == INVALID_ENTITY)
 		{
 			assert(0);
@@ -125,6 +139,34 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			if (scene.forces.Contains(entity))
 				return;
 			break;
+		case 14:
+			if (scene.animations.Contains(entity))
+				return;
+			break;
+		case 15:
+			if (scene.scripts.Contains(entity))
+				return;
+			break;
+		case 16:
+			if (scene.rigidbodies.Contains(entity))
+				return;
+			break;
+		case 17:
+			if (scene.softbodies.Contains(entity))
+				return;
+			break;
+		case 18:
+			if (scene.colliders.Contains(entity))
+				return;
+			break;
+		case 19:
+			if (scene.hierarchy.Contains(entity))
+				return;
+			break;
+		case 20:
+			if (scene.cameras.Contains(entity))
+				return;
+			break;
 		default:
 			return;
 		}
@@ -153,6 +195,20 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case 5:
 			scene.springs.Create(entity);
+
+			// Springs are special because they are computed in ordered fashion
+			//	So if we add a new spring that was parent of an other one, we move it in memory before the child
+			for (size_t i = 0; i < scene.springs.GetCount(); ++i)
+			{
+				Entity other = scene.springs.GetEntity(i);
+				const HierarchyComponent* hier = scene.hierarchy.GetComponent(other);
+				if (hier != nullptr && hier->parentID == entity)
+				{
+					size_t entity_index = scene.springs.GetCount() - 1; // last added entity (the parent)
+					scene.springs.MoveItem(entity_index, i); // will be moved before
+					break;
+				}
+			}
 			break;
 		case 6:
 			scene.inverse_kinematics.Create(entity);
@@ -186,6 +242,27 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		case 13:
 			scene.forces.Create(entity);
 			break;
+		case 14:
+			scene.animations.Create(entity);
+			break;
+		case 15:
+			scene.scripts.Create(entity);
+			break;
+		case 16:
+			scene.rigidbodies.Create(entity);
+			break;
+		case 17:
+			scene.softbodies.Create(entity);
+			break;
+		case 18:
+			scene.colliders.Create(entity);
+			break;
+		case 19:
+			scene.hierarchy.Create(entity);
+			break;
+		case 20:
+			scene.cameras.Create(entity);
+			break;
 		default:
 			break;
 		}
@@ -215,6 +292,13 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&transformWnd);
 	AddWidget(&layerWnd);
 	AddWidget(&nameWnd);
+	AddWidget(&scriptWnd);
+	AddWidget(&rigidWnd);
+	AddWidget(&softWnd);
+	AddWidget(&colliderWnd);
+	AddWidget(&hierarchyWnd);
+	AddWidget(&cameraComponentWnd);
+	AddWidget(&expressionWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -233,6 +317,13 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	transformWnd.SetVisible(false);
 	layerWnd.SetVisible(false);
 	nameWnd.SetVisible(false);
+	scriptWnd.SetVisible(false);
+	rigidWnd.SetVisible(false);
+	softWnd.SetVisible(false);
+	colliderWnd.SetVisible(false);
+	hierarchyWnd.SetVisible(false);
+	cameraComponentWnd.SetVisible(false);
+	expressionWnd.SetVisible(false);
 
 
 	SetSize(editor->optionsWnd.GetSize());
@@ -269,13 +360,25 @@ void ComponentsWindow::ResizeLayout()
 		nameWnd.SetVisible(true);
 		nameWnd.SetPos(pos);
 		nameWnd.SetSize(XMFLOAT2(width, nameWnd.GetScale().y));
-		nameWnd.Update();
 		pos.y += nameWnd.GetSize().y;
 		pos.y += padding;
 	}
 	else
 	{
 		nameWnd.SetVisible(false);
+	}
+
+	if (scene.hierarchy.Contains(hierarchyWnd.entity))
+	{
+		hierarchyWnd.SetVisible(true);
+		hierarchyWnd.SetPos(pos);
+		hierarchyWnd.SetSize(XMFLOAT2(width, hierarchyWnd.GetScale().y));
+		pos.y += hierarchyWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		hierarchyWnd.SetVisible(false);
 	}
 
 	if (scene.layers.Contains(layerWnd.entity))
@@ -473,6 +576,19 @@ void ComponentsWindow::ResizeLayout()
 		meshWnd.SetVisible(false);
 	}
 
+	if (scene.softbodies.Contains(softWnd.entity))
+	{
+		softWnd.SetVisible(true);
+		softWnd.SetPos(pos);
+		softWnd.SetSize(XMFLOAT2(width, softWnd.GetScale().y));
+		pos.y += softWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		softWnd.SetVisible(false);
+	}
+
 	if (scene.objects.Contains(objectWnd.entity))
 	{
 		objectWnd.SetVisible(true);
@@ -486,6 +602,19 @@ void ComponentsWindow::ResizeLayout()
 		objectWnd.SetVisible(false);
 	}
 
+	if (scene.rigidbodies.Contains(rigidWnd.entity))
+	{
+		rigidWnd.SetVisible(true);
+		rigidWnd.SetPos(pos);
+		rigidWnd.SetSize(XMFLOAT2(width, rigidWnd.GetScale().y));
+		pos.y += rigidWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		rigidWnd.SetVisible(false);
+	}
+
 	if (scene.weathers.Contains(weatherWnd.entity))
 	{
 		weatherWnd.SetVisible(true);
@@ -497,5 +626,57 @@ void ComponentsWindow::ResizeLayout()
 	else
 	{
 		weatherWnd.SetVisible(false);
+	}
+
+	if (scene.colliders.Contains(colliderWnd.entity))
+	{
+		colliderWnd.SetVisible(true);
+		colliderWnd.SetPos(pos);
+		colliderWnd.SetSize(XMFLOAT2(width, colliderWnd.GetScale().y));
+		pos.y += colliderWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		colliderWnd.SetVisible(false);
+	}
+
+	if (scene.cameras.Contains(cameraComponentWnd.entity))
+	{
+		cameraComponentWnd.SetVisible(true);
+		cameraComponentWnd.SetPos(pos);
+		cameraComponentWnd.SetSize(XMFLOAT2(width, cameraComponentWnd.GetScale().y));
+		pos.y += cameraComponentWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		cameraComponentWnd.SetVisible(false);
+	}
+
+	if (scene.scripts.Contains(scriptWnd.entity))
+	{
+		scriptWnd.SetVisible(true);
+		scriptWnd.SetPos(pos);
+		scriptWnd.SetSize(XMFLOAT2(width, scriptWnd.GetScale().y));
+		pos.y += scriptWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		scriptWnd.SetVisible(false);
+	}
+
+	if (scene.expressions.Contains(expressionWnd.entity))
+	{
+		expressionWnd.SetVisible(true);
+		expressionWnd.SetPos(pos);
+		expressionWnd.SetSize(XMFLOAT2(width, expressionWnd.GetScale().y));
+		pos.y += expressionWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		expressionWnd.SetVisible(false);
 	}
 }

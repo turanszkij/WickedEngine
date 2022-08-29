@@ -18,7 +18,13 @@ namespace wi::image
 	static BlendState blendStates[BLENDMODE_COUNT];
 	static RasterizerState rasterizerState;
 	static DepthStencilState depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
-	static PipelineState imagePSO[BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT];
+	enum STRIP_MODE
+	{
+		STRIP_OFF,
+		STRIP_ON,
+		STRIP_MODE_COUNT,
+	};
+	static PipelineState imagePSO[BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][STRIP_MODE_COUNT];
 	static thread_local Texture backgroundTexture;
 	static thread_local wi::Canvas canvas;
 
@@ -67,6 +73,8 @@ namespace wi::image
 		}
 
 		ImageConstants image = {};
+		image.buffer_index = -1;
+		image.buffer_offset = 0;
 		image.texture_base_index = device->GetDescriptorIndex(texture, SubresourceType::SRV);
 		image.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SubresourceType::SRV);
 		if (params.isBackgroundEnabled())
@@ -80,15 +88,6 @@ namespace wi::image
 		image.sampler_index = device->GetDescriptorIndex(sampler);
 		if (image.sampler_index < 0)
 			return;
-
-		const RenderPass* renderpass = device->GetCurrentRenderPass(cmd);
-		assert(renderpass != nullptr); // image renderer must draw inside render pass!
-		assert(!renderpass->GetDesc().attachments.empty());
-		assert(renderpass->GetDesc().attachments.front().texture != nullptr);
-		image.output_resolution.x = renderpass->GetDesc().attachments.front().texture->GetDesc().width;
-		image.output_resolution.y = renderpass->GetDesc().attachments.front().texture->GetDesc().height;
-		image.output_resolution_rcp.x = 1.0f / image.output_resolution.x;
-		image.output_resolution_rcp.y = 1.0f / image.output_resolution.y;
 
 		XMFLOAT4 color = params.color;
 		const float darken = 1 - params.fade;
@@ -125,21 +124,33 @@ namespace wi::image
 			image.flags |= IMAGE_FLAG_FULLSCREEN;
 		}
 
-		XMMATRIX M = XMMatrixScaling(params.scale.x * params.siz.x, params.scale.y * params.siz.y, 1);
-		M = M * XMMatrixRotationZ(params.rotation);
+		image.border_soften = params.border_soften;
 
-		if (params.customRotation != nullptr)
+		STRIP_MODE strip_mode = STRIP_ON;
+		uint32_t index_count = 0;
+
+		if (params.isFullScreenEnabled())
 		{
-			M = M * (*params.customRotation);
+			// full screen triangle, no vertex buffer:
+			image.buffer_index = -1;
+			image.buffer_offset = 0;
 		}
-
-		M = M * XMMatrixTranslation(params.pos.x, params.pos.y, params.pos.z);
-
-		if (!params.isFullScreenEnabled())
+		else
 		{
+			// vertex buffer:
+			XMMATRIX S = XMMatrixScaling(params.scale.x * params.siz.x, params.scale.y * params.siz.y, 1);
+			XMMATRIX M = XMMatrixRotationZ(params.rotation);
+
+			if (params.customRotation != nullptr)
+			{
+				M = M * (*params.customRotation);
+			}
+
+			M = M * XMMatrixTranslation(params.pos.x, params.pos.y, params.pos.z);
+
 			if (params.customProjection != nullptr)
 			{
-				M = XMMatrixScaling(1, -1, 1) * M; // reason: screen projection is Y down (like UV-space) and that is the common case for image rendering. But custom projections will use the "world space"
+				S = XMMatrixScaling(1, -1, 1) * S; // reason: screen projection is Y down (like UV-space) and that is the common case for image rendering. But custom projections will use the "world space"
 				M = M * (*params.customProjection);
 			}
 			else
@@ -151,28 +162,119 @@ namespace wi::image
 				assert(canvas.dpi > 0);
 				M = M * canvas.GetProjection();
 			}
+
+			XMVECTOR V[4];
+			float4 corners[4];
+			for (int i = 0; i < arraysize(params.corners); ++i)
+			{
+				V[i] = XMVectorSet(params.corners[i].x - params.pivot.x, params.corners[i].y - params.pivot.y, 0, 1);
+				V[i] = XMVector2Transform(V[i], S);
+				XMStoreFloat4(corners + i, XMVector2Transform(V[i], M)); // division by w will happen on GPU
+			}
+
+			image.b0 = XMHALF2(corners[0].x, corners[0].y).v;
+			image.b1 = XMHALF2(corners[1].x - corners[0].x, corners[1].y - corners[0].y).v;
+			image.b2 = XMHALF2(corners[2].x - corners[0].x, corners[2].y - corners[0].y).v;
+			image.b3 = XMHALF2(corners[0].x - corners[1].x - corners[2].x + corners[3].x, corners[0].y - corners[1].y - corners[2].y + corners[3].y).v;
+
+			if (params.isCornerRoundingEnabled())
+			{
+				// The rounded corner mode will use a triangle fan structure (implemrnted by indexed triangle list):
+				strip_mode = STRIP_OFF;
+				image.flags |= IMAGE_FLAG_CORNER_ROUNDING;
+				size_t vertex_count = 1; // start with center vertex
+				const int min_segment_count = 2;
+				for (int i = 0; i < arraysize(params.corners_rounding); ++i)
+				{
+					int segments = std::max(min_segment_count, params.corners_rounding[i].segments);
+					vertex_count += segments;
+					index_count += segments * 3;
+				}
+				index_count += 3; // closing triangle
+				const size_t vb_size = sizeof(float4) * vertex_count;
+				const size_t ib_size = sizeof(uint16_t) * index_count;
+				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(vb_size + ib_size, cmd);
+				image.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+				image.buffer_offset = (uint)mem.offset;
+				device->BindIndexBuffer(&mem.buffer, IndexBufferFormat::UINT16, mem.offset + vb_size, cmd);
+				float4* vertices = (float4*)mem.data;
+				uint16_t* indices = (uint16_t*)((uint8_t*)mem.data + vb_size);
+				uint32_t vi = 0;
+				uint32_t ii = 0;
+				XMStoreFloat4(vertices + vi, XMVector2Transform((V[0] + V[1] + V[2] + V[3]) * 0.25f, M)); // center vertex
+				vi++;
+				for (int i = 0; i < arraysize(params.corners_rounding); ++i)
+				{
+					Params::Rounding rounding;
+					XMVECTOR A;
+					XMVECTOR B;
+					XMVECTOR C;
+					switch (i)
+					{
+					default:
+					case 0:
+						rounding = params.corners_rounding[0];
+						A = V[2];
+						B = V[0];
+						C = V[1];
+						break;
+					case 1:
+						rounding = params.corners_rounding[1];
+						A = V[0];
+						B = V[1];
+						C = V[3];
+						break;
+					case 2:
+						rounding = params.corners_rounding[3];
+						A = V[1];
+						B = V[3];
+						C = V[2];
+						break;
+					case 3:
+						rounding = params.corners_rounding[2];
+						A = V[3];
+						B = V[2];
+						C = V[0];
+						break;
+					}
+					rounding.segments = std::max(min_segment_count, rounding.segments);
+					const XMVECTOR BA = A - B;
+					const XMVECTOR BC = C - B;
+					const XMVECTOR BA_length = XMVector2Length(BA);
+					const XMVECTOR BC_length = XMVector2Length(BC);
+					const XMVECTOR radius = XMVectorReplicate(rounding.radius);
+					const XMVECTOR start = B + BA / BA_length * XMVectorMin(radius, BA_length * 0.5f);
+					const XMVECTOR end = B + BC / BC_length * XMVectorMin(radius, BC_length * 0.5f);
+
+					for (int j = 0; j < rounding.segments; ++j)
+					{
+						float t = float(j) / float(rounding.segments - 1);
+						XMVECTOR bezier = wi::math::GetQuadraticBezierPos(start, B, end, t);
+						XMStoreFloat4(vertices + vi, XMVector2Transform(bezier, M));
+						indices[ii++] = 0;
+						indices[ii++] = vi - 1;
+						indices[ii++] = vi;
+						vi++;
+					}
+				}
+				// closing the triangle fan:
+				indices[ii++] = 0;
+				indices[ii++] = vi - 1;
+				indices[ii++] = 1;
+			}
+			else
+			{
+				// Non rounded image will simply use a 4 vertex triangle strip (simple quad)
+				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(float4) * 4, cmd);
+				image.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+				image.buffer_offset = (uint)mem.offset;
+				std::memcpy(mem.data, corners, sizeof(corners));
+			}
 		}
-
-		XMVECTOR V = XMVectorSet(params.corners[0].x - params.pivot.x, params.corners[0].y - params.pivot.y, 0, 1);
-		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&image.corners0, V);
-
-		V = XMVectorSet(params.corners[1].x - params.pivot.x, params.corners[1].y - params.pivot.y, 0, 1);
-		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&image.corners1, V);
-
-		V = XMVectorSet(params.corners[2].x - params.pivot.x, params.corners[2].y - params.pivot.y, 0, 1);
-		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&image.corners2, V);
-
-		V = XMVectorSet(params.corners[3].x - params.pivot.x, params.corners[3].y - params.pivot.y, 0, 1);
-		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&image.corners3, V);
 
 		if (params.isMirrorEnabled())
 		{
-			std::swap(image.corners0, image.corners1);
-			std::swap(image.corners2, image.corners3);
+			image.flags |= IMAGE_FLAG_MIRROR;
 		}
 
 		const TextureDesc& desc = texture->GetDesc();
@@ -232,17 +334,26 @@ namespace wi::image
 		}
 		device->BindStencilRef(stencilRef, cmd);
 
-		device->BindPipelineState(&imagePSO[params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
+		device->BindPipelineState(&imagePSO[params.blendFlag][params.stencilComp][params.stencilRefMode][strip_mode], cmd);
 
 		device->BindDynamicConstantBuffer(image, CBSLOT_IMAGE, cmd);
 
 		if (params.isFullScreenEnabled())
 		{
-			device->Draw(3, 0, cmd);
+			device->Draw(3, 0, cmd); // full screen triangle
 		}
 		else
 		{
-			device->Draw(4, 0, cmd);
+			switch (strip_mode)
+			{
+			case wi::image::STRIP_OFF:
+				device->DrawIndexed(index_count, 0, 0, cmd); // corner rounding with indexed geometry
+				break;
+			case wi::image::STRIP_ON:
+			default:
+				device->Draw(4, 0, cmd); // simple quad
+				break;
+			}
 		}
 
 		device->EventEnd(cmd);
@@ -260,7 +371,6 @@ namespace wi::image
 		desc.vs = &vertexShader;
 		desc.ps = &pixelShader;
 		desc.rs = &rasterizerState;
-		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
 
 		for (int j = 0; j < BLENDMODE_COUNT; ++j)
 		{
@@ -271,7 +381,20 @@ namespace wi::image
 				{
 					desc.dss = &depthStencilStates[k][m];
 
-					device->CreatePipelineState(&desc, &imagePSO[j][k][m]);
+					for (int n = 0; n < STRIP_MODE_COUNT; ++n)
+					{
+						switch (n)
+						{
+						default:
+						case STRIP_ON:
+							desc.pt = PrimitiveTopology::TRIANGLESTRIP;
+							break;
+						case STRIP_OFF:
+							desc.pt = PrimitiveTopology::TRIANGLELIST;
+							break;
+						}
+						device->CreatePipelineState(&desc, &imagePSO[j][k][m][n]);
+					}
 
 				}
 			}

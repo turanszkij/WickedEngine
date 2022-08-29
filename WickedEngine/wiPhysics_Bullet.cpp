@@ -565,6 +565,8 @@ namespace wi::physics
 
 			SoftBodyPhysicsComponent& physicscomponent = scene.softbodies[args.jobIndex];
 			Entity entity = scene.softbodies.GetEntity(args.jobIndex);
+			if (!scene.meshes.Contains(entity))
+				return;
 			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 			const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
 			mesh.SetDynamic(true);
@@ -679,7 +681,6 @@ namespace wi::physics
 					for (size_t ind = 0; ind < physicscomponent->vertex_positions_simulation.size(); ++ind)
 					{
 						uint32_t physicsInd = physicscomponent->graphicsToPhysicsVertexMapping[ind];
-						float weight = physicscomponent->weights[physicsInd];
 
 						btSoftBody::Node& node = softbody->m_nodes[physicsInd];
 

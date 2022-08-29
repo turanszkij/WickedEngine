@@ -45,8 +45,6 @@ namespace wi::lua
 	void AddFuncArray(const luaL_Reg* functions);
 	//add int member to registered object
 	void AddInt(const std::string& name, int data);
-	//returns the path of the last executed script:
-	const std::string& GetScriptPath();
 
 	//set delta time to use with lua
 	void SetDeltaTime(double dt);
@@ -62,6 +60,13 @@ namespace wi::lua
 
 	//kill every running background task (coroutine)
 	void KillProcesses();
+
+	// Generates a unique identifier for a script instance:
+	uint32_t GeneratePID();
+
+	// Adds some local management functions to the script
+	//	returns the PID
+	uint32_t AttachScriptParameters(std::string& script, const std::string& filename = "", uint32_t PID = GeneratePID(), const std::string& customparameters_prepend = "",  const std::string& customparameters_append = "");
 
 	//Following functions are "static", operating on specified lua state:
 
@@ -118,6 +123,84 @@ namespace wi::lua
 	void SSetPointer(lua_State* L, void* data);
 	//push null to lua stack
 	void SSetNull(lua_State* L);
+
+	//get-setters template for custom types
+	class LuaProperty
+	{
+	public:
+		virtual int Get(lua_State*L) = 0;
+		virtual int Set(lua_State*L) = 0;
+	};
+	//get-setters for int type
+	class IntProperty final : public LuaProperty
+	{
+	public:
+		int *data = nullptr;
+		IntProperty(){}
+		IntProperty(int* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for long type
+	class LongProperty final : public LuaProperty
+	{
+	public:
+		long* data = nullptr;
+		LongProperty(){}
+		LongProperty(long* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for long long type
+	class LongLongProperty final : public LuaProperty
+	{
+	public:
+		long long* data = nullptr;
+		LongLongProperty(){}
+		LongLongProperty(long long* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for int type
+	class FloatProperty final : public LuaProperty
+	{
+	public:
+		float* data = nullptr;
+		FloatProperty(){}
+		FloatProperty(float* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for double type
+	class DoubleProperty final : public LuaProperty
+	{
+	public:
+		double* data = nullptr;
+		DoubleProperty(){}
+		DoubleProperty(double* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for string type
+	class StringProperty final : public LuaProperty
+	{
+	public:
+		std::string* data = nullptr;
+		StringProperty(){}
+		StringProperty(std::string* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
+	//get-setters for bool type
+	class BoolProperty final : public LuaProperty
+	{
+	public:
+		bool* data = nullptr;
+		BoolProperty(){}
+		BoolProperty(bool* data): data(data) {}
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+	};
 
 	//throw error
 	void SError(lua_State* L, const std::string& error = "");

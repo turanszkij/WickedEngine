@@ -16,5 +16,7 @@ public:
 	wi::gui::CheckBox layers[32];
 	wi::gui::Button enableAllButton;
 	wi::gui::Button enableNoneButton;
+
+	void ResizeLayout() override;
 };
 

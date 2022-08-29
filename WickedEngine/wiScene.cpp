@@ -11,6 +11,7 @@
 #include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
+#include "wiLua.h"
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
@@ -275,6 +276,7 @@ namespace wi::scene
 		material.layerMask = layerMask;
 		material.transmission = transmission;
 		material.shaderType = (uint)shaderType;
+		material.userdata = userdata;
 
 		material.options = 0;
 		if (IsUsingVertexColors())
@@ -548,7 +550,7 @@ namespace wi::scene
 
 		// vertexBuffer - POSITION + NORMAL + WIND:
 		{
-			if (!targets.empty())
+			if (!morph_targets.empty())
 			{
 				vertex_positions_morphed.resize(vertex_positions.size());
 				dirty_morph = true;
@@ -1323,6 +1325,63 @@ namespace wi::scene
 		descriptor_srv = device->GetDescriptorIndex(&boneBuffer, SubresourceType::SRV);
 	}
 
+	AnimationComponent::AnimationChannel::PathDataType AnimationComponent::AnimationChannel::GetPathDataType() const
+	{
+		switch (path)
+		{
+		case wi::scene::AnimationComponent::AnimationChannel::Path::TRANSLATION:
+			return PathDataType::Float3;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::ROTATION:
+			return PathDataType::Float4;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SCALE:
+			return PathDataType::Float3;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::WEIGHTS:
+			return PathDataType::Weights;
+
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+			return PathDataType::Float3;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+			return PathDataType::Float;
+
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_PLAY:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_STOP:
+			return PathDataType::Event;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
+			return PathDataType::Float;
+
+		case wi::scene::AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
+			return PathDataType::Float;
+
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
+			return PathDataType::Float;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
+			return PathDataType::Float2;
+
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::SCRIPT_STOP:
+			return PathDataType::Event;
+
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
+			return PathDataType::Float4;
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
+		case wi::scene::AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
+			return PathDataType::Float;
+
+		default:
+			assert(0);
+			break;
+		}
+		return PathDataType::Event;
+	}
+
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
 		vertex_positions_simulation.resize(mesh.vertex_positions.size());
@@ -1464,6 +1523,26 @@ namespace wi::scene
 
 		UpdateCamera();
 	}
+	void CameraComponent::Lerp(const CameraComponent& a, const CameraComponent& b, float t)
+	{
+		SetDirty();
+
+		width = wi::math::Lerp(a.width, b.width, t);
+		height = wi::math::Lerp(a.height, b.height, t);
+		zNearP = wi::math::Lerp(a.zNearP, b.zNearP, t);
+		zFarP = wi::math::Lerp(a.zFarP, b.zFarP, t);
+		fov = wi::math::Lerp(a.fov, b.fov, t);
+		focal_length = wi::math::Lerp(a.focal_length, b.focal_length, t);
+		aperture_size = wi::math::Lerp(a.aperture_size, b.aperture_size, t);
+		aperture_shape = wi::math::Lerp(a.aperture_shape, b.aperture_shape, t);
+	}
+
+	void ScriptComponent::CreateFromFile(const std::string& filename)
+	{
+		this->filename = filename;
+		resource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+		script.clear(); // will be created on first Update()
+	}
 
 
 
@@ -1472,6 +1551,12 @@ namespace wi::scene
 	void Scene::Update(float dt)
 	{
 		this->dt = dt;
+
+		wi::jobsystem::context ctx;
+
+		// Script system runs first, because it could create new entities and components
+		//	So GPU persistent resources need to be created accordingly for them too:
+		RunScriptUpdateSystem(ctx);
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -1587,8 +1672,6 @@ namespace wi::scene
 			queryAllocator.store(0);
 		}
 
-		wi::jobsystem::context ctx;
-
 		// Scan mesh subset counts to allocate GPU geometry data:
 		geometryAllocator.store(0u);
 		wi::jobsystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
@@ -1651,15 +1734,19 @@ namespace wi::scene
 		}
 		geometryArrayMapped = (ShaderGeometry*)geometryUploadBuffer[device->GetBufferIndex()].mapped_data;
 
+		RunExpressionUpdateSystem(ctx);
+
 		RunMeshUpdateSystem(ctx);
 
 		RunMaterialUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
 
-		RunSpringUpdateSystem(ctx);
-
 		RunInverseKinematicsUpdateSystem(ctx);
+
+		RunColliderUpdateSystem(ctx);
+
+		RunSpringUpdateSystem(ctx);
 
 		RunArmatureUpdateSystem(ctx);
 
@@ -1837,57 +1924,59 @@ namespace wi::scene
 
 		if (wi::renderer::GetDDGIEnabled())
 		{
-			ddgi_frameIndex++;
-			if (!ddgiColorTexture[0].IsValid())
+			ddgi.frame_index++;
+			if (!ddgi.color_texture[1].IsValid()) // if just color_texture[0] is valid, it could be that ddgi was serialized, that's why we check color_texture[1] here
 			{
-				ddgi_frameIndex = 0;
+				ddgi.frame_index = 0;
+
+				const uint32_t probe_count = ddgi.grid_dimensions.x * ddgi.grid_dimensions.y * ddgi.grid_dimensions.z;
 
 				GPUBufferDesc buf;
 				buf.stride = sizeof(DDGIRayDataPacked);
-				buf.size = buf.stride * DDGI_PROBE_COUNT * DDGI_MAX_RAYCOUNT;
+				buf.size = buf.stride * probe_count * DDGI_MAX_RAYCOUNT;
 				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				device->CreateBuffer(&buf, nullptr, &ddgiRayBuffer);
-				device->SetName(&ddgiRayBuffer, "ddgiRayBuffer");
+				device->CreateBuffer(&buf, nullptr, &ddgi.ray_buffer);
+				device->SetName(&ddgi.ray_buffer, "ddgi.ray_buffer");
 
 				buf.stride = sizeof(DDGIProbeOffset);
-				buf.size = buf.stride * DDGI_PROBE_COUNT;
+				buf.size = buf.stride * probe_count;
 				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-				device->CreateBuffer(&buf, nullptr, &ddgiOffsetBuffer);
-				device->SetName(&ddgiOffsetBuffer, "ddgiOffsetBuffer");
+				device->CreateBuffer(&buf, nullptr, &ddgi.offset_buffer);
+				device->SetName(&ddgi.offset_buffer, "ddgi.offset_buffer");
 
 				TextureDesc tex;
-				tex.width = DDGI_COLOR_TEXTURE_WIDTH;
-				tex.height = DDGI_COLOR_TEXTURE_HEIGHT;
+				tex.width = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
+				tex.height = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.z;
 				//tex.format = Format::R11G11B10_FLOAT; // not enough precision with this format, causes green hue in GI
 				tex.format = Format::R16G16B16A16_FLOAT;
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-				device->CreateTexture(&tex, nullptr, &ddgiColorTexture[0]);
-				device->SetName(&ddgiColorTexture[0], "ddgiColorTexture[0]");
-				device->CreateTexture(&tex, nullptr, &ddgiColorTexture[1]);
-				device->SetName(&ddgiColorTexture[1], "ddgiColorTexture[1]");
+				device->CreateTexture(&tex, nullptr, &ddgi.color_texture[0]);
+				device->SetName(&ddgi.color_texture[0], "ddgi.color_texture[0]");
+				device->CreateTexture(&tex, nullptr, &ddgi.color_texture[1]);
+				device->SetName(&ddgi.color_texture[1], "ddgi.color_texture[1]");
 
-				tex.width = DDGI_DEPTH_TEXTURE_WIDTH;
-				tex.height = DDGI_DEPTH_TEXTURE_HEIGHT;
+				tex.width = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
+				tex.height = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.z;
 				tex.format = Format::R16G16_FLOAT;
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-				device->CreateTexture(&tex, nullptr, &ddgiDepthTexture[0]);
-				device->SetName(&ddgiDepthTexture[0], "ddgiDepthTexture[0]");
-				device->CreateTexture(&tex, nullptr, &ddgiDepthTexture[1]);
-				device->SetName(&ddgiDepthTexture[1], "ddgiDepthTexture[1]");
+				device->CreateTexture(&tex, nullptr, &ddgi.depth_texture[0]);
+				device->SetName(&ddgi.depth_texture[0], "ddgi.depth_texture[0]");
+				device->CreateTexture(&tex, nullptr, &ddgi.depth_texture[1]);
+				device->SetName(&ddgi.depth_texture[1], "ddgi.depth_texture[1]");
 			}
-			std::swap(ddgiColorTexture[0], ddgiColorTexture[1]);
-			std::swap(ddgiDepthTexture[0], ddgiDepthTexture[1]);
+			std::swap(ddgi.color_texture[0], ddgi.color_texture[1]);
+			std::swap(ddgi.depth_texture[0], ddgi.depth_texture[1]);
 		}
-		else if (ddgiColorTexture[0].IsValid())
+		else if (ddgi.color_texture[1].IsValid()) // if just color_texture[0] is valid, it could be that ddgi was serialized, that's why we check color_texture[1] here
 		{
-			ddgiRayBuffer = {};
-			ddgiOffsetBuffer = {};
-			ddgiColorTexture[0] = {};
-			ddgiColorTexture[1] = {};
-			ddgiDepthTexture[0] = {};
-			ddgiDepthTexture[1] = {};
+			ddgi.ray_buffer = {};
+			ddgi.offset_buffer = {};
+			ddgi.color_texture[0] = {};
+			ddgi.color_texture[1] = {};
+			ddgi.depth_texture[0] = {};
+			ddgi.depth_texture[1] = {};
 		}
 
 		impostor_ib_format = (((objects.GetCount() * 4) < 655536) ? Format::R16_UINT : Format::R32_UINT);
@@ -1999,9 +2088,15 @@ namespace wi::scene
 		shaderscene.weather.stars = weather.stars;
 		XMStoreFloat4x4(&shaderscene.weather.stars_rotation, XMMatrixRotationQuaternion(XMLoadFloat4(&weather.stars_rotation_quaternion)));
 
-		shaderscene.ddgi.color_texture = device->GetDescriptorIndex(&ddgiColorTexture[0], SubresourceType::SRV);
-		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgiDepthTexture[0], SubresourceType::SRV);
-		shaderscene.ddgi.offset_buffer = device->GetDescriptorIndex(&ddgiOffsetBuffer, SubresourceType::SRV);
+		shaderscene.ddgi.grid_dimensions = ddgi.grid_dimensions;
+		shaderscene.ddgi.probe_count = ddgi.grid_dimensions.x * ddgi.grid_dimensions.y * ddgi.grid_dimensions.z;
+		shaderscene.ddgi.color_texture_resolution = uint2(ddgi.color_texture[0].desc.width, ddgi.color_texture[0].desc.height);
+		shaderscene.ddgi.color_texture_resolution_rcp = float2(1.0f / shaderscene.ddgi.color_texture_resolution.x, 1.0f / shaderscene.ddgi.color_texture_resolution.y);
+		shaderscene.ddgi.depth_texture_resolution = uint2(ddgi.depth_texture[0].desc.width, ddgi.depth_texture[0].desc.height);
+		shaderscene.ddgi.depth_texture_resolution_rcp = float2(1.0f / shaderscene.ddgi.depth_texture_resolution.x, 1.0f / shaderscene.ddgi.depth_texture_resolution.y);
+		shaderscene.ddgi.color_texture = device->GetDescriptorIndex(&ddgi.color_texture[0], SubresourceType::SRV);
+		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgi.depth_texture[0], SubresourceType::SRV);
+		shaderscene.ddgi.offset_buffer = device->GetDescriptorIndex(&ddgi.offset_buffer, SubresourceType::SRV);
 		shaderscene.ddgi.grid_min.x = shaderscene.aabb_min.x - 1;
 		shaderscene.ddgi.grid_min.y = shaderscene.aabb_min.y - 1;
 		shaderscene.ddgi.grid_min.z = shaderscene.aabb_min.z - 1;
@@ -2015,9 +2110,9 @@ namespace wi::scene
 		shaderscene.ddgi.grid_extents_rcp.x = 1.0f / shaderscene.ddgi.grid_extents.x;
 		shaderscene.ddgi.grid_extents_rcp.y = 1.0f / shaderscene.ddgi.grid_extents.y;
 		shaderscene.ddgi.grid_extents_rcp.z = 1.0f / shaderscene.ddgi.grid_extents.z;
-		shaderscene.ddgi.cell_size.x = shaderscene.ddgi.grid_extents.x / (DDGI_GRID_DIMENSIONS.x - 1);
-		shaderscene.ddgi.cell_size.y = shaderscene.ddgi.grid_extents.y / (DDGI_GRID_DIMENSIONS.y - 1);
-		shaderscene.ddgi.cell_size.z = shaderscene.ddgi.grid_extents.z / (DDGI_GRID_DIMENSIONS.z - 1);
+		shaderscene.ddgi.cell_size.x = shaderscene.ddgi.grid_extents.x / (ddgi.grid_dimensions.x - 1);
+		shaderscene.ddgi.cell_size.y = shaderscene.ddgi.grid_extents.y / (ddgi.grid_dimensions.y - 1);
+		shaderscene.ddgi.cell_size.z = shaderscene.ddgi.grid_extents.z / (ddgi.grid_dimensions.z - 1);
 		shaderscene.ddgi.cell_size_rcp.x = 1.0f / shaderscene.ddgi.cell_size.x;
 		shaderscene.ddgi.cell_size_rcp.y = 1.0f / shaderscene.ddgi.cell_size.y;
 		shaderscene.ddgi.cell_size_rcp.z = 1.0f / shaderscene.ddgi.cell_size.z;
@@ -2025,34 +2120,10 @@ namespace wi::scene
 	}
 	void Scene::Clear()
 	{
-		names.Clear();
-		layers.Clear();
-		transforms.Clear();
-		hierarchy.Clear();
-		materials.Clear();
-		meshes.Clear();
-		impostors.Clear();
-		objects.Clear();
-		aabb_objects.Clear();
-		rigidbodies.Clear();
-		softbodies.Clear();
-		armatures.Clear();
-		lights.Clear();
-		aabb_lights.Clear();
-		cameras.Clear();
-		probes.Clear();
-		aabb_probes.Clear();
-		forces.Clear();
-		decals.Clear();
-		aabb_decals.Clear();
-		animations.Clear();
-		animation_datas.Clear();
-		emitters.Clear();
-		hairs.Clear();
-		weathers.Clear();
-		sounds.Clear();
-		inverse_kinematics.Clear();
-		springs.Clear();
+		for(auto& entry : componentLibrary.entries)
+		{
+			entry.second.component_manager->Clear();
+		}
 
 		TLAS = RaytracingAccelerationStructure();
 		BVH.Clear();
@@ -2066,70 +2137,29 @@ namespace wi::scene
 		surfelStatsBuffer = {};
 		surfelGridBuffer = {};
 		surfelCellBuffer = {};
+
+		ddgi = {};
 	}
 	void Scene::Merge(Scene& other)
 	{
-		names.Merge(other.names);
-		layers.Merge(other.layers);
-		transforms.Merge(other.transforms);
-		hierarchy.Merge(other.hierarchy);
-		materials.Merge(other.materials);
-		meshes.Merge(other.meshes);
-		impostors.Merge(other.impostors);
-		objects.Merge(other.objects);
-		aabb_objects.Merge(other.aabb_objects);
-		rigidbodies.Merge(other.rigidbodies);
-		softbodies.Merge(other.softbodies);
-		armatures.Merge(other.armatures);
-		lights.Merge(other.lights);
-		aabb_lights.Merge(other.aabb_lights);
-		cameras.Merge(other.cameras);
-		probes.Merge(other.probes);
-		aabb_probes.Merge(other.aabb_probes);
-		forces.Merge(other.forces);
-		decals.Merge(other.decals);
-		aabb_decals.Merge(other.aabb_decals);
-		animations.Merge(other.animations);
-		animation_datas.Merge(other.animation_datas);
-		emitters.Merge(other.emitters);
-		hairs.Merge(other.hairs);
-		weathers.Merge(other.weathers);
-		sounds.Merge(other.sounds);
-		inverse_kinematics.Merge(other.inverse_kinematics);
-		springs.Merge(other.springs);
+		for (auto& entry : componentLibrary.entries)
+		{
+			entry.second.component_manager->Merge(*other.componentLibrary.entries[entry.first].component_manager);
+		}
 
 		bounds = AABB::Merge(bounds, other.bounds);
+
+		if (!ddgi.color_texture[0].IsValid() && other.ddgi.color_texture[0].IsValid())
+		{
+			ddgi = std::move(other.ddgi);
+		}
 	}
 	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
 	{
-		entities.insert(names.GetEntityArray().begin(), names.GetEntityArray().end());
-		entities.insert(layers.GetEntityArray().begin(), layers.GetEntityArray().end());
-		entities.insert(transforms.GetEntityArray().begin(), transforms.GetEntityArray().end());
-		entities.insert(hierarchy.GetEntityArray().begin(), hierarchy.GetEntityArray().end());
-		entities.insert(materials.GetEntityArray().begin(), materials.GetEntityArray().end());
-		entities.insert(meshes.GetEntityArray().begin(), meshes.GetEntityArray().end());
-		entities.insert(impostors.GetEntityArray().begin(), impostors.GetEntityArray().end());
-		entities.insert(objects.GetEntityArray().begin(), objects.GetEntityArray().end());
-		entities.insert(aabb_objects.GetEntityArray().begin(), aabb_objects.GetEntityArray().end());
-		entities.insert(rigidbodies.GetEntityArray().begin(), rigidbodies.GetEntityArray().end());
-		entities.insert(softbodies.GetEntityArray().begin(), softbodies.GetEntityArray().end());
-		entities.insert(armatures.GetEntityArray().begin(), armatures.GetEntityArray().end());
-		entities.insert(lights.GetEntityArray().begin(), lights.GetEntityArray().end());
-		entities.insert(aabb_lights.GetEntityArray().begin(), aabb_lights.GetEntityArray().end());
-		entities.insert(cameras.GetEntityArray().begin(), cameras.GetEntityArray().end());
-		entities.insert(probes.GetEntityArray().begin(), probes.GetEntityArray().end());
-		entities.insert(aabb_probes.GetEntityArray().begin(), aabb_probes.GetEntityArray().end());
-		entities.insert(forces.GetEntityArray().begin(), forces.GetEntityArray().end());
-		entities.insert(decals.GetEntityArray().begin(), decals.GetEntityArray().end());
-		entities.insert(aabb_decals.GetEntityArray().begin(), aabb_decals.GetEntityArray().end());
-		entities.insert(animations.GetEntityArray().begin(), animations.GetEntityArray().end());
-		entities.insert(animation_datas.GetEntityArray().begin(), animation_datas.GetEntityArray().end());
-		entities.insert(emitters.GetEntityArray().begin(), emitters.GetEntityArray().end());
-		entities.insert(hairs.GetEntityArray().begin(), hairs.GetEntityArray().end());
-		entities.insert(weathers.GetEntityArray().begin(), weathers.GetEntityArray().end());
-		entities.insert(sounds.GetEntityArray().begin(), sounds.GetEntityArray().end());
-		entities.insert(inverse_kinematics.GetEntityArray().begin(), inverse_kinematics.GetEntityArray().end());
-		entities.insert(springs.GetEntityArray().begin(), springs.GetEntityArray().end());
+		for (auto& entry : componentLibrary.entries)
+		{
+			entities.insert(entry.second.component_manager->GetEntityArray().begin(), entry.second.component_manager->GetEntityArray().end());
+		}
 	}
 
 	void Scene::Entity_Remove(Entity entity, bool recursive)
@@ -2152,34 +2182,10 @@ namespace wi::scene
 			}
 		}
 
-		names.Remove(entity);
-		layers.Remove(entity);
-		transforms.Remove(entity);
-		hierarchy.Remove(entity);
-		materials.Remove(entity);
-		meshes.Remove(entity);
-		impostors.Remove(entity);
-		objects.Remove(entity);
-		aabb_objects.Remove(entity);
-		rigidbodies.Remove(entity);
-		softbodies.Remove(entity);
-		armatures.Remove(entity);
-		lights.Remove(entity);
-		aabb_lights.Remove(entity);
-		cameras.Remove(entity);
-		probes.Remove(entity);
-		aabb_probes.Remove(entity);
-		forces.Remove(entity);
-		decals.Remove(entity);
-		aabb_decals.Remove(entity);
-		animations.Remove(entity);
-		animation_datas.Remove(entity);
-		emitters.Remove(entity);
-		hairs.Remove(entity);
-		weathers.Remove(entity);
-		sounds.Remove(entity);
-		inverse_kinematics.Remove(entity);
-		springs.Remove(entity);
+		for (auto& entry : componentLibrary.entries)
+		{
+			entry.second.component_manager->Remove(entity);
+		}
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)
 	{
@@ -2445,7 +2451,6 @@ namespace wi::scene
 		const std::string& name
 	)
 	{
-		// 1) Create an ObjectComponent, this can be used to instance a mesh:
 		Entity entity = CreateEntity();
 
 		if (!name.empty())
@@ -2461,19 +2466,10 @@ namespace wi::scene
 
 		ObjectComponent& object = objects.Create(entity);
 
-		// 2) Create a mesh, this will contain vertex buffers:
-		//	Here a separate mesh entity is created, to allow efficient instancing (not duplicating mesh data when duplicating objects)
-		Entity entity_mesh_material = CreateEntity();
-
-		if (!name.empty())
-		{
-			names.Create(entity_mesh_material) = name + "_mesh_material";
-		}
-
-		MeshComponent& mesh = meshes.Create(entity_mesh_material);
+		MeshComponent& mesh = meshes.Create(entity);
 
 		// object references the mesh entity (there can be multiple objects referencing one mesh):
-		object.meshID = entity_mesh_material;
+		object.meshID = entity;
 
 		mesh.vertex_positions = {
 			// -Z
@@ -2589,8 +2585,8 @@ namespace wi::scene
 		// Subset maps a part of the mesh to a material:
 		MeshComponent::MeshSubset& subset = mesh.subsets.emplace_back();
 		subset.indexCount = uint32_t(mesh.indices.size());
-		materials.Create(entity_mesh_material);
-		subset.materialID = entity_mesh_material; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
+		materials.Create(entity);
+		subset.materialID = entity; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
 
 		// vertex buffer GPU data will be packed and uploaded here:
 		mesh.CreateRenderData();
@@ -2601,7 +2597,6 @@ namespace wi::scene
 		const std::string& name
 	)
 	{
-		// 1) Create an ObjectComponent, this can be used to instance a mesh:
 		Entity entity = CreateEntity();
 
 		if (!name.empty())
@@ -2617,19 +2612,10 @@ namespace wi::scene
 
 		ObjectComponent& object = objects.Create(entity);
 
-		// 2) Create a mesh, this will contain vertex buffers:
-		//	Here a separate mesh entity is created, to allow efficient instancing (not duplicating mesh data when duplicating objects)
-		Entity entity_mesh_material = CreateEntity();
-
-		if (!name.empty())
-		{
-			names.Create(entity_mesh_material) = name + "_mesh_material";
-		}
-
-		MeshComponent& mesh = meshes.Create(entity_mesh_material);
+		MeshComponent& mesh = meshes.Create(entity);
 
 		// object references the mesh entity (there can be multiple objects referencing one mesh):
-		object.meshID = entity_mesh_material;
+		object.meshID = entity;
 
 		mesh.vertex_positions = {
 			// +Y
@@ -2660,8 +2646,8 @@ namespace wi::scene
 		// Subset maps a part of the mesh to a material:
 		MeshComponent::MeshSubset& subset = mesh.subsets.emplace_back();
 		subset.indexCount = uint32_t(mesh.indices.size());
-		materials.Create(entity_mesh_material);
-		subset.materialID = entity_mesh_material; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
+		materials.Create(entity);
+		subset.materialID = entity; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
 
 		// vertex buffer GPU data will be packed and uploaded here:
 		mesh.CreateRenderData();
@@ -2737,55 +2723,111 @@ namespace wi::scene
 		for (size_t i = 0; i < animations.GetCount(); ++i)
 		{
 			AnimationComponent& animation = animations[i];
-			if (!animation.IsPlaying() && animation.timer == 0.0f)
+			if (!animation.IsPlaying() && animation.last_update_time == animation.timer)
 			{
 				continue;
 			}
+			animation.last_update_time = animation.timer;
 
 			for (const AnimationComponent::AnimationChannel& channel : animation.channels)
 			{
 				assert(channel.samplerIndex < (int)animation.samplers.size());
-				AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
-				if (sampler.data == INVALID_ENTITY)
-				{
-					// backwards-compatibility mode
-					sampler.data = CreateEntity();
-					animation_datas.Create(sampler.data) = sampler.backwards_compatibility_data;
-					sampler.backwards_compatibility_data.keyframe_times.clear();
-					sampler.backwards_compatibility_data.keyframe_data.clear();
-				}
+				const AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
 				const AnimationDataComponent* animationdata = animation_datas.GetComponent(sampler.data);
 				if (animationdata == nullptr)
 				{
 					continue;
 				}
 
-				int keyLeft = 0;
-				int keyRight = 0;
+				const AnimationComponent::AnimationChannel::PathDataType path_data_type = channel.GetPathDataType();
 
-				if (animationdata->keyframe_times.back() < animation.timer)
+				float timeFirst = std::numeric_limits<float>::max();
+				float timeLast = std::numeric_limits<float>::min();
+				int keyLeft = 0;	float timeLeft = std::numeric_limits<float>::min();
+				int keyRight = 0;	float timeRight = std::numeric_limits<float>::max();
+
+				// search for usable keyframes:
+				for (int k = 0; k < (int)animationdata->keyframe_times.size(); ++k)
 				{
-					// Rightmost keyframe is already outside animation, so just snap to last keyframe:
-					keyLeft = keyRight = (int)animationdata->keyframe_times.size() - 1;
+					const float time = animationdata->keyframe_times[k];
+					if (time < timeFirst)
+					{
+						timeFirst = time;
+					}
+					if (time > timeLast)
+					{
+						timeLast = time;
+					}
+					if (time <= animation.timer && time > timeLeft)
+					{
+						timeLeft = time;
+						keyLeft = k;
+					}
+					if (time >= animation.timer && time < timeRight)
+					{
+						timeRight = time;
+						keyRight = k;
+					}
+				}
+				if (path_data_type != AnimationComponent::AnimationChannel::PathDataType::Event)
+				{
+					if (animation.timer < timeFirst || animation.timer > timeLast)
+					{
+						// timer is outside range of keyframes, don't update animation:
+						continue;
+					}
 				}
 				else
 				{
-					// Search for the right keyframe (greater/equal to anim time):
-					while (animationdata->keyframe_times[keyRight++] < animation.timer) {}
-					keyRight--;
-
-					// Left keyframe is just near right:
-					keyLeft = std::max(0, keyRight - 1);
+					timeLeft = std::max(timeLeft, timeFirst);
+					timeRight = std::max(timeRight, timeLast);
 				}
 
-				float left = animationdata->keyframe_times[keyLeft];
+				const float left = animationdata->keyframe_times[keyLeft];
+				const float right = animationdata->keyframe_times[keyRight];
 
-				TransformComponent transform;
+				union Interpolator
+				{
+					XMFLOAT4 f4 = {};
+					XMFLOAT3 f3;
+					XMFLOAT2 f2;
+					float f;
+				} interpolator;
 
 				TransformComponent* target_transform = nullptr;
 				MeshComponent* target_mesh = nullptr;
+				LightComponent* target_light = nullptr;
+				SoundComponent* target_sound = nullptr;
+				EmittedParticleSystem* target_emitter = nullptr;
+				CameraComponent* target_camera = nullptr;
+				ScriptComponent* target_script = nullptr;
+				MaterialComponent* target_material = nullptr;
 
-				if (channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS)
+				if (
+					channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION ||
+					channel.path == AnimationComponent::AnimationChannel::Path::ROTATION ||
+					channel.path == AnimationComponent::AnimationChannel::Path::SCALE
+					)
+				{
+					target_transform = transforms.GetComponent(channel.target);
+					if (target_transform == nullptr)
+						continue;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+						interpolator.f3 = target_transform->translation_local;
+						break;
+					case AnimationComponent::AnimationChannel::Path::ROTATION:
+						interpolator.f4 = target_transform->rotation_local;
+						break;
+					case AnimationComponent::AnimationChannel::Path::SCALE:
+						interpolator.f3 = target_transform->scale_local;
+						break;
+					default:
+						break;
+					}
+				}
+				else if (channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS)
 				{
 					ObjectComponent* object = objects.GetComponent(channel.target);
 					if (object == nullptr)
@@ -2793,227 +2835,554 @@ namespace wi::scene
 					target_mesh = meshes.GetComponent(object->meshID);
 					if (target_mesh == nullptr)
 						continue;
-					animation.morph_weights_temp.resize(target_mesh->targets.size());
+					animation.morph_weights_temp.resize(target_mesh->morph_targets.size());
+				}
+				else if (
+					channel.path >= AnimationComponent::AnimationChannel::Path::LIGHT_COLOR &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_LIGHT_RANGE_END
+					)
+				{
+					target_light = lights.GetComponent(channel.target);
+					if (target_light == nullptr)
+						continue;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+						interpolator.f3 = target_light->color;
+						break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+						interpolator.f = target_light->intensity;
+						break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+						interpolator.f = target_light->range;
+						break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+						interpolator.f = target_light->innerConeAngle;
+						break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+						interpolator.f = target_light->outerConeAngle;
+						break;
+					default:
+						break;
+					}
+				}
+				else if (
+					channel.path >= AnimationComponent::AnimationChannel::Path::SOUND_PLAY &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_SOUND_RANGE_END
+					)
+				{
+					target_sound = sounds.GetComponent(channel.target);
+					if (target_sound == nullptr)
+						continue;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
+						interpolator.f = target_sound->volume;
+						break;
+					default:
+						break;
+					}
+				}
+				else if (
+					channel.path >= AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_EMITTER_RANGE_END
+					)
+				{
+					target_emitter = emitters.GetComponent(channel.target);
+					if (target_emitter == nullptr)
+						continue;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
+						interpolator.f = target_emitter->count;
+						break;
+					default:
+						break;
+					}
+				}
+				else if (
+					channel.path >= AnimationComponent::AnimationChannel::Path::CAMERA_FOV &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_CAMERA_RANGE_END
+					)
+				{
+					target_camera = cameras.GetComponent(channel.target);
+					if (target_camera == nullptr)
+						continue;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
+						interpolator.f = target_camera->fov;
+						break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
+						interpolator.f = target_camera->focal_length;
+						break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
+						interpolator.f = target_camera->aperture_size;
+						break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
+						interpolator.f2 = target_camera->aperture_shape;
+						break;
+					default:
+						break;
+					}
+				}
+				else if (
+					channel.path >= AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_SCRIPT_RANGE_END
+					)
+				{
+					target_script = scripts.GetComponent(channel.target);
+					if (target_script == nullptr)
+						continue;
+				}
+				else if (
+					channel.path >= AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR &&
+					channel.path < AnimationComponent::AnimationChannel::Path::_MATERIAL_RANGE_END
+					)
+				{
+					target_material = materials.GetComponent(channel.target);
+					if (target_material == nullptr)
+						continue;
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
+						interpolator.f4 = target_material->baseColor;
+						break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
+						interpolator.f4 = target_material->emissiveColor;
+						break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
+						interpolator.f = target_material->roughness;
+						break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
+						interpolator.f = target_material->metalness;
+						break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
+						interpolator.f = target_material->reflectance;
+						break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
+						interpolator.f4 = target_material->texMulAdd;
+						break;
+					default:
+						break;
+					}
 				}
 				else
 				{
-					target_transform = transforms.GetComponent(channel.target);
-					if (target_transform == nullptr)
-						continue;
-					transform = *target_transform;
+					assert(0);
+					continue;
 				}
 
-				switch (sampler.mode)
+				if (path_data_type == AnimationComponent::AnimationChannel::PathDataType::Event)
 				{
-				default:
-				case AnimationComponent::AnimationSampler::Mode::STEP:
+					// No path data, only event trigger:
+					if (keyLeft == channel.next_event && animation.timer >= timeLeft)
+					{
+						channel.next_event++;
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::SOUND_PLAY:
+							target_sound->Play();
+							break;
+						case AnimationComponent::AnimationChannel::Path::SOUND_STOP:
+							target_sound->Stop();
+							break;
+						case AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY:
+							target_script->Play();
+							break;
+						case AnimationComponent::AnimationChannel::Path::SCRIPT_STOP:
+							target_script->Stop();
+							break;
+						default:
+							break;
+						}
+					}
+				}
+				else
 				{
-					// Nearest neighbor method (snap to left):
-					switch (channel.path)
+					// Path data interpolation:
+					switch (sampler.mode)
 					{
 					default:
-					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+					case AnimationComponent::AnimationSampler::Mode::STEP:
 					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						transform.translation_local = ((const XMFLOAT3*)animationdata->keyframe_data.data())[keyLeft];
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::ROTATION:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
-						transform.rotation_local = ((const XMFLOAT4*)animationdata->keyframe_data.data())[keyLeft];
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::SCALE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						transform.scale_local = ((const XMFLOAT3*)animationdata->keyframe_data.data())[keyLeft];
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
-						for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+						// Nearest neighbor method:
+						const int key = wi::math::InverseLerp(timeLeft, timeRight, animation.timer) > 0.5f ? keyRight : keyLeft;
+						switch (path_data_type)
 						{
-							animation.morph_weights_temp[j] = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
+						default:
+						case AnimationComponent::AnimationChannel::PathDataType::Float:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+							interpolator.f = animationdata->keyframe_data[key];
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float2:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2);
+							interpolator.f2 = ((const XMFLOAT2*)animationdata->keyframe_data.data())[key];
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float3:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+							interpolator.f3 = ((const XMFLOAT3*)animationdata->keyframe_data.data())[key];
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float4:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
+							interpolator.f4 = ((const XMFLOAT4*)animationdata->keyframe_data.data())[key];
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Weights:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
+							for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+							{
+								animation.morph_weights_temp[j] = animationdata->keyframe_data[key * animation.morph_weights_temp.size() + j];
+							}
+						}
+						break;
 						}
 					}
 					break;
-					}
-				}
-				break;
-				case AnimationComponent::AnimationSampler::Mode::LINEAR:
-				{
-					// Linear interpolation method:
-					float t;
-					if (keyLeft == keyRight)
+					case AnimationComponent::AnimationSampler::Mode::LINEAR:
 					{
-						t = 0;
-					}
-					else
-					{
-						float right = animationdata->keyframe_times[keyRight];
-						t = (animation.timer - left) / (right - left);
-					}
-
-					switch (channel.path)
-					{
-					default:
-					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
-						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-						XMStoreFloat3(&transform.translation_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::ROTATION:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
-						const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
-						XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
-						XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
-						vAnim = XMQuaternionNormalize(vAnim);
-						XMStoreFloat4(&transform.rotation_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::SCALE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
-						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-						XMStoreFloat3(&transform.scale_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
-						for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+						// Linear interpolation method:
+						float t;
+						if (keyLeft == keyRight)
 						{
-							float vLeft = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
-							float vRight = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
+							t = 0;
+						}
+						else
+						{
+							t = (animation.timer - left) / (right - left);
+						}
+
+						switch (path_data_type)
+						{
+						default:
+						case AnimationComponent::AnimationChannel::PathDataType::Float:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+							float vLeft = animationdata->keyframe_data[keyLeft];
+							float vRight = animationdata->keyframe_data[keyRight];
 							float vAnim = wi::math::Lerp(vLeft, vRight, t);
-							animation.morph_weights_temp[j] = vAnim;
+							interpolator.f = vAnim;
 						}
-					}
-					break;
-					}
-				}
-				break;
-				case AnimationComponent::AnimationSampler::Mode::CUBICSPLINE:
-				{
-					// Cubic Spline interpolation method:
-					float t;
-					if (keyLeft == keyRight)
-					{
-						t = 0;
-					}
-					else
-					{
-						float right = animationdata->keyframe_times[keyRight];
-						t = (animation.timer - left) / (right - left);
-					}
-
-					const float t2 = t * t;
-					const float t3 = t2 * t;
-
-					switch (channel.path)
-					{
-					default:
-					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
-						XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
-						XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
-						XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-						XMStoreFloat3(&transform.translation_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::ROTATION:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4 * 3);
-						const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft * 3 + 1]);
-						XMVECTOR vLeftTanOut = dt * XMLoadFloat4(&data[keyLeft * 3 + 2]);
-						XMVECTOR vRightTanIn = dt * XMLoadFloat4(&data[keyRight * 3 + 0]);
-						XMVECTOR vRight = XMLoadFloat4(&data[keyRight * 3 + 1]);
-						XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-						vAnim = XMQuaternionNormalize(vAnim);
-						XMStoreFloat4(&transform.rotation_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::SCALE:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
-						XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
-						XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
-						XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-						XMStoreFloat3(&transform.scale_local, vAnim);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::WEIGHTS:
-					{
-						assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size() * 3);
-						for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float2:
 						{
-							float vLeft = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 1];
-							float vLeftTanOut = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 2];
-							float vRightTanIn = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 0];
-							float vRight = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 1];
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2);
+							const XMFLOAT2* data = (const XMFLOAT2*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat2(&data[keyLeft]);
+							XMVECTOR vRight = XMLoadFloat2(&data[keyRight]);
+							XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
+							XMStoreFloat2(&interpolator.f2, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float3:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+							const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
+							XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
+							XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
+							XMStoreFloat3(&interpolator.f3, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float4:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
+							const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
+							XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
+							XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
+							vAnim = XMQuaternionNormalize(vAnim);
+							XMStoreFloat4(&interpolator.f4, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Weights:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
+							for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+							{
+								float vLeft = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
+								float vRight = animationdata->keyframe_data[keyRight * animation.morph_weights_temp.size() + j];
+								float vAnim = wi::math::Lerp(vLeft, vRight, t);
+								animation.morph_weights_temp[j] = vAnim;
+							}
+						}
+						break;
+						}
+					}
+					break;
+					case AnimationComponent::AnimationSampler::Mode::CUBICSPLINE:
+					{
+						// Cubic Spline interpolation method:
+						float t;
+						if (keyLeft == keyRight)
+						{
+							t = 0;
+						}
+						else
+						{
+							t = (animation.timer - left) / (right - left);
+						}
+
+						const float t2 = t * t;
+						const float t3 = t2 * t;
+
+						switch (path_data_type)
+						{
+						default:
+						case AnimationComponent::AnimationChannel::PathDataType::Float:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+							float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
+							float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
+							float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
+							float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
 							float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-							animation.morph_weights_temp[j] = vAnim;
+							interpolator.f = vAnim;
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float2:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2 * 3);
+							const XMFLOAT2* data = (const XMFLOAT2*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat2(&data[keyLeft * 3 + 1]);
+							XMVECTOR vLeftTanOut = dt * XMLoadFloat2(&data[keyLeft * 3 + 2]);
+							XMVECTOR vRightTanIn = dt * XMLoadFloat2(&data[keyRight * 3 + 0]);
+							XMVECTOR vRight = XMLoadFloat2(&data[keyRight * 3 + 1]);
+							XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+							XMStoreFloat2(&interpolator.f2, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float3:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
+							const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
+							XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
+							XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
+							XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
+							XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+							XMStoreFloat3(&interpolator.f3, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Float4:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4 * 3);
+							const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
+							XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft * 3 + 1]);
+							XMVECTOR vLeftTanOut = dt * XMLoadFloat4(&data[keyLeft * 3 + 2]);
+							XMVECTOR vRightTanIn = dt * XMLoadFloat4(&data[keyRight * 3 + 0]);
+							XMVECTOR vRight = XMLoadFloat4(&data[keyRight * 3 + 1]);
+							XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+							vAnim = XMQuaternionNormalize(vAnim);
+							XMStoreFloat4(&interpolator.f4, vAnim);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::PathDataType::Weights:
+						{
+							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size() * 3);
+							for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+							{
+								float vLeft = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 1];
+								float vLeftTanOut = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 2];
+								float vRightTanIn = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 0];
+								float vRight = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 1];
+								float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+								animation.morph_weights_temp[j] = vAnim;
+							}
+						}
+						break;
 						}
 					}
 					break;
 					}
 				}
-				break;
-				}
+
+				// The interpolated raw values will be blended on top of component values:
+				const float t = animation.amount;
 
 				if (target_transform != nullptr)
 				{
 					target_transform->SetDirty();
 
-					const float t = animation.amount;
-
-					const XMVECTOR aS = XMLoadFloat3(&target_transform->scale_local);
-					const XMVECTOR aR = XMLoadFloat4(&target_transform->rotation_local);
-					const XMVECTOR aT = XMLoadFloat3(&target_transform->translation_local);
-
-					const XMVECTOR bS = XMLoadFloat3(&transform.scale_local);
-					const XMVECTOR bR = XMLoadFloat4(&transform.rotation_local);
-					const XMVECTOR bT = XMLoadFloat3(&transform.translation_local);
-
-					const XMVECTOR S = XMVectorLerp(aS, bS, t);
-					const XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
-					const XMVECTOR T = XMVectorLerp(aT, bT, t);
-
-					XMStoreFloat3(&target_transform->scale_local, S);
-					XMStoreFloat4(&target_transform->rotation_local, R);
-					XMStoreFloat3(&target_transform->translation_local, T);
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+					{
+						const XMVECTOR aT = XMLoadFloat3(&target_transform->translation_local);
+						const XMVECTOR bT = XMLoadFloat3(&interpolator.f3);
+						const XMVECTOR T = XMVectorLerp(aT, bT, t);
+						XMStoreFloat3(&target_transform->translation_local, T);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::ROTATION:
+					{
+						const XMVECTOR aR = XMLoadFloat4(&target_transform->rotation_local);
+						const XMVECTOR bR = XMLoadFloat4(&interpolator.f4);
+						const XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
+						XMStoreFloat4(&target_transform->rotation_local, R);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::SCALE:
+					{
+						const XMVECTOR aS = XMLoadFloat3(&target_transform->scale_local);
+						const XMVECTOR bS = XMLoadFloat3(&interpolator.f3);
+						const XMVECTOR S = XMVectorLerp(aS, bS, t);
+						XMStoreFloat3(&target_transform->scale_local, S);
+					}
+					break;
+					default:
+						break;
+					}
 				}
 
 				if (target_mesh != nullptr)
 				{
-					const float t = animation.amount;
-
-					for (size_t j = 0; j < target_mesh->targets.size(); ++j)
+					for (size_t j = 0; j < target_mesh->morph_targets.size(); ++j)
 					{
-						target_mesh->targets[j].weight = wi::math::Lerp(target_mesh->targets[j].weight, animation.morph_weights_temp[j], t);
+						target_mesh->morph_targets[j].weight = wi::math::Lerp(target_mesh->morph_targets[j].weight, animation.morph_weights_temp[j], t);
 					}
 
 					target_mesh->dirty_morph = true;
+				}
+
+				if (target_light != nullptr)
+				{
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+					{
+						target_light->color = wi::math::Lerp(target_light->color, interpolator.f3, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+					{
+						target_light->intensity = wi::math::Lerp(target_light->intensity, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+					{
+						target_light->range = wi::math::Lerp(target_light->range, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+					{
+						target_light->innerConeAngle = wi::math::Lerp(target_light->innerConeAngle, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+					{
+						target_light->outerConeAngle = wi::math::Lerp(target_light->outerConeAngle, interpolator.f, t);
+					}
+					break;
+					default:
+						break;
+					}
+				}
+
+				if (target_sound != nullptr)
+				{
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
+					{
+						target_sound->volume = wi::math::Lerp(target_sound->volume, interpolator.f, t);
+					}
+					break;
+					default:
+						break;
+					}
+				}
+
+				if (target_emitter != nullptr)
+				{
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
+					{
+						target_emitter->count = wi::math::Lerp(target_emitter->count, interpolator.f, t);
+					}
+					break;
+					default:
+						break;
+					}
+				}
+
+				if (target_camera != nullptr)
+				{
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
+					{
+						target_camera->fov = wi::math::Lerp(target_camera->fov, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
+					{
+						target_camera->focal_length = wi::math::Lerp(target_camera->focal_length, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
+					{
+						target_camera->aperture_size = wi::math::Lerp(target_camera->aperture_size, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
+					{
+						target_camera->aperture_shape = wi::math::Lerp(target_camera->aperture_shape, interpolator.f2, t);
+					}
+					break;
+					default:
+						break;
+					}
+				}
+
+				if (target_material != nullptr)
+				{
+					target_material->SetDirty();
+
+					switch (channel.path)
+					{
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
+					{
+						target_material->baseColor = wi::math::Lerp(target_material->baseColor, interpolator.f4, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
+					{
+						target_material->baseColor = wi::math::Lerp(target_material->emissiveColor, interpolator.f4, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
+					{
+						target_material->roughness = wi::math::Lerp(target_material->roughness, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
+					{
+						target_material->metalness = wi::math::Lerp(target_material->metalness, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
+					{
+						target_material->reflectance = wi::math::Lerp(target_material->reflectance, interpolator.f, t);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
+					{
+						target_material->texMulAdd = wi::math::Lerp(target_material->texMulAdd, interpolator.f4, t);
+					}
+					break;
+					default:
+						break;
+					}
 				}
 
 			}
@@ -3026,6 +3395,10 @@ namespace wi::scene
 			if (animation.IsLooped() && animation.timer > animation.end)
 			{
 				animation.timer = animation.start;
+				for (auto& channel : animation.channels)
+				{
+					channel.next_event = 0;
+				}
 			}
 		}
 	}
@@ -3093,12 +3466,254 @@ namespace wi::scene
 
 		});
 	}
+	void Scene::RunExpressionUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		for (size_t i = 0; i < expressions.GetCount(); ++i)
+		{
+			ExpressionComponent& expression_mastering = expressions[i];
+
+			// Procedural blink:
+			expression_mastering.blink_timer += expression_mastering.blink_frequency * dt;
+			if (expression_mastering.blink_timer >= 1)
+			{
+				int blink = expression_mastering.presets[(int)ExpressionComponent::Preset::Blink];
+				if (blink >= 0 && blink < expression_mastering.expressions.size())
+				{
+					ExpressionComponent::Expression& expression = expression_mastering.expressions[blink];
+					expression_mastering.blink_count = std::max(1, expression_mastering.blink_count);
+					float one_blink_length = expression_mastering.blink_length * expression_mastering.blink_frequency;
+					float all_blink_length = one_blink_length * (float)expression_mastering.blink_count;
+					float blink_index = std::floor(wi::math::Lerp(0, (float)expression_mastering.blink_count, (expression_mastering.blink_timer - 1) / all_blink_length));
+					float blink_trim = 1 + one_blink_length * blink_index;
+					float blink_state = wi::math::InverseLerp(0, one_blink_length, expression_mastering.blink_timer - blink_trim);
+					if (blink_state < 0.5f)
+					{
+						// closing
+						expression.weight = wi::math::Lerp(0, 1, wi::math::saturate(blink_state * 2));
+					}
+					else
+					{
+						// opening
+						expression.weight = wi::math::Lerp(1, 0, wi::math::saturate((blink_state - 0.5f) * 2));
+					}
+					if (expression_mastering.blink_timer >= 1 + all_blink_length)
+					{
+						expression.weight = 0;
+						expression_mastering.blink_timer = 0;
+					}
+					expression.SetDirty();
+				}
+			}
+
+			// Procedural look:
+			if (expression_mastering.look_timer == 0)
+			{
+				// Roll new random look direction for next look away event:
+				float vertical = wi::random::GetRandom(-1.0f, 1.0f);
+				float horizontal = wi::random::GetRandom(-1.0f, 1.0f);
+				expression_mastering.look_weights[0] = wi::math::saturate(vertical);
+				expression_mastering.look_weights[1] = wi::math::saturate(-vertical);
+				expression_mastering.look_weights[2] = wi::math::saturate(horizontal);
+				expression_mastering.look_weights[3] = wi::math::saturate(-horizontal);
+			}
+			expression_mastering.look_timer += expression_mastering.look_frequency * dt;
+			if (expression_mastering.look_timer >= 1)
+			{
+				int looks[] = {
+					expression_mastering.presets[(int)ExpressionComponent::Preset::LookDown],
+					expression_mastering.presets[(int)ExpressionComponent::Preset::LookUp],
+					expression_mastering.presets[(int)ExpressionComponent::Preset::LookLeft],
+					expression_mastering.presets[(int)ExpressionComponent::Preset::LookRight],
+				};
+				for (int idx = 0; idx<arraysize(looks); ++idx)
+				{
+					int look = looks[idx];
+					const float weight = expression_mastering.look_weights[idx];
+					if (look >= 0 && look < expression_mastering.expressions.size())
+					{
+						ExpressionComponent::Expression& expression = expression_mastering.expressions[look];
+						float look_state = wi::math::InverseLerp(0, expression_mastering.look_length * expression_mastering.look_frequency, expression_mastering.look_timer - 1);
+						if (look_state < 0.25f)
+						{
+							expression.weight = wi::math::Lerp(0, weight, wi::math::saturate(look_state * 4));
+						}
+						else
+						{
+							expression.weight = wi::math::Lerp(weight, 0, wi::math::saturate((look_state - 0.75f) * 4));
+						}
+						expression.SetDirty();
+					}
+				}
+				if (expression_mastering.look_timer >= 1 + expression_mastering.look_length * expression_mastering.look_frequency)
+				{
+					expression_mastering.look_timer = 0;
+				}
+			}
+
+			float overrideMouthBlend = 0;
+			float overrideBlinkBlend = 0;
+			float overrideLookBlend = 0;
+
+			// Pass 1: reset targets that will be modified by expressions:
+			//	Also accumulate override weights
+			for(ExpressionComponent::Expression& expression : expression_mastering.expressions)
+			{
+				const float blend = expression.IsBinary() ? (expression.weight > 0 ? 1 : 0) : expression.weight;
+				if (expression.override_mouth == ExpressionComponent::Override::Block)
+				{
+					overrideMouthBlend += 1;
+				}
+				if (expression.override_mouth == ExpressionComponent::Override::Blend)
+				{
+					overrideMouthBlend += blend;
+				}
+				if (expression.override_blink == ExpressionComponent::Override::Block)
+				{
+					overrideBlinkBlend += 1;
+				}
+				if (expression.override_blink == ExpressionComponent::Override::Blend)
+				{
+					overrideBlinkBlend += blend;
+				}
+				if (expression.override_look == ExpressionComponent::Override::Block)
+				{
+					overrideLookBlend += 1;
+				}
+				if (expression.override_look == ExpressionComponent::Override::Blend)
+				{
+					overrideLookBlend += blend;
+				}
+
+				if (!expression.IsDirty())
+					continue;
+
+				for (const ExpressionComponent::Expression::MorphTargetBinding& morph_target_binding : expression.morph_target_bindings)
+				{
+					MeshComponent* mesh = meshes.GetComponent(morph_target_binding.meshID);
+					if (mesh != nullptr && (int)mesh->morph_targets.size() > morph_target_binding.index)
+					{
+						MeshComponent::MorphTarget& morph_target = mesh->morph_targets[morph_target_binding.index];
+						if (morph_target.weight > 0)
+						{
+							morph_target.weight = 0;
+						}
+					}
+				}
+			}
+
+			// Override weights are factored in:
+			const int mouths[] = {
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Aa],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Ih],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Ou],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Ee],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Oh],
+			};
+			for (int mouth : mouths)
+			{
+				if (mouth >= 0 && mouth < expression_mastering.expressions.size())
+				{
+					ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
+					expression.weight *= 1 - wi::math::saturate(overrideMouthBlend);
+				}
+			}
+			const int blinks[] = {
+				expression_mastering.presets[(int)ExpressionComponent::Preset::Blink],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::BlinkLeft],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::BlinkRight],
+			};
+			for (int blink : blinks)
+			{
+				if (blink >= 0 && blink < expression_mastering.expressions.size())
+				{
+					ExpressionComponent::Expression& expression = expression_mastering.expressions[blink];
+					expression.weight *= 1 - wi::math::saturate(overrideBlinkBlend);
+				}
+			}
+			const int looks[] = {
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookUp],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookDown],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookLeft],
+				expression_mastering.presets[(int)ExpressionComponent::Preset::LookRight],
+			};
+			for (int look : looks)
+			{
+				if (look >= 0 && look < expression_mastering.expressions.size())
+				{
+					ExpressionComponent::Expression& expression = expression_mastering.expressions[look];
+					expression.weight *= 1 - wi::math::saturate(overrideLookBlend);
+				}
+			}
+
+			// Pass 2: apply expressions:
+			for (ExpressionComponent::Expression& expression : expression_mastering.expressions)
+			{
+				if (!expression.IsDirty())
+					continue;
+
+				expression.SetDirty(false);
+				const float blend = expression.IsBinary() ? (expression.weight > 0 ? 1 : 0) : expression.weight;
+
+				for (const ExpressionComponent::Expression::MorphTargetBinding& morph_target_binding : expression.morph_target_bindings)
+				{
+					MeshComponent* mesh = meshes.GetComponent(morph_target_binding.meshID);
+					if (mesh != nullptr && (int)mesh->morph_targets.size() > morph_target_binding.index)
+					{
+						MeshComponent::MorphTarget& morph_target = mesh->morph_targets[morph_target_binding.index];
+						morph_target.weight = wi::math::Lerp(morph_target.weight, morph_target_binding.weight, blend);
+						mesh->dirty_morph = true;
+					}
+				}
+			}
+		}
+	}
+	void Scene::RunColliderUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		for (size_t i = 0; i < colliders.GetCount(); ++i)
+		{
+			ColliderComponent& collider = colliders[i];
+			Entity entity = colliders.GetEntity(i);
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			if (transform == nullptr)
+				continue;
+
+			XMFLOAT3 scale = transform->GetScale();
+			collider.sphere.radius = collider.radius * std::max(scale.x, std::max(scale.y, scale.z));
+			collider.capsule.radius = collider.sphere.radius;
+
+			XMMATRIX W = XMLoadFloat4x4(&transform->world);
+			XMVECTOR offset = XMLoadFloat3(&collider.offset);
+			XMVECTOR tail = XMLoadFloat3(&collider.tail);
+			offset = XMVector3Transform(offset, W);
+			tail = XMVector3Transform(tail, W);
+
+			XMStoreFloat3(&collider.sphere.center, offset);
+			XMVECTOR N = XMVector3Normalize(offset - tail);
+			offset += N * collider.capsule.radius;
+			tail -= N * collider.capsule.radius;
+			XMStoreFloat3(&collider.capsule.base, offset);
+			XMStoreFloat3(&collider.capsule.tip, tail);
+
+			if (collider.shape == ColliderComponent::Shape::Plane)
+			{
+				collider.planeOrigin = collider.sphere.center;
+				XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
+				XMStoreFloat3(&collider.planeNormal, N);
+
+				XMMATRIX PLANE = XMMatrixScaling(collider.radius, 1, collider.radius);
+				PLANE = PLANE * XMMatrixTranslationFromVector(XMLoadFloat3(&collider.offset));
+				PLANE = PLANE * W;
+				PLANE = XMMatrixInverse(nullptr, PLANE);
+				XMStoreFloat4x4(&collider.planeProjection, PLANE);
+			}
+		}
+	}
 	void Scene::RunSpringUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		static float time = 0;
 		time += dt;
 		const XMVECTOR windDir = XMLoadFloat3(&weather.windDirection);
-		const XMVECTOR gravity = XMVectorSet(0, -9.8f, 0, 0);
 
 		for (size_t i = 0; i < springs.GetCount(); ++i)
 		{
@@ -3108,81 +3723,204 @@ namespace wi::scene
 				continue;
 			}
 			Entity entity = springs.GetEntity(i);
-			TransformComponent* transform = transforms.GetComponent(entity);
-			if (transform == nullptr)
+			size_t transform_index = transforms.GetIndex(entity);
+			if (transform_index == ~0ull)
 			{
-				assert(0);
 				continue;
 			}
+			TransformComponent& transform = transforms[transform_index];
 
-			if (spring.IsResetting())
-			{
-				spring.Reset(false);
-				spring.center_of_mass = transform->GetPosition();
-				spring.velocity = XMFLOAT3(0, 0, 0);
-			}
+			//XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
+			XMVECTOR rotation_parent_world = XMQuaternionIdentity();
+			XMMATRIX parentWorldMatrix = XMMatrixIdentity();
 
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
-			TransformComponent* parent_transform = hier == nullptr ? nullptr : transforms.GetComponent(hier->parentID);
-			if (parent_transform != nullptr)
+			size_t parent_index = hier == nullptr ? ~0ull : transforms.GetIndex(hier->parentID);
+			if (parent_index != ~0ull)
 			{
 				// Spring hierarchy resolve depends on spring component order!
 				//	It works best when parent spring is located before child spring!
 				//	It will work the other way, but results will be less convincing
-				transform->UpdateTransform_Parented(*parent_transform);
+				const TransformComponent& parent_transform = transforms[parent_index];
+				transform.UpdateTransform_Parented(parent_transform);
+				rotation_parent_world = parent_transform.GetRotationV();
+				parentWorldMatrix = XMLoadFloat4x4(&parent_transform.world);
 			}
 
-			const XMVECTOR position_current = transform->GetPositionV();
-			XMVECTOR position_prev = XMLoadFloat3(&spring.center_of_mass);
-			XMVECTOR force = (position_current - position_prev) * spring.stiffness;
+			XMVECTOR position_root = transform.GetPositionV();
+			//XMVECTOR rotation_combined = XMQuaternionNormalize(XMQuaternionMultiply(rotation_parent_world, rotation_local));
 
-			if (spring.wind_affection > 0)
+			if (spring.IsResetting() && dt > 0)
 			{
-				force += std::sin(time * weather.windSpeed + XMVectorGetX(XMVector3Dot(position_current, windDir))) * windDir * spring.wind_affection;
+				spring.Reset(false);
+
+				XMVECTOR tail = position_root + XMVectorSet(0, 1, 0, 0);
+				// Search for child to find the rest pose tail position:
+				bool child_found = false;
+				for (size_t j = 0; j < hierarchy.GetCount(); ++j)
+				{
+					const HierarchyComponent& hier = hierarchy[j];
+					Entity child = hierarchy.GetEntity(j);
+					if (hier.parentID == entity && transforms.Contains(child))
+					{
+						const TransformComponent& child_transform = *transforms.GetComponent(child);
+						tail = child_transform.GetPositionV();
+						child_found = true;
+						break;
+					}
+				}
+				if (!child_found)
+				{
+					// No child, try to guess tail position compared to parent (if it has parent):
+					const HierarchyComponent* hier = hierarchy.GetComponent(entity);
+					if (hier != nullptr && transforms.Contains(hier->parentID))
+					{
+						const TransformComponent& parent_transform = *transforms.GetComponent(hier->parentID);
+						XMVECTOR ab = position_root - parent_transform.GetPositionV();
+						tail = position_root + ab;
+					}
+				}
+				XMVECTOR axis = tail - position_root;
+				XMVECTOR length = XMVector3Length(axis);
+				//axis = XMVector3Rotate(axis, XMQuaternionNormalize(XMQuaternionInverse(rotation_combined)));
+				axis /= length;
+				XMStoreFloat3(&spring.boneAxis, axis);
+				XMStoreFloat3(&spring.currentTail, tail);
+				spring.prevTail = spring.currentTail;
+				spring.boneLength = XMVectorGetX(length);
+			}
+
+			XMVECTOR boneAxis = XMLoadFloat3(&spring.boneAxis);
+			//boneAxis = XMVector3Normalize(XMVector3Rotate(boneAxis, rotation_combined));
+
+			const float boneLength = spring.boneLength;
+			const float dragForce = spring.dragForce;
+			const float stiffnessForce = spring.stiffnessForce;
+			const XMVECTOR gravityDir = XMLoadFloat3(&spring.gravityDir);
+			const float gravityPower = spring.gravityPower;
+
+#if 0
+			// Debug axis:
+			wi::renderer::RenderableLine line;
+			line.color_start = line.color_end = XMFLOAT4(1, 1, 0, 1);
+			XMStoreFloat3(&line.start, position_root);
+			XMStoreFloat3(&line.end, position_root + boneAxis * boneLength);
+			wi::renderer::DrawLine(line);
+#endif
+
+			const XMVECTOR tail_current = XMLoadFloat3(&spring.currentTail);
+			const XMVECTOR tail_prev = XMLoadFloat3(&spring.prevTail);
+
+			XMVECTOR inertia = (tail_current - tail_prev) * (1 - dragForce);
+			XMVECTOR stiffness = boneAxis * stiffnessForce;
+			XMVECTOR external = XMVectorZero();
+
+			if (spring.windForce > 0)
+			{
+				external += std::sin(time * weather.windSpeed + XMVectorGetX(XMVector3Dot(tail_current, windDir))) * windDir * spring.windForce;
 			}
 			if (spring.IsGravityEnabled())
 			{
-				force += gravity;
+				external += gravityDir * gravityPower;
 			}
 
-			XMVECTOR velocity = XMLoadFloat3(&spring.velocity);
-			velocity += force * dt;
-			XMVECTOR position_target = position_prev + velocity * dt;
+			XMVECTOR tail_next = tail_current + inertia + dt * (stiffness + external);
+			XMVECTOR to_tail = XMVector3Normalize(tail_next - position_root);
 
-			if (parent_transform != nullptr)
+			if (!spring.IsStretchEnabled())
 			{
-				const XMVECTOR position_parent = parent_transform->GetPositionV();
-				const XMVECTOR parent_to_child = position_current - position_parent;
-				const XMVECTOR parent_to_target = position_target - position_parent;
+				// Limit offset to keep distance from parent:
+				tail_next = position_root + to_tail * boneLength;
+			}
 
-				if (!spring.IsStretchEnabled())
+#if 1
+			// Collider checks:
+			//	apply scaling to radius:
+			XMFLOAT3 scale = transform.GetScale();
+			const float hitRadius = spring.hitRadius * std::max(scale.x, std::max(scale.y, scale.z));
+
+			for (size_t collider_index = 0; collider_index < colliders.GetCount(); ++collider_index)
+			{
+				const ColliderComponent& collider = colliders[collider_index];
+
+				wi::primitive::Sphere tail_sphere;
+				XMStoreFloat3(&tail_sphere.center, tail_next); // tail_sphere center can change within loop!
+				tail_sphere.radius = hitRadius;
+				float dist = 0;
+				XMFLOAT3 direction = {};
+				switch (collider.shape)
 				{
-					// Limit offset to keep distance from parent:
-					const XMVECTOR len = XMVector3Length(parent_to_child);
-					position_target = position_parent + XMVector3Normalize(parent_to_target) * len;
+				default:
+				case ColliderComponent::Shape::Sphere:
+					tail_sphere.intersects(collider.sphere, dist, direction);
+					break;
+				case ColliderComponent::Shape::Capsule:
+					tail_sphere.intersects(collider.capsule, dist, direction);
+					break;
+				case ColliderComponent::Shape::Plane:
+					dist = wi::math::GetPlanePointDistance(XMLoadFloat3(&collider.planeOrigin), XMLoadFloat3(&collider.planeNormal), tail_next);
+					direction = collider.planeNormal;
+					if (dist < 0)
+					{
+						direction.x *= -1;
+						direction.y *= -1;
+						direction.z *= -1;
+						dist = std::abs(dist);
+					}
+					dist = dist - tail_sphere.radius;
+					if (dist < 0)
+					{
+						XMMATRIX planeProjection = XMLoadFloat4x4(&collider.planeProjection);
+						XMVECTOR clipSpacePos = XMVector3Transform(tail_next, planeProjection);
+						XMVECTOR uvw = clipSpacePos * XMVectorSet(0.5f, -0.5f, 0.5f, 1) + XMVectorSet(0.5f, 0.5f, 0.5f, 0);
+						XMVECTOR uvw_sat = XMVectorSaturate(uvw);
+						if (std::abs(XMVectorGetX(uvw) - XMVectorGetX(uvw_sat)) > std::numeric_limits<float>::epsilon())
+							dist = 1; // force no collision
+						else if (std::abs(XMVectorGetY(uvw) - XMVectorGetY(uvw_sat)) > std::numeric_limits<float>::epsilon())
+							dist = 1; // force no collision
+						else if (std::abs(XMVectorGetZ(uvw) - XMVectorGetZ(uvw_sat)) > std::numeric_limits<float>::epsilon())
+							dist = 1; // force no collision
+					}
+					break;
 				}
 
-				// Parent rotation to point to new child position:
-				const XMVECTOR dir_parent_to_child = XMVector3Normalize(parent_to_child);
-				const XMVECTOR dir_parent_to_target = XMVector3Normalize(parent_to_target);
-				const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_child, dir_parent_to_target));
-				const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_child, dir_parent_to_target))); // don't use std::acos!
-				const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
-				TransformComponent saved_parent = *parent_transform;
-				saved_parent.ApplyTransform();
-				saved_parent.Rotate(Q);
-				saved_parent.UpdateTransform();
-				std::swap(saved_parent.world, parent_transform->world); // only store temporary result, not modifying actual local space!
-			}
+				if (dist < 0)
+				{
+					tail_next = tail_next - XMLoadFloat3(&direction) * dist;
+					to_tail = XMVector3Normalize(tail_next - position_root);
 
-			XMStoreFloat3(&spring.center_of_mass, position_target);
-			velocity *= spring.damping;
-			XMStoreFloat3(&spring.velocity, velocity);
-			*((XMFLOAT3*)&transform->world._41) = spring.center_of_mass;
+					if (!spring.IsStretchEnabled())
+					{
+						// Limit offset to keep distance from parent:
+						tail_next = position_root + to_tail * boneLength;
+					}
+				}
+			}
+#endif
+
+			XMStoreFloat3(&spring.prevTail, tail_current);
+			XMStoreFloat3(&spring.currentTail, tail_next);
+
+			// Rotate to face tail position:
+			const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(boneAxis, to_tail));
+			const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(boneAxis, to_tail)));
+			const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
+			TransformComponent tmp = transform;
+			tmp.ApplyTransform();
+			tmp.Rotate(Q);
+			tmp.UpdateTransform();
+			transform.world = tmp.world; // only store world space result, not modifying actual local space!
+
 		}
 	}
 	void Scene::RunInverseKinematicsUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		if (inverse_kinematics.GetCount() > 0)
+		{
+			transforms_temp.resize(transforms.GetCount());
+			transforms_temp = transforms.GetComponentArray(); // make copy
+		}
+
 		bool recompute_hierarchy = false;
 		for (size_t i = 0; i < inverse_kinematics.GetCount(); ++i)
 		{
@@ -3192,20 +3930,22 @@ namespace wi::scene
 				continue;
 			}
 			Entity entity = inverse_kinematics.GetEntity(i);
-			TransformComponent* transform = transforms.GetComponent(entity);
-			TransformComponent* target = transforms.GetComponent(ik.target);
+			size_t transform_index = transforms.GetIndex(entity);
+			size_t target_index = transforms.GetIndex(ik.target);
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
-			if (transform == nullptr || target == nullptr || hier == nullptr)
+			if (transform_index == ~0ull || target_index == ~0ull || hier == nullptr)
 			{
 				continue;
 			}
+			TransformComponent& transform = transforms_temp[transform_index];
+			TransformComponent& target = transforms_temp[target_index];
 
-			const XMVECTOR target_pos = target->GetPositionV();
+			const XMVECTOR target_pos = target.GetPositionV();
 			for (uint32_t iteration = 0; iteration < ik.iteration_count; ++iteration)
 			{
 				TransformComponent* stack[32] = {};
 				Entity parent_entity = hier->parentID;
-				TransformComponent* child_transform = transform;
+				TransformComponent* child_transform = &transform;
 				for (uint32_t chain = 0; chain < std::min(ik.chain_length, (uint32_t)arraysize(stack)); ++chain)
 				{
 					recompute_hierarchy = true; // any IK will trigger a full transform hierarchy recompute step at the end(**)
@@ -3214,32 +3954,39 @@ namespace wi::scene
 					stack[chain] = child_transform;
 
 					// Compute required parent rotation that moves ik transform closer to target transform:
-					TransformComponent* parent_transform = transforms.GetComponent(parent_entity);
-					const XMVECTOR parent_pos = parent_transform->GetPositionV();
-					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform->GetPositionV() - parent_pos);
+					size_t parent_index = transforms.GetIndex(parent_entity);
+					if (parent_index == ~0ull)
+						continue;
+					TransformComponent& parent_transform = transforms_temp[parent_index];
+					const XMVECTOR parent_pos = parent_transform.GetPositionV();
+					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform.GetPositionV() - parent_pos);
 					const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
 					const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_ik, dir_parent_to_target));
 					const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target)));
 					const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
 
 					// parent to world space:
-					parent_transform->ApplyTransform();
+					parent_transform.ApplyTransform();
 					// rotate parent:
-					parent_transform->Rotate(Q);
-					parent_transform->UpdateTransform();
+					parent_transform.Rotate(Q);
+					parent_transform.UpdateTransform();
 					// parent back to local space (if parent has parent):
 					const HierarchyComponent* hier_parent = hierarchy.GetComponent(parent_entity);
 					if (hier_parent != nullptr)
 					{
 						Entity parent_of_parent_entity = hier_parent->parentID;
-						const TransformComponent* transform_parent_of_parent = transforms.GetComponent(parent_of_parent_entity);
-						XMMATRIX parent_of_parent_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent_of_parent->world));
-						parent_transform->MatrixTransform(parent_of_parent_inverse);
-						// Do not call UpdateTransform() here, to keep parent world matrix in world space!
+						size_t parent_of_parent_index = transforms.GetIndex(parent_of_parent_entity);
+						if (parent_of_parent_index != ~0ull)
+						{
+							const TransformComponent* transform_parent_of_parent = &transforms_temp[parent_of_parent_index];
+							XMMATRIX parent_of_parent_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent_of_parent->world));
+							parent_transform.MatrixTransform(parent_of_parent_inverse);
+							// Do not call UpdateTransform() here, to keep parent world matrix in world space!
+						}
 					}
 
 					// update chain from parent to children:
-					const TransformComponent* recurse_parent = parent_transform;
+					const TransformComponent* recurse_parent = &parent_transform;
 					for (int recurse_chain = (int)chain; recurse_chain >= 0; --recurse_chain)
 					{
 						stack[recurse_chain]->UpdateTransform_Parented(*recurse_parent);
@@ -3253,7 +4000,7 @@ namespace wi::scene
 					}
 
 					// move up in the chain by one:
-					child_transform = parent_transform;
+					child_transform = &parent_transform;
 					parent_entity = hier_parent->parentID;
 					assert(chain < (uint32_t)arraysize(stack) - 1); // if this is encountered, just extend stack array size
 
@@ -3271,12 +4018,23 @@ namespace wi::scene
 				const HierarchyComponent& parentcomponent = hierarchy[i];
 				Entity entity = hierarchy.GetEntity(i);
 
-				TransformComponent* transform_child = transforms.GetComponent(entity);
-				TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
-				if (transform_child != nullptr && transform_parent != nullptr)
+				size_t transform_index = transforms.GetIndex(entity);
+				size_t parent_index = transforms.GetIndex(parentcomponent.parentID);
+				if (transform_index != ~0ull && parent_index != ~0ull)
 				{
+					TransformComponent* transform_child = &transforms_temp[transform_index];
+					TransformComponent* transform_parent = &transforms_temp[parent_index];
 					transform_child->UpdateTransform_Parented(*transform_parent);
 				}
+			}
+		}
+
+		if (inverse_kinematics.GetCount() > 0)
+		{
+			for (size_t i = 0; i < transforms.GetCount(); ++i)
+			{
+				// IK shouldn't modify local space, so only update the world matrices!
+				transforms[i].world = transforms_temp[i].world;
 			}
 		}
 	}
@@ -3347,7 +4105,6 @@ namespace wi::scene
 
 			Entity entity = meshes.GetEntity(args.jobIndex);
 			MeshComponent& mesh = meshes[args.jobIndex];
-			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			if (!mesh.streamoutBuffer.IsValid())
 			{
@@ -3366,30 +4123,58 @@ namespace wi::scene
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
 			// Update morph targets if needed:
-			if (mesh.dirty_morph && !mesh.targets.empty())
+			if (mesh.dirty_morph && !mesh.morph_targets.empty())
 			{
 			    XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 			    XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
-			    for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
-			    {
-					XMFLOAT3 pos = mesh.vertex_positions[i];
-					XMFLOAT3 nor = mesh.vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : mesh.vertex_normals[i];
-					const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
+				mesh.morph_temp_pos = mesh.vertex_positions;
+				mesh.morph_temp_nor = mesh.vertex_normals;
 
-					for (const MeshComponent::MeshMorphTarget& target : mesh.targets)
+				for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
+				{
+					if (morph.weight <= 0)
+						continue;
+					if (morph.sparse_indices.empty())
 					{
-						pos.x += target.weight * target.vertex_positions[i].x;
-						pos.y += target.weight * target.vertex_positions[i].y;
-						pos.z += target.weight * target.vertex_positions[i].z;
-
-						if (!target.vertex_normals.empty())
+						for (size_t i = 0; i < morph.vertex_positions.size(); ++i)
 						{
-							nor.x += target.weight * target.vertex_normals[i].x;
-							nor.y += target.weight * target.vertex_normals[i].y;
-							nor.z += target.weight * target.vertex_normals[i].z;
+							mesh.morph_temp_pos[i].x += morph.weight * morph.vertex_positions[i].x;
+							mesh.morph_temp_pos[i].y += morph.weight * morph.vertex_positions[i].y;
+							mesh.morph_temp_pos[i].z += morph.weight * morph.vertex_positions[i].z;
+
+							if (!morph.vertex_normals.empty())
+							{
+								mesh.morph_temp_nor[i].x += morph.weight * morph.vertex_normals[i].x;
+								mesh.morph_temp_nor[i].y += morph.weight * morph.vertex_normals[i].y;
+								mesh.morph_temp_nor[i].z += morph.weight * morph.vertex_normals[i].z;
+							}
 						}
 					}
+					else
+					{
+						for (size_t i = 0; i < morph.sparse_indices.size(); ++i)
+						{
+							const uint32_t ind = morph.sparse_indices[i];
+							mesh.morph_temp_pos[ind].x += morph.weight * morph.vertex_positions[i].x;
+							mesh.morph_temp_pos[ind].y += morph.weight * morph.vertex_positions[i].y;
+							mesh.morph_temp_pos[ind].z += morph.weight * morph.vertex_positions[i].z;
+
+							if (!morph.vertex_normals.empty())
+							{
+								mesh.morph_temp_nor[ind].x += morph.weight * morph.vertex_normals[i].x;
+								mesh.morph_temp_nor[ind].y += morph.weight * morph.vertex_normals[i].y;
+								mesh.morph_temp_nor[ind].z += morph.weight * morph.vertex_normals[i].z;
+							}
+						}
+					}
+				}
+
+			    for (size_t i = 0; i < mesh.morph_temp_pos.size(); ++i)
+			    {
+					XMFLOAT3 pos = mesh.morph_temp_pos[i];
+					XMFLOAT3 nor = mesh.morph_temp_nor.empty() ? XMFLOAT3(1, 1, 1) : mesh.morph_temp_nor[i];
+					const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
 
 					XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
 					mesh.vertex_positions_morphed[i].FromFULL(pos, nor, wind);
@@ -3518,7 +4303,18 @@ namespace wi::scene
 			material.engineStencilRef = STENCILREF_DEFAULT;
 			if (material.IsCustomShader())
 			{
-				material.engineStencilRef = STENCILREF_CUSTOMSHADER;
+				if (material.IsOutlineEnabled())
+				{
+					material.engineStencilRef = STENCILREF_CUSTOMSHADER_OUTLINE;
+				}
+				else
+				{
+					material.engineStencilRef = STENCILREF_CUSTOMSHADER;
+				}
+			}
+			else if (material.IsOutlineEnabled())
+			{
+				material.engineStencilRef = STENCILREF_OUTLINE;
 			}
 
 			if (material.IsDirty())
@@ -4571,6 +5367,30 @@ namespace wi::scene
 				wi::audio::ExitLoop(&sound.soundinstance);
 			}
 			wi::audio::SetVolume(sound.volume, &sound.soundinstance);
+		}
+	}
+	void Scene::RunScriptUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		for (size_t i = 0; i < scripts.GetCount(); ++i)
+		{
+			ScriptComponent& script = scripts[i];
+			Entity entity = scripts.GetEntity(i);
+
+			if (script.IsPlaying())
+			{
+				if (script.script.empty() && script.resource.IsValid())
+				{
+					script.script += "local function GetEntity() return " + std::to_string(entity) + "; end\n";
+					script.script += script.resource.GetScript();
+					wi::lua::AttachScriptParameters(script.script, script.filename);
+				}
+				wi::lua::RunText(script.script);
+
+				if (script.IsPlayingOnlyOnce())
+				{
+					script.Stop();
+				}
+			}
 		}
 	}
 

@@ -39,6 +39,7 @@ namespace wi
 		float eyeadaptionKey = 0.115f;
 		float eyeadaptionRate = 1;
 		float fsrSharpness = 1.0f;
+		float lightShaftsStrength = 0.2f;
 
 		AO ao = AO_DISABLED;
 		bool fxaaEnabled = false;
@@ -87,6 +88,7 @@ namespace wi
 		wi::graphics::Texture rtGUIBlurredBackground[3];	// downsampled, gaussian blurred scene for GUI
 		wi::graphics::Texture rtShadingRate; // UINT8 shading rate per tile
 		wi::graphics::Texture rtFSR[2]; // FSR upscaling result (full resolution LDR)
+		wi::graphics::Texture rtOutlineSource; // linear depth but only the regions which have outline stencil
 
 		wi::graphics::Texture rtPostprocess; // ping-pong with main scene RT in post-process chain
 
@@ -106,6 +108,7 @@ namespace wi
 		wi::graphics::RenderPass renderpass_volumetriclight;
 		wi::graphics::RenderPass renderpass_particledistortion;
 		wi::graphics::RenderPass renderpass_waterripples;
+		wi::graphics::RenderPass renderpass_outline_source;
 
 		wi::graphics::Texture debugUAV; // debug UAV can be used by some shaders...
 		wi::renderer::TiledLightResources tiledLightResources;
@@ -185,6 +188,7 @@ namespace wi
 		constexpr float getEyeAdaptionKey() const { return eyeadaptionKey; }
 		constexpr float getEyeAdaptionRate() const { return eyeadaptionRate; }
 		constexpr float getFSRSharpness() const { return fsrSharpness; }
+		constexpr float getLightShaftsStrength() const { return lightShaftsStrength; }
 
 		constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 		constexpr AO getAO() const { return ao; }
@@ -228,6 +232,7 @@ namespace wi
 		constexpr void setEyeAdaptionKey(float value) { eyeadaptionKey = value; }
 		constexpr void setEyeAdaptionRate(float value) { eyeadaptionRate = value; }
 		constexpr void setFSRSharpness(float value) { fsrSharpness = value; }
+		constexpr void setLightShaftsStrength(float value) { lightShaftsStrength = value; }
 
 		void setAO(AO value);
 		void setSSREnabled(bool value);

@@ -23,6 +23,7 @@ namespace wi
 		resourcemanager::Flags flags = resourcemanager::Flags::NONE;
 		wi::graphics::Texture texture;
 		wi::audio::Sound sound;
+		std::string script;
 		wi::vector<uint8_t> filedata;
 	};
 
@@ -40,6 +41,11 @@ namespace wi
 	{
 		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		return resourceinternal->sound;
+	}
+	const std::string& Resource::GetScript() const
+	{
+		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		return resourceinternal->script;
 	}
 
 	void Resource::SetFileData(const wi::vector<uint8_t>& data)
@@ -78,6 +84,15 @@ namespace wi
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->sound = sound;
 	}
+	void Resource::SetScript(const std::string& script)
+	{
+		if (internal_state == nullptr)
+		{
+			internal_state = std::make_shared<ResourceInternal>();
+		}
+		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		resourceinternal->script = script;
+	}
 
 	namespace resourcemanager
 	{
@@ -98,19 +113,21 @@ namespace wi
 		{
 			IMAGE,
 			SOUND,
+			SCRIPT,
 		};
 		static const wi::unordered_map<std::string, DataType> types = {
-			std::make_pair("BASIS", DataType::IMAGE),
-			std::make_pair("KTX2", DataType::IMAGE),
-			std::make_pair("JPG", DataType::IMAGE),
-			std::make_pair("JPEG", DataType::IMAGE),
-			std::make_pair("PNG", DataType::IMAGE),
-			std::make_pair("BMP", DataType::IMAGE),
-			std::make_pair("DDS", DataType::IMAGE),
-			std::make_pair("TGA", DataType::IMAGE),
-			std::make_pair("QOI", DataType::IMAGE),
-			std::make_pair("WAV", DataType::SOUND),
-			std::make_pair("OGG", DataType::SOUND),
+			{"BASIS", DataType::IMAGE},
+			{"KTX2", DataType::IMAGE},
+			{"JPG", DataType::IMAGE},
+			{"JPEG", DataType::IMAGE},
+			{"PNG", DataType::IMAGE},
+			{"BMP", DataType::IMAGE},
+			{"DDS", DataType::IMAGE},
+			{"TGA", DataType::IMAGE},
+			{"QOI", DataType::IMAGE},
+			{"WAV", DataType::SOUND},
+			{"OGG", DataType::SOUND},
+			{"LUA", DataType::SCRIPT},
 		};
 		wi::vector<std::string> GetSupportedImageExtensions()
 		{
@@ -130,6 +147,18 @@ namespace wi
 			for (auto& x : types)
 			{
 				if (x.second == DataType::SOUND)
+				{
+					ret.push_back(x.first);
+				}
+			}
+			return ret;
+		}
+		wi::vector<std::string> GetSupportedScriptExtensions()
+		{
+			wi::vector<std::string> ret;
+			for (auto& x : types)
+			{
+				if (x.second == DataType::SCRIPT)
 				{
 					ret.push_back(x.first);
 				}
@@ -641,11 +670,21 @@ namespace wi
 				}
 			}
 			break;
+
 			case DataType::SOUND:
 			{
 				success = wi::audio::CreateSound(filedata, filesize, &resource->sound);
 			}
 			break;
+
+			case DataType::SCRIPT:
+			{
+				resource->script.resize(filesize);
+				std::memcpy(resource->script.data(), filedata, filesize);
+				success = true;
+			}
+			break;
+
 			};
 
 			if (success)

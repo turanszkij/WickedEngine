@@ -1234,7 +1234,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			--	We use a custom scene because if two models are loaded into the global scene, they will have name collisions
 			--	and thus we couldn't properly query entities by name
 			local model_scene = Scene()
-			self.model = LoadModel(model_scene, "../models/Havoc/havoc.wiscene")
+			self.model = LoadModel(model_scene, script_dir() .. "../models/Havoc/havoc.wiscene")
 
 			-- Place model according to starting facing direction:
 			self.face = face
@@ -1270,31 +1270,31 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			local effect_scene = Scene()
 			
 			effect_scene.Clear()
-			LoadModel(effect_scene, "../models/emitter_dust.wiscene")
+			LoadModel(effect_scene, script_dir() .. "../models/emitter_dust.wiscene")
 			self.effect_dust = effect_scene.Entity_FindByName("dust")  -- query the emitter entity by name
 			effect_scene.Component_GetEmitter(self.effect_dust).SetEmitCount(0)  -- don't emit continuously
 			scene.Merge(effect_scene)
 
 			effect_scene.Clear()
-			LoadModel(effect_scene, "../models/emitter_hiteffect.wiscene")
+			LoadModel(effect_scene, script_dir() .. "../models/emitter_hiteffect.wiscene")
 			self.effect_hit = effect_scene.Entity_FindByName("hit")  -- query the emitter entity by name
 			effect_scene.Component_GetEmitter(self.effect_hit).SetEmitCount(0)  -- don't emit continuously
 			scene.Merge(effect_scene)
 
 			effect_scene.Clear()
-			LoadModel(effect_scene, "../models/emitter_guardeffect.wiscene")
+			LoadModel(effect_scene, script_dir() .. "../models/emitter_guardeffect.wiscene")
 			self.effect_guard = effect_scene.Entity_FindByName("guard")  -- query the emitter entity by name
 			effect_scene.Component_GetEmitter(self.effect_guard).SetEmitCount(0)  -- don't emit continuously
 			scene.Merge(effect_scene)
 
 			effect_scene.Clear()
-			LoadModel(effect_scene, "../models/emitter_spark.wiscene")
+			LoadModel(effect_scene, script_dir() .. "../models/emitter_spark.wiscene")
 			self.effect_spark = effect_scene.Entity_FindByName("spark")  -- query the emitter entity by name
 			effect_scene.Component_GetEmitter(self.effect_spark).SetEmitCount(0)  -- don't emit continuously
 			scene.Merge(effect_scene)
 
 			effect_scene.Clear()
-			self.model_fireball = LoadModel(effect_scene, "../models/emitter_fireball.wiscene")
+			self.model_fireball = LoadModel(effect_scene, script_dir() .. "../models/emitter_fireball.wiscene")
 			self.effect_fireball = effect_scene.Entity_FindByName("fireball")  -- query the emitter entity by name
 			effect_scene.Component_GetEmitter(self.effect_fireball).SetEmitCount(0)  -- don't emit continuously
 			self.effect_fireball_haze = effect_scene.Entity_FindByName("haze")  -- query the emitter entity by name
@@ -1307,7 +1307,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			-- HP bar, etc. sprites:
 			local renderPath = application.GetActivePath()
 
-			self.sprite_hpbar_background = Sprite("hp_bar.png")
+			self.sprite_hpbar_background = Sprite(script_dir() .. "hp_bar.png")
 			local fx = self.sprite_hpbar_background.GetParams()
 			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
@@ -1323,7 +1323,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			self.sprite_hpbar_background.SetParams(fx)
 			renderPath.AddSprite(self.sprite_hpbar_background)
 
-			self.sprite_hpbar_hp = Sprite("hp_bar.png")
+			self.sprite_hpbar_hp = Sprite(script_dir() .. "hp_bar.png")
 			fx = self.sprite_hpbar_hp.GetParams()
 			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
@@ -1339,7 +1339,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			self.sprite_hpbar_hp.SetParams(fx)
 			renderPath.AddSprite(self.sprite_hpbar_hp)
 
-			self.sprite_hpbar_pattern = Sprite("hp_bar.png", "hp_bar.png")
+			self.sprite_hpbar_pattern = Sprite(script_dir() .. "hp_bar.png", script_dir() .. "hp_bar.png")
 			fx = self.sprite_hpbar_pattern.GetParams()
 			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
@@ -1361,7 +1361,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			self.sprite_hpbar_pattern.SetAnim(pattern_anim)
 			renderPath.AddSprite(self.sprite_hpbar_pattern)
 
-			self.sprite_hpbar_pattern2 = Sprite("hp_bar.png", "hp_bar.png")
+			self.sprite_hpbar_pattern2 = Sprite(script_dir() .. "hp_bar.png", script_dir() .. "hp_bar.png")
 			fx = self.sprite_hpbar_pattern2.GetParams()
 			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
@@ -1383,7 +1383,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			self.sprite_hpbar_pattern2.SetAnim(pattern_anim)
 			renderPath.AddSprite(self.sprite_hpbar_pattern2)
 
-			self.sprite_hpbar_border = Sprite("hp_bar.png")
+			self.sprite_hpbar_border = Sprite(script_dir() .. "hp_bar.png")
 			fx = self.sprite_hpbar_border.GetParams()
 			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
@@ -1399,7 +1399,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			renderPath.AddSprite(self.sprite_hpbar_border)
 			
 			if(self.face > 0) then
-				self.sprite_timer = Sprite("hp_bar.png")
+				self.sprite_timer = Sprite(script_dir() .. "hp_bar.png")
 				fx = self.sprite_timer.GetParams()
 				fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 				fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
@@ -1960,7 +1960,7 @@ runProcess(function()
 	info.SetShadowColor(Vector(0,0,0,1))
 	path.AddFont(info)
 
-	LoadModel("../models/dojo.wiscene")
+	LoadModel(script_dir() .. "../models/dojo.wiscene")
 	
 	-- Create the two player characters. Parameters are facing direction and material colors to differentiate between them:
 	--						Facing:		skin color:				shirt color				hair color				shoe color
@@ -2034,7 +2034,7 @@ runProcess(function()
 			backlog_post("RELOAD")
 			killProcesses()
 			application.SetActivePath(prevPath)
-			dofile("fighting_game.lua")
+			dofile(script_dir() .. "fighting_game.lua")
 			return
 		end
 		

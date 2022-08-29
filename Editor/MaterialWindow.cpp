@@ -10,7 +10,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MATERIAL " Material", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 1200));
+	SetSize(XMFLOAT2(300, 1300));
 
 	closeButton.SetTooltip("Delete MaterialComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -119,6 +119,17 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			material->SetDoubleSided(args.bValue);
 		});
 	AddWidget(&doubleSidedCheckBox);
+
+	outlineCheckBox.Create("Cartoon Outline: ");
+	outlineCheckBox.SetTooltip("Enable cartoon outline. The Cartoon Outline graphics setting also needs to be enabled for it to show up.");
+	outlineCheckBox.SetPos(XMFLOAT2(x, y += step));
+	outlineCheckBox.SetSize(XMFLOAT2(hei, hei));
+	outlineCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetOutlineEnabled(args.bValue);
+		});
+	AddWidget(&outlineCheckBox);
 
 
 	shaderTypeComboBox.Create("Shader: ");
@@ -680,8 +691,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	SetEntity(INVALID_ENTITY);
 }
 
-
-
 void MaterialWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
@@ -714,6 +723,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		occlusionSecondaryCheckBox.SetCheck(material->IsOcclusionEnabled_Secondary());
 		windCheckBox.SetCheck(material->IsUsingWind());
 		doubleSidedCheckBox.SetCheck(material->IsDoubleSided());
+		outlineCheckBox.SetCheck(material->IsOutlineEnabled());
 		normalMapSlider.SetValue(material->normalMapStrength);
 		roughnessSlider.SetValue(material->roughness);
 		reflectanceSlider.SetValue(material->reflectance);
@@ -827,5 +837,85 @@ void MaterialWindow::SetEntity(Entity entity)
 		textureSlotLabel.SetText("");
 		textureSlotUvsetField.SetText("");
 	}
+
+}
+
+
+void MaterialWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+	float jump = 20;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 150;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 40;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add_fullwidth(materialNameField);
+	add_right(shadowReceiveCheckBox);
+	add_right(shadowCasterCheckBox);
+	add_right(useVertexColorsCheckBox);
+	add_right(specularGlossinessCheckBox);
+	add_right(occlusionPrimaryCheckBox);
+	add_right(occlusionSecondaryCheckBox);
+	add_right(windCheckBox);
+	add_right(doubleSidedCheckBox);
+	add_right(outlineCheckBox);
+	add(shaderTypeComboBox);
+	add(blendModeComboBox);
+	add(shadingRateComboBox);
+	add(alphaRefSlider);
+	add(normalMapSlider);
+	add(roughnessSlider);
+	add(reflectanceSlider);
+	add(metalnessSlider);
+	add(emissiveSlider);
+	add(transmissionSlider);
+	add(refractionSlider);
+	add(pomSlider);
+	add(displacementMappingSlider);
+	add(subsurfaceScatteringSlider);
+	add(texAnimFrameRateSlider);
+	add(texAnimDirectionSliderU);
+	add(texAnimDirectionSliderV);
+	add(texMulSliderX);
+	add(texMulSliderY);
+	add(sheenRoughnessSlider);
+	add(clearcoatSlider);
+	add(clearcoatRoughnessSlider);
+	add(colorComboBox);
+	add_fullwidth(colorPicker);
+	add(textureSlotComboBox);
+	add_fullwidth(textureSlotButton);
+	add_fullwidth(textureSlotLabel);
+	textureSlotLabel.SetSize(XMFLOAT2(textureSlotLabel.GetSize().x - textureSlotLabel.GetSize().y - 2, textureSlotLabel.GetSize().y));
+	textureSlotUvsetField.SetPos(XMFLOAT2(textureSlotLabel.GetPos().x + textureSlotLabel.GetSize().x + 2, textureSlotLabel.GetPos().y));
 
 }

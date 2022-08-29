@@ -16,9 +16,6 @@ public:
 
 	wi::gui::Slider intensitySlider;
 	wi::gui::Slider rangeSlider;
-	wi::gui::Slider radiusSlider;
-	wi::gui::Slider widthSlider;
-	wi::gui::Slider heightSlider;
 	wi::gui::Slider outerConeAngleSlider;
 	wi::gui::Slider innerConeAngleSlider;
 	wi::gui::CheckBox	shadowCheckBox;
@@ -32,5 +29,7 @@ public:
 
 	wi::gui::Label lensflare_Label;
 	wi::gui::Button lensflare_Button[7];
+
+	void ResizeLayout() override;
 };
 

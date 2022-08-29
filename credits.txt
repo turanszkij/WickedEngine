@@ -33,6 +33,7 @@ Contributions:
 	- Linux audio implementation
 	- Linux controller implementation
 	- Linux network implementation
+	- Lua property bindings support, improvements
 	- Fixes
 - Maeve Garside https://github.com/MolassesLover
 	- Linux package files
@@ -72,3 +73,5 @@ Patreon supporters:
 - Alexander Dahlin
 - blueapples
 - Delhills
+- NI NI
+- Sherief

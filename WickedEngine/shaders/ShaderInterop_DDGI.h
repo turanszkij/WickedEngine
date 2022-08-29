@@ -3,17 +3,11 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
-static const uint3 DDGI_GRID_DIMENSIONS = uint3(32, 8, 32); // The scene extents will be subdivided into a grid of this resolution, each grid cell will have one probe
-static const uint DDGI_PROBE_COUNT = DDGI_GRID_DIMENSIONS.x * DDGI_GRID_DIMENSIONS.y * DDGI_GRID_DIMENSIONS.z;
 static const uint DDGI_MAX_RAYCOUNT = 512; // affects global ray buffer size
 static const uint DDGI_COLOR_RESOLUTION = 8; // this should not be modified, border update code is fixed
 static const uint DDGI_COLOR_TEXELS = 1 + DDGI_COLOR_RESOLUTION + 1; // with border
 static const uint DDGI_DEPTH_RESOLUTION = 16; // this should not be modified, border update code is fixed
 static const uint DDGI_DEPTH_TEXELS = 1 + DDGI_DEPTH_RESOLUTION + 1; // with border
-static const uint DDGI_COLOR_TEXTURE_WIDTH = DDGI_COLOR_TEXELS * DDGI_GRID_DIMENSIONS.x * DDGI_GRID_DIMENSIONS.y;
-static const uint DDGI_COLOR_TEXTURE_HEIGHT = DDGI_COLOR_TEXELS * DDGI_GRID_DIMENSIONS.z;
-static const uint DDGI_DEPTH_TEXTURE_WIDTH = DDGI_DEPTH_TEXELS * DDGI_GRID_DIMENSIONS.x * DDGI_GRID_DIMENSIONS.y;
-static const uint DDGI_DEPTH_TEXTURE_HEIGHT = DDGI_DEPTH_TEXELS * DDGI_GRID_DIMENSIONS.z;
 static const float DDGI_KEEP_DISTANCE = 0.1f; // how much distance should probes keep from surfaces
 
 #define DDGI_LINEAR_BLENDING
@@ -86,15 +80,15 @@ inline float ddgi_max_distance()
 inline uint3 ddgi_base_probe_coord(float3 P)
 {
 	float3 normalized_pos = (P - GetScene().ddgi.grid_min) * GetScene().ddgi.grid_extents_rcp;
-	return floor(normalized_pos * (DDGI_GRID_DIMENSIONS - 1));
+	return floor(normalized_pos * (GetScene().ddgi.grid_dimensions - 1));
 }
 inline uint3 ddgi_probe_coord(uint probeIndex)
 {
-	return unflatten3D(probeIndex, DDGI_GRID_DIMENSIONS);
+	return unflatten3D(probeIndex, GetScene().ddgi.grid_dimensions);
 }
 inline uint ddgi_probe_index(uint3 probeCoord)
 {
-	return flatten3D(probeCoord, DDGI_GRID_DIMENSIONS);
+	return flatten3D(probeCoord, GetScene().ddgi.grid_dimensions);
 }
 inline float3 ddgi_probe_position(uint3 probeCoord)
 {
@@ -108,23 +102,23 @@ inline float3 ddgi_probe_position(uint3 probeCoord)
 }
 inline uint2 ddgi_probe_color_pixel(uint3 probeCoord)
 {
-	return probeCoord.xz * DDGI_COLOR_TEXELS + uint2(probeCoord.y * DDGI_GRID_DIMENSIONS.x * DDGI_COLOR_TEXELS, 0) + 1;
+	return probeCoord.xz * DDGI_COLOR_TEXELS + uint2(probeCoord.y * GetScene().ddgi.grid_dimensions.x * DDGI_COLOR_TEXELS, 0) + 1;
 }
 inline float2 ddgi_probe_color_uv(uint3 probeCoord, float3 direction)
 {
 	float2 pixel = ddgi_probe_color_pixel(probeCoord);
 	pixel += (encode_oct(normalize(direction)) * 0.5 + 0.5) * DDGI_COLOR_RESOLUTION;
-	return pixel / float2(DDGI_COLOR_TEXTURE_WIDTH, DDGI_COLOR_TEXTURE_HEIGHT);
+	return pixel * GetScene().ddgi.color_texture_resolution_rcp;
 }
 inline uint2 ddgi_probe_depth_pixel(uint3 probeCoord)
 {
-	return probeCoord.xz * DDGI_DEPTH_TEXELS + uint2(probeCoord.y * DDGI_GRID_DIMENSIONS.x * DDGI_DEPTH_TEXELS, 0) + 1;
+	return probeCoord.xz * DDGI_DEPTH_TEXELS + uint2(probeCoord.y * GetScene().ddgi.grid_dimensions.x * DDGI_DEPTH_TEXELS, 0) + 1;
 }
 inline float2 ddgi_probe_depth_uv(uint3 probeCoord, float3 direction)
 {
 	float2 pixel = ddgi_probe_depth_pixel(probeCoord);
 	pixel += (encode_oct(normalize(direction)) * 0.5 + 0.5) * DDGI_DEPTH_RESOLUTION;
-	return pixel / float2(DDGI_DEPTH_TEXTURE_WIDTH, DDGI_DEPTH_TEXTURE_HEIGHT);
+	return pixel * GetScene().ddgi.depth_texture_resolution_rcp;
 }
 
 
@@ -146,7 +140,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		// Compute the offset grid coord and clamp to the probe grid boundary
 		// Offset = 0 or 1 along each axis
 		uint3 offset = uint3(i, i >> 1, i >> 2) & 1;
-		uint3 probe_grid_coord = clamp(base_grid_coord + offset, 0, DDGI_GRID_DIMENSIONS - 1);
+		uint3 probe_grid_coord = clamp(base_grid_coord + offset, 0, GetScene().ddgi.grid_dimensions - 1);
 		//int p = ddgi_probe_index(probe_grid_coord);
 
 		// Make cosine falloff in tangent plane with respect to the angle from the surface to the probe so that we never

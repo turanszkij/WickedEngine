@@ -22,6 +22,9 @@
     <Filter Include="Documentation">
       <UniqueIdentifier>{c66293fd-fe0c-444e-9502-f0864bfbf736}</UniqueIdentifier>
     </Filter>
+    <Filter Include="scripts\subscript_demo">
+      <UniqueIdentifier>{7a1dfecb-b9bf-4fb6-94cf-39b5fb5860c1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)scripts\camera_animation_clamped.lua">
@@ -205,6 +208,24 @@
       <Filter>scripts</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)models\gltf_KHR_lights_punctual_test.glb">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\script_tracking.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\subscript_demo\load_dojo.lua">
+      <Filter>scripts\subscript_demo</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\script_component_test.lua">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\script_component_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\animation_test.wiscene">
+      <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)models\morph_target_animation_test.wiscene">
       <Filter>models</Filter>
     </None>
   </ItemGroup>

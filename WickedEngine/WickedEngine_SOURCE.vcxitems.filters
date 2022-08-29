@@ -1044,7 +1044,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\volk.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\arial.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\liberation_sans.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiShaderCompiler.h">
@@ -1075,6 +1075,9 @@
       <Filter>ENGINE\System</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNoise.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiConfig.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1810,6 +1813,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp">
       <Filter>ENGINE\System</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiConfig.cpp">
+      <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

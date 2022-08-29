@@ -210,6 +210,7 @@ void RenderPath3D::ResizeBuffers()
 	rtAO = {};
 	rtShadow = {};
 	rtSSR = {};
+	rtOutlineSource = {};
 
 	// Depth buffers:
 	{
@@ -452,6 +453,8 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateRenderPass(&desc, &renderpass_waterripples);
 	}
 
+	renderpass_outline_source = {};
+
 
 	// Other resources:
 	{
@@ -596,7 +599,8 @@ void RenderPath3D::Update(float dt)
 		getSSREnabled() ||
 		getRaytracedReflectionEnabled() ||
 		wi::renderer::GetRaytracedShadowsEnabled() ||
-		getAO() == AO::AO_RTAO
+		getAO() == AO::AO_RTAO ||
+		wi::renderer::GetVariableRateShadingClassification()
 		)
 	{
 		if (!rtVelocity.IsValid())
@@ -634,6 +638,33 @@ void RenderPath3D::Update(float dt)
 	else
 	{
 		rtShadow = {};
+	}
+
+	if (getOutlineEnabled())
+	{
+		if(!rtOutlineSource.IsValid())
+		{
+			TextureDesc desc;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			desc.format = Format::R32_FLOAT;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			device->CreateTexture(&desc, nullptr, &rtOutlineSource);
+			device->SetName(&rtOutlineSource, "rtOutlineSource");
+		}
+		if(!renderpass_outline_source.IsValid())
+		{
+			RenderPassDesc desc;
+			desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtOutlineSource, RenderPassAttachment::LoadOp::CLEAR));
+			desc.attachments.push_back(RenderPassAttachment::DepthStencil(&depthBuffer_Main, RenderPassAttachment::LoadOp::LOAD));
+
+			device->CreateRenderPass(&desc, &renderpass_outline_source);
+		}
+	}
+	else
+	{
+		rtOutlineSource = {};
+		renderpass_outline_source = {};
 	}
 
 	// Keep a copy of last frame's depth buffer for temporal disocclusion checks, so swap with current one every frame:
@@ -714,8 +745,6 @@ void RenderPath3D::Render() const
 	CommandList cmd_prepareframe_async = cmd;
 	device->WaitCommandList(cmd, cmd_prepareframe);
 	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
-		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		wi::renderer::BindCameraCB(
 			*camera,
@@ -1107,6 +1136,25 @@ void RenderPath3D::Render() const
 		vp.height = (float)depthBuffer_Main.GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
 
+
+		if (getOutlineEnabled())
+		{
+			// Cut off outline source from linear depth:
+			device->EventBegin("Outline Source", cmd);
+			device->RenderPassBegin(&renderpass_outline_source, cmd);
+			wi::image::Params params;
+			params.enableFullScreen();
+			params.stencilRefMode = wi::image::STENCILREFMODE_ENGINE;
+			params.stencilComp = wi::image::STENCILMODE_EQUAL;
+			params.stencilRef = wi::enums::STENCILREF_OUTLINE;
+			wi::image::Draw(&rtLinearDepth, params, cmd);
+			params.stencilRef = wi::enums::STENCILREF_CUSTOMSHADER_OUTLINE;
+			wi::image::Draw(&rtLinearDepth, params, cmd);
+			device->RenderPassEnd(cmd);
+			device->EventEnd(cmd);
+		}
+
+
 		device->RenderPassBegin(&renderpass_main, cmd);
 
 		if (visibility_shading_in_compute)
@@ -1265,6 +1313,8 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 				instanceInclusionMask_RTAO
 			);
 			break;
+		case AO_DISABLED:
+			break;
 		}
 	}
 }
@@ -1284,7 +1334,13 @@ void RenderPath3D::RenderOutline(CommandList cmd) const
 {
 	if (getOutlineEnabled())
 	{
-		wi::renderer::Postprocess_Outline(rtLinearDepth, cmd, getOutlineThreshold(), getOutlineThickness(), getOutlineColor());
+		wi::renderer::Postprocess_Outline(
+			rtOutlineSource,
+			cmd,
+			getOutlineThreshold(),
+			getOutlineThickness(),
+			getOutlineColor()
+		);
 	}
 }
 void RenderPath3D::RenderLightShafts(CommandList cmd) const
@@ -1328,7 +1384,13 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 			{
 				XMFLOAT2 sun;
 				XMStoreFloat2(&sun, sunPos);
-				wi::renderer::Postprocess_LightShafts(*renderpass_lightshafts.desc.attachments.back().texture, rtSun[1], cmd, sun);
+				wi::renderer::Postprocess_LightShafts(
+					*renderpass_lightshafts.desc.attachments.back().texture,
+					rtSun[1],
+					cmd,
+					sun,
+					getLightShaftsStrength()
+				);
 			}
 		}
 		device->EventEnd(cmd);
@@ -1496,8 +1558,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 	{
 		if (wi::renderer::GetTemporalAAEnabled() && !wi::renderer::GetTemporalAADebugEnabled())
 		{
-			GraphicsDevice* device = wi::graphics::GetDevice();
-
 			wi::renderer::Postprocess_TemporalAA(
 				temporalAAResources,
 				*rt_read,

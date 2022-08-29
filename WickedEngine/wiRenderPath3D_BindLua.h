@@ -52,6 +52,7 @@ namespace wi::lua
 		int SetExposure(lua_State* L);
 		int SetMotionBlurStrength(lua_State* L);
 		int SetDepthOfFieldStrength(lua_State* L);
+		int SetLightShaftsStrength(lua_State* L);
 
 		static void Bind();
 	};

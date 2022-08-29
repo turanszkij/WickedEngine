@@ -5,7 +5,7 @@ backlog_post("---> START SCRIPT: pick.lua")
 
 scene = GetScene()
 scene.Clear()
-model_entity = LoadModel("../models/teapot.wiscene")
+model_entity = LoadModel(script_dir() .. "../models/teapot.wiscene")
 
 runProcess(function()
 	local t = 0

@@ -9,7 +9,7 @@ using namespace wi::scene;
 void NameWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Name", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_NAME " Name", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(360, 60));
 
 	closeButton.SetTooltip("Delete NameComponent");
@@ -75,8 +75,10 @@ void NameWindow::SetEntity(Entity entity)
 	}
 }
 
-void NameWindow::Update()
+void NameWindow::ResizeLayout()
 {
-	nameInput.SetPos(XMFLOAT2(60, 0));
+	wi::gui::Window::ResizeLayout();
+
+	nameInput.SetPos(XMFLOAT2(60, 4));
 	nameInput.SetSize(XMFLOAT2(GetSize().x - 65, nameInput.GetSize().y));
 }

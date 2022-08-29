@@ -4,6 +4,14 @@ include(GNUInstallDirs)
 set(INSTALL_LOCAL_CONFIGDIR "${CMAKE_BINARY_DIR}/cmake")
 set(INSTALL_CONFIGDIR "${CMAKE_INSTALL_LIBDIR}/cmake/WickedEngine")
 
+if (WICKED_DYNAMIC_LIBRARY)
+	set(WICKED_LIBRARY_TYPE SHARED)
+	message(STATUS "Building WickedEngine as a shared library")
+else()
+	set(WICKED_LIBRARY_TYPE STATIC)
+	message(STATUS "Building WickedEngine as a static library")
+endif()
+
 if (WIN32)
 	# TODO: Choose whether to use SDL2 on windows as well
 	set(TARGET_NAME WickedEngine_Windows)
@@ -128,9 +136,10 @@ set(HEADER_FILES
 		wiVector.h
 		wiVersion.h
 		wiXInput.h
+		wiConfig.h
 		)
 
-add_library(${TARGET_NAME} STATIC
+add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	wiLoadingScreen.cpp
 	wiLoadingScreen_BindLua.cpp
 	wiApplication.cpp
@@ -196,12 +205,13 @@ add_library(${TARGET_NAME} STATIC
 	wiVersion.cpp
 	wiXInput.cpp
 	wiShaderCompiler.cpp
+	wiConfig.cpp
 	${HEADER_FILES}
 )
 add_library(WickedEngine ALIAS ${TARGET_NAME})
 set_target_properties(${TARGET_NAME} PROPERTIES PUBLIC_HEADER "${HEADER_FILES}")
 
-target_include_directories(${TARGET_NAME} PUBLIC
+target_include_directories(${TARGET_NAME} SYSTEM PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine>
 )
@@ -217,14 +227,35 @@ if (WIN32)
 		UNICODE _UNICODE
 	)
 
+	target_compile_options(${TARGET_NAME} PRIVATE /W3)
+
 	set(LIBDXCOMPILER "dxcompiler.dll")
 else ()
+	# `ska::flat_hash_map` has issues on linux because of the hash function being identity
+	# in same cases. Use `robin_hood::unordered_flat_map` instead
+	target_compile_definitions(${TARGET_NAME} PUBLIC WI_UNORDERED_MAP_TYPE=2)
+
 	target_link_libraries(${TARGET_NAME} PUBLIC
 		Threads::Threads
 		SDL2::SDL2
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
 	)
 	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
+
+	# add some warnings and set them as errors
+	# read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
+	target_compile_options(${TARGET_NAME} PRIVATE
+			-Wuninitialized
+			-Wmaybe-uninitialized
+			-Wwrite-strings
+			-Winit-self
+			-Wreturn-type
+			-Wreorder
+			-Werror=delete-non-virtual-dtor
+			-Werror
+			#uncomment this to stop the compilation at the first error
+			# -Wfatal-errors
+			)
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)
 

@@ -6,6 +6,7 @@
 #include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiVector.h"
+#include "shaders/ShaderInterop_DDGI.h"
 
 using namespace wi::ecs;
 
@@ -213,6 +214,11 @@ namespace wi::scene
 				archive >> textures[SPECULARMAP].uvset;
 			}
 
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> userdata;
+			}
+
 			for (auto& x : textures)
 			{
 				if (!x.name.empty())
@@ -338,6 +344,11 @@ namespace wi::scene
 				archive << textures[SPECULARMAP].name;
 				archive << textures[SPECULARMAP].uvset;
 			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << userdata;
+			}
 		}
 	}
 	void MeshComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
@@ -398,12 +409,16 @@ namespace wi::scene
 			{
 			    size_t targetCount;
 			    archive >> targetCount;
-			    targets.resize(targetCount);
+			    morph_targets.resize(targetCount);
 			    for (size_t i = 0; i < targetCount; ++i)
 			    {
-					archive >> targets[i].vertex_positions;
-					archive >> targets[i].vertex_normals;
-					archive >> targets[i].weight;
+					archive >> morph_targets[i].vertex_positions;
+					archive >> morph_targets[i].vertex_normals;
+					archive >> morph_targets[i].weight;
+					if (seri.GetVersion() >= 1)
+					{
+						archive >> morph_targets[i].sparse_indices;
+					}
 			    }
 			}
 
@@ -467,12 +482,16 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 53)
 			{
-			    archive << targets.size();
-			    for (size_t i = 0; i < targets.size(); ++i)
+			    archive << morph_targets.size();
+			    for (size_t i = 0; i < morph_targets.size(); ++i)
 			    {
-					archive << targets[i].vertex_positions;
-					archive << targets[i].vertex_normals;
-					archive << targets[i].weight;
+					archive << morph_targets[i].vertex_positions;
+					archive << morph_targets[i].vertex_normals;
+					archive << morph_targets[i].weight;
+					if (seri.GetVersion() >= 1)
+					{
+						archive << morph_targets[i].sparse_indices;
+					}
 			    }
 			}
 
@@ -1405,18 +1424,171 @@ namespace wi::scene
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			archive >> stiffness;
-			archive >> damping;
-			archive >> wind_affection;
+			archive >> stiffnessForce;
+			archive >> dragForce;
+			archive >> windForce;
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> hitRadius;
+				archive >> gravityPower;
+				archive >> gravityDir;
+			}
 
 			Reset();
 		}
 		else
 		{
 			archive << _flags;
-			archive << stiffness;
-			archive << damping;
-			archive << wind_affection;
+			archive << stiffnessForce;
+			archive << dragForce;
+			archive << windForce;
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << hitRadius;
+				archive << gravityPower;
+				archive << gravityDir;
+			}
+		}
+	}
+	void ColliderComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			int ishape = 0;
+			archive >> ishape;
+			shape = (Shape)ishape;
+			if (seri.GetVersion() < 1)
+			{
+				Entity transformID;
+				SerializeEntity(archive, transformID, seri);
+			}
+			archive >> radius;
+			archive >> offset;
+			archive >> tail;
+		}
+		else
+		{
+			archive << _flags;
+			archive << (int)shape;
+			archive << radius;
+			archive << offset;
+			archive << tail;
+		}
+	}
+	void ScriptComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		const std::string& dir = archive.GetSourceDirectory();
+
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> filename;
+
+			if (IsPlayingOnlyOnce())
+			{
+				Play();
+			}
+
+			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
+				CreateFromFile(dir + filename);
+				});
+		}
+		else
+		{
+			std::string relative_filename = filename; // don't modify actual filename, because script_file() and script_dir() can rely on it
+			if (!dir.empty())
+			{
+				wi::helper::MakePathRelative(dir, relative_filename);
+			}
+
+			archive << _flags;
+			archive << relative_filename;
+		}
+	}
+	void ExpressionComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			for (int& index : presets)
+			{
+				archive >> index;
+			}
+			archive >> blink_frequency;
+			archive >> blink_length;
+			archive >> blink_count;
+			archive >> look_frequency;
+			archive >> look_length;
+
+			size_t expression_count = 0;
+			archive >> expression_count;
+			expressions.resize(expression_count);
+			for (size_t expression_index = 0; expression_index < expression_count; ++expression_index)
+			{
+				Expression& expression = expressions[expression_index];
+				archive >> expression.name;
+				archive >> expression.weight;
+
+				uint32_t value = 0;
+				archive >> value;
+				expression.preset = (Preset)value;
+
+				archive >> value;
+				expression.override_mouth = (Override)value;
+				archive >> value;
+				expression.override_blink = (Override)value;
+				archive >> value;
+				expression.override_look = (Override)value;
+
+				size_t count = 0;
+				archive >> count;
+				expression.morph_target_bindings.resize(count);
+				for (size_t i = 0; i < count; ++i)
+				{
+					SerializeEntity(archive, expression.morph_target_bindings[i].meshID, seri);
+					archive >> expression.morph_target_bindings[i].index;
+					archive >> expression.morph_target_bindings[i].weight;
+				}
+
+				expression.SetDirty();
+			}
+		}
+		else
+		{
+			archive << _flags;
+			for (int index : presets)
+			{
+				archive << index;
+			}
+			archive << blink_frequency;
+			archive << blink_length;
+			archive << blink_count;
+			archive << look_frequency;
+			archive << look_length;
+
+			archive << expressions.size();
+			for (size_t expression_index = 0; expression_index < expressions.size(); ++expression_index)
+			{
+				Expression& expression = expressions[expression_index];
+				archive << expression.name;
+				archive << expression.weight;
+
+				archive << (uint32_t)expression.preset;
+				archive << (uint32_t)expression.override_mouth;
+				archive << (uint32_t)expression.override_blink;
+				archive << (uint32_t)expression.override_look;
+
+				archive << expression.morph_target_bindings.size();
+				for (size_t i = 0; i < expression.morph_target_bindings.size(); ++i)
+				{
+					SerializeEntity(archive, expression.morph_target_bindings[i].meshID, seri);
+					archive << expression.morph_target_bindings[i].index;
+					archive << expression.morph_target_bindings[i].weight;
+				}
+			}
 		}
 	}
 
@@ -1445,53 +1617,219 @@ namespace wi::scene
 		// With this we will ensure that serialized entities are unique and persistent across the scene:
 		EntitySerializer seri;
 
-		names.Serialize(archive, seri);
-		layers.Serialize(archive, seri);
-		transforms.Serialize(archive, seri);
-		if (archive.GetVersion() < 75)
+		if(archive.GetVersion() >= 84)
 		{
-			ComponentManager<DEPRECATED_PreviousFrameTransformComponent> prev_transforms;
-			prev_transforms.Serialize(archive, seri);
+			// New scene serialization path with component library:
+			componentLibrary.Serialize(archive, seri);
 		}
-		hierarchy.Serialize(archive, seri);
-		materials.Serialize(archive, seri);
-		meshes.Serialize(archive, seri);
-		impostors.Serialize(archive, seri);
-		objects.Serialize(archive, seri);
-		aabb_objects.Serialize(archive, seri);
-		rigidbodies.Serialize(archive, seri);
-		softbodies.Serialize(archive, seri);
-		armatures.Serialize(archive, seri);
-		lights.Serialize(archive, seri);
-		aabb_lights.Serialize(archive, seri);
-		cameras.Serialize(archive, seri);
-		probes.Serialize(archive, seri);
-		aabb_probes.Serialize(archive, seri);
-		forces.Serialize(archive, seri);
-		decals.Serialize(archive, seri);
-		aabb_decals.Serialize(archive, seri);
-		animations.Serialize(archive, seri);
-		emitters.Serialize(archive, seri);
-		hairs.Serialize(archive, seri);
-		weathers.Serialize(archive, seri);
-		if (archive.GetVersion() >= 30)
+		else
 		{
-			sounds.Serialize(archive, seri);
+			// Old serialization path with hard coded componentn types:
+			names.Serialize(archive, seri);
+			layers.Serialize(archive, seri);
+			transforms.Serialize(archive, seri);
+			if (archive.GetVersion() < 75)
+			{
+				ComponentManager<DEPRECATED_PreviousFrameTransformComponent> prev_transforms;
+				prev_transforms.Serialize(archive, seri);
+			}
+			hierarchy.Serialize(archive, seri);
+			materials.Serialize(archive, seri);
+			meshes.Serialize(archive, seri);
+			impostors.Serialize(archive, seri);
+			objects.Serialize(archive, seri);
+			aabb_objects.Serialize(archive, seri);
+			rigidbodies.Serialize(archive, seri);
+			softbodies.Serialize(archive, seri);
+			armatures.Serialize(archive, seri);
+			lights.Serialize(archive, seri);
+			aabb_lights.Serialize(archive, seri);
+			cameras.Serialize(archive, seri);
+			probes.Serialize(archive, seri);
+			aabb_probes.Serialize(archive, seri);
+			forces.Serialize(archive, seri);
+			decals.Serialize(archive, seri);
+			aabb_decals.Serialize(archive, seri);
+			animations.Serialize(archive, seri);
+			emitters.Serialize(archive, seri);
+			hairs.Serialize(archive, seri);
+			weathers.Serialize(archive, seri);
+			if (archive.GetVersion() >= 30)
+			{
+				sounds.Serialize(archive, seri);
+			}
+			if (archive.GetVersion() >= 37)
+			{
+				inverse_kinematics.Serialize(archive, seri);
+			}
+			if (archive.GetVersion() >= 38)
+			{
+				springs.Serialize(archive, seri);
+			}
+			if (archive.GetVersion() >= 46)
+			{
+				animation_datas.Serialize(archive, seri);
+			}
+
+			if (archive.GetVersion() < 46)
+			{
+				// Fixing the animation import from archive that didn't have separate animation data components:
+				for (size_t i = 0; i < animations.GetCount(); ++i)
+				{
+					AnimationComponent& animation = animations[i];
+					for (const AnimationComponent::AnimationChannel& channel : animation.channels)
+					{
+						assert(channel.samplerIndex < (int)animation.samplers.size());
+						AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
+						if (sampler.data == INVALID_ENTITY)
+						{
+							// backwards-compatibility mode
+							sampler.data = CreateEntity();
+							animation_datas.Create(sampler.data) = sampler.backwards_compatibility_data;
+							sampler.backwards_compatibility_data.keyframe_times.clear();
+							sampler.backwards_compatibility_data.keyframe_data.clear();
+						}
+					}
+				}
+			}
 		}
-		if (archive.GetVersion() >= 37)
+
+		// Additional data serializations:
+		if (archive.GetVersion() >= 85)
 		{
-			inverse_kinematics.Serialize(archive, seri);
-		}
-		if (archive.GetVersion() >= 38)
-		{
-			springs.Serialize(archive, seri);
-		}
-		if (archive.GetVersion() >= 46)
-		{
-			animation_datas.Serialize(archive, seri);
+			ddgi.Serialize(archive);
 		}
 
 		wi::backlog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
+	}
+
+	void Scene::DDGI::Serialize(wi::Archive& archive)
+	{
+		using namespace wi::graphics;
+		GraphicsDevice* device = GetDevice();
+
+		if (archive.IsReadMode())
+		{
+			archive >> frame_index;
+			archive >> grid_dimensions;
+
+			wi::vector<uint8_t> data;
+
+			// color texture:
+			archive >> data;
+			if(!data.empty())
+			{
+
+				TextureDesc desc;
+				desc.width = DDGI_COLOR_TEXELS * grid_dimensions.x * grid_dimensions.y;
+				desc.height = DDGI_COLOR_TEXELS * grid_dimensions.z;
+				desc.format = Format::R16G16B16A16_FLOAT;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+
+				SubresourceData initdata;
+				initdata.data_ptr = data.data();
+				initdata.row_pitch = desc.width * GetFormatStride(desc.format);
+
+				device->CreateTexture(&desc, &initdata, &color_texture[0]);
+				device->SetName(&color_texture[0], "ddgi.color_texture[serialized]");
+			}
+
+			// depth texture:
+			archive >> data;
+			if(!data.empty())
+			{
+				TextureDesc desc;
+				desc.width = DDGI_DEPTH_TEXELS * grid_dimensions.x * grid_dimensions.y;
+				desc.height = DDGI_DEPTH_TEXELS * grid_dimensions.z;
+				desc.format = Format::R16G16_FLOAT;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+
+				SubresourceData initdata;
+				initdata.data_ptr = data.data();
+				initdata.row_pitch = desc.width * GetFormatStride(desc.format);
+
+				device->CreateTexture(&desc, &initdata, &depth_texture[0]);
+				device->SetName(&depth_texture[0], "ddgi.depth_texture[seriaized]");
+			}
+
+			// offset buffer:
+			archive >> data;
+			if(!data.empty())
+			{
+				GPUBufferDesc desc;
+				desc.stride = sizeof(DDGIProbeOffset);
+				desc.size = desc.stride * grid_dimensions.x * grid_dimensions.y * grid_dimensions.z;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				device->CreateBuffer(&desc, data.data(), &offset_buffer);
+				device->SetName(&offset_buffer, "ddgi.offset_buffer[serialized]");
+			}
+		}
+		else
+		{
+			archive << frame_index;
+			archive << grid_dimensions;
+
+			wi::vector<uint8_t> data;
+			if (color_texture[0].IsValid())
+			{
+				bool success = wi::helper::saveTextureToMemory(color_texture[0], data);
+				assert(success);
+			}
+			archive << data;
+
+			data.clear();
+			if (depth_texture[0].IsValid())
+			{
+				bool success = wi::helper::saveTextureToMemory(depth_texture[0], data);
+				assert(success);
+			}
+			archive << data;
+
+			// Download and serialize offset buffer:
+			if(offset_buffer.IsValid())
+			{
+				GPUBufferDesc desc = offset_buffer.desc;
+				desc.usage = wi::graphics::Usage::READBACK;
+				desc.bind_flags = {};
+				desc.misc_flags = {};
+				GPUBuffer staging;
+				bool success = device->CreateBuffer(&desc, nullptr, &staging);
+				assert(success);
+
+				CommandList cmd = device->BeginCommandList();
+
+				{
+					GPUBarrier barriers[] = {
+						GPUBarrier::Buffer(&offset_buffer,ResourceState::SHADER_RESOURCE,ResourceState::COPY_SRC),
+					};
+					device->Barrier(barriers, arraysize(barriers), cmd);
+				}
+
+				device->CopyResource(&staging, &offset_buffer, cmd);
+
+				{
+					GPUBarrier barriers[] = {
+						GPUBarrier::Buffer(&offset_buffer,ResourceState::COPY_SRC,ResourceState::SHADER_RESOURCE),
+					};
+					device->Barrier(barriers, arraysize(barriers), cmd);
+				}
+
+				device->SubmitCommandLists();
+				device->WaitForGPU();
+
+				// serialize like vector<uint8_t>:
+				archive << staging.mapped_size;
+				for (size_t i = 0; i < staging.mapped_size; ++i)
+				{
+					archive << ((uint8_t*)staging.mapped_data)[i];
+				}
+			}
+			else
+			{
+				archive << size_t(0);
+			}
+		}
 	}
 
 	Entity Scene::Entity_Serialize(
@@ -1508,670 +1846,736 @@ namespace wi::scene
 		{
 			seri.allow_remap = false;
 		}
-
-		if (archive.IsReadMode())
+		
+		if (archive.GetVersion() >= 84)
 		{
-			// Check for each components if it exists, and if yes, READ it:
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = names.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = layers.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = transforms.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			if(archive.GetVersion() < 75)
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					ComponentManager<DEPRECATED_PreviousFrameTransformComponent> prev_transforms;
-					auto& component = prev_transforms.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = hierarchy.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = materials.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = meshes.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = impostors.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = objects.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = aabb_objects.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = rigidbodies.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = softbodies.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = armatures.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = lights.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = aabb_lights.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = cameras.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = probes.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = aabb_probes.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = forces.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = decals.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = aabb_decals.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = animations.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = emitters.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = hairs.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = weathers.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			if (archive.GetVersion() >= 30)
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = sounds.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			if (archive.GetVersion() >= 37)
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = inverse_kinematics.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			if (archive.GetVersion() >= 38)
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = springs.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
-			if (archive.GetVersion() >= 46)
-			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
-				{
-					auto& component = animation_datas.Create(entity);
-					component.Serialize(archive, seri);
-				}
-			}
+			// New entity serialization path with component library:
+			componentLibrary.Entity_Serialize(entity, archive, seri);
 
-			// Wait the job system, because from this point, component managers could be resized
-			//	due to more serialization tasks in recursive operation
-			//	The pointers must not be invalidated while serialization jobs are not finished
-			wi::jobsystem::Wait(seri.ctx);
-
-			if (archive.GetVersion() >= 72 && has_flag(flags, EntitySerializeFlags::RECURSIVE))
+			if (archive.IsReadMode())
 			{
-				// serialize children:
-				seri.allow_remap = restore_remap;
-				size_t childCount = 0;
-				archive >> childCount;
-				for (size_t i = 0; i < childCount; ++i)
+				// Wait the job system, because from this point, component managers could be resized
+				//	due to more serialization tasks in recursive operation
+				//	The pointers must not be invalidated while serialization jobs are not finished
+				wi::jobsystem::Wait(seri.ctx);
+
+				if (archive.GetVersion() >= 72 && has_flag(flags, EntitySerializeFlags::RECURSIVE))
 				{
-					Entity child = Entity_Serialize(archive, seri, INVALID_ENTITY, flags);
-					if (child != INVALID_ENTITY)
+					// serialize children:
+					seri.allow_remap = restore_remap;
+					size_t childCount = 0;
+					archive >> childCount;
+					for (size_t i = 0; i < childCount; ++i)
 					{
-						HierarchyComponent* hier = hierarchy.GetComponent(child);
-						if (hier != nullptr)
+						Entity child = Entity_Serialize(archive, seri, INVALID_ENTITY, flags);
+						if (child != INVALID_ENTITY)
 						{
-							hier->parentID = entity;
+							HierarchyComponent* hier = hierarchy.GetComponent(child);
+							if (hier != nullptr)
+							{
+								hier->parentID = entity;
+							}
 						}
 					}
 				}
 			}
+			else
+			{
+				// Wait the job system, because from this point, component managers could be resized
+				//	due to more serialization tasks in recursive operation
+				//	The pointers must not be invalidated while serialization jobs are not finished
+				wi::jobsystem::Wait(seri.ctx);
+
+				if (archive.GetVersion() >= 72 && has_flag(flags, EntitySerializeFlags::RECURSIVE))
+				{
+					// Recursive serialization for all children:
+					seri.allow_remap = restore_remap;
+					wi::vector<Entity> children;
+					for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+					{
+						const HierarchyComponent& hier = hierarchy[i];
+						if (hier.parentID == entity)
+						{
+							Entity child = hierarchy.GetEntity(i);
+							children.push_back(child);
+						}
+					}
+					archive << children.size();
+					for (Entity child : children)
+					{
+						Entity_Serialize(archive, seri, child, flags);
+					}
+				}
+			}
+
 		}
 		else
 		{
-			// Find existing components one-by-one and WRITE them out:
+			// Old entity serialization path code for hard coded component types:
+			if (archive.IsReadMode())
 			{
-				auto component = names.GetComponent(entity);
-				if (component != nullptr)
+				// Check for each components if it exists, and if yes, READ it:
 				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = layers.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = transforms.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = hierarchy.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = materials.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = meshes.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = impostors.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = objects.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = aabb_objects.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = rigidbodies.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = softbodies.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = armatures.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = lights.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = aabb_lights.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = cameras.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = probes.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = aabb_probes.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = forces.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = decals.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = aabb_decals.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = animations.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = emitters.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = hairs.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = weathers.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			if(archive.GetVersion() >= 30)
-			{
-				auto component = sounds.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			if (archive.GetVersion() >= 37)
-			{
-				auto component = inverse_kinematics.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			if (archive.GetVersion() >= 38)
-			{
-				auto component = springs.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			if (archive.GetVersion() >= 46)
-			{
-				auto component = animation_datas.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-
-			// Wait the job system, because from this point, component managers could be resized
-			//	due to more serialization tasks in recursive operation
-			//	The pointers must not be invalidated while serialization jobs are not finished
-			wi::jobsystem::Wait(seri.ctx);
-
-			if (archive.GetVersion() >= 72 && has_flag(flags, EntitySerializeFlags::RECURSIVE))
-			{
-				// Recursive serialization for all children:
-				seri.allow_remap = restore_remap;
-				wi::vector<Entity> children;
-				for (size_t i = 0; i < hierarchy.GetCount(); ++i)
-				{
-					const HierarchyComponent& hier = hierarchy[i];
-					if (hier.parentID == entity)
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
 					{
-						Entity child = hierarchy.GetEntity(i);
-						children.push_back(child);
+						auto& component = names.Create(entity);
+						component.Serialize(archive, seri);
 					}
 				}
-				archive << children.size();
-				for (Entity child : children)
 				{
-					Entity_Serialize(archive, seri, child, flags);
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = layers.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = transforms.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				if(archive.GetVersion() < 75)
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						ComponentManager<DEPRECATED_PreviousFrameTransformComponent> prev_transforms;
+						auto& component = prev_transforms.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = hierarchy.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = materials.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = meshes.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = impostors.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = objects.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = aabb_objects.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = rigidbodies.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = softbodies.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = armatures.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = lights.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = aabb_lights.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = cameras.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = probes.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = aabb_probes.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = forces.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = decals.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = aabb_decals.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = animations.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = emitters.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = hairs.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = weathers.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				if (archive.GetVersion() >= 30)
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = sounds.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				if (archive.GetVersion() >= 37)
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = inverse_kinematics.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				if (archive.GetVersion() >= 38)
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = springs.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				if (archive.GetVersion() >= 46)
+				{
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = animation_datas.Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+
+				// Wait the job system, because from this point, component managers could be resized
+				//	due to more serialization tasks in recursive operation
+				//	The pointers must not be invalidated while serialization jobs are not finished
+				wi::jobsystem::Wait(seri.ctx);
+
+				if (archive.GetVersion() >= 72 && has_flag(flags, EntitySerializeFlags::RECURSIVE))
+				{
+					// serialize children:
+					seri.allow_remap = restore_remap;
+					size_t childCount = 0;
+					archive >> childCount;
+					for (size_t i = 0; i < childCount; ++i)
+					{
+						Entity child = Entity_Serialize(archive, seri, INVALID_ENTITY, flags);
+						if (child != INVALID_ENTITY)
+						{
+							HierarchyComponent* hier = hierarchy.GetComponent(child);
+							if (hier != nullptr)
+							{
+								hier->parentID = entity;
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				// Find existing components one-by-one and WRITE them out:
+				{
+					auto component = names.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = layers.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = transforms.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = hierarchy.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = materials.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = meshes.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = impostors.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = objects.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = aabb_objects.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = rigidbodies.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = softbodies.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = armatures.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = lights.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = aabb_lights.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = cameras.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = probes.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = aabb_probes.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = forces.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = decals.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = aabb_decals.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = animations.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = emitters.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = hairs.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				{
+					auto component = weathers.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				if(archive.GetVersion() >= 30)
+				{
+					auto component = sounds.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				if (archive.GetVersion() >= 37)
+				{
+					auto component = inverse_kinematics.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				if (archive.GetVersion() >= 38)
+				{
+					auto component = springs.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+				if (archive.GetVersion() >= 46)
+				{
+					auto component = animation_datas.GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
+				}
+
+				// Wait the job system, because from this point, component managers could be resized
+				//	due to more serialization tasks in recursive operation
+				//	The pointers must not be invalidated while serialization jobs are not finished
+				wi::jobsystem::Wait(seri.ctx);
+
+				if (archive.GetVersion() >= 72 && has_flag(flags, EntitySerializeFlags::RECURSIVE))
+				{
+					// Recursive serialization for all children:
+					seri.allow_remap = restore_remap;
+					wi::vector<Entity> children;
+					for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+					{
+						const HierarchyComponent& hier = hierarchy[i];
+						if (hier.parentID == entity)
+						{
+							Entity child = hierarchy.GetEntity(i);
+							children.push_back(child);
+						}
+					}
+					archive << children.size();
+					for (Entity child : children)
+					{
+						Entity_Serialize(archive, seri, child, flags);
+					}
 				}
 			}
 		}

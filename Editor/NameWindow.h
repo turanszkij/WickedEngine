@@ -14,6 +14,6 @@ public:
 
 	wi::gui::TextInputField nameInput;
 
-	void Update();
+	void ResizeLayout() override;
 };
 

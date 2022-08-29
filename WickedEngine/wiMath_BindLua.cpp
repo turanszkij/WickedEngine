@@ -19,7 +19,6 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, TransformCoord),
 		lunamethod(Vector_BindLua, Length),
 		lunamethod(Vector_BindLua, Normalize),
-		lunamethod(Vector_BindLua, QuaternionNormalize),
 		lunamethod(Vector_BindLua, Add),
 		lunamethod(Vector_BindLua, Subtract),
 		lunamethod(Vector_BindLua, Multiply),
@@ -28,12 +27,17 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, Lerp),
 		lunamethod(Vector_BindLua, Slerp),
 		lunamethod(Vector_BindLua, Clamp),
-		lunamethod(Vector_BindLua, Normalize),
+		lunamethod(Vector_BindLua, QuaternionNormalize),
 		lunamethod(Vector_BindLua, QuaternionMultiply),
 		lunamethod(Vector_BindLua, QuaternionFromRollPitchYaw),
+		lunamethod(Vector_BindLua, QuaternionToRollPitchYaw),
 		{ NULL, NULL }
 	};
 	Luna<Vector_BindLua>::PropertyType Vector_BindLua::properties[] = {
+		lunaproperty(Vector_BindLua, X),
+		lunaproperty(Vector_BindLua, Y),
+		lunaproperty(Vector_BindLua, Z),
+		lunaproperty(Vector_BindLua, W),
 		{ NULL, NULL }
 	};
 
@@ -384,6 +388,22 @@ namespace wi::lua
 		wi::lua::SError(L, "QuaternionFromRollPitchYaw(Vector rotXYZ) not enough arguments!");
 		return 0;
 	}
+	int Vector_BindLua::QuaternionToRollPitchYaw(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (v1)
+			{
+				XMFLOAT3 xyz = wi::math::QuaternionToRollPitchYaw(*v1);
+				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMFLOAT4(xyz.x, xyz.y, xyz.z, 0)));
+				return 1;
+			}
+		}
+		wi::lua::SError(L, "QuaternionToRollPitchYaw(Vector quaternion) not enough arguments!");
+		return 0;
+	}
 	int Vector_BindLua::Slerp(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
@@ -414,6 +434,53 @@ namespace wi::lua
 		}
 	}
 
+
+
+
+	int VectorProperty::Get(lua_State* L)
+	{
+		if(data_f2)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(data_f2)));
+		}
+		if(data_f3)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(data_f3)));
+		}
+		if(data_f4)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(data_f4)));
+		}
+		if(data_v)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(*data_v));
+		}
+		return 1;
+	}
+	int VectorProperty::Set(lua_State* L)
+	{
+		Vector_BindLua* get = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if(get)
+		{
+			if(data_f2)
+			{
+				XMStoreFloat2(data_f2, XMLoadFloat4(get));
+			}
+			if(data_f3)
+			{
+				XMStoreFloat3(data_f3, XMLoadFloat4(get));
+			}
+			if(data_f4)
+			{
+				*data_f4 = *get;
+			}
+			if(data_v)
+			{
+				*data_v = XMLoadFloat4(get);
+			}
+		}
+		return 0;
+	}
 
 
 
@@ -737,4 +804,34 @@ namespace wi::lua
 		}
 	}
 
+
+
+	int MatrixProperty::Get(lua_State *L)
+	{
+		if(data_f4x4)
+		{
+			Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(*data_f4x4));
+		}
+		if(data_m)
+		{
+			Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(*data_m));
+		}
+		return 1;
+	}
+	int MatrixProperty::Set(lua_State *L)
+	{
+		Matrix_BindLua* get = Luna<Matrix_BindLua>::check(L, 1);
+		if(get)
+		{
+			if(data_f4x4)
+			{
+				*data_f4x4 = *get;
+			}
+			if(data_m)
+			{
+				*data_m = XMLoadFloat4x4(get);
+			}
+		}
+		return 0;
+	}
 }
