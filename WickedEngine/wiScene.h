@@ -1485,7 +1485,7 @@ namespace wi::scene
 			Blend,
 		};
 
-		float blink_frequency = 0;	// number of blinks per second
+		float blink_frequency = 0.3f;	// number of blinks per second
 		float blink_length = 0.1f;	// blink's completion time in seconds
 		int blink_count = 2;
 		float look_frequency = 0;	// number of lookAt changes per second

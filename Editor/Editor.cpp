@@ -955,7 +955,7 @@ void EditorComponent::Update(float dt)
 					if (translator.selected.empty() && object->GetRenderTypes() & wi::enums::RENDERTYPE_WATER)
 					{
 						// if water, then put a water ripple onto it:
-						scene.PutWaterRipple("images/ripple.png", hovered.position);
+						scene.PutWaterRipple("../Content/models/ripple.png", hovered.position);
 					}
 					else if (componentsWnd.decalWnd.IsEnabled() && componentsWnd.decalWnd.placementCheckBox.GetCheck() && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 					{
