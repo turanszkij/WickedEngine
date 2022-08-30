@@ -4835,10 +4835,9 @@ namespace wi::scene
 			desc.mip_levels = 1;
 			desc.usage = Usage::DEFAULT;
 
-			desc.bind_flags = BindFlag::DEPTH_STENCIL;
-			desc.format = Format::D16_UNORM;
-			desc.layout = ResourceState::DEPTHSTENCIL;
-			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+			desc.format = Format::R16_TYPELESS;
+			desc.layout = ResourceState::SHADER_RESOURCE;
 			desc.sample_count = envmapMSAASampleCount;
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer_MSAA);
 			device->SetName(&envrenderingDepthBuffer_MSAA, "envrenderingDepthBuffer_MSAA");
@@ -4940,7 +4939,10 @@ namespace wi::scene
 						RenderPassAttachment::DepthStencil(
 							&envrenderingDepthBuffer_MSAA,
 							RenderPassAttachment::LoadOp::CLEAR,
-							RenderPassAttachment::StoreOp::DONTCARE
+							RenderPassAttachment::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::SHADER_RESOURCE
 						)
 					);
 					renderpassdesc.attachments.push_back(
@@ -4957,13 +4959,6 @@ namespace wi::scene
 							ResourceState::SHADER_RESOURCE,
 							ResourceState::SHADER_RESOURCE,
 							envmapArray.desc.mip_levels + envmapCount + i // subresource: individual cubes only mip0
-						)
-					);
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::ResolveDepth(&envrenderingDepthBuffer,
-							RenderPassAttachment::DepthResolveMode::Max,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::SHADER_RESOURCE
 						)
 					);
 					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap_MSAA[i]);

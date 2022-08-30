@@ -1014,6 +1014,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_WEATHERMAP], "volumetricCloud_weathermapCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER], "volumetricCloud_renderCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE], "volumetricCloud_renderCS_capture.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE_MSAA], "volumetricCloud_renderCS_capture_MSAA.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_REPROJECT], "volumetricCloud_reprojectCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_RENDER], "volumetricCloud_shadow_renderCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_FILTER], "volumetricCloud_shadow_filterCS.cso"); });
@@ -6789,8 +6790,18 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		// Compute Volumetric Clouds for environment map
 		if (vis.scene->weather.IsVolumetricClouds())
 		{
-			device->EventBegin("Volumetric Cloud Rendering Capture", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE], cmd);
+			if (probe.IsMSAA())
+			{
+				device->EventBegin("Volumetric Cloud Rendering Capture [MSAA]", cmd);
+				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE_MSAA], cmd);
+				device->BindResource(&vis.scene->envrenderingDepthBuffer_MSAA, 4, cmd);
+			}
+			else
+			{
+				device->EventBegin("Volumetric Cloud Rendering Capture", cmd);
+				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE], cmd);
+				device->BindResource(&vis.scene->envrenderingDepthBuffer, 4, cmd);
+			}
 
 			device->BindResource(&texture_shapeNoise, 0, cmd);
 			device->BindResource(&texture_detailNoise, 1, cmd);
@@ -6815,7 +6826,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			push.resolution_rcp.y = 1.0f / push.resolution.y;
 			push.arrayIndex = arrayIndex;
 			push.texture_input = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::SRV);
-			push.texture_input_depth = device->GetDescriptorIndex(&vis.scene->envrenderingDepthBuffer, SubresourceType::SRV);
 			push.texture_output = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::UAV);
 
 			if (probe.IsRealTime())

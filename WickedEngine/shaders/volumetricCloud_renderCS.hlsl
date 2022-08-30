@@ -35,10 +35,18 @@ Texture3D<float4> texture_detailNoise : register(t1);
 Texture2D<float4> texture_curlNoise : register(t2);
 Texture2D<float4> texture_weatherMap : register(t3);
 
-#ifndef VOLUMETRICCLOUD_CAPTURE
+#ifdef VOLUMETRICCLOUD_CAPTURE
+
+#ifdef MSAA
+Texture2DMSArray<float> texture_input_depth_MSAA : register(t4);
+#else
+TextureCube<float> texture_input_depth : register(t4);
+#endif // MSAA
+
+#else
 RWTexture2D<float4> texture_render : register(u0);
 RWTexture2D<float2> texture_cloudDepth : register(u1);
-#endif
+#endif // VOLUMETRICCLOUD_CAPTURE
 
 // Octaves for multiple-scattering approximation. 1 means single-scattering only.
 #define MS_COUNT 2
@@ -672,12 +680,22 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	TextureCubeArray input = bindless_cubearrays[capture.texture_input];
-	TextureCube input_depth = bindless_cubemaps[capture.texture_input_depth]; // Current capture with only 6 slices (cube)
 	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[capture.texture_output];
 
 	const float2 uv = (DTid.xy + 0.5) * capture.resolution_rcp;
 	const float3 N = uv_to_cubemap(uv, DTid.z);
-	const float depth = input_depth.SampleLevel(sampler_point_clamp, N, 0).r;
+
+#ifdef MSAA
+	float3 uv_slice = cubemap_to_uv(N);
+	uint2 cube_dim;
+	uint cube_elements;
+	uint cube_sam;
+	texture_input_depth_MSAA.GetDimensions(cube_dim.x, cube_dim.y, cube_elements, cube_sam);
+	uv_slice.xy *= cube_dim;
+	const float depth = texture_input_depth_MSAA.Load(uv_slice, 0);
+#else
+	const float depth = texture_input_depth.SampleLevel(sampler_point_clamp, N, 0).r;
+#endif // MSAA
 
 	float3 depthWorldPosition = reconstruct_position(uv, depth, xCubemapRenderCams[DTid.z].inverse_view_projection);
 
