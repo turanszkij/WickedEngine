@@ -1001,7 +1001,7 @@ void EditorComponent::Update(float dt)
 								}
 								ForceFieldComponent& force = scene.forces.Create(grass_interaction_entity);
 								TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
-								force.type = ENTITY_TYPE_FORCEFIELD_POINT;
+								force.type = ForceFieldComponent::Type::Point;
 								force.gravity = -80;
 								force.range = 3;
 								transform.Translate(P);

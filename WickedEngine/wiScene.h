@@ -1041,9 +1041,14 @@ namespace wi::scene
 		};
 		uint32_t _flags = EMPTY;
 
-		int type = ENTITY_TYPE_FORCEFIELD_POINT;
-		float gravity = 0.0f; // negative = deflector, positive = attractor
-		float range = 0.0f; // affection range
+		enum class Type
+		{
+			Point,
+			Plane,
+		} type = Type::Point;
+
+		float gravity = 0; // negative = deflector, positive = attractor
+		float range = 0; // affection range
 
 		// Non-serialized attributes:
 		XMFLOAT3 position;
@@ -1553,7 +1558,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<CameraComponent>& cameras = componentLibrary.Register<CameraComponent>("wi::scene::Scene::cameras");
 		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = componentLibrary.Register<EnvironmentProbeComponent>("wi::scene::Scene::probes");
 		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_probes = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_probes");
-		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Register<ForceFieldComponent>("wi::scene::Scene::forces");
+		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Register<ForceFieldComponent>("wi::scene::Scene::forces", 1); // version = 1
 		wi::ecs::ComponentManager<DecalComponent>& decals = componentLibrary.Register<DecalComponent>("wi::scene::Scene::decals");
 		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_decals = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_decals");
 		wi::ecs::ComponentManager<AnimationComponent>& animations = componentLibrary.Register<AnimationComponent>("wi::scene::Scene::animations");

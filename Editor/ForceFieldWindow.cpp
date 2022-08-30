@@ -42,10 +42,10 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 			switch (args.iValue)
 			{
 			case 0:
-				force->type = ENTITY_TYPE_FORCEFIELD_POINT;
+				force->type = ForceFieldComponent::Type::Point;
 				break;
 			case 1:
-				force->type = ENTITY_TYPE_FORCEFIELD_PLANE;
+				force->type = ForceFieldComponent::Type::Plane;
 				break;
 			default:
 				assert(0); // error
@@ -53,8 +53,8 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 			}
 		}
 	});
-	typeComboBox.AddItem("Point");
-	typeComboBox.AddItem("Plane");
+	typeComboBox.AddItem("Point", (uint64_t)ForceFieldComponent::Type::Point);
+	typeComboBox.AddItem("Plane", (uint64_t)ForceFieldComponent::Type::Plane);
 	typeComboBox.SetEnabled(false);
 	typeComboBox.SetTooltip("Choose the force field type.");
 	AddWidget(&typeComboBox);
@@ -105,7 +105,7 @@ void ForceFieldWindow::SetEntity(Entity entity)
 
 	if (force != nullptr)
 	{
-		typeComboBox.SetSelected(force->type == ENTITY_TYPE_FORCEFIELD_POINT ? 0 : 1);
+		typeComboBox.SetSelectedByUserdataWithoutCallback((uint64_t)force->type);
 		gravitySlider.SetValue(force->gravity);
 		rangeSlider.SetValue(force->range);
 

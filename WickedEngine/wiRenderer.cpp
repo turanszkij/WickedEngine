@@ -3814,7 +3814,16 @@ void UpdateRenderData(
 				shaderentity.layerMask = layer->layerMask;
 			}
 
-			shaderentity.SetType(force.type);
+			switch (force.type)
+			{
+			default:
+			case ForceFieldComponent::Type::Point:
+				shaderentity.SetType(ENTITY_TYPE_FORCEFIELD_POINT);
+				break;
+			case ForceFieldComponent::Type::Plane:
+				shaderentity.SetType(ENTITY_TYPE_FORCEFIELD_PLANE);
+				break;
+			}
 			shaderentity.position = force.position;
 			shaderentity.SetGravity(force.gravity);
 			shaderentity.SetRange(std::max(0.001f, force.GetRange()));
@@ -6292,11 +6301,11 @@ void DrawDebugWorld(
 
 			switch (force.type)
 			{
-			case ENTITY_TYPE_FORCEFIELD_POINT:
+			case ForceFieldComponent::Type::Point:
 				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_FORCEFIELD_POINT], cmd);
 				device->Draw(2880, 0, cmd); // uv-sphere
 				break;
-			case ENTITY_TYPE_FORCEFIELD_PLANE:
+			case ForceFieldComponent::Type::Plane:
 				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_FORCEFIELD_PLANE], cmd);
 				device->Draw(14, 0, cmd); // box
 				break;

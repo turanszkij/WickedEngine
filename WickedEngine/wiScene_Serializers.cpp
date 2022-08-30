@@ -900,14 +900,23 @@ namespace wi::scene
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			archive >> type;
+			uint32_t value;
+			archive >> value;
+			if (seri.GetVersion() < 1)
+			{
+				if (value == 200)
+					value = 0;
+				if (value == 201)
+					value = 1;
+			}
+			type = (Type)value;
 			archive >> gravity;
 			archive >> range;
 		}
 		else
 		{
 			archive << _flags;
-			archive << type;
+			archive << (uint32_t)type;
 			archive << gravity;
 			archive << range;
 		}

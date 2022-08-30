@@ -2308,9 +2308,6 @@ namespace wi::scene
 		transform.UpdateTransform();
 
 		ForceFieldComponent& force = forces.Create(entity);
-		force.gravity = 0;
-		force.range = 0;
-		force.type = ENTITY_TYPE_FORCEFIELD_POINT;
 
 		return entity;
 	}
