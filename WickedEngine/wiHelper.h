@@ -73,6 +73,9 @@ namespace wi::helper
 
 	std::string ReplaceExtension(const std::string& filename, const std::string& extension);
 
+	// If it already has required extension, then it does nothing, otherwise appends extension
+	std::string ForceExtension(const std::string& filename, const std::string& extension);
+
 	std::string RemoveExtension(const std::string& filename);
 
 	void MakePathRelative(const std::string& rootdir, std::string& path);

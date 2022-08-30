@@ -410,7 +410,7 @@ void EditorComponent::Load()
 		ss += "Select All: Ctrl + A\n";
 		ss += "Deselect All: Esc\n";
 		ss += "Undo: Ctrl + Z\n";
-		ss += "Redo: Ctrl + Y\n";
+		ss += "Redo: Ctrl + Y or Ctrl + Shift + Z\n";
 		ss += "Copy: Ctrl + C\n";
 		ss += "Cut: Ctrl + X\n";
 		ss += "Paste: Ctrl + V\n";
@@ -418,6 +418,9 @@ void EditorComponent::Load()
 		ss += "Save As: Ctrl + Shift + S\n";
 		ss += "Save: Ctrl + S\n";
 		ss += "Transform: Ctrl + T\n";
+		ss += "Move Toggle: 1\n";
+		ss += "Rotate Toggle: 2\n";
+		ss += "Scale Toggle: 3\n";
 		ss += "Wireframe mode: Ctrl + W\n";
 		ss += "Color grading reference: Ctrl + G (color grading palette reference will be displayed in top left corner)\n";
 		ss += "Inspector mode: I button (hold), hovered entity information will be displayed near mouse position.\n";
@@ -1080,7 +1083,7 @@ void EditorComponent::Update(float dt)
 	main->infoDisplay.colorgrading_helper = false;
 
 	// Control operations...
-	if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
+	if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
 	{
 		// Color Grading helper
 		if (wi::input::Down((wi::input::BUTTON)'G'))
@@ -1104,7 +1107,7 @@ void EditorComponent::Update(float dt)
 		// Save
 		if (wi::input::Press((wi::input::BUTTON)'S'))
 		{
-			if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || GetCurrentEditorScene().path.empty())
+			if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT) || GetCurrentEditorScene().path.empty())
 			{
 				SaveAs();
 			}
@@ -1236,22 +1239,55 @@ void EditorComponent::Update(float dt)
 			RecordEntity(archive, addedEntities);
 
 			optionsWnd.RefreshEntityTree();
-	}
+		}
 		// Undo
-		if (wi::input::Press((wi::input::BUTTON)'Z'))
+		if (wi::input::Press((wi::input::BUTTON)'Z') &&
+			!wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) &&
+			!wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT))
 		{
 			ConsumeHistoryOperation(true);
 
 			optionsWnd.RefreshEntityTree();
 		}
 		// Redo
-		if (wi::input::Press((wi::input::BUTTON)'Y'))
+		if (wi::input::Press((wi::input::BUTTON)'Y') ||
+			(wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && wi::input::Press((wi::input::BUTTON)'Z')) ||
+			(wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT) && wi::input::Press((wi::input::BUTTON)'Z'))
+			)
 		{
 			ConsumeHistoryOperation(false);
 
 			optionsWnd.RefreshEntityTree();
 		}
-		}
+	}
+
+	if (wi::input::Press(wi::input::BUTTON('1')))
+	{
+		translator.isTranslator = !translator.isTranslator;
+		translator.isScalator = false;
+		translator.isRotator = false;
+		optionsWnd.isTranslatorCheckBox.SetCheck(translator.isTranslator);
+		optionsWnd.isScalatorCheckBox.SetCheck(false);
+		optionsWnd.isRotatorCheckBox.SetCheck(false);
+	}
+	else if (wi::input::Press(wi::input::BUTTON('2')))
+	{
+		translator.isRotator = !translator.isRotator;
+		translator.isScalator = false;
+		translator.isTranslator = false;
+		optionsWnd.isRotatorCheckBox.SetCheck(translator.isRotator);
+		optionsWnd.isScalatorCheckBox.SetCheck(false);
+		optionsWnd.isTranslatorCheckBox.SetCheck(false);
+	}
+	else if (wi::input::Press(wi::input::BUTTON('3')))
+	{
+		translator.isScalator = !translator.isScalator;
+		translator.isTranslator = false;
+		translator.isRotator = false;
+		optionsWnd.isScalatorCheckBox.SetCheck(translator.isScalator);
+		optionsWnd.isTranslatorCheckBox.SetCheck(false);
+		optionsWnd.isRotatorCheckBox.SetCheck(false);
+	}
 
 	// Delete
 	if (deleting)
@@ -2687,7 +2723,7 @@ void EditorComponent::SaveAs()
 	}
 	wi::helper::FileDialog(params, [=](std::string fileName) {
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-			std::string filename = wi::helper::ReplaceExtension(fileName, params.extensions.front());
+			std::string filename = wi::helper::ForceExtension(fileName, params.extensions.front());
 			Save(filename);
 			});
 		});

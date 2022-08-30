@@ -605,6 +605,19 @@ namespace wi::helper
 		return filename.substr(0, idx + 1) + extension;
 	}
 
+	std::string ForceExtension(const std::string& filename, const std::string& extension)
+	{
+		std::string ext = "." + extension;
+		if (ext.length() > filename.length())
+			return filename + ext;
+
+		if (filename.substr(filename.length() - ext.length()).compare(ext))
+		{
+			return filename + ext;
+		}
+		return filename;
+	}
+
 	std::string RemoveExtension(const std::string& filename)
 	{
 		size_t idx = filename.rfind('.');

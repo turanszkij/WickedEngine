@@ -17,7 +17,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	isRotatorCheckBox.Create(ICON_ROTATE "  ");
 	isScalatorCheckBox.Create(ICON_SCALE "  ");
 	{
-		isScalatorCheckBox.SetTooltip("Scale");
+		isScalatorCheckBox.SetTooltip("Scale\nHotkey: 3");
 		isScalatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 			editor->translator.isScalator = args.bValue;
 			editor->translator.isTranslator = false;
@@ -28,7 +28,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		isScalatorCheckBox.SetCheck(editor->translator.isScalator);
 		AddWidget(&isScalatorCheckBox);
 
-		isRotatorCheckBox.SetTooltip("Rotate");
+		isRotatorCheckBox.SetTooltip("Rotate\nHotkey: 2");
 		isRotatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 			editor->translator.isRotator = args.bValue;
 			editor->translator.isScalator = false;
@@ -39,7 +39,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		isRotatorCheckBox.SetCheck(editor->translator.isRotator);
 		AddWidget(&isRotatorCheckBox);
 
-		isTranslatorCheckBox.SetTooltip("Translate/Move (Ctrl + T)");
+		isTranslatorCheckBox.SetTooltip("Translate/Move (Ctrl + T)\nHotkey: 1");
 		isTranslatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 			editor->translator.isTranslator = args.bValue;
 			editor->translator.isScalator = false;
