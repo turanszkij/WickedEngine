@@ -632,6 +632,7 @@ enum SHADER_ENTITY_TYPE
 };
 
 static const uint ENTITY_FLAG_LIGHT_STATIC = 1 << 0;
+static const uint ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS = 1 << 1;
 
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
@@ -653,7 +654,6 @@ static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
 static const uint OPTION_BIT_VOXELGI_ENABLED = 1 << 2;
 static const uint OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED = 1 << 3;
 static const uint OPTION_BIT_VOXELGI_RETARGETTED = 1 << 4;
-static const uint OPTION_BIT_SIMPLE_SKY = 1 << 5;
 static const uint OPTION_BIT_REALISTIC_SKY = 1 << 6;
 static const uint OPTION_BIT_HEIGHT_FOG = 1 << 7;
 static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 8;
@@ -662,6 +662,7 @@ static const uint OPTION_BIT_SURFELGI_ENABLED = 1 << 10;
 static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 11;
 static const uint OPTION_BIT_FORCE_DIFFUSE_LIGHTING = 1 << 12;
 static const uint OPTION_BIT_STATIC_SKY_HDR = 1 << 13;
+static const uint OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS = 1 << 14;
 
 // ---------- Common Constant buffers: -----------------
 
@@ -679,6 +680,13 @@ struct FrameCB
 
 	uint2		shadow_atlas_resolution;
 	float2		shadow_atlas_resolution_rcp;
+
+	float4x4	cloudShadowLightSpaceMatrix;
+	float4x4	cloudShadowLightSpaceMatrixInverse;
+
+	float		cloudShadowFarPlaneKm;
+	int			texture_volumetricclouds_shadow_index;
+	float2		padding0;
 
 	float3		voxelradiance_center;			// center of the voxel grid in world space units
 	float		voxelradiance_max_distance;		// maximum raymarch distance for voxel GI in world-space
@@ -840,6 +848,7 @@ struct LensFlarePush
 struct CubemapRenderCam
 {
 	float4x4 view_projection;
+	float4x4 inverse_view_projection;
 	uint4 properties;
 };
 CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
@@ -926,6 +935,22 @@ struct SkinningPushConstants
 
 	int so_pos_nor_wind;
 	int so_tan;
+};
+
+struct VolumetricCloudCapturePushConstants
+{
+	uint2 resolution;
+	float2 resolution_rcp;
+
+	uint arrayIndex;
+	int texture_input;
+	int texture_output;
+	int MaxStepCount;
+
+	float LODMin;
+	float ShadowSampleCount;
+	float GroundContributionSampleCount;
+	float padding;
 };
 
 

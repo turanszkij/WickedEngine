@@ -95,7 +95,7 @@ struct VolumetricCloudParameters
 	float3 Albedo; // Cloud albedo is normally very close to 1
 	float CloudAmbientGroundMultiplier; // [0; 1] Amount of ambient light to reach the bottom of clouds
 
-	float3 ExtinctionCoefficient; // * 0.05 looks good too
+	float3 ExtinctionCoefficient;
 	float BeerPowder;
 
 	float BeerPowderPower;
@@ -120,12 +120,8 @@ struct VolumetricCloudParameters
 
 	float WeatherScale;
 	float CurlScale;
-	float ShapeNoiseHeightGradientAmount;
-	float ShapeNoiseMultiplier;
-
-	float2 ShapeNoiseMinMax;
-	float ShapeNoisePower;
 	float DetailNoiseModifier;
+	float padding0;
 
 	float DetailNoiseHeightFraction;
 	float CurlNoiseModifier;
@@ -133,7 +129,7 @@ struct VolumetricCloudParameters
 	float CoverageMinimum;
 
 	float TypeAmount;
-	float TypeOverall;
+	float TypeMinimum;
 	float AnvilAmount; // Anvil clouds disabled by default.
 	float AnvilOverhangHeight;
 
@@ -143,7 +139,7 @@ struct VolumetricCloudParameters
 	float WindAngle;
 	float WindUpAmount;
 
-	float2 padding0;
+	float2 padding1;
 	float CoverageWindSpeed;
 	float CoverageWindAngle;
 
@@ -161,21 +157,19 @@ struct VolumetricCloudParameters
 
 	float LODDistance; // After a certain distance, noises will get higher LOD
 	float LODMin; // 
-	float BigStepMarch; // How long inital rays should be until they hit something. Lower values may ives a better image but may be slower.
+	float BigStepMarch; // How long inital rays should be until they hit something. Lower values may give a better image but may be slower.
 	float TransmittanceThreshold; // Default: 0.005. If the clouds transmittance has reached it's desired opacity, there's no need to keep raymarching for performance.
 
-	float2 padding1;
+	float2 padding2;
 	float ShadowSampleCount;
 	float GroundContributionSampleCount;
 
 	void init()
 	{
-
-
 		// Lighting
 		Albedo = float3(0.9f, 0.9f, 0.9f);
 		CloudAmbientGroundMultiplier = 0.75f;
-		ExtinctionCoefficient = float3(0.71f * 0.1f, 0.86f * 0.1f, 1.0f * 0.1f);
+		ExtinctionCoefficient = float3(0.71f * 0.05f, 0.86f * 0.05f, 1.0f * 0.05f);
 		BeerPowder = 20.0f;
 		BeerPowderPower = 0.5f;
 		PhaseG = 0.5f; // [-0.999; 0.999]
@@ -185,7 +179,7 @@ struct VolumetricCloudParameters
 		MultiScatteringExtinction = 0.1f;
 		MultiScatteringEccentricity = 0.2f;
 		ShadowStepLength = 3000.0f;
-		HorizonBlendAmount = 1.25f;
+		HorizonBlendAmount = 0.0000125f;
 		HorizonBlendPower = 2.0f;
 		WeatherDensityAmount = 0.0f;
 
@@ -194,24 +188,19 @@ struct VolumetricCloudParameters
 		CloudThickness = 4000.0f;
 		SkewAlongWindDirection = 700.0f;
 
-		TotalNoiseScale = 1.0f;
-		DetailScale = 5.0f;
-		WeatherScale = 0.0625f;
-		CurlScale = 7.5f;
-
-		ShapeNoiseHeightGradientAmount = 0.2f;
-		ShapeNoiseMultiplier = 0.8f;
-		ShapeNoisePower = 6.0f;
-		ShapeNoiseMinMax = float2(0.25f, 1.1f);
+		TotalNoiseScale = 0.0006f;
+		DetailScale = 2.0f;
+		WeatherScale = 0.000025f;
+		CurlScale = 0.3f;
 
 		DetailNoiseModifier = 0.2f;
 		DetailNoiseHeightFraction = 10.0f;
-		CurlNoiseModifier = 550.0f;
+		CurlNoiseModifier = 500.0f;
 
-		CoverageAmount = 2.0f;
-		CoverageMinimum = 1.05f;
+		CoverageAmount = 1.0f;
+		CoverageMinimum = 0.0f;
 		TypeAmount = 1.0f;
-		TypeOverall = 0.0f;
+		TypeMinimum = 0.0f;
 		AnvilAmount = 0.0f;
 		AnvilOverhangHeight = 3.0f;
 
@@ -225,21 +214,21 @@ struct VolumetricCloudParameters
 
 		// Cloud types
 		// 4 positions of a black, white, white, black gradient
-		CloudGradientSmall = float4(0.02f, 0.07f, 0.12f, 0.28f);
-		CloudGradientMedium = float4(0.02f, 0.07f, 0.39f, 0.59f);
+		CloudGradientSmall = float4(0.02f, 0.1f, 0.12f, 0.28f);
+		CloudGradientMedium = float4(0.02f, 0.1f, 0.39f, 0.59f);
 		CloudGradientLarge = float4(0.02f, 0.07f, 0.88f, 1.0f);
 
 		// Performance
-		MaxStepCount = 128;
+		MaxStepCount = 96;
 		MaxMarchingDistance = 30000.0f;
 		InverseDistanceStepCount = 15000.0f;
 		RenderDistance = 70000.0f;
 		LODDistance = 25000.0f;
 		LODMin = 0.0f;
-		BigStepMarch = 3.0f;
+		BigStepMarch = 1.0f;
 		TransmittanceThreshold = 0.005f;
 		ShadowSampleCount = 5.0f;
-		GroundContributionSampleCount = 2.0f;
+		GroundContributionSampleCount = 3.0f;
 	}
 
 #ifdef __cplusplus
@@ -254,11 +243,6 @@ struct ShaderFog
 	float end;
 	float height_start;
 	float height_end;
-
-	float height_sky;
-	float padding0;
-	float padding1;
-	float padding2;
 };
 
 struct ShaderWind
@@ -293,15 +277,10 @@ struct ShaderWeather
 	float sky_exposure;
 
 	float3 zenith;
-	float cloudiness;
+	float padding0;
 
 	float3 ambient;
-	float cloud_scale;
-
-	float cloud_speed;
-	float cloud_shadow_amount;
-	float cloud_shadow_scale;
-	float cloud_shadow_speed;
+	float padding1;
 
 	float4x4 stars_rotation;
 

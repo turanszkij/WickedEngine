@@ -2060,17 +2060,10 @@ namespace wi::scene
 		shaderscene.weather.sun_direction = weather.sunDirection;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = weather.ambient;
-		shaderscene.weather.cloudiness = weather.cloudiness;
-		shaderscene.weather.cloud_scale = weather.cloudScale;
-		shaderscene.weather.cloud_speed = weather.cloudSpeed;
-		shaderscene.weather.cloud_shadow_amount = weather.cloud_shadow_amount;
-		shaderscene.weather.cloud_shadow_scale = weather.cloud_shadow_scale;
-		shaderscene.weather.cloud_shadow_speed = weather.cloud_shadow_speed;
 		shaderscene.weather.fog.start = weather.fogStart;
 		shaderscene.weather.fog.end = weather.fogEnd;
 		shaderscene.weather.fog.height_start = weather.fogHeightStart;
 		shaderscene.weather.fog.height_end = weather.fogHeightEnd;
-		shaderscene.weather.fog.height_sky = weather.fogHeightSky;
 		shaderscene.weather.horizon = weather.horizon;
 		shaderscene.weather.zenith = weather.zenith;
 		shaderscene.weather.sky_exposure = weather.skyExposure;
@@ -2315,9 +2308,6 @@ namespace wi::scene
 		transform.UpdateTransform();
 
 		ForceFieldComponent& force = forces.Create(entity);
-		force.gravity = 0;
-		force.range = 0;
-		force.type = ENTITY_TYPE_FORCEFIELD_POINT;
 
 		return entity;
 	}
@@ -4835,12 +4825,9 @@ namespace wi::scene
 			desc.mip_levels = 1;
 			desc.usage = Usage::DEFAULT;
 
-			desc.bind_flags = BindFlag::DEPTH_STENCIL;
-			desc.format = Format::D16_UNORM;
-			desc.layout = ResourceState::DEPTHSTENCIL;
-			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
-			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
-			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
+			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+			desc.format = Format::R16_TYPELESS;
+			desc.layout = ResourceState::SHADER_RESOURCE;
 			desc.sample_count = envmapMSAASampleCount;
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer_MSAA);
 			device->SetName(&envrenderingDepthBuffer_MSAA, "envrenderingDepthBuffer_MSAA");
@@ -4862,17 +4849,25 @@ namespace wi::scene
 			desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 			desc.usage = Usage::DEFAULT;
 			desc.layout = ResourceState::SHADER_RESOURCE;
-
 			device->CreateTexture(&desc, nullptr, &envmapArray);
 			device->SetName(&envmapArray, "envmapArray");
+
+			desc.array_size = 6;
+			desc.mip_levels = 1;
+			desc.format = Format::R16_TYPELESS;
+			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+			desc.layout = ResourceState::SHADER_RESOURCE;
+			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
+			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
+
 
 			// Cube arrays per mip level:
 			for (uint32_t i = 0; i < envmapArray.desc.mip_levels; ++i)
 			{
 				int subresource_index;
-				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, 0, desc.array_size, i, 1);
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, 0, envmapArray.desc.array_size, i, 1);
 				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::UAV, 0, desc.array_size, i, 1);
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::UAV, 0, envmapArray.desc.array_size, i, 1);
 				assert(subresource_index == i);
 			}
 
@@ -4907,7 +4902,10 @@ namespace wi::scene
 						RenderPassAttachment::DepthStencil(
 							&envrenderingDepthBuffer,
 							RenderPassAttachment::LoadOp::CLEAR,
-							RenderPassAttachment::StoreOp::DONTCARE
+							RenderPassAttachment::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::SHADER_RESOURCE
 						)
 					);
 					renderpassdesc.attachments.push_back(
@@ -4931,7 +4929,10 @@ namespace wi::scene
 						RenderPassAttachment::DepthStencil(
 							&envrenderingDepthBuffer_MSAA,
 							RenderPassAttachment::LoadOp::CLEAR,
-							RenderPassAttachment::StoreOp::DONTCARE
+							RenderPassAttachment::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::SHADER_RESOURCE
 						)
 					);
 					renderpassdesc.attachments.push_back(

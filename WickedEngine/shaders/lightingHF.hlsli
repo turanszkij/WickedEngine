@@ -131,13 +131,11 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		[branch]
 		if (light.IsCastingShadow() && surface.IsReceiveShadow())
 		{
-			if (GetWeather().cloud_shadow_amount > 0)
+			if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
 			{
-				// Fake cloud shadows:
-				float cloud_shadow = noise_simplex_2D(surface.P.xz * GetWeather().cloud_shadow_scale + GetTime() * GetWeather().cloud_shadow_speed) * 0.5 + 0.5;
-				shadow *= saturate(cloud_shadow + 1 - GetWeather().cloud_shadow_amount * 2);
+				shadow *= shadow_2D_volumetricclouds(surface.P);
 			}
-
+				
 #ifdef SHADOW_MASK_ENABLED
 			[branch]
 			if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0)

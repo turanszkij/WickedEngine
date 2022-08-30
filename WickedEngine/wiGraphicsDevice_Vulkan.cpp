@@ -2477,6 +2477,10 @@ using namespace vulkan_internal;
 				*properties_chain = &sampler_minmax_properties;
 				properties_chain = &sampler_minmax_properties.pNext;
 
+				depth_stencil_resolve_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES;
+				*properties_chain = &depth_stencil_resolve_properties;
+				properties_chain = &depth_stencil_resolve_properties.pNext;
+
 				enabled_deviceExtensions = required_deviceExtensions;
 
 				if (checkExtensionSupport(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME, available_deviceExtensions))
@@ -2577,6 +2581,8 @@ using namespace vulkan_internal;
 			}
 
 			assert(properties2.properties.limits.timestampComputeAndGraphics == VK_TRUE);
+			assert(depth_stencil_resolve_properties.supportedDepthResolveModes& VK_RESOLVE_MODE_MIN_BIT);
+			assert(depth_stencil_resolve_properties.supportedDepthResolveModes& VK_RESOLVE_MODE_MAX_BIT);
 
 			vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
 
@@ -5097,6 +5103,8 @@ using namespace vulkan_internal;
 		VkAttachmentReference2 resolveAttachmentRefs[8] = {};
 		VkAttachmentReference2 shadingRateAttachmentRef = {};
 		VkAttachmentReference2 depthAttachmentRef = {};
+		VkSubpassDescriptionDepthStencilResolve depthResolve = {};
+		VkAttachmentReference2 depthResolveAttachmentRef = {};
 
 		VkFragmentShadingRateAttachmentInfoKHR shading_rate_attachment = {};
 		shading_rate_attachment.sType = VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
@@ -5109,6 +5117,7 @@ using namespace vulkan_internal;
 		VkSubpassDescription2 subpass = {};
 		subpass.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2;
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		const void** subpass_chain = &subpass.pNext;
 
 		uint32_t validAttachmentCount = 0;
 		for (auto& attachment : renderpass->desc.attachments)
@@ -5258,6 +5267,58 @@ using namespace vulkan_internal;
 				resolvecount++;
 				subpass.pResolveAttachments = resolveAttachmentRefs;
 			}
+			else if (attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH)
+			{
+
+				if (attachment.texture == nullptr)
+				{
+					resolveAttachmentRefs[resolvecount].attachment = VK_ATTACHMENT_UNUSED;
+				}
+				else
+				{
+					if (subresource < 0 || texture_internal_state->subresources_srv.empty())
+					{
+						attachments[validAttachmentCount] = texture_internal_state->srv.image_view;
+					}
+					else
+					{
+						assert(texture_internal_state->subresources_srv.size() > size_t(subresource) && "Invalid SRV subresource!");
+						attachments[validAttachmentCount] = texture_internal_state->subresources_srv[subresource].image_view;
+					}
+					if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
+					{
+						continue;
+					}
+				}
+
+				depthResolve.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE;
+
+				switch (attachment.depth_resolve_mode)
+				{
+				default:
+				case RenderPassAttachment::DepthResolveMode::Min:
+					depthResolve.depthResolveMode = VK_RESOLVE_MODE_MIN_BIT;
+					depthResolve.stencilResolveMode = VK_RESOLVE_MODE_MIN_BIT;
+					break;
+				case RenderPassAttachment::DepthResolveMode::Max:
+					depthResolve.depthResolveMode = VK_RESOLVE_MODE_MAX_BIT;
+					depthResolve.stencilResolveMode = VK_RESOLVE_MODE_MAX_BIT;
+					break;
+				}
+
+				depthResolveAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
+				depthResolveAttachmentRef.attachment = validAttachmentCount;
+				depthResolveAttachmentRef.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				if (IsFormatStencilSupport(attachment.texture->desc.format))
+				{
+					depthResolveAttachmentRef.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				}
+				depthResolveAttachmentRef.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				depthResolve.pDepthStencilResolveAttachment = &depthResolveAttachmentRef;
+
+				*subpass_chain = &depthResolve;
+				subpass_chain = &depthResolve.pNext;
+			}
 			else if (attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE && CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
 			{
 				shadingRateAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
@@ -5286,7 +5347,8 @@ using namespace vulkan_internal;
 					shadingRateAttachmentRef.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
 
-				subpass.pNext = &shading_rate_attachment;
+				*subpass_chain = &shading_rate_attachment;
+				subpass_chain = &shading_rate_attachment.pNext;
 			}
 
 			validAttachmentCount++;

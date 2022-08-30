@@ -17,7 +17,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     const float depthOffset4 = 200.0;
     
     const float totalSize = 3.0; // Adjust the overall size for all channels
-    const float coveragePerlinWorleyDifference = 0.7; // For more bigger and mean clouds, you can use something like 0.9 or 1.0
+    const float coveragePerlinWorleyDifference = 0.4; // For more bigger and mean clouds, you can use something like 0.9 or 1.0
     const float worleySeed = 1.0; // Randomize the worley coverage noise with a seed. 
     
     const float totalRemapLow = 0.5;
@@ -53,6 +53,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
     perlinNoise1 -= perlinNoise4;
     perlinNoise2 -= pow(perlinNoise4, 2.0);
-    
+	
+	perlinNoise1 = RemapClamped(perlinNoise1 * 2.0, 0.0, 1.0, 0.05, 1.0);
+	
     output[DTid.xy] = float4(perlinNoise1, perlinNoise2, perlinNoise3, 1.0);
 }

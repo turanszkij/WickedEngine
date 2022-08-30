@@ -27,13 +27,6 @@ public:
 	wi::gui::Slider fogEndSlider;
 	wi::gui::Slider fogHeightStartSlider;
 	wi::gui::Slider fogHeightEndSlider;
-	wi::gui::Slider fogHeightSkySlider;
-	wi::gui::Slider cloudinessSlider;
-	wi::gui::Slider cloudScaleSlider;
-	wi::gui::Slider cloudSpeedSlider;
-	wi::gui::Slider cloudShadowAmountSlider;
-	wi::gui::Slider cloudShadowScaleSlider;
-	wi::gui::Slider cloudShadowSpeedSlider;
 	wi::gui::Slider windSpeedSlider;
 	wi::gui::Slider windMagnitudeSlider;
 	wi::gui::Slider windDirectionSlider;
@@ -41,7 +34,6 @@ public:
 	wi::gui::Slider windRandomnessSlider;
 	wi::gui::Slider skyExposureSlider;
 	wi::gui::Slider starsSlider;
-	wi::gui::CheckBox simpleskyCheckBox;
 	wi::gui::CheckBox realisticskyCheckBox;
 	wi::gui::Button skyButton;
 	wi::gui::Button colorgradingButton;
@@ -63,8 +55,10 @@ public:
 
 	// volumetric clouds:
 	wi::gui::CheckBox volumetricCloudsCheckBox;
+	wi::gui::CheckBox volumetricCloudsShadowsCheckBox;
 	wi::gui::Slider coverageAmountSlider;
 	wi::gui::Slider coverageMinimumSlider;
+	wi::gui::Button volumetricCloudsWeatherMapButton;
 
 	wi::gui::Button preset0Button;
 	wi::gui::Button preset1Button;

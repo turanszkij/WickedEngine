@@ -384,7 +384,6 @@ void TestsRenderer::Load()
 			weather.ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 			weather.horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
 			weather.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
-			weather.cloudiness = 0.75f;
 
 			wi::scene::GetScene().Merge(scene); // add lodaded scene to global scene
 		}

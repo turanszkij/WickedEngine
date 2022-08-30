@@ -947,9 +947,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)fsr_sharpenCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_temporalCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)surfel_coverageCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -1053,6 +1050,18 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)impostor_prepareCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_renderCS_capture.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_shadow_renderCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_shadow_filterCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_renderCS_capture_MSAA.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

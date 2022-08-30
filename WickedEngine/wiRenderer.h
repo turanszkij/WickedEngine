@@ -206,8 +206,13 @@ namespace wi::renderer
 	// Render mip levels for textures that reqested it:
 	void ProcessDeferredMipGenRequests(wi::graphics::CommandList cmd);
 
+	// Compute volumetric cloud shadow data
+	void ComputeVolumetricCloudShadows(
+		wi::graphics::CommandList cmd,
+		const wi::graphics::Texture* weatherMap = nullptr
+	);
 	// Compute essential atmospheric scattering textures for skybox, fog and clouds
-	void RenderAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
+	void ComputeAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
 	// Update atmospheric scattering primarily for environment probes.
 	void RefreshAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
 	// Draw skydome centered to camera.
@@ -621,13 +626,14 @@ namespace wi::renderer
 		wi::graphics::Texture texture_cloudDepth;
 		wi::graphics::Texture texture_reproject[2];
 		wi::graphics::Texture texture_reproject_depth[2];
-		wi::graphics::Texture texture_temporal[2];
+		wi::graphics::Texture texture_reproject_additional[2];
 		wi::graphics::Texture texture_cloudMask;
 	};
 	void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution);
 	void Postprocess_VolumetricClouds(
 		const VolumetricCloudResources& res,
-		wi::graphics::CommandList cmd
+		wi::graphics::CommandList cmd,
+		const wi::graphics::Texture* weatherMap = nullptr
 	);
 	void Postprocess_FXAA(
 		const wi::graphics::Texture& input,

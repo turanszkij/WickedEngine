@@ -2,6 +2,7 @@
 #define DISABLE_VOXELGI
 #include "objectHF.hlsli"
 #include "voxelHF.hlsli"
+#include "volumetricCloudsHF.hlsli"
 
 // Note: the voxelizer uses an overall simplified material and lighting model (no normal maps, only diffuse light and emissive)
 
@@ -102,9 +103,15 @@ void main(PSInput input)
 								float3 ShPos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(P, 1)).xyz; // ortho matrix, no divide by .w
 								float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
-								[branch] if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
+								[branch]
+								if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
 								{
 									lightColor *= shadow_2D(light, ShPos, ShTex.xy, cascade);
+								}
+
+								if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
+								{
+									lightColor *= shadow_2D_volumetricclouds(P);
 								}
 							}
 

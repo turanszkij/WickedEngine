@@ -210,6 +210,9 @@ struct PrimitiveID
 #define sqr(a)		((a)*(a))
 #define pow5(x) pow(x, 5)
 
+#define M_TO_SKY_UNIT 0.001f // Engine units are in meters
+#define SKY_UNIT_TO_M (1.0 / M_TO_SKY_UNIT)
+
 // attribute computation with barycentric interpolation
 //	a0 : attribute at triangle corner 0
 //	a1 : attribute at triangle corner 1
@@ -569,6 +572,14 @@ inline float compute_lineardepth(in float z, in float near, in float far)
 inline float compute_lineardepth(in float z)
 {
 	return compute_lineardepth(z, GetCamera().z_near, GetCamera().z_far);
+}
+
+// Computes post-projection depth from linear depth
+inline float compute_inverse_lineardepth(in float lin, in float near, in float far)
+{
+	float z_n = ((lin - 2 * far) * near + far * lin) / (lin * near - far * lin);
+	float z = (z_n + 1) / 2;
+	return z;
 }
 
 inline float3x3 get_tangentspace(in float3 normal)

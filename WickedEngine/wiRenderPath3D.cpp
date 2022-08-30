@@ -220,7 +220,7 @@ void RenderPath3D::ResizeBuffers()
 
 		desc.sample_count = getMSAASampleCount();
 		desc.layout = ResourceState::DEPTHSTENCIL_READONLY;
-		desc.format = Format::R32G8X24_TYPELESS;
+		desc.format = Format::D32_FLOAT_S8X24_UINT;
 		desc.bind_flags = BindFlag::DEPTH_STENCIL;
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
 		device->SetName(&depthBuffer_Main, "depthBuffer_Main");
@@ -918,7 +918,8 @@ void RenderPath3D::Render() const
 		{
 			wi::renderer::Postprocess_VolumetricClouds(
 				volumetriccloudResources,
-				cmd
+				cmd,
+				scene->weather.volumetricCloudsWeatherMap.IsValid() ? &scene->weather.volumetricCloudsWeatherMap.GetTexture() : nullptr
 			);
 		}
 
@@ -1017,7 +1018,8 @@ void RenderPath3D::Render() const
 			{
 				wi::renderer::Postprocess_VolumetricClouds(
 					volumetriccloudResources_reflection,
-					cmd
+					cmd,
+					scene->weather.volumetricCloudsWeatherMap.IsValid() ? &scene->weather.volumetricCloudsWeatherMap.GetTexture() : nullptr
 				);
 			}
 
@@ -1066,7 +1068,7 @@ void RenderPath3D::Render() const
 				wi::image::Params fx;
 				fx.enableFullScreen();
 				fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-				wi::image::Draw(&volumetriccloudResources_reflection.texture_temporal[device->GetFrameCount() % 2], fx, cmd);
+				wi::image::Draw(&volumetriccloudResources_reflection.texture_reproject[device->GetFrameCount() % 2], fx, cmd);
 				device->EventEnd(cmd);
 			}
 
@@ -1175,7 +1177,7 @@ void RenderPath3D::Render() const
 		{
 			device->EventBegin("Volumetric Clouds Upsample + Blend", cmd);
 			wi::renderer::Postprocess_Upsample_Bilateral(
-				volumetriccloudResources.texture_temporal[device->GetFrameCount() % 2],
+				volumetriccloudResources.texture_reproject[device->GetFrameCount() % 2],
 				rtLinearDepth,
 				rtMain_render, // only desc is taken if pixel shader upsampling is used
 				cmd,

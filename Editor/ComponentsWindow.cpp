@@ -69,6 +69,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Soft Body " ICON_SOFTBODY, 17);
 	newComponentCombo.AddItem("Collider " ICON_COLLIDER, 18);
 	newComponentCombo.AddItem("Camera " ICON_CAMERA, 20);
+	newComponentCombo.AddItem("Object " ICON_OBJECT, 21);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(-1);
 		if (editor->translator.selected.empty())
@@ -168,6 +169,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			if (scene.cameras.Contains(entity))
 				return;
 			break;
+		case 21:
+			if (scene.objects.Contains(entity))
+				return;
+			break;
 		default:
 			return;
 		}
@@ -263,6 +268,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case 20:
 			scene.cameras.Create(entity);
+			break;
+		case 21:
+			scene.objects.Create(entity);
+			scene.aabb_objects.Create(entity);
 			break;
 		default:
 			break;

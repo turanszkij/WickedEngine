@@ -29,14 +29,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		sampling.variableSampleCount = false;
 		sampling.sampleCountIni = 40.0f; // Can go a low as 10 sample but energy lost starts to be visible.
 	}
-	const bool ground = false;
-	const float depthBufferWorldPos = 0.0;
+	const float tDepth = 0.0;
 	const bool opaque = false;
+	const bool ground = false;
 	const bool mieRayPhase = false;
 	const bool multiScatteringApprox = false;
+	const bool volumetricCloudShadow = false;
 	SingleScatteringResult ss = IntegrateScatteredLuminance(
         atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance,
-        sampling, ground, depthBufferWorldPos, opaque, mieRayPhase, multiScatteringApprox, transmittanceLUT, multiScatteringLUT);
+        sampling, tDepth, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, transmittanceLUT, multiScatteringLUT);
     
 	float3 transmittance = exp(-ss.opticalDepth);
     
