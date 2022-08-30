@@ -4007,7 +4007,7 @@ int WeatherComponent_BindLua::SetOceanEnabled(lua_State* L)
 }
 int WeatherComponent_BindLua::IsSimpleSky(lua_State* L)
 {
-	wi::lua::SSetBool(L, component->IsSimpleSky());
+	wi::lua::SSetBool(L, !component->IsRealisticSky());
 	return 1;
 }
 int WeatherComponent_BindLua::SetSimpleSky(lua_State* L)
@@ -4016,7 +4016,7 @@ int WeatherComponent_BindLua::SetSimpleSky(lua_State* L)
 	if (argc > 0)
 	{
 		bool value = wi::lua::SGetBool(L, 1);
-		component->SetSimpleSky(value);
+		component->SetRealisticSky(!value);
 	}
 	else
 	{

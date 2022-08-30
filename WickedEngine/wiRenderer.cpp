@@ -3326,10 +3326,6 @@ void UpdatePerFrameData(
 	{
 		frameCB.options |= OPTION_BIT_VOXELGI_RETARGETTED;
 	}
-	if (vis.scene->weather.IsSimpleSky())
-	{
-		frameCB.options |= OPTION_BIT_SIMPLE_SKY;
-	}
 	if (vis.scene->weather.IsRealisticSky())
 	{
 		frameCB.options |= OPTION_BIT_REALISTIC_SKY;
@@ -6788,7 +6784,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		device->RenderPassEnd(cmd);
 
 		// Compute Volumetric Clouds for environment map
-		if (vis.scene->weather.IsVolumetricClouds())
+		if (vis.scene->weather.IsVolumetricClouds() && (probe_aabb.layerMask & vis.layerMask))
 		{
 			if (probe.IsMSAA())
 			{

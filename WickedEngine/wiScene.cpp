@@ -2060,17 +2060,10 @@ namespace wi::scene
 		shaderscene.weather.sun_direction = weather.sunDirection;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = weather.ambient;
-		shaderscene.weather.cloudiness = weather.cloudiness;
-		shaderscene.weather.cloud_scale = weather.cloudScale;
-		shaderscene.weather.cloud_speed = weather.cloudSpeed;
-		shaderscene.weather.cloud_shadow_amount = weather.cloud_shadow_amount;
-		shaderscene.weather.cloud_shadow_scale = weather.cloud_shadow_scale;
-		shaderscene.weather.cloud_shadow_speed = weather.cloud_shadow_speed;
 		shaderscene.weather.fog.start = weather.fogStart;
 		shaderscene.weather.fog.end = weather.fogEnd;
 		shaderscene.weather.fog.height_start = weather.fogHeightStart;
 		shaderscene.weather.fog.height_end = weather.fogHeightEnd;
-		shaderscene.weather.fog.height_sky = weather.fogHeightSky;
 		shaderscene.weather.horizon = weather.horizon;
 		shaderscene.weather.zenith = weather.zenith;
 		shaderscene.weather.sky_exposure = weather.skyExposure;

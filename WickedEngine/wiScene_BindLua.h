@@ -977,13 +977,6 @@ namespace wi::lua::scene
 			fogEnd = FloatProperty(&component->fogEnd);
 			fogHeightStart = FloatProperty(&component->fogHeightStart);
 			fogHeightEnd = FloatProperty(&component->fogHeightEnd);
-			fogHeightSky = FloatProperty(&component->fogHeightSky);
-			cloudiness = FloatProperty(&component->cloudiness);
-			cloudScale = FloatProperty(&component->cloudScale);
-			cloudSpeed = FloatProperty(&component->cloudSpeed);
-			cloud_shadow_amount = FloatProperty(&component->cloud_shadow_amount);
-			cloud_shadow_scale = FloatProperty(&component->cloud_shadow_scale);
-			cloud_shadow_speed = FloatProperty(&component->cloud_shadow_speed);
 			windDirection = VectorProperty(&component->windDirection);
 			windRandomness = FloatProperty(&component->windRandomness);
 			windWaveSize = FloatProperty(&component->windWaveSize);

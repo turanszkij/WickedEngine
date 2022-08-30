@@ -243,11 +243,6 @@ struct ShaderFog
 	float end;
 	float height_start;
 	float height_end;
-
-	float height_sky;
-	float padding0;
-	float padding1;
-	float padding2;
 };
 
 struct ShaderWind
@@ -282,15 +277,10 @@ struct ShaderWeather
 	float sky_exposure;
 
 	float3 zenith;
-	float cloudiness;
+	float padding0;
 
 	float3 ambient;
-	float cloud_scale;
-
-	float cloud_speed;
-	float cloud_shadow_amount;
-	float cloud_shadow_scale;
-	float cloud_shadow_speed;
+	float padding1;
 
 	float4x4 stars_rotation;
 

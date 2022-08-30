@@ -1034,10 +1034,17 @@ namespace wi::scene
 			archive >> ambient;
 			archive >> fogStart;
 			archive >> fogEnd;
-			archive >> fogHeightSky;
-			archive >> cloudiness;
-			archive >> cloudScale;
-			archive >> cloudSpeed;
+			if (archive.GetVersion() < 86)
+			{
+				float fogHeightSky;
+				float cloudiness;
+				float cloudScale;
+				float cloudSpeed;
+				archive >> fogHeightSky;
+				archive >> cloudiness;
+				archive >> cloudScale;
+				archive >> cloudSpeed;
+			}
 			archive >> windDirection;
 			archive >> windRandomness;
 			archive >> windWaveSize;
@@ -1191,8 +1198,11 @@ namespace wi::scene
 				archive >> fogHeightEnd;
 			}
 
-			if (archive.GetVersion() >= 77)
+			if (archive.GetVersion() >= 77 && archive.GetVersion() < 86)
 			{
+				float cloud_shadow_amount;
+				float cloud_shadow_scale;
+				float cloud_shadow_speed;
 				archive >> cloud_shadow_amount;
 				archive >> cloud_shadow_scale;
 				archive >> cloud_shadow_speed;
@@ -1223,10 +1233,6 @@ namespace wi::scene
 			archive << ambient;
 			archive << fogStart;
 			archive << fogEnd;
-			archive << fogHeightSky;
-			archive << cloudiness;
-			archive << cloudScale;
-			archive << cloudSpeed;
 			archive << windDirection;
 			archive << windRandomness;
 			archive << windWaveSize;
@@ -1352,13 +1358,6 @@ namespace wi::scene
 			{
 				archive << fogHeightStart;
 				archive << fogHeightEnd;
-			}
-
-			if (archive.GetVersion() >= 77)
-			{
-				archive << cloud_shadow_amount;
-				archive << cloud_shadow_scale;
-				archive << cloud_shadow_speed;
 			}
 
 			if (archive.GetVersion() >= 78)

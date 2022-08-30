@@ -10,7 +10,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_WEATHER " Weather", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(660, 1400));
+	SetSize(XMFLOAT2(660, 1300));
 
 	closeButton.SetTooltip("Delete WeatherComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -58,7 +58,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	colorComboBox.AddItem("Horizon color");
 	colorComboBox.AddItem("Zenith color");
 	colorComboBox.AddItem("Ocean color");
-	colorComboBox.AddItem("V. Cloud color");
+	colorComboBox.AddItem("Cloud color");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	AddWidget(&colorComboBox);
 
@@ -137,62 +137,6 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&fogHeightEndSlider);
 
-	fogHeightSkySlider.Create(0, 1, 0, 10000, "Fog Height Sky: ");
-	fogHeightSkySlider.SetSize(XMFLOAT2(wid, hei));
-	fogHeightSkySlider.SetPos(XMFLOAT2(x, y += step));
-	fogHeightSkySlider.OnSlide([&](wi::gui::EventArgs args) {
-		GetWeather().fogHeightSky = args.fValue;
-	});
-	AddWidget(&fogHeightSkySlider);
-
-	cloudinessSlider.Create(0, 1, 0.0f, 10000, "Cloudiness: ");
-	cloudinessSlider.SetSize(XMFLOAT2(wid, hei));
-	cloudinessSlider.SetPos(XMFLOAT2(x, y += step));
-	cloudinessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		GetWeather().cloudiness = args.fValue;
-	});
-	AddWidget(&cloudinessSlider);
-
-	cloudScaleSlider.Create(0.00005f, 0.001f, 0.0005f, 10000, "Cloud Scale: ");
-	cloudScaleSlider.SetSize(XMFLOAT2(wid, hei));
-	cloudScaleSlider.SetPos(XMFLOAT2(x, y += step));
-	cloudScaleSlider.OnSlide([&](wi::gui::EventArgs args) {
-		GetWeather().cloudScale = args.fValue;
-	});
-	AddWidget(&cloudScaleSlider);
-
-	cloudSpeedSlider.Create(0.001f, 0.2f, 0.1f, 10000, "Cloud Speed: ");
-	cloudSpeedSlider.SetSize(XMFLOAT2(wid, hei));
-	cloudSpeedSlider.SetPos(XMFLOAT2(x, y += step));
-	cloudSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {
-		GetWeather().cloudSpeed = args.fValue;
-	});
-	AddWidget(&cloudSpeedSlider);
-
-	cloudShadowAmountSlider.Create(0, 1, 0, 10000, "Cloud Shadow: ");
-	cloudShadowAmountSlider.SetSize(XMFLOAT2(wid, hei));
-	cloudShadowAmountSlider.SetPos(XMFLOAT2(x, y += step));
-	cloudShadowAmountSlider.OnSlide([&](wi::gui::EventArgs args) {
-		GetWeather().cloud_shadow_amount = args.fValue;
-		});
-	AddWidget(&cloudShadowAmountSlider);
-
-	cloudShadowSpeedSlider.Create(0, 1, 0.2f, 10000, "Cloud Shadow Speed: ");
-	cloudShadowSpeedSlider.SetSize(XMFLOAT2(wid, hei));
-	cloudShadowSpeedSlider.SetPos(XMFLOAT2(x, y += step));
-	cloudShadowSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {
-		GetWeather().cloud_shadow_speed = args.fValue;
-		});
-	AddWidget(&cloudShadowSpeedSlider);
-
-	cloudShadowScaleSlider.Create(0.0001f, 0.02f, 0.005f, 10000, "Cloud Shadow Scale: ");
-	cloudShadowScaleSlider.SetSize(XMFLOAT2(wid, hei));
-	cloudShadowScaleSlider.SetPos(XMFLOAT2(x, y += step));
-	cloudShadowScaleSlider.OnSlide([&](wi::gui::EventArgs args) {
-		GetWeather().cloud_shadow_scale = args.fValue;
-		});
-	AddWidget(&cloudShadowScaleSlider);
-
 	windSpeedSlider.Create(0.0f, 4.0f, 1.0f, 10000, "Wind Speed: ");
 	windSpeedSlider.SetSize(XMFLOAT2(wid, hei));
 	windSpeedSlider.SetPos(XMFLOAT2(x, y += step));
@@ -250,31 +194,13 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&starsSlider);
 
-	simpleskyCheckBox.Create("Simple sky: ");
-	simpleskyCheckBox.SetTooltip("Simple sky will simply blend horizon and zenith color from bottom to top.");
-	simpleskyCheckBox.SetSize(XMFLOAT2(hei, hei));
-	simpleskyCheckBox.SetPos(XMFLOAT2(x, y += step));
-	simpleskyCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		auto& weather = GetWeather();
-		weather.SetSimpleSky(args.bValue);
-		if (args.bValue)
-		{
-			weather.SetRealisticSky(false);
-		}
-	});
-	AddWidget(&simpleskyCheckBox);
-
 	realisticskyCheckBox.Create("Realistic sky: ");
-	realisticskyCheckBox.SetTooltip("Physically based sky rendering model.");
+	realisticskyCheckBox.SetTooltip("Physically based sky rendering model.\nNote that realistic sky requires a sun (directional light) to be visible.");
 	realisticskyCheckBox.SetSize(XMFLOAT2(hei, hei));
 	realisticskyCheckBox.SetPos(XMFLOAT2(x, y += step));
 	realisticskyCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 		weather.SetRealisticSky(args.bValue);
-		if (args.bValue)
-		{
-			weather.SetSimpleSky(false);
-		}
 		});
 	AddWidget(&realisticskyCheckBox);
 
@@ -561,10 +487,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		weather.ambient = XMFLOAT3(33.0f / 255.0f, 47.0f / 255.0f, 127.0f / 255.0f);
 		weather.horizon = XMFLOAT3(101.0f / 255.0f, 101.0f / 255.0f, 227.0f / 255.0f);
 		weather.zenith = XMFLOAT3(99.0f / 255.0f, 133.0f / 255.0f, 255.0f / 255.0f);
-		weather.cloudiness = 0.4f;
 		weather.fogStart = 100;
 		weather.fogEnd = 1000;
-		weather.fogHeightSky = 0;
 
 		InvalidateProbes();
 
@@ -580,11 +504,9 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		auto& weather = GetWeather();
 		weather.ambient = XMFLOAT3(86.0f / 255.0f, 29.0f / 255.0f, 29.0f / 255.0f);
 		weather.horizon = XMFLOAT3(121.0f / 255.0f, 28.0f / 255.0f, 22.0f / 255.0f);
-		weather.zenith = XMFLOAT3(146.0f / 255.0f, 51.0f / 255.0f, 51.0f / 255.0f);
-		weather.cloudiness = 0.36f;
+		weather.zenith = XMFLOAT3(80.0f / 255.0f, 10.0f / 255.0f, 10.0f / 255.0f);
 		weather.fogStart = 50;
 		weather.fogEnd = 600;
-		weather.fogHeightSky = 0;
 
 		InvalidateProbes();
 
@@ -601,10 +523,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		weather.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
 		weather.horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
 		weather.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
-		weather.cloudiness = 0.75f;
 		weather.fogStart = 0;
 		weather.fogEnd = 500;
-		weather.fogHeightSky = 0;
 
 		InvalidateProbes();
 
@@ -619,12 +539,10 @@ void WeatherWindow::Create(EditorComponent* _editor)
 
 		auto& weather = GetWeather();
 		weather.ambient = XMFLOAT3(12.0f / 255.0f, 21.0f / 255.0f, 77.0f / 255.0f);
-		weather.horizon = XMFLOAT3(10.0f / 255.0f, 33.0f / 255.0f, 70.0f / 255.0f);
-		weather.zenith = XMFLOAT3(4.0f / 255.0f, 20.0f / 255.0f, 51.0f / 255.0f);
-		weather.cloudiness = 0.28f;
+		weather.horizon = XMFLOAT3(2.0f / 255.0f, 10.0f / 255.0f, 20.0f / 255.0f);
+		weather.zenith = XMFLOAT3(0, 0, 0);
 		weather.fogStart = 10;
 		weather.fogEnd = 400;
-		weather.fogHeightSky = 0;
 
 		InvalidateProbes();
 
@@ -641,11 +559,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		weather.ambient = XMFLOAT3(0, 0, 0);
 		weather.horizon = XMFLOAT3(1, 1, 1);
 		weather.zenith = XMFLOAT3(1, 1, 1);
-		weather.SetSimpleSky(true);
-		weather.cloudiness = 0;
 		weather.fogStart = 1000000;
 		weather.fogEnd = 1000000;
-		weather.fogHeightSky = 0;
 
 		InvalidateProbes();
 
@@ -764,13 +679,6 @@ void WeatherWindow::Update()
 		fogEndSlider.SetValue(weather.fogEnd);
 		fogHeightStartSlider.SetValue(weather.fogHeightStart);
 		fogHeightEndSlider.SetValue(weather.fogHeightEnd);
-		fogHeightSkySlider.SetValue(weather.fogHeightSky);
-		cloudinessSlider.SetValue(weather.cloudiness);
-		cloudScaleSlider.SetValue(weather.cloudScale);
-		cloudSpeedSlider.SetValue(weather.cloudSpeed);
-		cloudShadowAmountSlider.SetValue(weather.cloud_shadow_amount);
-		cloudShadowScaleSlider.SetValue(weather.cloud_shadow_scale);
-		cloudShadowSpeedSlider.SetValue(weather.cloud_shadow_speed);
 		windSpeedSlider.SetValue(weather.windSpeed);
 		windWaveSizeSlider.SetValue(weather.windWaveSize);
 		windRandomnessSlider.SetValue(weather.windRandomness);
@@ -798,7 +706,6 @@ void WeatherWindow::Update()
 			break;
 		}
 
-		simpleskyCheckBox.SetCheck(weather.IsSimpleSky());
 		realisticskyCheckBox.SetCheck(weather.IsRealisticSky());
 
 		ocean_enabledCheckBox.SetCheck(weather.IsOceanEnabled());
@@ -819,7 +726,6 @@ void WeatherWindow::Update()
 	else
 	{
 		scene.weather = {};
-		scene.weather.SetSimpleSky(true);
 		scene.weather.ambient = XMFLOAT3(0.5f, 0.5f, 0.5f);
 		scene.weather.zenith = default_sky_zenith;
 		scene.weather.horizon = default_sky_horizon;
@@ -894,7 +800,6 @@ void WeatherWindow::ResizeLayout()
 	};
 
 	add_fullwidth(primaryButton);
-	add_right(simpleskyCheckBox);
 	add_right(realisticskyCheckBox);
 	add(colorComboBox);
 	add_fullwidth(colorPicker);
@@ -905,13 +810,6 @@ void WeatherWindow::ResizeLayout()
 	add(fogEndSlider);
 	add(fogHeightStartSlider);
 	add(fogHeightEndSlider);
-	add(fogHeightSkySlider);
-	add(cloudinessSlider);
-	add(cloudScaleSlider);
-	add(cloudSpeedSlider);
-	add(cloudShadowAmountSlider);
-	add(cloudShadowScaleSlider);
-	add(cloudShadowSpeedSlider);
 	add(windSpeedSlider);
 	add(windMagnitudeSlider);
 	add(windDirectionSlider);

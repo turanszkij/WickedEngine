@@ -794,8 +794,8 @@ void TerrainGenerator::Generation_Restart()
 		weather.ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		weather.SetRealisticSky(true);
 		weather.SetVolumetricClouds(true);
-		weather.volumetricCloudParameters.CoverageAmount = 0.5f;
-		weather.volumetricCloudParameters.CoverageMinimum = 0.05f;
+		weather.volumetricCloudParameters.CoverageAmount = 0.65f;
+		weather.volumetricCloudParameters.CoverageMinimum = 0.15f;
 		if (presetCombo.GetItemUserData(presetCombo.GetSelected()) == PRESET_ISLANDS)
 		{
 			weather.SetOceanEnabled(true);
@@ -813,9 +813,6 @@ void TerrainGenerator::Generation_Restart()
 		weather.fogHeightEnd = 100;
 		weather.windDirection = XMFLOAT3(0.05f, 0.05f, 0.05f);
 		weather.windSpeed = 4;
-		weather.cloud_shadow_amount = 0.4f;
-		weather.cloud_shadow_scale = 0.003f;
-		weather.cloud_shadow_speed = 0.25f;
 		weather.stars = 0.6f;
 	}
 	if (scene->lights.GetCount() == 0)

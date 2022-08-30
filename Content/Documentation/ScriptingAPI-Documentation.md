@@ -846,7 +846,7 @@ Describes a Force Field effector.
 - Range : float
 
 #### WeatherComponent
-Describes a Rigid Body Physics object.
+Describes a Weather
 - OceanParameters : OceanParameters -- Returns a table to modify ocean parameters (if ocean is enabled)
 - AtmosphereParameters : AtmosphereParameters -- Returns a table to modify atmosphere parameters
 - VolumetricCloudParameters : VolumetricCloudParameters -- Returns a table to modify volumetric cloud parameters

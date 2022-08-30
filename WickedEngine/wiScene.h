@@ -1230,7 +1230,7 @@ namespace wi::scene
 		{
 			EMPTY = 0,
 			OCEAN_ENABLED = 1 << 0,
-			SIMPLE_SKY = 1 << 1,
+			_DEPRECATED_SIMPLE_SKY = 1 << 1,
 			REALISTIC_SKY = 1 << 2,
 			VOLUMETRIC_CLOUDS = 1 << 3,
 			HEIGHT_FOG = 1 << 4,
@@ -1239,14 +1239,12 @@ namespace wi::scene
 		uint32_t _flags = EMPTY;
 
 		inline bool IsOceanEnabled() const { return _flags & OCEAN_ENABLED; }
-		inline bool IsSimpleSky() const { return _flags & SIMPLE_SKY; }
 		inline bool IsRealisticSky() const { return _flags & REALISTIC_SKY; }
 		inline bool IsVolumetricClouds() const { return _flags & VOLUMETRIC_CLOUDS; }
 		inline bool IsHeightFog() const { return _flags & HEIGHT_FOG; }
 		inline bool IsVolumetricCloudsShadows() const { return _flags & VOLUMETRIC_CLOUDS_SHADOWS; }
 
 		inline void SetOceanEnabled(bool value = true) { if (value) { _flags |= OCEAN_ENABLED; } else { _flags &= ~OCEAN_ENABLED; } }
-		inline void SetSimpleSky(bool value = true) { if (value) { _flags |= SIMPLE_SKY; } else { _flags &= ~SIMPLE_SKY; } }
 		inline void SetRealisticSky(bool value = true) { if (value) { _flags |= REALISTIC_SKY; } else { _flags &= ~REALISTIC_SKY; } }
 		inline void SetVolumetricClouds(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS; } else { _flags &= ~VOLUMETRIC_CLOUDS; } }
 		inline void SetHeightFog(bool value = true) { if (value) { _flags |= HEIGHT_FOG; } else { _flags &= ~HEIGHT_FOG; } }
@@ -1262,13 +1260,6 @@ namespace wi::scene
 		float fogEnd = 1000;
 		float fogHeightStart = 1;
 		float fogHeightEnd = 3;
-		float fogHeightSky = 0;
-		float cloudiness = 0.0f;
-		float cloudScale = 0.0003f;
-		float cloudSpeed = 0.1f;
-		float cloud_shadow_amount = 0;
-		float cloud_shadow_scale = 0.002f;
-		float cloud_shadow_speed = 0.2f;
 		XMFLOAT3 windDirection = XMFLOAT3(0, 0, 0);
 		float windRandomness = 5;
 		float windWaveSize = 1;
