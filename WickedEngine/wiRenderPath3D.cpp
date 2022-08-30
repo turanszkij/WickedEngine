@@ -220,7 +220,7 @@ void RenderPath3D::ResizeBuffers()
 
 		desc.sample_count = getMSAASampleCount();
 		desc.layout = ResourceState::DEPTHSTENCIL_READONLY;
-		desc.format = Format::R32G8X24_TYPELESS;
+		desc.format = Format::D32_FLOAT_S8X24_UINT;
 		desc.bind_flags = BindFlag::DEPTH_STENCIL;
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
 		device->SetName(&depthBuffer_Main, "depthBuffer_Main");
