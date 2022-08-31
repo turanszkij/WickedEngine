@@ -514,13 +514,14 @@ void RenderPath3D::Update(float dt)
 
 	RenderPath2D::Update(dt);
 
+	const bool hw_raytrace = device->CheckCapability(GraphicsDeviceCapability::RAYTRACING);
 	if (getSceneUpdateEnabled())
 	{
 		if (wi::renderer::GetSurfelGIEnabled() ||
 			wi::renderer::GetDDGIEnabled() ||
-			wi::renderer::GetRaytracedShadowsEnabled() ||
-			getAO() == AO_RTAO ||
-			getRaytracedReflectionEnabled())
+			(hw_raytrace && wi::renderer::GetRaytracedShadowsEnabled()) ||
+			(hw_raytrace && getAO() == AO_RTAO) ||
+			(hw_raytrace && getRaytracedReflectionEnabled()))
 		{
 			scene->SetAccelerationStructureUpdateRequested(true);
 		}

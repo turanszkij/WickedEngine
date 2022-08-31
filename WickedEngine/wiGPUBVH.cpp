@@ -158,13 +158,16 @@ namespace wi
 				{
 					const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 
-					for (size_t j = 0; j < mesh.subsets.size(); ++j)
+					uint32_t first_subset = 0;
+					uint32_t last_subset = 0;
+					mesh.GetLODSubsetRange(object.lod, first_subset, last_subset);
+					for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 					{
-						auto& subset = mesh.subsets[j];
+						const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
 
 						BVHPushConstants push;
 						push.instanceIndex = (uint)i;
-						push.subsetIndex = (uint)j;
+						push.subsetIndex = subsetIndex;
 						push.primitiveCount = subset.indexCount / 3;
 						push.primitiveOffset = primitiveCount;
 						device->PushConstants(&push, sizeof(push), cmd);

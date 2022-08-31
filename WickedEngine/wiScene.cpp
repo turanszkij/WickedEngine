@@ -699,42 +699,47 @@ namespace wi::scene
 		{
 			BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 
-			RaytracingAccelerationStructureDesc desc;
-			desc.type = RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL;
-
-			if (streamoutBuffer.IsValid())
+			const uint32_t lod_count = GetLODCount();
+			BLASes.resize(lod_count);
+			for (uint32_t lod = 0; lod < lod_count; ++lod)
 			{
-				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
-				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
-			}
-			else
-			{
-				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
-			}
+				RaytracingAccelerationStructureDesc desc;
+				desc.type = RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL;
 
-			uint32_t first_subset = 0;
-			uint32_t last_subset = 0;
-			GetLODSubsetRange(0, first_subset, last_subset);
-			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-			{
-				const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
-				desc.bottom_level.geometries.emplace_back();
-				auto& geometry = desc.bottom_level.geometries.back();
-				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
-				geometry.triangles.vertex_buffer = generalBuffer;
-				geometry.triangles.vertex_byte_offset = vb_pos_nor_wind.offset;
-				geometry.triangles.index_buffer = generalBuffer;
-				geometry.triangles.index_format = GetIndexFormat();
-				geometry.triangles.index_count = subset.indexCount;
-				geometry.triangles.index_offset = ib.offset / GetIndexStride() + subset.indexOffset;
-				geometry.triangles.vertex_count = (uint32_t)vertex_positions.size();
-				geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
-				geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
-			}
+				if (streamoutBuffer.IsValid())
+				{
+					desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
+					desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+				}
+				else
+				{
+					desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
+				}
 
-			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
-			assert(success);
-			device->SetName(&BLAS, "MeshComponent::BLAS");
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				GetLODSubsetRange(lod, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
+					desc.bottom_level.geometries.emplace_back();
+					auto& geometry = desc.bottom_level.geometries.back();
+					geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
+					geometry.triangles.vertex_buffer = generalBuffer;
+					geometry.triangles.vertex_byte_offset = vb_pos_nor_wind.offset;
+					geometry.triangles.index_buffer = generalBuffer;
+					geometry.triangles.index_format = GetIndexFormat();
+					geometry.triangles.index_count = subset.indexCount;
+					geometry.triangles.index_offset = ib.offset / GetIndexStride() + subset.indexOffset;
+					geometry.triangles.vertex_count = (uint32_t)vertex_positions.size();
+					geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
+					geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
+				}
+
+				bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLASes[lod]);
+				assert(success);
+				device->SetName(&BLASes[lod], std::string("MeshComponent::BLAS[LOD" + std::to_string(lod) + "]").c_str());
+			}
 		}
 	}
 	void MeshComponent::CreateStreamoutRenderData()
@@ -4223,12 +4228,39 @@ namespace wi::scene
 				if (material != nullptr)
 				{
 					subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
-					const uint32_t lod_index = mesh.subsets_per_lod > 0 ? subsetIndex / mesh.subsets_per_lod : 0;
-					if (lod_index == 0 && mesh.BLAS.IsValid())
+				}
+				else
+				{
+					subset.materialIndex = 0;
+				}
+
+				geometry.indexOffset = subset.indexOffset;
+				geometry.materialIndex = subset.materialIndex;
+				geometry.meshletOffset = mesh.meshletCount;
+				geometry.meshletCount = triangle_count_to_meshlet_count(subset.indexCount / 3u);
+				mesh.meshletCount += geometry.meshletCount;
+				std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &geometry, sizeof(geometry));
+				subsetIndex++;
+			}
+
+			if (!mesh.BLASes.empty() && mesh.BLASes[0].IsValid())
+			{
+				const uint32_t lod_count = mesh.GetLODCount();
+				assert(uint32_t(mesh.BLASes.size()) == lod_count);
+				for (uint32_t lod = 0; lod < lod_count; ++lod)
+				{
+					uint32_t first_subset = 0;
+					uint32_t last_subset = 0;
+					mesh.GetLODSubsetRange(lod, first_subset, last_subset);
+					for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 					{
-						auto& geometry = mesh.BLAS.desc.bottom_level.geometries[subsetIndex];
+						const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+						const MaterialComponent& material = materials[subset.materialIndex];
+
+						const uint32_t geometry_index = subsetIndex - first_subset;
+						auto& geometry = mesh.BLASes[lod].desc.bottom_level.geometries[geometry_index];
 						uint32_t flags = geometry.flags;
-						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT) || !material->IsCastingShadow())
+						if (material.IsAlphaTestEnabled() || (material.GetRenderTypes() & RENDERTYPE_TRANSPARENT) || !material.IsCastingShadow())
 						{
 							geometry.flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 						}
@@ -4246,24 +4278,12 @@ namespace wi::scene
 							geometry.triangles.vertex_buffer = mesh.streamoutBuffer;
 							geometry.triangles.vertex_byte_offset = mesh.so_pos_nor_wind.offset;
 						}
-						if (material->IsDoubleSided())
+						if (material.IsDoubleSided())
 						{
 							mesh._flags |= MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 						}
 					}
 				}
-				else
-				{
-					subset.materialIndex = 0;
-				}
-
-				geometry.indexOffset = subset.indexOffset;
-				geometry.materialIndex = subset.materialIndex;
-				geometry.meshletOffset = mesh.meshletCount;
-				geometry.meshletCount = triangle_count_to_meshlet_count(subset.indexCount / 3u);
-				mesh.meshletCount += geometry.meshletCount;
-				std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &geometry, sizeof(geometry));
-				subsetIndex++;
 			}
 
 		});
@@ -4633,6 +4653,28 @@ namespace wi::scene
 
 					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
+					// LOD select:
+					{
+						const float distsq = wi::math::DistanceSquared(camera.Eye, object.center);
+						const float radius = object.radius;
+						const float radiussq = radius * radius;
+						if (distsq < radiussq)
+						{
+							object.lod = 0;
+						}
+						else
+						{
+							const MeshComponent* mesh = meshes.GetComponent(object.meshID);
+							if (mesh != nullptr && mesh->subsets_per_lod > 0)
+							{
+								const float dist = std::sqrt(distsq);
+								const float dist_to_sphere = dist - radius;
+								object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
+								object.lod = std::min(object.lod, mesh->GetLODCount() - 1);
+							}
+						}
+					}
+
 					if (TLAS_instancesMapped != nullptr)
 					{
 						// TLAS instance data:
@@ -4646,7 +4688,7 @@ namespace wi::scene
 						}
 						instance.instance_id = args.jobIndex;
 						instance.instance_mask = layerMask & 0xFF;
-						instance.bottom_level = &mesh.BLAS;
+						instance.bottom_level = &mesh.BLASes[object.lod];
 						instance.instance_contribution_to_hit_group_index = 0;
 						instance.flags = 0;
 						
@@ -4705,28 +4747,6 @@ namespace wi::scene
 						object.lightmap.desc.format = Format::R11G11B10_FLOAT;
 						wi::texturehelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.format);
 						device->SetName(&object.lightmap, "lightmap");
-					}
-
-					// LOD select:
-					{
-						const float distsq = wi::math::DistanceSquared(camera.Eye, object.center);
-						const float radius = object.radius;
-						const float radiussq = radius * radius;
-						if (distsq < radiussq)
-						{
-							object.lod = 0;
-						}
-						else
-						{
-							const MeshComponent* mesh = meshes.GetComponent(object.meshID);
-							if (mesh != nullptr && mesh->subsets_per_lod > 0)
-							{
-								const float dist = std::sqrt(distsq);
-								const float dist_to_sphere = dist - radius;
-								object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
-								object.lod = std::min(object.lod, mesh->GetLODCount() - 1);
-							}
-						}
 					}
 				}
 
