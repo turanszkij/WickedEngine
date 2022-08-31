@@ -72,7 +72,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\vfetchoptimizer.cpp">
       <Filter>meshoptimizer</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)TerrainGenerator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)TerrainWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)OptionsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ComponentsWindow.cpp" />
@@ -117,7 +117,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)meshoptimizer\meshoptimizer.h">
       <Filter>meshoptimizer</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)TerrainGenerator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)TerrainWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)FontAwesomeV6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IconsFontAwesome6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IconDefinitions.h" />

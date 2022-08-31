@@ -38,7 +38,7 @@ set (SOURCE_FILES
 	ArmatureWindow.cpp
 	OptionsWindow.cpp
 	ComponentsWindow.cpp
-	TerrainGenerator.cpp
+	TerrainWindow.cpp
 	xatlas.cpp
 )
 

@@ -403,42 +403,43 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 
 
-	terragen.Create();
-	terragen.OnCollapse([&](wi::gui::EventArgs args) {
+	terrainWnd.Create();
+	terrainWnd.OnCollapse([&](wi::gui::EventArgs args) {
 
-		if (terragen.terrainEntity == INVALID_ENTITY)
+		if (terrainWnd.terrain.terrainEntity == INVALID_ENTITY)
 		{
 			// Customize terrain generator before it's initialized:
-			terragen.material_Base.SetRoughness(1);
-			terragen.material_Base.SetReflectance(0.005f);
-			terragen.material_Slope.SetRoughness(0.1f);
-			terragen.material_LowAltitude.SetRoughness(1);
-			terragen.material_HighAltitude.SetRoughness(1);
-			terragen.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "terrain/base.jpg";
-			terragen.material_Base.textures[MaterialComponent::NORMALMAP].name = "terrain/base_nor.jpg";
-			terragen.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "terrain/slope.jpg";
-			terragen.material_Slope.textures[MaterialComponent::NORMALMAP].name = "terrain/slope_nor.jpg";
-			terragen.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/low_altitude.jpg";
-			terragen.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/low_altitude_nor.jpg";
-			terragen.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/high_altitude.jpg";
-			terragen.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/high_altitude_nor.jpg";
-			terragen.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = "terrain/grassparticle.png";
-			terragen.material_GrassParticle.alphaRef = 0.75f;
-			terragen.grass_properties.length = 5;
-			terragen.grass_properties.frameCount = 2;
-			terragen.grass_properties.framesX = 1;
-			terragen.grass_properties.framesY = 2;
-			terragen.grass_properties.frameStart = 0;
-			terragen.material_Base.CreateRenderData();
-			terragen.material_Slope.CreateRenderData();
-			terragen.material_LowAltitude.CreateRenderData();
-			terragen.material_HighAltitude.CreateRenderData();
-			terragen.material_GrassParticle.CreateRenderData();
+			terrainWnd.terrain.terrainEntity = CreateEntity();
+			terrainWnd.terrain.material_Base.SetRoughness(1);
+			terrainWnd.terrain.material_Base.SetReflectance(0.005f);
+			terrainWnd.terrain.material_Slope.SetRoughness(0.1f);
+			terrainWnd.terrain.material_LowAltitude.SetRoughness(1);
+			terrainWnd.terrain.material_HighAltitude.SetRoughness(1);
+			terrainWnd.terrain.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "terrain/base.jpg";
+			terrainWnd.terrain.material_Base.textures[MaterialComponent::NORMALMAP].name = "terrain/base_nor.jpg";
+			terrainWnd.terrain.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "terrain/slope.jpg";
+			terrainWnd.terrain.material_Slope.textures[MaterialComponent::NORMALMAP].name = "terrain/slope_nor.jpg";
+			terrainWnd.terrain.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/low_altitude.jpg";
+			terrainWnd.terrain.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/low_altitude_nor.jpg";
+			terrainWnd.terrain.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/high_altitude.jpg";
+			terrainWnd.terrain.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/high_altitude_nor.jpg";
+			terrainWnd.terrain.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = "terrain/grassparticle.png";
+			terrainWnd.terrain.material_GrassParticle.alphaRef = 0.75f;
+			terrainWnd.terrain.grass_properties.length = 5;
+			terrainWnd.terrain.grass_properties.frameCount = 2;
+			terrainWnd.terrain.grass_properties.framesX = 1;
+			terrainWnd.terrain.grass_properties.framesY = 2;
+			terrainWnd.terrain.grass_properties.frameStart = 0;
+			terrainWnd.terrain.material_Base.CreateRenderData();
+			terrainWnd.terrain.material_Slope.CreateRenderData();
+			terrainWnd.terrain.material_LowAltitude.CreateRenderData();
+			terrainWnd.terrain.material_HighAltitude.CreateRenderData();
+			terrainWnd.terrain.material_GrassParticle.CreateRenderData();
 			// Tree prop:
 			{
 				Scene props_scene;
 				wi::scene::LoadModel(props_scene, "terrain/tree.wiscene");
-				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
+				wi::terrain::Prop& prop = terrainWnd.terrain.props.emplace_back();
 				prop.name = "tree";
 				prop.min_count_per_chunk = 0;
 				prop.max_count_per_chunk = 10;
@@ -468,7 +469,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			{
 				Scene props_scene;
 				wi::scene::LoadModel(props_scene, "terrain/rock.wiscene");
-				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
+				wi::terrain::Prop& prop = terrainWnd.terrain.props.emplace_back();
 				prop.name = "rock";
 				prop.min_count_per_chunk = 0;
 				prop.max_count_per_chunk = 8;
@@ -498,7 +499,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			{
 				Scene props_scene;
 				wi::scene::LoadModel(props_scene, "terrain/bush.wiscene");
-				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
+				wi::terrain::Prop& prop = terrainWnd.terrain.props.emplace_back();
 				prop.name = "bush";
 				prop.min_count_per_chunk = 0;
 				prop.max_count_per_chunk = 10;
@@ -525,18 +526,17 @@ void OptionsWindow::Create(EditorComponent* _editor)
 				editor->GetCurrentScene().Merge(props_scene);
 			}
 
-			terragen.init();
 			RefreshEntityTree();
 		}
 
-		if (!terragen.IsCollapsed() && !editor->GetCurrentScene().transforms.Contains(terragen.terrainEntity))
+		if (!terrainWnd.IsCollapsed() && !editor->GetCurrentScene().transforms.Contains(terrainWnd.terrain.terrainEntity))
 		{
-			terragen.Generation_Restart();
+			terrainWnd.presetCombo.SetSelected(0);
 			RefreshEntityTree();
 		}
 
 		});
-	AddWidget(&terragen);
+	AddWidget(&terrainWnd);
 
 
 
@@ -749,9 +749,9 @@ void OptionsWindow::ResizeLayout()
 	pos.y += paintToolWnd.GetSize().y;
 	pos.y += padding;
 
-	terragen.SetPos(pos);
-	terragen.SetSize(XMFLOAT2(width, terragen.GetScale().y));
-	pos.y += terragen.GetSize().y;
+	terrainWnd.SetPos(pos);
+	terrainWnd.SetSize(XMFLOAT2(width, terrainWnd.GetScale().y));
+	pos.y += terrainWnd.GetSize().y;
 	pos.y += padding;
 
 	x_off = 45;
@@ -889,7 +889,7 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_EXPRESSION " ";
 	}
-	if (entity == terragen.terrainEntity)
+	if (entity == terrainWnd.terrain.terrainEntity)
 	{
 		item.name += ICON_TERRAIN " ";
 	}

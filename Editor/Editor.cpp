@@ -317,9 +317,9 @@ void EditorComponent::Load()
 	closeButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
 	closeButton.OnClick([&](wi::gui::EventArgs args) {
 
-		optionsWnd.terragen.Generation_Cancel();
-		optionsWnd.terragen.terrainEntity = INVALID_ENTITY;
-		optionsWnd.terragen.SetCollapsed(true);
+		optionsWnd.terrainWnd.terrain.Generation_Cancel();
+		optionsWnd.terrainWnd.terrain.terrainEntity = INVALID_ENTITY;
+		optionsWnd.terrainWnd.SetCollapsed(true);
 
 		translator.selected.clear();
 		wi::scene::Scene& scene = GetCurrentScene();
@@ -453,7 +453,7 @@ void EditorComponent::Load()
 	exitButton.SetColor(wi::Color(160, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
 	exitButton.SetColor(wi::Color(200, 50, 50, 255), wi::gui::WIDGETSTATE::FOCUS);
 	exitButton.OnClick([this](wi::gui::EventArgs args) {
-		optionsWnd.terragen.Generation_Cancel();
+		optionsWnd.terrainWnd.terrain.Generation_Cancel();
 		wi::platform::Exit();
 		});
 	GetGUI().AddWidget(&exitButton);
@@ -486,7 +486,7 @@ void EditorComponent::Load()
 		optionsWnd.themeCombo.SetSelected(3);
 	}
 
-	static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(TerrainGenerator::EVENT_THEME_RESET, [=](uint64_t) {
+	static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(TerrainWindow::EVENT_THEME_RESET, [=](uint64_t) {
 		optionsWnd.themeCombo.SetSelected(optionsWnd.themeCombo.GetSelected());
 		});
 
@@ -516,7 +516,7 @@ void EditorComponent::Update(float dt)
 	EditorScene& editorscene = GetCurrentEditorScene();
 	CameraComponent& camera = editorscene.camera;
 
-	optionsWnd.terragen.scene = &scene;
+	optionsWnd.terrainWnd.terrain.scene = &scene;
 	translator.scene = &scene;
 
 	if (scene.forces.Contains(grass_interaction_entity))
@@ -1495,7 +1495,7 @@ void EditorComponent::Update(float dt)
 		optionsWnd.graphicsWnd.pathTraceStatisticsLabel.SetText(ss);
 	}
 
-	optionsWnd.terragen.Generation_Update(camera);
+	optionsWnd.terrainWnd.terrain.Generation_Update(camera);
 
 	wi::profiler::EndRange(profrange);
 
@@ -2686,7 +2686,7 @@ void EditorComponent::Save(const std::string& filename)
 		wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.saveModeComboBox.GetItemUserData(optionsWnd.saveModeComboBox.GetSelected());
 		wi::resourcemanager::SetMode(embed_mode);
 
-		optionsWnd.terragen.BakeVirtualTexturesToFiles();
+		optionsWnd.terrainWnd.terrain.BakeVirtualTexturesToFiles();
 		scene.Serialize(archive);
 
 		if (dump_to_header)

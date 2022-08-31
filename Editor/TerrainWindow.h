@@ -1,0 +1,86 @@
+#pragma once
+#include "WickedEngine.h"
+
+struct ModifierWindow : public wi::gui::Window
+{
+	wi::terrain::Modifier* modifier = nullptr;
+	std::function<void()> generation_callback;
+	wi::gui::ComboBox blendCombo;
+	wi::gui::Slider blendSlider;
+	wi::gui::Slider frequencySlider;
+
+	ModifierWindow(const std::string& name);
+	void Bind(wi::terrain::Modifier* ptr);
+};
+struct PerlinModifierWindow : public ModifierWindow
+{
+	wi::gui::Slider octavesSlider;
+
+	PerlinModifierWindow();
+	void ResizeLayout();
+	void Bind(wi::terrain::PerlinModifier* ptr);
+};
+struct VoronoiModifierWindow : public ModifierWindow
+{
+	wi::gui::Slider fadeSlider;
+	wi::gui::Slider shapeSlider;
+	wi::gui::Slider falloffSlider;
+	wi::gui::Slider perturbationSlider;
+
+	VoronoiModifierWindow();
+	void ResizeLayout() override;
+	void Bind(wi::terrain::VoronoiModifier* ptr);
+};
+struct HeightmapModifierWindow : public ModifierWindow
+{
+	wi::gui::Slider scaleSlider;
+	wi::gui::Button loadButton;
+
+	HeightmapModifierWindow();
+	void ResizeLayout() override;
+	void Bind(wi::terrain::HeightmapModifier* ptr);
+};
+
+class TerrainWindow : public wi::gui::Window
+{
+public:
+	wi::terrain::Terrain terrain;
+
+	static constexpr int EVENT_THEME_RESET = 12345;
+	wi::gui::CheckBox centerToCamCheckBox;
+	wi::gui::CheckBox removalCheckBox;
+	wi::gui::CheckBox grassCheckBox;
+	wi::gui::Slider lodSlider;
+	wi::gui::Slider texlodSlider;
+	wi::gui::Slider generationSlider;
+	wi::gui::Slider propSlider;
+	wi::gui::Slider propDensitySlider;
+	wi::gui::Slider grassDensitySlider;
+	wi::gui::ComboBox presetCombo;
+	wi::gui::Slider scaleSlider;
+	wi::gui::Slider seedSlider;
+	wi::gui::Slider bottomLevelSlider;
+	wi::gui::Slider topLevelSlider;
+	wi::gui::Button saveHeightmapButton;
+	wi::gui::ComboBox addModifierCombo;
+
+	wi::gui::Slider region1Slider;
+	wi::gui::Slider region2Slider;
+	wi::gui::Slider region3Slider;
+
+	enum PRESET
+	{
+		PRESET_HILLS,
+		PRESET_ISLANDS,
+		PRESET_MOUNTAINS,
+		PRESET_ARCTIC,
+	};
+
+	wi::vector<std::unique_ptr<ModifierWindow>> modifiers;
+	wi::vector<ModifierWindow*> modifiers_to_remove;
+
+	void Create();
+	void ResizeLayout();
+	void AddModifier(ModifierWindow* modifier_window);
+};
+

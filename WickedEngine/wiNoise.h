@@ -9,7 +9,7 @@ namespace wi::noise
 	// Based on: https://github.com/Reputeless/PerlinNoise
 	struct Perlin
 	{
-		uint8_t state[256];
+		uint8_t state[256] = {};
 
 		void init(uint32_t seed)
 		{
