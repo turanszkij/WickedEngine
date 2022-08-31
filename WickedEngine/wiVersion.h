@@ -11,6 +11,8 @@ namespace wi::version
 	// minor bug fixes, alterations
 	int GetRevision();
 	const char* GetVersionString();
+
+	const char* GetCreditsString();
 }
 
 #endif // WICKEDENGINE_VERSION_DEFINED
