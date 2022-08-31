@@ -4653,6 +4653,28 @@ namespace wi::scene
 
 					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
+					// LOD select:
+					{
+						const float distsq = wi::math::DistanceSquared(camera.Eye, object.center);
+						const float radius = object.radius;
+						const float radiussq = radius * radius;
+						if (distsq < radiussq)
+						{
+							object.lod = 0;
+						}
+						else
+						{
+							const MeshComponent* mesh = meshes.GetComponent(object.meshID);
+							if (mesh != nullptr && mesh->subsets_per_lod > 0)
+							{
+								const float dist = std::sqrt(distsq);
+								const float dist_to_sphere = dist - radius;
+								object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
+								object.lod = std::min(object.lod, mesh->GetLODCount() - 1);
+							}
+						}
+					}
+
 					if (TLAS_instancesMapped != nullptr)
 					{
 						// TLAS instance data:
@@ -4725,28 +4747,6 @@ namespace wi::scene
 						object.lightmap.desc.format = Format::R11G11B10_FLOAT;
 						wi::texturehelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.format);
 						device->SetName(&object.lightmap, "lightmap");
-					}
-
-					// LOD select:
-					{
-						const float distsq = wi::math::DistanceSquared(camera.Eye, object.center);
-						const float radius = object.radius;
-						const float radiussq = radius * radius;
-						if (distsq < radiussq)
-						{
-							object.lod = 0;
-						}
-						else
-						{
-							const MeshComponent* mesh = meshes.GetComponent(object.meshID);
-							if (mesh != nullptr && mesh->subsets_per_lod > 0)
-							{
-								const float dist = std::sqrt(distsq);
-								const float dist_to_sphere = dist - radius;
-								object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
-								object.lod = std::min(object.lod, mesh->GetLODCount() - 1);
-							}
-						}
 					}
 				}
 
