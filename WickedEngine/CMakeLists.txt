@@ -137,6 +137,7 @@ set(HEADER_FILES
 		wiVersion.h
 		wiXInput.h
 		wiConfig.h
+		wiTerrain.h
 		)
 
 add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
@@ -206,6 +207,7 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	wiXInput.cpp
 	wiShaderCompiler.cpp
 	wiConfig.cpp
+	wiTerrain.cpp
 	${HEADER_FILES}
 )
 add_library(WickedEngine ALIAS ${TARGET_NAME})
