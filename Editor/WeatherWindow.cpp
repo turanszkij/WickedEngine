@@ -234,7 +234,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&coverageAmountSlider);
 
-	coverageMinimumSlider.Create(0, 1, 0, 1000, "Coverage minimmum: ");
+	coverageMinimumSlider.Create(0, 1, 0, 1000, "Coverage minimum: ");
 	coverageMinimumSlider.SetSize(XMFLOAT2(wid, hei));
 	coverageMinimumSlider.SetPos(XMFLOAT2(x, y += step));
 	coverageMinimumSlider.OnSlide([&](wi::gui::EventArgs args) {
