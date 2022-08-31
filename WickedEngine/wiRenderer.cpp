@@ -4253,22 +4253,25 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 			for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 			{
 				const MeshComponent& mesh = scene.meshes[i];
-				if (mesh.BLAS.IsValid())
+				for (auto& BLAS : mesh.BLASes)
 				{
-					switch (mesh.BLAS_state)
+					if (BLAS.IsValid())
 					{
-					default:
-					case MeshComponent::BLAS_STATE_COMPLETE:
-						break;
-					case MeshComponent::BLAS_STATE_NEEDS_REBUILD:
-						device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, nullptr);
-						break;
-					case MeshComponent::BLAS_STATE_NEEDS_REFIT:
-						device->BuildRaytracingAccelerationStructure(&mesh.BLAS, cmd, &mesh.BLAS);
-						break;
+						switch (mesh.BLAS_state)
+						{
+						default:
+						case MeshComponent::BLAS_STATE_COMPLETE:
+							break;
+						case MeshComponent::BLAS_STATE_NEEDS_REBUILD:
+							device->BuildRaytracingAccelerationStructure(&BLAS, cmd, nullptr);
+							break;
+						case MeshComponent::BLAS_STATE_NEEDS_REFIT:
+							device->BuildRaytracingAccelerationStructure(&BLAS, cmd, &BLAS);
+							break;
+						}
 					}
-					mesh.BLAS_state = MeshComponent::BLAS_STATE_COMPLETE;
 				}
+				mesh.BLAS_state = MeshComponent::BLAS_STATE_COMPLETE;
 			}
 
 			for (size_t i = 0; i < scene.hairs.GetCount(); ++i)

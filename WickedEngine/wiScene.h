@@ -411,7 +411,7 @@ namespace wi::scene
 		uint32_t geometryOffset = 0;
 		uint32_t meshletCount = 0;
 
-		wi::graphics::RaytracingAccelerationStructure BLAS;
+		wi::vector<wi::graphics::RaytracingAccelerationStructure> BLASes; // one BLAS per LOD
 		enum BLAS_STATE
 		{
 			BLAS_STATE_NEEDS_REBUILD,
