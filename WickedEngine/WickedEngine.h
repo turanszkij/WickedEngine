@@ -70,6 +70,7 @@
 #include "wiVector.h"
 #include "wiNoise.h"
 #include "wiConfig.h"
+#include "wiTerrain.h"
 
 #ifdef _WIN32
 #ifdef PLATFORM_UWP

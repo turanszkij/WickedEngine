@@ -25,6 +25,7 @@
 #include "CameraComponentWindow.h"
 #include "ExpressionWindow.h"
 #include "ArmatureWindow.h"
+#include "TerrainWindow.h"
 
 class EditorComponent;
 
@@ -63,4 +64,5 @@ public:
 	CameraComponentWindow cameraComponentWnd;
 	ExpressionWindow expressionWnd;
 	ArmatureWindow armatureWnd;
+	TerrainWindow terrainWnd;
 };

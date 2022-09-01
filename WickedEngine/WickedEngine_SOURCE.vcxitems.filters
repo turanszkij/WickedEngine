@@ -1080,6 +1080,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiConfig.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTerrain.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiScene_Components.h">
+      <Filter>ENGINE\System</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1816,6 +1822,12 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiConfig.cpp">
       <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTerrain.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiScene_Components.cpp">
+      <Filter>ENGINE\System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

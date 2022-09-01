@@ -263,6 +263,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiScene_Components.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTerrain.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedSet.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput_BindLua.h" />
@@ -644,7 +646,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath3D.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath3D_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiScene_Components.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSpriteAnim_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTerrain.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTexture_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiMath_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBacklog.cpp" />

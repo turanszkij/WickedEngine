@@ -116,7 +116,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)TerrainGenerator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)TerrainWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TransformWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Translator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)WeatherWindow.cpp" />
@@ -169,7 +169,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)SoundWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpringWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)stdafx.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)TerrainGenerator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)TerrainWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)tiny_gltf.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)tiny_obj_loader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TransformWindow.h" />

@@ -3654,21 +3654,13 @@ void UpdateRenderData(
 
 			bool shadow = light.IsCastingShadow() && !light.IsStatic();
 
-			if (GetRaytracedShadowsEnabled() && shadow)
+			if (shadow)
 			{
+				shaderentity.shadowAtlasMulAdd.x = light.shadow_rect.w * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.y = light.shadow_rect.h * atlas_dim_rcp.y;
+				shaderentity.shadowAtlasMulAdd.z = light.shadow_rect.x * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.w = light.shadow_rect.y * atlas_dim_rcp.y;
 				shaderentity.SetIndices(matrixCounter, 0);
-			}
-			else if(shadow)
-			{
-				shadow = light.IsCastingShadow() && !light.IsStatic();
-				if (shadow)
-				{
-					shaderentity.shadowAtlasMulAdd.x = light.shadow_rect.w * atlas_dim_rcp.x;
-					shaderentity.shadowAtlasMulAdd.y = light.shadow_rect.h * atlas_dim_rcp.y;
-					shaderentity.shadowAtlasMulAdd.z = light.shadow_rect.x * atlas_dim_rcp.x;
-					shaderentity.shadowAtlasMulAdd.w = light.shadow_rect.y * atlas_dim_rcp.y;
-					shaderentity.SetIndices(matrixCounter, 0);
-				}
 			}
 
 			switch (light.GetType())

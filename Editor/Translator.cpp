@@ -141,6 +141,8 @@ void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
 	if (IsEnabled())
 	{
 		PreTranslate();
+		if (!has_selected_transform)
+			return;
 
 		const Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas, camera);
 		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
@@ -491,7 +493,7 @@ void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
 }
 void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 {
-	if (!IsEnabled() || selected.empty())
+	if (!IsEnabled() || selected.empty() || !has_selected_transform)
 	{
 		return;
 	}
@@ -1061,6 +1063,7 @@ void Translator::PreTranslate()
 	{
 		transform.ClearTransform();
 	}
+	has_selected_transform = false;
 
 	// Find the center of all the entities that are selected:
 	XMVECTOR centerV = XMVectorSet(0, 0, 0, 0);
@@ -1073,8 +1076,12 @@ void Translator::PreTranslate()
 			transform->UpdateTransform();
 			centerV = XMVectorAdd(centerV, transform->GetPositionV());
 			count += 1.0f;
+			has_selected_transform = true;
 		}
 	}
+
+	if (!has_selected_transform)
+		return;
 
 	// Offset translator to center position and perform attachments:
 	if (count > 0)

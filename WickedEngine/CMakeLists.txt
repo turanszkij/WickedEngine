@@ -119,6 +119,7 @@ set(HEADER_FILES
 		wiScene.h
 		wiScene_BindLua.h
 		wiScene_Decl.h
+		wiScene_Components.h
 		wiSDLInput.h
 		wiShaderCompiler.h
 		wiSheenLUT.h
@@ -137,6 +138,7 @@ set(HEADER_FILES
 		wiVersion.h
 		wiXInput.h
 		wiConfig.h
+		wiTerrain.h
 		)
 
 add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
@@ -193,6 +195,7 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	wiRenderer_BindLua.cpp
 	wiResourceManager.cpp
 	wiScene.cpp
+	wiScene_Components.cpp
 	wiScene_BindLua.cpp
 	wiScene_Serializers.cpp
 	wiSDLInput.cpp
@@ -206,6 +209,7 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	wiXInput.cpp
 	wiShaderCompiler.cpp
 	wiConfig.cpp
+	wiTerrain.cpp
 	${HEADER_FILES}
 )
 add_library(WickedEngine ALIAS ${TARGET_NAME})

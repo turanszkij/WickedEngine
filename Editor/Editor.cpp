@@ -317,9 +317,7 @@ void EditorComponent::Load()
 	closeButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
 	closeButton.OnClick([&](wi::gui::EventArgs args) {
 
-		optionsWnd.terragen.Generation_Cancel();
-		optionsWnd.terragen.terrainEntity = INVALID_ENTITY;
-		optionsWnd.terragen.SetCollapsed(true);
+		componentsWnd.terrainWnd.terrain_preset = {};
 
 		translator.selected.clear();
 		wi::scene::Scene& scene = GetCurrentScene();
@@ -349,6 +347,7 @@ void EditorComponent::Load()
 		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.armatureWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.terrainWnd.SetEntity(INVALID_ENTITY);
 
 		optionsWnd.RefreshEntityTree();
 		ResetHistory();
@@ -434,6 +433,12 @@ void EditorComponent::Load()
 		ss += "You can find a program configuration file at Editor/config.ini\n";
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
 		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start, if exists)\n";
+		ss += "You can use some command line arguments (without any prefix):\n";
+		ss += "\t- Default to DirectX12 graphics device: dx12\n";
+		ss += "\t- Default to Vulkan graphics device: vulkan\n";
+		ss += "\t- Enable graphics device debug mode: debugdevice\n";
+		ss += "\t- Enable graphics device GPU-based validation: gpuvalidation\n";
+		ss += "\t- Make window always active, even when in background: alwaysactive\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
 		ss += "https://github.com/turanszkij/WickedEngine/issues\n";
 		ss += "\n\n";
@@ -453,7 +458,6 @@ void EditorComponent::Load()
 	exitButton.SetColor(wi::Color(160, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
 	exitButton.SetColor(wi::Color(200, 50, 50, 255), wi::gui::WIDGETSTATE::FOCUS);
 	exitButton.OnClick([this](wi::gui::EventArgs args) {
-		optionsWnd.terragen.Generation_Cancel();
 		wi::platform::Exit();
 		});
 	GetGUI().AddWidget(&exitButton);
@@ -486,10 +490,6 @@ void EditorComponent::Load()
 		optionsWnd.themeCombo.SetSelected(3);
 	}
 
-	static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(TerrainGenerator::EVENT_THEME_RESET, [=](uint64_t) {
-		optionsWnd.themeCombo.SetSelected(optionsWnd.themeCombo.GetSelected());
-		});
-
 	RenderPath2D::Load();
 }
 void EditorComponent::Start()
@@ -516,7 +516,6 @@ void EditorComponent::Update(float dt)
 	EditorScene& editorscene = GetCurrentEditorScene();
 	CameraComponent& camera = editorscene.camera;
 
-	optionsWnd.terragen.scene = &scene;
 	translator.scene = &scene;
 
 	if (scene.forces.Contains(grass_interaction_entity))
@@ -1342,6 +1341,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.armatureWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.terrainWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1381,6 +1381,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.cameraComponentWnd.SetEntity(picked.entity);
 		componentsWnd.expressionWnd.SetEntity(picked.entity);
 		componentsWnd.armatureWnd.SetEntity(picked.entity);
+		componentsWnd.terrainWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{
@@ -1494,8 +1495,6 @@ void EditorComponent::Update(float dt)
 		}
 		optionsWnd.graphicsWnd.pathTraceStatisticsLabel.SetText(ss);
 	}
-
-	optionsWnd.terragen.Generation_Update(camera);
 
 	wi::profiler::EndRange(profrange);
 
@@ -2686,7 +2685,6 @@ void EditorComponent::Save(const std::string& filename)
 		wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.saveModeComboBox.GetItemUserData(optionsWnd.saveModeComboBox.GetSelected());
 		wi::resourcemanager::SetMode(embed_mode);
 
-		optionsWnd.terragen.BakeVirtualTexturesToFiles();
 		scene.Serialize(archive);
 
 		if (dump_to_header)

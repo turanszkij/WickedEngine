@@ -55,7 +55,7 @@ struct ShaderScene
 		int offset_buffer;
 
 		float3 cell_size_rcp;
-		float padding0;
+		float smooth_backface;
 	};
 	DDGI ddgi;
 };

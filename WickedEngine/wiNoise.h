@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiMath.h"
+#include "wiArchive.h"
 
 #include <random>
 
@@ -9,7 +10,7 @@ namespace wi::noise
 	// Based on: https://github.com/Reputeless/PerlinNoise
 	struct Perlin
 	{
-		uint8_t state[256];
+		uint8_t state[256] = {};
 
 		void init(uint32_t seed)
 		{
@@ -96,6 +97,24 @@ namespace wi::noise
 				amplitude *= persistence;
 			}
 			return result;
+		}
+
+		void Serialize(wi::Archive& archive)
+		{
+			if (archive.IsReadMode())
+			{
+				for (auto& x : state)
+				{
+					archive >> x;
+				}
+			}
+			else
+			{
+				for (auto& x : state)
+				{
+					archive << x;
+				}
+			}
 		}
 	};
 

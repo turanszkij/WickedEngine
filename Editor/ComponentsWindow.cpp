@@ -40,6 +40,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	cameraComponentWnd.Create(editor);
 	expressionWnd.Create(editor);
 	armatureWnd.Create(editor);
+	terrainWnd.Create(editor);
 
 
 	newComponentCombo.Create("Add: ");
@@ -310,6 +311,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&cameraComponentWnd);
 	AddWidget(&expressionWnd);
 	AddWidget(&armatureWnd);
+	AddWidget(&terrainWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -336,6 +338,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	cameraComponentWnd.SetVisible(false);
 	expressionWnd.SetVisible(false);
 	armatureWnd.SetVisible(false);
+	terrainWnd.SetVisible(false);
 
 	SetSize(editor->optionsWnd.GetSize());
 }
@@ -702,5 +705,18 @@ void ComponentsWindow::ResizeLayout()
 	else
 	{
 		armatureWnd.SetVisible(false);
+	}
+
+	if (scene.terrains.Contains(terrainWnd.entity))
+	{
+		terrainWnd.SetVisible(true);
+		terrainWnd.SetPos(pos);
+		terrainWnd.SetSize(XMFLOAT2(width, terrainWnd.GetScale().y));
+		pos.y += terrainWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		terrainWnd.SetVisible(false);
 	}
 }

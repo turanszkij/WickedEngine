@@ -561,14 +561,15 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 void ObjectWindow::SetEntity(Entity entity)
 {
+	Scene& scene = editor->GetCurrentScene();
+	const ObjectComponent* object = scene.objects.GetComponent(entity);
+	if (object == nullptr)
+		entity = INVALID_ENTITY;
+
 	if (this->entity == entity)
 		return;
 
 	this->entity = entity;
-
-	Scene& scene = editor->GetCurrentScene();
-
-	const ObjectComponent* object = scene.objects.GetComponent(entity);
 
 	if (object != nullptr)
 	{
