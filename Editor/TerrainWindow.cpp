@@ -12,25 +12,25 @@ ModifierWindow::ModifierWindow(const std::string& name)
 	wi::gui::Window::Create(name, wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
 	SetSize(XMFLOAT2(200, 100));
 
-	blendCombo.Create("Blend Mode: ");
+	blendCombo.Create("Blend: ");
 	blendCombo.SetSize(XMFLOAT2(100, 20));
 	blendCombo.AddItem("Normal", (uint64_t)wi::terrain::Modifier::BlendMode::Normal);
 	blendCombo.AddItem("Additive", (uint64_t)wi::terrain::Modifier::BlendMode::Additive);
 	blendCombo.AddItem("Multiply", (uint64_t)wi::terrain::Modifier::BlendMode::Multiply);
 	blendCombo.OnSelect([=](wi::gui::EventArgs args) {
-		modifier->blendmode = (wi::terrain::Modifier::BlendMode)args.userdata;
+		modifier->blend = (wi::terrain::Modifier::BlendMode)args.userdata;
 		generation_callback();
 		});
 	AddWidget(&blendCombo);
 
-	blendSlider.Create(0, 1, 0.5f, 10000, "Blend: ");
-	blendSlider.SetSize(XMFLOAT2(100, 20));
-	blendSlider.SetTooltip("Blending amount");
-	blendSlider.OnSlide([=](wi::gui::EventArgs args) {
-		modifier->blend = args.fValue;
+	weightSlider.Create(0, 1, 0.5f, 10000, "Weight: ");
+	weightSlider.SetSize(XMFLOAT2(100, 20));
+	weightSlider.SetTooltip("Blending amount");
+	weightSlider.OnSlide([=](wi::gui::EventArgs args) {
+		modifier->weight = args.fValue;
 		generation_callback();
 		});
-	AddWidget(&blendSlider);
+	AddWidget(&weightSlider);
 
 	frequencySlider.Create(0.0001f, 0.01f, 0.0008f, 10000, "Frequency: ");
 	frequencySlider.SetSize(XMFLOAT2(100, 20));
@@ -44,15 +44,15 @@ ModifierWindow::ModifierWindow(const std::string& name)
 void ModifierWindow::Bind(wi::terrain::Modifier* ptr)
 {
 	modifier = ptr;
-	modifier->blendmode = (wi::terrain::Modifier::BlendMode)blendCombo.GetItemUserData(blendCombo.GetSelected());
-	modifier->blend = blendSlider.GetValue();
+	modifier->blend = (wi::terrain::Modifier::BlendMode)blendCombo.GetItemUserData(blendCombo.GetSelected());
+	modifier->weight = weightSlider.GetValue();
 	modifier->frequency = frequencySlider.GetValue();
 }
 void ModifierWindow::From(wi::terrain::Modifier* ptr)
 {
 	modifier = ptr;
-	blendCombo.SetSelectedByUserdataWithoutCallback((uint64_t)ptr->blendmode);
-	blendSlider.SetValue(ptr->blend);
+	blendCombo.SetSelectedByUserdataWithoutCallback((uint64_t)ptr->blend);
+	weightSlider.SetValue(ptr->weight);
 	frequencySlider.SetValue(ptr->frequency);
 }
 
@@ -86,7 +86,7 @@ void PerlinModifierWindow::ResizeLayout()
 	};
 
 	add(blendCombo);
-	add(blendSlider);
+	add(weightSlider);
 	add(frequencySlider);
 
 	add(octavesSlider);
@@ -159,7 +159,7 @@ void VoronoiModifierWindow::ResizeLayout()
 	};
 
 	add(blendCombo);
-	add(blendSlider);
+	add(weightSlider);
 	add(frequencySlider);
 
 	add(fadeSlider);
@@ -186,7 +186,7 @@ void VoronoiModifierWindow::From(wi::terrain::VoronoiModifier* ptr)
 
 HeightmapModifierWindow::HeightmapModifierWindow() : ModifierWindow("Heightmap")
 {
-	blendSlider.SetValue(1);
+	weightSlider.SetValue(1);
 	frequencySlider.SetValue(1);
 
 	scaleSlider.Create(0, 1, 0.1f, 1000, "Scale: ");
@@ -249,7 +249,7 @@ void HeightmapModifierWindow::ResizeLayout()
 	};
 
 	add(blendCombo);
-	add(blendSlider);
+	add(weightSlider);
 	add(frequencySlider);
 
 	add(scaleSlider);
@@ -446,10 +446,10 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			seedSlider.SetValue(5333);
 			bottomLevelSlider.SetValue(-60);
 			topLevelSlider.SetValue(380);
-			perlin->blendSlider.SetValue(0.5f);
+			perlin->weightSlider.SetValue(0.5f);
 			perlin->frequencySlider.SetValue(0.0008f);
 			perlin->octavesSlider.SetValue(6);
-			voronoi->blendSlider.SetValue(0.5f);
+			voronoi->weightSlider.SetValue(0.5f);
 			voronoi->frequencySlider.SetValue(0.001f);
 			voronoi->fadeSlider.SetValue(2.59f);
 			voronoi->shapeSlider.SetValue(0.7f);
@@ -464,10 +464,10 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			seedSlider.SetValue(4691);
 			bottomLevelSlider.SetValue(-79);
 			topLevelSlider.SetValue(520);
-			perlin->blendSlider.SetValue(0.5f);
+			perlin->weightSlider.SetValue(0.5f);
 			perlin->frequencySlider.SetValue(0.000991f);
 			perlin->octavesSlider.SetValue(6);
-			voronoi->blendSlider.SetValue(0.5f);
+			voronoi->weightSlider.SetValue(0.5f);
 			voronoi->frequencySlider.SetValue(0.000317f);
 			voronoi->fadeSlider.SetValue(8.2f);
 			voronoi->shapeSlider.SetValue(0.126f);
@@ -482,10 +482,10 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			seedSlider.SetValue(8863);
 			bottomLevelSlider.SetValue(0);
 			topLevelSlider.SetValue(2960);
-			perlin->blendSlider.SetValue(0.5f);
+			perlin->weightSlider.SetValue(0.5f);
 			perlin->frequencySlider.SetValue(0.00279f);
 			perlin->octavesSlider.SetValue(8);
-			voronoi->blendSlider.SetValue(0.5f);
+			voronoi->weightSlider.SetValue(0.5f);
 			voronoi->frequencySlider.SetValue(0.000496f);
 			voronoi->fadeSlider.SetValue(5.2f);
 			voronoi->shapeSlider.SetValue(0.412f);
@@ -500,10 +500,10 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			seedSlider.SetValue(2124);
 			bottomLevelSlider.SetValue(-50);
 			topLevelSlider.SetValue(40);
-			perlin->blendSlider.SetValue(1);
+			perlin->weightSlider.SetValue(1);
 			perlin->frequencySlider.SetValue(0.002f);
 			perlin->octavesSlider.SetValue(4);
-			voronoi->blendSlider.SetValue(1);
+			voronoi->weightSlider.SetValue(1);
 			voronoi->frequencySlider.SetValue(0.004f);
 			voronoi->fadeSlider.SetValue(1.8f);
 			voronoi->shapeSlider.SetValue(0.518f);

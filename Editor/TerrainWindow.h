@@ -8,7 +8,7 @@ struct ModifierWindow : public wi::gui::Window
 	wi::terrain::Modifier* modifier = nullptr;
 	std::function<void()> generation_callback;
 	wi::gui::ComboBox blendCombo;
-	wi::gui::Slider blendSlider;
+	wi::gui::Slider weightSlider;
 	wi::gui::Slider frequencySlider;
 
 	virtual ~ModifierWindow() = default;

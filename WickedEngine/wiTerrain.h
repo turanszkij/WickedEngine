@@ -180,26 +180,26 @@ namespace wi::terrain
 			Normal,
 			Additive,
 			Multiply,
-		} blendmode = BlendMode::Normal;
+		} blend = BlendMode::Normal;
 
-		float blend = 0.5f;
+		float weight = 0.5f;
 		float frequency = 0.0008f;
 
 		virtual void Seed(uint32_t seed) {}
 		virtual void Apply(const XMFLOAT2& world_pos, float& height) = 0;
 		constexpr void Blend(float& height, float value)
 		{
-			switch (blendmode)
+			switch (blend)
 			{
 			default:
 			case BlendMode::Normal:
-				height = wi::math::Lerp(height, value, blend);
+				height = wi::math::Lerp(height, value, weight);
 				break;
 			case BlendMode::Multiply:
-				height *= value * blend;
+				height *= value * weight;
 				break;
 			case BlendMode::Additive:
-				height += value * blend;
+				height += value * weight;
 				break;
 			}
 		}

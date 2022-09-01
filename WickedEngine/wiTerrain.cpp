@@ -1032,8 +1032,8 @@ namespace wi::terrain
 
 				Modifier* modifier = modifiers[i].get();
 				archive >> value;
-				modifier->blendmode = (Modifier::BlendMode)value;
-				archive >> modifier->blend;
+				modifier->blend = (Modifier::BlendMode)value;
+				archive >> modifier->weight;
 				archive >> modifier->frequency;
 			}
 		}
@@ -1126,8 +1126,8 @@ namespace wi::terrain
 					break;
 				}
 
-				archive << (uint32_t)modifier->blendmode;
-				archive << modifier->blend;
+				archive << (uint32_t)modifier->blend;
+				archive << modifier->weight;
 				archive << modifier->frequency;
 			}
 		}
