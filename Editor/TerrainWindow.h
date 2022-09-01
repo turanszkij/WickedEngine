@@ -1,6 +1,8 @@
 #pragma once
 #include "WickedEngine.h"
 
+class EditorComponent;
+
 struct ModifierWindow : public wi::gui::Window
 {
 	wi::terrain::Modifier* modifier = nullptr;
@@ -44,9 +46,6 @@ struct HeightmapModifierWindow : public ModifierWindow
 class TerrainWindow : public wi::gui::Window
 {
 public:
-	wi::terrain::Terrain terrain;
-
-	static constexpr int EVENT_THEME_RESET = 12345;
 	wi::gui::CheckBox centerToCamCheckBox;
 	wi::gui::CheckBox removalCheckBox;
 	wi::gui::CheckBox grassCheckBox;
@@ -79,7 +78,15 @@ public:
 	wi::vector<std::unique_ptr<ModifierWindow>> modifiers;
 	wi::vector<ModifierWindow*> modifiers_to_remove;
 
-	void Create();
+	void Create(EditorComponent* editor);
+
+	EditorComponent* editor = nullptr;
+	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+	wi::terrain::Terrain terrain_preset;
+	wi::terrain::Terrain* terrain_ptr = &terrain_preset;
+	wi::terrain::Terrain& terrain = *terrain_ptr;
+	void SetEntity(wi::ecs::Entity entity);
+
 	void ResizeLayout();
 	void AddModifier(ModifierWindow* modifier_window);
 };

@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiScene.h"
+#include "wiScene_Decl.h"
+#include "wiScene_Components.h"
 #include "wiNoise.h"
 #include "wiECS.h"
 #include "wiColor.h"
@@ -81,6 +82,7 @@ namespace wi::terrain
 	};
 
 	struct Modifier;
+	struct Generator;
 
 	struct Terrain
 	{
@@ -90,6 +92,7 @@ namespace wi::terrain
 			CENTER_TO_CAM = 1 << 0,
 			REMOVAL = 1 << 1,
 			GRASS = 1 << 2,
+			GENERATION_STARTED = 1 << 0,
 		};
 		uint32_t _flags = CENTER_TO_CAM | REMOVAL | GRASS;
 
@@ -108,9 +111,7 @@ namespace wi::terrain
 		wi::vector<Prop> props;
 
 		// For generating scene on a background thread:
-		wi::scene::Scene generation_scene; // The background generation thread can safely add things to this, it will be merged into the main scene when it is safe to do so
-		wi::jobsystem::context generation_workload;
-		std::atomic_bool generation_cancelled;
+		std::shared_ptr<Generator> generator;
 		float generation_time_budget_milliseconds = 12; // after this much time, the generation thread will exit. This can help avoid a very long running, resource consuming and slow cancellation generation
 
 		// Virtual texture updates will be batched like:
@@ -124,10 +125,12 @@ namespace wi::terrain
 		constexpr bool IsCenterToCamEnabled() const { return _flags & CENTER_TO_CAM; }
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }
 		constexpr bool IsGrassEnabled() const { return _flags & GRASS; }
+		constexpr bool IsGenerationStarted() const { return _flags & GENERATION_STARTED; }
 
 		constexpr void SetCenterToCamEnabled(bool value) { if (value) { _flags |= CENTER_TO_CAM; } else { _flags &= ~CENTER_TO_CAM; } }
 		constexpr void SetRemovalEnabled(bool value) { if (value) { _flags |= REMOVAL; } else { _flags &= ~REMOVAL; } }
 		constexpr void SetGrassEnabled(bool value) { if (value) { _flags |= GRASS; } else { _flags &= ~GRASS; } }
+		constexpr void SetGenerationStarted(bool value) { if (value) { _flags |= GENERATION_STARTED; } else { _flags &= ~GENERATION_STARTED; } }
 
 		float lod_multiplier = 0.005f;
 		float texlod = 0.01f;
@@ -143,7 +146,7 @@ namespace wi::terrain
 		float region2 = 2;
 		float region3 = 8;
 
-		wi::vector<std::unique_ptr<Modifier>> modifiers;
+		wi::vector<std::shared_ptr<Modifier>> modifiers;
 		wi::vector<Modifier*> modifiers_to_remove;
 
 		Terrain();
@@ -157,6 +160,8 @@ namespace wi::terrain
 		void Generation_Cancel();
 		// The virtual textures will be compressed and saved into resources. They can be serialized from there
 		void BakeVirtualTexturesToFiles();
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct Modifier

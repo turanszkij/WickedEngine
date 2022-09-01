@@ -4,7 +4,6 @@
 #include "CameraWindow.h"
 #include "MaterialPickerWindow.h"
 #include "PaintToolWindow.h"
-#include "TerrainWindow.h"
 
 class EditorComponent;
 
@@ -33,7 +32,6 @@ public:
 	CameraWindow cameraWnd;
 	MaterialPickerWindow materialPickerWnd;
 	PaintToolWindow paintToolWnd;
-	TerrainWindow terrainWnd;
 
 	enum class Filter : uint64_t
 	{

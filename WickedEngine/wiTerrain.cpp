@@ -164,9 +164,15 @@ namespace wi::terrain
 	};
 	static ChunkIndices chunk_indices;
 
+	struct Generator
+	{
+		wi::scene::Scene scene; // The background generation thread can safely add things to this, it will be merged into the main scene when it is safe to do so
+		wi::jobsystem::context workload;
+		std::atomic_bool cancelled;
+	};
+
 	Terrain::Terrain()
 	{
-
 		weather.ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		weather.SetRealisticSky(true);
 		weather.SetVolumetricClouds(true);
@@ -182,18 +188,17 @@ namespace wi::terrain
 		weather.windDirection = XMFLOAT3(0.05f, 0.05f, 0.05f);
 		weather.windSpeed = 4;
 		weather.stars = 0.6f;
+
+		generator = std::make_shared<Generator>();
 	}
 
 	void Terrain::Generation_Restart()
 	{
+		SetGenerationStarted(true);
 		Generation_Cancel();
-		generation_scene.Clear();
+		generator->scene.Clear();
 
 		chunks.clear();
-
-		scene->Entity_Remove(terrainEntity);
-		scene->transforms.Create(terrainEntity);
-		scene->names.Create(terrainEntity) = "terrain";
 
 		perlin_noise.init(seed);
 		for (auto& modifier : modifiers)
@@ -230,6 +235,11 @@ namespace wi::terrain
 		// The generation task is always cancelled every frame so we are sure that generation is not running at this point
 		Generation_Cancel();
 
+		if (!IsGenerationStarted())
+		{
+			Generation_Restart();
+		}
+
 		// Check whether any modifiers were "closed", and we will really remove them here if so:
 		if (!modifiers_to_remove.empty())
 		{
@@ -255,7 +265,7 @@ namespace wi::terrain
 		}
 
 		// What was generated, will be merged in to the main scene
-		scene->Merge(generation_scene);
+		scene->Merge(generator->scene);
 
 		const float chunk_scale_rcp = 1.0f / chunk_scale;
 
@@ -471,7 +481,7 @@ namespace wi::terrain
 		}
 
 		// Start the generation on a background thread and keep it running until the next frame
-		wi::jobsystem::Execute(generation_workload, [=](wi::jobsystem::JobArgs args) {
+		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs args) {
 
 			wi::Timer timer;
 			bool generated_something = false;
@@ -487,25 +497,25 @@ namespace wi::terrain
 					// Generate a new chunk:
 					ChunkData& chunk_data = chunks[chunk];
 
-					chunk_data.entity = generation_scene.Entity_CreateObject("chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z));
-					ObjectComponent& object = *generation_scene.objects.GetComponent(chunk_data.entity);
+					chunk_data.entity = generator->scene.Entity_CreateObject("chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z));
+					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
 					object.lod_distance_multiplier = lod_multiplier;
-					generation_scene.Component_Attach(chunk_data.entity, terrainEntity);
+					generator->scene.Component_Attach(chunk_data.entity, terrainEntity);
 
-					TransformComponent& transform = *generation_scene.transforms.GetComponent(chunk_data.entity);
+					TransformComponent& transform = *generator->scene.transforms.GetComponent(chunk_data.entity);
 					transform.ClearTransform();
 					chunk_data.position = XMFLOAT3(float(chunk.x * (chunk_width - 1)) * chunk_scale, 0, float(chunk.z * (chunk_width - 1)) * chunk_scale);
 					transform.Translate(chunk_data.position);
 					transform.UpdateTransform();
 
-					MaterialComponent& material = generation_scene.materials.Create(chunk_data.entity);
+					MaterialComponent& material = generator->scene.materials.Create(chunk_data.entity);
 					// material params will be 1 because they will be created from only texture maps
 					//	because region materials are blended together into one texture
 					material.SetRoughness(1);
 					material.SetMetalness(1);
 					material.SetReflectance(1);
 
-					MeshComponent& mesh = generation_scene.meshes.Create(chunk_data.entity);
+					MeshComponent& mesh = generator->scene.meshes.Create(chunk_data.entity);
 					object.meshID = chunk_data.entity;
 					mesh.indices = chunk_indices.indices;
 					for (auto& lod : chunk_indices.lods)
@@ -645,14 +655,14 @@ namespace wi::terrain
 						{
 							// add patch for this chunk
 							chunk_data.grass_entity = CreateEntity();
-							wi::HairParticleSystem& grass = generation_scene.hairs.Create(chunk_data.grass_entity);
+							wi::HairParticleSystem& grass = generator->scene.hairs.Create(chunk_data.grass_entity);
 							grass = chunk_data.grass;
 							chunk_data.grass_density_current = grass_density;
 							grass.strandCount = uint32_t(grass.strandCount * chunk_data.grass_density_current);
-							generation_scene.materials.Create(chunk_data.grass_entity) = material_GrassParticle;
-							generation_scene.transforms.Create(chunk_data.grass_entity);
-							generation_scene.names.Create(chunk_data.grass_entity) = "grass";
-							generation_scene.Component_Attach(chunk_data.grass_entity, chunk_data.entity, true);
+							generator->scene.materials.Create(chunk_data.grass_entity) = material_GrassParticle;
+							generator->scene.transforms.Create(chunk_data.grass_entity);
+							generator->scene.names.Create(chunk_data.grass_entity) = "grass";
+							generator->scene.Component_Attach(chunk_data.grass_entity, chunk_data.entity, true);
 							generated_something = true;
 						}
 					}
@@ -669,9 +679,9 @@ namespace wi::terrain
 						if (chunk_data.props_entity == INVALID_ENTITY)
 						{
 							chunk_data.props_entity = CreateEntity();
-							generation_scene.transforms.Create(chunk_data.props_entity);
-							generation_scene.names.Create(chunk_data.props_entity) = "props";
-							generation_scene.Component_Attach(chunk_data.props_entity, chunk_data.entity, true);
+							generator->scene.transforms.Create(chunk_data.props_entity);
+							generator->scene.names.Create(chunk_data.props_entity) = "props";
+							generator->scene.Component_Attach(chunk_data.props_entity, chunk_data.entity, true);
 							chunk_data.prop_density_current = prop_density;
 
 							chunk_data.prop_rand.seed((uint32_t)chunk.compute_hash() ^ seed);
@@ -718,10 +728,10 @@ namespace wi::terrain
 									const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise;
 									if (chance > prop.threshold)
 									{
-										Entity entity = generation_scene.Entity_CreateObject(prop.name + std::to_string(i));
-										ObjectComponent* object = generation_scene.objects.GetComponent(entity);
+										Entity entity = generator->scene.Entity_CreateObject(prop.name + std::to_string(i));
+										ObjectComponent* object = generator->scene.objects.GetComponent(entity);
 										*object = prop.object;
-										TransformComponent* transform = generation_scene.transforms.GetComponent(entity);
+										TransformComponent* transform = generator->scene.transforms.GetComponent(entity);
 										XMFLOAT3 offset = vertex_pos;
 										offset.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, float_distr(chunk_data.prop_rand));
 										transform->Translate(offset);
@@ -729,7 +739,7 @@ namespace wi::terrain
 										transform->Scale(XMFLOAT3(scaling, scaling, scaling));
 										transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * float_distr(chunk_data.prop_rand), 0));
 										transform->UpdateTransform();
-										generation_scene.Component_Attach(entity, chunk_data.props_entity, true);
+										generator->scene.Component_Attach(entity, chunk_data.props_entity, true);
 										generated_something = true;
 									}
 								}
@@ -740,14 +750,14 @@ namespace wi::terrain
 
 				if (generated_something && timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
 				{
-					generation_cancelled.store(true);
+					generator->cancelled.store(true);
 				}
 
 			};
 
 			// generate center chunk first:
 			request_chunk(0, 0);
-			if (generation_cancelled.load()) return;
+			if (generator->cancelled.load()) return;
 
 			// then generate neighbor chunks in outward spiral:
 			for (int growth = 0; growth < generation; ++growth)
@@ -758,25 +768,25 @@ namespace wi::terrain
 				for (int i = 0; i < side; ++i)
 				{
 					request_chunk(x, z);
-					if (generation_cancelled.load()) return;
+					if (generator->cancelled.load()) return;
 					x++;
 				}
 				for (int i = 0; i < side; ++i)
 				{
 					request_chunk(x, z);
-					if (generation_cancelled.load()) return;
+					if (generator->cancelled.load()) return;
 					z++;
 				}
 				for (int i = 0; i < side; ++i)
 				{
 					request_chunk(x, z);
-					if (generation_cancelled.load()) return;
+					if (generator->cancelled.load()) return;
 					x--;
 				}
 				for (int i = 0; i < side; ++i)
 				{
 					request_chunk(x, z);
-					if (generation_cancelled.load()) return;
+					if (generator->cancelled.load()) return;
 					z--;
 				}
 			}
@@ -787,9 +797,9 @@ namespace wi::terrain
 
 	void Terrain::Generation_Cancel()
 	{
-		generation_cancelled.store(true); // tell the generation thread that work must be stopped
-		wi::jobsystem::Wait(generation_workload); // waits until generation thread exits
-		generation_cancelled.store(false); // the next generation can run
+		generator->cancelled.store(true); // tell the generation thread that work must be stopped
+		wi::jobsystem::Wait(generator->workload); // waits until generation thread exits
+		generator->cancelled.store(false); // the next generation can run
 	}
 
 	void Terrain::BakeVirtualTexturesToFiles()
@@ -870,6 +880,18 @@ namespace wi::terrain
 			{
 				material->CreateRenderData();
 			}
+		}
+	}
+
+	void Terrain::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+
+		}
+		else
+		{
+
 		}
 	}
 

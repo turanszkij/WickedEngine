@@ -119,6 +119,7 @@ set(HEADER_FILES
 		wiScene.h
 		wiScene_BindLua.h
 		wiScene_Decl.h
+		wiScene_Components.h
 		wiSDLInput.h
 		wiShaderCompiler.h
 		wiSheenLUT.h
@@ -194,6 +195,7 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	wiRenderer_BindLua.cpp
 	wiResourceManager.cpp
 	wiScene.cpp
+	wiScene_Components.cpp
 	wiScene_BindLua.cpp
 	wiScene_Serializers.cpp
 	wiSDLInput.cpp
