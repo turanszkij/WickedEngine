@@ -900,10 +900,15 @@ This is used to describe a drawable area
 - GetLogicalHeight() : float -- height in dpi scaled units
 
 ## High Level Interface
-### MainComponent
-This is the main entry point and manages the lifetime of the application. Even though it is called a component, it is not part of the entity-component system
-- [outer]main : MainComponent
-- [void-constructor]MainComponent()
+<b>This section must only be used from standalone lua scripts, and must not be used from a ScriptComponent.</b>
+This is because ScriptComponent is always running inside scene.Update(), and paths can not be switched at that time safely.
+On the other hand, a standalone lua script can define its own update logic and render path and cahnge application behaviour.
+
+### Application
+This is the main entry point and manages the lifetime of the application.
+- [outer]application : Application
+- [deprecated][outer]main : Application
+- [void-constructor]Application()
 - GetContent() : Resource? result
 - GetActivePath() : RenderPath? result
 - SetActivePath(RenderPath path, opt float fadeSeconds,fadeColorR,fadeColorG,fadeColorB)
