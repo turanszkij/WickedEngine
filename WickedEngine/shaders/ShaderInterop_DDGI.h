@@ -171,7 +171,6 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		// up to 1/n. We want to distinguish between weights that are 
 		// low because of different factors.
 
-#if 0
 		// Smooth backface test
 		{
 			// Computed without the biasing applied to the "dir" variable. 
@@ -188,11 +187,8 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 
 			// The small offset at the end reduces the "going to zero" impact
 			// where this is really close to exactly opposite
-			weight *= sqr(max(0.0001, (dot(true_direction_to_probe, N) + 1.0) * 0.5)) + 0.2;
+			weight *= lerp(saturate(dot(dir, N)), sqr(max(0.0001, (dot(true_direction_to_probe, N) + 1.0) * 0.5)) + 0.2, GetScene().ddgi.smooth_backface);
 		}
-#else
-		weight *= saturate(dot(dir, N));
-#endif
 
 		// Moment visibility test
 #if 1

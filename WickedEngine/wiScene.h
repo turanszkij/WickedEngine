@@ -136,6 +136,9 @@ namespace wi::scene
 		{
 			uint frame_index = 0;
 			uint3 grid_dimensions = uint3(32, 8, 32); // The scene extents will be subdivided into a grid of this resolution, each grid cell will have one probe
+			float3 grid_min = float3(-1, -1, -1);
+			float3 grid_max = float3(1, 1, 1);
+			float smooth_backface = 0; // smoothness of backface test
 			wi::graphics::GPUBuffer ray_buffer;
 			wi::graphics::GPUBuffer offset_buffer;
 			wi::graphics::Texture color_texture[2];

@@ -199,6 +199,16 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&ddgiRayCountSlider);
 
+	ddgiSmoothBackfaceSlider.Create(0, 1, 0, 1000, "DDGI Smoothen: ");
+	ddgiSmoothBackfaceSlider.SetTooltip("Adjust the amount of smooth backface test.");
+	ddgiSmoothBackfaceSlider.SetSize(XMFLOAT2(wid, itemheight));
+	ddgiSmoothBackfaceSlider.SetPos(XMFLOAT2(x, y += step));
+	ddgiSmoothBackfaceSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		scene.ddgi.smooth_backface = args.fValue;
+		});
+	AddWidget(&ddgiSmoothBackfaceSlider);
+
 	ddgiX.Create("");
 	ddgiX.SetTooltip("Probe count in X dimension.");
 	ddgiX.SetDescription("DDGI Probes: ");
@@ -1641,6 +1651,7 @@ void GraphicsWindow::ResizeLayout()
 		ddgiY.SetVisible(false);
 		ddgiX.SetVisible(false);
 		ddgiRayCountSlider.SetVisible(false);
+		ddgiSmoothBackfaceSlider.SetVisible(false);
 		voxelRadianceDebugCheckBox.SetVisible(false);
 		voxelRadianceCheckBox.SetVisible(false);
 		voxelRadianceSecondaryBounceCheckBox.SetVisible(false);
@@ -1665,6 +1676,8 @@ void GraphicsWindow::ResizeLayout()
 		ddgiY.SetVisible(true);
 		ddgiX.SetVisible(true);
 		ddgiRayCountSlider.SetVisible(true);
+		ddgiSmoothBackfaceSlider.SetVisible(true);
+		ddgiSmoothBackfaceSlider.SetValue(editor->GetCurrentScene().ddgi.smooth_backface);
 		voxelRadianceDebugCheckBox.SetVisible(true);
 		voxelRadianceCheckBox.SetVisible(true);
 		voxelRadianceSecondaryBounceCheckBox.SetVisible(true);
@@ -1689,6 +1702,7 @@ void GraphicsWindow::ResizeLayout()
 		ddgiY.SetPos(XMFLOAT2(ddgiZ.GetPos().x - ddgiY.GetSize().x - padding, ddgiZ.GetPos().y));
 		ddgiX.SetPos(XMFLOAT2(ddgiY.GetPos().x - ddgiX.GetSize().x - padding, ddgiY.GetPos().y));
 		add(ddgiRayCountSlider);
+		add(ddgiSmoothBackfaceSlider);
 
 		y += jump;
 

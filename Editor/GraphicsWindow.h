@@ -27,6 +27,7 @@ public:
 	wi::gui::TextInputField ddgiY;
 	wi::gui::TextInputField ddgiZ;
 	wi::gui::Slider ddgiRayCountSlider;
+	wi::gui::Slider ddgiSmoothBackfaceSlider;
 	wi::gui::CheckBox voxelRadianceCheckBox;
 	wi::gui::CheckBox voxelRadianceDebugCheckBox;
 	wi::gui::CheckBox voxelRadianceSecondaryBounceCheckBox;

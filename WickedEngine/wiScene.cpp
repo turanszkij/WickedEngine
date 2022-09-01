@@ -457,6 +457,14 @@ namespace wi::scene
 			}
 			std::swap(ddgi.color_texture[0], ddgi.color_texture[1]);
 			std::swap(ddgi.depth_texture[0], ddgi.depth_texture[1]);
+			ddgi.grid_min = bounds.getMin();
+			ddgi.grid_min.x -= 1;
+			ddgi.grid_min.y -= 1;
+			ddgi.grid_min.z -= 1;
+			ddgi.grid_max = bounds.getMax();
+			ddgi.grid_max.x += 1;
+			ddgi.grid_max.y += 1;
+			ddgi.grid_max.z += 1;
 		}
 		else if (ddgi.color_texture[1].IsValid()) // if just color_texture[0] is valid, it could be that ddgi was serialized, that's why we check color_texture[1] here
 		{
@@ -579,19 +587,14 @@ namespace wi::scene
 		shaderscene.ddgi.color_texture = device->GetDescriptorIndex(&ddgi.color_texture[0], SubresourceType::SRV);
 		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgi.depth_texture[0], SubresourceType::SRV);
 		shaderscene.ddgi.offset_buffer = device->GetDescriptorIndex(&ddgi.offset_buffer, SubresourceType::SRV);
-		shaderscene.ddgi.grid_min.x = shaderscene.aabb_min.x - 1;
-		shaderscene.ddgi.grid_min.y = shaderscene.aabb_min.y - 1;
-		shaderscene.ddgi.grid_min.z = shaderscene.aabb_min.z - 1;
-		float3 grid_max = shaderscene.aabb_max;
-		grid_max.x += 1;
-		grid_max.y += 1;
-		grid_max.z += 1;
-		shaderscene.ddgi.grid_extents.x = abs(grid_max.x - shaderscene.ddgi.grid_min.x);
-		shaderscene.ddgi.grid_extents.y = abs(grid_max.y - shaderscene.ddgi.grid_min.y);
-		shaderscene.ddgi.grid_extents.z = abs(grid_max.z - shaderscene.ddgi.grid_min.z);
+		shaderscene.ddgi.grid_min = ddgi.grid_min;
+		shaderscene.ddgi.grid_extents.x = abs(ddgi.grid_max.x - ddgi.grid_min.x);
+		shaderscene.ddgi.grid_extents.y = abs(ddgi.grid_max.y - ddgi.grid_min.y);
+		shaderscene.ddgi.grid_extents.z = abs(ddgi.grid_max.z - ddgi.grid_min.z);
 		shaderscene.ddgi.grid_extents_rcp.x = 1.0f / shaderscene.ddgi.grid_extents.x;
 		shaderscene.ddgi.grid_extents_rcp.y = 1.0f / shaderscene.ddgi.grid_extents.y;
 		shaderscene.ddgi.grid_extents_rcp.z = 1.0f / shaderscene.ddgi.grid_extents.z;
+		shaderscene.ddgi.smooth_backface = ddgi.smooth_backface;
 		shaderscene.ddgi.cell_size.x = shaderscene.ddgi.grid_extents.x / (ddgi.grid_dimensions.x - 1);
 		shaderscene.ddgi.cell_size.y = shaderscene.ddgi.grid_extents.y / (ddgi.grid_dimensions.y - 1);
 		shaderscene.ddgi.cell_size.z = shaderscene.ddgi.grid_extents.z / (ddgi.grid_dimensions.z - 1);

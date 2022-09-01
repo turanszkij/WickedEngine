@@ -1721,6 +1721,13 @@ namespace wi::scene
 			archive >> frame_index;
 			archive >> grid_dimensions;
 
+			if (archive.GetVersion() >= 87)
+			{
+				archive >> grid_min;
+				archive >> grid_max;
+				archive >> smooth_backface;
+			}
+
 			wi::vector<uint8_t> data;
 
 			// color texture:
@@ -1777,6 +1784,13 @@ namespace wi::scene
 		{
 			archive << frame_index;
 			archive << grid_dimensions;
+
+			if (archive.GetVersion() >= 87)
+			{
+				archive << grid_min;
+				archive << grid_max;
+				archive << smooth_backface;
+			}
 
 			wi::vector<uint8_t> data;
 			if (color_texture[0].IsValid())
