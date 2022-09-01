@@ -433,6 +433,12 @@ void EditorComponent::Load()
 		ss += "You can find a program configuration file at Editor/config.ini\n";
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
 		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start, if exists)\n";
+		ss += "You can use some command line arguments (without any prefix):\n";
+		ss += "\t- Default to DirectX12 graphics device: dx12\n";
+		ss += "\t- Default to Vulkan graphics device: vulkan\n";
+		ss += "\t- Enable graphics device debug mode: debugdevice\n";
+		ss += "\t- Enable graphics device GPU-based validation: gpuvalidation\n";
+		ss += "\t- Make window always active, even when in background: alwaysactive\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
 		ss += "https://github.com/turanszkij/WickedEngine/issues\n";
 		ss += "\n\n";
