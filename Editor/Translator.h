@@ -14,6 +14,7 @@ private:
 	XMFLOAT3 axis = XMFLOAT3(1, 0, 0);
 	float angle = 0;
 	float angle_start = 0;
+	bool has_selected_transform = false;
 public:
 
 	void Update(const wi::scene::CameraComponent& camera, const wi::Canvas& canvas);

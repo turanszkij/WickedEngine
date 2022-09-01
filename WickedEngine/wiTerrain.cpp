@@ -244,7 +244,7 @@ namespace wi::terrain
 			light.SetCastShadow(true);
 			TransformComponent& transform = *scene->transforms.GetComponent(sunEntity);
 			transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV4, 0, XM_PIDIV4));
-			transform.Translate(XMFLOAT3(0, 2, 0));
+			transform.Translate(XMFLOAT3(0, 4, 0));
 		}
 	}
 
