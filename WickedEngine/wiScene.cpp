@@ -30,17 +30,22 @@ namespace wi::scene
 
 		wi::jobsystem::context ctx;
 
-		for (size_t i = 0; i < terrains.GetCount(); ++i)
-		{
-			wi::terrain::Terrain& terrain = terrains[i];
-			terrain.terrainEntity = terrains.GetEntity(i);
-			terrain.scene = this;
-			terrain.Generation_Update(camera);
-		}
-
 		// Script system runs first, because it could create new entities and components
 		//	So GPU persistent resources need to be created accordingly for them too:
 		RunScriptUpdateSystem(ctx);
+
+		// Terrains updates kick off:
+		if (dt > 0)
+		{
+			// Because this also spawns render tasks, this must not be during dt == 0 (eg. background loading)
+			for (size_t i = 0; i < terrains.GetCount(); ++i)
+			{
+				wi::terrain::Terrain& terrain = terrains[i];
+				terrain.terrainEntity = terrains.GetEntity(i);
+				terrain.scene = this;
+				terrain.Generation_Update(camera);
+			}
+		}
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 

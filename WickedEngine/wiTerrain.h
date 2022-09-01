@@ -55,7 +55,6 @@ namespace wi::terrain
 		float prop_density_current = 1;
 		wi::HairParticleSystem grass;
 		float grass_density_current = 1;
-		std::mt19937 prop_rand;
 		wi::vector<wi::Color> region_weights;
 		wi::graphics::Texture region_weights_texture;
 		uint32_t required_texture_resolution = 0;
@@ -92,7 +91,7 @@ namespace wi::terrain
 			CENTER_TO_CAM = 1 << 0,
 			REMOVAL = 1 << 1,
 			GRASS = 1 << 2,
-			GENERATION_STARTED = 1 << 0,
+			GENERATION_STARTED = 1 << 4,
 		};
 		uint32_t _flags = CENTER_TO_CAM | REMOVAL | GRASS;
 
@@ -103,7 +102,7 @@ namespace wi::terrain
 		wi::scene::MaterialComponent material_LowAltitude;
 		wi::scene::MaterialComponent material_HighAltitude;
 		wi::scene::MaterialComponent material_GrassParticle;
-		wi::scene::WeatherComponent weather; // if no weather exists, this weather will be used by default
+		wi::scene::WeatherComponent weather;
 		wi::HairParticleSystem grass_properties;
 		wi::unordered_map<Chunk, ChunkData> chunks;
 		Chunk center_chunk = {};
