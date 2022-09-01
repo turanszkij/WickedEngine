@@ -339,6 +339,17 @@ namespace wi::terrain
 			ChunkData& chunk_data = it->second;
 			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 
+			// pointer refresh:
+			MeshComponent* chunk_mesh = scene->meshes.GetComponent(chunk_data.entity);
+			if (chunk_mesh != nullptr)
+			{
+				chunk_data.mesh_vertex_positions = chunk_mesh->vertex_positions.data();
+			}
+			else
+			{
+				chunk_data.mesh_vertex_positions = nullptr;
+			}
+
 			// chunk removal:
 			if (IsRemovalEnabled())
 			{
@@ -643,18 +654,7 @@ namespace wi::terrain
 					}
 
 					// Create the blend weights texture for virtual texture update:
-					{
-						TextureDesc desc;
-						desc.width = (uint32_t)chunk_width;
-						desc.height = (uint32_t)chunk_width;
-						desc.format = Format::R8G8B8A8_UNORM;
-						desc.bind_flags = BindFlag::SHADER_RESOURCE;
-						SubresourceData data;
-						data.data_ptr = chunk_data.region_weights.data();
-						data.row_pitch = chunk_width * sizeof(chunk_data.region_weights[0]);
-						bool success = device->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
-						assert(success);
-					}
+					CreateChunkRegionTexture(chunk_data);
 
 					wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
 					generated_something = true;
@@ -694,7 +694,7 @@ namespace wi::terrain
 					{
 						ChunkData& chunk_data = it->second;
 
-						if (chunk_data.props_entity == INVALID_ENTITY)
+						if (chunk_data.props_entity == INVALID_ENTITY && chunk_data.mesh_vertex_positions != nullptr)
 						{
 							chunk_data.props_entity = CreateEntity();
 							generator->scene.transforms.Create(chunk_data.props_entity);
@@ -887,7 +887,7 @@ namespace wi::terrain
 			}
 		}
 
-		wi::helper::messageBox("Baking terrain virtual textures, this could take a while!", "Attention!");
+		wi::helper::messageBox("Baking terrain virtual textures to static textures, this could take a while!", "Attention!");
 
 		wi::jobsystem::Wait(ctx);
 
@@ -903,16 +903,224 @@ namespace wi::terrain
 		}
 	}
 
+	void Terrain::CreateChunkRegionTexture(ChunkData& chunk_data)
+	{
+		TextureDesc desc;
+		desc.width = (uint32_t)chunk_width;
+		desc.height = (uint32_t)chunk_width;
+		desc.format = Format::R8G8B8A8_UNORM;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		SubresourceData data;
+		data.data_ptr = chunk_data.region_weights.data();
+		data.row_pitch = chunk_width * sizeof(chunk_data.region_weights[0]);
+		bool success = GetDevice()->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
+		assert(success);
+	}
+
 	void Terrain::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
+			archive >> _flags;
+			archive >> lod_multiplier;
+			archive >> texlod;
+			archive >> generation;
+			archive >> prop_generation;
+			archive >> prop_density;
+			archive >> grass_density;
+			archive >> chunk_scale;
+			archive >> seed;
+			archive >> bottomLevel;
+			archive >> topLevel;
+			archive >> region1;
+			archive >> region2;
+			archive >> region3;
 
+			archive >> center_chunk.x;
+			archive >> center_chunk.z;
+
+			size_t count = 0;
+			archive >> count;
+			props.resize(count);
+			for (size_t i = 0; i < props.size(); ++i)
+			{
+				Prop& prop = props[i];
+				archive >> prop.name;
+				SerializeEntity(archive, prop.mesh_entity, seri);
+				prop.object.Serialize(archive, seri);
+				archive >> prop.min_count_per_chunk;
+				archive >> prop.max_count_per_chunk;
+				archive >> prop.region;
+				archive >> prop.region_power;
+				archive >> prop.noise_frequency;
+				archive >> prop.noise_power;
+				archive >> prop.threshold;
+				archive >> prop.min_size;
+				archive >> prop.max_size;
+				archive >> prop.min_y_offset;
+				archive >> prop.max_y_offset;
+			}
+
+			archive >> count;
+			chunks.reserve(count);
+			for (size_t i = 0; i < count; ++i)
+			{
+				Chunk chunk;
+				archive >> chunk.x;
+				archive >> chunk.z;
+				ChunkData& chunk_data = chunks[chunk];
+				SerializeEntity(archive, chunk_data.entity, seri);
+				SerializeEntity(archive, chunk_data.grass_entity, seri);
+				SerializeEntity(archive, chunk_data.props_entity, seri);
+				archive >> chunk_data.prop_density_current;
+				chunk_data.grass.Serialize(archive, seri);
+				archive >> chunk_data.grass_density_current;
+				archive >> chunk_data.region_weights;
+				CreateChunkRegionTexture(chunk_data);
+				archive >> chunk_data.sphere.center;
+				archive >> chunk_data.sphere.radius;
+				archive >> chunk_data.position;
+			}
+
+			archive >> count;
+			modifiers.resize(count);
+			for (size_t i = 0; i < modifiers.size(); ++i)
+			{
+				uint32_t value;
+				archive >> value;
+				Modifier::Type type = (Modifier::Type)value;
+
+				switch (type)
+				{
+				default:
+				case Modifier::Type::Perlin:
+					{
+						std::shared_ptr<PerlinModifier> modifier = std::make_shared<PerlinModifier>();
+						modifiers[i] = modifier;
+						archive >> modifier->octaves;
+						archive >> modifier->seed;
+					}
+					break;
+				case Modifier::Type::Voronoi:
+					{
+						std::shared_ptr<VoronoiModifier> modifier = std::make_shared<VoronoiModifier>();
+						modifiers[i] = modifier;
+						archive >> modifier->fade;
+						archive >> modifier->shape;
+						archive >> modifier->falloff;
+						archive >> modifier->perturbation;
+						archive >> modifier->seed;
+					}
+					break;
+				case Modifier::Type::Heightmap:
+					{
+						std::shared_ptr<HeightmapModifier> modifier = std::make_shared<HeightmapModifier>();
+						modifiers[i] = modifier;
+						archive >> modifier->scale;
+						archive >> modifier->data;
+						archive >> modifier->width;
+						archive >> modifier->height;
+					}
+					break;
+				}
+			}
 		}
 		else
 		{
+			BakeVirtualTexturesToFiles();
 
+			archive << _flags;
+			archive << lod_multiplier;
+			archive << texlod;
+			archive << generation;
+			archive << prop_generation;
+			archive << prop_density;
+			archive << grass_density;
+			archive << chunk_scale;
+			archive << seed;
+			archive << bottomLevel;
+			archive << topLevel;
+			archive << region1;
+			archive << region2;
+			archive << region3;
+
+			archive << center_chunk.x;
+			archive << center_chunk.z;
+
+			archive << props.size();
+			for (size_t i = 0; i < props.size(); ++i)
+			{
+				Prop& prop = props[i];
+				archive << prop.name;
+				SerializeEntity(archive, prop.mesh_entity, seri);
+				prop.object.Serialize(archive, seri);
+				archive << prop.min_count_per_chunk;
+				archive << prop.max_count_per_chunk;
+				archive << prop.region;
+				archive << prop.region_power;
+				archive << prop.noise_frequency;
+				archive << prop.noise_power;
+				archive << prop.threshold;
+				archive << prop.min_size;
+				archive << prop.max_size;
+				archive << prop.min_y_offset;
+				archive << prop.max_y_offset;
+			}
+
+			archive << chunks.size();
+			for (auto& it : chunks)
+			{
+				Chunk& chunk = it.first;
+				archive << chunk.x;
+				archive << chunk.z;
+				ChunkData& chunk_data = it.second;
+				SerializeEntity(archive, chunk_data.entity, seri);
+				SerializeEntity(archive, chunk_data.grass_entity, seri);
+				SerializeEntity(archive, chunk_data.props_entity, seri);
+				archive << chunk_data.prop_density_current;
+				chunk_data.grass.Serialize(archive, seri);
+				archive << chunk_data.grass_density_current;
+				archive << chunk_data.region_weights;
+				archive << chunk_data.sphere.center;
+				archive << chunk_data.sphere.radius;
+				archive << chunk_data.position;
+			}
+
+			archive << modifiers.size();
+			for (auto& modifier : modifiers)
+			{
+				archive << (uint32_t)modifier->type;
+				switch (modifier->type)
+				{
+				default:
+				case Modifier::Type::Perlin:
+					archive << ((PerlinModifier*)modifier.get())->octaves;
+					archive << ((PerlinModifier*)modifier.get())->seed;
+					break;
+				case Modifier::Type::Voronoi:
+					archive << ((VoronoiModifier*)modifier.get())->fade;
+					archive << ((VoronoiModifier*)modifier.get())->shape;
+					archive << ((VoronoiModifier*)modifier.get())->falloff;
+					archive << ((VoronoiModifier*)modifier.get())->perturbation;
+					archive << ((VoronoiModifier*)modifier.get())->seed;
+					break;
+				case Modifier::Type::Heightmap:
+					archive << ((HeightmapModifier*)modifier.get())->scale;
+					archive << ((HeightmapModifier*)modifier.get())->data;
+					archive << ((HeightmapModifier*)modifier.get())->width;
+					archive << ((HeightmapModifier*)modifier.get())->height;
+					break;
+				}
+			}
 		}
+
+		material_Base.Serialize(archive, seri);
+		material_Slope.Serialize(archive, seri);
+		material_LowAltitude.Serialize(archive, seri);
+		material_HighAltitude.Serialize(archive, seri);
+		material_GrassParticle.Serialize(archive, seri);
+		weather.Serialize(archive, seri);
+		grass_properties.Serialize(archive, seri);
 	}
 
 }

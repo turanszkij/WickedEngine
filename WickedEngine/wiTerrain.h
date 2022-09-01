@@ -161,12 +161,21 @@ namespace wi::terrain
 		void Generation_Cancel();
 		// The virtual textures will be compressed and saved into resources. They can be serialized from there
 		void BakeVirtualTexturesToFiles();
+		// Creates the blend weight texture for a chunk data
+		void CreateChunkRegionTexture(ChunkData& chunk_data);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct Modifier
 	{
+		enum class Type
+		{
+			Perlin,
+			Voronoi,
+			Heightmap,
+		} type = Type::Perlin;
+
 		enum class BlendMode
 		{
 			Normal,
@@ -199,10 +208,13 @@ namespace wi::terrain
 	struct PerlinModifier : public Modifier
 	{
 		int octaves = 6;
+		uint32_t seed = 0;
 		wi::noise::Perlin perlin_noise;
 
+		PerlinModifier() { type = Type::Perlin; }
 		void Seed(uint32_t seed) override
 		{
+			this->seed = seed;
 			perlin_noise.init(seed);
 		}
 		void Apply(const XMFLOAT2& world_pos, float& height) override
@@ -219,13 +231,14 @@ namespace wi::terrain
 		float shape = 0.7f;
 		float falloff = 6;
 		float perturbation = 0.1f;
+		uint32_t seed = 0;
 		wi::noise::Perlin perlin_noise;
-		float seed = 0;
 
+		VoronoiModifier() { type = Type::Voronoi; }
 		void Seed(uint32_t seed) override
 		{
+			this->seed = seed;
 			perlin_noise.init(seed);
-			this->seed = float(seed);
 		}
 		void Apply(const XMFLOAT2& world_pos, float& height) override
 		{
@@ -238,7 +251,7 @@ namespace wi::terrain
 				p.x += std::sin(angle) * perturbation;
 				p.y += std::cos(angle) * perturbation;
 			}
-			wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, seed);
+			wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)seed);
 			float weight = std::pow(1 - wi::math::saturate((res.distance - shape) * fade), std::max(0.0001f, falloff));
 			Blend(height, weight);
 		}
@@ -251,6 +264,7 @@ namespace wi::terrain
 		int width = 0;
 		int height = 0;
 
+		HeightmapModifier() { type = Type::Heightmap; }
 		void Apply(const XMFLOAT2& world_pos, float& height) override
 		{
 			XMFLOAT2 p = world_pos;

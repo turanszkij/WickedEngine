@@ -48,6 +48,13 @@ void ModifierWindow::Bind(wi::terrain::Modifier* ptr)
 	modifier->blend = blendSlider.GetValue();
 	modifier->frequency = frequencySlider.GetValue();
 }
+void ModifierWindow::From(wi::terrain::Modifier* ptr)
+{
+	modifier = ptr;
+	blendCombo.SetSelectedByUserdataWithoutCallback((uint64_t)ptr->blendmode);
+	blendSlider.SetValue(ptr->blend);
+	frequencySlider.SetValue(ptr->frequency);
+}
 
 PerlinModifierWindow::PerlinModifierWindow() : ModifierWindow("Perlin Noise")
 {
@@ -88,6 +95,11 @@ void PerlinModifierWindow::Bind(wi::terrain::PerlinModifier* ptr)
 {
 	ModifierWindow::Bind(ptr);
 	ptr->octaves = (int)octavesSlider.GetValue();
+}
+void PerlinModifierWindow::From(wi::terrain::PerlinModifier* ptr)
+{
+	ModifierWindow::From(ptr);
+	octavesSlider.SetValue((float)ptr->octaves);
 }
 
 VoronoiModifierWindow::VoronoiModifierWindow() : ModifierWindow("Voronoi Noise")
@@ -162,6 +174,14 @@ void VoronoiModifierWindow::Bind(wi::terrain::VoronoiModifier* ptr)
 	ptr->shape = shapeSlider.GetValue();
 	ptr->falloff = falloffSlider.GetValue();
 	ptr->perturbation = perturbationSlider.GetValue();
+}
+void VoronoiModifierWindow::From(wi::terrain::VoronoiModifier* ptr)
+{
+	ModifierWindow::From(ptr);
+	fadeSlider.SetValue(ptr->fade);
+	shapeSlider.SetValue(ptr->shape);
+	falloffSlider.SetValue(ptr->falloff);
+	perturbationSlider.SetValue(ptr->perturbation);
 }
 
 HeightmapModifierWindow::HeightmapModifierWindow() : ModifierWindow("Heightmap")
@@ -240,6 +260,11 @@ void HeightmapModifierWindow::Bind(wi::terrain::HeightmapModifier* ptr)
 	ModifierWindow::Bind(ptr);
 	ptr->scale = scaleSlider.GetValue();
 }
+void HeightmapModifierWindow::From(wi::terrain::HeightmapModifier* ptr)
+{
+	ModifierWindow::From(ptr);
+	scaleSlider.SetValue(ptr->scale);
+}
 
 
 void TerrainWindow::Create(EditorComponent* _editor)
@@ -248,10 +273,10 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	RemoveWidgets();
 	ClearTransform();
 
-	wi::gui::Window::Create(ICON_TERRAIN " Terrain Generator", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_TERRAIN " Terrain", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(420, 860));
 
-	closeButton.SetTooltip("Delete Terrain");
+	closeButton.SetTooltip("Delete Terrain.\nThis will bake generated virtual textures to static textures which could take a while!");
 	OnClose([=](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
@@ -688,10 +713,69 @@ void TerrainWindow::Create(EditorComponent* _editor)
 }
 void TerrainWindow::SetEntity(Entity entity)
 {
+	wi::scene::Scene& scene = editor->GetCurrentScene();
+	terrain = scene.terrains.GetComponent(entity);
+	if (terrain == nullptr)
+	{
+		entity = INVALID_ENTITY;
+		terrain = &terrain_preset;
+	}
+
+	if (this->entity == entity)
+		return;
+
 	this->entity = entity;
 
-	wi::scene::Scene& scene = editor->GetCurrentScene();
-	this->terrain = scene.terrains.GetComponent(entity);
+	for (auto& x : modifiers)
+	{
+		modifiers_to_remove.push_back(x.get());
+	}
+
+
+	centerToCamCheckBox.SetCheck(terrain->IsCenterToCamEnabled());
+	removalCheckBox.SetCheck(terrain->IsRemovalEnabled());
+	grassCheckBox.SetCheck(terrain->IsGrassEnabled());
+	lodSlider.SetValue(terrain->lod_multiplier);
+	texlodSlider.SetValue(terrain->texlod);
+	generationSlider.SetValue((float)terrain->generation);
+	propSlider.SetValue((float)terrain->prop_generation);
+	propDensitySlider.SetValue(terrain->prop_density);
+	scaleSlider.SetValue(terrain->chunk_scale);
+	seedSlider.SetValue((float)terrain->seed);
+	bottomLevelSlider.SetValue(terrain->bottomLevel);
+	topLevelSlider.SetValue(terrain->topLevel);
+	region1Slider.SetValue(terrain->region1);
+	region2Slider.SetValue(terrain->region2);
+	region3Slider.SetValue(terrain->region3);
+
+	for (auto& x : terrain->modifiers)
+	{
+		switch (x->type)
+		{
+		default:
+		case wi::terrain::Modifier::Type::Perlin:
+		{
+			PerlinModifierWindow* modifier = new PerlinModifierWindow;
+			modifiers.emplace_back().reset(modifier);
+			modifier->From((wi::terrain::PerlinModifier*)x.get());
+		}
+		break;
+		case wi::terrain::Modifier::Type::Voronoi:
+		{
+			VoronoiModifierWindow* modifier = new VoronoiModifierWindow;
+			modifiers.emplace_back().reset(modifier);
+			modifier->From((wi::terrain::VoronoiModifier*)x.get());
+		}
+		break;
+		case wi::terrain::Modifier::Type::Heightmap:
+		{
+			HeightmapModifierWindow* modifier = new HeightmapModifierWindow;
+			modifiers.emplace_back().reset(modifier);
+			modifier->From((wi::terrain::HeightmapModifier*)x.get());
+		}
+		break;
+		}
+	}
 }
 void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
 {

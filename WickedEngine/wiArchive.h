@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiMath.h"
 #include "wiVector.h"
+#include "wiColor.h"
 
 #include <string>
 
@@ -194,6 +195,11 @@ namespace wi
 			_write(data);
 			return *this;
 		}
+		inline Archive& operator<<(const wi::Color& data)
+		{
+			_write(data.rgba);
+			return *this;
+		}
 		inline Archive& operator<<(const std::string& data)
 		{
 			(*this) << data.length();
@@ -332,6 +338,11 @@ namespace wi
 		inline Archive& operator>>(XMUINT4& data)
 		{
 			_read(data);
+			return *this;
+		}
+		inline Archive& operator>>(wi::Color& data)
+		{
+			_read(data.rgba);
 			return *this;
 		}
 		inline Archive& operator>>(std::string& data)

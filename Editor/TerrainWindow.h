@@ -11,8 +11,11 @@ struct ModifierWindow : public wi::gui::Window
 	wi::gui::Slider blendSlider;
 	wi::gui::Slider frequencySlider;
 
+	virtual ~ModifierWindow() = default;
+
 	ModifierWindow(const std::string& name);
 	void Bind(wi::terrain::Modifier* ptr);
+	void From(wi::terrain::Modifier* ptr);
 };
 struct PerlinModifierWindow : public ModifierWindow
 {
@@ -21,6 +24,7 @@ struct PerlinModifierWindow : public ModifierWindow
 	PerlinModifierWindow();
 	void ResizeLayout();
 	void Bind(wi::terrain::PerlinModifier* ptr);
+	void From(wi::terrain::PerlinModifier* ptr);
 };
 struct VoronoiModifierWindow : public ModifierWindow
 {
@@ -32,6 +36,7 @@ struct VoronoiModifierWindow : public ModifierWindow
 	VoronoiModifierWindow();
 	void ResizeLayout() override;
 	void Bind(wi::terrain::VoronoiModifier* ptr);
+	void From(wi::terrain::VoronoiModifier* ptr);
 };
 struct HeightmapModifierWindow : public ModifierWindow
 {
@@ -41,6 +46,7 @@ struct HeightmapModifierWindow : public ModifierWindow
 	HeightmapModifierWindow();
 	void ResizeLayout() override;
 	void Bind(wi::terrain::HeightmapModifier* ptr);
+	void From(wi::terrain::HeightmapModifier* ptr);
 };
 
 class TerrainWindow : public wi::gui::Window
