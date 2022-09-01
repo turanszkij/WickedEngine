@@ -258,7 +258,7 @@ namespace wi::terrain
 			Generation_Restart();
 		}
 
-		// Check whether any modifiers were "closed", and we will really remove them here if so:
+		// Check whether any modifiers need to be removed, and we will really remove them here if so:
 		if (!modifiers_to_remove.empty())
 		{
 			for (auto& modifier : modifiers_to_remove)
@@ -919,6 +919,8 @@ namespace wi::terrain
 
 	void Terrain::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
 	{
+		Generation_Cancel();
+
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -999,6 +1001,7 @@ namespace wi::terrain
 						modifiers[i] = modifier;
 						archive >> modifier->octaves;
 						archive >> modifier->seed;
+						modifier->perlin_noise.Serialize(archive);
 					}
 					break;
 				case Modifier::Type::Voronoi:
@@ -1010,6 +1013,7 @@ namespace wi::terrain
 						archive >> modifier->falloff;
 						archive >> modifier->perturbation;
 						archive >> modifier->seed;
+						modifier->perlin_noise.Serialize(archive);
 					}
 					break;
 				case Modifier::Type::Heightmap:
@@ -1023,6 +1027,12 @@ namespace wi::terrain
 					}
 					break;
 				}
+
+				Modifier* modifier = modifiers[i].get();
+				archive >> value;
+				modifier->blendmode = (Modifier::BlendMode)value;
+				archive >> modifier->blend;
+				archive >> modifier->frequency;
 			}
 		}
 		else
@@ -1096,6 +1106,7 @@ namespace wi::terrain
 				case Modifier::Type::Perlin:
 					archive << ((PerlinModifier*)modifier.get())->octaves;
 					archive << ((PerlinModifier*)modifier.get())->seed;
+					((PerlinModifier*)modifier.get())->perlin_noise.Serialize(archive);
 					break;
 				case Modifier::Type::Voronoi:
 					archive << ((VoronoiModifier*)modifier.get())->fade;
@@ -1103,6 +1114,7 @@ namespace wi::terrain
 					archive << ((VoronoiModifier*)modifier.get())->falloff;
 					archive << ((VoronoiModifier*)modifier.get())->perturbation;
 					archive << ((VoronoiModifier*)modifier.get())->seed;
+					((VoronoiModifier*)modifier.get())->perlin_noise.Serialize(archive);
 					break;
 				case Modifier::Type::Heightmap:
 					archive << ((HeightmapModifier*)modifier.get())->scale;
@@ -1111,6 +1123,10 @@ namespace wi::terrain
 					archive << ((HeightmapModifier*)modifier.get())->height;
 					break;
 				}
+
+				archive << (uint32_t)modifier->blendmode;
+				archive << modifier->blend;
+				archive << modifier->frequency;
 			}
 		}
 
@@ -1121,6 +1137,7 @@ namespace wi::terrain
 		material_GrassParticle.Serialize(archive, seri);
 		weather.Serialize(archive, seri);
 		grass_properties.Serialize(archive, seri);
+		perlin_noise.Serialize(archive);
 	}
 
 }

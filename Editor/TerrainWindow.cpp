@@ -430,6 +430,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			RemoveWidget(modifier.get());
 		}
 		modifiers.clear();
+		modifiers_to_remove.clear();
 		terrain->modifiers.clear();
 		terrain->modifiers_to_remove.clear();
 		PerlinModifierWindow* perlin = new PerlinModifierWindow;
@@ -514,8 +515,13 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			break;
 		}
 
-		perlin->Bind(new wi::terrain::PerlinModifier);
-		voronoi->Bind(new wi::terrain::VoronoiModifier);
+		std::shared_ptr<wi::terrain::PerlinModifier> terrain_perlin = std::make_shared<wi::terrain::PerlinModifier>();
+		terrain->modifiers.emplace_back() = terrain_perlin;
+		std::shared_ptr<wi::terrain::VoronoiModifier> terrain_voronoi = std::make_shared<wi::terrain::VoronoiModifier>();
+		terrain->modifiers.emplace_back() = terrain_voronoi;
+
+		perlin->Bind(terrain_perlin.get());
+		voronoi->Bind(terrain_voronoi.get());
 		AddModifier(perlin);
 		AddModifier(voronoi);
 
@@ -549,21 +555,27 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		case 0:
 			{
 				PerlinModifierWindow* ptr = new PerlinModifierWindow;
-				ptr->Bind(new wi::terrain::PerlinModifier);
+				std::shared_ptr<wi::terrain::PerlinModifier> modifier = std::make_shared<wi::terrain::PerlinModifier>();
+				terrain->modifiers.push_back(modifier);
+				ptr->Bind(modifier.get());
 				AddModifier(ptr);
 			}
 			break;
 		case 1:
 			{
 				VoronoiModifierWindow* ptr = new VoronoiModifierWindow;
-				ptr->Bind(new wi::terrain::VoronoiModifier);
+				std::shared_ptr<wi::terrain::VoronoiModifier> modifier = std::make_shared<wi::terrain::VoronoiModifier>();
+				terrain->modifiers.push_back(modifier);
+				ptr->Bind(modifier.get());
 				AddModifier(ptr);
 			}
 			break;
 		case 2:
 			{
 				HeightmapModifierWindow* ptr = new HeightmapModifierWindow;
-				ptr->Bind(new wi::terrain::HeightmapModifier);
+				std::shared_ptr<wi::terrain::HeightmapModifier> modifier = std::make_shared<wi::terrain::HeightmapModifier>();
+				terrain->modifiers.push_back(modifier);
+				ptr->Bind(modifier.get());
 				AddModifier(ptr);
 			}
 			break;
@@ -756,22 +768,22 @@ void TerrainWindow::SetEntity(Entity entity)
 		case wi::terrain::Modifier::Type::Perlin:
 		{
 			PerlinModifierWindow* modifier = new PerlinModifierWindow;
-			modifiers.emplace_back().reset(modifier);
 			modifier->From((wi::terrain::PerlinModifier*)x.get());
+			AddModifier(modifier);
 		}
 		break;
 		case wi::terrain::Modifier::Type::Voronoi:
 		{
 			VoronoiModifierWindow* modifier = new VoronoiModifierWindow;
-			modifiers.emplace_back().reset(modifier);
 			modifier->From((wi::terrain::VoronoiModifier*)x.get());
+			AddModifier(modifier);
 		}
 		break;
 		case wi::terrain::Modifier::Type::Heightmap:
 		{
 			HeightmapModifierWindow* modifier = new HeightmapModifierWindow;
-			modifiers.emplace_back().reset(modifier);
 			modifier->From((wi::terrain::HeightmapModifier*)x.get());
+			AddModifier(modifier);
 		}
 		break;
 		}
@@ -783,7 +795,6 @@ void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
 		terrain->Generation_Restart();
 	};
 	modifiers.emplace_back().reset(modifier_window);
-	terrain->modifiers.emplace_back().reset(modifier_window->modifier);
 	AddWidget(modifier_window);
 
 	modifier_window->OnClose([=](wi::gui::EventArgs args) {
@@ -920,6 +931,28 @@ void TerrainWindow::SetupAssets()
 	presetCombo.SetSelected(0);
 }
 
+void TerrainWindow::Update(const wi::Canvas& canvas, float dt)
+{
+	// Check whether any modifiers were "closed", and we will really remove them here if so:
+	if (!modifiers_to_remove.empty())
+	{
+		for (auto& modifier : modifiers_to_remove)
+		{
+			for (auto it = modifiers.begin(); it != modifiers.end(); ++it)
+			{
+				if (it->get() == modifier)
+				{
+					modifiers.erase(it);
+					RemoveWidget(modifier);
+					break;
+				}
+			}
+		}
+		modifiers_to_remove.clear();
+	}
+
+	wi::gui::Window::Update(canvas, dt);
+}
 void TerrainWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();

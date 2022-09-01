@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiMath.h"
+#include "wiArchive.h"
 
 #include <random>
 
@@ -96,6 +97,24 @@ namespace wi::noise
 				amplitude *= persistence;
 			}
 			return result;
+		}
+
+		void Serialize(wi::Archive& archive)
+		{
+			if (archive.IsReadMode())
+			{
+				for (auto& x : state)
+				{
+					archive >> x;
+				}
+			}
+			else
+			{
+				for (auto& x : state)
+				{
+					archive << x;
+				}
+			}
 		}
 	};
 

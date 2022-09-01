@@ -94,6 +94,7 @@ public:
 	void AddModifier(ModifierWindow* modifier_window);
 	void SetupAssets();
 
+	void Update(const wi::Canvas& canvas, float dt) override;
 	void ResizeLayout() override;
 };
 
