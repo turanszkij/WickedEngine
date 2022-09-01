@@ -38,9 +38,6 @@ namespace wi::initializer
 		wi::backlog::post("");
 		wi::jobsystem::Initialize();
 
-		// Initialize this immediately:
-		wi::lua::Initialize(); systems[INITIALIZED_SYSTEM_LUA].store(true);
-
 		wi::backlog::post("");
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::font::Initialize(); systems[INITIALIZED_SYSTEM_FONT].store(true); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::image::Initialize(); systems[INITIALIZED_SYSTEM_IMAGE].store(true); });
@@ -54,6 +51,9 @@ namespace wi::initializer
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::GPUBVH::Initialize(); systems[INITIALIZED_SYSTEM_GPUBVH].store(true); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::physics::Initialize(); systems[INITIALIZED_SYSTEM_PHYSICS].store(true); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::audio::Initialize(); systems[INITIALIZED_SYSTEM_AUDIO].store(true); });
+
+		// Initialize this immediately:
+		wi::lua::Initialize(); systems[INITIALIZED_SYSTEM_LUA].store(true);
 
 		std::thread([] {
 			wi::jobsystem::Wait(ctx);
