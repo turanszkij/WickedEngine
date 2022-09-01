@@ -54,6 +54,7 @@ public:
 		Collider = 1 << 16,
 		Script = 1 << 17,
 		Expression = 1 << 18,
+		Terrain = 1 << 19,
 
 		All = ~0ull,
 	} filter = Filter::All;

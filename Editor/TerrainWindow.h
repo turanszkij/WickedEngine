@@ -83,11 +83,11 @@ public:
 	EditorComponent* editor = nullptr;
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	wi::terrain::Terrain terrain_preset;
-	wi::terrain::Terrain* terrain_ptr = &terrain_preset;
-	wi::terrain::Terrain& terrain = *terrain_ptr;
+	wi::terrain::Terrain* terrain = &terrain_preset;
 	void SetEntity(wi::ecs::Entity entity);
-
-	void ResizeLayout();
 	void AddModifier(ModifierWindow* modifier_window);
+	void SetupAssets();
+
+	void ResizeLayout() override;
 };
 

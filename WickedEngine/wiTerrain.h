@@ -150,6 +150,7 @@ namespace wi::terrain
 		wi::vector<Modifier*> modifiers_to_remove;
 
 		Terrain();
+		~Terrain();
 
 		// Restarts the terrain generation from scratch
 		//	This will remove previously existing terrain

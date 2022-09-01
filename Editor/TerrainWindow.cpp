@@ -249,7 +249,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	ClearTransform();
 
 	wi::gui::Window::Create(ICON_TERRAIN " Terrain Generator", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(420, 840));
+	SetSize(XMFLOAT2(420, 860));
 
 	closeButton.SetTooltip("Delete Terrain");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -277,7 +277,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	centerToCamCheckBox.SetPos(XMFLOAT2(x, y));
 	centerToCamCheckBox.SetCheck(true);
 	centerToCamCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		terrain.SetCenterToCamEnabled(args.bValue);
+		terrain->SetCenterToCamEnabled(args.bValue);
 		});
 	AddWidget(&centerToCamCheckBox);
 
@@ -287,7 +287,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	removalCheckBox.SetPos(XMFLOAT2(x + 100, y));
 	removalCheckBox.SetCheck(true);
 	removalCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		terrain.SetRemovalEnabled(args.bValue);
+		terrain->SetRemovalEnabled(args.bValue);
 		});
 	AddWidget(&removalCheckBox);
 
@@ -297,7 +297,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	grassCheckBox.SetPos(XMFLOAT2(x, y += step));
 	grassCheckBox.SetCheck(true);
 	grassCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		terrain.SetGrassEnabled(args.bValue);
+		terrain->SetGrassEnabled(args.bValue);
 		});
 	AddWidget(&grassCheckBox);
 
@@ -306,19 +306,19 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	lodSlider.SetSize(XMFLOAT2(wid, hei));
 	lodSlider.SetPos(XMFLOAT2(x, y += step));
 	lodSlider.OnSlide([this](wi::gui::EventArgs args) {
-		for (auto& it : terrain.chunks)
+		for (auto& it : terrain->chunks)
 		{
 			const wi::terrain::ChunkData& chunk_data = it.second;
 			if (chunk_data.entity != INVALID_ENTITY)
 			{
-				ObjectComponent* object = terrain.scene->objects.GetComponent(chunk_data.entity);
+				ObjectComponent* object = terrain->scene->objects.GetComponent(chunk_data.entity);
 				if (object != nullptr)
 				{
 					object->lod_distance_multiplier = args.fValue;
 				}
 			}
 		}
-		terrain.lod_multiplier = args.fValue;
+		terrain->lod_multiplier = args.fValue;
 		});
 	AddWidget(&lodSlider);
 
@@ -327,7 +327,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	texlodSlider.SetSize(XMFLOAT2(wid, hei));
 	texlodSlider.SetPos(XMFLOAT2(x, y += step));
 	texlodSlider.OnSlide([this](wi::gui::EventArgs args) {
-		terrain.texlod = args.fValue;
+		terrain->texlod = args.fValue;
 		});
 	AddWidget(&texlodSlider);
 
@@ -335,8 +335,8 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
 	generationSlider.SetSize(XMFLOAT2(wid, hei));
 	generationSlider.SetPos(XMFLOAT2(x, y += step));
-	texlodSlider.OnSlide([this](wi::gui::EventArgs args) {
-		terrain.generation = args.iValue;
+	generationSlider.OnSlide([this](wi::gui::EventArgs args) {
+		terrain->generation = args.iValue;
 		});
 	AddWidget(&generationSlider);
 
@@ -345,7 +345,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	propSlider.SetSize(XMFLOAT2(wid, hei));
 	propSlider.SetPos(XMFLOAT2(x, y += step));
 	propSlider.OnSlide([this](wi::gui::EventArgs args) {
-		terrain.prop_generation = args.iValue;
+		terrain->prop_generation = args.iValue;
 		});
 	AddWidget(&propSlider);
 
@@ -354,7 +354,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	propDensitySlider.SetSize(XMFLOAT2(wid, hei));
 	propDensitySlider.SetPos(XMFLOAT2(x, y += step));
 	propDensitySlider.OnSlide([this](wi::gui::EventArgs args) {
-		terrain.prop_density = args.fValue;
+		terrain->prop_density = args.fValue;
 		});
 	AddWidget(&propDensitySlider);
 
@@ -363,30 +363,30 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	grassDensitySlider.SetSize(XMFLOAT2(wid, hei));
 	grassDensitySlider.SetPos(XMFLOAT2(x, y += step));
 	grassDensitySlider.OnSlide([this](wi::gui::EventArgs args) {
-		terrain.grass_density = args.fValue;
+		terrain->grass_density = args.fValue;
 		});
 	AddWidget(&grassDensitySlider);
 
 	auto generate_callback = [&]() {
 
-		terrain.SetCenterToCamEnabled(centerToCamCheckBox.GetCheck());
-		terrain.SetRemovalEnabled(removalCheckBox.GetCheck());
-		terrain.SetGrassEnabled(grassCheckBox.GetCheck());
-		terrain.lod_multiplier = lodSlider.GetValue();
-		terrain.texlod = texlodSlider.GetValue();
-		terrain.generation = (int)generationSlider.GetValue();
-		terrain.prop_generation = (int)propSlider.GetValue();
-		terrain.prop_density = propDensitySlider.GetValue();
-		terrain.grass_density = grassDensitySlider.GetValue();
-		terrain.chunk_scale = scaleSlider.GetValue();
-		terrain.seed = (uint32_t)seedSlider.GetValue();
-		terrain.bottomLevel = bottomLevelSlider.GetValue();
-		terrain.topLevel = topLevelSlider.GetValue();
-		terrain.region1 = region1Slider.GetValue();
-		terrain.region2 = region2Slider.GetValue();
-		terrain.region3 = region3Slider.GetValue();
+		terrain->SetCenterToCamEnabled(centerToCamCheckBox.GetCheck());
+		terrain->SetRemovalEnabled(removalCheckBox.GetCheck());
+		terrain->SetGrassEnabled(grassCheckBox.GetCheck());
+		terrain->lod_multiplier = lodSlider.GetValue();
+		terrain->texlod = texlodSlider.GetValue();
+		terrain->generation = (int)generationSlider.GetValue();
+		terrain->prop_generation = (int)propSlider.GetValue();
+		terrain->prop_density = propDensitySlider.GetValue();
+		terrain->grass_density = grassDensitySlider.GetValue();
+		terrain->chunk_scale = scaleSlider.GetValue();
+		terrain->seed = (uint32_t)seedSlider.GetValue();
+		terrain->bottomLevel = bottomLevelSlider.GetValue();
+		terrain->topLevel = topLevelSlider.GetValue();
+		terrain->region1 = region1Slider.GetValue();
+		terrain->region2 = region2Slider.GetValue();
+		terrain->region3 = region3Slider.GetValue();
 
-		terrain.Generation_Restart();
+		terrain->SetGenerationStarted(false);
 	};
 
 	presetCombo.Create("Preset: ");
@@ -399,14 +399,14 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	presetCombo.AddItem("Arctic", PRESET_ARCTIC);
 	presetCombo.OnSelect([=](wi::gui::EventArgs args) {
 
-		terrain.Generation_Cancel();
+		terrain->Generation_Cancel();
 		for (auto& modifier : modifiers)
 		{
 			RemoveWidget(modifier.get());
 		}
 		modifiers.clear();
-		terrain.modifiers.clear();
-		terrain.modifiers_to_remove.clear();
+		terrain->modifiers.clear();
+		terrain->modifiers_to_remove.clear();
 		PerlinModifierWindow* perlin = new PerlinModifierWindow;
 		VoronoiModifierWindow* voronoi = new VoronoiModifierWindow;
 		perlin->blendCombo.SetSelectedByUserdataWithoutCallback((uint64_t)wi::terrain::Modifier::BlendMode::Additive);
@@ -416,7 +416,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		{
 		default:
 		case PRESET_HILLS:
-			terrain.weather.SetOceanEnabled(false);
+			terrain->weather.SetOceanEnabled(false);
 			seedSlider.SetValue(5333);
 			bottomLevelSlider.SetValue(-60);
 			topLevelSlider.SetValue(380);
@@ -434,7 +434,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			region3Slider.SetValue(8);
 			break;
 		case PRESET_ISLANDS:
-			terrain.weather.SetOceanEnabled(true);
+			terrain->weather.SetOceanEnabled(true);
 			seedSlider.SetValue(4691);
 			bottomLevelSlider.SetValue(-79);
 			topLevelSlider.SetValue(520);
@@ -452,7 +452,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			region3Slider.SetValue(8);
 			break;
 		case PRESET_MOUNTAINS:
-			terrain.weather.SetOceanEnabled(false);
+			terrain->weather.SetOceanEnabled(false);
 			seedSlider.SetValue(8863);
 			bottomLevelSlider.SetValue(0);
 			topLevelSlider.SetValue(2960);
@@ -470,7 +470,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			region3Slider.SetValue(0.8f);
 			break;
 		case PRESET_ARCTIC:
-			terrain.weather.SetOceanEnabled(false);
+			terrain->weather.SetOceanEnabled(false);
 			seedSlider.SetValue(2124);
 			bottomLevelSlider.SetValue(-50);
 			topLevelSlider.SetValue(40);
@@ -495,6 +495,9 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		AddModifier(voronoi);
 
 		generate_callback();
+
+		editor->optionsWnd.RefreshEntityTree();
+
 		});
 	AddWidget(&presetCombo);
 
@@ -513,7 +516,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	addModifierCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		addModifierCombo.SetSelectedWithoutCallback(-1);
-		terrain.Generation_Cancel();
+		terrain->Generation_Cancel();
 		switch (args.iValue)
 		{
 		default:
@@ -550,7 +553,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	scaleSlider.SetSize(XMFLOAT2(wid, hei));
 	scaleSlider.SetPos(XMFLOAT2(x, y += step));
 	scaleSlider.OnSlide([=](wi::gui::EventArgs args) {
-		terrain.chunk_scale = args.fValue;
+		terrain->chunk_scale = args.fValue;
 		generate_callback();
 		});
 	AddWidget(&scaleSlider);
@@ -560,7 +563,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	seedSlider.SetSize(XMFLOAT2(wid, hei));
 	seedSlider.SetPos(XMFLOAT2(x, y += step));
 	seedSlider.OnSlide([=](wi::gui::EventArgs args) {
-		terrain.seed = (uint32_t)args.iValue;
+		terrain->seed = (uint32_t)args.iValue;
 		generate_callback();
 		});
 	AddWidget(&seedSlider);
@@ -570,7 +573,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	bottomLevelSlider.SetSize(XMFLOAT2(wid, hei));
 	bottomLevelSlider.SetPos(XMFLOAT2(x, y += step));
 	bottomLevelSlider.OnSlide([=](wi::gui::EventArgs args) {
-		terrain.bottomLevel = args.fValue;
+		terrain->bottomLevel = args.fValue;
 		generate_callback();
 		});
 	AddWidget(&bottomLevelSlider);
@@ -580,7 +583,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	topLevelSlider.SetSize(XMFLOAT2(wid, hei));
 	topLevelSlider.SetPos(XMFLOAT2(x, y += step));
 	topLevelSlider.OnSlide([=](wi::gui::EventArgs args) {
-		terrain.topLevel = args.fValue;
+		terrain->topLevel = args.fValue;
 		generate_callback();
 		});
 	AddWidget(&topLevelSlider);
@@ -596,7 +599,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	region1Slider.SetSize(XMFLOAT2(wid, hei));
 	region1Slider.SetPos(XMFLOAT2(x, y += step));
 	region1Slider.OnSlide([=](wi::gui::EventArgs args) {
-		terrain.region1 = args.fValue;
+		terrain->region1 = args.fValue;
 		generate_callback();
 		});
 	AddWidget(&region1Slider);
@@ -606,7 +609,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	region2Slider.SetSize(XMFLOAT2(wid, hei));
 	region2Slider.SetPos(XMFLOAT2(x, y += step));
 	region2Slider.OnSlide([=](wi::gui::EventArgs args) {
-		terrain.region2 = args.fValue;
+		terrain->region2 = args.fValue;
 		generate_callback();
 		});
 	AddWidget(&region2Slider);
@@ -616,7 +619,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	region3Slider.SetSize(XMFLOAT2(wid, hei));
 	region3Slider.SetPos(XMFLOAT2(x, y += step));
 	region3Slider.OnSlide([=](wi::gui::EventArgs args) {
-		terrain.region3 = args.fValue;
+		terrain->region3 = args.fValue;
 		generate_callback();
 		});
 	AddWidget(&region3Slider);
@@ -631,9 +634,9 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
 				wi::primitive::AABB aabb;
-				for (auto& chunk : terrain.chunks)
+				for (auto& chunk : terrain->chunks)
 				{
-					const wi::primitive::AABB* object_aabb = terrain.scene->aabb_objects.GetComponent(chunk.second.entity);
+					const wi::primitive::AABB* object_aabb = terrain->scene->aabb_objects.GetComponent(chunk.second.entity);
 					if (object_aabb != nullptr)
 					{
 						aabb = wi::primitive::AABB::Merge(aabb, *object_aabb);
@@ -646,12 +649,12 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				data.resize(width * height);
 				std::fill(data.begin(), data.end(), 0u);
 
-				for (auto& chunk : terrain.chunks)
+				for (auto& chunk : terrain->chunks)
 				{
-					const ObjectComponent* object = terrain.scene->objects.GetComponent(chunk.second.entity);
+					const ObjectComponent* object = terrain->scene->objects.GetComponent(chunk.second.entity);
 					if (object != nullptr)
 					{
-						const MeshComponent* mesh = terrain.scene->meshes.GetComponent(object->meshID);
+						const MeshComponent* mesh = terrain->scene->meshes.GetComponent(object->meshID);
 						if (mesh != nullptr)
 						{
 							const XMMATRIX W = XMLoadFloat4x4(&object->worldMatrix);
@@ -681,39 +684,68 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			});
 		});
 
+	SetCollapsed(true);
+}
+void TerrainWindow::SetEntity(Entity entity)
+{
+	this->entity = entity;
 
+	wi::scene::Scene& scene = editor->GetCurrentScene();
+	this->terrain = scene.terrains.GetComponent(entity);
+}
+void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
+{
+	modifier_window->generation_callback = [=]() {
+		terrain->Generation_Restart();
+	};
+	modifiers.emplace_back().reset(modifier_window);
+	terrain->modifiers.emplace_back().reset(modifier_window->modifier);
+	AddWidget(modifier_window);
+
+	modifier_window->OnClose([=](wi::gui::EventArgs args) {
+		// Can't delete modifier in itself, so add to a deferred deletion queue:
+		terrain->modifiers_to_remove.push_back(modifier_window->modifier);
+		modifiers_to_remove.push_back(modifier_window);
+		});
+
+	editor->optionsWnd.themeCombo.SetSelected(editor->optionsWnd.themeCombo.GetSelected()); // theme refresh
+}
+void TerrainWindow::SetupAssets()
+{
+	if (!terrain_preset.props.empty())
+		return;
 
 	// Customize terrain generator before it's initialized:
-	terrain.material_Base.SetRoughness(1);
-	terrain.material_Base.SetReflectance(0.005f);
-	terrain.material_Slope.SetRoughness(0.1f);
-	terrain.material_LowAltitude.SetRoughness(1);
-	terrain.material_HighAltitude.SetRoughness(1);
-	terrain.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "terrain/base.jpg";
-	terrain.material_Base.textures[MaterialComponent::NORMALMAP].name = "terrain/base_nor.jpg";
-	terrain.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "terrain/slope.jpg";
-	terrain.material_Slope.textures[MaterialComponent::NORMALMAP].name = "terrain/slope_nor.jpg";
-	terrain.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/low_altitude.jpg";
-	terrain.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/low_altitude_nor.jpg";
-	terrain.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/high_altitude.jpg";
-	terrain.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/high_altitude_nor.jpg";
-	terrain.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = "terrain/grassparticle.png";
-	terrain.material_GrassParticle.alphaRef = 0.75f;
-	terrain.grass_properties.length = 5;
-	terrain.grass_properties.frameCount = 2;
-	terrain.grass_properties.framesX = 1;
-	terrain.grass_properties.framesY = 2;
-	terrain.grass_properties.frameStart = 0;
-	terrain.material_Base.CreateRenderData();
-	terrain.material_Slope.CreateRenderData();
-	terrain.material_LowAltitude.CreateRenderData();
-	terrain.material_HighAltitude.CreateRenderData();
-	terrain.material_GrassParticle.CreateRenderData();
+	terrain_preset.material_Base.SetRoughness(1);
+	terrain_preset.material_Base.SetReflectance(0.005f);
+	terrain_preset.material_Slope.SetRoughness(0.1f);
+	terrain_preset.material_LowAltitude.SetRoughness(1);
+	terrain_preset.material_HighAltitude.SetRoughness(1);
+	terrain_preset.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "terrain/base.jpg";
+	terrain_preset.material_Base.textures[MaterialComponent::NORMALMAP].name = "terrain/base_nor.jpg";
+	terrain_preset.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "terrain/slope.jpg";
+	terrain_preset.material_Slope.textures[MaterialComponent::NORMALMAP].name = "terrain/slope_nor.jpg";
+	terrain_preset.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/low_altitude.jpg";
+	terrain_preset.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/low_altitude_nor.jpg";
+	terrain_preset.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/high_altitude.jpg";
+	terrain_preset.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/high_altitude_nor.jpg";
+	terrain_preset.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = "terrain/grassparticle.png";
+	terrain_preset.material_GrassParticle.alphaRef = 0.75f;
+	terrain_preset.grass_properties.length = 5;
+	terrain_preset.grass_properties.frameCount = 2;
+	terrain_preset.grass_properties.framesX = 1;
+	terrain_preset.grass_properties.framesY = 2;
+	terrain_preset.grass_properties.frameStart = 0;
+	terrain_preset.material_Base.CreateRenderData();
+	terrain_preset.material_Slope.CreateRenderData();
+	terrain_preset.material_LowAltitude.CreateRenderData();
+	terrain_preset.material_HighAltitude.CreateRenderData();
+	terrain_preset.material_GrassParticle.CreateRenderData();
 	// Tree prop:
 	{
 		Scene props_scene;
 		wi::scene::LoadModel(props_scene, "terrain/tree.wiscene");
-		wi::terrain::Prop& prop = terrain.props.emplace_back();
+		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
 		prop.name = "tree";
 		prop.min_count_per_chunk = 0;
 		prop.max_count_per_chunk = 10;
@@ -743,7 +775,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	{
 		Scene props_scene;
 		wi::scene::LoadModel(props_scene, "terrain/rock.wiscene");
-		wi::terrain::Prop& prop = terrain.props.emplace_back();
+		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
 		prop.name = "rock";
 		prop.min_count_per_chunk = 0;
 		prop.max_count_per_chunk = 8;
@@ -773,7 +805,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	{
 		Scene props_scene;
 		wi::scene::LoadModel(props_scene, "terrain/bush.wiscene");
-		wi::terrain::Prop& prop = terrain.props.emplace_back();
+		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
 		prop.name = "bush";
 		prop.min_count_per_chunk = 0;
 		prop.max_count_per_chunk = 10;
@@ -800,16 +832,10 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		editor->GetCurrentScene().Merge(props_scene);
 	}
 
-
-	SetCollapsed(true);
+	terrain = &terrain_preset;
+	presetCombo.SetSelected(0);
 }
-void TerrainWindow::SetEntity(Entity entity)
-{
-	this->entity = entity;
 
-	wi::scene::Scene& scene = editor->GetCurrentScene();
-	this->terrain_ptr = scene.terrains.GetComponent(entity);
-}
 void TerrainWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
@@ -838,6 +864,7 @@ void TerrainWindow::ResizeLayout()
 		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
 		y += widget.GetSize().y;
 		y += padding;
+		widget.SetEnabled(true);
 	};
 
 	add_checkbox(centerToCamCheckBox);
@@ -865,21 +892,4 @@ void TerrainWindow::ResizeLayout()
 		add_window(*modifier);
 	}
 
-}
-void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
-{
-	modifier_window->generation_callback = [=]() {
-		terrain.Generation_Restart();
-	};
-	modifiers.emplace_back().reset(modifier_window);
-	terrain.modifiers.emplace_back().reset(modifier_window->modifier);
-	AddWidget(modifier_window);
-
-	modifier_window->OnClose([=](wi::gui::EventArgs args) {
-		// Can't delete modifier in itself, so add to a deferred deletion queue:
-		terrain.modifiers_to_remove.push_back(modifier_window->modifier);
-		modifiers_to_remove.push_back(modifier_window);
-		});
-
-	editor->optionsWnd.themeCombo.SetSelected(editor->optionsWnd.themeCombo.GetSelected()); // theme refresh
 }

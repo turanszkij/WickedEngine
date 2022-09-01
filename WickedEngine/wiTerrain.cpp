@@ -191,6 +191,10 @@ namespace wi::terrain
 
 		generator = std::make_shared<Generator>();
 	}
+	Terrain::~Terrain()
+	{
+		Generation_Cancel();
+	}
 
 	void Terrain::Generation_Restart()
 	{
@@ -200,22 +204,37 @@ namespace wi::terrain
 
 		chunks.clear();
 
+		wi::vector<Entity> entities_to_remove;
+		for (size_t i = 0; i < scene->hierarchy.GetCount(); ++i)
+		{
+			const HierarchyComponent& hier = scene->hierarchy[i];
+			if (hier.parentID == terrainEntity)
+			{
+				entities_to_remove.push_back(scene->hierarchy.GetEntity(i));
+			}
+		}
+		for (Entity x : entities_to_remove)
+		{
+			scene->Entity_Remove(x);
+		}
+
 		perlin_noise.init(seed);
 		for (auto& modifier : modifiers)
 		{
 			modifier->Seed(seed);
 		}
 
-		// Add some nice weather and lighting if there is none yet:
-		if (scene->weathers.GetCount() == 0)
+		// Add some nice weather and lighting:
+		if (!scene->weathers.Contains(terrainEntity))
 		{
-			scene->weathers.Create(terrainEntity) = weather;
-			if (!weather.IsOceanEnabled())
-			{
-				scene->ocean = {};
-			}
+			scene->weathers.Create(terrainEntity);
 		}
-		if (scene->lights.GetCount() == 0)
+		*scene->weathers.GetComponent(terrainEntity) = weather;
+		if (!weather.IsOceanEnabled())
+		{
+			scene->ocean = {};
+		}
+
 		{
 			Entity sunEntity = scene->Entity_CreateLight("terrainSun");
 			scene->Component_Attach(sunEntity, terrainEntity);
@@ -223,7 +242,6 @@ namespace wi::terrain
 			light.SetType(LightComponent::LightType::DIRECTIONAL);
 			light.intensity = 16;
 			light.SetCastShadow(true);
-			//light.SetVolumetricsEnabled(true);
 			TransformComponent& transform = *scene->transforms.GetComponent(sunEntity);
 			transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV4, 0, XM_PIDIV4));
 			transform.Translate(XMFLOAT3(0, 2, 0));
@@ -258,7 +276,7 @@ namespace wi::terrain
 			modifiers_to_remove.clear();
 		}
 
-		if (terrainEntity == INVALID_ENTITY || !scene->transforms.Contains(terrainEntity))
+		if (terrainEntity == INVALID_ENTITY)
 		{
 			chunks.clear();
 			return;
@@ -797,6 +815,8 @@ namespace wi::terrain
 
 	void Terrain::Generation_Cancel()
 	{
+		if (generator == nullptr)
+			return;
 		generator->cancelled.store(true); // tell the generation thread that work must be stopped
 		wi::jobsystem::Wait(generator->workload); // waits until generation thread exits
 		generator->cancelled.store(false); // the next generation can run

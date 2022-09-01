@@ -265,9 +265,9 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			scene.names.Create(pick.entity) = "collider";
 			break;
 		case 18:
+			editor->componentsWnd.terrainWnd.SetupAssets();
 			pick.entity = CreateEntity();
 			scene.terrains.Create(pick.entity) = editor->componentsWnd.terrainWnd.terrain_preset;
-			scene.transforms.Create(pick.entity);
 			scene.names.Create(pick.entity) = "terrain";
 			break;
 		default:
@@ -315,6 +315,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Armature " ICON_ARMATURE, (uint64_t)Filter::Armature);
 	filterCombo.AddItem("Script " ICON_SCRIPT, (uint64_t)Filter::Script);
 	filterCombo.AddItem("Expression " ICON_EXPRESSION, (uint64_t)Filter::Expression);
+	filterCombo.AddItem("Terrain " ICON_EXPRESSION, (uint64_t)Filter::Terrain);
 	filterCombo.SetTooltip("Apply filtering to the Entities");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
@@ -660,6 +661,10 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_TRANSFORM " ";
 	}
+	if (scene.terrains.Contains(entity))
+	{
+		item.name += ICON_TERRAIN " ";
+	}
 	if (scene.meshes.Contains(entity))
 	{
 		item.name += ICON_MESH " ";
@@ -753,10 +758,6 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_EXPRESSION " ";
 	}
-	if (scene.terrains.Contains(entity))
-	{
-		item.name += ICON_TERRAIN " ";
-	}
 	bool bone_found = false;
 	for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
 	{
@@ -824,6 +825,17 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
+	// Add any left over entities that might not have had a hierarchy:
+
+	if (has_flag(filter, Filter::Terrain))
+	{
+		// Any transform left that is not part of a hierarchy:
+		for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.terrains.GetEntity(i), 0);
+		}
+	}
+
 	if (has_flag(filter, Filter::Transform))
 	{
 		// Any transform left that is not part of a hierarchy:
@@ -832,8 +844,6 @@ void OptionsWindow::RefreshEntityTree()
 			PushToEntityTree(scene.transforms.GetEntity(i), 0);
 		}
 	}
-
-	// Add any left over entities that might not have had a hierarchy or transform:
 
 	if (has_flag(filter, Filter::Light))
 	{

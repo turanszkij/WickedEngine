@@ -317,6 +317,8 @@ void EditorComponent::Load()
 	closeButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
 	closeButton.OnClick([&](wi::gui::EventArgs args) {
 
+		componentsWnd.terrainWnd.terrain_preset = {};
+
 		translator.selected.clear();
 		wi::scene::Scene& scene = GetCurrentScene();
 		wi::renderer::ClearWorld(scene);
