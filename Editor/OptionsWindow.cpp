@@ -315,7 +315,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Armature " ICON_ARMATURE, (uint64_t)Filter::Armature);
 	filterCombo.AddItem("Script " ICON_SCRIPT, (uint64_t)Filter::Script);
 	filterCombo.AddItem("Expression " ICON_EXPRESSION, (uint64_t)Filter::Expression);
-	filterCombo.AddItem("Terrain " ICON_EXPRESSION, (uint64_t)Filter::Terrain);
+	filterCombo.AddItem("Terrain " ICON_TERRAIN, (uint64_t)Filter::Terrain);
 	filterCombo.SetTooltip("Apply filtering to the Entities");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
