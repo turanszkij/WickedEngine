@@ -914,10 +914,9 @@ namespace wi::gui
 				Deactivate();
 			}
 
-			Hitbox2D hitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
 			Hitbox2D pointerHitbox = GetPointerHitbox();
 
-			if (state == IDLE && hitbox.intersects(pointerHitbox))
+			if (state == IDLE && hitBox.intersects(pointerHitbox))
 			{
 				state = FOCUS;
 			}
@@ -944,7 +943,7 @@ namespace wi::gui
 				scrollbar_state = SCROLLBAR_INACTIVE;
 			}
 
-			if (IsScrollbarRequired() && hitbox.intersects(pointerHitbox))
+			if (IsScrollbarRequired() && hitBox.intersects(pointerHitbox))
 			{
 				if (clicked)
 				{
@@ -1032,6 +1031,15 @@ namespace wi::gui
 
 		// scrollbar knob
 		sprites_knob[scrollbar_state].Draw(cmd);
+
+		//Rect scissorRect;
+		//scissorRect.bottom = (int32_t)(canvas.GetPhysicalHeight());
+		//scissorRect.left = (int32_t)(0);
+		//scissorRect.right = (int32_t)(canvas.GetPhysicalWidth());
+		//scissorRect.top = (int32_t)(0);
+		//GraphicsDevice* device = wi::graphics::GetDevice();
+		//device->BindScissorRects(1, &scissorRect, cmd);
+		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y, wi::Color(255,0,0,100)), cmd);
 
 	}
 	void ScrollBar::SetColor(wi::Color color, int id)
@@ -2751,8 +2759,6 @@ namespace wi::gui
 		resizeDragger_UpperRight.Update(canvas, dt);
 		resizeDragger_BottomLeft.Update(canvas, dt);
 		resizeDragger_BottomRight.Update(canvas, dt);
-		scrollbar_horizontal.Update(canvas, dt);
-		scrollbar_vertical.Update(canvas, dt);
 
 		// Don't allow moving outside of screen:
 		if (parent == nullptr)
@@ -2840,12 +2846,15 @@ namespace wi::gui
 			return a->priority < b->priority;
 				});
 
-		float scroll = wi::input::GetPointer().z * 20;
-		if (scroll && scroll_allowed && scrollbar_vertical.IsScrollbarRequired() && pointerHitbox.intersects(hitBox)) // when window is in focus, but other widgets aren't
+		if (!IsMinimized() && IsVisible())
 		{
-			scroll_allowed = false;
-			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-			scrollbar_vertical.Scroll(scroll);
+			float scroll = wi::input::GetPointer().z * 20;
+			if (scroll && scroll_allowed && scrollbar_vertical.IsScrollbarRequired() && pointerHitbox.intersects(hitBox)) // when window is in focus, but other widgets aren't
+			{
+				scroll_allowed = false;
+				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+				scrollbar_vertical.Scroll(scroll);
+			}
 		}
 
 		if (IsMinimized())
@@ -3077,7 +3086,6 @@ namespace wi::gui
 	XMFLOAT2 Window::GetWidgetAreaSize() const
 	{
 		XMFLOAT2 size = GetSize();
-		size.y -= control_size;
 		if (scrollbar_horizontal.IsScrollbarRequired())
 		{
 			size.y -= control_size;
@@ -3987,7 +3995,7 @@ namespace wi::gui
 		wi::gui::Window::ResizeLayout();
 		const float padding = 4;
 		const float width = GetWidgetAreaSize().x;
-		float y = GetWidgetAreaSize().y;
+		float y = GetWidgetAreaSize().y - control_size;
 		float jump = 20;
 
 		auto add = [&](wi::gui::Widget& widget) {

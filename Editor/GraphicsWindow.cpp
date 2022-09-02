@@ -1458,8 +1458,6 @@ void GraphicsWindow::Update()
 	aoComboBox.SetSelectedWithoutCallback(editor->renderPath->getAO());
 	aoPowerSlider.SetValue((float)editor->renderPath->getAOPower());
 
-	aoRangeSlider.SetEnabled(false);
-	aoSampleCountSlider.SetEnabled(false);
 	switch (editor->renderPath->getAO())
 	{
 	case wi::RenderPath3D::AO_SSAO:
@@ -1468,8 +1466,11 @@ void GraphicsWindow::Update()
 		break;
 	case wi::RenderPath3D::AO_RTAO:
 		aoRangeSlider.SetEnabled(true);
+		aoSampleCountSlider.SetEnabled(false);
 		break;
 	default:
+		aoRangeSlider.SetEnabled(false);
+		aoSampleCountSlider.SetEnabled(false);
 		break;
 	}
 
