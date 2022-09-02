@@ -362,7 +362,7 @@ void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
 				else if (state == TRANSLATOR_Z)
 				{
 					XMVECTOR axis = XMVectorSet(0, 0, 1, 0);
-					XMVECTOR wrong = XMVector3Cross(camera.GetUp(), axis);
+					XMVECTOR wrong = XMVector3Cross(camera.GetAt(), axis);
 					planeNormal = XMVector3Cross(wrong, axis);
 					this->axis = XMFLOAT3(0, 0, 1);
 				}
