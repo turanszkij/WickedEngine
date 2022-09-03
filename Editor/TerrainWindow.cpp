@@ -859,10 +859,12 @@ void TerrainWindow::SetupAssets()
 	terrain_preset.material_LowAltitude.CreateRenderData();
 	terrain_preset.material_HighAltitude.CreateRenderData();
 	terrain_preset.material_GrassParticle.CreateRenderData();
+
+	Scene props_scene;
+	wi::scene::LoadModel(props_scene, "terrain/props.wiscene");
+
 	// Tree prop:
 	{
-		Scene props_scene;
-		wi::scene::LoadModel(props_scene, "terrain/tree.wiscene");
 		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
 		prop.min_count_per_chunk = 0;
 		prop.max_count_per_chunk = 10;
@@ -894,12 +896,9 @@ void TerrainWindow::SetupAssets()
 		);
 		archive.WriteData(prop.data);
 		props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
-		editor->GetCurrentScene().Merge(props_scene);
 	}
 	// Rock prop:
 	{
-		Scene props_scene;
-		wi::scene::LoadModel(props_scene, "terrain/rock.wiscene");
 		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
 		prop.min_count_per_chunk = 0;
 		prop.max_count_per_chunk = 8;
@@ -931,12 +930,9 @@ void TerrainWindow::SetupAssets()
 		);
 		archive.WriteData(prop.data);
 		props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
-		editor->GetCurrentScene().Merge(props_scene);
 	}
 	// Bush prop:
 	{
-		Scene props_scene;
-		wi::scene::LoadModel(props_scene, "terrain/bush.wiscene");
 		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
 		prop.min_count_per_chunk = 0;
 		prop.max_count_per_chunk = 10;
@@ -968,8 +964,9 @@ void TerrainWindow::SetupAssets()
 		);
 		archive.WriteData(prop.data);
 		props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
-		editor->GetCurrentScene().Merge(props_scene);
 	}
+
+	editor->GetCurrentScene().Merge(props_scene);
 
 	terrain = &terrain_preset;
 	presetCombo.SetSelected(0);

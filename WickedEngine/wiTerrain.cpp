@@ -823,12 +823,12 @@ namespace wi::terrain
 										{
 											transform = &generator->scene.transforms.Create(entity);
 										}
-										XMFLOAT3 offset = vertex_pos;
-										offset.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, float_distr(prop_rand));
-										transform->Translate(offset);
+										transform->translation_local = vertex_pos;
+										transform->translation_local.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, float_distr(prop_rand));
 										const float scaling = wi::math::Lerp(prop.min_size, prop.max_size, float_distr(prop_rand));
 										transform->Scale(XMFLOAT3(scaling, scaling, scaling));
 										transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * float_distr(prop_rand), 0));
+										transform->SetDirty();
 										transform->UpdateTransform();
 										generator->scene.Component_Attach(entity, chunk_data.props_entity, true);
 										generated_something = true;
