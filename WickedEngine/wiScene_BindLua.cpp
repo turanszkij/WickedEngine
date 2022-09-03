@@ -3428,6 +3428,13 @@ Luna<SpringComponent_BindLua>::FunctionType SpringComponent_BindLua::methods[] =
 	{ NULL, NULL }
 };
 Luna<SpringComponent_BindLua>::PropertyType SpringComponent_BindLua::properties[] = {
+	lunaproperty(SpringComponent_BindLua, Stiffness),
+	lunaproperty(SpringComponent_BindLua, Damping),
+	lunaproperty(SpringComponent_BindLua, WindAffection),
+	lunaproperty(SpringComponent_BindLua, DragForce),
+	lunaproperty(SpringComponent_BindLua, HitRadius),
+	lunaproperty(SpringComponent_BindLua, GravityPower),
+	lunaproperty(SpringComponent_BindLua, GravityDirection),
 	{ NULL, NULL }
 };
 
@@ -3435,6 +3442,7 @@ SpringComponent_BindLua::SpringComponent_BindLua(lua_State* L)
 {
 	owning = true;
 	component = new SpringComponent;
+	BuildBindings();
 }
 SpringComponent_BindLua::~SpringComponent_BindLua()
 {
@@ -3444,6 +3452,11 @@ SpringComponent_BindLua::~SpringComponent_BindLua()
 	}
 }
 
+int SpringComponent_BindLua::GetStiffness(lua_State *L)
+{
+	wi::lua::SSetFloat(L, component->stiffnessForce);
+	return 1;
+}
 int SpringComponent_BindLua::SetStiffness(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -3457,6 +3470,11 @@ int SpringComponent_BindLua::SetStiffness(lua_State* L)
 		wi::lua::SError(L, "SetStiffness(float value) not enough arguments!");
 	}
 	return 0;
+}
+int SpringComponent_BindLua::GetDamping(lua_State *L)
+{
+	wi::lua::SSetFloat(L, component->dragForce);
+	return 1;
 }
 int SpringComponent_BindLua::SetDamping(lua_State* L)
 {

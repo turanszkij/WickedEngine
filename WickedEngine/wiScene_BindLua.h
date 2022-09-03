@@ -517,13 +517,34 @@ namespace wi::lua::scene
 		static Luna<SpringComponent_BindLua>::FunctionType methods[];
 		static Luna<SpringComponent_BindLua>::PropertyType properties[];
 
-		SpringComponent_BindLua(wi::scene::SpringComponent* component) :component(component) {}
+		inline void BuildBindings()
+		{
+			DragForce = FloatProperty(&component->dragForce);
+			HitRadius = FloatProperty(&component->hitRadius);
+			GravityPower = FloatProperty(&component->gravityPower);
+			GravityDirection = VectorProperty(&component->gravityDir);
+		}
+		
+		SpringComponent_BindLua(wi::scene::SpringComponent* component) :component(component) { BuildBindings(); }
 		SpringComponent_BindLua(lua_State* L);
 		~SpringComponent_BindLua();
+
+		FloatProperty DragForce;
+		FloatProperty HitRadius;
+		FloatProperty GravityPower;
+		VectorProperty GravityDirection;
+		
+		PropertyFunction(DragForce)
+		PropertyFunction(HitRadius)
+		PropertyFunction(GravityPower)
+		PropertyFunction(GravityDirection)
 
 		int SetStiffness(lua_State* L);
 		int SetDamping(lua_State* L);
 		int SetWindAffection(lua_State* L);
+		int GetStiffness(lua_State* L);
+		int GetDamping(lua_State* L);
+		int GetWindAffection(lua_State* L);
 	};
 
 	class ScriptComponent_BindLua
@@ -986,6 +1007,10 @@ namespace wi::lua::scene
 			OceanParameters = Weather_OceanParams_Property(&component->oceanParameters);
 			AtmosphereParameters = Weather_AtmosphereParams_Property(&component->atmosphereParameters);
 			VolumetricCloudParameters = Weather_VolumetricCloudParams_Property(&component->volumetricCloudParameters);
+		
+			skyMapName = StringProperty(&component->skyMapName);
+			colorGradingMapName = StringProperty(&component->colorGradingMapName);
+			volumetricCloudsWeatherMapName = StringProperty(&component->volumetricCloudsWeatherMapName);
 		}
 
 		WeatherComponent_BindLua(wi::scene::WeatherComponent* component) :component(component) { BuildBindings(); }
@@ -1045,6 +1070,14 @@ namespace wi::lua::scene
 		PropertyFunction(OceanParameters)
 		PropertyFunction(AtmosphereParameters)
 		PropertyFunction(VolumetricCloudParameters)
+
+		StringProperty skyMapName;
+		StringProperty colorGradingMapName;
+		StringProperty volumetricCloudsWeatherMapName;
+
+		PropertyFunction(skyMapName)
+		PropertyFunction(colorGradingMapName)
+		PropertyFunction(volumetricCloudsWeatherMapName)
 
 		int IsOceanEnabled(lua_State* L);
 		int IsSimpleSky(lua_State* L);
