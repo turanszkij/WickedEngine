@@ -23,6 +23,8 @@ namespace wi::lua::primitive
 		int Intersects(lua_State* L);
 		int GetOrigin(lua_State* L);
 		int GetDirection(lua_State* L);
+		int SetOrigin(lua_State* L);
+		int SetDirection(lua_State* L);
 	};
 
 	class AABB_BindLua
@@ -41,6 +43,8 @@ namespace wi::lua::primitive
 		int Intersects2D(lua_State* L);
 		int GetMin(lua_State* L);
 		int GetMax(lua_State* L);
+		int SetMin(lua_State* L);
+		int SetMax(lua_State* L);
 		int GetCenter(lua_State* L);
 		int GetHalfExtents(lua_State* L);
 		int Transform(lua_State* L);

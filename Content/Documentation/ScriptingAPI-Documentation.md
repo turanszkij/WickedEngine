@@ -32,6 +32,7 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		7. [AnimationComponent](#animationcomponent)
 		8. [MaterialComponent](#materialcomponent)
 		9. [EmitterComponent](#emittercomponent)
+		9. [HairParticleSystem](#hairparticlesystem)
 		10. [LightComponent](#lightcomponent)
 		11. [ObjectComponent](#objectcomponent)
 		12. [InverseKinematicsComponent](#inversekinematicscomponent)
@@ -657,6 +658,7 @@ Describes an orientation in 3D space.
 - GetAmount() : float result
 
 #### MaterialComponent
+- _flags : int
 - BaseColor : Vector
 - EmissiveColor : Vector
 - EngineStencilRef : int
@@ -692,8 +694,30 @@ Describes an orientation in 3D space.
 - SetEngineStencilRef(int value)
 - SetUserStencilRef(int value)
 - GetStencilRef() : int result
+- SetTexture(int textureindex, string texturefile)
+- SetTextureUVSet(int textureindex, int uvset)
+- GetTexture(int textureindex) : string texturefile
+- GetTextureUVSet(int textureindex) : int uvset
+
+#### MeshComponent
+- _flags : int
+- TessellationFactor : float
+- ArmatureID : int
+- SubsetsPerLOD : int
+
+</br>
+
+- SetMeshSubsetMaterialID(int subsetindex, Entity materialID)
+- GetMeshSubsetMaterialID(int subsetindex)
 
 #### EmitterComponent
+- _flags : int
+- ShaderType : int
+- Mass : float
+- Velocity : Vector
+- Gravity : Vector
+- Drag : float
+- Restitution : float
 - EmitCount : float  -- emitted particle count per second
 - Size : float  -- particle starting size
 - Life : float  -- particle lifetime
@@ -704,6 +728,15 @@ Describes an orientation in 3D space.
 - ScaleY : float  -- scaling along lifetime in Y axis
 - Rotation : float  -- rotation speed
 - MotionBlurAmount : float  -- set the motion elongation factor
+- SPH_h : float
+- SPH_K : float
+- SPH_p0 : float
+- SPH_e : float
+- SpriteSheet_Frames_X : int
+- SpriteSheet_Frames_Y : int
+- SpriteSheet_Frame_Count : int
+- SpriteSheet_Frame_Start : int
+- SpriteSheet_Framerate : float
 
 </br>
 
@@ -718,6 +751,20 @@ Describes an orientation in 3D space.
 - SetScaleY(float value)  -- set scaling along lifetime in Y axis
 - SetRotation(float value)  -- set rotation speed
 - SetMotionBlurAmount(float value)  -- set the motion elongation factor
+
+#### HairParticleSystem
+- _flags : int
+- StrandCount : int
+- SegmentCount : int
+- RandomSeed : int
+- Length : float
+- Stiffness : float
+- Randomness : float
+- ViewDistance : float
+- SpriteSheet_Frames_X : int
+- SpriteSheet_Frames_Y : int
+- SpriteSheet_Frame_Count : int
+- SpriteSheet_Frame_Start : int
 
 #### LightComponent
 - Type : int  -- light type, see accepted values below (by default it is a point light)
@@ -800,9 +847,22 @@ Describes an Inverse Kinematics effector.
 
 #### SpringComponent
 Enables jiggle effect on transforms such as bones for example.
+- Stiffness : float
+- Damping : float
+- WindAffection : float
+- DragForce : float
+- HitRadius : float
+- GravityPower : float
+- GravityDirection : Vector
+
+</br>
+
 - SetStiffness(float value)
 - SetDamping(float value)
 - SetWindAffection(float value)
+- GetStiffness() : float result
+- GetDamping() : float result
+- GetWindAffection() : float result
 
 #### ScriptComponent
 A lua script bound to an entity
@@ -995,15 +1055,27 @@ It inherits functions from RenderPath2D.
 
 #### Ray
 A ray is defined by an origin Vector and a normalized direction Vector. It can be used to intersect with other primitives or the scene
+- Origin : Vector
+- Direction : Vector
+
+</br>
+
 - [constructor]Ray(Vector origin,direction)
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
 - Intersects(Capsule capsule) : bool result
 - GetOrigin() : Vector result
 - GetDirection() : Vector result
+- SetOrigin(Vector vector)
+- SetDirection(Vector vector)
 
 #### AABB
 Axis Aligned Bounding Box. Can be intersected with other primitives.
+- Min : Vector
+- Max : Vector
+
+</br>
+
 - [constructor]AABB(opt Vector min,max)	-- if no argument is given, it will be infinitely inverse that can't intersect
 - Intersects2D(AABB aabb) : bool result	-- omit the z component for intersection check for more precise 2D intersection
 - Intersects(AABB aabb) : bool result
@@ -1011,6 +1083,8 @@ Axis Aligned Bounding Box. Can be intersected with other primitives.
 - Intersects(Ray ray) : bool result
 - GetMin() : Vector result
 - GetMax() : Vector result
+- SetMin(Vector vector)
+- SetMax(Vector vector)
 - GetCenter() : Vector result
 - GetHalfExtents() : Vector result
 - Transform(Matrix matrix) : AABB result  -- transforms the AABB with a matrix and returns the resulting conservative AABB
