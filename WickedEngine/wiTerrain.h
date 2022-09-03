@@ -64,9 +64,7 @@ namespace wi::terrain
 
 	struct Prop
 	{
-		std::string name = "prop";
-		wi::ecs::Entity mesh_entity = wi::ecs::INVALID_ENTITY;
-		wi::scene::ObjectComponent object;
+		wi::vector<uint8_t> data; // serialized component data storage
 		int min_count_per_chunk = 0; // a chunk will try to generate min this many props of this type
 		int max_count_per_chunk = 10; // a chunk will try to generate max this many props of this type
 		int region = 0; // region selection in range [0,3] (0: base/grass, 1: slopes, 2: low altitude (bottom level-0), 3: high altitude (0-top level))
@@ -109,6 +107,7 @@ namespace wi::terrain
 		Chunk center_chunk = {};
 		wi::noise::Perlin perlin_noise;
 		wi::vector<Prop> props;
+		wi::unordered_map<uint64_t, wi::ecs::Entity> serializer_state;
 
 		// For generating scene on a background thread:
 		std::shared_ptr<Generator> generator;

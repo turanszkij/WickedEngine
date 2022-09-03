@@ -2742,6 +2742,8 @@ namespace wi::scene
 					for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 					{
 						const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+						if (materials.GetCount() <= subset.materialIndex)
+							continue;
 						const MaterialComponent& material = materials[subset.materialIndex];
 
 						const uint32_t geometry_index = subsetIndex - first_subset;

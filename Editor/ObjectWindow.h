@@ -18,6 +18,7 @@ public:
 	wi::gui::Slider ditherSlider;
 	wi::gui::Slider cascadeMaskSlider;
 	wi::gui::Slider lodSlider;
+	wi::gui::Slider drawdistanceSlider;
 
 	wi::gui::ComboBox colorComboBox;
 	wi::gui::ColorPicker colorPicker;

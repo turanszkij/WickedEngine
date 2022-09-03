@@ -296,6 +296,29 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	float hei = 20;
 	float wid = 120;
 
+	auto generate_callback = [&]() {
+
+		terrain->SetCenterToCamEnabled(centerToCamCheckBox.GetCheck());
+		terrain->SetRemovalEnabled(removalCheckBox.GetCheck());
+		terrain->SetGrassEnabled(grassCheckBox.GetCheck());
+		terrain->lod_multiplier = lodSlider.GetValue();
+		terrain->texlod = texlodSlider.GetValue();
+		terrain->generation = (int)generationSlider.GetValue();
+		terrain->prop_generation = (int)propGenerationSlider.GetValue();
+		terrain->physics_generation = (int)physicsGenerationSlider.GetValue();
+		terrain->prop_density = propDensitySlider.GetValue();
+		terrain->grass_density = grassDensitySlider.GetValue();
+		terrain->chunk_scale = scaleSlider.GetValue();
+		terrain->seed = (uint32_t)seedSlider.GetValue();
+		terrain->bottomLevel = bottomLevelSlider.GetValue();
+		terrain->topLevel = topLevelSlider.GetValue();
+		terrain->region1 = region1Slider.GetValue();
+		terrain->region2 = region2Slider.GetValue();
+		terrain->region3 = region3Slider.GetValue();
+
+		terrain->SetGenerationStarted(false);
+	};
+
 	centerToCamCheckBox.Create("Center to Cam: ");
 	centerToCamCheckBox.SetTooltip("Automatically generate chunks around camera. This sets the center chunk to camera position.");
 	centerToCamCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -333,6 +356,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	physicsCheckBox.SetCheck(true);
 	physicsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		terrain->SetPhysicsEnabled(args.bValue);
+		generate_callback();
 		});
 	AddWidget(&physicsCheckBox);
 
@@ -410,29 +434,6 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		terrain->grass_density = args.fValue;
 		});
 	AddWidget(&grassDensitySlider);
-
-	auto generate_callback = [&]() {
-
-		terrain->SetCenterToCamEnabled(centerToCamCheckBox.GetCheck());
-		terrain->SetRemovalEnabled(removalCheckBox.GetCheck());
-		terrain->SetGrassEnabled(grassCheckBox.GetCheck());
-		terrain->lod_multiplier = lodSlider.GetValue();
-		terrain->texlod = texlodSlider.GetValue();
-		terrain->generation = (int)generationSlider.GetValue();
-		terrain->prop_generation = (int)propGenerationSlider.GetValue();
-		terrain->physics_generation = (int)physicsGenerationSlider.GetValue();
-		terrain->prop_density = propDensitySlider.GetValue();
-		terrain->grass_density = grassDensitySlider.GetValue();
-		terrain->chunk_scale = scaleSlider.GetValue();
-		terrain->seed = (uint32_t)seedSlider.GetValue();
-		terrain->bottomLevel = bottomLevelSlider.GetValue();
-		terrain->topLevel = topLevelSlider.GetValue();
-		terrain->region1 = region1Slider.GetValue();
-		terrain->region2 = region2Slider.GetValue();
-		terrain->region3 = region3Slider.GetValue();
-
-		terrain->SetGenerationStarted(false);
-	};
 
 	presetCombo.Create("Preset: ");
 	presetCombo.SetTooltip("Select a terrain preset");
@@ -863,7 +864,6 @@ void TerrainWindow::SetupAssets()
 		Scene props_scene;
 		wi::scene::LoadModel(props_scene, "terrain/tree.wiscene");
 		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
-		prop.name = "tree";
 		prop.min_count_per_chunk = 0;
 		prop.max_count_per_chunk = 10;
 		prop.region = 0;
@@ -875,16 +875,24 @@ void TerrainWindow::SetupAssets()
 		prop.max_size = 8.0f;
 		prop.min_y_offset = -0.5f;
 		prop.max_y_offset = -0.5f;
-		prop.mesh_entity = props_scene.Entity_FindByName("tree_mesh");
-		props_scene.impostors.Create(prop.mesh_entity).swapInDistance = 200;
+		Entity mesh_entity = props_scene.Entity_FindByName("tree_mesh");
+		props_scene.impostors.Create(mesh_entity).swapInDistance = 200;
 		Entity object_entity = props_scene.Entity_FindByName("tree_object");
 		ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
 		if (object != nullptr)
 		{
-			prop.object = *object;
-			prop.object.lod_distance_multiplier = 0.05f;
+			object->lod_distance_multiplier = 0.05f;
 			//prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
 		}
+		wi::Archive archive;
+		EntitySerializer seri;
+		props_scene.Entity_Serialize(
+			archive,
+			seri,
+			object_entity,
+			wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+		);
+		archive.WriteData(prop.data);
 		props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
 		editor->GetCurrentScene().Merge(props_scene);
 	}
@@ -893,7 +901,6 @@ void TerrainWindow::SetupAssets()
 		Scene props_scene;
 		wi::scene::LoadModel(props_scene, "terrain/rock.wiscene");
 		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
-		prop.name = "rock";
 		prop.min_count_per_chunk = 0;
 		prop.max_count_per_chunk = 8;
 		prop.region = 0;
@@ -905,16 +912,24 @@ void TerrainWindow::SetupAssets()
 		prop.max_size = 4.0f;
 		prop.min_y_offset = -2;
 		prop.max_y_offset = 0.5f;
-		prop.mesh_entity = props_scene.Entity_FindByName("rock_mesh");
+		Entity mesh_entity = props_scene.Entity_FindByName("rock_mesh");
 		Entity object_entity = props_scene.Entity_FindByName("rock_object");
 		ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
 		if (object != nullptr)
 		{
-			prop.object = *object;
-			prop.object.lod_distance_multiplier = 0.02f;
-			prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
-			prop.object.draw_distance = 400;
+			object->lod_distance_multiplier = 0.02f;
+			object->cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+			object->draw_distance = 400;
 		}
+		wi::Archive archive;
+		EntitySerializer seri;
+		props_scene.Entity_Serialize(
+			archive,
+			seri,
+			object_entity,
+			wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+		);
+		archive.WriteData(prop.data);
 		props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
 		editor->GetCurrentScene().Merge(props_scene);
 	}
@@ -923,7 +938,6 @@ void TerrainWindow::SetupAssets()
 		Scene props_scene;
 		wi::scene::LoadModel(props_scene, "terrain/bush.wiscene");
 		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
-		prop.name = "bush";
 		prop.min_count_per_chunk = 0;
 		prop.max_count_per_chunk = 10;
 		prop.region = 0;
@@ -935,16 +949,24 @@ void TerrainWindow::SetupAssets()
 		prop.max_size = 1.5f;
 		prop.min_y_offset = -1;
 		prop.max_y_offset = 0;
-		prop.mesh_entity = props_scene.Entity_FindByName("bush_mesh");
+		Entity mesh_entity = props_scene.Entity_FindByName("bush_mesh");
 		Entity object_entity = props_scene.Entity_FindByName("bush_object");
 		ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
 		if (object != nullptr)
 		{
-			prop.object = *object;
-			prop.object.lod_distance_multiplier = 0.05f;
-			prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
-			prop.object.draw_distance = 200;
+			object->lod_distance_multiplier = 0.05f;
+			object->cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+			object->draw_distance = 200;
 		}
+		wi::Archive archive;
+		EntitySerializer seri;
+		props_scene.Entity_Serialize(
+			archive,
+			seri,
+			object_entity,
+			wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+		);
+		archive.WriteData(prop.data);
 		props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
 		editor->GetCurrentScene().Merge(props_scene);
 	}

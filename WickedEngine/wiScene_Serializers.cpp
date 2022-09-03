@@ -624,6 +624,11 @@ namespace wi::scene
 				archive >> capsule.height;
 				archive >> capsule.radius;
 			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> mesh_lod;
+			}
 		}
 		else
 		{
@@ -645,6 +650,11 @@ namespace wi::scene
 				archive << sphere.radius;
 				archive << capsule.height;
 				archive << capsule.radius;
+			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << mesh_lod;
 			}
 		}
 	}
