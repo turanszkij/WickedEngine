@@ -30,9 +30,13 @@ namespace wi::lua::primitive
 		lunamethod(Ray_BindLua, Intersects),
 		lunamethod(Ray_BindLua, GetOrigin),
 		lunamethod(Ray_BindLua, GetDirection),
+		lunamethod(Ray_BindLua, SetOrigin),
+		lunamethod(Ray_BindLua, SetDirection),
 		{ NULL, NULL }
 	};
 	Luna<Ray_BindLua>::PropertyType Ray_BindLua::properties[] = {
+		lunaproperty(Ray_BindLua, Origin),
+		lunaproperty(Ray_BindLua, Direction),
 		{ NULL, NULL }
 	};
 
@@ -104,10 +108,52 @@ namespace wi::lua::primitive
 		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&ray.origin)));
 		return 1;
 	}
+	int Ray_BindLua::SetOrigin(lua_State *L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (v != nullptr)
+			{
+				XMStoreFloat3(&ray.origin, XMLoadFloat4(v));
+			}
+			else
+			{
+				wi::lua::SError(L, "SetOrigin(Vector vector) argument is not a vector!");
+			}
+		}
+		else
+		{
+			wi::lua::SError(L, "SetOrigin(Vector vector) not enough arguments!");
+		}
+		return 0;
+	}
 	int Ray_BindLua::GetDirection(lua_State* L)
 	{
 		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&ray.direction)));
 		return 1;
+	}
+	int Ray_BindLua::SetDirection(lua_State *L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (v != nullptr)
+			{
+				XMStoreFloat3(&ray.direction, XMLoadFloat4(v));
+			}
+			else
+			{
+				wi::lua::SError(L, "SetDirection(Vector vector) argument is not a vector!");
+			}
+		}
+		else
+		{
+			wi::lua::SError(L, "SetDirection(Vector vector) not enough arguments!");
+		}
+		return 0;
 	}
 
 
@@ -119,6 +165,8 @@ namespace wi::lua::primitive
 		lunamethod(AABB_BindLua, Intersects2D),
 		lunamethod(AABB_BindLua, GetMin),
 		lunamethod(AABB_BindLua, GetMax),
+		lunamethod(AABB_BindLua, SetMin),
+		lunamethod(AABB_BindLua, SetMax),
 		lunamethod(AABB_BindLua, GetCenter),
 		lunamethod(AABB_BindLua, GetHalfExtents),
 		lunamethod(AABB_BindLua, Transform),
@@ -126,6 +174,8 @@ namespace wi::lua::primitive
 		{ NULL, NULL }
 	};
 	Luna<AABB_BindLua>::PropertyType AABB_BindLua::properties[] = {
+		lunaproperty(AABB_BindLua, Min),
+		lunaproperty(AABB_BindLua, Max),
 		{ NULL, NULL }
 	};
 
@@ -220,11 +270,53 @@ namespace wi::lua::primitive
 		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&M)));
 		return 1;
 	}
+	int AABB_BindLua::SetMin(lua_State *L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (v != nullptr)
+			{
+				XMStoreFloat3(&aabb._min, XMLoadFloat4(v));
+			}
+			else
+			{
+				wi::lua::SError(L, "SetMin(Vector vector) argument is not a vector!");
+			}
+		}
+		else
+		{
+			wi::lua::SError(L, "SetMin(Vector vector) not enough arguments!");
+		}
+		return 0;
+	}
 	int AABB_BindLua::GetMax(lua_State* L)
 	{
 		XMFLOAT3 M = aabb.getMax();
 		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&M)));
 		return 1;
+	}
+	int AABB_BindLua::SetMax(lua_State *L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (v != nullptr)
+			{
+				XMStoreFloat3(&aabb._max, XMLoadFloat4(v));
+			}
+			else
+			{
+				wi::lua::SError(L, "SetMax(Vector vector) argument is not a vector!");
+			}
+		}
+		else
+		{
+			wi::lua::SError(L, "SetMax(Vector vector) not enough arguments!");
+		}
+		return 0;
 	}
 	int AABB_BindLua::GetCenter(lua_State* L)
 	{
