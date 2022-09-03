@@ -314,8 +314,9 @@ void Bind()
 		Luna<CameraComponent_BindLua>::Register(L);
 		Luna<AnimationComponent_BindLua>::Register(L);
 		Luna<MaterialComponent_BindLua>::Register(L);
+		Luna<MeshComponent_BindLua>::Register(L);
 		Luna<EmitterComponent_BindLua>::Register(L);
-		Luna<HairParticleComponent_BindLua>::Register(L);
+		Luna<HairParticleSystem_BindLua>::Register(L);
 		Luna<LightComponent_BindLua>::Register(L);
 		Luna<ObjectComponent_BindLua>::Register(L);
 		Luna<InverseKinematicsComponent_BindLua>::Register(L);
@@ -348,7 +349,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateLayer),
 	lunamethod(Scene_BindLua, Component_CreateTransform),
 	lunamethod(Scene_BindLua, Component_CreateEmitter),
-	lunamethod(Scene_BindLua, Component_CreateHairParticle),
+	lunamethod(Scene_BindLua, Component_CreateHairParticleSystem),
 	lunamethod(Scene_BindLua, Component_CreateLight),
 	lunamethod(Scene_BindLua, Component_CreateObject),
 	lunamethod(Scene_BindLua, Component_CreateMaterial),
@@ -368,8 +369,9 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetCamera),
 	lunamethod(Scene_BindLua, Component_GetAnimation),
 	lunamethod(Scene_BindLua, Component_GetMaterial),
+	lunamethod(Scene_BindLua, Component_GetMesh),
 	lunamethod(Scene_BindLua, Component_GetEmitter),
-	lunamethod(Scene_BindLua, Component_GetHairParticle),
+	lunamethod(Scene_BindLua, Component_GetHairParticleSystem),
 	lunamethod(Scene_BindLua, Component_GetLight),
 	lunamethod(Scene_BindLua, Component_GetObject),
 	lunamethod(Scene_BindLua, Component_GetInverseKinematics),
@@ -388,7 +390,9 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetCameraArray),
 	lunamethod(Scene_BindLua, Component_GetAnimationArray),
 	lunamethod(Scene_BindLua, Component_GetMaterialArray),
+	lunamethod(Scene_BindLua, Component_GetMeshArray),
 	lunamethod(Scene_BindLua, Component_GetEmitterArray),
+	lunamethod(Scene_BindLua, Component_GetHairParticleSystemArray),
 	lunamethod(Scene_BindLua, Component_GetLightArray),
 	lunamethod(Scene_BindLua, Component_GetObjectArray),
 	lunamethod(Scene_BindLua, Component_GetInverseKinematicsArray),
@@ -407,7 +411,9 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetCameraArray),
 	lunamethod(Scene_BindLua, Entity_GetAnimationArray),
 	lunamethod(Scene_BindLua, Entity_GetMaterialArray),
+	lunamethod(Scene_BindLua, Entity_GetMeshArray),
 	lunamethod(Scene_BindLua, Entity_GetEmitterArray),
+	lunamethod(Scene_BindLua, Entity_GetHairParticleSystemArray),
 	lunamethod(Scene_BindLua, Entity_GetLightArray),
 	lunamethod(Scene_BindLua, Entity_GetObjectArray),
 	lunamethod(Scene_BindLua, Entity_GetInverseKinematicsArray),
@@ -612,7 +618,7 @@ int Scene_BindLua::Component_CreateEmitter(lua_State* L)
 	}
 	return 0;
 }
-int Scene_BindLua::Component_CreateHairParticle(lua_State* L)
+int Scene_BindLua::Component_CreateHairParticleSystem(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
@@ -620,7 +626,7 @@ int Scene_BindLua::Component_CreateHairParticle(lua_State* L)
 		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		HairParticleSystem& component = scene->hairs.Create(entity);
-		Luna<HairParticleComponent_BindLua>::push(L, new HairParticleComponent_BindLua(&component));
+		Luna<HairParticleSystem_BindLua>::push(L, new HairParticleSystem_BindLua(&component));
 		return 1;
 	}
 	else
@@ -951,6 +957,28 @@ int Scene_BindLua::Component_GetMaterial(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetMesh(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		MeshComponent* component = scene->meshes.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<MeshComponent_BindLua>::push(L, new MeshComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetMesh(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 int Scene_BindLua::Component_GetEmitter(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -973,7 +1001,7 @@ int Scene_BindLua::Component_GetEmitter(lua_State* L)
 	}
 	return 0;
 }
-int Scene_BindLua::Component_GetHairParticle(lua_State* L)
+int Scene_BindLua::Component_GetHairParticleSystem(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
@@ -986,7 +1014,7 @@ int Scene_BindLua::Component_GetHairParticle(lua_State* L)
 			return 0;
 		}
 
-		Luna<HairParticleComponent_BindLua>::push(L, new HairParticleComponent_BindLua(component));
+		Luna<HairParticleSystem_BindLua>::push(L, new HairParticleSystem_BindLua(component));
 		return 1;
 	}
 	else
@@ -1304,6 +1332,17 @@ int Scene_BindLua::Component_GetMaterialArray(lua_State* L)
 	}
 	return 1;
 }
+int Scene_BindLua::Component_GetMeshArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->meshes.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->meshes.GetCount(); ++i)
+	{
+		Luna<MeshComponent_BindLua>::push(L, new MeshComponent_BindLua(&scene->meshes[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
 int Scene_BindLua::Component_GetEmitterArray(lua_State* L)
 {
 	lua_createtable(L, (int)scene->emitters.GetCount(), 0);
@@ -1315,13 +1354,13 @@ int Scene_BindLua::Component_GetEmitterArray(lua_State* L)
 	}
 	return 1;
 }
-int Scene_BindLua::Component_GetHairParticleArray(lua_State* L)
+int Scene_BindLua::Component_GetHairParticleSystemArray(lua_State* L)
 {
 	lua_createtable(L, (int)scene->hairs.GetCount(), 0);
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->hairs.GetCount(); ++i)
 	{
-		Luna<HairParticleComponent_BindLua>::push(L, new HairParticleComponent_BindLua(&scene->hairs[i]));
+		Luna<HairParticleSystem_BindLua>::push(L, new HairParticleSystem_BindLua(&scene->hairs[i]));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1514,6 +1553,17 @@ int Scene_BindLua::Entity_GetMaterialArray(lua_State* L)
 	}
 	return 1;
 }
+int Scene_BindLua::Entity_GetMeshArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->meshes.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->meshes.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->meshes.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
 int Scene_BindLua::Entity_GetEmitterArray(lua_State* L)
 {
 	lua_createtable(L, (int)scene->emitters.GetCount(), 0);
@@ -1525,7 +1575,7 @@ int Scene_BindLua::Entity_GetEmitterArray(lua_State* L)
 	}
 	return 1;
 }
-int Scene_BindLua::Entity_GetHairParticleArray(lua_State* L)
+int Scene_BindLua::Entity_GetHairParticleSystemArray(lua_State* L)
 {
 	lua_createtable(L, (int)scene->hairs.GetCount(), 0);
 	int newTable = lua_gettop(L);
@@ -3131,36 +3181,36 @@ int EmitterComponent_BindLua::SetMotionBlurAmount(lua_State* L)
 
 
 
-const char HairParticleComponent_BindLua::className[] = "HairParticleComponent";
+const char HairParticleSystem_BindLua::className[] = "HairParticleSystem";
 
-Luna<HairParticleComponent_BindLua>::FunctionType HairParticleComponent_BindLua::methods[] = {
+Luna<HairParticleSystem_BindLua>::FunctionType HairParticleSystem_BindLua::methods[] = {
 	{ NULL, NULL }
 };
-Luna<HairParticleComponent_BindLua>::PropertyType HairParticleComponent_BindLua::properties[] = {
-	lunaproperty(HairParticleComponent_BindLua, _flags),
+Luna<HairParticleSystem_BindLua>::PropertyType HairParticleSystem_BindLua::properties[] = {
+	lunaproperty(HairParticleSystem_BindLua, _flags),
 
-	lunaproperty(HairParticleComponent_BindLua, StrandCount),
-	lunaproperty(HairParticleComponent_BindLua, SegmentCount),
-	lunaproperty(HairParticleComponent_BindLua, RandomSeed),
-	lunaproperty(HairParticleComponent_BindLua, Length),
-	lunaproperty(HairParticleComponent_BindLua, Stiffness),
-	lunaproperty(HairParticleComponent_BindLua, Randomness),
-	lunaproperty(HairParticleComponent_BindLua, ViewDistance),
+	lunaproperty(HairParticleSystem_BindLua, StrandCount),
+	lunaproperty(HairParticleSystem_BindLua, SegmentCount),
+	lunaproperty(HairParticleSystem_BindLua, RandomSeed),
+	lunaproperty(HairParticleSystem_BindLua, Length),
+	lunaproperty(HairParticleSystem_BindLua, Stiffness),
+	lunaproperty(HairParticleSystem_BindLua, Randomness),
+	lunaproperty(HairParticleSystem_BindLua, ViewDistance),
 
-	lunaproperty(HairParticleComponent_BindLua, SpriteSheet_Frames_X),
-	lunaproperty(HairParticleComponent_BindLua, SpriteSheet_Frames_Y),
-	lunaproperty(HairParticleComponent_BindLua, SpriteSheet_Frame_Count),
-	lunaproperty(HairParticleComponent_BindLua, SpriteSheet_Frame_Start),
+	lunaproperty(HairParticleSystem_BindLua, SpriteSheet_Frames_X),
+	lunaproperty(HairParticleSystem_BindLua, SpriteSheet_Frames_Y),
+	lunaproperty(HairParticleSystem_BindLua, SpriteSheet_Frame_Count),
+	lunaproperty(HairParticleSystem_BindLua, SpriteSheet_Frame_Start),
 	{ NULL, NULL }
 };
 
-HairParticleComponent_BindLua::HairParticleComponent_BindLua(lua_State *L)
+HairParticleSystem_BindLua::HairParticleSystem_BindLua(lua_State *L)
 {
 	owning = true;
 	component = new wi::HairParticleSystem;
 	BuildBindings();
 }
-HairParticleComponent_BindLua::~HairParticleComponent_BindLua()
+HairParticleSystem_BindLua::~HairParticleSystem_BindLua()
 {
 	if (owning)
 	{

@@ -47,7 +47,7 @@ namespace wi::lua::scene
 		int Component_CreateLayer(lua_State* L);
 		int Component_CreateTransform(lua_State* L);
 		int Component_CreateEmitter(lua_State* L);
-		int Component_CreateHairParticle(lua_State* L);
+		int Component_CreateHairParticleSystem(lua_State* L);
 		int Component_CreateLight(lua_State* L);
 		int Component_CreateObject(lua_State* L);
 		int Component_CreateMaterial(lua_State* L);
@@ -67,8 +67,9 @@ namespace wi::lua::scene
 		int Component_GetCamera(lua_State* L);
 		int Component_GetAnimation(lua_State* L);
 		int Component_GetMaterial(lua_State* L);
+		int Component_GetMesh(lua_State* L);
 		int Component_GetEmitter(lua_State* L);
-		int Component_GetHairParticle(lua_State* L);
+		int Component_GetHairParticleSystem(lua_State* L);
 		int Component_GetLight(lua_State* L);
 		int Component_GetObject(lua_State* L);
 		int Component_GetInverseKinematics(lua_State* L);
@@ -87,8 +88,9 @@ namespace wi::lua::scene
 		int Component_GetCameraArray(lua_State* L);
 		int Component_GetAnimationArray(lua_State* L);
 		int Component_GetMaterialArray(lua_State* L);
+		int Component_GetMeshArray(lua_State* L);
 		int Component_GetEmitterArray(lua_State* L);
-		int Component_GetHairParticleArray(lua_State* L);
+		int Component_GetHairParticleSystemArray(lua_State* L);
 		int Component_GetLightArray(lua_State* L);
 		int Component_GetObjectArray(lua_State* L);
 		int Component_GetInverseKinematicsArray(lua_State* L);
@@ -107,8 +109,9 @@ namespace wi::lua::scene
 		int Entity_GetCameraArray(lua_State* L);
 		int Entity_GetAnimationArray(lua_State* L);
 		int Entity_GetMaterialArray(lua_State* L);
+		int Entity_GetMeshArray(lua_State* L);
 		int Entity_GetEmitterArray(lua_State* L);
-		int Entity_GetHairParticleArray(lua_State* L);
+		int Entity_GetHairParticleSystemArray(lua_State* L);
 		int Entity_GetLightArray(lua_State* L);
 		int Entity_GetObjectArray(lua_State* L);
 		int Entity_GetInverseKinematicsArray(lua_State* L);
@@ -526,15 +529,15 @@ namespace wi::lua::scene
 		int GetMotionBlurAmount(lua_State* L);
 	};
 
-	class HairParticleComponent_BindLua
+	class HairParticleSystem_BindLua
 	{
 	public:
 		bool owning = false;
 		HairParticleSystem* component = nullptr;
 
 		static const char className[];
-		static Luna<HairParticleComponent_BindLua>::FunctionType methods[];
-		static Luna<HairParticleComponent_BindLua>::PropertyType properties[];
+		static Luna<HairParticleSystem_BindLua>::FunctionType methods[];
+		static Luna<HairParticleSystem_BindLua>::PropertyType properties[];
 
 		inline void BuildBindings()
 		{
@@ -554,9 +557,9 @@ namespace wi::lua::scene
 			SpriteSheet_Frame_Start = LongLongProperty(reinterpret_cast<long long*>(&component->frameStart));
 		}
 
-		HairParticleComponent_BindLua(HairParticleSystem* component) :component(component) { BuildBindings(); }
-		HairParticleComponent_BindLua(lua_State *L);
-		~HairParticleComponent_BindLua();
+		HairParticleSystem_BindLua(HairParticleSystem* component) :component(component) { BuildBindings(); }
+		HairParticleSystem_BindLua(lua_State *L);
+		~HairParticleSystem_BindLua();
 
 		LongLongProperty _flags;
 
