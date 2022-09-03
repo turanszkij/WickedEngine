@@ -369,6 +369,19 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&lodSlider);
 
+	drawdistanceSlider.Create(0, 1000, 1, 10000, "Draw Distance: ");
+	drawdistanceSlider.SetTooltip("Specify the draw distance of the object");
+	drawdistanceSlider.SetSize(XMFLOAT2(wid, hei));
+	drawdistanceSlider.SetPos(XMFLOAT2(x, y += step));
+	drawdistanceSlider.OnSlide([&](wi::gui::EventArgs args) {
+		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
+		if (object != nullptr)
+		{
+			object->draw_distance = args.fValue;
+		}
+		});
+	AddWidget(&drawdistanceSlider);
+
 	y += step;
 
 
@@ -597,6 +610,7 @@ void ObjectWindow::SetEntity(Entity entity)
 		cascadeMaskSlider.SetValue((float)object->cascadeMask);
 		ditherSlider.SetValue(object->GetTransparency());
 		lodSlider.SetValue(object->lod_distance_multiplier);
+		drawdistanceSlider.SetValue(object->draw_distance);
 
 		switch (colorComboBox.GetSelected())
 		{
@@ -667,6 +681,7 @@ void ObjectWindow::ResizeLayout()
 	add(ditherSlider);
 	add(cascadeMaskSlider);
 	add(lodSlider);
+	add(drawdistanceSlider);
 	add(colorComboBox);
 	add_fullwidth(colorPicker);
 	add(lightmapResolutionSlider);

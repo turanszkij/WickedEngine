@@ -135,16 +135,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
-    <None Include="$(MSBuildThisFileDirectory)terrain\bush.wiscene">
-      <Filter>terrain</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)terrain\rock.wiscene">
-      <Filter>terrain</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)terrain\tree.wiscene">
-      <Filter>terrain</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)config.ini" />
+    <None Include="$(MSBuildThisFileDirectory)terrain\props.wiscene">
+      <Filter>terrain</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="meshoptimizer">
@@ -184,25 +178,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="$(MSBuildThisFileDirectory)terrain\base-LICENSE.txt">
-      <Filter>terrain</Filter>
-    </Text>
-    <Text Include="$(MSBuildThisFileDirectory)terrain\high_altitude-LICENSE.txt">
-      <Filter>terrain</Filter>
-    </Text>
-    <Text Include="$(MSBuildThisFileDirectory)terrain\low_altitude-LICENSE.txt">
-      <Filter>terrain</Filter>
-    </Text>
-    <Text Include="$(MSBuildThisFileDirectory)terrain\slope-LICENSE.txt">
-      <Filter>terrain</Filter>
-    </Text>
-    <Text Include="$(MSBuildThisFileDirectory)terrain\bush-LICENSE.txt">
-      <Filter>terrain</Filter>
-    </Text>
-    <Text Include="$(MSBuildThisFileDirectory)terrain\rock-LICENSE.txt">
-      <Filter>terrain</Filter>
-    </Text>
-    <Text Include="$(MSBuildThisFileDirectory)terrain\tree-LICENSE.txt">
+    <Text Include="$(MSBuildThisFileDirectory)terrain\licenses.txt">
       <Filter>terrain</Filter>
     </Text>
   </ItemGroup>

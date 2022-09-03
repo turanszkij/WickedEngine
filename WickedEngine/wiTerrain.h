@@ -64,9 +64,7 @@ namespace wi::terrain
 
 	struct Prop
 	{
-		std::string name = "prop";
-		wi::ecs::Entity mesh_entity = wi::ecs::INVALID_ENTITY;
-		wi::scene::ObjectComponent object;
+		wi::vector<uint8_t> data; // serialized component data storage
 		int min_count_per_chunk = 0; // a chunk will try to generate min this many props of this type
 		int max_count_per_chunk = 10; // a chunk will try to generate max this many props of this type
 		int region = 0; // region selection in range [0,3] (0: base/grass, 1: slopes, 2: low altitude (bottom level-0), 3: high altitude (0-top level))
@@ -92,6 +90,7 @@ namespace wi::terrain
 			REMOVAL = 1 << 1,
 			GRASS = 1 << 2,
 			GENERATION_STARTED = 1 << 4,
+			PHYSICS = 1 << 5,
 		};
 		uint32_t _flags = CENTER_TO_CAM | REMOVAL | GRASS;
 
@@ -108,6 +107,7 @@ namespace wi::terrain
 		Chunk center_chunk = {};
 		wi::noise::Perlin perlin_noise;
 		wi::vector<Prop> props;
+		wi::unordered_map<uint64_t, wi::ecs::Entity> serializer_state;
 
 		// For generating scene on a background thread:
 		std::shared_ptr<Generator> generator;
@@ -125,16 +125,19 @@ namespace wi::terrain
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }
 		constexpr bool IsGrassEnabled() const { return _flags & GRASS; }
 		constexpr bool IsGenerationStarted() const { return _flags & GENERATION_STARTED; }
+		constexpr bool IsPhysicsEnabled() const { return _flags & PHYSICS; }
 
 		constexpr void SetCenterToCamEnabled(bool value) { if (value) { _flags |= CENTER_TO_CAM; } else { _flags &= ~CENTER_TO_CAM; } }
 		constexpr void SetRemovalEnabled(bool value) { if (value) { _flags |= REMOVAL; } else { _flags &= ~REMOVAL; } }
 		constexpr void SetGrassEnabled(bool value) { if (value) { _flags |= GRASS; } else { _flags &= ~GRASS; } }
 		constexpr void SetGenerationStarted(bool value) { if (value) { _flags |= GENERATION_STARTED; } else { _flags &= ~GENERATION_STARTED; } }
+		constexpr void SetPhysicsEnabled(bool value) { if (value) { _flags |= PHYSICS; } else { _flags &= ~PHYSICS; } }
 
 		float lod_multiplier = 0.005f;
 		float texlod = 0.01f;
 		int generation = 12;
 		int prop_generation = 10;
+		int physics_generation = 3;
 		float prop_density = 1;
 		float grass_density = 1;
 		float chunk_scale = 1;

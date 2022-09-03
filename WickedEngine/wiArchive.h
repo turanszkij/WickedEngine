@@ -42,7 +42,9 @@ namespace wi
 		Archive& operator=(const Archive&) = default;
 		Archive& operator=(Archive&&) = default;
 
+		void WriteData(wi::vector<uint8_t>& dest) const { dest.resize(pos); std::memcpy(dest.data(), data_ptr, pos); }
 		const uint8_t* GetData() const { return data_ptr; }
+		size_t GetPos() const { return pos; }
 		constexpr uint64_t GetVersion() const { return version; }
 		constexpr bool IsReadMode() const { return readMode; }
 		// This can set the archive into either read or write mode, and it will reset it's position

@@ -66,8 +66,8 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Force Field " ICON_FORCE, 13);
 	newComponentCombo.AddItem("Animation " ICON_ANIMATION, 14);
 	newComponentCombo.AddItem("Script " ICON_SCRIPT, 15);
-	newComponentCombo.AddItem("Rigid Body " ICON_RIGIDBODY, 16);
-	newComponentCombo.AddItem("Soft Body " ICON_SOFTBODY, 17);
+	newComponentCombo.AddItem("Rigid Body Physics " ICON_RIGIDBODY, 16);
+	newComponentCombo.AddItem("Soft Body Physics " ICON_SOFTBODY, 17);
 	newComponentCombo.AddItem("Collider " ICON_COLLIDER, 18);
 	newComponentCombo.AddItem("Camera " ICON_CAMERA, 20);
 	newComponentCombo.AddItem("Object " ICON_OBJECT, 21);

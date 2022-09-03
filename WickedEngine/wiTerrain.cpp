@@ -168,7 +168,7 @@ namespace wi::terrain
 	{
 		wi::scene::Scene scene; // The background generation thread can safely add things to this, it will be merged into the main scene when it is safe to do so
 		wi::jobsystem::context workload;
-		std::atomic_bool cancelled;
+		std::atomic_bool cancelled{ false };
 	};
 
 	Terrain::Terrain()
@@ -282,6 +282,12 @@ namespace wi::terrain
 			return;
 		}
 
+		WeatherComponent* weather_component = scene->weathers.GetComponent(terrainEntity);
+		if (weather_component != nullptr)
+		{
+			weather = *weather_component; // feedback default weather
+		}
+
 		// What was generated, will be merged in to the main scene
 		scene->Merge(generator->scene);
 
@@ -385,6 +391,46 @@ namespace wi::terrain
 				{
 					chunk_data.grass_density_current = grass_density;
 					grass->strandCount = uint32_t(chunk_data.grass.strandCount * chunk_data.grass_density_current);
+				}
+			}
+
+			RigidBodyPhysicsComponent* rigidbody = scene->rigidbodies.GetComponent(chunk_data.entity);
+			if (IsPhysicsEnabled())
+			{
+				const int lod_required = std::max(0, dist - 1);
+
+				if (rigidbody != nullptr)
+				{
+					if (dist < physics_generation)
+					{
+						if (rigidbody->mesh_lod != lod_required)
+						{
+							rigidbody->mesh_lod = lod_required;
+							rigidbody->physicsobject = {}; // will be recreated
+						}
+					}
+					else
+					{
+						scene->rigidbodies.Remove(chunk_data.entity);
+					}
+				}
+				else
+				{
+					if (dist < physics_generation)
+					{
+						RigidBodyPhysicsComponent& newrigidbody = scene->rigidbodies.Create(chunk_data.entity);
+						newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
+						newrigidbody.SetDisableDeactivation(true);
+						newrigidbody.SetKinematic(true);
+						newrigidbody.mesh_lod = lod_required;
+					}
+				}
+			}
+			else
+			{
+				if (rigidbody != nullptr)
+				{
+					scene->rigidbodies.Remove(chunk_data.entity);
 				}
 			}
 
@@ -705,7 +751,7 @@ namespace wi::terrain
 							std::mt19937 prop_rand;
 							prop_rand.seed((uint32_t)chunk.compute_hash() ^ seed);
 
-							for (auto& prop : props)
+							for (const auto& prop : props)
 							{
 								std::uniform_int_distribution<uint32_t> gen_distr(
 									uint32_t(prop.min_count_per_chunk * chunk_data.prop_density_current),
@@ -748,21 +794,50 @@ namespace wi::terrain
 									const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise;
 									if (chance > prop.threshold)
 									{
-										Entity entity = generator->scene.Entity_CreateObject(prop.name + std::to_string(i));
-										ObjectComponent* object = generator->scene.objects.GetComponent(entity);
-										*object = prop.object;
+										wi::Archive archive = wi::Archive(prop.data.data());
+										EntitySerializer seri;
+										wi::scene::Scene::EntitySerializeFlags flags = wi::scene::Scene::EntitySerializeFlags::RECURSIVE;
+										if (serializer_state.empty())
+										{
+											// This means the terrain was not serialized, but prop assets provided in this session, so we can keep references to them:
+											flags |= wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES;
+										}
+										else
+										{
+											// This means that terrain was serialized, so we have to resolve prop source asset dependencies:
+											seri.remap = serializer_state;
+										}
+										Entity entity = generator->scene.Entity_Serialize(
+											archive,
+											seri,
+											INVALID_ENTITY,
+											flags
+										);
+										NameComponent* name = generator->scene.names.GetComponent(entity);
+										if (name != nullptr)
+										{
+											name->name += std::to_string(i);
+										}
 										TransformComponent* transform = generator->scene.transforms.GetComponent(entity);
-										XMFLOAT3 offset = vertex_pos;
-										offset.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, float_distr(prop_rand));
-										transform->Translate(offset);
+										if (transform == nullptr)
+										{
+											transform = &generator->scene.transforms.Create(entity);
+										}
+										transform->translation_local = vertex_pos;
+										transform->translation_local.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, float_distr(prop_rand));
 										const float scaling = wi::math::Lerp(prop.min_size, prop.max_size, float_distr(prop_rand));
 										transform->Scale(XMFLOAT3(scaling, scaling, scaling));
 										transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * float_distr(prop_rand), 0));
+										transform->SetDirty();
 										transform->UpdateTransform();
 										generator->scene.Component_Attach(entity, chunk_data.props_entity, true);
 										generated_something = true;
 									}
 								}
+							}
+							if (!IsPhysicsEnabled())
+							{
+								generator->scene.rigidbodies.Clear();
 							}
 						}
 					}
@@ -850,7 +925,7 @@ namespace wi::terrain
 					case MaterialComponent::BASECOLORMAP:
 					case MaterialComponent::SURFACEMAP:
 					case MaterialComponent::NORMALMAP:
-						if (tex.name.empty() && tex.GetGPUResource() != nullptr)
+						if (!tex.name.empty() && tex.GetGPUResource() != nullptr)
 						{
 							wi::vector<uint8_t> filedata;
 							if (wi::helper::saveTextureToMemory(tex.resource.GetTexture(), filedata))
@@ -943,15 +1018,46 @@ namespace wi::terrain
 			archive >> center_chunk.x;
 			archive >> center_chunk.z;
 
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> physics_generation;
+			}
+
 			size_t count = 0;
 			archive >> count;
 			props.resize(count);
 			for (size_t i = 0; i < props.size(); ++i)
 			{
 				Prop& prop = props[i];
-				archive >> prop.name;
-				SerializeEntity(archive, prop.mesh_entity, seri);
-				prop.object.Serialize(archive, seri);
+				if (seri.GetVersion() >= 1)
+				{
+					archive >> prop.data;
+				}
+				else
+				{
+					// Back compat reading of terrain version 0:
+					std::string name;
+					Entity mesh_entity;
+					ObjectComponent object;
+					archive >> name;
+					SerializeEntity(archive, mesh_entity, seri);
+					object.Serialize(archive, seri);
+					Scene tmp_scene;
+					Entity object_entity = CreateEntity();
+					tmp_scene.names.Create(object_entity) = name;
+					tmp_scene.objects.Create(object_entity) = object;
+					tmp_scene.aabb_objects.Create(object_entity);
+					tmp_scene.transforms.Create(object_entity);
+					wi::Archive archive;
+					EntitySerializer seri;
+					tmp_scene.Entity_Serialize(
+						archive,
+						seri,
+						object_entity,
+						wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+					);
+					archive.WriteData(prop.data);
+				}
 				archive >> prop.min_count_per_chunk;
 				archive >> prop.max_count_per_chunk;
 				archive >> prop.region;
@@ -1036,6 +1142,8 @@ namespace wi::terrain
 				archive >> modifier->weight;
 				archive >> modifier->frequency;
 			}
+
+			serializer_state = seri.remap;
 		}
 		else
 		{
@@ -1059,13 +1167,16 @@ namespace wi::terrain
 			archive << center_chunk.x;
 			archive << center_chunk.z;
 
+			if (seri.GetVersion() >= 1)
+			{
+				archive << physics_generation;
+			}
+
 			archive << props.size();
 			for (size_t i = 0; i < props.size(); ++i)
 			{
 				Prop& prop = props[i];
-				archive << prop.name;
-				SerializeEntity(archive, prop.mesh_entity, seri);
-				prop.object.Serialize(archive, seri);
+				archive << prop.data;
 				archive << prop.min_count_per_chunk;
 				archive << prop.max_count_per_chunk;
 				archive << prop.region;

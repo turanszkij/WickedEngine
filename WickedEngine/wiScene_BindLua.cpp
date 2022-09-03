@@ -2709,7 +2709,7 @@ int MaterialComponent_BindLua::SetTexture(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc >= 2)
 	{
-		uint32_t textureindex = wi::lua::SGetLongLong(L, 1);
+		uint32_t textureindex = (uint32_t)wi::lua::SGetLongLong(L, 1);
 		std::string resourcename = wi::lua::SGetString(L, 2);
 
 		if(textureindex < MaterialComponent::TEXTURESLOT_COUNT)
@@ -2736,7 +2736,7 @@ int MaterialComponent_BindLua::GetTexture(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		uint32_t textureindex = wi::lua::SGetLongLong(L, 1);
+		uint32_t textureindex = (uint32_t)wi::lua::SGetLongLong(L, 1);
 
 		if(textureindex < MaterialComponent::TEXTURESLOT_COUNT)
 		{
@@ -2760,8 +2760,8 @@ int MaterialComponent_BindLua::SetTextureUVSet(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc >= 2)
 	{
-		uint32_t textureindex = wi::lua::SGetLongLong(L, 1);
-		uint32_t uvset = wi::lua::SGetLongLong(L, 2);
+		uint32_t textureindex = (uint32_t)wi::lua::SGetLongLong(L, 1);
+		uint32_t uvset = (uint32_t)wi::lua::SGetLongLong(L, 2);
 
 		if(textureindex < MaterialComponent::TEXTURESLOT_COUNT)
 		{
@@ -2786,7 +2786,7 @@ int MaterialComponent_BindLua::GetTextureUVSet(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		uint32_t textureindex = wi::lua::SGetLongLong(L, 1);
+		uint32_t textureindex = (uint32_t)wi::lua::SGetLongLong(L, 1);
 
 		if(textureindex < MaterialComponent::TEXTURESLOT_COUNT)
 		{
@@ -2849,8 +2849,8 @@ int MeshComponent_BindLua::SetMeshSubsetMaterialID(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc >= 2)
 	{
-		size_t subsetindex = wi::lua::SGetLongLong(L, 1);
-		uint32_t uvset = wi::lua::SGetLongLong(L, 2);
+		size_t subsetindex = (uint32_t)wi::lua::SGetLongLong(L, 1);
+		uint32_t uvset = (uint32_t)wi::lua::SGetLongLong(L, 2);
 
 		if(subsetindex < component->subsets.size())
 		{
