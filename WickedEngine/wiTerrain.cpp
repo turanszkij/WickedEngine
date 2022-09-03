@@ -168,7 +168,7 @@ namespace wi::terrain
 	{
 		wi::scene::Scene scene; // The background generation thread can safely add things to this, it will be merged into the main scene when it is safe to do so
 		wi::jobsystem::context workload;
-		std::atomic_bool cancelled;
+		std::atomic_bool cancelled{ false };
 	};
 
 	Terrain::Terrain()
@@ -282,6 +282,12 @@ namespace wi::terrain
 			return;
 		}
 
+		WeatherComponent* weather_component = scene->weathers.GetComponent(terrainEntity);
+		if (weather_component != nullptr)
+		{
+			weather = *weather_component; // feedback default weather
+		}
+
 		// What was generated, will be merged in to the main scene
 		scene->Merge(generator->scene);
 
@@ -385,6 +391,46 @@ namespace wi::terrain
 				{
 					chunk_data.grass_density_current = grass_density;
 					grass->strandCount = uint32_t(chunk_data.grass.strandCount * chunk_data.grass_density_current);
+				}
+			}
+
+			RigidBodyPhysicsComponent* rigidbody = scene->rigidbodies.GetComponent(chunk_data.entity);
+			if (IsPhysicsEnabled())
+			{
+				const int lod_required = std::max(0, dist - 1);
+
+				if (rigidbody != nullptr)
+				{
+					if (dist < physics_generation)
+					{
+						if (rigidbody->mesh_lod != lod_required)
+						{
+							rigidbody->mesh_lod = lod_required;
+							rigidbody->physicsobject = {}; // will be recreated
+						}
+					}
+					else
+					{
+						scene->rigidbodies.Remove(chunk_data.entity);
+					}
+				}
+				else
+				{
+					if (dist < physics_generation)
+					{
+						RigidBodyPhysicsComponent& newrigidbody = scene->rigidbodies.Create(chunk_data.entity);
+						newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
+						newrigidbody.SetDisableDeactivation(true);
+						newrigidbody.SetKinematic(true);
+						newrigidbody.mesh_lod = lod_required;
+					}
+				}
+			}
+			else
+			{
+				if (rigidbody != nullptr)
+				{
+					scene->rigidbodies.Remove(chunk_data.entity);
 				}
 			}
 
@@ -850,7 +896,7 @@ namespace wi::terrain
 					case MaterialComponent::BASECOLORMAP:
 					case MaterialComponent::SURFACEMAP:
 					case MaterialComponent::NORMALMAP:
-						if (tex.name.empty() && tex.GetGPUResource() != nullptr)
+						if (!tex.name.empty() && tex.GetGPUResource() != nullptr)
 						{
 							wi::vector<uint8_t> filedata;
 							if (wi::helper::saveTextureToMemory(tex.resource.GetTexture(), filedata))
@@ -942,6 +988,11 @@ namespace wi::terrain
 
 			archive >> center_chunk.x;
 			archive >> center_chunk.z;
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> physics_generation;
+			}
 
 			size_t count = 0;
 			archive >> count;
@@ -1058,6 +1109,11 @@ namespace wi::terrain
 
 			archive << center_chunk.x;
 			archive << center_chunk.z;
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << physics_generation;
+			}
 
 			archive << props.size();
 			for (size_t i = 0; i < props.size(); ++i)

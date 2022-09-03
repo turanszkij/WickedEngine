@@ -332,32 +332,7 @@ void RigidBodyWindow::SetEntity(Entity entity)
 		kinematicCheckBox.SetCheck(physicsComponent->IsKinematic());
 		disabledeactivationCheckBox.SetCheck(physicsComponent->IsDisableDeactivation());
 
-		if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::BOX)
-		{
-			collisionShapeComboBox.SetSelected(1);
-		}
-		else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::SPHERE)
-		{
-			collisionShapeComboBox.SetSelected(2);
-		}
-		else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::CAPSULE)
-		{
-			collisionShapeComboBox.SetSelected(3);
-		}
-		else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL)
-		{
-			collisionShapeComboBox.SetSelected(4);
-		}
-		else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH)
-		{
-			collisionShapeComboBox.SetSelected(5);
-		}
-	}
-	else
-	{
-		collisionShapeComboBox.SetSelected(0);
-		kinematicCheckBox.SetCheck(false);
-		disabledeactivationCheckBox.SetCheck(false);
+		collisionShapeComboBox.SetSelectedByUserdataWithoutCallback((uint64_t)physicsComponent->shape);
 	}
 
 }

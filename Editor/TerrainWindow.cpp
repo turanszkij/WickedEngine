@@ -326,6 +326,16 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&grassCheckBox);
 
+	physicsCheckBox.Create("Physics: ");
+	physicsCheckBox.SetTooltip("Specify whether physics is enabled for newly generated terrain chunks.");
+	physicsCheckBox.SetSize(XMFLOAT2(hei, hei));
+	physicsCheckBox.SetPos(XMFLOAT2(x, y += step));
+	physicsCheckBox.SetCheck(true);
+	physicsCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		terrain->SetPhysicsEnabled(args.bValue);
+		});
+	AddWidget(&physicsCheckBox);
+
 	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "Mesh LOD Distance: ");
 	lodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
 	lodSlider.SetSize(XMFLOAT2(wid, hei));
@@ -365,14 +375,23 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&generationSlider);
 
-	propSlider.Create(0, 16, 10, 16, "Prop Distance: ");
-	propSlider.SetTooltip("How far out props will be generated (value is in number of chunks)");
-	propSlider.SetSize(XMFLOAT2(wid, hei));
-	propSlider.SetPos(XMFLOAT2(x, y += step));
-	propSlider.OnSlide([this](wi::gui::EventArgs args) {
+	propGenerationSlider.Create(0, 16, 10, 16, "Prop Distance: ");
+	propGenerationSlider.SetTooltip("How far out props will be generated (value is in number of chunks)");
+	propGenerationSlider.SetSize(XMFLOAT2(wid, hei));
+	propGenerationSlider.SetPos(XMFLOAT2(x, y += step));
+	propGenerationSlider.OnSlide([this](wi::gui::EventArgs args) {
 		terrain->prop_generation = args.iValue;
 		});
-	AddWidget(&propSlider);
+	AddWidget(&propGenerationSlider);
+
+	physicsGenerationSlider.Create(0, 16, 3, 16, "Physics Distance: ");
+	physicsGenerationSlider.SetTooltip("How far out physics meshes will be generated (value is in number of chunks)");
+	physicsGenerationSlider.SetSize(XMFLOAT2(wid, hei));
+	physicsGenerationSlider.SetPos(XMFLOAT2(x, y += step));
+	physicsGenerationSlider.OnSlide([this](wi::gui::EventArgs args) {
+		terrain->physics_generation = args.iValue;
+		});
+	AddWidget(&physicsGenerationSlider);
 
 	propDensitySlider.Create(0, 10, 1, 1000, "Prop Density: ");
 	propDensitySlider.SetTooltip("Modifies overall prop density.");
@@ -400,7 +419,8 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		terrain->lod_multiplier = lodSlider.GetValue();
 		terrain->texlod = texlodSlider.GetValue();
 		terrain->generation = (int)generationSlider.GetValue();
-		terrain->prop_generation = (int)propSlider.GetValue();
+		terrain->prop_generation = (int)propGenerationSlider.GetValue();
+		terrain->physics_generation = (int)physicsGenerationSlider.GetValue();
 		terrain->prop_density = propDensitySlider.GetValue();
 		terrain->grass_density = grassDensitySlider.GetValue();
 		terrain->chunk_scale = scaleSlider.GetValue();
@@ -747,10 +767,12 @@ void TerrainWindow::SetEntity(Entity entity)
 	centerToCamCheckBox.SetCheck(terrain->IsCenterToCamEnabled());
 	removalCheckBox.SetCheck(terrain->IsRemovalEnabled());
 	grassCheckBox.SetCheck(terrain->IsGrassEnabled());
+	physicsCheckBox.SetCheck(terrain->IsPhysicsEnabled());
 	lodSlider.SetValue(terrain->lod_multiplier);
 	texlodSlider.SetValue(terrain->texlod);
 	generationSlider.SetValue((float)terrain->generation);
-	propSlider.SetValue((float)terrain->prop_generation);
+	propGenerationSlider.SetValue((float)terrain->prop_generation);
+	physicsGenerationSlider.SetValue((float)terrain->physics_generation);
 	propDensitySlider.SetValue(terrain->prop_density);
 	scaleSlider.SetValue(terrain->chunk_scale);
 	seedSlider.SetValue((float)terrain->seed);
@@ -984,13 +1006,15 @@ void TerrainWindow::ResizeLayout()
 		widget.SetEnabled(true);
 	};
 
-	add_checkbox(centerToCamCheckBox);
 	add_checkbox(removalCheckBox);
+	centerToCamCheckBox.SetPos(XMFLOAT2(removalCheckBox.GetPos().x - 100, removalCheckBox.GetPos().y));
 	add_checkbox(grassCheckBox);
+	physicsCheckBox.SetPos(XMFLOAT2(grassCheckBox.GetPos().x - 100, grassCheckBox.GetPos().y));
 	add(lodSlider);
 	add(texlodSlider);
 	add(generationSlider);
-	add(propSlider);
+	add(propGenerationSlider);
+	add(physicsGenerationSlider);
 	add(propDensitySlider);
 	add(grassDensitySlider);
 	add(presetCombo);

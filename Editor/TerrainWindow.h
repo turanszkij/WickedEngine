@@ -55,10 +55,12 @@ public:
 	wi::gui::CheckBox centerToCamCheckBox;
 	wi::gui::CheckBox removalCheckBox;
 	wi::gui::CheckBox grassCheckBox;
+	wi::gui::CheckBox physicsCheckBox;
 	wi::gui::Slider lodSlider;
 	wi::gui::Slider texlodSlider;
 	wi::gui::Slider generationSlider;
-	wi::gui::Slider propSlider;
+	wi::gui::Slider propGenerationSlider;
+	wi::gui::Slider physicsGenerationSlider;
 	wi::gui::Slider propDensitySlider;
 	wi::gui::Slider grassDensitySlider;
 	wi::gui::ComboBox presetCombo;

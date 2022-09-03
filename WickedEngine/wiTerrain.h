@@ -92,6 +92,7 @@ namespace wi::terrain
 			REMOVAL = 1 << 1,
 			GRASS = 1 << 2,
 			GENERATION_STARTED = 1 << 4,
+			PHYSICS = 1 << 5,
 		};
 		uint32_t _flags = CENTER_TO_CAM | REMOVAL | GRASS;
 
@@ -125,16 +126,19 @@ namespace wi::terrain
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }
 		constexpr bool IsGrassEnabled() const { return _flags & GRASS; }
 		constexpr bool IsGenerationStarted() const { return _flags & GENERATION_STARTED; }
+		constexpr bool IsPhysicsEnabled() const { return _flags & PHYSICS; }
 
 		constexpr void SetCenterToCamEnabled(bool value) { if (value) { _flags |= CENTER_TO_CAM; } else { _flags &= ~CENTER_TO_CAM; } }
 		constexpr void SetRemovalEnabled(bool value) { if (value) { _flags |= REMOVAL; } else { _flags &= ~REMOVAL; } }
 		constexpr void SetGrassEnabled(bool value) { if (value) { _flags |= GRASS; } else { _flags &= ~GRASS; } }
 		constexpr void SetGenerationStarted(bool value) { if (value) { _flags |= GENERATION_STARTED; } else { _flags &= ~GENERATION_STARTED; } }
+		constexpr void SetPhysicsEnabled(bool value) { if (value) { _flags |= PHYSICS; } else { _flags &= ~PHYSICS; } }
 
 		float lod_multiplier = 0.005f;
 		float texlod = 0.01f;
 		int generation = 12;
 		int prop_generation = 10;
+		int physics_generation = 3;
 		float prop_density = 1;
 		float grass_density = 1;
 		float chunk_scale = 1;
