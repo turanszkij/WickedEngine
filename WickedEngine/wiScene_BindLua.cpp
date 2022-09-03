@@ -3145,7 +3145,7 @@ Luna<HairParticleComponent_BindLua>::PropertyType HairParticleComponent_BindLua:
 	lunaproperty(HairParticleComponent_BindLua, Length),
 	lunaproperty(HairParticleComponent_BindLua, Stiffness),
 	lunaproperty(HairParticleComponent_BindLua, Randomness),
-	lunaproperty(HairParticleComponent_BindLua, viewDistance),
+	lunaproperty(HairParticleComponent_BindLua, ViewDistance),
 
 	lunaproperty(HairParticleComponent_BindLua, SpriteSheet_Frames_X),
 	lunaproperty(HairParticleComponent_BindLua, SpriteSheet_Frames_Y),

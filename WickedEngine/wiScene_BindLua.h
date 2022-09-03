@@ -546,7 +546,7 @@ namespace wi::lua::scene
 			Length = FloatProperty(&component->length);
 			Stiffness = FloatProperty(&component->stiffness);
 			Randomness = FloatProperty(&component->randomness);
-			viewDistance = FloatProperty(&component->viewDistance);
+			ViewDistance = FloatProperty(&component->viewDistance);
 		
 			SpriteSheet_Frames_X = LongLongProperty(reinterpret_cast<long long*>(&component->framesX));
 			SpriteSheet_Frames_Y = LongLongProperty(reinterpret_cast<long long*>(&component->framesY));
@@ -566,7 +566,7 @@ namespace wi::lua::scene
 		FloatProperty Length;
 		FloatProperty Stiffness;
 		FloatProperty Randomness;
-		FloatProperty viewDistance;
+		FloatProperty ViewDistance;
 
 		LongLongProperty SpriteSheet_Frames_X;
 		LongLongProperty SpriteSheet_Frames_Y;
@@ -581,7 +581,7 @@ namespace wi::lua::scene
 		PropertyFunction(Length)
 		PropertyFunction(Stiffness)
 		PropertyFunction(Randomness)
-		PropertyFunction(viewDistance)
+		PropertyFunction(ViewDistance)
 
 		PropertyFunction(SpriteSheet_Frames_X)
 		PropertyFunction(SpriteSheet_Frames_Y)
