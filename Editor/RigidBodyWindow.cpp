@@ -332,7 +332,7 @@ void RigidBodyWindow::SetEntity(Entity entity)
 		kinematicCheckBox.SetCheck(physicsComponent->IsKinematic());
 		disabledeactivationCheckBox.SetCheck(physicsComponent->IsDisableDeactivation());
 
-		collisionShapeComboBox.SetSelectedByUserdataWithoutCallback((uint64_t)physicsComponent->shape);
+		collisionShapeComboBox.SetSelectedByUserdata((uint64_t)physicsComponent->shape);
 	}
 
 }
