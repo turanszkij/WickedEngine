@@ -315,6 +315,7 @@ void Bind()
 		Luna<AnimationComponent_BindLua>::Register(L);
 		Luna<MaterialComponent_BindLua>::Register(L);
 		Luna<EmitterComponent_BindLua>::Register(L);
+		Luna<HairParticleComponent_BindLua>::Register(L);
 		Luna<LightComponent_BindLua>::Register(L);
 		Luna<ObjectComponent_BindLua>::Register(L);
 		Luna<InverseKinematicsComponent_BindLua>::Register(L);
@@ -346,6 +347,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateName),
 	lunamethod(Scene_BindLua, Component_CreateLayer),
 	lunamethod(Scene_BindLua, Component_CreateTransform),
+	lunamethod(Scene_BindLua, Component_CreateEmitter),
+	lunamethod(Scene_BindLua, Component_CreateHairParticle),
 	lunamethod(Scene_BindLua, Component_CreateLight),
 	lunamethod(Scene_BindLua, Component_CreateObject),
 	lunamethod(Scene_BindLua, Component_CreateMaterial),
@@ -366,6 +369,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetAnimation),
 	lunamethod(Scene_BindLua, Component_GetMaterial),
 	lunamethod(Scene_BindLua, Component_GetEmitter),
+	lunamethod(Scene_BindLua, Component_GetHairParticle),
 	lunamethod(Scene_BindLua, Component_GetLight),
 	lunamethod(Scene_BindLua, Component_GetObject),
 	lunamethod(Scene_BindLua, Component_GetInverseKinematics),
@@ -588,6 +592,40 @@ int Scene_BindLua::Component_CreateLight(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Component_CreateLight(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_CreateEmitter(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		EmittedParticleSystem& component = scene->emitters.Create(entity);
+		Luna<EmitterComponent_BindLua>::push(L, new EmitterComponent_BindLua(&component));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateEmitter(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_CreateHairParticle(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		HairParticleSystem& component = scene->hairs.Create(entity);
+		Luna<HairParticleComponent_BindLua>::push(L, new HairParticleComponent_BindLua(&component));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateHairParticle(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -935,6 +973,28 @@ int Scene_BindLua::Component_GetEmitter(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetHairParticle(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		wi::HairParticleSystem* component = scene->hairs.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<HairParticleComponent_BindLua>::push(L, new HairParticleComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetHairParticle(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 int Scene_BindLua::Component_GetLight(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -1255,6 +1315,17 @@ int Scene_BindLua::Component_GetEmitterArray(lua_State* L)
 	}
 	return 1;
 }
+int Scene_BindLua::Component_GetHairParticleArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->hairs.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->hairs.GetCount(); ++i)
+	{
+		Luna<HairParticleComponent_BindLua>::push(L, new HairParticleComponent_BindLua(&scene->hairs[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
 int Scene_BindLua::Component_GetLightArray(lua_State* L)
 {
 	lua_createtable(L, (int)scene->lights.GetCount(), 0);
@@ -1450,6 +1521,17 @@ int Scene_BindLua::Entity_GetEmitterArray(lua_State* L)
 	for (size_t i = 0; i < scene->emitters.GetCount(); ++i)
 	{
 		wi::lua::SSetLongLong(L, scene->emitters.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetHairParticleArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->hairs.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->hairs.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->hairs.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -2415,9 +2497,16 @@ Luna<MaterialComponent_BindLua>::FunctionType MaterialComponent_BindLua::methods
 	lunamethod(MaterialComponent_BindLua, SetEngineStencilRef),
 	lunamethod(MaterialComponent_BindLua, SetUserStencilRef),
 	lunamethod(MaterialComponent_BindLua, GetStencilRef),
+
+	lunamethod(MaterialComponent_BindLua, SetTexture),
+	lunamethod(MaterialComponent_BindLua, SetTextureUVSet),
+	lunamethod(MaterialComponent_BindLua, GetTexture),
+	lunamethod(MaterialComponent_BindLua, GetTextureUVSet),
 	{ NULL, NULL }
 };
 Luna<MaterialComponent_BindLua>::PropertyType MaterialComponent_BindLua::properties[] = {
+	lunaproperty(MaterialComponent_BindLua, _flags),
+	
 	lunaproperty(MaterialComponent_BindLua, BaseColor),
 	lunaproperty(MaterialComponent_BindLua, EmissiveColor),
 	lunaproperty(MaterialComponent_BindLua, EngineStencilRef),
@@ -2565,6 +2654,195 @@ int MaterialComponent_BindLua::GetStencilRef(lua_State* L)
 	wi::lua::SSetInt(L, (int)component->GetStencilRef());
 	return 1;
 }
+int MaterialComponent_BindLua::SetTexture(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc >= 2)
+	{
+		uint32_t textureindex = wi::lua::SGetLongLong(L, 1);
+		std::string resourcename = wi::lua::SGetString(L, 2);
+
+		if(textureindex < MaterialComponent::TEXTURESLOT_COUNT)
+		{
+			auto& texturedata = component->textures[textureindex];
+			texturedata.name = resourcename;
+			texturedata.resource = wi::resourcemanager::Load(resourcename);
+			component->SetDirty();
+		}
+		else
+		{
+			wi::lua::SError(L, "SetTexture(int textureindex, string resourcename) index out of range!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetTexture(int textureindex, string resourcename) not enough arguments!");
+	}
+
+	return 0;
+}
+int MaterialComponent_BindLua::GetTexture(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		uint32_t textureindex = wi::lua::SGetLongLong(L, 1);
+
+		if(textureindex < MaterialComponent::TEXTURESLOT_COUNT)
+		{
+			auto& texturedata = component->textures[textureindex];
+			wi::lua::SSetString(L, texturedata.name);
+			return 1;
+		}
+		else
+		{
+			wi::lua::SError(L, "GetTexture(int textureindex) index out of range!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "GetTexture(int textureindex) not enough arguments!");
+	}
+	return 0;
+}
+int MaterialComponent_BindLua::SetTextureUVSet(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc >= 2)
+	{
+		uint32_t textureindex = wi::lua::SGetLongLong(L, 1);
+		uint32_t uvset = wi::lua::SGetLongLong(L, 2);
+
+		if(textureindex < MaterialComponent::TEXTURESLOT_COUNT)
+		{
+			auto& texturedata = component->textures[textureindex];
+			texturedata.uvset = uvset;
+			component->SetDirty();
+		}
+		else
+		{
+			wi::lua::SError(L, "SetTextureUVSet(int textureindex, int uvset) index out of range!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetTextureUVSet(int textureindex, int uvset) not enough arguments!");
+	}
+
+	return 0;
+}
+int MaterialComponent_BindLua::GetTextureUVSet(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		uint32_t textureindex = wi::lua::SGetLongLong(L, 1);
+
+		if(textureindex < MaterialComponent::TEXTURESLOT_COUNT)
+		{
+			auto& texturedata = component->textures[textureindex];
+			wi::lua::SSetLongLong(L, texturedata.uvset);
+			return 1;
+		}
+		else
+		{
+			wi::lua::SError(L, "GetTextureUVSet(int textureindex) index out of range!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "GetTextureUVSet(int textureindex) not enough arguments!");
+	}
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+const char MeshComponent_BindLua::className[] = "MeshComponent";
+
+Luna<MeshComponent_BindLua>::FunctionType MeshComponent_BindLua::methods[] = {
+	lunamethod(MeshComponent_BindLua, SetMeshSubsetMaterialID),
+	lunamethod(MeshComponent_BindLua, GetMeshSubsetMaterialID),
+	{ NULL, NULL }
+};
+Luna<MeshComponent_BindLua>::PropertyType MeshComponent_BindLua::properties[] = {
+	lunaproperty(MeshComponent_BindLua, _flags),
+	lunaproperty(MeshComponent_BindLua, TessellationFactor),
+	lunaproperty(MeshComponent_BindLua, ArmatureID),
+	lunaproperty(MeshComponent_BindLua, SubsetsPerLOD),
+	{ NULL, NULL }
+};
+
+MeshComponent_BindLua::MeshComponent_BindLua(lua_State *L)
+{
+	owning = true;
+	component = new MeshComponent;
+	BuildBindings();
+}
+MeshComponent_BindLua::~MeshComponent_BindLua()
+{
+	if (owning)
+	{
+		delete component;
+	}
+}
+
+int MeshComponent_BindLua::SetMeshSubsetMaterialID(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc >= 2)
+	{
+		size_t subsetindex = wi::lua::SGetLongLong(L, 1);
+		uint32_t uvset = wi::lua::SGetLongLong(L, 2);
+
+		if(subsetindex < component->subsets.size())
+		{
+			auto& subsetdata = component->subsets[subsetindex];
+			subsetdata.materialID = uvset;
+		}
+		else
+		{
+			wi::lua::SError(L, "SetMeshSubsetMaterialID(int subsetindex, Entity materialID) index out of range!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetMeshSubsetMaterialID(int subsetindex, Entity materialID) not enough arguments!");
+	}
+
+	return 0;
+}
+int MeshComponent_BindLua::GetMeshSubsetMaterialID(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		size_t subsetindex = wi::lua::SGetLongLong(L, 1);
+
+		if(subsetindex < component->subsets.size())
+		{
+			auto& subsetdata = component->subsets[subsetindex];
+			wi::lua::SSetLongLong(L, subsetdata.materialID);
+			return 1;
+		}
+		else
+		{
+			wi::lua::SError(L, "GetMeshSubsetMaterialID(int subsetindex) index out of range!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "GetMeshSubsetMaterialID(int subsetindex) not enough arguments!");
+	}
+	return 0;
+}
 
 
 
@@ -2592,6 +2870,15 @@ Luna<EmitterComponent_BindLua>::FunctionType EmitterComponent_BindLua::methods[]
 	{ NULL, NULL }
 };
 Luna<EmitterComponent_BindLua>::PropertyType EmitterComponent_BindLua::properties[] = {
+	lunaproperty(EmitterComponent_BindLua, _flags),
+	
+	lunaproperty(EmitterComponent_BindLua, ShaderType),
+	
+	lunaproperty(EmitterComponent_BindLua, Mass),
+	lunaproperty(EmitterComponent_BindLua, Velocity),
+	lunaproperty(EmitterComponent_BindLua, Gravity),
+	lunaproperty(EmitterComponent_BindLua, Drag),
+	lunaproperty(EmitterComponent_BindLua, Restitution),
 	lunaproperty(EmitterComponent_BindLua, EmitCount),
 	lunaproperty(EmitterComponent_BindLua, Size),
 	lunaproperty(EmitterComponent_BindLua, Life),
@@ -2602,6 +2889,17 @@ Luna<EmitterComponent_BindLua>::PropertyType EmitterComponent_BindLua::propertie
 	lunaproperty(EmitterComponent_BindLua, ScaleY),
 	lunaproperty(EmitterComponent_BindLua, Rotation),
 	lunaproperty(EmitterComponent_BindLua, MotionBlurAmount),
+
+	lunaproperty(EmitterComponent_BindLua, SPH_h),
+	lunaproperty(EmitterComponent_BindLua, SPH_K),
+	lunaproperty(EmitterComponent_BindLua, SPH_p0),
+	lunaproperty(EmitterComponent_BindLua, SPH_e),
+
+	lunaproperty(EmitterComponent_BindLua, SpriteSheet_Frames_X),
+	lunaproperty(EmitterComponent_BindLua, SpriteSheet_Frames_Y),
+	lunaproperty(EmitterComponent_BindLua, SpriteSheet_Frame_Count),
+	lunaproperty(EmitterComponent_BindLua, SpriteSheet_Frame_Start),
+	lunaproperty(EmitterComponent_BindLua, SpriteSheet_Framerate),
 	{ NULL, NULL }
 };
 
@@ -2609,6 +2907,7 @@ EmitterComponent_BindLua::EmitterComponent_BindLua(lua_State *L)
 {
 	owning = true;
 	component = new wi::EmittedParticleSystem;
+	BuildBindings();
 }
 EmitterComponent_BindLua::~EmitterComponent_BindLua()
 {
@@ -2821,6 +3120,52 @@ int EmitterComponent_BindLua::SetMotionBlurAmount(lua_State* L)
 	}
 
 	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+const char HairParticleComponent_BindLua::className[] = "HairParticleComponent";
+
+Luna<HairParticleComponent_BindLua>::FunctionType HairParticleComponent_BindLua::methods[] = {
+	{ NULL, NULL }
+};
+Luna<HairParticleComponent_BindLua>::PropertyType HairParticleComponent_BindLua::properties[] = {
+	lunaproperty(HairParticleComponent_BindLua, _flags),
+
+	lunaproperty(HairParticleComponent_BindLua, StrandCount),
+	lunaproperty(HairParticleComponent_BindLua, SegmentCount),
+	lunaproperty(HairParticleComponent_BindLua, RandomSeed),
+	lunaproperty(HairParticleComponent_BindLua, Length),
+	lunaproperty(HairParticleComponent_BindLua, Stiffness),
+	lunaproperty(HairParticleComponent_BindLua, Randomness),
+	lunaproperty(HairParticleComponent_BindLua, viewDistance),
+
+	lunaproperty(HairParticleComponent_BindLua, SpriteSheet_Frames_X),
+	lunaproperty(HairParticleComponent_BindLua, SpriteSheet_Frames_Y),
+	lunaproperty(HairParticleComponent_BindLua, SpriteSheet_Frame_Count),
+	lunaproperty(HairParticleComponent_BindLua, SpriteSheet_Frame_Start),
+	{ NULL, NULL }
+};
+
+HairParticleComponent_BindLua::HairParticleComponent_BindLua(lua_State *L)
+{
+	owning = true;
+	component = new wi::HairParticleSystem;
+	BuildBindings();
+}
+HairParticleComponent_BindLua::~HairParticleComponent_BindLua()
+{
+	if (owning)
+	{
+		delete component;
+	}
 }
 
 
@@ -3502,6 +3847,11 @@ int SpringComponent_BindLua::SetWindAffection(lua_State* L)
 	{
 		wi::lua::SError(L, "SetWindAffection(float value) not enough arguments!");
 	}
+	return 0;
+}
+int SpringComponent_BindLua::GetWindAffection(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->windForce);
 	return 0;
 }
 

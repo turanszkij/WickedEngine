@@ -46,6 +46,8 @@ namespace wi::lua::scene
 		int Component_CreateName(lua_State* L);
 		int Component_CreateLayer(lua_State* L);
 		int Component_CreateTransform(lua_State* L);
+		int Component_CreateEmitter(lua_State* L);
+		int Component_CreateHairParticle(lua_State* L);
 		int Component_CreateLight(lua_State* L);
 		int Component_CreateObject(lua_State* L);
 		int Component_CreateMaterial(lua_State* L);
@@ -66,6 +68,7 @@ namespace wi::lua::scene
 		int Component_GetAnimation(lua_State* L);
 		int Component_GetMaterial(lua_State* L);
 		int Component_GetEmitter(lua_State* L);
+		int Component_GetHairParticle(lua_State* L);
 		int Component_GetLight(lua_State* L);
 		int Component_GetObject(lua_State* L);
 		int Component_GetInverseKinematics(lua_State* L);
@@ -85,6 +88,7 @@ namespace wi::lua::scene
 		int Component_GetAnimationArray(lua_State* L);
 		int Component_GetMaterialArray(lua_State* L);
 		int Component_GetEmitterArray(lua_State* L);
+		int Component_GetHairParticleArray(lua_State* L);
 		int Component_GetLightArray(lua_State* L);
 		int Component_GetObjectArray(lua_State* L);
 		int Component_GetInverseKinematicsArray(lua_State* L);
@@ -104,6 +108,7 @@ namespace wi::lua::scene
 		int Entity_GetAnimationArray(lua_State* L);
 		int Entity_GetMaterialArray(lua_State* L);
 		int Entity_GetEmitterArray(lua_State* L);
+		int Entity_GetHairParticleArray(lua_State* L);
 		int Entity_GetLightArray(lua_State* L);
 		int Entity_GetObjectArray(lua_State* L);
 		int Entity_GetInverseKinematicsArray(lua_State* L);
@@ -285,6 +290,7 @@ namespace wi::lua::scene
 
 		inline void BuildBindings()
 		{
+			_flags = LongLongProperty(reinterpret_cast<long long*>(&component->_flags));
 			ShaderType = IntProperty(reinterpret_cast<int*>(&component->shaderType));
 			UserBlendMode = IntProperty(reinterpret_cast<int*>(&component->roughness));
 			SpecularColor = VectorProperty(&component->specularColor);
@@ -314,6 +320,7 @@ namespace wi::lua::scene
 		MaterialComponent_BindLua(lua_State *L);
 		~MaterialComponent_BindLua();
 
+		LongLongProperty _flags;
 		IntProperty ShaderType;
 		IntProperty UserBlendMode;
 		VectorProperty SpecularColor;
@@ -338,6 +345,7 @@ namespace wi::lua::scene
 		FloatProperty texAnimElapsedTime;
 		IntProperty customShaderID;
 
+		PropertyFunction(_flags)
 		PropertyFunction(ShaderType)
 		PropertyFunction(UserBlendMode)
 		PropertyFunction(SpecularColor)
@@ -371,6 +379,47 @@ namespace wi::lua::scene
 		int SetUserStencilRef(lua_State* L);
 		int GetUserStencilRef(lua_State* L);
 		int GetStencilRef(lua_State* L);
+
+		int SetTexture(lua_State* L);
+		int SetTextureUVSet(lua_State* L);
+		int GetTexture(lua_State* L);
+		int GetTextureUVSet(lua_State* L);
+	};
+
+	class MeshComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wi::scene::MeshComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<MeshComponent_BindLua>::FunctionType methods[];
+		static Luna<MeshComponent_BindLua>::PropertyType properties[];
+
+		inline void BuildBindings()
+		{
+			_flags = LongLongProperty(reinterpret_cast<long long*>(&component->_flags));
+			TessellationFactor = FloatProperty(&component->tessellationFactor);
+			ArmatureID = LongLongProperty(reinterpret_cast<long long*>(&component->armatureID));
+			SubsetsPerLOD = LongLongProperty(reinterpret_cast<long long*>(&component->subsets_per_lod));
+		}
+
+		MeshComponent_BindLua(wi::scene::MeshComponent* component) :component(component) { BuildBindings(); }
+		MeshComponent_BindLua(lua_State *L);
+		~MeshComponent_BindLua();
+
+		LongLongProperty _flags;
+		FloatProperty TessellationFactor;
+		LongLongProperty ArmatureID;
+		LongLongProperty SubsetsPerLOD;
+
+		PropertyFunction(_flags)
+		PropertyFunction(TessellationFactor)
+		PropertyFunction(ArmatureID)
+		PropertyFunction(SubsetsPerLOD)
+
+		int SetMeshSubsetMaterialID(lua_State* L);
+		int GetMeshSubsetMaterialID(lua_State* L);
 	};
 
 	class EmitterComponent_BindLua
@@ -383,9 +432,75 @@ namespace wi::lua::scene
 		static Luna<EmitterComponent_BindLua>::FunctionType methods[];
 		static Luna<EmitterComponent_BindLua>::PropertyType properties[];
 
-		EmitterComponent_BindLua(wi::EmittedParticleSystem* component) :component(component) {}
+		inline void BuildBindings()
+		{
+			_flags = LongLongProperty(reinterpret_cast<long long*>(&component->_flags));
+
+			ShaderType = IntProperty(reinterpret_cast<int*>(&component->shaderType));
+
+			Mass = FloatProperty(&component->mass);
+			Velocity = VectorProperty(&component->velocity);
+			Gravity = VectorProperty(&component->gravity);
+			Drag = FloatProperty(&component->drag);
+			Restitution = FloatProperty(&component->restitution);
+
+			SPH_h = FloatProperty(&component->SPH_h);
+			SPH_K = FloatProperty(&component->SPH_K);
+			SPH_p0 = FloatProperty(&component->SPH_p0);
+			SPH_e = FloatProperty(&component->SPH_e);
+
+			SpriteSheet_Frames_X = LongLongProperty(reinterpret_cast<long long*>(&component->framesX));
+			SpriteSheet_Frames_Y = LongLongProperty(reinterpret_cast<long long*>(&component->framesY));
+			SpriteSheet_Frame_Count = LongLongProperty(reinterpret_cast<long long*>(&component->frameCount));
+			SpriteSheet_Frame_Start = LongLongProperty(reinterpret_cast<long long*>(&component->frameStart));
+			SpriteSheet_Framerate = FloatProperty(&component->frameRate);
+		}
+
+		EmitterComponent_BindLua(wi::EmittedParticleSystem* component) :component(component) { BuildBindings(); }
 		EmitterComponent_BindLua(lua_State *L);
 		~EmitterComponent_BindLua();
+
+		LongLongProperty _flags;
+
+		IntProperty ShaderType;
+
+		FloatProperty Mass;
+		VectorProperty Velocity;
+		VectorProperty Gravity;
+		FloatProperty Drag;
+		FloatProperty Restitution;
+
+		FloatProperty SPH_h;
+		FloatProperty SPH_K;
+		FloatProperty SPH_p0;
+		FloatProperty SPH_e;
+
+		LongLongProperty SpriteSheet_Frames_X;
+		LongLongProperty SpriteSheet_Frames_Y;
+		LongLongProperty SpriteSheet_Frame_Count;
+		LongLongProperty SpriteSheet_Frame_Start;
+		FloatProperty SpriteSheet_Framerate;
+
+		PropertyFunction(_flags)
+
+		PropertyFunction(ShaderType)
+
+		PropertyFunction(Mass)
+		PropertyFunction(Velocity)
+		PropertyFunction(Gravity)
+		PropertyFunction(Drag)
+		PropertyFunction(Restitution)
+
+		PropertyFunction(SPH_h)
+		PropertyFunction(SPH_K)
+		PropertyFunction(SPH_p0)
+		PropertyFunction(SPH_e)
+
+		PropertyFunction(SpriteSheet_Frames_X)
+		PropertyFunction(SpriteSheet_Frames_Y)
+		PropertyFunction(SpriteSheet_Frame_Count)
+		PropertyFunction(SpriteSheet_Frame_Start)
+		PropertyFunction(SpriteSheet_Framerate)
 
 		int Burst(lua_State* L);
 		int SetEmitCount(lua_State* L);
@@ -409,6 +524,69 @@ namespace wi::lua::scene
 		int GetScaleY(lua_State* L);
 		int GetRotation(lua_State* L);
 		int GetMotionBlurAmount(lua_State* L);
+	};
+
+	class HairParticleComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		HairParticleSystem* component = nullptr;
+
+		static const char className[];
+		static Luna<HairParticleComponent_BindLua>::FunctionType methods[];
+		static Luna<HairParticleComponent_BindLua>::PropertyType properties[];
+
+		inline void BuildBindings()
+		{
+			_flags = LongLongProperty(reinterpret_cast<long long*>(&component->_flags));
+
+			StrandCount = LongLongProperty(reinterpret_cast<long long*>(&component->strandCount));
+			SegmentCount = LongLongProperty(reinterpret_cast<long long*>(&component->segmentCount));
+			RandomSeed = LongLongProperty(reinterpret_cast<long long*>(&component->randomSeed));
+			Length = FloatProperty(&component->length);
+			Stiffness = FloatProperty(&component->stiffness);
+			Randomness = FloatProperty(&component->randomness);
+			viewDistance = FloatProperty(&component->viewDistance);
+		
+			SpriteSheet_Frames_X = LongLongProperty(reinterpret_cast<long long*>(&component->framesX));
+			SpriteSheet_Frames_Y = LongLongProperty(reinterpret_cast<long long*>(&component->framesY));
+			SpriteSheet_Frame_Count = LongLongProperty(reinterpret_cast<long long*>(&component->frameCount));
+			SpriteSheet_Frame_Start = LongLongProperty(reinterpret_cast<long long*>(&component->frameStart));
+		}
+
+		HairParticleComponent_BindLua(HairParticleSystem* component) :component(component) { BuildBindings(); }
+		HairParticleComponent_BindLua(lua_State *L);
+		~HairParticleComponent_BindLua();
+
+		LongLongProperty _flags;
+
+		LongLongProperty StrandCount;
+		LongLongProperty SegmentCount;
+		LongLongProperty RandomSeed;
+		FloatProperty Length;
+		FloatProperty Stiffness;
+		FloatProperty Randomness;
+		FloatProperty viewDistance;
+
+		LongLongProperty SpriteSheet_Frames_X;
+		LongLongProperty SpriteSheet_Frames_Y;
+		LongLongProperty SpriteSheet_Frame_Count;
+		LongLongProperty SpriteSheet_Frame_Start;
+
+		PropertyFunction(_flags)
+
+		PropertyFunction(StrandCount)
+		PropertyFunction(SegmentCount)
+		PropertyFunction(RandomSeed)
+		PropertyFunction(Length)
+		PropertyFunction(Stiffness)
+		PropertyFunction(Randomness)
+		PropertyFunction(viewDistance)
+
+		PropertyFunction(SpriteSheet_Frames_X)
+		PropertyFunction(SpriteSheet_Frames_Y)
+		PropertyFunction(SpriteSheet_Frame_Count)
+		PropertyFunction(SpriteSheet_Frame_Start)
 	};
 
 	class LightComponent_BindLua
