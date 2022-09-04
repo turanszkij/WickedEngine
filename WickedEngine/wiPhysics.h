@@ -34,6 +34,17 @@ namespace wi::physics
 		float dt
 	);
 
+	// Set linear velocity to rigid body
+	void SetLinearVelocity(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& velocity
+	);
+	// Set angular velocity to rigid body
+	void SetAngularVelocity(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& velocity
+	);
+
 	// Apply force at body center
 	void ApplyForce(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,

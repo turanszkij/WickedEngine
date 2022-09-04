@@ -16,6 +16,9 @@ namespace wi::lua
 		lunamethod(Physics_BindLua, IsDebugDrawEnabled),
 		lunamethod(Physics_BindLua, SetAccuracy),
 		lunamethod(Physics_BindLua, GetAccuracy),
+		lunamethod(Physics_BindLua, SetLinearVelocity),
+		lunamethod(Physics_BindLua, SetAngularVelocity),
+		lunamethod(Physics_BindLua, ApplyForceAt),
 		lunamethod(Physics_BindLua, ApplyForce),
 		lunamethod(Physics_BindLua, ApplyForceAt),
 		lunamethod(Physics_BindLua, ApplyImpulse),
@@ -95,6 +98,58 @@ namespace wi::lua
 		return 1;
 	}
 
+	int Physics_BindLua::SetLinearVelocity(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			scene::RigidBodyPhysicsComponent_BindLua* component = Luna<scene::RigidBodyPhysicsComponent_BindLua>::lightcheck(L, 1);
+			if (component == nullptr)
+			{
+				wi::lua::SError(L, "SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity) first argument is not a RigidBodyPhysicsComponent!");
+				return 0;
+			}
+			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (vec == nullptr)
+			{
+				wi::lua::SError(L, "SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity) second argument is not a Vector!");
+				return 0;
+			}
+			wi::physics::SetLinearVelocity(
+				*component->component,
+				*(XMFLOAT3*)vec
+			);
+		}
+		else
+			wi::lua::SError(L, "SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity) not enough arguments!");
+		return 0;
+	}
+	int Physics_BindLua::SetAngularVelocity(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			scene::RigidBodyPhysicsComponent_BindLua* component = Luna<scene::RigidBodyPhysicsComponent_BindLua>::lightcheck(L, 1);
+			if (component == nullptr)
+			{
+				wi::lua::SError(L, "SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity) first argument is not a RigidBodyPhysicsComponent!");
+				return 0;
+			}
+			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (vec == nullptr)
+			{
+				wi::lua::SError(L, "SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity) second argument is not a Vector!");
+				return 0;
+			}
+			wi::physics::SetAngularVelocity(
+				*component->component,
+				*(XMFLOAT3*)vec
+			);
+		}
+		else
+			wi::lua::SError(L, "SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity) not enough arguments!");
+		return 0;
+	}
 	int Physics_BindLua::ApplyForce(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);

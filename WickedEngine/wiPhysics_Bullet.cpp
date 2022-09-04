@@ -774,6 +774,27 @@ namespace wi::physics
 
 
 
+	void SetLinearVelocity(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& velocity
+	)
+	{
+		if (physicscomponent.physicsobject != nullptr)
+		{
+			GetRigidBody(physicscomponent).rigidBody->setLinearVelocity(btVector3(velocity.x, velocity.y, velocity.z));
+		}
+	}
+	void SetAngularVelocity(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& velocity
+	)
+	{
+		if (physicscomponent.physicsobject != nullptr)
+		{
+			GetRigidBody(physicscomponent).rigidBody->setAngularVelocity(btVector3(velocity.x, velocity.y, velocity.z));
+		}
+	}
+
 	void ApplyForce(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force

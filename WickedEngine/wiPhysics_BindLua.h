@@ -23,6 +23,8 @@ namespace wi::lua
 		int SetAccuracy(lua_State* L);
 		int GetAccuracy(lua_State* L);
 
+		int SetLinearVelocity(lua_State* L);
+		int SetAngularVelocity(lua_State* L);
 		int ApplyForce(lua_State* L);
 		int ApplyForceAt(lua_State* L);
 		int ApplyImpulse(lua_State* L);
