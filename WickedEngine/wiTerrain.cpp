@@ -760,6 +760,8 @@ namespace wi::terrain
 
 							for (const auto& prop : props)
 							{
+								if (prop.data.empty())
+									continue;
 								std::uniform_int_distribution<uint32_t> gen_distr(
 									uint32_t(prop.min_count_per_chunk * chunk_data.prop_density_current),
 									uint32_t(prop.max_count_per_chunk * chunk_data.prop_density_current)

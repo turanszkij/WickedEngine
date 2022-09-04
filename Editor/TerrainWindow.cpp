@@ -864,6 +864,7 @@ void TerrainWindow::SetupAssets()
 	wi::scene::LoadModel(props_scene, "terrain/props.wiscene");
 
 	// Tree prop:
+	if(props_scene.Entity_FindByName("tree_mesh") != INVALID_ENTITY)
 	{
 		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
 		prop.min_count_per_chunk = 0;
@@ -898,6 +899,7 @@ void TerrainWindow::SetupAssets()
 		props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
 	}
 	// Rock prop:
+	if (props_scene.Entity_FindByName("rock_mesh") != INVALID_ENTITY)
 	{
 		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
 		prop.min_count_per_chunk = 0;
@@ -932,6 +934,7 @@ void TerrainWindow::SetupAssets()
 		props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
 	}
 	// Bush prop:
+	if (props_scene.Entity_FindByName("bush_mesh") != INVALID_ENTITY)
 	{
 		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
 		prop.min_count_per_chunk = 0;
