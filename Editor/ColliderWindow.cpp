@@ -10,7 +10,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_COLLIDER " Collider", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 280));
+	SetSize(XMFLOAT2(670, 340));
 
 	closeButton.SetTooltip("Delete ColliderComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -31,6 +31,37 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	float hei = 20;
 	float step = hei + 2;
 	float wid = 220;
+
+	infoLabel.Create("");
+	infoLabel.SetText("Colliders are used for simple fake physics, without using the physics engine. They are only used in specific CPU/GPU systems.");
+	infoLabel.SetSize(XMFLOAT2(100, 50));
+	AddWidget(&infoLabel);
+
+	cpuCheckBox.Create("CPU: ");
+	cpuCheckBox.SetTooltip("Enable for use on the CPU. CPU usage includes: springs.");
+	cpuCheckBox.SetSize(XMFLOAT2(hei, hei));
+	cpuCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ColliderComponent* collider = scene.colliders.GetComponent(entity);
+		if (collider == nullptr)
+			return;
+
+		collider->SetCPUEnabled(args.bValue);
+		});
+	AddWidget(&cpuCheckBox);
+
+	gpuCheckBox.Create("GPU: ");
+	gpuCheckBox.SetTooltip("Enable for use on the GPU. GPU usage includes: emitter and hair particle systems.\nNote that GPU can support only a limited amount of colliders.");
+	gpuCheckBox.SetSize(XMFLOAT2(hei, hei));
+	gpuCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		ColliderComponent* collider = scene.colliders.GetComponent(entity);
+		if (collider == nullptr)
+			return;
+
+		collider->SetGPUEnabled(args.bValue);
+		});
+	AddWidget(&gpuCheckBox);
 
 	shapeCombo.Create("Shape: ");
 	shapeCombo.SetSize(XMFLOAT2(wid, hei));
@@ -167,6 +198,8 @@ void ColliderWindow::SetEntity(Entity entity)
 
 	if (collider != nullptr)
 	{
+		cpuCheckBox.SetCheck(collider->IsCPUEnabled());
+		gpuCheckBox.SetCheck(collider->IsGPUEnabled());
 		shapeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)collider->shape);
 		radiusSlider.SetValue(collider->radius);
 		offsetX.SetValue(collider->offset.x);
@@ -215,6 +248,9 @@ void ColliderWindow::ResizeLayout()
 		y += padding;
 	};
 
+	add_fullwidth(infoLabel);
+	add_right(cpuCheckBox);
+	gpuCheckBox.SetPos(XMFLOAT2(cpuCheckBox.GetPos().x - 100, cpuCheckBox.GetPos().y));
 	add(shapeCombo);
 	add(radiusSlider);
 

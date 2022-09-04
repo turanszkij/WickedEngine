@@ -937,6 +937,7 @@ Describes a Weather
 - VolumetricCloudParameters : VolumetricCloudParameters -- Returns a table to modify volumetric cloud parameters
 - SkyMapName : string -- Resource name for sky texture
 - ColorGradingMapName : string -- Resource name for color grading map
+- Gravity : Vector
 
 </br>
 
@@ -972,6 +973,9 @@ Describes a Sound object.
 - Radius : float
 - Offset : Vector
 - Tail : Vector
+
+- SetCPUEnabled(bool value)
+- SetGPUEnabled(bool value)
 
 ## Canvas
 This is used to describe a drawable area

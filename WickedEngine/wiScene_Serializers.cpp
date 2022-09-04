@@ -1496,6 +1496,12 @@ namespace wi::scene
 			archive >> radius;
 			archive >> offset;
 			archive >> tail;
+
+			if (seri.GetVersion() < 2)
+			{
+				SetCPUEnabled(true);
+				SetGPUEnabled(true);
+			}
 		}
 		else
 		{

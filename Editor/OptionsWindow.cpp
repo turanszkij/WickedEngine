@@ -313,6 +313,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Inverse Kinematics " ICON_IK, (uint64_t)Filter::IK);
 	filterCombo.AddItem("Camera " ICON_CAMERA, (uint64_t)Filter::Camera);
 	filterCombo.AddItem("Armature " ICON_ARMATURE, (uint64_t)Filter::Armature);
+	filterCombo.AddItem("Collider " ICON_COLLIDER, (uint64_t)Filter::Collider);
 	filterCombo.AddItem("Script " ICON_SCRIPT, (uint64_t)Filter::Script);
 	filterCombo.AddItem("Expression " ICON_EXPRESSION, (uint64_t)Filter::Expression);
 	filterCombo.AddItem("Terrain " ICON_TERRAIN, (uint64_t)Filter::Terrain);
