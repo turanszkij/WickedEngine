@@ -10,7 +10,7 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_ARMATURE " Armature", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 300));
+	SetSize(XMFLOAT2(670, 350));
 
 	closeButton.SetTooltip("Delete ArmatureComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -31,6 +31,11 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 	float hei = 20;
 	float step = hei + 2;
 	float wid = 220;
+
+	infoLabel.Create("");
+	infoLabel.SetSize(XMFLOAT2(100, 50));
+	infoLabel.SetText("This window will stay open even if you select other entities until it is collapsed, so you can select other bone entities.");
+	AddWidget(&infoLabel);
 
 	resetPoseButton.Create("Reset Pose");
 	resetPoseButton.SetSize(XMFLOAT2(wid, hei));
@@ -192,6 +197,7 @@ void ArmatureWindow::ResizeLayout()
 		y += padding;
 	};
 
+	add_fullwidth(infoLabel);
 	add_fullwidth(resetPoseButton);
 
 	y += jump;

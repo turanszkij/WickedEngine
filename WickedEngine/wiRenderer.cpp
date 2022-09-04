@@ -3269,7 +3269,7 @@ void UpdatePerFrameData(
 	frameCB.lightarray_offset = frameCB.envprobearray_offset + frameCB.envprobearray_count;
 	frameCB.lightarray_count = (uint)vis.visibleLights.size();
 	frameCB.forcefieldarray_offset = frameCB.lightarray_offset + frameCB.lightarray_count;
-	frameCB.forcefieldarray_count = uint(vis.scene->forces.GetCount() + vis.scene->colliders.GetCount());
+	frameCB.forcefieldarray_count = uint(vis.scene->forces.GetCount() + vis.scene->colliders_gpu.size());
 
 	frameCB.envprobe_mipcount = 0;
 	frameCB.envprobe_mipcount_rcp = 1.0f;
@@ -3734,7 +3734,7 @@ void UpdateRenderData(
 		}
 
 		// Write colliders into entity array:
-		for (size_t i = 0; i < vis.scene->colliders.GetCount(); ++i)
+		for (size_t i = 0; i < vis.scene->colliders_gpu.size(); ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -3744,16 +3744,8 @@ void UpdateRenderData(
 			}
 			ShaderEntity shaderentity = {};
 
-			const ColliderComponent& collider = vis.scene->colliders[i];
-
-			shaderentity.layerMask = ~0u;
-
-			Entity entity = vis.scene->colliders.GetEntity(i);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr)
-			{
-				shaderentity.layerMask = layer->layerMask;
-			}
+			const ColliderComponent& collider = vis.scene->colliders_gpu[i];
+			shaderentity.layerMask = collider.layerMask;
 
 			switch (collider.shape)
 			{

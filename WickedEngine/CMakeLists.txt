@@ -99,6 +99,7 @@ set(HEADER_FILES
 		wiNoise.h
 		wiOcean.h
 		wiPhysics.h
+		wiPhysics_BindLua.h
 		wiPlatform.h
 		wiPrimitive.h
 		wiPrimitive_BindLua.h
@@ -188,6 +189,7 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	wiNetwork_UWP.cpp
 	wiOcean.cpp
 	wiPhysics_Bullet.cpp
+	wiPhysics_BindLua.cpp
 	wiProfiler.cpp
 	wiRandom.cpp
 	wiRawInput.cpp

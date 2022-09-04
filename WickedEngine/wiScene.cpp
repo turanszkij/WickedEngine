@@ -2151,6 +2151,9 @@ namespace wi::scene
 	}
 	void Scene::RunColliderUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		colliders_cpu.clear();
+		colliders_gpu.clear();
+
 		for (size_t i = 0; i < colliders.GetCount(); ++i)
 		{
 			ColliderComponent& collider = colliders[i];
@@ -2188,6 +2191,21 @@ namespace wi::scene
 				PLANE = PLANE * W;
 				PLANE = XMMatrixInverse(nullptr, PLANE);
 				XMStoreFloat4x4(&collider.planeProjection, PLANE);
+			}
+
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				collider.layerMask = layer->layerMask;
+			}
+
+			if (collider.IsCPUEnabled())
+			{
+				colliders_cpu.push_back(collider);
+			}
+			if (collider.IsGPUEnabled())
+			{
+				colliders_gpu.push_back(collider);
 			}
 		}
 	}
@@ -2321,9 +2339,9 @@ namespace wi::scene
 			XMFLOAT3 scale = transform.GetScale();
 			const float hitRadius = spring.hitRadius * std::max(scale.x, std::max(scale.y, scale.z));
 
-			for (size_t collider_index = 0; collider_index < colliders.GetCount(); ++collider_index)
+			for (size_t collider_index = 0; collider_index < colliders_cpu.size(); ++collider_index)
 			{
-				const ColliderComponent& collider = colliders[collider_index];
+				const ColliderComponent& collider = colliders_cpu[collider_index];
 
 				wi::primitive::Sphere tail_sphere;
 				XMStoreFloat3(&tail_sphere.center, tail_next); // tail_sphere center can change within loop!

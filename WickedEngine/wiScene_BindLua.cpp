@@ -4376,6 +4376,7 @@ Luna<WeatherComponent_BindLua>::PropertyType WeatherComponent_BindLua::propertie
 	lunaproperty(WeatherComponent_BindLua, cloud_shadow_scale),
 	lunaproperty(WeatherComponent_BindLua, cloud_shadow_speed),
 	lunaproperty(WeatherComponent_BindLua, windDirection),
+	lunaproperty(WeatherComponent_BindLua, gravity),
 	lunaproperty(WeatherComponent_BindLua, windRandomness),
 	lunaproperty(WeatherComponent_BindLua, windWaveSize),
 	lunaproperty(WeatherComponent_BindLua, windSpeed),
@@ -4642,6 +4643,8 @@ int SoundComponent_BindLua::SetDisable3D(lua_State* L)
 const char ColliderComponent_BindLua::className[] = "ColliderComponent";
 
 Luna<ColliderComponent_BindLua>::FunctionType ColliderComponent_BindLua::methods[] = {
+	lunamethod(ColliderComponent_BindLua, SetCPUEnabled),
+	lunamethod(ColliderComponent_BindLua, SetGPUEnabled),
 	{ NULL, NULL }
 };
 Luna<ColliderComponent_BindLua>::PropertyType ColliderComponent_BindLua::properties[] = {
@@ -4664,6 +4667,33 @@ ColliderComponent_BindLua::~ColliderComponent_BindLua()
 	{
 		delete component;
 	}
+}
+
+int ColliderComponent_BindLua::SetCPUEnabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->SetCPUEnabled(wi::lua::SGetBool(L, 1));
+	}
+	else
+	{
+		wi::lua::SError(L, "SetCPUEnabled(bool value) not enough arguments!");
+	}
+	return 0;
+}
+int ColliderComponent_BindLua::SetGPUEnabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->SetGPUEnabled(wi::lua::SGetBool(L, 1));
+	}
+	else
+	{
+		wi::lua::SError(L, "SetGPUEnabled(bool value) not enough arguments!");
+	}
+	return 0;
 }
 
 }

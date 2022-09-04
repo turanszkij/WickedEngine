@@ -56,6 +56,7 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		3. [Sphere](#sphere)
 		4. [Capsule](#capsule)
 	12. [Input](#input)
+	13. [Physics](#physics)
 		
 ## Introduction and usage
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
@@ -525,8 +526,14 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_CreateLight(Entity entity) : LightComponent result  -- attach a light component to an entity. The returned LightComponent is associated with the entity and can be manipulated
 - Component_CreateObject(Entity entity) : ObjectComponent result  -- attach an object component to an entity. The returned ObjectComponent is associated with the entity and can be manipulated
 - Component_CreateInverseKinematics(Entity entity) : InverseKinematicsComponent result  -- attach an IK component to an entity. The returned InverseKinematicsComponent is associated with the entity and can be manipulated
-- Component_CreateSpring(Entity entity) : SpringComponent result  -- attach a spring component to an entity. The returned SpringKinematicsComponent is associated with the entity and can be manipulated
-- Component_CreateSpring(Entity entity) : ScriptComponent result  -- attach a script component to an entity. The returned ScriptKinematicsComponent is associated with the entity and can be manipulated
+- Component_CreateSpring(Entity entity) : SpringComponent result  -- attach a spring component to an entity. The returned SpringComponent is associated with the entity and can be manipulated
+- Component_CreateScript(Entity entity) : ScriptComponent result  -- attach a script component to an entity. The returned ScriptComponent is associated with the entity and can be manipulated
+- Component_CreateRigidBodyPhysics(Entity entity) : RigidBodyPhysicsComponent result  -- attach a RigidBodyPhysicsComponent to an entity. The returned RigidBodyPhysicsComponent is associated with the entity and can be manipulated
+- Component_CreateSoftBodyPhysics(Entity entity) : SoftBodyPhysicsComponent result  -- attach a SoftBodyPhysicsComponent to an entity. The returned SoftBodyPhysicsComponent is associated with the entity and can be manipulated
+- Component_CreateForceField(Entity entity) : ForceFieldComponent result  -- attach a ForceFieldComponent to an entity. The returned ForceFieldComponent is associated with the entity and can be manipulated
+- Component_CreateWeather(Entity entity) : WeatherComponent result  -- attach a WeatherComponent to an entity. The returned WeatherComponent is associated with the entity and can be manipulated
+- Component_CreateSound(Entity entity) : SoundComponent result  -- attach a SoundComponent to an entity. The returned SoundComponent is associated with the entity and can be manipulated
+- Component_CreateCollider(Entity entity) : ColliderComponent result  -- attach a script to an entity. The returned ColliderComponent is associated with the entity and can be manipulated
 
 - Component_GetName(Entity entity) : NameComponent? result  -- query the name component of the entity (if exists)
 - Component_GetLayer(Entity entity) : LayerComponent? result  -- query the layer component of the entity (if exists)
@@ -539,7 +546,13 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetObject(Entity entity) : ObjectComponent? result  -- query the object component of the entity (if exists)
 - Component_GetInverseKinematics(Entity entity) : InverseKinematicsComponent? result  -- query the IK component of the entity (if exists)
 - Component_GetSpring(Entity entity) : SpringComponent? result  -- query the spring component of the entity (if exists)
-- Component_GetSpring(Entity entity) : ScriptComponent? result  -- query the script component of the entity (if exists)
+- Component_GetScript(Entity entity) : ScriptComponent? result  -- query the script component of the entity (if exists)
+- Component_GetRigidBodyPhysics(Entity entity) : RigidBodyPhysicsComponent? result  -- query the RigidBodyPhysicsComponent of the entity (if exists)
+- Component_GetSoftBodyPhysics(Entity entity) : SoftBodyPhysicsComponent? result  -- query the SoftBodyPhysicsComponent of the entity (if exists)
+- Component_GetForceField(Entity entity) : ForceFieldComponent? result  -- query the ForceFieldComponent of the entity (if exists)
+- Component_GetWeather(Entity entity) : WeatherComponent? result  -- query the WeatherComponent of the entity (if exists)
+- Component_GetSound(Entity entity) : SoundComponent? result  -- query the SoundComponent of the entity (if exists)
+- Component_GetCollider(Entity entity) : ColliderComponent? result  -- query the ColliderComponent of the entity (if exists)
 
 - Component_GetNameArray() : NameComponent[] result  -- returns the array of all components of this type
 - Component_GetLayerArray() : LayerComponent[] result  -- returns the array of all components of this type
@@ -553,6 +566,12 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetInverseKinematicsArray() : InverseKinematicsComponent[] result  -- returns the array of all components of this type
 - Component_GetSpringArray() : SpringComponent[] result  -- returns the array of all components of this type
 - Component_GetScriptArray() : ScriptComponent[] result  -- returns the array of all components of this type
+- Component_GetRigidBodyPhysicsArray() : RigidBodyPhysicsComponent[] result  -- returns the array of all components of this type
+- Component_GetSoftBodyPhysicsArray() : SoftBodyPhysicsComponent[] result  -- returns the array of all components of this type
+- Component_GetForceFieldArray() : ForceFieldComponent[] result  -- returns the array of all components of this type
+- Component_GetWeatherArray() : WeatherComponent[] result  -- returns the array of all components of this type
+- Component_GetSoundArray() : SoundComponent[] result  -- returns the array of all components of this type
+- Component_GetColliderArray() : ColliderComponent[] result  -- returns the array of all components of this type
 
 - Entity_GetNameArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetLayerArray() : Entity[] result  -- returns the array of all entities that have this component type
@@ -566,6 +585,12 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetInverseKinematicsArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetSpringArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetScriptArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetRigidBodyPhysicsArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetSoftBodyPhysicsArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetForceFieldArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetWeatherArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetSoundArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetColliderArray() : Entity[] result  -- returns the array of all entities that have this component type
 
 - Component_Attach(Entity entity,parent)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer)
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
@@ -912,6 +937,7 @@ Describes a Weather
 - VolumetricCloudParameters : VolumetricCloudParameters -- Returns a table to modify volumetric cloud parameters
 - SkyMapName : string -- Resource name for sky texture
 - ColorGradingMapName : string -- Resource name for color grading map
+- Gravity : Vector
 
 </br>
 
@@ -947,6 +973,9 @@ Describes a Sound object.
 - Radius : float
 - Offset : Vector
 - Tail : Vector
+
+- SetCPUEnabled(bool value)
+- SetGPUEnabled(bool value)
 
 ## Canvas
 This is used to describe a drawable area
@@ -1211,3 +1240,27 @@ Describes a touch contact point
 - [outer]GAMEPAD_ANALOG_THUMBSTICK_R : int
 - [outer]GAMEPAD_ANALOG_TRIGGER_L : int
 - [outer]GAMEPAD_ANALOG_TRIGGER_R : int
+
+
+### Physics
+- [outer]physics : Physics	-- use this global object to access physics functions
+- SetEnabled(bool value)	-- Enable/disable the physics engine all together
+- IsEnabled() : bool
+- SetSimulationEnabled(bool value)	-- Enable/disable the physics simulation. Physics engine state will be updated but not simulated
+- IsSimulationEnabeld() : bool
+- SetDebugDrawEnabled(bool value)	-- Enable/disable debug drawing of physics objects
+- IsDebugDrawEnabled() : bool
+- SetAccuracy(int value)	-- Set the accuracy of the simulation. This value corresponds to maximum simulation step count. Higher values will be slower but more accurate.
+- GetAccuracy() : int
+- SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the linear velocity manually
+- SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the angular velocity manually
+- ApplyForce(RigidBodyPhysicsComponent component, Vector force)	-- Apply force at body center
+- ApplyForceAt(RigidBodyPhysicsComponent component, Vector force, Vector at)	-- Apply force at body local position
+- ApplyImpulse(RigidBodyPhysicsComponent component, Vector impulse)	-- Apply impulse at body center
+- ApplyImpulseAt(RigidBodyPhysicsComponent component, Vector impulse, Vector at)	-- Apply impulse at body local position
+- ApplyTorque(RigidBodyPhysicsComponent component, Vector torque)	-- Apply torque at body center
+- ApplyTorqueImpulse(RigidBodyPhysicsComponent component, Vector torque)	-- Apply torque impulse at body center
+- SetActivationState(RigidBodyPhysicsComponent component, int state)	-- Force set activation state to rigid body. Use a value ACTIVATION_STATE_ACTIVE or ACTIVATION_STATE_INACTIVE
+- SetActivationState(SoftBodyPhysicsComponent component, int state)	-- Force set activation state to soft body. Use a value ACTIVATION_STATE_ACTIVE or ACTIVATION_STATE_INACTIVE
+- [outer]ACTIVATION_STATE_ACTIVE : int
+- [outer]ACTIVATION_STATE_INACTIVE : int

@@ -1257,6 +1257,7 @@ namespace wi::scene
 		float windWaveSize = 1;
 		float windSpeed = 1;
 		float stars = 0.5f;
+		XMFLOAT3 gravity = XMFLOAT3(0, -10, 0);
 
 		wi::Ocean::OceanParameters oceanParameters;
 		AtmosphereParameters atmosphereParameters;
@@ -1366,8 +1367,16 @@ namespace wi::scene
 		enum FLAGS
 		{
 			EMPTY = 0,
+			CPU = 1 << 0,
+			GPU = 1 << 1,
 		};
-		uint32_t _flags = EMPTY;
+		uint32_t _flags = CPU;
+
+		constexpr void SetCPUEnabled(bool value = true) { if (value) { _flags |= CPU; } else { _flags &= ~CPU; } }
+		constexpr void SetGPUEnabled(bool value = true) { if (value) { _flags |= GPU; } else { _flags &= ~GPU; } }
+
+		constexpr bool IsCPUEnabled() const { return _flags & CPU; }
+		constexpr bool IsGPUEnabled() const { return _flags & GPU; }
 
 		enum class Shape
 		{
@@ -1387,6 +1396,7 @@ namespace wi::scene
 		XMFLOAT3 planeOrigin = {};
 		XMFLOAT3 planeNormal = {};
 		XMFLOAT4X4 planeProjection = wi::math::IDENTITY_MATRIX;
+		uint32_t layerMask = ~0u;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

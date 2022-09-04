@@ -1184,6 +1184,7 @@ namespace wi::lua::scene
 			windWaveSize = FloatProperty(&component->windWaveSize);
 			windSpeed = FloatProperty(&component->windSpeed);
 			stars = FloatProperty(&component->stars);
+			gravity = VectorProperty(&component->gravity);
 
 			OceanParameters = Weather_OceanParams_Property(&component->oceanParameters);
 			AtmosphereParameters = Weather_AtmosphereParams_Property(&component->atmosphereParameters);
@@ -1216,6 +1217,7 @@ namespace wi::lua::scene
 		FloatProperty cloud_shadow_scale;
 		FloatProperty cloud_shadow_speed;
 		VectorProperty windDirection;
+		VectorProperty gravity;
 		FloatProperty windRandomness;
 		FloatProperty windWaveSize;
 		FloatProperty windSpeed;
@@ -1239,6 +1241,7 @@ namespace wi::lua::scene
 		PropertyFunction(cloud_shadow_scale)
 		PropertyFunction(cloud_shadow_speed)
 		PropertyFunction(windDirection)
+		PropertyFunction(gravity)
 		PropertyFunction(windRandomness)
 		PropertyFunction(windWaveSize)
 		PropertyFunction(windSpeed)
@@ -1336,7 +1339,7 @@ namespace wi::lua::scene
 		ColliderComponent_BindLua(wi::scene::ColliderComponent* component) :component(component) { BuildBindings(); }
 		ColliderComponent_BindLua(lua_State* L);
 		~ColliderComponent_BindLua();
-		
+
 		IntProperty Shape;
 		FloatProperty Radius;
 		VectorProperty Offset;
@@ -1346,6 +1349,9 @@ namespace wi::lua::scene
 		PropertyFunction(Radius)
 		PropertyFunction(Offset)
 		PropertyFunction(Tail)
+
+		int SetCPUEnabled(lua_State* L);
+		int SetGPUEnabled(lua_State* L);
 	};
 }
 

@@ -20,6 +20,7 @@
 #include "wiBacklog_BindLua.h"
 #include "wiNetwork_BindLua.h"
 #include "wiPrimitive_BindLua.h"
+#include "wiPhysics_BindLua.h"
 #include "wiTimer.h"
 #include "wiVector.h"
 
@@ -41,7 +42,11 @@ namespace wi::lua
 			}
 		}
 	};
-	LuaInternal luainternal;
+	LuaInternal& lua_internal()
+	{
+		static LuaInternal luainternal;
+		return luainternal;
+	}
 
 	uint32_t GeneratePID()
 	{
@@ -135,8 +140,8 @@ namespace wi::lua
 	{
 		wi::Timer timer;
 
-		luainternal.m_luaState = luaL_newstate();
-		luaL_openlibs(luainternal.m_luaState);
+		lua_internal().m_luaState = luaL_newstate();
+		luaL_openlibs(lua_internal().m_luaState);
 		RegisterFunc("dofile", Internal_DoFile);
 		RunText(wiLua_Globals);
 
@@ -160,49 +165,50 @@ namespace wi::lua
 		backlog::Bind();
 		Network_BindLua::Bind();
 		primitive::Bind();
+		Physics_BindLua::Bind();
 
 		wi::backlog::post("wi::lua Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	lua_State* GetLuaState()
 	{
-		return luainternal.m_luaState;
+		return lua_internal().m_luaState;
 	}
 
 	bool Success()
 	{
-		return luainternal.m_status == 0;
+		return lua_internal().m_status == 0;
 	}
 	bool Failed()
 	{
-		return luainternal.m_status != 0;
+		return lua_internal().m_status != 0;
 	}
 	std::string GetErrorMsg()
 	{
 		if (Failed()) {
-			std::string retVal = lua_tostring(luainternal.m_luaState, -1);
+			std::string retVal = lua_tostring(lua_internal().m_luaState, -1);
 			return retVal;
 		}
 		return std::string("");
 	}
 	std::string PopErrorMsg()
 	{
-		std::string retVal = lua_tostring(luainternal.m_luaState, -1);
-		lua_pop(luainternal.m_luaState, 1); // remove error message
+		std::string retVal = lua_tostring(lua_internal().m_luaState, -1);
+		lua_pop(lua_internal().m_luaState, 1); // remove error message
 		return retVal;
 	}
 	void PostErrorMsg()
 	{
 		if (Failed())
 		{
-			const char* str = lua_tostring(luainternal.m_luaState, -1);
+			const char* str = lua_tostring(lua_internal().m_luaState, -1);
 			if (str == nullptr)
 				return;
 			std::string ss;
 			ss += WILUA_ERROR_PREFIX;
 			ss += str;
 			wi::backlog::post(ss, wi::backlog::LogLevel::Error);
-			lua_pop(luainternal.m_luaState, 1); // remove error message
+			lua_pop(lua_internal().m_luaState, 1); // remove error message
 		}
 	}
 	bool RunFile(const std::string& filename)
@@ -218,7 +224,7 @@ namespace wi::lua
 	}
 	bool RunScript()
 	{
-		luainternal.m_status = lua_pcall(luainternal.m_luaState, 0, LUA_MULTRET, 0);
+		lua_internal().m_status = lua_pcall(lua_internal().m_luaState, 0, LUA_MULTRET, 0);
 		if (Failed())
 		{
 			PostErrorMsg();
@@ -228,7 +234,7 @@ namespace wi::lua
 	}
 	bool RunText(const std::string& script)
 	{
-		luainternal.m_status = luaL_loadstring(luainternal.m_luaState, script.c_str());
+		lua_internal().m_status = luaL_loadstring(lua_internal().m_luaState, script.c_str());
 		if (Success())
 		{
 			return RunScript();
@@ -239,7 +245,7 @@ namespace wi::lua
 	}
 	bool RegisterFunc(const std::string& name, lua_CFunction function)
 	{
-		lua_register(luainternal.m_luaState, name.c_str(), function);
+		lua_register(lua_internal().m_luaState, name.c_str(), function);
 
 		PostErrorMsg();
 
@@ -247,11 +253,11 @@ namespace wi::lua
 	}
 	void RegisterLibrary(const std::string& tableName, const luaL_Reg* functions)
 	{
-		if (luaL_newmetatable(luainternal.m_luaState, tableName.c_str()) != 0)
+		if (luaL_newmetatable(lua_internal().m_luaState, tableName.c_str()) != 0)
 		{
 			//table is not yet present
-			lua_pushvalue(luainternal.m_luaState, -1);
-			lua_setfield(luainternal.m_luaState, -2, "__index"); // Object.__index = Object
+			lua_pushvalue(lua_internal().m_luaState, -1);
+			lua_setfield(lua_internal().m_luaState, -2, "__index"); // Object.__index = Object
 			AddFuncArray(functions);
 		}
 	}
@@ -260,37 +266,37 @@ namespace wi::lua
 		RegisterLibrary(tableName, nullptr);
 
 		// does this call need to be checked? eg. userData == nullptr?
-		void** userData = static_cast<void**>(lua_newuserdata(luainternal.m_luaState, sizeof(void*)));
+		void** userData = static_cast<void**>(lua_newuserdata(lua_internal().m_luaState, sizeof(void*)));
 		*(userData) = object;
 
-		luaL_setmetatable(luainternal.m_luaState, tableName.c_str());
-		lua_setglobal(luainternal.m_luaState, name.c_str());
+		luaL_setmetatable(lua_internal().m_luaState, tableName.c_str());
+		lua_setglobal(lua_internal().m_luaState, name.c_str());
 
 		return true;
 	}
 	void AddFunc(const std::string& name, lua_CFunction function)
 	{
-		lua_pushcfunction(luainternal.m_luaState, function);
-		lua_setfield(luainternal.m_luaState, -2, name.c_str());
+		lua_pushcfunction(lua_internal().m_luaState, function);
+		lua_setfield(lua_internal().m_luaState, -2, name.c_str());
 	}
 	void AddFuncArray(const luaL_Reg* functions)
 	{
 		if (functions != nullptr)
 		{
-			luaL_setfuncs(luainternal.m_luaState, functions, 0);
+			luaL_setfuncs(lua_internal().m_luaState, functions, 0);
 		}
 	}
 	void AddInt(const std::string& name, int data)
 	{
-		lua_pushinteger(luainternal.m_luaState, data);
-		lua_setfield(luainternal.m_luaState, -2, name.c_str());
+		lua_pushinteger(lua_internal().m_luaState, data);
+		lua_setfield(lua_internal().m_luaState, -2, name.c_str());
 	}
 
 	void SetDeltaTime(double dt)
 	{
-		lua_getglobal(luainternal.m_luaState, "setDeltaTime");
-		SSetDouble(luainternal.m_luaState, dt);
-		lua_call(luainternal.m_luaState, 1, 0);
+		lua_getglobal(lua_internal().m_luaState, "setDeltaTime");
+		SSetDouble(lua_internal().m_luaState, dt);
+		lua_call(lua_internal().m_luaState, 1, 0);
 	}
 
 	inline void SignalHelper(lua_State* L, const char* str)
@@ -301,19 +307,19 @@ namespace wi::lua
 	}
 	void FixedUpdate()
 	{
-		SignalHelper(luainternal.m_luaState, "wickedengine_fixed_update_tick");
+		SignalHelper(lua_internal().m_luaState, "wickedengine_fixed_update_tick");
 	}
 	void Update()
 	{
-		SignalHelper(luainternal.m_luaState, "wickedengine_update_tick");
+		SignalHelper(lua_internal().m_luaState, "wickedengine_update_tick");
 	}
 	void Render()
 	{
-		SignalHelper(luainternal.m_luaState, "wickedengine_render_tick");
+		SignalHelper(lua_internal().m_luaState, "wickedengine_render_tick");
 	}
 	void Signal(const std::string& name)
 	{
-		SignalHelper(luainternal.m_luaState, name.c_str());
+		SignalHelper(lua_internal().m_luaState, name.c_str());
 	}
 
 	void KillProcesses()

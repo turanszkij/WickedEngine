@@ -1241,6 +1241,11 @@ namespace wi::scene
 					volumetricCloudsWeatherMap = wi::resourcemanager::Load(volumetricCloudsWeatherMapName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 				}
 			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> gravity;
+			}
 		}
 		else
 		{
@@ -1388,6 +1393,11 @@ namespace wi::scene
 			{
 				archive << volumetricCloudsWeatherMapName;
 			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << gravity;
+			}
 		}
 	}
 	void SoundComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
@@ -1486,6 +1496,12 @@ namespace wi::scene
 			archive >> radius;
 			archive >> offset;
 			archive >> tail;
+
+			if (seri.GetVersion() < 2)
+			{
+				SetCPUEnabled(true);
+				SetGPUEnabled(true);
+			}
 		}
 		else
 		{

@@ -4,6 +4,7 @@
 #include "wiRenderer.h"
 #include "wiHelper.h"
 #include "wiScene.h"
+#include "wiPhysics.h"
 
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -397,21 +398,27 @@ namespace wi::terrain
 			RigidBodyPhysicsComponent* rigidbody = scene->rigidbodies.GetComponent(chunk_data.entity);
 			if (IsPhysicsEnabled())
 			{
-				const int lod_required = std::max(0, dist - 1);
+				const ObjectComponent* object = scene->objects.GetComponent(chunk_data.entity);
+				const int lod_required = object == nullptr ? 0 : object->lod;
 
 				if (rigidbody != nullptr)
 				{
-					if (dist < physics_generation)
+					if (rigidbody->mesh_lod != lod_required)
 					{
-						if (rigidbody->mesh_lod != lod_required)
-						{
-							rigidbody->mesh_lod = lod_required;
-							rigidbody->physicsobject = {}; // will be recreated
-						}
+						rigidbody->mesh_lod = lod_required;
+						rigidbody->physicsobject = {}; // will be recreated
 					}
 					else
 					{
-						scene->rigidbodies.Remove(chunk_data.entity);
+						if (dist < physics_generation)
+						{
+							wi::physics::SetActivationState(*rigidbody, wi::physics::ActivationState::Active);
+						}
+						else
+						{
+							//scene->rigidbodies.Remove(chunk_data.entity);
+							wi::physics::SetActivationState(*rigidbody, wi::physics::ActivationState::Inactive);
+						}
 					}
 				}
 				else
@@ -420,7 +427,7 @@ namespace wi::terrain
 					{
 						RigidBodyPhysicsComponent& newrigidbody = scene->rigidbodies.Create(chunk_data.entity);
 						newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
-						newrigidbody.SetDisableDeactivation(true);
+						//newrigidbody.SetDisableDeactivation(true);
 						newrigidbody.SetKinematic(true);
 						newrigidbody.mesh_lod = lod_required;
 					}
@@ -753,6 +760,8 @@ namespace wi::terrain
 
 							for (const auto& prop : props)
 							{
+								if (prop.data.empty())
+									continue;
 								std::uniform_int_distribution<uint32_t> gen_distr(
 									uint32_t(prop.min_count_per_chunk * chunk_data.prop_density_current),
 									uint32_t(prop.max_count_per_chunk * chunk_data.prop_density_current)
