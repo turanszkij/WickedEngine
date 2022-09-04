@@ -573,6 +573,7 @@ namespace wi::physics
 			if (physicscomponent.physicsobject != nullptr)
 			{
 				btSoftBody* softbody = GetSoftBody(physicscomponent).softBody.get();
+				softbody->getWorldInfo()->m_gravity = dynamicsWorld.getGravity();
 				softbody->m_cfg.kDF = physicscomponent.friction;
 				softbody->setWindVelocity(wind);
 
