@@ -13,6 +13,7 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 	void RefreshBoneList();
 
+	wi::gui::Label infoLabel;
 	wi::gui::Button resetPoseButton;
 	wi::gui::TreeList boneList;
 

@@ -9,7 +9,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_ANIMATION " Animation", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(520, 430));
+	SetSize(XMFLOAT2(520, 480));
 
 	closeButton.SetTooltip("Delete AnimationComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -30,6 +30,11 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	float hei = 18;
 	float wid = 200;
 	float step = hei + 4;
+
+	infoLabel.Create("");
+	infoLabel.SetSize(XMFLOAT2(100, 50));
+	infoLabel.SetText("The animation window will stay open even if you select other entities until it is collapsed, so you can record other entities' data.");
+	AddWidget(&infoLabel);
 
 	modeComboBox.Create("Sampling: ");
 	modeComboBox.SetSize(XMFLOAT2(wid, hei));
@@ -64,7 +69,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 			}
 		}
 	});
-	modeComboBox.SetTooltip("Choose how animation data is interpreted between keyframes.\nNote that Cubic spline sampling requires spline animation data, otherwise, it will fall back to Linear!");
+	modeComboBox.SetTooltip("Choose how animation data is interpreted between keyframes.\nNote that Cubic spline sampling requires spline animation data, otherwise, it will fall back to Linear!\nCurrently spline animation data creation is not supported, but it can be imported from GLTF/VRM models.");
 	AddWidget(&modeComboBox);
 
 	loopedCheckBox.Create("Looped: ");
@@ -1140,6 +1145,7 @@ void AnimationWindow::ResizeLayout()
 		y += padding;
 	};
 
+	add_fullwidth(infoLabel);
 	add(modeComboBox);
 
 	loopedCheckBox.SetPos(XMFLOAT2(margin_left, y));
