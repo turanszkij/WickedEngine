@@ -1257,6 +1257,7 @@ namespace wi::scene
 		float windWaveSize = 1;
 		float windSpeed = 1;
 		float stars = 0.5f;
+		XMFLOAT3 gravity = XMFLOAT3(0, -10, 0);
 
 		wi::Ocean::OceanParameters oceanParameters;
 		AtmosphereParameters atmosphereParameters;

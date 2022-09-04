@@ -17,14 +17,13 @@ namespace wi::physics
 	void SetSimulationEnabled(bool value);
 	bool IsSimulationEnabled();
 
-	// Enable/disable debug drawing of physics object
+	// Enable/disable debug drawing of physics objects
 	void SetDebugDrawEnabled(bool value);
 	bool IsDebugDrawEnabled();
 
 	// Set the accuracy of the simulation
 	//	This value corresponds to maximum simulation step count
 	//	Higher values will be slower but more accurate
-	//	Default is 10
 	void SetAccuracy(int value);
 	int GetAccuracy();
 
@@ -62,5 +61,23 @@ namespace wi::physics
 	void ApplyTorque(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& torque
+	);
+	void ApplyTorqueImpulse(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& torque
+	);
+
+	enum class ActivationState
+	{
+		Active,
+		Inactive,
+	};
+	void SetActivationState(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		ActivationState state
+	);
+	void SetActivationState(
+		wi::scene::SoftBodyPhysicsComponent& physicscomponent,
+		ActivationState state
 	);
 }

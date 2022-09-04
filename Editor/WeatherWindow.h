@@ -27,6 +27,7 @@ public:
 	wi::gui::Slider fogEndSlider;
 	wi::gui::Slider fogHeightStartSlider;
 	wi::gui::Slider fogHeightEndSlider;
+	wi::gui::Slider gravitySlider;
 	wi::gui::Slider windSpeedSlider;
 	wi::gui::Slider windMagnitudeSlider;
 	wi::gui::Slider windDirectionSlider;

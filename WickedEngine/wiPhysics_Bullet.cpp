@@ -25,11 +25,11 @@ namespace wi::physics
 		bool ENABLED = true;
 		bool SIMULATION_ENABLED = true;
 		bool DEBUGDRAW_ENABLED = false;
-		int ACCURACY = 10;
+		int ACCURACY = 1;
 		int softbodyIterationCount = 5;
 		std::mutex physicsLock;
 
-		class DebugDraw : public btIDebugDraw
+		class DebugDraw final : public btIDebugDraw
 		{
 			void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override
 			{
@@ -72,7 +72,6 @@ namespace wi::physics
 
 		struct PhysicsScene
 		{
-			btVector3 gravity = btVector3(0, -10, 0);
 			btSoftBodyRigidBodyCollisionConfiguration collisionConfiguration;
 			btDbvtBroadphase overlappingPairCache;
 			btSequentialImpulseConstraintSolver solver;
@@ -85,10 +84,13 @@ namespace wi::physics
 			{
 				auto physics_scene = std::make_shared<PhysicsScene>();
 
-				physics_scene->dynamicsWorld.getSolverInfo().m_solverMode |= SOLVER_RANDMIZE_ORDER;
-				physics_scene->dynamicsWorld.getDispatchInfo().m_enableSatConvex = true;
-				physics_scene->dynamicsWorld.getSolverInfo().m_splitImpulse = true;
-				physics_scene->dynamicsWorld.setGravity(physics_scene->gravity);
+				btContactSolverInfo& solverInfo = physics_scene->dynamicsWorld.getSolverInfo();
+				solverInfo.m_solverMode |= SOLVER_RANDMIZE_ORDER;
+				solverInfo.m_splitImpulse = true;
+
+				btDispatcherInfo& dispatcherInfo = physics_scene->dynamicsWorld.getDispatchInfo();
+				dispatcherInfo.m_enableSatConvex = true;
+
 				physics_scene->dynamicsWorld.setDebugDrawer(&debugDraw);
 
 				btSoftBodyWorldInfo& softWorldInfo = physics_scene->dynamicsWorld.getWorldInfo();
@@ -96,7 +98,6 @@ namespace wi::physics
 				softWorldInfo.water_density = 0;
 				softWorldInfo.water_offset = 0;
 				softWorldInfo.water_normal = btVector3(0, 0, 0);
-				softWorldInfo.m_gravity.setValue(physics_scene->gravity.x(), physics_scene->gravity.y(), physics_scene->gravity.z());
 				softWorldInfo.m_sparsesdf.Initialize();
 
 				scene.physics_scene = physics_scene;
@@ -304,10 +305,6 @@ namespace wi::physics
 			{
 				physicsobject.rigidBody->setActivationState(DISABLE_DEACTIVATION);
 			}
-			if (physicscomponent.shape == RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH)
-			{
-				physicsobject.rigidBody->setActivationState(DISABLE_DEACTIVATION);
-			}
 
 			physicsobject.physics_scene = scene.physics_scene;
 			GetPhysicsScene(scene).dynamicsWorld.addRigidBody(physicsobject.rigidBody.get());
@@ -485,6 +482,7 @@ namespace wi::physics
 		auto range = wi::profiler::BeginRangeCPU("Physics");
 
 		btSoftRigidDynamicsWorld& dynamicsWorld = GetPhysicsScene(scene).dynamicsWorld;
+		dynamicsWorld.setGravity(btVector3(scene.weather.gravity.x, scene.weather.gravity.y, scene.weather.gravity.z));
 
 		btVector3 wind = btVector3(scene.weather.windDirection.x, scene.weather.windDirection.y, scene.weather.windDirection.z);
 
@@ -511,17 +509,6 @@ namespace wi::physics
 			if (physicscomponent.physicsobject != nullptr)
 			{
 				btRigidBody* rigidbody = GetRigidBody(physicscomponent).rigidBody.get();
-
-				int activationState = rigidbody->getActivationState();
-				if (physicscomponent.IsDisableDeactivation())
-				{
-					activationState |= DISABLE_DEACTIVATION;
-				}
-				else
-				{
-					activationState &= ~DISABLE_DEACTIVATION;
-				}
-				rigidbody->setActivationState(activationState);
 
 				rigidbody->setDamping(
 					physicscomponent.damping_linear,
@@ -839,6 +826,50 @@ namespace wi::physics
 		if (physicscomponent.physicsobject != nullptr)
 		{
 			GetRigidBody(physicscomponent).rigidBody->applyTorque(btVector3(torque.x, torque.y, torque.z));
+		}
+	}
+	void ApplyTorqueImpulse(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& torque
+	)
+	{
+		if (physicscomponent.physicsobject != nullptr)
+		{
+			GetRigidBody(physicscomponent).rigidBody->applyTorqueImpulse(btVector3(torque.x, torque.y, torque.z));
+		}
+	}
+
+	constexpr int to_internal(ActivationState state)
+	{
+		switch (state)
+		{
+		default:
+		case wi::physics::ActivationState::Active:
+			return ACTIVE_TAG;
+		case wi::physics::ActivationState::Inactive:
+			return DISABLE_SIMULATION;
+		}
+	}
+	void SetActivationState(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		ActivationState state
+	)
+	{
+		if (physicscomponent.physicsobject != nullptr)
+		{
+			//GetRigidBody(physicscomponent).rigidBody->setActivationState(to_internal(state));
+			GetRigidBody(physicscomponent).rigidBody->forceActivationState(to_internal(state));
+		}
+	}
+	void SetActivationState(
+		wi::scene::SoftBodyPhysicsComponent& physicscomponent,
+		ActivationState state
+	)
+	{
+		if (physicscomponent.physicsobject != nullptr)
+		{
+			//GetSoftBody(physicscomponent).softBody->setActivationState(to_internal(state));
+			GetSoftBody(physicscomponent).softBody->forceActivationState(to_internal(state));
 		}
 	}
 }

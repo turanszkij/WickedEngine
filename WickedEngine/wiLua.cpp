@@ -20,6 +20,7 @@
 #include "wiBacklog_BindLua.h"
 #include "wiNetwork_BindLua.h"
 #include "wiPrimitive_BindLua.h"
+#include "wiPhysics_BindLua.h"
 #include "wiTimer.h"
 #include "wiVector.h"
 
@@ -41,7 +42,7 @@ namespace wi::lua
 			}
 		}
 	};
-	LuaInternal luainternal;
+	static LuaInternal luainternal;
 
 	uint32_t GeneratePID()
 	{
@@ -160,6 +161,7 @@ namespace wi::lua
 		backlog::Bind();
 		Network_BindLua::Bind();
 		primitive::Bind();
+		Physics_BindLua::Bind();
 
 		wi::backlog::post("wi::lua Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}

@@ -1241,6 +1241,11 @@ namespace wi::scene
 					volumetricCloudsWeatherMap = wi::resourcemanager::Load(volumetricCloudsWeatherMapName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 				}
 			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> gravity;
+			}
 		}
 		else
 		{
@@ -1387,6 +1392,11 @@ namespace wi::scene
 			if (archive.GetVersion() >= 86)
 			{
 				archive << volumetricCloudsWeatherMapName;
+			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << gravity;
 			}
 		}
 	}

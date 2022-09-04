@@ -137,6 +137,15 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&fogHeightEndSlider);
 
+	gravitySlider.Create(-20, 20, -10, 10000, "Gravity: ");
+	gravitySlider.SetTooltip("Set the gravity factor on Y (vertical) axis for physics.");
+	gravitySlider.SetSize(XMFLOAT2(wid, hei));
+	gravitySlider.SetPos(XMFLOAT2(x, y += step));
+	gravitySlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().gravity.y = args.fValue;
+		});
+	AddWidget(&gravitySlider);
+
 	windSpeedSlider.Create(0.0f, 4.0f, 1.0f, 10000, "Wind Speed: ");
 	windSpeedSlider.SetSize(XMFLOAT2(wid, hei));
 	windSpeedSlider.SetPos(XMFLOAT2(x, y += step));
@@ -679,6 +688,7 @@ void WeatherWindow::Update()
 		fogEndSlider.SetValue(weather.fogEnd);
 		fogHeightStartSlider.SetValue(weather.fogHeightStart);
 		fogHeightEndSlider.SetValue(weather.fogHeightEnd);
+		gravitySlider.SetValue(weather.gravity.y);
 		windSpeedSlider.SetValue(weather.windSpeed);
 		windWaveSizeSlider.SetValue(weather.windWaveSize);
 		windRandomnessSlider.SetValue(weather.windRandomness);
@@ -810,6 +820,7 @@ void WeatherWindow::ResizeLayout()
 	add(fogEndSlider);
 	add(fogHeightStartSlider);
 	add(fogHeightEndSlider);
+	add(gravitySlider);
 	add(windSpeedSlider);
 	add(windMagnitudeSlider);
 	add(windDirectionSlider);

@@ -1086,6 +1086,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiScene_Components.h">
       <Filter>ENGINE\System</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysics_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1828,6 +1831,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiScene_Components.cpp">
       <Filter>ENGINE\System</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
