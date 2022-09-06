@@ -147,9 +147,14 @@ int main(int argc, char *argv[])
         throw sdl2::SDLError("Error creating window");
     }
 
-    set_window_icon( window.get());
+    set_window_icon(window.get());
 
-    if(fullscreen) SDL_SetWindowFullscreen(window.get(), SDL_TRUE);
+	if (fullscreen)
+	{
+		//SDL_SetWindowFullscreen(window.get(), SDL_TRUE);
+		//SDL_SetWindowFullscreen(window.get(), SDL_WINDOW_FULLSCREEN);
+		SDL_SetWindowFullscreen(window.get(), SDL_WINDOW_FULLSCREEN_DESKTOP);
+	}
 
     editor.SetWindow(window.get());
 

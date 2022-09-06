@@ -12,6 +12,7 @@ HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 Editor editor;
+bool window_recreating = false;
 
 
 enum Hotkeys
@@ -101,6 +102,87 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
+BOOL CreateEditorWindow(int nCmdShow)
+{
+	int width = CW_USEDEFAULT;
+	int height = 0;
+	bool fullscreen = false;
+	bool borderless = false;
+
+	wi::Timer timer;
+	if (editor.config.Open("config.ini"))
+	{
+		if (editor.config.Has("width"))
+		{
+			width = editor.config.GetInt("width");
+			height = editor.config.GetInt("height");
+		}
+		fullscreen = editor.config.GetBool("fullscreen");
+		borderless = editor.config.GetBool("borderless");
+		editor.allow_hdr = editor.config.GetBool("allow_hdr");
+
+		wi::backlog::post("config.ini loaded in " + std::to_string(timer.elapsed_milliseconds()) + " milliseconds\n");
+	}
+
+	HWND hWnd = NULL;
+
+	if (borderless || fullscreen)
+	{
+		width = std::max(100, width);
+		height = std::max(100, height);
+
+		hWnd = CreateWindowEx(
+			WS_EX_APPWINDOW,
+			szWindowClass,
+			szTitle,
+			WS_POPUP,
+			CW_USEDEFAULT, 0, width, height,
+			NULL,
+			NULL,
+			hInst,
+			NULL
+		);
+	}
+	else
+	{
+		hWnd = CreateWindow(
+			szWindowClass,
+			szTitle,
+			WS_OVERLAPPEDWINDOW,
+			CW_USEDEFAULT, 0, width, height,
+			NULL,
+			NULL,
+			hInst,
+			NULL
+		);
+	}
+
+	if (!hWnd)
+	{
+		return FALSE;
+	}
+
+	if (fullscreen)
+	{
+		HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+		MONITORINFO info;
+		info.cbSize = sizeof(MONITORINFO);
+		GetMonitorInfo(monitor, &info);
+		width = info.rcMonitor.right - info.rcMonitor.left;
+		height = info.rcMonitor.bottom - info.rcMonitor.top;
+		MoveWindow(hWnd, 0, 0, width, height, FALSE);
+	}
+
+	editor.SetWindow(hWnd);
+
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
+
+	RegisterHotKey(hWnd, PRINTSCREEN, 0, VK_SNAPSHOT);
+
+	return TRUE;
+}
+
 //
 //   FUNCTION: InitInstance(HINSTANCE, int)
 //
@@ -115,83 +197,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
-   int width = CW_USEDEFAULT;
-   int height = 0;
-   bool fullscreen = false;
-   bool borderless = false;
-
-   wi::Timer timer;
-   if (editor.config.Open("config.ini"))
-   {
-	   if (editor.config.Has("width"))
-	   {
-		   width = editor.config.GetInt("width");
-		   height = editor.config.GetInt("height");
-	   }
-	   fullscreen = editor.config.GetBool("fullscreen");
-	   borderless = editor.config.GetBool("borderless");
-	   editor.allow_hdr = editor.config.GetBool("allow_hdr");
-
-	   wi::backlog::post("config.ini loaded in " + std::to_string(timer.elapsed_milliseconds()) + " milliseconds\n");
-   }
-
-   HWND hWnd = NULL;
-
-   if (borderless || fullscreen)
-   {
-	   width = std::max(100, width);
-	   height = std::max(100, height);
-
-	   hWnd = CreateWindowEx(
-		   WS_EX_APPWINDOW,
-		   szWindowClass,
-		   szTitle,
-		   WS_POPUP,
-		   CW_USEDEFAULT, 0, width, height,
-		   NULL,
-		   NULL,
-		   hInstance,
-		   NULL
-	   );
-   }
-   else
-   {
-	   hWnd = CreateWindow(
-		   szWindowClass,
-		   szTitle,
-		   WS_OVERLAPPEDWINDOW,
-		   CW_USEDEFAULT, 0, width, height,
-		   NULL,
-		   NULL,
-		   hInstance,
-		   NULL
-	   );
-   }
-
-   if (!hWnd)
-   {
-      return FALSE;
-   }
-
-   if (fullscreen)
-   {
-	   HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-	   MONITORINFO info;
-	   info.cbSize = sizeof(MONITORINFO);
-	   GetMonitorInfo(monitor, &info);
-	   width = info.rcMonitor.right - info.rcMonitor.left;
-	   height = info.rcMonitor.bottom - info.rcMonitor.top;
-	   MoveWindow(hWnd, 0, 0, width, height, FALSE);
-   }
-
-   editor.SetWindow(hWnd);
-
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
-
-   RegisterHotKey(hWnd, PRINTSCREEN, 0, VK_SNAPSHOT);
-
-   return TRUE;
+   return CreateEditorWindow(nCmdShow);
 }
 
 //
@@ -305,7 +311,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_DESTROY:
-        PostQuitMessage(0);
+		if (window_recreating)
+			window_recreating = false;
+		else
+			PostQuitMessage(0);
         break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
