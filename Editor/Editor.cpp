@@ -18,6 +18,16 @@ using namespace wi::primitive;
 using namespace wi::scene;
 using namespace wi::ecs;
 
+// These are used for platform dependent window fullscreen change:
+#if defined(PLATFORM_WINDOWS_DESKTOP)
+extern BOOL CreateEditorWindow(int nCmdShow);
+extern bool window_recreating;
+#elif defined(PLATFORM_UWP)
+#include "winrt/Windows.UI.ViewManagement.h"
+#elif defined(PLATFORM_LINUX)
+#include "sdl2.h"
+#endif // PLATFORM_WINDOWS
+
 void Editor::Initialize()
 {
 	Application::Initialize();
@@ -374,6 +384,47 @@ void EditorComponent::Load()
 		wi::backlog::Toggle();
 		});
 	GetGUI().AddWidget(&logButton);
+
+
+	fullscreenButton.Create("");
+	fullscreenButton.SetShadowRadius(2);
+	fullscreenButton.font.params.shadowColor = wi::Color::Transparent();
+	fullscreenButton.SetTooltip("Toggle full screen");
+	fullscreenButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
+	fullscreenButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
+	fullscreenButton.OnClick([&](wi::gui::EventArgs args) {
+		bool fullscreen = main->config.GetBool("fullscreen");
+		fullscreen = !fullscreen;
+		main->config.Set("fullscreen", fullscreen);
+		main->config.Commit();
+
+		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t) {
+
+#if defined(PLATFORM_WINDOWS_DESKTOP)
+			main->swapChain = {};
+			wi::graphics::GetDevice()->WaitForGPU();
+			main->config = {};
+			window_recreating = true;
+			DestroyWindow(main->window);
+			main->window = {};
+			CreateEditorWindow(SW_SHOWNORMAL);
+#elif defined(PLATFORM_UWP)
+			auto applicationView = winrt::Windows::UI::ViewManagement::ApplicationView::GetForCurrentView();
+			if (applicationView.IsFullScreenMode())
+			{
+				applicationView.ExitFullScreenMode();
+			}
+			else
+			{
+				applicationView.TryEnterFullScreenMode();
+			}
+#elif defined(PLATFORM_LINUX)
+			SDL_SetWindowFullscreen(main->window.get(), fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+		});
+	});
+	GetGUI().AddWidget(&fullscreenButton);
 
 
 	aboutButton.Create("");
@@ -2770,8 +2821,12 @@ void EditorComponent::UpdateTopMenuAnimation()
 	float padding = 4;
 	float lerp = 0.3f;
 
+	bool fullscreen = main->config.GetBool("fullscreen");
+	const char* fullscreen_text = fullscreen ? ICON_FA_COMPRESS " Windowed" : ICON_FULLSCREEN " Full screen";
+
 	exitButton.SetText(exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_EXIT " Exit" : ICON_EXIT);
 	aboutButton.SetText(aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_HELP " About" : ICON_HELP);
+	fullscreenButton.SetText(fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? fullscreen_text : fullscreen ? ICON_FA_COMPRESS : ICON_FULLSCREEN);
 	logButton.SetText(logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BACKLOG " Backlog" : ICON_BACKLOG);
 	closeButton.SetText(closeButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_CLOSE " Close" : ICON_CLOSE);
 	openButton.SetText(openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_OPEN " Open" : ICON_OPEN);
@@ -2779,6 +2834,7 @@ void EditorComponent::UpdateTopMenuAnimation()
 
 	exitButton.SetSize(XMFLOAT2(wi::math::Lerp(exitButton.GetSize().x, exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	aboutButton.SetSize(XMFLOAT2(wi::math::Lerp(aboutButton.GetSize().x, aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	fullscreenButton.SetSize(XMFLOAT2(wi::math::Lerp(fullscreenButton.GetSize().x, fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	logButton.SetSize(XMFLOAT2(wi::math::Lerp(logButton.GetSize().x, logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	closeButton.SetSize(XMFLOAT2(wi::math::Lerp(closeButton.GetSize().x, closeButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	openButton.SetSize(XMFLOAT2(wi::math::Lerp(openButton.GetSize().x, openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
@@ -2786,7 +2842,8 @@ void EditorComponent::UpdateTopMenuAnimation()
 
 	exitButton.SetPos(XMFLOAT2(screenW - exitButton.GetSize().x, 0));
 	aboutButton.SetPos(XMFLOAT2(exitButton.GetPos().x - aboutButton.GetSize().x - padding, 0));
-	logButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - logButton.GetSize().x - padding, 0));
+	fullscreenButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - fullscreenButton.GetSize().x - padding, 0));
+	logButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - logButton.GetSize().x - padding, 0));
 	closeButton.SetPos(XMFLOAT2(logButton.GetPos().x - closeButton.GetSize().x - padding, 0));
 	openButton.SetPos(XMFLOAT2(closeButton.GetPos().x - openButton.GetSize().x - padding, 0));
 	saveButton.SetPos(XMFLOAT2(openButton.GetPos().x - saveButton.GetSize().x - padding, 0));
