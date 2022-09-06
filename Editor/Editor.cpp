@@ -419,7 +419,7 @@ void EditorComponent::Load()
 				applicationView.TryEnterFullScreenMode();
 			}
 #elif defined(PLATFORM_LINUX)
-			SDL_SetWindowFullscreen(main->window.get(), fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+			SDL_SetWindowFullscreen(main->window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 		});
