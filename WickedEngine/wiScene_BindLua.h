@@ -124,6 +124,27 @@ namespace wi::lua::scene
 		int Entity_GetSoundArray(lua_State* L);
 		int Entity_GetColliderArray(lua_State* L);
 
+		int Component_RemoveName(lua_State* L);
+		int Component_RemoveLayer(lua_State* L);
+		int Component_RemoveTransform(lua_State* L);
+		int Component_RemoveCamera(lua_State* L);
+		int Component_RemoveAnimation(lua_State* L);
+		int Component_RemoveMaterial(lua_State* L);
+		int Component_RemoveMesh(lua_State* L);
+		int Component_RemoveEmitter(lua_State* L);
+		int Component_RemoveHairParticleSystem(lua_State* L);
+		int Component_RemoveLight(lua_State* L);
+		int Component_RemoveObject(lua_State* L);
+		int Component_RemoveInverseKinematics(lua_State* L);
+		int Component_RemoveSpring(lua_State* L);
+		int Component_RemoveScript(lua_State* L);
+		int Component_RemoveRigidBodyPhysics(lua_State* L);
+		int Component_RemoveSoftBodyPhysics(lua_State* L);
+		int Component_RemoveForceField(lua_State* L);
+		int Component_RemoveWeather(lua_State* L);
+		int Component_RemoveSound(lua_State* L);
+		int Component_RemoveCollider(lua_State* L);
+
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
 		int Component_DetachChildren(lua_State* L);

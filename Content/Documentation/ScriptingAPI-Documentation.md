@@ -592,6 +592,25 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetSoundArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetColliderArray() : Entity[] result  -- returns the array of all entities that have this component type
 
+- Component_RemoveName(Entity entity) : NameComponent? result  -- remove the name component of the entity (if exists)
+- Component_RemoveLayer(Entity entity) : LayerComponent? result  -- remove the layer component of the entity (if exists)
+- Component_RemoveTransform(Entity entity) : TransformComponent? result  -- remove the transform component of the entity (if exists)
+- Component_RemoveCamera(Entity entity) : CameraComponent? result  -- remove the camera component of the entity (if exists)
+- Component_RemoveAnimation(Entity entity) : AnimationComponent? result  -- remove the animation component of the entity (if exists)
+- Component_RemoveMaterial(Entity entity) : MaterialComponent? result  -- remove the material component of the entity (if exists)
+- Component_RemoveEmitter(Entity entity) : EmitterComponent? result  -- remove the emitter component of the entity (if exists)
+- Component_RemoveLight(Entity entity) : LightComponent? result  -- remove the light component of the entity (if exists)
+- Component_RemoveObject(Entity entity) : ObjectComponent? result  -- remove the object component of the entity (if exists)
+- Component_RemoveInverseKinematics(Entity entity) : InverseKinematicsComponent? result  -- remove the IK component of the entity (if exists)
+- Component_RemoveSpring(Entity entity) : SpringComponent? result  -- remove the spring component of the entity (if exists)
+- Component_RemoveScript(Entity entity) : ScriptComponent? result  -- remove the script component of the entity (if exists)
+- Component_RemoveRigidBodyPhysics(Entity entity) : RigidBodyPhysicsComponent? result  -- remove the RigidBodyPhysicsComponent of the entity (if exists)
+- Component_RemoveSoftBodyPhysics(Entity entity) : SoftBodyPhysicsComponent? result  -- remove the SoftBodyPhysicsComponent of the entity (if exists)
+- Component_RemoveForceField(Entity entity) : ForceFieldComponent? result  -- remove the ForceFieldComponent of the entity (if exists)
+- Component_RemoveWeather(Entity entity) : WeatherComponent? result  -- remove the WeatherComponent of the entity (if exists)
+- Component_RemoveSound(Entity entity) : SoundComponent? result  -- remove the SoundComponent of the entity (if exists)
+- Component_RemoveCollider(Entity entity) : ColliderComponent? result  -- remove the ColliderComponent of the entity (if exists)
+
 - Component_Attach(Entity entity,parent)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer)
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
 - Component_DetachChildren(Entity parent)  -- detaches all children from parent, as if calling Component_Detach for all of its children
