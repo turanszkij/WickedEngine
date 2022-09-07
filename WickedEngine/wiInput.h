@@ -137,7 +137,6 @@ namespace wi::input
 	// send various feedback to the controller
 	void SetControllerFeedback(const ControllerFeedback& data, int playerindex = 0);
 
-	// これはペンです
 	struct Pen
 	{
 		XMFLOAT2 position = {};
