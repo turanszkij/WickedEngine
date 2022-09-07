@@ -13,7 +13,7 @@ static const float depthThreshold = 10000.0;
 static const float normalThreshold = 1.0;
 static const float varianceEstimateThreshold = 0.015; // Larger variance values use stronger blur
 static const float varianceExitThreshold = 0.005; // Variance needs to be higher than this value to accept blur
-static const uint2 bilateralMinMaxRadius = uint2(0, 8); // Chosen by variance
+static const uint2 bilateralMinMaxRadius = uint2(4, 8); // Chosen by variance
 
 #define BILATERAL_SIGMA 0.9
 
@@ -26,13 +26,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif
 
 	const float depth = texture_depth[DTid.xy];
-	//const float roughness = texture_roughness[DTid.xy];
-
-	//if (!NeedReflection(roughness, depth))
-	//{
-	//	output[DTid.xy] = texture_temporal[DTid.xy];
-	//	return;
-	//}
 
 	float2 direction = postprocess.params0.xy;
 
@@ -44,10 +37,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	float variance = texture_resolve_variance[DTid.xy];
 	bool strongBlur = variance > varianceEstimateThreshold;
-	strongBlur = true;
 
 	float radius = strongBlur ? bilateralMinMaxRadius.y : bilateralMinMaxRadius.x;
-	//radius = lerp(0.0, radius, saturate(roughness * 8.0)); // roughness 0.125 is destination
 
 	float sigma = radius * BILATERAL_SIGMA;
 	int effectiveRadius = min(sigma * 2.0, radius);
@@ -70,13 +61,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				const float4 sampleColor = texture_temporal[sampleCoord];
 
 				const float3 sampleN = decode_oct(texture_normal[sampleCoord]);
-				//const float sampleRoughness = texture_roughness[sampleCoord];
 
 				float2 sampleUV = (sampleCoord + 0.5) * postprocess.resolution_rcp;
 				float3 sampleP = reconstruct_position(sampleUV, sampleDepth);
 
-				// Don't let invalid roughness samples interfere
-				//if (NeedReflection(sampleRoughness, sampleDepth))
 				{
 					float3 dq = P - sampleP;
 					float planeError = max(abs(dot(dq, sampleN)), abs(dot(dq, N)));
