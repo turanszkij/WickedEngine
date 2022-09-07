@@ -98,8 +98,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		if (neighbor_lineardepth > 0)
 		{
 			float3 rayDir = texture_rayDirectionPDF[neighborTracingCoord].xyz;
-			float weight = abs(dot(N, rayDir));
-			//weight = 1;
+			float weight = 1;
+			//weight *= abs(dot(N, rayDir));
 			//weight *= 1 - saturate(abs(neighbor_lineardepth - lineardepth));
 
 			float4 sampleColor = texture_rayIndirectDiffuse[neighborTracingCoord];

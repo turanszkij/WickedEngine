@@ -8,6 +8,7 @@
 #include "raytracingHF.hlsli"
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
+#include "ShaderInterop_SurfelGI.h"
 #include "ShaderInterop_DDGI.h"
 
 PUSHCONSTANT(postprocess, PostProcess);
@@ -105,7 +106,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 	{
 		// miss:
-		payload.data.xyz += GetDynamicSkyColor(q.WorldRayDirection());
+		payload.data.xyz += GetAmbient(q.WorldRayDirection());
 		payload.data.w = FLT_MAX;
 	}
 	else
@@ -183,6 +184,10 @@ void main(uint2 DTid : SV_DispatchThreadID)
 			if (GetScene().ddgi.color_texture >= 0)
 			{
 				lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+			}
+			else if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
+			{
+				lighting.indirect.diffuse = bindless_textures[GetCamera().texture_surfelgi_index][DTid.xy * 2].rgb * GetFrame().gi_boost;
 			}
 
 			float4 color = 0;

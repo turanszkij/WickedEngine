@@ -14,9 +14,9 @@ RWTexture2D<float4> output_color : register(u0);
 RWTexture2D<float> output_variance : register(u1);
 
 static const float temporalResponse = 0.96;
-static const float temporalScale = 4;
+static const float temporalScale = 0.9;
 static const float disocclusionDepthWeight = 1.0f;
-static const float disocclusionThreshold = 0.1f;
+static const float disocclusionThreshold = 0.89f;
 static const float varianceTemporalResponse = 0.6f;
 
 float2 CalculateReprojectionBuffer(float2 uv, float depth)
