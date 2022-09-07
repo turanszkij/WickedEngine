@@ -474,6 +474,28 @@ namespace wi::renderer
 		float power = 1.0f,
 		uint8_t instanceInclusionMask = 0xFF
 	);
+	struct RTDiffuseResources
+	{
+		mutable int frame = 0;
+		wi::graphics::Texture texture_rayIndirectDiffuse;
+		wi::graphics::Texture texture_rayDirectionPDF;
+		wi::graphics::Texture texture_rayLengths;
+		wi::graphics::Texture texture_resolve;
+		wi::graphics::Texture texture_resolve_variance;
+		wi::graphics::Texture texture_resolve_reprojectionDepth;
+		wi::graphics::Texture texture_temporal[2];
+		wi::graphics::Texture texture_temporal_variance[2];
+		wi::graphics::Texture texture_bilateral_temp;
+	};
+	void CreateRTDiffuseResources(RTDiffuseResources& res, XMUINT2 resolution);
+	void Postprocess_RTDiffuse(
+		const RTDiffuseResources& res,
+		const wi::scene::Scene& scene,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd,
+		float range = 1000.0f,
+		uint8_t instanceInclusionMask = 0xFF
+	);
 	struct RTReflectionResources
 	{
 		mutable int frame = 0;

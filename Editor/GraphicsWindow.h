@@ -61,6 +61,7 @@ public:
 	wi::gui::Slider aoSampleCountSlider;
 	wi::gui::CheckBox ssrCheckBox;
 	wi::gui::CheckBox raytracedReflectionsCheckBox;
+	wi::gui::CheckBox raytracedDiffuseCheckBox;
 	wi::gui::CheckBox screenSpaceShadowsCheckBox;
 	wi::gui::Slider screenSpaceShadowsStepCountSlider;
 	wi::gui::Slider screenSpaceShadowsRangeSlider;

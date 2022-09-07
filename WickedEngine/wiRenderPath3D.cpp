@@ -492,6 +492,7 @@ void RenderPath3D::ResizeBuffers()
 	setAO(ao);
 	setSSREnabled(ssrEnabled);
 	setRaytracedReflectionsEnabled(raytracedReflectionsEnabled);
+	setRaytracedDiffuseEnabled(raytracedDiffuseEnabled);
 	setFSREnabled(fsrEnabled);
 
 	RenderPath2D::ResizeBuffers();
@@ -521,7 +522,9 @@ void RenderPath3D::Update(float dt)
 			wi::renderer::GetDDGIEnabled() ||
 			(hw_raytrace && wi::renderer::GetRaytracedShadowsEnabled()) ||
 			(hw_raytrace && getAO() == AO_RTAO) ||
-			(hw_raytrace && getRaytracedReflectionEnabled()))
+			(hw_raytrace && getRaytracedReflectionEnabled()) ||
+			(hw_raytrace && getRaytracedDiffuseEnabled())
+			)
 		{
 			scene->SetAccelerationStructureUpdateRequested(true);
 		}
@@ -588,6 +591,10 @@ void RenderPath3D::Update(float dt)
 	{
 		rtSSR = {};
 	}
+	if (!getRaytracedDiffuseEnabled())
+	{
+		rtRaytracedDiffuse = {};
+	}
 	if (getAO() == AO_DISABLED)
 	{
 		rtAO = {};
@@ -599,6 +606,7 @@ void RenderPath3D::Update(float dt)
 		wi::renderer::GetTemporalAAEnabled() ||
 		getSSREnabled() ||
 		getRaytracedReflectionEnabled() ||
+		getRaytracedDiffuseEnabled() ||
 		wi::renderer::GetRaytracedShadowsEnabled() ||
 		getAO() == AO::AO_RTAO ||
 		wi::renderer::GetVariableRateShadingClassification()
@@ -700,6 +708,7 @@ void RenderPath3D::Update(float dt)
 	camera->texture_ao_index = device->GetDescriptorIndex(&rtAO, SubresourceType::SRV);
 	camera->texture_ssr_index = device->GetDescriptorIndex(&rtSSR, SubresourceType::SRV);
 	camera->texture_rtshadow_index = device->GetDescriptorIndex(&rtShadow, SubresourceType::SRV);
+	camera->texture_rtdiffuse_index = device->GetDescriptorIndex(&rtRaytracedDiffuse, SubresourceType::SRV);
 	camera->texture_surfelgi_index = device->GetDescriptorIndex(&surfelGIResources.result, SubresourceType::SRV);
 
 	camera_reflection.canvas.init(*this);
@@ -874,6 +883,7 @@ void RenderPath3D::Render() const
 		else if(
 			getSSREnabled() ||
 			getRaytracedReflectionEnabled() ||
+			getRaytracedDiffuseEnabled() ||
 			wi::renderer::GetScreenSpaceShadowsEnabled() ||
 			wi::renderer::GetRaytracedShadowsEnabled()
 			)
@@ -1105,6 +1115,16 @@ void RenderPath3D::Render() const
 				rtSSR,
 				cmd,
 				instanceInclusionMask_RTReflection
+			);
+		}
+		if (getRaytracedDiffuseEnabled())
+		{
+			wi::renderer::Postprocess_RTDiffuse(
+				rtdiffuseResources,
+				*scene,
+				rtRaytracedDiffuse,
+				cmd,
+				instanceInclusionMask_RTDiffuse
 			);
 		}
 
@@ -1791,6 +1811,32 @@ void RenderPath3D::setRaytracedReflectionsEnabled(bool value)
 	else
 	{
 		rtreflectionResources = {};
+	}
+}
+
+void RenderPath3D::setRaytracedDiffuseEnabled(bool value)
+{
+	raytracedDiffuseEnabled = value;
+
+	if (value)
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+		XMUINT2 internalResolution = GetInternalResolution();
+
+		TextureDesc desc;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.format = Format::R16G16B16A16_FLOAT;
+		desc.width = internalResolution.x;
+		desc.height = internalResolution.y;
+		device->CreateTexture(&desc, nullptr, &rtRaytracedDiffuse);
+		device->SetName(&rtRaytracedDiffuse, "rtRaytracedDiffuse");
+
+		wi::renderer::CreateRTDiffuseResources(rtdiffuseResources, internalResolution);
+	}
+	else
+	{
+		rtRaytracedDiffuse = {};
+		rtdiffuseResources = {};
 	}
 }
 

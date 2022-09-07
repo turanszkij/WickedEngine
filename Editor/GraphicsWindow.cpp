@@ -14,7 +14,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1760));
+	SetSize(XMFLOAT2(580, 1780));
 
 	float step = 21;
 	float itemheight = 18;
@@ -835,8 +835,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&aoSampleCountSlider);
 
-	ssrCheckBox.Create("SSR: ");
-	ssrCheckBox.SetTooltip("Enable Screen Space Reflections.");
+	ssrCheckBox.Create("Screen Space Reflections: ");
+	ssrCheckBox.SetTooltip("Enable Screen Space Reflections. This can not reflect anything that is outside of the screen.");
 	ssrCheckBox.SetScriptTip("RenderPath3D::SetSSREnabled(bool value)");
 	ssrCheckBox.SetSize(XMFLOAT2(hei, hei));
 	ssrCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -848,7 +848,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&ssrCheckBox);
 
-	raytracedReflectionsCheckBox.Create("RT Reflections: ");
+	raytracedReflectionsCheckBox.Create("Ray traced Reflections: ");
 	raytracedReflectionsCheckBox.SetTooltip("Enable Ray Traced Reflections. Only if GPU supports raytracing.");
 	raytracedReflectionsCheckBox.SetScriptTip("RenderPath3D::SetRaytracedReflectionsEnabled(bool value)");
 	raytracedReflectionsCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -861,6 +861,20 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&raytracedReflectionsCheckBox);
 	raytracedReflectionsCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
+
+	raytracedDiffuseCheckBox.Create("Ray traced Diffuse: ");
+	raytracedDiffuseCheckBox.SetTooltip("Enable Ray Traced Diffuse. Only if GPU supports raytracing.\nThis effect computes single bounce diffuse with ray tracing per pixel.\nIf DDGI is enabled, it will make it multi bounce.");
+	raytracedDiffuseCheckBox.SetScriptTip("RenderPath3D::SetRaytracedDiffuseEnabled(bool value)");
+	raytracedDiffuseCheckBox.SetSize(XMFLOAT2(hei, hei));
+	raytracedDiffuseCheckBox.SetPos(XMFLOAT2(x + 140, y));
+	editor->renderPath->setRaytracedDiffuseEnabled(editor->main->config.GetSection("graphics").GetBool("raytraced_diffuse"));
+	raytracedDiffuseCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->renderPath->setRaytracedDiffuseEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("raytraced_diffuse", args.bValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&raytracedDiffuseCheckBox);
+	raytracedDiffuseCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
 	screenSpaceShadowsCheckBox.Create("Screen Shadows: ");
 	screenSpaceShadowsCheckBox.SetTooltip("Enable screen space contact shadows. This can add small shadows details to shadow maps in screen space.");
@@ -1478,6 +1492,7 @@ void GraphicsWindow::Update()
 	aoSampleCountSlider.SetValue((float)editor->renderPath->getAOSampleCount());
 	ssrCheckBox.SetCheck(editor->renderPath->getSSREnabled());
 	raytracedReflectionsCheckBox.SetCheck(editor->renderPath->getRaytracedReflectionEnabled());
+	raytracedDiffuseCheckBox.SetCheck(editor->renderPath->getRaytracedDiffuseEnabled());
 	screenSpaceShadowsCheckBox.SetCheck(wi::renderer::GetScreenSpaceShadowsEnabled());
 	screenSpaceShadowsRangeSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowRange());
 	screenSpaceShadowsStepCountSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowSampleCount());
@@ -1730,6 +1745,7 @@ void GraphicsWindow::ResizeLayout()
 	add(aoSampleCountSlider);
 	add_right(ssrCheckBox);
 	add_right(raytracedReflectionsCheckBox);
+	add_right(raytracedDiffuseCheckBox);
 	add_right(screenSpaceShadowsStepCountSlider);
 	screenSpaceShadowsCheckBox.SetPos(XMFLOAT2(screenSpaceShadowsStepCountSlider.GetPos().x - screenSpaceShadowsCheckBox.GetSize().x - 80, screenSpaceShadowsStepCountSlider.GetPos().y));
 	add_right(screenSpaceShadowsRangeSlider);
