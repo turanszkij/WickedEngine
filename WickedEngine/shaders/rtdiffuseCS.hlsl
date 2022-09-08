@@ -43,158 +43,166 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	const float3 P = reconstruct_position(jitterUV, depth);
 	const float3 V = normalize(GetCamera().position - P);
 
-	const float2 bluenoise = blue_noise(DTid.xy).xy;
-	const float3 R = normalize(mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(N)));
-	const float PDF = 0;
-
-	RayDesc ray;
-	ray.TMin = 0.01;
-	ray.TMax = rtdiffuse_range;
-	ray.Origin = P;
-	ray.Direction = normalize(R);
-
 	RayPayload payload;
 	payload.data = 0;
 
-	const float minraycone = 0.05;
-	RayCone raycone = RayCone::from_spread_angle(pixel_cone_spread_angle_from_image_height(postprocess.resolution.y));
-	raycone = raycone.propagate(sqr(max(minraycone, roughness)), lineardepth * GetCamera().z_far);
+	//const float2 bluenoise = blue_noise(DTid.xy).xy;
+	//const float3 R = normalize(mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(N)));
 
-	float4 additive_dist = float4(0, 0, 0, FLT_MAX);
-
-	RayQuery<
-		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
-	> q;
-	q.TraceRayInline(
-		scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-		0,								// uint RayFlags
-		asuint(postprocess.params1.x),	// uint InstanceInclusionMask
-		ray								// RayDesc Ray
-	);
-	while (q.Proceed())
+	const uint samplecount = 1;
+	for (uint i = 0; i < samplecount; ++i)
 	{
-		PrimitiveID prim;
-		prim.primitiveIndex = q.CandidatePrimitiveIndex();
-		prim.instanceIndex = q.CandidateInstanceID();
-		prim.subsetIndex = q.CandidateGeometryIndex();
+		const float2 bluenoise = blue_noise(DTid.xy, (float)i / (float)samplecount).xy;
+		const float3 R = normalize(mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(N)));
 
-		Surface surface;
-		surface.init();
-		surface.V = -ray.Direction;
-		surface.raycone = raycone;
-		surface.hit_depth = q.CandidateTriangleRayT();
-		if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
-			break;
+		RayDesc ray;
+		ray.TMin = 0.01;
+		ray.TMax = rtdiffuse_range;
+		ray.Origin = P;
+		ray.Direction = normalize(R);
 
-		float alphatest = clamp(blue_noise(DTid.xy, q.CandidateTriangleRayT()).r, 0, 0.99);
+		const float minraycone = 0.05;
+		RayCone raycone = RayCone::from_spread_angle(pixel_cone_spread_angle_from_image_height(postprocess.resolution.y));
+		raycone = raycone.propagate(sqr(max(minraycone, roughness)), lineardepth * GetCamera().z_far);
 
-		if (surface.material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
+		float4 additive_dist = float4(0, 0, 0, FLT_MAX);
+
+		RayQuery<
+			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+		> q;
+		q.TraceRayInline(
+			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+			0,								// uint RayFlags
+			asuint(postprocess.params1.x),	// uint InstanceInclusionMask
+			ray								// RayDesc Ray
+		);
+		while (q.Proceed())
 		{
-			additive_dist.xyz += surface.emissiveColor;
-			additive_dist.w = min(additive_dist.w, q.CandidateTriangleRayT());
+			PrimitiveID prim;
+			prim.primitiveIndex = q.CandidatePrimitiveIndex();
+			prim.instanceIndex = q.CandidateInstanceID();
+			prim.subsetIndex = q.CandidateGeometryIndex();
+
+			Surface surface;
+			surface.init();
+			surface.V = -ray.Direction;
+			surface.raycone = raycone;
+			surface.hit_depth = q.CandidateTriangleRayT();
+			if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
+				break;
+
+			float alphatest = clamp(blue_noise(DTid.xy, q.CandidateTriangleRayT()).r, 0, 0.99);
+
+			if (surface.material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
+			{
+				additive_dist.xyz += surface.emissiveColor;
+				additive_dist.w = min(additive_dist.w, q.CandidateTriangleRayT());
+			}
+			else if (surface.opacity - alphatest >= 0)
+			{
+				q.CommitNonOpaqueTriangleHit();
+			}
 		}
-		else if (surface.opacity - alphatest >= 0)
+
+		if (additive_dist.w <= q.CommittedRayT())
 		{
-			q.CommitNonOpaqueTriangleHit();
+			payload.data.xyz += max(0, additive_dist.xyz);
 		}
-	}
 
-	if (additive_dist.w <= q.CommittedRayT())
-	{
-		payload.data.xyz += max(0, additive_dist.xyz);
-	}
-
-	if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
-	{
-		// miss:
-		payload.data.xyz += GetAmbient(q.WorldRayDirection());
-	}
-	else
-	{
-		// closest hit:
-		PrimitiveID prim;
-		prim.primitiveIndex = q.CommittedPrimitiveIndex();
-		prim.instanceIndex = q.CommittedInstanceID();
-		prim.subsetIndex = q.CommittedGeometryIndex();
-
-		Surface surface;
-		surface.init();
-		if (!q.CommittedTriangleFrontFace())
+		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 		{
-			surface.flags |= SURFACE_FLAG_BACKFACE;
-		}
-		surface.V = -ray.Direction;
-		surface.raycone = raycone;
-		surface.hit_depth = q.CommittedRayT();
-		if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
-			return;
-
-		surface.pixel = DTid.xy;
-		surface.screenUV = surface.pixel * postprocess.resolution_rcp.xy;
-
-		if (surface.material.IsUnlit())
-		{
-			payload.data.xyz = surface.albedo + surface.emissiveColor;
+			// miss:
+			payload.data.xyz += GetAmbient(q.WorldRayDirection());
 		}
 		else
 		{
-			// Light sampling:
-			surface.P = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
-			surface.V = -q.WorldRayDirection();
-			surface.update();
+			// closest hit:
+			PrimitiveID prim;
+			prim.primitiveIndex = q.CommittedPrimitiveIndex();
+			prim.instanceIndex = q.CommittedInstanceID();
+			prim.subsetIndex = q.CommittedGeometryIndex();
 
-			Lighting lighting;
-			lighting.create(0, 0, 0, 0);
-
-			[loop]
-			for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
+			Surface surface;
+			surface.init();
+			if (!q.CommittedTriangleFrontFace())
 			{
-				ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
-				if ((light.layerMask & surface.material.layerMask) == 0)
-					continue;
-
-				if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
-				{
-					continue; // static lights will be skipped (they are used in lightmap baking)
-				}
-
-				switch (light.GetType())
-				{
-				case ENTITY_TYPE_DIRECTIONALLIGHT:
-				{
-					light_directional(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_POINTLIGHT:
-				{
-					light_point(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_SPOTLIGHT:
-				{
-					light_spot(light, surface, lighting);
-				}
-				break;
-				}
+				surface.flags |= SURFACE_FLAG_BACKFACE;
 			}
+			surface.V = -ray.Direction;
+			surface.raycone = raycone;
+			surface.hit_depth = q.CommittedRayT();
+			if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
+				return;
 
-			lighting.indirect.specular += surface.emissiveColor;
+			surface.pixel = DTid.xy;
+			surface.screenUV = surface.pixel * postprocess.resolution_rcp.xy;
 
-			[branch]
-			if (GetScene().ddgi.color_texture >= 0)
+			if (surface.material.IsUnlit())
 			{
-				lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+				payload.data.xyz = surface.albedo + surface.emissiveColor;
 			}
-			else if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
+			else
 			{
-				lighting.indirect.diffuse = bindless_textures[GetCamera().texture_surfelgi_index][DTid.xy * 2].rgb * GetFrame().gi_boost;
-			}
+				// Light sampling:
+				surface.P = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
+				surface.V = -q.WorldRayDirection();
+				surface.update();
 
-			float4 color = 0;
-			ApplyLighting(surface, lighting, color);
-			payload.data.xyz += color.rgb;
+				Lighting lighting;
+				lighting.create(0, 0, 0, 0);
+
+				[loop]
+				for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
+				{
+					ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
+					if ((light.layerMask & surface.material.layerMask) == 0)
+						continue;
+
+					if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+					{
+						continue; // static lights will be skipped (they are used in lightmap baking)
+					}
+
+					switch (light.GetType())
+					{
+					case ENTITY_TYPE_DIRECTIONALLIGHT:
+					{
+						light_directional(light, surface, lighting);
+					}
+					break;
+					case ENTITY_TYPE_POINTLIGHT:
+					{
+						light_point(light, surface, lighting);
+					}
+					break;
+					case ENTITY_TYPE_SPOTLIGHT:
+					{
+						light_spot(light, surface, lighting);
+					}
+					break;
+					}
+				}
+
+				lighting.indirect.specular += surface.emissiveColor;
+
+				[branch]
+				if (GetScene().ddgi.color_texture >= 0)
+				{
+					lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+				}
+				else if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
+				{
+					lighting.indirect.diffuse = bindless_textures[GetCamera().texture_surfelgi_index][DTid.xy * 2].rgb * GetFrame().gi_boost;
+				}
+
+				float4 color = 0;
+				ApplyLighting(surface, lighting, color);
+				payload.data.xyz += color.rgb;
+			}
 		}
 	}
+
+	payload.data /= (float)samplecount;
 
 	output_rayIndirectDiffuse[DTid.xy] = float4(payload.data.xyz, 1);
 }

@@ -10,7 +10,7 @@ Texture2D<float4> texture_rayIndirectDiffuse : register(t0);
 RWTexture2D<float4> texture_resolve : register(u0);
 RWTexture2D<float> texture_resolve_variance : register(u1);
 
-static const float resolveSpatialSize = 16.0;
+static const float resolveSpatialSize = 20.0;
 static const uint resolveSpatialReconstructionCount = 8.0f;
 
 // Weighted incremental variance

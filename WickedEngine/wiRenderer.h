@@ -482,6 +482,7 @@ namespace wi::renderer
 		wi::graphics::Texture texture_spatial_variance;
 		wi::graphics::Texture texture_temporal[2];
 		wi::graphics::Texture texture_temporal_variance[2];
+		wi::graphics::Texture texture_bilateral_temp;
 	};
 	void CreateRTDiffuseResources(RTDiffuseResources& res, XMUINT2 resolution);
 	void Postprocess_RTDiffuse(

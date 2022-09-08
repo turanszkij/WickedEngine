@@ -11,10 +11,9 @@ Texture2D<float> texture_variance_history : register(t3);
 
 RWTexture2D<float4> output_color : register(u0);
 RWTexture2D<float> output_variance : register(u1);
-RWTexture2D<float4> output_final : register(u2);
 
-static const float temporalResponse = 0.96;
-static const float temporalScale = 2;
+static const float temporalResponse = 0.98;
+static const float temporalScale = 0.9;
 static const float disocclusionDepthWeight = 1.0f;
 static const float disocclusionThreshold = 0.89f;
 static const float varianceTemporalResponse = 0.6f;
@@ -141,10 +140,6 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV
 	{
 		float4 color = texture_color_current[DTid.xy];
 		output_color[DTid.xy] = color;
-		output_final[DTid.xy * 2 + uint2(0, 0)] = color;
-		output_final[DTid.xy * 2 + uint2(1, 0)] = color;
-		output_final[DTid.xy * 2 + uint2(0, 1)] = color;
-		output_final[DTid.xy * 2 + uint2(1, 1)] = color;
 		return;
 	}
 
@@ -228,9 +223,4 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV
 
 	output_color[DTid.xy] = max(0, resultColor);
 	output_variance[DTid.xy] = max(0, resultVariance);
-
-	output_final[DTid.xy * 2 + uint2(0, 0)] = max(0, resultColor);
-	output_final[DTid.xy * 2 + uint2(1, 0)] = max(0, resultColor);
-	output_final[DTid.xy * 2 + uint2(0, 1)] = max(0, resultColor);
-	output_final[DTid.xy * 2 + uint2(1, 1)] = max(0, resultColor);
 }

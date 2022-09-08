@@ -12,7 +12,7 @@ RWTexture2D<float4> output : register(u0);
 static const float depthThreshold = 10000.0;
 static const float normalThreshold = 1.0;
 static const float varianceEstimateThreshold = 0.015; // Larger variance values use stronger blur
-static const float varianceExitThreshold = 0.005; // Variance needs to be higher than this value to accept blur
+static const float varianceExitThreshold = 0.0025; // Variance needs to be higher than this value to accept blur
 static const uint2 bilateralMinMaxRadius = uint2(4, 8); // Chosen by variance
 
 #define BILATERAL_SIGMA 0.9
@@ -20,14 +20,6 @@ static const uint2 bilateralMinMaxRadius = uint2(4, 8); // Chosen by variance
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-#if 0 // Debug
-	output[DTid.xy] = float4((texture_resolve_variance[DTid.xy] > varianceEstimateThreshold).rrr, 1.0);
-	return;
-#endif
-
-	//output[DTid.xy] = texture_temporal[DTid.xy];
-	//return;
-
 	const float depth = texture_depth[DTid.xy];
 
 	float2 direction = postprocess.params0.xy;
@@ -35,10 +27,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float linearDepth = texture_lineardepth[DTid.xy];
 	const float3 N = decode_oct(texture_normal[DTid.xy]);
 
-	float4 outputColor = texture_temporal[DTid.xy];
+	const float2 uv = (DTid.xy + 0.5) * postprocess.resolution_rcp;
+	float4 outputColor = texture_temporal.SampleLevel(sampler_linear_clamp, uv, 0);
 
+	//output[DTid.xy] = outputColor;
+	//return;
 
-	float variance = texture_resolve_variance[DTid.xy];
+	float variance = texture_resolve_variance.SampleLevel(sampler_linear_clamp, uv, 0);
 	bool strongBlur = variance > varianceEstimateThreshold;
 
 	float radius = strongBlur ? bilateralMinMaxRadius.y : bilateralMinMaxRadius.x;
@@ -61,11 +56,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			if (all(sampleCoord >= int2(0, 0) && sampleCoord < (int2) postprocess.resolution))
 			{
 				const float sampleDepth = texture_depth[sampleCoord];
-				const float4 sampleColor = texture_temporal[sampleCoord];
+
+				float2 sampleUV = (sampleCoord + 0.5) * postprocess.resolution_rcp;
+				const float4 sampleColor = texture_temporal.SampleLevel(sampler_linear_clamp, sampleUV, 0);
 
 				const float3 sampleN = decode_oct(texture_normal[sampleCoord]);
 
-				float2 sampleUV = (sampleCoord + 0.5) * postprocess.resolution_rcp;
 				float3 sampleP = reconstruct_position(sampleUV, sampleDepth);
 
 				{
