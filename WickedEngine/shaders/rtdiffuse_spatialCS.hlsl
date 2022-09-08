@@ -6,15 +6,12 @@
 PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<float4> texture_rayIndirectDiffuse : register(t0);
-Texture2D<float4> texture_rayDirectionPDF : register(t1);
-Texture2D<float> texture_rayLength : register(t2);
 
 RWTexture2D<float4> texture_resolve : register(u0);
 RWTexture2D<float> texture_resolve_variance : register(u1);
-RWTexture2D<float> texture_reprojectionDepth : register(u2);
 
-static const float2 resolveSpatialSize = 14.0;
-static const uint resolveSpatialReconstructionCount = 4.0f;
+static const float resolveSpatialSize = 16.0;
+static const uint resolveSpatialReconstructionCount = 8.0f;
 
 // Weighted incremental variance
 // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
@@ -63,16 +60,16 @@ uint3 hash33(uint3 x)
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
-	const uint2 tracingCoord = DTid.xy / 2;
+	const uint2 tracingCoord = DTid.xy;
 
-	const float depth = texture_depth[DTid.xy];
+	const float depth = texture_depth[DTid.xy * 2];
 
 	const float farplane = GetCamera().z_far;
-	const float lineardepth = texture_lineardepth[DTid.xy] * farplane;
+	const float lineardepth = texture_lineardepth[DTid.xy * 2] * farplane;
 
 	// Everthing in world space:
 	const float3 P = reconstruct_position(uv, depth);
-	const float3 N = decode_oct(texture_normal[DTid.xy]);
+	const float3 N = decode_oct(texture_normal[DTid.xy * 2]);
 	const float3 V = normalize(GetCamera().position - P);
 	const float NdotV = saturate(dot(N, V));
 
@@ -92,15 +89,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float2 offset = (hammersley2d_random(i, sampleCount, random) - 0.5) * resolveSpatialSize;
 
 		int2 neighborTracingCoord = tracingCoord + offset;
-		int2 neighborCoord = DTid.xy + offset;
+		int2 neighborCoord = DTid.xy * 2 + offset;
 
 		float neighbor_lineardepth = texture_lineardepth[neighborCoord] * farplane;
-		if (neighbor_lineardepth > 0)
+		if (neighbor_lineardepth < farplane)
 		{
-			float3 rayDir = texture_rayDirectionPDF[neighborTracingCoord].xyz;
 			float weight = 1;
-			//weight *= abs(dot(N, rayDir));
-			//weight *= 1 - saturate(abs(neighbor_lineardepth - lineardepth));
+			weight *= 1 - saturate(abs(lineardepth - neighbor_lineardepth));
 
 			float4 sampleColor = texture_rayIndirectDiffuse[neighborTracingCoord];
 			sampleColor.rgb *= rcp(1 + Luminance(sampleColor.rgb));
@@ -118,10 +113,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	// Population variance
 	float resolveVariance = S / weightSum;
 
-	// Convert to post-projection depth so we can construct dual source reprojection buffers later
-	float reprojectionDepth = compute_inverse_lineardepth(lineardepth + closestRayLength, GetCamera().z_near, GetCamera().z_far);
-
 	texture_resolve[DTid.xy] = max(result, 0.00001f);
 	texture_resolve_variance[DTid.xy] = resolveVariance;
-	texture_reprojectionDepth[DTid.xy] = reprojectionDepth;
 }

@@ -14,12 +14,10 @@
 PUSHCONSTANT(postprocess, PostProcess);
 
 RWTexture2D<float4> output_rayIndirectDiffuse : register(u0);
-RWTexture2D<float4> output_rayDirectionPDF : register(u1);
-RWTexture2D<float> output_rayLengths : register(u2);
 
 struct RayPayload
 {
-	float4 data;
+	float3 data;
 };
 
 [numthreads(8, 4, 1)]
@@ -35,8 +33,11 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	float2 jitterUV = (screenJitter + DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, jitterUV, 0);
+	if (depth == 0)
+		return;
+
 	const float lineardepth = texture_lineardepth.SampleLevel(sampler_linear_clamp, jitterUV, 0);
-	const float roughness = texture_roughness[jitterPixel];
+	const float roughness = 1;
 
 	const float3 N = decode_oct(texture_normal[jitterPixel]);
 	const float3 P = reconstruct_position(jitterUV, depth);
@@ -107,7 +108,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	{
 		// miss:
 		payload.data.xyz += GetAmbient(q.WorldRayDirection());
-		payload.data.w = FLT_MAX;
 	}
 	else
 	{
@@ -194,10 +194,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 			ApplyLighting(surface, lighting, color);
 			payload.data.xyz += color.rgb;
 		}
-		payload.data.w = q.CommittedRayT();
 	}
 
 	output_rayIndirectDiffuse[DTid.xy] = float4(payload.data.xyz, 1);
-	output_rayDirectionPDF[DTid.xy] = float4(R, PDF);
-	output_rayLengths[DTid.xy] = 0;
 }

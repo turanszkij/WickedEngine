@@ -10242,23 +10242,15 @@ void CreateRTDiffuseResources(RTDiffuseResources& res, XMUINT2 resolution)
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 
-	desc.format = Format::R16G16B16A16_FLOAT;
+	desc.format = Format::R11G11B10_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_rayIndirectDiffuse);
-	device->CreateTexture(&desc, nullptr, &res.texture_rayDirectionPDF);
-	desc.format = Format::R16_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.texture_rayLengths);
-	device->SetName(&res.texture_rayLengths, "rtdiffuse_rayLengths");
 
-	desc.width = resolution.x;
-	desc.height = resolution.y;
-	desc.format = Format::R16G16B16A16_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.texture_resolve);
+	desc.format = Format::R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_spatial);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
-	device->CreateTexture(&desc, nullptr, &res.texture_bilateral_temp);
 	desc.format = Format::R16_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.texture_resolve_variance);
-	device->CreateTexture(&desc, nullptr, &res.texture_resolve_reprojectionDepth);
+	device->CreateTexture(&desc, nullptr, &res.texture_spatial_variance);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[0]);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[1]);
 }
@@ -10303,16 +10295,12 @@ void Postprocess_RTDiffuse(
 
 		const GPUResource* uavs[] = {
 			&res.texture_rayIndirectDiffuse,
-			&res.texture_rayDirectionPDF,
-			&res.texture_rayLengths
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&res.texture_rayIndirectDiffuse, res.texture_rayIndirectDiffuse.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_rayDirectionPDF, res.texture_rayDirectionPDF.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_rayLengths, res.texture_rayLengths.desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -10328,8 +10316,6 @@ void Postprocess_RTDiffuse(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_rayIndirectDiffuse, ResourceState::UNORDERED_ACCESS, res.texture_rayIndirectDiffuse.desc.layout),
-				GPUBarrier::Image(&res.texture_rayDirectionPDF, ResourceState::UNORDERED_ACCESS, res.texture_rayDirectionPDF.desc.layout),
-				GPUBarrier::Image(&res.texture_rayLengths, ResourceState::UNORDERED_ACCESS, res.texture_rayLengths.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -10337,54 +10323,43 @@ void Postprocess_RTDiffuse(
 		device->EventEnd(cmd);
 	}
 
-	// Upscale to full-res:
-	postprocess.resolution.x = desc.width;
-	postprocess.resolution.y = desc.height;
-	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-	// Resolve pass:
+	// Spatial pass:
 	{
 		device->EventBegin("RTDiffuse - spatial filter", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_SPATIAL], cmd);
 
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
 		const GPUResource* resarray[] = {
 			&res.texture_rayIndirectDiffuse,
-			&res.texture_rayDirectionPDF,
-			&res.texture_rayLengths,
 		};
 		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
-			&res.texture_resolve,
-			&res.texture_resolve_variance,
-			&res.texture_resolve_reprojectionDepth,
+			&res.texture_spatial,
+			&res.texture_spatial_variance,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_resolve, res.texture_resolve.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_resolve_variance, res.texture_resolve_variance.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_resolve_reprojectionDepth, res.texture_resolve_reprojectionDepth.desc.layout, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.texture_spatial, res.texture_spatial.desc.layout, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.texture_spatial_variance, res.texture_spatial_variance.desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
 		device->Dispatch(
-			(res.texture_resolve.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.texture_resolve.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(res.texture_spatial.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(res.texture_spatial.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			1,
 			cmd
 		);
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_resolve, ResourceState::UNORDERED_ACCESS, res.texture_resolve.desc.layout),
-				GPUBarrier::Image(&res.texture_resolve_variance, ResourceState::UNORDERED_ACCESS, res.texture_resolve_variance.desc.layout),
-				GPUBarrier::Image(&res.texture_resolve_reprojectionDepth, ResourceState::UNORDERED_ACCESS, res.texture_resolve_reprojectionDepth.desc.layout),
+				GPUBarrier::Image(&res.texture_spatial, ResourceState::UNORDERED_ACCESS, res.texture_spatial.desc.layout),
+				GPUBarrier::Image(&res.texture_spatial_variance, ResourceState::UNORDERED_ACCESS, res.texture_spatial_variance.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -10392,7 +10367,7 @@ void Postprocess_RTDiffuse(
 		device->EventEnd(cmd);
 	}
 
-	int temporal_output = device->GetFrameCount() % 2;
+	int temporal_output = res.frame % 2;
 	int temporal_history = 1 - temporal_output;
 
 	// Temporal pass:
@@ -10400,18 +10375,20 @@ void Postprocess_RTDiffuse(
 		device->EventBegin("RTDiffuse temporal filter", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_TEMPORAL], cmd);
 
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
 		const GPUResource* resarray[] = {
-			&res.texture_resolve,
+			&res.texture_spatial,
 			&res.texture_temporal[temporal_history],
-			&res.texture_resolve_variance,
+			&res.texture_spatial_variance,
 			&res.texture_temporal_variance[temporal_history],
-			&res.texture_resolve_reprojectionDepth,
 		};
 		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_temporal[temporal_output],
 			&res.texture_temporal_variance[temporal_output],
+			&output,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -10419,6 +10396,7 @@ void Postprocess_RTDiffuse(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&res.texture_temporal[temporal_output], res.texture_temporal[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Image(&res.texture_temporal_variance[temporal_output], res.texture_temporal_variance[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -10435,6 +10413,7 @@ void Postprocess_RTDiffuse(
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_temporal[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_temporal[temporal_output].desc.layout),
 				GPUBarrier::Image(&res.texture_temporal_variance[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_temporal_variance[temporal_output].desc.layout),
+				GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -10442,93 +10421,93 @@ void Postprocess_RTDiffuse(
 		device->EventEnd(cmd);
 	}
 
-	// Bilateral blur pass:
-	{
-		device->EventBegin("RTDiffuse - bilateral filter", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_BILATERAL], cmd);
+	//// Bilateral blur pass:
+	//{
+	//	device->EventBegin("RTDiffuse - bilateral filter", cmd);
+	//	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_BILATERAL], cmd);
 
-		// Horizontal:
-		{
-			postprocess.params0.x = 1;
-			postprocess.params0.y = 0;
-			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+	//	// Horizontal:
+	//	{
+	//		postprocess.params0.x = 1;
+	//		postprocess.params0.y = 0;
+	//		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-			const GPUResource* resarray[] = {
-				&res.texture_temporal[temporal_output],
-				&res.texture_temporal_variance[temporal_output],
-			};
-			device->BindResources(resarray, 0, arraysize(resarray), cmd);
+	//		const GPUResource* resarray[] = {
+	//			&res.texture_temporal[temporal_output],
+	//			&res.texture_temporal_variance[temporal_output],
+	//		};
+	//		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
-			const GPUResource* uavs[] = {
-				&res.texture_bilateral_temp,
-			};
-			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+	//		const GPUResource* uavs[] = {
+	//			&res.texture_bilateral_temp,
+	//		};
+	//		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&res.texture_bilateral_temp, res.texture_bilateral_temp.desc.layout, ResourceState::UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+	//		{
+	//			GPUBarrier barriers[] = {
+	//				GPUBarrier::Image(&res.texture_bilateral_temp, res.texture_bilateral_temp.desc.layout, ResourceState::UNORDERED_ACCESS),
+	//			};
+	//			device->Barrier(barriers, arraysize(barriers), cmd);
+	//		}
 
-			device->Dispatch(
-				(res.texture_bilateral_temp.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				(res.texture_bilateral_temp.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				1,
-				cmd
-			);
+	//		device->Dispatch(
+	//			(res.texture_bilateral_temp.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+	//			(res.texture_bilateral_temp.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+	//			1,
+	//			cmd
+	//		);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-					GPUBarrier::Image(&res.texture_bilateral_temp, ResourceState::UNORDERED_ACCESS, res.texture_bilateral_temp.desc.layout),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-		}
+	//		{
+	//			GPUBarrier barriers[] = {
+	//				GPUBarrier::Memory(),
+	//				GPUBarrier::Image(&res.texture_bilateral_temp, ResourceState::UNORDERED_ACCESS, res.texture_bilateral_temp.desc.layout),
+	//			};
+	//			device->Barrier(barriers, arraysize(barriers), cmd);
+	//		}
+	//	}
 
-		// Vertical:
-		{
-			postprocess.params0.x = 0;
-			postprocess.params0.y = 1;
-			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+	//	// Vertical:
+	//	{
+	//		postprocess.params0.x = 0;
+	//		postprocess.params0.y = 1;
+	//		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-			const GPUResource* resarray[] = {
-				&res.texture_bilateral_temp,
-				&res.texture_temporal_variance[temporal_output],
-			};
-			device->BindResources(resarray, 0, arraysize(resarray), cmd);
+	//		const GPUResource* resarray[] = {
+	//			&res.texture_bilateral_temp,
+	//			&res.texture_temporal_variance[temporal_output],
+	//		};
+	//		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
-			const GPUResource* uavs[] = {
-				&output,
-			};
-			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+	//		const GPUResource* uavs[] = {
+	//			&output,
+	//		};
+	//		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+	//		{
+	//			GPUBarrier barriers[] = {
+	//				GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+	//			};
+	//			device->Barrier(barriers, arraysize(barriers), cmd);
+	//		}
 
-			device->Dispatch(
-				(output.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				(output.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				1,
-				cmd
-			);
+	//		device->Dispatch(
+	//			(output.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+	//			(output.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+	//			1,
+	//			cmd
+	//		);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-					GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-		}
+	//		{
+	//			GPUBarrier barriers[] = {
+	//				GPUBarrier::Memory(),
+	//				GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+	//			};
+	//			device->Barrier(barriers, arraysize(barriers), cmd);
+	//		}
+	//	}
 
-		device->EventEnd(cmd);
-	}
+	//	device->EventEnd(cmd);
+	//}
 
 	res.frame++;
 

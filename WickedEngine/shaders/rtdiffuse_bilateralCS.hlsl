@@ -25,6 +25,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	return;
 #endif
 
+	//output[DTid.xy] = texture_temporal[DTid.xy];
+	//return;
+
 	const float depth = texture_depth[DTid.xy];
 
 	float2 direction = postprocess.params0.xy;
