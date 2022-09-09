@@ -561,7 +561,7 @@ namespace wi
 			graphicsDevice->SetName(&rendertarget, "Application::rendertarget");
 
 			RenderPassDesc renderpassdesc;
-			renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rendertarget, RenderPassAttachment::LoadOp::CLEAR));
+			renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(rendertarget, RenderPassAttachment::LoadOp::CLEAR));
 			success = graphicsDevice->CreateRenderPass(&renderpassdesc, &renderpass);
 			assert(success);
 		}

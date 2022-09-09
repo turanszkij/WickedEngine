@@ -3174,7 +3174,7 @@ void UpdatePerFrameData(
 						RenderPassDesc renderpassdesc;
 						renderpassdesc.attachments.push_back(
 							RenderPassAttachment::DepthStencil(
-								&shadowMapAtlas,
+								shadowMapAtlas,
 								RenderPassAttachment::LoadOp::CLEAR,
 								RenderPassAttachment::StoreOp::STORE,
 								ResourceState::SHADER_RESOURCE,
@@ -3184,7 +3184,7 @@ void UpdatePerFrameData(
 						);
 						renderpassdesc.attachments.push_back(
 							RenderPassAttachment::RenderTarget(
-								&shadowMapAtlas_Transparent,
+								shadowMapAtlas_Transparent,
 								RenderPassAttachment::LoadOp::CLEAR,
 								RenderPassAttachment::StoreOp::STORE,
 								ResourceState::SHADER_RESOURCE,

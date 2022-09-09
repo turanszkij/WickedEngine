@@ -1015,19 +1015,19 @@ namespace dx12_internal
 			rootsig_desc = &desc;
 
 			// First, initialize all to point to invalid root parameter:
-			for (int i = 0; i < arraysize(CBV); ++i)
+			for (size_t i = 0; i < arraysize(CBV); ++i)
 			{
 				CBV[i] = INVALID_ROOT_PARAMETER;
 			}
-			for (int i = 0; i < arraysize(SRV); ++i)
+			for (size_t i = 0; i < arraysize(SRV); ++i)
 			{
 				SRV[i] = INVALID_ROOT_PARAMETER;
 			}
-			for (int i = 0; i < arraysize(UAV); ++i)
+			for (size_t i = 0; i < arraysize(UAV); ++i)
 			{
 				UAV[i] = INVALID_ROOT_PARAMETER;
 			}
-			for (int i = 0; i < arraysize(SAM); ++i)
+			for (size_t i = 0; i < arraysize(SAM); ++i)
 			{
 				SAM[i] = INVALID_ROOT_PARAMETER;
 			}
@@ -2027,13 +2027,13 @@ using namespace dx12_internal;
 					if (attachment.type == RenderPassAttachment::Type::RESOLVE ||
 						attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH ||
 						attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE ||
-						attachment.texture == nullptr)
+						!attachment.texture.IsValid())
 						continue;
 
 					switch (attachment.type)
 					{
 					case RenderPassAttachment::Type::RENDERTARGET:
-						switch (attachment.texture->desc.format)
+						switch (attachment.texture.desc.format)
 						{
 						case Format::R16_TYPELESS:
 							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
@@ -2048,13 +2048,13 @@ using namespace dx12_internal;
 							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 							break;
 						default:
-							formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.format);
+							formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture.desc.format);
 							break;
 						}
 						formats.NumRenderTargets++;
 						break;
 					case RenderPassAttachment::Type::DEPTH_STENCIL:
-						switch (attachment.texture->desc.format)
+						switch (attachment.texture.desc.format)
 						{
 						case Format::R16_TYPELESS:
 							DSFormat = DXGI_FORMAT_D16_UNORM;
@@ -2069,7 +2069,7 @@ using namespace dx12_internal;
 							DSFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 							break;
 						default:
-							DSFormat = _ConvertFormat(attachment.texture->desc.format);
+							DSFormat = _ConvertFormat(attachment.texture.desc.format);
 							break;
 						}
 						break;
@@ -2078,7 +2078,7 @@ using namespace dx12_internal;
 						break;
 					}
 
-					sampleDesc.Count = attachment.texture->desc.sample_count;
+					sampleDesc.Count = attachment.texture.desc.sample_count;
 					sampleDesc.Quality = 0;
 				}
 				stream.stream1.DSFormat = DSFormat;
@@ -2996,7 +2996,7 @@ using namespace dx12_internal;
 		internal_state->dummyTexture.desc.height = desc->height;
 		internal_state->renderpass = {};
 		wi::helper::hash_combine(internal_state->renderpass.hash, desc->format);
-		internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget(&internal_state->dummyTexture));
+		internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget(internal_state->dummyTexture));
 
 		return true;
 	}
@@ -3719,11 +3719,11 @@ using namespace dx12_internal;
 		{
 			if (attachment.type == RenderPassAttachment::Type::RENDERTARGET || attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
 			{
-				wi::helper::hash_combine(renderpass->hash, attachment.texture->desc.format);
-				wi::helper::hash_combine(renderpass->hash, attachment.texture->desc.sample_count);
+				wi::helper::hash_combine(renderpass->hash, attachment.texture.desc.format);
+				wi::helper::hash_combine(renderpass->hash, attachment.texture.desc.sample_count);
 			}
 
-			const Texture* texture = attachment.texture;
+			const Texture* texture = &attachment.texture;
 			int subresource = attachment.subresource;
 			auto texture_internal = to_internal(texture);
 
@@ -3828,11 +3828,11 @@ using namespace dx12_internal;
 					int resolve_src_counter = 0;
 					for (auto& src : renderpass->desc.attachments)
 					{
-						if (src.type == RenderPassAttachment::Type::RENDERTARGET && src.texture != nullptr)
+						if (src.type == RenderPassAttachment::Type::RENDERTARGET && src.texture.IsValid())
 						{
 							if (resolve_src_counter == resolve_dst_counter)
 							{
-								auto src_internal = to_internal(src.texture);
+								auto src_internal = to_internal(&src.texture);
 								int src_subresource = src.subresource;
 								const SingleDescriptor& src_descriptor = src_subresource < 0 ? src_internal->rtv : src_internal->subresources_rtv[src_subresource];
 
@@ -3845,12 +3845,12 @@ using namespace dx12_internal;
 								src_RTV.EndingAccess.Resolve.pSrcResource = src_internal->resource.Get();
 
 								const SingleDescriptor& dst_descriptor = subresource < 0 ? texture_internal->srv : texture_internal->subresources_srv[subresource];
-								for (uint32_t mip = 0; mip < std::min(attachment.texture->desc.mip_levels, dst_descriptor.mipCount); ++mip)
+								for (uint32_t mip = 0; mip < std::min(attachment.texture.desc.mip_levels, dst_descriptor.mipCount); ++mip)
 								{
-									for (uint32_t slice = 0; slice < std::min(attachment.texture->desc.array_size, dst_descriptor.sliceCount); ++slice)
+									for (uint32_t slice = 0; slice < std::min(attachment.texture.desc.array_size, dst_descriptor.sliceCount); ++slice)
 									{
 										D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS& params = internal_state->resolve_subresources[resolve_src_counter].emplace_back();
-										params.SrcSubresource = D3D12CalcSubresource(src_descriptor.firstMip + mip, src_descriptor.firstSlice + slice, 0, src.texture->desc.mip_levels, src.texture->desc.array_size);
+										params.SrcSubresource = D3D12CalcSubresource(src_descriptor.firstMip + mip, src_descriptor.firstSlice + slice, 0, src.texture.desc.mip_levels, src.texture.desc.array_size);
 										params.DstSubresource = D3D12CalcSubresource(dst_descriptor.firstMip + mip, dst_descriptor.firstSlice + slice, 0, texture->desc.mip_levels, texture->desc.array_size);
 										params.SrcRect.left = 0;
 										params.SrcRect.top = 0;
@@ -3874,9 +3874,9 @@ using namespace dx12_internal;
 				{
 					for (auto& src : renderpass->desc.attachments)
 					{
-						if (src.type == RenderPassAttachment::Type::DEPTH_STENCIL && src.texture != nullptr)
+						if (src.type == RenderPassAttachment::Type::DEPTH_STENCIL && src.texture.IsValid())
 						{
-							auto src_internal = to_internal(src.texture);
+							auto src_internal = to_internal(&src.texture);
 							int src_subresource = src.subresource;
 							const SingleDescriptor& src_descriptor = src_subresource < 0 ? src_internal->dsv : src_internal->subresources_dsv[src_subresource];
 
@@ -3900,12 +3900,12 @@ using namespace dx12_internal;
 							src_DSV.DepthEndingAccess.Resolve.pSrcResource = src_internal->resource.Get();
 
 							const SingleDescriptor& dst_descriptor = subresource < 0 ? texture_internal->srv : texture_internal->subresources_srv[subresource];
-							for (uint32_t mip = 0; mip < std::min(attachment.texture->desc.mip_levels, dst_descriptor.mipCount); ++mip)
+							for (uint32_t mip = 0; mip < std::min(attachment.texture.desc.mip_levels, dst_descriptor.mipCount); ++mip)
 							{
-								for (uint32_t slice = 0; slice < std::min(attachment.texture->desc.array_size, dst_descriptor.sliceCount); ++slice)
+								for (uint32_t slice = 0; slice < std::min(attachment.texture.desc.array_size, dst_descriptor.sliceCount); ++slice)
 								{
 									D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS& params = internal_state->resolve_subresources_dsv.emplace_back();
-									params.SrcSubresource = D3D12CalcSubresource(src_descriptor.firstMip + mip, src_descriptor.firstSlice + slice, 0, src.texture->desc.mip_levels, src.texture->desc.array_size);
+									params.SrcSubresource = D3D12CalcSubresource(src_descriptor.firstMip + mip, src_descriptor.firstSlice + slice, 0, src.texture.desc.mip_levels, src.texture.desc.array_size);
 									params.DstSubresource = D3D12CalcSubresource(dst_descriptor.firstMip + mip, dst_descriptor.firstSlice + slice, 0, texture->desc.mip_levels, texture->desc.array_size);
 									params.SrcRect.left = 0;
 									params.SrcRect.top = 0;
@@ -3915,7 +3915,7 @@ using namespace dx12_internal;
 							}
 							src_DSV.DepthEndingAccess.Resolve.SubresourceCount = (UINT)internal_state->resolve_subresources_dsv.size();
 							src_DSV.DepthEndingAccess.Resolve.pSubresourceParameters = internal_state->resolve_subresources_dsv.data();
-							if (IsFormatStencilSupport(attachment.texture->desc.format))
+							if (IsFormatStencilSupport(attachment.texture.desc.format))
 							{
 								src_DSV.StencilBeginningAccess = src_DSV.DepthBeginningAccess;
 								src_DSV.StencilEndingAccess = src_DSV.DepthEndingAccess;
@@ -3935,7 +3935,7 @@ using namespace dx12_internal;
 		// Beginning barriers:
 		for (auto& attachment : renderpass->desc.attachments)
 		{
-			if (attachment.texture == nullptr)
+			if (!attachment.texture.IsValid())
 				continue;
 
 			D3D12_RESOURCE_STATES before = _ParseResourceState(attachment.initial_layout);
@@ -3947,7 +3947,7 @@ using namespace dx12_internal;
 			if (before == after)
 				continue;
 
-			auto texture_internal = to_internal(attachment.texture);
+			auto texture_internal = to_internal(&attachment.texture);
 
 			D3D12_RESOURCE_BARRIER barrierdesc = {};
 			barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -3982,11 +3982,11 @@ using namespace dx12_internal;
 					continue;
 				}
 
-				for (uint32_t mip = descriptor->firstMip; mip < std::min(attachment.texture->desc.mip_levels, descriptor->firstMip + descriptor->mipCount); ++mip)
+				for (uint32_t mip = descriptor->firstMip; mip < std::min(attachment.texture.desc.mip_levels, descriptor->firstMip + descriptor->mipCount); ++mip)
 				{
-					for (uint32_t slice = descriptor->firstSlice; slice < std::min(attachment.texture->desc.array_size, descriptor->firstSlice + descriptor->sliceCount); ++slice)
+					for (uint32_t slice = descriptor->firstSlice; slice < std::min(attachment.texture.desc.array_size, descriptor->firstSlice + descriptor->sliceCount); ++slice)
 					{
-						barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, attachment.texture->desc.mip_levels, attachment.texture->desc.array_size);
+						barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, attachment.texture.desc.mip_levels, attachment.texture.desc.array_size);
 						internal_state->barrierdescs_begin.push_back(barrierdesc);
 					}
 				}
@@ -4002,7 +4002,7 @@ using namespace dx12_internal;
 		// Ending barriers:
 		for (auto& attachment : renderpass->desc.attachments)
 		{
-			if (attachment.texture == nullptr)
+			if (!attachment.texture.IsValid())
 				continue;
 
 			D3D12_RESOURCE_STATES before = _ParseResourceState(attachment.subpass_layout);
@@ -4014,7 +4014,7 @@ using namespace dx12_internal;
 			if (before == after)
 				continue;
 
-			auto texture_internal = to_internal(attachment.texture);
+			auto texture_internal = to_internal(&attachment.texture);
 
 			D3D12_RESOURCE_BARRIER barrierdesc = {};
 			barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -4049,11 +4049,11 @@ using namespace dx12_internal;
 					continue;
 				}
 
-				for (uint32_t mip = descriptor->firstMip; mip < std::min(attachment.texture->desc.mip_levels, descriptor->firstMip + descriptor->mipCount); ++mip)
+				for (uint32_t mip = descriptor->firstMip; mip < std::min(attachment.texture.desc.mip_levels, descriptor->firstMip + descriptor->mipCount); ++mip)
 				{
-					for (uint32_t slice = descriptor->firstSlice; slice < std::min(attachment.texture->desc.array_size, descriptor->firstSlice + descriptor->sliceCount); ++slice)
+					for (uint32_t slice = descriptor->firstSlice; slice < std::min(attachment.texture.desc.array_size, descriptor->firstSlice + descriptor->sliceCount); ++slice)
 					{
-						barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, attachment.texture->desc.mip_levels, attachment.texture->desc.array_size);
+						barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, attachment.texture.desc.mip_levels, attachment.texture.desc.array_size);
 						internal_state->barrierdescs_end.push_back(barrierdesc);
 					}
 				}

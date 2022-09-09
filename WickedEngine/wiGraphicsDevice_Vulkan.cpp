@@ -1188,7 +1188,7 @@ namespace vulkan_internal
 			auto renderpass_internal = std::make_shared<RenderPass_Vulkan>();
 			renderpass_internal->allocationhandler = allocationhandler;
 			internal_state->renderpass.internal_state = renderpass_internal;
-			internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget(&internal_state->dummyTexture));
+			internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget(internal_state->dummyTexture));
 			res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderpass_internal->renderpass);
 			assert(res == VK_SUCCESS);
 
@@ -2081,9 +2081,9 @@ using namespace vulkan_internal;
 				multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 				multisampling.sampleShadingEnable = VK_FALSE;
 				multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-				if (commandlist.active_renderpass->desc.attachments.size() > 0 && commandlist.active_renderpass->desc.attachments[0].texture != nullptr)
+				if (commandlist.active_renderpass->desc.attachments.size() > 0 && commandlist.active_renderpass->desc.attachments[0].texture.IsValid())
 				{
-					multisampling.rasterizationSamples = (VkSampleCountFlagBits)commandlist.active_renderpass->desc.attachments[0].texture->desc.sample_count;
+					multisampling.rasterizationSamples = (VkSampleCountFlagBits)commandlist.active_renderpass->desc.attachments[0].texture.desc.sample_count;
 				}
 				if (pso->desc.rs != nullptr)
 				{
@@ -5090,8 +5090,8 @@ using namespace vulkan_internal;
 		{
 			if (attachment.type == RenderPassAttachment::Type::RENDERTARGET || attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
 			{
-				wi::helper::hash_combine(renderpass->hash, attachment.texture->desc.format);
-				wi::helper::hash_combine(renderpass->hash, attachment.texture->desc.sample_count);
+				wi::helper::hash_combine(renderpass->hash, attachment.texture.desc.format);
+				wi::helper::hash_combine(renderpass->hash, attachment.texture.desc.sample_count);
 			}
 		}
 
@@ -5122,7 +5122,7 @@ using namespace vulkan_internal;
 		uint32_t validAttachmentCount = 0;
 		for (auto& attachment : renderpass->desc.attachments)
 		{
-			const Texture* texture = attachment.texture;
+			const Texture* texture = &attachment.texture;
 			const TextureDesc& texdesc = texture->desc;
 			int subresource = attachment.subresource;
 			auto texture_internal_state = to_internal(texture);
@@ -5240,7 +5240,7 @@ using namespace vulkan_internal;
 			{
 				resolveAttachmentRefs[resolvecount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
 
-				if (attachment.texture == nullptr)
+				if (!attachment.texture.IsValid())
 				{
 					resolveAttachmentRefs[resolvecount].attachment = VK_ATTACHMENT_UNUSED;
 				}
@@ -5270,7 +5270,7 @@ using namespace vulkan_internal;
 			else if (attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH)
 			{
 
-				if (attachment.texture == nullptr)
+				if (!attachment.texture.IsValid())
 				{
 					resolveAttachmentRefs[resolvecount].attachment = VK_ATTACHMENT_UNUSED;
 				}
@@ -5309,7 +5309,7 @@ using namespace vulkan_internal;
 				depthResolveAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
 				depthResolveAttachmentRef.attachment = validAttachmentCount;
 				depthResolveAttachmentRef.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				if (IsFormatStencilSupport(attachment.texture->desc.format))
+				if (IsFormatStencilSupport(attachment.texture.desc.format))
 				{
 					depthResolveAttachmentRef.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 				}
@@ -5323,7 +5323,7 @@ using namespace vulkan_internal;
 			{
 				shadingRateAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
 
-				if (attachment.texture == nullptr)
+				if (!attachment.texture.IsValid())
 				{
 					shadingRateAttachmentRef.attachment = VK_ATTACHMENT_UNUSED;
 				}
@@ -5372,8 +5372,8 @@ using namespace vulkan_internal;
 
 		if (validAttachmentCount > 0)
 		{
-			const TextureDesc& texdesc = renderpass->desc.attachments[0].texture->desc;
-			auto texture_internal = to_internal(renderpass->desc.attachments[0].texture);
+			const TextureDesc& texdesc = renderpass->desc.attachments[0].texture.desc;
+			auto texture_internal = to_internal(&renderpass->desc.attachments[0].texture);
 			framebufferInfo.pAttachments = attachments;
 			framebufferInfo.width = texdesc.width;
 			framebufferInfo.height = texdesc.height;
@@ -5416,10 +5416,10 @@ using namespace vulkan_internal;
 			{
 				if (renderpass->desc.attachments[i].type == RenderPassAttachment::Type::RESOLVE ||
 					renderpass->desc.attachments[i].type == RenderPassAttachment::Type::SHADING_RATE_SOURCE ||
-					attachment.texture == nullptr)
+					!attachment.texture.IsValid())
 					continue;
 
-				const ClearValue& clear = renderpass->desc.attachments[i].texture->desc.clear;
+				const ClearValue& clear = renderpass->desc.attachments[i].texture.desc.clear;
 				if (renderpass->desc.attachments[i].type == RenderPassAttachment::Type::RENDERTARGET)
 				{
 					internal_state->clearColors[i].color.float32[0] = clear.color[0];

@@ -51,10 +51,10 @@ namespace wi
 		if (rtStenciled.IsValid())
 		{
 			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtStenciled, RenderPassAttachment::LoadOp::CLEAR));
+			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtStenciled, RenderPassAttachment::LoadOp::CLEAR));
 			desc.attachments.push_back(
 				RenderPassAttachment::DepthStencil(
-					dsv,
+					*dsv,
 					RenderPassAttachment::LoadOp::LOAD,
 					RenderPassAttachment::StoreOp::STORE,
 					ResourceState::DEPTHSTENCIL_READONLY,
@@ -65,7 +65,7 @@ namespace wi
 
 			if (rtStenciled.GetDesc().sample_count > 1)
 			{
-				desc.attachments.push_back(RenderPassAttachment::Resolve(&rtStenciled_resolved));
+				desc.attachments.push_back(RenderPassAttachment::Resolve(rtStenciled_resolved));
 			}
 
 			device->CreateRenderPass(&desc, &renderpass_stenciled);
@@ -74,13 +74,13 @@ namespace wi
 		}
 		{
 			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtFinal, RenderPassAttachment::LoadOp::CLEAR));
+			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtFinal, RenderPassAttachment::LoadOp::CLEAR));
 
 			if (dsv != nullptr && !rtStenciled.IsValid())
 			{
 				desc.attachments.push_back(
 					RenderPassAttachment::DepthStencil(
-						dsv,
+						*dsv,
 						RenderPassAttachment::LoadOp::LOAD,
 						RenderPassAttachment::StoreOp::STORE,
 						ResourceState::DEPTHSTENCIL_READONLY,
