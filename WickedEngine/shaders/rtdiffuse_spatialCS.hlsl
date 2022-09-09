@@ -3,15 +3,13 @@
 #include "stochasticSSRHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-PUSHCONSTANT(postprocess, PostProcess);
-
 Texture2D<float4> texture_rayIndirectDiffuse : register(t0);
 
 RWTexture2D<float4> texture_resolve : register(u0);
 RWTexture2D<float> texture_resolve_variance : register(u1);
 
-static const float resolveSpatialSize = 20.0;
-static const uint resolveSpatialReconstructionCount = 8.0f;
+static const float resolveSpatialSize = 8.0;
+static const uint resolveSpatialReconstructionCount = 4.0f;
 
 // Weighted incremental variance
 // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
@@ -59,7 +57,6 @@ uint3 hash33(uint3 x)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 	const uint2 tracingCoord = DTid.xy;
 
 	const float depth = texture_depth[DTid.xy * 2];
@@ -68,10 +65,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float lineardepth = texture_lineardepth[DTid.xy * 2] * farplane;
 
 	// Everthing in world space:
-	const float3 P = reconstruct_position(uv, depth);
 	const float3 N = decode_oct(texture_normal[DTid.xy * 2]);
-	const float3 V = normalize(GetCamera().position - P);
-	const float NdotV = saturate(dot(N, V));
 
 	float4 result = 0.0f;
 	float weightSum = 0.0f;

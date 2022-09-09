@@ -9,7 +9,6 @@
 #define GGX_IMPORTANCE_SAMPLE_BIAS 0.1
 
 // Shared Reflection settings:
-static const float ReflectionMaxRoughness = 0.6f;
 
 uint2 GetReflectionIndirectDispatchCoord(uint3 Gid, uint3 GTid, StructuredBuffer<uint> tiles, uint downsample)
 {
@@ -23,9 +22,9 @@ uint2 GetReflectionIndirectDispatchCoord(uint3 Gid, uint3 GTid, StructuredBuffer
 	return subtile_upperleft + unflatten2D(GTid.x, POSTPROCESS_BLOCKSIZE);
 }
 
-bool NeedReflection(float roughness, float depth)
+bool NeedReflection(float roughness, float depth, float roughness_cutoff)
 {
-	return (roughness < ReflectionMaxRoughness) && (depth > 0.0);
+	return (roughness < roughness_cutoff) && (depth > 0.0);
 }
 
 // Brian Karis, Epic Games "Real Shading in Unreal Engine 4"

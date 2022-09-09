@@ -28,7 +28,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float depth = texture_depth[DTid.xy];
 	const float roughness = texture_roughness[DTid.xy];
 
-	if (!NeedReflection(roughness, depth))
+	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
 	{
 		output[DTid.xy] = texture_temporal[DTid.xy];
 		return;
@@ -75,7 +75,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float3 sampleP = reconstruct_position(sampleUV, sampleDepth);
 
 				// Don't let invalid roughness samples interfere
-				if (NeedReflection(sampleRoughness, sampleDepth))
+				if (NeedReflection(sampleRoughness, sampleDepth, ssr_roughness_cutoff))
 				{
 					float3 dq = P - sampleP;
 					float planeError = max(abs(dot(dq, sampleN)), abs(dot(dq, N)));

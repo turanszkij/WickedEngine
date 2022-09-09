@@ -1114,6 +1114,8 @@ void RenderPath3D::Render() const
 				*scene,
 				rtSSR,
 				cmd,
+				getRaytracedReflectionsRange(),
+				getReflectionRoughnessCutoff(),
 				instanceInclusionMask_RTReflection
 			);
 		}
@@ -1124,6 +1126,7 @@ void RenderPath3D::Render() const
 				*scene,
 				rtRaytracedDiffuse,
 				cmd,
+				getRaytracedDiffuseRange(),
 				instanceInclusionMask_RTDiffuse
 			);
 		}
@@ -1347,7 +1350,8 @@ void RenderPath3D::RenderSSR(CommandList cmd) const
 			ssrResources,
 			rtSceneCopy,
 			rtSSR, 
-			cmd
+			cmd,
+			getReflectionRoughnessCutoff()
 		);
 	}
 }

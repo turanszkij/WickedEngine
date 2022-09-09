@@ -146,7 +146,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV
 	const float depth = texture_depth[DTid.xy];
 	const float roughness = texture_roughness[DTid.xy];
 
-	if (!NeedReflection(roughness, depth))
+	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
 	{
 		output_color[DTid.xy] = texture_color_current[DTid.xy];
 		output_variance[DTid.xy] = 0.0;

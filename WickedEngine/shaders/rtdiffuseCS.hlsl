@@ -112,7 +112,19 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 		{
 			// miss:
-			payload.data.xyz += GetAmbient(q.WorldRayDirection());
+			[branch]
+			if (GetScene().ddgi.color_texture >= 0)
+			{
+				payload.data += ddgi_sample_irradiance(P, N);
+			}
+			else if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(P)))
+			{
+				payload.data += bindless_textures[GetCamera().texture_surfelgi_index][DTid.xy * 2].rgb * GetFrame().gi_boost;
+			}
+			else
+			{
+				payload.data.xyz += GetAmbient(q.WorldRayDirection());
+			}
 		}
 		else
 		{
@@ -189,10 +201,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 				if (GetScene().ddgi.color_texture >= 0)
 				{
 					lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
-				}
-				else if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
-				{
-					lighting.indirect.diffuse = bindless_textures[GetCamera().texture_surfelgi_index][DTid.xy * 2].rgb * GetFrame().gi_boost;
 				}
 
 				float4 color = 0;

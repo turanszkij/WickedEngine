@@ -40,6 +40,9 @@ namespace wi
 		float eyeadaptionRate = 1;
 		float fsrSharpness = 1.0f;
 		float lightShaftsStrength = 0.2f;
+		float raytracedDiffuseRange = 10;
+		float raytracedReflectionsRange = 10000.0f;
+		float reflectionRoughnessCutoff = 0.6f;
 
 		AO ao = AO_DISABLED;
 		bool fxaaEnabled = false;
@@ -193,6 +196,9 @@ namespace wi
 		constexpr float getEyeAdaptionRate() const { return eyeadaptionRate; }
 		constexpr float getFSRSharpness() const { return fsrSharpness; }
 		constexpr float getLightShaftsStrength() const { return lightShaftsStrength; }
+		constexpr float getRaytracedDiffuseRange() const { return raytracedDiffuseRange; }
+		constexpr float getRaytracedReflectionsRange() const { return raytracedReflectionsRange; }
+		constexpr float getReflectionRoughnessCutoff() const { return reflectionRoughnessCutoff; }
 
 		constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 		constexpr AO getAO() const { return ao; }
@@ -238,6 +244,9 @@ namespace wi
 		constexpr void setEyeAdaptionRate(float value) { eyeadaptionRate = value; }
 		constexpr void setFSRSharpness(float value) { fsrSharpness = value; }
 		constexpr void setLightShaftsStrength(float value) { lightShaftsStrength = value; }
+		constexpr void setRaytracedDiffuseRange(float value) { raytracedDiffuseRange = value; }
+		constexpr void setRaytracedReflectionsRange(float value) { raytracedReflectionsRange = value; }
+		constexpr void setReflectionRoughnessCutoff(float value) { reflectionRoughnessCutoff = value; }
 
 		void setAO(AO value);
 		void setSSREnabled(bool value);

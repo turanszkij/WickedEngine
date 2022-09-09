@@ -92,7 +92,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float depth = texture_depth[DTid.xy];
 	const float roughness = texture_roughness[DTid.xy];
 
-	if (!NeedReflection(roughness, depth))
+	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
 	{
 		texture_resolve[DTid.xy] = texture_rayIndirectSpecular[tracingCoord];
 		texture_resolve_variance[DTid.xy] = 0.0;

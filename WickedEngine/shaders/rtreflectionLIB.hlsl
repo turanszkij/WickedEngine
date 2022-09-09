@@ -43,7 +43,7 @@ void RTReflection_Raygen()
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, jitterUV, 0);
 	const float roughness = texture_roughness[jitterPixel];
 
-	if (!NeedReflection(roughness, depth))
+	if (!NeedReflection(roughness, depth, rtreflection_roughness_cutoff))
 	{
 		output_rayIndirectSpecular[DTid.xy] = 0;
 		output_rayDirectionPDF[DTid.xy] = 0;

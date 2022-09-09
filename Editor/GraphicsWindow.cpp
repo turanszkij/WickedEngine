@@ -14,7 +14,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1780));
+	SetSize(XMFLOAT2(580, 1850));
 
 	float step = 21;
 	float itemheight = 18;
@@ -198,6 +198,16 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		wi::renderer::SetDDGIRayCount((uint32_t)args.iValue);
 		});
 	AddWidget(&ddgiRayCountSlider);
+
+	ddgiBlendSpeedSlider.Create(0, 0.1f, 0.02f, 1000, "DDGI Blend Speed: ");
+	ddgiBlendSpeedSlider.SetTooltip("Adjust the contribution of newly traced rays. Higher values will make the DDGI update faster, but can result in increased flickering.");
+	ddgiBlendSpeedSlider.SetSize(XMFLOAT2(wid, itemheight));
+	ddgiBlendSpeedSlider.SetPos(XMFLOAT2(x, y += step));
+	ddgiBlendSpeedSlider.SetValue(wi::renderer::GetDDGIBlendSpeed());
+	ddgiBlendSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::renderer::SetDDGIBlendSpeed(args.fValue);
+		});
+	AddWidget(&ddgiBlendSpeedSlider);
 
 	ddgiSmoothBackfaceSlider.Create(0, 1, 0, 1000, "DDGI Smoothen: ");
 	ddgiSmoothBackfaceSlider.SetTooltip("Adjust the amount of smooth backface test.");
@@ -758,7 +768,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	lightShaftsStrengthStrengthSlider.SetTooltip("Set light shaft strength.");
 	lightShaftsStrengthStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	lightShaftsStrengthStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
-	if (editor->main->config.GetSection("graphics").GetBool("lightshafts_strength"))
+	if (editor->main->config.GetSection("graphics").Has("lightshafts_strength"))
 	{
 		editor->renderPath->setLightShaftsStrength(editor->main->config.GetSection("graphics").GetFloat("lightshafts_strength"));
 	}
@@ -800,7 +810,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	aoPowerSlider.SetTooltip("Set SSAO Power. Higher values produce darker, more pronounced effect");
 	aoPowerSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	aoPowerSlider.SetPos(XMFLOAT2(x + 100, y += step));
-	if (editor->main->config.GetSection("graphics").GetBool("ambient_occlusion_power"))
+	if (editor->main->config.GetSection("graphics").Has("ambient_occlusion_power"))
 	{
 		editor->renderPath->setAOPower(editor->main->config.GetSection("graphics").GetFloat("ambient_occlusion_power"));
 	}
@@ -815,7 +825,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	aoRangeSlider.SetTooltip("Set AO ray length. Only for SSAO and RTAO");
 	aoRangeSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	aoRangeSlider.SetPos(XMFLOAT2(x + 100, y += step));
-	if (editor->main->config.GetSection("graphics").GetBool("ambient_occlusion_range"))
+	if (editor->main->config.GetSection("graphics").Has("ambient_occlusion_range"))
 	{
 		editor->renderPath->setAORange(editor->main->config.GetSection("graphics").GetFloat("ambient_occlusion_range"));
 	}
@@ -835,7 +845,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&aoSampleCountSlider);
 
-	ssrCheckBox.Create("Screen Space Reflections: ");
+	ssrCheckBox.Create("SSR: ");
 	ssrCheckBox.SetTooltip("Enable Screen Space Reflections. This can not reflect anything that is outside of the screen.");
 	ssrCheckBox.SetScriptTip("RenderPath3D::SetSSREnabled(bool value)");
 	ssrCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -848,7 +858,22 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&ssrCheckBox);
 
-	raytracedReflectionsCheckBox.Create("Ray traced Reflections: ");
+	reflectionsRoughnessCutoffSlider.Create(0, 1, 0.6f, 1000, "Cutoff: ");
+	reflectionsRoughnessCutoffSlider.SetTooltip("Set maximum roughness which can be used to apply screen space or raytraced reflections.");
+	reflectionsRoughnessCutoffSlider.SetSize(XMFLOAT2(mod_wid, hei));
+	reflectionsRoughnessCutoffSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	if (editor->main->config.GetSection("graphics").Has("reflection_roughness_cutoff"))
+	{
+		editor->renderPath->setReflectionRoughnessCutoff(editor->main->config.GetSection("graphics").GetFloat("reflection_roughness_cutoff"));
+	}
+	reflectionsRoughnessCutoffSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setReflectionRoughnessCutoff(args.fValue);
+		editor->main->config.GetSection("graphics").Set("reflection_roughness_cutoff", args.fValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&reflectionsRoughnessCutoffSlider);
+
+	raytracedReflectionsCheckBox.Create("RT Reflections: ");
 	raytracedReflectionsCheckBox.SetTooltip("Enable Ray Traced Reflections. Only if GPU supports raytracing.");
 	raytracedReflectionsCheckBox.SetScriptTip("RenderPath3D::SetRaytracedReflectionsEnabled(bool value)");
 	raytracedReflectionsCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -862,7 +887,23 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&raytracedReflectionsCheckBox);
 	raytracedReflectionsCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
-	raytracedDiffuseCheckBox.Create("Ray traced Diffuse: ");
+	raytracedReflectionsRangeSlider.Create(1.0f, 10000.0f, 1, 1000, "Range: ");
+	raytracedReflectionsRangeSlider.SetTooltip("Set Reflection ray length for Ray traced reflections.");
+	raytracedReflectionsRangeSlider.SetSize(XMFLOAT2(mod_wid, hei));
+	raytracedReflectionsRangeSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	if (editor->main->config.GetSection("graphics").Has("rtreflection_range"))
+	{
+		editor->renderPath->setRaytracedReflectionsRange(editor->main->config.GetSection("graphics").GetFloat("rtreflection_range"));
+	}
+	raytracedReflectionsRangeSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setRaytracedReflectionsRange(args.fValue);
+		editor->main->config.GetSection("graphics").Set("rtreflection_range", args.fValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&raytracedReflectionsRangeSlider);
+	raytracedReflectionsRangeSlider.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
+
+	raytracedDiffuseCheckBox.Create("RT Diffuse: ");
 	raytracedDiffuseCheckBox.SetTooltip("Enable Ray Traced Diffuse. Only if GPU supports raytracing.\nThis effect computes single bounce diffuse with ray tracing per pixel.\nIf DDGI is enabled, it will make it multi bounce.");
 	raytracedDiffuseCheckBox.SetScriptTip("RenderPath3D::SetRaytracedDiffuseEnabled(bool value)");
 	raytracedDiffuseCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -875,6 +916,22 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&raytracedDiffuseCheckBox);
 	raytracedDiffuseCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
+
+	raytracedDiffuseRangeSlider.Create(1.0f, 100.0f, 1, 1000, "Range: ");
+	raytracedDiffuseRangeSlider.SetTooltip("Set Reflection ray length for Ray traced diffuse.");
+	raytracedDiffuseRangeSlider.SetSize(XMFLOAT2(mod_wid, hei));
+	raytracedDiffuseRangeSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	if (editor->main->config.GetSection("graphics").Has("rtdiffuse_range"))
+	{
+		editor->renderPath->setRaytracedDiffuseRange(editor->main->config.GetSection("graphics").GetFloat("rtdiffuse_range"));
+	}
+	raytracedDiffuseRangeSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setRaytracedDiffuseRange(args.fValue);
+		editor->main->config.GetSection("graphics").Set("rtdiffuse_range", args.fValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&raytracedDiffuseRangeSlider);
+	raytracedDiffuseRangeSlider.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
 	screenSpaceShadowsCheckBox.Create("Screen Shadows: ");
 	screenSpaceShadowsCheckBox.SetTooltip("Enable screen space contact shadows. This can add small shadows details to shadow maps in screen space.");
@@ -1491,8 +1548,11 @@ void GraphicsWindow::Update()
 	aoRangeSlider.SetValue((float)editor->renderPath->getAORange());
 	aoSampleCountSlider.SetValue((float)editor->renderPath->getAOSampleCount());
 	ssrCheckBox.SetCheck(editor->renderPath->getSSREnabled());
+	reflectionsRoughnessCutoffSlider.SetValue(editor->renderPath->getReflectionRoughnessCutoff());
 	raytracedReflectionsCheckBox.SetCheck(editor->renderPath->getRaytracedReflectionEnabled());
+	raytracedReflectionsRangeSlider.SetValue(editor->renderPath->getRaytracedReflectionsRange());
 	raytracedDiffuseCheckBox.SetCheck(editor->renderPath->getRaytracedDiffuseEnabled());
+	raytracedDiffuseRangeSlider.SetValue(editor->renderPath->getRaytracedDiffuseRange());
 	screenSpaceShadowsCheckBox.SetCheck(wi::renderer::GetScreenSpaceShadowsEnabled());
 	screenSpaceShadowsRangeSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowRange());
 	screenSpaceShadowsStepCountSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowSampleCount());
@@ -1667,6 +1727,7 @@ void GraphicsWindow::ResizeLayout()
 		ddgiY.SetVisible(false);
 		ddgiX.SetVisible(false);
 		ddgiRayCountSlider.SetVisible(false);
+		ddgiBlendSpeedSlider.SetVisible(false);
 		ddgiSmoothBackfaceSlider.SetVisible(false);
 		voxelRadianceDebugCheckBox.SetVisible(false);
 		voxelRadianceCheckBox.SetVisible(false);
@@ -1692,6 +1753,7 @@ void GraphicsWindow::ResizeLayout()
 		ddgiY.SetVisible(true);
 		ddgiX.SetVisible(true);
 		ddgiRayCountSlider.SetVisible(true);
+		ddgiBlendSpeedSlider.SetVisible(true);
 		ddgiSmoothBackfaceSlider.SetVisible(true);
 		ddgiSmoothBackfaceSlider.SetValue(editor->GetCurrentScene().ddgi.smooth_backface);
 		voxelRadianceDebugCheckBox.SetVisible(true);
@@ -1718,6 +1780,7 @@ void GraphicsWindow::ResizeLayout()
 		ddgiY.SetPos(XMFLOAT2(ddgiZ.GetPos().x - ddgiY.GetSize().x - padding, ddgiZ.GetPos().y));
 		ddgiX.SetPos(XMFLOAT2(ddgiY.GetPos().x - ddgiX.GetSize().x - padding, ddgiY.GetPos().y));
 		add(ddgiRayCountSlider);
+		add(ddgiBlendSpeedSlider);
 		add(ddgiSmoothBackfaceSlider);
 
 		y += jump;
@@ -1743,9 +1806,12 @@ void GraphicsWindow::ResizeLayout()
 	add(aoPowerSlider);
 	add(aoRangeSlider);
 	add(aoSampleCountSlider);
-	add_right(ssrCheckBox);
-	add_right(raytracedReflectionsCheckBox);
-	add_right(raytracedDiffuseCheckBox);
+	add_right(reflectionsRoughnessCutoffSlider);
+	ssrCheckBox.SetPos(XMFLOAT2(reflectionsRoughnessCutoffSlider.GetPos().x - ssrCheckBox.GetSize().x - 80, reflectionsRoughnessCutoffSlider.GetPos().y));
+	add_right(raytracedReflectionsRangeSlider);
+	raytracedReflectionsCheckBox.SetPos(XMFLOAT2(raytracedReflectionsRangeSlider.GetPos().x - raytracedReflectionsCheckBox.GetSize().x - 80, raytracedReflectionsRangeSlider.GetPos().y));
+	add_right(raytracedDiffuseRangeSlider);
+	raytracedDiffuseCheckBox.SetPos(XMFLOAT2(raytracedDiffuseRangeSlider.GetPos().x - raytracedDiffuseCheckBox.GetSize().x - 80, raytracedDiffuseRangeSlider.GetPos().y));
 	add_right(screenSpaceShadowsStepCountSlider);
 	screenSpaceShadowsCheckBox.SetPos(XMFLOAT2(screenSpaceShadowsStepCountSlider.GetPos().x - screenSpaceShadowsCheckBox.GetSize().x - 80, screenSpaceShadowsStepCountSlider.GetPos().y));
 	add_right(screenSpaceShadowsRangeSlider);

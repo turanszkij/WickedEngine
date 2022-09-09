@@ -99,6 +99,7 @@ SURFEL_DEBUG SURFELGI_DEBUG = SURFEL_DEBUG_NONE;
 bool DDGI_ENABLED = false;
 bool DDGI_DEBUG_ENABLED = false;
 uint32_t DDGI_RAYCOUNT = 128u;
+float DDGI_BLEND_SPEED = 0.02f;
 float GI_BOOST = 1.0f;
 std::atomic<size_t> SHADER_ERRORS{ 0 };
 std::atomic<size_t> SHADER_MISSING{ 0 };
@@ -8909,6 +8910,7 @@ void DDGI(
 	push.instanceInclusionMask = instanceInclusionMask;
 	push.frameIndex = scene.ddgi.frame_index;
 	push.rayCount = std::min(GetDDGIRayCount(), DDGI_MAX_RAYCOUNT);
+	push.blendSpeed = GetDDGIBlendSpeed();
 
 	// Raytracing:
 	{
@@ -10333,8 +10335,6 @@ void Postprocess_RTDiffuse(
 		device->EventBegin("RTDiffuse - spatial filter", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_SPATIAL], cmd);
 
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
 		const GPUResource* resarray[] = {
 			&res.texture_rayIndirectDiffuse,
 		};
@@ -10558,6 +10558,7 @@ void Postprocess_RTReflection(
 	const Texture& output,
 	CommandList cmd,
 	float range,
+	float roughnessCutoff,
 	uint8_t instanceInclusionMask
 )
 {
@@ -10581,6 +10582,7 @@ void Postprocess_RTReflection(
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	rtreflection_range = range;
+	rtreflection_roughness_cutoff = roughnessCutoff;
 	rtreflection_frame = (float)res.frame;
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 
@@ -10938,7 +10940,8 @@ void Postprocess_SSR(
 	const SSRResources& res,
 	const Texture& input,
 	const Texture& output,
-	CommandList cmd
+	CommandList cmd,
+	float roughnessCutoff
 )
 {
 	device->EventBegin("Postprocess_SSR", cmd);
@@ -10946,6 +10949,10 @@ void Postprocess_SSR(
 	auto range = wi::profiler::BeginRangeGPU("SSR", cmd);
 
 	BindCommonResources(cmd);
+
+	PostProcess postprocess;
+	ssr_roughness_cutoff = roughnessCutoff;
+	ssr_frame = (float)res.frame;
 
 	// Compute tile classification (horizontal):
 	{
@@ -10986,6 +10993,7 @@ void Postprocess_SSR(
 	{
 		device->EventBegin("SSR Tile Classification - Vertical", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TILEMAXROUGHNESS_VERTICAL], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
 			&res.texture_tile_minmax_roughness_horizontal,
@@ -11049,8 +11057,6 @@ void Postprocess_SSR(
 
 		device->EventEnd(cmd);
 	}
-
-	PostProcess postprocess;
 
 	// Depth hierarchy:
 	{
@@ -11139,14 +11145,14 @@ void Postprocess_SSR(
 	postprocess.resolution.y = desc.height / 2;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	ssr_roughness_cutoff = roughnessCutoff;
+	ssr_frame = (float)res.frame;
 
 	// Factor to scale ratio between hierarchy and trace pass
 	postprocess.params1.x = (float)postprocess.resolution.x / (float)res.texture_depth_hierarchy.GetDesc().width;
 	postprocess.params1.y = (float)postprocess.resolution.y / (float)res.texture_depth_hierarchy.GetDesc().height;
 	postprocess.params1.z = 1.0f / postprocess.params1.x;
 	postprocess.params1.w = 1.0f / postprocess.params1.y;
-	ssr_frame = (float)res.frame;
-	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	// Raytrace pass:
 	{
@@ -11184,9 +11190,11 @@ void Postprocess_SSR(
 		device->DispatchIndirect(&res.buffer_tile_tracing_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE_CHEAP], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 		device->DispatchIndirect(&res.buffer_tile_tracing_statistics, INDIRECT_OFFSET_CHEAP, cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 		device->DispatchIndirect(&res.buffer_tile_tracing_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
 
 		{
@@ -11207,12 +11215,12 @@ void Postprocess_SSR(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	// Resolve pass:
 	{
 		device->EventBegin("SSR Resolve pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
 			&res.texture_rayIndirectSpecular,
@@ -11264,6 +11272,7 @@ void Postprocess_SSR(
 	{
 		device->EventBegin("SSR Temporal pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
 			&res.texture_resolve,
@@ -13825,6 +13834,14 @@ void SetDDGIRayCount(uint32_t value)
 uint32_t GetDDGIRayCount()
 {
 	return DDGI_RAYCOUNT;
+}
+void SetDDGIBlendSpeed(float value)
+{
+	DDGI_BLEND_SPEED = value;
+}
+float GetDDGIBlendSpeed()
+{
+	return DDGI_BLEND_SPEED;
 }
 void SetGIBoost(float value)
 {

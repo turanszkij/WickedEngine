@@ -27,6 +27,7 @@ public:
 	wi::gui::TextInputField ddgiY;
 	wi::gui::TextInputField ddgiZ;
 	wi::gui::Slider ddgiRayCountSlider;
+	wi::gui::Slider ddgiBlendSpeedSlider;
 	wi::gui::Slider ddgiSmoothBackfaceSlider;
 	wi::gui::CheckBox voxelRadianceCheckBox;
 	wi::gui::CheckBox voxelRadianceDebugCheckBox;
@@ -61,7 +62,10 @@ public:
 	wi::gui::Slider aoSampleCountSlider;
 	wi::gui::CheckBox ssrCheckBox;
 	wi::gui::CheckBox raytracedReflectionsCheckBox;
+	wi::gui::Slider reflectionsRoughnessCutoffSlider;
+	wi::gui::Slider raytracedReflectionsRangeSlider;
 	wi::gui::CheckBox raytracedDiffuseCheckBox;
+	wi::gui::Slider raytracedDiffuseRangeSlider;
 	wi::gui::CheckBox screenSpaceShadowsCheckBox;
 	wi::gui::Slider screenSpaceShadowsStepCountSlider;
 	wi::gui::Slider screenSpaceShadowsRangeSlider;
