@@ -40,11 +40,15 @@ namespace wi
 		float eyeadaptionRate = 1;
 		float fsrSharpness = 1.0f;
 		float lightShaftsStrength = 0.2f;
+		float raytracedDiffuseRange = 10;
+		float raytracedReflectionsRange = 10000.0f;
+		float reflectionRoughnessCutoff = 0.6f;
 
 		AO ao = AO_DISABLED;
 		bool fxaaEnabled = false;
 		bool ssrEnabled = false;
 		bool raytracedReflectionsEnabled = false;
+		bool raytracedDiffuseEnabled = false;
 		bool reflectionsEnabled = true;
 		bool shadowsEnabled = true;
 		bool bloomEnabled = true;
@@ -72,6 +76,7 @@ namespace wi
 		wi::graphics::Texture rtPrimitiveID_render; // can be MSAA
 		wi::graphics::Texture rtVelocity; // optional R16G16_FLOAT
 		wi::graphics::Texture rtReflection; // contains the scene rendered for planar reflections
+		wi::graphics::Texture rtRaytracedDiffuse; // raytraced diffuse screen space texture
 		wi::graphics::Texture rtSSR; // standard screen-space reflection results
 		wi::graphics::Texture rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
 		wi::graphics::Texture rtSceneCopy_tmp; // temporary for gaussian mipchain
@@ -117,6 +122,7 @@ namespace wi
 		wi::renderer::SSAOResources ssaoResources;
 		wi::renderer::MSAOResources msaoResources;
 		wi::renderer::RTAOResources rtaoResources;
+		wi::renderer::RTDiffuseResources rtdiffuseResources;
 		wi::renderer::RTReflectionResources rtreflectionResources;
 		wi::renderer::SSRResources ssrResources;
 		wi::renderer::RTShadowResources rtshadowResources;
@@ -161,6 +167,7 @@ namespace wi
 
 		uint8_t instanceInclusionMask_RTAO = 0xFF;
 		uint8_t instanceInclusionMask_RTShadow = 0xFF;
+		uint8_t instanceInclusionMask_RTDiffuse = 0xFF;
 		uint8_t instanceInclusionMask_RTReflection = 0xFF;
 		uint8_t instanceInclusionMask_SurfelGI = 0xFF;
 		uint8_t instanceInclusionMask_Lightmap = 0xFF;
@@ -189,10 +196,14 @@ namespace wi
 		constexpr float getEyeAdaptionRate() const { return eyeadaptionRate; }
 		constexpr float getFSRSharpness() const { return fsrSharpness; }
 		constexpr float getLightShaftsStrength() const { return lightShaftsStrength; }
+		constexpr float getRaytracedDiffuseRange() const { return raytracedDiffuseRange; }
+		constexpr float getRaytracedReflectionsRange() const { return raytracedReflectionsRange; }
+		constexpr float getReflectionRoughnessCutoff() const { return reflectionRoughnessCutoff; }
 
 		constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 		constexpr AO getAO() const { return ao; }
 		constexpr bool getSSREnabled() const { return ssrEnabled; }
+		constexpr bool getRaytracedDiffuseEnabled() const { return raytracedDiffuseEnabled; }
 		constexpr bool getRaytracedReflectionEnabled() const { return raytracedReflectionsEnabled; }
 		constexpr bool getShadowsEnabled() const { return shadowsEnabled; }
 		constexpr bool getReflectionsEnabled() const { return reflectionsEnabled; }
@@ -233,10 +244,14 @@ namespace wi
 		constexpr void setEyeAdaptionRate(float value) { eyeadaptionRate = value; }
 		constexpr void setFSRSharpness(float value) { fsrSharpness = value; }
 		constexpr void setLightShaftsStrength(float value) { lightShaftsStrength = value; }
+		constexpr void setRaytracedDiffuseRange(float value) { raytracedDiffuseRange = value; }
+		constexpr void setRaytracedReflectionsRange(float value) { raytracedReflectionsRange = value; }
+		constexpr void setReflectionRoughnessCutoff(float value) { reflectionRoughnessCutoff = value; }
 
 		void setAO(AO value);
 		void setSSREnabled(bool value);
 		void setRaytracedReflectionsEnabled(bool value);
+		void setRaytracedDiffuseEnabled(bool value);
 		constexpr void setShadowsEnabled(bool value) { shadowsEnabled = value; }
 		constexpr void setReflectionsEnabled(bool value) { reflectionsEnabled = value; }
 		constexpr void setFXAAEnabled(bool value) { fxaaEnabled = value; }

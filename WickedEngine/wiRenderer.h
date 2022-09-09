@@ -474,6 +474,25 @@ namespace wi::renderer
 		float power = 1.0f,
 		uint8_t instanceInclusionMask = 0xFF
 	);
+	struct RTDiffuseResources
+	{
+		mutable int frame = 0;
+		wi::graphics::Texture texture_rayIndirectDiffuse;
+		wi::graphics::Texture texture_spatial;
+		wi::graphics::Texture texture_spatial_variance;
+		wi::graphics::Texture texture_temporal[2];
+		wi::graphics::Texture texture_temporal_variance[2];
+		wi::graphics::Texture texture_bilateral_temp;
+	};
+	void CreateRTDiffuseResources(RTDiffuseResources& res, XMUINT2 resolution);
+	void Postprocess_RTDiffuse(
+		const RTDiffuseResources& res,
+		const wi::scene::Scene& scene,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd,
+		float range = 1000.0f,
+		uint8_t instanceInclusionMask = 0xFF
+	);
 	struct RTReflectionResources
 	{
 		mutable int frame = 0;
@@ -494,6 +513,7 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1000.0f,
+		float roughnessCutoff = 0.5f,
 		uint8_t instanceInclusionMask = 0xFF
 	);
 	struct SSRResources
@@ -521,7 +541,8 @@ namespace wi::renderer
 		const SSRResources& res,
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,
-		wi::graphics::CommandList cmd
+		wi::graphics::CommandList cmd,
+		float roughnessCutoff = 0.6f
 	);
 	struct RTShadowResources
 	{
@@ -848,6 +869,8 @@ namespace wi::renderer
 	bool GetDDGIDebugEnabled();
 	void SetDDGIRayCount(uint32_t value);
 	uint32_t GetDDGIRayCount();
+	void SetDDGIBlendSpeed(float value);
+	float GetDDGIBlendSpeed();
 	void SetGIBoost(float value);
 	float GetGIBoost();
 	void Workaround( const int bug, wi::graphics::CommandList cmd);

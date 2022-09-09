@@ -41,6 +41,7 @@ struct Bloom
 #define lineardepth_inputresolution_rcp postprocess.params0.zw
 
 static const uint SSR_TILESIZE = 32;
+#define ssr_roughness_cutoff postprocess.params0.z
 #define ssr_frame postprocess.params0.w
 
 #define ssao_range postprocess.params0.x
@@ -50,7 +51,11 @@ static const uint SSR_TILESIZE = 32;
 #define rtao_range ssao_range
 #define rtao_power ssao_power
 
+#define rtdiffuse_range ssao_range
+#define rtdiffuse_frame ssr_frame
+
 #define rtreflection_range ssao_range
+#define rtreflection_roughness_cutoff ssr_roughness_cutoff
 #define rtreflection_frame ssr_frame
 
 static const uint POSTPROCESS_HBAO_THREADCOUNT = 320;

@@ -3,42 +3,13 @@
 #include "stochasticSSRHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-PUSHCONSTANT(postprocess, PostProcess);
-
-Texture2D<float4> texture_rayIndirectSpecular : register(t0);
-Texture2D<float4> texture_rayDirectionPDF : register(t1);
-Texture2D<float> texture_rayLength : register(t2);
+Texture2D<float4> texture_rayIndirectDiffuse : register(t0);
 
 RWTexture2D<float4> texture_resolve : register(u0);
 RWTexture2D<float> texture_resolve_variance : register(u1);
-RWTexture2D<float> texture_reprojectionDepth : register(u2);
 
-static const float2 resolveSpatialSizeMinMax = float2(2.0, 8.0); // Good to have a min size as downsample scale (2x in this case)
+static const float resolveSpatialSize = 8.0;
 static const uint resolveSpatialReconstructionCount = 4.0f;
-
-float GetWeight(int2 neighborTracingCoord, float3 V, float3 N, float roughness, float NdotV)
-{
-	// Sample local pixel information
-	float4 rayDirectionPDF = texture_rayDirectionPDF[neighborTracingCoord];
-	float3 rayDirection = rayDirectionPDF.rgb;
-	float PDF = rayDirectionPDF.a;
-
-	float3 sampleL = normalize(rayDirection);
-	float3 sampleH = normalize(sampleL + V);
-
-	float sampleNdotH = saturate(dot(N, sampleH));
-	float sampleNdotL = saturate(dot(N, sampleL));
-
-	float roughnessBRDF = roughness * roughness;
-
-	float Vis = V_SmithGGXCorrelated(roughnessBRDF, NdotV, sampleNdotL);
-	float D = D_GGX(roughnessBRDF, sampleNdotH, sampleH);
-	float localBRDF = Vis * D * sampleNdotL;
-
-	float weight = localBRDF / max(PDF, 0.00001f);
-
-	return weight;
-}
 
 // Weighted incremental variance
 // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
@@ -86,28 +57,15 @@ uint3 hash33(uint3 x)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
-	const uint2 tracingCoord = DTid.xy / 2;
+	const uint2 tracingCoord = DTid.xy;
 
-	const float depth = texture_depth[DTid.xy];
-	const float roughness = texture_roughness[DTid.xy];
+	const float depth = texture_depth[DTid.xy * 2];
 
-	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
-	{
-		texture_resolve[DTid.xy] = texture_rayIndirectSpecular[tracingCoord];
-		texture_resolve_variance[DTid.xy] = 0.0;
-		texture_reprojectionDepth[DTid.xy] = 0.0;
-		return;
-	}
+	const float farplane = GetCamera().z_far;
+	const float lineardepth = texture_lineardepth[DTid.xy * 2] * farplane;
 
 	// Everthing in world space:
-	const float3 P = reconstruct_position(uv, depth);
-	const float3 N = decode_oct(texture_normal[DTid.xy]);
-	const float3 V = normalize(GetCamera().position - P);
-	const float NdotV = saturate(dot(N, V));
-
-	const float resolveSpatialScale = saturate(roughness * 5.0); // roughness 0.2 is destination
-	const float2 resolveSpatialSize = lerp(resolveSpatialSizeMinMax.x, resolveSpatialSizeMinMax.y, resolveSpatialScale);
+	const float3 N = decode_oct(texture_normal[DTid.xy * 2]);
 
 	float4 result = 0.0f;
 	float weightSum = 0.0f;
@@ -125,26 +83,21 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float2 offset = (hammersley2d_random(i, sampleCount, random) - 0.5) * resolveSpatialSize;
 
 		int2 neighborTracingCoord = tracingCoord + offset;
-		int2 neighborCoord = DTid.xy + offset;
+		int2 neighborCoord = DTid.xy * 2 + offset;
 
-		float neighborDepth = texture_depth[neighborCoord];
-		if (neighborDepth > 0.0)
+		float neighbor_lineardepth = texture_lineardepth[neighborCoord] * farplane;
+		if (neighbor_lineardepth < farplane)
 		{
-			float weight = GetWeight(neighborTracingCoord, V, N, roughness, NdotV);
+			float weight = 1;
+			weight *= 1 - saturate(abs(lineardepth - neighbor_lineardepth));
 
-			float4 sampleColor = texture_rayIndirectSpecular[neighborTracingCoord];
+			float4 sampleColor = texture_rayIndirectDiffuse[neighborTracingCoord];
 			sampleColor.rgb *= rcp(1 + Luminance(sampleColor.rgb));
 
 			result += sampleColor * weight;
 			weightSum += weight;
 
 			GetWeightedVariance(sampleColor, weight, weightSum, mean, S);
-
-			if (weight > 0.001)
-			{
-				float neighborRayLength = texture_rayLength[neighborTracingCoord];
-				closestRayLength = max(closestRayLength, neighborRayLength);
-			}
 		}
 	}
 
@@ -154,11 +107,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	// Population variance
 	float resolveVariance = S / weightSum;
 
-	// Convert to post-projection depth so we can construct dual source reprojection buffers later
-	const float lineardepth = texture_lineardepth[DTid.xy] * GetCamera().z_far;
-	float reprojectionDepth = compute_inverse_lineardepth(lineardepth + closestRayLength, GetCamera().z_near, GetCamera().z_far);
-
 	texture_resolve[DTid.xy] = max(result, 0.00001f);
 	texture_resolve_variance[DTid.xy] = resolveVariance;
-	texture_reprojectionDepth[DTid.xy] = reprojectionDepth;
 }

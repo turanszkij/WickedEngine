@@ -860,6 +860,13 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 
 #ifndef TRANSPARENT
 	[branch]
+	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetCamera().texture_rtdiffuse_index >= 0)
+	{
+		lighting.indirect.diffuse = bindless_textures[GetCamera().texture_rtdiffuse_index][surface.pixel].rgb * GetFrame().gi_boost;
+		surface.flags |= SURFACE_FLAG_GI_APPLIED;
+	}
+
+	[branch]
 	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
 	{
 		lighting.indirect.diffuse = bindless_textures[GetCamera().texture_surfelgi_index][surface.pixel].rgb * GetFrame().gi_boost;

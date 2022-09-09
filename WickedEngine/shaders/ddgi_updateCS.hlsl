@@ -133,7 +133,7 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 
 	if (push.frameIndex > 0)
 	{
-		result = lerp(prev_result, result, 0.02);
+		result = lerp(prev_result, result, push.blendSpeed);
 	}
 
 	output[pixel_current] = result;

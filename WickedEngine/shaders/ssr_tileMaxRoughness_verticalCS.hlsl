@@ -3,6 +3,8 @@
 #include "stochasticSSRHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 Texture2D<float2> tile_minmax_roughness_horizontal : register(t0);
 
 RWByteAddressBuffer tile_tracing_statistics : register(u0);
@@ -43,7 +45,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		tile_tracing_statistics.InterlockedAdd(TILE_STATISTICS_OFFSET_EXPENSIVE, 1, prevCount);
 		tiles_tracing_expensive[prevCount] = tile;
 	}
-	else if (maxRoughness > SSRRoughnessCheap && minRoughness < ReflectionMaxRoughness)
+	else if (maxRoughness > SSRRoughnessCheap && minRoughness < ssr_roughness_cutoff)
 	{
 		tile_tracing_statistics.InterlockedAdd(TILE_STATISTICS_OFFSET_CHEAP, 1, prevCount);
 		tiles_tracing_cheap[prevCount] = tile;

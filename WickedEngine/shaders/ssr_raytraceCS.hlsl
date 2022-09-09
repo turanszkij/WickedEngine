@@ -250,7 +250,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	float depth = texture_depth_hierarchy[screenJitter + pixel].r;
 	float roughness = texture_roughness[jitterPixel];
 
-	if (!NeedReflection(roughness, depth))
+	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
 	{
 		output_rayIndirectSpecular[pixel] = 0.0;
 		output_rayDirectionPDF[pixel] = 0.0;

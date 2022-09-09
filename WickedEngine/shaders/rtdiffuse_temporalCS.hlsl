@@ -8,16 +8,15 @@ Texture2D<float4> texture_color_current : register(t0);
 Texture2D<float4> texture_color_history : register(t1);
 Texture2D<float> texture_variance_current : register(t2);
 Texture2D<float> texture_variance_history : register(t3);
-Texture2D<float> texture_reprojectionDepth : register(t4);
 
 RWTexture2D<float4> output_color : register(u0);
 RWTexture2D<float> output_variance : register(u1);
 
-static const float temporalResponse = 0.95;
-static const float temporalScale = 2.0;
+static const float temporalResponse = 0.98;
+static const float temporalScale = 0.9;
 static const float disocclusionDepthWeight = 1.0f;
-static const float disocclusionThreshold = 0.9f;
-static const float varianceTemporalResponse = 0.9f;
+static const float disocclusionThreshold = 0.89f;
+static const float varianceTemporalResponse = 0.6f;
 
 float2 CalculateReprojectionBuffer(float2 uv, float depth)
 {
@@ -137,21 +136,14 @@ float4 SamplePreviousColor(float2 prevUV, float2 size, float depth, out float di
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV_DispatchThreadID)
 {
-	if ((uint) ssr_frame == 0)
+	if ((uint) rtdiffuse_frame == 0)
 	{
-		output_color[DTid.xy] = texture_color_current[DTid.xy];
+		float4 color = texture_color_current[DTid.xy];
+		output_color[DTid.xy] = color;
 		return;
 	}
 
-	const float depth = texture_depth[DTid.xy];
-	const float roughness = texture_roughness[DTid.xy];
-
-	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
-	{
-		output_color[DTid.xy] = texture_color_current[DTid.xy];
-		output_variance[DTid.xy] = 0.0;
-		return;
-	}
+	const float depth = texture_depth[DTid.xy * 2];
 
 	// Welford's online algorithm:
 	//  https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
@@ -176,16 +168,12 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV
 	float4 variance = (m2 / 9.0) - (mean * mean);
 	float4 stddev = sqrt(max(variance, 0.0f));
 
-	// Secondary reprojection based on ray lengths:
-	//	https://www.ea.com/seed/news/seed-dd18-presentation-slides-raytracing (Slide 45)
-
-	float2 velocity = texture_velocity[DTid.xy];
-	float reprojectionDepth = texture_reprojectionDepth[DTid.xy];
+	float2 velocity = texture_velocity[DTid.xy * 2];
 
 	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	float2 prevUVVelocity = uv + velocity;
-	float2 prevUVReflectionHit = CalculateReprojectionBuffer(uv, reprojectionDepth);
+	float2 prevUVReflectionHit = CalculateReprojectionBuffer(uv, depth);
 
 	float4 previousColorVelocity = texture_color_history.SampleLevel(sampler_linear_clamp, prevUVVelocity, 0);
 	float4 previousColorReflectionHit = texture_color_history.SampleLevel(sampler_linear_clamp, prevUVReflectionHit, 0);

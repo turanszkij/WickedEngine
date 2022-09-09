@@ -787,7 +787,7 @@ struct CameraCB
 
 	uint2 visibility_tilecount;
 	uint visibility_tilecount_flat;
-	uint padding;
+	int texture_rtdiffuse_index;
 
 	int texture_primitiveID_index;
 	int texture_depth_index;
