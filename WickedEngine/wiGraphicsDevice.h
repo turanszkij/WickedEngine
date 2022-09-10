@@ -56,6 +56,7 @@ namespace wi::graphics
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 		uint64_t TIMESTAMP_FREQUENCY = 0;
+		std::string deviceName;
 
 	public:
 		virtual ~GraphicsDevice() = default;
@@ -121,6 +122,7 @@ namespace wi::graphics
 		constexpr size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
 		constexpr uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 		constexpr uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
+		constexpr const std::string& GetDeviceName() const { return deviceName; }
 
 		// Get the shader binary format that the underlying graphics API consumes
 		virtual ShaderFormat GetShaderFormat() const = 0;

@@ -109,6 +109,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	bool info = editor->main->config.GetSection("options").GetBool("info");
 	editor->main->infoDisplay.heap_allocation_counter = info;
 	editor->main->infoDisplay.vram_usage = info;
+	editor->main->infoDisplay.device_name = info;
 	editor->main->infoDisplay.colorspace = info;
 	editor->main->infoDisplay.resolution = info;
 	editor->main->infoDisplay.logical_size = info;
@@ -117,6 +118,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	otherinfoCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.heap_allocation_counter = args.bValue;
 		editor->main->infoDisplay.vram_usage = args.bValue;
+		editor->main->infoDisplay.device_name = args.bValue;
 		editor->main->infoDisplay.colorspace = args.bValue;
 		editor->main->infoDisplay.resolution = args.bValue;
 		editor->main->infoDisplay.logical_size = args.bValue;

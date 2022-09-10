@@ -2330,6 +2330,7 @@ using namespace dx12_internal;
 			{
 				if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), featurelevel, IID_PPV_ARGS(&device))))
 				{
+					wi::helper::StringConvert(adapterDesc.Description, deviceName);
 					break;
 				}
 			}

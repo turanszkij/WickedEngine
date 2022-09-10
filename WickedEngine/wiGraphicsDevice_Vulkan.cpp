@@ -2568,6 +2568,7 @@ using namespace vulkan_internal;
 					physicalDevice = dev;
 					if (discrete)
 					{
+						deviceName = properties2.properties.deviceName;
 						break; // if this is discrete GPU, look no further (prioritize discrete GPU)
 					}
 				}

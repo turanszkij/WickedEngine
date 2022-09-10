@@ -329,6 +329,10 @@ namespace wi
 				}
 				infodisplay_str += "\n";
 			}
+			if (infoDisplay.device_name)
+			{
+				infodisplay_str += "Device: " + graphicsDevice->GetDeviceName() + "\n";
+			}
 			if (infoDisplay.resolution)
 			{
 				infodisplay_str += "Resolution: " + std::to_string(canvas.GetPhysicalWidth()) + " x " + std::to_string(canvas.GetPhysicalHeight()) + " (" + std::to_string(int(canvas.GetDPI())) + " dpi)\n";
