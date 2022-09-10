@@ -4045,21 +4045,15 @@ namespace wi::scene
 			{
 				const AABB& aabb = scene.aabb_objects[objectIndex];
 				if (!ray.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
-				{
 					continue;
-				}
 
 				const ObjectComponent& object = scene.objects[objectIndex];
 				if (object.meshID == INVALID_ENTITY)
-				{
 					continue;
-				}
 				if (!(renderTypeMask & object.GetRenderTypes()))
-				{
 					continue;
-				}
 
-				const MeshComponent* mesh= scene.meshes.GetComponent(object.meshID);
+				const MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
 				if (mesh == nullptr)
 					continue;
 
@@ -4231,19 +4225,13 @@ namespace wi::scene
 			{
 				const AABB& aabb = scene.aabb_objects[objectIndex];
 				if (!sphere.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
-				{
 					continue;
-				}
 
 				const ObjectComponent& object = scene.objects[objectIndex];
 				if (object.meshID == INVALID_ENTITY)
-				{
 					continue;
-				}
 				if (!(renderTypeMask & object.GetRenderTypes()))
-				{
 					continue;
-				}
 
 				const MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
 				if (mesh == nullptr)
@@ -4330,9 +4318,7 @@ namespace wi::scene
 						XMStoreFloat3(&max, XMVectorMax(p0, XMVectorMax(p1, p2)));
 						AABB aabb_triangle(min, max);
 						if (jobData.func->sphere.intersects(aabb_triangle) == AABB::OUTSIDE)
-						{
 							return;
-						}
 
 						// Compute the plane of the triangle (has to be normalized).
 						XMVECTOR N = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p1, p0), XMVectorSubtract(p2, p0)));
@@ -4344,9 +4330,7 @@ namespace wi::scene
 						XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(jobData.func->Center, p0), N);
 
 						if (!jobData.mesh->IsDoubleSided() && XMVectorGetX(Dist) > 0)
-						{
 							return; // pass through back faces
-						}
 
 						// If the center of the sphere is farther from the plane of the triangle than
 						// the radius of the sphere, then there cannot be an intersection.
@@ -4497,19 +4481,13 @@ namespace wi::scene
 			{
 				const AABB& aabb = scene.aabb_objects[objectIndex];
 				if (jobDataFunction.capsule_aabb.intersects(aabb) == AABB::INTERSECTION_TYPE::OUTSIDE || (layerMask & aabb.layerMask) == 0)
-				{
 					continue;
-				}
 
 				const ObjectComponent& object = scene.objects[objectIndex];
 				if (object.meshID == INVALID_ENTITY)
-				{
 					continue;
-				}
 				if (!(renderTypeMask & object.GetRenderTypes()))
-				{
 					continue;
-				}
 
 				const MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
 				if (mesh == nullptr)
@@ -4596,9 +4574,7 @@ namespace wi::scene
 						XMStoreFloat3(&max, XMVectorMax(p0, XMVectorMax(p1, p2)));
 						AABB aabb_triangle(min, max);
 						if (jobData.func->capsule_aabb.intersects(aabb_triangle) == AABB::OUTSIDE)
-						{
 							return;
-						}
 
 						// Compute the plane of the triangle (has to be normalized).
 						XMVECTOR N = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p1, p0), XMVectorSubtract(p2, p0)));
@@ -4681,9 +4657,7 @@ namespace wi::scene
 						XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(Center, p0), N);
 
 						if (!jobData.mesh->IsDoubleSided() && XMVectorGetX(Dist) > 0)
-						{
 							return; // pass through back faces
-						}
 
 						// If the center of the sphere is farther from the plane of the triangle than
 						// the radius of the sphere, then there cannot be an intersection.
