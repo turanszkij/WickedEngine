@@ -130,19 +130,17 @@ void EditorComponent::ResizeBuffers()
 				desc.attachments[0].texture = rt_selectionOutline_MSAA;
 				desc.attachments.push_back(RenderPassAttachment::Resolve(rt_selectionOutline[0]));
 			}
-			if (renderPath->GetDepthStencil() != nullptr)
-			{
-				desc.attachments.push_back(
-					RenderPassAttachment::DepthStencil(
-						*renderPath->GetDepthStencil(),
-						RenderPassAttachment::LoadOp::LOAD,
-						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::DEPTHSTENCIL_READONLY,
-						ResourceState::DEPTHSTENCIL_READONLY,
-						ResourceState::DEPTHSTENCIL_READONLY
-					)
-				);
-			}
+			desc.attachments.push_back(
+				RenderPassAttachment::DepthStencil(
+					*renderPath->GetDepthStencil(),
+					RenderPassAttachment::LoadOp::LOAD,
+					RenderPassAttachment::StoreOp::STORE,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY
+				)
+			);
+			
 			success = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
 			assert(success);
 
