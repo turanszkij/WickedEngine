@@ -2026,10 +2026,10 @@ using namespace dx12_internal;
 				{
 					if (attachment.type == RenderPassAttachment::Type::RESOLVE ||
 						attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH ||
-						attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE ||
-						!attachment.texture.IsValid())
+						attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE)
 						continue;
 
+					assert(attachment.texture.desc.format != Format::UNKNOWN);
 					switch (attachment.type)
 					{
 					case RenderPassAttachment::Type::RENDERTARGET:
