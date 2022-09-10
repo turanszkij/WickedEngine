@@ -4024,34 +4024,24 @@ namespace wi::scene
 		{
 			// Set up parallel closest hit selection:
 			wi::jobsystem::context ctx;
-			struct JobData
+			struct JobDataForFunction
 			{
-				// function:
 				PickResult* groupResults;
 				XMVECTOR rayOrigin;
 				XMVECTOR rayDirection;
 				float TMin;
 				float TMax;
-
-				// instance:
-				Entity entity;
-				const MeshComponent* mesh;
-				const SoftBodyPhysicsComponent* softbody;
-				const ArmatureComponent* armature;
-				XMMATRIX objectMat;
-				XMVECTOR rayOrigin_local;
-				XMVECTOR rayDirection_local;
-			} jobData;
+			} jobDataFunction;
 			const uint32_t threadCount = wi::jobsystem::GetThreadCount();
-			jobData.groupResults = (PickResult*)alloca(sizeof(PickResult) * threadCount);
+			jobDataFunction.groupResults = (PickResult*)alloca(sizeof(PickResult) * threadCount);
 			for (uint32_t t = 0; t < threadCount; ++t)
 			{
-				jobData.groupResults[t] = result;
+				jobDataFunction.groupResults[t] = result;
 			}
-			jobData.rayOrigin = XMLoadFloat3(&ray.origin);
-			jobData.rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
-			jobData.TMin = ray.TMin;
-			jobData.TMax = ray.TMax;
+			jobDataFunction.rayOrigin = XMLoadFloat3(&ray.origin);
+			jobDataFunction.rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
+			jobDataFunction.TMin = ray.TMin;
+			jobDataFunction.TMax = ray.TMax;
 
 			for (size_t objectIndex = 0; objectIndex < scene.aabb_objects.size(); ++objectIndex)
 			{
@@ -4071,9 +4061,27 @@ namespace wi::scene
 					continue;
 				}
 
-				jobData.mesh = scene.meshes.GetComponent(object.meshID);
-				if (jobData.mesh == nullptr)
+				const MeshComponent* mesh= scene.meshes.GetComponent(object.meshID);
+				if (mesh == nullptr)
 					continue;
+
+				struct JobDataForInstance
+				{
+					JobDataForFunction* func;
+					Entity entity;
+					const MeshComponent* mesh;
+					const SoftBodyPhysicsComponent* softbody;
+					const ArmatureComponent* armature;
+					XMMATRIX objectMat;
+					XMVECTOR rayOrigin_local;
+					XMVECTOR rayDirection_local;
+				};
+
+				// This will be stack deallocated at function exit:
+				JobDataForInstance& jobData = *(JobDataForInstance*)alloca(sizeof(JobDataForInstance));
+				jobData.func = &jobDataFunction;
+
+				jobData.mesh = mesh;
 
 				jobData.entity = scene.objects.GetEntity(objectIndex);
 
@@ -4082,8 +4090,8 @@ namespace wi::scene
 				jobData.objectMat = XMLoadFloat4x4(&object.worldMatrix);
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, jobData.objectMat);
 
-				jobData.rayOrigin_local = XMVector3Transform(jobData.rayOrigin, objectMat_Inverse);
-				jobData.rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(jobData.rayDirection, objectMat_Inverse));
+				jobData.rayOrigin_local = XMVector3Transform(jobData.func->rayOrigin, objectMat_Inverse);
+				jobData.rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(jobData.func->rayDirection, objectMat_Inverse));
 
 				jobData.armature = jobData.mesh->IsSkinned() ? scene.armatures.GetComponent(jobData.mesh->armatureID) : nullptr;
 
@@ -4102,7 +4110,7 @@ namespace wi::scene
 					const uint32_t groupSize = wi::jobsystem::DispatchGroupCount(jobCount, threadCount);
 					wi::jobsystem::Dispatch(ctx, jobCount, groupSize, [&jobData, subsetIndex, indexOffset](wi::jobsystem::JobArgs args) {
 
-						PickResult& groupResult = jobData.groupResults[args.groupID];
+						PickResult& groupResult = jobData.func->groupResults[args.groupID];
 
 						const uint32_t i0 = jobData.mesh->indices[indexOffset + args.jobIndex * 3 + 0];
 						const uint32_t i1 = jobData.mesh->indices[indexOffset + args.jobIndex * 3 + 1];
@@ -4146,10 +4154,10 @@ namespace wi::scene
 
 						float distance;
 						XMFLOAT2 bary;
-						if (wi::math::RayTriangleIntersects(jobData.rayOrigin_local, jobData.rayDirection_local, p0, p1, p2, distance, bary, jobData.TMin, jobData.TMax))
+						if (wi::math::RayTriangleIntersects(jobData.rayOrigin_local, jobData.rayDirection_local, p0, p1, p2, distance, bary, jobData.func->TMin, jobData.func->TMax))
 						{
 							const XMVECTOR pos = XMVector3Transform(XMVectorAdd(jobData.rayOrigin_local, jobData.rayDirection_local * distance), jobData.objectMat);
-							distance = wi::math::Distance(pos, jobData.rayOrigin);
+							distance = wi::math::Distance(pos, jobData.func->rayOrigin);
 
 							if (distance < groupResult.distance)
 							{
@@ -4169,16 +4177,16 @@ namespace wi::scene
 					});
 				}
 
-				// Merge thread results:
-				wi::jobsystem::Wait(ctx);
-				for (uint32_t t = 0; t < threadCount; ++t)
-				{
-					if (jobData.groupResults[t].distance < result.distance)
-					{
-						result = jobData.groupResults[t];
-					}
-				}
+			}
 
+			// Merge thread results:
+			wi::jobsystem::Wait(ctx);
+			for (uint32_t t = 0; t < threadCount; ++t)
+			{
+				if (jobDataFunction.groupResults[t].distance < result.distance)
+				{
+					result = jobDataFunction.groupResults[t];
+				}
 			}
 		}
 
@@ -4202,32 +4210,24 @@ namespace wi::scene
 		{
 			// Set up parallel closest hit selection:
 			wi::jobsystem::context ctx;
-			struct JobData
+			struct JobDataForFunction
 			{
-				// function:
 				SceneIntersectSphereResult* groupResults;
 				Sphere sphere;
 				XMVECTOR Center;
 				XMVECTOR Radius;
 				XMVECTOR RadiusSq;
-
-				// instance:
-				Entity entity;
-				const MeshComponent* mesh;
-				const SoftBodyPhysicsComponent* softbody;
-				const ArmatureComponent* armature;
-				XMMATRIX objectMat;
-			} jobData;
+			} jobDataFunction;
 			const uint32_t threadCount = wi::jobsystem::GetThreadCount();
-			jobData.groupResults = (SceneIntersectSphereResult*)alloca(sizeof(SceneIntersectSphereResult) * threadCount);
+			jobDataFunction.groupResults = (SceneIntersectSphereResult*)alloca(sizeof(SceneIntersectSphereResult) * threadCount);
 			for (uint32_t t = 0; t < threadCount; ++t)
 			{
-				jobData.groupResults[t] = result;
+				jobDataFunction.groupResults[t] = result;
 			}
-			jobData.sphere = sphere;
-			jobData.Center = XMLoadFloat3(&sphere.center);
-			jobData.Radius = XMVectorReplicate(sphere.radius);
-			jobData.RadiusSq = XMVectorMultiply(jobData.Radius, jobData.Radius);
+			jobDataFunction.sphere = sphere;
+			jobDataFunction.Center = XMLoadFloat3(&sphere.center);
+			jobDataFunction.Radius = XMVectorReplicate(sphere.radius);
+			jobDataFunction.RadiusSq = XMVectorMultiply(jobDataFunction.Radius, jobDataFunction.Radius);
 
 			for (size_t objectIndex = 0; objectIndex < scene.aabb_objects.size(); ++objectIndex)
 			{
@@ -4247,11 +4247,27 @@ namespace wi::scene
 					continue;
 				}
 
-				jobData.mesh = scene.meshes.GetComponent(object.meshID);
-				if (jobData.mesh == nullptr)
+				const MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
+				if (mesh == nullptr)
 					continue;
 
-				Entity entity = scene.objects.GetEntity(objectIndex);
+				struct JobDataForInstance
+				{
+					JobDataForFunction* func;
+					Entity entity;
+					const MeshComponent* mesh;
+					const SoftBodyPhysicsComponent* softbody;
+					const ArmatureComponent* armature;
+					XMMATRIX objectMat;
+				};
+
+				// This will be stack deallocated at function exit:
+				JobDataForInstance& jobData = *(JobDataForInstance*)alloca(sizeof(JobDataForInstance));
+				jobData.func = &jobDataFunction;
+
+				jobData.mesh = mesh;
+
+				jobData.entity = scene.objects.GetEntity(objectIndex);
 
 				jobData.softbody = scene.softbodies.GetComponent(object.meshID);
 
@@ -4274,7 +4290,7 @@ namespace wi::scene
 					const uint32_t groupSize = wi::jobsystem::DispatchGroupCount(jobCount, threadCount);
 					wi::jobsystem::Dispatch(ctx, jobCount, groupSize, [&jobData, subsetIndex, indexOffset](wi::jobsystem::JobArgs args) {
 
-						SceneIntersectSphereResult& groupResult = jobData.groupResults[args.groupID];
+						SceneIntersectSphereResult& groupResult = jobData.func->groupResults[args.groupID];
 
 						const uint32_t i0 = jobData.mesh->indices[indexOffset + args.jobIndex * 3 + 0];
 						const uint32_t i1 = jobData.mesh->indices[indexOffset + args.jobIndex * 3 + 1];
@@ -4315,7 +4331,7 @@ namespace wi::scene
 						XMStoreFloat3(&min, XMVectorMin(p0, XMVectorMin(p1, p2)));
 						XMStoreFloat3(&max, XMVectorMax(p0, XMVectorMax(p1, p2)));
 						AABB aabb_triangle(min, max);
-						if (jobData.sphere.intersects(aabb_triangle) == AABB::OUTSIDE)
+						if (jobData.func->sphere.intersects(aabb_triangle) == AABB::OUTSIDE)
 						{
 							return;
 						}
@@ -4327,7 +4343,7 @@ namespace wi::scene
 						assert(!XMVector3Equal(N, XMVectorZero()));
 
 						// Find the nearest feature on the triangle to the sphere.
-						XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(jobData.Center, p0), N);
+						XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(jobData.func->Center, p0), N);
 
 						if (!jobData.mesh->IsDoubleSided() && XMVectorGetX(Dist) > 0)
 						{
@@ -4336,11 +4352,11 @@ namespace wi::scene
 
 						// If the center of the sphere is farther from the plane of the triangle than
 						// the radius of the sphere, then there cannot be an intersection.
-						XMVECTOR NoIntersection = XMVectorLess(Dist, XMVectorNegate(jobData.Radius));
-						NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(Dist, jobData.Radius));
+						XMVECTOR NoIntersection = XMVectorLess(Dist, XMVectorNegate(jobData.func->Radius));
+						NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(Dist, jobData.func->Radius));
 
 						// Project the center of the sphere onto the plane of the triangle.
-						XMVECTOR Point0 = XMVectorNegativeMultiplySubtract(N, Dist, jobData.Center);
+						XMVECTOR Point0 = XMVectorNegativeMultiplySubtract(N, Dist, jobData.func->Center);
 
 						// Is it inside all the edges? If so we intersect because the distance 
 						// to the plane is less than the radius.
@@ -4367,25 +4383,25 @@ namespace wi::scene
 						// Find the nearest point on each edge.
 
 						// Edge 0,1
-						XMVECTOR Point1 = DirectX::Internal::PointOnLineSegmentNearestPoint(p0, p1, jobData.Center);
+						XMVECTOR Point1 = DirectX::Internal::PointOnLineSegmentNearestPoint(p0, p1, jobData.func->Center);
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(jobData.Center, Point1)), jobData.RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(jobData.func->Center, Point1)), jobData.func->RadiusSq));
 
 						// Edge 1,2
-						XMVECTOR Point2 = DirectX::Internal::PointOnLineSegmentNearestPoint(p1, p2, jobData.Center);
+						XMVECTOR Point2 = DirectX::Internal::PointOnLineSegmentNearestPoint(p1, p2, jobData.func->Center);
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(jobData.Center, Point2)), jobData.RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(jobData.func->Center, Point2)), jobData.func->RadiusSq));
 
 						// Edge 2,0
-						XMVECTOR Point3 = DirectX::Internal::PointOnLineSegmentNearestPoint(p2, p0, jobData.Center);
+						XMVECTOR Point3 = DirectX::Internal::PointOnLineSegmentNearestPoint(p2, p0, jobData.func->Center);
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(jobData.Center, Point3)), jobData.RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(jobData.func->Center, Point3)), jobData.func->RadiusSq));
 
 						bool intersects = XMVector4EqualInt(XMVectorAndCInt(Intersection, NoIntersection), XMVectorTrueInt());
 
@@ -4396,26 +4412,26 @@ namespace wi::scene
 							{
 								// If the sphere center's projection on the triangle plane is not within the triangle,
 								//	determine the closest point on triangle to the sphere center
-								float bestDist = XMVectorGetX(XMVector3LengthSq(Point1 - jobData.Center));
+								float bestDist = XMVectorGetX(XMVector3LengthSq(Point1 - jobData.func->Center));
 								bestPoint = Point1;
 
-								float d = XMVectorGetX(XMVector3LengthSq(Point2 - jobData.Center));
+								float d = XMVectorGetX(XMVector3LengthSq(Point2 - jobData.func->Center));
 								if (d < bestDist)
 								{
 									bestDist = d;
 									bestPoint = Point2;
 								}
-								d = XMVectorGetX(XMVector3LengthSq(Point3 - jobData.Center));
+								d = XMVectorGetX(XMVector3LengthSq(Point3 - jobData.func->Center));
 								if (d < bestDist)
 								{
 									bestDist = d;
 									bestPoint = Point3;
 								}
 							}
-							XMVECTOR intersectionVec = jobData.Center - bestPoint;
+							XMVECTOR intersectionVec = jobData.func->Center - bestPoint;
 							XMVECTOR intersectionVecLen = XMVector3Length(intersectionVec);
 
-							float depth = jobData.sphere.radius - XMVectorGetX(intersectionVecLen);
+							float depth = jobData.func->sphere.radius - XMVectorGetX(intersectionVecLen);
 							if (depth > groupResult.depth)
 							{
 								groupResult.entity = jobData.entity;
@@ -4427,16 +4443,16 @@ namespace wi::scene
 					});
 				}
 
-				// Merge thread results:
-				wi::jobsystem::Wait(ctx);
-				for (uint32_t t = 0; t < threadCount; ++t)
-				{
-					if (jobData.groupResults[t].depth > result.depth)
-					{
-						result = jobData.groupResults[t];
-					}
-				}
+			}
 
+			// Merge thread results:
+			wi::jobsystem::Wait(ctx);
+			for (uint32_t t = 0; t < threadCount; ++t)
+			{
+				if (jobDataFunction.groupResults[t].depth > result.depth)
+				{
+					result = jobDataFunction.groupResults[t];
+				}
 			}
 		}
 
@@ -4450,9 +4466,8 @@ namespace wi::scene
 		{
 			// Set up parallel closest hit selection:
 			wi::jobsystem::context ctx;
-			struct JobData
+			struct JobDataForFunction
 			{
-				// function:
 				SceneIntersectSphereResult* groupResults;
 				float radius;
 				XMVECTOR Base;
@@ -4463,34 +4478,27 @@ namespace wi::scene
 				XMVECTOR B;
 				XMVECTOR RadiusSq;
 				AABB capsule_aabb;
-
-				// instance:
-				Entity entity;
-				const MeshComponent* mesh;
-				const SoftBodyPhysicsComponent* softbody;
-				const ArmatureComponent* armature;
-				XMMATRIX objectMat;
-			} jobData;
+			} jobDataFunction;
 			const uint32_t threadCount = wi::jobsystem::GetThreadCount();
-			jobData.groupResults = (SceneIntersectSphereResult*)alloca(sizeof(SceneIntersectSphereResult) * threadCount);
+			jobDataFunction.groupResults = (SceneIntersectSphereResult*)alloca(sizeof(SceneIntersectSphereResult) * threadCount);
 			for (uint32_t t = 0; t < threadCount; ++t)
 			{
-				jobData.groupResults[t] = result;
+				jobDataFunction.groupResults[t] = result;
 			}
-			jobData.radius = capsule.radius;
-			jobData.Base = XMLoadFloat3(&capsule.base);
-			jobData.Tip = XMLoadFloat3(&capsule.tip);
-			jobData.Radius = XMVectorReplicate(capsule.radius);
-			jobData.LineEndOffset = XMVector3Normalize(jobData.Tip - jobData.Base) * jobData.Radius;
-			jobData.A = jobData.Base + jobData.LineEndOffset;
-			jobData.B = jobData.Tip - jobData.LineEndOffset;
-			jobData.RadiusSq = XMVectorMultiply(jobData.Radius, jobData.Radius);
-			jobData.capsule_aabb = capsule.getAABB();
+			jobDataFunction.radius = capsule.radius;
+			jobDataFunction.Base = XMLoadFloat3(&capsule.base);
+			jobDataFunction.Tip = XMLoadFloat3(&capsule.tip);
+			jobDataFunction.Radius = XMVectorReplicate(capsule.radius);
+			jobDataFunction.LineEndOffset = XMVector3Normalize(jobDataFunction.Tip - jobDataFunction.Base) * jobDataFunction.Radius;
+			jobDataFunction.A = jobDataFunction.Base + jobDataFunction.LineEndOffset;
+			jobDataFunction.B = jobDataFunction.Tip - jobDataFunction.LineEndOffset;
+			jobDataFunction.RadiusSq = XMVectorMultiply(jobDataFunction.Radius, jobDataFunction.Radius);
+			jobDataFunction.capsule_aabb = capsule.getAABB();
 
 			for (size_t objectIndex = 0; objectIndex < scene.aabb_objects.size(); ++objectIndex)
 			{
 				const AABB& aabb = scene.aabb_objects[objectIndex];
-				if (jobData.capsule_aabb.intersects(aabb) == AABB::INTERSECTION_TYPE::OUTSIDE || (layerMask & aabb.layerMask) == 0)
+				if (jobDataFunction.capsule_aabb.intersects(aabb) == AABB::INTERSECTION_TYPE::OUTSIDE || (layerMask & aabb.layerMask) == 0)
 				{
 					continue;
 				}
@@ -4505,11 +4513,27 @@ namespace wi::scene
 					continue;
 				}
 
-				jobData.mesh = scene.meshes.GetComponent(object.meshID);
-				if (jobData.mesh == nullptr)
+				const MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
+				if (mesh == nullptr)
 					continue;
 
-				Entity entity = scene.objects.GetEntity(objectIndex);
+				struct JobDataForInstance
+				{
+					JobDataForFunction* func;
+					Entity entity;
+					const MeshComponent* mesh;
+					const SoftBodyPhysicsComponent* softbody;
+					const ArmatureComponent* armature;
+					XMMATRIX objectMat;
+				};
+
+				// This will be stack deallocated at function exit:
+				JobDataForInstance& jobData = *(JobDataForInstance*)alloca(sizeof(JobDataForInstance));
+				jobData.func = &jobDataFunction;
+
+				jobData.mesh = mesh;
+
+				jobData.entity = scene.objects.GetEntity(objectIndex);
 
 				jobData.softbody = scene.softbodies.GetComponent(object.meshID);
 
@@ -4532,7 +4556,7 @@ namespace wi::scene
 					const uint32_t groupSize = wi::jobsystem::DispatchGroupCount(jobCount, threadCount);
 					wi::jobsystem::Dispatch(ctx, jobCount, groupSize, [&jobData, subsetIndex, indexOffset](wi::jobsystem::JobArgs args) {
 
-						SceneIntersectSphereResult& groupResult = jobData.groupResults[args.groupID];
+						SceneIntersectSphereResult& groupResult = jobData.func->groupResults[args.groupID];
 
 						const uint32_t i0 = jobData.mesh->indices[indexOffset + args.jobIndex * 3 + 0];
 						const uint32_t i1 = jobData.mesh->indices[indexOffset + args.jobIndex * 3 + 1];
@@ -4573,7 +4597,7 @@ namespace wi::scene
 						XMStoreFloat3(&min, XMVectorMin(p0, XMVectorMin(p1, p2)));
 						XMStoreFloat3(&max, XMVectorMax(p0, XMVectorMax(p1, p2)));
 						AABB aabb_triangle(min, max);
-						if (jobData.capsule_aabb.intersects(aabb_triangle) == AABB::OUTSIDE)
+						if (jobData.func->capsule_aabb.intersects(aabb_triangle) == AABB::OUTSIDE)
 						{
 							return;
 						}
@@ -4582,7 +4606,7 @@ namespace wi::scene
 						XMVECTOR N = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p1, p0), XMVectorSubtract(p2, p0)));
 						
 						XMVECTOR ReferencePoint;
-						XMVECTOR d = XMVector3Normalize(jobData.B - jobData.A);
+						XMVECTOR d = XMVector3Normalize(jobData.func->B - jobData.func->A);
 						if (abs(XMVectorGetX(XMVector3Dot(N, d))) < FLT_EPSILON)
 						{
 							// Capsule line cannot be intersected with triangle plane (they are parallel)
@@ -4592,8 +4616,8 @@ namespace wi::scene
 						else
 						{
 							// Intersect capsule line with triangle plane:
-							XMVECTOR t = XMVector3Dot(N, (jobData.Base - p0) / XMVectorAbs(XMVector3Dot(N, d)));
-							XMVECTOR LinePlaneIntersection = jobData.Base + d * t;
+							XMVECTOR t = XMVector3Dot(N, (jobData.func->Base - p0) / XMVectorAbs(XMVector3Dot(N, d)));
+							XMVECTOR LinePlaneIntersection = jobData.func->Base + d * t;
 
 							// Compute the cross products of the vector from the base of each edge to 
 							// the point with each edge vector.
@@ -4650,7 +4674,7 @@ namespace wi::scene
 						}
 
 						// Place a sphere on closest point on line segment to intersection:
-						XMVECTOR Center = wi::math::ClosestPointOnLineSegment(jobData.A, jobData.B, ReferencePoint);
+						XMVECTOR Center = wi::math::ClosestPointOnLineSegment(jobData.func->A, jobData.func->B, ReferencePoint);
 
 						// Assert that the triangle is not degenerate.
 						assert(!XMVector3Equal(N, XMVectorZero()));
@@ -4665,8 +4689,8 @@ namespace wi::scene
 
 						// If the center of the sphere is farther from the plane of the triangle than
 						// the radius of the sphere, then there cannot be an intersection.
-						XMVECTOR NoIntersection = XMVectorLess(Dist, XMVectorNegate(jobData.Radius));
-						NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(Dist, jobData.Radius));
+						XMVECTOR NoIntersection = XMVectorLess(Dist, XMVectorNegate(jobData.func->Radius));
+						NoIntersection = XMVectorOrInt(NoIntersection, XMVectorGreater(Dist, jobData.func->Radius));
 
 						// Project the center of the sphere onto the plane of the triangle.
 						XMVECTOR Point0 = XMVectorNegativeMultiplySubtract(N, Dist, Center);
@@ -4700,21 +4724,21 @@ namespace wi::scene
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point1)), jobData.RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point1)), jobData.func->RadiusSq));
 
 						// Edge 1,2
 						XMVECTOR Point2 = wi::math::ClosestPointOnLineSegment(p1, p2, Center);
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point2)), jobData.RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point2)), jobData.func->RadiusSq));
 
 						// Edge 2,0
 						XMVECTOR Point3 = wi::math::ClosestPointOnLineSegment(p2, p0, Center);
 
 						// If the distance to the center of the sphere to the point is less than 
 						// the radius of the sphere then it must intersect.
-						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point3)), jobData.RadiusSq));
+						Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point3)), jobData.func->RadiusSq));
 
 						bool intersects = XMVector4EqualInt(XMVectorAndCInt(Intersection, NoIntersection), XMVectorTrueInt());
 
@@ -4744,7 +4768,7 @@ namespace wi::scene
 							XMVECTOR intersectionVec = Center - bestPoint;
 							XMVECTOR intersectionVecLen = XMVector3Length(intersectionVec);
 
-							float depth = jobData.radius - XMVectorGetX(intersectionVecLen);
+							float depth = jobData.func->radius - XMVectorGetX(intersectionVecLen);
 							if (depth > groupResult.depth)
 							{
 								groupResult.entity = jobData.entity;
@@ -4754,18 +4778,18 @@ namespace wi::scene
 							}
 						}
 					});
-
-					// Merge thread results:
-					wi::jobsystem::Wait(ctx);
-					for (uint32_t t = 0; t < threadCount; ++t)
-					{
-						if (jobData.groupResults[t].depth > result.depth)
-						{
-							result = jobData.groupResults[t];
-						}
-					}
 				}
 
+			}
+
+			// Merge thread results:
+			wi::jobsystem::Wait(ctx);
+			for (uint32_t t = 0; t < threadCount; ++t)
+			{
+				if (jobDataFunction.groupResults[t].depth > result.depth)
+				{
+					result = jobDataFunction.groupResults[t];
+				}
 			}
 		}
 
