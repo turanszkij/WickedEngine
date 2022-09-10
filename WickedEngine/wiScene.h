@@ -29,18 +29,14 @@ namespace wi::scene
 		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Register<MeshComponent>("wi::scene::Scene::meshes", 1); // version = 1
 		wi::ecs::ComponentManager<ImpostorComponent>& impostors = componentLibrary.Register<ImpostorComponent>("wi::scene::Scene::impostors");
 		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Register<ObjectComponent>("wi::scene::Scene::objects");
-		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_objects = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_objects");
 		wi::ecs::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies = componentLibrary.Register<RigidBodyPhysicsComponent>("wi::scene::Scene::rigidbodies", 1); // version = 1
 		wi::ecs::ComponentManager<SoftBodyPhysicsComponent>& softbodies = componentLibrary.Register<SoftBodyPhysicsComponent>("wi::scene::Scene::softbodies");
 		wi::ecs::ComponentManager<ArmatureComponent>& armatures = componentLibrary.Register<ArmatureComponent>("wi::scene::Scene::armatures");
 		wi::ecs::ComponentManager<LightComponent>& lights = componentLibrary.Register<LightComponent>("wi::scene::Scene::lights");
-		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_lights = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_lights");
 		wi::ecs::ComponentManager<CameraComponent>& cameras = componentLibrary.Register<CameraComponent>("wi::scene::Scene::cameras");
 		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = componentLibrary.Register<EnvironmentProbeComponent>("wi::scene::Scene::probes");
-		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_probes = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_probes");
 		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Register<ForceFieldComponent>("wi::scene::Scene::forces", 1); // version = 1
 		wi::ecs::ComponentManager<DecalComponent>& decals = componentLibrary.Register<DecalComponent>("wi::scene::Scene::decals");
-		wi::ecs::ComponentManager<wi::primitive::AABB>& aabb_decals = componentLibrary.Register<wi::primitive::AABB>("wi::scene::Scene::aabb_decals");
 		wi::ecs::ComponentManager<AnimationComponent>& animations = componentLibrary.Register<AnimationComponent>("wi::scene::Scene::animations");
 		wi::ecs::ComponentManager<AnimationDataComponent>& animation_datas = componentLibrary.Register<AnimationDataComponent>("wi::scene::Scene::animation_datas");
 		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = componentLibrary.Register<EmittedParticleSystem>("wi::scene::Scene::emitters");
@@ -75,6 +71,12 @@ namespace wi::scene
 		mutable bool acceleration_structure_update_requested = false;
 		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
 		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
+
+		// AABB culling streams:
+		wi::vector<wi::primitive::AABB> aabb_objects;
+		wi::vector<wi::primitive::AABB> aabb_lights;
+		wi::vector<wi::primitive::AABB> aabb_probes;
+		wi::vector<wi::primitive::AABB> aabb_decals;
 
 		// Shader visible scene parameters:
 		ShaderScene shaderscene;
@@ -380,7 +382,7 @@ namespace wi::scene
 	//	renderTypeMask	:	filter based on render type
 	//	layerMask		:	filter based on layer
 	//	scene			:	the scene that will be traced against the ray
-	PickResult Pick(const wi::primitive::Ray& ray, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
+	PickResult Pick(const wi::primitive::Ray& ray, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene(), uint32_t lod = 0);
 
 	struct SceneIntersectSphereResult
 	{
@@ -389,8 +391,8 @@ namespace wi::scene
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 		float depth = 0;
 	};
-	SceneIntersectSphereResult SceneIntersectSphere(const wi::primitive::Sphere& sphere, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
-	SceneIntersectSphereResult SceneIntersectCapsule(const wi::primitive::Capsule& capsule, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
+	SceneIntersectSphereResult SceneIntersectSphere(const wi::primitive::Sphere& sphere, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene(), uint32_t lod = 0);
+	SceneIntersectSphereResult SceneIntersectCapsule(const wi::primitive::Capsule& capsule, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene(), uint32_t lod = 0);
 
 }
 

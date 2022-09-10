@@ -1578,7 +1578,7 @@ void EditorComponent::Render() const
 			const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
 			if (object != nullptr)
 			{
-				const AABB& aabb = *scene.aabb_objects.GetComponent(hovered.entity);
+				const AABB& aabb = scene.aabb_objects[scene.objects.GetIndex(hovered.entity)];
 
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
@@ -1588,7 +1588,7 @@ void EditorComponent::Render() const
 			const LightComponent* light = scene.lights.GetComponent(hovered.entity);
 			if (light != nullptr)
 			{
-				const AABB& aabb = *scene.aabb_lights.GetComponent(hovered.entity);
+				const AABB& aabb = scene.aabb_lights[scene.lights.GetIndex(hovered.entity)];
 
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
@@ -1604,7 +1604,7 @@ void EditorComponent::Render() const
 			const EnvironmentProbeComponent* probe = scene.probes.GetComponent(hovered.entity);
 			if (probe != nullptr)
 			{
-				const AABB& aabb = *scene.aabb_probes.GetComponent(hovered.entity);
+				const AABB& aabb = scene.aabb_probes[scene.probes.GetIndex(hovered.entity)];
 
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
@@ -1647,21 +1647,21 @@ void EditorComponent::Render() const
 				const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
 				if (object != nullptr)
 				{
-					const AABB& aabb = *scene.aabb_objects.GetComponent(picked.entity);
+					const AABB& aabb = scene.aabb_objects[scene.objects.GetIndex(picked.entity)];
 					selectedAABB = AABB::Merge(selectedAABB, aabb);
 				}
 
 				const LightComponent* light = scene.lights.GetComponent(picked.entity);
 				if (light != nullptr)
 				{
-					const AABB& aabb = *scene.aabb_lights.GetComponent(picked.entity);
+					const AABB& aabb = scene.aabb_lights[scene.lights.GetIndex(picked.entity)];
 					selectedAABB = AABB::Merge(selectedAABB, aabb);
 				}
 
 				const DecalComponent* decal = scene.decals.GetComponent(picked.entity);
 				if (decal != nullptr)
 				{
-					const AABB& aabb = *scene.aabb_decals.GetComponent(picked.entity);
+					const AABB& aabb = scene.aabb_decals[scene.decals.GetIndex(picked.entity)];
 					selectedAABB = AABB::Merge(selectedAABB, aabb);
 
 					// also display decal OBB:
@@ -1673,7 +1673,7 @@ void EditorComponent::Render() const
 				const EnvironmentProbeComponent* probe = scene.probes.GetComponent(picked.entity);
 				if (probe != nullptr)
 				{
-					const AABB& aabb = *scene.aabb_probes.GetComponent(picked.entity);
+					const AABB& aabb = scene.aabb_probes[scene.probes.GetIndex(picked.entity)];
 					selectedAABB = AABB::Merge(selectedAABB, aabb);
 				}
 

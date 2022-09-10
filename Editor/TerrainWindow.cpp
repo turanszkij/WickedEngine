@@ -694,11 +694,8 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				wi::primitive::AABB aabb;
 				for (auto& chunk : terrain->chunks)
 				{
-					const wi::primitive::AABB* object_aabb = terrain->scene->aabb_objects.GetComponent(chunk.second.entity);
-					if (object_aabb != nullptr)
-					{
-						aabb = wi::primitive::AABB::Merge(aabb, *object_aabb);
-					}
+					const wi::primitive::AABB& object_aabb = terrain->scene->aabb_objects[terrain->scene->objects.GetIndex(chunk.second.entity)];
+					aabb = wi::primitive::AABB::Merge(aabb, object_aabb);
 				}
 
 				wi::vector<uint8_t> data;
