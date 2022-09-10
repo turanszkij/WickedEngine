@@ -271,7 +271,6 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->GetCurrentScene().objects.Remove(entity);
-		editor->GetCurrentScene().aabb_objects.Remove(entity);
 
 		editor->RecordEntity(archive, entity);
 

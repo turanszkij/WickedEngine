@@ -1055,7 +1055,6 @@ namespace wi::terrain
 					Entity object_entity = CreateEntity();
 					tmp_scene.names.Create(object_entity) = name;
 					tmp_scene.objects.Create(object_entity) = object;
-					tmp_scene.aabb_objects.Create(object_entity);
 					tmp_scene.transforms.Create(object_entity);
 					wi::Archive archive;
 					EntitySerializer seri;

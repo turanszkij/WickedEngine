@@ -77,6 +77,15 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			return;
 		Scene& scene = editor->GetCurrentScene();
 		Entity entity = editor->translator.selected.back().entity;
+		if (args.userdata == 17)
+		{
+			// explanation: for softbody, we want to create it for the MeshComponent, if it's also selected together with the object:
+			ObjectComponent* object = scene.objects.GetComponent(entity);
+			if (object != nullptr)
+			{
+				entity = object->meshID;
+			}
+		}
 		if (entity == INVALID_ENTITY)
 		{
 			assert(0);
@@ -195,7 +204,6 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case 3:
 			scene.lights.Create(entity);
-			scene.aabb_lights.Create(entity);
 			break;
 		case 4:
 			scene.materials.Create(entity);
@@ -225,7 +233,6 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case 8:
 			scene.probes.Create(entity);
-			scene.aabb_probes.Create(entity);
 			break;
 		case 9:
 			if (!scene.materials.Contains(entity))
@@ -241,7 +248,6 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			if (!scene.materials.Contains(entity))
 				scene.materials.Create(entity);
 			scene.decals.Create(entity);
-			scene.aabb_decals.Create(entity);
 			break;
 		case 12:
 			scene.weathers.Create(entity);
@@ -272,7 +278,6 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case 21:
 			scene.objects.Create(entity);
-			scene.aabb_objects.Create(entity);
 			break;
 		default:
 			break;

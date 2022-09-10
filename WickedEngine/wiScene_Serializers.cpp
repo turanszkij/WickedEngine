@@ -1658,7 +1658,7 @@ namespace wi::scene
 		}
 		else
 		{
-			// Old serialization path with hard coded componentn types:
+			// Old serialization path with hard coded component types:
 			names.Serialize(archive, seri);
 			layers.Serialize(archive, seri);
 			transforms.Serialize(archive, seri);
@@ -1672,18 +1672,19 @@ namespace wi::scene
 			meshes.Serialize(archive, seri);
 			impostors.Serialize(archive, seri);
 			objects.Serialize(archive, seri);
-			aabb_objects.Serialize(archive, seri);
+			ComponentManager<wi::primitive::AABB> aabbs_tmp; // no longer needed from serializer
+			aabbs_tmp.Serialize(archive, seri);
 			rigidbodies.Serialize(archive, seri);
 			softbodies.Serialize(archive, seri);
 			armatures.Serialize(archive, seri);
 			lights.Serialize(archive, seri);
-			aabb_lights.Serialize(archive, seri);
+			aabbs_tmp.Serialize(archive, seri);
 			cameras.Serialize(archive, seri);
 			probes.Serialize(archive, seri);
-			aabb_probes.Serialize(archive, seri);
+			aabbs_tmp.Serialize(archive, seri);
 			forces.Serialize(archive, seri);
 			decals.Serialize(archive, seri);
-			aabb_decals.Serialize(archive, seri);
+			aabbs_tmp.Serialize(archive, seri);
 			animations.Serialize(archive, seri);
 			emitters.Serialize(archive, seri);
 			hairs.Serialize(archive, seri);
@@ -2051,7 +2052,7 @@ namespace wi::scene
 					archive >> component_exists;
 					if (component_exists)
 					{
-						auto& component = aabb_objects.Create(entity);
+						auto component = wi::primitive::AABB(); // no longer needed to be serialized
 						component.Serialize(archive, seri);
 					}
 				}
@@ -2096,7 +2097,7 @@ namespace wi::scene
 					archive >> component_exists;
 					if (component_exists)
 					{
-						auto& component = aabb_lights.Create(entity);
+						auto component = wi::primitive::AABB(); // no longer needed to be serialized
 						component.Serialize(archive, seri);
 					}
 				}
@@ -2123,7 +2124,7 @@ namespace wi::scene
 					archive >> component_exists;
 					if (component_exists)
 					{
-						auto& component = aabb_probes.Create(entity);
+						auto component = wi::primitive::AABB(); // no longer needed to be serialized
 						component.Serialize(archive, seri);
 					}
 				}
@@ -2150,7 +2151,7 @@ namespace wi::scene
 					archive >> component_exists;
 					if (component_exists)
 					{
-						auto& component = aabb_decals.Create(entity);
+						auto component = wi::primitive::AABB(); // no longer needed to be serialized
 						component.Serialize(archive, seri);
 					}
 				}
@@ -2356,16 +2357,7 @@ namespace wi::scene
 					}
 				}
 				{
-					auto component = aabb_objects.GetComponent(entity);
-					if (component != nullptr)
-					{
-						archive << true;
-						component->Serialize(archive, seri);
-					}
-					else
-					{
-						archive << false;
-					}
+					archive << false; // aabb no longer needed to be serialized
 				}
 				{
 					auto component = rigidbodies.GetComponent(entity);
@@ -2416,16 +2408,7 @@ namespace wi::scene
 					}
 				}
 				{
-					auto component = aabb_lights.GetComponent(entity);
-					if (component != nullptr)
-					{
-						archive << true;
-						component->Serialize(archive, seri);
-					}
-					else
-					{
-						archive << false;
-					}
+					archive << false; // aabb no longer needed to be serialized
 				}
 				{
 					auto component = cameras.GetComponent(entity);
@@ -2452,16 +2435,7 @@ namespace wi::scene
 					}
 				}
 				{
-					auto component = aabb_probes.GetComponent(entity);
-					if (component != nullptr)
-					{
-						archive << true;
-						component->Serialize(archive, seri);
-					}
-					else
-					{
-						archive << false;
-					}
+					archive << false; // aabb no longer needed to be serialized
 				}
 				{
 					auto component = forces.GetComponent(entity);
@@ -2488,16 +2462,7 @@ namespace wi::scene
 					}
 				}
 				{
-					auto component = aabb_decals.GetComponent(entity);
-					if (component != nullptr)
-					{
-						archive << true;
-						component->Serialize(archive, seri);
-					}
-					else
-					{
-						archive << false;
-					}
+					archive << false; // aabb no longer needed to be serialized
 				}
 				{
 					auto component = animations.GetComponent(entity);
