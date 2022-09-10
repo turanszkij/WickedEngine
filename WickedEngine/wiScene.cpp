@@ -15,8 +15,6 @@
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
 
-#include <mutex>
-
 using namespace wi::ecs;
 using namespace wi::enums;
 using namespace wi::graphics;
