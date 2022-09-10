@@ -124,15 +124,15 @@ void EditorComponent::ResizeBuffers()
 
 		{
 			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rt_selectionOutline[0], RenderPassAttachment::LoadOp::CLEAR));
+			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rt_selectionOutline[0], RenderPassAttachment::LoadOp::CLEAR));
 			if (renderPath->getMSAASampleCount() > 1)
 			{
-				desc.attachments[0].texture = &rt_selectionOutline_MSAA;
-				desc.attachments.push_back(RenderPassAttachment::Resolve(&rt_selectionOutline[0]));
+				desc.attachments[0].texture = rt_selectionOutline_MSAA;
+				desc.attachments.push_back(RenderPassAttachment::Resolve(rt_selectionOutline[0]));
 			}
 			desc.attachments.push_back(
 				RenderPassAttachment::DepthStencil(
-					renderPath->GetDepthStencil(),
+					*renderPath->GetDepthStencil(),
 					RenderPassAttachment::LoadOp::LOAD,
 					RenderPassAttachment::StoreOp::STORE,
 					ResourceState::DEPTHSTENCIL_READONLY,
@@ -140,16 +140,17 @@ void EditorComponent::ResizeBuffers()
 					ResourceState::DEPTHSTENCIL_READONLY
 				)
 			);
+			
 			success = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
 			assert(success);
 
 			if (renderPath->getMSAASampleCount() == 1)
 			{
-				desc.attachments[0].texture = &rt_selectionOutline[1]; // rendertarget
+				desc.attachments[0].texture = rt_selectionOutline[1]; // rendertarget
 			}
 			else
 			{
-				desc.attachments[1].texture = &rt_selectionOutline[1]; // resolve
+				desc.attachments[1].texture = rt_selectionOutline[1]; // resolve
 			}
 			success = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
 			assert(success);
@@ -171,14 +172,14 @@ void EditorComponent::ResizeBuffers()
 			RenderPassDesc desc;
 			desc.attachments.push_back(
 				RenderPassAttachment::DepthStencil(
-					&editor_depthbuffer,
+					editor_depthbuffer,
 					RenderPassAttachment::LoadOp::CLEAR,
 					RenderPassAttachment::StoreOp::DONTCARE
 				)
 			);
 			desc.attachments.push_back(
 				RenderPassAttachment::RenderTarget(
-					&renderPath->GetRenderResult(),
+					renderPath->GetRenderResult(),
 					RenderPassAttachment::LoadOp::CLEAR,
 					RenderPassAttachment::StoreOp::STORE
 				)

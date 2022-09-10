@@ -90,7 +90,7 @@ namespace wi
 
 		{
 			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(&traceResult, RenderPassAttachment::LoadOp::CLEAR));
+			desc.attachments.push_back(RenderPassAttachment::RenderTarget(traceResult, RenderPassAttachment::LoadOp::CLEAR));
 
 			device->CreateRenderPass(&desc, &renderpass_debugbvh);
 		}

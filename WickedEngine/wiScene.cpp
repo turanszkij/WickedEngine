@@ -2870,7 +2870,7 @@ namespace wi::scene
 				RenderPassDesc renderpassdesc;
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::RenderTarget(
-						&impostorArray,
+						impostorArray,
 						RenderPassAttachment::LoadOp::CLEAR,
 						RenderPassAttachment::StoreOp::STORE,
 						ResourceState::RENDERTARGET,
@@ -2882,7 +2882,7 @@ namespace wi::scene
 
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::RenderTarget(
-						&impostorArray,
+						impostorArray,
 						RenderPassAttachment::LoadOp::CLEAR,
 						RenderPassAttachment::StoreOp::STORE,
 						ResourceState::RENDERTARGET,
@@ -2894,7 +2894,7 @@ namespace wi::scene
 
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::RenderTarget(
-						&impostorArray,
+						impostorArray,
 						RenderPassAttachment::LoadOp::CLEAR,
 						RenderPassAttachment::StoreOp::STORE,
 						ResourceState::RENDERTARGET,
@@ -2906,7 +2906,7 @@ namespace wi::scene
 
 				renderpassdesc.attachments.push_back(
 					RenderPassAttachment::DepthStencil(
-						&impostorDepthStencil,
+						impostorDepthStencil,
 						RenderPassAttachment::LoadOp::CLEAR,
 						RenderPassAttachment::StoreOp::DONTCARE
 					)
@@ -3224,7 +3224,7 @@ namespace wi::scene
 
 							RenderPassDesc renderpassdesc;
 
-							renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&object.lightmap, RenderPassAttachment::LoadOp::CLEAR));
+							renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(object.lightmap, RenderPassAttachment::LoadOp::CLEAR));
 
 							device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_clear);
 
@@ -3238,7 +3238,7 @@ namespace wi::scene
 
 					if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
 					{
-						// Create a GPU-side per object lighmap if there is none yet, but the data exists already:
+						// Create a GPU-side per object lightmap if there is none yet, but the data exists already:
 						object.lightmap.desc.format = Format::R11G11B10_FLOAT;
 						wi::texturehelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.format);
 						device->SetName(&object.lightmap, "lightmap");
@@ -3415,7 +3415,7 @@ namespace wi::scene
 					RenderPassDesc renderpassdesc;
 					renderpassdesc.attachments.push_back(
 						RenderPassAttachment::DepthStencil(
-							&envrenderingDepthBuffer,
+							envrenderingDepthBuffer,
 							RenderPassAttachment::LoadOp::CLEAR,
 							RenderPassAttachment::StoreOp::STORE,
 							ResourceState::SHADER_RESOURCE,
@@ -3424,7 +3424,7 @@ namespace wi::scene
 						)
 					);
 					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::RenderTarget(&envmapArray,
+						RenderPassAttachment::RenderTarget(envmapArray,
 							RenderPassAttachment::LoadOp::DONTCARE,
 							RenderPassAttachment::StoreOp::STORE,
 							ResourceState::SHADER_RESOURCE,
@@ -3442,7 +3442,7 @@ namespace wi::scene
 					renderpassdesc.attachments.clear();
 					renderpassdesc.attachments.push_back(
 						RenderPassAttachment::DepthStencil(
-							&envrenderingDepthBuffer_MSAA,
+							envrenderingDepthBuffer_MSAA,
 							RenderPassAttachment::LoadOp::CLEAR,
 							RenderPassAttachment::StoreOp::STORE,
 							ResourceState::SHADER_RESOURCE,
@@ -3451,7 +3451,7 @@ namespace wi::scene
 						)
 					);
 					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::RenderTarget(&envrenderingColorBuffer_MSAA,
+						RenderPassAttachment::RenderTarget(envrenderingColorBuffer_MSAA,
 							RenderPassAttachment::LoadOp::DONTCARE,
 							RenderPassAttachment::StoreOp::DONTCARE,
 							ResourceState::RENDERTARGET,
@@ -3460,7 +3460,7 @@ namespace wi::scene
 						)
 					);
 					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::Resolve(&envmapArray,
+						RenderPassAttachment::Resolve(envmapArray,
 							ResourceState::SHADER_RESOURCE,
 							ResourceState::SHADER_RESOURCE,
 							envmapArray.desc.mip_levels + envmapCount + i // subresource: individual cubes only mip0
