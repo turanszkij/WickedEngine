@@ -2983,6 +2983,7 @@ namespace wi::scene
 	void Scene::RunObjectUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		aabb_objects.resize(objects.GetCount());
+		matrix_objects.resize(objects.GetCount());
 
 		meshletAllocator.store(0u);
 
@@ -3036,213 +3037,198 @@ namespace wi::scene
 			{
 				// These will only be valid for a single frame:
 				object.mesh_index = (uint32_t)meshes.GetIndex(object.meshID);
+				const MeshComponent& mesh = meshes[object.mesh_index];
 
-				uint32_t transform_index = (uint32_t)transforms.GetIndex(entity);
-				const TransformComponent& transform = transforms[transform_index];
+				const TransformComponent& transform = *transforms.GetComponent(entity);
 
-				if (object.mesh_index != ~0u)
+				XMMATRIX W = XMLoadFloat4x4(&transform.world);
+				aabb = mesh.aabb.transform(W);
+
+				if (mesh.IsSkinned() || mesh.IsDynamic())
 				{
-					const MeshComponent& mesh = meshes[object.mesh_index];
-
-					XMMATRIX W = XMLoadFloat4x4(&transform.world);
-					aabb = mesh.aabb.transform(W);
-
-					// This is instance bounding box matrix:
-					XMFLOAT4X4 meshMatrix;
-					XMStoreFloat4x4(&meshMatrix, mesh.aabb.getAsBoxMatrix() * W);
-
-					// We need sometimes the center of the instance bounding box, not the transform position (which can be outside the bounding box)
-					object.center = *((XMFLOAT3*)&meshMatrix._41);
-
-					if (mesh.IsSkinned() || mesh.IsDynamic())
+					object.SetDynamic(true);
+					const ArmatureComponent* armature = armatures.GetComponent(mesh.armatureID);
+					if (armature != nullptr)
 					{
-						object.SetDynamic(true);
-						const ArmatureComponent* armature = armatures.GetComponent(mesh.armatureID);
-						if (armature != nullptr)
+						aabb = AABB::Merge(aabb, armature->aabb);
+					}
+				}
+
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh.GetLODSubsetRange(0, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+					const MaterialComponent* material = materials.GetComponent(subset.materialID);
+
+					if (material != nullptr)
+					{
+						object.rendertypeMask |= material->GetRenderTypes();
+
+						if (material->HasPlanarReflection())
 						{
-							aabb = AABB::Merge(aabb, armature->aabb);
+							object.SetRequestPlanarReflection(true);
+						}
+					}
+				}
+
+				ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
+				if (impostor != nullptr)
+				{
+					object.fadeDistance = std::min(object.fadeDistance, impostor->swapInDistance);
+				}
+
+				SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
+				if (softbody != nullptr && mesh.streamoutBuffer.IsValid())
+				{
+					if (wi::physics::IsSimulationEnabled())
+					{
+						// this will be registered as soft body in the next physics update
+						softbody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER;
+
+						// soft body manipulated with the object matrix
+						softbody->worldMatrix = transform.world;
+
+						if (softbody->graphicsToPhysicsVertexMapping.empty())
+						{
+							softbody->CreateFromMesh(mesh);
 						}
 					}
 
-					uint32_t first_subset = 0;
-					uint32_t last_subset = 0;
-					mesh.GetLODSubsetRange(0, first_subset, last_subset);
-					for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+					// simulation aabb will be used for soft bodies
+					aabb = softbody->aabb;
+
+					// soft bodies have no transform, their vertices are simulated in world space
+					W = XMMatrixIdentity();
+				}
+
+				object.center = aabb.getCenter();
+				object.radius = aabb.getRadius();
+
+				// Create GPU instance data:
+				GraphicsDevice* device = wi::graphics::GetDevice();
+				ShaderMeshInstance inst;
+				inst.init();
+				XMFLOAT4X4& worldMatrix = matrix_objects[args.jobIndex];
+				inst.transformPrev.Create(worldMatrix);
+				XMStoreFloat4x4(&worldMatrix, W);
+				inst.transform.Create(worldMatrix);
+
+				// Correction matrix for mesh normals with non-uniform object scaling:
+				XMMATRIX worldMatrixInverseTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, W));
+				XMFLOAT4X4 transformIT;
+				XMStoreFloat4x4(&transformIT, worldMatrixInverseTranspose);
+
+				inst.transformInverseTranspose.Create(transformIT);
+				if (object.lightmap.IsValid())
+				{
+					inst.lightmap = device->GetDescriptorIndex(&object.lightmap, SubresourceType::SRV);
+				}
+				inst.uid = entity;
+				inst.layerMask = layerMask;
+				inst.color = wi::math::CompressColor(object.color);
+				inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
+				inst.geometryOffset = mesh.geometryOffset;
+				inst.geometryCount = (uint)mesh.subsets.size();
+				inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
+				inst.fadeDistance = object.fadeDistance;
+				inst.center = object.center;
+				inst.radius = object.radius;
+
+				std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+
+				// LOD select:
+				if (mesh.subsets_per_lod > 0)
+				{
+					const float distsq = wi::math::DistanceSquared(camera.Eye, object.center);
+					const float radius = object.radius;
+					const float radiussq = radius * radius;
+					if (distsq < radiussq)
 					{
-						const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
-						const MaterialComponent* material = materials.GetComponent(subset.materialID);
+						object.lod = 0;
+					}
+					else
+					{
+						const float dist = std::sqrt(distsq);
+						const float dist_to_sphere = dist - radius;
+						object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
+						object.lod = std::min(object.lod, mesh.GetLODCount() - 1);
+					}
+				}
 
-						if (material != nullptr)
+				if (TLAS_instancesMapped != nullptr)
+				{
+					// TLAS instance data:
+					RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
+					for (int i = 0; i < arraysize(instance.transform); ++i)
+					{
+						for (int j = 0; j < arraysize(instance.transform[i]); ++j)
 						{
-							object.rendertypeMask |= material->GetRenderTypes();
-
-							if (material->HasPlanarReflection())
-							{
-								object.SetRequestPlanarReflection(true);
-							}
+							instance.transform[i][j] = worldMatrix.m[j][i];
 						}
 					}
+					instance.instance_id = args.jobIndex;
+					instance.instance_mask = layerMask & 0xFF;
+					instance.bottom_level = &mesh.BLASes[object.lod];
+					instance.instance_contribution_to_hit_group_index = 0;
+					instance.flags = 0;
 
-					ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
-					if (impostor != nullptr)
+					if (mesh.IsDoubleSided() || mesh._flags & MeshComponent::TLAS_FORCE_DOUBLE_SIDED)
 					{
-						object.fadeDistance = std::min(object.fadeDistance, impostor->swapInDistance);
+						instance.flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
 					}
 
-					SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
-					if (softbody != nullptr && mesh.streamoutBuffer.IsValid())
+					if (XMVectorGetX(XMMatrixDeterminant(W)) > 0)
 					{
-						if (wi::physics::IsSimulationEnabled())
-						{
-							// this will be registered as soft body in the next physics update
-							softbody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER;
-
-							// soft body manipulated with the object matrix
-							softbody->worldMatrix = transform.world;
-
-							if (softbody->graphicsToPhysicsVertexMapping.empty())
-							{
-								softbody->CreateFromMesh(mesh);
-							}
-						}
-
-						// simulation aabb will be used for soft bodies
-						aabb = softbody->aabb;
-
-						// soft bodies have no transform, their vertices are simulated in world space
-						transform_index = ~0u;
+						// There is a mismatch between object space winding and BLAS winding:
+						//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_raytracing_instance_flags
+						instance.flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
 					}
 
-					object.center = aabb.getCenter();
-					object.radius = aabb.getRadius();
+					void* dest = (void*)((size_t)TLAS_instancesMapped + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+					device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
+				}
 
-					// Create GPU instance data:
-					GraphicsDevice* device = wi::graphics::GetDevice();
-					ShaderMeshInstance inst;
-					inst.init();
-					inst.transformPrev.Create(object.worldMatrix);
-					object.worldMatrix = transform_index == ~0u ? wi::math::IDENTITY_MATRIX : transforms[transform_index].world;
-					inst.transform.Create(object.worldMatrix);
-
-					XMMATRIX worldMatrixInverseTranspose = XMLoadFloat4x4(&object.worldMatrix);
-					worldMatrixInverseTranspose = XMMatrixInverse(nullptr, worldMatrixInverseTranspose);
-					worldMatrixInverseTranspose = XMMatrixTranspose(worldMatrixInverseTranspose);
-					XMFLOAT4X4 transformIT;
-					XMStoreFloat4x4(&transformIT, worldMatrixInverseTranspose);
-
-					inst.transformInverseTranspose.Create(transformIT);
-					if (object.lightmap.IsValid())
+				// lightmap things:
+				if (object.IsLightmapRenderRequested() && dt > 0)
+				{
+					if (!object.lightmap.IsValid())
 					{
-						inst.lightmap = device->GetDescriptorIndex(&object.lightmap, SubresourceType::SRV);
+						object.lightmapWidth = wi::math::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
+						object.lightmapHeight = wi::math::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
+
+						TextureDesc desc;
+						desc.width = object.lightmapWidth;
+						desc.height = object.lightmapHeight;
+						desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+						// Note: we need the full precision format to achieve correct accumulative blending! 
+						//	But the final lightmap will be compressed into an optimal format when the rendering is finished
+						desc.format = Format::R32G32B32A32_FLOAT;
+
+						device->CreateTexture(&desc, nullptr, &object.lightmap);
+						device->SetName(&object.lightmap, "lightmap_renderable");
+
+						RenderPassDesc renderpassdesc;
+
+						renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(object.lightmap, RenderPassAttachment::LoadOp::CLEAR));
+
+						device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_clear);
+
+						renderpassdesc.attachments.back().loadop = RenderPassAttachment::LoadOp::LOAD;
+						device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_accumulate);
+
+						object.lightmapIterationCount = 0; // reset accumulation
 					}
-					inst.uid = entity;
-					inst.layerMask = layerMask;
-					inst.color = wi::math::CompressColor(object.color);
-					inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
-					inst.geometryOffset = mesh.geometryOffset;
-					inst.geometryCount = (uint)mesh.subsets.size();
-					inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
-					inst.fadeDistance = object.fadeDistance;
-					inst.center = object.center;
-					inst.radius = object.radius;
+					lightmap_refresh_needed.store(true);
+				}
 
-					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
-
-					// LOD select:
-					{
-						const float distsq = wi::math::DistanceSquared(camera.Eye, object.center);
-						const float radius = object.radius;
-						const float radiussq = radius * radius;
-						if (distsq < radiussq)
-						{
-							object.lod = 0;
-						}
-						else
-						{
-							const MeshComponent* mesh = meshes.GetComponent(object.meshID);
-							if (mesh != nullptr && mesh->subsets_per_lod > 0)
-							{
-								const float dist = std::sqrt(distsq);
-								const float dist_to_sphere = dist - radius;
-								object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
-								object.lod = std::min(object.lod, mesh->GetLODCount() - 1);
-							}
-						}
-					}
-
-					if (TLAS_instancesMapped != nullptr)
-					{
-						// TLAS instance data:
-						RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
-						for (int i = 0; i < arraysize(instance.transform); ++i)
-						{
-							for (int j = 0; j < arraysize(instance.transform[i]); ++j)
-							{
-								instance.transform[i][j] = object.worldMatrix.m[j][i];
-							}
-						}
-						instance.instance_id = args.jobIndex;
-						instance.instance_mask = layerMask & 0xFF;
-						instance.bottom_level = &mesh.BLASes[object.lod];
-						instance.instance_contribution_to_hit_group_index = 0;
-						instance.flags = 0;
-						
-						if (mesh.IsDoubleSided() || mesh._flags & MeshComponent::TLAS_FORCE_DOUBLE_SIDED)
-						{
-							instance.flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
-						}
-						
-						if (XMVectorGetX(XMMatrixDeterminant(W)) > 0)
-						{
-							// There is a mismatch between object space winding and BLAS winding:
-							//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_raytracing_instance_flags
-							instance.flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
-						}
-						
-						void* dest = (void*)((size_t)TLAS_instancesMapped + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
-						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
-					}
-
-					// lightmap things:
-					if (object.IsLightmapRenderRequested() && dt > 0)
-					{
-						if (!object.lightmap.IsValid())
-						{
-							object.lightmapWidth = wi::math::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
-							object.lightmapHeight = wi::math::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
-
-							TextureDesc desc;
-							desc.width = object.lightmapWidth;
-							desc.height = object.lightmapHeight;
-							desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-							// Note: we need the full precision format to achieve correct accumulative blending! 
-							//	But the final lightmap will be compressed into an optimal format when the rendering is finished
-							desc.format = Format::R32G32B32A32_FLOAT;
-
-							device->CreateTexture(&desc, nullptr, &object.lightmap);
-							device->SetName(&object.lightmap, "lightmap_renderable");
-
-							RenderPassDesc renderpassdesc;
-
-							renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(object.lightmap, RenderPassAttachment::LoadOp::CLEAR));
-
-							device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_clear);
-
-							renderpassdesc.attachments.back().loadop = RenderPassAttachment::LoadOp::LOAD;
-							device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_accumulate);
-
-							object.lightmapIterationCount = 0; // reset accumulation
-						}
-						lightmap_refresh_needed.store(true);
-					}
-
-					if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
-					{
-						// Create a GPU-side per object lightmap if there is none yet, but the data exists already:
-						object.lightmap.desc.format = Format::R11G11B10_FLOAT;
-						wi::texturehelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.format);
-						device->SetName(&object.lightmap, "lightmap");
-					}
+				if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
+				{
+					// Create a GPU-side per object lightmap if there is none yet, but the data exists already:
+					object.lightmap.desc.format = Format::R11G11B10_FLOAT;
+					wi::texturehelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.format);
+					device->SetName(&object.lightmap, "lightmap");
 				}
 
 				aabb.layerMask = layerMask;
@@ -4079,7 +4065,7 @@ namespace wi::scene
 
 				jobData.softbody = scene.softbodies.GetComponent(object.meshID);
 
-				jobData.objectMat = XMLoadFloat4x4(&object.worldMatrix);
+				jobData.objectMat = XMLoadFloat4x4(&scene.matrix_objects[objectIndex]);
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, jobData.objectMat);
 
 				jobData.rayOrigin_local = XMVector3Transform(jobData.func->rayOrigin, objectMat_Inverse);
@@ -4257,7 +4243,7 @@ namespace wi::scene
 
 				jobData.softbody = scene.softbodies.GetComponent(object.meshID);
 
-				jobData.objectMat = XMLoadFloat4x4(&object.worldMatrix);
+				jobData.objectMat = XMLoadFloat4x4(&scene.matrix_objects[objectIndex]);
 
 				jobData.armature = jobData.mesh->IsSkinned() ? scene.armatures.GetComponent(jobData.mesh->armatureID) : nullptr;
 
@@ -4513,7 +4499,7 @@ namespace wi::scene
 
 				jobData.softbody = scene.softbodies.GetComponent(object.meshID);
 
-				jobData.objectMat = XMLoadFloat4x4(&object.worldMatrix);
+				jobData.objectMat = XMLoadFloat4x4(&scene.matrix_objects[objectIndex]);
 
 				jobData.armature = jobData.mesh->IsSkinned() ? scene.armatures.GetComponent(jobData.mesh->armatureID) : nullptr;
 

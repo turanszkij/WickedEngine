@@ -78,6 +78,9 @@ namespace wi::scene
 		wi::vector<wi::primitive::AABB> aabb_probes;
 		wi::vector<wi::primitive::AABB> aabb_decals;
 
+		// Separate stream of world matrices:
+		wi::vector<XMFLOAT4X4> matrix_objects;
+
 		// Shader visible scene parameters:
 		ShaderScene shaderscene;
 

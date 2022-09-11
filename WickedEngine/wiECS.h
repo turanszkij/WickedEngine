@@ -357,12 +357,16 @@ namespace wi::ecs
 		// Check if a component exists for a given entity or not
 		inline bool Contains(Entity entity) const
 		{
+			if (lookup.empty())
+				return false;
 			return lookup.find(entity) != lookup.end();
 		}
 
 		// Retrieve a [read/write] component specified by an entity (if it exists, otherwise nullptr)
 		inline Component* GetComponent(Entity entity)
 		{
+			if (lookup.empty())
+				return nullptr;
 			auto it = lookup.find(entity);
 			if (it != lookup.end())
 			{
@@ -374,6 +378,8 @@ namespace wi::ecs
 		// Retrieve a [read only] component specified by an entity (if it exists, otherwise nullptr)
 		inline const Component* GetComponent(Entity entity) const
 		{
+			if (lookup.empty())
+				return nullptr;
 			const auto it = lookup.find(entity);
 			if (it != lookup.end())
 			{
@@ -385,6 +391,8 @@ namespace wi::ecs
 		// Retrieve component index by entity handle (if not exists, returns ~0ull value)
 		inline size_t GetIndex(Entity entity) const 
 		{
+			if (lookup.empty())
+				return ~0ull;
 			const auto it = lookup.find(entity);
 			if (it != lookup.end())
 			{

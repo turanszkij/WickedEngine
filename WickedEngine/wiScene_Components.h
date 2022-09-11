@@ -642,14 +642,14 @@ namespace wi::scene
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 1);
 
-		uint32_t lightmapWidth = 0;
-		uint32_t lightmapHeight = 0;
-		wi::vector<uint8_t> lightmapTextureData;
-
 		uint8_t userStencilRef = 0;
 		float lod_distance_multiplier = 1;
 
 		float draw_distance = std::numeric_limits<float>::max(); // object will begin to fade out at this distance to camera
+
+		uint32_t lightmapWidth = 0;
+		uint32_t lightmapHeight = 0;
+		wi::vector<uint8_t> lightmapTextureData;
 
 		// Non-serialized attributes:
 
@@ -666,7 +666,6 @@ namespace wi::scene
 
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;
-		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		mutable uint32_t occlusionHistory = ~0u;

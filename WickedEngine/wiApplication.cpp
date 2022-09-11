@@ -331,15 +331,27 @@ namespace wi
 			}
 			if (infoDisplay.device_name)
 			{
-				infodisplay_str += "Device: " + graphicsDevice->GetDeviceName() + "\n";
+				infodisplay_str += "Device: ";
+				infodisplay_str += graphicsDevice->GetDeviceName();
+				infodisplay_str += "\n";
 			}
 			if (infoDisplay.resolution)
 			{
-				infodisplay_str += "Resolution: " + std::to_string(canvas.GetPhysicalWidth()) + " x " + std::to_string(canvas.GetPhysicalHeight()) + " (" + std::to_string(int(canvas.GetDPI())) + " dpi)\n";
+				infodisplay_str += "Resolution: ";
+				infodisplay_str += std::to_string(canvas.GetPhysicalWidth());
+				infodisplay_str += " x ";
+				infodisplay_str += std::to_string(canvas.GetPhysicalHeight());
+				infodisplay_str += " (";
+				infodisplay_str += std::to_string(int(canvas.GetDPI()));
+				infodisplay_str += " dpi)\n";
 			}
 			if (infoDisplay.logical_size)
 			{
-				infodisplay_str += "Logical Size: " + std::to_string(int(canvas.GetLogicalWidth())) + " x " + std::to_string(int(canvas.GetLogicalHeight())) + "\n";
+				infodisplay_str += "Logical Size: ";
+				infodisplay_str += std::to_string(int(canvas.GetLogicalWidth()));
+				infodisplay_str += " x ";
+				infodisplay_str += std::to_string(int(canvas.GetLogicalHeight()));
+				infodisplay_str += "\n";
 			}
 			if (infoDisplay.colorspace)
 			{
@@ -378,13 +390,19 @@ namespace wi
 			}
 			if (infoDisplay.heap_allocation_counter)
 			{
-				infodisplay_str += "Heap allocations per frame: " + std::to_string(number_of_heap_allocations.load()) + " (" + std::to_string(size_of_heap_allocations.load()) + " bytes)\n";
+				infodisplay_str += "Heap allocations per frame: ";
+				infodisplay_str += std::to_string(number_of_heap_allocations.load());
+				infodisplay_str += " (";
+				infodisplay_str += std::to_string(size_of_heap_allocations.load());
+				infodisplay_str += " bytes)\n";
 				number_of_heap_allocations.store(0);
 				size_of_heap_allocations.store(0);
 			}
 			if (infoDisplay.pipeline_count)
 			{
-				infodisplay_str += "Graphics pipelines active: " + std::to_string(graphicsDevice->GetActivePipelineCount()) + "\n";
+				infodisplay_str += "Graphics pipelines active: ";
+				infodisplay_str += std::to_string(graphicsDevice->GetActivePipelineCount());
+				infodisplay_str += "\n";
 			}
 
 			wi::font::Params params = wi::font::Params(

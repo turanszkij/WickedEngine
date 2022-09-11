@@ -712,7 +712,8 @@ void TerrainWindow::Create(EditorComponent* _editor)
 						const MeshComponent* mesh = terrain->scene->meshes.GetComponent(object->meshID);
 						if (mesh != nullptr)
 						{
-							const XMMATRIX W = XMLoadFloat4x4(&object->worldMatrix);
+							size_t objectIndex = terrain->scene->objects.GetIndex(chunk.second.entity);
+							const XMMATRIX W = XMLoadFloat4x4(&terrain->scene->matrix_objects[objectIndex]);
 							for (auto& x : mesh->vertex_positions)
 							{
 								XMVECTOR P = XMLoadFloat3(&x);

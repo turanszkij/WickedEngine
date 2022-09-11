@@ -2865,7 +2865,7 @@ void UpdateVisibility(Visibility& vis)
 							vis.closestRefPlane = dist;
 							XMVECTOR P = XMLoadFloat3(&object.center);
 							XMVECTOR N = XMVectorSet(0, 1, 0, 0);
-							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&object.worldMatrix));
+							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&vis.scene->matrix_objects[args.jobIndex]));
 							XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
 							XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 
@@ -7849,7 +7849,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 				device->BindViewports(1, &vp, cmd);
 
 				MiscCB misccb;
-				misccb.g_xTransform = object.worldMatrix;
+				misccb.g_xTransform = scene.matrix_objects[i];
 
 				device->BindDynamicConstantBuffer(misccb, CB_GETBINDSLOT(MiscCB), cmd);
 
