@@ -2781,8 +2781,8 @@ void UpdateVisibility(Visibility& vis)
 	if (vis.flags & Visibility::ALLOW_LIGHTS)
 	{
 		// Cull lights:
-		vis.visibleLights.resize(vis.scene->aabb_lights.GetCount());
-		wi::jobsystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_lights.GetCount(), groupSize, [&](wi::jobsystem::JobArgs args) {
+		vis.visibleLights.resize(vis.scene->aabb_lights.size());
+		wi::jobsystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_lights.size(), groupSize, [&](wi::jobsystem::JobArgs args) {
 
 			// Setup stream compaction:
 			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
@@ -2834,8 +2834,8 @@ void UpdateVisibility(Visibility& vis)
 	if (vis.flags & Visibility::ALLOW_OBJECTS)
 	{
 		// Cull objects:
-		vis.visibleObjects.resize(vis.scene->aabb_objects.GetCount());
-		wi::jobsystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_objects.GetCount(), groupSize, [&](wi::jobsystem::JobArgs args) {
+		vis.visibleObjects.resize(vis.scene->aabb_objects.size());
+		wi::jobsystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_objects.size(), groupSize, [&](wi::jobsystem::JobArgs args) {
 
 			// Setup stream compaction:
 			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
@@ -2907,8 +2907,8 @@ void UpdateVisibility(Visibility& vis)
 
 	if (vis.flags & Visibility::ALLOW_DECALS)
 	{
-		vis.visibleDecals.resize(vis.scene->aabb_decals.GetCount());
-		wi::jobsystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_decals.GetCount(), groupSize, [&](wi::jobsystem::JobArgs args) {
+		vis.visibleDecals.resize(vis.scene->aabb_decals.size());
+		wi::jobsystem::Dispatch(ctx, (uint32_t)vis.scene->aabb_decals.size(), groupSize, [&](wi::jobsystem::JobArgs args) {
 
 			// Setup stream compaction:
 			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
@@ -2943,7 +2943,7 @@ void UpdateVisibility(Visibility& vis)
 	{
 		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 			// Cull probes:
-			for (size_t i = 0; i < vis.scene->aabb_probes.GetCount(); ++i)
+			for (size_t i = 0; i < vis.scene->aabb_probes.size(); ++i)
 			{
 				const AABB& aabb = vis.scene->aabb_probes[i];
 
@@ -4875,7 +4875,7 @@ void DrawShadowmaps(
 				{
 					renderQueue.init();
 					bool transparentShadowsRequested = false;
-					for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
+					for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
 					{
 						const AABB& aabb = vis.scene->aabb_objects[i];
 						if ((aabb.layerMask & vis.layerMask) && shcams[cascade].frustum.CheckBoxFast(aabb))
@@ -4927,7 +4927,7 @@ void DrawShadowmaps(
 
 				renderQueue.init();
 				bool transparentShadowsRequested = false;
-				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
+				for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
 				{
 					const AABB& aabb = vis.scene->aabb_objects[i];
 					if ((aabb.layerMask & vis.layerMask) && shcam.frustum.CheckBoxFast(aabb))
@@ -4985,7 +4985,7 @@ void DrawShadowmaps(
 
 				renderQueue.init();
 				bool transparentShadowsRequested = false;
-				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
+				for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
 				{
 					const AABB& aabb = vis.scene->aabb_objects[i];
 					if ((aabb.layerMask & vis.layerMask) && boundingsphere.intersects(aabb))
@@ -5375,7 +5375,7 @@ void DrawDebugWorld(
 
 		MiscCB sb;
 
-		for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+		for (size_t i = 0; i < scene.aabb_objects.size(); ++i)
 		{
 			const AABB& aabb = scene.aabb_objects[i];
 
@@ -5387,7 +5387,7 @@ void DrawDebugWorld(
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
 
-		for (size_t i = 0; i < scene.aabb_lights.GetCount(); ++i)
+		for (size_t i = 0; i < scene.aabb_lights.size(); ++i)
 		{
 			const AABB& aabb = scene.aabb_lights[i];
 
@@ -5399,7 +5399,7 @@ void DrawDebugWorld(
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
 
-		for (size_t i = 0; i < scene.aabb_decals.GetCount(); ++i)
+		for (size_t i = 0; i < scene.aabb_decals.size(); ++i)
 		{
 			const AABB& aabb = scene.aabb_decals[i];
 
@@ -5411,7 +5411,7 @@ void DrawDebugWorld(
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
 
-		for (size_t i = 0; i < scene.aabb_probes.GetCount(); ++i)
+		for (size_t i = 0; i < scene.aabb_probes.size(); ++i)
 		{
 			const AABB& aabb = scene.aabb_probes[i];
 
@@ -6749,7 +6749,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			static thread_local RenderQueue renderQueue;
 			renderQueue.init();
-			for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
+			for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
 			{
 				const AABB& aabb = vis.scene->aabb_objects[i];
 				if ((aabb.layerMask & vis.layerMask) && (aabb.layerMask & probe_aabb.layerMask) && culler.intersects(aabb))
@@ -7096,7 +7096,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 	static thread_local RenderQueue renderQueue;
 	renderQueue.init();
-	for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
+	for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
 	{
 		const AABB& aabb = vis.scene->aabb_objects[i];
 		if (bbox.intersects(aabb))

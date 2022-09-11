@@ -770,7 +770,7 @@ void Example_ImGuiRenderer::Update(float dt)
 				if (!boundSizing)
 				{
 					//PE: This only diplay the bounding box.
-					const wi::primitive::AABB& aabb = *scene.aabb_objects.GetComponent(highlight_entity);
+					const wi::primitive::AABB& aabb = scene.aabb_objects[scene.objects.GetIndex(highlight_entity)];
 					XMFLOAT4X4 hoverBox;
 					XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
 					wi::renderer::DrawBox(hoverBox, XMFLOAT4(1.0f, 0.9f, 0.5f, 0.4f));
