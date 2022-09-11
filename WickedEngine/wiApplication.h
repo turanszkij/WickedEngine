@@ -99,6 +99,8 @@ namespace wi
 			bool watermark = true;
 			// display framerate
 			bool fpsinfo = false;
+			// display graphics device name
+			bool device_name = false;
 			// display resolution info
 			bool resolution = false;
 			// window's size in logical (DPI scaled) units
