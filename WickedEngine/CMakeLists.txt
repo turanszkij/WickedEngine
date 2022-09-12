@@ -140,6 +140,7 @@ set(HEADER_FILES
 		wiXInput.h
 		wiConfig.h
 		wiTerrain.h
+		wiAllocator.h
 		)
 
 add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}

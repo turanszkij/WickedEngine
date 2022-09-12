@@ -11,6 +11,7 @@
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
 #include "wiLua.h"
+#include "wiAllocator.h"
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
@@ -4000,6 +4001,7 @@ namespace wi::scene
 		return INVALID_ENTITY;
 	}
 
+
 	PickResult Pick(const Ray& ray, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene, uint32_t lod)
 	{
 		PickResult result;
@@ -4007,6 +4009,9 @@ namespace wi::scene
 		if (scene.objects.GetCount() > 0)
 		{
 			// Set up parallel closest hit selection:
+			uint8_t stack_mem[1024 * 8];
+			wi::allocator::LinearAllocator allocator;
+			allocator.init(stack_mem, sizeof(stack_mem));
 			wi::jobsystem::context ctx;
 			struct JobDataForFunction
 			{
@@ -4017,7 +4022,8 @@ namespace wi::scene
 				float TMax;
 			} jobDataFunction;
 			const uint32_t threadCount = wi::jobsystem::GetThreadCount();
-			jobDataFunction.groupResults = (PickResult*)alloca(sizeof(PickResult) * threadCount);
+			jobDataFunction.groupResults = (PickResult*)allocator.allocate(AlignTo(sizeof(PickResult) * threadCount, 16));
+			const size_t allocator_reserved_begin = allocator.offset;
 			for (uint32_t t = 0; t < threadCount; ++t)
 			{
 				jobDataFunction.groupResults[t] = result;
@@ -4055,22 +4061,23 @@ namespace wi::scene
 					XMVECTOR rayDirection_local;
 				};
 
-				// This will be stack deallocated at function exit:
-				JobDataForInstance& jobData = *(JobDataForInstance*)alloca(sizeof(JobDataForInstance));
+				uint8_t* jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+				if (jobdata_allocation == nullptr)
+				{
+					// Flush pending jobs, reset temp allocations, and reuse:
+					wi::jobsystem::Wait(ctx);
+					allocator.offset = allocator_reserved_begin;
+					jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+				}
+				JobDataForInstance& jobData = *(JobDataForInstance*)jobdata_allocation;
 				jobData.func = &jobDataFunction;
-
 				jobData.mesh = mesh;
-
 				jobData.entity = scene.objects.GetEntity(objectIndex);
-
 				jobData.softbody = scene.softbodies.GetComponent(object.meshID);
-
 				jobData.objectMat = XMLoadFloat4x4(&scene.matrix_objects[objectIndex]);
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, jobData.objectMat);
-
 				jobData.rayOrigin_local = XMVector3Transform(jobData.func->rayOrigin, objectMat_Inverse);
 				jobData.rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(jobData.func->rayDirection, objectMat_Inverse));
-
 				jobData.armature = jobData.mesh->IsSkinned() ? scene.armatures.GetComponent(jobData.mesh->armatureID) : nullptr;
 
 				uint32_t first_subset = 0;
@@ -4179,7 +4186,6 @@ namespace wi::scene
 
 		return result;
 	}
-
 	SceneIntersectSphereResult SceneIntersectSphere(const Sphere& sphere, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene, uint32_t lod)
 	{
 		SceneIntersectSphereResult result;
@@ -4187,6 +4193,9 @@ namespace wi::scene
 		if (scene.objects.GetCount() > 0)
 		{
 			// Set up parallel closest hit selection:
+			uint8_t stack_mem[1024 * 8];
+			wi::allocator::LinearAllocator allocator;
+			allocator.init(stack_mem, sizeof(stack_mem));
 			wi::jobsystem::context ctx;
 			struct JobDataForFunction
 			{
@@ -4197,7 +4206,8 @@ namespace wi::scene
 				XMVECTOR RadiusSq;
 			} jobDataFunction;
 			const uint32_t threadCount = wi::jobsystem::GetThreadCount();
-			jobDataFunction.groupResults = (SceneIntersectSphereResult*)alloca(sizeof(SceneIntersectSphereResult) * threadCount);
+			jobDataFunction.groupResults = (SceneIntersectSphereResult*)allocator.allocate(AlignTo(sizeof(SceneIntersectSphereResult) * threadCount, 16));
+			const size_t allocator_reserved_begin = allocator.offset;
 			for (uint32_t t = 0; t < threadCount; ++t)
 			{
 				jobDataFunction.groupResults[t] = result;
@@ -4233,18 +4243,20 @@ namespace wi::scene
 					XMMATRIX objectMat;
 				};
 
-				// This will be stack deallocated at function exit:
-				JobDataForInstance& jobData = *(JobDataForInstance*)alloca(sizeof(JobDataForInstance));
+				uint8_t* jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+				if (jobdata_allocation == nullptr)
+				{
+					// Flush pending jobs, reset temp allocations, and reuse:
+					wi::jobsystem::Wait(ctx);
+					allocator.offset = allocator_reserved_begin;
+					jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+				}
+				JobDataForInstance& jobData = *(JobDataForInstance*)jobdata_allocation;
 				jobData.func = &jobDataFunction;
-
 				jobData.mesh = mesh;
-
 				jobData.entity = scene.objects.GetEntity(objectIndex);
-
 				jobData.softbody = scene.softbodies.GetComponent(object.meshID);
-
 				jobData.objectMat = XMLoadFloat4x4(&scene.matrix_objects[objectIndex]);
-
 				jobData.armature = jobData.mesh->IsSkinned() ? scene.armatures.GetComponent(jobData.mesh->armatureID) : nullptr;
 
 				uint32_t first_subset = 0;
@@ -4433,6 +4445,9 @@ namespace wi::scene
 		if (scene.objects.GetCount() > 0)
 		{
 			// Set up parallel closest hit selection:
+			uint8_t stack_mem[1024 * 8];
+			wi::allocator::LinearAllocator allocator;
+			allocator.init(stack_mem, sizeof(stack_mem));
 			wi::jobsystem::context ctx;
 			struct JobDataForFunction
 			{
@@ -4448,7 +4463,8 @@ namespace wi::scene
 				AABB capsule_aabb;
 			} jobDataFunction;
 			const uint32_t threadCount = wi::jobsystem::GetThreadCount();
-			jobDataFunction.groupResults = (SceneIntersectSphereResult*)alloca(sizeof(SceneIntersectSphereResult) * threadCount);
+			jobDataFunction.groupResults = (SceneIntersectSphereResult*)allocator.allocate(AlignTo(sizeof(SceneIntersectSphereResult) * threadCount, 16));
+			const size_t allocator_reserved_begin = allocator.offset;
 			for (uint32_t t = 0; t < threadCount; ++t)
 			{
 				jobDataFunction.groupResults[t] = result;
@@ -4489,18 +4505,20 @@ namespace wi::scene
 					XMMATRIX objectMat;
 				};
 
-				// This will be stack deallocated at function exit:
-				JobDataForInstance& jobData = *(JobDataForInstance*)alloca(sizeof(JobDataForInstance));
+				uint8_t* jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+				if (jobdata_allocation == nullptr)
+				{
+					// Flush pending jobs, reset temp allocations, and reuse:
+					wi::jobsystem::Wait(ctx);
+					allocator.offset = allocator_reserved_begin;
+					jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+				}
+				JobDataForInstance& jobData = *(JobDataForInstance*)jobdata_allocation;
 				jobData.func = &jobDataFunction;
-
 				jobData.mesh = mesh;
-
 				jobData.entity = scene.objects.GetEntity(objectIndex);
-
 				jobData.softbody = scene.softbodies.GetComponent(object.meshID);
-
 				jobData.objectMat = XMLoadFloat4x4(&scene.matrix_objects[objectIndex]);
-
 				jobData.armature = jobData.mesh->IsSkinned() ? scene.armatures.GetComponent(jobData.mesh->armatureID) : nullptr;
 
 				uint32_t first_subset = 0;
