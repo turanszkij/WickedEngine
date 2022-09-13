@@ -77,6 +77,7 @@ namespace wi::scene
 		wi::vector<wi::primitive::AABB> aabb_lights;
 		wi::vector<wi::primitive::AABB> aabb_probes;
 		wi::vector<wi::primitive::AABB> aabb_decals;
+		wi::vector<wi::primitive::AABB> aabb_colliders_cpu;
 
 		// Separate stream of world matrices:
 		wi::vector<XMFLOAT4X4> matrix_objects;

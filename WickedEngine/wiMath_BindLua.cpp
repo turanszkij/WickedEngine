@@ -48,6 +48,13 @@ namespace wi::lua
 		z = 0;
 		w = 0;
 	}
+	Vector_BindLua::Vector_BindLua(const XMFLOAT3& vector)
+	{
+		x = vector.x;
+		y = vector.y;
+		z = vector.z;
+		w = 1;
+	}
 	Vector_BindLua::Vector_BindLua(const XMFLOAT4& vector)
 	{
 		x = vector.x;

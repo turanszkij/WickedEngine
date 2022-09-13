@@ -325,6 +325,21 @@ void Bind()
 		wi::lua::RegisterFunc("SceneIntersectSphere", SceneIntersectSphere);
 		wi::lua::RegisterFunc("SceneIntersectCapsule", SceneIntersectCapsule);
 
+		wi::lua::RunText("FILTER_NONE = 0");
+		wi::lua::RunText("FILTER_OPAQUE = 1 << 0");
+		wi::lua::RunText("FILTER_TRANSPARENT = 1 << 1");
+		wi::lua::RunText("FILTER_WATER = 1 << 2");
+		wi::lua::RunText("FILTER_NAVIGATION_MESH = 1 << 3");
+		wi::lua::RunText("FILTER_OBJECT_ALL = FILTER_OPAQUE | FILTER_TRANSPARENT | FILTER_WATER | FILTER_NAVIGATION_MESH");
+		wi::lua::RunText("FILTER_COLLIDER = 1 << 4");
+		wi::lua::RunText("FILTER_ALL = ~0");
+
+		// deprecated names:
+		wi::lua::RunText("PICK_VOID = FILTER_NONE");
+		wi::lua::RunText("PICK_OPAQUE = FILTER_OPAQUE");
+		wi::lua::RunText("PICK_TRANSPARENT = FILTER_TRANSPARENT");
+		wi::lua::RunText("PICK_WATER = FILTER_WATER");
+
 		Luna<Scene_BindLua>::Register(L);
 		Luna<NameComponent_BindLua>::Register(L);
 		Luna<LayerComponent_BindLua>::Register(L);
@@ -360,6 +375,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Update),
 	lunamethod(Scene_BindLua, Clear),
 	lunamethod(Scene_BindLua, Merge),
+	lunamethod(Scene_BindLua, Intersects),
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
 	lunamethod(Scene_BindLua, Entity_Duplicate),
@@ -566,6 +582,69 @@ int Scene_BindLua::Entity_Duplicate(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Entity_Duplicate(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+
+int Scene_BindLua::Intersects(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		uint32_t filterMask = wi::enums::FILTER_ALL;
+		uint32_t layerMask = ~0u;
+		uint lod = 0;
+		if (argc > 1)
+		{
+			filterMask = (uint32_t)wi::lua::SGetInt(L, 2);
+			if (argc > 2)
+			{
+				layerMask = (uint32_t)wi::lua::SGetInt(L, 3);
+				if (argc > 3)
+				{
+					lod = (uint32_t)wi::lua::SGetInt(L, 4);
+				}
+			}
+		}
+
+		Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
+		if (ray != nullptr)
+		{
+			auto result = scene->Intersects(ray->ray, filterMask, layerMask, lod);
+			wi::lua::SSetInt(L, (int)result.entity);
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.position));
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.normal));
+			wi::lua::SSetFloat(L, result.distance);
+			return 4;
+		}
+
+		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
+		if (sphere != nullptr)
+		{
+			auto result = scene->Intersects(sphere->sphere, filterMask, layerMask, lod);
+			wi::lua::SSetInt(L, (int)result.entity);
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.position));
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.normal));
+			wi::lua::SSetFloat(L, result.depth);
+			return 4;
+		}
+
+		Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
+		if (capsule != nullptr)
+		{
+			auto result = scene->Intersects(capsule->capsule, filterMask, layerMask, lod);
+			wi::lua::SSetInt(L, (int)result.entity);
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.position));
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.normal));
+			wi::lua::SSetFloat(L, result.depth);
+			return 4;
+		}
+
+		wi::lua::SError(L, "Scene::Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) first argument is not an accepted primitive type!");
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) not enough arguments!");
 	}
 	return 0;
 }

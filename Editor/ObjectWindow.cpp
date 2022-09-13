@@ -307,10 +307,14 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	renderableCheckBox.SetPos(XMFLOAT2(x, y));
 	renderableCheckBox.SetCheck(true);
 	renderableCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
-		if (object != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			object->SetRenderable(args.bValue);
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->SetRenderable(args.bValue);
+			}
 		}
 	});
 	AddWidget(&renderableCheckBox);
@@ -321,10 +325,14 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	shadowCheckBox.SetPos(XMFLOAT2(x, y += step));
 	shadowCheckBox.SetCheck(true);
 	shadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
-		if (object != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			object->SetCastShadow(args.bValue);
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->SetCastShadow(args.bValue);
+			}
 		}
 		});
 	AddWidget(&shadowCheckBox);
@@ -335,16 +343,20 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	navmeshCheckBox.SetPos(XMFLOAT2(x, y += step));
 	navmeshCheckBox.SetCheck(true);
 	navmeshCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
-		if (object != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			if (args.bValue)
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
 			{
-				object->filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
-			}
-			else
-			{
-				object->filterMask &= ~wi::enums::FILTER_NAVIGATION_MESH;
+				if (args.bValue)
+				{
+					object->filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
+				}
+				else
+				{
+					object->filterMask &= ~wi::enums::FILTER_NAVIGATION_MESH;
+				}
 			}
 		}
 		});

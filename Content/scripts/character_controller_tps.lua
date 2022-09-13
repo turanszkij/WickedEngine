@@ -216,7 +216,7 @@ Character = {
 			self.capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
 			local o2, p2, n2, depth = self.capsule.Intersects(testcapsule) -- capsule/capsule collision
 			if(not o2) then
-				o2, p2, n2, depth = SceneIntersectCapsule(self.capsule, PICK_OPAQUE, ~self.layerMask) -- scene/capsule collision
+				o2, p2, n2, depth = scene.Intersects(self.capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.layerMask) -- scene/capsule collision
 			end
 			if(o2 ~= INVALID_ENTITY) then
 				DrawPoint(p2,0.1,Vector(1,1,0,1))
@@ -249,7 +249,7 @@ Character = {
 			self.capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
 			local o2, p2, n2, depth = self.capsule.Intersects(testcapsule) -- capsule/capsule collision
 			if(not o2) then
-				o2, p2, n2, depth = SceneIntersectCapsule(self.capsule, PICK_OPAQUE, ~self.layerMask) -- scene/capsule collision
+				o2, p2, n2, depth = scene.Intersects(self.capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.layerMask) -- scene/capsule collision
 			end
 			if(o2 ~= INVALID_ENTITY) then
 				DrawPoint(p2,0.1,Vector(1,1,0,1))
@@ -282,7 +282,7 @@ Character = {
 		-- try to put water ripple if character head is directly above water
 		local head_transform = scene.Component_GetTransform(self.head)
 		local waterRay = Ray(head_transform.GetPosition(),Vector(0,-1,0))
-		local w,wp,wn = Pick(waterRay,PICK_WATER)
+		local w,wp,wn = scene.Intersects(waterRay,FILTER_WATER)
 		if(w ~= INVALID_ENTITY and self.velocity.Length() > 2) then
 			PutWaterRipple(script_dir() .. "../models/ripple.png",wp)
 		end
@@ -365,7 +365,7 @@ ThirdPersonCamera = {
 
 				local ray = Ray(targetPos, target_to_corner.Normalize(), TMin, TMax)
 
-				local collObj,collPos,collNor = Pick(ray, PICK_OPAQUE, ~self.character.layerMask)
+				local collObj,collPos,collNor = scene.Intersects(ray, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.character.layerMask)
 				if(collObj ~= INVALID_ENTITY) then
 					-- It hit something, see if it is between the player and camera:
 					local collDiff = vector.Subtract(collPos, targetPos)

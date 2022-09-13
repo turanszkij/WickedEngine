@@ -39,6 +39,8 @@ namespace wi::lua::scene
 		int Clear(lua_State* L);
 		int Merge(lua_State* L);
 
+		int Intersects(lua_State* L);
+
 		int Entity_FindByName(lua_State* L);
 		int Entity_Remove(lua_State* L);
 		int Entity_Duplicate(lua_State* L);
