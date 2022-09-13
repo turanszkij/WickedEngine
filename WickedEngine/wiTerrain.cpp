@@ -582,6 +582,7 @@ namespace wi::terrain
 					chunk_data.entity = generator->scene.Entity_CreateObject("chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z));
 					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
 					object.lod_distance_multiplier = lod_multiplier;
+					object.filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
 					generator->scene.Component_Attach(chunk_data.entity, terrainEntity);
 
 					TransformComponent& transform = *generator->scene.transforms.GetComponent(chunk_data.entity);

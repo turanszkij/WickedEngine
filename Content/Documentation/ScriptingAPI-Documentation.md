@@ -508,12 +508,23 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - [outer]GetCamera() : Camera result  -- returns the global camera
 - [outer]LoadModel(string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file. returns a root entity that everything in this model is attached to
 - [outer]LoadModel(Scene scene, string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file into specified scene. returns a root entity that everything in this model is attached to
-- [outer]PICK_OPAQUE : uint
-- [outer]PICK_TRANSPARENT : uint
-- [outer]PICK_WATER : uint
-- [outer]Pick(Ray ray, opt uint pickType = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
-- [outer]SceneIntersectSphere(Sphere sphere, opt uint pickType = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
-- [outer]SceneIntersectCapsule(Capsule capsule, opt uint pickType = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
+
+- [deprecated][outer]PICK_OPAQUE : uint	-- deprecated, you can use FILTER_ enums instead
+- [deprecated][outer]PICK_TRANSPARENT : uint	-- deprecated, you can use FILTER_ enums instead
+- [deprecated][outer]PICK_WATER : uint	-- deprecated, you can use FILTER_ enums instead
+- [deprecated][outer]Pick(Ray ray, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified. (deprecated, you can use the scene's Intersects() function instead)
+- [deprecated][outer]SceneIntersectSphere(Sphere sphere, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified. (deprecated, you can use the scene's Intersects() function instead)
+- [deprecated][outer]SceneIntersectCapsule(Capsule capsule, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified. (deprecated, you can use the scene's Intersects() function instead)
+
+- [outer]FILTER_NONE : uint	-- include nothing
+- [outer]FILTER_OPAQUE : uint	-- include opaque meshes
+- [outer]FILTER_TRANSPARENT : uint	-- include transparent meshes
+- [outer]FILTER_WATER : uint	-- include water meshes
+- [outer]FILTER_NAVIGATION_MESH : uint	-- include navigation meshes
+- [outer]FILTER_OBJECT_ALL : uint	-- include all objects, meshes
+- [outer]FILTER_COLLIDER : uint	-- include colliders
+- [outer]FILTER_ALL : uint	-- include everything
+- Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance	-- intersects a primitive with the scene and return collision parameters
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
@@ -998,6 +1009,8 @@ Describes a Sound object.
 
 - SetCPUEnabled(bool value)
 - SetGPUEnabled(bool value)
+- GetCapsule() : Capsule
+- GetSphere() : Sphere
 
 ## Canvas
 This is used to describe a drawable area
@@ -1065,6 +1078,7 @@ It can hold Sprites and SpriteFonts and can sort them by layers, update and rend
 This is the default scene render path. 
 It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - [constructor]RenderPath3D()
+- SetResolutionScale(float value)	-- scale internal rendering resolution. This can provide major performance improvement when GPU rendering speed is the bottleneck
 - SetAO(int value)  -- Sets up the ambient occlusion effect (possible values below)
 - AO_DISABLED : int  -- turn off AO computation (use in SetAO() function)
 	- AO_SSAO : int  -- enable simple brute force screen space ambient occlusion (use in SetAO() function)

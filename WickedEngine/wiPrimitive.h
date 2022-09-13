@@ -12,6 +12,7 @@ namespace wi::primitive
 	struct Ray;
 	struct AABB;
 	struct Capsule;
+	struct Plane;
 
 	struct AABB
 	{
@@ -88,7 +89,12 @@ namespace wi::primitive
 		bool intersects(const Capsule& b) const;
 		bool intersects(const Capsule& b, float& dist) const;
 		bool intersects(const Capsule& b, float& dist, XMFLOAT3& direction) const;
+		bool intersects(const Plane& b) const;
+		bool intersects(const Plane& b, float& dist) const;
+		bool intersects(const Plane& b, float& dist, XMFLOAT3& direction) const;
 		bool intersects(const Ray& b) const;
+		bool intersects(const Ray& b, float& dist) const;
+		bool intersects(const Ray& b, float& dist, XMFLOAT3& direction) const;
 	};
 	struct Capsule
 	{
@@ -112,8 +118,31 @@ namespace wi::primitive
 			return AABB::Merge(base_aabb, tip_aabb);
 		}
 		bool intersects(const Capsule& b, XMFLOAT3& position, XMFLOAT3& incident_normal, float& penetration_depth) const;
+		bool intersects(const Sphere& b) const;
+		bool intersects(const Sphere& b, float& dist) const;
+		bool intersects(const Sphere& b, float& dist, XMFLOAT3& direction) const;
+		bool intersects(const Plane& b) const;
+		bool intersects(const Plane& b, float& dist) const;
+		bool intersects(const Plane& b, float& dist, XMFLOAT3& direction) const;
 		bool intersects(const Ray& b) const;
-		bool intersects(const Ray& b, float& t) const;
+		bool intersects(const Ray& b, float& dist) const;
+		bool intersects(const Ray& b, float& dist, XMFLOAT3& direction) const;
+	};
+	struct Plane
+	{
+		XMFLOAT3 origin = {};
+		XMFLOAT3 normal = {};
+		XMFLOAT4X4 projection = wi::math::IDENTITY_MATRIX;
+
+		bool intersects(const Sphere& b) const;
+		bool intersects(const Sphere& b, float& dist) const;
+		bool intersects(const Sphere& b, float& dist, XMFLOAT3& direction) const;
+		bool intersects(const Capsule& b) const;
+		bool intersects(const Capsule& b, float& dist) const;
+		bool intersects(const Capsule& b, float& dist, XMFLOAT3& direction) const;
+		bool intersects(const Ray& b) const;
+		bool intersects(const Ray& b, float& dist) const;
+		bool intersects(const Ray& b, float& dist, XMFLOAT3& direction) const;
 	};
 	struct Ray
 	{
@@ -136,8 +165,14 @@ namespace wi::primitive
 		}
 		bool intersects(const AABB& b) const;
 		bool intersects(const Sphere& b) const;
+		bool intersects(const Sphere& b, float& dist) const;
+		bool intersects(const Sphere& b, float& dist, XMFLOAT3& direction) const;
 		bool intersects(const Capsule& b) const;
-		bool intersects(const Capsule& b, float& t) const;
+		bool intersects(const Capsule& b, float& dist) const;
+		bool intersects(const Capsule& b, float& dist, XMFLOAT3& direction) const;
+		bool intersects(const Plane& b) const;
+		bool intersects(const Plane& b, float& dist) const;
+		bool intersects(const Plane& b, float& dist, XMFLOAT3& direction) const;
 	};
 
 	struct Frustum

@@ -965,7 +965,7 @@ namespace wi::renderer
 	struct CustomShader
 	{
 		std::string name;
-		uint32_t renderTypeFlags = wi::enums::RENDERTYPE_OPAQUE;
+		uint32_t filterMask = wi::enums::FILTER_OPAQUE;
 		wi::graphics::PipelineState pso[wi::enums::RENDERPASS_COUNT] = {};
 	};
 	// Registers a custom shader that can be set to materials. 

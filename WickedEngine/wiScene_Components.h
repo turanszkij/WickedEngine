@@ -248,7 +248,7 @@ namespace wi::scene
 		inline void SetOcclusionEnabled_Primary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_PRIMARY; } else { _flags &= ~OCCLUSION_PRIMARY; } }
 		inline void SetOcclusionEnabled_Secondary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_SECONDARY; } else { _flags &= ~OCCLUSION_SECONDARY; } }
 
-		inline wi::enums::BLENDMODE GetBlendMode() const { if (userBlendMode == wi::enums::BLENDMODE_OPAQUE && (GetRenderTypes() & wi::enums::RENDERTYPE_TRANSPARENT)) return wi::enums::BLENDMODE_ALPHA; else return userBlendMode; }
+		inline wi::enums::BLENDMODE GetBlendMode() const { if (userBlendMode == wi::enums::BLENDMODE_OPAQUE && (GetFilterMask() & wi::enums::FILTER_TRANSPARENT)) return wi::enums::BLENDMODE_ALPHA; else return userBlendMode; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
 		inline bool IsUsingVertexColors() const { return _flags & USE_VERTEXCOLORS; }
@@ -305,8 +305,8 @@ namespace wi::scene
 		// Retrieve the array of textures from the material
 		void WriteTextures(const wi::graphics::GPUResource** dest, int count) const;
 
-		// Returns the bitwise OR of all the RENDERTYPE flags applicable to this material
-		uint32_t GetRenderTypes() const;
+		// Returns the bitwise OR of all the wi::enums::FILTER flags applicable to this material
+		uint32_t GetFilterMask() const;
 
 		// Create constant buffer and texture resources for GPU
 		void CreateRenderData();
@@ -638,7 +638,7 @@ namespace wi::scene
 
 		wi::ecs::Entity meshID = wi::ecs::INVALID_ENTITY;
 		uint32_t cascadeMask = 0; // which shadow cascades to skip from lowest detail to highest detail (0: skip none, 1: skip first, etc...)
-		uint32_t rendertypeMask = 0;
+		uint32_t filterMask = 0;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 1);
 
@@ -652,6 +652,7 @@ namespace wi::scene
 		wi::vector<uint8_t> lightmapTextureData;
 
 		// Non-serialized attributes:
+		uint32_t filterMaskDynamic = 0;
 
 		wi::graphics::Texture lightmap;
 		wi::graphics::RenderPass renderpass_lightmap_clear;
@@ -693,7 +694,7 @@ namespace wi::scene
 		inline bool IsLightmapRenderRequested() const { return _flags & LIGHTMAP_RENDER_REQUEST; }
 
 		inline float GetTransparency() const { return 1 - color.w; }
-		inline uint32_t GetRenderTypes() const { return rendertypeMask; }
+		inline uint32_t GetFilterMask() const { return filterMask | filterMaskDynamic; }
 
 		// User stencil value can be in range [0, 15]
 		//	Values greater than 0 can be used to override userStencilRef of MaterialComponent
@@ -1393,9 +1394,7 @@ namespace wi::scene
 		// Non-serialized attributes:
 		wi::primitive::Sphere sphere;
 		wi::primitive::Capsule capsule;
-		XMFLOAT3 planeOrigin = {};
-		XMFLOAT3 planeNormal = {};
-		XMFLOAT4X4 planeProjection = wi::math::IDENTITY_MATRIX;
+		wi::primitive::Plane plane;
 		uint32_t layerMask = ~0u;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);

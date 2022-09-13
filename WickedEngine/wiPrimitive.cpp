@@ -291,12 +291,62 @@ namespace wi::primitive
 		dist = dist - radius - b.radius;
 		return dist < 0;
 	}
+	bool Sphere::intersects(const Plane& b) const
+	{
+		return b.intersects(*this);
+	}
+	bool Sphere::intersects(const Plane& b, float& dist) const
+	{
+		return b.intersects(*this, dist);
+	}
+	bool Sphere::intersects(const Plane& b, float& dist, XMFLOAT3& direction) const
+	{
+		return b.intersects(*this, dist, direction);
+	}
 	bool Sphere::intersects(const Ray& b) const
 	{
-		XMVECTOR o = XMLoadFloat3(&b.origin);
-		XMVECTOR r = XMLoadFloat3(&b.direction);
-		XMVECTOR dist = XMVector3LinePointDistance(o, o + r, XMLoadFloat3(&center));
-		return XMVectorGetX(dist) <= radius;
+		float dist;
+		XMFLOAT3 direction;
+		return intersects(b, dist, direction);
+	}
+	bool Sphere::intersects(const Ray& b, float& dist) const
+	{
+		XMFLOAT3 direction;
+		return intersects(b, dist, direction);
+	}
+	bool Sphere::intersects(const Ray& b, float& dist, XMFLOAT3& direction) const
+	{
+		XMVECTOR C = XMLoadFloat3(&center);
+		XMVECTOR O = XMLoadFloat3(&b.origin);
+		XMVECTOR D = XMLoadFloat3(&b.direction);
+		XMVECTOR OC = O - C;
+		float B = XMVectorGetX(XMVector3Dot(OC, D));
+		float c = XMVectorGetX(XMVector3Dot(OC, OC)) - radius * radius;
+		float discr = B * B - c;
+		if (discr > 0)
+		{
+			float discrSq = std::sqrt(discr);
+
+			float t = (-B - discrSq);
+			if (t<b.TMax && t>b.TMin)
+			{
+				XMVECTOR P = O + D * t;
+				XMVECTOR N = XMVector3Normalize(P - C);
+				dist = t;
+				XMStoreFloat3(&direction, N);
+				return true;
+			}
+
+			t = (-B + discrSq);
+			if (t<b.TMax && t>b.TMin)
+			{
+				XMVECTOR P = O + D * t;
+				XMVECTOR N = XMVector3Normalize(P - C);
+				dist = t;
+				XMStoreFloat3(&direction, N);
+			}
+		}
+		return false;
 	}
 
 
@@ -363,50 +413,273 @@ namespace wi::primitive
 
 		return penetration_depth > 0;
 	}
+	bool Capsule::intersects(const Sphere& b) const
+	{
+		return b.intersects(*this);
+	}
+	bool Capsule::intersects(const Sphere& b, float& dist) const
+	{
+		bool intersects = b.intersects(*this, dist);
+		dist = -dist;
+		return intersects;
+	}
+	bool Capsule::intersects(const Sphere& b, float& dist, XMFLOAT3& direction) const
+	{
+		bool intersects = b.intersects(*this, dist, direction);
+		dist = -dist;
+		direction.x *= -1;
+		direction.y *= -1;
+		direction.z *= -1;
+		return intersects;
+	}
+	bool Capsule::intersects(const Plane& b) const
+	{
+		return b.intersects(*this);
+	}
+	bool Capsule::intersects(const Plane& b, float& dist) const
+	{
+		bool intersects = b.intersects(*this, dist);
+		dist = -dist;
+		return intersects;
+	}
+	bool Capsule::intersects(const Plane& b, float& dist, XMFLOAT3& direction) const
+	{
+		bool intersects = b.intersects(*this, dist, direction);
+		dist = -dist;
+		return intersects;
+	}
 	bool Capsule::intersects(const Ray& ray) const
 	{
-		XMVECTOR A = XMLoadFloat3(&base);
-		XMVECTOR B = XMLoadFloat3(&tip);
-		XMVECTOR L = XMVector3Normalize(A - B);
-		XMVECTOR O = XMLoadFloat3(&ray.origin);
-		XMVECTOR D = XMLoadFloat3(&ray.direction);
-		XMVECTOR C = XMVector3Normalize(XMVector3Cross(L, A - O));
-		XMVECTOR N = XMVector3Cross(L, C);
-		XMVECTOR Plane = XMPlaneFromPointNormal(A, N);
-		XMVECTOR I = XMPlaneIntersectLine(Plane, O, O + D * ray.TMax);
-		float dist = wi::math::GetPointSegmentDistance(I, A - L * radius, B + L * radius);
-		return dist <= radius;
+		float dist;
+		XMFLOAT3 direction;
+		return intersects(ray, dist, direction);
 	}
-	bool Capsule::intersects(const Ray& ray, float& t) const
+	bool Capsule::intersects(const Ray& ray, float& dist) const
+	{
+		XMFLOAT3 direction;
+		return intersects(ray, dist, direction);
+	}
+	bool Capsule::intersects(const Ray& ray, float& dist, XMFLOAT3& direction) const
 	{
 		XMVECTOR A = XMLoadFloat3(&base);
 		XMVECTOR B = XMLoadFloat3(&tip);
 		XMVECTOR L = XMVector3Normalize(A - B);
+		A -= L * radius;
+		B += L * radius;
 		XMVECTOR O = XMLoadFloat3(&ray.origin);
 		XMVECTOR D = XMLoadFloat3(&ray.direction);
 		XMVECTOR C = XMVector3Normalize(XMVector3Cross(L, A - O));
 		XMVECTOR N = XMVector3Cross(L, C);
 		XMVECTOR Plane = XMPlaneFromPointNormal(A, N);
 		XMVECTOR I = XMPlaneIntersectLine(Plane, O, O + D * ray.TMax);
-		float dist = wi::math::GetPointSegmentDistance(I, A - L * radius, B + L * radius);
-		t = XMVectorGetX(XMVector3Length(I - O));
-		return dist <= radius;
+		XMVECTOR P = wi::math::ClosestPointOnLineSegment(A, B, I);
+
+		Sphere sphere;
+		XMStoreFloat3(&sphere.center, P);
+		sphere.radius = radius;
+		return sphere.intersects(ray, dist, direction);
 	}
 
+
+
+
+	bool Plane::intersects(const Sphere& b) const
+	{
+		float dist;
+		XMFLOAT3 direction;
+		return intersects(b, dist, direction);
+	}
+	bool Plane::intersects(const Sphere& b, float& dist) const
+	{
+		XMFLOAT3 direction;
+		return intersects(b, dist, direction);
+	}
+	bool Plane::intersects(const Sphere& b, float& dist, XMFLOAT3& direction) const
+	{
+		XMVECTOR C = XMLoadFloat3(&b.center);
+		dist = wi::math::GetPlanePointDistance(XMLoadFloat3(&origin), XMLoadFloat3(&normal), C);
+		direction = normal;
+		if (dist < 0)
+		{
+			direction.x *= -1;
+			direction.y *= -1;
+			direction.z *= -1;
+			dist = std::abs(dist);
+		}
+		dist = dist - b.radius;
+		if (dist < 0)
+		{
+			XMMATRIX planeProjection = XMLoadFloat4x4(&projection);
+			XMVECTOR clipSpacePos = XMVector3Transform(C, planeProjection);
+			XMVECTOR uvw = clipSpacePos * XMVectorSet(0.5f, -0.5f, 0.5f, 1) + XMVectorSet(0.5f, 0.5f, 0.5f, 0);
+			XMVECTOR uvw_sat = XMVectorSaturate(uvw);
+			XMVECTOR uvw_diff = XMVectorAbs(uvw - uvw_sat);
+			if (XMVectorGetX(uvw_diff) > std::numeric_limits<float>::epsilon())
+				dist = 0; // force no collision
+			else if (XMVectorGetY(uvw_diff) > std::numeric_limits<float>::epsilon())
+				dist = 0; // force no collision
+			else if (XMVectorGetZ(uvw_diff) > std::numeric_limits<float>::epsilon())
+				dist = 0; // force no collision
+		}
+		return dist < 0;
+	}
+	bool Plane::intersects(const Capsule& b) const
+	{
+		float dist;
+		XMFLOAT3 direction;
+		return intersects(b, dist, direction);
+	}
+	bool Plane::intersects(const Capsule& b, float& dist) const
+	{
+		XMFLOAT3 direction;
+		return intersects(b, dist, direction);
+	}
+	bool Plane::intersects(const Capsule& b, float& dist, XMFLOAT3& direction) const
+	{
+		direction = normal;
+		dist = 0;
+
+		XMVECTOR N = XMLoadFloat3(&normal);
+		XMVECTOR O = XMLoadFloat3(&origin);
+
+		XMVECTOR A = XMLoadFloat3(&b.base);
+		XMVECTOR B = XMLoadFloat3(&b.tip);
+		XMVECTOR D = XMVector3Normalize(A - B);
+		A -= D * b.radius;
+		B += D * b.radius;
+
+		XMVECTOR C;
+		if (std::abs(XMVectorGetX(XMVector3Dot(N, D))) < std::numeric_limits<float>::epsilon())
+		{
+			// parallel line-plane, take any point on capsule segment
+			C = A;
+		}
+		else
+		{
+			// trace point on plane by capsule line and compute closest point on capsule to intersection point
+			XMVECTOR t = XMVector3Dot(N, (A - O) / XMVectorAbs(XMVector3Dot(N, D)));
+			XMVECTOR LinePlaneIntersection = A + D * t;
+			C = wi::math::ClosestPointOnLineSegment(A, B, LinePlaneIntersection);
+		}
+
+		dist = wi::math::GetPlanePointDistance(O, N, C);
+
+		if (dist < 0)
+		{
+			direction.x *= -1;
+			direction.y *= -1;
+			direction.z *= -1;
+			dist = std::abs(dist);
+		}
+
+		dist = dist - b.radius;
+
+		if (dist < 0)
+		{
+			XMMATRIX planeProjection = XMLoadFloat4x4(&projection);
+			XMVECTOR clipSpacePos = XMVector3Transform(C, planeProjection);
+			XMVECTOR uvw = clipSpacePos * XMVectorSet(0.5f, -0.5f, 0.5f, 1) + XMVectorSet(0.5f, 0.5f, 0.5f, 0);
+			XMVECTOR uvw_sat = XMVectorSaturate(uvw);
+			XMVECTOR uvw_diff = XMVectorAbs(uvw - uvw_sat);
+			if (XMVectorGetX(uvw_diff) > std::numeric_limits<float>::epsilon())
+				dist = 0; // force no collision
+			else if (XMVectorGetY(uvw_diff) > std::numeric_limits<float>::epsilon())
+				dist = 0; // force no collision
+			else if (XMVectorGetZ(uvw_diff) > std::numeric_limits<float>::epsilon())
+				dist = 0; // force no collision
+		}
+		return dist < 0;
+	}
+	bool Plane::intersects(const Ray& b) const
+	{
+		float dist;
+		XMFLOAT3 direction;
+		return intersects(b, dist, direction);
+	}
+	bool Plane::intersects(const Ray& b, float& dist) const
+	{
+		XMFLOAT3 direction;
+		return intersects(b, dist, direction);
+	}
+	bool Plane::intersects(const Ray& b, float& dist, XMFLOAT3& direction) const
+	{
+		dist = 0;
+		direction = normal;
+
+		XMVECTOR N = XMLoadFloat3(&normal);
+		XMVECTOR D = XMLoadFloat3(&b.direction);
+		if (std::abs(XMVectorGetX(XMVector3Dot(N, D))) < std::numeric_limits<float>::epsilon())
+			return false; // parallel line-plane
+
+		XMVECTOR O = XMLoadFloat3(&b.origin);
+		XMVECTOR A = O + D * b.TMin;
+		XMVECTOR B = O + D * b.TMax;
+
+		dist = XMVectorGetX(XMVector3Dot(N, (XMLoadFloat3(&origin) - O) / XMVector3Dot(N, D))); // plane intersection
+		if (dist <= 0)
+			return false;
+
+		XMVECTOR C = O + D * dist;
+
+		XMMATRIX planeProjection = XMLoadFloat4x4(&projection);
+		XMVECTOR clipSpacePos = XMVector3Transform(C, planeProjection);
+		XMVECTOR uvw = clipSpacePos * XMVectorSet(0.5f, -0.5f, 0.5f, 1) + XMVectorSet(0.5f, 0.5f, 0.5f, 0);
+		XMVECTOR uvw_sat = XMVectorSaturate(uvw);
+		XMVECTOR uvw_diff = XMVectorAbs(uvw - uvw_sat);
+		if (XMVectorGetX(uvw_diff) > std::numeric_limits<float>::epsilon())
+			return false; // force no collision
+		else if (XMVectorGetY(uvw_diff) > std::numeric_limits<float>::epsilon())
+			return false; // force no collision
+		else if (XMVectorGetZ(uvw_diff) > std::numeric_limits<float>::epsilon())
+			return false; // force no collision
+
+		return true;
+	}
 
 
 	bool Ray::intersects(const AABB& b) const
 	{
 		return b.intersects(*this);
 	}
-	bool Ray::intersects(const Sphere& b) const {
+	bool Ray::intersects(const Sphere& b) const
+	{
 		return b.intersects(*this);
 	}
-	bool Ray::intersects(const Capsule& b) const {
+	bool Ray::intersects(const Sphere& b, float& dist) const
+	{
+		bool intersects = b.intersects(*this, dist);
+		return intersects;
+	}
+	bool Ray::intersects(const Sphere& b, float& dist, XMFLOAT3& direction) const
+	{
+		bool intersects = b.intersects(*this, dist, direction);
+		return intersects;
+	}
+	bool Ray::intersects(const Capsule& b) const
+	{
 		return b.intersects(*this);
 	}
-	bool Ray::intersects(const Capsule& b, float& t) const {
-		return b.intersects(*this, t);
+	bool Ray::intersects(const Capsule& b, float& dist) const
+	{
+		bool intersects = b.intersects(*this, dist);
+		return intersects;
+	}
+	bool Ray::intersects(const Capsule& b, float& dist, XMFLOAT3& direction) const
+	{
+		bool intersects = b.intersects(*this, dist, direction);
+		return intersects;
+	}
+	bool Ray::intersects(const Plane& b) const
+	{
+		return b.intersects(*this);
+	}
+	bool Ray::intersects(const Plane& b, float& dist) const
+	{
+		return b.intersects(*this, dist);
+	}
+	bool Ray::intersects(const Plane& b, float& dist, XMFLOAT3& direction) const
+	{
+		return b.intersects(*this, dist, direction);
 	}
 
 

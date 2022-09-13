@@ -25,6 +25,7 @@ namespace wi::lua
 		lunamethod(RenderPath_BindLua, GetLayerMask),
 		lunamethod(RenderPath_BindLua, SetLayerMask),
 
+		lunamethod(RenderPath3D_BindLua, SetResolutionScale),
 		lunamethod(RenderPath3D_BindLua, SetAO),
 		lunamethod(RenderPath3D_BindLua, SetAOPower),
 		lunamethod(RenderPath3D_BindLua, SetSSREnabled),
@@ -57,6 +58,22 @@ namespace wi::lua
 	};
 
 
+	int RenderPath3D_BindLua::SetResolutionScale(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetResolutionScale(float value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			float value = wi::lua::SGetFloat(L, 1);
+			((RenderPath3D*)component)->resolutionScale = value;
+		}
+		else
+			wi::lua::SError(L, "SetResolutionScale(float value) not enough arguments!");
+		return 0;
+	}
 	int RenderPath3D_BindLua::SetAO(lua_State* L)
 	{
 		if (component == nullptr)

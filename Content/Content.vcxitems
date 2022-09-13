@@ -649,7 +649,6 @@
     <Image Include="$(MSBuildThisFileDirectory)models\Havoc\baseColor.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\Havoc\normalMap.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\orb.dds" />
-    <Image Include="$(MSBuildThisFileDirectory)models\repack.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\ripple.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\sky.dds" />
     <Image Include="$(MSBuildThisFileDirectory)models\smoke0.png" />

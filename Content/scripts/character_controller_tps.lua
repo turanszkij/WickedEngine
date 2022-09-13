@@ -19,8 +19,6 @@ end
 
 local scene = GetScene()
 
-local testcapsule = Capsule(Vector(-4,3),Vector(-4,6,-20),0.8) -- just place a test capsule into the scene
-
 Character = {
 	model = INVALID_ENTITY,
 	target = INVALID_ENTITY, -- Camera will look at this location, rays will be started from this location, etc.
@@ -40,7 +38,6 @@ Character = {
 	layerMask = 0x2, -- The character will be tagged to use this layer, so scene Picking can filter out the character
 	scale = Vector(0.8,0.8,0.8),
 	rotation = Vector(0,3.1415,0),
-	capsule = Capsule(Vector(), Vector(), 0),
 	
 	states = {
 		STAND = 0,
@@ -62,6 +59,8 @@ Character = {
 		self.right_hand = scene.Entity_FindByName("mano_R")
 		self.left_foot = scene.Entity_FindByName("piede_L")
 		self.right_foot = scene.Entity_FindByName("piede_R")
+
+		self.collider = scene.Entity_FindByName("girl")
 		
 		local model_transform = scene.Component_GetTransform(self.model)
 		model_transform.ClearTransform()
@@ -199,25 +198,23 @@ Character = {
 		-- apply force:
 		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, 0.016))
 		self.force = Vector(0,0,0,0)
+
+		local capsule = scene.Component_GetCollider(self.collider).GetCapsule()
 		
-		-- Capsule collision for character:
+		-- Capsule collision for character:		
 		local original_capsulepos = model_transform.GetPosition()
 		local capsulepos = original_capsulepos
-		local capsuleheight = 4
-		local radius = 0.7
-		local ground_intersection = false
-		local ccd_max = 5
+		local capsuleheight = vector.Subtract(capsule.GetTip(), capsule.GetBase()).Length()
+		local radius = capsule.GetRadius()
+		local ccd_max = 3
 		local ccd = 0
 		while(ccd < ccd_max) do
 			ccd = ccd + 1
 			local step = vector.Multiply(self.velocity, 1.0 / ccd_max * 0.016)
 
 			capsulepos = vector.Add(capsulepos, step)
-			self.capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
-			local o2, p2, n2, depth = self.capsule.Intersects(testcapsule) -- capsule/capsule collision
-			if(not o2) then
-				o2, p2, n2, depth = SceneIntersectCapsule(self.capsule, PICK_OPAQUE, ~self.layerMask) -- scene/capsule collision
-			end
+			capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
+			local o2, p2, n2, depth = scene.Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.layerMask) -- scene/capsule collision
 			if(o2 ~= INVALID_ENTITY) then
 				DrawPoint(p2,0.1,Vector(1,1,0,1))
 				DrawLine(p2, vector.Add(p2, n2), Vector(1,1,0,1))
@@ -240,17 +237,14 @@ Character = {
 		--	Unlike normal character motion collision, surface sliding is not computed
 		self.gravity = vector.Add(self.gravity, Vector(0,-9.8*0.1,0))
 		ccd = 0
-		ccd_max = 5
+		ccd_max = 3
 		while(ccd < ccd_max) do
 			ccd = ccd + 1
 			local step = vector.Multiply(self.gravity, 1.0 / ccd_max * 0.016)
 
 			capsulepos = vector.Add(capsulepos, step)
-			self.capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
-			local o2, p2, n2, depth = self.capsule.Intersects(testcapsule) -- capsule/capsule collision
-			if(not o2) then
-				o2, p2, n2, depth = SceneIntersectCapsule(self.capsule, PICK_OPAQUE, ~self.layerMask) -- scene/capsule collision
-			end
+			capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
+			local o2, p2, n2, depth = scene.Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.layerMask) -- scene/capsule collision
 			if(o2 ~= INVALID_ENTITY) then
 				DrawPoint(p2,0.1,Vector(1,1,0,1))
 				DrawLine(p2, vector.Add(p2, n2), Vector(1,1,0,1))
@@ -260,7 +254,6 @@ Character = {
 
 				-- Check whether it is intersecting the ground (ground normal is upwards)
 				if(vector.Dot(n2, Vector(0,1,0)) > 0.3) then
-					ground_intersection = true
 					self.gravity = vector.Multiply(self.gravity, 0)
 					break
 				end
@@ -268,11 +261,8 @@ Character = {
 			end
 		end
 
-		if ground_intersection then
-			self.velocity = vector.Multiply(self.velocity, 0.85) -- ground friction
-		else
-			self.velocity = vector.Multiply(self.velocity, 0.94) -- air friction
-		end
+		self.velocity = vector.Multiply(self.velocity, 0.85) -- ground friction
+
 		if(vector.Length(self.velocity) < 0.001) then
 			self.state = self.states.STAND
 		end
@@ -282,7 +272,7 @@ Character = {
 		-- try to put water ripple if character head is directly above water
 		local head_transform = scene.Component_GetTransform(self.head)
 		local waterRay = Ray(head_transform.GetPosition(),Vector(0,-1,0))
-		local w,wp,wn = Pick(waterRay,PICK_WATER)
+		local w,wp,wn = scene.Intersects(waterRay,FILTER_WATER)
 		if(w ~= INVALID_ENTITY and self.velocity.Length() > 2) then
 			PutWaterRipple(script_dir() .. "../models/ripple.png",wp)
 		end
@@ -365,7 +355,7 @@ ThirdPersonCamera = {
 
 				local ray = Ray(targetPos, target_to_corner.Normalize(), TMin, TMax)
 
-				local collObj,collPos,collNor = Pick(ray, PICK_OPAQUE, ~self.character.layerMask)
+				local collObj,collPos,collNor = scene.Intersects(ray, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.character.layerMask)
 				if(collObj ~= INVALID_ENTITY) then
 					-- It hit something, see if it is between the player and camera:
 					local collDiff = vector.Subtract(collPos, targetPos)
@@ -410,6 +400,10 @@ runProcess(function()
 	local prevPath = application.GetActivePath()
 	local path = RenderPath3D()
 	path.SetLightShaftsEnabled(true)
+	path.SetLightShaftsStrength(0.01)
+	path.SetAO(AO_MSAO)
+	path.SetAOPower(0.25)
+	--path.SetResolutionScale(0.5)
 	application.SetActivePath(path)
 
 	local font = SpriteFont("This script is showcasing how to perform scene collision with raycasts for character and camera.\nControls:\n#####################\n\nWASD/arrows/left analog stick: walk\nSHIFT/right shoulder button: movement speed\nSPACE/gamepad X/gamepad button 2: Jump\nRight Mouse Button/Right thumbstick: rotate camera\nScoll middle mouse/Left-Right triggers: adjust camera distance\nESCAPE key: quit\nR: reload script");
@@ -495,9 +489,10 @@ runProcess(function()
 		DrawPoint(scene.Component_GetTransform(player.left_foot).GetPosition(),0.2, Vector(0,1,1,1))
 		-- Right foot bone
 		DrawPoint(scene.Component_GetTransform(player.right_foot).GetPosition(),0.2, Vector(0,1,1,1))
+
 		
-		DrawCapsule(player.capsule)
-		DrawCapsule(testcapsule, Vector(1,0,0,100))
+		local capsule = scene.Component_GetCollider(player.collider).GetCapsule()
+		DrawCapsule(capsule)
 		
 		-- Wait for the engine to render the scene
 		render()

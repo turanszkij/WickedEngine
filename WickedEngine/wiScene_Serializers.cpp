@@ -524,7 +524,15 @@ namespace wi::scene
 			archive >> _flags;
 			SerializeEntity(archive, meshID, seri);
 			archive >> cascadeMask;
-			archive >> rendertypeMask;
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> filterMask;
+			}
+			else
+			{
+				uint32_t tmp;
+				archive >> tmp;
+			}
 			archive >> color;
 
 			if (archive.GetVersion() >= 23)
@@ -567,7 +575,10 @@ namespace wi::scene
 			archive << _flags;
 			SerializeEntity(archive, meshID, seri);
 			archive << cascadeMask;
-			archive << rendertypeMask;
+			if (seri.GetVersion() >= 1)
+			{
+				archive << filterMask;
+			}
 			archive << color;
 
 			if (archive.GetVersion() >= 23)

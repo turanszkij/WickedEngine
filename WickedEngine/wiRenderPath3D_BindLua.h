@@ -29,6 +29,7 @@ namespace wi::lua
 			this->component = &renderpath;
 		}
 
+		int SetResolutionScale(lua_State* L);
 		int SetAO(lua_State* L);
 		int SetAOPower(lua_State* L);
 		int SetSSREnabled(lua_State* L);

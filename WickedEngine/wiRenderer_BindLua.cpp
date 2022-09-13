@@ -423,12 +423,6 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("DrawDebugText", DrawDebugText);
 			wi::lua::RegisterFunc("PutWaterRipple", PutWaterRipple);
 
-
-			wi::lua::RunText("PICK_VOID = 0");
-			wi::lua::RunText("PICK_OPAQUE = 1");
-			wi::lua::RunText("PICK_TRANSPARENT = 2");
-			wi::lua::RunText("PICK_WATER = 4");
-
 			wi::lua::RunText("DEBUG_TEXT_DEPTH_TEST = 1");
 			wi::lua::RunText("DEBUG_TEXT_CAMERA_FACING = 2");
 			wi::lua::RunText("DEBUG_TEXT_CAMERA_SCALING = 4");

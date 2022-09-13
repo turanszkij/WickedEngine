@@ -503,9 +503,6 @@
     <Image Include="$(MSBuildThisFileDirectory)models\orb.dds">
       <Filter>models</Filter>
     </Image>
-    <Image Include="$(MSBuildThisFileDirectory)models\repack.png">
-      <Filter>models</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)models\sky.dds">
       <Filter>models</Filter>
     </Image>

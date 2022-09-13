@@ -786,7 +786,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			wi::primitive::Ray pickRay = wi::renderer::GetPickRay((long)mouse_x, (long)mouse_y, *this);
 			if (ImGui::IsMouseClicked(0))
 			{
-				PickResult hovered = wi::scene::Pick(pickRay, wi::enums::RENDERTYPE_ALL);
+				PickResult hovered = wi::scene::Pick(pickRay, wi::enums::FILTER_ALL);
 
 				subset_entity = INVALID_ENTITY;
 				if (hovered.subsetIndex > 0)

@@ -28,7 +28,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<MaterialComponent>& materials = componentLibrary.Register<MaterialComponent>("wi::scene::Scene::materials", 1); // version = 1
 		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Register<MeshComponent>("wi::scene::Scene::meshes", 1); // version = 1
 		wi::ecs::ComponentManager<ImpostorComponent>& impostors = componentLibrary.Register<ImpostorComponent>("wi::scene::Scene::impostors");
-		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Register<ObjectComponent>("wi::scene::Scene::objects");
+		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Register<ObjectComponent>("wi::scene::Scene::objects", 1); // version = 1
 		wi::ecs::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies = componentLibrary.Register<RigidBodyPhysicsComponent>("wi::scene::Scene::rigidbodies", 1); // version = 1
 		wi::ecs::ComponentManager<SoftBodyPhysicsComponent>& softbodies = componentLibrary.Register<SoftBodyPhysicsComponent>("wi::scene::Scene::softbodies");
 		wi::ecs::ComponentManager<ArmatureComponent>& armatures = componentLibrary.Register<ArmatureComponent>("wi::scene::Scene::armatures");
@@ -77,6 +77,7 @@ namespace wi::scene
 		wi::vector<wi::primitive::AABB> aabb_lights;
 		wi::vector<wi::primitive::AABB> aabb_probes;
 		wi::vector<wi::primitive::AABB> aabb_decals;
+		wi::vector<wi::primitive::AABB> aabb_colliders_cpu;
 
 		// Separate stream of world matrices:
 		wi::vector<XMFLOAT4X4> matrix_objects;
@@ -324,6 +325,44 @@ namespace wi::scene
 		void RunWeatherUpdateSystem(wi::jobsystem::context& ctx);
 		void RunSoundUpdateSystem(wi::jobsystem::context& ctx);
 		void RunScriptUpdateSystem(wi::jobsystem::context& ctx);
+
+
+		struct RayIntersectionResult
+		{
+			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+			XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+			XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
+			float distance = std::numeric_limits<float>::max();
+			int subsetIndex = -1;
+			int vertexID0 = -1;
+			int vertexID1 = -1;
+			int vertexID2 = -1;
+			XMFLOAT2 bary = XMFLOAT2(0, 0);
+			XMFLOAT4X4 orientation = wi::math::IDENTITY_MATRIX;
+
+			constexpr bool operator==(const RayIntersectionResult& other) const
+			{
+				return entity == other.entity;
+			}
+		};
+		// Given a ray, finds the closest intersection point against all mesh instances
+		//	ray				:	the incoming ray that will be traced
+		//	renderTypeMask	:	filter based on render type
+		//	layerMask		:	filter based on layer
+		RayIntersectionResult Intersects(const wi::primitive::Ray& ray, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
+
+		struct SphereIntersectionResult
+		{
+			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+			XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+			XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
+			float depth = 0;
+		};
+		SphereIntersectionResult Intersects(const wi::primitive::Sphere& sphere, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
+
+		using CapsuleIntersectionResult = SphereIntersectionResult;
+		CapsuleIntersectionResult Intersects(const wi::primitive::Capsule& capsule, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
+
 	};
 
 	// Returns skinned vertex position in armature local space
@@ -332,6 +371,7 @@ namespace wi::scene
 
 
 	// Helper that manages a global scene
+	//	(You don't need to use it, but it's an option for simplicity)
 	inline Scene& GetScene()
 	{
 		static Scene scene;
@@ -339,6 +379,7 @@ namespace wi::scene
 	}
 
 	// Helper that manages a global camera
+	//	(You don't need to use it, but it's an option for simplicity)
 	inline CameraComponent& GetCamera()
 	{
 		static CameraComponent camera;
@@ -362,40 +403,17 @@ namespace wi::scene
 	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
 	wi::ecs::Entity LoadModel(Scene& scene, const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
 
-	struct PickResult
-	{
-		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
-		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
-		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
-		float distance = std::numeric_limits<float>::max();
-		int subsetIndex = -1;
-		int vertexID0 = -1;
-		int vertexID1 = -1;
-		int vertexID2 = -1;
-		XMFLOAT2 bary = XMFLOAT2(0, 0);
-		XMFLOAT4X4 orientation = wi::math::IDENTITY_MATRIX;
+	// Deprecated, use Scene::Intersects() function instead
+	using PickResult = Scene::RayIntersectionResult;
+	PickResult Pick(const wi::primitive::Ray& ray, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene(), uint32_t lod = 0);
 
-		constexpr bool operator==(const PickResult& other) const
-		{
-			return entity == other.entity;
-		}
-	};
-	// Given a ray, finds the closest intersection point against all mesh instances
-	//	ray				:	the incoming ray that will be traced
-	//	renderTypeMask	:	filter based on render type
-	//	layerMask		:	filter based on layer
-	//	scene			:	the scene that will be traced against the ray
-	PickResult Pick(const wi::primitive::Ray& ray, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene(), uint32_t lod = 0);
+	// Deprecated, use Scene::Intersects() function instead
+	using SceneIntersectSphereResult = Scene::SphereIntersectionResult;
+	SceneIntersectSphereResult SceneIntersectSphere(const wi::primitive::Sphere& sphere, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene(), uint32_t lod = 0);
 
-	struct SceneIntersectSphereResult
-	{
-		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
-		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
-		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
-		float depth = 0;
-	};
-	SceneIntersectSphereResult SceneIntersectSphere(const wi::primitive::Sphere& sphere, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene(), uint32_t lod = 0);
-	SceneIntersectSphereResult SceneIntersectCapsule(const wi::primitive::Capsule& capsule, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene(), uint32_t lod = 0);
+	// Deprecated, use Scene::Intersects() function instead
+	using SceneIntersectCapsuleResult = Scene::SphereIntersectionResult;
+	SceneIntersectCapsuleResult SceneIntersectCapsule(const wi::primitive::Capsule& capsule, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene(), uint32_t lod = 0);
 
 }
 

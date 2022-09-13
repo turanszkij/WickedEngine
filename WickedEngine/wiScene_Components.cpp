@@ -308,7 +308,7 @@ namespace wi::scene
 		{
 			material.options |= SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED;
 		}
-		if (GetRenderTypes() & RENDERTYPE_TRANSPARENT)
+		if (GetFilterMask() & FILTER_TRANSPARENT)
 		{
 			material.options |= SHADERMATERIAL_OPTION_BIT_TRANSPARENT;
 		}
@@ -346,26 +346,26 @@ namespace wi::scene
 			dest[i] = textures[i].GetGPUResource();
 		}
 	}
-	uint32_t MaterialComponent::GetRenderTypes() const
+	uint32_t MaterialComponent::GetFilterMask() const
 	{
 		if (IsCustomShader() && customShaderID < (int)wi::renderer::GetCustomShaders().size())
 		{
 			auto& customShader = wi::renderer::GetCustomShaders()[customShaderID];
-			return customShader.renderTypeFlags;
+			return customShader.filterMask;
 		}
 		if (shaderType == SHADERTYPE_WATER)
 		{
-			return RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
+			return FILTER_TRANSPARENT | FILTER_WATER;
 		}
 		if (transmission > 0)
 		{
-			return RENDERTYPE_TRANSPARENT;
+			return FILTER_TRANSPARENT;
 		}
 		if (userBlendMode == BLENDMODE_OPAQUE)
 		{
-			return RENDERTYPE_OPAQUE;
+			return FILTER_OPAQUE;
 		}
-		return RENDERTYPE_TRANSPARENT;
+		return FILTER_TRANSPARENT;
 	}
 	void MaterialComponent::CreateRenderData()
 	{
