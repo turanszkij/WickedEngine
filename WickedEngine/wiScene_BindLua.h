@@ -1375,6 +1375,9 @@ namespace wi::lua::scene
 
 		int SetCPUEnabled(lua_State* L);
 		int SetGPUEnabled(lua_State* L);
+
+		int GetCapsule(lua_State* L);
+		int GetSphere(lua_State* L);
 	};
 }
 

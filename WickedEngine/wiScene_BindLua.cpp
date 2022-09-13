@@ -5097,6 +5097,8 @@ const char ColliderComponent_BindLua::className[] = "ColliderComponent";
 Luna<ColliderComponent_BindLua>::FunctionType ColliderComponent_BindLua::methods[] = {
 	lunamethod(ColliderComponent_BindLua, SetCPUEnabled),
 	lunamethod(ColliderComponent_BindLua, SetGPUEnabled),
+	lunamethod(ColliderComponent_BindLua, GetCapsule),
+	lunamethod(ColliderComponent_BindLua, GetSphere),
 	{ NULL, NULL }
 };
 Luna<ColliderComponent_BindLua>::PropertyType ColliderComponent_BindLua::properties[] = {
@@ -5146,6 +5148,27 @@ int ColliderComponent_BindLua::SetGPUEnabled(lua_State* L)
 		wi::lua::SError(L, "SetGPUEnabled(bool value) not enough arguments!");
 	}
 	return 0;
+}
+
+int ColliderComponent_BindLua::GetCapsule(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wi::lua::SError(L, "GetCapsule() component is null!");
+		return 0;
+	}
+	Luna<Capsule_BindLua>::push(L, new Capsule_BindLua(component->capsule));
+	return 1;
+}
+int ColliderComponent_BindLua::GetSphere(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wi::lua::SError(L, "GetCapsule() component is null!");
+		return 0;
+	}
+	Luna<Sphere_BindLua>::push(L, new Sphere_BindLua(component->sphere));
+	return 1;
 }
 
 }

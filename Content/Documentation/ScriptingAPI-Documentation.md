@@ -1009,6 +1009,8 @@ Describes a Sound object.
 
 - SetCPUEnabled(bool value)
 - SetGPUEnabled(bool value)
+- GetCapsule() : Capsule
+- GetSphere() : Sphere
 
 ## Canvas
 This is used to describe a drawable area
