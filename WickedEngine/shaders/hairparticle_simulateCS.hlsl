@@ -115,6 +115,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		len *= xLength;
 
 		float3 tip = base + normal * len;
+		float3 midpoint = lerp(base, tip, 0.5);
 
 		// Accumulate forces, apply colliders:
 		float3 force = 0;
@@ -135,11 +136,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					float3 N = normalize(A - B);
 					A -= N * range;
 					B += N * range;
-					float3 C = closest_point_on_segment(A, B, tip);
-					float3 dir = C- tip;
+					float3 C = closest_point_on_segment(A, B, midpoint);
+					float3 dir = C - midpoint;
 					float dist = length(dir);
 					dir /= dist;
-					dist = dist - range - len;
+					dist = dist - range - len * 0.5;
 					if (dist < 0)
 					{
 						tip = tip - dir * dist;

@@ -205,8 +205,7 @@ Character = {
 		local capsulepos = original_capsulepos
 		local capsuleheight = 4
 		local radius = 0.7
-		local ground_intersection = false
-		local ccd_max = 5
+		local ccd_max = 3
 		local ccd = 0
 		while(ccd < ccd_max) do
 			ccd = ccd + 1
@@ -240,7 +239,7 @@ Character = {
 		--	Unlike normal character motion collision, surface sliding is not computed
 		self.gravity = vector.Add(self.gravity, Vector(0,-9.8*0.1,0))
 		ccd = 0
-		ccd_max = 5
+		ccd_max = 3
 		while(ccd < ccd_max) do
 			ccd = ccd + 1
 			local step = vector.Multiply(self.gravity, 1.0 / ccd_max * 0.016)
@@ -260,7 +259,6 @@ Character = {
 
 				-- Check whether it is intersecting the ground (ground normal is upwards)
 				if(vector.Dot(n2, Vector(0,1,0)) > 0.3) then
-					ground_intersection = true
 					self.gravity = vector.Multiply(self.gravity, 0)
 					break
 				end
@@ -268,11 +266,8 @@ Character = {
 			end
 		end
 
-		if ground_intersection then
-			self.velocity = vector.Multiply(self.velocity, 0.85) -- ground friction
-		else
-			self.velocity = vector.Multiply(self.velocity, 0.94) -- air friction
-		end
+		self.velocity = vector.Multiply(self.velocity, 0.85) -- ground friction
+
 		if(vector.Length(self.velocity) < 0.001) then
 			self.state = self.states.STAND
 		end
@@ -410,6 +405,9 @@ runProcess(function()
 	local prevPath = application.GetActivePath()
 	local path = RenderPath3D()
 	path.SetLightShaftsEnabled(true)
+	path.SetLightShaftsStrength(0.01)
+	path.SetAO(AO_MSAO)
+	path.SetAOPower(0.25)
 	application.SetActivePath(path)
 
 	local font = SpriteFont("This script is showcasing how to perform scene collision with raycasts for character and camera.\nControls:\n#####################\n\nWASD/arrows/left analog stick: walk\nSHIFT/right shoulder button: movement speed\nSPACE/gamepad X/gamepad button 2: Jump\nRight Mouse Button/Right thumbstick: rotate camera\nScoll middle mouse/Left-Right triggers: adjust camera distance\nESCAPE key: quit\nR: reload script");
