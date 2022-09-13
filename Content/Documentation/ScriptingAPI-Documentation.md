@@ -1076,6 +1076,7 @@ It can hold Sprites and SpriteFonts and can sort them by layers, update and rend
 This is the default scene render path. 
 It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - [constructor]RenderPath3D()
+- SetResolutionScale(float value)	-- scale internal rendering resolution. This can provide major performance improvement when GPU rendering speed is the bottleneck
 - SetAO(int value)  -- Sets up the ambient occlusion effect (possible values below)
 - AO_DISABLED : int  -- turn off AO computation (use in SetAO() function)
 	- AO_SSAO : int  -- enable simple brute force screen space ambient occlusion (use in SetAO() function)
