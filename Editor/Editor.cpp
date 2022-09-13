@@ -1007,7 +1007,7 @@ void EditorComponent::Update(float dt)
 				const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
 				if (object != nullptr)
 				{	
-					if (translator.selected.empty() && object->GetRenderTypes() & wi::enums::RENDERTYPE_WATER)
+					if (translator.selected.empty() && object->GetFilterMask() & wi::enums::FILTER_WATER)
 					{
 						// if water, then put a water ripple onto it:
 						scene.PutWaterRipple("../Content/models/ripple.png", hovered.position);
@@ -1559,6 +1559,24 @@ void EditorComponent::Update(float dt)
 
 	renderPath->colorspace = colorspace;
 	renderPath->Update(dt);
+
+
+	bool force_collider_visualizer = false;
+	for (auto& x : translator.selected)
+	{
+		if (scene.colliders.Contains(x.entity))
+		{
+			force_collider_visualizer = true;
+		}
+	}
+	if (force_collider_visualizer)
+	{
+		wi::renderer::SetToDrawDebugColliders(true);
+	}
+	else
+	{
+		wi::renderer::SetToDrawDebugColliders(optionsWnd.graphicsWnd.colliderVisCheckBox.GetCheck());
+	}
 }
 void EditorComponent::PostUpdate()
 {

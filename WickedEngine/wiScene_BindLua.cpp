@@ -127,13 +127,13 @@ int Pick(lua_State* L)
 		Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
 		if (ray != nullptr)
 		{
-			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
+			uint32_t filterMask = wi::enums::FILTER_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
 			Scene* scene = GetGlobalScene();
 			uint32_t lod = 0;
 			if (argc > 1)
 			{
-				renderTypeMask = (uint32_t)wi::lua::SGetInt(L, 2);
+				filterMask = (uint32_t)wi::lua::SGetInt(L, 2);
 				if (argc > 2)
 				{
 					int mask = wi::lua::SGetInt(L, 3);
@@ -153,12 +153,12 @@ int Pick(lua_State* L)
 						}
 						else
 						{
-							wi::lua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene, opt uint lod) 4th argument is not of type Scene!");
+							wi::lua::SError(L, "Pick(Ray ray, opt uint filterMask, opt uint layerMask, opt Scene scene, opt uint lod) 4th argument is not of type Scene!");
 						}
 					}
 				}
 			}
-			auto pick = wi::scene::Pick(ray->ray, renderTypeMask, layerMask, *scene, lod);
+			auto pick = wi::scene::Pick(ray->ray, filterMask, layerMask, *scene, lod);
 			wi::lua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
@@ -166,11 +166,11 @@ int Pick(lua_State* L)
 			return 4;
 		}
 
-		wi::lua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene, opt uint lod) first argument must be of Ray type!");
+		wi::lua::SError(L, "Pick(Ray ray, opt uint filterMask, opt uint layerMask, opt Scene scene, opt uint lod) first argument must be of Ray type!");
 	}
 	else
 	{
-		wi::lua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene, opt uint lod) not enough arguments!");
+		wi::lua::SError(L, "Pick(Ray ray, opt uint filterMask, opt uint layerMask, opt Scene scene, opt uint lod) not enough arguments!");
 	}
 
 	return 0;
@@ -183,13 +183,13 @@ int SceneIntersectSphere(lua_State* L)
 		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
 		if (sphere != nullptr)
 		{
-			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
+			uint32_t filterMask = wi::enums::FILTER_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
 			Scene* scene = GetGlobalScene();
 			uint32_t lod = 0;
 			if (argc > 1)
 			{
-				renderTypeMask = (uint32_t)wi::lua::SGetInt(L, 2);
+				filterMask = (uint32_t)wi::lua::SGetInt(L, 2);
 				if (argc > 2)
 				{
 					int mask = wi::lua::SGetInt(L, 3);
@@ -209,12 +209,12 @@ int SceneIntersectSphere(lua_State* L)
 						}
 						else
 						{
-							wi::lua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene, opt uint lod) 4th argument is not of type Scene!");
+							wi::lua::SError(L, "SceneIntersectSphere(Sphere sphere, opt uint filterMask, opt uint layerMask, opt Scene scene, opt uint lod) 4th argument is not of type Scene!");
 						}
 					}
 				}
 			}
-			auto pick = wi::scene::SceneIntersectSphere(sphere->sphere, renderTypeMask, layerMask, *scene, lod);
+			auto pick = wi::scene::SceneIntersectSphere(sphere->sphere, filterMask, layerMask, *scene, lod);
 			wi::lua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
@@ -222,11 +222,11 @@ int SceneIntersectSphere(lua_State* L)
 			return 4;
 		}
 
-		wi::lua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene, opt uint lod) first argument must be of Sphere type!");
+		wi::lua::SError(L, "SceneIntersectSphere(Sphere sphere, opt uint filterMask, opt uint layerMask, opt Scene scene, opt uint lod) first argument must be of Sphere type!");
 	}
 	else
 	{
-		wi::lua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene, opt uint lod) not enough arguments!");
+		wi::lua::SError(L, "SceneIntersectSphere(Sphere sphere, opt uint filterMask, opt uint layerMask, opt Scene scene, opt uint lod) not enough arguments!");
 	}
 
 	return 0;
@@ -239,13 +239,13 @@ int SceneIntersectCapsule(lua_State* L)
 		Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
 		if (capsule != nullptr)
 		{
-			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
+			uint32_t filterMask = wi::enums::FILTER_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
 			Scene* scene = GetGlobalScene();
 			uint32_t lod = 0;
 			if (argc > 1)
 			{
-				renderTypeMask = (uint32_t)wi::lua::SGetInt(L, 2);
+				filterMask = (uint32_t)wi::lua::SGetInt(L, 2);
 				if (argc > 2)
 				{
 					int mask = wi::lua::SGetInt(L, 3);
@@ -265,12 +265,12 @@ int SceneIntersectCapsule(lua_State* L)
 						}
 						else
 						{
-							wi::lua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene, opt uint lod) 4th argument is not of type Scene!");
+							wi::lua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt uint filterMask, opt uint layerMask, opt Scene scene, opt uint lod) 4th argument is not of type Scene!");
 						}
 					}
 				}
 			}
-			auto pick = wi::scene::SceneIntersectCapsule(capsule->capsule, renderTypeMask, layerMask, *scene, lod);
+			auto pick = wi::scene::SceneIntersectCapsule(capsule->capsule, filterMask, layerMask, *scene, lod);
 			wi::lua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
@@ -278,11 +278,11 @@ int SceneIntersectCapsule(lua_State* L)
 			return 4;
 		}
 
-		wi::lua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene, opt uint lod) first argument must be of Capsule type!");
+		wi::lua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt uint filterMask, opt uint layerMask, opt Scene scene, opt uint lod) first argument must be of Capsule type!");
 	}
 	else
 	{
-		wi::lua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene, opt uint lod) not enough arguments!");
+		wi::lua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt uint filterMask, opt uint layerMask, opt Scene scene, opt uint lod) not enough arguments!");
 	}
 
 	return 0;
@@ -3906,7 +3906,7 @@ int ObjectComponent_BindLua::GetCascadeMask(lua_State *L){
 	return 1;
 }
 int ObjectComponent_BindLua::GetRendertypeMask(lua_State *L){
-	wi::lua::SSetLongLong(L, component->rendertypeMask);
+	wi::lua::SSetLongLong(L, component->GetFilterMask());
 	return 1;
 }
 int ObjectComponent_BindLua::GetColor(lua_State* L)
@@ -3940,8 +3940,7 @@ int ObjectComponent_BindLua::SetMeshID(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity meshID = (Entity)wi::lua::SGetLongLong(L, 1);
-		component->meshID = meshID;
+		component->meshID = (Entity)wi::lua::SGetLongLong(L, 1);
 	}
 	else
 	{
@@ -3955,8 +3954,7 @@ int ObjectComponent_BindLua::SetCascadeMask(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity cascadeMask = (Entity)wi::lua::SGetLongLong(L, 1);
-		component->cascadeMask = cascadeMask;
+		component->cascadeMask = (uint32_t)wi::lua::SGetLongLong(L, 1);
 	}
 	else
 	{
@@ -3970,8 +3968,7 @@ int ObjectComponent_BindLua::SetRendertypeMask(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity rendertypeMask = (Entity)wi::lua::SGetLongLong(L, 1);
-		component->rendertypeMask = rendertypeMask;
+		component->filterMask = (uint32_t)wi::lua::SGetLongLong(L, 1);
 	}
 	else
 	{

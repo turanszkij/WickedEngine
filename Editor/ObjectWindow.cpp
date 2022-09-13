@@ -329,6 +329,27 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&shadowCheckBox);
 
+	navmeshCheckBox.Create("Navmesh: ");
+	navmeshCheckBox.SetTooltip("Set object to be a navigation mesh filtering (FILTER_NAVIGATION_MESH).");
+	navmeshCheckBox.SetSize(XMFLOAT2(hei, hei));
+	navmeshCheckBox.SetPos(XMFLOAT2(x, y += step));
+	navmeshCheckBox.SetCheck(true);
+	navmeshCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
+		if (object != nullptr)
+		{
+			if (args.bValue)
+			{
+				object->filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
+			}
+			else
+			{
+				object->filterMask &= ~wi::enums::FILTER_NAVIGATION_MESH;
+			}
+		}
+		});
+	AddWidget(&navmeshCheckBox);
+
 	ditherSlider.Create(0, 1, 0, 1000, "Transparency: ");
 	ditherSlider.SetTooltip("Adjust transparency of the object. Opaque materials will use dithered transparency in this case!");
 	ditherSlider.SetSize(XMFLOAT2(wid, hei));
@@ -606,6 +627,7 @@ void ObjectWindow::SetEntity(Entity entity)
 
 		renderableCheckBox.SetCheck(object->IsRenderable());
 		shadowCheckBox.SetCheck(object->IsCastingShadow());
+		navmeshCheckBox.SetCheck(object->filterMask & wi::enums::FILTER_NAVIGATION_MESH);
 		cascadeMaskSlider.SetValue((float)object->cascadeMask);
 		ditherSlider.SetValue(object->GetTransparency());
 		lodSlider.SetValue(object->lod_distance_multiplier);
@@ -677,6 +699,7 @@ void ObjectWindow::ResizeLayout()
 
 	add_right(renderableCheckBox);
 	add_right(shadowCheckBox);
+	add_right(navmeshCheckBox);
 	add(ditherSlider);
 	add(cascadeMaskSlider);
 	add(lodSlider);

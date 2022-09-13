@@ -15,6 +15,7 @@ public:
 	wi::gui::ComboBox meshCombo;
 	wi::gui::CheckBox renderableCheckBox;
 	wi::gui::CheckBox shadowCheckBox;
+	wi::gui::CheckBox navmeshCheckBox;
 	wi::gui::Slider ditherSlider;
 	wi::gui::Slider cascadeMaskSlider;
 	wi::gui::Slider lodSlider;

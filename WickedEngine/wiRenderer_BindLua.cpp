@@ -423,11 +423,20 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("DrawDebugText", DrawDebugText);
 			wi::lua::RegisterFunc("PutWaterRipple", PutWaterRipple);
 
+			wi::lua::RunText("FILTER_NONE = 0");
+			wi::lua::RunText("FILTER_OPAQUE = 1 << 0");
+			wi::lua::RunText("FILTER_TRANSPARENT = 1 << 1");
+			wi::lua::RunText("FILTER_WATER = 1 << 2");
+			wi::lua::RunText("FILTER_NAVIGATION_MESH = 1 << 3");
+			wi::lua::RunText("FILTER_OBJECT_ALL = FILTER_OPAQUE | FILTER_TRANSPARENT | FILTER_WATER | FILTER_NAVIGATION_MESH");
+			wi::lua::RunText("FILTER_COLLIDER = 1 << 4");
+			wi::lua::RunText("FILTER_ALL = ~0");
 
-			wi::lua::RunText("PICK_VOID = 0");
-			wi::lua::RunText("PICK_OPAQUE = 1");
-			wi::lua::RunText("PICK_TRANSPARENT = 2");
-			wi::lua::RunText("PICK_WATER = 4");
+			// deprecated names:
+			wi::lua::RunText("PICK_VOID = FILTER_NONE");
+			wi::lua::RunText("PICK_OPAQUE = FILTER_OPAQUE");
+			wi::lua::RunText("PICK_TRANSPARENT = FILTER_TRANSPARENT");
+			wi::lua::RunText("PICK_WATER = FILTER_WATER");
 
 			wi::lua::RunText("DEBUG_TEXT_DEPTH_TEST = 1");
 			wi::lua::RunText("DEBUG_TEXT_CAMERA_FACING = 2");

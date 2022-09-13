@@ -508,12 +508,20 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - [outer]GetCamera() : Camera result  -- returns the global camera
 - [outer]LoadModel(string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file. returns a root entity that everything in this model is attached to
 - [outer]LoadModel(Scene scene, string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file into specified scene. returns a root entity that everything in this model is attached to
-- [outer]PICK_OPAQUE : uint
-- [outer]PICK_TRANSPARENT : uint
-- [outer]PICK_WATER : uint
-- [outer]Pick(Ray ray, opt uint pickType = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
-- [outer]SceneIntersectSphere(Sphere sphere, opt uint pickType = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
-- [outer]SceneIntersectCapsule(Capsule capsule, opt uint pickType = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
+- [deprecated][outer]PICK_OPAQUE : uint
+- [deprecated][outer]PICK_TRANSPARENT : uint
+- [deprecated][outer]PICK_WATER : uint
+- [outer]FILTER_NONE : uint	-- include nothing
+- [outer]FILTER_OPAQUE : uint	-- include opaque meshes
+- [outer]FILTER_TRANSPARENT : uint	-- include transparent meshes
+- [outer]FILTER_WATER : uint	-- include water meshes
+- [outer]FILTER_NAVIGATION_MESH : uint	-- include navigation meshes
+- [outer]FILTER_OBJECT_ALL : uint	-- include all objects, meshes
+- [outer]FILTER_COLLIDER : uint	-- include colliders
+- [outer]FILTER_ALL : uint	-- include everything
+- [outer]Pick(Ray ray, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
+- [outer]SceneIntersectSphere(Sphere sphere, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
+- [outer]SceneIntersectCapsule(Capsule capsule, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)

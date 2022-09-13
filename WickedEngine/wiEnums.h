@@ -15,13 +15,30 @@ namespace wi::enums
 	};
 
 	// Do not alter order or value because it is bound to lua manually!
-	enum RENDERTYPE
+	//	(Previously this was RENDERTYPE enum)
+	enum FILTER
 	{
+		// Include nothing:
+		FILTER_NONE = 0,
+
+		// Object filtering types:
+		FILTER_OPAQUE = 1 << 0,
+		FILTER_TRANSPARENT = 1 << 1,
+		FILTER_WATER = 1 << 2,
+		FILTER_NAVIGATION_MESH = 1 << 3,
+		FILTER_OBJECT_ALL = FILTER_OPAQUE | FILTER_TRANSPARENT | FILTER_WATER | FILTER_NAVIGATION_MESH,
+
+		// Other filtering types:
+		FILTER_COLLIDER = 1 << 4,
+
+		// Include everything:
+		FILTER_ALL = ~0,
+
+		// These are deprecated namings:
 		RENDERTYPE_VOID = 0,
-		RENDERTYPE_OPAQUE = 1 << 0,
-		RENDERTYPE_TRANSPARENT = 1 << 1,
-		RENDERTYPE_WATER = 1 << 2,
-		RENDERTYPE_ALL = RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER
+		RENDERTYPE_OPAQUE = FILTER_OPAQUE,
+		RENDERTYPE_TRANSPARENT = FILTER_TRANSPARENT,
+		RENDERTYPE_WATER = FILTER_WATER,
 	};
 
 	enum RENDERPASS

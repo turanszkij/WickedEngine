@@ -1305,7 +1305,7 @@ void LoadShaders()
 
 		CustomShader customShader;
 		customShader.name = "Hologram";
-		customShader.renderTypeFlags = RENDERTYPE_TRANSPARENT;
+		customShader.filterMask = FILTER_TRANSPARENT;
 		customShader.pso[RENDERPASS_MAIN] = pso;
 		RegisterCustomShader(customShader);
 		});
@@ -2474,7 +2474,7 @@ void RenderMeshes(
 	const Visibility& vis,
 	const RenderQueue& renderQueue,
 	RENDERPASS renderPass,
-	uint32_t renderTypeFlags,
+	uint32_t filterMask,
 	CommandList cmd,
 	bool tessellation = false,
 	const Frustum* frusta = nullptr,
@@ -2544,7 +2544,7 @@ void RenderMeshes(
 			}
 			const MaterialComponent& material = vis.scene->materials[subset.materialIndex];
 
-			bool subsetRenderable = renderTypeFlags & material.GetRenderTypes();
+			bool subsetRenderable = filterMask & material.GetFilterMask();
 
 			if (renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE)
 			{
@@ -2570,7 +2570,7 @@ void RenderMeshes(
 				else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
 				{
 					const CustomShader& customShader = customShaders[material.customShaderID];
-					if (renderTypeFlags & customShader.renderTypeFlags)
+					if (filterMask & customShader.filterMask)
 					{
 						pso = &customShader.pso[renderPass];
 					}
@@ -2584,7 +2584,7 @@ void RenderMeshes(
 					pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
 					assert(pso->IsValid());
 
-					if ((renderTypeFlags & RENDERTYPE_TRANSPARENT) && doublesided == OBJECTRENDERING_DOUBLESIDED_ENABLED)
+					if ((filterMask & FILTER_TRANSPARENT) && doublesided == OBJECTRENDERING_DOUBLESIDED_ENABLED)
 					{
 						doublesided = OBJECTRENDERING_DOUBLESIDED_BACKSIDE;
 						pso_backside = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
@@ -3768,10 +3768,10 @@ void UpdateRenderData(
 				break;
 			case ColliderComponent::Shape::Plane:
 				shaderentity.SetType(ENTITY_TYPE_COLLIDER_PLANE);
-				shaderentity.position = collider.planeOrigin;
-				shaderentity.SetDirection(collider.planeNormal);
+				shaderentity.position = collider.plane.origin;
+				shaderentity.SetDirection(collider.plane.normal);
 				shaderentity.SetIndices(matrixCounter, ~0u);
-				std::memcpy(&matrixArray[matrixCounter++], &collider.planeProjection, sizeof(collider.planeProjection));
+				std::memcpy(&matrixArray[matrixCounter++], &collider.plane.projection, sizeof(collider.plane.projection));
 				break;
 			default:
 				assert(0);
@@ -4885,7 +4885,8 @@ void DrawShadowmaps(
 							{
 								renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
-								if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
+								const uint32_t filterMask = object.GetFilterMask();
+								if (filterMask & FILTER_TRANSPARENT || filterMask & FILTER_WATER)
 								{
 									transparentShadowsRequested = true;
 								}
@@ -4908,10 +4909,10 @@ void DrawShadowmaps(
 						vp.max_depth = 1.0f;
 						device->BindViewports(1, &vp, cmd);
 
-						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
+						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd);
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
-							RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
+							RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd);
 						}
 					}
 
@@ -4937,7 +4938,8 @@ void DrawShadowmaps(
 						{
 							renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
-							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
+							const uint32_t filterMask = object.GetFilterMask();
+							if (filterMask & FILTER_TRANSPARENT || filterMask & FILTER_WATER)
 							{
 								transparentShadowsRequested = true;
 							}
@@ -4967,10 +4969,10 @@ void DrawShadowmaps(
 					vp.max_depth = 1.0f;
 					device->BindViewports(1, &vp, cmd);
 
-					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
+					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
-						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
+						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd);
 					}
 
 					if (predicationRequest && light.occlusionquery >= 0)
@@ -4995,7 +4997,8 @@ void DrawShadowmaps(
 						{
 							renderQueue.add(object.mesh_index, uint32_t(i), 0);
 
-							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
+							const uint32_t filterMask = object.GetFilterMask();
+							if (filterMask & FILTER_TRANSPARENT || filterMask & FILTER_WATER)
 							{
 								transparentShadowsRequested = true;
 							}
@@ -5040,10 +5043,10 @@ void DrawShadowmaps(
 					device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
 					device->BindViewports(arraysize(vp), vp, cmd);
 
-					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd, false, frusta, frustum_count);
+					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, FILTER_OPAQUE, cmd, false, frusta, frustum_count);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
-						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd, false, frusta, frustum_count);
+						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, FILTER_TRANSPARENT | FILTER_WATER, cmd, false, frusta, frustum_count);
 					}
 
 					if (predicationRequest && light.occlusionquery >= 0)
@@ -5070,7 +5073,7 @@ void DrawScene(
 	uint32_t flags
 )
 {
-	const bool opaque = flags & RENDERTYPE_OPAQUE;
+	const bool opaque = flags & FILTER_OPAQUE;
 	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
 	const bool tessellation = (flags & DRAWSCENE_TESSELLATION) && GetTessellationEnabled();
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
@@ -5090,20 +5093,20 @@ void DrawScene(
 		}
 	}
 
-	uint32_t renderTypeFlags = 0;
+	uint32_t filterMask = 0;
 	if (opaque)
 	{
-		renderTypeFlags |= RENDERTYPE_OPAQUE;
+		filterMask |= FILTER_OPAQUE;
 	}
 	if (transparent)
 	{
-		renderTypeFlags |= RENDERTYPE_TRANSPARENT;
-		renderTypeFlags |= RENDERTYPE_WATER;
+		filterMask |= FILTER_TRANSPARENT;
+		filterMask |= FILTER_WATER;
 	}
 
 	if (IsWireRender())
 	{
-		renderTypeFlags = RENDERTYPE_ALL;
+		filterMask = FILTER_ALL;
 	}
 
 	if (hairparticle)
@@ -5130,7 +5133,7 @@ void DrawScene(
 		if (occlusion && object.IsOccluded())
 			continue;
 
-		if (object.IsRenderable() && (object.GetRenderTypes() & renderTypeFlags))
+		if (object.IsRenderable() && (object.GetFilterMask() & filterMask))
 		{
 			const float distance = wi::math::Distance(vis.camera->Eye, object.center);
 			if (distance > object.fadeDistance + object.radius)
@@ -5150,7 +5153,7 @@ void DrawScene(
 		{
 			renderQueue.sort_opaque();
 		}
-		RenderMeshes(vis, renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
+		RenderMeshes(vis, renderQueue, renderPass, filterMask, cmd, tessellation);
 	}
 
 	if (impostor)
@@ -5329,7 +5332,7 @@ void DrawDebugWorld(
 					RenderableLine line;
 					line.color_start = XMFLOAT4(1, 0, 1, 1);
 					line.color_end = XMFLOAT4(1, 0, 1, 1);
-					XMMATRIX planeMatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&collider.planeProjection));
+					XMMATRIX planeMatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&collider.plane.projection));
 					XMVECTOR P0 = XMVector3Transform(XMVectorSet(-1, 0, -1, 1), planeMatrix);
 					XMVECTOR P1 = XMVector3Transform(XMVectorSet(1, 0, -1, 1), planeMatrix);
 					XMVECTOR P2 = XMVector3Transform(XMVectorSet(1, 0, 1, 1), planeMatrix);
@@ -5346,8 +5349,8 @@ void DrawDebugWorld(
 					XMStoreFloat3(&line.start, P3);
 					XMStoreFloat3(&line.end, P0);
 					DrawLine(line);
-					XMVECTOR O = XMLoadFloat3(&collider.planeOrigin);
-					XMVECTOR N = XMLoadFloat3(&collider.planeNormal);
+					XMVECTOR O = XMLoadFloat3(&collider.plane.origin);
+					XMVECTOR N = XMLoadFloat3(&collider.plane.normal);
 					XMStoreFloat3(&line.start, O);
 					XMStoreFloat3(&line.end, O + N);
 					DrawLine(line);
@@ -6764,7 +6767,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			if (!renderQueue.empty())
 			{
-				RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
+				RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, FILTER_ALL, cmd, false, frusta, arraysize(frusta));
 			}
 		}
 
@@ -7123,7 +7126,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 
 		device->RenderPassBegin(&renderpass_voxelize, cmd);
-		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd, false, nullptr, 1);
+		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, false, nullptr, 1);
 		device->RenderPassEnd(cmd);
 
 		{
