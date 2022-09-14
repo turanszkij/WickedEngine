@@ -55,6 +55,7 @@ public:
 		Script = 1 << 17,
 		Expression = 1 << 18,
 		Terrain = 1 << 19,
+		Spring = 1 << 20,
 
 		All = ~0ull,
 	} filter = Filter::All;

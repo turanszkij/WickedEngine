@@ -1348,7 +1348,6 @@ namespace wi::scene
 		XMFLOAT3 prevTail = {};
 		XMFLOAT3 currentTail = {};
 		XMFLOAT3 boneAxis = {};
-		float boneLength = 0;
 
 		inline void Reset(bool value = true) { if (value) { _flags |= RESET; } else { _flags &= ~RESET; } }
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }

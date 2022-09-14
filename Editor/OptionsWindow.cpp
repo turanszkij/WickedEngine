@@ -315,6 +315,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Inverse Kinematics " ICON_IK, (uint64_t)Filter::IK);
 	filterCombo.AddItem("Camera " ICON_CAMERA, (uint64_t)Filter::Camera);
 	filterCombo.AddItem("Armature " ICON_ARMATURE, (uint64_t)Filter::Armature);
+	filterCombo.AddItem("Spring " ICON_SPRING, (uint64_t)Filter::Spring);
 	filterCombo.AddItem("Collider " ICON_COLLIDER, (uint64_t)Filter::Collider);
 	filterCombo.AddItem("Script " ICON_SCRIPT, (uint64_t)Filter::Script);
 	filterCombo.AddItem("Expression " ICON_EXPRESSION, (uint64_t)Filter::Expression);
@@ -749,6 +750,10 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_IK " ";
 	}
+	if (scene.springs.Contains(entity))
+	{
+		item.name += ICON_SPRING " ";
+	}
 	if (scene.colliders.Contains(entity))
 	{
 		item.name += ICON_COLLIDER " ";
@@ -976,7 +981,7 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::All))
+	if (has_flag(filter, Filter::Spring))
 	{
 		for (size_t i = 0; i < scene.springs.GetCount(); ++i)
 		{

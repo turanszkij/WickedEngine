@@ -2219,6 +2219,8 @@ namespace wi::scene
 	}
 	void Scene::RunSpringUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		if (dt <= 0)
+			return;
 		static float time = 0;
 		time += dt;
 		const XMVECTOR windDir = XMLoadFloat3(&weather.windDirection);
@@ -2238,8 +2240,6 @@ namespace wi::scene
 			}
 			TransformComponent& transform = transforms[transform_index];
 
-			//XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
-			XMVECTOR rotation_parent_world = XMQuaternionIdentity();
 			XMMATRIX parentWorldMatrix = XMMatrixIdentity();
 
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
@@ -2251,14 +2251,12 @@ namespace wi::scene
 				//	It will work the other way, but results will be less convincing
 				const TransformComponent& parent_transform = transforms[parent_index];
 				transform.UpdateTransform_Parented(parent_transform);
-				rotation_parent_world = parent_transform.GetRotationV();
 				parentWorldMatrix = XMLoadFloat4x4(&parent_transform.world);
 			}
 
 			XMVECTOR position_root = transform.GetPositionV();
-			//XMVECTOR rotation_combined = XMQuaternionNormalize(XMQuaternionMultiply(rotation_parent_world, rotation_local));
 
-			if (spring.IsResetting() && dt > 0)
+			if (spring.IsResetting())
 			{
 				spring.Reset(false);
 
@@ -2288,20 +2286,20 @@ namespace wi::scene
 						tail = position_root + ab;
 					}
 				}
+
 				XMVECTOR axis = tail - position_root;
-				XMVECTOR length = XMVector3Length(axis);
-				//axis = XMVector3Rotate(axis, XMQuaternionNormalize(XMQuaternionInverse(rotation_combined)));
-				axis /= length;
+				XMMATRIX parentWorldMatrixInverse = XMMatrixInverse(nullptr, parentWorldMatrix);
+				axis = XMVector3TransformNormal(axis, parentWorldMatrixInverse);
 				XMStoreFloat3(&spring.boneAxis, axis);
 				XMStoreFloat3(&spring.currentTail, tail);
 				spring.prevTail = spring.currentTail;
-				spring.boneLength = XMVectorGetX(length);
 			}
 
 			XMVECTOR boneAxis = XMLoadFloat3(&spring.boneAxis);
-			//boneAxis = XMVector3Normalize(XMVector3Rotate(boneAxis, rotation_combined));
+			boneAxis = XMVector3TransformNormal(boneAxis, parentWorldMatrix);
 
-			const float boneLength = spring.boneLength;
+			const float boneLength = XMVectorGetX(XMVector3Length(boneAxis));
+			boneAxis /= boneLength;
 			const float dragForce = spring.dragForce;
 			const float stiffnessForce = spring.stiffnessForce;
 			const XMVECTOR gravityDir = XMLoadFloat3(&spring.gravityDir);
