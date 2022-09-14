@@ -2,7 +2,7 @@
 #include "IconsFontAwesome6.h" // icon descriptions, source: https://github.com/juliettef/IconFontCppHeaders
 
 // These map the Font Awesome icon definitions to editor:
-//	These definitions will help to change icons that are scattered throughout the editor codeL
+//	These definitions will help to change icons that are scattered throughout the editor code
 #define ICON_LAYER				ICON_FA_LAYER_GROUP
 #define ICON_TRANSFORM			ICON_FA_LOCATION_DOT
 #define ICON_MESH				ICON_FA_CUBE
@@ -59,6 +59,9 @@
 #define ICON_STOP				ICON_FA_STOP
 #define ICON_PEN				ICON_FA_PEN
 #define ICON_FILTER				ICON_FA_FILTER
+#define ICON_SAVE_EMBED			ICON_FA_FILE_ZIPPER
+#define ICON_SAVE_NO_EMBED		ICON_FA_FILE
+#define ICON_SAVE_HEADER		ICON_FA_FILE_CODE
 
 #define ICON_DARK				ICON_FA_MOON
 #define ICON_BRIGHT				ICON_FA_SUN
