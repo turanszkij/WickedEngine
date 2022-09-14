@@ -2593,7 +2593,7 @@ namespace wi::scene
 			if (!mesh.streamoutBuffer.IsValid())
 			{
 				const SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(entity);
-				if (softbody != nullptr && wi::physics::IsSimulationEnabled())
+				if (softbody != nullptr && wi::physics::IsEnabled())
 				{
 					mesh.CreateStreamoutRenderData();
 				}
@@ -3078,7 +3078,7 @@ namespace wi::scene
 				SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
 				if (softbody != nullptr && mesh.streamoutBuffer.IsValid())
 				{
-					if (wi::physics::IsSimulationEnabled())
+					if (wi::physics::IsEnabled())
 					{
 						// this will be registered as soft body in the next physics update
 						softbody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER;

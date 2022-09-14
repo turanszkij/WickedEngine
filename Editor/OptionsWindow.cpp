@@ -62,8 +62,14 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 	physicsEnabledCheckBox.Create("Physics: ");
 	physicsEnabledCheckBox.SetTooltip("Toggle Physics Simulation On/Off");
+	if (editor->main->config.GetSection("options").Has("physics"))
+	{
+		wi::physics::SetSimulationEnabled(editor->main->config.GetSection("options").GetBool("physics"));
+	}
 	physicsEnabledCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		wi::physics::SetSimulationEnabled(args.bValue);
+		editor->main->config.GetSection("options").Set("physics", args.bValue);
+		editor->main->config.Commit();
 		});
 	physicsEnabledCheckBox.SetCheck(wi::physics::IsSimulationEnabled());
 	AddWidget(&physicsEnabledCheckBox);
