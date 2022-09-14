@@ -131,4 +131,7 @@ namespace wi::helper
 
 	// Spins for the given time and does nothing (OS can not overtake)
 	void Spin(float milliseconds);
+
+	// Opens URL in the default browser
+	void OpenUrl(const std::string& url);
 };

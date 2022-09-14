@@ -325,6 +325,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Collider " ICON_COLLIDER, (uint64_t)Filter::Collider);
 	filterCombo.AddItem("Script " ICON_SCRIPT, (uint64_t)Filter::Script);
 	filterCombo.AddItem("Expression " ICON_EXPRESSION, (uint64_t)Filter::Expression);
+	filterCombo.AddItem("Humanoid " ICON_HUMANOID, (uint64_t)Filter::Humanoid);
 	filterCombo.AddItem("Terrain " ICON_TERRAIN, (uint64_t)Filter::Terrain);
 	filterCombo.SetTooltip("Apply filtering to the Entities");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
@@ -772,6 +773,10 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_EXPRESSION " ";
 	}
+	if (scene.humanoids.Contains(entity))
+	{
+		item.name += ICON_HUMANOID " ";
+	}
 	bool bone_found = false;
 	for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
 	{
@@ -1032,6 +1037,22 @@ void OptionsWindow::RefreshEntityTree()
 		for (size_t i = 0; i < scene.expressions.GetCount(); ++i)
 		{
 			PushToEntityTree(scene.expressions.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::Humanoid))
+	{
+		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.humanoids.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::Terrain))
+	{
+		for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.terrains.GetEntity(i), 0);
 		}
 	}
 

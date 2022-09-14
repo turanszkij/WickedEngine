@@ -358,6 +358,7 @@ void EditorComponent::Load()
 		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.armatureWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.humanoidWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.terrainWnd.SetEntity(INVALID_ENTITY);
 
 		optionsWnd.RefreshEntityTree();
@@ -426,6 +427,18 @@ void EditorComponent::Load()
 		});
 	});
 	GetGUI().AddWidget(&fullscreenButton);
+
+
+	bugButton.Create("");
+	bugButton.SetShadowRadius(2);
+	bugButton.font.params.shadowColor = wi::Color::Transparent();
+	bugButton.SetTooltip("Opens a browser window where you can report a bug or an issue.\nURL: https://github.com/turanszkij/WickedEngine/issues/new");
+	bugButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
+	bugButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
+	bugButton.OnClick([](wi::gui::EventArgs args) {
+		wi::helper::OpenUrl("https://github.com/turanszkij/WickedEngine/issues/new");
+	});
+	GetGUI().AddWidget(&bugButton);
 
 
 	aboutButton.Create("");
@@ -1393,6 +1406,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.armatureWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.humanoidWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.terrainWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
@@ -1433,6 +1447,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.cameraComponentWnd.SetEntity(picked.entity);
 		componentsWnd.expressionWnd.SetEntity(picked.entity);
 		componentsWnd.armatureWnd.SetEntity(picked.entity);
+		componentsWnd.humanoidWnd.SetEntity(picked.entity);
 		componentsWnd.terrainWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
@@ -2846,6 +2861,7 @@ void EditorComponent::UpdateTopMenuAnimation()
 	exitButton.SetText(exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_EXIT " Exit" : ICON_EXIT);
 	aboutButton.SetText(aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_HELP " About" : ICON_HELP);
 	fullscreenButton.SetText(fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? fullscreen_text : fullscreen ? ICON_FA_COMPRESS : ICON_FULLSCREEN);
+	bugButton.SetText(bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BUG " Bug report" : ICON_BUG);
 	logButton.SetText(logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BACKLOG " Backlog" : ICON_BACKLOG);
 	closeButton.SetText(closeButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_CLOSE " Close" : ICON_CLOSE);
 	openButton.SetText(openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_OPEN " Open" : ICON_OPEN);
@@ -2854,6 +2870,7 @@ void EditorComponent::UpdateTopMenuAnimation()
 	exitButton.SetSize(XMFLOAT2(wi::math::Lerp(exitButton.GetSize().x, exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	aboutButton.SetSize(XMFLOAT2(wi::math::Lerp(aboutButton.GetSize().x, aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	fullscreenButton.SetSize(XMFLOAT2(wi::math::Lerp(fullscreenButton.GetSize().x, fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	bugButton.SetSize(XMFLOAT2(wi::math::Lerp(bugButton.GetSize().x, bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	logButton.SetSize(XMFLOAT2(wi::math::Lerp(logButton.GetSize().x, logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	closeButton.SetSize(XMFLOAT2(wi::math::Lerp(closeButton.GetSize().x, closeButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	openButton.SetSize(XMFLOAT2(wi::math::Lerp(openButton.GetSize().x, openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
@@ -2861,7 +2878,8 @@ void EditorComponent::UpdateTopMenuAnimation()
 
 	exitButton.SetPos(XMFLOAT2(screenW - exitButton.GetSize().x, 0));
 	aboutButton.SetPos(XMFLOAT2(exitButton.GetPos().x - aboutButton.GetSize().x - padding, 0));
-	fullscreenButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - fullscreenButton.GetSize().x - padding, 0));
+	bugButton.SetPos(XMFLOAT2(exitButton.GetPos().x - bugButton.GetSize().x - padding, 0));
+	fullscreenButton.SetPos(XMFLOAT2(bugButton.GetPos().x - fullscreenButton.GetSize().x - padding, 0));
 	logButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - logButton.GetSize().x - padding, 0));
 	closeButton.SetPos(XMFLOAT2(logButton.GetPos().x - closeButton.GetSize().x - padding, 0));
 	openButton.SetPos(XMFLOAT2(closeButton.GetPos().x - openButton.GetSize().x - padding, 0));

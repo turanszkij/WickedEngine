@@ -1196,4 +1196,17 @@ namespace wi::helper
 			ms = time_span.count();
 		}
 	}
+
+	void OpenUrl(const std::string& url)
+	{
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		std::string op = "start " + url;
+		system(op.c_str());
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+#ifdef PLATFORM_LINUX
+		std::string op = "xdg-open " + url;
+		system(op.c_str());
+#endif // PLATFORM_WINDOWS_DESKTOP
+	}
 }

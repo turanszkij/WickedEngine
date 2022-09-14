@@ -1531,4 +1531,87 @@ namespace wi::scene
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
+
+	struct HumanoidComponent
+	{
+		enum FLAGS
+		{
+			NONE = 0,
+		};
+		uint32_t _flags = NONE;
+
+		// https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0-beta/humanoid.md#list-of-humanoid-bones
+		enum class HumanoidBone
+		{
+			// Torso:
+			Hips,			// Required
+			Spine,			// Required
+			Chest,
+			UpperChest,
+			Neck,
+
+			// Head:
+			Head,			// Required
+			LeftEye,
+			RightEye,
+			Jaw,
+
+			// Leg:
+			LeftUpperLeg,	// Required
+			LeftLowerLeg,	// Required
+			LeftFoot,		// Required
+			LeftToes,
+			RightUpperLeg,	// Required
+			RightLowerLeg,	// Required
+			RightFoot,		// Required
+			RightToes,
+
+			// Arm:
+			LeftShoulder,
+			LeftUpperArm,	// Required
+			LeftLowerArm,	// Required
+			LeftHand,		// Required
+			RightShoulder,
+			RightUpperArm,	// Required
+			RightLowerArm,	// Required
+			RightHand,		// Required
+
+			// Finger:
+			LeftThumbMetacarpal,
+			LeftThumbProximal,
+			LeftThumbDistal,
+			LeftIndexProximal,
+			LeftIndexIntermediate,
+			LeftIndexDistal,
+			LeftMiddleProximal,
+			LeftMiddleIntermediate,
+			LeftMiddleDistal,
+			LeftRingProximal,
+			LeftRingIntermediate,
+			LeftRingDistal,
+			LeftLittleProximal,
+			LeftLittleIntermediate,
+			LeftLittleDistal,
+			RightThumbMetacarpal,
+			RightThumbProximal,
+			RightThumbDistal,
+			RightIndexIntermediate,
+			RightIndexDistal,
+			RightIndexProximal,
+			RightMiddleProximal,
+			RightMiddleIntermediate,
+			RightMiddleDistal,
+			RightRingProximal,
+			RightRingIntermediate,
+			RightRingDistal,
+			RightLittleProximal,
+			RightLittleIntermediate,
+			RightLittleDistal,
+
+			Count
+		};
+		wi::ecs::Entity bones[size_t(HumanoidBone::Count)] = {};
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
 }
