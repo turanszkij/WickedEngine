@@ -10,6 +10,8 @@ namespace wi::config
 	struct File;
 	struct Section
 	{
+		virtual ~Section() = default;
+
 		friend struct File;
 
 		// Check whether the key exists:

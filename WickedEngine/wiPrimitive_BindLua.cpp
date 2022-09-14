@@ -49,7 +49,7 @@ namespace wi::lua::primitive
 			Vector_BindLua* d = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (o && d)
 			{
-				ray = Ray(XMLoadFloat4(o), XMLoadFloat4(d));
+				ray = Ray(XMLoadFloat4(&o->data), XMLoadFloat4(&d->data));
 				if (argc > 2)
 				{
 					ray.TMin = wi::lua::SGetFloat(L, 3);
@@ -116,7 +116,7 @@ namespace wi::lua::primitive
 			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (v != nullptr)
 			{
-				XMStoreFloat3(&ray.origin, XMLoadFloat4(v));
+				XMStoreFloat3(&ray.origin, XMLoadFloat4(&v->data));
 			}
 			else
 			{
@@ -142,7 +142,7 @@ namespace wi::lua::primitive
 			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (v != nullptr)
 			{
-				XMStoreFloat3(&ray.direction, XMLoadFloat4(v));
+				XMStoreFloat3(&ray.direction, XMLoadFloat4(&v->data));
 			}
 			else
 			{
@@ -189,15 +189,15 @@ namespace wi::lua::primitive
 			if (_minV && _maxV)
 			{
 				XMFLOAT3 _min, _max;
-				XMStoreFloat3(&_min, XMLoadFloat4(_minV));
-				XMStoreFloat3(&_max, XMLoadFloat4(_maxV));
+				XMStoreFloat3(&_min, XMLoadFloat4(&_minV->data));
+				XMStoreFloat3(&_max, XMLoadFloat4(&_maxV->data));
 
 				aabb = AABB(_min, _max);
 			}
 			else if (_minV)
 			{
 				XMFLOAT3 _min;
-				XMStoreFloat3(&_min, XMLoadFloat4(_minV));
+				XMStoreFloat3(&_min, XMLoadFloat4(&_minV->data));
 
 				aabb = AABB(_min);
 			}
@@ -278,7 +278,7 @@ namespace wi::lua::primitive
 			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (v != nullptr)
 			{
-				XMStoreFloat3(&aabb._min, XMLoadFloat4(v));
+				XMStoreFloat3(&aabb._min, XMLoadFloat4(&v->data));
 			}
 			else
 			{
@@ -305,7 +305,7 @@ namespace wi::lua::primitive
 			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (v != nullptr)
 			{
-				XMStoreFloat3(&aabb._max, XMLoadFloat4(v));
+				XMStoreFloat3(&aabb._max, XMLoadFloat4(&v->data));
 			}
 			else
 			{
@@ -338,7 +338,7 @@ namespace wi::lua::primitive
 			Matrix_BindLua* _matrix = Luna<Matrix_BindLua>::lightcheck(L, 1);
 			if (_matrix)
 			{
-				Luna<AABB_BindLua>::push(L, new AABB_BindLua(aabb.transform(*_matrix)));
+				Luna<AABB_BindLua>::push(L, new AABB_BindLua(aabb.transform(_matrix->data)));
 				return 1;
 			}
 			else
@@ -382,7 +382,7 @@ namespace wi::lua::primitive
 			if (cV)
 			{
 				XMFLOAT3 c;
-				XMStoreFloat3(&c, XMLoadFloat4(cV));
+				XMStoreFloat3(&c, XMLoadFloat4(&cV->data));
 
 				float r = wi::lua::SGetFloat(L, 2);
 
@@ -450,7 +450,7 @@ namespace wi::lua::primitive
 			Vector_BindLua* cV = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (cV)
 			{
-				XMStoreFloat3(&sphere.center, XMLoadFloat4(cV));
+				XMStoreFloat3(&sphere.center, XMLoadFloat4(&cV->data));
 			}
 			else
 			{
@@ -509,9 +509,9 @@ namespace wi::lua::primitive
 			if (bV && tV)
 			{
 				XMFLOAT3 b;
-				XMStoreFloat3(&b, XMLoadFloat4(bV));
+				XMStoreFloat3(&b, XMLoadFloat4(&bV->data));
 				XMFLOAT3 t;
-				XMStoreFloat3(&t, XMLoadFloat4(tV));
+				XMStoreFloat3(&t, XMLoadFloat4(&tV->data));
 
 				float r = wi::lua::SGetFloat(L, 3);
 
@@ -585,7 +585,7 @@ namespace wi::lua::primitive
 			Vector_BindLua* cV = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (cV)
 			{
-				XMStoreFloat3(&capsule.base, XMLoadFloat4(cV));
+				XMStoreFloat3(&capsule.base, XMLoadFloat4(&cV->data));
 			}
 			else
 			{
@@ -606,7 +606,7 @@ namespace wi::lua::primitive
 			Vector_BindLua* cV = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (cV)
 			{
-				XMStoreFloat3(&capsule.tip, XMLoadFloat4(cV));
+				XMStoreFloat3(&capsule.tip, XMLoadFloat4(&cV->data));
 			}
 			else
 			{

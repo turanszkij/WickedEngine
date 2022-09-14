@@ -1202,7 +1202,7 @@ namespace wi::terrain
 			archive << chunks.size();
 			for (auto& it : chunks)
 			{
-				Chunk& chunk = it.first;
+				const Chunk& chunk = it.first;
 				archive << chunk.x;
 				archive << chunk.z;
 				ChunkData& chunk_data = it.second;

@@ -72,7 +72,7 @@ int LoadModel(lua_State* L)
 					Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 3);
 					if (matrix != nullptr)
 					{
-						transform = XMLoadFloat4x4(matrix);
+						transform = XMLoadFloat4x4(&matrix->data);
 					}
 					else
 					{
@@ -99,7 +99,7 @@ int LoadModel(lua_State* L)
 				Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 2);
 				if (matrix != nullptr)
 				{
-					transform = XMLoadFloat4x4(matrix);
+					transform = XMLoadFloat4x4(&matrix->data);
 				}
 				else
 				{
@@ -2260,19 +2260,6 @@ Luna<NameComponent_BindLua>::PropertyType NameComponent_BindLua::properties[] = 
 	{ NULL, NULL }
 };
 
-NameComponent_BindLua::NameComponent_BindLua(lua_State *L)
-{
-	owning = true;
-	component = new NameComponent;
-}
-NameComponent_BindLua::~NameComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 int NameComponent_BindLua::SetName(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2308,19 +2295,6 @@ Luna<LayerComponent_BindLua>::PropertyType LayerComponent_BindLua::properties[] 
 	lunaproperty(LayerComponent_BindLua, LayerMask),
 	{ NULL, NULL }
 };
-
-LayerComponent_BindLua::LayerComponent_BindLua(lua_State *L)
-{
-	owning = true;
-	component = new LayerComponent;
-}
-LayerComponent_BindLua::~LayerComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
 
 int LayerComponent_BindLua::SetLayerMask(lua_State* L)
 {
@@ -2373,20 +2347,6 @@ Luna<TransformComponent_BindLua>::PropertyType TransformComponent_BindLua::prope
 	{ NULL, NULL }
 };
 
-TransformComponent_BindLua::TransformComponent_BindLua(lua_State *L)
-{
-	owning = true;
-	component = new TransformComponent;
-	BuildBindings();
-}
-TransformComponent_BindLua::~TransformComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 int TransformComponent_BindLua::Scale(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2396,7 +2356,7 @@ int TransformComponent_BindLua::Scale(lua_State* L)
 		if (v != nullptr)
 		{
 			XMFLOAT3 value;
-			XMStoreFloat3(&value, XMLoadFloat4(v));
+			XMStoreFloat3(&value, XMLoadFloat4(&v->data));
 			
 			component->Scale(value);
 		}
@@ -2420,7 +2380,7 @@ int TransformComponent_BindLua::Rotate(lua_State* L)
 		if (v != nullptr)
 		{
 			XMFLOAT3 rollPitchYaw;
-			XMStoreFloat3(&rollPitchYaw, XMLoadFloat4(v));
+			XMStoreFloat3(&rollPitchYaw, XMLoadFloat4(&v->data));
 
 			component->RotateRollPitchYaw(rollPitchYaw);
 		}
@@ -2444,7 +2404,7 @@ int TransformComponent_BindLua::Translate(lua_State* L)
 		if (v != nullptr)
 		{
 			XMFLOAT3 value;
-			XMStoreFloat3(&value, XMLoadFloat4(v));
+			XMStoreFloat3(&value, XMLoadFloat4(&v->data));
 
 			component->Translate(value);
 		}
@@ -2549,7 +2509,7 @@ int TransformComponent_BindLua::MatrixTransform(lua_State* L)
 		Matrix_BindLua* m = Luna<Matrix_BindLua>::lightcheck(L, 1);
 		if (m != nullptr)
 		{
-			component->MatrixTransform(XMLoadFloat4x4(m));
+			component->MatrixTransform(XMLoadFloat4x4(&m->data));
 		}
 		else
 		{
@@ -2659,19 +2619,6 @@ Luna<CameraComponent_BindLua>::PropertyType CameraComponent_BindLua::properties[
 	lunaproperty(CameraComponent_BindLua, ApertureShape),
 	{ NULL, NULL }
 };
-
-CameraComponent_BindLua::CameraComponent_BindLua(lua_State *L)
-{
-	owning = true;
-	component = new CameraComponent;
-}
-CameraComponent_BindLua::~CameraComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
 
 int CameraComponent_BindLua::UpdateCamera(lua_State* L)
 {
@@ -2803,7 +2750,7 @@ int CameraComponent_BindLua::SetApertureShape(lua_State* L)
 		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (param != nullptr)
 		{
-			XMStoreFloat2(&component->aperture_shape, XMLoadFloat4(param));
+			XMStoreFloat2(&component->aperture_shape, XMLoadFloat4(&param->data));
 		}
 	}
 	else
@@ -2888,19 +2835,6 @@ Luna<AnimationComponent_BindLua>::PropertyType AnimationComponent_BindLua::prope
 	lunaproperty(AnimationComponent_BindLua, Amount),
 	{ NULL, NULL }
 };
-
-AnimationComponent_BindLua::AnimationComponent_BindLua(lua_State *L)
-{
-	owning = true;
-	component = new AnimationComponent;
-}
-AnimationComponent_BindLua::~AnimationComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
 
 int AnimationComponent_BindLua::Play(lua_State* L)
 {
@@ -3043,20 +2977,6 @@ Luna<MaterialComponent_BindLua>::PropertyType MaterialComponent_BindLua::propert
 	{ NULL, NULL }
 };
 
-MaterialComponent_BindLua::MaterialComponent_BindLua(lua_State *L)
-{
-	owning = true;
-	component = new MaterialComponent;
-	BuildBindings();
-}
-MaterialComponent_BindLua::~MaterialComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 int MaterialComponent_BindLua::GetBaseColor(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(component->baseColor));
@@ -3071,7 +2991,7 @@ int MaterialComponent_BindLua::SetBaseColor(lua_State* L)
 		if (_color)
 		{
 			XMFLOAT4 color;
-			XMStoreFloat4(&color, XMLoadFloat4(_color));
+			XMStoreFloat4(&color, XMLoadFloat4(&_color->data));
 			component->SetBaseColor(color);
 		}
 		else
@@ -3100,7 +3020,7 @@ int MaterialComponent_BindLua::SetEmissiveColor(lua_State* L)
 		if (_color)
 		{
 			XMFLOAT4 color;
-			XMStoreFloat4(&color, XMLoadFloat4(_color));
+			XMStoreFloat4(&color, XMLoadFloat4(&_color->data));
 			component->SetEmissiveColor(color);
 		}
 		else
@@ -3285,20 +3205,6 @@ Luna<MeshComponent_BindLua>::PropertyType MeshComponent_BindLua::properties[] = 
 	{ NULL, NULL }
 };
 
-MeshComponent_BindLua::MeshComponent_BindLua(lua_State *L)
-{
-	owning = true;
-	component = new MeshComponent;
-	BuildBindings();
-}
-MeshComponent_BindLua::~MeshComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 int MeshComponent_BindLua::SetMeshSubsetMaterialID(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -3407,20 +3313,6 @@ Luna<EmitterComponent_BindLua>::PropertyType EmitterComponent_BindLua::propertie
 	lunaproperty(EmitterComponent_BindLua, SpriteSheet_Framerate),
 	{ NULL, NULL }
 };
-
-EmitterComponent_BindLua::EmitterComponent_BindLua(lua_State *L)
-{
-	owning = true;
-	component = new wi::EmittedParticleSystem;
-	BuildBindings();
-}
-EmitterComponent_BindLua::~EmitterComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
 
 int EmitterComponent_BindLua::Burst(lua_State* L)
 {
@@ -3659,20 +3551,6 @@ Luna<HairParticleSystem_BindLua>::PropertyType HairParticleSystem_BindLua::prope
 	{ NULL, NULL }
 };
 
-HairParticleSystem_BindLua::HairParticleSystem_BindLua(lua_State *L)
-{
-	owning = true;
-	component = new wi::HairParticleSystem;
-	BuildBindings();
-}
-HairParticleSystem_BindLua::~HairParticleSystem_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 
 
 
@@ -3711,19 +3589,6 @@ Luna<LightComponent_BindLua>::PropertyType LightComponent_BindLua::properties[] 
 	lunaproperty(LightComponent_BindLua, InnerConeAngle),
 	{ NULL, NULL }
 };
-
-LightComponent_BindLua::LightComponent_BindLua(lua_State *L)
-{
-	owning = true;
-	component = new LightComponent;
-}
-LightComponent_BindLua::~LightComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
 
 int LightComponent_BindLua::GetType(lua_State* L)
 {
@@ -3813,7 +3678,7 @@ int LightComponent_BindLua::SetColor(lua_State* L)
 		Vector_BindLua* value = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (value)
 		{
-			XMStoreFloat3(&component->color, XMLoadFloat4(value));
+			XMStoreFloat3(&component->color, XMLoadFloat4(&value->data));
 		}
 		else
 		{
@@ -3961,19 +3826,6 @@ Luna<ObjectComponent_BindLua>::PropertyType ObjectComponent_BindLua::properties[
 	{ NULL, NULL }
 };
 
-ObjectComponent_BindLua::ObjectComponent_BindLua(lua_State* L)
-{
-	owning = true;
-	component = new ObjectComponent;
-}
-ObjectComponent_BindLua::~ObjectComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 
 int ObjectComponent_BindLua::GetMeshID(lua_State* L)
 {
@@ -4064,7 +3916,7 @@ int ObjectComponent_BindLua::SetColor(lua_State* L)
 		Vector_BindLua* value = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (value)
 		{
-			XMStoreFloat4(&component->color, XMLoadFloat4(value));
+			XMStoreFloat4(&component->color, XMLoadFloat4(&value->data));
 		}
 		else
 		{
@@ -4086,7 +3938,7 @@ int ObjectComponent_BindLua::SetEmissiveColor(lua_State* L)
 		Vector_BindLua* value = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (value)
 		{
-			XMStoreFloat4(&component->emissiveColor, XMLoadFloat4(value));
+			XMStoreFloat4(&component->emissiveColor, XMLoadFloat4(&value->data));
 		}
 		else
 		{
@@ -4170,19 +4022,6 @@ Luna<InverseKinematicsComponent_BindLua>::PropertyType InverseKinematicsComponen
 	lunaproperty(InverseKinematicsComponent_BindLua, IterationCount),
 	{ NULL, NULL }
 };
-
-InverseKinematicsComponent_BindLua::InverseKinematicsComponent_BindLua(lua_State* L)
-{
-	owning = true;
-	component = new InverseKinematicsComponent;
-}
-InverseKinematicsComponent_BindLua::~InverseKinematicsComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
 
 int InverseKinematicsComponent_BindLua::SetTarget(lua_State* L)
 {
@@ -4285,20 +4124,6 @@ Luna<SpringComponent_BindLua>::PropertyType SpringComponent_BindLua::properties[
 	{ NULL, NULL }
 };
 
-SpringComponent_BindLua::SpringComponent_BindLua(lua_State* L)
-{
-	owning = true;
-	component = new SpringComponent;
-	BuildBindings();
-}
-SpringComponent_BindLua::~SpringComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 int SpringComponent_BindLua::GetStiffness(lua_State *L)
 {
 	wi::lua::SSetFloat(L, component->stiffnessForce);
@@ -4377,19 +4202,6 @@ Luna<ScriptComponent_BindLua>::PropertyType ScriptComponent_BindLua::properties[
 	{ NULL, NULL }
 };
 
-ScriptComponent_BindLua::ScriptComponent_BindLua(lua_State* L)
-{
-	owning = true;
-	component = new ScriptComponent;
-}
-ScriptComponent_BindLua::~ScriptComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 int ScriptComponent_BindLua::CreateFromFile(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -4460,20 +4272,6 @@ Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType RigidBodyPhysicsComponent_
 	{ NULL, NULL }
 };
 
-RigidBodyPhysicsComponent_BindLua::RigidBodyPhysicsComponent_BindLua(lua_State* L)
-{
-	owning = true;
-	component = new RigidBodyPhysicsComponent;
-	BuildBindings();
-}
-RigidBodyPhysicsComponent_BindLua::~RigidBodyPhysicsComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 int RigidBodyPhysicsComponent_BindLua::IsDisableDeactivation(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsDisableDeactivation());
@@ -4534,20 +4332,6 @@ Luna<SoftBodyPhysicsComponent_BindLua>::PropertyType SoftBodyPhysicsComponent_Bi
 	{ NULL, NULL }
 };
 
-SoftBodyPhysicsComponent_BindLua::SoftBodyPhysicsComponent_BindLua(lua_State* L)
-{
-	owning = true;
-	component = new SoftBodyPhysicsComponent;
-	BuildBindings();
-}
-SoftBodyPhysicsComponent_BindLua::~SoftBodyPhysicsComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 int SoftBodyPhysicsComponent_BindLua::SetDisableDeactivation(lua_State *L)
 {
 	bool value = wi::lua::SGetBool(L, 1);
@@ -4584,20 +4368,6 @@ Luna<ForceFieldComponent_BindLua>::PropertyType ForceFieldComponent_BindLua::pro
 	{ NULL, NULL }
 };
 
-ForceFieldComponent_BindLua::ForceFieldComponent_BindLua(lua_State* L)
-{
-	owning = true;
-	component = new ForceFieldComponent;
-	BuildBindings();
-}
-ForceFieldComponent_BindLua::~ForceFieldComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 
 
 
@@ -4624,20 +4394,6 @@ Luna<Weather_OceanParams_BindLua>::PropertyType Weather_OceanParams_BindLua::pro
 	lunaproperty(Weather_OceanParams_BindLua, surfaceDisplacement),
 	{ NULL, NULL }
 };
-
-Weather_OceanParams_BindLua::Weather_OceanParams_BindLua(lua_State* L)
-{
-	owning = true;
-	parameter = new wi::Ocean::OceanParameters;
-	BuildBindings();
-}
-Weather_OceanParams_BindLua::~Weather_OceanParams_BindLua()
-{
-	if (owning)
-	{
-		delete parameter;
-	}
-}
 
 int Weather_OceanParams_Property::Get(lua_State *L)
 {
@@ -4687,20 +4443,6 @@ Luna<Weather_AtmosphereParams_BindLua>::PropertyType Weather_AtmosphereParams_Bi
 	lunaproperty(Weather_AtmosphereParams_BindLua, groundAlbedo),
 	{ NULL, NULL }
 };
-
-Weather_AtmosphereParams_BindLua::Weather_AtmosphereParams_BindLua(lua_State* L)
-{
-	owning = true;
-	parameter = new AtmosphereParameters;
-	BuildBindings();
-}
-Weather_AtmosphereParams_BindLua::~Weather_AtmosphereParams_BindLua()
-{
-	if (owning)
-	{
-		delete parameter;
-	}
-}
 
 int Weather_AtmosphereParams_Property::Get(lua_State *L)
 {
@@ -4758,20 +4500,6 @@ Luna<Weather_VolumetricCloudParams_BindLua>::PropertyType Weather_VolumetricClou
 	lunaproperty(Weather_VolumetricCloudParams_BindLua,CloudGradientLarge),
 	{ NULL, NULL }
 };
-
-Weather_VolumetricCloudParams_BindLua::Weather_VolumetricCloudParams_BindLua(lua_State* L)
-{
-	owning = true;
-	parameter = new VolumetricCloudParameters;
-	BuildBindings();
-}
-Weather_VolumetricCloudParams_BindLua::~Weather_VolumetricCloudParams_BindLua()
-{
-	if (owning)
-	{
-		delete parameter;
-	}
-}
 
 int Weather_VolumetricCloudParams_Property::Get(lua_State *L)
 {
@@ -4842,20 +4570,6 @@ Luna<WeatherComponent_BindLua>::PropertyType WeatherComponent_BindLua::propertie
 	lunaproperty(WeatherComponent_BindLua, ColorGradingMapName),
 	{ NULL, NULL }
 };
-
-WeatherComponent_BindLua::WeatherComponent_BindLua(lua_State* L)
-{
-	owning = true;
-	component = new WeatherComponent;
-	BuildBindings();
-}
-WeatherComponent_BindLua::~WeatherComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
 
 int WeatherComponent_BindLua::IsOceanEnabled(lua_State* L)
 {
@@ -5017,20 +4731,6 @@ Luna<SoundComponent_BindLua>::PropertyType SoundComponent_BindLua::properties[] 
 	{ NULL, NULL }
 };
 
-SoundComponent_BindLua::SoundComponent_BindLua(lua_State* L)
-{
-	owning = true;
-	component = new SoundComponent;
-	BuildBindings();
-}
-SoundComponent_BindLua::~SoundComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
-
 int SoundComponent_BindLua::IsPlaying(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsPlaying());
@@ -5108,20 +4808,6 @@ Luna<ColliderComponent_BindLua>::PropertyType ColliderComponent_BindLua::propert
 	lunaproperty(ColliderComponent_BindLua, Tail),
 	{ NULL, NULL }
 };
-
-ColliderComponent_BindLua::ColliderComponent_BindLua(lua_State* L)
-{
-	owning = true;
-	component = new ColliderComponent;
-	BuildBindings();
-}
-ColliderComponent_BindLua::~ColliderComponent_BindLua()
-{
-	if (owning)
-	{
-		delete component;
-	}
-}
 
 int ColliderComponent_BindLua::SetCPUEnabled(lua_State* L)
 {

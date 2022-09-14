@@ -171,6 +171,8 @@ namespace wi::terrain
 
 	struct Modifier
 	{
+		virtual ~Modifier() = default;
+
 		enum class Type
 		{
 			Perlin,

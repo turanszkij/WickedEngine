@@ -21,7 +21,7 @@ namespace wi::lua::scene
 	class Scene_BindLua
 	{
 	private:
-		wi::scene::Scene customScene;
+		std::unique_ptr<wi::scene::Scene> owning;
 	public:
 		wi::scene::Scene* scene = nullptr;
 
@@ -32,7 +32,8 @@ namespace wi::lua::scene
 		Scene_BindLua(wi::scene::Scene* scene) :scene(scene) {}
 		Scene_BindLua(lua_State* L)
 		{
-			this->scene = &customScene;
+			owning = std::make_unique<wi::scene::Scene>();
+			this->scene = owning.get();
 		}
 
 		int Update(lua_State* L);
@@ -159,8 +160,9 @@ namespace wi::lua::scene
 
 	class NameComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::NameComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::NameComponent* component = nullptr;
 
 		static const char className[];
@@ -168,8 +170,11 @@ namespace wi::lua::scene
 		static Luna<NameComponent_BindLua>::PropertyType properties[];
 
 		NameComponent_BindLua(wi::scene::NameComponent* component) :component(component) {}
-		NameComponent_BindLua(lua_State *L);
-		~NameComponent_BindLua();
+		NameComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::NameComponent>();
+			component = owning.get();
+		}
 
 		int SetName(lua_State* L);
 		int GetName(lua_State* L);
@@ -177,8 +182,9 @@ namespace wi::lua::scene
 
 	class LayerComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::LayerComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::LayerComponent* component = nullptr;
 
 		static const char className[];
@@ -186,8 +192,11 @@ namespace wi::lua::scene
 		static Luna<LayerComponent_BindLua>::PropertyType properties[];
 
 		LayerComponent_BindLua(wi::scene::LayerComponent* component) :component(component) {}
-		LayerComponent_BindLua(lua_State *L);
-		~LayerComponent_BindLua();
+		LayerComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::LayerComponent>();
+			component = owning.get();
+		}
 
 		int SetLayerMask(lua_State* L);
 		int GetLayerMask(lua_State* L);
@@ -195,8 +204,9 @@ namespace wi::lua::scene
 
 	class TransformComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::TransformComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::TransformComponent* component = nullptr;
 
 		static const char className[];
@@ -210,9 +220,16 @@ namespace wi::lua::scene
 			Scale_local = VectorProperty(&component->scale_local);
 		}
 
-		TransformComponent_BindLua(wi::scene::TransformComponent* component) :component(component) { BuildBindings(); }
-		TransformComponent_BindLua(lua_State *L);
-		~TransformComponent_BindLua();
+		TransformComponent_BindLua(wi::scene::TransformComponent* component) :component(component)
+		{
+			BuildBindings();
+		}
+		TransformComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::TransformComponent>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		VectorProperty Translation_local;
 		VectorProperty Rotation_local;
@@ -240,8 +257,9 @@ namespace wi::lua::scene
 
 	class CameraComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::CameraComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::CameraComponent* component = nullptr;
 
 		static const char className[];
@@ -249,8 +267,11 @@ namespace wi::lua::scene
 		static Luna<CameraComponent_BindLua>::PropertyType properties[];
 
 		CameraComponent_BindLua(wi::scene::CameraComponent* component) :component(component) {}
-		CameraComponent_BindLua(lua_State *L);
-		~CameraComponent_BindLua();
+		CameraComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::CameraComponent>();
+			component = owning.get();
+		}
 
 		int UpdateCamera(lua_State* L);
 		int TransformCamera(lua_State* L);
@@ -279,8 +300,9 @@ namespace wi::lua::scene
 
 	class AnimationComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::AnimationComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::AnimationComponent* component = nullptr;
 
 		static const char className[];
@@ -288,8 +310,11 @@ namespace wi::lua::scene
 		static Luna<AnimationComponent_BindLua>::PropertyType properties[];
 
 		AnimationComponent_BindLua(wi::scene::AnimationComponent* component) :component(component) {}
-		AnimationComponent_BindLua(lua_State *L);
-		~AnimationComponent_BindLua();
+		AnimationComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::AnimationComponent>();
+			component = owning.get();
+		}
 
 		int Play(lua_State* L);
 		int Pause(lua_State* L);
@@ -306,8 +331,9 @@ namespace wi::lua::scene
 
 	class MaterialComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::MaterialComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::MaterialComponent* component = nullptr;
 
 		static const char className[];
@@ -342,9 +368,16 @@ namespace wi::lua::scene
 			customShaderID = IntProperty(&component->customShaderID);
 		}
 
-		MaterialComponent_BindLua(wi::scene::MaterialComponent* component) :component(component) { BuildBindings(); }
-		MaterialComponent_BindLua(lua_State *L);
-		~MaterialComponent_BindLua();
+		MaterialComponent_BindLua(wi::scene::MaterialComponent* component) :component(component)
+		{
+			BuildBindings();
+		}
+		MaterialComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::MaterialComponent>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		LongLongProperty _flags;
 		IntProperty ShaderType;
@@ -414,8 +447,9 @@ namespace wi::lua::scene
 
 	class MeshComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::MeshComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::MeshComponent* component = nullptr;
 
 		static const char className[];
@@ -430,9 +464,16 @@ namespace wi::lua::scene
 			SubsetsPerLOD = LongLongProperty(reinterpret_cast<long long*>(&component->subsets_per_lod));
 		}
 
-		MeshComponent_BindLua(wi::scene::MeshComponent* component) :component(component) { BuildBindings(); }
-		MeshComponent_BindLua(lua_State *L);
-		~MeshComponent_BindLua();
+		MeshComponent_BindLua(wi::scene::MeshComponent* component) :component(component)
+		{
+			BuildBindings();
+		}
+		MeshComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::MeshComponent>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		LongLongProperty _flags;
 		FloatProperty TessellationFactor;
@@ -450,8 +491,9 @@ namespace wi::lua::scene
 
 	class EmitterComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::EmittedParticleSystem> owning;
 	public:
-		bool owning = false;
 		wi::EmittedParticleSystem* component = nullptr;
 
 		static const char className[];
@@ -482,9 +524,16 @@ namespace wi::lua::scene
 			SpriteSheet_Framerate = FloatProperty(&component->frameRate);
 		}
 
-		EmitterComponent_BindLua(wi::EmittedParticleSystem* component) :component(component) { BuildBindings(); }
-		EmitterComponent_BindLua(lua_State *L);
-		~EmitterComponent_BindLua();
+		EmitterComponent_BindLua(wi::EmittedParticleSystem* component) :component(component)
+		{
+			BuildBindings();
+		}
+		EmitterComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::EmittedParticleSystem>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		LongLongProperty _flags;
 
@@ -554,9 +603,10 @@ namespace wi::lua::scene
 
 	class HairParticleSystem_BindLua
 	{
+	private:
+		std::unique_ptr<wi::HairParticleSystem> owning;
 	public:
-		bool owning = false;
-		HairParticleSystem* component = nullptr;
+		wi::HairParticleSystem* component = nullptr;
 
 		static const char className[];
 		static Luna<HairParticleSystem_BindLua>::FunctionType methods[];
@@ -580,9 +630,16 @@ namespace wi::lua::scene
 			SpriteSheet_Frame_Start = LongLongProperty(reinterpret_cast<long long*>(&component->frameStart));
 		}
 
-		HairParticleSystem_BindLua(HairParticleSystem* component) :component(component) { BuildBindings(); }
-		HairParticleSystem_BindLua(lua_State *L);
-		~HairParticleSystem_BindLua();
+		HairParticleSystem_BindLua(HairParticleSystem* component) :component(component)
+		{
+			BuildBindings();
+		}
+		HairParticleSystem_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<HairParticleSystem>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		LongLongProperty _flags;
 
@@ -617,8 +674,9 @@ namespace wi::lua::scene
 
 	class LightComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::LightComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::LightComponent* component = nullptr;
 
 		static const char className[];
@@ -626,8 +684,11 @@ namespace wi::lua::scene
 		static Luna<LightComponent_BindLua>::PropertyType properties[];
 
 		LightComponent_BindLua(wi::scene::LightComponent* component) :component(component) {}
-		LightComponent_BindLua(lua_State *L);
-		~LightComponent_BindLua();
+		LightComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::LightComponent>();
+			component = owning.get();
+		}
 
 		int SetType(lua_State* L);
 		int SetRange(lua_State* L);
@@ -656,8 +717,9 @@ namespace wi::lua::scene
 
 	class ObjectComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::ObjectComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::ObjectComponent* component = nullptr;
 
 		static const char className[];
@@ -665,8 +727,11 @@ namespace wi::lua::scene
 		static Luna<ObjectComponent_BindLua>::PropertyType properties[];
 
 		ObjectComponent_BindLua(wi::scene::ObjectComponent* component) :component(component) {}
-		ObjectComponent_BindLua(lua_State* L);
-		~ObjectComponent_BindLua();
+		ObjectComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::ObjectComponent>();
+			component = owning.get();
+		}
 
 		int GetMeshID(lua_State* L);
 		int GetCascadeMask(lua_State* L);
@@ -689,8 +754,9 @@ namespace wi::lua::scene
 
 	class InverseKinematicsComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::InverseKinematicsComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::InverseKinematicsComponent* component = nullptr;
 
 		static const char className[];
@@ -698,8 +764,11 @@ namespace wi::lua::scene
 		static Luna<InverseKinematicsComponent_BindLua>::PropertyType properties[];
 
 		InverseKinematicsComponent_BindLua(wi::scene::InverseKinematicsComponent* component) :component(component) {}
-		InverseKinematicsComponent_BindLua(lua_State* L);
-		~InverseKinematicsComponent_BindLua();
+		InverseKinematicsComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::InverseKinematicsComponent>();
+			component = owning.get();
+		}
 
 		int SetTarget(lua_State* L);
 		int SetChainLength(lua_State* L);
@@ -713,8 +782,9 @@ namespace wi::lua::scene
 
 	class SpringComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::SpringComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::SpringComponent* component = nullptr;
 
 		static const char className[];
@@ -729,9 +799,16 @@ namespace wi::lua::scene
 			GravityDirection = VectorProperty(&component->gravityDir);
 		}
 		
-		SpringComponent_BindLua(wi::scene::SpringComponent* component) :component(component) { BuildBindings(); }
-		SpringComponent_BindLua(lua_State* L);
-		~SpringComponent_BindLua();
+		SpringComponent_BindLua(wi::scene::SpringComponent* component) :component(component)
+		{
+			BuildBindings();
+		}
+		SpringComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::SpringComponent>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		FloatProperty DragForce;
 		FloatProperty HitRadius;
@@ -753,8 +830,9 @@ namespace wi::lua::scene
 
 	class ScriptComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::ScriptComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::ScriptComponent* component = nullptr;
 
 		static const char className[];
@@ -762,8 +840,11 @@ namespace wi::lua::scene
 		static Luna<ScriptComponent_BindLua>::PropertyType properties[];
 
 		ScriptComponent_BindLua(wi::scene::ScriptComponent* component) :component(component) {}
-		ScriptComponent_BindLua(lua_State* L);
-		~ScriptComponent_BindLua();
+		ScriptComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::ScriptComponent>();
+			component = owning.get();
+		}
 
 		int CreateFromFile(lua_State* L);
 		int Play(lua_State* L);
@@ -774,8 +855,9 @@ namespace wi::lua::scene
 
 	class RigidBodyPhysicsComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::RigidBodyPhysicsComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::RigidBodyPhysicsComponent* component = nullptr;
 
 		static const char className[];
@@ -797,9 +879,16 @@ namespace wi::lua::scene
 			TargetMeshLOD = LongLongProperty(reinterpret_cast<long long*>(&component->mesh_lod));
 		}
 
-		RigidBodyPhysicsComponent_BindLua(wi::scene::RigidBodyPhysicsComponent* component) :component(component) { BuildBindings(); }
-		RigidBodyPhysicsComponent_BindLua(lua_State* L);
-		~RigidBodyPhysicsComponent_BindLua();
+		RigidBodyPhysicsComponent_BindLua(wi::scene::RigidBodyPhysicsComponent* component) :component(component)
+		{
+			BuildBindings();
+		}
+		RigidBodyPhysicsComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::RigidBodyPhysicsComponent>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		IntProperty Shape;
 		FloatProperty Mass;
@@ -834,8 +923,9 @@ namespace wi::lua::scene
 
 	class SoftBodyPhysicsComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::SoftBodyPhysicsComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::SoftBodyPhysicsComponent* component = nullptr;
 
 		static const char className[];
@@ -849,9 +939,16 @@ namespace wi::lua::scene
 			Restitution = wi::lua::FloatProperty(&component->restitution);
 		}
 
-		SoftBodyPhysicsComponent_BindLua(wi::scene::SoftBodyPhysicsComponent* component) :component(component) { BuildBindings(); }
-		SoftBodyPhysicsComponent_BindLua(lua_State* L);
-		~SoftBodyPhysicsComponent_BindLua();
+		SoftBodyPhysicsComponent_BindLua(wi::scene::SoftBodyPhysicsComponent* component) :component(component)
+		{
+			BuildBindings();
+		}
+		SoftBodyPhysicsComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::SoftBodyPhysicsComponent>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		wi::lua::FloatProperty Mass;
 		wi::lua::FloatProperty Friction;
@@ -868,8 +965,9 @@ namespace wi::lua::scene
 
 	class ForceFieldComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::ForceFieldComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::ForceFieldComponent* component = nullptr;
 
 		static const char className[];
@@ -883,9 +981,16 @@ namespace wi::lua::scene
 			Range = FloatProperty(&component->range);
 		}
 
-		ForceFieldComponent_BindLua(wi::scene::ForceFieldComponent* component) :component(component) { BuildBindings(); }
-		ForceFieldComponent_BindLua(lua_State* L);
-		~ForceFieldComponent_BindLua();
+		ForceFieldComponent_BindLua(wi::scene::ForceFieldComponent* component) :component(component)
+		{
+			BuildBindings();
+		}
+		ForceFieldComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::ForceFieldComponent>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		IntProperty Type;
 		FloatProperty Gravity;
@@ -898,8 +1003,9 @@ namespace wi::lua::scene
 
 	class Weather_OceanParams_BindLua
 	{
+	private:
+		std::unique_ptr<wi::Ocean::OceanParameters> owning;
 	public:
-		bool owning = false;
 		wi::Ocean::OceanParameters* parameter = nullptr;
 
 		static const char className[];
@@ -918,9 +1024,16 @@ namespace wi::lua::scene
 			choppy_scale = FloatProperty(&parameter->choppy_scale);
 		}
 
-		Weather_OceanParams_BindLua(wi::Ocean::OceanParameters* parameter) :parameter(parameter) { BuildBindings(); }
-		Weather_OceanParams_BindLua(lua_State* L);
-		~Weather_OceanParams_BindLua();
+		Weather_OceanParams_BindLua(wi::Ocean::OceanParameters* parameter) :parameter(parameter)
+		{
+			BuildBindings();
+		}
+		Weather_OceanParams_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::Ocean::OceanParameters>();
+			parameter = owning.get();
+			BuildBindings();
+		}
 
 		IntProperty dmap_dim;
 		FloatProperty patch_length;
@@ -948,10 +1061,9 @@ namespace wi::lua::scene
 		PropertyFunction(surfaceDetail)
 		PropertyFunction(surfaceDisplacement)
 	};
-	class Weather_OceanParams_Property final : public LuaProperty
+	struct Weather_OceanParams_Property
 	{
-	public:
-		wi::Ocean::OceanParameters* data;
+		wi::Ocean::OceanParameters* data = nullptr;
 		Weather_OceanParams_Property(){}
 		Weather_OceanParams_Property(wi::Ocean::OceanParameters* data) :data(data){}
 		int Get(lua_State* L);
@@ -960,8 +1072,9 @@ namespace wi::lua::scene
 
 	class Weather_AtmosphereParams_BindLua
 	{
+	private:
+		std::unique_ptr<AtmosphereParameters> owning;
 	public:
-		bool owning = false;
 		AtmosphereParameters* parameter = nullptr;
 
 		static const char className[];
@@ -991,9 +1104,16 @@ namespace wi::lua::scene
 			groundAlbedo = VectorProperty(&parameter->groundAlbedo);
 		}
 
-		Weather_AtmosphereParams_BindLua(AtmosphereParameters* parameter) :parameter(parameter) { BuildBindings(); }
-		Weather_AtmosphereParams_BindLua(lua_State* L);
-		~Weather_AtmosphereParams_BindLua();
+		Weather_AtmosphereParams_BindLua(AtmosphereParameters* parameter) :parameter(parameter)
+		{
+			BuildBindings();
+		}
+		Weather_AtmosphereParams_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<AtmosphereParameters>();
+			parameter = owning.get();
+			BuildBindings();
+		}
 
 		FloatProperty bottomRadius;
 		FloatProperty topRadius;
@@ -1036,10 +1156,9 @@ namespace wi::lua::scene
 		PropertyFunction(absorptionExtinction)
 		PropertyFunction(groundAlbedo)
 	};
-	class Weather_AtmosphereParams_Property final : public LuaProperty
+	struct Weather_AtmosphereParams_Property
 	{
-	public:
-		AtmosphereParameters* data;
+		AtmosphereParameters* data = nullptr;
 		Weather_AtmosphereParams_Property(){}
 		Weather_AtmosphereParams_Property(AtmosphereParameters* data) :data(data){}
 		int Get(lua_State* L);
@@ -1048,8 +1167,9 @@ namespace wi::lua::scene
 
 	class Weather_VolumetricCloudParams_BindLua
 	{
+	private:
+		std::unique_ptr<VolumetricCloudParameters> owning;
 	public:
-		bool owning = false;
 		VolumetricCloudParameters* parameter = nullptr;
 
 		static const char className[];
@@ -1095,9 +1215,16 @@ namespace wi::lua::scene
 		}
 
 
-		Weather_VolumetricCloudParams_BindLua(VolumetricCloudParameters* parameter) :parameter(parameter) { BuildBindings(); }
-		Weather_VolumetricCloudParams_BindLua(lua_State* L);
-		~Weather_VolumetricCloudParams_BindLua();
+		Weather_VolumetricCloudParams_BindLua(VolumetricCloudParameters* parameter) : parameter(parameter)
+		{
+			BuildBindings();
+		}
+		Weather_VolumetricCloudParams_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<VolumetricCloudParameters>();
+			parameter = owning.get();
+			BuildBindings();
+		}
 
 		VectorProperty Albedo;
 		FloatProperty CloudAmbientGroundMultiplier;
@@ -1170,10 +1297,9 @@ namespace wi::lua::scene
 		PropertyFunction(CloudGradientLarge)
 
 	};
-	class Weather_VolumetricCloudParams_Property final : public LuaProperty
+	struct Weather_VolumetricCloudParams_Property
 	{
-	public:
-		VolumetricCloudParameters* data;
+		VolumetricCloudParameters* data = nullptr;
 		Weather_VolumetricCloudParams_Property(){}
 		Weather_VolumetricCloudParams_Property(VolumetricCloudParameters* data) :data(data){}
 		int Get(lua_State* L);
@@ -1182,8 +1308,9 @@ namespace wi::lua::scene
 
 	class WeatherComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::WeatherComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::WeatherComponent* component = nullptr;
 
 		static const char className[];
@@ -1218,9 +1345,16 @@ namespace wi::lua::scene
 			volumetricCloudsWeatherMapName = StringProperty(&component->volumetricCloudsWeatherMapName);
 		}
 
-		WeatherComponent_BindLua(wi::scene::WeatherComponent* component) :component(component) { BuildBindings(); }
-		WeatherComponent_BindLua(lua_State* L);
-		~WeatherComponent_BindLua();
+		WeatherComponent_BindLua(wi::scene::WeatherComponent* component) :component(component)
+		{
+			BuildBindings();
+		}
+		WeatherComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::WeatherComponent>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		VectorProperty sunColor;
 		VectorProperty sunDirection;
@@ -1307,8 +1441,9 @@ namespace wi::lua::scene
 	
 	class SoundComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::SoundComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::SoundComponent* component = nullptr;
 
 		static const char className[];
@@ -1321,9 +1456,16 @@ namespace wi::lua::scene
 			Volume = FloatProperty(&component->volume);
 		}
 
-		SoundComponent_BindLua(wi::scene::SoundComponent* component) :component(component) { BuildBindings(); }
-		SoundComponent_BindLua(lua_State* L);
-		~SoundComponent_BindLua();
+		SoundComponent_BindLua(wi::scene::SoundComponent* component) :component(component)
+		{
+			BuildBindings();
+		}
+		SoundComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::SoundComponent>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		StringProperty Filename;
 		FloatProperty Volume;
@@ -1343,8 +1485,9 @@ namespace wi::lua::scene
 
 	class ColliderComponent_BindLua
 	{
+	private:
+		std::unique_ptr<wi::scene::ColliderComponent> owning;
 	public:
-		bool owning = false;
 		wi::scene::ColliderComponent* component = nullptr;
 
 		static const char className[];
@@ -1359,9 +1502,16 @@ namespace wi::lua::scene
 			Tail = VectorProperty(&component->tail);
 		}
 
-		ColliderComponent_BindLua(wi::scene::ColliderComponent* component) :component(component) { BuildBindings(); }
-		ColliderComponent_BindLua(lua_State* L);
-		~ColliderComponent_BindLua();
+		ColliderComponent_BindLua(wi::scene::ColliderComponent* component) :component(component)
+		{
+			BuildBindings();
+		}
+		ColliderComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::ColliderComponent>();
+			component = owning.get();
+			BuildBindings();
+		}
 
 		IntProperty Shape;
 		FloatProperty Radius;

@@ -7,9 +7,10 @@
 namespace wi::lua
 {
 
-	class Vector_BindLua : public XMFLOAT4
+	class Vector_BindLua
 	{
 	public:
+		XMFLOAT4 data = {};
 		static const char className[];
 		static Luna<Vector_BindLua>::FunctionType methods[];
 		static Luna<Vector_BindLua>::PropertyType properties[];
@@ -54,14 +55,13 @@ namespace wi::lua
 
 		static void Bind();
 	};
-	class VectorProperty final : public LuaProperty
+	struct VectorProperty
 	{
 	public:
 		VectorProperty(){}
 		VectorProperty(XMFLOAT2* data): data_f2(data) {}
 		VectorProperty(XMFLOAT3* data): data_f3(data) {}
 		VectorProperty(XMFLOAT4* data): data_f4(data) {}
-		VectorProperty(XMVECTOR* data): data_v(data) {}
 		
 		int Get(lua_State*L);
 		int Set(lua_State*L);
@@ -69,12 +69,12 @@ namespace wi::lua
 		XMFLOAT2* data_f2 = nullptr;
 		XMFLOAT3* data_f3 = nullptr;
 		XMFLOAT4* data_f4 = nullptr;
-		XMVECTOR* data_v = nullptr;
 	};
 
-	class Matrix_BindLua : public XMFLOAT4X4
+	class Matrix_BindLua
 	{
 	public:
+		XMFLOAT4X4 data = wi::math::IDENTITY_MATRIX;
 		static const char className[];
 		static Luna<Matrix_BindLua>::FunctionType methods[];
 		static Luna<Matrix_BindLua>::PropertyType properties[];
@@ -103,17 +103,15 @@ namespace wi::lua
 
 		static void Bind();
 	};
-	class MatrixProperty final : public LuaProperty
+	struct MatrixProperty
 	{
 	public:
 		MatrixProperty(){}
 		MatrixProperty(XMFLOAT4X4* data): data_f4x4(data) {}
-		MatrixProperty(XMMATRIX* data): data_m(data) {}
 		
 		int Get(lua_State*L);
 		int Set(lua_State*L);
 	private:
-		XMFLOAT4X4* data_f4x4;
-		XMMATRIX* data_m;
+		XMFLOAT4X4* data_f4x4 = nullptr;
 	};
 }

@@ -7,9 +7,9 @@
 
 namespace wi::initializer
 {
-	bool initializationStarted = false;
-	wi::jobsystem::context ctx;
-	wi::Timer timer;
+	static bool initializationStarted = false;
+	static wi::jobsystem::context ctx;
+	static wi::Timer timer;
 	static std::atomic_bool systems[INITIALIZED_SYSTEM_COUNT]{};
 
 	void InitializeComponentsImmediate()

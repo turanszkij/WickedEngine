@@ -101,7 +101,7 @@ namespace wi::lua
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vec != nullptr)
 			{
-				wi::input::SetPointer(*vec);
+				wi::input::SetPointer(vec->data);
 			}
 			else
 				wi::lua::SError(L, "SetPointer(Vector props) argument is not a Vector!");
@@ -348,7 +348,7 @@ namespace wi::lua
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vec != nullptr)
 			{
-				feedback.led_color = wi::Color::fromFloat4(*vec);
+				feedback.led_color = wi::Color::fromFloat4(vec->data);
 			}
 			else
 			{

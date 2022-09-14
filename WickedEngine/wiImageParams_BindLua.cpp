@@ -156,7 +156,7 @@ namespace wi::lua
 			Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vector != nullptr)
 			{
-				XMStoreFloat3(&params.pos, XMLoadFloat4(vector));
+				XMStoreFloat3(&params.pos, XMLoadFloat4(&vector->data));
 			}
 		}
 		else
@@ -173,7 +173,7 @@ namespace wi::lua
 			Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vector != nullptr)
 			{
-				XMStoreFloat2(&params.siz, XMLoadFloat4(vector));
+				XMStoreFloat2(&params.siz, XMLoadFloat4(&vector->data));
 			}
 		}
 		else
@@ -190,7 +190,7 @@ namespace wi::lua
 			Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vector != nullptr)
 			{
-				XMStoreFloat2(&params.pivot, XMLoadFloat4(vector));
+				XMStoreFloat2(&params.pivot, XMLoadFloat4(&vector->data));
 			}
 		}
 		else
@@ -207,7 +207,7 @@ namespace wi::lua
 			Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (param != nullptr)
 			{
-				XMStoreFloat4(&params.color, XMLoadFloat4(param));
+				XMStoreFloat4(&params.color, XMLoadFloat4(&param->data));
 			}
 		}
 		else
@@ -329,7 +329,7 @@ namespace wi::lua
 			Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vector != nullptr)
 			{
-				XMStoreFloat2(&params.texOffset, XMLoadFloat4(vector));
+				XMStoreFloat2(&params.texOffset, XMLoadFloat4(&vector->data));
 			}
 		}
 		else
@@ -346,7 +346,7 @@ namespace wi::lua
 			Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vector != nullptr)
 			{
-				XMStoreFloat2(&params.texOffset2, XMLoadFloat4(vector));
+				XMStoreFloat2(&params.texOffset2, XMLoadFloat4(&vector->data));
 			}
 		}
 		else
@@ -364,7 +364,7 @@ namespace wi::lua
 			if (vector != nullptr)
 			{
 				XMFLOAT4 drawrect;
-				XMStoreFloat4(&drawrect, XMLoadFloat4(vector));
+				XMStoreFloat4(&drawrect, XMLoadFloat4(&vector->data));
 				params.enableDrawRect(drawrect);
 			}
 		}
@@ -383,7 +383,7 @@ namespace wi::lua
 			if (vector != nullptr)
 			{
 				XMFLOAT4 drawrect2;
-				XMStoreFloat4(&drawrect2, XMLoadFloat4(vector));
+				XMStoreFloat4(&drawrect2, XMLoadFloat4(&vector->data));
 				params.enableDrawRect2(drawrect2);
 			}
 		}

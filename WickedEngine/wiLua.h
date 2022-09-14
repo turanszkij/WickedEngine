@@ -124,17 +124,9 @@ namespace wi::lua
 	//push null to lua stack
 	void SSetNull(lua_State* L);
 
-	//get-setters template for custom types
-	class LuaProperty
-	{
-	public:
-		virtual int Get(lua_State*L) = 0;
-		virtual int Set(lua_State*L) = 0;
-	};
 	//get-setters for int type
-	class IntProperty final : public LuaProperty
+	struct IntProperty
 	{
-	public:
 		int *data = nullptr;
 		IntProperty(){}
 		IntProperty(int* data): data(data) {}
@@ -142,9 +134,8 @@ namespace wi::lua
 		int Set(lua_State* L);
 	};
 	//get-setters for long type
-	class LongProperty final : public LuaProperty
+	struct LongProperty
 	{
-	public:
 		long* data = nullptr;
 		LongProperty(){}
 		LongProperty(long* data): data(data) {}
@@ -152,9 +143,8 @@ namespace wi::lua
 		int Set(lua_State* L);
 	};
 	//get-setters for long long type
-	class LongLongProperty final : public LuaProperty
+	struct LongLongProperty
 	{
-	public:
 		long long* data = nullptr;
 		LongLongProperty(){}
 		LongLongProperty(long long* data): data(data) {}
@@ -162,9 +152,8 @@ namespace wi::lua
 		int Set(lua_State* L);
 	};
 	//get-setters for int type
-	class FloatProperty final : public LuaProperty
+	struct FloatProperty
 	{
-	public:
 		float* data = nullptr;
 		FloatProperty(){}
 		FloatProperty(float* data): data(data) {}
@@ -172,9 +161,8 @@ namespace wi::lua
 		int Set(lua_State* L);
 	};
 	//get-setters for double type
-	class DoubleProperty final : public LuaProperty
+	struct DoubleProperty
 	{
-	public:
 		double* data = nullptr;
 		DoubleProperty(){}
 		DoubleProperty(double* data): data(data) {}
@@ -182,9 +170,8 @@ namespace wi::lua
 		int Set(lua_State* L);
 	};
 	//get-setters for string type
-	class StringProperty final : public LuaProperty
+	struct StringProperty
 	{
-	public:
 		std::string* data = nullptr;
 		StringProperty(){}
 		StringProperty(std::string* data): data(data) {}
@@ -192,9 +179,8 @@ namespace wi::lua
 		int Set(lua_State* L);
 	};
 	//get-setters for bool type
-	class BoolProperty final : public LuaProperty
+	struct BoolProperty
 	{
-	public:
 		bool* data = nullptr;
 		BoolProperty(){}
 		BoolProperty(bool* data): data(data) {}

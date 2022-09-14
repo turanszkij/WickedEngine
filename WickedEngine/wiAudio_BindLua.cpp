@@ -371,7 +371,7 @@ namespace wi::lua
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vec != nullptr)
 			{
-				XMStoreFloat3(&soundinstance3D.listenerPos, XMLoadFloat4(vec));
+				XMStoreFloat3(&soundinstance3D.listenerPos, XMLoadFloat4(&vec->data));
 			}
 		}
 		else
@@ -386,7 +386,7 @@ namespace wi::lua
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vec != nullptr)
 			{
-				XMStoreFloat3(&soundinstance3D.listenerUp, XMLoadFloat4(vec));
+				XMStoreFloat3(&soundinstance3D.listenerUp, XMLoadFloat4(&vec->data));
 			}
 		}
 		else
@@ -401,7 +401,7 @@ namespace wi::lua
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vec != nullptr)
 			{
-				XMStoreFloat3(&soundinstance3D.listenerFront, XMLoadFloat4(vec));
+				XMStoreFloat3(&soundinstance3D.listenerFront, XMLoadFloat4(&vec->data));
 			}
 		}
 		else
@@ -416,7 +416,7 @@ namespace wi::lua
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vec != nullptr)
 			{
-				XMStoreFloat3(&soundinstance3D.listenerVelocity, XMLoadFloat4(vec));
+				XMStoreFloat3(&soundinstance3D.listenerVelocity, XMLoadFloat4(&vec->data));
 			}
 		}
 		else
@@ -432,7 +432,7 @@ namespace wi::lua
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vec != nullptr)
 			{
-				XMStoreFloat3(&soundinstance3D.emitterPos, XMLoadFloat4(vec));
+				XMStoreFloat3(&soundinstance3D.emitterPos, XMLoadFloat4(&vec->data));
 			}
 		}
 		else
@@ -447,7 +447,7 @@ namespace wi::lua
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vec != nullptr)
 			{
-				XMStoreFloat3(&soundinstance3D.emitterUp, XMLoadFloat4(vec));
+				XMStoreFloat3(&soundinstance3D.emitterUp, XMLoadFloat4(&vec->data));
 			}
 		}
 		else
@@ -462,7 +462,7 @@ namespace wi::lua
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vec != nullptr)
 			{
-				XMStoreFloat3(&soundinstance3D.emitterFront, XMLoadFloat4(vec));
+				XMStoreFloat3(&soundinstance3D.emitterFront, XMLoadFloat4(&vec->data));
 			}
 		}
 		else
@@ -477,7 +477,7 @@ namespace wi::lua
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vec != nullptr)
 			{
-				XMStoreFloat3(&soundinstance3D.emitterVelocity, XMLoadFloat4(vec));
+				XMStoreFloat3(&soundinstance3D.emitterVelocity, XMLoadFloat4(&vec->data));
 			}
 		}
 		else

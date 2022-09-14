@@ -94,6 +94,7 @@ namespace wi::ecs
 	class ComponentManager_Interface
 	{
 	public:
+		virtual ~ComponentManager_Interface() = default;
 		virtual void Copy(const ComponentManager_Interface& other) = 0;
 		virtual void Merge(ComponentManager_Interface& other) = 0;
 		virtual void Clear() = 0;

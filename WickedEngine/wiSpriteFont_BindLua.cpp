@@ -109,8 +109,8 @@ namespace wi::lua
 			Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (param != nullptr)
 			{
-				font.params.posX = param->x;
-				font.params.posY = param->y;
+				font.params.posX = param->data.x;
+				font.params.posY = param->data.y;
 			}
 			else
 				wi::lua::SError(L, "SetPos(Vector pos) argument is not a vector!");
@@ -127,8 +127,8 @@ namespace wi::lua
 			Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (param != nullptr)
 			{
-				font.params.spacingX = param->x;
-				font.params.spacingY = param->y;
+				font.params.spacingX = param->data.x;
+				font.params.spacingY = param->data.y;
 			}
 			else
 				wi::lua::SError(L, "SetSpacing(Vector spacing) argument is not a vector!");
@@ -160,7 +160,7 @@ namespace wi::lua
 			Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (param != nullptr)
 			{
-				font.params.color = wi::Color::fromFloat4(*param);
+				font.params.color = wi::Color::fromFloat4(param->data);
 			}
 			else
 			{
@@ -180,7 +180,7 @@ namespace wi::lua
 			Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (param != nullptr)
 			{
-				font.params.shadowColor = wi::Color::fromFloat4(*param);
+				font.params.shadowColor = wi::Color::fromFloat4(param->data);
 			}
 			else
 			{
@@ -248,8 +248,8 @@ namespace wi::lua
 			Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (param != nullptr)
 			{
-				font.params.shadow_offset_x = param->x;
-				font.params.shadow_offset_y = param->y;
+				font.params.shadow_offset_x = param->data.x;
+				font.params.shadow_offset_y = param->data.y;
 			}
 			else
 				wi::lua::SError(L, "SetShadowOffset(Vector pos) argument is not a vector!");

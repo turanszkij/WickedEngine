@@ -26,6 +26,7 @@ namespace wi::lua
 		{
 			this->component = &renderpath;
 		}
+		virtual ~RenderPath2D_BindLua() = default;
 
 		int AddSprite(lua_State* L);
 		int AddFont(lua_State* L);

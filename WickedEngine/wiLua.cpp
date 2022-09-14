@@ -145,6 +145,8 @@ namespace wi::lua
 		RegisterFunc("dofile", Internal_DoFile);
 		RunText(wiLua_Globals);
 
+		Vector_BindLua::Bind();
+		Matrix_BindLua::Bind();
 		Application_BindLua::Bind();
 		Canvas_BindLua::Bind();
 		RenderPath_BindLua::Bind();
@@ -158,8 +160,6 @@ namespace wi::lua
 		ImageParams_BindLua::Bind();
 		SpriteAnim_BindLua::Bind();
 		scene::Bind();
-		Vector_BindLua::Bind();
-		Matrix_BindLua::Bind();
 		Input_BindLua::Bind();
 		SpriteFont_BindLua::Bind();
 		backlog::Bind();

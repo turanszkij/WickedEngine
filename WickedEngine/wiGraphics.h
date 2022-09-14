@@ -683,6 +683,8 @@ namespace wi::graphics
 	{
 		std::shared_ptr<void> internal_state;
 		inline bool IsValid() const { return internal_state.get() != nullptr; }
+
+		virtual ~GraphicsDeviceChild() = default;
 	};
 
 	struct Sampler : public GraphicsDeviceChild

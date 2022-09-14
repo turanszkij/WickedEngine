@@ -119,7 +119,7 @@ namespace wi::lua
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vec != nullptr)
 			{
-				XMStoreFloat3(&anim.vel, XMLoadFloat4(vec));
+				XMStoreFloat3(&anim.vel, XMLoadFloat4(&vec->data));
 			}
 			else
 			{
