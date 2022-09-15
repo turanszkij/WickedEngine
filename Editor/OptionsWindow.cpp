@@ -728,6 +728,10 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_ARMATURE " ";
 	}
+	if (scene.humanoids.Contains(entity))
+	{
+		item.name += ICON_HUMANOID " ";
+	}
 	if (scene.lights.Contains(entity))
 	{
 		const LightComponent* light = scene.lights.GetComponent(entity);
@@ -772,10 +776,6 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	if (scene.expressions.Contains(entity))
 	{
 		item.name += ICON_EXPRESSION " ";
-	}
-	if (scene.humanoids.Contains(entity))
-	{
-		item.name += ICON_HUMANOID " ";
 	}
 	bool bone_found = false;
 	for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
@@ -1032,19 +1032,19 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
-	if (has_flag(filter, Filter::Expression))
-	{
-		for (size_t i = 0; i < scene.expressions.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.expressions.GetEntity(i), 0);
-		}
-	}
-
 	if (has_flag(filter, Filter::Humanoid))
 	{
 		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
 		{
 			PushToEntityTree(scene.humanoids.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::Expression))
+	{
+		for (size_t i = 0; i < scene.expressions.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.expressions.GetEntity(i), 0);
 		}
 	}
 

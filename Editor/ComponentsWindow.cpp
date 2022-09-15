@@ -689,19 +689,6 @@ void ComponentsWindow::ResizeLayout()
 		scriptWnd.SetVisible(false);
 	}
 
-	if (scene.expressions.Contains(expressionWnd.entity))
-	{
-		expressionWnd.SetVisible(true);
-		expressionWnd.SetPos(pos);
-		expressionWnd.SetSize(XMFLOAT2(width, expressionWnd.GetScale().y));
-		pos.y += expressionWnd.GetSize().y;
-		pos.y += padding;
-	}
-	else
-	{
-		expressionWnd.SetVisible(false);
-	}
-
 	if (scene.armatures.Contains(armatureWnd.entity))
 	{
 		armatureWnd.SetVisible(true);
@@ -726,6 +713,19 @@ void ComponentsWindow::ResizeLayout()
 	else
 	{
 		humanoidWnd.SetVisible(false);
+	}
+
+	if (scene.expressions.Contains(expressionWnd.entity))
+	{
+		expressionWnd.SetVisible(true);
+		expressionWnd.SetPos(pos);
+		expressionWnd.SetSize(XMFLOAT2(width, expressionWnd.GetScale().y));
+		pos.y += expressionWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		expressionWnd.SetVisible(false);
 	}
 
 	if (scene.terrains.Contains(terrainWnd.entity))

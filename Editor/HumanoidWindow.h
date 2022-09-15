@@ -16,6 +16,9 @@ public:
 	wi::gui::Label infoLabel;
 	wi::gui::CheckBox lookatMouseCheckBox;
 	wi::gui::CheckBox lookatCheckBox;
+	wi::gui::Slider headRotMaxXSlider;
+	wi::gui::Slider headRotMaxYSlider;
+	wi::gui::Slider headRotSpeedSlider;
 	wi::gui::TreeList boneList;
 
 	void Update(const wi::Canvas& canvas, float dt) override;

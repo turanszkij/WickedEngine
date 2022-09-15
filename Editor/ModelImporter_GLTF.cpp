@@ -1625,7 +1625,7 @@ void Import_Extension_VRM(LoaderState& state)
 			{
 				entity = CreateEntity();
 				state.scene->Component_Attach(entity, state.rootEntity);
-				state.scene->names.Create(entity) = state.name + "blendShapeMaster";
+				state.scene->names.Create(entity) = "blendShapeMaster";
 			}
 			ExpressionComponent& component = state.scene->expressions.Create(entity);
 
@@ -2151,6 +2151,41 @@ void Import_Extension_VRM(LoaderState& state)
 				}
 			}
 		}
+
+#if 0 // todo toon shading parameters
+		if (ext_vrm->second.Has("materialProperties"))
+		{
+			const auto& materialProperties = ext_vrm->second.Get("materialProperties");
+
+			for (size_t material_index = 0; material_index < materialProperties.ArrayLen(); ++material_index)
+			{
+				const auto& material = materialProperties.Get(int(material_index));
+				MaterialComponent* component = nullptr;
+
+				if (material.Has("name"))
+				{
+					const auto& value = material.Get("name");
+					const std::string& name = value.Get<std::string>();
+					Entity entity = state.scene->Entity_FindByName(name);
+					component = state.scene->materials.GetComponent(entity);
+				}
+
+				if (component != nullptr)
+				{
+					if (material.Has("shader"))
+					{
+						const auto& value = material.Get("shader");
+						const std::string& name = wi::helper::toUpper(value.Get<std::string>());
+						if (!name.compare("VRM/MTOON"))
+						{
+							component->shaderType = MaterialComponent::SHADERTYPE_CARTOON;
+						}
+					}
+				}
+			}
+		}
+#endif
+
 	}
 
 }

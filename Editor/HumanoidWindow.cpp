@@ -10,7 +10,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_HUMANOID " Humanoid", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 350));
+	SetSize(XMFLOAT2(670, 400));
 
 	closeButton.SetTooltip("Delete HumanoidComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -53,6 +53,45 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	lookatMouseCheckBox.SetSize(XMFLOAT2(hei, hei));
 	AddWidget(&lookatMouseCheckBox);
 	lookatMouseCheckBox.SetCheck(true);
+
+	headRotMaxXSlider.Create(0, 90, 60, 180, "Head horizontal: ");
+	headRotMaxXSlider.SetTooltip("Limit horizontal head movement (input in degrees)");
+	headRotMaxXSlider.SetSize(XMFLOAT2(wid, hei));
+	headRotMaxXSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			humanoid->head_rotation_max.x = args.fValue / 180.f * XM_PI;
+		}
+	});
+	AddWidget(&headRotMaxXSlider);
+
+	headRotMaxYSlider.Create(0, 60, 30, 60, "Head vertical: ");
+	headRotMaxYSlider.SetTooltip("Limit vertical head movement (input in degrees)");
+	headRotMaxYSlider.SetSize(XMFLOAT2(wid, hei));
+	headRotMaxYSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			humanoid->head_rotation_max.y = args.fValue / 180.f * XM_PI;
+		}
+	});
+	AddWidget(&headRotMaxYSlider);
+
+	headRotSpeedSlider.Create(0.05f, 1, 0.1f, 1000, "Head speed: ");
+	headRotSpeedSlider.SetTooltip("Adjust head turning speed.");
+	headRotSpeedSlider.SetSize(XMFLOAT2(wid, hei));
+	headRotSpeedSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			humanoid->head_rotation_speed = args.fValue;
+		}
+	});
+	AddWidget(&headRotSpeedSlider);
 
 	boneList.Create("Bones: ");
 	boneList.SetSize(XMFLOAT2(wid, 200));
@@ -115,6 +154,9 @@ void HumanoidWindow::SetEntity(Entity entity)
 		if (humanoid != nullptr)
 		{
 			lookatCheckBox.SetCheck(humanoid->IsLookAtEnabled());
+			headRotMaxXSlider.SetValue(humanoid->head_rotation_max.x / XM_PI * 180.f);
+			headRotMaxYSlider.SetValue(humanoid->head_rotation_max.y / XM_PI * 180.f);
+			headRotSpeedSlider.SetValue(humanoid->head_rotation_speed);
 		}
 	}
 }
@@ -402,6 +444,9 @@ void HumanoidWindow::ResizeLayout()
 	add_fullwidth(infoLabel);
 	add_right(lookatCheckBox);
 	lookatMouseCheckBox.SetPos(XMFLOAT2(lookatCheckBox.GetPos().x - 150, lookatCheckBox.GetPos().y));
+	add(headRotMaxXSlider);
+	add(headRotMaxYSlider);
+	add(headRotSpeedSlider);
 
 	y += jump;
 
