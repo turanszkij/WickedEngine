@@ -37,6 +37,23 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	infoLabel.SetText("This window will stay open even if you select other entities until it is collapsed, so you can select other bone entities.");
 	AddWidget(&infoLabel);
 
+	lookatCheckBox.Create("Look At Enabled: ");
+	lookatCheckBox.SetSize(XMFLOAT2(hei, hei));
+	lookatCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			humanoid->SetLookAtEnabled(args.bValue);
+		}
+		});
+	AddWidget(&lookatCheckBox);
+
+	lookatMouseCheckBox.Create("Look At Mouse: ");
+	lookatMouseCheckBox.SetSize(XMFLOAT2(hei, hei));
+	AddWidget(&lookatMouseCheckBox);
+	lookatMouseCheckBox.SetCheck(true);
+
 	boneList.Create("Bones: ");
 	boneList.SetSize(XMFLOAT2(wid, 200));
 	boneList.SetPos(XMFLOAT2(4, y += step));
@@ -94,6 +111,11 @@ void HumanoidWindow::SetEntity(Entity entity)
 	{
 		this->entity = entity;
 		RefreshBoneList();
+
+		if (humanoid != nullptr)
+		{
+			lookatCheckBox.SetCheck(humanoid->IsLookAtEnabled());
+		}
 	}
 }
 void HumanoidWindow::RefreshBoneList()
@@ -112,12 +134,14 @@ void HumanoidWindow::RefreshBoneList()
 
 			wi::gui::TreeList::Item item;
 			item.userdata = bone;
+			item.level = 1;
 
 			item.name += ICON_BONE " [";
 
 			switch (type)
 			{
 			case wi::scene::HumanoidComponent::HumanoidBone::Hips:
+				boneList.AddItem("Torso"); // grouping item
 				item.name += "Hips";
 				break;
 			case wi::scene::HumanoidComponent::HumanoidBone::Spine:
@@ -133,6 +157,7 @@ void HumanoidWindow::RefreshBoneList()
 				item.name += "Neck";
 				break;
 			case wi::scene::HumanoidComponent::HumanoidBone::Head:
+				boneList.AddItem("Head"); // grouping item
 				item.name += "Head";
 				break;
 			case wi::scene::HumanoidComponent::HumanoidBone::LeftEye:
@@ -145,6 +170,7 @@ void HumanoidWindow::RefreshBoneList()
 				item.name += "Jaw";
 				break;
 			case wi::scene::HumanoidComponent::HumanoidBone::LeftUpperLeg:
+				boneList.AddItem("Legs"); // grouping item
 				item.name += "LeftUpperLeg";
 				break;
 			case wi::scene::HumanoidComponent::HumanoidBone::LeftLowerLeg:
@@ -169,6 +195,7 @@ void HumanoidWindow::RefreshBoneList()
 				item.name += "RightToes";
 				break;
 			case wi::scene::HumanoidComponent::HumanoidBone::LeftShoulder:
+				boneList.AddItem("Arms"); // grouping item
 				item.name += "LeftShoulder";
 				break;
 			case wi::scene::HumanoidComponent::HumanoidBone::LeftUpperArm:
@@ -193,6 +220,7 @@ void HumanoidWindow::RefreshBoneList()
 				item.name += "RightHand";
 				break;
 			case wi::scene::HumanoidComponent::HumanoidBone::LeftThumbMetacarpal:
+				boneList.AddItem("Fingers"); // grouping item
 				item.name += "LeftThumbMetacarpal";
 				break;
 			case wi::scene::HumanoidComponent::HumanoidBone::LeftThumbProximal:
@@ -314,6 +342,26 @@ void HumanoidWindow::RefreshBoneList()
 	}
 }
 
+void HumanoidWindow::Update(const wi::Canvas& canvas, float dt)
+{
+	wi::gui::Window::Update(canvas, dt);
+
+	if (lookatMouseCheckBox.GetCheck())
+	{
+		Scene& scene = editor->GetCurrentScene();
+		const CameraComponent& camera = editor->GetCurrentEditorScene().camera;
+		const wi::input::MouseState& mouse = wi::input::GetMouseState();
+		wi::primitive::Ray ray = wi::renderer::GetPickRay((long)mouse.position.x, (long)mouse.position.y, canvas, camera);
+		XMFLOAT3 lookAt;
+		XMStoreFloat3(&lookAt, XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction)); // look at near plane position
+
+		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
+		{
+			HumanoidComponent& humanoid = scene.humanoids[i];
+			humanoid.lookAt = lookAt;
+		}
+	}
+}
 void HumanoidWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
@@ -352,6 +400,8 @@ void HumanoidWindow::ResizeLayout()
 	};
 
 	add_fullwidth(infoLabel);
+	add_right(lookatCheckBox);
+	lookatMouseCheckBox.SetPos(XMFLOAT2(lookatCheckBox.GetPos().x - 150, lookatCheckBox.GetPos().y));
 
 	y += jump;
 

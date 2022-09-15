@@ -232,6 +232,8 @@ namespace wi::scene
 
 		wi::jobsystem::Wait(ctx); // dependencies
 
+		RunHumanoidUpdateSystem(ctx);
+
 		RunInverseKinematicsUpdateSystem(ctx);
 
 		RunColliderUpdateSystem(ctx);
@@ -2135,6 +2137,115 @@ namespace wi::scene
 						mesh->dirty_morph = true;
 					}
 				}
+			}
+		}
+	}
+	void Scene::RunHumanoidUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		if (humanoids.GetCount() > 0)
+		{
+			transforms_temp.resize(transforms.GetCount());
+			transforms_temp = transforms.GetComponentArray(); // make copy
+		}
+
+		bool recompute_hierarchy = false;
+		for (size_t i = 0; i < humanoids.GetCount(); ++i)
+		{
+			HumanoidComponent& humanoid = humanoids[i];
+
+			Entity bone = humanoid.bones[size_t(HumanoidComponent::HumanoidBone::Head)];
+			size_t boneIndex = transforms.GetIndex(bone);
+
+			if (boneIndex < transforms_temp.size())
+			{
+				recompute_hierarchy = true;
+				TransformComponent& transform = transforms_temp[boneIndex];
+				XMVECTOR Q = XMQuaternionIdentity();
+
+				if (humanoid.IsLookAtEnabled())
+				{
+					XMVECTOR P = transform.GetPositionV();
+					XMMATRIX W = XMLoadFloat4x4(&transform.world);
+					XMMATRIX InverseW = XMMatrixInverse(nullptr, W);
+					XMVECTOR FORWARD = XMLoadFloat3(&humanoid.default_look_direction);
+					XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
+					XMVECTOR SIDE = XMVectorSet(1, 0, 0, 0);
+					XMVECTOR TARGET = XMVector3TransformNormal(XMVector3Normalize(XMLoadFloat3(&humanoid.lookAt) - P), InverseW);
+					XMVECTOR TARGET_HORIZONTAL = XMVector3Normalize(XMVectorSetY(TARGET, 0));
+					XMVECTOR TARGET_VERTICAL = XMVector3Normalize(XMVectorSetX(TARGET, 0) + FORWARD);
+
+					const float angle_horizontal = wi::math::GetAngle(FORWARD, TARGET_HORIZONTAL, UP, humanoid.head_rotation_max.x);
+					const float angle_vertical = wi::math::GetAngle(FORWARD, TARGET_VERTICAL, SIDE, humanoid.head_rotation_max.y);
+
+					Q = XMQuaternionNormalize(XMQuaternionRotationRollPitchYaw(angle_vertical, angle_horizontal, 0));
+				}
+
+				Q = XMQuaternionSlerp(XMLoadFloat4(&humanoid.lookAtDeltaRotationState), Q, humanoid.head_rotation_speed);
+				Q = XMQuaternionNormalize(Q);
+				XMStoreFloat4(&humanoid.lookAtDeltaRotationState, Q);
+
+				transform.Rotate(Q);
+				transform.UpdateTransform();
+
+#if 0
+				wi::renderer::RenderableLine line;
+				line.color_start = XMFLOAT4(0, 0, 1, 1);
+				line.color_end = XMFLOAT4(0, 1, 0, 1);
+				XMVECTOR E = P + FORWARD;
+				XMStoreFloat3(&line.start, P);
+				XMStoreFloat3(&line.end, E);
+				wi::renderer::DrawLine(line);
+
+				line.color_end = XMFLOAT4(1, 0, 0, 1);
+				E = P + TARGET;
+				XMStoreFloat3(&line.end, E);
+				wi::renderer::DrawLine(line);
+
+				line.color_start = line.color_end = XMFLOAT4(1, 0, 1, 1);
+				E = P + UP;
+				XMStoreFloat3(&line.end, E);
+				wi::renderer::DrawLine(line);
+
+				line.color_start = line.color_end = XMFLOAT4(1, 1, 0, 1);
+				E = P + SIDE;
+				XMStoreFloat3(&line.end, E);
+				wi::renderer::DrawLine(line);
+
+				std::string text = "angle_horizontal = " + std::to_string(angle_horizontal);
+				text += "\nangle_vertical = " + std::to_string(angle_vertical);
+				wi::renderer::DebugTextParams textparams;
+				textparams.flags |= wi::renderer::DebugTextParams::CAMERA_FACING;
+				textparams.flags |= wi::renderer::DebugTextParams::CAMERA_SCALING;
+				textparams.position = humanoid.lookAt;
+				textparams.scaling = 0.8f;
+				wi::renderer::DrawDebugText(text.c_str(), textparams);
+#endif
+			}
+		}
+
+		if (recompute_hierarchy)
+		{
+			for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+			{
+				const HierarchyComponent& parentcomponent = hierarchy[i];
+				Entity entity = hierarchy.GetEntity(i);
+
+				size_t transform_index = transforms.GetIndex(entity);
+				size_t parent_index = transforms.GetIndex(parentcomponent.parentID);
+				if (transform_index != ~0ull && parent_index != ~0ull)
+				{
+					TransformComponent* transform_child = &transforms_temp[transform_index];
+					TransformComponent* transform_parent = &transforms_temp[parent_index];
+					transform_child->UpdateTransform_Parented(*transform_parent);
+				}
+			}
+		}
+		if (humanoids.GetCount() > 0)
+		{
+			for (size_t i = 0; i < transforms.GetCount(); ++i)
+			{
+				// Humanoids shouldn't modify local space, so only update the world matrices!
+				transforms[i].world = transforms_temp[i].world;
 			}
 		}
 	}

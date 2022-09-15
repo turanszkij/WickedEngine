@@ -1899,6 +1899,7 @@ void Import_Extension_VRM(LoaderState& state)
 				state.scene->names.Create(entity) = "humanoid";
 			}
 			HumanoidComponent& component = state.scene->humanoids.Create(entity);
+			component.default_look_direction = XMFLOAT3(0, 0, -1);
 
 			const auto& humanoid = ext_vrm->second.Get("humanoid");
 			if (humanoid.Has("humanBones"))
@@ -2024,19 +2025,23 @@ void Import_Extension_VRM(LoaderState& state)
 						}
 						else if (!type.compare("LEFTTHUMBPROXIMAL"))
 						{
-							component.bones[size_t(HumanoidComponent::HumanoidBone::LeftThumbProximal)] = boneID;
+							// VRM 0.0 thumb proximal = VRM 1.0 thumb metacarpal
+							component.bones[size_t(HumanoidComponent::HumanoidBone::LeftThumbMetacarpal)] = boneID;
 						}
 						else if (!type.compare("RIGHTTHUMBPROXIMAL"))
 						{
-							component.bones[size_t(HumanoidComponent::HumanoidBone::RightThumbProximal)] = boneID;
+							// VRM 0.0 thumb proximal = VRM 1.0 thumb metacarpal
+							component.bones[size_t(HumanoidComponent::HumanoidBone::RightThumbMetacarpal)] = boneID;
 						}
 						else if (!type.compare("LEFTTHUMBINTERMEDIATE"))
 						{
-							component.bones[size_t(HumanoidComponent::HumanoidBone::LeftThumbMetacarpal)] = boneID;
+							// VRM 0.0 thumb intermediate = VRM 1.0 thumb proximal
+							component.bones[size_t(HumanoidComponent::HumanoidBone::LeftThumbProximal)] = boneID;
 						}
 						else if (!type.compare("RIGHTTHUMBINTERMEDIATE"))
 						{
-							component.bones[size_t(HumanoidComponent::HumanoidBone::RightThumbMetacarpal)] = boneID;
+							// VRM 0.0 thumb intermediate = VRM 1.0 thumb proximal
+							component.bones[size_t(HumanoidComponent::HumanoidBone::RightThumbProximal)] = boneID;
 						}
 						else if (!type.compare("LEFTTHUMBDISTAL"))
 						{

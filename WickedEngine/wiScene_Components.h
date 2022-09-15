@@ -1537,8 +1537,9 @@ namespace wi::scene
 		enum FLAGS
 		{
 			NONE = 0,
+			LOOKAT = 1 << 0,
 		};
-		uint32_t _flags = NONE;
+		uint32_t _flags = LOOKAT;
 
 		// https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0-beta/humanoid.md#list-of-humanoid-bones
 		enum class HumanoidBone
@@ -1611,6 +1612,18 @@ namespace wi::scene
 			Count
 		};
 		wi::ecs::Entity bones[size_t(HumanoidBone::Count)] = {};
+
+		constexpr bool IsLookAtEnabled() const { return _flags & LOOKAT; }
+
+		constexpr void SetLookAtEnabled(bool value = true) { if (value) { _flags |= LOOKAT; } else { _flags &= ~LOOKAT; } }
+
+		XMFLOAT3 default_look_direction = XMFLOAT3(0, 0, 1);
+		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
+		float head_rotation_speed = 0.1f;
+
+		// Non-serialized attributes:
+		XMFLOAT3 lookAt = {};
+		XMFLOAT4 lookAtDeltaRotationState = XMFLOAT4(0, 0, 0, 1);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

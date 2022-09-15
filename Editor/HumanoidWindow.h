@@ -14,8 +14,11 @@ public:
 	void RefreshBoneList();
 
 	wi::gui::Label infoLabel;
+	wi::gui::CheckBox lookatMouseCheckBox;
+	wi::gui::CheckBox lookatCheckBox;
 	wi::gui::TreeList boneList;
 
+	void Update(const wi::Canvas& canvas, float dt) override;
 	void ResizeLayout() override;
 };
 

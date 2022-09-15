@@ -1641,6 +1641,9 @@ namespace wi::scene
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
+			archive >> default_look_direction;
+			archive >> head_rotation_max;
+			archive >> head_rotation_speed;
 
 			for (auto& entity : bones)
 			{
@@ -1650,6 +1653,9 @@ namespace wi::scene
 		else
 		{
 			archive << _flags;
+			archive << default_look_direction;
+			archive << head_rotation_max;
+			archive << head_rotation_speed;
 
 			for (auto& entity : bones)
 			{

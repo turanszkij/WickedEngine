@@ -1473,7 +1473,9 @@ namespace wi::scene
 		XMMATRIX _VP = XMMatrixMultiply(_V, _P);
 		XMStoreFloat4x4(&View, _V);
 		XMStoreFloat4x4(&VP, _VP);
-		XMStoreFloat4x4(&InvView, XMMatrixInverse(nullptr, _V));
+		XMMATRIX _InvV = XMMatrixInverse(nullptr, _V);
+		XMStoreFloat4x4(&InvView, _InvV);
+		XMStoreFloat3x3(&rotationMatrix, _InvV);
 		XMStoreFloat4x4(&InvVP, XMMatrixInverse(nullptr, _VP));
 		XMStoreFloat4x4(&Projection, _P);
 		XMStoreFloat4x4(&InvProjection, XMMatrixInverse(nullptr, _P));
