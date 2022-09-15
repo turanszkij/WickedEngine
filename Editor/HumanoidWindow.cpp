@@ -10,7 +10,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_HUMANOID " Humanoid", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 400));
+	SetSize(XMFLOAT2(670, 500));
 
 	closeButton.SetTooltip("Delete HumanoidComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -95,6 +95,27 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&headRotSpeedSlider);
 
+	headSizeSlider.Create(0.5f, 2, 1, 1000, "Head size: ");
+	headSizeSlider.SetTooltip("Adjust head size.");
+	headSizeSlider.SetSize(XMFLOAT2(wid, hei));
+	headSizeSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			Entity bone = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::Head)];
+			TransformComponent* transform = scene.transforms.GetComponent(bone);
+			if (transform != nullptr)
+			{
+				transform->SetDirty();
+				transform->scale_local.x = args.fValue;
+				transform->scale_local.y = args.fValue;
+				transform->scale_local.z = args.fValue;
+			}
+		}
+		});
+	AddWidget(&headSizeSlider);
+
 	boneList.Create("Bones: ");
 	boneList.SetSize(XMFLOAT2(wid, 200));
 	boneList.SetPos(XMFLOAT2(4, y += step));
@@ -159,6 +180,7 @@ void HumanoidWindow::SetEntity(Entity entity)
 			headRotMaxXSlider.SetValue(humanoid->head_rotation_max.x / XM_PI * 180.f);
 			headRotMaxYSlider.SetValue(humanoid->head_rotation_max.y / XM_PI * 180.f);
 			headRotSpeedSlider.SetValue(humanoid->head_rotation_speed);
+			//headSizeSlider.SetValue(humanoid->head_size);
 		}
 	}
 }
@@ -455,6 +477,7 @@ void HumanoidWindow::ResizeLayout()
 	add(headRotMaxXSlider);
 	add(headRotMaxYSlider);
 	add(headRotSpeedSlider);
+	add(headSizeSlider);
 
 	y += jump;
 

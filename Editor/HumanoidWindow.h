@@ -19,6 +19,7 @@ public:
 	wi::gui::Slider headRotMaxXSlider;
 	wi::gui::Slider headRotMaxYSlider;
 	wi::gui::Slider headRotSpeedSlider;
+	wi::gui::Slider headSizeSlider;
 	wi::gui::TreeList boneList;
 
 	void Update(const wi::Canvas& canvas, float dt) override;
