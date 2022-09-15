@@ -556,6 +556,18 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.weatherWnd.default_sky_horizon = dark_point;
 		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
 
+		if ((Theme)args.userdata == Theme::Bright)
+		{
+			editor->inactiveEntityColor = theme_color_focus;
+			editor->hoveredEntityColor = theme_color_focus;
+		}
+		else
+		{
+			editor->inactiveEntityColor = theme.font.color;
+			editor->hoveredEntityColor = theme.font.color;
+		}
+		editor->inactiveEntityColor.setA(150);
+
 		});
 	AddWidget(&themeCombo);
 
