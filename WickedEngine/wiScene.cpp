@@ -1972,7 +1972,7 @@ namespace wi::scene
 					if (expression_mastering.blink_timer >= 1 + all_blink_length)
 					{
 						expression.weight = 0;
-						expression_mastering.blink_timer = 0;
+						expression_mastering.blink_timer = -wi::random::GetRandom(0.0f, 1.0f);
 					}
 					expression.SetDirty();
 				}
@@ -2019,7 +2019,7 @@ namespace wi::scene
 				}
 				if (expression_mastering.look_timer >= 1 + expression_mastering.look_length * expression_mastering.look_frequency)
 				{
-					expression_mastering.look_timer = 0;
+					expression_mastering.look_timer = -wi::random::GetRandom(0.0f, 1.0f);
 				}
 			}
 
@@ -2481,14 +2481,17 @@ namespace wi::scene
 			//	apply scaling to radius:
 			XMFLOAT3 scale = transform.GetScale();
 			const float hitRadius = spring.hitRadius * std::max(scale.x, std::max(scale.y, scale.z));
+			wi::primitive::Sphere tail_sphere;
+			XMStoreFloat3(&tail_sphere.center, tail_next);
+			tail_sphere.radius = hitRadius;
 
 			for (size_t collider_index = 0; collider_index < colliders_cpu.size(); ++collider_index)
 			{
+				if (!aabb_colliders_cpu[collider_index].intersects(tail_sphere))
+					continue;
+
 				const ColliderComponent& collider = colliders_cpu[collider_index];
 
-				wi::primitive::Sphere tail_sphere;
-				XMStoreFloat3(&tail_sphere.center, tail_next); // tail_sphere center can change within loop!
-				tail_sphere.radius = hitRadius;
 				float dist = 0;
 				XMFLOAT3 direction = {};
 				switch (collider.shape)
@@ -2515,6 +2518,9 @@ namespace wi::scene
 						// Limit offset to keep distance from parent:
 						tail_next = position_root + to_tail * boneLength;
 					}
+
+					XMStoreFloat3(&tail_sphere.center, tail_next);
+					tail_sphere.radius = hitRadius;
 				}
 			}
 #endif
