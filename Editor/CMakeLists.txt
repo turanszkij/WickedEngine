@@ -39,6 +39,7 @@ set (SOURCE_FILES
 	OptionsWindow.cpp
 	ComponentsWindow.cpp
 	TerrainWindow.cpp
+	HumanoidWindow.cpp
 	xatlas.cpp
 )
 

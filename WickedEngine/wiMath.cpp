@@ -104,15 +104,18 @@ namespace wi::math
 		}
 		return angle;
 	}
-	float GetAngle(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT3& axis)
+	float GetAngle(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT3& axis, float max)
 	{
 		XMVECTOR A = XMLoadFloat3(&a);
 		XMVECTOR B = XMLoadFloat3(&b);
-		float dp = XMVectorGetX(XMVector3Dot(A, B));
-		dp = wi::math::Clamp(dp, -1, 1);
-		float angle = std::acos(dp);
-		XMVECTOR CROSS = XMVector3Cross(A, B);
-		if (XMVectorGetX(XMVector3Dot(CROSS, XMLoadFloat3(&axis))) < 0)
+		XMVECTOR AXIS = XMLoadFloat3(&axis);
+		return GetAngle(A, B, AXIS, max);
+	}
+	float GetAngle(XMVECTOR A, XMVECTOR B, XMVECTOR AXIS, float max)
+	{
+		float angle = XMVectorGetX(XMVector3AngleBetweenVectors(A, B));
+		angle = std::min(angle, max);
+		if (XMVectorGetX(XMVector3Dot(XMVector3Cross(A, B), AXIS)) < 0)
 		{
 			angle = XM_2PI - angle;
 		}

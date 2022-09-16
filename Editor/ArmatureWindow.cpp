@@ -145,11 +145,11 @@ void ArmatureWindow::RefreshBoneList()
 			const NameComponent* name = scene.names.GetComponent(bone);
 			if (name == nullptr)
 			{
-				item.name += "[no_name] " + std::to_string(entity);
+				item.name += "[no_name] " + std::to_string(bone);
 			}
 			else if (name->name.empty())
 			{
-				item.name += "[name_empty] " + std::to_string(entity);
+				item.name += "[name_empty] " + std::to_string(bone);
 			}
 			else
 			{

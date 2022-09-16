@@ -99,7 +99,9 @@ KHR_lights_punctual
 GLTF 2.0 - VRM 0.0 extensions supported:
 VRM_secondaryAnimation
 VRM_blendShapeMaster
+VRM_humanoid
 
 GLTF 2.0 - VRM 1.0 extensions supported:
 VRMC_springBone
 VRMC_vrm_expressions
+VRMC_vrm_humanoid

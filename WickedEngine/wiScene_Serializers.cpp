@@ -1636,6 +1636,33 @@ namespace wi::scene
 			}
 		}
 	}
+	void HumanoidComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> default_look_direction;
+			archive >> head_rotation_max;
+			archive >> head_rotation_speed;
+
+			for (auto& entity : bones)
+			{
+				SerializeEntity(archive, entity, seri);
+			}
+		}
+		else
+		{
+			archive << _flags;
+			archive << default_look_direction;
+			archive << head_rotation_max;
+			archive << head_rotation_speed;
+
+			for (auto& entity : bones)
+			{
+				SerializeEntity(archive, entity, seri);
+			}
+		}
+	}
 
 	void Scene::Serialize(wi::Archive& archive)
 	{

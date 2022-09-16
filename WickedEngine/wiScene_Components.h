@@ -1531,4 +1531,104 @@ namespace wi::scene
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
+
+	struct HumanoidComponent
+	{
+		enum FLAGS
+		{
+			NONE = 0,
+			LOOKAT = 1 << 0,
+		};
+		uint32_t _flags = LOOKAT;
+
+		// https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0-beta/humanoid.md#list-of-humanoid-bones
+		enum class HumanoidBone
+		{
+			// Torso:
+			Hips,			// Required
+			Spine,			// Required
+			Chest,
+			UpperChest,
+			Neck,
+
+			// Head:
+			Head,			// Required
+			LeftEye,
+			RightEye,
+			Jaw,
+
+			// Leg:
+			LeftUpperLeg,	// Required
+			LeftLowerLeg,	// Required
+			LeftFoot,		// Required
+			LeftToes,
+			RightUpperLeg,	// Required
+			RightLowerLeg,	// Required
+			RightFoot,		// Required
+			RightToes,
+
+			// Arm:
+			LeftShoulder,
+			LeftUpperArm,	// Required
+			LeftLowerArm,	// Required
+			LeftHand,		// Required
+			RightShoulder,
+			RightUpperArm,	// Required
+			RightLowerArm,	// Required
+			RightHand,		// Required
+
+			// Finger:
+			LeftThumbMetacarpal,
+			LeftThumbProximal,
+			LeftThumbDistal,
+			LeftIndexProximal,
+			LeftIndexIntermediate,
+			LeftIndexDistal,
+			LeftMiddleProximal,
+			LeftMiddleIntermediate,
+			LeftMiddleDistal,
+			LeftRingProximal,
+			LeftRingIntermediate,
+			LeftRingDistal,
+			LeftLittleProximal,
+			LeftLittleIntermediate,
+			LeftLittleDistal,
+			RightThumbMetacarpal,
+			RightThumbProximal,
+			RightThumbDistal,
+			RightIndexIntermediate,
+			RightIndexDistal,
+			RightIndexProximal,
+			RightMiddleProximal,
+			RightMiddleIntermediate,
+			RightMiddleDistal,
+			RightRingProximal,
+			RightRingIntermediate,
+			RightRingDistal,
+			RightLittleProximal,
+			RightLittleIntermediate,
+			RightLittleDistal,
+
+			Count
+		};
+		wi::ecs::Entity bones[size_t(HumanoidBone::Count)] = {};
+
+		constexpr bool IsLookAtEnabled() const { return _flags & LOOKAT; }
+
+		constexpr void SetLookAtEnabled(bool value = true) { if (value) { _flags |= LOOKAT; } else { _flags &= ~LOOKAT; } }
+
+		XMFLOAT3 default_look_direction = XMFLOAT3(0, 0, 1);
+		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
+		float head_rotation_speed = 0.1f;
+		XMFLOAT2 eye_rotation_max = XMFLOAT2(XM_PI / 20.0f, XM_PI / 20.0f);
+		float eye_rotation_speed = 0.1f;
+
+		// Non-serialized attributes:
+		XMFLOAT3 lookAt = {}; // lookAt target pos, can be set by user
+		XMFLOAT4 lookAtDeltaRotationState_Head = XMFLOAT4(0, 0, 0, 1);
+		XMFLOAT4 lookAtDeltaRotationState_LeftEye = XMFLOAT4(0, 0, 0, 1);
+		XMFLOAT4 lookAtDeltaRotationState_RightEye = XMFLOAT4(0, 0, 0, 1);
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
 }

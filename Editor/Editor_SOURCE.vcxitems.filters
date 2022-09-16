@@ -84,6 +84,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)CameraComponentWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ExpressionWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ArmatureWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)HumanoidWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -132,6 +133,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)CameraComponentWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ExpressionWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ArmatureWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)HumanoidWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

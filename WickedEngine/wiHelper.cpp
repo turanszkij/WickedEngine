@@ -1196,4 +1196,23 @@ namespace wi::helper
 			ms = time_span.count();
 		}
 	}
+
+	void OpenUrl(const std::string& url)
+	{
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		std::string op = "start " + url;
+		int status = system(op.c_str());
+		wi::backlog::post("wi::helper::OpenUrl(" + url + ") returned status: " + std::to_string(status));
+		return;
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+#ifdef PLATFORM_LINUX
+		std::string op = "xdg-open " + url;
+		int status = system(op.c_str());
+		wi::backlog::post("wi::helper::OpenUrl(" + url + ") returned status: " + std::to_string(status));
+		return;
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+		wi::backlog::post("wi::helper::OpenUrl(" + url + "): not implemented for this operating system!", wi::backlog::LogLevel::Warning);
+	}
 }

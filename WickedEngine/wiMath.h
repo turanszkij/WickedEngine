@@ -261,8 +261,12 @@ namespace wi::math
 		return XMVectorGetX(XMVector3Dot(planeNormal, point - planeOrigin));
 	}
 
+	constexpr float RadiansToDegrees(float radians) { return radians / XM_PI * 180.0f; }
+	constexpr float DegreesToRadians(float degrees) { return degrees / 180.0f * XM_PI; }
+
 	float GetAngle(const XMFLOAT2& a, const XMFLOAT2& b);
-	float GetAngle(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT3& axis);
+	float GetAngle(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT3& axis, float max = XM_2PI);
+	float GetAngle(XMVECTOR A, XMVECTOR B, XMVECTOR axis, float max = XM_2PI);
 	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C);
 	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp = false);
 

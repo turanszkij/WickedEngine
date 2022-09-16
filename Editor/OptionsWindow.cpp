@@ -325,6 +325,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem("Collider " ICON_COLLIDER, (uint64_t)Filter::Collider);
 	filterCombo.AddItem("Script " ICON_SCRIPT, (uint64_t)Filter::Script);
 	filterCombo.AddItem("Expression " ICON_EXPRESSION, (uint64_t)Filter::Expression);
+	filterCombo.AddItem("Humanoid " ICON_HUMANOID, (uint64_t)Filter::Humanoid);
 	filterCombo.AddItem("Terrain " ICON_TERRAIN, (uint64_t)Filter::Terrain);
 	filterCombo.SetTooltip("Apply filtering to the Entities");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
@@ -555,6 +556,18 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.weatherWnd.default_sky_horizon = dark_point;
 		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
 
+		if ((Theme)args.userdata == Theme::Bright)
+		{
+			editor->inactiveEntityColor = theme_color_focus;
+			editor->hoveredEntityColor = theme_color_focus;
+		}
+		else
+		{
+			editor->inactiveEntityColor = theme.font.color;
+			editor->hoveredEntityColor = theme.font.color;
+		}
+		editor->inactiveEntityColor.setA(150);
+
 		});
 	AddWidget(&themeCombo);
 
@@ -726,6 +739,10 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	if (scene.armatures.Contains(entity))
 	{
 		item.name += ICON_ARMATURE " ";
+	}
+	if (scene.humanoids.Contains(entity))
+	{
+		item.name += ICON_HUMANOID " ";
 	}
 	if (scene.lights.Contains(entity))
 	{
@@ -1027,11 +1044,27 @@ void OptionsWindow::RefreshEntityTree()
 		}
 	}
 
+	if (has_flag(filter, Filter::Humanoid))
+	{
+		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.humanoids.GetEntity(i), 0);
+		}
+	}
+
 	if (has_flag(filter, Filter::Expression))
 	{
 		for (size_t i = 0; i < scene.expressions.GetCount(); ++i)
 		{
 			PushToEntityTree(scene.expressions.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::Terrain))
+	{
+		for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.terrains.GetEntity(i), 0);
 		}
 	}
 

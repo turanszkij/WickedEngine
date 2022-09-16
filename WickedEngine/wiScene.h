@@ -48,6 +48,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<ColliderComponent>& colliders = componentLibrary.Register<ColliderComponent>("wi::scene::Scene::colliders", 2); // version = 2
 		wi::ecs::ComponentManager<ScriptComponent>& scripts = componentLibrary.Register<ScriptComponent>("wi::scene::Scene::scripts");
 		wi::ecs::ComponentManager<ExpressionComponent>& expressions = componentLibrary.Register<ExpressionComponent>("wi::scene::Scene::expressions");
+		wi::ecs::ComponentManager<HumanoidComponent>& humanoids = componentLibrary.Register<HumanoidComponent>("wi::scene::Scene::humanoids");
 		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 1); // version = 1
 
 		// Non-serialized attributes:
@@ -308,9 +309,7 @@ namespace wi::scene
 		void RunTransformUpdateSystem(wi::jobsystem::context& ctx);
 		void RunHierarchyUpdateSystem(wi::jobsystem::context& ctx);
 		void RunExpressionUpdateSystem(wi::jobsystem::context& ctx);
-		void RunColliderUpdateSystem(wi::jobsystem::context& ctx);
-		void RunSpringUpdateSystem(wi::jobsystem::context& ctx);
-		void RunInverseKinematicsUpdateSystem(wi::jobsystem::context& ctx);
+		void RunProceduralAnimationUpdateSystem(wi::jobsystem::context& ctx);
 		void RunArmatureUpdateSystem(wi::jobsystem::context& ctx);
 		void RunMeshUpdateSystem(wi::jobsystem::context& ctx);
 		void RunMaterialUpdateSystem(wi::jobsystem::context& ctx);

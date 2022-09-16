@@ -56,6 +56,7 @@ public:
 		Expression = 1 << 18,
 		Terrain = 1 << 19,
 		Spring = 1 << 20,
+		Humanoid = 1 << 21,
 
 		All = ~0ull,
 	} filter = Filter::All;

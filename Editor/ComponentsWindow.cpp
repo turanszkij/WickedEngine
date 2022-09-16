@@ -40,6 +40,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	cameraComponentWnd.Create(editor);
 	expressionWnd.Create(editor);
 	armatureWnd.Create(editor);
+	humanoidWnd.Create(editor);
 	terrainWnd.Create(editor);
 
 
@@ -316,6 +317,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&cameraComponentWnd);
 	AddWidget(&expressionWnd);
 	AddWidget(&armatureWnd);
+	AddWidget(&humanoidWnd);
 	AddWidget(&terrainWnd);
 
 	materialWnd.SetVisible(false);
@@ -343,6 +345,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	cameraComponentWnd.SetVisible(false);
 	expressionWnd.SetVisible(false);
 	armatureWnd.SetVisible(false);
+	humanoidWnd.SetVisible(false);
 	terrainWnd.SetVisible(false);
 
 	SetSize(editor->optionsWnd.GetSize());
@@ -686,19 +689,6 @@ void ComponentsWindow::ResizeLayout()
 		scriptWnd.SetVisible(false);
 	}
 
-	if (scene.expressions.Contains(expressionWnd.entity))
-	{
-		expressionWnd.SetVisible(true);
-		expressionWnd.SetPos(pos);
-		expressionWnd.SetSize(XMFLOAT2(width, expressionWnd.GetScale().y));
-		pos.y += expressionWnd.GetSize().y;
-		pos.y += padding;
-	}
-	else
-	{
-		expressionWnd.SetVisible(false);
-	}
-
 	if (scene.armatures.Contains(armatureWnd.entity))
 	{
 		armatureWnd.SetVisible(true);
@@ -710,6 +700,32 @@ void ComponentsWindow::ResizeLayout()
 	else
 	{
 		armatureWnd.SetVisible(false);
+	}
+
+	if (scene.humanoids.Contains(humanoidWnd.entity))
+	{
+		humanoidWnd.SetVisible(true);
+		humanoidWnd.SetPos(pos);
+		humanoidWnd.SetSize(XMFLOAT2(width, humanoidWnd.GetScale().y));
+		pos.y += humanoidWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		humanoidWnd.SetVisible(false);
+	}
+
+	if (scene.expressions.Contains(expressionWnd.entity))
+	{
+		expressionWnd.SetVisible(true);
+		expressionWnd.SetPos(pos);
+		expressionWnd.SetSize(XMFLOAT2(width, expressionWnd.GetScale().y));
+		pos.y += expressionWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		expressionWnd.SetVisible(false);
 	}
 
 	if (scene.terrains.Contains(terrainWnd.entity))
