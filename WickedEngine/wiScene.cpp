@@ -2153,73 +2153,99 @@ namespace wi::scene
 		{
 			HumanoidComponent& humanoid = humanoids[i];
 
-			Entity bone = humanoid.bones[size_t(HumanoidComponent::HumanoidBone::Head)];
-			size_t boneIndex = transforms.GetIndex(bone);
-
-			if (boneIndex < transforms_temp.size())
+			struct LookAtSource
 			{
-				recompute_hierarchy = true;
-				TransformComponent& transform = transforms_temp[boneIndex];
-				XMVECTOR Q = XMQuaternionIdentity();
+				HumanoidComponent::HumanoidBone type;
+				XMFLOAT2* rotation_max;
+				float* rotation_speed;
+				XMFLOAT4* lookAtDeltaRotationState;
+			};
+			LookAtSource sources[] = {
+				{ HumanoidComponent::HumanoidBone::Head, &humanoid.head_rotation_max, &humanoid.head_rotation_speed, &humanoid.lookAtDeltaRotationState_Head },
+				{ HumanoidComponent::HumanoidBone::LeftEye, &humanoid.eye_rotation_max, &humanoid.eye_rotation_speed, &humanoid.lookAtDeltaRotationState_LeftEye },
+				{ HumanoidComponent::HumanoidBone::RightEye, &humanoid.eye_rotation_max, &humanoid.eye_rotation_speed, &humanoid.lookAtDeltaRotationState_RightEye },
+			};
+			for (auto& source : sources)
+			{
+				Entity bone = humanoid.bones[size_t(source.type)];
+				size_t boneIndex = transforms.GetIndex(bone);
 
-				if (humanoid.IsLookAtEnabled())
+				if (boneIndex < transforms_temp.size())
 				{
-					XMVECTOR P = transform.GetPositionV();
+					recompute_hierarchy = true;
+					TransformComponent& transform = transforms_temp[boneIndex];
+					XMVECTOR Q = XMQuaternionIdentity();
+
+					if (humanoid.IsLookAtEnabled())
+					{
+						const HierarchyComponent* hier = hierarchy.GetComponent(bone);
+						size_t parent_index = hier == nullptr ? ~0ull : transforms.GetIndex(hier->parentID);
+						if (parent_index != ~0ull)
+						{
+							const TransformComponent& parent_transform = transforms_temp[parent_index];
+							transform.UpdateTransform_Parented(parent_transform);
+						}
+
+						XMVECTOR P = transform.GetPositionV();
+						XMMATRIX W = XMLoadFloat4x4(&transform.world);
+						XMMATRIX InverseW = XMMatrixInverse(nullptr, W);
+						XMVECTOR FORWARD = XMLoadFloat3(&humanoid.default_look_direction);
+						XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
+						XMVECTOR SIDE = XMVectorSet(1, 0, 0, 0);
+						XMVECTOR TARGET = XMVector3TransformNormal(XMVector3Normalize(XMLoadFloat3(&humanoid.lookAt) - P), InverseW);
+						XMVECTOR TARGET_HORIZONTAL = XMVector3Normalize(XMVectorSetY(TARGET, 0));
+						XMVECTOR TARGET_VERTICAL = XMVector3Normalize(XMVectorSetX(TARGET, 0) + FORWARD);
+
+						const float angle_horizontal = wi::math::GetAngle(FORWARD, TARGET_HORIZONTAL, UP, source.rotation_max->x);
+						const float angle_vertical = wi::math::GetAngle(FORWARD, TARGET_VERTICAL, SIDE, source.rotation_max->y);
+
+						Q = XMQuaternionNormalize(XMQuaternionRotationRollPitchYaw(angle_vertical, angle_horizontal, 0));
+					}
+
+					Q = XMQuaternionSlerp(XMLoadFloat4(source.lookAtDeltaRotationState), Q, *source.rotation_speed);
+					Q = XMQuaternionNormalize(Q);
+					XMStoreFloat4(source.lookAtDeltaRotationState, Q);
+
+					// Local space and world space updated separately:
+					transform.Rotate(Q); // local space for having hierarchy recompute at the end
 					XMMATRIX W = XMLoadFloat4x4(&transform.world);
-					XMMATRIX InverseW = XMMatrixInverse(nullptr, W);
-					XMVECTOR FORWARD = XMLoadFloat3(&humanoid.default_look_direction);
-					XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
-					XMVECTOR SIDE = XMVectorSet(1, 0, 0, 0);
-					XMVECTOR TARGET = XMVector3TransformNormal(XMVector3Normalize(XMLoadFloat3(&humanoid.lookAt) - P), InverseW);
-					XMVECTOR TARGET_HORIZONTAL = XMVector3Normalize(XMVectorSetY(TARGET, 0));
-					XMVECTOR TARGET_VERTICAL = XMVector3Normalize(XMVectorSetX(TARGET, 0) + FORWARD);
-
-					const float angle_horizontal = wi::math::GetAngle(FORWARD, TARGET_HORIZONTAL, UP, humanoid.head_rotation_max.x);
-					const float angle_vertical = wi::math::GetAngle(FORWARD, TARGET_VERTICAL, SIDE, humanoid.head_rotation_max.y);
-
-					Q = XMQuaternionNormalize(XMQuaternionRotationRollPitchYaw(angle_vertical, angle_horizontal, 0));
-				}
-
-				Q = XMQuaternionSlerp(XMLoadFloat4(&humanoid.lookAtDeltaRotationState), Q, humanoid.head_rotation_speed);
-				Q = XMQuaternionNormalize(Q);
-				XMStoreFloat4(&humanoid.lookAtDeltaRotationState, Q);
-
-				transform.Rotate(Q);
-				transform.UpdateTransform();
+					W = XMMatrixRotationQuaternion(Q) * W;
+					XMStoreFloat4x4(&transform.world, W); // world space to have immediate feedback from parent to child (head -> eyes)
 
 #if 0
-				wi::renderer::RenderableLine line;
-				line.color_start = XMFLOAT4(0, 0, 1, 1);
-				line.color_end = XMFLOAT4(0, 1, 0, 1);
-				XMVECTOR E = P + FORWARD;
-				XMStoreFloat3(&line.start, P);
-				XMStoreFloat3(&line.end, E);
-				wi::renderer::DrawLine(line);
+					wi::renderer::RenderableLine line;
+					line.color_start = XMFLOAT4(0, 0, 1, 1);
+					line.color_end = XMFLOAT4(0, 1, 0, 1);
+					XMVECTOR E = P + FORWARD;
+					XMStoreFloat3(&line.start, P);
+					XMStoreFloat3(&line.end, E);
+					wi::renderer::DrawLine(line);
 
-				line.color_end = XMFLOAT4(1, 0, 0, 1);
-				E = P + TARGET;
-				XMStoreFloat3(&line.end, E);
-				wi::renderer::DrawLine(line);
+					line.color_end = XMFLOAT4(1, 0, 0, 1);
+					E = P + TARGET;
+					XMStoreFloat3(&line.end, E);
+					wi::renderer::DrawLine(line);
 
-				line.color_start = line.color_end = XMFLOAT4(1, 0, 1, 1);
-				E = P + UP;
-				XMStoreFloat3(&line.end, E);
-				wi::renderer::DrawLine(line);
+					line.color_start = line.color_end = XMFLOAT4(1, 0, 1, 1);
+					E = P + UP;
+					XMStoreFloat3(&line.end, E);
+					wi::renderer::DrawLine(line);
 
-				line.color_start = line.color_end = XMFLOAT4(1, 1, 0, 1);
-				E = P + SIDE;
-				XMStoreFloat3(&line.end, E);
-				wi::renderer::DrawLine(line);
+					line.color_start = line.color_end = XMFLOAT4(1, 1, 0, 1);
+					E = P + SIDE;
+					XMStoreFloat3(&line.end, E);
+					wi::renderer::DrawLine(line);
 
-				std::string text = "angle_horizontal = " + std::to_string(angle_horizontal);
-				text += "\nangle_vertical = " + std::to_string(angle_vertical);
-				wi::renderer::DebugTextParams textparams;
-				textparams.flags |= wi::renderer::DebugTextParams::CAMERA_FACING;
-				textparams.flags |= wi::renderer::DebugTextParams::CAMERA_SCALING;
-				textparams.position = humanoid.lookAt;
-				textparams.scaling = 0.8f;
-				wi::renderer::DrawDebugText(text.c_str(), textparams);
+					std::string text = "angle_horizontal = " + std::to_string(angle_horizontal);
+					text += "\nangle_vertical = " + std::to_string(angle_vertical);
+					wi::renderer::DebugTextParams textparams;
+					textparams.flags |= wi::renderer::DebugTextParams::CAMERA_FACING;
+					textparams.flags |= wi::renderer::DebugTextParams::CAMERA_SCALING;
+					textparams.position = humanoid.lookAt;
+					textparams.scaling = 0.8f;
+					wi::renderer::DrawDebugText(text.c_str(), textparams);
 #endif
+				}
 			}
 		}
 

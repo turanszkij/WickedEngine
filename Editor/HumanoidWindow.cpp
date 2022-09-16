@@ -64,7 +64,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
 		if (humanoid != nullptr)
 		{
-			humanoid->head_rotation_max.x = args.fValue / 180.f * XM_PI;
+			humanoid->head_rotation_max.x = wi::math::DegreesToRadians(args.fValue);
 		}
 	});
 	AddWidget(&headRotMaxXSlider);
@@ -77,7 +77,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
 		if (humanoid != nullptr)
 		{
-			humanoid->head_rotation_max.y = args.fValue / 180.f * XM_PI;
+			humanoid->head_rotation_max.y = wi::math::DegreesToRadians(args.fValue);
 		}
 	});
 	AddWidget(&headRotMaxYSlider);
@@ -94,6 +94,46 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&headRotSpeedSlider);
+
+
+	eyeRotMaxXSlider.Create(0, 40, 20, 40, "Eye horizontal: ");
+	eyeRotMaxXSlider.SetTooltip("Limit horizontal eye movement (input in degrees)");
+	eyeRotMaxXSlider.SetSize(XMFLOAT2(wid, hei));
+	eyeRotMaxXSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			humanoid->eye_rotation_max.x = wi::math::DegreesToRadians(args.fValue);
+		}
+		});
+	AddWidget(&eyeRotMaxXSlider);
+
+	eyeRotMaxYSlider.Create(0, 30, 15, 30, "Eye vertical: ");
+	eyeRotMaxYSlider.SetTooltip("Limit vertical eye movement (input in degrees)");
+	eyeRotMaxYSlider.SetSize(XMFLOAT2(wid, hei));
+	eyeRotMaxYSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			humanoid->eye_rotation_max.y = wi::math::DegreesToRadians(args.fValue);
+		}
+		});
+	AddWidget(&eyeRotMaxYSlider);
+
+	eyeRotSpeedSlider.Create(0.05f, 1, 0.2f, 1000, "Eye speed: ");
+	eyeRotSpeedSlider.SetTooltip("Adjust eye turning speed.");
+	eyeRotSpeedSlider.SetSize(XMFLOAT2(wid, hei));
+	eyeRotSpeedSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			humanoid->eye_rotation_speed = args.fValue;
+		}
+		});
+	AddWidget(&eyeRotSpeedSlider);
 
 	headSizeSlider.Create(0.5f, 2, 1, 1000, "Head size: ");
 	headSizeSlider.SetTooltip("Adjust head size.");
@@ -177,10 +217,19 @@ void HumanoidWindow::SetEntity(Entity entity)
 		if (humanoid != nullptr)
 		{
 			lookatCheckBox.SetCheck(humanoid->IsLookAtEnabled());
-			headRotMaxXSlider.SetValue(humanoid->head_rotation_max.x / XM_PI * 180.f);
-			headRotMaxYSlider.SetValue(humanoid->head_rotation_max.y / XM_PI * 180.f);
+			headRotMaxXSlider.SetValue(wi::math::RadiansToDegrees(humanoid->head_rotation_max.x));
+			headRotMaxYSlider.SetValue(wi::math::RadiansToDegrees(humanoid->head_rotation_max.y));
 			headRotSpeedSlider.SetValue(humanoid->head_rotation_speed);
-			//headSizeSlider.SetValue(humanoid->head_size);
+			eyeRotMaxXSlider.SetValue(wi::math::RadiansToDegrees(humanoid->eye_rotation_max.x));
+			eyeRotMaxYSlider.SetValue(wi::math::RadiansToDegrees(humanoid->eye_rotation_max.y));
+			eyeRotSpeedSlider.SetValue(humanoid->eye_rotation_speed);
+
+			Entity bone = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::Head)];
+			const TransformComponent* transform = scene.transforms.GetComponent(bone);
+			if (transform != nullptr)
+			{
+				headSizeSlider.SetValue(transform->scale_local.x);
+			}
 		}
 	}
 }
@@ -477,6 +526,9 @@ void HumanoidWindow::ResizeLayout()
 	add(headRotMaxXSlider);
 	add(headRotMaxYSlider);
 	add(headRotSpeedSlider);
+	add(eyeRotMaxXSlider);
+	add(eyeRotMaxYSlider);
+	add(eyeRotSpeedSlider);
 	add(headSizeSlider);
 
 	y += jump;

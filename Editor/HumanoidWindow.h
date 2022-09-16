@@ -19,6 +19,9 @@ public:
 	wi::gui::Slider headRotMaxXSlider;
 	wi::gui::Slider headRotMaxYSlider;
 	wi::gui::Slider headRotSpeedSlider;
+	wi::gui::Slider eyeRotMaxXSlider;
+	wi::gui::Slider eyeRotMaxYSlider;
+	wi::gui::Slider eyeRotSpeedSlider;
 	wi::gui::Slider headSizeSlider;
 	wi::gui::TreeList boneList;
 
