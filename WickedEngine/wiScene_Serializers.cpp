@@ -1644,6 +1644,8 @@ namespace wi::scene
 			archive >> default_look_direction;
 			archive >> head_rotation_max;
 			archive >> head_rotation_speed;
+			archive >> eye_rotation_max;
+			archive >> eye_rotation_speed;
 
 			for (auto& entity : bones)
 			{
@@ -1656,6 +1658,8 @@ namespace wi::scene
 			archive << default_look_direction;
 			archive << head_rotation_max;
 			archive << head_rotation_speed;
+			archive << eye_rotation_max;
+			archive << eye_rotation_speed;
 
 			for (auto& entity : bones)
 			{
