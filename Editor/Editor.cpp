@@ -950,18 +950,44 @@ void EditorComponent::Update(float dt)
 							continue;
 						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 						XMVECTOR a = transform.GetPositionV();
-						XMVECTOR b = a + XMVectorSet(0, 1, 0, 0);
+						XMVECTOR b = a + XMVectorSet(0, 0.1f, 0, 0);
 						// Search for child to connect bone tip:
 						bool child_found = false;
-						for (Entity child : armature.boneCollection)
+						for (size_t h = 0; (h < scene.humanoids.GetCount()) && !child_found; ++h)
 						{
-							const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
-							if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+							const HumanoidComponent& humanoid = scene.humanoids[h];
+							int bodypart = 0;
+							for (Entity child : humanoid.bones)
 							{
-								const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
-								b = child_transform.GetPositionV();
-								child_found = true;
-								break;
+								const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+								if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+								{
+									if (bodypart == int(HumanoidComponent::HumanoidBone::Hips))
+									{
+										// skip root-hip connection
+										child_found = true;
+										break;
+									}
+									const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+									b = child_transform.GetPositionV();
+									child_found = true;
+									break;
+								}
+								bodypart++;
+							}
+						}
+						if (!child_found)
+						{
+							for (Entity child : armature.boneCollection)
+							{
+								const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+								if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+								{
+									const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+									b = child_transform.GetPositionV();
+									child_found = true;
+									break;
+								}
 							}
 						}
 						if (!child_found)
@@ -2143,18 +2169,44 @@ void EditorComponent::Render() const
 								continue;
 							const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 							XMVECTOR a = transform.GetPositionV();
-							XMVECTOR b = a + XMVectorSet(0, 1, 0, 0);
+							XMVECTOR b = a + XMVectorSet(0, 0.1f, 0, 0);
 							// Search for child to connect bone tip:
 							bool child_found = false;
-							for (Entity child : armature.boneCollection)
+							for (size_t h = 0; (h < scene.humanoids.GetCount()) && !child_found; ++h)
 							{
-								const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
-								if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+								const HumanoidComponent& humanoid = scene.humanoids[h];
+								int bodypart = 0;
+								for (Entity child : humanoid.bones)
 								{
-									const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
-									b = child_transform.GetPositionV();
-									child_found = true;
-									break;
+									const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+									if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+									{
+										if (bodypart == int(HumanoidComponent::HumanoidBone::Hips))
+										{
+											// skip root-hip connection
+											child_found = true;
+											break;
+										}
+										const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+										b = child_transform.GetPositionV();
+										child_found = true;
+										break;
+									}
+									bodypart++;
+								}
+							}
+							if (!child_found)
+							{
+								for (Entity child : armature.boneCollection)
+								{
+									const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+									if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+									{
+										const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+										b = child_transform.GetPositionV();
+										child_found = true;
+										break;
+									}
 								}
 							}
 							if (!child_found)
