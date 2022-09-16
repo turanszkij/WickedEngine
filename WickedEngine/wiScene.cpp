@@ -232,13 +232,7 @@ namespace wi::scene
 
 		wi::jobsystem::Wait(ctx); // dependencies
 
-		RunHumanoidUpdateSystem(ctx);
-
-		RunInverseKinematicsUpdateSystem(ctx);
-
-		RunColliderUpdateSystem(ctx);
-
-		RunSpringUpdateSystem(ctx);
+		RunProceduralAnimationUpdateSystem(ctx);
 
 		RunArmatureUpdateSystem(ctx);
 
@@ -2140,15 +2134,104 @@ namespace wi::scene
 			}
 		}
 	}
-	void Scene::RunHumanoidUpdateSystem(wi::jobsystem::context& ctx)
+	void Scene::RunProceduralAnimationUpdateSystem(wi::jobsystem::context& ctx)
 	{
-		if (humanoids.GetCount() > 0)
+		if (dt <= 0)
+			return;
+
+		if (inverse_kinematics.GetCount() > 0 || humanoids.GetCount() > 0)
 		{
 			transforms_temp.resize(transforms.GetCount());
 			transforms_temp = transforms.GetComponentArray(); // make copy
 		}
 
 		bool recompute_hierarchy = false;
+		for (size_t i = 0; i < inverse_kinematics.GetCount(); ++i)
+		{
+			const InverseKinematicsComponent& ik = inverse_kinematics[i];
+			if (ik.IsDisabled())
+			{
+				continue;
+			}
+			Entity entity = inverse_kinematics.GetEntity(i);
+			size_t transform_index = transforms.GetIndex(entity);
+			size_t target_index = transforms.GetIndex(ik.target);
+			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
+			if (transform_index == ~0ull || target_index == ~0ull || hier == nullptr)
+			{
+				continue;
+			}
+			TransformComponent& transform = transforms_temp[transform_index];
+			TransformComponent& target = transforms_temp[target_index];
+
+			const XMVECTOR target_pos = target.GetPositionV();
+			for (uint32_t iteration = 0; iteration < ik.iteration_count; ++iteration)
+			{
+				TransformComponent* stack[32] = {};
+				Entity parent_entity = hier->parentID;
+				TransformComponent* child_transform = &transform;
+				for (uint32_t chain = 0; chain < std::min(ik.chain_length, (uint32_t)arraysize(stack)); ++chain)
+				{
+					recompute_hierarchy = true; // any IK will trigger a full transform hierarchy recompute step at the end(**)
+
+					// stack stores all traversed chain links so far:
+					stack[chain] = child_transform;
+
+					// Compute required parent rotation that moves ik transform closer to target transform:
+					size_t parent_index = transforms.GetIndex(parent_entity);
+					if (parent_index == ~0ull)
+						continue;
+					TransformComponent& parent_transform = transforms_temp[parent_index];
+					const XMVECTOR parent_pos = parent_transform.GetPositionV();
+					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform.GetPositionV() - parent_pos);
+					const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
+					const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_ik, dir_parent_to_target));
+					const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target)));
+					const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
+
+					// parent to world space:
+					parent_transform.ApplyTransform();
+					// rotate parent:
+					parent_transform.Rotate(Q);
+					parent_transform.UpdateTransform();
+					// parent back to local space (if parent has parent):
+					const HierarchyComponent* hier_parent = hierarchy.GetComponent(parent_entity);
+					if (hier_parent != nullptr)
+					{
+						Entity parent_of_parent_entity = hier_parent->parentID;
+						size_t parent_of_parent_index = transforms.GetIndex(parent_of_parent_entity);
+						if (parent_of_parent_index != ~0ull)
+						{
+							const TransformComponent* transform_parent_of_parent = &transforms_temp[parent_of_parent_index];
+							XMMATRIX parent_of_parent_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent_of_parent->world));
+							parent_transform.MatrixTransform(parent_of_parent_inverse);
+							// Do not call UpdateTransform() here, to keep parent world matrix in world space!
+						}
+					}
+
+					// update chain from parent to children:
+					const TransformComponent* recurse_parent = &parent_transform;
+					for (int recurse_chain = (int)chain; recurse_chain >= 0; --recurse_chain)
+					{
+						stack[recurse_chain]->UpdateTransform_Parented(*recurse_parent);
+						recurse_parent = stack[recurse_chain];
+					}
+
+					if (hier_parent == nullptr)
+					{
+						// chain root reached, exit
+						break;
+					}
+
+					// move up in the chain by one:
+					child_transform = &parent_transform;
+					parent_entity = hier_parent->parentID;
+					assert(chain < (uint32_t)arraysize(stack) - 1); // if this is encountered, just extend stack array size
+
+				}
+			}
+		}
+
 		for (size_t i = 0; i < humanoids.GetCount(); ++i)
 		{
 			HumanoidComponent& humanoid = humanoids[i];
@@ -2251,32 +2334,46 @@ namespace wi::scene
 
 		if (recompute_hierarchy)
 		{
-			for (size_t i = 0; i < hierarchy.GetCount(); ++i)
-			{
-				const HierarchyComponent& parentcomponent = hierarchy[i];
-				Entity entity = hierarchy.GetEntity(i);
+			wi::jobsystem::Dispatch(ctx, (uint32_t)hierarchy.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 
-				size_t transform_index = transforms.GetIndex(entity);
-				size_t parent_index = transforms.GetIndex(parentcomponent.parentID);
-				if (transform_index != ~0ull && parent_index != ~0ull)
+				HierarchyComponent& hier = hierarchy[args.jobIndex];
+				Entity entity = hierarchy.GetEntity(args.jobIndex);
+				size_t child_index = transforms.GetIndex(entity);
+				if (child_index == ~0ull)
+					return;
+
+				TransformComponent& transform_child = transforms_temp[child_index];
+				XMMATRIX worldmatrix = transform_child.GetLocalMatrix();
+
+				Entity parentID = hier.parentID;
+				while (parentID != INVALID_ENTITY)
 				{
-					TransformComponent* transform_child = &transforms_temp[transform_index];
-					TransformComponent* transform_parent = &transforms_temp[parent_index];
-					transform_child->UpdateTransform_Parented(*transform_parent);
+					size_t parent_index = transforms.GetIndex(parentID);
+					if (parent_index == ~0ull)
+						break;
+					TransformComponent& transform_parent = transforms_temp[parent_index];
+					worldmatrix *= transform_parent.GetLocalMatrix();
+
+					const HierarchyComponent* hier_recursive = hierarchy.GetComponent(parentID);
+					if (hier_recursive != nullptr)
+					{
+						parentID = hier_recursive->parentID;
+					}
+					else
+					{
+						parentID = INVALID_ENTITY;
+					}
 				}
-			}
+
+				// Now the real (not temp) transform world matrix is updated:
+				XMStoreFloat4x4(&transforms[child_index].world, worldmatrix);
+
+				});
+
+			wi::jobsystem::Wait(ctx);
 		}
-		if (humanoids.GetCount() > 0)
-		{
-			for (size_t i = 0; i < transforms.GetCount(); ++i)
-			{
-				// Humanoids shouldn't modify local space, so only update the world matrices!
-				transforms[i].world = transforms_temp[i].world;
-			}
-		}
-	}
-	void Scene::RunColliderUpdateSystem(wi::jobsystem::context& ctx)
-	{
+
+		// Colliders:
 		aabb_colliders_cpu.clear();
 		colliders_cpu.clear();
 		colliders_gpu.clear();
@@ -2318,23 +2415,23 @@ namespace wi::scene
 				aabb = collider.capsule.getAABB();
 				break;
 			case ColliderComponent::Shape::Plane:
-				{
-					collider.plane.origin = collider.sphere.center;
-					XMVECTOR N = XMVectorSet(0, 1, 0, 0);
-					N = XMVector3Normalize(XMVector3TransformNormal(N, W));
-					XMStoreFloat3(&collider.plane.normal, N);
+			{
+				collider.plane.origin = collider.sphere.center;
+				XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
+				XMStoreFloat3(&collider.plane.normal, N);
 
-					aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
+				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 
-					XMMATRIX PLANE = XMMatrixScaling(collider.radius, 1, collider.radius);
-					PLANE = PLANE * XMMatrixTranslationFromVector(XMLoadFloat3(&collider.offset));
-					PLANE = PLANE * W;
-					aabb = aabb.transform(PLANE);
+				XMMATRIX PLANE = XMMatrixScaling(collider.radius, 1, collider.radius);
+				PLANE = PLANE * XMMatrixTranslationFromVector(XMLoadFloat3(&collider.offset));
+				PLANE = PLANE * W;
+				aabb = aabb.transform(PLANE);
 
-					PLANE = XMMatrixInverse(nullptr, PLANE);
-					XMStoreFloat4x4(&collider.plane.projection, PLANE);
-				}
-				break;
+				PLANE = XMMatrixInverse(nullptr, PLANE);
+				XMStoreFloat4x4(&collider.plane.projection, PLANE);
+			}
+			break;
 			}
 
 			const LayerComponent* layer = layers.GetComponent(entity);
@@ -2353,11 +2450,8 @@ namespace wi::scene
 				colliders_gpu.push_back(collider);
 			}
 		}
-	}
-	void Scene::RunSpringUpdateSystem(wi::jobsystem::context& ctx)
-	{
-		if (dt <= 0)
-			return;
+
+		// Springs:
 		static float time = 0;
 		time += dt;
 		const XMVECTOR windDir = XMLoadFloat3(&weather.windDirection);
@@ -2538,131 +2632,6 @@ namespace wi::scene
 			tmp.UpdateTransform();
 			transform.world = tmp.world; // only store world space result, not modifying actual local space!
 
-		}
-	}
-	void Scene::RunInverseKinematicsUpdateSystem(wi::jobsystem::context& ctx)
-	{
-		if (inverse_kinematics.GetCount() > 0)
-		{
-			transforms_temp.resize(transforms.GetCount());
-			transforms_temp = transforms.GetComponentArray(); // make copy
-		}
-
-		bool recompute_hierarchy = false;
-		for (size_t i = 0; i < inverse_kinematics.GetCount(); ++i)
-		{
-			const InverseKinematicsComponent& ik = inverse_kinematics[i];
-			if (ik.IsDisabled())
-			{
-				continue;
-			}
-			Entity entity = inverse_kinematics.GetEntity(i);
-			size_t transform_index = transforms.GetIndex(entity);
-			size_t target_index = transforms.GetIndex(ik.target);
-			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
-			if (transform_index == ~0ull || target_index == ~0ull || hier == nullptr)
-			{
-				continue;
-			}
-			TransformComponent& transform = transforms_temp[transform_index];
-			TransformComponent& target = transforms_temp[target_index];
-
-			const XMVECTOR target_pos = target.GetPositionV();
-			for (uint32_t iteration = 0; iteration < ik.iteration_count; ++iteration)
-			{
-				TransformComponent* stack[32] = {};
-				Entity parent_entity = hier->parentID;
-				TransformComponent* child_transform = &transform;
-				for (uint32_t chain = 0; chain < std::min(ik.chain_length, (uint32_t)arraysize(stack)); ++chain)
-				{
-					recompute_hierarchy = true; // any IK will trigger a full transform hierarchy recompute step at the end(**)
-
-					// stack stores all traversed chain links so far:
-					stack[chain] = child_transform;
-
-					// Compute required parent rotation that moves ik transform closer to target transform:
-					size_t parent_index = transforms.GetIndex(parent_entity);
-					if (parent_index == ~0ull)
-						continue;
-					TransformComponent& parent_transform = transforms_temp[parent_index];
-					const XMVECTOR parent_pos = parent_transform.GetPositionV();
-					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform.GetPositionV() - parent_pos);
-					const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
-					const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_ik, dir_parent_to_target));
-					const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target)));
-					const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
-
-					// parent to world space:
-					parent_transform.ApplyTransform();
-					// rotate parent:
-					parent_transform.Rotate(Q);
-					parent_transform.UpdateTransform();
-					// parent back to local space (if parent has parent):
-					const HierarchyComponent* hier_parent = hierarchy.GetComponent(parent_entity);
-					if (hier_parent != nullptr)
-					{
-						Entity parent_of_parent_entity = hier_parent->parentID;
-						size_t parent_of_parent_index = transforms.GetIndex(parent_of_parent_entity);
-						if (parent_of_parent_index != ~0ull)
-						{
-							const TransformComponent* transform_parent_of_parent = &transforms_temp[parent_of_parent_index];
-							XMMATRIX parent_of_parent_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent_of_parent->world));
-							parent_transform.MatrixTransform(parent_of_parent_inverse);
-							// Do not call UpdateTransform() here, to keep parent world matrix in world space!
-						}
-					}
-
-					// update chain from parent to children:
-					const TransformComponent* recurse_parent = &parent_transform;
-					for (int recurse_chain = (int)chain; recurse_chain >= 0; --recurse_chain)
-					{
-						stack[recurse_chain]->UpdateTransform_Parented(*recurse_parent);
-						recurse_parent = stack[recurse_chain];
-					}
-
-					if (hier_parent == nullptr)
-					{
-						// chain root reached, exit
-						break;
-					}
-
-					// move up in the chain by one:
-					child_transform = &parent_transform;
-					parent_entity = hier_parent->parentID;
-					assert(chain < (uint32_t)arraysize(stack) - 1); // if this is encountered, just extend stack array size
-
-				}
-			}
-		}
-
-		if (recompute_hierarchy)
-		{
-			// (**)If there was IK, we need to recompute transform hierarchy. This is only necessary for transforms that have parent
-			//	transforms that are IK. Because the IK chain is computed from child to parent upwards, IK that have child would not update
-			//	its transform properly in some cases (such as if animation writes to that child)
-			for (size_t i = 0; i < hierarchy.GetCount(); ++i)
-			{
-				const HierarchyComponent& parentcomponent = hierarchy[i];
-				Entity entity = hierarchy.GetEntity(i);
-
-				size_t transform_index = transforms.GetIndex(entity);
-				size_t parent_index = transforms.GetIndex(parentcomponent.parentID);
-				if (transform_index != ~0ull && parent_index != ~0ull)
-				{
-					TransformComponent* transform_child = &transforms_temp[transform_index];
-					TransformComponent* transform_parent = &transforms_temp[parent_index];
-					transform_child->UpdateTransform_Parented(*transform_parent);
-				}
-			}
-		}
-
-		if (inverse_kinematics.GetCount() > 0)
-		{
-			for (size_t i = 0; i < transforms.GetCount(); ++i)
-			{
-				// IK shouldn't modify local space, so only update the world matrices!
-				transforms[i].world = transforms_temp[i].world;
-			}
 		}
 	}
 	void Scene::RunArmatureUpdateSystem(wi::jobsystem::context& ctx)

@@ -309,10 +309,7 @@ namespace wi::scene
 		void RunTransformUpdateSystem(wi::jobsystem::context& ctx);
 		void RunHierarchyUpdateSystem(wi::jobsystem::context& ctx);
 		void RunExpressionUpdateSystem(wi::jobsystem::context& ctx);
-		void RunHumanoidUpdateSystem(wi::jobsystem::context& ctx);
-		void RunColliderUpdateSystem(wi::jobsystem::context& ctx);
-		void RunSpringUpdateSystem(wi::jobsystem::context& ctx);
-		void RunInverseKinematicsUpdateSystem(wi::jobsystem::context& ctx);
+		void RunProceduralAnimationUpdateSystem(wi::jobsystem::context& ctx);
 		void RunArmatureUpdateSystem(wi::jobsystem::context& ctx);
 		void RunMeshUpdateSystem(wi::jobsystem::context& ctx);
 		void RunMaterialUpdateSystem(wi::jobsystem::context& ctx);
