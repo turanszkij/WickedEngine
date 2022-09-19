@@ -56,7 +56,11 @@ namespace wi::graphics
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 		uint64_t TIMESTAMP_FREQUENCY = 0;
-		std::string deviceName;
+		uint32_t vendorId;
+		uint32_t deviceId;
+		std::string adapterName;
+		std::string driverDescription;
+		AdapterType adapterType = AdapterType::Other;
 
 	public:
 		virtual ~GraphicsDevice() = default;
@@ -122,7 +126,12 @@ namespace wi::graphics
 		constexpr size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
 		constexpr uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 		constexpr uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
-		constexpr const std::string& GetDeviceName() const { return deviceName; }
+
+		constexpr uint32_t GetVendorId() const { return vendorId; }
+		constexpr uint32_t GetDeviceId() const { return deviceId; }
+		constexpr const std::string& GetAdapterName() const { return adapterName; }
+		constexpr const std::string& GetDriverDescription() const { return driverDescription; }
+		constexpr AdapterType GetAdapterType() const { return adapterType; }
 
 		// Get the shader binary format that the underlying graphics API consumes
 		virtual ShaderFormat GetShaderFormat() const = 0;

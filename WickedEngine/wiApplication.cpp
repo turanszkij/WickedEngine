@@ -336,7 +336,7 @@ namespace wi
 			if (infoDisplay.device_name)
 			{
 				infodisplay_str += "Device: ";
-				infodisplay_str += graphicsDevice->GetDeviceName();
+				infodisplay_str += graphicsDevice->GetAdapterName();
 				infodisplay_str += "\n";
 			}
 			if (infoDisplay.resolution)
@@ -504,6 +504,10 @@ namespace wi
 			if (wi::arguments::HasArgument("gpuvalidation"))
 			{
 				validationMode = ValidationMode::GPU;
+			}
+			if (wi::arguments::HasArgument("gpu_verbose"))
+			{
+				validationMode = ValidationMode::Verbose;
 			}
 
 			bool use_dx12 = wi::arguments::HasArgument("dx12");

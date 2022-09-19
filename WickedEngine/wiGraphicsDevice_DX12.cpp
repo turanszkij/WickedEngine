@@ -2330,7 +2330,6 @@ using namespace dx12_internal;
 			{
 				if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), featurelevel, IID_PPV_ARGS(&device))))
 				{
-					wi::helper::StringConvert(adapterDesc.Description, deviceName);
 					break;
 				}
 			}
@@ -2361,27 +2360,37 @@ using namespace dx12_internal;
 #ifdef _DEBUG
 				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-				//d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
 #endif
 
-				D3D12_MESSAGE_ID hide[] =
+				std::vector<D3D12_MESSAGE_SEVERITY> enabledSeverities;
+				std::vector<D3D12_MESSAGE_ID> disabledMessages;
+
+				// These severities should be seen all the time
+				enabledSeverities.push_back(D3D12_MESSAGE_SEVERITY_CORRUPTION);
+				enabledSeverities.push_back(D3D12_MESSAGE_SEVERITY_ERROR);
+				enabledSeverities.push_back(D3D12_MESSAGE_SEVERITY_WARNING);
+				enabledSeverities.push_back(D3D12_MESSAGE_SEVERITY_MESSAGE);
+
+				if (validationMode == ValidationMode::Verbose)
 				{
-					//D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-					//D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-					//D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
-					D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
-					D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE,
+					// Verbose only filters
+					enabledSeverities.push_back(D3D12_MESSAGE_SEVERITY_INFO);
+				}
+
+				disabledMessages.push_back(D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS);
+				disabledMessages.push_back(D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE);
+
 #if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
-					D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_DRIVERVERSIONMISMATCH,
-					D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_ADAPTERVERSIONMISMATCH,
-					D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND,
+				disabledMessages.push_back(D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_DRIVERVERSIONMISMATCH);
+				disabledMessages.push_back(D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_ADAPTERVERSIONMISMATCH);
+				disabledMessages.push_back(D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND);
 #endif
-					// Add more message IDs here as needed
-				};
 
 				D3D12_INFO_QUEUE_FILTER filter = {};
-				filter.DenyList.NumIDs = arraysize(hide);
-				filter.DenyList.pIDList = hide;
+				filter.AllowList.NumSeverities = static_cast<UINT>(enabledSeverities.size());
+				filter.AllowList.pSeverityList = enabledSeverities.data();
+				filter.DenyList.NumIDs = static_cast<UINT>(disabledMessages.size());
+				filter.DenyList.pIDList = disabledMessages.data();
 				d3dInfoQueue->AddStorageFilterEntries(&filter);
 			}
 		}
@@ -2555,6 +2564,44 @@ using namespace dx12_internal;
 		CD3DX12FeatureSupport features;
 		hr = features.Init(device.Get());
 		assert(SUCCEEDED(hr));
+
+		// Init adapter properties
+		{
+			DXGI_ADAPTER_DESC1 adapterDesc;
+			hr = dxgiAdapter->GetDesc1(&adapterDesc);
+			assert(SUCCEEDED(hr));
+
+			vendorId = adapterDesc.VendorId;
+			deviceId = adapterDesc.DeviceId;
+			wi::helper::StringConvert(adapterDesc.Description, adapterName);
+
+			// Convert the adapter's D3D12 driver version to a readable string like "24.21.13.9793".
+			LARGE_INTEGER umdVersion;
+			if (dxgiAdapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &umdVersion) != DXGI_ERROR_UNSUPPORTED)
+			{
+				uint64_t encodedVersion = umdVersion.QuadPart;
+				std::ostringstream o;
+				o << "D3D12 driver version ";
+				uint16_t driverVersion[4] = {};
+
+				for (size_t i = 0; i < 4; ++i) {
+					driverVersion[i] = (encodedVersion >> (48 - 16 * i)) & 0xFFFF;
+					o << driverVersion[i] << ".";
+				}
+
+				driverDescription = o.str();
+			}
+
+			// Detect adapter type.
+			if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+			{
+				adapterType = AdapterType::Cpu;
+			}
+			else
+			{
+				adapterType = features.UMA() ? AdapterType::IntegratedGpu : AdapterType::DiscreteGpu;
+			}
+		}
 
 		if (features.ConservativeRasterizationTier() >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1)
 		{

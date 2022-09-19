@@ -2386,6 +2386,13 @@ using namespace vulkan_internal;
 			{
 				debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
 				debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+
+				if (validationMode == ValidationMode::Verbose)
+				{
+					debugUtilsCreateInfo.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+					debugUtilsCreateInfo.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+				}
+
 				debugUtilsCreateInfo.pfnUserCallback = debugUtilsMessengerCallback;
 				createInfo.pNext = &debugUtilsCreateInfo;
 			}
@@ -2568,7 +2575,6 @@ using namespace vulkan_internal;
 					physicalDevice = dev;
 					if (discrete)
 					{
-						deviceName = properties2.properties.deviceName;
 						break; // if this is discrete GPU, look no further (prioritize discrete GPU)
 					}
 				}
@@ -2595,6 +2601,36 @@ using namespace vulkan_internal;
 			assert(features2.features.textureCompressionBC == VK_TRUE);
 			assert(features2.features.occlusionQueryPrecise == VK_TRUE);
 			assert(features_1_2.descriptorIndexing == VK_TRUE);
+
+			// Init adapter properties
+			vendorId = properties2.properties.vendorID;
+			deviceId = properties2.properties.deviceID;
+			adapterName = properties2.properties.deviceName;
+
+			driverDescription = properties_1_2.driverName;
+			if (properties_1_2.driverInfo[0] != '\0')
+			{
+				driverDescription += std::string(": ") + properties_1_2.driverInfo;
+			}
+
+			switch (properties2.properties.deviceType)
+			{
+			case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+				adapterType = AdapterType::IntegratedGpu;
+				break;
+			case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+				adapterType = AdapterType::DiscreteGpu;
+				break;
+			case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+				adapterType = AdapterType::VirtualGpu;
+				break;
+			case VK_PHYSICAL_DEVICE_TYPE_CPU:
+				adapterType = AdapterType::Cpu;
+				break;
+			default:
+				adapterType = AdapterType::Other;
+				break;
+			}
 
 			if (features2.features.tessellationShader == VK_TRUE)
 			{
