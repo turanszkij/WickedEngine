@@ -29,6 +29,7 @@ extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 #include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.System.h>
 #else
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
@@ -1199,6 +1200,10 @@ namespace wi::helper
 
 	void OpenUrl(const std::string& url)
 	{
+#ifdef PLATFORM_UWP
+		winrt::Windows::System::Launcher::LaunchUriAsync(winrt::Windows::Foundation::Uri(winrt::to_hstring(url)));
+#endif // PLATFORM_UWP
+
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		std::string op = "start " + url;
 		int status = system(op.c_str());
