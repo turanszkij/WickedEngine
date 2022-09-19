@@ -1001,7 +1001,7 @@ Describes a Sound object.
 - IsDisabled() : bool result -- Check if sound is disabled
 
 #### ColliderComponent
-Describes a Sound object.
+Describes a Collider object.
 - Shape : int -- Shape of the collider
 - Radius : float
 - Offset : Vector
@@ -1011,6 +1011,97 @@ Describes a Sound object.
 - SetGPUEnabled(bool value)
 - GetCapsule() : Capsule
 - GetSphere() : Sphere
+
+#### ExpressionComponent
+- FindExpressionID(string name) : int	-- Find an expression within the ExpressionComponent by name
+- SetWeight(int id, float weight)	-- Set expression weight by ID. The ID can be a non-preset expression. Use FindExpressionID() to retrieve non-preset expression IDs
+- SetPresetWeight(ExpressionPreset preset, float weight)	-- Set a preset expression's weight. You can get access to preset values from ExpressionPreset table
+
+[outer] ExpressionPreset = {
+	Happy = 0,
+	Angry = 1,
+	Sad = 2,
+	Relaxed = 3,
+	Surprised = 4,
+	Aa = 5,
+	Ih = 6,
+	Ou = 7,
+	Ee = 8,
+	Oh = 9,
+	Blink = 10,
+	BlinkLeft = 11,
+	BlinkRight = 12,
+	LookUp = 13,
+	LookDown = 14,
+	LookLeft = 15,
+	LookRight = 16,
+	Neutral = 17,
+}
+
+
+#### HumanoidComponent
+- GetBoneEntity(HumanoidBone bone) : int	-- Get the entity that is mapped to the specified humanoid bone. Use HumanoidBone table to get access to humanoid bone values
+- SetLookAtEnabled(bool value)	-- Enable/disable automatic lookAt (for head and eyes movement)
+- SetLookAt(Vector value)	-- Set a target lookAt position (for head an eyes movement)
+
+[outer] HumanoidBone = {
+	Hips = 0,
+	Spine = 1,
+	Chest = 2,
+	UpperChest = 3,
+	Neck = 4,
+	Head = 5,
+	LeftEye = 6,
+	RightEye = 7,
+	Jaw = 8,
+	LeftUpperLeg = 9,
+	LeftLowerLeg = 10,
+	LeftFoot = 11,
+	LeftToes = 12,
+	RightUpperLeg = 13,
+	RightLowerLeg = 14,
+	RightFoot = 15,
+	RightToes = 16,
+	LeftShoulder = 17,
+	LeftUpperArm = 18,
+	LeftLowerArm = 19,
+	LeftHand = 20,
+	RightShoulder = 21,
+	RightUpperArm = 22,
+	RightLowerArm = 23,
+	RightHand = 24,
+	LeftThumbMetacarpal = 25,
+	LeftThumbProximal = 26,
+	LeftThumbDistal = 27,
+	LeftIndexProximal = 28,
+	LeftIndexIntermediate = 29,
+	LeftIndexDistal = 30,
+	LeftMiddleProximal = 31,
+	LeftMiddleIntermediate = 32,
+	LeftMiddleDistal = 33,
+	LeftRingProximal = 34,
+	LeftRingIntermediate = 35,
+	LeftRingDistal = 36,
+	LeftLittleProximal = 37,
+	LeftLittleIntermediate = 38,
+	LeftLittleDistal = 39,
+	RightThumbMetacarpal = 40,
+	RightThumbProximal = 41,
+	RightThumbDistal = 42,
+	RightIndexIntermediate = 43,
+	RightIndexDistal = 44,
+	RightIndexProximal = 45,
+	RightMiddleProximal = 46,
+	RightMiddleIntermediate = 47,
+	RightMiddleDistal = 48,
+	RightRingProximal = 49,
+	RightRingIntermediate = 50,
+	RightRingDistal = 51,
+	RightLittleProximal = 52,
+	RightLittleIntermediate = 53,
+	RightLittleDistal = 54,
+}
+
 
 ## Canvas
 This is used to describe a drawable area
