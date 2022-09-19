@@ -336,7 +336,7 @@ namespace wi
 			if (infoDisplay.device_name)
 			{
 				infodisplay_str += "Device: ";
-				infodisplay_str += graphicsDevice->GetDeviceName();
+				infodisplay_str += graphicsDevice->GetAdapterName();
 				infodisplay_str += "\n";
 			}
 			if (infoDisplay.resolution)

@@ -2330,7 +2330,6 @@ using namespace dx12_internal;
 			{
 				if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), featurelevel, IID_PPV_ARGS(&device))))
 				{
-					wi::helper::StringConvert(adapterDesc.Description, deviceName);
 					break;
 				}
 			}
@@ -2361,7 +2360,6 @@ using namespace dx12_internal;
 #ifdef _DEBUG
 				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-				//d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
 #endif
 
 				std::vector<D3D12_MESSAGE_SEVERITY> enabledSeverities;
@@ -2566,6 +2564,44 @@ using namespace dx12_internal;
 		CD3DX12FeatureSupport features;
 		hr = features.Init(device.Get());
 		assert(SUCCEEDED(hr));
+
+		// Init adapter properties
+		{
+			DXGI_ADAPTER_DESC1 adapterDesc;
+			hr = dxgiAdapter->GetDesc1(&adapterDesc);
+			assert(SUCCEEDED(hr));
+
+			vendorId = adapterDesc.VendorId;
+			deviceId = adapterDesc.DeviceId;
+			wi::helper::StringConvert(adapterDesc.Description, adapterName);
+
+			// Convert the adapter's D3D12 driver version to a readable string like "24.21.13.9793".
+			LARGE_INTEGER umdVersion;
+			if (dxgiAdapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &umdVersion) != DXGI_ERROR_UNSUPPORTED)
+			{
+				uint64_t encodedVersion = umdVersion.QuadPart;
+				std::ostringstream o;
+				o << "D3D12 driver version ";
+				uint16_t driverVersion[4] = {};
+
+				for (size_t i = 0; i < 4; ++i) {
+					driverVersion[i] = (encodedVersion >> (48 - 16 * i)) & 0xFFFF;
+					o << driverVersion[i] << ".";
+				}
+
+				driverDescription = o.str();
+			}
+
+			// Detect adapter type.
+			if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+			{
+				adapterType = AdapterType::Cpu;
+			}
+			else
+			{
+				adapterType = features.UMA() ? AdapterType::IntegratedGpu : AdapterType::DiscreteGpu;
+			}
+		}
 
 		if (features.ConservativeRasterizationTier() >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1)
 		{

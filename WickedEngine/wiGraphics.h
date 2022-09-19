@@ -22,6 +22,15 @@ namespace wi::graphics
 		Verbose		// Print all warnings, errors and info messages
 	};
 
+	enum class AdapterType
+	{
+		Other,
+		IntegratedGpu,
+		DiscreteGpu,
+		VirtualGpu,
+		Cpu,
+	};
+
 	enum class ShaderStage
 	{
 		MS,		// Mesh Shader
