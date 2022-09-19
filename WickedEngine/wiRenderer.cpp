@@ -3336,6 +3336,10 @@ void UpdatePerFrameData(
 	{
 		frameCB.options |= OPTION_BIT_REALISTIC_SKY;
 	}
+	if (vis.scene->weather.IsOverrideFogColor())
+	{
+		frameCB.options |= OPTION_BIT_OVERRIDE_FOG_COLOR;
+	}
 	if (vis.scene->weather.IsHeightFog())
 	{
 		frameCB.options |= OPTION_BIT_HEIGHT_FOG;

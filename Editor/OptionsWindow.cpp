@@ -568,6 +568,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		}
 		editor->inactiveEntityColor.setA(150);
 
+		editor->save_text_color = theme.font.color;
+
 		});
 	AddWidget(&themeCombo);
 

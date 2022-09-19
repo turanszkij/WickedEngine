@@ -112,6 +112,9 @@ public:
 	void SaveAs();
 	bool deleting = false;
 
+	float save_text_alpha = 0; // seconds until save text disappears
+	wi::Color save_text_color = wi::Color::White();
+
 	struct EditorScene
 	{
 		std::string path;

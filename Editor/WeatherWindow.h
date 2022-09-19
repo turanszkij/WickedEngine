@@ -22,6 +22,7 @@ public:
 	XMFLOAT3 default_sky_zenith = XMFLOAT3(0, 0, 0);
 
 	wi::gui::Button primaryButton;
+	wi::gui::CheckBox overrideFogColorCheckBox;
 	wi::gui::CheckBox heightFogCheckBox;
 	wi::gui::Slider fogStartSlider;
 	wi::gui::Slider fogEndSlider;

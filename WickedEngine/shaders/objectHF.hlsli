@@ -896,17 +896,15 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 {
 	const float fogAmount = GetFogAmount(distance, P, V);
+
+	float3 fogColor = GetHorizonColor();
 	
-	if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
+	if ((GetFrame().options & OPTION_BIT_REALISTIC_SKY) && (GetFrame().options & OPTION_BIT_OVERRIDE_FOG_COLOR) == 0)
 	{
-		const float3 skyLuminance = texture_skyluminancelut.SampleLevel(sampler_point_clamp, float2(0.5, 0.5), 0).rgb;
-		color.rgb = lerp(color.rgb, skyLuminance, fogAmount);
+		fogColor = texture_skyluminancelut.SampleLevel(sampler_point_clamp, float2(0.5, 0.5), 0).rgb;
 	}
-	else
-	{
-		const float3 V = float3(0.0, -1.0, 0.0);
-		color.rgb = lerp(color.rgb, GetDynamicSkyColor(V, false, false, false, true), fogAmount);
-	}
+
+	color.rgb = lerp(color.rgb, fogColor, fogAmount);
 }
 
 inline uint AlphaToCoverage(float alpha, float alphaTest, float4 svposition)

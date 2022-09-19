@@ -288,6 +288,121 @@ int SceneIntersectCapsule(lua_State* L)
 	return 0;
 }
 
+
+static const std::string value_bindings = R"(
+INVALID_ENTITY = 0
+
+DIRECTIONAL = 0
+POINT = 1
+SPOT = 2
+SPHERE = 3
+DISC = 4
+RECTANGLE = 5
+TUBE = 6
+
+STENCILREF_EMPTY = 0
+STENCILREF_DEFAULT = 1
+STENCILREF_CUSTOMSHADER = 2
+STENCILREF_OUTLINE = 3
+STENCILREF_CUSTOMSHADER_OUTLINE = 4
+
+STENCILREF_SKIN = 3
+STENCILREF_SNOW = 4
+
+FILTER_NONE = 0
+FILTER_OPAQUE = 1 << 0
+FILTER_TRANSPARENT = 1 << 1
+FILTER_WATER = 1 << 2
+FILTER_NAVIGATION_MESH = 1 << 3
+FILTER_OBJECT_ALL = FILTER_OPAQUE | FILTER_TRANSPARENT | FILTER_WATER | FILTER_NAVIGATION_MESH
+FILTER_COLLIDER = 1 << 4
+FILTER_ALL = ~0
+
+PICK_VOID = FILTER_NONE
+PICK_OPAQUE = FILTER_OPAQUE
+PICK_TRANSPARENT = FILTER_TRANSPARENT
+PICK_WATER = FILTER_WATER
+
+ExpressionPreset = {
+	Happy = 0,
+	Angry = 1,
+	Sad = 2,
+	Relaxed = 3,
+	Surprised = 4,
+	Aa = 5,
+	Ih = 6,
+	Ou = 7,
+	Ee = 8,
+	Oh = 9,
+	Blink = 10,
+	BlinkLeft = 11,
+	BlinkRight = 12,
+	LookUp = 13,
+	LookDown = 14,
+	LookLeft = 15,
+	LookRight = 16,
+	Neutral = 17,
+}
+
+HumanoidBone = {
+	Hips = 0,
+	Spine = 1,
+	Chest = 2,
+	UpperChest = 3,
+	Neck = 4,
+	Head = 5,
+	LeftEye = 6,
+	RightEye = 7,
+	Jaw = 8,
+	LeftUpperLeg = 9,
+	LeftLowerLeg = 10,
+	LeftFoot = 11,
+	LeftToes = 12,
+	RightUpperLeg = 13,
+	RightLowerLeg = 14,
+	RightFoot = 15,
+	RightToes = 16,
+	LeftShoulder = 17,
+	LeftUpperArm = 18,
+	LeftLowerArm = 19,
+	LeftHand = 20,
+	RightShoulder = 21,
+	RightUpperArm = 22,
+	RightLowerArm = 23,
+	RightHand = 24,
+	LeftThumbMetacarpal = 25,
+	LeftThumbProximal = 26,
+	LeftThumbDistal = 27,
+	LeftIndexProximal = 28,
+	LeftIndexIntermediate = 29,
+	LeftIndexDistal = 30,
+	LeftMiddleProximal = 31,
+	LeftMiddleIntermediate = 32,
+	LeftMiddleDistal = 33,
+	LeftRingProximal = 34,
+	LeftRingIntermediate = 35,
+	LeftRingDistal = 36,
+	LeftLittleProximal = 37,
+	LeftLittleIntermediate = 38,
+	LeftLittleDistal = 39,
+	RightThumbMetacarpal = 40,
+	RightThumbProximal = 41,
+	RightThumbDistal = 42,
+	RightIndexIntermediate = 43,
+	RightIndexDistal = 44,
+	RightIndexProximal = 45,
+	RightMiddleProximal = 46,
+	RightMiddleIntermediate = 47,
+	RightMiddleDistal = 48,
+	RightRingProximal = 49,
+	RightRingIntermediate = 50,
+	RightRingDistal = 51,
+	RightLittleProximal = 52,
+	RightLittleIntermediate = 53,
+	RightLittleDistal = 54,
+}
+)";
+
 void Bind()
 {
 	static bool initialized = false;
@@ -298,25 +413,6 @@ void Bind()
 		lua_State* L = wi::lua::GetLuaState();
 
 		wi::lua::RegisterFunc("CreateEntity", CreateEntity_BindLua);
-		wi::lua::RunText("INVALID_ENTITY = 0");
-
-		wi::lua::RunText("DIRECTIONAL = 0");
-		wi::lua::RunText("POINT = 1");
-		wi::lua::RunText("SPOT = 2");
-		wi::lua::RunText("SPHERE = 3");
-		wi::lua::RunText("DISC = 4");
-		wi::lua::RunText("RECTANGLE = 5");
-		wi::lua::RunText("TUBE = 6");
-
-		wi::lua::RunText("STENCILREF_EMPTY = 0");
-		wi::lua::RunText("STENCILREF_DEFAULT = 1");
-		wi::lua::RunText("STENCILREF_CUSTOMSHADER = 2");
-		wi::lua::RunText("STENCILREF_OUTLINE = 3");
-		wi::lua::RunText("STENCILREF_CUSTOMSHADER_OUTLINE = 4");
-
-
-		wi::lua::RunText("STENCILREF_SKIN = 3"); // deprecated
-		wi::lua::RunText("STENCILREF_SNOW = 4"); // deprecated
 
 		wi::lua::RegisterFunc("GetCamera", GetCamera);
 		wi::lua::RegisterFunc("GetScene", GetScene);
@@ -324,21 +420,6 @@ void Bind()
 		wi::lua::RegisterFunc("Pick", Pick);
 		wi::lua::RegisterFunc("SceneIntersectSphere", SceneIntersectSphere);
 		wi::lua::RegisterFunc("SceneIntersectCapsule", SceneIntersectCapsule);
-
-		wi::lua::RunText("FILTER_NONE = 0");
-		wi::lua::RunText("FILTER_OPAQUE = 1 << 0");
-		wi::lua::RunText("FILTER_TRANSPARENT = 1 << 1");
-		wi::lua::RunText("FILTER_WATER = 1 << 2");
-		wi::lua::RunText("FILTER_NAVIGATION_MESH = 1 << 3");
-		wi::lua::RunText("FILTER_OBJECT_ALL = FILTER_OPAQUE | FILTER_TRANSPARENT | FILTER_WATER | FILTER_NAVIGATION_MESH");
-		wi::lua::RunText("FILTER_COLLIDER = 1 << 4");
-		wi::lua::RunText("FILTER_ALL = ~0");
-
-		// deprecated names:
-		wi::lua::RunText("PICK_VOID = FILTER_NONE");
-		wi::lua::RunText("PICK_OPAQUE = FILTER_OPAQUE");
-		wi::lua::RunText("PICK_TRANSPARENT = FILTER_TRANSPARENT");
-		wi::lua::RunText("PICK_WATER = FILTER_WATER");
 
 		Luna<Scene_BindLua>::Register(L);
 		Luna<NameComponent_BindLua>::Register(L);
@@ -364,6 +445,10 @@ void Bind()
 		Luna<WeatherComponent_BindLua>::Register(L);
 		Luna<SoundComponent_BindLua>::Register(L);
 		Luna<ColliderComponent_BindLua>::Register(L);
+		Luna<ExpressionComponent_BindLua>::Register(L);
+		Luna<HumanoidComponent_BindLua>::Register(L);
+
+		wi::lua::RunText(value_bindings);
 	}
 }
 
@@ -396,6 +481,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateWeather),
 	lunamethod(Scene_BindLua, Component_CreateSound),
 	lunamethod(Scene_BindLua, Component_CreateCollider),
+	lunamethod(Scene_BindLua, Component_CreateExpression),
+	lunamethod(Scene_BindLua, Component_CreateHumanoid),
 
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
@@ -417,6 +504,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetWeather),
 	lunamethod(Scene_BindLua, Component_GetSound),
 	lunamethod(Scene_BindLua, Component_GetCollider),
+	lunamethod(Scene_BindLua, Component_GetExpression),
+	lunamethod(Scene_BindLua, Component_GetHumanoid),
 
 	lunamethod(Scene_BindLua, Component_GetNameArray),
 	lunamethod(Scene_BindLua, Component_GetLayerArray),
@@ -438,6 +527,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetWeatherArray),
 	lunamethod(Scene_BindLua, Component_GetSoundArray),
 	lunamethod(Scene_BindLua, Component_GetColliderArray),
+	lunamethod(Scene_BindLua, Component_GetExpressionArray),
+	lunamethod(Scene_BindLua, Component_GetHumanoidArray),
 
 	lunamethod(Scene_BindLua, Entity_GetNameArray),
 	lunamethod(Scene_BindLua, Entity_GetLayerArray),
@@ -459,6 +550,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetWeatherArray),
 	lunamethod(Scene_BindLua, Entity_GetSoundArray),
 	lunamethod(Scene_BindLua, Entity_GetColliderArray),
+	lunamethod(Scene_BindLua, Entity_GetExpressionArray),
+	lunamethod(Scene_BindLua, Entity_GetHumanoidArray),
 
 	lunamethod(Scene_BindLua, Component_RemoveName),
 	lunamethod(Scene_BindLua, Component_RemoveLayer),
@@ -480,6 +573,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_RemoveWeather),
 	lunamethod(Scene_BindLua, Component_RemoveSound),
 	lunamethod(Scene_BindLua, Component_RemoveCollider),
+	lunamethod(Scene_BindLua, Component_RemoveExpression),
+	lunamethod(Scene_BindLua, Component_RemoveHumanoid),
 
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
@@ -938,6 +1033,40 @@ int Scene_BindLua::Component_CreateCollider(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_CreateExpression(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		ExpressionComponent& component = scene->expressions.Create(entity);
+		Luna<ExpressionComponent_BindLua>::push(L, new ExpressionComponent_BindLua(&component));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateExpression(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_CreateHumanoid(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		HumanoidComponent& component = scene->humanoids.Create(entity);
+		Luna<HumanoidComponent_BindLua>::push(L, new HumanoidComponent_BindLua(&component));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateHumanoid(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetName(lua_State* L)
 {
@@ -1379,6 +1508,50 @@ int Scene_BindLua::Component_GetCollider(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetExpression(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		ExpressionComponent* component = scene->expressions.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<ExpressionComponent_BindLua>::push(L, new ExpressionComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetExpression(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_GetHumanoid(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		HumanoidComponent* component = scene->humanoids.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<HumanoidComponent_BindLua>::push(L, new HumanoidComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetHumanoid(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetNameArray(lua_State* L)
 {
@@ -1569,9 +1742,9 @@ int Scene_BindLua::Component_GetForceFieldArray(lua_State* L)
 }
 int Scene_BindLua::Component_GetWeatherArray(lua_State* L)
 {
-	lua_createtable(L, (int)scene->forces.GetCount(), 0);
+	lua_createtable(L, (int)scene->weathers.GetCount(), 0);
 	int newTable = lua_gettop(L);
-	for (size_t i = 0; i < scene->forces.GetCount(); ++i)
+	for (size_t i = 0; i < scene->weathers.GetCount(); ++i)
 	{
 		Luna<WeatherComponent_BindLua>::push(L, new WeatherComponent_BindLua(&scene->weathers[i]));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
@@ -1580,9 +1753,9 @@ int Scene_BindLua::Component_GetWeatherArray(lua_State* L)
 }
 int Scene_BindLua::Component_GetSoundArray(lua_State* L)
 {
-	lua_createtable(L, (int)scene->forces.GetCount(), 0);
+	lua_createtable(L, (int)scene->sounds.GetCount(), 0);
 	int newTable = lua_gettop(L);
-	for (size_t i = 0; i < scene->forces.GetCount(); ++i)
+	for (size_t i = 0; i < scene->sounds.GetCount(); ++i)
 	{
 		Luna<SoundComponent_BindLua>::push(L, new SoundComponent_BindLua(&scene->sounds[i]));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
@@ -1591,11 +1764,33 @@ int Scene_BindLua::Component_GetSoundArray(lua_State* L)
 }
 int Scene_BindLua::Component_GetColliderArray(lua_State* L)
 {
-	lua_createtable(L, (int)scene->forces.GetCount(), 0);
+	lua_createtable(L, (int)scene->colliders.GetCount(), 0);
 	int newTable = lua_gettop(L);
-	for (size_t i = 0; i < scene->forces.GetCount(); ++i)
+	for (size_t i = 0; i < scene->colliders.GetCount(); ++i)
 	{
 		Luna<ColliderComponent_BindLua>::push(L, new ColliderComponent_BindLua(&scene->colliders[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetExpressionArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->expressions.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->expressions.GetCount(); ++i)
+	{
+		Luna<ExpressionComponent_BindLua>::push(L, new ExpressionComponent_BindLua(&scene->expressions[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetHumanoidArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->humanoids.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->humanoids.GetCount(); ++i)
+	{
+		Luna<HumanoidComponent_BindLua>::push(L, new HumanoidComponent_BindLua(&scene->humanoids[i]));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1817,6 +2012,28 @@ int Scene_BindLua::Entity_GetColliderArray(lua_State* L)
 	for (size_t i = 0; i < scene->colliders.GetCount(); ++i)
 	{
 		wi::lua::SSetLongLong(L, scene->colliders.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetExpressionArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->expressions.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->expressions.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->expressions.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetHumanoidArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->humanoids.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->humanoids.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->humanoids.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -2159,6 +2376,40 @@ int Scene_BindLua::Component_RemoveCollider(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Component_RemoveCollider(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_RemoveExpression(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		if (scene->expressions.Contains(entity))
+		{
+			scene->expressions.Remove(entity);
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_RemoveExpression(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_RemoveHumanoid(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		if (scene->humanoids.Contains(entity))
+		{
+			scene->humanoids.Remove(entity);
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_RemoveExpression(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -4855,6 +5106,171 @@ int ColliderComponent_BindLua::GetSphere(lua_State* L)
 	}
 	Luna<Sphere_BindLua>::push(L, new Sphere_BindLua(component->sphere));
 	return 1;
+}
+
+
+
+
+
+
+
+const char ExpressionComponent_BindLua::className[] = "ExpressionComponent";
+
+Luna<ExpressionComponent_BindLua>::FunctionType ExpressionComponent_BindLua::methods[] = {
+	lunamethod(ExpressionComponent_BindLua, FindExpressionID),
+	lunamethod(ExpressionComponent_BindLua, SetWeight),
+	lunamethod(ExpressionComponent_BindLua, SetPresetWeight),
+	{ NULL, NULL }
+};
+Luna<ExpressionComponent_BindLua>::PropertyType ExpressionComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+int ExpressionComponent_BindLua::FindExpressionID(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		std::string find = wi::lua::SGetString(L, 1);
+		for (size_t i = 0; i < component->expressions.size(); ++i)
+		{
+			if (component->expressions[i].name.compare(find) == 0)
+			{
+				wi::lua::SSetInt(L, int(i));
+				return 1;
+			}
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "FindExpressionID(string name) not enough arguments!");
+	}
+	return 0;
+}
+int ExpressionComponent_BindLua::SetWeight(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		int id = wi::lua::SGetInt(L, 1);
+		float weight = wi::lua::SGetFloat(L, 2);
+		if (id >= 0 && component->expressions.size() > id)
+		{
+			component->expressions[id].weight = weight;
+			component->expressions[id].SetDirty(true);
+		}
+		else
+		{
+			wi::lua::SError(L, "SetWeight(int id, float weight) id is out of bounds!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetWeight(int id, float weight) not enough arguments!");
+	}
+	return 0;
+}
+int ExpressionComponent_BindLua::SetPresetWeight(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		ExpressionComponent::Preset preset = (ExpressionComponent::Preset)wi::lua::SGetInt(L, 1);
+		float weight = wi::lua::SGetFloat(L, 2);
+		int id = component->presets[size_t(preset)];
+		if (id >= 0 && component->expressions.size() > id)
+		{
+			component->expressions[id].weight = weight;
+			component->expressions[id].SetDirty(true);
+		}
+		else
+		{
+			wi::lua::SError(L, "SetPresetWeight(ExpressionPreset preset, float weight) preset doesn't exist!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetPresetWeight(ExpressionPreset preset, float weight) not enough arguments!");
+	}
+	return 0;
+}
+
+
+
+
+
+
+
+const char HumanoidComponent_BindLua::className[] = "HumanoidComponent";
+
+Luna<HumanoidComponent_BindLua>::FunctionType HumanoidComponent_BindLua::methods[] = {
+	lunamethod(HumanoidComponent_BindLua, GetBoneEntity),
+	lunamethod(HumanoidComponent_BindLua, SetLookAtEnabled),
+	lunamethod(HumanoidComponent_BindLua, SetLookAt),
+	{ NULL, NULL }
+};
+Luna<HumanoidComponent_BindLua>::PropertyType HumanoidComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+int HumanoidComponent_BindLua::GetBoneEntity(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		int humanoidBone = wi::lua::SGetInt(L, 1);
+		if (humanoidBone >= 0 && humanoidBone < arraysize(component->bones))
+		{
+			wi::lua::SSetInt(L, (int)component->bones[humanoidBone]);
+		}
+		else
+		{
+			wi::lua::SError(L, "GetBoneEntity(HumanoidBone bone) invalid humanoid bone!");
+		}
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "GetBoneEntity(HumanoidBone bone) not enough arguments!");
+	}
+	return 0;
+}
+int HumanoidComponent_BindLua::SetLookAtEnabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		bool value = wi::lua::SGetBool(L, 1);
+		component->SetLookAtEnabled(value);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetLookAtEnabled(bool value) not enough arguments!");
+	}
+	return 0;
+}
+int HumanoidComponent_BindLua::SetLookAt(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vec)
+		{
+			component->lookAt.x = vec->data.x;
+			component->lookAt.y = vec->data.y;
+			component->lookAt.z = vec->data.z;
+		}
+		else
+		{
+			wi::lua::SError(L, "SetLookAt(Vector value) argument is not a Vector!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetLookAt(Vector value) not enough arguments!");
+	}
+	return 0;
 }
 
 }

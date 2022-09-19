@@ -63,6 +63,8 @@ namespace wi::lua::scene
 		int Component_CreateWeather(lua_State* L);
 		int Component_CreateSound(lua_State* L);
 		int Component_CreateCollider(lua_State* L);
+		int Component_CreateExpression(lua_State* L);
+		int Component_CreateHumanoid(lua_State* L);
 
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
@@ -84,6 +86,8 @@ namespace wi::lua::scene
 		int Component_GetWeather(lua_State* L);
 		int Component_GetSound(lua_State* L);
 		int Component_GetCollider(lua_State* L);
+		int Component_GetExpression(lua_State* L);
+		int Component_GetHumanoid(lua_State* L);
 
 		int Component_GetNameArray(lua_State* L);
 		int Component_GetLayerArray(lua_State* L);
@@ -105,6 +109,8 @@ namespace wi::lua::scene
 		int Component_GetWeatherArray(lua_State* L);
 		int Component_GetSoundArray(lua_State* L);
 		int Component_GetColliderArray(lua_State* L);
+		int Component_GetExpressionArray(lua_State* L);
+		int Component_GetHumanoidArray(lua_State* L);
 
 		int Entity_GetNameArray(lua_State* L);
 		int Entity_GetLayerArray(lua_State* L);
@@ -126,6 +132,8 @@ namespace wi::lua::scene
 		int Entity_GetWeatherArray(lua_State* L);
 		int Entity_GetSoundArray(lua_State* L);
 		int Entity_GetColliderArray(lua_State* L);
+		int Entity_GetExpressionArray(lua_State* L);
+		int Entity_GetHumanoidArray(lua_State* L);
 
 		int Component_RemoveName(lua_State* L);
 		int Component_RemoveLayer(lua_State* L);
@@ -147,6 +155,8 @@ namespace wi::lua::scene
 		int Component_RemoveWeather(lua_State* L);
 		int Component_RemoveSound(lua_State* L);
 		int Component_RemoveCollider(lua_State* L);
+		int Component_RemoveExpression(lua_State* L);
+		int Component_RemoveHumanoid(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
@@ -1528,6 +1538,52 @@ namespace wi::lua::scene
 
 		int GetCapsule(lua_State* L);
 		int GetSphere(lua_State* L);
+	};
+
+	class ExpressionComponent_BindLua
+	{
+	private:
+		std::unique_ptr<wi::scene::ExpressionComponent> owning;
+	public:
+		wi::scene::ExpressionComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<ExpressionComponent_BindLua>::FunctionType methods[];
+		static Luna<ExpressionComponent_BindLua>::PropertyType properties[];
+
+		ExpressionComponent_BindLua(wi::scene::ExpressionComponent* component) :component(component) {}
+		ExpressionComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::ExpressionComponent>();
+			component = owning.get();
+		}
+
+		int FindExpressionID(lua_State* L);
+		int SetWeight(lua_State* L);
+		int SetPresetWeight(lua_State* L);
+	};
+
+	class HumanoidComponent_BindLua
+	{
+	private:
+		std::unique_ptr<wi::scene::HumanoidComponent> owning;
+	public:
+		wi::scene::HumanoidComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<HumanoidComponent_BindLua>::FunctionType methods[];
+		static Luna<HumanoidComponent_BindLua>::PropertyType properties[];
+
+		HumanoidComponent_BindLua(wi::scene::HumanoidComponent* component) :component(component) {}
+		HumanoidComponent_BindLua(lua_State* L)
+		{
+			owning = std::make_unique<wi::scene::HumanoidComponent>();
+			component = owning.get();
+		}
+
+		int GetBoneEntity(lua_State* L);
+		int SetLookAtEnabled(lua_State* L);
+		int SetLookAt(lua_State* L);
 	};
 }
 

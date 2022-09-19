@@ -597,6 +597,8 @@ void EditorComponent::Update(float dt)
 	CheckBonePickingEnabled();
 	UpdateTopMenuAnimation();
 
+	save_text_alpha = std::max(0.0f, save_text_alpha - dt);
+
 	bool clear_selected = false;
 	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
 	{
@@ -2438,6 +2440,20 @@ void EditorComponent::Compose(CommandList cmd) const
 	renderPath->Compose(cmd);
 
 	RenderPath2D::Compose(cmd);
+
+	if (save_text_alpha > 0)
+	{
+		wi::font::Params params;
+		params.color = save_text_color;
+		params.shadowColor = wi::Color::Black();
+		params.color.setA(uint8_t(std::min(1.0f, save_text_alpha) * 255));
+		params.shadowColor.setA(params.color.getA());
+		params.position = XMFLOAT3(GetLogicalWidth() * 0.5f, GetLogicalHeight() * 0.5f, 0);
+		params.h_align = wi::font::WIFALIGN_CENTER;
+		params.v_align = wi::font::WIFALIGN_CENTER;
+		params.size = 30;
+		wi::font::Draw("Scene saved: " + GetCurrentEditorScene().path, params, cmd);
+	}
 }
 
 void EditorComponent::ClearSelected()
@@ -2840,6 +2856,8 @@ void EditorComponent::Save(const std::string& filename)
 	RefreshSceneList();
 
 	wi::backlog::post("Scene " + std::to_string(current_scene) + " saved: " + GetCurrentEditorScene().path);
+
+	save_text_alpha = 2;
 }
 void EditorComponent::SaveAs()
 {
