@@ -2364,24 +2364,35 @@ using namespace dx12_internal;
 				//d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
 #endif
 
-				D3D12_MESSAGE_ID hide[] =
+				std::vector<D3D12_MESSAGE_SEVERITY> enabledSeverities;
+				std::vector<D3D12_MESSAGE_ID> disabledMessages;
+
+				// These severities should be seen all the time
+				enabledSeverities.push_back(D3D12_MESSAGE_SEVERITY_CORRUPTION);
+				enabledSeverities.push_back(D3D12_MESSAGE_SEVERITY_ERROR);
+				enabledSeverities.push_back(D3D12_MESSAGE_SEVERITY_WARNING);
+				enabledSeverities.push_back(D3D12_MESSAGE_SEVERITY_MESSAGE);
+
+				if (validationMode == ValidationMode::Verbose)
 				{
-					//D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-					//D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-					//D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
-					D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
-					D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE,
+					// Verbose only filters
+					enabledSeverities.push_back(D3D12_MESSAGE_SEVERITY_INFO);
+				}
+
+				disabledMessages.push_back(D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS);
+				disabledMessages.push_back(D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE);
+
 #if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
-					D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_DRIVERVERSIONMISMATCH,
-					D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_ADAPTERVERSIONMISMATCH,
-					D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND,
+				disabledMessages.push_back(D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_DRIVERVERSIONMISMATCH);
+				disabledMessages.push_back(D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_ADAPTERVERSIONMISMATCH);
+				disabledMessages.push_back(D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND);
 #endif
-					// Add more message IDs here as needed
-				};
 
 				D3D12_INFO_QUEUE_FILTER filter = {};
-				filter.DenyList.NumIDs = arraysize(hide);
-				filter.DenyList.pIDList = hide;
+				filter.AllowList.NumSeverities = static_cast<UINT>(enabledSeverities.size());
+				filter.AllowList.pSeverityList = enabledSeverities.data();
+				filter.DenyList.NumIDs = static_cast<UINT>(disabledMessages.size());
+				filter.DenyList.pIDList = disabledMessages.data();
 				d3dInfoQueue->AddStorageFilterEntries(&filter);
 			}
 		}

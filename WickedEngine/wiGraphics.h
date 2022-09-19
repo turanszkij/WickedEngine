@@ -18,7 +18,8 @@ namespace wi::graphics
 	{
 		Disabled,	// No validation is enabled
 		Enabled,	// CPU command validation
-		GPU			// CPU and GPU-based validation
+		GPU,		// CPU and GPU-based validation
+		Verbose		// Print all warnings, errors and info messages
 	};
 
 	enum class ShaderStage
