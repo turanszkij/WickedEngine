@@ -505,6 +505,10 @@ namespace wi
 			{
 				validationMode = ValidationMode::GPU;
 			}
+			if (wi::arguments::HasArgument("gpu_verbose"))
+			{
+				validationMode = ValidationMode::Verbose;
+			}
 
 			bool use_dx12 = wi::arguments::HasArgument("dx12");
 			bool use_vulkan = wi::arguments::HasArgument("vulkan");
