@@ -96,6 +96,16 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	colorComboBox.SetSize(XMFLOAT2(mod_wid - x + mod_x - hei - 1, hei));
 	primaryButton.SetSize(XMFLOAT2(mod_wid, hei));
 
+	overrideFogColorCheckBox.Create("Override fog color: ");
+	overrideFogColorCheckBox.SetTooltip("If enabled, the fog color will be always taken from Horizon Color, even if the sky is realistic");
+	overrideFogColorCheckBox.SetSize(XMFLOAT2(hei, hei));
+	overrideFogColorCheckBox.SetPos(XMFLOAT2(x, y));
+	overrideFogColorCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetOverrideFogColor(args.bValue);
+		});
+	AddWidget(&overrideFogColorCheckBox);
+
 	heightFogCheckBox.Create("Height fog: ");
 	heightFogCheckBox.SetSize(XMFLOAT2(hei, hei));
 	heightFogCheckBox.SetPos(XMFLOAT2(x, y));
@@ -683,6 +693,7 @@ void WeatherWindow::Update()
 			volumetricCloudsWeatherMapButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapName));
 		}
 
+		overrideFogColorCheckBox.SetCheck(weather.IsOverrideFogColor());
 		heightFogCheckBox.SetCheck(weather.IsHeightFog());
 		fogStartSlider.SetValue(weather.fogStart);
 		fogEndSlider.SetValue(weather.fogEnd);
@@ -816,6 +827,7 @@ void WeatherWindow::ResizeLayout()
 	add_fullwidth(skyButton);
 	add_fullwidth(colorgradingButton);
 	add_right(heightFogCheckBox);
+	overrideFogColorCheckBox.SetPos(XMFLOAT2(heightFogCheckBox.GetPos().x - 100, heightFogCheckBox.GetPos().y));
 	add(fogStartSlider);
 	add(fogEndSlider);
 	add(fogHeightStartSlider);
