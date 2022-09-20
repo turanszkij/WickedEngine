@@ -1526,6 +1526,7 @@ namespace wi::scene
 						{
 							t = (animation.timer - left) / (right - left);
 						}
+						t = wi::math::saturate(t);
 
 						switch (path_data_type)
 						{
@@ -1597,6 +1598,7 @@ namespace wi::scene
 						{
 							t = (animation.timer - left) / (right - left);
 						}
+						t = wi::math::saturate(t);
 
 						const float t2 = t * t;
 						const float t3 = t2 * t;
