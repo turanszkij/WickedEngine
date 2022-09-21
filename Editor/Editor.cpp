@@ -1007,7 +1007,6 @@ void EditorComponent::Update(float dt)
 
 						wi::primitive::Capsule capsule;
 						capsule.radius = wi::math::Distance(a, b) * 0.1f;
-						capsule.radius = wi::math::Clamp(capsule.radius, 0.01f, 0.1f);
 						a -= ab * capsule.radius;
 						b += ab * capsule.radius;
 						XMStoreFloat3(&capsule.base, a);
@@ -2226,7 +2225,6 @@ void EditorComponent::Render() const
 
 							wi::primitive::Capsule capsule;
 							capsule.radius = wi::math::Distance(a, b) * 0.1f;
-							capsule.radius = wi::math::Clamp(capsule.radius, 0.01f, 0.1f);
 							a -= ab * capsule.radius;
 							b += ab * capsule.radius;
 							XMStoreFloat3(&capsule.base, a);

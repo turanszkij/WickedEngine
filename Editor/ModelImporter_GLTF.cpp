@@ -149,6 +149,7 @@ struct LoaderState
 
 void Import_Extension_VRM(LoaderState& state);
 void Import_Extension_VRMC(LoaderState& state);
+void Import_Mixamo_Bone(LoaderState& state, Entity armatureEntity, Entity boneEntity, const tinygltf::Node& node);
 
 // Recursively loads nodes and resolves hierarchy:
 void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
@@ -270,11 +271,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	std::string name = wi::helper::GetFileNameFromPath(fileName);
 	std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(name));
 
-
 	tinygltf::TinyGLTF loader;
 	std::string err;
 	std::string warn;
-	bool ret;
 
 	tinygltf::FsCallbacks callbacks;
 	callbacks.ReadWholeFile = tinygltf::ReadWholeFile;
@@ -291,7 +290,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	state.scene = &scene;
 
 	wi::vector<uint8_t> filedata;
-	ret = wi::helper::FileRead(fileName, filedata);
+	bool ret = wi::helper::FileRead(fileName, filedata);
 
 	if (ret)
 	{
@@ -315,7 +314,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		err = "Failed to read file: " + fileName;
 	}
 
-	if (!ret) {
+	if (!ret)
+	{
 		wi::helper::messageBox(err, "GLTF error!");
 	}
 
@@ -763,11 +763,6 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 		}
 
-	}
-
-	if (scene.materials.GetCount() == 0)
-	{
-		scene.Entity_CreateMaterial("gltfimport_defaultMaterial");
 	}
 
 	// Create meshes:
@@ -1389,6 +1384,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	int armatureIndex = 0;
 	for (auto& skin : state.gltfModel.skins)
 	{
+		Entity armatureEntity = scene.armatures.GetEntity(armatureIndex);
 		ArmatureComponent& armature = scene.armatures[armatureIndex++];
 
 		const size_t jointCount = skin.joints.size();
@@ -1402,6 +1398,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			Entity boneEntity = state.entityMap[jointIndex];
 
 			armature.boneCollection[i] = boneEntity;
+
+			Import_Mixamo_Bone(state, armatureEntity, boneEntity, state.gltfModel.nodes[jointIndex]);
 		}
 	}
 
@@ -2015,11 +2013,11 @@ void Import_Extension_VRM(LoaderState& state)
 						{
 							component.bones[size_t(HumanoidComponent::HumanoidBone::RightFoot)] = boneID;
 						}
-						else if (!type.compare("LEFTTOE")) // here it is Toe, not Toes
+						else if (!type.compare("LEFTTOES"))
 						{
 							component.bones[size_t(HumanoidComponent::HumanoidBone::LeftToes)] = boneID;
 						}
-						else if (!type.compare("RIGHTTOE")) // here it is Toe, not Toes
+						else if (!type.compare("RIGHTTOES"))
 						{
 							component.bones[size_t(HumanoidComponent::HumanoidBone::RightToes)] = boneID;
 						}
@@ -2785,5 +2783,226 @@ void Import_Extension_VRMC(LoaderState& state)
 			}
 
 		}
+	}
+}
+
+void Import_Mixamo_Bone(LoaderState& state, Entity armatureEntity, Entity boneEntity, const tinygltf::Node& node)
+{
+	auto get_humanoid = [&]() -> HumanoidComponent& {
+		HumanoidComponent* component = state.scene->humanoids.GetComponent(armatureEntity);
+		if (component == nullptr)
+		{
+			component = &state.scene->humanoids.Create(armatureEntity);
+		}
+		return *component;
+	};
+
+	if (!node.name.compare("mixamorig:Hips"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Hips)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:Spine"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Spine)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:Spine1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Chest)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:Spine2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::UpperChest)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:Neck"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Neck)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:Head"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Head)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftShoulder"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftShoulder)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightShoulder"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightShoulder)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftArm"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftUpperArm)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightArm"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightUpperArm)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftForeArm"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftLowerArm)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightForeArm"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightLowerArm)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHand"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftHand)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHand"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightHand)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandThumb1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftThumbMetacarpal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandThumb1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightThumbMetacarpal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandThumb2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftThumbProximal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandThumb2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightThumbProximal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandThumb3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftThumbDistal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandThumb3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightThumbDistal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandIndex1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftIndexProximal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandIndex1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightIndexProximal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandIndex2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftIndexIntermediate)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandIndex2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightIndexIntermediate)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandIndex3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftIndexDistal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandIndex3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightIndexDistal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandMiddle1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftMiddleProximal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandMiddle1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightMiddleProximal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandMiddle2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftMiddleIntermediate)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandMiddle2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightMiddleIntermediate)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandMiddle3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftMiddleDistal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandMiddle3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightMiddleDistal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandRing1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftRingProximal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandRing1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightRingProximal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandRing2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftRingIntermediate)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandRing2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightRingIntermediate)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandRing3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftRingDistal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandRing3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightRingDistal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandPinky1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftLittleProximal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandPinky1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightLittleProximal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandPinky2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftLittleIntermediate)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandPinky2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightLittleIntermediate)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftHandPinky3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftLittleDistal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightHandPinky3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightLittleDistal)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftUpLeg"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftUpperLeg)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightUpLeg"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightUpperLeg)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftLeg"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftLowerLeg)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightLeg"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightLowerLeg)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftFoot"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftFoot)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightFoot"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightFoot)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:LeftToeBase"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftToes)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightToeBase"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightToes)] = boneEntity;
 	}
 }
