@@ -5,11 +5,43 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
+void ToWorldSpace(Scene& scene, TransformComponent& transform, Entity entity)
+{
+	XMMATRIX worldmatrix = transform.GetLocalMatrix();
+
+	HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+	if (hier != nullptr)
+	{
+		Entity parentID = hier->parentID;
+		while (parentID != INVALID_ENTITY)
+		{
+			size_t parent_index = scene.transforms.GetIndex(parentID);
+			if (parent_index == ~0ull)
+				break;
+			TransformComponent& transform_parent = scene.transforms[parent_index];
+			worldmatrix *= transform_parent.GetLocalMatrix();
+
+			const HierarchyComponent* hier_recursive = scene.hierarchy.GetComponent(parentID);
+			if (hier_recursive != nullptr)
+			{
+				parentID = hier_recursive->parentID;
+			}
+			else
+			{
+				parentID = INVALID_ENTITY;
+			}
+		}
+	}
+
+	// Now the real (not temp) transform world matrix is updated:
+	XMStoreFloat4x4(&transform.world, worldmatrix);
+}
+
 void AnimationWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_ANIMATION " Animation", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(520, 480));
+	SetSize(XMFLOAT2(520, 500));
 
 	closeButton.SetTooltip("Delete AnimationComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -901,6 +933,168 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	AddWidget(&keyframesList);
 
 
+	retargetCombo.Create("Retarget: ");
+	retargetCombo.SetSize(XMFLOAT2(wid, hei));
+	retargetCombo.selected_font.anim.typewriter.looped = true;
+	retargetCombo.selected_font.anim.typewriter.time = 2;
+	retargetCombo.selected_font.anim.typewriter.character_start = 1;
+	retargetCombo.SetTooltip("Make a copy of this animation and retarget it for a humanoid.\nThis will only work for bones in this animation that are part of a humanoid.");
+	retargetCombo.SetInvalidSelectionText("...");
+	retargetCombo.OnSelect([=](wi::gui::EventArgs args) {
+		retargetCombo.SetSelectedWithoutCallback(-1);
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		const AnimationComponent* animation_source = scene.animations.GetComponent(entity);
+		if (animation_source == nullptr)
+			return;
+		const HumanoidComponent* humanoid_dest = scene.humanoids.GetComponent((Entity)args.userdata);
+		if (humanoid_dest == nullptr)
+			return;
+
+		bool retarget_valid = false;
+		Scene retarget_scene;
+		Entity retarget_entity = CreateEntity();
+		AnimationComponent& animation = retarget_scene.animations.Create(retarget_entity);
+		animation = *animation_source;
+		animation.channels.clear();
+		animation.samplers.clear();
+
+		NameComponent name;
+		name.name += "[retarget]";
+		const NameComponent* name_source = scene.names.GetComponent(entity);
+		if (name_source != nullptr)
+		{
+			name.name += " " + name_source->name;
+		}
+		scene.names.Create(retarget_entity) = name;
+
+		TransformComponent transform;
+		const TransformComponent* transform_source = scene.transforms.GetComponent(entity);
+		if (transform_source != nullptr)
+		{
+			transform = *transform_source;
+		}
+		scene.transforms.Create(retarget_entity) = transform;
+
+		scene.Component_Attach(retarget_entity, (Entity)args.userdata);
+
+		for (auto& channel : animation_source->channels)
+		{
+			bool found = false;
+			for (size_t i = 0; (i < scene.humanoids.GetCount()) && !found; ++i)
+			{
+				const HumanoidComponent& humanoid_source = scene.humanoids[i];
+				for (size_t humanoidBoneIndex = 0; humanoidBoneIndex < arraysize(humanoid_source.bones); ++humanoidBoneIndex)
+				{
+					Entity bone_source = humanoid_source.bones[humanoidBoneIndex];
+					if (bone_source == channel.target)
+					{
+						retarget_valid = true;
+						found = true;
+						Entity bone_dest = humanoid_dest->bones[humanoidBoneIndex];
+
+						auto& retarget_channel = animation.channels.emplace_back();
+						retarget_channel = channel;
+						retarget_channel.target = bone_dest;
+						retarget_channel.samplerIndex = (int)animation.samplers.size();
+
+						auto& sampler = animation_source->samplers[channel.samplerIndex];
+
+						auto& retarget_sampler = animation.samplers.emplace_back();
+						retarget_sampler = sampler;
+						retarget_sampler.backwards_compatibility_data = {};
+
+						Entity retarget_animation_data_entity = CreateEntity();
+						auto& retarget_animation_data = retarget_scene.animation_datas.Create(retarget_animation_data_entity);
+						retarget_sampler.data = retarget_animation_data_entity;
+
+						auto& animation_data = scene.animation_datas.Contains(sampler.data) ? *scene.animation_datas.GetComponent(sampler.data) : sampler.backwards_compatibility_data;
+						retarget_animation_data = animation_data;
+
+						TransformComponent* transform_source = scene.transforms.GetComponent(bone_source);
+						TransformComponent* transform_dest = scene.transforms.GetComponent(bone_dest);
+						if (transform_source != nullptr && transform_dest != nullptr)
+						{
+
+//#define DECOMPOSE_METHOD
+#ifdef DECOMPOSE_METHOD
+							XMMATRIX bindMatrix = XMLoadFloat4x4(&transform_source->world);
+							XMMATRIX inverseBindMatrix = XMMatrixInverse(nullptr, bindMatrix);
+							XMMATRIX targetMatrix = XMLoadFloat4x4(&transform_dest->world);
+							targetMatrix = transform_dest->GetLocalMatrix();
+							XMVECTOR S, R, T;
+#else
+							XMVECTOR S = XMVectorReciprocal(XMLoadFloat3(&transform_source->scale_local)) * XMLoadFloat3(&transform_dest->scale_local);
+							XMVECTOR R = XMQuaternionNormalize(XMQuaternionMultiply(XMQuaternionInverse(XMLoadFloat4(&transform_source->rotation_local)), XMLoadFloat4(&transform_dest->rotation_local)));
+							XMVECTOR T = -XMLoadFloat3(&transform_source->translation_local) + XMLoadFloat3(&transform_dest->translation_local);
+#endif // DECOMPOSE_METHOD
+
+							switch (channel.path)
+							{
+							case AnimationComponent::AnimationChannel::Path::SCALE:
+								for (size_t offset = 0; offset < retarget_animation_data.keyframe_data.size(); offset += 3)
+								{
+									XMFLOAT3* data = (XMFLOAT3*)&retarget_animation_data.keyframe_data[offset];
+#ifdef DECOMPOSE_METHOD
+									TransformComponent transform = *transform_source;
+									transform.scale_local = *data;
+									ToWorldSpace(scene, transform, bone_source);
+									XMMATRIX localMatrix = XMLoadFloat4x4(&transform.world) * inverseBindMatrix * targetMatrix;
+									XMMatrixDecompose(&S, &R, &T, localMatrix);
+									XMStoreFloat3(data, S);
+#else
+									XMStoreFloat3(data, XMLoadFloat3(data) * S);
+#endif // DECOMPOSE_METHOD
+								}
+								break;
+							case AnimationComponent::AnimationChannel::Path::ROTATION:
+								for (size_t offset = 0; offset < retarget_animation_data.keyframe_data.size(); offset += 4)
+								{
+									XMFLOAT4* data = (XMFLOAT4*)&retarget_animation_data.keyframe_data[offset];
+#ifdef DECOMPOSE_METHOD
+									TransformComponent transform = *transform_source;
+									transform.rotation_local = *data;
+									ToWorldSpace(scene, transform, bone_source);
+									XMMATRIX localMatrix = XMLoadFloat4x4(&transform.world) * inverseBindMatrix * targetMatrix;
+									XMMatrixDecompose(&S, &R, &T, localMatrix);
+									XMStoreFloat4(data, R);
+#else
+									XMStoreFloat4(data, XMQuaternionNormalize(XMQuaternionMultiply(XMLoadFloat4(data), R)));
+#endif // DECOMPOSE_METHOD
+								}
+								break;
+							case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+								for (size_t offset = 0; offset < retarget_animation_data.keyframe_data.size(); offset += 3)
+								{
+									XMFLOAT3* data = (XMFLOAT3*)&retarget_animation_data.keyframe_data[offset];
+#ifdef DECOMPOSE_METHOD
+									TransformComponent transform = *transform_source;
+									transform.translation_local = *data;
+									ToWorldSpace(scene, transform, bone_source);
+									XMMATRIX localMatrix = XMLoadFloat4x4(&transform.world) * inverseBindMatrix * targetMatrix;
+									XMMatrixDecompose(&S, &R, &T, localMatrix);
+									XMStoreFloat3(data, T);
+#else
+									XMStoreFloat3(data, XMLoadFloat3(data) + T);
+#endif // DECOMPOSE_METHOD
+								}
+								break;
+							default:
+								break;
+							}
+						}
+						break;
+					}
+				}
+			}
+		}
+		if (retarget_valid)
+		{
+			scene.Merge(retarget_scene);
+			editor->optionsWnd.RefreshEntityTree();
+		}
+	});
+	AddWidget(&retargetCombo);
+
 
 	SetMinimized(true);
 	SetVisible(false);
@@ -1104,6 +1298,27 @@ void AnimationWindow::RefreshKeyframesList()
 		}
 		channelIndex++;
 	}
+
+	retargetCombo.ClearItems();
+	for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
+	{
+		std::string item = ICON_HUMANOID " ";
+		Entity entity = scene.humanoids.GetEntity(i);
+		const NameComponent* name = scene.names.GetComponent(entity);
+		if (name == nullptr)
+		{
+			item += "[no_name] " + std::to_string(entity);
+		}
+		else if (name->name.empty())
+		{
+			item += "[name_empty] " + std::to_string(entity);
+		}
+		else
+		{
+			item += name->name;
+		}
+		retargetCombo.AddItem(item, (uint64_t)entity);
+	}
 }
 
 
@@ -1165,5 +1380,6 @@ void AnimationWindow::ResizeLayout()
 	add(startInput);
 	add(endInput);
 	add(recordCombo);
+	add(retargetCombo);
 	add_fullwidth(keyframesList);
 }
