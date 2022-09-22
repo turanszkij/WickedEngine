@@ -26,6 +26,8 @@ public:
 	wi::gui::ComboBox recordCombo;
 	wi::gui::TreeList keyframesList;
 
+	wi::gui::ComboBox retargetCombo;
+
 	void Update();
 
 	void RefreshKeyframesList();
