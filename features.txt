@@ -84,7 +84,8 @@ HDR display output
 Dynamic Diffuse Global Illumination (DDGI)
 Procedural terrain generator
 Expressions
-Humanoid animation retargeting
+Humanoid rig
+Animation retargeting
 
 GLTF 2.0 - KHR extensions supported:
 KHR_materials_unlit
