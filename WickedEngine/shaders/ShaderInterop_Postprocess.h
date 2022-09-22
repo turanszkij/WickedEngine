@@ -122,6 +122,9 @@ struct PushConstantsTonemap
 	float2 resolution_rcp;
 	float exposure;
 	float dither;
+	float brightness;
+	float contrast;
+	float saturation;
 
 	int texture_input;
 	int buffer_input_luminance;

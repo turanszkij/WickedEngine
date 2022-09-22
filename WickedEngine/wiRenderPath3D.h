@@ -23,6 +23,9 @@ namespace wi
 		};
 	private:
 		float exposure = 1.0f;
+		float brightness = 0.0f;
+		float contrast = 1.0f;
+		float saturation = 1.0f;
 		float bloomThreshold = 1.0f;
 		float motionBlurStrength = 100.0f;
 		float dofStrength = 10.0f;
@@ -179,6 +182,9 @@ namespace wi
 		const wi::graphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }
 
 		constexpr float getExposure() const { return exposure; }
+		constexpr float getBrightness() const { return brightness; }
+		constexpr float getContrast() const { return contrast; }
+		constexpr float getSaturation() const { return saturation; }
 		constexpr float getBloomThreshold() const { return bloomThreshold; }
 		constexpr float getMotionBlurStrength() const { return motionBlurStrength; }
 		constexpr float getDepthOfFieldStrength() const { return dofStrength; }
@@ -227,6 +233,9 @@ namespace wi
 		constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
 
 		constexpr void setExposure(float value) { exposure = value; }
+		constexpr void setBrightness(float value) { brightness = value; }
+		constexpr void setContrast(float value) { contrast = value; }
+		constexpr void setSaturation(float value) { saturation = value; }
 		constexpr void setBloomThreshold(float value) { bloomThreshold = value; }
 		constexpr void setMotionBlurStrength(float value) { motionBlurStrength = value; }
 		constexpr void setDepthOfFieldStrength(float value) { dofStrength = value; }

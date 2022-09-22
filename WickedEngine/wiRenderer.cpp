@@ -2292,7 +2292,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	const float splits[CASCADE_COUNT + 1] = {
 		referenceSplitClamp * 0.0f,		// near plane
 		referenceSplitClamp * 0.01f,	// near-mid split
-		referenceSplitClamp * 0.1f,		// mid-far split
+		referenceSplitClamp * 0.05f,		// mid-far split
 		referenceSplitClamp * 1.0f,		// far plane
 	};
 	assert(shcam_count <= CASCADE_COUNT);
@@ -13078,6 +13078,9 @@ void Postprocess_Tonemap(
 	const Texture& output,
 	CommandList cmd,
 	float exposure,
+	float brightness,
+	float contrast,
+	float saturation,
 	bool dither,
 	const Texture* texture_colorgradinglut,
 	const Texture* texture_distortion,
@@ -13105,6 +13108,9 @@ void Postprocess_Tonemap(
 	tonemap_push.resolution_rcp.y = 1.0f / desc.height;
 	tonemap_push.exposure = exposure;
 	tonemap_push.dither = dither ? 1.0f : 0.0f;
+	tonemap_push.brightness = brightness;
+	tonemap_push.contrast = contrast;
+	tonemap_push.saturation = saturation;
 	tonemap_push.texture_input = device->GetDescriptorIndex(&input, SubresourceType::SRV);
 	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
 	tonemap_push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SubresourceType::SRV);

@@ -42,6 +42,23 @@ float3 ACESFitted(float3 color)
 	return color;
 }
 
+float4x4 saturationMatrix(float saturate)
+{
+	float3 luminance = float3(0.3086f, 0.6094f, 0.0820f);
+	float oneMinusSat = 1.0f - saturate;
+
+	float3 red = float3(luminance * oneMinusSat);
+	red += float3(saturate, 0, 0);
+
+	float3 green = float3(luminance * oneMinusSat);
+	green += float3(0, saturate, 0);
+
+	float3 blue = float3(luminance * oneMinusSat);
+	blue += float3(0, 0, saturate);
+
+	return float4x4(red, 0, green, 0, blue, 0, 0, 0, 0, 1);
+}
+
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
@@ -97,6 +114,31 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		// dithering before outputting to SDR will reduce color banding:
 		result.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;
 	}
+
+	float saturationIntensity = 1.0f;
+	float brightness = 0.0f;
+	float contrast = 1.0f;
+
+	[branch]
+	if (tonemap_push.brightness >= 0)
+	{
+		brightness = tonemap_push.brightness;
+	}
+
+	[branch]
+	if (tonemap_push.contrast >= 0)
+	{
+		contrast = tonemap_push.contrast;
+	}
+
+	[branch]
+	if (tonemap_push.saturation >= 0)
+	{
+		saturationIntensity = tonemap_push.saturation;
+	}
+
+	result.rgb = (result.rgb - 0.5f) * contrast + 0.5f + brightness;
+	result.rgb = (float3)(mul(saturationMatrix(saturationIntensity), result));
 
 	[branch]
 	if (tonemap_push.texture_output >= 0)
