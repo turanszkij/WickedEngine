@@ -5,9 +5,7 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
-wi::vector<wi::renderer::RenderablePoint> points;
-
-XMMATRIX GetWorldMatrix(Scene& scene, Entity entity, XMMATRIX localMatrix)
+XMMATRIX ComputeWorldMatrixRecursive(Scene& scene, Entity entity, XMMATRIX localMatrix)
 {
 	HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
 	if (hier != nullptr)
@@ -32,8 +30,38 @@ XMMATRIX GetWorldMatrix(Scene& scene, Entity entity, XMMATRIX localMatrix)
 			}
 		}
 	}
-
 	return localMatrix;
+}
+XMMATRIX ComputeInverseParentMatrixRecursive(Scene& scene, Entity entity)
+{
+	XMMATRIX inverseParentMatrix = XMMatrixIdentity();
+
+	HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+	if (hier != nullptr)
+	{
+		Entity parentID = hier->parentID;
+		while (parentID != INVALID_ENTITY)
+		{
+			TransformComponent* transform_parent = scene.transforms.GetComponent(parentID);
+			if (transform_parent == nullptr)
+				break;
+
+			inverseParentMatrix *= transform_parent->GetLocalMatrix();
+
+			const HierarchyComponent* hier_recursive = scene.hierarchy.GetComponent(parentID);
+			if (hier_recursive != nullptr)
+			{
+				parentID = hier_recursive->parentID;
+			}
+			else
+			{
+				parentID = INVALID_ENTITY;
+			}
+		}
+
+		inverseParentMatrix = XMMatrixInverse(nullptr, inverseParentMatrix);
+	}
+	return inverseParentMatrix;
 }
 
 void AnimationWindow::Create(EditorComponent* _editor)
@@ -1013,22 +1041,11 @@ void AnimationWindow::Create(EditorComponent* _editor)
 						TransformComponent* transform_dest = scene.transforms.GetComponent(bone_dest);
 						if (transform_source != nullptr && transform_dest != nullptr)
 						{
-
-							//if (humanoidBoneIndex == 0)
-							//{
-							//	wi::renderer::RenderablePoint point;
-							//	point.size = 0.1f;
-							//	point.color = XMFLOAT4(1, 0, 0, 1);
-							//	point.position = transform_source->GetPosition();
-							//	points.push_back(point);
-							//}
-							XMMATRIX bindMatrix = XMLoadFloat4x4(&transform_source->world);
+							XMMATRIX bindMatrix = ComputeWorldMatrixRecursive(scene, bone_source, transform_source->GetLocalMatrix());
 							XMMATRIX inverseBindMatrix = XMMatrixInverse(nullptr, bindMatrix);
-							XMMATRIX targetMatrix = transform_dest->GetLocalMatrix();
-							XMVECTOR S, R, T;
-							XMVECTOR S_local = XMLoadFloat3(&transform_dest->scale_local);
-							XMVECTOR R_local = XMLoadFloat4(&transform_dest->rotation_local);
-							XMVECTOR T_local = XMLoadFloat3(&transform_dest->translation_local);
+							XMMATRIX targetMatrix = ComputeWorldMatrixRecursive(scene, bone_dest, transform_dest->GetLocalMatrix());
+							XMMATRIX inverseParentMatrix = ComputeInverseParentMatrixRecursive(scene, bone_dest);
+							XMVECTOR S, R, T; // matrix decompose destinations
 
 							switch (channel.path)
 							{
@@ -1038,7 +1055,8 @@ void AnimationWindow::Create(EditorComponent* _editor)
 									XMFLOAT3* data = (XMFLOAT3*)&retarget_animation_data.keyframe_data[offset];
 									TransformComponent transform = *transform_source;
 									transform.scale_local = *data;
-									XMMATRIX localMatrix = inverseBindMatrix * GetWorldMatrix(scene, bone_source, transform.GetLocalMatrix()) * targetMatrix;
+									XMMATRIX localMatrix = inverseBindMatrix * ComputeWorldMatrixRecursive(scene, bone_source, transform.GetLocalMatrix());
+									localMatrix = targetMatrix * localMatrix * inverseParentMatrix;
 									XMMatrixDecompose(&S, &R, &T, localMatrix);
 									XMStoreFloat3(data, S);
 								}
@@ -1049,15 +1067,10 @@ void AnimationWindow::Create(EditorComponent* _editor)
 									XMFLOAT4* data = (XMFLOAT4*)&retarget_animation_data.keyframe_data[offset];
 									TransformComponent transform = *transform_source;
 									transform.rotation_local = *data;
-									XMMATRIX localMatrix = inverseBindMatrix * GetWorldMatrix(scene, bone_source, transform.GetLocalMatrix()) * targetMatrix;
+									XMMATRIX localMatrix = inverseBindMatrix * ComputeWorldMatrixRecursive(scene, bone_source, transform.GetLocalMatrix());
+									localMatrix = targetMatrix * localMatrix * inverseParentMatrix;
 									XMMatrixDecompose(&S, &R, &T, localMatrix);
 									XMStoreFloat4(data, R);
-
-									//wi::renderer::RenderablePoint point;
-									//point.size = 0.1f;
-									//point.color = XMFLOAT4(0, 0, 1, 1);
-									//point.position = transform.GetPosition();
-									//points.push_back(point);
 								}
 								break;
 							case AnimationComponent::AnimationChannel::Path::TRANSLATION:
@@ -1066,20 +1079,10 @@ void AnimationWindow::Create(EditorComponent* _editor)
 									XMFLOAT3* data = (XMFLOAT3*)&retarget_animation_data.keyframe_data[offset];
 									TransformComponent transform = *transform_source;
 									transform.translation_local = *data;
-									XMMATRIX localMatrix = inverseBindMatrix * GetWorldMatrix(scene, bone_source, transform.GetLocalMatrix()) * targetMatrix;
+									XMMATRIX localMatrix = inverseBindMatrix * ComputeWorldMatrixRecursive(scene, bone_source, transform.GetLocalMatrix());
+									localMatrix = targetMatrix * localMatrix * inverseParentMatrix;
 									XMMatrixDecompose(&S, &R, &T, localMatrix);
 									XMStoreFloat3(data, T);
-
-									//if (humanoidBoneIndex == 0)
-									//{
-									//	wi::renderer::RenderablePoint point;
-									//	point.size = 0.1f;
-									//	point.color = XMFLOAT4(0, 0, 1, 1);
-									//	//point.position = transform.GetPosition();
-									//	point.position = *data;
-									//	points.push_back(point);
-									//}
-
 								}
 								break;
 							default:
@@ -1164,11 +1167,6 @@ void AnimationWindow::Update()
 	speedSlider.SetValue(animation.speed);
 	startInput.SetValue(animation.start);
 	endInput.SetValue(animation.end);
-
-	for (auto& point : points)
-	{
-		wi::renderer::DrawPoint(point);
-	}
 }
 
 
