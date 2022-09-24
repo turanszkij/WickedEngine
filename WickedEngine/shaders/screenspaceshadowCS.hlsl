@@ -200,7 +200,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						float shadow = 0;
 
 						ray.Direction = normalize(lerp(L, mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(L)), 0.025 + max3(surface.sss)));
-
 #ifdef RTAPI
 						RayQuery<
 							RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |

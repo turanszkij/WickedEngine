@@ -13078,6 +13078,9 @@ void Postprocess_Tonemap(
 	const Texture& output,
 	CommandList cmd,
 	float exposure,
+	float brightness,
+	float contrast,
+	float saturation,
 	bool dither,
 	const Texture* texture_colorgradinglut,
 	const Texture* texture_distortion,
@@ -13105,6 +13108,9 @@ void Postprocess_Tonemap(
 	tonemap_push.resolution_rcp.y = 1.0f / desc.height;
 	tonemap_push.exposure = exposure;
 	tonemap_push.dither = dither ? 1.0f : 0.0f;
+	tonemap_push.brightness = brightness;
+	tonemap_push.contrast = contrast;
+	tonemap_push.saturation = saturation;
 	tonemap_push.texture_input = device->GetDescriptorIndex(&input, SubresourceType::SRV);
 	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
 	tonemap_push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SubresourceType::SRV);
