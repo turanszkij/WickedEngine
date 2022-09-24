@@ -2292,7 +2292,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	const float splits[CASCADE_COUNT + 1] = {
 		referenceSplitClamp * 0.0f,		// near plane
 		referenceSplitClamp * 0.01f,	// near-mid split
-		referenceSplitClamp * 0.05f,		// mid-far split
+		referenceSplitClamp * 0.1f,		// mid-far split
 		referenceSplitClamp * 1.0f,		// far plane
 	};
 	assert(shcam_count <= CASCADE_COUNT);
