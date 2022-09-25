@@ -528,6 +528,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
+- UpdateHierarchy()	-- updates the full scene hierarchy system. Useful if you modified for example a parent transform and children immediately need up to date result in the script
 
 - CreateEntity() : int entity  -- creates an empty entity and returns it
 - Entity_FindByName(string value) : int entity  -- returns an entity ID if it exists, and 0 otherwise
@@ -653,6 +654,7 @@ Describes an orientation in 3D space.
 
 - Scale(Vector vectorXYZ)  -- Applies scaling
 - Rotate(Vector vectorRollPitchYaw)  -- Applies rotation as roll,pitch,yaw
+- RotateQuaternion(Vector quaternion)  -- Applies rotation as quaternion
 - Translate(Vector vectorXYZ)  -- Applies translation (position offset)
 - Lerp(TransformComponent a,b, float t)  -- Interpolates linearly between two transform components 
 - CatmullRom(TransformComponent a,b,c,d, float t)  -- Interpolates between four transform components on a spline

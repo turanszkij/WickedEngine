@@ -460,6 +460,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Update),
 	lunamethod(Scene_BindLua, Clear),
 	lunamethod(Scene_BindLua, Merge),
+	lunamethod(Scene_BindLua, UpdateHierarchy),
 	lunamethod(Scene_BindLua, Intersects),
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
@@ -678,6 +679,14 @@ int Scene_BindLua::Entity_Duplicate(lua_State* L)
 	{
 		wi::lua::SError(L, "Scene::Entity_Duplicate(Entity entity) not enough arguments!");
 	}
+	return 0;
+}
+
+int Scene_BindLua::UpdateHierarchy(lua_State* L)
+{
+	wi::jobsystem::context ctx;
+	scene->RunHierarchyUpdateSystem(ctx);
+	wi::jobsystem::Wait(ctx);
 	return 0;
 }
 
@@ -2577,6 +2586,7 @@ const char TransformComponent_BindLua::className[] = "TransformComponent";
 Luna<TransformComponent_BindLua>::FunctionType TransformComponent_BindLua::methods[] = {
 	lunamethod(TransformComponent_BindLua, Scale),
 	lunamethod(TransformComponent_BindLua, Rotate),
+	lunamethod(TransformComponent_BindLua, RotateQuaternion),
 	lunamethod(TransformComponent_BindLua, Translate),
 	lunamethod(TransformComponent_BindLua, Lerp),
 	lunamethod(TransformComponent_BindLua, CatmullRom),
@@ -2643,6 +2653,27 @@ int TransformComponent_BindLua::Rotate(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Rotate(Vector vectorRollPitchYaw) not enough arguments!");
+	}
+	return 0;
+}
+int TransformComponent_BindLua::RotateQuaternion(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (v != nullptr)
+		{
+			component->Rotate(v->data);
+		}
+		else
+		{
+			wi::lua::SError(L, "RotateQuaternion(Vector quaternion) argument is not a vector!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "RotateQuaternion(Vector quaternion) not enough arguments!");
 	}
 	return 0;
 }

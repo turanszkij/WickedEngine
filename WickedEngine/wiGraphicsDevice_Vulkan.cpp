@@ -2467,6 +2467,8 @@ using namespace vulkan_internal;
 				raytracing_query_features = {};
 				fragment_shading_rate_features = {};
 				mesh_shader_features = {};
+				conditional_rendering_features = {};
+				depth_clip_enable_features = {};
 
 				properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 				properties_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
@@ -2537,8 +2539,6 @@ using namespace vulkan_internal;
 
 				if (checkExtensionSupport(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME, available_deviceExtensions))
 				{
-					assert(checkExtensionSupport(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME, available_deviceExtensions));
-					enabled_deviceExtensions.push_back(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME);
 					enabled_deviceExtensions.push_back(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
 					fragment_shading_rate_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
 					*features_chain = &fragment_shading_rate_features;

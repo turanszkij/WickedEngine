@@ -19,6 +19,8 @@ namespace wi::scene
 {
 	struct Scene
 	{
+		virtual ~Scene() = default;
+
 		wi::ecs::ComponentLibrary componentLibrary;
 
 		wi::ecs::ComponentManager<NameComponent>& names = componentLibrary.Register<NameComponent>("wi::scene::Scene::names");
@@ -199,12 +201,12 @@ namespace wi::scene
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!
-		void Update(float dt);
+		virtual void Update(float dt);
 		// Remove everything from the scene that it owns:
-		void Clear();
+		virtual void Clear();
 		// Merge an other scene into this.
 		//	The contents of the other scene will be lost (and moved to this)!
-		void Merge(Scene& other);
+		virtual void Merge(Scene& other);
 		// Finds all entities in the scene that have any components attached
 		void FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const;
 
