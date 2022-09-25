@@ -1833,6 +1833,7 @@ void Import_Extension_VRM(LoaderState& state)
 									//component.colliders.push_back(colliderID); // for now, we will just use all colliders in the scene for every spring
 									ColliderComponent& collider_component = state.scene->colliders.Create(colliderID);
 									state.scene->transforms.Create(colliderID);
+									state.scene->layers.Create(colliderID);
 									state.scene->Component_Attach(colliderID, transformID, true);
 
 									const auto& collider = colliders.Get(int(collider_index));
@@ -2691,6 +2692,7 @@ void Import_Extension_VRMC(LoaderState& state)
 					Entity colliderID = CreateEntity();
 					state.scene->colliders.Create(colliderID) = component;
 					state.scene->transforms.Create(colliderID);
+					state.scene->layers.Create(colliderID);
 					state.scene->Component_Attach(colliderID, entity, true);
 				}
 			}

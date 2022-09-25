@@ -337,6 +337,10 @@ namespace wi::lua::scene
 		int GetTimer(lua_State* L);
 		int SetAmount(lua_State* L);
 		int GetAmount(lua_State* L);
+		int GetStart(lua_State* L);
+		int SetStart(lua_State* L);
+		int GetEnd(lua_State* L);
+		int SetEnd(lua_State* L);
 	};
 
 	class MaterialComponent_BindLua

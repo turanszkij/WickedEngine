@@ -3079,6 +3079,10 @@ Luna<AnimationComponent_BindLua>::FunctionType AnimationComponent_BindLua::metho
 	lunamethod(AnimationComponent_BindLua, GetTimer),
 	lunamethod(AnimationComponent_BindLua, SetAmount),
 	lunamethod(AnimationComponent_BindLua, GetAmount),
+	lunamethod(AnimationComponent_BindLua, GetStart),
+	lunamethod(AnimationComponent_BindLua, SetStart),
+	lunamethod(AnimationComponent_BindLua, GetEnd),
+	lunamethod(AnimationComponent_BindLua, SetEnd),
 	{ NULL, NULL }
 };
 Luna<AnimationComponent_BindLua>::PropertyType AnimationComponent_BindLua::properties[] = {
@@ -3168,6 +3172,44 @@ int AnimationComponent_BindLua::GetAmount(lua_State* L)
 {
 	wi::lua::SSetFloat(L, component->amount);
 	return 1;
+}
+int AnimationComponent_BindLua::GetStart(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->start);
+	return 1;
+}
+int AnimationComponent_BindLua::SetStart(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetFloat(L, 1);
+		component->start = value;
+	}
+	else
+	{
+		wi::lua::SError(L, "SetStart(float value) not enough arguments!");
+	}
+	return 0;
+}
+int AnimationComponent_BindLua::GetEnd(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->end);
+	return 1;
+}
+int AnimationComponent_BindLua::SetEnd(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetFloat(L, 1);
+		component->end = value;
+	}
+	else
+	{
+		wi::lua::SError(L, "SetEnd(float value) not enough arguments!");
+	}
+	return 0;
 }
 
 

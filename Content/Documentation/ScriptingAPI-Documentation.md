@@ -714,6 +714,10 @@ Describes an orientation in 3D space.
 - GetTimer() : float result
 - SetAmount(float value)
 - GetAmount() : float result
+- GetStart() : float result
+- SetStart(float value)
+- GetEnd() : float result
+- SetEnd(float value)
 
 #### MaterialComponent
 - _flags : int
