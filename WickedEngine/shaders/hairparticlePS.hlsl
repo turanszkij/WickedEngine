@@ -39,11 +39,13 @@ float4 main(VertexToPixel input) : SV_Target
 #ifndef PREPASS
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
+#ifndef CARTOON
 	[branch]
 	if (GetCamera().texture_ao_index >= 0)
 	{
 		surface.occlusion *= bindless_textures_float[GetCamera().texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
+#endif // CARTOON
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 #endif // PREPASS

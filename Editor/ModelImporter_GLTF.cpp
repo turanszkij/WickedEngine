@@ -2151,7 +2151,6 @@ void Import_Extension_VRM(LoaderState& state)
 			}
 		}
 
-#if 0 // todo toon shading parameters
 		if (ext_vrm->second.Has("materialProperties"))
 		{
 			const auto& materialProperties = ext_vrm->second.Get("materialProperties");
@@ -2183,7 +2182,6 @@ void Import_Extension_VRM(LoaderState& state)
 				}
 			}
 		}
-#endif
 
 	}
 
