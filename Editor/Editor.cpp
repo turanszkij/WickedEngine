@@ -260,7 +260,10 @@ void EditorComponent::Load()
 						Scene scene;
 						wi::scene::LoadModel(scene, fileName);
 						GetCurrentScene().Merge(scene);
-						GetCurrentEditorScene().path = fileName;
+						if (GetCurrentEditorScene().path.empty())
+						{
+							GetCurrentEditorScene().path = fileName;
+						}
 					}
 					else if (!extension.compare("OBJ")) // wavefront-obj
 					{
