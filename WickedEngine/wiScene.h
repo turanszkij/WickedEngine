@@ -84,6 +84,7 @@ namespace wi::scene
 
 		// Separate stream of world matrices:
 		wi::vector<XMFLOAT4X4> matrix_objects;
+		wi::vector<XMFLOAT4X4> matrix_objects_prev;
 
 		// Shader visible scene parameters:
 		ShaderScene shaderscene;
@@ -333,6 +334,7 @@ namespace wi::scene
 			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 			XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 			XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
+			XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
 			float distance = std::numeric_limits<float>::max();
 			int subsetIndex = -1;
 			int vertexID0 = -1;
@@ -357,6 +359,7 @@ namespace wi::scene
 			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 			XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 			XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
+			XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
 			float depth = 0;
 		};
 		SphereIntersectionResult Intersects(const wi::primitive::Sphere& sphere, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;

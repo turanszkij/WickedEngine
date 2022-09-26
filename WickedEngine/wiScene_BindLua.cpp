@@ -719,7 +719,8 @@ int Scene_BindLua::Intersects(lua_State* L)
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.position));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.normal));
 			wi::lua::SSetFloat(L, result.distance);
-			return 4;
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.velocity));
+			return 5;
 		}
 
 		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
@@ -730,7 +731,8 @@ int Scene_BindLua::Intersects(lua_State* L)
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.position));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.normal));
 			wi::lua::SSetFloat(L, result.depth);
-			return 4;
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.velocity));
+			return 5;
 		}
 
 		Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
@@ -741,7 +743,8 @@ int Scene_BindLua::Intersects(lua_State* L)
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.position));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.normal));
 			wi::lua::SSetFloat(L, result.depth);
-			return 4;
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.velocity));
+			return 5;
 		}
 
 		wi::lua::SError(L, "Scene::Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) first argument is not an accepted primitive type!");
