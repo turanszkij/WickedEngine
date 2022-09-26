@@ -12535,6 +12535,7 @@ void Postprocess_MotionBlur(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_VERTICAL], cmd);
 
 		device->BindResource(&res.texture_tilemax_horizontal, 0, cmd);
+		device->BindResource(&res.texture_tilemin_horizontal, 1, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_tilemax,
