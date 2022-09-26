@@ -202,8 +202,6 @@ namespace wi::physics
 				{
 					convexHull->addPoint(btVector3(pos.x, pos.y, pos.z));
 				}
-				btVector3 S(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
-				physicsobject.shape->setLocalScaling(S);
 			}
 			else
 			{
@@ -241,8 +239,6 @@ namespace wi::physics
 
 				bool useQuantizedAabbCompression = true;
 				physicsobject.shape = std::make_unique<btBvhTriangleMeshShape>(&physicsobject.triangles, useQuantizedAabbCompression);
-				btVector3 S(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
-				physicsobject.shape->setLocalScaling(S);
 			}
 			else
 			{
@@ -261,6 +257,9 @@ namespace wi::physics
 		{
 			// Use default margin for now
 			//shape->setMargin(btScalar(0.01));
+
+			btVector3 S(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
+			physicsobject.shape->setLocalScaling(S);
 
 			btScalar mass = physicscomponent.mass;
 

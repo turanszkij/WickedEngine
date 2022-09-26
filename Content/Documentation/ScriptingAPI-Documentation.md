@@ -1206,6 +1206,10 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetSharpenFilterEnabled(bool value)
 - SetSharpenFilterAmount(float value)
 - SetExposure(float value)
+- SetOutlineEnabled(bool value)
+- SetOutlineThreshold(float value)
+- SetOutlineThickness(float value)
+- SetOutlineColor(float r,g,b,a)
 
 #### LoadingScreen
 It is a RenderPath2D but one that internally manages resource loading and can display information about the process.

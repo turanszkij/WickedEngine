@@ -187,17 +187,15 @@ void ColliderWindow::Create(EditorComponent* _editor)
 
 void ColliderWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
-
-	this->entity = entity;
-
 	Scene& scene = editor->GetCurrentScene();
 
 	const ColliderComponent* collider = scene.colliders.GetComponent(entity);
 
 	if (collider != nullptr)
 	{
+		if (this->entity == entity)
+			return;
+		this->entity = entity;
 		cpuCheckBox.SetCheck(collider->IsCPUEnabled());
 		gpuCheckBox.SetCheck(collider->IsGPUEnabled());
 		shapeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)collider->shape);
@@ -208,6 +206,10 @@ void ColliderWindow::SetEntity(Entity entity)
 		tailX.SetValue(collider->tail.x);
 		tailY.SetValue(collider->tail.y);
 		tailZ.SetValue(collider->tail.z);
+	}
+	else
+	{
+		this->entity = INVALID_ENTITY;
 	}
 }
 

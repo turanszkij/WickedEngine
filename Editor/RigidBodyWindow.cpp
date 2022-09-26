@@ -310,18 +310,15 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 void RigidBodyWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
-
-	this->entity = entity;
-
 	Scene& scene = editor->GetCurrentScene();
-
 
 	const RigidBodyPhysicsComponent* physicsComponent = scene.rigidbodies.GetComponent(entity);
 
 	if (physicsComponent != nullptr)
 	{
+		if (this->entity == entity)
+			return;
+		this->entity = entity;
 		massSlider.SetValue(physicsComponent->mass);
 		frictionSlider.SetValue(physicsComponent->friction);
 		restitutionSlider.SetValue(physicsComponent->restitution);
@@ -333,6 +330,10 @@ void RigidBodyWindow::SetEntity(Entity entity)
 		disabledeactivationCheckBox.SetCheck(physicsComponent->IsDisableDeactivation());
 
 		collisionShapeComboBox.SetSelectedByUserdata((uint64_t)physicsComponent->shape);
+	}
+	else
+	{
+		this->entity = INVALID_ENTITY;
 	}
 
 }

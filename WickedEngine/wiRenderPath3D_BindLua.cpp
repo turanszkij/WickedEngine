@@ -51,6 +51,10 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetMotionBlurStrength),
 		lunamethod(RenderPath3D_BindLua, SetDepthOfFieldStrength),
 		lunamethod(RenderPath3D_BindLua, SetLightShaftsStrength),
+		lunamethod(RenderPath3D_BindLua, SetOutlineEnabled),
+		lunamethod(RenderPath3D_BindLua, SetOutlineThickness),
+		lunamethod(RenderPath3D_BindLua, SetOutlineThreshold),
+		lunamethod(RenderPath3D_BindLua, SetOutlineColor),
 		{ NULL, NULL }
 	};
 	Luna<RenderPath3D_BindLua>::PropertyType RenderPath3D_BindLua::properties[] = {
@@ -381,8 +385,6 @@ namespace wi::lua
 			wi::lua::SError(L, "SetExposure(float value) not enough arguments!");
 		return 0;
 	}
-
-
 	int RenderPath3D_BindLua::SetMotionBlurStrength(lua_State* L)
 	{
 		if (component == nullptr)
@@ -426,6 +428,66 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetLightShaftsStrength(float value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetOutlineEnabled(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetOutlineEnabled(bool value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setOutlineEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetOutlineEnabled(bool value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetOutlineThickness(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetOutlineThickness(float value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setOutlineThickness(wi::lua::SGetFloat(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetOutlineThickness(float value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetOutlineThreshold(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetOutlineThreshold(float value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setOutlineThreshold(wi::lua::SGetFloat(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetOutlineThreshold(float value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetOutlineColor(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetOutlineColor(float r,g,b,a) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 3)
+		{
+			((RenderPath3D*)component)->setOutlineColor(wi::lua::SGetFloat4(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetOutlineColor(float r,g,b,a) not enough arguments!");
 		return 0;
 	}
 

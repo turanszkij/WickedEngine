@@ -600,7 +600,7 @@ void EditorComponent::Update(float dt)
 	CheckBonePickingEnabled();
 	UpdateTopMenuAnimation();
 
-	save_text_alpha = std::max(0.0f, save_text_alpha - dt);
+	save_text_alpha = std::max(0.0f, save_text_alpha - 0.016f); // constant fade time (no dt, because after saving, dt can become huge)
 
 	bool clear_selected = false;
 	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
