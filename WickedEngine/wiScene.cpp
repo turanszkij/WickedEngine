@@ -4187,13 +4187,14 @@ namespace wi::scene
 
 						float distance;
 						XMFLOAT2 bary;
-						if (wi::math::RayTriangleIntersects(jobData.rayOrigin_local, jobData.rayDirection_local, p0, p1, p2, distance, bary, jobData.func->TMin, jobData.func->TMax))
+						if (wi::math::RayTriangleIntersects(jobData.rayOrigin_local, jobData.rayDirection_local, p0, p1, p2, distance, bary))
 						{
 							const XMVECTOR pos_local = XMVectorAdd(jobData.rayOrigin_local, jobData.rayDirection_local * distance);
 							const XMVECTOR pos = XMVector3Transform(pos_local, jobData.objectMat);
 							distance = wi::math::Distance(pos, jobData.func->rayOrigin);
 
-							if (distance < groupResult.distance)
+							// Note: we do the TMin, Tmax check here, in world space! We use the RayTriangleIntersects in local space, so we don't use those in there
+							if (distance < groupResult.distance && distance >= jobData.func->TMin && distance <= jobData.func->TMax)
 							{
 								const XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0)), jobData.objectMat));
 								const XMVECTOR vel = pos - XMVector3Transform(pos_local, jobData.objectMatPrev);
