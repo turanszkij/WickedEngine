@@ -476,6 +476,7 @@ A four component floating point vector. Provides efficient calculations with SIM
 - QuaternionFromRollPitchYaw(Vector rotXYZ) : Vector result
 - QuaternionToRollPitchYaw(Vector quaternion) : Vector result
 - QuaternionSlerp(Vector v1,v2, float t) : Vector result
+- GetAngle(Vector a,b,axis, opt float max_angle = math.pi * 2) : float result	-- computes the signed angle between two 3D vectors around specified axis
 
 ### Matrix
 A four by four matrix, efficient calculations with SIMD support.

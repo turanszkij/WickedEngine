@@ -31,6 +31,7 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, QuaternionMultiply),
 		lunamethod(Vector_BindLua, QuaternionFromRollPitchYaw),
 		lunamethod(Vector_BindLua, QuaternionToRollPitchYaw),
+		lunamethod(Vector_BindLua, GetAngle),
 		{ NULL, NULL }
 	};
 	Luna<Vector_BindLua>::PropertyType Vector_BindLua::properties[] = {
@@ -426,6 +427,33 @@ namespace wi::lua
 			}
 		}
 		wi::lua::SError(L, "QuaternionSlerp(Vector v1,v2, float t) not enough arguments!");
+		return 0;
+	}
+
+	int Vector_BindLua::GetAngle(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 2)
+		{
+			Vector_BindLua* a = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* b = Luna<Vector_BindLua>::lightcheck(L, 2);
+			Vector_BindLua* axis = Luna<Vector_BindLua>::lightcheck(L, 3);
+			float max_value = XM_2PI;
+			if (argc > 3)
+			{
+				max_value = wi::lua::SGetFloat(L, 4);
+			}
+			if (a && b && axis)
+			{
+				wi::lua::SSetFloat(L, wi::math::GetAngle(XMLoadFloat4(&a->data), XMLoadFloat4(&b->data), XMLoadFloat4(&axis->data), max_value));
+				return 1;
+			}
+			else
+			{
+				wi::lua::SError(L, "GetAngle(Vector a,b,axis, opt float max) first 3 arguments are not vectors!");
+			}
+		}
+		wi::lua::SError(L, "GetAngle(Vector a,b,axis, opt float max) not enough arguments!");
 		return 0;
 	}
 
