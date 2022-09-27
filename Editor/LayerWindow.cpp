@@ -189,14 +189,14 @@ void LayerWindow::ResizeLayout()
 	y += enableNoneButton.GetSize().y;
 	y += padding;
 
-	float off_x = padding;
+	float off_x = padding + 30;
 	for (uint32_t i = 0; i < arraysize(layers); ++i)
 	{
 		layers[i].SetPos(XMFLOAT2(off_x, y));
 		off_x += 50;
 		if (off_x + layers[i].GetSize().x > width - padding)
 		{
-			off_x = padding;
+			off_x = padding + 30;
 			y += layers[i].GetSize().y;
 			y += padding;
 		}

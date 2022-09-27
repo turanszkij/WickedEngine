@@ -860,15 +860,15 @@ void TerrainWindow::SetupAssets()
 	terrain_preset.material_Slope.SetRoughness(0.1f);
 	terrain_preset.material_LowAltitude.SetRoughness(1);
 	terrain_preset.material_HighAltitude.SetRoughness(1);
-	terrain_preset.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "terrain/base.jpg";
-	terrain_preset.material_Base.textures[MaterialComponent::NORMALMAP].name = "terrain/base_nor.jpg";
-	terrain_preset.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "terrain/slope.jpg";
-	terrain_preset.material_Slope.textures[MaterialComponent::NORMALMAP].name = "terrain/slope_nor.jpg";
-	terrain_preset.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/low_altitude.jpg";
-	terrain_preset.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/low_altitude_nor.jpg";
-	terrain_preset.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/high_altitude.jpg";
-	terrain_preset.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/high_altitude_nor.jpg";
-	terrain_preset.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = "terrain/grassparticle.png";
+	terrain_preset.material_Base.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/base.jpg";
+	terrain_preset.material_Base.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/base_nor.jpg";
+	terrain_preset.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/slope.jpg";
+	terrain_preset.material_Slope.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/slope_nor.jpg";
+	terrain_preset.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/low_altitude.jpg";
+	terrain_preset.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/low_altitude_nor.jpg";
+	terrain_preset.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude.jpg";
+	terrain_preset.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude_nor.jpg";
+	terrain_preset.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/grassparticle.png";
 	terrain_preset.material_GrassParticle.alphaRef = 0.75f;
 	terrain_preset.grass_properties.length = 2;
 	terrain_preset.grass_properties.frameCount = 2;
@@ -882,7 +882,7 @@ void TerrainWindow::SetupAssets()
 	terrain_preset.material_GrassParticle.CreateRenderData();
 
 	Scene props_scene;
-	wi::scene::LoadModel(props_scene, "terrain/props.wiscene");
+	wi::scene::LoadModel(props_scene, wi::helper::GetCurrentPath() + "/terrain/props.wiscene");
 
 	// Tree prop:
 	if(props_scene.Entity_FindByName("tree_mesh") != INVALID_ENTITY)
