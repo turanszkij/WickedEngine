@@ -46,6 +46,12 @@ namespace wi::helper
 
 	void screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name = "");
 
+	// Load raw pixel data in memory to texture
+	bool loadTextureFromMemory(wi::vector<uint8_t>& texturedata, const wi::graphics::Texture& texture);
+
+	// Convert texture in memory to rgba8
+	bool convertTextureData(const wi::graphics::TextureDesc desc, const wi::vector<uint8_t>& texturedata, uint32_t data_count, bool rgba_to_bgra);
+
 	// Save raw pixel data from the texture to memory
 	bool saveTextureToMemory(const wi::graphics::Texture& texture, wi::vector<uint8_t>& texturedata);
 

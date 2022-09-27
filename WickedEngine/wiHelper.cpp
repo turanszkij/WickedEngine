@@ -112,6 +112,197 @@ namespace wi::helper
 		}
 	}
 
+	bool loadTextureFromMemory(wi::vector<uint8_t>& texturedata, const wi::graphics::Texture& texture)
+	{
+		using namespace wi::graphics;
+
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		TextureDesc desc = texture.GetDesc();
+
+		uint32_t data_count = desc.width * desc.height;
+		uint32_t data_stride = wi::graphics::GetFormatStride(desc.format);
+		uint32_t data_size = data_count * data_stride;
+
+		Texture stagingTex;
+		TextureDesc staging_desc = desc;
+		staging_desc.usage = Usage::UPLOAD;
+		staging_desc.layout = ResourceState::COPY_SRC;
+		staging_desc.bind_flags = BindFlag::NONE;
+		staging_desc.misc_flags = ResourceMiscFlag::NONE;
+		staging_desc.mip_levels = 1;
+		bool success = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
+		assert(success);
+
+		if (stagingTex.mapped_data != nullptr )
+		{
+			if (stagingTex.desc.width != desc.width)
+			{
+				// Copy padded texture row by row:
+				const uint32_t cpysize = desc.width * data_stride;
+				for (uint32_t i = 0; i < desc.height; ++i)
+				{
+					void* src = (void*)((size_t)texturedata.data() + size_t(i * cpysize));
+					void* dst = (void*)((size_t)stagingTex.mapped_data + size_t(i * stagingTex.desc.width));
+					memcpy(dst, src, cpysize);
+				}
+			}
+			else
+			{
+				// Copy whole
+				std::memcpy(stagingTex.mapped_data, texturedata.data(), texturedata.size());
+			}
+		}
+		else
+		{
+			assert(0);
+		}
+
+		CommandList cmd = device->BeginCommandList();
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&texture, texture.desc.layout, ResourceState::COPY_DST),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->CopyResource(&texture, &stagingTex, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&texture, ResourceState::COPY_DST, texture.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		return stagingTex.mapped_data != nullptr;
+	}
+
+	bool convertTextureData(const wi::graphics::TextureDesc desc, const wi::vector<uint8_t>& texturedata, uint32_t data_count, bool rgba_to_bgra)
+	{
+		bool successfully_converted = false;
+		using namespace wi::graphics;
+		if (desc.format == Format::R10G10B10A2_UNORM)
+		{
+			// This will be converted first to rgba8 before saving to common format:
+			uint32_t* data32 = (uint32_t*)texturedata.data();
+
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				uint32_t pixel = data32[i];
+				float r = ((pixel >> 0) & 1023) / 1023.0f;
+				float g = ((pixel >> 10) & 1023) / 1023.0f;
+				float b = ((pixel >> 20) & 1023) / 1023.0f;
+				float a = ((pixel >> 30) & 3) / 3.0f;
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(r * 255.0f) << 0;
+				rgba8 |= (uint32_t)(g * 255.0f) << 8;
+				rgba8 |= (uint32_t)(b * 255.0f) << 16;
+				rgba8 |= (uint32_t)(a * 255.0f) << 24;
+
+				data32[i] = rgba8;
+			}
+			successfully_converted = true;
+		}
+		else if (desc.format == Format::R32G32B32A32_FLOAT)
+		{
+			// This will be converted first to rgba8 before saving to common format:
+			XMFLOAT4* dataSrc = (XMFLOAT4*)texturedata.data();
+			uint32_t* data32 = (uint32_t*)texturedata.data();
+
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				XMFLOAT4 pixel = dataSrc[i];
+				float r = std::max(0.0f, std::min(pixel.x, 1.0f));
+				float g = std::max(0.0f, std::min(pixel.y, 1.0f));
+				float b = std::max(0.0f, std::min(pixel.z, 1.0f));
+				float a = std::max(0.0f, std::min(pixel.w, 1.0f));
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(r * 255.0f) << 0;
+				rgba8 |= (uint32_t)(g * 255.0f) << 8;
+				rgba8 |= (uint32_t)(b * 255.0f) << 16;
+				rgba8 |= (uint32_t)(a * 255.0f) << 24;
+
+				data32[i] = rgba8;
+			}
+			successfully_converted = true;
+		}
+		else if (desc.format == Format::R16G16B16A16_FLOAT)
+		{
+			// This will be converted first to rgba8 before saving to common format:
+			XMHALF4* dataSrc = (XMHALF4*)texturedata.data();
+			uint32_t* data32 = (uint32_t*)texturedata.data();
+
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				XMHALF4 pixel = dataSrc[i];
+				float r = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.x), 1.0f));
+				float g = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.y), 1.0f));
+				float b = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.z), 1.0f));
+				float a = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.w), 1.0f));
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(r * 255.0f) << 0;
+				rgba8 |= (uint32_t)(g * 255.0f) << 8;
+				rgba8 |= (uint32_t)(b * 255.0f) << 16;
+				rgba8 |= (uint32_t)(a * 255.0f) << 24;
+
+				data32[i] = rgba8;
+			}
+			successfully_converted = true;
+		}
+		else if (desc.format == Format::R11G11B10_FLOAT)
+		{
+			// This will be converted first to rgba8 before saving to common format:
+			XMFLOAT3PK* dataSrc = (XMFLOAT3PK*)texturedata.data();
+			uint32_t* data32 = (uint32_t*)texturedata.data();
+
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				XMFLOAT3PK pixel = dataSrc[i];
+				XMVECTOR V = XMLoadFloat3PK(&pixel);
+				XMFLOAT3 pixel3;
+				XMStoreFloat3(&pixel3, V);
+				float r = std::max(0.0f, std::min(pixel3.x, 1.0f));
+				float g = std::max(0.0f, std::min(pixel3.y, 1.0f));
+				float b = std::max(0.0f, std::min(pixel3.z, 1.0f));
+				float a = 1;
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(r * 255.0f) << 0;
+				rgba8 |= (uint32_t)(g * 255.0f) << 8;
+				rgba8 |= (uint32_t)(b * 255.0f) << 16;
+				rgba8 |= (uint32_t)(a * 255.0f) << 24;
+
+				data32[i] = rgba8;
+			}
+			successfully_converted = true;
+		}
+		if (rgba_to_bgra == true)
+		{
+			uint32_t* data32 = (uint32_t*)texturedata.data();
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				uint32_t pixel = data32[i];
+				float b = ((pixel >> 0) & 255) / 255.0f;
+				float g = ((pixel >> 8) & 255) / 255.0f;
+				float r = ((pixel >> 16) & 255) / 255.0f;
+				float a = ((pixel >> 24) & 255) / 255.0f;
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(r * 255.0f) << 0;
+				rgba8 |= (uint32_t)(g * 255.0f) << 8;
+				rgba8 |= (uint32_t)(b * 255.0f) << 16;
+				rgba8 |= (uint32_t)(a * 255.0f) << 24;
+				data32[i] = rgba8;
+			}
+		}
+		return successfully_converted;
+	}
+
 	bool saveTextureToMemory(const wi::graphics::Texture& texture, wi::vector<uint8_t>& texturedata)
 	{
 		using namespace wi::graphics;
@@ -252,99 +443,9 @@ namespace wi::helper
 		basisu::vector<basisu::image> basis_mipmaps;
 
 		int dst_channel_count = 4;
-		if (desc.format == Format::R10G10B10A2_UNORM)
+		if (convertTextureData(desc, texturedata, data_count, false) == true)
 		{
-			// This will be converted first to rgba8 before saving to common format:
-			uint32_t* data32 = (uint32_t*)texturedata.data();
-
-			for (uint32_t i = 0; i < data_count; ++i)
-			{
-				uint32_t pixel = data32[i];
-				float r = ((pixel >> 0) & 1023) / 1023.0f;
-				float g = ((pixel >> 10) & 1023) / 1023.0f;
-				float b = ((pixel >> 20) & 1023) / 1023.0f;
-				float a = ((pixel >> 30) & 3) / 3.0f;
-
-				uint32_t rgba8 = 0;
-				rgba8 |= (uint32_t)(r * 255.0f) << 0;
-				rgba8 |= (uint32_t)(g * 255.0f) << 8;
-				rgba8 |= (uint32_t)(b * 255.0f) << 16;
-				rgba8 |= (uint32_t)(a * 255.0f) << 24;
-
-				data32[i] = rgba8;
-			}
-		}
-		else if (desc.format == Format::R32G32B32A32_FLOAT)
-		{
-			// This will be converted first to rgba8 before saving to common format:
-			XMFLOAT4* dataSrc = (XMFLOAT4*)texturedata.data();
-			uint32_t* data32 = (uint32_t*)texturedata.data();
-
-			for (uint32_t i = 0; i < data_count; ++i)
-			{
-				XMFLOAT4 pixel = dataSrc[i];
-				float r = std::max(0.0f, std::min(pixel.x, 1.0f));
-				float g = std::max(0.0f, std::min(pixel.y, 1.0f));
-				float b = std::max(0.0f, std::min(pixel.z, 1.0f));
-				float a = std::max(0.0f, std::min(pixel.w, 1.0f));
-
-				uint32_t rgba8 = 0;
-				rgba8 |= (uint32_t)(r * 255.0f) << 0;
-				rgba8 |= (uint32_t)(g * 255.0f) << 8;
-				rgba8 |= (uint32_t)(b * 255.0f) << 16;
-				rgba8 |= (uint32_t)(a * 255.0f) << 24;
-
-				data32[i] = rgba8;
-			}
-		}
-		else if (desc.format == Format::R16G16B16A16_FLOAT)
-		{
-			// This will be converted first to rgba8 before saving to common format:
-			XMHALF4* dataSrc = (XMHALF4*)texturedata.data();
-			uint32_t* data32 = (uint32_t*)texturedata.data();
-
-			for (uint32_t i = 0; i < data_count; ++i)
-			{
-				XMHALF4 pixel = dataSrc[i];
-				float r = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.x), 1.0f));
-				float g = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.y), 1.0f));
-				float b = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.z), 1.0f));
-				float a = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.w), 1.0f));
-
-				uint32_t rgba8 = 0;
-				rgba8 |= (uint32_t)(r * 255.0f) << 0;
-				rgba8 |= (uint32_t)(g * 255.0f) << 8;
-				rgba8 |= (uint32_t)(b * 255.0f) << 16;
-				rgba8 |= (uint32_t)(a * 255.0f) << 24;
-
-				data32[i] = rgba8;
-			}
-		}
-		else if (desc.format == Format::R11G11B10_FLOAT)
-		{
-			// This will be converted first to rgba8 before saving to common format:
-			XMFLOAT3PK* dataSrc = (XMFLOAT3PK*)texturedata.data();
-			uint32_t* data32 = (uint32_t*)texturedata.data();
-
-			for (uint32_t i = 0; i < data_count; ++i)
-			{
-				XMFLOAT3PK pixel = dataSrc[i];
-				XMVECTOR V = XMLoadFloat3PK(&pixel);
-				XMFLOAT3 pixel3;
-				XMStoreFloat3(&pixel3, V);
-				float r = std::max(0.0f, std::min(pixel3.x, 1.0f));
-				float g = std::max(0.0f, std::min(pixel3.y, 1.0f));
-				float b = std::max(0.0f, std::min(pixel3.z, 1.0f));
-				float a = 1;
-
-				uint32_t rgba8 = 0;
-				rgba8 |= (uint32_t)(r * 255.0f) << 0;
-				rgba8 |= (uint32_t)(g * 255.0f) << 8;
-				rgba8 |= (uint32_t)(b * 255.0f) << 16;
-				rgba8 |= (uint32_t)(a * 255.0f) << 24;
-
-				data32[i] = rgba8;
-			}
+			// This successfully converted to rgba8
 		}
 		else if (desc.format == Format::R8_UNORM)
 		{
