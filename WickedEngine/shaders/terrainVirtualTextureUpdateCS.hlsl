@@ -42,7 +42,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			tex.GetDimensions(dim.x, dim.y);
 			float2 diff = dim / output_dim;
 			float lod = log2(max(diff.x, diff.y));
-			float4 baseColorMap = tex.SampleLevel(sampler_linear_clamp, uv, lod);
+			float2 overscale = lod < 0 ? diff : 1;
+			float4 baseColorMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
 			baseColor *= baseColorMap;
 		}
 		total_baseColor += baseColor * weight;
@@ -56,7 +57,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			tex.GetDimensions(dim.x, dim.y);
 			float2 diff = dim / output_dim;
 			float lod = log2(max(diff.x, diff.y));
-			float4 surfaceMap = tex.SampleLevel(sampler_linear_clamp, uv, lod);
+			float2 overscale = lod < 0 ? diff : 1;
+			float4 surfaceMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
 			surface *= surfaceMap;
 		}
 		total_surface += surface * weight;
@@ -70,7 +72,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			tex.GetDimensions(dim.x, dim.y);
 			float2 diff = dim / output_dim;
 			float lod = log2(max(diff.x, diff.y));
-			float2 normalMap = tex.SampleLevel(sampler_linear_clamp, uv, lod).rg;
+			float2 overscale = lod < 0 ? diff : 1;
+			float2 normalMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod).rg;
 			normal = normalMap;
 		}
 		total_normal += normal * weight;

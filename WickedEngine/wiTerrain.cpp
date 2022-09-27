@@ -308,7 +308,7 @@ namespace wi::terrain
 		virtual_texture_barriers_end.clear();
 
 		// Check whether there are any materials that would write to virtual textures:
-		uint32_t max_texture_resolution = 0;
+		bool virtual_texture_any = false;
 		bool virtual_texture_available[MaterialComponent::TEXTURESLOT_COUNT] = {};
 		virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
 		MaterialComponent* virtual_materials[4] = {
@@ -329,9 +329,7 @@ namespace wi::terrain
 					if (material->textures[i].resource.IsValid())
 					{
 						virtual_texture_available[i] = true;
-						const TextureDesc& desc = material->textures[i].resource.GetTexture().GetDesc();
-						max_texture_resolution = std::max(max_texture_resolution, desc.width);
-						max_texture_resolution = std::max(max_texture_resolution, desc.height);
+						virtual_texture_any = true;
 					}
 					break;
 				default:
@@ -384,14 +382,15 @@ namespace wi::terrain
 				}
 			}
 
-			// Grass density modification:
-			if (chunk_data.grass_entity != INVALID_ENTITY && std::abs(chunk_data.grass_density_current - grass_density) > std::numeric_limits<float>::epsilon())
+			// Grass property update:
+			if (chunk_data.grass_entity != INVALID_ENTITY)
 			{
 				wi::HairParticleSystem* grass = scene->hairs.GetComponent(chunk_data.grass_entity);
 				if (grass != nullptr)
 				{
 					chunk_data.grass_density_current = grass_density;
 					grass->strandCount = uint32_t(chunk_data.grass.strandCount * chunk_data.grass_density_current);
+					grass->length = grass_properties.length;
 				}
 			}
 
@@ -442,7 +441,7 @@ namespace wi::terrain
 			}
 
 			// Collect virtual texture update requests:
-			if (max_texture_resolution > 0)
+			if (virtual_texture_any)
 			{
 				uint32_t texture_lod = 0;
 				const float distsq = wi::math::DistanceSquared(camera.Eye, chunk_data.sphere.center);
@@ -459,7 +458,8 @@ namespace wi::terrain
 					texture_lod = uint32_t(dist_to_sphere * texlodMultiplier);
 				}
 
-				chunk_data.required_texture_resolution = uint32_t(max_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
+				chunk_data.required_texture_resolution = uint32_t(target_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
+				chunk_data.required_texture_resolution = AlignTo(chunk_data.required_texture_resolution, 8u);
 				chunk_data.required_texture_resolution = std::max(8u, chunk_data.required_texture_resolution);
 				MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
 
@@ -935,7 +935,7 @@ namespace wi::terrain
 					case MaterialComponent::BASECOLORMAP:
 					case MaterialComponent::SURFACEMAP:
 					case MaterialComponent::NORMALMAP:
-						if (!tex.name.empty() && tex.GetGPUResource() != nullptr)
+						if (tex.GetGPUResource() != nullptr)
 						{
 							wi::vector<uint8_t> filedata;
 							if (wi::helper::saveTextureToMemory(tex.resource.GetTexture(), filedata))
@@ -1031,6 +1031,10 @@ namespace wi::terrain
 			if (seri.GetVersion() >= 1)
 			{
 				archive >> physics_generation;
+			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> target_texture_resolution;
 			}
 
 			size_t count = 0;
@@ -1179,6 +1183,10 @@ namespace wi::terrain
 			if (seri.GetVersion() >= 1)
 			{
 				archive << physics_generation;
+			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive << target_texture_resolution;
 			}
 
 			archive << props.size();
