@@ -627,7 +627,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_RemoveSound(Entity entity) : SoundComponent? result  -- remove the SoundComponent of the entity (if exists)
 - Component_RemoveCollider(Entity entity) : ColliderComponent? result  -- remove the ColliderComponent of the entity (if exists)
 
-- Component_Attach(Entity entity,parent)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer)
+- Component_Attach(Entity entity,parent, opt bool child_already_in_local_space = false)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer). If child_already_in_local_space is false, then child will be transformed into parent's local space, if true, it will be used as-is.
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
 - Component_DetachChildren(Entity parent)  -- detaches all children from parent, as if calling Component_Detach for all of its children
 

@@ -2433,12 +2433,17 @@ int Scene_BindLua::Component_Attach(lua_State* L)
 	{
 		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 		Entity parent = (Entity)wi::lua::SGetLongLong(L, 2);
+		bool child_already_in_local_space = false;
+		if (argc > 2)
+		{
+			child_already_in_local_space = wi::lua::SGetBool(L, 3);
+		}
 
-		scene->Component_Attach(entity, parent);
+		scene->Component_Attach(entity, parent, child_already_in_local_space);
 	}
 	else
 	{
-		wi::lua::SError(L, "Scene::Component_Attach(Entity entity,parent) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_Attach(Entity entity,parent, opt bool child_already_in_local_space = false) not enough arguments!");
 	}
 	return 0;
 }

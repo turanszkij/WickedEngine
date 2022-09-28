@@ -1036,7 +1036,7 @@ void EditorComponent::Update(float dt)
 					inspector_mode
 					)
 				{
-					hovered = wi::scene::Pick(pickRay, ~0u, ~0u, scene);
+					hovered = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 				}
 			}
 		}
