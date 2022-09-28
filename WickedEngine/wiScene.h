@@ -189,6 +189,8 @@ namespace wi::scene
 		wi::vector<TransformComponent> transforms_temp;
 
 		// CPU/GPU Colliders:
+		std::atomic<uint32_t> allocator_colliders_cpu;
+		std::atomic<uint32_t> allocator_colliders_gpu;
 		wi::vector<ColliderComponent> colliders_cpu;
 		wi::vector<ColliderComponent> colliders_gpu;
 

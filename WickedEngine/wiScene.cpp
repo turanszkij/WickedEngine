@@ -2379,17 +2379,19 @@ namespace wi::scene
 		}
 
 		// Colliders:
-		aabb_colliders_cpu.clear();
-		colliders_cpu.clear();
-		colliders_gpu.clear();
+		allocator_colliders_cpu.store(0u);
+		allocator_colliders_gpu.store(0u);
+		aabb_colliders_cpu.resize(colliders.GetCount());
+		colliders_cpu.resize(colliders.GetCount());
+		colliders_gpu.resize(colliders.GetCount());
 
-		for (size_t i = 0; i < colliders.GetCount(); ++i)
-		{
-			ColliderComponent& collider = colliders[i];
-			Entity entity = colliders.GetEntity(i);
+		wi::jobsystem::Dispatch(ctx, (uint32_t)colliders.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+
+			ColliderComponent& collider = colliders[args.jobIndex];
+			Entity entity = colliders.GetEntity(args.jobIndex);
 			const TransformComponent* transform = transforms.GetComponent(entity);
 			if (transform == nullptr)
-				continue;
+				return;
 
 			XMFLOAT3 scale = transform->GetScale();
 			collider.sphere.radius = collider.radius * std::max(scale.x, std::max(scale.y, scale.z));
@@ -2447,14 +2449,22 @@ namespace wi::scene
 
 			if (collider.IsCPUEnabled())
 			{
-				colliders_cpu.push_back(collider);
-				aabb_colliders_cpu.push_back(aabb);
+				uint32_t index = allocator_colliders_cpu.fetch_add(1u);
+				colliders_cpu[index] = collider;
+				aabb_colliders_cpu[index] = aabb;
 			}
 			if (collider.IsGPUEnabled())
 			{
-				colliders_gpu.push_back(collider);
+				uint32_t index = allocator_colliders_gpu.fetch_add(1u);
+				colliders_gpu[index] = collider;
 			}
-		}
+
+		});
+
+		wi::jobsystem::Wait(ctx);
+		aabb_colliders_cpu.resize(allocator_colliders_cpu.load());
+		colliders_cpu.resize(allocator_colliders_cpu.load());
+		colliders_gpu.resize(allocator_colliders_gpu.load());
 
 		// Springs:
 		static float time = 0;
