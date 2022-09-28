@@ -36,6 +36,11 @@ namespace wi::graphics
 		Microsoft::WRL::ComPtr<ID3D12PipelineLibrary1> pipelineLibrary;
 #endif
 
+		Microsoft::WRL::ComPtr<ID3D12Fence> deviceRemovedFence;
+		std::mutex onDeviceRemovedMutex;
+		HANDLE deviceRemovedWaitHandle;
+		bool deviceRemoved = false;
+
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
@@ -217,6 +222,7 @@ namespace wi::graphics
 
 		CommandList BeginCommandList(QUEUE_TYPE queue = QUEUE_GRAPHICS) override;
 		void SubmitCommandLists() override;
+		void OnDeviceRemoved();
 
 		void WaitForGPU() const override;
 		void ClearPipelineStateCache() override;
