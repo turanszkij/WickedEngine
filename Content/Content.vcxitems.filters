@@ -13,17 +13,29 @@
     <Filter Include="models\Sponza\textures">
       <UniqueIdentifier>{313c5c5a-2029-43a8-99ca-cc56f435121c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="models\Havoc">
-      <UniqueIdentifier>{6f72400d-8b00-4dc0-8015-f88dd5d4c11b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="models\dungeon">
-      <UniqueIdentifier>{2ba616fc-e2c9-4af4-9099-948f45e2dd80}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Documentation">
       <UniqueIdentifier>{c66293fd-fe0c-444e-9502-f0864bfbf736}</UniqueIdentifier>
     </Filter>
     <Filter Include="scripts\subscript_demo">
       <UniqueIdentifier>{7a1dfecb-b9bf-4fb6-94cf-39b5fb5860c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scripts\fighting_game">
+      <UniqueIdentifier>{1957f2fb-352c-4e23-aa30-a421c6dbda87}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scripts\character_controller">
+      <UniqueIdentifier>{4d95c5f8-6444-4426-ab19-873a8184f693}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scripts\dungeon_generator">
+      <UniqueIdentifier>{07f4c6e7-1f4b-4c5c-992b-6ab3c4d90624}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scripts\fighting_game\assets">
+      <UniqueIdentifier>{a6ff27c6-f634-4cf2-844f-9696c405c67f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scripts\character_controller\assets">
+      <UniqueIdentifier>{33988dfe-9428-4de4-b6b4-19cf5b3833f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scripts\dungeon_generator\assets">
+      <UniqueIdentifier>{a8242a40-dd2a-46f8-95a9-1b7431c79043}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -66,45 +78,6 @@
     <None Include="$(MSBuildThisFileDirectory)models\Sponza\sponza.wiscene">
       <Filter>models\Sponza</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)models\Havoc\havoc.wiscene">
-      <Filter>models\Havoc</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\block.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\corridor.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\crossjunction.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\end.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\oddcorridor.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\room.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\smallroomleft.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\start.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\tjunction.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\turnleft.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\turnright.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dungeon\upcorridor.wiscene">
-      <Filter>models\dungeon</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)models\cameras.wiscene">
       <Filter>models</Filter>
     </None>
@@ -117,37 +90,16 @@
     <None Include="$(MSBuildThisFileDirectory)models\DamagedHelmet.glb">
       <Filter>models</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)models\dojo.wiscene">
-      <Filter>models</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)models\emitter_distortion.wiscene">
       <Filter>models</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)models\emitter_dust.wiscene">
-      <Filter>models</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\emitter_fireball.wiscene">
-      <Filter>models</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)models\emitter_fluid_50k.wiscene">
-      <Filter>models</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\emitter_guardeffect.wiscene">
-      <Filter>models</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\emitter_hiteffect.wiscene">
       <Filter>models</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)models\emitter_skinned.wiscene">
       <Filter>models</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)models\emitter_smoke.wiscene">
-      <Filter>models</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\emitter_spark.wiscene">
-      <Filter>models</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\girl.wiscene">
       <Filter>models</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)models\hairparticle_torus.wiscene">
@@ -160,9 +112,6 @@
       <Filter>models</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)models\physics_test.wiscene">
-      <Filter>models</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)models\playground.wiscene">
       <Filter>models</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)models\shadows_test.wiscene">
@@ -213,9 +162,6 @@
     <None Include="$(MSBuildThisFileDirectory)scripts\script_tracking.lua">
       <Filter>scripts</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\subscript_demo\load_dojo.lua">
-      <Filter>scripts\subscript_demo</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)models\script_component_test.lua">
       <Filter>models</Filter>
     </None>
@@ -227,6 +173,111 @@
     </None>
     <None Include="$(MSBuildThisFileDirectory)models\morph_target_animation_test.wiscene">
       <Filter>models</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\character.wiscene">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\dojo.wiscene">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\emitter_dust.wiscene">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\emitter_fireball.wiscene">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\emitter_guardeffect.wiscene">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\emitter_hiteffect.wiscene">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\emitter_spark.wiscene">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\fighting_game\fighting_game.lua">
+      <Filter>scripts\fighting_game</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\character.wiscene">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\level.wiscene">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\open_door.lua">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_angry.lua">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_angry.wiscene">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_expression.lua">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_happy.lua">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_happy.wiscene">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_lookat.lua">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_lookat.wiscene">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_sad.lua">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_sad.wiscene">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\character_controller.lua">
+      <Filter>scripts\character_controller</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\block.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\corridor.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\crossjunction.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\end.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\oddcorridor.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\room.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\smallroomleft.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\start.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\tjunction.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\turnleft.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\turnright.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\assets\upcorridor.wiscene">
+      <Filter>scripts\dungeon_generator\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\dungeon_generator.lua">
+      <Filter>scripts\dungeon_generator</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\subscript_demo\load_model.lua">
+      <Filter>scripts\subscript_demo</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -461,12 +512,6 @@
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_spec.png">
       <Filter>models\Sponza\textures</Filter>
     </Image>
-    <Image Include="$(MSBuildThisFileDirectory)models\Havoc\baseColor.png">
-      <Filter>models\Havoc</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)models\Havoc\normalMap.png">
-      <Filter>models\Havoc</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)models\billboardredflowers.png">
       <Filter>models</Filter>
     </Image>
@@ -497,9 +542,6 @@
     <Image Include="$(MSBuildThisFileDirectory)models\grassbb.png">
       <Filter>models</Filter>
     </Image>
-    <Image Include="$(MSBuildThisFileDirectory)models\grid.dds">
-      <Filter>models</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)models\orb.dds">
       <Filter>models</Filter>
     </Image>
@@ -526,6 +568,39 @@
     </Image>
     <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_sepia.png">
       <Filter>models</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\baseColor.png">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\fire.jpg">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\grid.dds">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\hp_bar.png">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\normalMap.png">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\orb.dds">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\ripple.png">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\smoke0.png">
+      <Filter>scripts\fighting_game\assets</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\grassparticle.png">
+      <Filter>scripts\character_controller\assets</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\ripple.png">
+      <Filter>scripts\character_controller\assets</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\waterNormalMap.jpg">
+      <Filter>scripts\character_controller\assets</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
