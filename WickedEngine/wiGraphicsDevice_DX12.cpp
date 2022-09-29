@@ -1583,6 +1583,14 @@ namespace dx12_internal
 			name[nibbleCount - nibbleIndex - 1] = s_hexValues[nibble];
 		}
 	}
+
+#ifndef PLATFORM_UWP
+	inline void HandleDeviceRemoved(PVOID context, BOOLEAN)
+	{
+		GraphicsDevice_DX12* removedDevice = (GraphicsDevice_DX12*)context;
+		removedDevice->OnDeviceRemoved();
+	}
+#endif
 }
 using namespace dx12_internal;
 
@@ -2233,8 +2241,19 @@ using namespace dx12_internal;
 						if (SUCCEEDED(d3dDebug.As(&d3dDebug1)))
 						{
 							d3dDebug1->SetEnableGPUBasedValidation(TRUE);
+							d3dDebug1->SetEnableSynchronizedCommandQueueValidation(TRUE);
 						}
 					}
+				}
+
+				// DRED
+				ComPtr<ID3D12DeviceRemovedExtendedDataSettings1> pDredSettings;
+				if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&pDredSettings))))
+				{
+					// Turn on auto-breadcrumbs and page fault reporting.
+					pDredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+					pDredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+					pDredSettings->SetBreadcrumbContextEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
 				}
 			}
 
@@ -2700,6 +2719,27 @@ using namespace dx12_internal;
 		}
 #endif
 
+#ifndef PLATFORM_UWP
+		// Create fence to detect device removal
+		{
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(deviceRemovedFence.GetAddressOf()));
+			assert(SUCCEEDED(hr));
+
+			HANDLE deviceRemovedEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
+			hr = deviceRemovedFence->SetEventOnCompletion(UINT64_MAX, deviceRemovedEvent);
+			assert(SUCCEEDED(hr));
+
+			RegisterWaitForSingleObject(
+				&deviceRemovedWaitHandle,
+				deviceRemovedEvent,
+				HandleDeviceRemoved,
+				this, // Pass the device as our context
+				INFINITE, // No timeout
+				0 // No flags
+			);
+		}
+#endif
+
 		// Create common indirect command signatures:
 
 		D3D12_COMMAND_SIGNATURE_DESC cmd_desc = {};
@@ -2871,6 +2911,11 @@ using namespace dx12_internal;
 			std::string cachePath = GetCachePath();
 			wi::helper::FileWrite(cachePath, serializedData.data(), serializedData.size());
 		}
+#endif
+
+#ifndef PLATFORM_UWP
+		std::ignore = UnregisterWait(deviceRemovedWaitHandle);
+		deviceRemovedFence.Reset();
 #endif
 
 		copyAllocator.destroy();
@@ -5136,9 +5181,8 @@ using namespace dx12_internal;
 							static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? device->GetDeviceRemovedReason() : hr));
 						OutputDebugStringA(buff);
 #endif
-
-						// TODO: Handle device lost
-						// HandleDeviceLost();
+						// Handle device lost
+						OnDeviceRemoved();
 					}
 				}
 			}
@@ -5170,6 +5214,61 @@ using namespace dx12_internal;
 		}
 	}
 
+	void GraphicsDevice_DX12::OnDeviceRemoved()
+	{
+		std::lock_guard<std::mutex> lock(onDeviceRemovedMutex);
+
+		if (deviceRemoved)
+		{
+			return;
+		}
+		deviceRemoved = true;
+
+		const char* removedReasonString;
+		HRESULT removedReason = device->GetDeviceRemovedReason();
+
+		switch (removedReason)
+		{
+		case DXGI_ERROR_DEVICE_HUNG:
+			removedReasonString = "DXGI_ERROR_DEVICE_HUNG";
+			break;
+		case DXGI_ERROR_DEVICE_REMOVED:
+			removedReasonString = "DXGI_ERROR_DEVICE_REMOVED";
+			break;
+		case DXGI_ERROR_DEVICE_RESET:
+			removedReasonString = "DXGI_ERROR_DEVICE_RESET";
+			break;
+		case DXGI_ERROR_DRIVER_INTERNAL_ERROR:
+			removedReasonString = "DXGI_ERROR_DRIVER_INTERNAL_ERROR";
+			break;
+		case DXGI_ERROR_INVALID_CALL:
+			removedReasonString = "DXGI_ERROR_INVALID_CALL";
+			break;
+		case DXGI_ERROR_ACCESS_DENIED:
+			removedReasonString = "DXGI_ERROR_ACCESS_DENIED";
+			break;
+		default:
+			removedReasonString = "Unknown DXGI error";
+			break;
+		}
+
+		ComPtr<ID3D12DeviceRemovedExtendedData1> pDred;
+		if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&pDred))))
+		{
+			D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 dredAutoBreadcrumbsOutput;
+			HRESULT hr = pDred->GetAutoBreadcrumbsOutput1(&dredAutoBreadcrumbsOutput);
+			if (SUCCEEDED(hr))
+			{
+				// TODO: Log DRED info -> to file?
+			}
+		}
+
+		std::string message = "D3D12: device removed, cause: ";
+		message += removedReasonString;
+		wi::helper::messageBox(message, "Error!");
+		wi::platform::Exit();
+	}
+
 	void GraphicsDevice_DX12::WaitForGPU() const
 	{
 		ComPtr<ID3D12Fence> fence;
@@ -5188,6 +5287,7 @@ using namespace dx12_internal;
 			fence->Signal(0);
 		}
 	}
+
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
 	{
 		allocationhandler->destroylocker.lock();
