@@ -5,6 +5,17 @@ on:
 
 jobs:
 
+  content:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Package Content
+      uses: actions/upload-artifact@v2
+      with:
+        name: Sample Content
+        path: |
+          Content/
+
   windows:
     runs-on: windows-latest
     steps:
@@ -196,15 +207,3 @@ jobs:
           Tests/*.lua
           Tests/*.ttf
           Tests/Tests
-		  
-
-  content:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Package Content
-      uses: actions/upload-artifact@v2
-      with:
-        name: Sample Content
-        path: |
-          Content/
