@@ -45,7 +45,7 @@ Character = {
 	walk_speed = 0.2,
 	jog_speed = 0.4,
 	run_speed = 0.8,
-	jump_speed = 16,
+	jump_speed = 14,
 	layerMask = 0x2, -- The character will be tagged to use this layer, so scene intersection can filter out the character
 	scale = Vector(1, 1, 1),
 	rotation = Vector(0,math.pi,0),
@@ -266,17 +266,20 @@ Character = {
 		local capsule = scene.Component_GetCollider(self.collider).GetCapsule()
 		
 		-- Capsule collision for character:		
-		local ground_intersect = false
 		local original_capsulepos = model_transform.GetPosition()
 		local capsulepos = original_capsulepos
 		local capsuleheight = vector.Subtract(capsule.GetTip(), capsule.GetBase()).Length()
 		local radius = capsule.GetRadius()
-		local ccd_max = 3
-		local ccd = 0
-		local ccd_amount = 1.0 / ccd_max
-		while(ccd < ccd_max) do
-			ccd = ccd + 1
-			local step = vector.Multiply(self.velocity, ccd_amount)
+		local ground_intersect = false
+
+		local fixed_update_remain = dt
+		local fixed_update_rate = 1.0 / 120.0
+		local fixed_dt = fixed_update_rate / dt
+
+		while fixed_update_remain > 0 do
+			fixed_update_remain = fixed_update_remain - fixed_update_rate
+
+			local step = vector.Multiply(self.velocity, fixed_dt)
 
 			capsulepos = vector.Add(capsulepos, step)
 			capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
@@ -296,6 +299,7 @@ Character = {
 					self.velocity.SetY(0)
 					capsulepos = vector.Add(capsulepos, Vector(0, depth, 0))
 					capsulepos = vector.Add(capsulepos, velocity) -- apply moving platform velocity
+					self.force = vector.Multiply(self.force, 0.85) -- ground friction
 					ground_intersect = true
 				elseif ground_slope <= slope_threshold then
 					-- Slide on contact surface:
@@ -303,16 +307,15 @@ Character = {
 					local velocityNormalized = self.velocity.Normalize()
 					local undesiredMotion = n2:Multiply(vector.Dot(velocityNormalized, n2))
 					local desiredMotion = vector.Subtract(velocityNormalized, undesiredMotion)
-					desiredMotion.SetY(0)
+					if ground_intersect then
+						desiredMotion.SetY(0)
+					end
 					self.velocity = vector.Multiply(desiredMotion, velocityLen)
 					capsulepos = vector.Add(capsulepos, vector.Multiply(n2, depth))
 				end
 
 			end
-		end
 
-		if ground_intersect then
-			self.force = vector.Multiply(self.force, 0.85) -- ground friction
 		end
 
 		model_transform.Translate(vector.Subtract(capsulepos, original_capsulepos)) -- transform by the capsule offset

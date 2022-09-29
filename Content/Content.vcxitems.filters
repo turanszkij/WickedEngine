@@ -45,19 +45,10 @@
     <None Include="$(MSBuildThisFileDirectory)scripts\camera_animation_repeat.lua">
       <Filter>scripts</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller_tps.lua">
-      <Filter>scripts</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)scripts\debug_draw.lua">
       <Filter>scripts</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator.lua">
-      <Filter>scripts</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)scripts\emitter_burst.lua">
-      <Filter>scripts</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\fighting_game.lua">
       <Filter>scripts</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)scripts\move_object.lua">
@@ -556,9 +547,6 @@
     </Image>
     <Image Include="$(MSBuildThisFileDirectory)models\ripple.png">
       <Filter>models</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)scripts\hp_bar.png">
-      <Filter>scripts</Filter>
     </Image>
     <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_default.png">
       <Filter>models</Filter>
