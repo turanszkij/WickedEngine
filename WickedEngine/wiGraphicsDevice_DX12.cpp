@@ -1584,11 +1584,13 @@ namespace dx12_internal
 		}
 	}
 
+#ifndef PLATFORM_UWP
 	inline void HandleDeviceRemoved(PVOID context, BOOLEAN)
 	{
 		GraphicsDevice_DX12* removedDevice = (GraphicsDevice_DX12*)context;
 		removedDevice->OnDeviceRemoved();
 	}
+#endif
 }
 using namespace dx12_internal;
 
@@ -2717,6 +2719,7 @@ using namespace dx12_internal;
 		}
 #endif
 
+#ifndef PLATFORM_UWP
 		// Create fence to detect device removal
 		{
 			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(deviceRemovedFence.GetAddressOf()));
@@ -2735,6 +2738,7 @@ using namespace dx12_internal;
 				0 // No flags
 			);
 		}
+#endif
 
 		// Create common indirect command signatures:
 
@@ -2909,8 +2913,10 @@ using namespace dx12_internal;
 		}
 #endif
 
+#ifndef PLATFORM_UWP
 		std::ignore = UnregisterWait(deviceRemovedWaitHandle);
 		deviceRemovedFence.Reset();
+#endif
 
 		copyAllocator.destroy();
 	}

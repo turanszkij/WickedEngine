@@ -36,9 +36,11 @@ namespace wi::graphics
 		Microsoft::WRL::ComPtr<ID3D12PipelineLibrary1> pipelineLibrary;
 #endif
 
+#ifndef PLATFORM_UWP
 		Microsoft::WRL::ComPtr<ID3D12Fence> deviceRemovedFence;
-		std::mutex onDeviceRemovedMutex;
 		HANDLE deviceRemovedWaitHandle;
+#endif
+		std::mutex onDeviceRemovedMutex;
 		bool deviceRemoved = false;
 
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
