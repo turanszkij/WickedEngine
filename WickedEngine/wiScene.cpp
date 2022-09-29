@@ -2381,9 +2381,9 @@ namespace wi::scene
 		// Colliders:
 		allocator_colliders_cpu.store(0u);
 		allocator_colliders_gpu.store(0u);
-		aabb_colliders_cpu.resize(colliders.GetCount());
-		colliders_cpu.resize(colliders.GetCount());
-		colliders_gpu.resize(colliders.GetCount());
+		aabb_colliders_cpu.reserve(colliders.GetCount());
+		colliders_cpu.reserve(colliders.GetCount());
+		colliders_gpu.reserve(colliders.GetCount());
 
 		wi::jobsystem::Dispatch(ctx, (uint32_t)colliders.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 

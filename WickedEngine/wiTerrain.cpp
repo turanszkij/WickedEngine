@@ -367,7 +367,7 @@ namespace wi::terrain
 				else
 				{
 					// Grass patch removal:
-					if (chunk_data.grass.meshID != INVALID_ENTITY && (dist > 1 || !IsGrassEnabled()))
+					if (chunk_data.grass_entity != INVALID_ENTITY && (dist > 1 || !IsGrassEnabled()))
 					{
 						scene->Entity_Remove(chunk_data.grass_entity);
 						chunk_data.grass_entity = INVALID_ENTITY; // grass can be generated here by generation thread...
