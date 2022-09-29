@@ -283,6 +283,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
 
+		terrain->BakeVirtualTexturesToFiles();
 		editor->GetCurrentScene().terrains.Remove(entity);
 
 		editor->RecordEntity(archive, entity);

@@ -1772,61 +1772,6 @@ void LoadBuffers()
 	}
 
 	{
-		TextureDesc desc;
-		desc.type = TextureDesc::Type::TEXTURE_2D;
-		desc.width = 512;
-		desc.height = 512;
-		desc.format = Format::R11G11B10_FLOAT;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW]);
-		device->SetName(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], "textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW]");
-	}
-	{
-		TextureDesc desc;
-		desc.type = TextureDesc::Type::TEXTURE_2D;
-		desc.width = 256;
-		desc.height = 64;
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]);
-		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]");
-	}
-	{
-		TextureDesc desc;
-		desc.type = TextureDesc::Type::TEXTURE_2D;
-		desc.width = 32;
-		desc.height = 32;
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]);
-		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]");
-	}
-	{
-		TextureDesc desc;
-		desc.type = TextureDesc::Type::TEXTURE_2D;
-		desc.width = 192;
-		desc.height = 104;
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]);
-		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]");
-	}
-	{
-		TextureDesc desc;
-		desc.type = TextureDesc::Type::TEXTURE_2D;
-		desc.width = 1;
-		desc.height = 1;
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]);
-		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]");
-	}
-	{
 		// the dummy buffer is read-only so only the first 'exposure' value is needed,
 		// not the luminance or histogram values in the full version of the buffer used
         // when eye adaption is enabled.
@@ -2877,16 +2822,17 @@ void UpdateVisibility(Visibility& vis)
 
 				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
 				{
-					if (object.IsRenderable() && object.occlusionQueries[vis.scene->queryheap_idx] < 0)
+					Scene::OcclusionResult& occlusion_result = vis.scene->occlusion_results_objects[args.jobIndex];
+					if (object.IsRenderable() && occlusion_result.occlusionQueries[vis.scene->queryheap_idx] < 0)
 					{
 						if (aabb.intersects(vis.camera->Eye))
 						{
 							// camera is inside the instance, mark it as visible in this frame:
-							object.occlusionHistory |= 1;
+							occlusion_result.occlusionHistory |= 1;
 						}
 						else
 						{
-							object.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+							occlusion_result.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
 						}
 					}
 				}
@@ -3213,6 +3159,19 @@ void UpdatePerFrameData(
 	// Calculate volumetric cloud shadow data:
 	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
 	{
+		if (!textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].IsValid())
+		{
+			TextureDesc desc;
+			desc.type = TextureDesc::Type::TEXTURE_2D;
+			desc.width = 512;
+			desc.height = 512;
+			desc.format = Format::R11G11B10_FLOAT;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+			device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW]);
+			device->SetName(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], "textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW]");
+		}
+
 		const float cloudShadowSnapLength = 5000.0f;
 		const float cloudShadowExtent = 35000.0f; // The cloud shadow bounding box size
 		const float cloudShadowNearPlane = 0.0f;
@@ -3247,6 +3206,46 @@ void UpdatePerFrameData(
 		XMStoreFloat4x4(&frameCB.cloudShadowLightSpaceMatrixInverse, cloudShadowLightSpaceMatrixInverse);
 		frameCB.cloudShadowFarPlaneKm = cloudShadowFarPlane * metersToSkyUnit;
 		frameCB.texture_volumetricclouds_shadow_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], SubresourceType::SRV);
+	}
+
+	if (scene.weather.IsRealisticSky() && !textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT].IsValid())
+	{
+		TextureDesc desc;
+		desc.type = TextureDesc::Type::TEXTURE_2D;
+		desc.width = 256;
+		desc.height = 64;
+		desc.format = Format::R16G16B16A16_FLOAT;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]);
+		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]");
+
+		desc.type = TextureDesc::Type::TEXTURE_2D;
+		desc.width = 32;
+		desc.height = 32;
+		desc.format = Format::R16G16B16A16_FLOAT;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]);
+		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]");
+
+		desc.type = TextureDesc::Type::TEXTURE_2D;
+		desc.width = 192;
+		desc.height = 104;
+		desc.format = Format::R16G16B16A16_FLOAT;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]);
+		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]");
+
+		desc.type = TextureDesc::Type::TEXTURE_2D;
+		desc.width = 1;
+		desc.height = 1;
+		desc.format = Format::R16G16B16A16_FLOAT;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]);
+		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]");
 	}
 
 	// Update CPU-side frame constant buffer:
@@ -3400,7 +3399,6 @@ void UpdatePerFrameData(
 	frameCB.shadow_atlas_resolution_rcp.x = 1.0f / frameCB.shadow_atlas_resolution.x;
 	frameCB.shadow_atlas_resolution_rcp.y = 1.0f / frameCB.shadow_atlas_resolution.y;
 
-
 	// Create volumetric cloud static resources if needed:
 	if (scene.weather.IsVolumetricClouds() && !texture_shapeNoise.IsValid())
 	{
@@ -3461,6 +3459,7 @@ void UpdatePerFrameData(
 		texture_desc.format = Format::R8G8B8A8_UNORM;
 		device->CreateTexture(&texture_desc, nullptr, &texture_weatherMap);
 		device->SetName(&texture_weatherMap, "texture_weatherMap");
+
 	}
 }
 void UpdateRenderData(
@@ -4377,9 +4376,9 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 
 		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
-			const ObjectComponent& object = vis.scene->objects[instanceIndex];
+			const Scene::OcclusionResult& occlusion_result = vis.scene->occlusion_results_objects[instanceIndex];
 
-			int queryIndex = object.occlusionQueries[query_write];
+			int queryIndex = occlusion_result.occlusionQueries[query_write];
 			if (queryIndex >= 0)
 			{
 				const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
@@ -5132,11 +5131,10 @@ void DrawScene(
 	renderQueue.init();
 	for (uint32_t instanceIndex : vis.visibleObjects)
 	{
-		const ObjectComponent& object = vis.scene->objects[instanceIndex];
-
-		if (occlusion && object.IsOccluded())
+		if (occlusion && vis.scene->occlusion_results_objects[instanceIndex].IsOccluded())
 			continue;
 
+		const ObjectComponent& object = vis.scene->objects[instanceIndex];
 		if (object.IsRenderable() && (object.GetFilterMask() & filterMask))
 		{
 			const float distance = wi::math::Distance(vis.camera->Eye, object.center);

@@ -123,8 +123,24 @@ namespace wi::scene
 		std::atomic<uint32_t> meshletAllocator{ 0 };
 
 		// Occlusion query state:
+		struct OcclusionResult
+		{
+			int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+			// occlusion result history bitfield (32 bit->32 frame history)
+			uint32_t occlusionHistory = ~0u;
+
+			constexpr bool IsOccluded() const
+			{
+				// Perform a conservative occlusion test:
+				// If it is visible in any frames in the history, it is determined visible in this frame
+				// But if all queries failed in the history, it is occluded.
+				// If it pops up for a frame after occluded, it is visible again for some frames
+				return occlusionHistory == 0;
+			}
+		};
+		mutable wi::vector<OcclusionResult> occlusion_results_objects;
 		wi::graphics::GPUQueryHeap queryHeap;
-		wi::graphics::GPUBuffer queryResultBuffer[arraysize(ObjectComponent::occlusionQueries)];
+		wi::graphics::GPUBuffer queryResultBuffer[arraysize(OcclusionResult::occlusionQueries)];
 		wi::graphics::GPUBuffer queryPredicationBuffer;
 		int queryheap_idx = 0;
 		mutable std::atomic<uint32_t> queryAllocator{ 0 };

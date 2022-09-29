@@ -70,9 +70,10 @@ namespace wi::primitive
 		XMFLOAT3 _max = getMax();
 		return (_max.x - _min.x) * (_max.y - _min.y) * (_max.z - _min.z);
 	}
-	float AABB::getRadius() const {
+	float AABB::getRadius() const
+	{
 		XMFLOAT3 abc = getHalfWidth();
-		return std::max(std::max(abc.x, abc.y), abc.z);
+		return std::sqrt(std::pow(std::sqrt(std::pow(abc.x, 2.0f) + std::pow(abc.y, 2.0f)), 2.0f) + std::pow(abc.z, 2.0f));
 	}
 	AABB::INTERSECTION_TYPE AABB::intersects(const AABB& b) const
 	{

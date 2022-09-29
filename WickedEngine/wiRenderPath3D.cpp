@@ -13,6 +13,76 @@ namespace wi
 
 	void RenderPath3D::ResizeBuffers()
 	{
+		rtMain = {};
+		rtMain_render = {};
+		rtPrimitiveID = {};
+		rtPrimitiveID_render = {};
+		rtVelocity = {};
+		rtReflection = {};
+		rtRaytracedDiffuse = {};
+		rtSSR = {};
+		rtSceneCopy = {};
+		rtSceneCopy_tmp = {};
+		rtWaterRipple = {};
+		rtParticleDistortion = {};
+		rtParticleDistortion_Resolved = {};
+		rtVolumetricLights[0] = {};
+		rtVolumetricLights[1] = {};
+		rtBloom = {};
+		rtBloom_tmp = {};
+		rtAO = {};
+		rtShadow = {};
+		rtSun[0] = {};
+		rtSun[1] = {};
+		rtSun_resolved = {};
+		rtGUIBlurredBackground[0] = {};
+		rtGUIBlurredBackground[1] = {};
+		rtGUIBlurredBackground[2] = {};
+		rtShadingRate = {};
+		rtFSR[0] = {};
+		rtFSR[1] = {};
+		rtOutlineSource = {};
+
+		rtPostprocess = {};
+
+		depthBuffer_Main = {};
+		depthBuffer_Copy = {};
+		depthBuffer_Copy1 = {};
+		depthBuffer_Reflection = {};
+		rtLinearDepth = {};
+
+		renderpass_depthprepass = {};
+		renderpass_main = {};
+		renderpass_transparent = {};
+		renderpass_reflection_depthprepass = {};
+		renderpass_reflection = {};
+		renderpass_lightshafts = {};
+		renderpass_volumetriclight = {};
+		renderpass_particledistortion = {};
+		renderpass_waterripples = {};
+		renderpass_outline_source = {};
+
+		debugUAV = {};
+		tiledLightResources = {};
+		tiledLightResources_planarReflection = {};
+		luminanceResources = {};
+		ssaoResources = {};
+		msaoResources = {};
+		rtaoResources = {};
+		rtdiffuseResources = {};
+		rtreflectionResources = {};
+		ssrResources = {};
+		rtshadowResources = {};
+		screenspaceshadowResources = {};
+		depthoffieldResources = {};
+		motionblurResources = {};
+		volumetriccloudResources = {};
+		volumetriccloudResources_reflection = {};
+		bloomResources = {};
+		surfelGIResources = {};
+		temporalAAResources = {};
+		visibilityResources = {};
+
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		XMUINT2 internalResolution = GetInternalResolution();
@@ -86,30 +156,10 @@ namespace wi
 		}
 		{
 			TextureDesc desc;
-			desc.format = Format::R16G16B16A16_FLOAT;
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.format = Format::R11G11B10_FLOAT;
 			desc.width = internalResolution.x / 4;
 			desc.height = internalResolution.y / 4;
-			device->CreateTexture(&desc, nullptr, &rtVolumetricLights[0]);
-			device->SetName(&rtVolumetricLights[0], "rtVolumetricLights[0]");
-			device->CreateTexture(&desc, nullptr, &rtVolumetricLights[1]);
-			device->SetName(&rtVolumetricLights[1], "rtVolumetricLights[1]");
-		}
-		{
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::R16G16_FLOAT;
-			desc.width = internalResolution.x / 8;
-			desc.height = internalResolution.y / 8;
-			device->CreateTexture(&desc, nullptr, &rtWaterRipple);
-			device->SetName(&rtWaterRipple, "rtWaterRipple");
-		}
-		{
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
-			desc.format = Format::R11G11B10_FLOAT;
-			desc.width = internalResolution.x / 2;
-			desc.height = internalResolution.y / 2;
 			desc.mip_levels = std::min(8u, (uint32_t)std::log2(std::max(desc.width, desc.height)));
 			device->CreateTexture(&desc, nullptr, &rtSceneCopy);
 			device->SetName(&rtSceneCopy, "rtSceneCopy");
@@ -128,41 +178,6 @@ namespace wi
 				assert(subresource_index == i);
 				subresource_index = device->CreateSubresource(&rtSceneCopy_tmp, SubresourceType::UAV, 0, 1, i, 1);
 				assert(subresource_index == i);
-			}
-		}
-		{
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::R11G11B10_FLOAT;
-			desc.width = internalResolution.x / 4;
-			desc.height = internalResolution.y / 4;
-			device->CreateTexture(&desc, nullptr, &rtReflection);
-			device->SetName(&rtReflection, "rtReflection");
-		}
-		{
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::R11G11B10_FLOAT;
-			desc.width = internalResolution.x;
-			desc.height = internalResolution.y;
-			desc.sample_count = getMSAASampleCount();
-			device->CreateTexture(&desc, nullptr, &rtSun[0]);
-			device->SetName(&rtSun[0], "rtSun[0]");
-
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.sample_count = 1;
-			desc.width = internalResolution.x / 2;
-			desc.height = internalResolution.y / 2;
-			device->CreateTexture(&desc, nullptr, &rtSun[1]);
-			device->SetName(&rtSun[1], "rtSun[1]");
-
-			if (getMSAASampleCount() > 1)
-			{
-				desc.width = internalResolution.x;
-				desc.height = internalResolution.y;
-				desc.sample_count = 1;
-				device->CreateTexture(&desc, nullptr, &rtSun_resolved);
-				device->SetName(&rtSun_resolved, "rtSun_resolved");
 			}
 		}
 		{
@@ -206,11 +221,6 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &rtShadingRate);
 			device->SetName(&rtShadingRate, "rtShadingRate");
 		}
-		rtVelocity = {};
-		rtAO = {};
-		rtShadow = {};
-		rtSSR = {};
-		rtOutlineSource = {};
 
 		// Depth buffers:
 		{
@@ -247,16 +257,6 @@ namespace wi
 				subresource = device->CreateSubresource(&depthBuffer_Copy1, SubresourceType::UAV, 0, 1, i, 1);
 				assert(subresource == i);
 			}
-		}
-		{
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::R32_TYPELESS;
-			desc.width = internalResolution.x / 4;
-			desc.height = internalResolution.y / 4;
-			desc.layout = ResourceState::DEPTHSTENCIL_READONLY;
-			device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection);
-			device->SetName(&depthBuffer_Reflection, "depthBuffer_Reflection");
 		}
 		{
 			TextureDesc desc;
@@ -354,79 +354,6 @@ namespace wi
 		}
 		{
 			RenderPassDesc desc;
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					depthBuffer_Reflection,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::SHADER_RESOURCE
-				)
-			);
-
-			device->CreateRenderPass(&desc, &renderpass_reflection_depthprepass);
-		}
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(
-				RenderPassAttachment::RenderTarget(
-					rtReflection,
-					RenderPassAttachment::LoadOp::DONTCARE,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::RENDERTARGET,
-					ResourceState::SHADER_RESOURCE
-				)
-			);
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					depthBuffer_Reflection,
-					RenderPassAttachment::LoadOp::LOAD,
-					RenderPassAttachment::StoreOp::DONTCARE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY
-				)
-			);
-
-			device->CreateRenderPass(&desc, &renderpass_reflection);
-		}
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtSceneCopy, RenderPassAttachment::LoadOp::DONTCARE));
-
-			device->CreateRenderPass(&desc, &renderpass_downsamplescene);
-		}
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					depthBuffer_Main,
-					RenderPassAttachment::LoadOp::LOAD,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY
-				)
-			);
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtSun[0], RenderPassAttachment::LoadOp::CLEAR));
-			if (getMSAASampleCount() > 1)
-			{
-				desc.attachments.back().storeop = RenderPassAttachment::StoreOp::DONTCARE;
-				desc.attachments.push_back(RenderPassAttachment::Resolve(rtSun_resolved));
-			}
-
-			device->CreateRenderPass(&desc, &renderpass_lightshafts);
-		}
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtVolumetricLights[0], RenderPassAttachment::LoadOp::CLEAR));
-
-			device->CreateRenderPass(&desc, &renderpass_volumetriclight);
-		}
-		{
-			RenderPassDesc desc;
 			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtParticleDistortion, RenderPassAttachment::LoadOp::CLEAR));
 			desc.attachments.push_back(
 				RenderPassAttachment::DepthStencil(
@@ -446,14 +373,6 @@ namespace wi
 
 			device->CreateRenderPass(&desc, &renderpass_particledistortion);
 		}
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtWaterRipple, RenderPassAttachment::LoadOp::CLEAR));
-
-			device->CreateRenderPass(&desc, &renderpass_waterripples);
-		}
-
-		renderpass_outline_source = {};
 
 
 		// Other resources:
@@ -473,27 +392,22 @@ namespace wi
 		}
 		wi::renderer::CreateVisibilityResources(visibilityResources, internalResolution);
 		wi::renderer::CreateTiledLightResources(tiledLightResources, internalResolution);
-		wi::renderer::CreateTiledLightResources(tiledLightResources_planarReflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
-		wi::renderer::CreateLuminanceResources(luminanceResources, internalResolution);
 		wi::renderer::CreateScreenSpaceShadowResources(screenspaceshadowResources, internalResolution);
-		wi::renderer::CreateDepthOfFieldResources(depthoffieldResources, internalResolution);
-		wi::renderer::CreateMotionBlurResources(motionblurResources, internalResolution);
-		wi::renderer::CreateVolumetricCloudResources(volumetriccloudResources, internalResolution);
-		wi::renderer::CreateVolumetricCloudResources(volumetriccloudResources_reflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
-		wi::renderer::CreateBloomResources(bloomResources, internalResolution);
-		wi::renderer::CreateSurfelGIResources(surfelGIResources, internalResolution);
-		temporalAAResources = {};
 
-		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-		{
-			wi::renderer::CreateRTShadowResources(rtshadowResources, internalResolution);
-		}
-
+		// These can trigger resource creations if needed:
 		setAO(ao);
 		setSSREnabled(ssrEnabled);
 		setRaytracedReflectionsEnabled(raytracedReflectionsEnabled);
 		setRaytracedDiffuseEnabled(raytracedDiffuseEnabled);
 		setFSREnabled(fsrEnabled);
+		setMotionBlurEnabled(motionBlurEnabled);
+		setDepthOfFieldEnabled(depthOfFieldEnabled);
+		setEyeAdaptionEnabled(eyeAdaptionEnabled);
+		setReflectionsEnabled(reflectionsEnabled);
+		setBloomEnabled(bloomEnabled);
+		setVolumeLightsEnabled(volumeLightsEnabled);
+		setLightShaftsEnabled(lightShaftsEnabled);
+		setOutlineEnabled(outlineEnabled);
 
 		RenderPath2D::ResizeBuffers();
 	}
@@ -600,6 +514,70 @@ namespace wi
 			rtAO = {};
 		}
 
+		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+		{
+			if (!rtshadowResources.denoised.IsValid())
+			{
+				wi::renderer::CreateRTShadowResources(rtshadowResources, internalResolution);
+			}
+		}
+		else
+		{
+			rtshadowResources = {};
+		}
+
+		if (scene->weather.IsVolumetricClouds())
+		{
+			if (!volumetriccloudResources.texture_cloudRender.IsValid())
+			{
+				wi::renderer::CreateVolumetricCloudResources(volumetriccloudResources, internalResolution);
+			}
+			if (getReflectionsEnabled())
+			{
+				if (!volumetriccloudResources_reflection.texture_cloudRender.IsValid())
+				{
+					wi::renderer::CreateVolumetricCloudResources(volumetriccloudResources_reflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
+				}
+			}
+			else
+			{
+				volumetriccloudResources_reflection = {};
+			}
+		}
+
+		if (!scene->waterRipples.empty())
+		{
+			if (!rtWaterRipple.IsValid())
+			{
+				TextureDesc desc;
+				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+				desc.format = Format::R16G16_FLOAT;
+				desc.width = internalResolution.x / 8;
+				desc.height = internalResolution.y / 8;
+				device->CreateTexture(&desc, nullptr, &rtWaterRipple);
+				device->SetName(&rtWaterRipple, "rtWaterRipple");
+				{
+					RenderPassDesc desc;
+					desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtWaterRipple, RenderPassAttachment::LoadOp::CLEAR));
+
+					device->CreateRenderPass(&desc, &renderpass_waterripples);
+				}
+			}
+		}
+		else
+		{
+			rtWaterRipple = {};
+			renderpass_waterripples = {};
+		}
+
+		if (wi::renderer::GetSurfelGIEnabled())
+		{
+			if (!surfelGIResources.result.IsValid())
+			{
+				wi::renderer::CreateSurfelGIResources(surfelGIResources, internalResolution);
+			}
+		}
+
 		// Check whether velocity buffer is required:
 		if (
 			getMotionBlurEnabled() ||
@@ -647,33 +625,6 @@ namespace wi
 		else
 		{
 			rtShadow = {};
-		}
-
-		if (getOutlineEnabled())
-		{
-			if (!rtOutlineSource.IsValid())
-			{
-				TextureDesc desc;
-				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-				desc.format = Format::R32_FLOAT;
-				desc.width = internalResolution.x;
-				desc.height = internalResolution.y;
-				device->CreateTexture(&desc, nullptr, &rtOutlineSource);
-				device->SetName(&rtOutlineSource, "rtOutlineSource");
-			}
-			if (!renderpass_outline_source.IsValid())
-			{
-				RenderPassDesc desc;
-				desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtOutlineSource, RenderPassAttachment::LoadOp::CLEAR));
-				desc.attachments.push_back(RenderPassAttachment::DepthStencil(depthBuffer_Main, RenderPassAttachment::LoadOp::LOAD));
-
-				device->CreateRenderPass(&desc, &renderpass_outline_source);
-			}
-		}
-		else
-		{
-			rtOutlineSource = {};
-			renderpass_outline_source = {};
 		}
 
 		// Keep a copy of last frame's depth buffer for temporal disocclusion checks, so swap with current one every frame:
@@ -1458,21 +1409,7 @@ namespace wi
 		auto range = wi::profiler::BeginRangeGPU("Scene MIP Chain", cmd);
 		device->EventBegin("RenderSceneMIPChain", cmd);
 
-		device->RenderPassBegin(&renderpass_downsamplescene, cmd);
-
-		Viewport vp;
-		vp.width = (float)rtSceneCopy.GetDesc().width;
-		vp.height = (float)rtSceneCopy.GetDesc().height;
-		device->BindViewports(1, &vp, cmd);
-
-		wi::image::Params fx;
-		fx.enableFullScreen();
-		fx.sampleFlag = wi::image::SAMPLEMODE_CLAMP;
-		fx.quality = wi::image::QUALITY_LINEAR;
-		fx.blendFlag = BLENDMODE_OPAQUE;
-		wi::image::Draw(&rtMain, fx, cmd);
-
-		device->RenderPassEnd(cmd);
+		wi::renderer::Postprocess_Downsample4x(rtMain, rtSceneCopy, cmd);
 
 		wi::renderer::MIPGEN_OPTIONS mipopt;
 		mipopt.gaussian_temp = &rtSceneCopy_tmp;
@@ -1486,17 +1423,17 @@ namespace wi
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		// Water ripple rendering:
-		device->RenderPassBegin(&renderpass_waterripples, cmd); // always clear the water ripple rt, because it will always be sampled, whether there were any ripples or not
 		if (!scene->waterRipples.empty())
 		{
+			device->RenderPassBegin(&renderpass_waterripples, cmd);
 			Viewport vp;
 			vp.width = (float)rtWaterRipple.GetDesc().width;
 			vp.height = (float)rtWaterRipple.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
 
 			wi::renderer::DrawWaterRipples(visibility_main, cmd);
+			device->RenderPassEnd(cmd);
 		}
-		device->RenderPassEnd(cmd);
 
 		device->RenderPassBegin(&renderpass_transparent, cmd);
 
@@ -1771,7 +1708,6 @@ namespace wi
 		device->CreateTexture(&desc, nullptr, &rtAO);
 		device->SetName(&rtAO, "rtAO");
 	}
-
 	void RenderPath3D::setSSREnabled(bool value)
 	{
 		ssrEnabled = value;
@@ -1799,7 +1735,6 @@ namespace wi
 			ssrResources = {};
 		}
 	}
-
 	void RenderPath3D::setRaytracedReflectionsEnabled(bool value)
 	{
 		raytracedReflectionsEnabled = value;
@@ -1826,7 +1761,6 @@ namespace wi
 			rtreflectionResources = {};
 		}
 	}
-
 	void RenderPath3D::setRaytracedDiffuseEnabled(bool value)
 	{
 		raytracedDiffuseEnabled = value;
@@ -1854,7 +1788,6 @@ namespace wi
 			rtdiffuseResources = {};
 		}
 	}
-
 	void RenderPath3D::setFSREnabled(bool value)
 	{
 		fsrEnabled = value;
@@ -1879,6 +1812,270 @@ namespace wi
 		{
 			rtFSR[0] = {};
 			rtFSR[1] = {};
+		}
+	}
+	void RenderPath3D::setMotionBlurEnabled(bool value)
+	{
+		motionBlurEnabled = value;
+
+		if (value)
+		{
+			wi::renderer::CreateMotionBlurResources(motionblurResources, GetInternalResolution());
+		}
+		else
+		{
+			motionblurResources = {};
+		}
+	}
+	void RenderPath3D::setDepthOfFieldEnabled(bool value)
+	{
+		depthOfFieldEnabled = value;
+
+		if (value)
+		{
+			wi::renderer::CreateDepthOfFieldResources(depthoffieldResources, GetInternalResolution());
+		}
+		else
+		{
+			depthoffieldResources = {};
+		}
+	}
+	void RenderPath3D::setEyeAdaptionEnabled(bool value)
+	{
+		eyeAdaptionEnabled = value;
+
+		if (value)
+		{
+			wi::renderer::CreateLuminanceResources(luminanceResources, GetInternalResolution());
+		}
+		else
+		{
+			luminanceResources = {};
+		}
+	}
+	void RenderPath3D::setReflectionsEnabled(bool value)
+	{
+		reflectionsEnabled = value;
+
+		if (value)
+		{
+			GraphicsDevice* device = wi::graphics::GetDevice();
+			XMUINT2 internalResolution = GetInternalResolution();
+			if (internalResolution.x == 0 || internalResolution.y == 0)
+				return;
+
+			TextureDesc desc;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			desc.format = Format::R11G11B10_FLOAT;
+			desc.width = internalResolution.x / 4;
+			desc.height = internalResolution.y / 4;
+			device->CreateTexture(&desc, nullptr, &rtReflection);
+			device->SetName(&rtReflection, "rtReflection");
+
+			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+			desc.format = Format::R32_TYPELESS;
+			desc.width = internalResolution.x / 4;
+			desc.height = internalResolution.y / 4;
+			desc.layout = ResourceState::DEPTHSTENCIL_READONLY;
+			device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection);
+			device->SetName(&depthBuffer_Reflection, "depthBuffer_Reflection");
+
+			{
+				RenderPassDesc desc;
+				desc.attachments.push_back(
+					RenderPassAttachment::DepthStencil(
+						depthBuffer_Reflection,
+						RenderPassAttachment::LoadOp::CLEAR,
+						RenderPassAttachment::StoreOp::STORE,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL,
+						ResourceState::SHADER_RESOURCE
+					)
+				);
+
+				device->CreateRenderPass(&desc, &renderpass_reflection_depthprepass);
+			}
+			{
+				RenderPassDesc desc;
+				desc.attachments.push_back(
+					RenderPassAttachment::RenderTarget(
+						rtReflection,
+						RenderPassAttachment::LoadOp::DONTCARE,
+						RenderPassAttachment::StoreOp::STORE,
+						ResourceState::SHADER_RESOURCE,
+						ResourceState::RENDERTARGET,
+						ResourceState::SHADER_RESOURCE
+					)
+				);
+				desc.attachments.push_back(
+					RenderPassAttachment::DepthStencil(
+						depthBuffer_Reflection,
+						RenderPassAttachment::LoadOp::LOAD,
+						RenderPassAttachment::StoreOp::DONTCARE,
+						ResourceState::SHADER_RESOURCE,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL_READONLY
+					)
+				);
+
+				device->CreateRenderPass(&desc, &renderpass_reflection);
+			}
+
+			wi::renderer::CreateTiledLightResources(tiledLightResources_planarReflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
+		}
+		else
+		{
+			rtReflection = {};
+			depthBuffer_Reflection = {};
+			renderpass_reflection_depthprepass = {};
+			renderpass_reflection = {};
+			tiledLightResources_planarReflection = {};
+		}
+	}
+	void RenderPath3D::setBloomEnabled(bool value)
+	{
+		bloomEnabled = value;
+
+		if (value)
+		{
+			wi::renderer::CreateBloomResources(bloomResources, GetInternalResolution());
+		}
+		else
+		{
+			bloomResources = {};
+		}
+	}
+	void RenderPath3D::setVolumeLightsEnabled(bool value)
+	{
+		volumeLightsEnabled = value;
+
+		if (value)
+		{
+			GraphicsDevice* device = wi::graphics::GetDevice();
+			XMUINT2 internalResolution = GetInternalResolution();
+			if (internalResolution.x == 0 || internalResolution.y == 0)
+				return;
+
+			TextureDesc desc;
+			desc.format = Format::R16G16B16A16_FLOAT;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.width = internalResolution.x / 4;
+			desc.height = internalResolution.y / 4;
+			device->CreateTexture(&desc, nullptr, &rtVolumetricLights[0]);
+			device->SetName(&rtVolumetricLights[0], "rtVolumetricLights[0]");
+			device->CreateTexture(&desc, nullptr, &rtVolumetricLights[1]);
+			device->SetName(&rtVolumetricLights[1], "rtVolumetricLights[1]");
+			{
+				RenderPassDesc desc;
+				desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtVolumetricLights[0], RenderPassAttachment::LoadOp::CLEAR));
+
+				device->CreateRenderPass(&desc, &renderpass_volumetriclight);
+			}
+		}
+		else
+		{
+			rtVolumetricLights[0] = {};
+			rtVolumetricLights[1] = {};
+			renderpass_volumetriclight = {};
+		}
+	}
+	void RenderPath3D::setLightShaftsEnabled(bool value)
+	{
+		lightShaftsEnabled = value;
+
+		if (value)
+		{
+			GraphicsDevice* device = wi::graphics::GetDevice();
+			XMUINT2 internalResolution = GetInternalResolution();
+			if (internalResolution.x == 0 || internalResolution.y == 0)
+				return;
+
+			TextureDesc desc;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			desc.format = Format::R11G11B10_FLOAT;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			desc.sample_count = getMSAASampleCount();
+			device->CreateTexture(&desc, nullptr, &rtSun[0]);
+			device->SetName(&rtSun[0], "rtSun[0]");
+
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.sample_count = 1;
+			desc.width = internalResolution.x / 2;
+			desc.height = internalResolution.y / 2;
+			device->CreateTexture(&desc, nullptr, &rtSun[1]);
+			device->SetName(&rtSun[1], "rtSun[1]");
+
+			if (getMSAASampleCount() > 1)
+			{
+				desc.width = internalResolution.x;
+				desc.height = internalResolution.y;
+				desc.sample_count = 1;
+				device->CreateTexture(&desc, nullptr, &rtSun_resolved);
+				device->SetName(&rtSun_resolved, "rtSun_resolved");
+			}
+
+			{
+				RenderPassDesc desc;
+				desc.attachments.push_back(
+					RenderPassAttachment::DepthStencil(
+						depthBuffer_Main,
+						RenderPassAttachment::LoadOp::LOAD,
+						RenderPassAttachment::StoreOp::STORE,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL_READONLY
+					)
+				);
+				desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtSun[0], RenderPassAttachment::LoadOp::CLEAR));
+				if (getMSAASampleCount() > 1)
+				{
+					desc.attachments.back().storeop = RenderPassAttachment::StoreOp::DONTCARE;
+					desc.attachments.push_back(RenderPassAttachment::Resolve(rtSun_resolved));
+				}
+
+				device->CreateRenderPass(&desc, &renderpass_lightshafts);
+			}
+		}
+		else
+		{
+			rtSun[0] = {};
+			rtSun[1] = {};
+			rtSun_resolved = {};
+			renderpass_lightshafts = {};
+		}
+	}
+	void RenderPath3D::setOutlineEnabled(bool value)
+	{
+		outlineEnabled = value;
+
+		if (value)
+		{
+			GraphicsDevice* device = wi::graphics::GetDevice();
+			XMUINT2 internalResolution = GetInternalResolution();
+			if (internalResolution.x == 0 || internalResolution.y == 0)
+				return;
+
+			TextureDesc desc;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			desc.format = Format::R32_FLOAT;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			device->CreateTexture(&desc, nullptr, &rtOutlineSource);
+			device->SetName(&rtOutlineSource, "rtOutlineSource");
+
+			{
+				RenderPassDesc desc;
+				desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtOutlineSource, RenderPassAttachment::LoadOp::CLEAR));
+				desc.attachments.push_back(RenderPassAttachment::DepthStencil(depthBuffer_Main, RenderPassAttachment::LoadOp::LOAD));
+
+				device->CreateRenderPass(&desc, &renderpass_outline_source);
+			}
+		}
+		else
+		{
+			rtOutlineSource = {};
+			renderpass_outline_source = {};
 		}
 	}
 

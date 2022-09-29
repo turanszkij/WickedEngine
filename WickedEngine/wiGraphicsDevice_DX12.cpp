@@ -1667,6 +1667,7 @@ using namespace dx12_internal;
 			uploadBufferDesc.usage = Usage::UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploadBufferDesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
+			device->SetName(&cmd.uploadbuffer, "CopyAllocator::uploadBuffer");
 		}
 
 		// begin command list in valid state:
@@ -2417,6 +2418,10 @@ using namespace dx12_internal;
 		D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
 		allocatorDesc.pDevice = device.Get();
 		allocatorDesc.pAdapter = dxgiAdapter.Get();
+		//allocatorDesc.PreferredBlockSize = 256 * 1024 * 1024;
+		//allocatorDesc.Flags |= D3D12MA::ALLOCATOR_FLAG_ALWAYS_COMMITTED;
+		allocatorDesc.Flags |= D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
+		allocatorDesc.Flags |= D3D12MA::ALLOCATOR_FLAG_MSAA_TEXTURES_ALWAYS_COMMITTED;
 
 		allocationhandler = std::make_shared<AllocationHandler>();
 		allocationhandler->device = device;

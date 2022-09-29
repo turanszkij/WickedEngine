@@ -125,7 +125,11 @@ namespace wi::scene
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
 		{
-			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount() + 1); // +1 : ocean
+			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount());
+			if (weather.IsOceanEnabled())
+			{
+				minQueryCount += 1;
+			}
 			if (queryHeap.desc.query_count < minQueryCount)
 			{
 				GPUQueryHeapDesc desc;
@@ -3108,6 +3112,7 @@ namespace wi::scene
 		aabb_objects.resize(objects.GetCount());
 		matrix_objects.resize(objects.GetCount());
 		matrix_objects_prev.resize(objects.GetCount());
+		occlusion_results_objects.resize(objects.GetCount());
 
 		meshletAllocator.store(0u);
 
@@ -3121,24 +3126,25 @@ namespace wi::scene
 			AABB& aabb = aabb_objects[args.jobIndex];
 
 			// Update occlusion culling status:
+			OcclusionResult& occlusion_result = occlusion_results_objects[args.jobIndex];
 			if (!wi::renderer::GetFreezeCullingCameraEnabled())
 			{
-				object.occlusionHistory <<= 1u; // advance history by 1 frame
-				int query_id = object.occlusionQueries[queryheap_idx];
+				occlusion_result.occlusionHistory <<= 1u; // advance history by 1 frame
+				int query_id = occlusion_result.occlusionQueries[queryheap_idx];
 				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0)
 				{
 					uint64_t visible = ((uint64_t*)queryResultBuffer[queryheap_idx].mapped_data)[query_id];
 					if (visible)
 					{
-						object.occlusionHistory |= 1; // visible
+						occlusion_result.occlusionHistory |= 1; // visible
 					}
 				}
 				else
 				{
-					object.occlusionHistory |= 1; // visible
+					occlusion_result.occlusionHistory |= 1; // visible
 				}
 			}
-			object.occlusionQueries[queryheap_idx] = -1; // invalidate query
+			occlusion_result.occlusionQueries[queryheap_idx] = -1; // invalidate query
 
 			const LayerComponent* layer = layers.GetComponent(entity);
 			uint32_t layerMask;

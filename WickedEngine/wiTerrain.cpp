@@ -342,6 +342,7 @@ namespace wi::terrain
 		{
 			const Chunk& chunk = it->first;
 			ChunkData& chunk_data = it->second;
+			const bool chunk_visible = camera.frustum.CheckSphere(chunk_data.sphere.center, chunk_data.sphere.radius);
 			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 
 			// pointer refresh:
@@ -443,24 +444,30 @@ namespace wi::terrain
 			// Collect virtual texture update requests:
 			if (virtual_texture_any)
 			{
-				uint32_t texture_lod = 0;
-				const float distsq = wi::math::DistanceSquared(camera.Eye, chunk_data.sphere.center);
-				const float radius = chunk_data.sphere.radius;
-				const float radiussq = radius * radius;
-				if (distsq < radiussq)
+				if (chunk_visible)
 				{
-					texture_lod = 0;
+					uint32_t texture_lod = 0;
+					const float distsq = wi::math::DistanceSquared(camera.Eye, chunk_data.sphere.center);
+					const float radius = chunk_data.sphere.radius;
+					const float radiussq = radius * radius;
+					if (distsq < radiussq)
+					{
+						texture_lod = 0;
+					}
+					else
+					{
+						const float dist = std::sqrt(distsq);
+						const float dist_to_sphere = dist - radius;
+						texture_lod = uint32_t(dist_to_sphere * texlodMultiplier);
+					}
+					chunk_data.required_texture_resolution = uint32_t(target_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
+					chunk_data.required_texture_resolution = AlignTo(chunk_data.required_texture_resolution, 8u);
+					chunk_data.required_texture_resolution = std::max(8u, chunk_data.required_texture_resolution);
 				}
 				else
 				{
-					const float dist = std::sqrt(distsq);
-					const float dist_to_sphere = dist - radius;
-					texture_lod = uint32_t(dist_to_sphere * texlodMultiplier);
+					chunk_data.required_texture_resolution = 8u;
 				}
-
-				chunk_data.required_texture_resolution = uint32_t(target_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
-				chunk_data.required_texture_resolution = AlignTo(chunk_data.required_texture_resolution, 8u);
-				chunk_data.required_texture_resolution = std::max(8u, chunk_data.required_texture_resolution);
 				MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
 
 				if (material != nullptr)
@@ -1160,8 +1167,6 @@ namespace wi::terrain
 		}
 		else
 		{
-			BakeVirtualTexturesToFiles();
-
 			archive << _flags;
 			archive << lod_multiplier;
 			archive << texlod;

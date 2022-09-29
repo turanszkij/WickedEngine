@@ -1417,6 +1417,7 @@ using namespace vulkan_internal;
 			uploaddesc.usage = Usage::UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
+			device->SetName(&cmd.uploadbuffer, "CopyAllocator::uploadBuffer");
 		}
 
 		// begin command list in valid state:
