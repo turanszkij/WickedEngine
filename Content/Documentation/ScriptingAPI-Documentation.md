@@ -1228,7 +1228,7 @@ A ray is defined by an origin Vector and a normalized direction Vector. It can b
 
 </br>
 
-- [constructor]Ray(Vector origin,direction)
+- [constructor]Ray(Vector origin,direction, opt float Tmin=0,Tmax=FLT_MAX)
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
 - Intersects(Capsule capsule) : bool result

@@ -61,7 +61,7 @@ namespace wi::lua::primitive
 			}
 			else
 			{
-				wi::lua::SError(L, "Ray(Vector origin,direction) requires two arguments of Vector type!");
+				wi::lua::SError(L, "Ray(Vector origin,direction, opt float Tmin = 0, TMax = FLT_MAX) requires two arguments of Vector type!");
 			}
 		}
 		else

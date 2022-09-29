@@ -5,6 +5,18 @@ on:
     - cron:  '0 0 * * *'
 
 jobs:
+
+  content:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Package Content
+      uses: actions/upload-artifact@v2
+      with:
+        name: Sample Content
+        path: |
+          Content/
+  
   windows:
     runs-on: windows-latest
     steps:
@@ -34,7 +46,6 @@ jobs:
       with:
         name: Editor (Windows x64)
         path: |
-          Content/
           README.md
           LICENSE.md
           third_party_software.txt
@@ -100,7 +111,6 @@ jobs:
       with:
         name: Editor (Ubuntu 20.04)
         path: |
-          Content/
           README.md
           LICENSE.md
           third_party_software.txt
@@ -168,7 +178,6 @@ jobs:
       with:
         name: Editor (Linux - Steam SDK)
         path: |
-          Content/
           README.md
           LICENSE.md
           third_party_software.txt
