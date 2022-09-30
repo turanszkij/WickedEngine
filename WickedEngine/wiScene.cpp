@@ -2383,11 +2383,16 @@ namespace wi::scene
 		}
 
 		// Colliders:
-		allocator_colliders_cpu.store(0u);
-		allocator_colliders_gpu.store(0u);
-		aabb_colliders_cpu.reserve(colliders.GetCount());
-		colliders_cpu.reserve(colliders.GetCount());
-		colliders_gpu.reserve(colliders.GetCount());
+		collider_allocator_cpu.store(0u);
+		collider_allocator_gpu.store(0u);
+		collider_deinterleaved_data.reserve(
+			sizeof(wi::primitive::AABB) * colliders.GetCount() +
+			sizeof(ColliderComponent) * colliders.GetCount() +
+			sizeof(ColliderComponent) * colliders.GetCount()
+		);
+		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
+		colliders_cpu = (ColliderComponent*)(aabb_colliders_cpu + colliders.GetCount());
+		colliders_gpu = colliders_cpu + colliders.GetCount();
 
 		wi::jobsystem::Dispatch(ctx, (uint32_t)colliders.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 
@@ -2453,22 +2458,21 @@ namespace wi::scene
 
 			if (collider.IsCPUEnabled())
 			{
-				uint32_t index = allocator_colliders_cpu.fetch_add(1u);
+				uint32_t index = collider_allocator_cpu.fetch_add(1u);
 				colliders_cpu[index] = collider;
 				aabb_colliders_cpu[index] = aabb;
 			}
 			if (collider.IsGPUEnabled())
 			{
-				uint32_t index = allocator_colliders_gpu.fetch_add(1u);
+				uint32_t index = collider_allocator_gpu.fetch_add(1u);
 				colliders_gpu[index] = collider;
 			}
 
 		});
 
 		wi::jobsystem::Wait(ctx);
-		aabb_colliders_cpu.resize(allocator_colliders_cpu.load());
-		colliders_cpu.resize(allocator_colliders_cpu.load());
-		colliders_gpu.resize(allocator_colliders_gpu.load());
+		collider_count_cpu = collider_allocator_cpu.load();
+		collider_count_gpu = collider_allocator_gpu.load();
 
 		// Springs:
 		static float time = 0;
@@ -2598,7 +2602,7 @@ namespace wi::scene
 			XMStoreFloat3(&tail_sphere.center, tail_next);
 			tail_sphere.radius = hitRadius;
 
-			for (size_t collider_index = 0; collider_index < colliders_cpu.size(); ++collider_index)
+			for (size_t collider_index = 0; collider_index < collider_count_cpu; ++collider_index)
 			{
 				if (!aabb_colliders_cpu[collider_index].intersects(tail_sphere))
 					continue;
@@ -4043,7 +4047,7 @@ namespace wi::scene
 
 		if (filterMask & FILTER_COLLIDER)
 		{
-			const uint32_t jobCount = (uint32_t)colliders_cpu.size();
+			const uint32_t jobCount = collider_count_cpu;
 			const uint32_t groupSize = wi::jobsystem::DispatchGroupCount(jobCount, threadCount);
 			wi::jobsystem::Dispatch(ctx, jobCount, groupSize, [&jobDataFunction, this](wi::jobsystem::JobArgs args) {
 
@@ -4286,7 +4290,7 @@ namespace wi::scene
 
 		if (filterMask & FILTER_COLLIDER)
 		{
-			const uint32_t jobCount = (uint32_t)colliders_cpu.size();
+			const uint32_t jobCount = collider_count_cpu;
 			const uint32_t groupSize = wi::jobsystem::DispatchGroupCount(jobCount, threadCount);
 			wi::jobsystem::Dispatch(ctx, jobCount, groupSize, [&jobDataFunction, this](wi::jobsystem::JobArgs args) {
 
@@ -4604,7 +4608,7 @@ namespace wi::scene
 
 		if (filterMask & FILTER_COLLIDER)
 		{
-			const uint32_t jobCount = (uint32_t)colliders_cpu.size();
+			const uint32_t jobCount = collider_count_cpu;
 			const uint32_t groupSize = wi::jobsystem::DispatchGroupCount(jobCount, threadCount);
 			wi::jobsystem::Dispatch(ctx, jobCount, groupSize, [&jobDataFunction, this](wi::jobsystem::JobArgs args) {
 

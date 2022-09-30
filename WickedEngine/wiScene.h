@@ -80,7 +80,6 @@ namespace wi::scene
 		wi::vector<wi::primitive::AABB> aabb_lights;
 		wi::vector<wi::primitive::AABB> aabb_probes;
 		wi::vector<wi::primitive::AABB> aabb_decals;
-		wi::vector<wi::primitive::AABB> aabb_colliders_cpu;
 
 		// Separate stream of world matrices:
 		wi::vector<XMFLOAT4X4> matrix_objects;
@@ -205,10 +204,14 @@ namespace wi::scene
 		wi::vector<TransformComponent> transforms_temp;
 
 		// CPU/GPU Colliders:
-		std::atomic<uint32_t> allocator_colliders_cpu;
-		std::atomic<uint32_t> allocator_colliders_gpu;
-		wi::vector<ColliderComponent> colliders_cpu;
-		wi::vector<ColliderComponent> colliders_gpu;
+		std::atomic<uint32_t> collider_allocator_cpu{ 0 };
+		std::atomic<uint32_t> collider_allocator_gpu{ 0 };
+		wi::vector<uint8_t> collider_deinterleaved_data;
+		uint32_t collider_count_cpu = 0;
+		uint32_t collider_count_gpu = 0;
+		wi::primitive::AABB* aabb_colliders_cpu = nullptr;
+		ColliderComponent* colliders_cpu = nullptr;
+		ColliderComponent* colliders_gpu = nullptr;
 
 		// Ocean GPU state:
 		wi::Ocean ocean;

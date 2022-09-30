@@ -3274,7 +3274,7 @@ void UpdatePerFrameData(
 	frameCB.lightarray_offset = frameCB.envprobearray_offset + frameCB.envprobearray_count;
 	frameCB.lightarray_count = (uint)vis.visibleLights.size();
 	frameCB.forcefieldarray_offset = frameCB.lightarray_offset + frameCB.lightarray_count;
-	frameCB.forcefieldarray_count = uint(vis.scene->forces.GetCount() + vis.scene->colliders_gpu.size());
+	frameCB.forcefieldarray_count = uint(vis.scene->forces.GetCount() + vis.scene->collider_count_gpu);
 
 	frameCB.envprobe_mipcount = 0;
 	frameCB.envprobe_mipcount_rcp = 1.0f;
@@ -3743,7 +3743,7 @@ void UpdateRenderData(
 		}
 
 		// Write colliders into entity array:
-		for (size_t i = 0; i < vis.scene->colliders_gpu.size(); ++i)
+		for (size_t i = 0; i < vis.scene->collider_count_gpu; ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -4871,6 +4871,9 @@ void DrawShadowmaps(
 			{
 			case LightComponent::DIRECTIONAL:
 			{
+				if (max_shadow_resolution_2D == 0 && light.forced_shadow_resolution < 0)
+					break;
+
 				SHCAM shcams[CASCADE_COUNT];
 				CreateDirLightShadowCams(light, *vis.camera, shcams, arraysize(shcams));
 
@@ -4924,6 +4927,9 @@ void DrawShadowmaps(
 			break;
 			case LightComponent::SPOT:
 			{
+				if (max_shadow_resolution_2D == 0 && light.forced_shadow_resolution < 0)
+					break;
+
 				SHCAM shcam;
 				CreateSpotLightShadowCam(light, shcam);
 				if (!cam_frustum.Intersects(shcam.boundingfrustum))
@@ -4986,6 +4992,9 @@ void DrawShadowmaps(
 			break;
 			case LightComponent::POINT:
 			{
+				if (max_shadow_resolution_cube == 0 && light.forced_shadow_resolution < 0)
+					break;
+
 				Sphere boundingsphere(light.position, light.GetRange());
 
 				renderQueue.init();
@@ -7005,7 +7014,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 	for (uint32_t impostorIndex = 0; impostorIndex < scene.impostors.GetCount(); ++impostorIndex)
 	{
 		const ImpostorComponent& impostor = scene.impostors[impostorIndex];
-		if (!impostor.render_dirty)
+		if (!impostor.render_dirty || impostor.textureIndex < 0)
 			continue;
 		impostor.render_dirty = false;
 

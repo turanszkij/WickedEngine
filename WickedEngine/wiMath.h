@@ -41,23 +41,13 @@ namespace wi::math
 	{
 		return std::sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
 	}
-	inline float Distance(const XMVECTOR& v1, const XMVECTOR& v2)
+	inline float Distance(XMVECTOR v1, XMVECTOR v2)
 	{
-		XMVECTOR vectorSub = XMVectorSubtract(v1, v2);
-		XMVECTOR length = XMVector3Length(vectorSub);
-
-		float Distance = 0.0f;
-		XMStoreFloat(&Distance, length);
-		return Distance;
+		return XMVectorGetX(XMVector3Length(XMVectorSubtract(v1, v2)));
 	}
-	inline float DistanceSquared(const XMVECTOR& v1, const XMVECTOR& v2)
+	inline float DistanceSquared(XMVECTOR v1, XMVECTOR v2)
 	{
-		XMVECTOR vectorSub = XMVectorSubtract(v1, v2);
-		XMVECTOR length = XMVector3LengthSq(vectorSub);
-
-		float Distance = 0.0f;
-		XMStoreFloat(&Distance, length);
-		return Distance;
+		return XMVectorGetX(XMVector3LengthSq(XMVectorSubtract(v1, v2)));
 	}
 	inline float DistanceEstimated(const XMVECTOR& v1, const XMVECTOR& v2)
 	{

@@ -236,8 +236,8 @@ namespace wi::primitive
 		XMFLOAT3 min = b.getMin();
 		XMFLOAT3 max = b.getMax();
 		XMFLOAT3 closestPointInAabb = wi::math::Min(wi::math::Max(center, min), max);
-		double distanceSquared = wi::math::Distance(closestPointInAabb, center);
-		return distanceSquared < radius;
+		float distanceSquared = wi::math::DistanceSquared(closestPointInAabb, center);
+		return distanceSquared < (radius * radius);
 	}
 	bool Sphere::intersects(const Sphere& b)const
 	{
