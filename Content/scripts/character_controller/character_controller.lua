@@ -263,9 +263,12 @@ Character = {
 		self.face.SetY(0)
 		self.face=self.face:Normalize()
 
-		local capsule = scene.Component_GetCollider(self.collider).GetCapsule()
+		self.force = vector.Add(self.force, Vector(0, -1, 0)) -- gravity
+		self.velocity = vector.Multiply(self.force, dt)
+
 		
 		-- Capsule collision for character:		
+		local capsule = scene.Component_GetCollider(self.collider).GetCapsule()
 		local original_capsulepos = model_transform.GetPosition()
 		local capsulepos = original_capsulepos
 		local capsuleheight = vector.Subtract(capsule.GetTip(), capsule.GetBase()).Length()
@@ -273,11 +276,9 @@ Character = {
 		local ground_intersect = false
 
 		local fixed_update_remain = dt
-		local fixed_update_rate = 1.0 / 120.0
+		local fixed_update_fps = 120
+		local fixed_update_rate = 1.0 / fixed_update_fps
 		local fixed_dt = fixed_update_rate / dt
-
-		self.force = vector.Add(self.force, Vector(0, -1, 0)) -- gravity
-		self.velocity = vector.Multiply(self.force, dt)
 
 		while fixed_update_remain > 0 do
 			fixed_update_remain = fixed_update_remain - fixed_update_rate
