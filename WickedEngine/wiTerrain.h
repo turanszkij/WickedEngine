@@ -107,7 +107,6 @@ namespace wi::terrain
 		Chunk center_chunk = {};
 		wi::noise::Perlin perlin_noise;
 		wi::vector<Prop> props;
-		wi::unordered_map<uint64_t, wi::ecs::Entity> serializer_state;
 
 		// For generating scene on a background thread:
 		std::shared_ptr<Generator> generator;
