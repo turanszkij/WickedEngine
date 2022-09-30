@@ -474,7 +474,7 @@ runProcess(function()
 
 	--application.SetInfoDisplay(false)
 	application.SetFPSDisplay(true)
-	--path.SetResolutionScale(1.5)
+	--path.SetResolutionScale(0.5)
 
 	while true do
 

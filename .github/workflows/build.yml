@@ -15,7 +15,8 @@ jobs:
       with:
         name: Content
         path: |
-          Content/
+          Content/models
+          Content/scripts
 
   windows:
     runs-on: windows-latest
@@ -41,16 +42,14 @@ jobs:
         move Editor/config.ini ./
         move Editor/startup.lua ./
         move Editor/terrain ./
+        move Content/Documentation ./
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
         name: Editor (Windows)
         path: |
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
+		  Documentation/
           terrain/
           config.ini
           startup.lua
@@ -88,16 +87,14 @@ jobs:
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
         mv Editor/terrain ./
+        mv Content/Documentation ./
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
         name: Editor (Linux - Ubuntu)
         path: |
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
+		  Documentation/
           terrain/
           config.ini
           startup.lua
@@ -136,16 +133,14 @@ jobs:
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
         mv Editor/terrain ./
+        mv Content/Documentation ./
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
         name: Editor (Linux - Steam Deck)
         path: |
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
+		  Documentation/
           terrain/
           config.ini
           startup.lua
