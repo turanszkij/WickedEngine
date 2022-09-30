@@ -13,7 +13,7 @@ jobs:
     - name: Package Content
       uses: actions/upload-artifact@v2
       with:
-        name: Sample Content
+        name: Content
         path: |
           Content/
 
@@ -56,25 +56,6 @@ jobs:
           Editor/*.ico
           Editor/*.lua
           Editor/*.exe
-          
-    - name: Package Tests
-      uses: actions/upload-artifact@v2
-      with:
-        name: Tests (Windows x64)
-        path: |
-          Content/
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
-          Tests/images/
-          Tests/sound/
-          Tests/*.ini
-          Tests/*.txt
-          Tests/*.ico
-          Tests/*.lua
-          Tests/*.ttf
-          Tests/*.exe
 
     
   linux:
@@ -122,25 +103,6 @@ jobs:
           Editor/*.ico
           Editor/*.lua
           Editor/WickedEngineEditor
-          
-    - name: Package Tests
-      uses: actions/upload-artifact@v2
-      with:
-        name: Tests (Ubuntu 20.04)
-        path: |
-          Content/
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
-          Tests/images/
-          Tests/sound/
-          Tests/*.ini
-          Tests/*.txt
-          Tests/*.ico
-          Tests/*.lua
-          Tests/*.ttf
-          Tests/Tests
 
   
   linux-steamdeck:
@@ -189,22 +151,3 @@ jobs:
           Editor/*.ico
           Editor/*.lua
           Editor/WickedEngineEditor
-          
-    - name: Package Tests
-      uses: actions/upload-artifact@v2
-      with:
-        name: Tests (Linux - Steam SDK)
-        path: |
-          Content/
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
-          Tests/images/
-          Tests/sound/
-          Tests/*.ini
-          Tests/*.txt
-          Tests/*.ico
-          Tests/*.lua
-          Tests/*.ttf
-          Tests/Tests
