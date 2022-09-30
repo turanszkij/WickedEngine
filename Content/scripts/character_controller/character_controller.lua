@@ -124,6 +124,12 @@ Character = {
 		if(dot > 0) then 
 			self.force = vector.Add(self.force, self.face:Multiply(Vector(f,f,f)))
 		end
+	end,
+
+	Update = function(self)
+
+		local dt = getDeltaTime()
+
 
 		local model_transform = scene.Component_GetTransform(self.model)
 		local savedPos = model_transform.GetPosition()
@@ -135,54 +141,30 @@ Character = {
 		model_transform.UpdateTransform()
 		scene.Component_Detach(self.target)
 		scene.Component_Attach(self.target, self.model)
-	end,
 
-	Update = function(self)
-
-		local dt = math.min(0.033, getDeltaTime())
-		--local dt = 0.016
 		
+		-- Camera target control:
 
-		local lookDir = Vector()
-		if(input.Down(KEYBOARD_BUTTON_LEFT) or input.Down(string.byte('A'))) then
-			lookDir = lookDir:Add( Vector(-1) )
-		end
-		if(input.Down(KEYBOARD_BUTTON_RIGHT) or input.Down(string.byte('D'))) then
-			lookDir = lookDir:Add( Vector(1) )
+		-- read from gamepad analog stick:
+		local diff = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_R)
+		diff = vector.Multiply(diff, dt * 4)
+		
+		-- read from mouse:
+		if(input.Down(MOUSE_BUTTON_RIGHT)) then
+			local mouseDif = input.GetPointerDelta()
+			mouseDif = mouseDif:Multiply(dt * 0.3)
+			diff = vector.Add(diff, mouseDif)
+			input.SetPointer(self.savedPointerPos)
+			input.HidePointer(true)
+		else
+			self.savedPointerPos = input.GetPointer()
+			input.HidePointer(false)
 		end
 		
-		if(input.Down(KEYBOARD_BUTTON_UP) or input.Down(string.byte('W'))) then
-			lookDir = lookDir:Add( Vector(0,0,1) )
-		end
-		if(input.Down(KEYBOARD_BUTTON_DOWN) or input.Down(string.byte('S'))) then
-			lookDir = lookDir:Add( Vector(0,0,-1) )
-		end
+		local target_transform = scene.Component_GetTransform(self.target)
+		target_transform.Rotate(Vector(diff.GetY(),diff.GetX()))
 
-		local analog = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_L)
-		lookDir = vector.Add(lookDir, Vector(analog.GetX(), 0, analog.GetY()))
-			
-		if self.state ~= self.states.JUMP and self.state_prev ~= self.states.JUMP and self.velocity.GetY() == 0 then
-			if(lookDir.Length() > 0) then
-				if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
-					if input.Down(string.byte('E')) or input.Down(GAMEPAD_BUTTON_5) then
-						self:MoveDirection(lookDir,self.run_speed)
-						self.state = self.states.RUN
-					else
-						self:MoveDirection(lookDir,self.jog_speed)
-						self.state = self.states.JOG
-					end
-				else
-					self:MoveDirection(lookDir,self.walk_speed)
-					self.state = self.states.WALK
-				end
-			end
-			
-			if(input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2)) then
-				self:Jump(self.jump_speed)
-			end
-		elseif self.velocity.GetY() > 0 then
-			self:MoveDirection(lookDir,self.walk_speed)
-		end
+
 		
 		-- state and animation update
 		if(self.state == self.states.IDLE) then
@@ -231,38 +213,56 @@ Character = {
 				end
 			end
 		end
+
+		if dt > 0.1 then
+			return
+		end
+
+		-- Movement input:
+		local lookDir = Vector()
+		if(input.Down(KEYBOARD_BUTTON_LEFT) or input.Down(string.byte('A'))) then
+			lookDir = lookDir:Add( Vector(-1) )
+		end
+		if(input.Down(KEYBOARD_BUTTON_RIGHT) or input.Down(string.byte('D'))) then
+			lookDir = lookDir:Add( Vector(1) )
+		end
 		
+		if(input.Down(KEYBOARD_BUTTON_UP) or input.Down(string.byte('W'))) then
+			lookDir = lookDir:Add( Vector(0,0,1) )
+		end
+		if(input.Down(KEYBOARD_BUTTON_DOWN) or input.Down(string.byte('S'))) then
+			lookDir = lookDir:Add( Vector(0,0,-1) )
+		end
+
+		local analog = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_L)
+		lookDir = vector.Add(lookDir, Vector(analog.GetX(), 0, analog.GetY()))
+			
+		if self.state ~= self.states.JUMP and self.state_prev ~= self.states.JUMP and self.velocity.GetY() == 0 then
+			if(lookDir.Length() > 0) then
+				if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
+					if input.Down(string.byte('E')) or input.Down(GAMEPAD_BUTTON_5) then
+						self:MoveDirection(lookDir,self.run_speed)
+						self.state = self.states.RUN
+					else
+						self:MoveDirection(lookDir,self.jog_speed)
+						self.state = self.states.JOG
+					end
+				else
+					self:MoveDirection(lookDir,self.walk_speed)
+					self.state = self.states.WALK
+				end
+			end
+			
+			if(input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2)) then
+				self:Jump(self.jump_speed)
+			end
+		elseif self.velocity.GetY() > 0 then
+			self:MoveDirection(lookDir,self.walk_speed)
+		end
+
 		self.face.SetY(0)
 		self.face=self.face:Normalize()
 
-
-		-- Camera target control:
-
-		-- read from gamepad analog stick:
-		local diff = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_R)
-		diff = vector.Multiply(diff, dt * 4)
-		
-		-- read from mouse:
-		if(input.Down(MOUSE_BUTTON_RIGHT)) then
-			local mouseDif = input.GetPointerDelta()
-			mouseDif = mouseDif:Multiply(dt * 0.3)
-			diff = vector.Add(diff, mouseDif)
-			input.SetPointer(self.savedPointerPos)
-			input.HidePointer(true)
-		else
-			self.savedPointerPos = input.GetPointer()
-			input.HidePointer(false)
-		end
-		
-		local target_transform = scene.Component_GetTransform(self.target)
-		target_transform.Rotate(Vector(diff.GetY(),diff.GetX()))
-		
-		-- apply force:
-		local gravity = Vector(0, -1, 0)
-		self.force = vector.Add(self.force, gravity)
-		self.velocity = vector.Multiply(self.force, dt)
-
-		local model_transform = scene.Component_GetTransform(self.model)
 		local capsule = scene.Component_GetCollider(self.collider).GetCapsule()
 		
 		-- Capsule collision for character:		
@@ -276,9 +276,12 @@ Character = {
 		local fixed_update_rate = 1.0 / 120.0
 		local fixed_dt = fixed_update_rate / dt
 
+		self.force = vector.Add(self.force, Vector(0, -1, 0)) -- gravity
+		self.velocity = vector.Multiply(self.force, dt)
+
 		while fixed_update_remain > 0 do
 			fixed_update_remain = fixed_update_remain - fixed_update_rate
-
+		
 			local step = vector.Multiply(self.velocity, fixed_dt)
 
 			capsulepos = vector.Add(capsulepos, step)
@@ -471,7 +474,7 @@ runProcess(function()
 
 	--application.SetInfoDisplay(false)
 	application.SetFPSDisplay(true)
-	--path.SetResolutionScale(0.5)
+	--path.SetResolutionScale(1.5)
 
 	while true do
 

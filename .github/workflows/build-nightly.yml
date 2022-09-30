@@ -54,7 +54,7 @@ jobs:
           terrain/
           config.ini
           startup.lua
-          ./*.exe
+          Editor_Windows.exe
 
     
   linux:
@@ -91,7 +91,7 @@ jobs:
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
-        name: Editor (Ubuntu)
+        name: Editor (Linux - Ubuntu)
         path: |
           README.md
           LICENSE.md
@@ -139,7 +139,7 @@ jobs:
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
-        name: Editor (Linux - Steam)
+        name: Editor (Linux - Steam Deck)
         path: |
           README.md
           LICENSE.md
