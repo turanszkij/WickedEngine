@@ -374,6 +374,10 @@ namespace wi::scene
 				SerializeEntity(archive, subsets[i].materialID, seri);
 				archive >> subsets[i].indexOffset;
 				archive >> subsets[i].indexCount;
+				if (archive.GetVersion() >= 88)
+				{
+					archive >> subsets[i].name;
+				}
 			}
 
 			archive >> tessellationFactor;
@@ -449,6 +453,10 @@ namespace wi::scene
 				SerializeEntity(archive, subsets[i].materialID, seri);
 				archive << subsets[i].indexOffset;
 				archive << subsets[i].indexCount;
+				if (archive.GetVersion() >= 88)
+				{
+					archive << subsets[i].name;
+				}
 			}
 
 			archive << tessellationFactor;
