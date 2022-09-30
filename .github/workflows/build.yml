@@ -49,7 +49,7 @@ jobs:
       with:
         name: Editor (Windows)
         path: |
-		  Documentation/
+          Documentation/
           terrain/
           config.ini
           startup.lua
@@ -94,7 +94,7 @@ jobs:
       with:
         name: Editor (Linux - Ubuntu)
         path: |
-		  Documentation/
+          Documentation/
           terrain/
           config.ini
           startup.lua
@@ -140,7 +140,7 @@ jobs:
       with:
         name: Editor (Linux - Steam Deck)
         path: |
-		  Documentation/
+          Documentation/
           terrain/
           config.ini
           startup.lua
