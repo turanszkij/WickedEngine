@@ -32,7 +32,10 @@ Character = {
 	jog_anim = INVALID_ENTITY,
 	run_anim = INVALID_ENTITY,
 	jump_anim = INVALID_ENTITY,
+	swim_idle_anim = INVALID_ENTITY,
+	swim_anim = INVALID_ENTITY,
 	all_anims = {},
+	neck = INVALID_ENTITY,
 	head = INVALID_ENTITY,
 	left_hand = INVALID_ENTITY,
 	right_hand = INVALID_ENTITY,
@@ -46,6 +49,7 @@ Character = {
 	jog_speed = 0.4,
 	run_speed = 0.8,
 	jump_speed = 14,
+	swim_speed = 0.5,
 	layerMask = 0x2, -- The character will be tagged to use this layer, so scene intersection can filter out the character
 	scale = Vector(1, 1, 1),
 	rotation = Vector(0,math.pi,0),
@@ -57,6 +61,8 @@ Character = {
 		JOG = "jog",
 		RUN = "run",
 		JUMP = "jump",
+		SWIM_IDLE = "swim_idle",
+		SWIM = "swim",
 	},
 	
 	Create = function(self, model_name)
@@ -68,22 +74,22 @@ Character = {
 		self.state = self.states.IDLE
 		self.state_prev = self.state
 		
+		for i,entity in ipairs(character_scene.Entity_GetAnimationArray()) do
+			table.insert(self.all_anims, entity)
+		end
+		
 		self.idle_anim = character_scene.Entity_FindByName("idle")
 		self.walk_anim = character_scene.Entity_FindByName("walk")
 		self.jog_anim = character_scene.Entity_FindByName("jog")
 		self.run_anim = character_scene.Entity_FindByName("run")
 		self.jump_anim = character_scene.Entity_FindByName("jump")
-		self.all_anims = {
-			self.idle_anim,
-			self.walk_anim,
-			self.jog_anim,
-			self.run_anim,
-			self.jump_anim,
-		}
+		self.swim_idle_anim = character_scene.Entity_FindByName("swim_idle")
+		self.swim_anim = character_scene.Entity_FindByName("swim")
 
 		self.collider = character_scene.Entity_GetHumanoidArray()[1]
 		local humanoid = character_scene.Component_GetHumanoidArray()[1]
 		humanoid.SetLookAtEnabled(false)
+		self.neck = humanoid.GetBoneEntity(HumanoidBone.Neck)
 		self.head = humanoid.GetBoneEntity(HumanoidBone.Head)
 		self.left_hand = humanoid.GetBoneEntity(HumanoidBone.LeftHand)
 		self.right_hand = humanoid.GetBoneEntity(HumanoidBone.RightHand)
@@ -177,6 +183,10 @@ Character = {
 			self.current_anim = self.run_anim
 		elseif(self.state == self.states.JUMP) then
 			self.current_anim = self.jump_anim
+		elseif(self.state == self.states.SWIM_IDLE) then
+			self.current_anim = self.swim_idle_anim
+		elseif(self.state == self.states.SWIM) then
+			self.current_anim = self.swim_anim
 		end
 		
 		local current_anim = scene.Component_GetAnimation(self.current_anim)
@@ -208,14 +218,31 @@ Character = {
 					self.state = self.states.IDLE
 				end
 			else
-				if self.velocity.Length() < 0.1 then
+				if self.velocity.Length() < 0.1 and self.state ~= self.states.SWIM_IDLE and self.state ~= self.states.SWIM then
 					self.state = self.states.IDLE
 				end
 			end
 		end
 
 		if dt > 0.1 then
-			return
+			return -- avoid processing too large delta times to avoid instability
+		end
+
+		-- swim test:
+		if self.neck ~= INVALID_ENTITY then
+			local neck_pos = scene.Component_GetTransform(self.neck).GetPosition()
+			local water_threshold = 0.05
+			neck_pos = vector.Add(neck_pos, Vector(0, -water_threshold, 0))
+			local swim_ray = Ray(neck_pos, Vector(0,1,0), 0, 100)
+			local water_entity, water_pos, water_normal, water_distance = scene.Intersects(swim_ray, FILTER_WATER)
+			if water_entity ~= INVALID_ENTITY then
+				model_transform.Translate(Vector(0,water_distance - water_threshold,0))
+				model_transform.UpdateTransform()
+				self.force.SetY(0)
+				self.force = vector.Multiply(self.force, 0.8) -- water friction
+				self.velocity.SetY(0)
+				self.state = self.states.SWIM_IDLE
+			end
 		end
 
 		-- Movement input:
@@ -239,17 +266,22 @@ Character = {
 			
 		if self.state ~= self.states.JUMP and self.state_prev ~= self.states.JUMP and self.velocity.GetY() == 0 then
 			if(lookDir.Length() > 0) then
-				if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
-					if input.Down(string.byte('E')) or input.Down(GAMEPAD_BUTTON_5) then
-						self:MoveDirection(lookDir,self.run_speed)
-						self.state = self.states.RUN
-					else
-						self:MoveDirection(lookDir,self.jog_speed)
-						self.state = self.states.JOG
-					end
+				if self.state == self.states.SWIM_IDLE then
+					self:MoveDirection(lookDir,self.swim_speed)
+					self.state = self.states.SWIM
 				else
-					self:MoveDirection(lookDir,self.walk_speed)
-					self.state = self.states.WALK
+					if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
+						if input.Down(string.byte('E')) or input.Down(GAMEPAD_BUTTON_5) then
+							self:MoveDirection(lookDir,self.run_speed)
+							self.state = self.states.RUN
+						else
+							self:MoveDirection(lookDir,self.jog_speed)
+							self.state = self.states.JOG
+						end
+					else
+						self:MoveDirection(lookDir,self.walk_speed)
+						self.state = self.states.WALK
+					end
 				end
 			end
 			
@@ -326,7 +358,7 @@ Character = {
 		model_transform.UpdateTransform()
 		
 		-- try to put water ripple:
-		if self.velocity.Length() > 0.01 then
+		if self.velocity.Length() > 0.01 and self.state ~= self.states.SWIM_IDLE then
 			local w,wp = scene.Intersects(capsule, FILTER_WATER)
 			if w ~= INVALID_ENTITY then
 				PutWaterRipple(script_dir() .. "assets/ripple.png", wp)
@@ -545,6 +577,8 @@ runProcess(function()
 			-- camera target box and axis
 			--DrawBox(target_transform.GetMatrix())
 			
+			-- Neck bone
+			DrawPoint(scene.Component_GetTransform(player.neck).GetPosition(),0.05, Vector(0,1,1,1))
 			-- Head bone
 			DrawPoint(scene.Component_GetTransform(player.head).GetPosition(),0.05, Vector(0,1,1,1))
 			-- Left hand bone
