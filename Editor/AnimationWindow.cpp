@@ -986,11 +986,10 @@ void AnimationWindow::Create(EditorComponent* _editor)
 		animation.samplers.clear();
 
 		NameComponent name;
-		name.name += "[retarget]";
 		const NameComponent* name_source = scene.names.GetComponent(entity);
 		if (name_source != nullptr)
 		{
-			name.name += " " + name_source->name;
+			name.name += name_source->name;
 		}
 		scene.names.Create(retarget_entity) = name;
 

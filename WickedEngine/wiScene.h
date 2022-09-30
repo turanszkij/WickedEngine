@@ -19,6 +19,8 @@ namespace wi::scene
 {
 	struct Scene
 	{
+		virtual ~Scene() = default;
+
 		wi::ecs::ComponentLibrary componentLibrary;
 
 		wi::ecs::ComponentManager<NameComponent>& names = componentLibrary.Register<NameComponent>("wi::scene::Scene::names");
@@ -49,7 +51,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<ScriptComponent>& scripts = componentLibrary.Register<ScriptComponent>("wi::scene::Scene::scripts");
 		wi::ecs::ComponentManager<ExpressionComponent>& expressions = componentLibrary.Register<ExpressionComponent>("wi::scene::Scene::expressions");
 		wi::ecs::ComponentManager<HumanoidComponent>& humanoids = componentLibrary.Register<HumanoidComponent>("wi::scene::Scene::humanoids");
-		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 1); // version = 1
+		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 2); // version = 2
 
 		// Non-serialized attributes:
 		float dt = 0;
@@ -82,6 +84,7 @@ namespace wi::scene
 
 		// Separate stream of world matrices:
 		wi::vector<XMFLOAT4X4> matrix_objects;
+		wi::vector<XMFLOAT4X4> matrix_objects_prev;
 
 		// Shader visible scene parameters:
 		ShaderScene shaderscene;
@@ -120,8 +123,24 @@ namespace wi::scene
 		std::atomic<uint32_t> meshletAllocator{ 0 };
 
 		// Occlusion query state:
+		struct OcclusionResult
+		{
+			int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+			// occlusion result history bitfield (32 bit->32 frame history)
+			uint32_t occlusionHistory = ~0u;
+
+			constexpr bool IsOccluded() const
+			{
+				// Perform a conservative occlusion test:
+				// If it is visible in any frames in the history, it is determined visible in this frame
+				// But if all queries failed in the history, it is occluded.
+				// If it pops up for a frame after occluded, it is visible again for some frames
+				return occlusionHistory == 0;
+			}
+		};
+		mutable wi::vector<OcclusionResult> occlusion_results_objects;
 		wi::graphics::GPUQueryHeap queryHeap;
-		wi::graphics::GPUBuffer queryResultBuffer[arraysize(ObjectComponent::occlusionQueries)];
+		wi::graphics::GPUBuffer queryResultBuffer[arraysize(OcclusionResult::occlusionQueries)];
 		wi::graphics::GPUBuffer queryPredicationBuffer;
 		int queryheap_idx = 0;
 		mutable std::atomic<uint32_t> queryAllocator{ 0 };
@@ -186,6 +205,8 @@ namespace wi::scene
 		wi::vector<TransformComponent> transforms_temp;
 
 		// CPU/GPU Colliders:
+		std::atomic<uint32_t> allocator_colliders_cpu;
+		std::atomic<uint32_t> allocator_colliders_gpu;
 		wi::vector<ColliderComponent> colliders_cpu;
 		wi::vector<ColliderComponent> colliders_gpu;
 
@@ -199,12 +220,12 @@ namespace wi::scene
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!
-		void Update(float dt);
+		virtual void Update(float dt);
 		// Remove everything from the scene that it owns:
-		void Clear();
+		virtual void Clear();
 		// Merge an other scene into this.
 		//	The contents of the other scene will be lost (and moved to this)!
-		void Merge(Scene& other);
+		virtual void Merge(Scene& other);
 		// Finds all entities in the scene that have any components attached
 		void FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const;
 
@@ -331,6 +352,7 @@ namespace wi::scene
 			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 			XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 			XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
+			XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
 			float distance = std::numeric_limits<float>::max();
 			int subsetIndex = -1;
 			int vertexID0 = -1;
@@ -355,6 +377,7 @@ namespace wi::scene
 			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 			XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 			XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
+			XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
 			float depth = 0;
 		};
 		SphereIntersectionResult Intersects(const wi::primitive::Sphere& sphere, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;

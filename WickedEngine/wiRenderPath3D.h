@@ -111,7 +111,6 @@ namespace wi
 		wi::graphics::RenderPass renderpass_transparent;
 		wi::graphics::RenderPass renderpass_reflection_depthprepass;
 		wi::graphics::RenderPass renderpass_reflection;
-		wi::graphics::RenderPass renderpass_downsamplescene;
 		wi::graphics::RenderPass renderpass_lightshafts;
 		wi::graphics::RenderPass renderpass_volumetriclight;
 		wi::graphics::RenderPass renderpass_particledistortion;
@@ -261,19 +260,19 @@ namespace wi
 		void setSSREnabled(bool value);
 		void setRaytracedReflectionsEnabled(bool value);
 		void setRaytracedDiffuseEnabled(bool value);
+		void setMotionBlurEnabled(bool value);
+		void setDepthOfFieldEnabled(bool value);
+		void setEyeAdaptionEnabled(bool value);
+		void setReflectionsEnabled(bool value);
+		void setBloomEnabled(bool value);
+		void setVolumeLightsEnabled(bool value);
+		void setLightShaftsEnabled(bool value);
+		void setOutlineEnabled(bool value);
 		constexpr void setShadowsEnabled(bool value) { shadowsEnabled = value; }
-		constexpr void setReflectionsEnabled(bool value) { reflectionsEnabled = value; }
 		constexpr void setFXAAEnabled(bool value) { fxaaEnabled = value; }
-		constexpr void setBloomEnabled(bool value) { bloomEnabled = value; }
 		constexpr void setColorGradingEnabled(bool value) { colorGradingEnabled = value; }
-		constexpr void setVolumeLightsEnabled(bool value) { volumeLightsEnabled = value; }
-		constexpr void setLightShaftsEnabled(bool value) { lightShaftsEnabled = value; }
 		constexpr void setLensFlareEnabled(bool value) { lensFlareEnabled = value; }
-		constexpr void setMotionBlurEnabled(bool value) { motionBlurEnabled = value; }
-		constexpr void setDepthOfFieldEnabled(bool value) { depthOfFieldEnabled = value; }
-		constexpr void setEyeAdaptionEnabled(bool value) { eyeAdaptionEnabled = value; }
 		constexpr void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }
-		constexpr void setOutlineEnabled(bool value) { outlineEnabled = value; }
 		constexpr void setChromaticAberrationEnabled(bool value) { chromaticAberrationEnabled = value; }
 		constexpr void setDitherEnabled(bool value) { ditherEnabled = value; }
 		constexpr void setOcclusionCullingEnabled(bool value) { occlusionCullingEnabled = value; }

@@ -107,7 +107,6 @@ namespace wi::terrain
 		Chunk center_chunk = {};
 		wi::noise::Perlin perlin_noise;
 		wi::vector<Prop> props;
-		wi::unordered_map<uint64_t, wi::ecs::Entity> serializer_state;
 
 		// For generating scene on a background thread:
 		std::shared_ptr<Generator> generator;
@@ -140,6 +139,7 @@ namespace wi::terrain
 		int physics_generation = 3;
 		float prop_density = 1;
 		float grass_density = 1;
+		float grass_length = 1;
 		float chunk_scale = 1;
 		uint32_t seed = 3926;
 		float bottomLevel = -60;
@@ -147,6 +147,7 @@ namespace wi::terrain
 		float region1 = 1;
 		float region2 = 2;
 		float region3 = 8;
+		uint32_t target_texture_resolution = 1024;
 
 		wi::vector<std::shared_ptr<Modifier>> modifiers;
 		wi::vector<Modifier*> modifiers_to_remove;

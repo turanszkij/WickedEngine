@@ -260,7 +260,10 @@ void EditorComponent::Load()
 						Scene scene;
 						wi::scene::LoadModel(scene, fileName);
 						GetCurrentScene().Merge(scene);
-						GetCurrentEditorScene().path = fileName;
+						if (GetCurrentEditorScene().path.empty())
+						{
+							GetCurrentEditorScene().path = fileName;
+						}
 					}
 					else if (!extension.compare("OBJ")) // wavefront-obj
 					{
@@ -597,7 +600,7 @@ void EditorComponent::Update(float dt)
 	CheckBonePickingEnabled();
 	UpdateTopMenuAnimation();
 
-	save_text_alpha = std::max(0.0f, save_text_alpha - dt);
+	save_text_alpha = std::max(0.0f, save_text_alpha - 0.016f); // constant fade time (no dt, because after saving, dt can become huge)
 
 	bool clear_selected = false;
 	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
@@ -1033,7 +1036,7 @@ void EditorComponent::Update(float dt)
 					inspector_mode
 					)
 				{
-					hovered = wi::scene::Pick(pickRay, ~0u, ~0u, scene);
+					hovered = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 				}
 			}
 		}

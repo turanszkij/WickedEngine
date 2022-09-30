@@ -460,6 +460,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Update),
 	lunamethod(Scene_BindLua, Clear),
 	lunamethod(Scene_BindLua, Merge),
+	lunamethod(Scene_BindLua, UpdateHierarchy),
 	lunamethod(Scene_BindLua, Intersects),
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
@@ -681,6 +682,14 @@ int Scene_BindLua::Entity_Duplicate(lua_State* L)
 	return 0;
 }
 
+int Scene_BindLua::UpdateHierarchy(lua_State* L)
+{
+	wi::jobsystem::context ctx;
+	scene->RunHierarchyUpdateSystem(ctx);
+	wi::jobsystem::Wait(ctx);
+	return 0;
+}
+
 int Scene_BindLua::Intersects(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -710,7 +719,8 @@ int Scene_BindLua::Intersects(lua_State* L)
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.position));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.normal));
 			wi::lua::SSetFloat(L, result.distance);
-			return 4;
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.velocity));
+			return 5;
 		}
 
 		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
@@ -721,7 +731,8 @@ int Scene_BindLua::Intersects(lua_State* L)
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.position));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.normal));
 			wi::lua::SSetFloat(L, result.depth);
-			return 4;
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.velocity));
+			return 5;
 		}
 
 		Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
@@ -732,7 +743,8 @@ int Scene_BindLua::Intersects(lua_State* L)
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.position));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.normal));
 			wi::lua::SSetFloat(L, result.depth);
-			return 4;
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(result.velocity));
+			return 5;
 		}
 
 		wi::lua::SError(L, "Scene::Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) first argument is not an accepted primitive type!");
@@ -2421,12 +2433,17 @@ int Scene_BindLua::Component_Attach(lua_State* L)
 	{
 		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 		Entity parent = (Entity)wi::lua::SGetLongLong(L, 2);
+		bool child_already_in_local_space = false;
+		if (argc > 2)
+		{
+			child_already_in_local_space = wi::lua::SGetBool(L, 3);
+		}
 
-		scene->Component_Attach(entity, parent);
+		scene->Component_Attach(entity, parent, child_already_in_local_space);
 	}
 	else
 	{
-		wi::lua::SError(L, "Scene::Component_Attach(Entity entity,parent) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_Attach(Entity entity,parent, opt bool child_already_in_local_space = false) not enough arguments!");
 	}
 	return 0;
 }
@@ -2577,6 +2594,7 @@ const char TransformComponent_BindLua::className[] = "TransformComponent";
 Luna<TransformComponent_BindLua>::FunctionType TransformComponent_BindLua::methods[] = {
 	lunamethod(TransformComponent_BindLua, Scale),
 	lunamethod(TransformComponent_BindLua, Rotate),
+	lunamethod(TransformComponent_BindLua, RotateQuaternion),
 	lunamethod(TransformComponent_BindLua, Translate),
 	lunamethod(TransformComponent_BindLua, Lerp),
 	lunamethod(TransformComponent_BindLua, CatmullRom),
@@ -2643,6 +2661,27 @@ int TransformComponent_BindLua::Rotate(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Rotate(Vector vectorRollPitchYaw) not enough arguments!");
+	}
+	return 0;
+}
+int TransformComponent_BindLua::RotateQuaternion(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (v != nullptr)
+		{
+			component->Rotate(v->data);
+		}
+		else
+		{
+			wi::lua::SError(L, "RotateQuaternion(Vector quaternion) argument is not a vector!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "RotateQuaternion(Vector quaternion) not enough arguments!");
 	}
 	return 0;
 }
@@ -3079,6 +3118,10 @@ Luna<AnimationComponent_BindLua>::FunctionType AnimationComponent_BindLua::metho
 	lunamethod(AnimationComponent_BindLua, GetTimer),
 	lunamethod(AnimationComponent_BindLua, SetAmount),
 	lunamethod(AnimationComponent_BindLua, GetAmount),
+	lunamethod(AnimationComponent_BindLua, GetStart),
+	lunamethod(AnimationComponent_BindLua, SetStart),
+	lunamethod(AnimationComponent_BindLua, GetEnd),
+	lunamethod(AnimationComponent_BindLua, SetEnd),
 	{ NULL, NULL }
 };
 Luna<AnimationComponent_BindLua>::PropertyType AnimationComponent_BindLua::properties[] = {
@@ -3168,6 +3211,44 @@ int AnimationComponent_BindLua::GetAmount(lua_State* L)
 {
 	wi::lua::SSetFloat(L, component->amount);
 	return 1;
+}
+int AnimationComponent_BindLua::GetStart(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->start);
+	return 1;
+}
+int AnimationComponent_BindLua::SetStart(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetFloat(L, 1);
+		component->start = value;
+	}
+	else
+	{
+		wi::lua::SError(L, "SetStart(float value) not enough arguments!");
+	}
+	return 0;
+}
+int AnimationComponent_BindLua::GetEnd(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->end);
+	return 1;
+}
+int AnimationComponent_BindLua::SetEnd(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetFloat(L, 1);
+		component->end = value;
+	}
+	else
+	{
+		wi::lua::SError(L, "SetEnd(float value) not enough arguments!");
+	}
+	return 0;
 }
 
 

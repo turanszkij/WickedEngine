@@ -40,6 +40,8 @@ namespace wi::lua::scene
 		int Clear(lua_State* L);
 		int Merge(lua_State* L);
 
+		int UpdateHierarchy(lua_State* L);
+
 		int Intersects(lua_State* L);
 
 		int Entity_FindByName(lua_State* L);
@@ -251,6 +253,7 @@ namespace wi::lua::scene
 
 		int Scale(lua_State* L);
 		int Rotate(lua_State* L);
+		int RotateQuaternion(lua_State* L);
 		int Translate(lua_State* L);
 		int Lerp(lua_State* L);
 		int CatmullRom(lua_State* L);
@@ -337,6 +340,10 @@ namespace wi::lua::scene
 		int GetTimer(lua_State* L);
 		int SetAmount(lua_State* L);
 		int GetAmount(lua_State* L);
+		int GetStart(lua_State* L);
+		int SetStart(lua_State* L);
+		int GetEnd(lua_State* L);
+		int SetEnd(lua_State* L);
 	};
 
 	class MaterialComponent_BindLua

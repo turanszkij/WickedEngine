@@ -125,7 +125,11 @@ namespace wi::scene
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
 		{
-			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount() + 1); // +1 : ocean
+			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount());
+			if (weather.IsOceanEnabled())
+			{
+				minQueryCount += 1;
+			}
 			if (queryHeap.desc.query_count < minQueryCount)
 			{
 				GPUQueryHeapDesc desc;
@@ -2027,30 +2031,33 @@ namespace wi::scene
 			//	Also accumulate override weights
 			for(ExpressionComponent::Expression& expression : expression_mastering.expressions)
 			{
-				const float blend = expression.IsBinary() ? (expression.weight > 0 ? 1 : 0) : expression.weight;
-				if (expression.override_mouth == ExpressionComponent::Override::Block)
+				if (expression.weight > 0)
 				{
-					overrideMouthBlend += 1;
-				}
-				if (expression.override_mouth == ExpressionComponent::Override::Blend)
-				{
-					overrideMouthBlend += blend;
-				}
-				if (expression.override_blink == ExpressionComponent::Override::Block)
-				{
-					overrideBlinkBlend += 1;
-				}
-				if (expression.override_blink == ExpressionComponent::Override::Blend)
-				{
-					overrideBlinkBlend += blend;
-				}
-				if (expression.override_look == ExpressionComponent::Override::Block)
-				{
-					overrideLookBlend += 1;
-				}
-				if (expression.override_look == ExpressionComponent::Override::Blend)
-				{
-					overrideLookBlend += blend;
+					const float blend = expression.IsBinary() ? 1 : expression.weight;
+					if (expression.override_mouth == ExpressionComponent::Override::Block)
+					{
+						overrideMouthBlend += 1;
+					}
+					if (expression.override_mouth == ExpressionComponent::Override::Blend)
+					{
+						overrideMouthBlend += blend;
+					}
+					if (expression.override_blink == ExpressionComponent::Override::Block)
+					{
+						overrideBlinkBlend += 1;
+					}
+					if (expression.override_blink == ExpressionComponent::Override::Blend)
+					{
+						overrideBlinkBlend += blend;
+					}
+					if (expression.override_look == ExpressionComponent::Override::Block)
+					{
+						overrideLookBlend += 1;
+					}
+					if (expression.override_look == ExpressionComponent::Override::Blend)
+					{
+						overrideLookBlend += blend;
+					}
 				}
 
 				if (!expression.IsDirty())
@@ -2376,17 +2383,19 @@ namespace wi::scene
 		}
 
 		// Colliders:
-		aabb_colliders_cpu.clear();
-		colliders_cpu.clear();
-		colliders_gpu.clear();
+		allocator_colliders_cpu.store(0u);
+		allocator_colliders_gpu.store(0u);
+		aabb_colliders_cpu.reserve(colliders.GetCount());
+		colliders_cpu.reserve(colliders.GetCount());
+		colliders_gpu.reserve(colliders.GetCount());
 
-		for (size_t i = 0; i < colliders.GetCount(); ++i)
-		{
-			ColliderComponent& collider = colliders[i];
-			Entity entity = colliders.GetEntity(i);
+		wi::jobsystem::Dispatch(ctx, (uint32_t)colliders.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+
+			ColliderComponent& collider = colliders[args.jobIndex];
+			Entity entity = colliders.GetEntity(args.jobIndex);
 			const TransformComponent* transform = transforms.GetComponent(entity);
 			if (transform == nullptr)
-				continue;
+				return;
 
 			XMFLOAT3 scale = transform->GetScale();
 			collider.sphere.radius = collider.radius * std::max(scale.x, std::max(scale.y, scale.z));
@@ -2444,14 +2453,22 @@ namespace wi::scene
 
 			if (collider.IsCPUEnabled())
 			{
-				colliders_cpu.push_back(collider);
-				aabb_colliders_cpu.push_back(aabb);
+				uint32_t index = allocator_colliders_cpu.fetch_add(1u);
+				colliders_cpu[index] = collider;
+				aabb_colliders_cpu[index] = aabb;
 			}
 			if (collider.IsGPUEnabled())
 			{
-				colliders_gpu.push_back(collider);
+				uint32_t index = allocator_colliders_gpu.fetch_add(1u);
+				colliders_gpu[index] = collider;
 			}
-		}
+
+		});
+
+		wi::jobsystem::Wait(ctx);
+		aabb_colliders_cpu.resize(allocator_colliders_cpu.load());
+		colliders_cpu.resize(allocator_colliders_cpu.load());
+		colliders_gpu.resize(allocator_colliders_gpu.load());
 
 		// Springs:
 		static float time = 0;
@@ -3094,6 +3111,8 @@ namespace wi::scene
 	{
 		aabb_objects.resize(objects.GetCount());
 		matrix_objects.resize(objects.GetCount());
+		matrix_objects_prev.resize(objects.GetCount());
+		occlusion_results_objects.resize(objects.GetCount());
 
 		meshletAllocator.store(0u);
 
@@ -3107,24 +3126,25 @@ namespace wi::scene
 			AABB& aabb = aabb_objects[args.jobIndex];
 
 			// Update occlusion culling status:
+			OcclusionResult& occlusion_result = occlusion_results_objects[args.jobIndex];
 			if (!wi::renderer::GetFreezeCullingCameraEnabled())
 			{
-				object.occlusionHistory <<= 1u; // advance history by 1 frame
-				int query_id = object.occlusionQueries[queryheap_idx];
+				occlusion_result.occlusionHistory <<= 1u; // advance history by 1 frame
+				int query_id = occlusion_result.occlusionQueries[queryheap_idx];
 				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0)
 				{
 					uint64_t visible = ((uint64_t*)queryResultBuffer[queryheap_idx].mapped_data)[query_id];
 					if (visible)
 					{
-						object.occlusionHistory |= 1; // visible
+						occlusion_result.occlusionHistory |= 1; // visible
 					}
 				}
 				else
 				{
-					object.occlusionHistory |= 1; // visible
+					occlusion_result.occlusionHistory |= 1; // visible
 				}
 			}
-			object.occlusionQueries[queryheap_idx] = -1; // invalidate query
+			occlusion_result.occlusionQueries[queryheap_idx] = -1; // invalidate query
 
 			const LayerComponent* layer = layers.GetComponent(entity);
 			uint32_t layerMask;
@@ -3221,6 +3241,7 @@ namespace wi::scene
 				ShaderMeshInstance inst;
 				inst.init();
 				XMFLOAT4X4& worldMatrix = matrix_objects[args.jobIndex];
+				matrix_objects_prev[args.jobIndex] = worldMatrix;
 				inst.transformPrev.Create(worldMatrix);
 				XMStoreFloat4x4(&worldMatrix, W);
 				inst.transform.Create(worldMatrix);
@@ -4061,6 +4082,7 @@ namespace wi::scene
 						groupResult.bary = {};
 						groupResult.entity = colliders.GetEntity(args.jobIndex);
 						groupResult.normal = direction;
+						groupResult.velocity = {};
 						XMStoreFloat3(&groupResult.position, jobDataFunction.rayOrigin + jobDataFunction.rayDirection * dist);
 						groupResult.subsetIndex = -1;
 						groupResult.vertexID0 = 0;
@@ -4097,6 +4119,7 @@ namespace wi::scene
 					const SoftBodyPhysicsComponent* softbody;
 					const ArmatureComponent* armature;
 					XMMATRIX objectMat;
+					XMMATRIX objectMatPrev;
 					XMVECTOR rayOrigin_local;
 					XMVECTOR rayDirection_local;
 				};
@@ -4115,6 +4138,7 @@ namespace wi::scene
 				jobData.entity = objects.GetEntity(objectIndex);
 				jobData.softbody = softbodies.GetComponent(object.meshID);
 				jobData.objectMat = XMLoadFloat4x4(&matrix_objects[objectIndex]);
+				jobData.objectMatPrev = XMLoadFloat4x4(&matrix_objects_prev[objectIndex]);
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, jobData.objectMat);
 				jobData.rayOrigin_local = XMVector3Transform(jobData.func->rayOrigin, objectMat_Inverse);
 				jobData.rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(jobData.func->rayDirection, objectMat_Inverse));
@@ -4179,18 +4203,22 @@ namespace wi::scene
 
 						float distance;
 						XMFLOAT2 bary;
-						if (wi::math::RayTriangleIntersects(jobData.rayOrigin_local, jobData.rayDirection_local, p0, p1, p2, distance, bary, jobData.func->TMin, jobData.func->TMax))
+						if (wi::math::RayTriangleIntersects(jobData.rayOrigin_local, jobData.rayDirection_local, p0, p1, p2, distance, bary))
 						{
-							const XMVECTOR pos = XMVector3Transform(XMVectorAdd(jobData.rayOrigin_local, jobData.rayDirection_local * distance), jobData.objectMat);
+							const XMVECTOR pos_local = XMVectorAdd(jobData.rayOrigin_local, jobData.rayDirection_local * distance);
+							const XMVECTOR pos = XMVector3Transform(pos_local, jobData.objectMat);
 							distance = wi::math::Distance(pos, jobData.func->rayOrigin);
 
-							if (distance < groupResult.distance)
+							// Note: we do the TMin, Tmax check here, in world space! We use the RayTriangleIntersects in local space, so we don't use those in there
+							if (distance < groupResult.distance && distance >= jobData.func->TMin && distance <= jobData.func->TMax)
 							{
 								const XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0)), jobData.objectMat));
+								const XMVECTOR vel = pos - XMVector3Transform(pos_local, jobData.objectMatPrev);
 
 								groupResult.entity = jobData.entity;
 								XMStoreFloat3(&groupResult.position, pos);
 								XMStoreFloat3(&groupResult.normal, nor);
+								XMStoreFloat3(&groupResult.velocity, vel);
 								groupResult.distance = distance;
 								groupResult.subsetIndex = (int)subsetIndex;
 								groupResult.vertexID0 = (int)i0;
@@ -4299,6 +4327,7 @@ namespace wi::scene
 						groupResult.entity = colliders.GetEntity(args.jobIndex);
 						groupResult.normal = direction;
 						groupResult.position = position;
+						groupResult.velocity = {};
 					}
 				}
 			});
@@ -4330,6 +4359,7 @@ namespace wi::scene
 					const SoftBodyPhysicsComponent* softbody;
 					const ArmatureComponent* armature;
 					XMMATRIX objectMat;
+					XMMATRIX objectMatPrev;
 				};
 
 				uint8_t* jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
@@ -4346,6 +4376,7 @@ namespace wi::scene
 				jobData.entity = objects.GetEntity(objectIndex);
 				jobData.softbody = softbodies.GetComponent(object.meshID);
 				jobData.objectMat = XMLoadFloat4x4(&matrix_objects[objectIndex]);
+				jobData.objectMatPrev = XMLoadFloat4x4(&matrix_objects_prev[objectIndex]);
 				jobData.armature = jobData.mesh->IsSkinned() ? armatures.GetComponent(jobData.mesh->armatureID) : nullptr;
 
 				uint32_t first_subset = 0;
@@ -4507,6 +4538,10 @@ namespace wi::scene
 								groupResult.depth = depth;
 								XMStoreFloat3(&groupResult.position, bestPoint);
 								XMStoreFloat3(&groupResult.normal, intersectionVec / intersectionVecLen);
+
+								XMMATRIX objectMatInverse = XMMatrixInverse(nullptr, jobData.objectMat);
+								XMVECTOR vel = bestPoint - XMVector3Transform(XMVector3Transform(bestPoint, objectMatInverse), jobData.objectMatPrev);
+								XMStoreFloat3(&groupResult.velocity, vel);
 							}
 						}
 						});
@@ -4610,6 +4645,7 @@ namespace wi::scene
 						groupResult.entity = colliders.GetEntity(args.jobIndex);
 						groupResult.normal = direction;
 						groupResult.position = position;
+						groupResult.velocity = {};
 					}
 				}
 				});
@@ -4642,6 +4678,7 @@ namespace wi::scene
 					const SoftBodyPhysicsComponent* softbody;
 					const ArmatureComponent* armature;
 					XMMATRIX objectMat;
+					XMMATRIX objectMatPrev;
 				};
 
 				uint8_t* jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
@@ -4658,6 +4695,7 @@ namespace wi::scene
 				jobData.entity = objects.GetEntity(objectIndex);
 				jobData.softbody = softbodies.GetComponent(object.meshID);
 				jobData.objectMat = XMLoadFloat4x4(&matrix_objects[objectIndex]);
+				jobData.objectMatPrev = XMLoadFloat4x4(&matrix_objects_prev[objectIndex]);
 				jobData.armature = jobData.mesh->IsSkinned() ? armatures.GetComponent(jobData.mesh->armatureID) : nullptr;
 
 				uint32_t first_subset = 0;
@@ -4890,6 +4928,10 @@ namespace wi::scene
 								groupResult.depth = depth;
 								XMStoreFloat3(&groupResult.position, bestPoint);
 								XMStoreFloat3(&groupResult.normal, intersectionVec / intersectionVecLen);
+
+								XMMATRIX objectMatInverse = XMMatrixInverse(nullptr, jobData.objectMat);
+								XMVECTOR vel = bestPoint - XMVector3Transform(XMVector3Transform(bestPoint, objectMatInverse), jobData.objectMatPrev);
+								XMStoreFloat3(&groupResult.velocity, vel);
 							}
 						}
 					});

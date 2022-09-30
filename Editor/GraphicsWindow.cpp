@@ -442,6 +442,11 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	if (wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::RAYTRACING))
 	{
 		shadowTypeComboBox.AddItem("Ray traced");
+
+		if (editor->main->config.GetSection("graphics").Has("raytraced_shadows"))
+		{
+			wi::renderer::SetRaytracedShadowsEnabled(editor->main->config.GetSection("graphics").GetBool("raytraced_shadows"));
+		}
 	}
 	shadowTypeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 
@@ -450,14 +455,18 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		default:
 		case 0:
 			wi::renderer::SetRaytracedShadowsEnabled(false);
+			editor->main->config.GetSection("graphics").Set("raytraced_shadows", false);
 			break;
 		case 1:
 			wi::renderer::SetRaytracedShadowsEnabled(true);
+			editor->main->config.GetSection("graphics").Set("raytraced_shadows", true);
 			break;
 		}
+
+		editor->main->config.Commit();
+
 		});
-	shadowTypeComboBox.SetSelected(0);
-	shadowTypeComboBox.SetTooltip("Choose between shadowmaps and ray traced shadows (if available).\n(ray traced shadows need hardware raytracing support)");
+	shadowTypeComboBox.SetTooltip("Choose between shadowmaps and ray traced shadows.\nNote that ray traced shadows need hardware raytracing support, otherwise they are not available");
 	AddWidget(&shadowTypeComboBox);
 
 	shadowProps2DComboBox.Create("2D Shadowmap res: ");
@@ -1577,6 +1586,7 @@ void GraphicsWindow::Update()
 	chromaticaberrationSlider.SetValue(editor->renderPath->getChromaticAberrationAmount());
 	fsrCheckBox.SetCheck(editor->renderPath->getFSREnabled());
 	fsrSlider.SetValue(editor->renderPath->getFSRSharpness());
+	shadowTypeComboBox.SetSelectedWithoutCallback(wi::renderer::GetRaytracedShadowsEnabled() ? 1 : 0);
 }
 
 void GraphicsWindow::ChangeRenderPath(RENDERPATH path)

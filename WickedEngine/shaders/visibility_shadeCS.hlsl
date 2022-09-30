@@ -94,6 +94,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	TiledLighting(surface, lighting, tile.entity_flat_tile_index);
 
+#ifndef CARTOON
 	[branch]
 	if (GetCamera().texture_ssr_index >= 0)
 	{
@@ -105,6 +106,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	{
 		surface.occlusion *= bindless_textures_float[GetCamera().texture_ao_index].SampleLevel(sampler_linear_clamp, surface.screenUV, 0).r;
 	}
+#endif // CARTOON
 
 	float4 color = 0;
 

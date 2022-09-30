@@ -48,7 +48,7 @@ local proc_success, proc_coroutine = runProcess(function()
 		-- With the new scripting system, use script_dir() string variable to load files relative to the script directory.
 		-- Also running a script can now return its PID, which you can use to kill the script you just launched in this script
 		-- Down below is a small demo to open a file on another script and open it relative to that script's path
-		D.subscript_PID = dofile(script_dir() .. "subscript_demo/load_dojo.lua", true)
+		D.subscript_PID = dofile(script_dir() .. "subscript_demo/load_model.lua", true)
 		backlog_post("subscript PID: "..D.subscript_PID)
 	end
 

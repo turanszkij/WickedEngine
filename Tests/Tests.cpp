@@ -359,9 +359,13 @@ void TestsRenderer::Load()
 		case INVERSEKINEMATICSTEST:
 		{
 			Scene scene;
-			LoadModel(scene, "../Content/models/girl.wiscene", XMMatrixScaling(0.7f, 0.7f, 0.7f));
+			LoadModel(scene, "../Content/scripts/character_controller/assets/character.wiscene", XMMatrixScaling(2, 2, 2));
+			if (scene.humanoids.GetCount() == 0)
+				break;
 
-			ik_entity = scene.Entity_FindByName("mano_L"); // hand bone in girl.wiscene
+			HumanoidComponent& humanoid = scene.humanoids[0];
+			humanoid.SetLookAtEnabled(false);
+			ik_entity = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftHand];
 			if (ik_entity != INVALID_ENTITY)
 			{
 				InverseKinematicsComponent& ik = scene.inverse_kinematics.Create(ik_entity);

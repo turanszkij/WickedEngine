@@ -476,6 +476,7 @@ A four component floating point vector. Provides efficient calculations with SIM
 - QuaternionFromRollPitchYaw(Vector rotXYZ) : Vector result
 - QuaternionToRollPitchYaw(Vector quaternion) : Vector result
 - QuaternionSlerp(Vector v1,v2, float t) : Vector result
+- GetAngle(Vector a,b,axis, opt float max_angle = math.pi * 2) : float result	-- computes the signed angle between two 3D vectors around specified axis
 
 ### Matrix
 A four by four matrix, efficient calculations with SIMD support.
@@ -524,10 +525,11 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - [outer]FILTER_OBJECT_ALL : uint	-- include all objects, meshes
 - [outer]FILTER_COLLIDER : uint	-- include colliders
 - [outer]FILTER_ALL : uint	-- include everything
-- Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance	-- intersects a primitive with the scene and return collision parameters
+- Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity	-- intersects a primitive with the scene and return collision parameters
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
+- UpdateHierarchy()	-- updates the full scene hierarchy system. Useful if you modified for example a parent transform and children immediately need up to date result in the script
 
 - CreateEntity() : int entity  -- creates an empty entity and returns it
 - Entity_FindByName(string value) : int entity  -- returns an entity ID if it exists, and 0 otherwise
@@ -625,7 +627,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_RemoveSound(Entity entity) : SoundComponent? result  -- remove the SoundComponent of the entity (if exists)
 - Component_RemoveCollider(Entity entity) : ColliderComponent? result  -- remove the ColliderComponent of the entity (if exists)
 
-- Component_Attach(Entity entity,parent)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer)
+- Component_Attach(Entity entity,parent, opt bool child_already_in_local_space = false)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer). If child_already_in_local_space is false, then child will be transformed into parent's local space, if true, it will be used as-is.
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
 - Component_DetachChildren(Entity parent)  -- detaches all children from parent, as if calling Component_Detach for all of its children
 
@@ -653,6 +655,7 @@ Describes an orientation in 3D space.
 
 - Scale(Vector vectorXYZ)  -- Applies scaling
 - Rotate(Vector vectorRollPitchYaw)  -- Applies rotation as roll,pitch,yaw
+- RotateQuaternion(Vector quaternion)  -- Applies rotation as quaternion
 - Translate(Vector vectorXYZ)  -- Applies translation (position offset)
 - Lerp(TransformComponent a,b, float t)  -- Interpolates linearly between two transform components 
 - CatmullRom(TransformComponent a,b,c,d, float t)  -- Interpolates between four transform components on a spline
@@ -714,6 +717,10 @@ Describes an orientation in 3D space.
 - GetTimer() : float result
 - SetAmount(float value)
 - GetAmount() : float result
+- GetStart() : float result
+- SetStart(float value)
+- GetEnd() : float result
+- SetEnd(float value)
 
 #### MaterialComponent
 - _flags : int
@@ -1200,6 +1207,10 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetSharpenFilterEnabled(bool value)
 - SetSharpenFilterAmount(float value)
 - SetExposure(float value)
+- SetOutlineEnabled(bool value)
+- SetOutlineThreshold(float value)
+- SetOutlineThickness(float value)
+- SetOutlineColor(float r,g,b,a)
 
 #### LoadingScreen
 It is a RenderPath2D but one that internally manages resource loading and can display information about the process.
@@ -1217,7 +1228,7 @@ A ray is defined by an origin Vector and a normalized direction Vector. It can b
 
 </br>
 
-- [constructor]Ray(Vector origin,direction)
+- [constructor]Ray(Vector origin,direction, opt float Tmin=0,Tmax=FLT_MAX)
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
 - Intersects(Capsule capsule) : bool result

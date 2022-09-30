@@ -229,7 +229,7 @@ struct Surface
 		ab = max(0, roughnessBRDF * (1 - anisotropy));
 
 #ifdef CARTOON
-		F = smoothstep(0.05, 0.1, F);
+		F = smoothstep(0.1, 0.5, F);
 #endif // CARTOON
 	}
 

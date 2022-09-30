@@ -669,19 +669,6 @@ namespace wi::scene
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;
 
-		// occlusion result history bitfield (32 bit->32 frame history)
-		mutable uint32_t occlusionHistory = ~0u;
-		mutable int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
-
-		inline bool IsOccluded() const
-		{
-			// Perform a conservative occlusion test:
-			// If it is visible in any frames in the history, it is determined visible in this frame
-			// But if all queries failed in the history, it is occluded.
-			// If it pops up for a frame after occluded, it is visible again for some frames
-			return occlusionHistory == 0;
-		}
-
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }

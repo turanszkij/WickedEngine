@@ -1211,11 +1211,13 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifndef PREPASS
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
+#ifndef CARTOON
 	[branch]
 	if (GetCamera().texture_ao_index >= 0)
 	{
 		surface.occlusion *= bindless_textures_float[GetCamera().texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
+#endif // CARTOON
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 #endif // PREPASS
@@ -1391,12 +1393,14 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifndef WATER
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
+#ifndef CARTOON
 	[branch]
 	if (GetCamera().texture_ssr_index >= 0)
 	{
 		float4 ssr = bindless_textures[GetCamera().texture_ssr_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
 		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb * surface.F, ssr.a);
 	}
+#endif // CARTOON
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 #endif // WATER

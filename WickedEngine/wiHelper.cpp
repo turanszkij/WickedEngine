@@ -649,11 +649,14 @@ namespace wi::helper
 #else
 
 		std::filesystem::path filepath = path;
-		std::filesystem::path rootpath = rootdir;
-		std::filesystem::path relative = std::filesystem::relative(path, rootdir);
-		if (!relative.empty())
+		if (filepath.is_absolute())
 		{
-			path = relative.string();
+			std::filesystem::path rootpath = rootdir;
+			std::filesystem::path relative = std::filesystem::relative(path, rootdir);
+			if (!relative.empty())
+			{
+				path = relative.string();
+			}
 		}
 
 #endif // PLATFORM_UWP

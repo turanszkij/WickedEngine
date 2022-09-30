@@ -58,11 +58,13 @@ public:
 	wi::gui::CheckBox physicsCheckBox;
 	wi::gui::Slider lodSlider;
 	wi::gui::Slider texlodSlider;
+	wi::gui::Slider texResolutionSlider;
 	wi::gui::Slider generationSlider;
 	wi::gui::Slider propGenerationSlider;
 	wi::gui::Slider physicsGenerationSlider;
 	wi::gui::Slider propDensitySlider;
 	wi::gui::Slider grassDensitySlider;
+	wi::gui::Slider grassLengthSlider;
 	wi::gui::ComboBox presetCombo;
 	wi::gui::Slider scaleSlider;
 	wi::gui::Slider seedSlider;
