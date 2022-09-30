@@ -5,6 +5,19 @@ on:
     branches: [ master ]
 
 jobs:
+
+  content:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Package Content
+      uses: actions/upload-artifact@v2
+      with:
+        name: Content
+        path: |
+          Content/models
+          Content/scripts
+
   windows:
     runs-on: windows-latest
     steps:
@@ -22,52 +35,29 @@ jobs:
         cd ..
         "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:rebuild /m /p:Configuration=Release /p:Platform=x64
     
-    - name: Move binaries
+    - name: Move files
       shell: cmd
       run: |
-        move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe Editor\
-        
-        move BUILD\x64\Release\Tests\Tests.exe Tests\
+        move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe .\
+        move Editor\config.ini .\
+        move Editor\startup.lua .\
+        move Editor\terrain .\
+        move Content\Documentation .\
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
-        name: Editor (Windows x64)
+        name: Editor (Windows)
         path: |
-          Content/
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
-          Editor/terrain/
-          Editor/sound/
-          Editor/*.ini
-          Editor/*.ico
-          Editor/*.lua
-          Editor/*.exe
-          
-    - name: Package Tests
-      uses: actions/upload-artifact@v2
-      with:
-        name: Tests (Windows x64)
-        path: |
-          Content/
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
-          Tests/images/
-          Tests/sound/
-          Tests/*.ini
-          Tests/*.txt
-          Tests/*.ico
-          Tests/*.lua
-          Tests/*.ttf
-          Tests/*.exe
+          Documentation/
+          terrain/
+          config.ini
+          startup.lua
+          Editor_Windows.exe
 
     
   linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -91,50 +81,28 @@ jobs:
         make -B -j $(nproc)
 
         
-    - name: Move binaries
+    - name: Move files
       run: |
-        mv build/Editor/WickedEngineEditor Editor/
-        mv build/Tests/Tests Tests/
+        mv build/Editor/WickedEngineEditor ./
+        mv Editor/config.ini ./
+        mv Editor/startup.lua ./
+        mv Editor/terrain ./
+        mv Content/Documentation ./
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
-        name: Editor (Ubuntu 20.04)
+        name: Editor (Linux - Ubuntu)
         path: |
-          Content/
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
-          Editor/terrain/
-          Editor/sound/
-          Editor/*.ini
-          Editor/*.ico
-          Editor/*.lua
-          Editor/WickedEngineEditor
-          
-    - name: Package Tests
-      uses: actions/upload-artifact@v2
-      with:
-        name: Tests (Ubuntu 20.04)
-        path: |
-          Content/
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
-          Tests/images/
-          Tests/sound/
-          Tests/*.ini
-          Tests/*.txt
-          Tests/*.ico
-          Tests/*.lua
-          Tests/*.ttf
-          Tests/Tests
+          Documentation/
+          terrain/
+          config.ini
+          startup.lua
+          WickedEngineEditor
 
   
   linux-steamdeck:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -159,43 +127,21 @@ jobs:
         podman run --name sniper -v $PWD:/build registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest /build/build.sh
         podman container rm sniper
         
-    - name: Move binaries
+    - name: Move files
       run: |
-        mv build/Editor/WickedEngineEditor Editor/
-        mv build/Tests/Tests Tests/
+        mv build/Editor/WickedEngineEditor ./
+        mv Editor/config.ini ./
+        mv Editor/startup.lua ./
+        mv Editor/terrain ./
+        mv Content/Documentation ./
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
-        name: Editor (Linux - Steam SDK)
+        name: Editor (Linux - Steam Deck)
         path: |
-          Content/
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
-          Editor/terrain/
-          Editor/sound/
-          Editor/*.ini
-          Editor/*.ico
-          Editor/*.lua
-          Editor/WickedEngineEditor
-          
-    - name: Package Tests
-      uses: actions/upload-artifact@v2
-      with:
-        name: Tests (Linux - Steam SDK)
-        path: |
-          Content/
-          README.md
-          LICENSE.md
-          third_party_software.txt
-          features.txt
-          Tests/images/
-          Tests/sound/
-          Tests/*.ini
-          Tests/*.txt
-          Tests/*.ico
-          Tests/*.lua
-          Tests/*.ttf
-          Tests/Tests
+          Documentation/
+          terrain/
+          config.ini
+          startup.lua
+          WickedEngineEditor

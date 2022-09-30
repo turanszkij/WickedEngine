@@ -813,22 +813,12 @@ namespace wi::terrain
 									{
 										wi::Archive archive = wi::Archive(prop.data.data());
 										EntitySerializer seri;
-										wi::scene::Scene::EntitySerializeFlags flags = wi::scene::Scene::EntitySerializeFlags::RECURSIVE;
-										if (serializer_state.empty())
-										{
-											// This means the terrain was not serialized, but prop assets provided in this session, so we can keep references to them:
-											flags |= wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES;
-										}
-										else
-										{
-											// This means that terrain was serialized, so we have to resolve prop source asset dependencies:
-											seri.remap = serializer_state;
-										}
 										Entity entity = generator->scene.Entity_Serialize(
 											archive,
 											seri,
 											INVALID_ENTITY,
-											flags
+											wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
+											wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
 										);
 										NameComponent* name = generator->scene.names.GetComponent(entity);
 										if (name != nullptr)
@@ -1053,6 +1043,32 @@ namespace wi::terrain
 				if (seri.GetVersion() >= 1)
 				{
 					archive >> prop.data;
+
+					if (!prop.data.empty())
+					{
+						// Serialize the prop data in read mode and remap internal entity references:
+						Scene tmp_scene;
+						wi::Archive tmp_archive = wi::Archive(prop.data.data());
+						Entity entity = tmp_scene.Entity_Serialize(
+							tmp_archive,
+							seri,
+							INVALID_ENTITY,
+							wi::scene::Scene::EntitySerializeFlags::RECURSIVE
+						);
+
+						// Serialize again with the remapped references:
+						wi::Archive remapped_archive;
+						remapped_archive.SetReadModeAndResetPos(false);
+						tmp_scene.Entity_Serialize(
+							remapped_archive,
+							seri,
+							entity,
+							wi::scene::Scene::EntitySerializeFlags::RECURSIVE
+						);
+
+						// Replace original data with remapped references for current session:
+						remapped_archive.WriteData(prop.data);
+					}
 				}
 				else
 				{
@@ -1163,7 +1179,6 @@ namespace wi::terrain
 				archive >> modifier->frequency;
 			}
 
-			serializer_state = seri.remap;
 		}
 		else
 		{
