@@ -37,11 +37,11 @@ jobs:
     - name: Move files
       shell: cmd
       run: |
-        move BUILD/x64/Release/Editor_Windows/Editor_Windows.exe ./
-        move Editor/config.ini ./
-        move Editor/startup.lua ./
-        move Editor/terrain ./
-        move Content/Documentation ./
+        move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe .\
+        move Editor\config.ini .\
+        move Editor\startup.lua .\
+        move Editor\terrain .\
+        move Content\Documentation .\
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
