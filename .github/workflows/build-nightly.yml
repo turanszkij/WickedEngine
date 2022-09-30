@@ -34,32 +34,31 @@ jobs:
         cd ..
         "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:rebuild /m /p:Configuration=Release /p:Platform=x64
     
-    - name: Move binaries
+    - name: Move files
       shell: cmd
       run: |
-        move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe Editor\
-
-        move BUILD\x64\Release\Tests\Tests.exe Tests\
+        move BUILD/x64/Release/Editor_Windows/Editor_Windows.exe ./
+        move Editor/config.ini ./
+        move Editor/startup.lua ./
+        move Editor/terrain ./
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
-        name: Editor (Windows x64)
+        name: Editor (Windows)
         path: |
           README.md
           LICENSE.md
           third_party_software.txt
           features.txt
-          Editor/terrain/
-          Editor/sound/
-          Editor/*.ini
-          Editor/*.ico
-          Editor/*.lua
-          Editor/*.exe
+          terrain/
+          config.ini
+          startup.lua
+          ./*.exe
 
     
   linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -82,30 +81,30 @@ jobs:
         echo "---Rebuilding with ShaderDump---"
         make -B -j $(nproc)
         
-    - name: Move binaries
+    - name: Move files
       run: |
-        mv build/Editor/WickedEngineEditor Editor/
-        mv build/Tests/Tests Tests/
+        mv build/Editor/WickedEngineEditor ./
+        mv Editor/config.ini ./
+        mv Editor/startup.lua ./
+        mv Editor/terrain ./
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
-        name: Editor (Ubuntu 20.04)
+        name: Editor (Ubuntu)
         path: |
           README.md
           LICENSE.md
           third_party_software.txt
           features.txt
-          Editor/terrain/
-          Editor/sound/
-          Editor/*.ini
-          Editor/*.ico
-          Editor/*.lua
-          Editor/WickedEngineEditor
+          terrain/
+          config.ini
+          startup.lua
+          WickedEngineEditor
 
 
   linux-steamdeck:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -130,23 +129,23 @@ jobs:
         podman run --name sniper -v $PWD:/build registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest /build/build.sh
         podman container rm sniper
         
-    - name: Move binaries
+    - name: Move files
       run: |
-        mv build/Editor/WickedEngineEditor Editor/
-        mv build/Tests/Tests Tests/
+        mv build/Editor/WickedEngineEditor ./
+        mv Editor/config.ini ./
+        mv Editor/startup.lua ./
+        mv Editor/terrain ./
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
-        name: Editor (Linux - Steam SDK)
+        name: Editor (Linux - Steam)
         path: |
           README.md
           LICENSE.md
           third_party_software.txt
           features.txt
-          Editor/terrain/
-          Editor/sound/
-          Editor/*.ini
-          Editor/*.ico
-          Editor/*.lua
-          Editor/WickedEngineEditor
+          terrain/
+          config.ini
+          startup.lua
+          WickedEngineEditor
