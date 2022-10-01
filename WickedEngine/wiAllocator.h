@@ -16,6 +16,7 @@ namespace wi::allocator
 		{
 			data = (uint8_t*)mem;
 			capacity = size;
+			reset();
 		}
 		constexpr uint8_t* allocate(size_t size)
 		{

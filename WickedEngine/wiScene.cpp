@@ -12,6 +12,7 @@
 #include "wiUnorderedMap.h"
 #include "wiLua.h"
 #include "wiAllocator.h"
+#include "wiProfiler.h"
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
@@ -1184,7 +1185,6 @@ namespace wi::scene
 		}
 	}
 
-
 	void Scene::RunAnimationUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		for (size_t i = 0; i < animations.GetCount(); ++i)
@@ -2144,6 +2144,8 @@ namespace wi::scene
 		if (dt <= 0)
 			return;
 
+		auto range = wi::profiler::BeginRangeCPU("Procedural Animations");
+
 		if (inverse_kinematics.GetCount() > 0 || humanoids.GetCount() > 0)
 		{
 			transforms_temp.resize(transforms.GetCount());
@@ -2470,10 +2472,16 @@ namespace wi::scene
 		collider_count_cpu = collider_allocator_cpu.load();
 		collider_count_gpu = collider_allocator_gpu.load();
 
+
 		// Springs:
 		static float time = 0;
 		time += dt;
 		const XMVECTOR windDir = XMLoadFloat3(&weather.windDirection);
+
+		if (springs.GetCount() > 0)
+		{
+			spring_collider_bvh.Build(aabb_colliders_cpu, collider_count_cpu);
+		}
 
 		for (size_t i = 0; i < springs.GetCount(); ++i)
 		{
@@ -2598,11 +2606,7 @@ namespace wi::scene
 			XMStoreFloat3(&tail_sphere.center, tail_next);
 			tail_sphere.radius = hitRadius;
 
-			for (size_t collider_index = 0; collider_index < collider_count_cpu; ++collider_index)
-			{
-				if (!aabb_colliders_cpu[collider_index].intersects(tail_sphere))
-					continue;
-
+			spring_collider_bvh.Intersects(tail_sphere, 0, [&](uint32_t collider_index) {
 				const ColliderComponent& collider = colliders_cpu[collider_index];
 
 				float dist = 0;
@@ -2635,7 +2639,7 @@ namespace wi::scene
 					XMStoreFloat3(&tail_sphere.center, tail_next);
 					tail_sphere.radius = hitRadius;
 				}
-			}
+			});
 #endif
 
 			XMStoreFloat3(&spring.prevTail, tail_current);
@@ -2652,6 +2656,8 @@ namespace wi::scene
 			transform.world = tmp.world; // only store world space result, not modifying actual local space!
 
 		}
+
+		wi::profiler::EndRange(range);
 	}
 	void Scene::RunArmatureUpdateSystem(wi::jobsystem::context& ctx)
 	{

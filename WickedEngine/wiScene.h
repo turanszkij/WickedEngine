@@ -10,6 +10,7 @@
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "wiTerrain.h"
+#include "wiBVH.h"
 
 #include <string>
 #include <memory>
@@ -212,6 +213,7 @@ namespace wi::scene
 		wi::primitive::AABB* aabb_colliders_cpu = nullptr;
 		ColliderComponent* colliders_cpu = nullptr;
 		ColliderComponent* colliders_gpu = nullptr;
+		wi::BVH spring_collider_bvh;
 
 		// Ocean GPU state:
 		wi::Ocean ocean;
