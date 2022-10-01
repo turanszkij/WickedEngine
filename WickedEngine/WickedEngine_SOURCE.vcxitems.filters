@@ -1092,6 +1092,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocator.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiBVH.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

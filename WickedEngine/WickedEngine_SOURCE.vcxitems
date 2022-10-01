@@ -229,6 +229,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransformUtil.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiBVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiConfig.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNoise.h" />
