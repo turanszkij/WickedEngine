@@ -13534,6 +13534,8 @@ void Postprocess_Underwater(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_UNDERWATER], cmd);
 
+	BindCommonResources(cmd);
+
 	const TextureDesc& desc = output.GetDesc();
 
 	PostProcess postprocess;
