@@ -342,7 +342,7 @@ namespace wi::terrain
 		{
 			const Chunk& chunk = it->first;
 			ChunkData& chunk_data = it->second;
-			const bool chunk_visible = camera.frustum.CheckSphere(chunk_data.sphere.center, chunk_data.sphere.radius);
+			bool chunk_visible = camera.frustum.CheckSphere(chunk_data.sphere.center, chunk_data.sphere.radius);
 			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 
 			// pointer refresh:
@@ -383,8 +383,20 @@ namespace wi::terrain
 				}
 			}
 
+			if (wi::renderer::GetOcclusionCullingEnabled())
+			{
+				size_t object_index = scene->objects.GetIndex(chunk_data.entity);
+				if (object_index < scene->occlusion_results_objects.size())
+				{
+					if (scene->occlusion_results_objects[object_index].IsOccluded())
+					{
+						chunk_visible = false;
+					}
+				}
+			}
+
 			// Grass property update:
-			if (chunk_data.grass_entity != INVALID_ENTITY)
+			if (chunk_visible && chunk_data.grass_entity != INVALID_ENTITY)
 			{
 				wi::HairParticleSystem* grass = scene->hairs.GetComponent(chunk_data.grass_entity);
 				if (grass != nullptr)
