@@ -394,7 +394,6 @@ namespace wi::scene
 		BufferView so_pos_nor_wind;
 		BufferView so_tan;
 		BufferView so_pre;
-		wi::vector<uint8_t> vertex_subsets;
 		uint32_t geometryOffset = 0;
 		uint32_t meshletCount = 0;
 
@@ -434,9 +433,13 @@ namespace wi::scene
 			}
 		}
 
+		// Deletes all GPU resources
+		void DeleteRenderData();
+
 		// Recreates GPU resources for index/vertex buffers
 		void CreateRenderData();
 		void CreateStreamoutRenderData();
+		void CreateRaytracingRenderData();
 
 		enum COMPUTE_NORMALS
 		{

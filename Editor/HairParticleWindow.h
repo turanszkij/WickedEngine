@@ -18,6 +18,7 @@ public:
 
 	wi::HairParticleSystem* GetHair();
 
+	wi::gui::Label infoLabel;
 	wi::gui::ComboBox meshComboBox;
 	wi::gui::Slider lengthSlider;
 	wi::gui::Slider stiffnessSlider;

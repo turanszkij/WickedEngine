@@ -9,7 +9,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_HAIR " Hair Particle System", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(600, 260));
+	SetSize(XMFLOAT2(600, 350));
 
 	closeButton.SetTooltip("Delete HairParticleSystem");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -30,6 +30,10 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	float hei = 18;
 	float step = hei + 2;
 	float wid = 150;
+
+	infoLabel.Create("");
+	infoLabel.SetSize(XMFLOAT2(wid, 80));
+	AddWidget(&infoLabel);
 
 	meshComboBox.Create("Mesh: ");
 	meshComboBox.SetSize(XMFLOAT2(wid, hei));
@@ -265,13 +269,18 @@ wi::HairParticleSystem* HairParticleWindow::GetHair()
 
 void HairParticleWindow::UpdateData()
 {
-	auto emitter = GetHair();
-	if (emitter == nullptr)
+	auto hair = GetHair();
+	if (hair == nullptr)
 	{
 		return;
 	}
 
 	Scene& scene = editor->GetCurrentScene();
+
+	std::string ss;
+	ss += "To use hair particle system, first you must select a surface mesh to spawn particles on.\n\n";
+	ss += "Memory usage: " + std::to_string(hair->GetMemorySizeInBytes() / 1024.0f / 1024.0f) + " MB\n";
+	infoLabel.SetText(ss);
 
 	meshComboBox.ClearItems();
 	meshComboBox.AddItem("NO MESH");
@@ -281,7 +290,7 @@ void HairParticleWindow::UpdateData()
 		const NameComponent& name = *scene.names.GetComponent(entity);
 		meshComboBox.AddItem(name.name);
 
-		if (emitter->meshID == entity)
+		if (hair->meshID == entity)
 		{
 			meshComboBox.SetSelected((int)i + 1);
 		}
@@ -325,6 +334,7 @@ void HairParticleWindow::ResizeLayout()
 		y += padding;
 	};
 
+	add_fullwidth(infoLabel);
 	add(meshComboBox);
 	add(lengthSlider);
 	add(stiffnessSlider);

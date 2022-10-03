@@ -680,9 +680,6 @@ void PaintToolWindow::Update(float dt)
 						P = P * MUL + ADD;
 						P = P * SCREEN;
 
-						if (selected.subsetIndex >= 0 && mesh->vertex_subsets[j] != selected.subsetIndex)
-							continue;
-
 						const float z = XMVectorGetZ(P);
 						const float dist = XMVectorGetX(XMVector2Length(C - P));
 						if (z >= 0 && z <= 1 && dist <= pressure_radius)
@@ -727,8 +724,6 @@ void PaintToolWindow::Update(float dt)
 								mesh->indices[j + 1],
 								mesh->indices[j + 2],
 							};
-							if (selected.subsetIndex >= 0 && (mesh->vertex_subsets[triangle[0]] != selected.subsetIndex || mesh->vertex_subsets[triangle[1]] != selected.subsetIndex || mesh->vertex_subsets[triangle[2]] != selected.subsetIndex))
-								continue;
 
 							const XMVECTOR P[arraysize(triangle)] = {
 								XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),

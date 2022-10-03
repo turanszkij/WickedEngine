@@ -106,7 +106,7 @@ namespace wi::scene
 		materialArrayMapped = (ShaderMaterial*)materialUploadBuffer[device->GetBufferIndex()].mapped_data;
 
 		TLAS_instancesMapped = nullptr;
-		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+		if (IsAccelerationStructureUpdateRequested() && device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
 			GPUBufferDesc desc;
 			desc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
@@ -170,10 +170,13 @@ namespace wi::scene
 			mesh.geometryOffset = geometryAllocator.fetch_add((uint32_t)mesh.subsets.size());
 		});
 
-		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
-			// Must not keep inactive TLAS instances, so zero them out for safety:
-			std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
-		});
+		if (TLAS_instancesMapped != nullptr)
+		{
+			wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+				// Must not keep inactive TLAS instances, so zero them out for safety:
+				std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
+				});
+		}
 
 		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 			// Must not keep inactive instances, so init them for safety:
@@ -287,31 +290,34 @@ namespace wi::scene
 			SetAccelerationStructureUpdateRequested(true);
 		}
 
-		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+		if (IsAccelerationStructureUpdateRequested())
 		{
-			// Recreate top level acceleration structure if the object count changed:
-			if (TLAS.desc.top_level.count < instanceArraySize)
+			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 			{
-				RaytracingAccelerationStructureDesc desc;
-				desc.flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
-				desc.type = RaytracingAccelerationStructureDesc::Type::TOPLEVEL;
-				desc.top_level.count = (uint32_t)instanceArraySize * 2; // *2 to grow fast
-				GPUBufferDesc bufdesc;
-				bufdesc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
-				bufdesc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
-				bufdesc.size = bufdesc.stride * desc.top_level.count;
-				bool success = device->CreateBuffer(&bufdesc, nullptr, &desc.top_level.instance_buffer);
-				assert(success);
-				device->SetName(&desc.top_level.instance_buffer, "Scene::TLAS.instanceBuffer");
-				success = device->CreateRaytracingAccelerationStructure(&desc, &TLAS);
-				assert(success);
-				device->SetName(&TLAS, "Scene::TLAS");
+				// Recreate top level acceleration structure if the object count changed:
+				if (TLAS.desc.top_level.count < instanceArraySize)
+				{
+					RaytracingAccelerationStructureDesc desc;
+					desc.flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+					desc.type = RaytracingAccelerationStructureDesc::Type::TOPLEVEL;
+					desc.top_level.count = (uint32_t)instanceArraySize * 2; // *2 to grow fast
+					GPUBufferDesc bufdesc;
+					bufdesc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+					bufdesc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
+					bufdesc.size = bufdesc.stride * desc.top_level.count;
+					bool success = device->CreateBuffer(&bufdesc, nullptr, &desc.top_level.instance_buffer);
+					assert(success);
+					device->SetName(&desc.top_level.instance_buffer, "Scene::TLAS.instanceBuffer");
+					success = device->CreateRaytracingAccelerationStructure(&desc, &TLAS);
+					assert(success);
+					device->SetName(&TLAS, "Scene::TLAS");
+				}
 			}
-		}
-
-		if (!device->CheckCapability(GraphicsDeviceCapability::RAYTRACING) && IsAccelerationStructureUpdateRequested())
-		{
-			BVH.Update(*this);
+			else
+			{
+				// Software GPU BVH:
+				BVH.Update(*this);
+			}
 		}
 
 		// Update water ripples:
@@ -2743,6 +2749,12 @@ namespace wi::scene
 
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
+			if (!mesh.morph_targets.empty() && mesh.vertex_positions_morphed.size() != mesh.vertex_positions.size())
+			{
+				mesh.vertex_positions_morphed.resize(mesh.vertex_positions.size());
+				mesh.dirty_morph = true;
+			}
+
 			// Update morph targets if needed:
 			if (mesh.dirty_morph && !mesh.morph_targets.empty())
 			{
@@ -2869,8 +2881,13 @@ namespace wi::scene
 				subsetIndex++;
 			}
 
-			if (!mesh.BLASes.empty() && mesh.BLASes[0].IsValid())
+			if (TLAS_instancesMapped != nullptr) // check TLAS, to know if we need to care about BLAS
 			{
+				if (mesh.BLASes.empty() || !mesh.BLASes[0].IsValid())
+				{
+					mesh.CreateRaytracingRenderData();
+				}
+
 				const uint32_t lod_count = mesh.GetLODCount();
 				assert(uint32_t(mesh.BLASes.size()) == lod_count);
 				for (uint32_t lod = 0; lod < lod_count; ++lod)
@@ -3808,8 +3825,13 @@ namespace wi::scene
 			const size_t instanceIndex = objects.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
-			if (TLAS_instancesMapped != nullptr && hair.BLAS.IsValid())
+			if (TLAS_instancesMapped != nullptr)
 			{
+				if (!hair.BLAS.IsValid())
+				{
+					hair.CreateRaytracingRenderData();
+				}
+
 				// TLAS instance data:
 				RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
 				for (int i = 0; i < arraysize(instance.transform); ++i)
@@ -3899,8 +3921,13 @@ namespace wi::scene
 			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
-			if (TLAS_instancesMapped != nullptr && emitter.BLAS.IsValid())
+			if (TLAS_instancesMapped != nullptr)
 			{
+				if (!emitter.BLAS.IsValid())
+				{
+					emitter.CreateRaytracingRenderData();
+				}
+
 				// TLAS instance data:
 				RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
 				for (int i = 0; i < arraysize(instance.transform); ++i)

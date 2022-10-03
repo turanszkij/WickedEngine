@@ -7,7 +7,7 @@ struct Terrain
 {
 	ShaderMaterial materials[region_count];
 };
-ConstantBuffer<Terrain> terrain : register(b10);
+ConstantBuffer<Terrain> terrain : register(b0);
 
 // These are expected to be in the same bind slots as corresponding MaterialComponent::TEXTURESLOT enums
 RWTexture2D<unorm float4> output_baseColorMap : register(u0);

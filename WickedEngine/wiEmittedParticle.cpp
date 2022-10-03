@@ -61,6 +61,8 @@ namespace wi
 
 		if (particleBuffer.desc.size < MAX_PARTICLES * sizeof(Particle))
 		{
+			BLAS = {};
+
 			GPUBufferDesc bd;
 			bd.usage = Usage::DEFAULT;
 			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
@@ -253,6 +255,12 @@ namespace wi
 			}
 		}
 
+	}
+
+	void EmittedParticleSystem::CreateRaytracingRenderData()
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING) && !BLAS.IsValid() && primitiveBuffer.IsValid())
 		{
 			RaytracingAccelerationStructureDesc desc;
@@ -276,7 +284,6 @@ namespace wi
 			assert(success);
 			device->SetName(&BLAS, "EmittedParticleSystem::BLAS");
 		}
-
 	}
 
 	uint64_t EmittedParticleSystem::GetMemorySizeInBytes() const

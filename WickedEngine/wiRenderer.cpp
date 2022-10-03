@@ -2463,6 +2463,9 @@ void RenderMeshes(
 		if (instancedBatch.instanceCount == 0)
 			return;
 		const MeshComponent& mesh = vis.scene->meshes[instancedBatch.meshIndex];
+		if (!mesh.generalBuffer.IsValid())
+			return;
+
 		const bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
 		const uint8_t userStencilRefOverride = instancedBatch.userStencilRefOverride;
 

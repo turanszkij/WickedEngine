@@ -345,11 +345,36 @@ namespace wi::terrain
 			bool chunk_visible = camera.frustum.CheckSphere(chunk_data.sphere.center, chunk_data.sphere.radius);
 			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 
+			if (wi::renderer::GetOcclusionCullingEnabled())
+			{
+				size_t object_index = scene->objects.GetIndex(chunk_data.entity);
+				if (object_index < scene->occlusion_results_objects.size())
+				{
+					if (scene->occlusion_results_objects[object_index].IsOccluded())
+					{
+						chunk_visible = false;
+					}
+				}
+			}
+
 			// pointer refresh:
 			MeshComponent* chunk_mesh = scene->meshes.GetComponent(chunk_data.entity);
 			if (chunk_mesh != nullptr)
 			{
 				chunk_data.mesh_vertex_positions = chunk_mesh->vertex_positions.data();
+
+#if 0
+				// Test: remove off screen chunks
+				//	But the problem is that shadow casters shouldn't be removed outside view
+				if (chunk_visible && !chunk_mesh->generalBuffer.IsValid())
+				{
+					chunk_mesh->CreateRenderData();
+				}
+				else if (!chunk_visible && chunk_mesh->generalBuffer.IsValid())
+				{
+					chunk_mesh->DeleteRenderData();
+				}
+#endif
 			}
 			else
 			{
@@ -379,18 +404,6 @@ namespace wi::terrain
 					{
 						scene->Entity_Remove(chunk_data.props_entity);
 						chunk_data.props_entity = INVALID_ENTITY; // prop can be generated here by generation thread...
-					}
-				}
-			}
-
-			if (wi::renderer::GetOcclusionCullingEnabled())
-			{
-				size_t object_index = scene->objects.GetIndex(chunk_data.entity);
-				if (object_index < scene->occlusion_results_objects.size())
-				{
-					if (scene->occlusion_results_objects[object_index].IsOccluded())
-					{
-						chunk_visible = false;
 					}
 				}
 			}
@@ -540,7 +553,7 @@ namespace wi::terrain
 			material_Slope.WriteShaderMaterial(&materials[1]);
 			material_LowAltitude.WriteShaderMaterial(&materials[2]);
 			material_HighAltitude.WriteShaderMaterial(&materials[3]);
-			device->BindDynamicConstantBuffer(materials, 10, cmd);
+			device->BindDynamicConstantBuffer(materials, 0, cmd);
 
 			for (auto& chunk : virtual_texture_updates)
 			{

@@ -11,7 +11,7 @@ using namespace wi::enums;
 namespace wi
 {
 
-	void RenderPath3D::ResizeBuffers()
+	void RenderPath3D::DeleteGPUResources()
 	{
 		rtMain = {};
 		rtMain_render = {};
@@ -82,6 +82,11 @@ namespace wi
 		surfelGIResources = {};
 		temporalAAResources = {};
 		visibilityResources = {};
+	}
+
+	void RenderPath3D::ResizeBuffers()
+	{
+		DeleteGPUResources();
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -532,7 +537,7 @@ namespace wi
 			{
 				wi::renderer::CreateVolumetricCloudResources(volumetriccloudResources, internalResolution);
 			}
-			if (getReflectionsEnabled())
+			if (getReflectionsEnabled() && depthBuffer_Reflection.IsValid())
 			{
 				if (!volumetriccloudResources_reflection.texture_cloudRender.IsValid())
 				{
@@ -1237,6 +1242,16 @@ namespace wi
 		}
 
 		RenderPath2D::Compose(cmd);
+	}
+
+	void RenderPath3D::Stop()
+	{
+		DeleteGPUResources();
+	}
+
+	void RenderPath3D::Start()
+	{
+		ResizeBuffers();
 	}
 
 	void RenderPath3D::RenderAO(CommandList cmd) const

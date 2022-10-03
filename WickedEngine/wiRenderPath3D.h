@@ -154,6 +154,7 @@ namespace wi
 		virtual void RenderTransparents(wi::graphics::CommandList cmd) const;
 		virtual void RenderPostprocessChain(wi::graphics::CommandList cmd) const;
 
+		void DeleteGPUResources();
 		void ResizeBuffers() override;
 
 		wi::scene::CameraComponent* camera = &wi::scene::GetCamera();
@@ -285,6 +286,9 @@ namespace wi
 		void Update(float dt) override;
 		void Render() const override;
 		void Compose(wi::graphics::CommandList cmd) const override;
+
+		void Stop() override;
+		void Start() override;
 	};
 
 }

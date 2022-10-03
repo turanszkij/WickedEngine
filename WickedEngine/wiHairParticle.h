@@ -32,6 +32,7 @@ namespace wi
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 
 		void CreateRenderData(const wi::scene::MeshComponent& mesh);
+		void CreateRaytracingRenderData();
 
 		void UpdateCPU(
 			const wi::scene::TransformComponent& transform,
@@ -88,5 +89,6 @@ namespace wi
 		static void Initialize();
 
 		constexpr uint32_t GetParticleCount() const { return strandCount * segmentCount; }
+		uint64_t GetMemorySizeInBytes() const;
 	};
 }

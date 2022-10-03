@@ -382,10 +382,8 @@ namespace wi::scene
 		return wi::renderer::CombineStencilrefs(engineStencilRef, userStencilRef);
 	}
 
-	void MeshComponent::CreateRenderData()
+	void MeshComponent::DeleteRenderData()
 	{
-		GraphicsDevice* device = wi::graphics::GetDevice();
-
 		generalBuffer = {};
 		streamoutBuffer = {};
 		ib = {};
@@ -398,6 +396,13 @@ namespace wi::scene
 		so_pos_nor_wind = {};
 		so_tan = {};
 		so_pre = {};
+		BLASes.clear();
+	}
+	void MeshComponent::CreateRenderData()
+	{
+		DeleteRenderData();
+
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		if (vertex_tangents.empty() && !vertex_uvset_0.empty() && !vertex_normals.empty())
 		{
@@ -477,22 +482,6 @@ namespace wi::scene
 			}
 		}
 
-		{
-			vertex_subsets.resize(vertex_positions.size());
-			uint32_t first_subset = 0;
-			uint32_t last_subset = 0;
-			GetLODSubsetRange(0, first_subset, last_subset);
-			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-			{
-				const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
-				for (uint32_t i = 0; i < subset.indexCount; ++i)
-				{
-					uint32_t index = indices[subset.indexOffset + i];
-					vertex_subsets[index] = subsetIndex;
-				}
-			}
-		}
-
 		const size_t uv_count = std::max(vertex_uvset_0.size(), vertex_uvset_1.size());
 
 		GPUBufferDesc bd;
@@ -547,12 +536,6 @@ namespace wi::scene
 
 		// vertexBuffer - POSITION + NORMAL + WIND:
 		{
-			if (!morph_targets.empty())
-			{
-				vertex_positions_morphed.resize(vertex_positions.size());
-				dirty_morph = true;
-			}
-
 			vb_pos_nor_wind.offset = buffer_offset;
 			vb_pos_nor_wind.size = vertex_positions.size() * sizeof(Vertex_POS);
 			Vertex_POS* vertices = (Vertex_POS*)(buffer_data.data() + buffer_offset);
@@ -691,53 +674,6 @@ namespace wi::scene
 			vb_bon.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_bon.offset, vb_bon.size);
 			vb_bon.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_bon.subresource_srv);
 		}
-
-		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-		{
-			BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
-
-			const uint32_t lod_count = GetLODCount();
-			BLASes.resize(lod_count);
-			for (uint32_t lod = 0; lod < lod_count; ++lod)
-			{
-				RaytracingAccelerationStructureDesc desc;
-				desc.type = RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL;
-
-				if (streamoutBuffer.IsValid())
-				{
-					desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
-					desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
-				}
-				else
-				{
-					desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
-				}
-
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				GetLODSubsetRange(lod, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-				{
-					const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
-					desc.bottom_level.geometries.emplace_back();
-					auto& geometry = desc.bottom_level.geometries.back();
-					geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
-					geometry.triangles.vertex_buffer = generalBuffer;
-					geometry.triangles.vertex_byte_offset = vb_pos_nor_wind.offset;
-					geometry.triangles.index_buffer = generalBuffer;
-					geometry.triangles.index_format = GetIndexFormat();
-					geometry.triangles.index_count = subset.indexCount;
-					geometry.triangles.index_offset = ib.offset / GetIndexStride() + subset.indexOffset;
-					geometry.triangles.vertex_count = (uint32_t)vertex_positions.size();
-					geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
-					geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
-				}
-
-				bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLASes[lod]);
-				assert(success);
-				device->SetName(&BLASes[lod], std::string("MeshComponent::BLAS[LOD" + std::to_string(lod) + "]").c_str());
-			}
-		}
 	}
 	void MeshComponent::CreateStreamoutRenderData()
 	{
@@ -789,6 +725,57 @@ namespace wi::scene
 		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size);
 		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
 		so_pre.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pre.subresource_uav);
+	}
+	void MeshComponent::CreateRaytracingRenderData()
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		if (!device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+			return;
+
+		BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
+
+		const uint32_t lod_count = GetLODCount();
+		BLASes.resize(lod_count);
+		for (uint32_t lod = 0; lod < lod_count; ++lod)
+		{
+			RaytracingAccelerationStructureDesc desc;
+			desc.type = RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL;
+
+			if (streamoutBuffer.IsValid())
+			{
+				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
+				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+			}
+			else
+			{
+				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
+			}
+
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			GetLODSubsetRange(lod, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+			{
+				const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
+				desc.bottom_level.geometries.emplace_back();
+				auto& geometry = desc.bottom_level.geometries.back();
+				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
+				geometry.triangles.vertex_buffer = generalBuffer;
+				geometry.triangles.vertex_byte_offset = vb_pos_nor_wind.offset;
+				geometry.triangles.index_buffer = generalBuffer;
+				geometry.triangles.index_format = GetIndexFormat();
+				geometry.triangles.index_count = subset.indexCount;
+				geometry.triangles.index_offset = ib.offset / GetIndexStride() + subset.indexOffset;
+				geometry.triangles.vertex_count = (uint32_t)vertex_positions.size();
+				geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
+				geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
+			}
+
+			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLASes[lod]);
+			assert(success);
+			device->SetName(&BLASes[lod], std::string("MeshComponent::BLAS[LOD" + std::to_string(lod) + "]").c_str());
+		}
 	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
 	{

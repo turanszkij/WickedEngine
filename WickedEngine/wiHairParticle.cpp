@@ -31,10 +31,32 @@ namespace wi
 	static PipelineState PSO[RENDERPASS_COUNT];
 	static PipelineState PSO_wire;
 
+	uint64_t HairParticleSystem::GetMemorySizeInBytes() const
+	{
+		if (!simulationBuffer.IsValid())
+			return 0;
+
+		uint64_t retVal = 0;
+
+		retVal += simulationBuffer.GetDesc().size;
+		retVal += constantBuffer.GetDesc().size;
+		retVal += vertexBuffer_POS[0].GetDesc().size;
+		retVal += vertexBuffer_POS[1].GetDesc().size;
+		retVal += vertexBuffer_UVS.GetDesc().size;
+		retVal += primitiveBuffer.GetDesc().size;
+		retVal += culledIndexBuffer.GetDesc().size;
+		retVal += indirectBuffer.GetDesc().size;
+		retVal += indexBuffer.GetDesc().size;
+		retVal += vertexBuffer_length.GetDesc().size;
+
+		return retVal;
+	}
+
 	void HairParticleSystem::CreateRenderData(const wi::scene::MeshComponent& mesh)
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
+		BLAS = {};
 		_flags &= ~REBUILD_BUFFERS;
 		regenerate_frame = true;
 
@@ -166,6 +188,19 @@ namespace wi
 			device->SetName(&indexBuffer, "HairParticleSystem::indexBuffer");
 		}
 
+		if (!indirectBuffer.IsValid())
+		{
+			GPUBufferDesc desc;
+			desc.size = sizeof(uint) + sizeof(IndirectDrawArgsIndexedInstanced); // counter + draw args
+			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
+			desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+			device->CreateBuffer(&desc, nullptr, &indirectBuffer);
+		}
+	}
+	void HairParticleSystem::CreateRaytracingRenderData()
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING) && primitiveBuffer.IsValid())
 		{
 			RaytracingAccelerationStructureDesc desc;
@@ -188,15 +223,6 @@ namespace wi
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);
 			device->SetName(&BLAS, "HairParticleSystem::BLAS");
-		}
-
-		if (!indirectBuffer.IsValid())
-		{
-			GPUBufferDesc desc;
-			desc.size = sizeof(uint) + sizeof(IndirectDrawArgsIndexedInstanced); // counter + draw args
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
-			desc.bind_flags = BindFlag::UNORDERED_ACCESS;
-			device->CreateBuffer(&desc, nullptr, &indirectBuffer);
 		}
 	}
 
