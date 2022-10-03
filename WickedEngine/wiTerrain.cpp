@@ -518,16 +518,17 @@ namespace wi::terrain
 								TextureDesc desc;
 								desc.width = chunk_data.required_texture_resolution;
 								desc.height = chunk_data.required_texture_resolution;
-								desc.format = Format::R8G8B8A8_UNORM;
-								desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-								if (desc.width > 64)
+								if (i == MaterialComponent::TEXTURESLOT::NORMALMAP)
 								{
-									desc.mip_levels = (uint32_t)log2(std::max(desc.width, desc.height)) + 1;
+									desc.format = Format::R8G8_UNORM;
 								}
 								else
 								{
-									desc.mip_levels = 1;
+									desc.format = Format::R8G8B8A8_UNORM;
 								}
+								desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+								desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+								desc.mip_levels = 4;
 								Texture texture;
 								bool success = device->CreateTexture(&desc, nullptr, &texture);
 								assert(success);
@@ -536,10 +537,7 @@ namespace wi::terrain
 								{
 									for (uint32_t i = 0; i < texture.desc.mip_levels; ++i)
 									{
-										int subresource_index;
-										subresource_index = device->CreateSubresource(&texture, SubresourceType::SRV, 0, 1, i, 1);
-										assert(subresource_index == i);
-										subresource_index = device->CreateSubresource(&texture, SubresourceType::UAV, 0, 1, i, 1);
+										int subresource_index = device->CreateSubresource(&texture, SubresourceType::UAV, 0, 1, i, 1);
 										assert(subresource_index == i);
 									}
 								}
@@ -955,12 +953,10 @@ namespace wi::terrain
 					{
 						const Texture& texture = material->textures[i].resource.GetTexture();
 
-						device->BindUAV(&texture, i, cmd);
-
-						if (texture.GetDesc().mip_levels > 1)
-						{
-							wi::renderer::AddDeferredMIPGen(material->textures[i].resource.GetTexture());
-						}
+						device->BindUAV(&texture, i * 4 + 0, cmd, 0);
+						device->BindUAV(&texture, i * 4 + 1, cmd, 1);
+						device->BindUAV(&texture, i * 4 + 2, cmd, 2);
+						device->BindUAV(&texture, i * 4 + 3, cmd, 3);
 					}
 				}
 			}
@@ -969,8 +965,6 @@ namespace wi::terrain
 		}
 
 		device->Barrier(virtual_texture_barriers_end.data(), (uint32_t)virtual_texture_barriers_end.size(), cmd);
-
-		wi::renderer::ProcessDeferredMipGenRequests(cmd);
 
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
