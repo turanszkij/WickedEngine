@@ -139,7 +139,6 @@ namespace wi::terrain
 		int physics_generation = 3;
 		float prop_density = 1;
 		float grass_density = 1;
-		float grass_length = 1;
 		float chunk_scale = 1;
 		uint32_t seed = 3926;
 		float bottomLevel = -60;

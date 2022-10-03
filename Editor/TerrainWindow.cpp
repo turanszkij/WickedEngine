@@ -274,7 +274,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	ClearTransform();
 
 	wi::gui::Window::Create(ICON_TERRAIN " Terrain", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(420, 900));
+	SetSize(XMFLOAT2(420, 940));
 
 	closeButton.SetTooltip("Delete Terrain.\nThis will bake generated virtual textures to static textures which could take a while!");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -310,7 +310,8 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		terrain->physics_generation = (int)physicsGenerationSlider.GetValue();
 		terrain->prop_density = propDensitySlider.GetValue();
 		terrain->grass_density = grassDensitySlider.GetValue();
-		terrain->grass_length = grassLengthSlider.GetValue();
+		terrain->grass_properties.length = grassLengthSlider.GetValue();
+		terrain->grass_properties.viewDistance = grassDistanceSlider.GetValue();
 		terrain->chunk_scale = scaleSlider.GetValue();
 		terrain->seed = (uint32_t)seedSlider.GetValue();
 		terrain->bottomLevel = bottomLevelSlider.GetValue();
@@ -455,6 +456,15 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		terrain->grass_properties.length = args.fValue;
 		});
 	AddWidget(&grassLengthSlider);
+
+	grassDistanceSlider.Create(10, 100, 60, 1000, "Grass Distance: ");
+	grassDistanceSlider.SetTooltip("Modifies grass view distance.");
+	grassDistanceSlider.SetSize(XMFLOAT2(wid, hei));
+	grassDistanceSlider.SetPos(XMFLOAT2(x, y += step));
+	grassDistanceSlider.OnSlide([this](wi::gui::EventArgs args) {
+		terrain->grass_properties.viewDistance = args.fValue;
+		});
+	AddWidget(&grassDistanceSlider);
 
 	presetCombo.Create("Preset: ");
 	presetCombo.SetTooltip("Select a terrain preset");
@@ -797,6 +807,7 @@ void TerrainWindow::SetEntity(Entity entity)
 	propDensitySlider.SetValue(terrain->prop_density);
 	grassDensitySlider.SetValue(terrain->grass_density);
 	grassLengthSlider.SetValue(terrain->grass_properties.length);
+	grassDistanceSlider.SetValue(terrain->grass_properties.viewDistance);
 	scaleSlider.SetValue(terrain->chunk_scale);
 	seedSlider.SetValue((float)terrain->seed);
 	bottomLevelSlider.SetValue(terrain->bottomLevel);
@@ -1063,6 +1074,7 @@ void TerrainWindow::ResizeLayout()
 	add(propDensitySlider);
 	add(grassDensitySlider);
 	add(grassLengthSlider);
+	add(grassDistanceSlider);
 	add(presetCombo);
 	add(scaleSlider);
 	add(seedSlider);

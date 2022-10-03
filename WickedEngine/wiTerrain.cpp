@@ -174,7 +174,7 @@ namespace wi::terrain
 
 	Terrain::Terrain()
 	{
-		weather.ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
+		weather.ambient = XMFLOAT3(0.4f, 0.4f, 0.4f);
 		weather.SetRealisticSky(true);
 		weather.SetVolumetricClouds(true);
 		weather.volumetricCloudParameters.CoverageAmount = 0.65f;
@@ -189,6 +189,8 @@ namespace wi::terrain
 		weather.windDirection = XMFLOAT3(0.05f, 0.05f, 0.05f);
 		weather.windSpeed = 4;
 		weather.stars = 0.6f;
+
+		grass_properties.viewDistance = chunk_width;
 
 		generator = std::make_shared<Generator>();
 	}
@@ -417,6 +419,7 @@ namespace wi::terrain
 					chunk_data.grass_density_current = grass_density;
 					grass->strandCount = uint32_t(chunk_data.grass.strandCount * chunk_data.grass_density_current);
 					grass->length = grass_properties.length;
+					grass->viewDistance = grass_properties.viewDistance;
 				}
 			}
 
@@ -516,9 +519,29 @@ namespace wi::terrain
 								desc.height = chunk_data.required_texture_resolution;
 								desc.format = Format::R8G8B8A8_UNORM;
 								desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+								if (desc.width > 64)
+								{
+									desc.mip_levels = (uint32_t)log2(std::max(desc.width, desc.height)) + 1;
+								}
+								else
+								{
+									desc.mip_levels = 1;
+								}
 								Texture texture;
 								bool success = device->CreateTexture(&desc, nullptr, &texture);
 								assert(success);
+
+								if (desc.mip_levels > 1)
+								{
+									for (uint32_t i = 0; i < texture.desc.mip_levels; ++i)
+									{
+										int subresource_index;
+										subresource_index = device->CreateSubresource(&texture, SubresourceType::SRV, 0, 1, i, 1);
+										assert(subresource_index == i);
+										subresource_index = device->CreateSubresource(&texture, SubresourceType::UAV, 0, 1, i, 1);
+										assert(subresource_index == i);
+									}
+								}
 
 								material->textures[i].resource.SetTexture(texture);
 								virtual_texture_barriers_begin.push_back(GPUBarrier::Image(&material->textures[i].resource.GetTexture(), desc.layout, ResourceState::UNORDERED_ACCESS));
@@ -581,7 +604,15 @@ namespace wi::terrain
 					{
 						if (virtual_texture_available[i])
 						{
-							device->BindUAV(material->textures[i].GetGPUResource(), i, cmd);
+							const Texture& texture = material->textures[i].resource.GetTexture();
+
+							device->BindUAV(&texture, i, cmd);
+							device->ClearUAV(&texture, 0, cmd);
+
+							if (texture.GetDesc().mip_levels > 1)
+							{
+								wi::renderer::AddDeferredMIPGen(material->textures[i].resource.GetTexture());
+							}
 						}
 					}
 				}
@@ -590,6 +621,9 @@ namespace wi::terrain
 			}
 
 			device->Barrier(virtual_texture_barriers_end.data(), (uint32_t)virtual_texture_barriers_end.size(), cmd);
+
+			wi::renderer::ProcessDeferredMipGenRequests(cmd);
+
 			wi::profiler::EndRange(range);
 			device->EventEnd(cmd);
 		}
@@ -652,6 +686,10 @@ namespace wi::terrain
 					grass.vertex_lengths.resize(vertexCount);
 					std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
 
+					// Shadow casting will only be enabled for sloped terrain chunks:
+					std::atomic_bool slope_cast_shadow;
+					slope_cast_shadow.store(false);
+
 					// Do a parallel for loop over all the chunk's vertices and compute their properties:
 					wi::jobsystem::context ctx;
 					wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width, [&](wi::jobsystem::JobArgs args) {
@@ -682,8 +720,12 @@ namespace wi::terrain
 						XMFLOAT3 normal;
 						XMStoreFloat3(&normal, N);
 
+						const float slope_amount = 1.0f - wi::math::saturate(normal.y);
+						if (slope_amount > 0.1f)
+							slope_cast_shadow.store(true);
+
 						const float region_base = 1;
-						const float region_slope = std::pow(1.0f - wi::math::saturate(normal.y), region1);
+						const float region_slope = std::pow(slope_amount, region1);
 						const float region_low_altitude = bottomLevel == 0 ? 0 : std::pow(wi::math::saturate(wi::math::InverseLerp(0, bottomLevel, height)), region2);
 						const float region_high_altitude = topLevel == 0 ? 0 : std::pow(wi::math::saturate(wi::math::InverseLerp(0, topLevel, height)), region3);
 
@@ -721,6 +763,8 @@ namespace wi::terrain
 						});
 					wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
 
+					material.SetCastShadow(slope_cast_shadow.load());
+
 					wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 						mesh.CreateRenderData();
 						chunk_data.sphere.center = mesh.aabb.getCenter();
@@ -736,7 +780,6 @@ namespace wi::terrain
 						chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
 						chunk_data.grass.meshID = chunk_data.entity;
 						chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale * chunk_scale); // chunk_scale * chunk_scale : grass density increases with squared amount with chunk scale (x*z)
-						chunk_data.grass.viewDistance = chunk_width * chunk_scale;
 					}
 
 					// Create the blend weights texture for virtual texture update:

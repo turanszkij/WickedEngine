@@ -65,6 +65,7 @@ public:
 	wi::gui::Slider propDensitySlider;
 	wi::gui::Slider grassDensitySlider;
 	wi::gui::Slider grassLengthSlider;
+	wi::gui::Slider grassDistanceSlider;
 	wi::gui::ComboBox presetCombo;
 	wi::gui::Slider scaleSlider;
 	wi::gui::Slider seedSlider;
