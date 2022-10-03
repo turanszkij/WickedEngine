@@ -119,6 +119,7 @@ namespace wi::terrain
 		wi::vector<Chunk> virtual_texture_updates;
 		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_begin;
 		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_end;
+		bool virtual_texture_available[wi::scene::MaterialComponent::TEXTURESLOT_COUNT] = {};
 
 		constexpr bool IsCenterToCamEnabled() const { return _flags & CENTER_TO_CAM; }
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }
@@ -161,6 +162,8 @@ namespace wi::terrain
 		void Generation_Update(const wi::scene::CameraComponent& camera);
 		// Tells the generation thread that it should be cancelled and blocks until that is confirmed
 		void Generation_Cancel();
+		// Updates the virtual textures on GPU by compute shaders
+		void UpdateVirtualTextures(wi::graphics::CommandList cmd) const;
 		// The virtual textures will be compressed and saved into resources. They can be serialized from there
 		void BakeVirtualTexturesToFiles();
 		// Creates the blend weight texture for a chunk data

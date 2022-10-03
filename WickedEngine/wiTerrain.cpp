@@ -311,8 +311,7 @@ namespace wi::terrain
 
 		// Check whether there are any materials that would write to virtual textures:
 		bool virtual_texture_any = false;
-		bool virtual_texture_available[MaterialComponent::TEXTURESLOT_COUNT] = {};
-		virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
+		virtual_texture_available[MaterialComponent::TEXTURESLOT_COUNT] = {};
 		MaterialComponent* virtual_materials[4] = {
 			&material_Base,
 			&material_Slope,
@@ -323,6 +322,7 @@ namespace wi::terrain
 		{
 			for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
 			{
+				virtual_texture_available[i] = false;
 				switch (i)
 				{
 				case MaterialComponent::BASECOLORMAP:
@@ -339,6 +339,7 @@ namespace wi::terrain
 				}
 			}
 		}
+		virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
 
 		for (auto it = chunks.begin(); it != chunks.end();)
 		{
@@ -552,6 +553,13 @@ namespace wi::terrain
 
 					if (need_update)
 					{
+						// Shrink the uvs to avoid wrap sampling across edge by object rendering shaders:
+						float virtual_texture_resolution_rcp = 1.0f / float(chunk_data.required_texture_resolution);
+						material->texMulAdd.x = float(chunk_data.required_texture_resolution - 1) * virtual_texture_resolution_rcp;
+						material->texMulAdd.y = float(chunk_data.required_texture_resolution - 1) * virtual_texture_resolution_rcp;
+						material->texMulAdd.z = 0.5f * virtual_texture_resolution_rcp;
+						material->texMulAdd.w = 0.5f * virtual_texture_resolution_rcp;
+
 						virtual_texture_updates.push_back(chunk);
 					}
 
@@ -559,73 +567,6 @@ namespace wi::terrain
 			}
 
 			it++;
-		}
-
-		// Execute batched virtual texture updates:
-		if (!virtual_texture_updates.empty())
-		{
-			CommandList cmd = device->BeginCommandList();
-			device->EventBegin("TerrainVirtualTextureUpdate", cmd);
-			auto range = wi::profiler::BeginRangeGPU("TerrainVirtualTextureUpdate", cmd);
-			device->Barrier(virtual_texture_barriers_begin.data(), (uint32_t)virtual_texture_barriers_begin.size(), cmd);
-
-			device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE), cmd);
-
-			ShaderMaterial materials[4];
-			material_Base.WriteShaderMaterial(&materials[0]);
-			material_Slope.WriteShaderMaterial(&materials[1]);
-			material_LowAltitude.WriteShaderMaterial(&materials[2]);
-			material_HighAltitude.WriteShaderMaterial(&materials[3]);
-			device->BindDynamicConstantBuffer(materials, 0, cmd);
-
-			for (auto& chunk : virtual_texture_updates)
-			{
-				auto it = chunks.find(chunk);
-				if (it == chunks.end())
-					continue;
-				ChunkData& chunk_data = it->second;
-
-				const GPUResource* res[] = {
-					&chunk_data.region_weights_texture,
-				};
-				device->BindResources(res, 0, arraysize(res), cmd);
-
-				MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
-				if (material != nullptr)
-				{
-					// Shrink the uvs to avoid wrap sampling across edge by object rendering shaders:
-					float virtual_texture_resolution_rcp = 1.0f / float(chunk_data.required_texture_resolution);
-					material->texMulAdd.x = float(chunk_data.required_texture_resolution - 1) * virtual_texture_resolution_rcp;
-					material->texMulAdd.y = float(chunk_data.required_texture_resolution - 1) * virtual_texture_resolution_rcp;
-					material->texMulAdd.z = 0.5f * virtual_texture_resolution_rcp;
-					material->texMulAdd.w = 0.5f * virtual_texture_resolution_rcp;
-
-					for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
-					{
-						if (virtual_texture_available[i])
-						{
-							const Texture& texture = material->textures[i].resource.GetTexture();
-
-							device->BindUAV(&texture, i, cmd);
-							device->ClearUAV(&texture, 0, cmd);
-
-							if (texture.GetDesc().mip_levels > 1)
-							{
-								wi::renderer::AddDeferredMIPGen(material->textures[i].resource.GetTexture());
-							}
-						}
-					}
-				}
-
-				device->Dispatch(chunk_data.required_texture_resolution / 8u, chunk_data.required_texture_resolution / 8u, 1, cmd);
-			}
-
-			device->Barrier(virtual_texture_barriers_end.data(), (uint32_t)virtual_texture_barriers_end.size(), cmd);
-
-			wi::renderer::ProcessDeferredMipGenRequests(cmd);
-
-			wi::profiler::EndRange(range);
-			device->EventEnd(cmd);
 		}
 
 		// Start the generation on a background thread and keep it running until the next frame
@@ -972,6 +913,67 @@ namespace wi::terrain
 		generator->cancelled.store(true); // tell the generation thread that work must be stopped
 		wi::jobsystem::Wait(generator->workload); // waits until generation thread exits
 		generator->cancelled.store(false); // the next generation can run
+	}
+
+	void Terrain::UpdateVirtualTextures(CommandList cmd) const
+	{
+		if (virtual_texture_updates.empty())
+			return;
+
+		GraphicsDevice* device = GetDevice();
+		device->EventBegin("TerrainVirtualTextureUpdate", cmd);
+		auto range = wi::profiler::BeginRangeGPU("TerrainVirtualTextureUpdate", cmd);
+		device->Barrier(virtual_texture_barriers_begin.data(), (uint32_t)virtual_texture_barriers_begin.size(), cmd);
+
+		device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE), cmd);
+
+		ShaderMaterial materials[4];
+		material_Base.WriteShaderMaterial(&materials[0]);
+		material_Slope.WriteShaderMaterial(&materials[1]);
+		material_LowAltitude.WriteShaderMaterial(&materials[2]);
+		material_HighAltitude.WriteShaderMaterial(&materials[3]);
+		device->BindDynamicConstantBuffer(materials, 0, cmd);
+
+		for (auto& chunk : virtual_texture_updates)
+		{
+			auto it = chunks.find(chunk);
+			if (it == chunks.end())
+				continue;
+			const ChunkData& chunk_data = it->second;
+
+			const GPUResource* res[] = {
+				&chunk_data.region_weights_texture,
+			};
+			device->BindResources(res, 0, arraysize(res), cmd);
+
+			const MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+			if (material != nullptr)
+			{
+				for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+				{
+					if (virtual_texture_available[i])
+					{
+						const Texture& texture = material->textures[i].resource.GetTexture();
+
+						device->BindUAV(&texture, i, cmd);
+
+						if (texture.GetDesc().mip_levels > 1)
+						{
+							wi::renderer::AddDeferredMIPGen(material->textures[i].resource.GetTexture());
+						}
+					}
+				}
+			}
+
+			device->Dispatch(chunk_data.required_texture_resolution / 8u, chunk_data.required_texture_resolution / 8u, 1, cmd);
+		}
+
+		device->Barrier(virtual_texture_barriers_end.data(), (uint32_t)virtual_texture_barriers_end.size(), cmd);
+
+		wi::renderer::ProcessDeferredMipGenRequests(cmd);
+
+		wi::profiler::EndRange(range);
+		device->EventEnd(cmd);
 	}
 
 	void Terrain::BakeVirtualTexturesToFiles()

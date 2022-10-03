@@ -4221,6 +4221,11 @@ void UpdateRenderDataAsync(
 		}
 	}
 
+	for (size_t i = 0; i < vis.scene->terrains.GetCount(); ++i)
+	{
+		vis.scene->terrains[i].UpdateVirtualTextures(cmd);
+	}
+
 	device->EventEnd(cmd);
 }
 
