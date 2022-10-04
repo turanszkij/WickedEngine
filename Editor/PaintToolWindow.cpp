@@ -500,6 +500,8 @@ void PaintToolWindow::Update(float dt)
 				uv.y = vertex_uvset[intersect.vertexID0].y * w +
 					vertex_uvset[intersect.vertexID1].y * u +
 					vertex_uvset[intersect.vertexID2].y * v;
+				uv.x = uv.x * material->texMulAdd.x + material->texMulAdd.z;
+				uv.y = uv.y * material->texMulAdd.y + material->texMulAdd.w;
 				uint2 center = XMUINT2(uint32_t(uv.x * desc.width), uint32_t(uv.y * desc.height));
 
 				if (painting)

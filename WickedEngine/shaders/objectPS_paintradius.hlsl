@@ -4,9 +4,10 @@
 #include "ShaderInterop_Renderer.h"
 
 [earlydepthstencil]
-float4 main(PixelInput PSIn) : SV_TARGET
+float4 main(PixelInput input) : SV_TARGET
 {
-	const float2 pixel = (xPaintRadUVSET == 0 ? PSIn.uvsets.xy : PSIn.uvsets.zw) * xPaintRadResolution;
+	input.uvsets.xy = mad(input.uvsets.xy, GetMaterial().texMulAdd.xy, GetMaterial().texMulAdd.zw);
+	const float2 pixel = (xPaintRadUVSET == 0 ? input.uvsets.xy : input.uvsets.zw) * xPaintRadResolution;
 
 	const float2x2 rot = float2x2(
 		cos(xPaintRadBrushRotation), -sin(xPaintRadBrushRotation),
