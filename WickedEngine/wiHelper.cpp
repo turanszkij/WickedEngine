@@ -351,6 +351,11 @@ namespace wi::helper
 			// This can be saved by reducing target channel count, no conversion needed
 			dst_channel_count = 1;
 		}
+		else if (desc.format == Format::R8G8_UNORM)
+		{
+			// This can be saved by reducing target channel count, no conversion needed
+			dst_channel_count = 2;
+		}
 		else if (IsFormatBlockCompressed(desc.format))
 		{
 			basisu::texture_format fmt;

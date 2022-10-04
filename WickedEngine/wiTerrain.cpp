@@ -1061,9 +1061,48 @@ namespace wi::terrain
 			return;
 		}
 
-		wi::jobsystem::context ctx;
-
 		static const std::string extension = "PNG";
+		wi::vector<wi::Resource> resources; // retain resources until end of function
+
+		wi::helper::messageBox("Baking terrain virtual textures to static textures, this could take a while!", "Attention!");
+
+		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+		{
+			if (virtual_textures[i].IsValid())
+			{
+				wi::vector<uint8_t> texturedata;
+				if (wi::helper::saveTextureToMemory(virtual_textures[i], texturedata))
+				{
+					wi::vector<uint8_t> filedata;
+					if (wi::helper::saveTextureToMemoryFile(texturedata, virtual_textures[i].desc, extension, filedata))
+					{
+						std::string filename = "Terrain::";
+						switch (i)
+						{
+						default:
+						case MaterialComponent::TEXTURESLOT::BASECOLORMAP:
+							filename += "BASECOLORMAP";
+							break;
+						case MaterialComponent::TEXTURESLOT::NORMALMAP:
+							filename += "NORMALMAP";
+							break;
+						case MaterialComponent::TEXTURESLOT::SURFACEMAP:
+							filename += "SURFACEMAP";
+							break;
+						}
+						filename += "." + extension;
+						resources.push_back(
+							wi::resourcemanager::Load(
+								filename,
+								wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA,
+								filedata.data(),
+								filedata.size()
+							)
+						);
+					}
+				}
+			}
+		}
 
 		for (auto it = chunks.begin(); it != chunks.end(); it++)
 		{
@@ -1074,62 +1113,26 @@ namespace wi::terrain
 			{
 				for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
 				{
-					auto& tex = material->textures[i];
-					switch (i)
+					if (virtual_textures[i].IsValid())
 					{
-					case MaterialComponent::BASECOLORMAP:
-					case MaterialComponent::SURFACEMAP:
-					case MaterialComponent::NORMALMAP:
-						if (tex.GetGPUResource() != nullptr)
+						std::string filename = "Terrain::";
+						switch (i)
 						{
-							wi::vector<uint8_t> filedata;
-							if (wi::helper::saveTextureToMemory(tex.resource.GetTexture(), filedata))
-							{
-								tex.resource.SetFileData(std::move(filedata));
-								wi::jobsystem::Execute(ctx, [i, &tex, chunk](wi::jobsystem::JobArgs args) {
-									wi::vector<uint8_t> filedata_ktx2;
-									if (wi::helper::saveTextureToMemoryFile(tex.resource.GetFileData(), tex.resource.GetTexture().desc, extension, filedata_ktx2))
-									{
-										tex.name = std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
-										switch (i)
-										{
-										case MaterialComponent::BASECOLORMAP:
-											tex.name += "_basecolormap";
-											break;
-										case MaterialComponent::SURFACEMAP:
-											tex.name += "_surfacemap";
-											break;
-										case MaterialComponent::NORMALMAP:
-											tex.name += "_normalmap";
-											break;
-										default:
-											break;
-										}
-										tex.name += "." + extension;
-										tex.resource = wi::resourcemanager::Load(tex.name, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
-									}
-									});
-							}
+						default:
+						case MaterialComponent::TEXTURESLOT::BASECOLORMAP:
+							filename += "BASECOLORMAP";
+							break;
+						case MaterialComponent::TEXTURESLOT::NORMALMAP:
+							filename += "NORMALMAP";
+							break;
+						case MaterialComponent::TEXTURESLOT::SURFACEMAP:
+							filename += "SURFACEMAP";
+							break;
 						}
-						break;
-					default:
-						break;
+						filename += "." + extension;
+						material->textures[i].name = filename;
 					}
 				}
-			}
-		}
-
-		wi::helper::messageBox("Baking terrain virtual textures to static textures, this could take a while!", "Attention!");
-
-		wi::jobsystem::Wait(ctx);
-
-		for (auto it = chunks.begin(); it != chunks.end(); it++)
-		{
-			const Chunk& chunk = it->first;
-			ChunkData& chunk_data = it->second;
-			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
-			if (material != nullptr)
-			{
 				material->CreateRenderData();
 			}
 		}
