@@ -3,6 +3,12 @@
 static const uint region_count = 4;
 Texture2D<float4> region_weights_texture : register(t0);
 
+struct VirtualTexturePush
+{
+	uint4 offset_size;
+};
+PUSHCONSTANT(push, VirtualTexturePush);
+
 struct Terrain
 {
 	ShaderMaterial materials[region_count];
@@ -32,11 +38,11 @@ groupshared float lds_a[8][8];
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID)
 {
-	const uint2 pixel = DTid.xy;
+	if (DTid.x >= push.offset_size.z || DTid.y >= push.offset_size.w)
+		return;
 
-	float2 output_dim = 0;
-	output_baseColorMap_mip0.GetDimensions(output_dim.x, output_dim.y);
-	const float2 uv = (pixel + 0.5f) / output_dim;
+	float2 output_dim = push.offset_size.zw;
+	const float2 uv = (DTid.xy + 0.5f) / output_dim;
 
 	float4 region_weights = region_weights_texture.SampleLevel(sampler_linear_clamp, uv, 0);
 
@@ -101,10 +107,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID)
 	total_surface /= weight_sum;
 	total_normal /= weight_sum;
 
+	const uint2 pixel = DTid.xy + push.offset_size.xy;
 	output_baseColorMap_mip0[pixel] = total_baseColor;
 	output_surfaceMap_mip0[pixel] = total_surface;
 	output_normalMap_mip0[pixel] = float4(total_normal, 1, 1);
 
+#if 0
 	// Mip writes:
 
 	// Basecolormap:
@@ -278,4 +286,5 @@ void main(uint3 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID)
 
 		output_surfaceMap_mip3[pixel / 8] = value;
 	}
+#endif
 }

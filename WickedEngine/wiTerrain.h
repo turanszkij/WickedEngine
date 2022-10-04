@@ -46,6 +46,95 @@ namespace wi::terrain
 	static constexpr float chunk_width_rcp = 1.0f / (chunk_width - 1);
 	static constexpr uint32_t vertexCount = chunk_width * chunk_width;
 
+	struct VirtualTextureAllocator
+	{
+		static constexpr uint32_t min_tile_constant = 8;
+		static constexpr uint32_t max_width_constant = 8192;
+		uint32_t max_tile = 0;
+		uint32_t width = 0;
+		uint32_t height = 0;
+		struct Tile
+		{
+			uint32_t x = 0;
+			uint32_t y = 0;
+			uint32_t size = 0;
+
+			constexpr bool IsValid() const { return size > 0; }
+		};
+		struct LOD
+		{
+			wi::vector<Tile> free_tiles;
+		};
+		wi::vector<LOD> lods;
+
+		void init(uint32_t max_tile)
+		{
+			max_tile = wi::math::GetNextPowerOfTwo(max_tile);
+			max_tile = std::min(max_tile, max_width_constant);
+			this->max_tile = max_tile;
+			width = 0;
+			height = 0;
+			lods.clear();
+
+			uint32_t tile_size = max_tile;
+			uint32_t tile_count = max_width_constant / (tile_size / 2);
+			uint32_t y = 0;
+			while (tile_size >= min_tile_constant)
+			{
+				LOD& lod = lods.emplace_back();
+
+				uint32_t x = 0;
+				for (uint32_t i = 0; i < tile_count; ++i)
+				{
+					if (x + tile_size > max_width_constant)
+					{
+						x = 0;
+						y += tile_size;
+					}
+					Tile tile;
+					tile.x = x;
+					tile.y = y;
+					tile.size = tile_size;
+					lod.free_tiles.push_back(tile);
+
+					width = std::max(width, tile.x + tile.size);
+					height = std::max(height, tile.y + tile.size);
+					x += tile_size;
+				}
+				y += tile_size;
+				tile_size /= 2;
+				tile_count *= 2;
+			}
+		}
+
+		LOD& get_lod(uint32_t tile_size)
+		{
+			int lod = (int)lods.size() - 1 - ((int)std::log2(tile_size) - (int)std::log2(min_tile_constant));
+			lod = std::max(0, lod);
+			lod = std::min((int)lods.size() - 1, lod);
+			return lods[lod];
+		}
+
+		Tile allocate(uint32_t tile_size)
+		{
+			LOD& lod = get_lod(tile_size);
+			if (lod.free_tiles.empty())
+				return {};
+
+			Tile tile = lod.free_tiles.back();
+			lod.free_tiles.pop_back();
+			return tile;
+		}
+
+		void free(Tile& tile)
+		{
+			if (!tile.IsValid())
+				return;
+			LOD& lod = get_lod(tile.size);
+			lod.free_tiles.push_back(tile);
+		}
+	};
+
 	struct ChunkData
 	{
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
@@ -57,9 +146,10 @@ namespace wi::terrain
 		float grass_density_current = 1;
 		wi::vector<wi::Color> region_weights;
 		wi::graphics::Texture region_weights_texture;
-		uint32_t required_texture_resolution = 0;
 		wi::primitive::Sphere sphere;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+
+		VirtualTextureAllocator::Tile vt;
 	};
 
 	struct Prop
@@ -112,14 +202,16 @@ namespace wi::terrain
 		std::shared_ptr<Generator> generator;
 		float generation_time_budget_milliseconds = 12; // after this much time, the generation thread will exit. This can help avoid a very long running, resource consuming and slow cancellation generation
 
-		// Virtual texture updates will be batched like:
-		//	1) Execute all barriers (dst: UNORDERED_ACCESS)
-		//	2) Execute all compute shaders
-		//	3) Execute all barriers (dst: SHADER_RESOURCE)
-		wi::vector<Chunk> virtual_texture_updates;
-		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_begin;
-		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_end;
-		bool virtual_texture_available[wi::scene::MaterialComponent::TEXTURESLOT_COUNT] = {};
+		VirtualTextureAllocator virtual_texture_allocator;
+		wi::graphics::Texture virtual_textures[wi::scene::MaterialComponent::TEXTURESLOT_COUNT];
+		struct VirtualTextureUpdateRequest
+		{
+			VirtualTextureAllocator::Tile vt;
+			float score = 0;
+			wi::graphics::Texture region_weights_texture;
+		};
+		mutable wi::vector<VirtualTextureUpdateRequest> virtual_texture_updates;
+		mutable bool virtual_texture_clear = false;
 
 		constexpr bool IsCenterToCamEnabled() const { return _flags & CENTER_TO_CAM; }
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }
