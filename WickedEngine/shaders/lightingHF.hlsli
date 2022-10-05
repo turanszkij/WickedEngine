@@ -53,15 +53,14 @@ inline float3 sample_shadow(float2 uv, float cmp)
 
 #ifndef DISABLE_SOFT_SHADOWMAP
 	// sample along a rectangle pattern around center:
-	const float2 shadow_texel_size = GetFrame().shadow_atlas_resolution_rcp;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(-shadow_texel_size.x, -shadow_texel_size.y), cmp).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(-shadow_texel_size.x, 0), cmp).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(-shadow_texel_size.x, shadow_texel_size.y), cmp).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(0, -shadow_texel_size.y), cmp).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(0, shadow_texel_size.y), cmp).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(shadow_texel_size.x, -shadow_texel_size.y), cmp).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(shadow_texel_size.x, 0), cmp).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv + float2(shadow_texel_size.x, shadow_texel_size.y), cmp).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, -1)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 0)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 1)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, -1)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, 1)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, -1)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 0)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 1)).r;
 	shadow = shadow.xxx / 9.0;
 #endif // DISABLE_SOFT_SHADOWMAP
 
