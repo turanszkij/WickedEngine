@@ -1320,7 +1320,6 @@ namespace dx12_internal
 		wi::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
 		wi::vector<UINT64> rowSizesInBytes;
 		wi::vector<UINT> numRows;
-		wi::vector<SubresourceData> mapped_subresources;
 
 		virtual ~Resource_DX12()
 		{
@@ -1348,6 +1347,9 @@ namespace dx12_internal
 		SingleDescriptor dsv = {};
 		wi::vector<SingleDescriptor> subresources_rtv;
 		wi::vector<SingleDescriptor> subresources_dsv;
+
+		wi::vector<SubresourceData> mapped_subresources;
+		SparseTextureProperties sparse_texture_properties;
 
 		~Texture_DX12() override
 		{
@@ -2639,10 +2641,23 @@ using namespace dx12_internal;
 		{
 			capabilities |= GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
 		}
-		if (features.TiledResourcesTier() >= D3D12_TILED_RESOURCES_TIER_2)
+		if (features.TiledResourcesTier() >= D3D12_TILED_RESOURCES_TIER_1)
 		{
-			// https://docs.microsoft.com/en-us/windows/win32/direct3d11/tiled-resources-texture-sampling-features
-			capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
+			capabilities |= GraphicsDeviceCapability::SPARSE_BUFFER;
+			capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE2D;
+
+			if (features.TiledResourcesTier() >= D3D12_TILED_RESOURCES_TIER_2)
+			{
+				capabilities |= GraphicsDeviceCapability::SPARSE_NULL_MAPPING;
+
+				// https://docs.microsoft.com/en-us/windows/win32/direct3d11/tiled-resources-texture-sampling-features
+				capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
+
+				if (features.TiledResourcesTier() >= D3D12_TILED_RESOURCES_TIER_3)
+				{
+					capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE3D;
+				}
+			}
 		}
 
 		if (features.TypedUAVLoadAdditionalFormats())
@@ -2693,6 +2708,8 @@ using namespace dx12_internal;
 			wi::helper::messageBox("DX12: Root signature version 1.1 not supported!", "Error!");
 			wi::platform::Exit();
 		}
+
+		resource_heap_tier = features.ResourceHeapTier();
 
 		// Create pipeline library:
 #if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
@@ -3155,14 +3172,50 @@ using namespace dx12_internal;
 			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 		}
 
-		hr = allocationhandler->allocator->CreateResource(
-			&allocationDesc,
-			&resourceDesc,
-			resourceState,
-			nullptr,
-			&internal_state->allocation,
-			IID_PPV_ARGS(&internal_state->resource)
-		);
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL))
+		{
+			// Sparse tile pool must not be a committed resource because that uses implicit heap which returns nullptr,
+			//	thus it cannot be offsetted. This is why we create custom allocation here which will never be committed resource
+			//	(since it has no resource)
+			D3D12_RESOURCE_ALLOCATION_INFO allocationInfo = {};
+			allocationInfo.Alignment = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+			allocationInfo.SizeInBytes = AlignTo(desc->size, D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+
+			// tile pool memory can be used for sparse buffers and textures alike (requires resource heap tier 2):
+			allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
+			assert(resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2); // todo: what should we do if tier 2 is not supported?
+
+			hr = allocationhandler->allocator->AllocateMemory(
+				&allocationDesc,
+				&allocationInfo,
+				&internal_state->allocation
+			);
+
+			assert(SUCCEEDED(hr));
+			return SUCCEEDED(hr);
+		}
+
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
+		{
+			hr = device->CreateReservedResource(
+				&resourceDesc,
+				resourceState,
+				nullptr,
+				IID_PPV_ARGS(&internal_state->resource)
+			);
+			buffer->sparse_page_size = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+		}
+		else
+		{
+			hr = allocationhandler->allocator->CreateResource(
+				&allocationDesc,
+				&resourceDesc,
+				resourceState,
+				nullptr,
+				&internal_state->allocation,
+				IID_PPV_ARGS(&internal_state->resource)
+			);
+		}
 		assert(SUCCEEDED(hr));
 
 		internal_state->gpu_address = internal_state->resource->GetGPUVirtualAddress();
@@ -3232,6 +3285,7 @@ using namespace dx12_internal;
 		texture->mapped_size = 0;
 		texture->mapped_subresources = nullptr;
 		texture->mapped_subresource_count = 0;
+		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
 
 		HRESULT hr = E_FAIL;
@@ -3358,14 +3412,53 @@ using namespace dx12_internal;
 			}
 		}
 
-		hr = allocationhandler->allocator->CreateResource(
-			&allocationDesc,
-			&resourcedesc,
-			resourceState,
-			useClearValue ? &optimizedClearValue : nullptr,
-			&internal_state->allocation,
-			IID_PPV_ARGS(&internal_state->resource)
-		);
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SPARSE))
+		{
+			resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
+			hr = device->CreateReservedResource(
+				&resourcedesc,
+				resourceState,
+				useClearValue ? &optimizedClearValue : nullptr,
+				IID_PPV_ARGS(&internal_state->resource)
+			);
+			texture->sparse_page_size = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+
+			UINT num_tiles_for_entire_resource = 0;
+			D3D12_PACKED_MIP_INFO packed_mip_info = {};
+			D3D12_TILE_SHAPE tile_shape = {};
+			UINT num_subresource_tilings = 0;
+
+			device->GetResourceTiling(
+				internal_state->resource.Get(),
+				&num_tiles_for_entire_resource,
+				&packed_mip_info,
+				&tile_shape,
+				&num_subresource_tilings,
+				0,
+				nullptr
+			);
+
+			SparseTextureProperties& sparse = internal_state->sparse_texture_properties;
+			texture->sparse_properties = &sparse;
+			sparse.tile_width = tile_shape.WidthInTexels;
+			sparse.tile_height = tile_shape.HeightInTexels;
+			sparse.tile_depth = tile_shape.DepthInTexels;
+			sparse.total_tile_count = num_tiles_for_entire_resource;
+			sparse.packed_mip_count = packed_mip_info.NumPackedMips;
+			sparse.packed_mip_tile_offset = packed_mip_info.StartTileIndexInOverallResource;
+			sparse.packed_mip_tile_count = packed_mip_info.NumTilesForPackedMips;
+		}
+		else
+		{
+			hr = allocationhandler->allocator->CreateResource(
+				&allocationDesc,
+				&resourcedesc,
+				resourceState,
+				useClearValue ? &optimizedClearValue : nullptr,
+				&internal_state->allocation,
+				IID_PPV_ARGS(&internal_state->resource)
+			);
+		}
 		assert(SUCCEEDED(hr));
 
 		if (texture->desc.usage == Usage::READBACK)
@@ -5080,6 +5173,19 @@ using namespace dx12_internal;
 	{
 		HRESULT hr;
 
+		// tile mapping waits:
+		for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+		{
+			CommandQueue& q = queues[queue];
+			if (q.tile_mapping_fence_value == 0ull)
+				continue;
+			hr = q.queue->Wait(q.tile_mapping_fence.Get(), q.tile_mapping_fence_value);
+			assert(SUCCEEDED(hr));
+			hr = q.queue->Signal(q.tile_mapping_fence.Get(), 0ull);
+			assert(SUCCEEDED(hr));
+			q.tile_mapping_fence_value = 0ull;
+		}
+
 		// Submit current frame:
 		{
 			QUEUE_TYPE submit_queue = QUEUE_COUNT;
@@ -5380,6 +5486,90 @@ using namespace dx12_internal;
 			}
 		}
 		return false;
+	}
+
+	void GraphicsDevice_DX12::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
+	{
+		CommandQueue& q = queues[queue];
+		std::scoped_lock lock(q.tile_mapping_mutex);
+
+		for (uint32_t c = 0; c < command_count; ++c)
+		{
+			const SparseUpdateCommand& command = commands[c];
+			auto internal_sparse_resource = to_internal(command.sparse_resource);
+			uint32_t mip_count = 0;
+			uint32_t array_size = 0;
+			if (command.sparse_resource->IsTexture())
+			{
+				const Texture* sparse_texture = (const Texture*)command.sparse_resource;
+				mip_count = sparse_texture->desc.mip_levels;
+				array_size = sparse_texture->desc.array_size;
+			}
+			auto internal_tile_pool = to_internal(command.tile_pool);
+			ID3D12Heap* heap = internal_tile_pool->allocation->GetHeap();
+			q.tiled_resource_coordinates.resize(command.num_resource_regions);
+			q.tiled_region_sizes.resize(command.num_resource_regions);
+			for (uint32_t i = 0; i < command.num_resource_regions; ++i)
+			{
+				const SparseResourceCoordinate& in_coordinate = command.coordinates[i];
+				const SparseRegionSize& in_size = command.sizes[i];
+				D3D12_TILED_RESOURCE_COORDINATE& out_coordinate = q.tiled_resource_coordinates[i];
+				D3D12_TILE_REGION_SIZE& out_size = q.tiled_region_sizes[i];
+				out_coordinate.X = in_coordinate.x;
+				out_coordinate.Y = in_coordinate.y;
+				out_coordinate.Z = in_coordinate.z;
+				out_coordinate.Subresource = D3D12CalcSubresource(in_coordinate.mip, in_coordinate.slice, 0, mip_count, array_size);
+				out_size.NumTiles = in_size.num_tiles;
+				out_size.UseBox = in_size.use_box;
+				out_size.Width = in_size.width;
+				out_size.Height = in_size.height;
+				out_size.Depth = in_size.depth;
+			}
+			q.tile_range_flags.resize(command.num_ranges);
+			q.range_start_offsets.resize(command.num_ranges);
+			for (uint32_t i = 0; i < command.num_ranges; ++i)
+			{
+				const TileRangeFlags& in_flags = command.range_flags[i];
+				D3D12_TILE_RANGE_FLAGS& out_flags = q.tile_range_flags[i];
+				switch (in_flags)
+				{
+				default:
+				case TileRangeFlags::None:
+					out_flags = D3D12_TILE_RANGE_FLAG_NONE;
+					break;
+				case TileRangeFlags::Null:
+					out_flags = D3D12_TILE_RANGE_FLAG_NULL;
+					break;
+				}
+				const uint32_t in_offset = command.range_start_offsets[i];
+				uint32_t& out_offset = q.range_start_offsets[i];
+				out_offset = uint32_t(internal_tile_pool->allocation->GetOffset() / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES) + in_offset;
+			}
+			D3D12_TILE_MAPPING_FLAGS flags = D3D12_TILE_MAPPING_FLAG_NONE;
+
+			q.queue->UpdateTileMappings(
+				internal_sparse_resource->resource.Get(),
+				command.num_resource_regions,
+				q.tiled_resource_coordinates.data(),
+				q.tiled_region_sizes.data(),
+				heap,
+				command.num_ranges,
+				q.tile_range_flags.data(),
+				q.range_start_offsets.data(),
+				command.range_tile_counts,
+				flags
+			);
+		}
+
+		if (q.tile_mapping_fence == nullptr)
+		{
+			HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&q.tile_mapping_fence));
+			assert(SUCCEEDED(hr));
+		}
+
+		q.tile_mapping_fence_value++;
+		HRESULT hr = q.queue->Signal(q.tile_mapping_fence.Get(), q.tile_mapping_fence_value);
+		assert(SUCCEEDED(hr));
 	}
 
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)

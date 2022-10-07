@@ -207,8 +207,6 @@ namespace wi::terrain
 
 		chunks.clear();
 
-		virtual_texture_allocator = {};
-
 		wi::vector<Entity> entities_to_remove;
 		for (size_t i = 0; i < scene->hierarchy.GetCount(); ++i)
 		{
@@ -283,7 +281,6 @@ namespace wi::terrain
 
 		if (terrainEntity == INVALID_ENTITY)
 		{
-			virtual_texture_allocator = {};
 			chunks.clear();
 			return;
 		}
@@ -342,64 +339,10 @@ namespace wi::terrain
 		virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
 
 		target_texture_resolution = wi::math::GetNextPowerOfTwo(target_texture_resolution);
-		if (virtual_texture_allocator.max_tile != target_texture_resolution)
-		{
-			virtual_texture_allocator.init(target_texture_resolution);
-			virtual_texture_clear = true;
-
-			for (auto it = chunks.begin(); it != chunks.end(); it++)
-			{
-				const Chunk& chunk = it->first;
-				ChunkData& chunk_data = it->second;
-				chunk_data.vt = {};
-			}
-
-			TextureDesc desc;
-			desc.width = (uint32_t)virtual_texture_allocator.width;
-			desc.height = (uint32_t)virtual_texture_allocator.height;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			//desc.mip_levels = 4;
-
-			for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
-			{
-				if (!virtual_texture_available[i])
-					continue;
-
-				switch (i)
-				{
-				case MaterialComponent::NORMALMAP:
-					desc.format = Format::R8G8_UNORM;
-					break;
-				default:
-					desc.format = Format::R8G8B8A8_UNORM;
-					break;
-				}
-				bool success = device->CreateTexture(&desc, nullptr, &virtual_textures[i]);
-				assert(success);
-				device->SetName(&virtual_textures[i], "Terrain::virtual_textures[i]");
-
-				if (desc.mip_levels > 1)
-				{
-					for (uint32_t mip = 0; mip < virtual_textures[i].desc.mip_levels; ++mip)
-					{
-						int subresource_index = device->CreateSubresource(&virtual_textures[i], SubresourceType::UAV, 0, 1, mip, 1);
-						assert(subresource_index == mip);
-					}
-				}
-			}
-		}
-
-		const XMUINT2 virtual_texture_resolution = XMUINT2(
-			(uint32_t)virtual_textures[0].desc.width,
-			(uint32_t)virtual_textures[0].desc.height
-			);
-		const XMFLOAT2 virtual_texture_resolution_rcp = XMFLOAT2(
-			1.0f / virtual_texture_resolution.x,
-			1.0f / virtual_texture_resolution.y
-		);
-		int virtual_texture_rendering_budget = std::max(2048, (int)target_texture_resolution);
-		virtual_texture_rendering_budget *= virtual_texture_rendering_budget; // square size
+		target_texture_resolution = std::min(16384u, target_texture_resolution);
+		target_texture_resolution = std::max(128u, target_texture_resolution);
+		const uint32_t target_texture_resolution_max_lod = (uint32_t)std::log2(target_texture_resolution);
+		const uint32_t target_texture_resolution_lod_count = target_texture_resolution_max_lod + 1;
 
 		for (auto it = chunks.begin(); it != chunks.end();)
 		{
@@ -449,7 +392,6 @@ namespace wi::terrain
 			{
 				if (dist > removal_threshold)
 				{
-					virtual_texture_allocator.free(chunk_data.vt);
 					scene->Entity_Remove(it->second.entity);
 					it = chunks.erase(it);
 					continue; // don't increment iterator
@@ -534,83 +476,165 @@ namespace wi::terrain
 			// Collect virtual texture update requests:
 			if (virtual_texture_any)
 			{
-				uint32_t required_texture_resolution = 0;
+				if (chunk_data.textures[0].desc.width != target_texture_resolution)
+				{
+					chunk_data.residentMaxLod = target_texture_resolution_lod_count;
+
+					TextureDesc desc;
+					desc.width = target_texture_resolution;
+					desc.height = target_texture_resolution;
+					desc.misc_flags = ResourceMiscFlag::SPARSE;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+					desc.mip_levels = target_texture_resolution_lod_count;
+					desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+
+					desc.format = Format::R8G8B8A8_UNORM;
+					bool success = device->CreateTexture(&desc, nullptr, &chunk_data.textures[MaterialComponent::BASECOLORMAP]);
+					assert(success);
+					success = device->CreateTexture(&desc, nullptr, &chunk_data.textures[MaterialComponent::SURFACEMAP]);
+					assert(success);
+					//desc.format = Format::R8G8_UNORM;
+					success = device->CreateTexture(&desc, nullptr, &chunk_data.textures[MaterialComponent::NORMALMAP]);
+					assert(success);
+
+					const SparseTextureProperties& sparse = *chunk_data.textures[MaterialComponent::BASECOLORMAP].sparse_properties;
+					chunk_data.mip_allocations.clear();
+					chunk_data.mip_allocations.resize(target_texture_resolution_lod_count - sparse.packed_mip_count + 1);
+
+					for (uint32_t i = 0; i < target_texture_resolution_lod_count; ++i)
+					{
+						int subresource = 0;
+						subresource = device->CreateSubresource(&chunk_data.textures[MaterialComponent::BASECOLORMAP], SubresourceType::UAV, 0, 1, i, 1);
+						assert(subresource == i);
+						subresource = device->CreateSubresource(&chunk_data.textures[MaterialComponent::SURFACEMAP], SubresourceType::UAV, 0, 1, i, 1);
+						assert(subresource == i);
+						subresource = device->CreateSubresource(&chunk_data.textures[MaterialComponent::NORMALMAP], SubresourceType::UAV, 0, 1, i, 1);
+						assert(subresource == i);
+					}
+				}
+
+				uint32_t required_lod = target_texture_resolution_max_lod;
 				float request_score = 0;
 				if (chunk_visible)
 				{
-					uint32_t texture_lod = 0;
 					const float distsq = wi::math::DistanceSquared(camera.Eye, chunk_data.sphere.center);
 					const float radius = chunk_data.sphere.radius;
 					const float radiussq = radius * radius;
 					if (distsq < radiussq)
 					{
-						texture_lod = 0;
+						required_lod = 0;
 					}
 					else
 					{
 						const float dist = std::sqrt(distsq);
 						const float dist_to_sphere = std::max(0.0f, dist - radius);
-						texture_lod = uint32_t(dist_to_sphere * texlodMultiplier);
+						required_lod = uint32_t(dist_to_sphere * texlodMultiplier);
 					}
 					request_score = distsq;
-					required_texture_resolution = uint32_t(target_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
-					required_texture_resolution = AlignTo(required_texture_resolution, 8u);
-					required_texture_resolution = std::max(VirtualTextureAllocator::min_tile_constant, required_texture_resolution);
 				}
-				else
-				{
-					required_texture_resolution = VirtualTextureAllocator::min_tile_constant;
-				}
+				required_lod = std::min(target_texture_resolution_max_lod, required_lod);
 
-				if (chunk_data.vt.size != required_texture_resolution)
+				if (chunk_data.residentMaxLod != required_lod)
 				{
-					if (required_texture_resolution > chunk_data.vt.size)
+					if (required_lod < chunk_data.residentMaxLod)
 					{
-						// upscaling continuously:
-						required_texture_resolution = std::max(VirtualTextureAllocator::min_tile_constant, chunk_data.vt.size * 2);
+						// upscaling progressively:
+						required_lod = (uint32_t)std::max(0, (int)chunk_data.residentMaxLod - 1);
 					}
+					chunk_data.residentMaxLod = required_lod;
+
+					VirtualTextureUpdateRequest& request = virtual_texture_updates.emplace_back();
+					request.lod = required_lod;
+					request.score = request_score;
+					request.region_weights_texture = chunk_data.region_weights_texture;
+
+					const uint32_t sparse_lod = std::min(required_lod, uint32_t(chunk_data.mip_allocations.size() - 1));
+					const uint32_t required_lod_resolution = target_texture_resolution >> sparse_lod;
+					const bool packed_mips = sparse_lod != required_lod;
+
+					for (size_t i = 0; i < sparse_lod; ++i)
+					{
+						chunk_data.mip_allocations[i] = {};
+					}
+
+					uint32_t required_tiles[3];
+					size_t required_size[3];
+					for (int i = 0; i < 3; ++i)
+					{
+						required_size[i] = AlignTo(required_lod_resolution * required_lod_resolution * GetFormatStride(chunk_data.textures[i].desc.format), (uint32_t)chunk_data.textures[i].sparse_page_size);
+						required_tiles[i] = uint32_t(required_size[i] / chunk_data.textures[i].sparse_page_size);
+						request.textures[i] = chunk_data.textures[i];
+					}
+
+					if (!chunk_data.mip_allocations[sparse_lod].IsValid())
+					{
+						GPUBuffer& buffer = chunk_data.mip_allocations[sparse_lod];
+						GPUBufferDesc desc;
+						desc.size =
+							required_size[0] +
+							required_size[1] +
+							required_size[2];
+						desc.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL;
+						desc.alignment = chunk_data.textures[0].sparse_page_size;
+						bool success = device->CreateBuffer(&desc, nullptr, &buffer);
+						assert(success);
+
+						SparseUpdateCommand sparse_commands[3];
+						SparseResourceCoordinate sparse_coordinate[3];
+						SparseRegionSize sparse_size[3];
+						TileRangeFlags tile_range_flags[3];
+						uint32_t tile_range_offset[3];
+						uint32_t tile_range_count[3];
+
+						uint32_t offset = 0;
+						for (int i = 0; i < 3; ++i)
+						{
+							sparse_coordinate[i].mip = sparse_lod;
+							sparse_size[i].num_tiles = required_tiles[i];
+							if (!packed_mips)
+							{
+								sparse_size[i].use_box = true;
+								sparse_size[i].width = required_lod_resolution / chunk_data.textures[i].sparse_properties->tile_width;
+								sparse_size[i].height = required_lod_resolution / chunk_data.textures[i].sparse_properties->tile_height;
+							}
+							tile_range_flags[i] = TileRangeFlags::None;
+							tile_range_offset[i] = offset;
+							tile_range_count[i] = required_tiles[i];
+							offset += tile_range_count[i];
+
+							SparseUpdateCommand& command = sparse_commands[i];
+							command.sparse_resource = &chunk_data.textures[i];
+							command.num_resource_regions = 1;
+							command.coordinates = &sparse_coordinate[i];
+							command.sizes = &sparse_size[i];
+							command.tile_pool = &chunk_data.mip_allocations[sparse_lod];
+							command.num_ranges = 1;
+							command.range_flags = &tile_range_flags[i];
+							command.range_start_offsets = &tile_range_offset[i];
+							command.range_tile_counts = &tile_range_count[i];
+						}
+						device->SparseUpdate(QUEUE_GRAPHICS, sparse_commands, arraysize(sparse_commands));
+					}
+
 
 					MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
 					if (material != nullptr)
 					{
-						VirtualTextureAllocator::Tile vt = virtual_texture_allocator.allocate(required_texture_resolution);
+						// Shrink the uvs to avoid wrap sampling across edge by object rendering shaders:
+						XMFLOAT2 virtual_texture_resolution_rcp = XMFLOAT2(
+							1.0f / required_lod_resolution,
+							1.0f / required_lod_resolution
+						);
+						material->texMulAdd.x = float(required_lod_resolution - 1) * virtual_texture_resolution_rcp.x;
+						material->texMulAdd.y = float(required_lod_resolution - 1) * virtual_texture_resolution_rcp.y;
+						material->texMulAdd.z = 0.5f * virtual_texture_resolution_rcp.x;
+						material->texMulAdd.w = 0.5f * virtual_texture_resolution_rcp.y;
 
-						if (vt.IsValid())
+						for (int i = 0; i < 3; ++i)
 						{
-							int budget_after_alloc = virtual_texture_rendering_budget - int(required_texture_resolution * required_texture_resolution);
-
-							if (budget_after_alloc >= 0 || required_texture_resolution < VirtualTextureAllocator::min_tile_constant * 2)
-							{
-								virtual_texture_allocator.free(chunk_data.vt);
-								chunk_data.vt = vt;
-
-								// Shrink the uvs to avoid wrap sampling across edge by object rendering shaders:
-								material->texMulAdd.x = float(chunk_data.vt.size - 1) * virtual_texture_resolution_rcp.x;
-								material->texMulAdd.y = float(chunk_data.vt.size - 1) * virtual_texture_resolution_rcp.y;
-								material->texMulAdd.z = float(chunk_data.vt.x + 0.5f) * virtual_texture_resolution_rcp.x;
-								material->texMulAdd.w = float(chunk_data.vt.y + 0.5f) * virtual_texture_resolution_rcp.y;
-
-								for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
-								{
-									if (virtual_textures[i].IsValid())
-									{
-										material->textures[i].resource.SetTexture(virtual_textures[i]);
-									}
-								}
-
-								VirtualTextureUpdateRequest& request = virtual_texture_updates.emplace_back();
-								request.vt = chunk_data.vt;
-								request.score = request_score;
-								request.region_weights_texture = chunk_data.region_weights_texture;
-
-								virtual_texture_rendering_budget = budget_after_alloc;
-							}
-							else
-							{
-								virtual_texture_allocator.free(vt);
-							}
+							material->textures[i].lodClamp = (float)chunk_data.residentMaxLod;
+							material->textures[i].resource.SetTexture(chunk_data.textures[i]);
 						}
-
 					}
 				}
 			}
@@ -986,44 +1010,14 @@ namespace wi::terrain
 		material_HighAltitude.WriteShaderMaterial(&materials[3]);
 		device->BindDynamicConstantBuffer(materials, 0, cmd);
 
-		GPUBarrier barriers[MaterialComponent::TEXTURESLOT_COUNT];
-		uint32_t num_barriers = 0;
-
-		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+		for (auto& request : virtual_texture_updates)
 		{
-			if (virtual_textures[i].IsValid())
+			for (int i = 0; i < 3; ++i)
 			{
-				if (virtual_textures[i].desc.mip_levels > 1)
-				{
-					device->BindUAV(&virtual_textures[i], i * 4 + 0, cmd, 0);
-					device->BindUAV(&virtual_textures[i], i * 4 + 1, cmd, 1);
-					device->BindUAV(&virtual_textures[i], i * 4 + 2, cmd, 2);
-					device->BindUAV(&virtual_textures[i], i * 4 + 3, cmd, 3);
-				}
-				else
-				{
-					device->BindUAV(&virtual_textures[i], i * 4 + 0, cmd);
-				}
-
-				barriers[num_barriers++] = GPUBarrier::Image(&virtual_textures[i], virtual_textures[i].desc.layout, ResourceState::UNORDERED_ACCESS);
+				virtual_texture_barriers.push_back(GPUBarrier::Image(&request.textures[i], request.textures[i].desc.layout, ResourceState::UNORDERED_ACCESS));
 			}
 		}
-
-		device->Barrier(barriers, num_barriers, cmd);
-
-		if (virtual_texture_clear)
-		{
-			for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
-			{
-				if (virtual_textures[i].IsValid())
-				{
-					device->ClearUAV(&virtual_textures[i], 0, cmd);
-				}
-			}
-
-			GPUBarrier memory_barrier = GPUBarrier::Memory();
-			device->Barrier(&memory_barrier, 1, cmd);
-		}
+		device->Barrier(virtual_texture_barriers.data(), (uint32_t)virtual_texture_barriers.size(), cmd);
 
 		for (auto& request : virtual_texture_updates)
 		{
@@ -1032,22 +1026,26 @@ namespace wi::terrain
 			};
 			device->BindResources(res, 0, arraysize(res), cmd);
 
-			uint4 offset_size = uint4(
-				(uint)request.vt.x, (uint)request.vt.y,
-				(uint)request.vt.size, (uint)request.vt.size
-			);
+			for (int i = 0; i < 3; ++i)
+			{
+				device->BindUAV(&request.textures[i], (uint32_t)i, cmd, (int)request.lod);
+			}
+
+			const uint32_t request_lod_resolution = target_texture_resolution >> request.lod;
+
+			uint4 offset_size = uint4(0, 0, request_lod_resolution, request_lod_resolution);
 			device->PushConstants(&offset_size, sizeof(offset_size), cmd);
 
-			device->Dispatch(request.vt.size / 8u, request.vt.size / 8u, 1, cmd);
+			device->Dispatch((offset_size.z + 7u) / 8u, (offset_size.w + 7u) / 8u, 1, cmd);
 		}
 
-		for (uint32_t i = 0; i < num_barriers; ++i)
+		for (auto& x : virtual_texture_barriers)
 		{
-			std::swap(barriers[i].image.layout_before, barriers[i].image.layout_after);
+			std::swap(x.image.layout_before, x.image.layout_after);
 		}
-		device->Barrier(barriers, num_barriers, cmd);
+		device->Barrier(virtual_texture_barriers.data(), (uint32_t)virtual_texture_barriers.size(), cmd);
 
-		virtual_texture_clear = false;
+		virtual_texture_barriers.clear();
 		virtual_texture_updates.clear();
 
 		wi::profiler::EndRange(range);
@@ -1056,90 +1054,92 @@ namespace wi::terrain
 
 	void Terrain::BakeVirtualTexturesToFiles()
 	{
-		if (terrainEntity == INVALID_ENTITY)
-		{
-			return;
-		}
+		//if (terrainEntity == INVALID_ENTITY)
+		//{
+		//	return;
+		//}
 
-		static const std::string extension = "PNG";
-		wi::vector<wi::Resource> resources; // retain resources until end of function
+		//static const std::string extension = "PNG";
+		//wi::vector<wi::Resource> resources; // retain resources until end of function
 
-		wi::helper::messageBox("Baking terrain virtual textures to static textures, this could take a while!", "Attention!");
+		//wi::helper::messageBox("Baking terrain virtual textures to static textures, this could take a while!", "Attention!");
 
-		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
-		{
-			if (virtual_textures[i].IsValid())
-			{
-				wi::vector<uint8_t> texturedata;
-				if (wi::helper::saveTextureToMemory(virtual_textures[i], texturedata))
-				{
-					wi::vector<uint8_t> filedata;
-					if (wi::helper::saveTextureToMemoryFile(texturedata, virtual_textures[i].desc, extension, filedata))
-					{
-						std::string filename = "Terrain::";
-						switch (i)
-						{
-						default:
-						case MaterialComponent::TEXTURESLOT::BASECOLORMAP:
-							filename += "BASECOLORMAP";
-							break;
-						case MaterialComponent::TEXTURESLOT::NORMALMAP:
-							filename += "NORMALMAP";
-							break;
-						case MaterialComponent::TEXTURESLOT::SURFACEMAP:
-							filename += "SURFACEMAP";
-							break;
-						}
-						filename += "." + extension;
-						resources.push_back(
-							wi::resourcemanager::Load(
-								filename,
-								wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA,
-								filedata.data(),
-								filedata.size()
-							)
-						);
-					}
-				}
-			}
-		}
+		//for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+		//{
+		//	if (virtual_textures[i].IsValid())
+		//	{
+		//		wi::vector<uint8_t> texturedata;
+		//		if (wi::helper::saveTextureToMemory(virtual_textures[i], texturedata))
+		//		{
+		//			wi::vector<uint8_t> filedata;
+		//			if (wi::helper::saveTextureToMemoryFile(texturedata, virtual_textures[i].desc, extension, filedata))
+		//			{
+		//				std::string filename = "Terrain::";
+		//				switch (i)
+		//				{
+		//				default:
+		//				case MaterialComponent::TEXTURESLOT::BASECOLORMAP:
+		//					filename += "BASECOLORMAP";
+		//					break;
+		//				case MaterialComponent::TEXTURESLOT::NORMALMAP:
+		//					filename += "NORMALMAP";
+		//					break;
+		//				case MaterialComponent::TEXTURESLOT::SURFACEMAP:
+		//					filename += "SURFACEMAP";
+		//					break;
+		//				}
+		//				filename += "." + extension;
+		//				resources.push_back(
+		//					wi::resourcemanager::Load(
+		//						filename,
+		//						wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA,
+		//						filedata.data(),
+		//						filedata.size()
+		//					)
+		//				);
+		//			}
+		//		}
+		//	}
+		//}
 
-		for (auto it = chunks.begin(); it != chunks.end(); it++)
-		{
-			const Chunk& chunk = it->first;
-			ChunkData& chunk_data = it->second;
-			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
-			if (material != nullptr)
-			{
-				for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
-				{
-					if (virtual_textures[i].IsValid())
-					{
-						std::string filename = "Terrain::";
-						switch (i)
-						{
-						default:
-						case MaterialComponent::TEXTURESLOT::BASECOLORMAP:
-							filename += "BASECOLORMAP";
-							break;
-						case MaterialComponent::TEXTURESLOT::NORMALMAP:
-							filename += "NORMALMAP";
-							break;
-						case MaterialComponent::TEXTURESLOT::SURFACEMAP:
-							filename += "SURFACEMAP";
-							break;
-						}
-						filename += "." + extension;
-						material->textures[i].name = filename;
-					}
-				}
-				material->CreateRenderData();
-			}
-		}
+		//for (auto it = chunks.begin(); it != chunks.end(); it++)
+		//{
+		//	const Chunk& chunk = it->first;
+		//	ChunkData& chunk_data = it->second;
+		//	MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+		//	if (material != nullptr)
+		//	{
+		//		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+		//		{
+		//			if (virtual_textures[i].IsValid())
+		//			{
+		//				std::string filename = "Terrain::";
+		//				switch (i)
+		//				{
+		//				default:
+		//				case MaterialComponent::TEXTURESLOT::BASECOLORMAP:
+		//					filename += "BASECOLORMAP";
+		//					break;
+		//				case MaterialComponent::TEXTURESLOT::NORMALMAP:
+		//					filename += "NORMALMAP";
+		//					break;
+		//				case MaterialComponent::TEXTURESLOT::SURFACEMAP:
+		//					filename += "SURFACEMAP";
+		//					break;
+		//				}
+		//				filename += "." + extension;
+		//				material->textures[i].name = filename;
+		//			}
+		//		}
+		//		material->CreateRenderData();
+		//	}
+		//}
 	}
 
 	void Terrain::CreateChunkRegionTexture(ChunkData& chunk_data)
 	{
+		GraphicsDevice* device = GetDevice();
+
 		TextureDesc desc;
 		desc.width = (uint32_t)chunk_width;
 		desc.height = (uint32_t)chunk_width;
@@ -1148,7 +1148,7 @@ namespace wi::terrain
 		SubresourceData data;
 		data.data_ptr = chunk_data.region_weights.data();
 		data.row_pitch = chunk_width * sizeof(chunk_data.region_weights[0]);
-		bool success = GetDevice()->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
+		bool success = device->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
 		assert(success);
 	}
 

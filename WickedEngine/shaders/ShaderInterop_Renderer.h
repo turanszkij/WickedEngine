@@ -136,6 +136,11 @@ struct ShaderMaterial
 
 	uint4		userdata;
 
+	float		lodClamp_baseColorMap;
+	float		lodClamp_normalMap;
+	float		lodClamp_surfaceMap;
+	float		padding;
+
 	void init()
 	{
 		baseColor = float4(1, 1, 1, 1);
@@ -199,6 +204,10 @@ struct ShaderMaterial
 		shaderType = 0;
 
 		userdata = uint4(0, 0, 0, 0);
+
+		lodClamp_baseColorMap = 0;
+		lodClamp_normalMap = 0;
+		lodClamp_surfaceMap = 0;
 	}
 
 #ifndef __cplusplus

@@ -355,6 +355,8 @@ namespace wi::graphics
 		RAY_TRACING = 1 << 4,
 		PREDICATION = 1 << 5,
 		TRANSIENT_ATTACHMENT = 1 << 6,	// hint: used in renderpass, without needing to write content to memory (VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
+		SPARSE = 1 << 7,	// sparse resource without backing memory allocation
+		SPARSE_TILE_POOL = 1 << 8,	// buffer only, makes it suitable for containing tile memory for sparse resources
 	};
 
 	enum class GraphicsDeviceCapability
@@ -373,6 +375,10 @@ namespace wi::graphics
 		PREDICATION = 1 << 10,
 		SAMPLER_MINMAX = 1 << 11,
 		DEPTH_BOUNDS_TEST = 1 << 12,
+		SPARSE_BUFFER = 1 << 13,
+		SPARSE_TEXTURE2D = 1 << 14,
+		SPARSE_TEXTURE3D = 1 << 15,
+		SPARSE_NULL_MAPPING = 1 << 16,
 	};
 
 	enum class ResourceState
@@ -545,6 +551,7 @@ namespace wi::graphics
 		ResourceMiscFlag misc_flags = ResourceMiscFlag::NONE;
 		uint32_t stride = 0; // only needed for structured buffer types!
 		Format format = Format::UNKNOWN; // only needed for typed buffer!
+		uint64_t alignment = 0; // needed for tile pools
 	};
 
 	struct GPUQueryHeapDesc
@@ -686,6 +693,17 @@ namespace wi::graphics
 		int32_t bottom = 0;
 	};
 
+	struct SparseTextureProperties
+	{
+		uint32_t tile_width = 0;				// width of 1 tile in texels
+		uint32_t tile_height = 0;				// height of 1 tile in texels
+		uint32_t tile_depth = 0;				// depth of 1 tile in texels
+		uint32_t total_tile_count = 0;			// tiles for entire resource
+		uint32_t packed_mip_count = 0;			// number of packed mipmap levels, these cannot be individually mapped and they cannot use a box mapping
+		uint32_t packed_mip_tile_offset = 0;	// offset of the tiles for packed mip data relative to the entire resource
+		uint32_t packed_mip_tile_count = 0;		// how many tiles are required for the packed mipmaps
+	};
+
 
 	// Resources:
 
@@ -725,6 +743,8 @@ namespace wi::graphics
 		// These are only valid if the resource was created with CPU access (USAGE::UPLOAD or USAGE::READBACK)
 		void* mapped_data = nullptr;	// for buffers, it is a pointer to the buffer data; for textures, it is a pointer to texture data with linear tiling;
 		size_t mapped_size = 0;			// for buffers, it is the full buffer size; for textures it is the full texture size including all subresources;
+
+		size_t sparse_page_size = 0ull;	// specifies the required alignment of backing allocation for sparse tile pool
 	};
 
 	struct GPUBuffer : public GPUResource
@@ -741,6 +761,9 @@ namespace wi::graphics
 		// These are only valid if the texture was created with CPU access (USAGE::UPLOAD or USAGE::READBACK)
 		const SubresourceData* mapped_subresources = nullptr;	// an array of subresource mappings in the following memory layout: slice0|mip0, slice0|mip1, slice0|mip2, ... sliceN|mipN
 		size_t mapped_subresource_count = 0;					// the array size of mapped_subresources (number of slices * number of miplevels)
+
+		// These are only valid if texture was created with ResourceMiscFlag::SPARSE flag:
+		const SparseTextureProperties* sparse_properties = nullptr;
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
 	};
@@ -1065,6 +1088,45 @@ namespace wi::graphics
 		uint32_t width = 1;
 		uint32_t height = 1;
 		uint32_t depth = 1;
+	};
+
+	struct SparseResourceCoordinate
+	{
+		uint32_t x = 0;		// tile offset of texture resource in width
+		uint32_t y = 0;		// tile offset of texture resource in height
+		uint32_t z = 0;		// tile offset of texture resource in depth
+		uint32_t mip = 0;	// mip level of texture resource
+		uint32_t slice = 0;	// array slice of texture resource
+	};
+	struct SparseRegionSize
+	{
+		uint32_t num_tiles = 0;	// total number of tiles to be mapped
+
+		// if use_box is true, then width,height,depth are used;
+		//	otherwise the mapping is linear and simply num_tiles amount of tiles will be mapped.
+		//	- Must be false for mapping packed mip tail region!
+		//	- if use_box is true, then num_tiles must be equal to width * height * depth
+		bool use_box = false;
+		uint32_t width = 1;		// number of tiles to be mapped in X dimension
+		uint32_t height = 1;	// number of tiles to be mapped in Y dimension
+		uint32_t depth = 1;		// number of tiles to be mapped in Z dimension
+	};
+	enum class TileRangeFlags
+	{
+		None = 0,		// map page to tile memory
+		Null = 1 << 0,	// set page to null
+	};
+	struct SparseUpdateCommand
+	{
+		const GPUResource* sparse_resource = nullptr;			// the resource to do sparse mapping for (this requires resource to be created with ResourceMisc::SPARSE)
+		uint32_t num_resource_regions = 0;						// number of: coordinates, sizes
+		const SparseResourceCoordinate* coordinates = nullptr;	// mapping coordinates within sparse resource (num_resource_regions array size)
+		const SparseRegionSize* sizes = nullptr;				// mapping sizes within sparse resource (num_resource_regions array size)
+		const GPUBuffer* tile_pool = nullptr;					// this buffer must have been created with ResourceMisc::TILE_POOL
+		uint32_t num_ranges = 0;								// number of: range_flags, range_start_offsets, range_tile_counts
+		const TileRangeFlags* range_flags = nullptr;			// flags (num_ranges array size)
+		const uint32_t* range_start_offsets = nullptr;			// offset within tile pool (in pages) (num_ranges array size)
+		const uint32_t* range_tile_counts = nullptr;			// number of tiles to be mapped (num_ranges array size)
 	};
 
 

@@ -103,6 +103,20 @@ namespace wi::graphics
 			wi::vector<uint64_t> submit_signalValues;
 			wi::vector<VkCommandBuffer> submit_cmds;
 
+			std::mutex sparse_mutex;
+			VkSemaphore sparse_semaphore = VK_NULL_HANDLE;
+			uint64_t sparse_semaphore_value = 0ull;
+			wi::vector<VkBindSparseInfo> sparse_infos;
+			struct DataPerBind
+			{
+				wi::vector<VkSparseBufferMemoryBindInfo> buffer_bind_infos;
+				wi::vector<VkSparseImageOpaqueMemoryBindInfo> image_opaque_bind_infos;
+				wi::vector<VkSparseImageMemoryBindInfo> image_bind_infos;
+				wi::vector<VkSparseMemoryBind> memory_binds;
+				wi::vector<VkSparseImageMemoryBind> image_memory_binds;
+			};
+			wi::vector<DataPerBind> sparse_binds;
+
 			void submit(GraphicsDevice_Vulkan* device, VkFence fence);
 
 		} queues[QUEUE_COUNT];
@@ -358,7 +372,9 @@ namespace wi::graphics
 			return retval;
 		}
 
-		uint32_t GetMaxViewportCount() const { return properties2.properties.limits.maxViewports; };
+		uint32_t GetMaxViewportCount() const override { return properties2.properties.limits.maxViewports; };
+
+		void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) override;
 
 		///////////////Thread-sensitive////////////////////////
 
@@ -538,6 +554,7 @@ namespace wi::graphics
 			BindlessDescriptorHeap bindlessSamplers;
 			BindlessDescriptorHeap bindlessAccelerationStructures;
 
+			std::deque<std::pair<VmaAllocation, uint64_t>> destroyer_allocations;
 			std::deque<std::pair<std::pair<VkImage, VmaAllocation>, uint64_t>> destroyer_images;
 			std::deque<std::pair<VkImageView, uint64_t>> destroyer_imageviews;
 			std::deque<std::pair<std::pair<VkBuffer, VmaAllocation>, uint64_t>> destroyer_buffers;
@@ -584,6 +601,19 @@ namespace wi::graphics
 			{
 				destroylocker.lock();
 				framecount = FRAMECOUNT;
+				while (!destroyer_allocations.empty())
+				{
+					if (destroyer_allocations.front().second + BUFFERCOUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_allocations.front();
+						destroyer_allocations.pop_front();
+						vmaFreeMemory(allocator, item.first);
+					}
+					else
+					{
+						break;
+					}
+				}
 				while (!destroyer_images.empty())
 				{
 					if (destroyer_images.front().second + BUFFERCOUNT < FRAMECOUNT)

@@ -204,6 +204,7 @@ namespace wi::scene
 		{
 			std::string name;
 			uint32_t uvset = 0;
+			float lodClamp = 0;
 			wi::Resource resource;
 			const wi::graphics::GPUResource* GetGPUResource() const
 			{

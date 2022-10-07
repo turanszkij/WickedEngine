@@ -55,6 +55,7 @@ namespace wi::graphics
 		uint32_t dsv_descriptor_size = 0;
 		uint32_t resource_descriptor_size = 0;
 		uint32_t sampler_descriptor_size = 0;
+		D3D12_RESOURCE_HEAP_TIER resource_heap_tier = {};
 
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> nulldescriptorheap_cbv_srv_uav;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> nulldescriptorheap_sampler;
@@ -69,6 +70,14 @@ namespace wi::graphics
 			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 			wi::vector<ID3D12CommandList*> submit_cmds;
+
+			std::mutex tile_mapping_mutex;
+			Microsoft::WRL::ComPtr<ID3D12Fence> tile_mapping_fence;
+			uint64_t tile_mapping_fence_value = 0ull;
+			wi::vector<D3D12_TILED_RESOURCE_COORDINATE> tiled_resource_coordinates;
+			wi::vector<D3D12_TILE_REGION_SIZE> tiled_region_sizes;
+			wi::vector<D3D12_TILE_RANGE_FLAGS> tile_range_flags;
+			wi::vector<uint32_t> range_start_offsets;
 		} queues[QUEUE_COUNT];
 
 		struct CopyAllocator
@@ -265,7 +274,9 @@ namespace wi::graphics
 			return retval;
 		}
 
-		uint32_t GetMaxViewportCount() const { return D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE; };
+		uint32_t GetMaxViewportCount() const override { return D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE; };
+
+		void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) override;
 
 		///////////////Thread-sensitive////////////////////////
 

@@ -274,6 +274,9 @@ namespace wi::scene
 		material.transmission = transmission;
 		material.shaderType = (uint)shaderType;
 		material.userdata = userdata;
+		material.lodClamp_baseColorMap = textures[BASECOLORMAP].lodClamp;
+		material.lodClamp_normalMap = textures[NORMALMAP].lodClamp;
+		material.lodClamp_surfaceMap = textures[SURFACEMAP].lodClamp;
 
 		material.options = 0;
 		if (IsUsingVertexColors())

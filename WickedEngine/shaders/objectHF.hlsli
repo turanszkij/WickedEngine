@@ -335,7 +335,7 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 	if (GetMaterial().normalMapStrength > 0 && GetMaterial().uvset_normalMap >= 0)
 	{
 		const float2 UV_normalMap = GetMaterial().uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
-		float3 normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap).rg, 1);
+		float3 normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap, 0, GetMaterial().lodClamp_normalMap).rg, 1);
 		bumpColor = normalMap.rgb * 2 - 1;
 		N = normalize(lerp(N, mul(bumpColor, TBN), GetMaterial().normalMapStrength));
 		bumpColor *= GetMaterial().normalMapStrength;
@@ -1117,7 +1117,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
 	{
 		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-		float4 baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap);
+		float4 baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap, 0, GetMaterial().lodClamp_baseColorMap);
 		baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
 		color *= baseColorMap;
 	}
@@ -1154,7 +1154,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	if (GetMaterial().uvset_surfaceMap >= 0)
 	{
 		const float2 UV_surfaceMap = GetMaterial().uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
-		surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap);
+		surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap, 0, GetMaterial().lodClamp_surfaceMap);
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
