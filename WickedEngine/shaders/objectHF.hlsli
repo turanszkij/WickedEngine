@@ -1441,7 +1441,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_POSITION3D
 
 
-	color = max(0, color);
+	color = clamp(color, 0, 65000);
 
 
 	// end point:

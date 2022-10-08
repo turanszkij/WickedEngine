@@ -114,7 +114,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	ApplyFog(surface.hit_depth, GetCamera().position, surface.V, color);
 
-	color = max(0, color);
+	color = clamp(color, 0, 65000);
 
 	output[pixel] = float4(color.rgb, 1);
 
