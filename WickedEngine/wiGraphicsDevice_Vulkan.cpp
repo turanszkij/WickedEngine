@@ -6807,6 +6807,7 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
 	{
 		CommandQueue& q = queues[queue];
+		assert(q.sparse_binding_supported);
 		std::scoped_lock lock(q.sparse_mutex);
 
 		q.sparse_infos.resize(command_count);
