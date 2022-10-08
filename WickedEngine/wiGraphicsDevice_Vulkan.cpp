@@ -2748,6 +2748,10 @@ using namespace vulkan_internal;
 				if (graphicsFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 				{
 					graphicsFamily = familyIndex;
+					if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
+					{
+						queues[QUEUE_GRAPHICS].sparse_binding_supported = true;
+					}
 				}
 
 				if (copyFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
@@ -2771,15 +2775,22 @@ using namespace vulkan_internal;
 					queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT &&
 					!(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
 					!(queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
-					) {
+					)
+				{
 					copyFamily = familyIndex;
 				}
 
 				if (queueFamily.queueCount > 0 &&
 					queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT &&
 					!(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-					) {
+					)
+				{
 					computeFamily = familyIndex;
+
+					if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
+					{
+						queues[QUEUE_COMPUTE].sparse_binding_supported = true;
+					}
 				}
 
 				familyIndex++;
@@ -2818,14 +2829,14 @@ using namespace vulkan_internal;
 			}
 
 			volkLoadDevice(device);
-
-			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
-			vkGetDeviceQueue(device, computeFamily, 0, &computeQueue);
-			vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
 		}
 
 		// queues:
 		{
+			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
+			vkGetDeviceQueue(device, computeFamily, 0, &computeQueue);
+			vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
+
 			queues[QUEUE_GRAPHICS].queue = graphicsQueue;
 			queues[QUEUE_COMPUTE].queue = computeQueue;
 

@@ -103,6 +103,7 @@ namespace wi::graphics
 			wi::vector<uint64_t> submit_signalValues;
 			wi::vector<VkCommandBuffer> submit_cmds;
 
+			bool sparse_binding_supported = false;
 			std::mutex sparse_mutex;
 			VkSemaphore sparse_semaphore = VK_NULL_HANDLE;
 			uint64_t sparse_semaphore_value = 0ull;
