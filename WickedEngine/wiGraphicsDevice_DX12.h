@@ -73,6 +73,7 @@ namespace wi::graphics
 
 			std::mutex tile_mapping_mutex;
 			Microsoft::WRL::ComPtr<ID3D12Fence> tile_mapping_fence;
+			bool tile_mapping_dirty = false;
 			uint64_t tile_mapping_fence_value = 0ull;
 			wi::vector<D3D12_TILED_RESOURCE_COORDINATE> tiled_resource_coordinates;
 			wi::vector<D3D12_TILE_REGION_SIZE> tiled_region_sizes;

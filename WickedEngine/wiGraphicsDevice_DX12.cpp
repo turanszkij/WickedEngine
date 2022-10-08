@@ -3444,6 +3444,7 @@ using namespace dx12_internal;
 			sparse.tile_height = tile_shape.HeightInTexels;
 			sparse.tile_depth = tile_shape.DepthInTexels;
 			sparse.total_tile_count = num_tiles_for_entire_resource;
+			sparse.packed_mip_start = packed_mip_info.NumStandardMips;
 			sparse.packed_mip_count = packed_mip_info.NumPackedMips;
 			sparse.packed_mip_tile_offset = packed_mip_info.StartTileIndexInOverallResource;
 			sparse.packed_mip_tile_count = packed_mip_info.NumTilesForPackedMips;
@@ -5173,19 +5174,6 @@ using namespace dx12_internal;
 	{
 		HRESULT hr;
 
-		// tile mapping waits:
-		for (int queue = 0; queue < QUEUE_COUNT; ++queue)
-		{
-			CommandQueue& q = queues[queue];
-			if (q.tile_mapping_fence_value == 0ull)
-				continue;
-			hr = q.queue->Wait(q.tile_mapping_fence.Get(), q.tile_mapping_fence_value);
-			assert(SUCCEEDED(hr));
-			hr = q.queue->Signal(q.tile_mapping_fence.Get(), 0ull);
-			assert(SUCCEEDED(hr));
-			q.tile_mapping_fence_value = 0ull;
-		}
-
 		// Submit current frame:
 		{
 			QUEUE_TYPE submit_queue = QUEUE_COUNT;
@@ -5204,6 +5192,14 @@ using namespace dx12_internal;
 				}
 				if (commandlist.queue != submit_queue || !commandlist.waits.empty()) // new queue type or wait breaks submit batch
 				{
+					// tile mapping waits if needed:
+					if (queues[submit_queue].tile_mapping_dirty)
+					{
+						queues[submit_queue].tile_mapping_dirty = false;
+						hr = queues[submit_queue].queue->Wait(queues[submit_queue].tile_mapping_fence.Get(), queues[submit_queue].tile_mapping_fence_value);
+						assert(SUCCEEDED(hr));
+					}
+
 					// submit previous cmd batch:
 					if (!queues[submit_queue].submit_cmds.empty())
 					{
@@ -5255,13 +5251,24 @@ using namespace dx12_internal;
 			}
 
 			// submit last cmd batch:
-			assert(submit_queue < QUEUE_COUNT);
-			assert(!queues[submit_queue].submit_cmds.empty());
-			queues[submit_queue].queue->ExecuteCommandLists(
-				(UINT)queues[submit_queue].submit_cmds.size(),
-				queues[submit_queue].submit_cmds.data()
-			);
-			queues[submit_queue].submit_cmds.clear();
+			{
+				assert(submit_queue < QUEUE_COUNT);
+				assert(!queues[submit_queue].submit_cmds.empty());
+
+				// tile mapping waits if needed:
+				if (queues[submit_queue].tile_mapping_dirty)
+				{
+					queues[submit_queue].tile_mapping_dirty = false;
+					hr = queues[submit_queue].queue->Wait(queues[submit_queue].tile_mapping_fence.Get(), queues[submit_queue].tile_mapping_fence_value);
+					assert(SUCCEEDED(hr));
+				}
+
+				queues[submit_queue].queue->ExecuteCommandLists(
+					(UINT)queues[submit_queue].submit_cmds.size(),
+					queues[submit_queue].submit_cmds.data()
+				);
+				queues[submit_queue].submit_cmds.clear();
+			}
 
 			// Mark the completion of queues for this frame:
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
@@ -5492,6 +5499,7 @@ using namespace dx12_internal;
 	{
 		CommandQueue& q = queues[queue];
 		std::scoped_lock lock(q.tile_mapping_mutex);
+		q.tile_mapping_dirty = true;
 
 		for (uint32_t c = 0; c < command_count; ++c)
 		{
@@ -5545,7 +5553,6 @@ using namespace dx12_internal;
 				uint32_t& out_offset = q.range_start_offsets[i];
 				out_offset = uint32_t(internal_tile_pool->allocation->GetOffset() / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES) + in_offset;
 			}
-			D3D12_TILE_MAPPING_FLAGS flags = D3D12_TILE_MAPPING_FLAG_NONE;
 
 			q.queue->UpdateTileMappings(
 				internal_sparse_resource->resource.Get(),
@@ -5557,7 +5564,7 @@ using namespace dx12_internal;
 				q.tile_range_flags.data(),
 				q.range_start_offsets.data(),
 				command.range_tile_counts,
-				flags
+				D3D12_TILE_MAPPING_FLAG_NONE
 			);
 		}
 
@@ -5570,6 +5577,14 @@ using namespace dx12_internal;
 		q.tile_mapping_fence_value++;
 		HRESULT hr = q.queue->Signal(q.tile_mapping_fence.Get(), q.tile_mapping_fence_value);
 		assert(SUCCEEDED(hr));
+
+#if 0 // debug immediate wait by CPU
+		hr = q.tile_mapping_fence->SetEventOnCompletion(q.tile_mapping_fence_value, nullptr);
+		assert(SUCCEEDED(hr));
+		hr = q.tile_mapping_fence->Signal(0);
+		assert(SUCCEEDED(hr));
+		q.tile_mapping_fence_value = 0;
+#endif
 	}
 
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)

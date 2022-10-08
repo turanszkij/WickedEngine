@@ -1286,12 +1286,12 @@ using namespace vulkan_internal;
 
 	void GraphicsDevice_Vulkan::CommandQueue::submit(GraphicsDevice_Vulkan* device, VkFence fence)
 	{
-		if (sparse_semaphore != VK_NULL_HANDLE && sparse_semaphore_value > 0)
+		if (sparse_semaphore != VK_NULL_HANDLE && sparse_dirty)
 		{
+			sparse_dirty = false;
 			submit_waitSemaphores.push_back(sparse_semaphore);
 			submit_waitValues.push_back(sparse_semaphore_value);
 			submit_waitStages.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-			sparse_semaphore_value = 0ull;
 		}
 
 		VkSubmitInfo submitInfo = {};
@@ -3943,6 +3943,7 @@ using namespace vulkan_internal;
 					out_sparse.tile_width = in_sparse.formatProperties.imageGranularity.width;
 					out_sparse.tile_height = in_sparse.formatProperties.imageGranularity.height;
 					out_sparse.tile_depth = in_sparse.formatProperties.imageGranularity.depth;
+					out_sparse.packed_mip_start = in_sparse.imageMipTailFirstLod;
 					out_sparse.packed_mip_count = texture->desc.mip_levels - in_sparse.imageMipTailFirstLod;
 					out_sparse.packed_mip_tile_offset = uint32_t(in_sparse.imageMipTailOffset / memory_requirements.alignment);
 					out_sparse.packed_mip_tile_count = uint32_t(in_sparse.imageMipTailSize / memory_requirements.alignment);
@@ -6809,6 +6810,7 @@ using namespace vulkan_internal;
 		CommandQueue& q = queues[queue];
 		assert(q.sparse_binding_supported);
 		std::scoped_lock lock(q.sparse_mutex);
+		q.sparse_dirty = true;
 
 		q.sparse_infos.resize(command_count);
 		q.sparse_binds.resize(command_count);

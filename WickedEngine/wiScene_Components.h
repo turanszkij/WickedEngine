@@ -327,6 +327,7 @@ namespace wi::scene
 			_DEPRECATED_DIRTY_MORPH = 1 << 4,
 			_DEPRECATED_DIRTY_BINDLESS = 1 << 5,
 			TLAS_FORCE_DOUBLE_SIDED = 1 << 6,
+			DOUBLE_SIDED_SHADOW = 1 << 7,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -411,10 +412,12 @@ namespace wi::scene
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
+		inline void SetDoubleSidedShadow(bool value) { if (value) { _flags |= DOUBLE_SIDED_SHADOW; } else { _flags &= ~DOUBLE_SIDED; } }
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
+		inline bool IsDoubleSidedShadow() const { return _flags & DOUBLE_SIDED_SHADOW; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }

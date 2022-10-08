@@ -699,6 +699,7 @@ namespace wi::graphics
 		uint32_t tile_height = 0;				// height of 1 tile in texels
 		uint32_t tile_depth = 0;				// depth of 1 tile in texels
 		uint32_t total_tile_count = 0;			// tiles for entire resource
+		uint32_t packed_mip_start = 0;			// first mip of packed mipmap levels, these cannot be individually mapped and they cannot use a box mapping
 		uint32_t packed_mip_count = 0;			// number of packed mipmap levels, these cannot be individually mapped and they cannot use a box mapping
 		uint32_t packed_mip_tile_offset = 0;	// offset of the tiles for packed mip data relative to the entire resource
 		uint32_t packed_mip_tile_count = 0;		// how many tiles are required for the packed mipmaps

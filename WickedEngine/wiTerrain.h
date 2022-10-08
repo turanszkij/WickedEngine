@@ -46,6 +46,98 @@ namespace wi::terrain
 	static constexpr float chunk_width_rcp = 1.0f / (chunk_width - 1);
 	static constexpr uint32_t vertexCount = chunk_width * chunk_width;
 
+	struct GPUPageAllocator
+	{
+		wi::graphics::GPUBuffer buffer;
+
+		struct Page
+		{
+			uint16_t index = 0xFFFF;
+			constexpr bool IsValid() const { return index < 0xFFFF; }
+		};
+		wi::vector<Page> pages;
+
+		void init(size_t budget, size_t page_size);
+		Page allocate();
+		void free(Page page);
+	};
+	struct VirtualTexture
+	{
+		wi::graphics::Texture texture;
+		wi::graphics::Texture residencyMap;
+		wi::graphics::Texture feedbackMap;
+
+		void init(const wi::graphics::TextureDesc& desc);
+
+		struct LOD
+		{
+			uint32_t width = 0;
+			uint32_t height = 0;
+			struct Tile
+			{
+				uint8_t x = 0;
+				uint8_t y = 0;
+				GPUPageAllocator::Page page;
+			};
+			wi::vector<Tile> tiles;
+			wi::vector<uint8_t> tile_residency;
+
+			bool is_fully_resident() const
+			{
+				for (auto& tile : tiles)
+				{
+					if (!tile.page.IsValid())
+						return false;
+				}
+				return true;
+			}
+			void free(GPUPageAllocator& page_allocator)
+			{
+				for (auto& tile : tiles)
+				{
+					page_allocator.free(tile.page);
+					tile.page = {};
+				}
+			}
+			Tile allocate_missing_tile(GPUPageAllocator& allocator)
+			{
+				for (auto& tile : tiles)
+				{
+					if (tile.page.IsValid())
+						continue;
+					tile.page = allocator.allocate();
+					return tile;
+				}
+				return {};
+			}
+		};
+		wi::vector<LOD> lods;
+		uint32_t residentMaxLod = ~0u;
+
+		void free(GPUPageAllocator& page_allocator)
+		{
+			for (auto& lod : lods)
+			{
+				lod.free(page_allocator);
+			}
+		}
+	};
+	struct SparseUpdateBatcher
+	{
+		wi::vector<wi::graphics::SparseUpdateCommand> commands;
+		struct CommandArrays
+		{
+			wi::vector<wi::graphics::SparseResourceCoordinate> sparse_coordinate;
+			wi::vector<wi::graphics::SparseRegionSize> sparse_size;
+			wi::vector<wi::graphics::TileRangeFlags> tile_range_flags;
+			wi::vector<uint32_t> tile_range_offset;
+			wi::vector<uint32_t> tile_range_count;
+		};
+		wi::vector<CommandArrays> command_arrays;
+
+		void Flush(wi::graphics::QUEUE_TYPE queue);
+	};
+
 	struct ChunkData
 	{
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
@@ -60,9 +152,7 @@ namespace wi::terrain
 		wi::primitive::Sphere sphere;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 
-		wi::graphics::Texture textures[3];
-		uint32_t residentMaxLod = ~0u;
-		wi::vector<wi::graphics::GPUBuffer> mip_allocations;
+		VirtualTexture vt[3];
 	};
 
 	struct Prop
@@ -118,12 +208,17 @@ namespace wi::terrain
 		struct VirtualTextureUpdateRequest
 		{
 			float score = 0;
-			wi::graphics::Texture region_weights_texture;
-			wi::graphics::Texture textures[3];
 			uint32_t lod = 0;
+			uint32_t tile_x = 0;
+			uint32_t tile_y = 0;
+			uint32_t map_type = 0;
+			wi::graphics::Texture texturemap;
+			wi::graphics::Texture region_weights_texture;
 		};
 		mutable wi::vector<VirtualTextureUpdateRequest> virtual_texture_updates;
 		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers;
+		GPUPageAllocator page_allocator;
+		SparseUpdateBatcher sparse_batcher;
 
 		constexpr bool IsCenterToCamEnabled() const { return _flags & CENTER_TO_CAM; }
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }

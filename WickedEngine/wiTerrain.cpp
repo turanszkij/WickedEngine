@@ -172,6 +172,98 @@ namespace wi::terrain
 		std::atomic_bool cancelled{ false };
 	};
 
+	void GPUPageAllocator::init(size_t budget, size_t page_size)
+	{
+		GraphicsDevice* device = GetDevice();
+		GPUBufferDesc desc;
+		desc.alignment = page_size;
+		desc.size = AlignTo(budget, page_size);
+		desc.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL;
+		bool success = device->CreateBuffer(&desc, nullptr, &buffer);
+		assert(success);
+		device->SetName(&buffer, "PageAllocator");
+
+		uint32_t page_count = uint32_t(desc.size / page_size);
+		pages.reserve(page_count);
+		for (uint32_t i = 0; i < page_count; ++i)
+		{
+			Page page;
+			page.index = i;
+			pages.push_back(page);
+		}
+	}
+	GPUPageAllocator::Page GPUPageAllocator::allocate()
+	{
+		if (pages.empty())
+			return {};
+		Page page = pages.back();
+		pages.pop_back();
+		return page;
+	}
+	void GPUPageAllocator::free(Page page)
+	{
+		if (!page.IsValid())
+			return;
+		pages.push_back(page);
+	}
+
+	void VirtualTexture::init(const wi::graphics::TextureDesc& desc)
+	{
+		GraphicsDevice* device = GetDevice();
+		bool success = device->CreateTexture(&desc, nullptr, &texture);
+		assert(success);
+
+		uint32_t width = texture.desc.width / texture.sparse_properties->tile_width;
+		uint32_t height = texture.desc.height / texture.sparse_properties->tile_height;
+		uint32_t mips = texture.desc.mip_levels - texture.sparse_properties->packed_mip_count + 1;
+
+		TextureDesc td;
+		td.width = width;
+		td.height = height;
+		td.format = Format::R8_UINT;
+		td.bind_flags = BindFlag::SHADER_RESOURCE;
+		success = device->CreateTexture(&td, nullptr, &residencyMap);
+		assert(success);
+		device->SetName(&residencyMap, "VirtualTexture::residencyMap");
+
+		td.bind_flags = BindFlag::UNORDERED_ACCESS;
+		success = device->CreateTexture(&td, nullptr, &feedbackMap);
+		assert(success);
+		device->SetName(&feedbackMap, "VirtualTexture::feedbackMap");
+
+		lods.clear();
+		lods.resize(mips);
+		for (uint32_t i = 0; i < mips; ++i)
+		{
+			lods[i].width = width;
+			lods[i].height = height;
+			lods[i].tiles.resize(width * height);
+			lods[i].tile_residency.resize(width * height);
+			for (uint32_t y = 0; y < height; ++y)
+			{
+				for (uint32_t x = 0; x < width; ++x)
+				{
+					LOD::Tile& tile = lods[i].tiles[x + y * width];
+					tile.x = x;
+					tile.y = y;
+				}
+			}
+			width = std::max(1u, width / 2);
+			height = std::max(1u, height / 2);
+		}
+		residentMaxLod = texture.desc.mip_levels; // this reflects true mipchain, not tile based
+	}
+
+	void SparseUpdateBatcher::Flush(QUEUE_TYPE queue)
+	{
+		if (commands.empty())
+			return;
+		GraphicsDevice* device = GetDevice();
+		device->SparseUpdate(queue, commands.data(), (uint32_t)commands.size());
+		commands.clear();
+		command_arrays.clear();
+	}
+
 	Terrain::Terrain()
 	{
 		weather.ambient = XMFLOAT3(0.4f, 0.4f, 0.4f);
@@ -206,6 +298,7 @@ namespace wi::terrain
 		generator->scene.Clear();
 
 		chunks.clear();
+		page_allocator = {};
 
 		wi::vector<Entity> entities_to_remove;
 		for (size_t i = 0; i < scene->hierarchy.GetCount(); ++i)
@@ -282,6 +375,7 @@ namespace wi::terrain
 		if (terrainEntity == INVALID_ENTITY)
 		{
 			chunks.clear();
+			page_allocator = {};
 			return;
 		}
 
@@ -341,6 +435,7 @@ namespace wi::terrain
 		target_texture_resolution = wi::math::GetNextPowerOfTwo(target_texture_resolution);
 		target_texture_resolution = std::min(16384u, target_texture_resolution);
 		target_texture_resolution = std::max(128u, target_texture_resolution);
+		//target_texture_resolution = 128u;
 		const uint32_t target_texture_resolution_max_lod = (uint32_t)std::log2(target_texture_resolution);
 		const uint32_t target_texture_resolution_lod_count = target_texture_resolution_max_lod + 1;
 
@@ -392,6 +487,10 @@ namespace wi::terrain
 			{
 				if (dist > removal_threshold)
 				{
+					for (int i = 0; i < arraysize(chunk_data.vt); ++i)
+					{
+						chunk_data.vt[i].free(page_allocator);
+					}
 					scene->Entity_Remove(it->second.entity);
 					it = chunks.erase(it);
 					continue; // don't increment iterator
@@ -474,45 +573,9 @@ namespace wi::terrain
 			}
 
 			// Collect virtual texture update requests:
-			if (virtual_texture_any)
+			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+			if (virtual_texture_any && material != nullptr)
 			{
-				if (chunk_data.textures[0].desc.width != target_texture_resolution)
-				{
-					chunk_data.residentMaxLod = target_texture_resolution_lod_count;
-
-					TextureDesc desc;
-					desc.width = target_texture_resolution;
-					desc.height = target_texture_resolution;
-					desc.misc_flags = ResourceMiscFlag::SPARSE;
-					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-					desc.mip_levels = target_texture_resolution_lod_count;
-					desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-
-					desc.format = Format::R8G8B8A8_UNORM;
-					bool success = device->CreateTexture(&desc, nullptr, &chunk_data.textures[MaterialComponent::BASECOLORMAP]);
-					assert(success);
-					success = device->CreateTexture(&desc, nullptr, &chunk_data.textures[MaterialComponent::SURFACEMAP]);
-					assert(success);
-					//desc.format = Format::R8G8_UNORM;
-					success = device->CreateTexture(&desc, nullptr, &chunk_data.textures[MaterialComponent::NORMALMAP]);
-					assert(success);
-
-					const SparseTextureProperties& sparse = *chunk_data.textures[MaterialComponent::BASECOLORMAP].sparse_properties;
-					chunk_data.mip_allocations.clear();
-					chunk_data.mip_allocations.resize(target_texture_resolution_lod_count - sparse.packed_mip_count + 1);
-
-					for (uint32_t i = 0; i < target_texture_resolution_lod_count; ++i)
-					{
-						int subresource = 0;
-						subresource = device->CreateSubresource(&chunk_data.textures[MaterialComponent::BASECOLORMAP], SubresourceType::UAV, 0, 1, i, 1);
-						assert(subresource == i);
-						subresource = device->CreateSubresource(&chunk_data.textures[MaterialComponent::SURFACEMAP], SubresourceType::UAV, 0, 1, i, 1);
-						assert(subresource == i);
-						subresource = device->CreateSubresource(&chunk_data.textures[MaterialComponent::NORMALMAP], SubresourceType::UAV, 0, 1, i, 1);
-						assert(subresource == i);
-					}
-				}
-
 				uint32_t required_lod = target_texture_resolution_max_lod;
 				float request_score = 0;
 				if (chunk_visible)
@@ -534,113 +597,127 @@ namespace wi::terrain
 				}
 				required_lod = std::min(target_texture_resolution_max_lod, required_lod);
 
-				if (chunk_data.residentMaxLod != required_lod)
+				for (uint32_t map_type = 0; map_type < 3; ++map_type)
 				{
-					if (required_lod < chunk_data.residentMaxLod)
+					VirtualTexture& vt = chunk_data.vt[map_type];
+
+					if (vt.texture.desc.width != target_texture_resolution)
 					{
-						// upscaling progressively:
-						required_lod = (uint32_t)std::max(0, (int)chunk_data.residentMaxLod - 1);
-					}
-					chunk_data.residentMaxLod = required_lod;
+						TextureDesc desc;
+						desc.width = target_texture_resolution;
+						desc.height = target_texture_resolution;
+						desc.misc_flags = ResourceMiscFlag::SPARSE;
+						desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+						desc.mip_levels = target_texture_resolution_lod_count;
+						desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 
-					VirtualTextureUpdateRequest& request = virtual_texture_updates.emplace_back();
-					request.lod = required_lod;
-					request.score = request_score;
-					request.region_weights_texture = chunk_data.region_weights_texture;
+						desc.format = Format::R8G8B8A8_UNORM;
+						vt.init(desc);
 
-					const uint32_t sparse_lod = std::min(required_lod, uint32_t(chunk_data.mip_allocations.size() - 1));
-					const uint32_t required_lod_resolution = target_texture_resolution >> sparse_lod;
-					const bool packed_mips = sparse_lod != required_lod;
-
-					for (size_t i = 0; i < sparse_lod; ++i)
-					{
-						chunk_data.mip_allocations[i] = {};
-					}
-
-					uint32_t required_tiles[3];
-					size_t required_size[3];
-					for (int i = 0; i < 3; ++i)
-					{
-						required_size[i] = AlignTo(required_lod_resolution * required_lod_resolution * GetFormatStride(chunk_data.textures[i].desc.format), (uint32_t)chunk_data.textures[i].sparse_page_size);
-						required_tiles[i] = uint32_t(required_size[i] / chunk_data.textures[i].sparse_page_size);
-						request.textures[i] = chunk_data.textures[i];
-					}
-
-					if (!chunk_data.mip_allocations[sparse_lod].IsValid())
-					{
-						GPUBuffer& buffer = chunk_data.mip_allocations[sparse_lod];
-						GPUBufferDesc desc;
-						desc.size =
-							required_size[0] +
-							required_size[1] +
-							required_size[2];
-						desc.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL;
-						desc.alignment = chunk_data.textures[0].sparse_page_size;
-						bool success = device->CreateBuffer(&desc, nullptr, &buffer);
-						assert(success);
-
-						SparseUpdateCommand sparse_commands[3];
-						SparseResourceCoordinate sparse_coordinate[3];
-						SparseRegionSize sparse_size[3];
-						TileRangeFlags tile_range_flags[3];
-						uint32_t tile_range_offset[3];
-						uint32_t tile_range_count[3];
-
-						uint32_t offset = 0;
-						for (int i = 0; i < 3; ++i)
+						for (uint32_t i = 0; i < target_texture_resolution_lod_count; ++i)
 						{
-							sparse_coordinate[i].mip = sparse_lod;
-							sparse_size[i].num_tiles = required_tiles[i];
+							int subresource = 0;
+							subresource = device->CreateSubresource(&vt.texture, SubresourceType::UAV, 0, 1, i, 1);
+							assert(subresource == i);
+						}
+
+						if (!page_allocator.buffer.IsValid())
+						{
+							page_allocator.init(512 * 1024 * 1024, vt.texture.sparse_page_size);
+						}
+					}
+					if (vt.residentMaxLod != required_lod)
+					{
+						if (required_lod < vt.residentMaxLod)
+						{
+							// upscaling progressively:
+							required_lod = (uint32_t)std::max(0, (int)vt.residentMaxLod - 1);
+						}
+
+						const uint32_t mip_tail_start = vt.texture.sparse_properties->packed_mip_start;
+						const uint32_t sparse_lod = std::min(required_lod, mip_tail_start);
+						const uint32_t required_lod_resolution = target_texture_resolution >> sparse_lod;
+						const bool packed_mips = required_lod >= mip_tail_start;
+
+						for (size_t lod = 0; lod < sparse_lod; ++lod)
+						{
+							vt.lods[lod].free(page_allocator);
+						}
+
+						VirtualTexture::LOD::Tile missing_tile = vt.lods[sparse_lod].allocate_missing_tile(page_allocator);
+						if (missing_tile.page.IsValid())
+						{
+							SparseUpdateCommand& command = sparse_batcher.commands.emplace_back();
+							SparseUpdateBatcher::CommandArrays& command_arrays = sparse_batcher.command_arrays.emplace_back();
+							SparseResourceCoordinate& sparse_coordinate = command_arrays.sparse_coordinate.emplace_back();
+							SparseRegionSize& sparse_size = command_arrays.sparse_size.emplace_back();
+							TileRangeFlags& tile_range_flags = command_arrays.tile_range_flags.emplace_back();
+							uint32_t& tile_range_offset = command_arrays.tile_range_offset.emplace_back();
+							uint32_t& tile_range_count = command_arrays.tile_range_count.emplace_back();
+
+							sparse_coordinate.x = missing_tile.x;
+							sparse_coordinate.y = missing_tile.y;
+							sparse_coordinate.mip = sparse_lod;
+							sparse_size.num_tiles = 1;
 							if (!packed_mips)
 							{
-								sparse_size[i].use_box = true;
-								sparse_size[i].width = required_lod_resolution / chunk_data.textures[i].sparse_properties->tile_width;
-								sparse_size[i].height = required_lod_resolution / chunk_data.textures[i].sparse_properties->tile_height;
+								sparse_size.use_box = true;
+								sparse_size.width = 1;
+								sparse_size.height = 1;
+								assert(sparse_size.width > 0);
+								assert(sparse_size.height > 0);
 							}
-							tile_range_flags[i] = TileRangeFlags::None;
-							tile_range_offset[i] = offset;
-							tile_range_count[i] = required_tiles[i];
-							offset += tile_range_count[i];
+							tile_range_flags = TileRangeFlags::None;
+							tile_range_offset = missing_tile.page.index;
+							tile_range_count = 1;
 
-							SparseUpdateCommand& command = sparse_commands[i];
-							command.sparse_resource = &chunk_data.textures[i];
+							command.sparse_resource = &vt.texture;
 							command.num_resource_regions = 1;
-							command.coordinates = &sparse_coordinate[i];
-							command.sizes = &sparse_size[i];
-							command.tile_pool = &chunk_data.mip_allocations[sparse_lod];
+							command.coordinates = &sparse_coordinate;
+							command.sizes = &sparse_size;
+							command.tile_pool = &page_allocator.buffer;
 							command.num_ranges = 1;
-							command.range_flags = &tile_range_flags[i];
-							command.range_start_offsets = &tile_range_offset[i];
-							command.range_tile_counts = &tile_range_count[i];
+							command.range_flags = &tile_range_flags;
+							command.range_start_offsets = &tile_range_offset;
+							command.range_tile_counts = &tile_range_count;
+
+							VirtualTextureUpdateRequest& request = virtual_texture_updates.emplace_back();
+							request.score = request_score;
+							request.lod = required_lod;
+							request.tile_x = sparse_coordinate.x;
+							request.tile_y = sparse_coordinate.y;
+							request.map_type = map_type;
+							request.texturemap = vt.texture;
+							request.region_weights_texture = chunk_data.region_weights_texture;
 						}
-						device->SparseUpdate(QUEUE_GRAPHICS, sparse_commands, arraysize(sparse_commands));
-					}
-
-
-					MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
-					if (material != nullptr)
-					{
-						// Shrink the uvs to avoid wrap sampling across edge by object rendering shaders:
-						XMFLOAT2 virtual_texture_resolution_rcp = XMFLOAT2(
-							1.0f / required_lod_resolution,
-							1.0f / required_lod_resolution
-						);
-						material->texMulAdd.x = float(required_lod_resolution - 1) * virtual_texture_resolution_rcp.x;
-						material->texMulAdd.y = float(required_lod_resolution - 1) * virtual_texture_resolution_rcp.y;
-						material->texMulAdd.z = 0.5f * virtual_texture_resolution_rcp.x;
-						material->texMulAdd.w = 0.5f * virtual_texture_resolution_rcp.y;
-
-						for (int i = 0; i < 3; ++i)
+						else if (packed_mips)
 						{
-							material->textures[i].lodClamp = (float)chunk_data.residentMaxLod;
-							material->textures[i].resource.SetTexture(chunk_data.textures[i]);
+							// packed mip tile was already mapped, but the true mip needs to be updated:
+							VirtualTextureUpdateRequest& request = virtual_texture_updates.emplace_back();
+							request.score = request_score;
+							request.lod = required_lod;
+							request.tile_x = 0;
+							request.tile_y = 0;
+							request.map_type = map_type;
+							request.texturemap = vt.texture;
+							request.region_weights_texture = chunk_data.region_weights_texture;
 						}
+
+						if (vt.lods[sparse_lod].is_fully_resident())
+						{
+							vt.residentMaxLod = required_lod;
+						}
+
+						material->textures[map_type].lodClamp = (float)vt.residentMaxLod;
+						material->textures[map_type].resource.SetTexture(vt.texture);
 					}
 				}
 			}
 
 			it++;
 		}
+
+		sparse_batcher.Flush(QUEUE_GRAPHICS);
 
 		// Start the generation on a background thread and keep it running until the next frame
 		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs args) {
@@ -777,7 +854,11 @@ namespace wi::terrain
 						});
 					wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
 
-					material.SetCastShadow(slope_cast_shadow.load());
+					if (slope_cast_shadow.load())
+					{
+						material.SetCastShadow(true);
+						mesh.SetDoubleSidedShadow(true);
+					}
 
 					wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 						mesh.CreateRenderData();
@@ -1012,10 +1093,7 @@ namespace wi::terrain
 
 		for (auto& request : virtual_texture_updates)
 		{
-			for (int i = 0; i < 3; ++i)
-			{
-				virtual_texture_barriers.push_back(GPUBarrier::Image(&request.textures[i], request.textures[i].desc.layout, ResourceState::UNORDERED_ACCESS));
-			}
+			virtual_texture_barriers.push_back(GPUBarrier::Image(&request.texturemap, request.texturemap.desc.layout, ResourceState::UNORDERED_ACCESS));
 		}
 		device->Barrier(virtual_texture_barriers.data(), (uint32_t)virtual_texture_barriers.size(), cmd);
 
@@ -1026,17 +1104,28 @@ namespace wi::terrain
 			};
 			device->BindResources(res, 0, arraysize(res), cmd);
 
-			for (int i = 0; i < 3; ++i)
-			{
-				device->BindUAV(&request.textures[i], (uint32_t)i, cmd, (int)request.lod);
-			}
+			device->BindUAV(&request.texturemap, 0, cmd, (int)request.lod);
 
 			const uint32_t request_lod_resolution = target_texture_resolution >> request.lod;
 
-			uint4 offset_size = uint4(0, 0, request_lod_resolution, request_lod_resolution);
-			device->PushConstants(&offset_size, sizeof(offset_size), cmd);
+			uint2 size = uint2(
+				request.texturemap.sparse_properties->tile_width,
+				request.texturemap.sparse_properties->tile_height
+			);
 
-			device->Dispatch((offset_size.z + 7u) / 8u, (offset_size.w + 7u) / 8u, 1, cmd);
+			struct Push
+			{
+				uint2 offset;
+				uint map_type;
+			} push;
+			push.offset = uint2(
+				request.tile_x * size.x,
+				request.tile_y * size.y
+			);
+			push.map_type = request.map_type;
+			device->PushConstants(&push, sizeof(push), cmd);
+
+			device->Dispatch((size.x + 7u) / 8u, (size.y + 7u) / 8u, 1, cmd);
 		}
 
 		for (auto& x : virtual_texture_barriers)
