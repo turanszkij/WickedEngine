@@ -10,5 +10,6 @@ float4 main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD) : SV_TARGET
 
 	float4 color = float4(GetDynamicSkyColor(V), 1);
 
+	color = clamp(color, 0, 65000);
 	return color;
 }
