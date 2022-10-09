@@ -2952,6 +2952,9 @@ namespace wi::scene
 	}
 	void Scene::RunMaterialUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		feedback_map_allocator.store(0);
+		feedback_maps.reserve(materials.GetCount() * MaterialComponent::TEXTURESLOT_COUNT);
+
 		wi::jobsystem::Dispatch(ctx, (uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 
 			MaterialComponent& material = materials[args.jobIndex];
@@ -2992,6 +2995,15 @@ namespace wi::scene
 			if (material.IsDirty())
 			{
 				material.SetDirty(false);
+			}
+
+			for (auto& slot : material.textures)
+			{
+				if (slot.feedbackMap.IsValid())
+				{
+					uint32_t index = feedback_map_allocator.fetch_add(1);
+					*(feedback_maps.data() + index) = &slot.feedbackMap;
+				}
 			}
 
 			material.WriteShaderMaterial(materialArrayMapped + args.jobIndex);

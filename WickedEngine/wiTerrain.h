@@ -64,6 +64,7 @@ namespace wi::terrain
 	struct VirtualTexture
 	{
 		wi::graphics::Texture texture;
+		wi::graphics::Texture residencyMap;
 		wi::graphics::Texture feedbackMap;
 		wi::graphics::Texture feedbackMap_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
 
@@ -98,20 +99,33 @@ namespace wi::terrain
 					tile.page = {};
 				}
 			}
-			Tile allocate_missing_tile(GPUPageAllocator& allocator)
-			{
-				for (auto& tile : tiles)
-				{
-					if (tile.page.IsValid())
-						continue;
-					tile.page = allocator.allocate();
-					return tile;
-				}
-				return {};
-			}
 		};
 		wi::vector<LOD> lods;
 		uint32_t residentMaxLod = ~0u;
+
+		struct TileRequest
+		{
+			uint16_t lod = 0;
+			uint8_t x = 0;
+			uint8_t y = 0;
+		};
+		wi::vector<TileRequest> tile_requests;
+		LOD::Tile allocate_tile_request(const TileRequest& tile_request, GPUPageAllocator& allocator)
+		{
+			size_t lod_index = std::min((size_t)tile_request.lod, lods.size() - 1);
+			LOD& lod = lods[lod_index];
+			size_t tile_index = tile_request.x + tile_request.y * lod.width;
+			if (tile_index < lod.tiles.size())
+			{
+				LOD::Tile& tile = lod.tiles[tile_index];
+				if (tile.page.IsValid())
+					return {};
+				tile.page = allocator.allocate();
+				return tile;
+			}
+			assert(0);
+			return {};
+		}
 
 		void free(GPUPageAllocator& page_allocator)
 		{
@@ -206,7 +220,6 @@ namespace wi::terrain
 
 		struct VirtualTextureUpdateRequest
 		{
-			float score = 0;
 			uint32_t lod = 0;
 			uint32_t tile_x = 0;
 			uint32_t tile_y = 0;
@@ -262,10 +275,12 @@ namespace wi::terrain
 		void Generation_Cancel();
 		// Updates the virtual textures on GPU by compute shaders
 		void UpdateVirtualTextures(wi::graphics::CommandList cmd) const;
+		void VirtualTextureFeedbackRead(wi::graphics::CommandList cmd) const;
 		// The virtual textures will be compressed and saved into resources. They can be serialized from there
 		void BakeVirtualTexturesToFiles();
 		// Creates the blend weight texture for a chunk data
 		void CreateChunkRegionTexture(ChunkData& chunk_data);
+		void CheckChunkVirtualTextureStatus(ChunkData& chunk_data);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

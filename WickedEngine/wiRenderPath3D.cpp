@@ -336,6 +336,7 @@ namespace wi
 				desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS));
 			}
 
+			desc.flags |= RenderPassDesc::Flags::ALLOW_UAV_WRITES;
 			device->CreateRenderPass(&desc, &renderpass_main);
 		}
 		{
@@ -355,6 +356,7 @@ namespace wi
 			{
 				desc.attachments.push_back(RenderPassAttachment::Resolve(rtMain));
 			}
+			desc.flags |= RenderPassDesc::Flags::ALLOW_UAV_WRITES;
 			device->CreateRenderPass(&desc, &renderpass_transparent);
 		}
 		{

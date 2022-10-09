@@ -141,10 +141,15 @@ struct ShaderMaterial
 	float		lodClamp_surfaceMap;
 	float		padding;
 
+	int			residencyMap_baseColorMap;
+	int			residencyMap_normalMap;
+	int			residencyMap_surfaceMap;
+	int			padding0;
+
 	int			feedbackMap_baseColorMap;
 	int			feedbackMap_normalMap;
 	int			feedbackMap_surfaceMap;
-	int			padding0;
+	int			padding1;
 
 	void init()
 	{
@@ -213,6 +218,10 @@ struct ShaderMaterial
 		lodClamp_baseColorMap = 0;
 		lodClamp_normalMap = 0;
 		lodClamp_surfaceMap = 0;
+
+		residencyMap_baseColorMap = -1;
+		residencyMap_normalMap = -1;
+		residencyMap_surfaceMap = -1;
 
 		feedbackMap_baseColorMap = -1;
 		feedbackMap_normalMap = -1;

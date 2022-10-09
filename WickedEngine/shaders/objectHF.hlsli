@@ -348,7 +348,7 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 				uint2 feedback_dim;
 				feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
 				uint2 pixel_feedback = frac(UV_normalMap) * feedback_dim;
-				InterlockedOr(feedbackMap[pixel_feedback], WaveReadLaneFirst(WaveActiveBitOr(1)));
+				feedbackMap[pixel_feedback] = 1;
 			}
 		}
 		bumpColor = normalMap.rgb * 2 - 1;
@@ -1145,7 +1145,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 				uint2 feedback_dim;
 				feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
 				uint2 pixel_feedback = frac(UV_baseColorMap) * feedback_dim;
-				InterlockedOr(feedbackMap[pixel_feedback], WaveReadLaneFirst(WaveActiveBitOr(1)));
+				feedbackMap[pixel_feedback] = 1;
 			}
 		}
 		baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
@@ -1197,7 +1197,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 				uint2 feedback_dim;
 				feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
 				uint2 pixel_feedback = frac(UV_surfaceMap) * feedback_dim;
-				InterlockedOr(feedbackMap[pixel_feedback], WaveReadLaneFirst(WaveActiveBitOr(1)));
+				feedbackMap[pixel_feedback] = 1;
 			}
 		}
 	}

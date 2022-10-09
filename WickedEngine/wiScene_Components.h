@@ -206,7 +206,8 @@ namespace wi::scene
 			uint32_t uvset = 0;
 			wi::Resource resource;
 			float lodClamp = 0;
-			wi::graphics::Texture feedbackMap;
+			wi::graphics::GPUResource residencyMap;
+			wi::graphics::GPUResource feedbackMap;
 			const wi::graphics::GPUResource* GetGPUResource() const
 			{
 				if (!resource.IsValid() || !resource.GetTexture().IsValid())
