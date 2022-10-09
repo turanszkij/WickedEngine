@@ -105,24 +105,6 @@ namespace wi::scene
 		}
 		materialArrayMapped = (ShaderMaterial*)materialUploadBuffer[device->GetBufferIndex()].mapped_data;
 
-		TLAS_instancesMapped = nullptr;
-		if (IsAccelerationStructureUpdateRequested() && device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-		{
-			GPUBufferDesc desc;
-			desc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
-			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
-			desc.usage = Usage::UPLOAD;
-			if (TLAS_instancesUpload->desc.size < desc.size)
-			{
-				for (int i = 0; i < arraysize(TLAS_instancesUpload); ++i)
-				{
-					device->CreateBuffer(&desc, nullptr, &TLAS_instancesUpload[i]);
-					device->SetName(&TLAS_instancesUpload[i], "Scene::TLAS_instancesUpload");
-				}
-			}
-			TLAS_instancesMapped = TLAS_instancesUpload[device->GetBufferIndex()].mapped_data;
-		}
-
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
 		{
@@ -163,32 +145,39 @@ namespace wi::scene
 			queryAllocator.store(0);
 		}
 
-		// Scan mesh subset counts to allocate GPU geometry data:
-		geometryAllocator.store(0u);
-		wi::jobsystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
-			MeshComponent& mesh = meshes[args.jobIndex];
-			mesh.geometryOffset = geometryAllocator.fetch_add((uint32_t)mesh.subsets.size());
-		});
-
-		if (TLAS_instancesMapped != nullptr)
-		{
-			wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
-				// Must not keep inactive TLAS instances, so zero them out for safety:
-				std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
-				});
-		}
-
-		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
-			// Must not keep inactive instances, so init them for safety:
-			ShaderMeshInstance inst;
-			inst.init();
-			for (uint32_t i = 0; i < instanceArraySize; ++i)
-			{
-				std::memcpy(instanceArrayMapped + i, &inst, sizeof(inst));
-			}
-		});
-
 		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
+
+		if (dt > 0)
+		{
+			// Scan objects to check if lightmap rendering is requested:
+			lightmap_request_allocator.store(0);
+			lightmap_requests.reserve(objects.GetCount());
+			wi::jobsystem::Dispatch(ctx, (uint32_t)objects.GetCount(), small_subtask_groupsize, [this](wi::jobsystem::JobArgs args) {
+				ObjectComponent& object = objects[args.jobIndex];
+				if (object.IsLightmapRenderRequested())
+				{
+					uint32_t request_index = lightmap_request_allocator.fetch_add(1);
+					*(lightmap_requests.data() + request_index) = args.jobIndex;
+				}
+			});
+
+			// Scan mesh subset counts to allocate GPU geometry data:
+			geometryAllocator.store(0u);
+			wi::jobsystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+				MeshComponent& mesh = meshes[args.jobIndex];
+				mesh.geometryOffset = geometryAllocator.fetch_add((uint32_t)mesh.subsets.size());
+			});
+
+			wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+				// Must not keep inactive instances, so init them for safety:
+				ShaderMeshInstance inst;
+				inst.init();
+				for (uint32_t i = 0; i < instanceArraySize; ++i)
+				{
+					std::memcpy(instanceArrayMapped + i, &inst, sizeof(inst));
+				}
+			});
+		}
 
 		RunAnimationUpdateSystem(ctx);
 
@@ -197,6 +186,36 @@ namespace wi::scene
 		wi::jobsystem::Wait(ctx); // dependencies
 
 		RunHierarchyUpdateSystem(ctx);
+
+		// Lightmap requests are determined at this point, so we know if we need TLAS or not:
+		if (lightmap_request_allocator.load() > 0)
+		{
+			SetAccelerationStructureUpdateRequested(true);
+		}
+
+		// This must be after lightmap requests were determined:
+		TLAS_instancesMapped = nullptr;
+		if (IsAccelerationStructureUpdateRequested() && device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+		{
+			GPUBufferDesc desc;
+			desc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
+			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
+			desc.usage = Usage::UPLOAD;
+			if (TLAS_instancesUpload->desc.size < desc.size)
+			{
+				for (int i = 0; i < arraysize(TLAS_instancesUpload); ++i)
+				{
+					device->CreateBuffer(&desc, nullptr, &TLAS_instancesUpload[i]);
+					device->SetName(&TLAS_instancesUpload[i], "Scene::TLAS_instancesUpload");
+				}
+			}
+			TLAS_instancesMapped = TLAS_instancesUpload[device->GetBufferIndex()].mapped_data;
+
+			wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+				// Must not keep inactive TLAS instances, so zero them out for safety:
+				std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
+				});
+		}
 
 		// GPU subset count allocation is ready at this point:
 		geometryArraySize = geometryAllocator.load();
@@ -283,11 +302,6 @@ namespace wi::scene
 			bool success = device->CreateBuffer(&desc, nullptr, &meshletBuffer);
 			assert(success);
 			device->SetName(&meshletBuffer, "meshletBuffer");
-		}
-
-		if (lightmap_refresh_needed.load())
-		{
-			SetAccelerationStructureUpdateRequested(true);
 		}
 
 		if (IsAccelerationStructureUpdateRequested())
@@ -2819,66 +2833,69 @@ namespace wi::scene
 			    mesh.aabb = AABB(_min, _max);
 			}
 
-			ShaderGeometry geometry;
-			geometry.init();
-			geometry.ib = mesh.ib.descriptor_srv;
-			if (mesh.so_pos_nor_wind.IsValid())
+			if (geometryArrayMapped != nullptr)
 			{
-				geometry.vb_pos_nor_wind = mesh.so_pos_nor_wind.descriptor_srv;
-			}
-			else
-			{
-				geometry.vb_pos_nor_wind = mesh.vb_pos_nor_wind.descriptor_srv;
-			}
-			if (mesh.so_tan.IsValid())
-			{
-				geometry.vb_tan = mesh.so_tan.descriptor_srv;
-			}
-			else
-			{
-				geometry.vb_tan = mesh.vb_tan.descriptor_srv;
-			}
-			geometry.vb_col = mesh.vb_col.descriptor_srv;
-			geometry.vb_uvs = mesh.vb_uvs.descriptor_srv;
-			geometry.vb_atl = mesh.vb_atl.descriptor_srv;
-			geometry.vb_pre = mesh.so_pre.descriptor_srv;
-			geometry.aabb_min = mesh.aabb._min;
-			geometry.aabb_max = mesh.aabb._max;
-			geometry.tessellation_factor = mesh.tessellationFactor;
-
-			const ImpostorComponent* impostor = impostors.GetComponent(entity);
-			if (impostor != nullptr && impostor->textureIndex >= 0)
-			{
-				geometry.impostorSliceOffset = impostor->textureIndex * impostorCaptureAngles * 3;
-			}
-
-			if (mesh.IsDoubleSided())
-			{
-				geometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
-			}
-
-			mesh.meshletCount = 0;
-
-			uint32_t subsetIndex = 0;
-			for (auto& subset : mesh.subsets)
-			{
-				const MaterialComponent* material = materials.GetComponent(subset.materialID);
-				if (material != nullptr)
+				ShaderGeometry geometry;
+				geometry.init();
+				geometry.ib = mesh.ib.descriptor_srv;
+				if (mesh.so_pos_nor_wind.IsValid())
 				{
-					subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
+					geometry.vb_pos_nor_wind = mesh.so_pos_nor_wind.descriptor_srv;
 				}
 				else
 				{
-					subset.materialIndex = 0;
+					geometry.vb_pos_nor_wind = mesh.vb_pos_nor_wind.descriptor_srv;
+				}
+				if (mesh.so_tan.IsValid())
+				{
+					geometry.vb_tan = mesh.so_tan.descriptor_srv;
+				}
+				else
+				{
+					geometry.vb_tan = mesh.vb_tan.descriptor_srv;
+				}
+				geometry.vb_col = mesh.vb_col.descriptor_srv;
+				geometry.vb_uvs = mesh.vb_uvs.descriptor_srv;
+				geometry.vb_atl = mesh.vb_atl.descriptor_srv;
+				geometry.vb_pre = mesh.so_pre.descriptor_srv;
+				geometry.aabb_min = mesh.aabb._min;
+				geometry.aabb_max = mesh.aabb._max;
+				geometry.tessellation_factor = mesh.tessellationFactor;
+
+				const ImpostorComponent* impostor = impostors.GetComponent(entity);
+				if (impostor != nullptr && impostor->textureIndex >= 0)
+				{
+					geometry.impostorSliceOffset = impostor->textureIndex * impostorCaptureAngles * 3;
 				}
 
-				geometry.indexOffset = subset.indexOffset;
-				geometry.materialIndex = subset.materialIndex;
-				geometry.meshletOffset = mesh.meshletCount;
-				geometry.meshletCount = triangle_count_to_meshlet_count(subset.indexCount / 3u);
-				mesh.meshletCount += geometry.meshletCount;
-				std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &geometry, sizeof(geometry));
-				subsetIndex++;
+				if (mesh.IsDoubleSided())
+				{
+					geometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
+				}
+
+				mesh.meshletCount = 0;
+
+				uint32_t subsetIndex = 0;
+				for (auto& subset : mesh.subsets)
+				{
+					const MaterialComponent* material = materials.GetComponent(subset.materialID);
+					if (material != nullptr)
+					{
+						subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
+					}
+					else
+					{
+						subset.materialIndex = 0;
+					}
+
+					geometry.indexOffset = subset.indexOffset;
+					geometry.materialIndex = subset.materialIndex;
+					geometry.meshletOffset = mesh.meshletCount;
+					geometry.meshletCount = triangle_count_to_meshlet_count(subset.indexCount / 3u);
+					mesh.meshletCount += geometry.meshletCount;
+					std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &geometry, sizeof(geometry));
+					subsetIndex++;
+				}
 			}
 
 			if (TLAS_instancesMapped != nullptr) // check TLAS, to know if we need to care about BLAS
@@ -3374,7 +3391,6 @@ namespace wi::scene
 
 						object.lightmapIterationCount = 0; // reset accumulation
 					}
-					lightmap_refresh_needed.store(true);
 				}
 
 				if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
