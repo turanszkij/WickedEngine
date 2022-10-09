@@ -141,6 +141,11 @@ struct ShaderMaterial
 	float		lodClamp_surfaceMap;
 	float		padding;
 
+	int			feedbackMap_baseColorMap;
+	int			feedbackMap_normalMap;
+	int			feedbackMap_surfaceMap;
+	int			padding0;
+
 	void init()
 	{
 		baseColor = float4(1, 1, 1, 1);
@@ -208,6 +213,10 @@ struct ShaderMaterial
 		lodClamp_baseColorMap = 0;
 		lodClamp_normalMap = 0;
 		lodClamp_surfaceMap = 0;
+
+		feedbackMap_baseColorMap = -1;
+		feedbackMap_normalMap = -1;
+		feedbackMap_surfaceMap = -1;
 	}
 
 #ifndef __cplusplus

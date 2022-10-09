@@ -64,8 +64,8 @@ namespace wi::terrain
 	struct VirtualTexture
 	{
 		wi::graphics::Texture texture;
-		wi::graphics::Texture residencyMap;
 		wi::graphics::Texture feedbackMap;
+		wi::graphics::Texture feedbackMap_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
 
 		void init(const wi::graphics::TextureDesc& desc);
 
@@ -80,7 +80,6 @@ namespace wi::terrain
 				GPUPageAllocator::Page page;
 			};
 			wi::vector<Tile> tiles;
-			wi::vector<uint8_t> tile_residency;
 
 			bool is_fully_resident() const
 			{

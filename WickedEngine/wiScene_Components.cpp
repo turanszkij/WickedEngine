@@ -339,6 +339,10 @@ namespace wi::scene
 		material.texture_clearcoatnormalmap_index = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SubresourceType::SRV);
 		material.texture_specularmap_index = device->GetDescriptorIndex(textures[SPECULARMAP].GetGPUResource(), SubresourceType::SRV);
 
+		material.feedbackMap_baseColorMap = device->GetDescriptorIndex(&textures[BASECOLORMAP].feedbackMap, SubresourceType::UAV);
+		material.feedbackMap_surfaceMap = device->GetDescriptorIndex(&textures[SURFACEMAP].feedbackMap, SubresourceType::UAV);
+		material.feedbackMap_normalMap = device->GetDescriptorIndex(&textures[NORMALMAP].feedbackMap, SubresourceType::UAV);
+
 		std::memcpy(dest, &material, sizeof(ShaderMaterial)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void MaterialComponent::WriteTextures(const wi::graphics::GPUResource** dest, int count) const

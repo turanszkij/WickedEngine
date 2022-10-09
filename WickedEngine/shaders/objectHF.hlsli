@@ -335,7 +335,22 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 	if (GetMaterial().normalMapStrength > 0 && GetMaterial().uvset_normalMap >= 0)
 	{
 		const float2 UV_normalMap = GetMaterial().uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
-		float3 normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap, 0, GetMaterial().lodClamp_normalMap).rg, 1);
+		uint prt_status = 0;
+		float3 normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap, 0, 0, prt_status).rg, 1);
+		if (!CheckAccessFullyMapped(prt_status))
+		{
+			normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap, 0, GetMaterial().lodClamp_normalMap).rg, 1);
+
+			[branch]
+			if (GetMaterial().feedbackMap_normalMap >= 0)
+			{
+				RWTexture2D<uint> feedbackMap = bindless_rwtextures_uint[GetMaterial().feedbackMap_normalMap];
+				uint2 feedback_dim;
+				feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
+				uint2 pixel_feedback = frac(UV_normalMap) * feedback_dim;
+				InterlockedOr(feedbackMap[pixel_feedback], WaveReadLaneFirst(WaveActiveBitOr(1)));
+			}
+		}
 		bumpColor = normalMap.rgb * 2 - 1;
 		N = normalize(lerp(N, mul(bumpColor, TBN), GetMaterial().normalMapStrength));
 		bumpColor *= GetMaterial().normalMapStrength;
@@ -1117,7 +1132,22 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
 	{
 		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-		float4 baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap, 0, GetMaterial().lodClamp_baseColorMap);
+		uint prt_status = 0;
+		float4 baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap, 0, 0, prt_status);
+		if (!CheckAccessFullyMapped(prt_status))
+		{
+			baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap, 0, GetMaterial().lodClamp_baseColorMap);
+
+			[branch]
+			if (GetMaterial().feedbackMap_baseColorMap >= 0)
+			{
+				RWTexture2D<uint> feedbackMap = bindless_rwtextures_uint[GetMaterial().feedbackMap_baseColorMap];
+				uint2 feedback_dim;
+				feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
+				uint2 pixel_feedback = frac(UV_baseColorMap) * feedback_dim;
+				InterlockedOr(feedbackMap[pixel_feedback], WaveReadLaneFirst(WaveActiveBitOr(1)));
+			}
+		}
 		baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
 		color *= baseColorMap;
 	}
@@ -1154,7 +1184,22 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	if (GetMaterial().uvset_surfaceMap >= 0)
 	{
 		const float2 UV_surfaceMap = GetMaterial().uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
-		surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap, 0, GetMaterial().lodClamp_surfaceMap);
+		uint prt_status = 0;
+		surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap, 0, 0, prt_status);
+		if (!CheckAccessFullyMapped(prt_status))
+		{
+			surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap, 0, GetMaterial().lodClamp_surfaceMap);
+
+			[branch]
+			if (GetMaterial().feedbackMap_surfaceMap >= 0)
+			{
+				RWTexture2D<uint> feedbackMap = bindless_rwtextures_uint[GetMaterial().feedbackMap_surfaceMap];
+				uint2 feedback_dim;
+				feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
+				uint2 pixel_feedback = frac(UV_surfaceMap) * feedback_dim;
+				InterlockedOr(feedbackMap[pixel_feedback], WaveReadLaneFirst(WaveActiveBitOr(1)));
+			}
+		}
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 

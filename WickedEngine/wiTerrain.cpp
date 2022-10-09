@@ -181,7 +181,7 @@ namespace wi::terrain
 		desc.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL;
 		bool success = device->CreateBuffer(&desc, nullptr, &buffer);
 		assert(success);
-		device->SetName(&buffer, "PageAllocator");
+		device->SetName(&buffer, "GPUPageAllocator");
 
 		uint32_t page_count = uint32_t(desc.size / page_size);
 		pages.reserve(page_count);
@@ -202,7 +202,7 @@ namespace wi::terrain
 	}
 	void GPUPageAllocator::free(Page page)
 	{
-		if (!page.IsValid())
+		if (!page.IsValid() || !buffer.IsValid())
 			return;
 		pages.push_back(page);
 	}
@@ -213,23 +213,29 @@ namespace wi::terrain
 		bool success = device->CreateTexture(&desc, nullptr, &texture);
 		assert(success);
 
+		residentMaxLod = texture.desc.mip_levels; // this reflects true mipchain, not tile based
+
 		uint32_t width = texture.desc.width / texture.sparse_properties->tile_width;
 		uint32_t height = texture.desc.height / texture.sparse_properties->tile_height;
 		uint32_t mips = texture.desc.mip_levels - texture.sparse_properties->packed_mip_count + 1;
 
-		TextureDesc td;
-		td.width = width;
-		td.height = height;
-		td.format = Format::R8_UINT;
-		td.bind_flags = BindFlag::SHADER_RESOURCE;
-		success = device->CreateTexture(&td, nullptr, &residencyMap);
-		assert(success);
-		device->SetName(&residencyMap, "VirtualTexture::residencyMap");
-
-		td.bind_flags = BindFlag::UNORDERED_ACCESS;
-		success = device->CreateTexture(&td, nullptr, &feedbackMap);
+		TextureDesc feedback_desc;
+		feedback_desc.width = width;
+		feedback_desc.height = height;
+		feedback_desc.format = Format::R8_UINT;
+		feedback_desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+		success = device->CreateTexture(&feedback_desc, nullptr, &feedbackMap);
 		assert(success);
 		device->SetName(&feedbackMap, "VirtualTexture::feedbackMap");
+
+		feedback_desc.bind_flags = BindFlag::NONE;
+		feedback_desc.usage = Usage::READBACK;
+		for (int i = 0; i < arraysize(feedbackMap_readback); ++i)
+		{
+			success = device->CreateTexture(&feedback_desc, nullptr, &feedbackMap_readback[i]);
+			assert(success);
+			device->SetName(&feedbackMap_readback[i], "VirtualTexture::feedbackMap_readback[i]");
+		}
 
 		lods.clear();
 		lods.resize(mips);
@@ -238,7 +244,6 @@ namespace wi::terrain
 			lods[i].width = width;
 			lods[i].height = height;
 			lods[i].tiles.resize(width * height);
-			lods[i].tile_residency.resize(width * height);
 			for (uint32_t y = 0; y < height; ++y)
 			{
 				for (uint32_t x = 0; x < width; ++x)
@@ -251,7 +256,6 @@ namespace wi::terrain
 			width = std::max(1u, width / 2);
 			height = std::max(1u, height / 2);
 		}
-		residentMaxLod = texture.desc.mip_levels; // this reflects true mipchain, not tile based
 	}
 
 	void SparseUpdateBatcher::Flush(QUEUE_TYPE queue)
@@ -597,12 +601,14 @@ namespace wi::terrain
 				}
 				required_lod = std::min(target_texture_resolution_max_lod, required_lod);
 
-				for (uint32_t map_type = 0; map_type < 3; ++map_type)
+				for (uint32_t map_type = 0; map_type < arraysize(chunk_data.vt); ++map_type)
 				{
 					VirtualTexture& vt = chunk_data.vt[map_type];
 
 					if (vt.texture.desc.width != target_texture_resolution)
 					{
+						vt.free(page_allocator);
+
 						TextureDesc desc;
 						desc.width = target_texture_resolution;
 						desc.height = target_texture_resolution;
@@ -613,6 +619,9 @@ namespace wi::terrain
 
 						desc.format = Format::R8G8B8A8_UNORM;
 						vt.init(desc);
+
+						material->textures[map_type].resource.SetTexture(vt.texture);
+						material->textures[map_type].feedbackMap = vt.feedbackMap;
 
 						for (uint32_t i = 0; i < target_texture_resolution_lod_count; ++i)
 						{
@@ -639,11 +648,46 @@ namespace wi::terrain
 						const uint32_t required_lod_resolution = target_texture_resolution >> sparse_lod;
 						const bool packed_mips = required_lod >= mip_tail_start;
 
+						// Free an unmap pages that are no longer required:
 						for (size_t lod = 0; lod < sparse_lod; ++lod)
 						{
-							vt.lods[lod].free(page_allocator);
+							for (auto& unmappable_tile : vt.lods[lod].tiles)
+							{
+								if (!unmappable_tile.page.IsValid())
+									continue;
+
+								SparseUpdateCommand& command = sparse_batcher.commands.emplace_back();
+								SparseUpdateBatcher::CommandArrays& command_arrays = sparse_batcher.command_arrays.emplace_back();
+								SparseResourceCoordinate& sparse_coordinate = command_arrays.sparse_coordinate.emplace_back();
+								SparseRegionSize& sparse_size = command_arrays.sparse_size.emplace_back();
+								TileRangeFlags& tile_range_flags = command_arrays.tile_range_flags.emplace_back();
+								uint32_t& tile_range_offset = command_arrays.tile_range_offset.emplace_back();
+								uint32_t& tile_range_count = command_arrays.tile_range_count.emplace_back();
+
+								sparse_coordinate.x = unmappable_tile.x;
+								sparse_coordinate.y = unmappable_tile.y;
+								sparse_coordinate.mip = (uint32_t)lod;
+								sparse_size.width = 1;
+								sparse_size.height = 1;
+								tile_range_flags = TileRangeFlags::Null;
+								tile_range_offset = unmappable_tile.page.index;
+								tile_range_count = 1;
+
+								command.sparse_resource = &vt.texture;
+								command.num_resource_regions = 1;
+								command.coordinates = &sparse_coordinate;
+								command.sizes = &sparse_size;
+								command.num_ranges = 1;
+								command.range_flags = &tile_range_flags;
+								command.range_start_offsets = &tile_range_offset;
+								command.range_tile_counts = &tile_range_count;
+
+								page_allocator.free(unmappable_tile.page);
+								unmappable_tile.page = {};
+							}
 						}
 
+						// Allocate and map single page request:
 						VirtualTexture::LOD::Tile missing_tile = vt.lods[sparse_lod].allocate_missing_tile(page_allocator);
 						if (missing_tile.page.IsValid())
 						{
@@ -658,15 +702,8 @@ namespace wi::terrain
 							sparse_coordinate.x = missing_tile.x;
 							sparse_coordinate.y = missing_tile.y;
 							sparse_coordinate.mip = sparse_lod;
-							sparse_size.num_tiles = 1;
-							if (!packed_mips)
-							{
-								sparse_size.use_box = true;
-								sparse_size.width = 1;
-								sparse_size.height = 1;
-								assert(sparse_size.width > 0);
-								assert(sparse_size.height > 0);
-							}
+							sparse_size.width = 1;
+							sparse_size.height = 1;
 							tile_range_flags = TileRangeFlags::None;
 							tile_range_offset = missing_tile.page.index;
 							tile_range_count = 1;
@@ -681,6 +718,7 @@ namespace wi::terrain
 							command.range_start_offsets = &tile_range_offset;
 							command.range_tile_counts = &tile_range_count;
 
+							// Request updating virtual texture tile after mapping:
 							VirtualTextureUpdateRequest& request = virtual_texture_updates.emplace_back();
 							request.score = request_score;
 							request.lod = required_lod;
@@ -707,10 +745,9 @@ namespace wi::terrain
 						{
 							vt.residentMaxLod = required_lod;
 						}
-
-						material->textures[map_type].lodClamp = (float)vt.residentMaxLod;
-						material->textures[map_type].resource.SetTexture(vt.texture);
 					}
+
+					material->textures[map_type].lodClamp = (float)vt.residentMaxLod;
 				}
 			}
 

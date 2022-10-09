@@ -6910,7 +6910,7 @@ using namespace vulkan_internal;
 				{
 					const SparseResourceCoordinate& in_coordinate = in_command.coordinates[j];
 					const SparseRegionSize& in_size = in_command.sizes[j];
-					const bool is_miptail = in_coordinate.mip >= texture_desc.mip_levels - internal_sparse->sparse_texture_properties.packed_mip_count;
+					const bool is_miptail = in_coordinate.mip >= internal_sparse->sparse_texture_properties.packed_mip_start;
 
 					if (is_miptail)
 					{
@@ -6970,19 +6970,9 @@ using namespace vulkan_internal;
 							out_image_memory_bind.offset.x = in_coordinate.x * internal_sparse->sparse_texture_properties.tile_width;
 							out_image_memory_bind.offset.y = in_coordinate.y * internal_sparse->sparse_texture_properties.tile_height;
 							out_image_memory_bind.offset.z = in_coordinate.z * internal_sparse->sparse_texture_properties.tile_depth;
-							if (in_size.use_box)
-							{
-								out_image_memory_bind.extent.width = in_size.width * internal_sparse->sparse_texture_properties.tile_width;
-								out_image_memory_bind.extent.height = in_size.height * internal_sparse->sparse_texture_properties.tile_height;
-								out_image_memory_bind.extent.depth = in_size.depth * internal_sparse->sparse_texture_properties.tile_depth;
-							}
-							else
-							{
-								// wrapped linear mapping currently not supported, map the entire subresource in this case:
-								out_image_memory_bind.extent.width = std::max(1u, texture_desc.width >> in_coordinate.mip);
-								out_image_memory_bind.extent.height = std::max(1u, texture_desc.height >> in_coordinate.mip);
-								out_image_memory_bind.extent.depth = std::max(1u, texture_desc.depth >> in_coordinate.mip);
-							}
+							out_image_memory_bind.extent.width = in_size.width * internal_sparse->sparse_texture_properties.tile_width;
+							out_image_memory_bind.extent.height = in_size.height * internal_sparse->sparse_texture_properties.tile_height;
+							out_image_memory_bind.extent.depth = in_size.depth * internal_sparse->sparse_texture_properties.tile_depth;
 						}
 					}
 

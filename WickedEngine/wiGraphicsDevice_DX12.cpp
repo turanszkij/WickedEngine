@@ -1320,6 +1320,7 @@ namespace dx12_internal
 		wi::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
 		wi::vector<UINT64> rowSizesInBytes;
 		wi::vector<UINT> numRows;
+		SparseTextureProperties sparse_texture_properties;
 
 		virtual ~Resource_DX12()
 		{
@@ -1349,7 +1350,6 @@ namespace dx12_internal
 		wi::vector<SingleDescriptor> subresources_dsv;
 
 		wi::vector<SubresourceData> mapped_subresources;
-		SparseTextureProperties sparse_texture_properties;
 
 		~Texture_DX12() override
 		{
@@ -5513,8 +5513,14 @@ using namespace dx12_internal;
 				mip_count = sparse_texture->desc.mip_levels;
 				array_size = sparse_texture->desc.array_size;
 			}
-			auto internal_tile_pool = to_internal(command.tile_pool);
-			ID3D12Heap* heap = internal_tile_pool->allocation->GetHeap();
+			ID3D12Heap* heap = nullptr;
+			uint32_t heap_page_offset = 0;
+			if (command.tile_pool != nullptr)
+			{
+				auto internal_tile_pool = to_internal(command.tile_pool);
+				heap = internal_tile_pool->allocation->GetHeap();
+				heap_page_offset = uint32_t(internal_tile_pool->allocation->GetOffset() / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+			}
 			q.tiled_resource_coordinates.resize(command.num_resource_regions);
 			q.tiled_region_sizes.resize(command.num_resource_regions);
 			for (uint32_t i = 0; i < command.num_resource_regions; ++i)
@@ -5527,11 +5533,11 @@ using namespace dx12_internal;
 				out_coordinate.Y = in_coordinate.y;
 				out_coordinate.Z = in_coordinate.z;
 				out_coordinate.Subresource = D3D12CalcSubresource(in_coordinate.mip, in_coordinate.slice, 0, mip_count, array_size);
-				out_size.NumTiles = in_size.num_tiles;
-				out_size.UseBox = in_size.use_box;
+				out_size.UseBox = in_coordinate.mip < internal_sparse_resource->sparse_texture_properties.packed_mip_start; // only for non packed mips
 				out_size.Width = in_size.width;
 				out_size.Height = in_size.height;
 				out_size.Depth = in_size.depth;
+				out_size.NumTiles = out_size.Width * out_size.Height * out_size.Depth;
 			}
 			q.tile_range_flags.resize(command.num_ranges);
 			q.range_start_offsets.resize(command.num_ranges);
@@ -5551,7 +5557,7 @@ using namespace dx12_internal;
 				}
 				const uint32_t in_offset = command.range_start_offsets[i];
 				uint32_t& out_offset = q.range_start_offsets[i];
-				out_offset = uint32_t(internal_tile_pool->allocation->GetOffset() / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES) + in_offset;
+				out_offset = heap_page_offset + in_offset;
 			}
 
 			q.queue->UpdateTileMappings(

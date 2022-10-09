@@ -698,7 +698,7 @@ namespace wi::graphics
 		uint32_t tile_width = 0;				// width of 1 tile in texels
 		uint32_t tile_height = 0;				// height of 1 tile in texels
 		uint32_t tile_depth = 0;				// depth of 1 tile in texels
-		uint32_t total_tile_count = 0;			// tiles for entire resource
+		uint32_t total_tile_count = 0;			// number of tiles for entire resource
 		uint32_t packed_mip_start = 0;			// first mip of packed mipmap levels, these cannot be individually mapped and they cannot use a box mapping
 		uint32_t packed_mip_count = 0;			// number of packed mipmap levels, these cannot be individually mapped and they cannot use a box mapping
 		uint32_t packed_mip_tile_offset = 0;	// offset of the tiles for packed mip data relative to the entire resource
@@ -1093,24 +1093,17 @@ namespace wi::graphics
 
 	struct SparseResourceCoordinate
 	{
-		uint32_t x = 0;		// tile offset of texture resource in width
-		uint32_t y = 0;		// tile offset of texture resource in height
-		uint32_t z = 0;		// tile offset of texture resource in depth
+		uint32_t x = 0;		// tile offset of buffer or texture in width
+		uint32_t y = 0;		// tile offset of texture in height
+		uint32_t z = 0;		// tile offset of 3D texture in depth
 		uint32_t mip = 0;	// mip level of texture resource
 		uint32_t slice = 0;	// array slice of texture resource
 	};
 	struct SparseRegionSize
 	{
-		uint32_t num_tiles = 0;	// total number of tiles to be mapped
-
-		// if use_box is true, then width,height,depth are used;
-		//	otherwise the mapping is linear and simply num_tiles amount of tiles will be mapped.
-		//	- Must be false for mapping packed mip tail region!
-		//	- if use_box is true, then num_tiles must be equal to width * height * depth
-		bool use_box = false;
-		uint32_t width = 1;		// number of tiles to be mapped in X dimension
-		uint32_t height = 1;	// number of tiles to be mapped in Y dimension
-		uint32_t depth = 1;		// number of tiles to be mapped in Z dimension
+		uint32_t width = 1;		// number of tiles to be mapped in X dimension (buffer or texture)
+		uint32_t height = 1;	// number of tiles to be mapped in Y dimension (texture only)
+		uint32_t depth = 1;		// number of tiles to be mapped in Z dimension (3D texture only)
 	};
 	enum class TileRangeFlags
 	{
