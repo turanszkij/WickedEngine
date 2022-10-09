@@ -339,13 +339,13 @@ namespace wi::scene
 		material.texture_clearcoatnormalmap_index = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SubresourceType::SRV);
 		material.texture_specularmap_index = device->GetDescriptorIndex(textures[SPECULARMAP].GetGPUResource(), SubresourceType::SRV);
 
-		material.residencyMap_baseColorMap = device->GetDescriptorIndex(&textures[BASECOLORMAP].residencyMap, SubresourceType::SRV);
-		material.residencyMap_surfaceMap = device->GetDescriptorIndex(&textures[SURFACEMAP].residencyMap, SubresourceType::SRV);
-		material.residencyMap_normalMap = device->GetDescriptorIndex(&textures[NORMALMAP].residencyMap, SubresourceType::SRV);
+		material.residencyMap_baseColorMap = textures[BASECOLORMAP].descriptor_residencyMap;
+		material.residencyMap_surfaceMap = textures[SURFACEMAP].descriptor_residencyMap;
+		material.residencyMap_normalMap = textures[NORMALMAP].descriptor_residencyMap;
 
-		material.feedbackMap_baseColorMap = device->GetDescriptorIndex(&textures[BASECOLORMAP].feedbackMap, SubresourceType::UAV);
-		material.feedbackMap_surfaceMap = device->GetDescriptorIndex(&textures[SURFACEMAP].feedbackMap, SubresourceType::UAV);
-		material.feedbackMap_normalMap = device->GetDescriptorIndex(&textures[NORMALMAP].feedbackMap, SubresourceType::UAV);
+		material.feedbackMap_baseColorMap = textures[BASECOLORMAP].descriptor_feedbackMap;
+		material.feedbackMap_surfaceMap = textures[SURFACEMAP].descriptor_feedbackMap;
+		material.feedbackMap_normalMap = textures[NORMALMAP].descriptor_feedbackMap;
 
 		std::memcpy(dest, &material, sizeof(ShaderMaterial)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}

@@ -205,9 +205,9 @@ namespace wi::scene
 			std::string name;
 			uint32_t uvset = 0;
 			wi::Resource resource;
-			float lodClamp = 0;
-			wi::graphics::GPUResource residencyMap;
-			wi::graphics::GPUResource feedbackMap;
+			float lodClamp = 0;					// optional, can be used by texture streaming
+			int descriptor_residencyMap = -1;	// optional, can be used by texture streaming
+			int descriptor_feedbackMap = -1;	// optional, can be used by texture streaming
 			const wi::graphics::GPUResource* GetGPUResource() const
 			{
 				if (!resource.IsValid() || !resource.GetTexture().IsValid())

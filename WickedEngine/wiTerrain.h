@@ -66,7 +66,10 @@ namespace wi::terrain
 		wi::graphics::Texture texture;
 		wi::graphics::Texture residencyMap;
 		wi::graphics::Texture feedbackMap;
-		wi::graphics::Texture feedbackMap_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		wi::graphics::Texture residencyMap_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		wi::graphics::Texture feedbackMap_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		int cpu_resource_id = 0;
+		bool updated = false;
 
 		void init(const wi::graphics::TextureDesc& desc);
 
@@ -101,6 +104,7 @@ namespace wi::terrain
 			}
 		};
 		wi::vector<LOD> lods;
+		wi::vector<uint8_t> tile_residency;
 		uint32_t residentMaxLod = ~0u;
 
 		struct TileRequest
@@ -109,7 +113,6 @@ namespace wi::terrain
 			uint8_t x = 0;
 			uint8_t y = 0;
 		};
-		wi::vector<TileRequest> tile_requests;
 		LOD::Tile allocate_tile_request(const TileRequest& tile_request, GPUPageAllocator& allocator)
 		{
 			size_t lod_index = std::min((size_t)tile_request.lod, lods.size() - 1);
@@ -273,14 +276,17 @@ namespace wi::terrain
 		void Generation_Update(const wi::scene::CameraComponent& camera);
 		// Tells the generation thread that it should be cancelled and blocks until that is confirmed
 		void Generation_Cancel();
-		// Updates the virtual textures on GPU by compute shaders
-		void UpdateVirtualTextures(wi::graphics::CommandList cmd) const;
-		void VirtualTextureFeedbackRead(wi::graphics::CommandList cmd) const;
 		// The virtual textures will be compressed and saved into resources. They can be serialized from there
 		void BakeVirtualTexturesToFiles();
 		// Creates the blend weight texture for a chunk data
 		void CreateChunkRegionTexture(ChunkData& chunk_data);
-		void CheckChunkVirtualTextureStatus(ChunkData& chunk_data);
+
+		// Evaluate tile request, allocate tiles, map, create update reques
+		void UpdateVirtualTexturesCPU(ChunkData& chunk_data);
+		// Updates the virtual textures on GPU by compute shaders
+		void UpdateVirtualTexturesGPU(wi::graphics::CommandList cmd) const;
+		// Feedback maps are copied to CPU readable resources
+		void WritebackTileRequestsGPU(wi::graphics::CommandList cmd) const;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

@@ -4052,18 +4052,6 @@ void UpdateRenderDataAsync(
 
 	BindCommonResources(cmd);
 
-	const uint32_t feedback_map_count = vis.scene->feedback_map_allocator.load();
-	if(feedback_map_count > 0)
-	{
-		device->EventBegin("Clear Feedback Textures", cmd);
-		for (uint32_t i = 0; i < feedback_map_count; ++i)
-		{
-			const GPUResource* feedback_map_ptr = *(vis.scene->feedback_maps.data() + i);
-			device->ClearUAV(feedback_map_ptr, 0, cmd);
-		}
-		device->EventEnd(cmd);
-	}
-
 	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
 	{
 		ComputeVolumetricCloudShadows(cmd, vis.scene->weather.volumetricCloudsWeatherMap.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMap.GetTexture() : nullptr);
@@ -4239,7 +4227,7 @@ void UpdateRenderDataAsync(
 
 	for (size_t i = 0; i < vis.scene->terrains.GetCount(); ++i)
 	{
-		vis.scene->terrains[i].UpdateVirtualTextures(cmd);
+		vis.scene->terrains[i].UpdateVirtualTexturesGPU(cmd);
 	}
 
 	device->EventEnd(cmd);

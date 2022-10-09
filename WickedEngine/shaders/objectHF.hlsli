@@ -339,7 +339,17 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 		float3 normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap, 0, 0, prt_status).rg, 1);
 		if (!CheckAccessFullyMapped(prt_status))
 		{
-			normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap, 0, GetMaterial().lodClamp_normalMap).rg, 1);
+			uint lodClamp = GetMaterial().lodClamp_normalMap;
+
+			[branch]
+			if (GetMaterial().residencyMap_normalMap >= 0)
+			{
+				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_normalMap];
+				uint4 residency = residencyMap.GatherRed(sampler_objectshader, UV_normalMap);
+				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
+			}
+
+			normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap, 0, lodClamp).rg, 1);
 
 			[branch]
 			if (GetMaterial().feedbackMap_normalMap >= 0)
@@ -1136,7 +1146,17 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		float4 baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap, 0, 0, prt_status);
 		if (!CheckAccessFullyMapped(prt_status))
 		{
-			baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap, 0, GetMaterial().lodClamp_baseColorMap);
+			uint lodClamp = GetMaterial().lodClamp_baseColorMap;
+
+			[branch]
+			if (GetMaterial().residencyMap_normalMap >= 0)
+			{
+				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_baseColorMap];
+				uint4 residency = residencyMap.GatherRed(sampler_objectshader, UV_baseColorMap);
+				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
+			}
+
+			baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap, 0, lodClamp);
 
 			[branch]
 			if (GetMaterial().feedbackMap_baseColorMap >= 0)
@@ -1188,6 +1208,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap, 0, 0, prt_status);
 		if (!CheckAccessFullyMapped(prt_status))
 		{
+			uint lodClamp = GetMaterial().lodClamp_surfaceMap;
+
+			[branch]
+			if (GetMaterial().residencyMap_surfaceMap >= 0)
+			{
+				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_surfaceMap];
+				uint4 residency = residencyMap.GatherRed(sampler_objectshader, UV_surfaceMap);
+				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
+			}
+
 			surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap, 0, GetMaterial().lodClamp_surfaceMap);
 
 			[branch]

@@ -1524,6 +1524,11 @@ namespace wi
 
 			device->RenderPassEnd(cmd);
 		}
+
+		for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
+		{
+			scene->terrains[i].WritebackTileRequestsGPU(cmd);
+		}
 	}
 	void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 	{

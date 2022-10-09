@@ -205,9 +205,6 @@ namespace wi::scene
 		wi::vector<uint32_t> lightmap_requests;
 		wi::vector<TransformComponent> transforms_temp;
 
-		std::atomic<uint32_t> feedback_map_allocator{ 0 };
-		wi::vector<const wi::graphics::GPUResource*> feedback_maps;
-
 		// CPU/GPU Colliders:
 		std::atomic<uint32_t> collider_allocator_cpu{ 0 };
 		std::atomic<uint32_t> collider_allocator_gpu{ 0 };
