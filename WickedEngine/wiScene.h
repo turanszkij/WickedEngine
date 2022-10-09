@@ -201,7 +201,8 @@ namespace wi::scene
 		uint32_t impostorGeometryOffset = ~0u;
 		uint32_t impostorMaterialOffset = ~0u;
 
-		mutable std::atomic_bool lightmap_refresh_needed{ false };
+		std::atomic<uint32_t> lightmap_request_allocator{ 0 };
+		wi::vector<uint32_t> lightmap_requests;
 		wi::vector<TransformComponent> transforms_temp;
 
 		// CPU/GPU Colliders:

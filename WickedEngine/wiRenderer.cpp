@@ -7834,7 +7834,8 @@ void RayTraceSceneBVH(const Scene& scene, CommandList cmd)
 
 void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclusionMask)
 {
-	if (scene.lightmap_refresh_needed.load())
+	const uint32_t lightmap_request_count = scene.lightmap_request_allocator.load();
+	if (lightmap_request_count > 0)
 	{
 		auto range = wi::profiler::BeginRangeGPU("Lightmap Processing", cmd);
 
@@ -7844,9 +7845,10 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 		BindCommonResources(cmd);
 
 		// Render lightmaps for each object:
-		for (uint32_t i = 0; i < scene.objects.GetCount(); ++i)
+		for (uint32_t requestIndex = 0; requestIndex < lightmap_request_count; ++requestIndex)
 		{
-			const ObjectComponent& object = scene.objects[i];
+			uint32_t objectIndex = *(scene.lightmap_requests.data() + requestIndex);
+			const ObjectComponent& object = scene.objects[objectIndex];
 			if (!object.lightmap.IsValid())
 				continue;
 
@@ -7875,7 +7877,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 				device->BindViewports(1, &vp, cmd);
 
 				MiscCB misccb;
-				misccb.g_xTransform = scene.matrix_objects[i];
+				misccb.g_xTransform = scene.matrix_objects[objectIndex];
 
 				device->BindDynamicConstantBuffer(misccb, CB_GETBINDSLOT(MiscCB), cmd);
 
@@ -7921,7 +7923,6 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 			}
 		}
 
-		scene.lightmap_refresh_needed.store(false);
 		wi::profiler::EndRange(range);
 	}
 }
