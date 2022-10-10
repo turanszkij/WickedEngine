@@ -77,58 +77,20 @@ namespace wi::terrain
 		{
 			uint32_t width = 0;
 			uint32_t height = 0;
-			struct Tile
-			{
-				uint8_t x = 0;
-				uint8_t y = 0;
-				GPUPageAllocator::Page page;
-			};
-			wi::vector<Tile> tiles;
+			wi::vector<GPUPageAllocator::Page> pages;
 
-			bool is_fully_resident() const
-			{
-				for (auto& tile : tiles)
-				{
-					if (!tile.page.IsValid())
-						return false;
-				}
-				return true;
-			}
 			void free(GPUPageAllocator& page_allocator)
 			{
-				for (auto& tile : tiles)
+				for (auto& tile : pages)
 				{
-					page_allocator.free(tile.page);
-					tile.page = {};
+					page_allocator.free(tile);
+					tile = {};
 				}
 			}
 		};
 		wi::vector<LOD> lods;
 		wi::vector<uint8_t> tile_residency;
-		uint32_t residentMaxLod = ~0u;
-
-		struct TileRequest
-		{
-			uint16_t lod = 0;
-			uint8_t x = 0;
-			uint8_t y = 0;
-		};
-		LOD::Tile allocate_tile_request(const TileRequest& tile_request, GPUPageAllocator& allocator)
-		{
-			size_t lod_index = std::min((size_t)tile_request.lod, lods.size() - 1);
-			LOD& lod = lods[lod_index];
-			size_t tile_index = tile_request.x + tile_request.y * lod.width;
-			if (tile_index < lod.tiles.size())
-			{
-				LOD::Tile& tile = lod.tiles[tile_index];
-				if (tile.page.IsValid())
-					return {};
-				tile.page = allocator.allocate();
-				return tile;
-			}
-			assert(0);
-			return {};
-		}
+		uint8_t residentMaxLod = 0xFF;	// fully resident maximum LOD
 
 		void free(GPUPageAllocator& page_allocator)
 		{
@@ -167,6 +129,7 @@ namespace wi::terrain
 		wi::graphics::Texture region_weights_texture;
 		wi::primitive::Sphere sphere;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		bool visible = true;
 
 		VirtualTexture vt[3];
 	};

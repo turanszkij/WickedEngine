@@ -336,7 +336,7 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 	{
 		const float2 UV_normalMap = GetMaterial().uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
 		uint prt_status = 0;
-		float3 normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap, 0, 0, prt_status).rg, 1);
+		float3 normalMap = float3(texture_normalmap.Sample(sampler_linear_clamp, UV_normalMap, 0, 0, prt_status).rg, 1);
 		if (!CheckAccessFullyMapped(prt_status))
 		{
 			uint lodClamp = GetMaterial().lodClamp_normalMap;
@@ -345,11 +345,11 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 			if (GetMaterial().residencyMap_normalMap >= 0)
 			{
 				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_normalMap];
-				uint4 residency = residencyMap.GatherRed(sampler_objectshader, UV_normalMap);
+				uint4 residency = residencyMap.GatherRed(sampler_linear_clamp, UV_normalMap);
 				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
 			}
 
-			normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap, 0, lodClamp).rg, 1);
+			normalMap = float3(texture_normalmap.Sample(sampler_linear_clamp, UV_normalMap, 0, lodClamp).rg, 1);
 
 			[branch]
 			if (GetMaterial().feedbackMap_normalMap >= 0)
@@ -357,7 +357,7 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 				RWTexture2D<uint> feedbackMap = bindless_rwtextures_uint[GetMaterial().feedbackMap_normalMap];
 				uint2 feedback_dim;
 				feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
-				uint2 pixel_feedback = frac(UV_normalMap) * feedback_dim;
+				uint2 pixel_feedback = UV_normalMap * feedback_dim;
 				feedbackMap[pixel_feedback] = 1;
 			}
 		}
@@ -1143,7 +1143,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	{
 		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
 		uint prt_status = 0;
-		float4 baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap, 0, 0, prt_status);
+		float4 baseColorMap = texture_basecolormap.Sample(sampler_linear_clamp, UV_baseColorMap, 0, 0, prt_status);
 		if (!CheckAccessFullyMapped(prt_status))
 		{
 			uint lodClamp = GetMaterial().lodClamp_baseColorMap;
@@ -1152,11 +1152,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			if (GetMaterial().residencyMap_normalMap >= 0)
 			{
 				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_baseColorMap];
-				uint4 residency = residencyMap.GatherRed(sampler_objectshader, UV_baseColorMap);
+				uint4 residency = residencyMap.GatherRed(sampler_linear_clamp, UV_baseColorMap);
 				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
 			}
 
-			baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap, 0, lodClamp);
+			baseColorMap = texture_basecolormap.Sample(sampler_linear_clamp, UV_baseColorMap, 0, lodClamp);
 
 			[branch]
 			if (GetMaterial().feedbackMap_baseColorMap >= 0)
@@ -1164,7 +1164,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 				RWTexture2D<uint> feedbackMap = bindless_rwtextures_uint[GetMaterial().feedbackMap_baseColorMap];
 				uint2 feedback_dim;
 				feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
-				uint2 pixel_feedback = frac(UV_baseColorMap) * feedback_dim;
+				uint2 pixel_feedback = UV_baseColorMap * feedback_dim;
 				feedbackMap[pixel_feedback] = 1;
 			}
 		}
@@ -1205,7 +1205,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	{
 		const float2 UV_surfaceMap = GetMaterial().uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
 		uint prt_status = 0;
-		surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap, 0, 0, prt_status);
+		surfaceMap = texture_surfacemap.Sample(sampler_linear_clamp, UV_surfaceMap, 0, 0, prt_status);
 		if (!CheckAccessFullyMapped(prt_status))
 		{
 			uint lodClamp = GetMaterial().lodClamp_surfaceMap;
@@ -1214,11 +1214,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			if (GetMaterial().residencyMap_surfaceMap >= 0)
 			{
 				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_surfaceMap];
-				uint4 residency = residencyMap.GatherRed(sampler_objectshader, UV_surfaceMap);
+				uint4 residency = residencyMap.GatherRed(sampler_linear_clamp, UV_surfaceMap);
 				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
 			}
 
-			surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap, 0, GetMaterial().lodClamp_surfaceMap);
+			surfaceMap = texture_surfacemap.Sample(sampler_linear_clamp, UV_surfaceMap, 0, GetMaterial().lodClamp_surfaceMap);
 
 			[branch]
 			if (GetMaterial().feedbackMap_surfaceMap >= 0)
@@ -1226,7 +1226,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 				RWTexture2D<uint> feedbackMap = bindless_rwtextures_uint[GetMaterial().feedbackMap_surfaceMap];
 				uint2 feedback_dim;
 				feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
-				uint2 pixel_feedback = frac(UV_surfaceMap) * feedback_dim;
+				uint2 pixel_feedback = UV_surfaceMap * feedback_dim;
 				feedbackMap[pixel_feedback] = 1;
 			}
 		}
