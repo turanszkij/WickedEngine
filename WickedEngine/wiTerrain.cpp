@@ -731,11 +731,8 @@ namespace wi::terrain
 						});
 					wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
 
-					if (slope_cast_shadow.load())
-					{
-						material.SetCastShadow(true);
-						mesh.SetDoubleSidedShadow(true);
-					}
+					material.SetCastShadow(slope_cast_shadow.load());
+					mesh.SetDoubleSidedShadow(slope_cast_shadow.load());
 
 					wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 						mesh.CreateRenderData();
