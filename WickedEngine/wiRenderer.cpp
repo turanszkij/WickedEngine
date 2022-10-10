@@ -2438,6 +2438,10 @@ void RenderMeshes(
 		renderPass == RENDERPASS_ENVMAPCAPTURE ||
 		renderPass == RENDERPASS_VOXELIZE;
 
+	const bool shadowRendering =
+		renderPass == RENDERPASS_SHADOW ||
+		renderPass == RENDERPASS_SHADOWCUBE;
+
 	// Pre-allocate space for all the instances in GPU-buffer:
 	const size_t alloc_size = renderQueue.size() * frustum_count * sizeof(ShaderMeshInstancePointer);
 	const GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
@@ -2527,7 +2531,7 @@ void RenderMeshes(
 				{
 					const BLENDMODE blendMode = material.GetBlendMode();
 					const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
-					OBJECTRENDERING_DOUBLESIDED doublesided = (mesh.IsDoubleSided() || material.IsDoubleSided()) ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
+					OBJECTRENDERING_DOUBLESIDED doublesided = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
 
 					pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
 					assert(pso->IsValid());

@@ -358,7 +358,7 @@ namespace wi::graphics
 			return retval;
 		}
 
-		uint32_t GetMaxViewportCount() const { return properties2.properties.limits.maxViewports; };
+		uint32_t GetMaxViewportCount() const override { return properties2.properties.limits.maxViewports; };
 
 		///////////////Thread-sensitive////////////////////////
 

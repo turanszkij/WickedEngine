@@ -15,7 +15,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MESH " Mesh", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(580, 700));
+	SetSize(XMFLOAT2(580, 730));
 
 	closeButton.SetTooltip("Delete MeshComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -78,6 +78,19 @@ void MeshWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&doubleSidedCheckBox);
+
+	doubleSidedShadowCheckBox.Create("Double Sided Shadow: ");
+	doubleSidedShadowCheckBox.SetTooltip("If enabled, the shadow rendering will be forced to use double sided mode.\nThis can help fix some shadow artifacts without enabling double sided mode for the main rendering of this mesh.");
+	doubleSidedShadowCheckBox.SetSize(XMFLOAT2(hei, hei));
+	doubleSidedShadowCheckBox.SetPos(XMFLOAT2(x, y += step));
+	doubleSidedShadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			mesh->SetDoubleSidedShadow(args.bValue);
+		}
+		});
+	AddWidget(&doubleSidedShadowCheckBox);
 
 	impostorCreateButton.Create("Create Impostor");
 	impostorCreateButton.SetTooltip("Create an impostor image of the mesh. The mesh will be replaced by this image when far away, to render faster.");
@@ -675,6 +688,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		}
 
 		doubleSidedCheckBox.SetCheck(mesh->IsDoubleSided());
+		doubleSidedShadowCheckBox.SetCheck(mesh->IsDoubleSidedShadow());
 
 		const ImpostorComponent* impostor = scene.impostors.GetComponent(entity);
 		if (impostor != nullptr)
@@ -761,6 +775,7 @@ void MeshWindow::ResizeLayout()
 	add(subsetComboBox);
 	add(subsetMaterialComboBox);
 	add_right(doubleSidedCheckBox);
+	add_right(doubleSidedShadowCheckBox);
 	add_fullwidth(impostorCreateButton);
 	add(impostorDistanceSlider);
 	add(tessellationFactorSlider);
