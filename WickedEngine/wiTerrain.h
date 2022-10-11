@@ -68,8 +68,8 @@ namespace wi::terrain
 		wi::graphics::Texture feedbackMap;
 		wi::graphics::Texture residencyMap_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
 		wi::graphics::Texture feedbackMap_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1] = {};
 		int cpu_resource_id = 0;
-		bool updated = false;
 
 		void init(const wi::graphics::TextureDesc& desc);
 
@@ -78,6 +78,7 @@ namespace wi::terrain
 			uint32_t width = 0;
 			uint32_t height = 0;
 			wi::vector<GPUPageAllocator::Page> pages;
+			wi::vector<uint8_t> page_dependecies;
 
 			void free(GPUPageAllocator& page_allocator)
 			{
@@ -99,6 +100,8 @@ namespace wi::terrain
 				lod.free(page_allocator);
 			}
 		}
+
+		void DrawDebug(wi::graphics::CommandList cmd);
 	};
 	struct SparseUpdateBatcher
 	{
