@@ -347,6 +347,8 @@ namespace wi::scene
 		material.feedbackMap_surfaceMap = textures[SURFACEMAP].descriptor_feedbackMap;
 		material.feedbackMap_normalMap = textures[NORMALMAP].descriptor_feedbackMap;
 
+		material.sampler_maximum = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_MAXIMUM));
+
 		std::memcpy(dest, &material, sizeof(ShaderMaterial)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void MaterialComponent::WriteTextures(const wi::graphics::GPUResource** dest, int count) const

@@ -337,20 +337,23 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 		const float2 UV_normalMap = GetMaterial().uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
 		uint prt_status = 0;
 		float3 normalMap = float3(texture_normalmap.Sample(sampler_linear_clamp, UV_normalMap, 0, 0, prt_status).rg, 1);
+
+		[branch]
 		if (!CheckAccessFullyMapped(prt_status))
 		{
-			uint lodClamp = GetMaterial().lodClamp_normalMap;
+			float lodClamp = GetMaterial().lodClamp_normalMap;
 
 			[branch]
 			if (GetMaterial().residencyMap_normalMap >= 0)
 			{
-				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_normalMap];
-				uint4 residency = residencyMap.GatherRed(sampler_linear_clamp, UV_normalMap);
-				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
+				Texture2D residencyMap = bindless_textures[GetMaterial().residencyMap_normalMap];
+				SamplerState sampler_maximum = bindless_samplers[GetMaterial().sampler_maximum];
+				lodClamp = residencyMap.SampleLevel(sampler_maximum, UV_normalMap, 0).r * 255;
 			}
 
 			normalMap = float3(texture_normalmap.Sample(sampler_linear_clamp, UV_normalMap, 0, lodClamp).rg, 1);
 		}
+
 		[branch]
 		if (GetMaterial().feedbackMap_normalMap >= 0)
 		{
@@ -359,8 +362,9 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 			feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
 			uint2 pixel_feedback = UV_normalMap * feedback_dim;
 			float lod = texture_normalmap.CalculateLevelOfDetail(sampler_linear_clamp, UV_normalMap);
-			InterlockedMin(feedbackMap[pixel_feedback], floor(lod));
+			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
+
 		bumpColor = normalMap.rgb * 2 - 1;
 		N = normalize(lerp(N, mul(bumpColor, TBN), GetMaterial().normalMapStrength));
 		bumpColor *= GetMaterial().normalMapStrength;
@@ -1144,20 +1148,23 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
 		uint prt_status = 0;
 		float4 baseColorMap = texture_basecolormap.Sample(sampler_linear_clamp, UV_baseColorMap, 0, 0, prt_status);
+
+		[branch]
 		if (!CheckAccessFullyMapped(prt_status))
 		{
-			uint lodClamp = GetMaterial().lodClamp_baseColorMap;
+			float lodClamp = GetMaterial().lodClamp_baseColorMap;
 
 			[branch]
 			if (GetMaterial().residencyMap_baseColorMap >= 0)
 			{
-				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_baseColorMap];
-				uint4 residency = residencyMap.GatherRed(sampler_linear_clamp, UV_baseColorMap);
-				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
+				Texture2D residencyMap = bindless_textures[GetMaterial().residencyMap_baseColorMap];
+				SamplerState sampler_maximum = bindless_samplers[GetMaterial().sampler_maximum];
+				lodClamp = residencyMap.SampleLevel(sampler_maximum, UV_baseColorMap, 0).r * 255;
 			}
 
 			baseColorMap = texture_basecolormap.Sample(sampler_linear_clamp, UV_baseColorMap, 0, lodClamp);
 		}
+
 		[branch]
 		if (GetMaterial().feedbackMap_baseColorMap >= 0)
 		{
@@ -1166,7 +1173,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
 			uint2 pixel_feedback = UV_baseColorMap * feedback_dim;
 			float lod = texture_basecolormap.CalculateLevelOfDetail(sampler_linear_clamp, UV_baseColorMap);
-			InterlockedMin(feedbackMap[pixel_feedback], floor(lod));
+			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
 		baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
 		color *= baseColorMap;
@@ -1214,20 +1221,23 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		const float2 UV_surfaceMap = GetMaterial().uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
 		uint prt_status = 0;
 		surfaceMap = texture_surfacemap.Sample(sampler_linear_clamp, UV_surfaceMap, 0, 0, prt_status);
+
+		[branch]
 		if (!CheckAccessFullyMapped(prt_status))
 		{
-			uint lodClamp = GetMaterial().lodClamp_surfaceMap;
+			float lodClamp = GetMaterial().lodClamp_surfaceMap;
 
 			[branch]
 			if (GetMaterial().residencyMap_surfaceMap >= 0)
 			{
-				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_surfaceMap];
-				uint4 residency = residencyMap.GatherRed(sampler_linear_clamp, UV_surfaceMap);
-				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
+				Texture2D residencyMap = bindless_textures[GetMaterial().residencyMap_surfaceMap];
+				SamplerState sampler_maximum = bindless_samplers[GetMaterial().sampler_maximum];
+				lodClamp = residencyMap.SampleLevel(sampler_maximum, UV_surfaceMap, 0).r * 255;
 			}
 
 			surfaceMap = texture_surfacemap.Sample(sampler_linear_clamp, UV_surfaceMap, 0, GetMaterial().lodClamp_surfaceMap);
 		}
+
 		[branch]
 		if (GetMaterial().feedbackMap_surfaceMap >= 0)
 		{
@@ -1236,7 +1246,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
 			uint2 pixel_feedback = UV_surfaceMap * feedback_dim;
 			float lod = texture_surfacemap.CalculateLevelOfDetail(sampler_linear_clamp, UV_surfaceMap);
-			InterlockedMin(feedbackMap[pixel_feedback], floor(lod));
+			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
 	}
 #endif // OBJECTSHADER_USE_UVSETS

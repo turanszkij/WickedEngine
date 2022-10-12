@@ -136,10 +136,10 @@ struct ShaderMaterial
 
 	uint4		userdata;
 
+	int			sampler_maximum;
 	float		lodClamp_baseColorMap;
 	float		lodClamp_normalMap;
 	float		lodClamp_surfaceMap;
-	float		padding;
 
 	int			residencyMap_baseColorMap;
 	int			residencyMap_normalMap;

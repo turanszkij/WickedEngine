@@ -2123,6 +2123,13 @@ void SetUpStates()
 	samplerDesc.max_anisotropy = 16;
 	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_OBJECTSHADER]);
 
+	samplerDesc.filter = Filter::MAXIMUM_ANISOTROPIC;
+	samplerDesc.address_u = TextureAddressMode::CLAMP;
+	samplerDesc.address_v = TextureAddressMode::CLAMP;
+	samplerDesc.address_w = TextureAddressMode::CLAMP;
+	samplerDesc.max_anisotropy = 16;
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_OBJECTSHADER_MAXIMUM]);
+
 	samplerDesc.filter = Filter::COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.address_u = TextureAddressMode::CLAMP;
 	samplerDesc.address_v = TextureAddressMode::CLAMP;

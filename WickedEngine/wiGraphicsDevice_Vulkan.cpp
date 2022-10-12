@@ -4000,9 +4000,24 @@ using namespace vulkan_internal;
 				assert(res == VK_SUCCESS);
 
 				VkSubresourceLayout subresourcelayout = {};
-				VkImageSubresource subresource = {};
-				subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				vkGetImageSubresourceLayout(device, image, &subresource, &subresourcelayout);
+
+				if (texture->desc.usage == Usage::UPLOAD)
+				{
+					const uint32_t block_size = GetFormatBlockSize(desc->format);
+					const uint32_t num_blocks_x = std::max(1u, desc->width / block_size);
+					const uint32_t num_blocks_y = std::max(1u, desc->height / block_size);
+					const uint32_t rowpitch = num_blocks_x * GetFormatStride(desc->format);
+					const uint32_t slicepitch = rowpitch * num_blocks_y;
+					subresourcelayout.rowPitch = (VkDeviceSize)rowpitch;
+					subresourcelayout.depthPitch = (VkDeviceSize)slicepitch;
+					subresourcelayout.arrayPitch = (VkDeviceSize)slicepitch;
+				}
+				else
+				{
+					VkImageSubresource subresource = {};
+					subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					vkGetImageSubresourceLayout(device, image, &subresource, &subresourcelayout);
+				}
 
 				if (texture->desc.usage == Usage::READBACK || texture->desc.usage == Usage::UPLOAD)
 				{

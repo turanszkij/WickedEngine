@@ -61,6 +61,8 @@ namespace wi::terrain
 		Page allocate();
 		void free(Page page);
 	};
+
+//#define TERRAIN_VIRTUAL_TEXTURE_DEBUG
 	struct VirtualTexture
 	{
 		wi::graphics::Texture texture;
@@ -90,8 +92,10 @@ namespace wi::terrain
 			}
 		};
 		wi::vector<LOD> lods;
-		wi::vector<uint8_t> tile_residency;
-		uint8_t residentMaxLod = 0xFF;	// fully resident maximum LOD
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+		wi::vector<uint8_t> tile_residency_debug;
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 
 		void free(GPUPageAllocator& page_allocator)
 		{
@@ -198,6 +202,7 @@ namespace wi::terrain
 		};
 		mutable wi::vector<VirtualTextureUpdateRequest> virtual_texture_updates;
 		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers;
+		mutable wi::vector<VirtualTexture> virtual_textures_in_use;
 		GPUPageAllocator page_allocator;
 		SparseUpdateBatcher sparse_batcher;
 

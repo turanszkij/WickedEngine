@@ -228,7 +228,7 @@ namespace wi::terrain
 		td.width = width;
 		td.height = height;
 
-		td.format = Format::R8_UINT;
+		td.format = Format::R8_UNORM;
 		td.bind_flags = BindFlag::SHADER_RESOURCE;
 		td.usage = Usage::DEFAULT;
 		td.layout = ResourceState::SHADER_RESOURCE;
@@ -264,8 +264,9 @@ namespace wi::terrain
 			device->SetName(&feedbackMap_CPU[i], "VirtualTexture::feedbackMap_CPU[i]");
 		}
 
-		tile_residency.resize(width * height);
-		std::fill(tile_residency.begin(), tile_residency.end(), 0xFF); // 0xFF: tile mip status invalid
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+		tile_residency_debug.resize(width * height);
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 
 		lods.clear();
 		lods.resize(sparse_mips);
@@ -279,10 +280,10 @@ namespace wi::terrain
 			height = std::max(1u, height / 2);
 		}
 
-		residentMaxLod = (uint8_t)texture.desc.mip_levels; // this reflects true mipchain, not tile based
 	}
 	void VirtualTexture::DrawDebug(CommandList cmd)
 	{
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 		if (lods.empty())
 			return;
 		float cellsize = 20;
@@ -416,7 +417,7 @@ namespace wi::terrain
 		{
 			for (uint32_t x = 0; x < width; ++x)
 			{
-				uint8_t lod = tile_residency[x + y * width];
+				uint8_t lod = tile_residency_debug[x + y * width];
 
 				wi::image::Params image_params;
 				image_params.pos.x = cellsize * x + offset.x;
@@ -503,6 +504,7 @@ namespace wi::terrain
 			}
 			offset.x += cellsize * lod.width + 30;
 		}
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 	}
 
 	void SparseUpdateBatcher::Flush(QUEUE_TYPE queue)
@@ -605,10 +607,6 @@ namespace wi::terrain
 			Generation_Restart();
 		}
 
-		generation = 0;
-		props = {};
-		SetGrassEnabled(false);
-
 		// Check whether any modifiers need to be removed, and we will really remove them here if so:
 		if (!modifiers_to_remove.empty())
 		{
@@ -686,6 +684,7 @@ namespace wi::terrain
 			}
 		}
 		virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
+		virtual_textures_in_use.clear();
 
 		for (auto it = chunks.begin(); it != chunks.end();)
 		{
@@ -1302,13 +1301,11 @@ namespace wi::terrain
 				desc.mip_levels = 0;
 				desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 
-#if 0
 				if (map_type == MaterialComponent::NORMALMAP)
 				{
 					desc.format = Format::R8G8_UNORM;
 				}
 				else
-#endif
 				{
 					desc.format = Format::R8G8B8A8_UNORM;
 				}
@@ -1331,14 +1328,14 @@ namespace wi::terrain
 				}
 			}
 
+			virtual_textures_in_use.push_back(vt);
 			vt.cpu_resource_id = (vt.cpu_resource_id + 1) % arraysize(vt.feedbackMap_CPU);
 			const bool data_available_CPU = vt.data_available_CPU[vt.cpu_resource_id];
+			vt.data_available_CPU[vt.cpu_resource_id] = true;
 			const uint32_t width = vt.lods[0].width;
 			const uint32_t height = vt.lods[0].height;
-			const uint32_t mip_tail_start = vt.texture.sparse_properties->packed_mip_start;
 			const SubresourceData* feedback_data = vt.feedbackMap_CPU[vt.cpu_resource_id].mapped_subresources;
 			const Texture& residencyTextureCPU = vt.residencyMap_CPU[vt.cpu_resource_id];
-			const SubresourceData* residency_data = residencyTextureCPU.mapped_subresources;
 
 			// Calculate min requests for each tile in each LOD,
 			//	This shows which tiles can be deallocated, and which should be allocated
@@ -1382,6 +1379,8 @@ namespace wi::terrain
 						if (page.IsValid() && page_request > lod && !must_be_always_resident)
 						{
 							// Deallocate + Unmap:
+							page_allocator.free(page);
+							page = {};
 							SparseUpdateCommand& command = sparse_batcher.commands.emplace_back();
 							SparseUpdateBatcher::CommandArrays& command_arrays = sparse_batcher.command_arrays.emplace_back();
 							SparseResourceCoordinate& sparse_coordinate = command_arrays.sparse_coordinate.emplace_back();
@@ -1396,7 +1395,7 @@ namespace wi::terrain
 							sparse_size.width = 1;
 							sparse_size.height = 1;
 							tile_range_flags = TileRangeFlags::Null;
-							tile_range_offset = page.index;
+							tile_range_offset = 0;
 							tile_range_count = 1;
 
 							command.sparse_resource = &vt.texture;
@@ -1408,9 +1407,6 @@ namespace wi::terrain
 							command.range_flags = &tile_range_flags;
 							command.range_start_offsets = &tile_range_offset;
 							command.range_tile_counts = &tile_range_count;
-
-							page_allocator.free(page);
-							page = {};
 						}
 						else if (!page.IsValid() && (page_request <= lod || must_be_always_resident))
 						{
@@ -1461,12 +1457,16 @@ namespace wi::terrain
 
 			// Calculate residency map:
 			//	Must be after deallocations happened to not have invalid tiles show up.
-			for (uint32_t y = 0; y < height; ++y)
-			{
+			wi::jobsystem::context ctx;
+			wi::jobsystem::Dispatch(ctx, height, 1, [this, &vt](wi::jobsystem::JobArgs args) {
+				const uint32_t y = args.jobIndex;
+				const uint32_t width = vt.lods[0].width;
+				const Texture& residencyTextureCPU = vt.residencyMap_CPU[vt.cpu_resource_id];
+				const SubresourceData* residency_data = residencyTextureCPU.mapped_subresources;
+
 				for (uint32_t x = 0; x < width; ++x)
 				{
-					uint8_t& tile_resident_lod = vt.tile_residency[x + y * width];
-					tile_resident_lod = 0xFF;
+					uint8_t tile_resident_lod = 0xFF;
 
 					for (uint8_t lod = 0; lod < (uint8_t)vt.lods.size(); ++lod)
 					{
@@ -1480,17 +1480,22 @@ namespace wi::terrain
 							tile_resident_lod = std::min(tile_resident_lod, lod);
 						}
 					}
-				}
-				// memcpy into uncached memory:
-				std::memcpy(
-					(uint8_t*)residencyTextureCPU.mapped_data + y * residency_data->row_pitch,
-					vt.tile_residency.data() + y * width,
-					sizeof(uint8_t)* width
-				);
-			}
-			vt.data_available_CPU[vt.cpu_resource_id] = true;
 
-			material->textures[map_type].lodClamp = (float)vt.residentMaxLod;
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+					vt.tile_residency_debug[x + y * width] = tile_resident_lod;
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+
+					// memcpy into uncached memory:
+					std::memcpy(
+						(uint8_t*)residencyTextureCPU.mapped_data + x + y * residency_data->row_pitch,
+						&tile_resident_lod,
+						sizeof(tile_resident_lod)
+					);
+				}
+			});
+			wi::jobsystem::Wait(ctx);
+
+			material->textures[map_type].lodClamp = (float)vt.lods.size() - 1;
 		}
 	}
 
@@ -1499,24 +1504,26 @@ namespace wi::terrain
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Terrain - Virtual Texture Update", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Terrain - Virtual Texture Update", cmd);
+		const bool updates_needed = !virtual_texture_updates.empty();
+		virtual_texture_barriers.clear();
 
 		device->EventBegin("Clear Feedback Textures | Upload Residency Maps", cmd);
-		for (auto& it : chunks)
+		for (const VirtualTexture& vt : virtual_textures_in_use)
 		{
-			const ChunkData& chunk_data = it.second;
-			for (uint32_t i = 0; i < arraysize(chunk_data.vt); ++i)
+			if (vt.feedbackMap.IsValid())
 			{
-				const VirtualTexture& vt = chunk_data.vt[i];
-				if (vt.feedbackMap.IsValid())
+				device->ClearUAV(&vt.feedbackMap, 0xFF, cmd);
+				device->CopyResource(&vt.residencyMap, &vt.residencyMap_CPU[vt.cpu_resource_id], cmd);
+
+				if (updates_needed)
 				{
-					device->ClearUAV(&vt.feedbackMap, 0xFF, cmd);
-					device->CopyResource(&vt.residencyMap, &vt.residencyMap_CPU[vt.cpu_resource_id], cmd);
+					virtual_texture_barriers.push_back(GPUBarrier::Image(&vt.texture, vt.texture.desc.layout, ResourceState::UNORDERED_ACCESS));
 				}
 			}
 		}
 		device->EventEnd(cmd);
 
-		if (!virtual_texture_updates.empty())
+		if (updates_needed)
 		{
 			device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE), cmd);
 
@@ -1527,11 +1534,7 @@ namespace wi::terrain
 			material_HighAltitude.WriteShaderMaterial(&materials[3]);
 			device->BindDynamicConstantBuffer(materials, 0, cmd);
 
-			for (auto& request : virtual_texture_updates)
-			{
-				virtual_texture_barriers.push_back(GPUBarrier::Image(&request.texturemap, request.texturemap.desc.layout, ResourceState::UNORDERED_ACCESS, request.lod));
-			}
-			//device->Barrier(virtual_texture_barriers.data(), (uint32_t)virtual_texture_barriers.size(), cmd);
+			device->Barrier(virtual_texture_barriers.data(), (uint32_t)virtual_texture_barriers.size(), cmd);
 
 			for (auto& request : virtual_texture_updates)
 			{
@@ -1584,9 +1587,8 @@ namespace wi::terrain
 			{
 				std::swap(x.image.layout_before, x.image.layout_after);
 			}
-			//device->Barrier(virtual_texture_barriers.data(), (uint32_t)virtual_texture_barriers.size(), cmd);
+			device->Barrier(virtual_texture_barriers.data(), (uint32_t)virtual_texture_barriers.size(), cmd);
 
-			virtual_texture_barriers.clear();
 			virtual_texture_updates.clear();
 		}
 
@@ -1599,16 +1601,11 @@ namespace wi::terrain
 		GraphicsDevice* device = GetDevice();
 
 		device->EventBegin("Terrain - Writeback Tile Requests", cmd);
-		for (auto& it : chunks)
+		for (const VirtualTexture& vt : virtual_textures_in_use)
 		{
-			const ChunkData& chunk_data = it.second;
-			for (uint32_t map_type = 0; map_type < arraysize(chunk_data.vt); ++map_type)
+			if (vt.feedbackMap.IsValid())
 			{
-				const VirtualTexture& vt = chunk_data.vt[map_type];
-				if (vt.feedbackMap.IsValid())
-				{
-					device->CopyResource(&vt.feedbackMap_CPU[vt.cpu_resource_id], &vt.feedbackMap, cmd);
-				}
+				device->CopyResource(&vt.feedbackMap_CPU[vt.cpu_resource_id], &vt.feedbackMap, cmd);
 			}
 		}
 		device->EventEnd(cmd);

@@ -2456,14 +2456,14 @@ void EditorComponent::Compose(CommandList cmd) const
 		wi::font::Draw("Scene saved: " + GetCurrentEditorScene().path, params, cmd);
 	}
 
-#if 1
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 	auto& scene = GetCurrentScene();
 	if (scene.terrains.GetCount() > 0)
 	{
 		auto& terrain = scene.terrains[0];
-		terrain.chunks[{}].vt[0].DrawDebug(cmd);
+		terrain.chunks[terrain.center_chunk].vt[0].DrawDebug(cmd);
 	}
-#endif
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 }
 
 void EditorComponent::ClearSelected()
