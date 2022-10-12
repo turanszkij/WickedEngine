@@ -78,7 +78,7 @@ namespace wi::terrain
 			uint32_t width = 0;
 			uint32_t height = 0;
 			wi::vector<GPUPageAllocator::Page> pages;
-			wi::vector<uint8_t> page_dependecies;
+			wi::vector<uint8_t> page_requests;
 
 			void free(GPUPageAllocator& page_allocator)
 			{

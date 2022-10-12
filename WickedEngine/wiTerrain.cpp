@@ -274,10 +274,7 @@ namespace wi::terrain
 			lods[i].width = width;
 			lods[i].height = height;
 			lods[i].pages.resize(width * height);
-			//if (i > 0)
-			{
-				lods[i].page_dependecies.resize(width * height);
-			}
+			lods[i].page_requests.resize(width * height);
 			width = std::max(1u, width / 2);
 			height = std::max(1u, height / 2);
 		}
@@ -288,8 +285,8 @@ namespace wi::terrain
 	{
 		if (lods.empty())
 			return;
-		float cellsize = 30;
-		XMFLOAT2 offset = XMFLOAT2(0, 50);
+		float cellsize = 20;
+		XMFLOAT2 offset = XMFLOAT2(0, 100);
 
 		const SubresourceData* feedback_data = feedbackMap_CPU[cpu_resource_id].mapped_subresources;
 
@@ -299,10 +296,11 @@ namespace wi::terrain
 		{
 			wi::font::Params font_params;
 			font_params.shadowColor = wi::Color::Black();
+			font_params.shadow_softness = 1;
 			font_params.size = 30;
 			font_params.posX = offset.x;
 			font_params.posY = offset.y - font_params.size;
-			wi::font::Draw("GPU Tile Request Feedback:", font_params, cmd);
+			wi::font::Draw("GPU Tile Request:", font_params, cmd);
 		}
 		for (uint32_t y = 0; y < height; ++y)
 		{
@@ -346,10 +344,69 @@ namespace wi::terrain
 			}
 		}
 
+
+		offset.x += cellsize * width + 30;
+		{
+			wi::font::Params font_params;
+			font_params.shadowColor = wi::Color::Black();
+			font_params.shadow_softness = 1;
+			font_params.size = 30;
+			font_params.posX = offset.x;
+			font_params.posY = offset.y - font_params.size;
+			wi::font::Draw("Min request per mip level:", font_params, cmd);
+		}
+		for (auto& lod : lods)
+		{
+			for (uint32_t y = 0; y < lod.height; ++y)
+			{
+				for (uint32_t x = 0; x < lod.width; ++x)
+				{
+					uint8_t request = lod.page_requests[x + y * lod.width];
+
+					wi::image::Params image_params;
+					image_params.pos.x = cellsize * x + offset.x;
+					image_params.pos.y = cellsize * y + offset.y;
+					image_params.siz.x = cellsize;
+					image_params.siz.y = cellsize;
+					image_params.blendFlag = wi::enums::BLENDMODE::BLENDMODE_ALPHA;
+					image_params.opacity = 0.75f;
+					if (request == 0xFF)
+					{
+						image_params.color = XMFLOAT4(0, 0, 0, 1);
+					}
+					else
+					{
+						image_params.color = XMFLOAT4(0, 0, 1, 1);
+					}
+					wi::image::Draw(wi::texturehelper::getWhite(), image_params, cmd);
+
+					wi::font::Params font_params;
+					font_params.position.x = cellsize * x + cellsize * 0.5f + offset.x;
+					font_params.position.y = cellsize * y + cellsize * 0.5f + offset.y;
+					font_params.h_align = wi::font::WIFALIGN_CENTER;
+					font_params.v_align = wi::font::WIFALIGN_CENTER;
+					if (request == 0xFF)
+					{
+						wi::font::Draw("X", font_params, cmd);
+					}
+					else
+					{
+						wi::font::Draw(std::to_string(request), font_params, cmd);
+					}
+				}
+			}
+			offset.x += cellsize * lod.width + 30;
+		}
+
+
+		//////////////////////////////////////////////
+
+		offset.x = 0;
 		offset.y += cellsize * height + 30;
 		{
 			wi::font::Params font_params;
 			font_params.shadowColor = wi::Color::Black();
+			font_params.shadow_softness = 1;
 			font_params.size = 30;
 			font_params.posX = offset.x;
 			font_params.posY = offset.y - font_params.size;
@@ -398,6 +455,7 @@ namespace wi::terrain
 		{
 			wi::font::Params font_params;
 			font_params.shadowColor = wi::Color::Black();
+			font_params.shadow_softness = 1;
 			font_params.size = 30;
 			font_params.posX = offset.x;
 			font_params.posY = offset.y - font_params.size;
@@ -1277,176 +1335,87 @@ namespace wi::terrain
 			const bool data_available_CPU = vt.data_available_CPU[vt.cpu_resource_id];
 			const uint32_t width = vt.lods[0].width;
 			const uint32_t height = vt.lods[0].height;
-			const int mip_tail_start = (int)vt.texture.sparse_properties->packed_mip_start;
+			const uint32_t mip_tail_start = vt.texture.sparse_properties->packed_mip_start;
 			const SubresourceData* feedback_data = vt.feedbackMap_CPU[vt.cpu_resource_id].mapped_subresources;
 			const Texture& residencyTextureCPU = vt.residencyMap_CPU[vt.cpu_resource_id];
 			const SubresourceData* residency_data = residencyTextureCPU.mapped_subresources;
-			int deallocations = 0;
-			for (uint32_t y = 0; y < height; ++y)
+
+			// Calculate min requests for each tile in each LOD,
+			//	This shows which tiles can be deallocated, and which should be allocated
+			if (data_available_CPU)
 			{
-				for (uint32_t x = 0; x < width; ++x)
+				for (auto& x : vt.lods)
 				{
-					//if (x > 1 || y > 1)
-					//	break;
-					//if (!data_available_CPU)
-					//	break;
-					uint8_t& tile_resident_lod = vt.tile_residency[x + y * width];
-					tile_resident_lod = std::min(tile_resident_lod, vt.residentMaxLod);
-
-					uint8_t* feedback_row = ((uint8_t*)feedback_data->data_ptr) + y * feedback_data->row_pitch;
-					uint32_t feedback_request = *((uint32_t*)feedback_row + x);
-
-					if (!data_available_CPU)
+					std::fill(x.page_requests.begin(), x.page_requests.end(), 0xFF);
+				}
+				for (uint32_t y = 0; y < height; ++y)
+				{
+					for (uint32_t x = 0; x < width; ++x)
 					{
-						if (x == 0 && y == 0)
+						uint8_t* feedback_row = ((uint8_t*)feedback_data->data_ptr) + y * feedback_data->row_pitch;
+						uint32_t feedback_request = *((uint32_t*)feedback_row + x);
+
+						for (uint8_t lod = 0; lod < (uint8_t)vt.lods.size(); ++lod)
 						{
-							feedback_request = 0;
-						}
-						else
-						{
-							feedback_request = 0xFF;
+							const uint8_t l_x = x >> lod;
+							const uint8_t l_y = y >> lod;
+							const uint32_t l_width = width >> lod;
+							const uint32_t l_index = l_x + l_y * l_width;
+							vt.lods[lod].page_requests[l_index] = std::min(vt.lods[lod].page_requests[l_index], (uint8_t)feedback_request);
 						}
 					}
+				}
+			}
 
-					if (feedback_request < tile_resident_lod && tile_resident_lod > 0)
+			// Perform the allocations and deallocations, bottom up starting from least detailed to most detailed mip:
+			for (int lod = (int)vt.lods.size() - 1; lod >= 0; --lod)
+			{
+				for (uint32_t y = 0; y < vt.lods[lod].height; ++y)
+				{
+					for (uint32_t x = 0; x < vt.lods[lod].width; ++x)
 					{
-						// Want to increase lod detail:
-						int lod = (int)tile_resident_lod - 1;
+						uint32_t l_index = x + y * vt.lods[lod].width;
+						GPUPageAllocator::Page& page = vt.lods[lod].pages[l_index];
+						uint8_t page_request = vt.lods[lod].page_requests[l_index];
+						const bool must_be_always_resident = lod == ((int)vt.lods.size() - 1);
 
-						const uint8_t l_x = x >> lod;
-						const uint8_t l_y = y >> lod;
-						const uint32_t l_width = width >> lod;
-						const uint32_t l_index = l_x + l_y * l_width;
-						const uint32_t sparse_lod = std::min(lod, mip_tail_start);
-						const bool packed_mips = lod >= mip_tail_start;
-						GPUPageAllocator::Page& page = vt.lods[sparse_lod].pages[l_index];
-
-						if (!page.IsValid() || packed_mips)
+						if (page.IsValid() && page_request > lod && !must_be_always_resident)
 						{
-							// Allocate and map single page request:
-							if (!page.IsValid())
-							{
-								page = page_allocator.allocate();
-								if (page.IsValid())
-								{
-									SparseUpdateCommand& command = sparse_batcher.commands.emplace_back();
-									SparseUpdateBatcher::CommandArrays& command_arrays = sparse_batcher.command_arrays.emplace_back();
-									SparseResourceCoordinate& sparse_coordinate = command_arrays.sparse_coordinate.emplace_back();
-									SparseRegionSize& sparse_size = command_arrays.sparse_size.emplace_back();
-									TileRangeFlags& tile_range_flags = command_arrays.tile_range_flags.emplace_back();
-									uint32_t& tile_range_offset = command_arrays.tile_range_offset.emplace_back();
-									uint32_t& tile_range_count = command_arrays.tile_range_count.emplace_back();
+							// Deallocate + Unmap:
+							SparseUpdateCommand& command = sparse_batcher.commands.emplace_back();
+							SparseUpdateBatcher::CommandArrays& command_arrays = sparse_batcher.command_arrays.emplace_back();
+							SparseResourceCoordinate& sparse_coordinate = command_arrays.sparse_coordinate.emplace_back();
+							SparseRegionSize& sparse_size = command_arrays.sparse_size.emplace_back();
+							TileRangeFlags& tile_range_flags = command_arrays.tile_range_flags.emplace_back();
+							uint32_t& tile_range_offset = command_arrays.tile_range_offset.emplace_back();
+							uint32_t& tile_range_count = command_arrays.tile_range_count.emplace_back();
 
-									sparse_coordinate.x = l_x;
-									sparse_coordinate.y = l_y;
-									sparse_coordinate.mip = sparse_lod;
-									sparse_size.width = 1;
-									sparse_size.height = 1;
-									tile_range_flags = TileRangeFlags::None;
-									tile_range_offset = page.index;
-									tile_range_count = 1;
+							sparse_coordinate.x = x;
+							sparse_coordinate.y = y;
+							sparse_coordinate.mip = (uint32_t)lod;
+							sparse_size.width = 1;
+							sparse_size.height = 1;
+							tile_range_flags = TileRangeFlags::Null;
+							tile_range_offset = page.index;
+							tile_range_count = 1;
 
-									command.sparse_resource = &vt.texture;
-									command.num_resource_regions = 1;
-									command.coordinates = &sparse_coordinate;
-									command.sizes = &sparse_size;
-									command.tile_pool = &page_allocator.buffer;
-									command.num_ranges = 1;
-									command.range_flags = &tile_range_flags;
-									command.range_start_offsets = &tile_range_offset;
-									command.range_tile_counts = &tile_range_count;
+							command.sparse_resource = &vt.texture;
+							command.num_resource_regions = 1;
+							command.coordinates = &sparse_coordinate;
+							command.sizes = &sparse_size;
+							command.tile_pool = &page_allocator.buffer;
+							command.num_ranges = 1;
+							command.range_flags = &tile_range_flags;
+							command.range_start_offsets = &tile_range_offset;
+							command.range_tile_counts = &tile_range_count;
 
-									// Request updating virtual texture tile after mapping:
-									VirtualTextureUpdateRequest& request = virtual_texture_updates.emplace_back();
-									request.tile_x = l_x;
-									request.tile_y = l_y;
-									request.lod = (uint32_t)lod;
-									request.map_type = map_type;
-									request.texturemap = vt.texture;
-									request.region_weights_texture = chunk_data.region_weights_texture;
-								}
-							}
-							else if (packed_mips)
-							{
-								// packed mip tile was already mapped, but the true mip needs to be updated:
-								VirtualTextureUpdateRequest& request = virtual_texture_updates.emplace_back();
-								request.lod = (uint32_t)lod;
-								request.tile_x = 0;
-								request.tile_y = 0;
-								request.map_type = map_type;
-								request.texturemap = vt.texture;
-								request.region_weights_texture = chunk_data.region_weights_texture;
-							}
-
-							if (packed_mips && page.IsValid())
-							{
-								vt.residentMaxLod = (uint8_t)lod;
-							}
+							page_allocator.free(page);
+							page = {};
 						}
-
-						if (packed_mips)
+						else if (!page.IsValid() && (page_request <= lod || must_be_always_resident))
 						{
-							tile_resident_lod = std::min(tile_resident_lod, vt.residentMaxLod);
-						}
-						else if (page.IsValid())
-						{
-							tile_resident_lod = std::min(tile_resident_lod, (uint8_t)lod);
-
-							// Dependency update for lower detail lod:
-							//	Current lod tile's bit is recorded into lower detail lod
-							{
-								const uint8_t dependency_bits = (1 << (l_x % 2)) << ((l_y % 2) * 2);
-								const uint8_t ll_x = l_x >> 1;
-								const uint8_t ll_y = l_y >> 1;
-								const uint32_t ll_width = l_width >> 1;
-								const uint32_t ll_index = ll_x + ll_y * ll_width;
-								vt.lods[tile_resident_lod + 1].page_dependecies[ll_index] |= dependency_bits;
-							}
-						}
-					}
-					else if (feedback_request > tile_resident_lod && tile_resident_lod < mip_tail_start /*&& deallocations < 10*/)
-					{
-						// Want to decrease lod detail:
-						int lod = tile_resident_lod;
-						const uint8_t l_x = x >> lod;
-						const uint8_t l_y = y >> lod;
-						const uint32_t l_width = width >> lod;
-						const uint32_t l_index = l_x + l_y * l_width;
-
-						//if (device->GetFrameCount() % 60 != 0)
-						//	continue;
-
-						//if (lod > 0)
-						//{
-						//	int parent_lod = lod - 1;
-						//	const uint8_t pl_x = x >> parent_lod;
-						//	const uint8_t pl_y = y >> parent_lod;
-						//	const uint32_t pl_width = width >> parent_lod;
-						//	const uint32_t pl_index = pl_x + pl_y * pl_width;
-						//	if (vt.lods[parent_lod].pages[pl_index].IsValid())
-						//		continue;
-						//}
-
-						// Dependency update for lower lod:
-						//	Current lod tile's bit is removed from lower detail lod
-						{
-							const uint8_t dependency_bits = (1 << (l_x % 2)) << ((l_y % 2) * 2);
-							const uint8_t ll_x = l_x >> 1;
-							const uint8_t ll_y = l_y >> 1;
-							const uint32_t ll_width = l_width >> 1;
-							const uint32_t ll_index = ll_x + ll_y * ll_width;
-							vt.lods[lod + 1].page_dependecies[ll_index] ^= dependency_bits;
-						}
-
-						//if (lod > 0)
-						//	continue;
-
-						tile_resident_lod++;
-
-						if (vt.lods[lod].page_dependecies[l_index] == 0)
-						{
-							GPUPageAllocator::Page& page = vt.lods[lod].pages[l_index];
-							//assert(page.IsValid());
+							// Allocate + Map:
+							page = page_allocator.allocate();
 							if (page.IsValid())
 							{
 								SparseUpdateCommand& command = sparse_batcher.commands.emplace_back();
@@ -1457,12 +1426,12 @@ namespace wi::terrain
 								uint32_t& tile_range_offset = command_arrays.tile_range_offset.emplace_back();
 								uint32_t& tile_range_count = command_arrays.tile_range_count.emplace_back();
 
-								sparse_coordinate.x = l_x;
-								sparse_coordinate.y = l_y;
-								sparse_coordinate.mip = lod;
+								sparse_coordinate.x = x;
+								sparse_coordinate.y = y;
+								sparse_coordinate.mip = (uint32_t)lod;
 								sparse_size.width = 1;
 								sparse_size.height = 1;
-								tile_range_flags = TileRangeFlags::Null;
+								tile_range_flags = TileRangeFlags::None;
 								tile_range_offset = page.index;
 								tile_range_count = 1;
 
@@ -1476,59 +1445,50 @@ namespace wi::terrain
 								command.range_start_offsets = &tile_range_offset;
 								command.range_tile_counts = &tile_range_count;
 
-								deallocations++;
-								page_allocator.free(page);
-								page = {};
-
+								// Request updating virtual texture tile after mapping:
+								VirtualTextureUpdateRequest& request = virtual_texture_updates.emplace_back();
+								request.tile_x = x;
+								request.tile_y = y;
+								request.lod = (uint32_t)lod;
+								request.map_type = map_type;
+								request.texturemap = vt.texture;
+								request.region_weights_texture = chunk_data.region_weights_texture;
 							}
 						}
-
 					}
 				}
 			}
 
-
-			//for (uint32_t y = 0; y < height; ++y)
-			//{
-			//	for (uint32_t x = 0; x < width; ++x)
-			//	{
-			//		uint8_t& tile_resident_lod = vt.tile_residency[x + y * width];
-			//		int lod = (int)vt.lods.size() - 1;
-
-			//		while (lod > 0)
-			//		{
-			//			const uint8_t l_x = x >> lod;
-			//			const uint8_t l_y = y >> lod;
-			//			const uint32_t l_width = width >> lod;
-			//			const uint32_t l_index = l_x + l_y * l_width;
-			//			auto page = vt.lods[lod].pages[l_index];
-			//			if (page.IsValid())
-			//			{
-			//				tile_resident_lod = (uint8_t)lod;
-			//			}
-			//			lod--;
-			//		}
-			//	}
-			//}
-
-			vt.data_available_CPU[vt.cpu_resource_id] = true;
-
-#if 0
-			for (size_t i = 0; i < vt.tile_residency.size(); ++i)
-			{
-				vt.tile_residency[i] = (uint8_t)i;
-			}
-#endif
-
+			// Calculate residency map:
+			//	Must be after deallocations happened to not have invalid tiles show up.
 			for (uint32_t y = 0; y < height; ++y)
 			{
+				for (uint32_t x = 0; x < width; ++x)
+				{
+					uint8_t& tile_resident_lod = vt.tile_residency[x + y * width];
+					tile_resident_lod = 0xFF;
+
+					for (uint8_t lod = 0; lod < (uint8_t)vt.lods.size(); ++lod)
+					{
+						const uint8_t l_x = x >> lod;
+						const uint8_t l_y = y >> lod;
+						const uint32_t l_width = width >> lod;
+						const uint32_t l_index = l_x + l_y * l_width;
+						GPUPageAllocator::Page& page = vt.lods[lod].pages[l_index];
+						if (page.IsValid())
+						{
+							tile_resident_lod = std::min(tile_resident_lod, lod);
+						}
+					}
+				}
 				// memcpy into uncached memory:
 				std::memcpy(
 					(uint8_t*)residencyTextureCPU.mapped_data + y * residency_data->row_pitch,
 					vt.tile_residency.data() + y * width,
-					sizeof(uint8_t) * width
+					sizeof(uint8_t)* width
 				);
 			}
+			vt.data_available_CPU[vt.cpu_resource_id] = true;
 
 			material->textures[map_type].lodClamp = (float)vt.residentMaxLod;
 		}
@@ -1580,32 +1540,44 @@ namespace wi::terrain
 				};
 				device->BindResources(res, 0, arraysize(res), cmd);
 
-				device->BindUAV(&request.texturemap, 0, cmd, (int)request.lod);
-
-				const uint2 request_lod_resolution = uint2(
-					request.texturemap.desc.width >> request.lod,
-					request.texturemap.desc.height >> request.lod
-				);
-
-				const uint2 size = uint2(
-					std::min(request_lod_resolution.x, request.texturemap.sparse_properties->tile_width),
-					std::min(request_lod_resolution.y, request.texturemap.sparse_properties->tile_height)
-				);
-
-				struct Push
+				uint32_t first_mip = request.lod;
+				uint32_t last_mip = request.lod;
+				const bool packed_mips = request.lod >= request.texturemap.sparse_properties->packed_mip_start;
+				if (packed_mips && request.texturemap.sparse_properties->packed_mip_count > 1)
 				{
-					uint2 offset;
-					uint map_type;
-				} push;
+					first_mip = request.texturemap.sparse_properties->packed_mip_start;
+					last_mip = first_mip + request.texturemap.sparse_properties->packed_mip_count - 1;
+				}
 
-				push.offset = uint2(
-					request.tile_x * size.x,
-					request.tile_y * size.y
-				);
-				push.map_type = request.map_type;
-				device->PushConstants(&push, sizeof(push), cmd);
+				for (uint32_t mip = first_mip; mip <= last_mip; mip++)
+				{
+					device->BindUAV(&request.texturemap, 0, cmd, (int)mip);
 
-				device->Dispatch((size.x + 7u) / 8u, (size.y + 7u) / 8u, 1, cmd);
+					const uint2 request_lod_resolution = uint2(
+						request.texturemap.desc.width >> mip,
+						request.texturemap.desc.height >> mip
+					);
+
+					const uint2 size = uint2(
+						std::min(request_lod_resolution.x, request.texturemap.sparse_properties->tile_width),
+						std::min(request_lod_resolution.y, request.texturemap.sparse_properties->tile_height)
+					);
+
+					struct Push
+					{
+						uint2 offset;
+						uint map_type;
+					} push;
+
+					push.offset = uint2(
+						request.tile_x * size.x,
+						request.tile_y * size.y
+					);
+					push.map_type = request.map_type;
+					device->PushConstants(&push, sizeof(push), cmd);
+
+					device->Dispatch((size.x + 7u) / 8u, (size.y + 7u) / 8u, 1, cmd);
+				}
 			}
 
 			for (auto& x : virtual_texture_barriers)
