@@ -84,10 +84,10 @@ namespace wi::terrain
 
 			void free(GPUPageAllocator& page_allocator)
 			{
-				for (auto& tile : pages)
+				for (auto& page : pages)
 				{
-					page_allocator.free(tile);
-					tile = {};
+					page_allocator.free(page);
+					page = {};
 				}
 			}
 		};
@@ -106,21 +106,16 @@ namespace wi::terrain
 		}
 
 		void DrawDebug(wi::graphics::CommandList cmd);
-	};
-	struct SparseUpdateBatcher
-	{
-		wi::vector<wi::graphics::SparseUpdateCommand> commands;
-		struct CommandArrays
-		{
-			wi::vector<wi::graphics::SparseResourceCoordinate> sparse_coordinate;
-			wi::vector<wi::graphics::SparseRegionSize> sparse_size;
-			wi::vector<wi::graphics::TileRangeFlags> tile_range_flags;
-			wi::vector<uint32_t> tile_range_offset;
-			wi::vector<uint32_t> tile_range_count;
-		};
-		wi::vector<CommandArrays> command_arrays;
 
-		void Flush(wi::graphics::QUEUE_TYPE queue);
+		// Sparse mapping parameters are stored here because they will be accessed by background thread:
+		static constexpr uint32_t max_sparse_update_count = 10;
+		uint32_t sparse_update_count = 0;
+		wi::graphics::SparseUpdateCommand command;
+		wi::graphics::SparseResourceCoordinate sparse_coordinate[max_sparse_update_count];
+		wi::graphics::SparseRegionSize sparse_size[max_sparse_update_count];
+		wi::graphics::TileRangeFlags tile_range_flags[max_sparse_update_count];
+		uint32_t tile_range_offset[max_sparse_update_count];
+		uint32_t tile_range_count[max_sparse_update_count];
 	};
 
 	struct ChunkData
@@ -138,7 +133,7 @@ namespace wi::terrain
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		bool visible = true;
 
-		VirtualTexture vt[3];
+		wi::vector<VirtualTexture> vt;
 	};
 
 	struct Prop
@@ -202,9 +197,8 @@ namespace wi::terrain
 		};
 		mutable wi::vector<VirtualTextureUpdateRequest> virtual_texture_updates;
 		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers;
-		mutable wi::vector<VirtualTexture> virtual_textures_in_use;
+		mutable wi::vector<const VirtualTexture*> virtual_textures_in_use;
 		GPUPageAllocator page_allocator;
-		SparseUpdateBatcher sparse_batcher;
 
 		constexpr bool IsCenterToCamEnabled() const { return _flags & CENTER_TO_CAM; }
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }
@@ -253,7 +247,7 @@ namespace wi::terrain
 		void CreateChunkRegionTexture(ChunkData& chunk_data);
 
 		// Evaluate tile request, allocate tiles, map, create update reques
-		void UpdateVirtualTexturesCPU(ChunkData& chunk_data);
+		void UpdateVirtualTexturesCPU();
 		// Updates the virtual textures on GPU by compute shaders
 		void UpdateVirtualTexturesGPU(wi::graphics::CommandList cmd) const;
 		// Feedback maps are copied to CPU readable resources

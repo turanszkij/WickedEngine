@@ -1117,7 +1117,6 @@ namespace wi::graphics
 		const SparseResourceCoordinate* coordinates = nullptr;	// mapping coordinates within sparse resource (num_resource_regions array size)
 		const SparseRegionSize* sizes = nullptr;				// mapping sizes within sparse resource (num_resource_regions array size)
 		const GPUBuffer* tile_pool = nullptr;					// this buffer must have been created with ResourceMisc::TILE_POOL
-		uint32_t num_ranges = 0;								// number of: range_flags, range_start_offsets, range_tile_counts
 		const TileRangeFlags* range_flags = nullptr;			// flags (num_ranges array size)
 		const uint32_t* range_start_offsets = nullptr;			// offset within tile pool (in pages) (num_ranges array size)
 		const uint32_t* range_tile_counts = nullptr;			// number of tiles to be mapped (num_ranges array size)

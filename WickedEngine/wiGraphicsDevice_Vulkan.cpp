@@ -6857,8 +6857,8 @@ using namespace vulkan_internal;
 			out_bind.buffer_bind_infos.reserve(in_command.num_resource_regions);
 			out_bind.image_opaque_bind_infos.reserve(in_command.num_resource_regions);
 			out_bind.image_bind_infos.reserve(in_command.num_resource_regions);
-			out_bind.memory_binds.reserve(in_command.num_resource_regions * in_command.num_ranges);
-			out_bind.image_memory_binds.reserve(in_command.num_resource_regions * in_command.num_ranges);
+			out_bind.memory_binds.reserve(in_command.num_resource_regions);
+			out_bind.image_memory_binds.reserve(in_command.num_resource_regions);
 
 			const VkSparseMemoryBind* memory_bind_ptr = out_bind.memory_binds.data();
 			const VkSparseImageMemoryBind* image_memory_bind_ptr = out_bind.image_memory_binds.data();
@@ -6867,35 +6867,32 @@ using namespace vulkan_internal;
 			{
 				auto internal_sparse = to_internal((const GPUBuffer*)in_command.sparse_resource);
 
+				VkSparseBufferMemoryBindInfo& info = out_bind.buffer_bind_infos.emplace_back();
+				info.buffer = internal_sparse->resource;
+				info.pBinds = memory_bind_ptr;
+				info.bindCount = in_command.num_resource_regions;
+				memory_bind_ptr += in_command.num_resource_regions;
+
 				for (uint32_t j = 0; j < in_command.num_resource_regions; ++j)
 				{
 					const SparseResourceCoordinate& in_coordinate = in_command.coordinates[j];
 					const SparseRegionSize& in_size = in_command.sizes[j];
 
-					VkSparseBufferMemoryBindInfo& info = out_bind.buffer_bind_infos.emplace_back();
-					info.buffer = internal_sparse->resource;
-					info.pBinds = memory_bind_ptr;
-					info.bindCount = in_command.num_ranges;
-					memory_bind_ptr += in_command.num_ranges;
-
-					for (size_t k = 0; k < in_command.num_ranges; ++k)
+					const TileRangeFlags& in_flags = in_command.range_flags[j];
+					uint32_t in_offset = in_command.range_start_offsets[j];
+					uint32_t in_tile_count = in_command.range_tile_counts[j];
+					VkSparseMemoryBind& out_memory_bind = out_bind.memory_binds.emplace_back();
+					out_memory_bind = {};
+					out_memory_bind.resourceOffset = in_coordinate.x * in_command.sparse_resource->sparse_page_size;
+					out_memory_bind.size = in_tile_count * in_command.sparse_resource->sparse_page_size;
+					if (in_flags == TileRangeFlags::Null)
 					{
-						const TileRangeFlags& in_flags = in_command.range_flags[k];
-						uint32_t in_offset = in_command.range_start_offsets[k];
-						uint32_t in_tile_count = in_command.range_tile_counts[k];
-						VkSparseMemoryBind& out_memory_bind = out_bind.memory_binds.emplace_back();
-						out_memory_bind = {};
-						out_memory_bind.resourceOffset = in_coordinate.x * in_command.sparse_resource->sparse_page_size;
-						out_memory_bind.size = in_tile_count * in_command.sparse_resource->sparse_page_size;
-						if (in_flags == TileRangeFlags::Null)
-						{
-							out_memory_bind.memory = VK_NULL_HANDLE;
-						}
-						else
-						{
-							out_memory_bind.memory = tile_pool_memory;
-							out_memory_bind.memoryOffset = tile_pool_offset + in_offset * in_command.sparse_resource->sparse_page_size;
-						}
+						out_memory_bind.memory = VK_NULL_HANDLE;
+					}
+					else
+					{
+						out_memory_bind.memory = tile_pool_memory;
+						out_memory_bind.memoryOffset = tile_pool_offset + in_offset * in_command.sparse_resource->sparse_page_size;
 					}
 				}
 			}
@@ -6932,27 +6929,24 @@ using namespace vulkan_internal;
 						VkSparseImageOpaqueMemoryBindInfo& info = out_bind.image_opaque_bind_infos.emplace_back();
 						info.image = internal_sparse->resource;
 						info.pBinds = memory_bind_ptr;
-						info.bindCount = in_command.num_ranges;
-						memory_bind_ptr += in_command.num_ranges;
+						info.bindCount = 1;
+						memory_bind_ptr++;
 
-						for (size_t k = 0; k < in_command.num_ranges; ++k)
+						const TileRangeFlags& in_flags = in_command.range_flags[j];
+						uint32_t in_offset = in_command.range_start_offsets[j];
+						uint32_t in_tile_count = in_command.range_tile_counts[j];
+						VkSparseMemoryBind& out_memory_bind = out_bind.memory_binds.emplace_back();
+						out_memory_bind = {};
+						out_memory_bind.resourceOffset = internal_sparse->sparse_texture_properties.packed_mip_tile_offset * sparse_texture->sparse_page_size;
+						out_memory_bind.size = in_tile_count * in_command.sparse_resource->sparse_page_size;
+						if (in_flags == TileRangeFlags::Null)
 						{
-							const TileRangeFlags& in_flags = in_command.range_flags[k];
-							uint32_t in_offset = in_command.range_start_offsets[k];
-							uint32_t in_tile_count = in_command.range_tile_counts[k];
-							VkSparseMemoryBind& out_memory_bind = out_bind.memory_binds.emplace_back();
-							out_memory_bind = {};
-							out_memory_bind.resourceOffset = internal_sparse->sparse_texture_properties.packed_mip_tile_offset * sparse_texture->sparse_page_size;
-							out_memory_bind.size = in_tile_count * in_command.sparse_resource->sparse_page_size;
-							if (in_flags == TileRangeFlags::Null)
-							{
-								out_memory_bind.memory = VK_NULL_HANDLE;
-							}
-							else
-							{
-								out_memory_bind.memory = tile_pool_memory;
-								out_memory_bind.memoryOffset = tile_pool_offset + in_offset * in_command.sparse_resource->sparse_page_size;
-							}
+							out_memory_bind.memory = VK_NULL_HANDLE;
+						}
+						else
+						{
+							out_memory_bind.memory = tile_pool_memory;
+							out_memory_bind.memoryOffset = tile_pool_offset + in_offset * in_command.sparse_resource->sparse_page_size;
 						}
 					}
 					else
@@ -6960,35 +6954,32 @@ using namespace vulkan_internal;
 						VkSparseImageMemoryBindInfo& info = out_bind.image_bind_infos.emplace_back();
 						info.image = internal_sparse->resource;
 						info.pBinds = image_memory_bind_ptr;
-						info.bindCount = in_command.num_ranges;
-						image_memory_bind_ptr += in_command.num_ranges;
+						info.bindCount = 1;
+						image_memory_bind_ptr++;
 
-						for (uint32_t k = 0; k < in_command.num_ranges; ++k)
+						const TileRangeFlags& in_flags = in_command.range_flags[j];
+						uint32_t in_offset = in_command.range_start_offsets[j];
+						uint32_t in_tile_count = in_command.range_tile_counts[j];
+						VkSparseImageMemoryBind& out_image_memory_bind = out_bind.image_memory_binds.emplace_back();
+						out_image_memory_bind = {};
+						if (in_flags == TileRangeFlags::Null)
 						{
-							const TileRangeFlags& in_flags = in_command.range_flags[k];
-							uint32_t in_offset = in_command.range_start_offsets[k];
-							uint32_t in_tile_count = in_command.range_tile_counts[k];
-							VkSparseImageMemoryBind& out_image_memory_bind = out_bind.image_memory_binds.emplace_back();
-							out_image_memory_bind = {};
-							if (in_flags == TileRangeFlags::Null)
-							{
-								out_image_memory_bind.memory = VK_NULL_HANDLE;
-							}
-							else
-							{
-								out_image_memory_bind.memory = tile_pool_memory;
-								out_image_memory_bind.memoryOffset = tile_pool_offset + in_offset * in_command.sparse_resource->sparse_page_size;
-							}
-							out_image_memory_bind.subresource.mipLevel = in_coordinate.mip;
-							out_image_memory_bind.subresource.arrayLayer = in_coordinate.slice;
-							out_image_memory_bind.subresource.aspectMask = aspectMask;
-							out_image_memory_bind.offset.x = in_coordinate.x * internal_sparse->sparse_texture_properties.tile_width;
-							out_image_memory_bind.offset.y = in_coordinate.y * internal_sparse->sparse_texture_properties.tile_height;
-							out_image_memory_bind.offset.z = in_coordinate.z * internal_sparse->sparse_texture_properties.tile_depth;
-							out_image_memory_bind.extent.width = in_size.width * internal_sparse->sparse_texture_properties.tile_width;
-							out_image_memory_bind.extent.height = in_size.height * internal_sparse->sparse_texture_properties.tile_height;
-							out_image_memory_bind.extent.depth = in_size.depth * internal_sparse->sparse_texture_properties.tile_depth;
+							out_image_memory_bind.memory = VK_NULL_HANDLE;
 						}
+						else
+						{
+							out_image_memory_bind.memory = tile_pool_memory;
+							out_image_memory_bind.memoryOffset = tile_pool_offset + in_offset * in_command.sparse_resource->sparse_page_size;
+						}
+						out_image_memory_bind.subresource.mipLevel = in_coordinate.mip;
+						out_image_memory_bind.subresource.arrayLayer = in_coordinate.slice;
+						out_image_memory_bind.subresource.aspectMask = aspectMask;
+						out_image_memory_bind.offset.x = in_coordinate.x * internal_sparse->sparse_texture_properties.tile_width;
+						out_image_memory_bind.offset.y = in_coordinate.y * internal_sparse->sparse_texture_properties.tile_height;
+						out_image_memory_bind.offset.z = in_coordinate.z * internal_sparse->sparse_texture_properties.tile_depth;
+						out_image_memory_bind.extent.width = in_size.width * internal_sparse->sparse_texture_properties.tile_width;
+						out_image_memory_bind.extent.height = in_size.height * internal_sparse->sparse_texture_properties.tile_height;
+						out_image_memory_bind.extent.depth = in_size.depth * internal_sparse->sparse_texture_properties.tile_depth;
 					}
 
 				}

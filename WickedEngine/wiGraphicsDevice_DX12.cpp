@@ -5539,9 +5539,9 @@ using namespace dx12_internal;
 				out_size.Depth = in_size.depth;
 				out_size.NumTiles = out_size.Width * out_size.Height * out_size.Depth;
 			}
-			q.tile_range_flags.resize(command.num_ranges);
-			q.range_start_offsets.resize(command.num_ranges);
-			for (uint32_t i = 0; i < command.num_ranges; ++i)
+			q.tile_range_flags.resize(command.num_resource_regions);
+			q.range_start_offsets.resize(command.num_resource_regions);
+			for (uint32_t i = 0; i < command.num_resource_regions; ++i)
 			{
 				const TileRangeFlags& in_flags = command.range_flags[i];
 				D3D12_TILE_RANGE_FLAGS& out_flags = q.tile_range_flags[i];
@@ -5566,7 +5566,7 @@ using namespace dx12_internal;
 				q.tiled_resource_coordinates.data(),
 				q.tiled_region_sizes.data(),
 				heap,
-				command.num_ranges,
+				command.num_resource_regions,
 				q.tile_range_flags.data(),
 				q.range_start_offsets.data(),
 				command.range_tile_counts,
@@ -5587,9 +5587,6 @@ using namespace dx12_internal;
 #if 0 // debug immediate wait by CPU
 		hr = q.tile_mapping_fence->SetEventOnCompletion(q.tile_mapping_fence_value, nullptr);
 		assert(SUCCEEDED(hr));
-		hr = q.tile_mapping_fence->Signal(0);
-		assert(SUCCEEDED(hr));
-		q.tile_mapping_fence_value = 0;
 #endif
 	}
 
