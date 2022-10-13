@@ -6848,15 +6848,9 @@ using namespace vulkan_internal;
 				tile_pool_offset = internal_tile_pool->allocation->GetOffset();
 			}
 
-			out_bind.buffer_bind_infos.clear();
-			out_bind.image_opaque_bind_infos.clear();
-			out_bind.image_bind_infos.clear();
 			out_bind.memory_binds.clear();
 			out_bind.image_memory_binds.clear();
 
-			out_bind.buffer_bind_infos.reserve(in_command.num_resource_regions);
-			out_bind.image_opaque_bind_infos.reserve(in_command.num_resource_regions);
-			out_bind.image_bind_infos.reserve(in_command.num_resource_regions);
 			out_bind.memory_binds.reserve(in_command.num_resource_regions);
 			out_bind.image_memory_binds.reserve(in_command.num_resource_regions);
 
@@ -6867,7 +6861,8 @@ using namespace vulkan_internal;
 			{
 				auto internal_sparse = to_internal((const GPUBuffer*)in_command.sparse_resource);
 
-				VkSparseBufferMemoryBindInfo& info = out_bind.buffer_bind_infos.emplace_back();
+				VkSparseBufferMemoryBindInfo& info = out_bind.buffer_bind_info;
+				info = {};
 				info.buffer = internal_sparse->resource;
 				info.pBinds = memory_bind_ptr;
 				info.bindCount = in_command.num_resource_regions;
@@ -6895,6 +6890,12 @@ using namespace vulkan_internal;
 						out_memory_bind.memoryOffset = tile_pool_offset + in_offset * in_command.sparse_resource->sparse_page_size;
 					}
 				}
+
+				if (out_info.bufferBindCount > 0)
+				{
+					out_info.pBufferBinds = &out_bind.buffer_bind_info;
+					out_info.bufferBindCount = 1;
+				}
 			}
 			else if (in_command.sparse_resource->IsTexture())
 			{
@@ -6918,6 +6919,18 @@ using namespace vulkan_internal;
 					aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
 				}
 
+				VkSparseImageOpaqueMemoryBindInfo& opaque_info = out_bind.image_opaque_bind_info;
+				opaque_info = {};
+				opaque_info.image = internal_sparse->resource;
+				opaque_info.pBinds = memory_bind_ptr;
+				opaque_info.bindCount = 0;
+
+				VkSparseImageMemoryBindInfo& info = out_bind.image_bind_info;
+				info = {};
+				info.image = internal_sparse->resource;
+				info.pBinds = image_memory_bind_ptr;
+				info.bindCount = 0;
+
 				for (uint32_t j = 0; j < in_command.num_resource_regions; ++j)
 				{
 					const SparseResourceCoordinate& in_coordinate = in_command.coordinates[j];
@@ -6926,10 +6939,7 @@ using namespace vulkan_internal;
 
 					if (is_miptail)
 					{
-						VkSparseImageOpaqueMemoryBindInfo& info = out_bind.image_opaque_bind_infos.emplace_back();
-						info.image = internal_sparse->resource;
-						info.pBinds = memory_bind_ptr;
-						info.bindCount = 1;
+						opaque_info.bindCount++;
 						memory_bind_ptr++;
 
 						const TileRangeFlags& in_flags = in_command.range_flags[j];
@@ -6951,10 +6961,7 @@ using namespace vulkan_internal;
 					}
 					else
 					{
-						VkSparseImageMemoryBindInfo& info = out_bind.image_bind_infos.emplace_back();
-						info.image = internal_sparse->resource;
-						info.pBinds = image_memory_bind_ptr;
-						info.bindCount = 1;
+						info.bindCount++;
 						image_memory_bind_ptr++;
 
 						const TileRangeFlags& in_flags = in_command.range_flags[j];
@@ -6984,10 +6991,17 @@ using namespace vulkan_internal;
 
 				}
 
-				out_info.pImageBinds = out_bind.image_bind_infos.data();
-				out_info.imageBindCount = (uint32_t)out_bind.image_bind_infos.size();
-				out_info.pImageOpaqueBinds = out_bind.image_opaque_bind_infos.data();
-				out_info.imageOpaqueBindCount = (uint32_t)out_bind.image_opaque_bind_infos.size();
+				if (opaque_info.bindCount > 0)
+				{
+					out_info.pImageOpaqueBinds = &out_bind.image_opaque_bind_info;
+					out_info.imageOpaqueBindCount = 1;
+				}
+				if (info.bindCount > 0)
+				{
+					out_info.pImageBinds = &out_bind.image_bind_info;
+					out_info.imageBindCount = 1;
+				}
+
 			}
 
 		}

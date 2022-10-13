@@ -72,50 +72,33 @@ namespace wi::terrain
 		wi::graphics::Texture feedbackMap_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
 		bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1] = {};
 		int cpu_resource_id = 0;
-
-		void init(const wi::graphics::TextureDesc& desc);
-
-		struct LOD
-		{
-			uint32_t width = 0;
-			uint32_t height = 0;
-			wi::vector<GPUPageAllocator::Page> pages;
-			wi::vector<uint8_t> page_requests;
-
-			void free(GPUPageAllocator& page_allocator)
-			{
-				for (auto& page : pages)
-				{
-					page_allocator.free(page);
-					page = {};
-				}
-			}
-		};
-		wi::vector<LOD> lods;
+		wi::vector<GPUPageAllocator::Page> pages;
+		wi::vector<uint8_t> page_requests;
+		wi::vector<uint32_t> lod_page_offsets;
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 		wi::vector<uint8_t> tile_residency_debug;
 #endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 
+		void init(const wi::graphics::TextureDesc& desc);
+
 		void free(GPUPageAllocator& page_allocator)
 		{
-			for (auto& lod : lods)
+			for (auto& page : pages)
 			{
-				lod.free(page_allocator);
+				page_allocator.free(page);
+				page = {};
 			}
 		}
 
 		void DrawDebug(wi::graphics::CommandList cmd);
 
 		// Sparse mapping parameters are stored here because they will be accessed by background thread:
-		static constexpr uint32_t max_sparse_update_count = 10;
-		uint32_t sparse_update_count = 0;
-		wi::graphics::SparseUpdateCommand command;
-		wi::graphics::SparseResourceCoordinate sparse_coordinate[max_sparse_update_count];
-		wi::graphics::SparseRegionSize sparse_size[max_sparse_update_count];
-		wi::graphics::TileRangeFlags tile_range_flags[max_sparse_update_count];
-		uint32_t tile_range_offset[max_sparse_update_count];
-		uint32_t tile_range_count[max_sparse_update_count];
+		wi::vector<wi::graphics::SparseResourceCoordinate> sparse_coordinate;
+		wi::vector<wi::graphics::SparseRegionSize> sparse_size;
+		wi::vector<wi::graphics::TileRangeFlags> tile_range_flags;
+		wi::vector<uint32_t> tile_range_offset;
+		wi::vector<uint32_t> tile_range_count;
 	};
 
 	struct ChunkData
@@ -196,7 +179,9 @@ namespace wi::terrain
 			wi::graphics::Texture region_weights_texture;
 		};
 		mutable wi::vector<VirtualTextureUpdateRequest> virtual_texture_updates;
-		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers;
+		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_update;
+		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_update;
+		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_writeback;
 		mutable wi::vector<const VirtualTexture*> virtual_textures_in_use;
 		GPUPageAllocator page_allocator;
 

@@ -2461,7 +2461,10 @@ void EditorComponent::Compose(CommandList cmd) const
 	if (scene.terrains.GetCount() > 0)
 	{
 		auto& terrain = scene.terrains[0];
-		terrain.chunks[terrain.center_chunk].vt[0].DrawDebug(cmd);
+		if (!terrain.chunks[terrain.center_chunk].vt.empty())
+		{
+			terrain.chunks[terrain.center_chunk].vt[0].DrawDebug(cmd);
+		}
 	}
 #endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 }

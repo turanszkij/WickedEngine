@@ -111,9 +111,9 @@ namespace wi::graphics
 			wi::vector<VkBindSparseInfo> sparse_infos;
 			struct DataPerBind
 			{
-				wi::vector<VkSparseBufferMemoryBindInfo> buffer_bind_infos;
-				wi::vector<VkSparseImageOpaqueMemoryBindInfo> image_opaque_bind_infos;
-				wi::vector<VkSparseImageMemoryBindInfo> image_bind_infos;
+				VkSparseBufferMemoryBindInfo buffer_bind_info;
+				VkSparseImageOpaqueMemoryBindInfo image_opaque_bind_info;
+				VkSparseImageMemoryBindInfo image_bind_info;
 				wi::vector<VkSparseMemoryBind> memory_binds;
 				wi::vector<VkSparseImageMemoryBind> image_memory_binds;
 			};
