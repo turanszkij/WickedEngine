@@ -3903,6 +3903,7 @@ using namespace vulkan_internal;
 			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
 
 			res = vkCreateImage(device, &imageInfo, nullptr, &internal_state->resource);
+			assert(res == VK_SUCCESS);
 
 			VkMemoryRequirements memory_requirements = {};
 			vkGetImageMemoryRequirements(

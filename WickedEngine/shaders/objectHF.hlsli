@@ -346,14 +346,15 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 			[branch]
 			if (GetMaterial().residencyMap_normalMap >= 0)
 			{
-				Texture2D residencyMap = bindless_textures[GetMaterial().residencyMap_normalMap];
-				SamplerState sampler_maximum = bindless_samplers[GetMaterial().sampler_maximum];
-				lodClamp = residencyMap.SampleLevel(sampler_maximum, UV_normalMap, 0).r * 255;
+				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_normalMap];
+				uint4 residency = residencyMap.GatherRed(sampler_aniso_clamp, UV_normalMap);
+				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
 			}
 
 			normalMap = float3(texture_normalmap.Sample(sampler_aniso_clamp, UV_normalMap, 0, lodClamp).rg, 1);
 		}
 
+#ifdef EARLY_DEPTH_STENCIL_ENABLED
 		[branch]
 		if (GetMaterial().feedbackMap_normalMap >= 0)
 		{
@@ -364,6 +365,7 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 			float lod = texture_normalmap.CalculateLevelOfDetail(sampler_aniso_clamp, UV_normalMap);
 			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
+#endif // EARLY_DEPTH_STENCIL_ENABLED
 
 		bumpColor = normalMap.rgb * 2 - 1;
 		N = normalize(lerp(N, mul(bumpColor, TBN), GetMaterial().normalMapStrength));
@@ -1062,6 +1064,7 @@ PixelInput main(VertexInput input)
 //	WATER				-	include specialized water shader code
 
 #ifdef DISABLE_ALPHATEST
+#define EARLY_DEPTH_STENCIL_ENABLED
 [earlydepthstencil]
 #endif // DISABLE_ALPHATEST
 
@@ -1157,14 +1160,15 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			[branch]
 			if (GetMaterial().residencyMap_baseColorMap >= 0)
 			{
-				Texture2D residencyMap = bindless_textures[GetMaterial().residencyMap_baseColorMap];
-				SamplerState sampler_maximum = bindless_samplers[GetMaterial().sampler_maximum];
-				lodClamp = residencyMap.SampleLevel(sampler_maximum, UV_baseColorMap, 0).r * 255;
+				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_baseColorMap];
+				uint4 residency = residencyMap.GatherRed(sampler_aniso_clamp, UV_baseColorMap);
+				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
 			}
 
 			baseColorMap = texture_basecolormap.Sample(sampler_aniso_clamp, UV_baseColorMap, 0, lodClamp);
 		}
 
+#ifdef EARLY_DEPTH_STENCIL_ENABLED
 		[branch]
 		if (GetMaterial().feedbackMap_baseColorMap >= 0)
 		{
@@ -1175,6 +1179,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			float lod = texture_basecolormap.CalculateLevelOfDetail(sampler_aniso_clamp, UV_baseColorMap);
 			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
+#endif // EARLY_DEPTH_STENCIL_ENABLED
+
 		baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
 		color *= baseColorMap;
 	}
@@ -1222,14 +1228,15 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			[branch]
 			if (GetMaterial().residencyMap_surfaceMap >= 0)
 			{
-				Texture2D residencyMap = bindless_textures[GetMaterial().residencyMap_surfaceMap];
-				SamplerState sampler_maximum = bindless_samplers[GetMaterial().sampler_maximum];
-				lodClamp = residencyMap.SampleLevel(sampler_maximum, UV_surfaceMap, 0).r * 255;
+				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_surfaceMap];
+				uint4 residency = residencyMap.GatherRed(sampler_aniso_clamp, UV_surfaceMap);
+				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
 			}
 
 			surfaceMap = texture_surfacemap.Sample(sampler_aniso_clamp, UV_surfaceMap, 0, GetMaterial().lodClamp_surfaceMap);
 		}
 
+#ifdef EARLY_DEPTH_STENCIL_ENABLED
 		[branch]
 		if (GetMaterial().feedbackMap_surfaceMap >= 0)
 		{
@@ -1240,6 +1247,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			float lod = texture_surfacemap.CalculateLevelOfDetail(sampler_aniso_clamp, UV_surfaceMap);
 			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
+#endif // EARLY_DEPTH_STENCIL_ENABLED
+
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 

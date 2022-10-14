@@ -1,14 +1,8 @@
 #include "globals.hlsli"
 
 static const uint region_count = 4;
-Texture2D<float4> region_weights_texture : register(t0);
 
-struct VirtualTexturePush
-{
-	uint2 offset;
-	uint map_type;
-};
-PUSHCONSTANT(push, VirtualTexturePush);
+PUSHCONSTANT(push, TerrainVirtualTexturePush);
 
 struct Terrain
 {
@@ -16,11 +10,12 @@ struct Terrain
 };
 ConstantBuffer<Terrain> terrain : register(b0);
 
-RWTexture2D<unorm float4> output : register(u0);
-
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID)
 {
+	Texture2D<float4> region_weights_texture = bindless_textures[push.region_weights_textureRO];
+	RWTexture2D<unorm float4> output = bindless_rwtextures[push.output_textureRW];
+
 	const uint2 pixel = DTid.xy + push.offset;
 
 	float2 output_dim;

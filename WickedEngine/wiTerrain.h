@@ -68,17 +68,15 @@ namespace wi::terrain
 		wi::graphics::Texture texture;
 		wi::graphics::Texture residencyMap;
 		wi::graphics::Texture feedbackMap;
-		wi::graphics::Texture residencyMap_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
-		wi::graphics::Texture feedbackMap_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		wi::graphics::GPUBuffer lodOffsetsBuffer;
+		wi::graphics::GPUBuffer requestBuffer;
+		wi::graphics::GPUBuffer allocationBuffer;
+		wi::graphics::GPUBuffer allocationBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		wi::graphics::GPUBuffer pageBuffer_CPU_upload[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
 		bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1] = {};
 		int cpu_resource_id = 0;
 		wi::vector<GPUPageAllocator::Page> pages;
-		wi::vector<uint8_t> page_requests;
 		wi::vector<uint32_t> lod_page_offsets;
-
-#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-		wi::vector<uint8_t> tile_residency_debug;
-#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 
 		void init(const wi::graphics::TextureDesc& desc);
 
@@ -99,6 +97,17 @@ namespace wi::terrain
 		wi::vector<wi::graphics::TileRangeFlags> tile_range_flags;
 		wi::vector<uint32_t> tile_range_offset;
 		wi::vector<uint32_t> tile_range_count;
+
+		// Attach this data to Virtual Texture because we will record these by separate CPU thread:
+		struct UpdateRequest
+		{
+			uint32_t lod = 0;
+			uint32_t tile_x = 0;
+			uint32_t tile_y = 0;
+		};
+		wi::vector<UpdateRequest> update_requests;
+		wi::graphics::Texture region_weights_texture;
+		uint32_t map_type = 0;
 	};
 
 	struct ChunkData
@@ -169,19 +178,10 @@ namespace wi::terrain
 		std::shared_ptr<Generator> generator;
 		float generation_time_budget_milliseconds = 12; // after this much time, the generation thread will exit. This can help avoid a very long running, resource consuming and slow cancellation generation
 
-		struct VirtualTextureUpdateRequest
-		{
-			uint32_t lod = 0;
-			uint32_t tile_x = 0;
-			uint32_t tile_y = 0;
-			uint32_t map_type = 0;
-			wi::graphics::Texture texturemap;
-			wi::graphics::Texture region_weights_texture;
-		};
-		mutable wi::vector<VirtualTextureUpdateRequest> virtual_texture_updates;
 		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_update;
 		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_update;
 		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_writeback;
+		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_writeback;
 		mutable wi::vector<const VirtualTexture*> virtual_textures_in_use;
 		GPUPageAllocator page_allocator;
 
@@ -226,8 +226,6 @@ namespace wi::terrain
 		void Generation_Update(const wi::scene::CameraComponent& camera);
 		// Tells the generation thread that it should be cancelled and blocks until that is confirmed
 		void Generation_Cancel();
-		// The virtual textures will be compressed and saved into resources. They can be serialized from there
-		void BakeVirtualTexturesToFiles();
 		// Creates the blend weight texture for a chunk data
 		void CreateChunkRegionTexture(ChunkData& chunk_data);
 

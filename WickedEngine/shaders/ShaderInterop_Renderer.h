@@ -136,10 +136,10 @@ struct ShaderMaterial
 
 	uint4		userdata;
 
-	int			sampler_maximum;
 	float		lodClamp_baseColorMap;
 	float		lodClamp_normalMap;
 	float		lodClamp_surfaceMap;
+	int			padding;
 
 	int			residencyMap_baseColorMap;
 	int			residencyMap_normalMap;
@@ -979,6 +979,43 @@ struct VolumetricCloudCapturePushConstants
 	float ShadowSampleCount;
 	float GroundContributionSampleCount;
 	float padding;
+};
+
+
+struct TerrainVirtualTexturePush
+{
+	uint2 offset;
+	uint map_type;
+	int region_weights_textureRO;
+	int output_textureRW;
+};
+struct VirtualTextureResidencyUpdatePush
+{
+	uint lodCount;
+	uint width;
+	uint height;
+	int lodOffsetsBufferRO;
+	int pageBufferRO;
+	int residencyTextureRW;
+};
+struct VirtualTextureTileAllocatePush
+{
+	uint threadCount;
+	uint lodCount;
+	uint width;
+	int lodOffsetsBufferRO;
+	int pageBufferRO;
+	int requestBufferRW;
+	int allocationBufferRW;
+};
+struct VirtualTextureTileRequestsPush
+{
+	uint lodCount;
+	uint width;
+	uint height;
+	int lodOffsetsBufferRO;
+	int feedbackTextureRO;
+	int requestBufferRW;
 };
 
 

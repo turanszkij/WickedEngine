@@ -276,14 +276,13 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create(ICON_TERRAIN " Terrain", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(420, 940));
 
-	closeButton.SetTooltip("Delete Terrain.\nThis will bake generated virtual textures to static textures which could take a while!");
+	closeButton.SetTooltip("Delete Terrain.");
 	OnClose([=](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
 
-		terrain->BakeVirtualTexturesToFiles();
 		editor->GetCurrentScene().terrains.Remove(entity);
 
 		editor->RecordEntity(archive, entity);
