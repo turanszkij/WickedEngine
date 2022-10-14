@@ -16,6 +16,10 @@
 
 #define LIGHTMAP_QUALITY_BICUBIC
 
+#ifdef DISABLE_ALPHATEST
+#define EARLY_DEPTH_STENCIL_ENABLED
+#endif // DISABLE_ALPHATEST
+
 
 #include "globals.hlsli"
 #include "brdf.hlsli"
@@ -1063,10 +1067,9 @@ PixelInput main(VertexInput input)
 //	POM					-	include parallax occlusion mapping computation
 //	WATER				-	include specialized water shader code
 
-#ifdef DISABLE_ALPHATEST
-#define EARLY_DEPTH_STENCIL_ENABLED
+#ifdef EARLY_DEPTH_STENCIL_ENABLED
 [earlydepthstencil]
-#endif // DISABLE_ALPHATEST
+#endif // EARLY_DEPTH_STENCIL_ENABLED
 
 // entry point:
 #ifdef PREPASS
