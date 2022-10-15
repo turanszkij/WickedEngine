@@ -2778,6 +2778,11 @@ using namespace vulkan_internal;
 					)
 				{
 					copyFamily = familyIndex;
+
+					if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
+					{
+						queues[QUEUE_COPY].sparse_binding_supported = true;
+					}
 				}
 
 				if (queueFamily.queueCount > 0 &&
@@ -2839,6 +2844,7 @@ using namespace vulkan_internal;
 
 			queues[QUEUE_GRAPHICS].queue = graphicsQueue;
 			queues[QUEUE_COMPUTE].queue = computeQueue;
+			queues[QUEUE_COPY].queue = copyQueue;
 
 			VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
 			timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -2863,6 +2869,13 @@ using namespace vulkan_internal;
 			if (res != VK_SUCCESS)
 			{
 				wi::helper::messageBox("vkCreateSemaphore[QUEUE_COMPUTE] failed! ERROR: " + std::to_string(res), "Error!");
+				wi::platform::Exit();
+			}
+			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_COPY].semaphore);
+			assert(res == VK_SUCCESS);
+			if (res != VK_SUCCESS)
+			{
+				wi::helper::messageBox("vkCreateSemaphore[QUEUE_COPY] failed! ERROR: " + std::to_string(res), "Error!");
 				wi::platform::Exit();
 			}
 		}
@@ -6523,6 +6536,9 @@ using namespace vulkan_internal;
 				case wi::graphics::QUEUE_COMPUTE:
 					poolInfo.queueFamilyIndex = computeFamily;
 					break;
+				case wi::graphics::QUEUE_COPY:
+					poolInfo.queueFamilyIndex = copyFamily;
+					break;
 				default:
 					assert(0); // queue type not handled
 					break;
@@ -6597,8 +6613,10 @@ using namespace vulkan_internal;
 			// Transitions:
 			if(submit_inits)
 			{
+				submit_inits = false;
 				res = vkEndCommandBuffer(frame.initCommandBuffer);
 				assert(res == VK_SUCCESS);
+				queues[QUEUE_GRAPHICS].submit_cmds.push_back(frame.initCommandBuffer); // can only be submitted on graphics queue
 			}
 
 			uint64_t copy_sync = copyAllocator.flush();
@@ -6640,12 +6658,6 @@ using namespace vulkan_internal;
 						queues[submit_queue].submit_waitSemaphores.push_back(queues[waitcommandlist.queue].semaphore);
 						queues[submit_queue].submit_waitValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id);
 					}
-				}
-
-				if (submit_inits)
-				{
-					queues[submit_queue].submit_cmds.push_back(frame.initCommandBuffer);
-					submit_inits = false;
 				}
 
 				queues[submit_queue].swapchain_updates = commandlist.prev_swapchains;

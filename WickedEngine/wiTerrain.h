@@ -72,11 +72,24 @@ namespace wi::terrain
 		wi::graphics::GPUBuffer requestBuffer;
 		wi::graphics::GPUBuffer allocationBuffer;
 		wi::graphics::GPUBuffer allocationBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		wi::graphics::GPUBuffer pageBuffer;
 		wi::graphics::GPUBuffer pageBuffer_CPU_upload[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
 		bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1] = {};
 		int cpu_resource_id = 0;
 		wi::vector<GPUPageAllocator::Page> pages;
 		wi::vector<uint32_t> lod_page_offsets;
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+		uint32_t requested_tile_allocation_count = 0;
+		uint32_t successful_tile_allocation_count = 0;
+		uint32_t failed_tile_allocation_count = 0;
+		uint32_t requested_tile_deallocation_count = 0;
+		uint32_t successful_tile_deallocation_count = 0;
+		uint32_t failed_tile_deallocation_count = 0;
+		wi::graphics::Texture feedbackMap_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		wi::graphics::Texture residencyMap_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		wi::graphics::GPUBuffer requestBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 
 		void init(const wi::graphics::TextureDesc& desc);
 
@@ -105,7 +118,7 @@ namespace wi::terrain
 			uint32_t tile_x = 0;
 			uint32_t tile_y = 0;
 		};
-		wi::vector<UpdateRequest> update_requests;
+		mutable wi::vector<UpdateRequest> update_requests;
 		wi::graphics::Texture region_weights_texture;
 		uint32_t map_type = 0;
 	};
@@ -180,8 +193,8 @@ namespace wi::terrain
 
 		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_update;
 		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_update;
-		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_writeback;
-		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_writeback;
+		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_allocation;
+		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_allocation;
 		mutable wi::vector<const VirtualTexture*> virtual_textures_in_use;
 		GPUPageAllocator page_allocator;
 
@@ -226,14 +239,15 @@ namespace wi::terrain
 		void Generation_Update(const wi::scene::CameraComponent& camera);
 		// Tells the generation thread that it should be cancelled and blocks until that is confirmed
 		void Generation_Cancel();
-		// Creates the blend weight texture for a chunk data
-		void CreateChunkRegionTexture(ChunkData& chunk_data);
+		// Creates the textures for a chunk data
+		void CreateChunkTextures(ChunkData& chunk_data, wi::scene::MaterialComponent& material);
 
 		// Evaluate tile request, allocate tiles, map, create update reques
 		void UpdateVirtualTexturesCPU();
 		// Updates the virtual textures on GPU by compute shaders
 		void UpdateVirtualTexturesGPU(wi::graphics::CommandList cmd) const;
-		// Feedback maps are copied to CPU readable resources
+		void CopyVirtualTexturePageStatusGPU(wi::graphics::CommandList cmd) const;
+		void AllocateVirtualTextureTileRequestsGPU(wi::graphics::CommandList cmd) const;
 		void WritebackTileRequestsGPU(wi::graphics::CommandList cmd) const;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);

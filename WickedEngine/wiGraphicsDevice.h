@@ -41,6 +41,7 @@ namespace wi::graphics
 	{
 		QUEUE_GRAPHICS,
 		QUEUE_COMPUTE,
+		QUEUE_COPY,
 
 		QUEUE_COUNT,
 	};

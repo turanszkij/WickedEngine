@@ -2438,52 +2438,80 @@ using namespace dx12_internal;
 			wi::platform::Exit();
 		}
 
-		queues[QUEUE_GRAPHICS].desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-		queues[QUEUE_GRAPHICS].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-		queues[QUEUE_GRAPHICS].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		queues[QUEUE_GRAPHICS].desc.NodeMask = 0;
-		hr = device->CreateCommandQueue(&queues[QUEUE_GRAPHICS].desc, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].queue));
-		assert(SUCCEEDED(hr));
-		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
-			wi::platform::Exit();
-		}
-		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].fence));
-		assert(SUCCEEDED(hr));
-		if (FAILED(hr))
-		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateFence[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
-			wi::platform::Exit();
-		}
-
-		queues[QUEUE_COMPUTE].desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-		queues[QUEUE_COMPUTE].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-		queues[QUEUE_COMPUTE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		queues[QUEUE_COMPUTE].desc.NodeMask = 0;
-		hr = device->CreateCommandQueue(&queues[QUEUE_COMPUTE].desc, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].queue));
-		assert(SUCCEEDED(hr));
-		if (FAILED(hr))
-		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
-			wi::platform::Exit();
-		}
-		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].fence));
-		assert(SUCCEEDED(hr));
-		if (FAILED(hr))
-		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateFence[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
-			wi::platform::Exit();
+			queues[QUEUE_GRAPHICS].desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+			queues[QUEUE_GRAPHICS].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			queues[QUEUE_GRAPHICS].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queues[QUEUE_GRAPHICS].desc.NodeMask = 0;
+			hr = device->CreateCommandQueue(&queues[QUEUE_GRAPHICS].desc, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].queue));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].fence));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateFence[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
 		}
 
+		{
+			queues[QUEUE_COMPUTE].desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+			queues[QUEUE_COMPUTE].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			queues[QUEUE_COMPUTE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queues[QUEUE_COMPUTE].desc.NodeMask = 0;
+			hr = device->CreateCommandQueue(&queues[QUEUE_COMPUTE].desc, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].queue));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].fence));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateFence[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+		}
+
+		{
+			queues[QUEUE_COPY].desc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+			queues[QUEUE_COPY].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			queues[QUEUE_COPY].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queues[QUEUE_COPY].desc.NodeMask = 0;
+			hr = device->CreateCommandQueue(&queues[QUEUE_COPY].desc, IID_PPV_ARGS(&queues[QUEUE_COPY].queue));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COPY] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_COPY].fence));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateFence[QUEUE_COPY] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+		}
 
 		rtv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		dsv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
@@ -5149,11 +5177,14 @@ using namespace dx12_internal;
 		hr = commandlist.GetGraphicsCommandList()->Reset(commandlist.GetCommandAllocator(), nullptr);
 		assert(SUCCEEDED(hr));
 
-		ID3D12DescriptorHeap* heaps[2] = {
-			descriptorheap_res.heap_GPU.Get(),
-			descriptorheap_sam.heap_GPU.Get()
-		};
-		commandlist.GetGraphicsCommandList()->SetDescriptorHeaps(arraysize(heaps), heaps);
+		if (queue != QUEUE_COPY)
+		{
+			ID3D12DescriptorHeap* heaps[2] = {
+				descriptorheap_res.heap_GPU.Get(),
+				descriptorheap_sam.heap_GPU.Get()
+			};
+			commandlist.GetGraphicsCommandList()->SetDescriptorHeaps(arraysize(heaps), heaps);
+		}
 
 		if (queue == QUEUE_GRAPHICS)
 		{

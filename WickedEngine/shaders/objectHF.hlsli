@@ -17,7 +17,7 @@
 #define LIGHTMAP_QUALITY_BICUBIC
 
 #ifdef DISABLE_ALPHATEST
-#define EARLY_DEPTH_STENCIL_ENABLED
+#define EARLY_DEPTH_STENCIL
 #endif // DISABLE_ALPHATEST
 
 
@@ -358,7 +358,7 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 			normalMap = float3(texture_normalmap.Sample(sampler_aniso_clamp, UV_normalMap, 0, lodClamp).rg, 1);
 		}
 
-#ifdef EARLY_DEPTH_STENCIL_ENABLED
+#ifdef EARLY_DEPTH_STENCIL
 		[branch]
 		if (GetMaterial().feedbackMap_normalMap >= 0)
 		{
@@ -369,7 +369,7 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 			float lod = texture_normalmap.CalculateLevelOfDetail(sampler_aniso_clamp, UV_normalMap);
 			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
-#endif // EARLY_DEPTH_STENCIL_ENABLED
+#endif // EARLY_DEPTH_STENCIL
 
 		bumpColor = normalMap.rgb * 2 - 1;
 		N = normalize(lerp(N, mul(bumpColor, TBN), GetMaterial().normalMapStrength));
@@ -1067,9 +1067,9 @@ PixelInput main(VertexInput input)
 //	POM					-	include parallax occlusion mapping computation
 //	WATER				-	include specialized water shader code
 
-#ifdef EARLY_DEPTH_STENCIL_ENABLED
+#ifdef EARLY_DEPTH_STENCIL
 [earlydepthstencil]
-#endif // EARLY_DEPTH_STENCIL_ENABLED
+#endif // EARLY_DEPTH_STENCIL
 
 // entry point:
 #ifdef PREPASS
@@ -1171,7 +1171,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			baseColorMap = texture_basecolormap.Sample(sampler_aniso_clamp, UV_baseColorMap, 0, lodClamp);
 		}
 
-#ifdef EARLY_DEPTH_STENCIL_ENABLED
+#ifdef EARLY_DEPTH_STENCIL
 		[branch]
 		if (GetMaterial().feedbackMap_baseColorMap >= 0)
 		{
@@ -1182,7 +1182,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			float lod = texture_basecolormap.CalculateLevelOfDetail(sampler_aniso_clamp, UV_baseColorMap);
 			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
-#endif // EARLY_DEPTH_STENCIL_ENABLED
+#endif // EARLY_DEPTH_STENCIL
 
 		baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
 		color *= baseColorMap;
@@ -1239,7 +1239,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			surfaceMap = texture_surfacemap.Sample(sampler_aniso_clamp, UV_surfaceMap, 0, GetMaterial().lodClamp_surfaceMap);
 		}
 
-#ifdef EARLY_DEPTH_STENCIL_ENABLED
+#ifdef EARLY_DEPTH_STENCIL
 		[branch]
 		if (GetMaterial().feedbackMap_surfaceMap >= 0)
 		{
@@ -1250,7 +1250,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			float lod = texture_surfacemap.CalculateLevelOfDetail(sampler_aniso_clamp, UV_surfaceMap);
 			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
-#endif // EARLY_DEPTH_STENCIL_ENABLED
+#endif // EARLY_DEPTH_STENCIL
 
 	}
 #endif // OBJECTSHADER_USE_UVSETS
