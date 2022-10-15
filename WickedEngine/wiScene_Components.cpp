@@ -347,6 +347,15 @@ namespace wi::scene
 		material.feedbackMap_surfaceMap = textures[SURFACEMAP].descriptor_feedbackMap;
 		material.feedbackMap_normalMap = textures[NORMALMAP].descriptor_feedbackMap;
 
+		if (sampler_descriptor < 0)
+		{
+			material.sampler_descriptor = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER));
+		}
+		else
+		{
+			material.sampler_descriptor = sampler_descriptor;
+		}
+
 		std::memcpy(dest, &material, sizeof(ShaderMaterial)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void MaterialComponent::WriteTextures(const wi::graphics::GPUResource** dest, int count) const

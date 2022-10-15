@@ -2126,12 +2126,12 @@ void SetUpStates()
 	samplerDesc.max_anisotropy = 16;
 	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_OBJECTSHADER]);
 
-	samplerDesc.filter = Filter::MAXIMUM_ANISOTROPIC;
+	samplerDesc.filter = Filter::ANISOTROPIC;
 	samplerDesc.address_u = TextureAddressMode::CLAMP;
 	samplerDesc.address_v = TextureAddressMode::CLAMP;
 	samplerDesc.address_w = TextureAddressMode::CLAMP;
 	samplerDesc.max_anisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_OBJECTSHADER_MAXIMUM]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_OBJECTSHADER_CLAMPED]);
 
 	samplerDesc.filter = Filter::COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.address_u = TextureAddressMode::CLAMP;
@@ -2146,6 +2146,11 @@ void SetUpStates()
 void ModifyObjectSampler(const SamplerDesc& desc)
 {
 	device->CreateSampler(&desc, &samplers[SAMPLER_OBJECTSHADER]);
+	SamplerDesc desc_clamped = desc;
+	desc_clamped.address_u = TextureAddressMode::CLAMP;
+	desc_clamped.address_v = TextureAddressMode::CLAMP;
+	desc_clamped.address_w = TextureAddressMode::CLAMP;
+	device->CreateSampler(&desc_clamped, &samplers[SAMPLER_OBJECTSHADER_CLAMPED]);
 }
 
 const std::string& GetShaderPath()

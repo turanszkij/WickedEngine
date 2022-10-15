@@ -41,7 +41,7 @@ inline ShaderMaterial GetMaterial()
 	return load_material(push.materialIndex);
 }
 
-#define sampler_objectshader			bindless_samplers[GetFrame().sampler_objectshader_index]
+#define sampler_objectshader			bindless_samplers[GetMaterial().sampler_descriptor]
 
 #define texture_basecolormap			bindless_textures[GetMaterial().texture_basecolormap_index]
 #define texture_normalmap				bindless_textures[GetMaterial().texture_normalmap_index]
@@ -340,7 +340,7 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 	{
 		const float2 UV_normalMap = GetMaterial().uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
 		uint prt_status = 0;
-		float3 normalMap = float3(texture_normalmap.Sample(sampler_aniso_clamp, UV_normalMap, 0, 0, prt_status).rg, 1);
+		float3 normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap, 0, 0, prt_status).rg, 1);
 
 		[branch]
 		if (!CheckAccessFullyMapped(prt_status))
@@ -351,11 +351,11 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 			if (GetMaterial().residencyMap_normalMap >= 0)
 			{
 				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_normalMap];
-				uint4 residency = residencyMap.GatherRed(sampler_aniso_clamp, UV_normalMap);
+				uint4 residency = residencyMap.GatherRed(sampler_objectshader, UV_normalMap);
 				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
 			}
 
-			normalMap = float3(texture_normalmap.Sample(sampler_aniso_clamp, UV_normalMap, 0, lodClamp).rg, 1);
+			normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap, 0, lodClamp).rg, 1);
 		}
 
 #ifdef EARLY_DEPTH_STENCIL
@@ -366,7 +366,7 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 			uint2 feedback_dim;
 			feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
 			uint2 pixel_feedback = UV_normalMap * feedback_dim;
-			float lod = texture_normalmap.CalculateLevelOfDetail(sampler_aniso_clamp, UV_normalMap);
+			float lod = texture_normalmap.CalculateLevelOfDetail(sampler_objectshader, UV_normalMap);
 			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
 #endif // EARLY_DEPTH_STENCIL
@@ -1153,7 +1153,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	{
 		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
 		uint prt_status = 0;
-		float4 baseColorMap = texture_basecolormap.Sample(sampler_aniso_clamp, UV_baseColorMap, 0, 0, prt_status);
+		float4 baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap, 0, 0, prt_status);
 
 		[branch]
 		if (!CheckAccessFullyMapped(prt_status))
@@ -1164,11 +1164,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			if (GetMaterial().residencyMap_baseColorMap >= 0)
 			{
 				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_baseColorMap];
-				uint4 residency = residencyMap.GatherRed(sampler_aniso_clamp, UV_baseColorMap);
+				uint4 residency = residencyMap.GatherRed(sampler_objectshader, UV_baseColorMap);
 				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
 			}
 
-			baseColorMap = texture_basecolormap.Sample(sampler_aniso_clamp, UV_baseColorMap, 0, lodClamp);
+			baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap, 0, lodClamp);
 		}
 
 #ifdef EARLY_DEPTH_STENCIL
@@ -1179,7 +1179,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			uint2 feedback_dim;
 			feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
 			uint2 pixel_feedback = UV_baseColorMap * feedback_dim;
-			float lod = texture_basecolormap.CalculateLevelOfDetail(sampler_aniso_clamp, UV_baseColorMap);
+			float lod = texture_basecolormap.CalculateLevelOfDetail(sampler_objectshader, UV_baseColorMap);
 			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
 #endif // EARLY_DEPTH_STENCIL
@@ -1221,7 +1221,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	{
 		const float2 UV_surfaceMap = GetMaterial().uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
 		uint prt_status = 0;
-		surfaceMap = texture_surfacemap.Sample(sampler_aniso_clamp, UV_surfaceMap, 0, 0, prt_status);
+		surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap, 0, 0, prt_status);
 
 		[branch]
 		if (!CheckAccessFullyMapped(prt_status))
@@ -1232,11 +1232,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			if (GetMaterial().residencyMap_surfaceMap >= 0)
 			{
 				Texture2D<uint> residencyMap = bindless_textures_uint[GetMaterial().residencyMap_surfaceMap];
-				uint4 residency = residencyMap.GatherRed(sampler_aniso_clamp, UV_surfaceMap);
+				uint4 residency = residencyMap.GatherRed(sampler_objectshader, UV_surfaceMap);
 				lodClamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
 			}
 
-			surfaceMap = texture_surfacemap.Sample(sampler_aniso_clamp, UV_surfaceMap, 0, GetMaterial().lodClamp_surfaceMap);
+			surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap, 0, GetMaterial().lodClamp_surfaceMap);
 		}
 
 #ifdef EARLY_DEPTH_STENCIL
@@ -1247,7 +1247,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			uint2 feedback_dim;
 			feedbackMap.GetDimensions(feedback_dim.x, feedback_dim.y);
 			uint2 pixel_feedback = UV_surfaceMap * feedback_dim;
-			float lod = texture_surfacemap.CalculateLevelOfDetail(sampler_aniso_clamp, UV_surfaceMap);
+			float lod = texture_surfacemap.CalculateLevelOfDetail(sampler_objectshader, UV_surfaceMap);
 			InterlockedMin(feedbackMap[pixel_feedback], uint(lod));
 		}
 #endif // EARLY_DEPTH_STENCIL

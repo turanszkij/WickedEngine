@@ -1391,6 +1391,8 @@ namespace wi::terrain
 			if (material == nullptr)
 				continue;
 
+			material->sampler_descriptor = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMPED));
+
 			if (chunk_data.vt.empty())
 			{
 				chunk_data.vt.resize(3);
