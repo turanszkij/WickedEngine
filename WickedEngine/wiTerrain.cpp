@@ -1088,7 +1088,7 @@ namespace wi::terrain
 						chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale * chunk_scale); // chunk_scale * chunk_scale : grass density increases with squared amount with chunk scale (x*z)
 					}
 
-					// Create the blend weights texture for virtual texture update:
+					// Create the textures for virtual texture update:
 					CreateChunkTextures(chunk_data, material);
 
 					wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
@@ -1295,6 +1295,8 @@ namespace wi::terrain
 		bool success = device->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
 		assert(success);
 
+		chunk_data.vt.resize(3);
+
 		for (uint32_t map_type = 0; map_type < chunk_data.vt.size(); ++map_type)
 		{
 			VirtualTexture& vt = chunk_data.vt[map_type];
@@ -1330,12 +1332,10 @@ namespace wi::terrain
 				material.textures[map_type].descriptor_residencyMap = device->GetDescriptorIndex(&vt.residencyMap, SubresourceType::SRV);
 				material.textures[map_type].descriptor_feedbackMap = device->GetDescriptorIndex(&vt.feedbackMap, SubresourceType::UAV);
 
-				locker.lock();
 				if (!page_allocator.buffer.IsValid())
 				{
 					page_allocator.init(512ull * 1024ull * 1024ull, vt.texture.sparse_page_size);
 				}
-				locker.unlock();
 
 				// Allocate least detailed mip level up front:
 				//	This is needed because for the first few frames the GPU readback won't be ready to use
@@ -1346,23 +1346,30 @@ namespace wi::terrain
 					GPUPageAllocator::Page& page = vt.pages[l_index];
 					page = page_allocator.allocate();
 
-					// Record sparse map:
-					SparseResourceCoordinate& coordinate = vt.sparse_coordinate.emplace_back();
-					coordinate.x = 0;
-					coordinate.y = 0;
-					coordinate.mip = least_detailed_lod;
-					SparseRegionSize& region = vt.sparse_size.emplace_back();
-					region.width = 1;
-					region.height = 1;
-					vt.tile_range_flags.push_back(TileRangeFlags::None);
-					vt.tile_range_offset.push_back(page.index);
-					vt.tile_range_count.push_back(1);
+					if (page.IsValid())
+					{
+						// Record sparse map:
+						SparseResourceCoordinate& coordinate = vt.sparse_coordinate.emplace_back();
+						coordinate.x = 0;
+						coordinate.y = 0;
+						coordinate.mip = least_detailed_lod;
+						SparseRegionSize& region = vt.sparse_size.emplace_back();
+						region.width = 1;
+						region.height = 1;
+						vt.tile_range_flags.push_back(TileRangeFlags::None);
+						vt.tile_range_offset.push_back(page.index);
+						vt.tile_range_count.push_back(1);
 
-					// Request updating virtual texture tile after mapping:
-					VirtualTexture::UpdateRequest& request = vt.update_requests.emplace_back();
-					request.tile_x = coordinate.x;
-					request.tile_y = coordinate.y;
-					request.lod = coordinate.mip;
+						// Request updating virtual texture tile after mapping:
+						VirtualTexture::UpdateRequest& request = vt.update_requests.emplace_back();
+						request.tile_x = coordinate.x;
+						request.tile_y = coordinate.y;
+						request.lod = coordinate.mip;
+					}
+					else
+					{
+						wi::backlog::post("Virtual texture least detailed mip couldn't be allocated on creation!", wi::backlog::LogLevel::Warning);
+					}
 				}
 			}
 			vt.region_weights_texture = chunk_data.region_weights_texture;
@@ -1395,18 +1402,13 @@ namespace wi::terrain
 
 			if (chunk_data.vt.empty())
 			{
-				chunk_data.vt.resize(3);
+				// This should have been created on generation thread, but if not (serialized), create it last minute:
+				CreateChunkTextures(chunk_data, *material);
 			}
 
 			for (uint32_t map_type = 0; map_type < chunk_data.vt.size(); ++map_type)
 			{
 				VirtualTexture& vt = chunk_data.vt[map_type];
-
-				if (!vt.texture.IsValid())
-				{
-					// This should have been created on generation thread, but if not (serialized), create it last minute:
-					CreateChunkTextures(chunk_data, *material);
-				}
 
 				// Process each virtual texture on a background thread:
 				wi::jobsystem::Execute(ctx, [this, &vt](wi::jobsystem::JobArgs args) {
@@ -1440,16 +1442,16 @@ namespace wi::terrain
 							const uint8_t x = (allocation_request >> 24u) & 0xFF;
 							const uint8_t y = (allocation_request >> 16u) & 0xFF;
 							const uint8_t lod = (allocation_request >> 8u) & 0xFF;
+							const bool allocate = allocation_request & 0x1;
 							if (lod >= vt.lod_page_offsets.size())
 								continue;
 							const uint32_t l_offset = vt.lod_page_offsets[lod];
-							const bool allocate = allocation_request & 0x1;
 							const uint32_t l_width = std::max(1u, width >> lod);
 							const uint32_t l_height = std::max(1u, height >> lod);
 							const uint32_t l_index = l_offset + x + y * l_width;
-							GPUPageAllocator::Page& page = vt.pages[l_index];
 							if (x >= l_width || y >= l_height)
 								continue;
+							GPUPageAllocator::Page& page = vt.pages[l_index];
 
 							if (allocate)
 							{
