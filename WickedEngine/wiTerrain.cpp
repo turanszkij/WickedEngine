@@ -178,22 +178,33 @@ namespace wi::terrain
 		std::atomic_bool cancelled{ false };
 	};
 
-	void GPUPageAllocator::init(size_t budget, size_t page_size)
+	void GPUPageAllocator::init(size_t _block_size, size_t _page_size)
+	{
+		block_size = _block_size;
+		page_size = _page_size;
+		blocks.clear();
+		pages.clear();
+		new_block();
+	}
+	void GPUPageAllocator::new_block()
 	{
 		GraphicsDevice* device = GetDevice();
+		const uint16_t block_index = (uint16_t)blocks.size();
+		GPUBuffer& block = blocks.emplace_back();
 		GPUBufferDesc desc;
 		desc.alignment = page_size;
-		desc.size = AlignTo(budget, page_size);
+		desc.size = AlignTo(block_size, page_size);
 		desc.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL;
-		bool success = device->CreateBuffer(&desc, nullptr, &buffer);
+		bool success = device->CreateBuffer(&desc, nullptr, &block);
 		assert(success);
-		device->SetName(&buffer, "GPUPageAllocator");
+		device->SetName(&block, "GPUPageAllocator::block");
 
 		uint32_t page_count = uint32_t(desc.size / page_size);
-		pages.reserve(page_count);
+		pages.reserve(pages.capacity() + page_count);
 		for (uint32_t i = 0; i < page_count; ++i)
 		{
 			Page page;
+			page.block = block_index;
 			page.index = i;
 			pages.push_back(page);
 		}
@@ -202,8 +213,8 @@ namespace wi::terrain
 	GPUPageAllocator::Page GPUPageAllocator::allocate()
 	{
 		std::scoped_lock lock(locker);
-		if (pages.empty())
-			return {};
+		while (pages.empty())
+			new_block();
 		Page page = pages.back();
 		pages.pop_back();
 		return page;
@@ -211,7 +222,7 @@ namespace wi::terrain
 	void GPUPageAllocator::free(Page page)
 	{
 		std::scoped_lock lock(locker);
-		if (!page.IsValid() || !buffer.IsValid())
+		if (!page.IsValid())
 			return;
 		pages.push_back(page);
 	}
@@ -621,6 +632,52 @@ namespace wi::terrain
 		}
 #endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 	}
+	void VirtualTexture::SparseMap(GPUPageAllocator& allocator, GPUPageAllocator::Page page, uint32_t x, uint32_t y, uint32_t mip)
+	{
+		if (page.IsValid() && page.block != last_block)
+		{
+			SparseFlush(allocator);
+			last_block = page.block;
+		}
+		SparseResourceCoordinate& coordinate = sparse_coordinate.emplace_back();
+		coordinate.x = x;
+		coordinate.y = y;
+		coordinate.mip = mip;
+		SparseRegionSize& region = sparse_size.emplace_back();
+		region.width = 1;
+		region.height = 1;
+		if (page.IsValid())
+		{
+			tile_range_flags.push_back(TileRangeFlags::None);
+			tile_range_offset.push_back(page.index);
+		}
+		else
+		{
+			tile_range_flags.push_back(TileRangeFlags::Null);
+			tile_range_offset.push_back(0);
+		}
+		tile_range_count.push_back(1);
+	}
+	void VirtualTexture::SparseFlush(GPUPageAllocator& allocator)
+	{
+		if (sparse_coordinate.empty())
+			return;
+		SparseUpdateCommand command;
+		command.sparse_resource = &texture;
+		command.num_resource_regions = (uint32_t)sparse_coordinate.size();
+		command.coordinates = sparse_coordinate.data();
+		command.sizes = sparse_size.data();
+		command.tile_pool = &allocator.blocks[last_block];
+		command.range_flags = tile_range_flags.data();
+		command.range_start_offsets = tile_range_offset.data();
+		command.range_tile_counts = tile_range_count.data();
+		GetDevice()->SparseUpdate(QUEUE_COPY, &command, 1);
+		sparse_coordinate.clear();
+		sparse_size.clear();
+		tile_range_flags.clear();
+		tile_range_offset.clear();
+		tile_range_count.clear();
+	}
 
 	Terrain::Terrain()
 	{
@@ -712,7 +769,7 @@ namespace wi::terrain
 			Generation_Restart();
 		}
 
-		generation = 1;
+		generation = 3;
 
 		// Check whether any modifiers need to be removed, and we will really remove them here if so:
 		if (!modifiers_to_remove.empty())
@@ -1332,9 +1389,9 @@ namespace wi::terrain
 				material.textures[map_type].descriptor_residencyMap = device->GetDescriptorIndex(&vt.residencyMap, SubresourceType::SRV);
 				material.textures[map_type].descriptor_feedbackMap = device->GetDescriptorIndex(&vt.feedbackMap, SubresourceType::UAV);
 
-				if (!page_allocator.buffer.IsValid())
+				if (page_allocator.blocks.empty())
 				{
-					page_allocator.init(512ull * 1024ull * 1024ull, vt.texture.sparse_page_size);
+					page_allocator.init(256ull * 1024ull * 1024ull, vt.texture.sparse_page_size);
 				}
 
 				// Allocate least detailed mip level up front:
@@ -1349,22 +1406,13 @@ namespace wi::terrain
 					if (page.IsValid())
 					{
 						// Record sparse map:
-						SparseResourceCoordinate& coordinate = vt.sparse_coordinate.emplace_back();
-						coordinate.x = 0;
-						coordinate.y = 0;
-						coordinate.mip = least_detailed_lod;
-						SparseRegionSize& region = vt.sparse_size.emplace_back();
-						region.width = 1;
-						region.height = 1;
-						vt.tile_range_flags.push_back(TileRangeFlags::None);
-						vt.tile_range_offset.push_back(page.index);
-						vt.tile_range_count.push_back(1);
+						vt.SparseMap(page_allocator, page, 0, 0, least_detailed_lod);
 
 						// Request updating virtual texture tile after mapping:
 						VirtualTexture::UpdateRequest& request = vt.update_requests.emplace_back();
-						request.tile_x = coordinate.x;
-						request.tile_y = coordinate.y;
-						request.lod = coordinate.mip;
+						request.tile_x = 0;
+						request.tile_y = 0;
+						request.lod = least_detailed_lod;
 					}
 					else
 					{
@@ -1469,23 +1517,13 @@ namespace wi::terrain
 								page = page_allocator.allocate();
 								if (page.IsValid())
 								{
-									// Record sparse map:
-									SparseResourceCoordinate& coordinate = vt.sparse_coordinate.emplace_back();
-									coordinate.x = x;
-									coordinate.y = y;
-									coordinate.mip = (uint32_t)lod;
-									SparseRegionSize& region = vt.sparse_size.emplace_back();
-									region.width = 1;
-									region.height = 1;
-									vt.tile_range_flags.push_back(TileRangeFlags::None);
-									vt.tile_range_offset.push_back(page.index);
-									vt.tile_range_count.push_back(1);
+									vt.SparseMap(page_allocator, page, x, y, lod);
 
 									// Request updating virtual texture tile after mapping:
 									VirtualTexture::UpdateRequest& request = vt.update_requests.emplace_back();
-									request.tile_x = coordinate.x;
-									request.tile_y = coordinate.y;
-									request.lod = coordinate.mip;
+									request.tile_x = x;
+									request.tile_y = y;
+									request.lod = lod;
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 									vt.successful_tile_allocation_count++;
@@ -1516,17 +1554,7 @@ namespace wi::terrain
 								page_allocator.free(page);
 								page = {};
 
-								// Record sparse unmap:
-								SparseResourceCoordinate& coordinate = vt.sparse_coordinate.emplace_back();
-								coordinate.x = x;
-								coordinate.y = y;
-								coordinate.mip = (uint32_t)lod;
-								SparseRegionSize& region = vt.sparse_size.emplace_back();
-								region.width = 1;
-								region.height = 1;
-								vt.tile_range_flags.push_back(TileRangeFlags::Null);
-								vt.tile_range_offset.push_back(0);
-								vt.tile_range_count.push_back(1);
+								vt.SparseMap(page_allocator, page, x, y, lod); // invalid page will do unmap
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 								vt.successful_tile_deallocation_count++;
@@ -1534,24 +1562,8 @@ namespace wi::terrain
 							}
 						}
 					}
-					if (vt.sparse_coordinate.size() > 0)
-					{
-						wi::graphics::SparseUpdateCommand command;
-						command.sparse_resource = &vt.texture;
-						command.num_resource_regions = (uint32_t)vt.sparse_coordinate.size();
-						command.coordinates = vt.sparse_coordinate.data();
-						command.sizes = vt.sparse_size.data();
-						command.tile_pool = &page_allocator.buffer;
-						command.range_flags = vt.tile_range_flags.data();
-						command.range_start_offsets = vt.tile_range_offset.data();
-						command.range_tile_counts = vt.tile_range_count.data();
-						GetDevice()->SparseUpdate(QUEUE_COPY, &command, 1);
-						vt.sparse_coordinate.clear();
-						vt.sparse_size.clear();
-						vt.tile_range_flags.clear();
-						vt.tile_range_offset.clear();
-						vt.tile_range_count.clear();
-					}
+
+					vt.SparseFlush(page_allocator);
 
 					// Update page buffer for GPU:
 					uint32_t* page_buffer = (uint32_t*)vt.pageBuffer_CPU_upload[vt.cpu_resource_id].mapped_data;

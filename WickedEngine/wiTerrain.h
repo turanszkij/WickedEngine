@@ -48,16 +48,20 @@ namespace wi::terrain
 
 	struct GPUPageAllocator
 	{
-		wi::graphics::GPUBuffer buffer;
+		size_t block_size = 0;
+		size_t page_size = 0;
+		wi::vector<wi::graphics::GPUBuffer> blocks;
 
 		struct Page
 		{
-			uint16_t index = 0xFFFF;
+			uint16_t block = 0;			// index into buffer_blocks array
+			uint16_t index = 0xFFFF;	// index into block's pages
 			constexpr bool IsValid() const { return index < 0xFFFF; }
 		};
 		wi::vector<Page> pages;
 
-		void init(size_t budget, size_t page_size);
+		void init(size_t block_size, size_t page_size);
+		void new_block();
 		Page allocate();
 		void free(Page page);
 	};
@@ -104,13 +108,6 @@ namespace wi::terrain
 
 		void DrawDebug(wi::graphics::CommandList cmd);
 
-		// Sparse mapping parameters are stored here because they will be accessed by background thread:
-		wi::vector<wi::graphics::SparseResourceCoordinate> sparse_coordinate;
-		wi::vector<wi::graphics::SparseRegionSize> sparse_size;
-		wi::vector<wi::graphics::TileRangeFlags> tile_range_flags;
-		wi::vector<uint32_t> tile_range_offset;
-		wi::vector<uint32_t> tile_range_count;
-
 		// Attach this data to Virtual Texture because we will record these by separate CPU thread:
 		struct UpdateRequest
 		{
@@ -121,6 +118,17 @@ namespace wi::terrain
 		mutable wi::vector<UpdateRequest> update_requests;
 		wi::graphics::Texture region_weights_texture;
 		uint32_t map_type = 0;
+
+		void SparseMap(GPUPageAllocator& allocator, GPUPageAllocator::Page page, uint32_t x, uint32_t y, uint32_t mip);
+		void SparseFlush(GPUPageAllocator& allocator);
+
+	private:
+		wi::vector<wi::graphics::SparseResourceCoordinate> sparse_coordinate;
+		wi::vector<wi::graphics::SparseRegionSize> sparse_size;
+		wi::vector<wi::graphics::TileRangeFlags> tile_range_flags;
+		wi::vector<uint32_t> tile_range_offset;
+		wi::vector<uint32_t> tile_range_count;
+		uint32_t last_block = 0;
 	};
 
 	struct ChunkData
