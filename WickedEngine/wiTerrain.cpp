@@ -712,7 +712,7 @@ namespace wi::terrain
 			Generation_Restart();
 		}
 
-		generation = 3;
+		generation = 1;
 
 		// Check whether any modifiers need to be removed, and we will really remove them here if so:
 		if (!modifiers_to_remove.empty())
@@ -1593,12 +1593,9 @@ namespace wi::terrain
 		device->EventBegin("Clear Metadata", cmd);
 		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
-			if (vt->feedbackMap.IsValid())
-			{
-				device->ClearUAV(&vt->feedbackMap, 0xFF, cmd);
-				device->ClearUAV(&vt->requestBuffer, 0xFF, cmd);
-				device->ClearUAV(&vt->allocationBuffer, 0, cmd);
-			}
+			device->ClearUAV(&vt->feedbackMap, 0xFF, cmd);
+			device->ClearUAV(&vt->requestBuffer, 0xFF, cmd);
+			device->ClearUAV(&vt->allocationBuffer, 0, cmd);
 		}
 		device->EventEnd(cmd);
 
@@ -1606,24 +1603,21 @@ namespace wi::terrain
 		device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_VIRTUALTEXTURE_RESIDENCYUPDATE), cmd);
 		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
-			if (vt->residencyMap.IsValid())
-			{
-				VirtualTextureResidencyUpdatePush push;
-				push.lodCount = (uint)vt->lod_page_offsets.size();
-				push.width = vt->feedbackMap.desc.width;
-				push.height = vt->feedbackMap.desc.height;
-				push.lodOffsetsBufferRO = device->GetDescriptorIndex(&vt->lodOffsetsBuffer, SubresourceType::SRV);
-				push.pageBufferRO = device->GetDescriptorIndex(&vt->pageBuffer, SubresourceType::SRV);
-				push.residencyTextureRW = device->GetDescriptorIndex(&vt->residencyMap, SubresourceType::UAV);
-				device->PushConstants(&push, sizeof(push), cmd);
+			VirtualTextureResidencyUpdatePush push;
+			push.lodCount = (uint)vt->lod_page_offsets.size();
+			push.width = vt->feedbackMap.desc.width;
+			push.height = vt->feedbackMap.desc.height;
+			push.lodOffsetsBufferRO = device->GetDescriptorIndex(&vt->lodOffsetsBuffer, SubresourceType::SRV);
+			push.pageBufferRO = device->GetDescriptorIndex(&vt->pageBuffer, SubresourceType::SRV);
+			push.residencyTextureRW = device->GetDescriptorIndex(&vt->residencyMap, SubresourceType::UAV);
+			device->PushConstants(&push, sizeof(push), cmd);
 
-				device->Dispatch(
-					(vt->residencyMap.desc.width + 7u) / 8u,
-					(vt->residencyMap.desc.height + 7u) / 8u,
-					1u,
-					cmd
-				);
-			}
+			device->Dispatch(
+				(vt->residencyMap.desc.width + 7u) / 8u,
+				(vt->residencyMap.desc.height + 7u) / 8u,
+				1u,
+				cmd
+			);
 		}
 		device->EventEnd(cmd);
 
@@ -1690,10 +1684,7 @@ namespace wi::terrain
 		device->EventBegin("Terrain - CopyVirtualTexturePageStatusGPU", cmd);
 		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
-			if (vt->pageBuffer.IsValid())
-			{
-				device->CopyResource(&vt->pageBuffer, &vt->pageBuffer_CPU_upload[vt->cpu_resource_id], cmd);
-			}
+			device->CopyResource(&vt->pageBuffer, &vt->pageBuffer_CPU_upload[vt->cpu_resource_id], cmd);
 		}
 		device->EventEnd(cmd);
 	}
@@ -1710,24 +1701,21 @@ namespace wi::terrain
 			device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_VIRTUALTEXTURE_TILEREQUESTS), cmd);
 			for (const VirtualTexture* vt : virtual_textures_in_use)
 			{
-				if (vt->feedbackMap.IsValid())
-				{
-					VirtualTextureTileRequestsPush push;
-					push.lodCount = (uint)vt->lod_page_offsets.size();
-					push.width = vt->feedbackMap.desc.width;
-					push.height = vt->feedbackMap.desc.height;
-					push.lodOffsetsBufferRO = device->GetDescriptorIndex(&vt->lodOffsetsBuffer, SubresourceType::SRV);
-					push.feedbackTextureRO = device->GetDescriptorIndex(&vt->feedbackMap, SubresourceType::SRV);
-					push.requestBufferRW = device->GetDescriptorIndex(&vt->requestBuffer, SubresourceType::UAV);
-					device->PushConstants(&push, sizeof(push), cmd);
+				VirtualTextureTileRequestsPush push;
+				push.lodCount = (uint)vt->lod_page_offsets.size();
+				push.width = vt->feedbackMap.desc.width;
+				push.height = vt->feedbackMap.desc.height;
+				push.lodOffsetsBufferRO = device->GetDescriptorIndex(&vt->lodOffsetsBuffer, SubresourceType::SRV);
+				push.feedbackTextureRO = device->GetDescriptorIndex(&vt->feedbackMap, SubresourceType::SRV);
+				push.requestBufferRW = device->GetDescriptorIndex(&vt->requestBuffer, SubresourceType::UAV);
+				device->PushConstants(&push, sizeof(push), cmd);
 
-					device->Dispatch(
-						(vt->feedbackMap.desc.width + 7u) / 8u,
-						(vt->feedbackMap.desc.height + 7u) / 8u,
-						1u,
-						cmd
-					);
-				}
+				device->Dispatch(
+					(vt->feedbackMap.desc.width + 7u) / 8u,
+					(vt->feedbackMap.desc.height + 7u) / 8u,
+					1u,
+					cmd
+				);
 			}
 			device->EventEnd(cmd);
 		}
@@ -1740,25 +1728,22 @@ namespace wi::terrain
 			device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_VIRTUALTEXTURE_TILEALLOCATE), cmd);
 			for (const VirtualTexture* vt : virtual_textures_in_use)
 			{
-				if (vt->feedbackMap.IsValid())
-				{
-					VirtualTextureTileAllocatePush push;
-					push.threadCount = (uint)vt->pages.size();
-					push.lodCount = (uint)vt->lod_page_offsets.size();
-					push.width = vt->feedbackMap.desc.width;
-					push.lodOffsetsBufferRO = device->GetDescriptorIndex(&vt->lodOffsetsBuffer, SubresourceType::SRV);
-					push.pageBufferRO = device->GetDescriptorIndex(&vt->pageBuffer, SubresourceType::SRV);
-					push.requestBufferRW = device->GetDescriptorIndex(&vt->requestBuffer, SubresourceType::UAV);
-					push.allocationBufferRW = device->GetDescriptorIndex(&vt->allocationBuffer, SubresourceType::UAV);
-					device->PushConstants(&push, sizeof(push), cmd);
+				VirtualTextureTileAllocatePush push;
+				push.threadCount = (uint)vt->pages.size();
+				push.lodCount = (uint)vt->lod_page_offsets.size();
+				push.width = vt->feedbackMap.desc.width;
+				push.lodOffsetsBufferRO = device->GetDescriptorIndex(&vt->lodOffsetsBuffer, SubresourceType::SRV);
+				push.pageBufferRO = device->GetDescriptorIndex(&vt->pageBuffer, SubresourceType::SRV);
+				push.requestBufferRW = device->GetDescriptorIndex(&vt->requestBuffer, SubresourceType::UAV);
+				push.allocationBufferRW = device->GetDescriptorIndex(&vt->allocationBuffer, SubresourceType::UAV);
+				device->PushConstants(&push, sizeof(push), cmd);
 
-					device->Dispatch(
-						(push.threadCount + 63u) / 64u,
-						1u,
-						1u,
-						cmd
-					);
-				}
+				device->Dispatch(
+					(push.threadCount + 63u) / 64u,
+					1u,
+					1u,
+					cmd
+				);
 			}
 			device->EventEnd(cmd);
 		}
@@ -1776,16 +1761,13 @@ namespace wi::terrain
 
 		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
-			if (vt->requestBuffer.IsValid())
-			{
-				device->CopyResource(&vt->allocationBuffer_CPU_readback[vt->cpu_resource_id], &vt->allocationBuffer, cmd);
+			device->CopyResource(&vt->allocationBuffer_CPU_readback[vt->cpu_resource_id], &vt->allocationBuffer, cmd);
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-				device->CopyResource(&vt->feedbackMap_CPU_readback[vt->cpu_resource_id], &vt->feedbackMap, cmd);
-				device->CopyResource(&vt->residencyMap_CPU_readback[vt->cpu_resource_id], &vt->residencyMap, cmd);
-				device->CopyResource(&vt->requestBuffer_CPU_readback[vt->cpu_resource_id], &vt->requestBuffer, cmd);
+			device->CopyResource(&vt->feedbackMap_CPU_readback[vt->cpu_resource_id], &vt->feedbackMap, cmd);
+			device->CopyResource(&vt->residencyMap_CPU_readback[vt->cpu_resource_id], &vt->residencyMap, cmd);
+			device->CopyResource(&vt->requestBuffer_CPU_readback[vt->cpu_resource_id], &vt->requestBuffer, cmd);
 #endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
-			}
 		}
 
 		device->EventEnd(cmd);
