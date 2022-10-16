@@ -215,6 +215,7 @@ namespace wi::graphics
 			QUEUE_TYPE queue = {};
 			uint32_t id = 0;
 			wi::vector<CommandList> waits;
+			std::atomic_bool waited_on{ false };
 
 			DescriptorBinder binder;
 			DescriptorBinderPool binder_pools[BUFFERCOUNT];

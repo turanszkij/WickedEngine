@@ -5151,6 +5151,7 @@ using namespace dx12_internal;
 		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
+		commandlist.waited_on.store(false);
 
 		if (commandlist.GetGraphicsCommandList() == nullptr)
 		{
@@ -5207,8 +5208,6 @@ using namespace dx12_internal;
 
 		// Submit current frame:
 		{
-			QUEUE_TYPE submit_queue = QUEUE_COUNT;
-
 			uint32_t cmd_last = cmd_count;
 			cmd_count = 0;
 			for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
@@ -5217,53 +5216,48 @@ using namespace dx12_internal;
 				hr = commandlist.GetGraphicsCommandList()->Close();
 				assert(SUCCEEDED(hr));
 
-				if (submit_queue == QUEUE_COUNT)
-				{
-					submit_queue = commandlist.queue;
-				}
-				if (commandlist.queue != submit_queue || !commandlist.waits.empty()) // new queue type or wait breaks submit batch
+				CommandQueue& queue = queues[commandlist.queue];
+				queue.submit_cmds.push_back(commandlist.GetGraphicsCommandList());
+
+				if (commandlist.waited_on.load() || !commandlist.waits.empty() || queue.tile_mapping_dirty)
 				{
 					// tile mapping waits if needed:
-					if (queues[submit_queue].tile_mapping_dirty)
+					if (queue.tile_mapping_dirty)
 					{
-						queues[submit_queue].tile_mapping_dirty = false;
-						hr = queues[submit_queue].queue->Wait(queues[submit_queue].tile_mapping_fence.Get(), queues[submit_queue].tile_mapping_fence_value);
+						queue.tile_mapping_dirty = false;
+						hr = queue.queue->Wait(queue.tile_mapping_fence.Get(), queue.tile_mapping_fence_value);
 						assert(SUCCEEDED(hr));
 					}
-
-					// submit previous cmd batch:
-					if (!queues[submit_queue].submit_cmds.empty())
-					{
-						queues[submit_queue].queue->ExecuteCommandLists(
-							(UINT)queues[submit_queue].submit_cmds.size(),
-							queues[submit_queue].submit_cmds.data()
-						);
-						queues[submit_queue].submit_cmds.clear();
-					}
-
-					// signal status in case any future waits needed:
-					hr = queues[submit_queue].queue->Signal(
-						queues[submit_queue].fence.Get(),
-						FRAMECOUNT * commandlists.size() + (uint64_t)cmd
-					);
-					assert(SUCCEEDED(hr));
-
-					submit_queue = commandlist.queue;
 
 					for (auto& wait : commandlist.waits)
 					{
 						// record wait for signal on a previous submit:
 						const CommandList_DX12& waitcommandlist = GetCommandList(wait);
-						hr = queues[submit_queue].queue->Wait(
+						hr = queue.queue->Wait(
 							queues[waitcommandlist.queue].fence.Get(),
 							FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id
 						);
 						assert(SUCCEEDED(hr));
 					}
-				}
 
-				assert(submit_queue < QUEUE_COUNT);
-				queues[submit_queue].submit_cmds.push_back(commandlist.GetGraphicsCommandList());
+					if (!queue.submit_cmds.empty())
+					{
+						queue.queue->ExecuteCommandLists(
+							(UINT)queue.submit_cmds.size(),
+							queue.submit_cmds.data()
+						);
+						queue.submit_cmds.clear();
+					}
+
+					if (commandlist.waited_on.load())
+					{
+						hr = queue.queue->Signal(
+							queue.fence.Get(),
+							FRAMECOUNT * commandlists.size() + (uint64_t)commandlist.id
+						);
+						assert(SUCCEEDED(hr));
+					}
+				}
 
 				for (auto& x : commandlist.pipelines_worker)
 				{
@@ -5281,30 +5275,29 @@ using namespace dx12_internal;
 				commandlist.pipelines_worker.clear();
 			}
 
-			// submit last cmd batch:
+			// Mark the completion of queues for this frame:
+			for (int q = 0; q < QUEUE_COUNT; ++q)
 			{
-				assert(submit_queue < QUEUE_COUNT);
-				assert(!queues[submit_queue].submit_cmds.empty());
+				CommandQueue& queue = queues[q];
 
 				// tile mapping waits if needed:
-				if (queues[submit_queue].tile_mapping_dirty)
+				if (queue.tile_mapping_dirty)
 				{
-					queues[submit_queue].tile_mapping_dirty = false;
-					hr = queues[submit_queue].queue->Wait(queues[submit_queue].tile_mapping_fence.Get(), queues[submit_queue].tile_mapping_fence_value);
+					queue.tile_mapping_dirty = false;
+					hr = queue.queue->Wait(queue.tile_mapping_fence.Get(), queue.tile_mapping_fence_value);
 					assert(SUCCEEDED(hr));
 				}
 
-				queues[submit_queue].queue->ExecuteCommandLists(
-					(UINT)queues[submit_queue].submit_cmds.size(),
-					queues[submit_queue].submit_cmds.data()
-				);
-				queues[submit_queue].submit_cmds.clear();
-			}
+				if (!queue.submit_cmds.empty())
+				{
+					queue.queue->ExecuteCommandLists(
+						(UINT)queue.submit_cmds.size(),
+						queue.submit_cmds.data()
+					);
+					queue.submit_cmds.clear();
+				}
 
-			// Mark the completion of queues for this frame:
-			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
-			{
-				hr = queues[queue].queue->Signal(frame_fence[GetBufferIndex()][queue].Get(), 1);
+				hr = queue.queue->Signal(frame_fence[GetBufferIndex()][q].Get(), 1);
 				assert(SUCCEEDED(hr));
 			}
 
@@ -5624,8 +5617,10 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		assert(GetCommandList(wait_for).id < commandlist.id); // can't wait for future command list!
+		CommandList_DX12& commandlist_wait_for = GetCommandList(wait_for);
+		assert(commandlist_wait_for.id < commandlist.id); // can't wait for future command list!
 		commandlist.waits.push_back(wait_for);
+		commandlist_wait_for.waited_on.store(true);
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{

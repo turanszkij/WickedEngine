@@ -6519,6 +6519,7 @@ using namespace vulkan_internal;
 		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
+		commandlist.waited_on.store(false);
 
 		if (commandlist.GetCommandBuffer() == VK_NULL_HANDLE)
 		{
@@ -6608,8 +6609,6 @@ using namespace vulkan_internal;
 		{
 			auto& frame = GetFrameResources();
 
-			QUEUE_TYPE submit_queue = QUEUE_COUNT;
-
 			// Transitions:
 			if(submit_inits)
 			{
@@ -6622,11 +6621,12 @@ using namespace vulkan_internal;
 			uint64_t copy_sync = copyAllocator.flush();
 			if (copy_sync > 0) // sync up with copyallocator before first submit
 			{
-				for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+				for (int q = 0; q < QUEUE_COUNT; ++q)
 				{
-					queues[queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
-					queues[queue].submit_waitSemaphores.push_back(copyAllocator.semaphore);
-					queues[queue].submit_waitValues.push_back(copy_sync);
+					CommandQueue& queue = queues[q];
+					queue.submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
+					queue.submit_waitSemaphores.push_back(copyAllocator.semaphore);
+					queue.submit_waitValues.push_back(copy_sync);
 				}
 				copy_sync = 0;
 			}
@@ -6639,44 +6639,43 @@ using namespace vulkan_internal;
 				res = vkEndCommandBuffer(commandlist.GetCommandBuffer());
 				assert(res == VK_SUCCESS);
 
-				if (submit_queue == QUEUE_COUNT) // start first batch
-				{
-					submit_queue = commandlist.queue;
-				}
+				CommandQueue& queue = queues[commandlist.queue];
+				queue.submit_cmds.push_back(commandlist.GetCommandBuffer());
 
-				if (submit_queue != commandlist.queue || !commandlist.waits.empty()) // new queue type or wait breaks submit batch
-				{
-					// New batch signals its last cmd:
-					queues[submit_queue].submit_signalSemaphores.push_back(queues[submit_queue].semaphore);
-					queues[submit_queue].submit_signalValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)cmd);
-					queues[submit_queue].submit(this, VK_NULL_HANDLE);
-					submit_queue = commandlist.queue;
-
-					for (auto& wait : commandlist.waits)
-					{
-						// record wait for signal on a previous submit:
-						CommandList_Vulkan& waitcommandlist = GetCommandList(wait);
-						queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-						queues[submit_queue].submit_waitSemaphores.push_back(queues[waitcommandlist.queue].semaphore);
-						queues[submit_queue].submit_waitValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id);
-					}
-				}
-
-				queues[submit_queue].swapchain_updates = commandlist.prev_swapchains;
+				queue.swapchain_updates = commandlist.prev_swapchains;
 				for (auto& swapchain : commandlist.prev_swapchains)
 				{
 					auto internal_state = to_internal(&swapchain);
 
-					queues[submit_queue].submit_swapchains.push_back(internal_state->swapChain);
-					queues[submit_queue].submit_swapChainImageIndices.push_back(internal_state->swapChainImageIndex);
-					queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-					queues[submit_queue].submit_waitSemaphores.push_back(internal_state->swapchainAcquireSemaphore);
-					queues[submit_queue].submit_waitValues.push_back(0); // not a timeline semaphore
-					queues[submit_queue].submit_signalSemaphores.push_back(internal_state->swapchainReleaseSemaphore);
-					queues[submit_queue].submit_signalValues.push_back(0); // not a timeline semaphore
+					queue.submit_swapchains.push_back(internal_state->swapChain);
+					queue.submit_swapChainImageIndices.push_back(internal_state->swapChainImageIndex);
+					queue.submit_waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+					queue.submit_waitSemaphores.push_back(internal_state->swapchainAcquireSemaphore);
+					queue.submit_waitValues.push_back(0); // not a timeline semaphore
+					queue.submit_signalSemaphores.push_back(internal_state->swapchainReleaseSemaphore);
+					queue.submit_signalValues.push_back(0); // not a timeline semaphore
 				}
 
-				queues[submit_queue].submit_cmds.push_back(commandlist.GetCommandBuffer());
+				if (commandlist.waited_on.load() || !commandlist.waits.empty())
+				{
+					for (auto& wait : commandlist.waits)
+					{
+						// Wait for command list dependency:
+						CommandList_Vulkan& waitcommandlist = GetCommandList(wait);
+						queue.submit_waitStages.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+						queue.submit_waitSemaphores.push_back(queues[waitcommandlist.queue].semaphore);
+						queue.submit_waitValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id);
+					}
+
+					if (commandlist.waited_on.load())
+					{
+						// Signal this command list's completion:
+						queue.submit_signalSemaphores.push_back(queue.semaphore);
+						queue.submit_signalValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)commandlist.id);
+					}
+
+					queue.submit(this, VK_NULL_HANDLE);
+				}
 
 				for (auto& x : commandlist.pipelines_worker)
 				{
@@ -6695,9 +6694,9 @@ using namespace vulkan_internal;
 			}
 
 			// final submits with fences:
-			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+			for (int q = 0; q < QUEUE_COUNT; ++q)
 			{
-				queues[queue].submit(this, frame.fence[queue]);
+				queues[q].submit(this, frame.fence[q]);
 			}
 		}
 
@@ -7076,8 +7075,10 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::WaitCommandList(CommandList cmd, CommandList wait_for)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		assert(GetCommandList(wait_for).id < commandlist.id); // can't wait for future command list!
+		CommandList_Vulkan& commandlist_wait_for = GetCommandList(wait_for);
+		assert(commandlist_wait_for.id < commandlist.id); // can't wait for future command list!
 		commandlist.waits.push_back(wait_for);
+		commandlist_wait_for.waited_on.store(true);
 	}
 	void GraphicsDevice_Vulkan::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{

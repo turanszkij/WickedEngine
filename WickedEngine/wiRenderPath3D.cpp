@@ -1197,8 +1197,8 @@ namespace wi
 
 		if (scene->terrains.GetCount() > 0)
 		{
-			CommandList cmd_allocation_tilerequest = device->BeginCommandList(QUEUE_GRAPHICS);
-			//device->WaitCommandList(cmd_allocation_tilerequest, cmd); // wait for opaque scene
+			CommandList cmd_allocation_tilerequest = device->BeginCommandList(QUEUE_COMPUTE);
+			device->WaitCommandList(cmd_allocation_tilerequest, cmd); // wait for opaque scene
 			wi::jobsystem::Execute(ctx, [this, cmd_allocation_tilerequest](wi::jobsystem::JobArgs args) {
 				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
 				{
