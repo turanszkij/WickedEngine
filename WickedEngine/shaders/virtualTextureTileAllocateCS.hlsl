@@ -31,6 +31,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	}
 	lod--;
 
+	if (lod >= 8)
+		return;
+
 	const uint page = pageBuffer.Load(DTid.x * sizeof(uint));
 	const uint requestMinLod = requestBuffer.Load(DTid.x * sizeof(uint));
 	const bool must_be_always_resident = lod == ((int)push.lodCount - 1);
@@ -42,6 +45,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 	if (page == 0xFFFF && (requestMinLod <= lod || must_be_always_resident))
 	{
+#if 0 // if enabled, it will slow down allocation and only allocate 1 level per frame
 		if (lod < push.lodCount - 1)
 		{
 			// Check if LOD below this is resident, otherwise don't allocate it yet
@@ -54,10 +58,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			if (pageBuffer.Load(ll_index * sizeof(uint)) == 0xFFFF)
 				return;
 		}
+#endif
 		// Allocate:
 		uint allocationIndex = 0;
 		allocationBuffer.InterlockedAdd(0, 1, allocationIndex);
-		allocationBuffer.Store((1 + allocationIndex) * sizeof(uint), ((DTid.x & 0xFFFF) << 16u) | ((lod & 0xFF) << 8u) | 1u);
+		allocationBuffer.Store((1 + allocationIndex) * sizeof(uint), ((x & 0xFF) << 24u) | ((y & 0xFF) << 16u) | ((lod & 0xFF) << 8u) | 1u);
 	}
 	else if(page != 0xFFFF && requestMinLod > lod && !must_be_always_resident)
 	{
@@ -85,6 +90,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		// Deallocate:
 		uint allocationIndex = 0;
 		allocationBuffer.InterlockedAdd(0, 1, allocationIndex);
-		allocationBuffer.Store((1 + allocationIndex) * sizeof(uint), ((DTid.x & 0xFFFF) << 16u) | ((lod & 0xFF) << 8u) | 0u);
+		allocationBuffer.Store((1 + allocationIndex) * sizeof(uint), ((x & 0xFF) << 24u) | ((y & 0xFF) << 16u) | ((lod & 0xFF) << 8u) | 0u);
 	}
 }

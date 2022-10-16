@@ -6620,6 +6620,16 @@ using namespace vulkan_internal;
 			}
 
 			uint64_t copy_sync = copyAllocator.flush();
+			if (copy_sync > 0) // sync up with copyallocator before first submit
+			{
+				for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+				{
+					queues[queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
+					queues[queue].submit_waitSemaphores.push_back(copyAllocator.semaphore);
+					queues[queue].submit_waitValues.push_back(copy_sync);
+				}
+				copy_sync = 0;
+			}
 
 			uint32_t cmd_last = cmd_count;
 			cmd_count = 0;
@@ -6632,14 +6642,6 @@ using namespace vulkan_internal;
 				if (submit_queue == QUEUE_COUNT) // start first batch
 				{
 					submit_queue = commandlist.queue;
-				}
-
-				if (copy_sync > 0) // sync up with copyallocator before first submit
-				{
-					queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
-					queues[submit_queue].submit_waitSemaphores.push_back(copyAllocator.semaphore);
-					queues[submit_queue].submit_waitValues.push_back(copy_sync);
-					copy_sync = 0;
 				}
 
 				if (submit_queue != commandlist.queue || !commandlist.waits.empty()) // new queue type or wait breaks submit batch

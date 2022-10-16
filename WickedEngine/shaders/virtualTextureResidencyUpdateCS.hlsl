@@ -34,10 +34,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		const uint l_page_offset = lod_offsets[lod];
 		const uint l_index = l_page_offset + l_x + l_y * l_width;
 		const uint page = pageBuffer.Load(l_index * sizeof(uint));
-		if (page != 0xFFFF)
+		if (page == 0xFFFF)
 		{
-			residency = lod;
-			break;
+			// invalid page
+			//	normally this wouldn't happen after a resident mip was encountered, but
+			//	it can happen on allocation failures, in this case reset the residency to invalid
+			//	this will mean that while there was a higher res resident page, but we can't use that because lower levels might be non resident
+			residency = 0xFF;
+		}
+		else
+		{
+			// valid page
+			//	normally this would be the highest lod and we could exit, but failed allocations can cause holes in the mip chain
+			residency = min(residency, lod);
 		}
 	}
 

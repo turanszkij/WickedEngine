@@ -1437,17 +1437,17 @@ namespace wi::terrain
 						for (uint32_t i = 0; i < allocation_count; ++i)
 						{
 							const uint32_t allocation_request = allocation_requests[i];
-							const uint16_t DTid = (allocation_request >> 16u) & 0xFFFF;
+							const uint8_t x = (allocation_request >> 24u) & 0xFF;
+							const uint8_t y = (allocation_request >> 16u) & 0xFF;
 							const uint8_t lod = (allocation_request >> 8u) & 0xFF;
 							if (lod >= vt.lod_page_offsets.size())
 								continue;
+							const uint32_t l_offset = vt.lod_page_offsets[lod];
 							const bool allocate = allocation_request & 0x1;
-							GPUPageAllocator::Page& page = vt.pages[DTid];
 							const uint32_t l_width = std::max(1u, width >> lod);
 							const uint32_t l_height = std::max(1u, height >> lod);
-							const uint32_t l_index = DTid - vt.lod_page_offsets[lod];
-							const uint32_t x = l_index % l_width;
-							const uint32_t y = l_index / l_width;
+							const uint32_t l_index = l_offset + x + y * l_width;
+							GPUPageAllocator::Page& page = vt.pages[l_index];
 							if (x >= l_width || y >= l_height)
 								continue;
 
