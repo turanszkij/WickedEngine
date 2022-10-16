@@ -68,7 +68,7 @@ namespace wi
 		bool ditherEnabled = true;
 		bool occlusionCullingEnabled = true;
 		bool sceneUpdateEnabled = true;
-		bool fsrEnabled = true;
+		bool fsrEnabled = false;
 
 		uint32_t msaaSampleCount = 1;
 
