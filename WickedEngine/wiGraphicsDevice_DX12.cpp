@@ -5522,8 +5522,11 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
 	{
 		CommandQueue& q = queues[queue];
-		std::scoped_lock lock(q.tile_mapping_mutex);
-		q.tile_mapping_dirty = true;
+
+		thread_local wi::vector<D3D12_TILED_RESOURCE_COORDINATE> tiled_resource_coordinates;
+		thread_local wi::vector<D3D12_TILE_REGION_SIZE> tiled_region_sizes;
+		thread_local wi::vector<D3D12_TILE_RANGE_FLAGS> tile_range_flags;
+		thread_local wi::vector<uint32_t> range_start_offsets;
 
 		for (uint32_t c = 0; c < command_count; ++c)
 		{
@@ -5545,14 +5548,14 @@ using namespace dx12_internal;
 				heap = internal_tile_pool->allocation->GetHeap();
 				heap_page_offset = uint32_t(internal_tile_pool->allocation->GetOffset() / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
 			}
-			q.tiled_resource_coordinates.resize(command.num_resource_regions);
-			q.tiled_region_sizes.resize(command.num_resource_regions);
+			tiled_resource_coordinates.resize(command.num_resource_regions);
+			tiled_region_sizes.resize(command.num_resource_regions);
 			for (uint32_t i = 0; i < command.num_resource_regions; ++i)
 			{
 				const SparseResourceCoordinate& in_coordinate = command.coordinates[i];
 				const SparseRegionSize& in_size = command.sizes[i];
-				D3D12_TILED_RESOURCE_COORDINATE& out_coordinate = q.tiled_resource_coordinates[i];
-				D3D12_TILE_REGION_SIZE& out_size = q.tiled_region_sizes[i];
+				D3D12_TILED_RESOURCE_COORDINATE& out_coordinate = tiled_resource_coordinates[i];
+				D3D12_TILE_REGION_SIZE& out_size = tiled_region_sizes[i];
 				out_coordinate.X = in_coordinate.x;
 				out_coordinate.Y = in_coordinate.y;
 				out_coordinate.Z = in_coordinate.z;
@@ -5563,12 +5566,12 @@ using namespace dx12_internal;
 				out_size.Depth = in_size.depth;
 				out_size.NumTiles = out_size.Width * out_size.Height * out_size.Depth;
 			}
-			q.tile_range_flags.resize(command.num_resource_regions);
-			q.range_start_offsets.resize(command.num_resource_regions);
+			tile_range_flags.resize(command.num_resource_regions);
+			range_start_offsets.resize(command.num_resource_regions);
 			for (uint32_t i = 0; i < command.num_resource_regions; ++i)
 			{
 				const TileRangeFlags& in_flags = command.range_flags[i];
-				D3D12_TILE_RANGE_FLAGS& out_flags = q.tile_range_flags[i];
+				D3D12_TILE_RANGE_FLAGS& out_flags = tile_range_flags[i];
 				switch (in_flags)
 				{
 				default:
@@ -5580,38 +5583,44 @@ using namespace dx12_internal;
 					break;
 				}
 				const uint32_t in_offset = command.range_start_offsets[i];
-				uint32_t& out_offset = q.range_start_offsets[i];
+				uint32_t& out_offset = range_start_offsets[i];
 				out_offset = heap_page_offset + in_offset;
 			}
 
+			// No need to lock this, it is thread safe
 			q.queue->UpdateTileMappings(
 				internal_sparse_resource->resource.Get(),
 				command.num_resource_regions,
-				q.tiled_resource_coordinates.data(),
-				q.tiled_region_sizes.data(),
+				tiled_resource_coordinates.data(),
+				tiled_region_sizes.data(),
 				heap,
 				command.num_resource_regions,
-				q.tile_range_flags.data(),
-				q.range_start_offsets.data(),
+				tile_range_flags.data(),
+				range_start_offsets.data(),
 				command.range_tile_counts,
 				D3D12_TILE_MAPPING_FLAG_NONE
 			);
 		}
 
-		if (q.tile_mapping_fence == nullptr)
+		// Queue signal needs to be locked, they need to be in order:
 		{
-			HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&q.tile_mapping_fence));
-			assert(SUCCEEDED(hr));
-		}
+			std::scoped_lock lock(q.tile_mapping_mutex);
+			q.tile_mapping_dirty = true;
+			if (q.tile_mapping_fence == nullptr)
+			{
+				HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&q.tile_mapping_fence));
+				assert(SUCCEEDED(hr));
+			}
 
-		q.tile_mapping_fence_value++;
-		HRESULT hr = q.queue->Signal(q.tile_mapping_fence.Get(), q.tile_mapping_fence_value);
-		assert(SUCCEEDED(hr));
+			q.tile_mapping_fence_value++;
+			HRESULT hr = q.queue->Signal(q.tile_mapping_fence.Get(), q.tile_mapping_fence_value);
+			assert(SUCCEEDED(hr));
 
 #if 0 // debug immediate wait by CPU
-		hr = q.tile_mapping_fence->SetEventOnCompletion(q.tile_mapping_fence_value, nullptr);
-		assert(SUCCEEDED(hr));
+			hr = q.tile_mapping_fence->SetEventOnCompletion(q.tile_mapping_fence_value, nullptr);
+			assert(SUCCEEDED(hr));
 #endif
+		}
 	}
 
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)

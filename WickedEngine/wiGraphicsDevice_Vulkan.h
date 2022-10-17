@@ -108,16 +108,6 @@ namespace wi::graphics
 			VkSemaphore sparse_semaphore = VK_NULL_HANDLE;
 			bool sparse_dirty = false;
 			uint64_t sparse_semaphore_value = 0ull;
-			wi::vector<VkBindSparseInfo> sparse_infos;
-			struct DataPerBind
-			{
-				VkSparseBufferMemoryBindInfo buffer_bind_info;
-				VkSparseImageOpaqueMemoryBindInfo image_opaque_bind_info;
-				VkSparseImageMemoryBindInfo image_bind_info;
-				wi::vector<VkSparseMemoryBind> memory_binds;
-				wi::vector<VkSparseImageMemoryBind> image_memory_binds;
-			};
-			wi::vector<DataPerBind> sparse_binds;
 
 			void submit(GraphicsDevice_Vulkan* device, VkFence fence);
 

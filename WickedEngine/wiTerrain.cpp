@@ -1563,8 +1563,6 @@ namespace wi::terrain
 						}
 					}
 
-					vt.SparseFlush(page_allocator);
-
 					// Update page buffer for GPU:
 					uint32_t* page_buffer = (uint32_t*)vt.pageBuffer_CPU_upload[vt.cpu_resource_id].mapped_data;
 					for (size_t i = 0; i < vt.pages.size(); ++i)
@@ -1573,6 +1571,8 @@ namespace wi::terrain
 						// force memcpy into uncached memory to avoid read stall by mistake:
 						std::memcpy(page_buffer + i, &page, sizeof(page));
 					}
+
+					vt.SparseFlush(page_allocator);
 
 				});
 
