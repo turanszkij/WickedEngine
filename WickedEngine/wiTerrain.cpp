@@ -399,12 +399,8 @@ namespace wi::terrain
 			font_params.posX = offset.x;
 			font_params.posY = offset.y;
 			std::string ss;
-			ss += "Allocation count REQUEST: " + std::to_string(requested_tile_allocation_count);
-			ss += "\tSUCCESSFUL: " + std::to_string(successful_tile_allocation_count);
-			ss += "\tFAILED: " + std::to_string(failed_tile_allocation_count) + "\n";
-			ss += "Deallocation count REQUEST: " + std::to_string(requested_tile_deallocation_count);
-			ss += "\tSUCCESSFUL: " + std::to_string(successful_tile_deallocation_count);
-			ss += "\tFAILED: " + std::to_string(failed_tile_deallocation_count) + "\n";
+			ss += "Allocation count: " + std::to_string(tile_allocation_count) + "\n";
+			ss += "Deallocation count: " + std::to_string(tile_deallocation_count) + "\n";
 			wi::font::Draw(ss, font_params, cmd);
 		}
 
@@ -650,11 +646,25 @@ namespace wi::terrain
 		{
 			tile_range_flags.push_back(TileRangeFlags::None);
 			tile_range_offset.push_back(page.index);
+
+			// Request updating virtual texture tile after mapping:
+			VirtualTexture::UpdateRequest& request = update_requests.emplace_back();
+			request.tile_x = x;
+			request.tile_y = y;
+			request.lod = mip;
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			tile_allocation_count++;
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 		}
 		else
 		{
 			tile_range_flags.push_back(TileRangeFlags::Null);
 			tile_range_offset.push_back(0);
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			tile_deallocation_count++;
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 		}
 		tile_range_count.push_back(1);
 	}
@@ -1407,12 +1417,6 @@ namespace wi::terrain
 					{
 						// Record sparse map:
 						vt.SparseMap(page_allocator, page, 0, 0, least_detailed_lod);
-
-						// Request updating virtual texture tile after mapping:
-						VirtualTexture::UpdateRequest& request = vt.update_requests.emplace_back();
-						request.tile_x = 0;
-						request.tile_y = 0;
-						request.lod = least_detailed_lod;
 					}
 					else
 					{
@@ -1470,12 +1474,8 @@ namespace wi::terrain
 					vt.data_available_CPU[vt.cpu_resource_id] = true;
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-					vt.requested_tile_allocation_count = 0;
-					vt.successful_tile_allocation_count = 0;
-					vt.failed_tile_allocation_count = 0;
-					vt.requested_tile_deallocation_count = 0;
-					vt.successful_tile_deallocation_count = 0;
-					vt.failed_tile_deallocation_count = 0;
+					vt.tile_allocation_count = 0;
+					vt.tile_deallocation_count = 0;
 #endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 
 					// Perform the allocations and deallocations:
@@ -1503,62 +1503,26 @@ namespace wi::terrain
 
 							if (allocate)
 							{
-#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-								vt.requested_tile_allocation_count++;
-#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 								if (page.IsValid())
 								{
-#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-									vt.failed_tile_allocation_count++;
-#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
-									//assert(0);
 									continue;
 								}
 								page = page_allocator.allocate();
 								if (page.IsValid())
 								{
 									vt.SparseMap(page_allocator, page, x, y, lod);
-
-									// Request updating virtual texture tile after mapping:
-									VirtualTexture::UpdateRequest& request = vt.update_requests.emplace_back();
-									request.tile_x = x;
-									request.tile_y = y;
-									request.lod = lod;
-
-#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-									vt.successful_tile_allocation_count++;
-#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
-								}
-								else
-								{
-#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-									vt.failed_tile_allocation_count++;
-#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
-									wi::backlog::post("Terrain: virtual texture page was requested, but there are no more free pages!", wi::backlog::LogLevel::Warning);
-									break;
 								}
 							}
 							else
 							{
-#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-								vt.requested_tile_deallocation_count++;
-#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 								if (!page.IsValid())
 								{
-#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-									vt.failed_tile_deallocation_count++;
-#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
-									//assert(0);
 									continue;
 								}
 								page_allocator.free(page);
 								page = {};
 
 								vt.SparseMap(page_allocator, page, x, y, lod); // invalid page will do unmap
-
-#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-								vt.successful_tile_deallocation_count++;
-#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 							}
 						}
 					}

@@ -54,7 +54,7 @@ namespace wi::terrain
 
 		struct Page
 		{
-			uint16_t block = 0;			// index into buffer_blocks array
+			uint16_t block = 0;			// index into blocks array
 			uint16_t index = 0xFFFF;	// index into block's pages
 			constexpr bool IsValid() const { return index < 0xFFFF; }
 		};
@@ -84,12 +84,8 @@ namespace wi::terrain
 		wi::vector<uint32_t> lod_page_offsets;
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-		uint32_t requested_tile_allocation_count = 0;
-		uint32_t successful_tile_allocation_count = 0;
-		uint32_t failed_tile_allocation_count = 0;
-		uint32_t requested_tile_deallocation_count = 0;
-		uint32_t successful_tile_deallocation_count = 0;
-		uint32_t failed_tile_deallocation_count = 0;
+		uint32_t tile_allocation_count = 0;
+		uint32_t tile_deallocation_count = 0;
 		wi::graphics::Texture feedbackMap_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
 		wi::graphics::Texture residencyMap_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
 		wi::graphics::GPUBuffer requestBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
