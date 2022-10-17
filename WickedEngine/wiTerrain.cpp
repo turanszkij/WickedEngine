@@ -247,6 +247,17 @@ namespace wi::terrain
 		{
 			lod_count -= texture.sparse_properties->packed_mip_count - 1;
 		}
+		std::fill(lod_page_offsets, lod_page_offsets + arraysize(lod_page_offsets), 0);
+		std::fill(data_available_CPU, data_available_CPU + arraysize(data_available_CPU), 0);
+		cpu_resource_id = 0;
+		pages.clear();
+
+		sparse_coordinate.clear();
+		sparse_size.clear();
+		tile_range_flags.clear();
+		tile_range_offset.clear();
+		tile_range_count.clear();
+		last_block = 0;
 
 		TextureDesc td;
 		td.width = width;
@@ -778,8 +789,6 @@ namespace wi::terrain
 			Generation_Restart();
 		}
 
-		generation = 3;
-
 		// Check whether any modifiers need to be removed, and we will really remove them here if so:
 		if (!modifiers_to_remove.empty())
 		{
@@ -1155,7 +1164,7 @@ namespace wi::terrain
 					}
 
 					// Create the textures for virtual texture update:
-					CreateChunkTextures(chunk_data, material);
+					CreateChunkRegionTexture(chunk_data);
 
 					wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
 					generated_something = true;
@@ -1346,85 +1355,21 @@ namespace wi::terrain
 		generator->cancelled.store(false); // the next generation can run
 	}
 
-	void Terrain::CreateChunkTextures(ChunkData& chunk_data, MaterialComponent& material)
+	void Terrain::CreateChunkRegionTexture(ChunkData& chunk_data)
 	{
-		GraphicsDevice* device = GetDevice();
-
-		TextureDesc desc;
-		desc.width = (uint32_t)chunk_width;
-		desc.height = (uint32_t)chunk_width;
-		desc.format = Format::R8G8B8A8_UNORM;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE;
-		SubresourceData data;
-		data.data_ptr = chunk_data.region_weights.data();
-		data.row_pitch = chunk_width * sizeof(chunk_data.region_weights[0]);
-		bool success = device->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
-		assert(success);
-
-		chunk_data.vt.resize(3);
-
-		for (uint32_t map_type = 0; map_type < chunk_data.vt.size(); ++map_type)
+		if (!chunk_data.region_weights_texture.IsValid())
 		{
-			VirtualTexture& vt = chunk_data.vt[map_type];
-
-			if (!vt.texture.IsValid())
-			{
-				vt.free(page_allocator);
-
-				TextureDesc desc;
-#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-				desc.width = 2048;
-				desc.height = 2048;
-#else
-				desc.width = 16384;
-				desc.height = 16384;
-#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
-				desc.misc_flags = ResourceMiscFlag::SPARSE;
-				desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-				desc.mip_levels = 0;
-				desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-
-				if (map_type == MaterialComponent::NORMALMAP)
-				{
-					desc.format = Format::R8G8_UNORM;
-				}
-				else
-				{
-					desc.format = Format::R8G8B8A8_UNORM;
-				}
-				vt.init(desc);
-
-				material.textures[map_type].resource.SetTexture(vt.texture);
-				material.textures[map_type].descriptor_residencyMap = device->GetDescriptorIndex(&vt.residencyMap, SubresourceType::SRV);
-				material.textures[map_type].descriptor_feedbackMap = device->GetDescriptorIndex(&vt.feedbackMap, SubresourceType::UAV);
-
-				if (page_allocator.blocks.empty())
-				{
-					page_allocator.init(256ull * 1024ull * 1024ull, vt.texture.sparse_page_size);
-				}
-
-				// Allocate least detailed mip level up front:
-				//	This is needed because for the first few frames the GPU readback won't be ready to use
-				//	So in the first few frames after creation, the least detailed mip will be shown until GPU data is available
-				{
-					const uint32_t least_detailed_lod = vt.lod_count - 1;
-					const uint32_t l_index = vt.lod_page_offsets[least_detailed_lod];
-					GPUPageAllocator::Page& page = vt.pages[l_index];
-					page = page_allocator.allocate();
-
-					if (page.IsValid())
-					{
-						// Record sparse map:
-						vt.SparseMap(page_allocator, page, 0, 0, least_detailed_lod);
-					}
-					else
-					{
-						wi::backlog::post("Virtual texture least detailed mip couldn't be allocated on creation!", wi::backlog::LogLevel::Warning);
-					}
-				}
-			}
-			vt.region_weights_texture = chunk_data.region_weights_texture;
-			vt.map_type = map_type;
+			GraphicsDevice* device = GetDevice();
+			TextureDesc desc;
+			desc.width = (uint32_t)chunk_width;
+			desc.height = (uint32_t)chunk_width;
+			desc.format = Format::R8G8B8A8_UNORM;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			SubresourceData data;
+			data.data_ptr = chunk_data.region_weights.data();
+			data.row_pitch = chunk_width * sizeof(chunk_data.region_weights[0]);
+			bool success = device->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
+			assert(success);
 		}
 	}
 
@@ -1451,15 +1396,75 @@ namespace wi::terrain
 
 			material->sampler_descriptor = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMPED));
 
-			if (chunk_data.vt.empty())
-			{
-				// This should have been created on generation thread, but if not (serialized), create it last minute:
-				CreateChunkTextures(chunk_data, *material);
-			}
+			// This should have been created on generation thread, but if not (serialized), create it last minute:
+			CreateChunkRegionTexture(chunk_data);
 
+			const uint32_t min_resolution = 256u;
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			const uint32_t max_resolution = 2048;
+#else
+			const uint32_t max_resolution = 16384u;
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			//const uint32_t required_resolution = std::max(min_resolution, max_resolution >> (dist / 2));
+			const uint32_t required_resolution = dist < 2 ? max_resolution : min_resolution;
+
+			chunk_data.vt.resize(3); // base, normal, surface
 			for (uint32_t map_type = 0; map_type < chunk_data.vt.size(); ++map_type)
 			{
 				VirtualTexture& vt = chunk_data.vt[map_type];
+
+				if (vt.texture.desc.width != required_resolution)
+				{
+					vt.free(page_allocator);
+
+					TextureDesc desc;
+					desc.width = required_resolution;
+					desc.height = required_resolution;
+					desc.misc_flags = ResourceMiscFlag::SPARSE;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+					desc.mip_levels = 0;
+					desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+
+					if (map_type == MaterialComponent::NORMALMAP)
+					{
+						desc.format = Format::R8G8_UNORM;
+					}
+					else
+					{
+						desc.format = Format::R8G8B8A8_UNORM;
+					}
+					vt.init(desc);
+
+					material->textures[map_type].resource.SetTexture(vt.texture);
+					material->textures[map_type].descriptor_residencyMap = device->GetDescriptorIndex(&vt.residencyMap, SubresourceType::SRV);
+					material->textures[map_type].descriptor_feedbackMap = device->GetDescriptorIndex(&vt.feedbackMap, SubresourceType::UAV);
+
+					locker.lock();
+					if (page_allocator.blocks.empty())
+					{
+						page_allocator.init(64ull * 1024ull * 1024ull, vt.texture.sparse_page_size);
+					}
+					locker.unlock();
+
+					// Allocate least detailed mip level up front:
+					//	This is needed because for the first few frames the GPU readback won't be ready to use
+					//	So in the first few frames after creation, the least detailed mip will be shown until GPU data is available
+					{
+						const uint32_t least_detailed_lod = vt.lod_count - 1;
+						const uint32_t l_index = vt.lod_page_offsets[least_detailed_lod];
+						GPUPageAllocator::Page& page = vt.pages[l_index];
+						page = page_allocator.allocate();
+
+						if (page.IsValid())
+						{
+							// Record sparse map:
+							vt.SparseMap(page_allocator, page, 0, 0, least_detailed_lod);
+						}
+					}
+					vt.region_weights_texture = chunk_data.region_weights_texture;
+					vt.map_type = map_type;
+				}
+
 				if (vt.data_available_CPU[vt.cpu_resource_id] && frame_skippable)
 					continue;
 
@@ -1483,7 +1488,8 @@ namespace wi::terrain
 					//	GPU writes allocation requests by virtualTextureTileAllocateCS.hlsl compute shader
 					if (vt.data_available_CPU)
 					{
-						const uint32_t allocation_count = *(const uint32_t*)vt.allocationBuffer_CPU_readback[vt.cpu_resource_id].mapped_data;
+						uint32_t allocation_count = *(const uint32_t*)vt.allocationBuffer_CPU_readback[vt.cpu_resource_id].mapped_data;
+						allocation_count = std::min(uint32_t(vt.pages.size() - 1), allocation_count);
 						const uint32_t* allocation_requests = ((const uint32_t*)vt.allocationBuffer_CPU_readback[vt.cpu_resource_id].mapped_data) + 1; // +1 offset of the allocation counter
 						for (uint32_t i = 0; i < allocation_count; ++i)
 						{
@@ -1688,8 +1694,8 @@ namespace wi::terrain
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(
-					(vt->feedbackMap.desc.width / 2 + 7u) / 8u,
-					(vt->feedbackMap.desc.height / 2 + 7u) / 8u,
+					(std::max(1u, vt->feedbackMap.desc.width / 2) + 7u) / 8u,
+					(std::max(1u, vt->feedbackMap.desc.height / 2) + 7u) / 8u,
 					1u,
 					cmd
 				);

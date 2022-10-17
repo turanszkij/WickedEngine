@@ -2382,6 +2382,7 @@ using namespace dx12_internal;
 #ifdef _DEBUG
 				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+				//d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
 #endif
 
 				std::vector<D3D12_MESSAGE_SEVERITY> enabledSeverities;

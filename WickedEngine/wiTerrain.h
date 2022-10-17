@@ -245,7 +245,7 @@ namespace wi::terrain
 		// Tells the generation thread that it should be cancelled and blocks until that is confirmed
 		void Generation_Cancel();
 		// Creates the textures for a chunk data
-		void CreateChunkTextures(ChunkData& chunk_data, wi::scene::MaterialComponent& material);
+		void CreateChunkRegionTexture(ChunkData& chunk_data);
 
 		// Evaluate tile request, allocate tiles, map, create update reques
 		void UpdateVirtualTexturesCPU();
