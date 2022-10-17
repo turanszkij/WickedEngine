@@ -379,7 +379,7 @@ namespace wi::terrain
 	void VirtualTexture::DrawDebug(CommandList cmd)
 	{
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-		if (lod_page_offsets.empty())
+		if (lod_count == 0)
 			return;
 		float cellsize = 20;
 		XMFLOAT2 offset = XMFLOAT2(0, 20);
@@ -435,7 +435,7 @@ namespace wi::terrain
 				}
 				else
 				{
-					image_params.color = XMFLOAT4(1.0f - wi::math::saturate((float)feedback_request / (float)lod_page_offsets.size()), 0, 0, 1);
+					image_params.color = XMFLOAT4(1.0f - wi::math::saturate((float)feedback_request / (float)lod_count), 0, 0, 1);
 				}
 				wi::image::Draw(wi::texturehelper::getWhite(), image_params, cmd);
 
@@ -466,7 +466,7 @@ namespace wi::terrain
 			font_params.posY = offset.y - font_params.size;
 			wi::font::Draw("Min request per mip level:", font_params, cmd);
 		}
-		for (uint8_t lod = 0; lod < (uint8_t)lod_page_offsets.size(); ++lod)
+		for (uint8_t lod = 0; lod < (uint8_t)lod_count; ++lod)
 		{
 			const uint32_t l_width = std::max(1u, width >> lod);
 			const uint32_t l_height = std::max(1u, height >> lod);
@@ -548,7 +548,7 @@ namespace wi::terrain
 				}
 				else
 				{
-					image_params.color = XMFLOAT4(0, 1.0f - wi::math::saturate((float)lod / (float)lod_page_offsets.size()), 0, 1);
+					image_params.color = XMFLOAT4(0, 1.0f - wi::math::saturate((float)lod / (float)lod_count), 0, 1);
 				}
 				wi::image::Draw(wi::texturehelper::getWhite(), image_params, cmd);
 
@@ -578,7 +578,7 @@ namespace wi::terrain
 			font_params.posY = offset.y - font_params.size;
 			wi::font::Draw("Resident pages per mip level:", font_params, cmd);
 		}
-		for (uint8_t lod = 0; lod < (uint8_t)lod_page_offsets.size(); ++lod)
+		for (uint8_t lod = 0; lod < (uint8_t)lod_count; ++lod)
 		{
 			const uint32_t l_width = std::max(1u, width >> lod);
 			const uint32_t l_height = std::max(1u, height >> lod);

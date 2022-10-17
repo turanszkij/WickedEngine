@@ -36,7 +36,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 	const uint page = pageBuffer.Load(DTid.x * sizeof(uint));
 	const uint requestMinLod = requestBuffer.Load(DTid.x * sizeof(uint));
-	const bool must_be_always_resident = lod == ((int)push.lodCount - 1);
+	const bool must_be_always_resident = lod == ((int)push.lodCount - 2); // bottom 2 lods (both only 1 tile each) always resident
 
 	const uint l_width = max(1u, push.width >> lod);
 	const uint l_index = DTid.x - lod_offsets[lod];

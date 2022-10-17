@@ -108,9 +108,9 @@ namespace wi::terrain
 		// Attach this data to Virtual Texture because we will record these by separate CPU thread:
 		struct UpdateRequest
 		{
-			uint32_t lod = 0;
-			uint32_t tile_x = 0;
-			uint32_t tile_y = 0;
+			uint16_t lod = 0;
+			uint8_t tile_x = 0;
+			uint8_t tile_y = 0;
 		};
 		mutable wi::vector<UpdateRequest> update_requests;
 		wi::graphics::Texture region_weights_texture;
