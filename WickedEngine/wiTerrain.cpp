@@ -1431,7 +1431,6 @@ namespace wi::terrain
 	void Terrain::UpdateVirtualTexturesCPU()
 	{
 		GraphicsDevice* device = GetDevice();
-		uint64_t frame_count = device->GetFrameCount();
 		virtual_textures_in_use.clear();
 		virtual_texture_barriers_before_update.clear();
 		virtual_texture_barriers_after_update.clear();
@@ -1444,6 +1443,7 @@ namespace wi::terrain
 			const Chunk& chunk = it.first;
 			ChunkData& chunk_data = it.second;
 			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+			const bool frame_skippable = dist > 1 ? (wi::random::GetRandom(dist * dist) > 0) : false;
 
 			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
 			if (material == nullptr)
@@ -1460,6 +1460,8 @@ namespace wi::terrain
 			for (uint32_t map_type = 0; map_type < chunk_data.vt.size(); ++map_type)
 			{
 				VirtualTexture& vt = chunk_data.vt[map_type];
+				if (vt.data_available_CPU[vt.cpu_resource_id] && frame_skippable)
+					continue;
 
 				// Process each virtual texture on a background thread:
 				wi::jobsystem::Execute(ctx, [this, &vt](wi::jobsystem::JobArgs args) {
