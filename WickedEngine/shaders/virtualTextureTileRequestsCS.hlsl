@@ -3,7 +3,7 @@
 
 PUSHCONSTANT(push, VirtualTextureTileRequestsPush);
 
-groupshared uint lod_offsets[8];
+groupshared uint lod_offsets[9];
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
@@ -12,7 +12,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	Texture2D<uint> feedbackTexture = bindless_textures_uint[push.feedbackTextureRO];
 	RWByteAddressBuffer requestBuffer = bindless_rwbuffers[push.requestBufferRW];
 
-	if (groupIndex < 8)
+	if (groupIndex < 9)
 	{
 		lod_offsets[groupIndex] = lodOffsetsBuffer.Load(groupIndex * sizeof(uint));
 	}

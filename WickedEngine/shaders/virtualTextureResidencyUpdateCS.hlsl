@@ -3,7 +3,7 @@
 
 PUSHCONSTANT(push, VirtualTextureResidencyUpdatePush);
 
-groupshared uint lod_offsets[8];
+groupshared uint lod_offsets[9];
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
@@ -12,7 +12,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	ByteAddressBuffer pageBuffer = bindless_buffers[push.pageBufferRO];
 	RWTexture2D<uint> residencyTexture = bindless_rwtextures_uint[push.residencyTextureRW];
 
-	if (groupIndex < 8)
+	if (groupIndex < 9)
 	{
 		lod_offsets[groupIndex] = lodOffsetsBuffer.Load(groupIndex * sizeof(uint));
 	}

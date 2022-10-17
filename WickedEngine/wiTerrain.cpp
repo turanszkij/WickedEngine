@@ -242,10 +242,10 @@ namespace wi::terrain
 
 		uint32_t width = texture.desc.width / texture.sparse_properties->tile_width;
 		uint32_t height = texture.desc.height / texture.sparse_properties->tile_height;
-		uint32_t sparse_mips = texture.desc.mip_levels;
+		lod_count = texture.desc.mip_levels;
 		if (texture.sparse_properties->packed_mip_count > 0)
 		{
-			sparse_mips -= texture.sparse_properties->packed_mip_count - 1;
+			lod_count -= texture.sparse_properties->packed_mip_count - 1;
 		}
 
 		TextureDesc td;
@@ -292,9 +292,8 @@ namespace wi::terrain
 		}
 #endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 
-		lod_page_offsets.resize(sparse_mips);
 		uint32_t page_count = 0;
-		for (uint32_t i = 0; i < sparse_mips; ++i)
+		for (uint32_t i = 0; i < lod_count; ++i)
 		{
 			lod_page_offsets[i] = page_count;
 			page_count += width * height;
@@ -308,8 +307,8 @@ namespace wi::terrain
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			bd.bind_flags = BindFlag::SHADER_RESOURCE;
 			bd.usage = Usage::DEFAULT;
-			bd.size = sizeof(uint32_t) * lod_page_offsets.size();
-			success = device->CreateBuffer(&bd, lod_page_offsets.data(), &lodOffsetsBuffer);
+			bd.size = sizeof(uint32_t) * lod_count;
+			success = device->CreateBuffer(&bd, lod_page_offsets, &lodOffsetsBuffer);
 			assert(success);
 			device->SetName(&lodOffsetsBuffer, "VirtualTexture::lodOffsetsBuffer");
 		}
@@ -1408,7 +1407,7 @@ namespace wi::terrain
 				//	This is needed because for the first few frames the GPU readback won't be ready to use
 				//	So in the first few frames after creation, the least detailed mip will be shown until GPU data is available
 				{
-					const uint32_t least_detailed_lod = (uint32_t)vt.lod_page_offsets.size() - 1;
+					const uint32_t least_detailed_lod = vt.lod_count - 1;
 					const uint32_t l_index = vt.lod_page_offsets[least_detailed_lod];
 					GPUPageAllocator::Page& page = vt.pages[l_index];
 					page = page_allocator.allocate();
@@ -1491,7 +1490,7 @@ namespace wi::terrain
 							const uint8_t y = (allocation_request >> 16u) & 0xFF;
 							const uint8_t lod = (allocation_request >> 8u) & 0xFF;
 							const bool allocate = allocation_request & 0x1;
-							if (lod >= vt.lod_page_offsets.size())
+							if (lod >= vt.lod_count)
 								continue;
 							const uint32_t l_offset = vt.lod_page_offsets[lod];
 							const uint32_t l_width = std::max(1u, width >> lod);
@@ -1540,7 +1539,7 @@ namespace wi::terrain
 
 				});
 
-				material->textures[map_type].lodClamp = (float)vt.lod_page_offsets.size() - 1;
+				material->textures[map_type].lodClamp = (float)vt.lod_count - 1;
 				virtual_textures_in_use.push_back(&vt);
 				virtual_texture_barriers_before_update.push_back(GPUBarrier::Buffer(&vt.pageBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE_COMPUTE));
 				virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.feedbackMap, vt.feedbackMap.desc.layout, ResourceState::UNORDERED_ACCESS));
@@ -1580,7 +1579,7 @@ namespace wi::terrain
 		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
 			VirtualTextureResidencyUpdatePush push;
-			push.lodCount = (uint)vt->lod_page_offsets.size();
+			push.lodCount = vt->lod_count;
 			push.width = vt->feedbackMap.desc.width;
 			push.height = vt->feedbackMap.desc.height;
 			push.lodOffsetsBufferRO = device->GetDescriptorIndex(&vt->lodOffsetsBuffer, SubresourceType::SRV);
@@ -1678,7 +1677,7 @@ namespace wi::terrain
 			for (const VirtualTexture* vt : virtual_textures_in_use)
 			{
 				VirtualTextureTileRequestsPush push;
-				push.lodCount = (uint)vt->lod_page_offsets.size();
+				push.lodCount = vt->lod_count;
 				push.width = vt->feedbackMap.desc.width;
 				push.height = vt->feedbackMap.desc.height;
 				push.lodOffsetsBufferRO = device->GetDescriptorIndex(&vt->lodOffsetsBuffer, SubresourceType::SRV);
@@ -1706,7 +1705,7 @@ namespace wi::terrain
 			{
 				VirtualTextureTileAllocatePush push;
 				push.threadCount = (uint)vt->pages.size();
-				push.lodCount = (uint)vt->lod_page_offsets.size();
+				push.lodCount = vt->lod_count;
 				push.width = vt->feedbackMap.desc.width;
 				push.lodOffsetsBufferRO = device->GetDescriptorIndex(&vt->lodOffsetsBuffer, SubresourceType::SRV);
 				push.pageBufferRO = device->GetDescriptorIndex(&vt->pageBuffer, SubresourceType::SRV);

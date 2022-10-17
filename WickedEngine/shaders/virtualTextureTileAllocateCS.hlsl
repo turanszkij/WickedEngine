@@ -3,7 +3,7 @@
 
 PUSHCONSTANT(push, VirtualTextureTileAllocatePush);
 
-groupshared uint lod_offsets[8];
+groupshared uint lod_offsets[9];
 
 [numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
@@ -13,7 +13,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	RWByteAddressBuffer requestBuffer = bindless_rwbuffers[push.requestBufferRW];
 	RWByteAddressBuffer allocationBuffer = bindless_rwbuffers[push.allocationBufferRW];
 
-	if (groupIndex < 8)
+	if (groupIndex < 9)
 	{
 		lod_offsets[groupIndex] = lodOffsetsBuffer.Load(groupIndex * sizeof(uint));
 	}
@@ -31,7 +31,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	}
 	lod--;
 
-	if (lod >= 8)
+	if (lod >= 9)
 		return;
 
 	const uint page = pageBuffer.Load(DTid.x * sizeof(uint));

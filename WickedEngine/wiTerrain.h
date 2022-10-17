@@ -81,7 +81,8 @@ namespace wi::terrain
 		bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1] = {};
 		int cpu_resource_id = 0;
 		wi::vector<GPUPageAllocator::Page> pages;
-		wi::vector<uint32_t> lod_page_offsets;
+		uint32_t lod_page_offsets[9] = {};
+		uint32_t lod_count = 0;
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 		uint32_t tile_allocation_count = 0;
