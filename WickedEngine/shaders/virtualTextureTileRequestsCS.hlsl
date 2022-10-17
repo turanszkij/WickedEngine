@@ -19,14 +19,35 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 	GroupMemoryBarrierWithGroupSync();
 
-	if (DTid.x >= push.width || DTid.y >= push.height)
+	if (DTid.x >= push.width / 2 || DTid.y >= push.height / 2)
 		return;
 
-	uint page_request = feedbackTexture[DTid.xy];
+	const uint4 page_requests = uint4(
+		feedbackTexture[DTid.xy * 2 + uint2(0, 0)],
+		feedbackTexture[DTid.xy * 2 + uint2(1, 0)],
+		feedbackTexture[DTid.xy * 2 + uint2(0, 1)],
+		feedbackTexture[DTid.xy * 2 + uint2(1, 1)]
+	);
+	const uint page_request = min(page_requests.x, min(page_requests.y, min(page_requests.z, page_requests.w)));
 
-	const uint x = DTid.x;
-	const uint y = DTid.y;
-	for (uint lod = 0; lod < push.lodCount; ++lod)
+	const uint x = DTid.x * 2;
+	const uint y = DTid.y * 2;
+
+	// LOD0 :
+	//	- Extrude min request area to 2x2 tiles
+	//	- No need for atomics here
+	requestBuffer.Store(((x + 0) + (y + 0) * push.width) * sizeof(uint), page_request);
+	requestBuffer.Store(((x + 1) + (y + 0) * push.width) * sizeof(uint), page_request);
+	requestBuffer.Store(((x + 0) + (y + 1) * push.width) * sizeof(uint), page_request);
+	requestBuffer.Store(((x + 1) + (y + 1) * push.width) * sizeof(uint), page_request);
+
+	// LOD1 :
+	//	- No need for atomics here
+	requestBuffer.Store((lod_offsets[1] + DTid.x + DTid.y * (push.width >> 1)) * sizeof(uint), page_request);
+
+	// LOD2 -> LOD MAX:
+	//	- Need atomics
+	for (uint lod = 2; lod < push.lodCount; ++lod)
 	{
 		const uint l_x = x >> lod;
 		const uint l_y = y >> lod;

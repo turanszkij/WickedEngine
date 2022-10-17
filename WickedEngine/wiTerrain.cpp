@@ -1686,8 +1686,8 @@ namespace wi::terrain
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(
-					(vt->feedbackMap.desc.width + 7u) / 8u,
-					(vt->feedbackMap.desc.height + 7u) / 8u,
+					(vt->feedbackMap.desc.width / 2 + 7u) / 8u,
+					(vt->feedbackMap.desc.height / 2 + 7u) / 8u,
 					1u,
 					cmd
 				);
