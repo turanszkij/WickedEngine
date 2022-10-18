@@ -3,24 +3,24 @@
 
 PUSHCONSTANT(push, VirtualTextureTileRequestsPush);
 
-groupshared uint lod_offsets[9];
-
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
-	ByteAddressBuffer lodOffsetsBuffer = bindless_buffers[push.lodOffsetsBufferRO];
+	if (DTid.x >= push.width / 2 || DTid.y >= push.height / 2)
+		return;
+
 	Texture2D<uint> feedbackTexture = bindless_textures_uint[push.feedbackTextureRO];
 	RWByteAddressBuffer requestBuffer = bindless_rwbuffers[push.requestBufferRW];
 
-	if (groupIndex < 9)
+	uint page_count = 0;
+	uint lod_offsets[9];
+	for (uint i = 0; i < push.lodCount; ++i)
 	{
-		lod_offsets[groupIndex] = lodOffsetsBuffer.Load(groupIndex * sizeof(uint));
+		const uint l_width = max(1u, push.width >> i);
+		const uint l_height = max(1u, push.height >> i);
+		lod_offsets[i] = page_count;
+		page_count += l_width * l_height;
 	}
-
-	GroupMemoryBarrierWithGroupSync();
-
-	if (DTid.x >= push.width / 2 || DTid.y >= push.height / 2)
-		return;
 
 	const uint4 page_requests = uint4(
 		feedbackTexture[DTid.xy * 2 + uint2(0, 0)],

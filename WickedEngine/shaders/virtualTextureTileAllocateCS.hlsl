@@ -3,25 +3,25 @@
 
 PUSHCONSTANT(push, VirtualTextureTileAllocatePush);
 
-groupshared uint lod_offsets[9];
-
 [numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
-	ByteAddressBuffer lodOffsetsBuffer = bindless_buffers[push.lodOffsetsBufferRO];
+	if (DTid.x >= push.threadCount)
+		return;
+
 	ByteAddressBuffer pageBuffer = bindless_buffers[push.pageBufferRO];
 	RWByteAddressBuffer requestBuffer = bindless_rwbuffers[push.requestBufferRW];
 	RWByteAddressBuffer allocationBuffer = bindless_rwbuffers[push.allocationBufferRW];
 
-	if (groupIndex < 9)
+	uint page_count = 0;
+	uint lod_offsets[9];
+	for (uint i = 0; i < push.lodCount; ++i)
 	{
-		lod_offsets[groupIndex] = lodOffsetsBuffer.Load(groupIndex * sizeof(uint));
+		const uint l_width = max(1u, push.width >> i);
+		const uint l_height = max(1u, push.height >> i);
+		lod_offsets[i] = page_count;
+		page_count += l_width * l_height;
 	}
-
-	GroupMemoryBarrierWithGroupSync();
-
-	if (DTid.x >= push.threadCount)
-		return;
 
 	uint lod = 1;
 	for (; lod < push.lodCount; ++lod) // this should be small loop to look up which lod we are processing

@@ -995,7 +995,6 @@ struct VirtualTextureResidencyUpdatePush
 	uint lodCount;
 	uint width;
 	uint height;
-	int lodOffsetsBufferRO;
 	int pageBufferRO;
 	int residencyTextureRW;
 };
@@ -1004,7 +1003,7 @@ struct VirtualTextureTileAllocatePush
 	uint threadCount;
 	uint lodCount;
 	uint width;
-	int lodOffsetsBufferRO;
+	uint height;
 	int pageBufferRO;
 	int requestBufferRW;
 	int allocationBufferRW;
@@ -1014,7 +1013,6 @@ struct VirtualTextureTileRequestsPush
 	uint lodCount;
 	uint width;
 	uint height;
-	int lodOffsetsBufferRO;
 	int feedbackTextureRO;
 	int requestBufferRW;
 };

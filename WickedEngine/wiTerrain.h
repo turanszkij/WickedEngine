@@ -72,7 +72,6 @@ namespace wi::terrain
 		wi::graphics::Texture texture;
 		wi::graphics::Texture residencyMap;
 		wi::graphics::Texture feedbackMap;
-		wi::graphics::GPUBuffer lodOffsetsBuffer;
 		wi::graphics::GPUBuffer requestBuffer;
 		wi::graphics::GPUBuffer allocationBuffer;
 		wi::graphics::GPUBuffer allocationBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
@@ -81,7 +80,6 @@ namespace wi::terrain
 		bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1] = {};
 		int cpu_resource_id = 0;
 		wi::vector<GPUPageAllocator::Page> pages;
-		uint32_t lod_page_offsets[9] = {};
 		uint32_t lod_count = 0;
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
