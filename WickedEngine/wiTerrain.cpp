@@ -386,21 +386,21 @@ namespace wi::terrain
 		float cellsize = 20;
 		XMFLOAT2 offset = XMFLOAT2(0, 20);
 
-		uint32_t page_count = 0;
-		uint32_t lod_offsets[9] = {};
-		for (uint32_t i = 0; i < lod_count; ++i)
-		{
-			const uint32_t l_width = std::max(1u, feedbackMap.desc.width >> i);
-			const uint32_t l_height = std::max(1u, feedbackMap.desc.height >> i);
-			lod_offsets[i] = page_count;
-			page_count += l_width * l_height;
-		}
-
 		const SubresourceData* feedback_data = feedbackMap_CPU_readback[cpu_resource_id].mapped_subresources;
 		const SubresourceData* residency_data = residencyMap_CPU_readback[cpu_resource_id].mapped_subresources;
 
 		const uint32_t width = feedbackMap.desc.width;
 		const uint32_t height = feedbackMap.desc.height;
+
+		uint32_t page_count = 0;
+		uint32_t lod_offsets[9] = {};
+		for (uint32_t i = 0; i < lod_count; ++i)
+		{
+			const uint32_t l_width = std::max(1u, width >> i);
+			const uint32_t l_height = std::max(1u, height >> i);
+			lod_offsets[i] = page_count;
+			page_count += l_width * l_height;
+		}
 
 		{
 			wi::font::Params font_params;
@@ -1492,8 +1492,8 @@ namespace wi::terrain
 						uint32_t lod_offsets[9] = {};
 						for (uint32_t i = 0; i < vt.lod_count; ++i)
 						{
-							const uint32_t l_width = std::max(1u, vt.feedbackMap.desc.width >> i);
-							const uint32_t l_height = std::max(1u, vt.feedbackMap.desc.height >> i);
+							const uint32_t l_width = std::max(1u, width >> i);
+							const uint32_t l_height = std::max(1u, height >> i);
 							lod_offsets[i] = page_count;
 							page_count += l_width * l_height;
 						}
