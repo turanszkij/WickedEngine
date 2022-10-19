@@ -5220,16 +5220,8 @@ using namespace dx12_internal;
 				CommandQueue& queue = queues[commandlist.queue];
 				queue.submit_cmds.push_back(commandlist.GetGraphicsCommandList());
 
-				if (commandlist.waited_on.load() || !commandlist.waits.empty() || queue.tile_mapping_dirty)
+				if (commandlist.waited_on.load() || !commandlist.waits.empty())
 				{
-					// tile mapping waits if needed:
-					if (queue.tile_mapping_dirty)
-					{
-						queue.tile_mapping_dirty = false;
-						hr = queue.queue->Wait(queue.tile_mapping_fence.Get(), queue.tile_mapping_fence_value);
-						assert(SUCCEEDED(hr));
-					}
-
 					for (auto& wait : commandlist.waits)
 					{
 						// record wait for signal on a previous submit:
@@ -5280,14 +5272,6 @@ using namespace dx12_internal;
 			for (int q = 0; q < QUEUE_COUNT; ++q)
 			{
 				CommandQueue& queue = queues[q];
-
-				// tile mapping waits if needed:
-				if (queue.tile_mapping_dirty)
-				{
-					queue.tile_mapping_dirty = false;
-					hr = queue.queue->Wait(queue.tile_mapping_fence.Get(), queue.tile_mapping_fence_value);
-					assert(SUCCEEDED(hr));
-				}
 
 				if (!queue.submit_cmds.empty())
 				{
@@ -5601,26 +5585,6 @@ using namespace dx12_internal;
 				command.range_tile_counts,
 				D3D12_TILE_MAPPING_FLAG_NONE
 			);
-		}
-
-		// Queue signal needs to be locked, they need to be in order:
-		{
-			std::scoped_lock lock(q.tile_mapping_mutex);
-			q.tile_mapping_dirty = true;
-			if (q.tile_mapping_fence == nullptr)
-			{
-				HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&q.tile_mapping_fence));
-				assert(SUCCEEDED(hr));
-			}
-
-			q.tile_mapping_fence_value++;
-			HRESULT hr = q.queue->Signal(q.tile_mapping_fence.Get(), q.tile_mapping_fence_value);
-			assert(SUCCEEDED(hr));
-
-#if 0 // debug immediate wait by CPU
-			hr = q.tile_mapping_fence->SetEventOnCompletion(q.tile_mapping_fence_value, nullptr);
-			assert(SUCCEEDED(hr));
-#endif
 		}
 	}
 

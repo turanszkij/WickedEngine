@@ -105,9 +105,6 @@ namespace wi::graphics
 
 			bool sparse_binding_supported = false;
 			std::mutex sparse_mutex;
-			VkSemaphore sparse_semaphore = VK_NULL_HANDLE;
-			bool sparse_dirty = false;
-			uint64_t sparse_semaphore_value = 0ull;
 
 			void submit(GraphicsDevice_Vulkan* device, VkFence fence);
 

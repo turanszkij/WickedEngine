@@ -70,11 +70,6 @@ namespace wi::graphics
 			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 			wi::vector<ID3D12CommandList*> submit_cmds;
-
-			std::mutex tile_mapping_mutex;
-			Microsoft::WRL::ComPtr<ID3D12Fence> tile_mapping_fence;
-			bool tile_mapping_dirty = false;
-			uint64_t tile_mapping_fence_value = 0ull;
 		} queues[QUEUE_COUNT];
 
 		struct CopyAllocator

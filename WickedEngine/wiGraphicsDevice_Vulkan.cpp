@@ -1286,14 +1286,6 @@ using namespace vulkan_internal;
 
 	void GraphicsDevice_Vulkan::CommandQueue::submit(GraphicsDevice_Vulkan* device, VkFence fence)
 	{
-		if (sparse_semaphore != VK_NULL_HANDLE && sparse_dirty)
-		{
-			sparse_dirty = false;
-			submit_waitSemaphores.push_back(sparse_semaphore);
-			submit_waitValues.push_back(sparse_semaphore_value);
-			submit_waitStages.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-		}
-
 		VkSubmitInfo submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submitInfo.commandBufferCount = (uint32_t)submit_cmds.size();
@@ -7031,58 +7023,9 @@ using namespace vulkan_internal;
 			CommandQueue& q = queues[queue];
 			std::scoped_lock lock(q.sparse_mutex);
 			assert(q.sparse_binding_supported);
-			q.sparse_dirty = true;
-
-			if (q.sparse_semaphore == VK_NULL_HANDLE)
-			{
-				VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
-				timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-				timelineCreateInfo.pNext = nullptr;
-				timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-				timelineCreateInfo.initialValue = 0;
-
-				VkSemaphoreCreateInfo createInfo = {};
-				createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-				createInfo.pNext = &timelineCreateInfo;
-				createInfo.flags = 0;
-
-				VkResult res = vkCreateSemaphore(device, &createInfo, nullptr, &q.sparse_semaphore);
-				assert(res == VK_SUCCESS);
-			}
-
-			q.sparse_semaphore_value++;
-			sparse_infos.back().pSignalSemaphores = &q.sparse_semaphore;
-			sparse_infos.back().signalSemaphoreCount = 1;
-
-			VkTimelineSemaphoreSubmitInfo timelineInfo = {};
-			timelineInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
-			timelineInfo.pNext = nullptr;
-			timelineInfo.waitSemaphoreValueCount = 0;
-			timelineInfo.pWaitSemaphoreValues = nullptr;
-			timelineInfo.signalSemaphoreValueCount = 1;
-			timelineInfo.pSignalSemaphoreValues = &q.sparse_semaphore_value;
-			// Note: validation layer complains about VUID-VkBindSparseInfo-pWaitSemaphores-03246
-			//	It says that VkTimelineSemaphoreSubmitInfo is not provided in pNext, but here it is:
-			sparse_infos.back().pNext = &timelineInfo;
-
-
-			//static VkFence fence = VK_NULL_HANDLE;
-			//if (fence == VK_NULL_HANDLE)
-			//{
-			//	VkFenceCreateInfo fenceInfo = {};
-			//	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-			//	VkResult res = vkCreateFence(device, &fenceInfo, nullptr, &fence);
-			//	assert(res == VK_SUCCESS);
-			//}
 
 			VkResult res = vkQueueBindSparse(q.queue, (uint32_t)sparse_infos.size(), sparse_infos.data(), VK_NULL_HANDLE);
 			assert(res == VK_SUCCESS);
-
-			//res = vkWaitForFences(device, 1, &fence, true, 0xFFFFFFFFFFFFFFFF);
-			//assert(res == VK_SUCCESS);
-
-			//res = vkResetFences(device, 1, &fence);
-			//assert(res == VK_SUCCESS);
 		}
 	}
 
