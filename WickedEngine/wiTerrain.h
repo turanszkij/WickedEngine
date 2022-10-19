@@ -200,6 +200,7 @@ namespace wi::terrain
 		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_allocation;
 		mutable wi::vector<const VirtualTexture*> virtual_textures_in_use;
 		GPUPageAllocator page_allocator;
+		wi::graphics::Sampler sampler;
 
 		constexpr bool IsCenterToCamEnabled() const { return _flags & CENTER_TO_CAM; }
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }

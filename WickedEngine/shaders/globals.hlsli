@@ -3,7 +3,6 @@
 #include "ColorSpaceUtility.hlsli"
 #include "PixelPacking_R11G11B10.hlsli"
 #include "ShaderInterop.h"
-#include "ShaderInterop_Renderer.h"
 
 // The root signature will affect shader compilation for DX12.
 //	The shader compiler will take the defined name: WICKED_ENGINE_DEFAULT_ROOTSIGNATURE and use it as root signature
@@ -90,6 +89,8 @@ RWByteAddressBuffer bindless_rwbuffers[] : register(space15);
 RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space16);
 RWTexture3D<float4> bindless_rwtextures3D[] : register(space17);
 RWTexture2D<uint> bindless_rwtextures_uint[] : register(space18);
+
+#include "ShaderInterop_Renderer.h"
 
 inline FrameCB GetFrame()
 {
@@ -1367,7 +1368,7 @@ inline void ParallaxOcclusionMapping_Impl(
 )
 {
 	[branch]
-	if (material.parallaxOcclusionMapping > 0 && material.uvset_displacementMap >= 0)
+	if (material.parallaxOcclusionMapping > 0)
 	{
 		V = mul(TBN, V);
 		float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;

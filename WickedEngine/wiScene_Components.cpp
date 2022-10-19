@@ -252,19 +252,7 @@ namespace wi::scene
 		);
 		material.subsurfaceScattering = sss;
 		material.subsurfaceScattering_inv = sss_inv;
-		material.uvset_baseColorMap = textures[BASECOLORMAP].GetUVSet();
-		material.uvset_surfaceMap = textures[SURFACEMAP].GetUVSet();
-		material.uvset_normalMap = textures[NORMALMAP].GetUVSet();
-		material.uvset_displacementMap = textures[DISPLACEMENTMAP].GetUVSet();
-		material.uvset_emissiveMap = textures[EMISSIVEMAP].GetUVSet();
-		material.uvset_occlusionMap = textures[OCCLUSIONMAP].GetUVSet();
-		material.uvset_transmissionMap = textures[TRANSMISSIONMAP].GetUVSet();
-		material.uvset_sheenColorMap = textures[SHEENCOLORMAP].GetUVSet();
-		material.uvset_sheenRoughnessMap = textures[SHEENROUGHNESSMAP].GetUVSet();
-		material.uvset_clearcoatMap = textures[CLEARCOATMAP].GetUVSet();
-		material.uvset_clearcoatRoughnessMap = textures[CLEARCOATROUGHNESSMAP].GetUVSet();
-		material.uvset_clearcoatNormalMap = textures[CLEARCOATNORMALMAP].GetUVSet();
-		material.uvset_specularMap = textures[SPECULARMAP].GetUVSet();
+
 		material.sheenColor_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(sheenColor.x, sheenColor.y, sheenColor.z));
 		material.sheenRoughness = sheenRoughness;
 		material.clearcoat = clearcoat;
@@ -274,9 +262,6 @@ namespace wi::scene
 		material.transmission = transmission;
 		material.shaderType = (uint)shaderType;
 		material.userdata = userdata;
-		material.lodClamp_baseColorMap = textures[BASECOLORMAP].lodClamp;
-		material.lodClamp_normalMap = textures[NORMALMAP].lodClamp;
-		material.lodClamp_surfaceMap = textures[SURFACEMAP].lodClamp;
 
 		material.options = 0;
 		if (IsUsingVertexColors())
@@ -325,27 +310,13 @@ namespace wi::scene
 		}
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
-		material.texture_basecolormap_index = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_surfacemap_index = device->GetDescriptorIndex(textures[SURFACEMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_emissivemap_index = device->GetDescriptorIndex(textures[EMISSIVEMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_normalmap_index = device->GetDescriptorIndex(textures[NORMALMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_displacementmap_index = device->GetDescriptorIndex(textures[DISPLACEMENTMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_occlusionmap_index = device->GetDescriptorIndex(textures[OCCLUSIONMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_transmissionmap_index = device->GetDescriptorIndex(textures[TRANSMISSIONMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_sheencolormap_index = device->GetDescriptorIndex(textures[SHEENCOLORMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_sheenroughnessmap_index = device->GetDescriptorIndex(textures[SHEENROUGHNESSMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_clearcoatmap_index = device->GetDescriptorIndex(textures[CLEARCOATMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_clearcoatroughnessmap_index = device->GetDescriptorIndex(textures[CLEARCOATROUGHNESSMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_clearcoatnormalmap_index = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SubresourceType::SRV);
-		material.texture_specularmap_index = device->GetDescriptorIndex(textures[SPECULARMAP].GetGPUResource(), SubresourceType::SRV);
-
-		material.residencyMap_baseColorMap = textures[BASECOLORMAP].descriptor_residencyMap;
-		material.residencyMap_surfaceMap = textures[SURFACEMAP].descriptor_residencyMap;
-		material.residencyMap_normalMap = textures[NORMALMAP].descriptor_residencyMap;
-
-		material.feedbackMap_baseColorMap = textures[BASECOLORMAP].descriptor_feedbackMap;
-		material.feedbackMap_surfaceMap = textures[SURFACEMAP].descriptor_feedbackMap;
-		material.feedbackMap_normalMap = textures[NORMALMAP].descriptor_feedbackMap;
+		for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
+		{
+			material.textures[i].uvset_lodclamp = (textures[i].uvset & 1) | (XMConvertFloatToHalf(textures[i].lod_clamp) << 1u);
+			material.textures[i].texture_descriptor = device->GetDescriptorIndex(textures[i].GetGPUResource(), SubresourceType::SRV);
+			material.textures[i].sparse_residencymap_descriptor = textures[i].sparse_residencymap_descriptor;
+			material.textures[i].sparse_feedbackmap_descriptor = textures[i].sparse_feedbackmap_descriptor;
+		}
 
 		if (sampler_descriptor < 0)
 		{

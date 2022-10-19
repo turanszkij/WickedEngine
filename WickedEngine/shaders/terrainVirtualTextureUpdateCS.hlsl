@@ -40,9 +40,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID)
 		{
 			float4 baseColor = material.baseColor;
 			[branch]
-			if (material.texture_basecolormap_index >= 0)
+			if (material.textures[BASECOLORMAP].IsValid())
 			{
-				Texture2D tex = bindless_textures[material.texture_basecolormap_index];
+				Texture2D tex = bindless_textures[material.textures[BASECOLORMAP].texture_descriptor];
 				float2 dim = 0;
 				tex.GetDimensions(dim.x, dim.y);
 				float2 diff = dim / output_dim;
@@ -59,9 +59,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID)
 		{
 			float2 normal = float2(0.5, 0.5);
 			[branch]
-			if (material.texture_normalmap_index >= 0)
+			if (material.textures[NORMALMAP].IsValid())
 			{
-				Texture2D tex = bindless_textures[material.texture_normalmap_index];
+				Texture2D tex = bindless_textures[material.textures[NORMALMAP].texture_descriptor];
 				float2 dim = 0;
 				tex.GetDimensions(dim.x, dim.y);
 				float2 diff = dim / output_dim;
@@ -78,9 +78,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID)
 		{
 			float4 surface = float4(1, material.roughness, material.metalness, material.reflectance);
 			[branch]
-			if (material.texture_surfacemap_index >= 0)
+			if (material.textures[SURFACEMAP].IsValid())
 			{
-				Texture2D tex = bindless_textures[material.texture_surfacemap_index];
+				Texture2D tex = bindless_textures[material.textures[SURFACEMAP].texture_descriptor];
 				float2 dim = 0;
 				tex.GetDimensions(dim.x, dim.y);
 				float2 diff = dim / output_dim;

@@ -142,10 +142,9 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 #ifdef OBJECTSHADER_USE_UVSETS
 	// displacement mapping:
 	[branch]
-	if (GetMaterial().displacementMapping > 0 && GetMaterial().uvset_displacementMap >= 0)
+	if (GetMaterial().displacementMapping > 0 && GetMaterial().textures[DISPLACEMENTMAP].IsValid())
 	{
-		float2 uv = GetMaterial().uvset_displacementMap == 0 ? output.uvsets.xy : output.uvsets.zw;
-		float displacement = texture_displacementmap.SampleLevel(sampler_objectshader, uv, 0).r;
+		float displacement = GetMaterial().textures[DISPLACEMENTMAP].SampleLevel(sampler_objectshader, output.uvsets, 0).r;
 		displacement *= GetMaterial().displacementMapping;
 		output.pos.xyz += output.nor * displacement;
 	}

@@ -205,21 +205,17 @@ namespace wi::scene
 			std::string name;
 			uint32_t uvset = 0;
 			wi::Resource resource;
-			float lodClamp = 0;					// optional, can be used by texture streaming
-			int descriptor_residencyMap = -1;	// optional, can be used by texture streaming
-			int descriptor_feedbackMap = -1;	// optional, can be used by texture streaming
 			const wi::graphics::GPUResource* GetGPUResource() const
 			{
 				if (!resource.IsValid() || !resource.GetTexture().IsValid())
 					return nullptr;
 				return &resource.GetTexture();
 			}
-			int GetUVSet() const
-			{
-				if (!resource.IsValid() || !resource.GetTexture().IsValid())
-					return -1;
-				return (int)uvset;
-			}
+
+			// Non-serialized attributes:
+			float lod_clamp = 0;						// optional, can be used by texture streaming
+			int sparse_residencymap_descriptor = -1;	// optional, can be used by texture streaming
+			int sparse_feedbackmap_descriptor = -1;		// optional, can be used by texture streaming
 		};
 		TextureMap textures[TEXTURESLOT_COUNT];
 

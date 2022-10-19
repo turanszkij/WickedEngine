@@ -3,6 +3,8 @@
 #ifndef REDUCED
 #define SURFACE_LOAD_ENABLE_WIND
 #endif // REDUCED
+#define PRT // Partially Resident Textures
+#define TEXTURE_SLOT_NONUNIFORM
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "raytracingHF.hlsli"

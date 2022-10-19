@@ -282,7 +282,7 @@ struct Surface
 	}
 	void load_internal()
 	{
-		SamplerState sam = bindless_samplers[GetFrame().sampler_objectshader_index];
+		SamplerState sam = bindless_samplers[material.sampler_descriptor];
 
 		const bool is_hairparticle = geometry.flags & SHADERMESH_FLAG_HAIRPARTICLE;
 		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
@@ -359,12 +359,12 @@ struct Surface
 
 #ifdef PARALLAXOCCLUSIONMAPPING
 			[branch]
-			if (material.texture_displacementmap_index >= 0)
+			if (material.textures[DISPLACEMENTMAP].IsValid())
 			{
-				const float2 uv = material.uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
-				const float2 uv_dx = material.uvset_displacementMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-				const float2 uv_dy = material.uvset_displacementMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-				Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_displacementmap_index)];
+				const float2 uv = material.textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
+				const float2 uv_dx = material.textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets_dx.xy : uvsets_dx.zw;
+				const float2 uv_dy = material.textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets_dy.xy : uvsets_dy.zw;
+				Texture2D tex = bindless_textures[NonUniformResourceIndex(material.textures[DISPLACEMENTMAP].texture_descriptor)];
 				ParallaxOcclusionMapping_Impl(
 					uvsets,
 					V,
@@ -380,20 +380,16 @@ struct Surface
 
 			// Normal mapping:
 			[branch]
-			if (geometry.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
+			if (geometry.vb_tan >= 0 && material.textures[NORMALMAP].IsValid() && material.normalMapStrength > 0)
 			{
-				const float2 uv = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
-				Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_normalmap_index)];
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-				const float2 uv_dx = material.uvset_normalMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-				const float2 uv_dy = material.uvset_normalMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-				const float3 normalMap = float3(tex.SampleGrad(sam, uv, uv_dx, uv_dy).rg, 1) * 2 - 1;
+				const float3 normalMap = float3(material.textures[NORMALMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rg, 1) * 2 - 1;
 #else
 				float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-				lod = compute_texture_lod(tex, material.uvset_normalMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+				lod = compute_texture_lod(material.textures[NORMALMAP].GetTexture(), material.textures[NORMALMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-				const float3 normalMap = float3(tex.SampleLevel(sam, uv, lod).rg, 1) * 2 - 1;
+				const float3 normalMap = float3(material.textures[NORMALMAP].SampleLevel(sam, uvsets, lod).rg, 1) * 2 - 1;
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 				N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 				bumpColor = normalMap * material.normalMapStrength;
@@ -403,20 +399,17 @@ struct Surface
 		baseColor = is_emittedparticle ? 1 : material.baseColor;
 		baseColor *= unpack_rgba(inst.color);
 		[branch]
-		if (material.texture_basecolormap_index >= 0)
+		if (material.textures[BASECOLORMAP].IsValid())
 		{
-			const float2 uv = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_basecolormap_index)];
+			uint prt_status = 0;
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			const float2 uv_dx = material.uvset_baseColorMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-			const float2 uv_dy = material.uvset_baseColorMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-			float4 baseColorMap = tex.SampleGrad(sam, uv, uv_dx, uv_dy);
+			float4 baseColorMap = material.textures[BASECOLORMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy);
 #else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(tex, material.uvset_baseColorMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+			lod = compute_texture_lod(material.textures[BASECOLORMAP].GetTexture(), material.textures[BASECOLORMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			float4 baseColorMap = tex.SampleLevel(sam, uv, lod);
+			float4 baseColorMap = material.textures[BASECOLORMAP].SampleLevel(sam, uvsets, lod);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 			if ((GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
@@ -457,20 +450,16 @@ struct Surface
 
 		float4 surfaceMap = 1;
 		[branch]
-		if (material.texture_surfacemap_index >= 0 && !simple_lighting)
+		if (material.textures[SURFACEMAP].IsValid() && !simple_lighting)
 		{
-			const float2 uv = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
-			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_surfacemap_index)];
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			const float2 uv_dx = material.uvset_surfaceMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-			const float2 uv_dy = material.uvset_surfaceMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-			surfaceMap = tex.SampleGrad(sam, uv, uv_dx, uv_dy);
+			surfaceMap = material.textures[SURFACEMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy);
 #else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(tex, material.uvset_surfaceMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+			lod = compute_texture_lod(material.textures[SURFACEMAP].GetTexture(), material.textures[SURFACEMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			surfaceMap = tex.SampleLevel(sam, uv, lod);
+			surfaceMap = material.textures[SURFACEMAP].SampleLevel(sam, uvsets, lod);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 		if (simple_lighting)
@@ -480,20 +469,16 @@ struct Surface
 
 		float4 specularMap = 1;
 		[branch]
-		if (material.texture_specularmap_index >= 0 && !simple_lighting)
+		if (material.textures[SPECULARMAP].IsValid() && !simple_lighting)
 		{
-			const float2 uv = material.uvset_specularMap == 0 ? uvsets.xy : uvsets.zw;
-			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_specularmap_index)];
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			const float2 uv_dx = material.uvset_specularMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-			const float2 uv_dy = material.uvset_specularMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-			specularMap = tex.SampleGrad(sam, uv, uv_dx, uv_dy);
+			specularMap = material.textures[SPECULARMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy);
 #else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(tex, material.uvset_specularMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+			lod = compute_texture_lod(material.textures[SPECULARMAP].GetTexture(), material.textures[SPECULARMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			specularMap = tex.SampleLevel(sam, uv, lod);
+			specularMap = material.textures[SPECULARMAP].SampleLevel(sam, uvsets, lod);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 			specularMap.rgb = DEGAMMA(specularMap.rgb);
 		}
@@ -508,20 +493,16 @@ struct Surface
 		else
 		{
 			[branch]
-			if (material.texture_emissivemap_index >= 0)
+			if (material.textures[EMISSIVEMAP].IsValid())
 			{
-				const float2 uv = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
-				Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_emissivemap_index)];
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-				const float2 uv_dx = material.uvset_emissiveMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-				const float2 uv_dy = material.uvset_emissiveMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-				float4 emissiveMap = tex.SampleGrad(sam, uv, uv_dx, uv_dy);
+				float4 emissiveMap = material.textures[EMISSIVEMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy);
 #else
 				float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-				lod = compute_texture_lod(tex, material.uvset_emissiveMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+				lod = compute_texture_lod(material.textures[EMISSIVEMAP].GetTexture(), material.textures[EMISSIVEMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-				float4 emissiveMap = tex.SampleLevel(sam, uv, lod);
+				float4 emissiveMap = material.textures[EMISSIVEMAP].SampleLevel(sam, uvsets, lod);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 				emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 				emissiveColor *= emissiveMap.rgb * emissiveMap.a;
@@ -534,38 +515,31 @@ struct Surface
 		}
 
 		transmission = material.transmission;
-		if (material.texture_transmissionmap_index >= 0)
+		[branch]
+		if (material.textures[TRANSMISSIONMAP].IsValid())
 		{
-			const float2 uv = material.uvset_transmissionMap == 0 ? uvsets.xy : uvsets.zw;
-			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_transmissionmap_index)];
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			const float2 uv_dx = material.uvset_transmissionMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-			const float2 uv_dy = material.uvset_transmissionMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-			transmission *= tex.SampleGrad(sam, uv, uv_dx, uv_dy).r;
+			transmission *= material.textures[TRANSMISSIONMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).r;
 #else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(tex, material.uvset_transmissionMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+			lod = compute_texture_lod(material.textures[TRANSMISSIONMAP].GetTexture(), material.textures[TRANSMISSIONMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			transmission *= tex.SampleLevel(sam, uv, lod).r;
+			transmission *= material.textures[TRANSMISSIONMAP].SampleLevel(sam, uvsets, lod).r;
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 
 		[branch]
-		if (material.IsOcclusionEnabled_Secondary() && material.texture_occlusionmap_index >= 0)
+		if (material.IsOcclusionEnabled_Secondary() && material.textures[OCCLUSIONMAP].IsValid())
 		{
-			const float2 uv = material.uvset_occlusionMap == 0 ? uvsets.xy : uvsets.zw;
-			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_occlusionmap_index)];
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			const float2 uv_dx = material.uvset_occlusionMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-			const float2 uv_dy = material.uvset_occlusionMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-			occlusion *= tex.SampleGrad(sam, uv, uv_dx, uv_dy).r;
+			occlusion *= material.textures[OCCLUSIONMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).r;
 #else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(tex, material.uvset_occlusionMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+			lod = compute_texture_lod(material.textures[OCCLUSIONMAP].GetTexture(), material.textures[OCCLUSIONMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			occlusion *= tex.SampleLevel(sam, uv, lod).r;
+			occlusion *= material.textures[OCCLUSIONMAP].SampleLevel(sam, uvsets, lod).r;
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 
@@ -574,37 +548,29 @@ struct Surface
 		sheen.roughness = material.sheenRoughness;
 
 		[branch]
-		if (material.texture_sheencolormap_index >= 0)
+		if (material.textures[SHEENCOLORMAP].IsValid())
 		{
-			const float2 uv = material.uvset_sheenColorMap == 0 ? uvsets.xy : uvsets.zw;
-			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_sheencolormap_index)];
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			const float2 uv_dx = material.uvset_sheenColorMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-			const float2 uv_dy = material.uvset_sheenColorMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-			sheen.color *= DEGAMMA(tex.SampleGrad(sam, uv, uv_dx, uv_dy).rgb);
+			sheen.color *= DEGAMMA(material.textures[SHEENCOLORMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rgb);
 #else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(tex, material.uvset_sheenColorMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+			lod = compute_texture_lod(material.textures[SHEENCOLORMAP].GetTexture(), material.textures[SHEENCOLORMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			sheen.color *= DEGAMMA(tex.SampleLevel(sam, uv, lod).rgb);
+			sheen.color *= DEGAMMA(material.textures[SHEENCOLORMAP].SampleLevel(sam, uvsets, lod).rgb);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 		[branch]
-		if (material.texture_sheenroughnessmap_index >= 0)
+		if (material.textures[SHEENROUGHNESSMAP].IsValid())
 		{
-			const float2 uv = material.uvset_sheenRoughnessMap == 0 ? uvsets.xy : uvsets.zw;
-			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_sheenroughnessmap_index)];
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			const float2 uv_dx = material.uvset_sheenRoughnessMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-			const float2 uv_dy = material.uvset_sheenRoughnessMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-			sheen.roughness *= tex.SampleGrad(sam, uv, uv_dx, uv_dy).a;
+			sheen.roughness *= material.textures[SHEENROUGHNESSMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).a;
 #else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(tex, material.uvset_sheenRoughnessMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+			lod = compute_texture_lod(material.textures[SHEENROUGHNESSMAP].GetTexture(), material.textures[SHEENROUGHNESSMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			sheen.roughness *= tex.SampleLevel(sam, uv, lod).a;
+			sheen.roughness *= material.textures[SHEENROUGHNESSMAP].SampleLevel(sam, uvsets, lod).a;
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 #endif // SHEEN
@@ -616,54 +582,42 @@ struct Surface
 		clearcoat.N = facenormal;
 
 		[branch]
-		if (material.texture_clearcoatmap_index >= 0)
+		if (material.textures[CLEARCOATMAP].IsValid())
 		{
-			const float2 uv = material.uvset_clearcoatMap == 0 ? uvsets.xy : uvsets.zw;
-			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_clearcoatmap_index)];
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			const float2 uv_dx = material.uvset_clearcoatMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-			const float2 uv_dy = material.uvset_clearcoatMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-			clearcoat.factor *= tex.SampleGrad(sam, uv, uv_dx, uv_dy).r;
+			clearcoat.factor *= material.textures[CLEARCOATMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).r;
 #else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(tex, material.uvset_clearcoatMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+			lod = compute_texture_lod(material.textures[CLEARCOATMAP].GetTexture(), material.textures[CLEARCOATMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			clearcoat.factor *= tex.SampleLevel(sam, uv, lod).r;
+			clearcoat.factor *= material.textures[CLEARCOATMAP].SampleLevel(sam, uvsets, lod).r;
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 		[branch]
-		if (material.texture_clearcoatroughnessmap_index >= 0)
+		if (material.textures[CLEARCOATROUGHNESSMAP].IsValid())
 		{
-			const float2 uv = material.uvset_clearcoatRoughnessMap == 0 ? uvsets.xy : uvsets.zw;
-			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_clearcoatroughnessmap_index)];
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			const float2 uv_dx = material.uvset_clearcoatRoughnessMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-			const float2 uv_dy = material.uvset_clearcoatRoughnessMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-			clearcoat.roughness *= tex.SampleGrad(sam, uv, uv_dx, uv_dy).g;
+			clearcoat.roughness *= material.textures[CLEARCOATROUGHNESSMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).g;
 #else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(tex, material.uvset_clearcoatRoughnessMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+			lod = compute_texture_lod(material.textures[CLEARCOATROUGHNESSMAP].GetTexture(), material.textures[CLEARCOATROUGHNESSMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			clearcoat.roughness *= tex.SampleLevel(sam, uv, lod).g;
+			clearcoat.roughness *= material.textures[CLEARCOATROUGHNESSMAP].SampleLevel(sam, uvsets, lod).g;
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 		[branch]
-		if (material.texture_clearcoatnormalmap_index >= 0 && geometry.vb_tan >= 0) // also check that tan is valid! (for TBN)
+		if (material.textures[CLEARCOATNORMALMAP].IsValid() && geometry.vb_tan >= 0) // also check that tan is valid! (for TBN)
 		{
-			const float2 uv = material.uvset_clearcoatNormalMap == 0 ? uvsets.xy : uvsets.zw;
-			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_clearcoatnormalmap_index)];
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			const float2 uv_dx = material.uvset_clearcoatNormalMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-			const float2 uv_dy = material.uvset_clearcoatNormalMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-			float3 clearcoatNormalMap = float3(tex.SampleGrad(sam, uv, uv_dx, uv_dy).rg, 1);
+			float3 clearcoatNormalMap = float3(material.textures[CLEARCOATNORMALMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rg, 1);
 #else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(tex, material.uvset_clearcoatNormalMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+			lod = compute_texture_lod(material.textures[CLEARCOATNORMALMAP].GetTexture(), material.textures[CLEARCOATNORMALMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			float3 clearcoatNormalMap = float3(tex.SampleLevel(sam, uv, lod).rg, 1);
+			float3 clearcoatNormalMap = float3(material.textures[CLEARCOATNORMALMAP].SampleLevel(sam, uvsets, lod).rg, 1);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 			clearcoatNormalMap = clearcoatNormalMap * 2 - 1;

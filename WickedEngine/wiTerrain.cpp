@@ -838,7 +838,7 @@ namespace wi::terrain
 
 		// Check whether there are any materials that would write to virtual textures:
 		bool virtual_texture_any = false;
-		bool virtual_texture_available[MaterialComponent::TEXTURESLOT_COUNT] = {};
+		bool virtual_texture_available[TEXTURESLOT_COUNT] = {};
 		MaterialComponent* virtual_materials[4] = {
 			&material_Base,
 			&material_Slope,
@@ -847,7 +847,7 @@ namespace wi::terrain
 		};
 		for (auto& material : virtual_materials)
 		{
-			for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+			for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
 			{
 				virtual_texture_available[i] = false;
 				switch (i)
@@ -1383,6 +1383,17 @@ namespace wi::terrain
 		virtual_texture_barriers_before_allocation.clear();
 		virtual_texture_barriers_after_allocation.clear();
 
+		if (!sampler.IsValid())
+		{
+			SamplerDesc samplerDesc;
+			samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;	// Anisotropic sampler is too expensive with the sparse texture system currently
+			samplerDesc.address_u = TextureAddressMode::CLAMP;	// Clamp sampler is needed to not oversample on chunk boundaries
+			samplerDesc.address_v = TextureAddressMode::CLAMP;
+			samplerDesc.address_w = TextureAddressMode::CLAMP;
+			bool success = device->CreateSampler(&samplerDesc, &sampler);
+			assert(success);
+		}
+
 		wi::jobsystem::context ctx;
 		for (auto& it : chunks)
 		{
@@ -1395,7 +1406,7 @@ namespace wi::terrain
 			if (material == nullptr)
 				continue;
 
-			material->sampler_descriptor = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMPED));
+			material->sampler_descriptor = device->GetDescriptorIndex(&sampler);
 
 			// This should have been created on generation thread, but if not (serialized), create it last minute:
 			CreateChunkRegionTexture(chunk_data);
@@ -1437,8 +1448,8 @@ namespace wi::terrain
 					vt.init(desc);
 
 					material->textures[map_type].resource.SetTexture(vt.texture);
-					material->textures[map_type].descriptor_residencyMap = device->GetDescriptorIndex(&vt.residencyMap, SubresourceType::SRV);
-					material->textures[map_type].descriptor_feedbackMap = device->GetDescriptorIndex(&vt.feedbackMap, SubresourceType::UAV);
+					material->textures[map_type].sparse_residencymap_descriptor = device->GetDescriptorIndex(&vt.residencyMap, SubresourceType::SRV);
+					material->textures[map_type].sparse_feedbackmap_descriptor = device->GetDescriptorIndex(&vt.feedbackMap, SubresourceType::UAV);
 
 					locker.lock();
 					if (page_allocator.blocks.empty())
@@ -1557,7 +1568,7 @@ namespace wi::terrain
 
 				});
 
-				material->textures[map_type].lodClamp = (float)vt.lod_count - 1;
+				material->textures[map_type].lod_clamp = (float)vt.lod_count - 1;
 				virtual_textures_in_use.push_back(&vt);
 				virtual_texture_barriers_before_update.push_back(GPUBarrier::Buffer(&vt.pageBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE_COMPUTE));
 				virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.feedbackMap, vt.feedbackMap.desc.layout, ResourceState::UNORDERED_ACCESS));

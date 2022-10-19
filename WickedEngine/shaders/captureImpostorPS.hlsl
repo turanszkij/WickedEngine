@@ -12,10 +12,9 @@ ImpostorOutput main(PixelInput input)
 {
 	float4 color;
 	[branch]
-	if (GetMaterial().uvset_baseColorMap >= 0)
+	if (GetMaterial().textures[BASECOLORMAP].IsValid())
 	{
-		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		color = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap);
+		color = GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, input.uvsets);
 	}
 	else
 	{
@@ -30,7 +29,7 @@ ImpostorOutput main(PixelInput input)
 	float3x3 TBN = compute_tangent_frame(N, P, input.uvsets.xy);
 
 	[branch]
-	if (GetMaterial().uvset_normalMap >= 0)
+	if (GetMaterial().textures[NORMALMAP].IsValid())
 	{
 		float3 bumpColor;
 		NormalMapping(input.uvsets, N, TBN, bumpColor);
@@ -38,10 +37,9 @@ ImpostorOutput main(PixelInput input)
 
 	float4 surfaceMap = 1;
 	[branch]
-	if (GetMaterial().uvset_surfaceMap >= 0)
+	if (GetMaterial().textures[SURFACEMAP].IsValid())
 	{
-		const float2 UV_surfaceMap = GetMaterial().uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		surfaceMap = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap);
+		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_objectshader, input.uvsets);
 	}
 
 	float4 surface;

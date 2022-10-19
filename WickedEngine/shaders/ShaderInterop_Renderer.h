@@ -72,6 +72,191 @@ static const uint SHADERMATERIAL_OPTION_BIT_TRANSPARENT = 1 << 8;
 static const uint SHADERMATERIAL_OPTION_BIT_ADDITIVE = 1 << 9;
 static const uint SHADERMATERIAL_OPTION_BIT_UNLIT = 1 << 10;
 
+// Same as MaterialComponent::TEXTURESLOT
+//	Because of shader compiler issues, the enum is currently not usable in Vulkan for array indexing
+static const uint BASECOLORMAP = 0;
+static const uint NORMALMAP = 1;
+static const uint SURFACEMAP = 2;
+static const uint EMISSIVEMAP = 3;
+static const uint DISPLACEMENTMAP = 4;
+static const uint OCCLUSIONMAP = 5;
+static const uint TRANSMISSIONMAP = 6;
+static const uint SHEENCOLORMAP = 7;
+static const uint SHEENROUGHNESSMAP = 8;
+static const uint CLEARCOATMAP = 9;
+static const uint CLEARCOATROUGHNESSMAP = 10;
+static const uint CLEARCOATNORMALMAP = 11;
+static const uint SPECULARMAP = 12;
+static const uint TEXTURESLOT_COUNT = 13;
+
+#ifndef __cplusplus
+#ifdef TEXTURE_SLOT_NONUNIFORM
+#define UniformTextureSlot(x) NonUniformResourceIndex(x)
+#else
+#define UniformTextureSlot(x) (x)
+#endif // TEXTURE_SLOT_NONUNIFORM
+#endif // __cplusplus
+
+struct ShaderTextureSlot
+{
+	uint uvset_lodclamp;
+	int texture_descriptor;
+	int sparse_residencymap_descriptor;
+	int sparse_feedbackmap_descriptor;
+
+	inline void init()
+	{
+		uvset_lodclamp = 0;
+		texture_descriptor = -1;
+		sparse_residencymap_descriptor = -1;
+		sparse_feedbackmap_descriptor = -1;
+	}
+
+	inline bool IsValid()
+	{
+		return texture_descriptor >= 0;
+	}
+	inline uint GetUVSet()
+	{
+		return uvset_lodclamp & 1u;
+	}
+
+#ifndef __cplusplus
+	inline float GetLodClamp()
+	{
+		return f16tof32((uvset_lodclamp >> 1u) & 0xFFFF);
+	}
+	Texture2D GetTexture()
+	{
+		return bindless_textures[UniformTextureSlot(texture_descriptor)];
+	}
+	float4 Sample(in SamplerState sam, in float4 uvsets)
+	{
+		Texture2D tex = GetTexture();
+		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
+
+#ifdef PRT
+		uint prt_status;
+		float4 value = tex.Sample(sam, uv, 0, 0, prt_status);
+
+		[branch]
+		if (!CheckAccessFullyMapped(prt_status))
+		{
+			float lod_clamp = GetLodClamp();
+
+			[branch]
+			if (sparse_residencymap_descriptor >= 0)
+			{
+				Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
+				uint4 residency = residency_map.GatherRed(sam, uv);
+				lod_clamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
+			}
+
+			value = tex.Sample(sam, uv, 0, lod_clamp);
+		}
+
+		[branch]
+		if (sparse_feedbackmap_descriptor >= 0)
+		{
+			RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[UniformTextureSlot(sparse_feedbackmap_descriptor)];
+			uint2 dim;
+			feedback_map.GetDimensions(dim.x, dim.y);
+			uint2 pixel = uv * dim;
+			float lod = tex.CalculateLevelOfDetail(sam, uv);
+			InterlockedMin(feedback_map[pixel], uint(lod));
+		}
+#else
+		float4 value = tex.Sample(sam, uv);
+#endif // PRT
+		return value;
+	}
+
+	float4 SampleLevel(in SamplerState sam, in float4 uvsets, in float lod)
+	{
+		Texture2D tex = GetTexture();
+		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
+
+#ifdef PRT
+		uint prt_status;
+		float4 value = tex.SampleLevel(sam, uv, lod, 0, prt_status);
+
+		[branch]
+		if (!CheckAccessFullyMapped(prt_status))
+		{
+			lod = GetLodClamp();
+
+			[branch]
+			if (sparse_residencymap_descriptor >= 0)
+			{
+				Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
+				uint4 residency = residency_map.GatherRed(sam, uv);
+				lod = max(residency.x, max(residency.y, max(residency.z, residency.w)));
+			}
+
+			value = tex.SampleLevel(sam, uv, lod);
+		}
+
+		[branch]
+		if (sparse_feedbackmap_descriptor >= 0)
+		{
+			RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[UniformTextureSlot(sparse_feedbackmap_descriptor)];
+			uint2 dim;
+			feedback_map.GetDimensions(dim.x, dim.y);
+			uint2 pixel = uv * dim;
+			InterlockedMin(feedback_map[pixel], uint(lod));
+		}
+#else
+		float4 value = tex.SampleLevel(sam, uv, lod);
+#endif // PRT
+		return value;
+	}
+
+	float4 SampleGrad(in SamplerState sam, in float4 uvsets, in float4 uvsets_dx, in float4 uvsets_dy)
+	{
+		Texture2D tex = GetTexture();
+		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
+		float2 uv_dx = GetUVSet() == 0 ? uvsets_dx.xy : uvsets_dx.zw;
+		float2 uv_dy = GetUVSet() == 0 ? uvsets_dy.xy : uvsets_dy.zw;
+
+#ifdef PRT
+		uint prt_status;
+		float4 value = tex.SampleGrad(sam, uv, uv_dx, uv_dy, 0, 0, prt_status);
+
+		[branch]
+		if (!CheckAccessFullyMapped(prt_status))
+		{
+			float lod_clamp = GetLodClamp();
+
+			[branch]
+			if (sparse_residencymap_descriptor >= 0)
+			{
+				Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
+				uint4 residency = residency_map.GatherRed(sam, uv);
+				lod_clamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
+			}
+
+			value = tex.SampleGrad(sam, uv, uv_dx, uv_dy, 0, lod_clamp);
+		}
+
+		[branch]
+		if (sparse_feedbackmap_descriptor >= 0)
+		{
+			RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[UniformTextureSlot(sparse_feedbackmap_descriptor)];
+			uint2 dim;
+			feedback_map.GetDimensions(dim.x, dim.y);
+			uint2 pixel = uv * dim;
+			tex.GetDimensions(dim.x, dim.y);
+			float lod = log2(max(length(uv_dx * dim), length(uv_dy * dim))); // https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#7.18.11%20LOD%20Calculations
+			InterlockedMin(feedback_map[pixel], uint(lod));
+		}
+#else
+		float4 value = tex.SampleGrad(sam, uv, uv_dx, uv_dy);
+#endif // PRT
+		return value;
+	}
+#endif // __cplusplus
+};
+
 struct ShaderMaterial
 {
 	float4		baseColor;
@@ -90,66 +275,23 @@ struct ShaderMaterial
 	float		displacementMapping;
 
 	float		transmission;
-	uint		options;
 	uint		emissive_r11g11b10;
 	uint		specular_r11g11b10;
-
-	uint		layerMask;
-	int			uvset_baseColorMap;
-	int			uvset_surfaceMap;
-	int			uvset_normalMap;
-
-	int			uvset_displacementMap;
-	int			uvset_emissiveMap;
-	int			uvset_occlusionMap;
-	int			uvset_transmissionMap;
-
-	int			uvset_sheenColorMap;
-	int			uvset_sheenRoughnessMap;
-	int			uvset_clearcoatMap;
-	int			uvset_clearcoatRoughnessMap;
-
-	int			uvset_clearcoatNormalMap;
-	int			uvset_specularMap;
 	uint		sheenColor_r11g11b10;
-	float		sheenRoughness;
 
+	float		sheenRoughness;
 	float		clearcoat;
 	float		clearcoatRoughness;
-	int			texture_basecolormap_index;
-	int			texture_surfacemap_index;
+	float		padding;
 
-	int			texture_emissivemap_index;
-	int			texture_normalmap_index;
-	int			texture_displacementmap_index;
-	int			texture_occlusionmap_index;
-
-	int			texture_transmissionmap_index;
-	int			texture_sheencolormap_index;
-	int			texture_sheenroughnessmap_index;
-	int			texture_clearcoatmap_index;
-
-	int			texture_clearcoatroughnessmap_index;
-	int			texture_clearcoatnormalmap_index;
-	int			texture_specularmap_index;
+	int			sampler_descriptor;
+	uint		options;
+	uint		layerMask;
 	uint		shaderType;
 
 	uint4		userdata;
 
-	int			sampler_descriptor;
-	float		lodClamp_baseColorMap;
-	float		lodClamp_normalMap;
-	float		lodClamp_surfaceMap;
-
-	int			residencyMap_baseColorMap;
-	int			residencyMap_normalMap;
-	int			residencyMap_surfaceMap;
-	int			padding0;
-
-	int			feedbackMap_baseColorMap;
-	int			feedbackMap_normalMap;
-	int			feedbackMap_surfaceMap;
-	int			padding1;
+	ShaderTextureSlot textures[TEXTURESLOT_COUNT];
 
 	void init()
 	{
@@ -174,59 +316,21 @@ struct ShaderMaterial
 		specular_r11g11b10 = 0;
 
 		layerMask = ~0u;
-		uvset_baseColorMap = -1;
-		uvset_surfaceMap = -1;
-		uvset_normalMap = -1;
-
-		uvset_displacementMap = -1;
-		uvset_emissiveMap = -1;
-		uvset_occlusionMap = -1;
-		uvset_transmissionMap = -1;
-
-		uvset_sheenColorMap = -1;
-		uvset_sheenRoughnessMap = -1;
-		uvset_clearcoatMap = -1;
-		uvset_clearcoatRoughnessMap = -1;
-
-		uvset_clearcoatNormalMap = -1;
-		uvset_specularMap = -1;
 		sheenColor_r11g11b10 = 0;
 		sheenRoughness = 0;
 
 		clearcoat = 0;
 		clearcoatRoughness = 0;
-		texture_basecolormap_index = -1;
-		texture_surfacemap_index = -1;
-
-		texture_emissivemap_index = -1;
-		texture_normalmap_index = -1;
-		texture_displacementmap_index = -1;
-		texture_occlusionmap_index = -1;
-
-		texture_transmissionmap_index = -1;
-		texture_sheencolormap_index = -1;
-		texture_sheenroughnessmap_index = -1;
-		texture_clearcoatmap_index = -1;
-
-		texture_clearcoatroughnessmap_index = -1;
-		texture_clearcoatnormalmap_index = -1;
-		texture_specularmap_index = -1;
 		shaderType = 0;
 
 		userdata = uint4(0, 0, 0, 0);
 
 		sampler_descriptor = -1;
-		lodClamp_baseColorMap = 0;
-		lodClamp_normalMap = 0;
-		lodClamp_surfaceMap = 0;
 
-		residencyMap_baseColorMap = -1;
-		residencyMap_normalMap = -1;
-		residencyMap_surfaceMap = -1;
-
-		feedbackMap_baseColorMap = -1;
-		feedbackMap_normalMap = -1;
-		feedbackMap_surfaceMap = -1;
+		for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
+		{
+			textures[i].init();
+		}
 	}
 
 #ifndef __cplusplus
@@ -745,7 +849,7 @@ struct FrameCB
 	uint		temporalaa_samplerotation;
 	float		blue_noise_phase;
 
-	int			sampler_objectshader_index;
+	int			padding1;
 	int			texture_random64x64_index;
 	int			texture_bluenoise_index;
 	int			texture_sheenlut_index;
