@@ -240,8 +240,8 @@ namespace wi::terrain
 			assert(subresource == i);
 		}
 
-		uint32_t width = texture.desc.width / texture.sparse_properties->tile_width;
-		uint32_t height = texture.desc.height / texture.sparse_properties->tile_height;
+		uint32_t width = std::max(1u, texture.desc.width / texture.sparse_properties->tile_width);
+		uint32_t height = std::max(1u, texture.desc.height / texture.sparse_properties->tile_height);
 		lod_count = texture.desc.mip_levels;
 		if (texture.sparse_properties->packed_mip_count > 0)
 		{
@@ -269,6 +269,7 @@ namespace wi::terrain
 		tile_range_offset.clear();
 		tile_range_count.clear();
 		last_block = 0;
+		updated_since = 0;
 
 		TextureDesc td;
 		td.width = width;
@@ -1399,8 +1400,7 @@ namespace wi::terrain
 		{
 			const Chunk& chunk = it.first;
 			ChunkData& chunk_data = it.second;
-			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
-			const bool frame_skippable = dist > 1 ? (wi::random::GetRandom(dist * dist) > 0) : false;
+			const uint32_t dist = (uint32_t)std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 
 			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
 			if (material == nullptr)
@@ -1411,13 +1411,12 @@ namespace wi::terrain
 			// This should have been created on generation thread, but if not (serialized), create it last minute:
 			CreateChunkRegionTexture(chunk_data);
 
-			const uint32_t min_resolution = 256u;
+			const uint32_t min_resolution = 128u;
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 			const uint32_t max_resolution = 2048;
 #else
 			const uint32_t max_resolution = 16384u;
 #endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
-			//const uint32_t required_resolution = std::max(min_resolution, max_resolution >> (dist / 2));
 			const uint32_t required_resolution = dist < 2 ? max_resolution : min_resolution;
 
 			chunk_data.vt.resize(3); // base, normal, surface
@@ -1476,8 +1475,13 @@ namespace wi::terrain
 					vt.map_type = map_type;
 				}
 
+				const bool frame_skippable = vt.updated_since < (dist * dist);
+				vt.updated_since++;
+
 				if (vt.data_available_CPU[vt.cpu_resource_id] && frame_skippable)
 					continue;
+
+				vt.updated_since = 0;
 
 				// Process each virtual texture on a background thread:
 				wi::jobsystem::Execute(ctx, [this, &vt](wi::jobsystem::JobArgs args) {
