@@ -2961,7 +2961,7 @@ void EditorComponent::UpdateTopMenuAnimation()
 
 	exitButton.SetPos(XMFLOAT2(screenW - exitButton.GetSize().x, 0));
 	aboutButton.SetPos(XMFLOAT2(exitButton.GetPos().x - aboutButton.GetSize().x - padding, 0));
-	bugButton.SetPos(XMFLOAT2(exitButton.GetPos().x - bugButton.GetSize().x - padding, 0));
+	bugButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - bugButton.GetSize().x - padding, 0));
 	fullscreenButton.SetPos(XMFLOAT2(bugButton.GetPos().x - fullscreenButton.GetSize().x - padding, 0));
 	logButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - logButton.GetSize().x - padding, 0));
 	closeButton.SetPos(XMFLOAT2(logButton.GetPos().x - closeButton.GetSize().x - padding, 0));
