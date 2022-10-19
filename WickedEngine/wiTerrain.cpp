@@ -834,7 +834,6 @@ namespace wi::terrain
 		}
 
 		const int removal_threshold = generation + 2;
-		const float texlodMultiplier = texlod;
 		GraphicsDevice* device = GetDevice();
 
 		// Check whether there are any materials that would write to virtual textures:
@@ -1510,6 +1509,7 @@ namespace wi::terrain
 
 						uint32_t allocation_count = *(const uint32_t*)vt.allocationBuffer_CPU_readback[vt.cpu_resource_id].mapped_data;
 						allocation_count = std::min(uint32_t(vt.pages.size() - 1), allocation_count);
+						//allocation_count = std::min(100u, allocation_count);
 						const uint32_t* allocation_requests = ((const uint32_t*)vt.allocationBuffer_CPU_readback[vt.cpu_resource_id].mapped_data) + 1; // +1 offset of the allocation counter
 						for (uint32_t i = 0; i < allocation_count; ++i)
 						{
@@ -1782,7 +1782,11 @@ namespace wi::terrain
 		{
 			archive >> _flags;
 			archive >> lod_multiplier;
-			archive >> texlod;
+			if (seri.GetVersion() < 3)
+			{
+				float texlod;
+				archive >> texlod;
+			}
 			archive >> generation;
 			archive >> prop_generation;
 			archive >> prop_density;
@@ -1802,8 +1806,9 @@ namespace wi::terrain
 			{
 				archive >> physics_generation;
 			}
-			if (seri.GetVersion() >= 2)
+			if (seri.GetVersion() >= 2 && seri.GetVersion() < 3)
 			{
+				uint32_t target_texture_resolution;
 				archive >> target_texture_resolution;
 			}
 
@@ -1956,7 +1961,11 @@ namespace wi::terrain
 		{
 			archive << _flags;
 			archive << lod_multiplier;
-			archive << texlod;
+			if (seri.GetVersion() < 3)
+			{
+				float texlod = 1;
+				archive << texlod;
+			}
 			archive << generation;
 			archive << prop_generation;
 			archive << prop_density;
@@ -1976,8 +1985,9 @@ namespace wi::terrain
 			{
 				archive << physics_generation;
 			}
-			if (seri.GetVersion() >= 2)
+			if (seri.GetVersion() >= 2 && seri.GetVersion() < 3)
 			{
+				uint32_t target_texture_resolution = 1024;
 				archive << target_texture_resolution;
 			}
 

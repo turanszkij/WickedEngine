@@ -302,8 +302,6 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		terrain->SetRemovalEnabled(removalCheckBox.GetCheck());
 		terrain->SetGrassEnabled(grassCheckBox.GetCheck());
 		terrain->lod_multiplier = lodSlider.GetValue();
-		terrain->texlod = texlodSlider.GetValue();
-		terrain->target_texture_resolution = (uint32_t)texResolutionSlider.GetValue();
 		terrain->generation = (int)generationSlider.GetValue();
 		terrain->prop_generation = (int)propGenerationSlider.GetValue();
 		terrain->physics_generation = (int)physicsGenerationSlider.GetValue();
@@ -383,24 +381,6 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		terrain->lod_multiplier = args.fValue;
 		});
 	AddWidget(&lodSlider);
-
-	texlodSlider.Create(0.001f, 0.05f, 0.01f, 10000, "Tex LOD Distance: ");
-	texlodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier for virtual textures.\nLow values increase LOD detail in distance");
-	texlodSlider.SetSize(XMFLOAT2(wid, hei));
-	texlodSlider.SetPos(XMFLOAT2(x, y += step));
-	texlodSlider.OnSlide([this](wi::gui::EventArgs args) {
-		terrain->texlod = args.fValue;
-		});
-	AddWidget(&texlodSlider);
-
-	texResolutionSlider.Create(256, 4096, 1024, 4096 - 256, "Tex Resolution: ");
-	texResolutionSlider.SetTooltip("Virtual texture target resolution for most detailed chunk.\nNote: if chunk resolution is bigger than texture resolution, texture scaling will be applied to those chunks.");
-	texResolutionSlider.SetSize(XMFLOAT2(wid, hei));
-	texResolutionSlider.SetPos(XMFLOAT2(x, y += step));
-	texResolutionSlider.OnSlide([this](wi::gui::EventArgs args) {
-		terrain->target_texture_resolution = (uint32_t)args.iValue;
-		});
-	AddWidget(&texResolutionSlider);
 
 	generationSlider.Create(0, 16, 12, 16, "Generation Distance: ");
 	generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
@@ -798,8 +778,6 @@ void TerrainWindow::SetEntity(Entity entity)
 	grassCheckBox.SetCheck(terrain->IsGrassEnabled());
 	physicsCheckBox.SetCheck(terrain->IsPhysicsEnabled());
 	lodSlider.SetValue(terrain->lod_multiplier);
-	texlodSlider.SetValue(terrain->texlod);
-	texResolutionSlider.SetValue((float)terrain->target_texture_resolution);
 	generationSlider.SetValue((float)terrain->generation);
 	propGenerationSlider.SetValue((float)terrain->prop_generation);
 	physicsGenerationSlider.SetValue((float)terrain->physics_generation);
@@ -1072,8 +1050,6 @@ void TerrainWindow::ResizeLayout()
 	add_checkbox(grassCheckBox);
 	physicsCheckBox.SetPos(XMFLOAT2(grassCheckBox.GetPos().x - 100, grassCheckBox.GetPos().y));
 	add(lodSlider);
-	add(texlodSlider);
-	add(texResolutionSlider);
 	add(generationSlider);
 	add(propGenerationSlider);
 	add(physicsGenerationSlider);

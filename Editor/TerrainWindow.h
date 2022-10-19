@@ -57,8 +57,6 @@ public:
 	wi::gui::CheckBox grassCheckBox;
 	wi::gui::CheckBox physicsCheckBox;
 	wi::gui::Slider lodSlider;
-	wi::gui::Slider texlodSlider;
-	wi::gui::Slider texResolutionSlider;
 	wi::gui::Slider generationSlider;
 	wi::gui::Slider propGenerationSlider;
 	wi::gui::Slider physicsGenerationSlider;

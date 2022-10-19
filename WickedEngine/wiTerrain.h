@@ -216,7 +216,6 @@ namespace wi::terrain
 		constexpr void SetPhysicsEnabled(bool value) { if (value) { _flags |= PHYSICS; } else { _flags &= ~PHYSICS; } }
 
 		float lod_multiplier = 0.005f;
-		float texlod = 0.01f;
 		int generation = 12;
 		int prop_generation = 10;
 		int physics_generation = 3;
@@ -229,7 +228,6 @@ namespace wi::terrain
 		float region1 = 1;
 		float region2 = 2;
 		float region3 = 8;
-		uint32_t target_texture_resolution = 1024;
 
 		wi::vector<std::shared_ptr<Modifier>> modifiers;
 		wi::vector<Modifier*> modifiers_to_remove;
