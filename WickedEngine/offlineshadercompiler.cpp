@@ -346,7 +346,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"emittedparticleMS", wi::graphics::ShaderStage::MS },
 
 
-	{"rtreflectionLIB", wi::graphics::ShaderStage::LIB },
+	//{"rtreflectionLIB", wi::graphics::ShaderStage::LIB },
 };
 
 struct Target
