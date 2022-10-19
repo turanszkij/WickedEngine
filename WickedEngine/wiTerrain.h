@@ -195,11 +195,11 @@ namespace wi::terrain
 		std::shared_ptr<Generator> generator;
 		float generation_time_budget_milliseconds = 12; // after this much time, the generation thread will exit. This can help avoid a very long running, resource consuming and slow cancellation generation
 
-		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_update;
-		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_update;
-		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_allocation;
-		mutable wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_allocation;
-		mutable wi::vector<const VirtualTexture*> virtual_textures_in_use;
+		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_update;
+		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_update;
+		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_allocation;
+		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_allocation;
+		wi::vector<const VirtualTexture*> virtual_textures_in_use;
 		GPUPageAllocator page_allocator;
 		wi::graphics::Sampler sampler;
 

@@ -1464,12 +1464,7 @@ namespace wi::terrain
 						const uint32_t least_detailed_lod = vt.lod_count - 1;
 						GPUPageAllocator::Page& page = vt.pages.back();
 						page = page_allocator.allocate();
-
-						if (page.IsValid())
-						{
-							// Record sparse map:
-							vt.SparseMap(page_allocator, page, 0, 0, least_detailed_lod);
-						}
+						vt.SparseMap(page_allocator, page, 0, 0, least_detailed_lod);
 					}
 					vt.region_weights_texture = chunk_data.region_weights_texture;
 					vt.map_type = map_type;
