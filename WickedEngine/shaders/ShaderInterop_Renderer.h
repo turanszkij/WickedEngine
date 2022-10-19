@@ -183,17 +183,17 @@ struct ShaderTextureSlot
 		[branch]
 		if (!CheckAccessFullyMapped(prt_status))
 		{
-			lod = GetLodClamp();
+			float lod_clamp = GetLodClamp();
 
 			[branch]
 			if (sparse_residencymap_descriptor >= 0)
 			{
 				Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
 				uint4 residency = residency_map.GatherRed(sam, uv);
-				lod = max(residency.x, max(residency.y, max(residency.z, residency.w)));
+				lod_clamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
 			}
 
-			value = tex.SampleLevel(sam, uv, lod);
+			value = tex.SampleLevel(sam, uv, max(lod, lod_clamp));
 		}
 
 		[branch]

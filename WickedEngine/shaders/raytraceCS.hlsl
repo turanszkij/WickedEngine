@@ -1,6 +1,7 @@
 #define RAY_BACKFACE_CULLING
 #define RAYTRACE_STACK_SHARED
 #define SURFACE_LOAD_MIPCONE
+#define PRT // Partially Resident Textures
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
