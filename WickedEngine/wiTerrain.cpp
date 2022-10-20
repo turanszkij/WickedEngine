@@ -1410,7 +1410,7 @@ namespace wi::terrain
 			// This should have been created on generation thread, but if not (serialized), create it last minute:
 			CreateChunkRegionTexture(chunk_data);
 
-			const uint32_t min_resolution = 256u;
+			const uint32_t min_resolution = 128u;
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 			const uint32_t max_resolution = 2048;
 #else
