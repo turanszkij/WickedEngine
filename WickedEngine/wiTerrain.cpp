@@ -5,6 +5,12 @@
 #include "wiHelper.h"
 #include "wiScene.h"
 #include "wiPhysics.h"
+#include "wiImage.h"
+#include "wiFont.h"
+#include "wiTextureHelper.h"
+#include "wiBacklog.h"
+
+#include <mutex>
 
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -172,6 +178,578 @@ namespace wi::terrain
 		std::atomic_bool cancelled{ false };
 	};
 
+	void GPUPageAllocator::init(size_t _block_size, size_t _page_size)
+	{
+		block_size = _block_size;
+		page_size = _page_size;
+		blocks.clear();
+		pages.clear();
+		new_block();
+	}
+	void GPUPageAllocator::new_block()
+	{
+		GraphicsDevice* device = GetDevice();
+		const uint16_t block_index = (uint16_t)blocks.size();
+		GPUBuffer& block = blocks.emplace_back();
+		GPUBufferDesc desc;
+		desc.alignment = page_size;
+		desc.size = AlignTo(block_size, page_size);
+		desc.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL;
+		bool success = device->CreateBuffer(&desc, nullptr, &block);
+		assert(success);
+		device->SetName(&block, "GPUPageAllocator::block");
+
+		uint32_t page_count = uint32_t(desc.size / page_size);
+		pages.reserve(pages.capacity() + page_count);
+		for (uint32_t i = 0; i < page_count; ++i)
+		{
+			Page page;
+			page.block = block_index;
+			page.index = i;
+			pages.push_back(page);
+		}
+	}
+	static std::mutex locker;
+	GPUPageAllocator::Page GPUPageAllocator::allocate()
+	{
+		std::scoped_lock lock(locker);
+		while (pages.empty())
+			new_block();
+		Page page = pages.back();
+		pages.pop_back();
+		return page;
+	}
+	void GPUPageAllocator::free(Page page)
+	{
+		std::scoped_lock lock(locker);
+		if (!page.IsValid())
+			return;
+		pages.push_back(page);
+	}
+
+	void VirtualTexture::init(GPUPageAllocator& page_allocator, const TextureDesc& desc)
+	{
+		GraphicsDevice* device = GetDevice();
+		bool success = device->CreateTexture(&desc, nullptr, &texture);
+		assert(success);
+
+		for (uint32_t i = 0; i < texture.desc.mip_levels; ++i)
+		{
+			int subresource = 0;
+			subresource = device->CreateSubresource(&texture, SubresourceType::UAV, 0, 1, i, 1);
+			assert(subresource == i);
+		}
+
+		residencyMap = {};
+		feedbackMap = {};
+		requestBuffer = {};
+		allocationBuffer = {};
+		pageBuffer = {};
+
+		uint32_t width = std::max(1u, texture.desc.width / texture.sparse_properties->tile_width);
+		uint32_t height = std::max(1u, texture.desc.height / texture.sparse_properties->tile_height);
+		lod_count = texture.desc.mip_levels;
+		if (texture.sparse_properties->packed_mip_count > 0)
+		{
+			lod_count -= texture.sparse_properties->packed_mip_count - 1;
+		}
+		for (int i = 0; i < arraysize(data_available_CPU); ++i)
+		{
+			data_available_CPU[i] = false;
+			allocationBuffer_CPU_readback[i] = {};
+			pageBuffer_CPU_upload[i] = {};
+		}
+		cpu_resource_id = 0;
+		pages.clear();
+
+		uint32_t page_count = 0;
+		for (uint32_t i = 0; i < lod_count; ++i)
+		{
+			const uint32_t l_width = std::max(1u, width >> i);
+			const uint32_t l_height = std::max(1u, height >> i);
+			page_count += l_width * l_height;
+		}
+		pages.resize(page_count);
+
+		sparse_coordinate.clear();
+		sparse_size.clear();
+		tile_range_flags.clear();
+		tile_range_offset.clear();
+		tile_range_count.clear();
+		last_block = 0;
+
+		if (desc.width >= 1024)
+		{
+			TextureDesc td;
+			td.width = width;
+			td.height = height;
+
+			td.format = Format::R8_UINT;
+			td.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			td.usage = Usage::DEFAULT;
+			td.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+			success = device->CreateTexture(&td, nullptr, &residencyMap);
+			assert(success);
+			device->SetName(&residencyMap, "VirtualTexture::residencyMap");
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			td.misc_flags = {};
+			td.bind_flags = BindFlag::NONE;
+			td.usage = Usage::READBACK;
+			for (int i = 0; i < arraysize(residencyMap_CPU_readback); ++i)
+			{
+				success = device->CreateTexture(&td, nullptr, &residencyMap_CPU_readback[i]);
+				assert(success);
+				device->SetName(&residencyMap_CPU_readback[i], "VirtualTexture::residencyMap_CPU_readback[i]");
+			}
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+
+			td.format = Format::R32_UINT; // shader atomic support needed
+			td.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+			td.usage = Usage::DEFAULT;
+			td.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+			success = device->CreateTexture(&td, nullptr, &feedbackMap);
+			assert(success);
+			device->SetName(&feedbackMap, "VirtualTexture::feedbackMap");
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			td.misc_flags = {};
+			td.bind_flags = BindFlag::NONE;
+			td.usage = Usage::READBACK;
+			for (int i = 0; i < arraysize(feedbackMap_CPU_readback); ++i)
+			{
+				success = device->CreateTexture(&td, nullptr, &feedbackMap_CPU_readback[i]);
+				assert(success);
+				device->SetName(&feedbackMap_CPU_readback[i], "VirtualTexture::feedbackMap_CPU_readback[i]");
+			}
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+
+			{
+				GPUBufferDesc bd;
+				bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				bd.usage = Usage::DEFAULT;
+				bd.bind_flags = BindFlag::UNORDERED_ACCESS;
+				bd.size = sizeof(uint32_t) * page_count;
+				success = device->CreateBuffer(&bd, nullptr, &requestBuffer);
+				assert(success);
+				device->SetName(&requestBuffer, "VirtualTexture::requestBuffer");
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+				bd.misc_flags = {};
+				bd.bind_flags = BindFlag::NONE;
+				bd.usage = Usage::READBACK;
+				for (int i = 0; i < arraysize(requestBuffer_CPU_readback); ++i)
+				{
+					success = device->CreateBuffer(&bd, nullptr, &requestBuffer_CPU_readback[i]);
+					assert(success);
+					device->SetName(&requestBuffer_CPU_readback[i], "VirtualTexture::requestBuffer_CPU_readback[i]");
+				}
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			}
+			{
+				GPUBufferDesc bd;
+				bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				bd.usage = Usage::DEFAULT;
+				bd.bind_flags = BindFlag::UNORDERED_ACCESS;
+				bd.size = sizeof(uint32_t) * (page_count + 1); // +1: atomic global counter
+				success = device->CreateBuffer(&bd, nullptr, &allocationBuffer);
+				assert(success);
+				device->SetName(&allocationBuffer, "VirtualTexture::allocationBuffer");
+
+				bd.misc_flags = {};
+				bd.bind_flags = BindFlag::NONE;
+				bd.usage = Usage::READBACK;
+				for (int i = 0; i < arraysize(allocationBuffer_CPU_readback); ++i)
+				{
+					success = device->CreateBuffer(&bd, nullptr, &allocationBuffer_CPU_readback[i]);
+					assert(success);
+					device->SetName(&allocationBuffer_CPU_readback[i], "VirtualTexture::allocationBuffer_CPU_readback[i]");
+				}
+			}
+			{
+				GPUBufferDesc bd;
+				bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				bd.usage = Usage::DEFAULT;
+				bd.bind_flags = BindFlag::SHADER_RESOURCE;
+				bd.size = sizeof(uint32_t) * page_count;
+				success = device->CreateBuffer(&bd, nullptr, &pageBuffer);
+				assert(success);
+				device->SetName(&pageBuffer, "VirtualTexture::pageBuffer");
+
+				bd.misc_flags = {};
+				bd.usage = Usage::UPLOAD;
+				bd.bind_flags = {};
+				for (int i = 0; i < arraysize(pageBuffer_CPU_upload); ++i)
+				{
+					success = device->CreateBuffer(&bd, nullptr, &pageBuffer_CPU_upload[i]);
+					assert(success);
+					device->SetName(&pageBuffer_CPU_upload[i], "VirtualTexture::pageBuffer_CPU_upload[i]");
+				}
+			}
+		}
+
+		locker.lock();
+		if (page_allocator.blocks.empty())
+		{
+			page_allocator.init(64ull * 1024ull * 1024ull, texture.sparse_page_size);
+		}
+		locker.unlock();
+
+		if (feedbackMap.IsValid())
+		{
+			// Allocate least detailed mip level up front:
+			//	This is needed because for the first few frames the GPU readback won't be ready to use
+			//	So in the first few frames after creation, the least detailed mip will be shown until GPU data is available
+			const uint32_t least_detailed_lod = lod_count - 1;
+			GPUPageAllocator::Page& page = pages.back();
+			page = page_allocator.allocate();
+			SparseMap(page_allocator, page, 0, 0, least_detailed_lod);
+		}
+		else
+		{
+			// For small/distant textures, we just map each tile up front and not manage residencies:
+			uint32_t l_offset = 0;
+			for (uint32_t lod = 0; lod < lod_count; ++lod)
+			{
+				const uint32_t l_width = std::max(1u, width >> lod);
+				const uint32_t l_height = std::max(1u, height >> lod);
+				for (uint32_t y = 0; y < l_height; ++y)
+				{
+					for (uint32_t x = 0; x < l_width; ++x)
+					{
+						const uint32_t l_index = l_offset + x + y * l_width;
+						GPUPageAllocator::Page& page = pages[l_index];
+						page = page_allocator.allocate();
+						SparseMap(page_allocator, page, x, y, lod);
+					}
+				}
+				l_offset += l_width * l_height;
+			}
+		}
+		SparseFlush(page_allocator);
+	}
+	void VirtualTexture::DrawDebug(CommandList cmd)
+	{
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+		if (lod_count == 0)
+			return;
+		float cellsize = 20;
+		XMFLOAT2 offset = XMFLOAT2(0, 20);
+
+		const SubresourceData* feedback_data = feedbackMap_CPU_readback[cpu_resource_id].mapped_subresources;
+		const SubresourceData* residency_data = residencyMap_CPU_readback[cpu_resource_id].mapped_subresources;
+
+		const uint32_t width = feedbackMap.desc.width;
+		const uint32_t height = feedbackMap.desc.height;
+
+		uint32_t page_count = 0;
+		uint32_t lod_offsets[9] = {};
+		for (uint32_t i = 0; i < lod_count; ++i)
+		{
+			const uint32_t l_width = std::max(1u, width >> i);
+			const uint32_t l_height = std::max(1u, height >> i);
+			lod_offsets[i] = page_count;
+			page_count += l_width * l_height;
+		}
+
+		{
+			wi::font::Params font_params;
+			font_params.shadowColor = wi::Color::Black();
+			font_params.shadow_softness = 1;
+			font_params.size = 20;
+			font_params.posX = offset.x;
+			font_params.posY = offset.y;
+			std::string ss;
+			ss += "Allocation count: " + std::to_string(tile_allocation_count) + "\n";
+			ss += "Deallocation count: " + std::to_string(tile_deallocation_count) + "\n";
+			wi::font::Draw(ss, font_params, cmd);
+		}
+
+		offset.y = 100;
+		{
+			wi::font::Params font_params;
+			font_params.shadowColor = wi::Color::Black();
+			font_params.shadow_softness = 1;
+			font_params.size = 30;
+			font_params.posX = offset.x;
+			font_params.posY = offset.y - font_params.size;
+			wi::font::Draw("GPU Tile Request:", font_params, cmd);
+		}
+		for (uint32_t y = 0; y < height; ++y)
+		{
+			for (uint32_t x = 0; x < width; ++x)
+			{
+				uint8_t* feedback_row = ((uint8_t*)feedback_data->data_ptr) + y * feedback_data->row_pitch;
+				uint32_t feedback_request = *((uint32_t*)feedback_row + x);
+				if (!data_available_CPU[cpu_resource_id])
+					feedback_request = 0xFF;
+
+				wi::image::Params image_params;
+				image_params.pos.x = cellsize * x + offset.x;
+				image_params.pos.y = cellsize * y + offset.y;
+				image_params.siz.x = cellsize;
+				image_params.siz.y = cellsize;
+				image_params.blendFlag = wi::enums::BLENDMODE::BLENDMODE_ALPHA;
+				image_params.opacity = 0.75f;
+				if (feedback_request == 0xFF)
+				{
+					image_params.color = XMFLOAT4(0, 0, 0, 1);
+				}
+				else
+				{
+					image_params.color = XMFLOAT4(1.0f - wi::math::saturate((float)feedback_request / (float)lod_count), 0, 0, 1);
+				}
+				wi::image::Draw(wi::texturehelper::getWhite(), image_params, cmd);
+
+				wi::font::Params font_params;
+				font_params.position.x = cellsize * x + cellsize * 0.5f + offset.x;
+				font_params.position.y = cellsize * y + cellsize * 0.5f + offset.y;
+				font_params.h_align = wi::font::WIFALIGN_CENTER;
+				font_params.v_align = wi::font::WIFALIGN_CENTER;
+				if (feedback_request == 0xFF)
+				{
+					wi::font::Draw("X", font_params, cmd);
+				}
+				else
+				{
+					wi::font::Draw(std::to_string(feedback_request), font_params, cmd);
+				}
+			}
+		}
+
+
+		offset.x += cellsize * width + 30;
+		{
+			wi::font::Params font_params;
+			font_params.shadowColor = wi::Color::Black();
+			font_params.shadow_softness = 1;
+			font_params.size = 30;
+			font_params.posX = offset.x;
+			font_params.posY = offset.y - font_params.size;
+			wi::font::Draw("Min request per mip level:", font_params, cmd);
+		}
+		for (uint8_t lod = 0; lod < (uint8_t)lod_count; ++lod)
+		{
+			const uint32_t l_width = std::max(1u, width >> lod);
+			const uint32_t l_height = std::max(1u, height >> lod);
+			const uint32_t l_page_offset = lod_offsets[lod];
+
+			for (uint32_t y = 0; y < l_height; ++y)
+			{
+				for (uint32_t x = 0; x < l_width; ++x)
+				{
+					const uint32_t l_index = l_page_offset + x + y * l_width;
+					const uint32_t request = ((const uint32_t*)requestBuffer_CPU_readback[cpu_resource_id].mapped_data)[l_index];
+
+					wi::image::Params image_params;
+					image_params.pos.x = cellsize * x + offset.x;
+					image_params.pos.y = cellsize * y + offset.y;
+					image_params.siz.x = cellsize;
+					image_params.siz.y = cellsize;
+					image_params.blendFlag = wi::enums::BLENDMODE::BLENDMODE_ALPHA;
+					image_params.opacity = 0.75f;
+					if (request == 0xFF)
+					{
+						image_params.color = XMFLOAT4(0, 0, 0, 1);
+					}
+					else
+					{
+						image_params.color = XMFLOAT4(0, 0, 1, 1);
+					}
+					wi::image::Draw(wi::texturehelper::getWhite(), image_params, cmd);
+
+					wi::font::Params font_params;
+					font_params.position.x = cellsize * x + cellsize * 0.5f + offset.x;
+					font_params.position.y = cellsize * y + cellsize * 0.5f + offset.y;
+					font_params.h_align = wi::font::WIFALIGN_CENTER;
+					font_params.v_align = wi::font::WIFALIGN_CENTER;
+					if (request == 0xFF)
+					{
+						wi::font::Draw("X", font_params, cmd);
+					}
+					else
+					{
+						wi::font::Draw(std::to_string(request), font_params, cmd);
+					}
+				}
+			}
+			offset.x += cellsize * l_width + 30;
+		}
+
+
+		//////////////////////////////////////////////
+
+		offset.x = 0;
+		offset.y += cellsize * height + 30;
+		{
+			wi::font::Params font_params;
+			font_params.shadowColor = wi::Color::Black();
+			font_params.shadow_softness = 1;
+			font_params.size = 30;
+			font_params.posX = offset.x;
+			font_params.posY = offset.y - font_params.size;
+			wi::font::Draw("Min Resident Mip:", font_params, cmd);
+		}
+		for (uint32_t y = 0; y < height; ++y)
+		{
+			for (uint32_t x = 0; x < width; ++x)
+			{
+				uint8_t* residency_row = ((uint8_t*)residency_data->data_ptr) + y * residency_data->row_pitch;
+				uint8_t lod = residency_row[x];
+
+				wi::image::Params image_params;
+				image_params.pos.x = cellsize * x + offset.x;
+				image_params.pos.y = cellsize * y + offset.y;
+				image_params.siz.x = cellsize;
+				image_params.siz.y = cellsize;
+				image_params.blendFlag = wi::enums::BLENDMODE::BLENDMODE_ALPHA;
+				image_params.opacity = 0.75f;
+				if (lod == 0xFF)
+				{
+					image_params.color = XMFLOAT4(0, 0, 0, 1);
+				}
+				else
+				{
+					image_params.color = XMFLOAT4(0, 1.0f - wi::math::saturate((float)lod / (float)lod_count), 0, 1);
+				}
+				wi::image::Draw(wi::texturehelper::getWhite(), image_params, cmd);
+
+				wi::font::Params font_params;
+				font_params.position.x = cellsize * x + cellsize * 0.5f + offset.x;
+				font_params.position.y = cellsize * y + cellsize * 0.5f + offset.y;
+				font_params.h_align = wi::font::WIFALIGN_CENTER;
+				font_params.v_align = wi::font::WIFALIGN_CENTER;
+				if (lod == 0xFF)
+				{
+					wi::font::Draw("X", font_params, cmd);
+				}
+				else
+				{
+					wi::font::Draw(std::to_string(lod), font_params, cmd);
+				}
+			}
+		}
+
+		offset.x += cellsize * width + 30;
+		{
+			wi::font::Params font_params;
+			font_params.shadowColor = wi::Color::Black();
+			font_params.shadow_softness = 1;
+			font_params.size = 30;
+			font_params.posX = offset.x;
+			font_params.posY = offset.y - font_params.size;
+			wi::font::Draw("Resident pages per mip level:", font_params, cmd);
+		}
+		for (uint8_t lod = 0; lod < (uint8_t)lod_count; ++lod)
+		{
+			const uint32_t l_width = std::max(1u, width >> lod);
+			const uint32_t l_height = std::max(1u, height >> lod);
+			const uint32_t l_page_offset = lod_offsets[lod];
+
+			for (uint32_t y = 0; y < l_height; ++y)
+			{
+				for (uint32_t x = 0; x < l_width; ++x)
+				{
+					const uint32_t l_index = l_page_offset + x + y * l_width;
+					auto page = pages[l_index];
+
+					wi::image::Params image_params;
+					image_params.pos.x = cellsize * x + offset.x;
+					image_params.pos.y = cellsize * y + offset.y;
+					image_params.siz.x = cellsize;
+					image_params.siz.y = cellsize;
+					image_params.blendFlag = wi::enums::BLENDMODE::BLENDMODE_ALPHA;
+					image_params.opacity = 0.75f;
+					if (page.IsValid())
+					{
+						image_params.color = XMFLOAT4(0, 0, 1, 1);
+					}
+					else
+					{
+						image_params.color = XMFLOAT4(0, 0, 0, 1);
+					}
+					wi::image::Draw(wi::texturehelper::getWhite(), image_params, cmd);
+
+					wi::font::Params font_params;
+					font_params.position.x = cellsize * x + cellsize * 0.5f + offset.x;
+					font_params.position.y = cellsize * y + cellsize * 0.5f + offset.y;
+					font_params.h_align = wi::font::WIFALIGN_CENTER;
+					font_params.v_align = wi::font::WIFALIGN_CENTER;
+					if (page.IsValid())
+					{
+						wi::font::Draw("O", font_params, cmd);
+					}
+					else
+					{
+						wi::font::Draw("X", font_params, cmd);
+					}
+				}
+			}
+			offset.x += cellsize * l_width + 30;
+		}
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+	}
+	void VirtualTexture::SparseMap(GPUPageAllocator& allocator, GPUPageAllocator::Page page, uint32_t x, uint32_t y, uint32_t mip)
+	{
+		if (page.IsValid() && page.block != last_block)
+		{
+			SparseFlush(allocator);
+			last_block = page.block;
+		}
+		SparseResourceCoordinate& coordinate = sparse_coordinate.emplace_back();
+		coordinate.x = x;
+		coordinate.y = y;
+		coordinate.mip = mip;
+		SparseRegionSize& region = sparse_size.emplace_back();
+		region.width = 1;
+		region.height = 1;
+		if (page.IsValid())
+		{
+			tile_range_flags.push_back(TileRangeFlags::None);
+			tile_range_offset.push_back(page.index);
+
+			// Request updating virtual texture tile after mapping:
+			VirtualTexture::UpdateRequest& request = update_requests.emplace_back();
+			request.tile_x = x;
+			request.tile_y = y;
+			request.lod = mip;
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			tile_allocation_count++;
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+		}
+		else
+		{
+			tile_range_flags.push_back(TileRangeFlags::Null);
+			tile_range_offset.push_back(0);
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			tile_deallocation_count++;
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+		}
+		tile_range_count.push_back(1);
+	}
+	void VirtualTexture::SparseFlush(GPUPageAllocator& allocator)
+	{
+		if (sparse_coordinate.empty())
+			return;
+		SparseUpdateCommand command;
+		command.sparse_resource = &texture;
+		command.num_resource_regions = (uint32_t)sparse_coordinate.size();
+		command.coordinates = sparse_coordinate.data();
+		command.sizes = sparse_size.data();
+		command.tile_pool = &allocator.blocks[last_block];
+		command.range_flags = tile_range_flags.data();
+		command.range_start_offsets = tile_range_offset.data();
+		command.range_tile_counts = tile_range_count.data();
+		GetDevice()->SparseUpdate(QUEUE_COPY, &command, 1);
+		sparse_coordinate.clear();
+		sparse_size.clear();
+		tile_range_flags.clear();
+		tile_range_offset.clear();
+		tile_range_count.clear();
+	}
+
 	Terrain::Terrain()
 	{
 		weather.ambient = XMFLOAT3(0.4f, 0.4f, 0.4f);
@@ -206,8 +784,7 @@ namespace wi::terrain
 		generator->scene.Clear();
 
 		chunks.clear();
-
-		virtual_texture_allocator = {};
+		page_allocator = {};
 
 		wi::vector<Entity> entities_to_remove;
 		for (size_t i = 0; i < scene->hierarchy.GetCount(); ++i)
@@ -253,7 +830,7 @@ namespace wi::terrain
 		}
 	}
 
-	void Terrain::Generation_Update(const wi::scene::CameraComponent& camera)
+	void Terrain::Generation_Update(const CameraComponent& camera)
 	{
 		// The generation task is always cancelled every frame so we are sure that generation is not running at this point
 		Generation_Cancel();
@@ -283,8 +860,8 @@ namespace wi::terrain
 
 		if (terrainEntity == INVALID_ENTITY)
 		{
-			virtual_texture_allocator = {};
 			chunks.clear();
+			page_allocator = {};
 			return;
 		}
 
@@ -306,12 +883,11 @@ namespace wi::terrain
 		}
 
 		const int removal_threshold = generation + 2;
-		const float texlodMultiplier = texlod;
 		GraphicsDevice* device = GetDevice();
 
 		// Check whether there are any materials that would write to virtual textures:
 		bool virtual_texture_any = false;
-		bool virtual_texture_available[MaterialComponent::TEXTURESLOT_COUNT] = {};
+		bool virtual_texture_available[TEXTURESLOT_COUNT] = {};
 		MaterialComponent* virtual_materials[4] = {
 			&material_Base,
 			&material_Slope,
@@ -320,7 +896,7 @@ namespace wi::terrain
 		};
 		for (auto& material : virtual_materials)
 		{
-			for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+			for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
 			{
 				virtual_texture_available[i] = false;
 				switch (i)
@@ -341,71 +917,11 @@ namespace wi::terrain
 		}
 		virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
 
-		target_texture_resolution = wi::math::GetNextPowerOfTwo(target_texture_resolution);
-		if (virtual_texture_allocator.max_tile != target_texture_resolution)
-		{
-			virtual_texture_allocator.init(target_texture_resolution);
-			virtual_texture_clear = true;
-
-			for (auto it = chunks.begin(); it != chunks.end(); it++)
-			{
-				const Chunk& chunk = it->first;
-				ChunkData& chunk_data = it->second;
-				chunk_data.vt = {};
-			}
-
-			TextureDesc desc;
-			desc.width = (uint32_t)virtual_texture_allocator.width;
-			desc.height = (uint32_t)virtual_texture_allocator.height;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			//desc.mip_levels = 4;
-
-			for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
-			{
-				if (!virtual_texture_available[i])
-					continue;
-
-				switch (i)
-				{
-				case MaterialComponent::NORMALMAP:
-					desc.format = Format::R8G8_UNORM;
-					break;
-				default:
-					desc.format = Format::R8G8B8A8_UNORM;
-					break;
-				}
-				bool success = device->CreateTexture(&desc, nullptr, &virtual_textures[i]);
-				assert(success);
-				device->SetName(&virtual_textures[i], "Terrain::virtual_textures[i]");
-
-				if (desc.mip_levels > 1)
-				{
-					for (uint32_t mip = 0; mip < virtual_textures[i].desc.mip_levels; ++mip)
-					{
-						int subresource_index = device->CreateSubresource(&virtual_textures[i], SubresourceType::UAV, 0, 1, mip, 1);
-						assert(subresource_index == mip);
-					}
-				}
-			}
-		}
-
-		const XMUINT2 virtual_texture_resolution = XMUINT2(
-			(uint32_t)virtual_textures[0].desc.width,
-			(uint32_t)virtual_textures[0].desc.height
-			);
-		const XMFLOAT2 virtual_texture_resolution_rcp = XMFLOAT2(
-			1.0f / virtual_texture_resolution.x,
-			1.0f / virtual_texture_resolution.y
-		);
-		int virtual_texture_rendering_budget = std::max(2048, (int)target_texture_resolution);
-		virtual_texture_rendering_budget *= virtual_texture_rendering_budget; // square size
-
 		for (auto it = chunks.begin(); it != chunks.end();)
 		{
 			const Chunk& chunk = it->first;
 			ChunkData& chunk_data = it->second;
-			bool chunk_visible = camera.frustum.CheckSphere(chunk_data.sphere.center, chunk_data.sphere.radius);
+			chunk_data.visible = camera.frustum.CheckSphere(chunk_data.sphere.center, chunk_data.sphere.radius);
 			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 
 			if (wi::renderer::GetOcclusionCullingEnabled())
@@ -415,7 +931,7 @@ namespace wi::terrain
 				{
 					if (scene->occlusion_results_objects[object_index].IsOccluded())
 					{
-						chunk_visible = false;
+						chunk_data.visible = false;
 					}
 				}
 			}
@@ -449,7 +965,10 @@ namespace wi::terrain
 			{
 				if (dist > removal_threshold)
 				{
-					virtual_texture_allocator.free(chunk_data.vt);
+					for (int i = 0; i < arraysize(chunk_data.vt); ++i)
+					{
+						chunk_data.vt[i].free(page_allocator);
+					}
 					scene->Entity_Remove(it->second.entity);
 					it = chunks.erase(it);
 					continue; // don't increment iterator
@@ -473,7 +992,7 @@ namespace wi::terrain
 			}
 
 			// Grass property update:
-			if (chunk_visible && chunk_data.grass_entity != INVALID_ENTITY)
+			if (chunk_data.visible && chunk_data.grass_entity != INVALID_ENTITY)
 			{
 				wi::HairParticleSystem* grass = scene->hairs.GetComponent(chunk_data.grass_entity);
 				if (grass != nullptr)
@@ -531,91 +1050,12 @@ namespace wi::terrain
 				}
 			}
 
-			// Collect virtual texture update requests:
-			if (virtual_texture_any)
-			{
-				uint32_t required_texture_resolution = 0;
-				float request_score = 0;
-				if (chunk_visible)
-				{
-					uint32_t texture_lod = 0;
-					const float distsq = wi::math::DistanceSquared(camera.Eye, chunk_data.sphere.center);
-					const float radius = chunk_data.sphere.radius;
-					const float radiussq = radius * radius;
-					if (distsq < radiussq)
-					{
-						texture_lod = 0;
-					}
-					else
-					{
-						const float dist = std::sqrt(distsq);
-						const float dist_to_sphere = std::max(0.0f, dist - radius);
-						texture_lod = uint32_t(dist_to_sphere * texlodMultiplier);
-					}
-					request_score = distsq;
-					required_texture_resolution = uint32_t(target_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
-					required_texture_resolution = AlignTo(required_texture_resolution, 8u);
-					required_texture_resolution = std::max(VirtualTextureAllocator::min_tile_constant, required_texture_resolution);
-				}
-				else
-				{
-					required_texture_resolution = VirtualTextureAllocator::min_tile_constant;
-				}
-
-				if (chunk_data.vt.size != required_texture_resolution)
-				{
-					if (required_texture_resolution > chunk_data.vt.size)
-					{
-						// upscaling continuously:
-						required_texture_resolution = std::max(VirtualTextureAllocator::min_tile_constant, chunk_data.vt.size * 2);
-					}
-
-					MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
-					if (material != nullptr)
-					{
-						VirtualTextureAllocator::Tile vt = virtual_texture_allocator.allocate(required_texture_resolution);
-
-						if (vt.IsValid())
-						{
-							int budget_after_alloc = virtual_texture_rendering_budget - int(required_texture_resolution * required_texture_resolution);
-
-							if (budget_after_alloc >= 0 || required_texture_resolution < VirtualTextureAllocator::min_tile_constant * 2)
-							{
-								virtual_texture_allocator.free(chunk_data.vt);
-								chunk_data.vt = vt;
-
-								// Shrink the uvs to avoid wrap sampling across edge by object rendering shaders:
-								material->texMulAdd.x = float(chunk_data.vt.size - 1) * virtual_texture_resolution_rcp.x;
-								material->texMulAdd.y = float(chunk_data.vt.size - 1) * virtual_texture_resolution_rcp.y;
-								material->texMulAdd.z = float(chunk_data.vt.x + 0.5f) * virtual_texture_resolution_rcp.x;
-								material->texMulAdd.w = float(chunk_data.vt.y + 0.5f) * virtual_texture_resolution_rcp.y;
-
-								for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
-								{
-									if (virtual_textures[i].IsValid())
-									{
-										material->textures[i].resource.SetTexture(virtual_textures[i]);
-									}
-								}
-
-								VirtualTextureUpdateRequest& request = virtual_texture_updates.emplace_back();
-								request.vt = chunk_data.vt;
-								request.score = request_score;
-								request.region_weights_texture = chunk_data.region_weights_texture;
-
-								virtual_texture_rendering_budget = budget_after_alloc;
-							}
-							else
-							{
-								virtual_texture_allocator.free(vt);
-							}
-						}
-
-					}
-				}
-			}
-
 			it++;
+		}
+
+		if (virtual_texture_any)
+		{
+			UpdateVirtualTexturesCPU();
 		}
 
 		// Start the generation on a background thread and keep it running until the next frame
@@ -773,7 +1213,7 @@ namespace wi::terrain
 						chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale * chunk_scale); // chunk_scale * chunk_scale : grass density increases with squared amount with chunk scale (x*z)
 					}
 
-					// Create the blend weights texture for virtual texture update:
+					// Create the textures for virtual texture update:
 					CreateChunkRegionTexture(chunk_data);
 
 					wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
@@ -965,21 +1405,262 @@ namespace wi::terrain
 		generator->cancelled.store(false); // the next generation can run
 	}
 
-	void Terrain::UpdateVirtualTextures(CommandList cmd) const
+	void Terrain::CreateChunkRegionTexture(ChunkData& chunk_data)
 	{
-		if (virtual_texture_updates.empty())
-			return;
+		if (!chunk_data.region_weights_texture.IsValid())
+		{
+			GraphicsDevice* device = GetDevice();
+			TextureDesc desc;
+			desc.width = (uint32_t)chunk_width;
+			desc.height = (uint32_t)chunk_width;
+			desc.format = Format::R8G8B8A8_UNORM;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			SubresourceData data;
+			data.data_ptr = chunk_data.region_weights.data();
+			data.row_pitch = chunk_width * sizeof(chunk_data.region_weights[0]);
+			bool success = device->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
+			assert(success);
+		}
+	}
 
-		std::sort(virtual_texture_updates.begin(), virtual_texture_updates.end(), [](const VirtualTextureUpdateRequest& a, const VirtualTextureUpdateRequest& b) {
-			return a.score < b.score;
-		});
-
+	void Terrain::UpdateVirtualTexturesCPU()
+	{
 		GraphicsDevice* device = GetDevice();
-		device->EventBegin("Terrain - Virtual Texture Update", cmd);
-		auto range = wi::profiler::BeginRangeGPU("Terrain - Virtual Texture Update", cmd);
+		virtual_textures_in_use.clear();
+		virtual_texture_barriers_before_update.clear();
+		virtual_texture_barriers_after_update.clear();
+		virtual_texture_barriers_before_allocation.clear();
+		virtual_texture_barriers_after_allocation.clear();
 
+		if (!sampler.IsValid())
+		{
+			SamplerDesc samplerDesc;
+			samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;	// Anisotropic sampler is too expensive with the sparse texture system currently
+			samplerDesc.address_u = TextureAddressMode::CLAMP;	// Clamp sampler is needed to not oversample on chunk boundaries
+			samplerDesc.address_v = TextureAddressMode::CLAMP;
+			samplerDesc.address_w = TextureAddressMode::CLAMP;
+			bool success = device->CreateSampler(&samplerDesc, &sampler);
+			assert(success);
+		}
+
+		wi::jobsystem::context ctx;
+		for (auto& it : chunks)
+		{
+			const Chunk& chunk = it.first;
+			ChunkData& chunk_data = it.second;
+			const uint32_t dist = (uint32_t)std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+
+			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+			if (material == nullptr)
+				continue;
+
+			material->sampler_descriptor = device->GetDescriptorIndex(&sampler);
+
+			// This should have been created on generation thread, but if not (serialized), create it last minute:
+			CreateChunkRegionTexture(chunk_data);
+
+			const uint32_t min_resolution = 128u;
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			const uint32_t max_resolution = 2048;
+#else
+			const uint32_t max_resolution = 16384u;
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			const uint32_t required_resolution = dist < 2 ? max_resolution : min_resolution;
+
+			chunk_data.vt.resize(3); // base, normal, surface
+			for (uint32_t map_type = 0; map_type < chunk_data.vt.size(); ++map_type)
+			{
+				VirtualTexture& vt = chunk_data.vt[map_type];
+
+				if (vt.texture.desc.width != required_resolution)
+				{
+					vt.free(page_allocator);
+
+					TextureDesc desc;
+					desc.width = required_resolution;
+					desc.height = required_resolution;
+					desc.misc_flags = ResourceMiscFlag::SPARSE;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+					desc.mip_levels = 0;
+					desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+
+					if (map_type == MaterialComponent::NORMALMAP)
+					{
+						desc.format = Format::R8G8_UNORM;
+					}
+					else
+					{
+						desc.format = Format::R8G8B8A8_UNORM;
+					}
+					vt.init(page_allocator, desc);
+
+					material->textures[map_type].resource.SetTexture(vt.texture);
+					material->textures[map_type].sparse_residencymap_descriptor = device->GetDescriptorIndex(&vt.residencyMap, SubresourceType::SRV);
+					material->textures[map_type].sparse_feedbackmap_descriptor = device->GetDescriptorIndex(&vt.feedbackMap, SubresourceType::UAV);
+
+					vt.region_weights_texture = chunk_data.region_weights_texture;
+					vt.map_type = map_type;
+				}
+
+				material->textures[map_type].lod_clamp = (float)vt.lod_count - 1;
+				virtual_textures_in_use.push_back(&vt);
+				virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.texture, vt.texture.desc.layout, ResourceState::UNORDERED_ACCESS));
+				virtual_texture_barriers_after_update.push_back(GPUBarrier::Image(&vt.texture, ResourceState::UNORDERED_ACCESS, vt.texture.desc.layout));
+
+				if (!vt.residencyMap.IsValid())
+					continue;
+
+				// Process each virtual texture on a background thread:
+				wi::jobsystem::Execute(ctx, [this, &vt](wi::jobsystem::JobArgs args) {
+
+					const uint32_t width = vt.feedbackMap.desc.width;
+					const uint32_t height = vt.feedbackMap.desc.height;
+
+					// We must only access persistently mapped resources by CPU that the GPU is not using currently:
+					vt.cpu_resource_id = (vt.cpu_resource_id + 1) % arraysize(vt.allocationBuffer_CPU_readback);
+					const bool data_available_CPU = vt.data_available_CPU[vt.cpu_resource_id]; // indicates whether any GPU data is readable at this point or not
+					vt.data_available_CPU[vt.cpu_resource_id] = true;
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+					vt.tile_allocation_count = 0;
+					vt.tile_deallocation_count = 0;
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+
+					// Perform the allocations and deallocations:
+					//	GPU writes allocation requests by virtualTextureTileAllocateCS.hlsl compute shader
+					if (vt.data_available_CPU)
+					{
+						uint32_t page_count = 0;
+						uint32_t lod_offsets[9] = {};
+						for (uint32_t i = 0; i < vt.lod_count; ++i)
+						{
+							const uint32_t l_width = std::max(1u, width >> i);
+							const uint32_t l_height = std::max(1u, height >> i);
+							lod_offsets[i] = page_count;
+							page_count += l_width * l_height;
+						}
+
+						uint32_t allocation_count = *(const uint32_t*)vt.allocationBuffer_CPU_readback[vt.cpu_resource_id].mapped_data;
+						allocation_count = std::min(uint32_t(vt.pages.size() - 1), allocation_count);
+						//allocation_count = std::min(100u, allocation_count);
+						const uint32_t* allocation_requests = ((const uint32_t*)vt.allocationBuffer_CPU_readback[vt.cpu_resource_id].mapped_data) + 1; // +1 offset of the allocation counter
+						for (uint32_t i = 0; i < allocation_count; ++i)
+						{
+							const uint32_t allocation_request = allocation_requests[i];
+							const uint8_t x = (allocation_request >> 24u) & 0xFF;
+							const uint8_t y = (allocation_request >> 16u) & 0xFF;
+							const uint8_t lod = (allocation_request >> 8u) & 0xFF;
+							const bool allocate = allocation_request & 0x1;
+							const bool must_be_always_resident = (int)lod == ((int)vt.lod_count - 1);
+							if (lod >= vt.lod_count)
+								continue;
+							const uint32_t l_offset = lod_offsets[lod];
+							const uint32_t l_width = std::max(1u, width >> lod);
+							const uint32_t l_height = std::max(1u, height >> lod);
+							const uint32_t l_index = l_offset + x + y * l_width;
+							if (x >= l_width || y >= l_height)
+								continue;
+							GPUPageAllocator::Page& page = vt.pages[l_index];
+
+							if (allocate)
+							{
+								if (page.IsValid())
+								{
+									continue;
+								}
+								page = page_allocator.allocate();
+								if (page.IsValid())
+								{
+									vt.SparseMap(page_allocator, page, x, y, lod);
+								}
+							}
+							else if(!must_be_always_resident)
+							{
+								if (!page.IsValid())
+								{
+									continue;
+								}
+								page_allocator.free(page);
+								page = {};
+
+								vt.SparseMap(page_allocator, page, x, y, lod); // invalid page will do unmap
+							}
+						}
+					}
+
+					// Update page buffer for GPU:
+					uint32_t* page_buffer = (uint32_t*)vt.pageBuffer_CPU_upload[vt.cpu_resource_id].mapped_data;
+					for (size_t i = 0; i < vt.pages.size(); ++i)
+					{
+						uint32_t page = (uint32_t)vt.pages[i].index;
+						// force memcpy into uncached memory to avoid read stall by mistake:
+						std::memcpy(page_buffer + i, &page, sizeof(page));
+					}
+
+					vt.SparseFlush(page_allocator);
+
+				});
+
+				virtual_texture_barriers_before_update.push_back(GPUBarrier::Buffer(&vt.pageBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE_COMPUTE));
+				virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.feedbackMap, vt.feedbackMap.desc.layout, ResourceState::UNORDERED_ACCESS));
+				virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.residencyMap, vt.residencyMap.desc.layout, ResourceState::UNORDERED_ACCESS));
+				virtual_texture_barriers_after_update.push_back(GPUBarrier::Image(&vt.residencyMap, ResourceState::UNORDERED_ACCESS, vt.residencyMap.desc.layout));
+				virtual_texture_barriers_before_allocation.push_back(GPUBarrier::Image(&vt.feedbackMap, ResourceState::UNORDERED_ACCESS, vt.feedbackMap.desc.layout));
+				virtual_texture_barriers_after_allocation.push_back(GPUBarrier::Buffer(&vt.allocationBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+				virtual_texture_barriers_after_allocation.push_back(GPUBarrier::Buffer(&vt.requestBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			}
+		}
+		wi::jobsystem::Wait(ctx);
+	}
+
+	void Terrain::UpdateVirtualTexturesGPU(CommandList cmd) const
+	{
+		GraphicsDevice* device = GetDevice();
+		device->EventBegin("Terrain - UpdateVirtualTexturesGPU", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Terrain - UpdateVirtualTexturesGPU", cmd);
+
+		wi::renderer::ProcessDeferredMipGenRequests(cmd); // source textures should be mipmapped at this point
+
+		device->Barrier(virtual_texture_barriers_before_update.data(), (uint32_t)virtual_texture_barriers_before_update.size(), cmd);
+
+		device->EventBegin("Clear Metadata", cmd);
+		for (const VirtualTexture* vt : virtual_textures_in_use)
+		{
+			if (!vt->residencyMap.IsValid())
+				continue;
+			device->ClearUAV(&vt->feedbackMap, 0xFF, cmd);
+			device->ClearUAV(&vt->requestBuffer, 0xFF, cmd);
+			device->ClearUAV(&vt->allocationBuffer, 0, cmd);
+		}
+		device->EventEnd(cmd);
+
+		device->EventBegin("Update Residency Maps", cmd);
+		device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_VIRTUALTEXTURE_RESIDENCYUPDATE), cmd);
+		for (const VirtualTexture* vt : virtual_textures_in_use)
+		{
+			if (!vt->residencyMap.IsValid())
+				continue;
+			VirtualTextureResidencyUpdatePush push;
+			push.lodCount = vt->lod_count;
+			push.width = vt->residencyMap.desc.width;
+			push.height = vt->residencyMap.desc.height;
+			push.pageBufferRO = device->GetDescriptorIndex(&vt->pageBuffer, SubresourceType::SRV);
+			push.residencyTextureRW = device->GetDescriptorIndex(&vt->residencyMap, SubresourceType::UAV);
+			device->PushConstants(&push, sizeof(push), cmd);
+
+			device->Dispatch(
+				(vt->residencyMap.desc.width + 7u) / 8u,
+				(vt->residencyMap.desc.height + 7u) / 8u,
+				1u,
+				cmd
+			);
+		}
+		device->EventEnd(cmd);
+
+		device->EventBegin("Render Tile Regions", cmd);
 		device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE), cmd);
-
 		ShaderMaterial materials[4];
 		material_Base.WriteShaderMaterial(&materials[0]);
 		material_Slope.WriteShaderMaterial(&materials[1]);
@@ -987,170 +1668,154 @@ namespace wi::terrain
 		material_HighAltitude.WriteShaderMaterial(&materials[3]);
 		device->BindDynamicConstantBuffer(materials, 0, cmd);
 
-		GPUBarrier barriers[MaterialComponent::TEXTURESLOT_COUNT];
-		uint32_t num_barriers = 0;
-
-		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
-			if (virtual_textures[i].IsValid())
+			for (auto& request : vt->update_requests)
 			{
-				if (virtual_textures[i].desc.mip_levels > 1)
+				uint32_t first_mip = request.lod;
+				uint32_t last_mip = request.lod;
+				const bool packed_mips = request.lod >= vt->texture.sparse_properties->packed_mip_start;
+				if (packed_mips && vt->texture.sparse_properties->packed_mip_count > 1)
 				{
-					device->BindUAV(&virtual_textures[i], i * 4 + 0, cmd, 0);
-					device->BindUAV(&virtual_textures[i], i * 4 + 1, cmd, 1);
-					device->BindUAV(&virtual_textures[i], i * 4 + 2, cmd, 2);
-					device->BindUAV(&virtual_textures[i], i * 4 + 3, cmd, 3);
-				}
-				else
-				{
-					device->BindUAV(&virtual_textures[i], i * 4 + 0, cmd);
+					first_mip = vt->texture.sparse_properties->packed_mip_start;
+					last_mip = first_mip + vt->texture.sparse_properties->packed_mip_count - 1;
 				}
 
-				barriers[num_barriers++] = GPUBarrier::Image(&virtual_textures[i], virtual_textures[i].desc.layout, ResourceState::UNORDERED_ACCESS);
+				for (uint32_t mip = first_mip; mip <= last_mip; mip++)
+				{
+					const uint2 request_lod_resolution = uint2(
+						vt->texture.desc.width >> mip,
+						vt->texture.desc.height >> mip
+					);
+
+					const uint2 size = uint2(
+						std::min(request_lod_resolution.x, vt->texture.sparse_properties->tile_width),
+						std::min(request_lod_resolution.y, vt->texture.sparse_properties->tile_height)
+					);
+
+					TerrainVirtualTexturePush push;
+					push.offset = uint2(
+						request.tile_x * size.x,
+						request.tile_y * size.y
+					);
+					push.map_type = vt->map_type;
+					push.region_weights_textureRO = device->GetDescriptorIndex(&vt->region_weights_texture, SubresourceType::SRV);
+					push.output_textureRW = device->GetDescriptorIndex(&vt->texture, SubresourceType::UAV, mip);
+					device->PushConstants(&push, sizeof(push), cmd);
+
+					device->Dispatch((size.x + 7u) / 8u, (size.y + 7u) / 8u, 1, cmd);
+				}
 			}
+			vt->update_requests.clear();
 		}
+		device->EventEnd(cmd);
 
-		device->Barrier(barriers, num_barriers, cmd);
-
-		if (virtual_texture_clear)
-		{
-			for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
-			{
-				if (virtual_textures[i].IsValid())
-				{
-					device->ClearUAV(&virtual_textures[i], 0, cmd);
-				}
-			}
-
-			GPUBarrier memory_barrier = GPUBarrier::Memory();
-			device->Barrier(&memory_barrier, 1, cmd);
-		}
-
-		for (auto& request : virtual_texture_updates)
-		{
-			const GPUResource* res[] = {
-				&request.region_weights_texture,
-			};
-			device->BindResources(res, 0, arraysize(res), cmd);
-
-			uint4 offset_size = uint4(
-				(uint)request.vt.x, (uint)request.vt.y,
-				(uint)request.vt.size, (uint)request.vt.size
-			);
-			device->PushConstants(&offset_size, sizeof(offset_size), cmd);
-
-			device->Dispatch(request.vt.size / 8u, request.vt.size / 8u, 1, cmd);
-		}
-
-		for (uint32_t i = 0; i < num_barriers; ++i)
-		{
-			std::swap(barriers[i].image.layout_before, barriers[i].image.layout_after);
-		}
-		device->Barrier(barriers, num_barriers, cmd);
-
-		virtual_texture_clear = false;
-		virtual_texture_updates.clear();
+		device->Barrier(virtual_texture_barriers_after_update.data(), (uint32_t)virtual_texture_barriers_after_update.size(), cmd);
 
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
 	}
 
-	void Terrain::BakeVirtualTexturesToFiles()
+	void Terrain::CopyVirtualTexturePageStatusGPU(CommandList cmd) const
 	{
-		if (terrainEntity == INVALID_ENTITY)
+		GraphicsDevice* device = GetDevice();
+		device->EventBegin("Terrain - CopyVirtualTexturePageStatusGPU", cmd);
+		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
-			return;
+			if (!vt->residencyMap.IsValid())
+				continue;
+			device->CopyResource(&vt->pageBuffer, &vt->pageBuffer_CPU_upload[vt->cpu_resource_id], cmd);
 		}
-
-		static const std::string extension = "PNG";
-		wi::vector<wi::Resource> resources; // retain resources until end of function
-
-		wi::helper::messageBox("Baking terrain virtual textures to static textures, this could take a while!", "Attention!");
-
-		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
-		{
-			if (virtual_textures[i].IsValid())
-			{
-				wi::vector<uint8_t> texturedata;
-				if (wi::helper::saveTextureToMemory(virtual_textures[i], texturedata))
-				{
-					wi::vector<uint8_t> filedata;
-					if (wi::helper::saveTextureToMemoryFile(texturedata, virtual_textures[i].desc, extension, filedata))
-					{
-						std::string filename = "Terrain::";
-						switch (i)
-						{
-						default:
-						case MaterialComponent::TEXTURESLOT::BASECOLORMAP:
-							filename += "BASECOLORMAP";
-							break;
-						case MaterialComponent::TEXTURESLOT::NORMALMAP:
-							filename += "NORMALMAP";
-							break;
-						case MaterialComponent::TEXTURESLOT::SURFACEMAP:
-							filename += "SURFACEMAP";
-							break;
-						}
-						filename += "." + extension;
-						resources.push_back(
-							wi::resourcemanager::Load(
-								filename,
-								wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA,
-								filedata.data(),
-								filedata.size()
-							)
-						);
-					}
-				}
-			}
-		}
-
-		for (auto it = chunks.begin(); it != chunks.end(); it++)
-		{
-			const Chunk& chunk = it->first;
-			ChunkData& chunk_data = it->second;
-			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
-			if (material != nullptr)
-			{
-				for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
-				{
-					if (virtual_textures[i].IsValid())
-					{
-						std::string filename = "Terrain::";
-						switch (i)
-						{
-						default:
-						case MaterialComponent::TEXTURESLOT::BASECOLORMAP:
-							filename += "BASECOLORMAP";
-							break;
-						case MaterialComponent::TEXTURESLOT::NORMALMAP:
-							filename += "NORMALMAP";
-							break;
-						case MaterialComponent::TEXTURESLOT::SURFACEMAP:
-							filename += "SURFACEMAP";
-							break;
-						}
-						filename += "." + extension;
-						material->textures[i].name = filename;
-					}
-				}
-				material->CreateRenderData();
-			}
-		}
+		device->EventEnd(cmd);
 	}
 
-	void Terrain::CreateChunkRegionTexture(ChunkData& chunk_data)
+	void Terrain::AllocateVirtualTextureTileRequestsGPU(CommandList cmd) const
 	{
-		TextureDesc desc;
-		desc.width = (uint32_t)chunk_width;
-		desc.height = (uint32_t)chunk_width;
-		desc.format = Format::R8G8B8A8_UNORM;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE;
-		SubresourceData data;
-		data.data_ptr = chunk_data.region_weights.data();
-		data.row_pitch = chunk_width * sizeof(chunk_data.region_weights[0]);
-		bool success = GetDevice()->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
-		assert(success);
+		GraphicsDevice* device = GetDevice();
+
+		device->EventBegin("Terrain - AllocateVirtualTextureTileRequestsGPU", cmd);
+		device->Barrier(virtual_texture_barriers_before_allocation.data(), (uint32_t)virtual_texture_barriers_before_allocation.size(), cmd);
+
+		{
+			device->EventBegin("Tile Requests", cmd);
+			device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_VIRTUALTEXTURE_TILEREQUESTS), cmd);
+			for (const VirtualTexture* vt : virtual_textures_in_use)
+			{
+				if (!vt->residencyMap.IsValid())
+					continue;
+				VirtualTextureTileRequestsPush push;
+				push.lodCount = vt->lod_count;
+				push.width = vt->feedbackMap.desc.width;
+				push.height = vt->feedbackMap.desc.height;
+				push.feedbackTextureRO = device->GetDescriptorIndex(&vt->feedbackMap, SubresourceType::SRV);
+				push.requestBufferRW = device->GetDescriptorIndex(&vt->requestBuffer, SubresourceType::UAV);
+				device->PushConstants(&push, sizeof(push), cmd);
+
+				device->Dispatch(
+					(std::max(1u, vt->feedbackMap.desc.width / 2) + 7u) / 8u,
+					(std::max(1u, vt->feedbackMap.desc.height / 2) + 7u) / 8u,
+					1u,
+					cmd
+				);
+			}
+			device->EventEnd(cmd);
+		}
+
+		GPUBarrier memory_barrier = GPUBarrier::Memory();
+		device->Barrier(&memory_barrier, 1, cmd);
+
+		{
+			device->EventBegin("Tile Allocation Requests", cmd);
+			device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_VIRTUALTEXTURE_TILEALLOCATE), cmd);
+			for (const VirtualTexture* vt : virtual_textures_in_use)
+			{
+				if (!vt->residencyMap.IsValid())
+					continue;
+				VirtualTextureTileAllocatePush push;
+				push.threadCount = (uint)vt->pages.size();
+				push.lodCount = vt->lod_count;
+				push.width = vt->feedbackMap.desc.width;
+				push.height = vt->feedbackMap.desc.height;
+				push.pageBufferRO = device->GetDescriptorIndex(&vt->pageBuffer, SubresourceType::SRV);
+				push.requestBufferRW = device->GetDescriptorIndex(&vt->requestBuffer, SubresourceType::UAV);
+				push.allocationBufferRW = device->GetDescriptorIndex(&vt->allocationBuffer, SubresourceType::UAV);
+				device->PushConstants(&push, sizeof(push), cmd);
+
+				device->Dispatch(
+					(push.threadCount + 63u) / 64u,
+					1u,
+					1u,
+					cmd
+				);
+			}
+			device->EventEnd(cmd);
+		}
+
+		device->Barrier(virtual_texture_barriers_after_allocation.data(), (uint32_t)virtual_texture_barriers_after_allocation.size(), cmd);
+
+		device->EventEnd(cmd);
+	}
+
+	void Terrain::WritebackTileRequestsGPU(CommandList cmd) const
+	{
+		GraphicsDevice* device = GetDevice();
+
+		device->EventBegin("Terrain - WritebackTileRequestsGPU", cmd);
+
+		for (const VirtualTexture* vt : virtual_textures_in_use)
+		{
+			if (!vt->residencyMap.IsValid())
+				continue;
+			device->CopyResource(&vt->allocationBuffer_CPU_readback[vt->cpu_resource_id], &vt->allocationBuffer, cmd);
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+			device->CopyResource(&vt->feedbackMap_CPU_readback[vt->cpu_resource_id], &vt->feedbackMap, cmd);
+			device->CopyResource(&vt->residencyMap_CPU_readback[vt->cpu_resource_id], &vt->residencyMap, cmd);
+			device->CopyResource(&vt->requestBuffer_CPU_readback[vt->cpu_resource_id], &vt->requestBuffer, cmd);
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+		}
+
+		device->EventEnd(cmd);
 	}
 
 	void Terrain::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
@@ -1161,7 +1826,11 @@ namespace wi::terrain
 		{
 			archive >> _flags;
 			archive >> lod_multiplier;
-			archive >> texlod;
+			if (seri.GetVersion() < 3)
+			{
+				float texlod;
+				archive >> texlod;
+			}
 			archive >> generation;
 			archive >> prop_generation;
 			archive >> prop_density;
@@ -1181,8 +1850,9 @@ namespace wi::terrain
 			{
 				archive >> physics_generation;
 			}
-			if (seri.GetVersion() >= 2)
+			if (seri.GetVersion() >= 2 && seri.GetVersion() < 3)
 			{
+				uint32_t target_texture_resolution;
 				archive >> target_texture_resolution;
 			}
 
@@ -1274,7 +1944,6 @@ namespace wi::terrain
 				chunk_data.grass.Serialize(archive, seri);
 				archive >> chunk_data.grass_density_current;
 				archive >> chunk_data.region_weights;
-				CreateChunkRegionTexture(chunk_data);
 				archive >> chunk_data.sphere.center;
 				archive >> chunk_data.sphere.radius;
 				archive >> chunk_data.position;
@@ -1336,7 +2005,11 @@ namespace wi::terrain
 		{
 			archive << _flags;
 			archive << lod_multiplier;
-			archive << texlod;
+			if (seri.GetVersion() < 3)
+			{
+				float texlod = 1;
+				archive << texlod;
+			}
 			archive << generation;
 			archive << prop_generation;
 			archive << prop_density;
@@ -1356,8 +2029,9 @@ namespace wi::terrain
 			{
 				archive << physics_generation;
 			}
-			if (seri.GetVersion() >= 2)
+			if (seri.GetVersion() >= 2 && seri.GetVersion() < 3)
 			{
+				uint32_t target_texture_resolution = 1024;
 				archive << target_texture_resolution;
 			}
 

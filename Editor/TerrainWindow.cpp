@@ -276,14 +276,13 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create(ICON_TERRAIN " Terrain", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(420, 940));
 
-	closeButton.SetTooltip("Delete Terrain.\nThis will bake generated virtual textures to static textures which could take a while!");
+	closeButton.SetTooltip("Delete Terrain.");
 	OnClose([=](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
 
-		terrain->BakeVirtualTexturesToFiles();
 		editor->GetCurrentScene().terrains.Remove(entity);
 
 		editor->RecordEntity(archive, entity);
@@ -303,8 +302,6 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		terrain->SetRemovalEnabled(removalCheckBox.GetCheck());
 		terrain->SetGrassEnabled(grassCheckBox.GetCheck());
 		terrain->lod_multiplier = lodSlider.GetValue();
-		terrain->texlod = texlodSlider.GetValue();
-		terrain->target_texture_resolution = (uint32_t)texResolutionSlider.GetValue();
 		terrain->generation = (int)generationSlider.GetValue();
 		terrain->prop_generation = (int)propGenerationSlider.GetValue();
 		terrain->physics_generation = (int)physicsGenerationSlider.GetValue();
@@ -384,24 +381,6 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		terrain->lod_multiplier = args.fValue;
 		});
 	AddWidget(&lodSlider);
-
-	texlodSlider.Create(0.001f, 0.05f, 0.01f, 10000, "Tex LOD Distance: ");
-	texlodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier for virtual textures.\nLow values increase LOD detail in distance");
-	texlodSlider.SetSize(XMFLOAT2(wid, hei));
-	texlodSlider.SetPos(XMFLOAT2(x, y += step));
-	texlodSlider.OnSlide([this](wi::gui::EventArgs args) {
-		terrain->texlod = args.fValue;
-		});
-	AddWidget(&texlodSlider);
-
-	texResolutionSlider.Create(256, 4096, 1024, 4096 - 256, "Tex Resolution: ");
-	texResolutionSlider.SetTooltip("Virtual texture target resolution for most detailed chunk.\nNote: if chunk resolution is bigger than texture resolution, texture scaling will be applied to those chunks.");
-	texResolutionSlider.SetSize(XMFLOAT2(wid, hei));
-	texResolutionSlider.SetPos(XMFLOAT2(x, y += step));
-	texResolutionSlider.OnSlide([this](wi::gui::EventArgs args) {
-		terrain->target_texture_resolution = (uint32_t)args.iValue;
-		});
-	AddWidget(&texResolutionSlider);
 
 	generationSlider.Create(0, 16, 12, 16, "Generation Distance: ");
 	generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
@@ -799,8 +778,6 @@ void TerrainWindow::SetEntity(Entity entity)
 	grassCheckBox.SetCheck(terrain->IsGrassEnabled());
 	physicsCheckBox.SetCheck(terrain->IsPhysicsEnabled());
 	lodSlider.SetValue(terrain->lod_multiplier);
-	texlodSlider.SetValue(terrain->texlod);
-	texResolutionSlider.SetValue((float)terrain->target_texture_resolution);
 	generationSlider.SetValue((float)terrain->generation);
 	propGenerationSlider.SetValue((float)terrain->prop_generation);
 	physicsGenerationSlider.SetValue((float)terrain->physics_generation);
@@ -872,6 +849,12 @@ void TerrainWindow::SetupAssets()
 	terrain_preset.material_Slope.SetRoughness(0.1f);
 	terrain_preset.material_LowAltitude.SetRoughness(1);
 	terrain_preset.material_HighAltitude.SetRoughness(1);
+#if 0
+	terrain_preset.material_Base.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/tile.png";
+	terrain_preset.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/tile.png";
+	terrain_preset.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/tile.png";
+	terrain_preset.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/tile.png";
+#else
 	terrain_preset.material_Base.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/base.jpg";
 	terrain_preset.material_Base.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/base_nor.jpg";
 	terrain_preset.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/slope.jpg";
@@ -880,6 +863,7 @@ void TerrainWindow::SetupAssets()
 	terrain_preset.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/low_altitude_nor.jpg";
 	terrain_preset.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude.jpg";
 	terrain_preset.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude_nor.jpg";
+#endif
 	terrain_preset.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/grassparticle.png";
 	terrain_preset.material_GrassParticle.alphaRef = 0.75f;
 	terrain_preset.grass_properties.length = 2;
@@ -1066,8 +1050,6 @@ void TerrainWindow::ResizeLayout()
 	add_checkbox(grassCheckBox);
 	physicsCheckBox.SetPos(XMFLOAT2(grassCheckBox.GetPos().x - 100, grassCheckBox.GetPos().y));
 	add(lodSlider);
-	add(texlodSlider);
-	add(texResolutionSlider);
 	add(generationSlider);
 	add(propGenerationSlider);
 	add(physicsGenerationSlider);

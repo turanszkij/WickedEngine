@@ -103,6 +103,9 @@ namespace wi::graphics
 			wi::vector<uint64_t> submit_signalValues;
 			wi::vector<VkCommandBuffer> submit_cmds;
 
+			bool sparse_binding_supported = false;
+			std::mutex sparse_mutex;
+
 			void submit(GraphicsDevice_Vulkan* device, VkFence fence);
 
 		} queues[QUEUE_COUNT];
@@ -199,6 +202,7 @@ namespace wi::graphics
 			QUEUE_TYPE queue = {};
 			uint32_t id = 0;
 			wi::vector<CommandList> waits;
+			std::atomic_bool waited_on{ false };
 
 			DescriptorBinder binder;
 			DescriptorBinderPool binder_pools[BUFFERCOUNT];
@@ -359,6 +363,8 @@ namespace wi::graphics
 		}
 
 		uint32_t GetMaxViewportCount() const override { return properties2.properties.limits.maxViewports; };
+
+		void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) override;
 
 		///////////////Thread-sensitive////////////////////////
 
@@ -538,6 +544,7 @@ namespace wi::graphics
 			BindlessDescriptorHeap bindlessSamplers;
 			BindlessDescriptorHeap bindlessAccelerationStructures;
 
+			std::deque<std::pair<VmaAllocation, uint64_t>> destroyer_allocations;
 			std::deque<std::pair<std::pair<VkImage, VmaAllocation>, uint64_t>> destroyer_images;
 			std::deque<std::pair<VkImageView, uint64_t>> destroyer_imageviews;
 			std::deque<std::pair<std::pair<VkBuffer, VmaAllocation>, uint64_t>> destroyer_buffers;
@@ -584,6 +591,19 @@ namespace wi::graphics
 			{
 				destroylocker.lock();
 				framecount = FRAMECOUNT;
+				while (!destroyer_allocations.empty())
+				{
+					if (destroyer_allocations.front().second + BUFFERCOUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_allocations.front();
+						destroyer_allocations.pop_front();
+						vmaFreeMemory(allocator, item.first);
+					}
+					else
+					{
+						break;
+					}
+				}
 				while (!destroyer_images.empty())
 				{
 					if (destroyer_images.front().second + BUFFERCOUNT < FRAMECOUNT)

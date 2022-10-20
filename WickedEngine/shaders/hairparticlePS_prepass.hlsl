@@ -10,9 +10,9 @@ uint main(VertexToPixel input, out uint coverage : SV_Coverage) : SV_Target
 	float alpha = 1;
 
 	[branch]
-	if (material.texture_basecolormap_index >= 0)
+	if (material.textures[BASECOLORMAP].IsValid())
 	{
-		alpha = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex).a;
+		alpha = material.textures[BASECOLORMAP].Sample(sampler_linear_clamp, input.tex.xyxy).a;
 	}
 
 	// Distance dithered fade:

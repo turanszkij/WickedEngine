@@ -607,6 +607,10 @@ namespace vulkan_internal
 			{
 				allocationhandler->destroyer_buffers.push_back(std::make_pair(std::make_pair(resource, allocation), framecount));
 			}
+			else if(allocation)
+			{
+				allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
+			}
 			if (srv.IsValid())
 			{
 				if (srv.is_typed)
@@ -686,6 +690,7 @@ namespace vulkan_internal
 		wi::vector<uint32_t> subresources_framebuffer_layercount;
 
 		wi::vector<SubresourceData> mapped_subresources;
+		SparseTextureProperties sparse_texture_properties;
 
 		~Texture_Vulkan()
 		{
@@ -693,8 +698,18 @@ namespace vulkan_internal
 				return;
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
-			if (resource) allocationhandler->destroyer_images.push_back(std::make_pair(std::make_pair(resource, allocation), framecount));
-			if (staging_resource) allocationhandler->destroyer_buffers.push_back(std::make_pair(std::make_pair(staging_resource, allocation), framecount));
+			if (resource)
+			{
+				allocationhandler->destroyer_images.push_back(std::make_pair(std::make_pair(resource, allocation), framecount));
+			}
+			else if (staging_resource)
+			{
+				allocationhandler->destroyer_buffers.push_back(std::make_pair(std::make_pair(staging_resource, allocation), framecount));
+			}
+			else if (allocation)
+			{
+				allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
+			}
 			if (srv.IsValid())
 			{
 				allocationhandler->destroyer_imageviews.push_back(std::make_pair(srv.image_view, framecount));
@@ -2691,6 +2706,26 @@ using namespace vulkan_internal;
 				capabilities |= GraphicsDeviceCapability::DEPTH_BOUNDS_TEST;
 			}
 
+			if (features2.features.sparseBinding == VK_TRUE)
+			{
+				if (properties2.properties.sparseProperties.residencyNonResidentStrict == VK_TRUE)
+				{
+					capabilities |= GraphicsDeviceCapability::SPARSE_NULL_MAPPING;
+				}
+				if (features2.features.sparseResidencyBuffer == VK_TRUE)
+				{
+					capabilities |= GraphicsDeviceCapability::SPARSE_BUFFER;
+				}
+				if (features2.features.sparseResidencyImage2D == VK_TRUE)
+				{
+					capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE2D;
+				}
+				if (features2.features.sparseResidencyImage3D == VK_TRUE)
+				{
+					capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE3D;
+				}
+			}
+
 			// Find queue families:
 			uint32_t queueFamilyCount = 0;
 			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
@@ -2705,6 +2740,10 @@ using namespace vulkan_internal;
 				if (graphicsFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 				{
 					graphicsFamily = familyIndex;
+					if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
+					{
+						queues[QUEUE_GRAPHICS].sparse_binding_supported = true;
+					}
 				}
 
 				if (copyFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
@@ -2728,15 +2767,27 @@ using namespace vulkan_internal;
 					queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT &&
 					!(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
 					!(queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
-					) {
+					)
+				{
 					copyFamily = familyIndex;
+
+					if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
+					{
+						queues[QUEUE_COPY].sparse_binding_supported = true;
+					}
 				}
 
 				if (queueFamily.queueCount > 0 &&
 					queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT &&
 					!(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-					) {
+					)
+				{
 					computeFamily = familyIndex;
+
+					if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
+					{
+						queues[QUEUE_COMPUTE].sparse_binding_supported = true;
+					}
 				}
 
 				familyIndex++;
@@ -2775,16 +2826,17 @@ using namespace vulkan_internal;
 			}
 
 			volkLoadDevice(device);
-
-			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
-			vkGetDeviceQueue(device, computeFamily, 0, &computeQueue);
-			vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
 		}
 
 		// queues:
 		{
+			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
+			vkGetDeviceQueue(device, computeFamily, 0, &computeQueue);
+			vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
+
 			queues[QUEUE_GRAPHICS].queue = graphicsQueue;
 			queues[QUEUE_COMPUTE].queue = computeQueue;
+			queues[QUEUE_COPY].queue = copyQueue;
 
 			VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
 			timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -2809,6 +2861,13 @@ using namespace vulkan_internal;
 			if (res != VK_SUCCESS)
 			{
 				wi::helper::messageBox("vkCreateSemaphore[QUEUE_COMPUTE] failed! ERROR: " + std::to_string(res), "Error!");
+				wi::platform::Exit();
+			}
+			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_COPY].semaphore);
+			assert(res == VK_SUCCESS);
+			if (res != VK_SUCCESS)
+			{
+				wi::helper::messageBox("vkCreateSemaphore[QUEUE_COPY] failed! ERROR: " + std::to_string(res), "Error!");
 				wi::platform::Exit();
 			}
 		}
@@ -3573,20 +3632,65 @@ using namespace vulkan_internal;
 			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		}
 
-		VmaAllocationCreateInfo allocInfo = {};
-		allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-		if (desc->usage == Usage::READBACK)
+		VkResult res;
+
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL))
 		{
-			bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-			allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-		}
-		else if(desc->usage == Usage::UPLOAD)
-		{
-			bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-			allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			VkMemoryRequirements memory_requirements = {};
+			memory_requirements.alignment = desc->alignment;
+			memory_requirements.size = AlignTo(desc->size, memory_requirements.alignment);
+			memory_requirements.memoryTypeBits = ~0u;
+
+			VmaAllocationCreateInfo create_info = {};
+			create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+			VmaAllocationInfo allocation_info = {};
+
+			res = vmaAllocateMemory(
+				allocationhandler->allocator,
+				&memory_requirements,
+				&create_info,
+				&internal_state->allocation,
+				&allocation_info
+			);
+			assert(res == VK_SUCCESS);
+
+			return res == VK_SUCCESS;
 		}
 
-		VkResult res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
+		{
+			bufferInfo.flags |= VK_BUFFER_CREATE_SPARSE_BINDING_BIT;
+			bufferInfo.flags |= VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT;
+
+			res = vkCreateBuffer(device, &bufferInfo, nullptr, &internal_state->resource);
+			assert(res == VK_SUCCESS);
+
+			VkMemoryRequirements memory_requirements = {};
+			vkGetBufferMemoryRequirements(
+				device,
+				internal_state->resource,
+				&memory_requirements
+			);
+			buffer->sparse_page_size = memory_requirements.alignment;
+		}
+		else
+		{
+			VmaAllocationCreateInfo allocInfo = {};
+			allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+			if (desc->usage == Usage::READBACK)
+			{
+				bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+				allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			}
+			else if (desc->usage == Usage::UPLOAD)
+			{
+				bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+				allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			}
+
+			res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+		}
 		assert(res == VK_SUCCESS);
 
 		if (desc->usage == Usage::READBACK || desc->usage == Usage::UPLOAD)
@@ -3709,15 +3813,13 @@ using namespace vulkan_internal;
 		texture->mapped_size = 0;
 		texture->mapped_subresources = nullptr;
 		texture->mapped_subresource_count = 0;
+		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
 
 		if (texture->desc.mip_levels == 0)
 		{
 			texture->desc.mip_levels = (uint32_t)log2(std::max(texture->desc.width, texture->desc.height)) + 1;
 		}
-
-		VmaAllocationCreateInfo allocInfo = {};
-		allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
 		VkImageCreateInfo imageInfo = {};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -3742,12 +3844,10 @@ using namespace vulkan_internal;
 		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
 		if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
 		if (has_flag(texture->desc.bind_flags, BindFlag::SHADING_RATE))
 		{
@@ -3802,91 +3902,167 @@ using namespace vulkan_internal;
 
 		VkResult res;
 
-		if (texture->desc.usage == Usage::READBACK || texture->desc.usage == Usage::UPLOAD)
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SPARSE))
 		{
-			VkBufferCreateInfo bufferInfo = {};
-			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-			bufferInfo.size = 0;
-			const uint32_t data_stride = GetFormatStride(texture->desc.format);
-			const uint32_t block_size = GetFormatBlockSize(texture->desc.format);
-			const uint32_t num_blocks_x = texture->desc.width / block_size;
-			const uint32_t num_blocks_y = texture->desc.height / block_size;
-			uint32_t mip_width = num_blocks_x;
-			uint32_t mip_height = num_blocks_y;
-			uint32_t mip_depth = texture->desc.depth;
-			for (uint32_t mip = 0; mip < texture->desc.mip_levels; ++mip)
-			{
-				bufferInfo.size += mip_width * mip_height * mip_depth;
-				mip_width = std::max(1u, mip_width / 2);
-				mip_height = std::max(1u, mip_height / 2);
-				mip_depth = std::max(1u, mip_depth / 2);
-			}
-			bufferInfo.size *= imageInfo.arrayLayers;
-			bufferInfo.size *= data_stride;
+			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
+			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
 
-			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-			if (texture->desc.usage == Usage::READBACK)
-			{
-				allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-			}
-			else if(texture->desc.usage == Usage::UPLOAD)
-			{
-				allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-			}
-
-			res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->staging_resource, &internal_state->allocation, nullptr);
+			res = vkCreateImage(device, &imageInfo, nullptr, &internal_state->resource);
 			assert(res == VK_SUCCESS);
 
-			imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
-			imageInfo.mipLevels = 1; // set miplevels to 1 for linear tiling resource (this resource is just temporary)
-			VkImage image;
-			res = vkCreateImage(device, &imageInfo, nullptr, &image);
-			assert(res == VK_SUCCESS);
+			VkMemoryRequirements memory_requirements = {};
+			vkGetImageMemoryRequirements(
+				device,
+				internal_state->resource,
+				&memory_requirements
+			);
+			texture->sparse_page_size = memory_requirements.alignment;
 
-			VkSubresourceLayout subresourcelayout = {};
-			VkImageSubresource subresource = {};
-			subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			vkGetImageSubresourceLayout(device, image, &subresource, &subresourcelayout);
+			uint32_t sparse_requirement_count = 0;
 
-			if (texture->desc.usage == Usage::READBACK || texture->desc.usage == Usage::UPLOAD)
+			vkGetImageSparseMemoryRequirements(
+				device,
+				internal_state->resource,
+				&sparse_requirement_count,
+				nullptr
+			);
+
+			wi::vector<VkSparseImageMemoryRequirements> sparse_requirements(sparse_requirement_count);
+			texture->sparse_properties = &internal_state->sparse_texture_properties;
+
+			vkGetImageSparseMemoryRequirements(
+				device,
+				internal_state->resource,
+				&sparse_requirement_count,
+				sparse_requirements.data()
+			);
+
+			SparseTextureProperties& out_sparse = internal_state->sparse_texture_properties;
+			out_sparse.total_tile_count = uint32_t(memory_requirements.size / memory_requirements.alignment);
+
+			for (size_t i = 0; i < sparse_requirements.size(); ++i)
 			{
-				texture->mapped_data = internal_state->allocation->GetMappedData();
-				texture->mapped_size = internal_state->allocation->GetSize();
-
-				internal_state->mapped_subresources.resize(texture->desc.array_size* texture->desc.mip_levels);
-				size_t subresourceIndex = 0;
-				size_t subresourceDataOffset = 0;
-				for (uint32_t layer = 0; layer < texture->desc.array_size; ++layer)
+				const VkSparseImageMemoryRequirements& in_sparse = sparse_requirements[i];
+				if (i == 0)
 				{
-					uint32_t rowpitch = (uint32_t)subresourcelayout.rowPitch;
-					uint32_t slicepitch = (uint32_t)subresourcelayout.depthPitch;
-					uint32_t mip_width = num_blocks_x;
-					for (uint32_t mip = 0; mip < texture->desc.mip_levels; ++mip)
-					{
-						SubresourceData& subresourcedata = internal_state->mapped_subresources[subresourceIndex++];
-						subresourcedata.data_ptr = (uint8_t*)texture->mapped_data + subresourceDataOffset;
-						subresourcedata.row_pitch = rowpitch;
-						subresourcedata.slice_pitch = slicepitch;
-						subresourceDataOffset += std::max(rowpitch * mip_width, slicepitch);
-						rowpitch = std::max(data_stride, rowpitch / 2);
-						slicepitch = std::max(data_stride, slicepitch / 4); // squared reduction
-						mip_width = std::max(1u, mip_width / 2);
-					}
+					// These should be common for all subresources right? Like in DX12?
+					out_sparse.tile_width = in_sparse.formatProperties.imageGranularity.width;
+					out_sparse.tile_height = in_sparse.formatProperties.imageGranularity.height;
+					out_sparse.tile_depth = in_sparse.formatProperties.imageGranularity.depth;
+					out_sparse.packed_mip_start = in_sparse.imageMipTailFirstLod;
+					out_sparse.packed_mip_count = texture->desc.mip_levels - in_sparse.imageMipTailFirstLod;
+					out_sparse.packed_mip_tile_offset = uint32_t(in_sparse.imageMipTailOffset / memory_requirements.alignment);
+					out_sparse.packed_mip_tile_count = uint32_t(in_sparse.imageMipTailSize / memory_requirements.alignment);
 				}
-				texture->mapped_subresources = internal_state->mapped_subresources.data();
-				texture->mapped_subresource_count = internal_state->mapped_subresources.size();
 			}
 
-			vkDestroyImage(device, image, nullptr);
-			return res == VK_SUCCESS;
 		}
 		else
 		{
-			res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
-			assert(res == VK_SUCCESS);
+			VmaAllocationCreateInfo allocInfo = {};
+			allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+			if (texture->desc.usage == Usage::READBACK || texture->desc.usage == Usage::UPLOAD)
+			{
+				VkBufferCreateInfo bufferInfo = {};
+				bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+				bufferInfo.size = 0;
+				const uint32_t data_stride = GetFormatStride(texture->desc.format);
+				const uint32_t block_size = GetFormatBlockSize(texture->desc.format);
+				const uint32_t num_blocks_x = texture->desc.width / block_size;
+				const uint32_t num_blocks_y = texture->desc.height / block_size;
+				uint32_t mip_width = num_blocks_x;
+				uint32_t mip_height = num_blocks_y;
+				uint32_t mip_depth = texture->desc.depth;
+				for (uint32_t mip = 0; mip < texture->desc.mip_levels; ++mip)
+				{
+					bufferInfo.size += mip_width * mip_height * mip_depth;
+					mip_width = std::max(1u, mip_width / 2);
+					mip_height = std::max(1u, mip_height / 2);
+					mip_depth = std::max(1u, mip_depth / 2);
+				}
+				bufferInfo.size *= imageInfo.arrayLayers;
+				bufferInfo.size *= data_stride;
+
+				allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+				if (texture->desc.usage == Usage::READBACK)
+				{
+					allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+					bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+				}
+				else if (texture->desc.usage == Usage::UPLOAD)
+				{
+					allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+					bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+				}
+
+				res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->staging_resource, &internal_state->allocation, nullptr);
+				assert(res == VK_SUCCESS);
+
+				imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
+				imageInfo.mipLevels = 1; // set miplevels to 1 for linear tiling resource (this resource is just temporary)
+				VkImage image;
+				res = vkCreateImage(device, &imageInfo, nullptr, &image);
+				assert(res == VK_SUCCESS);
+
+				VkSubresourceLayout subresourcelayout = {};
+
+				if (texture->desc.usage == Usage::UPLOAD)
+				{
+					const uint32_t block_size = GetFormatBlockSize(desc->format);
+					const uint32_t num_blocks_x = std::max(1u, desc->width / block_size);
+					const uint32_t num_blocks_y = std::max(1u, desc->height / block_size);
+					const uint32_t rowpitch = num_blocks_x * GetFormatStride(desc->format);
+					const uint32_t slicepitch = rowpitch * num_blocks_y;
+					subresourcelayout.rowPitch = (VkDeviceSize)rowpitch;
+					subresourcelayout.depthPitch = (VkDeviceSize)slicepitch;
+					subresourcelayout.arrayPitch = (VkDeviceSize)slicepitch;
+				}
+				else
+				{
+					VkImageSubresource subresource = {};
+					subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					vkGetImageSubresourceLayout(device, image, &subresource, &subresourcelayout);
+				}
+
+				if (texture->desc.usage == Usage::READBACK || texture->desc.usage == Usage::UPLOAD)
+				{
+					texture->mapped_data = internal_state->allocation->GetMappedData();
+					texture->mapped_size = internal_state->allocation->GetSize();
+
+					internal_state->mapped_subresources.resize(texture->desc.array_size * texture->desc.mip_levels);
+					size_t subresourceIndex = 0;
+					size_t subresourceDataOffset = 0;
+					for (uint32_t layer = 0; layer < texture->desc.array_size; ++layer)
+					{
+						uint32_t rowpitch = (uint32_t)subresourcelayout.rowPitch;
+						uint32_t slicepitch = (uint32_t)subresourcelayout.depthPitch;
+						uint32_t mip_width = num_blocks_x;
+						for (uint32_t mip = 0; mip < texture->desc.mip_levels; ++mip)
+						{
+							SubresourceData& subresourcedata = internal_state->mapped_subresources[subresourceIndex++];
+							subresourcedata.data_ptr = (uint8_t*)texture->mapped_data + subresourceDataOffset;
+							subresourcedata.row_pitch = rowpitch;
+							subresourcedata.slice_pitch = slicepitch;
+							subresourceDataOffset += std::max(rowpitch * mip_width, slicepitch);
+							rowpitch = std::max(data_stride, rowpitch / 2);
+							slicepitch = std::max(data_stride, slicepitch / 4); // squared reduction
+							mip_width = std::max(1u, mip_width / 2);
+						}
+					}
+					texture->mapped_subresources = internal_state->mapped_subresources.data();
+					texture->mapped_subresource_count = internal_state->mapped_subresources.size();
+				}
+
+				vkDestroyImage(device, image, nullptr);
+				return res == VK_SUCCESS;
+			}
+			else
+			{
+				res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+			}
 		}
+		assert(res == VK_SUCCESS);
 
 		// Issue data copy on request:
 		if (initial_data != nullptr)
@@ -6335,6 +6511,7 @@ using namespace vulkan_internal;
 		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
+		commandlist.waited_on.store(false);
 
 		if (commandlist.GetCommandBuffer() == VK_NULL_HANDLE)
 		{
@@ -6351,6 +6528,9 @@ using namespace vulkan_internal;
 					break;
 				case wi::graphics::QUEUE_COMPUTE:
 					poolInfo.queueFamilyIndex = computeFamily;
+					break;
+				case wi::graphics::QUEUE_COPY:
+					poolInfo.queueFamilyIndex = copyFamily;
 					break;
 				default:
 					assert(0); // queue type not handled
@@ -6421,16 +6601,27 @@ using namespace vulkan_internal;
 		{
 			auto& frame = GetFrameResources();
 
-			QUEUE_TYPE submit_queue = QUEUE_COUNT;
-
 			// Transitions:
 			if(submit_inits)
 			{
+				submit_inits = false;
 				res = vkEndCommandBuffer(frame.initCommandBuffer);
 				assert(res == VK_SUCCESS);
+				queues[QUEUE_GRAPHICS].submit_cmds.push_back(frame.initCommandBuffer); // can only be submitted on graphics queue
 			}
 
 			uint64_t copy_sync = copyAllocator.flush();
+			if (copy_sync > 0) // sync up with copyallocator before first submit
+			{
+				for (int q = 0; q < QUEUE_COUNT; ++q)
+				{
+					CommandQueue& queue = queues[q];
+					queue.submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
+					queue.submit_waitSemaphores.push_back(copyAllocator.semaphore);
+					queue.submit_waitValues.push_back(copy_sync);
+				}
+				copy_sync = 0;
+			}
 
 			uint32_t cmd_last = cmd_count;
 			cmd_count = 0;
@@ -6440,58 +6631,43 @@ using namespace vulkan_internal;
 				res = vkEndCommandBuffer(commandlist.GetCommandBuffer());
 				assert(res == VK_SUCCESS);
 
-				if (submit_queue == QUEUE_COUNT) // start first batch
-				{
-					submit_queue = commandlist.queue;
-				}
+				CommandQueue& queue = queues[commandlist.queue];
+				queue.submit_cmds.push_back(commandlist.GetCommandBuffer());
 
-				if (copy_sync > 0) // sync up with copyallocator before first submit
-				{
-					queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
-					queues[submit_queue].submit_waitSemaphores.push_back(copyAllocator.semaphore);
-					queues[submit_queue].submit_waitValues.push_back(copy_sync);
-					copy_sync = 0;
-				}
-
-				if (submit_queue != commandlist.queue || !commandlist.waits.empty()) // new queue type or wait breaks submit batch
-				{
-					// New batch signals its last cmd:
-					queues[submit_queue].submit_signalSemaphores.push_back(queues[submit_queue].semaphore);
-					queues[submit_queue].submit_signalValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)cmd);
-					queues[submit_queue].submit(this, VK_NULL_HANDLE);
-					submit_queue = commandlist.queue;
-
-					for (auto& wait : commandlist.waits)
-					{
-						// record wait for signal on a previous submit:
-						CommandList_Vulkan& waitcommandlist = GetCommandList(wait);
-						queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-						queues[submit_queue].submit_waitSemaphores.push_back(queues[waitcommandlist.queue].semaphore);
-						queues[submit_queue].submit_waitValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id);
-					}
-				}
-
-				if (submit_inits)
-				{
-					queues[submit_queue].submit_cmds.push_back(frame.initCommandBuffer);
-					submit_inits = false;
-				}
-
-				queues[submit_queue].swapchain_updates = commandlist.prev_swapchains;
+				queue.swapchain_updates = commandlist.prev_swapchains;
 				for (auto& swapchain : commandlist.prev_swapchains)
 				{
 					auto internal_state = to_internal(&swapchain);
 
-					queues[submit_queue].submit_swapchains.push_back(internal_state->swapChain);
-					queues[submit_queue].submit_swapChainImageIndices.push_back(internal_state->swapChainImageIndex);
-					queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-					queues[submit_queue].submit_waitSemaphores.push_back(internal_state->swapchainAcquireSemaphore);
-					queues[submit_queue].submit_waitValues.push_back(0); // not a timeline semaphore
-					queues[submit_queue].submit_signalSemaphores.push_back(internal_state->swapchainReleaseSemaphore);
-					queues[submit_queue].submit_signalValues.push_back(0); // not a timeline semaphore
+					queue.submit_swapchains.push_back(internal_state->swapChain);
+					queue.submit_swapChainImageIndices.push_back(internal_state->swapChainImageIndex);
+					queue.submit_waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+					queue.submit_waitSemaphores.push_back(internal_state->swapchainAcquireSemaphore);
+					queue.submit_waitValues.push_back(0); // not a timeline semaphore
+					queue.submit_signalSemaphores.push_back(internal_state->swapchainReleaseSemaphore);
+					queue.submit_signalValues.push_back(0); // not a timeline semaphore
 				}
 
-				queues[submit_queue].submit_cmds.push_back(commandlist.GetCommandBuffer());
+				if (commandlist.waited_on.load() || !commandlist.waits.empty())
+				{
+					for (auto& wait : commandlist.waits)
+					{
+						// Wait for command list dependency:
+						CommandList_Vulkan& waitcommandlist = GetCommandList(wait);
+						queue.submit_waitStages.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+						queue.submit_waitSemaphores.push_back(queues[waitcommandlist.queue].semaphore);
+						queue.submit_waitValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id);
+					}
+
+					if (commandlist.waited_on.load())
+					{
+						// Signal this command list's completion:
+						queue.submit_signalSemaphores.push_back(queue.semaphore);
+						queue.submit_signalValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)commandlist.id);
+					}
+
+					queue.submit(this, VK_NULL_HANDLE);
+				}
 
 				for (auto& x : commandlist.pipelines_worker)
 				{
@@ -6510,9 +6686,9 @@ using namespace vulkan_internal;
 			}
 
 			// final submits with fences:
-			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+			for (int q = 0; q < QUEUE_COUNT; ++q)
 			{
-				queues[queue].submit(this, frame.fence[queue]);
+				queues[q].submit(this, frame.fence[q]);
 			}
 		}
 
@@ -6650,11 +6826,216 @@ using namespace vulkan_internal;
 		return false;
 	}
 
+	void GraphicsDevice_Vulkan::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
+	{
+		thread_local wi::vector<VkBindSparseInfo> sparse_infos;
+		struct DataPerBind
+		{
+			VkSparseBufferMemoryBindInfo buffer_bind_info;
+			VkSparseImageOpaqueMemoryBindInfo image_opaque_bind_info;
+			VkSparseImageMemoryBindInfo image_bind_info;
+			wi::vector<VkSparseMemoryBind> memory_binds;
+			wi::vector<VkSparseImageMemoryBind> image_memory_binds;
+		};
+		thread_local wi::vector<DataPerBind> sparse_binds;
+
+		sparse_infos.resize(command_count);
+		sparse_binds.resize(command_count);
+
+		for (uint32_t i = 0; i < command_count; ++i)
+		{
+			const SparseUpdateCommand& in_command = commands[i];
+			VkBindSparseInfo& out_info = sparse_infos[i];
+			out_info = {};
+			out_info.sType = VK_STRUCTURE_TYPE_BIND_SPARSE_INFO;
+
+			DataPerBind& out_bind = sparse_binds[i];
+
+			VkDeviceMemory tile_pool_memory = VK_NULL_HANDLE;
+			VkDeviceSize tile_pool_offset = 0;
+			if (in_command.tile_pool != nullptr)
+			{
+				auto internal_tile_pool = to_internal(in_command.tile_pool);
+				tile_pool_memory = internal_tile_pool->allocation->GetMemory();
+				tile_pool_offset = internal_tile_pool->allocation->GetOffset();
+			}
+
+			out_bind.memory_binds.clear();
+			out_bind.image_memory_binds.clear();
+
+			out_bind.memory_binds.reserve(in_command.num_resource_regions);
+			out_bind.image_memory_binds.reserve(in_command.num_resource_regions);
+
+			const VkSparseMemoryBind* memory_bind_ptr = out_bind.memory_binds.data();
+			const VkSparseImageMemoryBind* image_memory_bind_ptr = out_bind.image_memory_binds.data();
+
+			if (in_command.sparse_resource->IsBuffer())
+			{
+				auto internal_sparse = to_internal((const GPUBuffer*)in_command.sparse_resource);
+
+				VkSparseBufferMemoryBindInfo& info = out_bind.buffer_bind_info;
+				info = {};
+				info.buffer = internal_sparse->resource;
+				info.pBinds = memory_bind_ptr;
+				info.bindCount = in_command.num_resource_regions;
+				memory_bind_ptr += in_command.num_resource_regions;
+
+				for (uint32_t j = 0; j < in_command.num_resource_regions; ++j)
+				{
+					const SparseResourceCoordinate& in_coordinate = in_command.coordinates[j];
+					const SparseRegionSize& in_size = in_command.sizes[j];
+
+					const TileRangeFlags& in_flags = in_command.range_flags[j];
+					uint32_t in_offset = in_command.range_start_offsets[j];
+					uint32_t in_tile_count = in_command.range_tile_counts[j];
+					VkSparseMemoryBind& out_memory_bind = out_bind.memory_binds.emplace_back();
+					out_memory_bind = {};
+					out_memory_bind.resourceOffset = in_coordinate.x * in_command.sparse_resource->sparse_page_size;
+					out_memory_bind.size = in_tile_count * in_command.sparse_resource->sparse_page_size;
+					if (in_flags == TileRangeFlags::Null)
+					{
+						out_memory_bind.memory = VK_NULL_HANDLE;
+					}
+					else
+					{
+						out_memory_bind.memory = tile_pool_memory;
+						out_memory_bind.memoryOffset = tile_pool_offset + in_offset * in_command.sparse_resource->sparse_page_size;
+					}
+				}
+
+				if (out_info.bufferBindCount > 0)
+				{
+					out_info.pBufferBinds = &out_bind.buffer_bind_info;
+					out_info.bufferBindCount = 1;
+				}
+			}
+			else if (in_command.sparse_resource->IsTexture())
+			{
+				const Texture* sparse_texture = (const Texture*)in_command.sparse_resource;
+				const TextureDesc& texture_desc = sparse_texture->GetDesc();
+				auto internal_sparse = to_internal(sparse_texture);
+
+				VkImageAspectFlags aspectMask = {};
+				if (has_flag(texture_desc.bind_flags, BindFlag::DEPTH_STENCIL))
+				{
+					aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+					if (IsFormatStencilSupport(texture_desc.format))
+					{
+						aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+					}
+				}
+				if (has_flag(texture_desc.bind_flags, BindFlag::RENDER_TARGET) ||
+					has_flag(texture_desc.bind_flags, BindFlag::SHADER_RESOURCE) ||
+					has_flag(texture_desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+				{
+					aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
+				}
+
+				VkSparseImageOpaqueMemoryBindInfo& opaque_info = out_bind.image_opaque_bind_info;
+				opaque_info = {};
+				opaque_info.image = internal_sparse->resource;
+				opaque_info.pBinds = memory_bind_ptr;
+				opaque_info.bindCount = 0;
+
+				VkSparseImageMemoryBindInfo& info = out_bind.image_bind_info;
+				info = {};
+				info.image = internal_sparse->resource;
+				info.pBinds = image_memory_bind_ptr;
+				info.bindCount = 0;
+
+				for (uint32_t j = 0; j < in_command.num_resource_regions; ++j)
+				{
+					const SparseResourceCoordinate& in_coordinate = in_command.coordinates[j];
+					const SparseRegionSize& in_size = in_command.sizes[j];
+					const bool is_miptail = in_coordinate.mip >= internal_sparse->sparse_texture_properties.packed_mip_start;
+
+					if (is_miptail)
+					{
+						opaque_info.bindCount++;
+						memory_bind_ptr++;
+
+						const TileRangeFlags& in_flags = in_command.range_flags[j];
+						uint32_t in_offset = in_command.range_start_offsets[j];
+						uint32_t in_tile_count = in_command.range_tile_counts[j];
+						VkSparseMemoryBind& out_memory_bind = out_bind.memory_binds.emplace_back();
+						out_memory_bind = {};
+						out_memory_bind.resourceOffset = internal_sparse->sparse_texture_properties.packed_mip_tile_offset * sparse_texture->sparse_page_size;
+						out_memory_bind.size = in_tile_count * in_command.sparse_resource->sparse_page_size;
+						if (in_flags == TileRangeFlags::Null)
+						{
+							out_memory_bind.memory = VK_NULL_HANDLE;
+						}
+						else
+						{
+							out_memory_bind.memory = tile_pool_memory;
+							out_memory_bind.memoryOffset = tile_pool_offset + in_offset * in_command.sparse_resource->sparse_page_size;
+						}
+					}
+					else
+					{
+						info.bindCount++;
+						image_memory_bind_ptr++;
+
+						const TileRangeFlags& in_flags = in_command.range_flags[j];
+						uint32_t in_offset = in_command.range_start_offsets[j];
+						uint32_t in_tile_count = in_command.range_tile_counts[j];
+						VkSparseImageMemoryBind& out_image_memory_bind = out_bind.image_memory_binds.emplace_back();
+						out_image_memory_bind = {};
+						if (in_flags == TileRangeFlags::Null)
+						{
+							out_image_memory_bind.memory = VK_NULL_HANDLE;
+						}
+						else
+						{
+							out_image_memory_bind.memory = tile_pool_memory;
+							out_image_memory_bind.memoryOffset = tile_pool_offset + in_offset * in_command.sparse_resource->sparse_page_size;
+						}
+						out_image_memory_bind.subresource.mipLevel = in_coordinate.mip;
+						out_image_memory_bind.subresource.arrayLayer = in_coordinate.slice;
+						out_image_memory_bind.subresource.aspectMask = aspectMask;
+						out_image_memory_bind.offset.x = in_coordinate.x * internal_sparse->sparse_texture_properties.tile_width;
+						out_image_memory_bind.offset.y = in_coordinate.y * internal_sparse->sparse_texture_properties.tile_height;
+						out_image_memory_bind.offset.z = in_coordinate.z * internal_sparse->sparse_texture_properties.tile_depth;
+						out_image_memory_bind.extent.width = in_size.width * internal_sparse->sparse_texture_properties.tile_width;
+						out_image_memory_bind.extent.height = in_size.height * internal_sparse->sparse_texture_properties.tile_height;
+						out_image_memory_bind.extent.depth = in_size.depth * internal_sparse->sparse_texture_properties.tile_depth;
+					}
+
+				}
+
+				if (opaque_info.bindCount > 0)
+				{
+					out_info.pImageOpaqueBinds = &out_bind.image_opaque_bind_info;
+					out_info.imageOpaqueBindCount = 1;
+				}
+				if (info.bindCount > 0)
+				{
+					out_info.pImageBinds = &out_bind.image_bind_info;
+					out_info.imageBindCount = 1;
+				}
+
+			}
+
+		}
+
+		// Queue command:
+		{
+			CommandQueue& q = queues[queue];
+			std::scoped_lock lock(q.sparse_mutex);
+			assert(q.sparse_binding_supported);
+
+			VkResult res = vkQueueBindSparse(q.queue, (uint32_t)sparse_infos.size(), sparse_infos.data(), VK_NULL_HANDLE);
+			assert(res == VK_SUCCESS);
+		}
+	}
+
 	void GraphicsDevice_Vulkan::WaitCommandList(CommandList cmd, CommandList wait_for)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		assert(GetCommandList(wait_for).id < commandlist.id); // can't wait for future command list!
+		CommandList_Vulkan& commandlist_wait_for = GetCommandList(wait_for);
+		assert(commandlist_wait_for.id < commandlist.id); // can't wait for future command list!
 		commandlist.waits.push_back(wait_for);
+		commandlist_wait_for.waited_on.store(true);
 	}
 	void GraphicsDevice_Vulkan::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{

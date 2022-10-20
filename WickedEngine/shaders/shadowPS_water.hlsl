@@ -9,10 +9,9 @@ float4 main(PixelInput input) : SV_TARGET
 
 	float4 color;
 	[branch]
-	if (GetMaterial().uvset_baseColorMap >= 0)
+	if (GetMaterial().textures[BASECOLORMAP].IsValid())
 	{
-		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		color = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap);
+		color = GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, input.uvsets);
 		color.rgb = DEGAMMA(color.rgb);
 	}
 	else

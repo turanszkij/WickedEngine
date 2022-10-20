@@ -55,6 +55,7 @@ namespace wi::graphics
 		uint32_t dsv_descriptor_size = 0;
 		uint32_t resource_descriptor_size = 0;
 		uint32_t sampler_descriptor_size = 0;
+		D3D12_RESOURCE_HEAP_TIER resource_heap_tier = {};
 
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> nulldescriptorheap_cbv_srv_uav;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> nulldescriptorheap_sampler;
@@ -119,6 +120,7 @@ namespace wi::graphics
 			QUEUE_TYPE queue = {};
 			uint32_t id = 0;
 			wi::vector<CommandList> waits;
+			std::atomic_bool waited_on{ false };
 
 			DescriptorBinder binder;
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
@@ -266,6 +268,8 @@ namespace wi::graphics
 		}
 
 		uint32_t GetMaxViewportCount() const override { return D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE; };
+
+		void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) override;
 
 		///////////////Thread-sensitive////////////////////////
 

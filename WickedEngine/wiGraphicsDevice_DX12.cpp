@@ -1320,7 +1320,7 @@ namespace dx12_internal
 		wi::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
 		wi::vector<UINT64> rowSizesInBytes;
 		wi::vector<UINT> numRows;
-		wi::vector<SubresourceData> mapped_subresources;
+		SparseTextureProperties sparse_texture_properties;
 
 		virtual ~Resource_DX12()
 		{
@@ -1348,6 +1348,8 @@ namespace dx12_internal
 		SingleDescriptor dsv = {};
 		wi::vector<SingleDescriptor> subresources_rtv;
 		wi::vector<SingleDescriptor> subresources_dsv;
+
+		wi::vector<SubresourceData> mapped_subresources;
 
 		~Texture_DX12() override
 		{
@@ -2380,6 +2382,7 @@ using namespace dx12_internal;
 #ifdef _DEBUG
 				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+				//d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
 #endif
 
 				std::vector<D3D12_MESSAGE_SEVERITY> enabledSeverities;
@@ -2436,52 +2439,80 @@ using namespace dx12_internal;
 			wi::platform::Exit();
 		}
 
-		queues[QUEUE_GRAPHICS].desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-		queues[QUEUE_GRAPHICS].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-		queues[QUEUE_GRAPHICS].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		queues[QUEUE_GRAPHICS].desc.NodeMask = 0;
-		hr = device->CreateCommandQueue(&queues[QUEUE_GRAPHICS].desc, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].queue));
-		assert(SUCCEEDED(hr));
-		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
-			wi::platform::Exit();
-		}
-		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].fence));
-		assert(SUCCEEDED(hr));
-		if (FAILED(hr))
-		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateFence[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
-			wi::platform::Exit();
-		}
-
-		queues[QUEUE_COMPUTE].desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-		queues[QUEUE_COMPUTE].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-		queues[QUEUE_COMPUTE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		queues[QUEUE_COMPUTE].desc.NodeMask = 0;
-		hr = device->CreateCommandQueue(&queues[QUEUE_COMPUTE].desc, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].queue));
-		assert(SUCCEEDED(hr));
-		if (FAILED(hr))
-		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
-			wi::platform::Exit();
-		}
-		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].fence));
-		assert(SUCCEEDED(hr));
-		if (FAILED(hr))
-		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateFence[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
-			wi::platform::Exit();
+			queues[QUEUE_GRAPHICS].desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+			queues[QUEUE_GRAPHICS].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			queues[QUEUE_GRAPHICS].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queues[QUEUE_GRAPHICS].desc.NodeMask = 0;
+			hr = device->CreateCommandQueue(&queues[QUEUE_GRAPHICS].desc, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].queue));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].fence));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateFence[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
 		}
 
+		{
+			queues[QUEUE_COMPUTE].desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+			queues[QUEUE_COMPUTE].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			queues[QUEUE_COMPUTE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queues[QUEUE_COMPUTE].desc.NodeMask = 0;
+			hr = device->CreateCommandQueue(&queues[QUEUE_COMPUTE].desc, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].queue));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].fence));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateFence[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+		}
+
+		{
+			queues[QUEUE_COPY].desc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+			queues[QUEUE_COPY].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			queues[QUEUE_COPY].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queues[QUEUE_COPY].desc.NodeMask = 0;
+			hr = device->CreateCommandQueue(&queues[QUEUE_COPY].desc, IID_PPV_ARGS(&queues[QUEUE_COPY].queue));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COPY] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_COPY].fence));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateFence[QUEUE_COPY] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+		}
 
 		rtv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		dsv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
@@ -2639,10 +2670,23 @@ using namespace dx12_internal;
 		{
 			capabilities |= GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
 		}
-		if (features.TiledResourcesTier() >= D3D12_TILED_RESOURCES_TIER_2)
+		if (features.TiledResourcesTier() >= D3D12_TILED_RESOURCES_TIER_1)
 		{
-			// https://docs.microsoft.com/en-us/windows/win32/direct3d11/tiled-resources-texture-sampling-features
-			capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
+			capabilities |= GraphicsDeviceCapability::SPARSE_BUFFER;
+			capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE2D;
+
+			if (features.TiledResourcesTier() >= D3D12_TILED_RESOURCES_TIER_2)
+			{
+				capabilities |= GraphicsDeviceCapability::SPARSE_NULL_MAPPING;
+
+				// https://docs.microsoft.com/en-us/windows/win32/direct3d11/tiled-resources-texture-sampling-features
+				capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
+
+				if (features.TiledResourcesTier() >= D3D12_TILED_RESOURCES_TIER_3)
+				{
+					capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE3D;
+				}
+			}
 		}
 
 		if (features.TypedUAVLoadAdditionalFormats())
@@ -2693,6 +2737,8 @@ using namespace dx12_internal;
 			wi::helper::messageBox("DX12: Root signature version 1.1 not supported!", "Error!");
 			wi::platform::Exit();
 		}
+
+		resource_heap_tier = features.ResourceHeapTier();
 
 		// Create pipeline library:
 #if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
@@ -3155,14 +3201,50 @@ using namespace dx12_internal;
 			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 		}
 
-		hr = allocationhandler->allocator->CreateResource(
-			&allocationDesc,
-			&resourceDesc,
-			resourceState,
-			nullptr,
-			&internal_state->allocation,
-			IID_PPV_ARGS(&internal_state->resource)
-		);
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL))
+		{
+			// Sparse tile pool must not be a committed resource because that uses implicit heap which returns nullptr,
+			//	thus it cannot be offsetted. This is why we create custom allocation here which will never be committed resource
+			//	(since it has no resource)
+			D3D12_RESOURCE_ALLOCATION_INFO allocationInfo = {};
+			allocationInfo.Alignment = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+			allocationInfo.SizeInBytes = AlignTo(desc->size, D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+
+			// tile pool memory can be used for sparse buffers and textures alike (requires resource heap tier 2):
+			allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
+			assert(resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2); // todo: what should we do if tier 2 is not supported?
+
+			hr = allocationhandler->allocator->AllocateMemory(
+				&allocationDesc,
+				&allocationInfo,
+				&internal_state->allocation
+			);
+
+			assert(SUCCEEDED(hr));
+			return SUCCEEDED(hr);
+		}
+
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
+		{
+			hr = device->CreateReservedResource(
+				&resourceDesc,
+				resourceState,
+				nullptr,
+				IID_PPV_ARGS(&internal_state->resource)
+			);
+			buffer->sparse_page_size = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+		}
+		else
+		{
+			hr = allocationhandler->allocator->CreateResource(
+				&allocationDesc,
+				&resourceDesc,
+				resourceState,
+				nullptr,
+				&internal_state->allocation,
+				IID_PPV_ARGS(&internal_state->resource)
+			);
+		}
 		assert(SUCCEEDED(hr));
 
 		internal_state->gpu_address = internal_state->resource->GetGPUVirtualAddress();
@@ -3232,6 +3314,7 @@ using namespace dx12_internal;
 		texture->mapped_size = 0;
 		texture->mapped_subresources = nullptr;
 		texture->mapped_subresource_count = 0;
+		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
 
 		HRESULT hr = E_FAIL;
@@ -3358,14 +3441,54 @@ using namespace dx12_internal;
 			}
 		}
 
-		hr = allocationhandler->allocator->CreateResource(
-			&allocationDesc,
-			&resourcedesc,
-			resourceState,
-			useClearValue ? &optimizedClearValue : nullptr,
-			&internal_state->allocation,
-			IID_PPV_ARGS(&internal_state->resource)
-		);
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SPARSE))
+		{
+			resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
+			hr = device->CreateReservedResource(
+				&resourcedesc,
+				resourceState,
+				useClearValue ? &optimizedClearValue : nullptr,
+				IID_PPV_ARGS(&internal_state->resource)
+			);
+			texture->sparse_page_size = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+
+			UINT num_tiles_for_entire_resource = 0;
+			D3D12_PACKED_MIP_INFO packed_mip_info = {};
+			D3D12_TILE_SHAPE tile_shape = {};
+			UINT num_subresource_tilings = 0;
+
+			device->GetResourceTiling(
+				internal_state->resource.Get(),
+				&num_tiles_for_entire_resource,
+				&packed_mip_info,
+				&tile_shape,
+				&num_subresource_tilings,
+				0,
+				nullptr
+			);
+
+			SparseTextureProperties& sparse = internal_state->sparse_texture_properties;
+			texture->sparse_properties = &sparse;
+			sparse.tile_width = tile_shape.WidthInTexels;
+			sparse.tile_height = tile_shape.HeightInTexels;
+			sparse.tile_depth = tile_shape.DepthInTexels;
+			sparse.total_tile_count = num_tiles_for_entire_resource;
+			sparse.packed_mip_start = packed_mip_info.NumStandardMips;
+			sparse.packed_mip_count = packed_mip_info.NumPackedMips;
+			sparse.packed_mip_tile_offset = packed_mip_info.StartTileIndexInOverallResource;
+			sparse.packed_mip_tile_count = packed_mip_info.NumTilesForPackedMips;
+		}
+		else
+		{
+			hr = allocationhandler->allocator->CreateResource(
+				&allocationDesc,
+				&resourcedesc,
+				resourceState,
+				useClearValue ? &optimizedClearValue : nullptr,
+				&internal_state->allocation,
+				IID_PPV_ARGS(&internal_state->resource)
+			);
+		}
 		assert(SUCCEEDED(hr));
 
 		if (texture->desc.usage == Usage::READBACK)
@@ -5029,6 +5152,7 @@ using namespace dx12_internal;
 		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
+		commandlist.waited_on.store(false);
 
 		if (commandlist.GetGraphicsCommandList() == nullptr)
 		{
@@ -5055,11 +5179,14 @@ using namespace dx12_internal;
 		hr = commandlist.GetGraphicsCommandList()->Reset(commandlist.GetCommandAllocator(), nullptr);
 		assert(SUCCEEDED(hr));
 
-		ID3D12DescriptorHeap* heaps[2] = {
-			descriptorheap_res.heap_GPU.Get(),
-			descriptorheap_sam.heap_GPU.Get()
-		};
-		commandlist.GetGraphicsCommandList()->SetDescriptorHeaps(arraysize(heaps), heaps);
+		if (queue != QUEUE_COPY)
+		{
+			ID3D12DescriptorHeap* heaps[2] = {
+				descriptorheap_res.heap_GPU.Get(),
+				descriptorheap_sam.heap_GPU.Get()
+			};
+			commandlist.GetGraphicsCommandList()->SetDescriptorHeaps(arraysize(heaps), heaps);
+		}
 
 		if (queue == QUEUE_GRAPHICS)
 		{
@@ -5082,8 +5209,6 @@ using namespace dx12_internal;
 
 		// Submit current frame:
 		{
-			QUEUE_TYPE submit_queue = QUEUE_COUNT;
-
 			uint32_t cmd_last = cmd_count;
 			cmd_count = 0;
 			for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
@@ -5092,45 +5217,40 @@ using namespace dx12_internal;
 				hr = commandlist.GetGraphicsCommandList()->Close();
 				assert(SUCCEEDED(hr));
 
-				if (submit_queue == QUEUE_COUNT)
+				CommandQueue& queue = queues[commandlist.queue];
+				queue.submit_cmds.push_back(commandlist.GetGraphicsCommandList());
+
+				if (commandlist.waited_on.load() || !commandlist.waits.empty())
 				{
-					submit_queue = commandlist.queue;
-				}
-				if (commandlist.queue != submit_queue || !commandlist.waits.empty()) // new queue type or wait breaks submit batch
-				{
-					// submit previous cmd batch:
-					if (!queues[submit_queue].submit_cmds.empty())
-					{
-						queues[submit_queue].queue->ExecuteCommandLists(
-							(UINT)queues[submit_queue].submit_cmds.size(),
-							queues[submit_queue].submit_cmds.data()
-						);
-						queues[submit_queue].submit_cmds.clear();
-					}
-
-					// signal status in case any future waits needed:
-					hr = queues[submit_queue].queue->Signal(
-						queues[submit_queue].fence.Get(),
-						FRAMECOUNT * commandlists.size() + (uint64_t)cmd
-					);
-					assert(SUCCEEDED(hr));
-
-					submit_queue = commandlist.queue;
-
 					for (auto& wait : commandlist.waits)
 					{
 						// record wait for signal on a previous submit:
 						const CommandList_DX12& waitcommandlist = GetCommandList(wait);
-						hr = queues[submit_queue].queue->Wait(
+						hr = queue.queue->Wait(
 							queues[waitcommandlist.queue].fence.Get(),
 							FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id
 						);
 						assert(SUCCEEDED(hr));
 					}
-				}
 
-				assert(submit_queue < QUEUE_COUNT);
-				queues[submit_queue].submit_cmds.push_back(commandlist.GetGraphicsCommandList());
+					if (!queue.submit_cmds.empty())
+					{
+						queue.queue->ExecuteCommandLists(
+							(UINT)queue.submit_cmds.size(),
+							queue.submit_cmds.data()
+						);
+						queue.submit_cmds.clear();
+					}
+
+					if (commandlist.waited_on.load())
+					{
+						hr = queue.queue->Signal(
+							queue.fence.Get(),
+							FRAMECOUNT * commandlists.size() + (uint64_t)commandlist.id
+						);
+						assert(SUCCEEDED(hr));
+					}
+				}
 
 				for (auto& x : commandlist.pipelines_worker)
 				{
@@ -5148,19 +5268,21 @@ using namespace dx12_internal;
 				commandlist.pipelines_worker.clear();
 			}
 
-			// submit last cmd batch:
-			assert(submit_queue < QUEUE_COUNT);
-			assert(!queues[submit_queue].submit_cmds.empty());
-			queues[submit_queue].queue->ExecuteCommandLists(
-				(UINT)queues[submit_queue].submit_cmds.size(),
-				queues[submit_queue].submit_cmds.data()
-			);
-			queues[submit_queue].submit_cmds.clear();
-
 			// Mark the completion of queues for this frame:
-			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+			for (int q = 0; q < QUEUE_COUNT; ++q)
 			{
-				hr = queues[queue].queue->Signal(frame_fence[GetBufferIndex()][queue].Get(), 1);
+				CommandQueue& queue = queues[q];
+
+				if (!queue.submit_cmds.empty())
+				{
+					queue.queue->ExecuteCommandLists(
+						(UINT)queue.submit_cmds.size(),
+						queue.submit_cmds.data()
+					);
+					queue.submit_cmds.clear();
+				}
+
+				hr = queue.queue->Signal(frame_fence[GetBufferIndex()][q].Get(), 1);
 				assert(SUCCEEDED(hr));
 			}
 
@@ -5382,11 +5504,97 @@ using namespace dx12_internal;
 		return false;
 	}
 
+	void GraphicsDevice_DX12::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
+	{
+		CommandQueue& q = queues[queue];
+
+		thread_local wi::vector<D3D12_TILED_RESOURCE_COORDINATE> tiled_resource_coordinates;
+		thread_local wi::vector<D3D12_TILE_REGION_SIZE> tiled_region_sizes;
+		thread_local wi::vector<D3D12_TILE_RANGE_FLAGS> tile_range_flags;
+		thread_local wi::vector<uint32_t> range_start_offsets;
+
+		for (uint32_t c = 0; c < command_count; ++c)
+		{
+			const SparseUpdateCommand& command = commands[c];
+			auto internal_sparse_resource = to_internal(command.sparse_resource);
+			uint32_t mip_count = 0;
+			uint32_t array_size = 0;
+			if (command.sparse_resource->IsTexture())
+			{
+				const Texture* sparse_texture = (const Texture*)command.sparse_resource;
+				mip_count = sparse_texture->desc.mip_levels;
+				array_size = sparse_texture->desc.array_size;
+			}
+			ID3D12Heap* heap = nullptr;
+			uint32_t heap_page_offset = 0;
+			if (command.tile_pool != nullptr)
+			{
+				auto internal_tile_pool = to_internal(command.tile_pool);
+				heap = internal_tile_pool->allocation->GetHeap();
+				heap_page_offset = uint32_t(internal_tile_pool->allocation->GetOffset() / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+			}
+			tiled_resource_coordinates.resize(command.num_resource_regions);
+			tiled_region_sizes.resize(command.num_resource_regions);
+			for (uint32_t i = 0; i < command.num_resource_regions; ++i)
+			{
+				const SparseResourceCoordinate& in_coordinate = command.coordinates[i];
+				const SparseRegionSize& in_size = command.sizes[i];
+				D3D12_TILED_RESOURCE_COORDINATE& out_coordinate = tiled_resource_coordinates[i];
+				D3D12_TILE_REGION_SIZE& out_size = tiled_region_sizes[i];
+				out_coordinate.X = in_coordinate.x;
+				out_coordinate.Y = in_coordinate.y;
+				out_coordinate.Z = in_coordinate.z;
+				out_coordinate.Subresource = D3D12CalcSubresource(in_coordinate.mip, in_coordinate.slice, 0, mip_count, array_size);
+				out_size.UseBox = in_coordinate.mip < internal_sparse_resource->sparse_texture_properties.packed_mip_start; // only for non packed mips
+				out_size.Width = in_size.width;
+				out_size.Height = in_size.height;
+				out_size.Depth = in_size.depth;
+				out_size.NumTiles = out_size.Width * out_size.Height * out_size.Depth;
+			}
+			tile_range_flags.resize(command.num_resource_regions);
+			range_start_offsets.resize(command.num_resource_regions);
+			for (uint32_t i = 0; i < command.num_resource_regions; ++i)
+			{
+				const TileRangeFlags& in_flags = command.range_flags[i];
+				D3D12_TILE_RANGE_FLAGS& out_flags = tile_range_flags[i];
+				switch (in_flags)
+				{
+				default:
+				case TileRangeFlags::None:
+					out_flags = D3D12_TILE_RANGE_FLAG_NONE;
+					break;
+				case TileRangeFlags::Null:
+					out_flags = D3D12_TILE_RANGE_FLAG_NULL;
+					break;
+				}
+				const uint32_t in_offset = command.range_start_offsets[i];
+				uint32_t& out_offset = range_start_offsets[i];
+				out_offset = heap_page_offset + in_offset;
+			}
+
+			// No need to lock this, it is thread safe
+			q.queue->UpdateTileMappings(
+				internal_sparse_resource->resource.Get(),
+				command.num_resource_regions,
+				tiled_resource_coordinates.data(),
+				tiled_region_sizes.data(),
+				heap,
+				command.num_resource_regions,
+				tile_range_flags.data(),
+				range_start_offsets.data(),
+				command.range_tile_counts,
+				D3D12_TILE_MAPPING_FLAG_NONE
+			);
+		}
+	}
+
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		assert(GetCommandList(wait_for).id < commandlist.id); // can't wait for future command list!
+		CommandList_DX12& commandlist_wait_for = GetCommandList(wait_for);
+		assert(commandlist_wait_for.id < commandlist.id); // can't wait for future command list!
 		commandlist.waits.push_back(wait_for);
+		commandlist_wait_for.waited_on.store(true);
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{

@@ -46,93 +46,84 @@ namespace wi::terrain
 	static constexpr float chunk_width_rcp = 1.0f / (chunk_width - 1);
 	static constexpr uint32_t vertexCount = chunk_width * chunk_width;
 
-	struct VirtualTextureAllocator
+	struct GPUPageAllocator
 	{
-		static constexpr uint32_t min_tile_constant = 8;
-		static constexpr uint32_t max_width_constant = 8192;
-		uint32_t max_tile = 0;
-		uint32_t width = 0;
-		uint32_t height = 0;
-		struct Tile
-		{
-			uint32_t x = 0;
-			uint32_t y = 0;
-			uint32_t size = 0;
+		size_t block_size = 0;
+		size_t page_size = 0;
+		wi::vector<wi::graphics::GPUBuffer> blocks;
 
-			constexpr bool IsValid() const { return size > 0; }
+		struct Page
+		{
+			uint16_t block = 0;			// index into blocks array
+			uint16_t index = 0xFFFF;	// index into block's pages
+			constexpr bool IsValid() const { return index < 0xFFFF; }
 		};
-		struct LOD
-		{
-			wi::vector<Tile> free_tiles;
-		};
-		wi::vector<LOD> lods;
+		wi::vector<Page> pages;
 
-		void init(uint32_t max_tile)
-		{
-			max_tile = wi::math::GetNextPowerOfTwo(max_tile);
-			max_tile = std::min(max_tile, max_width_constant);
-			this->max_tile = max_tile;
-			width = 0;
-			height = 0;
-			lods.clear();
+		void init(size_t block_size, size_t page_size);
+		void new_block();
+		Page allocate();
+		void free(Page page);
+	};
 
-			uint32_t tile_size = max_tile;
-			uint32_t tile_count = max_width_constant / (tile_size / 2);
-			uint32_t y = 0;
-			while (tile_size >= min_tile_constant)
+//#define TERRAIN_VIRTUAL_TEXTURE_DEBUG
+	struct VirtualTexture
+	{
+		wi::graphics::Texture texture;
+		wi::graphics::Texture residencyMap;
+		wi::graphics::Texture feedbackMap;
+		wi::graphics::GPUBuffer requestBuffer;
+		wi::graphics::GPUBuffer allocationBuffer;
+		wi::graphics::GPUBuffer allocationBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		wi::graphics::GPUBuffer pageBuffer;
+		wi::graphics::GPUBuffer pageBuffer_CPU_upload[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1] = {};
+		int cpu_resource_id = 0;
+		wi::vector<GPUPageAllocator::Page> pages;
+		uint32_t lod_count = 0;
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+		uint32_t tile_allocation_count = 0;
+		uint32_t tile_deallocation_count = 0;
+		wi::graphics::Texture feedbackMap_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		wi::graphics::Texture residencyMap_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		wi::graphics::GPUBuffer requestBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+
+		void init(GPUPageAllocator& page_allocator, const wi::graphics::TextureDesc& desc);
+
+		void free(GPUPageAllocator& page_allocator)
+		{
+			for (auto& page : pages)
 			{
-				LOD& lod = lods.emplace_back();
-
-				uint32_t x = 0;
-				for (uint32_t i = 0; i < tile_count; ++i)
-				{
-					if (x + tile_size > max_width_constant)
-					{
-						x = 0;
-						y += tile_size;
-					}
-					Tile tile;
-					tile.x = x;
-					tile.y = y;
-					tile.size = tile_size;
-					lod.free_tiles.push_back(tile);
-
-					width = std::max(width, tile.x + tile.size);
-					height = std::max(height, tile.y + tile.size);
-					x += tile_size;
-				}
-				y += tile_size;
-				tile_size /= 2;
-				tile_count *= 2;
+				page_allocator.free(page);
+				page = {};
 			}
 		}
 
-		LOD& get_lod(uint32_t tile_size)
-		{
-			int lod = (int)lods.size() - 1 - ((int)std::log2(tile_size) - (int)std::log2(min_tile_constant));
-			lod = std::max(0, lod);
-			lod = std::min((int)lods.size() - 1, lod);
-			return lods[lod];
-		}
+		void DrawDebug(wi::graphics::CommandList cmd);
 
-		Tile allocate(uint32_t tile_size)
+		// Attach this data to Virtual Texture because we will record these by separate CPU thread:
+		struct UpdateRequest
 		{
-			LOD& lod = get_lod(tile_size);
-			if (lod.free_tiles.empty())
-				return {};
+			uint16_t lod = 0;
+			uint8_t tile_x = 0;
+			uint8_t tile_y = 0;
+		};
+		mutable wi::vector<UpdateRequest> update_requests;
+		wi::graphics::Texture region_weights_texture;
+		uint32_t map_type = 0;
 
-			Tile tile = lod.free_tiles.back();
-			lod.free_tiles.pop_back();
-			return tile;
-		}
+		void SparseMap(GPUPageAllocator& allocator, GPUPageAllocator::Page page, uint32_t x, uint32_t y, uint32_t mip);
+		void SparseFlush(GPUPageAllocator& allocator);
 
-		void free(Tile& tile)
-		{
-			if (!tile.IsValid())
-				return;
-			LOD& lod = get_lod(tile.size);
-			lod.free_tiles.push_back(tile);
-		}
+	private:
+		wi::vector<wi::graphics::SparseResourceCoordinate> sparse_coordinate;
+		wi::vector<wi::graphics::SparseRegionSize> sparse_size;
+		wi::vector<wi::graphics::TileRangeFlags> tile_range_flags;
+		wi::vector<uint32_t> tile_range_offset;
+		wi::vector<uint32_t> tile_range_count;
+		uint32_t last_block = 0;
 	};
 
 	struct ChunkData
@@ -148,8 +139,9 @@ namespace wi::terrain
 		wi::graphics::Texture region_weights_texture;
 		wi::primitive::Sphere sphere;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		bool visible = true;
 
-		VirtualTextureAllocator::Tile vt;
+		wi::vector<VirtualTexture> vt;
 	};
 
 	struct Prop
@@ -202,16 +194,13 @@ namespace wi::terrain
 		std::shared_ptr<Generator> generator;
 		float generation_time_budget_milliseconds = 12; // after this much time, the generation thread will exit. This can help avoid a very long running, resource consuming and slow cancellation generation
 
-		VirtualTextureAllocator virtual_texture_allocator;
-		wi::graphics::Texture virtual_textures[wi::scene::MaterialComponent::TEXTURESLOT_COUNT];
-		struct VirtualTextureUpdateRequest
-		{
-			VirtualTextureAllocator::Tile vt;
-			float score = 0;
-			wi::graphics::Texture region_weights_texture;
-		};
-		mutable wi::vector<VirtualTextureUpdateRequest> virtual_texture_updates;
-		mutable bool virtual_texture_clear = false;
+		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_update;
+		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_update;
+		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_allocation;
+		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_allocation;
+		wi::vector<const VirtualTexture*> virtual_textures_in_use;
+		GPUPageAllocator page_allocator;
+		wi::graphics::Sampler sampler;
 
 		constexpr bool IsCenterToCamEnabled() const { return _flags & CENTER_TO_CAM; }
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }
@@ -226,7 +215,6 @@ namespace wi::terrain
 		constexpr void SetPhysicsEnabled(bool value) { if (value) { _flags |= PHYSICS; } else { _flags &= ~PHYSICS; } }
 
 		float lod_multiplier = 0.005f;
-		float texlod = 0.01f;
 		int generation = 12;
 		int prop_generation = 10;
 		int physics_generation = 3;
@@ -239,7 +227,6 @@ namespace wi::terrain
 		float region1 = 1;
 		float region2 = 2;
 		float region3 = 8;
-		uint32_t target_texture_resolution = 1024;
 
 		wi::vector<std::shared_ptr<Modifier>> modifiers;
 		wi::vector<Modifier*> modifiers_to_remove;
@@ -254,12 +241,14 @@ namespace wi::terrain
 		void Generation_Update(const wi::scene::CameraComponent& camera);
 		// Tells the generation thread that it should be cancelled and blocks until that is confirmed
 		void Generation_Cancel();
-		// Updates the virtual textures on GPU by compute shaders
-		void UpdateVirtualTextures(wi::graphics::CommandList cmd) const;
-		// The virtual textures will be compressed and saved into resources. They can be serialized from there
-		void BakeVirtualTexturesToFiles();
-		// Creates the blend weight texture for a chunk data
+		// Creates the textures for a chunk data
 		void CreateChunkRegionTexture(ChunkData& chunk_data);
+
+		void UpdateVirtualTexturesCPU();
+		void UpdateVirtualTexturesGPU(wi::graphics::CommandList cmd) const;
+		void CopyVirtualTexturePageStatusGPU(wi::graphics::CommandList cmd) const;
+		void AllocateVirtualTextureTileRequestsGPU(wi::graphics::CommandList cmd) const;
+		void WritebackTileRequestsGPU(wi::graphics::CommandList cmd) const;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

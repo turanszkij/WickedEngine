@@ -211,12 +211,11 @@ namespace wi::scene
 					return nullptr;
 				return &resource.GetTexture();
 			}
-			int GetUVSet() const
-			{
-				if (!resource.IsValid() || !resource.GetTexture().IsValid())
-					return -1;
-				return (int)uvset;
-			}
+
+			// Non-serialized attributes:
+			float lod_clamp = 0;						// optional, can be used by texture streaming
+			int sparse_residencymap_descriptor = -1;	// optional, can be used by texture streaming
+			int sparse_feedbackmap_descriptor = -1;		// optional, can be used by texture streaming
 		};
 		TextureMap textures[TEXTURESLOT_COUNT];
 
@@ -225,6 +224,7 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		uint32_t layerMask = ~0u;
+		int sampler_descriptor = -1; // optional
 
 		// User stencil value can be in range [0, 15]
 		inline void SetUserStencilRef(uint8_t value)

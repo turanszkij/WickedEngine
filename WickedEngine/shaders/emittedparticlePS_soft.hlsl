@@ -12,14 +12,14 @@ float4 main(VertextoPixel input) : SV_TARGET
 	float4 color = 1;
 
 	[branch]
-	if (material.texture_basecolormap_index >= 0)
+	if (material.textures[BASECOLORMAP].IsValid())
 	{
-		color = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex.xy);
+		color = material.textures[BASECOLORMAP].Sample(sampler_linear_clamp, input.tex.xyxy);
 
 		[branch]
 		if (xEmitterOptions & EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED)
 		{
-			float4 color2 = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex.zw);
+			float4 color2 = material.textures[BASECOLORMAP].Sample(sampler_linear_clamp, input.tex.zwzw);
 			color = lerp(color, color2, input.frameBlend);
 		}
 	}

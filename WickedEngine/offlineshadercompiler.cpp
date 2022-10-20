@@ -200,6 +200,9 @@ wi::vector<ShaderEntry> shaders = {
 	{"terrainVirtualTextureUpdateCS", wi::graphics::ShaderStage::CS },
 	{"meshlet_prepareCS", wi::graphics::ShaderStage::CS },
 	{"impostor_prepareCS", wi::graphics::ShaderStage::CS },
+	{"virtualTextureTileRequestsCS", wi::graphics::ShaderStage::CS },
+	{"virtualTextureTileAllocateCS", wi::graphics::ShaderStage::CS },
+	{"virtualTextureResidencyUpdateCS", wi::graphics::ShaderStage::CS },
 
 
 	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },
@@ -343,7 +346,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"emittedparticleMS", wi::graphics::ShaderStage::MS },
 
 
-	{"rtreflectionLIB", wi::graphics::ShaderStage::LIB },
+	//{"rtreflectionLIB", wi::graphics::ShaderStage::LIB },
 };
 
 struct Target

@@ -41,6 +41,7 @@ namespace wi::graphics
 	{
 		QUEUE_GRAPHICS,
 		QUEUE_COMPUTE,
+		QUEUE_COPY,
 
 		QUEUE_COUNT,
 	};
@@ -155,7 +156,11 @@ namespace wi::graphics
 		// Returns video memory statistics for the current application
 		virtual MemoryUsage GetMemoryUsage() const = 0;
 
+		// Returns the maximum amount of viewports that can be bound at once
 		virtual uint32_t GetMaxViewportCount() const = 0;
+
+		// Performs a batched mapping of sparse resource pages to a tile pool
+		virtual void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) {};
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Command List functions are below:

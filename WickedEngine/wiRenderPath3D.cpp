@@ -336,6 +336,7 @@ namespace wi
 				desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS));
 			}
 
+			desc.flags |= RenderPassDesc::Flags::ALLOW_UAV_WRITES;
 			device->CreateRenderPass(&desc, &renderpass_main);
 		}
 		{
@@ -355,6 +356,7 @@ namespace wi
 			{
 				desc.attachments.push_back(RenderPassAttachment::Resolve(rtMain));
 			}
+			desc.flags |= RenderPassDesc::Flags::ALLOW_UAV_WRITES;
 			device->CreateRenderPass(&desc, &renderpass_transparent);
 		}
 		{
@@ -693,6 +695,18 @@ namespace wi
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		wi::jobsystem::context ctx;
 
+		CommandList cmd_copypages;
+		if (scene->terrains.GetCount() > 0)
+		{
+			cmd_copypages = device->BeginCommandList(QUEUE_COPY);
+			wi::jobsystem::Execute(ctx, [this, cmd_copypages](wi::jobsystem::JobArgs args) {
+				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
+				{
+					scene->terrains[i].CopyVirtualTexturePageStatusGPU(cmd_copypages);
+				}
+				});
+		}
+
 		// Preparing the frame:
 		CommandList cmd = device->BeginCommandList();
 		CommandList cmd_prepareframe = cmd;
@@ -710,6 +724,10 @@ namespace wi
 		cmd = device->BeginCommandList(QUEUE_COMPUTE);
 		CommandList cmd_prepareframe_async = cmd;
 		device->WaitCommandList(cmd, cmd_prepareframe);
+		if (cmd_copypages.IsValid())
+		{
+			device->WaitCommandList(cmd, cmd_copypages);
+		}
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
 			wi::renderer::BindCameraCB(
@@ -1175,7 +1193,28 @@ namespace wi
 			}
 
 			device->EventEnd(cmd);
+		});
+
+		if (scene->terrains.GetCount() > 0)
+		{
+			CommandList cmd_allocation_tilerequest = device->BeginCommandList(QUEUE_COMPUTE);
+			device->WaitCommandList(cmd_allocation_tilerequest, cmd); // wait for opaque scene
+			wi::jobsystem::Execute(ctx, [this, cmd_allocation_tilerequest](wi::jobsystem::JobArgs args) {
+				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
+				{
+					scene->terrains[i].AllocateVirtualTextureTileRequestsGPU(cmd_allocation_tilerequest);
+				}
 			});
+
+			CommandList cmd_writeback_tilerequest = device->BeginCommandList(QUEUE_COPY);
+			device->WaitCommandList(cmd_writeback_tilerequest, cmd_allocation_tilerequest);
+			wi::jobsystem::Execute(ctx, [this, cmd_writeback_tilerequest](wi::jobsystem::JobArgs args) {
+				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
+				{
+					scene->terrains[i].WritebackTileRequestsGPU(cmd_writeback_tilerequest);
+				}
+			});
+		}
 
 		// Transparents, post processes, etc:
 		cmd = device->BeginCommandList();

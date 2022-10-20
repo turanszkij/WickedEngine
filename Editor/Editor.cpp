@@ -2455,6 +2455,18 @@ void EditorComponent::Compose(CommandList cmd) const
 		params.size = 30;
 		wi::font::Draw("Scene saved: " + GetCurrentEditorScene().path, params, cmd);
 	}
+
+#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
+	auto& scene = GetCurrentScene();
+	if (scene.terrains.GetCount() > 0)
+	{
+		auto& terrain = scene.terrains[0];
+		if (!terrain.chunks[terrain.center_chunk].vt.empty())
+		{
+			terrain.chunks[terrain.center_chunk].vt[0].DrawDebug(cmd);
+		}
+	}
+#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 }
 
 void EditorComponent::ClearSelected()
