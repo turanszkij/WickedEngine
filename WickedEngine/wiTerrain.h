@@ -81,7 +81,6 @@ namespace wi::terrain
 		int cpu_resource_id = 0;
 		wi::vector<GPUPageAllocator::Page> pages;
 		uint32_t lod_count = 0;
-		uint32_t updated_since = 0;
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 		uint32_t tile_allocation_count = 0;
