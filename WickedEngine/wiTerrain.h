@@ -90,7 +90,7 @@ namespace wi::terrain
 		wi::graphics::GPUBuffer requestBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
 #endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 
-		void init(const wi::graphics::TextureDesc& desc);
+		void init(GPUPageAllocator& page_allocator, const wi::graphics::TextureDesc& desc);
 
 		void free(GPUPageAllocator& page_allocator)
 		{

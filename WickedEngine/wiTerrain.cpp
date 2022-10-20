@@ -227,7 +227,7 @@ namespace wi::terrain
 		pages.push_back(page);
 	}
 
-	void VirtualTexture::init(const TextureDesc& desc)
+	void VirtualTexture::init(GPUPageAllocator& page_allocator, const TextureDesc& desc)
 	{
 		GraphicsDevice* device = GetDevice();
 		bool success = device->CreateTexture(&desc, nullptr, &texture);
@@ -388,6 +388,45 @@ namespace wi::terrain
 			}
 		}
 
+		locker.lock();
+		if (page_allocator.blocks.empty())
+		{
+			page_allocator.init(64ull * 1024ull * 1024ull, texture.sparse_page_size);
+		}
+		locker.unlock();
+
+		if (feedbackMap.IsValid())
+		{
+			// Allocate least detailed mip level up front:
+			//	This is needed because for the first few frames the GPU readback won't be ready to use
+			//	So in the first few frames after creation, the least detailed mip will be shown until GPU data is available
+			const uint32_t least_detailed_lod = lod_count - 1;
+			GPUPageAllocator::Page& page = pages.back();
+			page = page_allocator.allocate();
+			SparseMap(page_allocator, page, 0, 0, least_detailed_lod);
+		}
+		else
+		{
+			// For small/distant textures, we just map each tile up front and not manage residencies:
+			uint32_t l_offset = 0;
+			for (uint32_t lod = 0; lod < lod_count; ++lod)
+			{
+				const uint32_t l_width = std::max(1u, width >> lod);
+				const uint32_t l_height = std::max(1u, height >> lod);
+				for (uint32_t y = 0; y < l_height; ++y)
+				{
+					for (uint32_t x = 0; x < l_width; ++x)
+					{
+						const uint32_t l_index = l_offset + x + y * l_width;
+						GPUPageAllocator::Page& page = pages[l_index];
+						page = page_allocator.allocate();
+						SparseMap(page_allocator, page, x, y, lod);
+					}
+				}
+				l_offset += l_width * l_height;
+			}
+		}
+		SparseFlush(page_allocator);
 	}
 	void VirtualTexture::DrawDebug(CommandList cmd)
 	{
@@ -1453,53 +1492,12 @@ namespace wi::terrain
 					{
 						desc.format = Format::R8G8B8A8_UNORM;
 					}
-					vt.init(desc);
+					vt.init(page_allocator, desc);
 
 					material->textures[map_type].resource.SetTexture(vt.texture);
 					material->textures[map_type].sparse_residencymap_descriptor = device->GetDescriptorIndex(&vt.residencyMap, SubresourceType::SRV);
 					material->textures[map_type].sparse_feedbackmap_descriptor = device->GetDescriptorIndex(&vt.feedbackMap, SubresourceType::UAV);
 
-					locker.lock();
-					if (page_allocator.blocks.empty())
-					{
-						page_allocator.init(64ull * 1024ull * 1024ull, vt.texture.sparse_page_size);
-					}
-					locker.unlock();
-
-					if(vt.feedbackMap.IsValid())
-					{
-						// Allocate least detailed mip level up front:
-						//	This is needed because for the first few frames the GPU readback won't be ready to use
-						//	So in the first few frames after creation, the least detailed mip will be shown until GPU data is available
-						const uint32_t least_detailed_lod = vt.lod_count - 1;
-						GPUPageAllocator::Page& page = vt.pages.back();
-						page = page_allocator.allocate();
-						vt.SparseMap(page_allocator, page, 0, 0, least_detailed_lod);
-					}
-					else
-					{
-						// For small/distant textures, we just map each tile up front and not manage residencies:
-						uint32_t width = std::max(1u, vt.texture.desc.width / vt.texture.sparse_properties->tile_width);
-						uint32_t height = std::max(1u, vt.texture.desc.height / vt.texture.sparse_properties->tile_height);
-						uint32_t l_offset = 0;
-						for (uint32_t lod = 0; lod < vt.lod_count; ++lod)
-						{
-							const uint32_t l_width = std::max(1u, width >> lod);
-							const uint32_t l_height = std::max(1u, height >> lod);
-							for (uint32_t y = 0; y < l_height; ++y)
-							{
-								for (uint32_t x = 0; x < l_width; ++x)
-								{
-									const uint32_t l_index = l_offset + x + y * l_width;
-									GPUPageAllocator::Page& page = vt.pages[l_index];
-									page = page_allocator.allocate();
-									vt.SparseMap(page_allocator, page, x, y, lod);
-								}
-							}
-							l_offset += l_width * l_height;
-						}
-					}
-					vt.SparseFlush(page_allocator);
 					vt.region_weights_texture = chunk_data.region_weights_texture;
 					vt.map_type = map_type;
 				}
