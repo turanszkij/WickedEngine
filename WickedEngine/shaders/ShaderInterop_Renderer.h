@@ -135,12 +135,12 @@ struct ShaderTextureSlot
 		Texture2D tex = GetTexture();
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
-#ifdef PRT
-		uint prt_status;
-		float4 value = tex.Sample(sam, uv, 0, 0, prt_status);
+#ifdef SVT // "Sparse Virtual Texture"
+		uint svt_status;
+		float4 value = tex.Sample(sam, uv, 0, 0, svt_status);
 
 		[branch]
-		if (!CheckAccessFullyMapped(prt_status))
+		if (!CheckAccessFullyMapped(svt_status))
 		{
 			float lod_clamp = GetLodClamp();
 
@@ -167,7 +167,7 @@ struct ShaderTextureSlot
 		}
 #else
 		float4 value = tex.Sample(sam, uv);
-#endif // PRT
+#endif // SVT
 		return value;
 	}
 
@@ -176,12 +176,12 @@ struct ShaderTextureSlot
 		Texture2D tex = GetTexture();
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
-#ifdef PRT
-		uint prt_status;
-		float4 value = tex.SampleLevel(sam, uv, lod, 0, prt_status);
+#ifdef SVT // "Sparse Virtual Texture"
+		uint svt_status;
+		float4 value = tex.SampleLevel(sam, uv, lod, 0, svt_status);
 
 		[branch]
-		if (!CheckAccessFullyMapped(prt_status))
+		if (!CheckAccessFullyMapped(svt_status))
 		{
 			float lod_clamp = GetLodClamp();
 
@@ -207,7 +207,7 @@ struct ShaderTextureSlot
 		}
 #else
 		float4 value = tex.SampleLevel(sam, uv, lod);
-#endif // PRT
+#endif // SVT
 		return value;
 	}
 
@@ -218,12 +218,12 @@ struct ShaderTextureSlot
 		float2 uv_dx = GetUVSet() == 0 ? uvsets_dx.xy : uvsets_dx.zw;
 		float2 uv_dy = GetUVSet() == 0 ? uvsets_dy.xy : uvsets_dy.zw;
 
-#ifdef PRT
-		uint prt_status;
-		float4 value = tex.SampleGrad(sam, uv, uv_dx, uv_dy, 0, 0, prt_status);
+#ifdef SVT // "Sparse Virtual Texture"
+		uint svt_status;
+		float4 value = tex.SampleGrad(sam, uv, uv_dx, uv_dy, 0, 0, svt_status);
 
 		[branch]
-		if (!CheckAccessFullyMapped(prt_status))
+		if (!CheckAccessFullyMapped(svt_status))
 		{
 			float lod_clamp = GetLodClamp();
 
@@ -251,7 +251,7 @@ struct ShaderTextureSlot
 		}
 #else
 		float4 value = tex.SampleGrad(sam, uv, uv_dx, uv_dy);
-#endif // PRT
+#endif // SVT
 		return value;
 	}
 #endif // __cplusplus

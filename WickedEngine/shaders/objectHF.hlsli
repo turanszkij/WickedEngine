@@ -21,7 +21,7 @@
 #endif // DISABLE_ALPHATEST
 
 #ifdef EARLY_DEPTH_STENCIL
-#define PRT // Partially Resident Textures
+#define SVT // "Sparse Virtual Texture"
 #endif // EARLY_DEPTH_STENCIL
 
 

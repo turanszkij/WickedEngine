@@ -227,7 +227,7 @@ namespace wi::terrain
 		pages.push_back(page);
 	}
 
-	void VirtualTexture::init(const wi::graphics::TextureDesc& desc)
+	void VirtualTexture::init(const TextureDesc& desc)
 	{
 		GraphicsDevice* device = GetDevice();
 		bool success = device->CreateTexture(&desc, nullptr, &texture);
@@ -781,7 +781,7 @@ namespace wi::terrain
 		}
 	}
 
-	void Terrain::Generation_Update(const wi::scene::CameraComponent& camera)
+	void Terrain::Generation_Update(const CameraComponent& camera)
 	{
 		// The generation task is always cancelled every frame so we are sure that generation is not running at this point
 		Generation_Cancel();
@@ -1410,7 +1410,7 @@ namespace wi::terrain
 			// This should have been created on generation thread, but if not (serialized), create it last minute:
 			CreateChunkRegionTexture(chunk_data);
 
-			const uint32_t min_resolution = 128u;
+			const uint32_t min_resolution = 256u;
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 			const uint32_t max_resolution = 2048;
 #else
@@ -1464,6 +1464,7 @@ namespace wi::terrain
 						GPUPageAllocator::Page& page = vt.pages.back();
 						page = page_allocator.allocate();
 						vt.SparseMap(page_allocator, page, 0, 0, least_detailed_lod);
+						vt.SparseFlush(page_allocator);
 					}
 					vt.region_weights_texture = chunk_data.region_weights_texture;
 					vt.map_type = map_type;
@@ -1518,6 +1519,7 @@ namespace wi::terrain
 							const uint8_t y = (allocation_request >> 16u) & 0xFF;
 							const uint8_t lod = (allocation_request >> 8u) & 0xFF;
 							const bool allocate = allocation_request & 0x1;
+							const bool must_be_always_resident = (int)lod == ((int)vt.lod_count - 1);
 							if (lod >= vt.lod_count)
 								continue;
 							const uint32_t l_offset = lod_offsets[lod];
@@ -1540,7 +1542,7 @@ namespace wi::terrain
 									vt.SparseMap(page_allocator, page, x, y, lod);
 								}
 							}
-							else
+							else if(!must_be_always_resident)
 							{
 								if (!page.IsValid())
 								{
@@ -1754,7 +1756,7 @@ namespace wi::terrain
 		device->EventEnd(cmd);
 	}
 
-	void Terrain::WritebackTileRequestsGPU(wi::graphics::CommandList cmd) const
+	void Terrain::WritebackTileRequestsGPU(CommandList cmd) const
 	{
 		GraphicsDevice* device = GetDevice();
 

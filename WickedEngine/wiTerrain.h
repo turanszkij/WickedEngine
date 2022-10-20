@@ -245,9 +245,7 @@ namespace wi::terrain
 		// Creates the textures for a chunk data
 		void CreateChunkRegionTexture(ChunkData& chunk_data);
 
-		// Evaluate tile request, allocate tiles, map, create update reques
 		void UpdateVirtualTexturesCPU();
-		// Updates the virtual textures on GPU by compute shaders
 		void UpdateVirtualTexturesGPU(wi::graphics::CommandList cmd) const;
 		void CopyVirtualTexturePageStatusGPU(wi::graphics::CommandList cmd) const;
 		void AllocateVirtualTextureTileRequestsGPU(wi::graphics::CommandList cmd) const;
