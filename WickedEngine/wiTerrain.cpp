@@ -1623,6 +1623,8 @@ namespace wi::terrain
 		device->EventBegin("Terrain - UpdateVirtualTexturesGPU", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Terrain - UpdateVirtualTexturesGPU", cmd);
 
+		wi::renderer::ProcessDeferredMipGenRequests(cmd); // source textures should be mipmapped at this point
+
 		device->Barrier(virtual_texture_barriers_before_update.data(), (uint32_t)virtual_texture_barriers_before_update.size(), cmd);
 
 		device->EventBegin("Clear Metadata", cmd);
