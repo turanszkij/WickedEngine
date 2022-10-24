@@ -114,6 +114,7 @@ void ScriptWindow::SetEntity(wi::ecs::Entity entity)
 		{
 			fileButton.SetText("Open File...");
 		}
+		playonceCheckBox.SetCheck(script->IsPlayingOnlyOnce());
 	}
 }
 
