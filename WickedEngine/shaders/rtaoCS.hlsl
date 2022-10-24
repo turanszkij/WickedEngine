@@ -1,3 +1,4 @@
+#define TEXTURE_SLOT_NONUNIFORM
 #define RTAPI
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"

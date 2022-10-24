@@ -135,7 +135,9 @@ struct ShaderTextureSlot
 		Texture2D tex = GetTexture();
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
-#ifdef SVT // "Sparse Virtual Texture"
+#ifdef DISABLE_SVT
+		float4 value = tex.Sample(sam, uv);
+#else
 		uint svt_status;
 		float4 value = tex.Sample(sam, uv, 0, 0, svt_status);
 
@@ -155,6 +157,7 @@ struct ShaderTextureSlot
 			value = tex.Sample(sam, uv, 0, lod_clamp);
 		}
 
+#ifdef SVT_FEEDBACK
 		[branch]
 		if (sparse_feedbackmap_descriptor >= 0)
 		{
@@ -165,9 +168,8 @@ struct ShaderTextureSlot
 			float lod = tex.CalculateLevelOfDetail(sam, uv);
 			InterlockedMin(feedback_map[pixel], uint(lod));
 		}
-#else
-		float4 value = tex.Sample(sam, uv);
-#endif // SVT
+#endif // SVT_FEEDBACK
+#endif // DISABLE_SVT
 		return value;
 	}
 
@@ -176,7 +178,9 @@ struct ShaderTextureSlot
 		Texture2D tex = GetTexture();
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
-#ifdef SVT // "Sparse Virtual Texture"
+#ifdef DISABLE_SVT
+		float4 value = tex.SampleLevel(sam, uv, lod);
+#else
 		uint svt_status;
 		float4 value = tex.SampleLevel(sam, uv, lod, 0, svt_status);
 
@@ -196,6 +200,7 @@ struct ShaderTextureSlot
 			value = tex.SampleLevel(sam, uv, max(lod, lod_clamp));
 		}
 
+#ifdef SVT_FEEDBACK
 		[branch]
 		if (sparse_feedbackmap_descriptor >= 0)
 		{
@@ -205,9 +210,8 @@ struct ShaderTextureSlot
 			uint2 pixel = uv * dim;
 			InterlockedMin(feedback_map[pixel], uint(lod));
 		}
-#else
-		float4 value = tex.SampleLevel(sam, uv, lod);
-#endif // SVT
+#endif // SVT_FEEDBACK
+#endif // DISABLE_SVT
 		return value;
 	}
 
@@ -218,7 +222,9 @@ struct ShaderTextureSlot
 		float2 uv_dx = GetUVSet() == 0 ? uvsets_dx.xy : uvsets_dx.zw;
 		float2 uv_dy = GetUVSet() == 0 ? uvsets_dy.xy : uvsets_dy.zw;
 
-#ifdef SVT // "Sparse Virtual Texture"
+#ifdef DISABLE_SVT
+		float4 value = tex.SampleGrad(sam, uv, uv_dx, uv_dy);
+#else
 		uint svt_status;
 		float4 value = tex.SampleGrad(sam, uv, uv_dx, uv_dy, 0, 0, svt_status);
 
@@ -238,6 +244,7 @@ struct ShaderTextureSlot
 			value = tex.SampleGrad(sam, uv, uv_dx, uv_dy, 0, lod_clamp);
 		}
 
+#ifdef SVT_FEEDBACK
 		[branch]
 		if (sparse_feedbackmap_descriptor >= 0)
 		{
@@ -249,9 +256,8 @@ struct ShaderTextureSlot
 			float lod = log2(max(length(uv_dx * dim), length(uv_dy * dim))); // https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#7.18.11%20LOD%20Calculations
 			InterlockedMin(feedback_map[pixel], uint(lod));
 		}
-#else
-		float4 value = tex.SampleGrad(sam, uv, uv_dx, uv_dy);
-#endif // SVT
+#endif // SVT_FEEDBACK
+#endif // DISABLE_SVT
 		return value;
 	}
 #endif // __cplusplus

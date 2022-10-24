@@ -21,7 +21,7 @@
 #endif // DISABLE_ALPHATEST
 
 #ifdef EARLY_DEPTH_STENCIL
-#define SVT // "Sparse Virtual Texture"
+#define SVT_FEEDBACK
 #endif // EARLY_DEPTH_STENCIL
 
 

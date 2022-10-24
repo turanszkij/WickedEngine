@@ -130,7 +130,14 @@ inline ShaderEntity load_entity(uint entityIndex)
 }
 inline float4x4 load_entitymatrix(uint matrixIndex)
 {
-	return transpose(bindless_buffers[GetFrame().buffer_entitymatrixarray_index].Load<float4x4>(matrixIndex * sizeof(float4x4)));
+	// Workaround for: https://github.com/microsoft/DirectXShaderCompiler/issues/4738
+	ByteAddressBuffer buffer = bindless_buffers[GetFrame().buffer_entitymatrixarray_index];
+	return transpose(float4x4(
+		buffer.Load<float4>((matrixIndex * 4 + 0) * sizeof(float4)),
+		buffer.Load<float4>((matrixIndex * 4 + 1) * sizeof(float4)),
+		buffer.Load<float4>((matrixIndex * 4 + 2) * sizeof(float4)),
+		buffer.Load<float4>((matrixIndex * 4 + 3) * sizeof(float4))
+		));
 }
 
 struct PrimitiveID

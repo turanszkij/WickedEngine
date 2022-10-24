@@ -2,6 +2,7 @@
 #define DISABLE_SOFT_SHADOWMAP
 #define DISABLE_TRANSPARENT_SHADOWMAP
 #define SURFACE_LOAD_MIPCONE
+#define TEXTURE_SLOT_NONUNIFORM
 
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"

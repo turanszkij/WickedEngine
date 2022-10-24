@@ -1,3 +1,4 @@
+#define TEXTURE_SLOT_NONUNIFORM
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
