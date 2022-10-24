@@ -2724,6 +2724,7 @@ using namespace vulkan_internal;
 				{
 					capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE3D;
 				}
+				capabilities |= GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL;
 			}
 
 			// Find queue families:
@@ -3634,7 +3635,9 @@ using namespace vulkan_internal;
 
 		VkResult res;
 
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL))
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_BUFFER) ||
+			has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS) ||
+			has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_RT_DS))
 		{
 			VkMemoryRequirements memory_requirements = {};
 			memory_requirements.alignment = desc->alignment;

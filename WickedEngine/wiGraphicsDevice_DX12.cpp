@@ -2740,6 +2740,11 @@ using namespace dx12_internal;
 
 		resource_heap_tier = features.ResourceHeapTier();
 
+		if (resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2)
+		{
+			capabilities |= GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL;
+		}
+
 		// Create pipeline library:
 #if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
 		// Try to read pipeline cache file if exists.
@@ -3201,7 +3206,9 @@ using namespace dx12_internal;
 			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 		}
 
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL))
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_BUFFER) ||
+			has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS) ||
+			has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_RT_DS))
 		{
 			// Sparse tile pool must not be a committed resource because that uses implicit heap which returns nullptr,
 			//	thus it cannot be offsetted. This is why we create custom allocation here which will never be committed resource
@@ -3210,9 +3217,23 @@ using namespace dx12_internal;
 			allocationInfo.Alignment = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
 			allocationInfo.SizeInBytes = AlignTo(desc->size, D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
 
-			// tile pool memory can be used for sparse buffers and textures alike (requires resource heap tier 2):
-			allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
-			assert(resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2); // todo: what should we do if tier 2 is not supported?
+			if (resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2)
+			{
+				// tile pool memory can be used for sparse buffers and textures alike (requires resource heap tier 2):
+				allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
+			}
+			else if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_BUFFER))
+			{
+				allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
+			}
+			else if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS))
+			{
+				allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
+			}
+			else if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_RT_DS))
+			{
+				allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
+			}
 
 			hr = allocationhandler->allocator->AllocateMemory(
 				&allocationDesc,

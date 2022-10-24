@@ -194,7 +194,7 @@ namespace wi::terrain
 		GPUBufferDesc desc;
 		desc.alignment = page_size;
 		desc.size = AlignTo(block_size, page_size);
-		desc.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL;
+		desc.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS;
 		bool success = device->CreateBuffer(&desc, nullptr, &block);
 		assert(success);
 		device->SetName(&block, "GPUPageAllocator::block");
