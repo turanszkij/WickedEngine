@@ -296,14 +296,22 @@ namespace wi::lua
 	{
 		lua_getglobal(lua_internal().m_luaState, "setDeltaTime");
 		SSetDouble(lua_internal().m_luaState, dt);
-		lua_call(lua_internal().m_luaState, 1, 0);
+		lua_internal().m_status = lua_pcall(lua_internal().m_luaState, 1, LUA_MULTRET, 0);
+		if (Failed())
+		{
+			PostErrorMsg();
+		}
 	}
 
 	inline void SignalHelper(lua_State* L, const char* str)
 	{
 		lua_getglobal(L, "signal");
 		lua_pushstring(L, str);
-		lua_call(L, 1, 0);
+		lua_internal().m_status = lua_pcall(L, 1, LUA_MULTRET, 0);
+		if (Failed())
+		{
+			PostErrorMsg();
+		}
 	}
 	void FixedUpdate()
 	{
