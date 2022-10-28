@@ -409,6 +409,10 @@ namespace wi
 			{
 				cb.xEmitterOptions |= EMITTER_OPTION_BIT_MESH_SHADER_ENABLED;
 			}
+			if (IsCollidersDisabled())
+			{
+				cb.xEmitterOptions |= EMITTER_OPTION_BIT_COLLIDERS_DISABLED;
+			}
 
 			// SPH:
 			cb.xSPH_h = SPH_h;

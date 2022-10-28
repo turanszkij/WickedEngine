@@ -11,7 +11,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_EMITTER " Emitter", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 940));
+	SetSize(XMFLOAT2(300, 960));
 
 	closeButton.SetTooltip("Delete EmittedParticleSystem");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -151,14 +151,10 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	debugCheckBox.SetPos(XMFLOAT2(x, y += step));
 	debugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	debugCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
-		{
-			emitter->SetDebug(args.bValue);
-		}
+		wi::renderer::SetToDrawDebugEmitters(args.bValue);
 	});
-	debugCheckBox.SetCheck(false);
-	debugCheckBox.SetTooltip("Currently this has no functionality.");
+	debugCheckBox.SetCheck(wi::renderer::GetToDrawDebugEmitters());
+	debugCheckBox.SetTooltip("Toggle debug visualizer for emitters.");
 	AddWidget(&debugCheckBox);
 
 
@@ -190,6 +186,21 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	frameBlendingCheckBox.SetCheck(false);
 	frameBlendingCheckBox.SetTooltip("If sprite sheet animation is in effect, frames will be smoothly blended.");
 	AddWidget(&frameBlendingCheckBox);
+
+
+	collidersDisabledCheckBox.Create("Colliders disabled: ");
+	collidersDisabledCheckBox.SetPos(XMFLOAT2(x, y += step));
+	collidersDisabledCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	collidersDisabledCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->SetCollidersDisabled(args.bValue);
+		}
+		});
+	collidersDisabledCheckBox.SetCheck(false);
+	collidersDisabledCheckBox.SetTooltip("Simply disables all colliders for acting on this particle system");
+	AddWidget(&collidersDisabledCheckBox);
 
 
 
@@ -666,6 +677,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		pauseCheckBox.SetCheck(emitter->IsPaused());
 		volumeCheckBox.SetCheck(emitter->IsVolumeEnabled());
 		frameBlendingCheckBox.SetCheck(emitter->IsFrameBlendingEnabled());
+		collidersDisabledCheckBox.SetCheck(emitter->IsCollidersDisabled());
 		maxParticlesSlider.SetValue((float)emitter->GetMaxParticleCount());
 
 		frameRateInput.SetValue(emitter->frameRate);
@@ -700,7 +712,6 @@ void EmitterWindow::SetEntity(Entity entity)
 		sph_p0_Slider.SetValue(emitter->SPH_p0);
 		sph_e_Slider.SetValue(emitter->SPH_e);
 
-		debugCheckBox.SetCheck(emitter->IsDebug());
 	}
 	else
 	{
@@ -709,6 +720,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		SetEnabled(false);
 
 	}
+	debugCheckBox.SetCheck(wi::renderer::GetToDrawDebugEmitters());
 
 }
 
@@ -814,6 +826,7 @@ void EmitterWindow::ResizeLayout()
 	add_right(debugCheckBox);
 	add_right(volumeCheckBox);
 	add_right(frameBlendingCheckBox);
+	add_right(collidersDisabledCheckBox);
 	add(maxParticlesSlider);
 	add(emitCountSlider);
 	add(emitSizeSlider);

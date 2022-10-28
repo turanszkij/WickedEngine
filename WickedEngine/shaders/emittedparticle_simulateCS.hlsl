@@ -56,6 +56,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 		if (particle.life > 0)
 		{
+			const bool colliders_disabled = xEmitterOptions & EMITTER_OPTION_BIT_COLLIDERS_DISABLED;
+
 			// process forces and colliders:
 			for (uint i = 0; i < GetFrame().forcefieldarray_count; ++i)
 			{
@@ -69,6 +71,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 					if (type == ENTITY_TYPE_COLLIDER_CAPSULE)
 					{
+						if (colliders_disabled)
+							continue;
 						float3 A = entity.position;
 						float3 B = entity.GetColliderTip();
 						float3 N = normalize(A - B);
@@ -102,6 +106,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 							particle.force += entity.GetDirection() * entity.GetGravity() * (1 - saturate(dist / range));
 							break;
 						case ENTITY_TYPE_COLLIDER_SPHERE:
+							if (colliders_disabled)
+								break;
 							dist = dist - range - particleSize;
 							if (dist < 0)
 							{
@@ -112,6 +118,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 							}
 							break;
 						case ENTITY_TYPE_COLLIDER_PLANE:
+							if (colliders_disabled)
+								break;
 							dir = normalize(entity.GetDirection());
 							dist = plane_point_distance(entity.position, dir, particle.position);
 							if (dist < 0)
