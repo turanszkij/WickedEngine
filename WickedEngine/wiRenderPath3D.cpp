@@ -393,6 +393,7 @@ namespace wi
 			desc.sample_count = 1;
 			desc.usage = Usage::DEFAULT;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.layout = ResourceState::SHADER_RESOURCE;
 
 			device->CreateTexture(&desc, nullptr, &debugUAV);
 			device->SetName(&debugUAV, "debugUAV");
@@ -711,6 +712,7 @@ namespace wi
 		CommandList cmd = device->BeginCommandList();
 		CommandList cmd_prepareframe = cmd;
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+			GraphicsDevice* device = wi::graphics::GetDevice();
 			wi::renderer::BindCameraCB(
 				*camera,
 				camera_previous,
@@ -718,6 +720,12 @@ namespace wi
 				cmd
 			);
 			wi::renderer::UpdateRenderData(visibility_main, frameCB, cmd);
+
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, ResourceState::UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+
 			});
 
 		//	async compute parallel with depth prepass
@@ -1245,6 +1253,7 @@ namespace wi
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&rtLinearDepth, ResourceState::SHADER_RESOURCE, rtLinearDepth.desc.layout),
 					GPUBarrier::Image(&depthBuffer_Copy, ResourceState::SHADER_RESOURCE, depthBuffer_Copy.desc.layout),
+					GPUBarrier::Image(&debugUAV, ResourceState::UNORDERED_ACCESS, debugUAV.desc.layout),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}

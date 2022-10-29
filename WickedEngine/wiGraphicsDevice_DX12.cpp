@@ -1484,7 +1484,7 @@ namespace dx12_internal
 		uint32_t rt_count = 0;
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTVs[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 		D3D12_RENDER_PASS_DEPTH_STENCIL_DESC DSV = {};
-		const Texture* shading_rate_image = nullptr;
+		Texture shading_rate_image;
 
 		// Due to a API bug, this resolve_subresources array must be kept alive between BeginRenderpass() and EndRenderpass()!
 		wi::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> resolve_subresources[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
@@ -4169,7 +4169,7 @@ using namespace dx12_internal;
 			}
 			else if (attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE)
 			{
-				internal_state->shading_rate_image = texture;
+				internal_state->shading_rate_image = *texture;
 			}
 		}
 
@@ -5657,9 +5657,9 @@ using namespace dx12_internal;
 			commandlist.GetGraphicsCommandList()->ResourceBarrier((UINT)internal_state->barrierdescs_begin.size(), internal_state->barrierdescs_begin.data());
 		}
 
-		if (internal_state->shading_rate_image != nullptr)
+		if (internal_state->shading_rate_image.IsValid())
 		{
-			commandlist.GetGraphicsCommandList()->RSSetShadingRateImage(to_internal(internal_state->shading_rate_image)->resource.Get());
+			commandlist.GetGraphicsCommandList()->RSSetShadingRateImage(to_internal(&internal_state->shading_rate_image)->resource.Get());
 		}
 
 		commandlist.GetGraphicsCommandList()->BeginRenderPass(
@@ -5679,7 +5679,7 @@ using namespace dx12_internal;
 
 		if (internal_state != nullptr)
 		{
-			if (internal_state->shading_rate_image != nullptr)
+			if (internal_state->shading_rate_image.IsValid())
 			{
 				commandlist.GetGraphicsCommandList()->RSSetShadingRateImage(nullptr);
 			}

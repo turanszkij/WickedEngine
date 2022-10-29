@@ -420,6 +420,7 @@ namespace wi::scene
 				tex.height = SURFEL_MOMENT_ATLAS_TEXELS;
 				tex.format = Format::R16G16_FLOAT;
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				tex.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 				device->CreateTexture(&tex, nullptr, &surfelMomentsTexture[0]);
 				device->SetName(&surfelMomentsTexture[0], "surfelMomentsTexture[0]");
 				device->CreateTexture(&tex, nullptr, &surfelMomentsTexture[1]);
