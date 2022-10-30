@@ -53,6 +53,9 @@ public:
 	wi::gui::CheckBox forceDiffuseLightingCheckBox;
 
 	wi::gui::Slider exposureSlider;
+	wi::gui::Slider brightnessSlider;
+	wi::gui::Slider contrastSlider;
+	wi::gui::Slider saturationSlider;
 	wi::gui::CheckBox lensFlareCheckBox;
 	wi::gui::CheckBox lightShaftsCheckBox;
 	wi::gui::Slider lightShaftsStrengthStrengthSlider;

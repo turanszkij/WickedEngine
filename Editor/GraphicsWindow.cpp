@@ -14,7 +14,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1850));
+	SetSize(XMFLOAT2(580, 1880));
 
 	float step = 21;
 	float itemheight = 18;
@@ -746,6 +746,48 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->main->config.Commit();
 		});
 	AddWidget(&exposureSlider);
+
+	brightnessSlider.Create(-1.0f, 1.0f, 0, 10000, "Brightness: ");
+	brightnessSlider.SetSize(XMFLOAT2(wid, hei));
+	brightnessSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("brightness"))
+	{
+		editor->renderPath->setBrightness(editor->main->config.GetSection("graphics").GetFloat("brightness"));
+	}
+	brightnessSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setBrightness(args.fValue);
+		editor->main->config.GetSection("graphics").Set("brightness", args.fValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&brightnessSlider);
+
+	contrastSlider.Create(0.0f, 2.0f, 1, 10000, "Contrast: ");
+	contrastSlider.SetSize(XMFLOAT2(wid, hei));
+	contrastSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("contrast"))
+	{
+		editor->renderPath->setContrast(editor->main->config.GetSection("graphics").GetFloat("contrast"));
+	}
+	contrastSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setContrast(args.fValue);
+		editor->main->config.GetSection("graphics").Set("contrast", args.fValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&contrastSlider);
+
+	saturationSlider.Create(0.0f, 2.0f, 1, 10000, "Saturation: ");
+	saturationSlider.SetSize(XMFLOAT2(wid, hei));
+	saturationSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("saturation"))
+	{
+		editor->renderPath->setSaturation(editor->main->config.GetSection("graphics").GetFloat("saturation"));
+	}
+	saturationSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setSaturation(args.fValue);
+		editor->main->config.GetSection("graphics").Set("saturation", args.fValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&saturationSlider);
 
 	lensFlareCheckBox.Create("LensFlare: ");
 	lensFlareCheckBox.SetTooltip("Toggle visibility of light source flares. Additional setup needed per light for a lensflare to be visible.");
@@ -1532,6 +1574,9 @@ void GraphicsWindow::Update()
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
 	exposureSlider.SetValue(editor->renderPath->getExposure());
+	brightnessSlider.SetValue(editor->renderPath->getBrightness());
+	contrastSlider.SetValue(editor->renderPath->getContrast());
+	saturationSlider.SetValue(editor->renderPath->getSaturation());
 	lensFlareCheckBox.SetCheck(editor->renderPath->getLensFlareEnabled());
 	lightShaftsCheckBox.SetCheck(editor->renderPath->getLightShaftsEnabled());
 	lightShaftsStrengthStrengthSlider.SetValue(editor->renderPath->getLightShaftsStrength());
@@ -1809,6 +1854,9 @@ void GraphicsWindow::ResizeLayout()
 	y += jump;
 
 	add(exposureSlider);
+	add(brightnessSlider);
+	add(contrastSlider);
+	add(saturationSlider);
 	add_right(lensFlareCheckBox);
 	add_right(lightShaftsStrengthStrengthSlider);
 	lightShaftsCheckBox.SetPos(XMFLOAT2(lightShaftsStrengthStrengthSlider.GetPos().x - lightShaftsCheckBox.GetSize().x - 80, lightShaftsStrengthStrengthSlider.GetPos().y));
