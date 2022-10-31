@@ -88,6 +88,8 @@ Contributors
 	- Fixes
 - Dennis Brakhane | https://github.com/brakhane
 	- Added Liberation Sans default font
+- Cop46 | https://github.com/Cop46
+	- Brightness, Contrast, Saturation post process
 
 Patreon supporters
 ---------------------------
@@ -115,6 +117,10 @@ Patreon supporters
 - NI NI
 - Sherief
 - ktopoet
+- Justin Macklin
+- Cédric Fabre
+- TogetherTeam
+- Bartosz Boczula
 		)";
 
 		return credits;
