@@ -1673,8 +1673,8 @@ namespace wi::terrain
 		if (!bc1_raw.IsValid())
 		{
 			TextureDesc td;
-			td.width = 512;
-			td.height = 256;
+			td.width = 512 / 4;
+			td.height = 256 / 4;
 			td.format = Format::R32G32_UINT;
 			td.bind_flags = BindFlag::UNORDERED_ACCESS;
 			td.layout = ResourceState::UNORDERED_ACCESS;
@@ -1685,8 +1685,8 @@ namespace wi::terrain
 		if (!bc3_raw.IsValid())
 		{
 			TextureDesc td;
-			td.width = 256;
-			td.height = 256;
+			td.width = 256 / 4;
+			td.height = 256 / 4;
 			td.format = Format::R32G32B32A32_UINT;
 			td.bind_flags = BindFlag::UNORDERED_ACCESS;
 			td.layout = ResourceState::UNORDERED_ACCESS;
@@ -1697,8 +1697,8 @@ namespace wi::terrain
 		if (!bc5_raw.IsValid())
 		{
 			TextureDesc td;
-			td.width = 256;
-			td.height = 256;
+			td.width = 256 / 4;
+			td.height = 256 / 4;
 			td.format = Format::R32G32B32A32_UINT;
 			td.bind_flags = BindFlag::UNORDERED_ACCESS;
 			td.layout = ResourceState::UNORDERED_ACCESS;
