@@ -1096,9 +1096,9 @@ struct VolumetricCloudCapturePushConstants
 struct TerrainVirtualTexturePush
 {
 	uint2 offset;
+	float2 resolution_rcp;
 	uint map_type;
 	int region_weights_textureRO;
-	int output_textureRW;
 };
 struct VirtualTextureResidencyUpdatePush
 {
