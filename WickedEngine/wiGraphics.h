@@ -697,6 +697,16 @@ namespace wi::graphics
 		int32_t bottom = 0;
 	};
 
+	struct Box
+	{
+		uint32_t left = 0;
+		uint32_t top = 0;
+		uint32_t front = 0;
+		uint32_t right = 0;
+		uint32_t bottom = 0;
+		uint32_t back = 0;
+	};
+
 	struct SparseTextureProperties
 	{
 		uint32_t tile_width = 0;				// width of 1 tile in texels

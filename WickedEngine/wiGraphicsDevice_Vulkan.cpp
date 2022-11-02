@@ -7706,8 +7706,8 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		auto internal_state_src = to_internal((const GPUBuffer*)pSrc);
-		auto internal_state_dst = to_internal((const GPUBuffer*)pDst);
+		auto internal_state_src = to_internal(pSrc);
+		auto internal_state_dst = to_internal(pDst);
 
 		VkBufferCopy copy = {};
 		copy.srcOffset = src_offset;
@@ -7718,6 +7718,55 @@ using namespace vulkan_internal;
 			internal_state_src->resource,
 			internal_state_dst->resource,
 			1, &copy
+		);
+	}
+	void GraphicsDevice_Vulkan::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox)
+	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		auto src_internal = to_internal(src);
+		auto dst_internal = to_internal(dst);
+
+		VkImageCopy copy = {};
+		copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.dstSubresource.baseArrayLayer = dstSlice;
+		copy.dstSubresource.layerCount = 1;
+		copy.dstSubresource.mipLevel = dstMip;
+		copy.dstOffset.x = dstX;
+		copy.dstOffset.y = dstY;
+		copy.dstOffset.z = dstZ;
+
+		copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.srcSubresource.baseArrayLayer = srcSlice;
+		copy.srcSubresource.layerCount = 1;
+		copy.srcSubresource.mipLevel = srcMip;
+
+		if (srcbox == nullptr)
+		{
+			copy.srcOffset.x = 0;
+			copy.srcOffset.y = 0;
+			copy.srcOffset.z = 0;
+			copy.extent.width = std::min(dst->desc.width, src->desc.width);
+			copy.extent.height = std::min(dst->desc.height, src->desc.height);
+			copy.extent.depth = std::min(dst->desc.depth, src->desc.depth);
+		}
+		else
+		{
+			copy.srcOffset.x = srcbox->left;
+			copy.srcOffset.y = srcbox->top;
+			copy.srcOffset.z = srcbox->front;
+			copy.extent.width = srcbox->right - srcbox->left;
+			copy.extent.height = srcbox->bottom - srcbox->top;
+			copy.extent.depth = srcbox->back - srcbox->front;
+		}
+
+		vkCmdCopyImage(
+			commandlist.GetCommandBuffer(),
+			src_internal->resource,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			dst_internal->resource,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&copy
 		);
 	}
 	void GraphicsDevice_Vulkan::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
