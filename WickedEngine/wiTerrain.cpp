@@ -935,6 +935,15 @@ namespace wi::terrain
 			{
 				chunk_data.mesh_vertex_positions = chunk_mesh->vertex_positions.data();
 
+				if (IsTessellationEnabled())
+				{
+					chunk_mesh->tessellationFactor = 32;
+				}
+				else
+				{
+					chunk_mesh->tessellationFactor = 0;
+				}
+
 #if 0
 				// Test: remove off screen chunks
 				//	But the problem is that shadow casters shouldn't be removed outside view

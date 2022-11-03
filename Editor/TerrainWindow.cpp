@@ -361,6 +361,16 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&physicsCheckBox);
 
+	tessellationCheckBox.Create("Tessellation: ");
+	tessellationCheckBox.SetTooltip("Specify whether tessellation is enabled for terrain surface.\nTessellation requires GPU hardware support\nTessellation doesn't work with raytracing effects or Visibility Compute Shading rendering mode.");
+	tessellationCheckBox.SetSize(XMFLOAT2(hei, hei));
+	tessellationCheckBox.SetPos(XMFLOAT2(x, y += step));
+	tessellationCheckBox.SetCheck(true);
+	tessellationCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		terrain->SetTessellationEnabled(args.bValue);
+		});
+	AddWidget(&tessellationCheckBox);
+
 	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "Mesh LOD Distance: ");
 	lodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
 	lodSlider.SetSize(XMFLOAT2(wid, hei));
@@ -777,6 +787,7 @@ void TerrainWindow::SetEntity(Entity entity)
 	removalCheckBox.SetCheck(terrain->IsRemovalEnabled());
 	grassCheckBox.SetCheck(terrain->IsGrassEnabled());
 	physicsCheckBox.SetCheck(terrain->IsPhysicsEnabled());
+	tessellationCheckBox.SetCheck(terrain->IsTessellationEnabled());
 	lodSlider.SetValue(terrain->lod_multiplier);
 	generationSlider.SetValue((float)terrain->generation);
 	propGenerationSlider.SetValue((float)terrain->prop_generation);
@@ -1049,6 +1060,7 @@ void TerrainWindow::ResizeLayout()
 	centerToCamCheckBox.SetPos(XMFLOAT2(removalCheckBox.GetPos().x - 100, removalCheckBox.GetPos().y));
 	add_checkbox(grassCheckBox);
 	physicsCheckBox.SetPos(XMFLOAT2(grassCheckBox.GetPos().x - 100, grassCheckBox.GetPos().y));
+	add_checkbox(tessellationCheckBox);
 	add(lodSlider);
 	add(generationSlider);
 	add(propGenerationSlider);

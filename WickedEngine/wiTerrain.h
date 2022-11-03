@@ -173,6 +173,7 @@ namespace wi::terrain
 			GRASS = 1 << 2,
 			GENERATION_STARTED = 1 << 4,
 			PHYSICS = 1 << 5,
+			TESSELLATION = 1 << 6,
 		};
 		uint32_t _flags = CENTER_TO_CAM | REMOVAL | GRASS;
 
@@ -207,12 +208,14 @@ namespace wi::terrain
 		constexpr bool IsGrassEnabled() const { return _flags & GRASS; }
 		constexpr bool IsGenerationStarted() const { return _flags & GENERATION_STARTED; }
 		constexpr bool IsPhysicsEnabled() const { return _flags & PHYSICS; }
+		constexpr bool IsTessellationEnabled() const { return _flags & TESSELLATION; }
 
 		constexpr void SetCenterToCamEnabled(bool value) { if (value) { _flags |= CENTER_TO_CAM; } else { _flags &= ~CENTER_TO_CAM; } }
 		constexpr void SetRemovalEnabled(bool value) { if (value) { _flags |= REMOVAL; } else { _flags &= ~REMOVAL; } }
 		constexpr void SetGrassEnabled(bool value) { if (value) { _flags |= GRASS; } else { _flags &= ~GRASS; } }
 		constexpr void SetGenerationStarted(bool value) { if (value) { _flags |= GENERATION_STARTED; } else { _flags &= ~GENERATION_STARTED; } }
 		constexpr void SetPhysicsEnabled(bool value) { if (value) { _flags |= PHYSICS; } else { _flags &= ~PHYSICS; } }
+		constexpr void SetTessellationEnabled(bool value) { if (value) { _flags |= TESSELLATION; } else { _flags &= ~TESSELLATION; } }
 
 		float lod_multiplier = 0.005f;
 		int generation = 12;
