@@ -18,8 +18,11 @@ RWTexture2D<uint4> output_bc3_unorm : register(u1);
 RWTexture2D<uint4> output_bc5_unorm : register(u2);
 
 [numthreads(8, 8, 1)]
-void main(uint3 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID)
+void main(uint3 DTid : SV_DispatchThreadID)
 {
+	if (DTid.x >= push.write_size.x || DTid.y >= push.write_size.y)
+		return;
+
 	Texture2D<float4> region_weights_texture = bindless_textures[push.region_weights_textureRO];
 
 	float3 block_rgb[BLOCK_SIZE_4X4];
@@ -128,16 +131,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID)
 		}
 	}
 
+	const uint2 write_coord = DTid.xy + uint2(push.write_offset, 0);
 	if (push.map_type == 1)
 	{
-		output_bc5_unorm[DTid.xy] = CompressBlockBC5_UNORM(block_x, block_y, CMP_QUALITY0);
+		output_bc5_unorm[write_coord] = CompressBlockBC5_UNORM(block_x, block_y, CMP_QUALITY0);
 	}
 	if (push.map_type == 2)
 	{
-		output_bc3_unorm[DTid.xy] = CompressBlockBC3_UNORM(block_rgb, block_x, CMP_QUALITY2, /*isSRGB =*/ false);
+		output_bc3_unorm[write_coord] = CompressBlockBC3_UNORM(block_rgb, block_x, CMP_QUALITY2, /*isSRGB =*/ false);
 	}
 	else
 	{
-		output_bc1_unorm[DTid.xy] = CompressBlockBC1_UNORM(block_rgb, CMP_QUALITY0, /*isSRGB =*/ false);
+		output_bc1_unorm[write_coord] = CompressBlockBC1_UNORM(block_rgb, CMP_QUALITY0, /*isSRGB =*/ false);
 	}
 }

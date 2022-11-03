@@ -1669,11 +1669,12 @@ namespace wi::terrain
 		material_HighAltitude.WriteShaderMaterial(&materials[3]);
 		device->BindDynamicConstantBuffer(materials, 0, cmd);
 
+		static const uint32_t raw_tiles_max = 8u;
 		static Texture bc1_raw;
 		if (!bc1_raw.IsValid())
 		{
 			TextureDesc td;
-			td.width = 512 / 4;
+			td.width = 512 / 4 * raw_tiles_max;
 			td.height = 256 / 4;
 			td.format = Format::R32G32_UINT;
 			td.bind_flags = BindFlag::UNORDERED_ACCESS;
@@ -1685,7 +1686,7 @@ namespace wi::terrain
 		if (!bc3_raw.IsValid())
 		{
 			TextureDesc td;
-			td.width = 256 / 4;
+			td.width = 256 / 4 * raw_tiles_max;
 			td.height = 256 / 4;
 			td.format = Format::R32G32B32A32_UINT;
 			td.bind_flags = BindFlag::UNORDERED_ACCESS;
@@ -1697,7 +1698,7 @@ namespace wi::terrain
 		if (!bc5_raw.IsValid())
 		{
 			TextureDesc td;
-			td.width = 256 / 4;
+			td.width = 256 / 4 * raw_tiles_max;
 			td.height = 256 / 4;
 			td.format = Format::R32G32B32A32_UINT;
 			td.bind_flags = BindFlag::UNORDERED_ACCESS;
@@ -1709,8 +1710,61 @@ namespace wi::terrain
 		device->BindUAV(&bc3_raw, 1, cmd);
 		device->BindUAV(&bc5_raw, 2, cmd);
 
+		struct PendingRawTile
+		{
+			const Texture* dst;
+			const Texture* src;
+			uint32_t dstX;
+			uint32_t dstY;
+			uint32_t dstMip;
+			uint2 bc_size;
+			uint32_t srcX;
+		};
+		static wi::vector<PendingRawTile> pending_raw_tiles;
+		const Texture* bc_raw[] = {
+			&bc1_raw,
+			&bc5_raw,
+			&bc3_raw,
+		};
+
+		auto bc_raw_flush = [&](uint32_t map_type) {
+			if (pending_raw_tiles.empty())
+				return;
+
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(bc_raw[map_type], bc_raw[map_type]->desc.layout, ResourceState::COPY_SRC),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+
+			for (auto& pending : pending_raw_tiles)
+			{
+				Box srcbox;
+				srcbox.left = pending.srcX;
+				srcbox.right = pending.srcX + pending.bc_size.x;
+				srcbox.top = 0;
+				srcbox.bottom = pending.bc_size.y;
+				srcbox.front = 0;
+				srcbox.back = 1;
+				device->CopyTexture(
+					pending.dst, pending.dstX, pending.dstY, 0, pending.dstMip, 0,
+					pending.src, 0, 0, cmd, &srcbox
+				);
+			}
+
+			for (uint32_t map_type = 0; map_type < arraysize(barriers); ++map_type)
+			{
+				std::swap(barriers[map_type].image.layout_before, barriers[map_type].image.layout_after);
+			}
+			device->Barrier(barriers, arraysize(barriers), cmd);
+
+			pending_raw_tiles.clear();
+		};
+
 		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
+			const uint32_t map_type = vt->map_type;
+			uint32_t pending_raw_tile_offset = 0;
+
 			for (auto& request : vt->update_requests)
 			{
 				uint32_t first_mip = request.lod;
@@ -1738,6 +1792,12 @@ namespace wi::terrain
 						(size.y + 3u) / 4u
 					);
 
+					if ((pending_raw_tile_offset + bc_size.x) >= bc_raw[map_type]->desc.width)
+					{
+						bc_raw_flush(map_type);
+						pending_raw_tile_offset = 0;
+					}
+
 					TerrainVirtualTexturePush push;
 					push.offset = uint2(
 						request.tile_x * size.x,
@@ -1745,44 +1805,27 @@ namespace wi::terrain
 					);
 					push.resolution_rcp.x = 1.0f / request_lod_resolution.x;
 					push.resolution_rcp.y = 1.0f / request_lod_resolution.y;
-					push.map_type = vt->map_type;
+					push.write_size = bc_size;
+					push.write_offset = pending_raw_tile_offset;
+					push.map_type = map_type;
 					push.region_weights_textureRO = device->GetDescriptorIndex(&vt->region_weights_texture, SubresourceType::SRV);
 					device->PushConstants(&push, sizeof(push), cmd);
 
 					device->Dispatch((bc_size.x + 7u) / 8u, (bc_size.y + 7u) / 8u, 1, cmd);
 
-					// Sadly we can't write directly into block compressed texture, so we must copy from raw block format to real BC format:
-					const Texture* bc_raw = nullptr;
-					switch (vt->map_type)
-					{
-					default:
-						bc_raw = &bc1_raw;
-						break;
-					case MaterialComponent::NORMALMAP:
-						bc_raw = &bc5_raw;
-						break;
-					case MaterialComponent::SURFACEMAP:
-						bc_raw = &bc3_raw;
-						break;
-					}
-					GPUBarrier barrier = GPUBarrier::Image(bc_raw, bc_raw->desc.layout, ResourceState::COPY_SRC);
-					device->Barrier(&barrier, 1, cmd);
-					Box srcbox;
-					srcbox.left = 0;
-					srcbox.right = bc_size.x;
-					srcbox.top = 0;
-					srcbox.bottom = bc_size.y;
-					srcbox.front = 0;
-					srcbox.back = 1;
-					device->CopyTexture(
-						&vt->texture, request.tile_x * size.x, request.tile_y * size.y, 0, mip, 0,
-						bc_raw, 0, 0, cmd, &srcbox
-					);
-					std::swap(barrier.image.layout_before, barrier.image.layout_after);
-					device->Barrier(&barrier, 1, cmd);
+					PendingRawTile& pending_raw_tile = pending_raw_tiles.emplace_back();
+					pending_raw_tile.dst = &vt->texture;
+					pending_raw_tile.src = bc_raw[map_type];
+					pending_raw_tile.dstX = push.offset.x;
+					pending_raw_tile.dstY = push.offset.y;
+					pending_raw_tile.dstMip = mip;
+					pending_raw_tile.bc_size = bc_size;
+					pending_raw_tile.srcX = push.write_offset;
+					pending_raw_tile_offset += bc_size.x;
 				}
 			}
 			vt->update_requests.clear();
+			bc_raw_flush(map_type);
 		}
 		device->EventEnd(cmd);
 
