@@ -1099,7 +1099,6 @@ struct TerrainVirtualTexturePush
 	float2 resolution_rcp;
 	uint2 write_size;
 	uint write_offset;
-	uint map_type;
 	int region_weights_textureRO;
 };
 struct VirtualTextureResidencyUpdatePush

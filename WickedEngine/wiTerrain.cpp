@@ -1661,7 +1661,7 @@ namespace wi::terrain
 		device->EventEnd(cmd);
 
 		device->EventBegin("Render Tile Regions", cmd);
-		device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE), cmd);
+
 		ShaderMaterial materials[4];
 		material_Base.WriteShaderMaterial(&materials[0]);
 		material_Slope.WriteShaderMaterial(&materials[1]);
@@ -1669,7 +1669,7 @@ namespace wi::terrain
 		material_HighAltitude.WriteShaderMaterial(&materials[3]);
 		device->BindDynamicConstantBuffer(materials, 0, cmd);
 
-		static const uint32_t raw_tiles_max = 8u;
+		static const uint32_t raw_tiles_max = 16u;
 		static Texture bc1_raw;
 		if (!bc1_raw.IsValid())
 		{
@@ -1682,8 +1682,8 @@ namespace wi::terrain
 			bool success = device->CreateTexture(&td, nullptr, &bc1_raw);
 			assert(success);
 		}
-		static Texture bc3_raw;
-		if (!bc3_raw.IsValid())
+		static Texture bc3_bc5_raw;
+		if (!bc3_bc5_raw.IsValid())
 		{
 			TextureDesc td;
 			td.width = 256 / 4 * raw_tiles_max;
@@ -1691,29 +1691,13 @@ namespace wi::terrain
 			td.format = Format::R32G32B32A32_UINT;
 			td.bind_flags = BindFlag::UNORDERED_ACCESS;
 			td.layout = ResourceState::UNORDERED_ACCESS;
-			bool success = device->CreateTexture(&td, nullptr, &bc3_raw);
+			bool success = device->CreateTexture(&td, nullptr, &bc3_bc5_raw);
 			assert(success);
 		}
-		static Texture bc5_raw;
-		if (!bc5_raw.IsValid())
-		{
-			TextureDesc td;
-			td.width = 256 / 4 * raw_tiles_max;
-			td.height = 256 / 4;
-			td.format = Format::R32G32B32A32_UINT;
-			td.bind_flags = BindFlag::UNORDERED_ACCESS;
-			td.layout = ResourceState::UNORDERED_ACCESS;
-			bool success = device->CreateTexture(&td, nullptr, &bc5_raw);
-			assert(success);
-		}
-		device->BindUAV(&bc1_raw, 0, cmd);
-		device->BindUAV(&bc3_raw, 1, cmd);
-		device->BindUAV(&bc5_raw, 2, cmd);
 
 		struct PendingRawTile
 		{
 			const Texture* dst;
-			const Texture* src;
 			uint32_t dstX;
 			uint32_t dstY;
 			uint32_t dstMip;
@@ -1723,8 +1707,8 @@ namespace wi::terrain
 		static wi::vector<PendingRawTile> pending_raw_tiles;
 		const Texture* bc_raw[] = {
 			&bc1_raw,
-			&bc5_raw,
-			&bc3_raw,
+			&bc3_bc5_raw,
+			&bc3_bc5_raw,
 		};
 
 		auto bc_raw_flush = [&](uint32_t map_type) {
@@ -1747,7 +1731,7 @@ namespace wi::terrain
 				srcbox.back = 1;
 				device->CopyTexture(
 					pending.dst, pending.dstX, pending.dstY, 0, pending.dstMip, 0,
-					pending.src, 0, 0, cmd, &srcbox
+					bc_raw[map_type], 0, 0, cmd, &srcbox
 				);
 			}
 
@@ -1760,71 +1744,92 @@ namespace wi::terrain
 			pending_raw_tiles.clear();
 		};
 
-		for (const VirtualTexture* vt : virtual_textures_in_use)
+		for (uint32_t map_type = 0; map_type < 3; map_type++)
 		{
-			const uint32_t map_type = vt->map_type;
 			uint32_t pending_raw_tile_offset = 0;
 
-			for (auto& request : vt->update_requests)
+			switch (map_type)
 			{
-				uint32_t first_mip = request.lod;
-				uint32_t last_mip = request.lod;
-				const bool packed_mips = request.lod >= vt->texture.sparse_properties->packed_mip_start;
-				if (packed_mips && vt->texture.sparse_properties->packed_mip_count > 1)
+			case MaterialComponent::BASECOLORMAP:
+				device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_BASECOLORMAP), cmd);
+				break;
+			case MaterialComponent::NORMALMAP:
+				device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_NORMALMAP), cmd);
+				break;
+			case MaterialComponent::SURFACEMAP:
+				device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_SURFACEMAP), cmd);
+				break;
+			default:
+				assert(0);
+				break;
+			}
+			device->BindUAV(bc_raw[map_type], 0, cmd);
+
+			for (const VirtualTexture* vt : virtual_textures_in_use)
+			{
+				// Ignore mismatching map_type, this is made to avoid repeatedly rebinding shaders
+				if (vt->map_type != map_type)
+					continue;
+
+				for (auto& request : vt->update_requests)
 				{
-					first_mip = vt->texture.sparse_properties->packed_mip_start;
-					last_mip = first_mip + vt->texture.sparse_properties->packed_mip_count - 1;
-				}
-
-				for (uint32_t mip = first_mip; mip <= last_mip; mip++)
-				{
-					const uint2 request_lod_resolution = uint2(
-						vt->texture.desc.width >> mip,
-						vt->texture.desc.height >> mip
-					);
-
-					const uint2 size = uint2(
-						std::min(request_lod_resolution.x, vt->texture.sparse_properties->tile_width),
-						std::min(request_lod_resolution.y, vt->texture.sparse_properties->tile_height)
-					);
-					const uint2 bc_size = uint2(
-						(size.x + 3u) / 4u,
-						(size.y + 3u) / 4u
-					);
-
-					if ((pending_raw_tile_offset + bc_size.x) >= bc_raw[map_type]->desc.width)
+					uint32_t first_mip = request.lod;
+					uint32_t last_mip = request.lod;
+					const bool packed_mips = request.lod >= vt->texture.sparse_properties->packed_mip_start;
+					if (packed_mips && vt->texture.sparse_properties->packed_mip_count > 1)
 					{
-						bc_raw_flush(map_type);
-						pending_raw_tile_offset = 0;
+						first_mip = vt->texture.sparse_properties->packed_mip_start;
+						last_mip = first_mip + vt->texture.sparse_properties->packed_mip_count - 1;
 					}
 
-					TerrainVirtualTexturePush push;
-					push.offset = uint2(
-						request.tile_x * size.x,
-						request.tile_y * size.y
-					);
-					push.resolution_rcp.x = 1.0f / request_lod_resolution.x;
-					push.resolution_rcp.y = 1.0f / request_lod_resolution.y;
-					push.write_size = bc_size;
-					push.write_offset = pending_raw_tile_offset;
-					push.map_type = map_type;
-					push.region_weights_textureRO = device->GetDescriptorIndex(&vt->region_weights_texture, SubresourceType::SRV);
-					device->PushConstants(&push, sizeof(push), cmd);
+					for (uint32_t mip = first_mip; mip <= last_mip; mip++)
+					{
+						const uint2 request_lod_resolution = uint2(
+							vt->texture.desc.width >> mip,
+							vt->texture.desc.height >> mip
+						);
 
-					device->Dispatch((bc_size.x + 7u) / 8u, (bc_size.y + 7u) / 8u, 1, cmd);
+						const uint2 size = uint2(
+							std::min(request_lod_resolution.x, vt->texture.sparse_properties->tile_width),
+							std::min(request_lod_resolution.y, vt->texture.sparse_properties->tile_height)
+						);
+						const uint2 bc_size = uint2(
+							(size.x + 3u) / 4u,
+							(size.y + 3u) / 4u
+						);
 
-					PendingRawTile& pending_raw_tile = pending_raw_tiles.emplace_back();
-					pending_raw_tile.dst = &vt->texture;
-					pending_raw_tile.src = bc_raw[map_type];
-					pending_raw_tile.dstX = push.offset.x;
-					pending_raw_tile.dstY = push.offset.y;
-					pending_raw_tile.dstMip = mip;
-					pending_raw_tile.bc_size = bc_size;
-					pending_raw_tile.srcX = push.write_offset;
-					pending_raw_tile_offset += bc_size.x;
+						if ((pending_raw_tile_offset + bc_size.x) >= bc_raw[map_type]->desc.width)
+						{
+							bc_raw_flush(map_type);
+							pending_raw_tile_offset = 0;
+						}
+
+						TerrainVirtualTexturePush push;
+						push.offset = uint2(
+							request.tile_x * size.x,
+							request.tile_y * size.y
+						);
+						push.resolution_rcp.x = 1.0f / request_lod_resolution.x;
+						push.resolution_rcp.y = 1.0f / request_lod_resolution.y;
+						push.write_size = bc_size;
+						push.write_offset = pending_raw_tile_offset;
+						push.region_weights_textureRO = device->GetDescriptorIndex(&vt->region_weights_texture, SubresourceType::SRV);
+						device->PushConstants(&push, sizeof(push), cmd);
+
+						device->Dispatch((bc_size.x + 7u) / 8u, (bc_size.y + 7u) / 8u, 1, cmd);
+
+						PendingRawTile& pending_raw_tile = pending_raw_tiles.emplace_back();
+						pending_raw_tile.dst = &vt->texture;
+						pending_raw_tile.dstX = push.offset.x;
+						pending_raw_tile.dstY = push.offset.y;
+						pending_raw_tile.dstMip = mip;
+						pending_raw_tile.bc_size = bc_size;
+						pending_raw_tile.srcX = push.write_offset;
+						pending_raw_tile_offset += bc_size.x;
+					}
 				}
+				vt->update_requests.clear();
 			}
-			vt->update_requests.clear();
 			bc_raw_flush(map_type);
 		}
 		device->EventEnd(cmd);
