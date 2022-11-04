@@ -149,23 +149,23 @@ struct PrimitiveID
 	// These packing methods require meshlet data, and pack into 32 bits:
 	inline uint pack()
 	{
-		// 1 bit valid flag
-		// 23 bit meshletIndex
+		// 24 bit meshletIndex
 		// 8  bit meshletPrimitiveIndex
 		ShaderMeshInstance inst = load_instance(instanceIndex);
 		ShaderGeometry geometry = load_geometry(inst.geometryOffset + subsetIndex);
 		uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + primitiveIndex / MESHLET_TRIANGLE_COUNT;
-		meshletIndex &= ~0u >> 9u; // mask 23 active bits
+		meshletIndex += 1; // indicate that it is valid
+		meshletIndex &= ~0u >> 8u; // mask 24 active bits
 		uint meshletPrimitiveIndex = primitiveIndex % MESHLET_TRIANGLE_COUNT;
 		meshletPrimitiveIndex &= 0xFF; // mask 8 active bits
-		meshletPrimitiveIndex <<= 23u;
-		return (1u << 31u) | meshletPrimitiveIndex | meshletIndex;
+		meshletPrimitiveIndex <<= 24u;
+		return meshletPrimitiveIndex | meshletIndex;
 	}
 	inline void unpack(uint value)
 	{
-		value ^= 1u << 31u; // remove valid flag
-		uint meshletIndex = value & (~0u >> 9u);
-		uint meshletPrimitiveIndex = (value >> 23u) & 0xFF;
+		uint meshletIndex = value & (~0u >> 8u);
+		meshletIndex -= 1; // remove valid check
+		uint meshletPrimitiveIndex = (value >> 24u) & 0xFF;
 		ShaderMeshlet meshlet = load_meshlet(meshletIndex);
 		ShaderMeshInstance inst = load_instance(meshlet.instanceIndex);
 		primitiveIndex = meshlet.primitiveOffset + meshletPrimitiveIndex;
@@ -176,15 +176,14 @@ struct PrimitiveID
 	// These packing methods don't need meshlets, but they are packed into 64 bits:
 	uint2 pack2()
 	{
-		// 1 bit valid flag
-		// 31 bit primitiveIndex
+		// 32 bit primitiveIndex + 1 valid check
 		// 24 bit instanceIndex
 		// 8  bit subsetIndex
-		return uint2((1u << 31u) | primitiveIndex, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
+		return uint2(primitiveIndex + 1, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
 	}
 	void unpack2(uint2 value)
 	{
-		primitiveIndex = value.x & (~0u >> 1u);
+		primitiveIndex = value.x - 1; // remove valid check
 		instanceIndex = value.y & 0xFFFFFF;
 		subsetIndex = (value.y >> 24u) & 0xFF;
 	}
