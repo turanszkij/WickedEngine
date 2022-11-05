@@ -3960,6 +3960,7 @@ void UpdateRenderData(
 
 	// Hair particle systems GPU simulation:
 	//	(This must be non-async too, as prepass will render hairs!)
+	static thread_local wi::vector<HairParticleSystem::UpdateGPUItem> hair_updates;
 	if (!vis.visibleHairs.empty() && frameCB.delta_time > 0)
 	{
 		range = wi::profiler::BeginRangeGPU("HairParticles - Simulate", cmd);
@@ -3973,10 +3974,15 @@ void UpdateRenderData(
 				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
 				size_t materialIndex = vis.scene->materials.GetIndex(entity);
 				const MaterialComponent& material = vis.scene->materials[materialIndex];
-
-				hair.UpdateGPU((uint32_t)vis.scene->objects.GetCount() + hairIndex, *mesh, material, cmd);
+				auto& hair_update = hair_updates.emplace_back();
+				hair_update.hair = &hair;
+				hair_update.instanceIndex = (uint32_t)vis.scene->objects.GetCount() + hairIndex;
+				hair_update.mesh = mesh;
+				hair_update.material = &material;
 			}
 		}
+		HairParticleSystem::UpdateGPU(hair_updates.data(), (uint32_t)hair_updates.size(), cmd);
+		hair_updates.clear();
 		wi::profiler::EndRange(range);
 	}
 

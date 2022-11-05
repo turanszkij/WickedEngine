@@ -39,12 +39,21 @@ namespace wi
 			const wi::scene::MeshComponent& mesh,
 			float dt
 		);
-		void UpdateGPU(
-			uint32_t instanceIndex,
-			const wi::scene::MeshComponent& mesh,
-			const wi::scene::MaterialComponent& material,
+
+		struct UpdateGPUItem
+		{
+			const HairParticleSystem* hair = nullptr;
+			uint32_t instanceIndex = 0;
+			const wi::scene::MeshComponent* mesh = nullptr;
+			const wi::scene::MaterialComponent* material = nullptr;
+		};
+		// Update a batch of hair particles by GPU
+		static void UpdateGPU(
+			const UpdateGPUItem* items,
+			uint32_t itemCount,
 			wi::graphics::CommandList cmd
-		) const;
+		);
+
 		void Draw(
 			const wi::scene::MaterialComponent& material,
 			wi::enums::RENDERPASS renderPass,

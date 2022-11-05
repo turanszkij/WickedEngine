@@ -81,8 +81,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
     const uint strandID = DTid.x * xHairSegmentCount;
     
 	// Transform particle by the emitter object matrix:
-    float3 base = mul(xHairWorld, float4(position.xyz, 1)).xyz;
-    target = normalize(mul((float3x3)xHairWorld, target));
+	const float4x4 worldMatrix = xHairTransform.GetMatrix();
+    float3 base = mul(worldMatrix, float4(position.xyz, 1)).xyz;
+    target = normalize(mul((float3x3)worldMatrix, target));
 	const float3 root = base;
 
 	const float3 diff = root - GetCamera().position;
@@ -285,10 +286,20 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		sphere.center = (base + tip) * 0.5;
 		sphere.radius = len;
 
-		if (!distance_culled && GetCamera().frustum.intersects(sphere))
+		const bool visible = !distance_culled && GetCamera().frustum.intersects(sphere);
+
+		// Optimization: reduce to 1 atomic operation per wave
+		const uint waveAppendCount = WaveActiveCountBits(visible);
+		uint waveOffset;
+		if (WaveIsFirstLane() && waveAppendCount > 0)
 		{
-			uint prevCount;
-			counterBuffer.InterlockedAdd(0, 1, prevCount);
+			counterBuffer.InterlockedAdd(0, waveAppendCount, waveOffset);
+		}
+		waveOffset = WaveReadLaneFirst(waveOffset);
+
+		if (visible)
+		{
+			uint prevCount = waveOffset + WavePrefixSum(1);
 			uint ii0 = prevCount * 6;
 			culledIndexBuffer[ii0 + 0] = i0 + 0;
 			culledIndexBuffer[ii0 + 1] = i0 + 1;

@@ -256,85 +256,110 @@ namespace wi
 			BLAS.desc.bottom_level.geometries.back().triangles.vertex_buffer = vertexBuffer_POS[0];
 		}
 	}
-	void HairParticleSystem::UpdateGPU(uint32_t instanceIndex, const MeshComponent& mesh, const MaterialComponent& material, CommandList cmd) const
+	void HairParticleSystem::UpdateGPU(
+		const UpdateGPUItem* items,
+		uint32_t itemCount,
+		CommandList cmd
+	)
 	{
-		if (strandCount == 0 || !simulationBuffer.IsValid())
-		{
-			return;
-		}
-
 		GraphicsDevice* device = wi::graphics::GetDevice();
-		device->EventBegin("HairParticle - UpdateGPU", cmd);
+		device->EventBegin("HairParticleSystem - UpdateGPU", cmd);
 
-		TextureDesc desc;
-		if (material.textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
+		static thread_local wi::vector<GPUBarrier> barrier_stack;
+		auto barrier_stack_flush = [&]()
 		{
-			desc = material.textures[MaterialComponent::BASECOLORMAP].resource.GetTexture().GetDesc();
-		}
-		HairParticleCB hcb;
-		hcb.xHairWorld = world;
-		hcb.xHairRegenerate = regenerate_frame ? 1 : 0;
-		hcb.xLength = length;
-		hcb.xStiffness = stiffness;
-		hcb.xHairRandomness = randomness;
-		hcb.xHairStrandCount = strandCount;
-		hcb.xHairSegmentCount = std::max(segmentCount, 1u);
-		hcb.xHairParticleCount = hcb.xHairStrandCount * hcb.xHairSegmentCount;
-		hcb.xHairRandomSeed = randomSeed;
-		hcb.xHairViewDistance = viewDistance;
-		hcb.xHairBaseMeshIndexCount = (uint)indices.size();
-		hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
-		// segmentCount will be loop in the shader, not a threadgroup so we don't need it here:
-		hcb.xHairNumDispatchGroups = (hcb.xHairParticleCount + THREADCOUNT_SIMULATEHAIR - 1) / THREADCOUNT_SIMULATEHAIR;
-		hcb.xHairFramesXY = uint2(std::max(1u, framesX), std::max(1u, framesY));
-		hcb.xHairFrameCount = std::max(1u, frameCount);
-		hcb.xHairFrameStart = frameStart;
-		hcb.xHairTexMul = float2(1.0f / (float)hcb.xHairFramesXY.x, 1.0f / (float)hcb.xHairFramesXY.y);
-		hcb.xHairAspect = (float)std::max(1u, desc.width) / (float)std::max(1u, desc.height);
-		hcb.xHairLayerMask = layerMask;
-		hcb.xHairInstanceIndex = instanceIndex;
-		device->UpdateBuffer(&constantBuffer, &hcb, cmd);
+			if (barrier_stack.empty())
+				return;
+			device->Barrier(barrier_stack.data(), (uint32_t)barrier_stack.size(), cmd);
+			barrier_stack.clear();
+		};
 
+		bool mem_barrier_needed = false;
+		for (uint32_t i = 0; i < itemCount; ++i)
 		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		if (regenerate_frame)
-		{
-			device->ClearUAV(&simulationBuffer, 0, cmd);
-			device->ClearUAV(&vertexBuffer_POS[0], 0, cmd);
-			device->ClearUAV(&vertexBuffer_POS[1], 0, cmd);
-			device->ClearUAV(&vertexBuffer_UVS, 0, cmd);
-			device->ClearUAV(&culledIndexBuffer, 0, cmd);
-			device->ClearUAV(&indirectBuffer, 0, cmd);
+			const UpdateGPUItem& item = items[i];
+			const HairParticleSystem& hair = *item.hair;
+			if (hair.strandCount == 0 || !hair.simulationBuffer.IsValid())
 			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
+				continue;
 			}
+			const MeshComponent& mesh = *item.mesh;
+			const MaterialComponent& material = *item.material;
+
+			TextureDesc desc;
+			if (material.textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
+			{
+				desc = material.textures[MaterialComponent::BASECOLORMAP].resource.GetTexture().GetDesc();
+			}
+			HairParticleCB hcb;
+			hcb.xHairTransform.Create(hair.world);
+			hcb.xHairRegenerate = hair.regenerate_frame ? 1 : 0;
+			hcb.xLength = hair.length;
+			hcb.xStiffness = hair.stiffness;
+			hcb.xHairRandomness = hair.randomness;
+			hcb.xHairStrandCount = hair.strandCount;
+			hcb.xHairSegmentCount = std::max(hair.segmentCount, 1u);
+			hcb.xHairParticleCount = hcb.xHairStrandCount * hcb.xHairSegmentCount;
+			hcb.xHairRandomSeed = hair.randomSeed;
+			hcb.xHairViewDistance = hair.viewDistance;
+			hcb.xHairBaseMeshIndexCount = (uint)hair.indices.size();
+			hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
+			hcb.xHairFramesXY = uint2(std::max(1u, hair.framesX), std::max(1u, hair.framesY));
+			hcb.xHairFrameCount = std::max(1u, hair.frameCount);
+			hcb.xHairFrameStart = hair.frameStart;
+			hcb.xHairTexMul = float2(1.0f / (float)hcb.xHairFramesXY.x, 1.0f / (float)hcb.xHairFramesXY.y);
+			hcb.xHairAspect = (float)std::max(1u, desc.width) / (float)std::max(1u, desc.height);
+			hcb.xHairLayerMask = hair.layerMask;
+			hcb.xHairInstanceIndex = item.instanceIndex;
+			device->UpdateBuffer(&hair.constantBuffer, &hcb, cmd);
+
+			if (hair.regenerate_frame)
+			{
+				hair.regenerate_frame = false;
+				device->ClearUAV(&hair.simulationBuffer, 0, cmd);
+				device->ClearUAV(&hair.vertexBuffer_POS[0], 0, cmd);
+				device->ClearUAV(&hair.vertexBuffer_POS[1], 0, cmd);
+				device->ClearUAV(&hair.vertexBuffer_UVS, 0, cmd);
+				device->ClearUAV(&hair.culledIndexBuffer, 0, cmd);
+				device->ClearUAV(&hair.indirectBuffer, 0, cmd);
+				mem_barrier_needed = true;
+			}
+
+			barrier_stack.push_back(GPUBarrier::Buffer(&hair.constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
 		}
+
+		if (mem_barrier_needed)
+		{
+			barrier_stack.push_back(GPUBarrier::Memory());
+		}
+		barrier_stack_flush();
 
 		// Simulate:
+		device->BindComputeShader(&cs_simulate, cmd);
+		for (uint32_t i = 0; i < itemCount; ++i)
 		{
-			device->BindComputeShader(&cs_simulate, cmd);
-			device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(HairParticleCB), cmd);
+			const UpdateGPUItem& item = items[i];
+			const HairParticleSystem& hair = *item.hair;
+			if (hair.strandCount == 0 || !hair.simulationBuffer.IsValid())
+			{
+				continue;
+			}
+			const MeshComponent& mesh = *item.mesh;
+
+			device->BindConstantBuffer(&hair.constantBuffer, CB_GETBINDSLOT(HairParticleCB), cmd);
 
 			const GPUResource* uavs[] = {
-				&simulationBuffer,
-				&vertexBuffer_POS[0],
-				&vertexBuffer_UVS,
-				&culledIndexBuffer,
-				&indirectBuffer
+				&hair.simulationBuffer,
+				&hair.vertexBuffer_POS[0],
+				&hair.vertexBuffer_UVS,
+				&hair.culledIndexBuffer,
+				&hair.indirectBuffer
 			};
 			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-			if (indexBuffer.IsValid())
+			if (hair.indexBuffer.IsValid())
 			{
-				device->BindResource(&indexBuffer, 0, cmd);
+				device->BindResource(&hair.indexBuffer, 0, cmd);
 			}
 			else
 			{
@@ -348,42 +373,47 @@ namespace wi
 			{
 				device->BindResource(&mesh.generalBuffer, 1, cmd, mesh.vb_pos_nor_wind.subresource_srv);
 			}
-			device->BindResource(&vertexBuffer_length, 2, cmd);
+			device->BindResource(&hair.vertexBuffer_length, 2, cmd);
 
-			device->Dispatch(hcb.xHairNumDispatchGroups, 1, 1, cmd);
-
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory()
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			device->Dispatch((hair.strandCount + THREADCOUNT_SIMULATEHAIR - 1) / THREADCOUNT_SIMULATEHAIR, 1, 1, cmd);
 
 		}
 
-		// Finish update (reset counter, create indirect draw args):
 		{
-			device->BindComputeShader(&cs_finishUpdate, cmd);
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		// Finish update (reset counter, create indirect draw args):
+		device->BindComputeShader(&cs_finishUpdate, cmd);
+		for (uint32_t i = 0; i < itemCount; ++i)
+		{
+			const UpdateGPUItem& item = items[i];
+			const HairParticleSystem& hair = *item.hair;
+			if (hair.strandCount == 0 || !hair.simulationBuffer.IsValid())
+			{
+				continue;
+			}
 
 			const GPUResource* uavs[] = {
-				&indirectBuffer
+				&hair.indirectBuffer
 			};
 			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 			device->Dispatch(1, 1, 1, cmd);
 
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&indirectBuffer),
-				GPUBarrier::Buffer(&indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT),
-				GPUBarrier::Buffer(&vertexBuffer_POS[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&vertexBuffer_UVS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&culledIndexBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDEX_BUFFER),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-
+			barrier_stack.push_back(GPUBarrier::Memory(&hair.indirectBuffer));
+			barrier_stack.push_back(GPUBarrier::Buffer(&hair.indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT));
+			barrier_stack.push_back(GPUBarrier::Buffer(&hair.vertexBuffer_POS[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+			barrier_stack.push_back(GPUBarrier::Buffer(&hair.vertexBuffer_UVS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+			barrier_stack.push_back(GPUBarrier::Buffer(&hair.culledIndexBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDEX_BUFFER));
 		}
 
-		device->EventEnd(cmd);
+		barrier_stack_flush();
 
-		regenerate_frame = false;
+		device->EventEnd(cmd);
 	}
 
 	void HairParticleSystem::Draw(const MaterialComponent& material, wi::enums::RENDERPASS renderPass, CommandList cmd) const

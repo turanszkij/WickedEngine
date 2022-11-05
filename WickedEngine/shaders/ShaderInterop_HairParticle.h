@@ -17,7 +17,7 @@ struct PatchSimulationData
 
 CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 {
-	float4x4 xHairWorld;
+	ShaderTransform xHairTransform;
 
 	uint xHairRegenerate;
 	float xLength;
@@ -32,7 +32,7 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	float xHairViewDistance;
 	uint xHairBaseMeshIndexCount;
 	uint xHairBaseMeshVertexPositionStride;
-	uint xHairNumDispatchGroups;
+	uint xHairInstanceIndex;
 
 	uint2 xHairFramesXY;
 	uint xHairFrameCount;
@@ -41,11 +41,6 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	float2 xHairTexMul;
 	float xHairAspect;
 	uint xHairLayerMask;
-
-	uint xHairInstanceIndex;
-	uint padding0;
-	uint padding1;
-	uint padding2;
 };
 
 #endif // WI_SHADERINTEROP_HAIRPARTICLE_H

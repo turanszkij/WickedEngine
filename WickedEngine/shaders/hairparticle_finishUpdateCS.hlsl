@@ -4,11 +4,9 @@
 RWByteAddressBuffer counterBuffer : register(u0);
 
 [numthreads(1, 1, 1)]
-void main( uint3 DTid : SV_DispatchThreadID )
+void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint particleCount = counterBuffer.Load(0);
-
-	AllMemoryBarrier();
 
 	// Reset counter for next frame:
 	counterBuffer.Store(0, 0);
