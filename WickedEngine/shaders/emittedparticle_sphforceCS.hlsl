@@ -4,12 +4,12 @@
 //#define DEBUG_PRESSURE
 
 StructuredBuffer<uint> aliveBuffer_CURRENT : register(t0);
-ByteAddressBuffer counterBuffer : register(t1);
-StructuredBuffer<float> densityBuffer : register(t2);
-StructuredBuffer<float> cellIndexBuffer : register(t3);
-StructuredBuffer<uint> cellOffsetBuffer : register(t4);
+StructuredBuffer<float> densityBuffer : register(t1);
+StructuredBuffer<uint> particleCellBuffer : register(t2);
+StructuredBuffer<SPHGridCell> cellBuffer : register(t3);
 
-RWStructuredBuffer<Particle> particleBuffer : register(u0);
+RWByteAddressBuffer counterBuffer : register(u0);
+RWStructuredBuffer<Particle> particleBuffer : register(u1);
 
 #ifndef SPH_USE_ACCELERATION_GRID
 // grid structure is not a good fit to exploit shared memory because one threadgroup can load from different initial cells :(
@@ -65,63 +65,40 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	const int3 cellIndex = floor(remappedPos);
 
 	// iterate through all [27] neighbor cells:
-	[loop]
-	for (int i = -1; i <= 1; ++i)
+	for (uint i = 0; i < 27; ++i)
 	{
-		[loop]
-		for (int j = -1; j <= 1; ++j)
+		// hashed cell index is retrieved:
+		const int3 neighborIndex = cellIndex + sph_neighbor_offsets[i];
+		const uint flatNeighborIndex = SPH_GridHash(neighborIndex);
+
+		SPHGridCell cell = cellBuffer[flatNeighborIndex];
+		for (uint iterator = 0; iterator < cell.count; ++iterator)
 		{
-			[loop]
-			for (int k = -1; k <= 1; ++k)
+			uint particleIndexB = particleCellBuffer[cell.offset + iterator];
+			if (particleIndexB != particleIndexA)
 			{
-				// hashed cell index is retrieved:
-				const int3 neighborIndex = cellIndex + int3(i, j, k);
-				const uint flatNeighborIndex = SPH_GridHash(neighborIndex);
+				// SPH Force evaluation:
+				const float3 positionB = particleBuffer[particleIndexB].position.xyz;
 
-				// look up the offset into particle list from neighbor cell:
-				uint neighborIterator = cellOffsetBuffer[flatNeighborIndex];
+				const float3 diff = particleA.position - positionB;
+				const float r2 = dot(diff, diff); // distance squared
+				const float r = sqrt(r2);
 
-				// iterate through neighbor cell particles (if iterator offset is valid):
-				[loop]
-				while (neighborIterator != 0xFFFFFFFF && neighborIterator < aliveCount)
+				if (r > 0 && r < h) // avoid division by zero!
 				{
-					if (neighborIterator != DTid.x)
-					{
-						uint particleIndexB = aliveBuffer_CURRENT[neighborIterator];
-						if ((uint)cellIndexBuffer[particleIndexB] != flatNeighborIndex)
-						{
-							// here means we stepped out of the neighbor cell list!
-							break;
-						}
+					const float3 velocityB = particleBuffer[particleIndexB].velocity.xyz;
+					const float densityB = densityBuffer[particleIndexB];
+					const float pressureB = K * (densityB - p0);
 
-						// SPH Force evaluation:
-						{
-							const float3 positionB = particleBuffer[particleIndexB].position.xyz;
+					const float3 rNorm = diff / r;
+					float W = xSPH_spiky_constant * pow(h - r, 2); // spiky kernel smoothing function
 
-							const float3 diff = particleA.position - positionB;
-							const float r2 = dot(diff, diff); // distance squared
-							const float r = sqrt(r2);
+					const float mass = particleBuffer[particleIndexB].mass / particleA.mass;
 
-							if (r > 0 && r < h) // avoid division by zero!
-							{
-								const float3 velocityB = particleBuffer[particleIndexB].velocity.xyz;
-								const float densityB = densityBuffer[particleIndexB];
-								const float pressureB = K * (densityB - p0);
+					f_a += mass * ((pressureA + pressureB) / (2 * densityA * densityB)) * W * rNorm;
 
-								const float3 rNorm = diff / r;
-								float W = xSPH_spiky_constant * pow(h - r, 2); // spiky kernel smoothing function
-
-								const float mass = particleBuffer[particleIndexB].mass / particleA.mass;
-
-								f_a += mass * ((pressureA + pressureB) / (2 * densityA * densityB)) * W * rNorm;
-
-								W = xSPH_visc_constant * (h - r);
-								f_av += mass * (1.0f / densityB) * (velocityB - particleA.velocity) * W * rNorm;
-							}
-						}
-					}
-
-					neighborIterator++;
+					W = xSPH_visc_constant * (h - r);
+					f_av += mass * (1.0f / densityB) * (velocityB - particleA.velocity) * W * rNorm;
 				}
 			}
 		}

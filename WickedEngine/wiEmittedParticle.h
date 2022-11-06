@@ -37,8 +37,8 @@ namespace wi
 		wi::graphics::GPUBuffer aliveList[2];
 		wi::graphics::GPUBuffer deadList;
 		wi::graphics::GPUBuffer distanceBuffer; // for sorting
-		wi::graphics::GPUBuffer sphPartitionCellIndices; // for SPH
-		wi::graphics::GPUBuffer sphPartitionCellOffsets; // for SPH
+		wi::graphics::GPUBuffer sphGridCells;  // for SPH
+		wi::graphics::GPUBuffer sphParticleCells;  // for SPH
 		wi::graphics::GPUBuffer densityBuffer; // for SPH
 		wi::graphics::GPUBuffer counterBuffer;
 		wi::graphics::GPUBuffer indirectBuffers; // kickoffUpdate, simulation, draw

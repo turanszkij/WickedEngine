@@ -1059,7 +1059,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_COVERAGE], "surfel_coverageCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_INDIRECTPREPARE], "surfel_indirectprepareCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_UPDATE], "surfel_updateCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_GRIDRESET], "surfel_gridresetCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_GRIDOFFSETS], "surfel_gridoffsetsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_BINNING], "surfel_binningCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_INTEGRATE], "surfel_integrateCS.cso"); });
@@ -8694,12 +8693,6 @@ void SurfelGI(
 	// Grid reset:
 	{
 		device->EventBegin("Grid Reset", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_SURFEL_GRIDRESET], cmd);
-
-		const GPUResource* uavs[] = {
-			&scene.surfelGridBuffer,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8708,12 +8701,7 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->Dispatch(
-			(SURFEL_TABLE_SIZE + 63) / 64,
-			1,
-			1,
-			cmd
-		);
+		device->ClearUAV(&scene.surfelGridBuffer, 0, cmd);
 
 		device->EventEnd(cmd);
 	}

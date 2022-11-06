@@ -2,12 +2,12 @@
 #include "ShaderInterop_EmittedParticle.h"
 
 StructuredBuffer<uint> aliveBuffer_CURRENT : register(t0);
-ByteAddressBuffer counterBuffer : register(t1);
-StructuredBuffer<Particle> particleBuffer : register(t2);
-StructuredBuffer<float> cellIndexBuffer : register(t3);
-StructuredBuffer<uint> cellOffsetBuffer : register(t4);
+StructuredBuffer<Particle> particleBuffer : register(t1);
+StructuredBuffer<uint> particleCellBuffer : register(t2);
+StructuredBuffer<SPHGridCell> cellBuffer : register(t3);
 
-RWStructuredBuffer<float> densityBuffer : register(u0);
+RWByteAddressBuffer counterBuffer : register(u0);
+RWStructuredBuffer<float> densityBuffer : register(u1);
 
 #ifndef SPH_USE_ACCELERATION_GRID
 // grid structure is not a good fit to exploit shared memory because one threadgroup can load from different initial cells :(
@@ -53,49 +53,29 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	const int3 cellIndex = floor(remappedPos);
 
 	// iterate through all [27] neighbor cells:
-	[loop]
-	for (int i = -1; i <= 1; ++i)
+	for (uint i = 0; i < 27; ++i)
 	{
-		[loop]
-		for (int j = -1; j <= 1; ++j)
+		// hashed cell index is retrieved:
+		const int3 neighborIndex = cellIndex + sph_neighbor_offsets[i];
+		const uint flatNeighborIndex = SPH_GridHash(neighborIndex);
+
+		SPHGridCell cell = cellBuffer[flatNeighborIndex];
+		for (uint iterator = 0; iterator < cell.count; ++iterator)
 		{
-			[loop]
-			for (int k = -1; k <= 1; ++k)
+			uint particleIndexB = particleCellBuffer[cell.offset + iterator];
+
+			// SPH Density evaluation:
 			{
-				// hashed cell index is retrieved:
-				const int3 neighborIndex = cellIndex + int3(i, j, k);
-				const uint flatNeighborIndex = SPH_GridHash(neighborIndex);
+				Particle particleB = particleBuffer[particleIndexB];
 
-				// look up the offset into particle list from neighbor cell:
-				uint neighborIterator = cellOffsetBuffer[flatNeighborIndex];
+				float3 diff = positionA - particleB.position;
+				float r2 = dot(diff, diff); // distance squared
 
-				// iterate through neighbor cell particles (if iterator offset is valid):
-				[loop]
-				while (neighborIterator != 0xFFFFFFFF && neighborIterator < aliveCount)
+				if (r2 < h2)
 				{
-					uint particleIndexB = aliveBuffer_CURRENT[neighborIterator];
-					if ((uint)cellIndexBuffer[particleIndexB] != flatNeighborIndex)
-					{
-						// here means we stepped out of the neighbor cell list!
-						break;
-					}
+					float W = xSPH_poly6_constant * pow(h2 - r2, 3); // poly6 smoothing kernel
 
-					// SPH Density evaluation:
-					{
-						Particle particleB = particleBuffer[particleIndexB];
-
-						float3 diff = positionA - particleB.position;
-						float r2 = dot(diff, diff); // distance squared
-
-						if (r2 < h2)
-						{
-							float W = xSPH_poly6_constant * pow(h2 - r2, 3); // poly6 smoothing kernel
-
-							density += particleB.mass * W;
-						}
-					}
-
-					neighborIterator++;
+					density += particleB.mass * W;
 				}
 			}
 		}

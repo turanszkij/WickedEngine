@@ -6,6 +6,7 @@ StructuredBuffer<Particle> particleBuffer : register(t1);
 
 RWByteAddressBuffer counterBuffer : register(u0);
 RWStructuredBuffer<SPHGridCell> cellBuffer : register(u1);
+RWStructuredBuffer<uint> particleCellBuffer : register(u2);
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -23,5 +24,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	int3 cellIndex = floor(remappedPos);
 	uint flatCellIndex = SPH_GridHash(cellIndex);
 
-	InterlockedAdd(cellBuffer[flatCellIndex].count, 1);
+	uint prevCount;
+	InterlockedAdd(cellBuffer[flatCellIndex].count, 1, prevCount);
+	particleCellBuffer[cellBuffer[flatCellIndex].offset + prevCount] = particleIndex;
 }

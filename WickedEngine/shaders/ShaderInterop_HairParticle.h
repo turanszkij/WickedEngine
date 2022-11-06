@@ -2,17 +2,16 @@
 #define WI_SHADERINTEROP_HAIRPARTICLE_H
 
 #include "ShaderInterop.h"
+#include "ShaderInterop_Renderer.h"
 
-#define THREADCOUNT_SIMULATEHAIR 256
+#define THREADCOUNT_SIMULATEHAIR 64
 
 struct PatchSimulationData
 {
 	float3 position;
 	uint tangent_random;
-	float3 normal; // need high precision for the simulation!
+	uint3 normal_velocity; // packed fp16
 	uint binormal_length;
-	float3 velocity;
-	uint padding;
 };
 
 CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)

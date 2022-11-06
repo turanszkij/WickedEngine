@@ -23,6 +23,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		RNG rng;
 		rng.init(uint2(xEmitterRandomness, DTid.x), GetFrame().frame_count);
+
+		const float4x4 worldMatrix = xEmitterTransform.GetMatrix();
 		
 #ifdef EMIT_FROM_MESH
 		// random triangle on emitter surface:
@@ -73,17 +75,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		// compute final surface position on triangle from barycentric coords:
 		float3 pos = pos_nor0.xyz + f * (pos_nor1.xyz - pos_nor0.xyz) + g * (pos_nor2.xyz - pos_nor0.xyz);
 		float3 nor = nor0 + f * (nor1 - nor0) + g * (nor2 - nor0);
-		pos = mul(xEmitterWorld, float4(pos, 1)).xyz;
-		nor = normalize(mul((float3x3)xEmitterWorld, nor));
+		pos = mul(worldMatrix, float4(pos, 1)).xyz;
+		nor = normalize(mul((float3x3)worldMatrix, nor));
 
 #else
 
 #ifdef EMITTER_VOLUME
 		// Emit inside volume:
-		float3 pos = mul(xEmitterWorld, float4(rng.next_float() * 2 - 1, rng.next_float() * 2 - 1, rng.next_float() * 2 - 1, 1)).xyz;
+		float3 pos = mul(worldMatrix, float4(rng.next_float() * 2 - 1, rng.next_float() * 2 - 1, rng.next_float() * 2 - 1, 1)).xyz;
 #else
 		// Just emit from center point:
-		float3 pos = mul(xEmitterWorld, float4(0, 0, 0, 1)).xyz;
+		float3 pos = mul(worldMatrix, float4(0, 0, 0, 1)).xyz;
 #endif // EMITTER_VOLUME
 
 		float3 nor = 0;

@@ -31,6 +31,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	// reset culled count:
 	counterBuffer.Store(PARTICLECOUNTER_OFFSET_CULLEDCOUNT, 0);
 
-	// and write real emit count:
+	// write real emit count:
 	counterBuffer.Store(PARTICLECOUNTER_OFFSET_REALEMITCOUNT, realEmitCount);
+
+	// reset cell allocator:
+	counterBuffer.Store(PARTICLECOUNTER_OFFSET_CELLALLOCATOR, 0);
 }

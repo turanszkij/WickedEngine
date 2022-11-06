@@ -2,6 +2,7 @@
 #define WI_SHADERINTEROP_EMITTEDPARTICLE_H
 
 #include "ShaderInterop.h"
+#include "ShaderInterop_Renderer.h"
 
 struct Particle
 {
@@ -23,12 +24,14 @@ struct ParticleCounters
 	uint realEmitCount;
 	uint aliveCount_afterSimulation;
 	uint culledCount;
+	uint cellAllocator;
 };
 static const uint PARTICLECOUNTER_OFFSET_ALIVECOUNT = 0;
 static const uint PARTICLECOUNTER_OFFSET_DEADCOUNT = PARTICLECOUNTER_OFFSET_ALIVECOUNT + 4;
 static const uint PARTICLECOUNTER_OFFSET_REALEMITCOUNT = PARTICLECOUNTER_OFFSET_DEADCOUNT + 4;
 static const uint PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION = PARTICLECOUNTER_OFFSET_REALEMITCOUNT + 4;
 static const uint PARTICLECOUNTER_OFFSET_CULLEDCOUNT = PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION + 4;
+static const uint PARTICLECOUNTER_OFFSET_CELLALLOCATOR = PARTICLECOUNTER_OFFSET_CULLEDCOUNT + 4;
 
 static const uint EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED = 1 << 0;
 static const uint EMITTER_OPTION_BIT_SPH_ENABLED = 1 << 1;
@@ -37,7 +40,7 @@ static const uint EMITTER_OPTION_BIT_COLLIDERS_DISABLED = 1 << 3;
 
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
-	float4x4	xEmitterWorld;
+	ShaderTransform	xEmitterTransform;
 
 	uint		xEmitCount;
 	uint		xEmitterMeshIndexCount;
@@ -95,7 +98,6 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 };
 
 static const uint THREADCOUNT_EMIT = 256;
-static const uint THREADCOUNT_SIMULATION = 256;
 static const uint THREADCOUNT_MESH_SHADER = 32;
 
 static const uint ARGUMENTBUFFER_OFFSET_DISPATCHEMIT = 0;
@@ -108,6 +110,12 @@ static const uint ARGUMENTBUFFER_OFFSET_DRAWPARTICLES = ARGUMENTBUFFER_OFFSET_DI
 #define SPH_USE_ACCELERATION_GRID
 static const uint SPH_PARTITION_BUCKET_COUNT = 128 * 128 * 64;
 
+#ifdef SPH_USE_ACCELERATION_GRID
+static const uint THREADCOUNT_SIMULATION = 64;
+#else
+static const uint THREADCOUNT_SIMULATION = 256;
+#endif // SPH_USE_ACCELERATION_GRID
+
 inline uint SPH_GridHash(int3 cellIndex)
 {
 	const uint p1 = 73856093;   // some large primes 
@@ -117,6 +125,42 @@ inline uint SPH_GridHash(int3 cellIndex)
 	n %= SPH_PARTITION_BUCKET_COUNT;
 	return n;
 }
+struct SPHGridCell
+{
+	uint count;
+	uint offset;
+};
+
+// 27 neighbor offsets in a 3D grid, including center cell:
+static const int3 sph_neighbor_offsets[27] = {
+	int3(-1, -1, -1),
+	int3(-1, -1, 0),
+	int3(-1, -1, 1),
+	int3(-1, 0, -1),
+	int3(-1, 0, 0),
+	int3(-1, 0, 1),
+	int3(-1, 1, -1),
+	int3(-1, 1, 0),
+	int3(-1, 1, 1),
+	int3(0, -1, -1),
+	int3(0, -1, 0),
+	int3(0, -1, 1),
+	int3(0, 0, -1),
+	int3(0, 0, 0),
+	int3(0, 0, 1),
+	int3(0, 1, -1),
+	int3(0, 1, 0),
+	int3(0, 1, 1),
+	int3(1, -1, -1),
+	int3(1, -1, 0),
+	int3(1, -1, 1),
+	int3(1, 0, -1),
+	int3(1, 0, 0),
+	int3(1, 0, 1),
+	int3(1, 1, -1),
+	int3(1, 1, 0),
+	int3(1, 1, 1),
+};
 
 #endif // WI_SHADERINTEROP_EMITTEDPARTICLE_H
 

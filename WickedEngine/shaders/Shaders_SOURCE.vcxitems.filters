@@ -353,12 +353,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticle_sphpartitionCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticle_sphpartitionoffsetsCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticle_sphpartitionoffsetsresetCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticle_simulateCS_SORTING.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -968,9 +962,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)visibility_resolveCS_MSAA.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)surfel_gridresetCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)surfel_gridoffsetsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -1089,6 +1080,12 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)terrainVirtualTextureUpdateCS_surfacemap.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticle_sphcellallocationCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticle_sphbinningCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

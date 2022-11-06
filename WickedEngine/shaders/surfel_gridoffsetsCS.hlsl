@@ -8,8 +8,8 @@ RWByteAddressBuffer surfelStatsBuffer : register(u2);
 [numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	SurfelGridCell cell = surfelGridBuffer[DTid.x];
-	surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_CELLALLOCATOR, cell.count, cell.offset);
-	cell.count = 0;
-	surfelGridBuffer[DTid.x] = cell;
+	if (surfelGridBuffer[DTid.x].count == 0)
+		return;
+	surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_CELLALLOCATOR, surfelGridBuffer[DTid.x].count, surfelGridBuffer[DTid.x].offset);
+	surfelGridBuffer[DTid.x].count = 0;
 }

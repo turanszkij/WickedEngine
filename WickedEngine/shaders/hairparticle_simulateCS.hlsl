@@ -104,11 +104,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		if (xHairRegenerate)
 		{
 			simulationBuffer[particleID].position = base;
-			simulationBuffer[particleID].normal = target;
-			simulationBuffer[particleID].velocity = 0;
+			simulationBuffer[particleID].normal_velocity = f32tof16(target);
 		}
 
-        normal += simulationBuffer[particleID].normal;
+        normal += f16tof32(simulationBuffer[particleID].normal_velocity);
         normal = normalize(normal);
 
 		float len = (binormal_length >> 24) & 0x000000FF;
@@ -203,11 +202,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
         force *= delta_time;
 
 		// Simulation buffer load:
-        float3 velocity = simulationBuffer[particleID].velocity;
+        float3 velocity = f16tof32(simulationBuffer[particleID].normal_velocity >> 16u);
 
 		// Apply surface-movement-based velocity:
 		const float3 old_base = simulationBuffer[particleID].position;
-		const float3 old_normal = simulationBuffer[particleID].normal;
+		const float3 old_normal = f16tof32(simulationBuffer[particleID].normal_velocity);
 		const float3 old_tip = old_base + old_normal * len;
 		const float3 surface_velocity = old_tip - tip;
 		velocity += surface_velocity;
@@ -225,13 +224,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// Drag:
 		velocity *= 0.98f;
 
-		// Store particle:
-		simulationBuffer[particleID].position = base;
-		simulationBuffer[particleID].normal = normal;
-
 		// Store simulation data:
-		simulationBuffer[particleID].velocity = velocity;
-
+		simulationBuffer[particleID].position = base;
+		simulationBuffer[particleID].normal_velocity = f32tof16(normal) | (f32tof16(velocity) << 16u);
 
 		// Write out render buffers:
 		//	These must be persistent, not culled (raytracing, surfels...)
