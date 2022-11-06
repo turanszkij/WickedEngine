@@ -360,11 +360,34 @@ namespace wi::scene
 	}
 	void MaterialComponent::CreateRenderData()
 	{
-		for (auto& x : textures)
+		for (uint32_t slot = 0; slot < TEXTURESLOT_COUNT; ++slot)
 		{
-			if (!x.name.empty())
+			auto& textureslot = textures[slot];
+			if (!textureslot.name.empty())
 			{
-				x.resource = wi::resourcemanager::Load(x.name, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+				wi::resourcemanager::Flags flags = wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA;
+				switch (slot)
+				{
+				case BASECOLORMAP:
+				case EMISSIVEMAP:
+				case SPECULARMAP:
+				case SHEENCOLORMAP:
+					flags |= wi::resourcemanager::Flags::IMPORT_SRGB;
+					break;
+				case SURFACEMAP:
+					if (IsUsingSpecularGlossinessWorkflow())
+					{
+						flags |= wi::resourcemanager::Flags::IMPORT_SRGB;
+					}
+					break;
+				case NORMALMAP:
+					flags |= wi::resourcemanager::Flags::IMPORT_NORMALMAP;
+					break;
+				default:
+					break;
+				}
+
+				textureslot.resource = wi::resourcemanager::Load(textureslot.name, flags);
 			}
 		}
 	}

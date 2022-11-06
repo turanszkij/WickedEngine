@@ -279,7 +279,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.skyMapName = fileName;
-					weather.skyMap = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					weather.skyMap = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA | wi::resourcemanager::Flags::IMPORT_SRGB);
 					skyButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 				});
 			});

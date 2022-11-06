@@ -7411,7 +7411,16 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 	bool hdr = !IsFormatUnorm(desc.format);
 
-	MipgenPushConstants mipgen;
+	MipgenPushConstants mipgen = {};
+
+	if (options.preserve_coverage)
+	{
+		mipgen.mipgen_options |= MIPGEN_OPTION_BIT_PRESERVE_COVERAGE;
+	}
+	if (IsFormatSRGB(desc.format))
+	{
+		mipgen.mipgen_options |= MIPGEN_OPTION_BIT_SRGB;
+	}
 
 	if (desc.type == TextureDesc::Type::TEXTURE_1D)
 	{
@@ -7469,7 +7478,6 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					mipgen.outputResolution_rcp.x = 1.0f / mipgen.outputResolution.x;
 					mipgen.outputResolution_rcp.y = 1.0f / mipgen.outputResolution.y;
 					mipgen.arrayIndex = options.arrayIndex;
-					mipgen.mipgen_options = 0;
 					device->PushConstants(&mipgen, sizeof(mipgen), cmd);
 
 					device->Dispatch(
@@ -7524,7 +7532,6 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					mipgen.outputResolution_rcp.x = 1.0f / mipgen.outputResolution.x;
 					mipgen.outputResolution_rcp.y = 1.0f / mipgen.outputResolution.y;
 					mipgen.arrayIndex = 0;
-					mipgen.mipgen_options = 0;
 					device->PushConstants(&mipgen, sizeof(mipgen), cmd);
 
 					device->Dispatch(
@@ -7593,11 +7600,6 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				mipgen.outputResolution_rcp.x = 1.0f / mipgen.outputResolution.x;
 				mipgen.outputResolution_rcp.y = 1.0f / mipgen.outputResolution.y;
 				mipgen.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
-				mipgen.mipgen_options = 0;
-				if (options.preserve_coverage)
-				{
-					mipgen.mipgen_options |= MIPGEN_OPTION_BIT_PRESERVE_COVERAGE;
-				}
 				device->PushConstants(&mipgen, sizeof(mipgen), cmd);
 
 				device->Dispatch(

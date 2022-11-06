@@ -75,8 +75,8 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 #ifndef REDUCED
 	// Pack primary payload for shading:
 	uint4 payload_0;
-	payload_0.x = pack_rgba(float4(GAMMA(surface.albedo), surface.occlusion));
-	payload_0.y = pack_rgba(float4(GAMMA(surface.f0), surface.roughness));
+	payload_0.x = pack_rgba(float4(ApplySRGBCurve_Fast(surface.albedo), surface.occlusion));
+	payload_0.y = pack_rgba(float4(ApplySRGBCurve_Fast(surface.f0), surface.roughness));
 	payload_0.z = pack_half2(encode_oct(surface.N));
 	payload_0.w = Pack_R11G11B10_FLOAT(surface.emissiveColor);
 	output_payload_0[pixel] = payload_0;

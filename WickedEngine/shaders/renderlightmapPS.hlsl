@@ -232,7 +232,7 @@ float4 main(Input input) : SV_TARGET
 			if (IsStaticSky())
 			{
 				// We have envmap information in a texture:
-				envColor = DEGAMMA_SKY(texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.Direction, 0).rgb);
+				envColor = texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.Direction, 0).rgb;
 			}
 			else
 			{

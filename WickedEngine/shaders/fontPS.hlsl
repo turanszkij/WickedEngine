@@ -36,7 +36,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 	}
 	else if (font.flags & FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR)
 	{
-		color.rgb = DEGAMMA(color.rgb);
 		color.rgb *= font.hdr_scaling;
 	}
 

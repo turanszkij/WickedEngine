@@ -820,7 +820,7 @@ namespace wi::scene
 					if (!lensFlareNames[i].empty())
 					{
 						lensFlareNames[i] = dir + lensFlareNames[i];
-						lensFlareRimTextures[i] = wi::resourcemanager::Load(lensFlareNames[i], wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+						lensFlareRimTextures[i] = wi::resourcemanager::Load(lensFlareNames[i], wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA | wi::resourcemanager::Flags::IMPORT_SRGB);
 					}
 				}
 			});
@@ -1109,7 +1109,7 @@ namespace wi::scene
 				if (!skyMapName.empty())
 				{
 					skyMapName = dir + skyMapName;
-					skyMap = wi::resourcemanager::Load(skyMapName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					skyMap = wi::resourcemanager::Load(skyMapName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA | wi::resourcemanager::Flags::IMPORT_SRGB);
 				}
 			}
 			if (archive.GetVersion() >= 40)

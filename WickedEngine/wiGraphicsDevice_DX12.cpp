@@ -4569,6 +4569,11 @@ using namespace dx12_internal;
 		{
 			format = *format_change;
 		}
+		if (type == SubresourceType::UAV)
+		{
+			// RW resource can't be SRGB
+			format = GetFormatNonSRGB(format);
+		}
 
 		switch (type)
 		{
@@ -4963,6 +4968,11 @@ using namespace dx12_internal;
 		if (format_change != nullptr)
 		{
 			format = *format_change;
+		}
+		if (type == SubresourceType::UAV)
+		{
+			// RW resource can't be SRGB
+			format = GetFormatNonSRGB(format);
 		}
 
 		switch (type)

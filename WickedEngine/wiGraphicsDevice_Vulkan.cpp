@@ -568,6 +568,9 @@ namespace vulkan_internal
 			ss += "[Vulkan Error]: ";
 			ss += callback_data->pMessage;
 			wi::backlog::post(ss, wi::backlog::LogLevel::Error);
+#ifdef _DEBUG
+			assert(0);
+#endif // _DEBUG
 		}
 
 		return VK_FALSE;
@@ -3875,6 +3878,10 @@ using namespace vulkan_internal;
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 		}
+		if (IsFormatSRGB(texture->desc.format) && has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		{
+			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | VK_IMAGE_CREATE_EXTENDED_USAGE_BIT;
+		}
 
 		if (families.size() > 1)
 		{
@@ -5957,6 +5964,11 @@ using namespace vulkan_internal;
 		{
 			format = *format_change;
 		}
+		if (type == SubresourceType::UAV)
+		{
+			// RW resource can't be SRGB
+			format = GetFormatNonSRGB(format);
+		}
 
 		VkImageViewCreateInfo view_desc = {};
 		view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -6035,6 +6047,13 @@ using namespace vulkan_internal;
 			default:
 				break;
 			}
+
+			// This is required in cases where image was created with eg. USAGE_STORAGE, but
+			//	the view format that we are creating doesn't support USAGE_STORAGE (for examplle: SRGB formats)
+			VkImageViewUsageCreateInfo viewUsageInfo = {};
+			viewUsageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO;
+			viewUsageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+			view_desc.pNext = &viewUsageInfo;
 
 			Texture_Vulkan::TextureSubresource subresource;
 			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &subresource.image_view);
@@ -6202,6 +6221,11 @@ using namespace vulkan_internal;
 		if (format_change != nullptr)
 		{
 			format = *format_change;
+		}
+		if (type == SubresourceType::UAV)
+		{
+			// RW resource can't be SRGB
+			format = GetFormatNonSRGB(format);
 		}
 
 		switch (type)

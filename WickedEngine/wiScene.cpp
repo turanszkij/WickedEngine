@@ -3017,9 +3017,9 @@ namespace wi::scene
 			device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
 			device->SetName(&impostorDepthStencil, "impostorDepthStencil");
 
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			desc.array_size = maxImpostorCount * impostorCaptureAngles * 3;
-			desc.format = Format::R8G8B8A8_UNORM;
+			desc.format = Format::R8G8B8A8_UNORM_SRGB;
 			desc.layout = ResourceState::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::NONE;
 			device->CreateTexture(&desc, nullptr, &impostorArray);

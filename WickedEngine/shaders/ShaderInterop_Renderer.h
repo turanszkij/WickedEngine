@@ -1011,6 +1011,7 @@ struct MipgenPushConstants
 	int sampler_index;
 };
 static const uint MIPGEN_OPTION_BIT_PRESERVE_COVERAGE = 1 << 0;
+static const uint MIPGEN_OPTION_BIT_SRGB = 1 << 1;
 
 struct FilterEnvmapPushConstants
 {

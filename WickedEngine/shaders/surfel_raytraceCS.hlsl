@@ -66,7 +66,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			if (IsStaticSky())
 			{
 				// We have envmap information in a texture:
-				envColor = DEGAMMA_SKY(texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.Direction, 0).rgb);
+				envColor = texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.Direction, 0).rgb;
 			}
 			else
 			{

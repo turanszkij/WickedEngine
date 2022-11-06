@@ -1493,7 +1493,7 @@ namespace wi::terrain
 					switch (map_type)
 					{
 					default:
-						desc.format = Format::BC1_UNORM;
+						desc.format = Format::BC1_UNORM_SRGB;
 						break;
 					case MaterialComponent::NORMALMAP:
 						desc.format = Format::BC5_UNORM;
