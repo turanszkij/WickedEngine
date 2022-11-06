@@ -3375,14 +3375,6 @@ void UpdatePerFrameData(
 	{
 		frameCB.options |= OPTION_BIT_FORCE_DIFFUSE_LIGHTING;
 	}
-	if (vis.scene->weather.skyMap.IsValid())
-	{
-		bool hdr = !IsFormatUnorm(vis.scene->weather.skyMap.GetTexture().desc.format);
-		if (hdr)
-		{
-			frameCB.options |= OPTION_BIT_STATIC_SKY_HDR;
-		}
-	}
 	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
 	{
 		frameCB.options |= OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS;

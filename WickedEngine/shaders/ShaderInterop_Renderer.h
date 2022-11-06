@@ -799,9 +799,8 @@ static const uint OPTION_BIT_SHADOW_MASK = 1 << 9;
 static const uint OPTION_BIT_SURFELGI_ENABLED = 1 << 10;
 static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 11;
 static const uint OPTION_BIT_FORCE_DIFFUSE_LIGHTING = 1 << 12;
-static const uint OPTION_BIT_STATIC_SKY_HDR = 1 << 13;
-static const uint OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS = 1 << 14;
-static const uint OPTION_BIT_OVERRIDE_FOG_COLOR = 1 << 15;
+static const uint OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS = 1 << 13;
+static const uint OPTION_BIT_OVERRIDE_FOG_COLOR = 1 << 14;
 
 // ---------- Common Constant buffers: -----------------
 
