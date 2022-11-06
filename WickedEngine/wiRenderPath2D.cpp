@@ -22,7 +22,7 @@ namespace wi
 			TextureDesc desc = GetDepthStencil()->GetDesc();
 			desc.layout = ResourceState::SHADER_RESOURCE;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::R8G8B8A8_UNORM;
+			desc.format = Format::R8G8B8A8_UNORM_SRGB;
 			device->CreateTexture(&desc, nullptr, &rtStenciled);
 			device->SetName(&rtStenciled, "rtStenciled");
 
@@ -41,7 +41,7 @@ namespace wi
 		{
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::R8G8B8A8_UNORM;
+			desc.format = Format::R8G8B8A8_UNORM_SRGB;
 			desc.width = GetPhysicalWidth();
 			desc.height = GetPhysicalHeight();
 			device->CreateTexture(&desc, nullptr, &rtFinal);

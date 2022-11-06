@@ -21,6 +21,7 @@ namespace wi
 		const wi::graphics::Texture& GetTexture() const;
 		const wi::audio::Sound& GetSound() const;
 		const std::string& GetScript() const;
+		int GetTextureNonSRGBSubresource() const;
 
 		void SetFileData(const wi::vector<uint8_t>& data);
 		void SetFileData(wi::vector<uint8_t>&& data);
@@ -49,8 +50,7 @@ namespace wi
 			NONE = 0,
 			IMPORT_COLORGRADINGLUT = 1 << 0, // image import will convert resource to 3D color grading LUT
 			IMPORT_RETAIN_FILEDATA = 1 << 1, // file data will be kept for later reuse. This is necessary for keeping the resource serializable
-			IMPORT_SRGB = 1 << 2, // image import will use SRGB format modifier
-			IMPORT_NORMALMAP = 1 << 3, // image import will use optimal normal map encoding
+			IMPORT_NORMALMAP = 1 << 2, // image import will try to use optimal normal map encoding
 		};
 
 		// Load a resource

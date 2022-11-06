@@ -22,6 +22,7 @@ namespace wi
 	{
 		resourcemanager::Flags flags = resourcemanager::Flags::NONE;
 		wi::graphics::Texture texture;
+		int non_srgb_subresource = -1;
 		wi::audio::Sound sound;
 		std::string script;
 		wi::vector<uint8_t> filedata;
@@ -46,6 +47,11 @@ namespace wi
 	{
 		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		return resourceinternal->script;
+	}
+	int Resource::GetTextureNonSRGBSubresource() const
+	{
+		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		return resourceinternal->non_srgb_subresource;
 	}
 
 	void Resource::SetFileData(const wi::vector<uint8_t>& data)
@@ -172,7 +178,6 @@ namespace wi
 			{
 				flags &= ~Flags::IMPORT_RETAIN_FILEDATA;
 			}
-			const bool srgb = has_flag(flags, Flags::IMPORT_SRGB);
 
 			locker.lock();
 			std::weak_ptr<ResourceInternal>& weak_resource = resources[name];
@@ -232,6 +237,7 @@ namespace wi
 			{
 			case DataType::IMAGE:
 			{
+				const bool srgb = true;
 				GraphicsDevice* device = wi::graphics::GetDevice();
 				if (!ext.compare("KTX2"))
 				{
@@ -643,7 +649,7 @@ namespace wi
 								desc.width = 16;
 								desc.height = 16;
 								desc.depth = 16;
-								desc.format = srgb ? Format::R8G8B8A8_UNORM_SRGB : Format::R8G8B8A8_UNORM;
+								desc.format = Format::R8G8B8A8_UNORM;
 								desc.bind_flags = BindFlag::SHADER_RESOURCE;
 								SubresourceData InitData;
 								InitData.data_ptr = data;
@@ -684,6 +690,22 @@ namespace wi
 						}
 					}
 					free(rgb);
+				}
+
+				if (resource->texture.IsValid())
+				{
+					const TextureDesc& desc = resource->texture.GetDesc();
+					Format non_srgb_format = GetFormatNonSRGB(desc.format);
+					if (non_srgb_format != desc.format)
+					{
+						resource->non_srgb_subresource = device->CreateSubresource(
+							&resource->texture,
+							SubresourceType::SRV,
+							0, desc.array_size,
+							0, desc.mip_levels,
+							&non_srgb_format
+						);
+					}
 				}
 			}
 			break;
