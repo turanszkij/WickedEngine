@@ -2861,7 +2861,7 @@ using namespace dx12_internal;
 		}
 
 		// Fully typed casting: https://microsoft.github.io/DirectX-Specs/d3d/RelaxedCasting.html#casting-rules-for-rs2-drivers
-		//casting_fully_typed_formats = features.CastingFullyTypedFormatSupported();
+		casting_fully_typed_formats = features.CastingFullyTypedFormatSupported();
 
 		resource_heap_tier = features.ResourceHeapTier();
 
