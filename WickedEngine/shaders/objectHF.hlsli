@@ -1114,7 +1114,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
 	{
 		float4 baseColorMap = GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, uvsets);
-		baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
 		color *= baseColorMap;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
@@ -1161,7 +1160,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	if (GetMaterial().textures[SPECULARMAP].IsValid())
 	{
 		specularMap = GetMaterial().textures[SPECULARMAP].Sample(sampler_objectshader, uvsets);
-		specularMap.rgb = DEGAMMA(specularMap.rgb);
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1178,7 +1176,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	if (any(surface.emissiveColor) && GetMaterial().textures[EMISSIVEMAP].IsValid())
 	{
 		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_objectshader, uvsets);
-		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 		surface.emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
@@ -1228,7 +1225,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().textures[SHEENCOLORMAP].IsValid())
 	{
-		surface.sheen.color = DEGAMMA(GetMaterial().textures[SHEENCOLORMAP].Sample(sampler_objectshader, uvsets).rgb);
+		surface.sheen.color = GetMaterial().textures[SHEENCOLORMAP].Sample(sampler_objectshader, uvsets).rgb;
 	}
 	[branch]
 	if (GetMaterial().textures[SHEENROUGHNESSMAP].IsValid())

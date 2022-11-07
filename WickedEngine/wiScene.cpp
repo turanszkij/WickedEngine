@@ -3017,9 +3017,9 @@ namespace wi::scene
 			device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
 			device->SetName(&impostorDepthStencil, "impostorDepthStencil");
 
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			desc.array_size = maxImpostorCount * impostorCaptureAngles * 3;
-			desc.format = Format::R8G8B8A8_UNORM;
+			desc.format = Format::R10G10B10A2_UNORM;
 			desc.layout = ResourceState::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::NONE;
 			device->CreateTexture(&desc, nullptr, &impostorArray);
@@ -3498,7 +3498,7 @@ namespace wi::scene
 			desc.usage = Usage::DEFAULT;
 
 			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::R16_TYPELESS;
+			desc.format = Format::D16_UNORM;
 			desc.layout = ResourceState::SHADER_RESOURCE;
 			desc.sample_count = envmapMSAASampleCount;
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer_MSAA);
@@ -3526,12 +3526,11 @@ namespace wi::scene
 
 			desc.array_size = 6;
 			desc.mip_levels = 1;
-			desc.format = Format::R16_TYPELESS;
+			desc.format = Format::D16_UNORM;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 			desc.layout = ResourceState::SHADER_RESOURCE;
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
 			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
-
 
 			// Cube arrays per mip level:
 			for (uint32_t i = 0; i < envmapArray.desc.mip_levels; ++i)

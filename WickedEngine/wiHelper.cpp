@@ -346,6 +346,21 @@ namespace wi::helper
 				data32[i] = rgba8;
 			}
 		}
+		else if (desc.format == Format::B8G8R8A8_UNORM || desc.format == Format::B8G8R8A8_UNORM_SRGB)
+		{
+			// This will be converted first to rgba8 before saving to common format:
+			uint32_t* data32 = (uint32_t*)texturedata.data();
+
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				uint32_t pixel = data32[i];
+				uint8_t b = (pixel >> 0u) & 0xFF;
+				uint8_t g = (pixel >> 8u) & 0xFF;
+				uint8_t r = (pixel >> 16u) & 0xFF;
+				uint8_t a = (pixel >> 24u) & 0xFF;
+				data32[i] = r | (g << 8u) | (b << 16u) | (a << 24u);
+			}
+		}
 		else if (desc.format == Format::R8_UNORM)
 		{
 			// This can be saved by reducing target channel count, no conversion needed
@@ -390,7 +405,7 @@ namespace wi::helper
 		}
 		else
 		{
-			assert(desc.format == Format::R8G8B8A8_UNORM); // If you need to save other texture format, implement data conversion for it
+			assert(desc.format == Format::R8G8B8A8_UNORM || desc.format == Format::R8G8B8A8_UNORM_SRGB); // If you need to save other texture format, implement data conversion for it
 		}
 
 		if (basis || ktx2)

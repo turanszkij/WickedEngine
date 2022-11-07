@@ -49,10 +49,10 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	// Unpack primary payload:
 	uint4 payload_0 = input_payload_0[pixel];
 	float4 data0 = unpack_rgba(payload_0.x);
-	surface.albedo = DEGAMMA(data0.rgb);
+	surface.albedo = RemoveSRGBCurve_Fast(data0.rgb);
 	surface.occlusion = data0.a;
 	float4 data1 = unpack_rgba(payload_0.y);
-	surface.f0 = DEGAMMA(data1.rgb);
+	surface.f0 = RemoveSRGBCurve_Fast(data1.rgb);
 	surface.roughness = data1.a;
 	surface.N = decode_oct(unpack_half2(payload_0.z));
 	surface.emissiveColor = Unpack_R11G11B10_FLOAT(payload_0.w);

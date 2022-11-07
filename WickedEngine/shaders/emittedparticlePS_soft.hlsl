@@ -43,6 +43,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 #ifdef EMITTEDPARTICLE_DISTORTION
 	// just make normal maps blendable:
+	color.rgb = ApplySRGBCurve_Fast(color.rgb); // note: This texture uses basecolormap slot, and this slot is using SRGB descriptor, so we correct it here for normal map
 	color.rgb = color.rgb - 0.5f;
 #endif // EMITTEDPARTICLE_DISTORTION
 

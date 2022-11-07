@@ -652,8 +652,8 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 			wi::helper::FileDialog(params, [this, material, slot](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->textures[slot].resource = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 					material->textures[slot].name = fileName;
+					material->CreateRenderData();
 					material->SetDirty();
 					textureSlotLabel.SetText(wi::helper::GetFileNameFromPath(fileName));
 					});

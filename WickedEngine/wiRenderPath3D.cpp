@@ -1936,7 +1936,7 @@ namespace wi
 			device->SetName(&rtReflection, "rtReflection");
 
 			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::R32_TYPELESS;
+			desc.format = Format::D32_FLOAT;
 			desc.width = internalResolution.x / 4;
 			desc.height = internalResolution.y / 4;
 			desc.layout = ResourceState::DEPTHSTENCIL_READONLY;

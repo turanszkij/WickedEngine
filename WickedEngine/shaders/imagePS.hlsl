@@ -49,7 +49,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	}
 	else if (image.flags & IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR)
 	{
-		color.rgb = DEGAMMA(color.rgb);
+		color.rgb = RemoveSRGBCurve_Fast(color.rgb);
 		color.rgb *= image.hdr_scaling;
 	}
 

@@ -33,6 +33,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif
 		}
 
+		if (mipgen.mipgen_options & MIPGEN_OPTION_BIT_SRGB)
+		{
+			color.rgb = ApplySRGBCurve_Fast(color.rgb);
+		}
+
 		output[DTid.xy] = color;
 	}
 }

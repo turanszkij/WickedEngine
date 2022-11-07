@@ -34,7 +34,6 @@ void main(PSInput input)
 		if (GetMaterial().textures[BASECOLORMAP].IsValid() && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			baseColor = GetMaterial().textures[BASECOLORMAP].Sample(sampler_linear_wrap, input.uvsets);
-			baseColor.rgb = DEGAMMA(baseColor.rgb);
 		}
 		else
 		{
@@ -47,7 +46,6 @@ void main(PSInput input)
 		if (any(emissiveColor) && GetMaterial().textures[EMISSIVEMAP].IsValid())
 		{
 			float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_linear_wrap, input.uvsets);
-			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 			emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 		}
 

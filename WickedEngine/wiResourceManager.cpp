@@ -22,6 +22,7 @@ namespace wi
 	{
 		resourcemanager::Flags flags = resourcemanager::Flags::NONE;
 		wi::graphics::Texture texture;
+		int srgb_subresource = -1;
 		wi::audio::Sound sound;
 		std::string script;
 		wi::vector<uint8_t> filedata;
@@ -46,6 +47,11 @@ namespace wi
 	{
 		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		return resourceinternal->script;
+	}
+	int Resource::GetTextureSRGBSubresource() const
+	{
+		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		return resourceinternal->srgb_subresource;
 	}
 
 	void Resource::SetFileData(const wi::vector<uint8_t>& data)
@@ -243,21 +249,30 @@ namespace wi
 						desc.height = transcoder.get_height();
 						desc.array_size = std::max(desc.array_size, transcoder.get_layers() * transcoder.get_faces());
 						desc.mip_levels = transcoder.get_levels();
+						desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 						if (transcoder.get_faces() == 6)
 						{
-							desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
+							desc.misc_flags |= ResourceMiscFlag::TEXTURECUBE;
 						}
 
 						basist::transcoder_texture_format fmt;
-						if (transcoder.get_has_alpha())
+						if (has_flag(flags, Flags::IMPORT_NORMALMAP))
 						{
-							fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
-							desc.format = Format::BC3_UNORM;
+							fmt = basist::transcoder_texture_format::cTFBC5_RG;
+							desc.format = Format::BC5_UNORM;
 						}
 						else
 						{
-							fmt = basist::transcoder_texture_format::cTFBC1_RGB;
-							desc.format = Format::BC1_UNORM;
+							if (transcoder.get_has_alpha())
+							{
+								fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
+								desc.format = Format::BC3_UNORM;
+							}
+							else
+							{
+								fmt = basist::transcoder_texture_format::cTFBC1_RGB;
+								desc.format = Format::BC1_UNORM;
+							}
 						}
 						uint32_t bytes_per_block = basis_get_bytes_per_block_or_pixel(fmt);
 
@@ -331,6 +346,18 @@ namespace wi
 							{
 								success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
 								device->SetName(&resource->texture, name.c_str());
+
+								Format srgb_format = GetFormatSRGB(desc.format);
+								if (srgb_format != desc.format)
+								{
+									resource->srgb_subresource = device->CreateSubresource(
+										&resource->texture,
+										SubresourceType::SRV,
+										0, -1,
+										0, -1,
+										&srgb_format
+									);
+								}
 							}
 						}
 						transcoder.clear();
@@ -353,17 +380,26 @@ namespace wi
 								desc.width = info.m_width;
 								desc.height = info.m_height;
 								desc.mip_levels = info.m_total_levels;
+								desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 
 								basist::transcoder_texture_format fmt;
-								if (info.m_alpha_flag)
+								if (has_flag(flags, Flags::IMPORT_NORMALMAP))
 								{
-									fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
-									desc.format = Format::BC3_UNORM;
+									fmt = basist::transcoder_texture_format::cTFBC5_RG;
+									desc.format = Format::BC5_UNORM;
 								}
 								else
 								{
-									fmt = basist::transcoder_texture_format::cTFBC1_RGB;
-									desc.format = Format::BC1_UNORM;
+									if (info.m_alpha_flag)
+									{
+										fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
+										desc.format = Format::BC3_UNORM;
+									}
+									else
+									{
+										fmt = basist::transcoder_texture_format::cTFBC1_RGB;
+										desc.format = Format::BC1_UNORM;
+									}
 								}
 								uint32_t bytes_per_block = basis_get_bytes_per_block_or_pixel(fmt);
 
@@ -423,6 +459,18 @@ namespace wi
 									{
 										success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
 										device->SetName(&resource->texture, name.c_str());
+
+										Format srgb_format = GetFormatSRGB(desc.format);
+										if (srgb_format != desc.format)
+										{
+											resource->srgb_subresource = device->CreateSubresource(
+												&resource->texture,
+												SubresourceType::SRV,
+												0, -1,
+												0, -1,
+												&srgb_format
+											);
+										}
 									}
 								}
 							}
@@ -448,6 +496,7 @@ namespace wi
 						desc.array_size = dds.GetArraySize();
 						desc.format = Format::R8G8B8A8_UNORM;
 						desc.layout = ResourceState::SHADER_RESOURCE;
+						desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 
 						if (dds.IsCubemap())
 						{
@@ -568,6 +617,18 @@ namespace wi
 
 						success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
 						device->SetName(&resource->texture, name.c_str());
+
+						Format srgb_format = GetFormatSRGB(desc.format);
+						if (srgb_format != desc.format)
+						{
+							resource->srgb_subresource = device->CreateSubresource(
+								&resource->texture,
+								SubresourceType::SRV,
+								0, -1,
+								0, -1,
+								&srgb_format
+							);
+						}
 					}
 					else assert(0); // failed to load DDS
 
@@ -643,6 +704,7 @@ namespace wi
 							desc.mip_levels = (uint32_t)log2(std::max(width, height)) + 1;
 							desc.usage = Usage::DEFAULT;
 							desc.layout = ResourceState::SHADER_RESOURCE;
+							desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 
 							uint32_t mipwidth = width;
 							wi::vector<SubresourceData> InitData(desc.mip_levels);
@@ -664,6 +726,20 @@ namespace wi
 								subresource_index = device->CreateSubresource(&resource->texture, SubresourceType::UAV, 0, 1, i, 1);
 								assert(subresource_index == i);
 							}
+
+							// This part must be AFTER mip level subresource creation:
+							{
+								Format srgb_format = GetFormatSRGB(desc.format);
+								resource->srgb_subresource = device->CreateSubresource(
+									&resource->texture,
+									SubresourceType::SRV,
+									0, -1,
+									0, -1,
+									&srgb_format
+								);
+							}
+
+							wi::renderer::AddDeferredMIPGen(resource->texture, true);
 						}
 					}
 					free(rgb);
@@ -701,12 +777,6 @@ namespace wi
 				{
 					// resource was loaded using file name, and we want to discard filedata
 					resource->filedata.clear();
-				}
-
-				if (type == DataType::IMAGE && resource->texture.desc.mip_levels > 1
-					&& has_flag(resource->texture.desc.bind_flags, BindFlag::UNORDERED_ACCESS))
-				{
-					wi::renderer::AddDeferredMIPGen(resource->texture, true);
 				}
 
 				Resource retVal;

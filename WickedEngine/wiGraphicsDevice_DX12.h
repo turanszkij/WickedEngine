@@ -50,6 +50,7 @@ namespace wi::graphics
 
 		bool tearingSupported = false;
 		bool additionalShadingRatesSupported = false;
+		bool casting_fully_typed_formats = false;
 
 		uint32_t rtv_descriptor_size = 0;
 		uint32_t dsv_descriptor_size = 0;

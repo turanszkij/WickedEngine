@@ -313,7 +313,32 @@ namespace wi::scene
 		for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
 		{
 			material.textures[i].uvset_lodclamp = (textures[i].uvset & 1) | (XMConvertFloatToHalf(textures[i].lod_clamp) << 1u);
-			material.textures[i].texture_descriptor = device->GetDescriptorIndex(textures[i].GetGPUResource(), SubresourceType::SRV);
+			if (textures[i].resource.IsValid())
+			{
+				int subresource = -1;
+				switch (i)
+				{
+				case BASECOLORMAP:
+				case EMISSIVEMAP:
+				case SPECULARMAP:
+				case SHEENCOLORMAP:
+					subresource = textures[i].resource.GetTextureSRGBSubresource();
+					break;
+				case SURFACEMAP:
+					if (IsUsingSpecularGlossinessWorkflow())
+					{
+						subresource = textures[i].resource.GetTextureSRGBSubresource();
+					}
+					break;
+				default:
+					break;
+				}
+				material.textures[i].texture_descriptor = device->GetDescriptorIndex(textures[i].GetGPUResource(), SubresourceType::SRV, subresource);
+			}
+			else
+			{
+				material.textures[i].texture_descriptor = -1;
+			}
 			material.textures[i].sparse_residencymap_descriptor = textures[i].sparse_residencymap_descriptor;
 			material.textures[i].sparse_feedbackmap_descriptor = textures[i].sparse_feedbackmap_descriptor;
 		}
@@ -360,11 +385,22 @@ namespace wi::scene
 	}
 	void MaterialComponent::CreateRenderData()
 	{
-		for (auto& x : textures)
+		for (uint32_t slot = 0; slot < TEXTURESLOT_COUNT; ++slot)
 		{
-			if (!x.name.empty())
+			auto& textureslot = textures[slot];
+			if (!textureslot.name.empty())
 			{
-				x.resource = wi::resourcemanager::Load(x.name, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+				wi::resourcemanager::Flags flags = wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA;
+				switch (slot)
+				{
+				case NORMALMAP:
+				case CLEARCOATNORMALMAP:
+					flags |= wi::resourcemanager::Flags::IMPORT_NORMALMAP;
+					break;
+				default:
+					break;
+				}
+				textureslot.resource = wi::resourcemanager::Load(textureslot.name, flags);
 			}
 		}
 	}

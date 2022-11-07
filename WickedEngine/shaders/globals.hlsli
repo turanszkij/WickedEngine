@@ -265,10 +265,6 @@ inline float3 clipspace_to_uv(in float3 clipspace)
 	return clipspace * float3(0.5, -0.5, 0.5) + 0.5;
 }
 
-#define DEGAMMA_SKY(x)	((GetFrame().options & OPTION_BIT_STATIC_SKY_HDR) ? (x) : RemoveSRGBCurve_Fast(x))
-#define DEGAMMA(x)		(RemoveSRGBCurve_Fast(x))
-#define GAMMA(x)		(ApplySRGBCurve_Fast(x))
-
 inline float3 GetSunColor() { return GetWeather().sun_color; } // sun color with intensity applied
 inline float3 GetSunDirection() { return GetWeather().sun_direction; }
 inline float3 GetHorizonColor() { return GetWeather().horizon.rgb; }

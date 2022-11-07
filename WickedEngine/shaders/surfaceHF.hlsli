@@ -173,7 +173,7 @@ struct Surface
 		{
 			// Specular-glossiness workflow:
 			roughness *= saturate(1 - surfaceMap.a);
-			f0 *= DEGAMMA(surfaceMap.rgb);
+			f0 *= surfaceMap.rgb;
 			albedo = baseColor.rgb;
 		}
 		else
@@ -413,7 +413,6 @@ struct Surface
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 			if ((GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
-				baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
 				baseColor *= baseColorMap;
 			}
 			else
@@ -480,7 +479,6 @@ struct Surface
 #endif // SURFACE_LOAD_MIPCONE
 			specularMap = material.textures[SPECULARMAP].SampleLevel(sam, uvsets, lod);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
-			specularMap.rgb = DEGAMMA(specularMap.rgb);
 		}
 
 		create(material, baseColor, surfaceMap, specularMap);
@@ -504,7 +502,6 @@ struct Surface
 #endif // SURFACE_LOAD_MIPCONE
 				float4 emissiveMap = material.textures[EMISSIVEMAP].SampleLevel(sam, uvsets, lod);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
-				emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 				emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 			}
 		}
@@ -551,13 +548,13 @@ struct Surface
 		if (material.textures[SHEENCOLORMAP].IsValid())
 		{
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			sheen.color *= DEGAMMA(material.textures[SHEENCOLORMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rgb);
+			sheen.color *= material.textures[SHEENCOLORMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rgb;
 #else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(material.textures[SHEENCOLORMAP].GetTexture(), material.textures[SHEENCOLORMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			sheen.color *= DEGAMMA(material.textures[SHEENCOLORMAP].SampleLevel(sam, uvsets, lod).rgb);
+			sheen.color *= material.textures[SHEENCOLORMAP].SampleLevel(sam, uvsets, lod).rgb;
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 		[branch]

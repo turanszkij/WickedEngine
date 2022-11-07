@@ -131,7 +131,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const uint2 write_coord = DTid.xy + uint2(push.write_offset, 0);
 
 #ifdef UPDATE_BASECOLORMAP
-	output[write_coord] = CompressBlockBC1_UNORM(block_rgb, CMP_QUALITY0, /*isSRGB =*/ false);
+	output[write_coord] = CompressBlockBC1_UNORM(block_rgb, CMP_QUALITY0, /*isSRGB =*/ true);
 #endif // UPDATE_BASECOLORMAP
 
 #ifdef UPDATE_NORMALMAP

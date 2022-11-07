@@ -501,204 +501,252 @@ namespace dx12_internal
 		{
 		case Format::UNKNOWN:
 			return DXGI_FORMAT_UNKNOWN;
-			break;
 		case Format::R32G32B32A32_FLOAT:
 			return DXGI_FORMAT_R32G32B32A32_FLOAT;
-			break;
 		case Format::R32G32B32A32_UINT:
 			return DXGI_FORMAT_R32G32B32A32_UINT;
-			break;
 		case Format::R32G32B32A32_SINT:
 			return DXGI_FORMAT_R32G32B32A32_SINT;
-			break;
 		case Format::R32G32B32_FLOAT:
 			return DXGI_FORMAT_R32G32B32_FLOAT;
-			break;
 		case Format::R32G32B32_UINT:
 			return DXGI_FORMAT_R32G32B32_UINT;
-			break;
 		case Format::R32G32B32_SINT:
 			return DXGI_FORMAT_R32G32B32_SINT;
-			break;
 		case Format::R16G16B16A16_FLOAT:
 			return DXGI_FORMAT_R16G16B16A16_FLOAT;
-			break;
 		case Format::R16G16B16A16_UNORM:
 			return DXGI_FORMAT_R16G16B16A16_UNORM;
-			break;
 		case Format::R16G16B16A16_UINT:
 			return DXGI_FORMAT_R16G16B16A16_UINT;
-			break;
 		case Format::R16G16B16A16_SNORM:
 			return DXGI_FORMAT_R16G16B16A16_SNORM;
-			break;
 		case Format::R16G16B16A16_SINT:
 			return DXGI_FORMAT_R16G16B16A16_SINT;
-			break;
 		case Format::R32G32_FLOAT:
 			return DXGI_FORMAT_R32G32_FLOAT;
-			break;
 		case Format::R32G32_UINT:
 			return DXGI_FORMAT_R32G32_UINT;
-			break;
 		case Format::R32G32_SINT:
 			return DXGI_FORMAT_R32G32_SINT;
-			break;
-		case Format::R32G8X24_TYPELESS:
-			return DXGI_FORMAT_R32G8X24_TYPELESS;
-			break;
 		case Format::D32_FLOAT_S8X24_UINT:
 			return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-			break;
 		case Format::R10G10B10A2_UNORM:
 			return DXGI_FORMAT_R10G10B10A2_UNORM;
-			break;
 		case Format::R10G10B10A2_UINT:
 			return DXGI_FORMAT_R10G10B10A2_UINT;
-			break;
 		case Format::R11G11B10_FLOAT:
 			return DXGI_FORMAT_R11G11B10_FLOAT;
-			break;
 		case Format::R8G8B8A8_UNORM:
 			return DXGI_FORMAT_R8G8B8A8_UNORM;
-			break;
 		case Format::R8G8B8A8_UNORM_SRGB:
 			return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-			break;
 		case Format::R8G8B8A8_UINT:
 			return DXGI_FORMAT_R8G8B8A8_UINT;
-			break;
 		case Format::R8G8B8A8_SNORM:
 			return DXGI_FORMAT_R8G8B8A8_SNORM;
-			break;
 		case Format::R8G8B8A8_SINT:
 			return DXGI_FORMAT_R8G8B8A8_SINT;
-			break;
 		case Format::R16G16_FLOAT:
 			return DXGI_FORMAT_R16G16_FLOAT;
-			break;
 		case Format::R16G16_UNORM:
 			return DXGI_FORMAT_R16G16_UNORM;
-			break;
 		case Format::R16G16_UINT:
 			return DXGI_FORMAT_R16G16_UINT;
-			break;
 		case Format::R16G16_SNORM:
 			return DXGI_FORMAT_R16G16_SNORM;
-			break;
 		case Format::R16G16_SINT:
 			return DXGI_FORMAT_R16G16_SINT;
-			break;
-		case Format::R32_TYPELESS:
-			return DXGI_FORMAT_R32_TYPELESS;
-			break;
 		case Format::D32_FLOAT:
 			return DXGI_FORMAT_D32_FLOAT;
-			break;
 		case Format::R32_FLOAT:
 			return DXGI_FORMAT_R32_FLOAT;
-			break;
 		case Format::R32_UINT:
 			return DXGI_FORMAT_R32_UINT;
-			break;
 		case Format::R32_SINT:
 			return DXGI_FORMAT_R32_SINT;
-			break;
 		case Format::R8G8_UNORM:
 			return DXGI_FORMAT_R8G8_UNORM;
-			break;
 		case Format::R8G8_UINT:
 			return DXGI_FORMAT_R8G8_UINT;
-			break;
 		case Format::R8G8_SNORM:
 			return DXGI_FORMAT_R8G8_SNORM;
-			break;
 		case Format::R8G8_SINT:
 			return DXGI_FORMAT_R8G8_SINT;
-			break;
-		case Format::R16_TYPELESS:
-			return DXGI_FORMAT_R16_TYPELESS;
-			break;
 		case Format::R16_FLOAT:
 			return DXGI_FORMAT_R16_FLOAT;
-			break;
 		case Format::D16_UNORM:
 			return DXGI_FORMAT_D16_UNORM;
-			break;
 		case Format::R16_UNORM:
 			return DXGI_FORMAT_R16_UNORM;
-			break;
 		case Format::R16_UINT:
 			return DXGI_FORMAT_R16_UINT;
-			break;
 		case Format::R16_SNORM:
 			return DXGI_FORMAT_R16_SNORM;
-			break;
 		case Format::R16_SINT:
 			return DXGI_FORMAT_R16_SINT;
-			break;
 		case Format::R8_UNORM:
 			return DXGI_FORMAT_R8_UNORM;
-			break;
 		case Format::R8_UINT:
 			return DXGI_FORMAT_R8_UINT;
-			break;
 		case Format::R8_SNORM:
 			return DXGI_FORMAT_R8_SNORM;
-			break;
 		case Format::R8_SINT:
 			return DXGI_FORMAT_R8_SINT;
-			break;
 		case Format::BC1_UNORM:
 			return DXGI_FORMAT_BC1_UNORM;
-			break;
 		case Format::BC1_UNORM_SRGB:
 			return DXGI_FORMAT_BC1_UNORM_SRGB;
-			break;
 		case Format::BC2_UNORM:
 			return DXGI_FORMAT_BC2_UNORM;
-			break;
 		case Format::BC2_UNORM_SRGB:
 			return DXGI_FORMAT_BC2_UNORM_SRGB;
-			break;
 		case Format::BC3_UNORM:
 			return DXGI_FORMAT_BC3_UNORM;
-			break;
 		case Format::BC3_UNORM_SRGB:
 			return DXGI_FORMAT_BC3_UNORM_SRGB;
-			break;
 		case Format::BC4_UNORM:
 			return DXGI_FORMAT_BC4_UNORM;
-			break;
 		case Format::BC4_SNORM:
 			return DXGI_FORMAT_BC4_SNORM;
-			break;
 		case Format::BC5_UNORM:
 			return DXGI_FORMAT_BC5_UNORM;
-			break;
 		case Format::BC5_SNORM:
 			return DXGI_FORMAT_BC5_SNORM;
-			break;
 		case Format::B8G8R8A8_UNORM:
 			return DXGI_FORMAT_B8G8R8A8_UNORM;
-			break;
 		case Format::B8G8R8A8_UNORM_SRGB:
 			return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-			break;
 		case Format::BC6H_UF16:
 			return DXGI_FORMAT_BC6H_UF16;
-			break;
 		case Format::BC6H_SF16:
 			return DXGI_FORMAT_BC6H_SF16;
-			break;
 		case Format::BC7_UNORM:
 			return DXGI_FORMAT_BC7_UNORM;
-			break;
 		case Format::BC7_UNORM_SRGB:
 			return DXGI_FORMAT_BC7_UNORM_SRGB;
-			break;
 		}
 		return DXGI_FORMAT_UNKNOWN;
+	}
+	constexpr DXGI_FORMAT _ConvertFormatToTypeless(DXGI_FORMAT value)
+	{
+		switch (value)
+		{
+		case DXGI_FORMAT_R32G32B32A32_TYPELESS:
+		case DXGI_FORMAT_R32G32B32A32_FLOAT:
+		case DXGI_FORMAT_R32G32B32A32_UINT:
+		case DXGI_FORMAT_R32G32B32A32_SINT:
+			return DXGI_FORMAT_R32G32B32A32_TYPELESS;
+		case DXGI_FORMAT_R32G32B32_TYPELESS:
+		case DXGI_FORMAT_R32G32B32_FLOAT:
+		case DXGI_FORMAT_R32G32B32_UINT:
+		case DXGI_FORMAT_R32G32B32_SINT:
+			return DXGI_FORMAT_R32G32B32_TYPELESS;
+		case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+		case DXGI_FORMAT_R16G16B16A16_FLOAT:
+		case DXGI_FORMAT_R16G16B16A16_UNORM:
+		case DXGI_FORMAT_R16G16B16A16_UINT:
+		case DXGI_FORMAT_R16G16B16A16_SNORM:
+		case DXGI_FORMAT_R16G16B16A16_SINT:
+			return DXGI_FORMAT_R16G16B16A16_TYPELESS;
+		case DXGI_FORMAT_R32G32_TYPELESS:
+		case DXGI_FORMAT_R32G32_FLOAT:
+		case DXGI_FORMAT_R32G32_UINT:
+		case DXGI_FORMAT_R32G32_SINT:
+			return DXGI_FORMAT_R32G32_TYPELESS;
+		case DXGI_FORMAT_R32G8X24_TYPELESS:
+		case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+		case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+			return DXGI_FORMAT_R32G8X24_TYPELESS;
+		case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+			return DXGI_FORMAT_X32_TYPELESS_G8X24_UINT;
+		case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+		case DXGI_FORMAT_R10G10B10A2_UNORM:
+		case DXGI_FORMAT_R10G10B10A2_UINT:
+			return DXGI_FORMAT_R10G10B10A2_TYPELESS;
+		case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+		case DXGI_FORMAT_R8G8B8A8_UNORM:
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+		case DXGI_FORMAT_R8G8B8A8_UINT:
+		case DXGI_FORMAT_R8G8B8A8_SNORM:
+		case DXGI_FORMAT_R8G8B8A8_SINT:
+			return DXGI_FORMAT_R8G8B8A8_TYPELESS;
+		case DXGI_FORMAT_R16G16_TYPELESS:
+		case DXGI_FORMAT_R16G16_FLOAT:
+		case DXGI_FORMAT_R16G16_UNORM:
+		case DXGI_FORMAT_R16G16_UINT:
+		case DXGI_FORMAT_R16G16_SNORM:
+		case DXGI_FORMAT_R16G16_SINT:
+			return DXGI_FORMAT_R16G16_TYPELESS;
+		case DXGI_FORMAT_R32_TYPELESS:
+		case DXGI_FORMAT_D32_FLOAT:
+		case DXGI_FORMAT_R32_FLOAT:
+		case DXGI_FORMAT_R32_UINT:
+		case DXGI_FORMAT_R32_SINT:
+			return DXGI_FORMAT_R32_TYPELESS;
+		case DXGI_FORMAT_R24G8_TYPELESS:
+		case DXGI_FORMAT_D24_UNORM_S8_UINT:
+		case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+			return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+			return DXGI_FORMAT_X24_TYPELESS_G8_UINT;
+		case DXGI_FORMAT_R8G8_TYPELESS:
+		case DXGI_FORMAT_R8G8_UNORM:
+		case DXGI_FORMAT_R8G8_UINT:
+		case DXGI_FORMAT_R8G8_SNORM:
+		case DXGI_FORMAT_R8G8_SINT:
+			return DXGI_FORMAT_R8G8_TYPELESS;
+		case DXGI_FORMAT_R16_TYPELESS:
+		case DXGI_FORMAT_R16_FLOAT:
+		case DXGI_FORMAT_D16_UNORM:
+		case DXGI_FORMAT_R16_UNORM:
+		case DXGI_FORMAT_R16_UINT:
+		case DXGI_FORMAT_R16_SNORM:
+		case DXGI_FORMAT_R16_SINT:
+			return DXGI_FORMAT_R16_TYPELESS;
+		case DXGI_FORMAT_R8_TYPELESS:
+		case DXGI_FORMAT_R8_UNORM:
+		case DXGI_FORMAT_R8_UINT:
+		case DXGI_FORMAT_R8_SNORM:
+		case DXGI_FORMAT_R8_SINT:
+			return DXGI_FORMAT_R8_TYPELESS;
+		case DXGI_FORMAT_BC1_TYPELESS:
+		case DXGI_FORMAT_BC1_UNORM:
+		case DXGI_FORMAT_BC1_UNORM_SRGB:
+			return DXGI_FORMAT_BC1_TYPELESS;
+		case DXGI_FORMAT_BC2_TYPELESS:
+		case DXGI_FORMAT_BC2_UNORM:
+		case DXGI_FORMAT_BC2_UNORM_SRGB:
+			return DXGI_FORMAT_BC2_TYPELESS;
+		case DXGI_FORMAT_BC3_TYPELESS:
+		case DXGI_FORMAT_BC3_UNORM:
+		case DXGI_FORMAT_BC3_UNORM_SRGB:
+			return DXGI_FORMAT_BC3_TYPELESS;
+		case DXGI_FORMAT_BC4_TYPELESS:
+		case DXGI_FORMAT_BC4_UNORM:
+		case DXGI_FORMAT_BC4_SNORM:
+			return DXGI_FORMAT_BC4_TYPELESS;
+		case DXGI_FORMAT_BC5_TYPELESS:
+		case DXGI_FORMAT_BC5_UNORM:
+		case DXGI_FORMAT_BC5_SNORM:
+			return DXGI_FORMAT_BC5_TYPELESS;
+		case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+			return DXGI_FORMAT_B8G8R8A8_TYPELESS;
+		case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+		case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+			return DXGI_FORMAT_B8G8R8X8_TYPELESS;
+		case DXGI_FORMAT_BC6H_TYPELESS:
+		case DXGI_FORMAT_BC6H_UF16:
+		case DXGI_FORMAT_BC6H_SF16:
+			return DXGI_FORMAT_BC6H_TYPELESS;
+		case DXGI_FORMAT_BC7_TYPELESS:
+		case DXGI_FORMAT_BC7_UNORM:
+		case DXGI_FORMAT_BC7_UNORM_SRGB:
+			return DXGI_FORMAT_BC7_TYPELESS;
+		default:
+			return DXGI_FORMAT_UNKNOWN;
+		}
 	}
 	constexpr D3D12_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pInitialData)
 	{
@@ -763,202 +811,130 @@ namespace dx12_internal
 		{
 		case DXGI_FORMAT_UNKNOWN:
 			return Format::UNKNOWN;
-			break;
 		case DXGI_FORMAT_R32G32B32A32_FLOAT:
 			return Format::R32G32B32A32_FLOAT;
-			break;
 		case DXGI_FORMAT_R32G32B32A32_UINT:
 			return Format::R32G32B32A32_UINT;
-			break;
 		case DXGI_FORMAT_R32G32B32A32_SINT:
 			return Format::R32G32B32A32_SINT;
-			break;
 		case DXGI_FORMAT_R32G32B32_FLOAT:
 			return Format::R32G32B32_FLOAT;
-			break;
 		case DXGI_FORMAT_R32G32B32_UINT:
 			return Format::R32G32B32_UINT;
-			break;
 		case DXGI_FORMAT_R32G32B32_SINT:
 			return Format::R32G32B32_SINT;
-			break;
 		case DXGI_FORMAT_R16G16B16A16_FLOAT:
 			return Format::R16G16B16A16_FLOAT;
-			break;
 		case DXGI_FORMAT_R16G16B16A16_UNORM:
 			return Format::R16G16B16A16_UNORM;
-			break;
 		case DXGI_FORMAT_R16G16B16A16_UINT:
 			return Format::R16G16B16A16_UINT;
-			break;
 		case DXGI_FORMAT_R16G16B16A16_SNORM:
 			return Format::R16G16B16A16_SNORM;
-			break;
 		case DXGI_FORMAT_R16G16B16A16_SINT:
 			return Format::R16G16B16A16_SINT;
-			break;
 		case DXGI_FORMAT_R32G32_FLOAT:
 			return Format::R32G32_FLOAT;
-			break;
 		case DXGI_FORMAT_R32G32_UINT:
 			return Format::R32G32_UINT;
-			break;
 		case DXGI_FORMAT_R32G32_SINT:
 			return Format::R32G32_SINT;
-			break;
-		case DXGI_FORMAT_R32G8X24_TYPELESS:
-			return Format::R32G8X24_TYPELESS;
-			break;
 		case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
 			return Format::D32_FLOAT_S8X24_UINT;
-			break;
 		case DXGI_FORMAT_R10G10B10A2_UNORM:
 			return Format::R10G10B10A2_UNORM;
-			break;
 		case DXGI_FORMAT_R10G10B10A2_UINT:
 			return Format::R10G10B10A2_UINT;
-			break;
 		case DXGI_FORMAT_R11G11B10_FLOAT:
 			return Format::R11G11B10_FLOAT;
-			break;
 		case DXGI_FORMAT_R8G8B8A8_UNORM:
 			return Format::R8G8B8A8_UNORM;
-			break;
 		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
 			return Format::R8G8B8A8_UNORM_SRGB;
-			break;
 		case DXGI_FORMAT_R8G8B8A8_UINT:
 			return Format::R8G8B8A8_UINT;
-			break;
 		case DXGI_FORMAT_R8G8B8A8_SNORM:
 			return Format::R8G8B8A8_SNORM;
-			break;
 		case DXGI_FORMAT_R8G8B8A8_SINT:
 			return Format::R8G8B8A8_SINT;
-			break;
 		case DXGI_FORMAT_R16G16_FLOAT:
 			return Format::R16G16_FLOAT;
-			break;
 		case DXGI_FORMAT_R16G16_UNORM:
 			return Format::R16G16_UNORM;
-			break;
 		case DXGI_FORMAT_R16G16_UINT:
 			return Format::R16G16_UINT;
-			break;
 		case DXGI_FORMAT_R16G16_SNORM:
 			return Format::R16G16_SNORM;
-			break;
 		case DXGI_FORMAT_R16G16_SINT:
 			return Format::R16G16_SINT;
-			break;
-		case DXGI_FORMAT_R32_TYPELESS:
-			return Format::R32_TYPELESS;
-			break;
 		case DXGI_FORMAT_D32_FLOAT:
 			return Format::D32_FLOAT;
-			break;
 		case DXGI_FORMAT_R32_FLOAT:
 			return Format::R32_FLOAT;
-			break;
 		case DXGI_FORMAT_R32_UINT:
 			return Format::R32_UINT;
-			break;
 		case DXGI_FORMAT_R32_SINT:
 			return Format::R32_SINT;
-			break;
 		case DXGI_FORMAT_R8G8_UNORM:
 			return Format::R8G8_UNORM;
-			break;
 		case DXGI_FORMAT_R8G8_UINT:
 			return Format::R8G8_UINT;
-			break;
 		case DXGI_FORMAT_R8G8_SNORM:
 			return Format::R8G8_SNORM;
-			break;
 		case DXGI_FORMAT_R8G8_SINT:
 			return Format::R8G8_SINT;
-			break;
-		case DXGI_FORMAT_R16_TYPELESS:
-			return Format::R16_TYPELESS;
-			break;
 		case DXGI_FORMAT_R16_FLOAT:
 			return Format::R16_FLOAT;
-			break;
 		case DXGI_FORMAT_D16_UNORM:
 			return Format::D16_UNORM;
-			break;
 		case DXGI_FORMAT_R16_UNORM:
 			return Format::R16_UNORM;
-			break;
 		case DXGI_FORMAT_R16_UINT:
 			return Format::R16_UINT;
-			break;
 		case DXGI_FORMAT_R16_SNORM:
 			return Format::R16_SNORM;
-			break;
 		case DXGI_FORMAT_R16_SINT:
 			return Format::R16_SINT;
-			break;
 		case DXGI_FORMAT_R8_UNORM:
 			return Format::R8_UNORM;
-			break;
 		case DXGI_FORMAT_R8_UINT:
 			return Format::R8_UINT;
-			break;
 		case DXGI_FORMAT_R8_SNORM:
 			return Format::R8_SNORM;
-			break;
 		case DXGI_FORMAT_R8_SINT:
 			return Format::R8_SINT;
-			break;
 		case DXGI_FORMAT_BC1_UNORM:
 			return Format::BC1_UNORM;
-			break;
 		case DXGI_FORMAT_BC1_UNORM_SRGB:
 			return Format::BC1_UNORM_SRGB;
-			break;
 		case DXGI_FORMAT_BC2_UNORM:
 			return Format::BC2_UNORM;
-			break;
 		case DXGI_FORMAT_BC2_UNORM_SRGB:
 			return Format::BC2_UNORM_SRGB;
-			break;
 		case DXGI_FORMAT_BC3_UNORM:
 			return Format::BC3_UNORM;
-			break;
 		case DXGI_FORMAT_BC3_UNORM_SRGB:
 			return Format::BC3_UNORM_SRGB;
-			break;
 		case DXGI_FORMAT_BC4_UNORM:
 			return Format::BC4_UNORM;
-			break;
 		case DXGI_FORMAT_BC4_SNORM:
 			return Format::BC4_SNORM;
-			break;
 		case DXGI_FORMAT_BC5_UNORM:
 			return Format::BC5_UNORM;
-			break;
 		case DXGI_FORMAT_BC5_SNORM:
 			return Format::BC5_SNORM;
-			break;
 		case DXGI_FORMAT_B8G8R8A8_UNORM:
 			return Format::B8G8R8A8_UNORM;
-			break;
 		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
 			return Format::B8G8R8A8_UNORM_SRGB;
-			break;
 		case DXGI_FORMAT_BC6H_UF16:
 			return Format::BC6H_UF16;
-			break;
 		case DXGI_FORMAT_BC6H_SF16:
 			return Format::BC6H_SF16;
-			break;
 		case DXGI_FORMAT_BC7_UNORM:
 			return Format::BC7_UNORM;
-			break;
 		case DXGI_FORMAT_BC7_UNORM_SRGB:
 			return Format::BC7_UNORM_SRGB;
-			break;
 		}
 		return Format::UNKNOWN;
 	}
@@ -2040,49 +2016,16 @@ using namespace dx12_internal;
 						attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE)
 						continue;
 
+
 					assert(attachment.texture.desc.format != Format::UNKNOWN);
 					switch (attachment.type)
 					{
 					case RenderPassAttachment::Type::RENDERTARGET:
-						switch (attachment.texture.desc.format)
-						{
-						case Format::R16_TYPELESS:
-							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
-							break;
-						case Format::R32_TYPELESS:
-							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
-							break;
-						case Format::R24G8_TYPELESS:
-							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-							break;
-						case Format::R32G8X24_TYPELESS:
-							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-							break;
-						default:
-							formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture.desc.format);
-							break;
-						}
+						formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture.desc.format);
 						formats.NumRenderTargets++;
 						break;
 					case RenderPassAttachment::Type::DEPTH_STENCIL:
-						switch (attachment.texture.desc.format)
-						{
-						case Format::R16_TYPELESS:
-							DSFormat = DXGI_FORMAT_D16_UNORM;
-							break;
-						case Format::R32_TYPELESS:
-							DSFormat = DXGI_FORMAT_D32_FLOAT;
-							break;
-						case Format::R24G8_TYPELESS:
-							DSFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-							break;
-						case Format::R32G8X24_TYPELESS:
-							DSFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-							break;
-						default:
-							DSFormat = _ConvertFormat(attachment.texture.desc.format);
-							break;
-						}
+						DSFormat = _ConvertFormat(attachment.texture.desc.format);
 						break;
 					default:
 						assert(0);
@@ -2738,6 +2681,9 @@ using namespace dx12_internal;
 			wi::platform::Exit();
 		}
 
+		// Fully typed casting: https://microsoft.github.io/DirectX-Specs/d3d/RelaxedCasting.html#casting-rules-for-rs2-drivers
+		casting_fully_typed_formats = features.CastingFullyTypedFormatSupported();
+
 		resource_heap_tier = features.ResourceHeapTier();
 
 		if (resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2)
@@ -3312,8 +3258,9 @@ using namespace dx12_internal;
 		{
 			CreateSubresource(buffer, SubresourceType::UAV, 0);
 
-			if (!has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_RAW))
+			if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS) && !has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_RAW))
 			{
+				// Create raw buffer if doesn't exist for ClearUAV:
 				D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
 				uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -3338,6 +3285,8 @@ using namespace dx12_internal;
 		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
 
+		bool require_format_casting = has_flag(desc->misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING);
+
 		HRESULT hr = E_FAIL;
 
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
@@ -3358,7 +3307,11 @@ using namespace dx12_internal;
 		{
 			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 			//allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
-			if (!has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
+			if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
+			{
+				require_format_casting = true;
+			}
+			else
 			{
 				resourcedesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 			}
@@ -3397,20 +3350,14 @@ using namespace dx12_internal;
 		optimizedClearValue.Color[3] = texture->desc.clear.color[3];
 		optimizedClearValue.DepthStencil.Depth = texture->desc.clear.depth_stencil.depth;
 		optimizedClearValue.DepthStencil.Stencil = texture->desc.clear.depth_stencil.stencil;
-		optimizedClearValue.Format = resourcedesc.Format;
-		if (optimizedClearValue.Format == DXGI_FORMAT_R16_TYPELESS)
-		{
-			optimizedClearValue.Format = DXGI_FORMAT_D16_UNORM;
-		}
-		else if (optimizedClearValue.Format == DXGI_FORMAT_R32_TYPELESS)
-		{
-			optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-		}
-		else if (optimizedClearValue.Format == DXGI_FORMAT_R32G8X24_TYPELESS)
-		{
-			optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-		}
+		optimizedClearValue.Format = resourcedesc.Format; // Typed
 		bool useClearValue = has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) || has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
+
+		if ((!casting_fully_typed_formats && require_format_casting) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
+		{
+			// Fallback to TYPELESS, must be AFTER optimizedClearValue.Format was set:
+			resourcedesc.Format = _ConvertFormatToTypeless(resourcedesc.Format);
+		}
 
 		D3D12_RESOURCE_STATES resourceState = _ParseResourceState(texture->desc.layout);
 
@@ -4580,18 +4527,17 @@ using namespace dx12_internal;
 			// Try to resolve resource format:
 			switch (format)
 			{
-			case Format::R16_TYPELESS:
+			case Format::D16_UNORM:
 				srv_desc.Format = DXGI_FORMAT_R16_UNORM;
 				break;
-			case Format::R32_TYPELESS:
+			case Format::D32_FLOAT:
 				srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
 				break;
-			case Format::R24G8_TYPELESS:
+			case Format::D24_UNORM_S8_UINT:
 				srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 				break;
-			case Format::R32G8X24_TYPELESS:
+			case Format::D32_FLOAT_S8X24_UINT:
 				srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-				break;
 			default:
 				srv_desc.Format = _ConvertFormat(format);
 				break;
@@ -4693,26 +4639,7 @@ using namespace dx12_internal;
 		case SubresourceType::UAV:
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-
-			// Try to resolve resource format:
-			switch (format)
-			{
-			case Format::R16_TYPELESS:
-				uav_desc.Format = DXGI_FORMAT_R16_UNORM;
-				break;
-			case Format::R32_TYPELESS:
-				uav_desc.Format = DXGI_FORMAT_R32_FLOAT;
-				break;
-			case Format::R24G8_TYPELESS:
-				uav_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-				break;
-			case Format::R32G8X24_TYPELESS:
-				uav_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-				break;
-			default:
-				uav_desc.Format = _ConvertFormat(format);
-				break;
-			}
+			uav_desc.Format = _ConvertFormat(format);
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
@@ -4771,26 +4698,7 @@ using namespace dx12_internal;
 		case SubresourceType::RTV:
 		{
 			D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
-
-			// Try to resolve resource format:
-			switch (format)
-			{
-			case Format::R16_TYPELESS:
-				rtv_desc.Format = DXGI_FORMAT_R16_UNORM;
-				break;
-			case Format::R32_TYPELESS:
-				rtv_desc.Format = DXGI_FORMAT_R32_FLOAT;
-				break;
-			case Format::R24G8_TYPELESS:
-				rtv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-				break;
-			case Format::R32G8X24_TYPELESS:
-				rtv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-				break;
-			default:
-				rtv_desc.Format = _ConvertFormat(format);
-				break;
-			}
+			rtv_desc.Format = _ConvertFormat(format);
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
@@ -4865,26 +4773,7 @@ using namespace dx12_internal;
 		case SubresourceType::DSV:
 		{
 			D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
-
-			// Try to resolve resource format:
-			switch (format)
-			{
-			case Format::R16_TYPELESS:
-				dsv_desc.Format = DXGI_FORMAT_D16_UNORM;
-				break;
-			case Format::R32_TYPELESS:
-				dsv_desc.Format = DXGI_FORMAT_D32_FLOAT;
-				break;
-			case Format::R24G8_TYPELESS:
-				dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-				break;
-			case Format::R32G8X24_TYPELESS:
-				dsv_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-				break;
-			default:
-				dsv_desc.Format = _ConvertFormat(format);
-				break;
-			}
+			dsv_desc.Format = _ConvertFormat(format);
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
@@ -4963,6 +4852,11 @@ using namespace dx12_internal;
 		if (format_change != nullptr)
 		{
 			format = *format_change;
+		}
+		if (type == SubresourceType::UAV)
+		{
+			// RW resource can't be SRGB
+			format = GetFormatNonSRGB(format);
 		}
 
 		switch (type)

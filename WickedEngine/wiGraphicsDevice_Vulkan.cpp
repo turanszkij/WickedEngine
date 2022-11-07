@@ -44,208 +44,132 @@ namespace vulkan_internal
 		{
 		case Format::UNKNOWN:
 			return VK_FORMAT_UNDEFINED;
-			break;
 		case Format::R32G32B32A32_FLOAT:
 			return VK_FORMAT_R32G32B32A32_SFLOAT;
-			break;
 		case Format::R32G32B32A32_UINT:
 			return VK_FORMAT_R32G32B32A32_UINT;
-			break;
 		case Format::R32G32B32A32_SINT:
 			return VK_FORMAT_R32G32B32A32_SINT;
-			break;
 		case Format::R32G32B32_FLOAT:
 			return VK_FORMAT_R32G32B32_SFLOAT;
-			break;
 		case Format::R32G32B32_UINT:
 			return VK_FORMAT_R32G32B32_UINT;
-			break;
 		case Format::R32G32B32_SINT:
 			return VK_FORMAT_R32G32B32_SINT;
-			break;
 		case Format::R16G16B16A16_FLOAT:
 			return VK_FORMAT_R16G16B16A16_SFLOAT;
-			break;
 		case Format::R16G16B16A16_UNORM:
 			return VK_FORMAT_R16G16B16A16_UNORM;
-			break;
 		case Format::R16G16B16A16_UINT:
 			return VK_FORMAT_R16G16B16A16_UINT;
-			break;
 		case Format::R16G16B16A16_SNORM:
 			return VK_FORMAT_R16G16B16A16_SNORM;
-			break;
 		case Format::R16G16B16A16_SINT:
 			return VK_FORMAT_R16G16B16A16_SINT;
-			break;
 		case Format::R32G32_FLOAT:
 			return VK_FORMAT_R32G32_SFLOAT;
-			break;
 		case Format::R32G32_UINT:
 			return VK_FORMAT_R32G32_UINT;
-			break;
 		case Format::R32G32_SINT:
 			return VK_FORMAT_R32G32_SINT;
-			break;
-		case Format::R32G8X24_TYPELESS:
-			return VK_FORMAT_D32_SFLOAT_S8_UINT;
-			break;
 		case Format::D32_FLOAT_S8X24_UINT:
 			return VK_FORMAT_D32_SFLOAT_S8_UINT;
-			break;
 		case Format::R10G10B10A2_UNORM:
 			return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-			break;
 		case Format::R10G10B10A2_UINT:
 			return VK_FORMAT_A2B10G10R10_UINT_PACK32;
-			break;
 		case Format::R11G11B10_FLOAT:
 			return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
-			break;
 		case Format::R8G8B8A8_UNORM:
 			return VK_FORMAT_R8G8B8A8_UNORM;
-			break;
 		case Format::R8G8B8A8_UNORM_SRGB:
 			return VK_FORMAT_R8G8B8A8_SRGB;
-			break;
 		case Format::R8G8B8A8_UINT:
 			return VK_FORMAT_R8G8B8A8_UINT;
-			break;
 		case Format::R8G8B8A8_SNORM:
 			return VK_FORMAT_R8G8B8A8_SNORM;
-			break;
 		case Format::R8G8B8A8_SINT:
 			return VK_FORMAT_R8G8B8A8_SINT;
-			break;
 		case Format::R16G16_FLOAT:
 			return VK_FORMAT_R16G16_SFLOAT;
-			break;
 		case Format::R16G16_UNORM:
 			return VK_FORMAT_R16G16_UNORM;
-			break;
 		case Format::R16G16_UINT:
 			return VK_FORMAT_R16G16_UINT;
-			break;
 		case Format::R16G16_SNORM:
 			return VK_FORMAT_R16G16_SNORM;
-			break;
 		case Format::R16G16_SINT:
 			return VK_FORMAT_R16G16_SINT;
-			break;
-		case Format::R32_TYPELESS:
-			return VK_FORMAT_D32_SFLOAT;
-			break;
 		case Format::D32_FLOAT:
 			return VK_FORMAT_D32_SFLOAT;
-			break;
 		case Format::R32_FLOAT:
 			return VK_FORMAT_R32_SFLOAT;
-			break;
 		case Format::R32_UINT:
 			return VK_FORMAT_R32_UINT;
-			break;
 		case Format::R32_SINT:
 			return VK_FORMAT_R32_SINT;
-			break;
-		case Format::R24G8_TYPELESS:
-			return VK_FORMAT_D24_UNORM_S8_UINT;
-			break;
 		case Format::D24_UNORM_S8_UINT:
 			return VK_FORMAT_D24_UNORM_S8_UINT;
-			break;
 		case Format::R8G8_UNORM:
 			return VK_FORMAT_R8G8_UNORM;
-			break;
 		case Format::R8G8_UINT:
 			return VK_FORMAT_R8G8_UINT;
-			break;
 		case Format::R8G8_SNORM:
 			return VK_FORMAT_R8G8_SNORM;
-			break;
 		case Format::R8G8_SINT:
 			return VK_FORMAT_R8G8_SINT;
-			break;
-		case Format::R16_TYPELESS:
-			return VK_FORMAT_D16_UNORM;
-			break;
 		case Format::R16_FLOAT:
 			return VK_FORMAT_R16_SFLOAT;
-			break;
 		case Format::D16_UNORM:
 			return VK_FORMAT_D16_UNORM;
-			break;
 		case Format::R16_UNORM:
 			return VK_FORMAT_R16_UNORM;
-			break;
 		case Format::R16_UINT:
 			return VK_FORMAT_R16_UINT;
-			break;
 		case Format::R16_SNORM:
 			return VK_FORMAT_R16_SNORM;
-			break;
 		case Format::R16_SINT:
 			return VK_FORMAT_R16_SINT;
-			break;
 		case Format::R8_UNORM:
 			return VK_FORMAT_R8_UNORM;
-			break;
 		case Format::R8_UINT:
 			return VK_FORMAT_R8_UINT;
-			break;
 		case Format::R8_SNORM:
 			return VK_FORMAT_R8_SNORM;
-			break;
 		case Format::R8_SINT:
 			return VK_FORMAT_R8_SINT;
-			break;
 		case Format::BC1_UNORM:
 			return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-			break;
 		case Format::BC1_UNORM_SRGB:
 			return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
-			break;
 		case Format::BC2_UNORM:
 			return VK_FORMAT_BC2_UNORM_BLOCK;
-			break;
 		case Format::BC2_UNORM_SRGB:
 			return VK_FORMAT_BC2_SRGB_BLOCK;
-			break;
 		case Format::BC3_UNORM:
 			return VK_FORMAT_BC3_UNORM_BLOCK;
-			break;
 		case Format::BC3_UNORM_SRGB:
 			return VK_FORMAT_BC3_SRGB_BLOCK;
-			break;
 		case Format::BC4_UNORM:
 			return VK_FORMAT_BC4_UNORM_BLOCK;
-			break;
 		case Format::BC4_SNORM:
 			return VK_FORMAT_BC4_SNORM_BLOCK;
-			break;
 		case Format::BC5_UNORM:
 			return VK_FORMAT_BC5_UNORM_BLOCK;
-			break;
 		case Format::BC5_SNORM:
 			return VK_FORMAT_BC5_SNORM_BLOCK;
-			break;
 		case Format::B8G8R8A8_UNORM:
 			return VK_FORMAT_B8G8R8A8_UNORM;
-			break;
 		case Format::B8G8R8A8_UNORM_SRGB:
 			return VK_FORMAT_B8G8R8A8_SRGB;
-			break;
 		case Format::BC6H_UF16:
 			return VK_FORMAT_BC6H_UFLOAT_BLOCK;
-			break;
 		case Format::BC6H_SF16:
 			return VK_FORMAT_BC6H_SFLOAT_BLOCK;
-			break;
 		case Format::BC7_UNORM:
 			return VK_FORMAT_BC7_UNORM_BLOCK;
-			break;
 		case Format::BC7_UNORM_SRGB:
 			return VK_FORMAT_BC7_SRGB_BLOCK;
-			break;
 		}
 		return VK_FORMAT_UNDEFINED;
 	}
@@ -568,6 +492,9 @@ namespace vulkan_internal
 			ss += "[Vulkan Error]: ";
 			ss += callback_data->pMessage;
 			wi::backlog::post(ss, wi::backlog::LogLevel::Error);
+#ifdef _DEBUG
+			assert(0);
+#endif // _DEBUG
 		}
 
 		return VK_FALSE;
@@ -3843,6 +3770,11 @@ using namespace vulkan_internal;
 		if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+			if (IsFormatSRGB(texture->desc.format))
+			{
+				imageInfo.flags |= VK_IMAGE_CREATE_EXTENDED_USAGE_BIT;
+			}
 		}
 		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
@@ -3871,7 +3803,7 @@ using namespace vulkan_internal;
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
-		if (IsFormatTypeless(texture->desc.format))
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 		}
@@ -4190,7 +4122,7 @@ using namespace vulkan_internal;
 			barrier.newLayout = _ConvertImageLayout(texture->desc.layout);
 			barrier.srcAccessMask = 0;
 			barrier.dstAccessMask = _ParseResourceState(texture->desc.layout);
-			if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+			if (IsFormatDepthSupport(texture->desc.format))
 			{
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 				if (IsFormatStencilSupport(texture->desc.format))
@@ -6014,27 +5946,17 @@ using namespace vulkan_internal;
 		{
 		case SubresourceType::SRV:
 		{
-			switch (format)
+			if (IsFormatDepthSupport(format))
 			{
-			case Format::R16_TYPELESS:
-				view_desc.format = VK_FORMAT_D16_UNORM;
 				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				break;
-			case Format::R32_TYPELESS:
-				view_desc.format = VK_FORMAT_D32_SFLOAT;
-				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				break;
-			case Format::R24G8_TYPELESS:
-				view_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
-				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				break;
-			case Format::R32G8X24_TYPELESS:
-				view_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
-				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				break;
-			default:
-				break;
 			}
+
+			// This is required in cases where image was created with eg. USAGE_STORAGE, but
+			//	the view format that we are creating doesn't support USAGE_STORAGE (for examplle: SRGB formats)
+			VkImageViewUsageCreateInfo viewUsageInfo = {};
+			viewUsageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO;
+			viewUsageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+			view_desc.pNext = &viewUsageInfo;
 
 			Texture_Vulkan::TextureSubresource subresource;
 			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &subresource.image_view);
@@ -6144,26 +6066,6 @@ using namespace vulkan_internal;
 			view_desc.subresourceRange.levelCount = 1;
 			view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-			switch (format)
-			{
-			case Format::R16_TYPELESS:
-				view_desc.format = VK_FORMAT_D16_UNORM;
-				break;
-			case Format::R32_TYPELESS:
-				view_desc.format = VK_FORMAT_D32_SFLOAT;
-				break;
-			case Format::R24G8_TYPELESS:
-				view_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
-				view_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-				break;
-			case Format::R32G8X24_TYPELESS:
-				view_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
-				view_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-				break;
-			default:
-				break;
-			}
-
 			VkImageView dsv;
 			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &dsv);
 
@@ -6202,6 +6104,11 @@ using namespace vulkan_internal;
 		if (format_change != nullptr)
 		{
 			format = *format_change;
+		}
+		if (type == SubresourceType::UAV)
+		{
+			// RW resource can't be SRGB
+			format = GetFormatNonSRGB(format);
 		}
 
 		switch (type)
@@ -6919,7 +6826,7 @@ using namespace vulkan_internal;
 				auto internal_sparse = to_internal(sparse_texture);
 
 				VkImageAspectFlags aspectMask = {};
-				if (has_flag(texture_desc.bind_flags, BindFlag::DEPTH_STENCIL))
+				if (IsFormatDepthSupport(texture_desc.format))
 				{
 					aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
 					if (IsFormatStencilSupport(texture_desc.format))
@@ -7644,7 +7551,7 @@ using namespace vulkan_internal;
 				copy.dstOffset.y = 0;
 				copy.dstOffset.z = 0;
 
-				if (has_flag(src_desc.bind_flags, BindFlag::DEPTH_STENCIL))
+				if (IsFormatDepthSupport(src_desc.format))
 				{
 					copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 					if (IsFormatStencilSupport(src_desc.format))
@@ -7913,7 +7820,7 @@ using namespace vulkan_internal;
 				barrierdesc.newLayout = _ConvertImageLayout(barrier.image.layout_after);
 				barrierdesc.srcAccessMask = _ParseResourceState(barrier.image.layout_before);
 				barrierdesc.dstAccessMask = _ParseResourceState(barrier.image.layout_after);
-				if (has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL))
+				if (IsFormatDepthSupport(desc.format))
 				{
 					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 					if (IsFormatStencilSupport(desc.format))

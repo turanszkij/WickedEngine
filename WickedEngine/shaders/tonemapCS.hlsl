@@ -123,7 +123,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (tonemap_push.display_colorspace == (uint)ColorSpace::SRGB)
 	{
 		result.rgb = ACESFitted(hdr.rgb);
-		result.rgb = GAMMA(result.rgb);
+		result.rgb = ApplySRGBCurve_Fast(result.rgb);
 	}
 
 	[branch]
