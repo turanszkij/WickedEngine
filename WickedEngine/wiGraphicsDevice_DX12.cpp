@@ -502,6 +502,8 @@ namespace dx12_internal
 		case Format::UNKNOWN:
 			return DXGI_FORMAT_UNKNOWN;
 			break;
+		case Format::R32G32B32A32_TYPELESS:
+			return DXGI_FORMAT_R32G32B32A32_TYPELESS;
 		case Format::R32G32B32A32_FLOAT:
 			return DXGI_FORMAT_R32G32B32A32_FLOAT;
 			break;
@@ -511,6 +513,8 @@ namespace dx12_internal
 		case Format::R32G32B32A32_SINT:
 			return DXGI_FORMAT_R32G32B32A32_SINT;
 			break;
+		case Format::R32G32B32_TYPELESS:
+			return DXGI_FORMAT_R32G32B32_TYPELESS;
 		case Format::R32G32B32_FLOAT:
 			return DXGI_FORMAT_R32G32B32_FLOAT;
 			break;
@@ -520,6 +524,8 @@ namespace dx12_internal
 		case Format::R32G32B32_SINT:
 			return DXGI_FORMAT_R32G32B32_SINT;
 			break;
+		case Format::R16G16B16A16_TYPELESS:
+			return DXGI_FORMAT_R16G16B16A16_TYPELESS;
 		case Format::R16G16B16A16_FLOAT:
 			return DXGI_FORMAT_R16G16B16A16_FLOAT;
 			break;
@@ -535,6 +541,8 @@ namespace dx12_internal
 		case Format::R16G16B16A16_SINT:
 			return DXGI_FORMAT_R16G16B16A16_SINT;
 			break;
+		case Format::R32G32_TYPELESS:
+			return DXGI_FORMAT_R32G32_TYPELESS;
 		case Format::R32G32_FLOAT:
 			return DXGI_FORMAT_R32G32_FLOAT;
 			break;
@@ -544,12 +552,11 @@ namespace dx12_internal
 		case Format::R32G32_SINT:
 			return DXGI_FORMAT_R32G32_SINT;
 			break;
-		case Format::R32G8X24_TYPELESS:
-			return DXGI_FORMAT_R32G8X24_TYPELESS;
-			break;
 		case Format::D32_FLOAT_S8X24_UINT:
 			return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 			break;
+		case Format::R10G10B10A2_TYPELESS:
+			return DXGI_FORMAT_R10G10B10A2_TYPELESS;
 		case Format::R10G10B10A2_UNORM:
 			return DXGI_FORMAT_R10G10B10A2_UNORM;
 			break;
@@ -559,6 +566,8 @@ namespace dx12_internal
 		case Format::R11G11B10_FLOAT:
 			return DXGI_FORMAT_R11G11B10_FLOAT;
 			break;
+		case Format::R8G8B8A8_TYPELESS:
+			return DXGI_FORMAT_R8G8B8A8_TYPELESS;
 		case Format::R8G8B8A8_UNORM:
 			return DXGI_FORMAT_R8G8B8A8_UNORM;
 			break;
@@ -574,6 +583,8 @@ namespace dx12_internal
 		case Format::R8G8B8A8_SINT:
 			return DXGI_FORMAT_R8G8B8A8_SINT;
 			break;
+		case Format::R16G16_TYPELESS:
+			return DXGI_FORMAT_R16G16_TYPELESS;
 		case Format::R16G16_FLOAT:
 			return DXGI_FORMAT_R16G16_FLOAT;
 			break;
@@ -604,6 +615,8 @@ namespace dx12_internal
 		case Format::R32_SINT:
 			return DXGI_FORMAT_R32_SINT;
 			break;
+		case Format::R8G8_TYPELESS:
+			return DXGI_FORMAT_R8G8_TYPELESS;
 		case Format::R8G8_UNORM:
 			return DXGI_FORMAT_R8G8_UNORM;
 			break;
@@ -649,48 +662,64 @@ namespace dx12_internal
 		case Format::R8_SINT:
 			return DXGI_FORMAT_R8_SINT;
 			break;
+		case Format::BC1_TYPELESS:
+			return DXGI_FORMAT_BC1_TYPELESS;
 		case Format::BC1_UNORM:
 			return DXGI_FORMAT_BC1_UNORM;
 			break;
 		case Format::BC1_UNORM_SRGB:
 			return DXGI_FORMAT_BC1_UNORM_SRGB;
 			break;
+		case Format::BC2_TYPELESS:
+			return DXGI_FORMAT_BC2_TYPELESS;
 		case Format::BC2_UNORM:
 			return DXGI_FORMAT_BC2_UNORM;
 			break;
 		case Format::BC2_UNORM_SRGB:
 			return DXGI_FORMAT_BC2_UNORM_SRGB;
 			break;
+		case Format::BC3_TYPELESS:
+			return DXGI_FORMAT_BC3_TYPELESS;
 		case Format::BC3_UNORM:
 			return DXGI_FORMAT_BC3_UNORM;
 			break;
 		case Format::BC3_UNORM_SRGB:
 			return DXGI_FORMAT_BC3_UNORM_SRGB;
 			break;
+		case Format::BC4_TYPELESS:
+			return DXGI_FORMAT_BC4_TYPELESS;
 		case Format::BC4_UNORM:
 			return DXGI_FORMAT_BC4_UNORM;
 			break;
 		case Format::BC4_SNORM:
 			return DXGI_FORMAT_BC4_SNORM;
 			break;
+		case Format::BC5_TYPELESS:
+			return DXGI_FORMAT_BC5_TYPELESS;
 		case Format::BC5_UNORM:
 			return DXGI_FORMAT_BC5_UNORM;
 			break;
 		case Format::BC5_SNORM:
 			return DXGI_FORMAT_BC5_SNORM;
 			break;
+		case Format::B8G8R8A8_TYPELESS:
+			return DXGI_FORMAT_B8G8R8A8_TYPELESS;
 		case Format::B8G8R8A8_UNORM:
 			return DXGI_FORMAT_B8G8R8A8_UNORM;
 			break;
 		case Format::B8G8R8A8_UNORM_SRGB:
 			return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 			break;
+		case Format::BC6H_TYPELESS:
+			return DXGI_FORMAT_BC6H_TYPELESS;
 		case Format::BC6H_UF16:
 			return DXGI_FORMAT_BC6H_UF16;
 			break;
 		case Format::BC6H_SF16:
 			return DXGI_FORMAT_BC6H_SF16;
 			break;
+		case Format::BC7_TYPELESS:
+			return DXGI_FORMAT_BC7_TYPELESS;
 		case Format::BC7_UNORM:
 			return DXGI_FORMAT_BC7_UNORM;
 			break;
@@ -805,9 +834,6 @@ namespace dx12_internal
 			break;
 		case DXGI_FORMAT_R32G32_SINT:
 			return Format::R32G32_SINT;
-			break;
-		case DXGI_FORMAT_R32G8X24_TYPELESS:
-			return Format::R32G8X24_TYPELESS;
 			break;
 		case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
 			return Format::D32_FLOAT_S8X24_UINT;
@@ -2040,49 +2066,25 @@ using namespace dx12_internal;
 						attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE)
 						continue;
 
+
 					assert(attachment.texture.desc.format != Format::UNKNOWN);
 					switch (attachment.type)
 					{
 					case RenderPassAttachment::Type::RENDERTARGET:
-						switch (attachment.texture.desc.format)
+						if (IsFormatTypeless(attachment.texture.desc.format))
 						{
-						case Format::R16_TYPELESS:
-							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
-							break;
-						case Format::R32_TYPELESS:
-							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
-							break;
-						case Format::R24G8_TYPELESS:
-							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-							break;
-						case Format::R32G8X24_TYPELESS:
-							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-							break;
-						default:
+							auto attachment_internal = to_internal(&attachment.texture);
+							const SingleDescriptor& descriptor = attachment.subresource < 0 ? attachment_internal->rtv : attachment_internal->subresources_rtv[attachment.subresource];
+							formats.RTFormats[formats.NumRenderTargets] = descriptor.rtv.Format;
+						}
+						else
+						{
 							formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture.desc.format);
-							break;
 						}
 						formats.NumRenderTargets++;
 						break;
 					case RenderPassAttachment::Type::DEPTH_STENCIL:
-						switch (attachment.texture.desc.format)
-						{
-						case Format::R16_TYPELESS:
-							DSFormat = DXGI_FORMAT_D16_UNORM;
-							break;
-						case Format::R32_TYPELESS:
-							DSFormat = DXGI_FORMAT_D32_FLOAT;
-							break;
-						case Format::R24G8_TYPELESS:
-							DSFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-							break;
-						case Format::R32G8X24_TYPELESS:
-							DSFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-							break;
-						default:
-							DSFormat = _ConvertFormat(attachment.texture.desc.format);
-							break;
-						}
+						DSFormat = _ConvertFormat(attachment.texture.desc.format);
 						break;
 					default:
 						assert(0);
@@ -3304,23 +3306,27 @@ using namespace dx12_internal;
 
 
 		// Create resource views if needed
-		if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
+		if (!IsFormatTypeless(buffer->desc.format))
 		{
-			CreateSubresource(buffer, SubresourceType::SRV, 0);
-		}
-		if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
-		{
-			CreateSubresource(buffer, SubresourceType::UAV, 0);
-
-			if (!has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_RAW))
+			if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
 			{
-				D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-				uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-				uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-				uav_desc.Buffer.NumElements = uint32_t(desc->size / sizeof(uint32_t));
-				internal_state->uav_raw.init(this, uav_desc, internal_state->resource.Get());
+				CreateSubresource(buffer, SubresourceType::SRV, 0);
 			}
+			if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
+			{
+				CreateSubresource(buffer, SubresourceType::UAV, 0);
+			}
+		}
+
+		if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS) && !has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_RAW))
+		{
+			// Create raw buffer if doesn't exist for ClearUAV:
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+			uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+			uav_desc.Buffer.NumElements = uint32_t(desc->size / sizeof(uint32_t));
+			internal_state->uav_raw.init(this, uav_desc, internal_state->resource.Get());
 		}
 
 		return SUCCEEDED(hr);
@@ -3577,21 +3583,24 @@ using namespace dx12_internal;
 			copyAllocator.submit(cmd);
 		}
 
-		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
+		if (!IsFormatTypeless(texture->desc.format))
 		{
-			CreateSubresource(texture, SubresourceType::RTV, 0, -1, 0, -1);
-		}
-		if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
-		{
-			CreateSubresource(texture, SubresourceType::DSV, 0, -1, 0, -1);
-		}
-		if (has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
-		{
-			CreateSubresource(texture, SubresourceType::SRV, 0, -1, 0, -1);
-		}
-		if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
-		{
-			CreateSubresource(texture, SubresourceType::UAV, 0, -1, 0, -1);
+			if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
+			{
+				CreateSubresource(texture, SubresourceType::RTV, 0, -1, 0, -1);
+			}
+			if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+			{
+				CreateSubresource(texture, SubresourceType::DSV, 0, -1, 0, -1);
+			}
+			if (has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+			{
+				CreateSubresource(texture, SubresourceType::SRV, 0, -1, 0, -1);
+			}
+			if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+			{
+				CreateSubresource(texture, SubresourceType::UAV, 0, -1, 0, -1);
+			}
 		}
 
 		return SUCCEEDED(hr);
@@ -4569,11 +4578,6 @@ using namespace dx12_internal;
 		{
 			format = *format_change;
 		}
-		if (type == SubresourceType::UAV)
-		{
-			// RW resource can't be SRGB
-			format = GetFormatNonSRGB(format);
-		}
 
 		switch (type)
 		{
@@ -4585,18 +4589,17 @@ using namespace dx12_internal;
 			// Try to resolve resource format:
 			switch (format)
 			{
-			case Format::R16_TYPELESS:
+			case Format::D16_UNORM:
 				srv_desc.Format = DXGI_FORMAT_R16_UNORM;
 				break;
-			case Format::R32_TYPELESS:
+			case Format::D32_FLOAT:
 				srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
 				break;
-			case Format::R24G8_TYPELESS:
+			case Format::D24_UNORM_S8_UINT:
 				srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 				break;
-			case Format::R32G8X24_TYPELESS:
+			case Format::D32_FLOAT_S8X24_UINT:
 				srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-				break;
 			default:
 				srv_desc.Format = _ConvertFormat(format);
 				break;
@@ -4698,26 +4701,7 @@ using namespace dx12_internal;
 		case SubresourceType::UAV:
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-
-			// Try to resolve resource format:
-			switch (format)
-			{
-			case Format::R16_TYPELESS:
-				uav_desc.Format = DXGI_FORMAT_R16_UNORM;
-				break;
-			case Format::R32_TYPELESS:
-				uav_desc.Format = DXGI_FORMAT_R32_FLOAT;
-				break;
-			case Format::R24G8_TYPELESS:
-				uav_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-				break;
-			case Format::R32G8X24_TYPELESS:
-				uav_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-				break;
-			default:
-				uav_desc.Format = _ConvertFormat(format);
-				break;
-			}
+			uav_desc.Format = _ConvertFormat(format);
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
@@ -4776,26 +4760,7 @@ using namespace dx12_internal;
 		case SubresourceType::RTV:
 		{
 			D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
-
-			// Try to resolve resource format:
-			switch (format)
-			{
-			case Format::R16_TYPELESS:
-				rtv_desc.Format = DXGI_FORMAT_R16_UNORM;
-				break;
-			case Format::R32_TYPELESS:
-				rtv_desc.Format = DXGI_FORMAT_R32_FLOAT;
-				break;
-			case Format::R24G8_TYPELESS:
-				rtv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-				break;
-			case Format::R32G8X24_TYPELESS:
-				rtv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-				break;
-			default:
-				rtv_desc.Format = _ConvertFormat(format);
-				break;
-			}
+			rtv_desc.Format = _ConvertFormat(format);
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
@@ -4870,26 +4835,7 @@ using namespace dx12_internal;
 		case SubresourceType::DSV:
 		{
 			D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
-
-			// Try to resolve resource format:
-			switch (format)
-			{
-			case Format::R16_TYPELESS:
-				dsv_desc.Format = DXGI_FORMAT_D16_UNORM;
-				break;
-			case Format::R32_TYPELESS:
-				dsv_desc.Format = DXGI_FORMAT_D32_FLOAT;
-				break;
-			case Format::R24G8_TYPELESS:
-				dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-				break;
-			case Format::R32G8X24_TYPELESS:
-				dsv_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-				break;
-			default:
-				dsv_desc.Format = _ConvertFormat(format);
-				break;
-			}
+			dsv_desc.Format = _ConvertFormat(format);
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{

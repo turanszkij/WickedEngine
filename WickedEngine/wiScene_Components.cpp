@@ -322,15 +322,15 @@ namespace wi::scene
 				case EMISSIVEMAP:
 				case SPECULARMAP:
 				case SHEENCOLORMAP:
+					subresource = textures[i].resource.GetTextureSRGBSubresource();
 					break;
 				case SURFACEMAP:
-					if (!IsUsingSpecularGlossinessWorkflow())
+					if (IsUsingSpecularGlossinessWorkflow())
 					{
-						subresource = textures[i].resource.GetTextureNonSRGBSubresource();
+						subresource = textures[i].resource.GetTextureSRGBSubresource();
 					}
 					break;
 				default:
-					subresource = textures[i].resource.GetTextureNonSRGBSubresource();
 					break;
 				}
 				material.textures[i].texture_descriptor = device->GetDescriptorIndex(textures[i].GetGPUResource(), SubresourceType::SRV, subresource);

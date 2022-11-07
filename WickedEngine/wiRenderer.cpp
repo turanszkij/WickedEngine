@@ -3111,7 +3111,7 @@ void UpdatePerFrameData(
 						TextureDesc desc;
 						desc.width = uint32_t(packer.width);
 						desc.height = uint32_t(packer.height);
-						desc.format = Format::R16_TYPELESS;
+						desc.format = Format::D16_UNORM;
 						desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 						desc.layout = ResourceState::SHADER_RESOURCE;
 						device->CreateTexture(&desc, nullptr, &shadowMapAtlas);

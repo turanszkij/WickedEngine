@@ -22,7 +22,7 @@ namespace wi
 	{
 		resourcemanager::Flags flags = resourcemanager::Flags::NONE;
 		wi::graphics::Texture texture;
-		int non_srgb_subresource = -1;
+		int srgb_subresource = -1;
 		wi::audio::Sound sound;
 		std::string script;
 		wi::vector<uint8_t> filedata;
@@ -48,10 +48,10 @@ namespace wi
 		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		return resourceinternal->script;
 	}
-	int Resource::GetTextureNonSRGBSubresource() const
+	int Resource::GetTextureSRGBSubresource() const
 	{
 		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
-		return resourceinternal->non_srgb_subresource;
+		return resourceinternal->srgb_subresource;
 	}
 
 	void Resource::SetFileData(const wi::vector<uint8_t>& data)
@@ -237,7 +237,6 @@ namespace wi
 			{
 			case DataType::IMAGE:
 			{
-				const bool srgb = true;
 				GraphicsDevice* device = wi::graphics::GetDevice();
 				if (!ext.compare("KTX2"))
 				{
@@ -266,12 +265,12 @@ namespace wi
 							if (transcoder.get_has_alpha())
 							{
 								fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
-								desc.format = srgb ? Format::BC3_UNORM_SRGB : Format::BC3_UNORM;
+								desc.format = Format::BC3_UNORM;
 							}
 							else
 							{
 								fmt = basist::transcoder_texture_format::cTFBC1_RGB;
-								desc.format = srgb ? Format::BC1_UNORM_SRGB : Format::BC1_UNORM;
+								desc.format = Format::BC1_UNORM;
 							}
 						}
 						uint32_t bytes_per_block = basis_get_bytes_per_block_or_pixel(fmt);
@@ -346,6 +345,18 @@ namespace wi
 							{
 								success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
 								device->SetName(&resource->texture, name.c_str());
+
+								Format srgb_format = GetFormatSRGB(desc.format);
+								if (srgb_format != desc.format)
+								{
+									resource->srgb_subresource = device->CreateSubresource(
+										&resource->texture,
+										SubresourceType::SRV,
+										0, -1,
+										0, -1,
+										&srgb_format
+									);
+								}
 							}
 						}
 						transcoder.clear();
@@ -380,12 +391,12 @@ namespace wi
 									if (info.m_alpha_flag)
 									{
 										fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
-										desc.format = srgb ? Format::BC3_UNORM_SRGB : Format::BC3_UNORM;
+										desc.format = Format::BC3_UNORM;
 									}
 									else
 									{
 										fmt = basist::transcoder_texture_format::cTFBC1_RGB;
-										desc.format = srgb ? Format::BC1_UNORM_SRGB : Format::BC1_UNORM;
+										desc.format = Format::BC1_UNORM;
 									}
 								}
 								uint32_t bytes_per_block = basis_get_bytes_per_block_or_pixel(fmt);
@@ -446,6 +457,18 @@ namespace wi
 									{
 										success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
 										device->SetName(&resource->texture, name.c_str());
+
+										Format srgb_format = GetFormatSRGB(desc.format);
+										if (srgb_format != desc.format)
+										{
+											resource->srgb_subresource = device->CreateSubresource(
+												&resource->texture,
+												SubresourceType::SRV,
+												0, -1,
+												0, -1,
+												&srgb_format
+											);
+										}
 									}
 								}
 							}
@@ -499,9 +522,9 @@ namespace wi
 						case tinyddsloader::DDSFile::DXGIFormat::R10G10B10A2_UInt: desc.format = Format::R10G10B10A2_UINT; break;
 						case tinyddsloader::DDSFile::DXGIFormat::R11G11B10_Float: desc.format = Format::R11G11B10_FLOAT; break;
 						case tinyddsloader::DDSFile::DXGIFormat::B8G8R8X8_UNorm: desc.format = Format::B8G8R8A8_UNORM; break;
-						case tinyddsloader::DDSFile::DXGIFormat::B8G8R8A8_UNorm: desc.format = srgb ? Format::B8G8R8A8_UNORM_SRGB : Format::B8G8R8A8_UNORM; break;
+						case tinyddsloader::DDSFile::DXGIFormat::B8G8R8A8_UNorm: desc.format = Format::B8G8R8A8_UNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::B8G8R8A8_UNorm_SRGB: desc.format = Format::B8G8R8A8_UNORM_SRGB; break;
-						case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UNorm: desc.format = srgb ? Format::R8G8B8A8_UNORM_SRGB : Format::R8G8B8A8_UNORM; break;
+						case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UNorm: desc.format = Format::R8G8B8A8_UNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UNorm_SRGB: desc.format = Format::R8G8B8A8_UNORM_SRGB; break;
 						case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UInt: desc.format = Format::R8G8B8A8_UINT; break;
 						case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_SNorm: desc.format = Format::R8G8B8A8_SNORM; break;
@@ -529,17 +552,17 @@ namespace wi
 						case tinyddsloader::DDSFile::DXGIFormat::R8_UInt: desc.format = Format::R8_UINT; break;
 						case tinyddsloader::DDSFile::DXGIFormat::R8_SNorm: desc.format = Format::R8_SNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::R8_SInt: desc.format = Format::R8_SINT; break;
-						case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm: desc.format = srgb ? Format::BC1_UNORM_SRGB : Format::BC1_UNORM; break;
+						case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm: desc.format = Format::BC1_UNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm_SRGB: desc.format = Format::BC1_UNORM_SRGB; break;
-						case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm: desc.format = srgb ? Format::BC2_UNORM_SRGB : Format::BC2_UNORM; break;
+						case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm: desc.format = Format::BC2_UNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm_SRGB: desc.format = Format::BC2_UNORM_SRGB; break;
-						case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm: desc.format = srgb ? Format::BC3_UNORM_SRGB : Format::BC3_UNORM; break;
+						case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm: desc.format = Format::BC3_UNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm_SRGB: desc.format = Format::BC3_UNORM_SRGB; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC4_UNorm: desc.format = Format::BC4_UNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC4_SNorm: desc.format = Format::BC4_SNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC5_UNorm: desc.format = Format::BC5_UNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC5_SNorm: desc.format = Format::BC5_SNORM; break;
-						case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm: desc.format = srgb ? Format::BC7_UNORM_SRGB : Format::BC7_UNORM; break;
+						case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm: desc.format = Format::BC7_UNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm_SRGB: desc.format = Format::BC7_UNORM_SRGB; break;
 						default:
 							assert(0); // incoming format is not supported 
@@ -591,6 +614,18 @@ namespace wi
 
 						success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
 						device->SetName(&resource->texture, name.c_str());
+
+						Format srgb_format = GetFormatSRGB(desc.format);
+						if (srgb_format != desc.format)
+						{
+							resource->srgb_subresource = device->CreateSubresource(
+								&resource->texture,
+								SubresourceType::SRV,
+								0, -1,
+								0, -1,
+								&srgb_format
+							);
+						}
 					}
 					else assert(0); // failed to load DDS
 
@@ -662,7 +697,7 @@ namespace wi
 						else
 						{
 							desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-							desc.format = srgb ? Format::R8G8B8A8_UNORM_SRGB : Format::R8G8B8A8_UNORM;
+							desc.format = Format::R8G8B8A8_UNORM;
 							desc.mip_levels = (uint32_t)log2(std::max(width, height)) + 1;
 							desc.usage = Usage::DEFAULT;
 							desc.layout = ResourceState::SHADER_RESOURCE;
@@ -687,25 +722,23 @@ namespace wi
 								subresource_index = device->CreateSubresource(&resource->texture, SubresourceType::UAV, 0, 1, i, 1);
 								assert(subresource_index == i);
 							}
+
+							// This part must be AFTER mip level subresource creation:
+							{
+								Format srgb_format = GetFormatSRGB(desc.format);
+								resource->srgb_subresource = device->CreateSubresource(
+									&resource->texture,
+									SubresourceType::SRV,
+									0, -1,
+									0, -1,
+									&srgb_format
+								);
+							}
+
+							wi::renderer::AddDeferredMIPGen(resource->texture, true);
 						}
 					}
 					free(rgb);
-				}
-
-				if (resource->texture.IsValid())
-				{
-					const TextureDesc& desc = resource->texture.GetDesc();
-					Format non_srgb_format = GetFormatNonSRGB(desc.format);
-					if (non_srgb_format != desc.format)
-					{
-						resource->non_srgb_subresource = device->CreateSubresource(
-							&resource->texture,
-							SubresourceType::SRV,
-							0, desc.array_size,
-							0, desc.mip_levels,
-							&non_srgb_format
-						);
-					}
 				}
 			}
 			break;
@@ -740,12 +773,6 @@ namespace wi
 				{
 					// resource was loaded using file name, and we want to discard filedata
 					resource->filedata.clear();
-				}
-
-				if (type == DataType::IMAGE && resource->texture.desc.mip_levels > 1
-					&& has_flag(resource->texture.desc.bind_flags, BindFlag::UNORDERED_ACCESS))
-				{
-					wi::renderer::AddDeferredMIPGen(resource->texture, true);
 				}
 
 				Resource retVal;

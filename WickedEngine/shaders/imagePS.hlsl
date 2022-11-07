@@ -14,7 +14,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 		if (image.flags & IMAGE_FLAG_EXTRACT_NORMALMAP)
 		{
-			tex.rgb = ApplySRGBCurve_Fast(tex.rgb); // note: This texture uses SRGB descriptor, so we correct it here for normal map
 			tex.rgb = tex.rgb * 2 - 1;
 		}
 

@@ -21,7 +21,7 @@ namespace wi
 		const wi::graphics::Texture& GetTexture() const;
 		const wi::audio::Sound& GetSound() const;
 		const std::string& GetScript() const;
-		int GetTextureNonSRGBSubresource() const;
+		int GetTextureSRGBSubresource() const;
 
 		void SetFileData(const wi::vector<uint8_t>& data);
 		void SetFileData(wi::vector<uint8_t>&& data);
