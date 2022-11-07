@@ -3770,6 +3770,11 @@ using namespace vulkan_internal;
 		if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+			if (IsFormatSRGB(texture->desc.format))
+			{
+				imageInfo.flags |= VK_IMAGE_CREATE_EXTENDED_USAGE_BIT;
+			}
 		}
 		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
@@ -3801,10 +3806,6 @@ using namespace vulkan_internal;
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
-			if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
-			{
-				imageInfo.flags |= VK_IMAGE_CREATE_EXTENDED_USAGE_BIT;
-			}
 		}
 
 		if (families.size() > 1)
