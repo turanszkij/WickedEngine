@@ -100,7 +100,6 @@ namespace vulkan_internal
 			return VK_FORMAT_R16G16_SNORM;
 		case Format::R16G16_SINT:
 			return VK_FORMAT_R16G16_SINT;
-			return VK_FORMAT_R32_SFLOAT;
 		case Format::D32_FLOAT:
 			return VK_FORMAT_D32_SFLOAT;
 		case Format::R32_FLOAT:

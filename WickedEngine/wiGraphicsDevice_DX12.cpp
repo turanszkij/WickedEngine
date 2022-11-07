@@ -503,7 +503,6 @@ namespace dx12_internal
 			return DXGI_FORMAT_UNKNOWN;
 		case Format::R32G32B32A32_FLOAT:
 			return DXGI_FORMAT_R32G32B32A32_FLOAT;
-			break;
 		case Format::R32G32B32A32_UINT:
 			return DXGI_FORMAT_R32G32B32A32_UINT;
 		case Format::R32G32B32A32_SINT:
