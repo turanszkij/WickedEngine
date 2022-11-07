@@ -249,9 +249,10 @@ namespace wi
 						desc.height = transcoder.get_height();
 						desc.array_size = std::max(desc.array_size, transcoder.get_layers() * transcoder.get_faces());
 						desc.mip_levels = transcoder.get_levels();
+						desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 						if (transcoder.get_faces() == 6)
 						{
-							desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
+							desc.misc_flags |= ResourceMiscFlag::TEXTURECUBE;
 						}
 
 						basist::transcoder_texture_format fmt;
@@ -379,6 +380,7 @@ namespace wi
 								desc.width = info.m_width;
 								desc.height = info.m_height;
 								desc.mip_levels = info.m_total_levels;
+								desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 
 								basist::transcoder_texture_format fmt;
 								if (has_flag(flags, Flags::IMPORT_NORMALMAP))
@@ -494,6 +496,7 @@ namespace wi
 						desc.array_size = dds.GetArraySize();
 						desc.format = Format::R8G8B8A8_UNORM;
 						desc.layout = ResourceState::SHADER_RESOURCE;
+						desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 
 						if (dds.IsCubemap())
 						{
@@ -701,6 +704,7 @@ namespace wi
 							desc.mip_levels = (uint32_t)log2(std::max(width, height)) + 1;
 							desc.usage = Usage::DEFAULT;
 							desc.layout = ResourceState::SHADER_RESOURCE;
+							desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 
 							uint32_t mipwidth = width;
 							wi::vector<SubresourceData> InitData(desc.mip_levels);

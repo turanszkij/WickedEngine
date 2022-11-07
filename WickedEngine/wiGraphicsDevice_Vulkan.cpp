@@ -3888,7 +3888,7 @@ using namespace vulkan_internal;
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
-		if (IsFormatTypeless(texture->desc.format) || IsFormatUnorm(texture->desc.format))
+		if (IsFormatTypeless(texture->desc.format) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING))
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 			if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))

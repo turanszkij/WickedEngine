@@ -3019,7 +3019,7 @@ namespace wi::scene
 
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			desc.array_size = maxImpostorCount * impostorCaptureAngles * 3;
-			desc.format = Format::R8G8B8A8_UNORM_SRGB;
+			desc.format = Format::R10G10B10A2_UNORM;
 			desc.layout = ResourceState::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::NONE;
 			device->CreateTexture(&desc, nullptr, &impostorArray);

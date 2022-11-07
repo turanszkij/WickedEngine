@@ -375,6 +375,7 @@ namespace wi::graphics
 		SPARSE_TILE_POOL_TEXTURE_NON_RT_DS = 1 << 9,	// buffer only, makes it suitable for containing tile memory for sparse textures that are non render targets nor depth stencils
 		SPARSE_TILE_POOL_TEXTURE_RT_DS = 1 << 10,		// buffer only, makes it suitable for containing tile memory for sparse textures that are either render targets or depth stencils
 		SPARSE_TILE_POOL = SPARSE_TILE_POOL_BUFFER | SPARSE_TILE_POOL_TEXTURE_NON_RT_DS | SPARSE_TILE_POOL_TEXTURE_RT_DS, // buffer only, makes it suitable for containing tile memory for all kinds of sparse resources. Requires GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL to be supported
+		TYPED_FORMAT_CASTING = 1 << 11,	// enable casting typed formats
 	};
 
 	enum class GraphicsDeviceCapability
