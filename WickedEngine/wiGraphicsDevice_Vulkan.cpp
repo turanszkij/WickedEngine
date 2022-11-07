@@ -44,219 +44,133 @@ namespace vulkan_internal
 		{
 		case Format::UNKNOWN:
 			return VK_FORMAT_UNDEFINED;
-			break;
-		case Format::R32G32B32A32_TYPELESS:
 		case Format::R32G32B32A32_FLOAT:
 			return VK_FORMAT_R32G32B32A32_SFLOAT;
-			break;
 		case Format::R32G32B32A32_UINT:
 			return VK_FORMAT_R32G32B32A32_UINT;
-			break;
 		case Format::R32G32B32A32_SINT:
 			return VK_FORMAT_R32G32B32A32_SINT;
-			break;
-		case Format::R32G32B32_TYPELESS:
 		case Format::R32G32B32_FLOAT:
 			return VK_FORMAT_R32G32B32_SFLOAT;
-			break;
 		case Format::R32G32B32_UINT:
 			return VK_FORMAT_R32G32B32_UINT;
-			break;
 		case Format::R32G32B32_SINT:
 			return VK_FORMAT_R32G32B32_SINT;
-			break;
-		case Format::R16G16B16A16_TYPELESS:
 		case Format::R16G16B16A16_FLOAT:
 			return VK_FORMAT_R16G16B16A16_SFLOAT;
-			break;
 		case Format::R16G16B16A16_UNORM:
 			return VK_FORMAT_R16G16B16A16_UNORM;
-			break;
 		case Format::R16G16B16A16_UINT:
 			return VK_FORMAT_R16G16B16A16_UINT;
-			break;
 		case Format::R16G16B16A16_SNORM:
 			return VK_FORMAT_R16G16B16A16_SNORM;
-			break;
 		case Format::R16G16B16A16_SINT:
 			return VK_FORMAT_R16G16B16A16_SINT;
-			break;
-		case Format::R32G32_TYPELESS:
 		case Format::R32G32_FLOAT:
 			return VK_FORMAT_R32G32_SFLOAT;
-			break;
 		case Format::R32G32_UINT:
 			return VK_FORMAT_R32G32_UINT;
-			break;
 		case Format::R32G32_SINT:
 			return VK_FORMAT_R32G32_SINT;
-			break;
 		case Format::D32_FLOAT_S8X24_UINT:
 			return VK_FORMAT_D32_SFLOAT_S8_UINT;
-			break;
-		case Format::R10G10B10A2_TYPELESS:
 		case Format::R10G10B10A2_UNORM:
 			return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-			break;
 		case Format::R10G10B10A2_UINT:
 			return VK_FORMAT_A2B10G10R10_UINT_PACK32;
-			break;
 		case Format::R11G11B10_FLOAT:
 			return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
-			break;
-		case Format::R8G8B8A8_TYPELESS:
 		case Format::R8G8B8A8_UNORM:
 			return VK_FORMAT_R8G8B8A8_UNORM;
-			break;
 		case Format::R8G8B8A8_UNORM_SRGB:
 			return VK_FORMAT_R8G8B8A8_SRGB;
-			break;
 		case Format::R8G8B8A8_UINT:
 			return VK_FORMAT_R8G8B8A8_UINT;
-			break;
 		case Format::R8G8B8A8_SNORM:
 			return VK_FORMAT_R8G8B8A8_SNORM;
-			break;
 		case Format::R8G8B8A8_SINT:
 			return VK_FORMAT_R8G8B8A8_SINT;
-			break;
-		case Format::R16G16_TYPELESS:
 		case Format::R16G16_FLOAT:
 			return VK_FORMAT_R16G16_SFLOAT;
-			break;
 		case Format::R16G16_UNORM:
 			return VK_FORMAT_R16G16_UNORM;
-			break;
 		case Format::R16G16_UINT:
 			return VK_FORMAT_R16G16_UINT;
-			break;
 		case Format::R16G16_SNORM:
 			return VK_FORMAT_R16G16_SNORM;
-			break;
 		case Format::R16G16_SINT:
 			return VK_FORMAT_R16G16_SINT;
-			break;
-		case Format::R32_TYPELESS:
 			return VK_FORMAT_R32_SFLOAT;
-			break;
 		case Format::D32_FLOAT:
 			return VK_FORMAT_D32_SFLOAT;
-			break;
 		case Format::R32_FLOAT:
 			return VK_FORMAT_R32_SFLOAT;
-			break;
 		case Format::R32_UINT:
 			return VK_FORMAT_R32_UINT;
-			break;
 		case Format::R32_SINT:
 			return VK_FORMAT_R32_SINT;
-			break;
 		case Format::D24_UNORM_S8_UINT:
 			return VK_FORMAT_D24_UNORM_S8_UINT;
-			break;
-		case Format::R8G8_TYPELESS:
 		case Format::R8G8_UNORM:
 			return VK_FORMAT_R8G8_UNORM;
-			break;
 		case Format::R8G8_UINT:
 			return VK_FORMAT_R8G8_UINT;
-			break;
 		case Format::R8G8_SNORM:
 			return VK_FORMAT_R8G8_SNORM;
-			break;
 		case Format::R8G8_SINT:
 			return VK_FORMAT_R8G8_SINT;
-			break;
-		case Format::R16_TYPELESS:
-			return VK_FORMAT_R16_UNORM;
-			break;
 		case Format::R16_FLOAT:
 			return VK_FORMAT_R16_SFLOAT;
-			break;
 		case Format::D16_UNORM:
 			return VK_FORMAT_D16_UNORM;
-			break;
 		case Format::R16_UNORM:
 			return VK_FORMAT_R16_UNORM;
-			break;
 		case Format::R16_UINT:
 			return VK_FORMAT_R16_UINT;
-			break;
 		case Format::R16_SNORM:
 			return VK_FORMAT_R16_SNORM;
-			break;
 		case Format::R16_SINT:
 			return VK_FORMAT_R16_SINT;
-			break;
-		case Format::R8_TYPELESS:
 		case Format::R8_UNORM:
 			return VK_FORMAT_R8_UNORM;
-			break;
 		case Format::R8_UINT:
 			return VK_FORMAT_R8_UINT;
-			break;
 		case Format::R8_SNORM:
 			return VK_FORMAT_R8_SNORM;
-			break;
 		case Format::R8_SINT:
 			return VK_FORMAT_R8_SINT;
-			break;
-		case Format::BC1_TYPELESS:
 		case Format::BC1_UNORM:
 			return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-			break;
 		case Format::BC1_UNORM_SRGB:
 			return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
-			break;
-		case Format::BC2_TYPELESS:
 		case Format::BC2_UNORM:
 			return VK_FORMAT_BC2_UNORM_BLOCK;
-			break;
 		case Format::BC2_UNORM_SRGB:
 			return VK_FORMAT_BC2_SRGB_BLOCK;
-			break;
-		case Format::BC3_TYPELESS:
 		case Format::BC3_UNORM:
 			return VK_FORMAT_BC3_UNORM_BLOCK;
-			break;
 		case Format::BC3_UNORM_SRGB:
 			return VK_FORMAT_BC3_SRGB_BLOCK;
-			break;
-		case Format::BC4_TYPELESS:
 		case Format::BC4_UNORM:
 			return VK_FORMAT_BC4_UNORM_BLOCK;
-			break;
 		case Format::BC4_SNORM:
 			return VK_FORMAT_BC4_SNORM_BLOCK;
-			break;
-		case Format::BC5_TYPELESS:
 		case Format::BC5_UNORM:
 			return VK_FORMAT_BC5_UNORM_BLOCK;
-			break;
 		case Format::BC5_SNORM:
 			return VK_FORMAT_BC5_SNORM_BLOCK;
-			break;
-		case Format::B8G8R8A8_TYPELESS:
 		case Format::B8G8R8A8_UNORM:
 			return VK_FORMAT_B8G8R8A8_UNORM;
-			break;
 		case Format::B8G8R8A8_UNORM_SRGB:
 			return VK_FORMAT_B8G8R8A8_SRGB;
-			break;
-		case Format::BC6H_TYPELESS:
 		case Format::BC6H_UF16:
 			return VK_FORMAT_BC6H_UFLOAT_BLOCK;
-			break;
 		case Format::BC6H_SF16:
 			return VK_FORMAT_BC6H_SFLOAT_BLOCK;
-			break;
-		case Format::BC7_TYPELESS:
 		case Format::BC7_UNORM:
 			return VK_FORMAT_BC7_UNORM_BLOCK;
-			break;
 		case Format::BC7_UNORM_SRGB:
 			return VK_FORMAT_BC7_SRGB_BLOCK;
-			break;
 		}
 		return VK_FORMAT_UNDEFINED;
 	}
@@ -3809,16 +3723,13 @@ using namespace vulkan_internal;
 		}
 
 		// Create resource views if needed
-		if (!IsFormatTypeless(buffer->desc.format))
+		if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
 		{
-			if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
-			{
-				CreateSubresource(buffer, SubresourceType::SRV, 0);
-			}
-			if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
-			{
-				CreateSubresource(buffer, SubresourceType::UAV, 0);
-			}
+			CreateSubresource(buffer, SubresourceType::SRV, 0);
+		}
+		if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
+		{
+			CreateSubresource(buffer, SubresourceType::UAV, 0);
 		}
 
 		return res == VK_SUCCESS;
@@ -3888,7 +3799,7 @@ using namespace vulkan_internal;
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
-		if (IsFormatTypeless(texture->desc.format) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING))
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 			if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
@@ -4244,24 +4155,21 @@ using namespace vulkan_internal;
 			initLocker.unlock();
 		}
 
-		if (!IsFormatTypeless(texture->desc.format))
+		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
-			if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
-			{
-				CreateSubresource(texture, SubresourceType::RTV, 0, -1, 0, -1);
-			}
-			if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
-			{
-				CreateSubresource(texture, SubresourceType::DSV, 0, -1, 0, -1);
-			}
-			if (has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
-			{
-				CreateSubresource(texture, SubresourceType::SRV, 0, -1, 0, -1);
-			}
-			if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
-			{
-				CreateSubresource(texture, SubresourceType::UAV, 0, -1, 0, -1);
-			}
+			CreateSubresource(texture, SubresourceType::RTV, 0, -1, 0, -1);
+		}
+		if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+		{
+			CreateSubresource(texture, SubresourceType::DSV, 0, -1, 0, -1);
+		}
+		if (has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		{
+			CreateSubresource(texture, SubresourceType::SRV, 0, -1, 0, -1);
+		}
+		if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		{
+			CreateSubresource(texture, SubresourceType::UAV, 0, -1, 0, -1);
 		}
 
 		return res == VK_SUCCESS;

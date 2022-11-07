@@ -207,61 +207,50 @@ namespace wi::graphics
 	{
 		UNKNOWN,
 
-		R32G32B32A32_TYPELESS,
 		R32G32B32A32_FLOAT,
 		R32G32B32A32_UINT,
 		R32G32B32A32_SINT,
 
-		R32G32B32_TYPELESS,
 		R32G32B32_FLOAT,
 		R32G32B32_UINT,
 		R32G32B32_SINT,
 
-		R16G16B16A16_TYPELESS,
 		R16G16B16A16_FLOAT,
 		R16G16B16A16_UNORM,
 		R16G16B16A16_UINT,
 		R16G16B16A16_SNORM,
 		R16G16B16A16_SINT,
 
-		R32G32_TYPELESS,
 		R32G32_FLOAT,
 		R32G32_UINT,
 		R32G32_SINT,
 		D32_FLOAT_S8X24_UINT,	// depth (32-bit) + stencil (8-bit) | SRV: R32_FLOAT
 
-		R10G10B10A2_TYPELESS,
 		R10G10B10A2_UNORM,
 		R10G10B10A2_UINT,
 		R11G11B10_FLOAT,
-		R8G8B8A8_TYPELESS,
 		R8G8B8A8_UNORM,
 		R8G8B8A8_UNORM_SRGB,
 		R8G8B8A8_UINT,
 		R8G8B8A8_SNORM,
-		R8G8B8A8_SINT, 
-		B8G8R8A8_TYPELESS,
+		R8G8B8A8_SINT,
 		B8G8R8A8_UNORM,
 		B8G8R8A8_UNORM_SRGB,
-		R16G16_TYPELESS,
 		R16G16_FLOAT,
 		R16G16_UNORM,
 		R16G16_UINT,
 		R16G16_SNORM,
 		R16G16_SINT,
-		R32_TYPELESS,
 		D32_FLOAT,				// depth (32-bit) | SRV: R32_FLOAT
 		R32_FLOAT,
 		R32_UINT,
 		R32_SINT, 
 		D24_UNORM_S8_UINT,		// depth (24-bit) + stencil (8-bit) | SRV: R24_INTERNAL
 
-		R8G8_TYPELESS,
 		R8G8_UNORM,
 		R8G8_UINT,
 		R8G8_SNORM,
 		R8G8_SINT,
-		R16_TYPELESS,
 		R16_FLOAT,
 		D16_UNORM,				// depth (16-bit) | SRV: R16_UNORM
 		R16_UNORM,
@@ -269,31 +258,23 @@ namespace wi::graphics
 		R16_SNORM,
 		R16_SINT,
 
-		R8_TYPELESS,
 		R8_UNORM,
 		R8_UINT,
 		R8_SNORM,
 		R8_SINT,
 
-		BC1_TYPELESS,
 		BC1_UNORM,
 		BC1_UNORM_SRGB,
-		BC2_TYPELESS,
 		BC2_UNORM,
 		BC2_UNORM_SRGB,
-		BC3_TYPELESS,
 		BC3_UNORM,
 		BC3_UNORM_SRGB,
-		BC4_TYPELESS,
 		BC4_UNORM,
 		BC4_SNORM,
-		BC5_TYPELESS,
 		BC5_UNORM,
 		BC5_SNORM,
-		BC6H_TYPELESS,
 		BC6H_UF16,
 		BC6H_SF16,
-		BC7_TYPELESS,
 		BC7_UNORM,
 		BC7_UNORM_SRGB
 	};
@@ -375,7 +356,8 @@ namespace wi::graphics
 		SPARSE_TILE_POOL_TEXTURE_NON_RT_DS = 1 << 9,	// buffer only, makes it suitable for containing tile memory for sparse textures that are non render targets nor depth stencils
 		SPARSE_TILE_POOL_TEXTURE_RT_DS = 1 << 10,		// buffer only, makes it suitable for containing tile memory for sparse textures that are either render targets or depth stencils
 		SPARSE_TILE_POOL = SPARSE_TILE_POOL_BUFFER | SPARSE_TILE_POOL_TEXTURE_NON_RT_DS | SPARSE_TILE_POOL_TEXTURE_RT_DS, // buffer only, makes it suitable for containing tile memory for all kinds of sparse resources. Requires GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL to be supported
-		TYPED_FORMAT_CASTING = 1 << 11,	// enable casting typed formats
+		TYPED_FORMAT_CASTING = 1 << 11,	// enable casting formats between same type and different modifiers: eg. UNORM -> SRGB
+		TYPELESS_FORMAT_CASTING = 1 << 12,	// enable casting formats to other formats that have the same bit-width and channel layout: eg. R32_FLOAT -> R32_UINT
 	};
 
 	enum class GraphicsDeviceCapability
@@ -1153,34 +1135,6 @@ namespace wi::graphics
 	};
 
 
-	constexpr bool IsFormatTypeless(Format format)
-	{
-		switch (format)
-		{
-		case Format::R32G32B32A32_TYPELESS:
-		case Format::R32G32B32_TYPELESS:
-		case Format::R16G16B16A16_TYPELESS:
-		case Format::R32G32_TYPELESS:
-		case Format::R10G10B10A2_TYPELESS:
-		case Format::R8G8B8A8_TYPELESS:
-		case Format::B8G8R8A8_TYPELESS:
-		case Format::R16G16_TYPELESS:
-		case Format::R8G8_TYPELESS:
-		case Format::R8_TYPELESS:
-		case Format::R16_TYPELESS:
-		case Format::R32_TYPELESS:
-		case Format::BC1_TYPELESS:
-		case Format::BC2_TYPELESS:
-		case Format::BC3_TYPELESS:
-		case Format::BC4_TYPELESS:
-		case Format::BC5_TYPELESS:
-		case Format::BC6H_TYPELESS:
-		case Format::BC7_TYPELESS:
-			return true;
-		default:
-			return false;
-		}
-	}
 	constexpr bool IsFormatSRGB(Format format)
 	{
 		switch (format)
@@ -1231,25 +1185,18 @@ namespace wi::graphics
 	{
 		switch (format)
 		{
-		case Format::BC1_TYPELESS:
 		case Format::BC1_UNORM:
 		case Format::BC1_UNORM_SRGB:
-		case Format::BC2_TYPELESS:
 		case Format::BC2_UNORM:
 		case Format::BC2_UNORM_SRGB:
-		case Format::BC3_TYPELESS:
 		case Format::BC3_UNORM:
 		case Format::BC3_UNORM_SRGB:
-		case Format::BC4_TYPELESS:
 		case Format::BC4_UNORM:
 		case Format::BC4_SNORM:
-		case Format::BC5_TYPELESS:
 		case Format::BC5_UNORM:
 		case Format::BC5_SNORM:
-		case Format::BC6H_TYPELESS:
 		case Format::BC6H_UF16:
 		case Format::BC6H_SF16:
-		case Format::BC7_TYPELESS:
 		case Format::BC7_UNORM:
 		case Format::BC7_UNORM_SRGB:
 			return true;
@@ -1293,42 +1240,32 @@ namespace wi::graphics
 	{
 		switch (format)
 		{
-		case Format::BC1_TYPELESS:
 		case Format::BC1_UNORM:
 		case Format::BC1_UNORM_SRGB:
-		case Format::BC4_TYPELESS:
 		case Format::BC4_SNORM:
 		case Format::BC4_UNORM:
 			return 8u;
 
-		case Format::R32G32B32A32_TYPELESS:
 		case Format::R32G32B32A32_FLOAT:
 		case Format::R32G32B32A32_UINT:
 		case Format::R32G32B32A32_SINT:
-		case Format::BC2_TYPELESS:
 		case Format::BC2_UNORM:
 		case Format::BC2_UNORM_SRGB:
-		case Format::BC3_TYPELESS:
 		case Format::BC3_UNORM:
 		case Format::BC3_UNORM_SRGB:
-		case Format::BC5_TYPELESS:
 		case Format::BC5_SNORM:
 		case Format::BC5_UNORM:
-		case Format::BC6H_TYPELESS:
 		case Format::BC6H_UF16:
 		case Format::BC6H_SF16:
-		case Format::BC7_TYPELESS:
 		case Format::BC7_UNORM:
 		case Format::BC7_UNORM_SRGB:
 			return 16u;
 
-		case Format::R32G32B32_TYPELESS:
 		case Format::R32G32B32_FLOAT:
 		case Format::R32G32B32_UINT:
 		case Format::R32G32B32_SINT:
 			return 12u;
 
-		case Format::R16G16B16A16_TYPELESS:
 		case Format::R16G16B16A16_FLOAT:
 		case Format::R16G16B16A16_UNORM:
 		case Format::R16G16B16A16_UINT:
@@ -1336,18 +1273,15 @@ namespace wi::graphics
 		case Format::R16G16B16A16_SINT:
 			return 8u;
 
-		case Format::R32G32_TYPELESS:
 		case Format::R32G32_FLOAT:
 		case Format::R32G32_UINT:
 		case Format::R32G32_SINT:
 		case Format::D32_FLOAT_S8X24_UINT:
 			return 8u;
 
-		case Format::R10G10B10A2_TYPELESS:
 		case Format::R10G10B10A2_UNORM:
 		case Format::R10G10B10A2_UINT:
 		case Format::R11G11B10_FLOAT:
-		case Format::R8G8B8A8_TYPELESS:
 		case Format::R8G8B8A8_UNORM:
 		case Format::R8G8B8A8_UNORM_SRGB:
 		case Format::R8G8B8A8_UINT:
@@ -1355,13 +1289,11 @@ namespace wi::graphics
 		case Format::R8G8B8A8_SINT:
 		case Format::B8G8R8A8_UNORM:
 		case Format::B8G8R8A8_UNORM_SRGB:
-		case Format::R16G16_TYPELESS:
 		case Format::R16G16_FLOAT:
 		case Format::R16G16_UNORM:
 		case Format::R16G16_UINT:
 		case Format::R16G16_SNORM:
 		case Format::R16G16_SINT:
-		case Format::R32_TYPELESS:
 		case Format::D32_FLOAT:
 		case Format::R32_FLOAT:
 		case Format::R32_UINT:
@@ -1369,12 +1301,10 @@ namespace wi::graphics
 		case Format::D24_UNORM_S8_UINT:
 			return 4u;
 
-		case Format::R8G8_TYPELESS:
 		case Format::R8G8_UNORM:
 		case Format::R8G8_UINT:
 		case Format::R8G8_SNORM:
 		case Format::R8G8_SINT:
-		case Format::R16_TYPELESS:
 		case Format::R16_FLOAT:
 		case Format::D16_UNORM:
 		case Format::R16_UNORM:
@@ -1383,7 +1313,6 @@ namespace wi::graphics
 		case Format::R16_SINT:
 			return 2u;
 
-		case Format::R8_TYPELESS:
 		case Format::R8_UNORM:
 		case Format::R8_UINT:
 		case Format::R8_SNORM:
@@ -1400,22 +1329,16 @@ namespace wi::graphics
 	{
 		switch (format)
 		{
-		case Format::R8G8B8A8_TYPELESS:
 		case Format::R8G8B8A8_UNORM_SRGB:
 			return Format::R8G8B8A8_UNORM;
-		case Format::B8G8R8A8_TYPELESS:
 		case Format::B8G8R8A8_UNORM_SRGB:
 			return Format::B8G8R8A8_UNORM;
-		case Format::BC1_TYPELESS:
 		case Format::BC1_UNORM_SRGB:
 			return Format::BC1_UNORM;
-		case Format::BC2_TYPELESS:
 		case Format::BC2_UNORM_SRGB:
 			return Format::BC2_UNORM;
-		case Format::BC3_TYPELESS:
 		case Format::BC3_UNORM_SRGB:
 			return Format::BC3_UNORM;
-		case Format::BC7_TYPELESS:
 		case Format::BC7_UNORM_SRGB:
 			return Format::BC7_UNORM;
 		default:
@@ -1426,27 +1349,21 @@ namespace wi::graphics
 	{
 		switch (format)
 		{
-		case Format::R8G8B8A8_TYPELESS:
 		case Format::R8G8B8A8_UNORM:
 		case Format::R8G8B8A8_UNORM_SRGB:
 			return Format::R8G8B8A8_UNORM_SRGB;
-		case Format::B8G8R8A8_TYPELESS:
 		case Format::B8G8R8A8_UNORM:
 		case Format::B8G8R8A8_UNORM_SRGB:
 			return Format::B8G8R8A8_UNORM_SRGB;
-		case Format::BC1_TYPELESS:
 		case Format::BC1_UNORM:
 		case Format::BC1_UNORM_SRGB:
 			return Format::BC1_UNORM_SRGB;
-		case Format::BC2_TYPELESS:
 		case Format::BC2_UNORM:
 		case Format::BC2_UNORM_SRGB:
 			return Format::BC2_UNORM_SRGB;
-		case Format::BC3_TYPELESS:
 		case Format::BC3_UNORM:
 		case Format::BC3_UNORM_SRGB:
 			return Format::BC3_UNORM_SRGB;
-		case Format::BC7_TYPELESS:
 		case Format::BC7_UNORM:
 		case Format::BC7_UNORM_SRGB:
 			return Format::BC7_UNORM_SRGB;
