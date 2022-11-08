@@ -570,7 +570,6 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Ma
 	return realPS;
 }
 
-PipelineState PSO_decal;
 PipelineState PSO_occlusionquery;
 PipelineState PSO_impostor[RENDERPASS_COUNT];
 PipelineState PSO_impostor_wire;
@@ -3570,7 +3569,7 @@ void UpdateRenderData(
 			int texture = -1;
 			if (decal.texture.IsValid())
 			{
-				texture = device->GetDescriptorIndex(&decal.texture.GetTexture(), SubresourceType::SRV);
+				texture = device->GetDescriptorIndex(&decal.texture.GetTexture(), SubresourceType::SRV, decal.texture.GetTextureSRGBSubresource());
 			}
 			int normal = -1;
 			if (decal.normal.IsValid())

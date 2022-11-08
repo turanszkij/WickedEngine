@@ -72,7 +72,7 @@ namespace wi
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->filedata = data;
 	}
-	void Resource::SetTexture(const wi::graphics::Texture& texture)
+	void Resource::SetTexture(const wi::graphics::Texture& texture, int srgb_subresource)
 	{
 		if (internal_state == nullptr)
 		{
@@ -80,6 +80,7 @@ namespace wi
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->texture = texture;
+		resourceinternal->srgb_subresource = srgb_subresource;
 	}
 	void Resource::SetSound(const wi::audio::Sound& sound)
 	{

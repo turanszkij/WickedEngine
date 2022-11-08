@@ -25,7 +25,9 @@ namespace wi
 
 		void SetFileData(const wi::vector<uint8_t>& data);
 		void SetFileData(wi::vector<uint8_t>&& data);
-		void SetTexture(const wi::graphics::Texture& texture);
+		// Allows to set a Texture to the resource from outside
+		//	srgb_subresource: you can provide a subresource for SRGB view if the texture is going to be used as SRGB with the GetTextureSRGBSubresource() (optional)
+		void SetTexture(const wi::graphics::Texture& texture, int srgb_subresource = -1);
 		void SetSound(const wi::audio::Sound& sound);
 		void SetScript(const std::string& script);
 	};
