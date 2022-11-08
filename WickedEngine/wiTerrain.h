@@ -70,6 +70,7 @@ namespace wi::terrain
 	struct VirtualTexture
 	{
 		wi::graphics::Texture texture;
+		wi::graphics::Texture texture_raw_block;
 		wi::graphics::Texture residencyMap;
 		wi::graphics::Texture feedbackMap;
 		wi::graphics::GPUBuffer requestBuffer;

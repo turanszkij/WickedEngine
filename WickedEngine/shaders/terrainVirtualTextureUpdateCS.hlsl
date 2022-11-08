@@ -13,11 +13,11 @@ struct Terrain
 };
 ConstantBuffer<Terrain> terrain : register(b0);
 
-#if defined(UPDATE_NORMALMAP) || defined(UPDATE_SURFACEMAP)
-RWTexture2D<uint4> output : register(u0);	// BC3, BC5
-#else
+#if !defined(UPDATE_NORMALMAP) && !defined(UPDATE_SURFACEMAP)
 #define UPDATE_BASECOLORMAP
-RWTexture2D<uint2> output : register(u0);	// BC1
+RWTexture2D<uint2> bindless_rwtextures_uint2[] : register(space19);
+#else
+RWTexture2D<uint4> bindless_rwtextures_uint4[] : register(space19);
 #endif // UPDATE_NORMALMAP
 
 static const uint2 block_offsets[BLOCK_SIZE_4X4] = {
@@ -27,6 +27,17 @@ static const uint2 block_offsets[BLOCK_SIZE_4X4] = {
 	uint2(0, 3), uint2(1, 3), uint2(2, 3), uint2(3, 3),
 };
 
+#undef WICKED_ENGINE_DEFAULT_ROOTSIGNATURE // don't use auto root signature!
+[RootSignature(
+	"RootConstants(num32BitConstants=8, b999), "
+	"CBV(b0), "
+	"DescriptorTable( "
+		"SRV(t0, space = 2, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE),"
+		"UAV(u0, space = 19, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)"
+	"), "
+	"StaticSampler(s100, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_LINEAR),"
+	"StaticSampler(s101, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_MIP_LINEAR),"
+)]
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
@@ -35,10 +46,22 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	Texture2D<float4> region_weights_texture = bindless_textures[push.region_weights_textureRO];
 
+#ifdef UPDATE_BASECOLORMAP
+	RWTexture2D<uint2> output = bindless_rwtextures_uint2[push.output_textureRW];
 	float3 block_rgb[BLOCK_SIZE_4X4];
-	float block_a[BLOCK_SIZE_4X4];
+#endif // UPDATE_BASECOLORMAP
+
+#ifdef UPDATE_NORMALMAP
+	RWTexture2D<uint4> output = bindless_rwtextures_uint4[push.output_textureRW];
 	float block_x[BLOCK_SIZE_4X4];
 	float block_y[BLOCK_SIZE_4X4];
+#endif // UPDATE_NORMALMAP
+
+#ifdef UPDATE_SURFACEMAP
+	RWTexture2D<uint4> output = bindless_rwtextures_uint4[push.output_textureRW];
+	float3 block_rgb[BLOCK_SIZE_4X4];
+	float block_a[BLOCK_SIZE_4X4];
+#endif // UPDATE_SURFACEMAP
 
 	for(uint o = 0; o < BLOCK_SIZE_4X4; ++o)
 	{
@@ -128,7 +151,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // UPDATE_SURFACEMAP
 	}
 
-	const uint2 write_coord = DTid.xy + uint2(push.write_offset, 0);
+	const uint2 write_coord = push.offset / 4 + DTid.xy;
 
 #ifdef UPDATE_BASECOLORMAP
 	output[write_coord] = CompressBlockBC1_UNORM(block_rgb, CMP_QUALITY0, /*isSRGB =*/ true);

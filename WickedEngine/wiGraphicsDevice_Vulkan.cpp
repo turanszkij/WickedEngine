@@ -2633,7 +2633,7 @@ using namespace vulkan_internal;
 				capabilities |= GraphicsDeviceCapability::DEPTH_BOUNDS_TEST;
 			}
 
-			if (features2.features.sparseBinding == VK_TRUE)
+			if (features2.features.sparseBinding == VK_TRUE && features2.features.sparseResidencyAliased == VK_TRUE)
 			{
 				if (properties2.properties.sparseProperties.residencyNonResidentStrict == VK_TRUE)
 				{
@@ -3592,6 +3592,7 @@ using namespace vulkan_internal;
 		{
 			bufferInfo.flags |= VK_BUFFER_CREATE_SPARSE_BINDING_BIT;
 			bufferInfo.flags |= VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT;
+			bufferInfo.flags |= VK_BUFFER_CREATE_SPARSE_ALIASED_BIT;
 
 			res = vkCreateBuffer(device, &bufferInfo, nullptr, &internal_state->resource);
 			assert(res == VK_SUCCESS);
@@ -3841,6 +3842,7 @@ using namespace vulkan_internal;
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
 			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
+			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_ALIASED_BIT;
 
 			res = vkCreateImage(device, &imageInfo, nullptr, &internal_state->resource);
 			assert(res == VK_SUCCESS);

@@ -233,6 +233,44 @@ namespace wi::terrain
 		bool success = device->CreateTexture(&desc, nullptr, &texture);
 		assert(success);
 
+		locker.lock();
+		if (page_allocator.blocks.empty())
+		{
+			page_allocator.init(64ull * 1024ull * 1024ull, texture.sparse_page_size);
+		}
+		locker.unlock();
+
+		// For writing the block compressed texture, create an aliased raw block texture:
+		if(IsFormatBlockCompressed(desc.format))
+		{
+			TextureDesc desc_raw_block = desc;
+			desc_raw_block.width /= 4;
+			desc_raw_block.height /= 4;
+			desc_raw_block.bind_flags = BindFlag::UNORDERED_ACCESS;
+			desc_raw_block.layout = ResourceState::UNORDERED_ACCESS;
+			switch (desc_raw_block.format)
+			{
+			default:
+			case Format::BC1_UNORM:
+			case Format::BC1_UNORM_SRGB:
+				desc_raw_block.format = Format::R32G32_UINT;
+				break;
+			case Format::BC3_UNORM:
+			case Format::BC3_UNORM_SRGB:
+			case Format::BC5_UNORM:
+				desc_raw_block.format = Format::R32G32B32A32_UINT;
+				break;
+			}
+			success = device->CreateTexture(&desc_raw_block, nullptr, &texture_raw_block);
+			assert(success);
+
+			for (uint32_t i = 0; i < texture_raw_block.desc.mip_levels; ++i)
+			{
+				int subresource_index = device->CreateSubresource(&texture_raw_block, SubresourceType::UAV, 0, 1, i, 1);
+				assert(subresource_index == i);
+			}
+		}
+
 		residencyMap = {};
 		feedbackMap = {};
 		requestBuffer = {};
@@ -380,13 +418,6 @@ namespace wi::terrain
 				}
 			}
 		}
-
-		locker.lock();
-		if (page_allocator.blocks.empty())
-		{
-			page_allocator.init(64ull * 1024ull * 1024ull, texture.sparse_page_size);
-		}
-		locker.unlock();
 
 		if (feedbackMap.IsValid())
 		{
@@ -726,16 +757,23 @@ namespace wi::terrain
 	{
 		if (sparse_coordinate.empty())
 			return;
-		SparseUpdateCommand command;
-		command.sparse_resource = &texture;
-		command.num_resource_regions = (uint32_t)sparse_coordinate.size();
-		command.coordinates = sparse_coordinate.data();
-		command.sizes = sparse_size.data();
-		command.tile_pool = &allocator.blocks[last_block];
-		command.range_flags = tile_range_flags.data();
-		command.range_start_offsets = tile_range_offset.data();
-		command.range_tile_counts = tile_range_count.data();
-		GetDevice()->SparseUpdate(QUEUE_COPY, &command, 1);
+
+		locker.lock();
+		SparseUpdateCommand commands[2];
+		commands[0].sparse_resource = &texture;
+		commands[0].num_resource_regions = (uint32_t)sparse_coordinate.size();
+		commands[0].coordinates = sparse_coordinate.data();
+		commands[0].sizes = sparse_size.data();
+		commands[0].tile_pool = &allocator.blocks[last_block];
+		commands[0].range_flags = tile_range_flags.data();
+		commands[0].range_start_offsets = tile_range_offset.data();
+		commands[0].range_tile_counts = tile_range_count.data();
+
+		commands[1] = commands[0];
+		commands[1].sparse_resource = &texture_raw_block;
+
+		GetDevice()->SparseUpdate(QUEUE_COPY, commands, arraysize(commands));
+		locker.unlock();
 		sparse_coordinate.clear();
 		sparse_size.clear();
 		tile_range_flags.clear();
@@ -1514,8 +1552,9 @@ namespace wi::terrain
 
 				material->textures[map_type].lod_clamp = (float)vt.lod_count - 1;
 				virtual_textures_in_use.push_back(&vt);
-				virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.texture, vt.texture.desc.layout, ResourceState::COPY_DST));
-				virtual_texture_barriers_after_update.push_back(GPUBarrier::Image(&vt.texture, ResourceState::COPY_DST, vt.texture.desc.layout));
+				virtual_texture_barriers_before_update.push_back(GPUBarrier::Memory(&vt.texture_raw_block));
+				virtual_texture_barriers_after_update.push_back(GPUBarrier::Memory(&vt.texture_raw_block));
+
 
 				if (!vt.residencyMap.IsValid())
 					continue;
@@ -1678,85 +1717,8 @@ namespace wi::terrain
 		material_HighAltitude.WriteShaderMaterial(&materials[3]);
 		device->BindDynamicConstantBuffer(materials, 0, cmd);
 
-		static const uint32_t raw_tiles_max = 16u;
-		static Texture bc1_raw;
-		if (!bc1_raw.IsValid())
-		{
-			TextureDesc td;
-			td.width = 512 / 4 * raw_tiles_max;
-			td.height = 256 / 4;
-			td.format = Format::R32G32_UINT;
-			td.bind_flags = BindFlag::UNORDERED_ACCESS;
-			td.layout = ResourceState::UNORDERED_ACCESS;
-			bool success = device->CreateTexture(&td, nullptr, &bc1_raw);
-			assert(success);
-		}
-		static Texture bc3_bc5_raw;
-		if (!bc3_bc5_raw.IsValid())
-		{
-			TextureDesc td;
-			td.width = 256 / 4 * raw_tiles_max;
-			td.height = 256 / 4;
-			td.format = Format::R32G32B32A32_UINT;
-			td.bind_flags = BindFlag::UNORDERED_ACCESS;
-			td.layout = ResourceState::UNORDERED_ACCESS;
-			bool success = device->CreateTexture(&td, nullptr, &bc3_bc5_raw);
-			assert(success);
-		}
-
-		struct PendingRawTile
-		{
-			const Texture* dst;
-			uint32_t dstX;
-			uint32_t dstY;
-			uint32_t dstMip;
-			uint2 bc_size;
-			uint32_t srcX;
-		};
-		static wi::vector<PendingRawTile> pending_raw_tiles;
-		const Texture* bc_raw[] = {
-			&bc1_raw,
-			&bc3_bc5_raw,
-			&bc3_bc5_raw,
-		};
-
-		auto bc_raw_flush = [&](uint32_t map_type) {
-			if (pending_raw_tiles.empty())
-				return;
-
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(bc_raw[map_type], bc_raw[map_type]->desc.layout, ResourceState::COPY_SRC),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-
-			for (auto& pending : pending_raw_tiles)
-			{
-				Box srcbox;
-				srcbox.left = pending.srcX;
-				srcbox.right = pending.srcX + pending.bc_size.x;
-				srcbox.top = 0;
-				srcbox.bottom = pending.bc_size.y;
-				srcbox.front = 0;
-				srcbox.back = 1;
-				device->CopyTexture(
-					pending.dst, pending.dstX, pending.dstY, 0, pending.dstMip, 0,
-					bc_raw[map_type], 0, 0, cmd, &srcbox
-				);
-			}
-
-			for (uint32_t map_type = 0; map_type < arraysize(barriers); ++map_type)
-			{
-				std::swap(barriers[map_type].image.layout_before, barriers[map_type].image.layout_after);
-			}
-			device->Barrier(barriers, arraysize(barriers), cmd);
-
-			pending_raw_tiles.clear();
-		};
-
 		for (uint32_t map_type = 0; map_type < 3; map_type++)
 		{
-			uint32_t pending_raw_tile_offset = 0;
-
 			switch (map_type)
 			{
 			case MaterialComponent::BASECOLORMAP:
@@ -1772,7 +1734,6 @@ namespace wi::terrain
 				assert(0);
 				break;
 			}
-			device->BindUAV(bc_raw[map_type], 0, cmd);
 
 			for (const VirtualTexture* vt : virtual_textures_in_use)
 			{
@@ -1807,12 +1768,6 @@ namespace wi::terrain
 							(size.y + 3u) / 4u
 						);
 
-						if ((pending_raw_tile_offset + bc_size.x) >= bc_raw[map_type]->desc.width)
-						{
-							bc_raw_flush(map_type);
-							pending_raw_tile_offset = 0;
-						}
-
 						TerrainVirtualTexturePush push;
 						push.offset = uint2(
 							request.tile_x * size.x,
@@ -1821,25 +1776,15 @@ namespace wi::terrain
 						push.resolution_rcp.x = 1.0f / request_lod_resolution.x;
 						push.resolution_rcp.y = 1.0f / request_lod_resolution.y;
 						push.write_size = bc_size;
-						push.write_offset = pending_raw_tile_offset;
 						push.region_weights_textureRO = device->GetDescriptorIndex(&vt->region_weights_texture, SubresourceType::SRV);
+						push.output_textureRW = device->GetDescriptorIndex(&vt->texture_raw_block, SubresourceType::UAV, (int)mip);
 						device->PushConstants(&push, sizeof(push), cmd);
 
 						device->Dispatch((bc_size.x + 7u) / 8u, (bc_size.y + 7u) / 8u, 1, cmd);
-
-						PendingRawTile& pending_raw_tile = pending_raw_tiles.emplace_back();
-						pending_raw_tile.dst = &vt->texture;
-						pending_raw_tile.dstX = push.offset.x;
-						pending_raw_tile.dstY = push.offset.y;
-						pending_raw_tile.dstMip = mip;
-						pending_raw_tile.bc_size = bc_size;
-						pending_raw_tile.srcX = push.write_offset;
-						pending_raw_tile_offset += bc_size.x;
 					}
 				}
 				vt->update_requests.clear();
 			}
-			bc_raw_flush(map_type);
 		}
 		device->EventEnd(cmd);
 
