@@ -6800,7 +6800,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			if (vis.scene->weather.skyMap.IsValid())
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
-				device->BindResource(&vis.scene->weather.skyMap.GetTexture(), 0, cmd);
+				device->BindResource(&vis.scene->weather.skyMap.GetTexture(), 0, cmd, vis.scene->weather.skyMap.GetTextureSRGBSubresource());
 			}
 			else
 			{

@@ -47,25 +47,22 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	Texture2D<float4> region_weights_texture = bindless_textures[push.region_weights_textureRO];
 
 #ifdef UPDATE_BASECOLORMAP
-	RWTexture2D<uint2> output = bindless_rwtextures_uint2[push.output_textureRW];
 	float3 block_rgb[BLOCK_SIZE_4X4];
 #endif // UPDATE_BASECOLORMAP
 
 #ifdef UPDATE_NORMALMAP
-	RWTexture2D<uint4> output = bindless_rwtextures_uint4[push.output_textureRW];
 	float block_x[BLOCK_SIZE_4X4];
 	float block_y[BLOCK_SIZE_4X4];
 #endif // UPDATE_NORMALMAP
 
 #ifdef UPDATE_SURFACEMAP
-	RWTexture2D<uint4> output = bindless_rwtextures_uint4[push.output_textureRW];
 	float3 block_rgb[BLOCK_SIZE_4X4];
 	float block_a[BLOCK_SIZE_4X4];
 #endif // UPDATE_SURFACEMAP
 
-	for(uint o = 0; o < BLOCK_SIZE_4X4; ++o)
+	for(uint idx = 0; idx < BLOCK_SIZE_4X4; ++idx)
 	{
-		const uint2 block_offset = block_offsets[o];
+		const uint2 block_offset = block_offsets[idx];
 		const uint2 pixel = push.offset + DTid.xy * 4 + block_offset;
 		const float2 uv = (pixel.xy + 0.5f) * push.resolution_rcp;
 
@@ -134,8 +131,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 		total_color /= weight_sum;
 
-		const uint idx = block_offset.x + block_offset.y * 4;
-
 #ifdef UPDATE_BASECOLORMAP
 		block_rgb[idx] = total_color.rgb;
 #endif // UPDATE_BASECOLORMAP
@@ -154,14 +149,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const uint2 write_coord = push.offset / 4 + DTid.xy;
 
 #ifdef UPDATE_BASECOLORMAP
+	RWTexture2D<uint2> output = bindless_rwtextures_uint2[push.output_textureRW];
 	output[write_coord] = CompressBlockBC1_UNORM(block_rgb, CMP_QUALITY0, /*isSRGB =*/ true);
 #endif // UPDATE_BASECOLORMAP
 
 #ifdef UPDATE_NORMALMAP
+	RWTexture2D<uint4> output = bindless_rwtextures_uint4[push.output_textureRW];
 	output[write_coord] = CompressBlockBC5_UNORM(block_x, block_y, CMP_QUALITY0);
 #endif // UPDATE_NORMALMAP
 
 #ifdef UPDATE_SURFACEMAP
+	RWTexture2D<uint4> output = bindless_rwtextures_uint4[push.output_textureRW];
 	output[write_coord] = CompressBlockBC3_UNORM(block_rgb, block_a, CMP_QUALITY2, /*isSRGB =*/ false);
 #endif // UPDATE_SURFACEMAP
 }
