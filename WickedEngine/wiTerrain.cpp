@@ -190,7 +190,8 @@ namespace wi::terrain
 	{
 		GraphicsDevice* device = GetDevice();
 		const uint16_t block_index = (uint16_t)blocks.size();
-		GPUBuffer& block = blocks.emplace_back();
+		blocks.push_back(std::make_shared<GPUBuffer>());
+		GPUBuffer& block = *blocks.back();
 		GPUBufferDesc desc;
 		desc.alignment = page_size;
 		desc.size = AlignTo(block_size, page_size);
@@ -758,13 +759,12 @@ namespace wi::terrain
 		if (sparse_coordinate.empty())
 			return;
 
-		locker.lock();
 		SparseUpdateCommand commands[2];
 		commands[0].sparse_resource = &texture;
 		commands[0].num_resource_regions = (uint32_t)sparse_coordinate.size();
 		commands[0].coordinates = sparse_coordinate.data();
 		commands[0].sizes = sparse_size.data();
-		commands[0].tile_pool = &allocator.blocks[last_block];
+		commands[0].tile_pool = allocator.blocks[last_block].get();
 		commands[0].range_flags = tile_range_flags.data();
 		commands[0].range_start_offsets = tile_range_offset.data();
 		commands[0].range_tile_counts = tile_range_count.data();
@@ -773,7 +773,6 @@ namespace wi::terrain
 		commands[1].sparse_resource = &texture_raw_block;
 
 		GetDevice()->SparseUpdate(QUEUE_COPY, commands, arraysize(commands));
-		locker.unlock();
 		sparse_coordinate.clear();
 		sparse_size.clear();
 		tile_range_flags.clear();

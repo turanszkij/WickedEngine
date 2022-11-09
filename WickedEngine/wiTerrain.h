@@ -10,6 +10,7 @@
 #include <random>
 #include <string>
 #include <atomic>
+#include <memory>
 
 namespace wi::terrain
 {
@@ -50,7 +51,7 @@ namespace wi::terrain
 	{
 		size_t block_size = 0;
 		size_t page_size = 0;
-		wi::vector<wi::graphics::GPUBuffer> blocks;
+		wi::vector<std::shared_ptr<wi::graphics::GPUBuffer>> blocks; // storing pointers to avoid pointer changes on realloc, because they can be referenced by multiple threads
 
 		struct Page
 		{
