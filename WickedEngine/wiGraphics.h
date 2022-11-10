@@ -381,6 +381,10 @@ namespace wi::graphics
 		SPARSE_TEXTURE3D = 1 << 15,
 		SPARSE_NULL_MAPPING = 1 << 16,
 		GENERIC_SPARSE_TILE_POOL = 1 << 17, // alows using ResourceMiscFlag::SPARSE_TILE_POOL (non resource type specific version)
+		DEPTH_RESOLVE_SAMPLE_ZERO = 1 << 18,
+		STENCIL_RESOLVE_SAMPLE_ZERO = 1 << 19,
+		DEPTH_RESOLVE_MIN_MAX = 1 << 20,
+		STENCIL_RESOLVE_MIN_MAX = 1 << 21,
 	};
 
 	enum class ResourceState

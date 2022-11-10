@@ -2531,8 +2531,6 @@ using namespace vulkan_internal;
 			}
 
 			assert(properties2.properties.limits.timestampComputeAndGraphics == VK_TRUE);
-			assert(depth_stencil_resolve_properties.supportedDepthResolveModes& VK_RESOLVE_MODE_MIN_BIT);
-			assert(depth_stencil_resolve_properties.supportedDepthResolveModes& VK_RESOLVE_MODE_MAX_BIT);
 
 			vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
 
@@ -2652,6 +2650,29 @@ using namespace vulkan_internal;
 					capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE3D;
 				}
 				capabilities |= GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL;
+			}
+
+			if (depth_stencil_resolve_properties.supportedDepthResolveModes & VK_RESOLVE_MODE_SAMPLE_ZERO_BIT)
+			{
+				capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_SAMPLE_ZERO;
+			}
+			if (depth_stencil_resolve_properties.supportedStencilResolveModes & VK_RESOLVE_MODE_SAMPLE_ZERO_BIT)
+			{
+				capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_SAMPLE_ZERO;
+			}
+			if (
+				(depth_stencil_resolve_properties.supportedDepthResolveModes & VK_RESOLVE_MODE_MIN_BIT) &&
+				(depth_stencil_resolve_properties.supportedDepthResolveModes & VK_RESOLVE_MODE_MAX_BIT)
+				)
+			{
+				capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_MIN_MAX;
+			}
+			if (
+				(depth_stencil_resolve_properties.supportedStencilResolveModes & VK_RESOLVE_MODE_MIN_BIT) &&
+				(depth_stencil_resolve_properties.supportedStencilResolveModes & VK_RESOLVE_MODE_MAX_BIT)
+				)
+			{
+				capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_MIN_MAX;
 			}
 
 			// Find queue families:

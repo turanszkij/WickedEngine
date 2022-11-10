@@ -96,8 +96,7 @@ namespace wi::font
 			wi::Color color = wi::Color(255, 255, 255, 255),
 			wi::Color shadowColor = wi::Color(0, 0, 0, 0)
 		) :
-			posX(posX),
-			posY(posY),
+			position(posX, posY, 0),
 			size(size),
 			h_align(h_align),
 			v_align(v_align),
