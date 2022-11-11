@@ -2899,6 +2899,9 @@ Luna<CameraComponent_BindLua>::FunctionType CameraComponent_BindLua::methods[] =
 	lunamethod(CameraComponent_BindLua, GetPosition),
 	lunamethod(CameraComponent_BindLua, GetLookDirection),
 	lunamethod(CameraComponent_BindLua, GetUpDirection),
+	lunamethod(CameraComponent_BindLua, SetPosition),
+	lunamethod(CameraComponent_BindLua, SetLookDirection),
+	lunamethod(CameraComponent_BindLua, SetUpDirection),
 	{ NULL, NULL }
 };
 Luna<CameraComponent_BindLua>::PropertyType CameraComponent_BindLua::properties[] = {
@@ -3092,6 +3095,63 @@ int CameraComponent_BindLua::GetLookDirection(lua_State* L)
 int CameraComponent_BindLua::GetUpDirection(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(component->GetUp()));
+	return 1;
+}
+int CameraComponent_BindLua::SetPosition(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (v)
+		{
+			component->Eye.x = v->data.x;
+			component->Eye.y = v->data.y;
+			component->Eye.z = v->data.z;
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetPosition(Vector value) not enough arguments!");
+	}
+	return 1;
+}
+int CameraComponent_BindLua::SetLookDirection(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (v)
+		{
+			component->At.x = v->data.x;
+			component->At.y = v->data.y;
+			component->At.z = v->data.z;
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetLookDirection(Vector value) not enough arguments!");
+	}
+	return 1;
+}
+int CameraComponent_BindLua::SetUpDirection(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (v)
+		{
+			component->Up.x = v->data.x;
+			component->Up.y = v->data.y;
+			component->Up.z = v->data.z;
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetUpDirection(Vector value) not enough arguments!");
+	}
 	return 1;
 }
 

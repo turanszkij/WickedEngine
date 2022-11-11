@@ -326,11 +326,12 @@ void EditorComponent::Load()
 	closeButton.Create("");
 	closeButton.SetShadowRadius(2);
 	closeButton.font.params.shadowColor = wi::Color::Transparent();
-	closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, and delete the scene.\nThis operation cannot be undone!");
+	closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, delete the scene and kill all script processes.\nThis operation cannot be undone!");
 	closeButton.SetColor(wi::Color(255, 130, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	closeButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
 	closeButton.OnClick([&](wi::gui::EventArgs args) {
 
+		wi::lua::KillProcesses();
 		componentsWnd.terrainWnd.terrain_preset = {};
 
 		translator.selected.clear();

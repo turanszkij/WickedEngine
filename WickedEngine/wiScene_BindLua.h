@@ -309,6 +309,9 @@ namespace wi::lua::scene
 		int GetPosition(lua_State* L);
 		int GetLookDirection(lua_State* L);
 		int GetUpDirection(lua_State* L);
+		int SetPosition(lua_State* L);
+		int SetLookDirection(lua_State* L);
+		int SetUpDirection(lua_State* L);
 	};
 
 	class AnimationComponent_BindLua

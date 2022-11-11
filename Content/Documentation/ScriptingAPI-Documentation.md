@@ -700,6 +700,9 @@ Describes an orientation in 3D space.
 - GetPosition() : Vector result
 - GetLookDirection() : Vector result
 - GetUpDirection() : Vector result
+- SetPosition(Vector value)
+- SetLookDirection(Vector value)
+- SetUpDirection(Vector value)
 
 #### AnimationComponent
 - Timer : float
