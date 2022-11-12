@@ -3140,12 +3140,14 @@ namespace wi::scene
 			geometry.materialIndex = impostorMaterialOffset;
 			std::memcpy(geometryArrayMapped + impostorGeometryOffset, &geometry, sizeof(geometry));
 
-			ShaderMeshInstance instance;
-			instance.init();
-			instance.geometryOffset = impostorGeometryOffset;
-			instance.geometryCount = 1;
-			instance.meshletOffset = meshletAllocator.fetch_add(geometry.meshletCount); // global meshlet offset
-			std::memcpy(instanceArrayMapped + impostorInstanceOffset, &instance, sizeof(instance));
+			ShaderMeshInstance inst;
+			inst.init();
+			inst.geometryOffset = impostorGeometryOffset;
+			inst.geometryCount = 1;
+			inst.baseGeometryOffset = inst.geometryOffset;
+			inst.baseGeometryCount = inst.geometryCount;
+			inst.meshletOffset = meshletAllocator.fetch_add(geometry.meshletCount); // global meshlet offset
+			std::memcpy(instanceArrayMapped + impostorInstanceOffset, &inst, sizeof(inst));
 		}
 	}
 	void Scene::RunObjectUpdateSystem(wi::jobsystem::context& ctx)
@@ -3225,25 +3227,6 @@ namespace wi::scene
 					}
 				}
 
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				mesh.GetLODSubsetRange(0, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-				{
-					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
-					const MaterialComponent* material = materials.GetComponent(subset.materialID);
-
-					if (material != nullptr)
-					{
-						object.filterMask |= material->GetFilterMask();
-
-						if (material->HasPlanarReflection())
-						{
-							object.SetRequestPlanarReflection(true);
-						}
-					}
-				}
-
 				ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
 				if (impostor != nullptr)
 				{
@@ -3277,6 +3260,44 @@ namespace wi::scene
 				object.center = aabb.getCenter();
 				object.radius = aabb.getRadius();
 
+				// LOD select:
+				if (mesh.subsets_per_lod > 0)
+				{
+					const float distsq = wi::math::DistanceSquared(camera.Eye, object.center);
+					const float radius = object.radius;
+					const float radiussq = radius * radius;
+					if (distsq < radiussq)
+					{
+						object.lod = 0;
+					}
+					else
+					{
+						const float dist = std::sqrt(distsq);
+						const float dist_to_sphere = dist - radius;
+						object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
+						object.lod = std::min(object.lod, mesh.GetLODCount() - 1);
+					}
+				}
+
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh.GetLODSubsetRange(object.lod, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+					const MaterialComponent* material = materials.GetComponent(subset.materialID);
+
+					if (material != nullptr)
+					{
+						object.filterMask |= material->GetFilterMask();
+
+						if (material->HasPlanarReflection())
+						{
+							object.SetRequestPlanarReflection(true);
+						}
+					}
+				}
+
 				// Create GPU instance data:
 				GraphicsDevice* device = wi::graphics::GetDevice();
 				ShaderMeshInstance inst;
@@ -3301,33 +3322,16 @@ namespace wi::scene
 				inst.layerMask = layerMask;
 				inst.color = wi::math::CompressColor(object.color);
 				inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
-				inst.geometryOffset = mesh.geometryOffset;
-				inst.geometryCount = (uint)mesh.subsets.size();
+				inst.baseGeometryOffset = mesh.geometryOffset;
+				inst.baseGeometryCount = (uint)mesh.subsets.size();
+				inst.geometryOffset = inst.baseGeometryOffset + first_subset;
+				inst.geometryCount = last_subset - first_subset;
 				inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
 				inst.fadeDistance = object.fadeDistance;
 				inst.center = object.center;
 				inst.radius = object.radius;
 
 				std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
-
-				// LOD select:
-				if (mesh.subsets_per_lod > 0)
-				{
-					const float distsq = wi::math::DistanceSquared(camera.Eye, object.center);
-					const float radius = object.radius;
-					const float radiussq = radius * radius;
-					if (distsq < radiussq)
-					{
-						object.lod = 0;
-					}
-					else
-					{
-						const float dist = std::sqrt(distsq);
-						const float dist_to_sphere = dist - radius;
-						object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
-						object.lod = std::min(object.lod, mesh.GetLODCount() - 1);
-					}
-				}
 
 				if (TLAS_instancesMapped != nullptr)
 				{
@@ -3830,13 +3834,15 @@ namespace wi::scene
 			inst.init();
 			inst.uid = entity;
 			inst.layerMask = hair.layerMask;
-			inst.geometryOffset = (uint)geometryAllocation;
 			inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1, 1, 1));
 			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
-			inst.geometryCount = 1;
-			inst.meshletOffset = meshletOffset;
 			inst.center = hair.aabb.getCenter();
 			inst.radius = hair.aabb.getRadius();
+			inst.geometryOffset = (uint)geometryAllocation;
+			inst.geometryCount = 1;
+			inst.baseGeometryOffset = inst.geometryOffset;
+			inst.baseGeometryCount = inst.geometryCount;
+			inst.meshletOffset = meshletOffset;
 
 			const size_t instanceIndex = objects.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
@@ -3928,10 +3934,12 @@ namespace wi::scene
 			inst.init();
 			inst.uid = entity;
 			inst.layerMask = emitter.layerMask;
-			inst.geometryOffset = (uint)geometryAllocation;
 			inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1, 1, 1));
 			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
+			inst.geometryOffset = (uint)geometryAllocation;
 			inst.geometryCount = 1;
+			inst.baseGeometryOffset = inst.geometryOffset;
+			inst.baseGeometryCount = inst.geometryCount;
 			inst.meshletOffset = meshletOffset;
 
 			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;

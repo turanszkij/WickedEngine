@@ -408,7 +408,7 @@ struct ShaderGeometry
 	int vb_pre;
 
 	uint materialIndex;
-	uint meshletOffset; // offset of this subset in meshlets
+	uint meshletOffset; // offset of this subset in meshlets (locally within the mesh)
 	uint meshletCount;
 	int impostorSliceOffset;
 
@@ -491,17 +491,17 @@ struct ShaderMeshInstance
 	uint uid;
 	uint flags;
 	uint layerMask;
-	uint geometryOffset;
+	uint geometryOffset;	// offset of all geometries for currently active LOD
 
-	uint geometryCount;
+	uint geometryCount;		// number of all geometries in currently active LOD
 	uint color;
 	uint emissive;
 	int lightmap;
 
-	uint meshletOffset; // offset in the global meshlet buffer for first subset
+	uint meshletOffset; // offset in the global meshlet buffer for first subset (for LOD0)
 	float fadeDistance;
-	int padding0;
-	int padding1;
+	uint baseGeometryOffset;	// offset of all geometries of the instance (if no LODs, then it is equal to geometryOffset)
+	uint baseGeometryCount;		// number of all geometries of the instance (if no LODs, then it is equal to geometryCount)
 
 	float3 center;
 	float radius;
@@ -520,6 +520,8 @@ struct ShaderMeshInstance
 		lightmap = -1;
 		geometryOffset = 0;
 		geometryCount = 0;
+		baseGeometryOffset = 0;
+		baseGeometryCount = 0;
 		meshletOffset = ~0u;
 		fadeDistance = 0;
 		center = float3(0, 0, 0);

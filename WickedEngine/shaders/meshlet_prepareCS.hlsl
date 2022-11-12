@@ -10,9 +10,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	uint instanceIndex = Gid.x;
 	ShaderMeshInstance inst = load_instance(instanceIndex);
 
-	for (uint i = 0; i < inst.geometryCount; ++i)
+	for (uint i = 0; i < inst.baseGeometryCount; ++i)
 	{
-		uint geometryIndex = inst.geometryOffset + i;
+		uint geometryIndex = inst.baseGeometryOffset + i;
 		ShaderGeometry geometry = load_geometry(geometryIndex);
 		for (uint j = groupIndex; j < geometry.meshletCount; j += THREADCOUNT)
 		{
