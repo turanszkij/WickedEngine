@@ -227,6 +227,7 @@ struct VertexSurface
 		tangent.xyz = normalize(mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz));
 
 		uvsets = input.GetUVSets();
+		uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
 		atlas = input.GetAtlasUV();
 
@@ -1049,11 +1050,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	const float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
 	float3 bumpColor = 0;
 
-#ifdef OBJECTSHADER_USE_UVSETS
-	float4 uvsets = input.uvsets;
-	uvsets.xy = mad(uvsets.xy, GetMaterial().texMulAdd.xy, GetMaterial().texMulAdd.zw);
-#endif // OBJECTSHADER_USE_UVSETS
-
 #ifndef DISABLE_ALPHATEST
 #ifndef TRANSPARENT
 #ifndef ENVMAPRENDERING
@@ -1087,7 +1083,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 #ifdef OBJECTSHADER_USE_TANGENT
 #if 0
-	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, uvsets.xy);
+	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, input.uvsets.xy);
 #else
 	surface.T = input.tan;
 	surface.T.xyz = normalize(surface.T.xyz);
@@ -1096,7 +1092,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif
 
 #ifdef POM
-	ParallaxOcclusionMapping(uvsets, surface.V, TBN);
+	ParallaxOcclusionMapping(input.uvsets, surface.V, TBN);
 #endif // POM
 
 #endif // OBJECTSHADER_USE_TANGENT
@@ -1113,7 +1109,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	if (GetMaterial().textures[BASECOLORMAP].IsValid() && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 #endif // PREPASS
 	{
-		float4 baseColorMap = GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, uvsets);
+		float4 baseColorMap = GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, input.uvsets);
 		color *= baseColorMap;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
@@ -1137,7 +1133,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 #ifndef WATER
 #ifdef OBJECTSHADER_USE_TANGENT
-	NormalMapping(uvsets, surface.N, TBN, bumpColor);
+	NormalMapping(input.uvsets, surface.N, TBN, bumpColor);
 #endif // OBJECTSHADER_USE_TANGENT
 #endif // WATER
 
@@ -1148,7 +1144,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().textures[SURFACEMAP].IsValid())
 	{
-		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_objectshader, uvsets);
+		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_objectshader, input.uvsets);
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1159,7 +1155,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().textures[SPECULARMAP].IsValid())
 	{
-		specularMap = GetMaterial().textures[SPECULARMAP].Sample(sampler_objectshader, uvsets);
+		specularMap = GetMaterial().textures[SPECULARMAP].Sample(sampler_objectshader, input.uvsets);
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1175,7 +1171,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (any(surface.emissiveColor) && GetMaterial().textures[EMISSIVEMAP].IsValid())
 	{
-		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_objectshader, uvsets);
+		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_objectshader, input.uvsets);
 		surface.emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
@@ -1192,7 +1188,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().IsOcclusionEnabled_Secondary() && GetMaterial().textures[OCCLUSIONMAP].IsValid())
 	{
-		surface.occlusion *= GetMaterial().textures[OCCLUSIONMAP].Sample(sampler_objectshader, uvsets).r;
+		surface.occlusion *= GetMaterial().textures[OCCLUSIONMAP].Sample(sampler_objectshader, input.uvsets).r;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1225,12 +1221,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().textures[SHEENCOLORMAP].IsValid())
 	{
-		surface.sheen.color = GetMaterial().textures[SHEENCOLORMAP].Sample(sampler_objectshader, uvsets).rgb;
+		surface.sheen.color = GetMaterial().textures[SHEENCOLORMAP].Sample(sampler_objectshader, input.uvsets).rgb;
 	}
 	[branch]
 	if (GetMaterial().textures[SHEENROUGHNESSMAP].IsValid())
 	{
-		surface.sheen.roughness = GetMaterial().textures[SHEENROUGHNESSMAP].Sample(sampler_objectshader, uvsets).a;
+		surface.sheen.roughness = GetMaterial().textures[SHEENROUGHNESSMAP].Sample(sampler_objectshader, input.uvsets).a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 #endif // SHEEN
@@ -1245,18 +1241,18 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().textures[CLEARCOATMAP].IsValid())
 	{
-		surface.clearcoat.factor = GetMaterial().textures[CLEARCOATMAP].Sample(sampler_objectshader, uvsets).r;
+		surface.clearcoat.factor = GetMaterial().textures[CLEARCOATMAP].Sample(sampler_objectshader, input.uvsets).r;
 	}
 	[branch]
 	if (GetMaterial().textures[CLEARCOATROUGHNESSMAP].IsValid())
 	{
-		surface.clearcoat.roughness = GetMaterial().textures[CLEARCOATROUGHNESSMAP].Sample(sampler_objectshader, uvsets).g;
+		surface.clearcoat.roughness = GetMaterial().textures[CLEARCOATROUGHNESSMAP].Sample(sampler_objectshader, input.uvsets).g;
 	}
 #ifdef OBJECTSHADER_USE_TANGENT
 	[branch]
 	if (GetMaterial().textures[CLEARCOATNORMALMAP].IsValid())
 	{
-		float3 clearcoatNormalMap = float3(GetMaterial().textures[CLEARCOATNORMALMAP].Sample(sampler_objectshader, uvsets).rg, 1);
+		float3 clearcoatNormalMap = float3(GetMaterial().textures[CLEARCOATNORMALMAP].Sample(sampler_objectshader, input.uvsets).rg, 1);
 		clearcoatNormalMap = clearcoatNormalMap * 2 - 1;
 		surface.clearcoat.N = mul(clearcoatNormalMap, TBN);
 	}
@@ -1296,7 +1292,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	if (GetMaterial().textures[NORMALMAP].IsValid())
 	{
 		Texture2D texture_normalmap = bindless_textures[GetMaterial().textures[NORMALMAP].texture_descriptor];
-		const float2 UV_normalMap = GetMaterial().textures[NORMALMAP].GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
+		const float2 UV_normalMap = GetMaterial().textures[NORMALMAP].GetUVSet() == 0 ? input.uvsets.xy : input.uvsets.zw;
 		bumpColor0 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap - GetMaterial().texMulAdd.ww).rg - 1;
 		bumpColor1 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + GetMaterial().texMulAdd.zw).rg - 1;
 	}
@@ -1332,7 +1328,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		[branch]
 		if (GetMaterial().textures[TRANSMISSIONMAP].IsValid())
 		{
-			float transmissionMap = GetMaterial().textures[TRANSMISSIONMAP].Sample(sampler_objectshader, uvsets).r;
+			float transmissionMap = GetMaterial().textures[TRANSMISSIONMAP].Sample(sampler_objectshader, input.uvsets).r;
 			surface.transmission *= transmissionMap;
 		}
 #endif // OBJECTSHADER_USE_UVSETS

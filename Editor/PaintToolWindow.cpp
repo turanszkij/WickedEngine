@@ -243,12 +243,12 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 			if (material == nullptr)
 				continue;
 
-			Texture editTexture = GetEditTextureSlot(*material);
+			TextureSlot editTexture = GetEditTextureSlot(*material);
 
 			uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
 
 			wi::vector<uint8_t> texturefiledata;
-			if (wi::helper::saveTextureToMemoryFile(editTexture, "PNG", texturefiledata))
+			if (wi::helper::saveTextureToMemoryFile(editTexture.texture, "PNG", texturefiledata))
 			{
 				material->textures[sel].resource.SetFileData(texturefiledata);
 			}
@@ -484,10 +484,10 @@ void PaintToolWindow::Update(float dt)
 					break;
 
 				int uvset = 0;
-				Texture editTexture = GetEditTextureSlot(*material, &uvset);
-				if (!editTexture.IsValid())
+				TextureSlot editTexture = GetEditTextureSlot(*material, &uvset);
+				if (!editTexture.texture.IsValid())
 					break;
-				const TextureDesc& desc = editTexture.GetDesc();
+				const TextureDesc& desc = editTexture.texture.GetDesc();
 				auto& vertex_uvset = uvset == 0 ? mesh->vertex_uvset_0 : mesh->vertex_uvset_1;
 
 				const float u = intersect.bary.x;
@@ -535,7 +535,7 @@ void PaintToolWindow::Update(float dt)
 					{
 						device->BindResource(wi::texturehelper::getWhite(), 1, cmd);
 					}
-					device->BindUAV(&editTexture, 0, cmd);
+					device->BindUAV(&editTexture.texture, 0, cmd);
 
 					PaintTextureCB cb;
 					cb.xPaintBrushCenter = center;
@@ -561,9 +561,9 @@ void PaintToolWindow::Update(float dt)
 					};
 					device->Barrier(barriers, arraysize(barriers), cmd);
 
-					if (editTexture.desc.mip_levels > 1)
+					if (editTexture.texture.desc.mip_levels > 1)
 					{
-						wi::renderer::GenerateMipChain(editTexture, wi::renderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
+						wi::renderer::GenerateMipChain(editTexture.texture, wi::renderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
 					}
 				}
 				if(substep == substep_count - 1)
@@ -1316,22 +1316,36 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 			{
 				// Make a copy of texture to edit and replace material resource:
 				GraphicsDevice* device = wi::graphics::GetDevice();
-				Texture newTex;
-				TextureDesc desc = editTexture.GetDesc();
+				TextureSlot newslot;
+				TextureDesc desc = editTexture.texture.GetDesc();
 				desc.format = Format::R8G8B8A8_UNORM; // force format to one that is writable by GPU
 				desc.bind_flags |= BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-				device->CreateTexture(&desc, nullptr, &newTex);
-				for (uint32_t i = 0; i < newTex.GetDesc().mip_levels; ++i)
+				desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
+				device->CreateTexture(&desc, nullptr, &newslot.texture);
+				for (uint32_t i = 0; i < newslot.texture.GetDesc().mip_levels; ++i)
 				{
 					int subresource_index;
-					subresource_index = device->CreateSubresource(&newTex, SubresourceType::SRV, 0, 1, i, 1);
+					subresource_index = device->CreateSubresource(&newslot.texture, SubresourceType::SRV, 0, 1, i, 1);
 					assert(subresource_index == i);
-					subresource_index = device->CreateSubresource(&newTex, SubresourceType::UAV, 0, 1, i, 1);
+					subresource_index = device->CreateSubresource(&newslot.texture, SubresourceType::UAV, 0, 1, i, 1);
 					assert(subresource_index == i);
 				}
+				// This part must be AFTER mip level subresource creation:
+				int srgb_subresource = -1;
+				{
+					Format srgb_format = GetFormatSRGB(desc.format);
+					newslot.srgb_subresource = device->CreateSubresource(
+						&newslot.texture,
+						SubresourceType::SRV,
+						0, -1,
+						0, -1,
+						&srgb_format
+					);
+				}
 				assert(cmd.IsValid());
-				wi::renderer::CopyTexture2D(newTex, -1, 0, 0, editTexture, 0, cmd);
-				ReplaceEditTextureSlot(*material, newTex);
+				device->CopyResource(&newslot.texture, &editTexture.texture, cmd);
+
+				ReplaceEditTextureSlot(*material, newslot);
 			}
 
 		}
@@ -1556,21 +1570,24 @@ void PaintToolWindow::ConsumeHistoryOperation(wi::Archive& archive, bool undo)
 		}
 	}
 }
-Texture PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
+PaintToolWindow::TextureSlot PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
 {
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
 	if (!material.textures[sel].resource.IsValid())
 	{
-		return Texture();
+		return {};
 	}
 	if (uvset)
 		*uvset = material.textures[sel].uvset;
-	return material.textures[sel].resource.GetTexture();
+	TextureSlot retVal;
+	retVal.texture = material.textures[sel].resource.GetTexture();
+	retVal.srgb_subresource = material.textures[sel].resource.GetTextureSRGBSubresource();
+	return retVal;
 }
-void PaintToolWindow::ReplaceEditTextureSlot(wi::scene::MaterialComponent& material, const Texture& texture)
+void PaintToolWindow::ReplaceEditTextureSlot(wi::scene::MaterialComponent& material, const TextureSlot& textureslot)
 {
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
-	material.textures[sel].resource.SetTexture(texture);
+	material.textures[sel].resource.SetTexture(textureslot.texture, textureslot.srgb_subresource);
 	material.SetDirty();
 }
 

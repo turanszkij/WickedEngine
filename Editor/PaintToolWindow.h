@@ -13,9 +13,14 @@ class PaintToolWindow : public wi::gui::Window
 	bool history_needs_recording_end = false;
 	size_t history_redo_jump_position = 0;
 	size_t history_textureIndex = 0;
-	wi::vector<wi::graphics::Texture> history_textures; // we'd like to keep history textures in GPU memory to avoid GPU readback
-	wi::graphics::Texture GetEditTextureSlot(const wi::scene::MaterialComponent& material, int* uvset = nullptr);
-	void ReplaceEditTextureSlot(wi::scene::MaterialComponent& material, const wi::graphics::Texture& texture);
+	struct TextureSlot
+	{
+		wi::graphics::Texture texture;
+		int srgb_subresource = -1;
+	};
+	wi::vector<TextureSlot> history_textures;
+	TextureSlot GetEditTextureSlot(const wi::scene::MaterialComponent& material, int* uvset = nullptr);
+	void ReplaceEditTextureSlot(wi::scene::MaterialComponent& material, const TextureSlot& textureslot);
 
 	struct SculptingIndex
 	{

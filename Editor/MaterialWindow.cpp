@@ -305,7 +305,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&refractionSlider);
 
-	pomSlider.Create(0, 0.1f, 0.0f, 1000, "Par Occl Mapping: ");
+	pomSlider.Create(0, 1.0f, 0.0f, 1000, "Par Occl Mapping: ");
 	pomSlider.SetSize(XMFLOAT2(wid, hei));
 	pomSlider.SetPos(XMFLOAT2(x, y += step));
 	pomSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -315,7 +315,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&pomSlider);
 
-	displacementMappingSlider.Create(0, 0.1f, 0.0f, 1000, "Displacement: ");
+	displacementMappingSlider.Create(0, 10.0f, 0.0f, 1000, "Displacement: ");
 	displacementMappingSlider.SetTooltip("Adjust how much the bump map should modulate the geometry when using tessellation.");
 	displacementMappingSlider.SetSize(XMFLOAT2(wid, hei));
 	displacementMappingSlider.SetPos(XMFLOAT2(x, y += step));
@@ -652,8 +652,18 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 			wi::helper::FileDialog(params, [this, material, slot](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					wi::resourcemanager::Flags flags = wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA;
+					switch (slot)
+					{
+					case MaterialComponent::NORMALMAP:
+					case MaterialComponent::CLEARCOATNORMALMAP:
+						flags |= wi::resourcemanager::Flags::IMPORT_NORMALMAP;
+						break;
+					default:
+						break;
+					};
+					material->textures[slot].resource = wi::resourcemanager::Load(fileName, flags);
 					material->textures[slot].name = fileName;
-					material->CreateRenderData();
 					material->SetDirty();
 					textureSlotLabel.SetText(wi::helper::GetFileNameFromPath(fileName));
 					});
@@ -779,12 +789,10 @@ void MaterialWindow::SetEntity(Entity entity)
 		case MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC:
 			pomSlider.SetText("Anisotropy: ");
 			pomSlider.SetTooltip("Adjust anisotropy specular effect. \nOnly works with PBR + Anisotropic shader.");
-			pomSlider.SetRange(0, 0.99f);
 			break;
 		case MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING:
 			pomSlider.SetText("Par Occl Mapping: ");
 			pomSlider.SetTooltip("[Parallax Occlusion Mapping] Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
-			pomSlider.SetRange(0, 0.1f);
 			break;
 		default:
 			pomSlider.SetEnabled(false);
