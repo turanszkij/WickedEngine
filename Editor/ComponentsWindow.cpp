@@ -348,7 +348,16 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	humanoidWnd.SetVisible(false);
 	terrainWnd.SetVisible(false);
 
-	SetSize(editor->optionsWnd.GetSize());
+	XMFLOAT2 size = XMFLOAT2(338, 500);
+	if (editor->main->config.GetSection("layout").Has("components.width"))
+	{
+		size.x = editor->main->config.GetSection("layout").GetFloat("components.width");
+	}
+	if (editor->main->config.GetSection("layout").Has("components.height"))
+	{
+		size.y = editor->main->config.GetSection("layout").GetFloat("components.height");
+	}
+	SetSize(size);
 }
 void ComponentsWindow::Update(float dt)
 {
@@ -363,6 +372,8 @@ void ComponentsWindow::ResizeLayout()
 	const float padding = 4;
 	XMFLOAT2 pos = XMFLOAT2(padding, padding);
 	const float width = GetWidgetAreaSize().x - padding * 2;
+	editor->main->config.GetSection("layout").Set("components.width", GetSize().x);
+	editor->main->config.GetSection("layout").Set("components.height", GetSize().y);
 
 	if (!editor->translator.selected.empty())
 	{

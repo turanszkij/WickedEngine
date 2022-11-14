@@ -55,6 +55,7 @@ namespace wi::gui
 	//	As opposed to click and other interaction types, we don't want to disable scroll on every focused widget
 	//	because that would block scrolling the parent if a child element is hovered
 	static bool scroll_allowed = true;
+	static bool typing_active = false;
 
 	void GUI::Update(const wi::Canvas& canvas, float dt)
 	{
@@ -180,14 +181,27 @@ namespace wi::gui
 		}
 		return nullptr;
 	}
-	bool GUI::HasFocus()
+	bool GUI::HasFocus() const
+	{
+		if (!visible)
+		{
+			return false;
+		}
+		if (IsTyping())
+		{
+			return true;
+		}
+
+		return focus;
+	}
+	bool GUI::IsTyping() const
 	{
 		if (!visible)
 		{
 			return false;
 		}
 
-		return focus;
+		return typing_active;
 	}
 	void GUI::SetColor(wi::Color color, int id)
 	{
@@ -370,7 +384,8 @@ namespace wi::gui
 			{
 				scripttipFont.params = tooltipFont.params;
 				scripttipFont.params.posY += textHeightWithoutScriptTip;
-				scripttipFont.params.color = wi::Color::lerp(tooltipFont.params.color, wi::Color::Transparent(), 0.25f);
+				scripttipFont.params.color = tooltipFont.params.color;
+				scripttipFont.params.color.setA(uint8_t(float(scripttipFont.params.color.getA()) / 255.0f * 0.6f * 255));
 				scripttipFont.Draw(cmd);
 			}
 		}
@@ -830,6 +845,16 @@ namespace wi::gui
 			fx.siz.x += shadow * 2;
 			fx.siz.y += shadow * 2;
 			fx.color = shadow_color;
+			if (fx.isCornerRoundingEnabled())
+			{
+				for (auto& corner_rounding : fx.corners_rounding)
+				{
+					if (corner_rounding.radius > 0)
+					{
+						corner_rounding.radius += shadow;
+					}
+				}
+			}
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1184,6 +1209,16 @@ namespace wi::gui
 			fx.siz.x += shadow * 2;
 			fx.siz.y += shadow * 2;
 			fx.color = shadow_color;
+			if (fx.isCornerRoundingEnabled())
+			{
+				for (auto& corner_rounding : fx.corners_rounding)
+				{
+					if (corner_rounding.radius > 0)
+					{
+						corner_rounding.radius += shadow;
+					}
+				}
+			}
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1303,6 +1338,7 @@ namespace wi::gui
 						args.iValue = atoi(args.sValue.c_str());
 						args.fValue = (float)atof(args.sValue.c_str());
 						onInputAccepted(args);
+						typing_active = false;
 					}
 
 					Deactivate();
@@ -1342,6 +1378,7 @@ namespace wi::gui
 					// cancel input 
 					font_input.text.clear();
 					Deactivate();
+					typing_active = false;
 				}
 				else if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 				{
@@ -1432,6 +1469,16 @@ namespace wi::gui
 			fx.siz.x += shadow * 2;
 			fx.siz.y += shadow * 2;
 			fx.color = shadow_color;
+			if (fx.isCornerRoundingEnabled())
+			{
+				for (auto& corner_rounding : fx.corners_rounding)
+				{
+					if (corner_rounding.radius > 0)
+					{
+						corner_rounding.radius += shadow;
+					}
+				}
+			}
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1579,6 +1626,7 @@ namespace wi::gui
 		caret_pos = (int)font_input.GetText().size();
 		caret_begin = caret_pos;
 		caret_delay = 0;
+		typing_active = true;
 	}
 
 
@@ -1770,6 +1818,16 @@ namespace wi::gui
 			fx.siz.x += shadow * 2 + 1 + valueInputField.GetSize().x;
 			fx.siz.y += shadow * 2;
 			fx.color = shadow_color;
+			if (fx.isCornerRoundingEnabled())
+			{
+				for (auto& corner_rounding : fx.corners_rounding)
+				{
+					if (corner_rounding.radius > 0)
+					{
+						corner_rounding.radius += shadow;
+					}
+				}
+			}
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -1930,6 +1988,16 @@ namespace wi::gui
 			fx.siz.x += shadow * 2;
 			fx.siz.y += shadow * 2;
 			fx.color = shadow_color;
+			if (fx.isCornerRoundingEnabled())
+			{
+				for (auto& corner_rounding : fx.corners_rounding)
+				{
+					if (corner_rounding.radius > 0)
+					{
+						corner_rounding.radius += shadow;
+					}
+				}
+			}
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -2228,6 +2296,16 @@ namespace wi::gui
 			fx.siz.x += shadow * 2 + 1 + scale.y;
 			fx.siz.y += shadow * 2;
 			fx.color = shadow_color;
+			if (fx.isCornerRoundingEnabled())
+			{
+				for (auto& corner_rounding : fx.corners_rounding)
+				{
+					if (corner_rounding.radius > 0)
+					{
+						corner_rounding.radius += shadow;
+					}
+				}
+			}
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
@@ -2938,6 +3016,16 @@ namespace wi::gui
 			if (IsMinimized())
 			{
 				fx.siz.y = control_size + shadow * 2;
+			}
+			if (fx.isCornerRoundingEnabled())
+			{
+				for (auto& corner_rounding : fx.corners_rounding)
+				{
+					if (corner_rounding.radius > 0)
+					{
+						corner_rounding.radius += shadow;
+					}
+				}
 			}
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
@@ -4318,6 +4406,16 @@ namespace wi::gui
 			fx.siz.x += shadow * 2;
 			fx.siz.y = scale.y + shadow * 2;
 			fx.color = shadow_color;
+			if (fx.isCornerRoundingEnabled())
+			{
+				for (auto& corner_rounding : fx.corners_rounding)
+				{
+					if (corner_rounding.radius > 0)
+					{
+						corner_rounding.radius += shadow;
+					}
+				}
+			}
 			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 

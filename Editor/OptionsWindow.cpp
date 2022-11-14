@@ -392,20 +392,6 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	AddWidget(&materialPickerWnd);
 
 
-	sceneComboBox.Create("Scene: ");
-	sceneComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		if (args.iValue >= int(editor->scenes.size()))
-		{
-			editor->NewScene();
-		}
-		editor->SetCurrentScene(args.iValue);
-		});
-	sceneComboBox.SetEnabled(true);
-	sceneComboBox.SetColor(wi::Color(50, 100, 255, 180), wi::gui::IDLE);
-	sceneComboBox.SetColor(wi::Color(120, 160, 255, 255), wi::gui::FOCUS);
-	AddWidget(&sceneComboBox);
-
-
 	saveModeComboBox.Create("Save Mode: ");
 	saveModeComboBox.AddItem("Embed resources " ICON_SAVE_EMBED, (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
 	saveModeComboBox.AddItem("No embedding " ICON_SAVE_NO_EMBED, (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
@@ -473,10 +459,10 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		case Theme::Hacking:
 			editor->main->config.GetSection("options").Set("theme", "Hacking");
 			theme_color_idle = wi::Color(0, 0, 0, 255);
-			theme_color_focus = wi::Color(10, 230, 30, 255);
+			theme_color_focus = wi::Color(0, 160, 60, 255);
 			dark_point = wi::Color(0, 0, 0, 255);
-			theme.shadow_color = wi::Color(0, 250, 0, 200);
-			theme.font.color = wi::Color(100, 250, 100, 255);
+			theme.shadow_color = wi::Color(0, 200, 90, 200);
+			theme.font.color = wi::Color(0, 200, 90, 255);
 			theme.font.shadow_color = wi::Color::Shadow();
 			break;
 		}
@@ -525,8 +511,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 		if ((Theme)args.userdata == Theme::Hacking)
 		{
-			gui.SetColor(wi::Color(0, 200, 0, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
-			gui.SetColor(wi::Color(0, 200, 0, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
+			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
+			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
 		}
 
 		// customize individual elements:
@@ -553,8 +539,51 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			editor->saveButton.sprites[i].params.enableCornerRounding();
 			editor->saveButton.sprites[i].params.corners_rounding[2].radius = 10;
 		}
+		for (int i = 0; i < arraysize(editor->playButton.sprites); ++i)
+		{
+			editor->playButton.sprites[i].params.enableCornerRounding();
+			editor->playButton.sprites[i].params.corners_rounding[2].radius = 40;
+			editor->stopButton.sprites[i].params.enableCornerRounding();
+			editor->stopButton.sprites[i].params.corners_rounding[3].radius = 40;
+		}
+		int scene_id = 0;
+		for (auto& editorscene : editor->scenes)
+		{
+			for (int i = 0; i < arraysize(editorscene->tabSelectButton.sprites); ++i)
+			{
+				editorscene->tabSelectButton.sprites[i].params.enableCornerRounding();
+				editorscene->tabSelectButton.sprites[i].params.corners_rounding[0].radius = 10;
+				editorscene->tabSelectButton.sprites[i].params.corners_rounding[2].radius = 10;
+			}
+			for (int i = 0; i < arraysize(editorscene->tabCloseButton.sprites); ++i)
+			{
+				editorscene->tabCloseButton.sprites[i].params.enableCornerRounding();
+				editorscene->tabCloseButton.sprites[i].params.corners_rounding[1].radius = 10;
+				editorscene->tabCloseButton.sprites[i].params.corners_rounding[3].radius = 10;
+			}
+
+			if (editor->current_scene == scene_id)
+			{
+				editorscene->tabSelectButton.sprites[wi::gui::IDLE].params.color = editor->newSceneButton.sprites[wi::gui::FOCUS].params.color;
+			}
+			else
+			{
+				editorscene->tabSelectButton.sprites[wi::gui::IDLE].params.color = editor->newSceneButton.sprites[wi::gui::IDLE].params.color;
+			}
+			editorscene->tabCloseButton.SetColor(wi::Color::Error(), wi::gui::WIDGET_ID_FOCUS);
+			scene_id++;
+		}
+		for (int i = 0; i < arraysize(editor->newSceneButton.sprites); ++i)
+		{
+			editor->newSceneButton.sprites[i].params.enableCornerRounding();
+			editor->newSceneButton.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->newSceneButton.sprites[i].params.corners_rounding[1].radius = 10;
+			editor->newSceneButton.sprites[i].params.corners_rounding[2].radius = 10;
+			editor->newSceneButton.sprites[i].params.corners_rounding[3].radius = 10;
+		}
 		editor->componentsWnd.weatherWnd.default_sky_horizon = dark_point;
 		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
+		editor->componentsWnd.weatherWnd.Update();
 
 		if ((Theme)args.userdata == Theme::Bright)
 		{
@@ -574,7 +603,16 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	AddWidget(&themeCombo);
 
 
-	SetSize(XMFLOAT2(338, 500));
+	XMFLOAT2 size = XMFLOAT2(338, 500);
+	if (editor->main->config.GetSection("layout").Has("options.width"))
+	{
+		size.x = editor->main->config.GetSection("layout").GetFloat("options.width");
+	}
+	if (editor->main->config.GetSection("layout").Has("options.height"))
+	{
+		size.y = editor->main->config.GetSection("layout").GetFloat("options.height");
+	}
+	SetSize(size);
 }
 void OptionsWindow::Update(float dt)
 {
@@ -590,6 +628,8 @@ void OptionsWindow::ResizeLayout()
 	XMFLOAT2 pos = XMFLOAT2(padding, padding);
 	const float width = GetWidgetAreaSize().x - padding * 2;
 	float x_off = 100;
+	editor->main->config.GetSection("layout").Set("options.width", GetSize().x);
+	editor->main->config.GetSection("layout").Set("options.height", GetSize().y);
 
 	isScalatorCheckBox.SetPos(XMFLOAT2(pos.x + width - isScalatorCheckBox.GetSize().x, pos.y));
 	isRotatorCheckBox.SetPos(XMFLOAT2(isScalatorCheckBox.GetPos().x - isRotatorCheckBox.GetSize().x - 80, pos.y));
@@ -607,11 +647,6 @@ void OptionsWindow::ResizeLayout()
 	profilerEnabledCheckBox.SetPos(XMFLOAT2(physicsEnabledCheckBox.GetPos().x - profilerEnabledCheckBox.GetSize().x - 80, pos.y));
 	cinemaModeCheckBox.SetPos(XMFLOAT2(profilerEnabledCheckBox.GetPos().x - cinemaModeCheckBox.GetSize().x - 70, pos.y));
 	pos.y += cinemaModeCheckBox.GetSize().y;
-	pos.y += padding;
-
-	sceneComboBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
-	sceneComboBox.SetSize(XMFLOAT2(width - x_off - sceneComboBox.GetScale().y - 1, sceneComboBox.GetScale().y));
-	pos.y += sceneComboBox.GetSize().y;
 	pos.y += padding;
 
 	saveModeComboBox.SetPos(XMFLOAT2(pos.x + x_off, pos.y));

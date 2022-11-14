@@ -252,6 +252,7 @@ namespace wi::config
 						if (committed_values[section].count(it.first) == 0)
 						{
 							text += it.first + " = " + it.second + "\n";
+							committed_values[section].insert(it.first);
 						}
 					}
 					// Begin new section:
@@ -273,6 +274,7 @@ namespace wi::config
 			if (committed_values[this].count(it.first) == 0)
 			{
 				text += it.first + " = " + it.second + "\n";
+				committed_values[this].insert(it.first);
 			}
 		}
 		for (auto& it : sections)
@@ -289,6 +291,7 @@ namespace wi::config
 				if (committed_values[&it.second].count(it2.first) == 0)
 				{
 					text += it2.first + " = " + it2.second + "\n";
+					committed_values[&it.second].insert(it2.first);
 				}
 			}
 		}

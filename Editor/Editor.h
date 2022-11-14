@@ -23,9 +23,13 @@ class EditorComponent : public wi::RenderPath2D
 public:
 	Editor* main = nullptr;
 
+	wi::gui::Button newSceneButton;
+
+	wi::gui::Button playButton;
+	wi::gui::Button stopButton;
+
 	wi::gui::Button saveButton;
 	wi::gui::Button openButton;
-	wi::gui::Button closeButton;
 	wi::gui::Button logButton;
 	wi::gui::Button fullscreenButton;
 	wi::gui::Button bugButton;
@@ -115,6 +119,8 @@ public:
 	float save_text_alpha = 0; // seconds until save text disappears
 	wi::Color save_text_color = wi::Color::White();
 
+	std::string last_script_path;
+
 	struct EditorScene
 	{
 		std::string path;
@@ -125,6 +131,8 @@ public:
 		wi::scene::TransformComponent camera_target;
 		wi::vector<wi::Archive> history;
 		int historyPos = -1;
+		wi::gui::Button tabSelectButton;
+		wi::gui::Button tabCloseButton;
 	};
 	wi::vector<std::unique_ptr<EditorScene>> scenes;
 	int current_scene = 0;
@@ -132,46 +140,9 @@ public:
 	const EditorScene& GetCurrentEditorScene() const { return *scenes[current_scene].get(); }
 	wi::scene::Scene& GetCurrentScene() { return scenes[current_scene].get()->scene; }
 	const wi::scene::Scene& GetCurrentScene() const { return scenes[current_scene].get()->scene; }
-	void SetCurrentScene(int index)
-	{
-		current_scene = index;
-		this->renderPath->scene = &scenes[current_scene].get()->scene;
-		this->renderPath->camera = &scenes[current_scene].get()->camera;
-		wi::lua::scene::SetGlobalScene(this->renderPath->scene);
-		wi::lua::scene::SetGlobalCamera(this->renderPath->camera);
-		optionsWnd.RefreshEntityTree();
-		RefreshSceneList();
-	}
-	void RefreshSceneList()
-	{
-		optionsWnd.sceneComboBox.ClearItems();
-		for (int i = 0; i < int(scenes.size()); ++i)
-		{
-			if (scenes[i]->path.empty())
-			{
-				optionsWnd.sceneComboBox.AddItem("Untitled");
-			}
-			else
-			{
-				optionsWnd.sceneComboBox.AddItem(wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(scenes[i]->path)));
-			}
-		}
-		optionsWnd.sceneComboBox.AddItem("[New]");
-		optionsWnd.sceneComboBox.SetSelectedWithoutCallback(current_scene);
-		std::string tooltip = "Choose a scene";
-		if (!GetCurrentEditorScene().path.empty())
-		{
-			tooltip += "\nCurrent path: " + GetCurrentEditorScene().path;
-		}
-		optionsWnd.sceneComboBox.SetTooltip(tooltip);
-	}
-	void NewScene()
-	{
-		scenes.push_back(std::make_unique<EditorScene>());
-		SetCurrentScene(int(scenes.size()) - 1);
-		RefreshSceneList();
-		optionsWnd.cameraWnd.ResetCam();
-	}
+	void SetCurrentScene(int index);
+	void RefreshSceneList();
+	void NewScene();
 };
 
 class Editor : public wi::Application
@@ -182,4 +153,9 @@ public:
 	wi::config::File config;
 
 	void Initialize() override;
+
+	~Editor()
+	{
+		config.Commit();
+	}
 };

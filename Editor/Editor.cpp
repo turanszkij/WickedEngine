@@ -198,8 +198,10 @@ void EditorComponent::ResizeLayout()
 	float screenH = GetLogicalHeight();
 
 	optionsWnd.SetPos(XMFLOAT2(0, screenH - optionsWnd.GetScale().y));
+	optionsWnd.scale_local = wi::math::Clamp(optionsWnd.scale_local, XMFLOAT3(1, 1, 1), XMFLOAT3(screenW, screenH, 1));
 
 	componentsWnd.SetPos(XMFLOAT2(screenW - componentsWnd.GetScale().x, screenH - componentsWnd.GetScale().y));
+	componentsWnd.scale_local = wi::math::Clamp(componentsWnd.scale_local, XMFLOAT3(1, 1, 1), XMFLOAT3(screenW, screenH, 1));
 
 	aboutLabel.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 	aboutLabel.SetPos(XMFLOAT2(screenW / 2.0f - aboutLabel.scale.x / 2.0f, screenH / 2.0f - aboutLabel.scale.y / 2.0f));
@@ -212,11 +214,72 @@ void EditorComponent::Load()
 	//	when an icon character is not found in the default font.
 	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, sizeof(font_awesome_v6));
 
+	newSceneButton.Create("+");
+	newSceneButton.SetTooltip("New scene");
+	newSceneButton.OnClick([&](wi::gui::EventArgs args) {
+		NewScene();
+		});
+	GetGUI().AddWidget(&newSceneButton);
+
+
+	playButton.Create(ICON_PLAY);
+	playButton.font.params.shadowColor = wi::Color::Transparent();
+	playButton.SetShadowRadius(2);
+	playButton.SetTooltip("Execute the last used (standalone) script.\nTo use a new script, use the Open button.");
+	playButton.OnClick([&](wi::gui::EventArgs args) {
+		if (last_script_path.empty() || !wi::helper::FileExists(last_script_path))
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = ".lua";
+			params.extensions.push_back("lua");
+			wi::helper::FileDialog(params, [&](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+
+					std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
+					if (!extension.compare("LUA"))
+					{
+						last_script_path = fileName;
+						main->config.Set("last_script_path", last_script_path);
+						main->config.Commit();
+						playButton.SetScriptTip("dofile(\"" + last_script_path + "\")");
+						wi::lua::RunFile(fileName);
+					}
+				});
+			});
+		}
+		else
+		{
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				wi::lua::RunFile(last_script_path);
+			});
+		}
+	});
+	GetGUI().AddWidget(&playButton);
+
+	if (main->config.Has("last_script_path"))
+	{
+		last_script_path = main->config.GetText("last_script_path");
+	}
+	playButton.SetScriptTip("dofile(\"" + last_script_path + "\")");
+
+
+	stopButton.Create(ICON_STOP);
+	stopButton.font.params.shadowColor = wi::Color::Transparent();
+	stopButton.SetShadowRadius(2);
+	stopButton.SetTooltip("Stops every script background processes that are still running.");
+	stopButton.SetScriptTip("killProcesses()");
+	stopButton.OnClick([&](wi::gui::EventArgs args) {
+		wi::lua::KillProcesses();
+	});
+	GetGUI().AddWidget(&stopButton);
+
+
 
 	saveButton.Create("");
 	saveButton.font.params.shadowColor = wi::Color::Transparent();
 	saveButton.SetShadowRadius(2);
-	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)");
+	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)\nYou can also use Ctrl + S to quicksave, without browsing.");
 	saveButton.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	saveButton.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
 	saveButton.OnClick([&](wi::gui::EventArgs args) {
@@ -247,6 +310,10 @@ void EditorComponent::Load()
 				std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
 				if (!extension.compare("LUA"))
 				{
+					last_script_path = fileName;
+					main->config.Set("last_script_path", last_script_path);
+					main->config.Commit();
+					playButton.SetScriptTip("dofile(\"" + last_script_path + "\")");
 					wi::lua::RunFile(fileName);
 					return;
 				}
@@ -323,61 +390,61 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&openButton);
 
 
-	closeButton.Create("");
-	closeButton.SetShadowRadius(2);
-	closeButton.font.params.shadowColor = wi::Color::Transparent();
-	closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, delete the scene and kill all script processes.\nThis operation cannot be undone!");
-	closeButton.SetColor(wi::Color(255, 130, 100, 180), wi::gui::WIDGETSTATE::IDLE);
-	closeButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
-	closeButton.OnClick([&](wi::gui::EventArgs args) {
+	//closeButton.Create("");
+	//closeButton.SetShadowRadius(2);
+	//closeButton.font.params.shadowColor = wi::Color::Transparent();
+	//closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, delete the scene and kill all script processes.\nThis operation cannot be undone!");
+	//closeButton.SetColor(wi::Color(255, 130, 100, 180), wi::gui::WIDGETSTATE::IDLE);
+	//closeButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
+	//closeButton.OnClick([&](wi::gui::EventArgs args) {
 
-		wi::lua::KillProcesses();
-		componentsWnd.terrainWnd.terrain_preset = {};
+	//	wi::lua::KillProcesses();
+	//	componentsWnd.terrainWnd.terrain_preset = {};
 
-		translator.selected.clear();
-		wi::scene::Scene& scene = GetCurrentScene();
-		wi::renderer::ClearWorld(scene);
-		optionsWnd.cameraWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
-		componentsWnd.lightWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.soundWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.decalWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.envProbeWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.materialWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.emitterWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.hairWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.forceFieldWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.springWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.ikWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.transformWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.layerWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.nameWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.animWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.scriptWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.rigidWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.colliderWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.hierarchyWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.armatureWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.humanoidWnd.SetEntity(INVALID_ENTITY);
-		componentsWnd.terrainWnd.SetEntity(INVALID_ENTITY);
+	//	translator.selected.clear();
+	//	wi::scene::Scene& scene = GetCurrentScene();
+	//	wi::renderer::ClearWorld(scene);
+	//	optionsWnd.cameraWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
+	//	componentsWnd.lightWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.soundWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.decalWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.envProbeWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.materialWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.emitterWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.hairWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.forceFieldWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.springWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.ikWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.transformWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.layerWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.nameWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.animWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.scriptWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.rigidWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.colliderWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.hierarchyWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.armatureWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.humanoidWnd.SetEntity(INVALID_ENTITY);
+	//	componentsWnd.terrainWnd.SetEntity(INVALID_ENTITY);
 
-		optionsWnd.RefreshEntityTree();
-		ResetHistory();
-		GetCurrentEditorScene().path.clear();
+	//	optionsWnd.RefreshEntityTree();
+	//	ResetHistory();
+	//	GetCurrentEditorScene().path.clear();
 
-		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-			if (scenes.size() > 1)
-			{
-				scenes.erase(scenes.begin() + current_scene);
-			}
-			SetCurrentScene(std::max(0, current_scene - 1));
-			});
-		});
-	GetGUI().AddWidget(&closeButton);
+	//	wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+	//		if (scenes.size() > 1)
+	//		{
+	//			scenes.erase(scenes.begin() + current_scene);
+	//		}
+	//		SetCurrentScene(std::max(0, current_scene - 1));
+	//		});
+	//	});
+	//GetGUI().AddWidget(&closeButton);
 
 
 	logButton.Create("");
@@ -1179,7 +1246,7 @@ void EditorComponent::Update(float dt)
 	main->infoDisplay.colorgrading_helper = false;
 
 	// Control operations...
-	if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
+	if (!GetGUI().IsTyping() && wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
 	{
 		// Color Grading helper
 		if (wi::input::Down((wi::input::BUTTON)'G'))
@@ -1357,32 +1424,35 @@ void EditorComponent::Update(float dt)
 		}
 	}
 
-	if (wi::input::Press(wi::input::BUTTON('1')))
+	if (!GetGUI().IsTyping())
 	{
-		translator.isTranslator = !translator.isTranslator;
-		translator.isScalator = false;
-		translator.isRotator = false;
-		optionsWnd.isTranslatorCheckBox.SetCheck(translator.isTranslator);
-		optionsWnd.isScalatorCheckBox.SetCheck(false);
-		optionsWnd.isRotatorCheckBox.SetCheck(false);
-	}
-	else if (wi::input::Press(wi::input::BUTTON('2')))
-	{
-		translator.isRotator = !translator.isRotator;
-		translator.isScalator = false;
-		translator.isTranslator = false;
-		optionsWnd.isRotatorCheckBox.SetCheck(translator.isRotator);
-		optionsWnd.isScalatorCheckBox.SetCheck(false);
-		optionsWnd.isTranslatorCheckBox.SetCheck(false);
-	}
-	else if (wi::input::Press(wi::input::BUTTON('3')))
-	{
-		translator.isScalator = !translator.isScalator;
-		translator.isTranslator = false;
-		translator.isRotator = false;
-		optionsWnd.isScalatorCheckBox.SetCheck(translator.isScalator);
-		optionsWnd.isTranslatorCheckBox.SetCheck(false);
-		optionsWnd.isRotatorCheckBox.SetCheck(false);
+		if (wi::input::Press(wi::input::BUTTON('1')))
+		{
+			translator.isTranslator = !translator.isTranslator;
+			translator.isScalator = false;
+			translator.isRotator = false;
+			optionsWnd.isTranslatorCheckBox.SetCheck(translator.isTranslator);
+			optionsWnd.isScalatorCheckBox.SetCheck(false);
+			optionsWnd.isRotatorCheckBox.SetCheck(false);
+		}
+		else if (wi::input::Press(wi::input::BUTTON('2')))
+		{
+			translator.isRotator = !translator.isRotator;
+			translator.isScalator = false;
+			translator.isTranslator = false;
+			optionsWnd.isRotatorCheckBox.SetCheck(translator.isRotator);
+			optionsWnd.isScalatorCheckBox.SetCheck(false);
+			optionsWnd.isTranslatorCheckBox.SetCheck(false);
+		}
+		else if (wi::input::Press(wi::input::BUTTON('3')))
+		{
+			translator.isScalator = !translator.isScalator;
+			translator.isTranslator = false;
+			translator.isRotator = false;
+			optionsWnd.isScalatorCheckBox.SetCheck(translator.isScalator);
+			optionsWnd.isTranslatorCheckBox.SetCheck(false);
+			optionsWnd.isRotatorCheckBox.SetCheck(false);
+		}
 	}
 
 	// Delete
@@ -2937,7 +3007,7 @@ void EditorComponent::UpdateTopMenuAnimation()
 	float wid_idle = 40;
 	float wid_focus = wid_idle * 2.5f;
 	float padding = 4;
-	float lerp = 0.3f;
+	float lerp = 0.4f;
 
 	bool fullscreen = main->config.GetBool("fullscreen");
 	const char* fullscreen_text = fullscreen ? ICON_FA_COMPRESS " Windowed" : ICON_FULLSCREEN " Full screen";
@@ -2947,7 +3017,6 @@ void EditorComponent::UpdateTopMenuAnimation()
 	fullscreenButton.SetText(fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? fullscreen_text : fullscreen ? ICON_FA_COMPRESS : ICON_FULLSCREEN);
 	bugButton.SetText(bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BUG " Bug report" : ICON_BUG);
 	logButton.SetText(logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BACKLOG " Backlog" : ICON_BACKLOG);
-	closeButton.SetText(closeButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_CLOSE " Close" : ICON_CLOSE);
 	openButton.SetText(openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_OPEN " Open" : ICON_OPEN);
 	saveButton.SetText(saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_SAVE " Save" : ICON_SAVE);
 
@@ -2956,7 +3025,6 @@ void EditorComponent::UpdateTopMenuAnimation()
 	fullscreenButton.SetSize(XMFLOAT2(wi::math::Lerp(fullscreenButton.GetSize().x, fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	bugButton.SetSize(XMFLOAT2(wi::math::Lerp(bugButton.GetSize().x, bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	logButton.SetSize(XMFLOAT2(wi::math::Lerp(logButton.GetSize().x, logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
-	closeButton.SetSize(XMFLOAT2(wi::math::Lerp(closeButton.GetSize().x, closeButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	openButton.SetSize(XMFLOAT2(wi::math::Lerp(openButton.GetSize().x, openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	saveButton.SetSize(XMFLOAT2(wi::math::Lerp(saveButton.GetSize().x, saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 
@@ -2965,7 +3033,129 @@ void EditorComponent::UpdateTopMenuAnimation()
 	bugButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - bugButton.GetSize().x - padding, 0));
 	fullscreenButton.SetPos(XMFLOAT2(bugButton.GetPos().x - fullscreenButton.GetSize().x - padding, 0));
 	logButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - logButton.GetSize().x - padding, 0));
-	closeButton.SetPos(XMFLOAT2(logButton.GetPos().x - closeButton.GetSize().x - padding, 0));
-	openButton.SetPos(XMFLOAT2(closeButton.GetPos().x - openButton.GetSize().x - padding, 0));
+	openButton.SetPos(XMFLOAT2(logButton.GetPos().x - openButton.GetSize().x - padding, 0));
 	saveButton.SetPos(XMFLOAT2(openButton.GetPos().x - saveButton.GetSize().x - padding, 0));
+
+
+	stopButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	stopButton.SetPos(XMFLOAT2(saveButton.GetPos().x - stopButton.GetSize().x - 20, 0));
+	playButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	playButton.SetPos(XMFLOAT2(stopButton.GetPos().x - playButton.GetSize().x - padding, 0));
+
+
+	float ofs = screenW - 2;
+	float y = exitButton.GetPos().y + exitButton.GetSize().y + 5;
+	hei = 18;
+	wid_idle = 105;
+	for (int i = 0; i < int(scenes.size()); ++i)
+	{
+		auto& editorscene = scenes[i];
+		editorscene->tabSelectButton.SetSize(XMFLOAT2(wid_idle, hei));
+		editorscene->tabCloseButton.SetSize(XMFLOAT2(hei, hei));
+		ofs -= editorscene->tabCloseButton.GetSize().x;
+		editorscene->tabCloseButton.SetPos(XMFLOAT2(ofs, y));
+		ofs -= editorscene->tabSelectButton.GetSize().x;
+		editorscene->tabSelectButton.SetPos(XMFLOAT2(ofs, y));
+		ofs -= 4;
+	}
+	newSceneButton.SetSize(XMFLOAT2(hei, hei));
+	ofs -= newSceneButton.GetSize().x;
+	newSceneButton.SetPos(XMFLOAT2(ofs, y));
+}
+
+void EditorComponent::SetCurrentScene(int index)
+{
+	current_scene = index;
+	this->renderPath->scene = &scenes[current_scene].get()->scene;
+	this->renderPath->camera = &scenes[current_scene].get()->camera;
+	wi::lua::scene::SetGlobalScene(renderPath->scene);
+	wi::lua::scene::SetGlobalCamera(renderPath->camera);
+	optionsWnd.RefreshEntityTree();
+	RefreshSceneList();
+}
+void EditorComponent::RefreshSceneList()
+{
+	optionsWnd.themeCombo.SetSelected(optionsWnd.themeCombo.GetSelected());
+	for (int i = 0; i < int(scenes.size()); ++i)
+	{
+		auto& editorscene = scenes[i];
+		if (editorscene->path.empty())
+		{
+			editorscene->tabSelectButton.SetText("Untitled scene");
+			editorscene->tabSelectButton.SetTooltip("");
+		}
+		else
+		{
+			editorscene->tabSelectButton.SetText(wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(editorscene->path)));
+			editorscene->tabSelectButton.SetTooltip(editorscene->path);
+		}
+
+		editorscene->tabSelectButton.OnClick([this, i](wi::gui::EventArgs args) {
+			SetCurrentScene(i);
+			});
+		editorscene->tabCloseButton.OnClick([this, i](wi::gui::EventArgs args) {
+			wi::lua::KillProcesses();
+			componentsWnd.terrainWnd.terrain_preset = {};
+
+			translator.selected.clear();
+			wi::scene::Scene& scene = GetCurrentScene();
+			wi::renderer::ClearWorld(scene);
+			optionsWnd.cameraWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.objectWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.meshWnd.SetEntity(wi::ecs::INVALID_ENTITY, -1);
+			componentsWnd.lightWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.soundWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.decalWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.envProbeWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.materialWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.emitterWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.hairWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.forceFieldWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.springWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.ikWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.transformWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.layerWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.nameWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.animWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.scriptWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.rigidWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.softWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.colliderWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.hierarchyWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.cameraComponentWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.expressionWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.armatureWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.humanoidWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.terrainWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+
+			optionsWnd.RefreshEntityTree();
+			ResetHistory();
+			scenes[i]->path.clear();
+
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				if (scenes.size() > 1)
+				{
+					GetGUI().RemoveWidget(&scenes[i]->tabSelectButton);
+					GetGUI().RemoveWidget(&scenes[i]->tabCloseButton);
+					scenes.erase(scenes.begin() + i);
+				}
+				SetCurrentScene(std::max(0, i - 1));
+			});
+		});
+	}
+}
+void EditorComponent::NewScene()
+{
+	int scene_id = int(scenes.size());
+	scenes.push_back(std::make_unique<EditorScene>());
+	auto& editorscene = scenes.back();
+	editorscene->tabSelectButton.Create("");
+	editorscene->tabCloseButton.Create("X");
+	editorscene->tabCloseButton.SetTooltip("Close scene. This operation cannot be undone!");
+	GetGUI().AddWidget(&editorscene->tabSelectButton);
+	GetGUI().AddWidget(&editorscene->tabCloseButton);
+	SetCurrentScene(scene_id);
+	RefreshSceneList();
+	UpdateTopMenuAnimation();
+	optionsWnd.cameraWnd.ResetCam();
 }

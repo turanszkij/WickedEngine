@@ -27,7 +27,6 @@ public:
 	wi::gui::CheckBox otherinfoCheckBox;
 	wi::gui::ComboBox themeCombo;
 	wi::gui::ComboBox saveModeComboBox;
-	wi::gui::ComboBox sceneComboBox;
 	GraphicsWindow graphicsWnd;
 	CameraWindow cameraWnd;
 	MaterialPickerWindow materialPickerWnd;

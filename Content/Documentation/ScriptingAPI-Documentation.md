@@ -678,19 +678,19 @@ Describes an orientation in 3D space.
 </br>
 
 - UpdateCamera()  -- update the camera matrices
-- TransformCamera(TransformComponent transform)  -- copies the transform's orientation to the camera. Camera matrices are not updated immediately. They will be updated by the Scene::Update() (if the camera is part of the scene), or by manually calling UpdateCamera()
+- TransformCamera(TransformComponent transform)  -- copies the transform's orientation to the camera, and sets the camera position, look direction and up direction. Camera matrices are not updated immediately. They will be updated by the Scene::Update() (if the camera is part of the scene), or by manually calling UpdateCamera()
 - GetFOV() : float result
-- SetFOV(float value)
+- SetFOV(float value)	-- Sets the vertical field of view for the camera (value is an angle in radians)
 - GetNearPlane() : float result
-- SetNearPlane(float value)
+- SetNearPlane(float value)	-- Sets the near plane of the camera, which specifies the rendering cut off near the viewer. Must be a value greater than zero 
 - GetFarPlane() : float result
-- SetFarPlane(float value)
+- SetFarPlane(float value)	-- Sets the far plane (view distance) of the camera
 - GetFocalDistance() : float result
-- SetFocalDistance(float value)
+- SetFocalDistance(float value)	-- Sets the focal distance (focus distance) of the camera. This is used by depth of field.
 - GetApertureSize() : float result
-- SetApertureSize(float value)
+- SetApertureSize(float value)	-- Sets the aperture size of the camera. Larger values will make the depth of field effect stronger.
 - GetApertureShape() : float result
-- SetApertureShape(Vector value)
+- SetApertureShape(Vector value)	-- Sets the aperture shape of camera, used for depth of field effect. The value's `.X` element specifies the horizontal, the `.Y` element specifies the vertical shape.
 - GetView() : Matrix result
 - GetProjection() : Matrix result
 - GetViewProjection() : Matrix result
@@ -700,9 +700,9 @@ Describes an orientation in 3D space.
 - GetPosition() : Vector result
 - GetLookDirection() : Vector result
 - GetUpDirection() : Vector result
-- SetPosition(Vector value)
-- SetLookDirection(Vector value)
-- SetUpDirection(Vector value)
+- SetPosition(Vector value)	-- Sets the position of the camera. `UpdateCamera()` should be used after this to apply the value. 
+- SetLookDirection(Vector value)		-- Sets the look direction of the camera. The value must be a normalized direction `Vector`, relative to the camera position, and also perpendicular to the up direction. `UpdateCamera()` should be used after this to apply the value. This value will also be set if using the `TransformCamera()` function, from the transform's rotation.
+- SetUpDirection(Vector value)		-- Sets the up direction of the camera. This must be a normalized direction `Vector`, relative to the camera position, and also perpendicular to the look direction. `UpdateCamera()` should be used after this to apply the value. This value will also be set if using the `TransformCamera()` function, from the transform's rotation.
 
 #### AnimationComponent
 - Timer : float

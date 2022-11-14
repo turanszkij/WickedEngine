@@ -218,10 +218,12 @@ namespace wi::gui
 		Widget* GetWidget(const std::string& name);
 
 		// returns true if any gui element has the focus
-		bool HasFocus();
+		bool HasFocus() const;
+		// returns true if text input is happening
+		bool IsTyping() const;
 
 		void SetVisible(bool value) { visible = value; }
-		bool IsVisible() { return visible; }
+		bool IsVisible() const { return visible; }
 
 		void SetColor(wi::Color color, int id = -1);
 		void SetShadowColor(wi::Color color);
