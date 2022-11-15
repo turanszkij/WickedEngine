@@ -1133,7 +1133,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 #ifndef WATER
 #ifdef OBJECTSHADER_USE_TANGENT
-	NormalMapping(input.uvsets, surface.N, TBN, bumpColor);
+	//NormalMapping(input.uvsets, surface.N, TBN, bumpColor);
 #endif // OBJECTSHADER_USE_TANGENT
 #endif // WATER
 
@@ -1144,7 +1144,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().textures[SURFACEMAP].IsValid())
 	{
-		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_objectshader, input.uvsets);
+		//surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_objectshader, input.uvsets);
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 

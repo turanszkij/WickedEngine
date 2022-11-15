@@ -12,7 +12,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	ByteAddressBuffer pageBuffer = bindless_buffers[push.pageBufferRO];
 	RWTexture2D<uint> residencyTexture = bindless_rwtextures_uint[push.residencyTextureRW];
 
-	uint residency = 0xFF;
+	uint minLod = 0xFF;
+	uint tile_x = 0;
+	uint tile_y = 0;
 
 	const uint x = DTid.x;
 	const uint y = DTid.y;
@@ -32,16 +34,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			//	normally this wouldn't happen after a resident mip was encountered, but
 			//	it can happen on allocation failures, in this case reset the residency to invalid
 			//	this will mean that while there was a higher res resident page, but we can't use that because lower levels might be non resident
-			residency = 0xFF;
+			minLod = 0xFF;
 		}
-		else
+		else if(lod < minLod)
 		{
 			// valid page
 			//	normally this would be the highest lod and we could exit, but failed allocations can cause holes in the mip chain
-			residency = min(residency, lod);
+			minLod = lod;
+			tile_x = page & 0xFF;
+			tile_y = (page >> 8u) & 0xFF;
 		}
 		lod_offset += l_width * l_height;
 	}
 
-	residencyTexture[DTid.xy] = residency;
+	minLod = 0;
+	residencyTexture[DTid.xy] = (tile_x & 0xFF) | ((tile_y & 0xFF) << 8u) | ((minLod & 0xFF) << 16u);
 }
