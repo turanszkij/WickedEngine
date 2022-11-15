@@ -1004,9 +1004,9 @@ namespace wi::terrain
 			{
 				if (dist > removal_threshold)
 				{
-					for (int i = 0; i < arraysize(chunk_data.vt); ++i)
+					for (auto& vt : chunk_data.vt)
 					{
-						chunk_data.vt[i].free(page_allocator);
+						vt.free(page_allocator);
 					}
 					scene->Entity_Remove(it->second.entity);
 					it = chunks.erase(it);

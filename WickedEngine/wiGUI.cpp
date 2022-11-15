@@ -1414,6 +1414,7 @@ namespace wi::gui
 			{
 				// activate
 				SetAsActive();
+				typing_active = true; // do NOT set this inside SetAsActive() because that can be called from outside, but this bool cannot, and it could stuck
 			}
 		}
 
@@ -1626,7 +1627,6 @@ namespace wi::gui
 		caret_pos = (int)font_input.GetText().size();
 		caret_begin = caret_pos;
 		caret_delay = 0;
-		typing_active = true;
 	}
 
 
