@@ -90,6 +90,8 @@ static const uint SPECULARMAP = 12;
 static const uint TEXTURESLOT_COUNT = 13;
 
 static const uint SVT_TILE_SIZE = 256u;
+static const uint SVT_TILE_BORDER = 4u;
+static const uint SVT_TILE_SIZE_PADDED = SVT_TILE_BORDER + SVT_TILE_SIZE + SVT_TILE_BORDER;
 
 #ifndef __cplusplus
 #ifdef TEXTURE_SLOT_NONUNIFORM
@@ -153,35 +155,58 @@ struct ShaderTextureSlot
 		if (sparse_residencymap_descriptor >= 0)
 		{
 			Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
-			float2 dim;
-			residency_map.GetDimensions(dim.x, dim.y);
-			uint2 pixel = uv * dim;
-			uint residency = residency_map[pixel];
-			uint2 tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
-			uint min_lod = (residency >> 16u) & 0xFF;
-			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE;
+			float2 residency_dim;
+			residency_map.GetDimensions(residency_dim.x, residency_dim.y);
 
-			float2 virtual_image_dim = dim * SVT_TILE_SIZE;
-			float lod = get_lod(virtual_image_dim, ddx(uv), ddy(uv));
-			float clamped_lod = max(min_lod, lod);
-
-			uint2 virtual_lod_dim = uint2(virtual_image_dim) >> uint(clamped_lod);
-			float2 virtual_pixel = uv * virtual_lod_dim;
-			float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
 			float2 atlas_dim;
 			tex.GetDimensions(atlas_dim.x, atlas_dim.y);
-			float2 atlas_tile_pixel = tile_pixel_upperleft + 0.5 + virtual_tile_pixel;
-			float2 atlas_uv = atlas_tile_pixel / atlas_dim;
-			value = tex.SampleLevel(sam, atlas_uv, 0);
-			//value = float4(atlas_uv, 0, 0);
-			//value = float4((float2)virtual_tile_pixel / (float)SVT_TILE_SIZE, 0, 0);
-			//value = float4(frac(uv * dim), 0, 0);
+
+			float2 virtual_image_dim = residency_dim * SVT_TILE_SIZE;
+			float lod = get_lod(virtual_image_dim, ddx(uv), ddy(uv));
+			float lod_blend = frac(lod);
+
+			uint2 pixel = uv * residency_dim;
+			uint min_lod = (residency_map.Load(uint3(pixel >> uint(lod), uint(lod))) >> 16u) & 0xFF;
+			float clamped_lod = clamp(lod, min_lod, GetLodClamp());
+
+			// Mip - more detailed:
+			float4 value0;
+			{
+				uint lod0 = floor(clamped_lod);
+				uint residency = residency_map.Load(uint3(pixel >> lod0, lod0));
+				uint2 tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
+				uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER;
+				uint2 virtual_lod_dim = uint2(virtual_image_dim) >> lod0;
+				float2 virtual_pixel = uv * virtual_lod_dim;
+				float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
+				float2 atlas_tile_pixel = tile_pixel_upperleft + 0.5 + virtual_tile_pixel;
+				float2 atlas_uv = atlas_tile_pixel / atlas_dim;
+				value0 = tex.SampleLevel(sam, atlas_uv, 0);
+			}
+
+			// Mip - less detailed:
+			float4 value1;
+			{
+				uint lod1 = ceil(clamped_lod);
+				uint residency = residency_map.Load(uint3(pixel >> lod1, lod1));
+				uint2 tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
+				uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER;
+				uint2 virtual_lod_dim = uint2(virtual_image_dim) >> lod1;
+				float2 virtual_pixel = uv * virtual_lod_dim;
+				float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
+				float2 atlas_tile_pixel = tile_pixel_upperleft + 0.5 + virtual_tile_pixel;
+				float2 atlas_uv = atlas_tile_pixel / atlas_dim;
+				value1 = tex.SampleLevel(sam, atlas_uv, 0);
+			}
+
+			value = lerp(value0, value1, lod_blend);
 
 #ifdef SVT_FEEDBACK
 			[branch]
 			if (sparse_feedbackmap_descriptor >= 0)
 			{
 				RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[UniformTextureSlot(sparse_feedbackmap_descriptor)];
+				uint2 dim;
 				feedback_map.GetDimensions(dim.x, dim.y);
 				pixel = uv * dim;
 				InterlockedMin(feedback_map[pixel], uint(lod));
@@ -1153,18 +1178,19 @@ struct VolumetricCloudCapturePushConstants
 
 struct TerrainVirtualTexturePush
 {
-	uint2 offset;
+	int2 offset;
 	uint2 write_offset;
 	float resolution_rcp;
 	int region_weights_textureRO;
 };
-struct VirtualTextureResidencyUpdatePush
+struct VirtualTextureResidencyUpdateCB
 {
 	uint lodCount;
 	uint width;
 	uint height;
 	int pageBufferRO;
-	int residencyTextureRW;
+
+	int4 residencyTextureRW_mips[9]; // because this can be indexed in shader, this structure cannot be push constant, it has to be constant buffer!
 };
 struct VirtualTextureTileAllocatePush
 {

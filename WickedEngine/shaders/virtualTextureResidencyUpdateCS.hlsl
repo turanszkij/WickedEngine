@@ -1,16 +1,15 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
-PUSHCONSTANT(push, VirtualTextureResidencyUpdatePush);
+ConstantBuffer<VirtualTextureResidencyUpdateCB> cb : register(b0);
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
-	if (DTid.x >= push.width || DTid.y >= push.height)
+	if (DTid.x >= cb.width || DTid.y >= cb.height)
 		return;
 
-	ByteAddressBuffer pageBuffer = bindless_buffers[push.pageBufferRO];
-	RWTexture2D<uint> residencyTexture = bindless_rwtextures_uint[push.residencyTextureRW];
+	ByteAddressBuffer pageBuffer = bindless_buffers[cb.pageBufferRO];
 
 	uint minLod = 0xFF;
 	uint tile_x = 0;
@@ -19,15 +18,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	const uint x = DTid.x;
 	const uint y = DTid.y;
 	uint lod_offset = 0;
-	for (uint lod = 0; lod < push.lodCount; ++lod)
+	uint lod_pages[9];
+	uint lod = 0;
+	for (lod = 0; lod < cb.lodCount; ++lod)
 	{
 		const uint l_x = x >> lod;
 		const uint l_y = y >> lod;
-		const uint l_width = max(1u, push.width >> lod);
-		const uint l_height = max(1u, push.height >> lod);
+		const uint l_width = max(1u, cb.width >> lod);
+		const uint l_height = max(1u, cb.height >> lod);
 		const uint l_page_offset = lod_offset;
 		const uint l_index = l_page_offset + l_x + l_y * l_width;
 		const uint page = pageBuffer.Load(l_index * sizeof(uint));
+		lod_pages[lod] = page;
 		if (page == 0xFFFF)
 		{
 			// invalid page
@@ -47,5 +49,27 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		lod_offset += l_width * l_height;
 	}
 
-	residencyTexture[DTid.xy] = (tile_x & 0xFF) | ((tile_y & 0xFF) << 8u) | ((minLod & 0xFF) << 16u);
+	// Update the mip chain:
+	for (lod = 0; lod < cb.lodCount; ++lod)
+	{
+		uint lod_check = 1u << lod;
+
+		if ((DTid.x % lod_check == 0) && (DTid.y % lod_check == 0))
+		{
+			uint page = lod_pages[lod];
+
+			RWTexture2D<uint> residencyTexture = bindless_rwtextures_uint[cb.residencyTextureRW_mips[lod].x];
+			uint2 write_coord = DTid.xy >> lod;
+			if (lod < minLod || page == 0xFFFF)
+			{
+				residencyTexture[write_coord] = (tile_x & 0xFF) | ((tile_y & 0xFF) << 8u) | ((minLod & 0xFF) << 16u);
+			}
+			else
+			{
+				uint x = page & 0xFF;
+				uint y = (page >> 8u) & 0xFF;
+				residencyTexture[write_coord] = (x & 0xFF) | ((y & 0xFF) << 8u) | ((lod & 0xFF) << 16u);
+			}
+		}
+	}
 }
