@@ -89,12 +89,22 @@ static const uint CLEARCOATNORMALMAP = 11;
 static const uint SPECULARMAP = 12;
 static const uint TEXTURESLOT_COUNT = 13;
 
+static const uint SVT_TILE_SIZE = 256u;
+static const uint SVT_TILE_BORDER = 4u;
+static const uint SVT_TILE_SIZE_PADDED = SVT_TILE_BORDER + SVT_TILE_SIZE + SVT_TILE_BORDER;
+
 #ifndef __cplusplus
 #ifdef TEXTURE_SLOT_NONUNIFORM
 #define UniformTextureSlot(x) NonUniformResourceIndex(x)
 #else
 #define UniformTextureSlot(x) (x)
 #endif // TEXTURE_SLOT_NONUNIFORM
+
+inline float get_lod(in uint2 dim, in float2 uv_dx, in float2 uv_dy)
+{
+	// https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#7.18.11%20LOD%20Calculations
+	return log2(max(length(uv_dx * dim), length(uv_dy * dim)));
+}
 #endif // __cplusplus
 
 struct ShaderTextureSlot
@@ -130,47 +140,84 @@ struct ShaderTextureSlot
 	{
 		return bindless_textures[UniformTextureSlot(texture_descriptor)];
 	}
-	float4 Sample(in SamplerState sam, in float4 uvsets)
+	float4 SampleVirtual(
+		in Texture2D tex,
+		in SamplerState sam,
+		in float2 uv,
+		in Texture2D<uint> residency_map,
+		in uint2 virtual_tile_count,
+		in uint2 virtual_image_dim,
+		in float virtual_lod
+	)
 	{
-		Texture2D tex = GetTexture();
-		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
-
-#ifdef DISABLE_SVT
-		float4 value = tex.Sample(sam, uv);
-#else
-		uint svt_status;
-		float4 value = tex.Sample(sam, uv, 0, 0, svt_status);
-
-		[branch]
-		if (!CheckAccessFullyMapped(svt_status))
-		{
-			float lod_clamp = GetLodClamp();
-
-			[branch]
-			if (sparse_residencymap_descriptor >= 0)
-			{
-				Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
-				uint4 residency = residency_map.GatherRed(sam, uv);
-				lod_clamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
-			}
-
-			value = tex.Sample(sam, uv, 0, lod_clamp);
-		}
-
 #ifdef SVT_FEEDBACK
 		[branch]
 		if (sparse_feedbackmap_descriptor >= 0)
 		{
 			RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[UniformTextureSlot(sparse_feedbackmap_descriptor)];
-			uint2 dim;
-			feedback_map.GetDimensions(dim.x, dim.y);
-			uint2 pixel = uv * dim;
-			float lod = tex.CalculateLevelOfDetail(sam, uv);
-			InterlockedMin(feedback_map[pixel], uint(lod));
+			uint2 pixel = uv * virtual_tile_count;
+			InterlockedMin(feedback_map[pixel], uint(virtual_lod));
 		}
 #endif // SVT_FEEDBACK
+
+		float2 atlas_dim;
+		tex.GetDimensions(atlas_dim.x, atlas_dim.y);
+
+		uint2 pixel = uv * virtual_tile_count;
+		uint min_lod = (residency_map.Load(uint3(pixel >> uint(virtual_lod), uint(virtual_lod))) >> 16u) & 0xFF;
+		float clamped_lod = clamp(virtual_lod, min_lod, GetLodClamp());
+
+		// Mip - more detailed:
+		float4 value0;
+		{
+			uint lod0 = floor(clamped_lod);
+			uint residency = residency_map.Load(uint3(pixel >> lod0, lod0));
+			uint2 tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
+			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER;
+			uint2 virtual_lod_dim = virtual_image_dim >> lod0;
+			float2 virtual_pixel = uv * virtual_lod_dim;
+			float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
+			float2 atlas_tile_pixel = tile_pixel_upperleft + 0.5 + virtual_tile_pixel;
+			float2 atlas_uv = atlas_tile_pixel / atlas_dim;
+			value0 = tex.SampleLevel(sam, atlas_uv, 0);
+		}
+
+		// Mip - less detailed:
+		float4 value1;
+		{
+			uint lod1 = ceil(clamped_lod);
+			uint residency = residency_map.Load(uint3(pixel >> lod1, lod1));
+			uint2 tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
+			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER;
+			uint2 virtual_lod_dim = virtual_image_dim >> lod1;
+			float2 virtual_pixel = uv * virtual_lod_dim;
+			float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
+			float2 atlas_tile_pixel = tile_pixel_upperleft + 0.5 + virtual_tile_pixel;
+			float2 atlas_uv = atlas_tile_pixel / atlas_dim;
+			value1 = tex.SampleLevel(sam, atlas_uv, 0);
+		}
+
+		return lerp(value0, value1, frac(virtual_lod)); // custom trilinear filtering
+	}
+	float4 Sample(in SamplerState sam, in float4 uvsets)
+	{
+		Texture2D tex = GetTexture();
+		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
+
+#ifndef DISABLE_SVT
+		[branch]
+		if (sparse_residencymap_descriptor >= 0)
+		{
+			Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
+			float2 virtual_tile_count;
+			residency_map.GetDimensions(virtual_tile_count.x, virtual_tile_count.y);
+			float2 virtual_image_dim = virtual_tile_count * SVT_TILE_SIZE;
+			float virtual_lod = get_lod(virtual_image_dim, ddx(uv), ddy(uv));
+			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, virtual_lod);
+		}
 #endif // DISABLE_SVT
-		return value;
+
+		return tex.Sample(sam, uv);
 	}
 
 	float4 SampleLevel(in SamplerState sam, in float4 uvsets, in float lod)
@@ -178,41 +225,19 @@ struct ShaderTextureSlot
 		Texture2D tex = GetTexture();
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
-#ifdef DISABLE_SVT
-		float4 value = tex.SampleLevel(sam, uv, lod);
-#else
-		uint svt_status;
-		float4 value = tex.SampleLevel(sam, uv, lod, 0, svt_status);
-
+#ifndef DISABLE_SVT
 		[branch]
-		if (!CheckAccessFullyMapped(svt_status))
+		if (sparse_residencymap_descriptor >= 0)
 		{
-			float lod_clamp = GetLodClamp();
-
-			[branch]
-			if (sparse_residencymap_descriptor >= 0)
-			{
-				Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
-				uint4 residency = residency_map.GatherRed(sam, uv);
-				lod_clamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
-			}
-
-			value = tex.SampleLevel(sam, uv, max(lod, lod_clamp));
+			Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
+			float2 virtual_tile_count;
+			residency_map.GetDimensions(virtual_tile_count.x, virtual_tile_count.y);
+			float2 virtual_image_dim = virtual_tile_count * SVT_TILE_SIZE;
+			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, lod);
 		}
-
-#ifdef SVT_FEEDBACK
-		[branch]
-		if (sparse_feedbackmap_descriptor >= 0)
-		{
-			RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[UniformTextureSlot(sparse_feedbackmap_descriptor)];
-			uint2 dim;
-			feedback_map.GetDimensions(dim.x, dim.y);
-			uint2 pixel = uv * dim;
-			InterlockedMin(feedback_map[pixel], uint(lod));
-		}
-#endif // SVT_FEEDBACK
 #endif // DISABLE_SVT
-		return value;
+
+		return tex.SampleLevel(sam, uv, lod);
 	}
 
 	float4 SampleGrad(in SamplerState sam, in float4 uvsets, in float4 uvsets_dx, in float4 uvsets_dy)
@@ -222,43 +247,20 @@ struct ShaderTextureSlot
 		float2 uv_dx = GetUVSet() == 0 ? uvsets_dx.xy : uvsets_dx.zw;
 		float2 uv_dy = GetUVSet() == 0 ? uvsets_dy.xy : uvsets_dy.zw;
 
-#ifdef DISABLE_SVT
-		float4 value = tex.SampleGrad(sam, uv, uv_dx, uv_dy);
-#else
-		uint svt_status;
-		float4 value = tex.SampleGrad(sam, uv, uv_dx, uv_dy, 0, 0, svt_status);
-
+#ifndef DISABLE_SVT
 		[branch]
-		if (!CheckAccessFullyMapped(svt_status))
+		if (sparse_residencymap_descriptor >= 0)
 		{
-			float lod_clamp = GetLodClamp();
-
-			[branch]
-			if (sparse_residencymap_descriptor >= 0)
-			{
-				Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
-				uint4 residency = residency_map.GatherRed(sam, uv);
-				lod_clamp = max(residency.x, max(residency.y, max(residency.z, residency.w)));
-			}
-
-			value = tex.SampleGrad(sam, uv, uv_dx, uv_dy, 0, lod_clamp);
+			Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
+			float2 virtual_tile_count;
+			residency_map.GetDimensions(virtual_tile_count.x, virtual_tile_count.y);
+			float2 virtual_image_dim = virtual_tile_count * SVT_TILE_SIZE;
+			float virtual_lod = get_lod(virtual_image_dim, uv_dx, uv_dy);
+			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, virtual_lod);
 		}
-
-#ifdef SVT_FEEDBACK
-		[branch]
-		if (sparse_feedbackmap_descriptor >= 0)
-		{
-			RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[UniformTextureSlot(sparse_feedbackmap_descriptor)];
-			uint2 dim;
-			feedback_map.GetDimensions(dim.x, dim.y);
-			uint2 pixel = uv * dim;
-			tex.GetDimensions(dim.x, dim.y);
-			float lod = log2(max(length(uv_dx * dim), length(uv_dy * dim))); // https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#7.18.11%20LOD%20Calculations
-			InterlockedMin(feedback_map[pixel], uint(lod));
-		}
-#endif // SVT_FEEDBACK
 #endif // DISABLE_SVT
-		return value;
+
+		return tex.SampleGrad(sam, uv, uv_dx, uv_dy);
 	}
 #endif // __cplusplus
 };
@@ -1097,19 +1099,19 @@ struct VolumetricCloudCapturePushConstants
 
 struct TerrainVirtualTexturePush
 {
-	uint2 offset;
-	float2 resolution_rcp;
-	uint2 write_size;
+	int2 offset;
+	uint2 write_offset;
+	float resolution_rcp;
 	int region_weights_textureRO;
-	int output_textureRW;
 };
-struct VirtualTextureResidencyUpdatePush
+struct VirtualTextureResidencyUpdateCB
 {
 	uint lodCount;
 	uint width;
 	uint height;
 	int pageBufferRO;
-	int residencyTextureRW;
+
+	int4 residencyTextureRW_mips[9]; // because this can be indexed in shader, this structure cannot be push constant, it has to be constant buffer!
 };
 struct VirtualTextureTileAllocatePush
 {
