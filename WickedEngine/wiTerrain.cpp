@@ -1006,9 +1006,9 @@ namespace wi::terrain
 		if (!sampler.IsValid())
 		{
 			SamplerDesc samplerDesc;
-			samplerDesc.filter = Filter::ANISOTROPIC;	// Anisotropic sampler is too expensive with the sparse texture system currently
-			samplerDesc.max_anisotropy = 8;
-			samplerDesc.address_u = TextureAddressMode::CLAMP;	// Clamp sampler is needed to not oversample on chunk boundaries
+			samplerDesc.filter = Filter::ANISOTROPIC;
+			samplerDesc.max_anisotropy = 8; // The atlas tile border can take up to 8x anisotropic
+			samplerDesc.address_u = TextureAddressMode::CLAMP;
 			samplerDesc.address_v = TextureAddressMode::CLAMP;
 			samplerDesc.address_w = TextureAddressMode::CLAMP;
 			bool success = device->CreateSampler(&samplerDesc, &sampler);
