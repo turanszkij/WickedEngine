@@ -163,9 +163,9 @@ struct ShaderTextureSlot
 
 			float2 virtual_image_dim = dim * SVT_TILE_SIZE;
 			float lod = get_lod(virtual_image_dim, ddx(uv), ddy(uv));
-			lod = max(min_lod, lod);
+			float clamped_lod = max(min_lod, lod);
 
-			uint2 virtual_lod_dim = uint2(virtual_image_dim) >> uint(lod);
+			uint2 virtual_lod_dim = uint2(virtual_image_dim) >> uint(clamped_lod);
 			float2 virtual_pixel = uv * virtual_lod_dim;
 			float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
 			float2 atlas_dim;

@@ -47,6 +47,5 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		lod_offset += l_width * l_height;
 	}
 
-	minLod = 0;
 	residencyTexture[DTid.xy] = (tile_x & 0xFF) | ((tile_y & 0xFF) << 8u) | ((minLod & 0xFF) << 16u);
 }
