@@ -536,9 +536,9 @@ namespace wi::terrain
 			{
 				if (dist > removal_threshold)
 				{
-					for (int i = 0; i < arraysize(atlas); ++i)
+					if (chunk_data.vt != nullptr)
 					{
-						chunk_data.vt[i].free(atlas[i]);
+						chunk_data.vt->free(atlas);
 					}
 					scene->Entity_Remove(it->second.entity);
 					it = chunks.erase(it);
@@ -1035,14 +1035,17 @@ namespace wi::terrain
 			const uint32_t max_resolution = 65536u;
 			const uint32_t required_resolution = dist < 2 ? max_resolution : min_resolution;
 
-			chunk_data.vt.resize(3); // base, normal, surface
-			for (uint32_t map_type = 0; map_type < chunk_data.vt.size(); ++map_type)
+			if (!atlas.IsValid())
 			{
-				if (!atlas[map_type].texture.IsValid())
+				const uint32_t physical_width = 16384u;
+				const uint32_t physical_height = 16384u;
+				GPUBufferDesc tile_pool_desc;
+
+				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
 				{
 					TextureDesc desc;
-					desc.width = 16384u;
-					desc.height = 16384u;
+					desc.width = physical_width;
+					desc.height = physical_height;
 					desc.misc_flags = ResourceMiscFlag::SPARSE;
 					desc.bind_flags = BindFlag::SHADER_RESOURCE;
 					desc.mip_levels = 1;
@@ -1070,83 +1073,105 @@ namespace wi::terrain
 						break;
 					}
 
-					bool success = device->CreateTexture(&desc, nullptr, &atlas[map_type].texture);
+					bool success = device->CreateTexture(&desc, nullptr, &atlas.maps[map_type].texture);
 					assert(success);
 
-					success = device->CreateTexture(&desc_raw_block, nullptr, &atlas[map_type].texture_raw_block);
+					success = device->CreateTexture(&desc_raw_block, nullptr, &atlas.maps[map_type].texture_raw_block);
 					assert(success);
 
-					assert(atlas[map_type].texture.sparse_properties->total_tile_count == atlas[map_type].texture_raw_block.sparse_properties->total_tile_count);
-					assert(atlas[map_type].texture.sparse_page_size == atlas[map_type].texture_raw_block.sparse_page_size);
+					assert(atlas.maps[map_type].texture.sparse_properties->total_tile_count == atlas.maps[map_type].texture_raw_block.sparse_properties->total_tile_count);
+					assert(atlas.maps[map_type].texture.sparse_page_size == atlas.maps[map_type].texture_raw_block.sparse_page_size);
 
-					for (uint32_t i = 0; i < atlas[map_type].texture_raw_block.desc.mip_levels; ++i)
+					tile_pool_desc.size += atlas.maps[map_type].texture.sparse_properties->total_tile_count * atlas.maps[map_type].texture.sparse_page_size;
+					tile_pool_desc.alignment = AlignTo(tile_pool_desc.alignment, atlas.maps[map_type].texture.sparse_page_size);
+
+					for (uint32_t i = 0; i < atlas.maps[map_type].texture_raw_block.desc.mip_levels; ++i)
 					{
-						int subresource_index = device->CreateSubresource(&atlas[map_type].texture_raw_block, SubresourceType::UAV, 0, 1, i, 1);
+						int subresource_index = device->CreateSubresource(&atlas.maps[map_type].texture_raw_block, SubresourceType::UAV, 0, 1, i, 1);
 						assert(subresource_index == i);
 					}
+				}
 
-					GPUBufferDesc bd;
-					bd.alignment = atlas[map_type].texture.sparse_page_size;
-					bd.size = atlas[map_type].texture.sparse_properties->total_tile_count * atlas[map_type].texture.sparse_page_size;
-					bd.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS;
-					success = device->CreateBuffer(&bd, nullptr, &atlas[map_type].tile_pool);
-					assert(success);
+				tile_pool_desc.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS;
+				bool success = device->CreateBuffer(&tile_pool_desc, nullptr, &atlas.tile_pool);
+				assert(success);
 
-					atlas[map_type].free_tiles.clear();
-					atlas[map_type].free_tiles.reserve((desc.width / SVT_TILE_SIZE_PADDED) * (desc.height / SVT_TILE_SIZE_PADDED));
-					for (uint8_t y = 0; y < desc.height / SVT_TILE_SIZE_PADDED; ++y)
+				const uint32_t physical_tile_count_x = physical_width / SVT_TILE_SIZE_PADDED;
+				const uint32_t physical_tile_count_y = physical_height / SVT_TILE_SIZE_PADDED;
+
+				atlas.free_tiles.clear();
+				atlas.free_tiles.reserve(physical_tile_count_x * physical_tile_count_y);
+				for (uint8_t y = 0; y < physical_tile_count_y; ++y)
+				{
+					for (uint8_t x = 0; x < physical_tile_count_x; ++x)
 					{
-						for (uint8_t x = 0; x < desc.width / SVT_TILE_SIZE_PADDED; ++x)
-						{
-							VirtualTextureAtlas::Tile& tile = atlas[map_type].free_tiles.emplace_back();
-							tile.x = x;
-							tile.y = y;
-						}
+						VirtualTextureAtlas::Tile& tile = atlas.free_tiles.emplace_back();
+						tile.x = x;
+						tile.y = y;
 					}
+				}
 
+				uint32_t offset = 0;
+				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
+				{
 					// Sparse mapping for block compression aliasing:
 					SparseUpdateCommand commands[2];
-					commands[0].sparse_resource = &atlas[map_type].texture;
-					commands[0].tile_pool = &atlas[map_type].tile_pool;
+					commands[0].sparse_resource = &atlas.maps[map_type].texture;
+					commands[0].tile_pool = &atlas.tile_pool;
 					commands[0].num_resource_regions = 1;
 					SparseResourceCoordinate coordinate;
 					coordinate.x = 0;
 					coordinate.y = 0;
 					commands[0].coordinates = &coordinate;
 					SparseRegionSize region;
-					region.width = atlas[map_type].texture.desc.width / atlas[map_type].texture.sparse_properties->tile_width;
-					region.height = atlas[map_type].texture.desc.height / atlas[map_type].texture.sparse_properties->tile_height;
+					region.width = atlas.maps[map_type].texture.desc.width / atlas.maps[map_type].texture.sparse_properties->tile_width;
+					region.height = atlas.maps[map_type].texture.desc.height / atlas.maps[map_type].texture.sparse_properties->tile_height;
 					commands[0].sizes = &region;
 					TileRangeFlags flags = {};
 					commands[0].range_flags = &flags;
-					uint32_t offset = 0;
 					commands[0].range_start_offsets = &offset;
-					uint32_t count = atlas[map_type].texture.sparse_properties->total_tile_count;
+					uint32_t count = atlas.maps[map_type].texture.sparse_properties->total_tile_count;
 					commands[0].range_tile_counts = &count;
 					commands[1] = commands[0];
-					commands[1].sparse_resource = &atlas[map_type].texture_raw_block;
+					commands[1].sparse_resource = &atlas.maps[map_type].texture_raw_block;
 					device->SparseUpdate(QUEUE_COPY, commands, arraysize(commands));
+					offset += count;
 				}
+			}
 
-				VirtualTexture& vt = chunk_data.vt[map_type];
+			if (chunk_data.vt == nullptr)
+			{
+				chunk_data.vt = std::make_shared<VirtualTexture>();
+			}
+			VirtualTexture& vt = *chunk_data.vt;
 
-				if (vt.resolution != required_resolution)
+			if (vt.resolution != required_resolution)
+			{
+				vt.init(atlas, required_resolution);
+
+				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
 				{
-					vt.init(atlas[map_type], required_resolution);
-
-					material->textures[map_type].resource.SetTexture(atlas[map_type].texture);
+					material->textures[map_type].resource.SetTexture(atlas.maps[map_type].texture);
 					if (vt.feedbackMap.IsValid())
 					{
 						material->texMulAdd = XMFLOAT4(1, 1, 0, 0);
 						material->textures[map_type].sparse_residencymap_descriptor = device->GetDescriptorIndex(&vt.residencyMap, SubresourceType::SRV);
-						material->textures[map_type].sparse_feedbackmap_descriptor = device->GetDescriptorIndex(&vt.feedbackMap, SubresourceType::UAV);
+						if (map_type == 0)
+						{
+							// Only first texture slot will write feedback
+							material->textures[map_type].sparse_feedbackmap_descriptor = device->GetDescriptorIndex(&vt.feedbackMap, SubresourceType::UAV);
+						}
+						else
+						{
+							material->textures[map_type].sparse_feedbackmap_descriptor = -1;
+						}
 					}
 					else
 					{
 						auto tile = vt.tiles.back();
 						const float2 resolution_rcp = float2(
-							1.0f / (float)atlas[map_type].texture.desc.width,
-							1.0f / (float)atlas[map_type].texture.desc.height
+							1.0f / (float)atlas.maps[map_type].texture.desc.width,
+							1.0f / (float)atlas.maps[map_type].texture.desc.height
 						);
 						if (map_type == 0)
 						{
@@ -1158,116 +1183,114 @@ namespace wi::terrain
 						material->textures[map_type].sparse_residencymap_descriptor = -1;
 						material->textures[map_type].sparse_feedbackmap_descriptor = -1;
 					}
+					material->textures[map_type].lod_clamp = (float)vt.lod_count - 1;
+				}
+				vt.region_weights_texture = chunk_data.region_weights_texture;
+			}
 
-					vt.region_weights_texture = chunk_data.region_weights_texture;
-					vt.map_type = map_type;
+			virtual_textures_in_use.push_back(&vt);
+
+
+			if (!vt.residencyMap.IsValid())
+				continue;
+
+			// Process each virtual texture on a background thread:
+			wi::jobsystem::Execute(ctx, [this, &vt](wi::jobsystem::JobArgs args) {
+
+				const uint32_t width = vt.feedbackMap.desc.width;
+				const uint32_t height = vt.feedbackMap.desc.height;
+
+				// We must only access persistently mapped resources by CPU that the GPU is not using currently:
+				vt.cpu_resource_id = (vt.cpu_resource_id + 1) % arraysize(vt.allocationBuffer_CPU_readback);
+				const bool data_available_CPU = vt.data_available_CPU[vt.cpu_resource_id]; // indicates whether any GPU data is readable at this point or not
+				vt.data_available_CPU[vt.cpu_resource_id] = true;
+
+				// Perform the allocations and deallocations:
+				//	GPU writes allocation requests by virtualTextureTileAllocateCS.hlsl compute shader
+				if (vt.data_available_CPU)
+				{
+					uint32_t page_count = 0;
+					uint32_t lod_offsets[9] = {};
+					for (uint32_t i = 0; i < vt.lod_count; ++i)
+					{
+						const uint32_t l_width = std::max(1u, width >> i);
+						const uint32_t l_height = std::max(1u, height >> i);
+						lod_offsets[i] = page_count;
+						page_count += l_width * l_height;
+					}
+
+					uint32_t allocation_count = *(const uint32_t*)vt.allocationBuffer_CPU_readback[vt.cpu_resource_id].mapped_data;
+					allocation_count = std::min(uint32_t(vt.tiles.size() - 1), allocation_count);
+					//allocation_count = std::min(100u, allocation_count);
+					const uint32_t* allocation_requests = ((const uint32_t*)vt.allocationBuffer_CPU_readback[vt.cpu_resource_id].mapped_data) + 1; // +1 offset of the allocation counter
+					for (uint32_t i = 0; i < allocation_count; ++i)
+					{
+						const uint32_t allocation_request = allocation_requests[i];
+						const uint8_t x = (allocation_request >> 24u) & 0xFF;
+						const uint8_t y = (allocation_request >> 16u) & 0xFF;
+						const uint8_t lod = (allocation_request >> 8u) & 0xFF;
+						const bool allocate = allocation_request & 0x1;
+						const bool must_be_always_resident = (int)lod == ((int)vt.lod_count - 1);
+						if (lod >= vt.lod_count)
+							continue;
+						const uint32_t l_offset = lod_offsets[lod];
+						const uint32_t l_width = std::max(1u, width >> lod);
+						const uint32_t l_height = std::max(1u, height >> lod);
+						const uint32_t l_index = l_offset + x + y * l_width;
+						if (x >= l_width || y >= l_height)
+							continue;
+						VirtualTextureAtlas::Tile& tile = vt.tiles[l_index];
+
+						if (allocate)
+						{
+							if (tile.IsValid())
+							{
+								continue;
+							}
+							locker.lock();
+							tile = atlas.allocate();
+							locker.unlock();
+
+							if (tile.IsValid())
+							{
+								VirtualTexture::UpdateRequest& request = vt.update_requests.emplace_back();
+								request.x = x;
+								request.y = y;
+								request.lod = lod;
+								request.tile_x = tile.x;
+								request.tile_y = tile.y;
+							}
+						}
+						else if (!must_be_always_resident)
+						{
+							if (!tile.IsValid())
+							{
+								continue;
+							}
+							locker.lock();
+							atlas.free(tile);
+							locker.unlock();
+						}
+					}
 				}
 
-				material->textures[map_type].lod_clamp = (float)vt.lod_count - 1;
-				virtual_textures_in_use.push_back(&vt);
-
-
-				if (!vt.residencyMap.IsValid())
-					continue;
-
-				// Process each virtual texture on a background thread:
-				wi::jobsystem::Execute(ctx, [this, &vt](wi::jobsystem::JobArgs args) {
-
-					const uint32_t width = vt.feedbackMap.desc.width;
-					const uint32_t height = vt.feedbackMap.desc.height;
-
-					// We must only access persistently mapped resources by CPU that the GPU is not using currently:
-					vt.cpu_resource_id = (vt.cpu_resource_id + 1) % arraysize(vt.allocationBuffer_CPU_readback);
-					const bool data_available_CPU = vt.data_available_CPU[vt.cpu_resource_id]; // indicates whether any GPU data is readable at this point or not
-					vt.data_available_CPU[vt.cpu_resource_id] = true;
-
-					// Perform the allocations and deallocations:
-					//	GPU writes allocation requests by virtualTextureTileAllocateCS.hlsl compute shader
-					if (vt.data_available_CPU)
-					{
-						uint32_t page_count = 0;
-						uint32_t lod_offsets[9] = {};
-						for (uint32_t i = 0; i < vt.lod_count; ++i)
-						{
-							const uint32_t l_width = std::max(1u, width >> i);
-							const uint32_t l_height = std::max(1u, height >> i);
-							lod_offsets[i] = page_count;
-							page_count += l_width * l_height;
-						}
-
-						uint32_t allocation_count = *(const uint32_t*)vt.allocationBuffer_CPU_readback[vt.cpu_resource_id].mapped_data;
-						allocation_count = std::min(uint32_t(vt.tiles.size() - 1), allocation_count);
-						//allocation_count = std::min(100u, allocation_count);
-						const uint32_t* allocation_requests = ((const uint32_t*)vt.allocationBuffer_CPU_readback[vt.cpu_resource_id].mapped_data) + 1; // +1 offset of the allocation counter
-						for (uint32_t i = 0; i < allocation_count; ++i)
-						{
-							const uint32_t allocation_request = allocation_requests[i];
-							const uint8_t x = (allocation_request >> 24u) & 0xFF;
-							const uint8_t y = (allocation_request >> 16u) & 0xFF;
-							const uint8_t lod = (allocation_request >> 8u) & 0xFF;
-							const bool allocate = allocation_request & 0x1;
-							const bool must_be_always_resident = (int)lod == ((int)vt.lod_count - 1);
-							if (lod >= vt.lod_count)
-								continue;
-							const uint32_t l_offset = lod_offsets[lod];
-							const uint32_t l_width = std::max(1u, width >> lod);
-							const uint32_t l_height = std::max(1u, height >> lod);
-							const uint32_t l_index = l_offset + x + y * l_width;
-							if (x >= l_width || y >= l_height)
-								continue;
-							VirtualTextureAtlas::Tile& tile = vt.tiles[l_index];
-
-							if (allocate)
-							{
-								if (tile.IsValid())
-								{
-									continue;
-								}
-								locker.lock();
-								tile = atlas[vt.map_type].allocate();
-								locker.unlock();
-
-								if (tile.IsValid())
-								{
-									VirtualTexture::UpdateRequest& request = vt.update_requests.emplace_back();
-									request.x = x;
-									request.y = y;
-									request.lod = lod;
-									request.tile_x = tile.x;
-									request.tile_y = tile.y;
-								}
-							}
-							else if(!must_be_always_resident)
-							{
-								if (!tile.IsValid())
-								{
-									continue;
-								}
-								locker.lock();
-								atlas[vt.map_type].free(tile);
-								locker.unlock();
-							}
-						}
-					}
-
-					// Update page buffer for GPU:
-					uint32_t* page_buffer = (uint32_t*)vt.pageBuffer_CPU_upload[vt.cpu_resource_id].mapped_data;
-					for (size_t i = 0; i < vt.tiles.size(); ++i)
-					{
-						uint32_t page = uint32_t(uint32_t(vt.tiles[i].x) | (uint32_t(vt.tiles[i].y) << 8u));
-						// force memcpy into uncached memory to avoid read stall by mistake:
-						std::memcpy(page_buffer + i, &page, sizeof(page));
-					}
+				// Update page buffer for GPU:
+				uint32_t* page_buffer = (uint32_t*)vt.pageBuffer_CPU_upload[vt.cpu_resource_id].mapped_data;
+				for (size_t i = 0; i < vt.tiles.size(); ++i)
+				{
+					uint32_t page = uint32_t(uint32_t(vt.tiles[i].x) | (uint32_t(vt.tiles[i].y) << 8u));
+					// force memcpy into uncached memory to avoid read stall by mistake:
+					std::memcpy(page_buffer + i, &page, sizeof(page));
+				}
 
 				});
 
-				virtual_texture_barriers_before_update.push_back(GPUBarrier::Buffer(&vt.pageBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE_COMPUTE));
-				virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.feedbackMap, vt.feedbackMap.desc.layout, ResourceState::UNORDERED_ACCESS));
-				virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.residencyMap, vt.residencyMap.desc.layout, ResourceState::UNORDERED_ACCESS));
-				virtual_texture_barriers_after_update.push_back(GPUBarrier::Image(&vt.residencyMap, ResourceState::UNORDERED_ACCESS, vt.residencyMap.desc.layout));
-				virtual_texture_barriers_before_allocation.push_back(GPUBarrier::Image(&vt.feedbackMap, ResourceState::UNORDERED_ACCESS, vt.feedbackMap.desc.layout));
-				virtual_texture_barriers_after_allocation.push_back(GPUBarrier::Buffer(&vt.allocationBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
-			}
+			virtual_texture_barriers_before_update.push_back(GPUBarrier::Buffer(&vt.pageBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE_COMPUTE));
+			virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.feedbackMap, vt.feedbackMap.desc.layout, ResourceState::UNORDERED_ACCESS));
+			virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.residencyMap, vt.residencyMap.desc.layout, ResourceState::UNORDERED_ACCESS));
+			virtual_texture_barriers_after_update.push_back(GPUBarrier::Image(&vt.residencyMap, ResourceState::UNORDERED_ACCESS, vt.residencyMap.desc.layout));
+			virtual_texture_barriers_before_allocation.push_back(GPUBarrier::Image(&vt.feedbackMap, ResourceState::UNORDERED_ACCESS, vt.feedbackMap.desc.layout));
+			virtual_texture_barriers_after_allocation.push_back(GPUBarrier::Buffer(&vt.allocationBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
 		}
 		wi::jobsystem::Wait(ctx);
 	}
@@ -1341,15 +1364,15 @@ namespace wi::terrain
 			{
 			case MaterialComponent::BASECOLORMAP:
 				device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_BASECOLORMAP), cmd);
-				device->BindUAV(&atlas[MaterialComponent::BASECOLORMAP].texture_raw_block, 0, cmd);
+				device->BindUAV(&atlas.maps[MaterialComponent::BASECOLORMAP].texture_raw_block, 0, cmd);
 				break;
 			case MaterialComponent::NORMALMAP:
 				device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_NORMALMAP), cmd);
-				device->BindUAV(&atlas[MaterialComponent::NORMALMAP].texture_raw_block, 0, cmd);
+				device->BindUAV(&atlas.maps[MaterialComponent::NORMALMAP].texture_raw_block, 0, cmd);
 				break;
 			case MaterialComponent::SURFACEMAP:
 				device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_SURFACEMAP), cmd);
-				device->BindUAV(&atlas[MaterialComponent::SURFACEMAP].texture_raw_block, 0, cmd);
+				device->BindUAV(&atlas.maps[MaterialComponent::SURFACEMAP].texture_raw_block, 0, cmd);
 				break;
 			default:
 				assert(0);
@@ -1358,10 +1381,6 @@ namespace wi::terrain
 
 			for (const VirtualTexture* vt : virtual_textures_in_use)
 			{
-				// Ignore mismatching map_type, this is made to avoid repeatedly rebinding shaders
-				if (vt->map_type != map_type)
-					continue;
-
 				for (auto& request : vt->update_requests)
 				{
 					const uint request_lod_resolution = std::max(1u, vt->resolution >> request.lod);
@@ -1383,8 +1402,11 @@ namespace wi::terrain
 						cmd
 					);
 				}
-				vt->update_requests.clear();
 			}
+		}
+		for (const VirtualTexture* vt : virtual_textures_in_use)
+		{
+			vt->update_requests.clear();
 		}
 		device->EventEnd(cmd);
 

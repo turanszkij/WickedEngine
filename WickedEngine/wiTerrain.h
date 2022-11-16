@@ -49,8 +49,12 @@ namespace wi::terrain
 
 	struct VirtualTextureAtlas
 	{
-		wi::graphics::Texture texture;
-		wi::graphics::Texture texture_raw_block;
+		struct Map
+		{
+			wi::graphics::Texture texture;
+			wi::graphics::Texture texture_raw_block;
+		};
+		Map maps[3];
 		wi::graphics::GPUBuffer tile_pool;
 
 		struct Tile
@@ -78,6 +82,10 @@ namespace wi::terrain
 				return;
 			free_tiles.push_back(tile);
 			tile = {};
+		}
+		inline bool IsValid() const
+		{
+			return tile_pool.IsValid();
 		}
 	};
 
@@ -118,7 +126,6 @@ namespace wi::terrain
 		};
 		mutable wi::vector<UpdateRequest> update_requests;
 		wi::graphics::Texture region_weights_texture;
-		uint32_t map_type = 0;
 	};
 
 	struct ChunkData
@@ -135,8 +142,7 @@ namespace wi::terrain
 		wi::primitive::Sphere sphere;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		bool visible = true;
-
-		wi::vector<VirtualTexture> vt;
+		std::shared_ptr<VirtualTexture> vt;
 	};
 
 	struct Prop
@@ -196,7 +202,7 @@ namespace wi::terrain
 		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_allocation;
 		wi::vector<const VirtualTexture*> virtual_textures_in_use;
 		wi::graphics::Sampler sampler;
-		VirtualTextureAtlas atlas[3];
+		VirtualTextureAtlas atlas;
 
 		constexpr bool IsCenterToCamEnabled() const { return _flags & CENTER_TO_CAM; }
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }
