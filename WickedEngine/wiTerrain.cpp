@@ -1034,7 +1034,7 @@ namespace wi::terrain
 			if (!atlas.IsValid())
 			{
 				const uint32_t physical_width = 16384u;
-				const uint32_t physical_height = 16384u;
+				const uint32_t physical_height = 8192u;
 				GPUBufferDesc tile_pool_desc;
 
 				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
@@ -1145,25 +1145,6 @@ namespace wi::terrain
 			const uint32_t max_resolution = 65536u;
 			const uint32_t required_resolution = dist < 2 ? max_resolution : min_resolution;
 			//const uint32_t required_resolution = std::max(min_resolution, max_resolution >> std::min(7, std::max(0, dist - 1)));
-			//uint32_t required_resolution = min_resolution;
-			//switch (dist)
-			//{
-			//case 0:
-			//case 1:
-			//	required_resolution = 65536u;
-			//	break;
-			//case 2:
-			//	required_resolution = 32768u;
-			//	break;
-			//case 3:
-			//	required_resolution = 16384u;
-			//	break;
-			//case 4:
-			//	required_resolution = 8192u;
-			//	break;
-			//default:
-			//	break;
-			//}
 
 			if (vt.resolution != required_resolution)
 			{

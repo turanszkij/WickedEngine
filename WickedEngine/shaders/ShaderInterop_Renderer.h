@@ -150,6 +150,16 @@ struct ShaderTextureSlot
 		in float virtual_lod
 	)
 	{
+#ifdef SVT_FEEDBACK
+		[branch]
+		if (sparse_feedbackmap_descriptor >= 0)
+		{
+			RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[UniformTextureSlot(sparse_feedbackmap_descriptor)];
+			uint2 pixel = uv * virtual_tile_count;
+			InterlockedMin(feedback_map[pixel], uint(virtual_lod));
+		}
+#endif // SVT_FEEDBACK
+
 		float2 atlas_dim;
 		tex.GetDimensions(atlas_dim.x, atlas_dim.y);
 
@@ -159,8 +169,8 @@ struct ShaderTextureSlot
 
 		// Mip - more detailed:
 		float4 value0;
-		uint lod0 = floor(clamped_lod);
 		{
+			uint lod0 = floor(clamped_lod);
 			uint residency = residency_map.Load(uint3(pixel >> lod0, lod0));
 			uint2 tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
 			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER;
@@ -174,8 +184,8 @@ struct ShaderTextureSlot
 
 		// Mip - less detailed:
 		float4 value1;
-		uint lod1 = ceil(clamped_lod);
 		{
+			uint lod1 = ceil(clamped_lod);
 			uint residency = residency_map.Load(uint3(pixel >> lod1, lod1));
 			uint2 tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
 			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER;
@@ -187,30 +197,14 @@ struct ShaderTextureSlot
 			value1 = tex.SampleLevel(sam, atlas_uv, 0);
 		}
 
-		float4 value = lerp(value0, value1, frac(virtual_lod));
-
-#ifdef SVT_FEEDBACK
-		[branch]
-		if (sparse_feedbackmap_descriptor >= 0)
-		{
-			RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[UniformTextureSlot(sparse_feedbackmap_descriptor)];
-			uint2 dim;
-			feedback_map.GetDimensions(dim.x, dim.y);
-			pixel = uv * dim;
-			InterlockedMin(feedback_map[pixel], uint(virtual_lod));
-		}
-#endif // SVT_FEEDBACK
-
-		return value;
+		return lerp(value0, value1, frac(virtual_lod)); // custom trilinear filtering
 	}
 	float4 Sample(in SamplerState sam, in float4 uvsets)
 	{
 		Texture2D tex = GetTexture();
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
-#ifdef DISABLE_SVT
-		return tex.Sample(sam, uv);
-#else
+#ifndef DISABLE_SVT
 		[branch]
 		if (sparse_residencymap_descriptor >= 0)
 		{
@@ -221,8 +215,9 @@ struct ShaderTextureSlot
 			float virtual_lod = get_lod(virtual_image_dim, ddx(uv), ddy(uv));
 			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, virtual_lod);
 		}
-		return tex.Sample(sam, uv);
 #endif // DISABLE_SVT
+
+		return tex.Sample(sam, uv);
 	}
 
 	float4 SampleLevel(in SamplerState sam, in float4 uvsets, in float lod)
@@ -230,9 +225,7 @@ struct ShaderTextureSlot
 		Texture2D tex = GetTexture();
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
-#ifdef DISABLE_SVT
-		return tex.SampleLevel(sam, uv, lod);
-#else
+#ifndef DISABLE_SVT
 		[branch]
 		if (sparse_residencymap_descriptor >= 0)
 		{
@@ -242,8 +235,9 @@ struct ShaderTextureSlot
 			float2 virtual_image_dim = virtual_tile_count * SVT_TILE_SIZE;
 			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, lod);
 		}
-		return tex.SampleLevel(sam, uv, lod);
 #endif // DISABLE_SVT
+
+		return tex.SampleLevel(sam, uv, lod);
 	}
 
 	float4 SampleGrad(in SamplerState sam, in float4 uvsets, in float4 uvsets_dx, in float4 uvsets_dy)
@@ -253,9 +247,7 @@ struct ShaderTextureSlot
 		float2 uv_dx = GetUVSet() == 0 ? uvsets_dx.xy : uvsets_dx.zw;
 		float2 uv_dy = GetUVSet() == 0 ? uvsets_dy.xy : uvsets_dy.zw;
 
-#ifdef DISABLE_SVT
-		return tex.SampleGrad(sam, uv, uv_dx, uv_dy);
-#else
+#ifndef DISABLE_SVT
 		[branch]
 		if (sparse_residencymap_descriptor >= 0)
 		{
@@ -266,8 +258,9 @@ struct ShaderTextureSlot
 			float virtual_lod = get_lod(virtual_image_dim, uv_dx, uv_dy);
 			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, virtual_lod);
 		}
-		return tex.SampleGrad(sam, uv, uv_dx, uv_dy);
 #endif // DISABLE_SVT
+
+		return tex.SampleGrad(sam, uv, uv_dx, uv_dy);
 	}
 #endif // __cplusplus
 };
