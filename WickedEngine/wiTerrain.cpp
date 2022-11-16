@@ -228,7 +228,7 @@ namespace wi::terrain
 
 		GraphicsDevice* device = GetDevice();
 
-		if (resolution >= 1024)
+		if (resolution > SVT_TILE_SIZE)
 		{
 			uint32_t granularity = resolution / SVT_TILE_SIZE;
 
@@ -1020,7 +1020,7 @@ namespace wi::terrain
 		{
 			const Chunk& chunk = it.first;
 			ChunkData& chunk_data = it.second;
-			const uint32_t dist = (uint32_t)std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 
 			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
 			if (material == nullptr)
@@ -1030,10 +1030,6 @@ namespace wi::terrain
 
 			// This should have been created on generation thread, but if not (serialized), create it last minute:
 			CreateChunkRegionTexture(chunk_data);
-
-			const uint32_t min_resolution = SVT_TILE_SIZE;
-			const uint32_t max_resolution = 65536u;
-			const uint32_t required_resolution = dist < 2 ? max_resolution : min_resolution;
 
 			if (!atlas.IsValid())
 			{
@@ -1083,7 +1079,7 @@ namespace wi::terrain
 					assert(atlas.maps[map_type].texture.sparse_page_size == atlas.maps[map_type].texture_raw_block.sparse_page_size);
 
 					tile_pool_desc.size += atlas.maps[map_type].texture.sparse_properties->total_tile_count * atlas.maps[map_type].texture.sparse_page_size;
-					tile_pool_desc.alignment = AlignTo(tile_pool_desc.alignment, atlas.maps[map_type].texture.sparse_page_size);
+					tile_pool_desc.alignment = std::max(tile_pool_desc.alignment, atlas.maps[map_type].texture.sparse_page_size);
 
 					for (uint32_t i = 0; i < atlas.maps[map_type].texture_raw_block.desc.mip_levels; ++i)
 					{
@@ -1144,6 +1140,30 @@ namespace wi::terrain
 				chunk_data.vt = std::make_shared<VirtualTexture>();
 			}
 			VirtualTexture& vt = *chunk_data.vt;
+
+			const uint32_t min_resolution = SVT_TILE_SIZE;
+			const uint32_t max_resolution = 65536u;
+			const uint32_t required_resolution = dist < 2 ? max_resolution : min_resolution;
+			//const uint32_t required_resolution = std::max(min_resolution, max_resolution >> std::min(7, std::max(0, dist - 1)));
+			//uint32_t required_resolution = min_resolution;
+			//switch (dist)
+			//{
+			//case 0:
+			//case 1:
+			//	required_resolution = 65536u;
+			//	break;
+			//case 2:
+			//	required_resolution = 32768u;
+			//	break;
+			//case 3:
+			//	required_resolution = 16384u;
+			//	break;
+			//case 4:
+			//	required_resolution = 8192u;
+			//	break;
+			//default:
+			//	break;
+			//}
 
 			if (vt.resolution != required_resolution)
 			{
