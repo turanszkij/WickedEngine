@@ -2931,21 +2931,20 @@ void EditorComponent::Save(const std::string& filename)
 			{
 				archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
 			}
-
-			GetCurrentEditorScene().path = filename;
 		}
 		else
 		{
 			wi::helper::messageBox("Could not create " + filename + "!");
 			return;
 		}
-
-		RefreshSceneList();
 	}
 	if(file_extension == "GLTF" || file_extension == "GLB")
 	{
 		ExportModel_GLTF(filename, GetCurrentScene());
 	}
+
+	GetCurrentEditorScene().path = filename;
+	RefreshSceneList();
 
 	wi::backlog::post("Scene " + std::to_string(current_scene) + " saved: " + GetCurrentEditorScene().path);
 
