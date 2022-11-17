@@ -5,7 +5,6 @@
 
 #include "Utility/stb_image.h"
 
-#include <filesystem>
 #include <mutex>
 #include <string>
 #include <limits>
@@ -3218,8 +3217,10 @@ inline std::string _ExportHelper_GetOriginalTexture(std::string texture_file)
 	{
 		std::string target_file = wi::helper::ReplaceExtension(texture_file, ext);
 		wi::backlog::post(target_file);
-		if(std::filesystem::exists(target_file))
+		if (wi::helper::FileExists(target_file))
+		{
 			return target_file;
+		}
 	}
 
 	return texture_file;
