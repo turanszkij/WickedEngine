@@ -160,19 +160,21 @@ struct ShaderTextureSlot
 		}
 #endif // SVT_FEEDBACK
 
+		virtual_lod = min(virtual_lod, GetLodClamp());
+
 		float2 atlas_dim;
 		tex.GetDimensions(atlas_dim.x, atlas_dim.y);
 
 		uint2 pixel = uv * virtual_tile_count;
-		uint min_lod = (residency_map.Load(uint3(pixel >> uint(virtual_lod), uint(virtual_lod))) >> 16u) & 0xFF;
-		float clamped_lod = clamp(virtual_lod, min_lod, GetLodClamp());
+		uint residency = residency_map.Load(uint3(pixel >> uint(virtual_lod), uint(virtual_lod)));
+		uint2 tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
+		uint min_lod = (residency >> 16u) & 0xFF;
+		float clamped_lod = max(virtual_lod, min_lod);
 
 		// Mip - more detailed:
 		float4 value0;
 		{
 			uint lod0 = floor(clamped_lod);
-			uint residency = residency_map.Load(uint3(pixel >> lod0, lod0));
-			uint2 tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
 			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER;
 			uint2 virtual_lod_dim = virtual_image_dim >> lod0;
 			float2 virtual_pixel = uv * virtual_lod_dim;
@@ -186,8 +188,8 @@ struct ShaderTextureSlot
 		float4 value1;
 		{
 			uint lod1 = ceil(clamped_lod);
-			uint residency = residency_map.Load(uint3(pixel >> lod1, lod1));
-			uint2 tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
+			residency = residency_map.Load(uint3(pixel >> lod1, lod1));
+			tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
 			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER;
 			uint2 virtual_lod_dim = virtual_image_dim >> lod1;
 			float2 virtual_pixel = uv * virtual_lod_dim;

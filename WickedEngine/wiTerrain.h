@@ -68,7 +68,25 @@ namespace wi::terrain
 		};
 		wi::vector<Tile> free_tiles;
 
-		Tile allocate()
+		struct Residency
+		{
+			wi::graphics::Texture feedbackMap;
+			wi::graphics::Texture residencyMap;
+			wi::graphics::GPUBuffer requestBuffer;
+			wi::graphics::GPUBuffer allocationBuffer;
+			wi::graphics::GPUBuffer allocationBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+			wi::graphics::GPUBuffer pageBuffer;
+			wi::graphics::GPUBuffer pageBuffer_CPU_upload[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+			bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1] = {};
+			int cpu_resource_id = 0;
+			uint32_t resolution = 0;
+
+			void init(uint32_t resolution);
+			void reset();
+		};
+		wi::unordered_map<uint32_t, wi::vector<std::shared_ptr<Residency>>> free_residencies; // per resolution residencies
+
+		Tile allocate_tile()
 		{
 			if (free_tiles.empty())
 				return {};
@@ -76,12 +94,32 @@ namespace wi::terrain
 			free_tiles.pop_back();
 			return tile;
 		}
-		void free(Tile& tile)
+		void free_tile(Tile& tile)
 		{
 			if (!tile.IsValid())
 				return;
 			free_tiles.push_back(tile);
 			tile = {};
+		}
+		std::shared_ptr<Residency> allocate_residency(uint32_t resolution)
+		{
+			if (free_residencies[resolution].empty())
+			{
+				std::shared_ptr<Residency> residency = std::make_shared<Residency>();
+				residency->init(resolution);
+				free_residencies[resolution].push_back(residency);
+			}
+			std::shared_ptr<Residency> residency = free_residencies[resolution].back();
+			free_residencies[resolution].pop_back();
+			residency->reset();
+			return residency;
+		}
+		void free_residency(std::shared_ptr<Residency>& residency)
+		{
+			if (residency == nullptr)
+				return;
+			free_residencies[residency->resolution].push_back(residency);
+			residency = {};
 		}
 		inline bool IsValid() const
 		{
@@ -91,15 +129,7 @@ namespace wi::terrain
 
 	struct VirtualTexture
 	{
-		wi::graphics::Texture feedbackMap;
-		wi::graphics::Texture residencyMap;
-		wi::graphics::GPUBuffer requestBuffer;
-		wi::graphics::GPUBuffer allocationBuffer;
-		wi::graphics::GPUBuffer allocationBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
-		wi::graphics::GPUBuffer pageBuffer;
-		wi::graphics::GPUBuffer pageBuffer_CPU_upload[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
-		bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1] = {};
-		int cpu_resource_id = 0;
+		std::shared_ptr<VirtualTextureAtlas::Residency> residency;
 		wi::vector<VirtualTextureAtlas::Tile> tiles;
 		uint32_t lod_count = 0;
 		uint32_t resolution = 0;
@@ -110,9 +140,10 @@ namespace wi::terrain
 		{
 			for (auto& tile : tiles)
 			{
-				atlas.free(tile);
+				atlas.free_tile(tile);
 			}
 			tiles.clear();
+			atlas.free_residency(residency);
 		}
 
 		// Attach this data to Virtual Texture because we will record these by separate CPU thread:
