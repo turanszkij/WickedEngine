@@ -2912,32 +2912,40 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 void EditorComponent::Save(const std::string& filename)
 {
-	const bool dump_to_header = optionsWnd.saveModeComboBox.GetSelected() == 2;
-
-	wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
-	if (archive.IsOpen())
+	auto file_extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
+	if(file_extension == "WISCENE")
 	{
-		Scene& scene = GetCurrentScene();
+		const bool dump_to_header = optionsWnd.saveModeComboBox.GetSelected() == 2;
 
-		wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.saveModeComboBox.GetItemUserData(optionsWnd.saveModeComboBox.GetSelected());
-		wi::resourcemanager::SetMode(embed_mode);
-
-		scene.Serialize(archive);
-
-		if (dump_to_header)
+		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
+		if (archive.IsOpen())
 		{
-			archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
+			Scene& scene = GetCurrentScene();
+
+			wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.saveModeComboBox.GetItemUserData(optionsWnd.saveModeComboBox.GetSelected());
+			wi::resourcemanager::SetMode(embed_mode);
+
+			scene.Serialize(archive);
+
+			if (dump_to_header)
+			{
+				archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
+			}
+
+			GetCurrentEditorScene().path = filename;
+		}
+		else
+		{
+			wi::helper::messageBox("Could not create " + filename + "!");
+			return;
 		}
 
-		GetCurrentEditorScene().path = filename;
+		RefreshSceneList();
 	}
-	else
+	if(file_extension == "GLTF" || file_extension == "GLB")
 	{
-		wi::helper::messageBox("Could not create " + filename + "!");
-		return;
+		ExportModel_GLTF(filename, GetCurrentScene());
 	}
-
-	RefreshSceneList();
 
 	wi::backlog::post("Scene " + std::to_string(current_scene) + " saved: " + GetCurrentEditorScene().path);
 
@@ -2956,12 +2964,15 @@ void EditorComponent::SaveAs()
 	}
 	else
 	{
-		params.description = "Wicked Scene (.wiscene)";
+		params.description = "Wicked Scene (.wiscene) | GLTF Model (.gltf) | GLTF Binary Model (.glb)";
 		params.extensions.push_back("wiscene");
+		params.extensions.push_back("gltf");
+		params.extensions.push_back("glb");
 	}
 	wi::helper::FileDialog(params, [=](std::string fileName) {
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-			std::string filename = wi::helper::ForceExtension(fileName, params.extensions.front());
+			auto extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
+			std::string filename = (extension == "GLTF" || extension == "GLB") ? fileName : wi::helper::ForceExtension(fileName, params.extensions.front());
 			Save(filename);
 			});
 		});
