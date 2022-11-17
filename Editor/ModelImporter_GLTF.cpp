@@ -1750,9 +1750,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		
 		camera.width = float(x.perspective.aspectRatio);
 		camera.height = 1.f;
-		camera.fov = x.perspective.yfov;
-		camera.zFarP = x.perspective.zfar;
-		camera.zNearP = x.perspective.znear;
+		camera.fov = (float)x.perspective.yfov;
+		camera.zFarP = (float)x.perspective.zfar;
+		camera.zNearP = (float)x.perspective.znear;
 		
 		TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		transform.RotateRollPitchYaw(XMFLOAT3(XM_PI, 0, XM_PI));
@@ -2062,7 +2062,6 @@ void Import_Extension_VRM(LoaderState& state)
 				state.scene->names.Create(entity) = "humanoid";
 			}
 			HumanoidComponent& component = state.scene->humanoids.Create(entity);
-			component.default_look_direction = XMFLOAT3(0, 0, -1);
 
 			const auto& humanoid = ext_vrm->second.Get("humanoid");
 			if (humanoid.Has("humanBones"))
@@ -2538,6 +2537,7 @@ void Import_Extension_VRMC(LoaderState& state)
 				state.scene->names.Create(entity) = "humanoid";
 			}
 			HumanoidComponent& component = state.scene->humanoids.Create(entity);
+			component.default_look_direction = XMFLOAT3(0, 0, -1);
 
 			const auto& humanoid = ext_vrm->second.Get("humanoid");
 			if (humanoid.Has("humanBones"))
@@ -2957,6 +2957,7 @@ void Import_Mixamo_Bone(LoaderState& state, Entity armatureEntity, Entity boneEn
 		if (component == nullptr)
 		{
 			component = &state.scene->humanoids.Create(armatureEntity);
+			component->default_look_direction = XMFLOAT3(0, 0, -1);
 		}
 		return *component;
 	};
@@ -3229,19 +3230,19 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 	embed = true;
 
 	tinygltf::TextureInfo textureinfo_builder;
-	size_t texture_index = -1;
+	int texture_index = -1;
 	auto find_texture_id = state.textureMap.find(texture_file);
 
 	if(find_texture_id == state.textureMap.end())
 	{
-		size_t image_bufferView_index;
+		int image_bufferView_index = 0;
 		if(embed)
 		{
 			tinygltf::Buffer buffer_builder;
-			auto buffer_index = state.gltfModel.buffers.size();
+			int buffer_index = (int)state.gltfModel.buffers.size();
 			auto resource = wi::resourcemanager::Load(texture_file);
 			wi::vector<uint8_t> texturedata;
-			size_t buffer_size;
+			size_t buffer_size = 0;
 			if(wi::helper::saveTextureToMemory(resource.GetTexture(), texturedata))
 			{
 				wi::vector<uint8_t> filedata;
@@ -3254,14 +3255,14 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 			state.gltfModel.buffers.push_back(buffer_builder);
 			
 			tinygltf::BufferView bufferView_builder;
-			image_bufferView_index = state.gltfModel.bufferViews.size();
+			image_bufferView_index = (int)state.gltfModel.bufferViews.size();
 			bufferView_builder.buffer = buffer_index;
 			bufferView_builder.byteLength = buffer_size;
 			state.gltfModel.bufferViews.push_back(bufferView_builder);
 		}
 
 		tinygltf::Image image_builder;
-		auto image_index = state.gltfModel.images.size();
+		int image_index = (int)state.gltfModel.images.size();
 		wi::helper::MakePathRelative(gltf_dir, texture_file);
 		if(embed)
 		{
@@ -3275,7 +3276,7 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 		state.gltfModel.images.push_back(image_builder);
 
 		tinygltf::Texture texture_builder;
-		texture_index = state.gltfModel.textures.size();
+		texture_index = (int)state.gltfModel.textures.size();
 		texture_builder.source = image_index;
 		state.gltfModel.textures.push_back(texture_builder);
 
@@ -3319,7 +3320,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 	// Create a dummy material
 	state.gltfModel.materials.emplace_back();
-	auto def_material_index = 0;
+	int def_material_index = 0;
 
 	// Analysis prep
 	wi::jobsystem::context analysis_ctx;
@@ -3635,11 +3636,25 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		mesh_builder.name = nameComponent->name;
 
 		tinygltf::Buffer buffer_builder;
-		auto buffer_index = state.gltfModel.buffers.size();
+		int buffer_index = (int)state.gltfModel.buffers.size();
 
-		size_t buf_write_offset, 
-			buf_idc_size, buf_d_vpos_size, buf_d_vnorm_size, buf_d_vtan_size, buf_d_uv0_size, buf_d_uv1_size, buf_d_joint_size, buf_d_weights_size, buf_d_col_size,
-			buf_d_vpos_offset, buf_d_vnorm_offset, buf_d_vtan_offset, buf_d_uv0_offset, buf_d_uv1_offset, buf_d_joint_offset, buf_d_weights_offset, buf_d_col_offset;
+		size_t buf_idc_size = 0;
+		size_t buf_d_vpos_size = 0;
+		size_t buf_d_vnorm_size = 0;
+		size_t buf_d_vtan_size = 0;
+		size_t buf_d_uv0_size = 0;
+		size_t buf_d_uv1_size = 0;
+		size_t buf_d_joint_size = 0;
+		size_t buf_d_weights_size = 0;
+		size_t buf_d_col_size = 0;
+		size_t buf_d_vpos_offset = 0;
+		size_t buf_d_vnorm_offset = 0;
+		size_t buf_d_vtan_offset = 0;
+		size_t buf_d_uv0_offset = 0;
+		size_t buf_d_uv1_offset = 0;
+		size_t buf_d_joint_offset = 0;
+		size_t buf_d_weights_offset = 0;
+		size_t buf_d_col_offset = 0;
 
 		// Write mesh data to buffer first and then figure things out...
 		size_t buf_i = 0;
@@ -3722,7 +3737,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		// Mesh data
 		tinygltf::BufferView vpos_bufferView_builder;
-		auto vpos_bufferView_index = state.gltfModel.bufferViews.size();
+		int vpos_bufferView_index = (int)state.gltfModel.bufferViews.size();
 		vpos_bufferView_builder.buffer = buffer_index;
 		vpos_bufferView_builder.byteOffset = buf_d_vpos_offset;
 		vpos_bufferView_builder.byteLength = buf_d_vpos_size;
@@ -3730,7 +3745,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		state.gltfModel.bufferViews.push_back(vpos_bufferView_builder);
 
 		tinygltf::Accessor vpos_accessor_builder;
-		auto vpos_accessor_index = state.gltfModel.accessors.size();
+		int vpos_accessor_index = (int)state.gltfModel.accessors.size();
 		vpos_accessor_builder.bufferView = vpos_bufferView_index;
 		vpos_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
 		vpos_accessor_builder.count = mesh.vertex_positions.size();
@@ -3747,7 +3762,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		state.gltfModel.accessors.push_back(vpos_accessor_builder);
 
 		tinygltf::BufferView vnorm_bufferView_builder;
-		auto vnorm_bufferView_index = state.gltfModel.bufferViews.size();
+		int vnorm_bufferView_index = (int)state.gltfModel.bufferViews.size();
 		vnorm_bufferView_builder.buffer = buffer_index;
 		vnorm_bufferView_builder.byteOffset = buf_d_vnorm_offset;
 		vnorm_bufferView_builder.byteLength = buf_d_vnorm_size;
@@ -3755,7 +3770,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		state.gltfModel.bufferViews.push_back(vnorm_bufferView_builder);
 
 		tinygltf::Accessor vnorm_accessor_builder;
-		auto vnorm_accessor_index = state.gltfModel.accessors.size();
+		int vnorm_accessor_index = (int)state.gltfModel.accessors.size();
 		vnorm_accessor_builder.bufferView = vnorm_bufferView_index;
 		vnorm_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
 		vnorm_accessor_builder.count = mesh.vertex_normals.size();
@@ -3763,7 +3778,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		state.gltfModel.accessors.push_back(vnorm_accessor_builder);
 
 		tinygltf::BufferView vtan_bufferView_builder;
-		auto vtan_bufferView_index = state.gltfModel.bufferViews.size();
+		int vtan_bufferView_index = (int)state.gltfModel.bufferViews.size();
 		vtan_bufferView_builder.buffer = buffer_index;
 		vtan_bufferView_builder.byteOffset = buf_d_vtan_offset;
 		vtan_bufferView_builder.byteLength = buf_d_vtan_size;
@@ -3771,18 +3786,18 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		state.gltfModel.bufferViews.push_back(vtan_bufferView_builder);
 
 		tinygltf::Accessor vtan_accessor_builder;
-		auto vtan_accessor_index = state.gltfModel.accessors.size();
+		int vtan_accessor_index = (int)state.gltfModel.accessors.size();
 		vtan_accessor_builder.bufferView = vtan_bufferView_index;
 		vtan_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
 		vtan_accessor_builder.count = mesh.vertex_tangents.size();
 		vtan_accessor_builder.type = TINYGLTF_TYPE_VEC4;
 		state.gltfModel.accessors.push_back(vtan_accessor_builder);
 
-		size_t uv0_accessor_index;
+		int uv0_accessor_index = -1;
 		if(buf_d_uv0_size > 0)
 		{
 			tinygltf::BufferView uv0_bufferView_builder;
-			auto uv0_bufferView_index = state.gltfModel.bufferViews.size();
+			int uv0_bufferView_index = (int)state.gltfModel.bufferViews.size();
 			uv0_bufferView_builder.buffer = buffer_index;
 			uv0_bufferView_builder.byteOffset = buf_d_uv0_offset;
 			uv0_bufferView_builder.byteLength = buf_d_uv0_size;
@@ -3790,7 +3805,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.bufferViews.push_back(uv0_bufferView_builder);
 
 			tinygltf::Accessor uv0_accessor_builder;
-			uv0_accessor_index = state.gltfModel.accessors.size();
+			uv0_accessor_index = (int)state.gltfModel.accessors.size();
 			uv0_accessor_builder.bufferView = uv0_bufferView_index;
 			uv0_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
 			uv0_accessor_builder.count = mesh.vertex_uvset_0.size();
@@ -3798,11 +3813,11 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.accessors.push_back(uv0_accessor_builder);
 		}
 
-		size_t uv1_accessor_index;
+		int uv1_accessor_index = -1;
 		if(buf_d_uv1_size > 0)
 		{
 			tinygltf::BufferView uv1_bufferView_builder;
-			auto uv1_bufferView_index = state.gltfModel.bufferViews.size();
+			int uv1_bufferView_index = (int)state.gltfModel.bufferViews.size();
 			uv1_bufferView_builder.buffer = buffer_index;
 			uv1_bufferView_builder.byteOffset = buf_d_uv1_offset;
 			uv1_bufferView_builder.byteLength = buf_d_uv1_size;
@@ -3810,7 +3825,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.bufferViews.push_back(uv1_bufferView_builder);
 
 			tinygltf::Accessor uv1_accessor_builder;
-			uv1_accessor_index = state.gltfModel.accessors.size();
+			uv1_accessor_index = (int)state.gltfModel.accessors.size();
 			uv1_accessor_builder.bufferView = uv1_bufferView_index;
 			uv1_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
 			uv1_accessor_builder.count = mesh.vertex_uvset_1.size();
@@ -3818,11 +3833,11 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.accessors.push_back(uv1_accessor_builder);
 		}
 
-		size_t joint_accessor_index;
+		int joint_accessor_index = -1;
 		if(buf_d_joint_size > 0)
 		{
 			tinygltf::BufferView joint_bufferView_builder;
-			auto joint_bufferView_index = state.gltfModel.bufferViews.size();
+			int joint_bufferView_index = (int)state.gltfModel.bufferViews.size();
 			joint_bufferView_builder.buffer = buffer_index;
 			joint_bufferView_builder.byteOffset = buf_d_joint_offset;
 			joint_bufferView_builder.byteLength = buf_d_joint_size;
@@ -3830,7 +3845,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.bufferViews.push_back(joint_bufferView_builder);
 
 			tinygltf::Accessor joint_accessor_builder;
-			joint_accessor_index = state.gltfModel.accessors.size();
+			joint_accessor_index = (int)state.gltfModel.accessors.size();
 			joint_accessor_builder.bufferView = joint_bufferView_index;
 			joint_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT;
 			joint_accessor_builder.count = mesh.vertex_boneindices.size();
@@ -3838,11 +3853,11 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.accessors.push_back(joint_accessor_builder);
 		}
 
-		size_t weight_accessor_index;
+		int weight_accessor_index = -1;
 		if(buf_d_weights_size > 0)
 		{
 			tinygltf::BufferView weight_bufferView_builder;
-			auto weight_bufferView_index = state.gltfModel.bufferViews.size();
+			int weight_bufferView_index = (int)state.gltfModel.bufferViews.size();
 			weight_bufferView_builder.buffer = buffer_index;
 			weight_bufferView_builder.byteOffset = buf_d_weights_offset;
 			weight_bufferView_builder.byteLength = buf_d_weights_size;
@@ -3850,7 +3865,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.bufferViews.push_back(weight_bufferView_builder);
 
 			tinygltf::Accessor weight_accessor_builder;
-			weight_accessor_index = state.gltfModel.accessors.size();
+			weight_accessor_index = (int)state.gltfModel.accessors.size();
 			weight_accessor_builder.bufferView = weight_bufferView_index;
 			weight_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
 			weight_accessor_builder.count = mesh.vertex_boneweights.size();
@@ -3858,11 +3873,11 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.accessors.push_back(weight_accessor_builder);
 		}
 
-		size_t color_accessor_index;
+		int color_accessor_index = -1;
 		if(buf_d_col_size > 0)
 		{
 			tinygltf::BufferView color_bufferView_builder;
-			auto color_bufferView_index = state.gltfModel.bufferViews.size();
+			int color_bufferView_index = (int)state.gltfModel.bufferViews.size();
 			color_bufferView_builder.buffer = buffer_index;
 			color_bufferView_builder.byteOffset = buf_d_col_offset;
 			color_bufferView_builder.byteLength = buf_d_col_size;
@@ -3870,7 +3885,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.bufferViews.push_back(color_bufferView_builder);
 
 			tinygltf::Accessor color_accessor_builder;
-			color_accessor_index = state.gltfModel.accessors.size();
+			color_accessor_index = (int)state.gltfModel.accessors.size();
 			color_accessor_builder.bufferView = color_bufferView_index;
 			color_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
 			color_accessor_builder.count = mesh.vertex_colors.size();
@@ -3890,7 +3905,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		buf_d_morph_def_size = buf_i - buf_d_morph_def_offset;
 
 		tinygltf::BufferView morph_def_bufferView_builder;
-		auto morph_def_bufferView_index = state.gltfModel.bufferViews.size();
+		int morph_def_bufferView_index = (int)state.gltfModel.bufferViews.size();
 		morph_def_bufferView_builder.buffer = buffer_index;
 		morph_def_bufferView_builder.byteOffset = buf_d_morph_def_offset;
 		morph_def_bufferView_builder.byteLength = buf_d_morph_def_size;
@@ -3930,11 +3945,11 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 			// Sparse accessor indices
 			auto is_sparse = (m_morph.sparse_indices.size() > 0);
-			size_t morph_sparse_bufferView_index;
+			int morph_sparse_bufferView_index = 0;
 			if(is_sparse)
 			{
 				tinygltf::BufferView morph_sparse_bufferView_builder;
-				morph_sparse_bufferView_index = state.gltfModel.bufferViews.size();
+				morph_sparse_bufferView_index = (int)state.gltfModel.bufferViews.size();
 				morph_sparse_bufferView_builder.buffer = buffer_index;
 				morph_sparse_bufferView_builder.byteOffset = buf_d_morph_idc_offset;
 				morph_sparse_bufferView_builder.byteLength = buf_d_morph_idc_size;
@@ -3946,7 +3961,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			if(buf_d_morph_pos_size > 0)
 			{
 				tinygltf::BufferView morph_pos_bufferView_builder;
-				auto morph_pos_bufferView_index = state.gltfModel.bufferViews.size();
+				int morph_pos_bufferView_index = (int)state.gltfModel.bufferViews.size();
 				morph_pos_bufferView_builder.buffer = buffer_index;
 				morph_pos_bufferView_builder.byteOffset = buf_d_morph_pos_offset;
 				morph_pos_bufferView_builder.byteLength = buf_d_morph_pos_size;
@@ -3963,7 +3978,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				{
 					auto& sparse = morph_pos_accessor_builder.sparse;
 					sparse.isSparse = true;
-					sparse.count = m_morph.sparse_indices.size();
+					sparse.count = (int)m_morph.sparse_indices.size();
 					
 					sparse.indices.bufferView = morph_sparse_bufferView_index;
 					sparse.indices.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT;
@@ -3977,7 +3992,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			if(buf_d_morph_norm_size > 0)
 			{
 				tinygltf::BufferView morph_norm_bufferView_builder;
-				auto morph_norm_bufferView_index = state.gltfModel.bufferViews.size();
+				int morph_norm_bufferView_index = (int)state.gltfModel.bufferViews.size();
 				morph_norm_bufferView_builder.buffer = buffer_index;
 				morph_norm_bufferView_builder.byteOffset = buf_d_morph_norm_offset;
 				morph_norm_bufferView_builder.byteLength = buf_d_morph_norm_size;
@@ -3996,7 +4011,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				{
 					auto& sparse = morph_norm_accessor_builder.sparse;
 					sparse.isSparse = true;
-					sparse.count = m_morph.sparse_indices.size();
+					sparse.count = (int)m_morph.sparse_indices.size();
 					
 					sparse.indices.bufferView = morph_sparse_bufferView_index;
 					sparse.indices.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT;
@@ -4017,7 +4032,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 			// One primitive has one bufferview and accessor?
 			tinygltf::BufferView indices_bufferView_builder;
-			auto indices_bufferView_index = state.gltfModel.bufferViews.size();
+			int indices_bufferView_index = (int)state.gltfModel.bufferViews.size();
 			indices_bufferView_builder.buffer = buffer_index;
 			indices_bufferView_builder.byteOffset = subset.indexOffset*sizeof(uint32_t);
 			indices_bufferView_builder.byteLength = subset.indexCount*sizeof(uint32_t);
@@ -4025,7 +4040,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.bufferViews.push_back(indices_bufferView_builder);
 
 			tinygltf::Accessor indices_accessor_builder;
-			auto indices_accessor_index = state.gltfModel.accessors.size();
+			int indices_accessor_index = (int)state.gltfModel.accessors.size();
 			indices_accessor_builder.bufferView = indices_bufferView_index;
 			indices_accessor_builder.byteOffset = 0;
 			indices_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT;
@@ -4048,16 +4063,16 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				primitive_builder.attributes["WEIGHTS_0"] = weight_accessor_index;
 			if(buf_d_col_size > 0)
 				primitive_builder.attributes["COLOR_0"] = color_accessor_index;
-			primitive_builder.material = (subset.materialID != wi::ecs::INVALID_ENTITY) ? wiscene.materials.GetIndex(subset.materialID)+1 : def_material_index; // subset.materialID; // TODO remap
+			primitive_builder.material = (subset.materialID != wi::ecs::INVALID_ENTITY) ? int(wiscene.materials.GetIndex(subset.materialID) + 1) : def_material_index; // subset.materialID; // TODO remap
 			primitive_builder.mode = TINYGLTF_MODE_TRIANGLES;
 
 			for(size_t msub_morph_id = 0; msub_morph_id < morphs_pos_accessors.size(); ++msub_morph_id)
 			{
 				std::map<std::string, int> morph_info;
 				if(morphs_pos_accessors[msub_morph_id].second)
-					morph_info["POSITION"] = morphs_pos_accessors[msub_morph_id].first;
+					morph_info["POSITION"] = (int)morphs_pos_accessors[msub_morph_id].first;
 				if(morphs_norm_accessors[msub_morph_id].second)
-					morph_info["NORMAL"] = morphs_norm_accessors[msub_morph_id].first;
+					morph_info["NORMAL"] = (int)morphs_norm_accessors[msub_morph_id].first;
 				primitive_builder.targets.push_back(morph_info);
 			}
 
@@ -4136,7 +4151,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		auto hierarchyComponent = wiscene.hierarchy.GetComponent(transformEntity);
 
 		tinygltf::Node node_builder;
-		auto node_index = t_id;
+		int node_index = (int)t_id;
 		
 		if(nameComponent != nullptr)
 			node_builder.name = nameComponent->name;
@@ -4164,10 +4179,10 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		{
 			if(objectComponent->meshID != wi::ecs::INVALID_ENTITY)
 			{
-				node_builder.mesh = wiscene.meshes.GetIndex(objectComponent->meshID);
+				node_builder.mesh = (int)wiscene.meshes.GetIndex(objectComponent->meshID);
 				if(wiscene.meshes[node_builder.mesh].armatureID != wi::ecs::INVALID_ENTITY)
 				{
-					node_builder.skin = wiscene.armatures.GetIndex(wiscene.meshes[node_builder.mesh].armatureID);
+					node_builder.skin = (int)wiscene.armatures.GetIndex(wiscene.meshes[node_builder.mesh].armatureID);
 				}
 			}
 		}
@@ -4181,7 +4196,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		if(wiscene.cameras.Contains(transformEntity))
 		{
-			node_builder.camera = wiscene.cameras.GetIndex(transformEntity);
+			node_builder.camera = (int)wiscene.cameras.GetIndex(transformEntity);
 		}
 		
 		state.nodeMap[transformEntity] = node_index;
@@ -4203,7 +4218,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			skin_builder.name = nameComponent->name;
 
 		tinygltf::Buffer buffer_builder;
-		auto buffer_index = state.gltfModel.buffers.size();
+		int buffer_index = (int)state.gltfModel.buffers.size();
 
 		size_t buf_i = 0;
 
@@ -4221,7 +4236,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		uint32_t analysis_readCount = 16384;
 
 		tinygltf::BufferView aibm_bufferView_builder;
-		auto aibm_bufferView_index = state.gltfModel.bufferViews.size();
+		int aibm_bufferView_index = (int)state.gltfModel.bufferViews.size();
 		aibm_bufferView_builder.buffer = buffer_index;
 		// aibm_bufferView_builder.byteOffset = 0;
 		aibm_bufferView_builder.byteLength = buf_i;
@@ -4229,7 +4244,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		state.gltfModel.bufferViews.push_back(aibm_bufferView_builder);
 
 		tinygltf::Accessor aibm_accessor_builder;
-		auto aibm_accessor_index = state.gltfModel.accessors.size();
+		int aibm_accessor_index = (int)state.gltfModel.accessors.size();
 		aibm_accessor_builder.bufferView = aibm_bufferView_index;
 		aibm_accessor_builder.byteOffset = 0;
 		aibm_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
@@ -4273,7 +4288,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		// Store animations into a single buffer
 		size_t buf_i = 0;
 		tinygltf::Buffer buffer_builder;
-		auto buffer_index = state.gltfModel.buffers.size();
+		int buffer_index = (int)state.gltfModel.buffers.size();
 		for(size_t animdata_id = 0; animdata_id < wiscene.animation_datas.GetCount(); ++animdata_id)
 		{
 			auto& animdata = wiscene.animation_datas[animdata_id];
@@ -4296,7 +4311,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			buf_d_fdata_size = buf_i - buf_d_fdata_offset;
 
 			tinygltf::BufferView ftime_bufferView_builder;
-			auto ftime_bufferView_index = state.gltfModel.bufferViews.size();
+			int ftime_bufferView_index = (int)state.gltfModel.bufferViews.size();
 			ftime_bufferView_builder.buffer = buffer_index;
 			ftime_bufferView_builder.byteOffset = buf_d_ftime_offset;
 			ftime_bufferView_builder.byteLength = buf_d_ftime_size;
@@ -4304,7 +4319,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.bufferViews.push_back(ftime_bufferView_builder);
 
 			tinygltf::Accessor ftime_accessor_builder;
-			auto ftime_accessor_index = state.gltfModel.accessors.size();
+			int ftime_accessor_index = (int)state.gltfModel.accessors.size();
 			ftime_accessor_builder.bufferView = ftime_bufferView_index;
 			ftime_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
 			ftime_accessor_builder.count = animdata.keyframe_times.size();
@@ -4312,24 +4327,24 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.accessors.push_back(ftime_accessor_builder);
 
 			tinygltf::BufferView fdata_bufferView_builder;
-			auto fdata_bufferView_index = state.gltfModel.bufferViews.size();
+			int fdata_bufferView_index = (int)state.gltfModel.bufferViews.size();
 			fdata_bufferView_builder.buffer = buffer_index;
 			fdata_bufferView_builder.byteOffset = buf_d_fdata_offset;
 			fdata_bufferView_builder.byteLength = buf_d_fdata_size;
 			// fdata_bufferView_builder.target = TINYGLTF_TARGET_ARRAY_BUFFER;
 			state.gltfModel.bufferViews.push_back(fdata_bufferView_builder);
 
-			size_t anim_vectype = TINYGLTF_TYPE_SCALAR;
+			int anim_vectype = TINYGLTF_TYPE_SCALAR;
 			size_t anim_sizedivider = 1;
 			auto find_animdata_vectype = animdata_vectype.find(animdataEntity);
 			if(find_animdata_vectype != animdata_vectype.end())
 			{
-				anim_vectype = find_animdata_vectype->second;
+				anim_vectype = (int)find_animdata_vectype->second;
 				anim_sizedivider = (find_animdata_vectype->second == TINYGLTF_TYPE_SCALAR) ? 1 : find_animdata_vectype->second;
 			}
 
 			tinygltf::Accessor fdata_accessor_builder;
-			auto fdata_accessor_index = state.gltfModel.accessors.size();
+			int fdata_accessor_index = (int)state.gltfModel.accessors.size();
 			fdata_accessor_builder.bufferView = fdata_bufferView_index;
 			fdata_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
 			fdata_accessor_builder.count = animdata.keyframe_data.size() / anim_sizedivider;
@@ -4337,10 +4352,10 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.accessors.push_back(fdata_accessor_builder);
 
 			animation_datasets[animdataEntity] = {
-				ftime_bufferView_index,
-				ftime_accessor_index,
-				fdata_bufferView_index,
-				fdata_accessor_index
+				(size_t)ftime_bufferView_index,
+				(size_t)ftime_accessor_index,
+				(size_t)fdata_bufferView_index,
+				(size_t)fdata_accessor_index
 			};
 		}
 		state.gltfModel.buffers.push_back(buffer_builder);
@@ -4354,8 +4369,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		for(auto& sampler : animation.samplers)
 		{
 			tinygltf::AnimationSampler sampler_builder;
-			sampler_builder.input = animation_datasets[sampler.data][1];
-			sampler_builder.output = animation_datasets[sampler.data][3];
+			sampler_builder.input = (int)animation_datasets[sampler.data][1];
+			sampler_builder.output = (int)animation_datasets[sampler.data][3];
 			sampler_builder.interpolation = 
 				(sampler.mode == AnimationComponent::AnimationSampler::Mode::CUBICSPLINE) ? "CUBICSPLINE" :
 				(sampler.mode == AnimationComponent::AnimationSampler::Mode::STEP) ? "STEP" : "LINEAR";
@@ -4384,8 +4399,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		auto hierarchyEntity = wiscene.hierarchy.GetEntity(h_id);
 		if(wiscene.transforms.Contains(hierarchyComponent.parentID) && wiscene.transforms.Contains(hierarchyEntity))
 		{
-			auto node_index = wiscene.transforms.GetIndex(hierarchyEntity);
-			auto parent_node_index = wiscene.transforms.GetIndex(hierarchyComponent.parentID);
+			int node_index = (int)wiscene.transforms.GetIndex(hierarchyEntity);
+			size_t parent_node_index = wiscene.transforms.GetIndex(hierarchyComponent.parentID);
 			state.gltfModel.nodes[parent_node_index].children.push_back(node_index);
 		}
 	}
