@@ -466,15 +466,25 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 		if (!extension.compare("GLTF"))
 		{
-			ret = loader.LoadASCIIFromString(&state.gltfModel, &err, &warn, 
-				reinterpret_cast<const char*>(&filedata.at(0)),
-				static_cast<unsigned int>(filedata.size()), basedir);
+			ret = loader.LoadASCIIFromString(
+				&state.gltfModel,
+				&err,
+				&warn, 
+				reinterpret_cast<const char*>(filedata.data()),
+				static_cast<unsigned int>(filedata.size()),
+				basedir
+			);
 		}
 		else
 		{
-			ret = loader.LoadBinaryFromMemory(&state.gltfModel, &err, &warn,
+			ret = loader.LoadBinaryFromMemory(
+				&state.gltfModel,
+				&err,
+				&warn,
 				filedata.data(),
-				static_cast<unsigned int>(filedata.size()), basedir);
+				static_cast<unsigned int>(filedata.size()),
+				basedir
+			);
 		}
 	}
 	else
@@ -1104,6 +1114,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					for (size_t i = 0; i < vertexCount; ++i)
 					{
 						mesh.vertex_tangents[vertexOffset + i] = ((XMFLOAT4*)data)[i];
+						mesh.vertex_tangents[vertexOffset + i].w *= -1;
 					}
 				}
 				else if (!attr_name.compare("TEXCOORD_0"))
@@ -3298,6 +3309,13 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 {
 	tinygltf::TinyGLTF writer;
 
+	tinygltf::FsCallbacks callbacks;
+	callbacks.ReadWholeFile = tinygltf::ReadWholeFile;
+	callbacks.WriteWholeFile = tinygltf::WriteWholeFile;
+	callbacks.FileExists = tinygltf::FileExists;
+	callbacks.ExpandFilePath = tinygltf::ExpandFilePath;
+	writer.SetFsCallbacks(callbacks);
+
 	LoaderState state;
 	state.scene = &scene;
 	auto& wiscene = *state.scene;
@@ -4406,6 +4424,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		}
 	}
 
+	state.gltfModel.defaultScene = (int)state.gltfModel.scenes.size();
 	state.gltfModel.scenes.push_back(scene_builder);
 	state.gltfModel.asset.version = "2.0";
 	state.gltfModel.asset.generator = "WickedEngine";
