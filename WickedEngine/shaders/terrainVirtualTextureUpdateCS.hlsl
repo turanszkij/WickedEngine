@@ -30,7 +30,7 @@ static const uint2 block_offsets[BLOCK_SIZE_4X4] = {
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	if (DTid.x >= SVT_TILE_SIZE_PADDED / 4 || DTid.y >= SVT_TILE_SIZE_PADDED / 4)
+	if (DTid.x >= push.write_size || DTid.y >= push.write_size)
 		return;
 
 	Texture2D<float4> region_weights_texture = bindless_textures[push.region_weights_textureRO];
@@ -80,7 +80,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				baseColor *= baseColorMap;
 			}
 			total_color += baseColor * weight;
-			//if (DTid.x == 0 || DTid.y == 0)
+			//if (DTid.x < 2 || DTid.y < 2)
 			//	total_color = 0;
 #endif // UPDATE_BASECOLORMAP
 

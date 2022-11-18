@@ -18,7 +18,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	const uint x = DTid.x;
 	const uint y = DTid.y;
 	uint lod_offset = 0;
-	uint lod_pages[9];
+	uint lod_pages[10];
 	uint lod = 0;
 	for (lod = 0; lod < cb.lodCount; ++lod)
 	{
@@ -57,18 +57,31 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		if ((DTid.x % lod_check == 0) && (DTid.y % lod_check == 0))
 		{
 			uint page = lod_pages[lod];
-
-			RWTexture2D<uint> residencyTexture = bindless_rwtextures_uint[cb.residencyTextureRW_mips[lod].x];
 			uint2 write_coord = DTid.xy >> lod;
-			if (lod < minLod || page == 0xFFFF)
+
+			const bool packed_mips = lod == cb.lodCount - 1;
+			if (packed_mips)
 			{
-				residencyTexture[write_coord] = (tile_x & 0xFF) | ((tile_y & 0xFF) << 8u) | ((minLod & 0xFF) << 16u);
+				RWTexture2D<uint> residencyTexture = bindless_rwtextures_uint[cb.residencyTextureRW_mips[lod - 1].x];
+				residencyTexture[write_coord] &= 0xFFFF;
+				uint x = page & 0xFF;
+				uint y = (page >> 8u) & 0xFF;
+				residencyTexture[write_coord] |= ((x & 0xFF) << 16u) | ((y & 0xFF) << 24u);
+				//residencyTexture[write_coord] |= 0xFFFF << 24u;
 			}
 			else
 			{
-				uint x = page & 0xFF;
-				uint y = (page >> 8u) & 0xFF;
-				residencyTexture[write_coord] = (x & 0xFF) | ((y & 0xFF) << 8u) | ((lod & 0xFF) << 16u);
+				RWTexture2D<uint> residencyTexture = bindless_rwtextures_uint[cb.residencyTextureRW_mips[lod].x];
+				if (lod < minLod || page == 0xFFFF)
+				{
+					residencyTexture[write_coord] = (tile_x & 0xFF) | ((tile_y & 0xFF) << 8u) | ((minLod & 0xFF) << 16u);
+				}
+				else
+				{
+					uint x = page & 0xFF;
+					uint y = (page >> 8u) & 0xFF;
+					residencyTexture[write_coord] = (x & 0xFF) | ((y & 0xFF) << 8u) | ((lod & 0xFF) << 16u);
+				}
 			}
 		}
 	}

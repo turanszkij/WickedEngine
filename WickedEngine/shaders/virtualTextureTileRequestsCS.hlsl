@@ -13,7 +13,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	RWByteAddressBuffer requestBuffer = bindless_rwbuffers[push.requestBufferRW];
 
 	uint page_count = 0;
-	uint lod_offsets[9];
+	uint lod_offsets[10];
 	for (uint i = 0; i < push.lodCount; ++i)
 	{
 		const uint l_width = max(1u, push.width >> i);
