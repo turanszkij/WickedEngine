@@ -195,6 +195,7 @@ namespace wi::terrain
 			side /= 2;
 			lod_count++;
 		}
+		tile_count += 1; // packed mips
 
 		if (resolution > SVT_TILE_SIZE)
 		{
@@ -292,9 +293,6 @@ namespace wi::terrain
 
 	void VirtualTexture::init(VirtualTextureAtlas& atlas, uint resolution)
 	{
-		locker.lock();
-		free(atlas);
-		locker.unlock();
 		this->resolution = resolution;
 
 		lod_count = 0;
@@ -306,25 +304,57 @@ namespace wi::terrain
 			side /= 2;
 			lod_count++;
 		}
-		tiles.resize(tile_count);
 
 		locker.lock();
-		tiles.back() = atlas.allocate_tile();
+		free(atlas);
 		if (tile_count > 1)
 		{
+			// close by chunks have residency and packed mips
 			residency = atlas.allocate_residency(resolution);
+			tile_count += 1; // packed mip chain
+			lod_count += 1; // packed mip chain
+			tiles.resize(tile_count);
+			tiles[tile_count - 1] = atlas.allocate_tile();
+			tiles[tile_count - 2] = atlas.allocate_tile();
+			if (tiles[tile_count - 1].IsValid())
+			{
+				// packed mip tail update:
+				UpdateRequest& request = update_requests.emplace_back();
+				request.lod = lod_count - 1;
+				request.tile_x = tiles[tile_count - 1].x;
+				request.tile_y = tiles[tile_count - 1].y;
+				request.x = 0;
+				request.y = 0;
+			}
+			if (tiles[tile_count - 2].IsValid())
+			{
+				// last nonpacked mip update:
+				UpdateRequest& request = update_requests.emplace_back();
+				request.lod = lod_count - 2;
+				request.tile_x = tiles[tile_count - 2].x;
+				request.tile_y = tiles[tile_count - 2].y;
+				request.x = 0;
+				request.y = 0;
+			}
+		}
+		else
+		{
+			// far away chunks only have 1 tile
+			tiles.resize(tile_count);
+			tiles.back() = atlas.allocate_tile();
+			if (tiles.back().IsValid())
+			{
+				// update the only tile there is:
+				UpdateRequest& request = update_requests.emplace_back();
+				request.lod = lod_count - 1;
+				request.tile_x = tiles.back().x;
+				request.tile_y = tiles.back().y;
+				request.x = 0;
+				request.y = 0;
+			}
 		}
 		locker.unlock();
 
-		if (tiles.back().IsValid())
-		{
-			UpdateRequest& request = update_requests.emplace_back();
-			request.lod = lod_count - 1;
-			request.tile_x = tiles.back().x;
-			request.tile_y = tiles.back().y;
-			request.x = 0;
-			request.y = 0;
-		}
 	}
 
 	Terrain::Terrain()
@@ -1182,6 +1212,7 @@ namespace wi::terrain
 					}
 					else
 					{
+						// Simple chunks without residency only have 1 mapped tile, and no mips so they simply use a texMulAdd (todo)
 						auto tile = vt.tiles.back();
 						const float2 resolution_rcp = float2(
 							1.0f / (float)atlas.maps[map_type].texture.desc.width,
@@ -1197,7 +1228,7 @@ namespace wi::terrain
 						material->textures[map_type].sparse_residencymap_descriptor = -1;
 						material->textures[map_type].sparse_feedbackmap_descriptor = -1;
 					}
-					material->textures[map_type].lod_clamp = (float)vt.lod_count - 1;
+					material->textures[map_type].lod_clamp = (float)vt.lod_count - 2;
 				}
 				vt.region_weights_texture = chunk_data.region_weights_texture;
 			}
@@ -1224,7 +1255,7 @@ namespace wi::terrain
 				if (vt.residency->data_available_CPU)
 				{
 					uint32_t page_count = 0;
-					uint32_t lod_offsets[9] = {};
+					uint32_t lod_offsets[10] = {};
 					for (uint32_t i = 0; i < vt.lod_count; ++i)
 					{
 						const uint32_t l_width = std::max(1u, width >> i);
@@ -1244,7 +1275,7 @@ namespace wi::terrain
 						const uint8_t y = (allocation_request >> 16u) & 0xFF;
 						const uint8_t lod = (allocation_request >> 8u) & 0xFF;
 						const bool allocate = allocation_request & 0x1;
-						const bool must_be_always_resident = (int)lod == ((int)vt.lod_count - 1);
+						const bool must_be_always_resident = (int)lod >= ((int)vt.lod_count - 2);
 						if (lod >= vt.lod_count)
 							continue;
 						const uint32_t l_offset = lod_offsets[lod];
@@ -1297,7 +1328,7 @@ namespace wi::terrain
 					std::memcpy(page_buffer + i, &page, sizeof(page));
 				}
 
-				});
+			});
 
 			virtual_texture_barriers_before_update.push_back(GPUBarrier::Buffer(&vt.residency->pageBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE_COMPUTE));
 			virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.residency->feedbackMap, vt.residency->feedbackMap.desc.layout, ResourceState::UNORDERED_ACCESS));
@@ -1397,24 +1428,58 @@ namespace wi::terrain
 			{
 				for (auto& request : vt->update_requests)
 				{
-					const uint request_lod_resolution = std::max(1u, vt->resolution >> request.lod);
+					uint request_lod_resolution = std::max(1u, vt->resolution >> request.lod);
+					const uint2 write_offset_original = uint2(
+						request.tile_x * SVT_TILE_SIZE_PADDED / 4,
+						request.tile_y * SVT_TILE_SIZE_PADDED / 4
+					);
 
 					TerrainVirtualTexturePush push;
 					push.offset = int2(
 						int(request.x * SVT_TILE_SIZE) - int(SVT_TILE_BORDER),
 						int(request.y * SVT_TILE_SIZE) - int(SVT_TILE_BORDER)
 					);
-					push.resolution_rcp = 1.0f / request_lod_resolution;
-					push.write_offset = uint2(request.tile_x * SVT_TILE_SIZE_PADDED / 4, request.tile_y * SVT_TILE_SIZE_PADDED / 4);
 					push.region_weights_textureRO = device->GetDescriptorIndex(&vt->region_weights_texture, SubresourceType::SRV);
-					device->PushConstants(&push, sizeof(push), cmd);
 
-					device->Dispatch(
-						(SVT_TILE_SIZE_PADDED / 4u + 7u) / 8u,
-						(SVT_TILE_SIZE_PADDED / 4u + 7u) / 8u,
-						1,
-						cmd
-					);
+					if (request_lod_resolution < SVT_TILE_SIZE)
+					{
+						// packed mips
+
+						uint32_t tail_mip_idx = 0;
+						while (request_lod_resolution >= 4u)
+						{
+							push.resolution_rcp = 1.0f / request_lod_resolution;
+							push.write_offset = write_offset_original;
+							push.write_offset.x += SVT_PACKED_MIP_OFFSETS[tail_mip_idx].x / 4;
+							push.write_offset.y += SVT_PACKED_MIP_OFFSETS[tail_mip_idx].y / 4;
+							push.write_size = (SVT_TILE_BORDER + request_lod_resolution + SVT_TILE_BORDER) / 4;
+							device->PushConstants(&push, sizeof(push), cmd);
+
+							device->Dispatch(
+								(push.write_size + 7u) / 8u,
+								(push.write_size + 7u) / 8u,
+								1,
+								cmd
+							);
+
+							request_lod_resolution /= 2u;
+							tail_mip_idx++;
+						}
+					}
+					else
+					{
+						push.resolution_rcp = 1.0f / request_lod_resolution;
+						push.write_offset = write_offset_original;
+						push.write_size = SVT_TILE_SIZE_PADDED / 4u;
+						device->PushConstants(&push, sizeof(push), cmd);
+
+						device->Dispatch(
+							(push.write_size + 7u) / 8u,
+							(push.write_size + 7u) / 8u,
+							1,
+							cmd
+						);
+					}
 				}
 			}
 		}
