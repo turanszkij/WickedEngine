@@ -4287,6 +4287,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 	// Write Animations
 	wi::unordered_map<Entity, std::vector<size_t>> animation_datasets;
+	if(wiscene.animations.GetCount() > 0)
 	{
 		// Find accessor types first!
 		wi::unordered_map<Entity, size_t> animdata_vectype; 
@@ -4434,7 +4435,10 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	{
 		writer.WriteGltfSceneToFile(&state.gltfModel, filename, false, true, true, true);
 	}
-	writer.WriteGltfSceneToFile(&state.gltfModel, filename, false, false, true, false);
+	else
+	{
+		writer.WriteGltfSceneToFile(&state.gltfModel, filename, false, false, true, false);
+	}
 
 	// Restore scene world orientation
 	FlipZAxis(state);
