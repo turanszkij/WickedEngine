@@ -1760,6 +1760,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	int cameraIndex = 0;
 	for (auto& x : state.gltfModel.cameras)
 	{
+		if (!x.type.compare("orthographic"))
+			continue;
 		Entity entity = scene.cameras.GetEntity(cameraIndex);
 		CameraComponent& camera = scene.cameras[cameraIndex++];
 		
