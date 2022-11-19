@@ -4155,10 +4155,6 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		if(light_forward_flip)
 			transformComponent.RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV2,0,0));
 
-		auto camera_orient_flip = wiscene.cameras.Contains(transformEntity);
-		if(camera_orient_flip)
-			transformComponent.RotateRollPitchYaw(XMFLOAT3(-XM_PI, 0, -XM_PI));
-
 		auto objectComponent = wiscene.objects.GetComponent(transformEntity);
 		auto hierarchyComponent = wiscene.hierarchy.GetComponent(transformEntity);
 
@@ -4183,9 +4179,6 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		if(light_forward_flip)
 			transformComponent.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2,0,0));
-
-		if(camera_orient_flip)
-			transformComponent.RotateRollPitchYaw(XMFLOAT3(XM_PI, 0, XM_PI));
 		
 		if(objectComponent != nullptr)
 		{
