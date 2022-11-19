@@ -390,6 +390,15 @@ namespace wi::terrain
 		Generation_Cancel();
 		generator->scene.Clear();
 
+
+		for (auto it = chunks.begin(); it != chunks.end(); it++)
+		{
+			ChunkData& chunk_data = it->second;
+			if (chunk_data.vt != nullptr)
+			{
+				chunk_data.vt->free(atlas);
+			}
+		}
 		chunks.clear();
 
 		wi::vector<Entity> entities_to_remove;
@@ -466,6 +475,14 @@ namespace wi::terrain
 
 		if (terrainEntity == INVALID_ENTITY)
 		{
+			for (auto it = chunks.begin(); it != chunks.end(); it++)
+			{
+				ChunkData& chunk_data = it->second;
+				if (chunk_data.vt != nullptr)
+				{
+					chunk_data.vt->free(atlas);
+				}
+			}
 			chunks.clear();
 			return;
 		}
