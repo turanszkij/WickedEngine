@@ -3632,17 +3632,6 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 					{"texCoord",tinygltf::Value(specularTexInfo_pre.texCoord)}
 				});
 		}
-		else if(material.textures[wi::scene::MaterialComponent::SURFACEMAP].resource.IsValid()){
-			auto specularTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-				state, 
-				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::SURFACEMAP].name,
-				material.textures[wi::scene::MaterialComponent::CLEARCOATMAP].uvset);
-			KHR_materials_specular_builder["specularTexture"] = tinygltf::Value({
-					{"index",tinygltf::Value(specularTexInfo_pre.index)},
-					{"texCoord",tinygltf::Value(specularTexInfo_pre.texCoord)}
-				});
-		}
 		material_builder.extensions["KHR_materials_specular"] = tinygltf::Value(KHR_materials_specular_builder);
 
 		state.gltfModel.materials.push_back(material_builder);
