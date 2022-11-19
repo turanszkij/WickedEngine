@@ -279,7 +279,7 @@ void EditorComponent::Load()
 	saveButton.Create("");
 	saveButton.font.params.shadowColor = wi::Color::Transparent();
 	saveButton.SetShadowRadius(2);
-	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)\nYou can also use Ctrl + S to quicksave, without browsing.");
+	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)\nBy default, the scene will be saved into .wiscene, but you can specify .gltf or .glb extensions to export into GLTF.\nYou can also use Ctrl + S to quicksave, without browsing.");
 	saveButton.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	saveButton.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
 	saveButton.OnClick([&](wi::gui::EventArgs args) {
@@ -2971,7 +2971,7 @@ void EditorComponent::SaveAs()
 	wi::helper::FileDialog(params, [=](std::string fileName) {
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 			auto extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
-			std::string filename = (extension == "GLTF" || extension == "GLB") ? fileName : wi::helper::ForceExtension(fileName, params.extensions.front());
+			std::string filename = (!extension.compare("GLTF") || !extension.compare("GLB")) ? fileName : wi::helper::ForceExtension(fileName, params.extensions.front());
 			Save(filename);
 			});
 		});
@@ -3096,7 +3096,7 @@ void EditorComponent::RefreshSceneList()
 		}
 		else
 		{
-			editorscene->tabSelectButton.SetText(wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(editorscene->path)));
+			editorscene->tabSelectButton.SetText(wi::helper::GetFileNameFromPath(editorscene->path));
 			editorscene->tabSelectButton.SetTooltip(editorscene->path);
 		}
 
