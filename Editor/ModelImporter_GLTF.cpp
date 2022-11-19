@@ -1036,7 +1036,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					mesh.vertex_positions.resize(vertexOffset + vertexCount);
 					for (size_t i = 0; i < vertexCount; ++i)
 					{
-						mesh.vertex_positions[vertexOffset + i] = ((XMFLOAT3*)data)[i];
+						mesh.vertex_positions[vertexOffset + i] = *(const XMFLOAT3*)(data + i * stride);
 					}
 
 					if (accessor.sparse.isSparse)
@@ -1077,7 +1077,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					mesh.vertex_normals.resize(vertexOffset + vertexCount);
 					for (size_t i = 0; i < vertexCount; ++i)
 					{
-						mesh.vertex_normals[vertexOffset + i] = ((XMFLOAT3*)data)[i];
+						mesh.vertex_normals[vertexOffset + i] = *(const XMFLOAT3*)(data + i * stride);
 					}
 
 					if (accessor.sparse.isSparse)
@@ -1118,7 +1118,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					mesh.vertex_tangents.resize(vertexOffset + vertexCount);
 					for (size_t i = 0; i < vertexCount; ++i)
 					{
-						mesh.vertex_tangents[vertexOffset + i] = ((XMFLOAT4*)data)[i];
+						mesh.vertex_tangents[vertexOffset + i] = *(const XMFLOAT4*)(data + i * stride);
 						mesh.vertex_tangents[vertexOffset + i].w *= -1;
 					}
 				}
@@ -1165,7 +1165,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					{
 						for (size_t i = 0; i < vertexCount; ++i)
 						{
-							const XMFLOAT2& tex = *(XMFLOAT2*)((size_t)data + i * stride);
+							const XMFLOAT2& tex = *(const XMFLOAT2*)((size_t)data + i * stride);
 
 							mesh.vertex_uvset_1[vertexOffset + i].x = tex.x;
 							mesh.vertex_uvset_1[vertexOffset + i].y = tex.y;
@@ -1206,7 +1206,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 						for (size_t i = 0; i < vertexCount; ++i)
 						{
-							const JointTmp& joint = ((JointTmp*)data)[i];
+							const JointTmp& joint = *(const JointTmp*)(data + i * stride);
 
 							mesh.vertex_boneindices[vertexOffset + i].x = joint.ind[0];
 							mesh.vertex_boneindices[vertexOffset + i].y = joint.ind[1];
@@ -1223,7 +1223,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 						for (size_t i = 0; i < vertexCount; ++i)
 						{
-							const JointTmp& joint = ((JointTmp*)data)[i];
+							const JointTmp& joint = *(const JointTmp*)(data + i * stride);
 
 							mesh.vertex_boneindices[vertexOffset + i].x = joint.ind[0];
 							mesh.vertex_boneindices[vertexOffset + i].y = joint.ind[1];
@@ -1240,7 +1240,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 						for (size_t i = 0; i < vertexCount; ++i)
 						{
-							const JointTmp& joint = ((JointTmp*)data)[i];
+							const JointTmp& joint = *(const JointTmp*)(data + i * stride);
 
 							mesh.vertex_boneindices[vertexOffset + i].x = joint.ind[0];
 							mesh.vertex_boneindices[vertexOffset + i].y = joint.ind[1];
