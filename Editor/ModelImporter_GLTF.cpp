@@ -1129,7 +1129,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					{
 						for (size_t i = 0; i < vertexCount; ++i)
 						{
-							const XMFLOAT2& tex = ((XMFLOAT2*)data)[i];
+							const XMFLOAT2& tex = *(const XMFLOAT2*)((size_t)data + i * stride);
 
 							mesh.vertex_uvset_0[vertexOffset + i].x = tex.x;
 							mesh.vertex_uvset_0[vertexOffset + i].y = tex.y;
