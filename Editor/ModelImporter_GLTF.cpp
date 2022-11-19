@@ -160,7 +160,7 @@ void Import_Mixamo_Bone(LoaderState& state, Entity armatureEntity, Entity boneEn
 // Recursively loads nodes and resolves hierarchy:
 void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 {
-	if (nodeIndex < 0)
+	if (nodeIndex < 0 || state.entityMap.count(nodeIndex) != 0)
 	{
 		return;
 	}
@@ -3345,10 +3345,10 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	state.gltfModel.materials.emplace_back();
 	int def_material_index = 0;
 
-	// Analysis prep
-	wi::jobsystem::context analysis_ctx;
-	std::mutex analysis_lock_sync;
-	uint32_t analysis_readCount = 16384;
+	//// Analysis prep
+	//wi::jobsystem::context analysis_ctx;
+	//std::mutex analysis_lock_sync;
+	//uint32_t analysis_readCount = 16384;
 
 	// Write Materials
 	for(size_t mt_id = 0; mt_id < wiscene.materials.GetCount(); ++mt_id)
@@ -4156,7 +4156,6 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			transformComponent.RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV2,0,0));
 
 		auto objectComponent = wiscene.objects.GetComponent(transformEntity);
-		auto hierarchyComponent = wiscene.hierarchy.GetComponent(transformEntity);
 
 		tinygltf::Node node_builder;
 		int node_index = (int)t_id;
@@ -4234,11 +4233,11 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		}
 		state.gltfModel.buffers.push_back(buffer_builder);
 
-		// Inverse Bind Matrices data access
-		// Analysis prep
-		wi::jobsystem::context analysis_ctx;
-		std::mutex analysis_lock_sync;
-		uint32_t analysis_readCount = 16384;
+		//// Inverse Bind Matrices data access
+		//// Analysis prep
+		//wi::jobsystem::context analysis_ctx;
+		//std::mutex analysis_lock_sync;
+		//uint32_t analysis_readCount = 16384;
 
 		tinygltf::BufferView aibm_bufferView_builder;
 		int aibm_bufferView_index = (int)state.gltfModel.bufferViews.size();
