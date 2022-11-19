@@ -1758,14 +1758,11 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		Entity entity = scene.cameras.GetEntity(cameraIndex);
 		CameraComponent& camera = scene.cameras[cameraIndex++];
 		
-		camera.width = float(x.perspective.aspectRatio);
-		camera.height = 1.f;
+		//camera.width = float(x.perspective.aspectRatio);
+		//camera.height = 1.f;
 		camera.fov = (float)x.perspective.yfov;
 		camera.zFarP = (float)x.perspective.zfar;
 		camera.zNearP = (float)x.perspective.znear;
-		
-		TransformComponent& transform = *scene.transforms.GetComponent(entity);
-		transform.RotateRollPitchYaw(XMFLOAT3(XM_PI, 0, XM_PI));
 	}
 
 	Import_Extension_VRM(state);
