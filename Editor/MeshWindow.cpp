@@ -678,8 +678,16 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
 			Entity entity = scene.materials.GetEntity(i);
-			const NameComponent& name = *scene.names.GetComponent(entity);
-			subsetMaterialComboBox.AddItem(name.name);
+
+			if (scene.names.Contains(entity))
+			{
+				const NameComponent& name = *scene.names.GetComponent(entity);
+				subsetMaterialComboBox.AddItem(name.name);
+			}
+			else
+			{
+				subsetMaterialComboBox.AddItem(std::to_string(entity));
+			}
 
 			if (subset >= 0 && subset < mesh->subsets.size() && mesh->subsets[subset].materialID == entity)
 			{

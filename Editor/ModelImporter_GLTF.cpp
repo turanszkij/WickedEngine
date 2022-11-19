@@ -968,6 +968,11 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			mesh.subsets.back().indexOffset = (uint32_t)indexOffset;
 			mesh.subsets.back().indexCount = (uint32_t)indexCount;
 
+			if (scene.materials.GetCount() == 0)
+			{
+				// Create a material last minute if there was none
+				scene.materials.Create(CreateEntity());
+			}
 			mesh.subsets.back().materialID = scene.materials.GetEntity(std::max(0, prim.material));
 			MaterialComponent* material = scene.materials.GetComponent(mesh.subsets.back().materialID);
 
