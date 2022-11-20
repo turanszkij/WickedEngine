@@ -224,7 +224,12 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 	TransformComponent& transform = *scene.transforms.GetComponent(entity);
 	if (!node.scale.empty())
 	{
-		transform.scale_local = XMFLOAT3((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]);
+		// Note: limiting min scale because scale <= 0.0001 will break matrix decompose and mess up the model (float precision issue?)
+		transform.scale_local = XMFLOAT3(
+			(float)std::max(0.0001001, node.scale[0]),
+			(float)std::max(0.0001001, node.scale[1]),
+			(float)std::max(0.0001001, node.scale[2])
+		);
 	}
 	if (!node.rotation.empty())
 	{
