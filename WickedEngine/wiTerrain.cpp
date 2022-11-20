@@ -390,6 +390,15 @@ namespace wi::terrain
 		Generation_Cancel();
 		generator->scene.Clear();
 
+
+		for (auto it = chunks.begin(); it != chunks.end(); it++)
+		{
+			ChunkData& chunk_data = it->second;
+			if (chunk_data.vt != nullptr)
+			{
+				chunk_data.vt->free(atlas);
+			}
+		}
 		chunks.clear();
 
 		wi::vector<Entity> entities_to_remove;
@@ -466,6 +475,14 @@ namespace wi::terrain
 
 		if (terrainEntity == INVALID_ENTITY)
 		{
+			for (auto it = chunks.begin(); it != chunks.end(); it++)
+			{
+				ChunkData& chunk_data = it->second;
+				if (chunk_data.vt != nullptr)
+				{
+					chunk_data.vt->free(atlas);
+				}
+			}
 			chunks.clear();
 			return;
 		}
@@ -1345,8 +1362,6 @@ namespace wi::terrain
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Terrain - UpdateVirtualTexturesGPU", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Terrain - UpdateVirtualTexturesGPU", cmd);
-
-		wi::renderer::ProcessDeferredMipGenRequests(cmd); // source textures should be mipmapped at this point
 
 		device->Barrier(virtual_texture_barriers_before_update.data(), (uint32_t)virtual_texture_barriers_before_update.size(), cmd);
 

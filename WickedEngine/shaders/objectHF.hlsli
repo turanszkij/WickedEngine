@@ -1085,6 +1085,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #if 0
 	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, input.uvsets.xy);
 #else
+	if (is_frontface == false)
+	{
+		input.tan = -input.tan;
+	}
 	surface.T = input.tan;
 	surface.T.xyz = normalize(surface.T.xyz);
 	float3 binormal = normalize(cross(surface.T.xyz, surface.N) * surface.T.w);

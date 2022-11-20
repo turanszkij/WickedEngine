@@ -92,7 +92,8 @@ static const uint TEXTURESLOT_COUNT = 13;
 static const uint SVT_TILE_SIZE = 256u;
 static const uint SVT_TILE_BORDER = 4u;
 static const uint SVT_TILE_SIZE_PADDED = SVT_TILE_SIZE + SVT_TILE_BORDER * 2;
-static const uint2 SVT_PACKED_MIP_OFFSETS[6] = {
+static const uint SVT_PACKED_MIP_COUNT = 6;
+static const uint2 SVT_PACKED_MIP_OFFSETS[SVT_PACKED_MIP_COUNT] = {
 	uint2(0, 0),
 	uint2(SVT_TILE_SIZE / 2 + SVT_TILE_BORDER * 2, 0),
 	uint2(SVT_TILE_SIZE / 2 + SVT_TILE_BORDER * 2 + SVT_TILE_SIZE / 4 + SVT_TILE_BORDER * 2, 0),
@@ -173,7 +174,7 @@ struct ShaderTextureSlot
 		tex.GetDimensions(atlas_dim.x, atlas_dim.y);
 
 		const uint max_nonpacked_lod = uint(GetLodClamp());
-		virtual_lod = min(virtual_lod, max_nonpacked_lod + 5);
+		virtual_lod = min(virtual_lod, max_nonpacked_lod + SVT_PACKED_MIP_COUNT);
 		bool packed_mips = uint(virtual_lod) > max_nonpacked_lod;
 
 		uint2 pixel = uv * virtual_tile_count;
