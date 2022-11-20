@@ -290,7 +290,6 @@ void FlipZAxis(LoaderState& state)
 		for(auto& v_tan : mesh.vertex_tangents)
 		{
 			v_tan.z *= -1.f;
-			v_tan.w *= -1.f;
 		}
 		for(auto& v_morph : mesh.morph_targets)
 		{
@@ -1119,7 +1118,6 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					for (size_t i = 0; i < vertexCount; ++i)
 					{
 						mesh.vertex_tangents[vertexOffset + i] = *(const XMFLOAT4*)(data + i * stride);
-						mesh.vertex_tangents[vertexOffset + i].w *= -1;
 					}
 				}
 				else if (!attr_name.compare("TEXCOORD_0"))
