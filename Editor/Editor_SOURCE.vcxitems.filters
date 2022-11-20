@@ -141,6 +141,9 @@
     <None Include="$(MSBuildThisFileDirectory)terrain\props.wiscene">
       <Filter>terrain</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\props.ini">
+      <Filter>terrain</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="meshoptimizer">
@@ -155,9 +158,6 @@
       <Filter>terrain</Filter>
     </Image>
     <Image Include="$(MSBuildThisFileDirectory)terrain\base_nor.jpg">
-      <Filter>terrain</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)terrain\grassparticle.png">
       <Filter>terrain</Filter>
     </Image>
     <Image Include="$(MSBuildThisFileDirectory)terrain\high_altitude.jpg">
@@ -176,6 +176,9 @@
       <Filter>terrain</Filter>
     </Image>
     <Image Include="$(MSBuildThisFileDirectory)terrain\low_altitude_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\grassparticle.dds">
       <Filter>terrain</Filter>
     </Image>
   </ItemGroup>

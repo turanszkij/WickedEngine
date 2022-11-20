@@ -4,6 +4,8 @@
 
 #include "Utility/stb_image.h"
 
+#include <unordered_map>
+
 using namespace wi::ecs;
 using namespace wi::scene;
 
@@ -860,12 +862,6 @@ void TerrainWindow::SetupAssets()
 	terrain_preset.material_Slope.SetRoughness(0.1f);
 	terrain_preset.material_LowAltitude.SetRoughness(1);
 	terrain_preset.material_HighAltitude.SetRoughness(1);
-#if 0
-	terrain_preset.material_Base.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/tile.png";
-	terrain_preset.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/tile.png";
-	terrain_preset.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/tile.png";
-	terrain_preset.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/tile.png";
-#else
 	terrain_preset.material_Base.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/base.jpg";
 	terrain_preset.material_Base.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/base_nor.jpg";
 	terrain_preset.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/slope.jpg";
@@ -874,8 +870,7 @@ void TerrainWindow::SetupAssets()
 	terrain_preset.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/low_altitude_nor.jpg";
 	terrain_preset.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude.jpg";
 	terrain_preset.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude_nor.jpg";
-#endif
-	terrain_preset.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/grassparticle.png";
+	terrain_preset.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/grassparticle.dds";
 	terrain_preset.material_GrassParticle.alphaRef = 0.75f;
 	terrain_preset.grass_properties.length = 2;
 	terrain_preset.grass_properties.frameCount = 2;
@@ -888,116 +883,103 @@ void TerrainWindow::SetupAssets()
 	terrain_preset.material_HighAltitude.CreateRenderData();
 	terrain_preset.material_GrassParticle.CreateRenderData();
 
-	Scene props_scene;
-	wi::scene::LoadModel(props_scene, wi::helper::GetCurrentPath() + "/terrain/props.wiscene");
+	std::string terrain_path = wi::helper::GetCurrentPath() + "/terrain/";
+	wi::config::File config;
+	config.Open(std::string(terrain_path + "props.ini").c_str());
+	std::unordered_map<std::string, Scene> prop_scenes;
 
-	// Tree prop:
-	if(props_scene.Entity_FindByName("tree_mesh") != INVALID_ENTITY)
+	for (const auto& it : config)
 	{
-		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
-		prop.min_count_per_chunk = 0;
-		prop.max_count_per_chunk = 20;
-		prop.region = 0;
-		prop.region_power = 2;
-		prop.noise_frequency = 0.1f;
-		prop.noise_power = 1;
-		prop.threshold = 0.4f;
-		prop.min_size = 1.0f;
-		prop.max_size = 4.0f;
-		prop.min_y_offset = -0.25f;
-		prop.max_y_offset = -0.25f;
-		Entity mesh_entity = props_scene.Entity_FindByName("tree_mesh");
-		props_scene.impostors.Create(mesh_entity).swapInDistance = 200;
-		Entity object_entity = props_scene.Entity_FindByName("tree_object");
-		ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
-		if (object != nullptr)
+		const std::string& section_name = it.first;
+		const wi::config::Section& section = it.second;
+		Entity entity = INVALID_ENTITY;
+		Scene* scene = &editor->GetCurrentScene();
+
+		if (section.Has("file"))
 		{
-			object->lod_distance_multiplier = 0.05f;
-			//prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+			std::string text = section.GetText("file");
+			if (prop_scenes.count(text) == 0)
+			{
+				wi::scene::LoadModel(prop_scenes[text], terrain_path + text);
+			}
+			if (prop_scenes.count(text) != 0)
+			{
+				scene = &prop_scenes[text];
+			}
 		}
+		if (section.Has("entity"))
+		{
+			std::string text = section.GetText("entity");
+			entity = scene->Entity_FindByName(text);
+		}
+		if (entity == INVALID_ENTITY)
+		{
+			continue;
+		}
+
+		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
+
+		if (section.Has("min_count_per_chunk"))
+		{
+			prop.min_count_per_chunk = section.GetInt("min_count_per_chunk");
+		}
+		if (section.Has("max_count_per_chunk"))
+		{
+			prop.max_count_per_chunk = section.GetInt("max_count_per_chunk");
+		}
+		if (section.Has("region"))
+		{
+			prop.region = section.GetInt("region");
+		}
+		if (section.Has("region_power"))
+		{
+			prop.region_power = section.GetFloat("region_power");
+		}
+		if (section.Has("noise_frequency"))
+		{
+			prop.noise_frequency = section.GetFloat("noise_frequency");
+		}
+		if (section.Has("noise_power"))
+		{
+			prop.noise_power = section.GetFloat("noise_power");
+		}
+		if (section.Has("threshold"))
+		{
+			prop.threshold = section.GetFloat("threshold");
+		}
+		if (section.Has("min_size"))
+		{
+			prop.min_size = section.GetFloat("min_size");
+		}
+		if (section.Has("max_size"))
+		{
+			prop.max_size = section.GetFloat("max_size");
+		}
+		if (section.Has("min_y_offset"))
+		{
+			prop.min_y_offset = section.GetFloat("min_y_offset");
+		}
+		if (section.Has("max_y_offset"))
+		{
+			prop.max_y_offset = section.GetFloat("max_y_offset");
+		}
+
 		wi::Archive archive;
 		EntitySerializer seri;
-		props_scene.Entity_Serialize(
+		scene->Entity_Serialize(
 			archive,
 			seri,
-			object_entity,
+			entity,
 			wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
 		);
 		archive.WriteData(prop.data);
-		props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
-	}
-	// Rock prop:
-	if (props_scene.Entity_FindByName("rock_mesh") != INVALID_ENTITY)
-	{
-		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
-		prop.min_count_per_chunk = 0;
-		prop.max_count_per_chunk = 8;
-		prop.region = 0;
-		prop.region_power = 1;
-		prop.noise_frequency = 0.005f;
-		prop.noise_power = 2;
-		prop.threshold = 0.5f;
-		prop.min_size = 0.02f;
-		prop.max_size = 2.0f;
-		prop.min_y_offset = -1;
-		prop.max_y_offset = 0.25f;
-		Entity mesh_entity = props_scene.Entity_FindByName("rock_mesh");
-		Entity object_entity = props_scene.Entity_FindByName("rock_object");
-		ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
-		if (object != nullptr)
-		{
-			object->lod_distance_multiplier = 0.02f;
-			object->cascadeMask = 1; // they won't be rendered into the largest shadow cascade
-			object->draw_distance = 400;
-		}
-		wi::Archive archive;
-		EntitySerializer seri;
-		props_scene.Entity_Serialize(
-			archive,
-			seri,
-			object_entity,
-			wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
-		);
-		archive.WriteData(prop.data);
-		props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
-	}
-	// Bush prop:
-	if (props_scene.Entity_FindByName("bush_mesh") != INVALID_ENTITY)
-	{
-		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
-		prop.min_count_per_chunk = 0;
-		prop.max_count_per_chunk = 10;
-		prop.region = 0;
-		prop.region_power = 4;
-		prop.noise_frequency = 0.01f;
-		prop.noise_power = 4;
-		prop.threshold = 0.1f;
-		prop.min_size = 0.05f;
-		prop.max_size = 0.5f;
-		prop.min_y_offset = -0.25;
-		prop.max_y_offset = 0;
-		Entity mesh_entity = props_scene.Entity_FindByName("bush_mesh");
-		Entity object_entity = props_scene.Entity_FindByName("bush_object");
-		ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
-		if (object != nullptr)
-		{
-			object->lod_distance_multiplier = 0.05f;
-			object->cascadeMask = 1; // they won't be rendered into the largest shadow cascade
-			object->draw_distance = 200;
-		}
-		wi::Archive archive;
-		EntitySerializer seri;
-		props_scene.Entity_Serialize(
-			archive,
-			seri,
-			object_entity,
-			wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
-		);
-		archive.WriteData(prop.data);
-		props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
+		scene->Entity_Remove(entity); // The entities will be placed by terrain generator, we don't need the default object that the scene has anymore
 	}
 
-	editor->GetCurrentScene().Merge(props_scene);
+	for (auto& it : prop_scenes)
+	{
+		editor->GetCurrentScene().Merge(it.second);
+	}
 
 	terrain = &terrain_preset;
 	presetCombo.SetSelected(0);
