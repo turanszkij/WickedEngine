@@ -308,10 +308,11 @@ void FlipZAxis(LoaderState& state)
 
 	// Flip scene's transformComponents
 	bool state_restore = (state.transforms_original.size() > 0);
-	wi::unordered_map<wi::ecs::Entity, wi::ecs::Entity> hierarchy_list;
-	wi::unordered_map<size_t, wi::scene::TransformComponent> correction_queue;
 	if(!state_restore)
 	{
+		wi::unordered_map<wi::ecs::Entity, wi::ecs::Entity> hierarchy_list;
+		wi::unordered_map<size_t, wi::scene::TransformComponent> correction_queue;
+
 		for(size_t i = 0; i < wiscene.transforms.GetCount(); ++i)
 		{
 			auto transformEntity = wiscene.transforms.GetEntity(i);
@@ -1762,9 +1763,12 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			continue;
 		Entity entity = scene.cameras.GetEntity(cameraIndex);
 		CameraComponent& camera = scene.cameras[cameraIndex++];
-		
-		camera.width = float(x.perspective.aspectRatio);
-		camera.height = 1.f;
+
+		if (x.perspective.aspectRatio > 0)
+		{
+			camera.width = float(x.perspective.aspectRatio);
+			camera.height = 1.f;
+		}
 		camera.fov = (float)x.perspective.yfov;
 		camera.zFarP = (float)x.perspective.zfar;
 		camera.zNearP = (float)x.perspective.znear;
