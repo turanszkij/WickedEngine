@@ -144,6 +144,9 @@
     <None Include="$(MSBuildThisFileDirectory)terrain\props.ini">
       <Filter>terrain</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\grass.ini">
+      <Filter>terrain</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="meshoptimizer">

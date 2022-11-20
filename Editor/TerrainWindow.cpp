@@ -870,18 +870,10 @@ void TerrainWindow::SetupAssets()
 	terrain_preset.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/low_altitude_nor.jpg";
 	terrain_preset.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude.jpg";
 	terrain_preset.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude_nor.jpg";
-	terrain_preset.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/grassparticle.dds";
-	terrain_preset.material_GrassParticle.alphaRef = 0.75f;
-	terrain_preset.grass_properties.length = 2;
-	terrain_preset.grass_properties.frameCount = 2;
-	terrain_preset.grass_properties.framesX = 1;
-	terrain_preset.grass_properties.framesY = 2;
-	terrain_preset.grass_properties.frameStart = 0;
 	terrain_preset.material_Base.CreateRenderData();
 	terrain_preset.material_Slope.CreateRenderData();
 	terrain_preset.material_LowAltitude.CreateRenderData();
 	terrain_preset.material_HighAltitude.CreateRenderData();
-	terrain_preset.material_GrassParticle.CreateRenderData();
 
 	std::string terrain_path = wi::helper::GetCurrentPath() + "/terrain/";
 	wi::config::File config;
@@ -979,6 +971,46 @@ void TerrainWindow::SetupAssets()
 	for (auto& it : prop_scenes)
 	{
 		editor->GetCurrentScene().Merge(it.second);
+	}
+
+	// Grass config:
+	terrain_preset.material_GrassParticle.alphaRef = 0.75f;
+	terrain_preset.grass_properties.length = 2;
+	terrain_preset.grass_properties.frameCount = 2;
+	terrain_preset.grass_properties.framesX = 1;
+	terrain_preset.grass_properties.framesY = 2;
+	terrain_preset.grass_properties.frameStart = 0;
+
+	wi::config::File grass_config;
+	grass_config.Open(std::string(terrain_path + "grass.ini").c_str());
+	if (grass_config.Has("texture"))
+	{
+		terrain_preset.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = terrain_path + grass_config.GetText("texture");
+		terrain_preset.material_GrassParticle.CreateRenderData();
+	}
+	if (grass_config.Has("alphaRef"))
+	{
+		terrain_preset.material_GrassParticle.alphaRef = grass_config.GetFloat("alphaRef");
+	}
+	if (grass_config.Has("length"))
+	{
+		terrain_preset.grass_properties.length = grass_config.GetFloat("length");
+	}
+	if (grass_config.Has("frameCount"))
+	{
+		terrain_preset.grass_properties.frameCount = grass_config.GetInt("frameCount");
+	}
+	if (grass_config.Has("framesX"))
+	{
+		terrain_preset.grass_properties.framesX = grass_config.GetInt("framesX");
+	}
+	if (grass_config.Has("framesY"))
+	{
+		terrain_preset.grass_properties.framesY = grass_config.GetInt("framesY");
+	}
+	if (grass_config.Has("frameCount"))
+	{
+		terrain_preset.grass_properties.frameStart = grass_config.GetInt("frameStart");
 	}
 
 	terrain = &terrain_preset;
