@@ -279,7 +279,7 @@ void EditorComponent::Load()
 	saveButton.Create("");
 	saveButton.font.params.shadowColor = wi::Color::Transparent();
 	saveButton.SetShadowRadius(2);
-	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)\nYou can also use Ctrl + S to quicksave, without browsing.");
+	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)\nBy default, the scene will be saved into .wiscene, but you can specify .gltf or .glb extensions to export into GLTF.\nYou can also use Ctrl + S to quicksave, without browsing.");
 	saveButton.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	saveButton.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
 	saveButton.OnClick([&](wi::gui::EventArgs args) {
@@ -2912,31 +2912,38 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 void EditorComponent::Save(const std::string& filename)
 {
-	const bool dump_to_header = optionsWnd.saveModeComboBox.GetSelected() == 2;
-
-	wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
-	if (archive.IsOpen())
+	auto file_extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
+	if(file_extension == "WISCENE")
 	{
-		Scene& scene = GetCurrentScene();
+		const bool dump_to_header = optionsWnd.saveModeComboBox.GetSelected() == 2;
 
-		wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.saveModeComboBox.GetItemUserData(optionsWnd.saveModeComboBox.GetSelected());
-		wi::resourcemanager::SetMode(embed_mode);
-
-		scene.Serialize(archive);
-
-		if (dump_to_header)
+		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
+		if (archive.IsOpen())
 		{
-			archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
+			Scene& scene = GetCurrentScene();
+
+			wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.saveModeComboBox.GetItemUserData(optionsWnd.saveModeComboBox.GetSelected());
+			wi::resourcemanager::SetMode(embed_mode);
+
+			scene.Serialize(archive);
+
+			if (dump_to_header)
+			{
+				archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
+			}
 		}
-
-		GetCurrentEditorScene().path = filename;
+		else
+		{
+			wi::helper::messageBox("Could not create " + filename + "!");
+			return;
+		}
 	}
-	else
+	if(file_extension == "GLTF" || file_extension == "GLB")
 	{
-		wi::helper::messageBox("Could not create " + filename + "!");
-		return;
+		ExportModel_GLTF(filename, GetCurrentScene());
 	}
 
+	GetCurrentEditorScene().path = filename;
 	RefreshSceneList();
 
 	wi::backlog::post("Scene " + std::to_string(current_scene) + " saved: " + GetCurrentEditorScene().path);
@@ -2956,12 +2963,15 @@ void EditorComponent::SaveAs()
 	}
 	else
 	{
-		params.description = "Wicked Scene (.wiscene)";
+		params.description = "Wicked Scene (.wiscene) | GLTF Model (.gltf) | GLTF Binary Model (.glb)";
 		params.extensions.push_back("wiscene");
+		params.extensions.push_back("gltf");
+		params.extensions.push_back("glb");
 	}
 	wi::helper::FileDialog(params, [=](std::string fileName) {
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-			std::string filename = wi::helper::ForceExtension(fileName, params.extensions.front());
+			auto extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
+			std::string filename = (!extension.compare("GLTF") || !extension.compare("GLB")) ? fileName : wi::helper::ForceExtension(fileName, params.extensions.front());
 			Save(filename);
 			});
 		});
@@ -3086,7 +3096,7 @@ void EditorComponent::RefreshSceneList()
 		}
 		else
 		{
-			editorscene->tabSelectButton.SetText(wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(editorscene->path)));
+			editorscene->tabSelectButton.SetText(wi::helper::GetFileNameFromPath(editorscene->path));
 			editorscene->tabSelectButton.SetTooltip(editorscene->path);
 		}
 
