@@ -3969,7 +3969,7 @@ void UpdateRenderData(
 	}
 
 	// Impostor prepare:
-	if (vis.scene->instanceArraySize > 0 && vis.scene->meshletBuffer.IsValid())
+	if (vis.scene->impostors.GetCount() > 0 && vis.scene->objects.GetCount() > 0 && vis.scene->impostorBuffer.IsValid())
 	{
 		device->EventBegin("Impostor prepare", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Impostor prepare", cmd);

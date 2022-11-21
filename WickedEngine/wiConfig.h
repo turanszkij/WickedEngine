@@ -43,6 +43,11 @@ namespace wi::config
 		// Get access to a named section. If it doesn't exist, then it will be created
 		Section& GetSection(const char* name);
 
+		std::unordered_map<std::string, Section>::iterator begin() { return sections.begin(); }
+		std::unordered_map<std::string, Section>::const_iterator begin() const { return sections.begin(); }
+		std::unordered_map<std::string, Section>::iterator end() { return sections.end(); }
+		std::unordered_map<std::string, Section>::const_iterator end() const { return sections.end(); }
+
 	private:
 		std::string filename;
 		std::unordered_map<std::string, Section> sections;
