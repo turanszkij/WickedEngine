@@ -225,11 +225,15 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 	if (!node.scale.empty())
 	{
 		// Note: limiting min scale because scale <= 0.0001 will break matrix decompose and mess up the model (float precision issue?)
-		transform.scale_local = XMFLOAT3(
-			(float)std::max(0.0001001, node.scale[0]),
-			(float)std::max(0.0001001, node.scale[1]),
-			(float)std::max(0.0001001, node.scale[2])
-		);
+		for (int idx = 0; idx < 3; ++idx)
+		{
+			if (std::abs(node.scale[idx]) <= 0.0001)
+			{
+				const double sign = node.scale[idx] < 0 ? -1 : 1;
+				node.scale[idx] = 0.0001001 * sign;
+			}
+		}
+		transform.scale_local = XMFLOAT3(float(node.scale[0]), float(node.scale[1]), float(node.scale[2]));
 	}
 	if (!node.rotation.empty())
 	{
