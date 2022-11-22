@@ -72,6 +72,7 @@ Contributors
 	- Linux network implementation
 	- ComponentLibrary implementation
 	- Lua property bindings support, improvements
+	- GLTF Export
 	- Fixes
 - Maeve Garside | https://github.com/MolassesLover
 	- Linux package files
