@@ -349,7 +349,7 @@ namespace wi
 								device->SetName(&resource->texture, name.c_str());
 
 								Format srgb_format = GetFormatSRGB(desc.format);
-								if (srgb_format != desc.format)
+								if (srgb_format != Format::UNKNOWN && srgb_format != desc.format)
 								{
 									resource->srgb_subresource = device->CreateSubresource(
 										&resource->texture,
@@ -462,7 +462,7 @@ namespace wi
 										device->SetName(&resource->texture, name.c_str());
 
 										Format srgb_format = GetFormatSRGB(desc.format);
-										if (srgb_format != desc.format)
+										if (srgb_format != Format::UNKNOWN && srgb_format != desc.format)
 										{
 											resource->srgb_subresource = device->CreateSubresource(
 												&resource->texture,
@@ -620,7 +620,7 @@ namespace wi
 						device->SetName(&resource->texture, name.c_str());
 
 						Format srgb_format = GetFormatSRGB(desc.format);
-						if (srgb_format != desc.format)
+						if (srgb_format != Format::UNKNOWN && srgb_format != desc.format)
 						{
 							resource->srgb_subresource = device->CreateSubresource(
 								&resource->texture,
