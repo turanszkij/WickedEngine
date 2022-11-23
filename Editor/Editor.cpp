@@ -3105,7 +3105,7 @@ void EditorComponent::RefreshSceneList()
 			});
 		editorscene->tabCloseButton.OnClick([this, i](wi::gui::EventArgs args) {
 			wi::lua::KillProcesses();
-			componentsWnd.terrainWnd.terrain_preset = {};
+			componentsWnd.terrainWnd.terrain_preset.props.clear();
 
 			translator.selected.clear();
 			wi::scene::Scene& scene = GetCurrentScene();
