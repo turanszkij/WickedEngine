@@ -2627,40 +2627,43 @@ namespace wi::scene
 			XMStoreFloat3(&tail_sphere.center, tail_next);
 			tail_sphere.radius = hitRadius;
 
-			spring_collider_bvh.Intersects(tail_sphere, 0, [&](uint32_t collider_index) {
-				const ColliderComponent& collider = colliders_cpu[collider_index];
+			if (colliders_cpu != nullptr)
+			{
+				spring_collider_bvh.Intersects(tail_sphere, 0, [&](uint32_t collider_index) {
+					const ColliderComponent& collider = colliders_cpu[collider_index];
 
-				float dist = 0;
-				XMFLOAT3 direction = {};
-				switch (collider.shape)
-				{
-				default:
-				case ColliderComponent::Shape::Sphere:
-					tail_sphere.intersects(collider.sphere, dist, direction);
-					break;
-				case ColliderComponent::Shape::Capsule:
-					tail_sphere.intersects(collider.capsule, dist, direction);
-					break;
-				case ColliderComponent::Shape::Plane:
-					tail_sphere.intersects(collider.plane, dist, direction);
-					break;
-				}
-
-				if (dist < 0)
-				{
-					tail_next = tail_next - XMLoadFloat3(&direction) * dist;
-					to_tail = XMVector3Normalize(tail_next - position_root);
-
-					if (!spring.IsStretchEnabled())
+					float dist = 0;
+					XMFLOAT3 direction = {};
+					switch (collider.shape)
 					{
-						// Limit offset to keep distance from parent:
-						tail_next = position_root + to_tail * boneLength;
+					default:
+					case ColliderComponent::Shape::Sphere:
+						tail_sphere.intersects(collider.sphere, dist, direction);
+						break;
+					case ColliderComponent::Shape::Capsule:
+						tail_sphere.intersects(collider.capsule, dist, direction);
+						break;
+					case ColliderComponent::Shape::Plane:
+						tail_sphere.intersects(collider.plane, dist, direction);
+						break;
 					}
 
-					XMStoreFloat3(&tail_sphere.center, tail_next);
-					tail_sphere.radius = hitRadius;
-				}
-			});
+					if (dist < 0)
+					{
+						tail_next = tail_next - XMLoadFloat3(&direction) * dist;
+						to_tail = XMVector3Normalize(tail_next - position_root);
+
+						if (!spring.IsStretchEnabled())
+						{
+							// Limit offset to keep distance from parent:
+							tail_next = position_root + to_tail * boneLength;
+						}
+
+						XMStoreFloat3(&tail_sphere.center, tail_next);
+						tail_sphere.radius = hitRadius;
+					}
+				});
+			}
 #endif
 
 			XMStoreFloat3(&spring.prevTail, tail_current);
