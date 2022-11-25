@@ -13659,6 +13659,14 @@ void Postprocess_FSR2(
 	const float sharpenessRemapped = (-2.0f * sharpness) + 2.0f;
 	FsrRcasCon(rcasConsts.rcasConfig, sharpenessRemapped);
 
+	const int r_idx = fsr2_constants.frameIndex % 2;
+	const int rw_idx = (fsr2_constants.frameIndex + 1) % 2;
+
+	const Texture& r_lock = res.lock_status[r_idx];
+	const Texture& rw_lock = res.lock_status[rw_idx];
+	const Texture& r_output = res.output_internal[r_idx];
+	const Texture& rw_output = res.output_internal[rw_idx];
+
 	if (fsr2_constants.frameIndex == 0)
 	{
 		device->ClearUAV(&res.adjusted_color, 0, cmd);
@@ -13673,15 +13681,17 @@ void Postprocess_FSR2(
 		device->ClearUAV(&res.lock_status[0], 0, cmd);
 		device->ClearUAV(&res.lock_status[1], 0, cmd);
 		device->ClearUAV(&res.reactive_mask, 0, cmd);
-		device->ClearUAV(&res.spd_global_atomic, 0, cmd);
 		device->ClearUAV(&res.output_internal[0], 0, cmd);
 		device->ClearUAV(&res.output_internal[1], 0, cmd);
 	}
+	device->ClearUAV(&res.spd_global_atomic, 0, cmd); // there was Nan issue sometimes when this was not always cleared
 
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
 			GPUBarrier::Image(&res.reactive_mask, res.reactive_mask.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.luminance_current, res.luminance_current.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.exposure, res.exposure.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -13724,17 +13734,6 @@ void Postprocess_FSR2(
 	device->BindSampler(&samplers[SAMPLER_POINT_CLAMP], 0, cmd);
 	device->BindSampler(&samplers[SAMPLER_LINEAR_CLAMP], 1, cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&res.reactive_mask, ResourceState::UNORDERED_ACCESS, res.reactive_mask.desc.layout),
-
-			GPUBarrier::Image(&res.luminance_current, res.luminance_current.desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&res.exposure, res.exposure.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
 	device->EventBegin("Luminance pyramid", cmd);
 	{
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_COMPUTE_LUMINANCE_PYRAMID_PASS], cmd);
@@ -13753,7 +13752,6 @@ void Postprocess_FSR2(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
 			GPUBarrier::Image(&res.exposure, ResourceState::UNORDERED_ACCESS, res.exposure.desc.layout),
 			GPUBarrier::Image(&res.luminance_current, ResourceState::UNORDERED_ACCESS, res.luminance_current.desc.layout),
 
@@ -13780,7 +13778,7 @@ void Postprocess_FSR2(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
+			GPUBarrier::Image(&res.reactive_mask, ResourceState::UNORDERED_ACCESS, res.reactive_mask.desc.layout),
 			GPUBarrier::Image(&res.adjusted_color, ResourceState::UNORDERED_ACCESS, res.adjusted_color.desc.layout),
 			GPUBarrier::Image(&res.luminance_history, ResourceState::UNORDERED_ACCESS, res.luminance_history.desc.layout),
 
@@ -13811,12 +13809,12 @@ void Postprocess_FSR2(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
 			GPUBarrier::Image(&res.previous_depth, ResourceState::UNORDERED_ACCESS, res.previous_depth.desc.layout),
 			GPUBarrier::Image(&res.dilated_depth, ResourceState::UNORDERED_ACCESS, res.dilated_depth.desc.layout),
 			GPUBarrier::Image(&res.dilated_motion, ResourceState::UNORDERED_ACCESS, res.dilated_motion.desc.layout),
 			GPUBarrier::Image(&res.dilated_reactive, ResourceState::UNORDERED_ACCESS, res.dilated_reactive.desc.layout),
 
+			GPUBarrier::Image(&rw_lock, rw_lock.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.disocclusion_mask, res.disocclusion_mask.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
@@ -13832,27 +13830,8 @@ void Postprocess_FSR2(
 		device->BindUAV(&res.disocclusion_mask, 0, cmd);
 
 		device->Dispatch(dispatchSrcX, dispatchSrcY, 1, cmd);
-		//device->ClearUAV(&res.disocclusion_mask, 0, cmd);
 	}
 	device->EventEnd(cmd);
-
-	const int r_idx = fsr2_constants.frameIndex % 2;
-	const int rw_idx = (fsr2_constants.frameIndex + 1) % 2;
-
-	const Texture& r_lock = res.lock_status[r_idx];
-	const Texture& rw_lock = res.lock_status[rw_idx];
-	const Texture& r_output = res.output_internal[r_idx];
-	const Texture& rw_output = res.output_internal[rw_idx];
-
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&res.disocclusion_mask, ResourceState::UNORDERED_ACCESS, res.disocclusion_mask.desc.layout),
-
-			GPUBarrier::Image(&rw_lock, rw_lock.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
 
 	device->EventBegin("Create locks", cmd);
 	{
@@ -13869,7 +13848,8 @@ void Postprocess_FSR2(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
+			GPUBarrier::Memory(&rw_lock),
+			GPUBarrier::Image(&res.disocclusion_mask, ResourceState::UNORDERED_ACCESS, res.disocclusion_mask.desc.layout),
 			GPUBarrier::Image(&rw_output, rw_output.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
@@ -13903,7 +13883,6 @@ void Postprocess_FSR2(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
 			GPUBarrier::Image(&rw_lock, ResourceState::UNORDERED_ACCESS, rw_lock.desc.layout),
 			GPUBarrier::Image(&rw_output, ResourceState::UNORDERED_ACCESS, rw_output.desc.layout),
 		};

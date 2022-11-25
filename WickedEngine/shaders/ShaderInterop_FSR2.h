@@ -1,5 +1,6 @@
 #ifndef WI_SHADERINTEROP_FONT_H
 #define WI_SHADERINTEROP_FONT_H
+// This file contains settings to apply to FSR2 at compilation time
 
 #ifdef __cplusplus
 #define FFX_CPU

@@ -14,7 +14,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1890));
+	SetSize(XMFLOAT2(580, 1920));
 
 	float step = 21;
 	float itemheight = 18;
@@ -1331,8 +1331,23 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&fsrCheckBox);
 
-	fsr2CheckBox.Create("FSR 2: ");
-	fsr2CheckBox.SetTooltip("FidelityFX FSR Upscaling, version 2. You can use this as a replacement for Temporal AA while also upscaling from lowered rendering resolution.");
+	fsrSlider.Create(0, 2, 1.0f, 1000, "Sharpness: ");
+	fsrSlider.SetTooltip("The sharpening amount to apply for FSR 1.0 upscaling. Note that this increases sharpness will smaller values.");
+	fsrSlider.SetSize(XMFLOAT2(mod_wid, hei));
+	fsrSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("fsr_sharpness"))
+	{
+		editor->renderPath->setFSRSharpness(editor->main->config.GetSection("graphics").GetFloat("fsr_sharpness"));
+	}
+	fsrSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setFSRSharpness(args.fValue);
+		editor->main->config.GetSection("graphics").Set("fsr_sharpness", args.fValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&fsrSlider);
+
+	fsr2CheckBox.Create("FSR 2.1: ");
+	fsr2CheckBox.SetTooltip("FidelityFX FSR Upscaling, version 2.1. You can use this as a replacement for Temporal AA while also upscaling from lowered rendering resolution.");
 	fsr2CheckBox.SetSize(XMFLOAT2(hei, hei));
 	fsr2CheckBox.SetPos(XMFLOAT2(x, y += step));
 	if (editor->main->config.GetSection("graphics").Has("fsr2"))
@@ -1346,20 +1361,63 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&fsr2CheckBox);
 
-	fsrSlider.Create(0, 2, 1.0f, 1000, "Sharpness: ");
-	fsrSlider.SetTooltip("The sharpening amount to apply for FSR upscaling.");
-	fsrSlider.SetSize(XMFLOAT2(mod_wid, hei));
-	fsrSlider.SetPos(XMFLOAT2(x + 100, y));
-	if (editor->main->config.GetSection("graphics").Has("fsr_sharpness"))
+	fsr2Slider.Create(0, 1, 1.0f, 1000, "Sharpness: ");
+	fsr2Slider.SetTooltip("The sharpening amount to apply for FSR 2.1 upscaling.");
+	fsr2Slider.SetSize(XMFLOAT2(mod_wid, hei));
+	fsr2Slider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("fsr2_sharpness"))
 	{
-		editor->renderPath->setFSRSharpness(editor->main->config.GetSection("graphics").GetFloat("fsr_sharpness"));
+		editor->renderPath->setFSR2Sharpness(editor->main->config.GetSection("graphics").GetFloat("fsr2_sharpness"));
 	}
-	fsrSlider.OnSlide([=](wi::gui::EventArgs args) {
-		editor->renderPath->setFSRSharpness(args.fValue);
-		editor->main->config.GetSection("graphics").Set("fsr_sharpness", args.fValue);
+	fsr2Slider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setFSR2Sharpness(args.fValue);
+		editor->main->config.GetSection("graphics").Set("fsr2_sharpness", args.fValue);
 		editor->main->config.Commit();
 		});
-	AddWidget(&fsrSlider);
+	AddWidget(&fsr2Slider);
+
+	fsr2Combo.Create("FSR 2.1 Preset: ");
+	fsr2Combo.SetTooltip("Set resolution scaling quality mode for FSR 2.1:\nQuality: 1.5x\nBalanced: 1.7x\nPerformance: 2.0x\nUltra performance: 3.0x");
+	int fsr2_preset = editor->main->config.GetSection("graphics").GetInt("fsr2_preset");
+	fsr2Combo.SetSize(XMFLOAT2(wid, hei));
+	fsr2Combo.SetPos(XMFLOAT2(x, y += step));
+	fsr2Combo.AddItem("Quality");
+	fsr2Combo.AddItem("Balanced");
+	fsr2Combo.AddItem("Performance");
+	fsr2Combo.AddItem("Ultra Performance");
+	fsr2Combo.OnSelect([=](wi::gui::EventArgs args) {
+		if (editor->renderPath->getFSR2Enabled())
+		{
+			// Guidelines: https://github.com/GPUOpen-Effects/FidelityFX-FSR2#scaling-modes
+			wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER)->GetDesc();
+			switch (args.iValue)
+			{
+			default:
+			case 0:
+				editor->resolutionScale = 1.0f / 1.5f;
+				desc.mip_lod_bias = -1.58f;
+				break;
+			case 1:
+				editor->resolutionScale = 1.0f / 1.7f;
+				desc.mip_lod_bias = -1.76f;
+				break;
+			case 2:
+				editor->resolutionScale = 1.0f / 2.0f;
+				desc.mip_lod_bias = -2.0f;
+				break;
+			case 3:
+				editor->resolutionScale = 1.0f / 3.0f;
+				desc.mip_lod_bias = -2.58f;
+				break;
+			}
+			resolutionScaleSlider.SetValue(editor->resolutionScale);
+			wi::renderer::ModifyObjectSampler(desc);
+		}
+		editor->main->config.GetSection("graphics").Set("fsr2_preset", args.iValue);
+		editor->main->config.Commit();
+		});
+	fsr2Combo.SetSelected(fsr2_preset);
+	AddWidget(&fsr2Combo);
 
 
 
@@ -1647,6 +1705,7 @@ void GraphicsWindow::Update()
 	fsrCheckBox.SetCheck(editor->renderPath->getFSREnabled());
 	fsr2CheckBox.SetCheck(editor->renderPath->getFSR2Enabled());
 	fsrSlider.SetValue(editor->renderPath->getFSRSharpness());
+	fsr2Slider.SetValue(editor->renderPath->getFSR2Sharpness());
 	shadowTypeComboBox.SetSelectedWithoutCallback(wi::renderer::GetRaytracedShadowsEnabled() ? 1 : 0);
 }
 
@@ -1910,7 +1969,9 @@ void GraphicsWindow::ResizeLayout()
 	chromaticaberrationCheckBox.SetPos(XMFLOAT2(chromaticaberrationSlider.GetPos().x - chromaticaberrationCheckBox.GetSize().x - 80, chromaticaberrationSlider.GetPos().y));
 	add_right(fsrSlider);
 	fsrCheckBox.SetPos(XMFLOAT2(fsrSlider.GetPos().x - fsrCheckBox.GetSize().x - 80, fsrSlider.GetPos().y));
-	add_right(fsr2CheckBox);
+	add_right(fsr2Slider);
+	fsr2CheckBox.SetPos(XMFLOAT2(fsr2Slider.GetPos().x - fsr2CheckBox.GetSize().x - 80, fsr2Slider.GetPos().y));
+	add_right(fsr2Combo);
 
 	y += jump;
 

@@ -42,6 +42,7 @@ namespace wi
 		float eyeadaptionKey = 0.115f;
 		float eyeadaptionRate = 1;
 		float fsrSharpness = 1.0f;
+		float fsr2Sharpness = 0.5f;
 		float lightShaftsStrength = 0.2f;
 		float raytracedDiffuseRange = 10;
 		float raytracedReflectionsRange = 10000.0f;
@@ -203,6 +204,7 @@ namespace wi
 		constexpr float getEyeAdaptionKey() const { return eyeadaptionKey; }
 		constexpr float getEyeAdaptionRate() const { return eyeadaptionRate; }
 		constexpr float getFSRSharpness() const { return fsrSharpness; }
+		constexpr float getFSR2Sharpness() const { return fsr2Sharpness; }
 		constexpr float getLightShaftsStrength() const { return lightShaftsStrength; }
 		constexpr float getRaytracedDiffuseRange() const { return raytracedDiffuseRange; }
 		constexpr float getRaytracedReflectionsRange() const { return raytracedReflectionsRange; }
@@ -255,6 +257,7 @@ namespace wi
 		constexpr void setEyeAdaptionKey(float value) { eyeadaptionKey = value; }
 		constexpr void setEyeAdaptionRate(float value) { eyeadaptionRate = value; }
 		constexpr void setFSRSharpness(float value) { fsrSharpness = value; }
+		constexpr void setFSR2Sharpness(float value) { fsr2Sharpness = value; }
 		constexpr void setLightShaftsStrength(float value) { lightShaftsStrength = value; }
 		constexpr void setRaytracedDiffuseRange(float value) { raytracedDiffuseRange = value; }
 		constexpr void setRaytracedReflectionsRange(float value) { raytracedReflectionsRange = value; }

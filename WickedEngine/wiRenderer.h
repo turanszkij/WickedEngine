@@ -763,8 +763,8 @@ namespace wi::renderer
 		const wi::graphics::Texture& input_velocity,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
-		float dt,
-		float sharpness = 1.0f
+		float dt, // delta time in seconds
+		float sharpness = 0.5f
 	);
 	void Postprocess_Chromatic_Aberration(
 		const wi::graphics::Texture& input,

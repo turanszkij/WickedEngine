@@ -1629,7 +1629,7 @@ namespace wi
 					rtFSR[0],
 					cmd,
 					scene->dt,
-					getFSRSharpness()
+					getFSR2Sharpness()
 				);
 
 				rt_read = &rtFSR[0];
