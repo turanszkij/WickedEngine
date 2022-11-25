@@ -1632,6 +1632,15 @@ namespace wi
 					getFSR2Sharpness()
 				);
 
+				// rebind these, because FSR2 binds other things to those constant buffers:
+				wi::renderer::BindCameraCB(
+					*camera,
+					camera_previous,
+					camera_reflection,
+					cmd
+				);
+				wi::renderer::BindCommonResources(cmd);
+
 				rt_read = &rtFSR[0];
 				rt_write = &rtFSR[1];
 			}
