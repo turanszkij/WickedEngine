@@ -559,6 +559,7 @@ int main(int argc, char* argv[])
 			std::string name_repl = name;
 			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
+			std::replace(name_repl.begin(), name_repl.end(), '-', '_');
 			ss += "const uint8_t " + name_repl + "[] = {";
 			for (size_t i = 0; i < output.shadersize; ++i)
 			{
@@ -576,6 +577,7 @@ int main(int argc, char* argv[])
 			std::string name_repl = name;
 			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
+			std::replace(name_repl.begin(), name_repl.end(), '-', '_');
 			ss += "{\"" + name + "\", {" + name_repl + ",sizeof(" + name_repl + ")}},\n";
 		}
 		ss += "};\n"; // map end

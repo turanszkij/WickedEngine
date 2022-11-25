@@ -642,6 +642,13 @@ namespace wi
 			rtShadow = {};
 		}
 
+		if (getFSR2Enabled())
+		{
+			// FSR2 also acts as a temporal AA, so we inform the shaders about it here
+			//	This will allow improved stochastic alpha test transparency
+			frameCB.options |= OPTION_BIT_TEMPORALAA_ENABLED;
+		}
+
 		// Keep a copy of last frame's depth buffer for temporal disocclusion checks, so swap with current one every frame:
 		std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 
@@ -1506,6 +1513,27 @@ namespace wi
 			device->RenderPassEnd(cmd);
 		}
 
+		if (getFSR2Enabled())
+		{
+			// Save the pre-alpha for FSR2 reactive mask:
+			//	Note that rtFSR temp resource is always larger or equal to rtMain, so CopyTexture is used instead of CopyResource!
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&rtMain, rtMain.desc.layout, ResourceState::COPY_SRC),
+				GPUBarrier::Image(&rtFSR[1], rtFSR->desc.layout, ResourceState::COPY_DST),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+			device->CopyTexture(
+				&rtFSR[1], 0, 0, 0, 0, 0,
+				&rtMain, 0, 0,
+				cmd
+			);
+			for (int i = 0; i < arraysize(barriers); ++i)
+			{
+				std::swap(barriers[i].image.layout_before, barriers[i].image.layout_after);
+			}
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		device->RenderPassBegin(&renderpass_transparent, cmd);
 
 		Viewport vp;
@@ -1594,6 +1622,7 @@ namespace wi
 				wi::renderer::Postprocess_FSR2(
 					fsr2Resources,
 					*camera,
+					rtFSR[1],
 					*rt_read,
 					depthBuffer_Copy,
 					rtVelocity,

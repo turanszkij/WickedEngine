@@ -13499,7 +13499,8 @@ XMFLOAT2 FSR2Resources::GetJitter() const
 void Postprocess_FSR2(
 	const FSR2Resources& res,
 	const CameraComponent& camera,
-	const Texture& input,
+	const Texture& input_pre_alpha,
+	const Texture& input_post_alpha,
 	const Texture& input_depth,
 	const Texture& input_velocity,
 	const Texture& output,
@@ -13677,6 +13678,48 @@ void Postprocess_FSR2(
 		device->ClearUAV(&res.output_internal[1], 0, cmd);
 	}
 
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+			GPUBarrier::Image(&res.reactive_mask, res.reactive_mask.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->EventBegin("Autogen reactive mask", cmd);
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_AUTOGEN_REACTIVE_PASS], cmd);
+
+		device->BindResource(&input_pre_alpha, 0, cmd);
+		device->BindResource(&input_post_alpha, 1, cmd);
+		device->BindUAV(&res.reactive_mask, 0, cmd);
+
+		struct Fsr2GenerateReactiveConstants
+		{
+			float       scale;
+			float       threshold;
+			float       binaryValue;
+			uint32_t    flags;
+		};
+		Fsr2GenerateReactiveConstants constants = {};
+		constants.scale = 1;
+		constants.threshold = 1;
+		constants.binaryValue = 0;
+		constants.flags = 0;
+		constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_TONEMAP;
+		constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_INVERSETONEMAP;
+		constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_USE_COMPONENTS_MAX;
+		//constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_THRESHOLD;
+		device->BindDynamicConstantBuffer(constants, 0, cmd);
+
+		const int32_t threadGroupWorkRegionDim = 8;
+		const int32_t dispatchSrcX = (fsr2_constants.renderSize[0] + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
+		const int32_t dispatchSrcY = (fsr2_constants.renderSize[1] + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
+
+		device->Dispatch(dispatchThreadGroupCountXY[0], dispatchThreadGroupCountXY[1], 1, cmd);
+	}
+	device->EventEnd(cmd);
+
 	device->BindDynamicConstantBuffer(fsr2_constants, 0, cmd);
 	device->BindSampler(&samplers[SAMPLER_POINT_CLAMP], 0, cmd);
 	device->BindSampler(&samplers[SAMPLER_LINEAR_CLAMP], 1, cmd);
@@ -13684,6 +13727,8 @@ void Postprocess_FSR2(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
+			GPUBarrier::Image(&res.reactive_mask, ResourceState::UNORDERED_ACCESS, res.reactive_mask.desc.layout),
+
 			GPUBarrier::Image(&res.luminance_current, res.luminance_current.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.exposure, res.exposure.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
@@ -13694,7 +13739,7 @@ void Postprocess_FSR2(
 	{
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_COMPUTE_LUMINANCE_PYRAMID_PASS], cmd);
 
-		device->BindResource(&input, 0, cmd);
+		device->BindResource(&input_post_alpha, 0, cmd);
 		device->BindUAV(&res.spd_global_atomic, 0, cmd);
 		device->BindUAV(&res.luminance_current, 1, cmd, fsr2_constants.lumaMipLevelToUse);
 		device->BindUAV(&res.luminance_current, 2, cmd, 5);
@@ -13723,7 +13768,7 @@ void Postprocess_FSR2(
 	{
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_PREPARE_INPUT_COLOR_PASS], cmd);
 
-		device->BindResource(&input, 0, cmd);
+		device->BindResource(&input_post_alpha, 0, cmd);
 		device->BindResource(&res.exposure, 1, cmd);
 		device->BindUAV(&res.previous_depth, 0, cmd);
 		device->BindUAV(&res.adjusted_color, 1, cmd);

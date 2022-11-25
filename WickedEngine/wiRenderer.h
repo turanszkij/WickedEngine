@@ -757,7 +757,8 @@ namespace wi::renderer
 	void Postprocess_FSR2(
 		const FSR2Resources& res,
 		const wi::scene::CameraComponent& camera,
-		const wi::graphics::Texture& input,
+		const wi::graphics::Texture& input_pre_alpha,
+		const wi::graphics::Texture& input_post_alpha,
 		const wi::graphics::Texture& input_depth,
 		const wi::graphics::Texture& input_velocity,
 		const wi::graphics::Texture& output,
