@@ -1960,6 +1960,31 @@ namespace wi
 			rtFSR[1] = {};
 		}
 	}
+	void RenderPath3D::setFSR2Preset(FSR2_Preset preset)
+	{
+		wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER)->GetDesc();
+		switch (preset)
+		{
+		default:
+		case FSR2_Preset::Quality:
+			resolutionScale = 1.0f / 1.5f;
+			desc.mip_lod_bias = -1.58f;
+			break;
+		case FSR2_Preset::Balanced:
+			resolutionScale = 1.0f / 1.7f;
+			desc.mip_lod_bias = -1.76f;
+			break;
+		case FSR2_Preset::Performance:
+			resolutionScale = 1.0f / 2.0f;
+			desc.mip_lod_bias = -2.0f;
+			break;
+		case FSR2_Preset::Ultra_Performance:
+			resolutionScale = 1.0f / 3.0f;
+			desc.mip_lod_bias = -2.58f;
+			break;
+		}
+		wi::renderer::ModifyObjectSampler(desc);
+	}
 	void RenderPath3D::setMotionBlurEnabled(bool value)
 	{
 		motionBlurEnabled = value;

@@ -1779,7 +1779,7 @@ void LoadBuffers()
 	{
 		// the dummy buffer is read-only so only the first 'exposure' value is needed,
 		// not the luminance or histogram values in the full version of the buffer used
-        // when eye adaption is enabled.
+		// when eye adaption is enabled.
 		float values[1] = { 1 };
 
 		GPUBufferDesc desc;

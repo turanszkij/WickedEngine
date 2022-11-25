@@ -59,6 +59,11 @@ namespace wi::lua
 		int SetOutlineThickness(lua_State* L);
 		int SetOutlineThreshold(lua_State* L);
 		int SetOutlineColor(lua_State* L);
+		int SetFSREnabled(lua_State* L);
+		int SetFSRSharpness(lua_State* L);
+		int SetFSR2Enabled(lua_State* L);
+		int SetFSR2Sharpness(lua_State* L);
+		int SetFSR2Preset(lua_State* L);
 
 		static void Bind();
 	};

@@ -21,6 +21,14 @@ namespace wi
 			AO_RTAO,		// ray traced ambient occlusion
 			// Don't alter order! (bound to lua manually)
 		};
+		enum class FSR2_Preset
+		{
+			// Guidelines: https://github.com/GPUOpen-Effects/FidelityFX-FSR2#scaling-modes
+			Quality,
+			Balanced,
+			Performance,
+			Ultra_Performance,
+		};
 	private:
 		float exposure = 1.0f;
 		float brightness = 0.0f;
@@ -286,6 +294,7 @@ namespace wi
 		constexpr void setSceneUpdateEnabled(bool value) { sceneUpdateEnabled = value; }
 		void setFSREnabled(bool value);
 		void setFSR2Enabled(bool value);
+		void setFSR2Preset(FSR2_Preset preset); // this will modify resolution scaling and sampler lod bias
 
 		virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 

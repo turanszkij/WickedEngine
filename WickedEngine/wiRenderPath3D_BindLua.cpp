@@ -55,6 +55,11 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetOutlineThickness),
 		lunamethod(RenderPath3D_BindLua, SetOutlineThreshold),
 		lunamethod(RenderPath3D_BindLua, SetOutlineColor),
+		lunamethod(RenderPath3D_BindLua, SetFSREnabled),
+		lunamethod(RenderPath3D_BindLua, SetFSRSharpness),
+		lunamethod(RenderPath3D_BindLua, SetFSR2Enabled),
+		lunamethod(RenderPath3D_BindLua, SetFSR2Sharpness),
+		lunamethod(RenderPath3D_BindLua, SetFSR2Preset),
 		{ NULL, NULL }
 	};
 	Luna<RenderPath3D_BindLua>::PropertyType RenderPath3D_BindLua::properties[] = {
@@ -488,6 +493,77 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetOutlineColor(float r,g,b,a) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetFSREnabled(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetFSREnabled(bool value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+			((RenderPath3D*)component)->setFSREnabled(wi::lua::SGetBool(L, 1));
+		else
+			wi::lua::SError(L, "SetFSREnabled(bool value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetFSRSharpness(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetFSRSharpness(float value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setFSRSharpness(wi::lua::SGetFloat(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetFSRSharpness(float value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetFSR2Enabled(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetFSR2Enabled(bool value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+			((RenderPath3D*)component)->setFSR2Enabled(wi::lua::SGetBool(L, 1));
+		else
+			wi::lua::SError(L, "SetFSR2Enabled(bool value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetFSR2Sharpness(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetFSR2Sharpness(float value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setFSR2Sharpness(wi::lua::SGetFloat(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetFSR2Sharpness(float value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetFSR2Preset(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetFSR2Preset(FSR2_Preset value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setFSR2Preset((wi::RenderPath3D::FSR2_Preset)wi::lua::SGetInt(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetFSR2Preset(FSR2_Preset value) not enough arguments!");
 		return 0;
 	}
 

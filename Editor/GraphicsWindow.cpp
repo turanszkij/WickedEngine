@@ -1316,8 +1316,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&chromaticaberrationSlider);
 
-	fsrCheckBox.Create("FSR: ");
-	fsrCheckBox.SetTooltip("FidelityFX FSR Upscaling. Use this only with Temporal AA or MSAA when the resolution scaling is lowered.");
+	fsrCheckBox.Create("FSR 1.0: ");
+	fsrCheckBox.SetTooltip("FidelityFX FSR Upscaling version 1.0. Use this alongside Temporal AA or MSAA when the resolution scaling is lowered.");
 	fsrCheckBox.SetSize(XMFLOAT2(hei, hei));
 	fsrCheckBox.SetPos(XMFLOAT2(x, y += step));
 	if (editor->main->config.GetSection("graphics").Has("fsr"))
@@ -1347,7 +1347,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&fsrSlider);
 
 	fsr2CheckBox.Create("FSR 2.1: ");
-	fsr2CheckBox.SetTooltip("FidelityFX FSR Upscaling, version 2.1. You can use this as a replacement for Temporal AA while also upscaling from lowered rendering resolution.");
+	fsr2CheckBox.SetTooltip("FidelityFX FSR Upscaling, version 2.1. You can use this as a replacement for Temporal AA while also upscaling from lowered rendering resolution.\nDo not use custom resolution scaling, but use an FSR 2.1 preset instead.");
 	fsr2CheckBox.SetSize(XMFLOAT2(hei, hei));
 	fsr2CheckBox.SetPos(XMFLOAT2(x, y += step));
 	if (editor->main->config.GetSection("graphics").Has("fsr2"))
@@ -1381,37 +1381,16 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	int fsr2_preset = editor->main->config.GetSection("graphics").GetInt("fsr2_preset");
 	fsr2Combo.SetSize(XMFLOAT2(wid, hei));
 	fsr2Combo.SetPos(XMFLOAT2(x, y += step));
-	fsr2Combo.AddItem("Quality");
-	fsr2Combo.AddItem("Balanced");
-	fsr2Combo.AddItem("Performance");
-	fsr2Combo.AddItem("Ultra Performance");
+	fsr2Combo.AddItem("Quality", (uint64_t)wi::RenderPath3D::FSR2_Preset::Quality);
+	fsr2Combo.AddItem("Balanced", (uint64_t)wi::RenderPath3D::FSR2_Preset::Balanced);
+	fsr2Combo.AddItem("Performance", (uint64_t)wi::RenderPath3D::FSR2_Preset::Performance);
+	fsr2Combo.AddItem("Ultra performance", (uint64_t)wi::RenderPath3D::FSR2_Preset::Ultra_Performance);
 	fsr2Combo.OnSelect([=](wi::gui::EventArgs args) {
 		if (editor->renderPath->getFSR2Enabled())
 		{
-			// Guidelines: https://github.com/GPUOpen-Effects/FidelityFX-FSR2#scaling-modes
-			wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER)->GetDesc();
-			switch (args.iValue)
-			{
-			default:
-			case 0:
-				editor->resolutionScale = 1.0f / 1.5f;
-				desc.mip_lod_bias = -1.58f;
-				break;
-			case 1:
-				editor->resolutionScale = 1.0f / 1.7f;
-				desc.mip_lod_bias = -1.76f;
-				break;
-			case 2:
-				editor->resolutionScale = 1.0f / 2.0f;
-				desc.mip_lod_bias = -2.0f;
-				break;
-			case 3:
-				editor->resolutionScale = 1.0f / 3.0f;
-				desc.mip_lod_bias = -2.58f;
-				break;
-			}
+			editor->renderPath->setFSR2Preset((wi::RenderPath3D::FSR2_Preset)args.userdata);
+			editor->resolutionScale = editor->renderPath->resolutionScale;
 			resolutionScaleSlider.SetValue(editor->resolutionScale);
-			wi::renderer::ModifyObjectSampler(desc);
 		}
 		editor->main->config.GetSection("graphics").Set("fsr2_preset", args.iValue);
 		editor->main->config.Commit();
