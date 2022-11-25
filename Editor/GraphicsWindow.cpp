@@ -14,7 +14,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1880));
+	SetSize(XMFLOAT2(580, 1890));
 
 	float step = 21;
 	float itemheight = 18;
@@ -1331,6 +1331,21 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&fsrCheckBox);
 
+	fsr2CheckBox.Create("FSR 2: ");
+	fsr2CheckBox.SetTooltip("FidelityFX FSR Upscaling, version 2. You can use this as a replacement for Temporal AA while also upscaling from lowered rendering resolution.");
+	fsr2CheckBox.SetSize(XMFLOAT2(hei, hei));
+	fsr2CheckBox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("fsr2"))
+	{
+		editor->renderPath->setFSR2Enabled(editor->main->config.GetSection("graphics").GetBool("fsr2"));
+	}
+	fsr2CheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->renderPath->setFSR2Enabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("fsr2", args.bValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&fsr2CheckBox);
+
 	fsrSlider.Create(0, 2, 1.0f, 1000, "Sharpness: ");
 	fsrSlider.SetTooltip("The sharpening amount to apply for FSR upscaling.");
 	fsrSlider.SetSize(XMFLOAT2(mod_wid, hei));
@@ -1630,6 +1645,7 @@ void GraphicsWindow::Update()
 	chromaticaberrationCheckBox.SetCheck(editor->renderPath->getChromaticAberrationEnabled());
 	chromaticaberrationSlider.SetValue(editor->renderPath->getChromaticAberrationAmount());
 	fsrCheckBox.SetCheck(editor->renderPath->getFSREnabled());
+	fsr2CheckBox.SetCheck(editor->renderPath->getFSR2Enabled());
 	fsrSlider.SetValue(editor->renderPath->getFSRSharpness());
 	shadowTypeComboBox.SetSelectedWithoutCallback(wi::renderer::GetRaytracedShadowsEnabled() ? 1 : 0);
 }
@@ -1894,6 +1910,7 @@ void GraphicsWindow::ResizeLayout()
 	chromaticaberrationCheckBox.SetPos(XMFLOAT2(chromaticaberrationSlider.GetPos().x - chromaticaberrationCheckBox.GetSize().x - 80, chromaticaberrationSlider.GetPos().y));
 	add_right(fsrSlider);
 	fsrCheckBox.SetPos(XMFLOAT2(fsrSlider.GetPos().x - fsrCheckBox.GetSize().x - 80, fsrSlider.GetPos().y));
+	add_right(fsr2CheckBox);
 
 	y += jump;
 

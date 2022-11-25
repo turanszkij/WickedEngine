@@ -69,6 +69,7 @@ namespace wi
 		bool occlusionCullingEnabled = true;
 		bool sceneUpdateEnabled = true;
 		bool fsrEnabled = false;
+		bool fsr2Enabled = false;
 
 		uint32_t msaaSampleCount = 1;
 
@@ -137,6 +138,7 @@ namespace wi
 		wi::renderer::SurfelGIResources surfelGIResources;
 		wi::renderer::TemporalAAResources temporalAAResources;
 		wi::renderer::VisibilityResources visibilityResources;
+		wi::renderer::FSR2Resources fsr2Resources;
 
 		mutable const wi::graphics::Texture* lastPostprocessRT = &rtPostprocess;
 		// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
@@ -229,6 +231,7 @@ namespace wi
 		constexpr bool getOcclusionCullingEnabled() const { return occlusionCullingEnabled; }
 		constexpr bool getSceneUpdateEnabled() const { return sceneUpdateEnabled; }
 		constexpr bool getFSREnabled() const { return fsrEnabled; }
+		constexpr bool getFSR2Enabled() const { return fsr2Enabled; }
 
 		constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
 
@@ -279,6 +282,7 @@ namespace wi
 		constexpr void setOcclusionCullingEnabled(bool value) { occlusionCullingEnabled = value; }
 		constexpr void setSceneUpdateEnabled(bool value) { sceneUpdateEnabled = value; }
 		void setFSREnabled(bool value);
+		void setFSR2Enabled(bool value);
 
 		virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 

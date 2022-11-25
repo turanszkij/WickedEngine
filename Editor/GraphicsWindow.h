@@ -93,6 +93,7 @@ public:
 	wi::gui::Slider chromaticaberrationSlider;
 	wi::gui::CheckBox fsrCheckBox;
 	wi::gui::Slider fsrSlider;
+	wi::gui::CheckBox fsr2CheckBox;
 
 	wi::gui::CheckBox nameDebugCheckBox;
 	wi::gui::CheckBox physicsDebugCheckBox;

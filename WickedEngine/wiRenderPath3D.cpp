@@ -82,6 +82,7 @@ namespace wi
 		surfelGIResources = {};
 		temporalAAResources = {};
 		visibilityResources = {};
+		fsr2Resources = {};
 	}
 
 	void RenderPath3D::ResizeBuffers()
@@ -408,6 +409,7 @@ namespace wi
 		setRaytracedReflectionsEnabled(raytracedReflectionsEnabled);
 		setRaytracedDiffuseEnabled(raytracedDiffuseEnabled);
 		setFSREnabled(fsrEnabled);
+		setFSR2Enabled(fsr2Enabled);
 		setMotionBlurEnabled(motionBlurEnabled);
 		setDepthOfFieldEnabled(depthOfFieldEnabled);
 		setEyeAdaptionEnabled(eyeAdaptionEnabled);
@@ -484,7 +486,11 @@ namespace wi
 			getSceneUpdateEnabled() ? dt : 0
 		);
 
-		if (wi::renderer::GetTemporalAAEnabled())
+		if (getFSR2Enabled())
+		{
+			camera->jitter = fsr2Resources.GetJitter();
+		}
+		else if (wi::renderer::GetTemporalAAEnabled())
 		{
 			const XMFLOAT4& halton = wi::math::GetHaltonSequence(wi::graphics::GetDevice()->GetFrameCount() % 256);
 			camera->jitter.x = (halton.x * 2 - 1) / (float)internalResolution.x;
@@ -595,7 +601,8 @@ namespace wi
 			getRaytracedDiffuseEnabled() ||
 			wi::renderer::GetRaytracedShadowsEnabled() ||
 			getAO() == AO::AO_RTAO ||
-			wi::renderer::GetVariableRateShadingClassification()
+			wi::renderer::GetVariableRateShadingClassification() ||
+			getFSR2Enabled()
 			)
 		{
 			if (!rtVelocity.IsValid())
@@ -1582,7 +1589,24 @@ namespace wi
 
 		// 1.) HDR post process chain
 		{
-			if (wi::renderer::GetTemporalAAEnabled() && !wi::renderer::GetTemporalAADebugEnabled())
+			if (rtFSR[0].IsValid() && getFSR2Enabled())
+			{
+				wi::renderer::Postprocess_FSR2(
+					fsr2Resources,
+					*camera,
+					*rt_read,
+					depthBuffer_Copy,
+					rtVelocity,
+					rtFSR[0],
+					cmd,
+					scene->dt,
+					getFSRSharpness()
+				);
+
+				rt_read = &rtFSR[0];
+				rt_write = &rtFSR[1];
+			}
+			else if (wi::renderer::GetTemporalAAEnabled() && !wi::renderer::GetTemporalAADebugEnabled())
 			{
 				wi::renderer::Postprocess_TemporalAA(
 					temporalAAResources,
@@ -1874,6 +1898,35 @@ namespace wi
 		}
 		else
 		{
+			rtFSR[0] = {};
+			rtFSR[1] = {};
+		}
+	}
+	void RenderPath3D::setFSR2Enabled(bool value)
+	{
+		fsr2Enabled = value;
+
+		if (fsr2Enabled)
+		{
+			GraphicsDevice* device = wi::graphics::GetDevice();
+			if (GetPhysicalWidth() == 0 || GetPhysicalHeight() == 0)
+				return;
+
+			wi::renderer::CreateFSR2Resources(fsr2Resources, GetInternalResolution(), XMUINT2(GetPhysicalWidth(), GetPhysicalHeight()));
+
+			TextureDesc desc;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.format = rtPostprocess.desc.format;
+			desc.width = GetPhysicalWidth();
+			desc.height = GetPhysicalHeight();
+			device->CreateTexture(&desc, nullptr, &rtFSR[0]);
+			device->SetName(&rtFSR[0], "rtFSR[0]");
+			device->CreateTexture(&desc, nullptr, &rtFSR[1]);
+			device->SetName(&rtFSR[1], "rtFSR[1]");
+		}
+		else
+		{
+			fsr2Resources = {};
 			rtFSR[0] = {};
 			rtFSR[1] = {};
 		}
