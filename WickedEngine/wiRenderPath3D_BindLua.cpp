@@ -567,6 +567,21 @@ namespace wi::lua
 		return 0;
 	}
 
+static const std::string value_bindings = R"(
+AO_DISABLED = 0
+AO_SSAO = 1
+AO_HBAO = 2
+AO_MSAO = 3
+AO_RTAO = 4
+
+FSR2_Preset = {
+	Quality = 0,
+	Balanced = 1,
+	Performance = 2,
+	Ultra_Performance = 3,
+}
+)";
+
 	void RenderPath3D_BindLua::Bind()
 	{
 		static bool initialized = false;
@@ -575,11 +590,7 @@ namespace wi::lua
 			initialized = true;
 			Luna<RenderPath3D_BindLua>::Register(wi::lua::GetLuaState());
 
-			wi::lua::RunText("AO_DISABLED = 0");
-			wi::lua::RunText("AO_SSAO = 1");
-			wi::lua::RunText("AO_HBAO = 2");
-			wi::lua::RunText("AO_MSAO = 3");
-			wi::lua::RunText("AO_RTAO = 4");
+			wi::lua::RunText(value_bindings);
 		}
 	}
 
