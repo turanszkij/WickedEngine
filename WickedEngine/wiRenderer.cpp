@@ -13276,6 +13276,7 @@ namespace fsr2
 #include "shaders/ffx-fsr2/ffx_fsr1.h"
 #include "shaders/ffx-fsr2/ffx_spd.h"
 #include "shaders/ffx-fsr2/ffx_fsr2_callbacks_hlsl.h"
+#include "shaders/ffx-fsr2/ffx_fsr2_common.h"
 int32_t ffxFsr2GetJitterPhaseCount(int32_t renderWidth, int32_t displayWidth)
 {
 	const float basePhaseCount = 8.0f;
@@ -13352,7 +13353,7 @@ void CreateFSR2Resources(FSR2Resources& res, XMUINT2 render_resolution, XMUINT2 
 
 	desc.width = 1;
 	desc.height = 1;
-	desc.format = Format::R32_FLOAT;
+	desc.format = Format::R32G32_FLOAT;
 	success = device->CreateTexture(&desc, nullptr, &res.exposure);
 	assert(success);
 	device->SetName(&res.exposure, "fsr2::exposure");
@@ -13667,7 +13668,7 @@ void Postprocess_FSR2(
 	const Texture& r_output = res.output_internal[r_idx];
 	const Texture& rw_output = res.output_internal[rw_idx];
 
-	if (fsr2_constants.frameIndex == 0)
+	if (resetAccumulation)
 	{
 		device->ClearUAV(&res.adjusted_color, 0, cmd);
 		device->ClearUAV(&res.luminance_current, 0, cmd);
@@ -13678,13 +13679,19 @@ void Postprocess_FSR2(
 		device->ClearUAV(&res.dilated_motion, 0, cmd);
 		device->ClearUAV(&res.dilated_reactive, 0, cmd);
 		device->ClearUAV(&res.disocclusion_mask, 0, cmd);
-		device->ClearUAV(&res.lock_status[0], 0, cmd);
-		device->ClearUAV(&res.lock_status[1], 0, cmd);
 		device->ClearUAV(&res.reactive_mask, 0, cmd);
 		device->ClearUAV(&res.output_internal[0], 0, cmd);
 		device->ClearUAV(&res.output_internal[1], 0, cmd);
+		device->ClearUAV(&res.spd_global_atomic, 0, cmd);
+
+		float clearValuesLockStatus[4]{};
+		clearValuesLockStatus[LOCK_LIFETIME_REMAINING] = lockInitialLifetime * 2.0f;
+		clearValuesLockStatus[LOCK_TEMPORAL_LUMA] = 0.0f;
+		clearValuesLockStatus[LOCK_TRUST] = 1.0f;
+		uint32_t clear_lock_pk = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(clearValuesLockStatus[0], clearValuesLockStatus[1], clearValuesLockStatus[2]));
+		device->ClearUAV(&res.lock_status[0], clear_lock_pk, cmd);
+		device->ClearUAV(&res.lock_status[1], clear_lock_pk, cmd);
 	}
-	device->ClearUAV(&res.spd_global_atomic, 0, cmd); // there was Nan issue sometimes when this was not always cleared
 
 	{
 		GPUBarrier barriers[] = {
