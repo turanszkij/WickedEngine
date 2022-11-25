@@ -26,9 +26,7 @@
 // CB   0 : cbFSR2
 // CB   1 : cbRCAS
 
-#define FFX_GPU
-#define FFX_HLSL
-//#define FFX_FSR2_EMBED_ROOTSIG
+#include "../ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_EXPOSURE              0
 #define FSR2_BIND_SRV_RCAS_INPUT            1

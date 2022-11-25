@@ -19,9 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#define FFX_GPU
-#define FFX_HLSL
-//#define FFX_FSR2_EMBED_ROOTSIG
+#include "../ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_INPUT_COLOR                     0
 #define FSR2_BIND_UAV_SPD_GLOBAL_ATOMIC               0

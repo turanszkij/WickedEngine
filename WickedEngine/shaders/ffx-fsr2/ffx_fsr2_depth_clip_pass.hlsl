@@ -26,11 +26,7 @@
 // UAV 12 : FSR2_DepthClip                      : rw_depth_clip
 // CB   0 : cbFSR2
 
-#define FFX_GPU
-#define FFX_HLSL
-//#define FFX_FSR2_EMBED_ROOTSIG
-
-#define FFX_FSR2_OPTION_LOW_RESOLUTION_MOTION_VECTORS 1
+#include "../ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_RECONSTRUCTED_PREV_NEAREST_DEPTH      0
 #define FSR2_BIND_SRV_DILATED_MOTION_VECTORS                1

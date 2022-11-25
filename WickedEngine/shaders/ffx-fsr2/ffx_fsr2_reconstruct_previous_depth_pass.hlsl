@@ -27,11 +27,7 @@
 // UAV  9 : FSR2_DilatedDepth                   : rw_dilatedDepth
 // CB   0 : cbFSR2
 
-#define FFX_GPU
-#define FFX_HLSL
-//#define FFX_FSR2_EMBED_ROOTSIG
-
-#define FFX_FSR2_OPTION_LOW_RESOLUTION_MOTION_VECTORS 1
+#include "../ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_MOTION_VECTORS                        0
 #define FSR2_BIND_SRV_DEPTH                                 1

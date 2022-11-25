@@ -27,13 +27,7 @@
 // UAV 14 : FSR2_LumaHistory                    : rw_luma_history
 // CB   0 : cbFSR2
 
-#define FFX_GPU
-#define FFX_HLSL
-//#define FFX_FSR2_EMBED_ROOTSIG
-
-#define FFX_FSR2_OPTION_LOW_RESOLUTION_MOTION_VECTORS 1
-#define FFX_FSR2_OPTION_HDR_COLOR_INPUT 1
-#define FFX_FSR2_OPTION_INVERTED_DEPTH 1
+#include "../ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_INPUT_COLOR                           0
 #define FSR2_BIND_SRV_EXPOSURE                              1

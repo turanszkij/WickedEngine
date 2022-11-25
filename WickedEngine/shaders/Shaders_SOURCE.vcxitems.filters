@@ -1231,5 +1231,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_spd.h">
       <Filter>ffx-fsr2</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_FSR2.h">
+      <Filter>interop</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

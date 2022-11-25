@@ -26,6 +26,7 @@
 #include "shaders/ShaderInterop_Raytracing.h"
 #include "shaders/ShaderInterop_BVH.h"
 #include "shaders/ShaderInterop_DDGI.h"
+#include "shaders/ShaderInterop_FSR2.h"
 
 #include <algorithm>
 #include <atomic>
@@ -13271,7 +13272,6 @@ void Postprocess_FSR(
 
 namespace fsr2
 {
-#define FFX_CPU
 #include "shaders/ffx-fsr2/ffx_core.h"
 #include "shaders/ffx-fsr2/ffx_fsr1.h"
 #include "shaders/ffx-fsr2/ffx_spd.h"
@@ -13703,20 +13703,20 @@ void Postprocess_FSR2(
 		};
 		Fsr2GenerateReactiveConstants constants = {};
 		constants.scale = 1;
-		constants.threshold = 1;
-		constants.binaryValue = 0;
+		constants.threshold = 0.2f;
+		constants.binaryValue = 0.9f;
 		constants.flags = 0;
 		constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_TONEMAP;
-		constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_INVERSETONEMAP;
+		//constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_INVERSETONEMAP;
 		constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_USE_COMPONENTS_MAX;
-		//constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_THRESHOLD;
+		constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_THRESHOLD;
 		device->BindDynamicConstantBuffer(constants, 0, cmd);
 
 		const int32_t threadGroupWorkRegionDim = 8;
 		const int32_t dispatchSrcX = (fsr2_constants.renderSize[0] + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
 		const int32_t dispatchSrcY = (fsr2_constants.renderSize[1] + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
 
-		device->Dispatch(dispatchThreadGroupCountXY[0], dispatchThreadGroupCountXY[1], 1, cmd);
+		device->Dispatch(dispatchSrcX, dispatchSrcY, 1, cmd);
 	}
 	device->EventEnd(cmd);
 
@@ -13797,6 +13797,8 @@ void Postprocess_FSR2(
 
 		device->BindResource(&input_velocity, 0, cmd);
 		device->BindResource(&input_depth, 1, cmd);
+		device->BindResource(&res.reactive_mask, 2, cmd);
+		device->BindResource(&input_post_alpha, 3, cmd);
 		device->BindResource(&res.adjusted_color, 4, cmd);
 		device->BindUAV(&res.previous_depth, 0, cmd);
 		device->BindUAV(&res.dilated_motion, 1, cmd);
@@ -13891,7 +13893,9 @@ void Postprocess_FSR2(
 		device->BindResource(&res.luminance_current, 11, cmd);
 		device->BindUAV(&rw_output, 0, cmd);
 		device->BindUAV(&rw_lock, 1, cmd);
+#if !FFX_FSR2_OPTION_APPLY_SHARPENING
 		device->BindUAV(&output, 2, cmd);
+#endif // !FFX_FSR2_OPTION_APPLY_SHARPENING
 
 		device->Dispatch(dispatchDstX, dispatchDstY, 1, cmd);
 	}
@@ -13906,6 +13910,7 @@ void Postprocess_FSR2(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
+#if FFX_FSR2_OPTION_APPLY_SHARPENING
 	device->EventBegin("Sharpen (RCAS)", cmd);
 	{
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_RCAS_PASS], cmd);
@@ -13923,6 +13928,7 @@ void Postprocess_FSR2(
 		device->Dispatch(dispatchX, dispatchY, 1, cmd);
 	}
 	device->EventEnd(cmd);
+#endif // FFX_FSR2_OPTION_APPLY_SHARPENING
 
 	{
 		GPUBarrier barriers[] = {

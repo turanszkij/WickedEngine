@@ -38,13 +38,7 @@
 // CB   0 : cbFSR2
 // CB   1 : FSR2DispatchOffsets
 
-#define FFX_GPU
-#define FFX_HLSL
-//#define FFX_FSR2_EMBED_ROOTSIG
-
-#define FFX_FSR2_OPTION_LOW_RESOLUTION_MOTION_VECTORS 1
-#define FFX_FSR2_OPTION_HDR_COLOR_INPUT 1
-#define FFX_FSR2_OPTION_APPLY_SHARPENING 1
+#include "../ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_EXPOSURE                               0
 #if FFX_FSR2_OPTION_LOW_RESOLUTION_MOTION_VECTORS
