@@ -5,6 +5,17 @@
 #include <fstream>
 #include <thread>
 
+// Enable macro and follow instructions from here: https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
+//#define USING_D3D12_AGILITY_SDK
+#ifdef USING_D3D12_AGILITY_SDK
+extern "C"
+{
+	// Used to enable the "Agility SDK" components
+	__declspec(dllexport) extern const UINT D3D12SDKVersion = 608 /* D3D12_SDK_VERSION*/;
+	__declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\";
+}
+#endif
+
 #define MAX_LOADSTRING 100
 
 // Global Variables:

@@ -304,7 +304,6 @@ struct ALLOCATION_DESC
     /** \brief Custom pool to place the new resource in. Optional.
 
     When not NULL, the resource will be created inside specified custom pool.
-    It will then never be created as committed.
     */
     Pool* CustomPool;
     /// Custom general-purpose pointer that will be stored in D3D12MA::Allocation.

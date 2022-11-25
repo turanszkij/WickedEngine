@@ -107,6 +107,16 @@ especially to test compatibility with D3D12_RESOURCE_HEAP_TIER_1 on modern GPUs.
    #define D3D12MA_DEFAULT_BLOCK_SIZE (64ull * 1024 * 1024)
 #endif
 
+#ifndef D3D12MA_DEBUG_LOG
+   #define D3D12MA_DEBUG_LOG(format, ...)
+   /*
+   #define D3D12MA_DEBUG_LOG(format, ...) do { \
+       wprintf(format, __VA_ARGS__); \
+       wprintf(L"\n"); \
+   } while(false)
+   */
+#endif
+
 #endif // _D3D12MA_CONFIGURATION
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -900,6 +910,7 @@ class Vector
 public:
     using value_type = T;
     using iterator = T*;
+    using const_iterator = const T*;
 
     // allocationCallbacks externally owned, must outlive this object.
     Vector(const ALLOCATION_CALLBACKS& allocationCallbacks);
@@ -916,13 +927,10 @@ public:
 
     iterator begin() { return m_pArray; }
     iterator end() { return m_pArray + m_Count; }
-    iterator rend() { return begin() - 1; }
-    iterator rbegin() { return end() - 1; }
-
-    const iterator cbegin() const { return m_pArray; }
-    const iterator cend() const { return m_pArray + m_Count; }
-    const iterator crbegin() const { return cend() - 1; }
-    const iterator crend() const { return cbegin() - 1; }
+    const_iterator cbegin() const { return m_pArray; }
+    const_iterator cend() const { return m_pArray + m_Count; }
+    const_iterator begin() const { return cbegin(); }
+    const_iterator end() const { return cend(); }
 
     void push_front(const T& src) { insert(0, src); }
     void push_back(const T& src);
@@ -2968,11 +2976,13 @@ public:
     virtual void AddStatistics(Statistics& inoutStats) const = 0;
     virtual void AddDetailedStatistics(DetailedStatistics& inoutStats) const = 0;
     virtual void WriteAllocationInfoToJson(JsonWriter& json) const = 0;
+    virtual void DebugLogAllAllocations() const = 0;
 
 protected:
     const ALLOCATION_CALLBACKS* GetAllocs() const { return m_pAllocationCallbacks; }
     UINT64 GetDebugMargin() const { return IsVirtual() ? 0 : D3D12MA_DEBUG_MARGIN; }
 
+    void DebugLogAllocation(UINT64 offset, UINT64 size, void* privateData) const;
     void PrintDetailedMap_Begin(JsonWriter& json,
         UINT64 unusedBytes,
         size_t allocationCount,
@@ -2998,6 +3008,25 @@ BlockMetadata::BlockMetadata(const ALLOCATION_CALLBACKS* allocationCallbacks, bo
     m_pAllocationCallbacks(allocationCallbacks)
 {
     D3D12MA_ASSERT(allocationCallbacks);
+}
+
+void BlockMetadata::DebugLogAllocation(UINT64 offset, UINT64 size, void* privateData) const
+{
+    if (IsVirtual())
+    {
+        D3D12MA_DEBUG_LOG(L"UNFREED VIRTUAL ALLOCATION; Offset: %llu; Size: %llu; PrivateData: %p", offset, size, privateData);
+    }
+    else
+    {
+        D3D12MA_ASSERT(privateData != NULL);
+        Allocation* allocation = reinterpret_cast<Allocation*>(privateData);
+
+        privateData = allocation->GetPrivateData();
+        LPCWSTR name = allocation->GetName();
+
+        D3D12MA_DEBUG_LOG(L"UNFREED ALLOCATION; Offset: %llu; Size: %llu; PrivateData: %p; Name: %s",
+            offset, size, privateData, name ? name : L"D3D12MA_Empty");
+    }
 }
 
 void BlockMetadata::PrintDetailedMap_Begin(JsonWriter& json,
@@ -3715,6 +3744,7 @@ public:
     void AddStatistics(Statistics& inoutStats) const override;
     void AddDetailedStatistics(DetailedStatistics& inoutStats) const override;
     void WriteAllocationInfoToJson(JsonWriter& json) const override;
+    void DebugLogAllAllocations() const override;
 
 private:
     /*
@@ -4671,6 +4701,19 @@ void BlockMetadata_Linear::WriteAllocationInfoToJson(JsonWriter& json) const
     PrintDetailedMap_End(json);
 }
 
+void BlockMetadata_Linear::DebugLogAllAllocations() const
+{
+    const SuballocationVectorType& suballocations1st = AccessSuballocations1st();
+    for (auto it = suballocations1st.begin() + m_1stNullItemsBeginCount; it != suballocations1st.end(); ++it)
+        if (it->type != SUBALLOCATION_TYPE_FREE)
+            DebugLogAllocation(it->offset, it->size, it->privateData);
+
+    const SuballocationVectorType& suballocations2nd = AccessSuballocations2nd();
+    for (auto it = suballocations2nd.begin(); it != suballocations2nd.end(); ++it)
+        if (it->type != SUBALLOCATION_TYPE_FREE)
+            DebugLogAllocation(it->offset, it->size, it->privateData);
+}
+
 Suballocation& BlockMetadata_Linear::FindSuballocation(UINT64 offset) const
 {
     const SuballocationVectorType& suballocations1st = AccessSuballocations1st();
@@ -4682,31 +4725,31 @@ Suballocation& BlockMetadata_Linear::FindSuballocation(UINT64 offset) const
 
     // Item from the 1st vector.
     {
-        const SuballocationVectorType::iterator it = BinaryFindSorted(
-            suballocations1st.cbegin() + m_1stNullItemsBeginCount,
-            suballocations1st.cend(),
+        const SuballocationVectorType::const_iterator it = BinaryFindSorted(
+            suballocations1st.begin() + m_1stNullItemsBeginCount,
+            suballocations1st.end(),
             refSuballoc,
             SuballocationOffsetLess());
-        if (it != suballocations1st.cend())
+        if (it != suballocations1st.end())
         {
-            return *it;
+            return const_cast<Suballocation&>(*it);
         }
     }
 
     if (m_2ndVectorMode != SECOND_VECTOR_EMPTY)
     {
         // Rest of members stays uninitialized intentionally for better performance.
-        const SuballocationVectorType::iterator it = m_2ndVectorMode == SECOND_VECTOR_RING_BUFFER ?
-            BinaryFindSorted(suballocations2nd.cbegin(), suballocations2nd.cend(), refSuballoc, SuballocationOffsetLess()) :
-            BinaryFindSorted(suballocations2nd.cbegin(), suballocations2nd.cend(), refSuballoc, SuballocationOffsetGreater());
-        if (it != suballocations2nd.cend())
+        const SuballocationVectorType::const_iterator it = m_2ndVectorMode == SECOND_VECTOR_RING_BUFFER ?
+            BinaryFindSorted(suballocations2nd.begin(), suballocations2nd.end(), refSuballoc, SuballocationOffsetLess()) :
+            BinaryFindSorted(suballocations2nd.begin(), suballocations2nd.end(), refSuballoc, SuballocationOffsetGreater());
+        if (it != suballocations2nd.end())
         {
-            return *it;
+            return const_cast<Suballocation&>(*it);
         }
     }
 
     D3D12MA_ASSERT(0 && "Allocation not found in linear allocator!");
-    return *suballocations1st.crbegin(); // Should never occur.
+    return const_cast<Suballocation&>(suballocations1st.back()); // Should never occur.
 }
 
 bool BlockMetadata_Linear::ShouldCompact1st() const
@@ -4997,6 +5040,7 @@ public:
     void AddStatistics(Statistics& inoutStats) const override;
     void AddDetailedStatistics(DetailedStatistics& inoutStats) const override;
     void WriteAllocationInfoToJson(JsonWriter& json) const override;
+    void DebugLogAllAllocations() const override;
 
 private:
     // According to original paper it should be preferable 4 or 5:
@@ -5639,6 +5683,17 @@ void BlockMetadata_TLSF::WriteAllocationInfoToJson(JsonWriter& json) const
             PrintDetailedMap_Allocation(json, block->offset, block->size, block->PrivateData());
     }
     PrintDetailedMap_End(json);
+}
+
+void BlockMetadata_TLSF::DebugLogAllAllocations() const
+{
+    for (Block* block = m_NullBlock->prevPhysical; block != NULL; block = block->prevPhysical)
+    {
+        if (!block->IsFree())
+        {
+            DebugLogAllocation(block->offset, block->size, block->PrivateData());
+        }
+    }
 }
 
 UINT8 BlockMetadata_TLSF::SizeToMemoryClass(UINT64 size) const
@@ -8130,6 +8185,10 @@ NormalBlock::~NormalBlock()
 {
     if (m_pMetadata != NULL)
     {
+        // Define macro D3D12MA_DEBUG_LOG to receive the list of the unfreed allocations.
+        if (!m_pMetadata->IsEmpty())
+            m_pMetadata->DebugLogAllAllocations();
+
         // THIS IS THE MOST IMPORTANT ASSERT IN THE ENTIRE LIBRARY!
         // Hitting it means you have some memory leak - unreleased Allocation objects.
         D3D12MA_ASSERT(m_pMetadata->IsEmpty() && "Some allocations were not freed before destruction of this memory block!");
@@ -10213,11 +10272,13 @@ void VirtualBlock::BuildStatsString(WCHAR** ppStatsString) const
 
     D3D12MA_DEBUG_GLOBAL_MUTEX_LOCK
 
-        StringBuilder sb(m_Pimpl->m_AllocationCallbacks);
+    StringBuilder sb(m_Pimpl->m_AllocationCallbacks);
     {
         JsonWriter json(m_Pimpl->m_AllocationCallbacks, sb);
         D3D12MA_HEAVY_ASSERT(m_Pimpl->m_Metadata->Validate());
+        json.BeginObject();
         m_Pimpl->m_Metadata->WriteAllocationInfoToJson(json);
+        json.EndObject();
     } // Scope for JsonWriter
 
     const size_t length = sb.GetLength();
