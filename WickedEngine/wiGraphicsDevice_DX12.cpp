@@ -2285,15 +2285,15 @@ using namespace dx12_internal;
 			}
 
 			D3D_FEATURE_LEVEL featurelevels[] = {
-				//D3D_FEATURE_LEVEL_12_2,
+				D3D_FEATURE_LEVEL_12_2,
 				D3D_FEATURE_LEVEL_12_1,
 				D3D_FEATURE_LEVEL_12_0,
 				D3D_FEATURE_LEVEL_11_1,
 				D3D_FEATURE_LEVEL_11_0,
 			};
-			for (auto& featurelevel : featurelevels)
+			for (auto& featureLevel : featurelevels)
 			{
-				if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), featurelevel, IID_PPV_ARGS(&device))))
+				if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), featureLevel, IID_PPV_ARGS(&device))))
 				{
 					break;
 				}
