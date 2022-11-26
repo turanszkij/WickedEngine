@@ -75,7 +75,6 @@ add_custom_command(
 	TARGET WickedEngineEditor POST_BUILD
 	# Copy shader compiler library in the source folder
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/WickedEngine/${LIB_DXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/images ${CMAKE_CURRENT_BINARY_DIR}/images
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/terrain ${CMAKE_CURRENT_BINARY_DIR}/terrain
 )
 
@@ -93,7 +92,7 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/wicked-engine.sh"
 install(TARGETS WickedEngineEditor RUNTIME DESTINATION ${EDITOR_INSTALL_FOLDER})
 
 # install editor assets
-# mandatory images and terrain folders
+# mandatory terrain folder
 install(DIRECTORY
 		"${CMAKE_CURRENT_SOURCE_DIR}/terrain"
 		DESTINATION ${EDITOR_INSTALL_FOLDER})
