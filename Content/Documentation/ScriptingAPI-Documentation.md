@@ -1214,6 +1214,18 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetOutlineThreshold(float value)
 - SetOutlineThickness(float value)
 - SetOutlineColor(float r,g,b,a)
+- SetFSREnabled(bool value)	-- FSR 1.0 on/off
+- SetFSRSharpness(float value)	-- FSR 1.0 sharpness 0: sharpest, 2: least sharp
+- SetFSR2Enabled(bool value) -- FSR 2.1 on/off
+- SetFSR2Sharpness(float value) -- FSR 2.1 sharpness 0: least sharp, 1: sharpest (this is different to FSR 1.0)
+- SetFSR2Preset(FSR2_Preset value) -- FSR 2.1 preset will modify resolution scaling and sampler LOD bias
+
+FSR2_Preset = {
+	Quality = 0,			-- 1.5x scaling, -1.58 sampler LOD bias
+	Balanced = 1,			-- 1.7x scaling, -1.76 sampler LOD bias
+	Performance = 2,		-- 2.0x scaling, -2.0 sampler LOD bias
+	Ultra_Performance = 3,	-- 3.0x scaling, -2.58 sampler LOD bias
+}
 
 #### LoadingScreen
 It is a RenderPath2D but one that internally manages resource loading and can display information about the process.
