@@ -1357,7 +1357,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	fsr2CheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setFSR2Enabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("fsr2", args.bValue);
-		editor->main->config.Commit();
+		fsr2Combo.SetSelected(fsr2Combo.GetSelected());
 		});
 	AddWidget(&fsr2CheckBox);
 

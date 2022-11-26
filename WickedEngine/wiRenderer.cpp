@@ -12072,6 +12072,7 @@ void Postprocess_DepthOfField(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 		device->Dispatch(
 			(res.texture_tilemax_horizontal.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			(res.texture_tilemax_horizontal.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -12517,6 +12518,7 @@ void Postprocess_MotionBlur(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 		device->Dispatch(
 			(res.texture_tilemax_horizontal.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			(res.texture_tilemax_horizontal.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,

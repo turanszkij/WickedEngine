@@ -642,6 +642,17 @@ namespace wi
 			rtShadow = {};
 		}
 
+		// Motion blur and depth of field recreation was possibly requested by FSR2 toggling on/off
+		//	Because these need to run either in display of internal resolution depending on FSR2 on/off
+		if (getMotionBlurEnabled() && !motionblurResources.IsValid())
+		{
+			setMotionBlurEnabled(true);
+		}
+		if (getDepthOfFieldEnabled() && !depthoffieldResources.IsValid())
+		{
+			setDepthOfFieldEnabled(true);
+		}
+
 		if (getFSR2Enabled())
 		{
 			// FSR2 also acts as a temporal AA, so we inform the shaders about it here
@@ -1617,7 +1628,7 @@ namespace wi
 
 		// 1.) HDR post process chain
 		{
-			if (getFSR2Enabled())
+			if (getFSR2Enabled() && fsr2Resources.IsValid())
 			{
 				wi::renderer::Postprocess_FSR2(
 					fsr2Resources,
@@ -1968,6 +1979,10 @@ namespace wi
 			rtFSR[0] = {};
 			rtFSR[1] = {};
 		}
+
+		// Depending on FSR2 is on/off, these either need to run at display or internal resolution:
+		motionblurResources = {};
+		depthoffieldResources = {};
 	}
 	void RenderPath3D::setFSR2Preset(FSR2_Preset preset)
 	{
@@ -2000,7 +2015,12 @@ namespace wi
 
 		if (value)
 		{
-			wi::renderer::CreateMotionBlurResources(motionblurResources, GetInternalResolution());
+			XMUINT2 resolution = GetInternalResolution();
+			if (getFSR2Enabled())
+			{
+				resolution = XMUINT2(GetPhysicalWidth(), GetPhysicalHeight());
+			}
+			wi::renderer::CreateMotionBlurResources(motionblurResources, resolution);
 		}
 		else
 		{
@@ -2013,7 +2033,12 @@ namespace wi
 
 		if (value)
 		{
-			wi::renderer::CreateDepthOfFieldResources(depthoffieldResources, GetInternalResolution());
+			XMUINT2 resolution = GetInternalResolution();
+			if (getFSR2Enabled())
+			{
+				resolution = XMUINT2(GetPhysicalWidth(), GetPhysicalHeight());
+			}
+			wi::renderer::CreateDepthOfFieldResources(depthoffieldResources, resolution);
 		}
 		else
 		{

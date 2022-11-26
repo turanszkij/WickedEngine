@@ -31,7 +31,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 #else
 
 	const float mindepth = neighborhood_mindepth_maxcoc[2 * pixel / DEPTHOFFIELD_TILESIZE].x;
-    const float center_depth = texture_lineardepth.Load(uint3(pixel, 1));
+    const float center_depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv, 0);
 	const float coc = get_coc(center_depth);
 	const float alpha = SampleAlpha(coc);
 	const float2 depthcmp = DepthCmp2(center_depth, mindepth);
