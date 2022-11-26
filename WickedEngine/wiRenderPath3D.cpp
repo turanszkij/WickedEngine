@@ -1947,8 +1947,12 @@ namespace wi
 		}
 		else
 		{
-			rtFSR[0] = {};
-			rtFSR[1] = {};
+			if (!getFSR2Enabled())
+			{
+				// These are used both for FSR and FSR2
+				rtFSR[0] = {};
+				rtFSR[1] = {};
+			}
 		}
 	}
 	void RenderPath3D::setFSR2Enabled(bool value)
@@ -1976,8 +1980,12 @@ namespace wi
 		else
 		{
 			fsr2Resources = {};
-			rtFSR[0] = {};
-			rtFSR[1] = {};
+			if (!getFSREnabled())
+			{
+				// These are used both for FSR and FSR2
+				rtFSR[0] = {};
+				rtFSR[1] = {};
+			}
 		}
 
 		// Depending on FSR2 is on/off, these either need to run at display or internal resolution:

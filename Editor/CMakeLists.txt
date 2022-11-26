@@ -95,7 +95,6 @@ install(TARGETS WickedEngineEditor RUNTIME DESTINATION ${EDITOR_INSTALL_FOLDER})
 # install editor assets
 # mandatory images and terrain folders
 install(DIRECTORY
-		"${CMAKE_CURRENT_SOURCE_DIR}/images"
 		"${CMAKE_CURRENT_SOURCE_DIR}/terrain"
 		DESTINATION ${EDITOR_INSTALL_FOLDER})
 # optional .ini .ico .lua
