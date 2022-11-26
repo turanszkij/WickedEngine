@@ -13332,7 +13332,6 @@ void CreateFSR2Resources(FSR2Resources& res, XMUINT2 render_resolution, XMUINT2 
 {
 	using namespace fsr2;
 	res.fsr2_constants = {};
-	res.jitterPrev = {};
 
 	res.fsr2_constants.renderSize[0] = render_resolution.x;
 	res.fsr2_constants.renderSize[1] = render_resolution.y;
@@ -13570,13 +13569,10 @@ void Postprocess_FSR2(
 	const bool enable_display_resolution_motion_vectors = false;
 	const int32_t* motionVectorsTargetSize = enable_display_resolution_motion_vectors ? fsr2_constants.displaySize : fsr2_constants.renderSize;
 
-	const XMFLOAT2 motionVectorScale = XMFLOAT2(1, 1);
-	//fsr2_constants.motionVectorScale[0] = (motionVectorScale.x / motionVectorsTargetSize[0]);
-	//fsr2_constants.motionVectorScale[1] = (motionVectorScale.y / motionVectorsTargetSize[1]);
 	fsr2_constants.motionVectorScale[0] = 1;
 	fsr2_constants.motionVectorScale[1] = 1;
-	//fsr2_constants.motionVectorScale[0] = (float)motionVectorsTargetSize[0];
-	//fsr2_constants.motionVectorScale[1] = (float)motionVectorsTargetSize[1];
+
+	// Jitter cancellation is removed from here because it is baked into the velocity buffer already:
 
 	//// compute jitter cancellation
 	//const bool jitterCancellation = true;
@@ -13670,6 +13666,24 @@ void Postprocess_FSR2(
 
 	if (resetAccumulation)
 	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.adjusted_color, res.adjusted_color.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.luminance_current, res.luminance_current.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.luminance_history, res.luminance_history.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.exposure, res.exposure.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.previous_depth, res.previous_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.dilated_depth, res.dilated_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.dilated_motion, res.dilated_motion.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.dilated_reactive, res.dilated_reactive.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.disocclusion_mask, res.disocclusion_mask.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.reactive_mask, res.reactive_mask.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.output_internal[0], res.output_internal[0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.output_internal[1], res.output_internal[1].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.lock_status[0], res.lock_status[0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.lock_status[1], res.lock_status[1].desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
 		device->ClearUAV(&res.adjusted_color, 0, cmd);
 		device->ClearUAV(&res.luminance_current, 0, cmd);
 		device->ClearUAV(&res.luminance_history, 0, cmd);
@@ -13682,7 +13696,7 @@ void Postprocess_FSR2(
 		device->ClearUAV(&res.reactive_mask, 0, cmd);
 		device->ClearUAV(&res.output_internal[0], 0, cmd);
 		device->ClearUAV(&res.output_internal[1], 0, cmd);
-		device->ClearUAV(&res.spd_global_atomic, 0, cmd);
+		device->ClearUAV(&res.spd_global_atomic, 0, cmd); // this is always in UAV state
 
 		float clearValuesLockStatus[4]{};
 		clearValuesLockStatus[LOCK_LIFETIME_REMAINING] = lockInitialLifetime * 2.0f;
@@ -13691,6 +13705,12 @@ void Postprocess_FSR2(
 		uint32_t clear_lock_pk = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(clearValuesLockStatus[0], clearValuesLockStatus[1], clearValuesLockStatus[2]));
 		device->ClearUAV(&res.lock_status[0], clear_lock_pk, cmd);
 		device->ClearUAV(&res.lock_status[1], clear_lock_pk, cmd);
+
+		for (int i = 0; i < arraysize(barriers); ++i)
+		{
+			std::swap(barriers[i].image.layout_before, barriers[i].image.layout_after);
+		}
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	{
@@ -13719,14 +13739,17 @@ void Postprocess_FSR2(
 			uint32_t    flags;
 		};
 		Fsr2GenerateReactiveConstants constants = {};
-		constants.scale = 1;
-		constants.threshold = 0.2f;
-		constants.binaryValue = 0.9f;
+		static float scale = 1.0f;
+		static float threshold = 0.2f;
+		static float binaryValue = 0.9f;
+		constants.scale = scale;
+		constants.threshold = threshold;
+		constants.binaryValue = binaryValue;
 		constants.flags = 0;
 		constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_TONEMAP;
 		//constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_INVERSETONEMAP;
-		constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_USE_COMPONENTS_MAX;
-		constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_THRESHOLD;
+		//constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_USE_COMPONENTS_MAX;
+		//constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_THRESHOLD;
 		device->BindDynamicConstantBuffer(constants, 0, cmd);
 
 		const int32_t threadGroupWorkRegionDim = 8;

@@ -1617,7 +1617,7 @@ namespace wi
 
 		// 1.) HDR post process chain
 		{
-			if (rtFSR[0].IsValid() && getFSR2Enabled())
+			if (getFSR2Enabled())
 			{
 				wi::renderer::Postprocess_FSR2(
 					fsr2Resources,
@@ -1666,7 +1666,7 @@ namespace wi
 				std::swap(rt_read, rt_write);
 			}
 
-			if (getDepthOfFieldEnabled() && camera->aperture_size > 0 && getDepthOfFieldStrength() > 0)
+			if (getDepthOfFieldEnabled() && camera->aperture_size > 0 && getDepthOfFieldStrength() > 0 && depthoffieldResources.IsValid())
 			{
 				wi::renderer::Postprocess_DepthOfField(
 					depthoffieldResources,
@@ -1680,7 +1680,7 @@ namespace wi
 				std::swap(rt_read, rt_write);
 			}
 
-			if (getMotionBlurEnabled() && getMotionBlurStrength() > 0)
+			if (getMotionBlurEnabled() && getMotionBlurStrength() > 0 && motionblurResources.IsValid())
 			{
 				wi::renderer::Postprocess_MotionBlur(
 					motionblurResources,

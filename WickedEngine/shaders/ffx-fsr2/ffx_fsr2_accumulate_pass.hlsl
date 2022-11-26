@@ -38,7 +38,7 @@
 // CB   0 : cbFSR2
 // CB   1 : FSR2DispatchOffsets
 
-#include "../ShaderInterop_FSR2.h"
+#include "ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_EXPOSURE                               0
 #if FFX_FSR2_OPTION_LOW_RESOLUTION_MOTION_VECTORS

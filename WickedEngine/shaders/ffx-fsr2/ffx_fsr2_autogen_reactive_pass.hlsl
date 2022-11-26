@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "../ShaderInterop_FSR2.h"
+#include "ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_PRE_ALPHA_COLOR                       0
 #define FSR2_BIND_SRV_POST_ALPHA_COLOR                      1

@@ -26,7 +26,7 @@
 // UAV 11 : FSR2_LockStatus1                    : rw_lock_status
 // CB   0 : cbFSR2
 
-#include "../ShaderInterop_FSR2.h"
+#include "ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_LOCK_STATUS                           1
 #define FSR2_BIND_SRV_PREPARED_INPUT_COLOR                  2

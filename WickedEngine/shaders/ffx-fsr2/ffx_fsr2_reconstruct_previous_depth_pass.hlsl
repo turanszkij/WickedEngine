@@ -27,7 +27,7 @@
 // UAV  9 : FSR2_DilatedDepth                   : rw_dilatedDepth
 // CB   0 : cbFSR2
 
-#include "../ShaderInterop_FSR2.h"
+#include "ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_MOTION_VECTORS                        0
 #define FSR2_BIND_SRV_DEPTH                                 1

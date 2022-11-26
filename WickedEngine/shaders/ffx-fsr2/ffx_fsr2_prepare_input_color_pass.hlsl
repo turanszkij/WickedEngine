@@ -27,7 +27,7 @@
 // UAV 14 : FSR2_LumaHistory                    : rw_luma_history
 // CB   0 : cbFSR2
 
-#include "../ShaderInterop_FSR2.h"
+#include "ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_INPUT_COLOR                           0
 #define FSR2_BIND_SRV_EXPOSURE                              1

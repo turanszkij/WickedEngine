@@ -603,6 +603,8 @@ namespace wi::renderer
 		wi::graphics::GPUBuffer buffer_tiles_earlyexit;
 		wi::graphics::GPUBuffer buffer_tiles_cheap;
 		wi::graphics::GPUBuffer buffer_tiles_expensive;
+
+		bool IsValid() const { return texture_tilemax_horizontal.IsValid(); }
 	};
 	void CreateDepthOfFieldResources(DepthOfFieldResources& res, XMUINT2 resolution);
 	void Postprocess_DepthOfField(
@@ -631,6 +633,8 @@ namespace wi::renderer
 		wi::graphics::GPUBuffer buffer_tiles_earlyexit;
 		wi::graphics::GPUBuffer buffer_tiles_cheap;
 		wi::graphics::GPUBuffer buffer_tiles_expensive;
+
+		bool IsValid() const { return texture_tilemax_horizontal.IsValid(); }
 	};
 	void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution);
 	void Postprocess_MotionBlur(
@@ -732,7 +736,6 @@ namespace wi::renderer
 			float     lumaMipRcp;
 		};
 		mutable Fsr2Constants fsr2_constants = {};
-		mutable XMFLOAT2 jitterPrev = {};
 		wi::graphics::Texture adjusted_color;
 		wi::graphics::Texture luminance_current;
 		wi::graphics::Texture luminance_history;
