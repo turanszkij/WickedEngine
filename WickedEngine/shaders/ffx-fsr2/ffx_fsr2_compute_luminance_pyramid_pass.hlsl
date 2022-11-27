@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#define FFX_HALF 0 // doesn't compile if enabled
 #include "ShaderInterop_FSR2.h"
 
 #define FSR2_BIND_SRV_INPUT_COLOR                     0

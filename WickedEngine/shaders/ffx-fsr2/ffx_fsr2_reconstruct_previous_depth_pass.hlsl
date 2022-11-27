@@ -32,7 +32,7 @@
 #define FSR2_BIND_SRV_MOTION_VECTORS                        0
 #define FSR2_BIND_SRV_DEPTH                                 1
 #define FSR2_BIND_SRV_REACTIVE_MASK                         2
-#define FSR2_BIND_SRV_TRANSPARENCY_AND_COMPOSITION_MASK     3
+//#define FSR2_BIND_SRV_TRANSPARENCY_AND_COMPOSITION_MASK     3
 #define FSR2_BIND_SRV_PREPARED_INPUT_COLOR                  4
 #define FSR2_BIND_UAV_RECONSTRUCTED_PREV_NEAREST_DEPTH      0
 #define FSR2_BIND_UAV_DILATED_MOTION_VECTORS                1
