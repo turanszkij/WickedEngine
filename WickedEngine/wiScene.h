@@ -167,7 +167,9 @@ namespace wi::scene
 			float smooth_backface = 0; // smoothness of backface test
 			wi::graphics::GPUBuffer ray_buffer;
 			wi::graphics::GPUBuffer offset_buffer;
+			wi::graphics::GPUBuffer sparse_tile_pool;
 			wi::graphics::Texture color_texture[2];
+			wi::graphics::Texture color_texture_rw[2]; // alias of color_texture
 			wi::graphics::Texture depth_texture[2];
 
 			void Serialize(wi::Archive& archive);

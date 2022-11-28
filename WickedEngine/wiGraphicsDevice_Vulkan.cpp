@@ -110,6 +110,8 @@ namespace vulkan_internal
 			return VK_FORMAT_R32_SINT;
 		case Format::D24_UNORM_S8_UINT:
 			return VK_FORMAT_D24_UNORM_S8_UINT;
+		case Format::R9G9B9E5_SHAREDEXP:
+			return VK_FORMAT_E5B9G9R9_UFLOAT_PACK32;
 		case Format::R8G8_UNORM:
 			return VK_FORMAT_R8G8_UNORM;
 		case Format::R8G8_UINT:
@@ -6935,9 +6937,9 @@ using namespace vulkan_internal;
 						out_image_memory_bind.offset.x = in_coordinate.x * internal_sparse->sparse_texture_properties.tile_width;
 						out_image_memory_bind.offset.y = in_coordinate.y * internal_sparse->sparse_texture_properties.tile_height;
 						out_image_memory_bind.offset.z = in_coordinate.z * internal_sparse->sparse_texture_properties.tile_depth;
-						out_image_memory_bind.extent.width = in_size.width * internal_sparse->sparse_texture_properties.tile_width;
-						out_image_memory_bind.extent.height = in_size.height * internal_sparse->sparse_texture_properties.tile_height;
-						out_image_memory_bind.extent.depth = in_size.depth * internal_sparse->sparse_texture_properties.tile_depth;
+						out_image_memory_bind.extent.width = std::min(texture_desc.width, in_size.width * internal_sparse->sparse_texture_properties.tile_width);
+						out_image_memory_bind.extent.height = std::min(texture_desc.height, in_size.height * internal_sparse->sparse_texture_properties.tile_height);
+						out_image_memory_bind.extent.depth = std::min(texture_desc.depth, in_size.depth * internal_sparse->sparse_texture_properties.tile_depth);
 					}
 
 				}

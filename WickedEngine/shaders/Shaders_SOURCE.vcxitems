@@ -35,6 +35,7 @@
     <None Include="$(MSBuildThisFileDirectory)objectHF_tessellation.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)oceanSurfaceHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)PixelPacking_R11G11B10.hlsli" />
+    <None Include="$(MSBuildThisFileDirectory)PixelPacking_RGBE.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)quad.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)raytracingHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)skyAtmosphere.hlsli" />

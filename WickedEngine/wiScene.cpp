@@ -458,23 +458,73 @@ namespace wi::scene
 				tex.width = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
 				tex.height = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.z;
 				//tex.format = Format::R11G11B10_FLOAT; // not enough precision with this format, causes green hue in GI
-				tex.format = Format::R16G16B16A16_FLOAT;
-				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				//tex.format = Format::R16G16B16A16_FLOAT; // this is trivial to use but fat
+				tex.format = Format::R9G9B9E5_SHAREDEXP; // must be packed manually as uint32, good quality and fast to sample
+				tex.misc_flags = ResourceMiscFlag::SPARSE; // sparse aliasing to write R9G9B9E5_SHAREDEXP as uint
+				tex.width = std::max(128u, tex.width);		// force non-packed mip behaviour
+				tex.height = std::max(128u, tex.height);	// force non-packed mip behaviour
+				tex.bind_flags = BindFlag::SHADER_RESOURCE;
+				tex.layout = ResourceState::SHADER_RESOURCE;
 				device->CreateTexture(&tex, nullptr, &ddgi.color_texture[0]);
 				device->SetName(&ddgi.color_texture[0], "ddgi.color_texture[0]");
 				device->CreateTexture(&tex, nullptr, &ddgi.color_texture[1]);
 				device->SetName(&ddgi.color_texture[1], "ddgi.color_texture[1]");
 
+				tex.format = Format::R32_UINT; // packed R9G9B9E5_SHAREDEXP
+				tex.bind_flags = BindFlag::UNORDERED_ACCESS;
+				tex.layout = ResourceState::UNORDERED_ACCESS;
+				device->CreateTexture(&tex, nullptr, &ddgi.color_texture_rw[0]);
+				device->SetName(&ddgi.color_texture_rw[0], "ddgi.color_texture_rw[0]");
+				device->CreateTexture(&tex, nullptr, &ddgi.color_texture_rw[1]);
+				device->SetName(&ddgi.color_texture_rw[1], "ddgi.color_texture_rw[1]");
+
+				buf = {};
+				buf.alignment = ddgi.color_texture_rw[0].sparse_page_size;
+				buf.size = ddgi.color_texture_rw[0].sparse_properties->total_tile_count * buf.alignment * 2;
+				buf.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS;
+				device->CreateBuffer(&buf, nullptr, &ddgi.sparse_tile_pool);
+
+				SparseUpdateCommand commands[4];
+				commands[0].sparse_resource = &ddgi.color_texture[0];
+				commands[0].tile_pool = &ddgi.sparse_tile_pool;
+				commands[0].num_resource_regions = 1;
+				uint32_t tile_count = ddgi.color_texture_rw[0].sparse_properties->total_tile_count;
+				uint32_t tile_offset[2] = { 0, tile_count };
+				SparseRegionSize region;
+				region.width = (tex.width + ddgi.color_texture_rw[0].sparse_properties->tile_width - 1) / ddgi.color_texture_rw[0].sparse_properties->tile_width;
+				region.height = (tex.height + ddgi.color_texture_rw[0].sparse_properties->tile_height - 1) / ddgi.color_texture_rw[0].sparse_properties->tile_height;
+				SparseResourceCoordinate coordinate;
+				coordinate.x = 0;
+				coordinate.y = 0;
+				TileRangeFlags flags = TileRangeFlags::None;
+				commands[0].sizes = &region;
+				commands[0].coordinates = &coordinate;
+				commands[0].range_flags = &flags;
+				commands[0].range_tile_counts = &tile_count;
+				commands[0].range_start_offsets = &tile_offset[0];
+				commands[1] = commands[0];
+				commands[1].sparse_resource = &ddgi.color_texture_rw[0];
+				commands[2] = commands[0];
+				commands[2].sparse_resource = &ddgi.color_texture[1];
+				commands[2].range_start_offsets = &tile_offset[1];
+				commands[3] = commands[0];
+				commands[3].sparse_resource = &ddgi.color_texture_rw[1];
+				commands[3].range_start_offsets = &tile_offset[1];
+				device->SparseUpdate(QUEUE_COMPUTE, commands, arraysize(commands));
+
 				tex.width = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
 				tex.height = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.z;
 				tex.format = Format::R16G16_FLOAT;
+				tex.misc_flags = {};
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				tex.layout = ResourceState::SHADER_RESOURCE;
 				device->CreateTexture(&tex, nullptr, &ddgi.depth_texture[0]);
 				device->SetName(&ddgi.depth_texture[0], "ddgi.depth_texture[0]");
 				device->CreateTexture(&tex, nullptr, &ddgi.depth_texture[1]);
 				device->SetName(&ddgi.depth_texture[1], "ddgi.depth_texture[1]");
 			}
 			std::swap(ddgi.color_texture[0], ddgi.color_texture[1]);
+			std::swap(ddgi.color_texture_rw[0], ddgi.color_texture_rw[1]);
 			std::swap(ddgi.depth_texture[0], ddgi.depth_texture[1]);
 			ddgi.grid_min = bounds.getMin();
 			ddgi.grid_min.x -= 1;

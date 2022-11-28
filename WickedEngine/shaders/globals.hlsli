@@ -2,6 +2,7 @@
 #define WI_SHADER_GLOBALS_HF
 #include "ColorSpaceUtility.hlsli"
 #include "PixelPacking_R11G11B10.hlsli"
+#include "PixelPacking_RGBE.hlsli"
 #include "ShaderInterop.h"
 
 // The root signature will affect shader compilation for DX12.

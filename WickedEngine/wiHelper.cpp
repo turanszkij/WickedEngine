@@ -346,6 +346,32 @@ namespace wi::helper
 				data32[i] = rgba8;
 			}
 		}
+		else if (desc.format == Format::R9G9B9E5_SHAREDEXP)
+		{
+			// This will be converted first to rgba8 before saving to common format:
+			XMFLOAT3SE* dataSrc = (XMFLOAT3SE*)texturedata.data();
+			uint32_t* data32 = (uint32_t*)texturedata.data();
+
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				XMFLOAT3SE pixel = dataSrc[i];
+				XMVECTOR V = XMLoadFloat3SE(&pixel);
+				XMFLOAT3 pixel3;
+				XMStoreFloat3(&pixel3, V);
+				float r = std::max(0.0f, std::min(pixel3.x, 1.0f));
+				float g = std::max(0.0f, std::min(pixel3.y, 1.0f));
+				float b = std::max(0.0f, std::min(pixel3.z, 1.0f));
+				float a = 1;
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(r * 255.0f) << 0;
+				rgba8 |= (uint32_t)(g * 255.0f) << 8;
+				rgba8 |= (uint32_t)(b * 255.0f) << 16;
+				rgba8 |= (uint32_t)(a * 255.0f) << 24;
+
+				data32[i] = rgba8;
+			}
+		}
 		else if (desc.format == Format::B8G8R8A8_UNORM || desc.format == Format::B8G8R8A8_UNORM_SRGB)
 		{
 			// This will be converted first to rgba8 before saving to common format:

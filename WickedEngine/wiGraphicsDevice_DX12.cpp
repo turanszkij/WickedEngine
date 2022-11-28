@@ -565,6 +565,10 @@ namespace dx12_internal
 			return DXGI_FORMAT_R32_UINT;
 		case Format::R32_SINT:
 			return DXGI_FORMAT_R32_SINT;
+		case Format::D24_UNORM_S8_UINT:
+			return DXGI_FORMAT_D24_UNORM_S8_UINT;
+		case Format::R9G9B9E5_SHAREDEXP:
+			return DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
 		case Format::R8G8_UNORM:
 			return DXGI_FORMAT_R8G8_UNORM;
 		case Format::R8G8_UINT:
@@ -875,6 +879,10 @@ namespace dx12_internal
 			return Format::R32_UINT;
 		case DXGI_FORMAT_R32_SINT:
 			return Format::R32_SINT;
+		case DXGI_FORMAT_D24_UNORM_S8_UINT:
+			return Format::D24_UNORM_S8_UINT;
+		case DXGI_FORMAT_R9G9B9E5_SHAREDEXP:
+			return Format::R9G9B9E5_SHAREDEXP;
 		case DXGI_FORMAT_R8G8_UNORM:
 			return Format::R8G8_UNORM;
 		case DXGI_FORMAT_R8G8_UINT:

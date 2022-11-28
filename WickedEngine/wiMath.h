@@ -309,6 +309,21 @@ namespace wi::math
 		XMStoreFloat3PK(&pk, XMLoadFloat3(&color));
 		return pk.v;
 	}
+	inline XMFLOAT3 Unpack_R9G9B9E5_SHAREDEXP(uint32_t value)
+	{
+		XMFLOAT3SE se;
+		se.v = value;
+		XMVECTOR V = XMLoadFloat3SE(&se);
+		XMFLOAT3 result;
+		XMStoreFloat3(&result, V);
+		return result;
+	}
+	inline uint32_t Pack_R9G9B9E5_SHAREDEXP(const XMFLOAT3& value)
+	{
+		XMFLOAT3SE se;
+		XMStoreFloat3SE(&se, XMLoadFloat3(&value));
+		return se;
+	}
 
 
 

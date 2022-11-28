@@ -141,6 +141,9 @@
     <None Include="$(MSBuildThisFileDirectory)surfaceHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)PixelPacking_RGBE.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticle_simulateCS.hlsl">
