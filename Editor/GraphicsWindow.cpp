@@ -1358,6 +1358,12 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setFSR2Enabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("fsr2", args.bValue);
 		fsr2Combo.SetSelected(fsr2Combo.GetSelected());
+		if (!args.bValue)
+		{
+			wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER)->GetDesc();
+			desc.mip_lod_bias = wi::math::Clamp(mipLodBiasSlider.GetValue(), -15.9f, 15.9f);
+			wi::renderer::ModifyObjectSampler(desc);
+		}
 		});
 	AddWidget(&fsr2CheckBox);
 
