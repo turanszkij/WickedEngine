@@ -2836,37 +2836,47 @@ namespace wi::scene
 				{
 					if (morph.weight <= 0)
 						continue;
-					if (morph.sparse_indices.empty())
+					if (morph.sparse_indices_positions.empty())
 					{
+						// Flat update:
 						for (size_t i = 0; i < morph.vertex_positions.size(); ++i)
 						{
 							mesh.morph_temp_pos[i].x += morph.weight * morph.vertex_positions[i].x;
 							mesh.morph_temp_pos[i].y += morph.weight * morph.vertex_positions[i].y;
 							mesh.morph_temp_pos[i].z += morph.weight * morph.vertex_positions[i].z;
-
-							if (!morph.vertex_normals.empty())
-							{
-								mesh.morph_temp_nor[i].x += morph.weight * morph.vertex_normals[i].x;
-								mesh.morph_temp_nor[i].y += morph.weight * morph.vertex_normals[i].y;
-								mesh.morph_temp_nor[i].z += morph.weight * morph.vertex_normals[i].z;
-							}
 						}
 					}
 					else
 					{
-						for (size_t i = 0; i < morph.sparse_indices.size(); ++i)
+						// Sparse update:
+						for (size_t i = 0; i < morph.sparse_indices_positions.size(); ++i)
 						{
-							const uint32_t ind = morph.sparse_indices[i];
+							const uint32_t ind = morph.sparse_indices_positions[i];
 							mesh.morph_temp_pos[ind].x += morph.weight * morph.vertex_positions[i].x;
 							mesh.morph_temp_pos[ind].y += morph.weight * morph.vertex_positions[i].y;
 							mesh.morph_temp_pos[ind].z += morph.weight * morph.vertex_positions[i].z;
+						}
+					}
 
-							if (!morph.vertex_normals.empty())
-							{
-								mesh.morph_temp_nor[ind].x += morph.weight * morph.vertex_normals[i].x;
-								mesh.morph_temp_nor[ind].y += morph.weight * morph.vertex_normals[i].y;
-								mesh.morph_temp_nor[ind].z += morph.weight * morph.vertex_normals[i].z;
-							}
+					if (morph.sparse_indices_normals.empty())
+					{
+						// Flat update:
+						for (size_t i = 0; i < morph.vertex_normals.size(); ++i)
+						{
+							mesh.morph_temp_nor[i].x += morph.weight * morph.vertex_normals[i].x;
+							mesh.morph_temp_nor[i].y += morph.weight * morph.vertex_normals[i].y;
+							mesh.morph_temp_nor[i].z += morph.weight * morph.vertex_normals[i].z;
+						}
+					}
+					else
+					{
+						// Sparse update:
+						for (size_t i = 0; i < morph.sparse_indices_normals.size(); ++i)
+						{
+							const uint32_t ind = morph.sparse_indices_normals[i];
+							mesh.morph_temp_nor[ind].x += morph.weight * morph.vertex_normals[i].x;
+							mesh.morph_temp_nor[ind].y += morph.weight * morph.vertex_normals[i].y;
+							mesh.morph_temp_nor[ind].z += morph.weight * morph.vertex_normals[i].z;
 						}
 					}
 				}

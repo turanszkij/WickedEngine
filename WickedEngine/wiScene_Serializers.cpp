@@ -417,7 +417,11 @@ namespace wi::scene
 					archive >> morph_targets[i].weight;
 					if (seri.GetVersion() >= 1)
 					{
-						archive >> morph_targets[i].sparse_indices;
+						archive >> morph_targets[i].sparse_indices_positions;
+					}
+					if (seri.GetVersion() >= 2)
+					{
+						archive >> morph_targets[i].sparse_indices_normals;
 					}
 			    }
 			}
@@ -490,7 +494,11 @@ namespace wi::scene
 					archive << morph_targets[i].weight;
 					if (seri.GetVersion() >= 1)
 					{
-						archive << morph_targets[i].sparse_indices;
+						archive << morph_targets[i].sparse_indices_positions;
+					}
+					if (seri.GetVersion() >= 2)
+					{
+						archive << morph_targets[i].sparse_indices_normals;
 					}
 			    }
 			}
