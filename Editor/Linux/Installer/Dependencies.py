@@ -30,7 +30,7 @@ def InstallDistributionPackage(packageID: str):
         case "Ubuntu":
             match packageID:
                 case "TkInter":
-                    command = "python-tk" 
+                    command = "sudo apt-get install python-tk" 
         case _:
                 print(
                     f":: Could not detect your Linux distribution.\n:: You'll have to manually install {packageName}"
