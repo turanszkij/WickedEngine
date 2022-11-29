@@ -2,7 +2,7 @@ import subprocess
 import sys
 
 # Global variable for all supported Linux distributions
-distroList: str = ["Arch Linux"]
+distroList: str = ["Arch Linux", "Ubuntu"]
 
 # Get the Linux distribution name from `/etc/os-release`.
 def GetDistribution():
