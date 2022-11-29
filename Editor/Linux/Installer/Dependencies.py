@@ -33,7 +33,7 @@ def InstallDistributionPackage(packageID: str):
                     command = "sudo apt-get install python-tk" 
         case _:
                 print(
-                    f":: Could not detect your Linux distribution.\n:: You'll have to manually install {packageName}"
+                    f":: Could not detect your Linux distribution.\n:: You'll have to manually install {packageID}"
                 )
                 sys.exit()
     subprocess.run(command, shell=True)
