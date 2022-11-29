@@ -1,43 +1,55 @@
-import subprocess
+import os
+from subprocess import Popen, PIPE
+import sys
+from tkinter import messagebox, filedialog
 
-from tkinter import messagebox
-from tkinter import filedialog
-
-wickedRootDirectory = "WICKED"
-wickedRootDirectorySelected = bool()
+installerDirectory = os.path.dirname(os.path.realpath(__file__))
+installerDirectorySelected: bool = False
 
 
 def Install():
-    global wickedRootDirectory
-    global wickedRootDirectorySelected
+    global installerDirectory
+    global installerDirectorySelected
 
-    if wickedRootDirectorySelected:
-        subprocess.run(
-            f"""sudo cp {wickedRootDirectory}/Editor/Linux/Installer/Distribution/wicked-engine.desktop /usr/share/applications/wicked-engine.desktop""",
-            shell=True,
-        )
-        subprocess.run(
-            f"sudo cp {wickedRootDirectory}/Editor/Linux/Installer/Distribution/wicked-engine.sh /usr/bin/wicked-engine",
-            shell=True,
-        )
-        subprocess.run(
-            f"sudo chmod +x {wickedRootDirectory}/Editor/Linux/Installer/Distribution/wicked-engine.sh",
-            shell=True,
-        )
-        subprocess.run(f"sudo chmod +x /usr/bin/wicked-engine", shell=True)
+    installCommands: str = [
+        f"sudo cp {installerDirectory}/Distribution/wicked-engine.desktop /usr/share/applications/wicked-engine.desktop",
+        f"sudo cp {installerDirectory}/Distribution/wicked-engine.sh /usr/bin/wicked-engine",
+        f"sudo chmod +x {installerDirectory}/Distribution/wicked-engine.sh",
+        f"sudo chmod +x /usr/bin/wicked-engine",
+    ]
 
-        print(":: Finished installing!")
+    if installerDirectorySelected:
+        for installCommand in installCommands:
+            subprocessTask = Popen(
+                installCommand,
+                shell=True,
+                stdout=PIPE,
+                stderr=PIPE,
+            )
+
+            if subprocessTask.returncode != 0:
+                subprocesOutput, subprocessError = subprocessTask.communicate()
+
+                print(subprocessTask.returncode, subprocesOutput, subprocessError)
+                processError = messagebox.showerror(
+                    title="Install Error", message=subprocessError
+                )
+                
+                break
+
+            elif subprocessTask.returncode == 0:
+                print(":: Finished installing!")
     else:
-        directoryWarning = Messagebox.ok(
-            "No Wicked Engine directory selected!", title="Install Error"
+        directoryWarning = messagebox.showerror(
+            title="Install Error", message="No Wicked Engine directory selected!"
         )
 
 
 def SelectDirectory():
-    global wickedRootDirectorySelected
+    global installerDirectorySelected
 
-    wickedRootDirectory = filedialog.askdirectory(
+    installerDirectory = filedialog.askdirectory(
         initialdir="../../../", title="Select Wicked Folder"
     )
 
-    wickedRootDirectorySelected = True
+    installerDirectorySelected = True
