@@ -28,6 +28,11 @@ def GetDistributionPackage(packageID: str):
                 case "TkInter":
                     packageID = "tk"
                     return packageID
+        case "Ubuntu":
+            match packageID:
+                case "TkInter":
+                    packageID = "python-tk"
+                    return packageID
 
 
 # Ask to install a Python dependency.
@@ -50,5 +55,6 @@ def RequestDependency(packageName: str):
                 print(
                     f":: Could not detect your Linux distribution.\n:: You'll have to manually install {packageName}"
                 )
+                sys.exit()
     else:
         sys.exit(0)
