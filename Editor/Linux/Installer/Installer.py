@@ -1,4 +1,5 @@
 import os
+import subprocess
 from subprocess import Popen, PIPE
 import sys
 from tkinter import messagebox, filedialog
@@ -23,22 +24,22 @@ def Install():
             subprocessTask = Popen(
                 installCommand,
                 shell=True,
-                stdout=PIPE,
-                stderr=PIPE,
+                stderr=PIPE
             )
 
-            if subprocessTask.returncode != 0:
-                subprocesOutput, subprocessError = subprocessTask.communicate()
 
-                print(subprocessTask.returncode, subprocesOutput, subprocessError)
-                processError = messagebox.showerror(
-                    title="Install Error", message=subprocessError
+            if subprocessTask.wait() != 0:
+                error = subprocessTask.communicate()
+                print(error)
+
+                errorMessage = messagebox.showerror(
+                    title="Install Error", message=error
                 )
                 
                 break
 
-            elif subprocessTask.returncode == 0:
-                print(":: Finished installing!")
+        if subprocessTask.returncode == 0:
+            print(":: Finished installing!")
     else:
         directoryWarning = messagebox.showerror(
             title="Install Error", message="No Wicked Engine directory selected!"
