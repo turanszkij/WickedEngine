@@ -21,12 +21,7 @@ def Install():
 
     if installerDirectorySelected:
         for installCommand in installCommands:
-            subprocessTask = Popen(
-                installCommand,
-                shell=True,
-                stderr=PIPE
-            )
-
+            subprocessTask = Popen(installCommand, shell=True, stderr=PIPE)
 
             if subprocessTask.wait() != 0:
                 error = subprocessTask.communicate()
@@ -35,7 +30,7 @@ def Install():
                 errorMessage = messagebox.showerror(
                     title="Install Error", message=error
                 )
-                
+
                 break
 
         if subprocessTask.returncode == 0:

@@ -5,6 +5,7 @@ try:
 except:
     print(":: \033[0;31mError\033[0m: Unable to find Tk Interface!")
     Dependencies.RequestDependency("TkInter")
+    from tkinter import *
 
 import Installer
 

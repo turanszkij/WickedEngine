@@ -17,14 +17,38 @@ def GetDistribution():
                 print(f"Detected {distribution}")
                 return distribution
 
+distro = GetDistribution()
+
+def GetDistributionPackage(packageID: str):
+    global distro
+
+    match distro:
+        case "Arch Linux":
+            match packageID:
+                case "TkInter":
+                    packageID = "tk"
+                    return packageID
+
 
 # Ask to install a Python dependency.
-def RequestDependency(package: str):
+def RequestDependency(packageName: str):
+    global distro
+
     loop: bool = True
-    answer = input(f":: Would you like to install \033[0;33m{package}\033[0m? [y/n]")
+    answer = input(
+        f":: Would you like to install \033[0;33m{packageName}\033[0m? [y/n]"
+    )
 
     if answer.lower() == "y":
-        if GetDistribution() == "Arch Linux":
-            subprocess.run("sudo pacman -S --noconfirm tk", shell=True)
+        match distro:
+            case "Arch Linux":
+                subprocess.run(
+                    f"sudo pacman -S --noconfirm {GetDistributionPackage(packageName)}",
+                    shell=True,
+                )
+            case _:
+                print(
+                    f":: Could not detect your Linux distribution.\n:: You'll have to manually install {packageName}"
+                )
     else:
         sys.exit(0)
