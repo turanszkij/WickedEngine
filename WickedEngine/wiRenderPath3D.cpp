@@ -912,6 +912,9 @@ namespace wi
 				wi::renderer::Postprocess_VolumetricClouds(
 					volumetriccloudResources,
 					cmd,
+					*camera,
+					camera_previous,
+					camera_reflection,
 					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
 					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 				);
@@ -1013,6 +1016,9 @@ namespace wi
 					wi::renderer::Postprocess_VolumetricClouds(
 						volumetriccloudResources_reflection,
 						cmd,
+						camera_reflection,
+						camera_reflection_previous,
+						camera_reflection,
 						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
 						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 					);

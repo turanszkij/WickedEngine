@@ -12758,12 +12758,29 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
 	CommandList cmd,
+	const CameraComponent& camera,
+	const CameraComponent& camera_previous,
+	const CameraComponent& camera_reflection,
 	const Texture* weatherMapFirst,
 	const Texture* weatherMapSecond
 )
 {
 	device->EventBegin("Postprocess_VolumetricClouds", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Volumetric Clouds", cmd);
+
+	// Disable Temporal AA jitter for clouds
+	if (GetTemporalAAEnabled())
+	{
+		CameraComponent camera_clouds = camera;
+		camera_clouds.jitter = XMFLOAT2(0, 0);
+		camera_clouds.UpdateCamera();
+
+		CameraComponent camera_previous_clouds = camera_previous;
+		camera_previous_clouds.jitter = XMFLOAT2(0, 0);
+		camera_previous_clouds.UpdateCamera();
+
+		wi::renderer::BindCameraCB(camera_clouds, camera_previous_clouds, camera_reflection, cmd);
+	}
 
 	BindCommonResources(cmd);
 
@@ -12901,6 +12918,12 @@ void Postprocess_VolumetricClouds(
 	}
 
 	res.frame++;
+
+	// Reenable jitter for other passes
+	if (GetTemporalAAEnabled())
+	{
+		BindCameraCB(camera, camera_previous, camera_reflection, cmd);
+	}
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

@@ -655,6 +655,9 @@ namespace wi::renderer
 	void Postprocess_VolumetricClouds(
 		const VolumetricCloudResources& res,
 		wi::graphics::CommandList cmd,
+		const wi::scene::CameraComponent& camera,
+		const wi::scene::CameraComponent& camera_previous,
+		const wi::scene::CameraComponent& camera_reflection,
 		const wi::graphics::Texture* weatherMapFirst = nullptr,
 		const wi::graphics::Texture* weatherMapSecond = nullptr
 	);

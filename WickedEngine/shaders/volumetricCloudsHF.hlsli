@@ -487,7 +487,7 @@ float SampleCloudDensity(Texture3D<float4> texture_shapeNoise, Texture3D<float4>
 		
         // Apply our curl noise to erode with tiny details.
 		float3 curlNoise = DecodeCurlNoise(texture_curlNoise.SampleLevel(sampler_linear_wrap, p.xz * parameters.layer.CurlScale * parameters.layer.TotalNoiseScale, 0).rgb);
-		highFrequencyPos += float3(curlNoise.r, curlNoise.b, curlNoise.g) * saturate((1.0 - heightFraction) * 500) * 250;
+		highFrequencyPos += float3(curlNoise.r, curlNoise.b, curlNoise.g) * saturate((1.0 - heightFraction) * parameters.layer.CurlNoiseHeightFraction) * parameters.layer.CurlNoiseModifier;
 
 		float3 highFrequencyNoises = texture_detailNoise.SampleLevel(sampler_linear_wrap, highFrequencyPos * parameters.layer.DetailScale * parameters.layer.TotalNoiseScale, lod).rgb;
 		
