@@ -332,8 +332,8 @@ namespace wi::terrain
 		weather.ambient = XMFLOAT3(0.4f, 0.4f, 0.4f);
 		weather.SetRealisticSky(true);
 		weather.SetVolumetricClouds(true);
-		weather.volumetricCloudParameters.CoverageAmount = 0.65f;
-		weather.volumetricCloudParameters.CoverageMinimum = 0.15f;
+		weather.volumetricCloudParameters.LayerFirst.CoverageAmount = 0.65f;
+		weather.volumetricCloudParameters.LayerFirst.CoverageMinimum = 0.15f;
 		weather.oceanParameters.waterHeight = -40;
 		weather.oceanParameters.wave_amplitude = 120;
 		weather.fogStart = 300;

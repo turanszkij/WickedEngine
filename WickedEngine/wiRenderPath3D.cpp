@@ -912,7 +912,8 @@ namespace wi
 				wi::renderer::Postprocess_VolumetricClouds(
 					volumetriccloudResources,
 					cmd,
-					scene->weather.volumetricCloudsWeatherMap.IsValid() ? &scene->weather.volumetricCloudsWeatherMap.GetTexture() : nullptr
+					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 				);
 			}
 
@@ -1012,7 +1013,8 @@ namespace wi
 					wi::renderer::Postprocess_VolumetricClouds(
 						volumetriccloudResources_reflection,
 						cmd,
-						scene->weather.volumetricCloudsWeatherMap.IsValid() ? &scene->weather.volumetricCloudsWeatherMap.GetTexture() : nullptr
+						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 					);
 				}
 

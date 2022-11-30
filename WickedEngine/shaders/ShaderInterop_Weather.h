@@ -90,15 +90,63 @@ struct AtmosphereParameters
 };
 
 
-struct VolumetricCloudParameters
+struct VolumetricCloudLayer
 {
-	float3 Albedo; // Cloud albedo is normally very close to 1
-	float CloudAmbientGroundMultiplier; // [0; 1] Amount of ambient light to reach the bottom of clouds
+	// Lighting
+	float3 Albedo; // Cloud albedo is normally very close to white
+	float padding0;
 
 	float3 ExtinctionCoefficient;
-	float BeerPowder;
+	float padding1;
 
+	// Modelling
+	float SkewAlongWindDirection;
+	float TotalNoiseScale;
+	float CurlScale;
+	float CurlNoiseHeightFraction;
+
+	float CurlNoiseModifier;
+	float DetailScale;
+	float DetailNoiseHeightFraction;
+	float DetailNoiseModifier;
+
+	float SkewAlongCoverageWindDirection;
+	float WeatherScale;
+	float CoverageAmount;
+	float CoverageMinimum;
+
+	float TypeAmount;
+	float TypeMinimum;
+	float RainAmount; // Rain clouds disabled by default.
+	float RainMinimum;
+
+	// Cloud types: 4 positions of a black, white, white, black gradient
+	float4 GradientSmall;
+	float4 GradientMedium;
+	float4 GradientLarge;
+
+	// amountTop, offsetTop, amountBot, offsetBot: Control with 'amount' the coverage scale along the current gradient height, and can be adjusted with 'offset'
+	float4 AnvilDeformationSmall;
+	float4 AnvilDeformationMedium;
+	float4 AnvilDeformationLarge;
+
+	// Animation
+	float WindSpeed;
+	float WindAngle;
+	float WindUpAmount;
+	float CoverageWindSpeed;
+
+	float CoverageWindAngle;
+	float3 padding2;
+};
+
+struct VolumetricCloudParameters
+{
+	float BeerPowder;
 	float BeerPowderPower;
+	float2 padding0;
+
+	float AmbientGroundMultiplier; // [0; 1] Amount of ambient light to reach the bottom of clouds
 	float PhaseG; // [-0.999; 0.999]
 	float PhaseG2; // [-0.999; 0.999]
 	float PhaseBlend; // [0; 1]
@@ -110,44 +158,14 @@ struct VolumetricCloudParameters
 
 	float HorizonBlendAmount;
 	float HorizonBlendPower;
-	float WeatherDensityAmount; // Rain clouds disabled by default.
 	float CloudStartHeight;
-
 	float CloudThickness;
-	float SkewAlongWindDirection;
-	float TotalNoiseScale;
-	float DetailScale;
 
-	float WeatherScale;
-	float CurlScale;
-	float DetailNoiseModifier;
-	float padding0;
+	VolumetricCloudLayer LayerFirst;
+	VolumetricCloudLayer LayerSecond;
 
-	float DetailNoiseHeightFraction;
-	float CurlNoiseModifier;
-	float CoverageAmount;
-	float CoverageMinimum;
-
-	float TypeAmount;
-	float TypeMinimum;
-	float AnvilAmount; // Anvil clouds disabled by default.
-	float AnvilOverhangHeight;
-
-	// Animation
 	float AnimationMultiplier;
-	float WindSpeed;
-	float WindAngle;
-	float WindUpAmount;
-
-	float2 padding1;
-	float CoverageWindSpeed;
-	float CoverageWindAngle;
-
-	// Cloud types
-	// 4 positions of a black, white, white, black gradient
-	float4 CloudGradientSmall;
-	float4 CloudGradientMedium;
-	float4 CloudGradientLarge;
+	float padding1;
 
 	// Performance
 	int MaxStepCount; // Maximum number of iterations. Higher gives better images but may be slow.
@@ -167,11 +185,9 @@ struct VolumetricCloudParameters
 	void init()
 	{
 		// Lighting
-		Albedo = float3(0.9f, 0.9f, 0.9f);
-		CloudAmbientGroundMultiplier = 0.75f;
-		ExtinctionCoefficient = float3(0.71f * 0.05f, 0.86f * 0.05f, 1.0f * 0.05f);
 		BeerPowder = 20.0f;
 		BeerPowderPower = 0.5f;
+		AmbientGroundMultiplier = 0.75f;
 		PhaseG = 0.5f; // [-0.999; 0.999]
 		PhaseG2 = -0.5f; // [-0.999; 0.999]
 		PhaseBlend = 0.2f; // [0; 1]
@@ -181,46 +197,101 @@ struct VolumetricCloudParameters
 		ShadowStepLength = 3000.0f;
 		HorizonBlendAmount = 0.0000125f;
 		HorizonBlendPower = 2.0f;
-		WeatherDensityAmount = 0.0f;
 
 		// Modelling
 		CloudStartHeight = 1500.0f;
-		CloudThickness = 4000.0f;
-		SkewAlongWindDirection = 700.0f;
+		CloudThickness = 8000.0f;
 
-		TotalNoiseScale = 0.0006f;
-		DetailScale = 2.0f;
-		WeatherScale = 0.000025f;
-		CurlScale = 0.3f;
+		// First
+		{
+			// Lighting
+			LayerFirst.Albedo = float3(0.9f, 0.9f, 0.9f);
+			LayerFirst.ExtinctionCoefficient = float3(0.71f * 0.05f, 0.86f * 0.05f, 1.0f * 0.05f);
 
-		DetailNoiseModifier = 0.2f;
-		DetailNoiseHeightFraction = 10.0f;
-		CurlNoiseModifier = 500.0f;
+			// Modelling
+			LayerFirst.SkewAlongWindDirection = 700.0f;
+			LayerFirst.TotalNoiseScale = 0.0006f;
+			LayerFirst.CurlScale = 0.3f;
+			LayerFirst.CurlNoiseHeightFraction = 500.0f;
+			LayerFirst.CurlNoiseModifier = 500.0f;
+			LayerFirst.DetailScale = 2.0f;
+			LayerFirst.DetailNoiseHeightFraction = 10.0f;
+			LayerFirst.DetailNoiseModifier = 0.2f;
+			LayerFirst.SkewAlongCoverageWindDirection = 2500.0f;
+			LayerFirst.WeatherScale = 0.000025f;
+			LayerFirst.CoverageAmount = 1.0f;
+			LayerFirst.CoverageMinimum = 0.0f;
+			LayerFirst.TypeAmount = 1.0f;
+			LayerFirst.TypeMinimum = 0.0f;
+			LayerFirst.RainAmount = 0.0f; // Rain clouds disabled by default.
+			LayerFirst.RainMinimum = 0.0f;
 
-		CoverageAmount = 1.0f;
-		CoverageMinimum = 0.0f;
-		TypeAmount = 1.0f;
-		TypeMinimum = 0.0f;
-		AnvilAmount = 0.0f;
-		AnvilOverhangHeight = 3.0f;
+			// Cloud types: 4 positions of a black, white, white, black gradient
+			LayerFirst.GradientSmall = float4(0.01f, 0.05f, 0.06f, 0.14f);
+			LayerFirst.GradientMedium = float4(0.01f, 0.05f, 0.2f, 0.3f);
+			LayerFirst.GradientLarge = float4(0.01f, 0.05f, 0.5f, 0.6f);
+
+			// amountTop, offsetTop, amountBot, offsetBot: Control with 'amount' the coverage scale along the current gradient height, and can be adjusted with 'offset'
+			LayerFirst.AnvilDeformationSmall = float4(0.0f, 0.0f, 0.0f, 0.0f);
+			LayerFirst.AnvilDeformationMedium = float4(20.0f, 0.1f, 20.0f, 0.07f);
+			LayerFirst.AnvilDeformationLarge = float4(10.0f, 0.1f, 8.0f, 0.1f);
+
+			// Animation
+			LayerFirst.WindSpeed = 15.9f;
+			LayerFirst.WindAngle = -0.39f;
+			LayerFirst.WindUpAmount = 0.5f;
+			LayerFirst.CoverageWindSpeed = 25.0f;
+			LayerFirst.CoverageWindAngle = 0.087f;
+		}
+
+		// Second
+		{
+			// Lighting
+			LayerSecond.Albedo = float3(0.9f, 0.9f, 0.9f);
+			LayerSecond.ExtinctionCoefficient = float3(0.71f * 0.005f, 0.86f * 0.005f, 1.0f * 0.005f);
+
+			// Modelling
+			LayerSecond.SkewAlongWindDirection = 400.0f;
+			LayerSecond.TotalNoiseScale = 0.0006f;
+			LayerSecond.CurlScale = 0.1f;
+			LayerSecond.CurlNoiseHeightFraction = 500.0f;
+			LayerSecond.CurlNoiseModifier = 250.0f;
+			LayerSecond.DetailScale = 2.0f;
+			LayerSecond.DetailNoiseHeightFraction = 0.0f;
+			LayerSecond.DetailNoiseModifier = 1.0f;
+			LayerSecond.SkewAlongCoverageWindDirection = 0.0f;
+			LayerSecond.WeatherScale = 0.000025f;
+			LayerSecond.CoverageAmount = 1.0f;
+			LayerSecond.CoverageMinimum = 0.0f;
+			LayerSecond.TypeAmount = 1.0f;
+			LayerSecond.TypeMinimum = 0.0f;
+			LayerSecond.RainAmount = 0.0f; // Rain clouds disabled by default.
+			LayerSecond.RainMinimum = 0.0f;
+
+			// Cloud types: 4 positions of a black, white, white, black gradient
+			LayerSecond.GradientSmall = float4(0.6f, 0.62f, 0.63f, 0.65f);
+			LayerSecond.GradientMedium = float4(0.6f, 0.625f, 0.675f, 0.7f);
+			LayerSecond.GradientLarge = float4(0.6f, 0.65f, 0.7f, 0.75f);
+
+			// amountTop, offsetTop, amountBot, offsetBot: Control with 'amount' the coverage scale along the current gradient height, and can be adjusted with 'offset'
+			LayerSecond.AnvilDeformationSmall = float4(0.0f, 0.0f, 0.0f, 0.0f);
+			LayerSecond.AnvilDeformationMedium = float4(0.0f, 0.0f, 0.0f, 0.0f);
+			LayerSecond.AnvilDeformationLarge = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+			// Animation
+			LayerSecond.WindSpeed = 10.0f;
+			LayerSecond.WindAngle = 1.0f;
+			LayerSecond.WindUpAmount = 0.1f;
+			LayerSecond.CoverageWindSpeed = 50.0f;
+			LayerSecond.CoverageWindAngle = 1.0f;
+		}
 
 		// Animation
 		AnimationMultiplier = 2.0f;
-		WindSpeed = 15.9f;
-		WindAngle = -0.39f;
-		WindUpAmount = 0.5f;
-		CoverageWindSpeed = 25.0f;
-		CoverageWindAngle = 0.087f;
-
-		// Cloud types
-		// 4 positions of a black, white, white, black gradient
-		CloudGradientSmall = float4(0.02f, 0.1f, 0.12f, 0.28f);
-		CloudGradientMedium = float4(0.02f, 0.1f, 0.39f, 0.59f);
-		CloudGradientLarge = float4(0.02f, 0.07f, 0.88f, 1.0f);
 
 		// Performance
 		MaxStepCount = 96;
-		MaxMarchingDistance = 30000.0f;
+		MaxMarchingDistance = 45000.0f;
 		InverseDistanceStepCount = 15000.0f;
 		RenderDistance = 70000.0f;
 		LODDistance = 25000.0f;

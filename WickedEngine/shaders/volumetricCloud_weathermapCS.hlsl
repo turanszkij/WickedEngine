@@ -2,7 +2,7 @@
 #include "volumetricCloudsHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-RWTexture2D<float4> output : register(u0);
+RWTexture2D<float4> outputFirst : register(u0);
 
 static const float texSize = 1024;
 
@@ -41,13 +41,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
     perlinNoise1 = pow(perlinNoise1, 1.00);
     worleyNoise1 = pow(worleyNoise1, 0.75);
     perlinNoise2 = pow(perlinNoise2, 2.00);
-    perlinNoise3 = pow(perlinNoise3, 3.00);
+    perlinNoise3 = pow(perlinNoise3, 0.75);
     perlinNoise4 = pow(perlinNoise4, 1.00);
     
     perlinNoise1 = saturate(perlinNoise1 * 1.2) * 0.4 + 0.1;
     worleyNoise1 = saturate(1.0 - worleyNoise1 * 2.0);
     perlinNoise2 = saturate(perlinNoise2) * 0.5;
-    perlinNoise3 = saturate(1.0 - perlinNoise3 * 3.0);
+	perlinNoise3 = saturate(perlinNoise3) - 0.05;
     perlinNoise4 = saturate(1.0 - perlinNoise4 * 1.5);
     perlinNoise4 = DilatePerlinWorley(worleyNoise1, perlinNoise4, coveragePerlinWorleyDifference);
 
@@ -56,5 +56,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	
 	perlinNoise1 = RemapClamped(perlinNoise1 * 2.0, 0.0, 1.0, 0.05, 1.0);
 	
-    output[DTid.xy] = float4(perlinNoise1, perlinNoise2, perlinNoise3, 1.0);
+	outputFirst[DTid.xy] = float4(perlinNoise1, perlinNoise2, perlinNoise3, 1.0);
 }

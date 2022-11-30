@@ -84,7 +84,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 			weather.oceanParameters.waterColor = args.color.toFloat4();
 			break;
 		case 4:
-			weather.volumetricCloudParameters.Albedo = args.color.toFloat3();
+			weather.volumetricCloudParameters.LayerFirst.Albedo = args.color.toFloat3();
 			break;
 		}
 		});
@@ -244,23 +244,41 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&volumetricCloudsShadowsCheckBox);
 
-	coverageAmountSlider.Create(0, 10, 1, 1000, "Coverage amount: ");
-	coverageAmountSlider.SetSize(XMFLOAT2(wid, hei));
-	coverageAmountSlider.SetPos(XMFLOAT2(x, y += step));
-	coverageAmountSlider.OnSlide([&](wi::gui::EventArgs args) {
+	coverageAmountFirstLayerSlider.Create(0, 10, 1, 1000, "Coverage amount first layer: ");
+	coverageAmountFirstLayerSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageAmountFirstLayerSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageAmountFirstLayerSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
-		weather.volumetricCloudParameters.CoverageAmount = args.fValue;
+		weather.volumetricCloudParameters.LayerFirst.CoverageAmount = args.fValue;
 		});
-	AddWidget(&coverageAmountSlider);
+	AddWidget(&coverageAmountFirstLayerSlider);
 
-	coverageMinimumSlider.Create(0, 1, 0, 1000, "Coverage minimum: ");
-	coverageMinimumSlider.SetSize(XMFLOAT2(wid, hei));
-	coverageMinimumSlider.SetPos(XMFLOAT2(x, y += step));
-	coverageMinimumSlider.OnSlide([&](wi::gui::EventArgs args) {
+	coverageMinimumFirstLayerSlider.Create(0, 1, 0, 1000, "Coverage minimum first layer: ");
+	coverageMinimumFirstLayerSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageMinimumFirstLayerSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageMinimumFirstLayerSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
-		weather.volumetricCloudParameters.CoverageMinimum = args.fValue;
+		weather.volumetricCloudParameters.LayerFirst.CoverageMinimum = args.fValue;
 		});
-	AddWidget(&coverageMinimumSlider);
+	AddWidget(&coverageMinimumFirstLayerSlider);
+
+	coverageAmountSecondLayerSlider.Create(0, 10, 1, 1000, "Coverage amount second layer: ");
+	coverageAmountSecondLayerSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageAmountSecondLayerSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageAmountSecondLayerSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.LayerSecond.CoverageAmount = args.fValue;
+		});
+	AddWidget(&coverageAmountSecondLayerSlider);
+
+	coverageMinimumSecondLayerSlider.Create(0, 1, 0, 1000, "Coverage minimum second layer: ");
+	coverageMinimumSecondLayerSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageMinimumSecondLayerSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageMinimumSecondLayerSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.LayerSecond.CoverageMinimum = args.fValue;
+		});
+	AddWidget(&coverageMinimumSecondLayerSlider);
 
 	skyButton.Create("Load Sky");
 	skyButton.SetTooltip("Load a skybox cubemap texture...");
@@ -329,14 +347,14 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&colorgradingButton);
 
-	volumetricCloudsWeatherMapButton.Create("Load Volumetric Clouds Weather Map");
-	volumetricCloudsWeatherMapButton.SetTooltip("Load a weather map for volumetric clouds. Red channel is coverage, green is type and blue is water density (rain).");
-	volumetricCloudsWeatherMapButton.SetSize(XMFLOAT2(mod_wid, hei));
-	volumetricCloudsWeatherMapButton.SetPos(XMFLOAT2(mod_x, y += step));
-	volumetricCloudsWeatherMapButton.OnClick([=](wi::gui::EventArgs args) {
+	volumetricCloudsWeatherMapFirstLayerButton.Create("Load Volumetric Clouds Weather Map First Layer");
+	volumetricCloudsWeatherMapFirstLayerButton.SetTooltip("Load a weather map for volumetric clouds. Red channel is coverage, green is type and blue is water density (rain).");
+	volumetricCloudsWeatherMapFirstLayerButton.SetSize(XMFLOAT2(mod_wid, hei));
+	volumetricCloudsWeatherMapFirstLayerButton.SetPos(XMFLOAT2(mod_x, y += step));
+	volumetricCloudsWeatherMapFirstLayerButton.OnClick([=](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 
-		if (!weather.volumetricCloudsWeatherMap.IsValid())
+		if (!weather.volumetricCloudsWeatherMapFirst.IsValid())
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
@@ -345,21 +363,53 @@ void WeatherWindow::Create(EditorComponent* _editor)
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
-					weather.volumetricCloudsWeatherMapName = fileName;
-					weather.volumetricCloudsWeatherMap = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
-					volumetricCloudsWeatherMapButton.SetText(wi::helper::GetFileNameFromPath(fileName));
+					weather.volumetricCloudsWeatherMapFirstName = fileName;
+					weather.volumetricCloudsWeatherMapFirst = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					volumetricCloudsWeatherMapFirstLayerButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 					});
 				});
 		}
 		else
 		{
-			weather.volumetricCloudsWeatherMap = {};
-			weather.volumetricCloudsWeatherMapName.clear();
-			volumetricCloudsWeatherMapButton.SetText("Load Volumetric Clouds Weather Map");
+			weather.volumetricCloudsWeatherMapFirst = {};
+			weather.volumetricCloudsWeatherMapFirstName.clear();
+			volumetricCloudsWeatherMapFirstLayerButton.SetText("Load Volumetric Clouds Weather Map First Layer");
 		}
 
 		});
-	AddWidget(&volumetricCloudsWeatherMapButton);
+	AddWidget(&volumetricCloudsWeatherMapFirstLayerButton);
+
+	volumetricCloudsWeatherMapSecondLayerButton.Create("Load Volumetric Clouds Weather Map Second Layer");
+	volumetricCloudsWeatherMapSecondLayerButton.SetTooltip("Load a weather map for volumetric clouds. Red channel is coverage, green is type and blue is water density (rain).");
+	volumetricCloudsWeatherMapSecondLayerButton.SetSize(XMFLOAT2(mod_wid, hei));
+	volumetricCloudsWeatherMapSecondLayerButton.SetPos(XMFLOAT2(mod_x, y += step));
+	volumetricCloudsWeatherMapSecondLayerButton.OnClick([=](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+
+		if (!weather.volumetricCloudsWeatherMapSecond.IsValid())
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					auto& weather = GetWeather();
+					weather.volumetricCloudsWeatherMapSecondName = fileName;
+					weather.volumetricCloudsWeatherMapSecond = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					volumetricCloudsWeatherMapSecondLayerButton.SetText(wi::helper::GetFileNameFromPath(fileName));
+					});
+				});
+		}
+		else
+		{
+			weather.volumetricCloudsWeatherMapSecond = {};
+			weather.volumetricCloudsWeatherMapSecondName.clear();
+			volumetricCloudsWeatherMapSecondLayerButton.SetText("Load Volumetric Clouds Weather Map Second Layer");
+		}
+
+		});
+	AddWidget(&volumetricCloudsWeatherMapSecondLayerButton);
 
 
 
@@ -688,9 +738,14 @@ void WeatherWindow::Update()
 			colorgradingButton.SetText(wi::helper::GetFileNameFromPath(weather.colorGradingMapName));
 		}
 
-		if (!weather.volumetricCloudsWeatherMapName.empty())
+		if (!weather.volumetricCloudsWeatherMapFirstName.empty())
 		{
-			volumetricCloudsWeatherMapButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapName));
+			volumetricCloudsWeatherMapFirstLayerButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapFirstName));
+		}
+
+		if (!weather.volumetricCloudsWeatherMapSecondName.empty())
+		{
+			volumetricCloudsWeatherMapSecondLayerButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapSecondName));
 		}
 
 		overrideFogColorCheckBox.SetCheck(weather.IsOverrideFogColor());
@@ -723,7 +778,7 @@ void WeatherWindow::Update()
 			colorPicker.SetPickColor(wi::Color::fromFloat4(weather.oceanParameters.waterColor));
 			break;
 		case 4:
-			colorPicker.SetPickColor(wi::Color::fromFloat3(weather.volumetricCloudParameters.Albedo));
+			colorPicker.SetPickColor(wi::Color::fromFloat3(weather.volumetricCloudParameters.LayerFirst.Albedo));
 			break;
 		}
 
@@ -741,8 +796,10 @@ void WeatherWindow::Update()
 
 		volumetricCloudsCheckBox.SetCheck(weather.IsVolumetricClouds());
 		volumetricCloudsShadowsCheckBox.SetCheck(weather.IsVolumetricCloudsShadows());
-		coverageAmountSlider.SetValue(weather.volumetricCloudParameters.CoverageAmount);
-		coverageMinimumSlider.SetValue(weather.volumetricCloudParameters.CoverageMinimum);
+		coverageAmountFirstLayerSlider.SetValue(weather.volumetricCloudParameters.LayerFirst.CoverageAmount);
+		coverageMinimumFirstLayerSlider.SetValue(weather.volumetricCloudParameters.LayerFirst.CoverageMinimum);
+		coverageAmountSecondLayerSlider.SetValue(weather.volumetricCloudParameters.LayerSecond.CoverageAmount);
+		coverageMinimumSecondLayerSlider.SetValue(weather.volumetricCloudParameters.LayerSecond.CoverageMinimum);
 	}
 	else
 	{
@@ -845,9 +902,12 @@ void WeatherWindow::ResizeLayout()
 
 	add_right(volumetricCloudsCheckBox);
 	add_right(volumetricCloudsShadowsCheckBox);
-	add(coverageAmountSlider);
-	add(coverageMinimumSlider);
-	add_fullwidth(volumetricCloudsWeatherMapButton);
+	add(coverageAmountFirstLayerSlider);
+	add(coverageMinimumFirstLayerSlider);
+	add(coverageAmountSecondLayerSlider);
+	add(coverageMinimumSecondLayerSlider);
+	add_fullwidth(volumetricCloudsWeatherMapFirstLayerButton);
+	add_fullwidth(volumetricCloudsWeatherMapSecondLayerButton);
 
 	y += jump;
 

@@ -1262,13 +1262,15 @@ namespace wi::scene
 
 		std::string skyMapName;
 		std::string colorGradingMapName;
-		std::string volumetricCloudsWeatherMapName;
+		std::string volumetricCloudsWeatherMapFirstName;
+		std::string volumetricCloudsWeatherMapSecondName;
 
 		// Non-serialized attributes:
 		uint32_t most_important_light_index = ~0u;
 		wi::Resource skyMap;
 		wi::Resource colorGradingMap;
-		wi::Resource volumetricCloudsWeatherMap;
+		wi::Resource volumetricCloudsWeatherMapFirst;
+		wi::Resource volumetricCloudsWeatherMapSecond;
 		XMFLOAT4 stars_rotation_quaternion = XMFLOAT4(0, 0, 0, 1);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);

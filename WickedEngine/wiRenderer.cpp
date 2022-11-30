@@ -4046,7 +4046,9 @@ void UpdateRenderDataAsync(
 
 	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
 	{
-		ComputeVolumetricCloudShadows(cmd, vis.scene->weather.volumetricCloudsWeatherMap.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMap.GetTexture() : nullptr);
+		const Texture* weatherMapFirst = vis.scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr;
+		const Texture* weatherMapSecond = vis.scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr;
+		ComputeVolumetricCloudShadows(cmd, weatherMapFirst, weatherMapSecond);
 	}
 
 	if (vis.scene->weather.IsRealisticSky())
@@ -6401,7 +6403,8 @@ void DrawDebugWorld(
 
 void ComputeVolumetricCloudShadows(
 	CommandList cmd,
-	const Texture* weatherMap)
+	const Texture* weatherMapFirst,
+	const Texture* weatherMapSecond)
 {
 	device->EventBegin("RenderVolumetricCloudShadows", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Volumetric Clouds Shadow", cmd);
@@ -6425,13 +6428,22 @@ void ComputeVolumetricCloudShadows(
 		device->BindResource(&texture_detailNoise, 1, cmd);
 		device->BindResource(&texture_curlNoise, 2, cmd);
 
-		if (weatherMap != nullptr)
+		if (weatherMapFirst != nullptr)
 		{
-			device->BindResource(weatherMap, 3, cmd);
+			device->BindResource(weatherMapFirst, 3, cmd);
 		}
 		else
 		{
 			device->BindResource(&texture_weatherMap, 3, cmd);
+		}
+
+		if (weatherMapSecond != nullptr)
+		{
+			device->BindResource(weatherMapSecond, 4, cmd);
+		}
+		else
+		{
+			device->BindResource(&texture_weatherMap, 4, cmd);
 		}
 
 		const GPUResource* uavs[] = {
@@ -6810,26 +6822,35 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				device->EventBegin("Volumetric Cloud Rendering Capture [MSAA]", cmd);
 				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE_MSAA], cmd);
-				device->BindResource(&vis.scene->envrenderingDepthBuffer_MSAA, 4, cmd);
+				device->BindResource(&vis.scene->envrenderingDepthBuffer_MSAA, 5, cmd);
 			}
 			else
 			{
 				device->EventBegin("Volumetric Cloud Rendering Capture", cmd);
 				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE], cmd);
-				device->BindResource(&vis.scene->envrenderingDepthBuffer, 4, cmd);
+				device->BindResource(&vis.scene->envrenderingDepthBuffer, 5, cmd);
 			}
 
 			device->BindResource(&texture_shapeNoise, 0, cmd);
 			device->BindResource(&texture_detailNoise, 1, cmd);
 			device->BindResource(&texture_curlNoise, 2, cmd);
 
-			if (vis.scene->weather.volumetricCloudsWeatherMap.IsValid())
+			if (vis.scene->weather.volumetricCloudsWeatherMapFirst.IsValid())
 			{
-				device->BindResource(&vis.scene->weather.volumetricCloudsWeatherMap.GetTexture(), 3, cmd);
+				device->BindResource(&vis.scene->weather.volumetricCloudsWeatherMapFirst.GetTexture(), 3, cmd);
 			}
 			else
 			{
 				device->BindResource(&texture_weatherMap, 3, cmd);
+			}
+
+			if (vis.scene->weather.volumetricCloudsWeatherMapSecond.IsValid())
+			{
+				device->BindResource(&vis.scene->weather.volumetricCloudsWeatherMapSecond.GetTexture(), 4, cmd);
+			}
+			else
+			{
+				device->BindResource(&texture_weatherMap, 4, cmd);
 			}
 
 			TextureDesc desc = vis.scene->envmapArray.GetDesc();
@@ -12737,7 +12758,8 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
 	CommandList cmd,
-	const Texture* weatherMap
+	const Texture* weatherMapFirst,
+	const Texture* weatherMapSecond
 )
 {
 	device->EventBegin("Postprocess_VolumetricClouds", cmd);
@@ -12766,13 +12788,22 @@ void Postprocess_VolumetricClouds(
 		device->BindResource(&texture_detailNoise, 1, cmd);
 		device->BindResource(&texture_curlNoise, 2, cmd);
 
-		if (weatherMap != nullptr)
+		if (weatherMapFirst != nullptr)
 		{
-			device->BindResource(weatherMap, 3, cmd);
+			device->BindResource(weatherMapFirst, 3, cmd);
 		}
 		else
 		{
 			device->BindResource(&texture_weatherMap, 3, cmd);
+		}
+
+		if (weatherMapSecond != nullptr)
+		{
+			device->BindResource(weatherMapSecond, 4, cmd);
+		}
+		else
+		{
+			device->BindResource(&texture_weatherMap, 4, cmd);
 		}
 
 		const GPUResource* uavs[] = {

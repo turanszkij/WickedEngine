@@ -209,7 +209,8 @@ namespace wi::renderer
 	// Compute volumetric cloud shadow data
 	void ComputeVolumetricCloudShadows(
 		wi::graphics::CommandList cmd,
-		const wi::graphics::Texture* weatherMap = nullptr
+		const wi::graphics::Texture* weatherMapFirst = nullptr,
+		const wi::graphics::Texture* weatherMapSecond = nullptr
 	);
 	// Compute essential atmospheric scattering textures for skybox, fog and clouds
 	void ComputeAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
@@ -654,7 +655,8 @@ namespace wi::renderer
 	void Postprocess_VolumetricClouds(
 		const VolumetricCloudResources& res,
 		wi::graphics::CommandList cmd,
-		const wi::graphics::Texture* weatherMap = nullptr
+		const wi::graphics::Texture* weatherMapFirst = nullptr,
+		const wi::graphics::Texture* weatherMapSecond = nullptr
 	);
 	void Postprocess_FXAA(
 		const wi::graphics::Texture& input,
