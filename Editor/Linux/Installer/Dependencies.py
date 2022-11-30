@@ -2,7 +2,7 @@ import subprocess
 import sys
 
 # Global variable for all supported Linux distributions
-distroList: str = ["Arch Linux", "Ubuntu"]
+distroList: str = ["Arch Linux", "Ubuntu", "Fedora Linux"]
 
 # Get the Linux distribution name from `/etc/os-release`.
 def GetDistribution():
@@ -31,6 +31,10 @@ def InstallDistributionPackage(packageID: str):
             match packageID:
                 case "TkInter":
                     command = "sudo apt-get install python3-tk" 
+        case "Fedora Linux":
+            match packageID:
+                case "TkInter":
+                    command = "sudo dnf install python3-tkinter" 
         case _:
                 print(
                     f":: Could not detect your Linux distribution.\n:: You'll have to manually install {packageID}"
