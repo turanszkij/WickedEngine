@@ -165,7 +165,7 @@ struct VolumetricCloudParameters
 	VolumetricCloudLayer LayerSecond;
 
 	float AnimationMultiplier;
-	float padding1;
+	float3 padding1;
 
 	// Performance
 	int MaxStepCount; // Maximum number of iterations. Higher gives better images but may be slow.
@@ -178,9 +178,9 @@ struct VolumetricCloudParameters
 	float BigStepMarch; // How long inital rays should be until they hit something. Lower values may give a better image but may be slower.
 	float TransmittanceThreshold; // Default: 0.005. If the clouds transmittance has reached it's desired opacity, there's no need to keep raymarching for performance.
 
-	float2 padding2;
 	float ShadowSampleCount;
 	float GroundContributionSampleCount;
+	float2 padding2;
 
 	void init()
 	{
