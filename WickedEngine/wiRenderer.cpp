@@ -6476,43 +6476,50 @@ void ComputeVolumetricCloudShadows(
 		device->EventEnd(cmd);
 	}
 
-	// Cloud shadow filter pass:
+	auto CloudShadowFilter = [&](PostProcess& postprocess, CommandList cmd)
 	{
-		device->EventBegin("Volumetric Cloud Filter Shadow", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_FILTER], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		device->BindResource(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], 0, cmd);
-
-		const GPUResource* uavs[] = {
-			&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW],
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
+		// Cloud shadow filter pass:
 		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout, ResourceState::UNORDERED_ACCESS),
+			device->EventBegin("Volumetric Cloud Filter Shadow", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_FILTER], cmd);
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->BindResource(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], 0, cmd);
+
+			const GPUResource* uavs[] = {
+				&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW],
 			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout, ResourceState::UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			device->Dispatch(
+				(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+					GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			device->EventEnd(cmd);
 		}
+	};
 
-		device->Dispatch(
-			(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->EventEnd(cmd);
-	}
+	// We filter twice for to avoid rapid changing pixels and to mimic penumbra
+	CloudShadowFilter(postprocess, cmd);
+	CloudShadowFilter(postprocess, cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

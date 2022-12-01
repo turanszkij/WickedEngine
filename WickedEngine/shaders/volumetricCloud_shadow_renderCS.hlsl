@@ -67,10 +67,9 @@ void VolumetricShadowMap(out float3 result, in AtmosphereParameters atmosphere, 
 
 	const float averageGreyExtinction = dot(extinctionAccumulation / max(extinctionAccumulationCount, 1.0f), 1.0f / 3.0f);
 	const float maxGreyOpticalDepth = dot(maxOpticalDepth, 1.0f / 3.0f);
-
+	
 	// Values can get to big for the assigned texture, so we pack this into kilometer type
-	const bool miss = nearDepth == 0.0;
-	const float frontDepth = miss ? tMax * M_TO_SKY_UNIT : (tMin + nearDepth) * M_TO_SKY_UNIT;
+	const float frontDepth = (tMin + nearDepth) * M_TO_SKY_UNIT;
 
 	result = float3(frontDepth, averageGreyExtinction, maxGreyOpticalDepth);
 }
