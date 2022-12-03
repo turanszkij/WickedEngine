@@ -713,6 +713,7 @@ namespace wi
 		camera_reflection.texture_ao_index = -1;
 		camera_reflection.texture_ssr_index = -1;
 		camera_reflection.texture_rtshadow_index = -1;
+		camera_reflection.texture_rtdiffuse_index = -1;
 		camera_reflection.texture_surfelgi_index = -1;
 	}
 
@@ -804,10 +805,6 @@ namespace wi
 			wi::renderer::DRAWSCENE_HAIRPARTICLE |
 			wi::renderer::DRAWSCENE_TESSELLATION |
 			wi::renderer::DRAWSCENE_OCCLUSIONCULLING
-			;
-		static const uint32_t drawscene_flags_reflections =
-			wi::renderer::DRAWSCENE_OPAQUE |
-			wi::renderer::DRAWSCENE_IMPOSTOR
 			;
 
 		// Main camera depth prepass + occlusion culling:
@@ -1029,7 +1026,7 @@ namespace wi
 
 				device->RenderPassBegin(&renderpass_reflection_depthprepass, cmd);
 
-				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_PREPASS, cmd, drawscene_flags_reflections);
+				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_PREPASS, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR);
 
 				device->RenderPassEnd(cmd);
 
@@ -1045,9 +1042,9 @@ namespace wi
 				wi::profiler::EndRange(range); // Planar Reflections
 				device->EventEnd(cmd);
 
-				});
+			});
 
-			// Planar reflections opaque color pass:
+			// Planar reflections color pass:
 			cmd = device->BeginCommandList();
 			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
 
@@ -1077,7 +1074,8 @@ namespace wi
 
 				device->RenderPassBegin(&renderpass_reflection, cmd);
 
-				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, drawscene_flags_reflections);
+				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR);
+				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_TRANSPARENT); // separate renderscene, to be drawn after opaque and transparent sort order
 				wi::renderer::DrawSky(*scene, cmd);
 
 				// Blend the volumetric clouds on top:
@@ -1095,7 +1093,7 @@ namespace wi
 
 				wi::profiler::EndRange(range); // Planar Reflections
 				device->EventEnd(cmd);
-				});
+			});
 		}
 
 		// Main camera opaque color pass:
@@ -2080,15 +2078,15 @@ namespace wi
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			desc.format = Format::R11G11B10_FLOAT;
-			desc.width = internalResolution.x / 4;
-			desc.height = internalResolution.y / 4;
+			desc.width = internalResolution.x / 2;
+			desc.height = internalResolution.y / 2;
 			device->CreateTexture(&desc, nullptr, &rtReflection);
 			device->SetName(&rtReflection, "rtReflection");
 
 			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 			desc.format = Format::D32_FLOAT;
-			desc.width = internalResolution.x / 4;
-			desc.height = internalResolution.y / 4;
+			desc.width = internalResolution.x / 2;
+			desc.height = internalResolution.y / 2;
 			desc.layout = ResourceState::DEPTHSTENCIL_READONLY;
 			device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection);
 			device->SetName(&depthBuffer_Reflection, "depthBuffer_Reflection");
