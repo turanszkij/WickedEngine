@@ -395,7 +395,7 @@ Character = {
 				diff_right = vector.Subtract(collPos_right, pos_right).GetY()
 			end
 			local diff = diff_left
-			if collPos_left.GetY() > collPos_right.GetY() then
+			if collPos_left.GetY() > collPos_right.GetY() + 0.01 then
 				diff = diff_right
 				if collEntity_left ~= INVALID_ENTITY then
 					ik_foot = self.left_foot
