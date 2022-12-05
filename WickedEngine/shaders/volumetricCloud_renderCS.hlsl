@@ -502,14 +502,14 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		else
 		{
 			cloudColor = float4(0.0, 0.0, 0.0, 0.0);
-			cloudDepth = HALF_FLT_MAX;
+			cloudDepth = FLT_MAX;
 			return;
 		}
 
 		if (tMax <= tMin || tMin > GetWeather().volumetric_clouds.RenderDistance)
 		{
 			cloudColor = float4(0.0, 0.0, 0.0, 0.0);
-			cloudDepth = HALF_FLT_MAX;
+			cloudDepth = FLT_MAX;
 			return;
 		}
 		
@@ -519,8 +519,8 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		// Exclude skybox to allow infinite distance
 		tMax = depth == 0.0 ? tMax : min(tMax, tToDepthBuffer);
 
-		// Set infinite distance value to half precision for reprojection, which is rendertarget precision
-		tToDepthBuffer = depth == 0.0 ? HALF_FLT_MAX : tToDepthBuffer;
+		// Set infinite distance value to float precision for reprojection, which is rendertarget precision
+		tToDepthBuffer = depth == 0.0 ? FLT_MAX : tToDepthBuffer;
 		
 		const float marchingDistance = min(GetWeather().volumetric_clouds.MaxMarchingDistance, tMax - tMin);
 		tMax = tMin + marchingDistance;

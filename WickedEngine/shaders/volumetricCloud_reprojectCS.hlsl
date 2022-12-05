@@ -116,9 +116,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float3 depthWorldPosition = reconstruct_position(uv, depth);
 		float tToDepthBuffer = length(depthWorldPosition - GetCamera().position);
 
-		// Accommodate so when we compare tToDepthBuffer (float precision) with cloud_depth_current (half float precision) we don't overshoot and get incorrect testing
-		// No issues has been noticed so far
-		tToDepthBuffer = depth == 0.0 ? HALF_FLT_MAX : tToDepthBuffer;
+		// Fow now we use float values instead of half-float, we need to convert the cloud system to use kilometer unit and we can revert to half-float values
+		tToDepthBuffer = depth == 0.0 ? FLT_MAX : tToDepthBuffer;
 
 		if (shouldUpdatePixel)
 		{
