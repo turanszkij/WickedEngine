@@ -175,15 +175,25 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 		if (node.skin >= 0)
 		{
 			// This node is an armature:
-			MeshComponent& mesh = scene.meshes[node.mesh];
-			assert(!mesh.vertex_boneindices.empty());
 			entity = scene.armatures.GetEntity(node.skin);
-			mesh.armatureID = entity;
+			MeshComponent* mesh = &scene.meshes[node.mesh];
+			Entity meshEntity = scene.meshes.GetEntity(node.mesh);
+			assert(!mesh->vertex_boneindices.empty());
+			if (mesh->armatureID != INVALID_ENTITY)
+			{
+				// Reuse mesh with different skin is not possible currently, so we create a new one:
+				meshEntity = entity;
+				MeshComponent& newMesh = scene.meshes.Create(meshEntity);
+				newMesh = scene.meshes[node.mesh];
+				newMesh.CreateRenderData();
+				mesh = &newMesh;
+			}
+			mesh->armatureID = entity;
 
 			// The object component will use an identity transform but will be parented to the armature:
 			Entity objectEntity = scene.Entity_CreateObject(node.name);
 			ObjectComponent& object = *scene.objects.GetComponent(objectEntity);
-			object.meshID = scene.meshes.GetEntity(node.mesh);
+			object.meshID = meshEntity;
 			scene.Component_Attach(objectEntity, entity, true);
 		}
 		else
@@ -961,22 +971,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 		for (auto& prim : x.primitives)
 		{
-			assert(prim.indices >= 0);
-
-			// Fill indices:
-			const tinygltf::Accessor& accessor = state.gltfModel.accessors[prim.indices];
-			const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
-			const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
-
-			int stride = accessor.ByteStride(bufferView);
-			size_t indexCount = accessor.count;
-			size_t indexOffset = mesh.indices.size();
-			mesh.indices.resize(indexOffset + indexCount);
-
 			mesh.subsets.push_back(MeshComponent::MeshSubset());
-			mesh.subsets.back().indexOffset = (uint32_t)indexOffset;
-			mesh.subsets.back().indexCount = (uint32_t)indexCount;
-
 			if (scene.materials.GetCount() == 0)
 			{
 				// Create a material last minute if there was none
@@ -984,46 +979,59 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 			mesh.subsets.back().materialID = scene.materials.GetEntity(std::max(0, prim.material));
 			MaterialComponent* material = scene.materials.GetComponent(mesh.subsets.back().materialID);
-
 			uint32_t vertexOffset = (uint32_t)mesh.vertex_positions.size();
 
-			const uint8_t* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+			const size_t index_remap[] = {
+				0,2,1
+			};
 
-			int index_remap[3];
-			index_remap[0] = 0;
-			index_remap[1] = 2;
-			index_remap[2] = 1;
+			if (prim.indices >= 0)
+			{
+				// Fill indices:
+				const tinygltf::Accessor& accessor = state.gltfModel.accessors[prim.indices];
+				const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+				const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
 
-			if (stride == 1)
-			{
-				for (size_t i = 0; i < indexCount; i += 3)
+				int stride = accessor.ByteStride(bufferView);
+				size_t indexCount = accessor.count;
+				size_t indexOffset = mesh.indices.size();
+				mesh.indices.resize(indexOffset + indexCount);
+				mesh.subsets.back().indexOffset = (uint32_t)indexOffset;
+				mesh.subsets.back().indexCount = (uint32_t)indexCount;
+
+				const uint8_t* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+				if (stride == 1)
 				{
-					mesh.indices[indexOffset + i + 0] = vertexOffset + data[i + index_remap[0]];
-					mesh.indices[indexOffset + i + 1] = vertexOffset + data[i + index_remap[1]];
-					mesh.indices[indexOffset + i + 2] = vertexOffset + data[i + index_remap[2]];
+					for (size_t i = 0; i < indexCount; i += 3)
+					{
+						mesh.indices[indexOffset + i + 0] = vertexOffset + data[i + index_remap[0]];
+						mesh.indices[indexOffset + i + 1] = vertexOffset + data[i + index_remap[1]];
+						mesh.indices[indexOffset + i + 2] = vertexOffset + data[i + index_remap[2]];
+					}
 				}
-			}
-			else if (stride == 2)
-			{
-				for (size_t i = 0; i < indexCount; i += 3)
+				else if (stride == 2)
 				{
-					mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint16_t*)data)[i + index_remap[0]];
-					mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint16_t*)data)[i + index_remap[1]];
-					mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint16_t*)data)[i + index_remap[2]];
+					for (size_t i = 0; i < indexCount; i += 3)
+					{
+						mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint16_t*)data)[i + index_remap[0]];
+						mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint16_t*)data)[i + index_remap[1]];
+						mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint16_t*)data)[i + index_remap[2]];
+					}
 				}
-			}
-			else if (stride == 4)
-			{
-				for (size_t i = 0; i < indexCount; i += 3)
+				else if (stride == 4)
 				{
-					mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint32_t*)data)[i + index_remap[0]];
-					mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint32_t*)data)[i + index_remap[1]];
-					mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint32_t*)data)[i + index_remap[2]];
+					for (size_t i = 0; i < indexCount; i += 3)
+					{
+						mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint32_t*)data)[i + index_remap[0]];
+						mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint32_t*)data)[i + index_remap[1]];
+						mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint32_t*)data)[i + index_remap[2]];
+					}
 				}
-			}
-			else
-			{
-				assert(0 && "unsupported index stride!");
+				else
+				{
+					assert(0 && "unsupported index stride!");
+				}
 			}
 
 			for (auto& attr : prim.attributes)
@@ -1037,6 +1045,22 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 				int stride = accessor.ByteStride(bufferView);
 				size_t vertexCount = accessor.count;
+
+				if (mesh.subsets.back().indexCount == 0)
+				{
+					// Autogen indices:
+					//	Note: this is not common, so it is simpler to create a dummy index buffer here than rewrite engine to support this case
+					size_t indexOffset = mesh.indices.size();
+					mesh.indices.resize(indexOffset + vertexCount);
+					for (size_t vi = 0; vi < vertexCount; vi += 3)
+					{
+						mesh.indices[indexOffset + vi + 0] = uint32_t(vertexOffset + vi + index_remap[0]);
+						mesh.indices[indexOffset + vi + 1] = uint32_t(vertexOffset + vi + index_remap[1]);
+						mesh.indices[indexOffset + vi + 2] = uint32_t(vertexOffset + vi + index_remap[2]);
+					}
+					mesh.subsets.back().indexOffset = (uint32_t)indexOffset;
+					mesh.subsets.back().indexCount = (uint32_t)vertexCount;
+				}
 
 				const uint8_t* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
@@ -1525,6 +1549,12 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		for (size_t i = 0; i < x.weights.size(); i++)
 		{
 			mesh.morph_targets[i].weight = static_cast<float_t>(x.weights[i]);
+		}
+
+		if (mesh.vertex_normals.empty())
+		{
+			mesh.vertex_normals.resize(mesh.vertex_positions.size());
+			mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
 		}
 
 		mesh.CreateRenderData();
