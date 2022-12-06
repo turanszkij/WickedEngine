@@ -713,7 +713,7 @@ bool LoadShader(
 
 			if (!output.error_message.empty())
 			{
-				wi::backlog::post(output.error_message);
+				wi::backlog::post(output.error_message, wi::backlog::LogLevel::Warning);
 			}
 			wi::backlog::post("shader compiled: " + shaderbinaryfilename);
 			return device->CreateShader(stage, output.shaderdata, output.shadersize, &shader);

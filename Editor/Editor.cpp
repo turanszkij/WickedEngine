@@ -44,6 +44,8 @@ void Editor::Initialize()
 	//infoDisplay.heap_allocation_counter = true;
 	//infoDisplay.vram_usage = true;
 
+	wi::backlog::setFontColor(wi::Color(130, 210, 220, 255));
+
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
 	loader.Load();
@@ -52,7 +54,7 @@ void Editor::Initialize()
 
 	loader.addLoadingComponent(&renderComponent, this, 0.2f);
 
-	ActivatePath(&loader, 0.2f);
+	ActivatePath(&loader);
 
 }
 
