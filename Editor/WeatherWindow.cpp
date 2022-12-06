@@ -743,6 +743,24 @@ void WeatherWindow::Update()
 		volumetricCloudsShadowsCheckBox.SetCheck(weather.IsVolumetricCloudsShadows());
 		coverageAmountSlider.SetValue(weather.volumetricCloudParameters.CoverageAmount);
 		coverageMinimumSlider.SetValue(weather.volumetricCloudParameters.CoverageMinimum);
+
+		if (weather.skyMap.IsValid())
+		{
+			skyButton.SetText(wi::helper::GetFileNameFromPath(weather.skyMapName));
+		}
+		else
+		{
+			skyButton.SetText("Load Sky");
+		}
+
+		if (weather.colorGradingMap.IsValid())
+		{
+			skyButton.SetText(wi::helper::GetFileNameFromPath(weather.colorGradingMapName));
+		}
+		else
+		{
+			colorgradingButton.SetText("Load Color Grading LUT");
+		}
 	}
 	else
 	{
@@ -750,6 +768,8 @@ void WeatherWindow::Update()
 		scene.weather.ambient = XMFLOAT3(0.5f, 0.5f, 0.5f);
 		scene.weather.zenith = default_sky_zenith;
 		scene.weather.horizon = default_sky_horizon;
+		scene.weather.fogStart = std::numeric_limits<float>::max();
+		scene.weather.fogEnd = std::numeric_limits<float>::max();
 	}
 }
 
