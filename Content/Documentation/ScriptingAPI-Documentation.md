@@ -671,7 +671,7 @@ Describes an orientation in 3D space.
 - FOV : float
 - NearPlane : float
 - FarPlane : float
-- FocalDistance : float
+- FocalLength : float
 - ApertureSize : float
 - ApertureShape : float
 
@@ -685,8 +685,8 @@ Describes an orientation in 3D space.
 - SetNearPlane(float value)	-- Sets the near plane of the camera, which specifies the rendering cut off near the viewer. Must be a value greater than zero 
 - GetFarPlane() : float result
 - SetFarPlane(float value)	-- Sets the far plane (view distance) of the camera
-- GetFocalDistance() : float result
-- SetFocalDistance(float value)	-- Sets the focal distance (focus distance) of the camera. This is used by depth of field.
+- GetFocalLength() : float result
+- SetFocalLength(float value)	-- Sets the focal distance (focus distance) of the camera. This is used by depth of field.
 - GetApertureSize() : float result
 - SetApertureSize(float value)	-- Sets the aperture size of the camera. Larger values will make the depth of field effect stronger.
 - GetApertureShape() : float result
