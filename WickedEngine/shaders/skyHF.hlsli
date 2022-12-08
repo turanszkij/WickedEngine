@@ -125,5 +125,15 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
     return sky;
 }
 
+float3 GetStaticSkyColor(in float3 V)
+{
+	if (GetFrame().options & OPTION_BIT_STATIC_SKY_SPHEREMAP)
+	{
+		float2 uv = (float2(atan2(V.z, V.x) / PI, -V.y) + 1.0) * 0.5;
+		return bindless_textures[GetScene().globalenvmap].SampleLevel(sampler_linear_clamp, uv, 0).rgb;
+	}
+	return bindless_cubemaps[GetScene().globalenvmap].SampleLevel(sampler_linear_clamp, V, 0).rgb;
+}
+
 
 #endif // WI_SKY_HF

@@ -273,8 +273,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = "Cubemap texture";
-			params.extensions.push_back("dds");
+			params.description = "Image file (cube or spherical map)";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();

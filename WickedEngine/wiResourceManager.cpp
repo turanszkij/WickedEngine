@@ -132,6 +132,7 @@ namespace wi
 			{"DDS", DataType::IMAGE},
 			{"TGA", DataType::IMAGE},
 			{"QOI", DataType::IMAGE},
+			{"HDR", DataType::IMAGE},
 			{"WAV", DataType::SOUND},
 			{"OGG", DataType::SOUND},
 			{"LUA", DataType::SCRIPT},
@@ -566,6 +567,8 @@ namespace wi
 						case tinyddsloader::DDSFile::DXGIFormat::BC4_SNorm: desc.format = Format::BC4_SNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC5_UNorm: desc.format = Format::BC5_UNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC5_SNorm: desc.format = Format::BC5_SNORM; break;
+						case tinyddsloader::DDSFile::DXGIFormat::BC6H_SF16: desc.format = Format::BC6H_SF16; break;
+						case tinyddsloader::DDSFile::DXGIFormat::BC6H_UF16: desc.format = Format::BC6H_UF16; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm: desc.format = Format::BC7_UNORM; break;
 						case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm_SRGB: desc.format = Format::BC7_UNORM_SRGB; break;
 						default:
@@ -633,6 +636,41 @@ namespace wi
 					}
 					else assert(0); // failed to load DDS
 
+				}
+				else if(!ext.compare("HDR"))
+				{
+					int height, width, channels; // stb_image
+					float* data = stbi_loadf_from_memory(filedata, (int)filesize, &width, &height, &channels, 0);
+
+					if (data != nullptr)
+					{
+						TextureDesc desc;
+						desc.width = (uint32_t)width;
+						desc.height = (uint32_t)height;
+						switch (channels)
+						{
+						default:
+						case 4:
+							desc.format = Format::R32G32B32A32_FLOAT;
+							break;
+						case 3:
+							desc.format = Format::R32G32B32_FLOAT;
+							break;
+						case 2:
+							desc.format = Format::R32G32_FLOAT;
+							break;
+						case 1:
+							desc.format = Format::R32_FLOAT;
+							break;
+						}
+						desc.bind_flags = BindFlag::SHADER_RESOURCE;
+						desc.mip_levels = 1;
+						SubresourceData InitData;
+						InitData.data_ptr = data;
+						InitData.row_pitch = width * GetFormatStride(desc.format);
+						success = device->CreateTexture(&desc, &InitData, &resource->texture);
+						device->SetName(&resource->texture, name.c_str());
+					}
 				}
 				else
 				{
