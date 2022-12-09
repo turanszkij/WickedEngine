@@ -23,4 +23,5 @@ public:
 	wi::gui::ComboBox submixComboBox;
 
 	void ResizeLayout() override;
+	void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 };

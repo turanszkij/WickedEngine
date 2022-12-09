@@ -461,6 +461,30 @@ namespace wi::audio
 		}
 	}
 
+	SampleInfo GetSampleInfo(const Sound* sound)
+	{
+		SampleInfo info = {};
+		if (sound != nullptr && sound->IsValid())
+		{
+			auto soundinternal = to_internal(sound);
+			info.samples = (const short*)soundinternal->audioData.data();
+			info.sample_count = soundinternal->audioData.size() / sizeof(short);
+			info.sample_rate = soundinternal->wfx.nSamplesPerSec;
+		}
+		return info;
+	}
+	uint64_t GetTotalSamplesPlayed(const SoundInstance* instance)
+	{
+		if (instance != nullptr && instance->IsValid())
+		{
+			auto instanceinternal = to_internal(instance);
+			XAUDIO2_VOICE_STATE state = {};
+			instanceinternal->sourceVoice->GetState(&state, 0);
+			return state.SamplesPlayed;
+		}
+		return 0ull;
+	}
+
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume)
 	{
 		HRESULT hr = audio_internal->submixVoices[type]->SetVolume(volume);
@@ -953,6 +977,30 @@ namespace wi::audio
 			uint32_t res = FAudioSourceVoice_ExitLoop(instanceinternal->sourceVoice, FAUDIO_COMMIT_NOW);
 			assert(res == 0);
 		}
+	}
+
+	SampleInfo GetSampleInfo(const Sound* sound)
+	{
+		SampleInfo info = {};
+		if (sound != nullptr && sound->IsValid())
+		{
+			auto soundinternal = to_internal(sound);
+			info.samples = (const short*)soundinternal->audioData.data();
+			info.sample_count = soundinternal->audioData.size() / sizeof(short);
+			info.sample_rate = soundinternal->wfx.nSamplesPerSec;
+		}
+		return info;
+	}
+	uint64_t GetTotalSamplesPlayed(const SoundInstance* instance)
+	{
+		if (instance != nullptr && instance->IsValid())
+		{
+			auto instanceinternal = to_internal(instance);
+			FAudioVoiceState state = {};
+			FAudioSourceVoice_GetState(instanceinternal->sourceVoice, &state);
+			return state.SamplesPlayed;
+		}
+		return 0ull;
 	}
 
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume) {

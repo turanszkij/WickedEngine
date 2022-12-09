@@ -7,11 +7,33 @@ using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
 
+namespace SoundWindow_Internal
+{
+	PipelineState pso_waveline;
+
+	void LoadShaders()
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		PipelineStateDesc desc;
+		desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+		desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+		desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+		desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEFAULT);
+		desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
+		desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
+		desc.pt = PrimitiveTopology::LINESTRIP;
+		bool success = device->CreatePipelineState(&desc, &pso_waveline);
+		assert(success);
+	}
+}
+using namespace SoundWindow_Internal;
+
 void SoundWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_SOUND " Sound", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(440, 200));
+	SetSize(XMFLOAT2(440, 280));
 
 	closeButton.SetTooltip("Delete SoundComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -208,6 +230,95 @@ void SoundWindow::Create(EditorComponent* _editor)
 	SetEntity(INVALID_ENTITY);
 }
 
+void SoundWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
+{
+	Window::Render(canvas, cmd);
+
+	if (!IsVisible() || IsCollapsed())
+		return;
+
+	GraphicsDevice* device = wi::graphics::GetDevice();
+
+	static bool shaders_loaded = false;
+	if (!shaders_loaded)
+	{
+		shaders_loaded = true;
+		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { SoundWindow_Internal::LoadShaders(); });
+		SoundWindow_Internal::LoadShaders();
+	}
+
+	ApplyScissor(canvas, scissorRect, cmd);
+
+	struct Vertex
+	{
+		XMFLOAT4 position;
+		XMFLOAT4 color;
+	};
+	const uint32_t vertexCount = 256;
+	GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
+
+	Scene& scene = editor->GetCurrentScene();
+	SoundComponent* sound = scene.sounds.GetComponent(entity);
+	if (sound == nullptr || !sound->soundResource.IsValid())
+	{
+		// Vertices for straight line:
+		for (uint32_t i = 0; i < vertexCount; ++i)
+		{
+			Vertex vert;
+			vert.position = XMFLOAT4(float(i) / vertexCount, 0, 0, 1);
+			vert.color = XMFLOAT4(1, 1, 1, 1);
+			std::memcpy((Vertex*)allocation.data + i, &vert, sizeof(vert));
+		}
+	}
+	else
+	{
+		// Vertices for [-1, 1] second range of current sound sample:
+		wi::audio::SampleInfo info = wi::audio::GetSampleInfo(&sound->soundResource.GetSound());
+		uint32_t step = uint32_t(info.sample_rate * 2) / vertexCount;
+		uint64_t current_sample = wi::audio::GetTotalSamplesPlayed(&sound->soundinstance);
+		current_sample /= step;
+		current_sample *= step;
+		int64_t start_sample = (int64_t)current_sample - info.sample_rate;
+		int64_t end_sample = current_sample + info.sample_rate;
+
+		for (uint32_t i = 0; i < vertexCount; ++i)
+		{
+			Vertex vert;
+			vert.position = XMFLOAT4(float(i) / vertexCount, 0, 0, 1);
+			int64_t sample_idx = start_sample + i * step;
+			if (sample_idx > 0 && sample_idx < (int64_t)info.sample_count)
+			{
+				vert.position.y = float(info.samples[sample_idx]) / 32768.0f;
+			}
+			vert.color = XMFLOAT4(1, 1, 1, 1);
+			std::memcpy((Vertex*)allocation.data + i, &vert, sizeof(vert));
+		}
+	}
+
+	const GPUBuffer* vbs[] = {
+		&allocation.buffer,
+	};
+	const uint32_t strides[] = {
+		sizeof(Vertex),
+	};
+	const uint64_t offsets[] = {
+		allocation.offset,
+	};
+
+	device->EventBegin("Sound Wave", cmd);
+	device->BindPipelineState(&pso_waveline, cmd);
+	device->BindVertexBuffers(vbs, 0, 1, strides, offsets, cmd);
+	MiscCB cb;
+	cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+	XMStoreFloat4x4(&cb.g_xTransform,
+		XMMatrixScaling(GetSize().x - 20, 50, 1) *
+		XMMatrixTranslation(GetPos().x + 10, submixComboBox.GetPos().y + submixComboBox.GetSize().y + 55, 0) *
+		canvas.GetProjection()
+	);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
+	device->Draw(vertexCount, 0, cmd);
+	device->EventEnd(cmd);
+}
 
 
 void SoundWindow::SetEntity(Entity entity)
