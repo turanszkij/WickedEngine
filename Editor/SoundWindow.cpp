@@ -9,7 +9,8 @@ using namespace wi::scene;
 
 namespace SoundWindow_Internal
 {
-	PipelineState pso_waveline;
+	PipelineState pso_linestrip;
+	PipelineState pso_linelist;
 
 	void LoadShaders()
 	{
@@ -23,7 +24,10 @@ namespace SoundWindow_Internal
 		desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
 		desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
 		desc.pt = PrimitiveTopology::LINESTRIP;
-		bool success = device->CreatePipelineState(&desc, &pso_waveline);
+		bool success = device->CreatePipelineState(&desc, &pso_linestrip);
+
+		desc.pt = PrimitiveTopology::LINELIST;
+		success = device->CreatePipelineState(&desc, &pso_linelist);
 		assert(success);
 	}
 }
@@ -33,7 +37,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_SOUND " Sound", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(440, 280));
+	SetSize(XMFLOAT2(440, 300));
 
 	closeButton.SetTooltip("Delete SoundComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -72,6 +76,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 					sound->filename = fileName;
 					sound->soundResource = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 					wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+					filenameLabel.SetText(wi::helper::GetFileNameFromPath(sound->filename));
 					});
 				});
 		}
@@ -221,6 +226,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	reverbComboBox.AddItem("LARGEHALL");
 	reverbComboBox.AddItem("PLATE");
 	reverbComboBox.SetTooltip("Set the global reverb setting. Sound instances need to enable reverb to take effect!");
+	reverbComboBox.SetMaxVisibleItemCount(6);
 	AddWidget(&reverbComboBox);
 
 
@@ -238,6 +244,7 @@ void SoundWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd
 		return;
 
 	GraphicsDevice* device = wi::graphics::GetDevice();
+	device->EventBegin("Sound Wave", cmd);
 
 	static bool shaders_loaded = false;
 	if (!shaders_loaded)
@@ -262,11 +269,11 @@ void SoundWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd
 	if (sound == nullptr || !sound->soundResource.IsValid())
 	{
 		// Vertices for straight line:
+		Vertex vert;
+		vert.color = font.params.color;
 		for (uint32_t i = 0; i < vertexCount; ++i)
 		{
-			Vertex vert;
 			vert.position = XMFLOAT4(float(i) / vertexCount, 0, 0, 1);
-			vert.color = XMFLOAT4(1, 1, 1, 1);
 			std::memcpy((Vertex*)allocation.data + i, &vert, sizeof(vert));
 		}
 	}
@@ -274,49 +281,97 @@ void SoundWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd
 	{
 		// Vertices for [-1, 1] second range of current sound sample:
 		wi::audio::SampleInfo info = wi::audio::GetSampleInfo(&sound->soundResource.GetSound());
-		uint32_t step = uint32_t(info.sample_rate * 2) / vertexCount;
+		uint32_t sample_frequency = info.sample_rate * info.channel_count;
+		uint32_t step = uint32_t(sample_frequency * 2) / vertexCount;
 		uint64_t current_sample = wi::audio::GetTotalSamplesPlayed(&sound->soundinstance);
+		if (sound->IsLooped())
+		{
+			float total_time = float(current_sample) / float(info.sample_rate);
+			if (total_time > sound->soundinstance.loop_begin)
+			{
+				float loop_length = sound->soundinstance.loop_length > 0 ? sound->soundinstance.loop_length : (float(info.sample_count) / float(sample_frequency));
+				float loop_time = std::fmod(total_time - sound->soundinstance.loop_begin, loop_length);
+				current_sample = loop_time * info.sample_rate;
+			}
+		}
+		current_sample *= info.channel_count;
+		// This integer divide and multiply fixes the sample positions so the wave visualizer is stable:
 		current_sample /= step;
 		current_sample *= step;
-		int64_t start_sample = (int64_t)current_sample - info.sample_rate;
-		int64_t end_sample = current_sample + info.sample_rate;
+		int64_t start_sample = (int64_t)current_sample - sample_frequency;
+		int64_t end_sample = current_sample + sample_frequency;
 
+		Vertex vert;
+		vert.color = font.params.color;
 		for (uint32_t i = 0; i < vertexCount; ++i)
 		{
-			Vertex vert;
 			vert.position = XMFLOAT4(float(i) / vertexCount, 0, 0, 1);
 			int64_t sample_idx = start_sample + i * step;
 			if (sample_idx > 0 && sample_idx < (int64_t)info.sample_count)
 			{
 				vert.position.y = float(info.samples[sample_idx]) / 32768.0f;
 			}
-			vert.color = XMFLOAT4(1, 1, 1, 1);
 			std::memcpy((Vertex*)allocation.data + i, &vert, sizeof(vert));
 		}
 	}
 
-	const GPUBuffer* vbs[] = {
-		&allocation.buffer,
-	};
 	const uint32_t strides[] = {
 		sizeof(Vertex),
 	};
-	const uint64_t offsets[] = {
-		allocation.offset,
-	};
 
-	device->EventBegin("Sound Wave", cmd);
-	device->BindPipelineState(&pso_waveline, cmd);
-	device->BindVertexBuffers(vbs, 0, 1, strides, offsets, cmd);
 	MiscCB cb;
 	cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 	XMStoreFloat4x4(&cb.g_xTransform,
-		XMMatrixScaling(GetSize().x - 20, 50, 1) *
-		XMMatrixTranslation(GetPos().x + 10, submixComboBox.GetPos().y + submixComboBox.GetSize().y + 55, 0) *
+		XMMatrixScaling(GetSize().x - 20, 50, 1)*
+		XMMatrixTranslation(GetPos().x + 10, submixComboBox.GetPos().y + submixComboBox.GetSize().y + 60, 0)*
 		canvas.GetProjection()
 	);
 	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
-	device->Draw(vertexCount, 0, cmd);
+
+	// Wave:
+	{
+		device->BindPipelineState(&pso_linestrip, cmd);
+		const GPUBuffer* vbs[] = {
+			&allocation.buffer,
+		};
+		const uint64_t offsets[] = {
+			allocation.offset,
+		};
+		device->BindVertexBuffers(vbs, 0, 1, strides, offsets, cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->Draw(vertexCount, 0, cmd);
+	}
+	// Other stuff:
+	{
+		Vertex verts[] = {
+			// center:
+			{ XMFLOAT4(0.5f, -1, 0, 1), XMFLOAT4(1, 0.2f, 0.2f, 1) },
+			{ XMFLOAT4(0.5f, 1, 0, 1), XMFLOAT4(1, 0.2f, 0.2f, 1) },
+
+			// rect:
+			{ XMFLOAT4(0, -1, 0, 1), font.params.color },
+			{ XMFLOAT4(1, -1, 0, 1), font.params.color },
+			{ XMFLOAT4(1, -1, 0, 1), font.params.color },
+			{ XMFLOAT4(1, 1, 0, 1), font.params.color },
+			{ XMFLOAT4(1, 1, 0, 1), font.params.color },
+			{ XMFLOAT4(0, 1, 0, 1), font.params.color },
+			{ XMFLOAT4(0, 1, 0, 1), font.params.color },
+			{ XMFLOAT4(0, -1, 0, 1), font.params.color },
+		};
+		allocation = device->AllocateGPU(sizeof(verts), cmd);
+		std::memcpy(allocation.data, verts, sizeof(verts));
+
+		device->BindPipelineState(&pso_linelist, cmd);
+		const GPUBuffer* vbs[] = {
+			&allocation.buffer,
+		};
+		const uint64_t offsets[] = {
+			allocation.offset,
+		};
+		device->BindVertexBuffers(vbs, 0, 1, strides, offsets, cmd);
+		device->Draw(sizeof(verts) / sizeof(Vertex), 0, cmd);
+	}
+
 	device->EventEnd(cmd);
 }
 

@@ -69,6 +69,8 @@ namespace wi::audio
 		X3DAUDIO_HANDLE audio3D = {};
 		Microsoft::WRL::ComPtr<IUnknown> reverbEffect;
 		IXAudio2SubmixVoice* reverbSubmix = nullptr;
+		uint32_t termination_data = 0;
+		XAUDIO2_BUFFER termination_mark = {};
 
 		AudioInternal()
 		{
@@ -144,6 +146,10 @@ namespace wi::audio
 					wi::backlog::post("wi::audio [XAudio2] Reverb Submix was not created successfully!", wi::backlog::LogLevel::Warning);
 				}
 			}
+
+			termination_mark.Flags = XAUDIO2_END_OF_STREAM;
+			termination_mark.pAudioData = (const BYTE*)&termination_data;
+			termination_mark.AudioBytes = sizeof(termination_data);
 
 			if (SUCCEEDED(hr))
 			{
@@ -331,7 +337,7 @@ namespace wi::audio
 			soundinternal->wfx.nBlockAlign = (WORD)channels * sizeof(short); // is this right?
 			soundinternal->wfx.nAvgBytesPerSec = soundinternal->wfx.nSamplesPerSec * soundinternal->wfx.nBlockAlign;
 
-			size_t output_size = (size_t)samples * sizeof(short);
+			size_t output_size = size_t(samples * channels) * sizeof(short);
 			soundinternal->audioData.resize(output_size);
 			memcpy(soundinternal->audioData.data(), output, output_size);
 
@@ -416,9 +422,11 @@ namespace wi::audio
 		{
 			auto instanceinternal = to_internal(instance);
 			HRESULT hr = instanceinternal->sourceVoice->Stop(); // preserves cursor position
-			assert(SUCCEEDED(hr)); 
+			assert(SUCCEEDED(hr));
 			hr = instanceinternal->sourceVoice->FlushSourceBuffers(); // reset submitted audio buffer
-			assert(SUCCEEDED(hr)); 
+			assert(SUCCEEDED(hr));
+			hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&audio_internal->termination_mark); // mark this as terminated, this resets XAUDIO2_VOICE_STATE::SamplesPlayed to zero
+			assert(SUCCEEDED(hr));
 			hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer); // resubmit
 			assert(SUCCEEDED(hr));
 		}
@@ -470,6 +478,7 @@ namespace wi::audio
 			info.samples = (const short*)soundinternal->audioData.data();
 			info.sample_count = soundinternal->audioData.size() / sizeof(short);
 			info.sample_rate = soundinternal->wfx.nSamplesPerSec;
+			info.channel_count = soundinternal->wfx.nChannels;
 		}
 		return info;
 	}
@@ -635,6 +644,8 @@ namespace wi::audio
 		F3DAUDIO_HANDLE audio3D = {};
 		FAPO* reverbEffect;
 		FAudioSubmixVoice* reverbSubmix = nullptr;
+		uint32_t termination_data = 0;
+		FAudioBuffer termination_mark = {};
 
 		AudioInternal(){
 			wi::Timer timer;
@@ -687,6 +698,10 @@ namespace wi::audio
 					nullptr, 
 					&effectChain);
 			}
+
+			termination_mark.Flags = FAUDIO_END_OF_STREAM;
+			termination_mark.pAudioData = (const uint8_t*)&termination_data;
+			termination_mark.AudioBytes = sizeof(termination_data);
 
 			if (success)
 			{
@@ -865,7 +880,7 @@ namespace wi::audio
 			soundinternal->wfx.nBlockAlign = (uint16_t)channels * sizeof(short); // is this right?
 			soundinternal->wfx.nAvgBytesPerSec = soundinternal->wfx.nSamplesPerSec * soundinternal->wfx.nBlockAlign;
 
-			size_t output_size = (size_t)samples * sizeof(short);
+			size_t output_size = size_t(samples * channels) * sizeof(short);
 			soundinternal->audioData.resize(output_size);
 			memcpy(soundinternal->audioData.data(), output, output_size);
 
@@ -945,6 +960,8 @@ namespace wi::audio
 			assert(res == 0);
 			res = FAudioSourceVoice_FlushSourceBuffers(instanceinternal->sourceVoice); // reset submitted audio buffer
 			assert(res == 0);
+			res = FAudioSourceVoice_SubmitSourceBuffer(instanceinternal->sourceVoice, &audio_internal->termination_mark, nullptr); // mark this as terminated, this resets XAUDIO2_VOICE_STATE::SamplesPlayed to zero
+			assert(res == 0);
 			res = FAudioSourceVoice_SubmitSourceBuffer(instanceinternal->sourceVoice, &(instanceinternal->buffer), nullptr);
 			assert(res == 0);
 		}
@@ -988,6 +1005,7 @@ namespace wi::audio
 			info.samples = (const short*)soundinternal->audioData.data();
 			info.sample_count = soundinternal->audioData.size() / sizeof(short);
 			info.sample_rate = soundinternal->wfx.nSamplesPerSec;
+			info.channel_count = soundinternal->wfx.nChannels;
 		}
 		return info;
 	}

@@ -70,8 +70,10 @@ namespace wi::audio
 		const short* samples = nullptr;	// array of samples in the sound
 		size_t sample_count = 0;	// number of samples in the sound
 		int sample_rate = 0;	// number of samples per second
+		uint32_t channel_count = 1;	// number of channels in the samples array (1: mono, 2:stereo, etc.)
 	};
 	SampleInfo GetSampleInfo(const Sound* sound);
+	// Returns the total number of samples that were played since the creation of the sound instance
 	uint64_t GetTotalSamplesPlayed(const SoundInstance* instance);
 
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume);
