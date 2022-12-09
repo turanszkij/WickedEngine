@@ -2219,7 +2219,6 @@ namespace wi::scene
 
 		if (inverse_kinematics.GetCount() > 0 || humanoids.GetCount() > 0)
 		{
-			transforms_temp.resize(transforms.GetCount());
 			transforms_temp = transforms.GetComponentArray(); // make copy
 		}
 
@@ -2263,9 +2262,81 @@ namespace wi::scene
 					const XMVECTOR parent_pos = parent_transform.GetPositionV();
 					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform.GetPositionV() - parent_pos);
 					const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
-					const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_ik, dir_parent_to_target));
-					const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target)));
-					const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
+
+					// Check if this transform is part of a humanoid and need some constraining:
+					bool constrain = false;
+					XMFLOAT3 constraint_min = XMFLOAT3(0, 0, 0);
+					XMFLOAT3 constraint_max = XMFLOAT3(0, 0, 0);
+					for (size_t humanoid_idx = 0; (humanoid_idx < humanoids.GetCount()) && !constrain; ++humanoid_idx)
+					{
+						const HumanoidComponent& humanoid = humanoids[humanoid_idx];
+						int bone_type_idx = 0;
+						for (auto& bone : humanoid.bones)
+						{
+							if (bone == parent_entity)
+							{
+								switch ((HumanoidComponent::HumanoidBone)bone_type_idx)
+								{
+								default:
+									break;
+								case HumanoidComponent::HumanoidBone::LeftUpperLeg:
+								case HumanoidComponent::HumanoidBone::RightUpperLeg:
+									constrain = true;
+									constraint_min = XMFLOAT3(XM_PI * 0.6f, XM_PI * 0.1f, XM_PI * 0.1f);
+									constraint_max = XMFLOAT3(XM_PI * 0.1f, XM_PI * 0.1f, XM_PI * 0.1f);
+									break;
+								case HumanoidComponent::HumanoidBone::LeftLowerLeg:
+								case HumanoidComponent::HumanoidBone::RightLowerLeg:
+									constrain = true;
+									constraint_min = XMFLOAT3(0, 0, 0);
+									constraint_max = XMFLOAT3(XM_PI * 0.8f, 0, 0);
+									break;
+								}
+							}
+							if (constrain)
+								break;
+							bone_type_idx++;
+						}
+					}
+
+					XMVECTOR Q;
+					if (constrain)
+					{
+						// Apply constrained rotation:
+						Q = XMQuaternionIdentity();
+						XMMATRIX W = XMLoadFloat4x4(&parent_transform.world);
+						for (int axis_idx = 0; axis_idx < 3; ++axis_idx)
+						{
+							XMFLOAT3 axis_floats = XMFLOAT3(0, 0, 0);
+							((float*)&axis_floats)[axis_idx] = 1;
+							XMVECTOR axis = XMLoadFloat3(&axis_floats);
+							const float axis_min = ((float*)&constraint_min)[axis_idx] / (float)ik.iteration_count;
+							const float axis_max = ((float*)&constraint_max)[axis_idx] / (float)ik.iteration_count;
+							axis = XMVector3Normalize(XMVector3TransformNormal(axis, W));
+							const XMVECTOR projA = XMVector3Normalize(dir_parent_to_ik - axis * XMVector3Dot(axis, dir_parent_to_ik));
+							const XMVECTOR projB = XMVector3Normalize(dir_parent_to_target - axis * XMVector3Dot(axis, dir_parent_to_target));
+							float angle = XMVectorGetX(XMVector3AngleBetweenNormals(projA, projB));
+							if (XMVectorGetX(XMVector3Dot(XMVector3Cross(projA, projB), axis)) < 0)
+							{
+								angle = XM_2PI - std::min(angle, axis_min);
+							}
+							else
+							{
+								angle = std::min(angle, axis_max);
+							}
+							const XMVECTOR Q1 = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
+							W = XMMatrixRotationQuaternion(Q1) * W;
+							Q = XMQuaternionMultiply(Q1, Q);
+						}
+						Q = XMQuaternionNormalize(Q);
+					}
+					else
+					{
+						// Simple shortest rotation without constraint:
+						const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_ik, dir_parent_to_target));
+						const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target)));
+						Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
+					}
 
 					// parent to world space:
 					parent_transform.ApplyTransform();

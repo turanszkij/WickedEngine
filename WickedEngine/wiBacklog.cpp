@@ -259,10 +259,11 @@ namespace wi::backlog
 	{
 		std::scoped_lock lock(logLock);
 		wi::font::SetCanvas(canvas); // always set here as it can be called from outside...
-		font_params.cursor = {};
+		wi::font::Params params = font_params;
+		params.cursor = {};
 		if (refitscroll)
 		{
-			float textheight = wi::font::TextHeight(getTextWithoutLock(), font_params);
+			float textheight = wi::font::TextHeight(getTextWithoutLock(), params);
 			float limit = canvas.GetLogicalHeight() - 35;
 			if (scroll + textheight > limit)
 			{
@@ -270,28 +271,28 @@ namespace wi::backlog
 			}
 			refitscroll = false;
 		}
-		font_params.posX = 5;
-		font_params.posY = pos + scroll;
-		font_params.h_wrap = canvas.GetLogicalWidth() - font_params.posX;
+		params.posX = 5;
+		params.posY = pos + scroll;
+		params.h_wrap = canvas.GetLogicalWidth() - params.posX;
 		if (colorspace != ColorSpace::SRGB)
 		{
-			font_params.enableLinearOutputMapping(9);
+			params.enableLinearOutputMapping(9);
 		}
 		for (auto& x : entries)
 		{
 			switch (x.level)
 			{
 			case LogLevel::Warning:
-				font_params.color = wi::Color::Warning();
+				params.color = wi::Color::Warning();
 				break;
 			case LogLevel::Error:
-				font_params.color = wi::Color::Error();
+				params.color = wi::Color::Error();
 				break;
 			default:
-				font_params.color = wi::Color::White();
+				params.color = font_params.color;
 				break;
 			}
-			font_params.cursor = wi::font::Draw(x.text, font_params, cmd);
+			params.cursor = wi::font::Draw(x.text, params, cmd);
 		}
 	}
 
@@ -408,6 +409,10 @@ namespace wi::backlog
 	void setFontRowspacing(float value)
 	{
 		font_params.spacingY = value;
+	}
+	void setFontColor(wi::Color color)
+	{
+		font_params.color = color;
 	}
 
 	bool isActive() { return enabled; }

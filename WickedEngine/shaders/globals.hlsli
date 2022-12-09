@@ -191,7 +191,6 @@ struct PrimitiveID
 	}
 };
 
-#define texture_globalenvmap bindless_cubemaps[GetScene().globalenvmap]
 #define texture_envmaparray bindless_cubearrays[GetScene().envmaparray]
 
 #define texture_random64x64 bindless_textures[GetFrame().texture_random64x64_index]

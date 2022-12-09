@@ -713,7 +713,7 @@ bool LoadShader(
 
 			if (!output.error_message.empty())
 			{
-				wi::backlog::post(output.error_message);
+				wi::backlog::post(output.error_message, wi::backlog::LogLevel::Warning);
 			}
 			wi::backlog::post("shader compiled: " + shaderbinaryfilename);
 			return device->CreateShader(stage, output.shaderdata, output.shadersize, &shader);
@@ -3376,6 +3376,10 @@ void UpdatePerFrameData(
 	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
 	{
 		frameCB.options |= OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS;
+	}
+	if (vis.scene->weather.skyMap.IsValid() && !has_flag(vis.scene->weather.skyMap.GetTexture().desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+	{
+		frameCB.options |= OPTION_BIT_STATIC_SKY_SPHEREMAP;
 	}
 	
 	frameCB.scene = vis.scene->shaderscene;
@@ -6798,7 +6802,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			if (vis.scene->weather.skyMap.IsValid())
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
-				device->BindResource(&vis.scene->weather.skyMap.GetTexture(), 0, cmd, vis.scene->weather.skyMap.GetTextureSRGBSubresource());
 			}
 			else
 			{

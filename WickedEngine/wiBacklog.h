@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiCanvas.h"
+#include "wiColor.h"
 
 #include <string>
 
@@ -42,6 +43,7 @@ namespace wi::backlog
 	void setBackground(wi::graphics::Texture* texture);
 	void setFontSize(int value);
 	void setFontRowspacing(float value);
+	void setFontColor(wi::Color color);
 
 	void Lock();
 	void Unlock();
