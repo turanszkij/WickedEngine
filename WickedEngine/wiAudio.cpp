@@ -997,7 +997,7 @@ namespace wi::audio
 		{
 			auto instanceinternal = to_internal(instance);
 			FAudioVoiceState state = {};
-			FAudioSourceVoice_GetState(instanceinternal->sourceVoice, &state);
+			FAudioSourceVoice_GetState(instanceinternal->sourceVoice, &state, 0);
 			return state.SamplesPlayed;
 		}
 		return 0ull;
