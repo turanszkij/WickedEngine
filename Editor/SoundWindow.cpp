@@ -291,7 +291,7 @@ void SoundWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd
 			{
 				float loop_length = sound->soundinstance.loop_length > 0 ? sound->soundinstance.loop_length : (float(info.sample_count) / float(sample_frequency));
 				float loop_time = std::fmod(total_time - sound->soundinstance.loop_begin, loop_length);
-				current_sample = loop_time * float(info.sample_rate);
+				current_sample = uint64_t(loop_time * info.sample_rate);
 			}
 		}
 		current_sample *= info.channel_count;
@@ -322,8 +322,8 @@ void SoundWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd
 	MiscCB cb;
 	cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 	XMStoreFloat4x4(&cb.g_xTransform,
-		XMMatrixScaling(GetSize().x - 20, 50, 1)*
-		XMMatrixTranslation(GetPos().x + 10, submixComboBox.GetPos().y + submixComboBox.GetSize().y + 60, 0)*
+		XMMatrixScaling(GetSize().x - 10, 50, 1)*
+		XMMatrixTranslation(GetPos().x + 5, reverbComboBox.GetPos().y + reverbComboBox.GetSize().y + 60, 0)*
 		canvas.GetProjection()
 	);
 	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
@@ -463,13 +463,13 @@ void SoundWindow::ResizeLayout()
 	};
 
 	add_fullwidth(openButton);
-	add(reverbComboBox);
 	add_fullwidth(filenameLabel);
 	add(playstopButton);
 	loopedCheckbox.SetPos(XMFLOAT2(playstopButton.GetPos().x - loopedCheckbox.GetSize().x - 2, playstopButton.GetPos().y));
+	add(volumeSlider);
 	add_right(reverbCheckbox);
 	disable3dCheckbox.SetPos(XMFLOAT2(reverbCheckbox.GetPos().x - disable3dCheckbox.GetSize().x - 100 - 2, reverbCheckbox.GetPos().y));
-	add(volumeSlider);
 	add(submixComboBox);
+	add(reverbComboBox);
 }
 
