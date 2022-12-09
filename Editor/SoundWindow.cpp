@@ -21,7 +21,7 @@ namespace SoundWindow_Internal
 		desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
 		desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
 		desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEFAULT);
-		desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
+		desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_WIRE_SMOOTH);
 		desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
 		desc.pt = PrimitiveTopology::LINESTRIP;
 		bool success = device->CreatePipelineState(&desc, &pso_linestrip);
@@ -291,7 +291,7 @@ void SoundWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd
 			{
 				float loop_length = sound->soundinstance.loop_length > 0 ? sound->soundinstance.loop_length : (float(info.sample_count) / float(sample_frequency));
 				float loop_time = std::fmod(total_time - sound->soundinstance.loop_begin, loop_length);
-				current_sample = loop_time * info.sample_rate;
+				current_sample = loop_time * float(info.sample_rate);
 			}
 		}
 		current_sample *= info.channel_count;
