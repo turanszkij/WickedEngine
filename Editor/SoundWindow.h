@@ -3,6 +3,14 @@
 
 class EditorComponent;
 
+class WaveGraph : public wi::gui::Widget
+{
+public:
+	wi::scene::SoundComponent* sound = nullptr;
+
+	void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+};
+
 class SoundWindow : public wi::gui::Window
 {
 public:
@@ -21,7 +29,7 @@ public:
 	wi::gui::CheckBox disable3dCheckbox;
 	wi::gui::Slider volumeSlider;
 	wi::gui::ComboBox submixComboBox;
+	WaveGraph waveGraph;
 
 	void ResizeLayout() override;
-	void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 };

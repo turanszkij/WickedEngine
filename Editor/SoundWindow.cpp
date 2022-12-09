@@ -229,6 +229,9 @@ void SoundWindow::Create(EditorComponent* _editor)
 	reverbComboBox.SetMaxVisibleItemCount(6);
 	AddWidget(&reverbComboBox);
 
+	waveGraph.SetSize(XMFLOAT2(100, 50));
+	AddWidget(&waveGraph);
+
 
 	SetMinimized(true);
 	SetVisible(false);
@@ -236,13 +239,8 @@ void SoundWindow::Create(EditorComponent* _editor)
 	SetEntity(INVALID_ENTITY);
 }
 
-void SoundWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
+void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
 {
-	Window::Render(canvas, cmd);
-
-	if (!IsVisible() || IsCollapsed())
-		return;
-
 	GraphicsDevice* device = wi::graphics::GetDevice();
 	device->EventBegin("Sound Wave", cmd);
 
@@ -254,8 +252,6 @@ void SoundWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd
 		SoundWindow_Internal::LoadShaders();
 	}
 
-	ApplyScissor(canvas, scissorRect, cmd);
-
 	struct Vertex
 	{
 		XMFLOAT4 position;
@@ -264,8 +260,6 @@ void SoundWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd
 	const uint32_t vertexCount = 256;
 	GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
 
-	Scene& scene = editor->GetCurrentScene();
-	SoundComponent* sound = scene.sounds.GetComponent(entity);
 	if (sound == nullptr || !sound->soundResource.IsValid())
 	{
 		// Vertices for straight line:
@@ -322,8 +316,8 @@ void SoundWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd
 	MiscCB cb;
 	cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 	XMStoreFloat4x4(&cb.g_xTransform,
-		XMMatrixScaling(GetSize().x - 10, 50, 1)*
-		XMMatrixTranslation(GetPos().x + 5, reverbComboBox.GetPos().y + reverbComboBox.GetSize().y + 60, 0)*
+		XMMatrixScaling(GetSize().x, GetSize().y, 1) *
+		XMMatrixTranslation(GetPos().x, GetPos().y + GetSize().y, 0)*
 		canvas.GetProjection()
 	);
 	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
@@ -385,6 +379,8 @@ void SoundWindow::SetEntity(Entity entity)
 	Scene& scene = editor->GetCurrentScene();
 	SoundComponent* sound = scene.sounds.GetComponent(entity);
 	NameComponent* name = scene.names.GetComponent(entity);
+
+	waveGraph.sound = sound;
 
 	if (sound != nullptr)
 	{
@@ -471,5 +467,8 @@ void SoundWindow::ResizeLayout()
 	disable3dCheckbox.SetPos(XMFLOAT2(reverbCheckbox.GetPos().x - disable3dCheckbox.GetSize().x - 100 - 2, reverbCheckbox.GetPos().y));
 	add(submixComboBox);
 	add(reverbComboBox);
+
+	y += 10;
+	add_fullwidth(waveGraph);
 }
 
