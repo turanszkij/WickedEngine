@@ -2010,6 +2010,7 @@ namespace wi::scene
 	{
 		for (size_t i = 0; i < expressions.GetCount(); ++i)
 		{
+			Entity entity = expressions.GetEntity(i);
 			ExpressionComponent& expression_mastering = expressions[i];
 
 			// Procedural blink:
@@ -2088,6 +2089,47 @@ namespace wi::scene
 				{
 					expression_mastering.look_timer = -wi::random::GetRandom(0.0f, 1.0f);
 				}
+			}
+
+			// Talking animation based on sound:
+			const SoundComponent* sound = sounds.GetComponent(entity);
+			if(sound != nullptr && sound->soundResource.IsValid() && sound->IsPlaying())
+			{
+				wi::audio::SampleInfo info = wi::audio::GetSampleInfo(&sound->soundResource.GetSound());
+				uint32_t sample_frequency = info.sample_rate * info.channel_count;
+				uint64_t current_sample = wi::audio::GetTotalSamplesPlayed(&sound->soundinstance);
+				if (sound->IsLooped())
+				{
+					float total_time = float(current_sample) / float(info.sample_rate);
+					if (total_time > sound->soundinstance.loop_begin)
+					{
+						float loop_length = sound->soundinstance.loop_length > 0 ? sound->soundinstance.loop_length : (float(info.sample_count) / float(sample_frequency));
+						float loop_time = std::fmod(total_time - sound->soundinstance.loop_begin, loop_length);
+						current_sample = uint64_t(loop_time * info.sample_rate);
+					}
+				}
+				current_sample *= info.channel_count;
+				current_sample = std::min(current_sample, info.sample_count);
+
+				float voice = 0;
+				const int sample_count = 64;
+				for (int sam = 0; sam < sample_count; ++sam)
+				{
+					voice = std::max(voice, std::abs((float)info.samples[std::min(current_sample + sam, info.sample_count)] / 32768.0f));
+				}
+				int mouth = expression_mastering.presets[(int)ExpressionComponent::Preset::Aa];
+				ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
+
+				const float strength = 0.4f;
+				if (voice > 0.1f)
+				{
+					expression.weight = wi::math::Lerp(expression.weight, 1, strength);
+				}
+				else
+				{
+					expression.weight = wi::math::Lerp(expression.weight, 0, strength);
+				}
+				expression.SetDirty();
 			}
 
 			float overrideMouthBlend = 0;
