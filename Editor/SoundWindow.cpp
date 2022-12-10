@@ -61,6 +61,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 
 
 	openButton.Create("Open File " ICON_OPEN);
+	openButton.SetTooltip("Open sound file.\nSupported extensions: WAV, OGG");
 	openButton.SetPos(XMFLOAT2(x, y));
 	openButton.SetSize(XMFLOAT2(wid, hei));
 	openButton.OnClick([&](wi::gui::EventArgs args) {
@@ -69,7 +70,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = "Sound";
+			params.description = "Sound (.wav, .ogg)";
 			params.extensions = wi::resourcemanager::GetSupportedSoundExtensions();
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
@@ -260,11 +261,14 @@ void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) 
 	const uint32_t vertexCount = 256;
 	GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
 
+	XMFLOAT4 base_color = font.params.color;
+	base_color.w = 1;
+
 	if (sound == nullptr || !sound->soundResource.IsValid())
 	{
 		// Vertices for straight line:
 		Vertex vert;
-		vert.color = font.params.color;
+		vert.color = base_color;
 		for (uint32_t i = 0; i < vertexCount; ++i)
 		{
 			vert.position = XMFLOAT4(float(i) / vertexCount, 0, 0, 1);
@@ -296,7 +300,7 @@ void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) 
 		int64_t end_sample = current_sample + sample_frequency;
 
 		Vertex vert;
-		vert.color = font.params.color;
+		vert.color = base_color;
 		for (uint32_t i = 0; i < vertexCount; ++i)
 		{
 			vert.position = XMFLOAT4(float(i) / vertexCount, 0, 0, 1);
@@ -343,14 +347,14 @@ void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) 
 			{ XMFLOAT4(0.5f, 1, 0, 1), XMFLOAT4(1, 0.2f, 0.2f, 1) },
 
 			// rect:
-			{ XMFLOAT4(0, -1, 0, 1), font.params.color },
-			{ XMFLOAT4(1, -1, 0, 1), font.params.color },
-			{ XMFLOAT4(1, -1, 0, 1), font.params.color },
-			{ XMFLOAT4(1, 1, 0, 1), font.params.color },
-			{ XMFLOAT4(1, 1, 0, 1), font.params.color },
-			{ XMFLOAT4(0, 1, 0, 1), font.params.color },
-			{ XMFLOAT4(0, 1, 0, 1), font.params.color },
-			{ XMFLOAT4(0, -1, 0, 1), font.params.color },
+			{ XMFLOAT4(0, -1, 0, 1), base_color },
+			{ XMFLOAT4(1, -1, 0, 1), base_color },
+			{ XMFLOAT4(1, -1, 0, 1), base_color },
+			{ XMFLOAT4(1, 1, 0, 1), base_color },
+			{ XMFLOAT4(1, 1, 0, 1), base_color },
+			{ XMFLOAT4(0, 1, 0, 1), base_color },
+			{ XMFLOAT4(0, 1, 0, 1), base_color },
+			{ XMFLOAT4(0, -1, 0, 1), base_color },
 		};
 		allocation = device->AllocateGPU(sizeof(verts), cmd);
 		std::memcpy(allocation.data, verts, sizeof(verts));

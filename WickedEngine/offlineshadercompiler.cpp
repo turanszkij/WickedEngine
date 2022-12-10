@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <mutex>
 #include <string>
+#include <cstdlib>
 
 std::mutex locker;
 struct ShaderEntry
