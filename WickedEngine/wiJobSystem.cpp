@@ -70,6 +70,7 @@ namespace wi::jobsystem
 		std::unique_ptr<JobQueue[]> jobQueuePerThread;
 		std::shared_ptr<WorkerState> worker_state = std::make_shared<WorkerState>(); // kept alive by both threads and internal_state
 		std::atomic<uint32_t> nextQueue{ 0 };
+		wi::vector<std::thread> threads;
 		~InternalState()
 		{
 			worker_state->alive.store(false); // indicate that new jobs cannot be started from this point
@@ -81,6 +82,10 @@ namespace wi::jobsystem
 				{
 					std::this_thread::yield();
 				}
+			}
+			for (auto& thread : threads)
+			{
+				thread.join();
 			}
 		}
 	} static internal_state;
@@ -140,7 +145,7 @@ namespace wi::jobsystem
 
 		for (uint32_t threadID = 0; threadID < internal_state.numThreads; ++threadID)
 		{
-			std::thread worker([threadID] {
+			internal_state.threads.emplace_back([threadID] {
 
 				std::shared_ptr<WorkerState> worker_state = internal_state.worker_state; // this is a copy of shared_ptr<WorkerState>, so it will remain alive for the thread's lifetime
 
@@ -153,7 +158,8 @@ namespace wi::jobsystem
 					worker_state->wakeCondition.wait(lock);
 				}
 
-				});
+			});
+			std::thread& worker = internal_state.threads.back();
 
 #ifdef _WIN32
 			// Do Windows-specific thread setup:
@@ -193,8 +199,6 @@ namespace wi::jobsystem
 				handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());
 #undef handle_error_en
 #endif // _WIN32
-
-			worker.detach();
 		}
 
 		wi::backlog::post("wi::jobsystem Initialized with [" + std::to_string(internal_state.numCores) + " cores] [" + std::to_string(internal_state.numThreads) + " threads] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
