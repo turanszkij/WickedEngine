@@ -52,7 +52,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			push.instanceInclusionMask,		// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);
-		q.Proceed();
+		while (q.Proceed());
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
 		RayHit hit = TraceRay_Closest(ray, push.instanceInclusionMask, rng);
@@ -239,7 +239,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 						0xFF,							// uint InstanceInclusionMask
 						newRay							// RayDesc Ray
 					);
-					q.Proceed();
+					while (q.Proceed());
 					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
 					shadow = TraceRay_Any(newRay, push.instanceInclusionMask, rng) ? 0 : shadow;
