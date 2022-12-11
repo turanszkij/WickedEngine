@@ -172,6 +172,7 @@ struct ShaderTextureSlot
 
 		float2 atlas_dim;
 		tex.GetDimensions(atlas_dim.x, atlas_dim.y);
+		const float2 atlas_dim_rcp = rcp(atlas_dim);
 
 		const uint max_nonpacked_lod = uint(GetLodClamp());
 		virtual_lod = min(virtual_lod, max_nonpacked_lod + SVT_PACKED_MIP_COUNT);
@@ -192,7 +193,7 @@ struct ShaderTextureSlot
 			float2 virtual_pixel = uv * virtual_lod_dim;
 			float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
 			float2 atlas_tile_pixel = tile_pixel_upperleft + 0.5 + virtual_tile_pixel;
-			float2 atlas_uv = atlas_tile_pixel / atlas_dim;
+			float2 atlas_uv = atlas_tile_pixel * atlas_dim_rcp;
 			value0 = tex.SampleLevel(sam, atlas_uv, 0);
 		}
 
@@ -209,7 +210,7 @@ struct ShaderTextureSlot
 			float2 virtual_pixel = uv * virtual_lod_dim;
 			float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
 			float2 atlas_tile_pixel = tile_pixel_upperleft + 0.5 + virtual_tile_pixel;
-			float2 atlas_uv = atlas_tile_pixel / atlas_dim;
+			float2 atlas_uv = atlas_tile_pixel * atlas_dim_rcp;
 			value1 = tex.SampleLevel(sam, atlas_uv, 0);
 		}
 
