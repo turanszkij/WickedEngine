@@ -127,6 +127,7 @@ namespace wi::jobsystem
 		// Calculate the actual number of worker threads we want (-1 main thread):
 		internal_state.numThreads = std::min(maxThreadCount, std::max(1u, internal_state.numCores - 1));
 		internal_state.jobQueuePerThread.reset(new JobQueue[internal_state.numThreads]);
+		internal_state.threads.reserve(internal_state.numThreads);
 
 		for (uint32_t threadID = 0; threadID < internal_state.numThreads; ++threadID)
 		{
