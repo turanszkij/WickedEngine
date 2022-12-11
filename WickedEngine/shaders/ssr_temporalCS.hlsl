@@ -21,9 +21,7 @@ static const float varianceTemporalResponse = 0.9f;
 
 float2 CalculateReprojectionBuffer(float2 uv, float depth)
 {
-	float x = uv.x * 2 - 1;
-	float y = (1 - uv.y) * 2 - 1;
-	float2 screenPosition = float2(x, y);
+	float2 screenPosition = uv_to_clipspace(uv);
 
 	float4 thisClip = float4(screenPosition, depth, 1);
 
@@ -35,7 +33,7 @@ float2 CalculateReprojectionBuffer(float2 uv, float depth)
 	float2 screenVelocity = screenPosition - prevScreen;
 	float2 prevScreenPosition = screenPosition - screenVelocity;
 
-	return prevScreenPosition * float2(0.5, -0.5) + 0.5;
+	return clipspace_to_uv(prevScreenPosition);
 }
 
 float GetDisocclusion(float depth, float depthHistory)
