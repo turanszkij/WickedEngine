@@ -14,7 +14,7 @@ ImpostorOutput main(PixelInput input)
 	[branch]
 	if (GetMaterial().textures[BASECOLORMAP].IsValid())
 	{
-		color = GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, input.uvsets);
+		color = GetMaterial().textures[BASECOLORMAP].Sample(sampler_linear_wrap, input.uvsets);
 	}
 	else
 	{
@@ -39,7 +39,7 @@ ImpostorOutput main(PixelInput input)
 	[branch]
 	if (GetMaterial().textures[SURFACEMAP].IsValid())
 	{
-		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_objectshader, input.uvsets);
+		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_linear_wrap, input.uvsets);
 	}
 
 	float4 surface;

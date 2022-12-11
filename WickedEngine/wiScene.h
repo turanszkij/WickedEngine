@@ -29,7 +29,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<TransformComponent>& transforms = componentLibrary.Register<TransformComponent>("wi::scene::Scene::transforms");
 		wi::ecs::ComponentManager<HierarchyComponent>& hierarchy = componentLibrary.Register<HierarchyComponent>("wi::scene::Scene::hierarchy");
 		wi::ecs::ComponentManager<MaterialComponent>& materials = componentLibrary.Register<MaterialComponent>("wi::scene::Scene::materials", 1); // version = 1
-		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Register<MeshComponent>("wi::scene::Scene::meshes", 1); // version = 1
+		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Register<MeshComponent>("wi::scene::Scene::meshes", 2); // version = 2
 		wi::ecs::ComponentManager<ImpostorComponent>& impostors = componentLibrary.Register<ImpostorComponent>("wi::scene::Scene::impostors");
 		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Register<ObjectComponent>("wi::scene::Scene::objects", 1); // version = 1
 		wi::ecs::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies = componentLibrary.Register<RigidBodyPhysicsComponent>("wi::scene::Scene::rigidbodies", 1); // version = 1
@@ -167,7 +167,9 @@ namespace wi::scene
 			float smooth_backface = 0; // smoothness of backface test
 			wi::graphics::GPUBuffer ray_buffer;
 			wi::graphics::GPUBuffer offset_buffer;
+			wi::graphics::GPUBuffer sparse_tile_pool;
 			wi::graphics::Texture color_texture[2];
+			wi::graphics::Texture color_texture_rw[2]; // alias of color_texture
 			wi::graphics::Texture depth_texture[2];
 
 			void Serialize(wi::Archive& archive);

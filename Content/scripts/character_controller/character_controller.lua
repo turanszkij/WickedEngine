@@ -105,10 +105,13 @@ Character = {
 		
 		self.target = CreateEntity()
 		local target_transform = character_scene.Component_CreateTransform(self.target)
-		target_transform.Translate(character_scene.Component_GetTransform(self.head).GetPosition())
+		target_transform.Translate(character_scene.Component_GetTransform(self.neck).GetPosition())
 		target_transform.Translate(self.start_position)
 		
 		character_scene.Component_Attach(self.target, self.model)
+
+		self.root = character_scene.Entity_FindByName("Root")
+		self.root_bone_offset = 0
 
 		scene.Merge(character_scene)
 	end,
@@ -364,6 +367,72 @@ Character = {
 				PutWaterRipple(script_dir() .. "assets/ripple.png", wp)
 			end
 		end
+
+		-- IK foot placement:
+		local root_bone_transform = scene.Component_GetTransform(self.root)
+		root_bone_transform.ClearTransform()
+		self.root_bone_offset = math.lerp(self.root_bone_offset, 0, 0.1)
+		scene.UpdateHierarchy() -- Note: if I don't do this, you get foot positions after IK, but we want foot positions after animation, to start from "fresh"
+		local ik_foot = INVALID_ENTITY
+		local ik_pos = Vector()
+		-- Compute root bone offset:
+		--	I determine which foot wants to step on lower ground, that will offset root bone of skeleton downwards
+		--	The other foot will be the upper foot which will be later attached an Inverse Kinematics (IK) effector
+		if self.state == self.states.IDLE and self.velocity.GetY() == 0 then
+			local pos_left = scene.Component_GetTransform(self.left_foot).GetPosition()
+			local pos_right = scene.Component_GetTransform(self.right_foot).GetPosition()
+			local ray_left = Ray(vector.Add(pos_left, Vector(0, 1)), Vector(0, -1), 0, 1.8)
+			local ray_right = Ray(vector.Add(pos_right, Vector(0, 1)), Vector(0, -1), 0, 1.8)
+			-- Ray trace for both feet:
+			local collEntity_left,collPos_left = scene.Intersects(ray_left, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.layerMask)
+			local collEntity_right,collPos_right = scene.Intersects(ray_right, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.layerMask)
+			local diff_left = 0
+			local diff_right = 0
+			if collEntity_left ~= INVALID_ENTITY then
+				diff_left = vector.Subtract(collPos_left, pos_left).GetY()
+			end
+			if collEntity_right ~= INVALID_ENTITY then
+				diff_right = vector.Subtract(collPos_right, pos_right).GetY()
+			end
+			local diff = diff_left
+			if collPos_left.GetY() > collPos_right.GetY() + 0.01 then
+				diff = diff_right
+				if collEntity_left ~= INVALID_ENTITY then
+					ik_foot = self.left_foot
+					ik_pos = collPos_left
+				end
+			else 
+				if collEntity_right ~= INVALID_ENTITY then
+					ik_foot = self.right_foot
+					ik_pos = collPos_right
+				end
+			end
+			self.root_bone_offset = math.lerp(self.root_bone_offset, diff + 0.1, 0.2)
+		end
+		root_bone_transform.Translate(Vector(0, self.root_bone_offset))
+
+		-- Remove IK effectors by default:
+		if scene.Component_GetInverseKinematics(self.left_foot) ~= nil then
+			scene.Component_RemoveInverseKinematics(self.left_foot)
+		end
+		if scene.Component_GetInverseKinematics(self.right_foot) ~= nil then
+			scene.Component_RemoveInverseKinematics(self.right_foot)
+		end
+		-- The upper foot will use IK effector in IDLE state:
+		if ik_foot ~= INVALID_ENTITY then
+			if self.foot_placement == nil then
+				self.foot_placement = CreateEntity()
+				scene.Component_CreateTransform(self.foot_placement)
+			end
+			--DrawAxis(ik_pos, 0.2)
+			local transform = scene.Component_GetTransform(self.foot_placement)
+			transform.ClearTransform()
+			transform.Translate(vector.Add(ik_pos, Vector(0, 0.15)))
+			local ik = scene.Component_CreateInverseKinematics(ik_foot)
+			ik.SetTarget(self.foot_placement)
+			ik.SetChainLength(2)
+			ik.SetIterationCount(10)
+		end
 		
 	end,
 
@@ -480,6 +549,7 @@ ThirdPersonCamera = {
 ClearWorld()
 LoadModel(script_dir() .. "assets/level.wiscene")
 --LoadModel(script_dir() .. "assets/terrain.wiscene")
+--LoadModel(script_dir() .. "assets/ballpark.wiscene")
 --dofile(script_dir() .. "../dungeon_generator/dungeon_generator.lua")
 
 local player = Character
@@ -508,6 +578,8 @@ runProcess(function()
 	--application.SetInfoDisplay(false)
 	application.SetFPSDisplay(true)
 	--path.SetResolutionScale(0.5)
+	--path.SetFSR2Enabled(true)
+	--path.SetFSR2Preset(FSR2_Preset.Performance)
 
 	while true do
 

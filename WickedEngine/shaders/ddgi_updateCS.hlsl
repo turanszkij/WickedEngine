@@ -20,7 +20,7 @@ RWTexture2D<float2> output : register(u0);
 RWByteAddressBuffer ddgiOffsetBuffer:register(u1);
 #else
 static const uint THREADCOUNT = DDGI_COLOR_RESOLUTION;
-RWTexture2D<float3> output : register(u0);
+RWTexture2D<uint> output : register(u0);	// raw uint alias for Format::R9G9B9E5_SHAREDEXP
 #endif // DDGI_UPDATE_DEPTH
 
 static const uint CACHE_SIZE = THREADCOUNT * THREADCOUNT;
@@ -136,11 +136,12 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 		result = lerp(prev_result, result, push.blendSpeed);
 	}
 
+#ifdef DDGI_UPDATE_DEPTH
+
 	output[pixel_current] = result;
 
 	DeviceMemoryBarrierWithGroupSync();
 
-#ifdef DDGI_UPDATE_DEPTH
 	// Copy depth borders:
 	for (uint index = groupIndex; index < 68; index += THREADCOUNT * THREADCOUNT)
 	{
@@ -160,6 +161,11 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 		ddgiOffsetBuffer.Store<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset), ofs);
 	}
 #else
+
+	output[pixel_current] = PackRGBE(result);
+
+	DeviceMemoryBarrierWithGroupSync();
+
 	// Copy color borders:
 	for (uint index = groupIndex; index < 36; index += THREADCOUNT * THREADCOUNT)
 	{

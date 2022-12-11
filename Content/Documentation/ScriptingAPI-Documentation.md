@@ -671,7 +671,7 @@ Describes an orientation in 3D space.
 - FOV : float
 - NearPlane : float
 - FarPlane : float
-- FocalDistance : float
+- FocalLength : float
 - ApertureSize : float
 - ApertureShape : float
 
@@ -685,8 +685,8 @@ Describes an orientation in 3D space.
 - SetNearPlane(float value)	-- Sets the near plane of the camera, which specifies the rendering cut off near the viewer. Must be a value greater than zero 
 - GetFarPlane() : float result
 - SetFarPlane(float value)	-- Sets the far plane (view distance) of the camera
-- GetFocalDistance() : float result
-- SetFocalDistance(float value)	-- Sets the focal distance (focus distance) of the camera. This is used by depth of field.
+- GetFocalLength() : float result
+- SetFocalLength(float value)	-- Sets the focal distance (focus distance) of the camera. This is used by depth of field.
 - GetApertureSize() : float result
 - SetApertureSize(float value)	-- Sets the aperture size of the camera. Larger values will make the depth of field effect stronger.
 - GetApertureShape() : float result
@@ -1214,6 +1214,18 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetOutlineThreshold(float value)
 - SetOutlineThickness(float value)
 - SetOutlineColor(float r,g,b,a)
+- SetFSREnabled(bool value)	-- FSR 1.0 on/off
+- SetFSRSharpness(float value)	-- FSR 1.0 sharpness 0: sharpest, 2: least sharp
+- SetFSR2Enabled(bool value) -- FSR 2.1 on/off
+- SetFSR2Sharpness(float value) -- FSR 2.1 sharpness 0: least sharp, 1: sharpest (this is different to FSR 1.0)
+- SetFSR2Preset(FSR2_Preset value) -- FSR 2.1 preset will modify resolution scaling and sampler LOD bias
+
+FSR2_Preset = {
+	Quality = 0,			-- 1.5x scaling, -1.58 sampler LOD bias
+	Balanced = 1,			-- 1.7x scaling, -1.76 sampler LOD bias
+	Performance = 2,		-- 2.0x scaling, -2.0 sampler LOD bias
+	Ultra_Performance = 3,	-- 3.0x scaling, -2.58 sampler LOD bias
+}
 
 #### LoadingScreen
 It is a RenderPath2D but one that internally manages resource loading and can display information about the process.

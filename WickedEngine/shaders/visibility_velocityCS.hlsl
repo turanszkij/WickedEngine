@@ -39,7 +39,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 	float2 pos2D = clipspace;
 	float4 pos2DPrev = mul(GetCamera().previous_view_projection, float4(pre, 1));
-	pos2DPrev.xy /= pos2DPrev.w;
+	pos2DPrev.xy /= max(0.0001, pos2DPrev.w); // max: avoid nan
+	pos2DPrev.xy = clamp(pos2DPrev.xy, -1, 1); // clamp: avoid blown up values
 	float2 velocity = ((pos2DPrev.xy - GetCamera().temporalaa_jitter_prev) - (pos2D.xy - GetCamera().temporalaa_jitter)) * float2(0.5, -0.5);
 	output_velocity[pixel] = velocity;
 

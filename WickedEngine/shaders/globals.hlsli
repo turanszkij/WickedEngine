@@ -2,6 +2,7 @@
 #define WI_SHADER_GLOBALS_HF
 #include "ColorSpaceUtility.hlsli"
 #include "PixelPacking_R11G11B10.hlsli"
+#include "PixelPacking_RGBE.hlsli"
 #include "ShaderInterop.h"
 
 // The root signature will affect shader compilation for DX12.
@@ -13,8 +14,9 @@
 	"RootConstants(num32BitConstants=12, b999), " \
 	"CBV(b0), " \
 	"CBV(b1), " \
+	"CBV(b2), " \
 	"DescriptorTable( " \
-		"CBV(b2, numDescriptors = 12, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
+		"CBV(b3, numDescriptors = 11, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
 		"SRV(t0, numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
 		"UAV(u0, numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)" \
 	")," \
@@ -189,7 +191,6 @@ struct PrimitiveID
 	}
 };
 
-#define texture_globalenvmap bindless_cubemaps[GetScene().globalenvmap]
 #define texture_envmaparray bindless_cubearrays[GetScene().envmaparray]
 
 #define texture_random64x64 bindless_textures[GetFrame().texture_random64x64_index]

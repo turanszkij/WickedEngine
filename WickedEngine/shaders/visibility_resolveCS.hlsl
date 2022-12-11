@@ -77,9 +77,8 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 			if (surface.load(prim, ray.Origin, ray.Direction))
 			{
 				float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
-				tmp.xyz /= tmp.w;
-				depth = tmp.z;
-				depth = saturate(depth); // this avoids NAN
+				tmp.xyz /= max(0.0001, tmp.w); // max: avoid nan
+				depth = saturate(tmp.z); // saturate: avoid blown up values
 
 				bin = surface.material.shaderType;
 			}

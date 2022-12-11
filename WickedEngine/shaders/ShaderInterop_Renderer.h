@@ -91,7 +91,17 @@ static const uint TEXTURESLOT_COUNT = 13;
 
 static const uint SVT_TILE_SIZE = 256u;
 static const uint SVT_TILE_BORDER = 4u;
-static const uint SVT_TILE_SIZE_PADDED = SVT_TILE_BORDER + SVT_TILE_SIZE + SVT_TILE_BORDER;
+static const uint SVT_TILE_SIZE_PADDED = SVT_TILE_SIZE + SVT_TILE_BORDER * 2;
+static const uint SVT_PACKED_MIP_COUNT = 6;
+static const uint2 SVT_PACKED_MIP_OFFSETS[SVT_PACKED_MIP_COUNT] = {
+	uint2(0, 0),
+	uint2(SVT_TILE_SIZE / 2 + SVT_TILE_BORDER * 2, 0),
+	uint2(SVT_TILE_SIZE / 2 + SVT_TILE_BORDER * 2 + SVT_TILE_SIZE / 4 + SVT_TILE_BORDER * 2, 0),
+	// shift the offset down a bit to not go over the tile limit:
+	uint2(SVT_TILE_SIZE / 2 + SVT_TILE_BORDER * 2, SVT_TILE_SIZE / 4 + SVT_TILE_BORDER * 2),
+	uint2(SVT_TILE_SIZE / 2 + SVT_TILE_BORDER * 2 + SVT_TILE_SIZE / 16 + SVT_TILE_BORDER * 2, SVT_TILE_SIZE / 4 + SVT_TILE_BORDER * 2),
+	uint2(SVT_TILE_SIZE / 2 + SVT_TILE_BORDER * 2 + SVT_TILE_SIZE / 16 + SVT_TILE_BORDER * 2 + SVT_TILE_SIZE / 32 + SVT_TILE_BORDER * 2, SVT_TILE_SIZE / 4 + SVT_TILE_BORDER * 2),
+};
 
 #ifndef __cplusplus
 #ifdef TEXTURE_SLOT_NONUNIFORM
@@ -160,27 +170,30 @@ struct ShaderTextureSlot
 		}
 #endif // SVT_FEEDBACK
 
-		virtual_lod = min(virtual_lod, GetLodClamp());
-
 		float2 atlas_dim;
 		tex.GetDimensions(atlas_dim.x, atlas_dim.y);
+		const float2 atlas_dim_rcp = rcp(atlas_dim);
+
+		const uint max_nonpacked_lod = uint(GetLodClamp());
+		virtual_lod = min(virtual_lod, max_nonpacked_lod + SVT_PACKED_MIP_COUNT);
+		bool packed_mips = uint(virtual_lod) > max_nonpacked_lod;
 
 		uint2 pixel = uv * virtual_tile_count;
-		uint residency = residency_map.Load(uint3(pixel >> uint(virtual_lod), uint(virtual_lod)));
-		uint2 tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
-		uint min_lod = (residency >> 16u) & 0xFF;
-		float clamped_lod = max(virtual_lod, min_lod);
+		uint residency = residency_map.Load(uint3(pixel >> uint(virtual_lod), min(max_nonpacked_lod, uint(virtual_lod))));
+		uint2 tile = packed_mips ? uint2((residency >> 16u) & 0xFF, (residency >> 24u) & 0xFF) : uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
+		float clamped_lod = virtual_lod < max_nonpacked_lod ? max(virtual_lod, (residency >> 16u) & 0xFF) : virtual_lod;
 
 		// Mip - more detailed:
 		float4 value0;
 		{
 			uint lod0 = floor(clamped_lod);
-			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER;
-			uint2 virtual_lod_dim = virtual_image_dim >> lod0;
+			const uint packed_mip_idx = packed_mips ? uint(virtual_lod - max_nonpacked_lod - 1) : 0;
+			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER + SVT_PACKED_MIP_OFFSETS[packed_mip_idx];
+			uint2 virtual_lod_dim = max(4, virtual_image_dim >> lod0);
 			float2 virtual_pixel = uv * virtual_lod_dim;
 			float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
 			float2 atlas_tile_pixel = tile_pixel_upperleft + 0.5 + virtual_tile_pixel;
-			float2 atlas_uv = atlas_tile_pixel / atlas_dim;
+			float2 atlas_uv = atlas_tile_pixel * atlas_dim_rcp;
 			value0 = tex.SampleLevel(sam, atlas_uv, 0);
 		}
 
@@ -188,14 +201,16 @@ struct ShaderTextureSlot
 		float4 value1;
 		{
 			uint lod1 = ceil(clamped_lod);
-			residency = residency_map.Load(uint3(pixel >> lod1, lod1));
-			tile = uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
-			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER;
-			uint2 virtual_lod_dim = virtual_image_dim >> lod1;
+			packed_mips = uint(lod1) > max_nonpacked_lod;
+			const uint packed_mip_idx = packed_mips ? uint(lod1 - max_nonpacked_lod - 1) : 0;
+			residency = residency_map.Load(uint3(pixel >> lod1, min(max_nonpacked_lod, lod1)));
+			tile = packed_mips ? uint2((residency >> 16u) & 0xFF, (residency >> 24u) & 0xFF) : uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
+			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER + SVT_PACKED_MIP_OFFSETS[packed_mip_idx];
+			uint2 virtual_lod_dim = max(4, virtual_image_dim >> lod1);
 			float2 virtual_pixel = uv * virtual_lod_dim;
 			float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
 			float2 atlas_tile_pixel = tile_pixel_upperleft + 0.5 + virtual_tile_pixel;
-			float2 atlas_uv = atlas_tile_pixel / atlas_dim;
+			float2 atlas_uv = atlas_tile_pixel * atlas_dim_rcp;
 			value1 = tex.SampleLevel(sam, atlas_uv, 0);
 		}
 
@@ -807,6 +822,7 @@ static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 11;
 static const uint OPTION_BIT_FORCE_DIFFUSE_LIGHTING = 1 << 12;
 static const uint OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS = 1 << 13;
 static const uint OPTION_BIT_OVERRIDE_FOG_COLOR = 1 << 14;
+static const uint OPTION_BIT_STATIC_SKY_SPHEREMAP = 1 << 15;
 
 // ---------- Common Constant buffers: -----------------
 
@@ -1103,6 +1119,7 @@ struct TerrainVirtualTexturePush
 {
 	int2 offset;
 	uint2 write_offset;
+	uint write_size;
 	float resolution_rcp;
 	int region_weights_textureRO;
 };

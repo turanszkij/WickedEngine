@@ -458,23 +458,73 @@ namespace wi::scene
 				tex.width = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
 				tex.height = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.z;
 				//tex.format = Format::R11G11B10_FLOAT; // not enough precision with this format, causes green hue in GI
-				tex.format = Format::R16G16B16A16_FLOAT;
-				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				//tex.format = Format::R16G16B16A16_FLOAT; // this is trivial to use but fat
+				tex.format = Format::R9G9B9E5_SHAREDEXP; // must be packed manually as uint32, good quality and fast to sample
+				tex.misc_flags = ResourceMiscFlag::SPARSE; // sparse aliasing to write R9G9B9E5_SHAREDEXP as uint
+				tex.width = std::max(128u, tex.width);		// force non-packed mip behaviour
+				tex.height = std::max(128u, tex.height);	// force non-packed mip behaviour
+				tex.bind_flags = BindFlag::SHADER_RESOURCE;
+				tex.layout = ResourceState::SHADER_RESOURCE;
 				device->CreateTexture(&tex, nullptr, &ddgi.color_texture[0]);
 				device->SetName(&ddgi.color_texture[0], "ddgi.color_texture[0]");
 				device->CreateTexture(&tex, nullptr, &ddgi.color_texture[1]);
 				device->SetName(&ddgi.color_texture[1], "ddgi.color_texture[1]");
 
+				tex.format = Format::R32_UINT; // packed R9G9B9E5_SHAREDEXP
+				tex.bind_flags = BindFlag::UNORDERED_ACCESS;
+				tex.layout = ResourceState::UNORDERED_ACCESS;
+				device->CreateTexture(&tex, nullptr, &ddgi.color_texture_rw[0]);
+				device->SetName(&ddgi.color_texture_rw[0], "ddgi.color_texture_rw[0]");
+				device->CreateTexture(&tex, nullptr, &ddgi.color_texture_rw[1]);
+				device->SetName(&ddgi.color_texture_rw[1], "ddgi.color_texture_rw[1]");
+
+				buf = {};
+				buf.alignment = ddgi.color_texture_rw[0].sparse_page_size;
+				buf.size = ddgi.color_texture_rw[0].sparse_properties->total_tile_count * buf.alignment * 2;
+				buf.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS;
+				device->CreateBuffer(&buf, nullptr, &ddgi.sparse_tile_pool);
+
+				SparseUpdateCommand commands[4];
+				commands[0].sparse_resource = &ddgi.color_texture[0];
+				commands[0].tile_pool = &ddgi.sparse_tile_pool;
+				commands[0].num_resource_regions = 1;
+				uint32_t tile_count = ddgi.color_texture_rw[0].sparse_properties->total_tile_count;
+				uint32_t tile_offset[2] = { 0, tile_count };
+				SparseRegionSize region;
+				region.width = (tex.width + ddgi.color_texture_rw[0].sparse_properties->tile_width - 1) / ddgi.color_texture_rw[0].sparse_properties->tile_width;
+				region.height = (tex.height + ddgi.color_texture_rw[0].sparse_properties->tile_height - 1) / ddgi.color_texture_rw[0].sparse_properties->tile_height;
+				SparseResourceCoordinate coordinate;
+				coordinate.x = 0;
+				coordinate.y = 0;
+				TileRangeFlags flags = TileRangeFlags::None;
+				commands[0].sizes = &region;
+				commands[0].coordinates = &coordinate;
+				commands[0].range_flags = &flags;
+				commands[0].range_tile_counts = &tile_count;
+				commands[0].range_start_offsets = &tile_offset[0];
+				commands[1] = commands[0];
+				commands[1].sparse_resource = &ddgi.color_texture_rw[0];
+				commands[2] = commands[0];
+				commands[2].sparse_resource = &ddgi.color_texture[1];
+				commands[2].range_start_offsets = &tile_offset[1];
+				commands[3] = commands[0];
+				commands[3].sparse_resource = &ddgi.color_texture_rw[1];
+				commands[3].range_start_offsets = &tile_offset[1];
+				device->SparseUpdate(QUEUE_COMPUTE, commands, arraysize(commands));
+
 				tex.width = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
 				tex.height = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.z;
 				tex.format = Format::R16G16_FLOAT;
+				tex.misc_flags = {};
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				tex.layout = ResourceState::SHADER_RESOURCE;
 				device->CreateTexture(&tex, nullptr, &ddgi.depth_texture[0]);
 				device->SetName(&ddgi.depth_texture[0], "ddgi.depth_texture[0]");
 				device->CreateTexture(&tex, nullptr, &ddgi.depth_texture[1]);
 				device->SetName(&ddgi.depth_texture[1], "ddgi.depth_texture[1]");
 			}
 			std::swap(ddgi.color_texture[0], ddgi.color_texture[1]);
+			std::swap(ddgi.color_texture_rw[0], ddgi.color_texture_rw[1]);
 			std::swap(ddgi.depth_texture[0], ddgi.depth_texture[1]);
 			ddgi.grid_min = bounds.getMin();
 			ddgi.grid_min.x -= 1;
@@ -1960,6 +2010,7 @@ namespace wi::scene
 	{
 		for (size_t i = 0; i < expressions.GetCount(); ++i)
 		{
+			Entity entity = expressions.GetEntity(i);
 			ExpressionComponent& expression_mastering = expressions[i];
 
 			// Procedural blink:
@@ -2038,6 +2089,47 @@ namespace wi::scene
 				{
 					expression_mastering.look_timer = -wi::random::GetRandom(0.0f, 1.0f);
 				}
+			}
+
+			// Talking animation based on sound:
+			const SoundComponent* sound = sounds.GetComponent(entity);
+			if(sound != nullptr && sound->soundResource.IsValid() && sound->IsPlaying())
+			{
+				wi::audio::SampleInfo info = wi::audio::GetSampleInfo(&sound->soundResource.GetSound());
+				uint32_t sample_frequency = info.sample_rate * info.channel_count;
+				uint64_t current_sample = wi::audio::GetTotalSamplesPlayed(&sound->soundinstance);
+				if (sound->IsLooped())
+				{
+					float total_time = float(current_sample) / float(info.sample_rate);
+					if (total_time > sound->soundinstance.loop_begin)
+					{
+						float loop_length = sound->soundinstance.loop_length > 0 ? sound->soundinstance.loop_length : (float(info.sample_count) / float(sample_frequency));
+						float loop_time = std::fmod(total_time - sound->soundinstance.loop_begin, loop_length);
+						current_sample = uint64_t(loop_time * info.sample_rate);
+					}
+				}
+				current_sample *= info.channel_count;
+				current_sample = std::min(current_sample, info.sample_count);
+
+				float voice = 0;
+				const int sample_count = 64;
+				for (int sam = 0; sam < sample_count; ++sam)
+				{
+					voice = std::max(voice, std::abs((float)info.samples[std::min(current_sample + sam, info.sample_count)] / 32768.0f));
+				}
+				int mouth = expression_mastering.presets[(int)ExpressionComponent::Preset::Aa];
+				ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
+
+				const float strength = 0.4f;
+				if (voice > 0.1f)
+				{
+					expression.weight = wi::math::Lerp(expression.weight, 1, strength);
+				}
+				else
+				{
+					expression.weight = wi::math::Lerp(expression.weight, 0, strength);
+				}
+				expression.SetDirty();
 			}
 
 			float overrideMouthBlend = 0;
@@ -2169,7 +2261,6 @@ namespace wi::scene
 
 		if (inverse_kinematics.GetCount() > 0 || humanoids.GetCount() > 0)
 		{
-			transforms_temp.resize(transforms.GetCount());
 			transforms_temp = transforms.GetComponentArray(); // make copy
 		}
 
@@ -2213,9 +2304,81 @@ namespace wi::scene
 					const XMVECTOR parent_pos = parent_transform.GetPositionV();
 					const XMVECTOR dir_parent_to_ik = XMVector3Normalize(transform.GetPositionV() - parent_pos);
 					const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
-					const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_ik, dir_parent_to_target));
-					const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target)));
-					const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
+
+					// Check if this transform is part of a humanoid and need some constraining:
+					bool constrain = false;
+					XMFLOAT3 constraint_min = XMFLOAT3(0, 0, 0);
+					XMFLOAT3 constraint_max = XMFLOAT3(0, 0, 0);
+					for (size_t humanoid_idx = 0; (humanoid_idx < humanoids.GetCount()) && !constrain; ++humanoid_idx)
+					{
+						const HumanoidComponent& humanoid = humanoids[humanoid_idx];
+						int bone_type_idx = 0;
+						for (auto& bone : humanoid.bones)
+						{
+							if (bone == parent_entity)
+							{
+								switch ((HumanoidComponent::HumanoidBone)bone_type_idx)
+								{
+								default:
+									break;
+								case HumanoidComponent::HumanoidBone::LeftUpperLeg:
+								case HumanoidComponent::HumanoidBone::RightUpperLeg:
+									constrain = true;
+									constraint_min = XMFLOAT3(XM_PI * 0.6f, XM_PI * 0.1f, XM_PI * 0.1f);
+									constraint_max = XMFLOAT3(XM_PI * 0.1f, XM_PI * 0.1f, XM_PI * 0.1f);
+									break;
+								case HumanoidComponent::HumanoidBone::LeftLowerLeg:
+								case HumanoidComponent::HumanoidBone::RightLowerLeg:
+									constrain = true;
+									constraint_min = XMFLOAT3(0, 0, 0);
+									constraint_max = XMFLOAT3(XM_PI * 0.8f, 0, 0);
+									break;
+								}
+							}
+							if (constrain)
+								break;
+							bone_type_idx++;
+						}
+					}
+
+					XMVECTOR Q;
+					if (constrain)
+					{
+						// Apply constrained rotation:
+						Q = XMQuaternionIdentity();
+						XMMATRIX W = XMLoadFloat4x4(&parent_transform.world);
+						for (int axis_idx = 0; axis_idx < 3; ++axis_idx)
+						{
+							XMFLOAT3 axis_floats = XMFLOAT3(0, 0, 0);
+							((float*)&axis_floats)[axis_idx] = 1;
+							XMVECTOR axis = XMLoadFloat3(&axis_floats);
+							const float axis_min = ((float*)&constraint_min)[axis_idx] / (float)ik.iteration_count;
+							const float axis_max = ((float*)&constraint_max)[axis_idx] / (float)ik.iteration_count;
+							axis = XMVector3Normalize(XMVector3TransformNormal(axis, W));
+							const XMVECTOR projA = XMVector3Normalize(dir_parent_to_ik - axis * XMVector3Dot(axis, dir_parent_to_ik));
+							const XMVECTOR projB = XMVector3Normalize(dir_parent_to_target - axis * XMVector3Dot(axis, dir_parent_to_target));
+							float angle = XMVectorGetX(XMVector3AngleBetweenNormals(projA, projB));
+							if (XMVectorGetX(XMVector3Dot(XMVector3Cross(projA, projB), axis)) < 0)
+							{
+								angle = XM_2PI - std::min(angle, axis_min);
+							}
+							else
+							{
+								angle = std::min(angle, axis_max);
+							}
+							const XMVECTOR Q1 = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
+							W = XMMatrixRotationQuaternion(Q1) * W;
+							Q = XMQuaternionMultiply(Q1, Q);
+						}
+						Q = XMQuaternionNormalize(Q);
+					}
+					else
+					{
+						// Simple shortest rotation without constraint:
+						const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(dir_parent_to_ik, dir_parent_to_target));
+						const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(dir_parent_to_ik, dir_parent_to_target)));
+						Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
+					}
 
 					// parent to world space:
 					parent_transform.ApplyTransform();
@@ -2627,40 +2790,43 @@ namespace wi::scene
 			XMStoreFloat3(&tail_sphere.center, tail_next);
 			tail_sphere.radius = hitRadius;
 
-			spring_collider_bvh.Intersects(tail_sphere, 0, [&](uint32_t collider_index) {
-				const ColliderComponent& collider = colliders_cpu[collider_index];
+			if (colliders_cpu != nullptr)
+			{
+				spring_collider_bvh.Intersects(tail_sphere, 0, [&](uint32_t collider_index) {
+					const ColliderComponent& collider = colliders_cpu[collider_index];
 
-				float dist = 0;
-				XMFLOAT3 direction = {};
-				switch (collider.shape)
-				{
-				default:
-				case ColliderComponent::Shape::Sphere:
-					tail_sphere.intersects(collider.sphere, dist, direction);
-					break;
-				case ColliderComponent::Shape::Capsule:
-					tail_sphere.intersects(collider.capsule, dist, direction);
-					break;
-				case ColliderComponent::Shape::Plane:
-					tail_sphere.intersects(collider.plane, dist, direction);
-					break;
-				}
-
-				if (dist < 0)
-				{
-					tail_next = tail_next - XMLoadFloat3(&direction) * dist;
-					to_tail = XMVector3Normalize(tail_next - position_root);
-
-					if (!spring.IsStretchEnabled())
+					float dist = 0;
+					XMFLOAT3 direction = {};
+					switch (collider.shape)
 					{
-						// Limit offset to keep distance from parent:
-						tail_next = position_root + to_tail * boneLength;
+					default:
+					case ColliderComponent::Shape::Sphere:
+						tail_sphere.intersects(collider.sphere, dist, direction);
+						break;
+					case ColliderComponent::Shape::Capsule:
+						tail_sphere.intersects(collider.capsule, dist, direction);
+						break;
+					case ColliderComponent::Shape::Plane:
+						tail_sphere.intersects(collider.plane, dist, direction);
+						break;
 					}
 
-					XMStoreFloat3(&tail_sphere.center, tail_next);
-					tail_sphere.radius = hitRadius;
-				}
-			});
+					if (dist < 0)
+					{
+						tail_next = tail_next - XMLoadFloat3(&direction) * dist;
+						to_tail = XMVector3Normalize(tail_next - position_root);
+
+						if (!spring.IsStretchEnabled())
+						{
+							// Limit offset to keep distance from parent:
+							tail_next = position_root + to_tail * boneLength;
+						}
+
+						XMStoreFloat3(&tail_sphere.center, tail_next);
+						tail_sphere.radius = hitRadius;
+					}
+				});
+			}
 #endif
 
 			XMStoreFloat3(&spring.prevTail, tail_current);
@@ -2783,37 +2949,47 @@ namespace wi::scene
 				{
 					if (morph.weight <= 0)
 						continue;
-					if (morph.sparse_indices.empty())
+					if (morph.sparse_indices_positions.empty())
 					{
+						// Flat update:
 						for (size_t i = 0; i < morph.vertex_positions.size(); ++i)
 						{
 							mesh.morph_temp_pos[i].x += morph.weight * morph.vertex_positions[i].x;
 							mesh.morph_temp_pos[i].y += morph.weight * morph.vertex_positions[i].y;
 							mesh.morph_temp_pos[i].z += morph.weight * morph.vertex_positions[i].z;
-
-							if (!morph.vertex_normals.empty())
-							{
-								mesh.morph_temp_nor[i].x += morph.weight * morph.vertex_normals[i].x;
-								mesh.morph_temp_nor[i].y += morph.weight * morph.vertex_normals[i].y;
-								mesh.morph_temp_nor[i].z += morph.weight * morph.vertex_normals[i].z;
-							}
 						}
 					}
 					else
 					{
-						for (size_t i = 0; i < morph.sparse_indices.size(); ++i)
+						// Sparse update:
+						for (size_t i = 0; i < morph.sparse_indices_positions.size(); ++i)
 						{
-							const uint32_t ind = morph.sparse_indices[i];
+							const uint32_t ind = morph.sparse_indices_positions[i];
 							mesh.morph_temp_pos[ind].x += morph.weight * morph.vertex_positions[i].x;
 							mesh.morph_temp_pos[ind].y += morph.weight * morph.vertex_positions[i].y;
 							mesh.morph_temp_pos[ind].z += morph.weight * morph.vertex_positions[i].z;
+						}
+					}
 
-							if (!morph.vertex_normals.empty())
-							{
-								mesh.morph_temp_nor[ind].x += morph.weight * morph.vertex_normals[i].x;
-								mesh.morph_temp_nor[ind].y += morph.weight * morph.vertex_normals[i].y;
-								mesh.morph_temp_nor[ind].z += morph.weight * morph.vertex_normals[i].z;
-							}
+					if (morph.sparse_indices_normals.empty())
+					{
+						// Flat update:
+						for (size_t i = 0; i < morph.vertex_normals.size(); ++i)
+						{
+							mesh.morph_temp_nor[i].x += morph.weight * morph.vertex_normals[i].x;
+							mesh.morph_temp_nor[i].y += morph.weight * morph.vertex_normals[i].y;
+							mesh.morph_temp_nor[i].z += morph.weight * morph.vertex_normals[i].z;
+						}
+					}
+					else
+					{
+						// Sparse update:
+						for (size_t i = 0; i < morph.sparse_indices_normals.size(); ++i)
+						{
+							const uint32_t ind = morph.sparse_indices_normals[i];
+							mesh.morph_temp_nor[ind].x += morph.weight * morph.vertex_normals[i].x;
+							mesh.morph_temp_nor[ind].y += morph.weight * morph.vertex_normals[i].y;
+							mesh.morph_temp_nor[ind].z += morph.weight * morph.vertex_normals[i].z;
 						}
 					}
 				}

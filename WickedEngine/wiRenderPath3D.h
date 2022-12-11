@@ -21,6 +21,14 @@ namespace wi
 			AO_RTAO,		// ray traced ambient occlusion
 			// Don't alter order! (bound to lua manually)
 		};
+		enum class FSR2_Preset
+		{
+			// Guidelines: https://github.com/GPUOpen-Effects/FidelityFX-FSR2#scaling-modes
+			Quality,
+			Balanced,
+			Performance,
+			Ultra_Performance,
+		};
 	private:
 		float exposure = 1.0f;
 		float brightness = 0.0f;
@@ -42,6 +50,7 @@ namespace wi
 		float eyeadaptionKey = 0.115f;
 		float eyeadaptionRate = 1;
 		float fsrSharpness = 1.0f;
+		float fsr2Sharpness = 0.5f;
 		float lightShaftsStrength = 0.2f;
 		float raytracedDiffuseRange = 10;
 		float raytracedReflectionsRange = 10000.0f;
@@ -69,6 +78,7 @@ namespace wi
 		bool occlusionCullingEnabled = true;
 		bool sceneUpdateEnabled = true;
 		bool fsrEnabled = false;
+		bool fsr2Enabled = false;
 
 		uint32_t msaaSampleCount = 1;
 
@@ -137,6 +147,7 @@ namespace wi
 		wi::renderer::SurfelGIResources surfelGIResources;
 		wi::renderer::TemporalAAResources temporalAAResources;
 		wi::renderer::VisibilityResources visibilityResources;
+		wi::renderer::FSR2Resources fsr2Resources;
 
 		mutable const wi::graphics::Texture* lastPostprocessRT = &rtPostprocess;
 		// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
@@ -201,6 +212,7 @@ namespace wi
 		constexpr float getEyeAdaptionKey() const { return eyeadaptionKey; }
 		constexpr float getEyeAdaptionRate() const { return eyeadaptionRate; }
 		constexpr float getFSRSharpness() const { return fsrSharpness; }
+		constexpr float getFSR2Sharpness() const { return fsr2Sharpness; }
 		constexpr float getLightShaftsStrength() const { return lightShaftsStrength; }
 		constexpr float getRaytracedDiffuseRange() const { return raytracedDiffuseRange; }
 		constexpr float getRaytracedReflectionsRange() const { return raytracedReflectionsRange; }
@@ -229,6 +241,7 @@ namespace wi
 		constexpr bool getOcclusionCullingEnabled() const { return occlusionCullingEnabled; }
 		constexpr bool getSceneUpdateEnabled() const { return sceneUpdateEnabled; }
 		constexpr bool getFSREnabled() const { return fsrEnabled; }
+		constexpr bool getFSR2Enabled() const { return fsr2Enabled; }
 
 		constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
 
@@ -252,6 +265,7 @@ namespace wi
 		constexpr void setEyeAdaptionKey(float value) { eyeadaptionKey = value; }
 		constexpr void setEyeAdaptionRate(float value) { eyeadaptionRate = value; }
 		constexpr void setFSRSharpness(float value) { fsrSharpness = value; }
+		constexpr void setFSR2Sharpness(float value) { fsr2Sharpness = value; }
 		constexpr void setLightShaftsStrength(float value) { lightShaftsStrength = value; }
 		constexpr void setRaytracedDiffuseRange(float value) { raytracedDiffuseRange = value; }
 		constexpr void setRaytracedReflectionsRange(float value) { raytracedReflectionsRange = value; }
@@ -279,6 +293,8 @@ namespace wi
 		constexpr void setOcclusionCullingEnabled(bool value) { occlusionCullingEnabled = value; }
 		constexpr void setSceneUpdateEnabled(bool value) { sceneUpdateEnabled = value; }
 		void setFSREnabled(bool value);
+		void setFSR2Enabled(bool value);
+		void setFSR2Preset(FSR2_Preset preset); // this will modify resolution scaling and sampler lod bias
 
 		virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 

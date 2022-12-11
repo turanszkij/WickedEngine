@@ -360,7 +360,8 @@ namespace wi::scene
 		{
 			wi::vector<XMFLOAT3> vertex_positions;
 			wi::vector<XMFLOAT3> vertex_normals;
-			wi::vector<uint32_t> sparse_indices; // optional, these can be used to target vertices indirectly
+			wi::vector<uint32_t> sparse_indices_positions; // optional, these can be used to target vertices indirectly
+			wi::vector<uint32_t> sparse_indices_normals; // optional, these can be used to target vertices indirectly
 			float weight = 0;
 		};
 		wi::vector<MorphTarget> morph_targets;

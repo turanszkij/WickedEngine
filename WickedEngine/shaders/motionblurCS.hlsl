@@ -66,11 +66,11 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	const float neighborhood_velocity_magnitude = length(neighborhood_velocity);
 	const float4 center_color = input[pixel];
 
-	const float2 center_velocity = texture_velocity[pixel].xy * strength;
-	const float center_velocity_magnitude = length(center_velocity);
-	const float center_depth = texture_lineardepth[pixel];
-
 	const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
+
+	const float2 center_velocity = texture_velocity.SampleLevel(sampler_point_clamp, uv, 0).xy * strength;
+	const float center_velocity_magnitude = length(center_velocity);
+	const float center_depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv, 0);
 
 	float seed = 12345;
 	const float random_direction = blue_noise(pixel).x;

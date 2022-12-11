@@ -12,6 +12,7 @@ public:
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	void SetEntity(wi::ecs::Entity entity);
 
+	wi::gui::Label infoLabel;
 	wi::gui::Slider blinkFrequencySlider;
 	wi::gui::Slider blinkLengthSlider;
 	wi::gui::Slider blinkCountSlider;

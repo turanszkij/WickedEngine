@@ -2910,6 +2910,7 @@ Luna<CameraComponent_BindLua>::PropertyType CameraComponent_BindLua::properties[
 	lunaproperty(CameraComponent_BindLua, FarPlane),
 	lunaproperty(CameraComponent_BindLua, ApertureSize),
 	lunaproperty(CameraComponent_BindLua, ApertureShape),
+	lunaproperty(CameraComponent_BindLua, FocalLength),
 	{ NULL, NULL }
 };
 

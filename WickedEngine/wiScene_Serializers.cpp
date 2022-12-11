@@ -417,7 +417,11 @@ namespace wi::scene
 					archive >> morph_targets[i].weight;
 					if (seri.GetVersion() >= 1)
 					{
-						archive >> morph_targets[i].sparse_indices;
+						archive >> morph_targets[i].sparse_indices_positions;
+					}
+					if (seri.GetVersion() >= 2)
+					{
+						archive >> morph_targets[i].sparse_indices_normals;
 					}
 			    }
 			}
@@ -490,7 +494,11 @@ namespace wi::scene
 					archive << morph_targets[i].weight;
 					if (seri.GetVersion() >= 1)
 					{
-						archive << morph_targets[i].sparse_indices;
+						archive << morph_targets[i].sparse_indices_positions;
+					}
+					if (seri.GetVersion() >= 2)
+					{
+						archive << morph_targets[i].sparse_indices_normals;
 					}
 			    }
 			}
@@ -1907,8 +1915,16 @@ namespace wi::scene
 				TextureDesc desc;
 				desc.width = DDGI_COLOR_TEXELS * grid_dimensions.x * grid_dimensions.y;
 				desc.height = DDGI_COLOR_TEXELS * grid_dimensions.z;
-				desc.format = Format::R16G16B16A16_FLOAT;
-				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				if (data.size() == desc.width * desc.height * GetFormatStride(Format::R9G9B9E5_SHAREDEXP))
+				{
+					desc.format = Format::R9G9B9E5_SHAREDEXP;
+				}
+				else
+				{
+					assert(data.size() == desc.width * desc.height * GetFormatStride(Format::R16G16B16A16_FLOAT));
+					desc.format = Format::R16G16B16A16_FLOAT;
+				}
+				desc.bind_flags = BindFlag::SHADER_RESOURCE;
 
 				SubresourceData initdata;
 				initdata.data_ptr = data.data();

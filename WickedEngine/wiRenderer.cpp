@@ -26,6 +26,7 @@
 #include "shaders/ShaderInterop_Raytracing.h"
 #include "shaders/ShaderInterop_BVH.h"
 #include "shaders/ShaderInterop_DDGI.h"
+#include "shaders/ShaderInterop_FSR2.h"
 
 #include <algorithm>
 #include <atomic>
@@ -700,6 +701,7 @@ bool LoadShader(
 		std::string sourcedir = SHADERSOURCEPATH;
 		wi::helper::MakePathAbsolute(sourcedir);
 		input.include_directories.push_back(sourcedir);
+		input.include_directories.push_back(sourcedir + wi::helper::GetDirectoryFromPath(filename));
 		input.shadersourcefilename = wi::helper::ReplaceExtension(sourcedir + filename, "hlsl");
 
 		wi::shadercompiler::CompilerOutput output;
@@ -711,7 +713,7 @@ bool LoadShader(
 
 			if (!output.error_message.empty())
 			{
-				wi::backlog::post(output.error_message);
+				wi::backlog::post(output.error_message, wi::backlog::LogLevel::Warning);
 			}
 			wi::backlog::post("shader compiled: " + shaderbinaryfilename);
 			return device->CreateShader(stage, output.shaderdata, output.shadersize, &shader);
@@ -1017,6 +1019,14 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UNDERWATER], "underwaterCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR_UPSCALING], "fsr_upscalingCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR_SHARPEN], "fsr_sharpenCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR2_AUTOGEN_REACTIVE_PASS], "ffx-fsr2/ffx_fsr2_autogen_reactive_pass.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR2_COMPUTE_LUMINANCE_PYRAMID_PASS], "ffx-fsr2/ffx_fsr2_compute_luminance_pyramid_pass.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR2_PREPARE_INPUT_COLOR_PASS], "ffx-fsr2/ffx_fsr2_prepare_input_color_pass.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR2_RECONSTRUCT_PREVIOUS_DEPTH_PASS], "ffx-fsr2/ffx_fsr2_reconstruct_previous_depth_pass.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR2_DEPTH_CLIP_PASS], "ffx-fsr2/ffx_fsr2_depth_clip_pass.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR2_LOCK_PASS], "ffx-fsr2/ffx_fsr2_lock_pass.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR2_ACCUMULATE_PASS], "ffx-fsr2/ffx_fsr2_accumulate_pass.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR2_RCAS_PASS], "ffx-fsr2/ffx_fsr2_rcas_pass.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_CHROMATIC_ABERRATION], "chromatic_aberrationCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT1], "upsample_bilateral_float1CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM1], "upsample_bilateral_unorm1CS.cso"); });
@@ -1769,7 +1779,7 @@ void LoadBuffers()
 	{
 		// the dummy buffer is read-only so only the first 'exposure' value is needed,
 		// not the luminance or histogram values in the full version of the buffer used
-        // when eye adaption is enabled.
+		// when eye adaption is enabled.
 		float values[1] = { 1 };
 
 		GPUBufferDesc desc;
@@ -2215,12 +2225,9 @@ inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 }
 inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, SHCAM* shcams, size_t shcam_count)
 {
-	if (GetTemporalAAEnabled())
-	{
-		// remove camera jittering
-		camera.jitter = XMFLOAT2(0, 0);
-		camera.UpdateCamera();
-	}
+	// remove camera jittering
+	camera.jitter = XMFLOAT2(0, 0);
+	camera.UpdateCamera();
 
 	const XMMATRIX lightRotation = XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation));
 	const XMVECTOR to = XMVector3TransformNormal(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), lightRotation);
@@ -3370,6 +3377,10 @@ void UpdatePerFrameData(
 	{
 		frameCB.options |= OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS;
 	}
+	if (vis.scene->weather.skyMap.IsValid() && !has_flag(vis.scene->weather.skyMap.GetTexture().desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+	{
+		frameCB.options |= OPTION_BIT_STATIC_SKY_SPHEREMAP;
+	}
 	
 	frameCB.scene = vis.scene->shaderscene;
 
@@ -3969,7 +3980,7 @@ void UpdateRenderData(
 	}
 
 	// Impostor prepare:
-	if (vis.scene->instanceArraySize > 0 && vis.scene->meshletBuffer.IsValid())
+	if (vis.scene->impostors.GetCount() > 0 && vis.scene->objects.GetCount() > 0 && vis.scene->impostorBuffer.IsValid())
 	{
 		device->EventBegin("Impostor prepare", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Impostor prepare", cmd);
@@ -6810,7 +6821,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			if (vis.scene->weather.skyMap.IsValid())
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
-				device->BindResource(&vis.scene->weather.skyMap.GetTexture(), 0, cmd, vis.scene->weather.skyMap.GetTextureSRGBSubresource());
 			}
 			else
 			{
@@ -8980,7 +8990,6 @@ void DDGI(
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
 			GPUBarrier::Buffer(&scene.ddgi.ray_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
-			GPUBarrier::Image(&scene.ddgi.color_texture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&scene.ddgi.depth_texture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Buffer(&scene.ddgi.offset_buffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 		};
@@ -9000,7 +9009,7 @@ void DDGI(
 		device->BindResources(res, 0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
-			&scene.ddgi.color_texture[1],
+			&scene.ddgi.color_texture_rw[1],
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -9034,7 +9043,7 @@ void DDGI(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&scene.ddgi.color_texture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Memory(&scene.ddgi.color_texture_rw[1]),
 			GPUBarrier::Image(&scene.ddgi.depth_texture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 			GPUBarrier::Buffer(&scene.ddgi.offset_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 		};
@@ -12093,6 +12102,7 @@ void Postprocess_DepthOfField(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 		device->Dispatch(
 			(res.texture_tilemax_horizontal.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			(res.texture_tilemax_horizontal.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -12538,6 +12548,7 @@ void Postprocess_MotionBlur(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 		device->Dispatch(
 			(res.texture_tilemax_horizontal.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			(res.texture_tilemax_horizontal.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -13215,9 +13226,12 @@ void Postprocess_Tonemap(
 	device->EventEnd(cmd);
 }
 
+namespace fsr
+{
 #define A_CPU
 #include "shaders/ffx-fsr/ffx_a.h"
 #include "shaders/ffx-fsr/ffx_fsr1.h"
+}
 void Postprocess_FSR(
 	const Texture& input,
 	const Texture& temp,
@@ -13226,6 +13240,7 @@ void Postprocess_FSR(
 	float sharpness
 )
 {
+	using namespace fsr;
 	device->EventBegin("Postprocess_FSR", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Postprocess_FSR", cmd);
 
@@ -13321,6 +13336,686 @@ void Postprocess_FSR(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
+	}
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+
+namespace fsr2
+{
+#include "shaders/ffx-fsr2/ffx_core.h"
+#include "shaders/ffx-fsr2/ffx_fsr1.h"
+#include "shaders/ffx-fsr2/ffx_spd.h"
+#include "shaders/ffx-fsr2/ffx_fsr2_callbacks_hlsl.h"
+#include "shaders/ffx-fsr2/ffx_fsr2_common.h"
+int32_t ffxFsr2GetJitterPhaseCount(int32_t renderWidth, int32_t displayWidth)
+{
+	const float basePhaseCount = 8.0f;
+	const int32_t jitterPhaseCount = int32_t(basePhaseCount * pow((float(displayWidth) / renderWidth), 2.0f));
+	return jitterPhaseCount;
+}
+static const int FFX_FSR2_MAXIMUM_BIAS_TEXTURE_WIDTH = 16;
+static const int FFX_FSR2_MAXIMUM_BIAS_TEXTURE_HEIGHT = 16;
+static const float ffxFsr2MaximumBias[] = {
+	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	1.876f,	1.809f,	1.772f,	1.753f,	1.748f,
+	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	1.869f,	1.801f,	1.764f,	1.745f,	1.739f,
+	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	1.976f,	1.841f,	1.774f,	1.737f,	1.716f,	1.71f,
+	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	1.914f,	1.784f,	1.716f,	1.673f,	1.649f,	1.641f,
+	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	1.793f,	1.676f,	1.604f,	1.562f,	1.54f,	1.533f,
+	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	1.802f,	1.619f,	1.536f,	1.492f,	1.467f,	1.454f,	1.449f,
+	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	1.812f,	1.575f,	1.496f,	1.456f,	1.432f,	1.416f,	1.408f,	1.405f,
+	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	1.555f,	1.479f,	1.438f,	1.413f,	1.398f,	1.387f,	1.381f,	1.379f,
+	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	1.812f,	1.555f,	1.474f,	1.43f,	1.404f,	1.387f,	1.376f,	1.368f,	1.363f,	1.362f,
+	2.0f,	2.0f,	2.0f,	2.0f,	2.0f,	1.802f,	1.575f,	1.479f,	1.43f,	1.401f,	1.382f,	1.369f,	1.36f,	1.354f,	1.351f,	1.35f,
+	2.0f,	2.0f,	1.976f,	1.914f,	1.793f,	1.619f,	1.496f,	1.438f,	1.404f,	1.382f,	1.367f,	1.357f,	1.349f,	1.344f,	1.341f,	1.34f,
+	1.876f,	1.869f,	1.841f,	1.784f,	1.676f,	1.536f,	1.456f,	1.413f,	1.387f,	1.369f,	1.357f,	1.347f,	1.341f,	1.336f,	1.333f,	1.332f,
+	1.809f,	1.801f,	1.774f,	1.716f,	1.604f,	1.492f,	1.432f,	1.398f,	1.376f,	1.36f,	1.349f,	1.341f,	1.335f,	1.33f,	1.328f,	1.327f,
+	1.772f,	1.764f,	1.737f,	1.673f,	1.562f,	1.467f,	1.416f,	1.387f,	1.368f,	1.354f,	1.344f,	1.336f,	1.33f,	1.326f,	1.323f,	1.323f,
+	1.753f,	1.745f,	1.716f,	1.649f,	1.54f,	1.454f,	1.408f,	1.381f,	1.363f,	1.351f,	1.341f,	1.333f,	1.328f,	1.323f,	1.321f,	1.32f,
+	1.748f,	1.739f,	1.71f,	1.641f,	1.533f,	1.449f,	1.405f,	1.379f,	1.362f,	1.35f,	1.34f,	1.332f,	1.327f,	1.323f,	1.32f,	1.319f,
+
+};
+/// The value of Pi.
+const float FFX_PI = 3.141592653589793f;
+/// An epsilon value for floating point numbers.
+const float FFX_EPSILON = 1e-06f;
+// Lanczos
+static float lanczos2(float value)
+{
+	return abs(value) < FFX_EPSILON ? 1.f : (sinf(FFX_PI * value) / (FFX_PI * value)) * (sinf(0.5f * FFX_PI * value) / (0.5f * FFX_PI * value));
+}
+// Calculate halton number for index and base.
+static float halton(int32_t index, int32_t base)
+{
+	float f = 1.0f, result = 0.0f;
+
+	for (int32_t currentIndex = index; currentIndex > 0;) {
+
+		f /= (float)base;
+		result = result + f * (float)(currentIndex % base);
+		currentIndex = (uint32_t)(floorf((float)(currentIndex) / (float)(base)));
+	}
+
+	return result;
+}
+}
+void CreateFSR2Resources(FSR2Resources& res, XMUINT2 render_resolution, XMUINT2 presentation_resolution)
+{
+	using namespace fsr2;
+	res.fsr2_constants = {};
+
+	res.fsr2_constants.renderSize[0] = render_resolution.x;
+	res.fsr2_constants.renderSize[1] = render_resolution.y;
+	res.fsr2_constants.displaySize[0] = presentation_resolution.x;
+	res.fsr2_constants.displaySize[1] = presentation_resolution.y;
+	res.fsr2_constants.displaySizeRcp[0] = 1.0f / presentation_resolution.x;
+	res.fsr2_constants.displaySizeRcp[1] = 1.0f / presentation_resolution.y;
+
+	TextureDesc desc;
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+
+	desc.width = render_resolution.x;
+	desc.height = render_resolution.y;
+	desc.format = Format::R16G16B16A16_FLOAT;
+	bool success = device->CreateTexture(&desc, nullptr, &res.adjusted_color);
+	assert(success);
+	device->SetName(&res.adjusted_color, "fsr2::adjusted_color");
+
+	desc.width = 1;
+	desc.height = 1;
+	desc.format = Format::R32G32_FLOAT;
+	success = device->CreateTexture(&desc, nullptr, &res.exposure);
+	assert(success);
+	device->SetName(&res.exposure, "fsr2::exposure");
+
+	desc.width = render_resolution.x / 2;
+	desc.height = render_resolution.y / 2;
+	desc.format = Format::R16_FLOAT;
+	desc.mip_levels = 0;
+	success = device->CreateTexture(&desc, nullptr, &res.luminance_current);
+	assert(success);
+	device->SetName(&res.luminance_current, "fsr2::luminance_current");
+	for (uint32_t mip = 0; mip < res.luminance_current.desc.mip_levels; ++mip)
+	{
+		int subresource = device->CreateSubresource(&res.luminance_current, SubresourceType::UAV, 0, 1, mip, 1);
+		assert(subresource == mip);
+	}
+	desc.mip_levels = 1;
+
+	desc.width = render_resolution.x;
+	desc.height = render_resolution.y;
+	desc.format = Format::R8G8B8A8_UNORM;
+	success = device->CreateTexture(&desc, nullptr, &res.luminance_history);
+	assert(success);
+	device->SetName(&res.luminance_history, "fsr2::luminance_history");
+
+	desc.width = render_resolution.x;
+	desc.height = render_resolution.y;
+	desc.format = Format::R32_UINT;
+	success = device->CreateTexture(&desc, nullptr, &res.previous_depth);
+	assert(success);
+	device->SetName(&res.previous_depth, "fsr2::previous_depth");
+
+	desc.width = render_resolution.x;
+	desc.height = render_resolution.y;
+	desc.format = Format::R16_FLOAT;
+	success = device->CreateTexture(&desc, nullptr, &res.dilated_depth);
+	assert(success);
+	device->SetName(&res.dilated_depth, "fsr2::dilated_depth");
+
+	desc.width = render_resolution.x;
+	desc.height = render_resolution.y;
+	desc.format = Format::R16G16_FLOAT;
+	success = device->CreateTexture(&desc, nullptr, &res.dilated_motion);
+	assert(success);
+	device->SetName(&res.dilated_motion, "fsr2::dilated_motion");
+
+	desc.width = render_resolution.x;
+	desc.height = render_resolution.y;
+	desc.format = Format::R8G8_UNORM;
+	success = device->CreateTexture(&desc, nullptr, &res.dilated_reactive);
+	assert(success);
+	device->SetName(&res.dilated_reactive, "fsr2::dilated_reactive");
+
+	desc.width = render_resolution.x;
+	desc.height = render_resolution.y;
+	desc.format = Format::R8_UNORM;
+	success = device->CreateTexture(&desc, nullptr, &res.disocclusion_mask);
+	assert(success);
+	device->SetName(&res.disocclusion_mask, "fsr2::disocclusion_mask");
+
+	desc.width = render_resolution.x;
+	desc.height = render_resolution.y;
+	desc.format = Format::R8_UNORM;
+	success = device->CreateTexture(&desc, nullptr, &res.reactive_mask);
+	assert(success);
+	device->SetName(&res.reactive_mask, "fsr2::reactive_mask");
+
+	desc.width = presentation_resolution.x;
+	desc.height = presentation_resolution.y;
+	desc.format = Format::R11G11B10_FLOAT;
+	success = device->CreateTexture(&desc, nullptr, &res.lock_status[0]);
+	assert(success);
+	device->SetName(&res.lock_status[0], "fsr2::lock_status[0]");
+	success = device->CreateTexture(&desc, nullptr, &res.lock_status[1]);
+	assert(success);
+	device->SetName(&res.lock_status[1], "fsr2::lock_status[1]");
+
+	desc.width = presentation_resolution.x;
+	desc.height = presentation_resolution.y;
+	desc.format = Format::R16G16B16A16_FLOAT;
+	success = device->CreateTexture(&desc, nullptr, &res.output_internal[0]);
+	assert(success);
+	device->SetName(&res.output_internal[0], "fsr2::output_internal[0]");
+	success = device->CreateTexture(&desc, nullptr, &res.output_internal[1]);
+	assert(success);
+	device->SetName(&res.output_internal[1], "fsr2::output_internal[1]");
+
+	// generate the data for the LUT.
+	const uint32_t lanczos2LutWidth = 128;
+	int16_t lanczos2Weights[lanczos2LutWidth] = { };
+
+	for (uint32_t currentLanczosWidthIndex = 0; currentLanczosWidthIndex < lanczos2LutWidth; currentLanczosWidthIndex++)
+	{
+		const float x = 2.0f * currentLanczosWidthIndex / float(lanczos2LutWidth - 1);
+		const float y = lanczos2(x);
+		lanczos2Weights[currentLanczosWidthIndex] = int16_t(roundf(y * 32767.0f));
+	}
+
+	desc.width = lanczos2LutWidth;
+	desc.height = 1;
+	desc.format = Format::R16_SNORM;
+	SubresourceData initdata;
+	initdata.data_ptr = lanczos2Weights;
+	initdata.row_pitch = desc.width * sizeof(int16_t);
+	success = device->CreateTexture(&desc, &initdata, &res.lanczos_lut);
+	assert(success);
+	device->SetName(&res.lanczos_lut, "fsr2::lanczos_lut");
+
+	int16_t maximumBias[FFX_FSR2_MAXIMUM_BIAS_TEXTURE_WIDTH * FFX_FSR2_MAXIMUM_BIAS_TEXTURE_HEIGHT];
+	for (uint32_t i = 0; i < FFX_FSR2_MAXIMUM_BIAS_TEXTURE_WIDTH * FFX_FSR2_MAXIMUM_BIAS_TEXTURE_HEIGHT; ++i)
+	{
+		maximumBias[i] = int16_t(roundf(ffxFsr2MaximumBias[i] / 2.0f * 32767.0f));
+	}
+
+	desc.width = (uint32_t)FFX_FSR2_MAXIMUM_BIAS_TEXTURE_WIDTH;
+	desc.height = (uint32_t)FFX_FSR2_MAXIMUM_BIAS_TEXTURE_HEIGHT;
+	desc.format = Format::R16_SNORM;
+	initdata.data_ptr = maximumBias;
+	initdata.row_pitch = desc.width * sizeof(int16_t);
+	success = device->CreateTexture(&desc, &initdata, &res.maximum_bias_lut);
+	assert(success);
+	device->SetName(&res.maximum_bias_lut, "fsr2::maximum_bias_lut");
+
+	desc.width = 1;
+	desc.height = 1;
+	desc.format = Format::R32_UINT;
+	desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+	desc.layout = ResourceState::UNORDERED_ACCESS;
+	success = device->CreateTexture(&desc, nullptr, &res.spd_global_atomic);
+	assert(success);
+	device->SetName(&res.spd_global_atomic, "fsr2::spd_global_atomic");
+
+
+}
+XMFLOAT2 FSR2Resources::GetJitter() const
+{
+	int32_t phaseCount = fsr2::ffxFsr2GetJitterPhaseCount(fsr2_constants.renderSize[0], fsr2_constants.displaySize[0]);
+	float x = fsr2::halton((fsr2_constants.frameIndex % phaseCount) + 1, 2) - 0.5f;
+	float y = fsr2::halton((fsr2_constants.frameIndex % phaseCount) + 1, 3) - 0.5f;
+	x = 2 * x / (float)fsr2_constants.renderSize[0];
+	y = -2 * y / (float)fsr2_constants.renderSize[1];
+	return XMFLOAT2(x, y);
+}
+void Postprocess_FSR2(
+	const FSR2Resources& res,
+	const CameraComponent& camera,
+	const Texture& input_pre_alpha,
+	const Texture& input_post_alpha,
+	const Texture& input_depth,
+	const Texture& input_velocity,
+	const Texture& output,
+	CommandList cmd,
+	float dt,
+	float sharpness
+)
+{
+	using namespace fsr2;
+	device->EventBegin("Postprocess_FSR2", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Postprocess_FSR2", cmd);
+
+	struct Fsr2SpdConstants
+	{
+		uint32_t                    mips;
+		uint32_t                    numworkGroups;
+		uint32_t                    workGroupOffset[2];
+		uint32_t                    renderSize[2];
+	};
+	struct Fsr2RcasConstants
+	{
+		uint32_t                    rcasConfig[4];
+	};
+
+	FSR2Resources::Fsr2Constants& fsr2_constants = res.fsr2_constants;
+	fsr2_constants.jitterOffset[0] = camera.jitter.x;
+	fsr2_constants.jitterOffset[1] = camera.jitter.y;
+
+	// compute the horizontal FOV for the shader from the vertical one.
+	const float aspectRatio = (float)fsr2_constants.renderSize[0] / (float)fsr2_constants.renderSize[1];
+	const float cameraAngleHorizontal = atan(tan(camera.fov / 2) * aspectRatio) * 2;
+	fsr2_constants.tanHalfFOV = tanf(cameraAngleHorizontal * 0.5f);
+
+	const bool inverted_depth = true;
+	if (inverted_depth)
+	{
+		const float c = 0.0f;
+		fsr2_constants.deviceToViewDepth[0] = c + FLT_EPSILON;
+		fsr2_constants.deviceToViewDepth[1] = -1.00000000f;
+		fsr2_constants.deviceToViewDepth[2] = 0.100000001f;
+		fsr2_constants.deviceToViewDepth[3] = FLT_EPSILON;
+
+	}
+	else
+	{
+		const float c = -1.0f;
+		fsr2_constants.deviceToViewDepth[0] = c - FLT_EPSILON;
+		fsr2_constants.deviceToViewDepth[1] = -1.00000000f;
+		fsr2_constants.deviceToViewDepth[2] = -0.200019985f;
+		fsr2_constants.deviceToViewDepth[3] = FLT_EPSILON;
+	}
+
+	// To be updated if resource is larger than the actual image size
+	fsr2_constants.depthClipUVScale[0] = float(fsr2_constants.renderSize[0]) / res.disocclusion_mask.desc.width;
+	fsr2_constants.depthClipUVScale[1] = float(fsr2_constants.renderSize[1]) / res.disocclusion_mask.desc.height;
+	fsr2_constants.postLockStatusUVScale[0] = float(fsr2_constants.displaySize[0]) / res.lock_status[0].desc.width;
+	fsr2_constants.postLockStatusUVScale[1] = float(fsr2_constants.displaySize[1]) / res.lock_status[0].desc.height;
+	fsr2_constants.reactiveMaskDimRcp[0] = 1.0f / float(res.reactive_mask.desc.width);
+	fsr2_constants.reactiveMaskDimRcp[1] = 1.0f / float(res.reactive_mask.desc.height);
+	fsr2_constants.downscaleFactor[0] = float(fsr2_constants.renderSize[0]) / float(fsr2_constants.displaySize[0]);
+	fsr2_constants.downscaleFactor[1] = float(fsr2_constants.renderSize[1]) / float(fsr2_constants.displaySize[1]);
+	static float preExposure = 0;
+	fsr2_constants.preExposure = (preExposure != 0) ? preExposure : 1.0f;
+
+	// motion vector data
+	const bool enable_display_resolution_motion_vectors = false;
+	const int32_t* motionVectorsTargetSize = enable_display_resolution_motion_vectors ? fsr2_constants.displaySize : fsr2_constants.renderSize;
+
+	fsr2_constants.motionVectorScale[0] = 1;
+	fsr2_constants.motionVectorScale[1] = 1;
+
+	// Jitter cancellation is removed from here because it is baked into the velocity buffer already:
+
+	//// compute jitter cancellation
+	//const bool jitterCancellation = true;
+	//if (jitterCancellation)
+	//{
+	//	//fsr2_constants.motionVectorJitterCancellation[0] = (res.jitterPrev.x - fsr2_constants.jitterOffset[0]) / motionVectorsTargetSize[0];
+	//	//fsr2_constants.motionVectorJitterCancellation[1] = (res.jitterPrev.y - fsr2_constants.jitterOffset[1]) / motionVectorsTargetSize[1];
+	//	fsr2_constants.motionVectorJitterCancellation[0] = res.jitterPrev.x - fsr2_constants.jitterOffset[0];
+	//	fsr2_constants.motionVectorJitterCancellation[1] = res.jitterPrev.y - fsr2_constants.jitterOffset[1];
+
+	//	res.jitterPrev.x = fsr2_constants.jitterOffset[0];
+	//	res.jitterPrev.y = fsr2_constants.jitterOffset[1];
+	//}
+
+	// lock data, assuming jitter sequence length computation for now
+	const int32_t jitterPhaseCount = ffxFsr2GetJitterPhaseCount(fsr2_constants.renderSize[0], fsr2_constants.displaySize[0]);
+
+	static const float lockInitialLifetime = 1.0f;
+	fsr2_constants.lockInitialLifetime = lockInitialLifetime;
+
+	// init on first frame
+	const bool resetAccumulation = fsr2_constants.frameIndex == 0;
+	if (resetAccumulation || fsr2_constants.jitterPhaseCount == 0)
+	{
+		fsr2_constants.jitterPhaseCount = (float)jitterPhaseCount;
+	}
+	else
+	{
+		const int32_t jitterPhaseCountDelta = (int32_t)(jitterPhaseCount - fsr2_constants.jitterPhaseCount);
+		if (jitterPhaseCountDelta > 0) {
+			fsr2_constants.jitterPhaseCount++;
+		}
+		else if (jitterPhaseCountDelta < 0) {
+			fsr2_constants.jitterPhaseCount--;
+		}
+	}
+
+	const int32_t maxLockFrames = (int32_t)(fsr2_constants.jitterPhaseCount) + 1;
+	fsr2_constants.lockTickDelta = lockInitialLifetime / maxLockFrames;
+
+	// convert delta time to seconds and clamp to [0, 1].
+	//context->constants.deltaTime = std::max(0.0f, std::min(1.0f, params->frameTimeDelta / 1000.0f));
+	fsr2_constants.deltaTime = wi::math::saturate(dt);
+
+	fsr2_constants.frameIndex++;
+
+	// shading change usage of the SPD mip levels.
+	fsr2_constants.lumaMipLevelToUse = uint32_t(FFX_FSR2_SHADING_CHANGE_MIP_LEVEL);
+
+	const float mipDiv = float(2 << fsr2_constants.lumaMipLevelToUse);
+	fsr2_constants.lumaMipDimensions[0] = uint32_t(fsr2_constants.renderSize[0] / mipDiv);
+	fsr2_constants.lumaMipDimensions[1] = uint32_t(fsr2_constants.renderSize[1] / mipDiv);
+	fsr2_constants.lumaMipRcp = float(fsr2_constants.lumaMipDimensions[0] * fsr2_constants.lumaMipDimensions[1]) /
+		float(fsr2_constants.renderSize[0] * fsr2_constants.renderSize[1]);
+
+	// reactive mask bias
+	const int32_t threadGroupWorkRegionDim = 8;
+	const int32_t dispatchSrcX = (fsr2_constants.renderSize[0] + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
+	const int32_t dispatchSrcY = (fsr2_constants.renderSize[1] + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
+	const int32_t dispatchDstX = (fsr2_constants.displaySize[0] + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
+	const int32_t dispatchDstY = (fsr2_constants.displaySize[1] + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
+
+	// Auto exposure
+	uint32_t dispatchThreadGroupCountXY[2];
+	uint32_t workGroupOffset[2];
+	uint32_t numWorkGroupsAndMips[2];
+	uint32_t rectInfo[4] = { 0, 0, (uint32_t)fsr2_constants.renderSize[0], (uint32_t)fsr2_constants.renderSize[1] };
+	SpdSetup(dispatchThreadGroupCountXY, workGroupOffset, numWorkGroupsAndMips, rectInfo);
+
+	// downsample
+	Fsr2SpdConstants luminancePyramidConstants;
+	luminancePyramidConstants.numworkGroups = numWorkGroupsAndMips[0];
+	luminancePyramidConstants.mips = numWorkGroupsAndMips[1];
+	luminancePyramidConstants.workGroupOffset[0] = workGroupOffset[0];
+	luminancePyramidConstants.workGroupOffset[1] = workGroupOffset[1];
+	luminancePyramidConstants.renderSize[0] = fsr2_constants.renderSize[0];
+	luminancePyramidConstants.renderSize[1] = fsr2_constants.renderSize[1];
+
+	// compute the constants.
+	Fsr2RcasConstants rcasConsts = {};
+	const float sharpenessRemapped = (-2.0f * sharpness) + 2.0f;
+	FsrRcasCon(rcasConsts.rcasConfig, sharpenessRemapped);
+
+	const int r_idx = fsr2_constants.frameIndex % 2;
+	const int rw_idx = (fsr2_constants.frameIndex + 1) % 2;
+
+	const Texture& r_lock = res.lock_status[r_idx];
+	const Texture& rw_lock = res.lock_status[rw_idx];
+	const Texture& r_output = res.output_internal[r_idx];
+	const Texture& rw_output = res.output_internal[rw_idx];
+
+	if (resetAccumulation)
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.adjusted_color, res.adjusted_color.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.luminance_current, res.luminance_current.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.luminance_history, res.luminance_history.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.exposure, res.exposure.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.previous_depth, res.previous_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.dilated_depth, res.dilated_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.dilated_motion, res.dilated_motion.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.dilated_reactive, res.dilated_reactive.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.disocclusion_mask, res.disocclusion_mask.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.reactive_mask, res.reactive_mask.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.output_internal[0], res.output_internal[0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.output_internal[1], res.output_internal[1].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.lock_status[0], res.lock_status[0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.lock_status[1], res.lock_status[1].desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
+		device->ClearUAV(&res.adjusted_color, 0, cmd);
+		device->ClearUAV(&res.luminance_current, 0, cmd);
+		device->ClearUAV(&res.luminance_history, 0, cmd);
+		device->ClearUAV(&res.exposure, 0, cmd);
+		device->ClearUAV(&res.previous_depth, 0, cmd);
+		device->ClearUAV(&res.dilated_depth, 0, cmd);
+		device->ClearUAV(&res.dilated_motion, 0, cmd);
+		device->ClearUAV(&res.dilated_reactive, 0, cmd);
+		device->ClearUAV(&res.disocclusion_mask, 0, cmd);
+		device->ClearUAV(&res.reactive_mask, 0, cmd);
+		device->ClearUAV(&res.output_internal[0], 0, cmd);
+		device->ClearUAV(&res.output_internal[1], 0, cmd);
+		device->ClearUAV(&res.spd_global_atomic, 0, cmd); // this is always in UAV state
+
+		float clearValuesLockStatus[4]{};
+		clearValuesLockStatus[LOCK_LIFETIME_REMAINING] = lockInitialLifetime * 2.0f;
+		clearValuesLockStatus[LOCK_TEMPORAL_LUMA] = 0.0f;
+		clearValuesLockStatus[LOCK_TRUST] = 1.0f;
+		uint32_t clear_lock_pk = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(clearValuesLockStatus[0], clearValuesLockStatus[1], clearValuesLockStatus[2]));
+		device->ClearUAV(&res.lock_status[0], clear_lock_pk, cmd);
+		device->ClearUAV(&res.lock_status[1], clear_lock_pk, cmd);
+
+		for (int i = 0; i < arraysize(barriers); ++i)
+		{
+			std::swap(barriers[i].image.layout_before, barriers[i].image.layout_after);
+		}
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+			GPUBarrier::Image(&res.reactive_mask, res.reactive_mask.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.luminance_current, res.luminance_current.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.exposure, res.exposure.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->EventBegin("Autogen reactive mask", cmd);
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_AUTOGEN_REACTIVE_PASS], cmd);
+
+		device->BindResource(&input_pre_alpha, 0, cmd);
+		device->BindResource(&input_post_alpha, 1, cmd);
+		device->BindUAV(&res.reactive_mask, 0, cmd);
+
+		struct Fsr2GenerateReactiveConstants
+		{
+			float       scale;
+			float       threshold;
+			float       binaryValue;
+			uint32_t    flags;
+		};
+		Fsr2GenerateReactiveConstants constants = {};
+		static float scale = 1.0f;
+		static float threshold = 0.2f;
+		static float binaryValue = 0.9f;
+		constants.scale = scale;
+		constants.threshold = threshold;
+		constants.binaryValue = binaryValue;
+		constants.flags = 0;
+		constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_TONEMAP;
+		//constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_INVERSETONEMAP;
+		//constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_USE_COMPONENTS_MAX;
+		//constants.flags |= FFX_FSR2_AUTOREACTIVEFLAGS_APPLY_THRESHOLD;
+		device->BindDynamicConstantBuffer(constants, 0, cmd);
+
+		const int32_t threadGroupWorkRegionDim = 8;
+		const int32_t dispatchSrcX = (fsr2_constants.renderSize[0] + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
+		const int32_t dispatchSrcY = (fsr2_constants.renderSize[1] + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
+
+		device->Dispatch(dispatchSrcX, dispatchSrcY, 1, cmd);
+	}
+	device->EventEnd(cmd);
+
+	device->BindDynamicConstantBuffer(fsr2_constants, 0, cmd);
+	device->BindSampler(&samplers[SAMPLER_POINT_CLAMP], 0, cmd);
+	device->BindSampler(&samplers[SAMPLER_LINEAR_CLAMP], 1, cmd);
+
+	device->EventBegin("Luminance pyramid", cmd);
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_COMPUTE_LUMINANCE_PYRAMID_PASS], cmd);
+
+		device->BindResource(&input_post_alpha, 0, cmd);
+		device->BindUAV(&res.spd_global_atomic, 0, cmd);
+		device->BindUAV(&res.luminance_current, 1, cmd, fsr2_constants.lumaMipLevelToUse);
+		device->BindUAV(&res.luminance_current, 2, cmd, 5);
+		device->BindUAV(&res.exposure, 3, cmd);
+
+		device->BindDynamicConstantBuffer(luminancePyramidConstants, 1, cmd);
+
+		device->Dispatch(dispatchThreadGroupCountXY[0], dispatchThreadGroupCountXY[1], 1, cmd);
+	}
+	device->EventEnd(cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.exposure, ResourceState::UNORDERED_ACCESS, res.exposure.desc.layout),
+			GPUBarrier::Image(&res.luminance_current, ResourceState::UNORDERED_ACCESS, res.luminance_current.desc.layout),
+
+			GPUBarrier::Image(&res.previous_depth, res.previous_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.adjusted_color, res.adjusted_color.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.luminance_history, res.luminance_history.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->EventBegin("Adjust input color", cmd);
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_PREPARE_INPUT_COLOR_PASS], cmd);
+
+		device->BindResource(&input_post_alpha, 0, cmd);
+		device->BindResource(&res.exposure, 1, cmd);
+		device->BindUAV(&res.previous_depth, 0, cmd);
+		device->BindUAV(&res.adjusted_color, 1, cmd);
+		device->BindUAV(&res.luminance_history, 2, cmd);
+
+		device->Dispatch(dispatchSrcX, dispatchSrcY, 1, cmd);
+	}
+	device->EventEnd(cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.reactive_mask, ResourceState::UNORDERED_ACCESS, res.reactive_mask.desc.layout),
+			GPUBarrier::Image(&res.adjusted_color, ResourceState::UNORDERED_ACCESS, res.adjusted_color.desc.layout),
+			GPUBarrier::Image(&res.luminance_history, ResourceState::UNORDERED_ACCESS, res.luminance_history.desc.layout),
+
+			GPUBarrier::Image(&res.dilated_depth, res.dilated_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.dilated_motion, res.dilated_motion.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.dilated_reactive, res.dilated_reactive.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->EventBegin("Reconstruct and dilate", cmd);
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_RECONSTRUCT_PREVIOUS_DEPTH_PASS], cmd);
+
+		device->BindResource(&input_velocity, 0, cmd);
+		device->BindResource(&input_depth, 1, cmd);
+		device->BindResource(&res.reactive_mask, 2, cmd);
+		device->BindResource(&input_post_alpha, 3, cmd);
+		device->BindResource(&res.adjusted_color, 4, cmd);
+		device->BindUAV(&res.previous_depth, 0, cmd);
+		device->BindUAV(&res.dilated_motion, 1, cmd);
+		device->BindUAV(&res.dilated_depth, 2, cmd);
+		device->BindUAV(&res.dilated_reactive, 3, cmd);
+
+		device->Dispatch(dispatchSrcX, dispatchSrcY, 1, cmd);
+	}
+	device->EventEnd(cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.previous_depth, ResourceState::UNORDERED_ACCESS, res.previous_depth.desc.layout),
+			GPUBarrier::Image(&res.dilated_depth, ResourceState::UNORDERED_ACCESS, res.dilated_depth.desc.layout),
+			GPUBarrier::Image(&res.dilated_motion, ResourceState::UNORDERED_ACCESS, res.dilated_motion.desc.layout),
+			GPUBarrier::Image(&res.dilated_reactive, ResourceState::UNORDERED_ACCESS, res.dilated_reactive.desc.layout),
+
+			GPUBarrier::Image(&rw_lock, rw_lock.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.disocclusion_mask, res.disocclusion_mask.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->EventBegin("Depth clip", cmd);
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_DEPTH_CLIP_PASS], cmd);
+
+		device->BindResource(&res.previous_depth, 0, cmd);
+		device->BindResource(&res.dilated_motion, 1, cmd);
+		device->BindResource(&res.dilated_depth, 2, cmd);
+		device->BindUAV(&res.disocclusion_mask, 0, cmd);
+
+		device->Dispatch(dispatchSrcX, dispatchSrcY, 1, cmd);
+	}
+	device->EventEnd(cmd);
+
+	device->EventBegin("Create locks", cmd);
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_LOCK_PASS], cmd);
+
+		device->BindResource(&res.reactive_mask, 0, cmd);
+		device->BindResource(&r_lock, 1, cmd);
+		device->BindResource(&res.adjusted_color, 2, cmd);
+		device->BindUAV(&rw_lock, 0, cmd);
+
+		device->Dispatch(dispatchSrcX, dispatchSrcY, 1, cmd);
+	}
+	device->EventEnd(cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(&rw_lock),
+			GPUBarrier::Image(&res.disocclusion_mask, ResourceState::UNORDERED_ACCESS, res.disocclusion_mask.desc.layout),
+			GPUBarrier::Image(&rw_output, rw_output.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->EventBegin("Reproject and accumulate", cmd);
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_ACCUMULATE_PASS], cmd);
+
+		device->BindResource(&res.exposure, 0, cmd);
+		device->BindResource(&res.dilated_motion, 2, cmd);
+		device->BindResource(&r_output, 3, cmd);
+		device->BindResource(&r_lock, 4, cmd);
+		device->BindResource(&res.disocclusion_mask, 5, cmd);
+		device->BindResource(&res.adjusted_color, 6, cmd);
+		device->BindResource(&res.luminance_history, 7, cmd);
+		device->BindResource(&res.lanczos_lut, 8, cmd);
+		device->BindResource(&res.maximum_bias_lut, 9, cmd);
+		device->BindResource(&res.dilated_reactive, 10, cmd);
+		device->BindResource(&res.luminance_current, 11, cmd);
+		device->BindUAV(&rw_output, 0, cmd);
+		device->BindUAV(&rw_lock, 1, cmd);
+#if !FFX_FSR2_OPTION_APPLY_SHARPENING
+		device->BindUAV(&output, 2, cmd);
+#endif // !FFX_FSR2_OPTION_APPLY_SHARPENING
+
+		device->Dispatch(dispatchDstX, dispatchDstY, 1, cmd);
+	}
+	device->EventEnd(cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&rw_lock, ResourceState::UNORDERED_ACCESS, rw_lock.desc.layout),
+			GPUBarrier::Image(&rw_output, ResourceState::UNORDERED_ACCESS, rw_output.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+#if FFX_FSR2_OPTION_APPLY_SHARPENING
+	device->EventBegin("Sharpen (RCAS)", cmd);
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR2_RCAS_PASS], cmd);
+
+		device->BindResource(&res.exposure, 0, cmd);
+		device->BindResource(&rw_output, 1, cmd);
+		device->BindUAV(&output, 0, cmd);
+
+		device->BindDynamicConstantBuffer(rcasConsts, 1, cmd);
+
+		const int32_t threadGroupWorkRegionDimRCAS = 16;
+		const int32_t dispatchX = (fsr2_constants.displaySize[0] + (threadGroupWorkRegionDimRCAS - 1)) / threadGroupWorkRegionDimRCAS;
+		const int32_t dispatchY = (fsr2_constants.displaySize[1] + (threadGroupWorkRegionDimRCAS - 1)) / threadGroupWorkRegionDimRCAS;
+
+		device->Dispatch(dispatchX, dispatchY, 1, cmd);
+	}
+	device->EventEnd(cmd);
+#endif // FFX_FSR2_OPTION_APPLY_SHARPENING
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	wi::profiler::EndRange(range);

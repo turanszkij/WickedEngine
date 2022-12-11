@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <mutex>
 #include <string>
+#include <cstdlib>
 
 std::mutex locker;
 struct ShaderEntry
@@ -50,6 +51,14 @@ wi::vector<ShaderEntry> shaders = {
 	{"underwaterCS", wi::graphics::ShaderStage::CS},
 	{"fsr_upscalingCS", wi::graphics::ShaderStage::CS},
 	{"fsr_sharpenCS", wi::graphics::ShaderStage::CS},
+	{"ffx-fsr2/ffx_fsr2_autogen_reactive_pass", wi::graphics::ShaderStage::CS},
+	{"ffx-fsr2/ffx_fsr2_compute_luminance_pyramid_pass", wi::graphics::ShaderStage::CS},
+	{"ffx-fsr2/ffx_fsr2_prepare_input_color_pass", wi::graphics::ShaderStage::CS},
+	{"ffx-fsr2/ffx_fsr2_reconstruct_previous_depth_pass", wi::graphics::ShaderStage::CS},
+	{"ffx-fsr2/ffx_fsr2_depth_clip_pass", wi::graphics::ShaderStage::CS},
+	{"ffx-fsr2/ffx_fsr2_lock_pass", wi::graphics::ShaderStage::CS},
+	{"ffx-fsr2/ffx_fsr2_accumulate_pass", wi::graphics::ShaderStage::CS},
+	{"ffx-fsr2/ffx_fsr2_rcas_pass", wi::graphics::ShaderStage::CS},
 	{"ssaoCS", wi::graphics::ShaderStage::CS},
 	{"rtdiffuseCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5},
 	{"rtdiffuse_spatialCS", wi::graphics::ShaderStage::CS},
@@ -492,6 +501,7 @@ int main(int argc, char* argv[])
 					input.stage = shader.stage;
 					input.shadersourcefilename = SHADERSOURCEPATH + shader.name + ".hlsl";
 					input.include_directories.push_back(SHADERSOURCEPATH);
+					input.include_directories.push_back(SHADERSOURCEPATH + wi::helper::GetDirectoryFromPath(shader.name));
 					input.minshadermodel = shader.minshadermodel;
 					input.defines = permutation.defines;
 
@@ -550,6 +560,7 @@ int main(int argc, char* argv[])
 			std::string name_repl = name;
 			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
+			std::replace(name_repl.begin(), name_repl.end(), '-', '_');
 			ss += "const uint8_t " + name_repl + "[] = {";
 			for (size_t i = 0; i < output.shadersize; ++i)
 			{
@@ -567,6 +578,7 @@ int main(int argc, char* argv[])
 			std::string name_repl = name;
 			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
+			std::replace(name_repl.begin(), name_repl.end(), '-', '_');
 			ss += "{\"" + name + "\", {" + name_repl + ",sizeof(" + name_repl + ")}},\n";
 		}
 		ss += "};\n"; // map end

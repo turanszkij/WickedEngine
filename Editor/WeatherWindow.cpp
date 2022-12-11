@@ -281,7 +281,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&coverageMinimumSecondLayerSlider);
 
 	skyButton.Create("Load Sky");
-	skyButton.SetTooltip("Load a skybox cubemap texture...");
+	skyButton.SetTooltip("Load a skybox texture...\nIt can be either a cubemap or spherical projection map");
 	skyButton.SetSize(XMFLOAT2(mod_wid, hei));
 	skyButton.SetPos(XMFLOAT2(mod_x, y += step));
 	skyButton.OnClick([=](wi::gui::EventArgs args) {
@@ -291,8 +291,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = "Cubemap texture";
-			params.extensions.push_back("dds");
+			params.description = "Image file (cube or spherical map)";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
@@ -316,7 +316,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&skyButton);
 
 	colorgradingButton.Create("Load Color Grading LUT");
-	colorgradingButton.SetTooltip("Load a color grading lookup texture. It must be a 256x16 RGBA image!");
+	colorgradingButton.SetTooltip("Load a color grading lookup texture. It must be a 256x16 RGBA image!\nYou should use a lossless format for this such as PNG");
 	colorgradingButton.SetSize(XMFLOAT2(mod_wid, hei));
 	colorgradingButton.SetPos(XMFLOAT2(mod_x, y += step));
 	colorgradingButton.OnClick([=](wi::gui::EventArgs args) {
@@ -800,6 +800,24 @@ void WeatherWindow::Update()
 		coverageMinimumFirstLayerSlider.SetValue(weather.volumetricCloudParameters.LayerFirst.CoverageMinimum);
 		coverageAmountSecondLayerSlider.SetValue(weather.volumetricCloudParameters.LayerSecond.CoverageAmount);
 		coverageMinimumSecondLayerSlider.SetValue(weather.volumetricCloudParameters.LayerSecond.CoverageMinimum);
+
+		if (weather.skyMap.IsValid())
+		{
+			skyButton.SetText(wi::helper::GetFileNameFromPath(weather.skyMapName));
+		}
+		else
+		{
+			skyButton.SetText("Load Sky");
+		}
+
+		if (weather.colorGradingMap.IsValid())
+		{
+			skyButton.SetText(wi::helper::GetFileNameFromPath(weather.colorGradingMapName));
+		}
+		else
+		{
+			colorgradingButton.SetText("Load Color Grading LUT");
+		}
 	}
 	else
 	{
@@ -807,6 +825,8 @@ void WeatherWindow::Update()
 		scene.weather.ambient = XMFLOAT3(0.5f, 0.5f, 0.5f);
 		scene.weather.zenith = default_sky_zenith;
 		scene.weather.horizon = default_sky_horizon;
+		scene.weather.fogStart = std::numeric_limits<float>::max();
+		scene.weather.fogEnd = std::numeric_limits<float>::max();
 	}
 }
 

@@ -604,6 +604,8 @@ namespace wi::renderer
 		wi::graphics::GPUBuffer buffer_tiles_earlyexit;
 		wi::graphics::GPUBuffer buffer_tiles_cheap;
 		wi::graphics::GPUBuffer buffer_tiles_expensive;
+
+		bool IsValid() const { return texture_tilemax_horizontal.IsValid(); }
 	};
 	void CreateDepthOfFieldResources(DepthOfFieldResources& res, XMUINT2 resolution);
 	void Postprocess_DepthOfField(
@@ -632,6 +634,8 @@ namespace wi::renderer
 		wi::graphics::GPUBuffer buffer_tiles_earlyexit;
 		wi::graphics::GPUBuffer buffer_tiles_cheap;
 		wi::graphics::GPUBuffer buffer_tiles_expensive;
+
+		bool IsValid() const { return texture_tilemax_horizontal.IsValid(); }
 	};
 	void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution);
 	void Postprocess_MotionBlur(
@@ -709,6 +713,67 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float sharpness = 1.0f
+	);
+	struct FSR2Resources
+	{
+		struct Fsr2Constants
+		{
+			int32_t   renderSize[2];
+			int32_t   displaySize[2];
+			uint32_t  lumaMipDimensions[2];
+			uint32_t  lumaMipLevelToUse;
+			uint32_t  frameIndex;
+			float     displaySizeRcp[2];
+			float     jitterOffset[2];
+			float     deviceToViewDepth[4];
+			float     depthClipUVScale[2];
+			float     postLockStatusUVScale[2];
+			float     reactiveMaskDimRcp[2];
+			float     motionVectorScale[2];
+			float     downscaleFactor[2];
+			float     preExposure;
+			float     tanHalfFOV;
+			float     motionVectorJitterCancellation[2];
+			float     jitterPhaseCount;
+			float     lockInitialLifetime;
+			float     lockTickDelta;
+			float     deltaTime;
+			float     dynamicResChangeFactor;
+			float     lumaMipRcp;
+		};
+		mutable Fsr2Constants fsr2_constants = {};
+		wi::graphics::Texture adjusted_color;
+		wi::graphics::Texture luminance_current;
+		wi::graphics::Texture luminance_history;
+		wi::graphics::Texture exposure;
+		wi::graphics::Texture previous_depth;
+		wi::graphics::Texture dilated_depth;
+		wi::graphics::Texture dilated_motion;
+		wi::graphics::Texture dilated_reactive;
+		wi::graphics::Texture disocclusion_mask;
+		wi::graphics::Texture lock_status[2];
+		wi::graphics::Texture reactive_mask;
+		wi::graphics::Texture lanczos_lut;
+		wi::graphics::Texture maximum_bias_lut;
+		wi::graphics::Texture spd_global_atomic;
+		wi::graphics::Texture output_internal[2];
+
+		bool IsValid() const { return adjusted_color.IsValid(); }
+
+		XMFLOAT2 GetJitter() const;
+	};
+	void CreateFSR2Resources(FSR2Resources& res, XMUINT2 render_resolution, XMUINT2 presentation_resolution);
+	void Postprocess_FSR2(
+		const FSR2Resources& res,
+		const wi::scene::CameraComponent& camera,
+		const wi::graphics::Texture& input_pre_alpha,
+		const wi::graphics::Texture& input_post_alpha,
+		const wi::graphics::Texture& input_depth,
+		const wi::graphics::Texture& input_velocity,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd,
+		float dt, // delta time in seconds
+		float sharpness = 0.5f
 	);
 	void Postprocess_Chromatic_Aberration(
 		const wi::graphics::Texture& input,

@@ -565,6 +565,10 @@ namespace dx12_internal
 			return DXGI_FORMAT_R32_UINT;
 		case Format::R32_SINT:
 			return DXGI_FORMAT_R32_SINT;
+		case Format::D24_UNORM_S8_UINT:
+			return DXGI_FORMAT_D24_UNORM_S8_UINT;
+		case Format::R9G9B9E5_SHAREDEXP:
+			return DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
 		case Format::R8G8_UNORM:
 			return DXGI_FORMAT_R8G8_UNORM;
 		case Format::R8G8_UINT:
@@ -875,6 +879,10 @@ namespace dx12_internal
 			return Format::R32_UINT;
 		case DXGI_FORMAT_R32_SINT:
 			return Format::R32_SINT;
+		case DXGI_FORMAT_D24_UNORM_S8_UINT:
+			return Format::D24_UNORM_S8_UINT;
+		case DXGI_FORMAT_R9G9B9E5_SHAREDEXP:
+			return Format::R9G9B9E5_SHAREDEXP;
 		case DXGI_FORMAT_R8G8_UNORM:
 			return Format::R8G8_UNORM;
 		case DXGI_FORMAT_R8G8_UINT:
@@ -2285,15 +2293,15 @@ using namespace dx12_internal;
 			}
 
 			D3D_FEATURE_LEVEL featurelevels[] = {
-				//D3D_FEATURE_LEVEL_12_2,
+				D3D_FEATURE_LEVEL_12_2,
 				D3D_FEATURE_LEVEL_12_1,
 				D3D_FEATURE_LEVEL_12_0,
 				D3D_FEATURE_LEVEL_11_1,
 				D3D_FEATURE_LEVEL_11_0,
 			};
-			for (auto& featurelevel : featurelevels)
+			for (auto& featureLevel : featurelevels)
 			{
-				if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), featurelevel, IID_PPV_ARGS(&device))))
+				if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), featureLevel, IID_PPV_ARGS(&device))))
 				{
 					break;
 				}

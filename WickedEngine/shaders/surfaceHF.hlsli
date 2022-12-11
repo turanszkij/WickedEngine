@@ -401,7 +401,6 @@ struct Surface
 		[branch]
 		if (material.textures[BASECOLORMAP].IsValid())
 		{
-			uint prt_status = 0;
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 			float4 baseColorMap = material.textures[BASECOLORMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy);
 #else

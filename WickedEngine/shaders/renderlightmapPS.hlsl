@@ -218,7 +218,7 @@ float4 main(Input input) : SV_TARGET
 			xTraceUserData.y,				// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);
-		q.Proceed();
+		while (q.Proceed());
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
 		RayHit hit = TraceRay_Closest(ray, xTraceUserData.y, rng);
@@ -232,7 +232,7 @@ float4 main(Input input) : SV_TARGET
 			if (IsStaticSky())
 			{
 				// We have envmap information in a texture:
-				envColor = texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.Direction, 0).rgb;
+				envColor = GetStaticSkyColor(ray.Direction);
 			}
 			else
 			{

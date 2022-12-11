@@ -20,7 +20,7 @@ void ScriptWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->optionsWnd.RefreshEntityTree();
-		});
+	});
 
 	float hei = 20;
 	float wid = 100;
@@ -96,9 +96,6 @@ void ScriptWindow::Create(EditorComponent* _editor)
 
 void ScriptWindow::SetEntity(wi::ecs::Entity entity)
 {
-	if (this->entity == entity)
-		return;
-
 	this->entity = entity;
 
 	wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -115,6 +112,10 @@ void ScriptWindow::SetEntity(wi::ecs::Entity entity)
 			fileButton.SetText("Open File...");
 		}
 		playonceCheckBox.SetCheck(script->IsPlayingOnlyOnce());
+	}
+	else
+	{
+		fileButton.SetText("Open File...");
 	}
 }
 

@@ -39,13 +39,20 @@ set(HEADER_FILES_dx12
 		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3d12compatibility.h
 		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3d12sdklayers.h
 		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3dcommon.h
-		${CMAKE_CURRENT_SOURCE_DIR}/dx12/dxcore.h
-		${CMAKE_CURRENT_SOURCE_DIR}/dx12/dxcore_interface.h
 		${CMAKE_CURRENT_SOURCE_DIR}/dx12/dxgicommon.h
 		${CMAKE_CURRENT_SOURCE_DIR}/dx12/dxgiformat.h
 		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3d12shader.h
 		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3d12video.h
 		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3dx12.h
+		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3dx12_barriers.h
+		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3dx12_check_feature_support.h
+		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3dx12_core.h
+		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3dx12_default.h
+		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3dx12_pipeline_state_stream.h
+		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3dx12_render_pass.h
+		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3dx12_resource_helpers.h
+		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3dx12_root_signature.h
+		${CMAKE_CURRENT_SOURCE_DIR}/dx12/d3dx12_state_object.h
 		)
 install(FILES ${HEADER_FILES_dx12}
 		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/dx12")

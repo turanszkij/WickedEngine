@@ -246,6 +246,7 @@ namespace wi::graphics
 		R32_UINT,
 		R32_SINT, 
 		D24_UNORM_S8_UINT,		// depth (24-bit) + stencil (8-bit) | SRV: R24_INTERNAL
+		R9G9B9E5_SHAREDEXP,
 
 		R8G8_UNORM,
 		R8G8_UINT,
@@ -1303,6 +1304,7 @@ namespace wi::graphics
 		case Format::R32_UINT:
 		case Format::R32_SINT:
 		case Format::D24_UNORM_S8_UINT:
+		case Format::R9G9B9E5_SHAREDEXP:
 			return 4u;
 
 		case Format::R8G8_UNORM:

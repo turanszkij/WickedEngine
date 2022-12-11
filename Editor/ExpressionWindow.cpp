@@ -10,7 +10,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_EXPRESSION " Expression", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 500));
+	SetSize(XMFLOAT2(670, 550));
 
 	closeButton.SetTooltip("Delete ExpressionComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -31,6 +31,11 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	float hei = 20;
 	float step = hei + 2;
 	float wid = 220;
+
+	infoLabel.Create("");
+	infoLabel.SetSize(XMFLOAT2(100, 60));
+	infoLabel.SetText("Tip: If you also attach a Sound component to this entity, the mouth expression (if available) will be animated based on the sound playing.");
+	AddWidget(&infoLabel);
 
 	blinkFrequencySlider.Create(0, 1, 0, 1000, "Blinks: ");
 	blinkFrequencySlider.SetTooltip("Specifies the number of blinks per second.");
@@ -316,6 +321,7 @@ void ExpressionWindow::ResizeLayout()
 		y += padding;
 	};
 
+	add_fullwidth(infoLabel);
 	add(blinkFrequencySlider);
 	add(blinkLengthSlider);
 	add(blinkCountSlider);

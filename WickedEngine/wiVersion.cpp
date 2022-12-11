@@ -9,7 +9,7 @@ namespace wi::version
 	// minor features, major updates, breaking compatibility changes
 	const int minor = 71;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 96;
+	const int revision = 115;
 
 	const std::string version_string = std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(revision);
 
@@ -72,6 +72,7 @@ Contributors
 	- Linux network implementation
 	- ComponentLibrary implementation
 	- Lua property bindings support, improvements
+	- GLTF Export
 	- Fixes
 - Maeve Garside | https://github.com/MolassesLover
 	- Linux package files

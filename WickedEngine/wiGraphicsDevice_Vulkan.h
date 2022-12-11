@@ -443,7 +443,7 @@ namespace wi::graphics
 
 				void init(VkDevice device, VkDescriptorType type, uint32_t descriptorCount)
 				{
-					descriptorCount = std::min(descriptorCount, 100000u);
+					descriptorCount = std::min(descriptorCount, 500000u);
 
 					VkDescriptorPoolSize poolSize = {};
 					poolSize.type = type;

@@ -14,7 +14,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
-	const float center_depth = texture_lineardepth[DTid.xy];
+	const float center_depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv, 0);
 	const float2 mindepth_maxcoc = neighborhood_mindepth_maxcoc[DTid.xy / DEPTHOFFIELD_TILESIZE];
 	const float mindepth = mindepth_maxcoc.x;
 	const float maxcoc = mindepth_maxcoc.y;
