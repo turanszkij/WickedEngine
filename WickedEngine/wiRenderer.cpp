@@ -297,13 +297,20 @@ enum OBJECTRENDERING_ALPHATEST
 	OBJECTRENDERING_ALPHATEST_ENABLED,
 	OBJECTRENDERING_ALPHATEST_COUNT
 };
+enum OBJECTRENDERING_WIND
+{
+	OBJECTRENDERING_WIND_DISABLED,
+	OBJECTRENDERING_WIND_ENABLED,
+	OBJECTRENDERING_WIND_COUNT
+};
 PipelineState PSO_object
 	[MaterialComponent::SHADERTYPE_COUNT]
 	[RENDERPASS_COUNT]
 	[BLENDMODE_COUNT]
 	[OBJECTRENDERING_DOUBLESIDED_COUNT]
 	[OBJECTRENDERING_TESSELLATION_COUNT]
-	[OBJECTRENDERING_ALPHATEST_COUNT];
+	[OBJECTRENDERING_ALPHATEST_COUNT]
+	[OBJECTRENDERING_WIND_COUNT];
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
 
@@ -320,7 +327,7 @@ const wi::vector<CustomShader>& GetCustomShaders()
 }
 
 
-SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
+SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent, bool wind)
 {
 	SHADERTYPE realVS = VSTYPE_OBJECT_SIMPLE;
 
@@ -329,11 +336,11 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	case RENDERPASS_MAIN:
 		if (tessellation)
 		{
-			realVS = VSTYPE_OBJECT_COMMON_TESSELLATION;
+			realVS = wind ? VSTYPE_OBJECT_COMMON_TESSELLATION_WIND : VSTYPE_OBJECT_COMMON_TESSELLATION;
 		}
 		else
 		{
-			realVS = VSTYPE_OBJECT_COMMON;
+			realVS = wind ? VSTYPE_OBJECT_COMMON_WIND : VSTYPE_OBJECT_COMMON;
 		}
 		break;
 	case RENDERPASS_PREPASS:
@@ -341,22 +348,22 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 		{
 			if (alphatest)
 			{
-				realVS = VSTYPE_OBJECT_PREPASS_ALPHATEST_TESSELLATION;
+				realVS = wind ? VSTYPE_OBJECT_PREPASS_ALPHATEST_TESSELLATION_WIND : VSTYPE_OBJECT_PREPASS_ALPHATEST_TESSELLATION;
 			}
 			else
 			{
-				realVS = VSTYPE_OBJECT_PREPASS_TESSELLATION;
+				realVS = wind ? VSTYPE_OBJECT_PREPASS_TESSELLATION_WIND : VSTYPE_OBJECT_PREPASS_TESSELLATION;
 			}
 		}
 		else
 		{
 			if (alphatest)
 			{
-				realVS = VSTYPE_OBJECT_PREPASS_ALPHATEST;
+				realVS = wind ? VSTYPE_OBJECT_PREPASS_ALPHATEST_WIND : VSTYPE_OBJECT_PREPASS_ALPHATEST;
 			}
 			else
 			{
-				realVS = VSTYPE_OBJECT_PREPASS;
+				realVS = wind ? VSTYPE_OBJECT_PREPASS_WIND : VSTYPE_OBJECT_PREPASS;
 			}
 		}
 		break;
@@ -366,34 +373,34 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	case RENDERPASS_SHADOW:
 		if (transparent)
 		{
-			realVS = VSTYPE_SHADOW_TRANSPARENT;
+			realVS = wind ? VSTYPE_SHADOW_TRANSPARENT_WIND : VSTYPE_SHADOW_TRANSPARENT;
 		}
 		else
 		{
 			if (alphatest)
 			{
-				realVS = VSTYPE_SHADOW_ALPHATEST;
+				realVS = wind ? VSTYPE_SHADOW_ALPHATEST_WIND : VSTYPE_SHADOW_ALPHATEST;
 			}
 			else
 			{
-				realVS = VSTYPE_SHADOW;
+				realVS = wind ? VSTYPE_SHADOW_WIND : VSTYPE_SHADOW;
 			}
 		}
 		break;
 	case RENDERPASS_SHADOWCUBE:
 		if (transparent)
 		{
-			realVS = VSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT;
+			realVS = wind ? VSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT_WIND : VSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT;
 		}
 		else
 		{
 			if (alphatest)
 			{
-				realVS = VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+				realVS = wind ? VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST_WIND : VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
 			}
 			else
 			{
-				realVS = VSTYPE_SHADOWCUBEMAPRENDER;
+				realVS = wind ? VSTYPE_SHADOWCUBEMAPRENDER_WIND : VSTYPE_SHADOWCUBEMAPRENDER;
 			}
 		}
 		break;
@@ -494,41 +501,7 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Ma
 	switch (renderPass)
 	{
 	case RENDERPASS_MAIN:
-		switch (shaderType)
-		{
-		case MaterialComponent::SHADERTYPE_PBR:
-			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT : PSTYPE_OBJECT;
-			break;
-		case MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION:
-			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_PLANARREFLECTION : PSTYPE_OBJECT_PLANARREFLECTION;
-			break;
-		case MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING:
-			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_POM : PSTYPE_OBJECT_POM;
-			break;
-		case MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC:
-			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_ANISOTROPIC : PSTYPE_OBJECT_ANISOTROPIC;
-			break;
-		case MaterialComponent::SHADERTYPE_PBR_CLOTH:
-			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CLOTH : PSTYPE_OBJECT_CLOTH;
-			break;
-		case MaterialComponent::SHADERTYPE_PBR_CLEARCOAT:
-			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CLEARCOAT : PSTYPE_OBJECT_CLEARCOAT;
-			break;
-		case MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT:
-			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CLOTH_CLEARCOAT : PSTYPE_OBJECT_CLOTH_CLEARCOAT;
-			break;
-		case MaterialComponent::SHADERTYPE_WATER:
-			realPS = transparent ? PSTYPE_OBJECT_WATER : SHADERTYPE_COUNT;
-			break;
-		case MaterialComponent::SHADERTYPE_CARTOON:
-			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CARTOON : PSTYPE_OBJECT_CARTOON;
-			break;
-		case MaterialComponent::SHADERTYPE_UNLIT:
-			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_UNLIT : PSTYPE_OBJECT_UNLIT;
-			break;
-		default:
-			break;
-		}
+		realPS = SHADERTYPE((transparent ? PSTYPE_OBJECT_TRANSPARENT_PERMUTATION_BEGIN : PSTYPE_OBJECT_PERMUTATION_BEGIN) + shaderType);
 		break;
 	case RENDERPASS_PREPASS:
 		if (alphatest)
@@ -746,6 +719,8 @@ void LoadShaders()
 {
 	wi::jobsystem::context ctx;
 
+	static const wi::vector<std::string> wind_permutation = { "WIND" };
+
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		inputLayouts[ILTYPE_OBJECT_DEBUG].elements =
 		{
@@ -756,24 +731,31 @@ void LoadShaders()
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_COMMON], "objectVS_common.cso");
+		LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_COMMON_WIND], "objectVS_common.cso", ShaderModel::SM_6_0, wind_permutation);
 		});
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_PREPASS], "objectVS_prepass.cso");
+		LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_PREPASS_WIND], "objectVS_prepass.cso", ShaderModel::SM_6_0, wind_permutation);
 		});
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_PREPASS_ALPHATEST], "objectVS_prepass_alphatest.cso");
+		LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_PREPASS_ALPHATEST_WIND], "objectVS_prepass_alphatest.cso", ShaderModel::SM_6_0, wind_permutation);
 		});
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW], "shadowVS.cso");
+		LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_WIND], "shadowVS.cso", ShaderModel::SM_6_0, wind_permutation);
 		});
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_SIMPLE], "objectVS_simple.cso");
+		LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_SIMPLE_WIND], "objectVS_simple.cso", ShaderModel::SM_6_0, wind_permutation);
 		LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_ALPHATEST], "shadowVS_alphatest.cso");
+		LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_ALPHATEST_WIND], "shadowVS_alphatest.cso", ShaderModel::SM_6_0, wind_permutation);
 		LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_TRANSPARENT], "shadowVS_transparent.cso");
+		LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_TRANSPARENT_WIND], "shadowVS_transparent.cso", ShaderModel::SM_6_0, wind_permutation);
 		});
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
@@ -795,9 +777,13 @@ void LoadShaders()
 		});
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_COMMON_TESSELLATION], "objectVS_common_tessellation.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_COMMON_TESSELLATION_WIND], "objectVS_common_tessellation.cso", ShaderModel::SM_6_0, wind_permutation); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_PREPASS_TESSELLATION], "objectVS_prepass_tessellation.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_PREPASS_TESSELLATION_WIND], "objectVS_prepass_tessellation.cso", ShaderModel::SM_6_0, wind_permutation); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_PREPASS_ALPHATEST_TESSELLATION], "objectVS_prepass_alphatest_tessellation.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_PREPASS_ALPHATEST_TESSELLATION_WIND], "objectVS_prepass_alphatest_tessellation.cso", ShaderModel::SM_6_0, wind_permutation); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], "objectVS_simple_tessellation.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION_WIND], "objectVS_simple_tessellation.cso", ShaderModel::SM_6_0, wind_permutation); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_IMPOSTOR], "impostorVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetriclight_directionalVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOLUMETRICLIGHT_POINT], "volumetriclight_pointVS.cso"); });
@@ -821,16 +807,22 @@ void LoadShaders()
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_ENVMAP], "envMapVS.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_ENVMAP_SKY], "envMap_skyVS.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER], "cubeShadowVS.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_WIND], "cubeShadowVS.cso", ShaderModel::SM_6_0, wind_permutation); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], "cubeShadowVS_alphatest.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST_WIND], "cubeShadowVS_alphatest.cso", ShaderModel::SM_6_0, wind_permutation); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT], "cubeShadowVS_transparent.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT_WIND], "cubeShadowVS_transparent.cso", ShaderModel::SM_6_0, wind_permutation); });
 	}
 	else
 	{
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_ENVMAP], "envMapVS_emulation.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_ENVMAP_SKY], "envMap_skyVS_emulation.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER], "cubeShadowVS_emulation.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_WIND], "cubeShadowVS_emulation.cso", ShaderModel::SM_6_0, wind_permutation); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], "cubeShadowVS_alphatest_emulation.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST_WIND], "cubeShadowVS_alphatest_emulation.cso", ShaderModel::SM_6_0, wind_permutation); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT], "cubeShadowVS_transparent_emulation.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT_WIND], "cubeShadowVS_transparent_emulation.cso", ShaderModel::SM_6_0, wind_permutation); });
 
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_ENVMAP_EMULATION], "envMapGS_emulation.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_ENVMAP_SKY_EMULATION], "envMap_skyGS_emulation.cso"); });
@@ -839,25 +831,6 @@ void LoadShaders()
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT_EMULATION], "cubeShadowGS_transparent_emulation.cso"); });
 	}
 
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT], "objectPS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_TRANSPARENT], "objectPS_transparent.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PLANARREFLECTION], "objectPS_planarreflection.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_TRANSPARENT_PLANARREFLECTION], "objectPS_transparent_planarreflection.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_POM], "objectPS_pom.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_TRANSPARENT_POM], "objectPS_transparent_pom.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_ANISOTROPIC], "objectPS_anisotropic.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_TRANSPARENT_ANISOTROPIC], "objectPS_transparent_anisotropic.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_CLOTH], "objectPS_cloth.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_TRANSPARENT_CLOTH], "objectPS_transparent_cloth.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_CLEARCOAT], "objectPS_clearcoat.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_TRANSPARENT_CLEARCOAT], "objectPS_transparent_clearcoat.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_CLOTH_CLEARCOAT], "objectPS_cloth_clearcoat.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_TRANSPARENT_CLOTH_CLEARCOAT], "objectPS_transparent_cloth_clearcoat.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_CARTOON], "objectPS_cartoon.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_TRANSPARENT_CARTOON], "objectPS_transparent_cartoon.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_UNLIT], "objectPS_unlit.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_TRANSPARENT_UNLIT], "objectPS_transparent_unlit.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_WATER], "objectPS_water.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR], "impostorPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_HOLOGRAM], "objectPS_hologram.cso"); });
@@ -1107,6 +1080,70 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::DS, shaders[DSTYPE_OBJECT_PREPASS_ALPHATEST], "objectDS_prepass_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::DS, shaders[DSTYPE_OBJECT_SIMPLE], "objectDS_simple.cso"); });
 
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		LoadShader(
+			ShaderStage::PS,
+			shaders[PSTYPE_OBJECT_PERMUTATION_BEGIN + args.jobIndex],
+			"objectPS.cso",
+			ShaderModel::SM_6_0,
+			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
+		);
+
+	});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
+		defines.push_back("TRANSPARENT");
+		LoadShader(
+			ShaderStage::PS,
+			shaders[PSTYPE_OBJECT_TRANSPARENT_PERMUTATION_BEGIN + args.jobIndex],
+			"objectPS.cso",
+			ShaderModel::SM_6_0,
+			defines // permutation defines
+		);
+
+	});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SURFACE_PERMUTATION_BEGIN + args.jobIndex],
+			"visibility_surfaceCS.cso",
+			ShaderModel::SM_6_0,
+			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
+		);
+
+	});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
+		defines.push_back("REDUCED");
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_PERMUTATION_BEGIN + args.jobIndex],
+			"visibility_surfaceCS.cso",
+			ShaderModel::SM_6_0,
+			defines // permutation defines
+		);
+
+	});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + args.jobIndex],
+			"visibility_shadeCS.cso",
+			ShaderModel::SM_6_0,
+			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
+		);
+
+	});
+
 	wi::jobsystem::Wait(ctx);
 
 	// default objectshaders:
@@ -1123,127 +1160,130 @@ void LoadShaders()
 					{
 						for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
 						{
-							const bool transparency = blendMode != BLENDMODE_OPAQUE;
-							SHADERTYPE realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-							SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
-							SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
-							SHADERTYPE realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest, transparency);
-							SHADERTYPE realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, shaderType);
-
-							if (tessellation && (realHS == SHADERTYPE_COUNT || realDS == SHADERTYPE_COUNT))
+							for (int wind = 0; wind < OBJECTRENDERING_WIND_COUNT; ++wind)
 							{
-								continue;
-							}
+								const bool transparency = blendMode != BLENDMODE_OPAQUE;
+								SHADERTYPE realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency, wind);
+								SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
+								SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
+								SHADERTYPE realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest, transparency);
+								SHADERTYPE realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, shaderType);
 
-							PipelineStateDesc desc;
-							desc.vs = realVS < SHADERTYPE_COUNT ? &shaders[realVS] : nullptr;
-							desc.hs = realHS < SHADERTYPE_COUNT ? &shaders[realHS] : nullptr;
-							desc.ds = realDS < SHADERTYPE_COUNT ? &shaders[realDS] : nullptr;
-							desc.gs = realGS < SHADERTYPE_COUNT ? &shaders[realGS] : nullptr;
-							desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
-
-							switch (blendMode)
-							{
-							case BLENDMODE_OPAQUE:
-								desc.bs = &blendStates[BSTYPE_OPAQUE];
-								break;
-							case BLENDMODE_ALPHA:
-								desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-								break;
-							case BLENDMODE_ADDITIVE:
-								desc.bs = &blendStates[BSTYPE_ADDITIVE];
-								break;
-							case BLENDMODE_PREMULTIPLIED:
-								desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
-								break;
-							case BLENDMODE_MULTIPLY:
-								desc.bs = &blendStates[BSTYPE_MULTIPLY];
-								break;
-							default:
-								assert(0);
-								break;
-							}
-
-							switch (renderPass)
-							{
-							case RENDERPASS_SHADOW:
-							case RENDERPASS_SHADOWCUBE:
-								desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
-								break;
-							default:
-								break;
-							}
-
-							switch (renderPass)
-							{
-							case RENDERPASS_SHADOW:
-							case RENDERPASS_SHADOWCUBE:
-								desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
-								break;
-							case RENDERPASS_MAIN:
-								if (blendMode == BLENDMODE_ADDITIVE)
+								if (tessellation && (realHS == SHADERTYPE_COUNT || realDS == SHADERTYPE_COUNT))
 								{
-									desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+									continue;
 								}
-								else
-								{
-									desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
-								}
-								break;
-							case RENDERPASS_ENVMAPCAPTURE:
-								desc.dss = &depthStencils[DSSTYPE_ENVMAP];
-								break;
-							case RENDERPASS_VOXELIZE:
-								desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
-								break;
-							default:
-								if (blendMode == BLENDMODE_ADDITIVE)
-								{
-									desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-								}
-								else
-								{
-									desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-								}
-								break;
-							}
 
-							switch (renderPass)
-							{
-							case RENDERPASS_SHADOW:
-							case RENDERPASS_SHADOWCUBE:
-								desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
-								break;
-							case RENDERPASS_VOXELIZE:
-								desc.rs = &rasterizers[RSTYPE_VOXELIZE];
-								break;
-							default:
-								switch (doublesided)
+								PipelineStateDesc desc;
+								desc.vs = realVS < SHADERTYPE_COUNT ? &shaders[realVS] : nullptr;
+								desc.hs = realHS < SHADERTYPE_COUNT ? &shaders[realHS] : nullptr;
+								desc.ds = realDS < SHADERTYPE_COUNT ? &shaders[realDS] : nullptr;
+								desc.gs = realGS < SHADERTYPE_COUNT ? &shaders[realGS] : nullptr;
+								desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
+
+								switch (blendMode)
 								{
+								case BLENDMODE_OPAQUE:
+									desc.bs = &blendStates[BSTYPE_OPAQUE];
+									break;
+								case BLENDMODE_ALPHA:
+									desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+									break;
+								case BLENDMODE_ADDITIVE:
+									desc.bs = &blendStates[BSTYPE_ADDITIVE];
+									break;
+								case BLENDMODE_PREMULTIPLIED:
+									desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
+									break;
+								case BLENDMODE_MULTIPLY:
+									desc.bs = &blendStates[BSTYPE_MULTIPLY];
+									break;
 								default:
-								case OBJECTRENDERING_DOUBLESIDED_DISABLED:
-									desc.rs = &rasterizers[RSTYPE_FRONT];
-									break;
-								case OBJECTRENDERING_DOUBLESIDED_ENABLED:
-									desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-									break;
-								case OBJECTRENDERING_DOUBLESIDED_BACKSIDE:
-									desc.rs = &rasterizers[RSTYPE_BACK];
+									assert(0);
 									break;
 								}
-								break;
-							}
 
-							if (tessellation)
-							{
-								desc.pt = PrimitiveTopology::PATCHLIST;
-							}
-							else
-							{
-								desc.pt = PrimitiveTopology::TRIANGLELIST;
-							}
+								switch (renderPass)
+								{
+								case RENDERPASS_SHADOW:
+								case RENDERPASS_SHADOWCUBE:
+									desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
+									break;
+								default:
+									break;
+								}
 
-							device->CreatePipelineState(&desc, &PSO_object[shaderType][renderPass][blendMode][doublesided][tessellation][alphatest]);
+								switch (renderPass)
+								{
+								case RENDERPASS_SHADOW:
+								case RENDERPASS_SHADOWCUBE:
+									desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
+									break;
+								case RENDERPASS_MAIN:
+									if (blendMode == BLENDMODE_ADDITIVE)
+									{
+										desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+									}
+									else
+									{
+										desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
+									}
+									break;
+								case RENDERPASS_ENVMAPCAPTURE:
+									desc.dss = &depthStencils[DSSTYPE_ENVMAP];
+									break;
+								case RENDERPASS_VOXELIZE:
+									desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+									break;
+								default:
+									if (blendMode == BLENDMODE_ADDITIVE)
+									{
+										desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+									}
+									else
+									{
+										desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+									}
+									break;
+								}
+
+								switch (renderPass)
+								{
+								case RENDERPASS_SHADOW:
+								case RENDERPASS_SHADOWCUBE:
+									desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+									break;
+								case RENDERPASS_VOXELIZE:
+									desc.rs = &rasterizers[RSTYPE_VOXELIZE];
+									break;
+								default:
+									switch (doublesided)
+									{
+									default:
+									case OBJECTRENDERING_DOUBLESIDED_DISABLED:
+										desc.rs = &rasterizers[RSTYPE_FRONT];
+										break;
+									case OBJECTRENDERING_DOUBLESIDED_ENABLED:
+										desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+										break;
+									case OBJECTRENDERING_DOUBLESIDED_BACKSIDE:
+										desc.rs = &rasterizers[RSTYPE_BACK];
+										break;
+									}
+									break;
+								}
+
+								if (tessellation)
+								{
+									desc.pt = PrimitiveTopology::PATCHLIST;
+								}
+								else
+								{
+									desc.pt = PrimitiveTopology::TRIANGLELIST;
+								}
+
+								device->CreatePipelineState(&desc, &PSO_object[shaderType][renderPass][blendMode][doublesided][tessellation][alphatest][wind]);
+							}
 						}
 					}
 				}
@@ -1251,50 +1291,12 @@ void LoadShaders()
 		}
 	});
 
-	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
-
-		LoadShader(
-			ShaderStage::CS,
-			shaders[CSTYPE_VISIBILITY_SURFACE_PERMUTATION_BEGIN + args.jobIndex],
-			"visibility_surfaceCS.cso",
-			ShaderModel::SM_6_0,
-			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
-		);
-
-		});
-
-	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
-
-		auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
-		defines.push_back("REDUCED");
-		LoadShader(
-			ShaderStage::CS,
-			shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_PERMUTATION_BEGIN + args.jobIndex],
-			"visibility_surfaceCS.cso",
-			ShaderModel::SM_6_0,
-			defines // permutation defines
-		);
-
-		});
-
-	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
-
-		LoadShader(
-			ShaderStage::CS,
-			shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + args.jobIndex],
-			"visibility_shadeCS.cso",
-			ShaderModel::SM_6_0,
-			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
-		);
-
-		});
-
 	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
 	customShaders.clear();
 
 	// Hologram sample shader will be registered as custom shader:
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
-		SHADERTYPE realVS = GetVSTYPE(RENDERPASS_MAIN, false, false, true);
+		SHADERTYPE realVS = GetVSTYPE(RENDERPASS_MAIN, false, false, true, false);
 
 		PipelineStateDesc desc;
 		desc.vs = &shaders[realVS];
@@ -2398,7 +2400,7 @@ void Workaround(const int bug , CommandList cmd)
 		//PE: https://github.com/turanszkij/WickedEngine/issues/450#issuecomment-1143647323
 
 		//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
-		const PipelineState* pso = &PSO_object[0][RENDERPASS_VOXELIZE][BLENDMODE_OPAQUE][0][0][0];
+		const PipelineState* pso = &PSO_object[0][RENDERPASS_VOXELIZE][BLENDMODE_OPAQUE][0][0][0][0];
 
 		device->EventBegin("Workaround 1", cmd);
 		static RenderPass renderpass_clear;
@@ -2533,15 +2535,16 @@ void RenderMeshes(
 				{
 					const BLENDMODE blendMode = material.GetBlendMode();
 					const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
+					const bool wind = material.IsUsingWind();
 					OBJECTRENDERING_DOUBLESIDED doublesided = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
 
-					pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
+					pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest][wind];
 					assert(pso->IsValid());
 
 					if ((filterMask & FILTER_TRANSPARENT) && doublesided == OBJECTRENDERING_DOUBLESIDED_ENABLED)
 					{
 						doublesided = OBJECTRENDERING_DOUBLESIDED_BACKSIDE;
-						pso_backside = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
+						pso_backside = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest][wind];
 					}
 				}
 			}
