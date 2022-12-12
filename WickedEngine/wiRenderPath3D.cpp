@@ -2093,7 +2093,7 @@ namespace wi
 			desc.format = Format::D32_FLOAT;
 			desc.width = internalResolution.x / 2;
 			desc.height = internalResolution.y / 2;
-			desc.layout = ResourceState::DEPTHSTENCIL_READONLY;
+			desc.layout = ResourceState::DEPTHSTENCIL;
 			device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection);
 			device->SetName(&depthBuffer_Reflection, "depthBuffer_Reflection");
 
@@ -2104,7 +2104,7 @@ namespace wi
 						depthBuffer_Reflection,
 						RenderPassAttachment::LoadOp::CLEAR,
 						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL,
 						ResourceState::DEPTHSTENCIL,
 						ResourceState::SHADER_RESOURCE
 					)
@@ -2129,9 +2129,7 @@ namespace wi
 						depthBuffer_Reflection,
 						RenderPassAttachment::LoadOp::LOAD,
 						RenderPassAttachment::StoreOp::DONTCARE,
-						ResourceState::SHADER_RESOURCE,
-						ResourceState::DEPTHSTENCIL_READONLY,
-						ResourceState::DEPTHSTENCIL_READONLY
+						ResourceState::SHADER_RESOURCE
 					)
 				);
 
