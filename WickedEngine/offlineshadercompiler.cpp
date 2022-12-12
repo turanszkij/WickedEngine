@@ -463,14 +463,10 @@ int main(int argc, char* argv[])
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
 	{
 		shaders.back().permutations.emplace_back().defines = x;
-	}
 
-	// permutations for objectPS_TRANSPARENT:
-	shaders.push_back({ "objectPS", wi::graphics::ShaderStage::PS });
-	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
-	{
+		// same but with TRANSPARENT:
 		shaders.back().permutations.emplace_back().defines = x;
-		shaders.back().permutations.emplace_back().defines.push_back("TRANSPARENT");
+		shaders.back().permutations.back().defines.push_back("TRANSPARENT");
 	}
 
 	// permutations for visibility_surfaceCS:
