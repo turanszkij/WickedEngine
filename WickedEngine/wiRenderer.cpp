@@ -629,7 +629,7 @@ bool LoadShader(
 	Shader& shader,
 	const std::string& filename,
 	ShaderModel minshadermodel,
-	wi::vector<std::string> permutation_defines
+	const wi::vector<std::string>& permutation_defines
 )
 {
 	std::string shaderbinaryfilename = SHADERPATH + filename;
