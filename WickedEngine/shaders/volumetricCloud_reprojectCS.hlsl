@@ -5,14 +5,13 @@
 PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<float4> cloud_current : register(t0);
-Texture2D<float2> cloud_velocity_current : register(t1);
-Texture2D<float> cloud_depth_current : register(t2);
-Texture2D<float4> cloud_history : register(t3);
-Texture2D<float> cloud_depth_history : register(t4);
-Texture2D<float> cloud_additional_history : register(t5);
+Texture2D<float2> cloud_depth_current : register(t1);
+Texture2D<float4> cloud_history : register(t2);
+Texture2D<float2> cloud_depth_history : register(t3);
+Texture2D<float> cloud_additional_history : register(t4);
 
 RWTexture2D<float4> output : register(u0);
-RWTexture2D<float> output_depth : register(u1);
+RWTexture2D<float2> output_depth : register(u1);
 RWTexture2D<float> output_additional : register(u2);
 RWTexture2D<unorm float4> output_cloudMask : register(u3);
 
@@ -49,8 +48,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	
 #else
 	
-	// Load precalculated velocity buffer
-	float2 prevUV = uv + cloud_velocity_current.SampleLevel(sampler_point_clamp, uv, 0);
+	float2 screenPosition = uv_to_clipspace(uv);
+
+	float currentCloudLinearDepth = cloud_depth_current.SampleLevel(sampler_point_clamp, uv, 0).x;
+	float currentCloudDepth = compute_inverse_lineardepth(currentCloudLinearDepth, GetCamera().z_near, GetCamera().z_far);
+	
+	float4 thisClip = float4(screenPosition, currentCloudDepth, 1.0);
+	
+	float4 prevClip = mul(GetCamera().inverse_view_projection, thisClip);
+	prevClip = mul(GetCamera().previous_view_projection, prevClip);
+	
+	//float4 prevClip = mul(GetCamera().previous_view_projection, worldPosition);
+	float2 prevScreen = prevClip.xy / prevClip.w;
+	
+	float2 screenVelocity = screenPosition - prevScreen;
+	float2 prevScreenPosition = screenPosition - screenVelocity;
+	
+	// Transform from screen position to uv
+	float2 prevUV = prevScreenPosition * float2(0.5, -0.5) + 0.5;
     
 #endif
 	
@@ -63,7 +78,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	bool shouldUpdatePixel = (localIndex == currentIndex);
 	
 	float4 result = 0.0;
-	float depthResult = 0.0;
+	float2 depthResult = 0.0;
 	float additionalResult = 0.0;
 
 
@@ -89,10 +104,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (validHistory)
 	{
 		float4 newResult = cloud_current[clamp(renderCoord, minRenderCoord, maxRenderCoord)];
-		float newDepthResult = cloud_depth_current[clamp(renderCoord, minRenderCoord, maxRenderCoord)];
+		float2 newDepthResult = cloud_depth_current[clamp(renderCoord, minRenderCoord, maxRenderCoord)];
 
 		float4 previousResult = cloud_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
-		float previousDepthResult = cloud_depth_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
+		float2 previousDepthResult = cloud_depth_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 		float previousAdditionalResult = cloud_additional_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 		
 		float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r; // Half res
@@ -104,7 +119,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		if (shouldUpdatePixel)
 		{
-			if (abs(tToDepthBuffer - previousDepthResult) > tToDepthBuffer * 0.1)
+			if (abs(tToDepthBuffer - previousDepthResult.y) > tToDepthBuffer * 0.1)
 			{
 				result = newResult;
 				depthResult = newDepthResult;
@@ -152,7 +167,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			depthResult = previousDepthResult;
 			additionalResult = previousAdditionalResult;
 			
-			if (abs(tToDepthBuffer - previousDepthResult) > tToDepthBuffer * 0.1)
+			if (abs(tToDepthBuffer - previousDepthResult.y) > tToDepthBuffer * 0.1)
 			{
 				float closestDepth = FLT_MAX;
 				for (int y = -1; y <= 1; y++)
@@ -167,8 +182,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 						int2 neighborCoord = renderCoord + offset;
 						neighborCoord = clamp(neighborCoord, minRenderCoord, maxRenderCoord);
 
-						float neighboorDepthResult = cloud_depth_current[neighborCoord];
-						float neighborClosestDepth = abs(tToDepthBuffer - neighboorDepthResult);
+						float2 neighboorDepthResult = cloud_depth_current[neighborCoord];
+						float neighborClosestDepth = abs(tToDepthBuffer - neighboorDepthResult.y);
 
 						if (neighborClosestDepth < closestDepth)
 						{
@@ -189,8 +204,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				// Simple box clamping from neighbour pixels
 				float4 resultAABBMin = FLT_MAX;
 				float4 resultAABBMax = 0.0;
-				float depthResultAABBMin = FLT_MAX;
-				float depthResultAABBMax = 0.0;
+				float2 depthResultAABBMin = FLT_MAX;
+				float2 depthResultAABBMax = 0.0;
 
 				for (int y = -1; y <= 1; y++)
 				{
@@ -204,7 +219,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 						int2 neighborCoord = renderCoord + offset;
 							
 						float4 neighborResult = cloud_current[neighborCoord];
-						float neighboorDepthResult = cloud_depth_current[neighborCoord];
+						float2 neighboorDepthResult = cloud_depth_current[neighborCoord];
 
 						resultAABBMin = min(resultAABBMin, neighborResult);
 						resultAABBMax = max(resultAABBMax, neighborResult);

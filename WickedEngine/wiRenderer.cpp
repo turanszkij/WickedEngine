@@ -12748,10 +12748,7 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudRender);
 	device->SetName(&res.texture_cloudRender, "texture_cloudRender");
-	desc.format = Format::R16G16_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.texture_cloudVelocity);
-	device->SetName(&res.texture_cloudVelocity, "texture_cloudVelocity");
-	desc.format = Format::R32_FLOAT;
+	desc.format = Format::R32G32_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudDepth);
 	device->SetName(&res.texture_cloudDepth, "texture_cloudDepth");
 
@@ -12847,7 +12844,6 @@ void Postprocess_VolumetricClouds(
 
 		const GPUResource* uavs[] = {
 			&res.texture_cloudRender,
-			&res.texture_cloudVelocity,
 			&res.texture_cloudDepth,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
@@ -12855,7 +12851,6 @@ void Postprocess_VolumetricClouds(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&res.texture_cloudRender, res.texture_cloudRender.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_cloudVelocity, res.texture_cloudVelocity.desc.layout, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Image(&res.texture_cloudDepth, res.texture_cloudDepth.desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -12872,7 +12867,6 @@ void Postprocess_VolumetricClouds(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_cloudRender, ResourceState::UNORDERED_ACCESS, res.texture_cloudRender.desc.layout),
-				GPUBarrier::Image(&res.texture_cloudVelocity, ResourceState::UNORDERED_ACCESS, res.texture_cloudVelocity.desc.layout),
 				GPUBarrier::Image(&res.texture_cloudDepth, ResourceState::UNORDERED_ACCESS, res.texture_cloudDepth.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -12898,11 +12892,10 @@ void Postprocess_VolumetricClouds(
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&res.texture_cloudRender, 0, cmd);
-		device->BindResource(&res.texture_cloudVelocity, 1, cmd);
-		device->BindResource(&res.texture_cloudDepth, 2, cmd);
-		device->BindResource(&res.texture_reproject[temporal_history], 3, cmd);
-		device->BindResource(&res.texture_reproject_depth[temporal_history], 4, cmd);
-		device->BindResource(&res.texture_reproject_additional[temporal_history], 5, cmd);
+		device->BindResource(&res.texture_cloudDepth, 1, cmd);
+		device->BindResource(&res.texture_reproject[temporal_history], 2, cmd);
+		device->BindResource(&res.texture_reproject_depth[temporal_history], 3, cmd);
+		device->BindResource(&res.texture_reproject_additional[temporal_history], 4, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_reproject[temporal_output],

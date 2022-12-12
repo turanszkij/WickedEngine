@@ -46,8 +46,7 @@ TextureCube<float> texture_input_depth : register(t5);
 
 #else
 RWTexture2D<float4> texture_render : register(u0);
-RWTexture2D<float2> texture_cloudVelocity : register(u1);
-RWTexture2D<float> texture_cloudDepth : register(u2);
+RWTexture2D<float2> texture_cloudDepth : register(u1);
 #endif // VOLUMETRICCLOUD_CAPTURE
 
 // Octaves for multiple-scattering approximation. 1 means single-scattering only.
@@ -463,7 +462,7 @@ float CalculateAtmosphereBlend(float tDepth)
 	return fade;
 }
  
-void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition, float3 rayOrigin, float3 rayDirection, inout float4 cloudColor, inout float2 cloudVelocity, inout float cloudDepth)
+void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition, float3 rayOrigin, float3 rayDirection, inout float4 cloudColor, inout float2 cloudDepth)
 {	
 	AtmosphereParameters atmosphere = GetWeather().atmosphere;
 	
@@ -511,7 +510,6 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		else
 		{
 			cloudColor = float4(0.0, 0.0, 0.0, 0.0);
-			cloudVelocity = float2(0.0, 0.0);
 			cloudDepth = FLT_MAX;
 			return;
 		}
@@ -519,7 +517,6 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		if (tMax <= tMin || tMin > GetWeather().volumetric_clouds.RenderDistance)
 		{
 			cloudColor = float4(0.0, 0.0, 0.0, 0.0);
-			cloudVelocity = float2(0.0, 0.0);
 			cloudDepth = FLT_MAX;
 			return;
 		}
@@ -641,7 +638,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 
 	
 	float tDepth = depthWeightsSum == 0.0 ? tMax : depthWeightedSum / max(depthWeightsSum, 0.0000000001);
-	float3 cloudWorldPosition = rayOrigin + rayDirection * tDepth;
+	//float3 cloudWorldPosition = rayOrigin + rayDirection * tDepth;
 
 	float approxTransmittance = dot(transmittanceToView.rgb, 1.0 / 3.0);
 	float grayScaleTransmittance = approxTransmittance < GetWeather().volumetric_clouds.TransmittanceThreshold ? 0.0 : approxTransmittance;
@@ -694,17 +691,9 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		color *= 1.0 - atmosphereBlend;
 	}
 
-	// Calculate cloud velocity
-	float4 prevClip = mul(GetCamera().previous_view_projection, float4(cloudWorldPosition, 1.0));
-	float2 prevScreen = prevClip.xy / prevClip.w;
-
-	float2 screenPosition = uv_to_clipspace(uv);
-	float2 velocity = (prevScreen - screenPosition) * float2(0.5, -0.5);
-
 	// Output
 	cloudColor = color;
-	cloudVelocity = velocity;
-	cloudDepth = tToDepthBuffer; // Linear depth
+	cloudDepth = float2(tDepth, tToDepthBuffer); // Linear depth
 }
 
 #ifdef VOLUMETRICCLOUD_CAPTURE
@@ -735,9 +724,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 rayDirection = normalize(N);
 
 	float4 cloudColor = 0;
-	float2 cloudVelocity = 0;
-	float cloudDepth = 0;
-	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudVelocity, cloudDepth);
+	float2 cloudDepth = 0;
+	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudDepth);
 
 	float4 composite = input.SampleLevel(sampler_linear_clamp, float4(N, capture.arrayIndex), 0);
 
@@ -768,13 +756,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 rayDirection = normalize(unprojected.xyz - rayOrigin);
 	
 	float4 cloudColor = 0;
-	float2 cloudVelocity = 0;
-	float cloudDepth = 0;
-	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudVelocity, cloudDepth);
+	float2 cloudDepth = 0;
+	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudDepth);
 	
     // Output
 	texture_render[DTid.xy] = cloudColor;
-	texture_cloudVelocity[DTid.xy] = cloudVelocity;
 	texture_cloudDepth[DTid.xy] = cloudDepth;
 }
 #endif // VOLUMETRICCLOUD_CAPTURE
