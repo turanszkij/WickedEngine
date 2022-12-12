@@ -12782,6 +12782,7 @@ void Postprocess_VolumetricClouds(
 	const CameraComponent& camera,
 	const CameraComponent& camera_previous,
 	const CameraComponent& camera_reflection,
+	const bool jitterEnabled,
 	const Texture* weatherMapFirst,
 	const Texture* weatherMapSecond
 )
@@ -12789,8 +12790,8 @@ void Postprocess_VolumetricClouds(
 	device->EventBegin("Postprocess_VolumetricClouds", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Volumetric Clouds", cmd);
 
-	// Disable Temporal AA jitter for clouds
-	if (GetTemporalAAEnabled())
+	// Disable Temporal AA and FSR2 jitter for clouds
+	if (jitterEnabled)
 	{
 		CameraComponent camera_clouds = camera;
 		camera_clouds.jitter = XMFLOAT2(0, 0);

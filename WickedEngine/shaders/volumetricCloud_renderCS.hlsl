@@ -503,7 +503,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		else
 		{
 			cloudColor = float4(0.0, 0.0, 0.0, 0.0);
-			cloudWorldPosition = tMax;
+			cloudWorldPosition = FLT_MAX;
 			cloudDepth = FLT_MAX;
 			return;
 		}
@@ -511,7 +511,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		if (tMax <= tMin || tMin > GetWeather().volumetric_clouds.RenderDistance)
 		{
 			cloudColor = float4(0.0, 0.0, 0.0, 0.0);
-			cloudWorldPosition = tMax;
+			cloudWorldPosition = FLT_MAX;
 			cloudDepth = FLT_MAX;
 			return;
 		}

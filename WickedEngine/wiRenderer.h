@@ -663,6 +663,7 @@ namespace wi::renderer
 		const wi::scene::CameraComponent& camera,
 		const wi::scene::CameraComponent& camera_previous,
 		const wi::scene::CameraComponent& camera_reflection,
+		const bool jitterEnabled,
 		const wi::graphics::Texture* weatherMapFirst = nullptr,
 		const wi::graphics::Texture* weatherMapSecond = nullptr
 	);
