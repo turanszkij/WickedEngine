@@ -451,8 +451,30 @@ float3 SampleWeather(Texture2D<float4> texture_weatherMap, float3 p, float heigh
 	return weatherData;
 }
 
+bool ValidCloudDensity(float heightFraction, float heightGradient, float3 weatherData)
+{
+	return (weatherData.r > 0.2 && heightGradient < heightFraction);
+}
+
+bool ValidCloudDensityLayers(float heightFraction, float heightGradientFirst, float heightGradientSecond, float3 weatherDataFirst, float3 weatherDataSecond)
+{
+	bool validCloudDensityFirst = ValidCloudDensity(heightFraction, heightGradientFirst, weatherDataFirst);
+	bool validCloudDensitySecond = ValidCloudDensity(heightFraction, heightGradientSecond, weatherDataSecond);
+	
+	return validCloudDensityFirst && validCloudDensitySecond;
+}
+
 float SampleCloudDensity(Texture3D<float4> texture_shapeNoise, Texture3D<float4> texture_detailNoise, Texture2D<float4> texture_curlNoise, float3 p, float heightFraction, LayerParameters parameters, float3 weatherData, float lod, bool sampleDetail)
 {
+	// Sample height gradients
+	float densityHeightGradient = GetHeightGradient(heightFraction, weatherData, parameters);
+
+	// When can estimate the bounding area of the clouds if we know the height on the heightfraction
+	if (!ValidCloudDensity(densityHeightGradient, heightFraction, weatherData))
+	{
+		return 0.0;
+	}
+	
 	float3 lowFrequencyPos = float3(p.x, p.y + (p.x / 3.0f + p.z / 7.0f), p.z); // Offset to avoid repeting pattern for top-down view
 	lowFrequencyPos += parameters.windOffset;
 	lowFrequencyPos += heightFraction * parameters.windDirection * parameters.layer.SkewAlongWindDirection;
@@ -466,7 +488,6 @@ float SampleCloudDensity(Texture3D<float4> texture_shapeNoise, Texture3D<float4>
 	float cloudSample = Remap(lowFrequencyNoises.r, -(1.0 - lowFrequencyFBM), 1.0, 0.0, 1.0);
 
 	// Apply height gradients
-	float densityHeightGradient = GetHeightGradient(heightFraction, weatherData, parameters);
 	cloudSample *= densityHeightGradient;
 
 	float cloudCoverage = weatherData.r;

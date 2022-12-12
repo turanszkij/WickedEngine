@@ -141,7 +141,11 @@ void VolumetricShadow(inout ParticipatingMedia participatingMedia, in Atmosphere
 		
 		float3 weatherDataFirst = SampleWeather(texture_weatherMapFirst, samplePoint, heightFraction, layerParametersFirst);
 		float3 weatherDataSecond = SampleWeather(texture_weatherMapSecond, samplePoint, heightFraction, layerParametersSecond);
-		if (saturate(weatherDataFirst.r + weatherDataSecond.r) < 0.25)
+		
+		float heightGradientFirst = GetHeightGradient(heightFraction, weatherDataFirst, layerParametersFirst);
+		float heightGradientSecond = GetHeightGradient(heightFraction, weatherDataSecond, layerParametersSecond);
+		
+		if (ValidCloudDensityLayers(heightFraction, heightGradientFirst, heightGradientSecond, weatherDataFirst, weatherDataSecond))
 		{
 			continue;
 		}
@@ -211,7 +215,11 @@ void VolumetricGroundContribution(inout float3 environmentLuminance, in Atmosphe
 		
 		float3 weatherDataFirst = SampleWeather(texture_weatherMapFirst, samplePoint, heightFraction, layerParametersFirst);
 		float3 weatherDataSecond = SampleWeather(texture_weatherMapSecond, samplePoint, heightFraction, layerParametersSecond);
-		if (saturate(weatherDataFirst.r + weatherDataSecond.r) < 0.25)
+
+		float heightGradientFirst = GetHeightGradient(heightFraction, weatherDataFirst, layerParametersFirst);
+		float heightGradientSecond = GetHeightGradient(heightFraction, weatherDataSecond, layerParametersSecond);
+		
+		if (ValidCloudDensityLayers(heightFraction, heightGradientFirst, heightGradientSecond, weatherDataFirst, weatherDataSecond))
 		{
 			continue;
 		}
@@ -455,7 +463,7 @@ float CalculateAtmosphereBlend(float tDepth)
 	return fade;
 }
  
-void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition, float3 rayOrigin, float3 rayDirection, inout float4 cloudColor, inout float3 cloudWorldPosition, inout float cloudDepth)
+void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition, float3 rayOrigin, float3 rayDirection, inout float4 cloudColor, inout float2 cloudVelocity, inout float cloudDepth)
 {	
 	AtmosphereParameters atmosphere = GetWeather().atmosphere;
 	
@@ -503,7 +511,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		else
 		{
 			cloudColor = float4(0.0, 0.0, 0.0, 0.0);
-			cloudWorldPosition = FLT_MAX;
+			cloudVelocity = float2(0.0, 0.0);
 			cloudDepth = FLT_MAX;
 			return;
 		}
@@ -511,7 +519,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		if (tMax <= tMin || tMin > GetWeather().volumetric_clouds.RenderDistance)
 		{
 			cloudColor = float4(0.0, 0.0, 0.0, 0.0);
-			cloudWorldPosition = FLT_MAX;
+			cloudVelocity = float2(0.0, 0.0);
 			cloudDepth = FLT_MAX;
 			return;
 		}
@@ -574,9 +582,14 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		
 		float3 weatherDataFirst = SampleWeather(texture_weatherMapFirst, sampleWorldPosition, heightFraction, layerParametersFirst);
 		float3 weatherDataSecond = SampleWeather(texture_weatherMapSecond, sampleWorldPosition, heightFraction, layerParametersSecond);
-		if (saturate(weatherDataFirst.r + weatherDataSecond.r) < 0.25)
+
+		float heightGradientFirst = GetHeightGradient(heightFraction, weatherDataFirst, layerParametersFirst);
+		float heightGradientSecond = GetHeightGradient(heightFraction, weatherDataSecond, layerParametersSecond);
+
+		// We can guarantee that no clouds are here
+		if (ValidCloudDensityLayers(heightFraction, heightGradientFirst, heightGradientSecond, weatherDataFirst, weatherDataSecond))
 		{
-            // If value is low, continue marching until we quit or hit something.
+			// If value is low, continue marching until we quit or hit something.
 			sampleWorldPosition += rayDirection * stepSize * stepLength;
 			zeroDensitySampleCount += 1.0;
 			stepLength = zeroDensitySampleCount > 10.0 ? GetWeather().volumetric_clouds.BigStepMarch : 1.0; // If zero count has reached a high number, switch to big steps
@@ -628,7 +641,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 
 	
 	float tDepth = depthWeightsSum == 0.0 ? tMax : depthWeightedSum / max(depthWeightsSum, 0.0000000001);
-	float3 position = rayOrigin + rayDirection * tDepth;
+	float3 cloudWorldPosition = rayOrigin + rayDirection * tDepth;
 
 	float approxTransmittance = dot(transmittanceToView.rgb, 1.0 / 3.0);
 	float grayScaleTransmittance = approxTransmittance < GetWeather().volumetric_clouds.TransmittanceThreshold ? 0.0 : approxTransmittance;
@@ -680,9 +693,17 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		float atmosphereBlend = CalculateAtmosphereBlend(tDepth);
 		color *= 1.0 - atmosphereBlend;
 	}
-	
+
+	// Calculate cloud velocity
+	float4 prevClip = mul(GetCamera().previous_view_projection, float4(cloudWorldPosition, 1.0));
+	float2 prevScreen = prevClip.xy / prevClip.w;
+
+	float2 screenPosition = uv_to_clipspace(uv);
+	float2 velocity = (prevScreen - screenPosition) * float2(0.5, -0.5);
+
+	// Output
 	cloudColor = color;
-	cloudWorldPosition = position;
+	cloudVelocity = velocity;
 	cloudDepth = tToDepthBuffer; // Linear depth
 }
 
@@ -714,9 +735,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 rayDirection = normalize(N);
 
 	float4 cloudColor = 0;
-	float3 cloudWorldPosition = 0;
+	float2 cloudVelocity = 0;
 	float cloudDepth = 0;
-	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudWorldPosition, cloudDepth);
+	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudVelocity, cloudDepth);
 
 	float4 composite = input.SampleLevel(sampler_linear_clamp, float4(N, capture.arrayIndex), 0);
 
@@ -747,14 +768,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 rayDirection = normalize(unprojected.xyz - rayOrigin);
 	
 	float4 cloudColor = 0;
-	float3 cloudWorldPosition = 0;
+	float2 cloudVelocity = 0;
 	float cloudDepth = 0;
-	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudWorldPosition, cloudDepth);
-
-	// Calculate cloud velocity
-	float4 prevClip = mul(GetCamera().previous_view_projection, float4(cloudWorldPosition, 1.0));
-	float2 prevScreen = prevClip.xy / prevClip.w;
-	float2 cloudVelocity = (prevScreen - screenPosition) * float2(0.5, -0.5);
+	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudVelocity, cloudDepth);
 	
     // Output
 	texture_render[DTid.xy] = cloudColor;
