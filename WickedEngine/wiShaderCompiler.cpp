@@ -46,7 +46,7 @@ namespace wi::shadercompiler
 			HMODULE dxcompiler = wiLoadLibrary(LIBDXCOMPILER);
 #elif defined(PLATFORM_LINUX)
 #define LIBDXCOMPILER "libdxcompiler.so"
-			HMODULE dxcompiler = wiLoadLibrary(LIBDXCOMPILER);
+			HMODULE dxcompiler = wiLoadLibrary("./" LIBDXCOMPILER);
 #endif
 			if (dxcompiler != nullptr)
 			{
