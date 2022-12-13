@@ -29,6 +29,7 @@
 #else
 
 #define PLATFORM_LINUX
+#include <dlfcn.h>
 #define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
 #define wiGetProcAddress(handle,name) dlsym(handle, name)
 typedef void* HMODULE;
