@@ -36,7 +36,13 @@ void main(
 	if (tig >= realGroupCount)
 		return;
 
+#ifdef SPIRV
+	// Workaround for mesh shader compile issue with vulkan: https://github.com/microsoft/DirectXShaderCompiler/issues/4865#issuecomment-1346806816
+	ShaderGeometry geometry;
+	geometry.init(); // obviously, this will not produce correct result, but let the shader compile at least in vulkan
+#else
 	ShaderGeometry geometry = EmitterGetGeometry();
+#endif // SPIRV
 
 	uint instanceID = tid;
 	uint particleIndex = culledIndirectionBuffer2[culledIndirectionBuffer[instanceID]];

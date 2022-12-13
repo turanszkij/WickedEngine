@@ -314,8 +314,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"objectHS_prepass_alphatest", wi::graphics::ShaderStage::HS },
 	{"objectHS_simple", wi::graphics::ShaderStage::HS },
 
-	// Mesh shader compile issue with vulkan: https://github.com/microsoft/DirectXShaderCompiler/issues/4865#issuecomment-1346806816
-	//{"emittedparticleMS", wi::graphics::ShaderStage::MS },
+	{"emittedparticleMS", wi::graphics::ShaderStage::MS },
 
 
 	//{"rtreflectionLIB", wi::graphics::ShaderStage::LIB },
