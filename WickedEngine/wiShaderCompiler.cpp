@@ -68,7 +68,10 @@ namespace wi::shadercompiler
 			}
 			else
 			{
-				wi::backlog::post("wi::shadercompiler: could not load library " LIBDXCOMPILER);
+				wi::backlog::post("wi::shadercompiler: could not load library " LIBDXCOMPILER, wi::backlog::LogLevel::Error);
+#if defined(PLATFORM_LINUX)
+				wi::backlog::post(dlerror(), wi::backlog::LogLevel::Error); // print dlopen() error detail: https://linux.die.net/man/3/dlerror
+#endif // PLATFORM_LINUX
 			}
 
 		}

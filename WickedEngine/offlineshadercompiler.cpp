@@ -314,7 +314,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"objectHS_prepass_alphatest", wi::graphics::ShaderStage::HS },
 	{"objectHS_simple", wi::graphics::ShaderStage::HS },
 
-
 	{"emittedparticleMS", wi::graphics::ShaderStage::MS },
 
 

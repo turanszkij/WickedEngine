@@ -476,10 +476,17 @@ typedef enum DXC_OUT_KIND {
   DXC_OUT_REFLECTION = 8,     // IDxcBlob - RDAT part with reflection data
   DXC_OUT_ROOT_SIGNATURE = 9, // IDxcBlob - Serialized root signature output
   DXC_OUT_EXTRA_OUTPUTS  = 10,// IDxcExtraResults - Extra outputs
-  DXC_OUT_REMARKS = 11,       // IDxcBlobUtf8 or IDxcBlobUtf16 - text directed at stdout
+  DXC_OUT_REMARKS = 11,       // IDxcBlobUtf8 or IDxcBlobWide - text directed at stdout
+  DXC_OUT_TIME_REPORT = 12,   // IDxcBlobUtf8 or IDxcBlobWide - text directed at stdout
 
+  DXC_OUT_LAST = DXC_OUT_TIME_REPORT, // Last value for a counter
+
+  DXC_OUT_NUM_ENUMS,
   DXC_OUT_FORCE_DWORD = 0xFFFFFFFF
 } DXC_OUT_KIND;
+
+static_assert(DXC_OUT_NUM_ENUMS == DXC_OUT_LAST + 1,
+              "DXC_OUT_* Enum added and last value not updated.");
 
 CROSS_PLATFORM_UUIDOF(IDxcResult, "58346CDA-DDE7-4497-9461-6F87AF5E0659")
 struct IDxcResult : public IDxcOperationResult {
@@ -667,6 +674,47 @@ struct IDxcPdbUtils : public IUnknown {
   virtual HRESULT STDMETHODCALLTYPE CompileForFullPDB(_COM_Outptr_ IDxcResult **ppResult) = 0;
   virtual HRESULT STDMETHODCALLTYPE OverrideArgs(_In_ DxcArgPair *pArgPairs, UINT32 uNumArgPairs) = 0;
   virtual HRESULT STDMETHODCALLTYPE OverrideRootSignature(_In_ const WCHAR *pRootSignature) = 0;
+};
+
+CROSS_PLATFORM_UUIDOF(IDxcPdbUtils2, "4315D938-F369-4F93-95A2-252017CC3807")
+struct IDxcPdbUtils2 : public IUnknown {
+  virtual HRESULT STDMETHODCALLTYPE Load(_In_ IDxcBlob *pPdbOrDxil) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetSourceCount(_Out_ UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetSource(_In_ UINT32 uIndex, _COM_Outptr_ IDxcBlobEncoding **ppResult) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetSourceName(_In_ UINT32 uIndex, _COM_Outptr_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetLibraryPDBCount(UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetLibraryPDB(_In_ UINT32 uIndex, _COM_Outptr_ IDxcPdbUtils2 **ppOutPdbUtils, _COM_Outptr_opt_result_maybenull_ IDxcBlobWide **ppLibraryName) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetFlagCount(_Out_ UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetFlag(_In_ UINT32 uIndex, _COM_Outptr_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetArgCount(_Out_ UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetArg(_In_ UINT32 uIndex, _COM_Outptr_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetArgPairCount(_Out_ UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetArgPair(_In_ UINT32 uIndex, _COM_Outptr_result_maybenull_ IDxcBlobWide **ppName, _COM_Outptr_result_maybenull_ IDxcBlobWide **ppValue) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetDefineCount(_Out_ UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetDefine(_In_ UINT32 uIndex, _COM_Outptr_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetTargetProfile(_COM_Outptr_result_maybenull_ IDxcBlobWide **ppResult) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetEntryPoint(_COM_Outptr_result_maybenull_ IDxcBlobWide **ppResult) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetMainFileName(_COM_Outptr_result_maybenull_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetHash(_COM_Outptr_result_maybenull_ IDxcBlob **ppResult) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetName(_COM_Outptr_result_maybenull_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetVersionInfo(_COM_Outptr_result_maybenull_ IDxcVersionInfo **ppVersionInfo) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetCustomToolchainID(_Out_ UINT32 *pID) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetCustomToolchainData(_COM_Outptr_result_maybenull_ IDxcBlob **ppBlob) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetWholeDxil(_COM_Outptr_result_maybenull_ IDxcBlob **ppResult) = 0;
+
+  virtual BOOL STDMETHODCALLTYPE IsFullPDB() = 0;
+  virtual BOOL STDMETHODCALLTYPE IsPDBRef() = 0;
 };
 
 // Note: __declspec(selectany) requires 'extern'
