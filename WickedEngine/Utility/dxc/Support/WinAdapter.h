@@ -33,6 +33,8 @@
 #include <vector>
 #endif // __cplusplus
 
+#define COM_NO_WINDOWS_H // needed to inform d3d headers that this isn't windows
+
 //===----------------------------------------------------------------------===//
 //
 //                             Begin: Macro Definitions
@@ -64,10 +66,12 @@
 #endif // __EMULATE_UUID
 
 #define STDMETHODCALLTYPE
-#define STDAPI extern "C" HRESULT STDAPICALLTYPE
-#define STDAPI_(type) extern "C" type STDAPICALLTYPE
-#define STDMETHODIMP HRESULT STDMETHODCALLTYPE
 #define STDMETHODIMP_(type) type STDMETHODCALLTYPE
+#define STDMETHODIMP STDMETHODIMP_(HRESULT)
+#define STDMETHOD_(type,name) virtual STDMETHODIMP_(type) name
+#define STDMETHOD(name) STDMETHOD_(HRESULT, name)
+#define EXTERN_C extern "C"
+
 
 #define UNREFERENCED_PARAMETER(P) (void)(P)
 
@@ -88,13 +92,12 @@
 #define FALSE 0
 #define TRUE 1
 
-#define REGDB_E_CLASSNOTREG 1
-
 // We ignore the code page completely on Linux.
 #define GetConsoleOutputCP() 0
 
 #define _HRESULT_TYPEDEF_(_sc) ((HRESULT)_sc)
 #define DISP_E_BADINDEX _HRESULT_TYPEDEF_(0x8002000BL)
+#define REGDB_E_CLASSNOTREG _HRESULT_TYPEDEF_(0x80040154L)
 
 // This is an unsafe conversion. If needed, we can later implement a safe
 // conversion that throws exceptions for overflow cases.
@@ -118,7 +121,7 @@
 #define ERROR_OUT_OF_STRUCTURES ENOMEM
 #define ERROR_NOT_CAPABLE EPERM
 #define ERROR_NOT_FOUND ENOTSUP
-#define ERROR_UNHANDLED_EXCEPTION EINTR
+#define ERROR_UNHANDLED_EXCEPTION EBADF
 
 // Used by HRESULT <--> WIN32 error code conversion
 #define SEVERITY_ERROR 1
@@ -309,7 +312,6 @@
 
 #define _Printf_format_string_
 #define _Null_terminated_
-#define __fallthrough
 
 #define _Field_size_(size)
 #define _Field_size_full_(size)
@@ -326,6 +328,9 @@
 #define _Null_
 #define _Notnull_
 #define _Maybenull_
+#define THIS_
+#define THIS
+#define PURE = 0
 
 #define _Outptr_result_bytebuffer_(size)
 
@@ -365,6 +370,7 @@ typedef unsigned int UINT;
 typedef unsigned long ULONG;
 typedef long long LONGLONG;
 typedef long long LONG_PTR;
+typedef unsigned long long ULONG_PTR;
 typedef unsigned long long ULONGLONG;
 
 typedef uint16_t WORD;
@@ -404,6 +410,7 @@ typedef signed int HRESULT;
 //===--------------------- Handle Types -----------------------------------===//
 
 typedef void *HANDLE;
+typedef void *RPC_IF_HANDLE;
 
 #define DECLARE_HANDLE(name)                                                   \
   struct name##__ {                                                            \
@@ -611,21 +618,24 @@ template <typename T> inline void **IID_PPV_ARGS_Helper(T **pp) {
 
 #endif // __EMULATE_UUID
 
+// Needed for d3d headers, but fail to create actual interfaces
+#define DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) const GUID name = { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
+#define DECLSPEC_UUID(x)
+#define MIDL_INTERFACE(x) struct DECLSPEC_UUID(x)
+#define DECLARE_INTERFACE(iface)                struct iface
+#define DECLARE_INTERFACE_(iface, parent)       DECLARE_INTERFACE(iface) : parent
+
 //===--------------------- COM Interfaces ---------------------------------===//
 
 CROSS_PLATFORM_UUIDOF(IUnknown, "00000000-0000-0000-C000-000000000046")
 struct IUnknown {
-  IUnknown() : m_count(0) {};
+  IUnknown() {};
   virtual HRESULT QueryInterface(REFIID riid, void **ppvObject) = 0;
   virtual ULONG AddRef() = 0;
   virtual ULONG Release() = 0;
-  virtual ~IUnknown() = default;
   template <class Q> HRESULT QueryInterface(Q **pp) {
     return QueryInterface(__uuidof(Q), (void **)pp);
   }
-
-private:
-  std::atomic<unsigned long> m_count;
 };
 
 CROSS_PLATFORM_UUIDOF(INoMarshal, "ECC8691B-C1DB-4DC0-855E-65F6C551AF49")
@@ -633,10 +643,12 @@ struct INoMarshal : public IUnknown {};
 
 CROSS_PLATFORM_UUIDOF(IMalloc, "00000002-0000-0000-C000-000000000046")
 struct IMalloc : public IUnknown {
-  virtual void *Alloc(size_t size);
-  virtual void *Realloc(void *ptr, size_t size);
-  virtual void Free(void *ptr);
-  virtual HRESULT QueryInterface(REFIID riid, void **ppvObject);
+  virtual void *Alloc(size_t size) = 0;
+  virtual void *Realloc(void *ptr, size_t size) = 0;
+  virtual void Free(void *ptr) = 0;
+  virtual size_t GetSize(void *pv) = 0;
+  virtual int DidAlloc(void *pv) = 0;
+  virtual void HeapMinimize(void) = 0;
 };
 
 CROSS_PLATFORM_UUIDOF(ISequentialStream, "0C733A30-2A1C-11CE-ADE5-00AA0044773D")
@@ -668,6 +680,11 @@ struct IStream : public ISequentialStream {
 
   virtual HRESULT Clone(IStream **ppstm) = 0;
 };
+
+// These don't need stub implementations as they come from the DirectX Headers
+// They still need the __uuidof() though
+CROSS_PLATFORM_UUIDOF(ID3D12LibraryReflection, "8E349D19-54DB-4A56-9DC9-119D87BDB804")
+CROSS_PLATFORM_UUIDOF(ID3D12ShaderReflection, "5A58797D-A72C-478D-8BA2-EFC6B0EFE88E")
 
 //===--------------------- COM Pointer Types ------------------------------===//
 
