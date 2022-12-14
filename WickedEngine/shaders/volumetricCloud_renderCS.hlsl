@@ -55,6 +55,11 @@ RWTexture2D<float2> texture_cloudDepth : register(u1);
 // Because the lights color is limited to half-float precision, we can only set intensity to 65504 which in some cases isn't enough.
 #define LOCAL_LIGHTS_INTENSITY_MULTIPLIER 100000.0
 
+// Threshold that tells what cloud density we can accept
+#define CLOUD_DENSITY_THRESHOLD 0.001
+
+#define LOD_Max 3
+
 #ifdef VOLUMETRICCLOUD_CAPTURE
 	#define MAX_STEP_COUNT capture.MaxStepCount
 	#define LOD_Min capture.LODMin
@@ -141,10 +146,7 @@ void VolumetricShadow(inout ParticipatingMedia participatingMedia, in Atmosphere
 		float3 weatherDataFirst = SampleWeather(texture_weatherMapFirst, samplePoint, heightFraction, layerParametersFirst);
 		float3 weatherDataSecond = SampleWeather(texture_weatherMapSecond, samplePoint, heightFraction, layerParametersSecond);
 		
-		float heightGradientFirst = GetHeightGradient(heightFraction, weatherDataFirst, layerParametersFirst);
-		float heightGradientSecond = GetHeightGradient(heightFraction, weatherDataSecond, layerParametersSecond);
-		
-		if (ValidCloudDensityLayers(heightFraction, heightGradientFirst, heightGradientSecond, weatherDataFirst, weatherDataSecond))
+		if (!ValidCloudDensityLayers(heightFraction, weatherDataFirst, weatherDataSecond, layerParametersFirst, layerParametersSecond))
 		{
 			continue;
 		}
@@ -214,11 +216,8 @@ void VolumetricGroundContribution(inout float3 environmentLuminance, in Atmosphe
 		
 		float3 weatherDataFirst = SampleWeather(texture_weatherMapFirst, samplePoint, heightFraction, layerParametersFirst);
 		float3 weatherDataSecond = SampleWeather(texture_weatherMapSecond, samplePoint, heightFraction, layerParametersSecond);
-
-		float heightGradientFirst = GetHeightGradient(heightFraction, weatherDataFirst, layerParametersFirst);
-		float heightGradientSecond = GetHeightGradient(heightFraction, weatherDataSecond, layerParametersSecond);
 		
-		if (ValidCloudDensityLayers(heightFraction, heightGradientFirst, heightGradientSecond, weatherDataFirst, weatherDataSecond))
+		if (!ValidCloudDensityLayers(heightFraction, weatherDataFirst, weatherDataSecond, layerParametersFirst, layerParametersSecond))
 		{
 			continue;
 		}
@@ -545,7 +544,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 #endif
 				
         //t = tMin + 0.5 * stepSize;
-		t = tMin + offset * stepSize * GetWeather().volumetric_clouds.BigStepMarch;
+		t = tMin + offset * stepSize;
 	}
 	
 	// Sample layers
@@ -563,14 +562,11 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 	float depthWeightedSum = 0.0;
 	float depthWeightsSum = 0.0;
 	
-	float3 sampleWorldPosition = rayOrigin + rayDirection * t;
-	
-	float zeroDensitySampleCount = 0.0;
-	float stepLength = GetWeather().volumetric_clouds.BigStepMarch;
-
-    [loop]
-	for (float i = 0.0; i < steps; i += stepLength)
+	[loop]
+	for (float i = 0.0; i < steps; i++)
 	{
+		float3 sampleWorldPosition = rayOrigin + rayDirection * t;
+
 		float heightFraction = GetHeightFractionForPoint(atmosphere, sampleWorldPosition);
 		if (heightFraction < 0.0 || heightFraction > 1.0)
 		{
@@ -579,43 +575,26 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		
 		float3 weatherDataFirst = SampleWeather(texture_weatherMapFirst, sampleWorldPosition, heightFraction, layerParametersFirst);
 		float3 weatherDataSecond = SampleWeather(texture_weatherMapSecond, sampleWorldPosition, heightFraction, layerParametersSecond);
-
-		float heightGradientFirst = GetHeightGradient(heightFraction, weatherDataFirst, layerParametersFirst);
-		float heightGradientSecond = GetHeightGradient(heightFraction, weatherDataSecond, layerParametersSecond);
-
-		// We can guarantee that no clouds are here
-		if (ValidCloudDensityLayers(heightFraction, heightGradientFirst, heightGradientSecond, weatherDataFirst, weatherDataSecond))
+		
+		// We can guarantee that no clouds are here. This acts as a bounding box where we outside can take large steps
+		if (!ValidCloudDensityLayers(heightFraction, weatherDataFirst, weatherDataSecond, layerParametersFirst, layerParametersSecond))
 		{
-			// If value is low, continue marching until we quit or hit something.
-			sampleWorldPosition += rayDirection * stepSize * stepLength;
-			zeroDensitySampleCount += 1.0;
-			stepLength = zeroDensitySampleCount > 10.0 ? GetWeather().volumetric_clouds.BigStepMarch : 1.0; // If zero count has reached a high number, switch to big steps
+			// We increment i every iteration, but for every additional step, we want to add that to the increment
+			i += GetWeather().volumetric_clouds.BigStepMarch - 1;
+			t += GetWeather().volumetric_clouds.BigStepMarch * stepSize;
+			
 			continue;
 		}
-
-		float rayDepth = distance(GetCamera().position, sampleWorldPosition);
-		float lod = step(GetWeather().volumetric_clouds.LODDistance, rayDepth) + LOD_Min;
+		
+		float tProgress = distance(GetCamera().position, sampleWorldPosition);
+		float lod = round(tProgress / max(GetWeather().volumetric_clouds.LODDistance, 0.00001));
+		lod = clamp(lod, LOD_Min, LOD_Max);
 		
 		float cloudDensityFirst = SampleCloudDensity(texture_shapeNoise, texture_detailNoise, texture_curlNoise, sampleWorldPosition, heightFraction, layerParametersFirst, weatherDataFirst, lod, true);
 		float cloudDensitySecond = SampleCloudDensity(texture_shapeNoise, texture_detailNoise, texture_curlNoise, sampleWorldPosition, heightFraction, layerParametersSecond, weatherDataSecond, lod, true);
-		
-		if (saturate(cloudDensityFirst + cloudDensitySecond) > 0.0)
+
+		if (saturate(cloudDensityFirst + cloudDensitySecond) > CLOUD_DENSITY_THRESHOLD)
 		{
-			zeroDensitySampleCount = 0.0;
-			
-			if (stepLength > 1.0)
-			{
-                // If we already did big steps, then move back and refine ray
-				i -= stepLength - 1.0;
-				sampleWorldPosition -= rayDirection * stepSize * (stepLength - 1.0);
-				
-				weatherDataFirst = SampleWeather(texture_weatherMapFirst, sampleWorldPosition, heightFraction, layerParametersFirst);
-				weatherDataSecond = SampleWeather(texture_weatherMapSecond, sampleWorldPosition, heightFraction, layerParametersSecond);
-				
-				cloudDensityFirst = SampleCloudDensity(texture_shapeNoise, texture_detailNoise, texture_curlNoise, sampleWorldPosition, heightFraction, layerParametersFirst, weatherDataFirst, lod, true);
-				cloudDensitySecond = SampleCloudDensity(texture_shapeNoise, texture_detailNoise, texture_curlNoise, sampleWorldPosition, heightFraction, layerParametersSecond, weatherDataSecond, lod, true);
-			}
-			
 			VolumetricCloudLighting(atmosphere, rayOrigin, sampleWorldPosition, sunDirection, sunIlluminance, cosTheta, stepSize, heightFraction,
 				cloudDensityFirst, cloudDensitySecond, weatherDataFirst, weatherDataSecond,
 				layerParametersFirst, layerParametersSecond, lod,
@@ -626,16 +605,10 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 				break;
 			}
 		}
-		else
-		{
-			zeroDensitySampleCount += 1.0;
-		}
-        
-		stepLength = zeroDensitySampleCount > 10.0 ? GetWeather().volumetric_clouds.BigStepMarch : 1.0;
-        
-		sampleWorldPosition += rayDirection * stepSize * stepLength;
-	}
 
+		t += stepSize;
+	}
+		
 	
 	float tDepth = depthWeightsSum == 0.0 ? tMax : depthWeightedSum / max(depthWeightsSum, 0.0000000001);
 	//float3 cloudWorldPosition = rayOrigin + rayDirection * tDepth;

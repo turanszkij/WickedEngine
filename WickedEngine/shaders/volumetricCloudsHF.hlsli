@@ -451,26 +451,27 @@ float3 SampleWeather(Texture2D<float4> texture_weatherMap, float3 p, float heigh
 	return weatherData;
 }
 
-bool ValidCloudDensity(float heightFraction, float heightGradient, float3 weatherData)
+bool ValidCloudDensity(float heightFraction, float3 weatherData, LayerParameters parameters)
 {
-	return (weatherData.r > 0.2 && heightGradient < heightFraction);
+	float3 weatherTypeMask = GetWeatherTypeMask(weatherData);
+	
+	float4 cloudGradient = (parameters.layer.GradientSmall * weatherTypeMask.r) + (parameters.layer.GradientMedium * weatherTypeMask.g) + (parameters.layer.GradientLarge * weatherTypeMask.b);
+	
+	return weatherData.r > 0.2 && cloudGradient.r < heightFraction && cloudGradient.a > heightFraction;
 }
 
-bool ValidCloudDensityLayers(float heightFraction, float heightGradientFirst, float heightGradientSecond, float3 weatherDataFirst, float3 weatherDataSecond)
+bool ValidCloudDensityLayers(float heightFraction, float3 weatherDataFirst, float3 weatherDataSecond, LayerParameters parametersFirst, LayerParameters parametersSecond)
 {
-	bool validCloudDensityFirst = ValidCloudDensity(heightFraction, heightGradientFirst, weatherDataFirst);
-	bool validCloudDensitySecond = ValidCloudDensity(heightFraction, heightGradientSecond, weatherDataSecond);
+	bool validCloudDensityFirst = ValidCloudDensity(heightFraction, weatherDataFirst, parametersFirst);
+	bool validCloudDensitySecond = ValidCloudDensity(heightFraction, weatherDataSecond, parametersSecond);
 	
-	return validCloudDensityFirst && validCloudDensitySecond;
+	return validCloudDensityFirst || validCloudDensitySecond;
 }
 
 float SampleCloudDensity(Texture3D<float4> texture_shapeNoise, Texture3D<float4> texture_detailNoise, Texture2D<float4> texture_curlNoise, float3 p, float heightFraction, LayerParameters parameters, float3 weatherData, float lod, bool sampleDetail)
 {
-	// Sample height gradients
-	float densityHeightGradient = GetHeightGradient(heightFraction, weatherData, parameters);
-
 	// When can estimate the bounding area of the clouds if we know the height on the heightfraction
-	if (!ValidCloudDensity(densityHeightGradient, heightFraction, weatherData))
+	if (!ValidCloudDensity(heightFraction, weatherData, parameters))
 	{
 		return 0.0;
 	}
@@ -488,6 +489,7 @@ float SampleCloudDensity(Texture3D<float4> texture_shapeNoise, Texture3D<float4>
 	float cloudSample = Remap(lowFrequencyNoises.r, -(1.0 - lowFrequencyFBM), 1.0, 0.0, 1.0);
 
 	// Apply height gradients
+	float densityHeightGradient = GetHeightGradient(heightFraction, weatherData, parameters);
 	cloudSample *= densityHeightGradient;
 
 	float cloudCoverage = weatherData.r;

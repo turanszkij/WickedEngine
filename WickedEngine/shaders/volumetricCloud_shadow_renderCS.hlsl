@@ -46,11 +46,8 @@ void VolumetricShadowMap(out float3 result, in AtmosphereParameters atmosphere, 
 		
 		float3 weatherDataFirst = SampleWeather(texture_weatherMapFirst, samplePoint, heightFraction, layerParametersFirst);
 		float3 weatherDataSecond = SampleWeather(texture_weatherMapSecond, samplePoint, heightFraction, layerParametersSecond);
-
-		float heightGradientFirst = GetHeightGradient(heightFraction, weatherDataFirst, layerParametersFirst);
-		float heightGradientSecond = GetHeightGradient(heightFraction, weatherDataSecond, layerParametersSecond);
 		
-		if (ValidCloudDensityLayers(heightFraction, heightGradientFirst, heightGradientSecond, weatherDataFirst, weatherDataSecond))
+		if (!ValidCloudDensityLayers(heightFraction, weatherDataFirst, weatherDataSecond, layerParametersFirst, layerParametersSecond))
 		{
 			continue;
 		}

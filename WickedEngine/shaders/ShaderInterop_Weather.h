@@ -294,7 +294,7 @@ struct VolumetricCloudParameters
 		MaxMarchingDistance = 45000.0f;
 		InverseDistanceStepCount = 15000.0f;
 		RenderDistance = 70000.0f;
-		LODDistance = 25000.0f;
+		LODDistance = 30000.0f;
 		LODMin = 0.0f;
 		BigStepMarch = 1.0f;
 		TransmittanceThreshold = 0.005f;
