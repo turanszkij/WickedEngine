@@ -224,6 +224,37 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&newSceneButton);
 
 
+
+	translateButton.Create(ICON_TRANSLATE);
+	rotateButton.Create(ICON_ROTATE);
+	scaleButton.Create(ICON_SCALE);
+	{
+		scaleButton.SetTooltip("Scale\nHotkey: 3");
+		scaleButton.OnClick([&](wi::gui::EventArgs args) {
+			translator.isScalator = true;
+			translator.isTranslator = false;
+			translator.isRotator = false;
+		});
+		GetGUI().AddWidget(&scaleButton);
+
+		rotateButton.SetTooltip("Rotate\nHotkey: 2");
+		rotateButton.OnClick([&](wi::gui::EventArgs args) {
+			translator.isRotator = true;
+			translator.isScalator = false;
+			translator.isTranslator = false;
+			});
+		GetGUI().AddWidget(&rotateButton);
+
+		translateButton.SetTooltip("Translate/Move (Ctrl + T)\nHotkey: 1");
+		translateButton.OnClick([&](wi::gui::EventArgs args) {
+			translator.isTranslator = true;
+			translator.isScalator = false;
+			translator.isRotator = false;
+			});
+		GetGUI().AddWidget(&translateButton);
+	}
+
+
 	playButton.Create(ICON_PLAY);
 	playButton.font.params.shadowColor = wi::Color::Transparent();
 	playButton.SetShadowRadius(2);
@@ -1265,9 +1296,6 @@ void EditorComponent::Update(float dt)
 		if (wi::input::Press((wi::input::BUTTON)'T'))
 		{
 			translator.SetEnabled(!translator.IsEnabled());
-			optionsWnd.isTranslatorCheckBox.SetCheck(translator.isTranslator);
-			optionsWnd.isRotatorCheckBox.SetCheck(translator.isRotator);
-			optionsWnd.isScalatorCheckBox.SetCheck(translator.isScalator);
 		}
 		// Save
 		if (wi::input::Press((wi::input::BUTTON)'S'))
@@ -1433,27 +1461,18 @@ void EditorComponent::Update(float dt)
 			translator.isTranslator = !translator.isTranslator;
 			translator.isScalator = false;
 			translator.isRotator = false;
-			optionsWnd.isTranslatorCheckBox.SetCheck(translator.isTranslator);
-			optionsWnd.isScalatorCheckBox.SetCheck(false);
-			optionsWnd.isRotatorCheckBox.SetCheck(false);
 		}
 		else if (wi::input::Press(wi::input::BUTTON('2')))
 		{
 			translator.isRotator = !translator.isRotator;
 			translator.isScalator = false;
 			translator.isTranslator = false;
-			optionsWnd.isRotatorCheckBox.SetCheck(translator.isRotator);
-			optionsWnd.isScalatorCheckBox.SetCheck(false);
-			optionsWnd.isTranslatorCheckBox.SetCheck(false);
 		}
 		else if (wi::input::Press(wi::input::BUTTON('3')))
 		{
 			translator.isScalator = !translator.isScalator;
 			translator.isTranslator = false;
 			translator.isRotator = false;
-			optionsWnd.isScalatorCheckBox.SetCheck(translator.isScalator);
-			optionsWnd.isTranslatorCheckBox.SetCheck(false);
-			optionsWnd.isRotatorCheckBox.SetCheck(false);
 		}
 	}
 
@@ -2677,9 +2696,6 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				archive >> translator.isTranslator;
 				archive >> translator.isRotator;
 				archive >> translator.isScalator;
-				optionsWnd.isTranslatorCheckBox.SetCheck(translator.isTranslator);
-				optionsWnd.isRotatorCheckBox.SetCheck(translator.isRotator);
-				optionsWnd.isScalatorCheckBox.SetCheck(translator.isScalator);
 
 				EntitySerializer seri;
 				wi::scene::TransformComponent start;
@@ -3054,6 +3070,54 @@ void EditorComponent::UpdateTopMenuAnimation()
 	playButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	playButton.SetPos(XMFLOAT2(stopButton.GetPos().x - playButton.GetSize().x - padding, 0));
 
+
+	scaleButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	scaleButton.SetPos(XMFLOAT2(playButton.GetPos().x - scaleButton.GetSize().x - 20, 0));
+	rotateButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	rotateButton.SetPos(XMFLOAT2(scaleButton.GetPos().x - rotateButton.GetSize().x - padding, 0));
+	translateButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	translateButton.SetPos(XMFLOAT2(rotateButton.GetPos().x - translateButton.GetSize().x - padding, 0));
+
+	// Custom corner rounding stuff for top menu:
+	for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
+	{
+		saveButton.sprites[i].params.enableCornerRounding();
+		saveButton.sprites[i].params.corners_rounding[2].radius = 10;
+
+		playButton.sprites[i].params.enableCornerRounding();
+		playButton.sprites[i].params.corners_rounding[2].radius = 40;
+
+		stopButton.sprites[i].params.enableCornerRounding();
+		stopButton.sprites[i].params.corners_rounding[3].radius = 40;
+
+		translateButton.sprites[i].params.enableCornerRounding();
+		translateButton.sprites[i].params.corners_rounding[2].radius = 40;
+
+		scaleButton.sprites[i].params.enableCornerRounding();
+		scaleButton.sprites[i].params.corners_rounding[3].radius = 40;
+	}
+
+	XMFLOAT4 color_on = playButton.sprites[wi::gui::FOCUS].params.color;
+	XMFLOAT4 color_off = playButton.sprites[wi::gui::IDLE].params.color;
+
+	if (translator.isTranslator)
+	{
+		translateButton.sprites[wi::gui::IDLE].params.color = color_on;
+		rotateButton.sprites[wi::gui::IDLE].params.color = color_off;
+		scaleButton.sprites[wi::gui::IDLE].params.color = color_off;
+	}
+	else if (translator.isRotator)
+	{
+		translateButton.sprites[wi::gui::IDLE].params.color = color_off;
+		rotateButton.sprites[wi::gui::IDLE].params.color = color_on;
+		scaleButton.sprites[wi::gui::IDLE].params.color = color_off;
+	}
+	else if (translator.isScalator)
+	{
+		translateButton.sprites[wi::gui::IDLE].params.color = color_off;
+		rotateButton.sprites[wi::gui::IDLE].params.color = color_off;
+		scaleButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
 
 	float ofs = screenW - 2;
 	float y = exitButton.GetPos().y + exitButton.GetSize().y + 5;

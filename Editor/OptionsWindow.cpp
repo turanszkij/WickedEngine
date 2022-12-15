@@ -13,44 +13,6 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create("Options", wi::gui::Window::WindowControls::RESIZE_TOPRIGHT);
 	SetShadowRadius(2);
 
-	isTranslatorCheckBox.Create(ICON_TRANSLATE "  ");
-	isRotatorCheckBox.Create(ICON_ROTATE "  ");
-	isScalatorCheckBox.Create(ICON_SCALE "  ");
-	{
-		isScalatorCheckBox.SetTooltip("Scale\nHotkey: 3");
-		isScalatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
-			editor->translator.isScalator = args.bValue;
-			editor->translator.isTranslator = false;
-			editor->translator.isRotator = false;
-			isTranslatorCheckBox.SetCheck(false);
-			isRotatorCheckBox.SetCheck(false);
-			});
-		isScalatorCheckBox.SetCheck(editor->translator.isScalator);
-		AddWidget(&isScalatorCheckBox);
-
-		isRotatorCheckBox.SetTooltip("Rotate\nHotkey: 2");
-		isRotatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
-			editor->translator.isRotator = args.bValue;
-			editor->translator.isScalator = false;
-			editor->translator.isTranslator = false;
-			isScalatorCheckBox.SetCheck(false);
-			isTranslatorCheckBox.SetCheck(false);
-			});
-		isRotatorCheckBox.SetCheck(editor->translator.isRotator);
-		AddWidget(&isRotatorCheckBox);
-
-		isTranslatorCheckBox.SetTooltip("Translate/Move (Ctrl + T)\nHotkey: 1");
-		isTranslatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
-			editor->translator.isTranslator = args.bValue;
-			editor->translator.isScalator = false;
-			editor->translator.isRotator = false;
-			isScalatorCheckBox.SetCheck(false);
-			isRotatorCheckBox.SetCheck(false);
-			});
-		isTranslatorCheckBox.SetCheck(editor->translator.isTranslator);
-		AddWidget(&isTranslatorCheckBox);
-	}
-
 
 	profilerEnabledCheckBox.Create("Profiler: ");
 	profilerEnabledCheckBox.SetTooltip("Toggle Profiler On/Off");
@@ -534,18 +496,6 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			editor->componentsWnd.resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
 			editor->componentsWnd.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = 10;
 		}
-		for (int i = 0; i < arraysize(editor->saveButton.sprites); ++i)
-		{
-			editor->saveButton.sprites[i].params.enableCornerRounding();
-			editor->saveButton.sprites[i].params.corners_rounding[2].radius = 10;
-		}
-		for (int i = 0; i < arraysize(editor->playButton.sprites); ++i)
-		{
-			editor->playButton.sprites[i].params.enableCornerRounding();
-			editor->playButton.sprites[i].params.corners_rounding[2].radius = 40;
-			editor->stopButton.sprites[i].params.enableCornerRounding();
-			editor->stopButton.sprites[i].params.corners_rounding[3].radius = 40;
-		}
 		int scene_id = 0;
 		for (auto& editorscene : editor->scenes)
 		{
@@ -630,12 +580,6 @@ void OptionsWindow::ResizeLayout()
 	float x_off = 100;
 	editor->main->config.GetSection("layout").Set("options.width", GetSize().x);
 	editor->main->config.GetSection("layout").Set("options.height", GetSize().y);
-
-	isScalatorCheckBox.SetPos(XMFLOAT2(pos.x + width - isScalatorCheckBox.GetSize().x, pos.y));
-	isRotatorCheckBox.SetPos(XMFLOAT2(isScalatorCheckBox.GetPos().x - isRotatorCheckBox.GetSize().x - 80, pos.y));
-	isTranslatorCheckBox.SetPos(XMFLOAT2(isRotatorCheckBox.GetPos().x - isTranslatorCheckBox.GetSize().x - 70, pos.y));
-	pos.y += isTranslatorCheckBox.GetSize().y;
-	pos.y += padding;
 
 	otherinfoCheckBox.SetPos(XMFLOAT2(pos.x + width - otherinfoCheckBox.GetSize().x, pos.y));
 	fpsCheckBox.SetPos(XMFLOAT2(otherinfoCheckBox.GetPos().x - fpsCheckBox.GetSize().x - 80, pos.y));

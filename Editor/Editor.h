@@ -25,6 +25,10 @@ public:
 
 	wi::gui::Button newSceneButton;
 
+	wi::gui::Button translateButton;
+	wi::gui::Button rotateButton;
+	wi::gui::Button scaleButton;
+
 	wi::gui::Button playButton;
 	wi::gui::Button stopButton;
 

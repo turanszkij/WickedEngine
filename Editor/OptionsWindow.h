@@ -16,9 +16,6 @@ public:
 	void ResizeLayout() override;
 
 	EditorComponent* editor = nullptr;
-	wi::gui::CheckBox isScalatorCheckBox;
-	wi::gui::CheckBox isRotatorCheckBox;
-	wi::gui::CheckBox isTranslatorCheckBox;
 	wi::gui::CheckBox profilerEnabledCheckBox;
 	wi::gui::CheckBox physicsEnabledCheckBox;
 	wi::gui::CheckBox cinemaModeCheckBox;
