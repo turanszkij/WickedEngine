@@ -88,8 +88,9 @@ namespace wi::graphics
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const {}
 
-		// Set a debug name for the GPUResource, which will be visible in graphics debuggers
-		virtual void SetName(GPUResource* pResource, const char* name) = 0;
+		// Set a debug name which will be visible in graphics debuggers
+		virtual void SetName(GPUResource* pResource, const char* name) {}
+		virtual void SetName(Shader* shader, const char* name) {}
 
 		// Begin a new command list for GPU command recording.
 		//	This will be valid until SubmitCommandLists() is called.

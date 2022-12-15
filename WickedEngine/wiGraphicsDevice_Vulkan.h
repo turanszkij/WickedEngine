@@ -313,6 +313,7 @@ namespace wi::graphics
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
+		void SetName(Shader* shader, const char* name) override;
 
 		CommandList BeginCommandList(QUEUE_TYPE queue = QUEUE_GRAPHICS) override;
 		void SubmitCommandLists() override;

@@ -6404,34 +6404,48 @@ using namespace vulkan_internal;
 	
 	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name)
 	{
-		if (debugUtils)
+		if (!debugUtils || pResource == nullptr || !pResource->IsValid())
+			return;
+
+		VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+		info.pObjectName = name;
+		if (pResource->IsTexture())
 		{
-			VkDebugUtilsObjectNameInfoEXT info { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
-			info.pObjectName = name;
-			if (pResource->IsTexture())
-			{
-				info.objectType = VK_OBJECT_TYPE_IMAGE;
-				info.objectHandle = (uint64_t)to_internal((const Texture*)pResource)->resource;
-			}
-			else if (pResource->IsBuffer())
-			{
-				info.objectType = VK_OBJECT_TYPE_BUFFER;
-				info.objectHandle = (uint64_t)to_internal((const GPUBuffer*)pResource)->resource;
-			}
-			else if (pResource->IsAccelerationStructure())
-			{
-				info.objectType = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR;
-				info.objectHandle = (uint64_t)to_internal((const RaytracingAccelerationStructure*)pResource)->resource;
-			}
-
-			if (info.objectHandle == (uint64_t)VK_NULL_HANDLE)
-			{
-				return;
-			}
-
-			VkResult res = vkSetDebugUtilsObjectNameEXT(device, &info);
-			assert(res == VK_SUCCESS);
+			info.objectType = VK_OBJECT_TYPE_IMAGE;
+			info.objectHandle = (uint64_t)to_internal((const Texture*)pResource)->resource;
 		}
+		else if (pResource->IsBuffer())
+		{
+			info.objectType = VK_OBJECT_TYPE_BUFFER;
+			info.objectHandle = (uint64_t)to_internal((const GPUBuffer*)pResource)->resource;
+		}
+		else if (pResource->IsAccelerationStructure())
+		{
+			info.objectType = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR;
+			info.objectHandle = (uint64_t)to_internal((const RaytracingAccelerationStructure*)pResource)->resource;
+		}
+
+		if (info.objectHandle == (uint64_t)VK_NULL_HANDLE)
+			return;
+
+		VkResult res = vkSetDebugUtilsObjectNameEXT(device, &info);
+		assert(res == VK_SUCCESS);
+	}
+	void GraphicsDevice_Vulkan::SetName(Shader* shader, const char* name)
+	{
+		if (!debugUtils || shader == nullptr || !shader->IsValid())
+			return;
+
+		VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+		info.pObjectName = name;
+		info.objectType = VK_OBJECT_TYPE_SHADER_MODULE;
+		info.objectHandle = (uint64_t)to_internal(shader)->shaderModule;
+
+		if (info.objectHandle == (uint64_t)VK_NULL_HANDLE)
+			return;
+
+		VkResult res = vkSetDebugUtilsObjectNameEXT(device, &info);
+		assert(res == VK_SUCCESS);
 	}
 
 	CommandList GraphicsDevice_Vulkan::BeginCommandList(QUEUE_TYPE queue)

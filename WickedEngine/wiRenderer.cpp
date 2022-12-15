@@ -703,7 +703,12 @@ bool LoadShader(
 		wi::vector<uint8_t> buffer;
 		if (wi::helper::FileRead(shaderbinaryfilename, buffer))
 		{
-			return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+			bool success = device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+			if (success)
+			{
+				device->SetName(&shader, shaderbinaryfilename.c_str());
+			}
+			return success;
 		}
 		else
 		{
