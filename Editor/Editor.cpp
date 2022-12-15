@@ -229,6 +229,7 @@ void EditorComponent::Load()
 	rotateButton.Create(ICON_ROTATE);
 	scaleButton.Create(ICON_SCALE);
 	{
+		scaleButton.SetShadowRadius(2);
 		scaleButton.SetTooltip("Scale\nHotkey: 3");
 		scaleButton.OnClick([&](wi::gui::EventArgs args) {
 			translator.isScalator = true;
@@ -237,6 +238,7 @@ void EditorComponent::Load()
 		});
 		GetGUI().AddWidget(&scaleButton);
 
+		rotateButton.SetShadowRadius(2);
 		rotateButton.SetTooltip("Rotate\nHotkey: 2");
 		rotateButton.OnClick([&](wi::gui::EventArgs args) {
 			translator.isRotator = true;
@@ -245,6 +247,7 @@ void EditorComponent::Load()
 			});
 		GetGUI().AddWidget(&rotateButton);
 
+		translateButton.SetShadowRadius(2);
 		translateButton.SetTooltip("Translate/Move (Ctrl + T)\nHotkey: 1");
 		translateButton.OnClick([&](wi::gui::EventArgs args) {
 			translator.isTranslator = true;
