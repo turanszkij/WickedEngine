@@ -495,6 +495,37 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&logButton);
 
 
+	profilerButton.Create("");
+	profilerButton.SetShadowRadius(2);
+	profilerButton.font.params.shadowColor = wi::Color::Transparent();
+	profilerButton.SetTooltip("View the profiler frame timings");
+	profilerButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
+	profilerButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
+	profilerButton.OnClick([&](wi::gui::EventArgs args) {
+		profilerWnd.SetVisible(!wi::profiler::IsEnabled());
+		wi::profiler::SetEnabled(!wi::profiler::IsEnabled());
+	});
+	GetGUI().AddWidget(&profilerButton);
+
+
+	cinemaButton.Create("");
+	cinemaButton.SetShadowRadius(2);
+	cinemaButton.font.params.shadowColor = wi::Color::Transparent();
+	cinemaButton.SetTooltip("Enter cinema mode (all HUD disabled). Press ESC to return to normal.");
+	cinemaButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
+	cinemaButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
+	cinemaButton.OnClick([&](wi::gui::EventArgs args) {
+		if (renderPath != nullptr)
+		{
+			renderPath->GetGUI().SetVisible(false);
+		}
+		GetGUI().SetVisible(false);
+		wi::profiler::SetEnabled(false);
+		profilerWnd.SetVisible(false);
+	});
+	GetGUI().AddWidget(&cinemaButton);
+
+
 	fullscreenButton.Create("");
 	fullscreenButton.SetShadowRadius(2);
 	fullscreenButton.font.params.shadowColor = wi::Color::Transparent();
@@ -640,26 +671,29 @@ void EditorComponent::Load()
 	componentsWnd.Create(this);
 	GetGUI().AddWidget(&componentsWnd);
 
+	profilerWnd.Create();
+	GetGUI().AddWidget(&profilerWnd);
+
 	std::string theme = main->config.GetSection("options").GetText("theme");
 	if(theme.empty())
 	{
-		optionsWnd.themeCombo.SetSelected(0);
+		optionsWnd.generalWnd.themeCombo.SetSelected(0);
 	}
 	else if (!theme.compare("Dark"))
 	{
-		optionsWnd.themeCombo.SetSelected(0);
+		optionsWnd.generalWnd.themeCombo.SetSelected(0);
 	}
 	else if (!theme.compare("Bright"))
 	{
-		optionsWnd.themeCombo.SetSelected(1);
+		optionsWnd.generalWnd.themeCombo.SetSelected(1);
 	}
 	else if (!theme.compare("Soft"))
 	{
-		optionsWnd.themeCombo.SetSelected(2);
+		optionsWnd.generalWnd.themeCombo.SetSelected(2);
 	}
 	else if (!theme.compare("Hacking"))
 	{
-		optionsWnd.themeCombo.SetSelected(3);
+		optionsWnd.generalWnd.themeCombo.SetSelected(3);
 	}
 
 	RenderPath2D::Load();
@@ -709,7 +743,7 @@ void EditorComponent::Update(float dt)
 	bool clear_selected = false;
 	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
 	{
-		if (optionsWnd.cinemaModeCheckBox.GetCheck())
+		if (!GetGUI().IsVisible())
 		{
 			// Exit cinema mode:
 			if (renderPath != nullptr)
@@ -717,9 +751,6 @@ void EditorComponent::Update(float dt)
 				renderPath->GetGUI().SetVisible(true);
 			}
 			GetGUI().SetVisible(true);
-			wi::profiler::SetEnabled(optionsWnd.profilerEnabledCheckBox.GetCheck());
-
-			optionsWnd.cinemaModeCheckBox.SetCheck(false);
 		}
 		else
 		{
@@ -1293,7 +1324,7 @@ void EditorComponent::Update(float dt)
 		if (wi::input::Press((wi::input::BUTTON)'W'))
 		{
 			wi::renderer::SetWireRender(!wi::renderer::IsWireRender());
-			optionsWnd.graphicsWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
+			optionsWnd.generalWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
 		}
 		// Enable transform tool
 		if (wi::input::Press((wi::input::BUTTON)'T'))
@@ -1715,7 +1746,7 @@ void EditorComponent::Update(float dt)
 	}
 	else
 	{
-		wi::renderer::SetToDrawDebugColliders(optionsWnd.graphicsWnd.colliderVisCheckBox.GetCheck());
+		wi::renderer::SetToDrawDebugColliders(optionsWnd.generalWnd.colliderVisCheckBox.GetCheck());
 	}
 }
 void EditorComponent::PostUpdate()
@@ -1729,7 +1760,7 @@ void EditorComponent::Render() const
 	const Scene& scene = GetCurrentScene();
 
 	// Hovered item boxes:
-	if (!optionsWnd.cinemaModeCheckBox.GetCheck())
+	if (GetGUI().IsVisible())
 	{
 		if (hovered.entity != INVALID_ENTITY)
 		{
@@ -1793,7 +1824,7 @@ void EditorComponent::Render() const
 	}
 
 	// Selected items box:
-	if (!optionsWnd.cinemaModeCheckBox.GetCheck() && !translator.selected.empty())
+	if (GetGUI().IsVisible() && !translator.selected.empty())
 	{
 		AABB selectedAABB = AABB(
 			XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
@@ -1852,7 +1883,7 @@ void EditorComponent::Render() const
 	renderPath->Render();
 
 	// Editor custom render:
-	if (!optionsWnd.cinemaModeCheckBox.GetCheck())
+	if (GetGUI().IsVisible())
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		CommandList cmd = device->BeginCommandList();
@@ -2437,7 +2468,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.graphicsWnd.nameDebugCheckBox.GetCheck())
+			if (optionsWnd.generalWnd.nameDebugCheckBox.GetCheck())
 			{
 				device->EventBegin("Debug Names", cmd);
 				struct DebugNameEntitySorter
@@ -2936,14 +2967,14 @@ void EditorComponent::Save(const std::string& filename)
 	auto file_extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
 	if(file_extension == "WISCENE")
 	{
-		const bool dump_to_header = optionsWnd.saveModeComboBox.GetSelected() == 2;
+		const bool dump_to_header = optionsWnd.generalWnd.saveModeComboBox.GetSelected() == 2;
 
 		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 		if (archive.IsOpen())
 		{
 			Scene& scene = GetCurrentScene();
 
-			wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.saveModeComboBox.GetItemUserData(optionsWnd.saveModeComboBox.GetSelected());
+			wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.generalWnd.saveModeComboBox.GetItemUserData(optionsWnd.generalWnd.saveModeComboBox.GetSelected());
 			wi::resourcemanager::SetMode(embed_mode);
 
 			scene.Serialize(archive);
@@ -2973,7 +3004,7 @@ void EditorComponent::Save(const std::string& filename)
 }
 void EditorComponent::SaveAs()
 {
-	const bool dump_to_header = optionsWnd.saveModeComboBox.GetSelected() == 2;
+	const bool dump_to_header = optionsWnd.generalWnd.saveModeComboBox.GetSelected() == 2;
 
 	wi::helper::FileDialogParams params;
 	params.type = wi::helper::FileDialogParams::SAVE;
@@ -3047,6 +3078,8 @@ void EditorComponent::UpdateTopMenuAnimation()
 	aboutButton.SetText(aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_HELP " About" : ICON_HELP);
 	fullscreenButton.SetText(fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? fullscreen_text : fullscreen ? ICON_FA_COMPRESS : ICON_FULLSCREEN);
 	bugButton.SetText(bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BUG " Bug report" : ICON_BUG);
+	profilerButton.SetText(profilerButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_PROFILER " Profiler" : ICON_PROFILER);
+	cinemaButton.SetText(cinemaButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_CINEMA_MODE " Cinema" : ICON_CINEMA_MODE);
 	logButton.SetText(logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BACKLOG " Backlog" : ICON_BACKLOG);
 	openButton.SetText(openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_OPEN " Open" : ICON_OPEN);
 	saveButton.SetText(saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_SAVE " Save" : ICON_SAVE);
@@ -3055,6 +3088,8 @@ void EditorComponent::UpdateTopMenuAnimation()
 	aboutButton.SetSize(XMFLOAT2(wi::math::Lerp(aboutButton.GetSize().x, aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	fullscreenButton.SetSize(XMFLOAT2(wi::math::Lerp(fullscreenButton.GetSize().x, fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	bugButton.SetSize(XMFLOAT2(wi::math::Lerp(bugButton.GetSize().x, bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	profilerButton.SetSize(XMFLOAT2(wi::math::Lerp(profilerButton.GetSize().x, profilerButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	cinemaButton.SetSize(XMFLOAT2(wi::math::Lerp(cinemaButton.GetSize().x, cinemaButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	logButton.SetSize(XMFLOAT2(wi::math::Lerp(logButton.GetSize().x, logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	openButton.SetSize(XMFLOAT2(wi::math::Lerp(openButton.GetSize().x, openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	saveButton.SetSize(XMFLOAT2(wi::math::Lerp(saveButton.GetSize().x, saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
@@ -3063,7 +3098,9 @@ void EditorComponent::UpdateTopMenuAnimation()
 	aboutButton.SetPos(XMFLOAT2(exitButton.GetPos().x - aboutButton.GetSize().x - padding, 0));
 	bugButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - bugButton.GetSize().x - padding, 0));
 	fullscreenButton.SetPos(XMFLOAT2(bugButton.GetPos().x - fullscreenButton.GetSize().x - padding, 0));
-	logButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - logButton.GetSize().x - padding, 0));
+	cinemaButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - cinemaButton.GetSize().x - padding, 0));
+	profilerButton.SetPos(XMFLOAT2(cinemaButton.GetPos().x - profilerButton.GetSize().x - padding, 0));
+	logButton.SetPos(XMFLOAT2(profilerButton.GetPos().x - logButton.GetSize().x - padding, 0));
 	openButton.SetPos(XMFLOAT2(logButton.GetPos().x - openButton.GetSize().x - padding, 0));
 	saveButton.SetPos(XMFLOAT2(openButton.GetPos().x - saveButton.GetSize().x - padding, 0));
 
@@ -3154,7 +3191,7 @@ void EditorComponent::SetCurrentScene(int index)
 }
 void EditorComponent::RefreshSceneList()
 {
-	optionsWnd.themeCombo.SetSelected(optionsWnd.themeCombo.GetSelected());
+	optionsWnd.generalWnd.themeCombo.SetSelected(optionsWnd.generalWnd.themeCombo.GetSelected());
 	for (int i = 0; i < int(scenes.size()); ++i)
 	{
 		auto& editorscene = scenes[i];

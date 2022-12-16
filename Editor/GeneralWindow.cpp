@@ -1,0 +1,490 @@
+#include "stdafx.h"
+#include "GeneralWindow.h"
+#include "Editor.h"
+
+using namespace wi::graphics;
+using namespace wi::ecs;
+using namespace wi::scene;
+
+void GeneralWindow::Create(EditorComponent* _editor)
+{
+	editor = _editor;
+
+	wi::gui::Window::Create("General", wi::gui::Window::WindowControls::COLLAPSE);
+
+	SetSize(XMFLOAT2(580, 500));
+
+	physicsEnabledCheckBox.Create("Physics: ");
+	physicsEnabledCheckBox.SetTooltip("Toggle Physics Simulation On/Off");
+	if (editor->main->config.GetSection("options").Has("physics"))
+	{
+		wi::physics::SetSimulationEnabled(editor->main->config.GetSection("options").GetBool("physics"));
+	}
+	physicsEnabledCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		wi::physics::SetSimulationEnabled(args.bValue);
+		editor->main->config.GetSection("options").Set("physics", args.bValue);
+		editor->main->config.Commit();
+		});
+	physicsEnabledCheckBox.SetCheck(wi::physics::IsSimulationEnabled());
+	AddWidget(&physicsEnabledCheckBox);
+
+	physicsDebugCheckBox.Create("Physics visualizer: ");
+	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
+	physicsDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::physics::SetDebugDrawEnabled(args.bValue);
+		});
+	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
+	AddWidget(&physicsDebugCheckBox);
+
+	nameDebugCheckBox.Create("Name visualizer: ");
+	nameDebugCheckBox.SetTooltip("Visualize the entity names in the scene");
+	AddWidget(&nameDebugCheckBox);
+
+	wireFrameCheckBox.Create("Render Wireframe: ");
+	wireFrameCheckBox.SetTooltip("Visualize the scene as a wireframe");
+	wireFrameCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetWireRender(args.bValue);
+		});
+	wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
+	AddWidget(&wireFrameCheckBox);
+
+	aabbDebugCheckBox.Create("AABB visualizer: ");
+	aabbDebugCheckBox.SetTooltip("Visualize the scene bounding boxes");
+	aabbDebugCheckBox.SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
+	aabbDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawDebugPartitionTree(args.bValue);
+		});
+	aabbDebugCheckBox.SetCheck(wi::renderer::GetToDrawDebugPartitionTree());
+	AddWidget(&aabbDebugCheckBox);
+
+	boneLinesCheckBox.Create("Bone line visualizer: ");
+	boneLinesCheckBox.SetTooltip("Visualize bones of armatures");
+	boneLinesCheckBox.SetScriptTip("SetDebugBonesEnabled(bool enabled)");
+	boneLinesCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawDebugBoneLines(args.bValue);
+		});
+	boneLinesCheckBox.SetCheck(wi::renderer::GetToDrawDebugBoneLines());
+	AddWidget(&boneLinesCheckBox);
+
+	debugEmittersCheckBox.Create("Emitter visualizer: ");
+	debugEmittersCheckBox.SetTooltip("Visualize emitters");
+	debugEmittersCheckBox.SetScriptTip("SetDebugEmittersEnabled(bool enabled)");
+	debugEmittersCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawDebugEmitters(args.bValue);
+		});
+	debugEmittersCheckBox.SetCheck(wi::renderer::GetToDrawDebugEmitters());
+	AddWidget(&debugEmittersCheckBox);
+
+	debugForceFieldsCheckBox.Create("Force Field visualizer: ");
+	debugForceFieldsCheckBox.SetTooltip("Visualize force fields");
+	debugForceFieldsCheckBox.SetScriptTip("SetDebugForceFieldsEnabled(bool enabled)");
+	debugForceFieldsCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawDebugForceFields(args.bValue);
+		});
+	debugForceFieldsCheckBox.SetCheck(wi::renderer::GetToDrawDebugForceFields());
+	AddWidget(&debugForceFieldsCheckBox);
+
+	debugRaytraceBVHCheckBox.Create("RT BVH visualizer: ");
+	debugRaytraceBVHCheckBox.SetTooltip("Visualize scene BVH if raytracing is enabled (only for software raytracing currently)");
+	debugRaytraceBVHCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetRaytraceDebugBVHVisualizerEnabled(args.bValue);
+		});
+	debugRaytraceBVHCheckBox.SetCheck(wi::renderer::GetRaytraceDebugBVHVisualizerEnabled());
+	AddWidget(&debugRaytraceBVHCheckBox);
+
+	envProbesCheckBox.Create("Env probe visualizer: ");
+	envProbesCheckBox.SetTooltip("Toggle visualization of environment probes as reflective spheres");
+	envProbesCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawDebugEnvProbes(args.bValue);
+		});
+	envProbesCheckBox.SetCheck(wi::renderer::GetToDrawDebugEnvProbes());
+	AddWidget(&envProbesCheckBox);
+
+	cameraVisCheckBox.Create("Camera visualizer: ");
+	cameraVisCheckBox.SetTooltip("Toggle visualization of camera proxies in the scene");
+	cameraVisCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawDebugCameras(args.bValue);
+		});
+	cameraVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugCameras());
+	AddWidget(&cameraVisCheckBox);
+
+	colliderVisCheckBox.Create("Collider visualizer: ");
+	colliderVisCheckBox.SetTooltip("Toggle visualization of colliders in the scene");
+	colliderVisCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawDebugColliders(args.bValue);
+		});
+	colliderVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugColliders());
+	AddWidget(&colliderVisCheckBox);
+
+	gridHelperCheckBox.Create("Grid helper: ");
+	gridHelperCheckBox.SetTooltip("Toggle showing of unit visualizer grid in the world origin");
+	if (editor->main->config.GetSection("graphics").Has("grid_helper"))
+	{
+		wi::renderer::SetToDrawGridHelper(editor->main->config.GetSection("graphics").GetBool("grid_helper"));
+	}
+	gridHelperCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawGridHelper(args.bValue);
+		editor->main->config.GetSection("graphics").Set("grid_helper", args.bValue);
+		editor->main->config.Commit();
+		});
+	gridHelperCheckBox.SetCheck(wi::renderer::GetToDrawGridHelper());
+	AddWidget(&gridHelperCheckBox);
+
+
+	freezeCullingCameraCheckBox.Create("Freeze culling camera: ");
+	freezeCullingCameraCheckBox.SetTooltip("Freeze culling camera update. Scene culling will not be updated with the view");
+	freezeCullingCameraCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetFreezeCullingCameraEnabled(args.bValue);
+		});
+	freezeCullingCameraCheckBox.SetCheck(wi::renderer::GetFreezeCullingCameraEnabled());
+	AddWidget(&freezeCullingCameraCheckBox);
+
+
+
+	disableAlbedoMapsCheckBox.Create("Disable albedo maps: ");
+	disableAlbedoMapsCheckBox.SetTooltip("Disables albedo maps on objects for easier lighting debugging");
+	disableAlbedoMapsCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetDisableAlbedoMaps(args.bValue);
+		});
+	disableAlbedoMapsCheckBox.SetCheck(wi::renderer::IsDisableAlbedoMaps());
+	AddWidget(&disableAlbedoMapsCheckBox);
+
+
+	forceDiffuseLightingCheckBox.Create("Force diffuse lighting: ");
+	forceDiffuseLightingCheckBox.SetTooltip("Sets every surface fully diffuse, with zero specularity");
+	forceDiffuseLightingCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetForceDiffuseLighting(args.bValue);
+		});
+	forceDiffuseLightingCheckBox.SetCheck(wi::renderer::IsForceDiffuseLighting());
+	AddWidget(&forceDiffuseLightingCheckBox);
+
+
+
+	versionCheckBox.Create("Version: ");
+	versionCheckBox.SetTooltip("Toggle the engine version display text in top left corner.");
+	editor->main->infoDisplay.watermark = editor->main->config.GetSection("options").GetBool("version");
+	versionCheckBox.SetCheck(editor->main->infoDisplay.watermark);
+	versionCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		editor->main->infoDisplay.watermark = args.bValue;
+		editor->main->config.GetSection("options").Set("version", args.bValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&versionCheckBox);
+	versionCheckBox.SetCheck(editor->main->infoDisplay.watermark);
+
+	fpsCheckBox.Create("FPS: ");
+	fpsCheckBox.SetTooltip("Toggle the FPS display text in top left corner.");
+	editor->main->infoDisplay.fpsinfo = editor->main->config.GetSection("options").GetBool("fps");
+	fpsCheckBox.SetCheck(editor->main->infoDisplay.fpsinfo);
+	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		editor->main->infoDisplay.fpsinfo = args.bValue;
+		editor->main->config.GetSection("options").Set("fps", args.bValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&fpsCheckBox);
+	fpsCheckBox.SetCheck(editor->main->infoDisplay.fpsinfo);
+
+	otherinfoCheckBox.Create("Info: ");
+	otherinfoCheckBox.SetTooltip("Toggle advanced data in the info display text in top left corner.");
+	bool info = editor->main->config.GetSection("options").GetBool("info");
+	editor->main->infoDisplay.heap_allocation_counter = info;
+	editor->main->infoDisplay.vram_usage = info;
+	editor->main->infoDisplay.device_name = info;
+	editor->main->infoDisplay.colorspace = info;
+	editor->main->infoDisplay.resolution = info;
+	editor->main->infoDisplay.logical_size = info;
+	editor->main->infoDisplay.pipeline_count = info;
+	otherinfoCheckBox.SetCheck(info);
+	otherinfoCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		editor->main->infoDisplay.heap_allocation_counter = args.bValue;
+		editor->main->infoDisplay.vram_usage = args.bValue;
+		editor->main->infoDisplay.device_name = args.bValue;
+		editor->main->infoDisplay.colorspace = args.bValue;
+		editor->main->infoDisplay.resolution = args.bValue;
+		editor->main->infoDisplay.logical_size = args.bValue;
+		editor->main->infoDisplay.pipeline_count = args.bValue;
+		editor->main->config.GetSection("options").Set("info", args.bValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&otherinfoCheckBox);
+	otherinfoCheckBox.SetCheck(editor->main->infoDisplay.heap_allocation_counter);
+
+	saveModeComboBox.Create("Save Mode: ");
+	saveModeComboBox.AddItem("Embed resources " ICON_SAVE_EMBED, (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.AddItem("No embedding " ICON_SAVE_NO_EMBED, (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
+	saveModeComboBox.AddItem("Dump to header " ICON_SAVE_HEADER, (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header (" ICON_SAVE_HEADER ") option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.");
+	saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
+	saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
+	saveModeComboBox.SetSelected(editor->main->config.GetSection("options").GetInt("save_mode"));
+	saveModeComboBox.OnSelect([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("options").Set("save_mode", args.iValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&saveModeComboBox);
+
+
+	enum class Theme
+	{
+		Dark,
+		Bright,
+		Soft,
+		Hacking,
+	};
+
+	themeCombo.Create("Theme: ");
+	themeCombo.SetTooltip("Choose a color theme...");
+	themeCombo.AddItem("Dark " ICON_DARK, (uint64_t)Theme::Dark);
+	themeCombo.AddItem("Bright " ICON_BRIGHT, (uint64_t)Theme::Bright);
+	themeCombo.AddItem("Soft " ICON_SOFT, (uint64_t)Theme::Soft);
+	themeCombo.AddItem("Hacking " ICON_HACKING, (uint64_t)Theme::Hacking);
+	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
+
+		// Dark theme defaults:
+		wi::Color theme_color_idle = wi::Color(30, 40, 60, 200);
+		wi::Color theme_color_focus = wi::Color(70, 150, 170, 220);
+		wi::Color dark_point = wi::Color(10, 10, 20, 220); // darker elements will lerp towards this
+		wi::gui::Theme theme;
+		theme.image.background = true;
+		theme.image.blendFlag = wi::enums::BLENDMODE_OPAQUE;
+		theme.font.color = wi::Color(130, 210, 220, 255);
+		theme.shadow_color = wi::Color(80, 140, 180, 100);
+
+		switch ((Theme)args.userdata)
+		{
+		default:
+			break;
+		case Theme::Dark:
+			editor->main->config.GetSection("options").Set("theme", "Dark");
+			break;
+		case Theme::Bright:
+			editor->main->config.GetSection("options").Set("theme", "Bright");
+			theme_color_idle = wi::Color(200, 210, 220, 230);
+			theme_color_focus = wi::Color(210, 230, 255, 250);
+			dark_point = wi::Color(180, 180, 190, 230);
+			theme.shadow_color = wi::Color::Shadow();
+			theme.font.color = wi::Color(50, 50, 80, 255);
+			break;
+		case Theme::Soft:
+			editor->main->config.GetSection("options").Set("theme", "Soft");
+			theme_color_idle = wi::Color(200, 180, 190, 190);
+			theme_color_focus = wi::Color(240, 190, 200, 230);
+			dark_point = wi::Color(100, 80, 90, 220);
+			theme.shadow_color = wi::Color(240, 190, 200, 180);
+			theme.font.color = wi::Color(255, 230, 240, 255);
+			break;
+		case Theme::Hacking:
+			editor->main->config.GetSection("options").Set("theme", "Hacking");
+			theme_color_idle = wi::Color(0, 0, 0, 255);
+			theme_color_focus = wi::Color(0, 160, 60, 255);
+			dark_point = wi::Color(0, 0, 0, 255);
+			theme.shadow_color = wi::Color(0, 200, 90, 200);
+			theme.font.color = wi::Color(0, 200, 90, 255);
+			theme.font.shadow_color = wi::Color::Shadow();
+			break;
+		}
+		editor->main->config.Commit();
+
+		theme.tooltipImage = theme.image;
+		theme.tooltipImage.color = theme_color_idle;
+		theme.tooltipFont = theme.font;
+		theme.tooltip_shadow_color = theme.shadow_color;
+
+		wi::Color theme_color_active = wi::Color::White();
+		wi::Color theme_color_deactivating = wi::Color::lerp(theme_color_focus, wi::Color::White(), 0.5f);
+
+		// Customize whole gui:
+		wi::gui::GUI& gui = editor->GetGUI();
+		gui.SetTheme(theme); // set basic params to all states
+
+		// customize colors for specific states:
+		gui.SetColor(theme_color_idle, wi::gui::IDLE);
+		gui.SetColor(theme_color_focus, wi::gui::FOCUS);
+		gui.SetColor(theme_color_active, wi::gui::ACTIVE);
+		gui.SetColor(theme_color_deactivating, wi::gui::DEACTIVATING);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.7f), wi::gui::WIDGET_ID_WINDOW_BASE);
+
+		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_TEXTINPUTFIELD_ACTIVE);
+		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_TEXTINPUTFIELD_DEACTIVATING);
+
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.75f), wi::gui::WIDGET_ID_SLIDER_BASE_IDLE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_FOCUS);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.85f), wi::gui::WIDGET_ID_SLIDER_BASE_ACTIVE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_DEACTIVATING);
+		gui.SetColor(theme_color_idle, wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
+		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_SLIDER_KNOB_FOCUS);
+		gui.SetColor(theme_color_active, wi::gui::WIDGET_ID_SLIDER_KNOB_ACTIVE);
+		gui.SetColor(theme_color_deactivating, wi::gui::WIDGET_ID_SLIDER_KNOB_DEACTIVATING);
+
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.75f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_IDLE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_FOCUS);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.85f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_ACTIVE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_DEACTIVATING);
+		gui.SetColor(theme_color_idle, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
+		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_HOVER);
+		gui.SetColor(theme_color_active, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_GRABBED);
+
+		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_COMBO_DROPDOWN);
+
+		if ((Theme)args.userdata == Theme::Hacking)
+		{
+			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
+			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
+		}
+
+		// customize individual elements:
+		editor->componentsWnd.materialWnd.textureSlotButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		editor->optionsWnd.paintToolWnd.brushTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		editor->optionsWnd.paintToolWnd.revealTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		editor->aboutLabel.sprites[wi::gui::FOCUS] = editor->aboutLabel.sprites[wi::gui::IDLE];
+		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
+		{
+			editor->optionsWnd.sprites[i].params.enableCornerRounding();
+			editor->optionsWnd.sprites[i].params.corners_rounding[1].radius = 10;
+			editor->optionsWnd.resizeDragger_UpperRight.sprites[i].params.enableCornerRounding();
+			editor->optionsWnd.resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = 10;
+		}
+		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
+		{
+			editor->componentsWnd.sprites[i].params.enableCornerRounding();
+			editor->componentsWnd.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->componentsWnd.resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
+			editor->componentsWnd.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = 10;
+		}
+		int scene_id = 0;
+		for (auto& editorscene : editor->scenes)
+		{
+			for (int i = 0; i < arraysize(editorscene->tabSelectButton.sprites); ++i)
+			{
+				editorscene->tabSelectButton.sprites[i].params.enableCornerRounding();
+				editorscene->tabSelectButton.sprites[i].params.corners_rounding[0].radius = 10;
+				editorscene->tabSelectButton.sprites[i].params.corners_rounding[2].radius = 10;
+			}
+			for (int i = 0; i < arraysize(editorscene->tabCloseButton.sprites); ++i)
+			{
+				editorscene->tabCloseButton.sprites[i].params.enableCornerRounding();
+				editorscene->tabCloseButton.sprites[i].params.corners_rounding[1].radius = 10;
+				editorscene->tabCloseButton.sprites[i].params.corners_rounding[3].radius = 10;
+			}
+
+			if (editor->current_scene == scene_id)
+			{
+				editorscene->tabSelectButton.sprites[wi::gui::IDLE].params.color = editor->newSceneButton.sprites[wi::gui::FOCUS].params.color;
+			}
+			else
+			{
+				editorscene->tabSelectButton.sprites[wi::gui::IDLE].params.color = editor->newSceneButton.sprites[wi::gui::IDLE].params.color;
+			}
+			editorscene->tabCloseButton.SetColor(wi::Color::Error(), wi::gui::WIDGET_ID_FOCUS);
+			scene_id++;
+		}
+		for (int i = 0; i < arraysize(editor->newSceneButton.sprites); ++i)
+		{
+			editor->newSceneButton.sprites[i].params.enableCornerRounding();
+			editor->newSceneButton.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->newSceneButton.sprites[i].params.corners_rounding[1].radius = 10;
+			editor->newSceneButton.sprites[i].params.corners_rounding[2].radius = 10;
+			editor->newSceneButton.sprites[i].params.corners_rounding[3].radius = 10;
+		}
+		editor->componentsWnd.weatherWnd.default_sky_horizon = dark_point;
+		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
+		editor->componentsWnd.weatherWnd.Update();
+
+		if ((Theme)args.userdata == Theme::Bright)
+		{
+			editor->inactiveEntityColor = theme_color_focus;
+			editor->hoveredEntityColor = theme_color_focus;
+		}
+		else
+		{
+			editor->inactiveEntityColor = theme.font.color;
+			editor->hoveredEntityColor = theme.font.color;
+		}
+		editor->inactiveEntityColor.setA(150);
+
+		editor->save_text_color = theme.font.color;
+
+	});
+	AddWidget(&themeCombo);
+}
+
+void GeneralWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+	const float padding = 4;
+	const float width = GetWidgetAreaSize().x - padding * 2;
+	float y = padding;
+	float jump = 20;
+	float x_off = 100;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 155;
+		const float margin_right = 0;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_right = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_right = 0;
+		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	otherinfoCheckBox.SetPos(XMFLOAT2(width - otherinfoCheckBox.GetSize().x, y));
+	fpsCheckBox.SetPos(XMFLOAT2(otherinfoCheckBox.GetPos().x - fpsCheckBox.GetSize().x - 70, y));
+	versionCheckBox.SetPos(XMFLOAT2(fpsCheckBox.GetPos().x - versionCheckBox.GetSize().x - 70, y));
+	y += versionCheckBox.GetSize().y;
+	y += padding;
+
+	saveModeComboBox.SetPos(XMFLOAT2(x_off, y));
+	saveModeComboBox.SetSize(XMFLOAT2(width - x_off - saveModeComboBox.GetScale().y - 1, saveModeComboBox.GetScale().y));
+	y += saveModeComboBox.GetSize().y;
+	y += padding;
+
+	themeCombo.SetPos(XMFLOAT2(x_off, y));
+	themeCombo.SetSize(XMFLOAT2(width - x_off - themeCombo.GetScale().y - 1, themeCombo.GetScale().y));
+	y += themeCombo.GetSize().y;
+	y += padding;
+
+	physicsEnabledCheckBox.SetPos(XMFLOAT2(width - physicsEnabledCheckBox.GetSize().x, y));
+	physicsDebugCheckBox.SetPos(XMFLOAT2(physicsEnabledCheckBox.GetPos().x - physicsDebugCheckBox.GetSize().x - 70, y));
+	y += physicsEnabledCheckBox.GetSize().y;
+	y += padding;
+
+	nameDebugCheckBox.SetPos(XMFLOAT2(width - nameDebugCheckBox.GetSize().x, y));
+	y += nameDebugCheckBox.GetSize().y;
+	y += padding;
+
+	add_right(wireFrameCheckBox);
+	add_right(gridHelperCheckBox);
+	add_right(aabbDebugCheckBox);
+	add_right(boneLinesCheckBox);
+	add_right(debugEmittersCheckBox);
+	add_right(debugForceFieldsCheckBox);
+	add_right(debugRaytraceBVHCheckBox);
+	add_right(envProbesCheckBox);
+	add_right(cameraVisCheckBox);
+	add_right(colliderVisCheckBox);
+
+	y += jump;
+
+	add_right(freezeCullingCameraCheckBox);
+	add_right(disableAlbedoMapsCheckBox);
+	add_right(forceDiffuseLightingCheckBox);
+}

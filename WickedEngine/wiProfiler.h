@@ -1,6 +1,7 @@
 #pragma once
 #include "wiGraphicsDevice.h"
 #include "wiCanvas.h"
+#include "wiColor.h"
 
 namespace wi::profiler
 {
@@ -29,10 +30,14 @@ namespace wi::profiler
 		wi::graphics::CommandList cmd,
 		wi::graphics::ColorSpace colorspace = wi::graphics::ColorSpace::SRGB
 	);
+	void DisableDrawForThisFrame();
 
 	// Enable/disable profiling
 	void SetEnabled(bool value);
 
 	bool IsEnabled();
+
+	void SetBackgroundColor(wi::Color color);
+	void SetTextColor(wi::Color color);
 };
 

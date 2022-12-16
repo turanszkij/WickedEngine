@@ -26,6 +26,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)EnvProbeWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ExpressionWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForceFieldWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GeneralWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HairParticleWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HierarchyWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HumanoidWindow.cpp" />
@@ -102,6 +103,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)OptionsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)PaintToolWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)GraphicsWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ProfilerWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RigidBodyWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ScriptWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SoftBodyWindow.cpp" />
@@ -146,6 +148,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ExpressionWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)FontAwesomeV6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForceFieldWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GeneralWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HairParticleWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HierarchyWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HumanoidWindow.h" />
@@ -165,6 +168,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)OptionsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)PaintToolWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GraphicsWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ProfilerWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RigidBodyWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ScriptWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SoftBodyWindow.h" />

@@ -40,6 +40,8 @@ set (SOURCE_FILES
 	ComponentsWindow.cpp
 	TerrainWindow.cpp
 	HumanoidWindow.cpp
+	GeneralWindow.cpp
+	ProfilerWindow.cpp
 	xatlas.cpp
 )
 
