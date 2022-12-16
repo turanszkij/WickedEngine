@@ -7,6 +7,8 @@
 #include "wiHelper.h"
 #include "wiUnorderedMap.h"
 #include "wiBacklog.h"
+#include "wiRenderer.h"
+#include "wiEventHandler.h"
 
 #if __has_include("Superluminal/PerformanceAPI_capi.h")
 #include "Superluminal/PerformanceAPI_capi.h"
@@ -33,6 +35,9 @@ namespace wi::profiler
 	GPUBuffer queryResultBuffer[GraphicsDevice::GetBufferCount() + 1];
 	std::atomic<uint32_t> nextQuery{ 0 };
 	int queryheap_idx = 0;
+	bool drawn_this_frame = false;
+	wi::Color background_color = wi::Color(20, 20, 20, 230);
+	wi::Color text_color = wi::Color::White();
 
 #if PERFORMANCEAPI_ENABLED
 	PerformanceAPI_ModuleHandle superluminal_handle = {};
@@ -114,6 +119,7 @@ namespace wi::profiler
 		);
 
 		gpu_frame = BeginRangeGPU("GPU Frame", cmd);
+		drawn_this_frame = false;
 	}
 	void EndFrame(CommandList cmd)
 	{
@@ -268,6 +274,31 @@ namespace wi::profiler
 		lock.unlock();
 	}
 
+
+	PipelineState pso_linestrip;
+	PipelineState pso_linelist;
+	const uint32_t graph_vertex_count = 120;
+	float cpu_graph[graph_vertex_count] = {};
+	float gpu_graph[graph_vertex_count] = {};
+	void LoadShaders()
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		PipelineStateDesc desc;
+		desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+		desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+		desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+		desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+		desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_WIRE_SMOOTH);
+		desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
+		desc.pt = PrimitiveTopology::LINESTRIP;
+		bool success = device->CreatePipelineState(&desc, &pso_linestrip);
+
+		desc.pt = PrimitiveTopology::LINELIST;
+		success = device->CreatePipelineState(&desc, &pso_linelist);
+		assert(success);
+	}
+
 	struct Hits
 	{
 		uint32_t num_hits = 0;
@@ -283,15 +314,19 @@ namespace wi::profiler
 		ColorSpace colorspace
 	)
 	{
-		if (!ENABLED || !initialized)
+		if (!ENABLED || !ENABLED_REQUEST || !initialized || drawn_this_frame)
 			return;
+		drawn_this_frame = true;
+
+		const XMFLOAT2 graph_size = XMFLOAT2(190, 100);
+		const float graph_left_offset = 45;
+		const float graph_padding_y = 40;
 
 		wi::image::SetCanvas(canvas);
 		wi::font::SetCanvas(canvas);
 
 		std::stringstream ss("");
 		ss.precision(2);
-		ss << "Frame Profiler Ranges:\n----------------------------\n";
 
 		for (auto& x : ranges)
 		{
@@ -344,14 +379,15 @@ namespace wi::profiler
 			x.second.total_time = 0;
 		}
 
-		wi::font::Params params = wi::font::Params(x, y, wi::font::WIFONTSIZE_DEFAULT - 4, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, wi::Color(255, 255, 255, 255), wi::Color(0, 0, 0, 255));
+		wi::font::Params params = wi::font::Params(x, y + graph_size.y + graph_padding_y, wi::font::WIFONTSIZE_DEFAULT - 4, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, text_color);
 
+		// Background:
 		wi::image::Params fx;
-		fx.pos.x = (float)params.posX;
-		fx.pos.y = (float)params.posY;
-		fx.siz.x = (float)wi::font::TextWidth(ss.str(), params);
-		fx.siz.y = (float)wi::font::TextHeight(ss.str(), params);
-		fx.color = wi::Color(20, 20, 20, 230);
+		fx.pos.x = x - 10;
+		fx.pos.y = y - 10;
+		fx.siz.x = std::max(graph_size.x, (float)wi::font::TextWidth(ss.str(), params)) + 100;
+		fx.siz.y = (float)wi::font::TextHeight(ss.str(), params) + graph_size.y + graph_padding_y + 20;
+		fx.color = background_color;
 
 		if (colorspace != ColorSpace::SRGB)
 		{
@@ -361,6 +397,151 @@ namespace wi::profiler
 
 		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		wi::font::Draw(ss.str(), params, cmd);
+
+
+		// Graph:
+		{
+			static bool shaders_loaded = false;
+			if (!shaders_loaded)
+			{
+				shaders_loaded = true;
+				static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+				LoadShaders();
+			}
+
+			float graph_max = 33;
+			for (uint32_t i = graph_vertex_count - 1; i > 0; --i)
+			{
+				cpu_graph[i] = cpu_graph[i - 1];
+				gpu_graph[i] = gpu_graph[i - 1];
+				graph_max = std::max(graph_max, cpu_graph[i]);
+				graph_max = std::max(graph_max, gpu_graph[i]);
+			}
+			cpu_graph[0] = ranges[cpu_frame].time;
+			gpu_graph[0] = ranges[gpu_frame].time;
+			graph_max = std::max(graph_max, cpu_graph[0]);
+			graph_max = std::max(graph_max, gpu_graph[0]);
+
+			struct Vertex
+			{
+				XMFLOAT4 position;
+				XMFLOAT4 color;
+			};
+			Vertex graph_info[] = {
+				// axes:
+				{XMFLOAT4(0, 0, 0, 1), text_color},
+				{XMFLOAT4(0, 1, 0, 1), text_color},
+				{XMFLOAT4(0, 1, 0, 1), text_color},
+				{XMFLOAT4(1, 1, 0, 1), text_color},
+
+				// markers:
+				{XMFLOAT4(0, 0, 0, 1), text_color}, // graph_max
+				{XMFLOAT4(-10.0f / graph_size.x, 0, 0, 1), text_color}, // graph_max
+				{XMFLOAT4(0, 1 - 16.6f / graph_max, 0, 1), text_color}, // 16.6
+				{XMFLOAT4(-10.0f / graph_size.x, 1 - 16.6f / graph_max, 0, 1), text_color}, // 16.6
+				{XMFLOAT4(60.0f / float(graph_vertex_count),1,0,1), text_color}, // 60 frames
+				{XMFLOAT4(60.0f / float(graph_vertex_count),1 + 10.0f / graph_size.x,0,1), text_color}, // 60 frames
+				{XMFLOAT4(1,1,0,1), text_color}, // 0 frames
+				{XMFLOAT4(1,1 + 10.0f / graph_size.x,0,1), text_color}, // 0 frames
+			};
+
+			GraphicsDevice* device = wi::graphics::GetDevice();
+			GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(sizeof(Vertex) * graph_vertex_count * 2 + sizeof(graph_info), cmd);
+
+			for (uint32_t i = 0; i < graph_vertex_count; ++i)
+			{
+				Vertex vert;
+				vert.color = XMFLOAT4(1, 0.2f, 0.2f, 1);
+				vert.position = XMFLOAT4(float(graph_vertex_count - 1 - i) / float(graph_vertex_count), 1 - cpu_graph[i] / graph_max, 0, 1);
+				std::memcpy((Vertex*)allocation.data + i, &vert, sizeof(vert));
+
+				vert.color = XMFLOAT4(0.2f, 1, 0.2f, 1);
+				vert.position = XMFLOAT4(float(graph_vertex_count - 1 - i) / float(graph_vertex_count), 1 - gpu_graph[i] / graph_max, 0, 1);
+				std::memcpy((Vertex*)allocation.data + graph_vertex_count + i, &vert, sizeof(vert));
+			}
+			std::memcpy((Vertex*)allocation.data + graph_vertex_count * 2, graph_info, sizeof(graph_info));
+
+			device->BindPipelineState(&pso_linestrip, cmd);
+
+			MiscCB cb;
+			cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+			XMStoreFloat4x4(&cb.g_xTransform,
+				XMMatrixScaling(graph_size.x - graph_left_offset, graph_size.y, 1) *
+				XMMatrixTranslation(x + graph_left_offset, y, 0) *
+				canvas.GetProjection()
+			);
+			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
+
+			const GPUBuffer* buffers[] = {
+				&allocation.buffer
+			};
+			const uint32_t strides[] = {
+				sizeof(Vertex)
+			};
+			const uint64_t offsets[] = {
+				allocation.offset
+			};
+			device->BindVertexBuffers(buffers, 0, arraysize(buffers), strides, offsets, cmd);
+
+			device->Draw(graph_vertex_count, 0, cmd);
+			device->Draw(graph_vertex_count, graph_vertex_count, cmd);
+
+			device->BindPipelineState(&pso_linelist, cmd);
+			device->Draw(sizeof(graph_info) / sizeof(Vertex), graph_vertex_count * 2, cmd);
+
+			wi::font::Params params;
+			params.size = 10;
+			params.v_align = wi::font::WIFALIGN_CENTER;
+			params.color = text_color;
+			params.position.x = x;
+			params.position.y = y;
+			std::stringstream ss;
+			ss.precision(1);
+			ss << std::fixed << graph_max << " ms";
+			wi::font::Draw(ss.str(), params, cmd);
+			params.position.y = y + graph_size.y - (16.6f / graph_max) * graph_size.y;
+			wi::font::Draw("16.6 ms", params, cmd);
+
+			params.position.x = x + graph_size.x + 5;
+			params.position.y = y + graph_size.y - cpu_graph[0] / graph_max * graph_size.y;
+			params.color = wi::Color::fromFloat4(XMFLOAT4(1, 0.2f, 0.2f, 1));
+			ss.str("");
+			ss.clear();
+			ss << "cpu: " << cpu_graph[0] << " ms";
+			wi::font::Draw(ss.str(), params, cmd);
+
+			float cpu_position = params.position.y;
+			params.position.x = x + graph_size.x + 5;
+			params.position.y = y + graph_size.y - gpu_graph[0] / graph_max * graph_size.y;
+			if (std::abs(params.position.y - cpu_position) < params.size)
+			{
+				if (params.position.y < cpu_position)
+				{
+					params.position.y = cpu_position - params.size;
+				}
+				else
+				{
+					params.position.y = cpu_position + params.size;
+				}
+			}
+			params.color = wi::Color::fromFloat4(XMFLOAT4(0.2f, 1, 0.2f, 1));
+			ss.str("");
+			ss.clear();
+			ss << "gpu: " << gpu_graph[0] << " ms";
+			wi::font::Draw(ss.str(), params, cmd);
+
+			params.h_align = wi::font::WIFALIGN_CENTER;
+			params.color = text_color;
+			params.position.x = x + graph_left_offset + (graph_size.x - graph_left_offset) * 0.5f;
+			params.position.y = y + graph_size.y + 10;
+			wi::font::Draw("60 frames", params, cmd);
+			params.position.x = x + graph_size.x;
+			wi::font::Draw("current frame", params, cmd);
+		}
+	}
+	void DisableDrawForThisFrame()
+	{
+		drawn_this_frame = true;
 	}
 
 	void SetEnabled(bool value)
@@ -375,4 +556,12 @@ namespace wi::profiler
 		return ENABLED;
 	}
 
+	void SetBackgroundColor(wi::Color color)
+	{
+		background_color = color;
+	}
+	void SetTextColor(wi::Color color)
+	{
+		text_color = color;
+	}
 }

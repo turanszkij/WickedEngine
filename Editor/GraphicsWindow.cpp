@@ -14,7 +14,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1920));
+	SetSize(XMFLOAT2(580, 1600));
 
 	float step = 21;
 	float itemheight = 18;
@@ -338,16 +338,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		wi::renderer::SetVoxelRadianceMaxDistance(args.fValue);
 	});
 	AddWidget(&voxelRadianceMaxDistanceSlider);
-
-	wireFrameCheckBox.Create("Render Wireframe: ");
-	wireFrameCheckBox.SetTooltip("Visualize the scene as a wireframe");
-	wireFrameCheckBox.SetPos(XMFLOAT2(x, y += step));
-	wireFrameCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	wireFrameCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetWireRender(args.bValue);
-	});
-	wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
-	AddWidget(&wireFrameCheckBox);
 
 	variableRateShadingClassificationCheckBox.Create("VRS Classification: ");
 	variableRateShadingClassificationCheckBox.SetTooltip("Enable classification of variable rate shading on the screen. Less important parts will be shaded with lesser resolution.\nRequires Tier2 support for variable shading rate");
@@ -688,40 +678,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->main->config.Commit();
 	});
 	AddWidget(&raytraceBounceCountSlider);
-
-
-	freezeCullingCameraCheckBox.Create("Freeze culling camera: ");
-	freezeCullingCameraCheckBox.SetTooltip("Freeze culling camera update. Scene culling will not be updated with the view");
-	freezeCullingCameraCheckBox.SetPos(XMFLOAT2(x, y += step));
-	freezeCullingCameraCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	freezeCullingCameraCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetFreezeCullingCameraEnabled(args.bValue);
-	});
-	freezeCullingCameraCheckBox.SetCheck(wi::renderer::GetFreezeCullingCameraEnabled());
-	AddWidget(&freezeCullingCameraCheckBox);
-
-
-
-	disableAlbedoMapsCheckBox.Create("Disable albedo maps: ");
-	disableAlbedoMapsCheckBox.SetTooltip("Disables albedo maps on objects for easier lighting debugging");
-	disableAlbedoMapsCheckBox.SetPos(XMFLOAT2(x, y += step));
-	disableAlbedoMapsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	disableAlbedoMapsCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetDisableAlbedoMaps(args.bValue);
-		});
-	disableAlbedoMapsCheckBox.SetCheck(wi::renderer::IsDisableAlbedoMaps());
-	AddWidget(&disableAlbedoMapsCheckBox);
-
-
-	forceDiffuseLightingCheckBox.Create("Force diffuse lighting: ");
-	forceDiffuseLightingCheckBox.SetTooltip("Sets every surface fully diffuse, with zero specularity");
-	forceDiffuseLightingCheckBox.SetPos(XMFLOAT2(x, y += step));
-	forceDiffuseLightingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	forceDiffuseLightingCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetForceDiffuseLighting(args.bValue);
-		});
-	forceDiffuseLightingCheckBox.SetCheck(wi::renderer::IsForceDiffuseLighting());
-	AddWidget(&forceDiffuseLightingCheckBox);
 
 
 	// Old Postprocess window params:
@@ -1404,128 +1360,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	fsr2Combo.SetSelected(fsr2_preset);
 	AddWidget(&fsr2Combo);
 
-
-
-	// Visualizer toggles:
-	y += step;
-	x = 250;
-
-	nameDebugCheckBox.Create("Name visualizer: ");
-	nameDebugCheckBox.SetTooltip("Visualize the entity names in the scene");
-	nameDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
-	nameDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	AddWidget(&nameDebugCheckBox);
-
-	physicsDebugCheckBox.Create("Physics visualizer: ");
-	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
-	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
-	physicsDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	physicsDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::physics::SetDebugDrawEnabled(args.bValue);
-		});
-	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
-	AddWidget(&physicsDebugCheckBox);
-
-	aabbDebugCheckBox.Create("AABB visualizer: ");
-	aabbDebugCheckBox.SetTooltip("Visualize the scene bounding boxes");
-	aabbDebugCheckBox.SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
-	aabbDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
-	aabbDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	aabbDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugPartitionTree(args.bValue);
-		});
-	aabbDebugCheckBox.SetCheck(wi::renderer::GetToDrawDebugPartitionTree());
-	AddWidget(&aabbDebugCheckBox);
-
-	boneLinesCheckBox.Create("Bone line visualizer: ");
-	boneLinesCheckBox.SetTooltip("Visualize bones of armatures");
-	boneLinesCheckBox.SetScriptTip("SetDebugBonesEnabled(bool enabled)");
-	boneLinesCheckBox.SetPos(XMFLOAT2(x, y += step));
-	boneLinesCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	boneLinesCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugBoneLines(args.bValue);
-		});
-	boneLinesCheckBox.SetCheck(wi::renderer::GetToDrawDebugBoneLines());
-	AddWidget(&boneLinesCheckBox);
-
-	debugEmittersCheckBox.Create("Emitter visualizer: ");
-	debugEmittersCheckBox.SetTooltip("Visualize emitters");
-	debugEmittersCheckBox.SetScriptTip("SetDebugEmittersEnabled(bool enabled)");
-	debugEmittersCheckBox.SetPos(XMFLOAT2(x, y += step));
-	debugEmittersCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	debugEmittersCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugEmitters(args.bValue);
-		});
-	debugEmittersCheckBox.SetCheck(wi::renderer::GetToDrawDebugEmitters());
-	AddWidget(&debugEmittersCheckBox);
-
-	debugForceFieldsCheckBox.Create("Force Field visualizer: ");
-	debugForceFieldsCheckBox.SetTooltip("Visualize force fields");
-	debugForceFieldsCheckBox.SetScriptTip("SetDebugForceFieldsEnabled(bool enabled)");
-	debugForceFieldsCheckBox.SetPos(XMFLOAT2(x, y += step));
-	debugForceFieldsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	debugForceFieldsCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugForceFields(args.bValue);
-		});
-	debugForceFieldsCheckBox.SetCheck(wi::renderer::GetToDrawDebugForceFields());
-	AddWidget(&debugForceFieldsCheckBox);
-
-	debugRaytraceBVHCheckBox.Create("RT BVH visualizer: ");
-	debugRaytraceBVHCheckBox.SetTooltip("Visualize scene BVH if raytracing is enabled");
-	debugRaytraceBVHCheckBox.SetPos(XMFLOAT2(x, y += step));
-	debugRaytraceBVHCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	debugRaytraceBVHCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetRaytraceDebugBVHVisualizerEnabled(args.bValue);
-		});
-	debugRaytraceBVHCheckBox.SetCheck(wi::renderer::GetRaytraceDebugBVHVisualizerEnabled());
-	AddWidget(&debugRaytraceBVHCheckBox);
-
-	envProbesCheckBox.Create("Env probe visualizer: ");
-	envProbesCheckBox.SetTooltip("Toggle visualization of environment probes as reflective spheres");
-	envProbesCheckBox.SetPos(XMFLOAT2(x, y += step));
-	envProbesCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	envProbesCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugEnvProbes(args.bValue);
-		});
-	envProbesCheckBox.SetCheck(wi::renderer::GetToDrawDebugEnvProbes());
-	AddWidget(&envProbesCheckBox);
-
-	cameraVisCheckBox.Create("Camera visualizer: ");
-	cameraVisCheckBox.SetTooltip("Toggle visualization of camera proxies in the scene");
-	cameraVisCheckBox.SetPos(XMFLOAT2(x, y += step));
-	cameraVisCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	cameraVisCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugCameras(args.bValue);
-		});
-	cameraVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugCameras());
-	AddWidget(&cameraVisCheckBox);
-
-	colliderVisCheckBox.Create("Collider visualizer: ");
-	colliderVisCheckBox.SetTooltip("Toggle visualization of colliders in the scene");
-	colliderVisCheckBox.SetPos(XMFLOAT2(x, y += step));
-	colliderVisCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	colliderVisCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugColliders(args.bValue);
-		});
-	colliderVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugColliders());
-	AddWidget(&colliderVisCheckBox);
-
-	gridHelperCheckBox.Create("Grid helper: ");
-	gridHelperCheckBox.SetTooltip("Toggle showing of unit visualizer grid in the world origin");
-	gridHelperCheckBox.SetPos(XMFLOAT2(x, y += step));
-	gridHelperCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	if (editor->main->config.GetSection("graphics").Has("grid_helper"))
-	{
-		wi::renderer::SetToDrawGridHelper(editor->main->config.GetSection("graphics").GetBool("grid_helper"));
-	}
-	gridHelperCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawGridHelper(args.bValue);
-		editor->main->config.GetSection("graphics").Set("grid_helper", args.bValue);
-		editor->main->config.Commit();
-	});
-	gridHelperCheckBox.SetCheck(wi::renderer::GetToDrawGridHelper());
-	AddWidget(&gridHelperCheckBox);
-
 	Translate(XMFLOAT3(100, 50, 0));
 	SetMinimized(true);
 }
@@ -1957,24 +1791,6 @@ void GraphicsWindow::ResizeLayout()
 	add_right(fsr2Slider);
 	fsr2CheckBox.SetPos(XMFLOAT2(fsr2Slider.GetPos().x - fsr2CheckBox.GetSize().x - 80, fsr2Slider.GetPos().y));
 	add_right(fsr2Combo);
-
-	y += jump;
-
-	add_right(freezeCullingCameraCheckBox);
-	add_right(disableAlbedoMapsCheckBox);
-	add_right(forceDiffuseLightingCheckBox);
-	add_right(wireFrameCheckBox);
-	add_right(gridHelperCheckBox);
-	add_right(nameDebugCheckBox);
-	add_right(physicsDebugCheckBox);
-	add_right(aabbDebugCheckBox);
-	add_right(boneLinesCheckBox);
-	add_right(debugEmittersCheckBox);
-	add_right(debugForceFieldsCheckBox);
-	add_right(debugRaytraceBVHCheckBox);
-	add_right(envProbesCheckBox);
-	add_right(cameraVisCheckBox);
-	add_right(colliderVisCheckBox);
 
 
 }

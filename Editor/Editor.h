@@ -4,6 +4,7 @@
 #include "wiScene_BindLua.h"
 #include "OptionsWindow.h"
 #include "ComponentsWindow.h"
+#include "ProfilerWindow.h"
 
 #include "IconDefinitions.h"
 
@@ -35,6 +36,8 @@ public:
 	wi::gui::Button saveButton;
 	wi::gui::Button openButton;
 	wi::gui::Button logButton;
+	wi::gui::Button profilerButton;
+	wi::gui::Button cinemaButton;
 	wi::gui::Button fullscreenButton;
 	wi::gui::Button bugButton;
 	wi::gui::Button aboutButton;
@@ -43,6 +46,7 @@ public:
 
 	OptionsWindow optionsWnd;
 	ComponentsWindow componentsWnd;
+	ProfilerWindow profilerWnd;
 
 	std::unique_ptr<wi::RenderPath3D> renderPath;
 	const wi::graphics::Texture* GetGUIBlurredBackground() const override { return renderPath->GetGUIBlurredBackground(); }
