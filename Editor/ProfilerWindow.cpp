@@ -63,6 +63,11 @@ void ProfilerWindow::Update(const wi::Canvas& canvas, float dt)
 			resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = 10;
 			resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = 10;
 		}
+		else
+		{
+			resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = 0;
+			resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = 0;
+		}
 	}
 }
 void ProfilerWindow::ResizeLayout()
