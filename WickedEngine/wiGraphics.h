@@ -386,6 +386,7 @@ namespace wi::graphics
 		STENCIL_RESOLVE_SAMPLE_ZERO = 1 << 19,
 		DEPTH_RESOLVE_MIN_MAX = 1 << 20,
 		STENCIL_RESOLVE_MIN_MAX = 1 << 21,
+		CACHE_COHERENT_UMA = 1 << 22,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
 	};
 
 	enum class ResourceState

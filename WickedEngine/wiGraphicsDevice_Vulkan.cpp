@@ -2437,11 +2437,6 @@ using namespace vulkan_internal;
 
 				enabled_deviceExtensions = required_deviceExtensions;
 
-				if (checkExtensionSupport(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME, available_deviceExtensions))
-				{
-					// The shader compiler can still be using this extension, even though it is core in Vulkan 1.2, so enable it for now:
-					enabled_deviceExtensions.push_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
-				}
 				if (checkExtensionSupport(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME, available_deviceExtensions))
 				{
 					enabled_deviceExtensions.push_back(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME);
@@ -2825,6 +2820,15 @@ using namespace vulkan_internal;
 
 		memory_properties_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
 		vkGetPhysicalDeviceMemoryProperties2(physicalDevice, &memory_properties_2);
+
+		if (memory_properties_2.memoryProperties.memoryHeapCount == 1 &&
+			memory_properties_2.memoryProperties.memoryHeaps[0].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+		{
+			// https://registry.khronos.org/vulkan/specs/1.0-extensions/html/vkspec.html#memory-device
+			//	"In a unified memory architecture (UMA) system there is often only a single memory heap which is
+			//	considered to be equally “local” to the host and to the device, and such an implementation must advertise the heap as device-local."
+			capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
+		}
 
 		allocationhandler = std::make_shared<AllocationHandler>();
 		allocationhandler->device = device;

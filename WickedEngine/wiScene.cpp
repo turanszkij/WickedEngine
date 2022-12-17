@@ -64,12 +64,18 @@ namespace wi::scene
 			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			device->CreateBuffer(&desc, nullptr, &instanceBuffer);
-			device->SetName(&instanceBuffer, "Scene::instanceBuffer");
+			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			{
+				// Non-UMA: separate Default usage buffer
+				device->CreateBuffer(&desc, nullptr, &instanceBuffer);
+				device->SetName(&instanceBuffer, "Scene::instanceBuffer");
+
+				// Upload buffer shouldn't be used by shaders with Non-UMA:
+				desc.bind_flags = BindFlag::NONE;
+				desc.misc_flags = ResourceMiscFlag::NONE;
+			}
 
 			desc.usage = Usage::UPLOAD;
-			desc.bind_flags = BindFlag::NONE;
-			desc.misc_flags = ResourceMiscFlag::NONE;
 			for (int i = 0; i < arraysize(instanceUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &instanceUploadBuffer[i]);
@@ -91,12 +97,18 @@ namespace wi::scene
 			desc.size = desc.stride * materialArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			device->CreateBuffer(&desc, nullptr, &materialBuffer);
-			device->SetName(&materialBuffer, "Scene::materialBuffer");
+			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			{
+				// Non-UMA: separate Default usage buffer
+				device->CreateBuffer(&desc, nullptr, &materialBuffer);
+				device->SetName(&materialBuffer, "Scene::materialBuffer");
+
+				// Upload buffer shouldn't be used by shaders with Non-UMA:
+				desc.bind_flags = BindFlag::NONE;
+				desc.misc_flags = ResourceMiscFlag::NONE;
+			}
 
 			desc.usage = Usage::UPLOAD;
-			desc.bind_flags = BindFlag::NONE;
-			desc.misc_flags = ResourceMiscFlag::NONE;
 			for (int i = 0; i < arraysize(materialUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &materialUploadBuffer[i]);
@@ -233,12 +245,18 @@ namespace wi::scene
 			desc.size = desc.stride * geometryArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			device->CreateBuffer(&desc, nullptr, &geometryBuffer);
-			device->SetName(&geometryBuffer, "Scene::geometryBuffer");
+			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			{
+				// Non-UMA: separate Default usage buffer
+				device->CreateBuffer(&desc, nullptr, &geometryBuffer);
+				device->SetName(&geometryBuffer, "Scene::geometryBuffer");
+
+				// Upload buffer shouldn't be used by shaders with Non-UMA:
+				desc.bind_flags = BindFlag::NONE;
+				desc.misc_flags = ResourceMiscFlag::NONE;
+			}
 
 			desc.usage = Usage::UPLOAD;
-			desc.bind_flags = BindFlag::NONE;
-			desc.misc_flags = ResourceMiscFlag::NONE;
 			for (int i = 0; i < arraysize(geometryUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &geometryUploadBuffer[i]);
@@ -594,9 +612,18 @@ namespace wi::scene
 		}
 
 		// Shader scene resources:
-		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
-		shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
-		shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
+		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+		{
+			shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
+			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
+			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
+		}
+		else
+		{
+			shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
+			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
+			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
+		}
 		shaderscene.meshletbuffer = device->GetDescriptorIndex(&meshletBuffer, SubresourceType::SRV);
 		shaderscene.envmaparray = device->GetDescriptorIndex(&envmapArray, SubresourceType::SRV);
 		if (weather.skyMap.IsValid())

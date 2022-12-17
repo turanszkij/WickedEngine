@@ -2703,6 +2703,11 @@ using namespace dx12_internal;
 			capabilities |= GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL;
 		}
 
+		if (features.CacheCoherentUMA())
+		{
+			capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
+		}
+
 		// Create pipeline library:
 #if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
 		// Try to read pipeline cache file if exists.
