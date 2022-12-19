@@ -674,6 +674,7 @@ namespace wi::scene
 
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;
+		uint32_t sort_bits = 0;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }

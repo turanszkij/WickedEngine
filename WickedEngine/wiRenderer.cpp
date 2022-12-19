@@ -160,31 +160,30 @@ GPUBuffer luminance_dummy;
 // Direct reference to a renderable instance:
 struct RenderBatch
 {
-	uint64_t data;
+	uint32_t meshIndex;
+	uint32_t instanceIndex;
+	uint32_t distance;
+	uint32_t sort_bits; // an additional bitmask for sorting only, it should be used to reduce pipeline changes
 
-	inline void Create(uint32_t meshIndex, uint32_t instanceIndex, float distance)
+	inline void Create(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits)
 	{
-		// These asserts are a indicating if render queue limits are reached:
-		assert(meshIndex < 0x00FFFFFF);
-		assert(instanceIndex < 0x00FFFFFF);
-
-		data = 0;
-		data |= uint64_t(meshIndex & 0x00FFFFFF) << 40ull;
-		data |= uint64_t(XMConvertFloatToHalf(distance) & 0xFFFF) << 24ull;
-		data |= uint64_t(instanceIndex & 0x00FFFFFF) << 0ull;
+		this->meshIndex = meshIndex;
+		this->instanceIndex = instanceIndex;
+		this->distance = XMConvertFloatToHalf(distance);
+		this->sort_bits = sort_bits;
 	}
 
 	inline float GetDistance() const
 	{
-		return XMConvertHalfToFloat(HALF((data >> 24ull) & 0xFFFF));
+		return XMConvertHalfToFloat(HALF(distance));
 	}
 	inline uint32_t GetMeshIndex() const
 	{
-		return (data >> 40ull) & 0x00FFFFFF;
+		return meshIndex;
 	}
 	inline uint32_t GetInstanceIndex() const
 	{
-		return (data >> 0ull) & 0x00FFFFFF;
+		return instanceIndex;
 	}
 
 	// opaque sorting
@@ -192,23 +191,54 @@ struct RenderBatch
 	//	distance is second priority (front to back Z-buffering)
 	bool operator<(const RenderBatch& other) const
 	{
-		return data < other.data;
+		union SortKey
+		{
+			struct
+			{
+				// The order of members is important here, it means the sort priority (low to high)!
+				uint64_t distance : 16;
+				uint64_t meshIndex : 24;
+				uint64_t sort_bits : 24;
+			} bits;
+			uint64_t value;
+		};
+		static_assert(sizeof(SortKey) == sizeof(uint64_t));
+		SortKey a = {};
+		a.bits.distance = distance;
+		a.bits.meshIndex = meshIndex;
+		a.bits.sort_bits = sort_bits;
+		SortKey b = {};
+		b.bits.distance = other.distance;
+		b.bits.meshIndex = other.meshIndex;
+		b.bits.sort_bits = other.sort_bits;
+		return a.value < b.value;
 	}
 	// transparent sorting
 	//	Priority is distance for correct alpha blending (back to front rendering)
 	//	mesh index is second priority for instancing
 	bool operator>(const RenderBatch& other) const
 	{
-		// Swap bits of meshIndex and distance to prioritize distance more
-		uint64_t a_data = 0ull;
-		a_data |= ((data >> 24ull) & 0xFFFF) << 48ull; // distance repack
-		a_data |= ((data >> 40ull) & 0x00FFFFFF) << 24ull; // meshIndex repack
-		a_data |= data & 0x00FFFFFF; // instanceIndex repack
-		uint64_t b_data = 0ull;
-		b_data |= ((other.data >> 24ull) & 0xFFFF) << 48ull; // distance repack
-		b_data |= ((other.data >> 40ull) & 0x00FFFFFF) << 24ull; // meshIndex repack
-		b_data |= other.data & 0x00FFFFFF; // instanceIndex repack
-		return a_data > b_data;
+		union SortKey
+		{
+			struct
+			{
+				// The order of members is important here, it means the sort priority (low to high)!
+				uint64_t meshIndex : 24;
+				uint64_t sort_bits : 24;
+				uint64_t distance : 16;
+			} bits;
+			uint64_t value;
+		};
+		static_assert(sizeof(SortKey) == sizeof(uint64_t));
+		SortKey a = {};
+		a.bits.distance = distance;
+		a.bits.sort_bits = sort_bits;
+		a.bits.meshIndex = meshIndex;
+		SortKey b = {};
+		b.bits.distance = other.distance;
+		b.bits.sort_bits = other.sort_bits;
+		b.bits.meshIndex = other.meshIndex;
+		return a.value > b.value;
 	}
 };
 
@@ -221,9 +251,9 @@ struct RenderQueue
 	{
 		batches.clear();
 	}
-	inline void add(uint32_t meshIndex, uint32_t instanceIndex, float distance)
+	inline void add(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits)
 	{
-		batches.emplace_back().Create(meshIndex, instanceIndex, distance);
+		batches.emplace_back().Create(meshIndex, instanceIndex, distance, sort_bits);
 	}
 	inline void sort_transparent()
 	{
@@ -277,40 +307,25 @@ const Texture* GetTexture(TEXTYPES id)
 	return &textures[id];
 }
 
-
-enum OBJECTRENDERING_DOUBLESIDED
+union ObjectRenderingVariant
 {
-	OBJECTRENDERING_DOUBLESIDED_DISABLED,
-	OBJECTRENDERING_DOUBLESIDED_ENABLED,
-	OBJECTRENDERING_DOUBLESIDED_BACKSIDE,
-	OBJECTRENDERING_DOUBLESIDED_COUNT
+	struct
+	{
+		uint32_t shadertype : 8;	// MaterialComponent::SHADERTYPE
+		uint32_t blendmode : 4;		// wi::enums::BLENDMODE
+		uint32_t cullmode : 2;		// wi::graphics::CullMode
+		uint32_t tessellation : 1;	// bool
+		uint32_t alphatest : 1;		// bool
+		uint32_t wind : 1;			// bool
+	} bits;
+	uint32_t value;
 };
-enum OBJECTRENDERING_TESSELLATION
+static_assert(sizeof(ObjectRenderingVariant) == sizeof(uint32_t));
+wi::unordered_map<uint32_t, PipelineState> PSO_object[RENDERPASS_COUNT];
+inline PipelineState* GetObjectPSO(RENDERPASS renderPass, ObjectRenderingVariant variant)
 {
-	OBJECTRENDERING_TESSELLATION_DISABLED,
-	OBJECTRENDERING_TESSELLATION_ENABLED,
-	OBJECTRENDERING_TESSELLATION_COUNT
-};
-enum OBJECTRENDERING_ALPHATEST
-{
-	OBJECTRENDERING_ALPHATEST_DISABLED,
-	OBJECTRENDERING_ALPHATEST_ENABLED,
-	OBJECTRENDERING_ALPHATEST_COUNT
-};
-enum OBJECTRENDERING_WIND
-{
-	OBJECTRENDERING_WIND_DISABLED,
-	OBJECTRENDERING_WIND_ENABLED,
-	OBJECTRENDERING_WIND_COUNT
-};
-PipelineState PSO_object
-	[MaterialComponent::SHADERTYPE_COUNT]
-	[RENDERPASS_COUNT]
-	[BLENDMODE_COUNT]
-	[OBJECTRENDERING_DOUBLESIDED_COUNT]
-	[OBJECTRENDERING_TESSELLATION_COUNT]
-	[OBJECTRENDERING_ALPHATEST_COUNT]
-	[OBJECTRENDERING_WIND_COUNT];
+	return &PSO_object[renderPass][variant.value];
+}
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
 
@@ -563,10 +578,7 @@ PipelineState PSO_sss_snow;
 PipelineState PSO_upsample_bilateral;
 PipelineState PSO_outline;
 
-
-RaytracingPipelineState RTPSO_ao;
 RaytracingPipelineState RTPSO_reflection;
-RaytracingPipelineState RTPSO_shadow;
 
 enum SKYRENDERING
 {
@@ -1152,27 +1164,27 @@ void LoadShaders()
 	wi::jobsystem::Wait(ctx);
 
 	// default objectshaders:
-	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
-		MaterialComponent::SHADERTYPE shaderType = (MaterialComponent::SHADERTYPE)args.jobIndex;
+	wi::jobsystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+		RENDERPASS renderPass = (RENDERPASS)args.jobIndex;
 
-		for (int renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
+		for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)
 		{
-			for (int blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
+			for (uint32_t blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
 			{
-				for (int doublesided = 0; doublesided < OBJECTRENDERING_DOUBLESIDED_COUNT; ++doublesided)
+				for (uint32_t cullMode = 0; cullMode <= 3; ++cullMode)
 				{
-					for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
+					for (uint32_t tessellation = 0; tessellation <= 1; ++tessellation)
 					{
-						for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
+						for (uint32_t alphatest = 0; alphatest <= 1; ++alphatest)
 						{
-							for (int wind = 0; wind < OBJECTRENDERING_WIND_COUNT; ++wind)
+							for (uint32_t wind = 0; wind <= 1; ++wind)
 							{
 								const bool transparency = blendMode != BLENDMODE_OPAQUE;
-								SHADERTYPE realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency, wind);
-								SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
-								SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
-								SHADERTYPE realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest, transparency);
-								SHADERTYPE realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, shaderType);
+								SHADERTYPE realVS = GetVSTYPE(renderPass, tessellation, alphatest, transparency, wind);
+								SHADERTYPE realHS = GetHSTYPE(renderPass, tessellation, alphatest);
+								SHADERTYPE realDS = GetDSTYPE(renderPass, tessellation, alphatest);
+								SHADERTYPE realGS = GetGSTYPE(renderPass, alphatest, transparency);
+								SHADERTYPE realPS = GetPSTYPE(renderPass, alphatest, transparency, (MaterialComponent::SHADERTYPE)shaderType);
 
 								if (tessellation && (realHS == SHADERTYPE_COUNT || realDS == SHADERTYPE_COUNT))
 								{
@@ -1256,22 +1268,22 @@ void LoadShaders()
 								{
 								case RENDERPASS_SHADOW:
 								case RENDERPASS_SHADOWCUBE:
-									desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+									desc.rs = &rasterizers[cullMode == (int)CullMode::NONE ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
 									break;
 								case RENDERPASS_VOXELIZE:
 									desc.rs = &rasterizers[RSTYPE_VOXELIZE];
 									break;
 								default:
-									switch (doublesided)
+									switch ((CullMode)cullMode)
 									{
 									default:
-									case OBJECTRENDERING_DOUBLESIDED_DISABLED:
+									case CullMode::BACK:
 										desc.rs = &rasterizers[RSTYPE_FRONT];
 										break;
-									case OBJECTRENDERING_DOUBLESIDED_ENABLED:
+									case CullMode::NONE:
 										desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 										break;
-									case OBJECTRENDERING_DOUBLESIDED_BACKSIDE:
+									case CullMode::FRONT:
 										desc.rs = &rasterizers[RSTYPE_BACK];
 										break;
 									}
@@ -1287,7 +1299,14 @@ void LoadShaders()
 									desc.pt = PrimitiveTopology::TRIANGLELIST;
 								}
 
-								device->CreatePipelineState(&desc, &PSO_object[shaderType][renderPass][blendMode][doublesided][tessellation][alphatest][wind]);
+								ObjectRenderingVariant variant = {};
+								variant.bits.shadertype = shaderType;
+								variant.bits.blendmode = blendMode;
+								variant.bits.cullmode = cullMode;
+								variant.bits.tessellation = tessellation;
+								variant.bits.alphatest = alphatest;
+								variant.bits.wind = wind;
+								device->CreatePipelineState(&desc, GetObjectPSO(renderPass, variant));
 							}
 						}
 					}
@@ -2405,7 +2424,9 @@ void Workaround(const int bug , CommandList cmd)
 		//PE: https://github.com/turanszkij/WickedEngine/issues/450#issuecomment-1143647323
 
 		//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
-		const PipelineState* pso = &PSO_object[0][RENDERPASS_VOXELIZE][BLENDMODE_OPAQUE][0][0][0][0];
+		ObjectRenderingVariant variant = {};
+		variant.bits.blendmode = BLENDMODE_OPAQUE;
+		const PipelineState* pso = &PSO_object[RENDERPASS_VOXELIZE][variant.value];
 
 		device->EventBegin("Workaround 1", cmd);
 		static RenderPass renderpass_clear;
@@ -2469,6 +2490,8 @@ void RenderMeshes(
 		uint32_t lod = 0;
 	} instancedBatch = {};
 
+	uint32_t prev_stencilref = STENCILREF_DEFAULT;
+	device->BindStencilRef(prev_stencilref, cmd);
 
 	// This will be called every time we start a new draw call:
 	auto batch_flush = [&]()
@@ -2538,18 +2561,21 @@ void RenderMeshes(
 				}
 				else
 				{
-					const BLENDMODE blendMode = material.GetBlendMode();
-					const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
-					const bool wind = material.IsUsingWind();
-					OBJECTRENDERING_DOUBLESIDED doublesided = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
+					ObjectRenderingVariant variant = {};
+					variant.bits.shadertype = material.shaderType;
+					variant.bits.blendmode = material.GetBlendMode();
+					variant.bits.cullmode = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? (uint32_t)CullMode::NONE : (uint32_t)CullMode::BACK;
+					variant.bits.tessellation = tessellatorRequested;
+					variant.bits.alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
+					variant.bits.wind = material.IsUsingWind();
 
-					pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest][wind];
+					pso = GetObjectPSO(renderPass, variant);
 					assert(pso->IsValid());
 
-					if ((filterMask & FILTER_TRANSPARENT) && doublesided == OBJECTRENDERING_DOUBLESIDED_ENABLED)
+					if ((filterMask & FILTER_TRANSPARENT) && variant.bits.cullmode == (uint32_t)CullMode::NONE)
 					{
-						doublesided = OBJECTRENDERING_DOUBLESIDED_BACKSIDE;
-						pso_backside = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest][wind];
+						variant.bits.cullmode = (uint32_t)CullMode::FRONT;
+						pso_backside = GetObjectPSO(renderPass, variant);
 					}
 				}
 			}
@@ -2562,7 +2588,11 @@ void RenderMeshes(
 			STENCILREF engineStencilRef = material.engineStencilRef;
 			uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
 			uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
-			device->BindStencilRef(stencilRef, cmd);
+			if (stencilRef != prev_stencilref)
+			{
+				prev_stencilref = stencilRef;
+				device->BindStencilRef(stencilRef, cmd);
+			}
 
 			if (renderPass != RENDERPASS_PREPASS && renderPass != RENDERPASS_VOXELIZE) // depth only alpha test will be full res
 			{
@@ -4912,7 +4942,7 @@ void DrawShadowmaps(
 							const ObjectComponent& object = vis.scene->objects[i];
 							if (object.IsRenderable() && object.IsCastingShadow() && (cascade < (CASCADE_COUNT - object.cascadeMask)))
 							{
-								renderQueue.add(object.mesh_index, uint32_t(i), 0);
+								renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
 
 								const uint32_t filterMask = object.GetFilterMask();
 								if (filterMask & FILTER_TRANSPARENT || filterMask & FILTER_WATER)
@@ -4938,6 +4968,7 @@ void DrawShadowmaps(
 						vp.max_depth = 1.0f;
 						device->BindViewports(1, &vp, cmd);
 
+						renderQueue.sort_opaque();
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd);
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
@@ -4968,7 +4999,7 @@ void DrawShadowmaps(
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
-							renderQueue.add(object.mesh_index, uint32_t(i), 0);
+							renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
 
 							const uint32_t filterMask = object.GetFilterMask();
 							if (filterMask & FILTER_TRANSPARENT || filterMask & FILTER_WATER)
@@ -5001,6 +5032,7 @@ void DrawShadowmaps(
 					vp.max_depth = 1.0f;
 					device->BindViewports(1, &vp, cmd);
 
+					renderQueue.sort_opaque();
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
@@ -5030,7 +5062,7 @@ void DrawShadowmaps(
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
-							renderQueue.add(object.mesh_index, uint32_t(i), 0);
+							renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
 
 							const uint32_t filterMask = object.GetFilterMask();
 							if (filterMask & FILTER_TRANSPARENT || filterMask & FILTER_WATER)
@@ -5078,6 +5110,7 @@ void DrawShadowmaps(
 					device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
 					device->BindViewports(arraysize(vp), vp, cmd);
 
+					renderQueue.sort_opaque();
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, FILTER_OPAQUE, cmd, false, frusta, frustum_count);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
@@ -5174,7 +5207,7 @@ void DrawScene(
 			{
 				continue;
 			}
-			renderQueue.add(object.mesh_index, instanceIndex, distance);
+			renderQueue.add(object.mesh_index, instanceIndex, distance, object.sort_bits);
 		}
 	}
 	if (!renderQueue.empty())
@@ -6794,7 +6827,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					const ObjectComponent& object = vis.scene->objects[i];
 					if (object.IsRenderable())
 					{
-						renderQueue.add(object.mesh_index, uint32_t(i), 0);
+						renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
 					}
 				}
 			}
@@ -7140,7 +7173,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			const ObjectComponent& object = vis.scene->objects[i];
 			if (object.IsRenderable())
 			{
-				renderQueue.add(object.mesh_index, uint32_t(i), 0);
+				renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
 			}
 		}
 	}

@@ -3173,7 +3173,7 @@ namespace wi::scene
 				material.texMulAdd.w = fmodf(material.texMulAdd.w + material.texAnimDirection.y, 1);
 				material.texAnimElapsedTime = 0.0f;
 
-				material.SetDirty(); // will trigger constant buffer update later on
+				material.SetDirty();
 			}
 
 			material.engineStencilRef = STENCILREF_DEFAULT;
@@ -3405,6 +3405,7 @@ namespace wi::scene
 
 			aabb = AABB();
 			object.filterMaskDynamic = 0;
+			object.sort_bits = {};
 			object.SetDynamic(false);
 			object.SetRequestPlanarReflection(false);
 			object.fadeDistance = object.draw_distance;
@@ -3482,6 +3483,25 @@ namespace wi::scene
 					}
 				}
 
+				union SortBits
+				{
+					struct
+					{
+						uint32_t shadertype : MaterialComponent::SHADERTYPE_COUNT;
+						uint32_t blendmode : wi::enums::BLENDMODE_COUNT;
+						uint32_t doublesided : 1;	// bool
+						uint32_t tessellation : 1;	// bool
+						uint32_t alphatest : 1;		// bool
+						uint32_t wind : 1;			// bool
+						uint32_t customshader : 10;
+					} bits;
+					uint32_t value;
+				} sort_bits;
+				static_assert(sizeof(SortBits) == sizeof(uint32_t));
+
+				sort_bits.bits.tessellation = mesh.GetTessellationFactor() > 0;
+				sort_bits.bits.doublesided = mesh.IsDoubleSided();
+
 				uint32_t first_subset = 0;
 				uint32_t last_subset = 0;
 				mesh.GetLODSubsetRange(object.lod, first_subset, last_subset);
@@ -3497,6 +3517,18 @@ namespace wi::scene
 						if (material->HasPlanarReflection())
 						{
 							object.SetRequestPlanarReflection(true);
+						}
+
+						sort_bits.bits.shadertype |= 1 << material->shaderType;
+						sort_bits.bits.blendmode |= 1 << material->GetBlendMode();
+						sort_bits.bits.doublesided |= material->IsDoubleSided();
+						sort_bits.bits.alphatest |= material->IsAlphaTestEnabled();
+						sort_bits.bits.wind |= material->IsUsingWind();
+
+						int customshader = material->GetCustomShaderID();
+						if (customshader >= 0)
+						{
+							sort_bits.bits.customshader |= 1 << customshader;
 						}
 					}
 				}
