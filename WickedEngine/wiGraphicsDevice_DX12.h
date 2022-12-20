@@ -31,10 +31,8 @@ namespace wi::graphics
 		Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 		Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgiAdapter;
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
-
-#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
 		Microsoft::WRL::ComPtr<ID3D12PipelineLibrary1> pipelineLibrary;
-#endif
+		mutable std::mutex pipelineLibraryLocker;
 
 #ifndef PLATFORM_UWP
 		Microsoft::WRL::ComPtr<ID3D12Fence> deviceRemovedFence;
@@ -147,6 +145,7 @@ namespace wi::graphics
 			Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer;
 			bool dirty_pso = {};
 			wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> accelerationstructure_build_geometries;
+			RenderPassInfo renderpass_info;
 
 			void reset(uint32_t bufferindex)
 			{
@@ -166,6 +165,7 @@ namespace wi::graphics
 				dirty_pso = false;
 				swapchains.clear();
 				active_backbuffer = nullptr;
+				renderpass_info = {};
 			}
 
 			inline ID3D12CommandAllocator* GetCommandAllocator()
@@ -208,7 +208,7 @@ namespace wi::graphics
 		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const override;
 		bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const override;
 		bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const override;
-		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const override;
+		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info = nullptr) const override;
 		bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const override;
@@ -326,6 +326,11 @@ namespace wi::graphics
 		void EventBegin(const char* name, CommandList cmd) override;
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
+
+		RenderPassInfo GetRenderPassInfo(CommandList cmd) override
+		{
+			return GetCommandList(cmd).renderpass_info;
+		}
 
 		GPULinearAllocator& GetFrameAllocator(CommandList cmd) override
 		{

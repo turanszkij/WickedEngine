@@ -568,6 +568,14 @@ namespace wi::graphics
 		uint32_t query_count = 0;
 	};
 
+	struct RenderPassInfo
+	{
+		Format rt_formats[8] = {};
+		uint32_t rt_count = 0;
+		Format ds_format = Format::UNKNOWN;
+		uint32_t sample_count = 1;
+	};
+
 	struct PipelineStateDesc
 	{
 		const Shader*			vs = nullptr;

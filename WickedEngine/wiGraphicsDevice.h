@@ -73,7 +73,7 @@ namespace wi::graphics
 		virtual bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const = 0;
 		virtual bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const = 0;
 		virtual bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const = 0;
-		virtual bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const = 0;
+		virtual bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info = nullptr) const = 0;
 		virtual bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const = 0;
 		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const { return false; }
 		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const { return false; }
@@ -223,6 +223,7 @@ namespace wi::graphics
 		virtual void EventEnd(CommandList cmd) = 0;
 		virtual void SetMarker(const char* name, CommandList cmd) = 0;
 
+		virtual RenderPassInfo GetRenderPassInfo(CommandList cmd) = 0;
 
 		// Some useful helpers:
 

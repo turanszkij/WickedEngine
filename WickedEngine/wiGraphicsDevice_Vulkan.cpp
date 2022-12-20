@@ -746,6 +746,7 @@ namespace vulkan_internal
 	struct PipelineState_Vulkan
 	{
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		VkPipeline pipeline = VK_NULL_HANDLE;
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE; // no lifetime management here
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE; // no lifetime management here
 		wi::vector<VkDescriptorSetLayoutBinding> layoutBindings;
@@ -773,6 +774,16 @@ namespace vulkan_internal
 		VkPipelineDepthStencilStateCreateInfo depthstencil = {};
 		VkSampleMask samplemask = {};
 		VkPipelineTessellationStateCreateInfo tessellationInfo = {};
+
+		~PipelineState_Vulkan()
+		{
+			if (allocationhandler == nullptr)
+				return;
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (pipeline) allocationhandler->destroyer_pipelines.push_back(std::make_pair(pipeline, framecount));
+			allocationhandler->destroylocker.unlock();
+		}
 	};
 	struct RenderPass_Vulkan
 	{
@@ -932,7 +943,7 @@ namespace vulkan_internal
 
 	inline const std::string GetCachePath()
 	{
-		return wi::helper::GetTempDirectoryPath() + "WickedVkPipelineCache.data";
+		return wi::helper::GetTempDirectoryPath() + "wiPipelineCache_Vulkan";
 	}
 
 	bool CreateSwapChainInternal(
@@ -1999,7 +2010,6 @@ using namespace vulkan_internal;
 
 		const PipelineState* pso = commandlist.active_pso;
 		size_t pipeline_hash = commandlist.prev_pipeline_hash;
-		wi::helper::hash_combine(pipeline_hash, commandlist.vb_hash);
 		auto internal_state = to_internal(pso);
 
 		VkPipeline pipeline = VK_NULL_HANDLE;
@@ -2131,7 +2141,7 @@ using namespace vulkan_internal;
 						VkVertexInputBindingDescription& bind = bindings.emplace_back();
 						bind.binding = x.input_slot;
 						bind.inputRate = x.input_slot_class == InputClassification::PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
-						bind.stride = commandlist.vb_strides[x.input_slot];
+						bind.stride = GetFormatStride(x.format);
 					}
 
 					uint32_t offset = 0;
@@ -2223,7 +2233,7 @@ using namespace vulkan_internal;
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.pEngineName = "Wicked Engine";
 		appInfo.engineVersion = VK_MAKE_VERSION(wi::version::GetMajor(), wi::version::GetMinor(), wi::version::GetRevision());
-		appInfo.apiVersion = VK_API_VERSION_1_2;
+		appInfo.apiVersion = VK_API_VERSION_1_3;
 
 		// Enumerate available layers and extensions:
 		uint32_t instanceLayerCount;
@@ -2404,9 +2414,11 @@ using namespace vulkan_internal;
 				features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 				features_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
 				features_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+				features_1_3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
 				features2.pNext = &features_1_1;
 				features_1_1.pNext = &features_1_2;
-				void** features_chain = &features_1_2.pNext;
+				features_1_2.pNext = &features_1_3;
+				void** features_chain = &features_1_3.pNext;
 				acceleration_structure_features = {};
 				raytracing_features = {};
 				raytracing_query_features = {};
@@ -2418,9 +2430,11 @@ using namespace vulkan_internal;
 				properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 				properties_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
 				properties_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
+				properties_1_3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES;
 				properties2.pNext = &properties_1_1;
 				properties_1_1.pNext = &properties_1_2;
-				void** properties_chain = &properties_1_2.pNext;
+				properties_1_2.pNext = &properties_1_3;
+				void** properties_chain = &properties_1_3.pNext;
 				sampler_minmax_properties = {};
 				acceleration_structure_properties = {};
 				raytracing_properties = {};
@@ -2539,6 +2553,7 @@ using namespace vulkan_internal;
 			assert(features2.features.textureCompressionBC == VK_TRUE);
 			assert(features2.features.occlusionQueryPrecise == VK_TRUE);
 			assert(features_1_2.descriptorIndexing == VK_TRUE);
+			assert(features_1_3.dynamicRendering == VK_TRUE);
 
 			// Init adapter properties
 			vendorId = properties2.properties.vendorID;
@@ -3126,6 +3141,7 @@ using namespace vulkan_internal;
 		{
 			pso_dynamicStates.push_back(VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR);
 		}
+		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE);
 
 		dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 		dynamicStateInfo.dynamicStateCount = (uint32_t)pso_dynamicStates.size();
@@ -4513,7 +4529,6 @@ using namespace vulkan_internal;
 			// Create compute pipeline state in place:
 			pipelineInfo.stage = internal_state->stageInfo;
 
-
 			res = vkCreateComputePipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs);
 			assert(res == VK_SUCCESS);
 		}
@@ -4785,7 +4800,7 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const
+	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info) const
 	{
 		auto internal_state = std::make_shared<PipelineState_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -5256,8 +5271,169 @@ using namespace vulkan_internal;
 
 		pipelineInfo.pTessellationState = &tessellationInfo;
 
-
 		pipelineInfo.pDynamicState = &dynamicStateInfo;
+
+		if (renderpass_info != nullptr)
+		{
+			// MSAA:
+			VkPipelineMultisampleStateCreateInfo multisampling = {};
+			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+			multisampling.sampleShadingEnable = VK_FALSE;
+			multisampling.rasterizationSamples = (VkSampleCountFlagBits)renderpass_info->sample_count;
+			if (pso->desc.rs != nullptr)
+			{
+				const RasterizerState& desc = *pso->desc.rs;
+				if (desc.forced_sample_count > 1)
+				{
+					multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.forced_sample_count;
+				}
+			}
+			multisampling.minSampleShading = 1.0f;
+			VkSampleMask samplemask = internal_state->samplemask;
+			samplemask = pso->desc.sample_mask;
+			multisampling.pSampleMask = &samplemask;
+			if (pso->desc.bs != nullptr)
+			{
+				multisampling.alphaToCoverageEnable = pso->desc.bs->alpha_to_coverage_enable ? VK_TRUE : VK_FALSE;
+			}
+			else
+			{
+				multisampling.alphaToCoverageEnable = VK_FALSE;
+			}
+			multisampling.alphaToOneEnable = VK_FALSE;
+
+			pipelineInfo.pMultisampleState = &multisampling;
+
+
+			// Blending:
+			uint32_t numBlendAttachments = 0;
+			VkPipelineColorBlendAttachmentState colorBlendAttachments[8] = {};
+			for (size_t i = 0; i < renderpass_info->rt_count; ++i)
+			{
+				size_t attachmentIndex = 0;
+				if (pso->desc.bs->independent_blend_enable)
+					attachmentIndex = i;
+
+				const auto& desc = pso->desc.bs->render_target[attachmentIndex];
+				VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
+				numBlendAttachments++;
+
+				attachment.blendEnable = desc.blend_enable ? VK_TRUE : VK_FALSE;
+
+				attachment.colorWriteMask = 0;
+				if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_RED))
+				{
+					attachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
+				}
+				if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_GREEN))
+				{
+					attachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
+				}
+				if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_BLUE))
+				{
+					attachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
+				}
+				if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_ALPHA))
+				{
+					attachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
+				}
+
+				attachment.srcColorBlendFactor = _ConvertBlend(desc.src_blend);
+				attachment.dstColorBlendFactor = _ConvertBlend(desc.dest_blend);
+				attachment.colorBlendOp = _ConvertBlendOp(desc.blend_op);
+				attachment.srcAlphaBlendFactor = _ConvertBlend(desc.src_blend_alpha);
+				attachment.dstAlphaBlendFactor = _ConvertBlend(desc.dest_blend_alpha);
+				attachment.alphaBlendOp = _ConvertBlendOp(desc.blend_op_alpha);
+			}
+
+			VkPipelineColorBlendStateCreateInfo colorBlending = {};
+			colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+			colorBlending.logicOpEnable = VK_FALSE;
+			colorBlending.logicOp = VK_LOGIC_OP_COPY;
+			colorBlending.attachmentCount = numBlendAttachments;
+			colorBlending.pAttachments = colorBlendAttachments;
+			colorBlending.blendConstants[0] = 1.0f;
+			colorBlending.blendConstants[1] = 1.0f;
+			colorBlending.blendConstants[2] = 1.0f;
+			colorBlending.blendConstants[3] = 1.0f;
+
+			pipelineInfo.pColorBlendState = &colorBlending;
+
+			// Input layout:
+			VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+			vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+			wi::vector<VkVertexInputBindingDescription> bindings;
+			wi::vector<VkVertexInputAttributeDescription> attributes;
+			if (pso->desc.il != nullptr)
+			{
+				uint32_t lastBinding = 0xFFFFFFFF;
+				for (auto& x : pso->desc.il->elements)
+				{
+					if (x.input_slot == lastBinding)
+						continue;
+					lastBinding = x.input_slot;
+					VkVertexInputBindingDescription& bind = bindings.emplace_back();
+					bind.binding = x.input_slot;
+					bind.inputRate = x.input_slot_class == InputClassification::PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
+					bind.stride = GetFormatStride(x.format);
+				}
+
+				uint32_t offset = 0;
+				uint32_t i = 0;
+				lastBinding = 0xFFFFFFFF;
+				for (auto& x : pso->desc.il->elements)
+				{
+					VkVertexInputAttributeDescription attr = {};
+					attr.binding = x.input_slot;
+					if (attr.binding != lastBinding)
+					{
+						lastBinding = attr.binding;
+						offset = 0;
+					}
+					attr.format = _ConvertFormat(x.format);
+					attr.location = i;
+					attr.offset = x.aligned_byte_offset;
+					if (attr.offset == InputLayout::APPEND_ALIGNED_ELEMENT)
+					{
+						// need to manually resolve this from the format spec.
+						attr.offset = offset;
+						offset += GetFormatStride(x.format);
+					}
+
+					attributes.push_back(attr);
+
+					i++;
+				}
+
+				vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
+				vertexInputInfo.pVertexBindingDescriptions = bindings.data();
+				vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
+				vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
+			}
+			pipelineInfo.pVertexInputState = &vertexInputInfo;
+
+			pipelineInfo.renderPass = VK_NULL_HANDLE; // instead we use VkPipelineRenderingCreateInfo
+
+			VkPipelineRenderingCreateInfo renderingInfo = {};
+			renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+			renderingInfo.viewMask = 0;
+			renderingInfo.colorAttachmentCount = renderpass_info->rt_count;
+			VkFormat formats[8] = {};
+			for (uint32_t i = 0; i < renderpass_info->rt_count; ++i)
+			{
+				formats[i] = _ConvertFormat(renderpass_info->rt_formats[i]);
+			}
+			renderingInfo.pColorAttachmentFormats = formats;
+			renderingInfo.depthAttachmentFormat = _ConvertFormat(renderpass_info->ds_format);
+			if (IsFormatStencilSupport(renderpass_info->ds_format))
+			{
+				renderingInfo.stencilAttachmentFormat = renderingInfo.depthAttachmentFormat;
+			}
+			pipelineInfo.pNext = &renderingInfo;
+
+			VkResult res = vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline);
+			assert(res == VK_SUCCESS);
+		}
 
 		return res == VK_SUCCESS;
 	}
@@ -7044,7 +7220,10 @@ using namespace vulkan_internal;
 		renderPassInfo.clearValueCount = 1;
 		renderPassInfo.pClearValues = &clearColor;
 		vkCmdBeginRenderPass(commandlist.GetCommandBuffer(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-		
+
+		commandlist.renderpass_info = {};
+		commandlist.renderpass_info.rt_count = 1;
+		commandlist.renderpass_info.rt_formats[0] = swapchain->desc.format;
 	}
 	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
@@ -7053,12 +7232,29 @@ using namespace vulkan_internal;
 
 		auto internal_state = to_internal(renderpass);
 		vkCmdBeginRenderPass(commandlist.GetCommandBuffer(), &internal_state->beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		commandlist.renderpass_info = {};
+		for (auto& x : renderpass->desc.attachments)
+		{
+			switch (x.type)
+			{
+			case RenderPassAttachment::Type::RENDERTARGET:
+				commandlist.renderpass_info.rt_formats[commandlist.renderpass_info.rt_count++] = x.texture.desc.format;
+				commandlist.renderpass_info.sample_count = x.texture.desc.sample_count;
+				break;
+			case RenderPassAttachment::Type::DEPTH_STENCIL:
+				commandlist.renderpass_info.ds_format = x.texture.desc.format;
+				commandlist.renderpass_info.sample_count = x.texture.desc.sample_count;
+				break;
+			}
+		}
 	}
 	void GraphicsDevice_Vulkan::RenderPassEnd(CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		vkCmdEndRenderPass(commandlist.GetCommandBuffer());
 
+		commandlist.renderpass_info = {};
 		commandlist.active_renderpass = nullptr;
 	}
 	void GraphicsDevice_Vulkan::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
@@ -7174,12 +7370,12 @@ using namespace vulkan_internal;
 		size_t hash = 0;
 
 		VkDeviceSize voffsets[8] = {};
+		VkDeviceSize vstrides[8] = {};
 		VkBuffer vbuffers[8] = {};
 		assert(count <= 8);
 		for (uint32_t i = 0; i < count; ++i)
 		{
 			wi::helper::hash_combine(hash, strides[i]);
-			commandlist.vb_strides[i] = strides[i];
 
 			if (vertexBuffers[i] == nullptr || !vertexBuffers[i]->IsValid())
 			{
@@ -7193,20 +7389,14 @@ using namespace vulkan_internal;
 				{
 					voffsets[i] = offsets[i];
 				}
+				if (strides != nullptr)
+				{
+					vstrides[i] = strides[i];
+				}
 			}
 		}
-		for (int i = count; i < arraysize(commandlist.vb_strides); ++i)
-		{
-			commandlist.vb_strides[i] = 0;
-		}
 
-		vkCmdBindVertexBuffers(commandlist.GetCommandBuffer(), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
-
-		if (hash != commandlist.vb_hash)
-		{
-			commandlist.vb_hash = hash;
-			commandlist.dirty_pso = true;
-		}
+		vkCmdBindVertexBuffers2(commandlist.GetCommandBuffer(), slot, count, vbuffers, voffsets, nullptr, vstrides);
 	}
 	void GraphicsDevice_Vulkan::BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd)
 	{
@@ -7315,19 +7505,30 @@ using namespace vulkan_internal;
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
 
-		size_t pipeline_hash = 0;
-		wi::helper::hash_combine(pipeline_hash, pso->hash);
-		if (commandlist.active_renderpass != nullptr)
-		{
-			wi::helper::hash_combine(pipeline_hash, commandlist.active_renderpass->hash);
-		}
-		if (commandlist.prev_pipeline_hash == pipeline_hash)
-		{
-			return;
-		}
-		commandlist.prev_pipeline_hash = pipeline_hash;
-
 		auto internal_state = to_internal(pso);
+
+		if (internal_state->pipeline != VK_NULL_HANDLE)
+		{
+			vkCmdBindPipeline(commandlist.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, internal_state->pipeline);
+
+			commandlist.prev_pipeline_hash = 0;
+			commandlist.dirty_pso = false;
+		}
+		else
+		{
+			size_t pipeline_hash = 0;
+			wi::helper::hash_combine(pipeline_hash, pso->hash);
+			if (commandlist.active_renderpass != nullptr)
+			{
+				wi::helper::hash_combine(pipeline_hash, commandlist.active_renderpass->hash);
+			}
+			if (commandlist.prev_pipeline_hash == pipeline_hash)
+			{
+				return;
+			}
+			commandlist.prev_pipeline_hash = pipeline_hash;
+			commandlist.dirty_pso = true;
+		}
 
 		if (commandlist.active_pso == nullptr)
 		{
@@ -7357,7 +7558,6 @@ using namespace vulkan_internal;
 		}
 
 		commandlist.active_pso = pso;
-		commandlist.dirty_pso = true;
 	}
 	void GraphicsDevice_Vulkan::BindComputeShader(const Shader* cs, CommandList cmd)
 	{

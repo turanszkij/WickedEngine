@@ -26,6 +26,7 @@ using namespace Microsoft::WRL;
 
 namespace wi::graphics
 {
+//#define PIPELINE_LIBRARY_ENABLED
 
 namespace dx12_internal
 {
@@ -1549,7 +1550,7 @@ namespace dx12_internal
 
 	inline const std::string GetCachePath()
 	{
-		return wi::helper::GetTempDirectoryPath() + "WickedD3D12PipelineCache.data";
+		return wi::helper::GetTempDirectoryPath() + "wiPipelineCache_DX12";
 	}
 
 	inline void HashToName(uint64_t hash, std::wstring& name)
@@ -2056,23 +2057,27 @@ using namespace dx12_internal;
 				}
 
 				ComPtr<ID3D12PipelineState> newpso;
-#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
-				std::wstring name;
-				HashToName(pipeline_hash, name);
 
-				HRESULT hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&newpso));
+				HRESULT hr = E_INVALIDARG;
+				std::wstring name;
+
+				if (pipelineLibrary != nullptr)
+				{
+					HashToName(pipeline_hash, name);
+					pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
+					hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&newpso));
+					pipelineLibraryLocker.unlock();
+				}
+
 				if (hr == E_INVALIDARG)
 				{
 					hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
 
-					if (SUCCEEDED(hr))
+					if (pipelineLibrary != nullptr && SUCCEEDED(hr))
 					{
 						hr = pipelineLibrary->StorePipeline(name.c_str(), newpso.Get());
 					}
 				}
-#else
-				HRESULT hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
-#endif
 				assert(SUCCEEDED(hr));
 
 				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, newpso));
@@ -2354,11 +2359,9 @@ using namespace dx12_internal;
 				disabledMessages.push_back(D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS);
 				disabledMessages.push_back(D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE);
 
-#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
 				disabledMessages.push_back(D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_DRIVERVERSIONMISMATCH);
 				disabledMessages.push_back(D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_ADAPTERVERSIONMISMATCH);
 				disabledMessages.push_back(D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND);
-#endif
 
 				D3D12_INFO_QUEUE_FILTER filter = {};
 				filter.AllowList.NumSeverities = static_cast<UINT>(enabledSeverities.size());
@@ -2709,10 +2712,9 @@ using namespace dx12_internal;
 		}
 
 		// Create pipeline library:
-#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
+#ifdef PIPELINE_LIBRARY_ENABLED
 		// Try to read pipeline cache file if exists.
 		wi::vector<uint8_t> pipelineData;
-
 		std::string cachePath = GetCachePath();
 		if (!wi::helper::FileRead(cachePath, pipelineData))
 		{
@@ -2736,7 +2738,7 @@ using namespace dx12_internal;
 				assert(SUCCEEDED(hr));
 				break;
 		}
-#endif
+#endif // PIPELINE_LIBRARY_ENABLED
 
 #ifndef PLATFORM_UWP
 		// Create fence to detect device removal
@@ -2921,16 +2923,18 @@ using namespace dx12_internal;
 	{
 		WaitForGPU();
 
-#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
-		std::vector<uint8_t> serializedData(pipelineLibrary->GetSerializedSize());
-		HRESULT hr = pipelineLibrary->Serialize(serializedData.data(), serializedData.size());
-		if (SUCCEEDED(hr))
+		if (pipelineLibrary != nullptr)
 		{
-			// Write pipeline cache data to a file in binary format
-			std::string cachePath = GetCachePath();
-			wi::helper::FileWrite(cachePath, serializedData.data(), serializedData.size());
+			std::vector<uint8_t> serializedData(pipelineLibrary->GetSerializedSize());
+			HRESULT hr = pipelineLibrary->Serialize(serializedData.data(), serializedData.size());
+			assert(SUCCEEDED(hr));
+			if (SUCCEEDED(hr))
+			{
+				// Write pipeline cache data to a file in binary format
+				std::string cachePath = GetCachePath();
+				wi::helper::FileWrite(cachePath, serializedData.data(), serializedData.size());
+			}
 		}
-#endif
 
 #ifndef PLATFORM_UWP
 		std::ignore = UnregisterWait(deviceRemovedWaitHandle);
@@ -3615,7 +3619,31 @@ using namespace dx12_internal;
 			streamDesc.pPipelineStateSubobjectStream = &stream;
 			streamDesc.SizeInBytes = sizeof(stream);
 
-			hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
+			HRESULT hr = E_INVALIDARG;
+
+			std::wstring name;
+			if (pipelineLibrary != nullptr)
+			{
+				size_t hash = 0;
+				for (size_t i = 0; i < shadercode_size; ++i)
+				{
+					wi::helper::hash_combine(hash, ((const uint8_t*)shadercode)[i]);
+				}
+				HashToName(hash, name);
+				pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
+				hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&internal_state->resource));
+				pipelineLibraryLocker.unlock();
+			}
+
+			if (hr == E_INVALIDARG)
+			{
+				hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
+
+				if (pipelineLibrary != nullptr && SUCCEEDED(hr))
+				{
+					hr = pipelineLibrary->StorePipeline(name.c_str(), internal_state->resource.Get());
+				}
+			}
 			assert(SUCCEEDED(hr));
 		}
 
@@ -3694,7 +3722,7 @@ using namespace dx12_internal;
 
 		return SUCCEEDED(hr);
 	}
-	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const
+	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info) const
 	{
 		auto internal_state = std::make_shared<PipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3903,6 +3931,57 @@ using namespace dx12_internal;
 		}
 
 		stream.stream1.STRIP = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+
+		if (renderpass_info != nullptr)
+		{
+			DXGI_FORMAT DSFormat = _ConvertFormat(renderpass_info->ds_format);
+			D3D12_RT_FORMAT_ARRAY formats = {};
+			formats.NumRenderTargets = renderpass_info->rt_count;
+			for (uint32_t i = 0; i < renderpass_info->rt_count; ++i)
+			{
+				formats.RTFormats[i] = _ConvertFormat(renderpass_info->rt_formats[i]);
+			}
+			DXGI_SAMPLE_DESC sampleDesc = {};
+			sampleDesc.Count = renderpass_info->sample_count;
+			sampleDesc.Quality = 0;
+
+			stream.stream1.DSFormat = DSFormat;
+			stream.stream1.Formats = formats;
+			stream.stream1.SampleDesc = sampleDesc;
+
+			D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
+			streamDesc.pPipelineStateSubobjectStream = &stream;
+			streamDesc.SizeInBytes = sizeof(stream.stream1);
+			if (CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+			{
+				streamDesc.SizeInBytes += sizeof(stream.stream2);
+			}
+
+			ComPtr<ID3D12PipelineState> newpso;
+
+			HRESULT hr = E_INVALIDARG;
+			std::wstring name;
+			if (pipelineLibrary != nullptr)
+			{
+				HashToName(pso->hash, name);
+				pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
+				hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&newpso));
+				pipelineLibraryLocker.unlock();
+			}
+
+			if (hr == E_INVALIDARG)
+			{
+				hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
+
+				if (pipelineLibrary != nullptr && SUCCEEDED(hr))
+				{
+					hr = pipelineLibrary->StorePipeline(name.c_str(), newpso.Get());
+				}
+			}
+			assert(SUCCEEDED(hr));
+
+			internal_state->resource = newpso;
+		}
 
 		return true;
 	}
@@ -4555,6 +4634,7 @@ using namespace dx12_internal;
 				break;
 			case Format::D32_FLOAT_S8X24_UINT:
 				srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+				break;
 			default:
 				srv_desc.Format = _ConvertFormat(format);
 				break;
@@ -5555,6 +5635,9 @@ using namespace dx12_internal;
 		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 		commandlist.GetGraphicsCommandList()->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
 
+		commandlist.renderpass_info = {};
+		commandlist.renderpass_info.rt_count = 1;
+		commandlist.renderpass_info.rt_formats[0] = swapchain->desc.format;
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
@@ -5580,6 +5663,21 @@ using namespace dx12_internal;
 			internal_state->flags
 		);
 
+		commandlist.renderpass_info = {};
+		for (auto& x : renderpass->desc.attachments)
+		{
+			switch (x.type)
+			{
+			case RenderPassAttachment::Type::RENDERTARGET:
+				commandlist.renderpass_info.rt_formats[commandlist.renderpass_info.rt_count++] = x.texture.desc.format;
+				commandlist.renderpass_info.sample_count = x.texture.desc.sample_count;
+				break;
+			case RenderPassAttachment::Type::DEPTH_STENCIL:
+				commandlist.renderpass_info.ds_format = x.texture.desc.format;
+				commandlist.renderpass_info.sample_count = x.texture.desc.sample_count;
+				break;
+			}
+		}
 	}
 	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
 	{
@@ -5601,6 +5699,7 @@ using namespace dx12_internal;
 			}
 		}
 
+		commandlist.renderpass_info = {};
 		commandlist.active_renderpass = nullptr;
 
 		if (commandlist.active_backbuffer)
@@ -5850,19 +5949,36 @@ using namespace dx12_internal;
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
 
-		size_t pipeline_hash = 0;
-		wi::helper::hash_combine(pipeline_hash, pso->hash);
-		if (commandlist.active_renderpass != nullptr)
-		{
-			wi::helper::hash_combine(pipeline_hash, commandlist.active_renderpass->hash);
-		}
-		if (commandlist.prev_pipeline_hash == pipeline_hash)
-		{
-			return;
-		}
-		commandlist.prev_pipeline_hash = pipeline_hash;
-
 		auto internal_state = to_internal(pso);
+		if (internal_state->resource != nullptr)
+		{
+			commandlist.GetGraphicsCommandList()->SetPipelineState(internal_state->resource.Get());
+
+			if (commandlist.prev_pt != internal_state->primitiveTopology)
+			{
+				commandlist.prev_pt = internal_state->primitiveTopology;
+
+				commandlist.GetGraphicsCommandList()->IASetPrimitiveTopology(internal_state->primitiveTopology);
+			}
+
+			commandlist.prev_pipeline_hash = 0;
+			commandlist.dirty_pso = false;
+		}
+		else
+		{
+			size_t pipeline_hash = 0;
+			wi::helper::hash_combine(pipeline_hash, pso->hash);
+			if (commandlist.active_renderpass != nullptr)
+			{
+				wi::helper::hash_combine(pipeline_hash, commandlist.active_renderpass->hash);
+			}
+			if (commandlist.prev_pipeline_hash == pipeline_hash)
+			{
+				return;
+			}
+			commandlist.prev_pipeline_hash = pipeline_hash;
+			commandlist.dirty_pso = true;
+		}
 
 		if (commandlist.active_rootsig_graphics != internal_state->rootSignature.Get())
 		{
@@ -5875,7 +5991,6 @@ using namespace dx12_internal;
 		}
 
 		commandlist.active_pso = pso;
-		commandlist.dirty_pso = true;
 	}
 	void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
