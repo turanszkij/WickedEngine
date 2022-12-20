@@ -4555,6 +4555,7 @@ using namespace dx12_internal;
 				break;
 			case Format::D32_FLOAT_S8X24_UINT:
 				srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+				break;
 			default:
 				srv_desc.Format = _ConvertFormat(format);
 				break;
