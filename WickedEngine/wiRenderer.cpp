@@ -322,10 +322,10 @@ union ObjectRenderingVariant
 	uint32_t value;
 };
 static_assert(sizeof(ObjectRenderingVariant) == sizeof(uint32_t));
-wi::unordered_map<uint32_t, PipelineState> PSO_object[RENDERPASS_COUNT];
+wi::unordered_map<uint32_t, PipelineState> PSO_object[RENDERPASS_COUNT][MaterialComponent::SHADERTYPE_COUNT];
 inline PipelineState* GetObjectPSO(RENDERPASS renderPass, ObjectRenderingVariant variant)
 {
-	return &PSO_object[renderPass][variant.value];
+	return &PSO_object[renderPass][variant.bits.shadertype][variant.value];
 }
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
@@ -1165,43 +1165,10 @@ void LoadShaders()
 	wi::jobsystem::Wait(ctx);
 
 	// default objectshaders:
-	wi::jobsystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+	wi::jobsystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [&ctx](wi::jobsystem::JobArgs args) {
 		RENDERPASS renderPass = (RENDERPASS)args.jobIndex;
-
-		RenderPassInfo renderpass_info;
-		switch (renderPass)
-		{
-		case wi::enums::RENDERPASS_MAIN:
-			renderpass_info.rt_count = 1;
-			renderpass_info.rt_formats[0] = Format::R11G11B10_FLOAT;
-			renderpass_info.ds_format = Format::D32_FLOAT_S8X24_UINT;
-			break;
-		case wi::enums::RENDERPASS_PREPASS:
-			renderpass_info.rt_count = 1;
-			renderpass_info.rt_formats[0] = Format::R32_UINT;
-			renderpass_info.ds_format = Format::D32_FLOAT_S8X24_UINT;
-			break;
-		case wi::enums::RENDERPASS_ENVMAPCAPTURE:
-			renderpass_info.rt_count = 1;
-			renderpass_info.rt_formats[0] = Format::R11G11B10_FLOAT;
-			renderpass_info.ds_format = Format::D16_UNORM;
-			break;
-		case wi::enums::RENDERPASS_SHADOW:
-		case wi::enums::RENDERPASS_SHADOWCUBE:
-			renderpass_info.rt_count = 1;
-			renderpass_info.rt_formats[0] = Format::R16G16B16A16_FLOAT;
-			renderpass_info.ds_format = Format::D16_UNORM;
-			break;
-		case wi::enums::RENDERPASS_VOXELIZE:
-			renderpass_info.rt_count = 0;
-			renderpass_info.ds_format = Format::UNKNOWN;
-			break;
-		default:
-			break;
-		}
-
-		for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)
-		{
+		wi::jobsystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [renderPass](wi::jobsystem::JobArgs args) {
+			uint32_t shaderType = args.jobIndex;
 			for (uint32_t blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
 			{
 				for (uint32_t cullMode = 0; cullMode <= 3; ++cullMode)
@@ -1333,6 +1300,38 @@ void LoadShaders()
 									desc.pt = PrimitiveTopology::TRIANGLELIST;
 								}
 
+								RenderPassInfo renderpass_info;
+								switch (renderPass)
+								{
+								case wi::enums::RENDERPASS_MAIN:
+									renderpass_info.rt_count = 1;
+									renderpass_info.rt_formats[0] = Format::R11G11B10_FLOAT;
+									renderpass_info.ds_format = Format::D32_FLOAT_S8X24_UINT;
+									break;
+								case wi::enums::RENDERPASS_PREPASS:
+									renderpass_info.rt_count = 1;
+									renderpass_info.rt_formats[0] = Format::R32_UINT;
+									renderpass_info.ds_format = Format::D32_FLOAT_S8X24_UINT;
+									break;
+								case wi::enums::RENDERPASS_ENVMAPCAPTURE:
+									renderpass_info.rt_count = 1;
+									renderpass_info.rt_formats[0] = Format::R11G11B10_FLOAT;
+									renderpass_info.ds_format = Format::D16_UNORM;
+									break;
+								case wi::enums::RENDERPASS_SHADOW:
+								case wi::enums::RENDERPASS_SHADOWCUBE:
+									renderpass_info.rt_count = 1;
+									renderpass_info.rt_formats[0] = Format::R16G16B16A16_FLOAT;
+									renderpass_info.ds_format = Format::D16_UNORM;
+									break;
+								case wi::enums::RENDERPASS_VOXELIZE:
+									renderpass_info.rt_count = 0;
+									renderpass_info.ds_format = Format::UNKNOWN;
+									break;
+								default:
+									break;
+								}
+
 								ObjectRenderingVariant variant = {};
 								variant.bits.shadertype = shaderType;
 								variant.bits.blendmode = blendMode;
@@ -1378,7 +1377,7 @@ void LoadShaders()
 					}
 				}
 			}
-		}
+		});
 	});
 
 	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
