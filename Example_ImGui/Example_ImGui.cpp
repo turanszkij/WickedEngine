@@ -64,7 +64,7 @@ bool ImGui_Impl_CreateDeviceObjects()
 	samplerDesc.address_u = TextureAddressMode::WRAP;
 	samplerDesc.address_v = TextureAddressMode::WRAP;
 	samplerDesc.address_w = TextureAddressMode::WRAP;
-	samplerDesc.filter = Filter::MAXIMUM_MIN_MAG_MIP_LINEAR;
+	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
 	wi::graphics::GetDevice()->CreateSampler(&samplerDesc, &sampler);
 
 	// Store our identifier
