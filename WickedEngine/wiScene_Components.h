@@ -662,8 +662,6 @@ namespace wi::scene
 		uint32_t filterMaskDynamic = 0;
 
 		wi::graphics::Texture lightmap;
-		wi::graphics::RenderPass renderpass_lightmap_clear;
-		wi::graphics::RenderPass renderpass_lightmap_accumulate;
 		mutable uint32_t lightmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);

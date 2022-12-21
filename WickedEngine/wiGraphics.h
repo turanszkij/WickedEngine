@@ -421,6 +421,14 @@ namespace wi::graphics
 		HDR_LINEAR,		// HDR color space (16 bits per channel)
 	};
 
+	enum class RenderPassFlags
+	{
+		NONE = 0,
+		ALLOW_UAV_WRITES = 1 << 0,
+		SUSPENDING = 1 << 1,
+		RESUMING = 1 << 2,
+	};
+
 
 	// Descriptor structs:
 
@@ -921,25 +929,6 @@ namespace wi::graphics
 		}
 	};
 
-	struct RenderPassDesc
-	{
-		enum class Flags
-		{
-			EMPTY = 0,
-			ALLOW_UAV_WRITES = 1 << 0,
-		};
-		Flags flags = Flags::EMPTY;
-		wi::vector<RenderPassAttachment> attachments;
-	};
-
-	struct RenderPass : public GraphicsDeviceChild
-	{
-		size_t hash = 0;
-		RenderPassDesc desc;
-
-		constexpr const RenderPassDesc& GetDesc() const { return desc; }
-	};
-
 	struct GPUQueryHeap : public GraphicsDeviceChild
 	{
 		GPUQueryHeapDesc desc;
@@ -1396,6 +1385,26 @@ namespace wi::graphics
 		return ((value + alignment - 1) / alignment) * alignment;
 	}
 
+
+	// Deprecated, kept for back-compat:
+	struct RenderPassDesc
+	{
+		enum class Flags
+		{
+			EMPTY = 0,
+			ALLOW_UAV_WRITES = 1 << 0,
+		};
+		Flags flags = Flags::EMPTY;
+		wi::vector<RenderPassAttachment> attachments;
+	};
+	struct RenderPass
+	{
+		bool valid = false;
+		RenderPassDesc desc;
+
+		constexpr const RenderPassDesc& GetDesc() const { return desc; }
+		constexpr bool IsValid() const { return valid; }
+	};
 }
 
 template<>
@@ -1420,5 +1429,9 @@ struct enable_bitmask_operators<wi::graphics::ResourceState> {
 };
 template<>
 struct enable_bitmask_operators<wi::graphics::RenderPassDesc::Flags> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wi::graphics::RenderPassFlags> {
 	static const bool enable = true;
 };

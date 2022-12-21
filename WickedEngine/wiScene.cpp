@@ -3234,57 +3234,6 @@ namespace wi::scene
 				subresource_index = device->CreateSubresource(&impostorArray, SubresourceType::RTV, i, 1, 0, 1);
 				assert(subresource_index == i);
 			}
-
-			renderpasses_impostor.resize(desc.array_size / 3);
-			for (uint32_t i = 0; i < desc.array_size / 3; ++i)
-			{
-				RenderPassDesc renderpassdesc;
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::RenderTarget(
-						impostorArray,
-						RenderPassAttachment::LoadOp::CLEAR,
-						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET
-					)
-				);
-				renderpassdesc.attachments.back().subresource = i * 3;
-
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::RenderTarget(
-						impostorArray,
-						RenderPassAttachment::LoadOp::CLEAR,
-						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET
-					)
-				);
-				renderpassdesc.attachments.back().subresource = i * 3 + 1;
-
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::RenderTarget(
-						impostorArray,
-						RenderPassAttachment::LoadOp::CLEAR,
-						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET
-					)
-				);
-				renderpassdesc.attachments.back().subresource = i * 3 + 2;
-
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::DepthStencil(
-						impostorDepthStencil,
-						RenderPassAttachment::LoadOp::CLEAR,
-						RenderPassAttachment::StoreOp::DONTCARE
-					)
-				);
-
-				device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[i]);
-			}
 		}
 
 		// reconstruct impostor array status:
@@ -3620,15 +3569,6 @@ namespace wi::scene
 						device->CreateTexture(&desc, nullptr, &object.lightmap);
 						device->SetName(&object.lightmap, "lightmap_renderable");
 
-						RenderPassDesc renderpassdesc;
-
-						renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(object.lightmap, RenderPassAttachment::LoadOp::CLEAR));
-
-						device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_clear);
-
-						renderpassdesc.attachments.back().loadop = RenderPassAttachment::LoadOp::LOAD;
-						device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_accumulate);
-
 						object.lightmapIterationCount = 0; // reset accumulation
 					}
 				}
@@ -3797,72 +3737,11 @@ namespace wi::scene
 				assert(subresource_index == envmapArray.desc.mip_levels + envmapCount + i);
 			}
 
-			renderpasses_envmap.resize(envmapCount);
-			renderpasses_envmap_MSAA.resize(envmapCount);
 			for (uint32_t i = 0; i < envmapCount; ++i)
 			{
-				// Non MSAA:
-				{
-					int subresource_index;
-					subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::RTV, i * 6, 6, 0, 1);
-					assert(subresource_index == i);
-
-					RenderPassDesc renderpassdesc;
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::DepthStencil(
-							envrenderingDepthBuffer,
-							RenderPassAttachment::LoadOp::CLEAR,
-							RenderPassAttachment::StoreOp::STORE,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::DEPTHSTENCIL,
-							ResourceState::SHADER_RESOURCE
-						)
-					);
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::RenderTarget(envmapArray,
-							RenderPassAttachment::LoadOp::DONTCARE,
-							RenderPassAttachment::StoreOp::STORE,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::RENDERTARGET,
-							ResourceState::SHADER_RESOURCE,
-							subresource_index
-						)
-					);
-					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[i]);
-				}
-
-				// MSAA:
-				{
-					RenderPassDesc renderpassdesc;
-					renderpassdesc.attachments.clear();
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::DepthStencil(
-							envrenderingDepthBuffer_MSAA,
-							RenderPassAttachment::LoadOp::CLEAR,
-							RenderPassAttachment::StoreOp::STORE,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::DEPTHSTENCIL,
-							ResourceState::SHADER_RESOURCE
-						)
-					);
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::RenderTarget(envrenderingColorBuffer_MSAA,
-							RenderPassAttachment::LoadOp::DONTCARE,
-							RenderPassAttachment::StoreOp::DONTCARE,
-							ResourceState::RENDERTARGET,
-							ResourceState::RENDERTARGET,
-							ResourceState::RENDERTARGET
-						)
-					);
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::Resolve(envmapArray,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::SHADER_RESOURCE,
-							envmapArray.desc.mip_levels + envmapCount + i // subresource: individual cubes only mip0
-						)
-					);
-					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap_MSAA[i]);
-				}
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::RTV, i * 6, 6, 0, 1);
+				assert(subresource_index == i);
 			}
 		}
 

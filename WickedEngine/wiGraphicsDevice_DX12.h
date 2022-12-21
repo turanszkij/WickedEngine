@@ -139,13 +139,19 @@ namespace wi::graphics
 			const RaytracingPipelineState* active_rt = {};
 			const ID3D12RootSignature* active_rootsig_graphics = {};
 			const ID3D12RootSignature* active_rootsig_compute = {};
-			const RenderPass* active_renderpass = {};
 			ShadingRate prev_shadingrate = {};
 			wi::vector<const SwapChain*> swapchains;
-			Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer;
 			bool dirty_pso = {};
 			wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> accelerationstructure_build_geometries;
 			RenderPassInfo renderpass_info;
+			size_t renderpass_hash = 0;
+			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_begin;
+			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_end;
+			ID3D12Resource* shading_rate_image = nullptr;
+
+			// Due to a API bug, this resolve_subresources array must be kept alive between BeginRenderpass() and EndRenderpass()!
+			wi::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> resolve_subresources[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+			wi::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> resolve_subresources_dsv = {};
 
 			void reset(uint32_t bufferindex)
 			{
@@ -160,12 +166,19 @@ namespace wi::graphics
 				active_rt = nullptr;
 				active_rootsig_graphics = nullptr;
 				active_rootsig_compute = nullptr;
-				active_renderpass = nullptr;
 				prev_shadingrate = ShadingRate::RATE_INVALID;
 				dirty_pso = false;
 				swapchains.clear();
-				active_backbuffer = nullptr;
 				renderpass_info = {};
+				renderpass_hash = 0;
+				renderpass_barriers_begin.clear();
+				renderpass_barriers_end.clear();
+				for (size_t i = 0; i < arraysize(resolve_subresources); ++i)
+				{
+					resolve_subresources[i].clear();
+				}
+				resolve_subresources_dsv.clear();
+				shading_rate_image = nullptr;
 			}
 
 			inline ID3D12CommandAllocator* GetCommandAllocator()
@@ -209,7 +222,6 @@ namespace wi::graphics
 		bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const override;
 		bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const override;
 		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info = nullptr) const override;
-		bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const override;
 		
@@ -276,7 +288,7 @@ namespace wi::graphics
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;
 		void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) override;
-		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;
+		void RenderPassBegin(const RenderPassAttachment* attachments, uint32_t attachment_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) override;
 		void RenderPassEnd(CommandList cmd) override;
 		void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;
 		void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) override;

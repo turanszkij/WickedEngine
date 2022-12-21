@@ -124,7 +124,6 @@ struct VoxelizedSceneData
 
 Texture shadowMapAtlas;
 Texture shadowMapAtlas_Transparent;
-RenderPass renderpass_shadowMapAtlas;
 int max_shadow_resolution_2D = 1024;
 int max_shadow_resolution_cube = 256;
 
@@ -3232,29 +3231,6 @@ void UpdatePerFrameData(
 						device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Transparent);
 						device->SetName(&shadowMapAtlas_Transparent, "shadowMapAtlas_Transparent");
 
-
-						RenderPassDesc renderpassdesc;
-						renderpassdesc.attachments.push_back(
-							RenderPassAttachment::DepthStencil(
-								shadowMapAtlas,
-								RenderPassAttachment::LoadOp::CLEAR,
-								RenderPassAttachment::StoreOp::STORE,
-								ResourceState::SHADER_RESOURCE,
-								ResourceState::DEPTHSTENCIL,
-								ResourceState::SHADER_RESOURCE
-							)
-						);
-						renderpassdesc.attachments.push_back(
-							RenderPassAttachment::RenderTarget(
-								shadowMapAtlas_Transparent,
-								RenderPassAttachment::LoadOp::CLEAR,
-								RenderPassAttachment::StoreOp::STORE,
-								ResourceState::SHADER_RESOURCE,
-								ResourceState::RENDERTARGET,
-								ResourceState::SHADER_RESOURCE
-							)
-						);
-						device->CreateRenderPass(&renderpassdesc, &renderpass_shadowMapAtlas);
 					}
 					
 					break;
@@ -4957,7 +4933,7 @@ void DrawShadowmaps(
 	if (IsWireRender())
 		return;
 
-	if (!vis.visibleLights.empty() && renderpass_shadowMapAtlas.IsValid())
+	if (!vis.visibleLights.empty() && shadowMapAtlas.IsValid())
 	{
 		device->EventBegin("DrawShadowmaps", cmd);
 		auto range_cpu = wi::profiler::BeginRangeCPU("Shadowmap Rendering");
@@ -4977,7 +4953,25 @@ void DrawShadowmaps(
 
 		static thread_local RenderQueue renderQueue;
 
-		device->RenderPassBegin(&renderpass_shadowMapAtlas, cmd);
+		const RenderPassAttachment attachments[] = {
+			RenderPassAttachment::DepthStencil(
+				shadowMapAtlas,
+				RenderPassAttachment::LoadOp::CLEAR,
+				RenderPassAttachment::StoreOp::STORE,
+				ResourceState::SHADER_RESOURCE,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::SHADER_RESOURCE
+			),
+			RenderPassAttachment::RenderTarget(
+				shadowMapAtlas_Transparent,
+				RenderPassAttachment::LoadOp::CLEAR,
+				RenderPassAttachment::StoreOp::STORE,
+				ResourceState::SHADER_RESOURCE,
+				ResourceState::RENDERTARGET,
+				ResourceState::SHADER_RESOURCE
+			),
+		};
+		device->RenderPassBegin(attachments, arraysize(attachments), cmd);
 
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
@@ -6874,11 +6868,54 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		if (probe.IsMSAA())
 		{
-			device->RenderPassBegin(&vis.scene->renderpasses_envmap_MSAA[probe.textureIndex], cmd);
+			const RenderPassAttachment attachments[] = {
+				RenderPassAttachment::DepthStencil(
+					vis.scene->envrenderingDepthBuffer_MSAA,
+					RenderPassAttachment::LoadOp::CLEAR,
+					RenderPassAttachment::StoreOp::STORE,
+					ResourceState::SHADER_RESOURCE,
+					ResourceState::DEPTHSTENCIL,
+					ResourceState::SHADER_RESOURCE
+				),
+				RenderPassAttachment::RenderTarget(
+					vis.scene->envrenderingColorBuffer_MSAA,
+					RenderPassAttachment::LoadOp::DONTCARE,
+					RenderPassAttachment::StoreOp::DONTCARE,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET
+				),
+				RenderPassAttachment::Resolve(
+					vis.scene->envmapArray,
+					ResourceState::SHADER_RESOURCE,
+					ResourceState::SHADER_RESOURCE,
+					vis.scene->envmapArray.desc.mip_levels + vis.scene->envmapCount + probe.textureIndex // subresource: individual cubes only mip0
+				)
+			};
+			device->RenderPassBegin(attachments, arraysize(attachments), cmd);
 		}
 		else
 		{
-			device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
+			const RenderPassAttachment attachments[] = {
+				RenderPassAttachment::DepthStencil(
+					vis.scene->envrenderingDepthBuffer,
+					RenderPassAttachment::LoadOp::CLEAR,
+					RenderPassAttachment::StoreOp::STORE,
+					ResourceState::SHADER_RESOURCE,
+					ResourceState::DEPTHSTENCIL,
+					ResourceState::SHADER_RESOURCE
+				),
+				RenderPassAttachment::RenderTarget(
+					vis.scene->envmapArray,
+					RenderPassAttachment::LoadOp::DONTCARE,
+					RenderPassAttachment::StoreOp::STORE,
+					ResourceState::SHADER_RESOURCE,
+					ResourceState::RENDERTARGET,
+					ResourceState::SHADER_RESOURCE,
+					probe.textureIndex
+				)
+			};
+			device->RenderPassBegin(attachments, arraysize(attachments), cmd);
 		}
 
 		// Scene will only be rendered if this is a real probe entity:
@@ -7170,8 +7207,43 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 			BindCameraCB(impostorcamera, impostorcamera, impostorcamera, cmd);
 
-			int slice = (int)(impostor.textureIndex * impostorCaptureAngles + i);
-			device->RenderPassBegin(&scene.renderpasses_impostor[slice], cmd);
+			int slice = (int)(impostor.textureIndex * impostorCaptureAngles * 3 + i * 3);
+
+			const RenderPassAttachment attachments[] = {
+				RenderPassAttachment::RenderTarget(
+					scene.impostorArray,
+					RenderPassAttachment::LoadOp::CLEAR,
+					RenderPassAttachment::StoreOp::STORE,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET,
+					slice
+				),
+				RenderPassAttachment::RenderTarget(
+					scene.impostorArray,
+					RenderPassAttachment::LoadOp::CLEAR,
+					RenderPassAttachment::StoreOp::STORE,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET,
+					slice + 1
+				),
+				RenderPassAttachment::RenderTarget(
+					scene.impostorArray,
+					RenderPassAttachment::LoadOp::CLEAR,
+					RenderPassAttachment::StoreOp::STORE,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET,
+					slice + 2
+				),
+				RenderPassAttachment::DepthStencil(
+					scene.impostorDepthStencil,
+					RenderPassAttachment::LoadOp::CLEAR,
+					RenderPassAttachment::StoreOp::DONTCARE
+				)
+			};
+			device->RenderPassBegin(attachments, arraysize(attachments), cmd);
 
 			uint32_t first_subset = 0;
 			uint32_t last_subset = 0;
@@ -7995,11 +8067,13 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 
 				if (object.lightmapIterationCount == 0)
 				{
-					device->RenderPassBegin(&object.renderpass_lightmap_clear, cmd);
+					RenderPassAttachment attachment = RenderPassAttachment::RenderTarget(object.lightmap, RenderPassAttachment::LoadOp::CLEAR);
+					device->RenderPassBegin(&attachment, 1, cmd);
 				}
 				else
 				{
-					device->RenderPassBegin(&object.renderpass_lightmap_accumulate, cmd);
+					RenderPassAttachment attachment = RenderPassAttachment::RenderTarget(object.lightmap, RenderPassAttachment::LoadOp::LOAD);
+					device->RenderPassBegin(&attachment, 1, cmd);
 				}
 
 				Viewport vp;
