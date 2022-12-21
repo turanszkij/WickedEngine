@@ -563,8 +563,6 @@ namespace wi::graphics
 			std::deque<std::pair<VkShaderModule, uint64_t>> destroyer_shadermodules;
 			std::deque<std::pair<VkPipelineLayout, uint64_t>> destroyer_pipelineLayouts;
 			std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
-			std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
-			std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;
 			std::deque<std::pair<VkQueryPool, uint64_t>> destroyer_querypools;
 			std::deque<std::pair<VkSwapchainKHR, uint64_t>> destroyer_swapchains;
 			std::deque<std::pair<VkSurfaceKHR, uint64_t>> destroyer_surfaces;
@@ -760,32 +758,6 @@ namespace wi::graphics
 						auto item = destroyer_pipelines.front();
 						destroyer_pipelines.pop_front();
 						vkDestroyPipeline(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_renderpasses.empty())
-				{
-					if (destroyer_renderpasses.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_renderpasses.front();
-						destroyer_renderpasses.pop_front();
-						vkDestroyRenderPass(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_framebuffers.empty())
-				{
-					if (destroyer_framebuffers.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_framebuffers.front();
-						destroyer_framebuffers.pop_front();
-						vkDestroyFramebuffer(device, item.first, nullptr);
 					}
 					else
 					{

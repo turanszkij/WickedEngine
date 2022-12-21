@@ -6753,22 +6753,6 @@ using namespace vulkan_internal;
 			assert(0);
 		}
 		
-		//VkClearValue clearColor = {
-		//	swapchain->desc.clear_color[0],
-		//	swapchain->desc.clear_color[1],
-		//	swapchain->desc.clear_color[2],
-		//	swapchain->desc.clear_color[3],
-		//};
-		//VkRenderPassBeginInfo renderPassInfo = {};
-		//renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		//renderPassInfo.renderPass = to_internal(&internal_state->renderpass)->renderpass;
-		//renderPassInfo.framebuffer = internal_state->swapChainFramebuffers[internal_state->swapChainImageIndex];
-		//renderPassInfo.renderArea.offset = { 0, 0 };
-		//renderPassInfo.renderArea.extent = internal_state->swapChainExtent;
-		//renderPassInfo.clearValueCount = 1;
-		//renderPassInfo.pClearValues = &clearColor;
-		//vkCmdBeginRenderPass(commandlist.GetCommandBuffer(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
 		VkRenderingInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 		info.renderArea.offset.x = 0;
