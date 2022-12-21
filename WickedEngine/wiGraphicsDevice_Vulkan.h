@@ -224,7 +224,6 @@ namespace wi::graphics
 			wi::vector<VkAccelerationStructureGeometryKHR> accelerationstructure_build_geometries;
 			wi::vector<VkAccelerationStructureBuildRangeInfoKHR> accelerationstructure_build_ranges;
 			RenderPassInfo renderpass_info;
-			size_t renderpass_hash = 0;
 			wi::vector<VkImageMemoryBarrier> renderpass_barriers_begin;
 			wi::vector<VkImageMemoryBarrier> renderpass_barriers_end;
 
@@ -243,7 +242,6 @@ namespace wi::graphics
 				prev_shadingrate = ShadingRate::RATE_INVALID;
 				prev_swapchains.clear();
 				renderpass_info = {};
-				renderpass_hash = 0;
 				renderpass_barriers_begin.clear();
 				renderpass_barriers_end.clear();
 			}

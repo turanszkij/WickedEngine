@@ -382,11 +382,9 @@ namespace wi::graphics
 		SPARSE_TEXTURE3D = 1 << 15,
 		SPARSE_NULL_MAPPING = 1 << 16,
 		GENERIC_SPARSE_TILE_POOL = 1 << 17, // alows using ResourceMiscFlag::SPARSE_TILE_POOL (non resource type specific version)
-		DEPTH_RESOLVE_SAMPLE_ZERO = 1 << 18,
-		STENCIL_RESOLVE_SAMPLE_ZERO = 1 << 19,
-		DEPTH_RESOLVE_MIN_MAX = 1 << 20,
-		STENCIL_RESOLVE_MIN_MAX = 1 << 21,
-		CACHE_COHERENT_UMA = 1 << 22,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
+		DEPTH_RESOLVE_MIN_MAX = 1 << 18,
+		STENCIL_RESOLVE_MIN_MAX = 1 << 19,
+		CACHE_COHERENT_UMA = 1 << 20,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
 	};
 
 	enum class ResourceState
@@ -574,14 +572,6 @@ namespace wi::graphics
 	{
 		GpuQueryType type = GpuQueryType::TIMESTAMP;
 		uint32_t query_count = 0;
-	};
-
-	struct RenderPassInfo
-	{
-		Format rt_formats[8] = {};
-		uint32_t rt_count = 0;
-		Format ds_format = Format::UNKNOWN;
-		uint32_t sample_count = 1;
 	};
 
 	struct PipelineStateDesc
@@ -926,6 +916,74 @@ namespace wi::graphics
 			attachment.subpass_layout = ResourceState::SHADING_RATE_SOURCE;
 			attachment.final_layout = final_layout;
 			return attachment;
+		}
+	};
+
+	struct RenderPassInfo
+	{
+		Format rt_formats[8] = {};
+		uint32_t rt_count = 0;
+		Format ds_format = Format::UNKNOWN;
+		uint32_t sample_count = 1;
+
+		constexpr uint64_t get_hash() const
+		{
+			union Hasher
+			{
+				struct
+				{
+					uint64_t rt_format_0 : 6;
+					uint64_t rt_format_1 : 6;
+					uint64_t rt_format_2 : 6;
+					uint64_t rt_format_3 : 6;
+					uint64_t rt_format_4 : 6;
+					uint64_t rt_format_5 : 6;
+					uint64_t rt_format_6 : 6;
+					uint64_t rt_format_7 : 6;
+					uint64_t ds_format : 6;
+					uint64_t sample_count : 3;
+				} bits;
+				uint64_t value;
+			} hasher = {};
+			static_assert(sizeof(Hasher) == sizeof(uint64_t));
+			hasher.bits.rt_format_0 = (uint64_t)rt_formats[0];
+			hasher.bits.rt_format_1 = (uint64_t)rt_formats[1];
+			hasher.bits.rt_format_2 = (uint64_t)rt_formats[2];
+			hasher.bits.rt_format_3 = (uint64_t)rt_formats[3];
+			hasher.bits.rt_format_4 = (uint64_t)rt_formats[4];
+			hasher.bits.rt_format_5 = (uint64_t)rt_formats[5];
+			hasher.bits.rt_format_6 = (uint64_t)rt_formats[6];
+			hasher.bits.rt_format_7 = (uint64_t)rt_formats[7];
+			hasher.bits.ds_format = (uint64_t)ds_format;
+			hasher.bits.sample_count = (uint64_t)sample_count;
+			return hasher.value;
+		}
+		static constexpr RenderPassInfo from(const RenderPassAttachment* attachments, uint32_t attachment_count)
+		{
+			RenderPassInfo info;
+			for (uint32_t i = 0; i < attachment_count; ++i)
+			{
+				const RenderPassAttachment& attachment = attachments[i];
+				switch (attachment.type)
+				{
+				case RenderPassAttachment::Type::RENDERTARGET:
+					info.rt_formats[info.rt_count++] = attachment.texture.desc.format;
+					info.sample_count = attachment.texture.desc.sample_count;
+					break;
+				case RenderPassAttachment::Type::DEPTH_STENCIL:
+					info.ds_format = attachment.texture.desc.format;
+					info.sample_count = attachment.texture.desc.sample_count;
+					break;
+				}
+			}
+			return info;
+		}
+		static constexpr RenderPassInfo from(const SwapChainDesc& swapchain_desc)
+		{
+			RenderPassInfo info;
+			info.rt_count = 1;
+			info.rt_formats[0] = swapchain_desc.format;
+			return info;
 		}
 	};
 

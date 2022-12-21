@@ -144,7 +144,6 @@ namespace wi::graphics
 			bool dirty_pso = {};
 			wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> accelerationstructure_build_geometries;
 			RenderPassInfo renderpass_info;
-			size_t renderpass_hash = 0;
 			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_begin;
 			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_end;
 			ID3D12Resource* shading_rate_image = nullptr;
@@ -170,7 +169,6 @@ namespace wi::graphics
 				dirty_pso = false;
 				swapchains.clear();
 				renderpass_info = {};
-				renderpass_hash = 0;
 				renderpass_barriers_begin.clear();
 				renderpass_barriers_end.clear();
 				for (size_t i = 0; i < arraysize(resolve_subresources); ++i)

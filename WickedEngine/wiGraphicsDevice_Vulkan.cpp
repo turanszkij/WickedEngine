@@ -2577,14 +2577,6 @@ using namespace vulkan_internal;
 				capabilities |= GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL;
 			}
 
-			if (depth_stencil_resolve_properties.supportedDepthResolveModes & VK_RESOLVE_MODE_SAMPLE_ZERO_BIT)
-			{
-				capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_SAMPLE_ZERO;
-			}
-			if (depth_stencil_resolve_properties.supportedStencilResolveModes & VK_RESOLVE_MODE_SAMPLE_ZERO_BIT)
-			{
-				capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_SAMPLE_ZERO;
-			}
 			if (
 				(depth_stencil_resolve_properties.supportedDepthResolveModes & VK_RESOLVE_MODE_MIN_BIT) &&
 				(depth_stencil_resolve_properties.supportedDepthResolveModes & VK_RESOLVE_MODE_MAX_BIT)
@@ -6830,13 +6822,7 @@ using namespace vulkan_internal;
 
 		vkCmdBeginRendering(commandlist.GetCommandBuffer(), &info);
 
-		commandlist.renderpass_info = {};
-		commandlist.renderpass_info.rt_count = 1;
-		commandlist.renderpass_info.rt_formats[0] = swapchain->desc.format;
-		commandlist.renderpass_hash = 0;
-		wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.rt_count);
-		wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.rt_formats[0]);
-		wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.sample_count);
+		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
 	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPassAttachment* attachments, uint32_t attachment_count, CommandList cmd, RenderPassFlags flags)
 	{
@@ -7081,29 +7067,7 @@ using namespace vulkan_internal;
 
 		vkCmdBeginRendering(commandlist.GetCommandBuffer(), &info);
 
-		commandlist.renderpass_info = {};
-		for (uint32_t i = 0; i < attachment_count; ++i)
-		{
-			const RenderPassAttachment& attachment = attachments[i];
-			switch (attachment.type)
-			{
-			case RenderPassAttachment::Type::RENDERTARGET:
-				commandlist.renderpass_info.rt_formats[commandlist.renderpass_info.rt_count++] = attachment.texture.desc.format;
-				commandlist.renderpass_info.sample_count = attachment.texture.desc.sample_count;
-				break;
-			case RenderPassAttachment::Type::DEPTH_STENCIL:
-				commandlist.renderpass_info.ds_format = attachment.texture.desc.format;
-				commandlist.renderpass_info.sample_count = attachment.texture.desc.sample_count;
-				break;
-			}
-		}
-		commandlist.renderpass_hash = 0;
-		wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.rt_count);
-		for (uint32_t i = 0; i < commandlist.renderpass_info.rt_count; ++i)
-		{
-			wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.rt_formats[i]);
-		}
-		wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.sample_count);
+		commandlist.renderpass_info = RenderPassInfo::from(attachments, attachment_count);
 	}
 	void GraphicsDevice_Vulkan::RenderPassEnd(CommandList cmd)
 	{
@@ -7125,7 +7089,6 @@ using namespace vulkan_internal;
 		}
 
 		commandlist.renderpass_info = {};
-		commandlist.renderpass_hash = 0;
 	}
 	void GraphicsDevice_Vulkan::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
 	{
@@ -7388,7 +7351,7 @@ using namespace vulkan_internal;
 		{
 			size_t pipeline_hash = 0;
 			wi::helper::hash_combine(pipeline_hash, pso->hash);
-			wi::helper::hash_combine(pipeline_hash, commandlist.renderpass_hash);
+			wi::helper::hash_combine(pipeline_hash, commandlist.renderpass_info.get_hash());
 			if (commandlist.prev_pipeline_hash == pipeline_hash)
 			{
 				return;
@@ -7836,7 +7799,6 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		assert(commandlist.renderpass_hash == 0); // Can't resolve inside renderpass!
 
 		auto internal_state = to_internal(heap);
 		auto dst_internal = to_internal(dest);
@@ -7868,7 +7830,6 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::QueryReset(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		assert(commandlist.renderpass_hash == 0); // Can't resolve inside renderpass!
 
 		auto internal_state = to_internal(heap);
 
@@ -7883,7 +7844,6 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		assert(commandlist.renderpass_hash == 0);
 
 		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;

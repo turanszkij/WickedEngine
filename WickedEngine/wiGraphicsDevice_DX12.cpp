@@ -2526,8 +2526,6 @@ using namespace dx12_internal;
 
 		capabilities |= GraphicsDeviceCapability::TESSELLATION;
 		capabilities |= GraphicsDeviceCapability::PREDICATION;
-		capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_SAMPLE_ZERO;
-		capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_SAMPLE_ZERO;
 		capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_MIN_MAX;
 		capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_MIN_MAX;
 
@@ -5225,13 +5223,7 @@ using namespace dx12_internal;
 		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 		commandlist.GetGraphicsCommandList()->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
 
-		commandlist.renderpass_info = {};
-		commandlist.renderpass_info.rt_count = 1;
-		commandlist.renderpass_info.rt_formats[0] = swapchain->desc.format;
-		commandlist.renderpass_hash = 0;
-		wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.rt_count);
-		wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.rt_formats[0]);
-		wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.sample_count);
+		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const RenderPassAttachment* attachments, uint32_t attachment_count, CommandList cmd, RenderPassFlags flags)
 	{
@@ -5598,29 +5590,7 @@ using namespace dx12_internal;
 			FLAGS
 		);
 
-		commandlist.renderpass_info = {};
-		for (uint32_t i = 0; i < attachment_count; ++i)
-		{
-			const RenderPassAttachment& attachment = attachments[i];
-			switch (attachment.type)
-			{
-			case RenderPassAttachment::Type::RENDERTARGET:
-				commandlist.renderpass_info.rt_formats[commandlist.renderpass_info.rt_count++] = attachment.texture.desc.format;
-				commandlist.renderpass_info.sample_count = attachment.texture.desc.sample_count;
-				break;
-			case RenderPassAttachment::Type::DEPTH_STENCIL:
-				commandlist.renderpass_info.ds_format = attachment.texture.desc.format;
-				commandlist.renderpass_info.sample_count = attachment.texture.desc.sample_count;
-				break;
-			}
-		}
-		commandlist.renderpass_hash = 0;
-		wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.rt_count);
-		for (uint32_t i = 0; i < commandlist.renderpass_info.rt_count; ++i)
-		{
-			wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.rt_formats[i]);
-		}
-		wi::helper::hash_combine(commandlist.renderpass_hash, commandlist.renderpass_info.sample_count);
+		commandlist.renderpass_info = RenderPassInfo::from(attachments, attachment_count);
 	}
 	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
 	{
@@ -5642,7 +5612,6 @@ using namespace dx12_internal;
 		}
 
 		commandlist.renderpass_info = {};
-		commandlist.renderpass_hash = 0;
 	}
 	void GraphicsDevice_DX12::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
 	{
@@ -5896,7 +5865,7 @@ using namespace dx12_internal;
 		{
 			size_t pipeline_hash = 0;
 			wi::helper::hash_combine(pipeline_hash, pso->hash);
-			wi::helper::hash_combine(pipeline_hash, commandlist.renderpass_hash);
+			wi::helper::hash_combine(pipeline_hash, commandlist.renderpass_info.get_hash());
 			if (commandlist.prev_pipeline_hash == pipeline_hash)
 			{
 				return;
@@ -6195,7 +6164,6 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		assert(commandlist.renderpass_hash == 0); // Can't resolve inside renderpass!
 
 		auto internal_state = to_internal(heap);
 		auto dst_internal = to_internal(dest);
@@ -6237,7 +6205,6 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		assert(commandlist.renderpass_hash == 0); // Can't resolve inside renderpass!
 
 		auto& barrierdescs = commandlist.frame_barriers;
 
