@@ -5624,7 +5624,7 @@ using namespace vulkan_internal;
 		VkResult res = vkCreateRayTracingPipelinesKHR(
 			device,
 			VK_NULL_HANDLE,
-			VK_NULL_HANDLE,
+			pipelineCache,
 			1,
 			&info,
 			nullptr,
