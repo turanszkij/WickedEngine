@@ -3691,7 +3691,7 @@ using namespace dx12_internal;
 
 		pso->desc = *desc;
 
-		// Shouldn't hash pointers here, because hash can be serialized with pipeline library, so hashing is more complicated than in Vulkna:
+		// Shouldn't hash pointers here, because hash can be serialized with pipeline library, so hashing is more complicated than in Vulkan:
 		internal_state->hash = 0;
 		if (desc->ms != nullptr)
 		{
