@@ -6828,6 +6828,12 @@ using namespace vulkan_internal;
 		info.layerCount = 1;
 		info.renderArea.offset.x = 0;
 		info.renderArea.offset.y = 0;
+		if (image_count == 0)
+		{
+			// no attachments can still render (UAV only rendering)
+			info.renderArea.extent.width = properties2.properties.limits.maxFramebufferWidth;
+			info.renderArea.extent.height = properties2.properties.limits.maxFramebufferHeight;
+		}
 		VkRenderingAttachmentInfo color_attachments[8] = {};
 		VkRenderingAttachmentInfo depth_attachment = {};
 		VkRenderingAttachmentInfo stencil_attachment = {};

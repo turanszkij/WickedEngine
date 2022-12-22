@@ -2494,14 +2494,7 @@ void Workaround(const int bug , CommandList cmd)
 		const PipelineState* pso = GetObjectPSO(RENDERPASS_VOXELIZE, variant);
 
 		device->EventBegin("Workaround 1", cmd);
-		static RenderPass renderpass_clear;
-		if (!renderpass_clear.IsValid())
-		{
-			RenderPassDesc renderpassdesc;
-			renderpassdesc.flags = RenderPassDesc::Flags::EMPTY;
-			device->CreateRenderPass(&renderpassdesc, &renderpass_clear);
-		}
-		device->RenderPassBegin(&renderpass_clear, cmd);
+		device->RenderPassBegin(nullptr, 0, cmd);
 		device->BindPipelineState(pso, cmd);
 		device->DrawIndexedInstanced(0, 0, 0, 0, 0, cmd); //PE: Just need predraw(cmd);
 		device->RenderPassEnd(cmd);
@@ -7281,15 +7274,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 	device->EventBegin("Voxel Radiance", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Voxel Radiance", cmd);
 
-	static RenderPass renderpass_voxelize;
-
-	if (!renderpass_voxelize.IsValid())
-	{
-		RenderPassDesc renderpassdesc;
-		renderpassdesc.flags = RenderPassDesc::Flags::ALLOW_UAV_WRITES;
-		device->CreateRenderPass(&renderpassdesc, &renderpass_voxelize);
-	}
-
 	Texture* result = &textures[TEXTYPE_3D_VOXELRADIANCE];
 
 	AABB bbox;
@@ -7326,7 +7310,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		BindCommonResources(cmd);
 
 
-		device->RenderPassBegin(&renderpass_voxelize, cmd);
+		device->RenderPassBegin(nullptr, 0, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
 		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, false, nullptr, 1);
 		device->RenderPassEnd(cmd);
 
