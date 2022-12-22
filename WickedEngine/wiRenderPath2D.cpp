@@ -199,11 +199,11 @@ namespace wi
 		if (dsv != nullptr && !rtStenciled.IsValid())
 		{
 			RenderPassImage rp[] = {
-				RenderPassAttachment::RenderTarget(rtFinal, RenderPassAttachment::LoadOp::CLEAR),
-				RenderPassAttachment::DepthStencil(
-					*dsv,
-					RenderPassAttachment::LoadOp::LOAD,
-					RenderPassAttachment::StoreOp::STORE,
+				RenderPassImage::RenderTarget(&rtFinal, RenderPassImage::LoadOp::CLEAR),
+				RenderPassImage::DepthStencil(
+					dsv,
+					RenderPassImage::LoadOp::LOAD,
+					RenderPassImage::StoreOp::STORE,
 					ResourceState::DEPTHSTENCIL_READONLY,
 					ResourceState::DEPTHSTENCIL_READONLY,
 					ResourceState::DEPTHSTENCIL_READONLY
@@ -214,7 +214,7 @@ namespace wi
 		else
 		{
 			RenderPassImage rp[] = {
-				RenderPassAttachment::RenderTarget(rtFinal, RenderPassAttachment::LoadOp::CLEAR),
+				RenderPassImage::RenderTarget(&rtFinal, RenderPassImage::LoadOp::CLEAR),
 			};
 			device->RenderPassBegin(rp, arraysize(rp), cmd);
 		}
