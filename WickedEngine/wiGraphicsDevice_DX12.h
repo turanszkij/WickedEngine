@@ -32,6 +32,7 @@ namespace wi::graphics
 		Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgiAdapter;
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 		Microsoft::WRL::ComPtr<ID3D12PipelineLibrary1> pipelineLibrary;
+		wi::vector<uint8_t> pipelineLibraryData; // must be alive while pipelineLibrary object is alive!
 		mutable std::mutex pipelineLibraryLocker;
 
 #ifndef PLATFORM_UWP

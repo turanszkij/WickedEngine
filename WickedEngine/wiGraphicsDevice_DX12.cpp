@@ -26,7 +26,7 @@ using namespace Microsoft::WRL;
 
 namespace wi::graphics
 {
-//#define PIPELINE_LIBRARY_ENABLED
+#define PIPELINE_LIBRARY_ENABLED
 
 namespace dx12_internal
 {
@@ -2024,7 +2024,6 @@ using namespace dx12_internal;
 					HashToName(pipeline_hash, name);
 					pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
 					hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&newpso));
-					pipelineLibraryLocker.unlock();
 				}
 
 				if (hr == E_INVALIDARG)
@@ -2037,6 +2036,11 @@ using namespace dx12_internal;
 					}
 				}
 				assert(SUCCEEDED(hr));
+
+				if (pipelineLibrary != nullptr)
+				{
+					pipelineLibraryLocker.unlock();
+				}
 
 				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, newpso));
 				pipeline = newpso.Get();
@@ -2671,14 +2675,13 @@ using namespace dx12_internal;
 		// Create pipeline library:
 #ifdef PIPELINE_LIBRARY_ENABLED
 		// Try to read pipeline cache file if exists.
-		wi::vector<uint8_t> pipelineData;
 		std::string cachePath = GetCachePath();
-		if (!wi::helper::FileRead(cachePath, pipelineData))
+		if (!wi::helper::FileRead(cachePath, pipelineLibraryData))
 		{
-			pipelineData.clear();
+			pipelineLibraryData.clear();
 		}
 
-		hr = device->CreatePipelineLibrary(pipelineData.data(), pipelineData.size(), IID_PPV_ARGS(&pipelineLibrary));
+		hr = device->CreatePipelineLibrary(pipelineLibraryData.data(), pipelineLibraryData.size(), IID_PPV_ARGS(&pipelineLibrary));
 		switch (hr)
 		{
 			case DXGI_ERROR_UNSUPPORTED: // The driver doesn't support Pipeline libraries. WDDM2.1 drivers must support it.
@@ -3524,7 +3527,13 @@ using namespace dx12_internal;
 		shader->internal_state = internal_state;
 
 		internal_state->shadercode.resize(shadercode_size);
-		std::memcpy(internal_state->shadercode.data(), shadercode, shadercode_size);
+		internal_state->hash = 0;
+		for (size_t i = 0; i < shadercode_size; ++i)
+		{
+			uint8_t byte = ((uint8_t*)shadercode)[i];
+			wi::helper::hash_combine(internal_state->hash, byte);
+			internal_state->shadercode[i] = byte;
+		}
 		shader->stage = stage;
 
 		HRESULT hr = (internal_state->shadercode.empty() ? E_FAIL : S_OK);
@@ -3577,15 +3586,9 @@ using namespace dx12_internal;
 			std::wstring name;
 			if (pipelineLibrary != nullptr)
 			{
-				size_t hash = 0;
-				for (size_t i = 0; i < shadercode_size; ++i)
-				{
-					wi::helper::hash_combine(hash, ((const uint8_t*)shadercode)[i]);
-				}
-				HashToName(hash, name);
+				HashToName(internal_state->hash, name);
 				pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
 				hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&internal_state->resource));
-				pipelineLibraryLocker.unlock();
 			}
 
 			if (hr == E_INVALIDARG)
@@ -3598,6 +3601,11 @@ using namespace dx12_internal;
 				}
 			}
 			assert(SUCCEEDED(hr));
+
+			if (pipelineLibrary != nullptr)
+			{
+				pipelineLibraryLocker.unlock();
+			}
 		}
 
 		return SUCCEEDED(hr);
@@ -3683,18 +3691,96 @@ using namespace dx12_internal;
 
 		pso->desc = *desc;
 
+		// Shouldn't hash pointers here, because hash can be serialized with pipeline library, so hashing is more complicated than in Vulkna:
 		internal_state->hash = 0;
-		wi::helper::hash_combine(internal_state->hash, desc->ms);
-		wi::helper::hash_combine(internal_state->hash, desc->as);
-		wi::helper::hash_combine(internal_state->hash, desc->vs);
-		wi::helper::hash_combine(internal_state->hash, desc->ps);
-		wi::helper::hash_combine(internal_state->hash, desc->hs);
-		wi::helper::hash_combine(internal_state->hash, desc->ds);
-		wi::helper::hash_combine(internal_state->hash, desc->gs);
-		wi::helper::hash_combine(internal_state->hash, desc->il);
-		wi::helper::hash_combine(internal_state->hash, desc->rs);
-		wi::helper::hash_combine(internal_state->hash, desc->bs);
-		wi::helper::hash_combine(internal_state->hash, desc->dss);
+		if (desc->ms != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ms)->hash);
+		}
+		if (desc->as != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->as)->hash);
+		}
+		if (desc->vs != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->vs)->hash);
+		}
+		if (desc->ps != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ps)->hash);
+		}
+		if (desc->hs != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->hs)->hash);
+		}
+		if (desc->ds != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ds)->hash);
+		}
+		if (desc->gs != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->gs)->hash);
+		}
+		if (desc->il != nullptr)
+		{
+			for (auto& x : desc->il->elements)
+			{
+				wi::helper::hash_combine(internal_state->hash, x.format);
+				wi::helper::hash_combine(internal_state->hash, x.aligned_byte_offset);
+				wi::helper::hash_combine(internal_state->hash, x.input_slot);
+				wi::helper::hash_combine(internal_state->hash, x.input_slot_class);
+				wi::helper::hash_combine(internal_state->hash, x.semantic_index);
+				wi::helper::hash_combine(internal_state->hash, wi::helper::string_hash(x.semantic_name.c_str()));
+			}
+		}
+		if (desc->rs != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, desc->rs->antialiased_line_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->conservative_rasterization_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->cull_mode);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_bias);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_bias_clamp);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_clip_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->fill_mode);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->forced_sample_count);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->front_counter_clockwise);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->multisample_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->slope_scaled_depth_bias);
+		}
+		if (desc->bs != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, desc->bs->alpha_to_coverage_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->bs->independent_blend_enable);
+			for (auto& x : desc->bs->render_target)
+			{
+				wi::helper::hash_combine(internal_state->hash, x.blend_enable);
+				wi::helper::hash_combine(internal_state->hash, x.blend_op);
+				wi::helper::hash_combine(internal_state->hash, x.blend_op_alpha);
+				wi::helper::hash_combine(internal_state->hash, x.dest_blend);
+				wi::helper::hash_combine(internal_state->hash, x.dest_blend_alpha);
+				wi::helper::hash_combine(internal_state->hash, x.render_target_write_mask);
+				wi::helper::hash_combine(internal_state->hash, x.src_blend);
+				wi::helper::hash_combine(internal_state->hash, x.src_blend_alpha);
+			}
+		}
+		if (desc->dss != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_bounds_test_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_func);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_write_mask);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_read_mask);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_write_mask);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_depth_fail_op);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_fail_op);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_func);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_pass_op);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_depth_fail_op);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_fail_op);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_func);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_pass_op);
+		}
 		wi::helper::hash_combine(internal_state->hash, desc->pt);
 		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
 
@@ -3887,6 +3973,7 @@ using namespace dx12_internal;
 
 		if (renderpass_info != nullptr)
 		{
+			wi::helper::hash_combine(internal_state->hash, renderpass_info->get_hash());
 			DXGI_FORMAT DSFormat = _ConvertFormat(renderpass_info->ds_format);
 			D3D12_RT_FORMAT_ARRAY formats = {};
 			formats.NumRenderTargets = renderpass_info->rt_count;
@@ -3910,30 +3997,30 @@ using namespace dx12_internal;
 				streamDesc.SizeInBytes += sizeof(stream.stream2);
 			}
 
-			ComPtr<ID3D12PipelineState> newpso;
-
 			HRESULT hr = E_INVALIDARG;
 			std::wstring name;
 			if (pipelineLibrary != nullptr)
 			{
 				HashToName(internal_state->hash, name);
 				pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
-				hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&newpso));
-				pipelineLibraryLocker.unlock();
+				hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&internal_state->resource));
 			}
 
 			if (hr == E_INVALIDARG)
 			{
-				hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
+				hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
 
 				if (pipelineLibrary != nullptr && SUCCEEDED(hr))
 				{
-					hr = pipelineLibrary->StorePipeline(name.c_str(), newpso.Get());
+					hr = pipelineLibrary->StorePipeline(name.c_str(), internal_state->resource.Get());
 				}
 			}
 			assert(SUCCEEDED(hr));
 
-			internal_state->resource = newpso;
+			if (pipelineLibrary != nullptr)
+			{
+				pipelineLibraryLocker.unlock();
+			}
 		}
 
 		return true;
