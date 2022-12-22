@@ -306,6 +306,7 @@ const Texture* GetTexture(TEXTYPES id)
 	return &textures[id];
 }
 
+//#define TEST_PRELOAD_PSOS
 union ObjectRenderingVariant
 {
 	struct
@@ -316,7 +317,9 @@ union ObjectRenderingVariant
 		uint32_t tessellation : 1;	// bool
 		uint32_t alphatest : 1;		// bool
 		uint32_t wind : 1;			// bool
+#ifdef TEST_PRELOAD_PSOS
 		uint32_t sample_count : 4;	// 1, 2, 4, 8
+#endif // TEST_PRELOAD_PSOS
 	} bits;
 	uint32_t value;
 };
@@ -1299,38 +1302,6 @@ void LoadShaders()
 									desc.pt = PrimitiveTopology::TRIANGLELIST;
 								}
 
-								RenderPassInfo renderpass_info;
-								switch (renderPass)
-								{
-								case wi::enums::RENDERPASS_MAIN:
-									renderpass_info.rt_count = 1;
-									renderpass_info.rt_formats[0] = Format::R11G11B10_FLOAT;
-									renderpass_info.ds_format = Format::D32_FLOAT_S8X24_UINT;
-									break;
-								case wi::enums::RENDERPASS_PREPASS:
-									renderpass_info.rt_count = 1;
-									renderpass_info.rt_formats[0] = Format::R32_UINT;
-									renderpass_info.ds_format = Format::D32_FLOAT_S8X24_UINT;
-									break;
-								case wi::enums::RENDERPASS_ENVMAPCAPTURE:
-									renderpass_info.rt_count = 1;
-									renderpass_info.rt_formats[0] = Format::R11G11B10_FLOAT;
-									renderpass_info.ds_format = Format::D16_UNORM;
-									break;
-								case wi::enums::RENDERPASS_SHADOW:
-								case wi::enums::RENDERPASS_SHADOWCUBE:
-									renderpass_info.rt_count = 1;
-									renderpass_info.rt_formats[0] = Format::R16G16B16A16_FLOAT;
-									renderpass_info.ds_format = Format::D16_UNORM;
-									break;
-								case wi::enums::RENDERPASS_VOXELIZE:
-									renderpass_info.rt_count = 0;
-									renderpass_info.ds_format = Format::UNKNOWN;
-									break;
-								default:
-									break;
-								}
-
 								ObjectRenderingVariant variant = {};
 								variant.bits.shadertype = shaderType;
 								variant.bits.blendmode = blendMode;
@@ -1338,13 +1309,15 @@ void LoadShaders()
 								variant.bits.tessellation = tessellation;
 								variant.bits.alphatest = alphatest;
 								variant.bits.wind = wind;
-								variant.bits.sample_count = 1;
 
-								switch (renderPass)
+#ifdef TEST_PRELOAD_PSOS
+								variant.bits.sample_count = 1;
+								if (renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_PREPASS)
 								{
-								case wi::enums::RENDERPASS_MAIN:
-								case wi::enums::RENDERPASS_PREPASS:
-								{
+									RenderPassInfo renderpass_info;
+									renderpass_info.rt_count = 1;
+									renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? Format::R11G11B10_FLOAT : Format::R32_UINT;
+									renderpass_info.ds_format = Format::D32_FLOAT_S8X24_UINT;
 									const uint32_t msaa_support[] = { 1,2,4,8 };
 									for (int msaa : msaa_support)
 									{
@@ -1353,23 +1326,10 @@ void LoadShaders()
 										device->CreatePipelineState(&desc, GetObjectPSO(renderPass, variant), &renderpass_info);
 									}
 								}
-								break;
-
-								case wi::enums::RENDERPASS_ENVMAPCAPTURE:
+								else
+#endif /// TEST_PRELOAD_PSOS
 								{
-									const uint32_t msaa_support[] = { 1,8 };
-									for (int msaa : msaa_support)
-									{
-										variant.bits.sample_count = msaa;
-										renderpass_info.sample_count = msaa;
-										device->CreatePipelineState(&desc, GetObjectPSO(renderPass, variant), &renderpass_info);
-									}
-								}
-								break;
-
-								default:
-									device->CreatePipelineState(&desc, GetObjectPSO(renderPass, variant), &renderpass_info);
-									break;
+									device->CreatePipelineState(&desc, GetObjectPSO(renderPass, variant));
 								}
 							}
 						}
@@ -2490,7 +2450,9 @@ void Workaround(const int bug , CommandList cmd)
 		//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
 		ObjectRenderingVariant variant = {};
 		variant.bits.blendmode = BLENDMODE_OPAQUE;
+#ifdef TEST_PRELOAD_PSOS
 		variant.bits.sample_count = 1;
+#endif // TEST_PRELOAD_PSOS
 		const PipelineState* pso = GetObjectPSO(RENDERPASS_VOXELIZE, variant);
 
 		device->EventBegin("Workaround 1", cmd);
@@ -2519,7 +2481,9 @@ void RenderMeshes(
 
 	device->EventBegin("RenderMeshes", cmd);
 
+#ifdef TEST_PRELOAD_PSOS
 	RenderPassInfo renderpass_info = device->GetRenderPassInfo(cmd);
+#endif // TEST_PRELOAD_PSOS
 
 	tessellation = tessellation && device->CheckCapability(GraphicsDeviceCapability::TESSELLATION);
 	
@@ -2628,7 +2592,10 @@ void RenderMeshes(
 					variant.bits.tessellation = tessellatorRequested;
 					variant.bits.alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
 					variant.bits.wind = material.IsUsingWind();
+
+#ifdef TEST_PRELOAD_PSOS
 					variant.bits.sample_count = renderpass_info.sample_count;
+#endif // TEST_PRELOAD_PSOS
 
 					pso = GetObjectPSO(renderPass, variant);
 					assert(pso->IsValid());
