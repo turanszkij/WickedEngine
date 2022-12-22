@@ -759,6 +759,7 @@ namespace vulkan_internal
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE; // no lifetime management here
 		wi::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 		wi::vector<VkImageViewType> imageViewTypes;
+		size_t hash = 0;
 
 		wi::vector<VkDescriptorSetLayoutBinding> bindlessBindings;
 		wi::vector<VkDescriptorSet> bindlessSets;
@@ -4712,20 +4713,20 @@ using namespace vulkan_internal;
 		pso->internal_state = internal_state;
 		pso->desc = *desc;
 
-		pso->hash = 0;
-		wi::helper::hash_combine(pso->hash, desc->ms);
-		wi::helper::hash_combine(pso->hash, desc->as);
-		wi::helper::hash_combine(pso->hash, desc->vs);
-		wi::helper::hash_combine(pso->hash, desc->ps);
-		wi::helper::hash_combine(pso->hash, desc->hs);
-		wi::helper::hash_combine(pso->hash, desc->ds);
-		wi::helper::hash_combine(pso->hash, desc->gs);
-		wi::helper::hash_combine(pso->hash, desc->il);
-		wi::helper::hash_combine(pso->hash, desc->rs);
-		wi::helper::hash_combine(pso->hash, desc->bs);
-		wi::helper::hash_combine(pso->hash, desc->dss);
-		wi::helper::hash_combine(pso->hash, desc->pt);
-		wi::helper::hash_combine(pso->hash, desc->sample_mask);
+		internal_state->hash = 0;
+		wi::helper::hash_combine(internal_state->hash, desc->ms);
+		wi::helper::hash_combine(internal_state->hash, desc->as);
+		wi::helper::hash_combine(internal_state->hash, desc->vs);
+		wi::helper::hash_combine(internal_state->hash, desc->ps);
+		wi::helper::hash_combine(internal_state->hash, desc->hs);
+		wi::helper::hash_combine(internal_state->hash, desc->ds);
+		wi::helper::hash_combine(internal_state->hash, desc->gs);
+		wi::helper::hash_combine(internal_state->hash, desc->il);
+		wi::helper::hash_combine(internal_state->hash, desc->rs);
+		wi::helper::hash_combine(internal_state->hash, desc->bs);
+		wi::helper::hash_combine(internal_state->hash, desc->dss);
+		wi::helper::hash_combine(internal_state->hash, desc->pt);
+		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
 
 		VkResult res = VK_SUCCESS;
 
@@ -7338,7 +7339,7 @@ using namespace vulkan_internal;
 		else
 		{
 			size_t pipeline_hash = 0;
-			wi::helper::hash_combine(pipeline_hash, pso->hash);
+			wi::helper::hash_combine(pipeline_hash, internal_state->hash);
 			wi::helper::hash_combine(pipeline_hash, commandlist.renderpass_info.get_hash());
 			if (commandlist.prev_pipeline_hash == pipeline_hash)
 			{

@@ -1386,6 +1386,7 @@ namespace dx12_internal
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12PipelineState> resource;
 		ComPtr<ID3D12RootSignature> rootSignature;
+		size_t hash = 0;
 
 		wi::vector<uint8_t> shadercode;
 		wi::vector<D3D12_INPUT_ELEMENT_DESC> input_elements;
@@ -3682,20 +3683,20 @@ using namespace dx12_internal;
 
 		pso->desc = *desc;
 
-		pso->hash = 0;
-		wi::helper::hash_combine(pso->hash, desc->ms);
-		wi::helper::hash_combine(pso->hash, desc->as);
-		wi::helper::hash_combine(pso->hash, desc->vs);
-		wi::helper::hash_combine(pso->hash, desc->ps);
-		wi::helper::hash_combine(pso->hash, desc->hs);
-		wi::helper::hash_combine(pso->hash, desc->ds);
-		wi::helper::hash_combine(pso->hash, desc->gs);
-		wi::helper::hash_combine(pso->hash, desc->il);
-		wi::helper::hash_combine(pso->hash, desc->rs);
-		wi::helper::hash_combine(pso->hash, desc->bs);
-		wi::helper::hash_combine(pso->hash, desc->dss);
-		wi::helper::hash_combine(pso->hash, desc->pt);
-		wi::helper::hash_combine(pso->hash, desc->sample_mask);
+		internal_state->hash = 0;
+		wi::helper::hash_combine(internal_state->hash, desc->ms);
+		wi::helper::hash_combine(internal_state->hash, desc->as);
+		wi::helper::hash_combine(internal_state->hash, desc->vs);
+		wi::helper::hash_combine(internal_state->hash, desc->ps);
+		wi::helper::hash_combine(internal_state->hash, desc->hs);
+		wi::helper::hash_combine(internal_state->hash, desc->ds);
+		wi::helper::hash_combine(internal_state->hash, desc->gs);
+		wi::helper::hash_combine(internal_state->hash, desc->il);
+		wi::helper::hash_combine(internal_state->hash, desc->rs);
+		wi::helper::hash_combine(internal_state->hash, desc->bs);
+		wi::helper::hash_combine(internal_state->hash, desc->dss);
+		wi::helper::hash_combine(internal_state->hash, desc->pt);
+		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
 
 		auto& stream = internal_state->stream;
 		if (pso->desc.vs != nullptr)
@@ -3915,7 +3916,7 @@ using namespace dx12_internal;
 			std::wstring name;
 			if (pipelineLibrary != nullptr)
 			{
-				HashToName(pso->hash, name);
+				HashToName(internal_state->hash, name);
 				pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
 				hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&newpso));
 				pipelineLibraryLocker.unlock();
@@ -5805,7 +5806,7 @@ using namespace dx12_internal;
 		else
 		{
 			size_t pipeline_hash = 0;
-			wi::helper::hash_combine(pipeline_hash, pso->hash);
+			wi::helper::hash_combine(pipeline_hash, internal_state->hash);
 			wi::helper::hash_combine(pipeline_hash, commandlist.renderpass_info.get_hash());
 			if (commandlist.prev_pipeline_hash == pipeline_hash)
 			{

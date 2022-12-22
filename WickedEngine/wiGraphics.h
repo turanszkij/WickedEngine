@@ -996,7 +996,6 @@ namespace wi::graphics
 
 	struct PipelineState : public GraphicsDeviceChild
 	{
-		size_t hash = 0;
 		PipelineStateDesc desc;
 
 		constexpr const PipelineStateDesc& GetDesc() const { return desc; }
