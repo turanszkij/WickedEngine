@@ -51,17 +51,6 @@ namespace wi
 		depthBuffer_Reflection = {};
 		rtLinearDepth = {};
 
-		renderpass_depthprepass = {};
-		renderpass_main = {};
-		renderpass_transparent = {};
-		renderpass_reflection_depthprepass = {};
-		renderpass_reflection = {};
-		renderpass_lightshafts = {};
-		renderpass_volumetriclight = {};
-		renderpass_particledistortion = {};
-		renderpass_waterripples = {};
-		renderpass_outline_source = {};
-
 		debugUAV = {};
 		tiledLightResources = {};
 		tiledLightResources_planarReflection = {};
@@ -285,103 +274,6 @@ namespace wi
 			}
 		}
 
-		// Render passes:
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					depthBuffer_Main,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::DEPTHSTENCIL_READONLY
-				)
-			);
-			desc.attachments.push_back(
-				RenderPassAttachment::RenderTarget(
-					rtPrimitiveID_render,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE_COMPUTE,
-					ResourceState::RENDERTARGET,
-					ResourceState::SHADER_RESOURCE_COMPUTE
-				)
-			);
-			device->CreateRenderPass(&desc, &renderpass_depthprepass);
-
-			desc.attachments.clear();
-			desc.attachments.push_back(
-				RenderPassAttachment::RenderTarget(
-					rtMain_render,
-					RenderPassAttachment::LoadOp::LOAD
-				)
-			);
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					depthBuffer_Main,
-					RenderPassAttachment::LoadOp::LOAD,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY
-				)
-			);
-			if (getMSAASampleCount() > 1)
-			{
-				desc.attachments.push_back(RenderPassAttachment::Resolve(rtMain));
-			}
-
-			if (device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2) && rtShadingRate.IsValid())
-			{
-				desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS));
-			}
-
-			desc.flags |= RenderPassDesc::Flags::ALLOW_UAV_WRITES;
-			device->CreateRenderPass(&desc, &renderpass_main);
-		}
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtMain_render, RenderPassAttachment::LoadOp::LOAD));
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					depthBuffer_Main,
-					RenderPassAttachment::LoadOp::LOAD,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::DEPTHSTENCIL_READONLY
-				)
-			);
-			if (getMSAASampleCount() > 1)
-			{
-				desc.attachments.push_back(RenderPassAttachment::Resolve(rtMain));
-			}
-			desc.flags |= RenderPassDesc::Flags::ALLOW_UAV_WRITES;
-			device->CreateRenderPass(&desc, &renderpass_transparent);
-		}
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtParticleDistortion, RenderPassAttachment::LoadOp::CLEAR));
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					depthBuffer_Main,
-					RenderPassAttachment::LoadOp::LOAD,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY
-				)
-			);
-
-			if (getMSAASampleCount() > 1)
-			{
-				desc.attachments.push_back(RenderPassAttachment::Resolve(rtParticleDistortion_Resolved));
-			}
-
-			device->CreateRenderPass(&desc, &renderpass_particledistortion);
-		}
-
 
 		// Other resources:
 		{
@@ -576,18 +468,11 @@ namespace wi
 				desc.height = internalResolution.y / 8;
 				device->CreateTexture(&desc, nullptr, &rtWaterRipple);
 				device->SetName(&rtWaterRipple, "rtWaterRipple");
-				{
-					RenderPassDesc desc;
-					desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtWaterRipple, RenderPassAttachment::LoadOp::CLEAR));
-
-					device->CreateRenderPass(&desc, &renderpass_waterripples);
-				}
 			}
 		}
 		else
 		{
 			rtWaterRipple = {};
-			renderpass_waterripples = {};
 		}
 
 		if (wi::renderer::GetSurfelGIEnabled())
@@ -829,7 +714,24 @@ namespace wi
 
 			wi::renderer::OcclusionCulling_Reset(visibility_main, cmd); // must be outside renderpass!
 
-			device->RenderPassBegin(&renderpass_depthprepass, cmd);
+			RenderPassImage rp[] = {
+				RenderPassImage::DepthStencil(
+					&depthBuffer_Main,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL,
+					ResourceState::DEPTHSTENCIL_READONLY
+				),
+				RenderPassImage::RenderTarget(
+					&rtPrimitiveID_render,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
+					ResourceState::SHADER_RESOURCE_COMPUTE,
+					ResourceState::SHADER_RESOURCE_COMPUTE
+				),
+			};
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 			device->EventBegin("Opaque Z-prepass", cmd);
 			auto range = wi::profiler::BeginRangeGPU("Z-Prepass", cmd);
@@ -1030,7 +932,17 @@ namespace wi
 				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
 				device->BindViewports(1, &vp, cmd);
 
-				device->RenderPassBegin(&renderpass_reflection_depthprepass, cmd);
+				RenderPassImage rp[] = {
+					RenderPassImage::DepthStencil(
+						&depthBuffer_Reflection,
+						RenderPassImage::LoadOp::CLEAR,
+						RenderPassImage::StoreOp::STORE,
+						ResourceState::DEPTHSTENCIL,
+						ResourceState::DEPTHSTENCIL,
+						ResourceState::SHADER_RESOURCE
+					),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_PREPASS, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR);
 
@@ -1077,8 +989,22 @@ namespace wi
 				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
 				device->BindViewports(1, &vp, cmd);
 
-
-				device->RenderPassBegin(&renderpass_reflection, cmd);
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(
+						&rtReflection,
+						RenderPassImage::LoadOp::DONTCARE,
+						RenderPassImage::StoreOp::STORE,
+						ResourceState::SHADER_RESOURCE,
+						ResourceState::SHADER_RESOURCE
+					),
+					RenderPassImage::DepthStencil(
+						&depthBuffer_Reflection,
+						RenderPassImage::LoadOp::LOAD,
+						RenderPassImage::StoreOp::DONTCARE,
+						ResourceState::SHADER_RESOURCE
+					),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR);
 				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_TRANSPARENT); // separate renderscene, to be drawn after opaque and transparent sort order
@@ -1177,7 +1103,12 @@ namespace wi
 			{
 				// Cut off outline source from linear depth:
 				device->EventBegin("Outline Source", cmd);
-				device->RenderPassBegin(&renderpass_outline_source, cmd);
+
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rtOutlineSource, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD)
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
 				wi::image::Params params;
 				params.enableFullScreen();
 				params.stencilRefMode = wi::image::STENCILREFMODE_ENGINE;
@@ -1190,8 +1121,32 @@ namespace wi
 				device->EventEnd(cmd);
 			}
 
-
-			device->RenderPassBegin(&renderpass_main, cmd);
+			RenderPassImage rp[] = {
+				RenderPassImage::RenderTarget(
+					&rtMain_render,
+					RenderPassImage::LoadOp::LOAD
+				),
+				RenderPassImage::DepthStencil(
+					&depthBuffer_Main,
+					RenderPassImage::LoadOp::LOAD,
+					RenderPassImage::StoreOp::STORE,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY
+				),
+				RenderPassImage::Resolve(&rtMain),
+				RenderPassImage::ShadingRateSource(&rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS),
+			};
+			uint32_t rp_count = 2;
+			if (getMSAASampleCount() > 1)
+			{
+				rp_count++;
+			}
+			if (device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2) && rtShadingRate.IsValid())
+			{
+				rp_count++;
+			}
+			device->RenderPassBegin(rp, rp_count, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
 
 			if (visibility_shading_in_compute)
 			{
@@ -1423,7 +1378,37 @@ namespace wi
 
 			// Render sun stencil cutout:
 			{
-				device->RenderPassBegin(&renderpass_lightshafts, cmd);
+				if (getMSAASampleCount() > 1)
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::DepthStencil(
+							&depthBuffer_Main,
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY
+						),
+						RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
+						RenderPassImage::Resolve(&rtSun_resolved),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
+				else
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::DepthStencil(
+							&depthBuffer_Main,
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY
+						),
+						RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
 
 				Viewport vp;
 				vp.width = (float)depthBuffer_Main.GetDesc().width;
@@ -1454,7 +1439,7 @@ namespace wi
 					XMFLOAT2 sun;
 					XMStoreFloat2(&sun, sunPos);
 					wi::renderer::Postprocess_LightShafts(
-						renderpass_lightshafts.desc.attachments.back().texture,
+						getMSAASampleCount() > 1 ? rtSun_resolved : rtSun[0],
 						rtSun[1],
 						cmd,
 						sun,
@@ -1473,7 +1458,10 @@ namespace wi
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			device->RenderPassBegin(&renderpass_volumetriclight, cmd);
+			RenderPassImage rp[] = {
+				RenderPassImage::RenderTarget(&rtVolumetricLights[0], RenderPassImage::LoadOp::CLEAR),
+			};
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 			Viewport vp;
 			vp.width = (float)rtVolumetricLights[0].GetDesc().width;
@@ -1518,7 +1506,11 @@ namespace wi
 		// Water ripple rendering:
 		if (!scene->waterRipples.empty())
 		{
-			device->RenderPassBegin(&renderpass_waterripples, cmd);
+			RenderPassImage rp[] = {
+				RenderPassImage::RenderTarget(&rtWaterRipple, RenderPassImage::LoadOp::CLEAR),
+			};
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
+
 			Viewport vp;
 			vp.width = (float)rtWaterRipple.GetDesc().width;
 			vp.height = (float)rtWaterRipple.GetDesc().height;
@@ -1549,7 +1541,19 @@ namespace wi
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->RenderPassBegin(&renderpass_transparent, cmd);
+		RenderPassImage rp[] = {
+			RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD),
+			RenderPassImage::DepthStencil(
+				&depthBuffer_Main,
+				RenderPassImage::LoadOp::LOAD,
+				RenderPassImage::StoreOp::STORE,
+				ResourceState::DEPTHSTENCIL_READONLY,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL_READONLY
+			),
+			RenderPassImage::Resolve(&rtMain),
+		};
+		device->RenderPassBegin(rp, getMSAASampleCount() > 1 ? 3 : 2, cmd);
 
 		Viewport vp;
 		vp.width = (float)depthBuffer_Main.GetDesc().width;
@@ -1579,8 +1583,14 @@ namespace wi
 		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 		{
 			device->EventBegin("Contribute Volumetric Lights", cmd);
-			wi::renderer::Postprocess_Upsample_Bilateral(rtVolumetricLights[0], rtLinearDepth,
-				renderpass_transparent.desc.attachments[0].texture, cmd, true, 1.5f);
+			wi::renderer::Postprocess_Upsample_Bilateral(
+				rtVolumetricLights[0],
+				rtLinearDepth,
+				rtMain,
+				cmd,
+				true,
+				1.5f
+			);
 			device->EventEnd(cmd);
 		}
 
@@ -1610,7 +1620,37 @@ namespace wi
 
 		// Distortion particles:
 		{
-			device->RenderPassBegin(&renderpass_particledistortion, cmd);
+			if (getMSAASampleCount() > 1)
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rtParticleDistortion, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(
+						&depthBuffer_Main,
+						RenderPassImage::LoadOp::LOAD,
+						RenderPassImage::StoreOp::STORE,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL_READONLY
+					),
+					RenderPassImage::Resolve(&rtParticleDistortion_Resolved)
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+			else
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rtParticleDistortion, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(
+						&depthBuffer_Main,
+						RenderPassImage::LoadOp::LOAD,
+						RenderPassImage::StoreOp::STORE,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL_READONLY
+					),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
 
 			Viewport vp;
 			vp.width = (float)rtParticleDistortion.GetDesc().width;
@@ -2097,53 +2137,12 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection);
 			device->SetName(&depthBuffer_Reflection, "depthBuffer_Reflection");
 
-			{
-				RenderPassDesc desc;
-				desc.attachments.push_back(
-					RenderPassAttachment::DepthStencil(
-						depthBuffer_Reflection,
-						RenderPassAttachment::LoadOp::CLEAR,
-						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::DEPTHSTENCIL,
-						ResourceState::DEPTHSTENCIL,
-						ResourceState::SHADER_RESOURCE
-					)
-				);
-
-				device->CreateRenderPass(&desc, &renderpass_reflection_depthprepass);
-			}
-			{
-				RenderPassDesc desc;
-				desc.attachments.push_back(
-					RenderPassAttachment::RenderTarget(
-						rtReflection,
-						RenderPassAttachment::LoadOp::DONTCARE,
-						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::SHADER_RESOURCE,
-						ResourceState::RENDERTARGET,
-						ResourceState::SHADER_RESOURCE
-					)
-				);
-				desc.attachments.push_back(
-					RenderPassAttachment::DepthStencil(
-						depthBuffer_Reflection,
-						RenderPassAttachment::LoadOp::LOAD,
-						RenderPassAttachment::StoreOp::DONTCARE,
-						ResourceState::SHADER_RESOURCE
-					)
-				);
-
-				device->CreateRenderPass(&desc, &renderpass_reflection);
-			}
-
 			wi::renderer::CreateTiledLightResources(tiledLightResources_planarReflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
 		}
 		else
 		{
 			rtReflection = {};
 			depthBuffer_Reflection = {};
-			renderpass_reflection_depthprepass = {};
-			renderpass_reflection = {};
 			tiledLightResources_planarReflection = {};
 		}
 	}
@@ -2180,18 +2179,11 @@ namespace wi
 			device->SetName(&rtVolumetricLights[0], "rtVolumetricLights[0]");
 			device->CreateTexture(&desc, nullptr, &rtVolumetricLights[1]);
 			device->SetName(&rtVolumetricLights[1], "rtVolumetricLights[1]");
-			{
-				RenderPassDesc desc;
-				desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtVolumetricLights[0], RenderPassAttachment::LoadOp::CLEAR));
-
-				device->CreateRenderPass(&desc, &renderpass_volumetriclight);
-			}
 		}
 		else
 		{
 			rtVolumetricLights[0] = {};
 			rtVolumetricLights[1] = {};
-			renderpass_volumetriclight = {};
 		}
 	}
 	void RenderPath3D::setLightShaftsEnabled(bool value)
@@ -2229,35 +2221,12 @@ namespace wi
 				device->CreateTexture(&desc, nullptr, &rtSun_resolved);
 				device->SetName(&rtSun_resolved, "rtSun_resolved");
 			}
-
-			{
-				RenderPassDesc desc;
-				desc.attachments.push_back(
-					RenderPassAttachment::DepthStencil(
-						depthBuffer_Main,
-						RenderPassAttachment::LoadOp::LOAD,
-						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::DEPTHSTENCIL_READONLY,
-						ResourceState::DEPTHSTENCIL_READONLY,
-						ResourceState::DEPTHSTENCIL_READONLY
-					)
-				);
-				desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtSun[0], RenderPassAttachment::LoadOp::CLEAR));
-				if (getMSAASampleCount() > 1)
-				{
-					desc.attachments.back().storeop = RenderPassAttachment::StoreOp::DONTCARE;
-					desc.attachments.push_back(RenderPassAttachment::Resolve(rtSun_resolved));
-				}
-
-				device->CreateRenderPass(&desc, &renderpass_lightshafts);
-			}
 		}
 		else
 		{
 			rtSun[0] = {};
 			rtSun[1] = {};
 			rtSun_resolved = {};
-			renderpass_lightshafts = {};
 		}
 	}
 	void RenderPath3D::setOutlineEnabled(bool value)
@@ -2278,19 +2247,10 @@ namespace wi
 			desc.height = internalResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtOutlineSource);
 			device->SetName(&rtOutlineSource, "rtOutlineSource");
-
-			{
-				RenderPassDesc desc;
-				desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtOutlineSource, RenderPassAttachment::LoadOp::CLEAR));
-				desc.attachments.push_back(RenderPassAttachment::DepthStencil(depthBuffer_Main, RenderPassAttachment::LoadOp::LOAD));
-
-				device->CreateRenderPass(&desc, &renderpass_outline_source);
-			}
 		}
 		else
 		{
 			rtOutlineSource = {};
-			renderpass_outline_source = {};
 		}
 	}
 

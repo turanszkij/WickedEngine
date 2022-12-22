@@ -116,17 +116,6 @@ namespace wi
 		wi::graphics::Texture depthBuffer_Reflection; // used for reflection, single sample
 		wi::graphics::Texture rtLinearDepth; // linear depth result + mipchain (max filter)
 
-		wi::graphics::RenderPass renderpass_depthprepass;
-		wi::graphics::RenderPass renderpass_main;
-		wi::graphics::RenderPass renderpass_transparent;
-		wi::graphics::RenderPass renderpass_reflection_depthprepass;
-		wi::graphics::RenderPass renderpass_reflection;
-		wi::graphics::RenderPass renderpass_lightshafts;
-		wi::graphics::RenderPass renderpass_volumetriclight;
-		wi::graphics::RenderPass renderpass_particledistortion;
-		wi::graphics::RenderPass renderpass_waterripples;
-		wi::graphics::RenderPass renderpass_outline_source;
-
 		wi::graphics::Texture debugUAV; // debug UAV can be used by some shaders...
 		wi::renderer::TiledLightResources tiledLightResources;
 		wi::renderer::TiledLightResources tiledLightResources_planarReflection;
