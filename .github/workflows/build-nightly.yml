@@ -101,47 +101,47 @@ jobs:
           WickedEngineEditor
 
 
-#  linux-steamdeck:
-#    runs-on: ubuntu-latest
-#    steps:
-#    - uses: actions/checkout@v2
-#
-#    - name: Build
-#      run: |
-#        mkdir build
-#        echo "---Building Command Strings---"
-#        echo -e "#!/bin/bash \
-#        \nmkdir -p $(dirname $PWD) \
-#        \nln -s /build $PWD \
-#        \ncd /build/build \
-#        \ncmake .. -DCMAKE_BUILD_TYPE=Release \
-#        \nmake \
-#        \necho \"---Generating Shader Dump---\" \
-#        \ncd WickedEngine \
-#        \n./offlineshadercompiler spirv rebuild shaderdump\nmv wiShaderDump.h ../../WickedEngine/ \
-#        \necho \"---Rebuilding with ShaderDump---\" \
-#        \ncd .. \
-#        \nmake -B" > build.sh
-#        chmod +x build.sh
-#        echo "---Executing Containerized Build---"
-#        podman run --name sniper -v $PWD:/build registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest /build/build.sh
-#        podman container rm sniper
-#        
-#    - name: Move files
-#      run: |
-#        mv build/Editor/WickedEngineEditor ./
-#        mv Editor/config.ini ./
-#        mv Editor/startup.lua ./
-#        mv Editor/terrain ./
-#        mv Content/Documentation ./
-#        
-#    - name: Package Editor
-#      uses: actions/upload-artifact@v2
-#      with:
-#        name: Editor (Linux - Steam Deck)
-#        path: |
-#          Documentation/
-#          terrain/
-#          config.ini
-#          startup.lua
-#          WickedEngineEditor
+  linux-steamdeck:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build
+      run: |
+        mkdir build
+        echo "---Building Command Strings---"
+        echo -e "#!/bin/bash \
+        \nmkdir -p $(dirname $PWD) \
+        \nln -s /build $PWD \
+        \ncd /build/build \
+        \ncmake .. -DCMAKE_BUILD_TYPE=Release \
+        \nmake \
+        \necho \"---Generating Shader Dump---\" \
+        \ncd WickedEngine \
+        \n./offlineshadercompiler spirv rebuild shaderdump\nmv wiShaderDump.h ../../WickedEngine/ \
+        \necho \"---Rebuilding with ShaderDump---\" \
+        \ncd .. \
+        \nmake -B" > build.sh
+        chmod +x build.sh
+        echo "---Executing Containerized Build---"
+        podman run --name sniper -v $PWD:/build registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest /build/build.sh
+        podman container rm sniper
+        
+    - name: Move files
+      run: |
+        mv build/Editor/WickedEngineEditor ./
+        mv Editor/config.ini ./
+        mv Editor/startup.lua ./
+        mv Editor/terrain ./
+        mv Content/Documentation ./
+        
+    - name: Package Editor
+      uses: actions/upload-artifact@v2
+      with:
+        name: Editor (Linux - Steam Deck)
+        path: |
+          Documentation/
+          terrain/
+          config.ini
+          startup.lua
+          WickedEngineEditor
