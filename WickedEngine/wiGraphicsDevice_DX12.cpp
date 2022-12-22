@@ -26,7 +26,7 @@ using namespace Microsoft::WRL;
 
 namespace wi::graphics
 {
-#define PIPELINE_LIBRARY_ENABLED
+//#define PIPELINE_LIBRARY_ENABLED
 
 namespace dx12_internal
 {
@@ -3528,12 +3528,17 @@ using namespace dx12_internal;
 
 		internal_state->shadercode.resize(shadercode_size);
 		internal_state->hash = 0;
+#ifndef PIPELINE_LIBRARY_ENABLED
+		std::memcpy(internal_state->shadercode.data(), shadercode, shadercode_size);
+#else
+		// while copying over shader data, also compute hash for pipeline library serialization:
 		for (size_t i = 0; i < shadercode_size; ++i)
 		{
 			uint8_t byte = ((uint8_t*)shadercode)[i];
 			wi::helper::hash_combine(internal_state->hash, byte);
 			internal_state->shadercode[i] = byte;
 		}
+#endif // PIPELINE_LIBRARY_ENABLED
 		shader->stage = stage;
 
 		HRESULT hr = (internal_state->shadercode.empty() ? E_FAIL : S_OK);
@@ -3691,7 +3696,23 @@ using namespace dx12_internal;
 
 		pso->desc = *desc;
 
-		// Shouldn't hash pointers here, because hash can be serialized with pipeline library, so hashing is more complicated than in Vulkan:
+#ifndef PIPELINE_LIBRARY_ENABLED
+		internal_state->hash = 0;
+		wi::helper::hash_combine(internal_state->hash, desc->ms);
+		wi::helper::hash_combine(internal_state->hash, desc->as);
+		wi::helper::hash_combine(internal_state->hash, desc->vs);
+		wi::helper::hash_combine(internal_state->hash, desc->ps);
+		wi::helper::hash_combine(internal_state->hash, desc->hs);
+		wi::helper::hash_combine(internal_state->hash, desc->ds);
+		wi::helper::hash_combine(internal_state->hash, desc->gs);
+		wi::helper::hash_combine(internal_state->hash, desc->il);
+		wi::helper::hash_combine(internal_state->hash, desc->rs);
+		wi::helper::hash_combine(internal_state->hash, desc->bs);
+		wi::helper::hash_combine(internal_state->hash, desc->dss);
+		wi::helper::hash_combine(internal_state->hash, desc->pt);
+		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
+#else
+		// Shouldn't hash pointers here, because hash can be serialized with pipeline library:
 		internal_state->hash = 0;
 		if (desc->ms != nullptr)
 		{
@@ -3783,6 +3804,7 @@ using namespace dx12_internal;
 		}
 		wi::helper::hash_combine(internal_state->hash, desc->pt);
 		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
+#endif // PIPELINE_LIBRARY_ENABLED
 
 		auto& stream = internal_state->stream;
 		if (pso->desc.vs != nullptr)
