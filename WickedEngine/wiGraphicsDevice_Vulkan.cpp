@@ -6808,7 +6808,7 @@ using namespace vulkan_internal;
 
 		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
-	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPassAttachment* attachments, uint32_t attachment_count, CommandList cmd, RenderPassFlags flags)
+	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		commandlist.renderpass_barriers_begin.clear();
@@ -6835,77 +6835,81 @@ using namespace vulkan_internal;
 		bool depth = false;
 		bool stencil = false;
 		uint32_t color_resolve_count = 0;
-		for (uint32_t i = 0; i < attachment_count; ++i)
+		for (uint32_t i = 0; i < image_count; ++i)
 		{
-			const RenderPassAttachment& attachment = attachments[i];
-			auto internal_state = to_internal(&attachment.texture);
-			info.renderArea.extent.width = std::max(info.renderArea.extent.width, attachment.texture.desc.width);
-			info.renderArea.extent.height = std::max(info.renderArea.extent.height, attachment.texture.desc.height);
+			const RenderPassImage& image = images[i];
+			const Texture* texture = image.texture;
+			const TextureDesc& desc = texture->GetDesc();
+			int subresource = image.subresource;
+			auto internal_state = to_internal(texture);
+
+			info.renderArea.extent.width = std::max(info.renderArea.extent.width, desc.width);
+			info.renderArea.extent.height = std::max(info.renderArea.extent.height, desc.height);
 
 			VkAttachmentLoadOp loadOp;
-			switch (attachment.loadop)
+			switch (image.loadop)
 			{
 			default:
-			case RenderPassAttachment::LoadOp::LOAD:
+			case RenderPassImage::LoadOp::LOAD:
 				loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 				break;
-			case RenderPassAttachment::LoadOp::CLEAR:
+			case RenderPassImage::LoadOp::CLEAR:
 				loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 				break;
-			case RenderPassAttachment::LoadOp::DONTCARE:
+			case RenderPassImage::LoadOp::DONTCARE:
 				loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				break;
 			}
 
 			VkAttachmentStoreOp storeOp;
-			switch (attachment.storeop)
+			switch (image.storeop)
 			{
 			default:
-			case RenderPassAttachment::StoreOp::STORE:
+			case RenderPassImage::StoreOp::STORE:
 				storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 				break;
-			case RenderPassAttachment::StoreOp::DONTCARE:
+			case RenderPassImage::StoreOp::DONTCARE:
 				storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 				break;
 			}
 
-			Texture_Vulkan::TextureSubresource subresource;
+			Texture_Vulkan::TextureSubresource descriptor;
 
-			switch (attachment.type)
+			switch (image.type)
 			{
-			case RenderPassAttachment::Type::RENDERTARGET:
+			case RenderPassImage::Type::RENDERTARGET:
 			{
-				subresource = attachment.subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[attachment.subresource];
+				descriptor = subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[subresource];
 				VkRenderingAttachmentInfo& color_attachment = color_attachments[info.colorAttachmentCount++];
 				color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-				color_attachment.imageView = subresource.image_view;
+				color_attachment.imageView = descriptor.image_view;
 				color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				color_attachment.loadOp = loadOp;
 				color_attachment.storeOp = storeOp;
-				color_attachment.clearValue.color.float32[0] = attachment.texture.desc.clear.color[0];
-				color_attachment.clearValue.color.float32[1] = attachment.texture.desc.clear.color[1];
-				color_attachment.clearValue.color.float32[2] = attachment.texture.desc.clear.color[2];
-				color_attachment.clearValue.color.float32[3] = attachment.texture.desc.clear.color[3];
+				color_attachment.clearValue.color.float32[0] = desc.clear.color[0];
+				color_attachment.clearValue.color.float32[1] = desc.clear.color[1];
+				color_attachment.clearValue.color.float32[2] = desc.clear.color[2];
+				color_attachment.clearValue.color.float32[3] = desc.clear.color[3];
 				color = true;
 			}
 			break;
 
-			case RenderPassAttachment::Type::RESOLVE:
+			case RenderPassImage::Type::RESOLVE:
 			{
-				subresource = attachment.subresource < 0 ? internal_state->srv : internal_state->subresources_srv[attachment.subresource];
+				descriptor = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
 				VkRenderingAttachmentInfo& color_attachment = color_attachments[color_resolve_count++];
-				color_attachment.resolveImageView = subresource.image_view;
+				color_attachment.resolveImageView = descriptor.image_view;
 				color_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				color_attachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
 			}
 			break;
 
-			case RenderPassAttachment::Type::DEPTH_STENCIL:
+			case RenderPassImage::Type::DEPTH_STENCIL:
 			{
-				subresource = attachment.subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[attachment.subresource];
+				descriptor = subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[subresource];
 				depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-				depth_attachment.imageView = subresource.image_view;
-				if (attachment.subpass_layout == ResourceState::DEPTHSTENCIL_READONLY)
+				depth_attachment.imageView = descriptor.image_view;
+				if (image.layout == ResourceState::DEPTHSTENCIL_READONLY)
 				{
 					depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
 				}
@@ -6915,13 +6919,13 @@ using namespace vulkan_internal;
 				}
 				depth_attachment.loadOp = loadOp;
 				depth_attachment.storeOp = storeOp;
-				depth_attachment.clearValue.depthStencil.depth = attachment.texture.desc.clear.depth_stencil.depth;
+				depth_attachment.clearValue.depthStencil.depth = desc.clear.depth_stencil.depth;
 				depth = true;
-				if (IsFormatStencilSupport(attachment.texture.desc.format))
+				if (IsFormatStencilSupport(desc.format))
 				{
 					stencil_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-					stencil_attachment.imageView = attachment.subresource < 0 ? internal_state->dsv.image_view : internal_state->subresources_dsv[attachment.subresource].image_view;
-					if (attachment.subpass_layout == ResourceState::DEPTHSTENCIL_READONLY)
+					stencil_attachment.imageView = subresource < 0 ? internal_state->dsv.image_view : internal_state->subresources_dsv[subresource].image_view;
+					if (image.layout == ResourceState::DEPTHSTENCIL_READONLY)
 					{
 						stencil_attachment.imageLayout = VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL;
 					}
@@ -6931,27 +6935,27 @@ using namespace vulkan_internal;
 					}
 					stencil_attachment.loadOp = loadOp;
 					stencil_attachment.storeOp = storeOp;
-					stencil_attachment.clearValue.depthStencil.stencil = attachment.texture.desc.clear.depth_stencil.stencil;
+					stencil_attachment.clearValue.depthStencil.stencil = desc.clear.depth_stencil.stencil;
 					stencil = true;
 				}
 			}
 			break;
 
-			case RenderPassAttachment::Type::RESOLVE_DEPTH:
+			case RenderPassImage::Type::RESOLVE_DEPTH:
 			{
-				subresource = attachment.subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[attachment.subresource];
-				depth_attachment.resolveImageView = subresource.image_view;
-				stencil_attachment.resolveImageView = subresource.image_view;
+				descriptor = subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[subresource];
+				depth_attachment.resolveImageView = descriptor.image_view;
+				stencil_attachment.resolveImageView = descriptor.image_view;
 				depth_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
 				stencil_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
-				switch (attachment.depth_resolve_mode)
+				switch (image.depth_resolve_mode)
 				{
 				default:
-				case RenderPassAttachment::DepthResolveMode::Min:
+				case RenderPassImage::DepthResolveMode::Min:
 					depth_attachment.resolveMode = VK_RESOLVE_MODE_MIN_BIT;
 					stencil_attachment.resolveMode = VK_RESOLVE_MODE_MIN_BIT;
 					break;
-				case RenderPassAttachment::DepthResolveMode::Max:
+				case RenderPassImage::DepthResolveMode::Max:
 					depth_attachment.resolveMode = VK_RESOLVE_MODE_MAX_BIT;
 					stencil_attachment.resolveMode = VK_RESOLVE_MODE_MAX_BIT;
 					break;
@@ -6959,10 +6963,10 @@ using namespace vulkan_internal;
 			}
 			break;
 
-			case RenderPassAttachment::Type::SHADING_RATE_SOURCE:
-				subresource = attachment.subresource < 0 ? internal_state->uav : internal_state->subresources_uav[attachment.subresource];
+			case RenderPassImage::Type::SHADING_RATE_SOURCE:
+				descriptor = subresource < 0 ? internal_state->uav : internal_state->subresources_uav[subresource];
 				shading_rate_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
-				shading_rate_attachment.imageView = subresource.image_view;
+				shading_rate_attachment.imageView = descriptor.image_view;
 				shading_rate_attachment.imageLayout = VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
 				shading_rate_attachment.shadingRateAttachmentTexelSize.width = VARIABLE_RATE_SHADING_TILE_SIZE;
 				shading_rate_attachment.shadingRateAttachmentTexelSize.height = VARIABLE_RATE_SHADING_TILE_SIZE;
@@ -6972,19 +6976,19 @@ using namespace vulkan_internal;
 				break;
 			}
 
-			if (attachment.initial_layout != attachment.subpass_layout)
+			if (image.layout_before != image.layout)
 			{
 				VkImageMemoryBarrier& barrier = commandlist.renderpass_barriers_begin.emplace_back();
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 				barrier.image = internal_state->resource;
-				barrier.oldLayout = _ConvertImageLayout(attachment.initial_layout);
-				barrier.newLayout = _ConvertImageLayout(attachment.subpass_layout);
-				barrier.srcAccessMask = _ParseResourceState(attachment.initial_layout);
-				barrier.dstAccessMask = _ParseResourceState(attachment.subpass_layout);
-				if (IsFormatDepthSupport(attachment.texture.desc.format))
+				barrier.oldLayout = _ConvertImageLayout(image.layout_before);
+				barrier.newLayout = _ConvertImageLayout(image.layout);
+				barrier.srcAccessMask = _ParseResourceState(image.layout_before);
+				barrier.dstAccessMask = _ParseResourceState(image.layout);
+				if (IsFormatDepthSupport(desc.format))
 				{
 					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-					if (IsFormatStencilSupport(attachment.texture.desc.format))
+					if (IsFormatStencilSupport(desc.format))
 					{
 						barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 					}
@@ -6993,27 +6997,27 @@ using namespace vulkan_internal;
 				{
 					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
-				barrier.subresourceRange.baseMipLevel = subresource.firstMip;
-				barrier.subresourceRange.levelCount = subresource.mipCount;
-				barrier.subresourceRange.baseArrayLayer = subresource.firstSlice;
-				barrier.subresourceRange.layerCount = subresource.sliceCount;
+				barrier.subresourceRange.baseMipLevel = descriptor.firstMip;
+				barrier.subresourceRange.levelCount = descriptor.mipCount;
+				barrier.subresourceRange.baseArrayLayer = descriptor.firstSlice;
+				barrier.subresourceRange.layerCount = descriptor.sliceCount;
 				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			}
 
-			if (attachment.subpass_layout != attachment.final_layout)
+			if (image.layout != image.layout_after)
 			{
 				VkImageMemoryBarrier& barrier = commandlist.renderpass_barriers_end.emplace_back();
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 				barrier.image = internal_state->resource;
-				barrier.oldLayout = _ConvertImageLayout(attachment.subpass_layout);
-				barrier.newLayout = _ConvertImageLayout(attachment.final_layout);
-				barrier.srcAccessMask = _ParseResourceState(attachment.subpass_layout);
-				barrier.dstAccessMask = _ParseResourceState(attachment.final_layout);
-				if (IsFormatDepthSupport(attachment.texture.desc.format))
+				barrier.oldLayout = _ConvertImageLayout(image.layout);
+				barrier.newLayout = _ConvertImageLayout(image.layout_after);
+				barrier.srcAccessMask = _ParseResourceState(image.layout);
+				barrier.dstAccessMask = _ParseResourceState(image.layout_after);
+				if (IsFormatDepthSupport(desc.format))
 				{
 					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-					if (IsFormatStencilSupport(attachment.texture.desc.format))
+					if (IsFormatStencilSupport(desc.format))
 					{
 						barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 					}
@@ -7022,15 +7026,15 @@ using namespace vulkan_internal;
 				{
 					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
-				barrier.subresourceRange.baseMipLevel = subresource.firstMip;
-				barrier.subresourceRange.levelCount = subresource.mipCount;
-				barrier.subresourceRange.baseArrayLayer = subresource.firstSlice;
-				barrier.subresourceRange.layerCount = subresource.sliceCount;
+				barrier.subresourceRange.baseMipLevel = descriptor.firstMip;
+				barrier.subresourceRange.levelCount = descriptor.mipCount;
+				barrier.subresourceRange.baseArrayLayer = descriptor.firstSlice;
+				barrier.subresourceRange.layerCount = descriptor.sliceCount;
 				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			}
 
-			info.layerCount = std::min(attachment.texture.desc.array_size, std::max(info.layerCount, subresource.sliceCount));
+			info.layerCount = std::min(desc.array_size, std::max(info.layerCount, descriptor.sliceCount));
 		}
 		info.pColorAttachments = color ? color_attachments : nullptr;
 		info.pDepthAttachment = depth ? &depth_attachment : nullptr;
@@ -7051,7 +7055,7 @@ using namespace vulkan_internal;
 
 		vkCmdBeginRendering(commandlist.GetCommandBuffer(), &info);
 
-		commandlist.renderpass_info = RenderPassInfo::from(attachments, attachment_count);
+		commandlist.renderpass_info = RenderPassInfo::from(images, image_count);
 	}
 	void GraphicsDevice_Vulkan::RenderPassEnd(CommandList cmd)
 	{

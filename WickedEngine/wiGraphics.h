@@ -793,7 +793,7 @@ namespace wi::graphics
 		constexpr const TextureDesc& GetDesc() const { return desc; }
 	};
 
-	struct RenderPassAttachment
+	struct RenderPassImage
 	{
 		enum class Type
 		{
@@ -809,113 +809,112 @@ namespace wi::graphics
 			CLEAR,
 			DONTCARE,
 		} loadop = LoadOp::LOAD;
-		Texture texture;
+		const Texture* texture = nullptr;
 		int subresource = -1;
 		enum class StoreOp
 		{
 			STORE,
 			DONTCARE,
 		} storeop = StoreOp::STORE;
-		ResourceState initial_layout = ResourceState::UNDEFINED;	// layout before the render pass
-		ResourceState subpass_layout = ResourceState::UNDEFINED;	// layout within the render pass
-		ResourceState final_layout = ResourceState::UNDEFINED;		// layout after the render pass
+		ResourceState layout_before = ResourceState::UNDEFINED;	// layout before the render pass
+		ResourceState layout = ResourceState::UNDEFINED;	// layout within the render pass
+		ResourceState layout_after = ResourceState::UNDEFINED;	// layout after the render pass
 		enum class DepthResolveMode
 		{
 			Min,
 			Max,
 		} depth_resolve_mode = DepthResolveMode::Min;
 
-		static RenderPassAttachment RenderTarget(
-			const Texture& resource,
+		static RenderPassImage RenderTarget(
+			const Texture* resource,
 			LoadOp load_op = LoadOp::LOAD,
 			StoreOp store_op = StoreOp::STORE,
-			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
-			ResourceState subpass_layout = ResourceState::RENDERTARGET,
-			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
+			ResourceState layout_before = ResourceState::SHADER_RESOURCE,
+			ResourceState layout_after = ResourceState::SHADER_RESOURCE,
 			int subresource_RTV = -1
 		)
 		{
-			RenderPassAttachment attachment;
-			attachment.type = Type::RENDERTARGET;
-			attachment.texture = resource;
-			attachment.loadop = load_op;
-			attachment.storeop = store_op;
-			attachment.initial_layout = initial_layout;
-			attachment.subpass_layout = subpass_layout;
-			attachment.final_layout = final_layout;
-			attachment.subresource = subresource_RTV;
-			return attachment;
+			RenderPassImage image;
+			image.type = Type::RENDERTARGET;
+			image.texture = resource;
+			image.loadop = load_op;
+			image.storeop = store_op;
+			image.layout_before = layout_before;
+			image.layout = ResourceState::RENDERTARGET;
+			image.layout_after = layout_after;
+			image.subresource = subresource_RTV;
+			return image;
 		}
 
-		static RenderPassAttachment DepthStencil(
-			const Texture& resource,
+		static RenderPassImage DepthStencil(
+			const Texture* resource,
 			LoadOp load_op = LoadOp::LOAD,
 			StoreOp store_op = StoreOp::STORE,
-			ResourceState initial_layout = ResourceState::DEPTHSTENCIL,
-			ResourceState subpass_layout = ResourceState::DEPTHSTENCIL,
-			ResourceState final_layout = ResourceState::DEPTHSTENCIL,
+			ResourceState layout_before = ResourceState::DEPTHSTENCIL,
+			ResourceState layout = ResourceState::DEPTHSTENCIL,
+			ResourceState layout_after = ResourceState::DEPTHSTENCIL,
 			int subresource_DSV = -1
 		)
 		{
-			RenderPassAttachment attachment;
-			attachment.type = Type::DEPTH_STENCIL;
-			attachment.texture = resource;
-			attachment.loadop = load_op;
-			attachment.storeop = store_op;
-			attachment.initial_layout = initial_layout;
-			attachment.subpass_layout = subpass_layout;
-			attachment.final_layout = final_layout;
-			attachment.subresource = subresource_DSV;
-			return attachment;
+			RenderPassImage image;
+			image.type = Type::DEPTH_STENCIL;
+			image.texture = resource;
+			image.loadop = load_op;
+			image.storeop = store_op;
+			image.layout_before = layout_before;
+			image.layout = layout;
+			image.layout_after = layout_after;
+			image.subresource = subresource_DSV;
+			return image;
 		}
 
-		static RenderPassAttachment Resolve(
-			const Texture& resource,
-			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
-			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
+		static RenderPassImage Resolve(
+			const Texture* resource,
+			ResourceState layout_before = ResourceState::SHADER_RESOURCE,
+			ResourceState layout_after = ResourceState::SHADER_RESOURCE,
 			int subresource_SRV = -1
 		)
 		{
-			RenderPassAttachment attachment;
-			attachment.type = Type::RESOLVE;
-			attachment.texture = resource;
-			attachment.initial_layout = initial_layout;
-			attachment.final_layout = final_layout;
-			attachment.subresource = subresource_SRV;
-			return attachment;
+			RenderPassImage image;
+			image.type = Type::RESOLVE;
+			image.texture = resource;
+			image.layout_before = layout_before;
+			image.layout_after = layout_after;
+			image.subresource = subresource_SRV;
+			return image;
 		}
 
-		static RenderPassAttachment ResolveDepth(
-			const Texture& resource,
+		static RenderPassImage ResolveDepth(
+			const Texture* resource,
 			DepthResolveMode depth_resolve_mode = DepthResolveMode::Min,
-			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
-			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
+			ResourceState layout_before = ResourceState::SHADER_RESOURCE,
+			ResourceState layout_after = ResourceState::SHADER_RESOURCE,
 			int subresource_SRV = -1
 		)
 		{
-			RenderPassAttachment attachment;
-			attachment.type = Type::RESOLVE_DEPTH;
-			attachment.texture = resource;
-			attachment.initial_layout = initial_layout;
-			attachment.final_layout = final_layout;
-			attachment.subresource = subresource_SRV;
-			attachment.depth_resolve_mode = depth_resolve_mode;
-			return attachment;
+			RenderPassImage image;
+			image.type = Type::RESOLVE_DEPTH;
+			image.texture = resource;
+			image.layout_before = layout_before;
+			image.layout_after = layout_after;
+			image.subresource = subresource_SRV;
+			image.depth_resolve_mode = depth_resolve_mode;
+			return image;
 		}
 
-		static RenderPassAttachment ShadingRateSource(
-			const Texture& resource,
-			ResourceState initial_layout = ResourceState::SHADING_RATE_SOURCE,
-			ResourceState final_layout = ResourceState::SHADING_RATE_SOURCE
+		static RenderPassImage ShadingRateSource(
+			const Texture* resource,
+			ResourceState layout_before = ResourceState::SHADING_RATE_SOURCE,
+			ResourceState layout_after = ResourceState::SHADING_RATE_SOURCE
 		)
 		{
-			RenderPassAttachment attachment;
-			attachment.type = Type::SHADING_RATE_SOURCE;
-			attachment.texture = resource;
-			attachment.initial_layout = initial_layout;
-			attachment.subpass_layout = ResourceState::SHADING_RATE_SOURCE;
-			attachment.final_layout = final_layout;
-			return attachment;
+			RenderPassImage image;
+			image.type = Type::SHADING_RATE_SOURCE;
+			image.texture = resource;
+			image.layout_before = layout_before;
+			image.layout = ResourceState::SHADING_RATE_SOURCE;
+			image.layout_after = layout_after;
+			return image;
 		}
 	};
 
@@ -958,21 +957,22 @@ namespace wi::graphics
 			hasher.bits.sample_count = (uint64_t)sample_count;
 			return hasher.value;
 		}
-		static constexpr RenderPassInfo from(const RenderPassAttachment* attachments, uint32_t attachment_count)
+		static constexpr RenderPassInfo from(const RenderPassImage* images, uint32_t image_count)
 		{
 			RenderPassInfo info;
-			for (uint32_t i = 0; i < attachment_count; ++i)
+			for (uint32_t i = 0; i < image_count; ++i)
 			{
-				const RenderPassAttachment& attachment = attachments[i];
-				switch (attachment.type)
+				const RenderPassImage& image = images[i];
+				const TextureDesc& desc = image.texture->GetDesc();
+				switch (image.type)
 				{
-				case RenderPassAttachment::Type::RENDERTARGET:
-					info.rt_formats[info.rt_count++] = attachment.texture.desc.format;
-					info.sample_count = attachment.texture.desc.sample_count;
+				case RenderPassImage::Type::RENDERTARGET:
+					info.rt_formats[info.rt_count++] = desc.format;
+					info.sample_count = desc.sample_count;
 					break;
-				case RenderPassAttachment::Type::DEPTH_STENCIL:
-					info.ds_format = attachment.texture.desc.format;
-					info.sample_count = attachment.texture.desc.sample_count;
+				case RenderPassImage::Type::DEPTH_STENCIL:
+					info.ds_format = desc.format;
+					info.sample_count = desc.sample_count;
 					break;
 				}
 			}
@@ -1445,6 +1445,197 @@ namespace wi::graphics
 
 
 	// Deprecated, kept for back-compat:
+	struct RenderPassAttachment
+	{
+		enum class Type
+		{
+			RENDERTARGET,
+			DEPTH_STENCIL,
+			RESOLVE, // resolve render target (color)
+			RESOLVE_DEPTH,
+			SHADING_RATE_SOURCE
+		} type = Type::RENDERTARGET;
+		enum class LoadOp
+		{
+			LOAD,
+			CLEAR,
+			DONTCARE,
+		} loadop = LoadOp::LOAD;
+		Texture texture;
+		int subresource = -1;
+		enum class StoreOp
+		{
+			STORE,
+			DONTCARE,
+		} storeop = StoreOp::STORE;
+		ResourceState initial_layout = ResourceState::UNDEFINED;	// layout before the render pass
+		ResourceState subpass_layout = ResourceState::UNDEFINED;	// layout within the render pass
+		ResourceState final_layout = ResourceState::UNDEFINED;		// layout after the render pass
+		enum class DepthResolveMode
+		{
+			Min,
+			Max,
+		} depth_resolve_mode = DepthResolveMode::Min;
+
+		static RenderPassAttachment RenderTarget(
+			const Texture& resource,
+			LoadOp load_op = LoadOp::LOAD,
+			StoreOp store_op = StoreOp::STORE,
+			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
+			ResourceState subpass_layout = ResourceState::RENDERTARGET,
+			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
+			int subresource_RTV = -1
+		)
+		{
+			RenderPassAttachment attachment;
+			attachment.type = Type::RENDERTARGET;
+			attachment.texture = resource;
+			attachment.loadop = load_op;
+			attachment.storeop = store_op;
+			attachment.initial_layout = initial_layout;
+			attachment.subpass_layout = subpass_layout;
+			attachment.final_layout = final_layout;
+			attachment.subresource = subresource_RTV;
+			return attachment;
+		}
+
+		static RenderPassAttachment DepthStencil(
+			const Texture& resource,
+			LoadOp load_op = LoadOp::LOAD,
+			StoreOp store_op = StoreOp::STORE,
+			ResourceState initial_layout = ResourceState::DEPTHSTENCIL,
+			ResourceState subpass_layout = ResourceState::DEPTHSTENCIL,
+			ResourceState final_layout = ResourceState::DEPTHSTENCIL,
+			int subresource_DSV = -1
+		)
+		{
+			RenderPassAttachment attachment;
+			attachment.type = Type::DEPTH_STENCIL;
+			attachment.texture = resource;
+			attachment.loadop = load_op;
+			attachment.storeop = store_op;
+			attachment.initial_layout = initial_layout;
+			attachment.subpass_layout = subpass_layout;
+			attachment.final_layout = final_layout;
+			attachment.subresource = subresource_DSV;
+			return attachment;
+		}
+
+		static RenderPassAttachment Resolve(
+			const Texture& resource,
+			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
+			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
+			int subresource_SRV = -1
+		)
+		{
+			RenderPassAttachment attachment;
+			attachment.type = Type::RESOLVE;
+			attachment.texture = resource;
+			attachment.initial_layout = initial_layout;
+			attachment.final_layout = final_layout;
+			attachment.subresource = subresource_SRV;
+			return attachment;
+		}
+
+		static RenderPassAttachment ResolveDepth(
+			const Texture& resource,
+			DepthResolveMode depth_resolve_mode = DepthResolveMode::Min,
+			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
+			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
+			int subresource_SRV = -1
+		)
+		{
+			RenderPassAttachment attachment;
+			attachment.type = Type::RESOLVE_DEPTH;
+			attachment.texture = resource;
+			attachment.initial_layout = initial_layout;
+			attachment.final_layout = final_layout;
+			attachment.subresource = subresource_SRV;
+			attachment.depth_resolve_mode = depth_resolve_mode;
+			return attachment;
+		}
+
+		static RenderPassAttachment ShadingRateSource(
+			const Texture& resource,
+			ResourceState initial_layout = ResourceState::SHADING_RATE_SOURCE,
+			ResourceState final_layout = ResourceState::SHADING_RATE_SOURCE
+		)
+		{
+			RenderPassAttachment attachment;
+			attachment.type = Type::SHADING_RATE_SOURCE;
+			attachment.texture = resource;
+			attachment.initial_layout = initial_layout;
+			attachment.subpass_layout = ResourceState::SHADING_RATE_SOURCE;
+			attachment.final_layout = final_layout;
+			return attachment;
+		}
+
+		constexpr operator RenderPassImage() const
+		{
+			RenderPassImage image;
+			switch (type)
+			{
+			default:
+			case Type::RENDERTARGET:
+				image.type = RenderPassImage::Type::RENDERTARGET;
+				break;
+			case Type::DEPTH_STENCIL:
+				image.type = RenderPassImage::Type::DEPTH_STENCIL;
+				break;
+			case Type::RESOLVE:
+				image.type = RenderPassImage::Type::RESOLVE;
+				break;
+			case Type::RESOLVE_DEPTH:
+				image.type = RenderPassImage::Type::RESOLVE_DEPTH;
+				break;
+			case Type::SHADING_RATE_SOURCE:
+				image.type = RenderPassImage::Type::SHADING_RATE_SOURCE;
+				break;
+			}
+			switch (depth_resolve_mode)
+			{
+			default:
+			case DepthResolveMode::Min:
+				image.depth_resolve_mode = RenderPassImage::DepthResolveMode::Min;
+				break;
+			case DepthResolveMode::Max:
+				image.depth_resolve_mode = RenderPassImage::DepthResolveMode::Max;
+				break;
+			}
+			switch (loadop)
+			{
+			case RenderPassAttachment::LoadOp::LOAD:
+				image.loadop = RenderPassImage::LoadOp::LOAD;
+				break;
+			case RenderPassAttachment::LoadOp::CLEAR:
+				image.loadop = RenderPassImage::LoadOp::CLEAR;
+				break;
+			case RenderPassAttachment::LoadOp::DONTCARE:
+				image.loadop = RenderPassImage::LoadOp::DONTCARE;
+				break;
+			default:
+				break;
+			}
+			switch (storeop)
+			{
+			case RenderPassAttachment::StoreOp::STORE:
+				image.storeop = RenderPassImage::StoreOp::STORE;
+				break;
+			case RenderPassAttachment::StoreOp::DONTCARE:
+				image.storeop = RenderPassImage::StoreOp::DONTCARE;
+				break;
+			default:
+				break;
+			}
+			image.layout_before = initial_layout;
+			image.layout = subpass_layout;
+			image.layout_after = final_layout;
+			image.texture = &texture;
+			image.subresource = subresource;
+			return image;
+		}
+	};
+	// Deprecated, kept for back-compat:
 	struct RenderPassDesc
 	{
 		enum class Flags
@@ -1455,6 +1646,7 @@ namespace wi::graphics
 		Flags flags = Flags::EMPTY;
 		wi::vector<RenderPassAttachment> attachments;
 	};
+	// Deprecated, kept for back-compat:
 	struct RenderPass
 	{
 		bool valid = false;

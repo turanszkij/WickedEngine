@@ -172,7 +172,7 @@ namespace wi::graphics
 
 		virtual void WaitCommandList(CommandList cmd, CommandList wait_for) = 0;
 		virtual void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) = 0;
-		virtual void RenderPassBegin(const RenderPassAttachment* attachments, uint32_t attachment_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) = 0;
+		virtual void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) = 0;
 		virtual void RenderPassEnd(CommandList cmd) = 0;
 		virtual void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) = 0;
 		virtual void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) = 0;
@@ -316,6 +316,7 @@ namespace wi::graphics
 			renderpass->desc = *desc;
 			return true;
 		}
+		// Deprecated, kept for back-compat:
 		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 		{
 			RenderPassFlags flags = {};
@@ -323,7 +324,12 @@ namespace wi::graphics
 			{
 				flags |= RenderPassFlags::ALLOW_UAV_WRITES;
 			}
-			RenderPassBegin(renderpass->desc.attachments.data(), (uint32_t)renderpass->desc.attachments.size(), cmd, flags);
+			RenderPassImage rp[32] = {};
+			for (size_t i = 0; i < renderpass->desc.attachments.size(); ++i)
+			{
+				rp[i] = renderpass->desc.attachments[i];
+			}
+			RenderPassBegin(rp, (uint32_t)renderpass->desc.attachments.size(), cmd, flags);
 		}
 	};
 

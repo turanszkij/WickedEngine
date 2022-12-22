@@ -47,51 +47,6 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &rtFinal);
 			device->SetName(&rtFinal, "rtFinal");
 		}
-
-		if (rtStenciled.IsValid())
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtStenciled, RenderPassAttachment::LoadOp::CLEAR));
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					*dsv,
-					RenderPassAttachment::LoadOp::LOAD,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY
-				)
-			);
-
-			if (rtStenciled.GetDesc().sample_count > 1)
-			{
-				desc.attachments.push_back(RenderPassAttachment::Resolve(rtStenciled_resolved));
-			}
-
-			device->CreateRenderPass(&desc, &renderpass_stenciled);
-
-			dsv = nullptr;
-		}
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rtFinal, RenderPassAttachment::LoadOp::CLEAR));
-
-			if (dsv != nullptr && !rtStenciled.IsValid())
-			{
-				desc.attachments.push_back(
-					RenderPassAttachment::DepthStencil(
-						*dsv,
-						RenderPassAttachment::LoadOp::LOAD,
-						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::DEPTHSTENCIL_READONLY,
-						ResourceState::DEPTHSTENCIL_READONLY,
-						ResourceState::DEPTHSTENCIL_READONLY
-					)
-				);
-			}
-
-			device->CreateRenderPass(&desc, &renderpass_final);
-		}
 	}
 	void RenderPath2D::ResizeLayout()
 	{
@@ -179,11 +134,44 @@ namespace wi
 			wi::image::SetBackground(*GetGUIBlurredBackground());
 		}
 
+		const Texture* dsv = GetDepthStencil();
+
 		// Special care for internal resolution, because stencil buffer is of internal resolution, 
 		//	so we might need to render stencil sprites to separate render target that matches internal resolution!
 		if (rtStenciled.IsValid())
 		{
-			device->RenderPassBegin(&renderpass_stenciled, cmd);
+			if (rtStenciled.GetDesc().sample_count > 1)
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rtStenciled, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(
+						dsv,
+						RenderPassImage::LoadOp::LOAD,
+						RenderPassImage::StoreOp::STORE,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL_READONLY
+					),
+					RenderPassImage::Resolve(&rtStenciled_resolved)
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+			else
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rtStenciled, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(
+						dsv,
+						RenderPassImage::LoadOp::LOAD,
+						RenderPassImage::StoreOp::STORE,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL_READONLY,
+						ResourceState::DEPTHSTENCIL_READONLY
+					),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+			dsv = nullptr;
 
 			Viewport vp;
 			vp.width = (float)rtStenciled.GetDesc().width;
@@ -208,7 +196,28 @@ namespace wi
 			device->RenderPassEnd(cmd);
 		}
 
-		device->RenderPassBegin(&renderpass_final, cmd);
+		if (dsv != nullptr && !rtStenciled.IsValid())
+		{
+			RenderPassImage rp[] = {
+				RenderPassAttachment::RenderTarget(rtFinal, RenderPassAttachment::LoadOp::CLEAR),
+				RenderPassAttachment::DepthStencil(
+					*dsv,
+					RenderPassAttachment::LoadOp::LOAD,
+					RenderPassAttachment::StoreOp::STORE,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY
+				),
+			};
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
+		}
+		else
+		{
+			RenderPassImage rp[] = {
+				RenderPassAttachment::RenderTarget(rtFinal, RenderPassAttachment::LoadOp::CLEAR),
+			};
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
+		}
 
 		Viewport vp;
 		vp.width = (float)rtFinal.GetDesc().width;

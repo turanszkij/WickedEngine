@@ -4953,25 +4953,24 @@ void DrawShadowmaps(
 
 		static thread_local RenderQueue renderQueue;
 
-		const RenderPassAttachment attachments[] = {
-			RenderPassAttachment::DepthStencil(
-				shadowMapAtlas,
-				RenderPassAttachment::LoadOp::CLEAR,
-				RenderPassAttachment::StoreOp::STORE,
+		const RenderPassImage rp[] = {
+			RenderPassImage::DepthStencil(
+				&shadowMapAtlas,
+				RenderPassImage::LoadOp::CLEAR,
+				RenderPassImage::StoreOp::STORE,
 				ResourceState::SHADER_RESOURCE,
 				ResourceState::DEPTHSTENCIL,
 				ResourceState::SHADER_RESOURCE
 			),
-			RenderPassAttachment::RenderTarget(
-				shadowMapAtlas_Transparent,
-				RenderPassAttachment::LoadOp::CLEAR,
-				RenderPassAttachment::StoreOp::STORE,
+			RenderPassImage::RenderTarget(
+				&shadowMapAtlas_Transparent,
+				RenderPassImage::LoadOp::CLEAR,
+				RenderPassImage::StoreOp::STORE,
 				ResourceState::SHADER_RESOURCE,
-				ResourceState::RENDERTARGET,
 				ResourceState::SHADER_RESOURCE
 			),
 		};
-		device->RenderPassBegin(attachments, arraysize(attachments), cmd);
+		device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
@@ -6868,54 +6867,52 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		if (probe.IsMSAA())
 		{
-			const RenderPassAttachment attachments[] = {
-				RenderPassAttachment::DepthStencil(
-					vis.scene->envrenderingDepthBuffer_MSAA,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
+			const RenderPassImage rp[] = {
+				RenderPassImage::DepthStencil(
+					&vis.scene->envrenderingDepthBuffer_MSAA,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE,
 					ResourceState::DEPTHSTENCIL,
 					ResourceState::SHADER_RESOURCE
 				),
-				RenderPassAttachment::RenderTarget(
-					vis.scene->envrenderingColorBuffer_MSAA,
-					RenderPassAttachment::LoadOp::DONTCARE,
-					RenderPassAttachment::StoreOp::DONTCARE,
-					ResourceState::RENDERTARGET,
+				RenderPassImage::RenderTarget(
+					&vis.scene->envrenderingColorBuffer_MSAA,
+					RenderPassImage::LoadOp::DONTCARE,
+					RenderPassImage::StoreOp::DONTCARE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET
 				),
-				RenderPassAttachment::Resolve(
-					vis.scene->envmapArray,
+				RenderPassImage::Resolve(
+					&vis.scene->envmapArray,
 					ResourceState::SHADER_RESOURCE,
 					ResourceState::SHADER_RESOURCE,
 					vis.scene->envmapArray.desc.mip_levels + vis.scene->envmapCount + probe.textureIndex // subresource: individual cubes only mip0
 				)
 			};
-			device->RenderPassBegin(attachments, arraysize(attachments), cmd);
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
 		}
 		else
 		{
-			const RenderPassAttachment attachments[] = {
-				RenderPassAttachment::DepthStencil(
-					vis.scene->envrenderingDepthBuffer,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
+			const RenderPassImage rp[] = {
+				RenderPassImage::DepthStencil(
+					&vis.scene->envrenderingDepthBuffer,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE,
 					ResourceState::DEPTHSTENCIL,
 					ResourceState::SHADER_RESOURCE
 				),
-				RenderPassAttachment::RenderTarget(
-					vis.scene->envmapArray,
-					RenderPassAttachment::LoadOp::DONTCARE,
-					RenderPassAttachment::StoreOp::STORE,
+				RenderPassImage::RenderTarget(
+					&vis.scene->envmapArray,
+					RenderPassImage::LoadOp::DONTCARE,
+					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE,
-					ResourceState::RENDERTARGET,
 					ResourceState::SHADER_RESOURCE,
 					probe.textureIndex
 				)
 			};
-			device->RenderPassBegin(attachments, arraysize(attachments), cmd);
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
 		}
 
 		// Scene will only be rendered if this is a real probe entity:
@@ -7209,41 +7206,38 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 			int slice = (int)(impostor.textureIndex * impostorCaptureAngles * 3 + i * 3);
 
-			const RenderPassAttachment attachments[] = {
-				RenderPassAttachment::RenderTarget(
-					scene.impostorArray,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::RENDERTARGET,
+			const RenderPassImage rp[] = {
+				RenderPassImage::RenderTarget(
+					&scene.impostorArray,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET,
 					slice
 				),
-				RenderPassAttachment::RenderTarget(
-					scene.impostorArray,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::RENDERTARGET,
+				RenderPassImage::RenderTarget(
+					&scene.impostorArray,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET,
 					slice + 1
 				),
-				RenderPassAttachment::RenderTarget(
-					scene.impostorArray,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::RENDERTARGET,
+				RenderPassImage::RenderTarget(
+					&scene.impostorArray,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET,
 					slice + 2
 				),
-				RenderPassAttachment::DepthStencil(
-					scene.impostorDepthStencil,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::DONTCARE
+				RenderPassImage::DepthStencil(
+					&scene.impostorDepthStencil,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::DONTCARE
 				)
 			};
-			device->RenderPassBegin(attachments, arraysize(attachments), cmd);
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 			uint32_t first_subset = 0;
 			uint32_t last_subset = 0;
@@ -8067,13 +8061,13 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 
 				if (object.lightmapIterationCount == 0)
 				{
-					RenderPassAttachment attachment = RenderPassAttachment::RenderTarget(object.lightmap, RenderPassAttachment::LoadOp::CLEAR);
-					device->RenderPassBegin(&attachment, 1, cmd);
+					RenderPassImage rp = RenderPassImage::RenderTarget(&object.lightmap, RenderPassImage::LoadOp::CLEAR);
+					device->RenderPassBegin(&rp, 1, cmd);
 				}
 				else
 				{
-					RenderPassAttachment attachment = RenderPassAttachment::RenderTarget(object.lightmap, RenderPassAttachment::LoadOp::LOAD);
-					device->RenderPassBegin(&attachment, 1, cmd);
+					RenderPassImage rp = RenderPassImage::RenderTarget(&object.lightmap, RenderPassImage::LoadOp::LOAD);
+					device->RenderPassBegin(&rp, 1, cmd);
 				}
 
 				Viewport vp;

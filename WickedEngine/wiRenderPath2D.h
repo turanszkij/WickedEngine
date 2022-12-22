@@ -18,9 +18,6 @@ namespace wi
 		wi::graphics::Texture rtStenciled_resolved;
 		wi::graphics::Texture rtFinal;
 
-		wi::graphics::RenderPass renderpass_stenciled;
-		wi::graphics::RenderPass renderpass_final;
-
 		wi::gui::GUI GUI;
 
 		XMUINT2 current_buffersize{};

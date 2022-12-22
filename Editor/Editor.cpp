@@ -123,40 +123,6 @@ void EditorComponent::ResizeBuffers()
 		assert(success);
 		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
 		assert(success);
-
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rt_selectionOutline[0], RenderPassAttachment::LoadOp::CLEAR));
-			if (renderPath->getMSAASampleCount() > 1)
-			{
-				desc.attachments[0].texture = rt_selectionOutline_MSAA;
-				desc.attachments.push_back(RenderPassAttachment::Resolve(rt_selectionOutline[0]));
-			}
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					*renderPath->GetDepthStencil(),
-					RenderPassAttachment::LoadOp::LOAD,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY
-				)
-			);
-			
-			success = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
-			assert(success);
-
-			if (renderPath->getMSAASampleCount() == 1)
-			{
-				desc.attachments[0].texture = rt_selectionOutline[1]; // rendertarget
-			}
-			else
-			{
-				desc.attachments[1].texture = rt_selectionOutline[1]; // resolve
-			}
-			success = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
-			assert(success);
-		}
 	}
 
 	{
@@ -169,25 +135,6 @@ void EditorComponent::ResizeBuffers()
 		desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 		device->CreateTexture(&desc, nullptr, &editor_depthbuffer);
 		device->SetName(&editor_depthbuffer, "editor_depthbuffer");
-
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					editor_depthbuffer,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::DONTCARE
-				)
-			);
-			desc.attachments.push_back(
-				RenderPassAttachment::RenderTarget(
-					renderPath->GetRenderResult(),
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE
-				)
-			);
-			device->CreateRenderPass(&desc, &renderpass_editor);
-		}
 	}
 }
 void EditorComponent::ResizeLayout()
@@ -1909,7 +1856,37 @@ void EditorComponent::Render() const
 
 			// Materials outline:
 			{
-				device->RenderPassBegin(&renderpass_selectionOutline[0], cmd);
+				if (renderPath->getMSAASampleCount() > 1)
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rt_selectionOutline_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
+						RenderPassImage::Resolve(&rt_selectionOutline[0]),
+						RenderPassImage::DepthStencil(
+							renderPath->GetDepthStencil(),
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY
+						),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
+				else
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rt_selectionOutline[0], RenderPassImage::LoadOp::CLEAR),
+						RenderPassImage::DepthStencil(
+							renderPath->GetDepthStencil(),
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY
+						),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
 
 				// Draw solid blocks of selected materials
 				fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_MATERIAL;
@@ -1920,7 +1897,37 @@ void EditorComponent::Render() const
 
 			// Objects outline:
 			{
-				device->RenderPassBegin(&renderpass_selectionOutline[1], cmd);
+				if (renderPath->getMSAASampleCount() > 1)
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rt_selectionOutline_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
+						RenderPassImage::Resolve(&rt_selectionOutline[1]),
+						RenderPassImage::DepthStencil(
+							renderPath->GetDepthStencil(),
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY
+						),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
+				else
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rt_selectionOutline[1], RenderPassImage::LoadOp::CLEAR),
+						RenderPassImage::DepthStencil(
+							renderPath->GetDepthStencil(),
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY
+						),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
 
 				// Draw solid blocks of selected objects
 				fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_OBJECT;
@@ -1934,7 +1941,20 @@ void EditorComponent::Render() const
 
 		// Full resolution:
 		{
-			device->RenderPassBegin(&renderpass_editor, cmd);
+			const Texture& render_result = renderPath->GetRenderResult();
+			RenderPassImage rp[] = {
+				RenderPassImage::RenderTarget(
+					&render_result,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE
+				),
+				RenderPassImage::DepthStencil(
+					&editor_depthbuffer,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::DONTCARE
+				),
+			};
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 			Viewport vp;
 			vp.width = (float)editor_depthbuffer.GetDesc().width;

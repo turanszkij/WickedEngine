@@ -1961,9 +1961,6 @@ using namespace dx12_internal;
 		assert(dirty == 0ull); // check that all dirty root parameters were handled
 	}
 
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> pso_compile(PipelineState* pso, RenderPassInfo renderpass_info)
-	{
-	}
 	void GraphicsDevice_DX12::pso_validate(CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
@@ -5228,7 +5225,7 @@ using namespace dx12_internal;
 
 		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
-	void GraphicsDevice_DX12::RenderPassBegin(const RenderPassAttachment* attachments, uint32_t attachment_count, CommandList cmd, RenderPassFlags flags)
+	void GraphicsDevice_DX12::RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.renderpass_barriers_begin.clear();
@@ -5254,59 +5251,60 @@ using namespace dx12_internal;
 		ResolveSourceInfo RT_resolve_src_infos[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT];
 		ResolveSourceInfo DS_resolve_src_info;
 
-		for (uint32_t i = 0; i < attachment_count; ++i)
+		for (uint32_t i = 0; i < image_count; ++i)
 		{
-			const RenderPassAttachment& attachment = attachments[i];
-			const Texture* texture = &attachment.texture;
-			int subresource = attachment.subresource;
+			const RenderPassImage& image = images[i];
+			const Texture* texture = image.texture;
+			const TextureDesc& desc = texture->GetDesc();
+			int subresource = image.subresource;
 			auto internal_state = to_internal(texture);
 
 			D3D12_CLEAR_VALUE clear_value;
-			clear_value.Format = _ConvertFormat(texture->desc.format);
+			clear_value.Format = _ConvertFormat(desc.format);
 
 			D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE beginning_access_type;
-			switch (attachment.loadop)
+			switch (image.loadop)
 			{
 			default:
-			case RenderPassAttachment::LoadOp::LOAD:
+			case RenderPassImage::LoadOp::LOAD:
 				beginning_access_type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
 				break;
-			case RenderPassAttachment::LoadOp::CLEAR:
+			case RenderPassImage::LoadOp::CLEAR:
 				beginning_access_type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
 				break;
-			case RenderPassAttachment::LoadOp::DONTCARE:
+			case RenderPassImage::LoadOp::DONTCARE:
 				beginning_access_type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
 				break;
 			}
 
 			D3D12_RENDER_PASS_ENDING_ACCESS_TYPE ending_access_type;
-			switch (attachment.storeop)
+			switch (image.storeop)
 			{
 			default:
-			case RenderPassAttachment::StoreOp::STORE:
+			case RenderPassImage::StoreOp::STORE:
 				ending_access_type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 				break;
-			case RenderPassAttachment::StoreOp::DONTCARE:
+			case RenderPassImage::StoreOp::DONTCARE:
 				ending_access_type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
 				break;
 			}
 
 			SingleDescriptor descriptor;
 
-			switch (attachment.type)
+			switch (image.type)
 			{
-			case RenderPassAttachment::Type::RENDERTARGET:
+			case RenderPassImage::Type::RENDERTARGET:
 			{
-				descriptor = attachment.subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[attachment.subresource];
+				descriptor = subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[subresource];
 				ResolveSourceInfo& resolve_src_info = RT_resolve_src_infos[rt_count];
 				D3D12_RENDER_PASS_RENDER_TARGET_DESC& RTV = RTVs[rt_count++];
 				RTV.cpuDescriptor = descriptor.handle;
 				RTV.BeginningAccess.Type = beginning_access_type;
 				RTV.EndingAccess.Type = ending_access_type;
-				clear_value.Color[0] = texture->desc.clear.color[0];
-				clear_value.Color[1] = texture->desc.clear.color[1];
-				clear_value.Color[2] = texture->desc.clear.color[2];
-				clear_value.Color[3] = texture->desc.clear.color[3];
+				clear_value.Color[0] = desc.clear.color[0];
+				clear_value.Color[1] = desc.clear.color[1];
+				clear_value.Color[2] = desc.clear.color[2];
+				clear_value.Color[3] = desc.clear.color[3];
 				RTV.BeginningAccess.Clear.ClearValue = clear_value;
 				resolve_src_info.resource = internal_state->resource.Get();
 				resolve_src_info.preserve = ending_access_type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
@@ -5314,14 +5312,14 @@ using namespace dx12_internal;
 				resolve_src_info.mipCount = descriptor.mipCount;
 				resolve_src_info.firstSlice = descriptor.firstSlice;
 				resolve_src_info.sliceCount = descriptor.sliceCount;
-				resolve_src_info.total_mipCount = texture->desc.mip_levels;
-				resolve_src_info.total_sliceCount = texture->desc.array_size;
+				resolve_src_info.total_mipCount = desc.mip_levels;
+				resolve_src_info.total_sliceCount = desc.array_size;
 			}
 			break;
 
-			case RenderPassAttachment::Type::RESOLVE:
+			case RenderPassImage::Type::RESOLVE:
 			{
-				descriptor = attachment.subresource < 0 ? internal_state->srv : internal_state->subresources_srv[attachment.subresource];
+				descriptor = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
 				ResolveSourceInfo& resolve_src_info = RT_resolve_src_infos[rt_resolve_count];
 				D3D12_RENDER_PASS_RENDER_TARGET_DESC& RTV = RTVs[rt_resolve_count];
 				RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
@@ -5330,17 +5328,17 @@ using namespace dx12_internal;
 				RTV.EndingAccess.Resolve.pDstResource = internal_state->resource.Get();
 				RTV.EndingAccess.Resolve.pSrcResource = resolve_src_info.resource;
 				RTV.EndingAccess.Resolve.PreserveResolveSource = resolve_src_info.preserve;
-				for (uint32_t mip = 0; mip < std::min(attachment.texture.desc.mip_levels, descriptor.mipCount); ++mip)
+				for (uint32_t mip = 0; mip < std::min(desc.mip_levels, descriptor.mipCount); ++mip)
 				{
-					for (uint32_t slice = 0; slice < std::min(attachment.texture.desc.array_size, descriptor.sliceCount); ++slice)
+					for (uint32_t slice = 0; slice < std::min(desc.array_size, descriptor.sliceCount); ++slice)
 					{
 						D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS& params = commandlist.resolve_subresources[rt_resolve_count].emplace_back();
 						params.SrcSubresource = D3D12CalcSubresource(resolve_src_info.firstMip + mip, resolve_src_info.firstSlice + slice, 0, resolve_src_info.total_mipCount, resolve_src_info.total_sliceCount);
-						params.DstSubresource = D3D12CalcSubresource(descriptor.firstMip + mip, descriptor.firstSlice + slice, 0, texture->desc.mip_levels, texture->desc.array_size);
+						params.DstSubresource = D3D12CalcSubresource(descriptor.firstMip + mip, descriptor.firstSlice + slice, 0, desc.mip_levels, desc.array_size);
 						params.SrcRect.left = 0;
 						params.SrcRect.top = 0;
-						params.SrcRect.right = (LONG)texture->desc.width;
-						params.SrcRect.bottom = (LONG)texture->desc.height;
+						params.SrcRect.right = (LONG)desc.width;
+						params.SrcRect.bottom = (LONG)desc.height;
 					}
 				}
 				RTV.EndingAccess.Resolve.pSubresourceParameters = commandlist.resolve_subresources[rt_resolve_count].data();
@@ -5349,14 +5347,14 @@ using namespace dx12_internal;
 			}
 			break;
 
-			case RenderPassAttachment::Type::DEPTH_STENCIL:
+			case RenderPassImage::Type::DEPTH_STENCIL:
 			{
-				descriptor = attachment.subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[attachment.subresource];
+				descriptor = subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[subresource];
 				DSV.cpuDescriptor = descriptor.handle;
 				DSV.DepthBeginningAccess.Type = beginning_access_type;
 				DSV.DepthEndingAccess.Type = ending_access_type;
-				clear_value.DepthStencil.Depth = texture->desc.clear.depth_stencil.depth;
-				clear_value.DepthStencil.Stencil = texture->desc.clear.depth_stencil.stencil;
+				clear_value.DepthStencil.Depth = desc.clear.depth_stencil.depth;
+				clear_value.DepthStencil.Stencil = desc.clear.depth_stencil.stencil;
 				DSV.DepthBeginningAccess.Clear.ClearValue = clear_value;
 				DSV.DepthEndingAccess.Resolve.pSrcResource = internal_state->resource.Get();
 				DSV.DepthEndingAccess.Resolve.PreserveResolveSource = ending_access_type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
@@ -5366,9 +5364,9 @@ using namespace dx12_internal;
 				DS_resolve_src_info.mipCount = descriptor.mipCount;
 				DS_resolve_src_info.firstSlice = descriptor.firstSlice;
 				DS_resolve_src_info.sliceCount = descriptor.sliceCount;
-				DS_resolve_src_info.total_mipCount = texture->desc.mip_levels;
-				DS_resolve_src_info.total_sliceCount = texture->desc.array_size;
-				if (IsFormatStencilSupport(texture->desc.format))
+				DS_resolve_src_info.total_mipCount = desc.mip_levels;
+				DS_resolve_src_info.total_sliceCount = desc.array_size;
+				if (IsFormatStencilSupport(desc.format))
 				{
 					DSV.StencilBeginningAccess = DSV.DepthBeginningAccess;
 					DSV.StencilEndingAccess = DSV.DepthEndingAccess;
@@ -5376,47 +5374,47 @@ using namespace dx12_internal;
 			}
 			break;
 
-			case RenderPassAttachment::Type::RESOLVE_DEPTH:
+			case RenderPassImage::Type::RESOLVE_DEPTH:
 			{
-				descriptor = attachment.subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[attachment.subresource];
+				descriptor = subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[subresource];
 				DSV.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
 				DSV.DepthEndingAccess.Resolve.Format = clear_value.Format;
-				switch (attachment.depth_resolve_mode)
+				switch (image.depth_resolve_mode)
 				{
 				default:
-				case RenderPassAttachment::DepthResolveMode::Min:
+				case RenderPassImage::DepthResolveMode::Min:
 					DSV.DepthEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_MIN;
 					break;
-				case RenderPassAttachment::DepthResolveMode::Max:
+				case RenderPassImage::DepthResolveMode::Max:
 					DSV.DepthEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_MAX;
 					break;
 				}
 				DSV.DepthEndingAccess.Resolve.pDstResource = internal_state->resource.Get();
 				DSV.DepthEndingAccess.Resolve.pSrcResource = DS_resolve_src_info.resource;
 				DSV.DepthEndingAccess.Resolve.PreserveResolveSource = DS_resolve_src_info.preserve;
-				for (uint32_t mip = 0; mip < std::min(attachment.texture.desc.mip_levels, descriptor.mipCount); ++mip)
+				for (uint32_t mip = 0; mip < std::min(desc.mip_levels, descriptor.mipCount); ++mip)
 				{
-					for (uint32_t slice = 0; slice < std::min(attachment.texture.desc.array_size, descriptor.sliceCount); ++slice)
+					for (uint32_t slice = 0; slice < std::min(desc.array_size, descriptor.sliceCount); ++slice)
 					{
 						D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS& params = commandlist.resolve_subresources_dsv.emplace_back();
 						params.SrcSubresource = D3D12CalcSubresource(DS_resolve_src_info.firstMip + mip, DS_resolve_src_info.firstSlice + slice, 0, DS_resolve_src_info.total_mipCount, DS_resolve_src_info.total_sliceCount);
-						params.DstSubresource = D3D12CalcSubresource(descriptor.firstMip + mip, descriptor.firstSlice + slice, 0, texture->desc.mip_levels, texture->desc.array_size);
+						params.DstSubresource = D3D12CalcSubresource(descriptor.firstMip + mip, descriptor.firstSlice + slice, 0, desc.mip_levels, desc.array_size);
 						params.SrcRect.left = 0;
 						params.SrcRect.top = 0;
-						params.SrcRect.right = (LONG)texture->desc.width;
-						params.SrcRect.bottom = (LONG)texture->desc.height;
+						params.SrcRect.right = (LONG)desc.width;
+						params.SrcRect.bottom = (LONG)desc.height;
 					}
 				}
 				DSV.DepthEndingAccess.Resolve.pSubresourceParameters = commandlist.resolve_subresources_dsv.data();
 				DSV.DepthEndingAccess.Resolve.SubresourceCount = (UINT)commandlist.resolve_subresources_dsv.size();
-				if (IsFormatStencilSupport(texture->desc.format))
+				if (IsFormatStencilSupport(desc.format))
 				{
 					DSV.StencilEndingAccess = DSV.DepthEndingAccess;
 				}
 			}
 			break;
 
-			case RenderPassAttachment::Type::SHADING_RATE_SOURCE:
+			case RenderPassImage::Type::SHADING_RATE_SOURCE:
 				commandlist.shading_rate_image = internal_state->resource.Get(); // will be set after barriers
 				break;
 
@@ -5427,9 +5425,9 @@ using namespace dx12_internal;
 
 			// Beginning barriers:
 			{
-				D3D12_RESOURCE_STATES before = _ParseResourceState(attachment.initial_layout);
-				D3D12_RESOURCE_STATES after = _ParseResourceState(attachment.subpass_layout);
-				if (attachment.type == RenderPassAttachment::Type::RESOLVE || attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH)
+				D3D12_RESOURCE_STATES before = _ParseResourceState(image.layout_before);
+				D3D12_RESOURCE_STATES after = _ParseResourceState(image.layout);
+				if (image.type == RenderPassImage::Type::RESOLVE || image.type == RenderPassImage::Type::RESOLVE_DEPTH)
 				{
 					after = D3D12_RESOURCE_STATE_RESOLVE_DEST;
 				}
@@ -5442,14 +5440,14 @@ using namespace dx12_internal;
 					barrierdesc.Transition.StateBefore = before;
 					barrierdesc.Transition.StateAfter = after;
 
-					if (attachment.subresource >= 0)
+					if (subresource >= 0)
 					{
 						// Need to unroll descriptor into multiple subresource barriers:
-						for (uint32_t mip = descriptor.firstMip; mip < std::min(attachment.texture.desc.mip_levels, descriptor.firstMip + descriptor.mipCount); ++mip)
+						for (uint32_t mip = descriptor.firstMip; mip < std::min(desc.mip_levels, descriptor.firstMip + descriptor.mipCount); ++mip)
 						{
-							for (uint32_t slice = descriptor.firstSlice; slice < std::min(attachment.texture.desc.array_size, descriptor.firstSlice + descriptor.sliceCount); ++slice)
+							for (uint32_t slice = descriptor.firstSlice; slice < std::min(desc.array_size, descriptor.firstSlice + descriptor.sliceCount); ++slice)
 							{
-								barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, attachment.texture.desc.mip_levels, attachment.texture.desc.array_size);
+								barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, desc.mip_levels, desc.array_size);
 								commandlist.renderpass_barriers_begin.push_back(barrierdesc);
 							}
 						}
@@ -5465,9 +5463,9 @@ using namespace dx12_internal;
 
 			// Ending barriers:
 			{
-				D3D12_RESOURCE_STATES before = _ParseResourceState(attachment.subpass_layout);
-				D3D12_RESOURCE_STATES after = _ParseResourceState(attachment.final_layout);
-				if (attachment.type == RenderPassAttachment::Type::RESOLVE || attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH)
+				D3D12_RESOURCE_STATES before = _ParseResourceState(image.layout);
+				D3D12_RESOURCE_STATES after = _ParseResourceState(image.layout_after);
+				if (image.type == RenderPassImage::Type::RESOLVE || image.type == RenderPassImage::Type::RESOLVE_DEPTH)
 				{
 					before = D3D12_RESOURCE_STATE_RESOLVE_DEST;
 				}
@@ -5480,14 +5478,14 @@ using namespace dx12_internal;
 					barrierdesc.Transition.StateBefore = before;
 					barrierdesc.Transition.StateAfter = after;
 
-					if (attachment.subresource >= 0)
+					if (subresource >= 0)
 					{
 						// Need to unroll descriptor into multiple subresource barriers:
-						for (uint32_t mip = descriptor.firstMip; mip < std::min(attachment.texture.desc.mip_levels, descriptor.firstMip + descriptor.mipCount); ++mip)
+						for (uint32_t mip = descriptor.firstMip; mip < std::min(desc.mip_levels, descriptor.firstMip + descriptor.mipCount); ++mip)
 						{
-							for (uint32_t slice = descriptor.firstSlice; slice < std::min(attachment.texture.desc.array_size, descriptor.firstSlice + descriptor.sliceCount); ++slice)
+							for (uint32_t slice = descriptor.firstSlice; slice < std::min(desc.array_size, descriptor.firstSlice + descriptor.sliceCount); ++slice)
 							{
-								barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, attachment.texture.desc.mip_levels, attachment.texture.desc.array_size);
+								barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, desc.mip_levels, desc.array_size);
 								commandlist.renderpass_barriers_end.push_back(barrierdesc);
 							}
 						}
@@ -5533,7 +5531,7 @@ using namespace dx12_internal;
 			FLAGS
 		);
 
-		commandlist.renderpass_info = RenderPassInfo::from(attachments, attachment_count);
+		commandlist.renderpass_info = RenderPassInfo::from(images, image_count);
 	}
 	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
 	{
