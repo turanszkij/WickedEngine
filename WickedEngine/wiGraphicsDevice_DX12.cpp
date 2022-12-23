@@ -26,6 +26,8 @@ using namespace Microsoft::WRL;
 
 namespace wi::graphics
 {
+// Note: pipeline library is disabled, because it is slower to use than not using it
+//  There is driver-side caching that is much faster
 //#define PIPELINE_LIBRARY_ENABLED
 
 namespace dx12_internal
