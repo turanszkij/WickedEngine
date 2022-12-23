@@ -13509,7 +13509,7 @@ void CreateFSR2Resources(FSR2Resources& res, XMUINT2 render_resolution, XMUINT2 
 
 	desc.width = render_resolution.x;
 	desc.height = render_resolution.y;
-	desc.format = Format::R16G16B16A16_FLOAT;
+	desc.format = Format::R16G16B16A16_UNORM;
 	bool success = device->CreateTexture(&desc, nullptr, &res.adjusted_color);
 	assert(success);
 	device->SetName(&res.adjusted_color, "fsr2::adjusted_color");
@@ -13690,8 +13690,8 @@ void Postprocess_FSR2(
 	};
 
 	FSR2Resources::Fsr2Constants& fsr2_constants = res.fsr2_constants;
-	fsr2_constants.jitterOffset[0] = camera.jitter.x;
-	fsr2_constants.jitterOffset[1] = camera.jitter.y;
+	fsr2_constants.jitterOffset[0] = camera.jitter.x * fsr2_constants.renderSize[0] * 0.5f;
+	fsr2_constants.jitterOffset[1] = camera.jitter.y * fsr2_constants.renderSize[1] * -0.5f;
 
 	// compute the horizontal FOV for the shader from the vertical one.
 	const float aspectRatio = (float)fsr2_constants.renderSize[0] / (float)fsr2_constants.renderSize[1];
@@ -13750,6 +13750,7 @@ void Postprocess_FSR2(
 	//	res.jitterPrev.x = fsr2_constants.jitterOffset[0];
 	//	res.jitterPrev.y = fsr2_constants.jitterOffset[1];
 	//}
+
 
 	// lock data, assuming jitter sequence length computation for now
 	const int32_t jitterPhaseCount = ffxFsr2GetJitterPhaseCount(fsr2_constants.renderSize[0], fsr2_constants.displaySize[0]);
