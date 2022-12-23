@@ -42,7 +42,6 @@ namespace wi
 		// These are used when HDR10 color space is active:
 		//	Because we want to blend in linear color space, but HDR10 is non-linear
 		wi::graphics::Texture rendertarget;
-		wi::graphics::RenderPass renderpass;
 
 		std::string infodisplay_str;
 

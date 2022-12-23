@@ -124,7 +124,6 @@ struct VoxelizedSceneData
 
 Texture shadowMapAtlas;
 Texture shadowMapAtlas_Transparent;
-RenderPass renderpass_shadowMapAtlas;
 int max_shadow_resolution_2D = 1024;
 int max_shadow_resolution_cube = 256;
 
@@ -311,21 +310,24 @@ union ObjectRenderingVariant
 {
 	struct
 	{
+		uint32_t renderpass : 4;	// wi::enums::RENDERPASS
 		uint32_t shadertype : 8;	// MaterialComponent::SHADERTYPE
 		uint32_t blendmode : 4;		// wi::enums::BLENDMODE
 		uint32_t cullmode : 2;		// wi::graphics::CullMode
 		uint32_t tessellation : 1;	// bool
 		uint32_t alphatest : 1;		// bool
 		uint32_t wind : 1;			// bool
+		uint32_t sample_count : 4;	// 1, 2, 4, 8
 	} bits;
 	uint32_t value;
 };
 static_assert(sizeof(ObjectRenderingVariant) == sizeof(uint32_t));
-wi::unordered_map<uint32_t, PipelineState> PSO_object[RENDERPASS_COUNT];
-inline PipelineState* GetObjectPSO(RENDERPASS renderPass, ObjectRenderingVariant variant)
+wi::unordered_map<uint32_t, PipelineState> PSO_object[RENDERPASS_COUNT][MaterialComponent::SHADERTYPE_COUNT];
+inline PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
 {
-	return &PSO_object[renderPass][variant.value];
+	return &PSO_object[variant.bits.renderpass][variant.bits.shadertype][variant.value];
 }
+wi::jobsystem::context object_pso_job_ctx;
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
 
@@ -1062,6 +1064,15 @@ void LoadShaders()
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_RAYTRACE], "surfel_raytraceCS.cso"); });
 	}
 
+	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+	{
+		LoadShader(ShaderStage::CS, shaders[CSTYPE_RAYTRACE], "raytraceCS_rtapi.cso", ShaderModel::SM_6_5);
+	}
+	else
+	{
+		LoadShader(ShaderStage::CS, shaders[CSTYPE_RAYTRACE], "raytraceCS.cso");
+	}
+
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE], "visibility_resolveCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_MSAA], "visibility_resolveCS_MSAA.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_INDIRECT_PREPARE], "visibility_indirect_prepareCS.cso"); });
@@ -1162,158 +1173,6 @@ void LoadShaders()
 	});
 
 	wi::jobsystem::Wait(ctx);
-
-	// default objectshaders:
-	wi::jobsystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [](wi::jobsystem::JobArgs args) {
-		RENDERPASS renderPass = (RENDERPASS)args.jobIndex;
-
-		for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)
-		{
-			for (uint32_t blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
-			{
-				for (uint32_t cullMode = 0; cullMode <= 3; ++cullMode)
-				{
-					for (uint32_t tessellation = 0; tessellation <= 1; ++tessellation)
-					{
-						for (uint32_t alphatest = 0; alphatest <= 1; ++alphatest)
-						{
-							for (uint32_t wind = 0; wind <= 1; ++wind)
-							{
-								const bool transparency = blendMode != BLENDMODE_OPAQUE;
-								SHADERTYPE realVS = GetVSTYPE(renderPass, tessellation, alphatest, transparency, wind);
-								SHADERTYPE realHS = GetHSTYPE(renderPass, tessellation, alphatest);
-								SHADERTYPE realDS = GetDSTYPE(renderPass, tessellation, alphatest);
-								SHADERTYPE realGS = GetGSTYPE(renderPass, alphatest, transparency);
-								SHADERTYPE realPS = GetPSTYPE(renderPass, alphatest, transparency, (MaterialComponent::SHADERTYPE)shaderType);
-
-								if (tessellation && (realHS == SHADERTYPE_COUNT || realDS == SHADERTYPE_COUNT))
-								{
-									continue;
-								}
-
-								PipelineStateDesc desc;
-								desc.vs = realVS < SHADERTYPE_COUNT ? &shaders[realVS] : nullptr;
-								desc.hs = realHS < SHADERTYPE_COUNT ? &shaders[realHS] : nullptr;
-								desc.ds = realDS < SHADERTYPE_COUNT ? &shaders[realDS] : nullptr;
-								desc.gs = realGS < SHADERTYPE_COUNT ? &shaders[realGS] : nullptr;
-								desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
-
-								switch (blendMode)
-								{
-								case BLENDMODE_OPAQUE:
-									desc.bs = &blendStates[BSTYPE_OPAQUE];
-									break;
-								case BLENDMODE_ALPHA:
-									desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-									break;
-								case BLENDMODE_ADDITIVE:
-									desc.bs = &blendStates[BSTYPE_ADDITIVE];
-									break;
-								case BLENDMODE_PREMULTIPLIED:
-									desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
-									break;
-								case BLENDMODE_MULTIPLY:
-									desc.bs = &blendStates[BSTYPE_MULTIPLY];
-									break;
-								default:
-									assert(0);
-									break;
-								}
-
-								switch (renderPass)
-								{
-								case RENDERPASS_SHADOW:
-								case RENDERPASS_SHADOWCUBE:
-									desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
-									break;
-								default:
-									break;
-								}
-
-								switch (renderPass)
-								{
-								case RENDERPASS_SHADOW:
-								case RENDERPASS_SHADOWCUBE:
-									desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
-									break;
-								case RENDERPASS_MAIN:
-									if (blendMode == BLENDMODE_ADDITIVE)
-									{
-										desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-									}
-									else
-									{
-										desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
-									}
-									break;
-								case RENDERPASS_ENVMAPCAPTURE:
-									desc.dss = &depthStencils[DSSTYPE_ENVMAP];
-									break;
-								case RENDERPASS_VOXELIZE:
-									desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
-									break;
-								default:
-									if (blendMode == BLENDMODE_ADDITIVE)
-									{
-										desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-									}
-									else
-									{
-										desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-									}
-									break;
-								}
-
-								switch (renderPass)
-								{
-								case RENDERPASS_SHADOW:
-								case RENDERPASS_SHADOWCUBE:
-									desc.rs = &rasterizers[cullMode == (int)CullMode::NONE ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
-									break;
-								case RENDERPASS_VOXELIZE:
-									desc.rs = &rasterizers[RSTYPE_VOXELIZE];
-									break;
-								default:
-									switch ((CullMode)cullMode)
-									{
-									default:
-									case CullMode::BACK:
-										desc.rs = &rasterizers[RSTYPE_FRONT];
-										break;
-									case CullMode::NONE:
-										desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-										break;
-									case CullMode::FRONT:
-										desc.rs = &rasterizers[RSTYPE_BACK];
-										break;
-									}
-									break;
-								}
-
-								if (tessellation)
-								{
-									desc.pt = PrimitiveTopology::PATCHLIST;
-								}
-								else
-								{
-									desc.pt = PrimitiveTopology::TRIANGLELIST;
-								}
-
-								ObjectRenderingVariant variant = {};
-								variant.bits.shadertype = shaderType;
-								variant.bits.blendmode = blendMode;
-								variant.bits.cullmode = cullMode;
-								variant.bits.tessellation = tessellation;
-								variant.bits.alphatest = alphatest;
-								variant.bits.wind = wind;
-								device->CreatePipelineState(&desc, GetObjectPSO(renderPass, variant));
-							}
-						}
-					}
-				}
-			}
-		}
-	});
 
 	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
 	customShaders.clear();
@@ -1496,7 +1355,11 @@ void LoadShaders()
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 
-		device->CreatePipelineState(&desc, &PSO_renderlightmap);
+		RenderPassInfo renderpass_info;
+		renderpass_info.rt_count = 1;
+		renderpass_info.rt_formats[0] = Format::R32G32B32A32_FLOAT;
+
+		device->CreatePipelineState(&desc, &PSO_renderlightmap, &renderpass_info);
 		});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
@@ -1760,6 +1623,218 @@ void LoadShaders()
 #endif // RTREFLECTION_WITH_RAYTRACING_PIPELINE
 
 	wi::jobsystem::Wait(ctx);
+
+	
+
+	// default objectshaders:
+	//	We don't wait for these here, because then it can slow down the init time a lot
+	//	We will wait for these to complete in RenderMeshes() just before they will be first used
+	wi::jobsystem::Wait(object_pso_job_ctx);
+	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
+	{
+		for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)
+		{
+			wi::jobsystem::Execute(object_pso_job_ctx, [=](wi::jobsystem::JobArgs args) {
+				for (uint32_t blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
+				{
+					for (uint32_t cullMode = 0; cullMode <= 3; ++cullMode)
+					{
+						for (uint32_t tessellation = 0; tessellation <= 1; ++tessellation)
+						{
+							for (uint32_t alphatest = 0; alphatest <= 1; ++alphatest)
+							{
+								for (uint32_t wind = 0; wind <= 1; ++wind)
+								{
+									const bool transparency = blendMode != BLENDMODE_OPAQUE;
+									if (renderPass == RENDERPASS_PREPASS && transparency)
+										continue;
+
+									SHADERTYPE realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency, wind);
+									SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
+									SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
+									SHADERTYPE realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest, transparency);
+									SHADERTYPE realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, (MaterialComponent::SHADERTYPE)shaderType);
+
+									if (tessellation && (realHS == SHADERTYPE_COUNT || realDS == SHADERTYPE_COUNT))
+										continue;
+
+									PipelineStateDesc desc;
+									desc.vs = realVS < SHADERTYPE_COUNT ? &shaders[realVS] : nullptr;
+									desc.hs = realHS < SHADERTYPE_COUNT ? &shaders[realHS] : nullptr;
+									desc.ds = realDS < SHADERTYPE_COUNT ? &shaders[realDS] : nullptr;
+									desc.gs = realGS < SHADERTYPE_COUNT ? &shaders[realGS] : nullptr;
+									desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
+
+									switch (blendMode)
+									{
+									case BLENDMODE_OPAQUE:
+										desc.bs = &blendStates[BSTYPE_OPAQUE];
+										break;
+									case BLENDMODE_ALPHA:
+										desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+										break;
+									case BLENDMODE_ADDITIVE:
+										desc.bs = &blendStates[BSTYPE_ADDITIVE];
+										break;
+									case BLENDMODE_PREMULTIPLIED:
+										desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
+										break;
+									case BLENDMODE_MULTIPLY:
+										desc.bs = &blendStates[BSTYPE_MULTIPLY];
+										break;
+									default:
+										assert(0);
+										break;
+									}
+
+									switch (renderPass)
+									{
+									case RENDERPASS_SHADOW:
+									case RENDERPASS_SHADOWCUBE:
+										desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
+										break;
+									default:
+										break;
+									}
+
+									switch (renderPass)
+									{
+									case RENDERPASS_SHADOW:
+									case RENDERPASS_SHADOWCUBE:
+										desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
+										break;
+									case RENDERPASS_MAIN:
+										if (blendMode == BLENDMODE_ADDITIVE)
+										{
+											desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+										}
+										else
+										{
+											desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
+										}
+										break;
+									case RENDERPASS_ENVMAPCAPTURE:
+										desc.dss = &depthStencils[DSSTYPE_ENVMAP];
+										break;
+									case RENDERPASS_VOXELIZE:
+										desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+										break;
+									default:
+										if (blendMode == BLENDMODE_ADDITIVE)
+										{
+											desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+										}
+										else
+										{
+											desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+										}
+										break;
+									}
+
+									switch (renderPass)
+									{
+									case RENDERPASS_SHADOW:
+									case RENDERPASS_SHADOWCUBE:
+										desc.rs = &rasterizers[cullMode == (int)CullMode::NONE ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+										break;
+									case RENDERPASS_VOXELIZE:
+										desc.rs = &rasterizers[RSTYPE_VOXELIZE];
+										break;
+									default:
+										switch ((CullMode)cullMode)
+										{
+										default:
+										case CullMode::BACK:
+											desc.rs = &rasterizers[RSTYPE_FRONT];
+											break;
+										case CullMode::NONE:
+											desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+											break;
+										case CullMode::FRONT:
+											desc.rs = &rasterizers[RSTYPE_BACK];
+											break;
+										}
+										break;
+									}
+
+									if (tessellation)
+									{
+										desc.pt = PrimitiveTopology::PATCHLIST;
+									}
+									else
+									{
+										desc.pt = PrimitiveTopology::TRIANGLELIST;
+									}
+
+									ObjectRenderingVariant variant = {};
+									variant.bits.renderpass = renderPass;
+									variant.bits.shadertype = shaderType;
+									variant.bits.blendmode = blendMode;
+									variant.bits.cullmode = cullMode;
+									variant.bits.tessellation = tessellation;
+									variant.bits.alphatest = alphatest;
+									variant.bits.wind = wind;
+									variant.bits.sample_count = 1;
+
+									switch (renderPass)
+									{
+									case RENDERPASS_MAIN:
+									case RENDERPASS_PREPASS:
+									{
+										RenderPassInfo renderpass_info;
+										renderpass_info.rt_count = 1;
+										renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? Format::R11G11B10_FLOAT : Format::R32_UINT;
+										renderpass_info.ds_format = Format::D32_FLOAT_S8X24_UINT;
+										const uint32_t msaa_support[] = { 1,2,4,8 };
+										for (uint32_t msaa : msaa_support)
+										{
+											variant.bits.sample_count = msaa;
+											renderpass_info.sample_count = msaa;
+											device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+										}
+									}
+									break;
+
+									case RENDERPASS_ENVMAPCAPTURE:
+									{
+										RenderPassInfo renderpass_info;
+										renderpass_info.rt_count = 1;
+										renderpass_info.rt_formats[0] = Format::R11G11B10_FLOAT;
+										renderpass_info.ds_format = Format::D16_UNORM;
+										const uint32_t msaa_support[] = { 1,8 };
+										for (uint32_t msaa : msaa_support)
+										{
+											variant.bits.sample_count = msaa;
+											renderpass_info.sample_count = msaa;
+											device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+										}
+									}
+									break;
+
+									case RENDERPASS_SHADOW:
+									case RENDERPASS_SHADOWCUBE:
+									{
+										RenderPassInfo renderpass_info;
+										renderpass_info.rt_count = 1;
+										renderpass_info.rt_formats[0] = Format::R16G16B16A16_FLOAT;
+										renderpass_info.ds_format = Format::D16_UNORM;
+										device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+									}
+									break;
+
+									default:
+										device->CreatePipelineState(&desc, GetObjectPSO(variant));
+										break;
+									}
+
+								}
+							}
+						}
+					}
+				}
+			});
+		}
+	}
 
 }
 void LoadBuffers()
@@ -2424,19 +2499,15 @@ void Workaround(const int bug , CommandList cmd)
 		//PE: https://github.com/turanszkij/WickedEngine/issues/450#issuecomment-1143647323
 
 		//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
+		wi::jobsystem::Wait(object_pso_job_ctx);
 		ObjectRenderingVariant variant = {};
+		variant.bits.renderpass = RENDERPASS_VOXELIZE;
 		variant.bits.blendmode = BLENDMODE_OPAQUE;
-		const PipelineState* pso = &PSO_object[RENDERPASS_VOXELIZE][variant.value];
+		variant.bits.sample_count = 1;
+		const PipelineState* pso = GetObjectPSO(variant);
 
 		device->EventBegin("Workaround 1", cmd);
-		static RenderPass renderpass_clear;
-		if (!renderpass_clear.IsValid())
-		{
-			RenderPassDesc renderpassdesc;
-			renderpassdesc.flags = RenderPassDesc::Flags::EMPTY;
-			device->CreateRenderPass(&renderpassdesc, &renderpass_clear);
-		}
-		device->RenderPassBegin(&renderpass_clear, cmd);
+		device->RenderPassBegin(nullptr, 0, cmd);
 		device->BindPipelineState(pso, cmd);
 		device->DrawIndexedInstanced(0, 0, 0, 0, 0, cmd); //PE: Just need predraw(cmd);
 		device->RenderPassEnd(cmd);
@@ -2460,6 +2531,9 @@ void RenderMeshes(
 		return;
 
 	device->EventBegin("RenderMeshes", cmd);
+
+	wi::jobsystem::Wait(object_pso_job_ctx);
+	RenderPassInfo renderpass_info = device->GetRenderPassInfo(cmd);
 
 	tessellation = tessellation && device->CheckCapability(GraphicsDeviceCapability::TESSELLATION);
 	
@@ -2562,20 +2636,22 @@ void RenderMeshes(
 				else
 				{
 					ObjectRenderingVariant variant = {};
+					variant.bits.renderpass = renderPass;
 					variant.bits.shadertype = material.shaderType;
 					variant.bits.blendmode = material.GetBlendMode();
 					variant.bits.cullmode = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? (uint32_t)CullMode::NONE : (uint32_t)CullMode::BACK;
 					variant.bits.tessellation = tessellatorRequested;
 					variant.bits.alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
 					variant.bits.wind = material.IsUsingWind();
+					variant.bits.sample_count = renderpass_info.sample_count;
 
-					pso = GetObjectPSO(renderPass, variant);
+					pso = GetObjectPSO(variant);
 					assert(pso->IsValid());
 
 					if ((filterMask & FILTER_TRANSPARENT) && variant.bits.cullmode == (uint32_t)CullMode::NONE)
 					{
 						variant.bits.cullmode = (uint32_t)CullMode::FRONT;
-						pso_backside = GetObjectPSO(renderPass, variant);
+						pso_backside = GetObjectPSO(variant);
 					}
 				}
 			}
@@ -3163,29 +3239,6 @@ void UpdatePerFrameData(
 						device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Transparent);
 						device->SetName(&shadowMapAtlas_Transparent, "shadowMapAtlas_Transparent");
 
-
-						RenderPassDesc renderpassdesc;
-						renderpassdesc.attachments.push_back(
-							RenderPassAttachment::DepthStencil(
-								shadowMapAtlas,
-								RenderPassAttachment::LoadOp::CLEAR,
-								RenderPassAttachment::StoreOp::STORE,
-								ResourceState::SHADER_RESOURCE,
-								ResourceState::DEPTHSTENCIL,
-								ResourceState::SHADER_RESOURCE
-							)
-						);
-						renderpassdesc.attachments.push_back(
-							RenderPassAttachment::RenderTarget(
-								shadowMapAtlas_Transparent,
-								RenderPassAttachment::LoadOp::CLEAR,
-								RenderPassAttachment::StoreOp::STORE,
-								ResourceState::SHADER_RESOURCE,
-								ResourceState::RENDERTARGET,
-								ResourceState::SHADER_RESOURCE
-							)
-						);
-						device->CreateRenderPass(&renderpassdesc, &renderpass_shadowMapAtlas);
 					}
 					
 					break;
@@ -4888,7 +4941,7 @@ void DrawShadowmaps(
 	if (IsWireRender())
 		return;
 
-	if (!vis.visibleLights.empty() && renderpass_shadowMapAtlas.IsValid())
+	if (!vis.visibleLights.empty() && shadowMapAtlas.IsValid())
 	{
 		device->EventBegin("DrawShadowmaps", cmd);
 		auto range_cpu = wi::profiler::BeginRangeCPU("Shadowmap Rendering");
@@ -4908,7 +4961,24 @@ void DrawShadowmaps(
 
 		static thread_local RenderQueue renderQueue;
 
-		device->RenderPassBegin(&renderpass_shadowMapAtlas, cmd);
+		const RenderPassImage rp[] = {
+			RenderPassImage::DepthStencil(
+				&shadowMapAtlas,
+				RenderPassImage::LoadOp::CLEAR,
+				RenderPassImage::StoreOp::STORE,
+				ResourceState::SHADER_RESOURCE,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::SHADER_RESOURCE
+			),
+			RenderPassImage::RenderTarget(
+				&shadowMapAtlas_Transparent,
+				RenderPassImage::LoadOp::CLEAR,
+				RenderPassImage::StoreOp::STORE,
+				ResourceState::SHADER_RESOURCE,
+				ResourceState::SHADER_RESOURCE
+			),
+		};
+		device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
@@ -6805,11 +6875,52 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		if (probe.IsMSAA())
 		{
-			device->RenderPassBegin(&vis.scene->renderpasses_envmap_MSAA[probe.textureIndex], cmd);
+			const RenderPassImage rp[] = {
+				RenderPassImage::DepthStencil(
+					&vis.scene->envrenderingDepthBuffer_MSAA,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
+					ResourceState::SHADER_RESOURCE,
+					ResourceState::DEPTHSTENCIL,
+					ResourceState::SHADER_RESOURCE
+				),
+				RenderPassImage::RenderTarget(
+					&vis.scene->envrenderingColorBuffer_MSAA,
+					RenderPassImage::LoadOp::DONTCARE,
+					RenderPassImage::StoreOp::DONTCARE,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET
+				),
+				RenderPassImage::Resolve(
+					&vis.scene->envmapArray,
+					ResourceState::SHADER_RESOURCE,
+					ResourceState::SHADER_RESOURCE,
+					vis.scene->envmapArray.desc.mip_levels + vis.scene->envmapCount + probe.textureIndex // subresource: individual cubes only mip0
+				)
+			};
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
 		}
 		else
 		{
-			device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
+			const RenderPassImage rp[] = {
+				RenderPassImage::DepthStencil(
+					&vis.scene->envrenderingDepthBuffer,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
+					ResourceState::SHADER_RESOURCE,
+					ResourceState::DEPTHSTENCIL,
+					ResourceState::SHADER_RESOURCE
+				),
+				RenderPassImage::RenderTarget(
+					&vis.scene->envmapArray,
+					RenderPassImage::LoadOp::DONTCARE,
+					RenderPassImage::StoreOp::STORE,
+					ResourceState::SHADER_RESOURCE,
+					ResourceState::SHADER_RESOURCE,
+					probe.textureIndex
+				)
+			};
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
 		}
 
 		// Scene will only be rendered if this is a real probe entity:
@@ -7101,8 +7212,40 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 			BindCameraCB(impostorcamera, impostorcamera, impostorcamera, cmd);
 
-			int slice = (int)(impostor.textureIndex * impostorCaptureAngles + i);
-			device->RenderPassBegin(&scene.renderpasses_impostor[slice], cmd);
+			int slice = (int)(impostor.textureIndex * impostorCaptureAngles * 3 + i * 3);
+
+			const RenderPassImage rp[] = {
+				RenderPassImage::RenderTarget(
+					&scene.impostorArray,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET,
+					slice
+				),
+				RenderPassImage::RenderTarget(
+					&scene.impostorArray,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET,
+					slice + 1
+				),
+				RenderPassImage::RenderTarget(
+					&scene.impostorArray,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET,
+					slice + 2
+				),
+				RenderPassImage::DepthStencil(
+					&scene.impostorDepthStencil,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::DONTCARE
+				)
+			};
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 			uint32_t first_subset = 0;
 			uint32_t last_subset = 0;
@@ -7146,15 +7289,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 	device->EventBegin("Voxel Radiance", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Voxel Radiance", cmd);
 
-	static RenderPass renderpass_voxelize;
-
-	if (!renderpass_voxelize.IsValid())
-	{
-		RenderPassDesc renderpassdesc;
-		renderpassdesc.flags = RenderPassDesc::Flags::ALLOW_UAV_WRITES;
-		device->CreateRenderPass(&renderpassdesc, &renderpass_voxelize);
-	}
-
 	Texture* result = &textures[TEXTYPE_3D_VOXELRADIANCE];
 
 	AABB bbox;
@@ -7191,7 +7325,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		BindCommonResources(cmd);
 
 
-		device->RenderPassBegin(&renderpass_voxelize, cmd);
+		device->RenderPassBegin(nullptr, 0, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
 		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, false, nullptr, 1);
 		device->RenderPassEnd(cmd);
 
@@ -7828,23 +7962,6 @@ void RayTraceScene(
 	cb.xTraceSampleIndex = (uint32_t)accumulation_sample;
 	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
 
-	if (!shaders[CSTYPE_RAYTRACE].IsValid())
-	{
-		static auto init_shader = [] {
-			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-			{
-				LoadShader(ShaderStage::CS, shaders[CSTYPE_RAYTRACE], "raytraceCS_rtapi.cso", ShaderModel::SM_6_5);
-			}
-			else
-			{
-				LoadShader(ShaderStage::CS, shaders[CSTYPE_RAYTRACE], "raytraceCS.cso");
-			}
-		};
-
-		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { init_shader(); });
-		init_shader();
-	}
-
 	device->BindComputeShader(&shaders[CSTYPE_RAYTRACE], cmd);
 
 	const GPUResource* uavs[] = {
@@ -7926,11 +8043,13 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 
 				if (object.lightmapIterationCount == 0)
 				{
-					device->RenderPassBegin(&object.renderpass_lightmap_clear, cmd);
+					RenderPassImage rp = RenderPassImage::RenderTarget(&object.lightmap, RenderPassImage::LoadOp::CLEAR);
+					device->RenderPassBegin(&rp, 1, cmd);
 				}
 				else
 				{
-					device->RenderPassBegin(&object.renderpass_lightmap_accumulate, cmd);
+					RenderPassImage rp = RenderPassImage::RenderTarget(&object.lightmap, RenderPassImage::LoadOp::LOAD);
+					device->RenderPassBegin(&rp, 1, cmd);
 				}
 
 				Viewport vp;

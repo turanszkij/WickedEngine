@@ -184,15 +184,12 @@ namespace wi::scene
 		wi::graphics::Texture envrenderingDepthBuffer_MSAA;
 		wi::graphics::Texture envrenderingColorBuffer_MSAA;
 		wi::graphics::Texture envmapArray;
-		wi::vector<wi::graphics::RenderPass> renderpasses_envmap;
-		wi::vector<wi::graphics::RenderPass> renderpasses_envmap_MSAA;
 
 		// Impostor state:
 		static constexpr uint32_t maxImpostorCount = 8;
 		static constexpr uint32_t impostorTextureDim = 128;
 		wi::graphics::Texture impostorDepthStencil;
 		wi::graphics::Texture impostorArray;
-		wi::vector<wi::graphics::RenderPass> renderpasses_impostor;
 		wi::graphics::GPUBuffer impostorBuffer;
 		MeshComponent::BufferView impostor_ib;
 		MeshComponent::BufferView impostor_vb;

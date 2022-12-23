@@ -73,8 +73,8 @@ namespace wi::graphics
 		virtual bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const = 0;
 		virtual bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const = 0;
 		virtual bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const = 0;
-		virtual bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const = 0;
-		virtual bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const = 0;
+		// Creates a graphics pipeline state. If renderpass_info is specified, then it will be only compatible with that renderpass info, but it will be created immediately (it can also take longer to be created)
+		virtual bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info = nullptr) const = 0;
 		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const { return false; }
 		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const { return false; }
 		
@@ -172,7 +172,7 @@ namespace wi::graphics
 
 		virtual void WaitCommandList(CommandList cmd, CommandList wait_for) = 0;
 		virtual void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) = 0;
-		virtual void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) = 0;
+		virtual void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) = 0;
 		virtual void RenderPassEnd(CommandList cmd) = 0;
 		virtual void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) = 0;
 		virtual void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) = 0;
@@ -223,6 +223,7 @@ namespace wi::graphics
 		virtual void EventEnd(CommandList cmd) = 0;
 		virtual void SetMarker(const char* name, CommandList cmd) = 0;
 
+		virtual RenderPassInfo GetRenderPassInfo(CommandList cmd) = 0;
 
 		// Some useful helpers:
 
@@ -306,6 +307,29 @@ namespace wi::graphics
 			GPUAllocation allocation = AllocateGPU(sizeof(T), cmd);
 			std::memcpy(allocation.data, &data, sizeof(T));
 			BindConstantBuffer(&allocation.buffer, slot, cmd, allocation.offset);
+		}
+
+		// Deprecated, kept for back-compat:
+		bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const
+		{
+			renderpass->valid = true;
+			renderpass->desc = *desc;
+			return true;
+		}
+		// Deprecated, kept for back-compat:
+		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
+		{
+			RenderPassFlags flags = {};
+			if (has_flag(renderpass->desc.flags, RenderPassDesc::Flags::ALLOW_UAV_WRITES))
+			{
+				flags |= RenderPassFlags::ALLOW_UAV_WRITES;
+			}
+			RenderPassImage rp[32] = {};
+			for (size_t i = 0; i < renderpass->desc.attachments.size(); ++i)
+			{
+				rp[i] = renderpass->desc.attachments[i];
+			}
+			RenderPassBegin(rp, (uint32_t)renderpass->desc.attachments.size(), cmd, flags);
 		}
 	};
 

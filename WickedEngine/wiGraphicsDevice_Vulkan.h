@@ -49,6 +49,7 @@ namespace wi::graphics
 		VkPhysicalDeviceProperties2 properties2 = {};
 		VkPhysicalDeviceVulkan11Properties properties_1_1 = {};
 		VkPhysicalDeviceVulkan12Properties properties_1_2 = {};
+		VkPhysicalDeviceVulkan13Properties properties_1_3 = {};
 		VkPhysicalDeviceSamplerFilterMinmaxProperties sampler_minmax_properties = {};
 		VkPhysicalDeviceAccelerationStructurePropertiesKHR acceleration_structure_properties = {};
 		VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytracing_properties = {};
@@ -60,6 +61,7 @@ namespace wi::graphics
 		VkPhysicalDeviceFeatures2 features2 = {};
 		VkPhysicalDeviceVulkan11Features features_1_1 = {};
 		VkPhysicalDeviceVulkan12Features features_1_2 = {};
+		VkPhysicalDeviceVulkan13Features features_1_3 = {};
 		VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_features = {};
 		VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracing_features = {};
 		VkPhysicalDeviceRayQueryFeaturesKHR raytracing_query_features = {};
@@ -213,17 +215,17 @@ namespace wi::graphics
 			const PipelineState* active_pso = {};
 			const Shader* active_cs = {};
 			const RaytracingPipelineState* active_rt = {};
-			const RenderPass* active_renderpass = {};
 			ShadingRate prev_shadingrate = {};
 			wi::vector<SwapChain> prev_swapchains;
-			uint32_t vb_strides[8] = {};
-			size_t vb_hash = {};
 			bool dirty_pso = {};
 			wi::vector<VkMemoryBarrier> frame_memoryBarriers;
 			wi::vector<VkImageMemoryBarrier> frame_imageBarriers;
 			wi::vector<VkBufferMemoryBarrier> frame_bufferBarriers;
 			wi::vector<VkAccelerationStructureGeometryKHR> accelerationstructure_build_geometries;
 			wi::vector<VkAccelerationStructureBuildRangeInfoKHR> accelerationstructure_build_ranges;
+			RenderPassInfo renderpass_info;
+			wi::vector<VkImageMemoryBarrier> renderpass_barriers_begin;
+			wi::vector<VkImageMemoryBarrier> renderpass_barriers_end;
 
 			void reset(uint32_t bufferindex)
 			{
@@ -236,15 +238,12 @@ namespace wi::graphics
 				active_pso = nullptr;
 				active_cs = nullptr;
 				active_rt = nullptr;
-				active_renderpass = nullptr;
 				dirty_pso = false;
 				prev_shadingrate = ShadingRate::RATE_INVALID;
-				vb_hash = 0;
-				for (int i = 0; i < arraysize(vb_strides); ++i)
-				{
-					vb_strides[i] = 0;
-				}
 				prev_swapchains.clear();
+				renderpass_info = {};
+				renderpass_barriers_begin.clear();
+				renderpass_barriers_end.clear();
 			}
 
 			inline VkCommandPool GetCommandPool() const
@@ -297,8 +296,7 @@ namespace wi::graphics
 		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const override;
 		bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const override;
 		bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const override;
-		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const override;
-		bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const override;
+		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info = nullptr) const override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const override;
 		
@@ -371,7 +369,7 @@ namespace wi::graphics
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;
 		void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) override;
-		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;
+		void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) override;
 		void RenderPassEnd(CommandList cmd) override;
 		void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;
 		void BindViewports(uint32_t NumViewports, const Viewport *pViewports, CommandList cmd) override;
@@ -421,6 +419,11 @@ namespace wi::graphics
 		void EventBegin(const char* name, CommandList cmd) override;
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
+
+		RenderPassInfo GetRenderPassInfo(CommandList cmd) override
+		{
+			return GetCommandList(cmd).renderpass_info;
+		}
 
 		GPULinearAllocator& GetFrameAllocator(CommandList cmd) override
 		{
@@ -560,8 +563,6 @@ namespace wi::graphics
 			std::deque<std::pair<VkShaderModule, uint64_t>> destroyer_shadermodules;
 			std::deque<std::pair<VkPipelineLayout, uint64_t>> destroyer_pipelineLayouts;
 			std::deque<std::pair<VkPipeline, uint64_t>> destroyer_pipelines;
-			std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
-			std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;
 			std::deque<std::pair<VkQueryPool, uint64_t>> destroyer_querypools;
 			std::deque<std::pair<VkSwapchainKHR, uint64_t>> destroyer_swapchains;
 			std::deque<std::pair<VkSurfaceKHR, uint64_t>> destroyer_surfaces;
@@ -757,32 +758,6 @@ namespace wi::graphics
 						auto item = destroyer_pipelines.front();
 						destroyer_pipelines.pop_front();
 						vkDestroyPipeline(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_renderpasses.empty())
-				{
-					if (destroyer_renderpasses.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_renderpasses.front();
-						destroyer_renderpasses.pop_front();
-						vkDestroyRenderPass(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_framebuffers.empty())
-				{
-					if (destroyer_framebuffers.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_framebuffers.front();
-						destroyer_framebuffers.pop_front();
-						vkDestroyFramebuffer(device, item.first, nullptr);
 					}
 					else
 					{
