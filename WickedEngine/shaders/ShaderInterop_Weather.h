@@ -200,23 +200,23 @@ struct VolumetricCloudParameters
 
 		// Modelling
 		CloudStartHeight = 1500.0f;
-		CloudThickness = 8000.0f;
+		CloudThickness = 5000.0f;
 
 		// First
 		{
 			// Lighting
 			LayerFirst.Albedo = float3(0.9f, 0.9f, 0.9f);
-			LayerFirst.ExtinctionCoefficient = float3(0.71f * 0.05f, 0.86f * 0.05f, 1.0f * 0.05f);
+			LayerFirst.ExtinctionCoefficient = float3(0.71f * 0.1f, 0.86f * 0.1f, 1.0f * 0.1f);
 
 			// Modelling
 			LayerFirst.SkewAlongWindDirection = 700.0f;
 			LayerFirst.TotalNoiseScale = 0.0006f;
 			LayerFirst.CurlScale = 0.3f;
-			LayerFirst.CurlNoiseHeightFraction = 500.0f;
+			LayerFirst.CurlNoiseHeightFraction = 5.0f;
 			LayerFirst.CurlNoiseModifier = 500.0f;
-			LayerFirst.DetailScale = 2.0f;
+			LayerFirst.DetailScale = 4.0f;
 			LayerFirst.DetailNoiseHeightFraction = 10.0f;
-			LayerFirst.DetailNoiseModifier = 0.2f;
+			LayerFirst.DetailNoiseModifier = 0.3f;
 			LayerFirst.SkewAlongCoverageWindDirection = 2500.0f;
 			LayerFirst.WeatherScale = 0.000025f;
 			LayerFirst.CoverageAmount = 1.0f;
@@ -227,28 +227,28 @@ struct VolumetricCloudParameters
 			LayerFirst.RainMinimum = 0.0f;
 
 			// Cloud types: 4 positions of a black, white, white, black gradient
-			LayerFirst.GradientSmall = float4(0.01f, 0.05f, 0.06f, 0.14f);
-			LayerFirst.GradientMedium = float4(0.01f, 0.05f, 0.2f, 0.3f);
-			LayerFirst.GradientLarge = float4(0.01f, 0.05f, 0.5f, 0.6f);
+			LayerFirst.GradientSmall = float4(0.01f, 0.1f, 0.11f, 0.2f);
+			LayerFirst.GradientMedium = float4(0.01f, 0.08f, 0.3f, 0.4f);
+			LayerFirst.GradientLarge = float4(0.01f, 0.06f, 0.75f, 0.95f);
 
 			// amountTop, offsetTop, amountBot, offsetBot: Control with 'amount' the coverage scale along the current gradient height, and can be adjusted with 'offset'
 			LayerFirst.AnvilDeformationSmall = float4(0.0f, 0.0f, 0.0f, 0.0f);
-			LayerFirst.AnvilDeformationMedium = float4(20.0f, 0.1f, 20.0f, 0.07f);
-			LayerFirst.AnvilDeformationLarge = float4(10.0f, 0.1f, 8.0f, 0.1f);
+			LayerFirst.AnvilDeformationMedium = float4(15.0f, 0.1f, 15.0f, 0.1f);
+			LayerFirst.AnvilDeformationLarge = float4(5.0f, 0.25f, 5.0f, 0.15f);
 
 			// Animation
-			LayerFirst.WindSpeed = 15.9f;
-			LayerFirst.WindAngle = -0.39f;
+			LayerFirst.WindSpeed = 15.0f;
+			LayerFirst.WindAngle = 0.75f;
 			LayerFirst.WindUpAmount = 0.5f;
-			LayerFirst.CoverageWindSpeed = 25.0f;
-			LayerFirst.CoverageWindAngle = 0.087f;
+			LayerFirst.CoverageWindSpeed = 30.0f;
+			LayerFirst.CoverageWindAngle = 0.0f;
 		}
 
 		// Second
 		{
 			// Lighting
 			LayerSecond.Albedo = float3(0.9f, 0.9f, 0.9f);
-			LayerSecond.ExtinctionCoefficient = float3(0.71f * 0.005f, 0.86f * 0.005f, 1.0f * 0.005f);
+			LayerSecond.ExtinctionCoefficient = float3(0.71f * 0.01f, 0.86f * 0.01f, 1.0f * 0.01f);
 
 			// Modelling
 			LayerSecond.SkewAlongWindDirection = 400.0f;
@@ -270,8 +270,8 @@ struct VolumetricCloudParameters
 
 			// Cloud types: 4 positions of a black, white, white, black gradient
 			LayerSecond.GradientSmall = float4(0.6f, 0.62f, 0.63f, 0.65f);
-			LayerSecond.GradientMedium = float4(0.6f, 0.625f, 0.675f, 0.7f);
-			LayerSecond.GradientLarge = float4(0.6f, 0.65f, 0.7f, 0.75f);
+			LayerSecond.GradientMedium = float4(0.6f, 0.64f, 0.66f, 0.7f);
+			LayerSecond.GradientLarge = float4(0.6f, 0.66f, 0.69f, 0.75f);
 
 			// amountTop, offsetTop, amountBot, offsetBot: Control with 'amount' the coverage scale along the current gradient height, and can be adjusted with 'offset'
 			LayerSecond.AnvilDeformationSmall = float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -291,7 +291,7 @@ struct VolumetricCloudParameters
 
 		// Performance
 		MaxStepCount = 96;
-		MaxMarchingDistance = 45000.0f;
+		MaxMarchingDistance = 30000.0f;
 		InverseDistanceStepCount = 15000.0f;
 		RenderDistance = 70000.0f;
 		LODDistance = 30000.0f;
