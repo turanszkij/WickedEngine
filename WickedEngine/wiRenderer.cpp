@@ -6884,18 +6884,18 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			if (probe.IsRealTime())
 			{
-				push.MaxStepCount = 32;
+				push.maxStepCount = 32;
 				push.LODMin = 3;
-				push.ShadowSampleCount = 3;
-				push.GroundContributionSampleCount = 2;
+				push.shadowSampleCount = 3;
+				push.groundContributionSampleCount = 2;
 			}
 			else
 			{
 				// Use same parameters as current view
-				push.MaxStepCount = vis.scene->weather.volumetricCloudParameters.MaxStepCount;
+				push.maxStepCount = vis.scene->weather.volumetricCloudParameters.maxStepCount;
 				push.LODMin = vis.scene->weather.volumetricCloudParameters.LODMin;
-				push.ShadowSampleCount = vis.scene->weather.volumetricCloudParameters.ShadowSampleCount;
-				push.GroundContributionSampleCount = vis.scene->weather.volumetricCloudParameters.GroundContributionSampleCount;
+				push.shadowSampleCount = vis.scene->weather.volumetricCloudParameters.shadowSampleCount;
+				push.groundContributionSampleCount = vis.scene->weather.volumetricCloudParameters.groundContributionSampleCount;
 			}
 
 			device->PushConstants(&push, sizeof(push), cmd);

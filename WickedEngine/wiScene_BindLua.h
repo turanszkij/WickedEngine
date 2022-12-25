@@ -1198,80 +1198,80 @@ namespace wi::lua::scene
 
 		inline void BuildBindings()
 		{
-			CloudAmbientGroundMultiplier = FloatProperty(&parameter->AmbientGroundMultiplier);
+			cloudAmbientGroundMultiplier = FloatProperty(&parameter->ambientGroundMultiplier);
 
-			HorizonBlendAmount = FloatProperty(&parameter->HorizonBlendAmount);
-			HorizonBlendPower = FloatProperty(&parameter->HorizonBlendPower);
-			CloudStartHeight = FloatProperty(&parameter->CloudStartHeight);
-			CloudThickness = FloatProperty(&parameter->CloudThickness);
+			horizonBlendAmount = FloatProperty(&parameter->horizonBlendAmount);
+			horizonBlendPower = FloatProperty(&parameter->horizonBlendPower);
+			cloudStartHeight = FloatProperty(&parameter->cloudStartHeight);
+			cloudThickness = FloatProperty(&parameter->cloudThickness);
 
-			AnimationMultiplier = FloatProperty(&parameter->AnimationMultiplier);
+			animationMultiplier = FloatProperty(&parameter->animationMultiplier);
 
 			// First layer
-			AlbedoFirst = VectorProperty(&parameter->LayerFirst.Albedo);
-			ExtinctionCoefficientFirst = VectorProperty(&parameter->LayerFirst.ExtinctionCoefficient);
+			albedoFirst = VectorProperty(&parameter->layerFirst.albedo);
+			extinctionCoefficientFirst = VectorProperty(&parameter->layerFirst.extinctionCoefficient);
 
-			SkewAlongWindDirectionFirst = FloatProperty(&parameter->LayerFirst.SkewAlongWindDirection);
-			TotalNoiseScaleFirst = FloatProperty(&parameter->LayerFirst.TotalNoiseScale);
-			CurlScaleFirst = FloatProperty(&parameter->LayerFirst.CurlScale);
-			CurlNoiseModifierFirst = FloatProperty(&parameter->LayerFirst.CurlNoiseModifier);
-			DetailScaleFirst = FloatProperty(&parameter->LayerFirst.DetailScale);
-			DetailNoiseModifierFirst = FloatProperty(&parameter->LayerFirst.DetailNoiseModifier);
-			SkewAlongCoverageWindDirectionFirst = FloatProperty(&parameter->LayerFirst.SkewAlongCoverageWindDirection);
-			WeatherScaleFirst = FloatProperty(&parameter->LayerFirst.WeatherScale);
-			CoverageAmountFirst = FloatProperty(&parameter->LayerFirst.CoverageAmount);
-			CoverageMinimumFirst = FloatProperty(&parameter->LayerFirst.CoverageMinimum);
-			TypeAmountFirst = FloatProperty(&parameter->LayerFirst.TypeAmount);
-			TypeMinimumFirst = FloatProperty(&parameter->LayerFirst.TypeMinimum);
-			RainAmountFirst = FloatProperty(&parameter->LayerFirst.RainAmount);
-			RainMinimumFirst = FloatProperty(&parameter->LayerFirst.RainMinimum);
+			skewAlongWindDirectionFirst = FloatProperty(&parameter->layerFirst.skewAlongWindDirection);
+			totalNoiseScaleFirst = FloatProperty(&parameter->layerFirst.totalNoiseScale);
+			curlScaleFirst = FloatProperty(&parameter->layerFirst.curlScale);
+			curlNoiseModifierFirst = FloatProperty(&parameter->layerFirst.curlNoiseModifier);
+			detailScaleFirst = FloatProperty(&parameter->layerFirst.detailScale);
+			detailNoiseModifierFirst = FloatProperty(&parameter->layerFirst.detailNoiseModifier);
+			skewAlongCoverageWindDirectionFirst = FloatProperty(&parameter->layerFirst.skewAlongCoverageWindDirection);
+			weatherScaleFirst = FloatProperty(&parameter->layerFirst.weatherScale);
+			coverageAmountFirst = FloatProperty(&parameter->layerFirst.coverageAmount);
+			coverageMinimumFirst = FloatProperty(&parameter->layerFirst.coverageMinimum);
+			typeAmountFirst = FloatProperty(&parameter->layerFirst.typeAmount);
+			typeMinimumFirst = FloatProperty(&parameter->layerFirst.typeMinimum);
+			rainAmountFirst = FloatProperty(&parameter->layerFirst.rainAmount);
+			rainMinimumFirst = FloatProperty(&parameter->layerFirst.rainMinimum);
 
-			GradientSmallFirst = VectorProperty(&parameter->LayerFirst.GradientSmall);
-			GradientMediumFirst = VectorProperty(&parameter->LayerFirst.GradientMedium);
-			GradientLargeFirst = VectorProperty(&parameter->LayerFirst.GradientLarge);
+			gradientSmallFirst = VectorProperty(&parameter->layerFirst.gradientSmall);
+			gradientMediumFirst = VectorProperty(&parameter->layerFirst.gradientMedium);
+			gradientLargeFirst = VectorProperty(&parameter->layerFirst.gradientLarge);
 
-			AnvilDeformationSmallFirst = VectorProperty(&parameter->LayerFirst.AnvilDeformationSmall);
-			AnvilDeformationMediumFirst = VectorProperty(&parameter->LayerFirst.AnvilDeformationMedium);
-			AnvilDeformationLargeFirst = VectorProperty(&parameter->LayerFirst.AnvilDeformationLarge);
+			anvilDeformationSmallFirst = VectorProperty(&parameter->layerFirst.anvilDeformationSmall);
+			anvilDeformationMediumFirst = VectorProperty(&parameter->layerFirst.anvilDeformationMedium);
+			anvilDeformationLargeFirst = VectorProperty(&parameter->layerFirst.anvilDeformationLarge);
 
-			WindSpeedFirst = FloatProperty(&parameter->LayerFirst.WindSpeed);
-			WindAngleFirst = FloatProperty(&parameter->LayerFirst.WindAngle);
-			WindUpAmountFirst = FloatProperty(&parameter->LayerFirst.WindUpAmount);
-			CoverageWindSpeedFirst = FloatProperty(&parameter->LayerFirst.CoverageWindSpeed);
-			CoverageWindAngleFirst = FloatProperty(&parameter->LayerFirst.CoverageWindAngle);
+			windSpeedFirst = FloatProperty(&parameter->layerFirst.windSpeed);
+			windAngleFirst = FloatProperty(&parameter->layerFirst.windAngle);
+			windUpAmountFirst = FloatProperty(&parameter->layerFirst.windUpAmount);
+			coverageWindSpeedFirst = FloatProperty(&parameter->layerFirst.coverageWindSpeed);
+			coverageWindAngleFirst = FloatProperty(&parameter->layerFirst.coverageWindAngle);
 
 			// Second layer
-			AlbedoSecond = VectorProperty(&parameter->LayerSecond.Albedo);
-			ExtinctionCoefficientSecond = VectorProperty(&parameter->LayerSecond.ExtinctionCoefficient);
+			albedoSecond = VectorProperty(&parameter->layerSecond.albedo);
+			extinctionCoefficientSecond = VectorProperty(&parameter->layerSecond.extinctionCoefficient);
 
-			SkewAlongWindDirectionSecond = FloatProperty(&parameter->LayerSecond.SkewAlongWindDirection);
-			TotalNoiseScaleSecond = FloatProperty(&parameter->LayerSecond.TotalNoiseScale);
-			CurlScaleSecond = FloatProperty(&parameter->LayerSecond.CurlScale);
-			CurlNoiseModifierSecond = FloatProperty(&parameter->LayerSecond.CurlNoiseModifier);
-			DetailScaleSecond = FloatProperty(&parameter->LayerSecond.DetailScale);
-			DetailNoiseModifierSecond = FloatProperty(&parameter->LayerSecond.DetailNoiseModifier);
-			SkewAlongCoverageWindDirectionSecond = FloatProperty(&parameter->LayerSecond.SkewAlongCoverageWindDirection);
-			WeatherScaleSecond = FloatProperty(&parameter->LayerSecond.WeatherScale);
-			CoverageAmountSecond = FloatProperty(&parameter->LayerSecond.CoverageAmount);
-			CoverageMinimumSecond = FloatProperty(&parameter->LayerSecond.CoverageMinimum);
-			TypeAmountSecond = FloatProperty(&parameter->LayerSecond.TypeAmount);
-			TypeMinimumSecond = FloatProperty(&parameter->LayerSecond.TypeMinimum);
-			RainAmountSecond = FloatProperty(&parameter->LayerSecond.RainAmount);
-			RainMinimumSecond = FloatProperty(&parameter->LayerSecond.RainMinimum);
+			skewAlongWindDirectionSecond = FloatProperty(&parameter->layerSecond.skewAlongWindDirection);
+			totalNoiseScaleSecond = FloatProperty(&parameter->layerSecond.totalNoiseScale);
+			curlScaleSecond = FloatProperty(&parameter->layerSecond.curlScale);
+			curlNoiseModifierSecond = FloatProperty(&parameter->layerSecond.curlNoiseModifier);
+			detailScaleSecond = FloatProperty(&parameter->layerSecond.detailScale);
+			detailNoiseModifierSecond = FloatProperty(&parameter->layerSecond.detailNoiseModifier);
+			skewAlongCoverageWindDirectionSecond = FloatProperty(&parameter->layerSecond.skewAlongCoverageWindDirection);
+			weatherScaleSecond = FloatProperty(&parameter->layerSecond.weatherScale);
+			coverageAmountSecond = FloatProperty(&parameter->layerSecond.coverageAmount);
+			coverageMinimumSecond = FloatProperty(&parameter->layerSecond.coverageMinimum);
+			typeAmountSecond = FloatProperty(&parameter->layerSecond.typeAmount);
+			typeMinimumSecond = FloatProperty(&parameter->layerSecond.typeMinimum);
+			rainAmountSecond = FloatProperty(&parameter->layerSecond.rainAmount);
+			rainMinimumSecond = FloatProperty(&parameter->layerSecond.rainMinimum);
 
-			GradientSmallSecond = VectorProperty(&parameter->LayerSecond.GradientSmall);
-			GradientMediumSecond = VectorProperty(&parameter->LayerSecond.GradientMedium);
-			GradientLargeSecond = VectorProperty(&parameter->LayerSecond.GradientLarge);
+			gradientSmallSecond = VectorProperty(&parameter->layerSecond.gradientSmall);
+			gradientMediumSecond = VectorProperty(&parameter->layerSecond.gradientMedium);
+			gradientLargeSecond = VectorProperty(&parameter->layerSecond.gradientLarge);
 
-			AnvilDeformationSmallSecond = VectorProperty(&parameter->LayerSecond.AnvilDeformationSmall);
-			AnvilDeformationMediumSecond = VectorProperty(&parameter->LayerSecond.AnvilDeformationMedium);
-			AnvilDeformationLargeSecond = VectorProperty(&parameter->LayerSecond.AnvilDeformationLarge);
+			anvilDeformationSmallSecond = VectorProperty(&parameter->layerSecond.anvilDeformationSmall);
+			anvilDeformationMediumSecond = VectorProperty(&parameter->layerSecond.anvilDeformationMedium);
+			anvilDeformationLargeSecond = VectorProperty(&parameter->layerSecond.anvilDeformationLarge);
 
-			WindSpeedSecond = FloatProperty(&parameter->LayerSecond.WindSpeed);
-			WindAngleSecond = FloatProperty(&parameter->LayerSecond.WindAngle);
-			WindUpAmountSecond = FloatProperty(&parameter->LayerSecond.WindUpAmount);
-			CoverageWindSpeedSecond = FloatProperty(&parameter->LayerSecond.CoverageWindSpeed);
-			CoverageWindAngleSecond = FloatProperty(&parameter->LayerSecond.CoverageWindAngle);
+			windSpeedSecond = FloatProperty(&parameter->layerSecond.windSpeed);
+			windAngleSecond = FloatProperty(&parameter->layerSecond.windAngle);
+			windUpAmountSecond = FloatProperty(&parameter->layerSecond.windUpAmount);
+			coverageWindSpeedSecond = FloatProperty(&parameter->layerSecond.coverageWindSpeed);
+			coverageWindAngleSecond = FloatProperty(&parameter->layerSecond.coverageWindAngle);
 		}
 
 
@@ -1286,155 +1286,155 @@ namespace wi::lua::scene
 			BuildBindings();
 		}
 
-		FloatProperty CloudAmbientGroundMultiplier;
+		FloatProperty cloudAmbientGroundMultiplier;
 
-		FloatProperty HorizonBlendAmount;
-		FloatProperty HorizonBlendPower;
-		FloatProperty CloudStartHeight;
-		FloatProperty CloudThickness;
+		FloatProperty horizonBlendAmount;
+		FloatProperty horizonBlendPower;
+		FloatProperty cloudStartHeight;
+		FloatProperty cloudThickness;
 
-		FloatProperty AnimationMultiplier;
-
-		// First layer
-		VectorProperty AlbedoFirst;
-		VectorProperty ExtinctionCoefficientFirst;
-
-		FloatProperty SkewAlongWindDirectionFirst;
-		FloatProperty TotalNoiseScaleFirst;
-		FloatProperty CurlScaleFirst;
-		FloatProperty CurlNoiseModifierFirst;
-		FloatProperty DetailScaleFirst;
-		FloatProperty DetailNoiseModifierFirst;
-		FloatProperty SkewAlongCoverageWindDirectionFirst;
-		FloatProperty WeatherScaleFirst;
-		FloatProperty CoverageAmountFirst;
-		FloatProperty CoverageMinimumFirst;
-		FloatProperty TypeAmountFirst;
-		FloatProperty TypeMinimumFirst;
-		FloatProperty RainAmountFirst;
-		FloatProperty RainMinimumFirst;
-
-		VectorProperty GradientSmallFirst;
-		VectorProperty GradientMediumFirst;
-		VectorProperty GradientLargeFirst;
-
-		VectorProperty AnvilDeformationSmallFirst;
-		VectorProperty AnvilDeformationMediumFirst;
-		VectorProperty AnvilDeformationLargeFirst;
-
-		FloatProperty WindSpeedFirst;
-		FloatProperty WindAngleFirst;
-		FloatProperty WindUpAmountFirst;
-		FloatProperty CoverageWindSpeedFirst;
-		FloatProperty CoverageWindAngleFirst;
-
-		// Second layer
-		VectorProperty AlbedoSecond;
-		VectorProperty ExtinctionCoefficientSecond;
-
-		FloatProperty SkewAlongWindDirectionSecond;
-		FloatProperty TotalNoiseScaleSecond;
-		FloatProperty CurlScaleSecond;
-		FloatProperty CurlNoiseModifierSecond;
-		FloatProperty DetailScaleSecond;
-		FloatProperty DetailNoiseModifierSecond;
-		FloatProperty SkewAlongCoverageWindDirectionSecond;
-		FloatProperty WeatherScaleSecond;
-		FloatProperty CoverageAmountSecond;
-		FloatProperty CoverageMinimumSecond;
-		FloatProperty TypeAmountSecond;
-		FloatProperty TypeMinimumSecond;
-		FloatProperty RainAmountSecond;
-		FloatProperty RainMinimumSecond;
-
-		VectorProperty GradientSmallSecond;
-		VectorProperty GradientMediumSecond;
-		VectorProperty GradientLargeSecond;
-
-		VectorProperty AnvilDeformationSmallSecond;
-		VectorProperty AnvilDeformationMediumSecond;
-		VectorProperty AnvilDeformationLargeSecond;
-
-		FloatProperty WindSpeedSecond;
-		FloatProperty WindAngleSecond;
-		FloatProperty WindUpAmountSecond;
-		FloatProperty CoverageWindSpeedSecond;
-		FloatProperty CoverageWindAngleSecond;
-
-		PropertyFunction(CloudAmbientGroundMultiplier)
-
-		PropertyFunction(HorizonBlendAmount)
-		PropertyFunction(HorizonBlendPower)
-		PropertyFunction(CloudStartHeight)
-		PropertyFunction(CloudThickness)
-
-		PropertyFunction(AnimationMultiplier)
+		FloatProperty animationMultiplier;
 
 		// First layer
-		PropertyFunction(AlbedoFirst)
-		PropertyFunction(ExtinctionCoefficientFirst)
+		VectorProperty albedoFirst;
+		VectorProperty extinctionCoefficientFirst;
 
-		PropertyFunction(SkewAlongWindDirectionFirst)
-		PropertyFunction(TotalNoiseScaleFirst)
-		PropertyFunction(CurlScaleFirst)
-		PropertyFunction(CurlNoiseModifierFirst)
-		PropertyFunction(DetailScaleFirst)
-		PropertyFunction(DetailNoiseModifierFirst)
-		PropertyFunction(SkewAlongCoverageWindDirectionFirst)
-		PropertyFunction(WeatherScaleFirst)
-		PropertyFunction(CoverageAmountFirst)
-		PropertyFunction(CoverageMinimumFirst)
-		PropertyFunction(TypeAmountFirst)
-		PropertyFunction(TypeMinimumFirst)
-		PropertyFunction(RainAmountFirst)
-		PropertyFunction(RainMinimumFirst)
+		FloatProperty skewAlongWindDirectionFirst;
+		FloatProperty totalNoiseScaleFirst;
+		FloatProperty curlScaleFirst;
+		FloatProperty curlNoiseModifierFirst;
+		FloatProperty detailScaleFirst;
+		FloatProperty detailNoiseModifierFirst;
+		FloatProperty skewAlongCoverageWindDirectionFirst;
+		FloatProperty weatherScaleFirst;
+		FloatProperty coverageAmountFirst;
+		FloatProperty coverageMinimumFirst;
+		FloatProperty typeAmountFirst;
+		FloatProperty typeMinimumFirst;
+		FloatProperty rainAmountFirst;
+		FloatProperty rainMinimumFirst;
 
-		PropertyFunction(GradientSmallFirst)
-		PropertyFunction(GradientMediumFirst)
-		PropertyFunction(GradientLargeFirst)
+		VectorProperty gradientSmallFirst;
+		VectorProperty gradientMediumFirst;
+		VectorProperty gradientLargeFirst;
 
-		PropertyFunction(AnvilDeformationSmallFirst)
-		PropertyFunction(AnvilDeformationMediumFirst)
-		PropertyFunction(AnvilDeformationLargeFirst)
+		VectorProperty anvilDeformationSmallFirst;
+		VectorProperty anvilDeformationMediumFirst;
+		VectorProperty anvilDeformationLargeFirst;
 
-		PropertyFunction(WindSpeedFirst)
-		PropertyFunction(WindAngleFirst)
-		PropertyFunction(WindUpAmountFirst)
-		PropertyFunction(CoverageWindSpeedFirst)
-		PropertyFunction(CoverageWindAngleFirst)
+		FloatProperty windSpeedFirst;
+		FloatProperty windAngleFirst;
+		FloatProperty windUpAmountFirst;
+		FloatProperty coverageWindSpeedFirst;
+		FloatProperty coverageWindAngleFirst;
 
 		// Second layer
-		PropertyFunction(AlbedoSecond)
-		PropertyFunction(ExtinctionCoefficientSecond)
+		VectorProperty albedoSecond;
+		VectorProperty extinctionCoefficientSecond;
 
-		PropertyFunction(SkewAlongWindDirectionSecond)
-		PropertyFunction(TotalNoiseScaleSecond)
-		PropertyFunction(CurlScaleSecond)
-		PropertyFunction(CurlNoiseModifierSecond)
-		PropertyFunction(DetailScaleSecond)
-		PropertyFunction(DetailNoiseModifierSecond)
-		PropertyFunction(SkewAlongCoverageWindDirectionSecond)
-		PropertyFunction(WeatherScaleSecond)
-		PropertyFunction(CoverageAmountSecond)
-		PropertyFunction(CoverageMinimumSecond)
-		PropertyFunction(TypeAmountSecond)
-		PropertyFunction(TypeMinimumSecond)
-		PropertyFunction(RainAmountSecond)
-		PropertyFunction(RainMinimumSecond)
+		FloatProperty skewAlongWindDirectionSecond;
+		FloatProperty totalNoiseScaleSecond;
+		FloatProperty curlScaleSecond;
+		FloatProperty curlNoiseModifierSecond;
+		FloatProperty detailScaleSecond;
+		FloatProperty detailNoiseModifierSecond;
+		FloatProperty skewAlongCoverageWindDirectionSecond;
+		FloatProperty weatherScaleSecond;
+		FloatProperty coverageAmountSecond;
+		FloatProperty coverageMinimumSecond;
+		FloatProperty typeAmountSecond;
+		FloatProperty typeMinimumSecond;
+		FloatProperty rainAmountSecond;
+		FloatProperty rainMinimumSecond;
 
-		PropertyFunction(GradientSmallSecond)
-		PropertyFunction(GradientMediumSecond)
-		PropertyFunction(GradientLargeSecond)
+		VectorProperty gradientSmallSecond;
+		VectorProperty gradientMediumSecond;
+		VectorProperty gradientLargeSecond;
 
-		PropertyFunction(AnvilDeformationSmallSecond)
-		PropertyFunction(AnvilDeformationMediumSecond)
-		PropertyFunction(AnvilDeformationLargeSecond)
+		VectorProperty anvilDeformationSmallSecond;
+		VectorProperty anvilDeformationMediumSecond;
+		VectorProperty anvilDeformationLargeSecond;
 
-		PropertyFunction(WindSpeedSecond)
-		PropertyFunction(WindAngleSecond)
-		PropertyFunction(WindUpAmountSecond)
-		PropertyFunction(CoverageWindSpeedSecond)
-		PropertyFunction(CoverageWindAngleSecond)
+		FloatProperty windSpeedSecond;
+		FloatProperty windAngleSecond;
+		FloatProperty windUpAmountSecond;
+		FloatProperty coverageWindSpeedSecond;
+		FloatProperty coverageWindAngleSecond;
+
+		PropertyFunction(cloudAmbientGroundMultiplier)
+
+		PropertyFunction(horizonBlendAmount)
+		PropertyFunction(horizonBlendPower)
+		PropertyFunction(cloudStartHeight)
+		PropertyFunction(cloudThickness)
+
+		PropertyFunction(animationMultiplier)
+
+		// First layer
+		PropertyFunction(albedoFirst)
+		PropertyFunction(extinctionCoefficientFirst)
+
+		PropertyFunction(skewAlongWindDirectionFirst)
+		PropertyFunction(totalNoiseScaleFirst)
+		PropertyFunction(curlScaleFirst)
+		PropertyFunction(curlNoiseModifierFirst)
+		PropertyFunction(detailScaleFirst)
+		PropertyFunction(detailNoiseModifierFirst)
+		PropertyFunction(skewAlongCoverageWindDirectionFirst)
+		PropertyFunction(weatherScaleFirst)
+		PropertyFunction(coverageAmountFirst)
+		PropertyFunction(coverageMinimumFirst)
+		PropertyFunction(typeAmountFirst)
+		PropertyFunction(typeMinimumFirst)
+		PropertyFunction(rainAmountFirst)
+		PropertyFunction(rainMinimumFirst)
+
+		PropertyFunction(gradientSmallFirst)
+		PropertyFunction(gradientMediumFirst)
+		PropertyFunction(gradientLargeFirst)
+
+		PropertyFunction(anvilDeformationSmallFirst)
+		PropertyFunction(anvilDeformationMediumFirst)
+		PropertyFunction(anvilDeformationLargeFirst)
+
+		PropertyFunction(windSpeedFirst)
+		PropertyFunction(windAngleFirst)
+		PropertyFunction(windUpAmountFirst)
+		PropertyFunction(coverageWindSpeedFirst)
+		PropertyFunction(coverageWindAngleFirst)
+
+		// Second layer
+		PropertyFunction(albedoSecond)
+		PropertyFunction(extinctionCoefficientSecond)
+
+		PropertyFunction(skewAlongWindDirectionSecond)
+		PropertyFunction(totalNoiseScaleSecond)
+		PropertyFunction(curlScaleSecond)
+		PropertyFunction(curlNoiseModifierSecond)
+		PropertyFunction(detailScaleSecond)
+		PropertyFunction(detailNoiseModifierSecond)
+		PropertyFunction(skewAlongCoverageWindDirectionSecond)
+		PropertyFunction(weatherScaleSecond)
+		PropertyFunction(coverageAmountSecond)
+		PropertyFunction(coverageMinimumSecond)
+		PropertyFunction(typeAmountSecond)
+		PropertyFunction(typeMinimumSecond)
+		PropertyFunction(rainAmountSecond)
+		PropertyFunction(rainMinimumSecond)
+
+		PropertyFunction(gradientSmallSecond)
+		PropertyFunction(gradientMediumSecond)
+		PropertyFunction(gradientLargeSecond)
+
+		PropertyFunction(anvilDeformationSmallSecond)
+		PropertyFunction(anvilDeformationMediumSecond)
+		PropertyFunction(anvilDeformationLargeSecond)
+
+		PropertyFunction(windSpeedSecond)
+		PropertyFunction(windAngleSecond)
+		PropertyFunction(windUpAmountSecond)
+		PropertyFunction(coverageWindSpeedSecond)
+		PropertyFunction(coverageWindAngleSecond)
 	};
 	struct Weather_VolumetricCloudParams_Property
 	{

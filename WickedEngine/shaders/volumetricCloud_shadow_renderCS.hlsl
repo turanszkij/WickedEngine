@@ -94,8 +94,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	float planetRadius = parameters.bottomRadius * SKY_UNIT_TO_M;
 	float3 planetCenterWorld = parameters.planetCenter * SKY_UNIT_TO_M;
 
-	const float cloudBottomRadius = planetRadius + GetWeather().volumetric_clouds.CloudStartHeight;
-	const float cloudTopRadius = planetRadius + GetWeather().volumetric_clouds.CloudStartHeight + GetWeather().volumetric_clouds.CloudThickness;
+	const float cloudBottomRadius = planetRadius + GetWeather().volumetric_clouds.cloudStartHeight;
+	const float cloudTopRadius = planetRadius + GetWeather().volumetric_clouds.cloudStartHeight + GetWeather().volumetric_clouds.cloudThickness;
         
 	float2 tTopSolutions = RaySphereIntersect(rayOrigin, rayDirection, planetCenterWorld, cloudTopRadius);
 	if (tTopSolutions.x > 0.0 || tTopSolutions.y > 0.0) // Only calculate if any solutions are visible on screen!
@@ -131,8 +131,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		float3 worldPositionClosestToCloudLayer = rayOrigin + rayDirection * tMin; // Determined by tMin
 
 		// Sample layers
-		LayerParameters layerParametersFirst = SampleLayerParameters(GetWeather().volumetric_clouds.LayerFirst);
-		LayerParameters layerParametersSecond = SampleLayerParameters(GetWeather().volumetric_clouds.LayerSecond);
+		LayerParameters layerParametersFirst = SampleLayerParameters(GetWeather().volumetric_clouds.layerFirst);
+		LayerParameters layerParametersSecond = SampleLayerParameters(GetWeather().volumetric_clouds.layerSecond);
 
 		// Render
 		VolumetricShadowMap(result, parameters, worldPositionClosestToCloudLayer, GetSunDirection(), tMin, tMax, layerParametersFirst, layerParametersSecond);

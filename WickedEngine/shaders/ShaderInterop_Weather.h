@@ -93,213 +93,213 @@ struct AtmosphereParameters
 struct VolumetricCloudLayer
 {
 	// Lighting
-	float3 Albedo; // Cloud albedo is normally very close to white
+	float3 albedo; // Cloud albedo is normally very close to white
 	float padding0;
 
-	float3 ExtinctionCoefficient;
+	float3 extinctionCoefficient;
 	float padding1;
 
 	// Modelling
-	float SkewAlongWindDirection;
-	float TotalNoiseScale;
-	float CurlScale;
-	float CurlNoiseHeightFraction;
+	float skewAlongWindDirection;
+	float totalNoiseScale;
+	float curlScale;
+	float curlNoiseHeightFraction;
 
-	float CurlNoiseModifier;
-	float DetailScale;
-	float DetailNoiseHeightFraction;
-	float DetailNoiseModifier;
+	float curlNoiseModifier;
+	float detailScale;
+	float detailNoiseHeightFraction;
+	float detailNoiseModifier;
 
-	float SkewAlongCoverageWindDirection;
-	float WeatherScale;
-	float CoverageAmount;
-	float CoverageMinimum;
+	float skewAlongCoverageWindDirection;
+	float weatherScale;
+	float coverageAmount;
+	float coverageMinimum;
 
-	float TypeAmount;
-	float TypeMinimum;
-	float RainAmount; // Rain clouds disabled by default.
-	float RainMinimum;
+	float typeAmount;
+	float typeMinimum;
+	float rainAmount; // Rain clouds disabled by default.
+	float rainMinimum;
 
 	// Cloud types: 4 positions of a black, white, white, black gradient
-	float4 GradientSmall;
-	float4 GradientMedium;
-	float4 GradientLarge;
+	float4 gradientSmall;
+	float4 gradientMedium;
+	float4 gradientLarge;
 
 	// amountTop, offsetTop, amountBot, offsetBot: Control with 'amount' the coverage scale along the current gradient height, and can be adjusted with 'offset'
-	float4 AnvilDeformationSmall;
-	float4 AnvilDeformationMedium;
-	float4 AnvilDeformationLarge;
+	float4 anvilDeformationSmall;
+	float4 anvilDeformationMedium;
+	float4 anvilDeformationLarge;
 
 	// Animation
-	float WindSpeed;
-	float WindAngle;
-	float WindUpAmount;
-	float CoverageWindSpeed;
+	float windSpeed;
+	float windAngle;
+	float windUpAmount;
+	float coverageWindSpeed;
 
-	float CoverageWindAngle;
+	float coverageWindAngle;
 	float3 padding2;
 };
 
 struct VolumetricCloudParameters
 {
-	float BeerPowder;
-	float BeerPowderPower;
+	float beerPowder;
+	float beerPowderPower;
 	float2 padding0;
 
-	float AmbientGroundMultiplier; // [0; 1] Amount of ambient light to reach the bottom of clouds
-	float PhaseG; // [-0.999; 0.999]
-	float PhaseG2; // [-0.999; 0.999]
-	float PhaseBlend; // [0; 1]
+	float ambientGroundMultiplier; // [0; 1] Amount of ambient light to reach the bottom of clouds
+	float phaseG; // [-0.999; 0.999]
+	float phaseG2; // [-0.999; 0.999]
+	float phaseBlend; // [0; 1]
 
-	float MultiScatteringScattering;
-	float MultiScatteringExtinction;
-	float MultiScatteringEccentricity;
-	float ShadowStepLength;
+	float multiScatteringScattering;
+	float multiScatteringExtinction;
+	float multiScatteringEccentricity;
+	float shadowStepLength;
 
-	float HorizonBlendAmount;
-	float HorizonBlendPower;
-	float CloudStartHeight;
-	float CloudThickness;
+	float horizonBlendAmount;
+	float horizonBlendPower;
+	float cloudStartHeight;
+	float cloudThickness;
 
-	VolumetricCloudLayer LayerFirst;
-	VolumetricCloudLayer LayerSecond;
+	VolumetricCloudLayer layerFirst;
+	VolumetricCloudLayer layerSecond;
 
-	float AnimationMultiplier;
+	float animationMultiplier;
 	float3 padding1;
 
 	// Performance
-	int MaxStepCount; // Maximum number of iterations. Higher gives better images but may be slow.
-	float MaxMarchingDistance; // Clamping the marching steps to be within a certain distance.
-	float InverseDistanceStepCount; // Distance over which the raymarch steps will be evenly distributed.
-	float RenderDistance; // Maximum distance to march before returning a miss.
+	int maxStepCount; // Maximum number of iterations. Higher gives better images but may be slow.
+	float maxMarchingDistance; // Clamping the marching steps to be within a certain distance.
+	float inverseDistanceStepCount; // Distance over which the raymarch steps will be evenly distributed.
+	float renderDistance; // Maximum distance to march before returning a miss.
 
 	float LODDistance; // After a certain distance, noises will get higher LOD
 	float LODMin; // 
-	float BigStepMarch; // How long inital rays should be until they hit something. Lower values may give a better image but may be slower.
-	float TransmittanceThreshold; // Default: 0.005. If the clouds transmittance has reached it's desired opacity, there's no need to keep raymarching for performance.
+	float bigStepMarch; // How long inital rays should be until they hit something. Lower values may give a better image but may be slower.
+	float transmittanceThreshold; // Default: 0.005. If the clouds transmittance has reached it's desired opacity, there's no need to keep raymarching for performance.
 
-	float ShadowSampleCount;
-	float GroundContributionSampleCount;
+	float shadowSampleCount;
+	float groundContributionSampleCount;
 	float2 padding2;
 
 	void init()
 	{
 		// Lighting
-		BeerPowder = 20.0f;
-		BeerPowderPower = 0.5f;
-		AmbientGroundMultiplier = 0.75f;
-		PhaseG = 0.5f; // [-0.999; 0.999]
-		PhaseG2 = -0.5f; // [-0.999; 0.999]
-		PhaseBlend = 0.2f; // [0; 1]
-		MultiScatteringScattering = 1.0f;
-		MultiScatteringExtinction = 0.1f;
-		MultiScatteringEccentricity = 0.2f;
-		ShadowStepLength = 3000.0f;
-		HorizonBlendAmount = 0.0000125f;
-		HorizonBlendPower = 2.0f;
+		beerPowder = 20.0f;
+		beerPowderPower = 0.5f;
+		ambientGroundMultiplier = 0.75f;
+		phaseG = 0.5f; // [-0.999; 0.999]
+		phaseG2 = -0.5f; // [-0.999; 0.999]
+		phaseBlend = 0.2f; // [0; 1]
+		multiScatteringScattering = 1.0f;
+		multiScatteringExtinction = 0.1f;
+		multiScatteringEccentricity = 0.2f;
+		shadowStepLength = 3000.0f;
+		horizonBlendAmount = 0.0000125f;
+		horizonBlendPower = 2.0f;
 
 		// Modelling
-		CloudStartHeight = 1500.0f;
-		CloudThickness = 5000.0f;
+		cloudStartHeight = 1500.0f;
+		cloudThickness = 5000.0f;
 
 		// First
 		{
 			// Lighting
-			LayerFirst.Albedo = float3(0.9f, 0.9f, 0.9f);
-			LayerFirst.ExtinctionCoefficient = float3(0.71f * 0.1f, 0.86f * 0.1f, 1.0f * 0.1f);
+			layerFirst.albedo = float3(0.9f, 0.9f, 0.9f);
+			layerFirst.extinctionCoefficient = float3(0.71f * 0.1f, 0.86f * 0.1f, 1.0f * 0.1f);
 
 			// Modelling
-			LayerFirst.SkewAlongWindDirection = 700.0f;
-			LayerFirst.TotalNoiseScale = 0.0006f;
-			LayerFirst.CurlScale = 0.3f;
-			LayerFirst.CurlNoiseHeightFraction = 5.0f;
-			LayerFirst.CurlNoiseModifier = 500.0f;
-			LayerFirst.DetailScale = 4.0f;
-			LayerFirst.DetailNoiseHeightFraction = 10.0f;
-			LayerFirst.DetailNoiseModifier = 0.3f;
-			LayerFirst.SkewAlongCoverageWindDirection = 2500.0f;
-			LayerFirst.WeatherScale = 0.000025f;
-			LayerFirst.CoverageAmount = 1.0f;
-			LayerFirst.CoverageMinimum = 0.0f;
-			LayerFirst.TypeAmount = 1.0f;
-			LayerFirst.TypeMinimum = 0.0f;
-			LayerFirst.RainAmount = 0.0f; // Rain clouds disabled by default.
-			LayerFirst.RainMinimum = 0.0f;
+			layerFirst.skewAlongWindDirection = 700.0f;
+			layerFirst.totalNoiseScale = 0.0006f;
+			layerFirst.curlScale = 0.3f;
+			layerFirst.curlNoiseHeightFraction = 5.0f;
+			layerFirst.curlNoiseModifier = 500.0f;
+			layerFirst.detailScale = 4.0f;
+			layerFirst.detailNoiseHeightFraction = 10.0f;
+			layerFirst.detailNoiseModifier = 0.3f;
+			layerFirst.skewAlongCoverageWindDirection = 2500.0f;
+			layerFirst.weatherScale = 0.000025f;
+			layerFirst.coverageAmount = 1.0f;
+			layerFirst.coverageMinimum = 0.0f;
+			layerFirst.typeAmount = 1.0f;
+			layerFirst.typeMinimum = 0.0f;
+			layerFirst.rainAmount = 0.0f; // Rain clouds disabled by default.
+			layerFirst.rainMinimum = 0.0f;
 
 			// Cloud types: 4 positions of a black, white, white, black gradient
-			LayerFirst.GradientSmall = float4(0.01f, 0.1f, 0.11f, 0.2f);
-			LayerFirst.GradientMedium = float4(0.01f, 0.08f, 0.3f, 0.4f);
-			LayerFirst.GradientLarge = float4(0.01f, 0.06f, 0.75f, 0.95f);
+			layerFirst.gradientSmall = float4(0.01f, 0.1f, 0.11f, 0.2f);
+			layerFirst.gradientMedium = float4(0.01f, 0.08f, 0.3f, 0.4f);
+			layerFirst.gradientLarge = float4(0.01f, 0.06f, 0.75f, 0.95f);
 
 			// amountTop, offsetTop, amountBot, offsetBot: Control with 'amount' the coverage scale along the current gradient height, and can be adjusted with 'offset'
-			LayerFirst.AnvilDeformationSmall = float4(0.0f, 0.0f, 0.0f, 0.0f);
-			LayerFirst.AnvilDeformationMedium = float4(15.0f, 0.1f, 15.0f, 0.1f);
-			LayerFirst.AnvilDeformationLarge = float4(5.0f, 0.25f, 5.0f, 0.15f);
+			layerFirst.anvilDeformationSmall = float4(0.0f, 0.0f, 0.0f, 0.0f);
+			layerFirst.anvilDeformationMedium = float4(15.0f, 0.1f, 15.0f, 0.1f);
+			layerFirst.anvilDeformationLarge = float4(5.0f, 0.25f, 5.0f, 0.15f);
 
 			// Animation
-			LayerFirst.WindSpeed = 15.0f;
-			LayerFirst.WindAngle = 0.75f;
-			LayerFirst.WindUpAmount = 0.5f;
-			LayerFirst.CoverageWindSpeed = 30.0f;
-			LayerFirst.CoverageWindAngle = 0.0f;
+			layerFirst.windSpeed = 15.0f;
+			layerFirst.windAngle = 0.75f;
+			layerFirst.windUpAmount = 0.5f;
+			layerFirst.coverageWindSpeed = 30.0f;
+			layerFirst.coverageWindAngle = 0.0f;
 		}
 
 		// Second
 		{
 			// Lighting
-			LayerSecond.Albedo = float3(0.9f, 0.9f, 0.9f);
-			LayerSecond.ExtinctionCoefficient = float3(0.71f * 0.01f, 0.86f * 0.01f, 1.0f * 0.01f);
+			layerSecond.albedo = float3(0.9f, 0.9f, 0.9f);
+			layerSecond.extinctionCoefficient = float3(0.71f * 0.01f, 0.86f * 0.01f, 1.0f * 0.01f);
 
 			// Modelling
-			LayerSecond.SkewAlongWindDirection = 400.0f;
-			LayerSecond.TotalNoiseScale = 0.0006f;
-			LayerSecond.CurlScale = 0.1f;
-			LayerSecond.CurlNoiseHeightFraction = 500.0f;
-			LayerSecond.CurlNoiseModifier = 250.0f;
-			LayerSecond.DetailScale = 2.0f;
-			LayerSecond.DetailNoiseHeightFraction = 0.0f;
-			LayerSecond.DetailNoiseModifier = 1.0f;
-			LayerSecond.SkewAlongCoverageWindDirection = 0.0f;
-			LayerSecond.WeatherScale = 0.000025f;
-			LayerSecond.CoverageAmount = 1.0f;
-			LayerSecond.CoverageMinimum = 0.0f;
-			LayerSecond.TypeAmount = 1.0f;
-			LayerSecond.TypeMinimum = 0.0f;
-			LayerSecond.RainAmount = 0.0f; // Rain clouds disabled by default.
-			LayerSecond.RainMinimum = 0.0f;
+			layerSecond.skewAlongWindDirection = 400.0f;
+			layerSecond.totalNoiseScale = 0.0006f;
+			layerSecond.curlScale = 0.1f;
+			layerSecond.curlNoiseHeightFraction = 500.0f;
+			layerSecond.curlNoiseModifier = 250.0f;
+			layerSecond.detailScale = 2.0f;
+			layerSecond.detailNoiseHeightFraction = 0.0f;
+			layerSecond.detailNoiseModifier = 1.0f;
+			layerSecond.skewAlongCoverageWindDirection = 0.0f;
+			layerSecond.weatherScale = 0.000025f;
+			layerSecond.coverageAmount = 1.0f;
+			layerSecond.coverageMinimum = 0.0f;
+			layerSecond.typeAmount = 1.0f;
+			layerSecond.typeMinimum = 0.0f;
+			layerSecond.rainAmount = 0.0f; // Rain clouds disabled by default.
+			layerSecond.rainMinimum = 0.0f;
 
 			// Cloud types: 4 positions of a black, white, white, black gradient
-			LayerSecond.GradientSmall = float4(0.6f, 0.62f, 0.63f, 0.65f);
-			LayerSecond.GradientMedium = float4(0.6f, 0.64f, 0.66f, 0.7f);
-			LayerSecond.GradientLarge = float4(0.6f, 0.66f, 0.69f, 0.75f);
+			layerSecond.gradientSmall = float4(0.6f, 0.62f, 0.63f, 0.65f);
+			layerSecond.gradientMedium = float4(0.6f, 0.64f, 0.66f, 0.7f);
+			layerSecond.gradientLarge = float4(0.6f, 0.66f, 0.69f, 0.75f);
 
 			// amountTop, offsetTop, amountBot, offsetBot: Control with 'amount' the coverage scale along the current gradient height, and can be adjusted with 'offset'
-			LayerSecond.AnvilDeformationSmall = float4(0.0f, 0.0f, 0.0f, 0.0f);
-			LayerSecond.AnvilDeformationMedium = float4(0.0f, 0.0f, 0.0f, 0.0f);
-			LayerSecond.AnvilDeformationLarge = float4(0.0f, 0.0f, 0.0f, 0.0f);
+			layerSecond.anvilDeformationSmall = float4(0.0f, 0.0f, 0.0f, 0.0f);
+			layerSecond.anvilDeformationMedium = float4(0.0f, 0.0f, 0.0f, 0.0f);
+			layerSecond.anvilDeformationLarge = float4(0.0f, 0.0f, 0.0f, 0.0f);
 
 			// Animation
-			LayerSecond.WindSpeed = 10.0f;
-			LayerSecond.WindAngle = 1.0f;
-			LayerSecond.WindUpAmount = 0.1f;
-			LayerSecond.CoverageWindSpeed = 50.0f;
-			LayerSecond.CoverageWindAngle = 1.0f;
+			layerSecond.windSpeed = 10.0f;
+			layerSecond.windAngle = 1.0f;
+			layerSecond.windUpAmount = 0.1f;
+			layerSecond.coverageWindSpeed = 50.0f;
+			layerSecond.coverageWindAngle = 1.0f;
 		}
 
 		// Animation
-		AnimationMultiplier = 2.0f;
+		animationMultiplier = 2.0f;
 
 		// Performance
-		MaxStepCount = 96;
-		MaxMarchingDistance = 30000.0f;
-		InverseDistanceStepCount = 15000.0f;
-		RenderDistance = 70000.0f;
+		maxStepCount = 96;
+		maxMarchingDistance = 30000.0f;
+		inverseDistanceStepCount = 15000.0f;
+		renderDistance = 70000.0f;
 		LODDistance = 30000.0f;
 		LODMin = 0.0f;
-		BigStepMarch = 1.0f;
-		TransmittanceThreshold = 0.005f;
-		ShadowSampleCount = 5.0f;
-		GroundContributionSampleCount = 3.0f;
+		bigStepMarch = 1.0f;
+		transmittanceThreshold = 0.005f;
+		shadowSampleCount = 5.0f;
+		groundContributionSampleCount = 3.0f;
 	}
 
 #ifdef __cplusplus

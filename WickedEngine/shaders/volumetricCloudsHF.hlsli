@@ -379,13 +379,13 @@ LayerParameters SampleLayerParameters(VolumetricCloudLayer layer)
 	
 	layerParameters.layer = layer;
 
-	float animation = GetWeather().volumetric_clouds.AnimationMultiplier * GetFrame().time;
+	float animation = GetWeather().volumetric_clouds.animationMultiplier * GetFrame().time;
 	
-	layerParameters.windDirection = float3(cos(layer.WindAngle), -layer.WindUpAmount, sin(layer.WindAngle));
-	layerParameters.windOffset = layer.WindSpeed * layerParameters.windDirection * animation;
+	layerParameters.windDirection = float3(cos(layer.windAngle), -layer.windUpAmount, sin(layer.windAngle));
+	layerParameters.windOffset = layer.windSpeed * layerParameters.windDirection * animation;
 	
-	layerParameters.coverageWindDirection = float2(cos(layer.CoverageWindAngle), sin(layer.CoverageWindAngle));
-	layerParameters.coverageWindOffset = layer.CoverageWindSpeed * layerParameters.coverageWindDirection * animation;
+	layerParameters.coverageWindDirection = float2(cos(layer.coverageWindAngle), sin(layer.coverageWindAngle));
+	layerParameters.coverageWindOffset = layer.coverageWindSpeed * layerParameters.coverageWindDirection * animation;
 	
 	return layerParameters;
 }
@@ -395,7 +395,7 @@ float GetHeightFractionForPoint(AtmosphereParameters atmosphere, float3 pos)
 	float planetRadius = atmosphere.bottomRadius * SKY_UNIT_TO_M;
 	float3 planetCenterWorld = atmosphere.planetCenter * SKY_UNIT_TO_M;
 
-	return saturate((distance(pos, planetCenterWorld) - (planetRadius + GetWeather().volumetric_clouds.CloudStartHeight)) / GetWeather().volumetric_clouds.CloudThickness);
+	return saturate((distance(pos, planetCenterWorld) - (planetRadius + GetWeather().volumetric_clouds.cloudStartHeight)) / GetWeather().volumetric_clouds.cloudThickness);
 }
 
 float SampleGradient(float4 gradient, float heightFraction)
@@ -418,7 +418,7 @@ float GetHeightGradient(float heightFraction, float3 weatherData, LayerParameter
 {
 	float3 weatherTypeMask = GetWeatherTypeMask(weatherData);
 
-	float4 cloudGradient = (parameters.layer.GradientSmall * weatherTypeMask.r) + (parameters.layer.GradientMedium * weatherTypeMask.g) + (parameters.layer.GradientLarge * weatherTypeMask.b);
+	float4 cloudGradient = (parameters.layer.gradientSmall * weatherTypeMask.r) + (parameters.layer.gradientMedium * weatherTypeMask.g) + (parameters.layer.gradientLarge * weatherTypeMask.b);
 	
 	return SampleGradient(cloudGradient, heightFraction);
 }
@@ -428,10 +428,10 @@ float GetAnvilDeformation(float heightFraction, float3 weatherData, LayerParamet
 	float3 weatherTypeMask = GetWeatherTypeMask(weatherData);
 
 	// Fetch current gradient height
-	float4 cloudGradient = (parameters.layer.GradientSmall * weatherTypeMask.r) + (parameters.layer.GradientMedium * weatherTypeMask.g) + (parameters.layer.GradientLarge * weatherTypeMask.b);
+	float4 cloudGradient = (parameters.layer.gradientSmall * weatherTypeMask.r) + (parameters.layer.gradientMedium * weatherTypeMask.g) + (parameters.layer.gradientLarge * weatherTypeMask.b);
 	
 	// amountTop, offsetTop, amountBot, offsetBot
-	float4 anvilDeformation = (parameters.layer.AnvilDeformationSmall * weatherTypeMask.r) + (parameters.layer.AnvilDeformationMedium * weatherTypeMask.g) + (parameters.layer.AnvilDeformationLarge * weatherTypeMask.b);
+	float4 anvilDeformation = (parameters.layer.anvilDeformationSmall * weatherTypeMask.r) + (parameters.layer.anvilDeformationMedium * weatherTypeMask.g) + (parameters.layer.anvilDeformationLarge * weatherTypeMask.b);
 	
 	return saturate(pow(saturate(heightFraction + anvilDeformation.g + (1.0 - cloudGradient.a)), anvilDeformation.r) + pow(saturate((1.0 - heightFraction) + anvilDeformation.a + cloudGradient.r), anvilDeformation.b));
 }
@@ -439,14 +439,14 @@ float GetAnvilDeformation(float heightFraction, float3 weatherData, LayerParamet
 float3 SampleWeather(Texture2D<float4> texture_weatherMap, float3 p, float heightFraction, LayerParameters parameters)
 {
 	float2 pos = p.xz + parameters.coverageWindOffset;
-	pos += heightFraction * parameters.coverageWindDirection * parameters.layer.SkewAlongCoverageWindDirection;
+	pos += heightFraction * parameters.coverageWindDirection * parameters.layer.skewAlongCoverageWindDirection;
 	
-	float3 weatherData = texture_weatherMap.SampleLevel(sampler_linear_wrap, pos * parameters.layer.WeatherScale, 0).rgb;
+	float3 weatherData = texture_weatherMap.SampleLevel(sampler_linear_wrap, pos * parameters.layer.weatherScale, 0).rgb;
 	
     // Apply effects for coverage
-	weatherData.r = RemapClamped(weatherData.r * parameters.layer.CoverageAmount, 0.0, 1.0, parameters.layer.CoverageMinimum, 1.0);
-	weatherData.g = RemapClamped(weatherData.g * parameters.layer.TypeAmount, 0.0, 1.0, parameters.layer.TypeMinimum, 1.0);
-	weatherData.b = RemapClamped(weatherData.b * parameters.layer.RainAmount, 0.0, 1.0, parameters.layer.RainMinimum, 1.0);
+	weatherData.r = RemapClamped(weatherData.r * parameters.layer.coverageAmount, 0.0, 1.0, parameters.layer.coverageMinimum, 1.0);
+	weatherData.g = RemapClamped(weatherData.g * parameters.layer.typeAmount, 0.0, 1.0, parameters.layer.typeMinimum, 1.0);
+	weatherData.b = RemapClamped(weatherData.b * parameters.layer.rainAmount, 0.0, 1.0, parameters.layer.rainMinimum, 1.0);
 	
 	return weatherData;
 }
@@ -455,7 +455,7 @@ bool ValidCloudDensity(float heightFraction, float3 weatherData, LayerParameters
 {
 	float3 weatherTypeMask = GetWeatherTypeMask(weatherData);
 	
-	float4 cloudGradient = (parameters.layer.GradientSmall * weatherTypeMask.r) + (parameters.layer.GradientMedium * weatherTypeMask.g) + (parameters.layer.GradientLarge * weatherTypeMask.b);
+	float4 cloudGradient = (parameters.layer.gradientSmall * weatherTypeMask.r) + (parameters.layer.gradientMedium * weatherTypeMask.g) + (parameters.layer.gradientLarge * weatherTypeMask.b);
 	
 	return weatherData.r > 0.2 && cloudGradient.r < heightFraction && cloudGradient.a > heightFraction;
 }
@@ -478,9 +478,9 @@ float SampleCloudDensity(Texture3D<float4> texture_shapeNoise, Texture3D<float4>
 	
 	float3 lowFrequencyPos = float3(p.x, p.y + (p.x / 3.0f + p.z / 7.0f), p.z); // Offset to avoid repeting pattern for top-down view
 	lowFrequencyPos += parameters.windOffset;
-	lowFrequencyPos += heightFraction * parameters.windDirection * parameters.layer.SkewAlongWindDirection;
+	lowFrequencyPos += heightFraction * parameters.windDirection * parameters.layer.skewAlongWindDirection;
 	
-	float4 lowFrequencyNoises = texture_shapeNoise.SampleLevel(sampler_linear_wrap, lowFrequencyPos * parameters.layer.TotalNoiseScale, lod);
+	float4 lowFrequencyNoises = texture_shapeNoise.SampleLevel(sampler_linear_wrap, lowFrequencyPos * parameters.layer.totalNoiseScale, lod);
 
 	// Create an FBM out of the low-frequency Perlin-Worley Noises
 	float lowFrequencyFBM = (lowFrequencyNoises.g * 0.625) + (lowFrequencyNoises.b * 0.25) + (lowFrequencyNoises.a * 0.125);
@@ -506,23 +506,23 @@ float SampleCloudDensity(Texture3D<float4> texture_shapeNoise, Texture3D<float4>
 	if (cloudSample > 0.0 && sampleDetail)
 	{
 		float3 highFrequencyPos = p + parameters.windOffset;
-		highFrequencyPos += heightFraction * parameters.windDirection * parameters.layer.SkewAlongWindDirection;
+		highFrequencyPos += heightFraction * parameters.windDirection * parameters.layer.skewAlongWindDirection;
 		
         // Apply our curl noise to erode with tiny details.
-		float3 curlNoise = DecodeCurlNoise(texture_curlNoise.SampleLevel(sampler_linear_wrap, p.xz * parameters.layer.CurlScale * parameters.layer.TotalNoiseScale, 0).rgb);
-		highFrequencyPos += float3(curlNoise.r, curlNoise.b, curlNoise.g) * saturate(pow(1.0 - heightFraction, parameters.layer.CurlNoiseHeightFraction)) * parameters.layer.CurlNoiseModifier;
+		float3 curlNoise = DecodeCurlNoise(texture_curlNoise.SampleLevel(sampler_linear_wrap, p.xz * parameters.layer.curlScale * parameters.layer.totalNoiseScale, 0).rgb);
+		highFrequencyPos += float3(curlNoise.r, curlNoise.b, curlNoise.g) * saturate(pow(1.0 - heightFraction, parameters.layer.curlNoiseHeightFraction)) * parameters.layer.curlNoiseModifier;
 
-		float3 highFrequencyNoises = texture_detailNoise.SampleLevel(sampler_linear_wrap, highFrequencyPos * parameters.layer.DetailScale * parameters.layer.TotalNoiseScale, lod).rgb;
+		float3 highFrequencyNoises = texture_detailNoise.SampleLevel(sampler_linear_wrap, highFrequencyPos * parameters.layer.detailScale * parameters.layer.totalNoiseScale, lod).rgb;
 		
         // Create an FBM out of the high-frequency Worley Noises
 		float highFrequencyFBM = (highFrequencyNoises.r * 0.625) + (highFrequencyNoises.g * 0.25) + (highFrequencyNoises.b * 0.125);
 		highFrequencyFBM = saturate(highFrequencyFBM);
 		
         // Dilate detail noise based on height
-		float highFrequenceNoiseModifier = lerp(1.0 - highFrequencyFBM, highFrequencyFBM, saturate(heightFraction * parameters.layer.DetailNoiseHeightFraction));
+		float highFrequenceNoiseModifier = lerp(1.0 - highFrequencyFBM, highFrequencyFBM, saturate(heightFraction * parameters.layer.detailNoiseHeightFraction));
         
         // Erode with base of clouds
-		cloudSample = Remap(cloudSample, highFrequenceNoiseModifier * parameters.layer.DetailNoiseModifier, 1.0, 0.0, 1.0);
+		cloudSample = Remap(cloudSample, highFrequenceNoiseModifier * parameters.layer.detailNoiseModifier, 1.0, 0.0, 1.0);
 	}
 	
 	return max(cloudSample, 0.0);
@@ -530,12 +530,12 @@ float SampleCloudDensity(Texture3D<float4> texture_shapeNoise, Texture3D<float4>
 
 float3 SampleAlbedo(float densityFirst, float densitySecond, float3 weatherDataFirst, float3 weatherDataSecond)
 {
-	float3 albedoFirst = densityFirst * GetWeather().volumetric_clouds.LayerFirst.Albedo;
-	albedoFirst = pow(saturate(albedoFirst * GetWeather().volumetric_clouds.BeerPowder), GetWeather().volumetric_clouds.BeerPowderPower); // Artistic approach
+	float3 albedoFirst = densityFirst * GetWeather().volumetric_clouds.layerFirst.albedo;
+	albedoFirst = pow(saturate(albedoFirst * GetWeather().volumetric_clouds.beerPowder), GetWeather().volumetric_clouds.beerPowderPower); // Artistic approach
 	albedoFirst *= (1.0 - weatherDataFirst.b);
 	
-	float3 albedoSecond = densitySecond * GetWeather().volumetric_clouds.LayerSecond.Albedo;
-	albedoSecond = pow(saturate(albedoSecond * GetWeather().volumetric_clouds.BeerPowder), GetWeather().volumetric_clouds.BeerPowderPower);
+	float3 albedoSecond = densitySecond * GetWeather().volumetric_clouds.layerSecond.albedo;
+	albedoSecond = pow(saturate(albedoSecond * GetWeather().volumetric_clouds.beerPowder), GetWeather().volumetric_clouds.beerPowderPower);
 	albedoSecond *= (1.0 - weatherDataSecond.b);
 
 	return saturate(albedoFirst + albedoSecond);
@@ -543,8 +543,8 @@ float3 SampleAlbedo(float densityFirst, float densitySecond, float3 weatherDataF
 
 float3 SampleExtinction(float densityFirst, float densitySecond)
 {
-	float3 extinctionFirst = densityFirst * GetWeather().volumetric_clouds.LayerFirst.ExtinctionCoefficient;
-	float3 extinctionSecond = densitySecond * GetWeather().volumetric_clouds.LayerSecond.ExtinctionCoefficient;
+	float3 extinctionFirst = densityFirst * GetWeather().volumetric_clouds.layerFirst.extinctionCoefficient;
+	float3 extinctionSecond = densitySecond * GetWeather().volumetric_clouds.layerSecond.extinctionCoefficient;
 	
 	return saturate(extinctionFirst + extinctionSecond);
 }
