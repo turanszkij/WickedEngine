@@ -40,6 +40,9 @@
 
 #include "ShaderInterop_FSR2.h"
 
+#pragma dxc diagnostic push
+#pragma dxc diagnostic ignored "-Wfor-redefinition"
+
 #define FSR2_BIND_SRV_EXPOSURE                               0
 #if FFX_FSR2_OPTION_LOW_RESOLUTION_MOTION_VECTORS
 #define FSR2_BIND_SRV_DILATED_MOTION_VECTORS                 2
@@ -95,3 +98,5 @@ void main(uint2 uGroupId : SV_GroupID, uint2 uGroupThreadId : SV_GroupThreadID)
 
     Accumulate(uDispatchThreadId);
 }
+
+#pragma dxc diagnostic pop

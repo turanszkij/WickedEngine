@@ -1,7 +1,8 @@
-#define VOXEL_INITIAL_OFFSET 4
+#define VOXEL_INITIAL_OFFSET 1
 #include "globals.hlsli"
 #include "voxelHF.hlsli"
 #include "voxelConeTracingHF.hlsli"
+#include "lightingHF.hlsli"
 
 Texture3D<float4> input_emission : register(t0);
 StructuredBuffer<VoxelType> input_voxelscene : register(t1);
@@ -17,7 +18,8 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 	if (emission.a > 0)
 	{
-		float3 N = unpack_unitvector(input_voxelscene[DTid.x].normalMask);
+		const uint idx = flatten3D(writecoord, GetFrame().voxelradiance_resolution);
+		float3 N = decode_oct(unpack_half2(input_voxelscene[idx].normalMask));
 
 		float3 P = ((float3)writecoord + 0.5f) * GetFrame().voxelradiance_resolution_rcp;
 		P = P * 2 - 1;
@@ -26,9 +28,9 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		P *= GetFrame().voxelradiance_resolution;
 		P += GetFrame().voxelradiance_center;
 
-		float4 radiance = ConeTraceDiffuse(input_emission, P, N);
+		emission.rgb += ConeTraceDiffuse(input_emission, P, N).rgb;
 
-		output[writecoord] = emission + float4(radiance.rgb, 0);
+		output[writecoord] = emission;
 	}
 	else
 	{

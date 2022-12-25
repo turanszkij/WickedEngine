@@ -206,7 +206,7 @@ struct VertexSurface
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
 		position = input.GetPosition();
-		color = unpack_rgba(input.GetInstance().color);
+		color = GetMaterial().baseColor * unpack_rgba(input.GetInstance().color);
 		color.a *= 1 - input.GetInstancePointer().GetDither();
 		emissiveColor = input.GetInstance().emissive;
 
@@ -1113,7 +1113,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 
 #ifdef OBJECTSHADER_USE_COLOR
-	color *= GetMaterial().baseColor * input.color;
+	color *= input.color;
 #endif // OBJECTSHADER_USE_COLOR
 
 

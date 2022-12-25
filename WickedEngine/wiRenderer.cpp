@@ -7324,6 +7324,13 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 		BindCommonResources(cmd);
 
+		device->ClearUAV(&resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(&resourceBuffers[RBTYPE_VOXELSCENE]),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 
 		device->RenderPassBegin(nullptr, 0, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
 		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, false, nullptr, 1);
@@ -7331,15 +7338,16 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
+				GPUBarrier::Buffer(&resourceBuffers[RBTYPE_VOXELSCENE], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
 		device->EventBegin("Voxel Scene Copy - Clear", cmd);
-		device->BindUAV(&resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
-		device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 1, cmd);
+		device->BindResource(&resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
+		device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 
 		static bool smooth_copy = true;
 		if (smooth_copy)
@@ -7355,7 +7363,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
+				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -7366,6 +7374,13 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			// Pre-integrate the voxel texture by creating blurred mip levels:
 			GenerateMipChain(textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, cmd);
 
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS)
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
 			device->BindResource(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 			device->BindResource(&resourceBuffers[RBTYPE_VOXELSCENE], 1, cmd);
 			device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, cmd);
@@ -7375,28 +7390,14 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			device->EventBegin("Voxel Scene Clear Normals", cmd);
-			device->BindUAV(&resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
-			device->BindComputeShader(&shaders[CSTYPE_VOXELCLEARONLYNORMAL], cmd);
-			device->Dispatch((uint32_t)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
-			device->EventEnd(cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
+					GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+					GPUBarrier::Buffer(&resourceBuffers[RBTYPE_VOXELSCENE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
 			result = &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
 		}
-
-
 
 		// Pre-integrate the voxel texture by creating blurred mip levels:
 		{

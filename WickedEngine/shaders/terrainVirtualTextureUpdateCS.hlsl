@@ -1,5 +1,9 @@
 #include "globals.hlsli"
 
+#pragma dxc diagnostic push
+#pragma dxc diagnostic ignored "-Wambig-lit-shift"
+#pragma dxc diagnostic ignored "-Wunused-value"
+
 #define ASPM_HLSL
 #include "compressonator/bcn_common_kernel.h"
 
@@ -151,3 +155,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	output[write_coord] = CompressBlockBC3_UNORM(block_rgb, block_a, CMP_QUALITY2, /*isSRGB =*/ false);
 #endif // UPDATE_SURFACEMAP
 }
+
+#pragma dxc diagnostic pop

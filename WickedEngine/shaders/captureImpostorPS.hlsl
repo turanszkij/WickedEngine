@@ -20,7 +20,7 @@ ImpostorOutput main(PixelInput input)
 	{
 		color = 1;
 	}
-	color *= GetMaterial().baseColor /** input.color*/;
+	color *= input.color;
 	clip(color.a - GetMaterial().alphaTest);
 
 	float3 N = normalize(input.nor);
