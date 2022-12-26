@@ -296,7 +296,7 @@ struct VolumetricCloudParameters
 		renderDistance = 70000.0f;
 		LODDistance = 30000.0f;
 		LODMin = 0.0f;
-		bigStepMarch = 1.0f;
+		bigStepMarch = 2.0f;
 		transmittanceThreshold = 0.005f;
 		shadowSampleCount = 5.0f;
 		groundContributionSampleCount = 3.0f;

@@ -414,26 +414,35 @@ float3 GetWeatherTypeMask(float3 weatherData)
 	return float3(smallType, mediumType, largeType);
 }
 
-float GetHeightGradient(float heightFraction, float3 weatherData, LayerParameters parameters)
+float4 GetHeightGradientType(float3 weatherTypeMask, LayerParameters parameters)
 {
-	float3 weatherTypeMask = GetWeatherTypeMask(weatherData);
-
-	float4 cloudGradient = (parameters.layer.gradientSmall * weatherTypeMask.r) + (parameters.layer.gradientMedium * weatherTypeMask.g) + (parameters.layer.gradientLarge * weatherTypeMask.b);
-	
-	return SampleGradient(cloudGradient, heightFraction);
+	return (parameters.layer.gradientSmall * weatherTypeMask.r) + (parameters.layer.gradientMedium * weatherTypeMask.g) + (parameters.layer.gradientLarge * weatherTypeMask.b);
 }
 
-float GetAnvilDeformation(float heightFraction, float3 weatherData, LayerParameters parameters)
+float4 GetAnvilDeformationType(float3 weatherTypeMask, LayerParameters parameters)
+{
+	return (parameters.layer.anvilDeformationSmall * weatherTypeMask.r) + (parameters.layer.anvilDeformationMedium * weatherTypeMask.g) + (parameters.layer.anvilDeformationLarge * weatherTypeMask.b);
+}
+
+float SampleHeightGradient(float heightFraction, float3 weatherData, LayerParameters parameters)
 {
 	float3 weatherTypeMask = GetWeatherTypeMask(weatherData);
 
-	// Fetch current gradient height
-	float4 cloudGradient = (parameters.layer.gradientSmall * weatherTypeMask.r) + (parameters.layer.gradientMedium * weatherTypeMask.g) + (parameters.layer.gradientLarge * weatherTypeMask.b);
+	float4 heightGradient = GetHeightGradientType(weatherTypeMask, parameters);
+	
+	return SampleGradient(heightGradient, heightFraction);
+}
+
+float SampleAnvilDeformation(float heightFraction, float3 weatherData, LayerParameters parameters)
+{
+	float3 weatherTypeMask = GetWeatherTypeMask(weatherData);
+
+	float4 heightGradient = GetHeightGradientType(weatherTypeMask, parameters);
 	
 	// amountTop, offsetTop, amountBot, offsetBot
-	float4 anvilDeformation = (parameters.layer.anvilDeformationSmall * weatherTypeMask.r) + (parameters.layer.anvilDeformationMedium * weatherTypeMask.g) + (parameters.layer.anvilDeformationLarge * weatherTypeMask.b);
+	float4 anvilDeformation = GetAnvilDeformationType(weatherTypeMask, parameters);
 	
-	return saturate(pow(saturate(heightFraction + anvilDeformation.g + (1.0 - cloudGradient.a)), anvilDeformation.r) + pow(saturate((1.0 - heightFraction) + anvilDeformation.a + cloudGradient.r), anvilDeformation.b));
+	return saturate(pow(saturate(heightFraction + anvilDeformation.g + (1.0 - heightGradient.a)), anvilDeformation.r) + pow(saturate((1.0 - heightFraction) + anvilDeformation.a + heightGradient.r), anvilDeformation.b));
 }
 
 float3 SampleWeather(Texture2D<float4> texture_weatherMap, float3 p, float heightFraction, LayerParameters parameters)
@@ -455,9 +464,12 @@ bool ValidCloudDensity(float heightFraction, float3 weatherData, LayerParameters
 {
 	float3 weatherTypeMask = GetWeatherTypeMask(weatherData);
 	
-	float4 cloudGradient = (parameters.layer.gradientSmall * weatherTypeMask.r) + (parameters.layer.gradientMedium * weatherTypeMask.g) + (parameters.layer.gradientLarge * weatherTypeMask.b);
+	float4 heightGradient = GetHeightGradientType(weatherTypeMask, parameters);
+
+	float coverage = weatherData.r;
+	coverage *= SampleAnvilDeformation(heightFraction, weatherData, parameters);
 	
-	return weatherData.r > 0.2 && cloudGradient.r < heightFraction && cloudGradient.a > heightFraction;
+	return coverage > 0.05 && heightGradient.r < heightFraction && heightGradient.a > heightFraction;
 }
 
 bool ValidCloudDensityLayers(float heightFraction, float3 weatherDataFirst, float3 weatherDataSecond, LayerParameters parametersFirst, LayerParameters parametersSecond)
@@ -489,7 +501,7 @@ float SampleCloudDensity(Texture3D<float4> texture_shapeNoise, Texture3D<float4>
 	float cloudSample = Remap(lowFrequencyNoises.r, -(1.0 - lowFrequencyFBM), 1.0, 0.0, 1.0);
 
 	// Apply height gradients
-	float densityHeightGradient = GetHeightGradient(heightFraction, weatherData, parameters);
+	float densityHeightGradient = SampleHeightGradient(heightFraction, weatherData, parameters);
 	cloudSample *= densityHeightGradient;
 
 	float cloudCoverage = weatherData.r;
@@ -499,7 +511,7 @@ float SampleCloudDensity(Texture3D<float4> texture_shapeNoise, Texture3D<float4>
 	cloudSample *= cloudCoverage;
 
 	// Apply anvil deformations
-	float densityAnvilDeformation = GetAnvilDeformation(heightFraction, weatherData, parameters);
+	float densityAnvilDeformation = SampleAnvilDeformation(heightFraction, weatherData, parameters);
 	cloudSample *= densityAnvilDeformation;
 
     // Erode with detail noise if cloud sample > 0
