@@ -19,10 +19,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float totalSize = 3.0; // Adjust the overall size for all channels
 	const float worleySeed = 1.0; // Randomize the worley coverage noise with a seed.
     
-	const float perlinNoise1LowRemap = 0.75;
+	const float perlinNoise1LowRemap = 1.0;
 	const float perlinNoise1HighRemap = 1.25;
 		
-	const float worleyNoise1LowRemap = 0.5;
+	const float worleyNoise1LowRemap = 0.65;
 	const float worleyNoise1HighRemap = 0.9;
 		
 	const float perlinNoise2LowRemap = 0.75;
@@ -34,7 +34,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float perlinNoise4LowRemap = 1.0;
 	const float perlinNoise4HighRemap = 1.4;
 		
-	const float coveragePerlinWorleyDifference = 0.75;
+	const float coveragePerlinWorleyDifference = 1.0; // 0 is perlin, 1 is worley
 
 	// Generate Noises
 	float perlinNoise1 = GetPerlin_7_Octaves(float3(pos, depthOffset1), 3.0 * totalSize, true);

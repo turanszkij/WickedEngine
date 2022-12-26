@@ -367,8 +367,7 @@ namespace wi::terrain
 		weather.volumetricCloudParameters.layerFirst.curlScale = 0.15f;
 		weather.volumetricCloudParameters.layerFirst.detailNoiseModifier = 0.5;
 		weather.volumetricCloudParameters.layerFirst.weatherScale = 0.000035f;
-		weather.volumetricCloudParameters.layerFirst.coverageAmount = 1.25f;
-		weather.volumetricCloudParameters.layerFirst.coverageMinimum = -0.5f;
+		weather.volumetricCloudParameters.layerFirst.coverageMinimum = 0.25f;
 		weather.volumetricCloudParameters.layerFirst.typeAmount = 0.0f;
 		weather.volumetricCloudParameters.layerFirst.typeMinimum = 0.0f;
 		weather.volumetricCloudParameters.layerFirst.rainAmount = 0.9f;
