@@ -218,7 +218,7 @@ struct VolumetricCloudParameters
 			layerFirst.detailNoiseHeightFraction = 10.0f;
 			layerFirst.detailNoiseModifier = 0.3f;
 			layerFirst.skewAlongCoverageWindDirection = 2500.0f;
-			layerFirst.weatherScale = 0.000025f;
+			layerFirst.weatherScale = 0.00002f;
 			layerFirst.coverageAmount = 1.0f;
 			layerFirst.coverageMinimum = 0.0f;
 			layerFirst.typeAmount = 1.0f;
