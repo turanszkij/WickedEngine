@@ -1158,28 +1158,28 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 70)
 			{
-				archive >> volumetricCloudParameters.Albedo;
-				archive >> volumetricCloudParameters.CloudAmbientGroundMultiplier;
-				archive >> volumetricCloudParameters.ExtinctionCoefficient;
-				archive >> volumetricCloudParameters.BeerPowder;
-				archive >> volumetricCloudParameters.BeerPowderPower;
-				archive >> volumetricCloudParameters.PhaseG;
-				archive >> volumetricCloudParameters.PhaseG2;
-				archive >> volumetricCloudParameters.PhaseBlend;
-				archive >> volumetricCloudParameters.MultiScatteringScattering;
-				archive >> volumetricCloudParameters.MultiScatteringExtinction;
-				archive >> volumetricCloudParameters.MultiScatteringEccentricity;
-				archive >> volumetricCloudParameters.ShadowStepLength;
-				archive >> volumetricCloudParameters.HorizonBlendAmount;
-				archive >> volumetricCloudParameters.HorizonBlendPower;
-				archive >> volumetricCloudParameters.WeatherDensityAmount;
-				archive >> volumetricCloudParameters.CloudStartHeight;
-				archive >> volumetricCloudParameters.CloudThickness;
-				archive >> volumetricCloudParameters.SkewAlongWindDirection;
-				archive >> volumetricCloudParameters.TotalNoiseScale;
-				archive >> volumetricCloudParameters.DetailScale;
-				archive >> volumetricCloudParameters.WeatherScale;
-				archive >> volumetricCloudParameters.CurlScale;
+				archive >> volumetricCloudParameters.layerFirst.albedo;
+				archive >> volumetricCloudParameters.ambientGroundMultiplier;
+				archive >> volumetricCloudParameters.layerFirst.extinctionCoefficient;
+				archive >> volumetricCloudParameters.beerPowder;
+				archive >> volumetricCloudParameters.beerPowderPower;
+				archive >> volumetricCloudParameters.phaseG;
+				archive >> volumetricCloudParameters.phaseG2;
+				archive >> volumetricCloudParameters.phaseBlend;
+				archive >> volumetricCloudParameters.multiScatteringScattering;
+				archive >> volumetricCloudParameters.multiScatteringExtinction;
+				archive >> volumetricCloudParameters.multiScatteringEccentricity;
+				archive >> volumetricCloudParameters.shadowStepLength;
+				archive >> volumetricCloudParameters.horizonBlendAmount;
+				archive >> volumetricCloudParameters.horizonBlendPower;
+				archive >> volumetricCloudParameters.layerFirst.rainAmount;
+				archive >> volumetricCloudParameters.cloudStartHeight;
+				archive >> volumetricCloudParameters.cloudThickness;
+				archive >> volumetricCloudParameters.layerFirst.skewAlongWindDirection;
+				archive >> volumetricCloudParameters.layerFirst.totalNoiseScale;
+				archive >> volumetricCloudParameters.layerFirst.detailScale;
+				archive >> volumetricCloudParameters.layerFirst.weatherScale;
+				archive >> volumetricCloudParameters.layerFirst.curlScale;
 				if (archive.GetVersion() < 86)
 				{
 					float ShapeNoiseHeightGradientAmount;
@@ -1191,42 +1191,47 @@ namespace wi::scene
 					archive >> ShapeNoiseMinMax;
 					archive >> ShapeNoisePower;
 				}
-				archive >> volumetricCloudParameters.DetailNoiseModifier;
-				archive >> volumetricCloudParameters.DetailNoiseHeightFraction;
-				archive >> volumetricCloudParameters.CurlNoiseModifier;
-				archive >> volumetricCloudParameters.CoverageAmount;
-				archive >> volumetricCloudParameters.CoverageMinimum;
-				archive >> volumetricCloudParameters.TypeAmount;
-				archive >> volumetricCloudParameters.TypeMinimum;
-				archive >> volumetricCloudParameters.AnvilAmount;
-				archive >> volumetricCloudParameters.AnvilOverhangHeight;
-				archive >> volumetricCloudParameters.AnimationMultiplier;
-				archive >> volumetricCloudParameters.WindSpeed;
-				archive >> volumetricCloudParameters.WindAngle;
-				archive >> volumetricCloudParameters.WindUpAmount;
-				archive >> volumetricCloudParameters.CoverageWindSpeed;
-				archive >> volumetricCloudParameters.CoverageWindAngle;
-				archive >> volumetricCloudParameters.CloudGradientSmall;
-				archive >> volumetricCloudParameters.CloudGradientMedium;
-				archive >> volumetricCloudParameters.CloudGradientLarge;
-				archive >> volumetricCloudParameters.MaxStepCount;
-				archive >> volumetricCloudParameters.MaxMarchingDistance;
-				archive >> volumetricCloudParameters.InverseDistanceStepCount;
-				archive >> volumetricCloudParameters.RenderDistance;
+				archive >> volumetricCloudParameters.layerFirst.detailNoiseModifier;
+				archive >> volumetricCloudParameters.layerFirst.detailNoiseHeightFraction;
+				archive >> volumetricCloudParameters.layerFirst.curlNoiseModifier;
+				archive >> volumetricCloudParameters.layerFirst.coverageAmount;
+				archive >> volumetricCloudParameters.layerFirst.coverageMinimum;
+				archive >> volumetricCloudParameters.layerFirst.typeAmount;
+				archive >> volumetricCloudParameters.layerFirst.typeMinimum;
+				if (archive.GetVersion() < 88)
+				{
+					float AnvilAmount;
+					float AnvilOverhangHeight;
+					archive >> AnvilAmount;
+					archive >> AnvilOverhangHeight;
+				}
+				archive >> volumetricCloudParameters.animationMultiplier;
+				archive >> volumetricCloudParameters.layerFirst.windSpeed;
+				archive >> volumetricCloudParameters.layerFirst.windAngle;
+				archive >> volumetricCloudParameters.layerFirst.windUpAmount;
+				archive >> volumetricCloudParameters.layerFirst.coverageWindSpeed;
+				archive >> volumetricCloudParameters.layerFirst.coverageWindAngle;
+				archive >> volumetricCloudParameters.layerFirst.gradientSmall;
+				archive >> volumetricCloudParameters.layerFirst.gradientMedium;
+				archive >> volumetricCloudParameters.layerFirst.gradientLarge;
+				archive >> volumetricCloudParameters.maxStepCount;
+				archive >> volumetricCloudParameters.maxMarchingDistance;
+				archive >> volumetricCloudParameters.inverseDistanceStepCount;
+				archive >> volumetricCloudParameters.renderDistance;
 				archive >> volumetricCloudParameters.LODDistance;
 				archive >> volumetricCloudParameters.LODMin;
-				archive >> volumetricCloudParameters.BigStepMarch;
-				archive >> volumetricCloudParameters.TransmittanceThreshold;
-				archive >> volumetricCloudParameters.ShadowSampleCount;
-				archive >> volumetricCloudParameters.GroundContributionSampleCount;
+				archive >> volumetricCloudParameters.bigStepMarch;
+				archive >> volumetricCloudParameters.transmittanceThreshold;
+				archive >> volumetricCloudParameters.shadowSampleCount;
+				archive >> volumetricCloudParameters.groundContributionSampleCount;
 
 				if (archive.GetVersion() < 86)
 				{
-					volumetricCloudParameters.HorizonBlendAmount *= 0.00001f;
-					volumetricCloudParameters.TotalNoiseScale *= 0.0004f;
-					volumetricCloudParameters.WeatherScale *= 0.0004f;
-					volumetricCloudParameters.CoverageAmount /= 2.0f;
-					volumetricCloudParameters.CoverageMinimum = std::max(0.0f, volumetricCloudParameters.CoverageMinimum - 1.0f);
+					volumetricCloudParameters.horizonBlendAmount *= 0.00001f;
+					volumetricCloudParameters.layerFirst.totalNoiseScale *= 0.0004f;
+					volumetricCloudParameters.layerFirst.weatherScale *= 0.0004f;
+					volumetricCloudParameters.layerFirst.coverageAmount /= 2.0f;
+					volumetricCloudParameters.layerFirst.coverageMinimum = std::max(0.0f, volumetricCloudParameters.layerFirst.coverageMinimum - 1.0f);
 				}
 			}
 
@@ -1253,12 +1258,59 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 86)
 			{
-				archive >> volumetricCloudsWeatherMapName;
-				if (!volumetricCloudsWeatherMapName.empty())
+				archive >> volumetricCloudsWeatherMapFirstName;
+				if (!volumetricCloudsWeatherMapFirstName.empty())
 				{
-					volumetricCloudsWeatherMapName = dir + volumetricCloudsWeatherMapName;
-					volumetricCloudsWeatherMap = wi::resourcemanager::Load(volumetricCloudsWeatherMapName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					volumetricCloudsWeatherMapFirstName = dir + volumetricCloudsWeatherMapFirstName;
+					volumetricCloudsWeatherMapFirst = wi::resourcemanager::Load(volumetricCloudsWeatherMapFirstName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 				}
+			}
+
+			if (archive.GetVersion() >= 88)
+			{
+				archive >> volumetricCloudsWeatherMapSecondName;
+				if (!volumetricCloudsWeatherMapSecondName.empty())
+				{
+					volumetricCloudsWeatherMapSecondName = dir + volumetricCloudsWeatherMapSecondName;
+					volumetricCloudsWeatherMapSecond = wi::resourcemanager::Load(volumetricCloudsWeatherMapSecondName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+				}
+
+				archive >> volumetricCloudParameters.layerFirst.curlNoiseHeightFraction;
+				archive >> volumetricCloudParameters.layerFirst.skewAlongCoverageWindDirection;
+				archive >> volumetricCloudParameters.layerFirst.rainMinimum;
+				archive >> volumetricCloudParameters.layerFirst.anvilDeformationSmall;
+				archive >> volumetricCloudParameters.layerFirst.anvilDeformationMedium;
+				archive >> volumetricCloudParameters.layerFirst.anvilDeformationLarge;
+
+				archive >> volumetricCloudParameters.layerSecond.albedo;
+				archive >> volumetricCloudParameters.layerSecond.extinctionCoefficient;
+				archive >> volumetricCloudParameters.layerSecond.skewAlongWindDirection;
+				archive >> volumetricCloudParameters.layerSecond.totalNoiseScale;
+				archive >> volumetricCloudParameters.layerSecond.curlScale;
+				archive >> volumetricCloudParameters.layerSecond.curlNoiseHeightFraction;
+				archive >> volumetricCloudParameters.layerSecond.curlNoiseModifier;
+				archive >> volumetricCloudParameters.layerSecond.detailScale;
+				archive >> volumetricCloudParameters.layerSecond.detailNoiseHeightFraction;
+				archive >> volumetricCloudParameters.layerSecond.detailNoiseModifier;
+				archive >> volumetricCloudParameters.layerSecond.skewAlongCoverageWindDirection;
+				archive >> volumetricCloudParameters.layerSecond.weatherScale;
+				archive >> volumetricCloudParameters.layerSecond.coverageAmount;
+				archive >> volumetricCloudParameters.layerSecond.coverageMinimum;
+				archive >> volumetricCloudParameters.layerSecond.typeAmount;
+				archive >> volumetricCloudParameters.layerSecond.typeMinimum;
+				archive >> volumetricCloudParameters.layerSecond.rainAmount;
+				archive >> volumetricCloudParameters.layerSecond.rainMinimum;
+				archive >> volumetricCloudParameters.layerSecond.gradientSmall;
+				archive >> volumetricCloudParameters.layerSecond.gradientMedium;
+				archive >> volumetricCloudParameters.layerSecond.gradientLarge;
+				archive >> volumetricCloudParameters.layerSecond.anvilDeformationSmall;
+				archive >> volumetricCloudParameters.layerSecond.anvilDeformationMedium;
+				archive >> volumetricCloudParameters.layerSecond.anvilDeformationLarge;
+				archive >> volumetricCloudParameters.layerSecond.windSpeed;
+				archive >> volumetricCloudParameters.layerSecond.windAngle;
+				archive >> volumetricCloudParameters.layerSecond.windUpAmount;
+				archive >> volumetricCloudParameters.layerSecond.coverageWindSpeed;
+				archive >> volumetricCloudParameters.layerSecond.coverageWindAngle;
 			}
 
 			if (seri.GetVersion() >= 1)
@@ -1295,7 +1347,8 @@ namespace wi::scene
 
 			wi::helper::MakePathRelative(dir, skyMapName);
 			wi::helper::MakePathRelative(dir, colorGradingMapName);
-			wi::helper::MakePathRelative(dir, volumetricCloudsWeatherMapName);
+			wi::helper::MakePathRelative(dir, volumetricCloudsWeatherMapFirstName);
+			wi::helper::MakePathRelative(dir, volumetricCloudsWeatherMapSecondName);
 
 			if (archive.GetVersion() >= 32)
 			{
@@ -1334,67 +1387,72 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 70)
 			{
-				archive << volumetricCloudParameters.Albedo;
-				archive << volumetricCloudParameters.CloudAmbientGroundMultiplier;
-				archive << volumetricCloudParameters.ExtinctionCoefficient;
-				archive << volumetricCloudParameters.BeerPowder;
-				archive << volumetricCloudParameters.BeerPowderPower;
-				archive << volumetricCloudParameters.PhaseG;
-				archive << volumetricCloudParameters.PhaseG2;
-				archive << volumetricCloudParameters.PhaseBlend;
-				archive << volumetricCloudParameters.MultiScatteringScattering;
-				archive << volumetricCloudParameters.MultiScatteringExtinction;
-				archive << volumetricCloudParameters.MultiScatteringEccentricity;
-				archive << volumetricCloudParameters.ShadowStepLength;
-				archive << volumetricCloudParameters.HorizonBlendAmount;
-				archive << volumetricCloudParameters.HorizonBlendPower;
-				archive << volumetricCloudParameters.WeatherDensityAmount;
-				archive << volumetricCloudParameters.CloudStartHeight;
-				archive << volumetricCloudParameters.CloudThickness;
-				archive << volumetricCloudParameters.SkewAlongWindDirection;
-				archive << volumetricCloudParameters.TotalNoiseScale;
-				archive << volumetricCloudParameters.DetailScale;
-				archive << volumetricCloudParameters.WeatherScale;
-				archive << volumetricCloudParameters.CurlScale;
+				archive << volumetricCloudParameters.layerFirst.albedo;
+				archive << volumetricCloudParameters.ambientGroundMultiplier;
+				archive << volumetricCloudParameters.layerFirst.extinctionCoefficient;
+				archive << volumetricCloudParameters.beerPowder;
+				archive << volumetricCloudParameters.beerPowderPower;
+				archive << volumetricCloudParameters.phaseG;
+				archive << volumetricCloudParameters.phaseG2;
+				archive << volumetricCloudParameters.phaseBlend;
+				archive << volumetricCloudParameters.multiScatteringScattering;
+				archive << volumetricCloudParameters.multiScatteringExtinction;
+				archive << volumetricCloudParameters.multiScatteringEccentricity;
+				archive << volumetricCloudParameters.shadowStepLength;
+				archive << volumetricCloudParameters.horizonBlendAmount;
+				archive << volumetricCloudParameters.horizonBlendPower;
+				archive << volumetricCloudParameters.layerFirst.rainAmount;
+				archive << volumetricCloudParameters.cloudStartHeight;
+				archive << volumetricCloudParameters.cloudThickness;
+				archive << volumetricCloudParameters.layerFirst.skewAlongWindDirection;
+				archive << volumetricCloudParameters.layerFirst.totalNoiseScale;
+				archive << volumetricCloudParameters.layerFirst.detailScale;
+				archive << volumetricCloudParameters.layerFirst.weatherScale;
+				archive << volumetricCloudParameters.layerFirst.curlScale;
 				if (archive.GetVersion() < 86)
 				{
-					float ShapeNoiseHeightGradientAmount = 0;
-					float ShapeNoiseMultiplier = 0;
-					XMFLOAT2 ShapeNoiseMinMax = XMFLOAT2(0, 0);
-					float ShapeNoisePower = 0;
+					float ShapeNoiseHeightGradientAmount = 0.0f;
+					float ShapeNoiseMultiplier = 0.0f;
+					XMFLOAT2 ShapeNoiseMinMax = XMFLOAT2(0.0f, 0.0f);
+					float ShapeNoisePower = 0.0f;
 					archive << ShapeNoiseHeightGradientAmount;
 					archive << ShapeNoiseMultiplier;
 					archive << ShapeNoiseMinMax;
 					archive << ShapeNoisePower;
 				}
-				archive << volumetricCloudParameters.DetailNoiseModifier;
-				archive << volumetricCloudParameters.DetailNoiseHeightFraction;
-				archive << volumetricCloudParameters.CurlNoiseModifier;
-				archive << volumetricCloudParameters.CoverageAmount;
-				archive << volumetricCloudParameters.CoverageMinimum;
-				archive << volumetricCloudParameters.TypeAmount;
-				archive << volumetricCloudParameters.TypeMinimum;
-				archive << volumetricCloudParameters.AnvilAmount;
-				archive << volumetricCloudParameters.AnvilOverhangHeight;
-				archive << volumetricCloudParameters.AnimationMultiplier;
-				archive << volumetricCloudParameters.WindSpeed;
-				archive << volumetricCloudParameters.WindAngle;
-				archive << volumetricCloudParameters.WindUpAmount;
-				archive << volumetricCloudParameters.CoverageWindSpeed;
-				archive << volumetricCloudParameters.CoverageWindAngle;
-				archive << volumetricCloudParameters.CloudGradientSmall;
-				archive << volumetricCloudParameters.CloudGradientMedium;
-				archive << volumetricCloudParameters.CloudGradientLarge;
-				archive << volumetricCloudParameters.MaxStepCount;
-				archive << volumetricCloudParameters.MaxMarchingDistance;
-				archive << volumetricCloudParameters.InverseDistanceStepCount;
-				archive << volumetricCloudParameters.RenderDistance;
+				archive << volumetricCloudParameters.layerFirst.detailNoiseModifier;
+				archive << volumetricCloudParameters.layerFirst.detailNoiseHeightFraction;
+				archive << volumetricCloudParameters.layerFirst.curlNoiseModifier;
+				archive << volumetricCloudParameters.layerFirst.coverageAmount;
+				archive << volumetricCloudParameters.layerFirst.coverageMinimum;
+				archive << volumetricCloudParameters.layerFirst.typeAmount;
+				archive << volumetricCloudParameters.layerFirst.typeMinimum;
+				if (archive.GetVersion() < 88)
+				{
+					float AnvilAmount = 0.0f;
+					float AnvilOverhangHeight = 0.0f;
+					archive << AnvilAmount;
+					archive << AnvilOverhangHeight;
+				}
+				archive << volumetricCloudParameters.animationMultiplier;
+				archive << volumetricCloudParameters.layerFirst.windSpeed;
+				archive << volumetricCloudParameters.layerFirst.windAngle;
+				archive << volumetricCloudParameters.layerFirst.windUpAmount;
+				archive << volumetricCloudParameters.layerFirst.coverageWindSpeed;
+				archive << volumetricCloudParameters.layerFirst.coverageWindAngle;
+				archive << volumetricCloudParameters.layerFirst.gradientSmall;
+				archive << volumetricCloudParameters.layerFirst.gradientMedium;
+				archive << volumetricCloudParameters.layerFirst.gradientLarge;
+				archive << volumetricCloudParameters.maxStepCount;
+				archive << volumetricCloudParameters.maxMarchingDistance;
+				archive << volumetricCloudParameters.inverseDistanceStepCount;
+				archive << volumetricCloudParameters.renderDistance;
 				archive << volumetricCloudParameters.LODDistance;
 				archive << volumetricCloudParameters.LODMin;
-				archive << volumetricCloudParameters.BigStepMarch;
-				archive << volumetricCloudParameters.TransmittanceThreshold;
-				archive << volumetricCloudParameters.ShadowSampleCount;
-				archive << volumetricCloudParameters.GroundContributionSampleCount;
+				archive << volumetricCloudParameters.bigStepMarch;
+				archive << volumetricCloudParameters.transmittanceThreshold;
+				archive << volumetricCloudParameters.shadowSampleCount;
+				archive << volumetricCloudParameters.groundContributionSampleCount;
 			}
 
 			if (archive.GetVersion() >= 71)
@@ -1410,7 +1468,49 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 86)
 			{
-				archive << volumetricCloudsWeatherMapName;
+				archive << volumetricCloudsWeatherMapFirstName;
+			}
+
+			if (archive.GetVersion() >= 88)
+			{
+				archive << volumetricCloudsWeatherMapSecondName;
+
+				archive << volumetricCloudParameters.layerFirst.curlNoiseHeightFraction;
+				archive << volumetricCloudParameters.layerFirst.skewAlongCoverageWindDirection;
+				archive << volumetricCloudParameters.layerFirst.rainMinimum;
+				archive << volumetricCloudParameters.layerFirst.anvilDeformationSmall;
+				archive << volumetricCloudParameters.layerFirst.anvilDeformationMedium;
+				archive << volumetricCloudParameters.layerFirst.anvilDeformationLarge;
+
+				archive << volumetricCloudParameters.layerSecond.albedo;
+				archive << volumetricCloudParameters.layerSecond.extinctionCoefficient;
+				archive << volumetricCloudParameters.layerSecond.skewAlongWindDirection;
+				archive << volumetricCloudParameters.layerSecond.totalNoiseScale;
+				archive << volumetricCloudParameters.layerSecond.curlScale;
+				archive << volumetricCloudParameters.layerSecond.curlNoiseHeightFraction;
+				archive << volumetricCloudParameters.layerSecond.curlNoiseModifier;
+				archive << volumetricCloudParameters.layerSecond.detailScale;
+				archive << volumetricCloudParameters.layerSecond.detailNoiseHeightFraction;
+				archive << volumetricCloudParameters.layerSecond.detailNoiseModifier;
+				archive << volumetricCloudParameters.layerSecond.skewAlongCoverageWindDirection;
+				archive << volumetricCloudParameters.layerSecond.weatherScale;
+				archive << volumetricCloudParameters.layerSecond.coverageAmount;
+				archive << volumetricCloudParameters.layerSecond.coverageMinimum;
+				archive << volumetricCloudParameters.layerSecond.typeAmount;
+				archive << volumetricCloudParameters.layerSecond.typeMinimum;
+				archive << volumetricCloudParameters.layerSecond.rainAmount;
+				archive << volumetricCloudParameters.layerSecond.rainMinimum;
+				archive << volumetricCloudParameters.layerSecond.gradientSmall;
+				archive << volumetricCloudParameters.layerSecond.gradientMedium;
+				archive << volumetricCloudParameters.layerSecond.gradientLarge;
+				archive << volumetricCloudParameters.layerSecond.anvilDeformationSmall;
+				archive << volumetricCloudParameters.layerSecond.anvilDeformationMedium;
+				archive << volumetricCloudParameters.layerSecond.anvilDeformationLarge;
+				archive << volumetricCloudParameters.layerSecond.windSpeed;
+				archive << volumetricCloudParameters.layerSecond.windAngle;
+				archive << volumetricCloudParameters.layerSecond.windUpAmount;
+				archive << volumetricCloudParameters.layerSecond.coverageWindSpeed;
+				archive << volumetricCloudParameters.layerSecond.coverageWindAngle;
 			}
 
 			if (seri.GetVersion() >= 1)
