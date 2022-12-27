@@ -119,7 +119,7 @@ struct VoxelizedSceneData
 	float maxDistance = 20.0f;
 	bool secondaryBounceEnabled = false;
 	bool reflectionsEnabled = true;
-	uint32_t mips = 4;
+	uint32_t mips = 5;
 	bool pre_clear = true;
 } voxelSceneData;
 
@@ -7330,8 +7330,17 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->SetName(&voxel_render_radiance, "voxel_render_radiance");
 
 			desc.format = Format::R16G16B16A16_FLOAT;
+			desc.mip_levels = voxelSceneData.mips;
 			device->CreateTexture(&desc, nullptr, &voxel_prev_radiance);
 			device->SetName(&voxel_prev_radiance, "voxel_prev_radiance");
+			for (uint32_t i = 0; i < voxel_prev_radiance.GetDesc().mip_levels; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&voxel_prev_radiance, SubresourceType::SRV, 0, 1, i, 1);
+				assert(subresource_index == i);
+				subresource_index = device->CreateSubresource(&voxel_prev_radiance, SubresourceType::UAV, 0, 1, i, 1);
+				assert(subresource_index == i);
+			}
 		}
 
 		BindCommonResources(cmd);
@@ -7377,6 +7386,8 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
+
+		GenerateMipChain(voxel_prev_radiance, MIPGENFILTER_LINEAR, cmd);
 
 		{
 			device->EventBegin("Voxelize", cmd);
