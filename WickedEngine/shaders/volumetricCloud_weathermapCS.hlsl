@@ -25,9 +25,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float worleyNoise1LowRemap = 0.65;
 	const float worleyNoise1HighRemap = 0.9;
 		
-	const float perlinNoise2LowRemap = 0.75;
-	const float perlinNoise2HighRemap = 2.0;
-		
+	const float perlinNoise2LowRemap = 0.85;
+	const float perlinNoise2HighRemap = 1.9;
+	
 	const float perlinNoise3LowRemap = 0.5;
 	const float perlinNoise3HighRemap = 1.3;
 		
