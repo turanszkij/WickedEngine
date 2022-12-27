@@ -4147,7 +4147,9 @@ void UpdateRenderDataAsync(
 
 	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
 	{
-		ComputeVolumetricCloudShadows(cmd, vis.scene->weather.volumetricCloudsWeatherMap.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMap.GetTexture() : nullptr);
+		const Texture* weatherMapFirst = vis.scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr;
+		const Texture* weatherMapSecond = vis.scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr;
+		ComputeVolumetricCloudShadows(cmd, weatherMapFirst, weatherMapSecond);
 	}
 
 	if (vis.scene->weather.IsRealisticSky())
@@ -6522,7 +6524,8 @@ void DrawDebugWorld(
 
 void ComputeVolumetricCloudShadows(
 	CommandList cmd,
-	const Texture* weatherMap)
+	const Texture* weatherMapFirst,
+	const Texture* weatherMapSecond)
 {
 	device->EventBegin("RenderVolumetricCloudShadows", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Volumetric Clouds Shadow", cmd);
@@ -6546,15 +6549,24 @@ void ComputeVolumetricCloudShadows(
 		device->BindResource(&texture_detailNoise, 1, cmd);
 		device->BindResource(&texture_curlNoise, 2, cmd);
 
-		if (weatherMap != nullptr)
+		if (weatherMapFirst != nullptr)
 		{
-			device->BindResource(weatherMap, 3, cmd);
+			device->BindResource(weatherMapFirst, 3, cmd);
 		}
 		else
 		{
 			device->BindResource(&texture_weatherMap, 3, cmd);
 		}
 
+		if (weatherMapSecond != nullptr)
+		{
+			device->BindResource(weatherMapSecond, 4, cmd);
+		}
+		else
+		{
+			device->BindResource(&texture_weatherMap, 4, cmd);
+		}
+
 		const GPUResource* uavs[] = {
 			&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW],
 		};
@@ -6585,43 +6597,50 @@ void ComputeVolumetricCloudShadows(
 		device->EventEnd(cmd);
 	}
 
-	// Cloud shadow filter pass:
+	auto CloudShadowFilter = [&](PostProcess& postprocess, CommandList cmd)
 	{
-		device->EventBegin("Volumetric Cloud Filter Shadow", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_FILTER], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		device->BindResource(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], 0, cmd);
-
-		const GPUResource* uavs[] = {
-			&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW],
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
+		// Cloud shadow filter pass:
 		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout, ResourceState::UNORDERED_ACCESS),
+			device->EventBegin("Volumetric Cloud Filter Shadow", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_FILTER], cmd);
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->BindResource(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], 0, cmd);
+
+			const GPUResource* uavs[] = {
+				&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW],
 			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout, ResourceState::UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			device->Dispatch(
+				(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+					GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			device->EventEnd(cmd);
 		}
+	};
 
-		device->Dispatch(
-			(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->EventEnd(cmd);
-	}
+	// We filter twice for to avoid rapid changing pixels and to mimic penumbra
+	CloudShadowFilter(postprocess, cmd);
+	CloudShadowFilter(postprocess, cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -6971,26 +6990,35 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				device->EventBegin("Volumetric Cloud Rendering Capture [MSAA]", cmd);
 				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE_MSAA], cmd);
-				device->BindResource(&vis.scene->envrenderingDepthBuffer_MSAA, 4, cmd);
+				device->BindResource(&vis.scene->envrenderingDepthBuffer_MSAA, 5, cmd);
 			}
 			else
 			{
 				device->EventBegin("Volumetric Cloud Rendering Capture", cmd);
 				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE], cmd);
-				device->BindResource(&vis.scene->envrenderingDepthBuffer, 4, cmd);
+				device->BindResource(&vis.scene->envrenderingDepthBuffer, 5, cmd);
 			}
 
 			device->BindResource(&texture_shapeNoise, 0, cmd);
 			device->BindResource(&texture_detailNoise, 1, cmd);
 			device->BindResource(&texture_curlNoise, 2, cmd);
 
-			if (vis.scene->weather.volumetricCloudsWeatherMap.IsValid())
+			if (vis.scene->weather.volumetricCloudsWeatherMapFirst.IsValid())
 			{
-				device->BindResource(&vis.scene->weather.volumetricCloudsWeatherMap.GetTexture(), 3, cmd);
+				device->BindResource(&vis.scene->weather.volumetricCloudsWeatherMapFirst.GetTexture(), 3, cmd);
 			}
 			else
 			{
 				device->BindResource(&texture_weatherMap, 3, cmd);
+			}
+
+			if (vis.scene->weather.volumetricCloudsWeatherMapSecond.IsValid())
+			{
+				device->BindResource(&vis.scene->weather.volumetricCloudsWeatherMapSecond.GetTexture(), 4, cmd);
+			}
+			else
+			{
+				device->BindResource(&texture_weatherMap, 4, cmd);
 			}
 
 			TextureDesc desc = vis.scene->envmapArray.GetDesc();
@@ -7007,18 +7035,18 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			if (probe.IsRealTime())
 			{
-				push.MaxStepCount = 32;
+				push.maxStepCount = 32;
 				push.LODMin = 3;
-				push.ShadowSampleCount = 3;
-				push.GroundContributionSampleCount = 2;
+				push.shadowSampleCount = 3;
+				push.groundContributionSampleCount = 2;
 			}
 			else
 			{
 				// Use same parameters as current view
-				push.MaxStepCount = vis.scene->weather.volumetricCloudParameters.MaxStepCount;
+				push.maxStepCount = vis.scene->weather.volumetricCloudParameters.maxStepCount;
 				push.LODMin = vis.scene->weather.volumetricCloudParameters.LODMin;
-				push.ShadowSampleCount = vis.scene->weather.volumetricCloudParameters.ShadowSampleCount;
-				push.GroundContributionSampleCount = vis.scene->weather.volumetricCloudParameters.GroundContributionSampleCount;
+				push.shadowSampleCount = vis.scene->weather.volumetricCloudParameters.shadowSampleCount;
+				push.groundContributionSampleCount = vis.scene->weather.volumetricCloudParameters.groundContributionSampleCount;
 			}
 
 			device->PushConstants(&push, sizeof(push), cmd);
@@ -12880,7 +12908,7 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudRender);
 	device->SetName(&res.texture_cloudRender, "texture_cloudRender");
-	desc.format = Format::R16G16_FLOAT;
+	desc.format = Format::R32G32_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudDepth);
 	device->SetName(&res.texture_cloudDepth, "texture_cloudDepth");
 
@@ -12891,7 +12919,7 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	device->SetName(&res.texture_reproject[0], "texture_reproject[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_reproject[1]);
 	device->SetName(&res.texture_reproject[1], "texture_reproject[1]");
-	desc.format = Format::R16G16_FLOAT;
+	desc.format = Format::R32G32_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_reproject_depth[0]);
 	device->SetName(&res.texture_reproject_depth[0], "texture_reproject_depth[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_reproject_depth[1]);
@@ -12908,11 +12936,30 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
 	CommandList cmd,
-	const Texture* weatherMap
+	const CameraComponent& camera,
+	const CameraComponent& camera_previous,
+	const CameraComponent& camera_reflection,
+	const bool jitterEnabled,
+	const Texture* weatherMapFirst,
+	const Texture* weatherMapSecond
 )
 {
 	device->EventBegin("Postprocess_VolumetricClouds", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Volumetric Clouds", cmd);
+
+	// Disable Temporal AA and FSR2 jitter for clouds
+	if (jitterEnabled)
+	{
+		CameraComponent camera_clouds = camera;
+		camera_clouds.jitter = XMFLOAT2(0, 0);
+		camera_clouds.UpdateCamera();
+
+		CameraComponent camera_previous_clouds = camera_previous;
+		camera_previous_clouds.jitter = XMFLOAT2(0, 0);
+		camera_previous_clouds.UpdateCamera();
+
+		wi::renderer::BindCameraCB(camera_clouds, camera_previous_clouds, camera_reflection, cmd);
+	}
 
 	BindCommonResources(cmd);
 
@@ -12937,13 +12984,22 @@ void Postprocess_VolumetricClouds(
 		device->BindResource(&texture_detailNoise, 1, cmd);
 		device->BindResource(&texture_curlNoise, 2, cmd);
 
-		if (weatherMap != nullptr)
+		if (weatherMapFirst != nullptr)
 		{
-			device->BindResource(weatherMap, 3, cmd);
+			device->BindResource(weatherMapFirst, 3, cmd);
 		}
 		else
 		{
 			device->BindResource(&texture_weatherMap, 3, cmd);
+		}
+
+		if (weatherMapSecond != nullptr)
+		{
+			device->BindResource(weatherMapSecond, 4, cmd);
+		}
+		else
+		{
+			device->BindResource(&texture_weatherMap, 4, cmd);
 		}
 
 		const GPUResource* uavs[] = {
@@ -13041,6 +13097,12 @@ void Postprocess_VolumetricClouds(
 	}
 
 	res.frame++;
+
+	// Reenable jitter for other passes
+	if (GetTemporalAAEnabled())
+	{
+		BindCameraCB(camera, camera_previous, camera_reflection, cmd);
+	}
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

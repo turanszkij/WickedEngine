@@ -1106,11 +1106,11 @@ struct VolumetricCloudCapturePushConstants
 	uint arrayIndex;
 	int texture_input;
 	int texture_output;
-	int MaxStepCount;
+	int maxStepCount;
 
 	float LODMin;
-	float ShadowSampleCount;
-	float GroundContributionSampleCount;
+	float shadowSampleCount;
+	float groundContributionSampleCount;
 	float padding;
 };
 
