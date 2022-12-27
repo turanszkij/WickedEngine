@@ -461,7 +461,7 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 
 // VOXEL RADIANCE
 
-inline void VoxelGI(in Surface surface, inout Lighting lighting)
+inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 {
 	[branch] if (GetFrame().voxelradiance_resolution != 0)
 	{
@@ -470,12 +470,13 @@ inline void VoxelGI(in Surface surface, inout Lighting lighting)
 		voxelSpacePos *= GetFrame().voxelradiance_size_rcp;
 		voxelSpacePos *= GetFrame().voxelradiance_resolution_rcp;
 		voxelSpacePos = saturate(abs(voxelSpacePos));
-		float blend = 1 - pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
+		float blend = 1 - pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 8);
 
 		// diffuse:
+		if (blend > 0)
 		{
 			float4 trace = ConeTraceDiffuse(texture_voxelgi, surface.P, surface.N);
-			lighting.indirect.diffuse = lerp(lighting.indirect.diffuse, trace.rgb, trace.a * blend);
+			lighting.indirect.diffuse = mad(lighting.indirect.diffuse, (1 - trace.a), trace.rgb);
 		}
 
 		// specular:
@@ -483,7 +484,7 @@ inline void VoxelGI(in Surface surface, inout Lighting lighting)
 		if (GetFrame().options & OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED)
 		{
 			float4 trace = ConeTraceSpecular(texture_voxelgi, surface.P, surface.N, surface.V, surface.roughness);
-			lighting.indirect.specular = lerp(lighting.indirect.specular, trace.rgb * surface.F, trace.a * blend);
+			lighting.indirect.specular = mad(lighting.indirect.specular, (1 - trace.a), trace.rgb * surface.F);
 		}
 	}
 }

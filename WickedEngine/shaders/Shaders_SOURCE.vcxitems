@@ -2608,7 +2608,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelRadianceSecondaryBounceCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)voxelgi_temporalCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
@@ -2618,7 +2618,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Compute</ShaderType>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelSceneCopyClearCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)voxelgi_offsetprevCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
@@ -2627,16 +2627,6 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Compute</ShaderType>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelSceneCopyClearCS_TemporalSmoothing.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Compute</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Compute</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Compute</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Compute</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)voxelVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>

@@ -200,10 +200,10 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)depthoffield_tileMaxCOC_horizontalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelRadianceSecondaryBounceCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)voxelgi_temporalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelSceneCopyClearCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)voxelgi_offsetprevCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)upsample_bilateral_float1CS.hlsl">
@@ -706,9 +706,6 @@
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectHS.hlsl">
       <Filter>HS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelSceneCopyClearCS_TemporalSmoothing.hlsl">
-      <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_curlnoiseCS.hlsl">
       <Filter>CS</Filter>

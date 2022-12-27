@@ -1,12 +1,43 @@
 #define DISABLE_SOFT_SHADOWMAP
 #define DISABLE_VOXELGI
+#define VOXEL_INITIAL_OFFSET 2
 #include "objectHF.hlsli"
 #include "voxelHF.hlsli"
 #include "volumetricCloudsHF.hlsli"
 
 // Note: the voxelizer uses an overall simplified material and lighting model (no normal maps, only diffuse light and emissive)
 
-RWStructuredBuffer<VoxelType> output : register(u0);
+Texture3D<float4> input_previous_radiance : register(t0);
+
+RWTexture3D<uint> output_radiance : register(u0);
+
+void VoxelAtomicAverage(inout RWTexture3D<uint> output, in uint3 dest, in float4 color)
+{
+	float4 addingColor = float4(color.rgb, 1);
+	uint newValue = PackVoxelColor(float4(addingColor.rgb, 1.0 / MAX_VOXEL_ALPHA));
+	uint expectedValue = 0;
+	uint actualValue;
+
+	InterlockedCompareExchange(output[dest], expectedValue, newValue, actualValue);
+	while (actualValue != expectedValue)
+	{
+		expectedValue = actualValue;
+
+		color = UnpackVoxelColor(actualValue);
+		color.a *= MAX_VOXEL_ALPHA;
+
+		color.rgb *= color.a;
+
+		color += addingColor;
+
+		color.rgb /= color.a;
+
+		color.a /= MAX_VOXEL_ALPHA;
+		newValue = PackVoxelColor(color);
+
+		InterlockedCompareExchange(output[dest], expectedValue, newValue, actualValue);
+	}
+}
 
 // Note: centroid interpolation is used to avoid floating voxels in some cases
 struct PSInput
@@ -197,17 +228,39 @@ void main(PSInput input)
 			}
 		}
 
-		color.rgb *= lighting.direct.diffuse / PI;
+		float4 trace = ConeTraceDiffuse(input_previous_radiance, P, N);
+		lighting.indirect.diffuse = trace.rgb;
+		lighting.indirect.diffuse += GetAmbient(N) * (1 - trace.a);
+
+		color.rgb *= lighting.direct.diffuse / PI + lighting.indirect.diffuse;
 		
 		color.rgb += emissiveColor;
 
-		uint color_encoded = PackVoxelColor(color);
-		uint normal_encoded = pack_half2(encode_oct(N));
-
 		// output:
 		uint3 writecoord = floor(uvw * GetFrame().voxelradiance_resolution);
-		uint id = flatten3D(writecoord, GetFrame().voxelradiance_resolution);
-		InterlockedMax(output[id].colorMask, color_encoded);
-		InterlockedMax(output[id].normalMask, normal_encoded);
+		VoxelAtomicAverage(output_radiance, writecoord, color);
+
+		//bool done = false;
+		//while (!done)
+		//{
+		//	// acquire lock:
+		//	uint locked;
+		//	InterlockedCompareExchange(lock[writecoord], 0, 1, locked);
+		//	if (locked == 0)
+		//	{
+		//		float4 average = output_albedo[writecoord];
+		//		float3 average_normal = output_normal[writecoord];
+
+		//		average.a += 1;
+		//		average.rgb += color.rgb;
+		//		average_normal.rgb += N * 0.5 + 0.5;
+
+		//		output_albedo[writecoord] = average;
+		//		output_normal[writecoord] = average_normal;
+
+		//		InterlockedExchange(lock[writecoord], 0, locked);
+		//		done = true;
+		//	}
+		//}
 	}
 }

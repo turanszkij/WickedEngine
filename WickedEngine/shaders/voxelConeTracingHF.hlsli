@@ -6,6 +6,70 @@
 #define VOXEL_INITIAL_OFFSET 2
 #endif // VOXEL_INITIAL_OFFSET
 
+//#define USE_32_CONES
+#ifdef USE_32_CONES
+// 32 Cones for higher quality (16 on average per hemisphere)
+static const int DIFFUSE_CONE_COUNT = 32;
+static const float DIFFUSE_CONE_APERTURE = 0.628319;
+
+static const float3 DIFFUSE_CONE_DIRECTIONS[32] = {
+	float3(0.898904, 0.435512, 0.0479745),
+	float3(0.898904, -0.435512, -0.0479745),
+	float3(0.898904, 0.0479745, -0.435512),
+	float3(0.898904, -0.0479745, 0.435512),
+	float3(-0.898904, 0.435512, -0.0479745),
+	float3(-0.898904, -0.435512, 0.0479745),
+	float3(-0.898904, 0.0479745, 0.435512),
+	float3(-0.898904, -0.0479745, -0.435512),
+	float3(0.0479745, 0.898904, 0.435512),
+	float3(-0.0479745, 0.898904, -0.435512),
+	float3(-0.435512, 0.898904, 0.0479745),
+	float3(0.435512, 0.898904, -0.0479745),
+	float3(-0.0479745, -0.898904, 0.435512),
+	float3(0.0479745, -0.898904, -0.435512),
+	float3(0.435512, -0.898904, 0.0479745),
+	float3(-0.435512, -0.898904, -0.0479745),
+	float3(0.435512, 0.0479745, 0.898904),
+	float3(-0.435512, -0.0479745, 0.898904),
+	float3(0.0479745, -0.435512, 0.898904),
+	float3(-0.0479745, 0.435512, 0.898904),
+	float3(0.435512, -0.0479745, -0.898904),
+	float3(-0.435512, 0.0479745, -0.898904),
+	float3(0.0479745, 0.435512, -0.898904),
+	float3(-0.0479745, -0.435512, -0.898904),
+	float3(0.57735, 0.57735, 0.57735),
+	float3(0.57735, 0.57735, -0.57735),
+	float3(0.57735, -0.57735, 0.57735),
+	float3(0.57735, -0.57735, -0.57735),
+	float3(-0.57735, 0.57735, 0.57735),
+	float3(-0.57735, 0.57735, -0.57735),
+	float3(-0.57735, -0.57735, 0.57735),
+	float3(-0.57735, -0.57735, -0.57735)
+};
+#else // 16 cones for lower quality (8 on average per hemisphere)
+static const int DIFFUSE_CONE_COUNT = 16;
+static const float DIFFUSE_CONE_APERTURE = 0.872665;
+
+static const float3 DIFFUSE_CONE_DIRECTIONS[16] = {
+	float3(0.57735, 0.57735, 0.57735),
+	float3(0.57735, -0.57735, -0.57735),
+	float3(-0.57735, 0.57735, -0.57735),
+	float3(-0.57735, -0.57735, 0.57735),
+	float3(-0.903007, -0.182696, -0.388844),
+	float3(-0.903007, 0.182696, 0.388844),
+	float3(0.903007, -0.182696, 0.388844),
+	float3(0.903007, 0.182696, -0.388844),
+	float3(-0.388844, -0.903007, -0.182696),
+	float3(0.388844, -0.903007, 0.182696),
+	float3(0.388844, 0.903007, -0.182696),
+	float3(-0.388844, 0.903007, 0.182696),
+	float3(-0.182696, -0.388844, -0.903007),
+	float3(0.182696, 0.388844, -0.903007),
+	float3(-0.182696, 0.388844, 0.903007),
+	float3(0.182696, -0.388844, 0.903007)
+};
+#endif
+
 // voxels:			3D Texture containing voxel scene with direct diffuse lighting (or direct + secondary indirect bounce)
 // P:				world-space position of receiving surface
 // N:				world-space normal vector of receiving surface
@@ -28,14 +92,13 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 		float mip = log2(diameter * GetFrame().voxelradiance_size_rcp);
 
 		// Because we do the ray-marching in world space, we need to remap into 3d texture space before sampling:
-		//	todo: optimization could be doing ray-marching in texture space
 		float3 tc = startPos + coneDirection * dist;
 		tc = (tc - GetFrame().voxelradiance_center) * GetFrame().voxelradiance_size_rcp;
 		tc *= GetFrame().voxelradiance_resolution_rcp;
 		tc = tc * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
-		// break if the ray exits the voxel grid, or we sample from the last mip:
-		if (!is_saturated(tc) || mip >= (float)GetFrame().voxelradiance_mipcount)
+		// break if the ray exits the voxel grid:
+		if (!is_saturated(tc))
 			break;
 
 		float4 sam = voxels.SampleLevel(sampler_linear_clamp, tc, mip);
@@ -60,17 +123,25 @@ inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in floa
 	float4 amount = 0;
 	float3x3 tangentSpace = get_tangentspace(N);
 
+#if 0
+	const float aperture = tan(PI * 0.5 * 0.33);
 	for (uint cone = 0; cone < GetFrame().voxelradiance_numcones; ++cone) // quality is between 1 and 16 cones
 	{
 		float2 hamm = hammersley2d(cone, GetFrame().voxelradiance_numcones);
 		float3 hemisphere = hemispherepoint_cos(hamm.x, hamm.y);
 		float3 coneDirection = mul(hemisphere, tangentSpace);
 
-		amount += ConeTrace(voxels, P, N, coneDirection, tan(PI * 0.5f * 0.33f));
+		amount += ConeTrace(voxels, P, N, coneDirection, aperture);
 	}
-
-	// final radiance is average of all the cones radiances
 	amount *= GetFrame().voxelradiance_numcones_rcp;
+#else
+	for (uint cone = 0; cone < DIFFUSE_CONE_COUNT; ++cone)
+	{
+		amount += ConeTrace(voxels, P, N, DIFFUSE_CONE_DIRECTIONS[cone], DIFFUSE_CONE_APERTURE);
+	}
+	amount /= DIFFUSE_CONE_COUNT;
+#endif 
+
 	amount.rgb = max(0, amount.rgb);
 	amount.a = saturate(amount.a);
 
