@@ -476,7 +476,7 @@ inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 		if (blend > 0)
 		{
 			float4 trace = ConeTraceDiffuse(texture_voxelgi, surface.P, surface.N);
-			lighting.indirect.diffuse = mad(lighting.indirect.diffuse, (1 - trace.a), trace.rgb);
+			lighting.indirect.diffuse = mad(lighting.indirect.diffuse, 1 - trace.a, trace.rgb);
 		}
 
 		// specular:
@@ -484,7 +484,7 @@ inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 		if (GetFrame().options & OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED)
 		{
 			float4 trace = ConeTraceSpecular(texture_voxelgi, surface.P, surface.N, surface.V, surface.roughness);
-			lighting.indirect.specular = mad(lighting.indirect.specular, (1 - trace.a), trace.rgb * surface.F);
+			lighting.indirect.specular = mad(lighting.indirect.specular, 1 - trace.a, trace.rgb * surface.F);
 		}
 	}
 }
