@@ -128,7 +128,7 @@ namespace wi::image
 		constexpr void enableHDR10OutputMapping() { _flags |= OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		// enable linear output mapping, which means removing gamma curve and outputting in linear space (useful for blending in HDR space)
 		constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
-		constexpr void enableCornerRounding(float scaling = 1.0f) { _flags |= CORNER_ROUNDING; hdr_scaling = scaling; }
+		constexpr void enableCornerRounding() { _flags |= CORNER_ROUNDING; }
 
 		// disable draw rectangle for base texture (whole texture will be drawn, no cutout)
 		constexpr void disableDrawRect() { _flags &= ~DRAWRECT; }

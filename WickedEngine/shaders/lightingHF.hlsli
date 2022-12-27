@@ -134,8 +134,8 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 			{
 				shadow *= shadow_2D_volumetricclouds(surface.P);
 			}
-				
-#ifdef SHADOW_MASK_ENABLED
+
+#if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
 			[branch]
 			if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0)
 #endif // SHADOW_MASK_ENABLED
@@ -249,7 +249,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 			[branch]
 			if (light.IsCastingShadow() && surface.IsReceiveShadow())
 			{
-#ifdef SHADOW_MASK_ENABLED
+#if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
 				[branch]
 				if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0)
 #endif // SHADOW_MASK_ENABLED
@@ -309,7 +309,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 				[branch]
 				if (light.IsCastingShadow() && surface.IsReceiveShadow())
 				{
-#ifdef SHADOW_MASK_ENABLED
+#if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
 					[branch]
 					if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0)
 #endif // SHADOW_MASK_ENABLED

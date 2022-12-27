@@ -88,13 +88,6 @@ namespace wi
 			device->SetName(&rtGUIBlurredBackground[2], "rtGUIBlurredBackground[2]");
 		}
 
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(traceResult, RenderPassAttachment::LoadOp::CLEAR));
-
-			device->CreateRenderPass(&desc, &renderpass_debugbvh);
-		}
-
 		wi::renderer::CreateLuminanceResources(luminanceResources, internalResolution);
 		wi::renderer::CreateBloomResources(bloomResources, internalResolution);
 
@@ -306,7 +299,10 @@ namespace wi
 
 				if (wi::renderer::GetRaytraceDebugBVHVisualizerEnabled())
 				{
-					device->RenderPassBegin(&renderpass_debugbvh, cmd);
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&traceResult, RenderPassImage::LoadOp::CLEAR)
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 					Viewport vp;
 					vp.width = (float)traceResult.GetDesc().width;

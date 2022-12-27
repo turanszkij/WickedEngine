@@ -22,8 +22,6 @@ namespace wi
 		wi::graphics::Texture denoiserResult;
 		wi::jobsystem::context denoiserContext;
 
-		wi::graphics::RenderPass renderpass_debugbvh;
-
 		void ResizeBuffers() override;
 
 	public:

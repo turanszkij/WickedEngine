@@ -199,7 +199,10 @@ namespace wi
 		if (colorspace_conversion_required)
 		{
 			// In HDR10, we perform the compositing in a custom linear color space render target
-			graphicsDevice->RenderPassBegin(&renderpass, cmd);
+			RenderPassImage rp[] = {
+				RenderPassImage::RenderTarget(&rendertarget, RenderPassImage::LoadOp::CLEAR),
+			};
+			graphicsDevice->RenderPassBegin(rp, arraysize(rp), cmd);
 		}
 		else
 		{
@@ -593,11 +596,6 @@ namespace wi
 			bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertarget);
 			assert(success);
 			graphicsDevice->SetName(&rendertarget, "Application::rendertarget");
-
-			RenderPassDesc renderpassdesc;
-			renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(rendertarget, RenderPassAttachment::LoadOp::CLEAR));
-			success = graphicsDevice->CreateRenderPass(&renderpassdesc, &renderpass);
-			assert(success);
 		}
 	}
 

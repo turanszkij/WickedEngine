@@ -26,6 +26,9 @@ using namespace Microsoft::WRL;
 
 namespace wi::graphics
 {
+// Note: pipeline library is disabled, because it is slower to use than not using it
+//  There is driver-side caching that is much faster
+//#define PIPELINE_LIBRARY_ENABLED
 
 namespace dx12_internal
 {
@@ -1385,6 +1388,7 @@ namespace dx12_internal
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12PipelineState> resource;
 		ComPtr<ID3D12RootSignature> rootSignature;
+		size_t hash = 0;
 
 		wi::vector<uint8_t> shadercode;
 		wi::vector<D3D12_INPUT_ELEMENT_DESC> input_elements;
@@ -1459,21 +1463,6 @@ namespace dx12_internal
 			allocationhandler->destroylocker.unlock();
 		}
 	};
-	struct RenderPass_DX12
-	{
-		wi::vector<D3D12_RESOURCE_BARRIER> barrierdescs_begin;
-		wi::vector<D3D12_RESOURCE_BARRIER> barrierdescs_end;
-
-		D3D12_RENDER_PASS_FLAGS flags = D3D12_RENDER_PASS_FLAG_NONE;
-		uint32_t rt_count = 0;
-		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTVs[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
-		D3D12_RENDER_PASS_DEPTH_STENCIL_DESC DSV = {};
-		Texture shading_rate_image;
-
-		// Due to a API bug, this resolve_subresources array must be kept alive between BeginRenderpass() and EndRenderpass()!
-		wi::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> resolve_subresources[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
-		wi::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> resolve_subresources_dsv = {};
-	};
 	struct SwapChain_DX12
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
@@ -1482,8 +1471,6 @@ namespace dx12_internal
 		wi::vector<D3D12_CPU_DESCRIPTOR_HANDLE> backbufferRTV;
 
 		Texture dummyTexture;
-		RenderPass renderpass;
-
 		ColorSpace colorSpace = ColorSpace::SRGB;
 
 		~SwapChain_DX12()
@@ -1538,10 +1525,6 @@ namespace dx12_internal
 	{
 		return static_cast<RTPipelineState_DX12*>(param->internal_state.get());
 	}
-	RenderPass_DX12* to_internal(const RenderPass* param)
-	{
-		return static_cast<RenderPass_DX12*>(param->internal_state.get());
-	}
 	SwapChain_DX12* to_internal(const SwapChain* param)
 	{
 		return static_cast<SwapChain_DX12*>(param->internal_state.get());
@@ -1549,7 +1532,7 @@ namespace dx12_internal
 
 	inline const std::string GetCachePath()
 	{
-		return wi::helper::GetTempDirectoryPath() + "WickedD3D12PipelineCache.data";
+		return wi::helper::GetTempDirectoryPath() + "wiPipelineCache_DX12";
 	}
 
 	inline void HashToName(uint64_t hash, std::wstring& name)
@@ -1981,7 +1964,6 @@ using namespace dx12_internal;
 		assert(dirty == 0ull); // check that all dirty root parameters were handled
 	}
 
-
 	void GraphicsDevice_DX12::pso_validate(CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
@@ -2011,38 +1993,17 @@ using namespace dx12_internal;
 				// make copy, mustn't overwrite internal_state from here!
 				PipelineState_DX12::PSO_STREAM stream = internal_state->stream;
 
-				DXGI_FORMAT DSFormat = DXGI_FORMAT_UNKNOWN;
+				DXGI_FORMAT DSFormat = _ConvertFormat(commandlist.renderpass_info.ds_format);
 				D3D12_RT_FORMAT_ARRAY formats = {};
-				formats.NumRenderTargets = 0;
-				DXGI_SAMPLE_DESC sampleDesc = {};
-				sampleDesc.Count = 1;
-				sampleDesc.Quality = 0;
-				for (auto& attachment : commandlist.active_renderpass->desc.attachments)
+				formats.NumRenderTargets = commandlist.renderpass_info.rt_count;
+				for (uint32_t i = 0; i < commandlist.renderpass_info.rt_count; ++i)
 				{
-					if (attachment.type == RenderPassAttachment::Type::RESOLVE ||
-						attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH ||
-						attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE)
-						continue;
-
-
-					assert(attachment.texture.desc.format != Format::UNKNOWN);
-					switch (attachment.type)
-					{
-					case RenderPassAttachment::Type::RENDERTARGET:
-						formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture.desc.format);
-						formats.NumRenderTargets++;
-						break;
-					case RenderPassAttachment::Type::DEPTH_STENCIL:
-						DSFormat = _ConvertFormat(attachment.texture.desc.format);
-						break;
-					default:
-						assert(0);
-						break;
-					}
-
-					sampleDesc.Count = attachment.texture.desc.sample_count;
-					sampleDesc.Quality = 0;
+					formats.RTFormats[i] = _ConvertFormat(commandlist.renderpass_info.rt_formats[i]);
 				}
+				DXGI_SAMPLE_DESC sampleDesc = {};
+				sampleDesc.Count = commandlist.renderpass_info.sample_count;
+				sampleDesc.Quality = 0;
+
 				stream.stream1.DSFormat = DSFormat;
 				stream.stream1.Formats = formats;
 				stream.stream1.SampleDesc = sampleDesc;
@@ -2056,24 +2017,32 @@ using namespace dx12_internal;
 				}
 
 				ComPtr<ID3D12PipelineState> newpso;
-#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
-				std::wstring name;
-				HashToName(pipeline_hash, name);
 
-				HRESULT hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&newpso));
+				HRESULT hr = E_INVALIDARG;
+				std::wstring name;
+
+				if (pipelineLibrary != nullptr)
+				{
+					HashToName(pipeline_hash, name);
+					pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
+					hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&newpso));
+				}
+
 				if (hr == E_INVALIDARG)
 				{
 					hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
 
-					if (SUCCEEDED(hr))
+					if (pipelineLibrary != nullptr && SUCCEEDED(hr))
 					{
 						hr = pipelineLibrary->StorePipeline(name.c_str(), newpso.Get());
 					}
 				}
-#else
-				HRESULT hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
-#endif
 				assert(SUCCEEDED(hr));
+
+				if (pipelineLibrary != nullptr)
+				{
+					pipelineLibraryLocker.unlock();
+				}
 
 				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, newpso));
 				pipeline = newpso.Get();
@@ -2351,14 +2320,13 @@ using namespace dx12_internal;
 					enabledSeverities.push_back(D3D12_MESSAGE_SEVERITY_INFO);
 				}
 
+				disabledMessages.push_back(D3D12_MESSAGE_ID_DRAW_EMPTY_SCISSOR_RECTANGLE);
 				disabledMessages.push_back(D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS);
 				disabledMessages.push_back(D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE);
 
-#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
 				disabledMessages.push_back(D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_DRIVERVERSIONMISMATCH);
 				disabledMessages.push_back(D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_ADAPTERVERSIONMISMATCH);
 				disabledMessages.push_back(D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND);
-#endif
 
 				D3D12_INFO_QUEUE_FILTER filter = {};
 				filter.AllowList.NumSeverities = static_cast<UINT>(enabledSeverities.size());
@@ -2565,8 +2533,6 @@ using namespace dx12_internal;
 
 		capabilities |= GraphicsDeviceCapability::TESSELLATION;
 		capabilities |= GraphicsDeviceCapability::PREDICATION;
-		capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_SAMPLE_ZERO;
-		capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_SAMPLE_ZERO;
 		capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_MIN_MAX;
 		capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_MIN_MAX;
 
@@ -2703,18 +2669,21 @@ using namespace dx12_internal;
 			capabilities |= GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL;
 		}
 
-		// Create pipeline library:
-#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
-		// Try to read pipeline cache file if exists.
-		wi::vector<uint8_t> pipelineData;
-
-		std::string cachePath = GetCachePath();
-		if (!wi::helper::FileRead(cachePath, pipelineData))
+		if (features.CacheCoherentUMA())
 		{
-			pipelineData.clear();
+			capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
 		}
 
-		hr = device->CreatePipelineLibrary(pipelineData.data(), pipelineData.size(), IID_PPV_ARGS(&pipelineLibrary));
+		// Create pipeline library:
+#ifdef PIPELINE_LIBRARY_ENABLED
+		// Try to read pipeline cache file if exists.
+		std::string cachePath = GetCachePath();
+		if (!wi::helper::FileRead(cachePath, pipelineLibraryData))
+		{
+			pipelineLibraryData.clear();
+		}
+
+		hr = device->CreatePipelineLibrary(pipelineLibraryData.data(), pipelineLibraryData.size(), IID_PPV_ARGS(&pipelineLibrary));
 		switch (hr)
 		{
 			case DXGI_ERROR_UNSUPPORTED: // The driver doesn't support Pipeline libraries. WDDM2.1 drivers must support it.
@@ -2731,7 +2700,7 @@ using namespace dx12_internal;
 				assert(SUCCEEDED(hr));
 				break;
 		}
-#endif
+#endif // PIPELINE_LIBRARY_ENABLED
 
 #ifndef PLATFORM_UWP
 		// Create fence to detect device removal
@@ -2916,16 +2885,18 @@ using namespace dx12_internal;
 	{
 		WaitForGPU();
 
-#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
-		std::vector<uint8_t> serializedData(pipelineLibrary->GetSerializedSize());
-		HRESULT hr = pipelineLibrary->Serialize(serializedData.data(), serializedData.size());
-		if (SUCCEEDED(hr))
+		if (pipelineLibrary != nullptr)
 		{
-			// Write pipeline cache data to a file in binary format
-			std::string cachePath = GetCachePath();
-			wi::helper::FileWrite(cachePath, serializedData.data(), serializedData.size());
+			std::vector<uint8_t> serializedData(pipelineLibrary->GetSerializedSize());
+			HRESULT hr = pipelineLibrary->Serialize(serializedData.data(), serializedData.size());
+			assert(SUCCEEDED(hr));
+			if (SUCCEEDED(hr))
+			{
+				// Write pipeline cache data to a file in binary format
+				std::string cachePath = GetCachePath();
+				wi::helper::FileWrite(cachePath, serializedData.data(), serializedData.size());
+			}
 		}
-#endif
 
 #ifndef PLATFORM_UWP
 		std::ignore = UnregisterWait(deviceRemovedWaitHandle);
@@ -3101,10 +3072,6 @@ using namespace dx12_internal;
 		internal_state->dummyTexture.desc.format = desc->format;
 		internal_state->dummyTexture.desc.width = desc->width;
 		internal_state->dummyTexture.desc.height = desc->height;
-		internal_state->renderpass = {};
-		wi::helper::hash_combine(internal_state->renderpass.hash, desc->format);
-		internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget(internal_state->dummyTexture));
-
 		return true;
 	}
 	bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* desc, const void* initial_data, GPUBuffer* buffer) const
@@ -3562,7 +3529,18 @@ using namespace dx12_internal;
 		shader->internal_state = internal_state;
 
 		internal_state->shadercode.resize(shadercode_size);
+		internal_state->hash = 0;
+#ifndef PIPELINE_LIBRARY_ENABLED
 		std::memcpy(internal_state->shadercode.data(), shadercode, shadercode_size);
+#else
+		// while copying over shader data, also compute hash for pipeline library serialization:
+		for (size_t i = 0; i < shadercode_size; ++i)
+		{
+			uint8_t byte = ((uint8_t*)shadercode)[i];
+			wi::helper::hash_combine(internal_state->hash, byte);
+			internal_state->shadercode[i] = byte;
+		}
+#endif // PIPELINE_LIBRARY_ENABLED
 		shader->stage = stage;
 
 		HRESULT hr = (internal_state->shadercode.empty() ? E_FAIL : S_OK);
@@ -3610,8 +3588,31 @@ using namespace dx12_internal;
 			streamDesc.pPipelineStateSubobjectStream = &stream;
 			streamDesc.SizeInBytes = sizeof(stream);
 
-			hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
+			HRESULT hr = E_INVALIDARG;
+
+			std::wstring name;
+			if (pipelineLibrary != nullptr)
+			{
+				HashToName(internal_state->hash, name);
+				pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
+				hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&internal_state->resource));
+			}
+
+			if (hr == E_INVALIDARG)
+			{
+				hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
+
+				if (pipelineLibrary != nullptr && SUCCEEDED(hr))
+				{
+					hr = pipelineLibrary->StorePipeline(name.c_str(), internal_state->resource.Get());
+				}
+			}
 			assert(SUCCEEDED(hr));
+
+			if (pipelineLibrary != nullptr)
+			{
+				pipelineLibraryLocker.unlock();
+			}
 		}
 
 		return SUCCEEDED(hr);
@@ -3689,7 +3690,7 @@ using namespace dx12_internal;
 
 		return SUCCEEDED(hr);
 	}
-	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const
+	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info) const
 	{
 		auto internal_state = std::make_shared<PipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3697,20 +3698,115 @@ using namespace dx12_internal;
 
 		pso->desc = *desc;
 
-		pso->hash = 0;
-		wi::helper::hash_combine(pso->hash, desc->ms);
-		wi::helper::hash_combine(pso->hash, desc->as);
-		wi::helper::hash_combine(pso->hash, desc->vs);
-		wi::helper::hash_combine(pso->hash, desc->ps);
-		wi::helper::hash_combine(pso->hash, desc->hs);
-		wi::helper::hash_combine(pso->hash, desc->ds);
-		wi::helper::hash_combine(pso->hash, desc->gs);
-		wi::helper::hash_combine(pso->hash, desc->il);
-		wi::helper::hash_combine(pso->hash, desc->rs);
-		wi::helper::hash_combine(pso->hash, desc->bs);
-		wi::helper::hash_combine(pso->hash, desc->dss);
-		wi::helper::hash_combine(pso->hash, desc->pt);
-		wi::helper::hash_combine(pso->hash, desc->sample_mask);
+#ifndef PIPELINE_LIBRARY_ENABLED
+		internal_state->hash = 0;
+		wi::helper::hash_combine(internal_state->hash, desc->ms);
+		wi::helper::hash_combine(internal_state->hash, desc->as);
+		wi::helper::hash_combine(internal_state->hash, desc->vs);
+		wi::helper::hash_combine(internal_state->hash, desc->ps);
+		wi::helper::hash_combine(internal_state->hash, desc->hs);
+		wi::helper::hash_combine(internal_state->hash, desc->ds);
+		wi::helper::hash_combine(internal_state->hash, desc->gs);
+		wi::helper::hash_combine(internal_state->hash, desc->il);
+		wi::helper::hash_combine(internal_state->hash, desc->rs);
+		wi::helper::hash_combine(internal_state->hash, desc->bs);
+		wi::helper::hash_combine(internal_state->hash, desc->dss);
+		wi::helper::hash_combine(internal_state->hash, desc->pt);
+		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
+#else
+		// Shouldn't hash pointers here, because hash can be serialized with pipeline library:
+		internal_state->hash = 0;
+		if (desc->ms != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ms)->hash);
+		}
+		if (desc->as != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->as)->hash);
+		}
+		if (desc->vs != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->vs)->hash);
+		}
+		if (desc->ps != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ps)->hash);
+		}
+		if (desc->hs != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->hs)->hash);
+		}
+		if (desc->ds != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ds)->hash);
+		}
+		if (desc->gs != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, to_internal(desc->gs)->hash);
+		}
+		if (desc->il != nullptr)
+		{
+			for (auto& x : desc->il->elements)
+			{
+				wi::helper::hash_combine(internal_state->hash, x.format);
+				wi::helper::hash_combine(internal_state->hash, x.aligned_byte_offset);
+				wi::helper::hash_combine(internal_state->hash, x.input_slot);
+				wi::helper::hash_combine(internal_state->hash, x.input_slot_class);
+				wi::helper::hash_combine(internal_state->hash, x.semantic_index);
+				wi::helper::hash_combine(internal_state->hash, wi::helper::string_hash(x.semantic_name.c_str()));
+			}
+		}
+		if (desc->rs != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, desc->rs->antialiased_line_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->conservative_rasterization_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->cull_mode);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_bias);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_bias_clamp);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_clip_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->fill_mode);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->forced_sample_count);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->front_counter_clockwise);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->multisample_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->rs->slope_scaled_depth_bias);
+		}
+		if (desc->bs != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, desc->bs->alpha_to_coverage_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->bs->independent_blend_enable);
+			for (auto& x : desc->bs->render_target)
+			{
+				wi::helper::hash_combine(internal_state->hash, x.blend_enable);
+				wi::helper::hash_combine(internal_state->hash, x.blend_op);
+				wi::helper::hash_combine(internal_state->hash, x.blend_op_alpha);
+				wi::helper::hash_combine(internal_state->hash, x.dest_blend);
+				wi::helper::hash_combine(internal_state->hash, x.dest_blend_alpha);
+				wi::helper::hash_combine(internal_state->hash, x.render_target_write_mask);
+				wi::helper::hash_combine(internal_state->hash, x.src_blend);
+				wi::helper::hash_combine(internal_state->hash, x.src_blend_alpha);
+			}
+		}
+		if (desc->dss != nullptr)
+		{
+			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_bounds_test_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_func);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_write_mask);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_enable);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_read_mask);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_write_mask);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_depth_fail_op);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_fail_op);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_func);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_pass_op);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_depth_fail_op);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_fail_op);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_func);
+			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_pass_op);
+		}
+		wi::helper::hash_combine(internal_state->hash, desc->pt);
+		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
+#endif // PIPELINE_LIBRARY_ENABLED
 
 		auto& stream = internal_state->stream;
 		if (pso->desc.vs != nullptr)
@@ -3899,371 +3995,55 @@ using namespace dx12_internal;
 
 		stream.stream1.STRIP = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
 
-		return true;
-	}
-	bool GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const
-	{
-		auto internal_state = std::make_shared<RenderPass_DX12>();
-		renderpass->internal_state = internal_state;
-
-		renderpass->desc = *desc;
-
-		if (has_flag(renderpass->desc.flags, RenderPassDesc::Flags::ALLOW_UAV_WRITES))
+		if (renderpass_info != nullptr)
 		{
-			internal_state->flags |= D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES;
-		}
-
-		renderpass->hash = 0;
-		wi::helper::hash_combine(renderpass->hash, desc->attachments.size());
-		int resolve_dst_counter = 0;
-		for (auto& attachment : desc->attachments)
-		{
-			if (attachment.type == RenderPassAttachment::Type::RENDERTARGET || attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
+			wi::helper::hash_combine(internal_state->hash, renderpass_info->get_hash());
+			DXGI_FORMAT DSFormat = _ConvertFormat(renderpass_info->ds_format);
+			D3D12_RT_FORMAT_ARRAY formats = {};
+			formats.NumRenderTargets = renderpass_info->rt_count;
+			for (uint32_t i = 0; i < renderpass_info->rt_count; ++i)
 			{
-				wi::helper::hash_combine(renderpass->hash, attachment.texture.desc.format);
-				wi::helper::hash_combine(renderpass->hash, attachment.texture.desc.sample_count);
+				formats.RTFormats[i] = _ConvertFormat(renderpass_info->rt_formats[i]);
+			}
+			DXGI_SAMPLE_DESC sampleDesc = {};
+			sampleDesc.Count = renderpass_info->sample_count;
+			sampleDesc.Quality = 0;
+
+			stream.stream1.DSFormat = DSFormat;
+			stream.stream1.Formats = formats;
+			stream.stream1.SampleDesc = sampleDesc;
+
+			D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
+			streamDesc.pPipelineStateSubobjectStream = &stream;
+			streamDesc.SizeInBytes = sizeof(stream.stream1);
+			if (CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+			{
+				streamDesc.SizeInBytes += sizeof(stream.stream2);
 			}
 
-			const Texture* texture = &attachment.texture;
-			int subresource = attachment.subresource;
-			auto texture_internal = to_internal(texture);
-
-			D3D12_CLEAR_VALUE clear_value;
-			clear_value.Format = _ConvertFormat(texture->desc.format);
-
-			if (attachment.type == RenderPassAttachment::Type::RENDERTARGET)
+			HRESULT hr = E_INVALIDARG;
+			std::wstring name;
+			if (pipelineLibrary != nullptr)
 			{
-
-				if (subresource < 0 || texture_internal->subresources_rtv.empty())
-				{
-					internal_state->RTVs[internal_state->rt_count].cpuDescriptor = texture_internal->rtv.handle;
-				}
-				else
-				{
-					assert(texture_internal->subresources_rtv.size() > size_t(subresource) && "Invalid RTV subresource!");
-					internal_state->RTVs[internal_state->rt_count].cpuDescriptor = texture_internal->subresources_rtv[subresource].handle;
-				}
-
-				switch (attachment.loadop)
-				{
-				default:
-				case RenderPassAttachment::LoadOp::LOAD:
-					internal_state->RTVs[internal_state->rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-					break;
-				case RenderPassAttachment::LoadOp::CLEAR:
-					internal_state->RTVs[internal_state->rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-					clear_value.Color[0] = texture->desc.clear.color[0];
-					clear_value.Color[1] = texture->desc.clear.color[1];
-					clear_value.Color[2] = texture->desc.clear.color[2];
-					clear_value.Color[3] = texture->desc.clear.color[3];
-					internal_state->RTVs[internal_state->rt_count].BeginningAccess.Clear.ClearValue = clear_value;
-					break;
-				case RenderPassAttachment::LoadOp::DONTCARE:
-					internal_state->RTVs[internal_state->rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
-					break;
-				}
-
-				switch (attachment.storeop)
-				{
-				default:
-				case RenderPassAttachment::StoreOp::STORE:
-					internal_state->RTVs[internal_state->rt_count].EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-					break;
-				case RenderPassAttachment::StoreOp::DONTCARE:
-					internal_state->RTVs[internal_state->rt_count].EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
-					break;
-				}
-
-				internal_state->rt_count++;
+				HashToName(internal_state->hash, name);
+				pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
+				hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&internal_state->resource));
 			}
-			else if (attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
+
+			if (hr == E_INVALIDARG)
 			{
-				if (subresource < 0 || texture_internal->subresources_dsv.empty())
-				{
-					internal_state->DSV.cpuDescriptor = texture_internal->dsv.handle;
-				}
-				else
-				{
-					assert(texture_internal->subresources_dsv.size() > size_t(subresource) && "Invalid DSV subresource!");
-					internal_state->DSV.cpuDescriptor = texture_internal->subresources_dsv[subresource].handle;
-				}
+				hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
 
-				switch (attachment.loadop)
+				if (pipelineLibrary != nullptr && SUCCEEDED(hr))
 				{
-				default:
-				case RenderPassAttachment::LoadOp::LOAD:
-					internal_state->DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-					internal_state->DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-					break;
-				case RenderPassAttachment::LoadOp::CLEAR:
-					internal_state->DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-					internal_state->DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-					clear_value.DepthStencil.Depth = texture->desc.clear.depth_stencil.depth;
-					clear_value.DepthStencil.Stencil = texture->desc.clear.depth_stencil.stencil;
-					internal_state->DSV.DepthBeginningAccess.Clear.ClearValue = clear_value;
-					internal_state->DSV.StencilBeginningAccess.Clear.ClearValue = clear_value;
-					break;
-				case RenderPassAttachment::LoadOp::DONTCARE:
-					internal_state->DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
-					internal_state->DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
-					break;
-				}
-
-				switch (attachment.storeop)
-				{
-				default:
-				case RenderPassAttachment::StoreOp::STORE:
-					internal_state->DSV.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-					internal_state->DSV.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-					break;
-				case RenderPassAttachment::StoreOp::DONTCARE:
-					internal_state->DSV.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
-					internal_state->DSV.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
-					break;
+					hr = pipelineLibrary->StorePipeline(name.c_str(), internal_state->resource.Get());
 				}
 			}
-			else if (attachment.type == RenderPassAttachment::Type::RESOLVE)
+			assert(SUCCEEDED(hr));
+
+			if (pipelineLibrary != nullptr)
 			{
-				if (texture != nullptr)
-				{
-					int resolve_src_counter = 0;
-					for (auto& src : renderpass->desc.attachments)
-					{
-						if (src.type == RenderPassAttachment::Type::RENDERTARGET && src.texture.IsValid())
-						{
-							if (resolve_src_counter == resolve_dst_counter)
-							{
-								auto src_internal = to_internal(&src.texture);
-								int src_subresource = src.subresource;
-								const SingleDescriptor& src_descriptor = src_subresource < 0 ? src_internal->rtv : src_internal->subresources_rtv[src_subresource];
-
-								D3D12_RENDER_PASS_RENDER_TARGET_DESC& src_RTV = internal_state->RTVs[resolve_src_counter];
-								src_RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
-								src_RTV.EndingAccess.Resolve.PreserveResolveSource = src.storeop == RenderPassAttachment::StoreOp::STORE ? TRUE : FALSE;
-								src_RTV.EndingAccess.Resolve.Format = src_descriptor.rtv.Format;
-								src_RTV.EndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
-								src_RTV.EndingAccess.Resolve.pDstResource = texture_internal->resource.Get();
-								src_RTV.EndingAccess.Resolve.pSrcResource = src_internal->resource.Get();
-
-								const SingleDescriptor& dst_descriptor = subresource < 0 ? texture_internal->srv : texture_internal->subresources_srv[subresource];
-								for (uint32_t mip = 0; mip < std::min(attachment.texture.desc.mip_levels, dst_descriptor.mipCount); ++mip)
-								{
-									for (uint32_t slice = 0; slice < std::min(attachment.texture.desc.array_size, dst_descriptor.sliceCount); ++slice)
-									{
-										D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS& params = internal_state->resolve_subresources[resolve_src_counter].emplace_back();
-										params.SrcSubresource = D3D12CalcSubresource(src_descriptor.firstMip + mip, src_descriptor.firstSlice + slice, 0, src.texture.desc.mip_levels, src.texture.desc.array_size);
-										params.DstSubresource = D3D12CalcSubresource(dst_descriptor.firstMip + mip, dst_descriptor.firstSlice + slice, 0, texture->desc.mip_levels, texture->desc.array_size);
-										params.SrcRect.left = 0;
-										params.SrcRect.top = 0;
-										params.SrcRect.right = (LONG)texture->desc.width;
-										params.SrcRect.bottom = (LONG)texture->desc.height;
-									}
-								}
-								src_RTV.EndingAccess.Resolve.SubresourceCount = (UINT)internal_state->resolve_subresources[resolve_src_counter].size();
-								src_RTV.EndingAccess.Resolve.pSubresourceParameters = internal_state->resolve_subresources[resolve_src_counter].data();
-								break;
-							}
-							resolve_src_counter++;
-						}
-					}
-				}
-				resolve_dst_counter++;
-			}
-			else if (attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH)
-			{
-				if (texture != nullptr)
-				{
-					for (auto& src : renderpass->desc.attachments)
-					{
-						if (src.type == RenderPassAttachment::Type::DEPTH_STENCIL && src.texture.IsValid())
-						{
-							auto src_internal = to_internal(&src.texture);
-							int src_subresource = src.subresource;
-							const SingleDescriptor& src_descriptor = src_subresource < 0 ? src_internal->dsv : src_internal->subresources_dsv[src_subresource];
-
-							D3D12_RENDER_PASS_DEPTH_STENCIL_DESC& src_DSV = internal_state->DSV;
-							src_DSV.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
-							src_DSV.DepthEndingAccess.Resolve.PreserveResolveSource = src.storeop == RenderPassAttachment::StoreOp::STORE ? TRUE : FALSE;
-							src_DSV.DepthEndingAccess.Resolve.Format = src_descriptor.dsv.Format;
-
-							switch (attachment.depth_resolve_mode)
-							{
-							default:
-							case RenderPassAttachment::DepthResolveMode::Min:
-								src_DSV.DepthEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_MIN;
-								break;
-							case RenderPassAttachment::DepthResolveMode::Max:
-								src_DSV.DepthEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_MAX;
-								break;
-							}
-
-							src_DSV.DepthEndingAccess.Resolve.pDstResource = texture_internal->resource.Get();
-							src_DSV.DepthEndingAccess.Resolve.pSrcResource = src_internal->resource.Get();
-
-							const SingleDescriptor& dst_descriptor = subresource < 0 ? texture_internal->srv : texture_internal->subresources_srv[subresource];
-							for (uint32_t mip = 0; mip < std::min(attachment.texture.desc.mip_levels, dst_descriptor.mipCount); ++mip)
-							{
-								for (uint32_t slice = 0; slice < std::min(attachment.texture.desc.array_size, dst_descriptor.sliceCount); ++slice)
-								{
-									D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS& params = internal_state->resolve_subresources_dsv.emplace_back();
-									params.SrcSubresource = D3D12CalcSubresource(src_descriptor.firstMip + mip, src_descriptor.firstSlice + slice, 0, src.texture.desc.mip_levels, src.texture.desc.array_size);
-									params.DstSubresource = D3D12CalcSubresource(dst_descriptor.firstMip + mip, dst_descriptor.firstSlice + slice, 0, texture->desc.mip_levels, texture->desc.array_size);
-									params.SrcRect.left = 0;
-									params.SrcRect.top = 0;
-									params.SrcRect.right = (LONG)texture->desc.width;
-									params.SrcRect.bottom = (LONG)texture->desc.height;
-								}
-							}
-							src_DSV.DepthEndingAccess.Resolve.SubresourceCount = (UINT)internal_state->resolve_subresources_dsv.size();
-							src_DSV.DepthEndingAccess.Resolve.pSubresourceParameters = internal_state->resolve_subresources_dsv.data();
-							if (IsFormatStencilSupport(attachment.texture.desc.format))
-							{
-								src_DSV.StencilBeginningAccess = src_DSV.DepthBeginningAccess;
-								src_DSV.StencilEndingAccess = src_DSV.DepthEndingAccess;
-							}
-							break;
-						}
-					}
-				}
-			}
-			else if (attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE)
-			{
-				internal_state->shading_rate_image = *texture;
-			}
-		}
-
-
-		// Beginning barriers:
-		for (auto& attachment : renderpass->desc.attachments)
-		{
-			if (!attachment.texture.IsValid())
-				continue;
-
-			D3D12_RESOURCE_STATES before = _ParseResourceState(attachment.initial_layout);
-			D3D12_RESOURCE_STATES after = _ParseResourceState(attachment.subpass_layout);
-			if (attachment.type == RenderPassAttachment::Type::RESOLVE || attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH)
-			{
-				after = D3D12_RESOURCE_STATE_RESOLVE_DEST;
-			}
-			if (before == after)
-				continue;
-
-			auto texture_internal = to_internal(&attachment.texture);
-
-			D3D12_RESOURCE_BARRIER barrierdesc = {};
-			barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			barrierdesc.Transition.pResource = texture_internal->resource.Get();
-			barrierdesc.Transition.StateBefore = before;
-			barrierdesc.Transition.StateAfter = after;
-
-			if (attachment.subresource >= 0)
-			{
-				// Need to unroll descriptor into multiple subresource barriers:
-				const SingleDescriptor* descriptor = nullptr;
-				if (attachment.type == RenderPassAttachment::Type::RENDERTARGET)
-				{
-					descriptor = &texture_internal->subresources_rtv[attachment.subresource];
-				}
-				else if (attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
-				{
-					descriptor = &texture_internal->subresources_dsv[attachment.subresource];
-				}
-				else if (attachment.type == RenderPassAttachment::Type::RESOLVE || attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH)
-				{
-					// Single barrier for whole resource:
-					//	From debug layer it looks like the resolve operation requires entire resource to be in RESOLVE_DEST
-					barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-					internal_state->barrierdescs_begin.push_back(barrierdesc);
-					continue;
-				}
-				else
-				{
-					assert(0); // not handled attachment type, this shouldn't happen
-					continue;
-				}
-
-				for (uint32_t mip = descriptor->firstMip; mip < std::min(attachment.texture.desc.mip_levels, descriptor->firstMip + descriptor->mipCount); ++mip)
-				{
-					for (uint32_t slice = descriptor->firstSlice; slice < std::min(attachment.texture.desc.array_size, descriptor->firstSlice + descriptor->sliceCount); ++slice)
-					{
-						barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, attachment.texture.desc.mip_levels, attachment.texture.desc.array_size);
-						internal_state->barrierdescs_begin.push_back(barrierdesc);
-					}
-				}
-			}
-			else
-			{
-				// Single barrier for whole resource:
-				barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-				internal_state->barrierdescs_begin.push_back(barrierdesc);
-			}
-		}
-
-		// Ending barriers:
-		for (auto& attachment : renderpass->desc.attachments)
-		{
-			if (!attachment.texture.IsValid())
-				continue;
-
-			D3D12_RESOURCE_STATES before = _ParseResourceState(attachment.subpass_layout);
-			D3D12_RESOURCE_STATES after = _ParseResourceState(attachment.final_layout);
-			if (attachment.type == RenderPassAttachment::Type::RESOLVE || attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH)
-			{
-				before = D3D12_RESOURCE_STATE_RESOLVE_DEST;
-			}
-			if (before == after)
-				continue;
-
-			auto texture_internal = to_internal(&attachment.texture);
-
-			D3D12_RESOURCE_BARRIER barrierdesc = {};
-			barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			barrierdesc.Transition.pResource = texture_internal->resource.Get();
-			barrierdesc.Transition.StateBefore = before;
-			barrierdesc.Transition.StateAfter = after;
-
-			if (attachment.subresource >= 0)
-			{
-				// Need to unroll descriptor into multiple subresource barriers:
-				const SingleDescriptor* descriptor = nullptr;
-				if (attachment.type == RenderPassAttachment::Type::RENDERTARGET)
-				{
-					descriptor = &texture_internal->subresources_rtv[attachment.subresource];
-				}
-				else if (attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
-				{
-					descriptor = &texture_internal->subresources_dsv[attachment.subresource];
-				}
-				else if (attachment.type == RenderPassAttachment::Type::RESOLVE || attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH)
-				{
-					// Single barrier for whole resource:
-					//	From debug layer it looks like the resolve operation requires entire resource to be in RESOLVE_DEST
-					barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-					internal_state->barrierdescs_end.push_back(barrierdesc);
-					continue;
-				}
-				else
-				{
-					assert(0); // not handled attachment type, this shouldn't happen
-					continue;
-				}
-
-				for (uint32_t mip = descriptor->firstMip; mip < std::min(attachment.texture.desc.mip_levels, descriptor->firstMip + descriptor->mipCount); ++mip)
-				{
-					for (uint32_t slice = descriptor->firstSlice; slice < std::min(attachment.texture.desc.array_size, descriptor->firstSlice + descriptor->sliceCount); ++slice)
-					{
-						barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, attachment.texture.desc.mip_levels, attachment.texture.desc.array_size);
-						internal_state->barrierdescs_end.push_back(barrierdesc);
-					}
-				}
-			}
-			else
-			{
-				// Single barrier for whole resource:
-				barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-				internal_state->barrierdescs_end.push_back(barrierdesc);
+				pipelineLibraryLocker.unlock();
 			}
 		}
 
@@ -4550,6 +4330,7 @@ using namespace dx12_internal;
 				break;
 			case Format::D32_FLOAT_S8X24_UINT:
 				srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+				break;
 			default:
 				srv_desc.Format = _ConvertFormat(format);
 				break;
@@ -5526,10 +5307,10 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.renderpass_barriers_begin.clear();
+		commandlist.renderpass_barriers_end.clear();
 		commandlist.swapchains.push_back(swapchain);
 		auto internal_state = to_internal(swapchain);
-		commandlist.active_renderpass = &internal_state->renderpass;
-		commandlist.active_backbuffer = internal_state->backBuffers[internal_state->swapChain->GetCurrentBackBufferIndex()];
 
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -5539,6 +5320,10 @@ using namespace dx12_internal;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		commandlist.GetGraphicsCommandList()->ResourceBarrier(1, &barrier);
+
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+		commandlist.renderpass_barriers_end.push_back(barrier);
 		
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
 		RTV.cpuDescriptor = internal_state->backbufferRTV[internal_state->swapChain->GetCurrentBackBufferIndex()];
@@ -5550,67 +5335,336 @@ using namespace dx12_internal;
 		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 		commandlist.GetGraphicsCommandList()->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
 
+		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
-	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
+	void GraphicsDevice_DX12::RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		commandlist.active_renderpass = renderpass;
+		commandlist.renderpass_barriers_begin.clear();
+		commandlist.renderpass_barriers_end.clear();
 
-		auto internal_state = to_internal(commandlist.active_renderpass);
+		uint32_t rt_count = 0;
+		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTVs[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+		D3D12_RENDER_PASS_DEPTH_STENCIL_DESC DSV = {};
 
-		if (!internal_state->barrierdescs_begin.empty())
+		// Some bookkeeping for resolves:
+		uint32_t rt_resolve_count = 0;
+		struct ResolveSourceInfo
 		{
-			commandlist.GetGraphicsCommandList()->ResourceBarrier((UINT)internal_state->barrierdescs_begin.size(), internal_state->barrierdescs_begin.data());
+			ID3D12Resource* resource = nullptr;
+			BOOL preserve = FALSE;
+			uint32_t firstMip = 0;
+			uint32_t mipCount = 0;
+			uint32_t firstSlice = 0;
+			uint32_t sliceCount = 0;
+			uint32_t total_mipCount = 0;
+			uint32_t total_sliceCount = 0;
+		};
+		ResolveSourceInfo RT_resolve_src_infos[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT];
+		ResolveSourceInfo DS_resolve_src_info;
+
+		for (uint32_t i = 0; i < image_count; ++i)
+		{
+			const RenderPassImage& image = images[i];
+			const Texture* texture = image.texture;
+			const TextureDesc& desc = texture->GetDesc();
+			int subresource = image.subresource;
+			auto internal_state = to_internal(texture);
+
+			D3D12_CLEAR_VALUE clear_value;
+			clear_value.Format = _ConvertFormat(desc.format);
+
+			D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE beginning_access_type;
+			switch (image.loadop)
+			{
+			default:
+			case RenderPassImage::LoadOp::LOAD:
+				beginning_access_type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+				break;
+			case RenderPassImage::LoadOp::CLEAR:
+				beginning_access_type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+				break;
+			case RenderPassImage::LoadOp::DONTCARE:
+				beginning_access_type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+				break;
+			}
+
+			D3D12_RENDER_PASS_ENDING_ACCESS_TYPE ending_access_type;
+			switch (image.storeop)
+			{
+			default:
+			case RenderPassImage::StoreOp::STORE:
+				ending_access_type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+				break;
+			case RenderPassImage::StoreOp::DONTCARE:
+				ending_access_type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+				break;
+			}
+
+			SingleDescriptor descriptor;
+
+			switch (image.type)
+			{
+			case RenderPassImage::Type::RENDERTARGET:
+			{
+				descriptor = subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[subresource];
+				ResolveSourceInfo& resolve_src_info = RT_resolve_src_infos[rt_count];
+				D3D12_RENDER_PASS_RENDER_TARGET_DESC& RTV = RTVs[rt_count++];
+				RTV.cpuDescriptor = descriptor.handle;
+				RTV.BeginningAccess.Type = beginning_access_type;
+				RTV.EndingAccess.Type = ending_access_type;
+				clear_value.Color[0] = desc.clear.color[0];
+				clear_value.Color[1] = desc.clear.color[1];
+				clear_value.Color[2] = desc.clear.color[2];
+				clear_value.Color[3] = desc.clear.color[3];
+				RTV.BeginningAccess.Clear.ClearValue = clear_value;
+				resolve_src_info.resource = internal_state->resource.Get();
+				resolve_src_info.preserve = ending_access_type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+				resolve_src_info.firstMip = descriptor.firstMip;
+				resolve_src_info.mipCount = descriptor.mipCount;
+				resolve_src_info.firstSlice = descriptor.firstSlice;
+				resolve_src_info.sliceCount = descriptor.sliceCount;
+				resolve_src_info.total_mipCount = desc.mip_levels;
+				resolve_src_info.total_sliceCount = desc.array_size;
+			}
+			break;
+
+			case RenderPassImage::Type::RESOLVE:
+			{
+				descriptor = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
+				ResolveSourceInfo& resolve_src_info = RT_resolve_src_infos[rt_resolve_count];
+				D3D12_RENDER_PASS_RENDER_TARGET_DESC& RTV = RTVs[rt_resolve_count];
+				RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
+				RTV.EndingAccess.Resolve.Format = clear_value.Format;
+				RTV.EndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
+				RTV.EndingAccess.Resolve.pDstResource = internal_state->resource.Get();
+				RTV.EndingAccess.Resolve.pSrcResource = resolve_src_info.resource;
+				RTV.EndingAccess.Resolve.PreserveResolveSource = resolve_src_info.preserve;
+				for (uint32_t mip = 0; mip < std::min(desc.mip_levels, descriptor.mipCount); ++mip)
+				{
+					for (uint32_t slice = 0; slice < std::min(desc.array_size, descriptor.sliceCount); ++slice)
+					{
+						D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS& params = commandlist.resolve_subresources[rt_resolve_count].emplace_back();
+						params.SrcSubresource = D3D12CalcSubresource(resolve_src_info.firstMip + mip, resolve_src_info.firstSlice + slice, 0, resolve_src_info.total_mipCount, resolve_src_info.total_sliceCount);
+						params.DstSubresource = D3D12CalcSubresource(descriptor.firstMip + mip, descriptor.firstSlice + slice, 0, desc.mip_levels, desc.array_size);
+						params.SrcRect.left = 0;
+						params.SrcRect.top = 0;
+						params.SrcRect.right = (LONG)desc.width;
+						params.SrcRect.bottom = (LONG)desc.height;
+					}
+				}
+				RTV.EndingAccess.Resolve.pSubresourceParameters = commandlist.resolve_subresources[rt_resolve_count].data();
+				RTV.EndingAccess.Resolve.SubresourceCount = (UINT)commandlist.resolve_subresources[rt_resolve_count].size();
+				rt_resolve_count++;
+			}
+			break;
+
+			case RenderPassImage::Type::DEPTH_STENCIL:
+			{
+				descriptor = subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[subresource];
+				DSV.cpuDescriptor = descriptor.handle;
+				DSV.DepthBeginningAccess.Type = beginning_access_type;
+				DSV.DepthEndingAccess.Type = ending_access_type;
+				clear_value.DepthStencil.Depth = desc.clear.depth_stencil.depth;
+				clear_value.DepthStencil.Stencil = desc.clear.depth_stencil.stencil;
+				DSV.DepthBeginningAccess.Clear.ClearValue = clear_value;
+				DSV.DepthEndingAccess.Resolve.pSrcResource = internal_state->resource.Get();
+				DSV.DepthEndingAccess.Resolve.PreserveResolveSource = ending_access_type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+				DS_resolve_src_info.resource = internal_state->resource.Get();
+				DS_resolve_src_info.preserve = ending_access_type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+				DS_resolve_src_info.firstMip = descriptor.firstMip;
+				DS_resolve_src_info.mipCount = descriptor.mipCount;
+				DS_resolve_src_info.firstSlice = descriptor.firstSlice;
+				DS_resolve_src_info.sliceCount = descriptor.sliceCount;
+				DS_resolve_src_info.total_mipCount = desc.mip_levels;
+				DS_resolve_src_info.total_sliceCount = desc.array_size;
+				if (IsFormatStencilSupport(desc.format))
+				{
+					DSV.StencilBeginningAccess = DSV.DepthBeginningAccess;
+					DSV.StencilEndingAccess = DSV.DepthEndingAccess;
+				}
+			}
+			break;
+
+			case RenderPassImage::Type::RESOLVE_DEPTH:
+			{
+				descriptor = subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[subresource];
+				DSV.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
+				DSV.DepthEndingAccess.Resolve.Format = clear_value.Format;
+				switch (image.depth_resolve_mode)
+				{
+				default:
+				case RenderPassImage::DepthResolveMode::Min:
+					DSV.DepthEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_MIN;
+					break;
+				case RenderPassImage::DepthResolveMode::Max:
+					DSV.DepthEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_MAX;
+					break;
+				}
+				DSV.DepthEndingAccess.Resolve.pDstResource = internal_state->resource.Get();
+				DSV.DepthEndingAccess.Resolve.pSrcResource = DS_resolve_src_info.resource;
+				DSV.DepthEndingAccess.Resolve.PreserveResolveSource = DS_resolve_src_info.preserve;
+				for (uint32_t mip = 0; mip < std::min(desc.mip_levels, descriptor.mipCount); ++mip)
+				{
+					for (uint32_t slice = 0; slice < std::min(desc.array_size, descriptor.sliceCount); ++slice)
+					{
+						D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS& params = commandlist.resolve_subresources_dsv.emplace_back();
+						params.SrcSubresource = D3D12CalcSubresource(DS_resolve_src_info.firstMip + mip, DS_resolve_src_info.firstSlice + slice, 0, DS_resolve_src_info.total_mipCount, DS_resolve_src_info.total_sliceCount);
+						params.DstSubresource = D3D12CalcSubresource(descriptor.firstMip + mip, descriptor.firstSlice + slice, 0, desc.mip_levels, desc.array_size);
+						params.SrcRect.left = 0;
+						params.SrcRect.top = 0;
+						params.SrcRect.right = (LONG)desc.width;
+						params.SrcRect.bottom = (LONG)desc.height;
+					}
+				}
+				DSV.DepthEndingAccess.Resolve.pSubresourceParameters = commandlist.resolve_subresources_dsv.data();
+				DSV.DepthEndingAccess.Resolve.SubresourceCount = (UINT)commandlist.resolve_subresources_dsv.size();
+				if (IsFormatStencilSupport(desc.format))
+				{
+					DSV.StencilEndingAccess = DSV.DepthEndingAccess;
+				}
+			}
+			break;
+
+			case RenderPassImage::Type::SHADING_RATE_SOURCE:
+				commandlist.shading_rate_image = internal_state->resource.Get(); // will be set after barriers
+				break;
+
+			default:
+				break;
+			}
+
+
+			// Beginning barriers:
+			{
+				D3D12_RESOURCE_STATES before = _ParseResourceState(image.layout_before);
+				D3D12_RESOURCE_STATES after = _ParseResourceState(image.layout);
+				if (image.type == RenderPassImage::Type::RESOLVE || image.type == RenderPassImage::Type::RESOLVE_DEPTH)
+				{
+					after = D3D12_RESOURCE_STATE_RESOLVE_DEST;
+				}
+				if (before != after)
+				{
+					D3D12_RESOURCE_BARRIER barrierdesc = {};
+					barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+					barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+					barrierdesc.Transition.pResource = internal_state->resource.Get();
+					barrierdesc.Transition.StateBefore = before;
+					barrierdesc.Transition.StateAfter = after;
+
+					if (subresource >= 0)
+					{
+						// Need to unroll descriptor into multiple subresource barriers:
+						for (uint32_t mip = descriptor.firstMip; mip < std::min(desc.mip_levels, descriptor.firstMip + descriptor.mipCount); ++mip)
+						{
+							for (uint32_t slice = descriptor.firstSlice; slice < std::min(desc.array_size, descriptor.firstSlice + descriptor.sliceCount); ++slice)
+							{
+								barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, desc.mip_levels, desc.array_size);
+								commandlist.renderpass_barriers_begin.push_back(barrierdesc);
+							}
+						}
+					}
+					else
+					{
+						// Single barrier for whole resource:
+						barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+						commandlist.renderpass_barriers_begin.push_back(barrierdesc);
+					}
+				}
+			}
+
+			// Ending barriers:
+			{
+				D3D12_RESOURCE_STATES before = _ParseResourceState(image.layout);
+				D3D12_RESOURCE_STATES after = _ParseResourceState(image.layout_after);
+				if (image.type == RenderPassImage::Type::RESOLVE || image.type == RenderPassImage::Type::RESOLVE_DEPTH)
+				{
+					before = D3D12_RESOURCE_STATE_RESOLVE_DEST;
+				}
+				if (before != after)
+				{
+					D3D12_RESOURCE_BARRIER barrierdesc = {};
+					barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+					barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+					barrierdesc.Transition.pResource = internal_state->resource.Get();
+					barrierdesc.Transition.StateBefore = before;
+					barrierdesc.Transition.StateAfter = after;
+
+					if (subresource >= 0)
+					{
+						// Need to unroll descriptor into multiple subresource barriers:
+						for (uint32_t mip = descriptor.firstMip; mip < std::min(desc.mip_levels, descriptor.firstMip + descriptor.mipCount); ++mip)
+						{
+							for (uint32_t slice = descriptor.firstSlice; slice < std::min(desc.array_size, descriptor.firstSlice + descriptor.sliceCount); ++slice)
+							{
+								barrierdesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, desc.mip_levels, desc.array_size);
+								commandlist.renderpass_barriers_end.push_back(barrierdesc);
+							}
+						}
+					}
+					else
+					{
+						// Single barrier for whole resource:
+						barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+						commandlist.renderpass_barriers_end.push_back(barrierdesc);
+					}
+				}
+			}
 		}
 
-		if (internal_state->shading_rate_image.IsValid())
+		if (!commandlist.renderpass_barriers_begin.empty())
 		{
-			commandlist.GetGraphicsCommandList()->RSSetShadingRateImage(to_internal(&internal_state->shading_rate_image)->resource.Get());
+			commandlist.GetGraphicsCommandList()->ResourceBarrier((UINT)commandlist.renderpass_barriers_begin.size(), commandlist.renderpass_barriers_begin.data());
+		}
+
+		if (commandlist.shading_rate_image != nullptr)
+		{
+			commandlist.GetGraphicsCommandList()->RSSetShadingRateImage(commandlist.shading_rate_image);
+		}
+
+		D3D12_RENDER_PASS_FLAGS FLAGS = D3D12_RENDER_PASS_FLAG_NONE;
+		if (has_flag(flags, RenderPassFlags::ALLOW_UAV_WRITES))
+		{
+			FLAGS |= D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES;
+		}
+		if (has_flag(flags, RenderPassFlags::SUSPENDING))
+		{
+			FLAGS |= D3D12_RENDER_PASS_FLAG_SUSPENDING_PASS;
+		}
+		if (has_flag(flags, RenderPassFlags::RESUMING))
+		{
+			FLAGS |= D3D12_RENDER_PASS_FLAG_RESUMING_PASS;
 		}
 
 		commandlist.GetGraphicsCommandList()->BeginRenderPass(
-			internal_state->rt_count,
-			internal_state->RTVs,
-			internal_state->DSV.cpuDescriptor.ptr == 0 ? nullptr : &internal_state->DSV,
-			internal_state->flags
+			rt_count,
+			RTVs,
+			DSV.cpuDescriptor.ptr == 0 ? nullptr : &DSV,
+			FLAGS
 		);
 
+		commandlist.renderpass_info = RenderPassInfo::from(images, image_count);
 	}
 	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.GetGraphicsCommandList()->EndRenderPass();
 
-		auto internal_state = to_internal(commandlist.active_renderpass);
-
-		if (internal_state != nullptr)
+		if (commandlist.shading_rate_image != nullptr)
 		{
-			if (internal_state->shading_rate_image.IsValid())
-			{
-				commandlist.GetGraphicsCommandList()->RSSetShadingRateImage(nullptr);
-			}
-
-			if (!internal_state->barrierdescs_end.empty())
-			{
-				commandlist.GetGraphicsCommandList()->ResourceBarrier((UINT)internal_state->barrierdescs_end.size(), internal_state->barrierdescs_end.data());
-			}
+			commandlist.GetGraphicsCommandList()->RSSetShadingRateImage(nullptr);
+			commandlist.shading_rate_image = nullptr;
 		}
 
-		commandlist.active_renderpass = nullptr;
-
-		if (commandlist.active_backbuffer)
+		if (!commandlist.renderpass_barriers_end.empty())
 		{
-			D3D12_RESOURCE_BARRIER barrier = {};
-			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			barrier.Transition.pResource = commandlist.active_backbuffer.Get();
-			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			commandlist.GetGraphicsCommandList()->ResourceBarrier(1, &barrier);
-
-			commandlist.active_backbuffer = nullptr;
+			commandlist.GetGraphicsCommandList()->ResourceBarrier(
+				(UINT)commandlist.renderpass_barriers_end.size(),
+				commandlist.renderpass_barriers_end.data()
+			);
 		}
+
+		commandlist.renderpass_info = {};
 	}
 	void GraphicsDevice_DX12::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
 	{
@@ -5845,19 +5899,33 @@ using namespace dx12_internal;
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
 
-		size_t pipeline_hash = 0;
-		wi::helper::hash_combine(pipeline_hash, pso->hash);
-		if (commandlist.active_renderpass != nullptr)
-		{
-			wi::helper::hash_combine(pipeline_hash, commandlist.active_renderpass->hash);
-		}
-		if (commandlist.prev_pipeline_hash == pipeline_hash)
-		{
-			return;
-		}
-		commandlist.prev_pipeline_hash = pipeline_hash;
-
 		auto internal_state = to_internal(pso);
+		if (internal_state->resource != nullptr)
+		{
+			commandlist.GetGraphicsCommandList()->SetPipelineState(internal_state->resource.Get());
+
+			if (commandlist.prev_pt != internal_state->primitiveTopology)
+			{
+				commandlist.prev_pt = internal_state->primitiveTopology;
+
+				commandlist.GetGraphicsCommandList()->IASetPrimitiveTopology(internal_state->primitiveTopology);
+			}
+
+			commandlist.prev_pipeline_hash = 0;
+			commandlist.dirty_pso = false;
+		}
+		else
+		{
+			size_t pipeline_hash = 0;
+			wi::helper::hash_combine(pipeline_hash, internal_state->hash);
+			wi::helper::hash_combine(pipeline_hash, commandlist.renderpass_info.get_hash());
+			if (commandlist.prev_pipeline_hash == pipeline_hash)
+			{
+				return;
+			}
+			commandlist.prev_pipeline_hash = pipeline_hash;
+			commandlist.dirty_pso = true;
+		}
 
 		if (commandlist.active_rootsig_graphics != internal_state->rootSignature.Get())
 		{
@@ -5870,7 +5938,6 @@ using namespace dx12_internal;
 		}
 
 		commandlist.active_pso = pso;
-		commandlist.dirty_pso = true;
 	}
 	void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
@@ -5992,6 +6059,14 @@ using namespace dx12_internal;
 		auto internal_state = to_internal(args);
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.GetGraphicsCommandList()->ExecuteIndirect(dispatchMeshIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+	}
+	void GraphicsDevice_DX12::DispatchMeshIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
+	{
+		predraw(cmd);
+		auto args_internal = to_internal(args);
+		auto count_internal = to_internal(count);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->ExecuteIndirect(dispatchMeshIndirectCommandSignature.Get(), 1, args_internal->resource.Get(), args_offset, count_internal->resource.Get(), count_offset);
 	}
 	void GraphicsDevice_DX12::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
@@ -6142,7 +6217,6 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		assert(commandlist.active_renderpass == nullptr); // Can't resolve inside renderpass!
 
 		auto internal_state = to_internal(heap);
 		auto dst_internal = to_internal(dest);
@@ -6184,7 +6258,6 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		assert(commandlist.active_renderpass == nullptr);
 
 		auto& barrierdescs = commandlist.frame_barriers;
 

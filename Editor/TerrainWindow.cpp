@@ -849,7 +849,7 @@ void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
 		modifiers_to_remove.push_back(modifier_window);
 		});
 
-	editor->optionsWnd.themeCombo.SetSelected(editor->optionsWnd.themeCombo.GetSelected()); // theme refresh
+	editor->optionsWnd.generalWnd.themeCombo.SetSelected(editor->optionsWnd.generalWnd.themeCombo.GetSelected()); // theme refresh
 }
 void TerrainWindow::SetupAssets()
 {

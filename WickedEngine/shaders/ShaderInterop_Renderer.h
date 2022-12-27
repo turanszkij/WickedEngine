@@ -557,7 +557,7 @@ struct ShaderMeshInstancePointer
 
 	void init()
 	{
-		data = ~0;
+		data = 0;
 	}
 	void Create(uint _instanceIndex, uint frustum_index = 0, float dither = 0)
 	{

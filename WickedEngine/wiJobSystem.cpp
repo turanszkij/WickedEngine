@@ -67,11 +67,19 @@ namespace wi::jobsystem
 		~InternalState()
 		{
 			alive.store(false); // indicate that new jobs cannot be started from this point
-			wakeCondition.notify_all(); // wakes up sleeping worker threads
+			bool wake_loop = true;
+			std::thread waker([&] {
+				while (wake_loop)
+				{
+					wakeCondition.notify_all(); // wakes up sleeping worker threads
+				}
+			});
 			for (auto& thread : threads)
 			{
 				thread.join();
 			}
+			wake_loop = false;
+			waker.join();
 		}
 	} static internal_state;
 

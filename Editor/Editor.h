@@ -4,6 +4,7 @@
 #include "wiScene_BindLua.h"
 #include "OptionsWindow.h"
 #include "ComponentsWindow.h"
+#include "ProfilerWindow.h"
 
 #include "IconDefinitions.h"
 
@@ -25,12 +26,18 @@ public:
 
 	wi::gui::Button newSceneButton;
 
+	wi::gui::Button translateButton;
+	wi::gui::Button rotateButton;
+	wi::gui::Button scaleButton;
+
 	wi::gui::Button playButton;
 	wi::gui::Button stopButton;
 
 	wi::gui::Button saveButton;
 	wi::gui::Button openButton;
 	wi::gui::Button logButton;
+	wi::gui::Button profilerButton;
+	wi::gui::Button cinemaButton;
 	wi::gui::Button fullscreenButton;
 	wi::gui::Button bugButton;
 	wi::gui::Button aboutButton;
@@ -39,6 +46,7 @@ public:
 
 	OptionsWindow optionsWnd;
 	ComponentsWindow componentsWnd;
+	ProfilerWindow profilerWnd;
 
 	std::unique_ptr<wi::RenderPath3D> renderPath;
 	const wi::graphics::Texture* GetGUIBlurredBackground() const override { return renderPath->GetGUIBlurredBackground(); }
@@ -64,14 +72,12 @@ public:
 	};
 	wi::graphics::Texture rt_selectionOutline_MSAA;
 	wi::graphics::Texture rt_selectionOutline[2];
-	wi::graphics::RenderPass renderpass_selectionOutline[2];
 	float selectionOutlineTimer = 0;
 	const XMFLOAT4 selectionColor = XMFLOAT4(1, 0.6f, 0, 1);
 	const XMFLOAT4 selectionColor2 = XMFLOAT4(0, 1, 0.6f, 0.35f);
 	wi::Color inactiveEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 0.5f));
 	wi::Color hoveredEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 1));
 
-	wi::graphics::RenderPass renderpass_editor;
 	wi::graphics::Texture editor_depthbuffer;
 
 	Translator translator;

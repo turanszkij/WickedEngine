@@ -1,13 +1,13 @@
 #include "globals.hlsli"
 #include "voxelHF.hlsli"
 
-RWStructuredBuffer<VoxelType> input_output : register(u0);
-RWTexture3D<float4> output_emission : register(u1);
+StructuredBuffer<VoxelType> input : register(t0);
+RWTexture3D<float4> output_emission : register(u0);
 
 [numthreads(256, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
-	VoxelType voxel = input_output[DTid.x];
+	VoxelType voxel = input[DTid.x];
 
 	const float4 color = UnpackVoxelColor(voxel.colorMask);
 
@@ -38,7 +38,4 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	{
 		output_emission[writecoord] = 0;
 	}
-
-	// delete emission data, but keep normals (no need to delete, we will only read normal values of filled voxels)
-	input_output[DTid.x].colorMask = 0;
 }

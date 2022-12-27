@@ -153,20 +153,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			}
 		}
 		});
-	shaderTypeComboBox.AddItem("PBR", MaterialComponent::SHADERTYPE_PBR);
-	shaderTypeComboBox.AddItem("Planar reflections", MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION);
-	shaderTypeComboBox.AddItem("Par. occl. mapping", MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING);
-	shaderTypeComboBox.AddItem("Anisotropic", MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC);
-	shaderTypeComboBox.AddItem("Cloth", MaterialComponent::SHADERTYPE_PBR_CLOTH);
-	shaderTypeComboBox.AddItem("Clear coat", MaterialComponent::SHADERTYPE_PBR_CLEARCOAT);
-	shaderTypeComboBox.AddItem("Cloth + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT);
-	shaderTypeComboBox.AddItem("Water", MaterialComponent::SHADERTYPE_WATER);
-	shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
-	shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);
-	for (auto& x : wi::renderer::GetCustomShaders())
-	{
-		shaderTypeComboBox.AddItem("*" + x.name);
-	}
 	shaderTypeComboBox.SetEnabled(false);
 	shaderTypeComboBox.SetMaxVisibleItemCount(5);
 	AddWidget(&shaderTypeComboBox);
@@ -751,6 +737,22 @@ void MaterialWindow::SetEntity(Entity entity)
 		texMulSliderY.SetValue(material->texMulAdd.y);
 		alphaRefSlider.SetValue(material->alphaRef);
 		blendModeComboBox.SetSelected((int)material->userBlendMode);
+
+		shaderTypeComboBox.ClearItems();
+		shaderTypeComboBox.AddItem("PBR", MaterialComponent::SHADERTYPE_PBR);
+		shaderTypeComboBox.AddItem("Planar reflections", MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION);
+		shaderTypeComboBox.AddItem("Par. occl. mapping", MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING);
+		shaderTypeComboBox.AddItem("Anisotropic", MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC);
+		shaderTypeComboBox.AddItem("Cloth", MaterialComponent::SHADERTYPE_PBR_CLOTH);
+		shaderTypeComboBox.AddItem("Clear coat", MaterialComponent::SHADERTYPE_PBR_CLEARCOAT);
+		shaderTypeComboBox.AddItem("Cloth + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT);
+		shaderTypeComboBox.AddItem("Water", MaterialComponent::SHADERTYPE_WATER);
+		shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
+		shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);
+		for (auto& x : wi::renderer::GetCustomShaders())
+		{
+			shaderTypeComboBox.AddItem("*" + x.name);
+		}
 		if (material->GetCustomShaderID() >= 0)
 		{
 			shaderTypeComboBox.SetSelected(MaterialComponent::SHADERTYPE_COUNT + material->GetCustomShaderID());

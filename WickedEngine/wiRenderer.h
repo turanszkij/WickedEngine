@@ -74,7 +74,7 @@ namespace wi::renderer
 		wi::graphics::Shader& shader,
 		const std::string& filename,
 		wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_6_0,
-		wi::vector<std::string> permutation_defines = {}
+		const wi::vector<std::string>& permutation_defines = {}
 	);
 
 

@@ -64,12 +64,18 @@ namespace wi::scene
 			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			device->CreateBuffer(&desc, nullptr, &instanceBuffer);
-			device->SetName(&instanceBuffer, "Scene::instanceBuffer");
+			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			{
+				// Non-UMA: separate Default usage buffer
+				device->CreateBuffer(&desc, nullptr, &instanceBuffer);
+				device->SetName(&instanceBuffer, "Scene::instanceBuffer");
+
+				// Upload buffer shouldn't be used by shaders with Non-UMA:
+				desc.bind_flags = BindFlag::NONE;
+				desc.misc_flags = ResourceMiscFlag::NONE;
+			}
 
 			desc.usage = Usage::UPLOAD;
-			desc.bind_flags = BindFlag::NONE;
-			desc.misc_flags = ResourceMiscFlag::NONE;
 			for (int i = 0; i < arraysize(instanceUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &instanceUploadBuffer[i]);
@@ -91,12 +97,18 @@ namespace wi::scene
 			desc.size = desc.stride * materialArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			device->CreateBuffer(&desc, nullptr, &materialBuffer);
-			device->SetName(&materialBuffer, "Scene::materialBuffer");
+			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			{
+				// Non-UMA: separate Default usage buffer
+				device->CreateBuffer(&desc, nullptr, &materialBuffer);
+				device->SetName(&materialBuffer, "Scene::materialBuffer");
+
+				// Upload buffer shouldn't be used by shaders with Non-UMA:
+				desc.bind_flags = BindFlag::NONE;
+				desc.misc_flags = ResourceMiscFlag::NONE;
+			}
 
 			desc.usage = Usage::UPLOAD;
-			desc.bind_flags = BindFlag::NONE;
-			desc.misc_flags = ResourceMiscFlag::NONE;
 			for (int i = 0; i < arraysize(materialUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &materialUploadBuffer[i]);
@@ -233,12 +245,18 @@ namespace wi::scene
 			desc.size = desc.stride * geometryArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			device->CreateBuffer(&desc, nullptr, &geometryBuffer);
-			device->SetName(&geometryBuffer, "Scene::geometryBuffer");
+			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			{
+				// Non-UMA: separate Default usage buffer
+				device->CreateBuffer(&desc, nullptr, &geometryBuffer);
+				device->SetName(&geometryBuffer, "Scene::geometryBuffer");
+
+				// Upload buffer shouldn't be used by shaders with Non-UMA:
+				desc.bind_flags = BindFlag::NONE;
+				desc.misc_flags = ResourceMiscFlag::NONE;
+			}
 
 			desc.usage = Usage::UPLOAD;
-			desc.bind_flags = BindFlag::NONE;
-			desc.misc_flags = ResourceMiscFlag::NONE;
 			for (int i = 0; i < arraysize(geometryUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &geometryUploadBuffer[i]);
@@ -594,9 +612,18 @@ namespace wi::scene
 		}
 
 		// Shader scene resources:
-		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
-		shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
-		shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
+		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+		{
+			shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
+			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
+			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
+		}
+		else
+		{
+			shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
+			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
+			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
+		}
 		shaderscene.meshletbuffer = device->GetDescriptorIndex(&meshletBuffer, SubresourceType::SRV);
 		shaderscene.envmaparray = device->GetDescriptorIndex(&envmapArray, SubresourceType::SRV);
 		if (weather.skyMap.IsValid())
@@ -3146,7 +3173,7 @@ namespace wi::scene
 				material.texMulAdd.w = fmodf(material.texMulAdd.w + material.texAnimDirection.y, 1);
 				material.texAnimElapsedTime = 0.0f;
 
-				material.SetDirty(); // will trigger constant buffer update later on
+				material.SetDirty();
 			}
 
 			material.engineStencilRef = STENCILREF_DEFAULT;
@@ -3206,57 +3233,6 @@ namespace wi::scene
 				int subresource_index;
 				subresource_index = device->CreateSubresource(&impostorArray, SubresourceType::RTV, i, 1, 0, 1);
 				assert(subresource_index == i);
-			}
-
-			renderpasses_impostor.resize(desc.array_size / 3);
-			for (uint32_t i = 0; i < desc.array_size / 3; ++i)
-			{
-				RenderPassDesc renderpassdesc;
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::RenderTarget(
-						impostorArray,
-						RenderPassAttachment::LoadOp::CLEAR,
-						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET
-					)
-				);
-				renderpassdesc.attachments.back().subresource = i * 3;
-
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::RenderTarget(
-						impostorArray,
-						RenderPassAttachment::LoadOp::CLEAR,
-						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET
-					)
-				);
-				renderpassdesc.attachments.back().subresource = i * 3 + 1;
-
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::RenderTarget(
-						impostorArray,
-						RenderPassAttachment::LoadOp::CLEAR,
-						RenderPassAttachment::StoreOp::STORE,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET
-					)
-				);
-				renderpassdesc.attachments.back().subresource = i * 3 + 2;
-
-				renderpassdesc.attachments.push_back(
-					RenderPassAttachment::DepthStencil(
-						impostorDepthStencil,
-						RenderPassAttachment::LoadOp::CLEAR,
-						RenderPassAttachment::StoreOp::DONTCARE
-					)
-				);
-
-				device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[i]);
 			}
 		}
 
@@ -3378,6 +3354,7 @@ namespace wi::scene
 
 			aabb = AABB();
 			object.filterMaskDynamic = 0;
+			object.sort_bits = {};
 			object.SetDynamic(false);
 			object.SetRequestPlanarReflection(false);
 			object.fadeDistance = object.draw_distance;
@@ -3455,6 +3432,25 @@ namespace wi::scene
 					}
 				}
 
+				union SortBits
+				{
+					struct
+					{
+						uint32_t shadertype : MaterialComponent::SHADERTYPE_COUNT;
+						uint32_t blendmode : wi::enums::BLENDMODE_COUNT;
+						uint32_t doublesided : 1;	// bool
+						uint32_t tessellation : 1;	// bool
+						uint32_t alphatest : 1;		// bool
+						uint32_t wind : 1;			// bool
+						uint32_t customshader : 10;
+					} bits;
+					uint32_t value;
+				} sort_bits;
+				static_assert(sizeof(SortBits) == sizeof(uint32_t));
+
+				sort_bits.bits.tessellation = mesh.GetTessellationFactor() > 0;
+				sort_bits.bits.doublesided = mesh.IsDoubleSided();
+
 				uint32_t first_subset = 0;
 				uint32_t last_subset = 0;
 				mesh.GetLODSubsetRange(object.lod, first_subset, last_subset);
@@ -3470,6 +3466,18 @@ namespace wi::scene
 						if (material->HasPlanarReflection())
 						{
 							object.SetRequestPlanarReflection(true);
+						}
+
+						sort_bits.bits.shadertype |= 1 << material->shaderType;
+						sort_bits.bits.blendmode |= 1 << material->GetBlendMode();
+						sort_bits.bits.doublesided |= material->IsDoubleSided();
+						sort_bits.bits.alphatest |= material->IsAlphaTestEnabled();
+						sort_bits.bits.wind |= material->IsUsingWind();
+
+						int customshader = material->GetCustomShaderID();
+						if (customshader >= 0)
+						{
+							sort_bits.bits.customshader |= 1 << customshader;
 						}
 					}
 				}
@@ -3560,15 +3568,6 @@ namespace wi::scene
 
 						device->CreateTexture(&desc, nullptr, &object.lightmap);
 						device->SetName(&object.lightmap, "lightmap_renderable");
-
-						RenderPassDesc renderpassdesc;
-
-						renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(object.lightmap, RenderPassAttachment::LoadOp::CLEAR));
-
-						device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_clear);
-
-						renderpassdesc.attachments.back().loadop = RenderPassAttachment::LoadOp::LOAD;
-						device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_accumulate);
 
 						object.lightmapIterationCount = 0; // reset accumulation
 					}
@@ -3738,72 +3737,11 @@ namespace wi::scene
 				assert(subresource_index == envmapArray.desc.mip_levels + envmapCount + i);
 			}
 
-			renderpasses_envmap.resize(envmapCount);
-			renderpasses_envmap_MSAA.resize(envmapCount);
 			for (uint32_t i = 0; i < envmapCount; ++i)
 			{
-				// Non MSAA:
-				{
-					int subresource_index;
-					subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::RTV, i * 6, 6, 0, 1);
-					assert(subresource_index == i);
-
-					RenderPassDesc renderpassdesc;
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::DepthStencil(
-							envrenderingDepthBuffer,
-							RenderPassAttachment::LoadOp::CLEAR,
-							RenderPassAttachment::StoreOp::STORE,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::DEPTHSTENCIL,
-							ResourceState::SHADER_RESOURCE
-						)
-					);
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::RenderTarget(envmapArray,
-							RenderPassAttachment::LoadOp::DONTCARE,
-							RenderPassAttachment::StoreOp::STORE,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::RENDERTARGET,
-							ResourceState::SHADER_RESOURCE,
-							subresource_index
-						)
-					);
-					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[i]);
-				}
-
-				// MSAA:
-				{
-					RenderPassDesc renderpassdesc;
-					renderpassdesc.attachments.clear();
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::DepthStencil(
-							envrenderingDepthBuffer_MSAA,
-							RenderPassAttachment::LoadOp::CLEAR,
-							RenderPassAttachment::StoreOp::STORE,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::DEPTHSTENCIL,
-							ResourceState::SHADER_RESOURCE
-						)
-					);
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::RenderTarget(envrenderingColorBuffer_MSAA,
-							RenderPassAttachment::LoadOp::DONTCARE,
-							RenderPassAttachment::StoreOp::DONTCARE,
-							ResourceState::RENDERTARGET,
-							ResourceState::RENDERTARGET,
-							ResourceState::RENDERTARGET
-						)
-					);
-					renderpassdesc.attachments.push_back(
-						RenderPassAttachment::Resolve(envmapArray,
-							ResourceState::SHADER_RESOURCE,
-							ResourceState::SHADER_RESOURCE,
-							envmapArray.desc.mip_levels + envmapCount + i // subresource: individual cubes only mip0
-						)
-					);
-					device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap_MSAA[i]);
-				}
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::RTV, i * 6, 6, 0, 1);
+				assert(subresource_index == i);
 			}
 		}
 

@@ -123,40 +123,6 @@ void EditorComponent::ResizeBuffers()
 		assert(success);
 		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
 		assert(success);
-
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(rt_selectionOutline[0], RenderPassAttachment::LoadOp::CLEAR));
-			if (renderPath->getMSAASampleCount() > 1)
-			{
-				desc.attachments[0].texture = rt_selectionOutline_MSAA;
-				desc.attachments.push_back(RenderPassAttachment::Resolve(rt_selectionOutline[0]));
-			}
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					*renderPath->GetDepthStencil(),
-					RenderPassAttachment::LoadOp::LOAD,
-					RenderPassAttachment::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY
-				)
-			);
-			
-			success = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
-			assert(success);
-
-			if (renderPath->getMSAASampleCount() == 1)
-			{
-				desc.attachments[0].texture = rt_selectionOutline[1]; // rendertarget
-			}
-			else
-			{
-				desc.attachments[1].texture = rt_selectionOutline[1]; // resolve
-			}
-			success = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
-			assert(success);
-		}
 	}
 
 	{
@@ -169,25 +135,6 @@ void EditorComponent::ResizeBuffers()
 		desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 		device->CreateTexture(&desc, nullptr, &editor_depthbuffer);
 		device->SetName(&editor_depthbuffer, "editor_depthbuffer");
-
-		{
-			RenderPassDesc desc;
-			desc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					editor_depthbuffer,
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::DONTCARE
-				)
-			);
-			desc.attachments.push_back(
-				RenderPassAttachment::RenderTarget(
-					renderPath->GetRenderResult(),
-					RenderPassAttachment::LoadOp::CLEAR,
-					RenderPassAttachment::StoreOp::STORE
-				)
-			);
-			device->CreateRenderPass(&desc, &renderpass_editor);
-		}
 	}
 }
 void EditorComponent::ResizeLayout()
@@ -222,6 +169,40 @@ void EditorComponent::Load()
 		NewScene();
 		});
 	GetGUI().AddWidget(&newSceneButton);
+
+
+
+	translateButton.Create(ICON_TRANSLATE);
+	rotateButton.Create(ICON_ROTATE);
+	scaleButton.Create(ICON_SCALE);
+	{
+		scaleButton.SetShadowRadius(2);
+		scaleButton.SetTooltip("Scale\nHotkey: 3");
+		scaleButton.OnClick([&](wi::gui::EventArgs args) {
+			translator.isScalator = true;
+			translator.isTranslator = false;
+			translator.isRotator = false;
+		});
+		GetGUI().AddWidget(&scaleButton);
+
+		rotateButton.SetShadowRadius(2);
+		rotateButton.SetTooltip("Rotate\nHotkey: 2");
+		rotateButton.OnClick([&](wi::gui::EventArgs args) {
+			translator.isRotator = true;
+			translator.isScalator = false;
+			translator.isTranslator = false;
+			});
+		GetGUI().AddWidget(&rotateButton);
+
+		translateButton.SetShadowRadius(2);
+		translateButton.SetTooltip("Translate/Move (Ctrl + T)\nHotkey: 1");
+		translateButton.OnClick([&](wi::gui::EventArgs args) {
+			translator.isTranslator = true;
+			translator.isScalator = false;
+			translator.isRotator = false;
+			});
+		GetGUI().AddWidget(&translateButton);
+	}
 
 
 	playButton.Create(ICON_PLAY);
@@ -461,6 +442,37 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&logButton);
 
 
+	profilerButton.Create("");
+	profilerButton.SetShadowRadius(2);
+	profilerButton.font.params.shadowColor = wi::Color::Transparent();
+	profilerButton.SetTooltip("View the profiler frame timings");
+	profilerButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
+	profilerButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
+	profilerButton.OnClick([&](wi::gui::EventArgs args) {
+		profilerWnd.SetVisible(!wi::profiler::IsEnabled());
+		wi::profiler::SetEnabled(!wi::profiler::IsEnabled());
+	});
+	GetGUI().AddWidget(&profilerButton);
+
+
+	cinemaButton.Create("");
+	cinemaButton.SetShadowRadius(2);
+	cinemaButton.font.params.shadowColor = wi::Color::Transparent();
+	cinemaButton.SetTooltip("Enter cinema mode (all HUD disabled). Press ESC to return to normal.");
+	cinemaButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
+	cinemaButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
+	cinemaButton.OnClick([&](wi::gui::EventArgs args) {
+		if (renderPath != nullptr)
+		{
+			renderPath->GetGUI().SetVisible(false);
+		}
+		GetGUI().SetVisible(false);
+		wi::profiler::SetEnabled(false);
+		profilerWnd.SetVisible(false);
+	});
+	GetGUI().AddWidget(&cinemaButton);
+
+
 	fullscreenButton.Create("");
 	fullscreenButton.SetShadowRadius(2);
 	fullscreenButton.font.params.shadowColor = wi::Color::Transparent();
@@ -606,26 +618,29 @@ void EditorComponent::Load()
 	componentsWnd.Create(this);
 	GetGUI().AddWidget(&componentsWnd);
 
+	profilerWnd.Create();
+	GetGUI().AddWidget(&profilerWnd);
+
 	std::string theme = main->config.GetSection("options").GetText("theme");
 	if(theme.empty())
 	{
-		optionsWnd.themeCombo.SetSelected(0);
+		optionsWnd.generalWnd.themeCombo.SetSelected(0);
 	}
 	else if (!theme.compare("Dark"))
 	{
-		optionsWnd.themeCombo.SetSelected(0);
+		optionsWnd.generalWnd.themeCombo.SetSelected(0);
 	}
 	else if (!theme.compare("Bright"))
 	{
-		optionsWnd.themeCombo.SetSelected(1);
+		optionsWnd.generalWnd.themeCombo.SetSelected(1);
 	}
 	else if (!theme.compare("Soft"))
 	{
-		optionsWnd.themeCombo.SetSelected(2);
+		optionsWnd.generalWnd.themeCombo.SetSelected(2);
 	}
 	else if (!theme.compare("Hacking"))
 	{
-		optionsWnd.themeCombo.SetSelected(3);
+		optionsWnd.generalWnd.themeCombo.SetSelected(3);
 	}
 
 	RenderPath2D::Load();
@@ -675,7 +690,7 @@ void EditorComponent::Update(float dt)
 	bool clear_selected = false;
 	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
 	{
-		if (optionsWnd.cinemaModeCheckBox.GetCheck())
+		if (!GetGUI().IsVisible())
 		{
 			// Exit cinema mode:
 			if (renderPath != nullptr)
@@ -683,9 +698,6 @@ void EditorComponent::Update(float dt)
 				renderPath->GetGUI().SetVisible(true);
 			}
 			GetGUI().SetVisible(true);
-			wi::profiler::SetEnabled(optionsWnd.profilerEnabledCheckBox.GetCheck());
-
-			optionsWnd.cinemaModeCheckBox.SetCheck(false);
 		}
 		else
 		{
@@ -1259,15 +1271,12 @@ void EditorComponent::Update(float dt)
 		if (wi::input::Press((wi::input::BUTTON)'W'))
 		{
 			wi::renderer::SetWireRender(!wi::renderer::IsWireRender());
-			optionsWnd.graphicsWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
+			optionsWnd.generalWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
 		}
 		// Enable transform tool
 		if (wi::input::Press((wi::input::BUTTON)'T'))
 		{
 			translator.SetEnabled(!translator.IsEnabled());
-			optionsWnd.isTranslatorCheckBox.SetCheck(translator.isTranslator);
-			optionsWnd.isRotatorCheckBox.SetCheck(translator.isRotator);
-			optionsWnd.isScalatorCheckBox.SetCheck(translator.isScalator);
 		}
 		// Save
 		if (wi::input::Press((wi::input::BUTTON)'S'))
@@ -1433,27 +1442,18 @@ void EditorComponent::Update(float dt)
 			translator.isTranslator = !translator.isTranslator;
 			translator.isScalator = false;
 			translator.isRotator = false;
-			optionsWnd.isTranslatorCheckBox.SetCheck(translator.isTranslator);
-			optionsWnd.isScalatorCheckBox.SetCheck(false);
-			optionsWnd.isRotatorCheckBox.SetCheck(false);
 		}
 		else if (wi::input::Press(wi::input::BUTTON('2')))
 		{
 			translator.isRotator = !translator.isRotator;
 			translator.isScalator = false;
 			translator.isTranslator = false;
-			optionsWnd.isRotatorCheckBox.SetCheck(translator.isRotator);
-			optionsWnd.isScalatorCheckBox.SetCheck(false);
-			optionsWnd.isTranslatorCheckBox.SetCheck(false);
 		}
 		else if (wi::input::Press(wi::input::BUTTON('3')))
 		{
 			translator.isScalator = !translator.isScalator;
 			translator.isTranslator = false;
 			translator.isRotator = false;
-			optionsWnd.isScalatorCheckBox.SetCheck(translator.isScalator);
-			optionsWnd.isTranslatorCheckBox.SetCheck(false);
-			optionsWnd.isRotatorCheckBox.SetCheck(false);
 		}
 	}
 
@@ -1693,7 +1693,7 @@ void EditorComponent::Update(float dt)
 	}
 	else
 	{
-		wi::renderer::SetToDrawDebugColliders(optionsWnd.graphicsWnd.colliderVisCheckBox.GetCheck());
+		wi::renderer::SetToDrawDebugColliders(optionsWnd.generalWnd.colliderVisCheckBox.GetCheck());
 	}
 }
 void EditorComponent::PostUpdate()
@@ -1707,7 +1707,7 @@ void EditorComponent::Render() const
 	const Scene& scene = GetCurrentScene();
 
 	// Hovered item boxes:
-	if (!optionsWnd.cinemaModeCheckBox.GetCheck())
+	if (GetGUI().IsVisible())
 	{
 		if (hovered.entity != INVALID_ENTITY)
 		{
@@ -1771,7 +1771,7 @@ void EditorComponent::Render() const
 	}
 
 	// Selected items box:
-	if (!optionsWnd.cinemaModeCheckBox.GetCheck() && !translator.selected.empty())
+	if (GetGUI().IsVisible() && !translator.selected.empty())
 	{
 		AABB selectedAABB = AABB(
 			XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
@@ -1830,7 +1830,7 @@ void EditorComponent::Render() const
 	renderPath->Render();
 
 	// Editor custom render:
-	if (!optionsWnd.cinemaModeCheckBox.GetCheck())
+	if (GetGUI().IsVisible())
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		CommandList cmd = device->BeginCommandList();
@@ -1856,7 +1856,37 @@ void EditorComponent::Render() const
 
 			// Materials outline:
 			{
-				device->RenderPassBegin(&renderpass_selectionOutline[0], cmd);
+				if (renderPath->getMSAASampleCount() > 1)
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rt_selectionOutline_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
+						RenderPassImage::Resolve(&rt_selectionOutline[0]),
+						RenderPassImage::DepthStencil(
+							renderPath->GetDepthStencil(),
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY
+						),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
+				else
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rt_selectionOutline[0], RenderPassImage::LoadOp::CLEAR),
+						RenderPassImage::DepthStencil(
+							renderPath->GetDepthStencil(),
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY
+						),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
 
 				// Draw solid blocks of selected materials
 				fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_MATERIAL;
@@ -1867,7 +1897,37 @@ void EditorComponent::Render() const
 
 			// Objects outline:
 			{
-				device->RenderPassBegin(&renderpass_selectionOutline[1], cmd);
+				if (renderPath->getMSAASampleCount() > 1)
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rt_selectionOutline_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
+						RenderPassImage::Resolve(&rt_selectionOutline[1]),
+						RenderPassImage::DepthStencil(
+							renderPath->GetDepthStencil(),
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY
+						),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
+				else
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rt_selectionOutline[1], RenderPassImage::LoadOp::CLEAR),
+						RenderPassImage::DepthStencil(
+							renderPath->GetDepthStencil(),
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY,
+							ResourceState::DEPTHSTENCIL_READONLY
+						),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
 
 				// Draw solid blocks of selected objects
 				fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_OBJECT;
@@ -1881,7 +1941,20 @@ void EditorComponent::Render() const
 
 		// Full resolution:
 		{
-			device->RenderPassBegin(&renderpass_editor, cmd);
+			const Texture& render_result = renderPath->GetRenderResult();
+			RenderPassImage rp[] = {
+				RenderPassImage::RenderTarget(
+					&render_result,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE
+				),
+				RenderPassImage::DepthStencil(
+					&editor_depthbuffer,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::DONTCARE
+				),
+			};
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 			Viewport vp;
 			vp.width = (float)editor_depthbuffer.GetDesc().width;
@@ -2415,7 +2488,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.graphicsWnd.nameDebugCheckBox.GetCheck())
+			if (optionsWnd.generalWnd.nameDebugCheckBox.GetCheck())
 			{
 				device->EventBegin("Debug Names", cmd);
 				struct DebugNameEntitySorter
@@ -2677,9 +2750,6 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				archive >> translator.isTranslator;
 				archive >> translator.isRotator;
 				archive >> translator.isScalator;
-				optionsWnd.isTranslatorCheckBox.SetCheck(translator.isTranslator);
-				optionsWnd.isRotatorCheckBox.SetCheck(translator.isRotator);
-				optionsWnd.isScalatorCheckBox.SetCheck(translator.isScalator);
 
 				EntitySerializer seri;
 				wi::scene::TransformComponent start;
@@ -2917,14 +2987,14 @@ void EditorComponent::Save(const std::string& filename)
 	auto file_extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
 	if(file_extension == "WISCENE")
 	{
-		const bool dump_to_header = optionsWnd.saveModeComboBox.GetSelected() == 2;
+		const bool dump_to_header = optionsWnd.generalWnd.saveModeComboBox.GetSelected() == 2;
 
 		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 		if (archive.IsOpen())
 		{
 			Scene& scene = GetCurrentScene();
 
-			wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.saveModeComboBox.GetItemUserData(optionsWnd.saveModeComboBox.GetSelected());
+			wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.generalWnd.saveModeComboBox.GetItemUserData(optionsWnd.generalWnd.saveModeComboBox.GetSelected());
 			wi::resourcemanager::SetMode(embed_mode);
 
 			scene.Serialize(archive);
@@ -2954,7 +3024,7 @@ void EditorComponent::Save(const std::string& filename)
 }
 void EditorComponent::SaveAs()
 {
-	const bool dump_to_header = optionsWnd.saveModeComboBox.GetSelected() == 2;
+	const bool dump_to_header = optionsWnd.generalWnd.saveModeComboBox.GetSelected() == 2;
 
 	wi::helper::FileDialogParams params;
 	params.type = wi::helper::FileDialogParams::SAVE;
@@ -3028,6 +3098,8 @@ void EditorComponent::UpdateTopMenuAnimation()
 	aboutButton.SetText(aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_HELP " About" : ICON_HELP);
 	fullscreenButton.SetText(fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? fullscreen_text : fullscreen ? ICON_FA_COMPRESS : ICON_FULLSCREEN);
 	bugButton.SetText(bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BUG " Bug report" : ICON_BUG);
+	profilerButton.SetText(profilerButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_PROFILER " Profiler" : ICON_PROFILER);
+	cinemaButton.SetText(cinemaButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_CINEMA_MODE " Cinema" : ICON_CINEMA_MODE);
 	logButton.SetText(logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BACKLOG " Backlog" : ICON_BACKLOG);
 	openButton.SetText(openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_OPEN " Open" : ICON_OPEN);
 	saveButton.SetText(saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_SAVE " Save" : ICON_SAVE);
@@ -3036,6 +3108,8 @@ void EditorComponent::UpdateTopMenuAnimation()
 	aboutButton.SetSize(XMFLOAT2(wi::math::Lerp(aboutButton.GetSize().x, aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	fullscreenButton.SetSize(XMFLOAT2(wi::math::Lerp(fullscreenButton.GetSize().x, fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	bugButton.SetSize(XMFLOAT2(wi::math::Lerp(bugButton.GetSize().x, bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	profilerButton.SetSize(XMFLOAT2(wi::math::Lerp(profilerButton.GetSize().x, profilerButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	cinemaButton.SetSize(XMFLOAT2(wi::math::Lerp(cinemaButton.GetSize().x, cinemaButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	logButton.SetSize(XMFLOAT2(wi::math::Lerp(logButton.GetSize().x, logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	openButton.SetSize(XMFLOAT2(wi::math::Lerp(openButton.GetSize().x, openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	saveButton.SetSize(XMFLOAT2(wi::math::Lerp(saveButton.GetSize().x, saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
@@ -3044,7 +3118,9 @@ void EditorComponent::UpdateTopMenuAnimation()
 	aboutButton.SetPos(XMFLOAT2(exitButton.GetPos().x - aboutButton.GetSize().x - padding, 0));
 	bugButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - bugButton.GetSize().x - padding, 0));
 	fullscreenButton.SetPos(XMFLOAT2(bugButton.GetPos().x - fullscreenButton.GetSize().x - padding, 0));
-	logButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - logButton.GetSize().x - padding, 0));
+	cinemaButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - cinemaButton.GetSize().x - padding, 0));
+	profilerButton.SetPos(XMFLOAT2(cinemaButton.GetPos().x - profilerButton.GetSize().x - padding, 0));
+	logButton.SetPos(XMFLOAT2(profilerButton.GetPos().x - logButton.GetSize().x - padding, 0));
 	openButton.SetPos(XMFLOAT2(logButton.GetPos().x - openButton.GetSize().x - padding, 0));
 	saveButton.SetPos(XMFLOAT2(openButton.GetPos().x - saveButton.GetSize().x - padding, 0));
 
@@ -3054,6 +3130,54 @@ void EditorComponent::UpdateTopMenuAnimation()
 	playButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	playButton.SetPos(XMFLOAT2(stopButton.GetPos().x - playButton.GetSize().x - padding, 0));
 
+
+	scaleButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	scaleButton.SetPos(XMFLOAT2(playButton.GetPos().x - scaleButton.GetSize().x - 20, 0));
+	rotateButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	rotateButton.SetPos(XMFLOAT2(scaleButton.GetPos().x - rotateButton.GetSize().x - padding, 0));
+	translateButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	translateButton.SetPos(XMFLOAT2(rotateButton.GetPos().x - translateButton.GetSize().x - padding, 0));
+
+	// Custom corner rounding stuff for top menu:
+	for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
+	{
+		saveButton.sprites[i].params.enableCornerRounding();
+		saveButton.sprites[i].params.corners_rounding[2].radius = 10;
+
+		playButton.sprites[i].params.enableCornerRounding();
+		playButton.sprites[i].params.corners_rounding[2].radius = 40;
+
+		stopButton.sprites[i].params.enableCornerRounding();
+		stopButton.sprites[i].params.corners_rounding[3].radius = 40;
+
+		translateButton.sprites[i].params.enableCornerRounding();
+		translateButton.sprites[i].params.corners_rounding[2].radius = 40;
+
+		scaleButton.sprites[i].params.enableCornerRounding();
+		scaleButton.sprites[i].params.corners_rounding[3].radius = 40;
+	}
+
+	XMFLOAT4 color_on = playButton.sprites[wi::gui::FOCUS].params.color;
+	XMFLOAT4 color_off = playButton.sprites[wi::gui::IDLE].params.color;
+
+	if (translator.isTranslator)
+	{
+		translateButton.sprites[wi::gui::IDLE].params.color = color_on;
+		rotateButton.sprites[wi::gui::IDLE].params.color = color_off;
+		scaleButton.sprites[wi::gui::IDLE].params.color = color_off;
+	}
+	else if (translator.isRotator)
+	{
+		translateButton.sprites[wi::gui::IDLE].params.color = color_off;
+		rotateButton.sprites[wi::gui::IDLE].params.color = color_on;
+		scaleButton.sprites[wi::gui::IDLE].params.color = color_off;
+	}
+	else if (translator.isScalator)
+	{
+		translateButton.sprites[wi::gui::IDLE].params.color = color_off;
+		rotateButton.sprites[wi::gui::IDLE].params.color = color_off;
+		scaleButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
 
 	float ofs = screenW - 2;
 	float y = exitButton.GetPos().y + exitButton.GetSize().y + 5;
@@ -3087,7 +3211,7 @@ void EditorComponent::SetCurrentScene(int index)
 }
 void EditorComponent::RefreshSceneList()
 {
-	optionsWnd.themeCombo.SetSelected(optionsWnd.themeCombo.GetSelected());
+	optionsWnd.generalWnd.themeCombo.SetSelected(optionsWnd.generalWnd.themeCombo.GetSelected());
 	for (int i = 0; i < int(scenes.size()); ++i)
 	{
 		auto& editorscene = scenes[i];

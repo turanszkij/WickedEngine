@@ -662,8 +662,6 @@ namespace wi::scene
 		uint32_t filterMaskDynamic = 0;
 
 		wi::graphics::Texture lightmap;
-		wi::graphics::RenderPass renderpass_lightmap_clear;
-		wi::graphics::RenderPass renderpass_lightmap_accumulate;
 		mutable uint32_t lightmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
@@ -674,6 +672,7 @@ namespace wi::scene
 
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;
+		uint32_t sort_bits = 0;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }

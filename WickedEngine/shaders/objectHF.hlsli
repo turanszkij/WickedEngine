@@ -70,7 +70,6 @@ uint load_entitytile(uint tileIndex)
 // Use these to enable features for the shader:
 //	(Some of these are enabled automatically with OBJECTSHADER_LAYOUT defines)
 //#define OBJECTSHADER_USE_CLIPPLANE				- shader will be clipped according to camera clip planes
-//#define OBJECTSHADER_USE_WIND						- shader will use procedural wind animation
 //#define OBJECTSHADER_USE_COLOR					- shader will use colors (material color, vertex color...)
 //#define OBJECTSHADER_USE_DITHERING				- shader will use dithered transparency
 //#define OBJECTSHADER_USE_UVSETS					- shader will sample textures with uv sets
@@ -86,23 +85,19 @@ uint load_entitytile(uint tileIndex)
 
 
 #ifdef OBJECTSHADER_LAYOUT_SHADOW
-#define OBJECTSHADER_USE_WIND
 #endif // OBJECTSHADER_LAYOUT_SHADOW
 
 #ifdef OBJECTSHADER_LAYOUT_SHADOW_TEX
-#define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
 #endif // OBJECTSHADER_LAYOUT_SHADOW_TEX
 
 #ifdef OBJECTSHADER_LAYOUT_PREPASS
 #define OBJECTSHADER_USE_CLIPPLANE
-#define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_INSTANCEINDEX
 #endif // OBJECTSHADER_LAYOUT_SHADOW
 
 #ifdef OBJECTSHADER_LAYOUT_PREPASS_TEX
 #define OBJECTSHADER_USE_CLIPPLANE
-#define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_DITHERING
 #define OBJECTSHADER_USE_INSTANCEINDEX
@@ -110,7 +105,6 @@ uint load_entitytile(uint tileIndex)
 
 #ifdef OBJECTSHADER_LAYOUT_COMMON
 #define OBJECTSHADER_USE_CLIPPLANE
-#define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_ATLAS
 #define OBJECTSHADER_USE_COLOR
@@ -212,7 +206,7 @@ struct VertexSurface
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
 		position = input.GetPosition();
-		color = unpack_rgba(input.GetInstance().color);
+		color = GetMaterial().baseColor * unpack_rgba(input.GetInstance().color);
 		color.a *= 1 - input.GetInstancePointer().GetDither();
 		emissiveColor = input.GetInstance().emissive;
 
@@ -234,12 +228,12 @@ struct VertexSurface
 		position = mul(input.GetInstance().transform.GetMatrix(), position);
 
 
-#ifdef OBJECTSHADER_USE_WIND
+#ifdef WIND
 		if (material.IsUsingWind())
 		{
 			position.xyz += compute_wind(position.xyz, input.GetWindWeight());
 		}
-#endif // OBJECTSHADER_USE_WIND
+#endif // WIND
 	}
 };
 
@@ -803,7 +797,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 						continue; // static lights will be skipped (they are used in lightmap baking)
 					}
 
-#ifdef SHADOW_MASK_ENABLED
+#if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
 					const bool shadow_mask_enabled = (GetFrame().options & OPTION_BIT_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0;
 					float shadow_mask = 1;
 					[branch]
@@ -1022,12 +1016,11 @@ PixelInput main(VertexInput input)
 #ifdef OBJECTSHADER_COMPILE_PS
 
 // Possible switches:
-//	OUTPUT_GBUFFER		-	assemble object shader for gbuffer exporting
 //	PREPASS				-	assemble object shader for depth prepass rendering
 //	TRANSPARENT			-	assemble object shader for forward or tile forward transparent rendering
 //	ENVMAPRENDERING		-	modify object shader for envmap rendering
 //	PLANARREFLECTION	-	include planar reflection sampling
-//	POM					-	include parallax occlusion mapping computation
+//	PARALLAXOCCLUSIONMAPPING					-	include parallax occlusion mapping computation
 //	WATER				-	include specialized water shader code
 
 #ifdef EARLY_DEPTH_STENCIL
@@ -1095,9 +1088,9 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	float3x3 TBN = float3x3(surface.T.xyz, binormal, surface.N);
 #endif
 
-#ifdef POM
+#ifdef PARALLAXOCCLUSIONMAPPING
 	ParallaxOcclusionMapping(input.uvsets, surface.V, TBN);
-#endif // POM
+#endif // PARALLAXOCCLUSIONMAPPING
 
 #endif // OBJECTSHADER_USE_TANGENT
 
@@ -1120,7 +1113,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 
 #ifdef OBJECTSHADER_USE_COLOR
-	color *= GetMaterial().baseColor * input.color;
+	color *= input.color;
 #endif // OBJECTSHADER_USE_COLOR
 
 

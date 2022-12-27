@@ -95,14 +95,17 @@ void main(PSInput input)
 							[branch]
 							if (light.IsCastingShadow() >= 0)
 							{
-								const uint cascade = GetFrame().shadow_cascade_count - 1; // biggest cascade (coarsest resolution) will be used to voxelize
-								float3 ShPos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(P, 1)).xyz; // ortho matrix, no divide by .w
-								float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-
-								[branch]
-								if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
+								[loop]
+								for (uint cascade = 0; cascade < GetFrame().shadow_cascade_count; ++cascade)
 								{
-									lightColor *= shadow_2D(light, ShPos, ShTex.xy, cascade);
+									const float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(P, 1)).xyz; // ortho matrix, no divide by .w
+									const float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+
+									if (is_saturated(shadow_uv))
+									{
+										lightColor *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
+										break;
+									}
 								}
 
 								if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
@@ -199,7 +202,7 @@ void main(PSInput input)
 		color.rgb += emissiveColor;
 
 		uint color_encoded = PackVoxelColor(color);
-		uint normal_encoded = pack_unitvector(N);
+		uint normal_encoded = pack_half2(encode_oct(N));
 
 		// output:
 		uint3 writecoord = floor(uvw * GetFrame().voxelradiance_resolution);
