@@ -121,9 +121,9 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in float3 N)
 {
 	float4 amount = 0;
-	float3x3 tangentSpace = get_tangentspace(N);
 
 #if 0
+	float3x3 tangentSpace = get_tangentspace(N);
 	const float aperture = tan(PI * 0.5 * 0.33);
 	for (uint cone = 0; cone < GetFrame().voxelradiance_numcones; ++cone) // quality is between 1 and 16 cones
 	{
@@ -135,11 +135,15 @@ inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in floa
 	}
 	amount *= GetFrame().voxelradiance_numcones_rcp;
 #else
-	for (uint cone = 0; cone < DIFFUSE_CONE_COUNT; ++cone)
+	for (uint i = 0; i < DIFFUSE_CONE_COUNT; ++i)
 	{
-		amount += ConeTrace(voxels, P, N, DIFFUSE_CONE_DIRECTIONS[cone], DIFFUSE_CONE_APERTURE);
+		const float3 coneDirection = DIFFUSE_CONE_DIRECTIONS[i];
+		const float cosTheta = dot(N, coneDirection);
+		if (cosTheta <= 0)
+			continue;
+		amount += ConeTrace(voxels, P, N, coneDirection, DIFFUSE_CONE_APERTURE) /** cosTheta*/;
 	}
-	amount /= DIFFUSE_CONE_COUNT;
+	amount /= DIFFUSE_CONE_COUNT * 0.5; // hemisphere = half sphere
 #endif 
 
 	amount.rgb = max(0, amount.rgb);

@@ -71,6 +71,8 @@ void main(PSInput input)
 			baseColor = 1;
 		}
 		baseColor *= input.color;
+		clip(baseColor.a - GetMaterial().alphaTest);
+
 		float4 color = baseColor;
 		float3 emissiveColor = GetMaterial().GetEmissive();
 		[branch]

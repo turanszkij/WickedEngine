@@ -4,7 +4,7 @@
 
 static const float __hdrRange = 10.0f;		// HDR to SDR packing scale
 static const uint MAX_VOXEL_RGB = 511;		// 9 bits for RGB
-static const uint MAX_VOXEL_ALPHA = 31;		// 5 bits for alpha
+static const uint MAX_VOXEL_ALPHA = 31;		// 5 bits for alpha (alpha is needed for atomic average)
 static const float DARK_PACKING_POW = 8;	// improves precision for dark colors
 
 uint PackVoxelColor(in float4 color)
