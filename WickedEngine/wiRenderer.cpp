@@ -7335,11 +7335,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 	if (!renderQueue.empty())
 	{
-		Viewport vp;
-		vp.width = (float)voxelSceneData.res;
-		vp.height = (float)voxelSceneData.res;
-		device->BindViewports(1, &vp, cmd);
-
 		static Texture voxel_render_radiance;
 		static Texture voxel_prev_radiance;
 		if (!voxel_render_radiance.IsValid() || !voxel_prev_radiance.IsValid())
@@ -7419,6 +7414,11 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 		{
 			device->EventBegin("Voxelize", cmd);
+
+			Viewport vp;
+			vp.width = (float)voxelSceneData.res;
+			vp.height = (float)voxelSceneData.res;
+			device->BindViewports(1, &vp, cmd);
 
 			device->BindResource(&voxel_prev_radiance, 0, cmd);
 			device->BindUAV(&voxel_render_radiance, 0, cmd);

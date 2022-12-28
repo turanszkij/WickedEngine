@@ -135,15 +135,17 @@ inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in floa
 	}
 	amount *= GetFrame().voxelradiance_numcones_rcp;
 #else
+	float sum = 0;
 	for (uint i = 0; i < DIFFUSE_CONE_COUNT; ++i)
 	{
 		const float3 coneDirection = DIFFUSE_CONE_DIRECTIONS[i];
 		const float cosTheta = dot(N, coneDirection);
 		if (cosTheta <= 0)
 			continue;
-		amount += ConeTrace(voxels, P, N, coneDirection, DIFFUSE_CONE_APERTURE) /** cosTheta*/;
+		amount += ConeTrace(voxels, P, N, coneDirection, DIFFUSE_CONE_APERTURE) * cosTheta;
+		sum += cosTheta;
 	}
-	amount /= DIFFUSE_CONE_COUNT * 0.5; // hemisphere = half sphere
+	amount /= sum;
 #endif 
 
 	amount.rgb = max(0, amount.rgb);
