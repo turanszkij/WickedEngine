@@ -7336,6 +7336,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 	if (!renderQueue.empty())
 	{
 		static Texture voxel_render_radiance;
+		static Texture voxel_render_opacity;
 		static Texture voxel_prev_radiance;
 		if (!voxel_render_radiance.IsValid() || !voxel_prev_radiance.IsValid())
 		{
@@ -7351,6 +7352,8 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			desc.format = Format::R32_UINT;
 			device->CreateTexture(&desc, nullptr, &voxel_render_radiance);
 			device->SetName(&voxel_render_radiance, "voxel_render_radiance");
+			device->CreateTexture(&desc, nullptr, &voxel_render_opacity);
+			device->SetName(&voxel_render_opacity, "voxel_render_opacity");
 
 			desc.format = Format::R16G16B16A16_FLOAT;
 			desc.mip_levels = voxelSceneData.mips;
@@ -7371,6 +7374,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&voxel_render_radiance, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS), // discarding!
+				GPUBarrier::Image(&voxel_render_opacity, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS), // discarding!
 				GPUBarrier::Image(&voxel_prev_radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -7398,12 +7402,14 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->EventBegin("Clear Current Voxels", cmd);
 
 			device->ClearUAV(&voxel_render_radiance, 0, cmd);
+			device->ClearUAV(&voxel_render_opacity, 1, cmd);
 			device->EventEnd(cmd);
 		}
 
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(&voxel_render_radiance),
+				GPUBarrier::Memory(&voxel_render_opacity),
 				GPUBarrier::Image(&voxel_prev_radiance, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 			};
@@ -7422,6 +7428,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 			device->BindResource(&voxel_prev_radiance, 0, cmd);
 			device->BindUAV(&voxel_render_radiance, 0, cmd);
+			device->BindUAV(&voxel_render_opacity, 1, cmd);
 
 			device->RenderPassBegin(nullptr, 0, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
 			RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, false, nullptr, 1);
@@ -7430,6 +7437,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&voxel_render_radiance, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+					GPUBarrier::Image(&voxel_render_opacity, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 					GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
@@ -7443,6 +7451,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->BindComputeShader(&shaders[CSTYPE_VOXELGI_TEMPORAL], cmd);
 			device->BindResource(&voxel_prev_radiance, 0, cmd);
 			device->BindResource(&voxel_render_radiance, 1, cmd);
+			device->BindResource(&voxel_render_opacity, 2, cmd);
 			device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 
 			device->PushConstants(&voxelSceneData.offsetfromPrevFrame, sizeof(voxelSceneData.offsetfromPrevFrame), cmd);

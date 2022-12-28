@@ -10,6 +10,7 @@
 Texture3D<float4> input_previous_radiance : register(t0);
 
 RWTexture3D<uint> output_radiance : register(u0);
+RWTexture3D<uint> output_opacity : register(u1);
 
 void VoxelAtomicAverage(inout RWTexture3D<uint> output, in uint3 dest, in float4 color)
 {
@@ -44,7 +45,7 @@ struct PSInput
 {
 	float4 pos : SV_POSITION;
 	centroid float4 color : COLOR;
-	centroid float4 uvsets : UVSETS;
+	float4 uvsets : UVSETS;
 	centroid float3 N : NORMAL;
 	centroid float3 P : POSITION3D;
 };
@@ -60,18 +61,19 @@ void main(PSInput input)
 	[branch]
 	if (is_saturated(uvw))
 	{
-		float4 baseColor;
+		float4 baseColor = input.color;
 		[branch]
 		if (GetMaterial().textures[BASECOLORMAP].IsValid() && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
-			baseColor = GetMaterial().textures[BASECOLORMAP].Sample(sampler_linear_wrap, input.uvsets);
+			float lod_bias = 0;
+			if (GetMaterial().options & SHADERMATERIAL_OPTION_BIT_TRANSPARENT || GetMaterial().alphaTest > 0)
+			{
+				// If material is non opaque, then we apply bias to avoid sampling such a low
+				//	mip level in which alpha is completely gone (helps with trees)
+				lod_bias = -6;
+			}
+			baseColor *= GetMaterial().textures[BASECOLORMAP].SampleBias(sampler_linear_wrap, input.uvsets, lod_bias);
 		}
-		else
-		{
-			baseColor = 1;
-		}
-		baseColor *= input.color;
-		clip(baseColor.a - GetMaterial().alphaTest);
 
 		float4 color = baseColor;
 		float3 emissiveColor = GetMaterial().GetEmissive();
@@ -241,6 +243,7 @@ void main(PSInput input)
 		// output:
 		uint3 writecoord = floor(uvw * GetFrame().voxelradiance_resolution);
 		VoxelAtomicAverage(output_radiance, writecoord, color);
+		VoxelAtomicAverage(output_opacity, writecoord, color.aaaa);
 
 		//bool done = false;
 		//while (!done)

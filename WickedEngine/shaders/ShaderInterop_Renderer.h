@@ -257,6 +257,27 @@ struct ShaderTextureSlot
 		return tex.SampleLevel(sam, uv, lod);
 	}
 
+	float4 SampleBias(in SamplerState sam, in float4 uvsets, in float bias)
+	{
+		Texture2D tex = GetTexture();
+		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
+
+#ifndef DISABLE_SVT
+		[branch]
+		if (sparse_residencymap_descriptor >= 0)
+		{
+			Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
+			float2 virtual_tile_count;
+			residency_map.GetDimensions(virtual_tile_count.x, virtual_tile_count.y);
+			float2 virtual_image_dim = virtual_tile_count * SVT_TILE_SIZE;
+			float virtual_lod = get_lod(virtual_image_dim, ddx(uv), ddy(uv));
+			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, virtual_lod + bias);
+		}
+#endif // DISABLE_SVT
+
+		return tex.SampleBias(sam, uv, bias);
+	}
+
 	float4 SampleGrad(in SamplerState sam, in float4 uvsets, in float4 uvsets_dx, in float4 uvsets_dy)
 	{
 		Texture2D tex = GetTexture();
