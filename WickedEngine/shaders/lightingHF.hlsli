@@ -361,10 +361,12 @@ inline float3 GetAmbient(in float3 N)
 
 #endif // ENVMAPRENDERING
 
+#ifndef NO_FLAT_AMBIENT
 	// This is not entirely correct if we have probes, because it shouldn't be added twice.
 	//	However, it is not correct if we leave it out from probes, because if we render a scene
 	//	with dark sky but ambient, we still want some visible result.
 	ambient += GetAmbientColor();
+#endif // NO_FLAT_AMBIENT
 
 	return ambient;
 }
@@ -483,7 +485,7 @@ inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 		[branch]
 		if (GetFrame().options & OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED)
 		{
-			float4 trace = ConeTraceSpecular(texture_voxelgi, surface.P, surface.N, surface.V, surface.roughness);
+			float4 trace = ConeTraceSpecular(texture_voxelgi, surface.P, surface.N, surface.V, surface.roughnessBRDF);
 			lighting.indirect.specular = mad(lighting.indirect.specular, 1 - trace.a, trace.rgb * surface.F);
 		}
 	}

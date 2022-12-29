@@ -116,7 +116,7 @@ struct VoxelizedSceneData
 	XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
 	uint32_t numCones = 2;
 	float rayStepSize = 0.75f;
-	float maxDistance = 20.0f;
+	float maxDistance = 100.0f;
 	bool secondaryBounceEnabled = false;
 	bool reflectionsEnabled = true;
 	uint32_t mips = 5;
@@ -7342,7 +7342,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		{
 			TextureDesc desc;
 			desc.type = TextureDesc::Type::TEXTURE_3D;
-			desc.width = voxelSceneData.res;
+			desc.width = voxelSceneData.res * 6;
 			desc.height = voxelSceneData.res;
 			desc.depth = voxelSceneData.res;
 			desc.mip_levels = 1;
@@ -7393,7 +7393,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->BindUAV(&voxel_prev_radiance, 0, cmd);
 
 			device->PushConstants(&voxelSceneData.offsetfromPrevFrame, sizeof(voxelSceneData.offsetfromPrevFrame), cmd);
-			device->Dispatch(voxelSceneData.res / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
+			device->Dispatch(voxelSceneData.res * 6 / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
 
 			device->EventEnd(cmd);
 		}
@@ -7455,7 +7455,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 
 			device->PushConstants(&voxelSceneData.offsetfromPrevFrame, sizeof(voxelSceneData.offsetfromPrevFrame), cmd);
-			device->Dispatch(voxelSceneData.res / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
+			device->Dispatch(voxelSceneData.res * 6 / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
 
 			{
 				GPUBarrier barriers[] = {
@@ -14649,7 +14649,7 @@ void SetVoxelRadianceEnabled(bool enabled)
 	{
 		TextureDesc desc;
 		desc.type = TextureDesc::Type::TEXTURE_3D;
-		desc.width = voxelSceneData.res;
+		desc.width = voxelSceneData.res * 6;
 		desc.height = voxelSceneData.res;
 		desc.depth = voxelSceneData.res;
 		desc.mip_levels = voxelSceneData.mips;
@@ -14658,6 +14658,7 @@ void SetVoxelRadianceEnabled(bool enabled)
 		desc.usage = Usage::DEFAULT;
 
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE]);
+		device->SetName(&textures[TEXTYPE_3D_VOXELRADIANCE], "TEXTYPE_3D_VOXELRADIANCE");
 
 		for (uint32_t i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc().mip_levels; ++i)
 		{

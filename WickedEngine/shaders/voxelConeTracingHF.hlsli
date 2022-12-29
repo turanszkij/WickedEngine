@@ -2,8 +2,10 @@
 #define WI_VOXEL_CONERACING_HF
 #include "globals.hlsli"
 
+// With help from: https://github.com/compix/VoxelConeTracingGI/blob/master/assets/shaders/voxelConeTracing/finalLightingPass.frag
+
 #ifndef VOXEL_INITIAL_OFFSET
-#define VOXEL_INITIAL_OFFSET 2
+#define VOXEL_INITIAL_OFFSET 1
 #endif // VOXEL_INITIAL_OFFSET
 
 //#define USE_32_CONES
@@ -74,22 +76,36 @@ static const float3 DIFFUSE_CONE_DIRECTIONS[16] = {
 // P:				world-space position of receiving surface
 // N:				world-space normal vector of receiving surface
 // coneDirection:	world-space cone direction in the direction to perform the trace
-// coneAperture:	tan(coneHalfAngle)
+// coneAperture:	cone width
 inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, in float3 coneDirection, in float coneAperture)
 {
 	float3 color = 0;
 	float alpha = 0;
+
+	const float coneCoefficient = 2 * tan(coneAperture * 0.5);
+	const float voxelSize = GetFrame().voxelradiance_size * 2; // full extent
+	const float voxelSize_rcp = rcp(voxelSize);
 	
 	// We need to offset the cone start position to avoid sampling its own voxel (self-occlusion):
 	//	Unfortunately, it will result in disconnection between nearby surfaces :(
-	float dist = GetFrame().voxelradiance_size; // offset by cone dir so that first sample of all cones are not the same
-	float3 startPos = P + N * GetFrame().voxelradiance_size * VOXEL_INITIAL_OFFSET * SQRT2; // sqrt2 is diagonal voxel half-extent
+	float dist = voxelSize; // offset by cone dir so that first sample of all cones are not the same
+	float step_dist = dist;
+	float3 startPos = P + N * voxelSize * VOXEL_INITIAL_OFFSET * SQRT2; // sqrt2 is diagonal voxel half-extent
+
+	float3 aniso_direction = -coneDirection;
+	float3 face_offsets = float3(
+		aniso_direction.x > 0 ? 0 : 1,
+		aniso_direction.y > 0 ? 2 : 3,
+		aniso_direction.z > 0 ? 4 : 5
+	) / 6.0;
+	float3 direction_weights = abs(coneDirection);
+	//float3 direction_weights = sqr(coneDirection);
 
 	// We will break off the loop if the sampling distance is too far for performance reasons:
 	while (dist < GetFrame().voxelradiance_max_distance && alpha < 1)
 	{
-		float diameter = max(GetFrame().voxelradiance_size, 2 * coneAperture * dist);
-		float mip = log2(diameter * GetFrame().voxelradiance_size_rcp);
+		float diameter = max(voxelSize, coneCoefficient * dist);
+		float mip = log2(diameter * voxelSize_rcp);
 
 		// Because we do the ray-marching in world space, we need to remap into 3d texture space before sampling:
 		float3 tc = startPos + coneDirection * dist;
@@ -101,7 +117,16 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 		if (!is_saturated(tc))
 			break;
 
-		float4 sam = voxels.SampleLevel(sampler_linear_clamp, tc, mip);
+		tc.x /= 6.0;
+		float4 sam =
+			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.x, tc.y, tc.z), mip) * direction_weights.x +
+			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.y, tc.y, tc.z), mip) * direction_weights.y +
+			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.z, tc.y, tc.z), mip) * direction_weights.z
+			;
+
+		// correction:
+		float correction = step_dist * voxelSize_rcp;
+		sam *= correction;
 
 		// this is the correct blending to avoid black-staircase artifact (ray stepped front-to back, so blend front to back):
 		float a = 1 - alpha;
@@ -109,7 +134,8 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 		alpha += a * sam.a;
 
 		// step along ray:
-		dist += diameter * GetFrame().voxelradiance_stepsize;
+		step_dist = diameter * GetFrame().voxelradiance_stepsize;
+		dist += step_dist;
 	}
 
 	return float4(color, alpha);
@@ -160,7 +186,7 @@ inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in floa
 // V:				world-space view-vector (cameraPosition - P)
 inline float4 ConeTraceSpecular(in Texture3D<float4> voxels, in float3 P, in float3 N, in float3 V, in float roughness)
 {
-	float aperture = tan(roughness * PI * 0.5f * 0.1f);
+	float aperture = roughness;
 	float3 coneDirection = reflect(-V, N);
 
 	float4 amount = ConeTrace(voxels, P, N, coneDirection, aperture);

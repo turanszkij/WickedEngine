@@ -28,8 +28,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			uint3 dim;
 			input_previous_radiance.GetDimensions(dim.x, dim.y, dim.z);
 			int3 coord = DTid - push.offsetfromPrevFrame;
+			int aniso_face_index = DTid.x / dim.z;
+			int aniso_face_start_x = aniso_face_index * dim.z;
+			int aniso_face_end_x = aniso_face_start_x + dim.z;
+
 			if (
-				coord.x >= 0 && coord.x < dim.x &&
+				coord.x >= aniso_face_start_x && coord.x < aniso_face_end_x &&
 				coord.y >= 0 && coord.y < dim.y &&
 				coord.z >= 0 && coord.z < dim.z
 				)

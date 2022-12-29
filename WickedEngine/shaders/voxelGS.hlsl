@@ -1,4 +1,5 @@
 #include "globals.hlsli"
+#include "cube.hlsli"
 
 struct GSOutput
 {
@@ -6,32 +7,45 @@ struct GSOutput
 	float4 col : TEXCOORD;
 };
 
-[maxvertexcount(14)]
+[maxvertexcount(36)]
 void main(
-	point GSOutput input[1],
-	inout TriangleStream< GSOutput > output
+	point uint input[1] : VERTEXID,
+	inout TriangleStream<GSOutput> output
 )
 {
-	[branch]
-	if (input[0].col.a > 0)
+	uint3 coord = unflatten3D(input[0], GetFrame().voxelradiance_resolution);
+
+	for (uint i = 0; i < 36; i += 3)
 	{
-		for (uint i = 0; i < 14; i++)
+		GSOutput tri[3];
+		uint j = 0;
+		for (j = 0; j < 3; ++j)
 		{
-			GSOutput element;
-			element.pos = input[0].pos;
-			element.col = input[0].col;
-
-			element.pos.xyz = element.pos.xyz / GetFrame().voxelradiance_resolution * 2 - 1;
-			element.pos.y = -element.pos.y;
-			element.pos.xyz *= GetFrame().voxelradiance_resolution;
-			element.pos.xyz += (vertexID_create_cube(i) - float3(0, 1, 0)) * 2;
-			element.pos.xyz *= GetFrame().voxelradiance_size;
-
-			element.pos = mul(g_xTransform, float4(element.pos.xyz, 1));
-			element.col *= g_xColor;
-
-			output.Append(element);
+			tri[j].pos = float4(coord, 1);
+			tri[j].pos.xyz = tri[j].pos.xyz * GetFrame().voxelradiance_resolution_rcp * 2 - 1;
+			tri[j].pos.y = -tri[j].pos.y;
+			tri[j].pos.xyz *= GetFrame().voxelradiance_resolution;
+			tri[j].pos.xyz += (-CUBE[i + j].xyz * 0.5 + 0.5 - float3(0, 1, 0)) * 2;
+			tri[j].pos.xyz *= GetFrame().voxelradiance_size;
 		}
+
+		float3 facenormal = -normalize(cross(tri[2].pos.xyz - tri[1].pos.xyz, tri[1].pos.xyz - tri[0].pos.xyz));
+
+		uint3 pixel = coord;
+		pixel.x += cubemap_to_uv(facenormal).z * GetFrame().voxelradiance_resolution;
+		float4 color = texture_voxelgi[pixel];
+
+		if (color.a > 0)
+		{
+			for (j = 0; j < 3; ++j)
+			{
+				tri[j].pos = mul(g_xTransform, float4(tri[j].pos.xyz, 1));
+				tri[j].col = color;
+				tri[j].col *= g_xColor;
+				output.Append(tri[j]);
+			}
+		}
+
 		output.RestartStrip();
 	}
 }
