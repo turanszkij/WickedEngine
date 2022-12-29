@@ -7373,8 +7373,8 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&voxel_render_radiance, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS), // discarding!
-				GPUBarrier::Image(&voxel_render_opacity, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS), // discarding!
+				GPUBarrier::Image(&voxel_render_radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&voxel_render_opacity, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Image(&voxel_prev_radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -7402,7 +7402,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->EventBegin("Clear Current Voxels", cmd);
 
 			device->ClearUAV(&voxel_render_radiance, 0, cmd);
-			device->ClearUAV(&voxel_render_opacity, 1, cmd);
+			device->ClearUAV(&voxel_render_opacity, 0, cmd);
 			device->EventEnd(cmd);
 		}
 
