@@ -465,7 +465,7 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 
 inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 {
-	[branch] if (GetFrame().texture_voxelgi_index >= 0)
+	[branch] if (GetFrame().vxgi.resolution != 0)
 	{
 		// diffuse:
 		float4 trace = ConeTraceDiffuse(texture_voxelgi, surface.P, surface.N);
