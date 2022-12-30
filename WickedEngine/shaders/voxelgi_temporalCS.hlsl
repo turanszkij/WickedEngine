@@ -2,12 +2,6 @@
 #include "globals.hlsli"
 #include "voxelHF.hlsli"
 
-struct Push
-{
-	int3 offsetfromPrevFrame;
-};
-PUSHCONSTANT(push, Push);
-
 Texture3D<float4> input_previous_radiance : register(t0);
 Texture3D<uint> input_render_radiance : register(t1);
 Texture3D<uint> input_render_opacity : register(t2);
@@ -20,21 +14,26 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float4 radiance = UnpackVoxelColor(input_render_radiance[DTid]);
 	float opacity = UnpackVoxelColor(input_render_opacity[DTid]).r;
 
+	// MUST be AFTER rendered radiance and opacity lookup was done with DTid:
+	uint3 dim;
+	output_radiance.GetDimensions(dim.x, dim.y, dim.z);
+	DTid.y += g_xVoxelizer.clipmap_index * dim.z;
+
 	if (radiance.a > 0)
 	{
 		radiance.a = opacity;
-		if (any(push.offsetfromPrevFrame))
+		if (any(g_xVoxelizer.offsetfromPrevFrame))
 		{
-			uint3 dim;
-			input_previous_radiance.GetDimensions(dim.x, dim.y, dim.z);
-			int3 coord = DTid - push.offsetfromPrevFrame;
+			int3 coord = DTid - g_xVoxelizer.offsetfromPrevFrame;
 			int aniso_face_index = DTid.x / dim.z;
 			int aniso_face_start_x = aniso_face_index * dim.z;
 			int aniso_face_end_x = aniso_face_start_x + dim.z;
+			int clipmap_face_start_y = g_xVoxelizer.clipmap_index * dim.z;
+			int clipmap_face_end_y = clipmap_face_start_y + dim.z;
 
 			if (
 				coord.x >= aniso_face_start_x && coord.x < aniso_face_end_x &&
-				coord.y >= 0 && coord.y < dim.y &&
+				coord.y >= clipmap_face_start_y && coord.y < clipmap_face_end_y &&
 				coord.z >= 0 && coord.z < dim.z
 				)
 			{

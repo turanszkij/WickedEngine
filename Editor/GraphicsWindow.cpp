@@ -299,7 +299,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	voxelRadianceReflectionsCheckBox.SetCheck(wi::renderer::GetVoxelRadianceReflectionsEnabled());
 	AddWidget(&voxelRadianceReflectionsCheckBox);
 
-	voxelRadianceVoxelSizeSlider.Create(0.25, 2, 1, 7, "Voxel GI Voxel Size: ");
+	voxelRadianceVoxelSizeSlider.Create(0.125f, 0.5f, 1, 7, "Voxel GI Voxel Size: ");
 	voxelRadianceVoxelSizeSlider.SetTooltip("Adjust the voxel size for Voxel GI calculations.");
 	voxelRadianceVoxelSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	voxelRadianceVoxelSizeSlider.SetPos(XMFLOAT2(x, y += step));

@@ -25,6 +25,8 @@ void main(
 	inout TriangleStream< GSOutput > outputStream
 )
 {
+	VoxelClipMap clipmap = GetFrame().voxel_clipmaps[g_xVoxelizer.clipmap_index];
+
 	float3 facenormal = abs(input[0].nor + input[1].nor + input[2].nor);
 	uint maxi = facenormal[1] > facenormal[0] ? 1 : 0;
 	maxi = facenormal[2] > facenormal[maxi] ? 2 : maxi;
@@ -34,7 +36,7 @@ void main(
 		GSOutput output;
 
 		// World space -> Voxel grid space:
-		output.pos.xyz = (input[i].pos.xyz - GetFrame().voxelradiance_center) * GetFrame().voxelradiance_size_rcp;
+		output.pos.xyz = (input[i].pos.xyz - clipmap.center) / clipmap.voxelSize;
 
 		// Project onto dominant axis:
 		[flatten]

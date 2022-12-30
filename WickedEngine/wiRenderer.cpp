@@ -110,17 +110,20 @@ struct VoxelizedSceneData
 {
 	bool enabled = false;
 	uint32_t res = 128;
-	float voxelsize = 1;
-	XMFLOAT3 center = XMFLOAT3(0, 0, 0);
-	XMINT3 offsetfromPrevFrame = XMINT3(0, 0, 0);
-	XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
 	uint32_t numCones = 2;
 	float rayStepSize = 0.75f;
 	float maxDistance = 100.0f;
 	bool secondaryBounceEnabled = false;
 	bool reflectionsEnabled = true;
-	uint32_t mips = 5;
 	bool pre_clear = true;
+	struct ClipMap
+	{
+		float voxelsize = 0.125;
+		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
+		XMINT3 offsetfromPrevFrame = XMINT3(0, 0, 0);
+		XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
+	} clipmaps[VOXEL_GI_CLIPMAP_COUNT];
+	uint32_t clipmap_to_update = 0;
 } voxelSceneData;
 
 Texture shadowMapAtlas;
@@ -3106,19 +3109,20 @@ void UpdatePerFrameData(
 	// Update Voxelization parameters:
 	if (scene.objects.GetCount() > 0)
 	{
-		const float texelSize = voxelSceneData.voxelsize * 2;
-		const float stepSize = texelSize * (1u << voxelSceneData.mips); // reduce shimmering mip levels when moving
-		XMFLOAT3 center = XMFLOAT3(std::floor(vis.camera->Eye.x / stepSize) * stepSize, std::floor(vis.camera->Eye.y / stepSize) * stepSize, std::floor(vis.camera->Eye.z / stepSize) * stepSize);
-		voxelSceneData.offsetfromPrevFrame.x = int((voxelSceneData.center.x - center.x) / texelSize);
-		voxelSceneData.offsetfromPrevFrame.y = -int((voxelSceneData.center.y - center.y) / texelSize);
-		voxelSceneData.offsetfromPrevFrame.z = int((voxelSceneData.center.z - center.z) / texelSize);
-		voxelSceneData.center = center;
-		XMFLOAT3 extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
-		if (extents.x != voxelSceneData.extents.x || extents.y != voxelSceneData.extents.y || extents.z != voxelSceneData.extents.z)
+		VoxelizedSceneData::ClipMap& clipmap = voxelSceneData.clipmaps[voxelSceneData.clipmap_to_update];
+		clipmap.voxelsize = voxelSceneData.clipmaps[0].voxelsize * (1u << voxelSceneData.clipmap_to_update);
+		const float texelSize = clipmap.voxelsize * 2;
+		XMFLOAT3 center = XMFLOAT3(std::floor(vis.camera->Eye.x / texelSize) * texelSize, std::floor(vis.camera->Eye.y / texelSize) * texelSize, std::floor(vis.camera->Eye.z / texelSize) * texelSize);
+		clipmap.offsetfromPrevFrame.x = int((clipmap.center.x - center.x) / texelSize);
+		clipmap.offsetfromPrevFrame.y = -int((clipmap.center.y - center.y) / texelSize);
+		clipmap.offsetfromPrevFrame.z = int((clipmap.center.z - center.z) / texelSize);
+		clipmap.center = center;
+		XMFLOAT3 extents = XMFLOAT3(voxelSceneData.res * clipmap.voxelsize, voxelSceneData.res * clipmap.voxelsize, voxelSceneData.res * clipmap.voxelsize);
+		if (extents.x != clipmap.extents.x || extents.y != clipmap.extents.y || extents.z != clipmap.extents.z)
 		{
-			voxelSceneData.pre_clear = true;
+			//voxelSceneData.pre_clear = true;
 		}
-		voxelSceneData.extents = extents;
+		clipmap.extents = extents;
 	}
 
 	// Shadow atlas packing:
@@ -3355,15 +3359,14 @@ void UpdatePerFrameData(
 	frameCB.blue_noise_phase = (frameCB.frame_count & 0xFF) * 1.6180339887f;
 
 	frameCB.voxelradiance_max_distance = voxelSceneData.maxDistance;
-	frameCB.voxelradiance_size = voxelSceneData.voxelsize;
-	frameCB.voxelradiance_size_rcp = 1.0f / (float)frameCB.voxelradiance_size;
 	frameCB.voxelradiance_resolution = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
 	frameCB.voxelradiance_resolution_rcp = GetVoxelRadianceEnabled() ? 1.0f / (float)frameCB.voxelradiance_resolution : 0; //PE: was inf.
-	frameCB.voxelradiance_mipcount = voxelSceneData.mips;
-	frameCB.voxelradiance_numcones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
-	frameCB.voxelradiance_numcones_rcp = 1.0f / (float)frameCB.voxelradiance_numcones;
 	frameCB.voxelradiance_stepsize = voxelSceneData.rayStepSize;
-	frameCB.voxelradiance_center = voxelSceneData.center;
+	for (uint i = 0; i < VOXEL_GI_CLIPMAP_COUNT; ++i)
+	{
+		frameCB.voxel_clipmaps[i].center = voxelSceneData.clipmaps[i].center;
+		frameCB.voxel_clipmaps[i].voxelSize = voxelSceneData.clipmaps[i].voxelsize;
+	}
 
 	// The order is very important here:
 	frameCB.decalarray_offset = 0;
@@ -6287,9 +6290,9 @@ void DrawDebugWorld(
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_VOXEL], cmd);
 
-
+		static int clipmap_debug = 0;
 		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera.GetViewProjection());
+		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.clipmaps[clipmap_debug].center))* camera.GetViewProjection());
 		sb.g_xColor = float4(1, 1, 1, 1);
 
 		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
@@ -7312,11 +7315,10 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 	device->EventBegin("Voxel Radiance", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Voxel Radiance", cmd);
 
-	AABB bbox;
-	XMFLOAT3 extents = voxelSceneData.extents;
-	XMFLOAT3 center = voxelSceneData.center;
-	bbox.createFromHalfWidth(center, extents);
+	const VoxelizedSceneData::ClipMap& clipmap = voxelSceneData.clipmaps[voxelSceneData.clipmap_to_update];
 
+	AABB bbox;
+	bbox.createFromHalfWidth(clipmap.center, clipmap.extents);
 
 	static thread_local RenderQueue renderQueue;
 	renderQueue.init();
@@ -7335,6 +7337,23 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 	if (!renderQueue.empty())
 	{
+		if (!textures[TEXTYPE_3D_VOXELRADIANCE].IsValid())
+		{
+			TextureDesc desc;
+			desc.type = TextureDesc::Type::TEXTURE_3D;
+			desc.width = voxelSceneData.res * 6;
+			desc.height = voxelSceneData.res * VOXEL_GI_CLIPMAP_COUNT;
+			desc.depth = voxelSceneData.res;
+			desc.mip_levels = 1;
+			desc.format = Format::R16G16B16A16_FLOAT;
+			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+			desc.usage = Usage::DEFAULT;
+
+			device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE]);
+			device->SetName(&textures[TEXTYPE_3D_VOXELRADIANCE], "TEXTYPE_3D_VOXELRADIANCE");
+
+			voxelSceneData.pre_clear = true;
+		}
 		static Texture voxel_render_radiance;
 		static Texture voxel_render_opacity;
 		static Texture voxel_prev_radiance;
@@ -7355,21 +7374,18 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->CreateTexture(&desc, nullptr, &voxel_render_opacity);
 			device->SetName(&voxel_render_opacity, "voxel_render_opacity");
 
+			desc.height = voxelSceneData.res * VOXEL_GI_CLIPMAP_COUNT;
 			desc.format = Format::R16G16B16A16_FLOAT;
-			desc.mip_levels = voxelSceneData.mips;
 			device->CreateTexture(&desc, nullptr, &voxel_prev_radiance);
 			device->SetName(&voxel_prev_radiance, "voxel_prev_radiance");
-			for (uint32_t i = 0; i < voxel_prev_radiance.GetDesc().mip_levels; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&voxel_prev_radiance, SubresourceType::SRV, 0, 1, i, 1);
-				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&voxel_prev_radiance, SubresourceType::UAV, 0, 1, i, 1);
-				assert(subresource_index == i);
-			}
 		}
 
 		BindCommonResources(cmd);
+
+		VoxelizerCB cb;
+		cb.offsetfromPrevFrame = clipmap.offsetfromPrevFrame;
+		cb.clipmap_index = voxelSceneData.clipmap_to_update;
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_VOXELIZER, cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -7392,7 +7408,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->BindResource(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 			device->BindUAV(&voxel_prev_radiance, 0, cmd);
 
-			device->PushConstants(&voxelSceneData.offsetfromPrevFrame, sizeof(voxelSceneData.offsetfromPrevFrame), cmd);
 			device->Dispatch(voxelSceneData.res * 6 / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
 
 			device->EventEnd(cmd);
@@ -7415,8 +7430,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
-
-		GenerateMipChain(voxel_prev_radiance, MIPGENFILTER_LINEAR, cmd);
 
 		{
 			device->EventBegin("Voxelize", cmd);
@@ -7454,7 +7467,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->BindResource(&voxel_render_opacity, 2, cmd);
 			device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 
-			device->PushConstants(&voxelSceneData.offsetfromPrevFrame, sizeof(voxelSceneData.offsetfromPrevFrame), cmd);
 			device->Dispatch(voxelSceneData.res * 6 / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
 
 			{
@@ -7465,9 +7477,9 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			}
 			device->EventEnd(cmd);
 		}
-
-		GenerateMipChain(textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, cmd);
 	}
+
+	voxelSceneData.clipmap_to_update = (voxelSceneData.clipmap_to_update + 1) % VOXEL_GI_CLIPMAP_COUNT;
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -14645,39 +14657,14 @@ bool GetFreezeCullingCameraEnabled() { return freezeCullingCamera; }
 void SetVoxelRadianceEnabled(bool enabled)
 {
 	voxelSceneData.enabled = enabled;
-	if (!textures[TEXTYPE_3D_VOXELRADIANCE].IsValid())
-	{
-		TextureDesc desc;
-		desc.type = TextureDesc::Type::TEXTURE_3D;
-		desc.width = voxelSceneData.res * 6;
-		desc.height = voxelSceneData.res;
-		desc.depth = voxelSceneData.res;
-		desc.mip_levels = voxelSceneData.mips;
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-		desc.usage = Usage::DEFAULT;
-
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE]);
-		device->SetName(&textures[TEXTYPE_3D_VOXELRADIANCE], "TEXTYPE_3D_VOXELRADIANCE");
-
-		for (uint32_t i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc().mip_levels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE], SubresourceType::SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE], SubresourceType::UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
-		voxelSceneData.pre_clear = true;
-	}
 }
 bool GetVoxelRadianceEnabled() { return voxelSceneData.enabled; }
 void SetVoxelRadianceSecondaryBounceEnabled(bool enabled) { voxelSceneData.secondaryBounceEnabled = enabled; }
 bool GetVoxelRadianceSecondaryBounceEnabled() { return voxelSceneData.secondaryBounceEnabled; }
 void SetVoxelRadianceReflectionsEnabled(bool enabled) { voxelSceneData.reflectionsEnabled = enabled; }
 bool GetVoxelRadianceReflectionsEnabled() { return voxelSceneData.reflectionsEnabled; }
-void SetVoxelRadianceVoxelSize(float value) { voxelSceneData.voxelsize = value; }
-float GetVoxelRadianceVoxelSize() { return voxelSceneData.voxelsize; }
+void SetVoxelRadianceVoxelSize(float value) { voxelSceneData.clipmaps[0].voxelsize = value; }
+float GetVoxelRadianceVoxelSize() { return voxelSceneData.clipmaps[0].voxelsize; }
 void SetVoxelRadianceMaxDistance(float value) { voxelSceneData.maxDistance = value; }
 float GetVoxelRadianceMaxDistance() { return voxelSceneData.maxDistance; }
 int GetVoxelRadianceResolution() { return voxelSceneData.res; }

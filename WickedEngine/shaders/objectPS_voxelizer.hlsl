@@ -242,8 +242,11 @@ void main(PSInput input, in uint coverage : SV_Coverage)
 	color.rgb += emissiveColor;
 
 	// output:
-	float3 diff = (P - GetFrame().voxelradiance_center) * GetFrame().voxelradiance_resolution_rcp * GetFrame().voxelradiance_size_rcp;
+	VoxelClipMap clipmap = GetFrame().voxel_clipmaps[g_xVoxelizer.clipmap_index];
+	float3 diff = (P - clipmap.center) * GetFrame().voxelradiance_resolution_rcp / clipmap.voxelSize;
 	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+	if (!is_saturated(uvw))
+		return;
 	uint3 writecoord = floor(uvw * GetFrame().voxelradiance_resolution);
 
 	float3 aniso_direction = N;

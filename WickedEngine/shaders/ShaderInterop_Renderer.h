@@ -828,6 +828,13 @@ static const uint VISIBILITY_TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE
 
 static const int impostorCaptureAngles = 36;
 
+static const uint VOXEL_GI_CLIPMAP_COUNT = 6;
+struct VoxelClipMap
+{
+	float3 center;		// center of clipmap volume in world space
+	float voxelSize;	// half-extent of one voxel
+};
+
 // These option bits can be read from options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
 static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
@@ -868,19 +875,6 @@ struct FrameCB
 	int			texture_volumetricclouds_shadow_index;
 	float2		padding0;
 
-	float3		voxelradiance_center;			// center of the voxel grid in world space units
-	float		voxelradiance_max_distance;		// maximum raymarch distance for voxel GI in world-space
-
-	float		voxelradiance_size;				// voxel half-extent in world space units
-	float		voxelradiance_size_rcp;			// 1.0 / voxel-half extent
-	uint		voxelradiance_resolution;		// voxel grid resolution
-	float		voxelradiance_resolution_rcp;	// 1.0 / voxel grid resolution
-
-	uint		voxelradiance_mipcount;			// voxel grid mipmap count
-	uint		voxelradiance_numcones;			// number of diffuse cones to trace
-	float		voxelradiance_numcones_rcp;		// 1.0 / number of diffuse cones to trace
-	float		voxelradiance_stepsize;			// raymarch step size in voxel space units
-
 	uint		envprobe_mipcount;
 	float		envprobe_mipcount_rcp;
 	uint		lightarray_offset;			// indexing into entity array
@@ -912,6 +906,14 @@ struct FrameCB
 	float		gi_boost;
 
 	ShaderScene scene;
+
+
+	uint		voxelradiance_resolution;		// voxel grid resolution
+	float		voxelradiance_resolution_rcp;	// 1.0 / voxel grid resolution
+	float		voxelradiance_stepsize;			// raymarch step size in voxel space units
+	float		voxelradiance_max_distance;		// maximum raymarch distance for voxel GI in world-space
+
+	VoxelClipMap voxel_clipmaps[VOXEL_GI_CLIPMAP_COUNT];
 };
 
 struct CameraCB
@@ -1016,6 +1018,13 @@ CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)
 	float4 xLightColor;
 	float4 xLightEnerdis;
 };
+
+struct VoxelizerCB
+{
+	int3 offsetfromPrevFrame;
+	int clipmap_index;
+};
+CONSTANTBUFFER(g_xVoxelizer, VoxelizerCB, CBSLOT_RENDERER_VOXELIZER);
 
 struct LensFlarePush
 {

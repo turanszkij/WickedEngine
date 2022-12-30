@@ -82,15 +82,16 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	float3 color = 0;
 	float alpha = 0;
 
+	VoxelClipMap clipmap0 = GetFrame().voxel_clipmaps[0];
+	const float voxelSize0 = clipmap0.voxelSize * 2; // full extent
+	const float voxelSize0_rcp = rcp(voxelSize0);
+
 	const float coneCoefficient = 2 * tan(coneAperture * 0.5);
-	const float voxelSize = GetFrame().voxelradiance_size * 2; // full extent
-	const float voxelSize_rcp = rcp(voxelSize);
 	
 	// We need to offset the cone start position to avoid sampling its own voxel (self-occlusion):
-	//	Unfortunately, it will result in disconnection between nearby surfaces :(
-	float dist = voxelSize; // offset by cone dir so that first sample of all cones are not the same
+	float dist = voxelSize0; // offset by cone dir so that first sample of all cones are not the same
 	float step_dist = dist;
-	float3 startPos = P + N * voxelSize * VOXEL_INITIAL_OFFSET * SQRT2; // sqrt2 is diagonal voxel half-extent
+	float3 startPos = P + N * voxelSize0 * VOXEL_INITIAL_OFFSET * SQRT2; // sqrt2 is diagonal voxel half-extent
 
 	float3 aniso_direction = -coneDirection;
 	float3 face_offsets = float3(
@@ -104,29 +105,52 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	// We will break off the loop if the sampling distance is too far for performance reasons:
 	while (dist < GetFrame().voxelradiance_max_distance && alpha < 1)
 	{
-		float diameter = max(voxelSize, coneCoefficient * dist);
-		float mip = log2(diameter * voxelSize_rcp);
+		float3 p0 = startPos + coneDirection * dist;
 
-		// Because we do the ray-marching in world space, we need to remap into 3d texture space before sampling:
-		float3 tc = startPos + coneDirection * dist;
-		tc = (tc - GetFrame().voxelradiance_center) * GetFrame().voxelradiance_size_rcp;
-		tc *= GetFrame().voxelradiance_resolution_rcp;
-		tc = tc * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		float diameter = max(voxelSize0, coneCoefficient * dist);
+		float mip = log2(diameter * voxelSize0_rcp);
 
-		// break if the ray exits the voxel grid:
-		if (!is_saturated(tc))
-			break;
+		float clipmap_index_below = floor(mip);
+		float clipmap_blend = frac(mip);
 
-		tc.x /= 6.0;
-		float4 sam =
-			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.x, tc.y, tc.z), mip) * direction_weights.x +
-			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.y, tc.y, tc.z), mip) * direction_weights.y +
-			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.z, tc.y, tc.z), mip) * direction_weights.z
-			;
+		// Two clipmap levels will be sampled:
+		float4 clipmap_sam[2];
+		for (uint c = 0; c <= 1; ++c)
+		{
+			float3 tc = 0;
+			uint clipmap_index_base = clipmap_index_below + c;
+			uint clipmap_index = 0;
+			float clipmap_voxelSize = 1;
 
-		// correction:
-		float correction = step_dist * voxelSize_rcp;
-		sam *= correction;
+			// Try to find appropriate clipmap level:
+			do {
+				clipmap_index = min(VOXEL_GI_CLIPMAP_COUNT - 1, clipmap_index_base);
+				VoxelClipMap clipmap = GetFrame().voxel_clipmaps[clipmap_index];
+				clipmap_voxelSize = clipmap.voxelSize;
+
+				tc = (p0 - clipmap.center) / clipmap.voxelSize;
+				tc *= GetFrame().voxelradiance_resolution_rcp;
+				tc = tc * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+
+				clipmap_index_base++;
+			} while (!is_saturated(tc) && clipmap_index_base < VOXEL_GI_CLIPMAP_COUNT);
+
+			tc.x /= 6.0; // remap into anisotropic
+			tc.y = (tc.y + clipmap_index) / VOXEL_GI_CLIPMAP_COUNT; // remap into clipmap
+
+			clipmap_sam[c] =
+				voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.x, tc.y, tc.z), 0) * direction_weights.x +
+				voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.y, tc.y, tc.z), 0) * direction_weights.y +
+				voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.z, tc.y, tc.z), 0) * direction_weights.z
+				;
+
+			// correction:
+			float correction = step_dist / clipmap_voxelSize;
+			clipmap_sam[c] *= correction;
+		}
+
+		// blend two clipmap samples:
+		float4 sam = lerp(clipmap_sam[0], clipmap_sam[1], clipmap_blend);
 
 		// this is the correct blending to avoid black-staircase artifact (ray stepped front-to back, so blend front to back):
 		float a = 1 - alpha;

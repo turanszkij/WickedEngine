@@ -465,21 +465,11 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 
 inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 {
-	[branch] if (GetFrame().voxelradiance_resolution != 0)
+	[branch] if (GetFrame().texture_voxelgi_index >= 0)
 	{
-		// determine blending factor (we will blend out voxel GI on grid edges):
-		float3 voxelSpacePos = surface.P - GetFrame().voxelradiance_center;
-		voxelSpacePos *= GetFrame().voxelradiance_size_rcp;
-		voxelSpacePos *= GetFrame().voxelradiance_resolution_rcp;
-		voxelSpacePos = saturate(abs(voxelSpacePos));
-		float blend = 1 - pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 8);
-
 		// diffuse:
-		if (blend > 0)
-		{
-			float4 trace = ConeTraceDiffuse(texture_voxelgi, surface.P, surface.N);
-			lighting.indirect.diffuse = mad(lighting.indirect.diffuse, 1 - trace.a, trace.rgb);
-		}
+		float4 trace = ConeTraceDiffuse(texture_voxelgi, surface.P, surface.N);
+		lighting.indirect.diffuse = mad(lighting.indirect.diffuse, 1 - trace.a, trace.rgb);
 
 		// specular:
 		[branch]
