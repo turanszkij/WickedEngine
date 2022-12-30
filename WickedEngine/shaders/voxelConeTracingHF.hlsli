@@ -102,16 +102,18 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	float3 direction_weights = abs(coneDirection);
 	//float3 direction_weights = sqr(coneDirection);
 
+	const float half_texel = 0.5 * GetFrame().vxgi.resolution_rcp;
+
 	// We will break off the loop if the sampling distance is too far for performance reasons:
 	while (dist < GetFrame().vxgi.max_distance && alpha < 1)
 	{
 		float3 p0 = startPos + coneDirection * dist;
 
 		float diameter = max(voxelSize0, coneCoefficient * dist);
-		float mip = log2(diameter * voxelSize0_rcp);
+		float lod = log2(diameter * voxelSize0_rcp);
 
-		float clipmap_index_below = floor(mip);
-		float clipmap_blend = frac(mip);
+		float clipmap_index_below = floor(lod);
+		float clipmap_blend = frac(lod);
 
 		// Two clipmap levels will be sampled:
 		float4 clipmap_sam[2];
@@ -135,14 +137,18 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 				clipmap_index_base++;
 			} while (!is_saturated(tc) && clipmap_index_base < VOXEL_GI_CLIPMAP_COUNT);
 
+			// half texel correction is applied to avoid sampling over current clipmap:
+			tc = clamp(tc, half_texel, 1 - half_texel);
+
 			tc.x /= 6.0; // remap into anisotropic
 			tc.y = (tc.y + clipmap_index) / VOXEL_GI_CLIPMAP_COUNT; // remap into clipmap
 
+			// sample anisotropically 3 times, weighted by cone direction:
 			clipmap_sam[c] =
 				voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.x, tc.y, tc.z), 0) * direction_weights.x +
 				voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.y, tc.y, tc.z), 0) * direction_weights.y +
 				voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.z, tc.y, tc.z), 0) * direction_weights.z
-				;
+			;
 
 			// correction:
 			float correction = step_dist / clipmap_voxelSize;
@@ -172,19 +178,6 @@ inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in floa
 {
 	float4 amount = 0;
 
-#if 0
-	float3x3 tangentSpace = get_tangentspace(N);
-	const float aperture = tan(PI * 0.5 * 0.33);
-	for (uint cone = 0; cone < GetFrame().vxgi.numcones; ++cone) // quality is between 1 and 16 cones
-	{
-		float2 hamm = hammersley2d(cone, GetFrame().vxgi.numcones);
-		float3 hemisphere = hemispherepoint_cos(hamm.x, hamm.y);
-		float3 coneDirection = mul(hemisphere, tangentSpace);
-
-		amount += ConeTrace(voxels, P, N, coneDirection, aperture);
-	}
-	amount *= GetFrame().vxgi.numcones_rcp;
-#else
 	float sum = 0;
 	for (uint i = 0; i < DIFFUSE_CONE_COUNT; ++i)
 	{
@@ -196,7 +189,6 @@ inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in floa
 		sum += cosTheta;
 	}
 	amount /= sum;
-#endif 
 
 	amount.rgb = max(0, amount.rgb);
 	amount.a = saturate(amount.a);

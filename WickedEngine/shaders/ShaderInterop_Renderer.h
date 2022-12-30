@@ -1007,13 +1007,6 @@ CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)
 	float4 xLightEnerdis;
 };
 
-struct VoxelizerCB
-{
-	int3 offsetfromPrevFrame;
-	int clipmap_index;
-};
-CONSTANTBUFFER(g_xVoxelizer, VoxelizerCB, CBSLOT_RENDERER_VOXELIZER);
-
 struct LensFlarePush
 {
 	float3 xLensFlarePos;

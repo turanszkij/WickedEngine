@@ -269,25 +269,19 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	voxelRadianceCheckBox.SetCheck(wi::renderer::GetVoxelRadianceEnabled());
 	AddWidget(&voxelRadianceCheckBox);
 
-	voxelRadianceDebugCheckBox.Create("DEBUG: ");
-	voxelRadianceDebugCheckBox.SetTooltip("Toggle Voxel GI visualization.");
-	voxelRadianceDebugCheckBox.SetPos(XMFLOAT2(x + wid + 1, y));
-	voxelRadianceDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	voxelRadianceDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawVoxelHelper(args.bValue);
+	voxelRadianceDebugCombo.Create("");
+	voxelRadianceDebugCombo.SetTooltip("Toggle Voxel GI visualization.");
+	voxelRadianceDebugCombo.SetPos(XMFLOAT2(x + wid + 1, y));
+	voxelRadianceDebugCombo.SetSize(XMFLOAT2(80, itemheight));
+	voxelRadianceDebugCombo.AddItem("No debug", 0);
+	for (uint32_t i = 0; i < VOXEL_GI_CLIPMAP_COUNT; ++i)
+	{
+		voxelRadianceDebugCombo.AddItem("Clipmap " + std::to_string(i), i);
+	}
+	voxelRadianceDebugCombo.OnSelect([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawVoxelHelper(args.iValue != 0, (int)args.userdata);
 	});
-	voxelRadianceDebugCheckBox.SetCheck(wi::renderer::GetToDrawVoxelHelper());
-	AddWidget(&voxelRadianceDebugCheckBox);
-
-	voxelRadianceSecondaryBounceCheckBox.Create("Voxel GI 2nd Bounce: ");
-	voxelRadianceSecondaryBounceCheckBox.SetTooltip("Toggle secondary light bounce computation for Voxel GI.");
-	voxelRadianceSecondaryBounceCheckBox.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceSecondaryBounceCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	voxelRadianceSecondaryBounceCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceSecondaryBounceEnabled(args.bValue);
-	});
-	voxelRadianceSecondaryBounceCheckBox.SetCheck(wi::renderer::GetVoxelRadianceSecondaryBounceEnabled());
-	AddWidget(&voxelRadianceSecondaryBounceCheckBox);
+	AddWidget(&voxelRadianceDebugCombo);
 
 	voxelRadianceReflectionsCheckBox.Create("Reflections: ");
 	voxelRadianceReflectionsCheckBox.SetTooltip("Toggle specular reflections computation for Voxel GI.");
@@ -308,16 +302,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		wi::renderer::SetVoxelRadianceVoxelSize(args.fValue);
 	});
 	AddWidget(&voxelRadianceVoxelSizeSlider);
-
-	voxelRadianceConeTracingSlider.Create(1, 16, 8, 15, "Voxel GI NumCones: ");
-	voxelRadianceConeTracingSlider.SetTooltip("Adjust the number of cones sampled in the radiance gathering phase.");
-	voxelRadianceConeTracingSlider.SetSize(XMFLOAT2(wid, itemheight));
-	voxelRadianceConeTracingSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceConeTracingSlider.SetValue((float)wi::renderer::GetVoxelRadianceNumCones());
-	voxelRadianceConeTracingSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceNumCones(args.iValue);
-	});
-	AddWidget(&voxelRadianceConeTracingSlider);
 
 	voxelRadianceRayStepSizeSlider.Create(0.5f, 2.0f, 0.5f, 10000, "Voxel GI Ray Step: ");
 	voxelRadianceRayStepSizeSlider.SetTooltip("Adjust the precision of ray marching for cone tracing step. Lower values = more precision but slower performance.");
@@ -1678,12 +1662,10 @@ void GraphicsWindow::ResizeLayout()
 		ddgiRayCountSlider.SetVisible(false);
 		ddgiBlendSpeedSlider.SetVisible(false);
 		ddgiSmoothBackfaceSlider.SetVisible(false);
-		voxelRadianceDebugCheckBox.SetVisible(false);
+		voxelRadianceDebugCombo.SetVisible(false);
 		voxelRadianceCheckBox.SetVisible(false);
-		voxelRadianceSecondaryBounceCheckBox.SetVisible(false);
 		voxelRadianceReflectionsCheckBox.SetVisible(false);
 		voxelRadianceVoxelSizeSlider.SetVisible(false);
-		voxelRadianceConeTracingSlider.SetVisible(false);
 		voxelRadianceRayStepSizeSlider.SetVisible(false);
 		voxelRadianceMaxDistanceSlider.SetVisible(false);
 	}
@@ -1705,12 +1687,10 @@ void GraphicsWindow::ResizeLayout()
 		ddgiBlendSpeedSlider.SetVisible(true);
 		ddgiSmoothBackfaceSlider.SetVisible(true);
 		ddgiSmoothBackfaceSlider.SetValue(editor->GetCurrentScene().ddgi.smooth_backface);
-		voxelRadianceDebugCheckBox.SetVisible(true);
+		voxelRadianceDebugCombo.SetVisible(true);
 		voxelRadianceCheckBox.SetVisible(true);
-		voxelRadianceSecondaryBounceCheckBox.SetVisible(true);
 		voxelRadianceReflectionsCheckBox.SetVisible(true);
 		voxelRadianceVoxelSizeSlider.SetVisible(true);
-		voxelRadianceConeTracingSlider.SetVisible(true);
 		voxelRadianceRayStepSizeSlider.SetVisible(true);
 		voxelRadianceMaxDistanceSlider.SetVisible(true);
 
@@ -1734,12 +1714,10 @@ void GraphicsWindow::ResizeLayout()
 
 		y += jump;
 
-		add_right(voxelRadianceCheckBox);
-		add_right(voxelRadianceDebugCheckBox);
-		add_right(voxelRadianceSecondaryBounceCheckBox);
+		add_right(voxelRadianceDebugCombo);
+		voxelRadianceCheckBox.SetPos(XMFLOAT2(voxelRadianceDebugCombo.GetPos().x - voxelRadianceCheckBox.GetSize().x - padding, voxelRadianceDebugCombo.GetPos().y));
 		add_right(voxelRadianceReflectionsCheckBox);
 		add(voxelRadianceVoxelSizeSlider);
-		add(voxelRadianceConeTracingSlider);
 		add(voxelRadianceRayStepSizeSlider);
 		add(voxelRadianceMaxDistanceSlider);
 	}

@@ -21,4 +21,11 @@ struct VXGI
 	VoxelClipMap clipmaps[VOXEL_GI_CLIPMAP_COUNT];
 };
 
+struct VoxelizerCB
+{
+	int3 offsetfromPrevFrame;
+	int clipmap_index;
+};
+CONSTANTBUFFER(g_xVoxelizer, VoxelizerCB, CBSLOT_RENDERER_VOXELIZER);
+
 #endif // WI_SHADERINTEROP_VXGI_H

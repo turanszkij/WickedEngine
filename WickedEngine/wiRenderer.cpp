@@ -80,7 +80,6 @@ bool debugForceFields = false;
 bool debugCameras = false;
 bool debugColliders = false;
 bool gridHelper = false;
-bool voxelHelper = false;
 bool advancedLightCulling = true;
 bool variableRateShadingClassification = false;
 bool variableRateShadingClassificationDebug = false;
@@ -111,10 +110,8 @@ struct VoxelizedSceneData
 {
 	bool enabled = false;
 	uint32_t res = 128;
-	uint32_t numCones = 2;
 	float rayStepSize = 0.75f;
 	float maxDistance = 100.0f;
-	bool secondaryBounceEnabled = false;
 	bool reflectionsEnabled = true;
 	bool pre_clear = true;
 	struct ClipMap
@@ -125,6 +122,8 @@ struct VoxelizedSceneData
 		XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
 	} clipmaps[VOXEL_GI_CLIPMAP_COUNT];
 	uint32_t clipmap_to_update = 0;
+	bool debug = false;
+	int debug_clipmap_level = 0;
 } voxelSceneData;
 
 Texture shadowMapAtlas;
@@ -6288,16 +6287,15 @@ void DrawDebugWorld(
 		device->EventEnd(cmd);
 	}
 
-	if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE].IsValid())
+	if (voxelSceneData.debug && textures[TEXTYPE_3D_VOXELRADIANCE].IsValid())
 	{
 		device->EventBegin("Debug Voxels", cmd);
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_VOXEL], cmd);
 
-		static int clipmap_debug = 0;
 		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.clipmaps[clipmap_debug].center))* camera.GetViewProjection());
-		sb.g_xColor = float4(1, 1, 1, 1);
+		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
+		sb.g_xColor = float4((float)voxelSceneData.debug_clipmap_level, 1, 1, 1);
 
 		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
@@ -14639,8 +14637,8 @@ void SetToDrawDebugColliders(bool param) { debugColliders = param; }
 bool GetToDrawDebugColliders() { return debugColliders; }
 bool GetToDrawGridHelper() { return gridHelper; }
 void SetToDrawGridHelper(bool value) { gridHelper = value; }
-bool GetToDrawVoxelHelper() { return voxelHelper; }
-void SetToDrawVoxelHelper(bool value) { voxelHelper = value; }
+bool GetToDrawVoxelHelper() { return voxelSceneData.debug; }
+void SetToDrawVoxelHelper(bool value, int clipmap_level) { voxelSceneData.debug = value; voxelSceneData.debug_clipmap_level = clipmap_level; }
 void SetDebugLightCulling(bool enabled) { debugLightCulling = enabled; }
 bool GetDebugLightCulling() { return debugLightCulling; }
 void SetAdvancedLightCulling(bool enabled) { advancedLightCulling = enabled; }
@@ -14665,8 +14663,6 @@ void SetVoxelRadianceEnabled(bool enabled)
 	voxelSceneData.enabled = enabled;
 }
 bool GetVoxelRadianceEnabled() { return voxelSceneData.enabled; }
-void SetVoxelRadianceSecondaryBounceEnabled(bool enabled) { voxelSceneData.secondaryBounceEnabled = enabled; }
-bool GetVoxelRadianceSecondaryBounceEnabled() { return voxelSceneData.secondaryBounceEnabled; }
 void SetVoxelRadianceReflectionsEnabled(bool enabled) { voxelSceneData.reflectionsEnabled = enabled; }
 bool GetVoxelRadianceReflectionsEnabled() { return voxelSceneData.reflectionsEnabled; }
 void SetVoxelRadianceVoxelSize(float value) { voxelSceneData.clipmaps[0].voxelsize = value; }
@@ -14674,8 +14670,6 @@ float GetVoxelRadianceVoxelSize() { return voxelSceneData.clipmaps[0].voxelsize;
 void SetVoxelRadianceMaxDistance(float value) { voxelSceneData.maxDistance = value; }
 float GetVoxelRadianceMaxDistance() { return voxelSceneData.maxDistance; }
 int GetVoxelRadianceResolution() { return voxelSceneData.res; }
-void SetVoxelRadianceNumCones(int value) { voxelSceneData.numCones = value; }
-int GetVoxelRadianceNumCones() { return voxelSceneData.numCones; }
 float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
 void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }

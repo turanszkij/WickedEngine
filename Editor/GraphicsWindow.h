@@ -30,11 +30,9 @@ public:
 	wi::gui::Slider ddgiBlendSpeedSlider;
 	wi::gui::Slider ddgiSmoothBackfaceSlider;
 	wi::gui::CheckBox voxelRadianceCheckBox;
-	wi::gui::CheckBox voxelRadianceDebugCheckBox;
-	wi::gui::CheckBox voxelRadianceSecondaryBounceCheckBox;
+	wi::gui::ComboBox voxelRadianceDebugCombo;
 	wi::gui::CheckBox voxelRadianceReflectionsCheckBox;
 	wi::gui::Slider voxelRadianceVoxelSizeSlider;
-	wi::gui::Slider voxelRadianceConeTracingSlider;
 	wi::gui::Slider voxelRadianceRayStepSizeSlider;
 	wi::gui::Slider voxelRadianceMaxDistanceSlider;
 	wi::gui::Slider speedMultiplierSlider;

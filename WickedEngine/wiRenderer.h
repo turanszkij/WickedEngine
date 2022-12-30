@@ -261,7 +261,6 @@ namespace wi::renderer
 	void RefreshImpostors(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 	// Call once per frame to repack out of date lightmaps in the atlas
 	void RefreshLightmaps(const wi::scene::Scene& scene, wi::graphics::CommandList cmd, uint8_t instanceInclusionMask = 0xFF);
-	// Voxelize the scene into a voxel grid 3D texture
 	void VoxelRadiance(const Visibility& vis, wi::graphics::CommandList cmd);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
 	void ResolveMSAADepthBuffer(const wi::graphics::Texture& dst, const wi::graphics::Texture& src, wi::graphics::CommandList cmd);
@@ -885,7 +884,7 @@ namespace wi::renderer
 	bool GetToDrawGridHelper();
 	void SetToDrawGridHelper(bool value);
 	bool GetToDrawVoxelHelper();
-	void SetToDrawVoxelHelper(bool value);
+	void SetToDrawVoxelHelper(bool value, int clipmap_level);
 	void SetDebugLightCulling(bool enabled);
 	bool GetDebugLightCulling();
 	void SetAdvancedLightCulling(bool enabled);
@@ -904,8 +903,6 @@ namespace wi::renderer
 	bool GetFreezeCullingCameraEnabled();
 	void SetVoxelRadianceEnabled(bool enabled);
 	bool GetVoxelRadianceEnabled();
-	void SetVoxelRadianceSecondaryBounceEnabled(bool enabled);
-	bool GetVoxelRadianceSecondaryBounceEnabled();
 	void SetVoxelRadianceReflectionsEnabled(bool enabled);
 	bool GetVoxelRadianceReflectionsEnabled();
 	void SetVoxelRadianceVoxelSize(float value);
@@ -913,8 +910,6 @@ namespace wi::renderer
 	void SetVoxelRadianceMaxDistance(float value);
 	float GetVoxelRadianceMaxDistance();
 	int GetVoxelRadianceResolution();
-	void SetVoxelRadianceNumCones(int value);
-	int GetVoxelRadianceNumCones();
 	float GetVoxelRadianceRayStepSize();
 	void SetVoxelRadianceRayStepSize(float value);
 	void SetGameSpeed(float value);
