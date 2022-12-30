@@ -13,10 +13,36 @@ void main(
 	inout TriangleStream<GSOutput> output
 )
 {
-	uint clipmap_index = clamp((uint)g_xColor.x, 0, VOXEL_GI_CLIPMAP_COUNT - 1);
+	uint voxel_index = input[0];
+	uint clipmap_index = (uint)g_xColor.x;
+
+	bool min_clip = false;
+	if (clipmap_index == VOXEL_GI_CLIPMAP_COUNT)
+	{
+		min_clip = true;
+		const uint voxel_count = GetFrame().vxgi.resolution * GetFrame().vxgi.resolution * GetFrame().vxgi.resolution;
+		voxel_index = input[0] % voxel_count;
+		clipmap_index = input[0] / voxel_count;
+	}
+
+	uint3 coord = unflatten3D(voxel_index, GetFrame().vxgi.resolution);
+	float3 uvw = (coord + 0.5) * GetFrame().vxgi.resolution_rcp;
+	float3 center = uvw * 2 - 1;
+	center.y *= -1;
+	center *= GetFrame().vxgi.resolution;
+
 	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
 
-	uint3 coord = unflatten3D(input[0], GetFrame().vxgi.resolution);
+	if (min_clip && clipmap_index > 0)
+	{
+		float3 P = GetFrame().vxgi.clipmap_to_world((coord - 0.5) / (GetFrame().vxgi.resolution - 2), clipmap);
+		VoxelClipMap clipmap_below = GetFrame().vxgi.clipmaps[clipmap_index - 1];
+		float3 diff = (P - clipmap_below.center) * GetFrame().vxgi.resolution_rcp / clipmap_below.voxelSize;
+		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		if (is_saturated(uvw))
+			return;
+	}
+
 	uint3 pixel = coord;
 	pixel.y += clipmap_index * GetFrame().vxgi.resolution;
 
@@ -47,11 +73,8 @@ void main(
 		uint j = 0;
 		for (j = 0; j < 3; ++j)
 		{
-			tri[j].pos = float4(coord, 1);
-			tri[j].pos.xyz = tri[j].pos.xyz * GetFrame().vxgi.resolution_rcp * 2 - 1;
-			tri[j].pos.y = -tri[j].pos.y;
-			tri[j].pos.xyz *= GetFrame().vxgi.resolution;
-			tri[j].pos.xyz += (-CUBE[i + j].xyz * 0.5 + 0.5 - float3(0, 1, 0)) * 2;
+			tri[j].pos = float4(center, 1);
+			tri[j].pos.xyz += -CUBE[i + j].xyz;
 		}
 
 		float3 facenormal = -normalize(cross(tri[2].pos.xyz - tri[1].pos.xyz, tri[1].pos.xyz - tri[0].pos.xyz));

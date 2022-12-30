@@ -243,26 +243,31 @@ void main(PSInput input, in uint coverage : SV_Coverage)
 
 	// output:
 	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[g_xVoxelizer.clipmap_index];
-	float3 diff = (P - clipmap.center) * GetFrame().vxgi.resolution_rcp / clipmap.voxelSize;
-	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+	float3 uvw = GetFrame().vxgi.world_to_clipmap(P, clipmap);
 	if (!is_saturated(uvw))
 		return;
 	uint3 writecoord = floor(uvw * GetFrame().vxgi.resolution);
 
 	float3 aniso_direction = N;
+
+#if 0
+	uint face_offset = cubemap_to_uv(aniso_direction).z * GetFrame().vxgi.resolution;
+	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offset, 0, 0), color);
+	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offset, 0, 0), color.aaaa);
+#else
 	float3 face_offsets = float3(
 		aniso_direction.x > 0 ? 0 : 1,
 		aniso_direction.y > 0 ? 2 : 3,
 		aniso_direction.z > 0 ? 4 : 5
 		) * GetFrame().vxgi.resolution;
 	float3 direction_weights = abs(N);
-
 	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offsets.x, 0, 0), color * direction_weights.x);
 	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offsets.y, 0, 0), color * direction_weights.y);
 	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offsets.z, 0, 0), color * direction_weights.z);
 	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offsets.x, 0, 0), color.aaaa * direction_weights.x);
 	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offsets.y, 0, 0), color.aaaa * direction_weights.y);
 	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offsets.z, 0, 0), color.aaaa * direction_weights.z);
+#endif
 
 	//bool done = false;
 	//while (!done)

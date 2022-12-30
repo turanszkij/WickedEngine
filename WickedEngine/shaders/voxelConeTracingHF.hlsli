@@ -130,9 +130,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 				VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
 				clipmap_voxelSize = clipmap.voxelSize;
 
-				tc = (p0 - clipmap.center) / clipmap.voxelSize;
-				tc *= GetFrame().vxgi.resolution_rcp;
-				tc = tc * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				tc = GetFrame().vxgi.world_to_clipmap(p0, clipmap);
 
 				clipmap_index_base++;
 			} while (!is_saturated(tc) && clipmap_index_base < VOXEL_GI_CLIPMAP_COUNT);

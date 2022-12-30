@@ -19,6 +19,24 @@ struct VXGI
 	float		max_distance;	// maximum raymarch distance for voxel GI in world-space
 
 	VoxelClipMap clipmaps[VOXEL_GI_CLIPMAP_COUNT];
+
+#ifndef __cplusplus
+	float3 world_to_clipmap(in float3 P, in VoxelClipMap clipmap)
+	{
+		float3 diff = (P - clipmap.center) * resolution_rcp / clipmap.voxelSize;
+		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		return uvw;
+	}
+	float3 clipmap_to_world(in float3 uvw, in VoxelClipMap clipmap)
+	{
+		float3 P = uvw * 2 - 1;
+		P.y *= -1;
+		P *= clipmap.voxelSize;
+		P *= resolution;
+		P += clipmap.center;
+		return P;
+	}
+#endif // __cplusplus
 };
 
 struct VoxelizerCB

@@ -109,7 +109,7 @@ std::atomic<size_t> SHADER_MISSING{ 0 };
 struct VoxelizedSceneData
 {
 	bool enabled = false;
-	uint32_t res = 128;
+	uint32_t res = 64;
 	float rayStepSize = 0.75f;
 	float maxDistance = 100.0f;
 	bool reflectionsEnabled = true;
@@ -6299,7 +6299,12 @@ void DrawDebugWorld(
 
 		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
-		device->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, cmd);
+		uint32_t vertexCount = voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
+		if (voxelSceneData.debug_clipmap_level == VOXEL_GI_CLIPMAP_COUNT)
+		{
+			vertexCount *= VOXEL_GI_CLIPMAP_COUNT;
+		}
+		device->Draw(vertexCount, 0, cmd);
 
 		device->EventEnd(cmd);
 	}

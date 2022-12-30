@@ -274,6 +274,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	voxelRadianceDebugCombo.SetPos(XMFLOAT2(x + wid + 1, y));
 	voxelRadianceDebugCombo.SetSize(XMFLOAT2(80, itemheight));
 	voxelRadianceDebugCombo.AddItem("No debug", 0);
+	voxelRadianceDebugCombo.AddItem("Clipmaps", VOXEL_GI_CLIPMAP_COUNT);
 	for (uint32_t i = 0; i < VOXEL_GI_CLIPMAP_COUNT; ++i)
 	{
 		voxelRadianceDebugCombo.AddItem("Clipmap " + std::to_string(i), i);
