@@ -242,19 +242,19 @@ void main(PSInput input, in uint coverage : SV_Coverage)
 	color.rgb += emissiveColor;
 
 	// output:
-	VoxelClipMap clipmap = GetFrame().voxel_clipmaps[g_xVoxelizer.clipmap_index];
-	float3 diff = (P - clipmap.center) * GetFrame().voxelradiance_resolution_rcp / clipmap.voxelSize;
+	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[g_xVoxelizer.clipmap_index];
+	float3 diff = (P - clipmap.center) * GetFrame().vxgi.resolution_rcp / clipmap.voxelSize;
 	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 	if (!is_saturated(uvw))
 		return;
-	uint3 writecoord = floor(uvw * GetFrame().voxelradiance_resolution);
+	uint3 writecoord = floor(uvw * GetFrame().vxgi.resolution);
 
 	float3 aniso_direction = N;
 	float3 face_offsets = float3(
 		aniso_direction.x > 0 ? 0 : 1,
 		aniso_direction.y > 0 ? 2 : 3,
 		aniso_direction.z > 0 ? 4 : 5
-		) * GetFrame().voxelradiance_resolution;
+		) * GetFrame().vxgi.resolution;
 	float3 direction_weights = abs(N);
 
 	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offsets.x, 0, 0), color * direction_weights.x);

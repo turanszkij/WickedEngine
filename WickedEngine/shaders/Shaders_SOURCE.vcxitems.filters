@@ -1177,5 +1177,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_FSR2.h">
       <Filter>interop</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_VXGI.h">
+      <Filter>interop</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -82,7 +82,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	float3 color = 0;
 	float alpha = 0;
 
-	VoxelClipMap clipmap0 = GetFrame().voxel_clipmaps[0];
+	VoxelClipMap clipmap0 = GetFrame().vxgi.clipmaps[0];
 	const float voxelSize0 = clipmap0.voxelSize * 2; // full extent
 	const float voxelSize0_rcp = rcp(voxelSize0);
 
@@ -103,7 +103,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	//float3 direction_weights = sqr(coneDirection);
 
 	// We will break off the loop if the sampling distance is too far for performance reasons:
-	while (dist < GetFrame().voxelradiance_max_distance && alpha < 1)
+	while (dist < GetFrame().vxgi.max_distance && alpha < 1)
 	{
 		float3 p0 = startPos + coneDirection * dist;
 
@@ -125,11 +125,11 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 			// Try to find appropriate clipmap level:
 			do {
 				clipmap_index = min(VOXEL_GI_CLIPMAP_COUNT - 1, clipmap_index_base);
-				VoxelClipMap clipmap = GetFrame().voxel_clipmaps[clipmap_index];
+				VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
 				clipmap_voxelSize = clipmap.voxelSize;
 
 				tc = (p0 - clipmap.center) / clipmap.voxelSize;
-				tc *= GetFrame().voxelradiance_resolution_rcp;
+				tc *= GetFrame().vxgi.resolution_rcp;
 				tc = tc * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 				clipmap_index_base++;
@@ -158,7 +158,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 		alpha += a * sam.a;
 
 		// step along ray:
-		step_dist = diameter * GetFrame().voxelradiance_stepsize;
+		step_dist = diameter * GetFrame().vxgi.stepsize;
 		dist += step_dist;
 	}
 
@@ -175,15 +175,15 @@ inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in floa
 #if 0
 	float3x3 tangentSpace = get_tangentspace(N);
 	const float aperture = tan(PI * 0.5 * 0.33);
-	for (uint cone = 0; cone < GetFrame().voxelradiance_numcones; ++cone) // quality is between 1 and 16 cones
+	for (uint cone = 0; cone < GetFrame().vxgi.numcones; ++cone) // quality is between 1 and 16 cones
 	{
-		float2 hamm = hammersley2d(cone, GetFrame().voxelradiance_numcones);
+		float2 hamm = hammersley2d(cone, GetFrame().vxgi.numcones);
 		float3 hemisphere = hemispherepoint_cos(hamm.x, hamm.y);
 		float3 coneDirection = mul(hemisphere, tangentSpace);
 
 		amount += ConeTrace(voxels, P, N, coneDirection, aperture);
 	}
-	amount *= GetFrame().voxelradiance_numcones_rcp;
+	amount *= GetFrame().vxgi.numcones_rcp;
 #else
 	float sum = 0;
 	for (uint i = 0; i < DIFFUSE_CONE_COUNT; ++i)

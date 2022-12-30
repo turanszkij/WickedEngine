@@ -25,7 +25,7 @@ void main(
 	inout TriangleStream< GSOutput > outputStream
 )
 {
-	VoxelClipMap clipmap = GetFrame().voxel_clipmaps[g_xVoxelizer.clipmap_index];
+	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[g_xVoxelizer.clipmap_index];
 
 	float3 facenormal = abs(input[0].nor + input[1].nor + input[2].nor);
 	uint maxi = facenormal[1] > facenormal[0] ? 1 : 0;
@@ -50,7 +50,7 @@ void main(
 		}
 
 		// Voxel grid space -> Clip space
-		output.pos.xy *= GetFrame().voxelradiance_resolution_rcp;
+		output.pos.xy *= GetFrame().vxgi.resolution_rcp;
 		output.pos.zw = 1;
 
 		// Append the rest of the parameters as is:

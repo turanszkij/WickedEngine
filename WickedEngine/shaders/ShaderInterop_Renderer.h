@@ -2,6 +2,7 @@
 #define WI_SHADERINTEROP_RENDERER_H
 #include "ShaderInterop.h"
 #include "ShaderInterop_Weather.h"
+#include "ShaderInterop_VXGI.h"
 
 struct ShaderScene
 {
@@ -828,13 +829,6 @@ static const uint VISIBILITY_TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE
 
 static const int impostorCaptureAngles = 36;
 
-static const uint VOXEL_GI_CLIPMAP_COUNT = 6;
-struct VoxelClipMap
-{
-	float3 center;		// center of clipmap volume in world space
-	float voxelSize;	// half-extent of one voxel
-};
-
 // These option bits can be read from options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
 static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
@@ -907,13 +901,7 @@ struct FrameCB
 
 	ShaderScene scene;
 
-
-	uint		voxelradiance_resolution;		// voxel grid resolution
-	float		voxelradiance_resolution_rcp;	// 1.0 / voxel grid resolution
-	float		voxelradiance_stepsize;			// raymarch step size in voxel space units
-	float		voxelradiance_max_distance;		// maximum raymarch distance for voxel GI in world-space
-
-	VoxelClipMap voxel_clipmaps[VOXEL_GI_CLIPMAP_COUNT];
+	VXGI vxgi;
 };
 
 struct CameraCB

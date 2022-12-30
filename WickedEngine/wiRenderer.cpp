@@ -26,6 +26,7 @@
 #include "shaders/ShaderInterop_Raytracing.h"
 #include "shaders/ShaderInterop_BVH.h"
 #include "shaders/ShaderInterop_DDGI.h"
+#include "shaders/ShaderInterop_VXGI.h"
 #include "shaders/ShaderInterop_FSR2.h"
 
 #include <algorithm>
@@ -3120,7 +3121,7 @@ void UpdatePerFrameData(
 		XMFLOAT3 extents = XMFLOAT3(voxelSceneData.res * clipmap.voxelsize, voxelSceneData.res * clipmap.voxelsize, voxelSceneData.res * clipmap.voxelsize);
 		if (extents.x != clipmap.extents.x || extents.y != clipmap.extents.y || extents.z != clipmap.extents.z)
 		{
-			//voxelSceneData.pre_clear = true;
+			voxelSceneData.pre_clear = true;
 		}
 		clipmap.extents = extents;
 	}
@@ -3358,14 +3359,14 @@ void UpdatePerFrameData(
 	frameCB.frame_count = (uint)device->GetFrameCount();
 	frameCB.blue_noise_phase = (frameCB.frame_count & 0xFF) * 1.6180339887f;
 
-	frameCB.voxelradiance_max_distance = voxelSceneData.maxDistance;
-	frameCB.voxelradiance_resolution = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
-	frameCB.voxelradiance_resolution_rcp = GetVoxelRadianceEnabled() ? 1.0f / (float)frameCB.voxelradiance_resolution : 0; //PE: was inf.
-	frameCB.voxelradiance_stepsize = voxelSceneData.rayStepSize;
+	frameCB.vxgi.max_distance = voxelSceneData.maxDistance;
+	frameCB.vxgi.resolution = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
+	frameCB.vxgi.resolution_rcp = GetVoxelRadianceEnabled() ? 1.0f / (float)frameCB.vxgi.resolution : 0; //PE: was inf.
+	frameCB.vxgi.stepsize = voxelSceneData.rayStepSize;
 	for (uint i = 0; i < VOXEL_GI_CLIPMAP_COUNT; ++i)
 	{
-		frameCB.voxel_clipmaps[i].center = voxelSceneData.clipmaps[i].center;
-		frameCB.voxel_clipmaps[i].voxelSize = voxelSceneData.clipmaps[i].voxelsize;
+		frameCB.vxgi.clipmaps[i].center = voxelSceneData.clipmaps[i].center;
+		frameCB.vxgi.clipmaps[i].voxelSize = voxelSceneData.clipmaps[i].voxelsize;
 	}
 
 	// The order is very important here:
@@ -3565,6 +3566,9 @@ void UpdateRenderData(
 
 	auto prof_updatebuffer_cpu = wi::profiler::BeginRangeCPU("Update Buffers (CPU)");
 	auto prof_updatebuffer_gpu = wi::profiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
+
+	GPUBarrier frame_cb_barrier = GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST);
+	device->Barrier(&frame_cb_barrier, 1, cmd);
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
 	barrier_stack.push_back(GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
@@ -7392,6 +7396,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 				GPUBarrier::Image(&voxel_render_radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Image(&voxel_render_opacity, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Image(&voxel_prev_radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -7399,6 +7404,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		if (voxelSceneData.pre_clear)
 		{
 			device->ClearUAV(&voxel_prev_radiance, 0, cmd);
+			device->ClearUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 			voxelSceneData.pre_clear = false;
 		}
 		else
@@ -7426,7 +7432,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 				GPUBarrier::Memory(&voxel_render_radiance),
 				GPUBarrier::Memory(&voxel_render_opacity),
 				GPUBarrier::Image(&voxel_prev_radiance, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
