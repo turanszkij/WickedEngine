@@ -82,7 +82,8 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	float3 color = 0;
 	float alpha = 0;
 
-	VoxelClipMap clipmap0 = GetFrame().vxgi.clipmaps[0];
+	uint clipmap_index0 = 0;
+	VoxelClipMap clipmap0 = GetFrame().vxgi.clipmaps[clipmap_index0];
 	const float voxelSize0 = clipmap0.voxelSize * 2; // full extent
 	const float voxelSize0_rcp = rcp(voxelSize0);
 
@@ -110,7 +111,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 		float3 p0 = startPos + coneDirection * dist;
 
 		float diameter = max(voxelSize0, coneCoefficient * dist);
-		float lod = log2(diameter * voxelSize0_rcp);
+		float lod = max(clipmap_index0, log2(diameter * voxelSize0_rcp));
 
 		float clipmap_index_below = floor(lod);
 		float clipmap_blend = frac(lod);
@@ -134,6 +135,9 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 
 				clipmap_index_base++;
 			} while (!is_saturated(tc) && clipmap_index_base < VOXEL_GI_CLIPMAP_COUNT);
+
+			// Increase min mip level only after first trilinear sample (perf improvement):
+			clipmap_index0 = c == 0 ? max(clipmap_index0, clipmap_index) : clipmap_index0;
 
 			// half texel correction is applied to avoid sampling over current clipmap:
 			tc = clamp(tc, half_texel, 1 - half_texel);

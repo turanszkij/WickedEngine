@@ -85,6 +85,7 @@ void main(
 			color = float4(0, 0, 0, 1);
 		}
 
+		if(color.a > 0)
 		for (j = 0; j < 3; ++j)
 		{
 			tri[j].pos.xyz *= clipmap.voxelSize;

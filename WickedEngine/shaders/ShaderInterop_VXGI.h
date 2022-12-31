@@ -3,6 +3,10 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
+// If enabled, geometry shader will be used to voxelize, and axis will be selected by geometry shader
+//	If disabled, vertex shader with instance replication will be used for each axis
+#define VOXELIZATION_GEOMETRY_SHADER_ENABLED
+
 static const uint VOXEL_GI_CLIPMAP_COUNT = 6;
 
 struct VoxelClipMap

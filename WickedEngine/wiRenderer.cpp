@@ -438,9 +438,12 @@ SHADERTYPE GetGSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 
 	switch (renderPass)
 	{
+#ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 	case RENDERPASS_VOXELIZE:
 		realGS = GSTYPE_VOXELIZER;
 		break;
+#endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
+
 	case RENDERPASS_ENVMAPCAPTURE:
 		if (device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
 			break;
@@ -7453,7 +7456,12 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->BindUAV(&voxel_render_opacity, 1, cmd);
 
 			device->RenderPassBegin(nullptr, 0, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
-			RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, false, nullptr, 1);
+#ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
+			const uint32_t frustum_count = 1; // axis qwill be selected by gemetry shader
+#else
+			const uint32_t frustum_count = 3; // just used to replicate 3 times for main axes, but not with real frustums
+#endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
+			RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, false, nullptr, frustum_count);
 			device->RenderPassEnd(cmd);
 
 			{
