@@ -121,20 +121,20 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 		for (uint c = 0; c <= 1; ++c)
 		{
 			float3 tc = 0;
-			uint clipmap_index_base = clipmap_index_below + c;
-			uint clipmap_index = 0;
 			float clipmap_voxelSize = 1;
 
 			// Try to find appropriate clipmap level:
-			do {
-				clipmap_index = min(VOXEL_GI_CLIPMAP_COUNT - 1, clipmap_index_base);
+			uint clipmap_index = min(clipmap_index_below + c, VOXEL_GI_CLIPMAP_COUNT - 1);
+			for (; clipmap_index < VOXEL_GI_CLIPMAP_COUNT; ++clipmap_index)
+			{
 				VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
-				clipmap_voxelSize = clipmap.voxelSize;
-
 				tc = GetFrame().vxgi.world_to_clipmap(p0, clipmap);
-
-				clipmap_index_base++;
-			} while (!is_saturated(tc) && clipmap_index_base < VOXEL_GI_CLIPMAP_COUNT);
+				if (is_saturated(tc))
+				{
+					clipmap_voxelSize = clipmap.voxelSize;
+					break;
+				}
+			}
 
 			// Increase min mip level only after first trilinear sample (perf improvement):
 			clipmap_index0 = c == 0 ? max(clipmap_index0, clipmap_index) : clipmap_index0;
