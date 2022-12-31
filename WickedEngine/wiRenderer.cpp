@@ -7338,7 +7338,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		if (bbox.intersects(aabb))
 		{
 			const ObjectComponent& object = vis.scene->objects[i];
-			if (object.IsRenderable())
+			if (object.IsRenderable() && (voxelSceneData.clipmap_to_update < (VOXEL_GI_CLIPMAP_COUNT - object.cascadeMask)))
 			{
 				renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
 			}
@@ -7457,7 +7457,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 			device->RenderPassBegin(nullptr, 0, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
 #ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
-			const uint32_t frustum_count = 1; // axis qwill be selected by gemetry shader
+			const uint32_t frustum_count = 1; // axis will be selected by geometry shader
 #else
 			const uint32_t frustum_count = 3; // just used to replicate 3 times for main axes, but not with real frustums
 #endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
