@@ -11,8 +11,7 @@
 
 Texture3D<float4> input_previous_radiance : register(t0);
 
-RWTexture3D<uint> output_radiance : register(u0);
-RWTexture3D<uint> output_opacity : register(u1);
+RWTexture3D<uint> output_atomic : register(u0);
 
 void VoxelAtomicAverage(inout RWTexture3D<uint> output, in uint3 dest, in float4 color)
 {
@@ -249,25 +248,59 @@ void main(PSInput input, in uint coverage : SV_Coverage)
 	uint3 writecoord = floor(uvw * GetFrame().vxgi.resolution);
 
 	float3 aniso_direction = N;
-
-#if 0
-	uint face_offset = cubemap_to_uv(aniso_direction).z * GetFrame().vxgi.resolution;
-	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offset, 0, 0), color);
-	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offset, 0, 0), color.aaaa);
-#else
 	float3 face_offsets = float3(
 		aniso_direction.x > 0 ? 0 : 1,
 		aniso_direction.y > 0 ? 2 : 3,
 		aniso_direction.z > 0 ? 4 : 5
 		) * GetFrame().vxgi.resolution;
 	float3 direction_weights = abs(N);
-	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offsets.x, 0, 0), color * direction_weights.x);
-	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offsets.y, 0, 0), color * direction_weights.y);
-	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offsets.z, 0, 0), color * direction_weights.z);
-	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offsets.x, 0, 0), color.aaaa * direction_weights.x);
-	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offsets.y, 0, 0), color.aaaa * direction_weights.y);
-	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offsets.z, 0, 0), color.aaaa * direction_weights.z);
-#endif
+
+	writecoord.z *= 5; // de-interleaved channels
+
+	if (direction_weights.x > 0)
+	{
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, 0)], PackVoxelChannel(color.r * direction_weights.x));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, 1)], PackVoxelChannel(color.g * direction_weights.x));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, 2)], PackVoxelChannel(color.b * direction_weights.x));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, 3)], PackVoxelChannel(color.a * direction_weights.x));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, 4)], 1);
+	}
+	if (direction_weights.y > 0)
+	{
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, 0)], PackVoxelChannel(color.r * direction_weights.y));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, 1)], PackVoxelChannel(color.g * direction_weights.y));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, 2)], PackVoxelChannel(color.b * direction_weights.y));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, 3)], PackVoxelChannel(color.a * direction_weights.y));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, 4)], 1);
+	}
+	if (direction_weights.z > 0)
+	{
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, 0)], PackVoxelChannel(color.r * direction_weights.z));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, 1)], PackVoxelChannel(color.g * direction_weights.z));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, 2)], PackVoxelChannel(color.b * direction_weights.z));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, 3)], PackVoxelChannel(color.a * direction_weights.z));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, 4)], 1);
+	}
+
+
+//#if 0
+//	uint face_offset = cubemap_to_uv(aniso_direction).z * GetFrame().vxgi.resolution;
+//	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offset, 0, 0), color);
+//	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offset, 0, 0), color.aaaa);
+//#else
+//	float3 face_offsets = float3(
+//		aniso_direction.x > 0 ? 0 : 1,
+//		aniso_direction.y > 0 ? 2 : 3,
+//		aniso_direction.z > 0 ? 4 : 5
+//		) * GetFrame().vxgi.resolution;
+//	float3 direction_weights = abs(N);
+//	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offsets.x, 0, 0), color * direction_weights.x);
+//	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offsets.y, 0, 0), color * direction_weights.y);
+//	VoxelAtomicAverage(output_radiance, writecoord + uint3(face_offsets.z, 0, 0), color * direction_weights.z);
+//	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offsets.x, 0, 0), color.aaaa * direction_weights.x);
+//	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offsets.y, 0, 0), color.aaaa * direction_weights.y);
+//	VoxelAtomicAverage(output_opacity, writecoord + uint3(face_offsets.z, 0, 0), color.aaaa * direction_weights.z);
+//#endif
 
 	//bool done = false;
 	//while (!done)

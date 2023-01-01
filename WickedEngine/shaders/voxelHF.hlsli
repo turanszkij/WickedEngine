@@ -33,4 +33,13 @@ float4 UnpackVoxelColor(in uint colorMask)
 	return retVal;
 }
 
+uint PackVoxelChannel(float value)
+{
+	return uint(value * 1024);
+}
+float UnpackVoxelChannel(uint value)
+{
+	return float(value) / 1024.0f;
+}
+
 #endif // WI_VOXEL_HF

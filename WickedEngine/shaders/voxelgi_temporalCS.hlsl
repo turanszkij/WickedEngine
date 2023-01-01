@@ -3,8 +3,7 @@
 #include "voxelHF.hlsli"
 
 Texture3D<float4> input_previous_radiance : register(t0);
-Texture3D<uint> input_render_radiance : register(t1);
-Texture3D<uint> input_render_opacity : register(t2);
+Texture3D<uint> input_render_atomic : register(t1);
 
 RWTexture3D<float4> output_radiance : register(u0);
 
@@ -21,16 +20,22 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		uint3 dst = src;
 		dst.y += g_xVoxelizer.clipmap_index * GetFrame().vxgi.resolution;
 
-		float4 radiance;
-		float opacity;
+		float4 radiance = 0;
 		if (i < 6)
 		{
-			radiance = UnpackVoxelColor(input_render_radiance[src]);
-			opacity = UnpackVoxelColor(input_render_opacity[src]).r;
+			src.z *= 5;
+			uint count = input_render_atomic[src + uint3(0, 0, 4)];
+			if (count > 0)
+			{
+				radiance.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, 0)]);
+				radiance.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, 1)]);
+				radiance.b = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, 2)]);
+				radiance.a = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, 3)]);
+				radiance /= count;
+			}
 
 			if (radiance.a > 0)
 			{
-				radiance.a = opacity;
 				if (any(g_xVoxelizer.offsetfromPrevFrame))
 				{
 					int3 coord = dst - g_xVoxelizer.offsetfromPrevFrame;
@@ -76,10 +81,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				aniso_colors[face_offsets.z] * direction_weights.z
 				;
 			radiance = sam;
-			opacity = sam.a;
 		}
 
 		output_radiance[dst] = radiance;
-		//output_radiance[dst] = opacity;
 	}
 }

@@ -7368,24 +7368,20 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 			voxelSceneData.pre_clear = true;
 		}
-		static Texture voxel_render_radiance;
-		static Texture voxel_render_opacity;
-		if (!voxel_render_radiance.IsValid())
+		static Texture voxel_render_atomic;
+		if (!voxel_render_atomic.IsValid())
 		{
 			TextureDesc desc;
 			desc.type = TextureDesc::Type::TEXTURE_3D;
 			desc.width = voxelSceneData.res * 6;
 			desc.height = voxelSceneData.res;
-			desc.depth = voxelSceneData.res;
+			desc.depth = voxelSceneData.res * 5; // r,g,b,a,counter
 			desc.mip_levels = 1;
 			desc.usage = Usage::DEFAULT;
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-
 			desc.format = Format::R32_UINT;
-			device->CreateTexture(&desc, nullptr, &voxel_render_radiance);
-			device->SetName(&voxel_render_radiance, "voxel_render_radiance");
-			device->CreateTexture(&desc, nullptr, &voxel_render_opacity);
-			device->SetName(&voxel_render_opacity, "voxel_render_opacity");
+			device->CreateTexture(&desc, nullptr, &voxel_render_atomic);
+			device->SetName(&voxel_render_atomic, "voxel_render_atomic");
 		}
 
 		BindCommonResources(cmd);
@@ -7397,8 +7393,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&voxel_render_radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&voxel_render_opacity, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&voxel_render_atomic, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Image(&voxel_prev_radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 			};
@@ -7426,15 +7421,13 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		{
 			device->EventBegin("Clear Current Voxels", cmd);
 
-			device->ClearUAV(&voxel_render_radiance, 0, cmd);
-			device->ClearUAV(&voxel_render_opacity, 0, cmd);
+			device->ClearUAV(&voxel_render_atomic, 0, cmd);
 			device->EventEnd(cmd);
 		}
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&voxel_render_radiance),
-				GPUBarrier::Memory(&voxel_render_opacity),
+				GPUBarrier::Memory(&voxel_render_atomic),
 				GPUBarrier::Image(&voxel_prev_radiance, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 			};
@@ -7450,8 +7443,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->BindViewports(1, &vp, cmd);
 
 			device->BindResource(&voxel_prev_radiance, 0, cmd);
-			device->BindUAV(&voxel_render_radiance, 0, cmd);
-			device->BindUAV(&voxel_render_opacity, 1, cmd);
+			device->BindUAV(&voxel_render_atomic, 0, cmd);
 
 			device->RenderPassBegin(nullptr, 0, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
 #ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
@@ -7464,8 +7456,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&voxel_render_radiance, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-					GPUBarrier::Image(&voxel_render_opacity, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+					GPUBarrier::Image(&voxel_render_atomic, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 					GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
@@ -7478,8 +7469,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->EventBegin("Temporal Blend Voxels", cmd);
 			device->BindComputeShader(&shaders[CSTYPE_VOXELGI_TEMPORAL], cmd);
 			device->BindResource(&voxel_prev_radiance, 0, cmd);
-			device->BindResource(&voxel_render_radiance, 1, cmd);
-			device->BindResource(&voxel_render_opacity, 2, cmd);
+			device->BindResource(&voxel_render_atomic, 1, cmd);
 			device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 
 			device->Dispatch(voxelSceneData.res / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
