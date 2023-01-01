@@ -8,76 +8,13 @@
 #define VOXEL_INITIAL_OFFSET 1
 #endif // VOXEL_INITIAL_OFFSET
 
-//#define USE_32_CONES
-#ifdef USE_32_CONES
-// 32 Cones for higher quality (16 on average per hemisphere)
-static const int DIFFUSE_CONE_COUNT = 32;
-static const float DIFFUSE_CONE_APERTURE = 0.628319;
-
-static const float3 DIFFUSE_CONE_DIRECTIONS[32] = {
-	float3(0.898904, 0.435512, 0.0479745),
-	float3(0.898904, -0.435512, -0.0479745),
-	float3(0.898904, 0.0479745, -0.435512),
-	float3(0.898904, -0.0479745, 0.435512),
-	float3(-0.898904, 0.435512, -0.0479745),
-	float3(-0.898904, -0.435512, 0.0479745),
-	float3(-0.898904, 0.0479745, 0.435512),
-	float3(-0.898904, -0.0479745, -0.435512),
-	float3(0.0479745, 0.898904, 0.435512),
-	float3(-0.0479745, 0.898904, -0.435512),
-	float3(-0.435512, 0.898904, 0.0479745),
-	float3(0.435512, 0.898904, -0.0479745),
-	float3(-0.0479745, -0.898904, 0.435512),
-	float3(0.0479745, -0.898904, -0.435512),
-	float3(0.435512, -0.898904, 0.0479745),
-	float3(-0.435512, -0.898904, -0.0479745),
-	float3(0.435512, 0.0479745, 0.898904),
-	float3(-0.435512, -0.0479745, 0.898904),
-	float3(0.0479745, -0.435512, 0.898904),
-	float3(-0.0479745, 0.435512, 0.898904),
-	float3(0.435512, -0.0479745, -0.898904),
-	float3(-0.435512, 0.0479745, -0.898904),
-	float3(0.0479745, 0.435512, -0.898904),
-	float3(-0.0479745, -0.435512, -0.898904),
-	float3(0.57735, 0.57735, 0.57735),
-	float3(0.57735, 0.57735, -0.57735),
-	float3(0.57735, -0.57735, 0.57735),
-	float3(0.57735, -0.57735, -0.57735),
-	float3(-0.57735, 0.57735, 0.57735),
-	float3(-0.57735, 0.57735, -0.57735),
-	float3(-0.57735, -0.57735, 0.57735),
-	float3(-0.57735, -0.57735, -0.57735)
-};
-#else // 16 cones for lower quality (8 on average per hemisphere)
-static const int DIFFUSE_CONE_COUNT = 16;
-static const float DIFFUSE_CONE_APERTURE = 0.872665;
-
-static const float3 DIFFUSE_CONE_DIRECTIONS[16] = {
-	float3(0.57735, 0.57735, 0.57735),
-	float3(0.57735, -0.57735, -0.57735),
-	float3(-0.57735, 0.57735, -0.57735),
-	float3(-0.57735, -0.57735, 0.57735),
-	float3(-0.903007, -0.182696, -0.388844),
-	float3(-0.903007, 0.182696, 0.388844),
-	float3(0.903007, -0.182696, 0.388844),
-	float3(0.903007, 0.182696, -0.388844),
-	float3(-0.388844, -0.903007, -0.182696),
-	float3(0.388844, -0.903007, 0.182696),
-	float3(0.388844, 0.903007, -0.182696),
-	float3(-0.388844, 0.903007, 0.182696),
-	float3(-0.182696, -0.388844, -0.903007),
-	float3(0.182696, 0.388844, -0.903007),
-	float3(-0.182696, 0.388844, 0.903007),
-	float3(0.182696, -0.388844, 0.903007)
-};
-#endif
-
 // voxels:			3D Texture containing voxel scene with direct diffuse lighting (or direct + secondary indirect bounce)
 // P:				world-space position of receiving surface
 // N:				world-space normal vector of receiving surface
 // coneDirection:	world-space cone direction in the direction to perform the trace
 // coneAperture:	cone width
-inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, in float3 coneDirection, in float coneAperture)
+// precomputed_direction : avoid 3x anisotropic weight sampling, and isntead directly use a slice that has precomputed cone direction weighted data
+inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, in float3 coneDirection, in float coneAperture, uint precomputed_direction = 0)
 {
 	float3 color = 0;
 	float alpha = 0;
@@ -99,7 +36,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 		aniso_direction.x > 0 ? 0 : 1,
 		aniso_direction.y > 0 ? 2 : 3,
 		aniso_direction.z > 0 ? 4 : 5
-	) / 6.0;
+	) / (6.0 + DIFFUSE_CONE_COUNT);
 	float3 direction_weights = abs(coneDirection);
 	//float3 direction_weights = sqr(coneDirection);
 
@@ -142,15 +79,22 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 			// half texel correction is applied to avoid sampling over current clipmap:
 			tc = clamp(tc, half_texel, 1 - half_texel);
 
-			tc.x /= 6.0; // remap into anisotropic
+			tc.x = (tc.x + precomputed_direction) / (6.0 + DIFFUSE_CONE_COUNT); // remap into anisotropic
 			tc.y = (tc.y + clipmap_index) / VOXEL_GI_CLIPMAP_COUNT; // remap into clipmap
 
-			// sample anisotropically 3 times, weighted by cone direction:
-			clipmap_sam[c] =
-				voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.x, tc.y, tc.z), 0) * direction_weights.x +
-				voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.y, tc.y, tc.z), 0) * direction_weights.y +
-				voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.z, tc.y, tc.z), 0) * direction_weights.z
-			;
+			if (precomputed_direction == 0)
+			{
+				// sample anisotropically 3 times, weighted by cone direction:
+				clipmap_sam[c] =
+					voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.x, tc.y, tc.z), 0) * direction_weights.x +
+					voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.y, tc.y, tc.z), 0) * direction_weights.y +
+					voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.z, tc.y, tc.z), 0) * direction_weights.z
+				;
+			}
+			else
+			{
+				clipmap_sam[c] = voxels.SampleLevel(sampler_linear_clamp, tc, 0);
+			}
 
 			// correction:
 			float correction = step_dist / clipmap_voxelSize;
@@ -187,7 +131,8 @@ inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in floa
 		const float cosTheta = dot(N, coneDirection);
 		if (cosTheta <= 0)
 			continue;
-		amount += ConeTrace(voxels, P, N, coneDirection, DIFFUSE_CONE_APERTURE) * cosTheta;
+		const uint precomputed_direction = 6 + i; // optimization, avoids sampling 3 times aniso weights
+		amount += ConeTrace(voxels, P, N, coneDirection, DIFFUSE_CONE_APERTURE, precomputed_direction) * cosTheta;
 		sum += cosTheta;
 	}
 	amount /= sum;

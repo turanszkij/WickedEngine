@@ -50,4 +50,71 @@ struct VoxelizerCB
 };
 CONSTANTBUFFER(g_xVoxelizer, VoxelizerCB, CBSLOT_RENDERER_VOXELIZER);
 
+
+// Cones from: https://github.com/compix/VoxelConeTracingGI/blob/master/assets/shaders/voxelConeTracing/finalLightingPass.frag
+
+//#define USE_32_CONES
+#ifdef USE_32_CONES
+// 32 Cones for higher quality (16 on average per hemisphere)
+static const int DIFFUSE_CONE_COUNT = 32;
+static const float DIFFUSE_CONE_APERTURE = 0.628319;
+
+static const float3 DIFFUSE_CONE_DIRECTIONS[32] = {
+	float3(0.898904, 0.435512, 0.0479745),
+	float3(0.898904, -0.435512, -0.0479745),
+	float3(0.898904, 0.0479745, -0.435512),
+	float3(0.898904, -0.0479745, 0.435512),
+	float3(-0.898904, 0.435512, -0.0479745),
+	float3(-0.898904, -0.435512, 0.0479745),
+	float3(-0.898904, 0.0479745, 0.435512),
+	float3(-0.898904, -0.0479745, -0.435512),
+	float3(0.0479745, 0.898904, 0.435512),
+	float3(-0.0479745, 0.898904, -0.435512),
+	float3(-0.435512, 0.898904, 0.0479745),
+	float3(0.435512, 0.898904, -0.0479745),
+	float3(-0.0479745, -0.898904, 0.435512),
+	float3(0.0479745, -0.898904, -0.435512),
+	float3(0.435512, -0.898904, 0.0479745),
+	float3(-0.435512, -0.898904, -0.0479745),
+	float3(0.435512, 0.0479745, 0.898904),
+	float3(-0.435512, -0.0479745, 0.898904),
+	float3(0.0479745, -0.435512, 0.898904),
+	float3(-0.0479745, 0.435512, 0.898904),
+	float3(0.435512, -0.0479745, -0.898904),
+	float3(-0.435512, 0.0479745, -0.898904),
+	float3(0.0479745, 0.435512, -0.898904),
+	float3(-0.0479745, -0.435512, -0.898904),
+	float3(0.57735, 0.57735, 0.57735),
+	float3(0.57735, 0.57735, -0.57735),
+	float3(0.57735, -0.57735, 0.57735),
+	float3(0.57735, -0.57735, -0.57735),
+	float3(-0.57735, 0.57735, 0.57735),
+	float3(-0.57735, 0.57735, -0.57735),
+	float3(-0.57735, -0.57735, 0.57735),
+	float3(-0.57735, -0.57735, -0.57735)
+};
+#else // 16 cones for lower quality (8 on average per hemisphere)
+static const int DIFFUSE_CONE_COUNT = 16;
+static const float DIFFUSE_CONE_APERTURE = 0.872665;
+
+static const float3 DIFFUSE_CONE_DIRECTIONS[16] = {
+	float3(0.57735, 0.57735, 0.57735),
+	float3(0.57735, -0.57735, -0.57735),
+	float3(-0.57735, 0.57735, -0.57735),
+	float3(-0.57735, -0.57735, 0.57735),
+	float3(-0.903007, -0.182696, -0.388844),
+	float3(-0.903007, 0.182696, 0.388844),
+	float3(0.903007, -0.182696, 0.388844),
+	float3(0.903007, 0.182696, -0.388844),
+	float3(-0.388844, -0.903007, -0.182696),
+	float3(0.388844, -0.903007, 0.182696),
+	float3(0.388844, 0.903007, -0.182696),
+	float3(-0.388844, 0.903007, 0.182696),
+	float3(-0.182696, -0.388844, -0.903007),
+	float3(0.182696, 0.388844, -0.903007),
+	float3(-0.182696, 0.388844, 0.903007),
+	float3(0.182696, -0.388844, 0.903007)
+};
+#endif
+
 #endif // WI_SHADERINTEROP_VXGI_H

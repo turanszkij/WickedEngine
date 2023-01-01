@@ -7347,11 +7347,12 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 	if (!renderQueue.empty())
 	{
+		static Texture voxel_prev_radiance;
 		if (!textures[TEXTYPE_3D_VOXELRADIANCE].IsValid())
 		{
 			TextureDesc desc;
 			desc.type = TextureDesc::Type::TEXTURE_3D;
-			desc.width = voxelSceneData.res * 6;
+			desc.width = voxelSceneData.res * (6 + DIFFUSE_CONE_COUNT);
 			desc.height = voxelSceneData.res * VOXEL_GI_CLIPMAP_COUNT;
 			desc.depth = voxelSceneData.res;
 			desc.mip_levels = 1;
@@ -7362,12 +7363,14 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE]);
 			device->SetName(&textures[TEXTYPE_3D_VOXELRADIANCE], "TEXTYPE_3D_VOXELRADIANCE");
 
+			device->CreateTexture(&desc, nullptr, &voxel_prev_radiance);
+			device->SetName(&voxel_prev_radiance, "voxel_prev_radiance");
+
 			voxelSceneData.pre_clear = true;
 		}
 		static Texture voxel_render_radiance;
 		static Texture voxel_render_opacity;
-		static Texture voxel_prev_radiance;
-		if (!voxel_render_radiance.IsValid() || !voxel_prev_radiance.IsValid())
+		if (!voxel_render_radiance.IsValid())
 		{
 			TextureDesc desc;
 			desc.type = TextureDesc::Type::TEXTURE_3D;
@@ -7383,11 +7386,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->SetName(&voxel_render_radiance, "voxel_render_radiance");
 			device->CreateTexture(&desc, nullptr, &voxel_render_opacity);
 			device->SetName(&voxel_render_opacity, "voxel_render_opacity");
-
-			desc.height = voxelSceneData.res * VOXEL_GI_CLIPMAP_COUNT;
-			desc.format = Format::R16G16B16A16_FLOAT;
-			device->CreateTexture(&desc, nullptr, &voxel_prev_radiance);
-			device->SetName(&voxel_prev_radiance, "voxel_prev_radiance");
 		}
 
 		BindCommonResources(cmd);
@@ -7420,7 +7418,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->BindResource(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 			device->BindUAV(&voxel_prev_radiance, 0, cmd);
 
-			device->Dispatch(voxelSceneData.res * 6 / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
+			device->Dispatch(voxelSceneData.res / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
 
 			device->EventEnd(cmd);
 		}
@@ -7484,7 +7482,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->BindResource(&voxel_render_opacity, 2, cmd);
 			device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 
-			device->Dispatch(voxelSceneData.res * 6 / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
+			device->Dispatch(voxelSceneData.res / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
 
 			{
 				GPUBarrier barriers[] = {
