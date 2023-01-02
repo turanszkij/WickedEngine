@@ -304,8 +304,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&voxelRadianceVoxelSizeSlider);
 
-	voxelRadianceRayStepSizeSlider.Create(0.5f, 2.0f, 0.5f, 10000, "Voxel GI Ray Step: ");
-	voxelRadianceRayStepSizeSlider.SetTooltip("Adjust the precision of ray marching for cone tracing step. Lower values = more precision but slower performance.");
+	voxelRadianceRayStepSizeSlider.Create(0.5f, 4.0f, 1.0f, 10000, "Voxel GI Ray Step: ");
+	voxelRadianceRayStepSizeSlider.SetTooltip("Adjust the precision of ray marching for [reflection] cone tracing step. Lower values = more precision but slower performance.");
 	voxelRadianceRayStepSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	voxelRadianceRayStepSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceRayStepSizeSlider.SetValue(wi::renderer::GetVoxelRadianceRayStepSize());

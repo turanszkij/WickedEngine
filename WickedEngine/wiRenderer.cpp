@@ -110,7 +110,7 @@ struct VoxelizedSceneData
 {
 	bool enabled = false;
 	uint32_t res = 64;
-	float rayStepSize = 0.75f;
+	float rayStepSize = 2;
 	float maxDistance = 100.0f;
 	bool reflectionsEnabled = true;
 	bool pre_clear = true;

@@ -47,8 +47,8 @@ inline float4 SampleVoxelClipMap(in Texture3D<float4> voxels, in float3 P, in ui
 // N:				world-space normal vector of receiving surface
 // coneDirection:	world-space cone direction in the direction to perform the trace
 // coneAperture:	cone width
-// precomputed_direction : avoid 3x anisotropic weight sampling, and isntead directly use a slice that has precomputed cone direction weighted data
-inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, in float3 coneDirection, in float coneAperture, uint precomputed_direction = 0)
+// precomputed_direction : avoid 3x anisotropic weight sampling, and instead directly use a slice that has precomputed cone direction weighted data
+inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, in float3 coneDirection, in float coneAperture, in float stepSize, uint precomputed_direction = 0)
 {
 	float3 color = 0;
 	float alpha = 0;
@@ -97,13 +97,13 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 			sam = lerp(sam, SampleVoxelClipMap(voxels, p0, clipmap_index + 1, step_dist, face_offsets, direction_weights, precomputed_direction), clipmap_blend);
 		}
 
-		// this is the correct blending to avoid black-staircase artifact (ray stepped front-to back, so blend front to back):
+		// front-to back blending:
 		float a = 1 - alpha;
 		color += a * sam.rgb;
 		alpha += a * sam.a;
 
 		// step along ray:
-		step_dist = diameter * GetFrame().vxgi.stepsize;
+		step_dist = diameter * stepSize;
 		dist += step_dist;
 	}
 
@@ -125,7 +125,7 @@ inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in floa
 		if (cosTheta <= 0)
 			continue;
 		const uint precomputed_direction = 6 + i; // optimization, avoids sampling 3 times aniso weights
-		amount += ConeTrace(voxels, P, N, coneDirection, DIFFUSE_CONE_APERTURE, precomputed_direction) * cosTheta;
+		amount += ConeTrace(voxels, P, N, coneDirection, DIFFUSE_CONE_APERTURE, 1, precomputed_direction) * cosTheta;
 		sum += cosTheta;
 	}
 	amount /= sum;
@@ -140,12 +140,15 @@ inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in floa
 // P:				world-space position of receiving surface
 // N:				world-space normal vector of receiving surface
 // V:				world-space view-vector (cameraPosition - P)
-inline float4 ConeTraceSpecular(in Texture3D<float4> voxels, in float3 P, in float3 N, in float3 V, in float roughness)
+inline float4 ConeTraceSpecular(in Texture3D<float4> voxels, in float3 P, in float3 N, in float3 V, in float roughness, in uint2 pixel)
 {
 	float aperture = roughness;
 	float3 coneDirection = reflect(-V, N);
 
-	float4 amount = ConeTrace(voxels, P, N, coneDirection, aperture);
+	// some dithering to help with banding at large step size
+	P += coneDirection * dither(pixel + GetTemporalAASampleRotation()) * GetFrame().vxgi.stepsize;
+
+	float4 amount = ConeTrace(voxels, P, N, coneDirection, aperture, GetFrame().vxgi.stepsize);
 	amount.rgb = max(0, amount.rgb);
 	amount.a = saturate(amount.a);
 
