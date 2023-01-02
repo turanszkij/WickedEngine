@@ -8,6 +8,40 @@
 #define VOXEL_INITIAL_OFFSET 1
 #endif // VOXEL_INITIAL_OFFSET
 
+inline float4 SampleVoxelClipMap(in Texture3D<float4> voxels, in float3 P, in uint clipmap_index, float step_dist, in float3 face_offsets, in float3 direction_weights, uint precomputed_direction = 0)
+{
+	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
+	float3 tc = GetFrame().vxgi.world_to_clipmap(P, clipmap);
+
+	// half texel correction is applied to avoid sampling over current clipmap:
+	const float half_texel = 0.5 * GetFrame().vxgi.resolution_rcp;
+	tc = clamp(tc, half_texel, 1 - half_texel);
+
+	tc.x = (tc.x + precomputed_direction) / (6.0 + DIFFUSE_CONE_COUNT); // remap into anisotropic
+	tc.y = (tc.y + clipmap_index) / VOXEL_GI_CLIPMAP_COUNT; // remap into clipmap
+
+	float4 sam;
+	if (precomputed_direction == 0)
+	{
+		// sample anisotropically 3 times, weighted by cone direction:
+		sam =
+			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.x, tc.y, tc.z), 0) * direction_weights.x +
+			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.y, tc.y, tc.z), 0) * direction_weights.y +
+			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.z, tc.y, tc.z), 0) * direction_weights.z
+			;
+	}
+	else
+	{
+		// sample once for precomputed anisotropically weighted cone direction (uses precomputed_direction):
+		sam = voxels.SampleLevel(sampler_linear_clamp, tc, 0);
+	}
+
+	// correction:
+	sam *= step_dist / clipmap.voxelSize;
+
+	return sam;
+}
+
 // voxels:			3D Texture containing voxel scene with direct diffuse lighting (or direct + secondary indirect bounce)
 // P:				world-space position of receiving surface
 // N:				world-space normal vector of receiving surface
@@ -40,8 +74,6 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	float3 direction_weights = abs(coneDirection);
 	//float3 direction_weights = sqr(coneDirection);
 
-	const float half_texel = 0.5 * GetFrame().vxgi.resolution_rcp;
-
 	// We will break off the loop if the sampling distance is too far for performance reasons:
 	while (dist < GetFrame().vxgi.max_distance && alpha < 1)
 	{
@@ -50,59 +82,20 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 		float diameter = max(voxelSize0, coneCoefficient * dist);
 		float lod = max(clipmap_index0, log2(diameter * voxelSize0_rcp));
 
-		float clipmap_index_below = floor(lod);
+		float clipmap_index = GetFrame().vxgi.find_min_clipmap(p0, floor(lod));
 		float clipmap_blend = frac(lod);
 
-		// Two clipmap levels will be sampled:
-		float4 clipmap_sam[2];
-		for (uint c = 0; c <= 1; ++c)
+		// increase min mip level (perf improvement):
+		clipmap_index0 = max(clipmap_index0, clipmap_index);
+
+		// sample first clipmap level:
+		float4 sam = SampleVoxelClipMap(voxels, p0, clipmap_index, step_dist, face_offsets, direction_weights, precomputed_direction);
+
+		// sample second clipmap if needed and perform trilinear blend:
+		if(clipmap_blend > 0 && clipmap_index < VOXEL_GI_CLIPMAP_COUNT - 1)
 		{
-			float3 tc = 0;
-			float clipmap_voxelSize = 1;
-
-			// Try to find appropriate clipmap level:
-			uint clipmap_index = min(clipmap_index_below + c, VOXEL_GI_CLIPMAP_COUNT - 1);
-			for (; clipmap_index < VOXEL_GI_CLIPMAP_COUNT; ++clipmap_index)
-			{
-				VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
-				tc = GetFrame().vxgi.world_to_clipmap(p0, clipmap);
-				if (is_saturated(tc))
-				{
-					clipmap_voxelSize = clipmap.voxelSize;
-					break;
-				}
-			}
-
-			// Increase min mip level only after first trilinear sample (perf improvement):
-			clipmap_index0 = c == 0 ? max(clipmap_index0, clipmap_index) : clipmap_index0;
-
-			// half texel correction is applied to avoid sampling over current clipmap:
-			tc = clamp(tc, half_texel, 1 - half_texel);
-
-			tc.x = (tc.x + precomputed_direction) / (6.0 + DIFFUSE_CONE_COUNT); // remap into anisotropic
-			tc.y = (tc.y + clipmap_index) / VOXEL_GI_CLIPMAP_COUNT; // remap into clipmap
-
-			if (precomputed_direction == 0)
-			{
-				// sample anisotropically 3 times, weighted by cone direction:
-				clipmap_sam[c] =
-					voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.x, tc.y, tc.z), 0) * direction_weights.x +
-					voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.y, tc.y, tc.z), 0) * direction_weights.y +
-					voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.z, tc.y, tc.z), 0) * direction_weights.z
-				;
-			}
-			else
-			{
-				clipmap_sam[c] = voxels.SampleLevel(sampler_linear_clamp, tc, 0);
-			}
-
-			// correction:
-			float correction = step_dist / clipmap_voxelSize;
-			clipmap_sam[c] *= correction;
+			sam = lerp(sam, SampleVoxelClipMap(voxels, p0, clipmap_index + 1, step_dist, face_offsets, direction_weights, precomputed_direction), clipmap_blend);
 		}
-
-		// blend two clipmap samples:
-		float4 sam = lerp(clipmap_sam[0], clipmap_sam[1], clipmap_blend);
 
 		// this is the correct blending to avoid black-staircase artifact (ray stepped front-to back, so blend front to back):
 		float a = 1 - alpha;
