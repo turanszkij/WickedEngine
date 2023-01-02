@@ -884,7 +884,7 @@ struct FrameCB
 	uint		temporalaa_samplerotation;
 	float		blue_noise_phase;
 
-	int			padding1;
+	int			texture_voxelgi_sdf_index;
 	int			texture_random64x64_index;
 	int			texture_bluenoise_index;
 	int			texture_sheenlut_index;

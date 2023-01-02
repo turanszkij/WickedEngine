@@ -1058,6 +1058,9 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_fsr2_reconstruct_previous_depth_pass.hlsl">
       <Filter>ffx-fsr2</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)voxelgi_sdf_jumpfloodCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">

@@ -40,6 +40,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"depthoffield_tileMaxCOC_horizontalCS", wi::graphics::ShaderStage::CS},
 	{"voxelgi_offsetprevCS", wi::graphics::ShaderStage::CS},
 	{"voxelgi_temporalCS", wi::graphics::ShaderStage::CS},
+	{"voxelgi_sdf_jumpfloodCS", wi::graphics::ShaderStage::CS},
 	{"upsample_bilateral_float1CS", wi::graphics::ShaderStage::CS},
 	{"upsample_bilateral_float4CS", wi::graphics::ShaderStage::CS},
 	{"upsample_bilateral_unorm1CS", wi::graphics::ShaderStage::CS},

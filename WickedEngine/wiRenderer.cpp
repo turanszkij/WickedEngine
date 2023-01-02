@@ -918,6 +918,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], "resolveMSAADepthStencilCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VOXELGI_OFFSETPREV], "voxelgi_offsetprevCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VOXELGI_TEMPORAL], "voxelgi_temporalCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VOXELGI_SDF_JUMPFLOOD], "voxelgi_sdf_jumpfloodCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_TRANSMITTANCELUT], "skyAtmosphere_transmittanceLutCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], "skyAtmosphere_multiScatteredLuminanceLutCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_SKYVIEWLUT], "skyAtmosphere_skyViewLutCS.cso"); });
@@ -3484,6 +3485,7 @@ void UpdatePerFrameData(
 	frameCB.texture_multiscatteringlut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], SubresourceType::SRV);
 	frameCB.texture_skyluminancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], SubresourceType::SRV);
 	frameCB.texture_voxelgi_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_VOXELRADIANCE], SubresourceType::SRV);
+	frameCB.texture_voxelgi_sdf_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_VOXELSDF], SubresourceType::SRV);
 	frameCB.buffer_entityarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_ENTITYARRAY], SubresourceType::SRV);
 	frameCB.buffer_entitymatrixarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_MATRIXARRAY], SubresourceType::SRV);
 
@@ -7383,6 +7385,23 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->CreateTexture(&desc, nullptr, &voxel_render_atomic);
 			device->SetName(&voxel_render_atomic, "voxel_render_atomic");
 		}
+		static Texture voxel_sdf_temp;
+		if (!textures[TEXTYPE_3D_VOXELSDF].IsValid())
+		{
+			TextureDesc desc;
+			desc.type = TextureDesc::Type::TEXTURE_3D;
+			desc.width = voxelSceneData.res;
+			desc.height = voxelSceneData.res * VOXEL_GI_CLIPMAP_COUNT;
+			desc.depth = voxelSceneData.res;
+			desc.mip_levels = 1;
+			desc.usage = Usage::DEFAULT;
+			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+			desc.format = Format::R16_FLOAT;
+			device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELSDF]);
+			device->SetName(&textures[TEXTYPE_3D_VOXELSDF], "textures[TEXTYPE_3D_VOXELSDF]");
+			device->CreateTexture(&desc, nullptr, &voxel_sdf_temp);
+			device->SetName(&voxel_sdf_temp, "voxel_sdf_temp");
+		}
 
 		BindCommonResources(cmd);
 
@@ -7404,6 +7423,8 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		{
 			device->ClearUAV(&voxel_prev_radiance, 0, cmd);
 			device->ClearUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
+			device->ClearUAV(&textures[TEXTYPE_3D_VOXELSDF], 0, cmd);
+			device->ClearUAV(&voxel_sdf_temp, 0, cmd);
 			voxelSceneData.pre_clear = false;
 		}
 		else
@@ -7430,6 +7451,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 				GPUBarrier::Memory(&voxel_render_atomic),
 				GPUBarrier::Image(&voxel_prev_radiance, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELSDF], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -7457,7 +7479,8 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&voxel_render_atomic, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-					GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS)
+					GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELSDF], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -7471,15 +7494,51 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			device->BindResource(&voxel_prev_radiance, 0, cmd);
 			device->BindResource(&voxel_render_atomic, 1, cmd);
 			device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
+			device->BindUAV(&textures[TEXTYPE_3D_VOXELSDF], 1, cmd);
 
 			device->Dispatch(voxelSceneData.res / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
 
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+					GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELSDF], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
+			device->EventEnd(cmd);
+		}
+
+		{
+			device->EventBegin("SDF Jump Flood", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_VOXELGI_SDF_JUMPFLOOD], cmd);
+			device->BindResource(&textures[TEXTYPE_3D_VOXELSDF], 0, cmd);
+			device->BindUAV(&voxel_sdf_temp, 0, cmd);
+
+			const Texture* _write = &voxel_sdf_temp;
+			const Texture* _read = &textures[TEXTYPE_3D_VOXELSDF];
+
+			int passcount = (int)std::ceil(std::log2((float)voxelSceneData.res));
+			for (int i = 0; i < passcount; ++i)
+			{
+				float jump_size = std::pow(2.0f, float(passcount - i - 1));
+				device->PushConstants(&jump_size, sizeof(jump_size), cmd);
+
+				device->BindUAV(_write, 0, cmd);
+				device->BindResource(_read, 0, cmd);
+
+				device->Dispatch(voxelSceneData.res / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
+
+				{
+					GPUBarrier barriers[] = {
+						GPUBarrier::Image(_write, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+						GPUBarrier::Image(_read, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					};
+					device->Barrier(barriers, arraysize(barriers), cmd);
+				}
+
+				std::swap(_read, _write);
+			}
+
 			device->EventEnd(cmd);
 		}
 	}

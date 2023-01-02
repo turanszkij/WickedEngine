@@ -1,4 +1,3 @@
-#define VOXEL_INITIAL_OFFSET 4
 #include "globals.hlsli"
 #include "voxelHF.hlsli"
 
@@ -6,11 +5,14 @@ Texture3D<float4> input_previous_radiance : register(t0);
 Texture3D<uint> input_render_atomic : register(t1);
 
 RWTexture3D<float4> output_radiance : register(u0);
+RWTexture3D<float> output_sdf : register(u1);
 
 [numthreads(8, 8, 8)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	float4 aniso_colors[6];
+
+	float sdf = 65504.0;
 
 	for (uint i = 0; i < 6 + DIFFUSE_CONE_COUNT; ++i)
 	{
@@ -63,6 +65,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				radiance = 0;
 			}
 			aniso_colors[i] = radiance;
+
+			if (radiance.a > 0)
+			{
+				sdf = 0;
+			}
 		}
 		else
 		{
@@ -85,4 +92,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		output_radiance[dst] = radiance;
 	}
+
+	uint3 dst_sdf = DTid;
+	dst_sdf.y += g_xVoxelizer.clipmap_index * GetFrame().vxgi.resolution;
+	output_sdf[dst_sdf] = sdf;
 }
