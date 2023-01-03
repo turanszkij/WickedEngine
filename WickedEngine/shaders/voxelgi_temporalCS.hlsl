@@ -7,7 +7,7 @@ Texture3D<uint> input_render_atomic : register(t1);
 RWTexture3D<float4> output_radiance : register(u0);
 RWTexture3D<float> output_sdf : register(u1);
 
-static const float blend_speed = 0.2;
+static const float blend_speed = 0.5;
 
 [numthreads(8, 8, 8)]
 void main(uint3 DTid : SV_DispatchThreadID)

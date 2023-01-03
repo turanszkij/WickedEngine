@@ -7,7 +7,12 @@
 //	If disabled, vertex shader with instance replication will be used for each axis
 #define VOXELIZATION_GEOMETRY_SHADER_ENABLED
 
+// Number of clipmaps, each doubling in size:
 static const uint VXGI_CLIPMAP_COUNT = 6;
+// Upsampling amount for diffuse GI resolve pass:
+static const uint VXGI_DIFFUSE_UPSAMPLING = 4;
+// Upsampling amount for specular GI resolve pass:
+static const uint VXGI_SPECULAR_UPSAMPLING = 2;
 
 struct VoxelClipMap
 {

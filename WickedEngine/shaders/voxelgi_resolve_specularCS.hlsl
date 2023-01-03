@@ -10,13 +10,13 @@ RWTexture2D<float4> output : register(u0);
 
 // If this is enabled, disocclusion regions will be retraced, otherwise they will be filled by primary sample color:
 //#define HIGH_QUALITY_DISOCCLUSION
-static const float disocclusion_threshold = 0.5;
+static const float disocclusion_threshold = 0.2;
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const uint2 pixel_base = DTid.xy * 2;
-	const uint2 pixel_offset = unflatten2D(GetFrame().frame_count % 4, 2);
+	const uint2 pixel_base = DTid.xy * VXGI_SPECULAR_UPSAMPLING;
+	const uint2 pixel_offset = unflatten2D(GetFrame().frame_count % (VXGI_SPECULAR_UPSAMPLING * VXGI_SPECULAR_UPSAMPLING), VXGI_SPECULAR_UPSAMPLING);
 	const uint2 pixel = clamp(pixel_base + pixel_offset, 0, postprocess.resolution - 1);
 	const float2 uv = ((float2)pixel + 0.5) * postprocess.resolution_rcp;
 
@@ -28,21 +28,18 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float3 V = normalize(GetCamera().position - P);
 
 	Texture3D<float4> voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
-	float4 color = ConeTraceSpecular(voxels, P, N, V, roughness * roughness, pixel.xy);
+	float4 color = ConeTraceSpecular(voxels, P, N, V, roughness * roughness, DTid.xy);
 
 	output[pixel] = color;
 
-	for (uint x = 0; x < 2; ++x)
+	for (uint x = 0; x < VXGI_SPECULAR_UPSAMPLING; ++x)
 	{
-		for (uint y = 0; y < 2; ++y)
+		for (uint y = 0; y < VXGI_SPECULAR_UPSAMPLING; ++y)
 		{
 			const uint2 neighbor_offset = uint2(x, y);
 			const uint2 pixel_neighbor = clamp(pixel_base + neighbor_offset, 0, postprocess.resolution - 1);
 			if (any(neighbor_offset != pixel_offset))
 			{
-#if 0
-				output[pixel_neighbor] = input_prev[pixel_neighbor];
-#else
 				const float2 velocity = texture_velocity[pixel_neighbor];
 				const float2 uv_neighbor = (pixel_neighbor + 0.5) * postprocess.resolution_rcp;
 				const float2 uv_neighbor_prev = uv_neighbor + velocity;
@@ -75,7 +72,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					//output[pixel_neighbor] = float4(1,0,0,1);
 #endif // HIGH_QUALITY_DISOCCLUSION
 				}
-#endif
 			}
 		}
 	}

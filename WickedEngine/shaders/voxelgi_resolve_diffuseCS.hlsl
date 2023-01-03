@@ -16,8 +16,8 @@ static const float disocclusion_threshold = 1;
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const uint2 pixel_base = DTid.xy * 4;
-	const uint2 pixel_offset = unflatten2D(GetFrame().frame_count % 16, 4);
+	const uint2 pixel_base = DTid.xy * VXGI_DIFFUSE_UPSAMPLING;
+	const uint2 pixel_offset = unflatten2D(GetFrame().frame_count % (VXGI_DIFFUSE_UPSAMPLING * VXGI_DIFFUSE_UPSAMPLING), VXGI_DIFFUSE_UPSAMPLING);
 	const uint2 pixel = clamp(pixel_base + pixel_offset, 0, postprocess.resolution - 1);
 	const float2 uv = ((float2)pixel + 0.5) * postprocess.resolution_rcp;
 
@@ -35,9 +35,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	output[pixel] = color;
 
-	for (uint x = 0; x < 4; ++x)
+	for (uint x = 0; x < VXGI_DIFFUSE_UPSAMPLING; ++x)
 	{
-		for (uint y = 0; y < 4; ++y)
+		for (uint y = 0; y < VXGI_DIFFUSE_UPSAMPLING; ++y)
 		{
 			const uint2 neighbor_offset = uint2(x, y);
 			const uint2 pixel_neighbor = clamp(pixel_base + neighbor_offset, 0, postprocess.resolution - 1);

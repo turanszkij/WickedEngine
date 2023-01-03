@@ -7564,8 +7564,8 @@ void VXGI_Resolve(
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		uint2 dispatch_dim;
-		dispatch_dim.x = postprocess.resolution.x / 4;
-		dispatch_dim.y = postprocess.resolution.y / 4;
+		dispatch_dim.x = postprocess.resolution.x / VXGI_DIFFUSE_UPSAMPLING;
+		dispatch_dim.y = postprocess.resolution.y / VXGI_DIFFUSE_UPSAMPLING;
 
 		device->Dispatch((dispatch_dim.x + 7u) / 8u, (dispatch_dim.y + 7u) / 8u, 1, cmd);
 
@@ -7587,8 +7587,8 @@ void VXGI_Resolve(
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		uint2 dispatch_dim;
-		dispatch_dim.x = postprocess.resolution.x / 2;
-		dispatch_dim.y = postprocess.resolution.y / 2;
+		dispatch_dim.x = postprocess.resolution.x / VXGI_SPECULAR_UPSAMPLING;
+		dispatch_dim.y = postprocess.resolution.y / VXGI_SPECULAR_UPSAMPLING;
 
 		device->Dispatch((dispatch_dim.x + 7u) / 8u, (dispatch_dim.y + 7u) / 8u, 1, cmd);
 
