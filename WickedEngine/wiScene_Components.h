@@ -958,6 +958,8 @@ namespace wi::scene
 		int texture_surfelgi_index = -1;
 		int buffer_entitytiles_opaque_index = -1;
 		int buffer_entitytiles_transparent_index = -1;
+		int texture_vxgi_diffuse_index = -1;
+		int texture_vxgi_specular_index = -1;
 
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);
 		void UpdateCamera();

@@ -755,7 +755,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 #endif // DISABLE_ENVMAPS
 
 #ifndef DISABLE_VOXELGI
+#ifdef TRANSPARENT // opaque tiled forward: voxel GI was rendered in separate pass
 	VoxelGI(surface, lighting);
+#endif // TRANSPARENT
 #endif //DISABLE_VOXELGI
 
 	[branch]
@@ -863,6 +865,19 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		lighting.indirect.diffuse = bindless_textures[GetCamera().texture_surfelgi_index][surface.pixel].rgb * GetFrame().gi_boost;
 		surface.flags |= SURFACE_FLAG_GI_APPLIED;
+	}
+
+	[branch]
+	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetCamera().texture_vxgi_diffuse_index >= 0)
+	{
+		lighting.indirect.diffuse = bindless_textures[GetCamera().texture_vxgi_diffuse_index][surface.pixel].rgb * GetFrame().gi_boost;
+		surface.flags |= SURFACE_FLAG_GI_APPLIED;
+	}
+	[branch]
+	if (GetCamera().texture_vxgi_specular_index >= 0)
+	{
+		float4 vxgi_specular = bindless_textures[GetCamera().texture_vxgi_specular_index][surface.pixel];
+		lighting.indirect.specular = vxgi_specular.rgb * surface.F + lighting.indirect.specular * (1 - vxgi_specular.a);
 	}
 #endif // TRANSPARENT
 

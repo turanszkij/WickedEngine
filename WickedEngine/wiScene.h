@@ -175,6 +175,29 @@ namespace wi::scene
 			void Serialize(wi::Archive& archive);
 		} ddgi;
 
+		// Voxel GI resources:
+		struct VXGI
+		{
+			uint32_t res = 64;
+			float rayStepSize = 2;
+			float maxDistance = 100.0f;
+			struct ClipMap
+			{
+				float voxelsize = 0.125;
+				XMFLOAT3 center = XMFLOAT3(0, 0, 0);
+				XMINT3 offsetfromPrevFrame = XMINT3(0, 0, 0);
+				XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
+			} clipmaps[VOXEL_GI_CLIPMAP_COUNT];
+			uint32_t clipmap_to_update = 0;
+
+			wi::graphics::Texture radiance;
+			wi::graphics::Texture prev_radiance;
+			wi::graphics::Texture render_atomic;
+			wi::graphics::Texture sdf;
+			wi::graphics::Texture sdf_temp;
+			mutable bool pre_clear = true;
+		} vxgi;
+
 		// Environment probe cubemap array state:
 		static constexpr uint32_t envmapCount = 16;
 		static constexpr uint32_t envmapRes = 128;

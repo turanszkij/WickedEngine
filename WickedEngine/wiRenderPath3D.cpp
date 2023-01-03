@@ -72,6 +72,7 @@ namespace wi
 		temporalAAResources = {};
 		visibilityResources = {};
 		fsr2Resources = {};
+		vxgiResources = {};
 	}
 
 	void RenderPath3D::ResizeBuffers()
@@ -483,6 +484,19 @@ namespace wi
 			}
 		}
 
+		if (wi::renderer::GetVXGIEnabled())
+		{
+			if (!vxgiResources.IsValid())
+			{
+				wi::renderer::CreateVXGIResources(vxgiResources, internalResolution);
+			}
+			vxgiResources.Flip();
+		}
+		else
+		{
+			vxgiResources = {};
+		}
+
 		// Check whether velocity buffer is required:
 		if (
 			getMotionBlurEnabled() ||
@@ -493,7 +507,8 @@ namespace wi
 			wi::renderer::GetRaytracedShadowsEnabled() ||
 			getAO() == AO::AO_RTAO ||
 			wi::renderer::GetVariableRateShadingClassification() ||
-			getFSR2Enabled()
+			getFSR2Enabled() ||
+			wi::renderer::GetVXGIEnabled()
 			)
 		{
 			if (!rtVelocity.IsValid())
@@ -585,6 +600,15 @@ namespace wi
 		camera->texture_rtshadow_index = device->GetDescriptorIndex(&rtShadow, SubresourceType::SRV);
 		camera->texture_rtdiffuse_index = device->GetDescriptorIndex(&rtRaytracedDiffuse, SubresourceType::SRV);
 		camera->texture_surfelgi_index = device->GetDescriptorIndex(&surfelGIResources.result, SubresourceType::SRV);
+		camera->texture_vxgi_diffuse_index = device->GetDescriptorIndex(&vxgiResources.diffuse[0], SubresourceType::SRV);
+		if (wi::renderer::GetVXGIReflectionsEnabled())
+		{
+			camera->texture_vxgi_specular_index = device->GetDescriptorIndex(&vxgiResources.specular[0], SubresourceType::SRV);
+		}
+		else
+		{
+			camera->texture_vxgi_specular_index = -1;
+		}
 
 		camera_reflection.canvas.init(*this);
 		camera_reflection.width = (float)depthBuffer_Reflection.desc.width;
@@ -606,6 +630,8 @@ namespace wi
 		camera_reflection.texture_rtshadow_index = -1;
 		camera_reflection.texture_rtdiffuse_index = -1;
 		camera_reflection.texture_surfelgi_index = -1;
+		camera_reflection.texture_vxgi_diffuse_index = -1;
+		camera_reflection.texture_vxgi_specular_index = -1;
 	}
 
 	void RenderPath3D::Render() const
@@ -644,7 +670,15 @@ namespace wi
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 
-			});
+		});
+
+		if (wi::renderer::GetVXGIEnabled())
+		{
+			cmd = device->BeginCommandList();
+			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
+				wi::renderer::VXGI_Voxelize(visibility_main, cmd);
+				});
+		}
 
 		//	async compute parallel with depth prepass
 		cmd = device->BeginCommandList(QUEUE_COMPUTE);
@@ -798,7 +832,8 @@ namespace wi
 				getRaytracedReflectionEnabled() ||
 				getRaytracedDiffuseEnabled() ||
 				wi::renderer::GetScreenSpaceShadowsEnabled() ||
-				wi::renderer::GetRaytracedShadowsEnabled()
+				wi::renderer::GetRaytracedShadowsEnabled() ||
+				wi::renderer::GetVXGIEnabled()
 				)
 			{
 				// These post effects require surface normals and/or roughness
@@ -823,6 +858,15 @@ namespace wi
 					surfelGIResources,
 					*scene,
 					debugUAV,
+					cmd
+				);
+			}
+
+			if (wi::renderer::GetVXGIEnabled())
+			{
+				wi::renderer::VXGI_Resolve(
+					vxgiResources,
+					*scene,
 					cmd
 				);
 			}
@@ -903,16 +947,7 @@ namespace wi
 			wi::renderer::RefreshLightmaps(*scene, cmd, instanceInclusionMask_Lightmap);
 			wi::renderer::RefreshEnvProbes(visibility_main, cmd);
 			wi::renderer::RefreshImpostors(*scene, cmd);
-			});
-
-		// Voxel GI:
-		if (wi::renderer::GetVoxelRadianceEnabled())
-		{
-			cmd = device->BeginCommandList();
-			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
-				wi::renderer::VoxelRadiance(visibility_main, cmd);
-				});
-		}
+		});
 
 		if (visibility_main.IsRequestedPlanarReflections())
 		{
@@ -1134,7 +1169,7 @@ namespace wi
 			RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(
 					&rtMain_render,
-					RenderPassImage::LoadOp::LOAD
+					RenderPassImage::LoadOp::DONTCARE
 				),
 				RenderPassImage::DepthStencil(
 					&depthBuffer_Main,

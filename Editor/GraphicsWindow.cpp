@@ -264,9 +264,9 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	voxelRadianceCheckBox.SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	voxelRadianceCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceEnabled(args.bValue);
+		wi::renderer::SetVXGIEnabled(args.bValue);
 	});
-	voxelRadianceCheckBox.SetCheck(wi::renderer::GetVoxelRadianceEnabled());
+	voxelRadianceCheckBox.SetCheck(wi::renderer::GetVXGIEnabled());
 	AddWidget(&voxelRadianceCheckBox);
 
 	voxelRadianceDebugCombo.Create("");
@@ -289,18 +289,18 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	voxelRadianceReflectionsCheckBox.SetPos(XMFLOAT2(x + wid + 1, y));
 	voxelRadianceReflectionsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	voxelRadianceReflectionsCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceReflectionsEnabled(args.bValue);
+		wi::renderer::SetVXGIReflectionsEnabled(args.bValue);
 	});
-	voxelRadianceReflectionsCheckBox.SetCheck(wi::renderer::GetVoxelRadianceReflectionsEnabled());
+	voxelRadianceReflectionsCheckBox.SetCheck(wi::renderer::GetVXGIReflectionsEnabled());
 	AddWidget(&voxelRadianceReflectionsCheckBox);
 
 	voxelRadianceVoxelSizeSlider.Create(0.125f, 0.5f, 1, 7, "Voxel GI Voxel Size: ");
 	voxelRadianceVoxelSizeSlider.SetTooltip("Adjust the voxel size for Voxel GI calculations.");
 	voxelRadianceVoxelSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	voxelRadianceVoxelSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceVoxelSizeSlider.SetValue(wi::renderer::GetVoxelRadianceVoxelSize());
 	voxelRadianceVoxelSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceVoxelSize(args.fValue);
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		scene.vxgi.clipmaps[0].voxelsize = args.fValue;
 	});
 	AddWidget(&voxelRadianceVoxelSizeSlider);
 
@@ -308,9 +308,9 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	voxelRadianceRayStepSizeSlider.SetTooltip("Adjust the precision of ray marching for [reflection] cone tracing step. Lower values = more precision but slower performance.");
 	voxelRadianceRayStepSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	voxelRadianceRayStepSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceRayStepSizeSlider.SetValue(wi::renderer::GetVoxelRadianceRayStepSize());
 	voxelRadianceRayStepSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceRayStepSize(args.fValue);
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		scene.vxgi.rayStepSize = args.fValue;
 	});
 	AddWidget(&voxelRadianceRayStepSizeSlider);
 
@@ -318,9 +318,9 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	voxelRadianceMaxDistanceSlider.SetTooltip("Adjust max raymarching distance for voxel GI.");
 	voxelRadianceMaxDistanceSlider.SetSize(XMFLOAT2(wid, itemheight));
 	voxelRadianceMaxDistanceSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceMaxDistanceSlider.SetValue(wi::renderer::GetVoxelRadianceMaxDistance());
 	voxelRadianceMaxDistanceSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceMaxDistance(args.fValue);
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		scene.vxgi.maxDistance = args.fValue;
 	});
 	AddWidget(&voxelRadianceMaxDistanceSlider);
 
@@ -1692,8 +1692,11 @@ void GraphicsWindow::ResizeLayout()
 		voxelRadianceCheckBox.SetVisible(true);
 		voxelRadianceReflectionsCheckBox.SetVisible(true);
 		voxelRadianceVoxelSizeSlider.SetVisible(true);
+		voxelRadianceVoxelSizeSlider.SetValue(editor->GetCurrentScene().vxgi.clipmaps[0].voxelsize);
 		voxelRadianceRayStepSizeSlider.SetVisible(true);
+		voxelRadianceRayStepSizeSlider.SetValue(editor->GetCurrentScene().vxgi.rayStepSize);
 		voxelRadianceMaxDistanceSlider.SetVisible(true);
+		voxelRadianceMaxDistanceSlider.SetValue(editor->GetCurrentScene().vxgi.maxDistance);
 
 		add(GIBoostSlider);
 

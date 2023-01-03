@@ -25,20 +25,6 @@ struct VXGI
 	VoxelClipMap clipmaps[VOXEL_GI_CLIPMAP_COUNT];
 
 #ifndef __cplusplus
-	uint find_min_clipmap(in float3 P, in uint first_clipmap_index, out float3 tc)
-	{
-		uint clipmap_index = min(first_clipmap_index, VOXEL_GI_CLIPMAP_COUNT - 1);
-		for (; clipmap_index < VOXEL_GI_CLIPMAP_COUNT; ++clipmap_index)
-		{
-			VoxelClipMap clipmap = clipmaps[clipmap_index];
-			tc = world_to_clipmap(P, clipmap);
-			if (all(tc == saturate(tc)))
-			{
-				break;
-			}
-		}
-		return clipmap_index;
-	}
 	float3 world_to_clipmap(in float3 P, in VoxelClipMap clipmap)
 	{
 		float3 diff = (P - clipmap.center) * resolution_rcp / clipmap.voxelSize;

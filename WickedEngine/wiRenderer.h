@@ -261,7 +261,6 @@ namespace wi::renderer
 	void RefreshImpostors(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 	// Call once per frame to repack out of date lightmaps in the atlas
 	void RefreshLightmaps(const wi::scene::Scene& scene, wi::graphics::CommandList cmd, uint8_t instanceInclusionMask = 0xFF);
-	void VoxelRadiance(const Visibility& vis, wi::graphics::CommandList cmd);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
 	void ResolveMSAADepthBuffer(const wi::graphics::Texture& dst, const wi::graphics::Texture& src, wi::graphics::CommandList cmd);
 	void DownsampleDepthBuffer(const wi::graphics::Texture& src, wi::graphics::CommandList cmd);
@@ -379,6 +378,30 @@ namespace wi::renderer
 		const wi::scene::Scene& scene,
 		wi::graphics::CommandList cmd,
 		uint8_t instanceInclusionMask = 0xFF
+	);
+
+	struct VXGIResources
+	{
+		wi::graphics::Texture diffuse[2];
+		wi::graphics::Texture specular[2];
+		mutable bool pre_clear = true;
+
+		bool IsValid() const { return diffuse[0].IsValid(); }
+		void Flip()
+		{
+			std::swap(diffuse[0], diffuse[1]);
+			std::swap(specular[0], specular[1]);
+		}
+	};
+	void CreateVXGIResources(VXGIResources& res, XMUINT2 resolution);
+	void VXGI_Voxelize(
+		const Visibility& vis,
+		wi::graphics::CommandList cmd
+	);
+	void VXGI_Resolve(
+		const VXGIResources& res,
+		const wi::scene::Scene& scene,
+		wi::graphics::CommandList cmd
 	);
 
 	void Postprocess_Blur_Gaussian(
@@ -901,17 +924,10 @@ namespace wi::renderer
 	bool GetTemporalAADebugEnabled();
 	void SetFreezeCullingCameraEnabled(bool enabled);
 	bool GetFreezeCullingCameraEnabled();
-	void SetVoxelRadianceEnabled(bool enabled);
-	bool GetVoxelRadianceEnabled();
-	void SetVoxelRadianceReflectionsEnabled(bool enabled);
-	bool GetVoxelRadianceReflectionsEnabled();
-	void SetVoxelRadianceVoxelSize(float value);
-	float GetVoxelRadianceVoxelSize();
-	void SetVoxelRadianceMaxDistance(float value);
-	float GetVoxelRadianceMaxDistance();
-	int GetVoxelRadianceResolution();
-	float GetVoxelRadianceRayStepSize();
-	void SetVoxelRadianceRayStepSize(float value);
+	void SetVXGIEnabled(bool enabled);
+	bool GetVXGIEnabled();
+	void SetVXGIReflectionsEnabled(bool enabled);
+	bool GetVXGIReflectionsEnabled();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
 	void SetRaytraceBounceCount(uint32_t bounces);

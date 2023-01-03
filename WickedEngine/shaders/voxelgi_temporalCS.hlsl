@@ -7,6 +7,8 @@ Texture3D<uint> input_render_atomic : register(t1);
 RWTexture3D<float4> output_radiance : register(u0);
 RWTexture3D<float> output_sdf : register(u1);
 
+static const float blend_speed = 0.2;
+
 [numthreads(8, 8, 8)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
@@ -52,12 +54,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 						coord.z >= 0 && coord.z < GetFrame().vxgi.resolution
 						)
 					{
-						radiance = lerp(input_previous_radiance[dst], radiance, 0.2);
+						radiance = lerp(input_previous_radiance[dst], radiance, blend_speed);
 					}
 				}
 				else
 				{
-					radiance = lerp(input_previous_radiance[dst], radiance, 0.2);
+					radiance = lerp(input_previous_radiance[dst], radiance, blend_speed);
 				}
 			}
 			else

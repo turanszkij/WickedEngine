@@ -978,6 +978,11 @@ struct CameraCB
 	int texture_rtshadow_index;
 	int texture_surfelgi_index;
 	int texture_depth_index_prev;
+
+	int texture_vxgi_diffuse_index;
+	int texture_vxgi_specular_index;
+	int padding0;
+	int padding1;
 };
 
 

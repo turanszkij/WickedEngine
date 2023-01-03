@@ -75,19 +75,23 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	//float3 direction_weights = sqr(coneDirection);
 
 	// We will break off the loop if the sampling distance is too far for performance reasons:
-	while (dist < GetFrame().vxgi.max_distance && alpha < 1)
+	while (dist < GetFrame().vxgi.max_distance && alpha < 1 && clipmap_index0 < VOXEL_GI_CLIPMAP_COUNT)
 	{
 		float3 p0 = startPos + coneDirection * dist;
 
 		float diameter = max(voxelSize0, coneCoefficient * dist);
-		float lod = max(clipmap_index0, log2(diameter * voxelSize0_rcp));
+		float lod = clamp(log2(diameter * voxelSize0_rcp), clipmap_index0, VOXEL_GI_CLIPMAP_COUNT - 1);
 
-		float3 tc = 0;
-		float clipmap_index = GetFrame().vxgi.find_min_clipmap(p0, floor(lod), tc);
+		float clipmap_index = floor(lod);
 		float clipmap_blend = frac(lod);
 
-		// increase min mip level (perf improvement):
-		clipmap_index0 = max(clipmap_index0, clipmap_index);
+		VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
+		float3 tc = GetFrame().vxgi.world_to_clipmap(p0, clipmap);
+		if (!is_saturated(tc))
+		{
+			clipmap_index0++;
+			continue;
+		}
 
 		// sample first clipmap level:
 		float4 sam = SampleVoxelClipMap(voxels, p0, clipmap_index, step_dist, face_offsets, direction_weights, precomputed_direction);
