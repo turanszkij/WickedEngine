@@ -3351,7 +3351,9 @@ void UpdatePerFrameData(
 	frameCB.vxgi.resolution = GetVXGIEnabled() ? (uint)scene.vxgi.res : 0;
 	frameCB.vxgi.resolution_rcp = GetVXGIEnabled() ? 1.0f / (float)frameCB.vxgi.resolution : 0; //PE: was inf.
 	frameCB.vxgi.stepsize = scene.vxgi.rayStepSize;
-	for (uint i = 0; i < VOXEL_GI_CLIPMAP_COUNT; ++i)
+	frameCB.vxgi.texture_radiance = device->GetDescriptorIndex(&scene.vxgi.radiance, SubresourceType::SRV);
+	frameCB.vxgi.texture_sdf = device->GetDescriptorIndex(&scene.vxgi.sdf, SubresourceType::SRV);
+	for (uint i = 0; i < VXGI_CLIPMAP_COUNT; ++i)
 	{
 		frameCB.vxgi.clipmaps[i].center = scene.vxgi.clipmaps[i].center;
 		frameCB.vxgi.clipmaps[i].voxelSize = scene.vxgi.clipmaps[i].voxelsize;
@@ -3412,11 +3414,11 @@ void UpdatePerFrameData(
 	}
 	if (GetVXGIEnabled())
 	{
-		frameCB.options |= OPTION_BIT_VOXELGI_ENABLED;
+		frameCB.options |= OPTION_BIT_VXGI_ENABLED;
 	}
 	if (GetVXGIReflectionsEnabled())
 	{
-		frameCB.options |= OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED;
+		frameCB.options |= OPTION_BIT_VXGI_REFLECTIONS_ENABLED;
 	}
 	if (vis.scene->weather.IsRealisticSky())
 	{
@@ -3471,8 +3473,6 @@ void UpdatePerFrameData(
 	frameCB.texture_skyluminancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], SubresourceType::SRV);
 	frameCB.buffer_entityarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_ENTITYARRAY], SubresourceType::SRV);
 	frameCB.buffer_entitymatrixarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_MATRIXARRAY], SubresourceType::SRV);
-	frameCB.texture_voxelgi_index = device->GetDescriptorIndex(&scene.vxgi.radiance, SubresourceType::SRV);
-	frameCB.texture_voxelgi_sdf_index = device->GetDescriptorIndex(&scene.vxgi.sdf, SubresourceType::SRV);
 
 	frameCB.shadow_cascade_count = CASCADE_COUNT;
 	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMapAtlas, SubresourceType::SRV);
@@ -6290,9 +6290,9 @@ void DrawDebugWorld(
 		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		uint32_t vertexCount = scene.vxgi.res * scene.vxgi.res * scene.vxgi.res;
-		if (VXGI_DEBUG_CLIPMAP == VOXEL_GI_CLIPMAP_COUNT)
+		if (VXGI_DEBUG_CLIPMAP == VXGI_CLIPMAP_COUNT)
 		{
-			vertexCount *= VOXEL_GI_CLIPMAP_COUNT;
+			vertexCount *= VXGI_CLIPMAP_COUNT;
 		}
 		device->Draw(vertexCount, 0, cmd);
 
@@ -7351,7 +7351,7 @@ void VXGI_Voxelize(
 		if (bbox.intersects(aabb))
 		{
 			const ObjectComponent& object = vis.scene->objects[i];
-			if (object.IsRenderable() && (scene.vxgi.clipmap_to_update < (VOXEL_GI_CLIPMAP_COUNT - object.cascadeMask)))
+			if (object.IsRenderable() && (scene.vxgi.clipmap_to_update < (VXGI_CLIPMAP_COUNT - object.cascadeMask)))
 			{
 				renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
 			}
@@ -7397,7 +7397,7 @@ void VXGI_Voxelize(
 		}
 
 		{
-			device->EventBegin("Clear Current Voxels", cmd);
+			device->EventBegin("Clear Voxel Atomics", cmd);
 
 			device->ClearUAV(&scene.vxgi.render_atomic, 0, cmd);
 			device->EventEnd(cmd);

@@ -18,7 +18,7 @@ inline float4 SampleVoxelClipMap(in Texture3D<float4> voxels, in float3 P, in ui
 	tc = clamp(tc, half_texel, 1 - half_texel);
 
 	tc.x = (tc.x + precomputed_direction) / (6.0 + DIFFUSE_CONE_COUNT); // remap into anisotropic
-	tc.y = (tc.y + clipmap_index) / VOXEL_GI_CLIPMAP_COUNT; // remap into clipmap
+	tc.y = (tc.y + clipmap_index) / VXGI_CLIPMAP_COUNT; // remap into clipmap
 
 	float4 sam;
 	if (precomputed_direction == 0)
@@ -75,12 +75,12 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	//float3 direction_weights = sqr(coneDirection);
 
 	// We will break off the loop if the sampling distance is too far for performance reasons:
-	while (dist < GetFrame().vxgi.max_distance && alpha < 1 && clipmap_index0 < VOXEL_GI_CLIPMAP_COUNT)
+	while (dist < GetFrame().vxgi.max_distance && alpha < 1 && clipmap_index0 < VXGI_CLIPMAP_COUNT)
 	{
 		float3 p0 = startPos + coneDirection * dist;
 
 		float diameter = max(voxelSize0, coneCoefficient * dist);
-		float lod = clamp(log2(diameter * voxelSize0_rcp), clipmap_index0, VOXEL_GI_CLIPMAP_COUNT - 1);
+		float lod = clamp(log2(diameter * voxelSize0_rcp), clipmap_index0, VXGI_CLIPMAP_COUNT - 1);
 
 		float clipmap_index = floor(lod);
 		float clipmap_blend = frac(lod);
@@ -97,7 +97,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 		float4 sam = SampleVoxelClipMap(voxels, p0, clipmap_index, step_dist, face_offsets, direction_weights, precomputed_direction);
 
 		// sample second clipmap if needed and perform trilinear blend:
-		if(clipmap_blend > 0 && clipmap_index < VOXEL_GI_CLIPMAP_COUNT - 1)
+		if(clipmap_blend > 0 && clipmap_index < VXGI_CLIPMAP_COUNT - 1)
 		{
 			sam = lerp(sam, SampleVoxelClipMap(voxels, p0, clipmap_index + 1, step_dist, face_offsets, direction_weights, precomputed_direction), clipmap_blend);
 		}
@@ -114,8 +114,8 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 			// half texel correction is applied to avoid sampling over current clipmap:
 			const float half_texel = 0.5 * GetFrame().vxgi.resolution_rcp;
 			tc = clamp(tc, half_texel, 1 - half_texel);
-			tc.y = (tc.y + clipmap_index) / VOXEL_GI_CLIPMAP_COUNT; // remap into clipmap
-			float sdf = bindless_textures3D[GetFrame().texture_voxelgi_sdf_index].SampleLevel(sampler_linear_clamp, tc, 0).r;
+			tc.y = (tc.y + clipmap_index) / VXGI_CLIPMAP_COUNT; // remap into clipmap
+			float sdf = bindless_textures3D[GetFrame().vxgi.texture_sdf].SampleLevel(sampler_linear_clamp, tc, 0).r;
 			stepSizeCurrent = max(stepSize, sdf);
 		}
 

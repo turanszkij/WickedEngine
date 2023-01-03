@@ -570,7 +570,7 @@ namespace wi::scene
 				TextureDesc desc;
 				desc.type = TextureDesc::Type::TEXTURE_3D;
 				desc.width = vxgi.res * (6 + DIFFUSE_CONE_COUNT);
-				desc.height = vxgi.res * VOXEL_GI_CLIPMAP_COUNT;
+				desc.height = vxgi.res * VXGI_CLIPMAP_COUNT;
 				desc.depth = vxgi.res;
 				desc.mip_levels = 1;
 				desc.format = Format::R16G16B16A16_FLOAT;
@@ -604,7 +604,7 @@ namespace wi::scene
 				TextureDesc desc;
 				desc.type = TextureDesc::Type::TEXTURE_3D;
 				desc.width = vxgi.res;
-				desc.height = vxgi.res * VOXEL_GI_CLIPMAP_COUNT;
+				desc.height = vxgi.res * VXGI_CLIPMAP_COUNT;
 				desc.depth = vxgi.res;
 				desc.mip_levels = 1;
 				desc.usage = Usage::DEFAULT;
@@ -615,7 +615,7 @@ namespace wi::scene
 				device->CreateTexture(&desc, nullptr, &vxgi.sdf_temp);
 				device->SetName(&vxgi.sdf_temp, "vxgi.sdf_temp");
 			}
-			vxgi.clipmap_to_update = (vxgi.clipmap_to_update + 1) % VOXEL_GI_CLIPMAP_COUNT;
+			vxgi.clipmap_to_update = (vxgi.clipmap_to_update + 1) % VXGI_CLIPMAP_COUNT;
 		}
 
 		impostor_ib_format = (((objects.GetCount() * 4) < 655536) ? Format::R16_UINT : Format::R32_UINT);

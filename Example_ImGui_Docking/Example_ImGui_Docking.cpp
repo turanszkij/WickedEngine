@@ -1068,7 +1068,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			static bool bVoxelGIEnabled = false;
 			if (ImGui::Checkbox("Voxel GI", &bVoxelGIEnabled))
 			{
-				wi::renderer::SetVoxelRadianceEnabled(bVoxelGIEnabled);
+				wi::renderer::SetVXGIEnabled(bVoxelGIEnabled);
 			}
 
 

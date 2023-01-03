@@ -17,7 +17,7 @@ void main(
 	uint clipmap_index = (uint)g_xColor.x;
 
 	bool min_clip = false;
-	if (clipmap_index == VOXEL_GI_CLIPMAP_COUNT)
+	if (clipmap_index == VXGI_CLIPMAP_COUNT)
 	{
 		min_clip = true;
 		const uint voxel_count = GetFrame().vxgi.resolution * GetFrame().vxgi.resolution * GetFrame().vxgi.resolution;
@@ -46,13 +46,14 @@ void main(
 	uint3 pixel = coord;
 	pixel.y += clipmap_index * GetFrame().vxgi.resolution;
 
+	Texture3D<float4> voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
 	float4 face_colors[6] = {
-		texture_voxelgi[pixel + uint3(0 * GetFrame().vxgi.resolution, 0, 0)],
-		texture_voxelgi[pixel + uint3(1 * GetFrame().vxgi.resolution, 0, 0)],
-		texture_voxelgi[pixel + uint3(2 * GetFrame().vxgi.resolution, 0, 0)],
-		texture_voxelgi[pixel + uint3(3 * GetFrame().vxgi.resolution, 0, 0)],
-		texture_voxelgi[pixel + uint3(4 * GetFrame().vxgi.resolution, 0, 0)],
-		texture_voxelgi[pixel + uint3(5 * GetFrame().vxgi.resolution, 0, 0)],
+		voxels[pixel + uint3(0 * GetFrame().vxgi.resolution, 0, 0)],
+		voxels[pixel + uint3(1 * GetFrame().vxgi.resolution, 0, 0)],
+		voxels[pixel + uint3(2 * GetFrame().vxgi.resolution, 0, 0)],
+		voxels[pixel + uint3(3 * GetFrame().vxgi.resolution, 0, 0)],
+		voxels[pixel + uint3(4 * GetFrame().vxgi.resolution, 0, 0)],
+		voxels[pixel + uint3(5 * GetFrame().vxgi.resolution, 0, 0)],
 	};
 
 	if (

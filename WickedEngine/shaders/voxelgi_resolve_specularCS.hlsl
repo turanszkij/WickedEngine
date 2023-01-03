@@ -27,7 +27,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float3 P = reconstruct_position(uv, depth);
 	const float3 V = normalize(GetCamera().position - P);
 
-	Texture3D<float4> voxels = bindless_textures3D[GetFrame().texture_voxelgi_index];
+	Texture3D<float4> voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
 	float4 color = ConeTraceSpecular(voxels, P, N, V, roughness * roughness, pixel.xy);
 
 	output[pixel] = color;

@@ -832,8 +832,8 @@ static const int impostorCaptureAngles = 36;
 // These option bits can be read from options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
 static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
-static const uint OPTION_BIT_VOXELGI_ENABLED = 1 << 2;
-static const uint OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED = 1 << 3;
+static const uint OPTION_BIT_VXGI_ENABLED = 1 << 2;
+static const uint OPTION_BIT_VXGI_REFLECTIONS_ENABLED = 1 << 3;
 static const uint OPTION_BIT_REALISTIC_SKY = 1 << 6;
 static const uint OPTION_BIT_HEIGHT_FOG = 1 << 7;
 static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 8;
@@ -884,20 +884,20 @@ struct FrameCB
 	uint		temporalaa_samplerotation;
 	float		blue_noise_phase;
 
-	int			texture_voxelgi_sdf_index;
 	int			texture_random64x64_index;
 	int			texture_bluenoise_index;
 	int			texture_sheenlut_index;
-
 	int			texture_skyviewlut_index;
+
 	int			texture_transmittancelut_index;
 	int			texture_multiscatteringlut_index;
 	int			texture_skyluminancelut_index;
-
-	int			texture_voxelgi_index;
 	int			buffer_entityarray_index;
+
 	int			buffer_entitymatrixarray_index;
 	float		gi_boost;
+	float		padding1;
+	float		padding2;
 
 	ShaderScene scene;
 

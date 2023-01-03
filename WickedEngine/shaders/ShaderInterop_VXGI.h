@@ -7,7 +7,7 @@
 //	If disabled, vertex shader with instance replication will be used for each axis
 #define VOXELIZATION_GEOMETRY_SHADER_ENABLED
 
-static const uint VOXEL_GI_CLIPMAP_COUNT = 6;
+static const uint VXGI_CLIPMAP_COUNT = 6;
 
 struct VoxelClipMap
 {
@@ -17,12 +17,17 @@ struct VoxelClipMap
 
 struct VXGI
 {
-	uint		resolution;		// voxel grid resolution
-	float		resolution_rcp;	// 1.0 / voxel grid resolution
-	float		stepsize;		// raymarch step size in voxel space units
-	float		max_distance;	// maximum raymarch distance for voxel GI in world-space
+	uint	resolution;		// voxel grid resolution
+	float	resolution_rcp;	// 1.0 / voxel grid resolution
+	float	stepsize;		// raymarch step size in voxel space units
+	float	max_distance;	// maximum raymarch distance for voxel GI in world-space
 
-	VoxelClipMap clipmaps[VOXEL_GI_CLIPMAP_COUNT];
+	int		texture_radiance;
+	int		texture_sdf;
+	int		padding0;
+	int		padding1;
+
+	VoxelClipMap clipmaps[VXGI_CLIPMAP_COUNT];
 
 #ifndef __cplusplus
 	float3 world_to_clipmap(in float3 P, in VoxelClipMap clipmap)

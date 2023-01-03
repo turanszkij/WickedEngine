@@ -187,7 +187,7 @@ namespace wi::scene
 				XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 				XMINT3 offsetfromPrevFrame = XMINT3(0, 0, 0);
 				XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
-			} clipmaps[VOXEL_GI_CLIPMAP_COUNT];
+			} clipmaps[VXGI_CLIPMAP_COUNT];
 			uint32_t clipmap_to_update = 0;
 
 			wi::graphics::Texture radiance;

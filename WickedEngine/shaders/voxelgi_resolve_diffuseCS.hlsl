@@ -27,7 +27,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float3 N = decode_oct(texture_normal[pixel]);
 	const float3 P = reconstruct_position(uv, depth);
 
-	Texture3D<float4> voxels = bindless_textures3D[GetFrame().texture_voxelgi_index];
+	Texture3D<float4> voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
 
 	float4 trace = ConeTraceDiffuse(voxels, P, N);
 	float4 color = float4(trace.rgb, 1);

@@ -356,6 +356,7 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
+	// Surfel GI: diffuse GI with ray tracing from surfels
 	struct SurfelGIResources
 	{
 		wi::graphics::Texture result;
@@ -374,12 +375,14 @@ namespace wi::renderer
 		uint8_t instanceInclusionMask = 0xFF
 	);
 
+	// DDGI: Dynamic Diffuse Global Illumination (probe-based ray tracing)
 	void DDGI(
 		const wi::scene::Scene& scene,
 		wi::graphics::CommandList cmd,
 		uint8_t instanceInclusionMask = 0xFF
 	);
 
+	// VXGI: Voxel-based Global Illumination (voxel cone tracing-based)
 	struct VXGIResources
 	{
 		wi::graphics::Texture diffuse[2];
