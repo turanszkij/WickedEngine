@@ -899,11 +899,11 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LIGHTCULLING_ADVANCED], "lightCullingCS_ADVANCED.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LIGHTCULLING_ADVANCED_DEBUG], "lightCullingCS_ADVANCED_DEBUG.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], "resolveMSAADepthStencilCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VOXELGI_OFFSETPREV], "voxelgi_offsetprevCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VOXELGI_TEMPORAL], "voxelgi_temporalCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VOXELGI_SDF_JUMPFLOOD], "voxelgi_sdf_jumpfloodCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VOXELGI_RESOLVE_DIFFUSE], "voxelgi_resolve_diffuseCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VOXELGI_RESOLVE_SPECULAR], "voxelgi_resolve_specularCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VXGI_OFFSETPREV], "vxgi_offsetprevCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VXGI_TEMPORAL], "vxgi_temporalCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VXGI_SDF_JUMPFLOOD], "vxgi_sdf_jumpfloodCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VXGI_RESOLVE_DIFFUSE], "vxgi_resolve_diffuseCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VXGI_RESOLVE_SPECULAR], "vxgi_resolve_specularCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_TRANSMITTANCELUT], "skyAtmosphere_transmittanceLutCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], "skyAtmosphere_multiScatteredLuminanceLutCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_SKYVIEWLUT], "skyAtmosphere_skyViewLutCS.cso"); });
@@ -7387,7 +7387,7 @@ void VXGI_Voxelize(
 		else
 		{
 			device->EventBegin("Offset Previous Voxels", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_VOXELGI_OFFSETPREV], cmd);
+			device->BindComputeShader(&shaders[CSTYPE_VXGI_OFFSETPREV], cmd);
 			device->BindResource(&scene.vxgi.radiance, 0, cmd);
 			device->BindUAV(&scene.vxgi.prev_radiance, 0, cmd);
 
@@ -7447,7 +7447,7 @@ void VXGI_Voxelize(
 
 		{
 			device->EventBegin("Temporal Blend Voxels", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_VOXELGI_TEMPORAL], cmd);
+			device->BindComputeShader(&shaders[CSTYPE_VXGI_TEMPORAL], cmd);
 			device->BindResource(&scene.vxgi.prev_radiance, 0, cmd);
 			device->BindResource(&scene.vxgi.render_atomic, 1, cmd);
 			device->BindUAV(&scene.vxgi.radiance, 0, cmd);
@@ -7467,7 +7467,7 @@ void VXGI_Voxelize(
 
 		{
 			device->EventBegin("SDF Jump Flood", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_VOXELGI_SDF_JUMPFLOOD], cmd);
+			device->BindComputeShader(&shaders[CSTYPE_VXGI_SDF_JUMPFLOOD], cmd);
 
 			const Texture* _write = &scene.vxgi.sdf_temp;
 			const Texture* _read = &scene.vxgi.sdf;
@@ -7552,7 +7552,7 @@ void VXGI_Resolve(
 
 	{
 		device->EventBegin("Diffuse", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_VOXELGI_RESOLVE_DIFFUSE], cmd);
+		device->BindComputeShader(&shaders[CSTYPE_VXGI_RESOLVE_DIFFUSE], cmd);
 		device->BindResource(&res.diffuse[1], 0, cmd);
 		device->BindUAV(&res.diffuse[0], 0, cmd);
 
@@ -7575,7 +7575,7 @@ void VXGI_Resolve(
 	if(VXGI_REFLECTIONS_ENABLED)
 	{
 		device->EventBegin("Specular", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_VOXELGI_RESOLVE_SPECULAR], cmd);
+		device->BindComputeShader(&shaders[CSTYPE_VXGI_RESOLVE_SPECULAR], cmd);
 		device->BindResource(&res.specular[1], 0, cmd);
 		device->BindUAV(&res.specular[0], 0, cmd);
 

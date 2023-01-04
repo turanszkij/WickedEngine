@@ -677,7 +677,7 @@ namespace wi
 			cmd = device->BeginCommandList();
 			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
 				wi::renderer::VXGI_Voxelize(visibility_main, cmd);
-				});
+			});
 		}
 
 		//	async compute parallel with depth prepass

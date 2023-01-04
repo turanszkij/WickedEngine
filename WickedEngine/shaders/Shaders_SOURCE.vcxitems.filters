@@ -200,10 +200,10 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)depthoffield_tileMaxCOC_horizontalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelgi_temporalCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_temporalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelgi_offsetprevCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_offsetprevCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)upsample_bilateral_float1CS.hlsl">
@@ -1058,13 +1058,13 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_fsr2_reconstruct_previous_depth_pass.hlsl">
       <Filter>ffx-fsr2</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelgi_sdf_jumpfloodCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_sdf_jumpfloodCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelgi_resolve_diffuseCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_resolve_diffuseCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelgi_resolve_specularCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_resolve_specularCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
