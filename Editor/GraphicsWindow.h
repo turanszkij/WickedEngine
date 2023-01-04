@@ -29,12 +29,12 @@ public:
 	wi::gui::Slider ddgiRayCountSlider;
 	wi::gui::Slider ddgiBlendSpeedSlider;
 	wi::gui::Slider ddgiSmoothBackfaceSlider;
-	wi::gui::CheckBox voxelRadianceCheckBox;
-	wi::gui::ComboBox voxelRadianceDebugCombo;
-	wi::gui::CheckBox voxelRadianceReflectionsCheckBox;
-	wi::gui::Slider voxelRadianceVoxelSizeSlider;
-	wi::gui::Slider voxelRadianceRayStepSizeSlider;
-	wi::gui::Slider voxelRadianceMaxDistanceSlider;
+	wi::gui::CheckBox vxgiCheckBox;
+	wi::gui::ComboBox vxgiDebugCombo;
+	wi::gui::CheckBox vxgiReflectionsCheckBox;
+	wi::gui::Slider vxgiVoxelSizeSlider;
+	wi::gui::Slider vxgiRayStepSizeSlider;
+	wi::gui::Slider vxgiMaxDistanceSlider;
 	wi::gui::Slider speedMultiplierSlider;
 	wi::gui::CheckBox transparentShadowsCheckBox;
 	wi::gui::ComboBox shadowTypeComboBox;
