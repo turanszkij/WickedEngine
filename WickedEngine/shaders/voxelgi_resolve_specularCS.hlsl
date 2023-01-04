@@ -10,7 +10,7 @@ RWTexture2D<float4> output : register(u0);
 
 // If this is enabled, disocclusion regions will be retraced, otherwise they will be filled by primary sample color:
 //#define HIGH_QUALITY_DISOCCLUSION
-static const float disocclusion_threshold = 0.2;
+static const float disocclusion_threshold = 0.1;
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -20,17 +20,22 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const uint2 pixel = clamp(pixel_base + pixel_offset, 0, postprocess.resolution - 1);
 	const float2 uv = ((float2)pixel + 0.5) * postprocess.resolution_rcp;
 
-	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-	const float roughness = texture_roughness[pixel];
-
-	const float3 N = decode_oct(texture_normal[pixel]);
-	const float3 P = reconstruct_position(uv, depth);
-	const float3 V = normalize(GetCamera().position - P);
-
 	Texture3D<float4> voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
-	float4 color = ConeTraceSpecular(voxels, P, N, V, roughness * roughness, DTid.xy);
 
-	output[pixel] = color;
+	const float depth = texture_depth[pixel];
+
+	float4 color = 0;
+	[branch]
+	if (depth > 0)
+	{
+		const float roughness = texture_roughness[pixel];
+		const float3 N = decode_oct(texture_normal[pixel]);
+		const float3 P = reconstruct_position(uv, depth);
+		const float3 V = normalize(GetCamera().position - P);
+
+		color = ConeTraceSpecular(voxels, P, N, V, roughness * roughness, DTid.xy);
+		output[pixel] = color;
+	}
 
 	for (uint x = 0; x < VXGI_SPECULAR_UPSAMPLING; ++x)
 	{
@@ -46,6 +51,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				bool reprojection_valid = is_saturated(uv_neighbor_prev);
 
 				const float depth_neighbor = texture_depth[pixel_neighbor];
+				if (depth_neighbor == 0)
+					continue;
 				if (reprojection_valid)
 				{
 					const float depth_neighbor_prev = texture_depth_history.SampleLevel(sampler_linear_clamp, uv_neighbor_prev, 0);
