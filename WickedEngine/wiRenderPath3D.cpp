@@ -490,7 +490,6 @@ namespace wi
 			{
 				wi::renderer::CreateVXGIResources(vxgiResources, internalResolution);
 			}
-			vxgiResources.Flip();
 		}
 		else
 		{
@@ -1109,6 +1108,7 @@ namespace wi
 				wi::renderer::VXGI_Resolve(
 					vxgiResources,
 					*scene,
+					rtLinearDepth,
 					cmd
 				);
 			}
@@ -2217,8 +2217,8 @@ namespace wi
 			TextureDesc desc;
 			desc.format = Format::R16G16B16A16_FLOAT;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.width = internalResolution.x / 4;
-			desc.height = internalResolution.y / 4;
+			desc.width = internalResolution.x / 2;
+			desc.height = internalResolution.y / 2;
 			device->CreateTexture(&desc, nullptr, &rtVolumetricLights[0]);
 			device->SetName(&rtVolumetricLights[0], "rtVolumetricLights[0]");
 			device->CreateTexture(&desc, nullptr, &rtVolumetricLights[1]);

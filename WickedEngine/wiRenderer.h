@@ -390,11 +390,6 @@ namespace wi::renderer
 		mutable bool pre_clear = true;
 
 		bool IsValid() const { return diffuse[0].IsValid(); }
-		void Flip()
-		{
-			std::swap(diffuse[0], diffuse[1]);
-			std::swap(specular[0], specular[1]);
-		}
 	};
 	void CreateVXGIResources(VXGIResources& res, XMUINT2 resolution);
 	void VXGI_Voxelize(
@@ -404,6 +399,7 @@ namespace wi::renderer
 	void VXGI_Resolve(
 		const VXGIResources& res,
 		const wi::scene::Scene& scene,
+		wi::graphics::Texture texture_lineardepth,
 		wi::graphics::CommandList cmd
 	);
 

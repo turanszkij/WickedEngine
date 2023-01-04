@@ -7306,19 +7306,27 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 void CreateVXGIResources(VXGIResources& res, XMUINT2 resolution)
 {
 	TextureDesc desc;
-	desc.width = resolution.x;
-	desc.height = resolution.y;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 
+	desc.width = resolution.x;
+	desc.height = resolution.y;
 	desc.format = Format::R11G11B10_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.diffuse[0]);
 	device->SetName(&res.diffuse[0], "vxgi.diffuse[0]");
+
+	desc.width = resolution.x / VXGI_DIFFUSE_UPSAMPLING;
+	desc.height = resolution.y / VXGI_DIFFUSE_UPSAMPLING;
 	device->CreateTexture(&desc, nullptr, &res.diffuse[1]);
 	device->SetName(&res.diffuse[1], "vxgi.diffuse[1]");
 
+	desc.width = resolution.x;
+	desc.height = resolution.y;
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.specular[0]);
 	device->SetName(&res.specular[0], "vxgi.specular[0]");
+
+	desc.width = resolution.x / VXGI_SPECULAR_UPSAMPLING;
+	desc.height = resolution.y / VXGI_SPECULAR_UPSAMPLING;
 	device->CreateTexture(&desc, nullptr, &res.specular[1]);
 	device->SetName(&res.specular[1], "vxgi.specular[1]");
 
@@ -7504,6 +7512,7 @@ void VXGI_Voxelize(
 void VXGI_Resolve(
 	const VXGIResources& res,
 	const Scene& scene,
+	Texture texture_lineardepth,
 	CommandList cmd
 )
 {
@@ -7547,7 +7556,7 @@ void VXGI_Resolve(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&res.diffuse[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			GPUBarrier::Image(&res.specular[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Image(&res.specular[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -7555,19 +7564,18 @@ void VXGI_Resolve(
 	{
 		device->EventBegin("Diffuse", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_VXGI_RESOLVE_DIFFUSE], cmd);
-		device->BindResource(&res.diffuse[1], 0, cmd);
-		device->BindUAV(&res.diffuse[0], 0, cmd);
+		device->BindUAV(&res.diffuse[1], 0, cmd);
 
 		PostProcess postprocess;
-		postprocess.resolution.x = res.diffuse[0].desc.width;
-		postprocess.resolution.y = res.diffuse[0].desc.height;
+		postprocess.resolution.x = res.diffuse[1].desc.width;
+		postprocess.resolution.y = res.diffuse[1].desc.height;
 		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		uint2 dispatch_dim;
-		dispatch_dim.x = postprocess.resolution.x / VXGI_DIFFUSE_UPSAMPLING;
-		dispatch_dim.y = postprocess.resolution.y / VXGI_DIFFUSE_UPSAMPLING;
+		dispatch_dim.x = postprocess.resolution.x;
+		dispatch_dim.y = postprocess.resolution.y;
 
 		device->Dispatch((dispatch_dim.x + 7u) / 8u, (dispatch_dim.y + 7u) / 8u, 1, cmd);
 
@@ -7578,19 +7586,18 @@ void VXGI_Resolve(
 	{
 		device->EventBegin("Specular", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_VXGI_RESOLVE_SPECULAR], cmd);
-		device->BindResource(&res.specular[1], 0, cmd);
-		device->BindUAV(&res.specular[0], 0, cmd);
+		device->BindUAV(&res.specular[1], 0, cmd);
 
 		PostProcess postprocess;
-		postprocess.resolution.x = res.specular[0].desc.width;
-		postprocess.resolution.y = res.specular[0].desc.height;
+		postprocess.resolution.x = res.specular[1].desc.width;
+		postprocess.resolution.y = res.specular[1].desc.height;
 		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		uint2 dispatch_dim;
-		dispatch_dim.x = postprocess.resolution.x / VXGI_SPECULAR_UPSAMPLING;
-		dispatch_dim.y = postprocess.resolution.y / VXGI_SPECULAR_UPSAMPLING;
+		dispatch_dim.x = postprocess.resolution.x;
+		dispatch_dim.y = postprocess.resolution.y;
 
 		device->Dispatch((dispatch_dim.x + 7u) / 8u, (dispatch_dim.y + 7u) / 8u, 1, cmd);
 
@@ -7600,10 +7607,23 @@ void VXGI_Resolve(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&res.diffuse[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			GPUBarrier::Image(&res.specular[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Image(&res.specular[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
+
+	Postprocess_Upsample_Bilateral(
+		res.diffuse[1],
+		texture_lineardepth,
+		res.diffuse[0],
+		cmd
+	);
+	Postprocess_Upsample_Bilateral(
+		res.specular[1],
+		texture_lineardepth,
+		res.specular[0],
+		cmd
+	);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
