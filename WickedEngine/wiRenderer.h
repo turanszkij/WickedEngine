@@ -261,8 +261,6 @@ namespace wi::renderer
 	void RefreshImpostors(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 	// Call once per frame to repack out of date lightmaps in the atlas
 	void RefreshLightmaps(const wi::scene::Scene& scene, wi::graphics::CommandList cmd, uint8_t instanceInclusionMask = 0xFF);
-	// Voxelize the scene into a voxel grid 3D texture
-	void VoxelRadiance(const Visibility& vis, wi::graphics::CommandList cmd);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
 	void ResolveMSAADepthBuffer(const wi::graphics::Texture& dst, const wi::graphics::Texture& src, wi::graphics::CommandList cmd);
 	void DownsampleDepthBuffer(const wi::graphics::Texture& src, wi::graphics::CommandList cmd);
@@ -358,6 +356,7 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
+	// Surfel GI: diffuse GI with ray tracing from surfels
 	struct SurfelGIResources
 	{
 		wi::graphics::Texture result;
@@ -376,10 +375,32 @@ namespace wi::renderer
 		uint8_t instanceInclusionMask = 0xFF
 	);
 
+	// DDGI: Dynamic Diffuse Global Illumination (probe-based ray tracing)
 	void DDGI(
 		const wi::scene::Scene& scene,
 		wi::graphics::CommandList cmd,
 		uint8_t instanceInclusionMask = 0xFF
+	);
+
+	// VXGI: Voxel-based Global Illumination (voxel cone tracing-based)
+	struct VXGIResources
+	{
+		wi::graphics::Texture diffuse[2];
+		wi::graphics::Texture specular[2];
+		mutable bool pre_clear = true;
+
+		bool IsValid() const { return diffuse[0].IsValid(); }
+	};
+	void CreateVXGIResources(VXGIResources& res, XMUINT2 resolution);
+	void VXGI_Voxelize(
+		const Visibility& vis,
+		wi::graphics::CommandList cmd
+	);
+	void VXGI_Resolve(
+		const VXGIResources& res,
+		const wi::scene::Scene& scene,
+		wi::graphics::Texture texture_lineardepth,
+		wi::graphics::CommandList cmd
 	);
 
 	void Postprocess_Blur_Gaussian(
@@ -885,7 +906,7 @@ namespace wi::renderer
 	bool GetToDrawGridHelper();
 	void SetToDrawGridHelper(bool value);
 	bool GetToDrawVoxelHelper();
-	void SetToDrawVoxelHelper(bool value);
+	void SetToDrawVoxelHelper(bool value, int clipmap_level);
 	void SetDebugLightCulling(bool enabled);
 	bool GetDebugLightCulling();
 	void SetAdvancedLightCulling(bool enabled);
@@ -902,21 +923,10 @@ namespace wi::renderer
 	bool GetTemporalAADebugEnabled();
 	void SetFreezeCullingCameraEnabled(bool enabled);
 	bool GetFreezeCullingCameraEnabled();
-	void SetVoxelRadianceEnabled(bool enabled);
-	bool GetVoxelRadianceEnabled();
-	void SetVoxelRadianceSecondaryBounceEnabled(bool enabled);
-	bool GetVoxelRadianceSecondaryBounceEnabled();
-	void SetVoxelRadianceReflectionsEnabled(bool enabled);
-	bool GetVoxelRadianceReflectionsEnabled();
-	void SetVoxelRadianceVoxelSize(float value);
-	float GetVoxelRadianceVoxelSize();
-	void SetVoxelRadianceMaxDistance(float value);
-	float GetVoxelRadianceMaxDistance();
-	int GetVoxelRadianceResolution();
-	void SetVoxelRadianceNumCones(int value);
-	int GetVoxelRadianceNumCones();
-	float GetVoxelRadianceRayStepSize();
-	void SetVoxelRadianceRayStepSize(float value);
+	void SetVXGIEnabled(bool enabled);
+	bool GetVXGIEnabled();
+	void SetVXGIReflectionsEnabled(bool enabled);
+	bool GetVXGIReflectionsEnabled();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
 	void SetRaytraceBounceCount(uint32_t bounces);

@@ -26,6 +26,7 @@
 #include "shaders/ShaderInterop_Raytracing.h"
 #include "shaders/ShaderInterop_BVH.h"
 #include "shaders/ShaderInterop_DDGI.h"
+#include "shaders/ShaderInterop_VXGI.h"
 #include "shaders/ShaderInterop_FSR2.h"
 
 #include <algorithm>
@@ -79,7 +80,6 @@ bool debugForceFields = false;
 bool debugCameras = false;
 bool debugColliders = false;
 bool gridHelper = false;
-bool voxelHelper = false;
 bool advancedLightCulling = true;
 bool variableRateShadingClassification = false;
 bool variableRateShadingClassificationDebug = false;
@@ -104,23 +104,10 @@ float DDGI_BLEND_SPEED = 0.02f;
 float GI_BOOST = 1.0f;
 std::atomic<size_t> SHADER_ERRORS{ 0 };
 std::atomic<size_t> SHADER_MISSING{ 0 };
-
-
-struct VoxelizedSceneData
-{
-	bool enabled = false;
-	uint32_t res = 128;
-	float voxelsize = 1;
-	XMFLOAT3 center = XMFLOAT3(0, 0, 0);
-	XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
-	uint32_t numCones = 2;
-	float rayStepSize = 0.75f;
-	float maxDistance = 20.0f;
-	bool secondaryBounceEnabled = false;
-	bool reflectionsEnabled = true;
-	bool centerChangedThisFrame = true;
-	uint32_t mips = 7;
-} voxelSceneData;
+bool VXGI_ENABLED = false;
+bool VXGI_REFLECTIONS_ENABLED = true;
+bool VXGI_DEBUG = false;
+int VXGI_DEBUG_CLIPMAP = 0;
 
 Texture shadowMapAtlas;
 Texture shadowMapAtlas_Transparent;
@@ -434,9 +421,12 @@ SHADERTYPE GetGSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 
 	switch (renderPass)
 	{
+#ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 	case RENDERPASS_VOXELIZE:
 		realGS = GSTYPE_VOXELIZER;
 		break;
+#endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
+
 	case RENDERPASS_ENVMAPCAPTURE:
 		if (device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
 			break;
@@ -909,9 +899,11 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LIGHTCULLING_ADVANCED], "lightCullingCS_ADVANCED.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LIGHTCULLING_ADVANCED_DEBUG], "lightCullingCS_ADVANCED_DEBUG.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], "resolveMSAADepthStencilCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VOXELSCENECOPYCLEAR], "voxelSceneCopyClearCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], "voxelSceneCopyClearCS_TemporalSmoothing.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], "voxelRadianceSecondaryBounceCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VXGI_OFFSETPREV], "vxgi_offsetprevCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VXGI_TEMPORAL], "vxgi_temporalCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VXGI_SDF_JUMPFLOOD], "vxgi_sdf_jumpfloodCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VXGI_RESOLVE_DIFFUSE], "vxgi_resolve_diffuseCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VXGI_RESOLVE_SPECULAR], "vxgi_resolve_specularCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_TRANSMITTANCELUT], "skyAtmosphere_transmittanceLutCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], "skyAtmosphere_multiScatteredLuminanceLutCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_SKYVIEWLUT], "skyAtmosphere_skyViewLutCS.cso"); });
@@ -3106,19 +3098,20 @@ void UpdatePerFrameData(
 	// Update Voxelization parameters:
 	if (scene.objects.GetCount() > 0)
 	{
-		// We don't update it if the scene is empty, this even makes it easier to debug
-		const float f = 0.05f / voxelSceneData.voxelsize;
-		XMFLOAT3 center = XMFLOAT3(std::floor(vis.camera->Eye.x * f) / f, std::floor(vis.camera->Eye.y * f) / f, std::floor(vis.camera->Eye.z * f) / f);
-		if (wi::math::DistanceSquared(center, voxelSceneData.center) > 0)
+		Scene::VXGI::ClipMap& clipmap = scene.vxgi.clipmaps[scene.vxgi.clipmap_to_update];
+		clipmap.voxelsize = scene.vxgi.clipmaps[0].voxelsize * (1u << scene.vxgi.clipmap_to_update);
+		const float texelSize = clipmap.voxelsize * 2;
+		XMFLOAT3 center = XMFLOAT3(std::floor(vis.camera->Eye.x / texelSize) * texelSize, std::floor(vis.camera->Eye.y / texelSize) * texelSize, std::floor(vis.camera->Eye.z / texelSize) * texelSize);
+		clipmap.offsetfromPrevFrame.x = int((clipmap.center.x - center.x) / texelSize);
+		clipmap.offsetfromPrevFrame.y = -int((clipmap.center.y - center.y) / texelSize);
+		clipmap.offsetfromPrevFrame.z = int((clipmap.center.z - center.z) / texelSize);
+		clipmap.center = center;
+		XMFLOAT3 extents = XMFLOAT3(scene.vxgi.res * clipmap.voxelsize, scene.vxgi.res * clipmap.voxelsize, scene.vxgi.res * clipmap.voxelsize);
+		if (extents.x != clipmap.extents.x || extents.y != clipmap.extents.y || extents.z != clipmap.extents.z)
 		{
-			voxelSceneData.centerChangedThisFrame = true;
+			scene.vxgi.pre_clear = true;
 		}
-		else
-		{
-			voxelSceneData.centerChangedThisFrame = false;
-		}
-		voxelSceneData.center = center;
-		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
+		clipmap.extents = extents;
 	}
 
 	// Shadow atlas packing:
@@ -3354,16 +3347,17 @@ void UpdatePerFrameData(
 	frameCB.frame_count = (uint)device->GetFrameCount();
 	frameCB.blue_noise_phase = (frameCB.frame_count & 0xFF) * 1.6180339887f;
 
-	frameCB.voxelradiance_max_distance = voxelSceneData.maxDistance;
-	frameCB.voxelradiance_size = voxelSceneData.voxelsize;
-	frameCB.voxelradiance_size_rcp = 1.0f / (float)frameCB.voxelradiance_size;
-	frameCB.voxelradiance_resolution = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
-	frameCB.voxelradiance_resolution_rcp = GetVoxelRadianceEnabled() ? 1.0f / (float)frameCB.voxelradiance_resolution : 0; //PE: was inf.
-	frameCB.voxelradiance_mipcount = voxelSceneData.mips;
-	frameCB.voxelradiance_numcones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
-	frameCB.voxelradiance_numcones_rcp = 1.0f / (float)frameCB.voxelradiance_numcones;
-	frameCB.voxelradiance_stepsize = voxelSceneData.rayStepSize;
-	frameCB.voxelradiance_center = voxelSceneData.center;
+	frameCB.vxgi.max_distance = scene.vxgi.maxDistance;
+	frameCB.vxgi.resolution = GetVXGIEnabled() ? (uint)scene.vxgi.res : 0;
+	frameCB.vxgi.resolution_rcp = GetVXGIEnabled() ? 1.0f / (float)frameCB.vxgi.resolution : 0; //PE: was inf.
+	frameCB.vxgi.stepsize = scene.vxgi.rayStepSize;
+	frameCB.vxgi.texture_radiance = device->GetDescriptorIndex(&scene.vxgi.radiance, SubresourceType::SRV);
+	frameCB.vxgi.texture_sdf = device->GetDescriptorIndex(&scene.vxgi.sdf, SubresourceType::SRV);
+	for (uint i = 0; i < VXGI_CLIPMAP_COUNT; ++i)
+	{
+		frameCB.vxgi.clipmaps[i].center = scene.vxgi.clipmaps[i].center;
+		frameCB.vxgi.clipmaps[i].voxelSize = scene.vxgi.clipmaps[i].voxelsize;
+	}
 
 	// The order is very important here:
 	frameCB.decalarray_offset = 0;
@@ -3418,17 +3412,13 @@ void UpdatePerFrameData(
 	{
 		frameCB.options |= OPTION_BIT_TRANSPARENTSHADOWS_ENABLED;
 	}
-	if (GetVoxelRadianceEnabled())
+	if (GetVXGIEnabled())
 	{
-		frameCB.options |= OPTION_BIT_VOXELGI_ENABLED;
+		frameCB.options |= OPTION_BIT_VXGI_ENABLED;
 	}
-	if (GetVoxelRadianceReflectionsEnabled())
+	if (GetVXGIReflectionsEnabled())
 	{
-		frameCB.options |= OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED;
-	}
-	if (voxelSceneData.centerChangedThisFrame)
-	{
-		frameCB.options |= OPTION_BIT_VOXELGI_RETARGETTED;
+		frameCB.options |= OPTION_BIT_VXGI_REFLECTIONS_ENABLED;
 	}
 	if (vis.scene->weather.IsRealisticSky())
 	{
@@ -3481,7 +3471,6 @@ void UpdatePerFrameData(
 	frameCB.texture_transmittancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], SubresourceType::SRV);
 	frameCB.texture_multiscatteringlut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], SubresourceType::SRV);
 	frameCB.texture_skyluminancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], SubresourceType::SRV);
-	frameCB.texture_voxelgi_index = device->GetDescriptorIndex(GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], SubresourceType::SRV);
 	frameCB.buffer_entityarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_ENTITYARRAY], SubresourceType::SRV);
 	frameCB.buffer_entitymatrixarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_MATRIXARRAY], SubresourceType::SRV);
 
@@ -3566,6 +3555,9 @@ void UpdateRenderData(
 
 	auto prof_updatebuffer_cpu = wi::profiler::BeginRangeCPU("Update Buffers (CPU)");
 	auto prof_updatebuffer_gpu = wi::profiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
+
+	GPUBarrier frame_cb_barrier = GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST);
+	device->Barrier(&frame_cb_barrier, 1, cmd);
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
 	barrier_stack.push_back(GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
@@ -6285,20 +6277,24 @@ void DrawDebugWorld(
 		device->EventEnd(cmd);
 	}
 
-	if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE].IsValid())
+	if (VXGI_DEBUG && scene.vxgi.radiance.IsValid())
 	{
 		device->EventBegin("Debug Voxels", cmd);
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_VOXEL], cmd);
 
-
 		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera.GetViewProjection());
-		sb.g_xColor = float4(1, 1, 1, 1);
+		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
+		sb.g_xColor = float4((float)VXGI_DEBUG_CLIPMAP, 1, 1, 1);
 
 		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
-		device->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, cmd);
+		uint32_t vertexCount = scene.vxgi.res * scene.vxgi.res * scene.vxgi.res;
+		if (VXGI_DEBUG_CLIPMAP == VXGI_CLIPMAP_COUNT)
+		{
+			vertexCount *= VXGI_CLIPMAP_COUNT;
+		}
+		device->Draw(vertexCount, 0, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -7064,8 +7060,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			}
 
 			device->Dispatch(
-				(desc.width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE,
-				(desc.height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE,
+				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 				6,
 				cmd);
 
@@ -7306,23 +7302,54 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 	device->EventEnd(cmd);
 }
 
-void VoxelRadiance(const Visibility& vis, CommandList cmd)
+
+void CreateVXGIResources(VXGIResources& res, XMUINT2 resolution)
 {
-	if (!GetVoxelRadianceEnabled())
+	TextureDesc desc;
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+
+	desc.width = resolution.x;
+	desc.height = resolution.y;
+	desc.format = Format::R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.diffuse[0]);
+	device->SetName(&res.diffuse[0], "vxgi.diffuse[0]");
+
+	desc.width = resolution.x / VXGI_DIFFUSE_UPSAMPLING;
+	desc.height = resolution.y / VXGI_DIFFUSE_UPSAMPLING;
+	device->CreateTexture(&desc, nullptr, &res.diffuse[1]);
+	device->SetName(&res.diffuse[1], "vxgi.diffuse[1]");
+
+	desc.width = resolution.x;
+	desc.height = resolution.y;
+	desc.format = Format::R16G16B16A16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.specular[0]);
+	device->SetName(&res.specular[0], "vxgi.specular[0]");
+
+	desc.width = resolution.x / VXGI_SPECULAR_UPSAMPLING;
+	desc.height = resolution.y / VXGI_SPECULAR_UPSAMPLING;
+	device->CreateTexture(&desc, nullptr, &res.specular[1]);
+	device->SetName(&res.specular[1], "vxgi.specular[1]");
+
+	res.pre_clear = true;
+}
+void VXGI_Voxelize(
+	const Visibility& vis,
+	CommandList cmd
+)
+{
+	if (!GetVXGIEnabled())
 	{
 		return;
 	}
 
-	device->EventBegin("Voxel Radiance", cmd);
-	auto range = wi::profiler::BeginRangeGPU("Voxel Radiance", cmd);
+	device->EventBegin("VXGI - Voxelize", cmd);
+	auto range = wi::profiler::BeginRangeGPU("VXGI - Voxelize", cmd);
 
-	Texture* result = &textures[TEXTYPE_3D_VOXELRADIANCE];
+	const Scene& scene = *vis.scene;
+	const Scene::VXGI::ClipMap& clipmap = scene.vxgi.clipmaps[scene.vxgi.clipmap_to_update];
 
 	AABB bbox;
-	XMFLOAT3 extents = voxelSceneData.extents;
-	XMFLOAT3 center = voxelSceneData.center;
-	bbox.createFromHalfWidth(center, extents);
-
+	bbox.createFromHalfWidth(clipmap.center, clipmap.extents);
 
 	static thread_local RenderQueue renderQueue;
 	renderQueue.init();
@@ -7332,7 +7359,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		if (bbox.intersects(aabb))
 		{
 			const ObjectComponent& object = vis.scene->objects[i];
-			if (object.IsRenderable())
+			if (object.IsRenderable() && (scene.vxgi.clipmap_to_update < (VXGI_CLIPMAP_COUNT - object.cascadeMask)))
 			{
 				renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
 			}
@@ -7341,96 +7368,262 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 	if (!renderQueue.empty())
 	{
-		Viewport vp;
-		vp.width = (float)voxelSceneData.res;
-		vp.height = (float)voxelSceneData.res;
-		device->BindViewports(1, &vp, cmd);
-
-		GPUResource* UAVs[] = { &resourceBuffers[RBTYPE_VOXELSCENE] };
-		device->BindUAVs(UAVs, 0, 1, cmd);
-
 		BindCommonResources(cmd);
 
-		device->ClearUAV(&resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
+		VoxelizerCB cb;
+		cb.offsetfromPrevFrame = clipmap.offsetfromPrevFrame;
+		cb.clipmap_index = scene.vxgi.clipmap_to_update;
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_VOXELIZER, cmd);
+
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&resourceBuffers[RBTYPE_VOXELSCENE]),
+				GPUBarrier::Image(&scene.vxgi.render_atomic, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&scene.vxgi.prev_radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&scene.vxgi.radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->RenderPassBegin(nullptr, 0, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
-		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, false, nullptr, 1);
-		device->RenderPassEnd(cmd);
-
+		if (scene.vxgi.pre_clear)
 		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&resourceBuffers[RBTYPE_VOXELSCENE], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS)
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
-		device->EventBegin("Voxel Scene Copy - Clear", cmd);
-		device->BindResource(&resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
-		device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
-
-		static bool smooth_copy = true;
-		if (smooth_copy)
-		{
-			device->BindComputeShader(&shaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], cmd);
+			device->ClearUAV(&scene.vxgi.prev_radiance, 0, cmd);
+			device->ClearUAV(&scene.vxgi.radiance, 0, cmd);
+			device->ClearUAV(&scene.vxgi.sdf, 0, cmd);
+			device->ClearUAV(&scene.vxgi.sdf_temp, 0, cmd);
+			scene.vxgi.pre_clear = false;
 		}
 		else
 		{
-			device->BindComputeShader(&shaders[CSTYPE_VOXELSCENECOPYCLEAR], cmd);
+			device->EventBegin("Offset Previous Voxels", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_VXGI_OFFSETPREV], cmd);
+			device->BindResource(&scene.vxgi.radiance, 0, cmd);
+			device->BindUAV(&scene.vxgi.prev_radiance, 0, cmd);
+
+			device->Dispatch(scene.vxgi.res / 8, scene.vxgi.res / 8, scene.vxgi.res / 8, cmd);
+
+			device->EventEnd(cmd);
 		}
-		device->Dispatch((uint32_t)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
-		device->EventEnd(cmd);
+
+		{
+			device->EventBegin("Clear Voxel Atomics", cmd);
+
+			device->ClearUAV(&scene.vxgi.render_atomic, 0, cmd);
+			device->EventEnd(cmd);
+		}
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Memory(&scene.vxgi.render_atomic),
+				GPUBarrier::Image(&scene.vxgi.prev_radiance, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Image(&scene.vxgi.radiance, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Image(&scene.vxgi.sdf, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		if (voxelSceneData.secondaryBounceEnabled)
 		{
-			device->EventBegin("Voxel Radiance Secondary Bounce", cmd);
-			// Pre-integrate the voxel texture by creating blurred mip levels:
-			GenerateMipChain(textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, cmd);
+			device->EventBegin("Voxelize", cmd);
+
+			Viewport vp;
+			vp.width = (float)scene.vxgi.res;
+			vp.height = (float)scene.vxgi.res;
+			device->BindViewports(1, &vp, cmd);
+
+			device->BindResource(&scene.vxgi.prev_radiance, 0, cmd);
+			device->BindUAV(&scene.vxgi.render_atomic, 0, cmd);
+
+			device->RenderPassBegin(nullptr, 0, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
+#ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
+			const uint32_t frustum_count = 1; // axis will be selected by geometry shader
+#else
+			const uint32_t frustum_count = 3; // just used to replicate 3 times for main axes, but not with real frustums
+#endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
+			RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, false, nullptr, frustum_count);
+			device->RenderPassEnd(cmd);
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS)
+					GPUBarrier::Image(&scene.vxgi.render_atomic, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+					GPUBarrier::Image(&scene.vxgi.radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					GPUBarrier::Image(&scene.vxgi.sdf, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			device->BindResource(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
-			device->BindResource(&resourceBuffers[RBTYPE_VOXELSCENE], 1, cmd);
-			device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, cmd);
-			device->BindComputeShader(&shaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], cmd);
-			device->Dispatch(voxelSceneData.res / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
 			device->EventEnd(cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-					GPUBarrier::Buffer(&resourceBuffers[RBTYPE_VOXELSCENE], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			result = &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
 		}
 
-		// Pre-integrate the voxel texture by creating blurred mip levels:
 		{
-			GenerateMipChain(*result, MIPGENFILTER_LINEAR, cmd);
+			device->EventBegin("Temporal Blend Voxels", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_VXGI_TEMPORAL], cmd);
+			device->BindResource(&scene.vxgi.prev_radiance, 0, cmd);
+			device->BindResource(&scene.vxgi.render_atomic, 1, cmd);
+			device->BindUAV(&scene.vxgi.radiance, 0, cmd);
+			device->BindUAV(&scene.vxgi.sdf, 1, cmd);
+
+			device->Dispatch(scene.vxgi.res / 8, scene.vxgi.res / 8, scene.vxgi.res / 8, cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&scene.vxgi.radiance, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+					GPUBarrier::Image(&scene.vxgi.sdf, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+			device->EventEnd(cmd);
+		}
+
+		{
+			device->EventBegin("SDF Jump Flood", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_VXGI_SDF_JUMPFLOOD], cmd);
+
+			const Texture* _write = &scene.vxgi.sdf_temp;
+			const Texture* _read = &scene.vxgi.sdf;
+
+			int passcount = (int)std::ceil(std::log2((float)scene.vxgi.res));
+			for (int i = 0; i < passcount; ++i)
+			{
+				float jump_size = std::pow(2.0f, float(passcount - i - 1));
+				device->PushConstants(&jump_size, sizeof(jump_size), cmd);
+
+				device->BindUAV(_write, 0, cmd);
+				device->BindResource(_read, 0, cmd);
+
+				device->Dispatch(scene.vxgi.res / 8, scene.vxgi.res / 8, scene.vxgi.res / 8, cmd);
+
+				{
+					GPUBarrier barriers[] = {
+						GPUBarrier::Image(_write, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+						GPUBarrier::Image(_read, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					};
+					device->Barrier(barriers, arraysize(barriers), cmd);
+				}
+
+				std::swap(_read, _write);
+			}
+
+			device->EventEnd(cmd);
 		}
 	}
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void VXGI_Resolve(
+	const VXGIResources& res,
+	const Scene& scene,
+	Texture texture_lineardepth,
+	CommandList cmd
+)
+{
+	if (!GetVXGIEnabled() || !scene.vxgi.radiance.IsValid())
+	{
+		return;
+	}
+
+	device->EventBegin("VXGI - Resolve", cmd);
+	auto range = wi::profiler::BeginRangeGPU("VXGI - Resolve", cmd);
+
+	BindCommonResources(cmd);
+
+	if (res.pre_clear)
+	{
+		res.pre_clear = false;
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.diffuse[0], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.diffuse[1], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.specular[0], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.specular[1], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+		device->ClearUAV(&res.diffuse[0], 0, cmd);
+		device->ClearUAV(&res.diffuse[1], 0, cmd);
+		device->ClearUAV(&res.specular[0], 0, cmd);
+		device->ClearUAV(&res.specular[1], 0, cmd);
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.diffuse[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Image(&res.diffuse[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Image(&res.specular[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Image(&res.specular[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.diffuse[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Image(&res.specular[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	{
+		device->EventBegin("Diffuse", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_VXGI_RESOLVE_DIFFUSE], cmd);
+		device->BindUAV(&res.diffuse[1], 0, cmd);
+
+		PostProcess postprocess;
+		postprocess.resolution.x = res.diffuse[1].desc.width;
+		postprocess.resolution.y = res.diffuse[1].desc.height;
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+		uint2 dispatch_dim;
+		dispatch_dim.x = postprocess.resolution.x;
+		dispatch_dim.y = postprocess.resolution.y;
+
+		device->Dispatch((dispatch_dim.x + 7u) / 8u, (dispatch_dim.y + 7u) / 8u, 1, cmd);
+
+		device->EventEnd(cmd);
+	}
+
+	if(VXGI_REFLECTIONS_ENABLED)
+	{
+		device->EventBegin("Specular", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_VXGI_RESOLVE_SPECULAR], cmd);
+		device->BindUAV(&res.specular[1], 0, cmd);
+
+		PostProcess postprocess;
+		postprocess.resolution.x = res.specular[1].desc.width;
+		postprocess.resolution.y = res.specular[1].desc.height;
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+		uint2 dispatch_dim;
+		dispatch_dim.x = postprocess.resolution.x;
+		dispatch_dim.y = postprocess.resolution.y;
+
+		device->Dispatch((dispatch_dim.x + 7u) / 8u, (dispatch_dim.y + 7u) / 8u, 1, cmd);
+
+		device->EventEnd(cmd);
+	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.diffuse[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Image(&res.specular[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	Postprocess_Upsample_Bilateral(
+		res.diffuse[1],
+		texture_lineardepth,
+		res.diffuse[0],
+		cmd
+	);
+	Postprocess_Upsample_Bilateral(
+		res.specular[1],
+		texture_lineardepth,
+		res.specular[0],
+		cmd
+	);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -8215,6 +8408,8 @@ void BindCameraCB(
 	cb.texture_rtdiffuse_index = camera.texture_rtdiffuse_index;
 	cb.texture_surfelgi_index = camera.texture_surfelgi_index;
 	cb.texture_depth_index_prev = camera_previous.texture_depth_index;
+	cb.texture_vxgi_diffuse_index = camera.texture_vxgi_diffuse_index;
+	cb.texture_vxgi_specular_index = camera.texture_vxgi_specular_index;
 
 	device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 }
@@ -14584,8 +14779,8 @@ void SetToDrawDebugColliders(bool param) { debugColliders = param; }
 bool GetToDrawDebugColliders() { return debugColliders; }
 bool GetToDrawGridHelper() { return gridHelper; }
 void SetToDrawGridHelper(bool value) { gridHelper = value; }
-bool GetToDrawVoxelHelper() { return voxelHelper; }
-void SetToDrawVoxelHelper(bool value) { voxelHelper = value; }
+bool GetToDrawVoxelHelper() { return VXGI_DEBUG; }
+void SetToDrawVoxelHelper(bool value, int clipmap_level) { VXGI_DEBUG = value; VXGI_DEBUG_CLIPMAP = clipmap_level; }
 void SetDebugLightCulling(bool enabled) { debugLightCulling = enabled; }
 bool GetDebugLightCulling() { return debugLightCulling; }
 void SetAdvancedLightCulling(bool enabled) { advancedLightCulling = enabled; }
@@ -14605,72 +14800,13 @@ void SetTemporalAADebugEnabled(bool enabled) { temporalAADEBUG = enabled; }
 bool GetTemporalAADebugEnabled() { return temporalAADEBUG; }
 void SetFreezeCullingCameraEnabled(bool enabled) { freezeCullingCamera = enabled; }
 bool GetFreezeCullingCameraEnabled() { return freezeCullingCamera; }
-void SetVoxelRadianceEnabled(bool enabled)
+void SetVXGIEnabled(bool enabled)
 {
-	voxelSceneData.enabled = enabled;
-	if (!textures[TEXTYPE_3D_VOXELRADIANCE].IsValid())
-	{
-		TextureDesc desc;
-		desc.type = TextureDesc::Type::TEXTURE_3D;
-		desc.width = voxelSceneData.res;
-		desc.height = voxelSceneData.res;
-		desc.depth = voxelSceneData.res;
-		desc.mip_levels = 0;
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-		desc.usage = Usage::DEFAULT;
-
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE]);
-
-		for (uint32_t i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc().mip_levels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE], SubresourceType::SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE], SubresourceType::UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
-	}
-	if (!textures[TEXTYPE_3D_VOXELRADIANCE_HELPER].IsValid())
-	{
-		const TextureDesc& desc = textures[TEXTYPE_3D_VOXELRADIANCE].GetDesc();
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
-
-		for (uint32_t i = 0; i < desc.mip_levels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], SubresourceType::SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], SubresourceType::UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
-	}
-	if (!resourceBuffers[RBTYPE_VOXELSCENE].IsValid())
-	{
-		GPUBufferDesc desc;
-		desc.stride = sizeof(uint32_t) * 2;
-		desc.size = desc.stride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
-		desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-		desc.usage = Usage::DEFAULT;
-
-		device->CreateBuffer(&desc, nullptr, &resourceBuffers[RBTYPE_VOXELSCENE]);
-	}
+	VXGI_ENABLED = enabled;
 }
-bool GetVoxelRadianceEnabled() { return voxelSceneData.enabled; }
-void SetVoxelRadianceSecondaryBounceEnabled(bool enabled) { voxelSceneData.secondaryBounceEnabled = enabled; }
-bool GetVoxelRadianceSecondaryBounceEnabled() { return voxelSceneData.secondaryBounceEnabled; }
-void SetVoxelRadianceReflectionsEnabled(bool enabled) { voxelSceneData.reflectionsEnabled = enabled; }
-bool GetVoxelRadianceReflectionsEnabled() { return voxelSceneData.reflectionsEnabled; }
-void SetVoxelRadianceVoxelSize(float value) { voxelSceneData.voxelsize = value; }
-float GetVoxelRadianceVoxelSize() { return voxelSceneData.voxelsize; }
-void SetVoxelRadianceMaxDistance(float value) { voxelSceneData.maxDistance = value; }
-float GetVoxelRadianceMaxDistance() { return voxelSceneData.maxDistance; }
-int GetVoxelRadianceResolution() { return voxelSceneData.res; }
-void SetVoxelRadianceNumCones(int value) { voxelSceneData.numCones = value; }
-int GetVoxelRadianceNumCones() { return voxelSceneData.numCones; }
-float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
-void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
+bool GetVXGIEnabled() { return VXGI_ENABLED; }
+void SetVXGIReflectionsEnabled(bool enabled) { VXGI_REFLECTIONS_ENABLED = enabled; }
+bool GetVXGIReflectionsEnabled() { return VXGI_REFLECTIONS_ENABLED; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
 void SetRaytraceBounceCount(uint32_t bounces)

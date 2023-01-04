@@ -2,6 +2,7 @@
 #define WI_SHADERINTEROP_RENDERER_H
 #include "ShaderInterop.h"
 #include "ShaderInterop_Weather.h"
+#include "ShaderInterop_VXGI.h"
 
 struct ShaderScene
 {
@@ -255,6 +256,27 @@ struct ShaderTextureSlot
 #endif // DISABLE_SVT
 
 		return tex.SampleLevel(sam, uv, lod);
+	}
+
+	float4 SampleBias(in SamplerState sam, in float4 uvsets, in float bias)
+	{
+		Texture2D tex = GetTexture();
+		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
+
+#ifndef DISABLE_SVT
+		[branch]
+		if (sparse_residencymap_descriptor >= 0)
+		{
+			Texture2D<uint> residency_map = bindless_textures_uint[UniformTextureSlot(sparse_residencymap_descriptor)];
+			float2 virtual_tile_count;
+			residency_map.GetDimensions(virtual_tile_count.x, virtual_tile_count.y);
+			float2 virtual_image_dim = virtual_tile_count * SVT_TILE_SIZE;
+			float virtual_lod = get_lod(virtual_image_dim, ddx(uv), ddy(uv));
+			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, virtual_lod + bias);
+		}
+#endif // DISABLE_SVT
+
+		return tex.SampleBias(sam, uv, bias);
 	}
 
 	float4 SampleGrad(in SamplerState sam, in float4 uvsets, in float4 uvsets_dx, in float4 uvsets_dy)
@@ -810,9 +832,8 @@ static const int impostorCaptureAngles = 36;
 // These option bits can be read from options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
 static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
-static const uint OPTION_BIT_VOXELGI_ENABLED = 1 << 2;
-static const uint OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED = 1 << 3;
-static const uint OPTION_BIT_VOXELGI_RETARGETTED = 1 << 4;
+static const uint OPTION_BIT_VXGI_ENABLED = 1 << 2;
+static const uint OPTION_BIT_VXGI_REFLECTIONS_ENABLED = 1 << 3;
 static const uint OPTION_BIT_REALISTIC_SKY = 1 << 6;
 static const uint OPTION_BIT_HEIGHT_FOG = 1 << 7;
 static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 8;
@@ -848,19 +869,6 @@ struct FrameCB
 	int			texture_volumetricclouds_shadow_index;
 	float2		padding0;
 
-	float3		voxelradiance_center;			// center of the voxel grid in world space units
-	float		voxelradiance_max_distance;		// maximum raymarch distance for voxel GI in world-space
-
-	float		voxelradiance_size;				// voxel half-extent in world space units
-	float		voxelradiance_size_rcp;			// 1.0 / voxel-half extent
-	uint		voxelradiance_resolution;		// voxel grid resolution
-	float		voxelradiance_resolution_rcp;	// 1.0 / voxel grid resolution
-
-	uint		voxelradiance_mipcount;			// voxel grid mipmap count
-	uint		voxelradiance_numcones;			// number of diffuse cones to trace
-	float		voxelradiance_numcones_rcp;		// 1.0 / number of diffuse cones to trace
-	float		voxelradiance_stepsize;			// raymarch step size in voxel space units
-
 	uint		envprobe_mipcount;
 	float		envprobe_mipcount_rcp;
 	uint		lightarray_offset;			// indexing into entity array
@@ -876,22 +884,24 @@ struct FrameCB
 	uint		temporalaa_samplerotation;
 	float		blue_noise_phase;
 
-	int			padding1;
 	int			texture_random64x64_index;
 	int			texture_bluenoise_index;
 	int			texture_sheenlut_index;
-
 	int			texture_skyviewlut_index;
+
 	int			texture_transmittancelut_index;
 	int			texture_multiscatteringlut_index;
 	int			texture_skyluminancelut_index;
-
-	int			texture_voxelgi_index;
 	int			buffer_entityarray_index;
+
 	int			buffer_entitymatrixarray_index;
 	float		gi_boost;
+	float		padding1;
+	float		padding2;
 
 	ShaderScene scene;
+
+	VXGI vxgi;
 };
 
 struct CameraCB
@@ -968,6 +978,11 @@ struct CameraCB
 	int texture_rtshadow_index;
 	int texture_surfelgi_index;
 	int texture_depth_index_prev;
+
+	int texture_vxgi_diffuse_index;
+	int texture_vxgi_specular_index;
+	int padding0;
+	int padding1;
 };
 
 

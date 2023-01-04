@@ -200,7 +200,6 @@ struct PrimitiveID
 #define texture_transmittancelut bindless_textures[GetFrame().texture_transmittancelut_index]
 #define texture_multiscatteringlut bindless_textures[GetFrame().texture_multiscatteringlut_index]
 #define texture_skyluminancelut bindless_textures[GetFrame().texture_skyluminancelut_index]
-#define texture_voxelgi bindless_textures3D[GetFrame().texture_voxelgi_index]
 #define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
@@ -247,9 +246,9 @@ inline float4 attribute_at_bary(in float4 a0, in float4 a1, in float4 a2, in flo
 }
 
 inline bool is_saturated(float a) { return a == saturate(a); }
-inline bool is_saturated(float2 a) { return is_saturated(a.x) && is_saturated(a.y); }
-inline bool is_saturated(float3 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z); }
-inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z) && is_saturated(a.w); }
+inline bool is_saturated(float2 a) { return all(a == saturate(a)); }
+inline bool is_saturated(float3 a) { return all(a == saturate(a)); }
+inline bool is_saturated(float4 a) { return all(a == saturate(a)); }
 
 inline float2 uv_to_clipspace(in float2 uv)
 {

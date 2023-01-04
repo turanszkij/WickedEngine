@@ -361,10 +361,12 @@ inline float3 GetAmbient(in float3 N)
 
 #endif // ENVMAPRENDERING
 
+#ifndef NO_FLAT_AMBIENT
 	// This is not entirely correct if we have probes, because it shouldn't be added twice.
 	//	However, it is not correct if we leave it out from probes, because if we render a scene
 	//	with dark sky but ambient, we still want some visible result.
 	ambient += GetAmbientColor();
+#endif // NO_FLAT_AMBIENT
 
 	return ambient;
 }
@@ -461,29 +463,23 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 
 // VOXEL RADIANCE
 
-inline void VoxelGI(in Surface surface, inout Lighting lighting)
+inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 {
-	[branch] if (GetFrame().voxelradiance_resolution != 0)
+	[branch]
+	if (GetFrame().vxgi.resolution != 0 && GetFrame().vxgi.texture_radiance >= 0)
 	{
-		// determine blending factor (we will blend out voxel GI on grid edges):
-		float3 voxelSpacePos = surface.P - GetFrame().voxelradiance_center;
-		voxelSpacePos *= GetFrame().voxelradiance_size_rcp;
-		voxelSpacePos *= GetFrame().voxelradiance_resolution_rcp;
-		voxelSpacePos = saturate(abs(voxelSpacePos));
-		float blend = 1 - pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
+		Texture3D<float4> voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
 
 		// diffuse:
-		{
-			float4 trace = ConeTraceDiffuse(texture_voxelgi, surface.P, surface.N);
-			lighting.indirect.diffuse = lerp(lighting.indirect.diffuse, trace.rgb, trace.a * blend);
-		}
+		float4 trace = ConeTraceDiffuse(voxels, surface.P, surface.N);
+		lighting.indirect.diffuse = mad(lighting.indirect.diffuse, 1 - trace.a, trace.rgb);
 
 		// specular:
 		[branch]
-		if (GetFrame().options & OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED)
+		if (GetFrame().options & OPTION_BIT_VXGI_REFLECTIONS_ENABLED)
 		{
-			float4 trace = ConeTraceSpecular(texture_voxelgi, surface.P, surface.N, surface.V, surface.roughness);
-			lighting.indirect.specular = lerp(lighting.indirect.specular, trace.rgb * surface.F, trace.a * blend);
+			float4 trace = ConeTraceSpecular(voxels, surface.P, surface.N, surface.V, surface.roughnessBRDF, surface.pixel);
+			lighting.indirect.specular = mad(lighting.indirect.specular, 1 - trace.a, trace.rgb * surface.F);
 		}
 	}
 }

@@ -200,10 +200,10 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)depthoffield_tileMaxCOC_horizontalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelRadianceSecondaryBounceCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_temporalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelSceneCopyClearCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_offsetprevCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)upsample_bilateral_float1CS.hlsl">
@@ -707,9 +707,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectHS.hlsl">
       <Filter>HS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelSceneCopyClearCS_TemporalSmoothing.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_curlnoiseCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -1061,6 +1058,15 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_fsr2_reconstruct_previous_depth_pass.hlsl">
       <Filter>ffx-fsr2</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_sdf_jumpfloodCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_resolve_diffuseCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_resolve_specularCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">
@@ -1178,6 +1184,9 @@
       <Filter>ffx-fsr2</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_FSR2.h">
+      <Filter>interop</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_VXGI.h">
       <Filter>interop</Filter>
     </ClInclude>
   </ItemGroup>

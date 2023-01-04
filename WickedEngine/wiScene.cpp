@@ -563,6 +563,61 @@ namespace wi::scene
 			ddgi.depth_texture[1] = {};
 		}
 
+		if (wi::renderer::GetVXGIEnabled())
+		{
+			if(!vxgi.radiance.IsValid())
+			{
+				TextureDesc desc;
+				desc.type = TextureDesc::Type::TEXTURE_3D;
+				desc.width = vxgi.res * (6 + DIFFUSE_CONE_COUNT);
+				desc.height = vxgi.res * VXGI_CLIPMAP_COUNT;
+				desc.depth = vxgi.res;
+				desc.mip_levels = 1;
+				desc.format = Format::R16G16B16A16_FLOAT;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				desc.usage = Usage::DEFAULT;
+
+				device->CreateTexture(&desc, nullptr, &vxgi.radiance);
+				device->SetName(&vxgi.radiance, "vxgi.radiance");
+
+				device->CreateTexture(&desc, nullptr, &vxgi.prev_radiance);
+				device->SetName(&vxgi.prev_radiance, "vxgi.prev_radiance");
+
+				vxgi.pre_clear = true;
+			}
+			if (!vxgi.render_atomic.IsValid())
+			{
+				TextureDesc desc;
+				desc.type = TextureDesc::Type::TEXTURE_3D;
+				desc.width = vxgi.res * 6;
+				desc.height = vxgi.res;
+				desc.depth = vxgi.res * 5; // r,g,b,a,counter
+				desc.mip_levels = 1;
+				desc.usage = Usage::DEFAULT;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				desc.format = Format::R32_UINT;
+				device->CreateTexture(&desc, nullptr, &vxgi.render_atomic);
+				device->SetName(&vxgi.render_atomic, "vxgi.render_atomic");
+			}
+			if (!vxgi.sdf.IsValid())
+			{
+				TextureDesc desc;
+				desc.type = TextureDesc::Type::TEXTURE_3D;
+				desc.width = vxgi.res;
+				desc.height = vxgi.res * VXGI_CLIPMAP_COUNT;
+				desc.depth = vxgi.res;
+				desc.mip_levels = 1;
+				desc.usage = Usage::DEFAULT;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				desc.format = Format::R16_FLOAT;
+				device->CreateTexture(&desc, nullptr, &vxgi.sdf);
+				device->SetName(&vxgi.sdf, "vxgi.sdf");
+				device->CreateTexture(&desc, nullptr, &vxgi.sdf_temp);
+				device->SetName(&vxgi.sdf_temp, "vxgi.sdf_temp");
+			}
+			vxgi.clipmap_to_update = (vxgi.clipmap_to_update + 1) % VXGI_CLIPMAP_COUNT;
+		}
+
 		impostor_ib_format = (((objects.GetCount() * 4) < 655536) ? Format::R16_UINT : Format::R32_UINT);
 		const size_t impostor_index_stride = impostor_ib_format == Format::R16_UINT ? sizeof(uint16_t) : sizeof(uint32_t);
 		const uint64_t required_impostor_buffer_size = objects.GetCount() * (sizeof(impostor_index_stride) * 6 + sizeof(uint4) * 4 + sizeof(uint2));
