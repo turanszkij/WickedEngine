@@ -7515,6 +7515,8 @@ void VXGI_Resolve(
 	device->EventBegin("VXGI - Resolve", cmd);
 	auto range = wi::profiler::BeginRangeGPU("VXGI - Resolve", cmd);
 
+	BindCommonResources(cmd);
+
 	if (res.pre_clear)
 	{
 		res.pre_clear = false;

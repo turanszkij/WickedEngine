@@ -672,14 +672,6 @@ namespace wi
 
 		});
 
-		if (wi::renderer::GetVXGIEnabled())
-		{
-			cmd = device->BeginCommandList();
-			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
-				wi::renderer::VXGI_Voxelize(visibility_main, cmd);
-			});
-		}
-
 		//	async compute parallel with depth prepass
 		cmd = device->BeginCommandList(QUEUE_COMPUTE);
 		CommandList cmd_prepareframe_async = cmd;
@@ -862,15 +854,6 @@ namespace wi
 				);
 			}
 
-			if (wi::renderer::GetVXGIEnabled())
-			{
-				wi::renderer::VXGI_Resolve(
-					vxgiResources,
-					*scene,
-					cmd
-				);
-			}
-
 			RenderAO(cmd);
 
 			if (wi::renderer::GetVariableRateShadingClassification() && device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
@@ -931,6 +914,14 @@ namespace wi
 			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 				wi::renderer::DrawShadowmaps(visibility_main, cmd);
 				});
+		}
+
+		if (wi::renderer::GetVXGIEnabled())
+		{
+			cmd = device->BeginCommandList();
+			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
+				wi::renderer::VXGI_Voxelize(visibility_main, cmd);
+			});
 		}
 
 		// Updating textures:
@@ -1111,6 +1102,14 @@ namespace wi
 					cmd,
 					getRaytracedDiffuseRange(),
 					instanceInclusionMask_RTDiffuse
+				);
+			}
+			if (wi::renderer::GetVXGIEnabled())
+			{
+				wi::renderer::VXGI_Resolve(
+					vxgiResources,
+					*scene,
+					cmd
 				);
 			}
 
