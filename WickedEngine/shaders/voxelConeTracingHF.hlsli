@@ -163,7 +163,7 @@ inline float4 ConeTraceSpecular(in Texture3D<float4> voxels, in float3 P, in flo
 	float3 coneDirection = reflect(-V, N);
 
 	// some dithering to help with banding at large step size
-	P += coneDirection * dither(pixel + GetTemporalAASampleRotation()) * GetFrame().vxgi.stepsize;
+	P += coneDirection * (dither(pixel + GetTemporalAASampleRotation()) - 0.5) * GetFrame().vxgi.stepsize;
 
 	float4 amount = ConeTrace(voxels, P, N, coneDirection, aperture, GetFrame().vxgi.stepsize, true);
 	amount.rgb = max(0, amount.rgb);

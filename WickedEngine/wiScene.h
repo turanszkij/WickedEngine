@@ -179,7 +179,7 @@ namespace wi::scene
 		struct VXGI
 		{
 			uint32_t res = 64;
-			float rayStepSize = 2;
+			float rayStepSize = 1;
 			float maxDistance = 100.0f;
 			struct ClipMap
 			{

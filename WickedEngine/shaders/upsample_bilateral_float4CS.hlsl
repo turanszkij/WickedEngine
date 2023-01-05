@@ -26,7 +26,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 #endif // USE_PIXELSHADER
 
-
 	const float threshold = postprocess.params0.x;
 	const float lowres_depthchain_mip = postprocess.params0.w;
 	const float2 lowres_size = postprocess.params1.xy;
@@ -50,17 +49,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	UPSAMPLE_FORMAT color;
 
+#ifndef UPSAMPLE_DISABLE_FILTERING
 	[branch]
 	if (accum_diff < threshold)
 	{
-#ifdef UPSAMPLE_DISABLE_FILTERING
-		color = input[floor(uv * lowres_size)];
-#else
 		// small error, take bilinear sample:
 		color = input.SampleLevel(sampler_linear_clamp, uv, 0);
-#endif // UPSAMPLE_DISABLE_FILTERING
 	}
 	else
+#endif // UPSAMPLE_DISABLE_FILTERING
 	{
 		// large error:
 

@@ -32,6 +32,7 @@ public:
 	wi::gui::CheckBox vxgiCheckBox;
 	wi::gui::ComboBox vxgiDebugCombo;
 	wi::gui::CheckBox vxgiReflectionsCheckBox;
+	wi::gui::CheckBox vxgiFullresCheckBox;
 	wi::gui::Slider vxgiVoxelSizeSlider;
 	wi::gui::Slider vxgiRayStepSizeSlider;
 	wi::gui::Slider vxgiMaxDistanceSlider;

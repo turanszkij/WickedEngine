@@ -3382,24 +3382,8 @@ void UpdatePerFrameData(
 	frameCB.temporalaa_samplerotation = 0;
 	if (GetTemporalAAEnabled())
 	{
-		uint id = frameCB.frame_count % 4;
-		uint x = 0;
-		uint y = 0;
-		switch (id)
-		{
-		case 1:
-			x = 1;
-			break;
-		case 2:
-			y = 1;
-			break;
-		case 3:
-			x = 1;
-			y = 1;
-			break;
-		default:
-			break;
-		}
+		uint x = frameCB.frame_count % 4;
+		uint y = frameCB.frame_count / 4;
 		frameCB.temporalaa_samplerotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
 	}
 
@@ -7513,7 +7497,8 @@ void VXGI_Resolve(
 	const VXGIResources& res,
 	const Scene& scene,
 	Texture texture_lineardepth,
-	CommandList cmd
+	CommandList cmd,
+	bool fullres
 )
 {
 	if (!GetVXGIEnabled() || !scene.vxgi.radiance.IsValid())
@@ -7564,11 +7549,20 @@ void VXGI_Resolve(
 	{
 		device->EventBegin("Diffuse", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_VXGI_RESOLVE_DIFFUSE], cmd);
-		device->BindUAV(&res.diffuse[1], 0, cmd);
 
 		PostProcess postprocess;
-		postprocess.resolution.x = res.diffuse[1].desc.width;
-		postprocess.resolution.y = res.diffuse[1].desc.height;
+		if (fullres)
+		{
+			device->BindUAV(&res.diffuse[0], 0, cmd);
+			postprocess.resolution.x = res.diffuse[0].desc.width;
+			postprocess.resolution.y = res.diffuse[0].desc.height;
+		}
+		else
+		{
+			device->BindUAV(&res.diffuse[1], 0, cmd);
+			postprocess.resolution.x = res.diffuse[1].desc.width;
+			postprocess.resolution.y = res.diffuse[1].desc.height;
+		}
 		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
@@ -7586,11 +7580,20 @@ void VXGI_Resolve(
 	{
 		device->EventBegin("Specular", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_VXGI_RESOLVE_SPECULAR], cmd);
-		device->BindUAV(&res.specular[1], 0, cmd);
 
 		PostProcess postprocess;
-		postprocess.resolution.x = res.specular[1].desc.width;
-		postprocess.resolution.y = res.specular[1].desc.height;
+		if (fullres)
+		{
+			device->BindUAV(&res.specular[0], 0, cmd);
+			postprocess.resolution.x = res.specular[0].desc.width;
+			postprocess.resolution.y = res.specular[0].desc.height;
+		}
+		else
+		{
+			device->BindUAV(&res.specular[1], 0, cmd);
+			postprocess.resolution.x = res.specular[1].desc.width;
+			postprocess.resolution.y = res.specular[1].desc.height;
+		}
 		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
@@ -7612,18 +7615,28 @@ void VXGI_Resolve(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	Postprocess_Upsample_Bilateral(
-		res.diffuse[1],
-		texture_lineardepth,
-		res.diffuse[0],
-		cmd
-	);
-	Postprocess_Upsample_Bilateral(
-		res.specular[1],
-		texture_lineardepth,
-		res.specular[0],
-		cmd
-	);
+	if (!fullres)
+	{
+		const float depth_threshold = 0.5f;
+
+		Postprocess_Upsample_Bilateral(
+			res.diffuse[1],
+			texture_lineardepth,
+			res.diffuse[0],
+			cmd,
+			false,
+			depth_threshold
+		);
+
+		Postprocess_Upsample_Bilateral(
+			res.specular[1],
+			texture_lineardepth,
+			res.specular[0],
+			cmd,
+			false,
+			depth_threshold
+		);
+	}
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

@@ -396,11 +396,14 @@ namespace wi::renderer
 		const Visibility& vis,
 		wi::graphics::CommandList cmd
 	);
+	// Resolve VXGI to screen
+	//	fullres : if true it will be in native resolution, otherwise it will use some upsampling from low res
 	void VXGI_Resolve(
 		const VXGIResources& res,
 		const wi::scene::Scene& scene,
 		wi::graphics::Texture texture_lineardepth,
-		wi::graphics::CommandList cmd
+		wi::graphics::CommandList cmd,
+		bool fullres = false
 	);
 
 	void Postprocess_Blur_Gaussian(

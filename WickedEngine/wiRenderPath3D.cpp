@@ -562,6 +562,9 @@ namespace wi
 			// FSR2 also acts as a temporal AA, so we inform the shaders about it here
 			//	This will allow improved stochastic alpha test transparency
 			frameCB.options |= OPTION_BIT_TEMPORALAA_ENABLED;
+			uint x = frameCB.frame_count % 4;
+			uint y = frameCB.frame_count / 4;
+			frameCB.temporalaa_samplerotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
 		}
 
 		// Keep a copy of last frame's depth buffer for temporal disocclusion checks, so swap with current one every frame:
@@ -1108,7 +1111,8 @@ namespace wi
 					vxgiResources,
 					*scene,
 					rtLinearDepth,
-					cmd
+					cmd,
+					getVXGIResolveFullResolutionEnabled()
 				);
 			}
 

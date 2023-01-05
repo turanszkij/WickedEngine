@@ -263,8 +263,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	vxgiCheckBox.SetTooltip("Toggle Voxel Global Illumination.");
 	vxgiCheckBox.SetPos(XMFLOAT2(x, y += step));
 	vxgiCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	vxgiCheckBox.OnClick([](wi::gui::EventArgs args) {
+	if (editor->main->config.GetSection("graphics").Has("vxgi"))
+	{
+		wi::renderer::SetVXGIEnabled(editor->main->config.GetSection("graphics").GetBool("vxgi"));
+	}
+	vxgiCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetVXGIEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("vxgi", args.bValue);
+		editor->main->config.Commit();
 	});
 	vxgiCheckBox.SetCheck(wi::renderer::GetVXGIEnabled());
 	AddWidget(&vxgiCheckBox);
@@ -288,11 +294,33 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	vxgiReflectionsCheckBox.SetTooltip("Toggle specular reflections computation for VXGI.");
 	vxgiReflectionsCheckBox.SetPos(XMFLOAT2(x + wid + 1, y));
 	vxgiReflectionsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	vxgiReflectionsCheckBox.OnClick([](wi::gui::EventArgs args) {
+	if (editor->main->config.GetSection("graphics").Has("vxgi.reflections"))
+	{
+		wi::renderer::SetVXGIReflectionsEnabled(editor->main->config.GetSection("graphics").GetBool("vxgi.reflections"));
+	}
+	vxgiReflectionsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetVXGIReflectionsEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("vxgi.reflections", args.bValue);
+		editor->main->config.Commit();
 	});
 	vxgiReflectionsCheckBox.SetCheck(wi::renderer::GetVXGIReflectionsEnabled());
 	AddWidget(&vxgiReflectionsCheckBox);
+
+	vxgiFullresCheckBox.Create("VXGI Full Resolution: ");
+	vxgiFullresCheckBox.SetTooltip("Toggle resolve mode for VXGI opaque. Full resolution will use the full rendering resolution, otherwise it will be upsampled from lower resolution.");
+	vxgiFullresCheckBox.SetPos(XMFLOAT2(x + wid + 1, y));
+	vxgiFullresCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	if (editor->main->config.GetSection("graphics").Has("vxgi.fullres"))
+	{
+		editor->renderPath->setVXGIResolveFullResolutionEnabled(editor->main->config.GetSection("graphics").GetBool("vxgi.fullres"));
+	}
+	vxgiFullresCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->renderPath->setVXGIResolveFullResolutionEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("vxgi.fullres", args.bValue);
+		editor->main->config.Commit();
+	});
+	vxgiFullresCheckBox.SetCheck(editor->renderPath->getVXGIResolveFullResolutionEnabled());
+	AddWidget(&vxgiFullresCheckBox);
 
 	vxgiVoxelSizeSlider.Create(0.125f, 0.5f, 1, 7, "VXGI Voxel Size: ");
 	vxgiVoxelSizeSlider.SetTooltip("Adjust the voxel size for VXGI calculations.");
@@ -304,7 +332,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&vxgiVoxelSizeSlider);
 
-	vxgiRayStepSizeSlider.Create(0.5f, 4.0f, 1.0f, 10000, "VXGI Ray Step: ");
+	vxgiRayStepSizeSlider.Create(0.5f, 2.0f, 1.0f, 10000, "VXGI Ray Step: ");
 	vxgiRayStepSizeSlider.SetTooltip("Adjust the precision of ray marching for [reflection] cone tracing step. Lower values = more precision but slower performance.");
 	vxgiRayStepSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	vxgiRayStepSizeSlider.SetPos(XMFLOAT2(x, y += step));
@@ -1666,6 +1694,7 @@ void GraphicsWindow::ResizeLayout()
 		vxgiDebugCombo.SetVisible(false);
 		vxgiCheckBox.SetVisible(false);
 		vxgiReflectionsCheckBox.SetVisible(false);
+		vxgiFullresCheckBox.SetVisible(false);
 		vxgiVoxelSizeSlider.SetVisible(false);
 		vxgiRayStepSizeSlider.SetVisible(false);
 		vxgiMaxDistanceSlider.SetVisible(false);
@@ -1691,6 +1720,7 @@ void GraphicsWindow::ResizeLayout()
 		vxgiDebugCombo.SetVisible(true);
 		vxgiCheckBox.SetVisible(true);
 		vxgiReflectionsCheckBox.SetVisible(true);
+		vxgiFullresCheckBox.SetVisible(true);
 		vxgiVoxelSizeSlider.SetVisible(true);
 		vxgiVoxelSizeSlider.SetValue(editor->GetCurrentScene().vxgi.clipmaps[0].voxelsize);
 		vxgiRayStepSizeSlider.SetVisible(true);
@@ -1721,6 +1751,7 @@ void GraphicsWindow::ResizeLayout()
 		add_right(vxgiDebugCombo);
 		vxgiCheckBox.SetPos(XMFLOAT2(vxgiDebugCombo.GetPos().x - vxgiCheckBox.GetSize().x - padding, vxgiDebugCombo.GetPos().y));
 		add_right(vxgiReflectionsCheckBox);
+		add_right(vxgiFullresCheckBox);
 		add(vxgiVoxelSizeSlider);
 		add(vxgiRayStepSizeSlider);
 		add(vxgiMaxDistanceSlider);
