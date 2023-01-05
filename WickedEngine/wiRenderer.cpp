@@ -13293,11 +13293,8 @@ void Postprocess_VolumetricClouds(
 
 	res.frame++;
 
-	// Reenable jitter for other passes
-	if (GetTemporalAAEnabled())
-	{
-		BindCameraCB(camera, camera_previous, camera_reflection, cmd);
-	}
+	// Rebind original cameras for other effects after this:
+	BindCameraCB(camera, camera_previous, camera_reflection, cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

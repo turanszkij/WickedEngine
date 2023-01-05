@@ -506,8 +506,7 @@ namespace wi
 			wi::renderer::GetRaytracedShadowsEnabled() ||
 			getAO() == AO::AO_RTAO ||
 			wi::renderer::GetVariableRateShadingClassification() ||
-			getFSR2Enabled() ||
-			wi::renderer::GetVXGIEnabled()
+			getFSR2Enabled()
 			)
 		{
 			if (!rtVelocity.IsValid())
