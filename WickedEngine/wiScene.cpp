@@ -591,7 +591,7 @@ namespace wi::scene
 				desc.type = TextureDesc::Type::TEXTURE_3D;
 				desc.width = vxgi.res * 6;
 				desc.height = vxgi.res;
-				desc.depth = vxgi.res * 5; // r,g,b,a,counter
+				desc.depth = vxgi.res * VOXELIZATION_CHANNEL_COUNT;
 				desc.mip_levels = 1;
 				desc.usage = Usage::DEFAULT;
 				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;

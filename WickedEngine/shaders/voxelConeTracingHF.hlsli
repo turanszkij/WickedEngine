@@ -116,7 +116,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 			tc = clamp(tc, half_texel, 1 - half_texel);
 			tc.y = (tc.y + clipmap_index) / VXGI_CLIPMAP_COUNT; // remap into clipmap
 			float sdf = bindless_textures3D[GetFrame().vxgi.texture_sdf].SampleLevel(sampler_linear_clamp, tc, 0).r;
-			stepSizeCurrent = max(stepSize, sdf);
+			stepSizeCurrent = max(stepSize, sdf - diameter);
 		}
 
 		// step along ray:

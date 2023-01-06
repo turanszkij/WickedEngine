@@ -7,6 +7,10 @@
 //	If disabled, vertex shader with instance replication will be used for each axis
 #define VOXELIZATION_GEOMETRY_SHADER_ENABLED
 
+// If enabled, conservative rasterization will be used to voxelize
+//	This can more accurately voxelize thin geometry, but slower
+//#define VOXELIZATION_CONSERVATIVE_RASTERIZATION_ENABLED
+
 // Number of clipmaps, each doubling in size:
 static const uint VXGI_CLIPMAP_COUNT = 6;
 // Upsampling amount for diffuse GI resolve pass:
@@ -59,6 +63,25 @@ struct VoxelizerCB
 	int clipmap_index;
 };
 CONSTANTBUFFER(g_xVoxelizer, VoxelizerCB, CBSLOT_RENDERER_VOXELIZER);
+
+enum VOXELIZATION_CHANNEL
+{
+	VOXELIZATION_CHANNEL_BASECOLOR_R,
+	VOXELIZATION_CHANNEL_BASECOLOR_G,
+	VOXELIZATION_CHANNEL_BASECOLOR_B,
+	VOXELIZATION_CHANNEL_BASECOLOR_A,
+	VOXELIZATION_CHANNEL_EMISSIVE_R,
+	VOXELIZATION_CHANNEL_EMISSIVE_G,
+	VOXELIZATION_CHANNEL_EMISSIVE_B,
+	VOXELIZATION_CHANNEL_DIRECTLIGHT_R,
+	VOXELIZATION_CHANNEL_DIRECTLIGHT_G,
+	VOXELIZATION_CHANNEL_DIRECTLIGHT_B,
+	VOXELIZATION_CHANNEL_NORMAL_R,
+	VOXELIZATION_CHANNEL_NORMAL_G,
+	VOXELIZATION_CHANNEL_FRAGMENT_COUNTER,
+
+	VOXELIZATION_CHANNEL_COUNT,
+};
 
 
 // Cones from: https://github.com/compix/VoxelConeTracingGI/blob/master/assets/shaders/voxelConeTracing/finalLightingPass.frag

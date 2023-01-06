@@ -1,11 +1,9 @@
 #define DISABLE_SOFT_SHADOWMAP
 #define DISABLE_VOXELGI
-#define VOXEL_INITIAL_OFFSET 1
-//#define ENVMAPRENDERING // modified ambient calc
-//#define NO_FLAT_AMBIENT
 #include "objectHF.hlsli"
 #include "voxelHF.hlsli"
 #include "volumetricCloudsHF.hlsli"
+#include "cullingShaderHF.hlsli"
 
 // Note: the voxelizer uses an overall simplified material and lighting model (no normal maps, only diffuse light and emissive)
 
@@ -49,13 +47,34 @@ struct PSInput
 	float4 uvsets : UVSETS;
 	centroid float3 N : NORMAL;
 	centroid float3 P : POSITION3D;
+
+#ifdef VOXELIZATION_CONSERVATIVE_RASTERIZATION_ENABLED
+	nointerpolation float3 aabb_min : AABB_MIN;
+	nointerpolation float3 aabb_max : AABB_MAX;
+#endif // VOXELIZATION_CONSERVATIVE_RASTERIZATION_ENABLED
 };
 
-void main(PSInput input, in uint coverage : SV_Coverage)
+void main(PSInput input)
 {
-	float3 N = normalize(input.N);
 	float3 P = input.P;
-	float coverage_percent = countbits(coverage) / 8.0;
+
+	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[g_xVoxelizer.clipmap_index];
+	float3 uvw = GetFrame().vxgi.world_to_clipmap(P, clipmap);
+	if (!is_saturated(uvw))
+		return;
+
+#ifdef VOXELIZATION_CONSERVATIVE_RASTERIZATION_ENABLED
+	uint3 clipmap_pixel = uvw * GetFrame().vxgi.resolution;
+	float3 clipmap_uvw_center = (clipmap_pixel + 0.5) * GetFrame().vxgi.resolution_rcp;
+	float3 voxel_center = GetFrame().vxgi.clipmap_to_world(clipmap_uvw_center, clipmap);
+	AABB voxel_aabb;
+	voxel_aabb.c = voxel_center;
+	voxel_aabb.e = clipmap.voxelSize;
+	AABB triangle_aabb;
+	AABBfromMinMax(triangle_aabb, input.aabb_min, input.aabb_max);
+	if (!IntersectAABB(voxel_aabb, triangle_aabb))
+		return;
+#endif // VOXELIZATION_CONSERVATIVE_RASTERIZATION_ENABLED
 
 	float4 baseColor = input.color;
 	[branch]
@@ -70,11 +89,7 @@ void main(PSInput input, in uint coverage : SV_Coverage)
 		}
 		baseColor *= GetMaterial().textures[BASECOLORMAP].SampleBias(sampler_linear_wrap, input.uvsets, lod_bias);
 	}
-	//baseColor.a = pow(baseColor.a, 64);
-	//baseColor.a = 1;
-	//baseColor.a *= coverage_percent;
 
-	float4 color = baseColor;
 	float3 emissiveColor = GetMaterial().GetEmissive();
 	[branch]
 	if (any(emissiveColor) && GetMaterial().textures[EMISSIVEMAP].IsValid())
@@ -82,7 +97,8 @@ void main(PSInput input, in uint coverage : SV_Coverage)
 		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_linear_wrap, input.uvsets);
 		emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 	}
-	//emissiveColor *= coverage_percent;
+
+	float3 N = normalize(input.N);
 
 	Lighting lighting;
 	lighting.create(0, 0, 0, 0);
@@ -232,19 +248,7 @@ void main(PSInput input, in uint coverage : SV_Coverage)
 		}
 	}
 
-	float4 trace = ConeTraceDiffuse(input_previous_radiance, P, N);
-	lighting.indirect.diffuse = trace.rgb;
-	lighting.indirect.diffuse += GetAmbient(N) * (1 - trace.a);
-
-	color.rgb *= lighting.direct.diffuse / PI + lighting.indirect.diffuse;
-
-	color.rgb += emissiveColor;
-
 	// output:
-	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[g_xVoxelizer.clipmap_index];
-	float3 uvw = GetFrame().vxgi.world_to_clipmap(P, clipmap);
-	if (!is_saturated(uvw))
-		return;
 	uint3 writecoord = floor(uvw * GetFrame().vxgi.resolution);
 
 	float3 aniso_direction = N;
@@ -255,31 +259,67 @@ void main(PSInput input, in uint coverage : SV_Coverage)
 		) * GetFrame().vxgi.resolution;
 	float3 direction_weights = abs(N);
 
-	writecoord.z *= 5; // de-interleaved channels
+	writecoord.z *= VOXELIZATION_CHANNEL_COUNT; // de-interleaved channels
 
 	if (direction_weights.x > 0)
 	{
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, 0)], PackVoxelChannel(color.r * direction_weights.x));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, 1)], PackVoxelChannel(color.g * direction_weights.x));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, 2)], PackVoxelChannel(color.b * direction_weights.x));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, 3)], PackVoxelChannel(color.a * direction_weights.x));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, 4)], 1);
+		float4 baseColor_direction = baseColor * direction_weights.x;
+		float3 emissive_direction = emissiveColor * direction_weights.x;
+		float3 directLight_direction = lighting.direct.diffuse * direction_weights.x;
+		float2 normal_direction = encode_oct(N * direction_weights.x) * 0.5 + 0.5;
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_BASECOLOR_R)], PackVoxelChannel(baseColor_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_BASECOLOR_G)], PackVoxelChannel(baseColor_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_BASECOLOR_B)], PackVoxelChannel(baseColor_direction.b));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_BASECOLOR_A)], PackVoxelChannel(baseColor_direction.a));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_EMISSIVE_R)], PackVoxelChannel(emissive_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_EMISSIVE_G)], PackVoxelChannel(emissive_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_EMISSIVE_B)], PackVoxelChannel(emissive_direction.b));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_R)], PackVoxelChannel(directLight_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_G)], PackVoxelChannel(directLight_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_B)], PackVoxelChannel(directLight_direction.b));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_NORMAL_R)], PackVoxelChannel(normal_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_NORMAL_G)], PackVoxelChannel(normal_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.x, 0, VOXELIZATION_CHANNEL_FRAGMENT_COUNTER)], 1);
 	}
 	if (direction_weights.y > 0)
 	{
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, 0)], PackVoxelChannel(color.r * direction_weights.y));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, 1)], PackVoxelChannel(color.g * direction_weights.y));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, 2)], PackVoxelChannel(color.b * direction_weights.y));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, 3)], PackVoxelChannel(color.a * direction_weights.y));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, 4)], 1);
+		float4 baseColor_direction = baseColor * direction_weights.y;
+		float3 emissive_direction = emissiveColor * direction_weights.y;
+		float3 directLight_direction = lighting.direct.diffuse * direction_weights.y;
+		float2 normal_direction = encode_oct(N * direction_weights.y) * 0.5 + 0.5;
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_BASECOLOR_R)], PackVoxelChannel(baseColor_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_BASECOLOR_G)], PackVoxelChannel(baseColor_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_BASECOLOR_B)], PackVoxelChannel(baseColor_direction.b));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_BASECOLOR_A)], PackVoxelChannel(baseColor_direction.a));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_EMISSIVE_R)], PackVoxelChannel(emissive_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_EMISSIVE_G)], PackVoxelChannel(emissive_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_EMISSIVE_B)], PackVoxelChannel(emissive_direction.b));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_R)], PackVoxelChannel(directLight_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_G)], PackVoxelChannel(directLight_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_B)], PackVoxelChannel(directLight_direction.b));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_NORMAL_R)], PackVoxelChannel(normal_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_NORMAL_G)], PackVoxelChannel(normal_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.y, 0, VOXELIZATION_CHANNEL_FRAGMENT_COUNTER)], 1);
 	}
 	if (direction_weights.z > 0)
 	{
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, 0)], PackVoxelChannel(color.r * direction_weights.z));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, 1)], PackVoxelChannel(color.g * direction_weights.z));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, 2)], PackVoxelChannel(color.b * direction_weights.z));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, 3)], PackVoxelChannel(color.a * direction_weights.z));
-		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, 4)], 1);
+		float4 baseColor_direction = baseColor * direction_weights.z;
+		float3 emissive_direction = emissiveColor * direction_weights.z;
+		float3 directLight_direction = lighting.direct.diffuse * direction_weights.z;
+		float2 normal_direction = encode_oct(N * direction_weights.z) * 0.5 + 0.5;
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_BASECOLOR_R)], PackVoxelChannel(baseColor_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_BASECOLOR_G)], PackVoxelChannel(baseColor_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_BASECOLOR_B)], PackVoxelChannel(baseColor_direction.b));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_BASECOLOR_A)], PackVoxelChannel(baseColor_direction.a));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_EMISSIVE_R)], PackVoxelChannel(emissive_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_EMISSIVE_G)], PackVoxelChannel(emissive_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_EMISSIVE_B)], PackVoxelChannel(emissive_direction.b));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_R)], PackVoxelChannel(directLight_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_G)], PackVoxelChannel(directLight_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_B)], PackVoxelChannel(directLight_direction.b));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_NORMAL_R)], PackVoxelChannel(normal_direction.r));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_NORMAL_G)], PackVoxelChannel(normal_direction.g));
+		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_FRAGMENT_COUNTER)], 1);
 	}
 
 

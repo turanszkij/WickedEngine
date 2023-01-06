@@ -1,5 +1,10 @@
+#define VOXEL_INITIAL_OFFSET 1
+//#define ENVMAPRENDERING // modified ambient calc
+//#define NO_FLAT_AMBIENT
 #include "globals.hlsli"
+#include "objectHF.hlsli"
 #include "voxelHF.hlsli"
+#include "volumetricCloudsHF.hlsli"
 
 Texture3D<float4> input_previous_radiance : register(t0);
 Texture3D<uint> input_render_atomic : register(t1);
@@ -14,7 +19,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	float4 aniso_colors[6];
 
-	float sdf = 65504.0;
+	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[g_xVoxelizer.clipmap_index];
+	float sdf = clipmap.voxelSize * 2 * GetFrame().vxgi.resolution;
 
 	for (uint i = 0; i < 6 + DIFFUSE_CONE_COUNT; ++i)
 	{
@@ -27,15 +33,44 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float4 radiance = 0;
 		if (i < 6)
 		{
-			src.z *= 5;
-			uint count = input_render_atomic[src + uint3(0, 0, 4)];
+			src.z *= VOXELIZATION_CHANNEL_COUNT;
+			uint count = input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_FRAGMENT_COUNTER)];
 			if (count > 0)
 			{
-				radiance.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, 0)]);
-				radiance.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, 1)]);
-				radiance.b = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, 2)]);
-				radiance.a = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, 3)]);
-				radiance /= count;
+				float4 baseColor = 0;
+				float3 emissive = 0;
+				float3 directLight = 0;
+				float3 N = 0;
+				baseColor.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_BASECOLOR_R)]);
+				baseColor.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_BASECOLOR_G)]);
+				baseColor.b = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_BASECOLOR_B)]);
+				baseColor.a = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_BASECOLOR_A)]);
+				baseColor /= count;
+				emissive.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_EMISSIVE_R)]);
+				emissive.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_EMISSIVE_G)]);
+				emissive.b = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_EMISSIVE_B)]);
+				emissive /= count;
+				directLight.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_R)]);
+				directLight.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_G)]);
+				directLight.b = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_B)]);
+				directLight /= count;
+				N.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_NORMAL_R)]);
+				N.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_NORMAL_G)]);
+				N /= count;
+				N = decode_oct(N.rg * 2 - 1);
+
+				radiance = baseColor;
+
+				// Voxel indirect lighting:
+				float3 P = GetFrame().vxgi.clipmap_to_world((DTid) * GetFrame().vxgi.resolution_rcp, clipmap);
+				Lighting lighting;
+				lighting.create(0, 0, 0, 0);
+				lighting.direct.diffuse = directLight;
+				float4 trace = ConeTraceDiffuse(input_previous_radiance, P, N);
+				lighting.indirect.diffuse = trace.rgb;
+				lighting.indirect.diffuse += GetAmbient(N) * (1 - trace.a);
+				radiance.rgb *= lighting.direct.diffuse / PI + lighting.indirect.diffuse;
+				radiance.rgb += emissive;
 			}
 
 			if (radiance.a > 0)
