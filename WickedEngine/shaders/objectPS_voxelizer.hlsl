@@ -103,163 +103,54 @@ void main(PSInput input)
 	Lighting lighting;
 	lighting.create(0, 0, 0, 0);
 
-	[branch]
-	if (any(xForwardLightMask))
-	{
-		// Loop through light buckets for the draw call:
-		const uint first_item = 0;
-		const uint last_item = first_item + GetFrame().lightarray_count - 1;
-		const uint first_bucket = first_item / 32;
-		const uint last_bucket = min(last_item / 32, 1); // only 2 buckets max (uint2) for forward pass!
-		[loop]
-		for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
-		{
-			uint bucket_bits = xForwardLightMask[bucket];
+	Surface surface;
+	surface.init();
+	surface.P = P;
+	surface.N = N;
+	surface.create(GetMaterial(), baseColor, 0, 0);
+	surface.roughness = GetMaterial().roughness;
+	surface.sss = GetMaterial().subsurfaceScattering;
+	surface.sss_inv = GetMaterial().subsurfaceScattering_inv;
+	surface.layerMask = GetMaterial().layerMask;
+	surface.update();
 
-			[loop]
-			while (bucket_bits != 0)
-			{
-				// Retrieve global entity index from local bucket, then remove bit from local bucket:
-				const uint bucket_bit_index = firstbitlow(bucket_bits);
-				const uint entity_index = bucket * 32 + bucket_bit_index;
-				bucket_bits ^= 1u << bucket_bit_index;
-
-				ShaderEntity light = load_entity(GetFrame().lightarray_offset + entity_index);
-
-				if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
-				{
-					continue; // static lights will be skipped (they are used in lightmap baking)
-				}
-
-				switch (light.GetType())
-				{
-				case ENTITY_TYPE_DIRECTIONALLIGHT:
-				{
-					float3 L = light.GetDirection();
-					const float NdotL = saturate(dot(L, N));
-
-					[branch]
-					if (NdotL > 0)
-					{
-						float3 lightColor = light.GetColor().rgb * NdotL;
-
-						[branch]
-						if (light.IsCastingShadow() >= 0)
-						{
-							[loop]
-							for (uint cascade = 0; cascade < GetFrame().shadow_cascade_count; ++cascade)
-							{
-								const float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(P, 1)).xyz; // ortho matrix, no divide by .w
-								const float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-
-								if (is_saturated(shadow_uv))
-								{
-									lightColor *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
-									break;
-								}
-							}
-
-							if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
-							{
-								lightColor *= shadow_2D_volumetricclouds(P);
-							}
-						}
-
-						lighting.direct.diffuse += lightColor;
-					}
-				}
-				break;
-				case ENTITY_TYPE_POINTLIGHT:
-				{
-					float3 L = light.position - P;
-					const float dist2 = dot(L, L);
-					const float range = light.GetRange();
-					const float range2 = range * range;
-
-					[branch]
-					if (dist2 < range2)
-					{
-						const float3 Lunnormalized = L;
-						const float dist = sqrt(dist2);
-						L /= dist;
-						const float NdotL = saturate(dot(L, N));
-
-						[branch]
-						if (NdotL > 0)
-						{
-							float3 lightColor = light.GetColor().rgb * NdotL * attenuation_pointlight(dist, dist2, range, range2);
-
-							[branch]
-							if (light.IsCastingShadow() >= 0) {
-								lightColor *= shadow_cube(light, Lunnormalized);
-							}
-
-							lighting.direct.diffuse += lightColor;
-						}
-					}
-				}
-				break;
-				case ENTITY_TYPE_SPOTLIGHT:
-				{
-					float3 L = light.position - P;
-					const float dist2 = dot(L, L);
-					const float range = light.GetRange();
-					const float range2 = range * range;
-
-					[branch]
-					if (dist2 < range2)
-					{
-						const float dist = sqrt(dist2);
-						L /= dist;
-						const float NdotL = saturate(dot(L, N));
-
-						[branch]
-						if (NdotL > 0)
-						{
-							const float spot_factor = dot(L, light.GetDirection());
-							const float spot_cutoff = light.GetConeAngleCos();
-
-							[branch]
-							if (spot_factor > spot_cutoff)
-							{
-								float3 lightColor = light.GetColor().rgb * NdotL * attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
-
-								[branch]
-								if (light.IsCastingShadow() >= 0)
-								{
-									float4 ShPos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
-									ShPos.xyz /= ShPos.w;
-									float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
-									[branch]
-									if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
-									{
-										lightColor *= shadow_2D(light, ShPos.xyz, ShTex.xy, 0);
-									}
-								}
-
-								lighting.direct.diffuse += lightColor;
-							}
-						}
-					}
-				}
-				break;
-				}
-			}
-		}
-	}
+	ForwardLighting(surface, lighting);
 
 	// output:
 	uint3 writecoord = floor(uvw * GetFrame().vxgi.resolution);
+	writecoord.z *= VOXELIZATION_CHANNEL_COUNT; // de-interleaved channels
 
 	float3 aniso_direction = N;
+
+#if 0
+	// This voxelization is faster but less accurate:
+	uint face_offset = cubemap_to_uv(aniso_direction).z * GetFrame().vxgi.resolution;
+	float4 baseColor_direction = baseColor;
+	float3 emissive_direction = emissiveColor;
+	float3 directLight_direction = lighting.direct.diffuse;
+	float2 normal_direction = encode_oct(N) * 0.5 + 0.5;
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_BASECOLOR_R)], PackVoxelChannel(baseColor_direction.r));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_BASECOLOR_G)], PackVoxelChannel(baseColor_direction.g));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_BASECOLOR_B)], PackVoxelChannel(baseColor_direction.b));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_BASECOLOR_A)], PackVoxelChannel(baseColor_direction.a));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_EMISSIVE_R)], PackVoxelChannel(emissive_direction.r));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_EMISSIVE_G)], PackVoxelChannel(emissive_direction.g));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_EMISSIVE_B)], PackVoxelChannel(emissive_direction.b));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_R)], PackVoxelChannel(directLight_direction.r));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_G)], PackVoxelChannel(directLight_direction.g));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_B)], PackVoxelChannel(directLight_direction.b));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_NORMAL_R)], PackVoxelChannel(normal_direction.r));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_NORMAL_G)], PackVoxelChannel(normal_direction.g));
+	InterlockedAdd(output_atomic[writecoord + uint3(face_offset, 0, VOXELIZATION_CHANNEL_FRAGMENT_COUNTER)], 1);
+
+#else
+	// This is slower but more accurate voxelization, by weighted voxel writes into multiple directions:
 	float3 face_offsets = float3(
 		aniso_direction.x > 0 ? 0 : 1,
 		aniso_direction.y > 0 ? 2 : 3,
 		aniso_direction.z > 0 ? 4 : 5
 		) * GetFrame().vxgi.resolution;
 	float3 direction_weights = abs(N);
-
-	writecoord.z *= VOXELIZATION_CHANNEL_COUNT; // de-interleaved channels
 
 	if (direction_weights.x > 0)
 	{
@@ -321,6 +212,7 @@ void main(PSInput input)
 		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_NORMAL_G)], PackVoxelChannel(normal_direction.g));
 		InterlockedAdd(output_atomic[writecoord + uint3(face_offsets.z, 0, VOXELIZATION_CHANNEL_FRAGMENT_COUNTER)], 1);
 	}
+#endif
 
 
 //#if 0
