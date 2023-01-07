@@ -11893,6 +11893,7 @@ void Postprocess_RTShadow(
 	const RTShadowResources& res,
 	const Scene& scene,
 	const GPUBuffer& entityTiles_Opaque,
+	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd,
 	uint8_t instanceInclusionMask
@@ -12240,7 +12241,6 @@ void Postprocess_RTShadow(
 
 		const GPUResource* uavs[] = {
 			&res.temporal[temporal_output],
-			&output,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -12248,7 +12248,6 @@ void Postprocess_RTShadow(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&res.temp, ResourceState::UNORDERED_ACCESS, res.temp.desc.layout),
 				GPUBarrier::Image(&res.temporal[temporal_output], res.temporal[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -12264,7 +12263,6 @@ void Postprocess_RTShadow(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.temporal[temporal_output], ResourceState::UNORDERED_ACCESS, res.temporal[temporal_output].desc.layout),
-				GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -12272,15 +12270,31 @@ void Postprocess_RTShadow(
 		device->EventEnd(cmd);
 	}
 
+	Postprocess_Upsample_Bilateral(
+		res.temporal[temporal_output],
+		lineardepth,
+		output,
+		cmd
+	);
+
 	wi::profiler::EndRange(prof_range);
 	device->EventEnd(cmd);
 }
 void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution)
 {
+	TextureDesc desc;
+	desc.width = resolution.x / 2;
+	desc.height = resolution.y / 2;
+	desc.format = Format::R32G32B32A32_UINT;
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+	device->CreateTexture(&desc, nullptr, &res.lowres);
+	device->SetName(&res.lowres, "screenspaceshadow.lowres");
 }
 void Postprocess_ScreenSpaceShadow(
 	const ScreenSpaceShadowResources& res,
 	const GPUBuffer& entityTiles_Opaque,
+	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd,
 	float range,
@@ -12290,7 +12304,7 @@ void Postprocess_ScreenSpaceShadow(
 	device->EventBegin("Postprocess_ScreenSpaceShadow", cmd);
 	auto prof_range = wi::profiler::BeginRangeGPU("ScreenSpaceShadow", cmd);
 
-	const TextureDesc& desc = output.GetDesc();
+	const TextureDesc& desc = res.lowres.GetDesc();
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], cmd);
 
@@ -12304,13 +12318,13 @@ void Postprocess_ScreenSpaceShadow(
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	const GPUResource* uavs[] = {
-		&output,
+		&res.lowres,
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.lowres, res.lowres.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -12324,12 +12338,17 @@ void Postprocess_ScreenSpaceShadow(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+			GPUBarrier::Image(&res.lowres, ResourceState::UNORDERED_ACCESS, res.lowres.desc.layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
+	Postprocess_Upsample_Bilateral(
+		res.lowres,
+		lineardepth,
+		output,
+		cmd
+	);
 
 	wi::profiler::EndRange(prof_range);
 	device->EventEnd(cmd);

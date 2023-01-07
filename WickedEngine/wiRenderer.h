@@ -587,18 +587,20 @@ namespace wi::renderer
 		const RTShadowResources& res,
 		const wi::scene::Scene& scene,
 		const wi::graphics::GPUBuffer& entityTiles_Opaque,
+		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		uint8_t instanceInclusionMask = 0xFF
 	);
 	struct ScreenSpaceShadowResources
 	{
-		int placeholder;
+		wi::graphics::Texture lowres;
 	};
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(
 		const ScreenSpaceShadowResources& res,
 		const wi::graphics::GPUBuffer& entityTiles_Opaque,
+		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1,

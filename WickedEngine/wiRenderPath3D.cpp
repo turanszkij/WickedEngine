@@ -534,8 +534,8 @@ namespace wi
 				TextureDesc desc;
 				desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 				desc.format = Format::R32G32B32A32_UINT;
-				desc.width = internalResolution.x / 2;
-				desc.height = internalResolution.y / 2;
+				desc.width = internalResolution.x;
+				desc.height = internalResolution.y;
 				desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 				device->CreateTexture(&desc, nullptr, &rtShadow);
 				device->SetName(&rtShadow, "rtShadow");
@@ -887,6 +887,7 @@ namespace wi
 				wi::renderer::Postprocess_ScreenSpaceShadow(
 					screenspaceshadowResources,
 					tiledLightResources.entityTiles_Opaque,
+					rtLinearDepth,
 					rtShadow,
 					cmd,
 					getScreenSpaceShadowRange(),
@@ -900,6 +901,7 @@ namespace wi
 					rtshadowResources,
 					*scene,
 					tiledLightResources.entityTiles_Opaque,
+					rtLinearDepth,
 					rtShadow,
 					cmd,
 					instanceInclusionMask_RTShadow

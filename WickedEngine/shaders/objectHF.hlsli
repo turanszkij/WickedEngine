@@ -810,7 +810,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 						{
 							uint mask_shift = (shadow_index % 4) * 8;
 							uint mask_bucket = shadow_index / 4;
-							uint mask = (bindless_textures_uint4[GetCamera().texture_rtshadow_index][surface.pixel / 2][mask_bucket] >> mask_shift) & 0xFF;
+							uint mask = (bindless_textures_uint4[GetCamera().texture_rtshadow_index][surface.pixel][mask_bucket] >> mask_shift) & 0xFF;
 							if (mask == 0)
 							{
 								continue;

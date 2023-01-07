@@ -8,8 +8,7 @@ Texture2D<uint4> resolve_current : register(t0);
 Texture2D<uint4> resolve_history : register(t1);
 Texture2D<float4> denoised : register(t3);
 
-RWTexture2D<uint4> temporal_output : register(u0);
-RWTexture2D<uint4> output : register(u1);
+RWTexture2D<uint4> output : register(u0);
 
 static const float temporalResponseMin = 0.88;
 static const float temporalResponseMax = 1.0f;
@@ -125,5 +124,4 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	}
 
 	output[DTid.xy].gba = shadow_mask.gba;
-	temporal_output[DTid.xy].gba = shadow_mask.gba;
 }
