@@ -3585,6 +3585,10 @@ namespace wi::scene
 					}
 					instance.instance_id = args.jobIndex;
 					instance.instance_mask = layerMask & 0xFF;
+					if (!object.IsRenderable() || !mesh.IsRenderable())
+					{
+						instance.instance_mask = 0;
+					}
 					instance.bottom_level = &mesh.BLASes[object.lod];
 					instance.instance_contribution_to_hit_group_index = 0;
 					instance.flags = 0;
