@@ -70,7 +70,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	GroupMemoryBarrierWithGroupSync();
 
 #ifdef SURFEL_COVERAGE_HALFRES
-	uint2 pixel = DTid.xy * 2 + GetTemporalAASampleRotation();
+	uint2 pixel = DTid.xy * 2;
 #else
 	uint2 pixel = DTid.xy;
 #endif // SURFEL_COVERAGE_HALFRES

@@ -48,9 +48,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	
 #else
 	
-	float x = uv.x * 2 - 1;
-	float y = (1 - uv.y) * 2 - 1;
-	float2 screenPosition = float2(x, y);
+	float2 screenPosition = uv_to_clipspace(uv);
 
 	float currentCloudLinearDepth = cloud_depth_current.SampleLevel(sampler_point_clamp, uv, 0).x;
 	float currentCloudDepth = compute_inverse_lineardepth(currentCloudLinearDepth, GetCamera().z_near, GetCamera().z_far);
@@ -116,9 +114,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float3 depthWorldPosition = reconstruct_position(uv, depth);
 		float tToDepthBuffer = length(depthWorldPosition - GetCamera().position);
 
-		// Accommodate so when we compare tToDepthBuffer (float precision) with cloud_depth_current (half float precision) we don't overshoot and get incorrect testing
-		// No issues has been noticed so far
-		tToDepthBuffer = depth == 0.0 ? HALF_FLT_MAX : tToDepthBuffer;
+		// Fow now we use float values instead of half-float, we need to convert the cloud system to use kilometer unit and we can revert to half-float values
+		tToDepthBuffer = depth == 0.0 ? FLT_MAX : tToDepthBuffer;
 
 		if (shouldUpdatePixel)
 		{
@@ -197,8 +194,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							result = neighborResult;
 							depthResult = neighboorDepthResult;
 							additionalResult = temporalResponseMinMax.x;
-
-
 						}
 					}
 				}

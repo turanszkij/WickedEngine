@@ -7,11 +7,37 @@ using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
 
+namespace SoundWindow_Internal
+{
+	PipelineState pso_linestrip;
+	PipelineState pso_linelist;
+
+	void LoadShaders()
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		PipelineStateDesc desc;
+		desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+		desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+		desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+		desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+		desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_WIRE_SMOOTH);
+		desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
+		desc.pt = PrimitiveTopology::LINESTRIP;
+		bool success = device->CreatePipelineState(&desc, &pso_linestrip);
+
+		desc.pt = PrimitiveTopology::LINELIST;
+		success = device->CreatePipelineState(&desc, &pso_linelist);
+		assert(success);
+	}
+}
+using namespace SoundWindow_Internal;
+
 void SoundWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_SOUND " Sound", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(440, 200));
+	SetSize(XMFLOAT2(440, 300));
 
 	closeButton.SetTooltip("Delete SoundComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -35,6 +61,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 
 
 	openButton.Create("Open File " ICON_OPEN);
+	openButton.SetTooltip("Open sound file.\nSupported extensions: WAV, OGG");
 	openButton.SetPos(XMFLOAT2(x, y));
 	openButton.SetSize(XMFLOAT2(wid, hei));
 	openButton.OnClick([&](wi::gui::EventArgs args) {
@@ -43,13 +70,14 @@ void SoundWindow::Create(EditorComponent* _editor)
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = "Sound";
+			params.description = "Sound (.wav, .ogg)";
 			params.extensions = wi::resourcemanager::GetSupportedSoundExtensions();
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					sound->filename = fileName;
 					sound->soundResource = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 					wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+					filenameLabel.SetText(wi::helper::GetFileNameFromPath(sound->filename));
 					});
 				});
 		}
@@ -199,7 +227,11 @@ void SoundWindow::Create(EditorComponent* _editor)
 	reverbComboBox.AddItem("LARGEHALL");
 	reverbComboBox.AddItem("PLATE");
 	reverbComboBox.SetTooltip("Set the global reverb setting. Sound instances need to enable reverb to take effect!");
+	reverbComboBox.SetMaxVisibleItemCount(6);
 	AddWidget(&reverbComboBox);
+
+	waveGraph.SetSize(XMFLOAT2(100, 50));
+	AddWidget(&waveGraph);
 
 
 	SetMinimized(true);
@@ -208,6 +240,138 @@ void SoundWindow::Create(EditorComponent* _editor)
 	SetEntity(INVALID_ENTITY);
 }
 
+void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
+{
+	GraphicsDevice* device = wi::graphics::GetDevice();
+	device->EventBegin("Sound Wave", cmd);
+
+	static bool shaders_loaded = false;
+	if (!shaders_loaded)
+	{
+		shaders_loaded = true;
+		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { SoundWindow_Internal::LoadShaders(); });
+		SoundWindow_Internal::LoadShaders();
+	}
+
+	struct Vertex
+	{
+		XMFLOAT4 position;
+		XMFLOAT4 color;
+	};
+	const uint32_t vertexCount = 256;
+	GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
+
+	XMFLOAT4 base_color = font.params.color;
+	base_color.w = 1;
+
+	if (sound == nullptr || !sound->soundResource.IsValid())
+	{
+		// Vertices for straight line:
+		Vertex vert;
+		vert.color = base_color;
+		for (uint32_t i = 0; i < vertexCount; ++i)
+		{
+			vert.position = XMFLOAT4(float(i) / vertexCount, 0, 0, 1);
+			std::memcpy((Vertex*)allocation.data + i, &vert, sizeof(vert));
+		}
+	}
+	else
+	{
+		// Vertices for [-1, 1] second range of current sound sample:
+		wi::audio::SampleInfo info = wi::audio::GetSampleInfo(&sound->soundResource.GetSound());
+		uint32_t sample_frequency = info.sample_rate * info.channel_count;
+		uint32_t step = uint32_t(sample_frequency * 2) / vertexCount;
+		uint64_t current_sample = wi::audio::GetTotalSamplesPlayed(&sound->soundinstance);
+		if (sound->IsLooped())
+		{
+			float total_time = float(current_sample) / float(info.sample_rate);
+			if (total_time > sound->soundinstance.loop_begin)
+			{
+				float loop_length = sound->soundinstance.loop_length > 0 ? sound->soundinstance.loop_length : (float(info.sample_count) / float(sample_frequency));
+				float loop_time = std::fmod(total_time - sound->soundinstance.loop_begin, loop_length);
+				current_sample = uint64_t(loop_time * info.sample_rate);
+			}
+		}
+		current_sample *= info.channel_count;
+		// This integer divide and multiply fixes the sample positions so the wave visualizer is stable:
+		current_sample /= step;
+		current_sample *= step;
+		int64_t start_sample = (int64_t)current_sample - sample_frequency;
+		int64_t end_sample = current_sample + sample_frequency;
+
+		Vertex vert;
+		vert.color = base_color;
+		for (uint32_t i = 0; i < vertexCount; ++i)
+		{
+			vert.position = XMFLOAT4(float(i) / vertexCount, 0, 0, 1);
+			int64_t sample_idx = start_sample + i * step;
+			if (sample_idx > 0 && sample_idx < (int64_t)info.sample_count)
+			{
+				vert.position.y = float(info.samples[sample_idx]) / 32768.0f;
+			}
+			std::memcpy((Vertex*)allocation.data + i, &vert, sizeof(vert));
+		}
+	}
+
+	const uint32_t strides[] = {
+		sizeof(Vertex),
+	};
+
+	MiscCB cb;
+	cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+	XMStoreFloat4x4(&cb.g_xTransform,
+		XMMatrixScaling(GetSize().x, GetSize().y, 1) *
+		XMMatrixTranslation(GetPos().x, GetPos().y + GetSize().y, 0)*
+		canvas.GetProjection()
+	);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
+
+	// Wave:
+	{
+		device->BindPipelineState(&pso_linestrip, cmd);
+		const GPUBuffer* vbs[] = {
+			&allocation.buffer,
+		};
+		const uint64_t offsets[] = {
+			allocation.offset,
+		};
+		device->BindVertexBuffers(vbs, 0, 1, strides, offsets, cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->Draw(vertexCount, 0, cmd);
+	}
+	// Other stuff:
+	{
+		Vertex verts[] = {
+			// center:
+			{ XMFLOAT4(0.5f, -1, 0, 1), XMFLOAT4(1, 0.2f, 0.2f, 1) },
+			{ XMFLOAT4(0.5f, 1, 0, 1), XMFLOAT4(1, 0.2f, 0.2f, 1) },
+
+			// rect:
+			{ XMFLOAT4(0, -1, 0, 1), base_color },
+			{ XMFLOAT4(1, -1, 0, 1), base_color },
+			{ XMFLOAT4(1, -1, 0, 1), base_color },
+			{ XMFLOAT4(1, 1, 0, 1), base_color },
+			{ XMFLOAT4(1, 1, 0, 1), base_color },
+			{ XMFLOAT4(0, 1, 0, 1), base_color },
+			{ XMFLOAT4(0, 1, 0, 1), base_color },
+			{ XMFLOAT4(0, -1, 0, 1), base_color },
+		};
+		allocation = device->AllocateGPU(sizeof(verts), cmd);
+		std::memcpy(allocation.data, verts, sizeof(verts));
+
+		device->BindPipelineState(&pso_linelist, cmd);
+		const GPUBuffer* vbs[] = {
+			&allocation.buffer,
+		};
+		const uint64_t offsets[] = {
+			allocation.offset,
+		};
+		device->BindVertexBuffers(vbs, 0, 1, strides, offsets, cmd);
+		device->Draw(sizeof(verts) / sizeof(Vertex), 0, cmd);
+	}
+
+	device->EventEnd(cmd);
+}
 
 
 void SoundWindow::SetEntity(Entity entity)
@@ -219,6 +383,8 @@ void SoundWindow::SetEntity(Entity entity)
 	Scene& scene = editor->GetCurrentScene();
 	SoundComponent* sound = scene.sounds.GetComponent(entity);
 	NameComponent* name = scene.names.GetComponent(entity);
+
+	waveGraph.sound = sound;
 
 	if (sound != nullptr)
 	{
@@ -297,13 +463,16 @@ void SoundWindow::ResizeLayout()
 	};
 
 	add_fullwidth(openButton);
-	add(reverbComboBox);
 	add_fullwidth(filenameLabel);
 	add(playstopButton);
 	loopedCheckbox.SetPos(XMFLOAT2(playstopButton.GetPos().x - loopedCheckbox.GetSize().x - 2, playstopButton.GetPos().y));
+	add(volumeSlider);
 	add_right(reverbCheckbox);
 	disable3dCheckbox.SetPos(XMFLOAT2(reverbCheckbox.GetPos().x - disable3dCheckbox.GetSize().x - 100 - 2, reverbCheckbox.GetPos().y));
-	add(volumeSlider);
 	add(submixComboBox);
+	add(reverbComboBox);
+
+	y += 10;
+	add_fullwidth(waveGraph);
 }
 

@@ -8,14 +8,15 @@ PUSHCONSTANT(postprocess, PostProcess);
 Texture3D<float4> texture_shapeNoise : register(t0);
 Texture3D<float4> texture_detailNoise : register(t1);
 Texture2D<float4> texture_curlNoise : register(t2);
-Texture2D<float4> texture_weatherMap : register(t3);
+Texture2D<float4> texture_weatherMapFirst : register(t3);
+Texture2D<float4> texture_weatherMapSecond : register(t4);
 
 RWTexture2D<float3> texture_render : register(u0);
 
 static const float2 sampleCountMinMax = float2(16.0, 32.0); // Based on sun angle, more angle more samples
 
 void VolumetricShadowMap(out float3 result, in AtmosphereParameters atmosphere, float3 worldPosition, float3 sunDirection,
-		float tMin, float tMax, float3 windOffset, float3 windDirection, float2 coverageWindOffset)
+		float tMin, float tMax, LayerParameters layerParametersFirst, LayerParameters layerParametersSecond)
 {
 	float nearDepth = 0.0;
 	float3 extinctionAccumulation = 0.0f;
@@ -43,15 +44,17 @@ void VolumetricShadowMap(out float3 result, in AtmosphereParameters atmosphere, 
 			break;
 		}
 		
-		float3 weatherData = SampleWeather(texture_weatherMap, samplePoint, heightFraction, coverageWindOffset);
-		if (weatherData.r < 0.25)
+		float3 weatherDataFirst = SampleWeather(texture_weatherMapFirst, samplePoint, heightFraction, layerParametersFirst);
+		float3 weatherDataSecond = SampleWeather(texture_weatherMapSecond, samplePoint, heightFraction, layerParametersSecond);
+		
+		if (!ValidCloudDensityLayers(heightFraction, weatherDataFirst, weatherDataSecond, layerParametersFirst, layerParametersSecond))
 		{
 			continue;
 		}
 
-		float shadowCloudDensity = SampleCloudDensity(texture_shapeNoise, texture_detailNoise, texture_curlNoise, samplePoint, heightFraction, weatherData, windOffset, windDirection, 0.0f, true);
-
-		float3 shadowExtinction = GetWeather().volumetric_clouds.ExtinctionCoefficient * shadowCloudDensity;
+		float shadowCloudDensityFirst = SampleCloudDensity(texture_shapeNoise, texture_detailNoise, texture_curlNoise, samplePoint, heightFraction, layerParametersFirst, weatherDataFirst, 0.0f, true);
+		float shadowCloudDensitySecond = SampleCloudDensity(texture_shapeNoise, texture_detailNoise, texture_curlNoise, samplePoint, heightFraction, layerParametersSecond, weatherDataSecond, 0.0f, true);
+		float3 shadowExtinction = SampleExtinction(shadowCloudDensityFirst, shadowCloudDensitySecond);
 		
 		if (any(shadowExtinction > 0.0f))
 		{
@@ -65,10 +68,9 @@ void VolumetricShadowMap(out float3 result, in AtmosphereParameters atmosphere, 
 
 	const float averageGreyExtinction = dot(extinctionAccumulation / max(extinctionAccumulationCount, 1.0f), 1.0f / 3.0f);
 	const float maxGreyOpticalDepth = dot(maxOpticalDepth, 1.0f / 3.0f);
-
+	
 	// Values can get to big for the assigned texture, so we pack this into kilometer type
-	const bool miss = nearDepth == 0.0;
-	const float frontDepth = miss ? tMax * M_TO_SKY_UNIT : (tMin + nearDepth) * M_TO_SKY_UNIT;
+	const float frontDepth = (tMin + nearDepth) * M_TO_SKY_UNIT;
 
 	result = float3(frontDepth, averageGreyExtinction, maxGreyOpticalDepth);
 }
@@ -92,8 +94,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	float planetRadius = parameters.bottomRadius * SKY_UNIT_TO_M;
 	float3 planetCenterWorld = parameters.planetCenter * SKY_UNIT_TO_M;
 
-	const float cloudBottomRadius = planetRadius + GetWeather().volumetric_clouds.CloudStartHeight;
-	const float cloudTopRadius = planetRadius + GetWeather().volumetric_clouds.CloudStartHeight + GetWeather().volumetric_clouds.CloudThickness;
+	const float cloudBottomRadius = planetRadius + GetWeather().volumetric_clouds.cloudStartHeight;
+	const float cloudTopRadius = planetRadius + GetWeather().volumetric_clouds.cloudStartHeight + GetWeather().volumetric_clouds.cloudThickness;
         
 	float2 tTopSolutions = RaySphereIntersect(rayOrigin, rayDirection, planetCenterWorld, cloudTopRadius);
 	if (tTopSolutions.x > 0.0 || tTopSolutions.y > 0.0) // Only calculate if any solutions are visible on screen!
@@ -128,15 +130,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 			
 		float3 worldPositionClosestToCloudLayer = rayOrigin + rayDirection * tMin; // Determined by tMin
 
-		// Wind animation offsets
-		float3 windDirection = float3(cos(GetWeather().volumetric_clouds.WindAngle), -GetWeather().volumetric_clouds.WindUpAmount, sin(GetWeather().volumetric_clouds.WindAngle));
-		float3 windOffset = GetWeather().volumetric_clouds.WindSpeed * GetWeather().volumetric_clouds.AnimationMultiplier * windDirection * GetFrame().time;
-
-		float2 coverageWindDirection = float2(cos(GetWeather().volumetric_clouds.CoverageWindAngle), sin(GetWeather().volumetric_clouds.CoverageWindAngle));
-		float2 coverageWindOffset = GetWeather().volumetric_clouds.CoverageWindSpeed * GetWeather().volumetric_clouds.AnimationMultiplier * coverageWindDirection * GetFrame().time;
+		// Sample layers
+		LayerParameters layerParametersFirst = SampleLayerParameters(GetWeather().volumetric_clouds.layerFirst);
+		LayerParameters layerParametersSecond = SampleLayerParameters(GetWeather().volumetric_clouds.layerSecond);
 
 		// Render
-		VolumetricShadowMap(result, parameters, worldPositionClosestToCloudLayer, GetSunDirection(), tMin, tMax, windOffset, windDirection, coverageWindOffset);
+		VolumetricShadowMap(result, parameters, worldPositionClosestToCloudLayer, GetSunDirection(), tMin, tMax, layerParametersFirst, layerParametersSecond);
 	}
 
 	// Output

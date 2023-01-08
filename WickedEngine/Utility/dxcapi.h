@@ -90,8 +90,15 @@ DXC_API_IMPORT HRESULT __stdcall DxcCreateInstance2(
 // For convenience, equivalent definitions to CP_UTF8 and CP_UTF16.
 #define DXC_CP_UTF8 65001
 #define DXC_CP_UTF16 1200
+#define DXC_CP_UTF32 12000
 // Use DXC_CP_ACP for: Binary;  ANSI Text;  Autodetect UTF with BOM
 #define DXC_CP_ACP 0
+
+#ifdef _WIN32
+#define DXC_CP_WIDE DXC_CP_UTF16
+#else
+#define DXC_CP_WIDE DXC_CP_UTF32
+#endif
 
 // This flag indicates that the shader hash was computed taking into account source information (-Zss)
 #define DXC_HASHFLAG_INCLUDES_SOURCE  1
@@ -153,17 +160,17 @@ public:
                                                 _Out_ UINT32 *pCodePage) = 0;
 };
 
-// Notes on IDxcBlobUtf16 and IDxcBlobUtf8
-// These guarantee null-terminated text and the stated encoding.
+// Notes on IDxcBlobWide and IDxcBlobUtf8
+// These guarantee null-terminated text and eithre utf8 or the native wide char encoding.
 // GetBufferSize() will return the size in bytes, including null-terminator
 // GetStringLength() will return the length in characters, excluding the null-terminator
-// Name strings will use IDxcBlobUtf16, while other string output blobs,
+// Name strings will use IDxcBlobWide, while other string output blobs,
 // such as errors/warnings, preprocessed HLSL, or other text will be based
 // on the -encoding option.
 
 // The API will use this interface for output name strings
-CROSS_PLATFORM_UUIDOF(IDxcBlobUtf16, "A3F84EAB-0FAA-497E-A39C-EE6ED60B2D84")
-struct IDxcBlobUtf16 : public IDxcBlobEncoding {
+CROSS_PLATFORM_UUIDOF(IDxcBlobWide, "A3F84EAB-0FAA-497E-A39C-EE6ED60B2D84")
+struct IDxcBlobWide : public IDxcBlobEncoding {
 public:
   virtual LPCWSTR STDMETHODCALLTYPE GetStringPointer(void) = 0;
   virtual SIZE_T STDMETHODCALLTYPE GetStringLength(void) = 0;
@@ -174,6 +181,11 @@ public:
   virtual LPCSTR STDMETHODCALLTYPE GetStringPointer(void) = 0;
   virtual SIZE_T STDMETHODCALLTYPE GetStringLength(void) = 0;
 };
+
+// Define legacy name IDxcBlobUtf16 as IDxcBlobWide for Win32
+#ifdef _WIN32
+typedef IDxcBlobWide IDxcBlobUtf16;
+#endif
 
 CROSS_PLATFORM_UUIDOF(IDxcIncludeHandler, "7f61fc7d-950d-467f-b3e3-3c02fb49187c")
 struct IDxcIncludeHandler : public IUnknown {
@@ -245,8 +257,18 @@ struct IDxcLibrary : public IUnknown {
     _In_ IDxcBlob *pBlob, _COM_Outptr_ IStream **ppStream) = 0;
   virtual HRESULT STDMETHODCALLTYPE GetBlobAsUtf8(
     _In_ IDxcBlob *pBlob, _COM_Outptr_ IDxcBlobEncoding **pBlobEncoding) = 0;
-  virtual HRESULT STDMETHODCALLTYPE GetBlobAsUtf16(
+
+  // Renamed from GetBlobAsUtf16 to GetBlobAsWide
+  virtual HRESULT STDMETHODCALLTYPE GetBlobAsWide(
     _In_ IDxcBlob *pBlob, _COM_Outptr_ IDxcBlobEncoding **pBlobEncoding) = 0;
+
+#ifdef _WIN32
+  // Alias to GetBlobAsWide on Win32
+  inline HRESULT GetBlobAsUtf16(
+    _In_ IDxcBlob *pBlob, _COM_Outptr_ IDxcBlobEncoding **pBlobEncoding) {
+    return this->GetBlobAsWide(pBlob, pBlobEncoding);
+  }
+#endif
 };
 
 // NOTE: IDxcResult replaces IDxcOperationResult
@@ -399,8 +421,18 @@ struct IDxcUtils : public IUnknown {
   // Convert or return matching encoded text blobs
   virtual HRESULT STDMETHODCALLTYPE GetBlobAsUtf8(
     _In_ IDxcBlob *pBlob, _COM_Outptr_ IDxcBlobUtf8 **pBlobEncoding) = 0;
-  virtual HRESULT STDMETHODCALLTYPE GetBlobAsUtf16(
-    _In_ IDxcBlob *pBlob, _COM_Outptr_ IDxcBlobUtf16 **pBlobEncoding) = 0;
+
+  // Renamed from GetBlobAsUtf16 to GetBlobAsWide
+  virtual HRESULT STDMETHODCALLTYPE GetBlobAsWide(
+    _In_ IDxcBlob *pBlob, _COM_Outptr_ IDxcBlobWide **pBlobEncoding) = 0;
+
+#ifdef _WIN32
+  // Alias to GetBlobAsWide on Win32
+  inline HRESULT GetBlobAsUtf16(
+    _In_ IDxcBlob *pBlob, _COM_Outptr_ IDxcBlobWide **pBlobEncoding) {
+    return this->GetBlobAsWide(pBlob, pBlobEncoding);
+  }
+#endif
 
   virtual HRESULT STDMETHODCALLTYPE GetDxilContainerPart(
     _In_ const DxcBuffer *pShader,
@@ -435,25 +467,33 @@ struct IDxcUtils : public IUnknown {
 typedef enum DXC_OUT_KIND {
   DXC_OUT_NONE = 0,
   DXC_OUT_OBJECT = 1,         // IDxcBlob - Shader or library object
-  DXC_OUT_ERRORS = 2,         // IDxcBlobUtf8 or IDxcBlobUtf16
+  DXC_OUT_ERRORS = 2,         // IDxcBlobUtf8 or IDxcBlobWide
   DXC_OUT_PDB = 3,            // IDxcBlob
   DXC_OUT_SHADER_HASH = 4,    // IDxcBlob - DxcShaderHash of shader or shader with source info (-Zsb/-Zss)
-  DXC_OUT_DISASSEMBLY = 5,    // IDxcBlobUtf8 or IDxcBlobUtf16 - from Disassemble
-  DXC_OUT_HLSL = 6,           // IDxcBlobUtf8 or IDxcBlobUtf16 - from Preprocessor or Rewriter
-  DXC_OUT_TEXT = 7,           // IDxcBlobUtf8 or IDxcBlobUtf16 - other text, such as -ast-dump or -Odump
+  DXC_OUT_DISASSEMBLY = 5,    // IDxcBlobUtf8 or IDxcBlobWide - from Disassemble
+  DXC_OUT_HLSL = 6,           // IDxcBlobUtf8 or IDxcBlobWide - from Preprocessor or Rewriter
+  DXC_OUT_TEXT = 7,           // IDxcBlobUtf8 or IDxcBlobWide - other text, such as -ast-dump or -Odump
   DXC_OUT_REFLECTION = 8,     // IDxcBlob - RDAT part with reflection data
   DXC_OUT_ROOT_SIGNATURE = 9, // IDxcBlob - Serialized root signature output
   DXC_OUT_EXTRA_OUTPUTS  = 10,// IDxcExtraResults - Extra outputs
+  DXC_OUT_REMARKS = 11,       // IDxcBlobUtf8 or IDxcBlobWide - text directed at stdout
+  DXC_OUT_TIME_REPORT = 12,   // IDxcBlobUtf8 or IDxcBlobWide - text directed at stdout
 
+  DXC_OUT_LAST = DXC_OUT_TIME_REPORT, // Last value for a counter
+
+  DXC_OUT_NUM_ENUMS,
   DXC_OUT_FORCE_DWORD = 0xFFFFFFFF
 } DXC_OUT_KIND;
+
+static_assert(DXC_OUT_NUM_ENUMS == DXC_OUT_LAST + 1,
+              "DXC_OUT_* Enum added and last value not updated.");
 
 CROSS_PLATFORM_UUIDOF(IDxcResult, "58346CDA-DDE7-4497-9461-6F87AF5E0659")
 struct IDxcResult : public IDxcOperationResult {
   virtual BOOL STDMETHODCALLTYPE HasOutput(_In_ DXC_OUT_KIND dxcOutKind) = 0;
   virtual HRESULT STDMETHODCALLTYPE GetOutput(_In_ DXC_OUT_KIND dxcOutKind,
     _In_ REFIID iid, _COM_Outptr_opt_result_maybenull_ void **ppvObject,
-    _COM_Outptr_ IDxcBlobUtf16 **ppOutputName) = 0;
+    _COM_Outptr_ IDxcBlobWide **ppOutputName) = 0;
 
   virtual UINT32 GetNumOutputs() = 0;
   virtual DXC_OUT_KIND GetOutputByIndex(UINT32 Index) = 0;
@@ -470,8 +510,8 @@ struct IDxcExtraOutputs : public IUnknown {
   virtual UINT32 STDMETHODCALLTYPE GetOutputCount() = 0;
   virtual HRESULT STDMETHODCALLTYPE GetOutput(_In_ UINT32 uIndex,
     _In_ REFIID iid, _COM_Outptr_opt_result_maybenull_ void **ppvObject,
-    _COM_Outptr_opt_result_maybenull_ IDxcBlobUtf16 **ppOutputType,
-    _COM_Outptr_opt_result_maybenull_ IDxcBlobUtf16 **ppOutputName) = 0;
+    _COM_Outptr_opt_result_maybenull_ IDxcBlobWide **ppOutputType,
+    _COM_Outptr_opt_result_maybenull_ IDxcBlobWide **ppOutputName) = 0;
 };
 
 CROSS_PLATFORM_UUIDOF(IDxcCompiler3, "228B4687-5A6A-4730-900C-9702B2203F54")
@@ -634,6 +674,47 @@ struct IDxcPdbUtils : public IUnknown {
   virtual HRESULT STDMETHODCALLTYPE CompileForFullPDB(_COM_Outptr_ IDxcResult **ppResult) = 0;
   virtual HRESULT STDMETHODCALLTYPE OverrideArgs(_In_ DxcArgPair *pArgPairs, UINT32 uNumArgPairs) = 0;
   virtual HRESULT STDMETHODCALLTYPE OverrideRootSignature(_In_ const WCHAR *pRootSignature) = 0;
+};
+
+CROSS_PLATFORM_UUIDOF(IDxcPdbUtils2, "4315D938-F369-4F93-95A2-252017CC3807")
+struct IDxcPdbUtils2 : public IUnknown {
+  virtual HRESULT STDMETHODCALLTYPE Load(_In_ IDxcBlob *pPdbOrDxil) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetSourceCount(_Out_ UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetSource(_In_ UINT32 uIndex, _COM_Outptr_ IDxcBlobEncoding **ppResult) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetSourceName(_In_ UINT32 uIndex, _COM_Outptr_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetLibraryPDBCount(UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetLibraryPDB(_In_ UINT32 uIndex, _COM_Outptr_ IDxcPdbUtils2 **ppOutPdbUtils, _COM_Outptr_opt_result_maybenull_ IDxcBlobWide **ppLibraryName) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetFlagCount(_Out_ UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetFlag(_In_ UINT32 uIndex, _COM_Outptr_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetArgCount(_Out_ UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetArg(_In_ UINT32 uIndex, _COM_Outptr_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetArgPairCount(_Out_ UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetArgPair(_In_ UINT32 uIndex, _COM_Outptr_result_maybenull_ IDxcBlobWide **ppName, _COM_Outptr_result_maybenull_ IDxcBlobWide **ppValue) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetDefineCount(_Out_ UINT32 *pCount) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetDefine(_In_ UINT32 uIndex, _COM_Outptr_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetTargetProfile(_COM_Outptr_result_maybenull_ IDxcBlobWide **ppResult) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetEntryPoint(_COM_Outptr_result_maybenull_ IDxcBlobWide **ppResult) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetMainFileName(_COM_Outptr_result_maybenull_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetHash(_COM_Outptr_result_maybenull_ IDxcBlob **ppResult) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetName(_COM_Outptr_result_maybenull_ IDxcBlobWide **ppResult) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetVersionInfo(_COM_Outptr_result_maybenull_ IDxcVersionInfo **ppVersionInfo) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetCustomToolchainID(_Out_ UINT32 *pID) = 0;
+  virtual HRESULT STDMETHODCALLTYPE GetCustomToolchainData(_COM_Outptr_result_maybenull_ IDxcBlob **ppBlob) = 0;
+
+  virtual HRESULT STDMETHODCALLTYPE GetWholeDxil(_COM_Outptr_result_maybenull_ IDxcBlob **ppResult) = 0;
+
+  virtual BOOL STDMETHODCALLTYPE IsFullPDB() = 0;
+  virtual BOOL STDMETHODCALLTYPE IsPDBRef() = 0;
 };
 
 // Note: __declspec(selectany) requires 'extern'

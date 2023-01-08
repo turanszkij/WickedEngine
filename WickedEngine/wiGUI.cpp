@@ -114,7 +114,7 @@ namespace wi::gui
 	}
 	void GUI::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
-		if (!visible)
+		if (!visible || widgets.empty())
 		{
 			return;
 		}

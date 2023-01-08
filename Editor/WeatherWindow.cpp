@@ -10,7 +10,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_WEATHER " Weather", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(660, 1300));
+	SetSize(XMFLOAT2(660, 1925));
 
 	closeButton.SetTooltip("Delete WeatherComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -58,7 +58,10 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	colorComboBox.AddItem("Horizon color");
 	colorComboBox.AddItem("Zenith color");
 	colorComboBox.AddItem("Ocean color");
-	colorComboBox.AddItem("Cloud color");
+	colorComboBox.AddItem("Cloud color 1");
+	colorComboBox.AddItem("Cloud color 2");
+	colorComboBox.AddItem("Cloud extinction 1");
+	colorComboBox.AddItem("Cloud extinction 2");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	AddWidget(&colorComboBox);
 
@@ -84,7 +87,16 @@ void WeatherWindow::Create(EditorComponent* _editor)
 			weather.oceanParameters.waterColor = args.color.toFloat4();
 			break;
 		case 4:
-			weather.volumetricCloudParameters.Albedo = args.color.toFloat3();
+			weather.volumetricCloudParameters.layerFirst.albedo = args.color.toFloat3();
+			break;
+		case 5:
+			weather.volumetricCloudParameters.layerSecond.albedo = args.color.toFloat3();
+			break;
+		case 6:
+			weather.volumetricCloudParameters.layerFirst.extinctionCoefficient = args.color.toFloat3();
+			break;
+		case 7:
+			weather.volumetricCloudParameters.layerSecond.extinctionCoefficient = args.color.toFloat3();
 			break;
 		}
 		});
@@ -244,26 +256,312 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&volumetricCloudsShadowsCheckBox);
 
-	coverageAmountSlider.Create(0, 10, 1, 1000, "Coverage amount: ");
-	coverageAmountSlider.SetSize(XMFLOAT2(wid, hei));
-	coverageAmountSlider.SetPos(XMFLOAT2(x, y += step));
-	coverageAmountSlider.OnSlide([&](wi::gui::EventArgs args) {
+	cloudStartHeightSlider.Create(500.0f, 2500.0f, 1500.0f, 1000.0f, "Cloud start height: ");
+	cloudStartHeightSlider.SetTooltip("This tells how many meters above the surface the cloud system should appear");
+	cloudStartHeightSlider.SetSize(XMFLOAT2(wid, hei));
+	cloudStartHeightSlider.SetPos(XMFLOAT2(x, y += step));
+	cloudStartHeightSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
-		weather.volumetricCloudParameters.CoverageAmount = args.fValue;
+		weather.volumetricCloudParameters.cloudStartHeight = args.fValue;
 		});
-	AddWidget(&coverageAmountSlider);
+	AddWidget(&cloudStartHeightSlider);
 
-	coverageMinimumSlider.Create(0, 1, 0, 1000, "Coverage minimum: ");
-	coverageMinimumSlider.SetSize(XMFLOAT2(wid, hei));
-	coverageMinimumSlider.SetPos(XMFLOAT2(x, y += step));
-	coverageMinimumSlider.OnSlide([&](wi::gui::EventArgs args) {
+	cloudThicknessSlider.Create(0.0f, 8000.0f, 5000.0f, 1000.0f, "Cloud thickness: ");
+	cloudThicknessSlider.SetTooltip("Specify the cloud system thickness, so from the start height plus additional thickness on top");
+	cloudThicknessSlider.SetSize(XMFLOAT2(wid, hei));
+	cloudThicknessSlider.SetPos(XMFLOAT2(x, y += step));
+	cloudThicknessSlider.OnSlide([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
-		weather.volumetricCloudParameters.CoverageMinimum = args.fValue;
+		weather.volumetricCloudParameters.cloudThickness = args.fValue;
 		});
-	AddWidget(&coverageMinimumSlider);
+	AddWidget(&cloudThicknessSlider);
+
+	skewAlongWindDirectionFirstSlider.Create(0.0f, 2000.0f, 700.0f, 1000.0f, "Skew noise 1: ");
+	skewAlongWindDirectionFirstSlider.SetTooltip("Adjust the skew on noise alone");
+	skewAlongWindDirectionFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	skewAlongWindDirectionFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	skewAlongWindDirectionFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.skewAlongWindDirection = args.fValue;
+		});
+	AddWidget(&skewAlongWindDirectionFirstSlider);
+
+	totalNoiseScaleFirstSlider.Create(0.0f, 0.002f, 0.0006f, 1000.0f, "Total noise scale 1: ");
+	totalNoiseScaleFirstSlider.SetTooltip("Total scale adjusts base noise, detail noise and curl noise");
+	totalNoiseScaleFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	totalNoiseScaleFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	totalNoiseScaleFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.totalNoiseScale = args.fValue;
+		});
+	AddWidget(&totalNoiseScaleFirstSlider);
+
+	curlScaleFirstSlider.Create(0.0f, 1.0f, 0.3f, 1000.0f, "Curl scale 1: ");
+	curlScaleFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	curlScaleFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	curlScaleFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.curlScale = args.fValue;
+		});
+	AddWidget(&curlScaleFirstSlider);
+
+	curlNoiseHeightFractionFirstSlider.Create(0.0f, 25.0f, 5.0f, 1000.0f, "Curl height 1: ");
+	curlNoiseHeightFractionFirstSlider.SetTooltip("Higher values pulls the curl more towards bottom");
+	curlNoiseHeightFractionFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	curlNoiseHeightFractionFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	curlNoiseHeightFractionFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.curlNoiseHeightFraction = args.fValue;
+		});
+	AddWidget(&curlNoiseHeightFractionFirstSlider);
+
+	curlNoiseModifierFirstSlider.Create(0.0f, 1000.0f, 500.0f, 1000.0f, "Curl modifier 1: ");
+	curlNoiseModifierFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	curlNoiseModifierFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	curlNoiseModifierFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.curlNoiseModifier = args.fValue;
+		});
+	AddWidget(&curlNoiseModifierFirstSlider);
+
+	detailScaleFirstSlider.Create(0.0f, 5.0f, 4.0f, 1000.0f, "Detail scale 1: ");
+	detailScaleFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	detailScaleFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	detailScaleFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.detailScale = args.fValue;
+		});
+	AddWidget(&detailScaleFirstSlider);
+
+	detailNoiseHeightFractionFirstSlider.Create(0.0f, 25.0f, 10.0f, 1000.0f, "Detail height 1: ");
+	detailNoiseHeightFractionFirstSlider.SetTooltip("Higher values pulls the detail more towards bottom");
+	detailNoiseHeightFractionFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	detailNoiseHeightFractionFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	detailNoiseHeightFractionFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.detailNoiseHeightFraction = args.fValue;
+		});
+	AddWidget(&detailNoiseHeightFractionFirstSlider);
+
+	detailNoiseModifierFirstSlider.Create(0.0f, 1.0f, 0.3f, 1000.0f, "Detail modifier 1: ");
+	detailNoiseModifierFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	detailNoiseModifierFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	detailNoiseModifierFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.detailNoiseModifier = args.fValue;
+		});
+	AddWidget(&detailNoiseModifierFirstSlider);
+
+	skewAlongCoverageWindDirectionFirstSlider.Create(0.0f, 3500.0f, 2500.0f, 1000.0f, "Skew coverage 1: ");
+	skewAlongCoverageWindDirectionFirstSlider.SetTooltip("This pulls the entire clouds towards the wind direction along height");
+	skewAlongCoverageWindDirectionFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	skewAlongCoverageWindDirectionFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	skewAlongCoverageWindDirectionFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.skewAlongCoverageWindDirection = args.fValue;
+		});
+	AddWidget(&skewAlongCoverageWindDirectionFirstSlider);
+
+	weatherScaleFirstSlider.Create(0.0f, 0.0001f, 0.000025f, 1000.0f, "Weather scale 1: ");
+	weatherScaleFirstSlider.SetTooltip("Scales the weather map that controls coverage, type and rain");
+	weatherScaleFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	weatherScaleFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	weatherScaleFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.weatherScale = args.fValue;
+		});
+	AddWidget(&weatherScaleFirstSlider);
+
+	coverageAmountFirstSlider.Create(0.0f, 10.0f, 1.0f, 1000.0f, "Coverage amount 1: ");
+	coverageAmountFirstSlider.SetTooltip("Adjust the coverage amount from the weather map");
+	coverageAmountFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageAmountFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageAmountFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.coverageAmount = args.fValue;
+		});
+	AddWidget(&coverageAmountFirstSlider);
+
+	coverageMinimumFirstSlider.Create(0.0f, 1.0f, 0.0f, 1000.0f, "Coverage minimum 1: ");
+	coverageMinimumFirstSlider.SetTooltip("Adjust the minimum amount from the weather map");
+	coverageMinimumFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageMinimumFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageMinimumFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.coverageMinimum = args.fValue;
+		});
+	AddWidget(&coverageMinimumFirstSlider);
+
+	typeAmountFirstSlider.Create(0.0f, 10.0f, 1.0f, 1000.0f, "Type amount 1: ");
+	typeAmountFirstSlider.SetTooltip("Adjust the type amount from the weather map");
+	typeAmountFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	typeAmountFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	typeAmountFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.typeAmount = args.fValue;
+		});
+	AddWidget(&typeAmountFirstSlider);
+
+	typeMinimumFirstSlider.Create(0.0f, 1.0f, 0.0f, 1000.0f, "Type minimum 1: ");
+	typeMinimumFirstSlider.SetTooltip("Adjust the minimum type from the weather map");
+	typeMinimumFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	typeMinimumFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	typeMinimumFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.typeMinimum = args.fValue;
+		});
+	AddWidget(&typeMinimumFirstSlider);
+
+	rainAmountFirstSlider.Create(0.0f, 10.0f, 0.0f, 1000.0f, "Rain amount 1: ");
+	rainAmountFirstSlider.SetTooltip("Adjust the rain amount from the weather map");
+	rainAmountFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	rainAmountFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	rainAmountFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.rainAmount = args.fValue;
+		});
+	AddWidget(&rainAmountFirstSlider);
+
+	rainMinimumFirstSlider.Create(0.0f, 1.0f, 0.0f, 1000.0f, "Rain minimum 1: ");
+	rainMinimumFirstSlider.SetTooltip("Adjust the minimum rain from the weather map");
+	rainMinimumFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	rainMinimumFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	rainMinimumFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.rainMinimum = args.fValue;
+		});
+	AddWidget(&rainMinimumFirstSlider);
+
+	auto SetupTextFieldComponents4 = [&](wi::gui::TextInputField (&textFields)[4], std::string description, std::string tooltip)
+	{
+		for (size_t i = 0; i < 4; i++)
+		{
+			wi::gui::TextInputField& textField = textFields[i];
+			textField.Create("");
+			textField.SetTooltip(tooltip);
+			textField.SetSize(XMFLOAT2(32.0f, hei));
+			float posX = x + 32.0f * (float)i;
+			if (i == 0)
+			{
+				textField.SetDescription(description);
+				textField.SetPos(XMFLOAT2(posX, y += step));
+			}
+			else
+			{
+				textField.SetDescription("");
+				textField.SetPos(XMFLOAT2(posX, y));
+			}
+			AddWidget(&textField);
+		}
+	};
+
+	SetupTextFieldComponents4(gradientSmallFirstTextFields, "Gradient small: ", "Control with a gradient where small clouds should appear, based on type 0.0");
+	gradientSmallFirstTextFields[0].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientSmall.x = args.fValue; });
+	gradientSmallFirstTextFields[1].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientSmall.y = args.fValue; });
+	gradientSmallFirstTextFields[2].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientSmall.z = args.fValue; });
+	gradientSmallFirstTextFields[3].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientSmall.w = args.fValue; });
+
+	SetupTextFieldComponents4(gradientMediumFirstTextFields, "Gradient medium: ", "Control with a gradient where medium clouds should appear, based on type 0.5");
+	gradientMediumFirstTextFields[0].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientMedium.x = args.fValue; });
+	gradientMediumFirstTextFields[1].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientMedium.y = args.fValue; });
+	gradientMediumFirstTextFields[2].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientMedium.z = args.fValue; });
+	gradientMediumFirstTextFields[3].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientMedium.w = args.fValue; });
+	
+	SetupTextFieldComponents4(gradientLargeFirstTextFields, "Gradient large: ", "Control with a gradient where large clouds should appear, based on type 1.0");
+	gradientLargeFirstTextFields[0].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientLarge.x = args.fValue; });
+	gradientLargeFirstTextFields[1].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientLarge.y = args.fValue; });
+	gradientLargeFirstTextFields[2].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientLarge.z = args.fValue; });
+	gradientLargeFirstTextFields[3].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.gradientLarge.w = args.fValue; });
+	
+	SetupTextFieldComponents4(anvilDeformationSmallFirstTextFields, "Anvil small: ", "Control the inward amount for small clouds (type 0.0). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)");
+	anvilDeformationSmallFirstTextFields[0].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationSmall.x = args.fValue; });
+	anvilDeformationSmallFirstTextFields[1].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationSmall.y = args.fValue; });
+	anvilDeformationSmallFirstTextFields[2].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationSmall.z = args.fValue; });
+	anvilDeformationSmallFirstTextFields[3].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationSmall.w = args.fValue; });
+	
+	SetupTextFieldComponents4(anvilDeformationMediumFirstTextFields, "Anvil medium: ", "Control the inward amount for medium clouds (type 0.5). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)");
+	anvilDeformationMediumFirstTextFields[0].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationMedium.x = args.fValue; });
+	anvilDeformationMediumFirstTextFields[1].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationMedium.y = args.fValue; });
+	anvilDeformationMediumFirstTextFields[2].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationMedium.z = args.fValue; });
+	anvilDeformationMediumFirstTextFields[3].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationMedium.w = args.fValue; });
+		
+	SetupTextFieldComponents4(anvilDeformationLargeFirstTextFields, "Anvil large: ", "Control the inward amount for large clouds (type 1.0). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)");
+	anvilDeformationLargeFirstTextFields[0].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationLarge.x = args.fValue; });
+	anvilDeformationLargeFirstTextFields[1].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationLarge.y = args.fValue; });
+	anvilDeformationLargeFirstTextFields[2].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationLarge.z = args.fValue; });
+	anvilDeformationLargeFirstTextFields[3].OnInputAccepted([=](wi::gui::EventArgs args) { GetWeather().volumetricCloudParameters.layerFirst.anvilDeformationLarge.w = args.fValue; });
+
+	windSpeedFirstSlider.Create(0.0f, 50.0f, 15.0f, 1000.0f, "Wind speed 1: ");
+	windSpeedFirstSlider.SetTooltip("Wind speed of the noise");
+	windSpeedFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	windSpeedFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	windSpeedFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.windSpeed = args.fValue;
+		});
+	AddWidget(&windSpeedFirstSlider);
+
+	windAngleFirstSlider.Create(0.0f, XM_PI * 2.0f, 0.75f, 1000.0f, "Wind angle 1: ");
+	windAngleFirstSlider.SetTooltip("Wind angle in radians");
+	windAngleFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	windAngleFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	windAngleFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.windAngle = args.fValue;
+		});
+	AddWidget(&windAngleFirstSlider);
+
+	windUpAmountFirstSlider.Create(0.0f, 1.0f, 0.5f, 1000.0f, "Wind up amount 1: ");
+	windUpAmountFirstSlider.SetTooltip("How much wind up drag the noise recieves");
+	windUpAmountFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	windUpAmountFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	windUpAmountFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.windUpAmount = args.fValue;
+		});
+	AddWidget(&windUpAmountFirstSlider);
+
+	coverageWindSpeedFirstSlider.Create(0.0f, 50.0f, 30.0f, 1000.0f, "Coverage wind speed 1: ");
+	coverageWindSpeedFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageWindSpeedFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageWindSpeedFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.coverageWindSpeed = args.fValue;
+		});
+	AddWidget(&coverageWindSpeedFirstSlider);
+
+	coverageWindAngleFirstSlider.Create(0.0f, XM_PI * 2.0f, 0.0f, 1000.0f, "Coverage wind angle 1: ");
+	coverageWindAngleFirstSlider.SetTooltip("Wind angle in radians");
+	coverageWindAngleFirstSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageWindAngleFirstSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageWindAngleFirstSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerFirst.coverageWindAngle = args.fValue;
+		});
+	AddWidget(&coverageWindAngleFirstSlider);
+
+	coverageAmountSecondSlider.Create(0.0f, 10.0f, 1.0f, 1000.0f, "Coverage amount 2: ");
+	coverageAmountSecondSlider.SetTooltip("Adjust the coverage amount from the weather map");
+	coverageAmountSecondSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageAmountSecondSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageAmountSecondSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerSecond.coverageAmount = args.fValue;
+		});
+	AddWidget(&coverageAmountSecondSlider);
+
+	coverageMinimumSecondSlider.Create(0.0f, 1.0f, 0.0f, 1000.0f, "Coverage minimum 2: ");
+	coverageMinimumSecondSlider.SetTooltip("Adjust the minimum amount from the weather map");
+	coverageMinimumSecondSlider.SetSize(XMFLOAT2(wid, hei));
+	coverageMinimumSecondSlider.SetPos(XMFLOAT2(x, y += step));
+	coverageMinimumSecondSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.layerSecond.coverageMinimum = args.fValue;
+		});
+	AddWidget(&coverageMinimumSecondSlider);
 
 	skyButton.Create("Load Sky");
-	skyButton.SetTooltip("Load a skybox cubemap texture...");
+	skyButton.SetTooltip("Load a skybox texture...\nIt can be either a cubemap or spherical projection map");
 	skyButton.SetSize(XMFLOAT2(mod_wid, hei));
 	skyButton.SetPos(XMFLOAT2(mod_x, y += step));
 	skyButton.OnClick([=](wi::gui::EventArgs args) {
@@ -298,7 +596,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&skyButton);
 
 	colorgradingButton.Create("Load Color Grading LUT");
-	colorgradingButton.SetTooltip("Load a color grading lookup texture. It must be a 256x16 RGBA image!");
+	colorgradingButton.SetTooltip("Load a color grading lookup texture. It must be a 256x16 RGBA image!\nYou should use a lossless format for this such as PNG");
 	colorgradingButton.SetSize(XMFLOAT2(mod_wid, hei));
 	colorgradingButton.SetPos(XMFLOAT2(mod_x, y += step));
 	colorgradingButton.OnClick([=](wi::gui::EventArgs args) {
@@ -329,14 +627,14 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&colorgradingButton);
 
-	volumetricCloudsWeatherMapButton.Create("Load Volumetric Clouds Weather Map");
-	volumetricCloudsWeatherMapButton.SetTooltip("Load a weather map for volumetric clouds. Red channel is coverage, green is type and blue is water density (rain).");
-	volumetricCloudsWeatherMapButton.SetSize(XMFLOAT2(mod_wid, hei));
-	volumetricCloudsWeatherMapButton.SetPos(XMFLOAT2(mod_x, y += step));
-	volumetricCloudsWeatherMapButton.OnClick([=](wi::gui::EventArgs args) {
+	volumetricCloudsWeatherMapFirstButton.Create("Load Volumetric Clouds Weather Map 1");
+	volumetricCloudsWeatherMapFirstButton.SetTooltip("Load a weather map for volumetric clouds. Red channel is coverage, green is type and blue is water density (rain).");
+	volumetricCloudsWeatherMapFirstButton.SetSize(XMFLOAT2(mod_wid, hei));
+	volumetricCloudsWeatherMapFirstButton.SetPos(XMFLOAT2(mod_x, y += step));
+	volumetricCloudsWeatherMapFirstButton.OnClick([=](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
 
-		if (!weather.volumetricCloudsWeatherMap.IsValid())
+		if (!weather.volumetricCloudsWeatherMapFirst.IsValid())
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
@@ -345,21 +643,53 @@ void WeatherWindow::Create(EditorComponent* _editor)
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
-					weather.volumetricCloudsWeatherMapName = fileName;
-					weather.volumetricCloudsWeatherMap = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
-					volumetricCloudsWeatherMapButton.SetText(wi::helper::GetFileNameFromPath(fileName));
+					weather.volumetricCloudsWeatherMapFirstName = fileName;
+					weather.volumetricCloudsWeatherMapFirst = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					volumetricCloudsWeatherMapFirstButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 					});
 				});
 		}
 		else
 		{
-			weather.volumetricCloudsWeatherMap = {};
-			weather.volumetricCloudsWeatherMapName.clear();
-			volumetricCloudsWeatherMapButton.SetText("Load Volumetric Clouds Weather Map");
+			weather.volumetricCloudsWeatherMapFirst = {};
+			weather.volumetricCloudsWeatherMapFirstName.clear();
+			volumetricCloudsWeatherMapFirstButton.SetText("Load Volumetric Clouds Weather Map 1");
 		}
 
 		});
-	AddWidget(&volumetricCloudsWeatherMapButton);
+	AddWidget(&volumetricCloudsWeatherMapFirstButton);
+
+	volumetricCloudsWeatherMapSecondButton.Create("Load Volumetric Clouds Weather Map 2");
+	volumetricCloudsWeatherMapSecondButton.SetTooltip("Load a weather map for volumetric clouds. Red channel is coverage, green is type and blue is water density (rain).");
+	volumetricCloudsWeatherMapSecondButton.SetSize(XMFLOAT2(mod_wid, hei));
+	volumetricCloudsWeatherMapSecondButton.SetPos(XMFLOAT2(mod_x, y += step));
+	volumetricCloudsWeatherMapSecondButton.OnClick([=](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+
+		if (!weather.volumetricCloudsWeatherMapSecond.IsValid())
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					auto& weather = GetWeather();
+					weather.volumetricCloudsWeatherMapSecondName = fileName;
+					weather.volumetricCloudsWeatherMapSecond = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					volumetricCloudsWeatherMapSecondButton.SetText(wi::helper::GetFileNameFromPath(fileName));
+					});
+				});
+		}
+		else
+		{
+			weather.volumetricCloudsWeatherMapSecond = {};
+			weather.volumetricCloudsWeatherMapSecondName.clear();
+			volumetricCloudsWeatherMapSecondButton.SetText("Load Volumetric Clouds Weather Map 2");
+		}
+
+		});
+	AddWidget(&volumetricCloudsWeatherMapSecondButton);
 
 
 
@@ -688,9 +1018,14 @@ void WeatherWindow::Update()
 			colorgradingButton.SetText(wi::helper::GetFileNameFromPath(weather.colorGradingMapName));
 		}
 
-		if (!weather.volumetricCloudsWeatherMapName.empty())
+		if (!weather.volumetricCloudsWeatherMapFirstName.empty())
 		{
-			volumetricCloudsWeatherMapButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapName));
+			volumetricCloudsWeatherMapFirstButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapFirstName));
+		}
+
+		if (!weather.volumetricCloudsWeatherMapSecondName.empty())
+		{
+			volumetricCloudsWeatherMapSecondButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapSecondName));
 		}
 
 		overrideFogColorCheckBox.SetCheck(weather.IsOverrideFogColor());
@@ -723,7 +1058,16 @@ void WeatherWindow::Update()
 			colorPicker.SetPickColor(wi::Color::fromFloat4(weather.oceanParameters.waterColor));
 			break;
 		case 4:
-			colorPicker.SetPickColor(wi::Color::fromFloat3(weather.volumetricCloudParameters.Albedo));
+			colorPicker.SetPickColor(wi::Color::fromFloat3(weather.volumetricCloudParameters.layerFirst.albedo));
+			break;
+		case 5:
+			colorPicker.SetPickColor(wi::Color::fromFloat3(weather.volumetricCloudParameters.layerSecond.albedo));
+			break;
+		case 6:
+			colorPicker.SetPickColor(wi::Color::fromFloat3(weather.volumetricCloudParameters.layerFirst.extinctionCoefficient));
+			break;
+		case 7:
+			colorPicker.SetPickColor(wi::Color::fromFloat3(weather.volumetricCloudParameters.layerSecond.extinctionCoefficient));
 			break;
 		}
 
@@ -741,8 +1085,55 @@ void WeatherWindow::Update()
 
 		volumetricCloudsCheckBox.SetCheck(weather.IsVolumetricClouds());
 		volumetricCloudsShadowsCheckBox.SetCheck(weather.IsVolumetricCloudsShadows());
-		coverageAmountSlider.SetValue(weather.volumetricCloudParameters.CoverageAmount);
-		coverageMinimumSlider.SetValue(weather.volumetricCloudParameters.CoverageMinimum);
+		cloudStartHeightSlider.SetValue(weather.volumetricCloudParameters.cloudStartHeight);
+		cloudThicknessSlider.SetValue(weather.volumetricCloudParameters.cloudThickness);
+		skewAlongWindDirectionFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.skewAlongWindDirection);
+		totalNoiseScaleFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.totalNoiseScale);
+		curlScaleFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.curlScale);
+		curlNoiseHeightFractionFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.curlNoiseHeightFraction);
+		curlNoiseModifierFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.curlNoiseModifier);
+		detailScaleFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.detailScale);
+		detailNoiseHeightFractionFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.detailNoiseHeightFraction);
+		detailNoiseModifierFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.detailNoiseModifier);
+		skewAlongCoverageWindDirectionFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.skewAlongCoverageWindDirection);
+		weatherScaleFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.weatherScale);
+		coverageAmountFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.coverageAmount);
+		coverageMinimumFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.coverageMinimum);
+		typeAmountFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.typeAmount);
+		typeMinimumFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.typeMinimum);
+		rainAmountFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.rainAmount);
+		rainMinimumFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.rainMinimum);
+		gradientSmallFirstTextFields[0].SetValue(weather.volumetricCloudParameters.layerFirst.gradientSmall.x);
+		gradientSmallFirstTextFields[1].SetValue(weather.volumetricCloudParameters.layerFirst.gradientSmall.y);
+		gradientSmallFirstTextFields[2].SetValue(weather.volumetricCloudParameters.layerFirst.gradientSmall.z);
+		gradientSmallFirstTextFields[3].SetValue(weather.volumetricCloudParameters.layerFirst.gradientSmall.w);
+		gradientMediumFirstTextFields[0].SetValue(weather.volumetricCloudParameters.layerFirst.gradientMedium.x);
+		gradientMediumFirstTextFields[1].SetValue(weather.volumetricCloudParameters.layerFirst.gradientMedium.y);
+		gradientMediumFirstTextFields[2].SetValue(weather.volumetricCloudParameters.layerFirst.gradientMedium.z);
+		gradientMediumFirstTextFields[3].SetValue(weather.volumetricCloudParameters.layerFirst.gradientMedium.w);
+		gradientLargeFirstTextFields[0].SetValue(weather.volumetricCloudParameters.layerFirst.gradientLarge.x);
+		gradientLargeFirstTextFields[1].SetValue(weather.volumetricCloudParameters.layerFirst.gradientLarge.y);
+		gradientLargeFirstTextFields[2].SetValue(weather.volumetricCloudParameters.layerFirst.gradientLarge.z);
+		gradientLargeFirstTextFields[3].SetValue(weather.volumetricCloudParameters.layerFirst.gradientLarge.w);
+		anvilDeformationSmallFirstTextFields[0].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationSmall.x);
+		anvilDeformationSmallFirstTextFields[1].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationSmall.y);
+		anvilDeformationSmallFirstTextFields[2].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationSmall.z);
+		anvilDeformationSmallFirstTextFields[3].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationSmall.w);
+		anvilDeformationMediumFirstTextFields[0].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationMedium.x);
+		anvilDeformationMediumFirstTextFields[1].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationMedium.y);
+		anvilDeformationMediumFirstTextFields[2].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationMedium.z);
+		anvilDeformationMediumFirstTextFields[3].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationMedium.w);
+		anvilDeformationLargeFirstTextFields[0].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationLarge.x);
+		anvilDeformationLargeFirstTextFields[1].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationLarge.y);
+		anvilDeformationLargeFirstTextFields[2].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationLarge.z);
+		anvilDeformationLargeFirstTextFields[3].SetValue(weather.volumetricCloudParameters.layerFirst.anvilDeformationLarge.w);
+		windSpeedFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.windSpeed);
+		windAngleFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.windAngle);
+		windUpAmountFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.windUpAmount);
+		coverageWindSpeedFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.coverageWindSpeed);
+		coverageWindAngleFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.coverageWindAngle);
+		coverageAmountSecondSlider.SetValue(weather.volumetricCloudParameters.layerSecond.coverageAmount);
+		coverageMinimumSecondSlider.SetValue(weather.volumetricCloudParameters.layerSecond.coverageMinimum);
 
 		if (weather.skyMap.IsValid())
 		{
@@ -755,11 +1146,29 @@ void WeatherWindow::Update()
 
 		if (weather.colorGradingMap.IsValid())
 		{
-			skyButton.SetText(wi::helper::GetFileNameFromPath(weather.colorGradingMapName));
+			colorgradingButton.SetText(wi::helper::GetFileNameFromPath(weather.colorGradingMapName));
 		}
 		else
 		{
 			colorgradingButton.SetText("Load Color Grading LUT");
+		}
+
+		if (weather.volumetricCloudsWeatherMapFirst.IsValid())
+		{
+			volumetricCloudsWeatherMapFirstButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapFirstName));
+		}
+		else
+		{
+			volumetricCloudsWeatherMapFirstButton.SetText("Load Volumetric Clouds Weather Map 1");
+		}
+
+		if (weather.volumetricCloudsWeatherMapSecond.IsValid())
+		{
+			volumetricCloudsWeatherMapSecondButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapSecondName));
+		}
+		else
+		{
+			volumetricCloudsWeatherMapSecondButton.SetText("Load Volumetric Clouds Weather Map 2");
 		}
 	}
 	else
@@ -865,9 +1274,48 @@ void WeatherWindow::ResizeLayout()
 
 	add_right(volumetricCloudsCheckBox);
 	add_right(volumetricCloudsShadowsCheckBox);
-	add(coverageAmountSlider);
-	add(coverageMinimumSlider);
-	add_fullwidth(volumetricCloudsWeatherMapButton);
+	add(cloudStartHeightSlider);
+	add(cloudThicknessSlider);
+	add(skewAlongWindDirectionFirstSlider);
+	add(totalNoiseScaleFirstSlider);
+	add(curlScaleFirstSlider);
+	add(curlNoiseHeightFractionFirstSlider);
+	add(curlNoiseModifierFirstSlider);
+	add(detailScaleFirstSlider);
+	add(detailNoiseHeightFractionFirstSlider);
+	add(detailNoiseModifierFirstSlider);
+	add(skewAlongCoverageWindDirectionFirstSlider);
+	add(weatherScaleFirstSlider);
+	add(coverageAmountFirstSlider);
+	add(coverageMinimumFirstSlider);
+	add(typeAmountFirstSlider);
+	add(typeMinimumFirstSlider);
+	add(rainAmountFirstSlider);
+	add(rainMinimumFirstSlider);
+
+	auto add_textfields4 = [&](wi::gui::TextInputField (&textFields)[4]) {
+		add_right(textFields[3]);
+		textFields[2].SetPos(XMFLOAT2(textFields[3].GetPos().x - textFields[2].GetSize().x - padding, textFields[3].GetPos().y));
+		textFields[1].SetPos(XMFLOAT2(textFields[2].GetPos().x - textFields[1].GetSize().x - padding, textFields[2].GetPos().y));
+		textFields[0].SetPos(XMFLOAT2(textFields[1].GetPos().x - textFields[0].GetSize().x - padding, textFields[1].GetPos().y));
+	};
+
+	add_textfields4(gradientSmallFirstTextFields);
+	add_textfields4(gradientMediumFirstTextFields);
+	add_textfields4(gradientLargeFirstTextFields);
+	add_textfields4(anvilDeformationSmallFirstTextFields);
+	add_textfields4(anvilDeformationMediumFirstTextFields);
+	add_textfields4(anvilDeformationLargeFirstTextFields);
+
+	add(windSpeedFirstSlider);
+	add(windAngleFirstSlider);
+	add(windUpAmountFirstSlider);
+	add(coverageWindSpeedFirstSlider);
+	add(coverageWindAngleFirstSlider);
+	add(coverageAmountSecondSlider);
+	add(coverageMinimumSecondSlider);
+	add_fullwidth(volumetricCloudsWeatherMapFirstButton);
+	add_fullwidth(volumetricCloudsWeatherMapSecondButton);
 
 	y += jump;
 

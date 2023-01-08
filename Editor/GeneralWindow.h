@@ -1,0 +1,37 @@
+#pragma once
+#include "WickedEngine.h"
+
+class EditorComponent;
+
+class GeneralWindow : public wi::gui::Window
+{
+public:
+	void Create(EditorComponent* editor);
+
+	EditorComponent* editor = nullptr;
+	wi::gui::CheckBox versionCheckBox;
+	wi::gui::CheckBox fpsCheckBox;
+	wi::gui::CheckBox otherinfoCheckBox;
+	wi::gui::ComboBox themeCombo;
+	wi::gui::ComboBox saveModeComboBox;
+
+	wi::gui::CheckBox physicsEnabledCheckBox;
+	wi::gui::CheckBox physicsDebugCheckBox;
+	wi::gui::CheckBox nameDebugCheckBox;
+	wi::gui::CheckBox gridHelperCheckBox;
+	wi::gui::CheckBox aabbDebugCheckBox;
+	wi::gui::CheckBox boneLinesCheckBox;
+	wi::gui::CheckBox debugEmittersCheckBox;
+	wi::gui::CheckBox debugForceFieldsCheckBox;
+	wi::gui::CheckBox debugRaytraceBVHCheckBox;
+	wi::gui::CheckBox wireFrameCheckBox;
+	wi::gui::CheckBox envProbesCheckBox;
+	wi::gui::CheckBox cameraVisCheckBox;
+	wi::gui::CheckBox colliderVisCheckBox;
+	wi::gui::CheckBox freezeCullingCameraCheckBox;
+	wi::gui::CheckBox disableAlbedoMapsCheckBox;
+	wi::gui::CheckBox forceDiffuseLightingCheckBox;
+
+	void ResizeLayout() override;
+};
+

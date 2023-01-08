@@ -74,7 +74,7 @@ namespace wi::renderer
 		wi::graphics::Shader& shader,
 		const std::string& filename,
 		wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_6_0,
-		wi::vector<std::string> permutation_defines = {}
+		const wi::vector<std::string>& permutation_defines = {}
 	);
 
 
@@ -209,7 +209,8 @@ namespace wi::renderer
 	// Compute volumetric cloud shadow data
 	void ComputeVolumetricCloudShadows(
 		wi::graphics::CommandList cmd,
-		const wi::graphics::Texture* weatherMap = nullptr
+		const wi::graphics::Texture* weatherMapFirst = nullptr,
+		const wi::graphics::Texture* weatherMapSecond = nullptr
 	);
 	// Compute essential atmospheric scattering textures for skybox, fog and clouds
 	void ComputeAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
@@ -260,8 +261,6 @@ namespace wi::renderer
 	void RefreshImpostors(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 	// Call once per frame to repack out of date lightmaps in the atlas
 	void RefreshLightmaps(const wi::scene::Scene& scene, wi::graphics::CommandList cmd, uint8_t instanceInclusionMask = 0xFF);
-	// Voxelize the scene into a voxel grid 3D texture
-	void VoxelRadiance(const Visibility& vis, wi::graphics::CommandList cmd);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
 	void ResolveMSAADepthBuffer(const wi::graphics::Texture& dst, const wi::graphics::Texture& src, wi::graphics::CommandList cmd);
 	void DownsampleDepthBuffer(const wi::graphics::Texture& src, wi::graphics::CommandList cmd);
@@ -357,6 +356,7 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
+	// Surfel GI: diffuse GI with ray tracing from surfels
 	struct SurfelGIResources
 	{
 		wi::graphics::Texture result;
@@ -375,10 +375,35 @@ namespace wi::renderer
 		uint8_t instanceInclusionMask = 0xFF
 	);
 
+	// DDGI: Dynamic Diffuse Global Illumination (probe-based ray tracing)
 	void DDGI(
 		const wi::scene::Scene& scene,
 		wi::graphics::CommandList cmd,
 		uint8_t instanceInclusionMask = 0xFF
+	);
+
+	// VXGI: Voxel-based Global Illumination (voxel cone tracing-based)
+	struct VXGIResources
+	{
+		wi::graphics::Texture diffuse[2];
+		wi::graphics::Texture specular[2];
+		mutable bool pre_clear = true;
+
+		bool IsValid() const { return diffuse[0].IsValid(); }
+	};
+	void CreateVXGIResources(VXGIResources& res, XMUINT2 resolution);
+	void VXGI_Voxelize(
+		const Visibility& vis,
+		wi::graphics::CommandList cmd
+	);
+	// Resolve VXGI to screen
+	//	fullres : if true it will be in native resolution, otherwise it will use some upsampling from low res
+	void VXGI_Resolve(
+		const VXGIResources& res,
+		const wi::scene::Scene& scene,
+		wi::graphics::Texture texture_lineardepth,
+		wi::graphics::CommandList cmd,
+		bool fullres = false
 	);
 
 	void Postprocess_Blur_Gaussian(
@@ -562,18 +587,20 @@ namespace wi::renderer
 		const RTShadowResources& res,
 		const wi::scene::Scene& scene,
 		const wi::graphics::GPUBuffer& entityTiles_Opaque,
+		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		uint8_t instanceInclusionMask = 0xFF
 	);
 	struct ScreenSpaceShadowResources
 	{
-		int placeholder;
+		wi::graphics::Texture lowres;
 	};
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(
 		const ScreenSpaceShadowResources& res,
 		const wi::graphics::GPUBuffer& entityTiles_Opaque,
+		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1,
@@ -658,7 +685,12 @@ namespace wi::renderer
 	void Postprocess_VolumetricClouds(
 		const VolumetricCloudResources& res,
 		wi::graphics::CommandList cmd,
-		const wi::graphics::Texture* weatherMap = nullptr
+		const wi::scene::CameraComponent& camera,
+		const wi::scene::CameraComponent& camera_previous,
+		const wi::scene::CameraComponent& camera_reflection,
+		const bool jitterEnabled,
+		const wi::graphics::Texture* weatherMapFirst = nullptr,
+		const wi::graphics::Texture* weatherMapSecond = nullptr
 	);
 	void Postprocess_FXAA(
 		const wi::graphics::Texture& input,
@@ -879,7 +911,7 @@ namespace wi::renderer
 	bool GetToDrawGridHelper();
 	void SetToDrawGridHelper(bool value);
 	bool GetToDrawVoxelHelper();
-	void SetToDrawVoxelHelper(bool value);
+	void SetToDrawVoxelHelper(bool value, int clipmap_level);
 	void SetDebugLightCulling(bool enabled);
 	bool GetDebugLightCulling();
 	void SetAdvancedLightCulling(bool enabled);
@@ -896,21 +928,10 @@ namespace wi::renderer
 	bool GetTemporalAADebugEnabled();
 	void SetFreezeCullingCameraEnabled(bool enabled);
 	bool GetFreezeCullingCameraEnabled();
-	void SetVoxelRadianceEnabled(bool enabled);
-	bool GetVoxelRadianceEnabled();
-	void SetVoxelRadianceSecondaryBounceEnabled(bool enabled);
-	bool GetVoxelRadianceSecondaryBounceEnabled();
-	void SetVoxelRadianceReflectionsEnabled(bool enabled);
-	bool GetVoxelRadianceReflectionsEnabled();
-	void SetVoxelRadianceVoxelSize(float value);
-	float GetVoxelRadianceVoxelSize();
-	void SetVoxelRadianceMaxDistance(float value);
-	float GetVoxelRadianceMaxDistance();
-	int GetVoxelRadianceResolution();
-	void SetVoxelRadianceNumCones(int value);
-	int GetVoxelRadianceNumCones();
-	float GetVoxelRadianceRayStepSize();
-	void SetVoxelRadianceRayStepSize(float value);
+	void SetVXGIEnabled(bool enabled);
+	bool GetVXGIEnabled();
+	void SetVXGIReflectionsEnabled(bool enabled);
+	bool GetVXGIReflectionsEnabled();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
 	void SetRaytraceBounceCount(uint32_t bounces);

@@ -14,7 +14,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1920));
+	SetSize(XMFLOAT2(580, 1600));
 
 	float step = 21;
 	float itemheight = 18;
@@ -259,95 +259,98 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&ddgiZ);
 
-	voxelRadianceCheckBox.Create("Voxel GI: ");
-	voxelRadianceCheckBox.SetTooltip("Toggle voxel Global Illumination computation.");
-	voxelRadianceCheckBox.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	voxelRadianceCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceEnabled(args.bValue);
+	vxgiCheckBox.Create("VXGI: ");
+	vxgiCheckBox.SetTooltip("Toggle Voxel Global Illumination.");
+	vxgiCheckBox.SetPos(XMFLOAT2(x, y += step));
+	vxgiCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	if (editor->main->config.GetSection("graphics").Has("vxgi"))
+	{
+		wi::renderer::SetVXGIEnabled(editor->main->config.GetSection("graphics").GetBool("vxgi"));
+	}
+	vxgiCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::renderer::SetVXGIEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("vxgi", args.bValue);
+		editor->main->config.Commit();
 	});
-	voxelRadianceCheckBox.SetCheck(wi::renderer::GetVoxelRadianceEnabled());
-	AddWidget(&voxelRadianceCheckBox);
+	vxgiCheckBox.SetCheck(wi::renderer::GetVXGIEnabled());
+	AddWidget(&vxgiCheckBox);
 
-	voxelRadianceDebugCheckBox.Create("DEBUG: ");
-	voxelRadianceDebugCheckBox.SetTooltip("Toggle Voxel GI visualization.");
-	voxelRadianceDebugCheckBox.SetPos(XMFLOAT2(x + wid + 1, y));
-	voxelRadianceDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	voxelRadianceDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawVoxelHelper(args.bValue);
+	vxgiDebugCombo.Create("");
+	vxgiDebugCombo.SetTooltip("Toggle VXGI visualization.");
+	vxgiDebugCombo.SetPos(XMFLOAT2(x + wid + 1, y));
+	vxgiDebugCombo.SetSize(XMFLOAT2(80, itemheight));
+	vxgiDebugCombo.AddItem("No debug", 0);
+	vxgiDebugCombo.AddItem("Clipmaps", VXGI_CLIPMAP_COUNT);
+	for (uint32_t i = 0; i < VXGI_CLIPMAP_COUNT; ++i)
+	{
+		vxgiDebugCombo.AddItem("Clipmap " + std::to_string(i), i);
+	}
+	vxgiDebugCombo.OnSelect([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawVoxelHelper(args.iValue != 0, (int)args.userdata);
 	});
-	voxelRadianceDebugCheckBox.SetCheck(wi::renderer::GetToDrawVoxelHelper());
-	AddWidget(&voxelRadianceDebugCheckBox);
+	AddWidget(&vxgiDebugCombo);
 
-	voxelRadianceSecondaryBounceCheckBox.Create("Voxel GI 2nd Bounce: ");
-	voxelRadianceSecondaryBounceCheckBox.SetTooltip("Toggle secondary light bounce computation for Voxel GI.");
-	voxelRadianceSecondaryBounceCheckBox.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceSecondaryBounceCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	voxelRadianceSecondaryBounceCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceSecondaryBounceEnabled(args.bValue);
+	vxgiReflectionsCheckBox.Create("VXGI Reflections: ");
+	vxgiReflectionsCheckBox.SetTooltip("Toggle specular reflections computation for VXGI.");
+	vxgiReflectionsCheckBox.SetPos(XMFLOAT2(x + wid + 1, y));
+	vxgiReflectionsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	if (editor->main->config.GetSection("graphics").Has("vxgi.reflections"))
+	{
+		wi::renderer::SetVXGIReflectionsEnabled(editor->main->config.GetSection("graphics").GetBool("vxgi.reflections"));
+	}
+	vxgiReflectionsCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::renderer::SetVXGIReflectionsEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("vxgi.reflections", args.bValue);
+		editor->main->config.Commit();
 	});
-	voxelRadianceSecondaryBounceCheckBox.SetCheck(wi::renderer::GetVoxelRadianceSecondaryBounceEnabled());
-	AddWidget(&voxelRadianceSecondaryBounceCheckBox);
+	vxgiReflectionsCheckBox.SetCheck(wi::renderer::GetVXGIReflectionsEnabled());
+	AddWidget(&vxgiReflectionsCheckBox);
 
-	voxelRadianceReflectionsCheckBox.Create("Reflections: ");
-	voxelRadianceReflectionsCheckBox.SetTooltip("Toggle specular reflections computation for Voxel GI.");
-	voxelRadianceReflectionsCheckBox.SetPos(XMFLOAT2(x + wid + 1, y));
-	voxelRadianceReflectionsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	voxelRadianceReflectionsCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceReflectionsEnabled(args.bValue);
+	vxgiFullresCheckBox.Create("VXGI Full Resolution: ");
+	vxgiFullresCheckBox.SetTooltip("Toggle resolve mode for VXGI opaque. Full resolution will use the full rendering resolution, otherwise it will be upsampled from lower resolution.");
+	vxgiFullresCheckBox.SetPos(XMFLOAT2(x + wid + 1, y));
+	vxgiFullresCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	if (editor->main->config.GetSection("graphics").Has("vxgi.fullres"))
+	{
+		editor->renderPath->setVXGIResolveFullResolutionEnabled(editor->main->config.GetSection("graphics").GetBool("vxgi.fullres"));
+	}
+	vxgiFullresCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->renderPath->setVXGIResolveFullResolutionEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("vxgi.fullres", args.bValue);
+		editor->main->config.Commit();
 	});
-	voxelRadianceReflectionsCheckBox.SetCheck(wi::renderer::GetVoxelRadianceReflectionsEnabled());
-	AddWidget(&voxelRadianceReflectionsCheckBox);
+	vxgiFullresCheckBox.SetCheck(editor->renderPath->getVXGIResolveFullResolutionEnabled());
+	AddWidget(&vxgiFullresCheckBox);
 
-	voxelRadianceVoxelSizeSlider.Create(0.25, 2, 1, 7, "Voxel GI Voxel Size: ");
-	voxelRadianceVoxelSizeSlider.SetTooltip("Adjust the voxel size for Voxel GI calculations.");
-	voxelRadianceVoxelSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
-	voxelRadianceVoxelSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceVoxelSizeSlider.SetValue(wi::renderer::GetVoxelRadianceVoxelSize());
-	voxelRadianceVoxelSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceVoxelSize(args.fValue);
+	vxgiVoxelSizeSlider.Create(0.125f, 0.5f, 1, 7, "VXGI Voxel Size: ");
+	vxgiVoxelSizeSlider.SetTooltip("Adjust the voxel size for VXGI calculations.");
+	vxgiVoxelSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
+	vxgiVoxelSizeSlider.SetPos(XMFLOAT2(x, y += step));
+	vxgiVoxelSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		scene.vxgi.clipmaps[0].voxelsize = args.fValue;
 	});
-	AddWidget(&voxelRadianceVoxelSizeSlider);
+	AddWidget(&vxgiVoxelSizeSlider);
 
-	voxelRadianceConeTracingSlider.Create(1, 16, 8, 15, "Voxel GI NumCones: ");
-	voxelRadianceConeTracingSlider.SetTooltip("Adjust the number of cones sampled in the radiance gathering phase.");
-	voxelRadianceConeTracingSlider.SetSize(XMFLOAT2(wid, itemheight));
-	voxelRadianceConeTracingSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceConeTracingSlider.SetValue((float)wi::renderer::GetVoxelRadianceNumCones());
-	voxelRadianceConeTracingSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceNumCones(args.iValue);
+	vxgiRayStepSizeSlider.Create(0.5f, 2.0f, 1.0f, 10000, "VXGI Ray Step: ");
+	vxgiRayStepSizeSlider.SetTooltip("Adjust the precision of ray marching for [reflection] cone tracing step. Lower values = more precision but slower performance.");
+	vxgiRayStepSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
+	vxgiRayStepSizeSlider.SetPos(XMFLOAT2(x, y += step));
+	vxgiRayStepSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		scene.vxgi.rayStepSize = args.fValue;
 	});
-	AddWidget(&voxelRadianceConeTracingSlider);
+	AddWidget(&vxgiRayStepSizeSlider);
 
-	voxelRadianceRayStepSizeSlider.Create(0.5f, 2.0f, 0.5f, 10000, "Voxel GI Ray Step: ");
-	voxelRadianceRayStepSizeSlider.SetTooltip("Adjust the precision of ray marching for cone tracing step. Lower values = more precision but slower performance.");
-	voxelRadianceRayStepSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
-	voxelRadianceRayStepSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceRayStepSizeSlider.SetValue(wi::renderer::GetVoxelRadianceRayStepSize());
-	voxelRadianceRayStepSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceRayStepSize(args.fValue);
+	vxgiMaxDistanceSlider.Create(0, 100, 10, 10000, "VXGI Distance: ");
+	vxgiMaxDistanceSlider.SetTooltip("Adjust max raymarching distance for VXGI.");
+	vxgiMaxDistanceSlider.SetSize(XMFLOAT2(wid, itemheight));
+	vxgiMaxDistanceSlider.SetPos(XMFLOAT2(x, y += step));
+	vxgiMaxDistanceSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		scene.vxgi.maxDistance = args.fValue;
 	});
-	AddWidget(&voxelRadianceRayStepSizeSlider);
-
-	voxelRadianceMaxDistanceSlider.Create(0, 100, 10, 10000, "Voxel GI Distance: ");
-	voxelRadianceMaxDistanceSlider.SetTooltip("Adjust max raymarching distance for voxel GI.");
-	voxelRadianceMaxDistanceSlider.SetSize(XMFLOAT2(wid, itemheight));
-	voxelRadianceMaxDistanceSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceMaxDistanceSlider.SetValue(wi::renderer::GetVoxelRadianceMaxDistance());
-	voxelRadianceMaxDistanceSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::renderer::SetVoxelRadianceMaxDistance(args.fValue);
-	});
-	AddWidget(&voxelRadianceMaxDistanceSlider);
-
-	wireFrameCheckBox.Create("Render Wireframe: ");
-	wireFrameCheckBox.SetTooltip("Visualize the scene as a wireframe");
-	wireFrameCheckBox.SetPos(XMFLOAT2(x, y += step));
-	wireFrameCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	wireFrameCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetWireRender(args.bValue);
-	});
-	wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
-	AddWidget(&wireFrameCheckBox);
+	AddWidget(&vxgiMaxDistanceSlider);
 
 	variableRateShadingClassificationCheckBox.Create("VRS Classification: ");
 	variableRateShadingClassificationCheckBox.SetTooltip("Enable classification of variable rate shading on the screen. Less important parts will be shaded with lesser resolution.\nRequires Tier2 support for variable shading rate");
@@ -688,40 +691,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->main->config.Commit();
 	});
 	AddWidget(&raytraceBounceCountSlider);
-
-
-	freezeCullingCameraCheckBox.Create("Freeze culling camera: ");
-	freezeCullingCameraCheckBox.SetTooltip("Freeze culling camera update. Scene culling will not be updated with the view");
-	freezeCullingCameraCheckBox.SetPos(XMFLOAT2(x, y += step));
-	freezeCullingCameraCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	freezeCullingCameraCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetFreezeCullingCameraEnabled(args.bValue);
-	});
-	freezeCullingCameraCheckBox.SetCheck(wi::renderer::GetFreezeCullingCameraEnabled());
-	AddWidget(&freezeCullingCameraCheckBox);
-
-
-
-	disableAlbedoMapsCheckBox.Create("Disable albedo maps: ");
-	disableAlbedoMapsCheckBox.SetTooltip("Disables albedo maps on objects for easier lighting debugging");
-	disableAlbedoMapsCheckBox.SetPos(XMFLOAT2(x, y += step));
-	disableAlbedoMapsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	disableAlbedoMapsCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetDisableAlbedoMaps(args.bValue);
-		});
-	disableAlbedoMapsCheckBox.SetCheck(wi::renderer::IsDisableAlbedoMaps());
-	AddWidget(&disableAlbedoMapsCheckBox);
-
-
-	forceDiffuseLightingCheckBox.Create("Force diffuse lighting: ");
-	forceDiffuseLightingCheckBox.SetTooltip("Sets every surface fully diffuse, with zero specularity");
-	forceDiffuseLightingCheckBox.SetPos(XMFLOAT2(x, y += step));
-	forceDiffuseLightingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	forceDiffuseLightingCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetForceDiffuseLighting(args.bValue);
-		});
-	forceDiffuseLightingCheckBox.SetCheck(wi::renderer::IsForceDiffuseLighting());
-	AddWidget(&forceDiffuseLightingCheckBox);
 
 
 	// Old Postprocess window params:
@@ -1404,128 +1373,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	fsr2Combo.SetSelected(fsr2_preset);
 	AddWidget(&fsr2Combo);
 
-
-
-	// Visualizer toggles:
-	y += step;
-	x = 250;
-
-	nameDebugCheckBox.Create("Name visualizer: ");
-	nameDebugCheckBox.SetTooltip("Visualize the entity names in the scene");
-	nameDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
-	nameDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	AddWidget(&nameDebugCheckBox);
-
-	physicsDebugCheckBox.Create("Physics visualizer: ");
-	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
-	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
-	physicsDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	physicsDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::physics::SetDebugDrawEnabled(args.bValue);
-		});
-	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
-	AddWidget(&physicsDebugCheckBox);
-
-	aabbDebugCheckBox.Create("AABB visualizer: ");
-	aabbDebugCheckBox.SetTooltip("Visualize the scene bounding boxes");
-	aabbDebugCheckBox.SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
-	aabbDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
-	aabbDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	aabbDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugPartitionTree(args.bValue);
-		});
-	aabbDebugCheckBox.SetCheck(wi::renderer::GetToDrawDebugPartitionTree());
-	AddWidget(&aabbDebugCheckBox);
-
-	boneLinesCheckBox.Create("Bone line visualizer: ");
-	boneLinesCheckBox.SetTooltip("Visualize bones of armatures");
-	boneLinesCheckBox.SetScriptTip("SetDebugBonesEnabled(bool enabled)");
-	boneLinesCheckBox.SetPos(XMFLOAT2(x, y += step));
-	boneLinesCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	boneLinesCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugBoneLines(args.bValue);
-		});
-	boneLinesCheckBox.SetCheck(wi::renderer::GetToDrawDebugBoneLines());
-	AddWidget(&boneLinesCheckBox);
-
-	debugEmittersCheckBox.Create("Emitter visualizer: ");
-	debugEmittersCheckBox.SetTooltip("Visualize emitters");
-	debugEmittersCheckBox.SetScriptTip("SetDebugEmittersEnabled(bool enabled)");
-	debugEmittersCheckBox.SetPos(XMFLOAT2(x, y += step));
-	debugEmittersCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	debugEmittersCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugEmitters(args.bValue);
-		});
-	debugEmittersCheckBox.SetCheck(wi::renderer::GetToDrawDebugEmitters());
-	AddWidget(&debugEmittersCheckBox);
-
-	debugForceFieldsCheckBox.Create("Force Field visualizer: ");
-	debugForceFieldsCheckBox.SetTooltip("Visualize force fields");
-	debugForceFieldsCheckBox.SetScriptTip("SetDebugForceFieldsEnabled(bool enabled)");
-	debugForceFieldsCheckBox.SetPos(XMFLOAT2(x, y += step));
-	debugForceFieldsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	debugForceFieldsCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugForceFields(args.bValue);
-		});
-	debugForceFieldsCheckBox.SetCheck(wi::renderer::GetToDrawDebugForceFields());
-	AddWidget(&debugForceFieldsCheckBox);
-
-	debugRaytraceBVHCheckBox.Create("RT BVH visualizer: ");
-	debugRaytraceBVHCheckBox.SetTooltip("Visualize scene BVH if raytracing is enabled");
-	debugRaytraceBVHCheckBox.SetPos(XMFLOAT2(x, y += step));
-	debugRaytraceBVHCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	debugRaytraceBVHCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetRaytraceDebugBVHVisualizerEnabled(args.bValue);
-		});
-	debugRaytraceBVHCheckBox.SetCheck(wi::renderer::GetRaytraceDebugBVHVisualizerEnabled());
-	AddWidget(&debugRaytraceBVHCheckBox);
-
-	envProbesCheckBox.Create("Env probe visualizer: ");
-	envProbesCheckBox.SetTooltip("Toggle visualization of environment probes as reflective spheres");
-	envProbesCheckBox.SetPos(XMFLOAT2(x, y += step));
-	envProbesCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	envProbesCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugEnvProbes(args.bValue);
-		});
-	envProbesCheckBox.SetCheck(wi::renderer::GetToDrawDebugEnvProbes());
-	AddWidget(&envProbesCheckBox);
-
-	cameraVisCheckBox.Create("Camera visualizer: ");
-	cameraVisCheckBox.SetTooltip("Toggle visualization of camera proxies in the scene");
-	cameraVisCheckBox.SetPos(XMFLOAT2(x, y += step));
-	cameraVisCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	cameraVisCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugCameras(args.bValue);
-		});
-	cameraVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugCameras());
-	AddWidget(&cameraVisCheckBox);
-
-	colliderVisCheckBox.Create("Collider visualizer: ");
-	colliderVisCheckBox.SetTooltip("Toggle visualization of colliders in the scene");
-	colliderVisCheckBox.SetPos(XMFLOAT2(x, y += step));
-	colliderVisCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	colliderVisCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawDebugColliders(args.bValue);
-		});
-	colliderVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugColliders());
-	AddWidget(&colliderVisCheckBox);
-
-	gridHelperCheckBox.Create("Grid helper: ");
-	gridHelperCheckBox.SetTooltip("Toggle showing of unit visualizer grid in the world origin");
-	gridHelperCheckBox.SetPos(XMFLOAT2(x, y += step));
-	gridHelperCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	if (editor->main->config.GetSection("graphics").Has("grid_helper"))
-	{
-		wi::renderer::SetToDrawGridHelper(editor->main->config.GetSection("graphics").GetBool("grid_helper"));
-	}
-	gridHelperCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::renderer::SetToDrawGridHelper(args.bValue);
-		editor->main->config.GetSection("graphics").Set("grid_helper", args.bValue);
-		editor->main->config.Commit();
-	});
-	gridHelperCheckBox.SetCheck(wi::renderer::GetToDrawGridHelper());
-	AddWidget(&gridHelperCheckBox);
-
 	Translate(XMFLOAT3(100, 50, 0));
 	SetMinimized(true);
 }
@@ -1844,14 +1691,13 @@ void GraphicsWindow::ResizeLayout()
 		ddgiRayCountSlider.SetVisible(false);
 		ddgiBlendSpeedSlider.SetVisible(false);
 		ddgiSmoothBackfaceSlider.SetVisible(false);
-		voxelRadianceDebugCheckBox.SetVisible(false);
-		voxelRadianceCheckBox.SetVisible(false);
-		voxelRadianceSecondaryBounceCheckBox.SetVisible(false);
-		voxelRadianceReflectionsCheckBox.SetVisible(false);
-		voxelRadianceVoxelSizeSlider.SetVisible(false);
-		voxelRadianceConeTracingSlider.SetVisible(false);
-		voxelRadianceRayStepSizeSlider.SetVisible(false);
-		voxelRadianceMaxDistanceSlider.SetVisible(false);
+		vxgiDebugCombo.SetVisible(false);
+		vxgiCheckBox.SetVisible(false);
+		vxgiReflectionsCheckBox.SetVisible(false);
+		vxgiFullresCheckBox.SetVisible(false);
+		vxgiVoxelSizeSlider.SetVisible(false);
+		vxgiRayStepSizeSlider.SetVisible(false);
+		vxgiMaxDistanceSlider.SetVisible(false);
 	}
 	else
 	{
@@ -1871,14 +1717,16 @@ void GraphicsWindow::ResizeLayout()
 		ddgiBlendSpeedSlider.SetVisible(true);
 		ddgiSmoothBackfaceSlider.SetVisible(true);
 		ddgiSmoothBackfaceSlider.SetValue(editor->GetCurrentScene().ddgi.smooth_backface);
-		voxelRadianceDebugCheckBox.SetVisible(true);
-		voxelRadianceCheckBox.SetVisible(true);
-		voxelRadianceSecondaryBounceCheckBox.SetVisible(true);
-		voxelRadianceReflectionsCheckBox.SetVisible(true);
-		voxelRadianceVoxelSizeSlider.SetVisible(true);
-		voxelRadianceConeTracingSlider.SetVisible(true);
-		voxelRadianceRayStepSizeSlider.SetVisible(true);
-		voxelRadianceMaxDistanceSlider.SetVisible(true);
+		vxgiDebugCombo.SetVisible(true);
+		vxgiCheckBox.SetVisible(true);
+		vxgiReflectionsCheckBox.SetVisible(true);
+		vxgiFullresCheckBox.SetVisible(true);
+		vxgiVoxelSizeSlider.SetVisible(true);
+		vxgiVoxelSizeSlider.SetValue(editor->GetCurrentScene().vxgi.clipmaps[0].voxelsize);
+		vxgiRayStepSizeSlider.SetVisible(true);
+		vxgiRayStepSizeSlider.SetValue(editor->GetCurrentScene().vxgi.rayStepSize);
+		vxgiMaxDistanceSlider.SetVisible(true);
+		vxgiMaxDistanceSlider.SetValue(editor->GetCurrentScene().vxgi.maxDistance);
 
 		add(GIBoostSlider);
 
@@ -1900,14 +1748,13 @@ void GraphicsWindow::ResizeLayout()
 
 		y += jump;
 
-		add_right(voxelRadianceCheckBox);
-		add_right(voxelRadianceDebugCheckBox);
-		add_right(voxelRadianceSecondaryBounceCheckBox);
-		add_right(voxelRadianceReflectionsCheckBox);
-		add(voxelRadianceVoxelSizeSlider);
-		add(voxelRadianceConeTracingSlider);
-		add(voxelRadianceRayStepSizeSlider);
-		add(voxelRadianceMaxDistanceSlider);
+		add_right(vxgiDebugCombo);
+		vxgiCheckBox.SetPos(XMFLOAT2(vxgiDebugCombo.GetPos().x - vxgiCheckBox.GetSize().x - padding, vxgiDebugCombo.GetPos().y));
+		add_right(vxgiReflectionsCheckBox);
+		add_right(vxgiFullresCheckBox);
+		add(vxgiVoxelSizeSlider);
+		add(vxgiRayStepSizeSlider);
+		add(vxgiMaxDistanceSlider);
 	}
 
 
@@ -1957,24 +1804,6 @@ void GraphicsWindow::ResizeLayout()
 	add_right(fsr2Slider);
 	fsr2CheckBox.SetPos(XMFLOAT2(fsr2Slider.GetPos().x - fsr2CheckBox.GetSize().x - 80, fsr2Slider.GetPos().y));
 	add_right(fsr2Combo);
-
-	y += jump;
-
-	add_right(freezeCullingCameraCheckBox);
-	add_right(disableAlbedoMapsCheckBox);
-	add_right(forceDiffuseLightingCheckBox);
-	add_right(wireFrameCheckBox);
-	add_right(gridHelperCheckBox);
-	add_right(nameDebugCheckBox);
-	add_right(physicsDebugCheckBox);
-	add_right(aabbDebugCheckBox);
-	add_right(boneLinesCheckBox);
-	add_right(debugEmittersCheckBox);
-	add_right(debugForceFieldsCheckBox);
-	add_right(debugRaytraceBVHCheckBox);
-	add_right(envProbesCheckBox);
-	add_right(cameraVisCheckBox);
-	add_right(colliderVisCheckBox);
 
 
 }

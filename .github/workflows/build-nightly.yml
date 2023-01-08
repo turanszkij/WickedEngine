@@ -65,6 +65,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt install libsdl2-dev
+        sudo apt install libncurses5
 
     - name: Build
       run: |
@@ -104,6 +105,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install libsdl2-dev
+        sudo apt install libncurses5
 
     - name: Build
       run: |

@@ -96,7 +96,7 @@ bool ImGui_Impl_CreateDeviceObjects()
 	samplerDesc.address_u = TextureAddressMode::WRAP;
 	samplerDesc.address_v = TextureAddressMode::WRAP;
 	samplerDesc.address_w = TextureAddressMode::WRAP;
-	samplerDesc.filter = Filter::MAXIMUM_MIN_MAG_MIP_LINEAR;
+	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
 	wi::graphics::GetDevice()->CreateSampler(&samplerDesc, &sampler);
 
 	// Store our identifier
@@ -1068,7 +1068,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			static bool bVoxelGIEnabled = false;
 			if (ImGui::Checkbox("Voxel GI", &bVoxelGIEnabled))
 			{
-				wi::renderer::SetVoxelRadianceEnabled(bVoxelGIEnabled);
+				wi::renderer::SetVXGIEnabled(bVoxelGIEnabled);
 			}
 
 

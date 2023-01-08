@@ -1,53 +1,45 @@
 #ifndef WI_VOXEL_HF
 #define WI_VOXEL_HF
+#include "ColorSpaceUtility.hlsli"
 
-struct VoxelType
-{
-	uint colorMask;
-	uint normalMask;
-};
+static const float __hdrRange = 10.0f;		// HDR to SDR packing scale
+static const uint MAX_VOXEL_RGB = 511;		// 9 bits for RGB
+static const uint MAX_VOXEL_ALPHA = 31;		// 5 bits for alpha (alpha is needed for atomic average)
+static const float DARK_PACKING_POW = 8;	// improves precision for dark colors
 
-static const float __hdrRange = 10.0f;
-
-// Encode HDR color to a 32 bit uint
-// Alpha is 1 bit + 7 bit HDR remapping
 uint PackVoxelColor(in float4 color)
 {
-	// normalize color to LDR
-	float hdr = length(color.rgb);
-	color.rgb /= hdr;
-
-	// encode LDR color and HDR range
-	uint3 iColor = uint3(color.rgb * 255.0f);
-	uint iHDR = (uint)(saturate(hdr / __hdrRange) * 127);
-	uint colorMask = (iHDR << 24u) | (iColor.r << 16u) | (iColor.g << 8u) | iColor.b;
-
-	// encode alpha into highest bit
-	uint iAlpha = (color.a > 0 ? 1u : 0u);
-	colorMask |= iAlpha << 31u;
-
-	return colorMask;
+	color.rgb /= __hdrRange;
+	color = saturate(color);
+	color.rgb = pow(color.rgb, 1.0 / DARK_PACKING_POW);
+	uint retVal = 0;
+	retVal |= (uint)(color.r * MAX_VOXEL_RGB) << 0u;
+	retVal |= (uint)(color.g * MAX_VOXEL_RGB) << 9u;
+	retVal |= (uint)(color.b * MAX_VOXEL_RGB) << 18u;
+	retVal |= (uint)(color.a * MAX_VOXEL_ALPHA) << 27u;
+	return retVal;
 }
 
-// Decode 32 bit uint into HDR color with 1 bit alpha
 float4 UnpackVoxelColor(in uint colorMask)
 {
-	float hdr;
-	float4 color;
+	float4 retVal;
+	retVal.r = (float)((colorMask >> 0u) & MAX_VOXEL_RGB) / MAX_VOXEL_RGB;
+	retVal.g = (float)((colorMask >> 9u) & MAX_VOXEL_RGB) / MAX_VOXEL_RGB;
+	retVal.b = (float)((colorMask >> 18u) & MAX_VOXEL_RGB) / MAX_VOXEL_RGB;
+	retVal.a = (float)((colorMask >> 27u) & MAX_VOXEL_ALPHA) / MAX_VOXEL_ALPHA;
+	retVal = saturate(retVal);
+	retVal.rgb = pow(retVal.rgb, DARK_PACKING_POW);
+	retVal.rgb *= __hdrRange;
+	return retVal;
+}
 
-	hdr = (colorMask >> 24u) & 0x0000007f;
-	color.r = (colorMask >> 16u) & 0x000000ff;
-	color.g = (colorMask >> 8u) & 0x000000ff;
-	color.b = colorMask & 0x000000ff;
-
-	hdr /= 127.0f;
-	color.rgb /= 255.0f;
-
-	color.rgb *= hdr * __hdrRange;
-
-	color.a = (colorMask >> 31u) & 0x00000001;
-
-	return color;
+uint PackVoxelChannel(float value)
+{
+	return uint(value * 1024);
+}
+float UnpackVoxelChannel(uint value)
+{
+	return float(value) / 1024.0f;
 }
 
 #endif // WI_VOXEL_HF

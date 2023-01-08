@@ -79,6 +79,7 @@ namespace wi
 		bool sceneUpdateEnabled = true;
 		bool fsrEnabled = false;
 		bool fsr2Enabled = false;
+		bool vxgiResolveFullResolution = false;
 
 		uint32_t msaaSampleCount = 1;
 
@@ -116,17 +117,6 @@ namespace wi
 		wi::graphics::Texture depthBuffer_Reflection; // used for reflection, single sample
 		wi::graphics::Texture rtLinearDepth; // linear depth result + mipchain (max filter)
 
-		wi::graphics::RenderPass renderpass_depthprepass;
-		wi::graphics::RenderPass renderpass_main;
-		wi::graphics::RenderPass renderpass_transparent;
-		wi::graphics::RenderPass renderpass_reflection_depthprepass;
-		wi::graphics::RenderPass renderpass_reflection;
-		wi::graphics::RenderPass renderpass_lightshafts;
-		wi::graphics::RenderPass renderpass_volumetriclight;
-		wi::graphics::RenderPass renderpass_particledistortion;
-		wi::graphics::RenderPass renderpass_waterripples;
-		wi::graphics::RenderPass renderpass_outline_source;
-
 		wi::graphics::Texture debugUAV; // debug UAV can be used by some shaders...
 		wi::renderer::TiledLightResources tiledLightResources;
 		wi::renderer::TiledLightResources tiledLightResources_planarReflection;
@@ -148,6 +138,7 @@ namespace wi
 		wi::renderer::TemporalAAResources temporalAAResources;
 		wi::renderer::VisibilityResources visibilityResources;
 		wi::renderer::FSR2Resources fsr2Resources;
+		wi::renderer::VXGIResources vxgiResources;
 
 		mutable const wi::graphics::Texture* lastPostprocessRT = &rtPostprocess;
 		// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
@@ -242,6 +233,7 @@ namespace wi
 		constexpr bool getSceneUpdateEnabled() const { return sceneUpdateEnabled; }
 		constexpr bool getFSREnabled() const { return fsrEnabled; }
 		constexpr bool getFSR2Enabled() const { return fsr2Enabled; }
+		constexpr bool getVXGIResolveFullResolutionEnabled() const { return vxgiResolveFullResolution; }
 
 		constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
 
@@ -295,6 +287,7 @@ namespace wi
 		void setFSREnabled(bool value);
 		void setFSR2Enabled(bool value);
 		void setFSR2Preset(FSR2_Preset preset); // this will modify resolution scaling and sampler lod bias
+		void setVXGIResolveFullResolutionEnabled(bool value) { vxgiResolveFullResolution = value; }
 
 		virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 

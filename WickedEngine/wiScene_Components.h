@@ -662,8 +662,6 @@ namespace wi::scene
 		uint32_t filterMaskDynamic = 0;
 
 		wi::graphics::Texture lightmap;
-		wi::graphics::RenderPass renderpass_lightmap_clear;
-		wi::graphics::RenderPass renderpass_lightmap_accumulate;
 		mutable uint32_t lightmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
@@ -674,6 +672,7 @@ namespace wi::scene
 
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;
+		uint32_t sort_bits = 0;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
@@ -959,6 +958,8 @@ namespace wi::scene
 		int texture_surfelgi_index = -1;
 		int buffer_entitytiles_opaque_index = -1;
 		int buffer_entitytiles_transparent_index = -1;
+		int texture_vxgi_diffuse_index = -1;
+		int texture_vxgi_specular_index = -1;
 
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);
 		void UpdateCamera();
@@ -1263,13 +1264,15 @@ namespace wi::scene
 
 		std::string skyMapName;
 		std::string colorGradingMapName;
-		std::string volumetricCloudsWeatherMapName;
+		std::string volumetricCloudsWeatherMapFirstName;
+		std::string volumetricCloudsWeatherMapSecondName;
 
 		// Non-serialized attributes:
 		uint32_t most_important_light_index = ~0u;
 		wi::Resource skyMap;
 		wi::Resource colorGradingMap;
-		wi::Resource volumetricCloudsWeatherMap;
+		wi::Resource volumetricCloudsWeatherMapFirst;
+		wi::Resource volumetricCloudsWeatherMapSecond;
 		XMFLOAT4 stars_rotation_quaternion = XMFLOAT4(0, 0, 0, 1);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);

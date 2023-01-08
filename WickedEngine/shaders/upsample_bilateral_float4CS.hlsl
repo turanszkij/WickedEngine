@@ -26,16 +26,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 #endif // USE_PIXELSHADER
 
-
 	const float threshold = postprocess.params0.x;
 	const float lowres_depthchain_mip = postprocess.params0.w;
 	const float2 lowres_size = postprocess.params1.xy;
 	const float2 lowres_texel_size = postprocess.params1.zw;
 
 	const float2 uv00 = uv - lowres_texel_size * 0.5;
-	const float2 uv10 = uv00 + float2(lowres_texel_size.x, 0);
-	const float2 uv01 = uv00 + float2(0, lowres_texel_size.y);
-	const float2 uv11 = uv00 + lowres_texel_size;
+	const float2 uv10 = float2(uv00.x + lowres_texel_size.x, uv00.y);
+	const float2 uv01 = float2(uv00.x, uv00.y + lowres_texel_size.y);
+	const float2 uv11 = float2(uv00.x + lowres_texel_size.x, uv00.y + lowres_texel_size.y);
 
 	const float4 lineardepth_highres = texture_lineardepth[pixel].xxxx;
 	const float4 lineardepth_lowres = float4(
@@ -50,21 +49,18 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	UPSAMPLE_FORMAT color;
 
+#ifndef UPSAMPLE_DISABLE_FILTERING
 	[branch]
 	if (accum_diff < threshold)
 	{
-#ifdef UPSAMPLE_DISABLE_FILTERING
-		color = input[floor(uv * lowres_size)];
-#else
 		// small error, take bilinear sample:
 		color = input.SampleLevel(sampler_linear_clamp, uv, 0);
-#endif // UPSAMPLE_DISABLE_FILTERING
 	}
 	else
+#endif // UPSAMPLE_DISABLE_FILTERING
 	{
 		// large error:
 
-#ifdef UPSAMPLE_DISABLE_FILTERING
 		// find nearest sample to current depth:
 		float min_depth_diff = depth_diff[0];
 		float2 uv_nearest = uv00;
@@ -87,20 +83,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			min_depth_diff = depth_diff[3];
 		}
 		color = input[floor(uv_nearest * lowres_size)];
-#else
-
-		// depth-weighted blending:
-		float4 weights = saturate(1 - abs(lineardepth_highres - lineardepth_lowres));
-		float sum = weights[0] + weights[1] + weights[2] + weights[3];
-		weights /= max(sum, 0.0001);
-
-		color = 0;
-		color += input.SampleLevel(sampler_point_clamp, uv00, 0) * weights[0];
-		color += input.SampleLevel(sampler_point_clamp, uv10, 0) * weights[1];
-		color += input.SampleLevel(sampler_point_clamp, uv01, 0) * weights[2];
-		color += input.SampleLevel(sampler_point_clamp, uv11, 0) * weights[3];
-
-#endif // UPSAMPLE_DISABLE_FILTERING
 	}
 
 #ifdef USE_PIXELSHADER

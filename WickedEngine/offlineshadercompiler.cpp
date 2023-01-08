@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <mutex>
 #include <string>
+#include <cstdlib>
 
 std::mutex locker;
 struct ShaderEntry
@@ -37,9 +38,11 @@ wi::vector<ShaderEntry> shaders = {
 	{"depthoffield_upsampleCS", wi::graphics::ShaderStage::CS},
 	{"depthoffield_tileMaxCOC_verticalCS", wi::graphics::ShaderStage::CS},
 	{"depthoffield_tileMaxCOC_horizontalCS", wi::graphics::ShaderStage::CS},
-	{"voxelRadianceSecondaryBounceCS", wi::graphics::ShaderStage::CS},
-	{"voxelSceneCopyClearCS", wi::graphics::ShaderStage::CS},
-	{"voxelClearOnlyNormalCS", wi::graphics::ShaderStage::CS},
+	{"vxgi_offsetprevCS", wi::graphics::ShaderStage::CS},
+	{"vxgi_temporalCS", wi::graphics::ShaderStage::CS},
+	{"vxgi_sdf_jumpfloodCS", wi::graphics::ShaderStage::CS},
+	{"vxgi_resolve_diffuseCS", wi::graphics::ShaderStage::CS},
+	{"vxgi_resolve_specularCS", wi::graphics::ShaderStage::CS},
 	{"upsample_bilateral_float1CS", wi::graphics::ShaderStage::CS},
 	{"upsample_bilateral_float4CS", wi::graphics::ShaderStage::CS},
 	{"upsample_bilateral_unorm1CS", wi::graphics::ShaderStage::CS},
@@ -160,7 +163,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"blur_bilateral_float3CS", wi::graphics::ShaderStage::CS },
 	{"blur_bilateral_float4CS", wi::graphics::ShaderStage::CS },
 	{"blur_bilateral_unorm1CS", wi::graphics::ShaderStage::CS },
-	{"voxelSceneCopyClearCS_TemporalSmoothing", wi::graphics::ShaderStage::CS },
 	{"normalsfromdepthCS", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_curlnoiseCS", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_detailnoiseCS", wi::graphics::ShaderStage::CS },
@@ -236,32 +238,13 @@ wi::vector<ShaderEntry> shaders = {
 	{"raytrace_debugbvhPS", wi::graphics::ShaderStage::PS },
 	{"outlinePS", wi::graphics::ShaderStage::PS },
 	{"oceanSurfaceSimplePS", wi::graphics::ShaderStage::PS },
-	{"objectPS_transparent_pom", wi::graphics::ShaderStage::PS },
-	{"objectPS_water", wi::graphics::ShaderStage::PS },
 	{"objectPS_voxelizer", wi::graphics::ShaderStage::PS },
-	{"objectPS_transparent", wi::graphics::ShaderStage::PS },
-	{"objectPS_transparent_planarreflection", wi::graphics::ShaderStage::PS },
-	{"objectPS_planarreflection", wi::graphics::ShaderStage::PS },
-	{"objectPS_pom", wi::graphics::ShaderStage::PS },
-	{"objectPS", wi::graphics::ShaderStage::PS },
 	{"objectPS_hologram", wi::graphics::ShaderStage::PS },
 	{"objectPS_paintradius", wi::graphics::ShaderStage::PS },
 	{"objectPS_simple", wi::graphics::ShaderStage::PS },
 	{"objectPS_debug", wi::graphics::ShaderStage::PS },
 	{"objectPS_prepass", wi::graphics::ShaderStage::PS },
 	{"objectPS_prepass_alphatest", wi::graphics::ShaderStage::PS },
-	{"objectPS_anisotropic", wi::graphics::ShaderStage::PS },
-	{"objectPS_transparent_anisotropic", wi::graphics::ShaderStage::PS },
-	{"objectPS_cloth", wi::graphics::ShaderStage::PS },
-	{"objectPS_transparent_cloth", wi::graphics::ShaderStage::PS },
-	{"objectPS_clearcoat", wi::graphics::ShaderStage::PS },
-	{"objectPS_transparent_clearcoat", wi::graphics::ShaderStage::PS },
-	{"objectPS_cloth_clearcoat", wi::graphics::ShaderStage::PS },
-	{"objectPS_transparent_cloth_clearcoat", wi::graphics::ShaderStage::PS },
-	{"objectPS_cartoon", wi::graphics::ShaderStage::PS },
-	{"objectPS_transparent_cartoon", wi::graphics::ShaderStage::PS },
-	{"objectPS_unlit", wi::graphics::ShaderStage::PS },
-	{"objectPS_transparent_unlit", wi::graphics::ShaderStage::PS },
 	{"lightVisualizerPS", wi::graphics::ShaderStage::PS },
 	{"lensFlarePS", wi::graphics::ShaderStage::PS },
 	{"impostorPS", wi::graphics::ShaderStage::PS },
@@ -296,23 +279,12 @@ wi::vector<ShaderEntry> shaders = {
 	{"vPointLightVS", wi::graphics::ShaderStage::VS },
 	{"sphereVS", wi::graphics::ShaderStage::VS },
 	{"skyVS", wi::graphics::ShaderStage::VS },
-	{"shadowVS_transparent", wi::graphics::ShaderStage::VS },
-	{"shadowVS", wi::graphics::ShaderStage::VS },
-	{"shadowVS_alphatest", wi::graphics::ShaderStage::VS },
 	{"postprocessVS", wi::graphics::ShaderStage::VS },
 	{"renderlightmapVS", wi::graphics::ShaderStage::VS },
 	{"raytrace_screenVS", wi::graphics::ShaderStage::VS },
 	{"oceanSurfaceVS", wi::graphics::ShaderStage::VS },
-	{"objectVS_simple", wi::graphics::ShaderStage::VS },
-	{"objectVS_voxelizer", wi::graphics::ShaderStage::VS },
-	{"objectVS_common", wi::graphics::ShaderStage::VS },
-	{"objectVS_common_tessellation", wi::graphics::ShaderStage::VS },
-	{"objectVS_prepass", wi::graphics::ShaderStage::VS },
-	{"objectVS_prepass_alphatest", wi::graphics::ShaderStage::VS },
-	{"objectVS_prepass_tessellation", wi::graphics::ShaderStage::VS },
-	{"objectVS_prepass_alphatest_tessellation", wi::graphics::ShaderStage::VS },
-	{"objectVS_simple_tessellation", wi::graphics::ShaderStage::VS },
 	{"objectVS_debug", wi::graphics::ShaderStage::VS },
+	{"objectVS_voxelizer", wi::graphics::ShaderStage::VS },
 	{"lensFlareVS", wi::graphics::ShaderStage::VS },
 	{"impostorVS", wi::graphics::ShaderStage::VS },
 	{"forceFieldPointVisualizerVS", wi::graphics::ShaderStage::VS },
@@ -321,16 +293,8 @@ wi::vector<ShaderEntry> shaders = {
 	{"envMapVS", wi::graphics::ShaderStage::VS },
 	{"envMap_skyVS_emulation", wi::graphics::ShaderStage::VS },
 	{"envMapVS_emulation", wi::graphics::ShaderStage::VS },
-	{"cubeShadowVS", wi::graphics::ShaderStage::VS },
-	{"cubeShadowVS_alphatest", wi::graphics::ShaderStage::VS },
-	{"cubeShadowVS_emulation", wi::graphics::ShaderStage::VS },
-	{"cubeShadowVS_alphatest_emulation", wi::graphics::ShaderStage::VS },
-	{"cubeShadowVS_transparent", wi::graphics::ShaderStage::VS },
-	{"cubeShadowVS_transparent_emulation", wi::graphics::ShaderStage::VS },
 	{"occludeeVS", wi::graphics::ShaderStage::VS },
 	{"ddgi_debugVS", wi::graphics::ShaderStage::VS },
-
-
 	{"envMap_skyGS_emulation", wi::graphics::ShaderStage::GS },
 	{"envMapGS_emulation", wi::graphics::ShaderStage::GS },
 	{"cubeShadowGS_emulation", wi::graphics::ShaderStage::GS },
@@ -350,7 +314,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"objectHS_prepass", wi::graphics::ShaderStage::HS },
 	{"objectHS_prepass_alphatest", wi::graphics::ShaderStage::HS },
 	{"objectHS_simple", wi::graphics::ShaderStage::HS },
-
 
 	{"emittedparticleMS", wi::graphics::ShaderStage::MS },
 
@@ -422,6 +385,88 @@ int main(int argc, char* argv[])
 			{ ShaderFormat::SPIRV, "shaders/spirv/" },
 		};
 		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6" << std::endl;
+	}
+
+	static const wi::vector<std::string> wind_permutation = { "WIND" };
+
+	shaders.push_back({ "objectVS_simple", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "objectVS_common", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "objectVS_common_tessellation", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "objectVS_prepass", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "objectVS_prepass_alphatest", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "objectVS_prepass_tessellation", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "objectVS_prepass_alphatest_tessellation", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "objectVS_simple_tessellation", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "shadowVS_transparent", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "shadowVS", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "shadowVS_alphatest", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "cubeShadowVS", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "cubeShadowVS_alphatest", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "cubeShadowVS_emulation", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "cubeShadowVS_alphatest_emulation", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "cubeShadowVS_transparent", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+	shaders.push_back({ "cubeShadowVS_transparent_emulation", wi::graphics::ShaderStage::VS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = wind_permutation;
+
+
+	// permutations for objectPS:
+	shaders.push_back({ "objectPS", wi::graphics::ShaderStage::PS });
+	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
+	{
+		shaders.back().permutations.emplace_back().defines = x;
+
+		// same but with TRANSPARENT:
+		shaders.back().permutations.emplace_back().defines = x;
+		shaders.back().permutations.back().defines.push_back("TRANSPARENT");
 	}
 
 	// permutations for visibility_surfaceCS:

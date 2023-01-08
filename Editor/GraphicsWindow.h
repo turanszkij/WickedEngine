@@ -29,14 +29,13 @@ public:
 	wi::gui::Slider ddgiRayCountSlider;
 	wi::gui::Slider ddgiBlendSpeedSlider;
 	wi::gui::Slider ddgiSmoothBackfaceSlider;
-	wi::gui::CheckBox voxelRadianceCheckBox;
-	wi::gui::CheckBox voxelRadianceDebugCheckBox;
-	wi::gui::CheckBox voxelRadianceSecondaryBounceCheckBox;
-	wi::gui::CheckBox voxelRadianceReflectionsCheckBox;
-	wi::gui::Slider voxelRadianceVoxelSizeSlider;
-	wi::gui::Slider voxelRadianceConeTracingSlider;
-	wi::gui::Slider voxelRadianceRayStepSizeSlider;
-	wi::gui::Slider voxelRadianceMaxDistanceSlider;
+	wi::gui::CheckBox vxgiCheckBox;
+	wi::gui::ComboBox vxgiDebugCombo;
+	wi::gui::CheckBox vxgiReflectionsCheckBox;
+	wi::gui::CheckBox vxgiFullresCheckBox;
+	wi::gui::Slider vxgiVoxelSizeSlider;
+	wi::gui::Slider vxgiRayStepSizeSlider;
+	wi::gui::Slider vxgiMaxDistanceSlider;
 	wi::gui::Slider speedMultiplierSlider;
 	wi::gui::CheckBox transparentShadowsCheckBox;
 	wi::gui::ComboBox shadowTypeComboBox;
@@ -48,9 +47,6 @@ public:
 	wi::gui::ComboBox textureQualityComboBox;
 	wi::gui::Slider mipLodBiasSlider;
 	wi::gui::Slider raytraceBounceCountSlider;
-	wi::gui::CheckBox freezeCullingCameraCheckBox;
-	wi::gui::CheckBox disableAlbedoMapsCheckBox;
-	wi::gui::CheckBox forceDiffuseLightingCheckBox;
 
 	wi::gui::Slider exposureSlider;
 	wi::gui::Slider brightnessSlider;
@@ -97,23 +93,11 @@ public:
 	wi::gui::ComboBox fsr2Combo;
 	wi::gui::Slider fsr2Slider;
 
-	wi::gui::CheckBox nameDebugCheckBox;
-	wi::gui::CheckBox physicsDebugCheckBox;
-	wi::gui::CheckBox aabbDebugCheckBox;
-	wi::gui::CheckBox boneLinesCheckBox;
-	wi::gui::CheckBox debugEmittersCheckBox;
-	wi::gui::CheckBox debugForceFieldsCheckBox;
-	wi::gui::CheckBox debugRaytraceBVHCheckBox;
-	wi::gui::CheckBox wireFrameCheckBox;
 	wi::gui::CheckBox variableRateShadingClassificationCheckBox;
 	wi::gui::CheckBox variableRateShadingClassificationDebugCheckBox;
 	wi::gui::CheckBox advancedLightCullingCheckBox;
 	wi::gui::CheckBox debugLightCullingCheckBox;
 	wi::gui::CheckBox tessellationCheckBox;
-	wi::gui::CheckBox envProbesCheckBox;
-	wi::gui::CheckBox gridHelperCheckBox;
-	wi::gui::CheckBox cameraVisCheckBox;
-	wi::gui::CheckBox colliderVisCheckBox;
 
 	enum RENDERPATH
 	{

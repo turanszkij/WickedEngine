@@ -4,6 +4,7 @@
 #include "CameraWindow.h"
 #include "MaterialPickerWindow.h"
 #include "PaintToolWindow.h"
+#include "GeneralWindow.h"
 
 class EditorComponent;
 
@@ -16,17 +17,7 @@ public:
 	void ResizeLayout() override;
 
 	EditorComponent* editor = nullptr;
-	wi::gui::CheckBox isScalatorCheckBox;
-	wi::gui::CheckBox isRotatorCheckBox;
-	wi::gui::CheckBox isTranslatorCheckBox;
-	wi::gui::CheckBox profilerEnabledCheckBox;
-	wi::gui::CheckBox physicsEnabledCheckBox;
-	wi::gui::CheckBox cinemaModeCheckBox;
-	wi::gui::CheckBox versionCheckBox;
-	wi::gui::CheckBox fpsCheckBox;
-	wi::gui::CheckBox otherinfoCheckBox;
-	wi::gui::ComboBox themeCombo;
-	wi::gui::ComboBox saveModeComboBox;
+	GeneralWindow generalWnd;
 	GraphicsWindow graphicsWnd;
 	CameraWindow cameraWnd;
 	MaterialPickerWindow materialPickerWnd;

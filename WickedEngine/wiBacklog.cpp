@@ -141,8 +141,6 @@ namespace wi::backlog
 					wi::Color theme_color_active = wi::Color::White();
 					wi::Color theme_color_deactivating = wi::Color::lerp(theme_color_focus, wi::Color::White(), 0.5f);
 					inputField.SetColor(theme_color_idle); // all states the same, it's gonna be always active anyway
-					inputField.SetShadowRadius(5);
-					inputField.SetShadowColor(wi::Color(80, 140, 180, 100));
 					inputField.font.params.color = wi::Color(160, 240, 250, 255);
 					inputField.font.params.shadowColor = wi::Color::Transparent();
 
@@ -189,8 +187,8 @@ namespace wi::backlog
 		}
 		pos = wi::math::Clamp(pos, -canvas.GetLogicalHeight(), 0);
 
-		inputField.SetSize(XMFLOAT2(canvas.GetLogicalWidth() - 20, 20));
-		inputField.SetPos(XMFLOAT2(10, canvas.GetLogicalHeight() - 30 + pos));
+		inputField.SetSize(XMFLOAT2(canvas.GetLogicalWidth() - 40, 20));
+		inputField.SetPos(XMFLOAT2(20, canvas.GetLogicalHeight() - 40 + pos));
 		inputField.Update(canvas, dt);
 
 		toggleButton.SetSize(XMFLOAT2(100, 100));
@@ -219,6 +217,25 @@ namespace wi::backlog
 				fx.enableLinearOutputMapping(9);
 			}
 			wi::image::Draw(&backgroundTex, fx, cmd);
+
+			wi::image::Params inputbg;
+			inputbg.color = wi::Color(80, 140, 180, 200);
+			inputbg.pos = inputField.translation;
+			inputbg.pos.x -= 8;
+			inputbg.pos.y -= 8;
+			inputbg.siz = inputField.GetSize();
+			inputbg.siz.x += 16;
+			inputbg.siz.y += 16;
+			inputbg.enableCornerRounding();
+			inputbg.corners_rounding[0].radius = 10;
+			inputbg.corners_rounding[1].radius = 10;
+			inputbg.corners_rounding[2].radius = 10;
+			inputbg.corners_rounding[3].radius = 10;
+			if (colorspace != ColorSpace::SRGB)
+			{
+				inputbg.enableLinearOutputMapping(9);
+			}
+			wi::image::Draw(wi::texturehelper::getWhite(), inputbg, cmd);
 
 			if (colorspace != ColorSpace::SRGB)
 			{

@@ -56,9 +56,6 @@ namespace wi::audio
 
 	bool CreateSound(const std::string& filename, Sound* sound);
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound);
-#ifdef SDL2
-	bool CreateSound(SDL_RWops* data, Sound* sound);
-#endif
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance);
 
 	void Play(SoundInstance* instance);
@@ -67,6 +64,17 @@ namespace wi::audio
 	void SetVolume(float volume, SoundInstance* instance = nullptr);
 	float GetVolume(const SoundInstance* instance = nullptr);
 	void ExitLoop(SoundInstance* instance);
+
+	struct SampleInfo
+	{
+		const short* samples = nullptr;	// array of samples in the sound
+		size_t sample_count = 0;	// number of samples in the sound
+		int sample_rate = 0;	// number of samples per second
+		uint32_t channel_count = 1;	// number of channels in the samples array (1: mono, 2:stereo, etc.)
+	};
+	SampleInfo GetSampleInfo(const Sound* sound);
+	// Returns the total number of samples that were played since the creation of the sound instance
+	uint64_t GetTotalSamplesPlayed(const SoundInstance* instance);
 
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume);
 	float GetSubmixVolume(SUBMIX_TYPE type);

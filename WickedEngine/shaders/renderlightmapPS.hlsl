@@ -218,7 +218,7 @@ float4 main(Input input) : SV_TARGET
 			xTraceUserData.y,				// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);
-		q.Proceed();
+		while (q.Proceed());
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
 		RayHit hit = TraceRay_Closest(ray, xTraceUserData.y, rng);

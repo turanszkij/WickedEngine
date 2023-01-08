@@ -493,10 +493,15 @@ namespace vulkan_internal
 		{
 			ss += "[Vulkan Error]: ";
 			ss += callback_data->pMessage;
+#if 1
 			wi::backlog::post(ss, wi::backlog::LogLevel::Error);
-#ifdef _DEBUG
-			assert(0);
-#endif // _DEBUG
+#else
+			OutputDebugStringA(callback_data->pMessage);
+			OutputDebugStringA("\n");
+#endif
+//#ifdef _DEBUG
+//			assert(0);
+//#endif // _DEBUG
 		}
 
 		return VK_FALSE;
@@ -601,22 +606,25 @@ namespace vulkan_internal
 		{
 			VkImageView image_view = VK_NULL_HANDLE;
 			int index = -1; // bindless
+			uint32_t firstMip = 0;
+			uint32_t mipCount = 0;
+			uint32_t firstSlice = 0;
+			uint32_t sliceCount = 0;
 
 			constexpr bool IsValid() const
 			{
-				return index >= 0;
+				return image_view != VK_NULL_HANDLE;
 			}
 		};
 		TextureSubresource srv;
 		TextureSubresource uav;
-		VkImageView rtv = VK_NULL_HANDLE;
-		VkImageView dsv = VK_NULL_HANDLE;
+		TextureSubresource rtv;
+		TextureSubresource dsv;
 		uint32_t framebuffer_layercount = 0;
 		wi::vector<TextureSubresource> subresources_srv;
 		wi::vector<TextureSubresource> subresources_uav;
-		wi::vector<VkImageView> subresources_rtv;
-		wi::vector<VkImageView> subresources_dsv;
-		wi::vector<uint32_t> subresources_framebuffer_layercount;
+		wi::vector<TextureSubresource> subresources_rtv;
+		wi::vector<TextureSubresource> subresources_dsv;
 
 		wi::vector<SubresourceData> mapped_subresources;
 		SparseTextureProperties sparse_texture_properties;
@@ -649,13 +657,13 @@ namespace vulkan_internal
 				allocationhandler->destroyer_imageviews.push_back(std::make_pair(uav.image_view, framecount));
 				allocationhandler->destroyer_bindlessStorageImages.push_back(std::make_pair(uav.index, framecount));
 			}
-			if (rtv != VK_NULL_HANDLE)
+			if (rtv.IsValid())
 			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(rtv, framecount));
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(rtv.image_view, framecount));
 			}
-			if (dsv != VK_NULL_HANDLE)
+			if (dsv.IsValid())
 			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(dsv, framecount));
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(dsv.image_view, framecount));
 			}
 			for (auto x : subresources_srv)
 			{
@@ -669,11 +677,11 @@ namespace vulkan_internal
 			}
 			for (auto x : subresources_rtv)
 			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
 			}
 			for (auto x : subresources_dsv)
 			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x, framecount));
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
 			}
 			allocationhandler->destroylocker.unlock();
 		}
@@ -746,10 +754,12 @@ namespace vulkan_internal
 	struct PipelineState_Vulkan
 	{
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		VkPipeline pipeline = VK_NULL_HANDLE;
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE; // no lifetime management here
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE; // no lifetime management here
 		wi::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 		wi::vector<VkImageViewType> imageViewTypes;
+		size_t hash = 0;
 
 		wi::vector<VkDescriptorSetLayoutBinding> bindlessBindings;
 		wi::vector<VkDescriptorSet> bindlessSets;
@@ -773,23 +783,14 @@ namespace vulkan_internal
 		VkPipelineDepthStencilStateCreateInfo depthstencil = {};
 		VkSampleMask samplemask = {};
 		VkPipelineTessellationStateCreateInfo tessellationInfo = {};
-	};
-	struct RenderPass_Vulkan
-	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
-		VkRenderPass renderpass = VK_NULL_HANDLE;
-		VkFramebuffer framebuffer = VK_NULL_HANDLE;
-		VkRenderPassBeginInfo beginInfo = {};
-		VkClearValue clearColors[9] = {};
 
-		~RenderPass_Vulkan()
+		~PipelineState_Vulkan()
 		{
 			if (allocationhandler == nullptr)
 				return;
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
-			if (renderpass) allocationhandler->destroyer_renderpasses.push_back(std::make_pair(renderpass, framecount));
-			if (framebuffer) allocationhandler->destroyer_framebuffers.push_back(std::make_pair(framebuffer, framecount));
+			if (pipeline) allocationhandler->destroyer_pipelines.push_back(std::make_pair(pipeline, framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -844,10 +845,8 @@ namespace vulkan_internal
 		VkExtent2D swapChainExtent;
 		wi::vector<VkImage> swapChainImages;
 		wi::vector<VkImageView> swapChainImageViews;
-		wi::vector<VkFramebuffer> swapChainFramebuffers;
 
 		Texture dummyTexture;
-		RenderPass renderpass;
 
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
 
@@ -868,7 +867,6 @@ namespace vulkan_internal
 
 			for (size_t i = 0; i < swapChainImages.size(); ++i)
 			{
-				allocationhandler->destroyer_framebuffers.push_back(std::make_pair(swapChainFramebuffers[i], framecount));
 				allocationhandler->destroyer_imageviews.push_back(std::make_pair(swapChainImageViews[i], framecount));
 			}
 
@@ -913,10 +911,6 @@ namespace vulkan_internal
 	{
 		return static_cast<PipelineState_Vulkan*>(param->internal_state.get());
 	}
-	RenderPass_Vulkan* to_internal(const RenderPass* param)
-	{
-		return static_cast<RenderPass_Vulkan*>(param->internal_state.get());
-	}
 	BVH_Vulkan* to_internal(const RaytracingAccelerationStructure* param)
 	{
 		return static_cast<BVH_Vulkan*>(param->internal_state.get());
@@ -932,7 +926,7 @@ namespace vulkan_internal
 
 	inline const std::string GetCachePath()
 	{
-		return wi::helper::GetTempDirectoryPath() + "WickedVkPipelineCache.data";
+		return wi::helper::GetTempDirectoryPath() + "wiPipelineCache_Vulkan";
 	}
 
 	bool CreateSwapChainInternal(
@@ -1085,62 +1079,8 @@ namespace vulkan_internal
 		assert(res == VK_SUCCESS);
 		internal_state->swapChainImageFormat = surfaceFormat.format;
 
-		// Create default render pass:
-		{
-			VkAttachmentDescription colorAttachment = {};
-			colorAttachment.format = internal_state->swapChainImageFormat;
-			colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-			VkAttachmentReference colorAttachmentRef = {};
-			colorAttachmentRef.attachment = 0;
-			colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-			VkSubpassDescription subpass = {};
-			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpass.colorAttachmentCount = 1;
-			subpass.pColorAttachments = &colorAttachmentRef;
-
-			VkRenderPassCreateInfo renderPassInfo = {};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-			renderPassInfo.attachmentCount = 1;
-			renderPassInfo.pAttachments = &colorAttachment;
-			renderPassInfo.subpassCount = 1;
-			renderPassInfo.pSubpasses = &subpass;
-
-			VkSubpassDependency dependency = {};
-			dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-			dependency.dstSubpass = 0;
-			dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependency.srcAccessMask = 0;
-			dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-			renderPassInfo.dependencyCount = 1;
-			renderPassInfo.pDependencies = &dependency;
-
-			internal_state->dummyTexture.desc.format = internal_state->desc.format;
-			internal_state->dummyTexture.desc.width = internal_state->desc.width;
-			internal_state->dummyTexture.desc.height = internal_state->desc.height;
-			internal_state->renderpass = {};
-			wi::helper::hash_combine(internal_state->renderpass.hash, internal_state->swapChainImageFormat);
-			auto renderpass_internal = std::make_shared<RenderPass_Vulkan>();
-			renderpass_internal->allocationhandler = allocationhandler;
-			internal_state->renderpass.internal_state = renderpass_internal;
-			internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget(internal_state->dummyTexture));
-			res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderpass_internal->renderpass);
-			assert(res == VK_SUCCESS);
-
-		}
-
 		// Create swap chain render targets:
 		internal_state->swapChainImageViews.resize(internal_state->swapChainImages.size());
-		internal_state->swapChainFramebuffers.resize(internal_state->swapChainImages.size());
 		for (size_t i = 0; i < internal_state->swapChainImages.size(); ++i)
 		{
 			VkImageViewCreateInfo createInfo = {};
@@ -1165,28 +1105,6 @@ namespace vulkan_internal
 				allocationhandler->destroylocker.unlock();
 			}
 			res = vkCreateImageView(device, &createInfo, nullptr, &internal_state->swapChainImageViews[i]);
-			assert(res == VK_SUCCESS);
-
-			VkImageView attachments[] = {
-				internal_state->swapChainImageViews[i]
-			};
-
-			VkFramebufferCreateInfo framebufferInfo = {};
-			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass = to_internal(&internal_state->renderpass)->renderpass;
-			framebufferInfo.attachmentCount = 1;
-			framebufferInfo.pAttachments = attachments;
-			framebufferInfo.width = internal_state->swapChainExtent.width;
-			framebufferInfo.height = internal_state->swapChainExtent.height;
-			framebufferInfo.layers = 1;
-
-			if (internal_state->swapChainFramebuffers[i] != VK_NULL_HANDLE)
-			{
-				allocationhandler->destroylocker.lock();
-				allocationhandler->destroyer_framebuffers.push_back(std::make_pair(internal_state->swapChainFramebuffers[i], allocationhandler->framecount));
-				allocationhandler->destroylocker.unlock();
-			}
-			res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &internal_state->swapChainFramebuffers[i]);
 			assert(res == VK_SUCCESS);
 		}
 
@@ -1999,7 +1917,6 @@ using namespace vulkan_internal;
 
 		const PipelineState* pso = commandlist.active_pso;
 		size_t pipeline_hash = commandlist.prev_pipeline_hash;
-		wi::helper::hash_combine(pipeline_hash, commandlist.vb_hash);
 		auto internal_state = to_internal(pso);
 
 		VkPipeline pipeline = VK_NULL_HANDLE;
@@ -2018,18 +1935,12 @@ using namespace vulkan_internal;
 			if (pipeline == VK_NULL_HANDLE)
 			{
 				VkGraphicsPipelineCreateInfo pipelineInfo = internal_state->pipelineInfo; // make a copy here
-				pipelineInfo.renderPass = to_internal(commandlist.active_renderpass)->renderpass;
-				pipelineInfo.subpass = 0;
 
 				// MSAA:
 				VkPipelineMultisampleStateCreateInfo multisampling = {};
 				multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 				multisampling.sampleShadingEnable = VK_FALSE;
-				multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-				if (commandlist.active_renderpass->desc.attachments.size() > 0 && commandlist.active_renderpass->desc.attachments[0].texture.IsValid())
-				{
-					multisampling.rasterizationSamples = (VkSampleCountFlagBits)commandlist.active_renderpass->desc.attachments[0].texture.desc.sample_count;
-				}
+				multisampling.rasterizationSamples = (VkSampleCountFlagBits)commandlist.renderpass_info.sample_count;
 				if (pso->desc.rs != nullptr)
 				{
 					const RasterizerState& desc = *pso->desc.rs;
@@ -2058,14 +1969,8 @@ using namespace vulkan_internal;
 				// Blending:
 				uint32_t numBlendAttachments = 0;
 				VkPipelineColorBlendAttachmentState colorBlendAttachments[8] = {};
-				const size_t blend_loopCount = commandlist.active_renderpass->desc.attachments.size();
-				for (size_t i = 0; i < blend_loopCount; ++i)
+				for (size_t i = 0; i < commandlist.renderpass_info.rt_count; ++i)
 				{
-					if (commandlist.active_renderpass->desc.attachments[i].type != RenderPassAttachment::Type::RENDERTARGET)
-					{
-						continue;
-					}
-
 					size_t attachmentIndex = 0;
 					if (pso->desc.bs->independent_blend_enable)
 						attachmentIndex = i;
@@ -2131,7 +2036,7 @@ using namespace vulkan_internal;
 						VkVertexInputBindingDescription& bind = bindings.emplace_back();
 						bind.binding = x.input_slot;
 						bind.inputRate = x.input_slot_class == InputClassification::PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
-						bind.stride = commandlist.vb_strides[x.input_slot];
+						bind.stride = GetFormatStride(x.format);
 					}
 
 					uint32_t offset = 0;
@@ -2167,6 +2072,25 @@ using namespace vulkan_internal;
 					vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
 				}
 				pipelineInfo.pVertexInputState = &vertexInputInfo;
+
+				pipelineInfo.renderPass = VK_NULL_HANDLE; // instead we use VkPipelineRenderingCreateInfo
+
+				VkPipelineRenderingCreateInfo renderingInfo = {};
+				renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+				renderingInfo.viewMask = 0;
+				renderingInfo.colorAttachmentCount = commandlist.renderpass_info.rt_count;
+				VkFormat formats[8] = {};
+				for (uint32_t i = 0; i < commandlist.renderpass_info.rt_count; ++i)
+				{
+					formats[i] = _ConvertFormat(commandlist.renderpass_info.rt_formats[i]);
+				}
+				renderingInfo.pColorAttachmentFormats = formats;
+				renderingInfo.depthAttachmentFormat = _ConvertFormat(commandlist.renderpass_info.ds_format);
+				if (IsFormatStencilSupport(commandlist.renderpass_info.ds_format))
+				{
+					renderingInfo.stencilAttachmentFormat = renderingInfo.depthAttachmentFormat;
+				}
+				pipelineInfo.pNext = &renderingInfo;
 
 				VkResult res = vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &pipeline);
 				assert(res == VK_SUCCESS);
@@ -2223,7 +2147,7 @@ using namespace vulkan_internal;
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.pEngineName = "Wicked Engine";
 		appInfo.engineVersion = VK_MAKE_VERSION(wi::version::GetMajor(), wi::version::GetMinor(), wi::version::GetRevision());
-		appInfo.apiVersion = VK_API_VERSION_1_2;
+		appInfo.apiVersion = VK_API_VERSION_1_3;
 
 		// Enumerate available layers and extensions:
 		uint32_t instanceLayerCount;
@@ -2404,9 +2328,11 @@ using namespace vulkan_internal;
 				features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 				features_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
 				features_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+				features_1_3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
 				features2.pNext = &features_1_1;
 				features_1_1.pNext = &features_1_2;
-				void** features_chain = &features_1_2.pNext;
+				features_1_2.pNext = &features_1_3;
+				void** features_chain = &features_1_3.pNext;
 				acceleration_structure_features = {};
 				raytracing_features = {};
 				raytracing_query_features = {};
@@ -2418,9 +2344,11 @@ using namespace vulkan_internal;
 				properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 				properties_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
 				properties_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
+				properties_1_3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES;
 				properties2.pNext = &properties_1_1;
 				properties_1_1.pNext = &properties_1_2;
-				void** properties_chain = &properties_1_2.pNext;
+				properties_1_2.pNext = &properties_1_3;
+				void** properties_chain = &properties_1_3.pNext;
 				sampler_minmax_properties = {};
 				acceleration_structure_properties = {};
 				raytracing_properties = {};
@@ -2437,11 +2365,6 @@ using namespace vulkan_internal;
 
 				enabled_deviceExtensions = required_deviceExtensions;
 
-				if (checkExtensionSupport(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME, available_deviceExtensions))
-				{
-					// The shader compiler can still be using this extension, even though it is core in Vulkan 1.2, so enable it for now:
-					enabled_deviceExtensions.push_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
-				}
 				if (checkExtensionSupport(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME, available_deviceExtensions))
 				{
 					enabled_deviceExtensions.push_back(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME);
@@ -2493,13 +2416,13 @@ using namespace vulkan_internal;
 					properties_chain = &fragment_shading_rate_properties.pNext;
 				}
 
-				if (checkExtensionSupport(VK_NV_MESH_SHADER_EXTENSION_NAME, available_deviceExtensions))
+				if (checkExtensionSupport(VK_EXT_MESH_SHADER_EXTENSION_NAME, available_deviceExtensions))
 				{
-					enabled_deviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
-					mesh_shader_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+					enabled_deviceExtensions.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+					mesh_shader_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
 					*features_chain = &mesh_shader_features;
 					features_chain = &mesh_shader_features.pNext;
-					mesh_shader_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
+					mesh_shader_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
 					*properties_chain = &mesh_shader_properties;
 					properties_chain = &mesh_shader_properties.pNext;
 				}
@@ -2544,6 +2467,7 @@ using namespace vulkan_internal;
 			assert(features2.features.textureCompressionBC == VK_TRUE);
 			assert(features2.features.occlusionQueryPrecise == VK_TRUE);
 			assert(features_1_2.descriptorIndexing == VK_TRUE);
+			assert(features_1_3.dynamicRendering == VK_TRUE);
 
 			// Init adapter properties
 			vendorId = properties2.properties.vendorID;
@@ -2654,14 +2578,6 @@ using namespace vulkan_internal;
 				capabilities |= GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL;
 			}
 
-			if (depth_stencil_resolve_properties.supportedDepthResolveModes & VK_RESOLVE_MODE_SAMPLE_ZERO_BIT)
-			{
-				capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_SAMPLE_ZERO;
-			}
-			if (depth_stencil_resolve_properties.supportedStencilResolveModes & VK_RESOLVE_MODE_SAMPLE_ZERO_BIT)
-			{
-				capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_SAMPLE_ZERO;
-			}
 			if (
 				(depth_stencil_resolve_properties.supportedDepthResolveModes & VK_RESOLVE_MODE_MIN_BIT) &&
 				(depth_stencil_resolve_properties.supportedDepthResolveModes & VK_RESOLVE_MODE_MAX_BIT)
@@ -2825,6 +2741,15 @@ using namespace vulkan_internal;
 
 		memory_properties_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
 		vkGetPhysicalDeviceMemoryProperties2(physicalDevice, &memory_properties_2);
+
+		if (memory_properties_2.memoryProperties.memoryHeapCount == 1 &&
+			memory_properties_2.memoryProperties.memoryHeaps[0].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+		{
+			// https://registry.khronos.org/vulkan/specs/1.0-extensions/html/vkspec.html#memory-device
+			//	"In a unified memory architecture (UMA) system there is often only a single memory heap which is
+			//	considered to be equally “local” to the host and to the device, and such an implementation must advertise the heap as device-local."
+			capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
+		}
 
 		allocationhandler = std::make_shared<AllocationHandler>();
 		allocationhandler->device = device;
@@ -3122,6 +3047,7 @@ using namespace vulkan_internal;
 		{
 			pso_dynamicStates.push_back(VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR);
 		}
+		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE);
 
 		dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 		dynamicStateInfo.dynamicStateCount = (uint32_t)pso_dynamicStates.size();
@@ -4509,7 +4435,6 @@ using namespace vulkan_internal;
 			// Create compute pipeline state in place:
 			pipelineInfo.stage = internal_state->stageInfo;
 
-
 			res = vkCreateComputePipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs);
 			assert(res == VK_SUCCESS);
 		}
@@ -4781,27 +4706,27 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const
+	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info) const
 	{
 		auto internal_state = std::make_shared<PipelineState_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		pso->internal_state = internal_state;
 		pso->desc = *desc;
 
-		pso->hash = 0;
-		wi::helper::hash_combine(pso->hash, desc->ms);
-		wi::helper::hash_combine(pso->hash, desc->as);
-		wi::helper::hash_combine(pso->hash, desc->vs);
-		wi::helper::hash_combine(pso->hash, desc->ps);
-		wi::helper::hash_combine(pso->hash, desc->hs);
-		wi::helper::hash_combine(pso->hash, desc->ds);
-		wi::helper::hash_combine(pso->hash, desc->gs);
-		wi::helper::hash_combine(pso->hash, desc->il);
-		wi::helper::hash_combine(pso->hash, desc->rs);
-		wi::helper::hash_combine(pso->hash, desc->bs);
-		wi::helper::hash_combine(pso->hash, desc->dss);
-		wi::helper::hash_combine(pso->hash, desc->pt);
-		wi::helper::hash_combine(pso->hash, desc->sample_mask);
+		internal_state->hash = 0;
+		wi::helper::hash_combine(internal_state->hash, desc->ms);
+		wi::helper::hash_combine(internal_state->hash, desc->as);
+		wi::helper::hash_combine(internal_state->hash, desc->vs);
+		wi::helper::hash_combine(internal_state->hash, desc->ps);
+		wi::helper::hash_combine(internal_state->hash, desc->hs);
+		wi::helper::hash_combine(internal_state->hash, desc->ds);
+		wi::helper::hash_combine(internal_state->hash, desc->gs);
+		wi::helper::hash_combine(internal_state->hash, desc->il);
+		wi::helper::hash_combine(internal_state->hash, desc->rs);
+		wi::helper::hash_combine(internal_state->hash, desc->bs);
+		wi::helper::hash_combine(internal_state->hash, desc->dss);
+		wi::helper::hash_combine(internal_state->hash, desc->pt);
+		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
 
 		VkResult res = VK_SUCCESS;
 
@@ -5252,372 +5177,172 @@ using namespace vulkan_internal;
 
 		pipelineInfo.pTessellationState = &tessellationInfo;
 
-
 		pipelineInfo.pDynamicState = &dynamicStateInfo;
 
-		return res == VK_SUCCESS;
-	}
-	bool GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const
-	{
-		auto internal_state = std::make_shared<RenderPass_Vulkan>();
-		internal_state->allocationhandler = allocationhandler;
-		renderpass->internal_state = internal_state;
-		renderpass->desc = *desc;
-
-		renderpass->hash = 0;
-		wi::helper::hash_combine(renderpass->hash, desc->attachments.size());
-		for (auto& attachment : desc->attachments)
+		if (desc->il == nullptr)
 		{
-			if (attachment.type == RenderPassAttachment::Type::RENDERTARGET || attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
-			{
-				wi::helper::hash_combine(renderpass->hash, attachment.texture.desc.format);
-				wi::helper::hash_combine(renderpass->hash, attachment.texture.desc.sample_count);
-			}
 		}
 
-		VkResult res;
-
-		VkImageView attachments[18] = {};
-		VkAttachmentDescription2 attachmentDescriptions[18] = {};
-		VkAttachmentReference2 colorAttachmentRefs[8] = {};
-		VkAttachmentReference2 resolveAttachmentRefs[8] = {};
-		VkAttachmentReference2 shadingRateAttachmentRef = {};
-		VkAttachmentReference2 depthAttachmentRef = {};
-		VkSubpassDescriptionDepthStencilResolve depthResolve = {};
-		VkAttachmentReference2 depthResolveAttachmentRef = {};
-
-		VkFragmentShadingRateAttachmentInfoKHR shading_rate_attachment = {};
-		shading_rate_attachment.sType = VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
-		shading_rate_attachment.pFragmentShadingRateAttachment = &shadingRateAttachmentRef;
-		shading_rate_attachment.shadingRateAttachmentTexelSize.width = VARIABLE_RATE_SHADING_TILE_SIZE;
-		shading_rate_attachment.shadingRateAttachmentTexelSize.height = VARIABLE_RATE_SHADING_TILE_SIZE;
-
-		int resolvecount = 0;
-
-		VkSubpassDescription2 subpass = {};
-		subpass.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2;
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		const void** subpass_chain = &subpass.pNext;
-
-		uint32_t validAttachmentCount = 0;
-		for (auto& attachment : renderpass->desc.attachments)
+		if (renderpass_info != nullptr)
 		{
-			const Texture* texture = &attachment.texture;
-			const TextureDesc& texdesc = texture->desc;
-			int subresource = attachment.subresource;
-			auto texture_internal_state = to_internal(texture);
-
-			attachmentDescriptions[validAttachmentCount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
-			attachmentDescriptions[validAttachmentCount].format = _ConvertFormat(texdesc.format);
-			attachmentDescriptions[validAttachmentCount].samples = (VkSampleCountFlagBits)texdesc.sample_count;
-
-			switch (attachment.loadop)
+			// MSAA:
+			VkPipelineMultisampleStateCreateInfo multisampling = {};
+			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+			multisampling.sampleShadingEnable = VK_FALSE;
+			multisampling.rasterizationSamples = (VkSampleCountFlagBits)renderpass_info->sample_count;
+			if (pso->desc.rs != nullptr)
 			{
-			default:
-			case RenderPassAttachment::LoadOp::LOAD:
-				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-				break;
-			case RenderPassAttachment::LoadOp::CLEAR:
-				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				break;
-			case RenderPassAttachment::LoadOp::DONTCARE:
-				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				break;
-			}
-
-			switch (attachment.storeop)
-			{
-			default:
-			case RenderPassAttachment::StoreOp::STORE:
-				attachmentDescriptions[validAttachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-				break;
-			case RenderPassAttachment::StoreOp::DONTCARE:
-				attachmentDescriptions[validAttachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				break;
-			}
-
-			attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-			attachmentDescriptions[validAttachmentCount].initialLayout = _ConvertImageLayout(attachment.initial_layout);
-			attachmentDescriptions[validAttachmentCount].finalLayout = _ConvertImageLayout(attachment.final_layout);
-
-			if (attachment.type == RenderPassAttachment::Type::RENDERTARGET)
-			{
-				if (subresource < 0 || texture_internal_state->subresources_rtv.empty())
+				const RasterizerState& desc = *pso->desc.rs;
+				if (desc.forced_sample_count > 1)
 				{
-					attachments[validAttachmentCount] = texture_internal_state->rtv;
-				}
-				else
-				{
-					assert(texture_internal_state->subresources_rtv.size() > size_t(subresource) && "Invalid RTV subresource!");
-					attachments[validAttachmentCount] = texture_internal_state->subresources_rtv[subresource];
-				}
-				if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
-				{
-					continue;
-				}
-
-				colorAttachmentRefs[subpass.colorAttachmentCount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-				colorAttachmentRefs[subpass.colorAttachmentCount].attachment = validAttachmentCount;
-				colorAttachmentRefs[subpass.colorAttachmentCount].layout = _ConvertImageLayout(attachment.subpass_layout);
-				colorAttachmentRefs[subpass.colorAttachmentCount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				subpass.colorAttachmentCount++;
-				subpass.pColorAttachments = colorAttachmentRefs;
-			}
-			else if (attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
-			{
-				if (subresource < 0 || texture_internal_state->subresources_dsv.empty())
-				{
-					attachments[validAttachmentCount] = texture_internal_state->dsv;
-				}
-				else
-				{
-					assert(texture_internal_state->subresources_dsv.size() > size_t(subresource) && "Invalid DSV subresource!");
-					attachments[validAttachmentCount] = texture_internal_state->subresources_dsv[subresource];
-				}
-				if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
-				{
-					continue;
-				}
-
-				depthAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-				depthAttachmentRef.attachment = validAttachmentCount;
-				depthAttachmentRef.layout = _ConvertImageLayout(attachment.subpass_layout);
-				depthAttachmentRef.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-				if (IsFormatStencilSupport(texdesc.format))
-				{
-					depthAttachmentRef.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-					switch (attachment.loadop)
-					{
-					default:
-					case RenderPassAttachment::LoadOp::LOAD:
-						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-						break;
-					case RenderPassAttachment::LoadOp::CLEAR:
-						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-						break;
-					case RenderPassAttachment::LoadOp::DONTCARE:
-						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-						break;
-					}
-
-					switch (attachment.storeop)
-					{
-					default:
-					case RenderPassAttachment::StoreOp::STORE:
-						attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-						break;
-					case RenderPassAttachment::StoreOp::DONTCARE:
-						attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-						break;
-					}
+					multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.forced_sample_count;
 				}
 			}
-			else if (attachment.type == RenderPassAttachment::Type::RESOLVE)
+			multisampling.minSampleShading = 1.0f;
+			VkSampleMask samplemask = internal_state->samplemask;
+			samplemask = pso->desc.sample_mask;
+			multisampling.pSampleMask = &samplemask;
+			if (pso->desc.bs != nullptr)
 			{
-				resolveAttachmentRefs[resolvecount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-
-				if (!attachment.texture.IsValid())
-				{
-					resolveAttachmentRefs[resolvecount].attachment = VK_ATTACHMENT_UNUSED;
-				}
-				else
-				{
-					if (subresource < 0 || texture_internal_state->subresources_srv.empty())
-					{
-						attachments[validAttachmentCount] = texture_internal_state->srv.image_view;
-					}
-					else
-					{
-						assert(texture_internal_state->subresources_srv.size() > size_t(subresource) && "Invalid SRV subresource!");
-						attachments[validAttachmentCount] = texture_internal_state->subresources_srv[subresource].image_view;
-					}
-					if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
-					{
-						continue;
-					}
-					resolveAttachmentRefs[resolvecount].attachment = validAttachmentCount;
-					resolveAttachmentRefs[resolvecount].layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					resolveAttachmentRefs[resolvecount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				}
-
-				resolvecount++;
-				subpass.pResolveAttachments = resolveAttachmentRefs;
-			}
-			else if (attachment.type == RenderPassAttachment::Type::RESOLVE_DEPTH)
-			{
-
-				if (!attachment.texture.IsValid())
-				{
-					resolveAttachmentRefs[resolvecount].attachment = VK_ATTACHMENT_UNUSED;
-				}
-				else
-				{
-					if (subresource < 0 || texture_internal_state->subresources_srv.empty())
-					{
-						attachments[validAttachmentCount] = texture_internal_state->srv.image_view;
-					}
-					else
-					{
-						assert(texture_internal_state->subresources_srv.size() > size_t(subresource) && "Invalid SRV subresource!");
-						attachments[validAttachmentCount] = texture_internal_state->subresources_srv[subresource].image_view;
-					}
-					if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
-					{
-						continue;
-					}
-				}
-
-				depthResolve.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE;
-
-				switch (attachment.depth_resolve_mode)
-				{
-				default:
-				case RenderPassAttachment::DepthResolveMode::Min:
-					depthResolve.depthResolveMode = VK_RESOLVE_MODE_MIN_BIT;
-					depthResolve.stencilResolveMode = VK_RESOLVE_MODE_MIN_BIT;
-					break;
-				case RenderPassAttachment::DepthResolveMode::Max:
-					depthResolve.depthResolveMode = VK_RESOLVE_MODE_MAX_BIT;
-					depthResolve.stencilResolveMode = VK_RESOLVE_MODE_MAX_BIT;
-					break;
-				}
-
-				depthResolveAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-				depthResolveAttachmentRef.attachment = validAttachmentCount;
-				depthResolveAttachmentRef.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				if (IsFormatStencilSupport(attachment.texture.desc.format))
-				{
-					depthResolveAttachmentRef.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-				}
-				depthResolveAttachmentRef.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				depthResolve.pDepthStencilResolveAttachment = &depthResolveAttachmentRef;
-
-				*subpass_chain = &depthResolve;
-				subpass_chain = &depthResolve.pNext;
-			}
-			else if (attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE && CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
-			{
-				shadingRateAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-
-				if (!attachment.texture.IsValid())
-				{
-					shadingRateAttachmentRef.attachment = VK_ATTACHMENT_UNUSED;
-				}
-				else
-				{
-					if (subresource < 0 || texture_internal_state->subresources_uav.empty())
-					{
-						attachments[validAttachmentCount] = texture_internal_state->uav.image_view;
-					}
-					else
-					{
-						assert(texture_internal_state->subresources_uav.size() > size_t(subresource) && "Invalid UAV subresource!");
-						attachments[validAttachmentCount] = texture_internal_state->subresources_uav[subresource].image_view;
-					}
-					if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
-					{
-						continue;
-					}
-					shadingRateAttachmentRef.attachment = validAttachmentCount;
-					shadingRateAttachmentRef.layout = VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
-					shadingRateAttachmentRef.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				}
-
-				*subpass_chain = &shading_rate_attachment;
-				subpass_chain = &shading_rate_attachment.pNext;
-			}
-
-			validAttachmentCount++;
-		}
-		assert(renderpass->desc.attachments.size() == validAttachmentCount);
-
-		VkRenderPassCreateInfo2 renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2;
-		renderPassInfo.attachmentCount = validAttachmentCount;
-		renderPassInfo.pAttachments = attachmentDescriptions;
-		renderPassInfo.subpassCount = 1;
-		renderPassInfo.pSubpasses = &subpass;
-
-		res = vkCreateRenderPass2(device, &renderPassInfo, nullptr, &internal_state->renderpass);
-		assert(res == VK_SUCCESS);
-
-		VkFramebufferCreateInfo framebufferInfo = {};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = internal_state->renderpass;
-		framebufferInfo.attachmentCount = validAttachmentCount;
-
-		if (validAttachmentCount > 0)
-		{
-			const TextureDesc& texdesc = renderpass->desc.attachments[0].texture.desc;
-			auto texture_internal = to_internal(&renderpass->desc.attachments[0].texture);
-			framebufferInfo.pAttachments = attachments;
-			framebufferInfo.width = texdesc.width;
-			framebufferInfo.height = texdesc.height;
-			if (renderpass->desc.attachments[0].subresource >= 0)
-			{
-				framebufferInfo.layers = texture_internal->subresources_framebuffer_layercount[0];
+				multisampling.alphaToCoverageEnable = pso->desc.bs->alpha_to_coverage_enable ? VK_TRUE : VK_FALSE;
 			}
 			else
 			{
-				framebufferInfo.layers = texture_internal->framebuffer_layercount;
+				multisampling.alphaToCoverageEnable = VK_FALSE;
 			}
-			framebufferInfo.layers = std::min(framebufferInfo.layers, texdesc.array_size);
-		}
-		else
-		{
-			framebufferInfo.pAttachments = nullptr;
-			framebufferInfo.width = properties2.properties.limits.maxFramebufferWidth;
-			framebufferInfo.height = properties2.properties.limits.maxFramebufferHeight;
-			framebufferInfo.layers = properties2.properties.limits.maxFramebufferLayers;
-		}
+			multisampling.alphaToOneEnable = VK_FALSE;
 
-		res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &internal_state->framebuffer);
-		assert(res == VK_SUCCESS);
+			pipelineInfo.pMultisampleState = &multisampling;
 
 
-		internal_state->beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		internal_state->beginInfo.renderPass = internal_state->renderpass;
-		internal_state->beginInfo.framebuffer = internal_state->framebuffer;
-		internal_state->beginInfo.renderArea.offset = { 0, 0 };
-		internal_state->beginInfo.renderArea.extent.width = framebufferInfo.width;
-		internal_state->beginInfo.renderArea.extent.height = framebufferInfo.height;
-
-		if (validAttachmentCount > 0)
-		{
-			internal_state->beginInfo.clearValueCount = validAttachmentCount;
-			internal_state->beginInfo.pClearValues = internal_state->clearColors;
-
-			int i = 0;
-			for (auto& attachment : renderpass->desc.attachments)
+			// Blending:
+			uint32_t numBlendAttachments = 0;
+			VkPipelineColorBlendAttachmentState colorBlendAttachments[8] = {};
+			for (size_t i = 0; i < renderpass_info->rt_count; ++i)
 			{
-				if (renderpass->desc.attachments[i].type == RenderPassAttachment::Type::RESOLVE ||
-					renderpass->desc.attachments[i].type == RenderPassAttachment::Type::SHADING_RATE_SOURCE ||
-					!attachment.texture.IsValid())
-					continue;
+				size_t attachmentIndex = 0;
+				if (pso->desc.bs->independent_blend_enable)
+					attachmentIndex = i;
 
-				const ClearValue& clear = renderpass->desc.attachments[i].texture.desc.clear;
-				if (renderpass->desc.attachments[i].type == RenderPassAttachment::Type::RENDERTARGET)
+				const auto& desc = pso->desc.bs->render_target[attachmentIndex];
+				VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
+				numBlendAttachments++;
+
+				attachment.blendEnable = desc.blend_enable ? VK_TRUE : VK_FALSE;
+
+				attachment.colorWriteMask = 0;
+				if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_RED))
 				{
-					internal_state->clearColors[i].color.float32[0] = clear.color[0];
-					internal_state->clearColors[i].color.float32[1] = clear.color[1];
-					internal_state->clearColors[i].color.float32[2] = clear.color[2];
-					internal_state->clearColors[i].color.float32[3] = clear.color[3];
+					attachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
 				}
-				else if (renderpass->desc.attachments[i].type == RenderPassAttachment::Type::DEPTH_STENCIL)
+				if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_GREEN))
 				{
-					internal_state->clearColors[i].depthStencil.depth = clear.depth_stencil.depth;
-					internal_state->clearColors[i].depthStencil.stencil = clear.depth_stencil.stencil;
+					attachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
 				}
-				else
+				if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_BLUE))
 				{
-					assert(0);
+					attachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
 				}
-				i++;
+				if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_ALPHA))
+				{
+					attachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
+				}
+
+				attachment.srcColorBlendFactor = _ConvertBlend(desc.src_blend);
+				attachment.dstColorBlendFactor = _ConvertBlend(desc.dest_blend);
+				attachment.colorBlendOp = _ConvertBlendOp(desc.blend_op);
+				attachment.srcAlphaBlendFactor = _ConvertBlend(desc.src_blend_alpha);
+				attachment.dstAlphaBlendFactor = _ConvertBlend(desc.dest_blend_alpha);
+				attachment.alphaBlendOp = _ConvertBlendOp(desc.blend_op_alpha);
 			}
+
+			VkPipelineColorBlendStateCreateInfo colorBlending = {};
+			colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+			colorBlending.logicOpEnable = VK_FALSE;
+			colorBlending.logicOp = VK_LOGIC_OP_COPY;
+			colorBlending.attachmentCount = numBlendAttachments;
+			colorBlending.pAttachments = colorBlendAttachments;
+			colorBlending.blendConstants[0] = 1.0f;
+			colorBlending.blendConstants[1] = 1.0f;
+			colorBlending.blendConstants[2] = 1.0f;
+			colorBlending.blendConstants[3] = 1.0f;
+
+			pipelineInfo.pColorBlendState = &colorBlending;
+
+			// Input layout:
+			VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+			vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+			wi::vector<VkVertexInputBindingDescription> bindings;
+			wi::vector<VkVertexInputAttributeDescription> attributes;
+			if (pso->desc.il != nullptr)
+			{
+				uint32_t lastBinding = 0xFFFFFFFF;
+				for (auto& x : pso->desc.il->elements)
+				{
+					if (x.input_slot == lastBinding)
+						continue;
+					lastBinding = x.input_slot;
+					VkVertexInputBindingDescription& bind = bindings.emplace_back();
+					bind.binding = x.input_slot;
+					bind.inputRate = x.input_slot_class == InputClassification::PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
+					bind.stride = GetFormatStride(x.format);
+				}
+
+				uint32_t offset = 0;
+				uint32_t i = 0;
+				lastBinding = 0xFFFFFFFF;
+				for (auto& x : pso->desc.il->elements)
+				{
+					VkVertexInputAttributeDescription attr = {};
+					attr.binding = x.input_slot;
+					if (attr.binding != lastBinding)
+					{
+						lastBinding = attr.binding;
+						offset = 0;
+					}
+					attr.format = _ConvertFormat(x.format);
+					attr.location = i;
+					attr.offset = x.aligned_byte_offset;
+					if (attr.offset == InputLayout::APPEND_ALIGNED_ELEMENT)
+					{
+						// need to manually resolve this from the format spec.
+						attr.offset = offset;
+						offset += GetFormatStride(x.format);
+					}
+
+					attributes.push_back(attr);
+
+					i++;
+				}
+
+				vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
+				vertexInputInfo.pVertexBindingDescriptions = bindings.data();
+				vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
+				vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
+			}
+			pipelineInfo.pVertexInputState = &vertexInputInfo;
+
+			pipelineInfo.renderPass = VK_NULL_HANDLE; // instead we use VkPipelineRenderingCreateInfo
+
+			VkPipelineRenderingCreateInfo renderingInfo = {};
+			renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+			renderingInfo.viewMask = 0;
+			renderingInfo.colorAttachmentCount = renderpass_info->rt_count;
+			VkFormat formats[8] = {};
+			for (uint32_t i = 0; i < renderpass_info->rt_count; ++i)
+			{
+				formats[i] = _ConvertFormat(renderpass_info->rt_formats[i]);
+			}
+			renderingInfo.pColorAttachmentFormats = formats;
+			renderingInfo.depthAttachmentFormat = _ConvertFormat(renderpass_info->ds_format);
+			if (IsFormatStencilSupport(renderpass_info->ds_format))
+			{
+				renderingInfo.stencilAttachmentFormat = renderingInfo.depthAttachmentFormat;
+			}
+			pipelineInfo.pNext = &renderingInfo;
+
+			VkResult res = vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline);
+			assert(res == VK_SUCCESS);
 		}
 
 		return res == VK_SUCCESS;
@@ -5900,7 +5625,7 @@ using namespace vulkan_internal;
 		VkResult res = vkCreateRayTracingPipelinesKHR(
 			device,
 			VK_NULL_HANDLE,
-			VK_NULL_HANDLE,
+			pipelineCache,
 			1,
 			&info,
 			nullptr,
@@ -5920,6 +5645,12 @@ using namespace vulkan_internal;
 		{
 			format = *format_change;
 		}
+
+		Texture_Vulkan::TextureSubresource subresource;
+		subresource.firstMip = firstMip;
+		subresource.mipCount = mipCount;
+		subresource.firstSlice = firstSlice;
+		subresource.sliceCount = sliceCount;
 
 		VkImageViewCreateInfo view_desc = {};
 		view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -5989,7 +5720,6 @@ using namespace vulkan_internal;
 			viewUsageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
 			view_desc.pNext = &viewUsageInfo;
 
-			Texture_Vulkan::TextureSubresource subresource;
 			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &subresource.image_view);
 
 			subresource.index = allocationhandler->bindlessSampledImages.allocate();
@@ -6032,7 +5762,6 @@ using namespace vulkan_internal;
 				view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
 			}
 
-			Texture_Vulkan::TextureSubresource subresource;
 			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &subresource.image_view);
 
 			subresource.index = allocationhandler->bindlessStorageImages.allocate();
@@ -6070,20 +5799,18 @@ using namespace vulkan_internal;
 		break;
 		case SubresourceType::RTV:
 		{
-			VkImageView rtv;
 			view_desc.subresourceRange.levelCount = 1;
-			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &rtv);
+			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &subresource.image_view);
 
 			if (res == VK_SUCCESS)
 			{
-				if (internal_state->rtv == VK_NULL_HANDLE)
+				if (!internal_state->rtv.IsValid())
 				{
-					internal_state->rtv = rtv;
+					internal_state->rtv = subresource;
 					internal_state->framebuffer_layercount = view_desc.subresourceRange.layerCount;
 					return -1;
 				}
-				internal_state->subresources_rtv.push_back(rtv);
-				internal_state->subresources_framebuffer_layercount.push_back(view_desc.subresourceRange.layerCount);
+				internal_state->subresources_rtv.push_back(subresource);
 				return int(internal_state->subresources_rtv.size() - 1);
 			}
 			else
@@ -6097,19 +5824,17 @@ using namespace vulkan_internal;
 			view_desc.subresourceRange.levelCount = 1;
 			view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-			VkImageView dsv;
-			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &dsv);
+			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &subresource.image_view);
 
 			if (res == VK_SUCCESS)
 			{
-				if (internal_state->dsv == VK_NULL_HANDLE)
+				if (!internal_state->dsv.IsValid())
 				{
-					internal_state->dsv = dsv;
+					internal_state->dsv = subresource;
 					internal_state->framebuffer_layercount = view_desc.subresourceRange.layerCount;
 					return -1;
 				}
-				internal_state->subresources_dsv.push_back(dsv);
-				internal_state->subresources_framebuffer_layercount.push_back(view_desc.subresourceRange.layerCount);
+				internal_state->subresources_dsv.push_back(subresource);
 				return int(internal_state->subresources_dsv.size() - 1);
 			}
 			else
@@ -6404,34 +6129,48 @@ using namespace vulkan_internal;
 	
 	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name)
 	{
-		if (debugUtils)
+		if (!debugUtils || pResource == nullptr || !pResource->IsValid())
+			return;
+
+		VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+		info.pObjectName = name;
+		if (pResource->IsTexture())
 		{
-			VkDebugUtilsObjectNameInfoEXT info { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
-			info.pObjectName = name;
-			if (pResource->IsTexture())
-			{
-				info.objectType = VK_OBJECT_TYPE_IMAGE;
-				info.objectHandle = (uint64_t)to_internal((const Texture*)pResource)->resource;
-			}
-			else if (pResource->IsBuffer())
-			{
-				info.objectType = VK_OBJECT_TYPE_BUFFER;
-				info.objectHandle = (uint64_t)to_internal((const GPUBuffer*)pResource)->resource;
-			}
-			else if (pResource->IsAccelerationStructure())
-			{
-				info.objectType = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR;
-				info.objectHandle = (uint64_t)to_internal((const RaytracingAccelerationStructure*)pResource)->resource;
-			}
-
-			if (info.objectHandle == (uint64_t)VK_NULL_HANDLE)
-			{
-				return;
-			}
-
-			VkResult res = vkSetDebugUtilsObjectNameEXT(device, &info);
-			assert(res == VK_SUCCESS);
+			info.objectType = VK_OBJECT_TYPE_IMAGE;
+			info.objectHandle = (uint64_t)to_internal((const Texture*)pResource)->resource;
 		}
+		else if (pResource->IsBuffer())
+		{
+			info.objectType = VK_OBJECT_TYPE_BUFFER;
+			info.objectHandle = (uint64_t)to_internal((const GPUBuffer*)pResource)->resource;
+		}
+		else if (pResource->IsAccelerationStructure())
+		{
+			info.objectType = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR;
+			info.objectHandle = (uint64_t)to_internal((const RaytracingAccelerationStructure*)pResource)->resource;
+		}
+
+		if (info.objectHandle == (uint64_t)VK_NULL_HANDLE)
+			return;
+
+		VkResult res = vkSetDebugUtilsObjectNameEXT(device, &info);
+		assert(res == VK_SUCCESS);
+	}
+	void GraphicsDevice_Vulkan::SetName(Shader* shader, const char* name)
+	{
+		if (!debugUtils || shader == nullptr || !shader->IsValid())
+			return;
+
+		VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+		info.pObjectName = name;
+		info.objectType = VK_OBJECT_TYPE_SHADER_MODULE;
+		info.objectHandle = (uint64_t)to_internal(shader)->shaderModule;
+
+		if (info.objectHandle == (uint64_t)VK_NULL_HANDLE)
+			return;
+
+		VkResult res = vkSetDebugUtilsObjectNameEXT(device, &info);
+		assert(res == VK_SUCCESS);
 	}
 
 	CommandList GraphicsDevice_Vulkan::BeginCommandList(QUEUE_TYPE queue)
@@ -6529,6 +6268,10 @@ using namespace vulkan_internal;
 			{
 				vkCmdSetDepthBounds(commandlist.GetCommandBuffer(), 0.0f, 1.0f);
 			}
+
+			// Silence validation about uninitialized stride:
+			const VkDeviceSize zero = {};
+			vkCmdBindVertexBuffers2(commandlist.GetCommandBuffer(), 0, 1, &nullBuffer, &zero, &zero, &zero);
 		}
 
 		return cmd;
@@ -6981,9 +6724,9 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-
+		commandlist.renderpass_barriers_begin.clear();
+		commandlist.renderpass_barriers_end.clear();
 		auto internal_state = to_internal(swapchain);
-		commandlist.active_renderpass = &internal_state->renderpass;
 		commandlist.prev_swapchains.push_back(*swapchain);
 
 		internal_state->locker.lock();
@@ -7011,37 +6754,336 @@ using namespace vulkan_internal;
 			assert(0);
 		}
 		
-		VkClearValue clearColor = {
-			swapchain->desc.clear_color[0],
-			swapchain->desc.clear_color[1],
-			swapchain->desc.clear_color[2],
-			swapchain->desc.clear_color[3],
-		};
-		VkRenderPassBeginInfo renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = to_internal(&internal_state->renderpass)->renderpass;
-		renderPassInfo.framebuffer = internal_state->swapChainFramebuffers[internal_state->swapChainImageIndex];
-		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = internal_state->swapChainExtent;
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues = &clearColor;
-		vkCmdBeginRenderPass(commandlist.GetCommandBuffer(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-		
+		VkRenderingInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+		info.renderArea.offset.x = 0;
+		info.renderArea.offset.y = 0;
+		info.renderArea.extent.width = swapchain->desc.width;
+		info.renderArea.extent.height = swapchain->desc.height;
+		info.layerCount = 1;
+
+		VkRenderingAttachmentInfo color_attachment = {};
+		color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		color_attachment.imageView = internal_state->swapChainImageViews[internal_state->swapChainImageIndex];
+		color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		color_attachment.clearValue.color.float32[0] = swapchain->desc.clear_color[0];
+		color_attachment.clearValue.color.float32[1] = swapchain->desc.clear_color[1];
+		color_attachment.clearValue.color.float32[2] = swapchain->desc.clear_color[2];
+		color_attachment.clearValue.color.float32[3] = swapchain->desc.clear_color[3];
+
+		info.colorAttachmentCount = 1;
+		info.pColorAttachments = &color_attachment;
+
+		VkImageMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.image = internal_state->swapChainImages[internal_state->swapChainImageIndex];
+		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_NONE;
+		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		vkCmdPipelineBarrier(
+			commandlist.GetCommandBuffer(),
+			VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+			VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier
+		);
+		barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_NONE;
+		commandlist.renderpass_barriers_end.push_back(barrier);
+
+		vkCmdBeginRendering(commandlist.GetCommandBuffer(), &info);
+
+		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
-	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
+	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		commandlist.active_renderpass = renderpass;
+		commandlist.renderpass_barriers_begin.clear();
+		commandlist.renderpass_barriers_end.clear();
 
-		auto internal_state = to_internal(renderpass);
-		vkCmdBeginRenderPass(commandlist.GetCommandBuffer(), &internal_state->beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		VkRenderingInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+		if (has_flag(flags, RenderPassFlags::SUSPENDING))
+		{
+			info.flags |= VK_RENDERING_SUSPENDING_BIT;
+		}
+		if (has_flag(flags, RenderPassFlags::RESUMING))
+		{
+			info.flags |= VK_RENDERING_RESUMING_BIT;
+		}
+		info.layerCount = 1;
+		info.renderArea.offset.x = 0;
+		info.renderArea.offset.y = 0;
+		if (image_count == 0)
+		{
+			// no attachments can still render (UAV only rendering)
+			info.renderArea.extent.width = properties2.properties.limits.maxFramebufferWidth;
+			info.renderArea.extent.height = properties2.properties.limits.maxFramebufferHeight;
+		}
+		VkRenderingAttachmentInfo color_attachments[8] = {};
+		VkRenderingAttachmentInfo depth_attachment = {};
+		VkRenderingAttachmentInfo stencil_attachment = {};
+		VkRenderingFragmentShadingRateAttachmentInfoKHR shading_rate_attachment = {};
+		bool color = false;
+		bool depth = false;
+		bool stencil = false;
+		uint32_t color_resolve_count = 0;
+		for (uint32_t i = 0; i < image_count; ++i)
+		{
+			const RenderPassImage& image = images[i];
+			const Texture* texture = image.texture;
+			const TextureDesc& desc = texture->GetDesc();
+			int subresource = image.subresource;
+			auto internal_state = to_internal(texture);
+
+			info.renderArea.extent.width = std::max(info.renderArea.extent.width, desc.width);
+			info.renderArea.extent.height = std::max(info.renderArea.extent.height, desc.height);
+
+			VkAttachmentLoadOp loadOp;
+			switch (image.loadop)
+			{
+			default:
+			case RenderPassImage::LoadOp::LOAD:
+				loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				break;
+			case RenderPassImage::LoadOp::CLEAR:
+				loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				break;
+			case RenderPassImage::LoadOp::DONTCARE:
+				loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				break;
+			}
+
+			VkAttachmentStoreOp storeOp;
+			switch (image.storeop)
+			{
+			default:
+			case RenderPassImage::StoreOp::STORE:
+				storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				break;
+			case RenderPassImage::StoreOp::DONTCARE:
+				storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				break;
+			}
+
+			Texture_Vulkan::TextureSubresource descriptor;
+
+			switch (image.type)
+			{
+			case RenderPassImage::Type::RENDERTARGET:
+			{
+				descriptor = subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[subresource];
+				VkRenderingAttachmentInfo& color_attachment = color_attachments[info.colorAttachmentCount++];
+				color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+				color_attachment.imageView = descriptor.image_view;
+				color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				color_attachment.loadOp = loadOp;
+				color_attachment.storeOp = storeOp;
+				color_attachment.clearValue.color.float32[0] = desc.clear.color[0];
+				color_attachment.clearValue.color.float32[1] = desc.clear.color[1];
+				color_attachment.clearValue.color.float32[2] = desc.clear.color[2];
+				color_attachment.clearValue.color.float32[3] = desc.clear.color[3];
+				color = true;
+			}
+			break;
+
+			case RenderPassImage::Type::RESOLVE:
+			{
+				descriptor = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
+				VkRenderingAttachmentInfo& color_attachment = color_attachments[color_resolve_count++];
+				color_attachment.resolveImageView = descriptor.image_view;
+				color_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				color_attachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+			}
+			break;
+
+			case RenderPassImage::Type::DEPTH_STENCIL:
+			{
+				descriptor = subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[subresource];
+				depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+				depth_attachment.imageView = descriptor.image_view;
+				if (image.layout == ResourceState::DEPTHSTENCIL_READONLY)
+				{
+					depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
+				}
+				else
+				{
+					depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+				}
+				depth_attachment.loadOp = loadOp;
+				depth_attachment.storeOp = storeOp;
+				depth_attachment.clearValue.depthStencil.depth = desc.clear.depth_stencil.depth;
+				depth = true;
+				if (IsFormatStencilSupport(desc.format))
+				{
+					stencil_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+					stencil_attachment.imageView = subresource < 0 ? internal_state->dsv.image_view : internal_state->subresources_dsv[subresource].image_view;
+					if (image.layout == ResourceState::DEPTHSTENCIL_READONLY)
+					{
+						stencil_attachment.imageLayout = VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL;
+					}
+					else
+					{
+						stencil_attachment.imageLayout = VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
+					}
+					stencil_attachment.loadOp = loadOp;
+					stencil_attachment.storeOp = storeOp;
+					stencil_attachment.clearValue.depthStencil.stencil = desc.clear.depth_stencil.stencil;
+					stencil = true;
+				}
+			}
+			break;
+
+			case RenderPassImage::Type::RESOLVE_DEPTH:
+			{
+				descriptor = subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[subresource];
+				depth_attachment.resolveImageView = descriptor.image_view;
+				stencil_attachment.resolveImageView = descriptor.image_view;
+				depth_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+				stencil_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
+				switch (image.depth_resolve_mode)
+				{
+				default:
+				case RenderPassImage::DepthResolveMode::Min:
+					depth_attachment.resolveMode = VK_RESOLVE_MODE_MIN_BIT;
+					stencil_attachment.resolveMode = VK_RESOLVE_MODE_MIN_BIT;
+					break;
+				case RenderPassImage::DepthResolveMode::Max:
+					depth_attachment.resolveMode = VK_RESOLVE_MODE_MAX_BIT;
+					stencil_attachment.resolveMode = VK_RESOLVE_MODE_MAX_BIT;
+					break;
+				}
+			}
+			break;
+
+			case RenderPassImage::Type::SHADING_RATE_SOURCE:
+				descriptor = subresource < 0 ? internal_state->uav : internal_state->subresources_uav[subresource];
+				shading_rate_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
+				shading_rate_attachment.imageView = descriptor.image_view;
+				shading_rate_attachment.imageLayout = VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
+				shading_rate_attachment.shadingRateAttachmentTexelSize.width = VARIABLE_RATE_SHADING_TILE_SIZE;
+				shading_rate_attachment.shadingRateAttachmentTexelSize.height = VARIABLE_RATE_SHADING_TILE_SIZE;
+				info.pNext = &shading_rate_attachment;
+				break;
+			default:
+				break;
+			}
+
+			if (image.layout_before != image.layout)
+			{
+				VkImageMemoryBarrier& barrier = commandlist.renderpass_barriers_begin.emplace_back();
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				barrier.image = internal_state->resource;
+				barrier.oldLayout = _ConvertImageLayout(image.layout_before);
+				barrier.newLayout = _ConvertImageLayout(image.layout);
+				barrier.srcAccessMask = _ParseResourceState(image.layout_before);
+				barrier.dstAccessMask = _ParseResourceState(image.layout);
+				if (IsFormatDepthSupport(desc.format))
+				{
+					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+					if (IsFormatStencilSupport(desc.format))
+					{
+						barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+					}
+				}
+				else
+				{
+					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				}
+				barrier.subresourceRange.baseMipLevel = descriptor.firstMip;
+				barrier.subresourceRange.levelCount = descriptor.mipCount;
+				barrier.subresourceRange.baseArrayLayer = descriptor.firstSlice;
+				barrier.subresourceRange.layerCount = descriptor.sliceCount;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			}
+
+			if (image.layout != image.layout_after)
+			{
+				VkImageMemoryBarrier& barrier = commandlist.renderpass_barriers_end.emplace_back();
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				barrier.image = internal_state->resource;
+				barrier.oldLayout = _ConvertImageLayout(image.layout);
+				barrier.newLayout = _ConvertImageLayout(image.layout_after);
+				barrier.srcAccessMask = _ParseResourceState(image.layout);
+				barrier.dstAccessMask = _ParseResourceState(image.layout_after);
+				if (IsFormatDepthSupport(desc.format))
+				{
+					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+					if (IsFormatStencilSupport(desc.format))
+					{
+						barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+					}
+				}
+				else
+				{
+					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				}
+				barrier.subresourceRange.baseMipLevel = descriptor.firstMip;
+				barrier.subresourceRange.levelCount = descriptor.mipCount;
+				barrier.subresourceRange.baseArrayLayer = descriptor.firstSlice;
+				barrier.subresourceRange.layerCount = descriptor.sliceCount;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			}
+
+			info.layerCount = std::min(desc.array_size, std::max(info.layerCount, descriptor.sliceCount));
+		}
+		info.pColorAttachments = color ? color_attachments : nullptr;
+		info.pDepthAttachment = depth ? &depth_attachment : nullptr;
+		info.pStencilAttachment = stencil ? &stencil_attachment : nullptr;
+
+		if (!commandlist.renderpass_barriers_begin.empty())
+		{
+			vkCmdPipelineBarrier(
+				commandlist.GetCommandBuffer(),
+				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				(uint32_t)commandlist.renderpass_barriers_begin.size(), commandlist.renderpass_barriers_begin.data()
+			);
+		}
+
+		vkCmdBeginRendering(commandlist.GetCommandBuffer(), &info);
+
+		commandlist.renderpass_info = RenderPassInfo::from(images, image_count);
 	}
 	void GraphicsDevice_Vulkan::RenderPassEnd(CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		vkCmdEndRenderPass(commandlist.GetCommandBuffer());
+		vkCmdEndRendering(commandlist.GetCommandBuffer());
 
-		commandlist.active_renderpass = nullptr;
+		if (!commandlist.renderpass_barriers_end.empty())
+		{
+			vkCmdPipelineBarrier(
+				commandlist.GetCommandBuffer(),
+				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				(uint32_t)commandlist.renderpass_barriers_end.size(), commandlist.renderpass_barriers_end.data()
+			);
+			commandlist.renderpass_barriers_end.clear();
+		}
+
+		commandlist.renderpass_info = {};
 	}
 	void GraphicsDevice_Vulkan::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
 	{
@@ -7156,12 +7198,12 @@ using namespace vulkan_internal;
 		size_t hash = 0;
 
 		VkDeviceSize voffsets[8] = {};
+		VkDeviceSize vstrides[8] = {};
 		VkBuffer vbuffers[8] = {};
 		assert(count <= 8);
 		for (uint32_t i = 0; i < count; ++i)
 		{
 			wi::helper::hash_combine(hash, strides[i]);
-			commandlist.vb_strides[i] = strides[i];
 
 			if (vertexBuffers[i] == nullptr || !vertexBuffers[i]->IsValid())
 			{
@@ -7175,20 +7217,14 @@ using namespace vulkan_internal;
 				{
 					voffsets[i] = offsets[i];
 				}
+				if (strides != nullptr)
+				{
+					vstrides[i] = strides[i];
+				}
 			}
 		}
-		for (int i = count; i < arraysize(commandlist.vb_strides); ++i)
-		{
-			commandlist.vb_strides[i] = 0;
-		}
 
-		vkCmdBindVertexBuffers(commandlist.GetCommandBuffer(), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
-
-		if (hash != commandlist.vb_hash)
-		{
-			commandlist.vb_hash = hash;
-			commandlist.dirty_pso = true;
-		}
+		vkCmdBindVertexBuffers2(commandlist.GetCommandBuffer(), slot, count, vbuffers, voffsets, nullptr, vstrides);
 	}
 	void GraphicsDevice_Vulkan::BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd)
 	{
@@ -7297,19 +7333,27 @@ using namespace vulkan_internal;
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
 
-		size_t pipeline_hash = 0;
-		wi::helper::hash_combine(pipeline_hash, pso->hash);
-		if (commandlist.active_renderpass != nullptr)
-		{
-			wi::helper::hash_combine(pipeline_hash, commandlist.active_renderpass->hash);
-		}
-		if (commandlist.prev_pipeline_hash == pipeline_hash)
-		{
-			return;
-		}
-		commandlist.prev_pipeline_hash = pipeline_hash;
-
 		auto internal_state = to_internal(pso);
+
+		if (internal_state->pipeline != VK_NULL_HANDLE)
+		{
+			vkCmdBindPipeline(commandlist.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, internal_state->pipeline);
+
+			commandlist.prev_pipeline_hash = 0;
+			commandlist.dirty_pso = false;
+		}
+		else
+		{
+			size_t pipeline_hash = 0;
+			wi::helper::hash_combine(pipeline_hash, internal_state->hash);
+			wi::helper::hash_combine(pipeline_hash, commandlist.renderpass_info.get_hash());
+			if (commandlist.prev_pipeline_hash == pipeline_hash)
+			{
+				return;
+			}
+			commandlist.prev_pipeline_hash = pipeline_hash;
+			commandlist.dirty_pso = true;
+		}
 
 		if (commandlist.active_pso == nullptr)
 		{
@@ -7339,7 +7383,6 @@ using namespace vulkan_internal;
 		}
 
 		commandlist.active_pso = pso;
-		commandlist.dirty_pso = true;
 	}
 	void GraphicsDevice_Vulkan::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
@@ -7484,14 +7527,22 @@ using namespace vulkan_internal;
 	{
 		predraw(cmd);
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		vkCmdDrawMeshTasksNV(commandlist.GetCommandBuffer(), threadGroupCountX * threadGroupCountY * threadGroupCountZ, 0);
+		vkCmdDrawMeshTasksEXT(commandlist.GetCommandBuffer(), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_Vulkan::DispatchMeshIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		vkCmdDrawMeshTasksIndirectNV(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, sizeof(IndirectDispatchArgs));
+		vkCmdDrawMeshTasksIndirectEXT(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, sizeof(IndirectDispatchArgs));
+	}
+	void GraphicsDevice_Vulkan::DispatchMeshIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
+	{
+		predraw(cmd);
+		auto args_internal = to_internal(args);
+		auto count_internal = to_internal(count);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDrawMeshTasksIndirectCountEXT(commandlist.GetCommandBuffer(), args_internal->resource, args_offset, count_internal->resource, count_offset, max_count, sizeof(IndirectDispatchArgs));
 	}
 	void GraphicsDevice_Vulkan::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
@@ -7743,7 +7794,6 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		assert(commandlist.active_renderpass == nullptr); // Can't resolve inside renderpass!
 
 		auto internal_state = to_internal(heap);
 		auto dst_internal = to_internal(dest);
@@ -7775,7 +7825,6 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::QueryReset(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		assert(commandlist.active_renderpass == nullptr); // Can't resolve inside renderpass!
 
 		auto internal_state = to_internal(heap);
 
@@ -7790,7 +7839,6 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		assert(commandlist.active_renderpass == nullptr);
 
 		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;

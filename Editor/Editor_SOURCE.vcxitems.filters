@@ -85,6 +85,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ExpressionWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ArmatureWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HumanoidWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GeneralWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ProfilerWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -134,6 +136,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ExpressionWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ArmatureWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HumanoidWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GeneralWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ProfilerWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
