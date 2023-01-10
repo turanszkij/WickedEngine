@@ -4,10 +4,6 @@
 
 // With help from: https://github.com/compix/VoxelConeTracingGI/blob/master/assets/shaders/voxelConeTracing/finalLightingPass.frag
 
-#ifndef VOXEL_INITIAL_OFFSET
-#define VOXEL_INITIAL_OFFSET 1
-#endif // VOXEL_INITIAL_OFFSET
-
 inline float4 SampleVoxelClipMap(in Texture3D<float4> voxels, in float3 P, in uint clipmap_index, float step_dist, in float3 face_offsets, in float3 direction_weights, uint precomputed_direction = 0)
 {
 	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
@@ -63,7 +59,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	// We need to offset the cone start position to avoid sampling its own voxel (self-occlusion):
 	float dist = voxelSize0; // offset by cone dir so that first sample of all cones are not the same
 	float step_dist = dist;
-	float3 startPos = P + N * voxelSize0 * VOXEL_INITIAL_OFFSET * SQRT2; // sqrt2 is diagonal voxel half-extent
+	float3 startPos = P + N * voxelSize0;
 
 	float3 aniso_direction = -coneDirection;
 	float3 face_offsets = float3(
@@ -108,19 +104,18 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 		alpha += a * sam.a;
 
 		float stepSizeCurrent = stepSize;
-
 		if (use_sdf)
 		{
 			// half texel correction is applied to avoid sampling over current clipmap:
 			const float half_texel = 0.5 * GetFrame().vxgi.resolution_rcp;
-			tc = clamp(tc, half_texel, 1 - half_texel);
-			tc.y = (tc.y + clipmap_index) / VXGI_CLIPMAP_COUNT; // remap into clipmap
-			float sdf = bindless_textures3D[GetFrame().vxgi.texture_sdf].SampleLevel(sampler_linear_clamp, tc, 0).r;
+			float3 tc0 = clamp(tc, half_texel, 1 - half_texel);
+			tc0.y = (tc0.y + clipmap_index) / VXGI_CLIPMAP_COUNT; // remap into clipmap
+			float sdf = bindless_textures3D[GetFrame().vxgi.texture_sdf].SampleLevel(sampler_linear_clamp, tc0, 0).r;
 			stepSizeCurrent = max(stepSize, sdf - diameter);
 		}
+		step_dist = diameter * stepSizeCurrent;
 
 		// step along ray:
-		step_dist = diameter * stepSizeCurrent;
 		dist += step_dist;
 	}
 

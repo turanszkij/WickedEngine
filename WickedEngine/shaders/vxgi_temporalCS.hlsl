@@ -1,4 +1,3 @@
-#define VOXEL_INITIAL_OFFSET 1
 //#define ENVMAPRENDERING // modified ambient calc
 //#define NO_FLAT_AMBIENT
 #include "globals.hlsli"
@@ -62,7 +61,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				radiance = baseColor;
 
 				// Voxel indirect lighting:
-				float3 P = GetFrame().vxgi.clipmap_to_world((DTid) * GetFrame().vxgi.resolution_rcp, clipmap);
+				float3 P = GetFrame().vxgi.clipmap_to_world((DTid + 0.5) * GetFrame().vxgi.resolution_rcp, clipmap);
 				Lighting lighting;
 				lighting.create(0, 0, 0, 0);
 				lighting.direct.diffuse = directLight;
