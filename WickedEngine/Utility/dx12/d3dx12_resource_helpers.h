@@ -13,6 +13,7 @@
 
 #include "d3d12.h"
 #include "d3dx12_core.h"
+#include "d3dx12_property_format_table.h"
 //------------------------------------------------------------------------------------------------
 template <typename T, typename U, typename V>
 inline void D3D12DecomposeSubresource( UINT Subresource, UINT MipLevels, UINT ArraySize, _Out_ T& MipSlice, _Out_ U& ArraySlice, _Out_ V& PlaneSlice ) noexcept
@@ -397,4 +398,202 @@ inline const CD3DX12_RESOURCE_DESC1* D3DX12ConditionallyExpandAPIDesc(
     const D3D12_RESOURCE_DESC1* pDesc)
 {
     return D3DX12ConditionallyExpandAPIDesc(static_cast<CD3DX12_RESOURCE_DESC1&>(LclDesc), static_cast<const CD3DX12_RESOURCE_DESC1*>(pDesc));
+}
+
+//------------------------------------------------------------------------------------------------
+// The difference between D3DX12GetCopyableFootprints and ID3D12Device::GetCopyableFootprints 
+// is that this one loses a lot of error checking by assuming the arguments are correct
+inline bool D3DX12GetCopyableFootprints( 
+    _In_  const D3D12_RESOURCE_DESC1& ResourceDesc,
+    _In_range_(0, D3D12_REQ_SUBRESOURCES) UINT FirstSubresource,
+    _In_range_(0, D3D12_REQ_SUBRESOURCES - FirstSubresource) UINT NumSubresources,
+    UINT64 BaseOffset,
+    _Out_writes_opt_(NumSubresources) D3D12_PLACED_SUBRESOURCE_FOOTPRINT* pLayouts,
+    _Out_writes_opt_(NumSubresources) UINT* pNumRows,
+    _Out_writes_opt_(NumSubresources) UINT64* pRowSizeInBytes,
+    _Out_opt_ UINT64* pTotalBytes)
+{
+    constexpr UINT64 uint64_max = ~0ull;
+    UINT64 TotalBytes = uint64_max;
+    UINT uSubRes = 0;
+
+    bool bResourceOverflow = false;
+    TotalBytes = 0;
+
+    const DXGI_FORMAT Format = ResourceDesc.Format;
+
+    CD3DX12_RESOURCE_DESC1 LresourceDesc;
+    const CD3DX12_RESOURCE_DESC1& resourceDesc = *D3DX12ConditionallyExpandAPIDesc(LresourceDesc, &ResourceDesc);
+
+    // Check if its a valid format
+    D3DX12_ASSERT(D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::FormatExists(Format));
+
+    const UINT WidthAlignment = D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetWidthAlignment( Format );
+    const UINT HeightAlignment = D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetHeightAlignment( Format );
+    const UINT16 DepthAlignment = UINT16( D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetDepthAlignment( Format ) );
+
+    for (; uSubRes < NumSubresources; ++uSubRes)
+    {
+        bool bOverflow = false;
+        UINT Subresource = FirstSubresource + uSubRes;
+
+        D3DX12_ASSERT(resourceDesc.MipLevels != 0);
+        UINT subresourceCount = resourceDesc.MipLevels * resourceDesc.ArraySize() * D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetPlaneCount(resourceDesc.Format);
+
+        if (Subresource > subresourceCount)
+        {
+            break;
+        }
+
+        TotalBytes = D3DX12Align< UINT64 >( TotalBytes, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT );
+
+        UINT MipLevel, ArraySlice, PlaneSlice;
+        D3D12DecomposeSubresource(Subresource, resourceDesc.MipLevels, resourceDesc.ArraySize(), /*_Out_*/MipLevel, /*_Out_*/ArraySlice, /*_Out_*/PlaneSlice);
+
+        const UINT64 Width = D3DX12AlignAtLeast<UINT64>(resourceDesc.Width >> MipLevel, WidthAlignment);
+        const UINT Height =  D3DX12AlignAtLeast(resourceDesc.Height >> MipLevel, HeightAlignment);
+        const UINT16 Depth = D3DX12AlignAtLeast<UINT16>(resourceDesc.Depth() >> MipLevel, DepthAlignment);
+
+        // Adjust for the current PlaneSlice.  Most formats have only one plane.
+        DXGI_FORMAT PlaneFormat;
+        UINT32 MinPlanePitchWidth, PlaneWidth, PlaneHeight;
+        D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetPlaneSubsampledSizeAndFormatForCopyableLayout(PlaneSlice, Format, (UINT)Width, Height, /*_Out_*/ PlaneFormat, /*_Out_*/ MinPlanePitchWidth, /* _Out_ */ PlaneWidth, /*_Out_*/ PlaneHeight);
+
+        D3D12_SUBRESOURCE_FOOTPRINT LocalPlacement;
+        auto& Placement = pLayouts ? pLayouts[uSubRes].Footprint : LocalPlacement;
+        Placement.Format = PlaneFormat;
+        Placement.Width = PlaneWidth;
+        Placement.Height = PlaneHeight;
+        Placement.Depth = Depth;
+
+        // Calculate row pitch
+        UINT MinPlaneRowPitch = 0;
+        D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::CalculateMinimumRowMajorRowPitch(PlaneFormat, MinPlanePitchWidth, MinPlaneRowPitch);
+
+        // Formats with more than one plane choose a larger pitch alignment to ensure that each plane begins on the row 
+        // immediately following the previous plane while still adhering to subresource alignment restrictions.
+        static_assert(   D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT >= D3D12_TEXTURE_DATA_PITCH_ALIGNMENT 
+                        && ((D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) == 0), 
+                        "D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT  must be >= and evenly divisible by D3D12_TEXTURE_DATA_PITCH_ALIGNMENT." );
+
+        Placement.RowPitch = D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::Planar(Format) 
+            ? D3DX12Align< UINT >( MinPlaneRowPitch, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT )
+            : D3DX12Align< UINT >( MinPlaneRowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT );
+            
+        if (pRowSizeInBytes)
+        {
+            UINT PlaneRowSize = 0;
+            D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::CalculateMinimumRowMajorRowPitch(PlaneFormat, PlaneWidth, PlaneRowSize);
+
+            pRowSizeInBytes[uSubRes] = PlaneRowSize;
+        }
+
+        // Number of rows (accounting for block compression and additional planes)
+        UINT NumRows = 0;
+        if (D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::Planar(Format))
+        {
+            NumRows = PlaneHeight;
+        }
+        else
+        {
+            D3DX12_ASSERT(Height % HeightAlignment == 0);
+            NumRows = Height / HeightAlignment;
+        }
+            
+        if (pNumRows)
+        {
+            pNumRows[uSubRes] = NumRows;
+        }
+
+            // Offsetting
+            if (pLayouts)
+            {
+                pLayouts[uSubRes].Offset = (bOverflow ? uint64_max : TotalBytes + BaseOffset);
+            }
+
+        const UINT16 NumSlices = Depth;
+        const UINT64 SubresourceSize = (NumRows * NumSlices - 1) * Placement.RowPitch + MinPlaneRowPitch;
+
+        // uint64 addition with overflow checking
+        TotalBytes = TotalBytes + SubresourceSize;
+        if(TotalBytes < SubresourceSize)
+        {
+            TotalBytes = uint64_max;
+        }
+        bResourceOverflow  = bResourceOverflow  || bOverflow;
+    }
+        
+    // Overflow error
+    if (bResourceOverflow)
+    {
+        TotalBytes = uint64_max;
+    }
+
+
+    if (pLayouts)
+    {
+        memset( pLayouts + uSubRes, -1, sizeof( *pLayouts ) * (NumSubresources - uSubRes) );
+    }
+    if (pNumRows)
+    {
+        memset(pNumRows + uSubRes, -1, sizeof(*pNumRows) * (NumSubresources - uSubRes));
+    }
+    if (pRowSizeInBytes)
+    {
+        memset(pRowSizeInBytes + uSubRes, -1, sizeof(*pRowSizeInBytes) * (NumSubresources - uSubRes));
+    }
+    if (pTotalBytes)
+    {
+        *pTotalBytes = TotalBytes;
+    }
+    if(TotalBytes == uint64_max)
+    {
+        return false;
+    }
+    return true;
+}
+
+//------------------------------------------------------------------------------------------------
+inline D3D12_RESOURCE_DESC1 D3DX12ResourceDesc0ToDesc1(D3D12_RESOURCE_DESC const& desc0)
+{
+	D3D12_RESOURCE_DESC1 	   desc1;
+    desc1.Dimension          = desc0.Dimension;
+    desc1.Alignment          = desc0.Alignment;
+    desc1.Width              = desc0.Width;
+    desc1.Height             = desc0.Height;
+    desc1.DepthOrArraySize   = desc0.DepthOrArraySize;
+    desc1.MipLevels          = desc0.MipLevels;
+    desc1.Format             = desc0.Format;
+    desc1.SampleDesc.Count   = desc0.SampleDesc.Count;
+    desc1.SampleDesc.Quality = desc0.SampleDesc.Quality;
+    desc1.Layout             = desc0.Layout;
+    desc1.Flags              = desc0.Flags;
+    desc1.SamplerFeedbackMipRegion.Width = 0;
+    desc1.SamplerFeedbackMipRegion.Height = 0;
+    desc1.SamplerFeedbackMipRegion.Depth = 0;
+    return desc1;
+}
+
+//------------------------------------------------------------------------------------------------
+inline bool D3DX12GetCopyableFootprints(
+	_In_  const D3D12_RESOURCE_DESC& pResourceDesc,
+	_In_range_(0, D3D12_REQ_SUBRESOURCES) UINT FirstSubresource,
+	_In_range_(0, D3D12_REQ_SUBRESOURCES - FirstSubresource) UINT NumSubresources,
+	UINT64 BaseOffset,
+	_Out_writes_opt_(NumSubresources) D3D12_PLACED_SUBRESOURCE_FOOTPRINT* pLayouts,
+	_Out_writes_opt_(NumSubresources) UINT* pNumRows,
+	_Out_writes_opt_(NumSubresources) UINT64* pRowSizeInBytes,
+	_Out_opt_ UINT64* pTotalBytes)
+{
+    // From D3D12_RESOURCE_DESC to D3D12_RESOURCE_DESC1
+    D3D12_RESOURCE_DESC1 desc = D3DX12ResourceDesc0ToDesc1(pResourceDesc);
+	return D3DX12GetCopyableFootprints(
+		*static_cast<CD3DX12_RESOURCE_DESC1*>(&desc),// From D3D12_RESOURCE_DESC1 to CD3DX12_RESOURCE_DESC1
+		FirstSubresource,
+		NumSubresources,
+		BaseOffset,
+		pLayouts,
+		pNumRows,
+		pRowSizeInBytes,
+		pTotalBytes);
 }
