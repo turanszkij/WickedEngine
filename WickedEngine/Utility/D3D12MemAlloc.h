@@ -24,7 +24,7 @@
 
 /** \mainpage D3D12 Memory Allocator
 
-<b>Version 2.0.2-development</b> (2022-06-14)
+<b>Version 2.1.0-development</b> (2022-12-15)
 
 Copyright (c) 2019-2022 Advanced Micro Devices, Inc. All rights reserved. \n
 License: MIT
@@ -51,7 +51,7 @@ Documentation of all members: D3D12MemAlloc.h
   - [Thread safety](@ref general_considerations_thread_safety)
   - [Versioning and compatibility](@ref general_considerations_versioning_and_compatibility)
   - [Features not supported](@ref general_considerations_features_not_supported)
-		
+        
 \section main_see_also See also
 
 - [Product page on GPUOpen](https://gpuopen.com/gaming-product/d3d12-memory-allocator/)
@@ -132,6 +132,18 @@ If providing your own implementation, you need to implement a subset of std::ato
 
 // Forward declaration if ID3D12ProtectedResourceSession is not defined inside the headers (older SDK, pre ID3D12Device4)
 struct ID3D12ProtectedResourceSession;
+
+// Define this enum even if SDK doesn't provide it, to simplify the API.
+#ifndef __ID3D12Device1_INTERFACE_DEFINED__
+typedef enum D3D12_RESIDENCY_PRIORITY
+{
+    D3D12_RESIDENCY_PRIORITY_MINIMUM = 0x28000000,
+    D3D12_RESIDENCY_PRIORITY_LOW = 0x50000000,
+    D3D12_RESIDENCY_PRIORITY_NORMAL = 0x78000000,
+    D3D12_RESIDENCY_PRIORITY_HIGH = 0xa0010000,
+    D3D12_RESIDENCY_PRIORITY_MAXIMUM = 0xc8000000
+} D3D12_RESIDENCY_PRIORITY;
+#endif
 
 namespace D3D12MA
 {
@@ -899,6 +911,29 @@ struct POOL_DESC
     Valid only if ID3D12Device4 interface is present in current Windows SDK!
     */
     ID3D12ProtectedResourceSession* pProtectedSession;
+    /** \brief Residency priority to be set for all allocations made in this pool. Optional.
+    
+    Set this parameter to one of the possible enum values e.g. `D3D12_RESIDENCY_PRIORITY_HIGH`
+    to apply specific residency priority to all allocations made in this pool:
+    `ID3D12Heap` memory blocks used to sub-allocate for placed resources, as well as
+    committed resources or heaps created when D3D12MA::ALLOCATION_FLAG_COMMITTED is used.
+    This can increase/decrease chance that the memory will be pushed out from VRAM
+    to system RAM when the system runs out of memory, which is invisible to the developer
+    using D3D12 API while it can degrade performance.
+
+    Priority is set using function `ID3D12Device1::SetResidencyPriority`.
+    It is performed only when `ID3D12Device1` interface is defined and successfully obtained.
+    Otherwise, this parameter is ignored.
+
+    This parameter is optional. If you set it to `D3D12_RESIDENCY_PRIORITY(0)`,
+    residency priority will not be set for allocations made in this pool.
+
+    There is no equivalent parameter for allocations made in default pools.
+    If you want to set residency priority for such allocation, you need to do it manually:
+    allocate with D3D12MA::ALLOCATION_FLAG_COMMITTED and call
+    `ID3D12Device1::SetResidencyPriority`, passing `allocation->GetResource()`.
+    */
+    D3D12_RESIDENCY_PRIORITY ResidencyPriority;
 };
 
 /** \brief Custom memory pool
@@ -1156,7 +1191,26 @@ public:
         Allocation** ppAllocation,
         REFIID riidResource,
         void** ppvResource);
-#endif // #ifdef __ID3D12Device4_INTERFACE_DEFINED__
+#endif // #ifdef __ID3D12Device8_INTERFACE_DEFINED__
+
+#ifdef __ID3D12Device10_INTERFACE_DEFINED__
+    /** \brief Similar to Allocator::CreateResource2, but there are initial layout instead of state and 
+    castable formats list
+
+    It internally uses `ID3D12Device10::CreateCommittedResource3` or `ID3D12Device10::CreatePlacedResource2`.
+
+    To work correctly, `ID3D12Device10` interface must be available in the current system. Otherwise, `E_NOINTERFACE` is returned.
+    */
+    HRESULT CreateResource3(const ALLOCATION_DESC* pAllocDesc,
+        const D3D12_RESOURCE_DESC1* pResourceDesc,
+        D3D12_BARRIER_LAYOUT InitialLayout,
+        const D3D12_CLEAR_VALUE* pOptimizedClearValue,
+        UINT32 NumCastableFormats,
+        DXGI_FORMAT* pCastableFormats,
+        Allocation** ppAllocation,
+        REFIID riidResource,
+        void** ppvResource);
+#endif  // #ifdef __ID3D12Device10_INTERFACE_DEFINED__
 
     /** \brief Allocates memory without creating any resource placed in it.
 
@@ -1212,6 +1266,41 @@ public:
         const D3D12_CLEAR_VALUE *pOptimizedClearValue,
         REFIID riidResource,
         void** ppvResource);
+
+#ifdef __ID3D12Device8_INTERFACE_DEFINED__
+    /** \brief Similar to Allocator::CreateAliasingResource, but supports new structure `D3D12_RESOURCE_DESC1`.
+    
+    It internally uses `ID3D12Device8::CreatePlacedResource1`.
+
+    To work correctly, `ID3D12Device8` interface must be available in the current system. Otherwise, `E_NOINTERFACE` is returned.
+    */
+    HRESULT CreateAliasingResource1(Allocation* pAllocation,
+        UINT64 AllocationLocalOffset,
+        const D3D12_RESOURCE_DESC1* pResourceDesc,
+        D3D12_RESOURCE_STATES InitialResourceState,
+        const D3D12_CLEAR_VALUE* pOptimizedClearValue,
+        REFIID riidResource,
+        void** ppvResource);
+#endif // #ifdef __ID3D12Device8_INTERFACE_DEFINED__
+
+#ifdef __ID3D12Device10_INTERFACE_DEFINED__
+    /** \brief Similar to Allocator::CreateAliasingResource1, but there are initial layout instead of state and 
+    castable formats list
+
+    It internally uses `ID3D12Device10::CreatePlacedResource2`.
+
+    To work correctly, `ID3D12Device10` interface must be available in the current system. Otherwise, `E_NOINTERFACE` is returned.
+    */
+    HRESULT CreateAliasingResource2(Allocation* pAllocation,
+        UINT64 AllocationLocalOffset,
+        const D3D12_RESOURCE_DESC1* pResourceDesc,
+        D3D12_BARRIER_LAYOUT InitialLayout,
+        const D3D12_CLEAR_VALUE* pOptimizedClearValue,
+        UINT32 NumCastableFormats,
+        DXGI_FORMAT* pCastableFormats,
+        REFIID riidResource,
+        void** ppvResource);
+#endif  // #ifdef __ID3D12Device10_INTERFACE_DEFINED__
 
     /** \brief Creates custom pool.
     */

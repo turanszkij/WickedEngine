@@ -261,7 +261,7 @@ struct VolumetricCloudParameters
 			layerSecond.detailNoiseModifier = 1.0f;
 			layerSecond.skewAlongCoverageWindDirection = 0.0f;
 			layerSecond.weatherScale = 0.000025f;
-			layerSecond.coverageAmount = 1.0f;
+			layerSecond.coverageAmount = 0.0f;
 			layerSecond.coverageMinimum = 0.0f;
 			layerSecond.typeAmount = 1.0f;
 			layerSecond.typeMinimum = 0.0f;

@@ -39,7 +39,8 @@ float4 main(VertexToPixel input) : SV_TARGET
 	for (uint i = 0; i < sampleCount; ++i)
 	{
 		bool valid = false;
-		
+
+		float3 shadow = 1;
 		for (uint cascade = 0; cascade < GetFrame().shadow_cascade_count; ++cascade)
 		{
 			float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(P, 1)).xyz; // ortho matrix, no divide by .w
@@ -48,31 +49,24 @@ float4 main(VertexToPixel input) : SV_TARGET
 			[branch]
 			if (is_saturated(shadow_uv))
 			{
-				float3 attenuation = shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
-
-				if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
-				{
-					attenuation *= shadow_2D_volumetricclouds(P);
-				}
-				
-				// Evaluate sample height for height fog calculation, given 0 for V:
-				attenuation *= GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0));
-				attenuation *= scattering;
-				
-				accumulation += attenuation;
-
-				marchedDistance += stepSize;
-				P = P + V * stepSize;
-
-				valid = true;
+				shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
 				break;
 			}
 		}
 
-		if (!valid)
+		if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
 		{
-			break;
+			shadow *= shadow_2D_volumetricclouds(P);
 		}
+
+		// Evaluate sample height for height fog calculation, given 0 for V:
+		shadow *= GetFogAmount(cameraDistance - marchedDistance, P, 0);
+		shadow *= scattering;
+
+		accumulation += shadow;
+
+		marchedDistance += stepSize;
+		P = P + V * stepSize;
 	}
 	accumulation /= sampleCount;
 
