@@ -6,7 +6,12 @@
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
 
-#include "Utility/dx12/d3dx12.h"
+#include "Utility/dx12/dxgiformat.h"
+#include "Utility/dx12/d3d12.h"
+#include "Utility/dx12/d3dx12_default.h"
+#include "Utility/dx12/d3dx12_resource_helpers.h"
+#include "Utility/dx12/d3dx12_pipeline_state_stream.h"
+#include "Utility/dx12/d3dx12_check_feature_support.h"
 #include "Utility/D3D12MemAlloc.h"
 #include <string>
 
