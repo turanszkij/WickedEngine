@@ -1693,6 +1693,8 @@ namespace wi::lua::scene
 		int FindExpressionID(lua_State* L);
 		int SetWeight(lua_State* L);
 		int SetPresetWeight(lua_State* L);
+		int GetWeight(lua_State* L);
+		int GetPresetWeight(lua_State* L);
 	};
 
 	class HumanoidComponent_BindLua

@@ -22,7 +22,7 @@ function zone_expression(zone_entity, expression_preset, expression_string)
 
         local str = "If character gets close to this, it will be " .. expression_string .. "\n"
         if zone_active then
-            str = str .. "...and a character is currently" .. expression_string .. "!"
+            str = str .. "...and a character is currently " .. expression_string .. "!"
         else
             str = str .. "...but no one is " .. expression_string .. " currently."
         end

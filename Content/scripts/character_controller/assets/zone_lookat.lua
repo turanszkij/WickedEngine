@@ -15,8 +15,6 @@ if zone_transform ~= nil then
                 humanoid.SetLookAtEnabled(true)
                 humanoid.SetLookAt(zone_pos)
                 zone_active = true
-            else
-                humanoid.SetLookAtEnabled(false)
             end
         end
     end

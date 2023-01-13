@@ -5299,6 +5299,8 @@ Luna<ExpressionComponent_BindLua>::FunctionType ExpressionComponent_BindLua::met
 	lunamethod(ExpressionComponent_BindLua, FindExpressionID),
 	lunamethod(ExpressionComponent_BindLua, SetWeight),
 	lunamethod(ExpressionComponent_BindLua, SetPresetWeight),
+	lunamethod(ExpressionComponent_BindLua, GetWeight),
+	lunamethod(ExpressionComponent_BindLua, GetPresetWeight),
 	{ NULL, NULL }
 };
 Luna<ExpressionComponent_BindLua>::PropertyType ExpressionComponent_BindLua::properties[] = {
@@ -5370,6 +5372,49 @@ int ExpressionComponent_BindLua::SetPresetWeight(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetPresetWeight(ExpressionPreset preset, float weight) not enough arguments!");
+	}
+	return 0;
+}
+int ExpressionComponent_BindLua::GetWeight(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		int id = wi::lua::SGetInt(L, 1);
+		if (id >= 0 && component->expressions.size() > id)
+		{
+			wi::lua::SSetFloat(L, component->expressions[id].weight);
+		}
+		else
+		{
+			wi::lua::SError(L, "GetWeight(int id) id is out of bounds!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "GetWeight(int id) not enough arguments!");
+	}
+	return 0;
+}
+int ExpressionComponent_BindLua::GetPresetWeight(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		ExpressionComponent::Preset preset = (ExpressionComponent::Preset)wi::lua::SGetInt(L, 1);
+		int id = component->presets[size_t(preset)];
+		if (id >= 0 && component->expressions.size() > id)
+		{
+			wi::lua::SSetFloat(L, component->expressions[id].weight);
+		}
+		else
+		{
+			wi::lua::SError(L, "GetPresetWeight(ExpressionPreset preset) preset doesn't exist!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "GetPresetWeight(ExpressionPreset preset) not enough arguments!");
 	}
 	return 0;
 }
