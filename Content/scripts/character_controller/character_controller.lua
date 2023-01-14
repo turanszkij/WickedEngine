@@ -20,12 +20,13 @@ local DrawAxis = function(point,f)
 end
 
 local debug = true -- press H to toggle
+local allow_pushaway_NPC = true -- You can decide whether NPCs can be pushed away by player
 
 local scene = GetScene()
 
 local Layers = {
-	Player = 1,
-	NPC = 2,
+	Player = 1 << 0,
+	NPC = 1 << 1,
 }
 local States = {
 	IDLE = "idle",
@@ -67,7 +68,7 @@ local function Character(model_name, start_position, face, controllable)
 		run_speed = 0.8,
 		jump_speed = 14,
 		swim_speed = 0.5,
-		layerMask = ~0,
+		layerMask = ~0, -- layerMask will be used to filter collisions
 		scale = Vector(1, 1, 1),
 		rotation = Vector(0,math.pi,0),
 		start_position = Vector(0, 1, 0),
@@ -82,9 +83,9 @@ local function Character(model_name, start_position, face, controllable)
 			self.face = face
 			self.controllable = controllable
 			if controllable then
-				self.layerMask = Layers.Player -- The character will be tagged to use this layer, so scene intersection can filter out the character
+				self.layerMask = Layers.Player
 			else
-				self.layerMask = Layers.NPC -- NPC layer mask; NPC doesn't detect collision with player, so player can't push it away, but player will collide with it
+				self.layerMask = Layers.NPC
 			end
 			local character_scene = Scene()
 			self.model = LoadModel(character_scene, model_name)
@@ -417,7 +418,14 @@ local function Character(model_name, start_position, face, controllable)
 
 				capsulepos = vector.Add(capsulepos, step)
 				capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
-				local o2, p2, n2, depth, velocity = scene.Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.layerMask) -- scene/capsule collision
+				local collision_layer = ~self.layerMask
+				if not controllable and not allow_pushaway_NPC then
+					-- For NPC, this makes it not pushable away by player:
+					--	This works by disabling NPC's collision to player
+					--	But the player can still collide with NPC and can be blocked
+					collision_layer = ~(Layers.Player | Layers.NPC)
+				end
+				local o2, p2, n2, depth, velocity = scene.Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, collision_layer) -- scene/capsule collision
 				if(o2 ~= INVALID_ENTITY) then
 
 					if debug then
@@ -481,8 +489,9 @@ local function Character(model_name, start_position, face, controllable)
 				local ray_left = Ray(vector.Add(pos_left, Vector(0, 1)), Vector(0, -1), 0, 1.8)
 				local ray_right = Ray(vector.Add(pos_right, Vector(0, 1)), Vector(0, -1), 0, 1.8)
 				-- Ray trace for both feet:
-				local collEntity_left,collPos_left = scene.Intersects(ray_left, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.layerMask)
-				local collEntity_right,collPos_right = scene.Intersects(ray_right, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.layerMask)
+				local collision_layer =  ~(Layers.Player | Layers.NPC) -- specifies that neither NPC, nor Player can collide with feet
+				local collEntity_left,collPos_left = scene.Intersects(ray_left, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, collision_layer)
+				local collEntity_right,collPos_right = scene.Intersects(ray_right, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, collision_layer)
 				local diff_left = 0
 				local diff_right = 0
 				if collEntity_left ~= INVALID_ENTITY then
@@ -634,7 +643,8 @@ local function ThirdPersonCamera(character)
 
 				local ray = Ray(targetPos, target_to_corner.Normalize(), TMin, TMax)
 
-				local collObj,collPos,collNor = scene.Intersects(ray, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~self.character.layerMask)
+				local collision_layer =  ~(Layers.Player | Layers.NPC) -- specifies that neither NPC, nor Player can collide with camera
+				local collObj,collPos,collNor = scene.Intersects(ray, FILTER_NAVIGATION_MESH | FILTER_COLLIDER,  collision_layer)
 				if(collObj ~= INVALID_ENTITY) then
 					-- It hit something, see if it is between the player and camera:
 					local collDiff = vector.Subtract(collPos, targetPos)
