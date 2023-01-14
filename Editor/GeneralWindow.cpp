@@ -12,7 +12,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 	wi::gui::Window::Create("General", wi::gui::Window::WindowControls::COLLAPSE);
 
-	SetSize(XMFLOAT2(580, 500));
+	SetSize(XMFLOAT2(580, 580));
 
 	physicsEnabledCheckBox.Create("Physics: ");
 	physicsEnabledCheckBox.SetTooltip("Toggle Physics Simulation On/Off");
@@ -224,6 +224,32 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	AddWidget(&saveModeComboBox);
 
 
+	transformToolOpacitySlider.Create(0, 1, 1, 100, "Transform Tool Opacity: ");
+	transformToolOpacitySlider.SetTooltip("You can control the transparency of the object placement tool");
+	transformToolOpacitySlider.SetSize(XMFLOAT2(100, 18));
+	if (editor->main->config.GetSection("options").Has("transform_tool_opacity"))
+	{
+		transformToolOpacitySlider.SetValue(editor->main->config.GetSection("options").GetFloat("transform_tool_opacity"));
+		editor->translator.opacity = transformToolOpacitySlider.GetValue();
+	}
+	transformToolOpacitySlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->translator.opacity = args.fValue;
+		editor->main->config.GetSection("options").Set("transform_tool_opacity", args.fValue);
+	});
+	AddWidget(&transformToolOpacitySlider);
+	bonePickerOpacitySlider.Create(0, 1, 1, 100, "Bone Picker Opacity: ");
+	bonePickerOpacitySlider.SetTooltip("You can control the transparency of the bone selector tool");
+	bonePickerOpacitySlider.SetSize(XMFLOAT2(100, 18));
+	if (editor->main->config.GetSection("options").Has("bone_picker_opacity"))
+	{
+		bonePickerOpacitySlider.SetValue(editor->main->config.GetSection("options").GetFloat("bone_picker_opacity"));
+	}
+	bonePickerOpacitySlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("options").Set("bone_picker_opacity", args.fValue);
+	});
+	AddWidget(&bonePickerOpacitySlider);
+
+
 	enum class Theme
 	{
 		Dark,
@@ -412,7 +438,7 @@ void GeneralWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
 	const float padding = 4;
-	const float width = GetWidgetAreaSize().x - padding * 2;
+	float width = GetWidgetAreaSize().x - padding * 2;
 	float y = padding;
 	float jump = 20;
 	float x_off = 100;
@@ -487,4 +513,10 @@ void GeneralWindow::ResizeLayout()
 	add_right(freezeCullingCameraCheckBox);
 	add_right(disableAlbedoMapsCheckBox);
 	add_right(forceDiffuseLightingCheckBox);
+
+	y += jump;
+
+	width -= padding * 6;
+	add(transformToolOpacitySlider);
+	add(bonePickerOpacitySlider);
 }

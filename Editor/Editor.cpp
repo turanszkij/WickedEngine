@@ -2402,6 +2402,8 @@ void EditorComponent::Render() const
 								}
 							}
 
+							color.w *= optionsWnd.generalWnd.bonePickerOpacitySlider.GetValue();
+
 							XMVECTOR Base = XMLoadFloat3(&capsule.base);
 							XMVECTOR Tip = XMLoadFloat3(&capsule.tip);
 							XMVECTOR Radius = XMVectorReplicate(capsule.radius);
