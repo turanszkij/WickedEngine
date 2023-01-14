@@ -67,7 +67,9 @@ namespace wi::platform
 #endif // PLATFORM_UWP
 #endif // _WIN32
 #ifdef SDL2
-		SDL_Quit();
+		SDL_Event quit_event;
+		quit_event.type = SDL_QUIT;
+		SDL_PushEvent(&quit_event);
 #endif
 	}
 

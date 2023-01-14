@@ -32,6 +32,9 @@ public:
 	wi::gui::CheckBox disableAlbedoMapsCheckBox;
 	wi::gui::CheckBox forceDiffuseLightingCheckBox;
 
+	wi::gui::Slider transformToolOpacitySlider;
+	wi::gui::Slider bonePickerOpacitySlider;
+
 	void ResizeLayout() override;
 };
 

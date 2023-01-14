@@ -2029,7 +2029,7 @@ runProcess(function()
 			application.SetActivePath(prevPath)
 			return
 		end
-		if(input.Press(string.byte('R'))) then
+		if(not backlog_isactive() and input.Press(string.byte('R'))) then
 			-- reload script
 			backlog_post("RELOAD")
 			killProcesses()

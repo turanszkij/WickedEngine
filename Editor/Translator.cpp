@@ -647,18 +647,21 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		// x
 		XMStoreFloat4x4(&sb.g_xTransform, matX * GetMirrorMatrix(TRANSLATOR_X, camera) * mat);
 		sb.g_xColor = state == TRANSLATOR_X ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 1);
+		sb.g_xColor.w *= opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 
 		// y
 		XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_Y, camera)* mat);
 		sb.g_xColor = state == TRANSLATOR_Y ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 1);
+		sb.g_xColor.w *= opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 
 		// z
 		XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_Z, camera)* mat);
 		sb.g_xColor = state == TRANSLATOR_Z ? highlight_color : XMFLOAT4(channel_min, channel_min, 1, 1);
+		sb.g_xColor.w *= opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 
@@ -709,6 +712,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 			mat
 		);
 		sb.g_xColor = state == TRANSLATOR_XYZ ? highlight_color : XMFLOAT4(1, 1, 1, 0.5f);
+		sb.g_xColor.w *= opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 	}
@@ -733,6 +737,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(origin_size, origin_size, origin_size) * mat);
 		sb.g_xColor = state == TRANSLATOR_XYZ ? highlight_color : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
+		sb.g_xColor.w *= opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(arraysize(cubeVerts), 0, cmd);
 	}
@@ -773,18 +778,21 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 			// xy
 			XMStoreFloat4x4(&sb.g_xTransform, matX * GetMirrorMatrix(TRANSLATOR_XY, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_XY ? highlight_color : XMFLOAT4(channel_min, channel_min, 1, 1);
+			sb.g_xColor.w *= opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// xz
 			XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_XZ, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_XZ ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 1);
+			sb.g_xColor.w *= opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// yz
 			XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_YZ, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_YZ ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 1);
+			sb.g_xColor.w *= opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 		}
@@ -818,18 +826,21 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 			// xy
 			XMStoreFloat4x4(&sb.g_xTransform, matX * GetMirrorMatrix(TRANSLATOR_XY, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_XY ? highlight_color : XMFLOAT4(channel_min, channel_min, 1, 0.4f);
+			sb.g_xColor.w *= opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// xz
 			XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_XZ, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_XZ ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 0.4f);
+			sb.g_xColor.w *= opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// yz
 			XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_YZ, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_YZ ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 0.4f);
+			sb.g_xColor.w *= opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 		}
@@ -919,6 +930,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 					VP
 				);
 				sb.g_xColor = XMFLOAT4(1, 1, 1, 0.5f);
+				sb.g_xColor.w *= opacity;
 				device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 				device->Draw(vertexCount, 0, cmd);
 			}
@@ -945,6 +957,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 				XMStoreFloat4x4(&sb.g_xTransform, VP);
 				sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+				sb.g_xColor.w *= opacity;
 				device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 				device->Draw(arraysize(verts), 0, cmd);
 			}
@@ -1007,6 +1020,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
 			sb.g_xColor = XMFLOAT4(1, 1, 1, 0.5f);
+			sb.g_xColor.w *= opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(vertexCount, 0, cmd);
 		}

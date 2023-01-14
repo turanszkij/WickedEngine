@@ -1025,7 +1025,9 @@ Describes a Collider object.
 #### ExpressionComponent
 - FindExpressionID(string name) : int	-- Find an expression within the ExpressionComponent by name
 - SetWeight(int id, float weight)	-- Set expression weight by ID. The ID can be a non-preset expression. Use FindExpressionID() to retrieve non-preset expression IDs
+- GetWeight(int id) : float	-- returns current weight of expression
 - SetPresetWeight(ExpressionPreset preset, float weight)	-- Set a preset expression's weight. You can get access to preset values from ExpressionPreset table
+- GetPresetWeight(ExpressionPreset preset) : float	-- returns current weight of preset expression
 
 [outer] ExpressionPreset = {
 	Happy = 0,
