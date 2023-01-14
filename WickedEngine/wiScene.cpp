@@ -1340,6 +1340,8 @@ namespace wi::scene
 
 	void Scene::RunAnimationUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		auto range = wi::profiler::BeginRangeCPU("Animations");
+
 		for (size_t i = 0; i < animations.GetCount(); ++i)
 		{
 			AnimationComponent& animation = animations[i];
@@ -2023,6 +2025,8 @@ namespace wi::scene
 				animation.timer += dt * animation.speed;
 			}
 		}
+
+		wi::profiler::EndRange(range);
 	}
 	void Scene::RunTransformUpdateSystem(wi::jobsystem::context& ctx)
 	{

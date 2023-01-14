@@ -5337,8 +5337,7 @@ int ExpressionComponent_BindLua::SetWeight(lua_State* L)
 		float weight = wi::lua::SGetFloat(L, 2);
 		if (id >= 0 && component->expressions.size() > id)
 		{
-			component->expressions[id].weight = weight;
-			component->expressions[id].SetDirty(true);
+			component->expressions[id].SetWeight(weight);
 		}
 		else
 		{
@@ -5361,8 +5360,7 @@ int ExpressionComponent_BindLua::SetPresetWeight(lua_State* L)
 		int id = component->presets[size_t(preset)];
 		if (id >= 0 && component->expressions.size() > id)
 		{
-			component->expressions[id].weight = weight;
-			component->expressions[id].SetDirty(true);
+			component->expressions[id].SetWeight(weight);
 		}
 		else
 		{

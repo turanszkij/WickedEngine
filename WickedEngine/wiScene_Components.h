@@ -1522,6 +1522,16 @@ namespace wi::scene
 
 			constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 			constexpr void SetBinary(bool value = true) { if (value) { _flags |= BINARY; } else { _flags &= ~BINARY; } }
+
+			// Set weight of expression (also sets dirty state if value is out of date)
+			inline void SetWeight(float value)
+			{
+				if (std::abs(weight - value) > std::numeric_limits<float>::epsilon())
+				{
+					SetDirty(true);
+				}
+				weight = value;
+			}
 		};
 		wi::vector<Expression> expressions;
 
