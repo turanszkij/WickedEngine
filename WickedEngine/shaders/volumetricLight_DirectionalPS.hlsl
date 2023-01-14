@@ -41,7 +41,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 		bool valid = false;
 
 		float3 shadow = 1;
-		for (uint cascade = 0; cascade < GetFrame().shadow_cascade_count; ++cascade)
+		for (uint cascade = 0; cascade < light.GetShadowCascadeCount(); ++cascade)
 		{
 			float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(P, 1)).xyz; // ortho matrix, no divide by .w
 			float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;

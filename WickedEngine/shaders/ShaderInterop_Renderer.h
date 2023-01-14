@@ -619,7 +619,7 @@ struct ShaderEntity
 	float3 position;
 	uint type8_flags8_range16;
 
-	uint2 direction16_coneAngleCos16;
+	uint2 direction16_coneAngleCos16; // coneAngleCos is used for cascade count in directional light
 	uint2 color; // half4 packed
 
 	uint layerMask;
@@ -654,6 +654,10 @@ struct ShaderEntity
 	inline float GetConeAngleCos()
 	{
 		return f16tof32(direction16_coneAngleCos16.y >> 16u);
+	}
+	inline uint GetShadowCascadeCount()
+	{
+		return direction16_coneAngleCos16.y >> 16u;
 	}
 	inline float GetAngleScale()
 	{
@@ -731,6 +735,10 @@ struct ShaderEntity
 	inline void SetConeAngleCos(float value)
 	{
 		direction16_coneAngleCos16.y |= XMConvertFloatToHalf(value) << 16u;
+	}
+	inline void SetShadowCascadeCount(uint value)
+	{
+		direction16_coneAngleCos16.y |= (value & 0xFFFF) << 16u;
 	}
 	inline void SetAngleScale(float value)
 	{
@@ -855,7 +863,7 @@ struct FrameCB
 	float		delta_time;
 
 	uint		frame_count;
-	uint		shadow_cascade_count;
+	uint		padding3;
 	int			texture_shadowatlas_index;
 	int			texture_shadowatlas_transparent_index;
 

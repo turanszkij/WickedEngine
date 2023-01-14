@@ -35,7 +35,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies = componentLibrary.Register<RigidBodyPhysicsComponent>("wi::scene::Scene::rigidbodies", 1); // version = 1
 		wi::ecs::ComponentManager<SoftBodyPhysicsComponent>& softbodies = componentLibrary.Register<SoftBodyPhysicsComponent>("wi::scene::Scene::softbodies");
 		wi::ecs::ComponentManager<ArmatureComponent>& armatures = componentLibrary.Register<ArmatureComponent>("wi::scene::Scene::armatures");
-		wi::ecs::ComponentManager<LightComponent>& lights = componentLibrary.Register<LightComponent>("wi::scene::Scene::lights");
+		wi::ecs::ComponentManager<LightComponent>& lights = componentLibrary.Register<LightComponent>("wi::scene::Scene::lights", 1); // version = 1
 		wi::ecs::ComponentManager<CameraComponent>& cameras = componentLibrary.Register<CameraComponent>("wi::scene::Scene::cameras");
 		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = componentLibrary.Register<EnvironmentProbeComponent>("wi::scene::Scene::probes");
 		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Register<ForceFieldComponent>("wi::scene::Scene::forces", 1); // version = 1
