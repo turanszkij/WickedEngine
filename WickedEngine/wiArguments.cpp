@@ -35,6 +35,6 @@ namespace wi::arguments
 
 	bool HasArgument(const std::string& value)
 	{
-		return (params.find(value) != params.end());
+		return params.find(value) != params.end();
 	}
 }
