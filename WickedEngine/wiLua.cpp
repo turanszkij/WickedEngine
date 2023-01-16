@@ -25,6 +25,7 @@
 #include "wiVector.h"
 
 #include <memory>
+#include <algorithm>
 
 namespace wi::lua
 {
@@ -54,7 +55,9 @@ namespace wi::lua
 		return scriptpid_next.fetch_add(1);
 	}
 
-	uint32_t AttachScriptParameters(std::string& script, const std::string& filename, uint32_t PID,  const std::string& customparameters_prepend,  const std::string& customparameters_append)
+	uint32_t attach_script_line_offset = 32;
+
+	uint32_t AttachScriptParameters(std::string& script, const std::string& filename, uint32_t PID, const std::string& customparameters_prepend, const std::string& customparameters_append, uint32_t customparameters_line_offset)
 	{
 		static const std::string persistent_inject = R"(
 			local runProcess = function(func) 
@@ -79,7 +82,12 @@ namespace wi::lua
 		dynamic_inject += "local function script_pid() return \"" + std::to_string(PID) + "\" end\n";
 		dynamic_inject += "local function script_dir() return \"" + wi::helper::GetDirectoryFromPath(filepath) + "\" end\n";
 		dynamic_inject += persistent_inject;
-		script = dynamic_inject + customparameters_prepend + script + customparameters_append;
+		std::string line_offset = "";
+		for(uint32_t i = (15+customparameters_line_offset); i < attach_script_line_offset; ++i)
+		{
+			line_offset += "\n";
+		}
+		script = dynamic_inject + customparameters_prepend + line_offset + script + customparameters_append;
 
 		return PID;
 	}
@@ -98,13 +106,15 @@ namespace wi::lua
 			if(argc >= 3) customparameters_prepend = SGetString(L, 3);
 			std::string customparameters_append;
 			if(argc >= 4) customparameters_prepend = SGetString(L, 4);
+			uint32_t customparameters_line_offset = 0;
+			if(argc >= 5) customparameters_line_offset = SGetInt(L, 5);
 
 			wi::vector<uint8_t> filedata;
 
 			if (wi::helper::FileRead(filename, filedata))
 			{
 				std::string command = std::string(filedata.begin(), filedata.end());
-				PID = AttachScriptParameters(command, filename, PID, customparameters_prepend, customparameters_append);
+				PID = AttachScriptParameters(command, filename, PID, customparameters_prepend, customparameters_append, customparameters_line_offset);
 
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)
@@ -528,7 +538,7 @@ namespace wi::lua
 		lua_Debug ar;
 		lua_getstack(L, 1, &ar);
 		lua_getinfo(L, "nSl", &ar);
-		int line = ar.currentline;
+		int line = std::max(ar.currentline, int(ar.currentline - attach_script_line_offset));
 
 		std::string ss;
 		ss += WILUA_ERROR_PREFIX;
@@ -543,6 +553,11 @@ namespace wi::lua
 	void SAddMetatable(lua_State* L, const std::string& name)
 	{
 		luaL_newmetatable(L, name.c_str());
+	}
+
+	void SetAttachScriptLineOffset(uint32_t offset)
+	{
+		attach_script_line_offset = offset;
 	}
 
 }

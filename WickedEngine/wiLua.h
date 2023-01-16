@@ -66,7 +66,7 @@ namespace wi::lua
 
 	// Adds some local management functions to the script
 	//	returns the PID
-	uint32_t AttachScriptParameters(std::string& script, const std::string& filename = "", uint32_t PID = GeneratePID(), const std::string& customparameters_prepend = "",  const std::string& customparameters_append = "");
+	uint32_t AttachScriptParameters(std::string& script, const std::string& filename = "", uint32_t PID = GeneratePID(), const std::string& customparameters_prepend = "", const std::string& customparameters_append = "", uint32_t customparameters_line_offset = 0);
 
 	//Following functions are "static", operating on specified lua state:
 
@@ -193,5 +193,9 @@ namespace wi::lua
 	
 	//add new metatable
 	void SAddMetatable(lua_State* L, const std::string& name);
+
+	//For script debugging, we need to ensure the line reported during error is correct
+	//To do this, we need to offset the script agreed for the debugger to check
+	void SetAttachScriptLineOffset(uint32_t offset);
 };
 
