@@ -193,9 +193,5 @@ namespace wi::lua
 	
 	//add new metatable
 	void SAddMetatable(lua_State* L, const std::string& name);
-
-	//For script debugging, we need to ensure the line reported during error is correct
-	//To do this, we need to offset the script agreed for the debugger to check
-	void SetAttachScriptLineOffset(uint32_t offset);
 };
 

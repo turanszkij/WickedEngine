@@ -7,7 +7,7 @@
 
 namespace wi::arguments
 {
-	wi::vector<std::string> params;
+	wi::unordered_set<std::string> params;
 
 	void Parse(const wchar_t* args)
 	{
@@ -29,22 +29,12 @@ namespace wi::arguments
     {
 		for (int i = 1; i < argc; i++)
 		{
-			params.push_back(std::string(argv[i]));
+			params.insert(std::string(argv[i]));
 		}
     }
 
 	bool HasArgument(const std::string& value)
 	{
-		for(auto& param : params)
-		{
-			if(param == value)
-				return true;
-		}
-		return false;
-	}
-
-	wi::vector<std::string>* GetParameters()
-	{
-		return &params;
+		return (params.find(value) != params.end());
 	}
 }

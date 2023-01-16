@@ -8,5 +8,4 @@ namespace wi::arguments
 	void Parse(const wchar_t* args);
     void Parse(int argc, char *argv[]);
 	bool HasArgument(const std::string& value);
-	wi::vector<std::string>* GetParameters();
 }
