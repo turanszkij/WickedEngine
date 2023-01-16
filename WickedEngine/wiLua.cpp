@@ -54,20 +54,19 @@ namespace wi::lua
 		return scriptpid_next.fetch_add(1);
 	}
 
-	uint32_t AttachScriptParameters(std::string& script, const std::string& filename, uint32_t PID,  const std::string& customparameters_prepend,  const std::string& customparameters_append)
+	uint32_t AttachScriptParameters(std::string& script, const std::string& filename, uint32_t PID, const std::string& customparameters_prepend, const std::string& customparameters_append)
 	{
-		static const std::string persistent_inject = R"(
-			local runProcess = function(func) 
-				success, co = Internal_runProcess(script_file(), script_pid(), func)
-				return success, co
-			end
-			if _ENV.PROCESSES_DATA[script_pid()] == nil then
-				_ENV.PROCESSES_DATA[script_pid()] = { _INITIALIZED = -1 }
-			end
-			if _ENV.PROCESSES_DATA[script_pid()]._INITIALIZED < 1 then
-				_ENV.PROCESSES_DATA[script_pid()]._INITIALIZED = _ENV.PROCESSES_DATA[script_pid()]._INITIALIZED + 1
-			end
-		)";
+		static const std::string persistent_inject =
+			"local runProcess = function(func) "
+			"	success, co = Internal_runProcess(script_file(), script_pid(), func);"
+			"	return success, co;"
+			"end;"
+			"if _ENV.PROCESSES_DATA[script_pid()] == nil then"
+			"	_ENV.PROCESSES_DATA[script_pid()] = { _INITIALIZED = -1 };"
+			"end;"
+			"if _ENV.PROCESSES_DATA[script_pid()]._INITIALIZED < 1 then"
+			"	_ENV.PROCESSES_DATA[script_pid()]._INITIALIZED = _ENV.PROCESSES_DATA[script_pid()]._INITIALIZED + 1;"
+			"end;";
 
 		// Make sure the file path doesn't contain backslash characters, replace them with forward slash.
 		//	- backslash would be recognized by lua as escape character
@@ -75,9 +74,9 @@ namespace wi::lua
 		std::string filepath = filename;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/');
 
-		std::string dynamic_inject = "local function script_file() return \"" + filepath + "\" end\n";
-		dynamic_inject += "local function script_pid() return \"" + std::to_string(PID) + "\" end\n";
-		dynamic_inject += "local function script_dir() return \"" + wi::helper::GetDirectoryFromPath(filepath) + "\" end\n";
+		std::string dynamic_inject = "local function script_file() return \"" + filepath + "\" end;";
+		dynamic_inject += "local function script_pid() return \"" + std::to_string(PID) + "\" end;";
+		dynamic_inject += "local function script_dir() return \"" + wi::helper::GetDirectoryFromPath(filepath) + "\" end;";
 		dynamic_inject += persistent_inject;
 		script = dynamic_inject + customparameters_prepend + script + customparameters_append;
 
@@ -537,12 +536,11 @@ namespace wi::lua
 		{
 			ss += error;
 		}
-		wi::backlog::post(ss);
+		wi::backlog::post(ss, wi::backlog::LogLevel::Error);
 	}
 
 	void SAddMetatable(lua_State* L, const std::string& name)
 	{
 		luaL_newmetatable(L, name.c_str());
 	}
-
 }
