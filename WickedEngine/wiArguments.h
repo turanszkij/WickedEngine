@@ -1,5 +1,4 @@
 #pragma once
-#include "wiVector.h"
 #include <string>
 
 // This can be used to parse and retrieve startup/command arguments of the application

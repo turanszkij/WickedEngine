@@ -4231,7 +4231,7 @@ namespace wi::scene
 				if (script.script.empty() && script.resource.IsValid())
 				{
 					script.script += script.resource.GetScript();
-					wi::lua::AttachScriptParameters(script.script, script.filename, wi::lua::GeneratePID(), "local function GetEntity() return " + std::to_string(entity) + "; end\n", "", 1);
+					wi::lua::AttachScriptParameters(script.script, script.filename, wi::lua::GeneratePID(), "local function GetEntity() return " + std::to_string(entity) + "; end;", "");
 				}
 				wi::lua::RunText(script.script);
 

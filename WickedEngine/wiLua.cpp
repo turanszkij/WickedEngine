@@ -25,7 +25,6 @@
 #include "wiVector.h"
 
 #include <memory>
-#include <algorithm>
 
 namespace wi::lua
 {
@@ -55,7 +54,7 @@ namespace wi::lua
 		return scriptpid_next.fetch_add(1);
 	}
 
-	uint32_t AttachScriptParameters(std::string& script, const std::string& filename, uint32_t PID, const std::string& customparameters_prepend, const std::string& customparameters_append, uint32_t customparameters_line_offset)
+	uint32_t AttachScriptParameters(std::string& script, const std::string& filename, uint32_t PID, const std::string& customparameters_prepend, const std::string& customparameters_append)
 	{
 		static const std::string persistent_inject =
 			"local runProcess = function(func) "
@@ -98,15 +97,13 @@ namespace wi::lua
 			if(argc >= 3) customparameters_prepend = SGetString(L, 3);
 			std::string customparameters_append;
 			if(argc >= 4) customparameters_prepend = SGetString(L, 4);
-			uint32_t customparameters_line_offset = 0;
-			if(argc >= 5) customparameters_line_offset = SGetInt(L, 5);
 
 			wi::vector<uint8_t> filedata;
 
 			if (wi::helper::FileRead(filename, filedata))
 			{
 				std::string command = std::string(filedata.begin(), filedata.end());
-				PID = AttachScriptParameters(command, filename, PID, customparameters_prepend, customparameters_append, customparameters_line_offset);
+				PID = AttachScriptParameters(command, filename, PID, customparameters_prepend, customparameters_append);
 
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)
@@ -539,7 +536,7 @@ namespace wi::lua
 		{
 			ss += error;
 		}
-		wi::backlog::post(ss);
+		wi::backlog::post(ss, wi::backlog::LogLevel::Error);
 	}
 
 	void SAddMetatable(lua_State* L, const std::string& name)
