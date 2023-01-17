@@ -823,13 +823,16 @@ namespace wi::scene
 			entry.second.component_manager->Remove(entity);
 		}
 	}
-	Entity Scene::Entity_FindByName(const std::string& name)
+	Entity Scene::Entity_FindByName(const std::string& name, Entity ancestor)
 	{
 		for (size_t i = 0; i < names.GetCount(); ++i)
 		{
 			if (names[i] == name)
 			{
-				return names.GetEntity(i);
+				Entity entity = names.GetEntity(i);
+				if (ancestor != INVALID_ENTITY && !Entity_IsDescendant(entity, ancestor))
+					continue;
+				return entity;
 			}
 		}
 		return INVALID_ENTITY;
@@ -848,6 +851,17 @@ namespace wi::scene
 		Entity root = Entity_Serialize(archive, seri, INVALID_ENTITY, EntitySerializeFlags::RECURSIVE | EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
 
 		return root;
+	}
+	bool Scene::Entity_IsDescendant(wi::ecs::Entity entity, wi::ecs::Entity ancestor) const
+	{
+		const HierarchyComponent* hier = hierarchy.GetComponent(entity);
+		while (hier != nullptr)
+		{
+			if (hier->parentID == ancestor)
+				return true;
+			hier = hierarchy.GetComponent(hier->parentID);
+		}
+		return false;
 	}
 	Entity Scene::Entity_CreateTransform(
 		const std::string& name

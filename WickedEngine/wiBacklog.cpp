@@ -281,7 +281,7 @@ namespace wi::backlog
 		if (refitscroll)
 		{
 			float textheight = wi::font::TextHeight(getTextWithoutLock(), params);
-			float limit = canvas.GetLogicalHeight() - 35;
+			float limit = canvas.GetLogicalHeight() - 50;
 			if (scroll + textheight > limit)
 			{
 				scroll = limit - textheight;
