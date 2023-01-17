@@ -160,6 +160,5 @@ int main(int argc, char *argv[])
 
     int ret = sdl_loop(editor);
 
-    SDL_Quit();
     return ret;
 }
