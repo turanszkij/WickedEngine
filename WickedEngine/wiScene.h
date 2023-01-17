@@ -261,9 +261,13 @@ namespace wi::scene
 		//	recursive	: also removes children if true
 		void Entity_Remove(wi::ecs::Entity entity, bool recursive = true);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
-		wi::ecs::Entity Entity_FindByName(const std::string& name);
+		//	ancestor : you can specify an ancestor entity if you only want to find entities that are descendants of ancestor entity
+		wi::ecs::Entity Entity_FindByName(const std::string& name, wi::ecs::Entity ancestor = wi::ecs::INVALID_ENTITY);
 		// Duplicates all of an entity's components and creates a new entity with them (recursively keeps hierarchy):
 		wi::ecs::Entity Entity_Duplicate(wi::ecs::Entity entity);
+		// Check whether entity is a descendant of ancestor
+		//	returns true if entity is in the hierarchy tree of ancestor, false otherwise
+		bool Entity_IsDescendant(wi::ecs::Entity entity, wi::ecs::Entity ancestor) const;
 
 		enum class EntitySerializeFlags
 		{
