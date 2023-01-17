@@ -47,6 +47,7 @@ namespace wi::lua::scene
 		int Entity_FindByName(lua_State* L);
 		int Entity_Remove(lua_State* L);
 		int Entity_Duplicate(lua_State* L);
+		int Entity_IsDescendant(lua_State* L);
 
 		int Component_CreateName(lua_State* L);
 		int Component_CreateLayer(lua_State* L);
