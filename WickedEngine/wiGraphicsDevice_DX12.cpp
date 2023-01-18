@@ -1123,19 +1123,10 @@ namespace dx12_internal
 		D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
 		D3D12_DESCRIPTOR_HEAP_TYPE type = {};
 		int index = -1; // bindless
-		union
-		{
-			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv;
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav;
-			D3D12_SAMPLER_DESC sam;
-			D3D12_RENDER_TARGET_VIEW_DESC rtv;
-			D3D12_DEPTH_STENCIL_VIEW_DESC dsv;
-		};
+
 		bool IsValid() const { return handle.ptr != 0; }
 		void init(const GraphicsDevice_DX12* device, const D3D12_CONSTANT_BUFFER_VIEW_DESC& cbv)
 		{
-			this->cbv = cbv;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			handle = allocationhandler->descriptors_res.allocate();
@@ -1159,7 +1150,6 @@ namespace dx12_internal
 		}
 		void init(const GraphicsDevice_DX12* device, const D3D12_SHADER_RESOURCE_VIEW_DESC& srv, ID3D12Resource* res)
 		{
-			this->srv = srv;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			handle = allocationhandler->descriptors_res.allocate();
@@ -1183,7 +1173,6 @@ namespace dx12_internal
 		}
 		void init(const GraphicsDevice_DX12* device, const D3D12_UNORDERED_ACCESS_VIEW_DESC& uav, ID3D12Resource* res)
 		{
-			this->uav = uav;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			handle = allocationhandler->descriptors_res.allocate();
@@ -1207,7 +1196,6 @@ namespace dx12_internal
 		}
 		void init(const GraphicsDevice_DX12* device, const D3D12_SAMPLER_DESC& sam)
 		{
-			this->sam = sam;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 			handle = allocationhandler->descriptors_sam.allocate();
@@ -1231,7 +1219,6 @@ namespace dx12_internal
 		}
 		void init(const GraphicsDevice_DX12* device, const D3D12_RENDER_TARGET_VIEW_DESC& rtv, ID3D12Resource* res)
 		{
-			this->rtv = rtv;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 			handle = allocationhandler->descriptors_rtv.allocate();
@@ -1239,7 +1226,6 @@ namespace dx12_internal
 		}
 		void init(const GraphicsDevice_DX12* device, const D3D12_DEPTH_STENCIL_VIEW_DESC& dsv, ID3D12Resource* res)
 		{
-			this->dsv = dsv;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 			handle = allocationhandler->descriptors_dsv.allocate();
