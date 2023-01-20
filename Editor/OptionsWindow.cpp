@@ -178,36 +178,43 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 
 
-	filterCombo.Create("Filter: ");
-	filterCombo.AddItem("All " ICON_FILTER, (uint64_t)Filter::All);
-	filterCombo.AddItem("Transform " ICON_TRANSFORM, (uint64_t)Filter::Transform);
-	filterCombo.AddItem("Material " ICON_MATERIAL, (uint64_t)Filter::Material);
-	filterCombo.AddItem("Mesh " ICON_MESH, (uint64_t)Filter::Mesh);
-	filterCombo.AddItem("Object " ICON_OBJECT, (uint64_t)Filter::Object);
-	filterCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, (uint64_t)Filter::EnvironmentProbe);
-	filterCombo.AddItem("Decal " ICON_DECAL, (uint64_t)Filter::Decal);
-	filterCombo.AddItem("Sound " ICON_SOUND, (uint64_t)Filter::Sound);
-	filterCombo.AddItem("Weather " ICON_WEATHER, (uint64_t)Filter::Weather);
-	filterCombo.AddItem("Light " ICON_POINTLIGHT, (uint64_t)Filter::Light);
-	filterCombo.AddItem("Animation " ICON_ANIMATION, (uint64_t)Filter::Animation);
-	filterCombo.AddItem("Force " ICON_FORCE, (uint64_t)Filter::Force);
-	filterCombo.AddItem("Emitter " ICON_EMITTER, (uint64_t)Filter::Emitter);
-	filterCombo.AddItem("Hairparticle " ICON_HAIR, (uint64_t)Filter::Hairparticle);
-	filterCombo.AddItem("Inverse Kinematics " ICON_IK, (uint64_t)Filter::IK);
-	filterCombo.AddItem("Camera " ICON_CAMERA, (uint64_t)Filter::Camera);
-	filterCombo.AddItem("Armature " ICON_ARMATURE, (uint64_t)Filter::Armature);
-	filterCombo.AddItem("Spring " ICON_SPRING, (uint64_t)Filter::Spring);
-	filterCombo.AddItem("Collider " ICON_COLLIDER, (uint64_t)Filter::Collider);
-	filterCombo.AddItem("Script " ICON_SCRIPT, (uint64_t)Filter::Script);
-	filterCombo.AddItem("Expression " ICON_EXPRESSION, (uint64_t)Filter::Expression);
-	filterCombo.AddItem("Humanoid " ICON_HUMANOID, (uint64_t)Filter::Humanoid);
-	filterCombo.AddItem("Terrain " ICON_TERRAIN, (uint64_t)Filter::Terrain);
-	filterCombo.SetTooltip("Apply filtering to the Entities");
+	filterCombo.Create("");
+	filterCombo.AddItem("", (uint64_t)Filter::All);
+	filterCombo.AddItem(ICON_TRANSFORM, (uint64_t)Filter::Transform);
+	filterCombo.AddItem(ICON_MATERIAL, (uint64_t)Filter::Material);
+	filterCombo.AddItem(ICON_MESH, (uint64_t)Filter::Mesh);
+	filterCombo.AddItem(ICON_OBJECT, (uint64_t)Filter::Object);
+	filterCombo.AddItem(ICON_ENVIRONMENTPROBE, (uint64_t)Filter::EnvironmentProbe);
+	filterCombo.AddItem(ICON_DECAL, (uint64_t)Filter::Decal);
+	filterCombo.AddItem(ICON_SOUND, (uint64_t)Filter::Sound);
+	filterCombo.AddItem(ICON_WEATHER, (uint64_t)Filter::Weather);
+	filterCombo.AddItem(ICON_POINTLIGHT, (uint64_t)Filter::Light);
+	filterCombo.AddItem(ICON_ANIMATION, (uint64_t)Filter::Animation);
+	filterCombo.AddItem(ICON_FORCE, (uint64_t)Filter::Force);
+	filterCombo.AddItem(ICON_EMITTER, (uint64_t)Filter::Emitter);
+	filterCombo.AddItem(ICON_HAIR, (uint64_t)Filter::Hairparticle);
+	filterCombo.AddItem(ICON_IK, (uint64_t)Filter::IK);
+	filterCombo.AddItem(ICON_CAMERA, (uint64_t)Filter::Camera);
+	filterCombo.AddItem(ICON_ARMATURE, (uint64_t)Filter::Armature);
+	filterCombo.AddItem(ICON_SPRING, (uint64_t)Filter::Spring);
+	filterCombo.AddItem(ICON_COLLIDER, (uint64_t)Filter::Collider);
+	filterCombo.AddItem(ICON_SCRIPT, (uint64_t)Filter::Script);
+	filterCombo.AddItem(ICON_EXPRESSION, (uint64_t)Filter::Expression);
+	filterCombo.AddItem(ICON_HUMANOID, (uint64_t)Filter::Humanoid);
+	filterCombo.AddItem(ICON_TERRAIN, (uint64_t)Filter::Terrain);
+	filterCombo.SetTooltip("Apply filtering to the Entities by components");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
 		RefreshEntityTree();
 		});
 	AddWidget(&filterCombo);
+
+
+	filterInput.Create("");
+	filterInput.SetTooltip("Apply filtering to the Entities by name");
+	filterInput.SetDescription(ICON_FILTER ": ");
+	filterInput.SetCancelInputEnabled(false);
+	AddWidget(&filterInput);
 
 
 	entityTree.Create("Entities");
@@ -327,10 +334,19 @@ void OptionsWindow::ResizeLayout()
 	pos.y += newCombo.GetSize().y;
 	pos.y += padding;
 
-	filterCombo.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
-	filterCombo.SetSize(XMFLOAT2(width - x_off - filterCombo.GetScale().y - 1, filterCombo.GetScale().y));
+
+
+	float filterComboWidth = 30;
+
+	filterInput.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
+	filterInput.SetSize(XMFLOAT2(width - x_off - filterInput.GetScale().y - 3 - filterComboWidth, filterCombo.GetScale().y));
+
+	filterCombo.SetPos(XMFLOAT2(filterInput.GetPos().x + filterInput.GetSize().x + 2, pos.y));
+	filterCombo.SetSize(XMFLOAT2(filterComboWidth, filterCombo.GetScale().y));
 	pos.y += filterCombo.GetSize().y;
 	pos.y += padding;
+
+
 
 	entityTree.SetPos(pos);
 	entityTree.SetSize(XMFLOAT2(width, std::max(editor->GetLogicalHeight() * 0.75f, editor->GetLogicalHeight() - pos.y)));
@@ -352,6 +368,12 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	item.userdata = entity;
 	item.selected = editor->IsSelected(entity);
 	item.open = entitytree_opened_items.count(entity) != 0;
+
+	const NameComponent* name = scene.names.GetComponent(entity);
+	if (name == nullptr || name->name.find(filterInput.GetCurrentInputValue()) == std::string::npos)
+	{
+		return;
+	}
 
 	// Icons:
 	if (scene.layers.Contains(entity))
@@ -482,7 +504,6 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 		}
 	}
 
-	const NameComponent* name = scene.names.GetComponent(entity);
 	if (name == nullptr)
 	{
 		item.name += "[no_name] " + std::to_string(entity);

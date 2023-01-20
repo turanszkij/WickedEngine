@@ -409,6 +409,7 @@ namespace wi::gui
 	protected:
 		std::function<void(EventArgs args)> onInputAccepted;
 		static wi::SpriteFont font_input;
+		bool cancel_input_enabled = true;
 
 	public:
 		void Create(const std::string& name);
@@ -419,8 +420,13 @@ namespace wi::gui
 		void SetValue(int newValue);
 		void SetValue(float newValue);
 		const std::string GetValue();
+		const std::string GetCurrentInputValue();
 		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
 		const std::string GetDescription() const { return font_description.GetTextA(); }
+
+		// Set whether incomplete input will be removed on lost activation state (default: true)
+		void SetCancelInputEnabled(bool value) { cancel_input_enabled = value; }
+		bool IsCancelInputEnabled() const { return cancel_input_enabled; }
 
 		// There can only be ONE active text input field, so these methods modify the active one
 		static void AddInput(const wchar_t inputChar);

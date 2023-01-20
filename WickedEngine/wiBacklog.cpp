@@ -115,6 +115,7 @@ namespace wi::backlog
 				{
 					created = true;
 					inputField.Create("");
+					inputField.SetCancelInputEnabled(false);
 					inputField.OnInputAccepted([](wi::gui::EventArgs args) {
 						historyPos = 0;
 						post(args.sValue);
