@@ -2290,7 +2290,6 @@ void ClearWorld(Scene& scene)
 
 }
 
-static const uint32_t CASCADE_COUNT = 3;
 // Don't store this structure on heap!
 struct SHCAM
 {
@@ -2334,15 +2333,6 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	const XMVECTOR up = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), lightRotation);
 	const XMMATRIX lightView = XMMatrixLookToLH(XMVectorZero(), to, up); // important to not move (zero out eye vector) the light view matrix itself because texel snapping must be done on projection matrix!
 	const float farPlane = camera.zFarP;
-	const float referenceFarPlane = 800.0f; // cascade splits here were tested with this depth range
-	const float referenceSplitClamp = std::min(1.0f, referenceFarPlane / farPlane); // if far plane is greater than reference, do not increase cascade sizes further
-	const float splits[CASCADE_COUNT + 1] = {
-		referenceSplitClamp * 0.0f,		// near plane
-		referenceSplitClamp * 0.01f,	// near-mid split
-		referenceSplitClamp * 0.1f,		// mid-far split
-		referenceSplitClamp * 1.0f,		// far plane
-	};
-	assert(shcam_count <= CASCADE_COUNT);
 
 	// Unproject main frustum corners into world space (notice the reversed Z projection!):
 	const XMMATRIX unproj = camera.GetInvViewProjection();
@@ -2361,9 +2351,9 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	// Compute shadow cameras:
 	for (int cascade = 0; cascade < shcam_count; ++cascade)
 	{
-		// Compute cascade sub-frustum in light-view-space from the main frustum corners:
-		const float split_near = splits[cascade];
-		const float split_far = splits[cascade + 1];
+		// Compute cascade bounds in light-view-space from the main frustum corners:
+		const float split_near = cascade == 0 ? 0 : light.cascade_distances[cascade - 1] / farPlane;
+		const float split_far = light.cascade_distances[cascade] / farPlane;
 		const XMVECTOR corners[] =
 		{
 			XMVector3Transform(XMVectorLerp(frustum_corners[0], frustum_corners[1], split_near), lightView),
@@ -3150,12 +3140,12 @@ void UpdatePerFrameData(
 				case LightComponent::DIRECTIONAL:
 					if (light.forced_shadow_resolution >= 0)
 					{
-						rect.w = light.forced_shadow_resolution * int(CASCADE_COUNT);
+						rect.w = light.forced_shadow_resolution * int(light.cascade_distances.size());
 						rect.h = light.forced_shadow_resolution;
 					}
 					else
 					{
-						rect.w = int(max_shadow_resolution_2D * iterative_scaling) * int(CASCADE_COUNT);
+						rect.w = int(max_shadow_resolution_2D * iterative_scaling) * int(light.cascade_distances.size());
 						rect.h = int(max_shadow_resolution_2D * iterative_scaling);
 					}
 					break;
@@ -3205,7 +3195,7 @@ void UpdatePerFrameData(
 							switch (light.GetType())
 							{
 							case LightComponent::DIRECTIONAL:
-								light.shadow_rect.w /= int(CASCADE_COUNT);
+								light.shadow_rect.w /= int(light.cascade_distances.size());
 								break;
 							case LightComponent::POINT:
 								light.shadow_rect.w /= 6;
@@ -3466,7 +3456,6 @@ void UpdatePerFrameData(
 	frameCB.buffer_entityarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_ENTITYARRAY], SubresourceType::SRV);
 	frameCB.buffer_entitymatrixarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_MATRIXARRAY], SubresourceType::SRV);
 
-	frameCB.shadow_cascade_count = CASCADE_COUNT;
 	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMapAtlas, SubresourceType::SRV);
 	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapAtlas_Transparent, SubresourceType::SRV);
 	frameCB.shadow_atlas_resolution.x = shadowMapAtlas.desc.width;
@@ -3755,14 +3744,16 @@ void UpdateRenderData(
 			case LightComponent::DIRECTIONAL:
 			{
 				shaderentity.SetDirection(light.direction);
+				shaderentity.SetShadowCascadeCount((uint)light.cascade_distances.size());
 
-				if (shadow)
+				if (shadow && !light.cascade_distances.empty())
 				{
-					SHCAM shcams[CASCADE_COUNT];
-					CreateDirLightShadowCams(light, *vis.camera, shcams, arraysize(shcams));
-					std::memcpy(&matrixArray[matrixCounter++], &shcams[0].view_projection, sizeof(XMMATRIX));
-					std::memcpy(&matrixArray[matrixCounter++], &shcams[1].view_projection, sizeof(XMMATRIX));
-					std::memcpy(&matrixArray[matrixCounter++], &shcams[2].view_projection, sizeof(XMMATRIX));
+					SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * light.cascade_distances.size());
+					CreateDirLightShadowCams(light, *vis.camera, shcams, light.cascade_distances.size());
+					for (size_t cascade = 0; cascade < light.cascade_distances.size(); ++cascade)
+					{
+						std::memcpy(&matrixArray[matrixCounter++], &shcams[cascade].view_projection, sizeof(XMMATRIX));
+					}
 				}
 			}
 			break;
@@ -4981,11 +4972,13 @@ void DrawShadowmaps(
 			{
 				if (max_shadow_resolution_2D == 0 && light.forced_shadow_resolution < 0)
 					break;
+				if (light.cascade_distances.empty())
+					break;
 
-				SHCAM shcams[CASCADE_COUNT];
-				CreateDirLightShadowCams(light, *vis.camera, shcams, arraysize(shcams));
+				SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * light.cascade_distances.size());
+				CreateDirLightShadowCams(light, *vis.camera, shcams, light.cascade_distances.size());
 
-				for (uint32_t cascade = 0; cascade < CASCADE_COUNT; ++cascade)
+				for (size_t cascade = 0; cascade < light.cascade_distances.size(); ++cascade)
 				{
 					renderQueue.init();
 					bool transparentShadowsRequested = false;
@@ -4995,7 +4988,7 @@ void DrawShadowmaps(
 						if ((aabb.layerMask & vis.layerMask) && shcams[cascade].frustum.CheckBoxFast(aabb))
 						{
 							const ObjectComponent& object = vis.scene->objects[i];
-							if (object.IsRenderable() && object.IsCastingShadow() && (cascade < (CASCADE_COUNT - object.cascadeMask)))
+							if (object.IsRenderable() && object.IsCastingShadow() && (cascade < (light.cascade_distances.size() - object.cascadeMask)))
 							{
 								renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
 

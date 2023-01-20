@@ -851,8 +851,9 @@ namespace wi::scene
 		float intensity = 1.0f; // Brightness of light in. The units that this is defined in depend on the type of light. Point and spot lights use luminous intensity in candela (lm/sr) while directional lights use illuminance in lux (lm/m2). https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
 		float range = 10.0f;
 		float outerConeAngle = XM_PIDIV4;
-		float innerConeAngle = 0; // default value is 0, means only outer cone angle is used 
+		float innerConeAngle = 0; // default value is 0, means only outer cone angle is used
 
+		wi::vector<float> cascade_distances = { 8,80,800 };
 		wi::vector<std::string> lensFlareNames;
 
 		int forced_shadow_resolution = -1; // -1: disabled, greater: fixed shadow map resolution
@@ -1521,6 +1522,16 @@ namespace wi::scene
 
 			constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 			constexpr void SetBinary(bool value = true) { if (value) { _flags |= BINARY; } else { _flags &= ~BINARY; } }
+
+			// Set weight of expression (also sets dirty state if value is out of date)
+			inline void SetWeight(float value)
+			{
+				if (std::abs(weight - value) > std::numeric_limits<float>::epsilon())
+				{
+					SetDirty(true);
+				}
+				weight = value;
+			}
 		};
 		wi::vector<Expression> expressions;
 

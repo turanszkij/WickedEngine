@@ -142,7 +142,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 			{
 				// Loop through cascades from closest (smallest) to furthest (largest)
 				[loop]
-				for (uint cascade = 0; cascade < GetFrame().shadow_cascade_count; ++cascade)
+				for (uint cascade = 0; cascade < light.GetShadowCascadeCount(); ++cascade)
 				{
 					// Project into shadow map space (no need to divide by .w because ortho projection!):
 					float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz;
@@ -158,7 +158,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 
 						// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
 						[branch]
-						if (cascade_fade > 0 && cascade < GetFrame().shadow_cascade_count - 1)
+						if (cascade_fade > 0 && cascade < light.GetShadowCascadeCount() - 1)
 						{
 							// Project into next shadow cascade (no need to divide by .w because ortho projection!):
 							cascade += 1;

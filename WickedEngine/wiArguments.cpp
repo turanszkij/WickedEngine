@@ -37,5 +37,4 @@ namespace wi::arguments
 	{
 		return params.find(value) != params.end();
 	}
-
 }

@@ -416,6 +416,17 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
 		editor->componentsWnd.weatherWnd.Update();
 
+		for (auto& x : editor->componentsWnd.lightWnd.cascades)
+		{
+			x.removeButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
+			for (auto& sprite : x.removeButton.sprites)
+			{
+				sprite.params.enableCornerRounding();
+				sprite.params.corners_rounding[0].radius = 10;
+				sprite.params.corners_rounding[2].radius = 10;
+			}
+		}
+
 		if ((Theme)args.userdata == Theme::Bright)
 		{
 			editor->inactiveEntityColor = theme_color_focus;

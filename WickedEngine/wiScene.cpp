@@ -823,13 +823,16 @@ namespace wi::scene
 			entry.second.component_manager->Remove(entity);
 		}
 	}
-	Entity Scene::Entity_FindByName(const std::string& name)
+	Entity Scene::Entity_FindByName(const std::string& name, Entity ancestor)
 	{
 		for (size_t i = 0; i < names.GetCount(); ++i)
 		{
 			if (names[i] == name)
 			{
-				return names.GetEntity(i);
+				Entity entity = names.GetEntity(i);
+				if (ancestor != INVALID_ENTITY && !Entity_IsDescendant(entity, ancestor))
+					continue;
+				return entity;
 			}
 		}
 		return INVALID_ENTITY;
@@ -848,6 +851,17 @@ namespace wi::scene
 		Entity root = Entity_Serialize(archive, seri, INVALID_ENTITY, EntitySerializeFlags::RECURSIVE | EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
 
 		return root;
+	}
+	bool Scene::Entity_IsDescendant(wi::ecs::Entity entity, wi::ecs::Entity ancestor) const
+	{
+		const HierarchyComponent* hier = hierarchy.GetComponent(entity);
+		while (hier != nullptr)
+		{
+			if (hier->parentID == ancestor)
+				return true;
+			hier = hierarchy.GetComponent(hier->parentID);
+		}
+		return false;
 	}
 	Entity Scene::Entity_CreateTransform(
 		const std::string& name
@@ -1340,6 +1354,8 @@ namespace wi::scene
 
 	void Scene::RunAnimationUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		auto range = wi::profiler::BeginRangeCPU("Animations");
+
 		for (size_t i = 0; i < animations.GetCount(); ++i)
 		{
 			AnimationComponent& animation = animations[i];
@@ -2023,6 +2039,8 @@ namespace wi::scene
 				animation.timer += dt * animation.speed;
 			}
 		}
+
+		wi::profiler::EndRange(range);
 	}
 	void Scene::RunTransformUpdateSystem(wi::jobsystem::context& ctx)
 	{
@@ -4226,9 +4244,8 @@ namespace wi::scene
 			{
 				if (script.script.empty() && script.resource.IsValid())
 				{
-					script.script += "local function GetEntity() return " + std::to_string(entity) + "; end\n";
 					script.script += script.resource.GetScript();
-					wi::lua::AttachScriptParameters(script.script, script.filename);
+					wi::lua::AttachScriptParameters(script.script, script.filename, wi::lua::GeneratePID(), "local function GetEntity() return " + std::to_string(entity) + "; end;", "");
 				}
 				wi::lua::RunText(script.script);
 

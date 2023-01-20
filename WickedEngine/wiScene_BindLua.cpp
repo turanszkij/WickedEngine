@@ -465,6 +465,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
 	lunamethod(Scene_BindLua, Entity_Duplicate),
+	lunamethod(Scene_BindLua, Entity_IsDescendant),
 	lunamethod(Scene_BindLua, Component_CreateName),
 	lunamethod(Scene_BindLua, Component_CreateLayer),
 	lunamethod(Scene_BindLua, Component_CreateTransform),
@@ -637,14 +638,20 @@ int Scene_BindLua::Entity_FindByName(lua_State* L)
 	{
 		std::string name = wi::lua::SGetString(L, 1);
 
-		Entity entity = scene->Entity_FindByName(name);
+		Entity ancestor = INVALID_ENTITY;
+		if (argc > 1)
+		{
+			ancestor = (Entity)wi::lua::SGetLongLong(L, 2);
+		}
+
+		Entity entity = scene->Entity_FindByName(name, ancestor);
 
 		wi::lua::SSetLongLong(L, entity);
 		return 1;
 	}
 	else
 	{
-		wi::lua::SError(L, "Scene::Entity_FindByName(string name) not enough arguments!");
+		wi::lua::SError(L, "Scene::Entity_FindByName(string name, opt Entity ancestor) not enough arguments!");
 	}
 	return 0;
 }
@@ -678,6 +685,23 @@ int Scene_BindLua::Entity_Duplicate(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Entity_Duplicate(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Entity_IsDescendant(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		Entity ancestor = (Entity)wi::lua::SGetLongLong(L, 2);
+
+		wi::lua::SSetBool(L, scene->Entity_IsDescendant(entity, ancestor));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Entity_IsDescendant(Entity entity, Entity ancestor) not enough arguments!");
 	}
 	return 0;
 }
@@ -5337,8 +5361,7 @@ int ExpressionComponent_BindLua::SetWeight(lua_State* L)
 		float weight = wi::lua::SGetFloat(L, 2);
 		if (id >= 0 && component->expressions.size() > id)
 		{
-			component->expressions[id].weight = weight;
-			component->expressions[id].SetDirty(true);
+			component->expressions[id].SetWeight(weight);
 		}
 		else
 		{
@@ -5361,8 +5384,7 @@ int ExpressionComponent_BindLua::SetPresetWeight(lua_State* L)
 		int id = component->presets[size_t(preset)];
 		if (id >= 0 && component->expressions.size() > id)
 		{
-			component->expressions[id].weight = weight;
-			component->expressions[id].SetDirty(true);
+			component->expressions[id].SetWeight(weight);
 		}
 		else
 		{

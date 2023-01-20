@@ -821,6 +821,11 @@ namespace wi::scene
 				innerConeAngle *= 0.5f;
 			}
 
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> cascade_distances;
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				lensFlareRimTextures.resize(lensFlareNames.size());
 				for (size_t i = 0; i < lensFlareNames.size(); ++i)
@@ -871,6 +876,11 @@ namespace wi::scene
 			if (archive.GetVersion() >= 82)
 			{
 				archive << innerConeAngle;
+			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << cascade_distances;
 			}
 		}
 	}

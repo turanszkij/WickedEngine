@@ -1280,6 +1280,14 @@ namespace wi::gui
 	{
 		return font.GetTextA();
 	}
+	const std::string TextInputField::GetCurrentInputValue()
+	{
+		if (state == ACTIVE)
+		{
+			return font_input.GetTextA();
+		}
+		return "";
+	}
 	void TextInputField::Update(const wi::Canvas& canvas, float dt)
 	{
 		if (!IsVisible())
@@ -1452,7 +1460,13 @@ namespace wi::gui
 		if (state == ACTIVE)
 		{
 			font_input.params = font.params;
+
+			if (!cancel_input_enabled)
+			{
+				SetValue(font_input.GetTextA());
+			}
 		}
+
 	}
 	void TextInputField::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{

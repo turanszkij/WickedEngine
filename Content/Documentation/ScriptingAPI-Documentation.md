@@ -532,9 +532,10 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - UpdateHierarchy()	-- updates the full scene hierarchy system. Useful if you modified for example a parent transform and children immediately need up to date result in the script
 
 - CreateEntity() : int entity  -- creates an empty entity and returns it
-- Entity_FindByName(string value) : int entity  -- returns an entity ID if it exists, and 0 otherwise
+- Entity_FindByName(string value, opt Entity ancestor = INVALID_ENTITY) : int entity  -- returns an entity ID if it exists, and INVALID_ENTITY otherwise. You can specify an ancestor entity if you only want to find entities that are descendants of ancestor entity
 - Entity_Remove(Entity entity)  -- removes an entity and deletes all its components if it exists
 - Entity_Duplicate(Entity entity) : int entity  -- duplicates all of an entity's components and creates a new entity with them. Returns the clone entity handle
+- Entity_IsDescendant(Entity entity, Entity ancestor) : bool result	-- Check whether entity is a descendant of ancestor. Returns `true` if entity is in the hierarchy tree of ancestor, `false` otherwise
 
 - Component_CreateName(Entity entity) : NameComponent result  -- attach a name component to an entity. The returned NameComponent is associated with the entity and can be manipulated
 - Component_CreateLayer(Entity entity) : LayerComponent result  -- attach a layer component to an entity. The returned LayerComponent is associated with the entity and can be manipulated

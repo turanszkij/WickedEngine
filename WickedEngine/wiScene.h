@@ -35,7 +35,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies = componentLibrary.Register<RigidBodyPhysicsComponent>("wi::scene::Scene::rigidbodies", 1); // version = 1
 		wi::ecs::ComponentManager<SoftBodyPhysicsComponent>& softbodies = componentLibrary.Register<SoftBodyPhysicsComponent>("wi::scene::Scene::softbodies");
 		wi::ecs::ComponentManager<ArmatureComponent>& armatures = componentLibrary.Register<ArmatureComponent>("wi::scene::Scene::armatures");
-		wi::ecs::ComponentManager<LightComponent>& lights = componentLibrary.Register<LightComponent>("wi::scene::Scene::lights");
+		wi::ecs::ComponentManager<LightComponent>& lights = componentLibrary.Register<LightComponent>("wi::scene::Scene::lights", 1); // version = 1
 		wi::ecs::ComponentManager<CameraComponent>& cameras = componentLibrary.Register<CameraComponent>("wi::scene::Scene::cameras");
 		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = componentLibrary.Register<EnvironmentProbeComponent>("wi::scene::Scene::probes");
 		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Register<ForceFieldComponent>("wi::scene::Scene::forces", 1); // version = 1
@@ -261,9 +261,13 @@ namespace wi::scene
 		//	recursive	: also removes children if true
 		void Entity_Remove(wi::ecs::Entity entity, bool recursive = true);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
-		wi::ecs::Entity Entity_FindByName(const std::string& name);
+		//	ancestor : you can specify an ancestor entity if you only want to find entities that are descendants of ancestor entity
+		wi::ecs::Entity Entity_FindByName(const std::string& name, wi::ecs::Entity ancestor = wi::ecs::INVALID_ENTITY);
 		// Duplicates all of an entity's components and creates a new entity with them (recursively keeps hierarchy):
 		wi::ecs::Entity Entity_Duplicate(wi::ecs::Entity entity);
+		// Check whether entity is a descendant of ancestor
+		//	returns true if entity is in the hierarchy tree of ancestor, false otherwise
+		bool Entity_IsDescendant(wi::ecs::Entity entity, wi::ecs::Entity ancestor) const;
 
 		enum class EntitySerializeFlags
 		{
