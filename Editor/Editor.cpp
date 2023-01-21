@@ -1695,11 +1695,6 @@ void EditorComponent::Update(float dt)
 	{
 		wi::renderer::SetToDrawDebugColliders(optionsWnd.generalWnd.colliderVisCheckBox.GetCheck());
 	}
-
-	if (optionsWnd.filterInput.GetState() == wi::gui::WIDGETSTATE::ACTIVE)
-	{
-		optionsWnd.RefreshEntityTree();
-	}
 }
 void EditorComponent::PostUpdate()
 {
