@@ -169,6 +169,8 @@ namespace wi::lua::scene
 
 		int GetWeather(lua_State* L);
 		int SetWeather(lua_State* L);
+
+		int RetargetAnimation(lua_State* L);
 	};
 
 	class NameComponent_BindLua

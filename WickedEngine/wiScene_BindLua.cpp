@@ -583,6 +583,9 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_DetachChildren),
 
 	lunamethod(Scene_BindLua, GetBounds),
+	lunamethod(Scene_BindLua, GetWeather),
+	lunamethod(Scene_BindLua, SetWeather),
+	lunamethod(Scene_BindLua, RetargetAnimation),
 	{ NULL, NULL }
 };
 Luna<Scene_BindLua>::PropertyType Scene_BindLua::properties[] = {
@@ -2535,6 +2538,25 @@ int Scene_BindLua::SetWeather(lua_State* L)
 	return 0;
 }
 
+int Scene_BindLua::RetargetAnimation(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 2)
+	{
+		Entity dst = wi::lua::SGetLongLong(L, 1);
+		Entity src = wi::lua::SGetLongLong(L, 2);
+		bool bake_data = wi::lua::SGetBool(L, 3);
+
+		wi::ecs::Entity entity = scene->RetargetAnimation(dst, src, bake_data);
+		wi::lua::SSetLongLong(L, entity);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "RetargetAnimation(Entity dst, Entity src, bool bake_data) not enough arguments!");
+	}
+	return 0;
+}
 
 
 

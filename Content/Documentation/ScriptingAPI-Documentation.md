@@ -633,6 +633,11 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_DetachChildren(Entity parent)  -- detaches all children from parent, as if calling Component_Detach for all of its children
 
 - GetBounds() : AABB result  -- returns an AABB fully containing objects in the scene. Only valid after scene has been updated.
+- GetWeather() : WeatherComponent
+- SetWeather(WeatherComponent weather)
+
+
+- RetargetAnimation(Entity dst, src, bool bake_data) : Entity entity	-- Retargets an animation from a Humanoid to an other Humanoid such that the new animation will play back on the destination humanoid. dst : destination humanoid that the animation will be fit onto src : the animation to copy, it should already target humanoid bones. bake_data : if true, the retargeted data will be baked into a new animation data. If false, it will reuse the source animation data without creating a new one and retargeting will be applied at runtime on every Update. Returns entity ID of the new animation or INVALID_ENTITY if retargeting was not successful
 
 #### NameComponent
 Holds a string that can more easily identify an entity to humans than an entity ID. 

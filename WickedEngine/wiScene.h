@@ -40,7 +40,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = componentLibrary.Register<EnvironmentProbeComponent>("wi::scene::Scene::probes");
 		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Register<ForceFieldComponent>("wi::scene::Scene::forces", 1); // version = 1
 		wi::ecs::ComponentManager<DecalComponent>& decals = componentLibrary.Register<DecalComponent>("wi::scene::Scene::decals");
-		wi::ecs::ComponentManager<AnimationComponent>& animations = componentLibrary.Register<AnimationComponent>("wi::scene::Scene::animations");
+		wi::ecs::ComponentManager<AnimationComponent>& animations = componentLibrary.Register<AnimationComponent>("wi::scene::Scene::animations", 1); // version = 1
 		wi::ecs::ComponentManager<AnimationDataComponent>& animation_datas = componentLibrary.Register<AnimationDataComponent>("wi::scene::Scene::animation_datas");
 		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = componentLibrary.Register<EmittedParticleSystem>("wi::scene::Scene::emitters");
 		wi::ecs::ComponentManager<HairParticleSystem>& hairs = componentLibrary.Register<HairParticleSystem>("wi::scene::Scene::hairs");
@@ -417,6 +417,17 @@ namespace wi::scene
 		using CapsuleIntersectionResult = SphereIntersectionResult;
 		CapsuleIntersectionResult Intersects(const wi::primitive::Capsule& capsule, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
 
+		// Goes through the hierarchy backwards and computes parent's world space matrix:
+		XMMATRIX ComputeParentMatrixRecursive(wi::ecs::Entity entity) const;
+
+		// Retargets an animation from a Humanoid to an other Humanoid such that the new animation will play back on the destination humanoid
+		//	dst			:	destination humanoid that the animation will be fit onto
+		//	src			:	the animation to copy, it should already target humanoid bones
+		//	bake_data	:	if true, the retargeted data will be baked into a new animation data.
+		//					if false, it will reuse the source animation data without creating a new one and retargeting will be applied at runtime on every Update
+		//
+		//	returns entity ID of the new animation or INVALID_ENTITY if retargeting was not successful
+		wi::ecs::Entity RetargetAnimation(wi::ecs::Entity dst, wi::ecs::Entity src, bool bake_data);
 	};
 
 	// Returns skinned vertex position in armature local space
@@ -443,7 +454,7 @@ namespace wi::scene
 	// Helper function to open a wiscene file and add the contents to the global scene
 	//	fileName		:	file path
 	//	transformMatrix	:	everything will be transformed by this matrix (optional)
-	//	attached		:	everything will be attached to a base entity
+	//	attached		:	if true, everything will be attached to a base entity
 	//
 	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
 	wi::ecs::Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
@@ -452,7 +463,7 @@ namespace wi::scene
 	//	scene			:	the scene that will contain the model
 	//	fileName		:	file path
 	//	transformMatrix	:	everything will be transformed by this matrix (optional)
-	//	attached		:	everything will be attached to a base entity
+	//	attached		:	if true, everything will be attached to a base entity
 	//
 	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
 	wi::ecs::Entity LoadModel(Scene& scene, const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
