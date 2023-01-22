@@ -120,6 +120,7 @@ namespace wi::lua::scene
 		int Entity_GetTransformArray(lua_State* L);
 		int Entity_GetCameraArray(lua_State* L);
 		int Entity_GetAnimationArray(lua_State* L);
+		int Entity_GetAnimationDataArray(lua_State* L);
 		int Entity_GetMaterialArray(lua_State* L);
 		int Entity_GetMeshArray(lua_State* L);
 		int Entity_GetEmitterArray(lua_State* L);
@@ -143,6 +144,7 @@ namespace wi::lua::scene
 		int Component_RemoveTransform(lua_State* L);
 		int Component_RemoveCamera(lua_State* L);
 		int Component_RemoveAnimation(lua_State* L);
+		int Component_RemoveAnimationData(lua_State* L);
 		int Component_RemoveMaterial(lua_State* L);
 		int Component_RemoveMesh(lua_State* L);
 		int Component_RemoveEmitter(lua_State* L);
@@ -169,6 +171,8 @@ namespace wi::lua::scene
 
 		int GetWeather(lua_State* L);
 		int SetWeather(lua_State* L);
+
+		int RetargetAnimation(lua_State* L);
 	};
 
 	class NameComponent_BindLua

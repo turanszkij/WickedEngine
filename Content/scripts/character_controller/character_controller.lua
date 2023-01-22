@@ -39,6 +39,24 @@ local States = {
 	DANCE = "dance"
 }
 
+	
+local animations = {}
+local function LoadAnimations(model_name)
+	local anim_scene = Scene()
+	LoadModel(anim_scene, model_name)
+	animations = {
+		IDLE = anim_scene.Entity_FindByName("idle"),
+		WALK = anim_scene.Entity_FindByName("walk"),
+		JOG = anim_scene.Entity_FindByName("jog"),
+		RUN = anim_scene.Entity_FindByName("run"),
+		JUMP = anim_scene.Entity_FindByName("jump"),
+		SWIM_IDLE = anim_scene.Entity_FindByName("swim_idle"),
+		SWIM = anim_scene.Entity_FindByName("swim"),
+		DANCE = anim_scene.Entity_FindByName("dance")
+	}
+	scene.Merge(anim_scene)
+end
+
 local character_capsules = {}
 
 local function Character(model_name, start_position, face, controllable)
@@ -74,7 +92,9 @@ local function Character(model_name, start_position, face, controllable)
 		scale = Vector(1, 1, 1),
 		rotation = Vector(0,math.pi,0),
 		start_position = Vector(0, 1, 0),
+		position = Vector(),
 		controllable = true,
+		root_bone_offset = 0,
 
 		patrol_waypoints = {},
 		patrol_next = 0,
@@ -91,41 +111,71 @@ local function Character(model_name, start_position, face, controllable)
 			else
 				self.layerMask = Layers.NPC
 			end
-			local character_scene = Scene()
-			self.model = LoadModel(character_scene, model_name)
-			local layer = character_scene.Component_GetLayer(self.model)
+			self.model = LoadModel(model_name)
+			local layer = scene.Component_GetLayer(self.model)
 			layer.SetLayerMask(self.layerMask)
 
 			self.state = States.IDLE
 			self.state_prev = self.state
+
+			for i,entity in ipairs(scene.Entity_GetHumanoidArray()) do
+				if scene.Entity_IsDescendant(entity, self.model) then
+					self.humanoid = entity
+					local humanoid = scene.Component_GetHumanoid(self.humanoid)
+					humanoid.SetLookAtEnabled(false)
+					self.neck = humanoid.GetBoneEntity(HumanoidBone.Neck)
+					self.head = humanoid.GetBoneEntity(HumanoidBone.Head)
+					self.left_hand = humanoid.GetBoneEntity(HumanoidBone.LeftHand)
+					self.right_hand = humanoid.GetBoneEntity(HumanoidBone.RightHand)
+					self.left_foot = humanoid.GetBoneEntity(HumanoidBone.LeftFoot)
+					self.right_foot = humanoid.GetBoneEntity(HumanoidBone.RightFoot)
+
+					-- Create a base capsule collider if it's not yet configured for character:
+					--	It will be used for movement logic and GPU collision effects
+					if scene.Component_GetCollider(entity) == nil then
+						local collider = scene.Component_CreateCollider(entity)
+						collider.SetCPUEnabled(false)
+						collider.SetGPUEnabled(true)
+						collider.Shape = ColliderShape.Capsule
+						collider.Radius = 0.3
+						collider.Offset = Vector(0, collider.Radius, 0)
+						collider.Tail = Vector(0, 1.4, 0)
+						local head_transform = scene.Component_GetTransform(self.head)
+						if head_transform ~= nil then
+							collider.Tail = head_transform.GetPosition()
+						end
+					end
+					self.collider = entity
+
+					break
+				end
+			end
+			for i,entity in ipairs(scene.Entity_GetExpressionArray()) do
+				if scene.Entity_IsDescendant(entity, self.model) then
+					self.expression = entity
+					self.happy = 0
+					break
+				end
+			end
+
+			self.root = scene.Entity_FindByName("Root", self.model)
 			
-			for i,entity in ipairs(character_scene.Entity_GetAnimationArray()) do
-				table.insert(self.all_anims, entity)
+			self.idle_anim = scene.RetargetAnimation(self.humanoid, animations.IDLE, false)
+			self.walk_anim = scene.RetargetAnimation(self.humanoid, animations.WALK, false)
+			self.jog_anim = scene.RetargetAnimation(self.humanoid, animations.JOG, false)
+			self.run_anim = scene.RetargetAnimation(self.humanoid, animations.RUN, false)
+			self.jump_anim = scene.RetargetAnimation(self.humanoid, animations.JUMP, false)
+			self.swim_idle_anim = scene.RetargetAnimation(self.humanoid, animations.SWIM_IDLE, false)
+			self.swim_anim = scene.RetargetAnimation(self.humanoid, animations.SWIM, false)
+			self.dance_anim = scene.RetargetAnimation(self.humanoid, animations.DANCE, false)
+			
+			for i,entity in ipairs(scene.Entity_GetAnimationArray()) do
+				if scene.Entity_IsDescendant(entity, self.model) then
+					table.insert(self.all_anims, entity)
+				end
 			end
 			
-			self.idle_anim = character_scene.Entity_FindByName("idle")
-			self.walk_anim = character_scene.Entity_FindByName("walk")
-			self.jog_anim = character_scene.Entity_FindByName("jog")
-			self.run_anim = character_scene.Entity_FindByName("run")
-			self.jump_anim = character_scene.Entity_FindByName("jump")
-			self.swim_idle_anim = character_scene.Entity_FindByName("swim_idle")
-			self.swim_anim = character_scene.Entity_FindByName("swim")
-			self.dance_anim = character_scene.Entity_FindByName("dance")
-
-			self.collider = character_scene.Entity_GetHumanoidArray()[1]
-			self.expression = character_scene.Entity_GetExpressionArray()[1]
-			self.happy=0
-			self.humanoid = character_scene.Entity_GetHumanoidArray()[1]
-			local humanoid = character_scene.Component_GetHumanoid(self.humanoid)
-			humanoid.SetLookAtEnabled(false)
-			self.neck = humanoid.GetBoneEntity(HumanoidBone.Neck)
-			self.head = humanoid.GetBoneEntity(HumanoidBone.Head)
-			self.left_hand = humanoid.GetBoneEntity(HumanoidBone.LeftHand)
-			self.right_hand = humanoid.GetBoneEntity(HumanoidBone.RightHand)
-			self.left_foot = humanoid.GetBoneEntity(HumanoidBone.LeftFoot)
-			self.right_foot = humanoid.GetBoneEntity(HumanoidBone.RightFoot)
-			
-			local model_transform = character_scene.Component_GetTransform(self.model)
+			local model_transform = scene.Component_GetTransform(self.model)
 			model_transform.ClearTransform()
 			model_transform.Scale(self.scale)
 			model_transform.Rotate(self.rotation)
@@ -133,16 +183,11 @@ local function Character(model_name, start_position, face, controllable)
 			model_transform.UpdateTransform()
 			
 			self.target = CreateEntity()
-			local target_transform = character_scene.Component_CreateTransform(self.target)
-			target_transform.Translate(character_scene.Component_GetTransform(self.neck).GetPosition())
+			local target_transform = scene.Component_CreateTransform(self.target)
+			target_transform.Translate(scene.Component_GetTransform(self.neck).GetPosition())
 			target_transform.Translate(self.start_position)
-			
-			character_scene.Component_Attach(self.target, self.model)
+			scene.Component_Attach(self.target, self.model)
 
-			self.root = character_scene.Entity_FindByName("Root")
-			self.root_bone_offset = 0
-
-			scene.Merge(character_scene)
 		end,
 		
 		Jump = function(self,f)
@@ -515,14 +560,13 @@ local function Character(model_name, start_position, face, controllable)
 			end
 
 			character_capsules[self.model] = capsule
+			self.position = model_transform.GetPosition()
 			
 		end,
 
 		Update_IK = function(self)
 			-- IK foot placement:
-			local root_bone_transform = scene.Component_GetTransform(self.root)
-			root_bone_transform.ClearTransform()
-			self.root_bone_offset = math.lerp(self.root_bone_offset, 0, 0.1)
+			local base_y = self.position.GetY()
 			local ik_foot = INVALID_ENTITY
 			local ik_pos = Vector()
 			-- Compute root bone offset:
@@ -540,10 +584,12 @@ local function Character(model_name, start_position, face, controllable)
 				local diff_left = 0
 				local diff_right = 0
 				if collEntity_left ~= INVALID_ENTITY then
-					diff_left = vector.Subtract(collPos_left, pos_left).GetY()
+					--DrawAxis(collPos_left, 0.2)
+					diff_left = collPos_left.GetY() - base_y
 				end
 				if collEntity_right ~= INVALID_ENTITY then
-					diff_right = vector.Subtract(collPos_right, pos_right).GetY()
+					--DrawAxis(collPos_right, 0.2)
+					diff_right = collPos_right.GetY() - base_y
 				end
 				local diff = diff_left
 				if collPos_left.GetY() > collPos_right.GetY() + 0.01 then
@@ -558,9 +604,18 @@ local function Character(model_name, start_position, face, controllable)
 						ik_pos = collPos_right
 					end
 				end
-				self.root_bone_offset = math.lerp(self.root_bone_offset, diff + 0.1, 0.2)
+				self.root_bone_offset = math.lerp(self.root_bone_offset, diff, 0.1)
+			else
+				self.root_bone_offset = math.lerp(self.root_bone_offset, 0, 0.1)
 			end
+
+			-- Offset root transform to lower foot pos:
+			local root_bone_transform = scene.Component_GetTransform(self.root)
+			root_bone_transform.ClearTransform()
+			local root_pos = root_bone_transform.GetPosition()
 			root_bone_transform.Translate(Vector(0, self.root_bone_offset))
+			--DrawDebugText(self.root_bone_offset, self.position, Vector(1,1,1,1), 0.1, DEBUG_TEXT_CAMERA_FACING)
+			--DrawPoint(vector.Add(root_pos, Vector(0, self.root_bone_offset)), 0.1, Vector(1,0,0,1))
 
 			-- Remove IK effectors by default:
 			if scene.Component_GetInverseKinematics(self.left_foot) ~= nil then
@@ -758,12 +813,13 @@ local function ThirdPersonCamera(character)
 	return self
 end
 
-	
 ClearWorld()
 LoadModel(script_dir() .. "assets/level.wiscene")
 --LoadModel(script_dir() .. "assets/terrain.wiscene")
 --LoadModel(script_dir() .. "assets/waypoints.wiscene", matrix.Translation(Vector(1,0,2)))
 --dofile(script_dir() .. "../dungeon_generator/dungeon_generator.lua")
+
+LoadAnimations(script_dir() .. "assets/animations.wiscene")
 
 local player = Character(script_dir() .. "assets/character.wiscene", Vector(0,0.5,0), Vector(0,0,1), true)
 local npcs = {

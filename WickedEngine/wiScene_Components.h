@@ -1102,10 +1102,11 @@ namespace wi::scene
 			{
 				EMPTY = 0,
 			};
-			uint32_t _flags = LOOPED;
+			uint32_t _flags = EMPTY;
 
 			wi::ecs::Entity target = wi::ecs::INVALID_ENTITY;
 			int samplerIndex = -1;
+			int retargetIndex = -1;
 
 			enum class Path
 			{
@@ -1193,8 +1194,16 @@ namespace wi::scene
 			// The data is now not part of the sampler, so it can be shared. This is kept only for backwards compatibility with previous versions.
 			AnimationDataComponent backwards_compatibility_data;
 		};
+		struct RetargetSourceData
+		{
+			wi::ecs::Entity source = wi::ecs::INVALID_ENTITY;
+			XMFLOAT4X4 dstRelativeMatrix = wi::math::IDENTITY_MATRIX;
+			XMFLOAT4X4 srcRelativeParentMatrix = wi::math::IDENTITY_MATRIX;
+		};
+
 		wi::vector<AnimationChannel> channels;
 		wi::vector<AnimationSampler> samplers;
+		wi::vector<RetargetSourceData> retargets;
 
 		// Non-serialzied attributes:
 		wi::vector<float> morph_weights_temp;

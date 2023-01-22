@@ -1642,7 +1642,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 
 			animationcomponent.samplers[i].data = CreateEntity();
-			scene.Component_Attach(animationcomponent.samplers[i].data, state.rootEntity);
+			scene.Component_Attach(animationcomponent.samplers[i].data, entity);
 			AnimationDataComponent& animationdata = scene.animation_datas.Create(animationcomponent.samplers[i].data);
 
 			// AnimationSampler input = keyframe times
