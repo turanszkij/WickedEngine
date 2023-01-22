@@ -537,6 +537,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetTransformArray),
 	lunamethod(Scene_BindLua, Entity_GetCameraArray),
 	lunamethod(Scene_BindLua, Entity_GetAnimationArray),
+	lunamethod(Scene_BindLua, Entity_GetAnimationDataArray),
 	lunamethod(Scene_BindLua, Entity_GetMaterialArray),
 	lunamethod(Scene_BindLua, Entity_GetMeshArray),
 	lunamethod(Scene_BindLua, Entity_GetEmitterArray),
@@ -560,6 +561,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_RemoveTransform),
 	lunamethod(Scene_BindLua, Component_RemoveCamera),
 	lunamethod(Scene_BindLua, Component_RemoveAnimation),
+	lunamethod(Scene_BindLua, Component_RemoveAnimationData),
 	lunamethod(Scene_BindLua, Component_RemoveMaterial),
 	lunamethod(Scene_BindLua, Component_RemoveMesh),
 	lunamethod(Scene_BindLua, Component_RemoveEmitter),
@@ -1890,6 +1892,17 @@ int Scene_BindLua::Entity_GetAnimationArray(lua_State* L)
 	}
 	return 1;
 }
+int Scene_BindLua::Entity_GetAnimationDataArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->animation_datas.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->animation_datas.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->animation_datas.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
 int Scene_BindLua::Entity_GetMaterialArray(lua_State* L)
 {
 	lua_createtable(L, (int)scene->materials.GetCount(), 0);
@@ -2160,6 +2173,23 @@ int Scene_BindLua::Component_RemoveAnimation(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Component_RemoveAnimation(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_RemoveAnimationData(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		if (scene->animation_datas.Contains(entity))
+		{
+			scene->animation_datas.Remove(entity);
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_RemoveAnimationData(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -2543,11 +2573,11 @@ int Scene_BindLua::RetargetAnimation(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 2)
 	{
-		Entity dst = wi::lua::SGetLongLong(L, 1);
-		Entity src = wi::lua::SGetLongLong(L, 2);
+		Entity dst = (Entity)wi::lua::SGetLongLong(L, 1);
+		Entity src = (Entity)wi::lua::SGetLongLong(L, 2);
 		bool bake_data = wi::lua::SGetBool(L, 3);
 
-		wi::ecs::Entity entity = scene->RetargetAnimation(dst, src, bake_data);
+		Entity entity = scene->RetargetAnimation(dst, src, bake_data);
 		wi::lua::SSetLongLong(L, entity);
 		return 1;
 	}

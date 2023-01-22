@@ -5491,6 +5491,7 @@ namespace wi::scene
 								Entity retarget_data_entity = CreateEntity();
 								auto& retarget_animation_data = retarget_scene.animation_datas.Create(retarget_data_entity);
 								retarget_sampler.data = retarget_data_entity;
+								retarget_scene.Component_Attach(retarget_data_entity, retarget_entity);
 
 								auto& animation_data = animation_datas.Contains(sampler.data) ? *animation_datas.GetComponent(sampler.data) : sampler.backwards_compatibility_data;
 								retarget_animation_data = animation_data;

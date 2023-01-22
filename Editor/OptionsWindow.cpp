@@ -475,6 +475,10 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_ANIMATION " ";
 	}
+	if (scene.animation_datas.Contains(entity))
+	{
+		item.name += "[animation_data] ";
+	}
 	if (scene.armatures.Contains(entity))
 	{
 		item.name += ICON_ARMATURE " ";
@@ -696,6 +700,10 @@ void OptionsWindow::RefreshEntityTree()
 		for (size_t i = 0; i < scene.animations.GetCount(); ++i)
 		{
 			PushToEntityTree(scene.animations.GetEntity(i), 0);
+		}
+		for (size_t i = 0; i < scene.animation_datas.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.animation_datas.GetEntity(i), 0);
 		}
 	}
 
