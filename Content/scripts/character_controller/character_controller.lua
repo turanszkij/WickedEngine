@@ -92,7 +92,9 @@ local function Character(model_name, start_position, face, controllable)
 		scale = Vector(1, 1, 1),
 		rotation = Vector(0,math.pi,0),
 		start_position = Vector(0, 1, 0),
+		position = Vector(),
 		controllable = true,
+		root_bone_offset = 0,
 
 		patrol_waypoints = {},
 		patrol_next = 0,
@@ -156,8 +158,7 @@ local function Character(model_name, start_position, face, controllable)
 				end
 			end
 
-			self.root = scene.Entity_FindByName("Root")
-			self.root_bone_offset = 0
+			self.root = scene.Entity_FindByName("Root", self.model)
 			
 			self.idle_anim = scene.RetargetAnimation(self.humanoid, animations.IDLE, false)
 			self.walk_anim = scene.RetargetAnimation(self.humanoid, animations.WALK, false)
@@ -559,14 +560,13 @@ local function Character(model_name, start_position, face, controllable)
 			end
 
 			character_capsules[self.model] = capsule
+			self.position = model_transform.GetPosition()
 			
 		end,
 
 		Update_IK = function(self)
 			-- IK foot placement:
-			local root_bone_transform = scene.Component_GetTransform(self.root)
-			root_bone_transform.ClearTransform()
-			self.root_bone_offset = math.lerp(self.root_bone_offset, 0, 0.1)
+			local base_y = self.position.GetY()
 			local ik_foot = INVALID_ENTITY
 			local ik_pos = Vector()
 			-- Compute root bone offset:
@@ -584,10 +584,12 @@ local function Character(model_name, start_position, face, controllable)
 				local diff_left = 0
 				local diff_right = 0
 				if collEntity_left ~= INVALID_ENTITY then
-					diff_left = vector.Subtract(collPos_left, pos_left).GetY()
+					--DrawAxis(collPos_left, 0.2)
+					diff_left = collPos_left.GetY() - base_y
 				end
 				if collEntity_right ~= INVALID_ENTITY then
-					diff_right = vector.Subtract(collPos_right, pos_right).GetY()
+					--DrawAxis(collPos_right, 0.2)
+					diff_right = collPos_right.GetY() - base_y
 				end
 				local diff = diff_left
 				if collPos_left.GetY() > collPos_right.GetY() + 0.01 then
@@ -602,9 +604,18 @@ local function Character(model_name, start_position, face, controllable)
 						ik_pos = collPos_right
 					end
 				end
-				self.root_bone_offset = math.lerp(self.root_bone_offset, diff + 0.1, 0.2)
+				self.root_bone_offset = math.lerp(self.root_bone_offset, diff, 0.1)
+			else
+				self.root_bone_offset = math.lerp(self.root_bone_offset, 0, 0.1)
 			end
+
+			-- Offset root transform to lower foot pos:
+			local root_bone_transform = scene.Component_GetTransform(self.root)
+			root_bone_transform.ClearTransform()
+			local root_pos = root_bone_transform.GetPosition()
 			root_bone_transform.Translate(Vector(0, self.root_bone_offset))
+			--DrawDebugText(self.root_bone_offset, self.position, Vector(1,1,1,1), 0.1, DEBUG_TEXT_CAMERA_FACING)
+			--DrawPoint(vector.Add(root_pos, Vector(0, self.root_bone_offset)), 0.1, Vector(1,0,0,1))
 
 			-- Remove IK effectors by default:
 			if scene.Component_GetInverseKinematics(self.left_foot) ~= nil then
