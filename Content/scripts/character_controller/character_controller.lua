@@ -119,7 +119,6 @@ local function Character(model_name, start_position, face, controllable)
 			for i,entity in ipairs(scene.Entity_GetHumanoidArray()) do
 				if scene.Entity_IsDescendant(entity, self.model) then
 					self.humanoid = entity
-					self.collider = entity
 					local humanoid = scene.Component_GetHumanoid(self.humanoid)
 					humanoid.SetLookAtEnabled(false)
 					self.neck = humanoid.GetBoneEntity(HumanoidBone.Neck)
@@ -128,6 +127,24 @@ local function Character(model_name, start_position, face, controllable)
 					self.right_hand = humanoid.GetBoneEntity(HumanoidBone.RightHand)
 					self.left_foot = humanoid.GetBoneEntity(HumanoidBone.LeftFoot)
 					self.right_foot = humanoid.GetBoneEntity(HumanoidBone.RightFoot)
+
+					-- Create a base capsule collider if it's not yet configured for character:
+					--	It will be used for movement logic and GPU collision effects
+					if scene.Component_GetCollider(entity) == nil then
+						local collider = scene.Component_CreateCollider(entity)
+						collider.SetCPUEnabled(false)
+						collider.SetGPUEnabled(true)
+						collider.Shape = ColliderShape.Capsule
+						collider.Radius = 0.3
+						collider.Offset = Vector(0, collider.Radius, 0)
+						collider.Tail = Vector(0, 1.4, 0)
+						local head_transform = scene.Component_GetTransform(self.head)
+						if head_transform ~= nil then
+							collider.Tail = head_transform.GetPosition()
+						end
+					end
+					self.collider = entity
+
 					break
 				end
 			end

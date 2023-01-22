@@ -401,6 +401,20 @@ HumanoidBone = {
 	RightLittleIntermediate = 53,
 	RightLittleDistal = 54,
 }
+
+ColliderShape = {
+	Sphere = 0,
+	Capsule = 1,
+	Plane = 2,
+}
+
+RigidBodyShape = {
+	Box = 0,
+	Sphere = 1,
+	Capsule = 2,
+	ConvexHull = 3,
+	TriangleMesh = 4,
+}
 )";
 
 void Bind()

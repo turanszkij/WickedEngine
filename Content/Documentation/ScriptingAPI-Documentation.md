@@ -959,7 +959,7 @@ Describes a Rigid Body Physics object.
 - BoxParams_HalfExtents : Vector
 - SphereParams_Radius : floatd
 - CapsuleParams_Radius : float
-- CapsuleParams_Reight : float
+- CapsuleParams_Height : float
 - TargetMeshLOD : int
 
 </br>
@@ -1029,6 +1029,12 @@ Describes a Collider object.
 - SetGPUEnabled(bool value)
 - GetCapsule() : Capsule
 - GetSphere() : Sphere
+
+[outer] ColliderShape = {
+	Sphere = 0,
+	Capsule = 1,
+	Plane = 2,
+}
 
 #### ExpressionComponent
 - FindExpressionID(string name) : int	-- Find an expression within the ExpressionComponent by name
