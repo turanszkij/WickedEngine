@@ -96,13 +96,14 @@ namespace wi::gui
 		// Reduced version of wi::image::Params, excluding position, alignment, etc.
 		struct Image
 		{
-			XMFLOAT4 color = wi::image::Params().color;
-			wi::enums::BLENDMODE blendFlag = wi::image::Params().blendFlag;
-			wi::image::SAMPLEMODE sampleFlag = wi::image::Params().sampleFlag;
-			wi::image::QUALITY quality = wi::image::Params().quality;
-			bool background = wi::image::Params().isBackgroundEnabled();
-			bool corner_rounding = wi::image::Params().isCornerRoundingEnabled();
-			wi::image::Params::Rounding corners_rounding[arraysize(wi::image::Params().corners_rounding)];
+			inline static const wi::image::Params params; // prototype for default values
+			XMFLOAT4 color = params.color;
+			wi::enums::BLENDMODE blendFlag = params.blendFlag;
+			wi::image::SAMPLEMODE sampleFlag = params.sampleFlag;
+			wi::image::QUALITY quality = params.quality;
+			bool background = params.isBackgroundEnabled();
+			bool corner_rounding = params.isCornerRoundingEnabled();
+			wi::image::Params::Rounding corners_rounding[arraysize(params.corners_rounding)];
 
 			void Apply(wi::image::Params& params) const
 			{
@@ -157,15 +158,16 @@ namespace wi::gui
 		// Reduced version of wi::font::Params, excluding position, alignment, etc.
 		struct Font
 		{
-			wi::Color color = wi::font::Params().color;
-			wi::Color shadow_color = wi::font::Params().shadowColor;
-			int style = wi::font::Params().style;
-			float softness = wi::font::Params().softness;
-			float bolden = wi::font::Params().bolden;
-			float shadow_softness = wi::font::Params().shadow_softness;
-			float shadow_bolden = wi::font::Params().shadow_bolden;
-			float shadow_offset_x = wi::font::Params().shadow_offset_x;
-			float shadow_offset_y = wi::font::Params().shadow_offset_y;
+			inline static const wi::font::Params params; // prototype for default values
+			wi::Color color = params.color;
+			wi::Color shadow_color = params.shadowColor;
+			int style = params.style;
+			float softness = params.softness;
+			float bolden = params.bolden;
+			float shadow_softness = params.shadow_softness;
+			float shadow_bolden = params.shadow_bolden;
+			float shadow_offset_x = params.shadow_offset_x;
+			float shadow_offset_y = params.shadow_offset_y;
 
 			void Apply(wi::font::Params& params) const
 			{
@@ -408,6 +410,7 @@ namespace wi::gui
 	{
 	protected:
 		std::function<void(EventArgs args)> onInputAccepted;
+		std::function<void(EventArgs args)> onInput;
 		static wi::SpriteFont font_input;
 		bool cancel_input_enabled = true;
 
@@ -439,7 +442,10 @@ namespace wi::gui
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
 
+		// Called when input was accepted with ENTER key:
 		void OnInputAccepted(std::function<void(EventArgs args)> func);
+		// Called when input was updated with new character:
+		void OnInput(std::function<void(EventArgs args)> func);
 	};
 
 	// Define an interval and slide the control along it
@@ -482,6 +488,7 @@ namespace wi::gui
 		std::function<void(EventArgs args)> onClick;
 		bool checked = false;
 		std::wstring check_text;
+		std::wstring uncheck_text;
 	public:
 		void Create(const std::string& name);
 
@@ -495,6 +502,7 @@ namespace wi::gui
 
 		static void SetCheckTextGlobal(const std::string& text);
 		void SetCheckText(const std::string& text);
+		void SetUnCheckText(const std::string& text);
 	};
 
 	// Drop-down list

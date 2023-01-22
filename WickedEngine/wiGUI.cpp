@@ -1247,6 +1247,7 @@ namespace wi::gui
 	int caret_pos = 0;
 	int caret_begin = 0;
 	int caret_delay = 0;
+	bool input_updated = false;
 	wi::Timer caret_timer;
 	void TextInputField::Create(const std::string& name)
 	{
@@ -1286,7 +1287,7 @@ namespace wi::gui
 		{
 			return font_input.GetTextA();
 		}
-		return "";
+		return GetValue();
 	}
 	void TextInputField::Update(const wi::Canvas& canvas, float dt)
 	{
@@ -1465,6 +1466,14 @@ namespace wi::gui
 			{
 				SetValue(font_input.GetTextA());
 			}
+
+			if (input_updated && onInput)
+			{
+				wi::gui::EventArgs args;
+				args.sValue = GetCurrentInputValue();
+				onInput(args);
+			}
+			input_updated = false;
 		}
 
 	}
@@ -1558,8 +1567,13 @@ namespace wi::gui
 	{
 		onInputAccepted = func;
 	}
+	void TextInputField::OnInput(std::function<void(EventArgs args)> func)
+	{
+		onInput = func;
+	}
 	void TextInputField::AddInput(const wchar_t inputChar)
 	{
+		input_updated = true;
 		switch (inputChar)
 		{
 		case '\b':	// BACKSPACE
@@ -1591,6 +1605,7 @@ namespace wi::gui
 	}
 	void TextInputField::DeleteFromInput(int direction)
 	{
+		input_updated = true;
 		std::wstring value_new = font_input.GetText();
 		if (caret_begin != caret_pos)
 		{
@@ -2064,6 +2079,18 @@ namespace wi::gui
 				wi::image::Draw(wi::texturehelper::getWhite(), params, cmd);
 			}
 		}
+		else if (!uncheck_text.empty())
+		{
+			wi::font::Params params;
+			params.posX = translation.x + scale.x * 0.5f;
+			params.posY = translation.y + scale.y * 0.5f;
+			params.h_align = wi::font::WIFALIGN_CENTER;
+			params.v_align = wi::font::WIFALIGN_CENTER;
+			params.size = int(scale.y);
+			params.scaling = 0.75f;
+			params.color = font.params.color;
+			wi::font::Draw(uncheck_text, params, cmd);
+		}
 
 	}
 	void CheckBox::OnClick(std::function<void(EventArgs args)> func)
@@ -2086,6 +2113,10 @@ namespace wi::gui
 	void CheckBox::SetCheckText(const std::string& text)
 	{
 		wi::helper::StringConvert(text, check_text);
+	}
+	void CheckBox::SetUnCheckText(const std::string& text)
+	{
+		wi::helper::StringConvert(text, uncheck_text);
 	}
 
 
