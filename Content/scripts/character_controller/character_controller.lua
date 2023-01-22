@@ -39,6 +39,24 @@ local States = {
 	DANCE = "dance"
 }
 
+	
+local animations = {}
+local function LoadAnimations(model_name)
+	local anim_scene = Scene()
+	LoadModel(anim_scene, model_name)
+	animations = {
+		IDLE = anim_scene.Entity_FindByName("idle"),
+		WALK = anim_scene.Entity_FindByName("walk"),
+		JOG = anim_scene.Entity_FindByName("jog"),
+		RUN = anim_scene.Entity_FindByName("run"),
+		JUMP = anim_scene.Entity_FindByName("jump"),
+		SWIM_IDLE = anim_scene.Entity_FindByName("swim_idle"),
+		SWIM = anim_scene.Entity_FindByName("swim"),
+		DANCE = anim_scene.Entity_FindByName("dance")
+	}
+	scene.Merge(anim_scene)
+end
+
 local character_capsules = {}
 
 local function Character(model_name, start_position, face, controllable)
@@ -91,41 +109,55 @@ local function Character(model_name, start_position, face, controllable)
 			else
 				self.layerMask = Layers.NPC
 			end
-			local character_scene = Scene()
-			self.model = LoadModel(character_scene, model_name)
-			local layer = character_scene.Component_GetLayer(self.model)
+			self.model = LoadModel(model_name)
+			local layer = scene.Component_GetLayer(self.model)
 			layer.SetLayerMask(self.layerMask)
 
 			self.state = States.IDLE
 			self.state_prev = self.state
+
+			for i,entity in ipairs(scene.Entity_GetHumanoidArray()) do
+				if scene.Entity_IsDescendant(entity, self.model) then
+					self.humanoid = entity
+					self.collider = entity
+					local humanoid = scene.Component_GetHumanoid(self.humanoid)
+					humanoid.SetLookAtEnabled(false)
+					self.neck = humanoid.GetBoneEntity(HumanoidBone.Neck)
+					self.head = humanoid.GetBoneEntity(HumanoidBone.Head)
+					self.left_hand = humanoid.GetBoneEntity(HumanoidBone.LeftHand)
+					self.right_hand = humanoid.GetBoneEntity(HumanoidBone.RightHand)
+					self.left_foot = humanoid.GetBoneEntity(HumanoidBone.LeftFoot)
+					self.right_foot = humanoid.GetBoneEntity(HumanoidBone.RightFoot)
+					break
+				end
+			end
+			for i,entity in ipairs(scene.Entity_GetExpressionArray()) do
+				if scene.Entity_IsDescendant(entity, self.model) then
+					self.expression = entity
+					self.happy = 0
+					break
+				end
+			end
+
+			self.root = scene.Entity_FindByName("Root")
+			self.root_bone_offset = 0
 			
-			for i,entity in ipairs(character_scene.Entity_GetAnimationArray()) do
-				table.insert(self.all_anims, entity)
+			self.idle_anim = scene.RetargetAnimation(self.humanoid, animations.IDLE, false)
+			self.walk_anim = scene.RetargetAnimation(self.humanoid, animations.WALK, false)
+			self.jog_anim = scene.RetargetAnimation(self.humanoid, animations.JOG, false)
+			self.run_anim = scene.RetargetAnimation(self.humanoid, animations.RUN, false)
+			self.jump_anim = scene.RetargetAnimation(self.humanoid, animations.JUMP, false)
+			self.swim_idle_anim = scene.RetargetAnimation(self.humanoid, animations.SWIM_IDLE, false)
+			self.swim_anim = scene.RetargetAnimation(self.humanoid, animations.SWIM, false)
+			self.dance_anim = scene.RetargetAnimation(self.humanoid, animations.DANCE, false)
+			
+			for i,entity in ipairs(scene.Entity_GetAnimationArray()) do
+				if scene.Entity_IsDescendant(entity, self.model) then
+					table.insert(self.all_anims, entity)
+				end
 			end
 			
-			self.idle_anim = character_scene.Entity_FindByName("idle")
-			self.walk_anim = character_scene.Entity_FindByName("walk")
-			self.jog_anim = character_scene.Entity_FindByName("jog")
-			self.run_anim = character_scene.Entity_FindByName("run")
-			self.jump_anim = character_scene.Entity_FindByName("jump")
-			self.swim_idle_anim = character_scene.Entity_FindByName("swim_idle")
-			self.swim_anim = character_scene.Entity_FindByName("swim")
-			self.dance_anim = character_scene.Entity_FindByName("dance")
-
-			self.collider = character_scene.Entity_GetHumanoidArray()[1]
-			self.expression = character_scene.Entity_GetExpressionArray()[1]
-			self.happy=0
-			self.humanoid = character_scene.Entity_GetHumanoidArray()[1]
-			local humanoid = character_scene.Component_GetHumanoid(self.humanoid)
-			humanoid.SetLookAtEnabled(false)
-			self.neck = humanoid.GetBoneEntity(HumanoidBone.Neck)
-			self.head = humanoid.GetBoneEntity(HumanoidBone.Head)
-			self.left_hand = humanoid.GetBoneEntity(HumanoidBone.LeftHand)
-			self.right_hand = humanoid.GetBoneEntity(HumanoidBone.RightHand)
-			self.left_foot = humanoid.GetBoneEntity(HumanoidBone.LeftFoot)
-			self.right_foot = humanoid.GetBoneEntity(HumanoidBone.RightFoot)
-			
-			local model_transform = character_scene.Component_GetTransform(self.model)
+			local model_transform = scene.Component_GetTransform(self.model)
 			model_transform.ClearTransform()
 			model_transform.Scale(self.scale)
 			model_transform.Rotate(self.rotation)
@@ -133,16 +165,11 @@ local function Character(model_name, start_position, face, controllable)
 			model_transform.UpdateTransform()
 			
 			self.target = CreateEntity()
-			local target_transform = character_scene.Component_CreateTransform(self.target)
-			target_transform.Translate(character_scene.Component_GetTransform(self.neck).GetPosition())
+			local target_transform = scene.Component_CreateTransform(self.target)
+			target_transform.Translate(scene.Component_GetTransform(self.neck).GetPosition())
 			target_transform.Translate(self.start_position)
-			
-			character_scene.Component_Attach(self.target, self.model)
+			scene.Component_Attach(self.target, self.model)
 
-			self.root = character_scene.Entity_FindByName("Root")
-			self.root_bone_offset = 0
-
-			scene.Merge(character_scene)
 		end,
 		
 		Jump = function(self,f)
@@ -758,12 +785,13 @@ local function ThirdPersonCamera(character)
 	return self
 end
 
-	
 ClearWorld()
 LoadModel(script_dir() .. "assets/level.wiscene")
 --LoadModel(script_dir() .. "assets/terrain.wiscene")
 --LoadModel(script_dir() .. "assets/waypoints.wiscene", matrix.Translation(Vector(1,0,2)))
 --dofile(script_dir() .. "../dungeon_generator/dungeon_generator.lua")
+
+LoadAnimations(script_dir() .. "assets/animations.wiscene")
 
 local player = Character(script_dir() .. "assets/character.wiscene", Vector(0,0.5,0), Vector(0,0,1), true)
 local npcs = {
