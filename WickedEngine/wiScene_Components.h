@@ -1225,6 +1225,8 @@ namespace wi::scene
 			HEIGHT_FOG = 1 << 4,
 			VOLUMETRIC_CLOUDS_SHADOWS = 1 << 5,
 			OVERRIDE_FOG_COLOR = 1 << 6,
+			REALISTIC_SKY_AERIAL_PERSPECTIVE = 1 << 7,
+			REALISTIC_SKY_HIGH_QUALITY = 1 << 8,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -1234,6 +1236,8 @@ namespace wi::scene
 		inline bool IsHeightFog() const { return _flags & HEIGHT_FOG; }
 		inline bool IsVolumetricCloudsShadows() const { return _flags & VOLUMETRIC_CLOUDS_SHADOWS; }
 		inline bool IsOverrideFogColor() const { return _flags & OVERRIDE_FOG_COLOR; }
+		inline bool IsRealisticSkyAerialPerspective() const { return _flags & REALISTIC_SKY_AERIAL_PERSPECTIVE; }
+		inline bool IsRealisticSkyHighQuality() const { return _flags & REALISTIC_SKY_HIGH_QUALITY; }
 
 		inline void SetOceanEnabled(bool value = true) { if (value) { _flags |= OCEAN_ENABLED; } else { _flags &= ~OCEAN_ENABLED; } }
 		inline void SetRealisticSky(bool value = true) { if (value) { _flags |= REALISTIC_SKY; } else { _flags &= ~REALISTIC_SKY; } }
@@ -1241,6 +1245,8 @@ namespace wi::scene
 		inline void SetHeightFog(bool value = true) { if (value) { _flags |= HEIGHT_FOG; } else { _flags &= ~HEIGHT_FOG; } }
 		inline void SetVolumetricCloudsShadows(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS_SHADOWS; } else { _flags &= ~VOLUMETRIC_CLOUDS_SHADOWS; } }
 		inline void SetOverrideFogColor(bool value = true) { if (value) { _flags |= OVERRIDE_FOG_COLOR; } else { _flags &= ~OVERRIDE_FOG_COLOR; } }
+		inline void SetRealisticSkyAerialPerspective(bool value = true) { if (value) { _flags |= REALISTIC_SKY_AERIAL_PERSPECTIVE; } else { _flags &= ~REALISTIC_SKY_AERIAL_PERSPECTIVE; } }
+		inline void SetRealisticSkyHighQuality(bool value = true) { if (value) { _flags |= REALISTIC_SKY_HIGH_QUALITY; } else { _flags &= ~REALISTIC_SKY_HIGH_QUALITY; } }
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);

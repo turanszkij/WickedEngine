@@ -1,6 +1,7 @@
 #ifndef WI_LIGHTING_HF
 #define WI_LIGHTING_HF
 #include "globals.hlsli"
+#include "shadowHF.hlsli"
 #include "brdf.hlsli"
 #include "voxelConeTracingHF.hlsli"
 #include "skyHF.hlsli"
@@ -40,79 +41,6 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout float4
 	color.rgb = lerp(surface.albedo * diffuse, surface.refraction.rgb, surface.refraction.a);
 	color.rgb += specular;
 	color.rgb += surface.emissiveColor;
-}
-
-inline float3 sample_shadow(float2 uv, float cmp)
-{
-	[branch]
-	if (GetFrame().texture_shadowatlas_index < 0)
-		return 0;
-
-	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
-	float3 shadow = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp).r;
-
-#ifndef DISABLE_SOFT_SHADOWMAP
-	// sample along a rectangle pattern around center:
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, -1)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 0)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 1)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, -1)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, 1)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, -1)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 0)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 1)).r;
-	shadow = shadow.xxx / 9.0;
-#endif // DISABLE_SOFT_SHADOWMAP
-
-#ifndef DISABLE_TRANSPARENT_SHADOWMAP
-	[branch]
-	if (GetFrame().options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED && GetFrame().texture_shadowatlas_transparent_index)
-	{
-		Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
-		float4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
-#ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
-		if (transparent_shadow.a > cmp)
-#endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
-		{
-			shadow *= transparent_shadow.rgb;
-		}
-	}
-#endif //DISABLE_TRANSPARENT_SHADOWMAP
-
-	return shadow;
-}
-
-// This is used to pull the uvs to the center to avoid sampling on the border and overfiltering into a different shadow
-inline void shadow_border_shrink(in ShaderEntity light, inout float2 shadow_uv)
-{
-	const float2 shadow_resolution = light.shadowAtlasMulAdd.xy * GetFrame().shadow_atlas_resolution;
-#ifdef DISABLE_SOFT_SHADOWMAP
-	const float border_size = 0.5;
-#else
-	const float border_size = 1.5;
-#endif // DISABLE_SOFT_SHADOWMAP
-	shadow_uv *= shadow_resolution - border_size * 2;
-	shadow_uv += border_size;
-	shadow_uv /= shadow_resolution;
-}
-
-inline float3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade)
-{
-	shadow_border_shrink(light, shadow_uv);
-	shadow_uv.x += cascade;
-	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, shadow_pos.z);
-}
-
-inline float3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized)
-{
-	const float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)) * 0.989); // little bias to avoid artifact
-	const float3 uv_slice = cubemap_to_uv(-Lunnormalized);
-	float2 shadow_uv = uv_slice.xy;
-	shadow_border_shrink(light, shadow_uv);
-	shadow_uv.x += uv_slice.z;
-	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, remapped_distance);
 }
 
 inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
@@ -351,8 +279,8 @@ inline float3 GetAmbient(in float3 N)
 
 	// Set realistic_sky_stationary to true so we capture ambient at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
 	ambient = lerp(
-		GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
-		GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
+		GetDynamicSkyColor(float3(0, -1, 0), false, false, true),
+		GetDynamicSkyColor(float3(0, 1, 0), false, false, true),
 		saturate(N.y * 0.5 + 0.5));
 
 #else
@@ -382,10 +310,10 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 
 	// There is no access to envmaps, so approximate sky color:
 	// Set realistic_sky_stationary to true so we capture environment at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
-	float3 skycolor_real = GetDynamicSkyColor(surface.R, false, false, false, true); // false: disable sun disk and clouds
+	float3 skycolor_real = GetDynamicSkyColor(surface.R, false, false, true); // false: disable sun disk and clouds
 	float3 skycolor_rough = lerp(
-		GetDynamicSkyColor(float3(0, -1, 0), false, false, false, true),
-		GetDynamicSkyColor(float3(0, 1, 0), false, false, false, true),
+		GetDynamicSkyColor(float3(0, -1, 0), false, false, true),
+		GetDynamicSkyColor(float3(0, 1, 0), false, false, true),
 		saturate(surface.R.y * 0.5 + 0.5));
 
 	envColor = lerp(skycolor_real, skycolor_rough, saturate(surface.roughness)) * surface.F;

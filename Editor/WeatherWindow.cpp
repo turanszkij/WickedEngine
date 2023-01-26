@@ -10,7 +10,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_WEATHER " Weather", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(660, 1925));
+	SetSize(XMFLOAT2(660, 1960));
 
 	closeButton.SetTooltip("Delete WeatherComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -235,6 +235,25 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&realisticskyCheckBox);
 
+	aerialperspectiveCheckBox.Create("Aerial Perspective: ");
+	aerialperspectiveCheckBox.SetTooltip("Additional calculations for realistic sky to enable atmospheric effects for objects and other drawn effects.");
+	aerialperspectiveCheckBox.SetSize(XMFLOAT2(hei, hei));
+	aerialperspectiveCheckBox.SetPos(XMFLOAT2(x, y += step));
+	aerialperspectiveCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetRealisticSkyAerialPerspective(args.bValue);
+		});
+	AddWidget(&aerialperspectiveCheckBox);
+
+	realisticskyHighQualityCheckBox.Create("High Quality: ");
+	realisticskyHighQualityCheckBox.SetTooltip("Skip LUT for more accurate sky and aerial perspective. This also enables shadowmaps to affect sky calculations. \nNote this is much slower.");
+	realisticskyHighQualityCheckBox.SetSize(XMFLOAT2(hei, hei));
+	realisticskyHighQualityCheckBox.SetPos(XMFLOAT2(x, y += step));
+	realisticskyHighQualityCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetRealisticSkyHighQuality(args.bValue);
+		});
+	AddWidget(&realisticskyHighQualityCheckBox);
 
 	volumetricCloudsCheckBox.Create("Volumetric clouds: ");
 	volumetricCloudsCheckBox.SetTooltip("Enable volumetric cloud rendering, which is separate from the simple cloud parameters.");
@@ -1072,6 +1091,8 @@ void WeatherWindow::Update()
 		}
 
 		realisticskyCheckBox.SetCheck(weather.IsRealisticSky());
+		aerialperspectiveCheckBox.SetCheck(weather.IsRealisticSkyAerialPerspective());
+		realisticskyHighQualityCheckBox.SetCheck(weather.IsRealisticSkyHighQuality());
 
 		ocean_enabledCheckBox.SetCheck(weather.IsOceanEnabled());
 		ocean_patchSizeSlider.SetValue(weather.oceanParameters.patch_length);
@@ -1251,6 +1272,8 @@ void WeatherWindow::ResizeLayout()
 
 	add_fullwidth(primaryButton);
 	add_right(realisticskyCheckBox);
+	add_right(aerialperspectiveCheckBox);
+	add_right(realisticskyHighQualityCheckBox);
 	add(colorComboBox);
 	add_fullwidth(colorPicker);
 	add_fullwidth(skyButton);

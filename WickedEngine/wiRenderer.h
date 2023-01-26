@@ -212,10 +212,14 @@ namespace wi::renderer
 		const wi::graphics::Texture* weatherMapFirst = nullptr,
 		const wi::graphics::Texture* weatherMapSecond = nullptr
 	);
-	// Compute essential atmospheric scattering textures for skybox, fog and clouds
-	void ComputeAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
-	// Update atmospheric scattering primarily for environment probes.
-	void RefreshAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
+
+	// Compute essential SkyAtmosphere textures for lighting, skyviewlut and cameravolume.
+	void ComputeSkyAtmosphereTextures(wi::graphics::CommandList cmd);
+	// Update SkyViewLut independently, used primarily for environtment probes.
+	void ComputeSkyAtmosphereSkyViewLut(wi::graphics::CommandList cmd);
+	// Update CameraVolumeLut independently, used primarily for environtment probes.
+	void ComputeSkyAtmosphereCameraVolumeLut(wi::graphics::CommandList cmd);
+
 	// Draw skydome centered to camera.
 	void DrawSky(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 	// Draw shadow maps for each visible light that has associated shadow maps
@@ -670,6 +674,17 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float strength = 100.0f
+	);
+	struct AerialPerspectiveResources
+	{
+		mutable int frame = 0;
+		wi::graphics::Texture texture_render;
+		wi::graphics::Texture texture_temporal[2];
+	};
+	void CreateAerialPerspectiveResources(AerialPerspectiveResources& res, XMUINT2 resolution);
+	void Postprocess_AerialPerspective(
+		const AerialPerspectiveResources& res,
+		wi::graphics::CommandList cmd
 	);
 	struct VolumetricCloudResources
 	{

@@ -908,6 +908,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], "skyAtmosphere_multiScatteredLuminanceLutCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_SKYVIEWLUT], "skyAtmosphere_skyViewLutCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_SKYLUMINANCELUT], "skyAtmosphere_skyLuminanceLutCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SKYATMOSPHERE_CAMERAVOLUMELUT], "skyAtmosphere_cameraVolumeLutCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4], "generateMIPChain2DCS_unorm4.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4], "generateMIPChain2DCS_float4.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_GENERATEMIPCHAIN3D_UNORM4], "generateMIPChain3DCS_unorm4.cso"); });
@@ -985,6 +986,10 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], "motionblurCS_earlyexit.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], "motionblurCS_cheap.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], "bloomseparateCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_AERIALPERSPECTIVE_RENDER], "skyAtmosphere_aerialPerspective_renderCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_AERIALPERSPECTIVE_RENDER_CAPTURE], "skyAtmosphere_aerialPerspective_renderCS_capture.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_AERIALPERSPECTIVE_RENDER_CAPTURE_MSAA], "skyAtmosphere_aerialPerspective_renderCS_capture_MSAA.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_AERIALPERSPECTIVE_TEMPORAL], "skyAtmosphere_aerialPerspective_temporalCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHAPENOISE], "volumetricCloud_shapenoiseCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_DETAILNOISE], "volumetricCloud_detailnoiseCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_CURLNOISE], "volumetricCloud_curlnoiseCS.cso"); });
@@ -3267,7 +3272,7 @@ void UpdatePerFrameData(
 		const float cloudShadowNearPlane = 0.0f;
 		const float cloudShadowFarPlane = cloudShadowExtent * 2.0;
 
-		const float metersToSkyUnit = 0.001f; // Engine units are in meters (must be same as skyAtmosphere.hlsli)
+		const float metersToSkyUnit = 0.001f; // Engine units are in meters (must be same as globals.hlsli)
 		const float skyUnitToMeters = 1.0f / metersToSkyUnit;
 
 		XMVECTOR atmosphereCenter = XMLoadFloat3(&vis.scene->weather.atmosphereParameters.planetCenter);
@@ -3336,6 +3341,16 @@ void UpdatePerFrameData(
 		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]);
 		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]");
+
+		desc.type = TextureDesc::Type::TEXTURE_3D;
+		desc.width = 32;
+		desc.height = 32;
+		desc.depth = 32;
+		desc.format = Format::R16G16B16A16_FLOAT;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT]);
+		device->SetName(&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT], "textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT]");
 	}
 
 	// Update CPU-side frame constant buffer:
@@ -3435,7 +3450,7 @@ void UpdatePerFrameData(
 	{
 		frameCB.options |= OPTION_BIT_FORCE_DIFFUSE_LIGHTING;
 	}
-	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
+	if (vis.scene->weather.IsVolumetricCloudsShadows() && vis.scene->weather.IsVolumetricClouds())
 	{
 		frameCB.options |= OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS;
 	}
@@ -3443,7 +3458,15 @@ void UpdatePerFrameData(
 	{
 		frameCB.options |= OPTION_BIT_STATIC_SKY_SPHEREMAP;
 	}
-	
+	if (vis.scene->weather.IsRealisticSkyAerialPerspective() && vis.scene->weather.IsRealisticSky())
+	{
+		frameCB.options |= OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE;
+	}
+	if (vis.scene->weather.IsRealisticSkyHighQuality() && vis.scene->weather.IsRealisticSky())
+	{
+		frameCB.options |= OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY;
+	}
+
 	frameCB.scene = vis.scene->shaderscene;
 
 	frameCB.texture_random64x64_index = device->GetDescriptorIndex(wi::texturehelper::getRandom64x64(), SubresourceType::SRV);
@@ -3453,6 +3476,7 @@ void UpdatePerFrameData(
 	frameCB.texture_transmittancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], SubresourceType::SRV);
 	frameCB.texture_multiscatteringlut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], SubresourceType::SRV);
 	frameCB.texture_skyluminancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], SubresourceType::SRV);
+	frameCB.texture_cameravolumelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT], SubresourceType::SRV);
 	frameCB.buffer_entityarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_ENTITYARRAY], SubresourceType::SRV);
 	frameCB.buffer_entitymatrixarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_MATRIXARRAY], SubresourceType::SRV);
 
@@ -4120,19 +4144,6 @@ void UpdateRenderDataAsync(
 
 	BindCommonResources(cmd);
 
-	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
-	{
-		const Texture* weatherMapFirst = vis.scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr;
-		const Texture* weatherMapSecond = vis.scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr;
-		ComputeVolumetricCloudShadows(cmd, weatherMapFirst, weatherMapSecond);
-	}
-
-	if (vis.scene->weather.IsRealisticSky())
-	{
-		// Render Atmospheric Scattering textures for lighting and sky
-		ComputeAtmosphericScatteringTextures(cmd);
-	}
-
 	// Precompute static volumetric cloud textures:
 	if (!volumetric_clouds_precomputed && vis.scene->weather.IsVolumetricClouds())
 	{
@@ -4265,6 +4276,13 @@ void UpdateRenderDataAsync(
 			device->EventEnd(cmd);
 		}
 		volumetric_clouds_precomputed = true;
+	}
+
+	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
+	{
+		const Texture* weatherMapFirst = vis.scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr;
+		const Texture* weatherMapSecond = vis.scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr;
+		ComputeVolumetricCloudShadows(cmd, weatherMapFirst, weatherMapSecond);
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
@@ -6627,10 +6645,12 @@ void ComputeVolumetricCloudShadows(
 	device->EventEnd(cmd);
 }
 
-void ComputeAtmosphericScatteringTextures(CommandList cmd)
+void ComputeSkyAtmosphereTextures(CommandList cmd)
 {
-	device->EventBegin("ComputeAtmosphericScatteringTextures", cmd);
-	auto range = wi::profiler::BeginRangeGPU("Atmospheric Scattering Textures", cmd);
+	device->EventBegin("ComputeSkyAtmosphereTextures", cmd);
+	auto range = wi::profiler::BeginRangeGPU("SkyAtmosphere Textures", cmd);
+
+	BindCommonResources(cmd);
 
 	// Transmittance Lut pass:
 	{
@@ -6639,6 +6659,7 @@ void ComputeAtmosphericScatteringTextures(CommandList cmd)
 
 		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], 0, cmd); // empty
 		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], 1, cmd); // empty
+		device->BindResource(&textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW], 2, cmd);
 
 		const GPUResource* uavs[] = {
 			&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT],
@@ -6678,7 +6699,7 @@ void ComputeAtmosphericScatteringTextures(CommandList cmd)
 
 		// Use transmittance from previous pass
 		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], 0, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], 1, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], 1, cmd); // empty
 
 		const GPUResource* uavs[] = {
 			&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT],
@@ -6746,13 +6767,13 @@ void ComputeAtmosphericScatteringTextures(CommandList cmd)
 
 	device->EventEnd(cmd);
 
-	RefreshAtmosphericScatteringTextures(cmd);
-
 	wi::profiler::EndRange(range);
 }
-void RefreshAtmosphericScatteringTextures(CommandList cmd)
+void ComputeSkyAtmosphereSkyViewLut(CommandList cmd)
 {
-	device->EventBegin("UpdateAtmosphericScatteringTextures", cmd);
+	device->EventBegin("ComputeSkyAtmosphereSkyViewLut", cmd);
+
+	BindCommonResources(cmd);
 
 	// Sky View Lut pass:
 	{
@@ -6786,6 +6807,55 @@ void RefreshAtmosphericScatteringTextures(CommandList cmd)
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT].desc.layout)
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	device->EventEnd(cmd);
+}
+void ComputeSkyAtmosphereCameraVolumeLut(CommandList cmd)
+{
+	device->EventBegin("ComputeSkyAtmosphereCameraVolumeLut", cmd);
+
+	BindCommonResources(cmd);
+	
+	// Camera Volume Lut pass:
+	{
+		device->EventBegin("CameraVolumeLut", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_SKYATMOSPHERE_CAMERAVOLUMELUT], cmd);
+
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], 0, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], 1, cmd);
+
+		const GPUResource* uavs[] = {
+			&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT],
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT], textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT].desc.layout, ResourceState::UNORDERED_ACCESS)
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		const int threadSize = 8;
+		const int cameraVolumeLutWidth = textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT].GetDesc().width;
+		const int cameraVolumeLutHeight = textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT].GetDesc().height;
+		const int cameraVolumeLutDepth = textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT].GetDesc().depth;
+		const int cameraVolumeLutThreadX = static_cast<uint32_t>(std::ceil(cameraVolumeLutWidth / threadSize));
+		const int cameraVolumeLutThreadY = static_cast<uint32_t>(std::ceil(cameraVolumeLutHeight / threadSize));
+		const int cameraVolumeLutThreadZ = static_cast<uint32_t>(std::ceil(cameraVolumeLutDepth / threadSize));
+
+		device->Dispatch(cameraVolumeLutThreadX, cameraVolumeLutThreadY, cameraVolumeLutThreadZ, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT].desc.layout)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -6868,8 +6938,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		if (vis.scene->weather.IsRealisticSky())
 		{
-			// Refresh atmospheric textures, since each probe has different positions
-			RefreshAtmosphericScatteringTextures(cmd);
+			// Update skyatmosphere textures, since each probe has different positions
+			ComputeSkyAtmosphereSkyViewLut(cmd);
 		}
 
 		if (probe.IsMSAA())
@@ -6963,6 +7033,70 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		}
 
 		device->RenderPassEnd(cmd);
+
+		// Compute Aerial Perspective for environment map
+		if (vis.scene->weather.IsRealisticSky() && vis.scene->weather.IsRealisticSkyAerialPerspective() && (probe_aabb.layerMask & vis.layerMask))
+		{
+			if (probe.IsMSAA())
+			{
+				device->EventBegin("SkyAtmosphere Aerial Perspective Capture [MSAA]", cmd);
+				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_AERIALPERSPECTIVE_RENDER_CAPTURE_MSAA], cmd);
+				device->BindResource(&vis.scene->envrenderingDepthBuffer_MSAA, 0, cmd);
+			}
+			else
+			{
+				device->EventBegin("SkyAtmosphere Aerial Perspective Capture", cmd);
+				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_AERIALPERSPECTIVE_RENDER_CAPTURE], cmd);
+				device->BindResource(&vis.scene->envrenderingDepthBuffer, 0, cmd);
+			}
+
+			TextureDesc desc = vis.scene->envmapArray.GetDesc();
+			int arrayIndex = probe.textureIndex;
+
+			AerialPerspectiveCapturePushConstants push;
+			push.resolution.x = desc.width;
+			push.resolution.y = desc.height;
+			push.resolution_rcp.x = 1.0f / push.resolution.x;
+			push.resolution_rcp.y = 1.0f / push.resolution.y;
+			push.arrayIndex = arrayIndex;
+			push.texture_input = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::SRV);
+			push.texture_output = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::UAV);
+
+			device->PushConstants(&push, sizeof(push), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 0),
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 1),
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 2),
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 3),
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 4),
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 5),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			device->Dispatch(
+				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				6,
+				cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 0),
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 1),
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 2),
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 3),
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 4),
+					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 5),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			device->EventEnd(cmd);
+		}
 
 		// Compute Volumetric Clouds for environment map
 		if (vis.scene->weather.IsVolumetricClouds() && (probe_aabb.layerMask & vis.layerMask))
@@ -7160,6 +7294,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				probe.render_dirty = false;
 				render_probe(probe, probe_aabb);
 			}
+		}
+
+		// Reset SkyAtmosphere SkyViewLut after usage:
+		{
+			CameraCB camcb;
+			camcb.position = vis.camera->Eye;
+			device->BindDynamicConstantBuffer(camcb, CBSLOT_RENDERER_CAMERA, cmd);
+
+			ComputeSkyAtmosphereSkyViewLut(cmd);
 		}
 	}
 
@@ -13118,6 +13261,140 @@ void Postprocess_MotionBlur(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void CreateAerialPerspectiveResources(AerialPerspectiveResources& res, XMUINT2 resolution)
+{
+	res.frame = 0;
+
+	XMUINT2 renderResolution = XMUINT2(resolution.x / 2, resolution.y / 2);
+	XMUINT2 temporalResolution = XMUINT2(resolution.x, resolution.y);
+
+	TextureDesc desc;
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+	desc.width = renderResolution.x;
+	desc.height = renderResolution.y;
+	desc.format = Format::R16G16B16A16_FLOAT;
+	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+	device->CreateTexture(&desc, nullptr, &res.texture_render);
+	device->SetName(&res.texture_render, "texture_render");
+
+	desc.width = temporalResolution.x;
+	desc.height = temporalResolution.y;
+	desc.format = Format::R16G16B16A16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
+	device->SetName(&res.texture_temporal[0], "texture_temporal[0]");
+	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
+	device->SetName(&res.texture_temporal[1], "texture_temporal[1]");
+}
+void Postprocess_AerialPerspective(
+	const AerialPerspectiveResources& res,
+	CommandList cmd
+)
+{
+	device->EventBegin("Postprocess_AerialPerspective", cmd);
+	auto range = wi::profiler::BeginRangeGPU("SkyAtmosphere Aerial Perspective", cmd);
+
+	BindCommonResources(cmd);
+
+	const TextureDesc& desc = res.texture_render.GetDesc();
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.width;
+	postprocess.resolution.y = desc.height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = (float)res.texture_temporal[0].GetDesc().width;
+	postprocess.params0.y = (float)res.texture_temporal[0].GetDesc().height;
+	postprocess.params0.z = 1.0f / postprocess.params0.x;
+	postprocess.params0.w = 1.0f / postprocess.params0.y;
+
+	// Aerial Perspective render pass:
+	{
+		device->EventBegin("Aerial Perspective Render", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_AERIALPERSPECTIVE_RENDER], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+		const GPUResource* uavs[] = {
+			&res.texture_render,
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.texture_render, res.texture_render.desc.layout, ResourceState::UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(
+			(res.texture_render.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(res.texture_render.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&res.texture_render, ResourceState::UNORDERED_ACCESS, res.texture_render.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	const TextureDesc& reprojection_desc = res.texture_temporal[0].GetDesc();
+	postprocess.resolution.x = reprojection_desc.width;
+	postprocess.resolution.y = reprojection_desc.height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	aerialperspective_frame = (float)res.frame;
+
+	int temporal_output = device->GetFrameCount() % 2;
+	int temporal_history = 1 - temporal_output;
+
+	// Aerial Perspective temporal pass:
+	{
+		device->EventBegin("Aerial Perspective Reproject", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_AERIALPERSPECTIVE_TEMPORAL], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+
+		device->BindResource(&res.texture_render, 0, cmd);
+		device->BindResource(&res.texture_temporal[temporal_history], 1, cmd);
+
+		const GPUResource* uavs[] = {
+			&res.texture_temporal[temporal_output],
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.texture_temporal[temporal_output], res.texture_temporal[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(
+			(res.texture_temporal[temporal_output].GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(res.texture_temporal[temporal_output].GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&res.texture_temporal[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_temporal[temporal_output].desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}

@@ -35,9 +35,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const bool mieRayPhase = false;
 	const bool multiScatteringApprox = false;
 	const bool volumetricCloudShadow = false;
+	const bool opaqueShadow = false;
 	SingleScatteringResult ss = IntegrateScatteredLuminance(
-        atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance,
-        sampling, tDepth, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, transmittanceLUT, multiScatteringLUT);
+        atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, sampling, tDepth, opaque, ground,
+		mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, transmittanceLUT, multiScatteringLUT);
     
 	float3 transmittance = exp(-ss.opticalDepth);
     

@@ -144,6 +144,9 @@
     <None Include="$(MSBuildThisFileDirectory)PixelPacking_RGBE.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)shadowHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticle_simulateCS.hlsl">
@@ -1065,6 +1068,21 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_resolve_specularCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_renderCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_cameraVolumeLutCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_renderCS_capture.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_renderCS_capture_MSAA.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_temporalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

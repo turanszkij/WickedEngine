@@ -37,6 +37,8 @@ public:
 	wi::gui::Slider skyExposureSlider;
 	wi::gui::Slider starsSlider;
 	wi::gui::CheckBox realisticskyCheckBox;
+	wi::gui::CheckBox aerialperspectiveCheckBox;
+	wi::gui::CheckBox realisticskyHighQualityCheckBox;
 	wi::gui::Button skyButton;
 	wi::gui::Button colorgradingButton;
 

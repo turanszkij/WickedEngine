@@ -617,7 +617,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 	float grayScaleTransmittance = approxTransmittance < GetWeather().volumetric_clouds.transmittanceThreshold ? 0.0 : approxTransmittance;
 	
 	// Apply aerial perspective
-	if (depthWeightsSum > 0.0 && GetFrame().options & OPTION_BIT_REALISTIC_SKY)
+	if (depthWeightsSum > 0.0 && GetFrame().options & OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE)
 	{
 		float3 worldPosition = GetCameraPlanetPos(atmosphere, rayOrigin);
 		float3 worldDirection = rayDirection;
@@ -643,9 +643,10 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 			const bool mieRayPhase = true;
 			const bool multiScatteringApprox = true;
 			const bool volumetricCloudShadow = true;
+			const bool opaqueShadow = false;
 			SingleScatteringResult ss = IntegrateScatteredLuminance(
-				atmosphere, DTid.xy, worldPosition, worldDirection, sunDirection, sunIlluminance,
-				sampling, tDepth * M_TO_SKY_UNIT, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, texture_transmittancelut, texture_multiscatteringlut);
+				atmosphere, DTid.xy, worldPosition, worldDirection, sunDirection, sunIlluminance, sampling, tDepth * M_TO_SKY_UNIT, opaque, ground,
+				mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut);
 
 			float transmittance = dot(ss.transmittance, float3(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f));
 			float4 aerialPerspective = float4(ss.L, transmittance);

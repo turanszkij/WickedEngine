@@ -852,6 +852,8 @@ static const uint OPTION_BIT_FORCE_DIFFUSE_LIGHTING = 1 << 12;
 static const uint OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS = 1 << 13;
 static const uint OPTION_BIT_OVERRIDE_FOG_COLOR = 1 << 14;
 static const uint OPTION_BIT_STATIC_SKY_SPHEREMAP = 1 << 15;
+static const uint OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE = 1 << 16;
+static const uint OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY = 1 << 17;
 
 // ---------- Common Constant buffers: -----------------
 
@@ -863,7 +865,7 @@ struct FrameCB
 	float		delta_time;
 
 	uint		frame_count;
-	uint		padding3;
+	uint		padding0;
 	int			texture_shadowatlas_index;
 	int			texture_shadowatlas_transparent_index;
 
@@ -875,7 +877,7 @@ struct FrameCB
 
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
-	float2		padding0;
+	float2		padding1;
 
 	uint		envprobe_mipcount;
 	float		envprobe_mipcount_rcp;
@@ -900,11 +902,11 @@ struct FrameCB
 	int			texture_transmittancelut_index;
 	int			texture_multiscatteringlut_index;
 	int			texture_skyluminancelut_index;
-	int			buffer_entityarray_index;
+	int			texture_cameravolumelut_index;
 
+	int			buffer_entityarray_index;
 	int			buffer_entitymatrixarray_index;
 	float		gi_boost;
-	float		padding1;
 	float		padding2;
 
 	ShaderScene scene;
@@ -1119,6 +1121,17 @@ struct SkinningPushConstants
 
 	int so_pos_nor_wind;
 	int so_tan;
+};
+
+struct AerialPerspectiveCapturePushConstants
+{
+	uint2 resolution;
+	float2 resolution_rcp;
+
+	uint arrayIndex;
+	int texture_input;
+	int texture_output;
+	float padding;
 };
 
 struct VolumetricCloudCapturePushConstants

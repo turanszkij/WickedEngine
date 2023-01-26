@@ -1,7 +1,7 @@
 #ifndef WI_SKYATMOSPHERE_HF
 #define WI_SKYATMOSPHERE_HF
 #include "globals.hlsli"
-#include "volumetricCloudsHF.hlsli"
+#include "shadowHF.hlsli"
 
 /*
  *
@@ -17,10 +17,14 @@ static const float2 transmittanceLUTRes = float2(256, 64);
 static const float2 multiScatteringLUTRes = float2(32, 32);
 static const float2 skyViewLUTRes = float2(192, 104);
 static const float2 skyLuminanceLUTRes = float2(1, 1);
+static const float3 cameraVolumeLUTRes = float3(32, 32, 32);
 
 #define USE_CornetteShanks
 
 #define PLANET_RADIUS_OFFSET 0.001f // Float accuracy offset in Sky unit (km, so this is 1m)
+
+#define AP_SLICE_COUNT 32.0f
+#define AP_KM_PER_SLICE 4.0f
 
 ////////////////////////////////////////////////////////////
 // LUT functions
@@ -444,6 +448,34 @@ float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDi
 	return retval;
 }
 
+float AerialPerspectiveDepthToSlice(float depth)
+{
+	return depth * (1.0f / AP_KM_PER_SLICE);
+}
+float AerialPerspectiveSliceToDepth(float slice)
+{
+	return slice * AP_KM_PER_SLICE;
+}
+
+float4 GetAerialPerspectiveTransmittance(float2 uv, float3 worldPosition, float3 cameraPos, Texture3D<float4> cameraVolumeLutTexture)
+{
+	float tDepth = length((worldPosition * M_TO_SKY_UNIT) - (cameraPos * M_TO_SKY_UNIT));
+	float slice = AerialPerspectiveDepthToSlice(tDepth);
+	float weight = 1.0;
+	if (slice < 0.5)
+	{
+		// We multiply by weight to fade to 0 at depth 0. That works for luminance and opacity.
+		weight = saturate(slice * 2.0);
+		slice = 0.5;
+	}
+	float w = sqrt(slice / AP_SLICE_COUNT); // squared distribution
+
+	float4 luminance = weight * cameraVolumeLutTexture.SampleLevel(sampler_linear_clamp, float3(uv, w), 0);
+	//luminance *= frac(clamp(w * AP_SLICE_COUNT, 0, AP_SLICE_COUNT)); // Debug slices
+	
+	return luminance;
+}
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -475,7 +507,7 @@ struct SamplingParameters
 SingleScatteringResult IntegrateScatteredLuminance(
 	in AtmosphereParameters atmosphere, in float2 pixelPosition, in float3 worldPosition, in float3 worldDirection, in float3 sunDirection, in float3 sunIlluminance,
     in SamplingParameters sampling, in float tDepth, in bool opaque, in bool ground, in bool mieRayPhase, in bool multiScatteringApprox, in bool volumetricCloudShadow,
-    in Texture2D<float4> transmittanceLutTexture, in Texture2D<float4> multiScatteringLUTTexture, in float tMaxMax = 9000000.0f)
+    in bool opaqueShadow, in Texture2D<float4> transmittanceLutTexture, in Texture2D<float4> multiScatteringLUTTexture, in float tMaxMax = 9000000.0f)
 {
 	SingleScatteringResult result = (SingleScatteringResult) 0;
 
@@ -572,7 +604,8 @@ SingleScatteringResult IntegrateScatteredLuminance(
 				// Reduce sample count with noise and Temporal AA:
 				if (sampling.perPixelNoise)
 				{
-					t = t0 + (t1 - t0) * InterleavedGradientNoise(pixelPosition, GetFrame().frame_count);
+					//t = t0 + (t1 - t0) * InterleavedGradientNoise(pixelPosition, GetFrame().frame_count % 16);
+					t = t0 + (t1 - t0) * blue_noise(pixelPosition).x;
 				}
 				else
 				{
@@ -615,10 +648,45 @@ SingleScatteringResult IntegrateScatteredLuminance(
 			float tEarth = RaySphereIntersectNearest(P, sunDirection, earthO + PLANET_RADIUS_OFFSET * UpVector, atmosphere.bottomRadius);
 			float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
 
+			float3 shadowP = P * SKY_UNIT_TO_M + atmosphere.planetCenter * SKY_UNIT_TO_M;
+			
 			// Volumetric cloud shadow
 			if (volumetricCloudShadow && GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
 			{
-				earthShadow *= shadow_2D_volumetricclouds(P * SKY_UNIT_TO_M + atmosphere.planetCenter * SKY_UNIT_TO_M);
+				earthShadow *= shadow_2D_volumetricclouds(shadowP);
+			}
+
+			// Opaque shadow from cascade shadow mapping
+			if (opaqueShadow)
+			{
+				for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
+				{
+					ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
+					
+					if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC || !light.IsCastingShadow())
+					{
+						// static lights will be skipped (they are used in lightmap baking)
+						// useless if light doesn't cast shadow
+						continue;
+					}
+					
+					if (light.GetType() == ENTITY_TYPE_DIRECTIONALLIGHT)
+					{
+						for (uint cascade = 0; cascade < light.GetShadowCascadeCount(); ++cascade)
+						{
+							float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(shadowP, 1)).xyz; // ortho matrix, no divide by .w
+							float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+					
+							if (is_saturated(shadow_uv))
+							{
+								earthShadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade).r;
+							}
+						}
+
+						// We've found the first/primary directional light, quit
+						break;
+					}
+				}
 			}
 			
 			// Dual scattering for multi scattering 

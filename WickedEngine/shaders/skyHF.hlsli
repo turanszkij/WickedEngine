@@ -6,21 +6,21 @@
 // Custom Atmosphere based on: https://www.shadertoy.com/view/Ml2cWG
 // Cloud noise based on: https://www.shadertoy.com/view/4tdSWr
 
-float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Texture2D<float4> transmittanceLUT, Texture2D<float4> multiScatteringLUT, float3 rayOrigin, float3 rayDirection, float3 sunDirection, float3 sunColor, bool enableSun, bool darkMode, bool stationary)
+float3 AccurateAtmosphericScattering(float3 rayOrigin, float3 rayDirection, float3 sunDirection, float3 sunColor, bool enableSun, bool darkMode, bool stationary, bool highQuality)
 {
     AtmosphereParameters atmosphere = GetWeather().atmosphere;
 
     float3 worldDirection = rayDirection;
 
-    float3 skyRelativePosition = stationary ? float3(0.00001, 0.00001, 0.00001) : rayOrigin; // We get compiler warnings: "floating point division by zero" when stationary is true, but it gets handled by GetCameraPlanetPos anyway
+	// We get compiler warnings: "floating point division by zero" when stationary is true, but it gets handled by GetCameraPlanetPos anyway
+    float3 skyRelativePosition = stationary ? float3(0.00001, 0.00001, 0.00001) : rayOrigin;
     float3 worldPosition = GetCameraPlanetPos(atmosphere, skyRelativePosition);
 
     float viewHeight = length(worldPosition);
 
     float3 luminance = float3(0.0, 0.0, 0.0);
 
-    const bool fastSky = true;
-    if (viewHeight < atmosphere.topRadius && fastSky)
+	if (viewHeight < atmosphere.topRadius && !highQuality)
     {
         float2 uv;
         float3 upVector = normalize(worldPosition);
@@ -36,8 +36,8 @@ float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Textur
 
         SkyViewLutParamsToUv(atmosphere, intersectGround, viewZenithCosAngle, lightViewCosAngle, viewHeight, uv);
 
-        luminance = skyViewLutTexture.SampleLevel(sampler_linear_clamp, uv, 0).rgb;
-    }
+		luminance = texture_skyviewlut.SampleLevel(sampler_linear_clamp, uv, 0).rgb;
+	}
     else
     {
         // Move to top atmosphere as the starting point for ray marching.
@@ -59,15 +59,16 @@ float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Textur
 				sampling.perPixelNoise = false;
 			}
 			const float2 pixelPosition = float2(0.0, 0.0);
-            const float tDepth = 0.0;
-            const bool opaque = false;
+			const float tDepth = 0.0;
+			const bool opaque = false;
             const bool ground = false;
             const bool mieRayPhase = true;
             const bool multiScatteringApprox = true;
-            const bool volumetricCloudShadow = false;
+			const bool volumetricCloudShadow = false;
+			const bool opaqueShadow = false;
             SingleScatteringResult ss = IntegrateScatteredLuminance(
-                atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance,
-                sampling, tDepth, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, transmittanceLUT, multiScatteringLUT);
+                atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, sampling, tDepth, opaque, ground,
+				mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut);
 
             luminance = ss.L;
         }
@@ -78,8 +79,8 @@ float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Textur
     if (enableSun)
     {
         float3 sunIlluminance = sunColor;
-        totalColor = luminance + GetSunLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, atmosphere, transmittanceLUT);
-    }
+		totalColor = luminance + GetSunLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, atmosphere, texture_transmittancelut);
+	}
     else
     {
         totalColor = luminance; // We cant really seperate mie from luminance due to precomputation, todo?
@@ -95,7 +96,7 @@ float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Textur
 
 // Returns sky color modulated by the sun and clouds
 //	V	: view direction
-float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enabled = true, bool dark_enabled = false, bool realistic_sky_stationary = false)
+float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool dark_enabled = false, bool stationary = false)
 {
     float3 sky = 0;
 
@@ -103,16 +104,14 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
     {
         sky = AccurateAtmosphericScattering
         (
-            texture_skyviewlut,          // Sky View Lut (combination of precomputed atmospheric LUTs)
-            texture_transmittancelut,
-            texture_multiscatteringlut,
-            GetCamera().position,           // Ray origin
+            GetCamera().position,       // Ray origin
             V,                          // Ray direction
-			GetSunDirection(),               // Position of the sun
-			GetSunColor(),                   // Sun Color
+			GetSunDirection(),          // Position of the sun
+			GetSunColor(),              // Sun Color
             sun_enabled,                // Use sun and total
             dark_enabled,               // Enable dark mode for light shafts etc.
-            realistic_sky_stationary    // Fixed position for ambient and environment capture.
+            stationary,					// Fixed position for ambient and environment capture.
+			false						// Skip color lookup from lut
         );
     }
     else

@@ -44,6 +44,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const bool mieRayPhase = false;
 	const bool multiScatteringApprox = false;
 	const bool volumetricCloudShadow = false;
+	const bool opaqueShadow = false;
 
 	const float sphereSolidAngle = 4.0 * PI;
 	const float isotropicPhase = 1.0 / sphereSolidAngle;
@@ -67,8 +68,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		worldDirection.y = sinTheta * sinPhi;
 		worldDirection.z = cosPhi;
 		SingleScatteringResult result = IntegrateScatteredLuminance(
-            atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance,
-            sampling, tDepth, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, transmittanceLUT, multiScatteringLUT);
+            atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, sampling, tDepth, opaque, ground,
+			mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, transmittanceLUT, multiScatteringLUT);
 
 		MultiScatAs1SharedMem[DTid.z] = result.multiScatAs1 * sphereSolidAngle / (sqrtSample * sqrtSample);
 		LSharedMem[DTid.z] = result.L * sphereSolidAngle / (sqrtSample * sqrtSample);
