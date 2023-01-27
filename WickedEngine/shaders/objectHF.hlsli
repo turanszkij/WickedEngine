@@ -917,10 +917,10 @@ inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 
 inline void ApplyAerialPerspective(float2 uv, float3 P, inout float4 color)
 {
-	if (GetFrame().options & OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE && GetWeather().wind.speed > 0.5)
+	if (GetFrame().options & OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE)
 	{
 		float4 AP = GetAerialPerspectiveTransmittance(uv, P, GetCamera().position, texture_cameravolumelut);
-		color.rgb = color.rgb + AP.rgb * AP.a;
+		color.rgb = color.rgb * (1.0 - AP.a) + AP.rgb;
 	}
 }
 

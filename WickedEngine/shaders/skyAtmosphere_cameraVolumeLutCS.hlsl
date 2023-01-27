@@ -14,9 +14,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 pixelPosition = float2(DTid.xy) + 0.5;
 	float2 uv = pixelPosition * rcp(cameraVolumeLUTRes.xy);
 	
-	float x = uv.x * 2 - 1;
-	float y = (1 - uv.y) * 2 - 1;
-	float2 screenPosition = float2(x, y);
+	float2 screenPosition = uv_to_clipspace(uv);
 	
 	float4 unprojected = mul(GetCamera().inverse_view_projection, float4(screenPosition, 0, 1));
 	unprojected.xyz /= unprojected.w;
@@ -98,5 +96,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, transmittanceLUT, multiScatteringLUT, tMaxMax);
 
 	const float transmittance = dot(ss.transmittance, float3(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f));
-	output[DTid] = float4(ss.L, transmittance);
+	output[DTid] = float4(ss.L, 1.0 - transmittance);
 }

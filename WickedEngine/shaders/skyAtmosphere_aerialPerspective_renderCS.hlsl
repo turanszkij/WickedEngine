@@ -73,7 +73,7 @@ void RenderAerialPerspective(uint3 DTid, float2 uv, float3 depthWorldPosition, f
 				mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut);
 
 			luminance = ss.L;
-			transmittance = dot(ss.transmittance, float3(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0));
+			transmittance = 1.0 - dot(ss.transmittance, float3(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0));
 		}
 	}
 }
@@ -118,7 +118,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float transmittance = 0.0;
 	RenderAerialPerspective(DTid, uv, depthWorldPosition, rayOrigin, rayDirection, luminance, transmittance, true);
 
-	float4 result = float4(luminance, 1.0 - transmittance);
+	float4 result = float4(luminance, transmittance);
 	
     // Output
 	output[uint3(DTid.xy, DTid.z + capture.arrayIndex * 6)] = float4(composite.rgb * (1.0 - result.a) + result.rgb, composite.a * (1.0 - result.a));
@@ -154,7 +154,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float transmittance = 0.0;
 	RenderAerialPerspective(DTid, uv, depthWorldPosition, rayOrigin, rayDirection, luminance, transmittance, false);
 
-	float4 result = float4(luminance, 1.0 - transmittance);
+	float4 result = float4(luminance, transmittance);
 	
     // Output
 	texture_output[DTid.xy] = result;
