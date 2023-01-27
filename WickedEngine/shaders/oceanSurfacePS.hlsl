@@ -96,6 +96,8 @@ float4 main(PSIn input) : SV_TARGET
 
 	ApplyFog(dist, GetCamera().position, V, color);
 
+	ApplyAerialPerspective(ScreenCoord, surface.P, color);
+
 	return color;
 }
 
