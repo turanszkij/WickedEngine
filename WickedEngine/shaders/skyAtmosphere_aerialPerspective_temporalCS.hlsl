@@ -15,7 +15,7 @@ static const float temporalScale = 1.0;
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
-	float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0).r;
+	float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r;
 
 	// Trim
 	if (depth == 0.0)
@@ -24,8 +24,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		return;
 	}
 	
-	uint2 renderResolution = postprocess.resolution / 2;
-	uint2 renderCoord = DTid.xy / 2;
+	uint2 renderResolution = postprocess.resolution;
+	uint2 renderCoord = DTid.xy;
 
 	uint2 minRenderCoord = uint2(0, 0);
 	uint2 maxRenderCoord = renderResolution - 1;
@@ -79,8 +79,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			int2 neighborTracingCoord = renderCoord + offset;
 			int2 neighborCoord = DTid.xy + offset;
 			
+			float2 neighborUV = neighborCoord * postprocess.resolution_rcp;
+			
 			float4 neighborResult = aerialeperspective_current[neighborTracingCoord];
-			float neighborDepth = texture_depth[neighborCoord];
+			float neighborDepth = texture_depth.SampleLevel(sampler_point_clamp, neighborUV, 1);
 
 			if (neighborDepth > 0.0)
 			{

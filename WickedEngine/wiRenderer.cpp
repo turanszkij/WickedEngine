@@ -13276,7 +13276,7 @@ void CreateAerialPerspectiveResources(AerialPerspectiveResources& res, XMUINT2 r
 	res.frame = 0;
 
 	XMUINT2 renderResolution = XMUINT2(resolution.x / 2, resolution.y / 2);
-	XMUINT2 temporalResolution = XMUINT2(resolution.x, resolution.y);
+	XMUINT2 temporalResolution = XMUINT2(resolution.x / 2, resolution.y / 2);
 
 	TextureDesc desc;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;

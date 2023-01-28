@@ -1292,14 +1292,17 @@ namespace wi
 
 			RenderOutline(cmd);
 
-			// Blend aerial perspective on top:
+			// Upsample + Blend aerial perspective on top:
 			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
 			{
-				device->EventBegin("Aerial Perspective Blend", cmd);
-				wi::image::Params fx;
-				fx.enableFullScreen();
-				fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-				wi::image::Draw(&aerialperspectiveResources.texture_temporal[device->GetFrameCount() % 2], fx, cmd);
+				device->EventBegin("Aerial Perspective Upsample + Blend", cmd);
+				wi::renderer::Postprocess_Upsample_Bilateral(
+					aerialperspectiveResources.texture_temporal[device->GetFrameCount() % 2],
+					rtLinearDepth,
+					rtMain_render, // only desc is taken if pixel shader upsampling is used
+					cmd,
+					true // pixel shader upsampling
+				);
 				device->EventEnd(cmd);
 			}
 

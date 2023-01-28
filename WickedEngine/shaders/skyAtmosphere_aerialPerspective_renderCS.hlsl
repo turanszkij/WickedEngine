@@ -129,12 +129,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	// This is necessary for accurate upscaling. This is so we don't reuse the same half-res pixels
+	// Offset to vary perPixelNoise more
 	uint2 offset = floor(blue_noise(uint2(0, 0)).xy);
 	float2 uv = (offset + DTid.xy + 0.5f) * postprocess.resolution_rcp;
 	
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
-
+	float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1);
+	
 	// For Aerial Perspective we don't focus on sky
 	if (depth == 0.0)
 	{
