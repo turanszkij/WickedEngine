@@ -45,21 +45,15 @@ float3 AccurateAtmosphericScattering(float3 rayOrigin, float3 rayDirection, floa
         if (MoveToTopAtmosphere(worldPosition, worldDirection, atmosphere.topRadius))
         {
             // Apply the start offset after moving to the top of atmosphere to avoid black pixels
-            const float startOffsetKm = 0.1; // 100m seems enough for long distances
-            worldPosition += worldDirection * startOffsetKm;
+			worldPosition += worldDirection * AP_START_OFFSET_KM;
 
             float3 sunIlluminance = sunColor;
 
-            SamplingParameters sampling;
-            {
-                sampling.variableSampleCount = true;
-                sampling.sampleCountIni = 0.0f;
-                sampling.rayMarchMinMaxSPP = float2(4, 14);
-                sampling.distanceSPPMaxInv = 0.01;
-				sampling.perPixelNoise = false;
-			}
 			const float2 pixelPosition = float2(0.0, 0.0);
 			const float tDepth = 0.0;
+			const float sampleCountIni = 0.0;
+			const bool variableSampleCount = true;
+			const bool perPixelNoise = false;
 			const bool opaque = false;
             const bool ground = false;
             const bool mieRayPhase = true;
@@ -67,8 +61,8 @@ float3 AccurateAtmosphericScattering(float3 rayOrigin, float3 rayDirection, floa
 			const bool volumetricCloudShadow = false;
 			const bool opaqueShadow = false;
             SingleScatteringResult ss = IntegrateScatteredLuminance(
-                atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, sampling, tDepth, opaque, ground,
-				mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut);
+                atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,
+				perPixelNoise, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut);
 
             luminance = ss.L;
         }

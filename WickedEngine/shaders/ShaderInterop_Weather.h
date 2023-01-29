@@ -46,6 +46,13 @@ struct AtmosphereParameters
 	// The albedo of the ground.
 	float3 groundAlbedo;	float padding5;
 
+	// Varying sample count for sky rendering based on the 'distanceSPPMaxInv' with min-max
+	float2 rayMarchMinMaxSPP;
+	// Describes how the raymarching samples are distributed no the screen
+	float distanceSPPMaxInv;
+	// Aerial Perspective exposure override
+	float aerialPerspectiveScale;
+
 	// Init default values (All units in kilometers)
 	void init(
 		float earthBottomRadius = 6360.0f,
@@ -80,7 +87,11 @@ struct AtmosphereParameters
 		groundAlbedo = float3(0.3f, 0.3f, 0.3f); // 0.3 for earths ground albedo, see https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
 		bottomRadius = earthBottomRadius;
 		topRadius = earthTopRadius;
-		planetCenter = float3(0.0f, -earthBottomRadius - 0.1f, 0.0f); // Spawn 100m in the air 
+		planetCenter = float3(0.0f, -earthBottomRadius - 0.1f, 0.0f); // Spawn 100m in the air
+
+		rayMarchMinMaxSPP = float2(4.0f, 14.0f);
+		distanceSPPMaxInv = 0.01f;
+		aerialPerspectiveScale = 1.0f;
 	}
 
 

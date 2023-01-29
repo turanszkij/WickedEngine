@@ -45,34 +45,29 @@ void RenderAerialPerspective(uint3 DTid, float2 uv, float3 depthWorldPosition, f
 		if (MoveToTopAtmosphere(worldPosition, worldDirection, atmosphere.topRadius))
 		{
 			// Apply the start offset after moving to the top of atmosphere to avoid black pixels
-			const float startOffsetKm = 0.1; // 100m seems enough for long distances
-			worldPosition += worldDirection * startOffsetKm;
+			worldPosition += worldDirection * AP_START_OFFSET_KM;
 
 			float3 sunDirection = GetSunDirection();
 			float3 sunIlluminance = GetSunColor();
 
-			SamplingParameters sampling;
-			{
-				sampling.variableSampleCount = true;
-				sampling.sampleCountIni = 0.0f;
-				sampling.rayMarchMinMaxSPP = float2(4, 14);
-				sampling.distanceSPPMaxInv = 0.01;
-#ifdef AERIALPERSPECTIVE_CAPTURE
-				sampling.perPixelNoise = false;
-#else
-				sampling.perPixelNoise = true;
-#endif
-			}
 			const float tDepth = length((depthWorldPosition.xyz * M_TO_SKY_UNIT) - (worldPosition + atmosphere.planetCenter)); // apply earth offset to go back to origin as top of earth mode
+			const float sampleCountIni = 0.0;
+			const bool variableSampleCount = true;
+#ifdef AERIALPERSPECTIVE_CAPTURE
+			const bool perPixelNoise = false;
+#else
+			const bool perPixelNoise = true;
+#endif
 			const bool opaque = true;
 			const bool ground = false;
 			const bool mieRayPhase = true;
 			const bool multiScatteringApprox = true;
 			const bool volumetricCloudShadow = true;
 			const bool opaqueShadow = true;
+			const float opticalDepthScale = atmosphere.aerialPerspectiveScale;
 			SingleScatteringResult ss = IntegrateScatteredLuminance(
-				atmosphere, DTid.xy, worldPosition, worldDirection, sunDirection, sunIlluminance, sampling, tDepth, opaque, ground,
-				mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut);
+				atmosphere, DTid.xy, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,
+				perPixelNoise, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut, opticalDepthScale);
 
 			luminance = ss.L;
 			transmittance = 1.0 - dot(ss.transmittance, float3(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0));

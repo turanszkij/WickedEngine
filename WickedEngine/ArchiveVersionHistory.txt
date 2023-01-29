@@ -1,5 +1,6 @@
 This file contains changelog of wi::Archive versions
 
+89: serialized WeatherComponent::atmosphereParameters: rayMarchMinMaxSPP, distanceSPPMaxInv and aerialPerspectiveScale
 88: volumetric clouds second layer
 87: DDGI serialization: added grid_extents and smooth_backface
 86: serialized volumetric clouds weather map, removed unused values and remapped values from VolumetricCloudParameters

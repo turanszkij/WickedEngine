@@ -28,9 +28,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	
 	uint2 renderResolution = postprocess.resolution;
 	uint2 renderCoord = DTid.xy;
-
-	uint2 minRenderCoord = uint2(0, 0);
-	uint2 maxRenderCoord = renderResolution - 1;
 	
 #if 0
 	

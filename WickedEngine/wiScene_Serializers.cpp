@@ -1323,6 +1323,13 @@ namespace wi::scene
 				archive >> volumetricCloudParameters.layerSecond.coverageWindAngle;
 			}
 
+			if (archive.GetVersion() >= 89)
+			{
+				archive >> atmosphereParameters.rayMarchMinMaxSPP;
+				archive >> atmosphereParameters.distanceSPPMaxInv;
+				archive >> atmosphereParameters.aerialPerspectiveScale;
+			}
+
 			if (seri.GetVersion() >= 1)
 			{
 				archive >> gravity;
@@ -1521,6 +1528,13 @@ namespace wi::scene
 				archive << volumetricCloudParameters.layerSecond.windUpAmount;
 				archive << volumetricCloudParameters.layerSecond.coverageWindSpeed;
 				archive << volumetricCloudParameters.layerSecond.coverageWindAngle;
+			}
+
+			if (archive.GetVersion() >= 89)
+			{
+				archive << atmosphereParameters.rayMarchMinMaxSPP;
+				archive << atmosphereParameters.distanceSPPMaxInv;
+				archive << atmosphereParameters.aerialPerspectiveScale;
 			}
 
 			if (seri.GetVersion() >= 1)

@@ -75,27 +75,25 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 	// Apply the start offset after moving to the top of atmosphere to avoid black pixels
-	const float startOffsetKm = 0.1; // 100m seems enough for long distances
-	worldPosition += worldDirection * startOffsetKm;
+	worldPosition += worldDirection * AP_START_OFFSET_KM;
 
 	float3 sunDirection = GetSunDirection();
 	float3 sunIlluminance = GetSunColor();
 
-	SamplingParameters sampling;
-    {
-		sampling.variableSampleCount = false;
-		sampling.sampleCountIni = max(1.0, float(DTid.z + 1.0) * 2.0f); // Double sample count per slice
-	}
 	const float tDepth = 0.0;
+	const float sampleCountIni = max(1.0, float(DTid.z + 1.0) * 2.0f); // Double sample count per slice
+	const bool variableSampleCount = false;
+	const bool perPixelNoise = false;
 	const bool opaque = false;
 	const bool ground = false;
 	const bool mieRayPhase = true;
 	const bool multiScatteringApprox = true;
 	const bool volumetricCloudShadow = true;
 	const bool opaqueShadow = true;
+	const float opticalDepthScale = atmosphere.aerialPerspectiveScale;
 	SingleScatteringResult ss = IntegrateScatteredLuminance(
-        atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, sampling, tDepth, opaque, ground,
-		mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, transmittanceLUT, multiScatteringLUT, tMaxMax);
+        atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,
+		perPixelNoise, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, transmittanceLUT, multiScatteringLUT, opticalDepthScale, tMaxMax);
 
 	const float transmittance = dot(ss.transmittance, float3(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f));
 	output[DTid] = float4(ss.L, 1.0 - transmittance);

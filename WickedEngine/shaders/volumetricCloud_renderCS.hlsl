@@ -626,27 +626,23 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		// This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
 		if (MoveToTopAtmosphere(worldPosition, worldDirection, atmosphere.topRadius))
 		{
-			SamplingParameters sampling;
-			{
-				sampling.variableSampleCount = true;
-				sampling.sampleCountIni = 0.0f;
-				sampling.rayMarchMinMaxSPP = float2(10, 25);
-				sampling.distanceSPPMaxInv = 0.01;
+			const float sampleCountIni = 0.0;
+			const bool variableSampleCount = true;
 #ifdef VOLUMETRICCLOUD_CAPTURE
-				sampling.perPixelNoise = false;
+			const bool perPixelNoise = false;
 #else
-				sampling.perPixelNoise = true;
+			const bool perPixelNoise = true;
 #endif
-			}
 			const bool opaque = true;
 			const bool ground = false;
 			const bool mieRayPhase = true;
 			const bool multiScatteringApprox = true;
 			const bool volumetricCloudShadow = true;
 			const bool opaqueShadow = false;
+			const float opticalDepthScale = atmosphere.aerialPerspectiveScale;
 			SingleScatteringResult ss = IntegrateScatteredLuminance(
-				atmosphere, DTid.xy, worldPosition, worldDirection, sunDirection, sunIlluminance, sampling, tDepth * M_TO_SKY_UNIT, opaque, ground,
-				mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut);
+				atmosphere, DTid.xy, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth * M_TO_SKY_UNIT, sampleCountIni, variableSampleCount,
+				perPixelNoise, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut, opticalDepthScale);
 
 			float transmittance = dot(ss.transmittance, float3(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f));
 			float4 aerialPerspective = float4(ss.L, transmittance);

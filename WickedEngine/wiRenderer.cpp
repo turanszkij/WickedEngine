@@ -13293,7 +13293,7 @@ void CreateAerialPerspectiveResources(AerialPerspectiveResources& res, XMUINT2 r
 	device->SetName(&res.texture_temporal[0], "texture_temporal[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
 	device->SetName(&res.texture_temporal[1], "texture_temporal[1]");
-	desc.format = Format::R16_FLOAT;
+	desc.format = Format::R32_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_depth[0]);
 	device->SetName(&res.texture_temporal_depth[0], "texture_temporal_depth[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_depth[1]);
