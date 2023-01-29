@@ -900,12 +900,12 @@ struct FrameCB
 	int			texture_transmittancelut_index;
 	int			texture_multiscatteringlut_index;
 	int			texture_skyluminancelut_index;
-	int			buffer_entityarray_index;
+	int			texture_wind_index;
 
+	int			buffer_entityarray_index;
 	int			buffer_entitymatrixarray_index;
 	float		gi_boost;
 	float		padding1;
-	float		padding2;
 
 	ShaderScene scene;
 

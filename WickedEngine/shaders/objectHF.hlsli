@@ -210,6 +210,7 @@ struct VertexSurface
 		color.a *= 1 - input.GetInstancePointer().GetDither();
 		emissiveColor = input.GetInstance().emissive;
 
+		[branch]
 		if (material.IsUsingVertexColors())
 		{
 			color *= input.GetVertexColor();
@@ -227,13 +228,11 @@ struct VertexSurface
 
 		position = mul(input.GetInstance().transform.GetMatrix(), position);
 
-
-#ifdef WIND
+		[branch]
 		if (material.IsUsingWind())
 		{
 			position.xyz += compute_wind(position.xyz, input.GetWindWeight());
 		}
-#endif // WIND
 	}
 };
 
