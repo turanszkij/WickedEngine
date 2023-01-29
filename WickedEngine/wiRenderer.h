@@ -680,6 +680,7 @@ namespace wi::renderer
 		mutable int frame = 0;
 		wi::graphics::Texture texture_render;
 		wi::graphics::Texture texture_temporal[2];
+		wi::graphics::Texture texture_temporal_depth[2];
 	};
 	void CreateAerialPerspectiveResources(AerialPerspectiveResources& res, XMUINT2 resolution);
 	void Postprocess_AerialPerspective(

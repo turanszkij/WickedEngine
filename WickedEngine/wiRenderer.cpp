@@ -13289,11 +13289,15 @@ void CreateAerialPerspectiveResources(AerialPerspectiveResources& res, XMUINT2 r
 
 	desc.width = temporalResolution.x;
 	desc.height = temporalResolution.y;
-	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
 	device->SetName(&res.texture_temporal[0], "texture_temporal[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
 	device->SetName(&res.texture_temporal[1], "texture_temporal[1]");
+	desc.format = Format::R16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_temporal_depth[0]);
+	device->SetName(&res.texture_temporal_depth[0], "texture_temporal_depth[0]");
+	device->CreateTexture(&desc, nullptr, &res.texture_temporal_depth[1]);
+	device->SetName(&res.texture_temporal_depth[1], "texture_temporal_depth[1]");
 }
 void Postprocess_AerialPerspective(
 	const AerialPerspectiveResources& res,
@@ -13368,18 +13372,20 @@ void Postprocess_AerialPerspective(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_AERIALPERSPECTIVE_TEMPORAL], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-
 		device->BindResource(&res.texture_render, 0, cmd);
 		device->BindResource(&res.texture_temporal[temporal_history], 1, cmd);
+		device->BindResource(&res.texture_temporal_depth[temporal_history], 2, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_temporal[temporal_output],
+			&res.texture_temporal_depth[temporal_output],
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&res.texture_temporal[temporal_output], res.texture_temporal[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.texture_temporal_depth[temporal_output], res.texture_temporal_depth[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -13395,6 +13401,7 @@ void Postprocess_AerialPerspective(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_temporal[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_temporal[temporal_output].desc.layout),
+				GPUBarrier::Image(&res.texture_temporal_depth[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_temporal_depth[temporal_output].desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
