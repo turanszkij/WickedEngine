@@ -228,11 +228,13 @@ struct VertexSurface
 
 		position = mul(input.GetInstance().transform.GetMatrix(), position);
 
+#ifndef DISABLE_WIND
 		[branch]
 		if (material.IsUsingWind())
 		{
 			position.xyz += compute_wind(position.xyz, input.GetWindWeight());
 		}
+#endif // DISABLE_WIND
 	}
 };
 
