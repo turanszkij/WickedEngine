@@ -132,6 +132,7 @@ namespace wi
 		{
 			// If the application is not active, disable Update loops:
 			deltaTimeAccumulator = 0;
+			wi::helper::Sleep(10);
 			return;
 		}
 
