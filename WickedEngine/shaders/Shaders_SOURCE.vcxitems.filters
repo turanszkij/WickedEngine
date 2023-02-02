@@ -1070,19 +1070,22 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)vxgi_resolve_specularCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_renderCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_renderCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_cameraVolumeLutCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_renderCS_capture.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_renderCS_capture.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_renderCS_capture_MSAA.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_renderCS_capture_MSAA.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_temporalCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_temporalCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_sunCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

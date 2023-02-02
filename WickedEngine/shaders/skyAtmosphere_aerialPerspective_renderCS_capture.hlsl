@@ -1,2 +1,0 @@
-#define AERIALPERSPECTIVE_CAPTURE
-#include "skyAtmosphere_aerialPerspective_renderCS.hlsl"

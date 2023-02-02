@@ -511,7 +511,17 @@ SingleScatteringResult IntegrateScatteredLuminance(
 	in bool volumetricCloudShadow, in bool opaqueShadow, in Texture2D<float4> transmittanceLutTexture, in Texture2D<float4> multiScatteringLUTTexture, in float opticalDepthScale = 1.0f, in float tMaxMax = 9000000.0f)
 {
 	SingleScatteringResult result = (SingleScatteringResult) 0;
+	result.L = 0;
+	result.opticalDepth = 0;
+	result.transmittance = 1.0;
+	result.multiScatAs1 = 0;
 
+	// If camera is inside ground, return
+	if (length(worldPosition) <= atmosphere.bottomRadius)
+	{
+		return result;
+	}
+	
 	// Compute next intersection with atmosphere or ground 
 	float3 earthO = float3(0.0f, 0.0f, 0.0f);
 	float tBottom = RaySphereIntersectNearest(worldPosition, worldDirection, earthO, atmosphere.bottomRadius);

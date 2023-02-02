@@ -246,7 +246,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&aerialperspectiveCheckBox);
 
 	realisticskyHighQualityCheckBox.Create("High Quality: ");
-	realisticskyHighQualityCheckBox.SetTooltip("Skip LUT for more accurate sky and aerial perspective. This also enables shadowmaps to affect sky calculations. \nNote this is much slower.");
+	realisticskyHighQualityCheckBox.SetTooltip("Skip LUT for more accurate sky and aerial perspective. This also enables shadowmaps to affect sky calculations. \nNote: For volumetric shadows to be visible, increase shadowmap boundary and/or enable cloud shadows.");
 	realisticskyHighQualityCheckBox.SetSize(XMFLOAT2(hei, hei));
 	realisticskyHighQualityCheckBox.SetPos(XMFLOAT2(x, y += step));
 	realisticskyHighQualityCheckBox.OnClick([&](wi::gui::EventArgs args) {

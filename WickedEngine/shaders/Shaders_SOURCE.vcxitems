@@ -895,10 +895,11 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Compute</ShaderType>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_renderCS.hlsl" />
-    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_renderCS_capture.hlsl" />
-    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_renderCS_capture_MSAA.hlsl" />
-    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_aerialPerspective_temporalCS.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_renderCS.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_renderCS_capture.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_renderCS_capture_MSAA.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_sunCS.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_temporalCS.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_cameraVolumeLutCS.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_skyLuminanceLutCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>

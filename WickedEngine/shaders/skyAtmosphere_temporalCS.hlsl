@@ -3,9 +3,9 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-Texture2D<float4> aerialeperspective_current : register(t0);
-Texture2D<float4> aerialeperspective_history : register(t1);
-Texture2D<float> aerialeperspective_depth_history : register(t2);
+Texture2D<float4> sky_current : register(t0);
+Texture2D<float4> sky_history : register(t1);
+Texture2D<float> sky_depth_history : register(t2);
 
 RWTexture2D<float4> output : register(u0);
 RWTexture2D<float> output_depth : register(u1);
@@ -19,8 +19,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 	float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r;
 
-	// Trim
-	if (depth == 0.0)
+	// Skip skybox if 'High Quality' is disabled
+	if (depth == 0.0 && (GetFrame().options & OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY) == 0)
 	{
 		output[DTid.xy] = float4(0.0, 0.0, 0.0, 0.0);
 		return;
@@ -62,10 +62,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
     
 #endif
 
-	float4 newResult = aerialeperspective_current[renderCoord];	
+	float4 newResult = sky_current[renderCoord];	
 	float4 result = newResult;
 	
-	float previousDepthResult = aerialeperspective_depth_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
+	float previousDepthResult = sky_depth_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 	
 	float3 depthWorldPosition = reconstruct_position(uv, depth);
 	float tToDepthBuffer = length(depthWorldPosition - GetCamera().position);
@@ -89,10 +89,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			
 				float2 neighborUV = neighborCoord * postprocess.resolution_rcp;
 			
-				float4 neighborResult = aerialeperspective_current[neighborTracingCoord];
+				float4 neighborResult = sky_current[neighborTracingCoord];
 				float neighborDepth = texture_depth.SampleLevel(sampler_point_clamp, neighborUV, 1);
-				
-				if (neighborDepth > 0.0)
+
+				// Evaluate skybox if 'High Quality' is disabled
+				if (neighborDepth > 0.0 || GetFrame().options & OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY)
 				{
 					m1 += neighborResult;
 					m2 += neighborResult * neighborResult;
@@ -109,7 +110,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float4 colorMin = mean - temporalScale * stddev;
 		float4 colorMax = mean + temporalScale * stddev;
 
-		float4 previousResult = aerialeperspective_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
+		float4 previousResult = sky_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 		previousResult = clamp(previousResult, colorMin, colorMax);
 
 		result = lerp(newResult, previousResult, temporalResponse);

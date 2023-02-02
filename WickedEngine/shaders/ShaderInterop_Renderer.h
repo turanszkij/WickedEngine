@@ -1123,7 +1123,7 @@ struct SkinningPushConstants
 	int so_tan;
 };
 
-struct AerialPerspectiveCapturePushConstants
+struct SkyAtmosphereCapturePushConstants
 {
 	uint2 resolution;
 	float2 resolution_rcp;

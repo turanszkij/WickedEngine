@@ -65,7 +65,8 @@ namespace wi
 		screenspaceshadowResources = {};
 		depthoffieldResources = {};
 		motionblurResources = {};
-		aerialperspectiveResources = {};
+		skyatmosphereResources = {};
+		skyatmosphereResources_reflection = {};
 		volumetriccloudResources = {};
 		volumetriccloudResources_reflection = {};
 		bloomResources = {};
@@ -440,27 +441,27 @@ namespace wi
 			rtshadowResources = {};
 		}
 
-		if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+		if (scene->weather.IsRealisticSky() && (scene->weather.IsRealisticSkyAerialPerspective() || scene->weather.IsRealisticSkyHighQuality()))
 		{
-			if (!aerialperspectiveResources.texture_render.IsValid())
+			if (!skyatmosphereResources.texture_render.IsValid())
 			{
-				wi::renderer::CreateAerialPerspectiveResources(aerialperspectiveResources, internalResolution);
+				wi::renderer::CreateSkyAtmosphereResources(skyatmosphereResources, internalResolution);
 			}
 			if (getReflectionsEnabled() && depthBuffer_Reflection.IsValid())
 			{
-				if (!aerialperspectiveResources_reflection.texture_render.IsValid())
+				if (!skyatmosphereResources_reflection.texture_render.IsValid())
 				{
-					wi::renderer::CreateAerialPerspectiveResources(aerialperspectiveResources_reflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
+					wi::renderer::CreateSkyAtmosphereResources(skyatmosphereResources_reflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
 				}
 			}
 			else
 			{
-				aerialperspectiveResources_reflection = {};
+				skyatmosphereResources_reflection = {};
 			}
 		}
 		else
 		{
-			aerialperspectiveResources = {};
+			skyatmosphereResources = {};
 		}
 
 		if (scene->weather.IsVolumetricClouds())
@@ -1027,12 +1028,20 @@ namespace wi
 
 				device->RenderPassEnd(cmd);
 
-				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+				if (scene->weather.IsRealisticSky() && (scene->weather.IsRealisticSkyAerialPerspective() || scene->weather.IsRealisticSkyHighQuality()))
 				{
-					wi::renderer::Postprocess_AerialPerspective(
-						aerialperspectiveResources_reflection,
+					wi::renderer::Postprocess_SkyAtmosphere_Sky(
+						skyatmosphereResources_reflection,
 						cmd
 					);
+
+					if (scene->weather.IsRealisticSkyHighQuality() && !scene->weather.skyMap.IsValid())
+					{
+						wi::renderer::Postprocess_SkyAtmosphere_Sun(
+							skyatmosphereResources_reflection,
+							cmd
+						);
+					}
 				}
 
 				if (scene->weather.IsVolumetricClouds())
@@ -1102,15 +1111,26 @@ namespace wi
 				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_TRANSPARENT); // separate renderscene, to be drawn after opaque and transparent sort order
 				wi::renderer::DrawSky(*scene, cmd);
 
-				// Blend aerial perspective on top:
-				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+				if (scene->weather.IsRealisticSky() && (scene->weather.IsRealisticSkyAerialPerspective() || scene->weather.IsRealisticSkyHighQuality()))
 				{
-					device->EventBegin("Aerial Perspective Reflection Blend", cmd);
+					// Blend SkyAtmosphere on top:
+					device->EventBegin("SkyAtmosphere Sky Reflection Blend", cmd);
 					wi::image::Params fx;
 					fx.enableFullScreen();
 					fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-					wi::image::Draw(&aerialperspectiveResources_reflection.texture_temporal[device->GetFrameCount() % 2], fx, cmd);
+					wi::image::Draw(&skyatmosphereResources_reflection.texture_temporal[device->GetFrameCount() % 2], fx, cmd);
 					device->EventEnd(cmd);
+
+					// Add sun on top:
+					if (scene->weather.IsRealisticSkyHighQuality() && !scene->weather.skyMap.IsValid())
+					{
+						device->EventBegin("SkyAtmosphere Sun Reflection Add", cmd);
+						wi::image::Params fx;
+						fx.enableFullScreen();
+						fx.blendFlag = BLENDMODE_ADDITIVE;
+						wi::image::Draw(&skyatmosphereResources_reflection.texture_sun, fx, cmd);
+						device->EventEnd(cmd);
+					}
 				}
 
 				// Blend the volumetric clouds on top:
@@ -1190,12 +1210,20 @@ namespace wi
 					getVXGIResolveFullResolutionEnabled()
 				);
 			}
-			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+			if (scene->weather.IsRealisticSky() && (scene->weather.IsRealisticSkyAerialPerspective() || scene->weather.IsRealisticSkyHighQuality()))
 			{
-				wi::renderer::Postprocess_AerialPerspective(
-					aerialperspectiveResources,
+				wi::renderer::Postprocess_SkyAtmosphere_Sky(
+					skyatmosphereResources,
 					cmd
 				);
+
+				if (scene->weather.IsRealisticSkyHighQuality() && !scene->weather.skyMap.IsValid())
+				{
+					wi::renderer::Postprocess_SkyAtmosphere_Sun(
+						skyatmosphereResources,
+						cmd
+					);
+				}
 			}
 
 			// Depth buffers were created on COMPUTE queue, so make them available for pixel shaders here:
@@ -1292,18 +1320,29 @@ namespace wi
 
 			RenderOutline(cmd);
 
-			// Upsample + Blend aerial perspective on top:
-			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+			// Upsample + Blend SkyAtmosphere on top:
+			if (scene->weather.IsRealisticSky() && (scene->weather.IsRealisticSkyAerialPerspective() || scene->weather.IsRealisticSkyHighQuality()))
 			{
-				device->EventBegin("Aerial Perspective Upsample + Blend", cmd);
+				device->EventBegin("SkyAtmosphere Sky Upsample + Blend", cmd);
 				wi::renderer::Postprocess_Upsample_Bilateral(
-					aerialperspectiveResources.texture_temporal[device->GetFrameCount() % 2],
+					skyatmosphereResources.texture_temporal[device->GetFrameCount() % 2],
 					rtLinearDepth,
 					rtMain_render, // only desc is taken if pixel shader upsampling is used
 					cmd,
 					true // pixel shader upsampling
 				);
 				device->EventEnd(cmd);
+
+				// Add sun on top:
+				if (scene->weather.IsRealisticSkyHighQuality() && !scene->weather.skyMap.IsValid())
+				{
+					device->EventBegin("SkyAtmosphere Sun Add", cmd);
+					wi::image::Params fx;
+					fx.enableFullScreen();
+					fx.blendFlag = BLENDMODE_ADDITIVE;
+					wi::image::Draw(&skyatmosphereResources.texture_sun, fx, cmd);
+					device->EventEnd(cmd);
+				}
 			}
 
 			// Upsample + Blend the volumetric clouds on top:
