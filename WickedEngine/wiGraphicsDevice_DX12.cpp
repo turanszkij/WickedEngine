@@ -1754,7 +1754,7 @@ using namespace dx12_internal;
 						break;
 					}
 				}
-				else if (stats.descriptorCopyCount > 1)
+				else if (stats.descriptorCopyCount > 0)
 				{
 					D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = heap.start_cpu;
 					const uint32_t descriptorSize = stats.sampler_table ? device->sampler_descriptor_size : device->resource_descriptor_size;
