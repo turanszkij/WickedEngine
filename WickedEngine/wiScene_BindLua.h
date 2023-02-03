@@ -1567,20 +1567,24 @@ namespace wi::lua::scene
 		int IsRealisticSky(lua_State* L);
 		int IsVolumetricClouds(lua_State* L);
 		int IsHeightFog(lua_State* L);
-		int IsVolumetricCloudsShadows(lua_State* L);
+		int IsVolumetricCloudsCastShadow(lua_State* L);
 		int IsOverrideFogColor(lua_State* L);
 		int IsRealisticSkyAerialPerspective(lua_State* L);
 		int IsRealisticSkyHighQuality(lua_State* L);
+		int IsRealisticSkyRecieveShadow(lua_State* L);
+		int IsVolumetricCloudsRecieveShadow(lua_State* L);
 
 		int SetOceanEnabled(lua_State* L);
 		int SetSimpleSky(lua_State* L);
 		int SetRealisticSky(lua_State* L);
 		int SetVolumetricClouds(lua_State* L);
 		int SetHeightFog(lua_State* L);
-		int SetVolumetricCloudsShadows(lua_State* L);
+		int SetVolumetricCloudsCastShadow(lua_State* L);
 		int SetOverrideFogColor(lua_State* L);
 		int SetRealisticSkyAerialPerspective(lua_State* L);
 		int SetRealisticSkyHighQuality(lua_State* L);
+		int SetRealisticSkyRecieveShadow(lua_State* L);
+		int SetVolumetricCloudsRecieveShadow(lua_State* L);
 
 		int GetSkyMapName(lua_State* L);
 		int GetColorGradingMapName(lua_State* L);

@@ -80,6 +80,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 sunDirection = GetSunDirection();
 	float3 sunIlluminance = GetSunColor();
 
+	const bool recieveShadow = GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECIEVE_SHADOW;
+
 	const float tDepth = 0.0;
 	const float sampleCountIni = max(1.0, float(DTid.z + 1.0) * 2.0f); // Double sample count per slice
 	const bool variableSampleCount = false;
@@ -88,8 +90,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const bool ground = false;
 	const bool mieRayPhase = true;
 	const bool multiScatteringApprox = true;
-	const bool volumetricCloudShadow = true;
-	const bool opaqueShadow = true;
+	const bool volumetricCloudShadow = recieveShadow;
+	const bool opaqueShadow = recieveShadow;
 	const float opticalDepthScale = atmosphere.aerialPerspectiveScale;
 	SingleScatteringResult ss = IntegrateScatteredLuminance(
         atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,

@@ -10,7 +10,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_WEATHER " Weather", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(660, 1960));
+	SetSize(XMFLOAT2(660, 2000));
 
 	closeButton.SetTooltip("Delete WeatherComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -255,7 +255,17 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&realisticskyHighQualityCheckBox);
 
-	volumetricCloudsCheckBox.Create("Volumetric clouds: ");
+	realisticskyRecieveShadowCheckBox.Create("Recieve Shadow: ");
+	realisticskyRecieveShadowCheckBox.SetTooltip("Realistic sky to recieve shadow from objects with shadow maps.");
+	realisticskyRecieveShadowCheckBox.SetSize(XMFLOAT2(hei, hei));
+	realisticskyRecieveShadowCheckBox.SetPos(XMFLOAT2(x, y += step));
+	realisticskyRecieveShadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetRealisticSkyRecieveShadow(args.bValue);
+		});
+	AddWidget(&realisticskyRecieveShadowCheckBox);
+
+	volumetricCloudsCheckBox.Create("Volumetric Clouds: ");
 	volumetricCloudsCheckBox.SetTooltip("Enable volumetric cloud rendering, which is separate from the simple cloud parameters.");
 	volumetricCloudsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	volumetricCloudsCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -265,15 +275,25 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&volumetricCloudsCheckBox);
 
-	volumetricCloudsShadowsCheckBox.Create("Volumetric clouds shadows: ");
-	volumetricCloudsShadowsCheckBox.SetTooltip("Compute shadows for volumetric clouds that will be used for geometry and lighting.");
-	volumetricCloudsShadowsCheckBox.SetSize(XMFLOAT2(hei, hei));
-	volumetricCloudsShadowsCheckBox.SetPos(XMFLOAT2(x, y += step));
-	volumetricCloudsShadowsCheckBox.OnClick([&](wi::gui::EventArgs args) {
+	volumetricCloudsRecieveShadowCheckBox.Create("Recieve Shadow: ");
+	volumetricCloudsRecieveShadowCheckBox.SetTooltip("Clouds to recieve shadow from objects with shadow maps.");
+	volumetricCloudsRecieveShadowCheckBox.SetSize(XMFLOAT2(hei, hei));
+	volumetricCloudsRecieveShadowCheckBox.SetPos(XMFLOAT2(x, y += step));
+	volumetricCloudsRecieveShadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
-		weather.SetVolumetricCloudsShadows(args.bValue);
+		weather.SetVolumetricCloudsRecieveShadow(args.bValue);
 		});
-	AddWidget(&volumetricCloudsShadowsCheckBox);
+	AddWidget(&volumetricCloudsRecieveShadowCheckBox);
+
+	volumetricCloudsCastShadowCheckBox.Create("Cast Shadow: ");
+	volumetricCloudsCastShadowCheckBox.SetTooltip("Compute shadows for volumetric clouds that will be used for geometry and lighting.");
+	volumetricCloudsCastShadowCheckBox.SetSize(XMFLOAT2(hei, hei));
+	volumetricCloudsCastShadowCheckBox.SetPos(XMFLOAT2(x, y += step));
+	volumetricCloudsCastShadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetVolumetricCloudsCastShadow(args.bValue);
+		});
+	AddWidget(&volumetricCloudsCastShadowCheckBox);
 
 	cloudStartHeightSlider.Create(500.0f, 2500.0f, 1500.0f, 1000.0f, "Cloud start height: ");
 	cloudStartHeightSlider.SetTooltip("This tells how many meters above the surface the cloud system should appear");
@@ -1105,7 +1125,8 @@ void WeatherWindow::Update()
 		ocean_toleranceSlider.SetValue(weather.oceanParameters.surfaceDisplacementTolerance);
 
 		volumetricCloudsCheckBox.SetCheck(weather.IsVolumetricClouds());
-		volumetricCloudsShadowsCheckBox.SetCheck(weather.IsVolumetricCloudsShadows());
+		volumetricCloudsRecieveShadowCheckBox.SetCheck(weather.IsVolumetricCloudsRecieveShadow());
+		volumetricCloudsCastShadowCheckBox.SetCheck(weather.IsVolumetricCloudsCastShadow());
 		cloudStartHeightSlider.SetValue(weather.volumetricCloudParameters.cloudStartHeight);
 		cloudThicknessSlider.SetValue(weather.volumetricCloudParameters.cloudThickness);
 		skewAlongWindDirectionFirstSlider.SetValue(weather.volumetricCloudParameters.layerFirst.skewAlongWindDirection);
@@ -1274,6 +1295,7 @@ void WeatherWindow::ResizeLayout()
 	add_right(realisticskyCheckBox);
 	add_right(aerialperspectiveCheckBox);
 	add_right(realisticskyHighQualityCheckBox);
+	add_right(realisticskyRecieveShadowCheckBox);
 	add(colorComboBox);
 	add_fullwidth(colorPicker);
 	add_fullwidth(skyButton);
@@ -1296,7 +1318,8 @@ void WeatherWindow::ResizeLayout()
 	y += jump;
 
 	add_right(volumetricCloudsCheckBox);
-	add_right(volumetricCloudsShadowsCheckBox);
+	add_right(volumetricCloudsRecieveShadowCheckBox);
+	add_right(volumetricCloudsCastShadowCheckBox);
 	add(cloudStartHeightSlider);
 	add(cloudThicknessSlider);
 	add(skewAlongWindDirectionFirstSlider);

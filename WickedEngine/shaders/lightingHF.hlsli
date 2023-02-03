@@ -58,7 +58,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		[branch]
 		if (light.IsCastingShadow() && surface.IsReceiveShadow())
 		{
-			if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
+			if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW)
 			{
 				shadow *= shadow_2D_volumetricclouds(surface.P);
 			}

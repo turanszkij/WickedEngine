@@ -1,3 +1,5 @@
+#define DISABLE_SOFT_SHADOWMAP
+#define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 #include "globals.hlsli"
 #include "volumetricCloudsHF.hlsli"
 #include "skyAtmosphere.hlsli"
@@ -105,6 +107,46 @@ ParticipatingMedia SampleParticipatingMedia(float3 baseAlbedo, float3 baseExtinc
 	}
 
 	return participatingMedia;
+}
+
+void OpaqueShadow(inout ParticipatingMedia participatingMedia, float3 worldPosition)
+{
+	float shadow = 1.0f;
+	
+	for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
+	{
+		ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
+		
+		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC || !light.IsCastingShadow())
+		{
+			// static lights will be skipped (they are used in lightmap baking)
+			// useless if light doesn't cast shadow
+			continue;
+		}
+		
+		if (light.GetType() == ENTITY_TYPE_DIRECTIONALLIGHT)
+		{
+			for (uint cascade = 0; cascade < light.GetShadowCascadeCount(); ++cascade)
+			{
+				float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(worldPosition, 1)).xyz; // ortho matrix, no divide by .w
+				float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				
+				if (is_saturated(shadow_uv))
+				{
+					shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade).r;
+				}
+			}
+
+			// We've found the first/primary directional light, quit
+			break;
+		}
+	}
+
+	[unroll]
+	for (int ms = 0; ms < MS_COUNT; ms++)
+	{
+		participatingMedia.transmittanceToLight[ms] *= shadow;
+	}
 }
 
 void VolumetricShadow(inout ParticipatingMedia participatingMedia, in AtmosphereParameters atmosphere, float3 worldPosition, float3 sunDirection, LayerParameters layerParametersFirst, LayerParameters layerParametersSecond, float lod)
@@ -391,6 +433,12 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 	// Only render if there is any sign of scattering (albedo * extinction)
 	if (any(participatingMedia.scatteringCoefficients[0] > 0.0))
 	{
+		// Sample shadows from opaque shadow maps
+		if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_RECIEVE_SHADOW)
+		{
+			OpaqueShadow(participatingMedia, worldPosition);
+		}
+		
 		// Calcualte volumetric shadow
 		VolumetricShadow(participatingMedia, atmosphere, worldPosition, sunDirection, layerParametersFirst, layerParametersSecond, lod);
 
@@ -637,8 +685,8 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 			const bool ground = false;
 			const bool mieRayPhase = true;
 			const bool multiScatteringApprox = true;
-			const bool volumetricCloudShadow = true;
-			const bool opaqueShadow = false;
+			const bool volumetricCloudShadow = GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW;
+			const bool opaqueShadow = GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_RECIEVE_SHADOW;
 			const float opticalDepthScale = atmosphere.aerialPerspectiveScale;
 			SingleScatteringResult ss = IntegrateScatteredLuminance(
 				atmosphere, DTid.xy, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth * M_TO_SKY_UNIT, sampleCountIni, variableSampleCount,

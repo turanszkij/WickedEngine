@@ -3253,7 +3253,7 @@ void UpdatePerFrameData(
 	}
 
 	// Calculate volumetric cloud shadow data:
-	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
+	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsCastShadow())
 	{
 		if (!textures[TEXTYPE_2D_VOLUMETRICCLOUDS_SHADOW].IsValid())
 		{
@@ -3451,9 +3451,9 @@ void UpdatePerFrameData(
 	{
 		frameCB.options |= OPTION_BIT_FORCE_DIFFUSE_LIGHTING;
 	}
-	if (vis.scene->weather.IsVolumetricCloudsShadows() && vis.scene->weather.IsVolumetricClouds())
+	if (vis.scene->weather.IsVolumetricCloudsCastShadow() && vis.scene->weather.IsVolumetricClouds())
 	{
-		frameCB.options |= OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS;
+		frameCB.options |= OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW;
 	}
 	if (vis.scene->weather.skyMap.IsValid() && !has_flag(vis.scene->weather.skyMap.GetTexture().desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 	{
@@ -3466,6 +3466,14 @@ void UpdatePerFrameData(
 	if (vis.scene->weather.IsRealisticSkyHighQuality() && vis.scene->weather.IsRealisticSky())
 	{
 		frameCB.options |= OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY;
+	}
+	if (vis.scene->weather.IsRealisticSkyRecieveShadow() && vis.scene->weather.IsRealisticSky())
+	{
+		frameCB.options |= OPTION_BIT_REALISTIC_SKY_RECIEVE_SHADOW;
+	}
+	if (vis.scene->weather.IsVolumetricCloudsRecieveShadow() && vis.scene->weather.IsVolumetricClouds())
+	{
+		frameCB.options |= OPTION_BIT_VOLUMETRICCLOUDS_RECIEVE_SHADOW;
 	}
 
 	frameCB.scene = vis.scene->shaderscene;
@@ -4279,7 +4287,7 @@ void UpdateRenderDataAsync(
 		volumetric_clouds_precomputed = true;
 	}
 
-	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsShadows())
+	if (vis.scene->weather.IsVolumetricClouds() && vis.scene->weather.IsVolumetricCloudsCastShadow())
 	{
 		const Texture* weatherMapFirst = vis.scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr;
 		const Texture* weatherMapSecond = vis.scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr;

@@ -901,20 +901,6 @@ namespace wi
 				);
 			}
 
-			if (scene->weather.IsVolumetricClouds())
-			{
-				wi::renderer::Postprocess_VolumetricClouds(
-					volumetriccloudResources,
-					cmd,
-					*camera,
-					camera_previous,
-					camera_reflection,
-					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
-					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-				);
-			}
-
 			RenderSSR(cmd);
 
 			if (wi::renderer::GetScreenSpaceShadowsEnabled())
@@ -1224,6 +1210,19 @@ namespace wi
 						cmd
 					);
 				}
+			}
+			if (scene->weather.IsVolumetricClouds())
+			{
+				wi::renderer::Postprocess_VolumetricClouds(
+					volumetriccloudResources,
+					cmd,
+					*camera,
+					camera_previous,
+					camera_reflection,
+					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+				);
 			}
 
 			// Depth buffers were created on COMPUTE queue, so make them available for pixel shaders here:

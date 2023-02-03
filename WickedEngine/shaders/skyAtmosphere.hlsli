@@ -662,7 +662,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
 			float3 shadowP = P * SKY_UNIT_TO_M + atmosphere.planetCenter * SKY_UNIT_TO_M;
 			
 			// Volumetric cloud shadow
-			if (volumetricCloudShadow && GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
+			if (volumetricCloudShadow && GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW)
 			{
 				earthShadow *= shadow_2D_volumetricclouds(shadowP);
 			}
