@@ -220,6 +220,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"virtualTextureTileRequestsCS", wi::graphics::ShaderStage::CS },
 	{"virtualTextureTileAllocateCS", wi::graphics::ShaderStage::CS },
 	{"virtualTextureResidencyUpdateCS", wi::graphics::ShaderStage::CS },
+	{"windCS", wi::graphics::ShaderStage::CS },
 
 
 	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },
@@ -393,75 +394,39 @@ int main(int argc, char* argv[])
 		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6" << std::endl;
 	}
 
-	static const wi::vector<std::string> wind_permutation = { "WIND" };
-
 	shaders.push_back({ "objectVS_simple", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_common", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_common_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_prepass", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_prepass_alphatest", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_prepass_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_prepass_alphatest_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_simple_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "shadowVS_transparent", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "shadowVS", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "shadowVS_alphatest", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS_alphatest", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS_emulation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS_alphatest_emulation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS_transparent", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS_transparent_emulation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 
 	// permutations for objectPS:

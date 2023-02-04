@@ -39,6 +39,26 @@ local States = {
 	DANCE = "dance"
 }
 
+	
+local animations = {}
+local function LoadAnimations(model_name)
+	local anim_scene = Scene()
+	LoadModel(anim_scene, model_name)
+	animations = {
+		IDLE = anim_scene.Entity_FindByName("idle"),
+		WALK = anim_scene.Entity_FindByName("walk"),
+		JOG = anim_scene.Entity_FindByName("jog"),
+		RUN = anim_scene.Entity_FindByName("run"),
+		JUMP = anim_scene.Entity_FindByName("jump"),
+		SWIM_IDLE = anim_scene.Entity_FindByName("swim_idle"),
+		SWIM = anim_scene.Entity_FindByName("swim"),
+		DANCE = anim_scene.Entity_FindByName("dance")
+	}
+	scene.Merge(anim_scene)
+end
+
+local character_capsules = {}
+
 local function Character(model_name, start_position, face, controllable)
 	local self = {
 		model = INVALID_ENTITY,
@@ -72,11 +92,15 @@ local function Character(model_name, start_position, face, controllable)
 		scale = Vector(1, 1, 1),
 		rotation = Vector(0,math.pi,0),
 		start_position = Vector(0, 1, 0),
+		position = Vector(),
 		controllable = true,
+		root_bone_offset = 0,
 
 		patrol_waypoints = {},
 		patrol_next = 0,
 		patrol_wait = 0,
+		patrol_reached = false,
+		hired = nil,
 		
 		Create = function(self, model_name, start_position, face, controllable)
 			self.start_position = start_position
@@ -87,41 +111,71 @@ local function Character(model_name, start_position, face, controllable)
 			else
 				self.layerMask = Layers.NPC
 			end
-			local character_scene = Scene()
-			self.model = LoadModel(character_scene, model_name)
-			local layer = character_scene.Component_GetLayer(self.model)
+			self.model = LoadModel(model_name)
+			local layer = scene.Component_GetLayer(self.model)
 			layer.SetLayerMask(self.layerMask)
 
 			self.state = States.IDLE
 			self.state_prev = self.state
+
+			for i,entity in ipairs(scene.Entity_GetHumanoidArray()) do
+				if scene.Entity_IsDescendant(entity, self.model) then
+					self.humanoid = entity
+					local humanoid = scene.Component_GetHumanoid(self.humanoid)
+					humanoid.SetLookAtEnabled(false)
+					self.neck = humanoid.GetBoneEntity(HumanoidBone.Neck)
+					self.head = humanoid.GetBoneEntity(HumanoidBone.Head)
+					self.left_hand = humanoid.GetBoneEntity(HumanoidBone.LeftHand)
+					self.right_hand = humanoid.GetBoneEntity(HumanoidBone.RightHand)
+					self.left_foot = humanoid.GetBoneEntity(HumanoidBone.LeftFoot)
+					self.right_foot = humanoid.GetBoneEntity(HumanoidBone.RightFoot)
+
+					-- Create a base capsule collider if it's not yet configured for character:
+					--	It will be used for movement logic and GPU collision effects
+					if scene.Component_GetCollider(entity) == nil then
+						local collider = scene.Component_CreateCollider(entity)
+						collider.SetCPUEnabled(false)
+						collider.SetGPUEnabled(true)
+						collider.Shape = ColliderShape.Capsule
+						collider.Radius = 0.3
+						collider.Offset = Vector(0, collider.Radius, 0)
+						collider.Tail = Vector(0, 1.4, 0)
+						local head_transform = scene.Component_GetTransform(self.head)
+						if head_transform ~= nil then
+							collider.Tail = head_transform.GetPosition()
+						end
+					end
+					self.collider = entity
+
+					break
+				end
+			end
+			for i,entity in ipairs(scene.Entity_GetExpressionArray()) do
+				if scene.Entity_IsDescendant(entity, self.model) then
+					self.expression = entity
+					self.happy = 0
+					break
+				end
+			end
+
+			self.root = scene.Entity_FindByName("Root", self.model)
 			
-			for i,entity in ipairs(character_scene.Entity_GetAnimationArray()) do
-				table.insert(self.all_anims, entity)
+			self.idle_anim = scene.RetargetAnimation(self.humanoid, animations.IDLE, false)
+			self.walk_anim = scene.RetargetAnimation(self.humanoid, animations.WALK, false)
+			self.jog_anim = scene.RetargetAnimation(self.humanoid, animations.JOG, false)
+			self.run_anim = scene.RetargetAnimation(self.humanoid, animations.RUN, false)
+			self.jump_anim = scene.RetargetAnimation(self.humanoid, animations.JUMP, false)
+			self.swim_idle_anim = scene.RetargetAnimation(self.humanoid, animations.SWIM_IDLE, false)
+			self.swim_anim = scene.RetargetAnimation(self.humanoid, animations.SWIM, false)
+			self.dance_anim = scene.RetargetAnimation(self.humanoid, animations.DANCE, false)
+			
+			for i,entity in ipairs(scene.Entity_GetAnimationArray()) do
+				if scene.Entity_IsDescendant(entity, self.model) then
+					table.insert(self.all_anims, entity)
+				end
 			end
 			
-			self.idle_anim = character_scene.Entity_FindByName("idle")
-			self.walk_anim = character_scene.Entity_FindByName("walk")
-			self.jog_anim = character_scene.Entity_FindByName("jog")
-			self.run_anim = character_scene.Entity_FindByName("run")
-			self.jump_anim = character_scene.Entity_FindByName("jump")
-			self.swim_idle_anim = character_scene.Entity_FindByName("swim_idle")
-			self.swim_anim = character_scene.Entity_FindByName("swim")
-			self.dance_anim = character_scene.Entity_FindByName("dance")
-
-			self.collider = character_scene.Entity_GetHumanoidArray()[1]
-			self.expression = character_scene.Entity_GetExpressionArray()[1]
-			self.happy=0
-			self.humanoid = character_scene.Entity_GetHumanoidArray()[1]
-			local humanoid = character_scene.Component_GetHumanoid(self.humanoid)
-			humanoid.SetLookAtEnabled(false)
-			self.neck = humanoid.GetBoneEntity(HumanoidBone.Neck)
-			self.head = humanoid.GetBoneEntity(HumanoidBone.Head)
-			self.left_hand = humanoid.GetBoneEntity(HumanoidBone.LeftHand)
-			self.right_hand = humanoid.GetBoneEntity(HumanoidBone.RightHand)
-			self.left_foot = humanoid.GetBoneEntity(HumanoidBone.LeftFoot)
-			self.right_foot = humanoid.GetBoneEntity(HumanoidBone.RightFoot)
-			
-			local model_transform = character_scene.Component_GetTransform(self.model)
+			local model_transform = scene.Component_GetTransform(self.model)
 			model_transform.ClearTransform()
 			model_transform.Scale(self.scale)
 			model_transform.Rotate(self.rotation)
@@ -129,16 +183,11 @@ local function Character(model_name, start_position, face, controllable)
 			model_transform.UpdateTransform()
 			
 			self.target = CreateEntity()
-			local target_transform = character_scene.Component_CreateTransform(self.target)
-			target_transform.Translate(character_scene.Component_GetTransform(self.neck).GetPosition())
+			local target_transform = scene.Component_CreateTransform(self.target)
+			target_transform.Translate(scene.Component_GetTransform(self.neck).GetPosition())
 			target_transform.Translate(self.start_position)
-			
-			character_scene.Component_Attach(self.target, self.model)
+			scene.Component_Attach(self.target, self.model)
 
-			self.root = character_scene.Entity_FindByName("Root")
-			self.root_bone_offset = 0
-
-			scene.Merge(character_scene)
 		end,
 		
 		Jump = function(self,f)
@@ -356,35 +405,74 @@ local function Character(model_name, start_position, face, controllable)
 					local pos = savedPos
 					pos.SetY(0)
 					local patrol = self.patrol_waypoints[self.patrol_next % patrol_count + 1]
-					local patrol_pos = patrol.position
-					local patrol_wait = patrol.wait or 0 -- default: 0
-					patrol_pos.SetY(0)
-					local patrol_vec = vector.Subtract(patrol_pos, pos)
-					local distance = patrol_vec.Length()
-					if distance < 0.2 then
-						-- reached patrol waypoint:
-						if self.state ~= States.SWIM_IDLE then
-							self.state = States.IDLE
-						end
-						if self.patrol_wait >= patrol_wait then
-							self.patrol_next = self.patrol_next + 1
-						else
-							self.patrol_wait = self.patrol_wait + dt
-						end
-					else
-						-- move towards patrol waypoint:
-						self.patrol_wait = 0
-						-- check if it's blocked by player collision:
-						local capsule = scene.Component_GetCollider(self.collider).GetCapsule()
-						capsule.SetRadius(capsule.GetRadius() * 2)
-						local e = scene.Intersects(capsule, FILTER_COLLIDER, Layers.Player)
-						if e == INVALID_ENTITY then
-							if self.state == States.SWIM_IDLE then
-								self.state = States.SWIM
-							else
-								self.state = patrol.state or States.WALK -- default : WALK
+					local patrol_transform = scene.Component_GetTransform(patrol.entity)
+					if patrol_transform ~= nil then
+						local patrol_pos = patrol_transform.GetPosition()
+						patrol_pos.SetY(0)
+						local patrol_wait = patrol.wait or 0 -- default: 0
+						local patrol_vec = vector.Subtract(patrol_pos, pos)
+						local distance = patrol_vec.Length()
+						local patrol_dist = patrol.distance or 0.2 -- default : 0.2
+						local patrol_dist_threshold = patrol.distance_threshold or 0 -- default : 0
+						if distance < patrol_dist then
+							-- reached patrol waypoint:
+							self.patrol_reached = true
+							if self.state ~= States.SWIM_IDLE then
+								self.state = States.IDLE
 							end
-							self:MoveDirection(patrol_vec)
+							if self.patrol_wait >= patrol_wait then
+								self.patrol_next = self.patrol_next + 1
+							else
+								self.patrol_wait = self.patrol_wait + dt
+							end
+						elseif self.patrol_reached then
+							--  threshold to avoid jerking between moving and reached destination:
+							--	 Between distance and distance + threshold, the character will not advance towards waypoint
+							--	 Useful for dynamic waypoint, such as following behaviour
+							if distance > patrol_dist + patrol_dist_threshold then
+								self.patrol_reached = false
+							end
+						else
+							-- move towards patrol waypoint:
+							self.patrol_wait = 0
+							-- check if it's blocked by player collision:
+							local capsule = scene.Component_GetCollider(self.collider).GetCapsule()
+							local forward_offset = vector.Multiply(patrol_vec.Normalize(), 0.5)
+							capsule.SetBase(vector.Add(capsule.GetBase(), forward_offset))
+							capsule.SetTip(vector.Add(capsule.GetTip(), forward_offset))
+							capsule.SetRadius(capsule.GetRadius() * 2)
+
+							-- Manual check for blocked patrol:
+							--	This is manually done because it is difficult to filter out current NPC among other NPCs
+							--	Because NPCs can also be blocked by other NPCs but not themselves
+							--	And introducing custom layer for every NPC is not very good
+							local blocked = false
+							for other_entity,other_capsule in pairs(character_capsules) do
+								if other_entity ~= self.model then
+									if capsule.Intersects(other_capsule) then
+										blocked = true
+									end
+								end
+							end
+							
+							if blocked then
+								if debug then
+									DrawDebugText("patrol blocked", vector.Add(capsule.GetTip(), Vector(0,0.1)), Vector(1,0,0,1), 0.08, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
+									DrawCapsule(capsule, Vector(1,0,0,1))
+								end
+							else
+								if self.state == States.SWIM_IDLE then
+									self.state = States.SWIM
+								else
+									self.state = patrol.state or States.WALK -- default : WALK
+								end
+								self:MoveDirection(patrol_vec)
+								if debug then
+									DrawDebugText("patrol blocking check", vector.Add(capsule.GetTip(), Vector(0,0.1)), Vector(0,1,0,1), 0.08, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
+									DrawCapsule(capsule, Vector(0,1,0,1))
+								end
+							end
+
 						end
 					end
 				end
@@ -423,7 +511,7 @@ local function Character(model_name, start_position, face, controllable)
 					-- For NPC, this makes it not pushable away by player:
 					--	This works by disabling NPC's collision to player
 					--	But the player can still collide with NPC and can be blocked
-					collision_layer = ~(Layers.Player | Layers.NPC)
+					collision_layer = collision_layer & ~Layers.Player
 				end
 				local o2, p2, n2, depth, velocity = scene.Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, collision_layer) -- scene/capsule collision
 				if(o2 ~= INVALID_ENTITY) then
@@ -470,14 +558,15 @@ local function Character(model_name, start_position, face, controllable)
 					PutWaterRipple(script_dir() .. "assets/ripple.png", wp)
 				end
 			end
+
+			character_capsules[self.model] = capsule
+			self.position = model_transform.GetPosition()
 			
 		end,
 
 		Update_IK = function(self)
 			-- IK foot placement:
-			local root_bone_transform = scene.Component_GetTransform(self.root)
-			root_bone_transform.ClearTransform()
-			self.root_bone_offset = math.lerp(self.root_bone_offset, 0, 0.1)
+			local base_y = self.position.GetY()
 			local ik_foot = INVALID_ENTITY
 			local ik_pos = Vector()
 			-- Compute root bone offset:
@@ -495,10 +584,12 @@ local function Character(model_name, start_position, face, controllable)
 				local diff_left = 0
 				local diff_right = 0
 				if collEntity_left ~= INVALID_ENTITY then
-					diff_left = vector.Subtract(collPos_left, pos_left).GetY()
+					--DrawAxis(collPos_left, 0.2)
+					diff_left = collPos_left.GetY() - base_y
 				end
 				if collEntity_right ~= INVALID_ENTITY then
-					diff_right = vector.Subtract(collPos_right, pos_right).GetY()
+					--DrawAxis(collPos_right, 0.2)
+					diff_right = collPos_right.GetY() - base_y
 				end
 				local diff = diff_left
 				if collPos_left.GetY() > collPos_right.GetY() + 0.01 then
@@ -513,9 +604,18 @@ local function Character(model_name, start_position, face, controllable)
 						ik_pos = collPos_right
 					end
 				end
-				self.root_bone_offset = math.lerp(self.root_bone_offset, diff + 0.1, 0.2)
+				self.root_bone_offset = math.lerp(self.root_bone_offset, diff, 0.1)
+			else
+				self.root_bone_offset = math.lerp(self.root_bone_offset, 0, 0.1)
 			end
+
+			-- Offset root transform to lower foot pos:
+			local root_bone_transform = scene.Component_GetTransform(self.root)
+			root_bone_transform.ClearTransform()
+			local root_pos = root_bone_transform.GetPosition()
 			root_bone_transform.Translate(Vector(0, self.root_bone_offset))
+			--DrawDebugText(self.root_bone_offset, self.position, Vector(1,1,1,1), 0.1, DEBUG_TEXT_CAMERA_FACING)
+			--DrawPoint(vector.Add(root_pos, Vector(0, self.root_bone_offset)), 0.1, Vector(1,0,0,1))
 
 			-- Remove IK effectors by default:
 			if scene.Component_GetInverseKinematics(self.left_foot) ~= nil then
@@ -561,9 +661,42 @@ local ResolveCharacters = function(characterA, characterB)
 			humanoidA.SetLookAt(headB)
 			humanoidB.SetLookAt(headA)
 
-			DrawDebugText("Hello there!", vector.Add(headA, Vector(0,0.4)), Vector(0.1,1,0.1,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
+			if characterB.controllable then
+				if input.Press(KEYBOARD_BUTTON_ENTER) then
+					characterA.hired = characterB
+				end
+
+				if characterA.hired == nil then
+					DrawDebugText("Hello there!\nPress ENTER to hire me!", vector.Add(headA, Vector(0,0.4)), Vector(1,0.2,1,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
+				else
+					DrawDebugText("Where are we going?", vector.Add(headA, Vector(0,0.4)), Vector(0.2,1,0.2,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
+				end
+			end
 		end
+
+		if characterA.hired ~= nil then
+			characterA.patrol_waypoints = {
+				{
+					entity = characterA.hired.model,
+					distance = 2,
+					distance_threshold = 1
+				}
+			}
+			if distance < 5 then
+				if characterA.hired.state == States.JOG or characterA.hired.state == States.RUN then
+					characterA.patrol_waypoints[1].state = States.JOG
+				else
+					characterA.patrol_waypoints[1].state = States.WALK
+				end
+			elseif distance < 10 then
+				characterA.patrol_waypoints[1].state = States.JOG
+			else
+				characterA.patrol_waypoints[1].state = States.RUN
+			end
+		end
+
 	end
+
 end
 
 -- Third person camera controller class:
@@ -680,18 +813,20 @@ local function ThirdPersonCamera(character)
 	return self
 end
 
-	
 ClearWorld()
 LoadModel(script_dir() .. "assets/level.wiscene")
 --LoadModel(script_dir() .. "assets/terrain.wiscene")
+--LoadModel(script_dir() .. "assets/waypoints.wiscene", matrix.Translation(Vector(1,0,2)))
 --dofile(script_dir() .. "../dungeon_generator/dungeon_generator.lua")
+
+LoadAnimations(script_dir() .. "assets/animations.wiscene")
 
 local player = Character(script_dir() .. "assets/character.wiscene", Vector(0,0.5,0), Vector(0,0,1), true)
 local npcs = {
 	-- Patrolling NPC IDs: 1,2,3
 	Character(script_dir() .. "assets/character.wiscene", Vector(4,0.1,4), Vector(0,0,-1), false),
 	Character(script_dir() .. "assets/character.wiscene", Vector(-8,1,4), Vector(-1,0,0), false),
-	Character(script_dir() .. "assets/character.wiscene", Vector(-2,0.1,4), Vector(-1,0,0), false),
+	Character(script_dir() .. "assets/character.wiscene", Vector(-2,0.1,8), Vector(-1,0,0), false),
 
 	-- stationary NPC IDs: 3,4....
 	Character(script_dir() .. "assets/character.wiscene", Vector(-1,0.1,-6), Vector(0,0,1), false),
@@ -843,47 +978,47 @@ end)
 -- Patrol waypoints:
 
 local waypoints = {
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint1")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint2")),
+	scene.Entity_FindByName("waypoint1"),
+	scene.Entity_FindByName("waypoint2"),
 
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint3")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint4")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint5")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint6")),
+	scene.Entity_FindByName("waypoint3"),
+	scene.Entity_FindByName("waypoint4"),
+	scene.Entity_FindByName("waypoint5"),
+	scene.Entity_FindByName("waypoint6"),
 
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint7")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint8")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint9")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint10")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint11")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint12")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint13")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint14")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint15")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint16")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint17")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint18")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint19")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint20")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint21")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint22")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint23")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint24")),
-	scene.Component_GetTransform(scene.Entity_FindByName("waypoint25")),
+	scene.Entity_FindByName("waypoint7"),
+	scene.Entity_FindByName("waypoint8"),
+	scene.Entity_FindByName("waypoint9"),
+	scene.Entity_FindByName("waypoint10"),
+	scene.Entity_FindByName("waypoint11"),
+	scene.Entity_FindByName("waypoint12"),
+	scene.Entity_FindByName("waypoint13"),
+	scene.Entity_FindByName("waypoint14"),
+	scene.Entity_FindByName("waypoint15"),
+	scene.Entity_FindByName("waypoint16"),
+	scene.Entity_FindByName("waypoint17"),
+	scene.Entity_FindByName("waypoint18"),
+	scene.Entity_FindByName("waypoint19"),
+	scene.Entity_FindByName("waypoint20"),
+	scene.Entity_FindByName("waypoint21"),
+	scene.Entity_FindByName("waypoint22"),
+	scene.Entity_FindByName("waypoint23"),
+	scene.Entity_FindByName("waypoint24"),
+	scene.Entity_FindByName("waypoint25"),
 }
 
 -- Simplest 1-2 patrol:
 if(
-	waypoints[1] ~= nil and 
-	waypoints[2] ~= nil
+	waypoints[1] ~= INVALID_ENTITY and 
+	waypoints[2] ~= INVALID_ENTITY
 ) then
 	npcs[1].patrol_waypoints = {
 		{
-			position = waypoints[1].GetPosition(),
+			entity = waypoints[1],
 			wait = 0,
 		},
 		{
-			position = waypoints[2].GetPosition(),
+			entity = waypoints[2],
 			wait = 2,
 		},
 	}
@@ -891,27 +1026,27 @@ end
 
 -- Some more advanced, toggle between walk and jog, also swimming (because waypoints are across water mesh in test level):
 if(
-	waypoints[3] ~= nil and 
-	waypoints[4] ~= nil and
-	waypoints[5] ~= nil and
-	waypoints[6] ~= nil
+	waypoints[3] ~= INVALID_ENTITY and 
+	waypoints[4] ~= INVALID_ENTITY and
+	waypoints[5] ~= INVALID_ENTITY and
+	waypoints[6] ~= INVALID_ENTITY
 ) then
 	npcs[2].patrol_waypoints = {
 		{
-			position = waypoints[3].GetPosition(),
+			entity = waypoints[3],
 			wait = 0,
 			state = States.JOG,
 		},
 		{
-			position = waypoints[4].GetPosition(),
+			entity = waypoints[4],
 			wait = 0,
 		},
 		{
-			position = waypoints[5].GetPosition(),
+			entity = waypoints[5],
 			wait = 2,
 		},
 		{
-			position = waypoints[6].GetPosition(),
+			entity = waypoints[6],
 			wait = 0,
 			state = States.JOG,
 		},
@@ -921,102 +1056,102 @@ end
 
 -- Run long circle:
 if(
-	waypoints[7] ~= nil and 
-	waypoints[8] ~= nil and 
-	waypoints[9] ~= nil and 
-	waypoints[10] ~= nil and 
-	waypoints[11] ~= nil and 
-	waypoints[12] ~= nil and 
-	waypoints[13] ~= nil and 
-	waypoints[14] ~= nil and 
-	waypoints[15] ~= nil and 
-	waypoints[16] ~= nil and 
-	waypoints[17] ~= nil and 
-	waypoints[18] ~= nil and 
-	waypoints[19] ~= nil and 
-	waypoints[20] ~= nil and 
-	waypoints[21] ~= nil and 
-	waypoints[22] ~= nil and 
-	waypoints[23] ~= nil and 
-	waypoints[24] ~= nil and 
-	waypoints[25] ~= nil
+	waypoints[7] ~= INVALID_ENTITY and 
+	waypoints[8] ~= INVALID_ENTITY and 
+	waypoints[9] ~= INVALID_ENTITY and 
+	waypoints[10] ~= INVALID_ENTITY and 
+	waypoints[11] ~= INVALID_ENTITY and 
+	waypoints[12] ~= INVALID_ENTITY and 
+	waypoints[13] ~= INVALID_ENTITY and 
+	waypoints[14] ~= INVALID_ENTITY and 
+	waypoints[15] ~= INVALID_ENTITY and 
+	waypoints[16] ~= INVALID_ENTITY and 
+	waypoints[17] ~= INVALID_ENTITY and 
+	waypoints[18] ~= INVALID_ENTITY and 
+	waypoints[19] ~= INVALID_ENTITY and 
+	waypoints[20] ~= INVALID_ENTITY and 
+	waypoints[21] ~= INVALID_ENTITY and 
+	waypoints[22] ~= INVALID_ENTITY and 
+	waypoints[23] ~= INVALID_ENTITY and 
+	waypoints[24] ~= INVALID_ENTITY and 
+	waypoints[25] ~= INVALID_ENTITY
 ) then
 	npcs[3].patrol_waypoints = {
 		{
-			position = waypoints[7].GetPosition(),
+			entity = waypoints[7],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[8].GetPosition(),
+			entity = waypoints[8],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[9].GetPosition(),
+			entity = waypoints[9],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[10].GetPosition(),
+			entity = waypoints[10],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[11].GetPosition(),
+			entity = waypoints[11],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[12].GetPosition(),
+			entity = waypoints[12],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[13].GetPosition(),
+			entity = waypoints[13],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[14].GetPosition(),
+			entity = waypoints[14],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[15].GetPosition(),
+			entity = waypoints[15],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[16].GetPosition(),
+			entity = waypoints[16],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[17].GetPosition(),
+			entity = waypoints[17],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[18].GetPosition(),
+			entity = waypoints[18],
 			state = States.JOG,
 			wait = 2, -- little wait at top of slope
 		},
 		{
-			position = waypoints[19].GetPosition(),
+			entity = waypoints[19],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[20].GetPosition(),
+			entity = waypoints[20],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[21].GetPosition(),
+			entity = waypoints[21],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[22].GetPosition(),
+			entity = waypoints[22],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[23].GetPosition(),
+			entity = waypoints[23],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[24].GetPosition(),
+			entity = waypoints[24],
 			state = States.JOG,
 		},
 		{
-			position = waypoints[25].GetPosition(),
+			entity = waypoints[25],
 			state = States.JOG,
 		},
 	}

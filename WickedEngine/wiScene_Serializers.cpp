@@ -998,6 +998,10 @@ namespace wi::scene
 				archive >> (uint32_t&)channels[i].path;
 				SerializeEntity(archive, channels[i].target, seri);
 				archive >> channels[i].samplerIndex;
+				if (seri.GetVersion() >= 1)
+				{
+					archive >> channels[i].retargetIndex;
+				}
 			}
 
 			size_t samplerCount;
@@ -1015,6 +1019,19 @@ namespace wi::scene
 				if (archive.GetVersion() >= 46)
 				{
 					SerializeEntity(archive, samplers[i].data, seri);
+				}
+			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				size_t retargetCount;
+				archive >> retargetCount;
+				retargets.resize(retargetCount);
+				for (size_t i = 0; i < retargetCount; ++i)
+				{
+					SerializeEntity(archive, retargets[i].source, seri);
+					archive >> retargets[i].dstRelativeMatrix;
+					archive >> retargets[i].srcRelativeParentMatrix;
 				}
 			}
 
@@ -1042,6 +1059,10 @@ namespace wi::scene
 				archive << (uint32_t&)channels[i].path;
 				SerializeEntity(archive, channels[i].target, seri);
 				archive << channels[i].samplerIndex;
+				if (seri.GetVersion() >= 1)
+				{
+					archive << channels[i].retargetIndex;
+				}
 			}
 
 			archive << samplers.size();
@@ -1050,6 +1071,17 @@ namespace wi::scene
 				archive << samplers[i]._flags;
 				archive << samplers[i].mode;
 				SerializeEntity(archive, samplers[i].data, seri);
+			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << retargets.size();
+				for (size_t i = 0; i < retargets.size(); ++i)
+				{
+					SerializeEntity(archive, retargets[i].source, seri);
+					archive << retargets[i].dstRelativeMatrix;
+					archive << retargets[i].srcRelativeParentMatrix;
+				}
 			}
 		}
 	}

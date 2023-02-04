@@ -532,9 +532,10 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - UpdateHierarchy()	-- updates the full scene hierarchy system. Useful if you modified for example a parent transform and children immediately need up to date result in the script
 
 - CreateEntity() : int entity  -- creates an empty entity and returns it
-- Entity_FindByName(string value) : int entity  -- returns an entity ID if it exists, and 0 otherwise
+- Entity_FindByName(string value, opt Entity ancestor = INVALID_ENTITY) : int entity  -- returns an entity ID if it exists, and INVALID_ENTITY otherwise. You can specify an ancestor entity if you only want to find entities that are descendants of ancestor entity
 - Entity_Remove(Entity entity)  -- removes an entity and deletes all its components if it exists
 - Entity_Duplicate(Entity entity) : int entity  -- duplicates all of an entity's components and creates a new entity with them. Returns the clone entity handle
+- Entity_IsDescendant(Entity entity, Entity ancestor) : bool result	-- Check whether entity is a descendant of ancestor. Returns `true` if entity is in the hierarchy tree of ancestor, `false` otherwise
 
 - Component_CreateName(Entity entity) : NameComponent result  -- attach a name component to an entity. The returned NameComponent is associated with the entity and can be manipulated
 - Component_CreateLayer(Entity entity) : LayerComponent result  -- attach a layer component to an entity. The returned LayerComponent is associated with the entity and can be manipulated
@@ -594,6 +595,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetTransformArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetCameraArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetAnimationArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetAnimationDataArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetMaterialArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetEmitterArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetLightArray() : Entity[] result  -- returns the array of all entities that have this component type
@@ -608,30 +610,36 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetSoundArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetColliderArray() : Entity[] result  -- returns the array of all entities that have this component type
 
-- Component_RemoveName(Entity entity) : NameComponent? result  -- remove the name component of the entity (if exists)
-- Component_RemoveLayer(Entity entity) : LayerComponent? result  -- remove the layer component of the entity (if exists)
-- Component_RemoveTransform(Entity entity) : TransformComponent? result  -- remove the transform component of the entity (if exists)
-- Component_RemoveCamera(Entity entity) : CameraComponent? result  -- remove the camera component of the entity (if exists)
-- Component_RemoveAnimation(Entity entity) : AnimationComponent? result  -- remove the animation component of the entity (if exists)
-- Component_RemoveMaterial(Entity entity) : MaterialComponent? result  -- remove the material component of the entity (if exists)
-- Component_RemoveEmitter(Entity entity) : EmitterComponent? result  -- remove the emitter component of the entity (if exists)
-- Component_RemoveLight(Entity entity) : LightComponent? result  -- remove the light component of the entity (if exists)
-- Component_RemoveObject(Entity entity) : ObjectComponent? result  -- remove the object component of the entity (if exists)
-- Component_RemoveInverseKinematics(Entity entity) : InverseKinematicsComponent? result  -- remove the IK component of the entity (if exists)
-- Component_RemoveSpring(Entity entity) : SpringComponent? result  -- remove the spring component of the entity (if exists)
-- Component_RemoveScript(Entity entity) : ScriptComponent? result  -- remove the script component of the entity (if exists)
-- Component_RemoveRigidBodyPhysics(Entity entity) : RigidBodyPhysicsComponent? result  -- remove the RigidBodyPhysicsComponent of the entity (if exists)
-- Component_RemoveSoftBodyPhysics(Entity entity) : SoftBodyPhysicsComponent? result  -- remove the SoftBodyPhysicsComponent of the entity (if exists)
-- Component_RemoveForceField(Entity entity) : ForceFieldComponent? result  -- remove the ForceFieldComponent of the entity (if exists)
-- Component_RemoveWeather(Entity entity) : WeatherComponent? result  -- remove the WeatherComponent of the entity (if exists)
-- Component_RemoveSound(Entity entity) : SoundComponent? result  -- remove the SoundComponent of the entity (if exists)
-- Component_RemoveCollider(Entity entity) : ColliderComponent? result  -- remove the ColliderComponent of the entity (if exists)
+- Component_RemoveName(Entity entity)  -- remove the name component of the entity (if exists)
+- Component_RemoveLayer(Entity entity)  -- remove the layer component of the entity (if exists)
+- Component_RemoveTransform(Entity entity)  -- remove the transform component of the entity (if exists)
+- Component_RemoveCamera(Entity entity)  -- remove the camera component of the entity (if exists)
+- Component_RemoveAnimation(Entity entity)  -- remove the animation component of the entity (if exists)
+- Component_RemoveAnimationData(Entity entity)
+- Component_RemoveMaterial(Entity entity) -- remove the material component of the entity (if exists)
+- Component_RemoveEmitter(Entity entity)  -- remove the emitter component of the entity (if exists)
+- Component_RemoveLight(Entity entity)  -- remove the light component of the entity (if exists)
+- Component_RemoveObject(Entity entity)  -- remove the object component of the entity (if exists)
+- Component_RemoveInverseKinematics(Entity entity)  -- remove the IK component of the entity (if exists)
+- Component_RemoveSpring(Entity entity)  -- remove the spring component of the entity (if exists)
+- Component_RemoveScript(Entity entity)  -- remove the script component of the entity (if exists)
+- Component_RemoveRigidBodyPhysics(Entity entity)  -- remove the RigidBodyPhysicsComponent of the entity (if exists)
+- Component_RemoveSoftBodyPhysics(Entity entity)  -- remove the SoftBodyPhysicsComponent of the entity (if exists)
+- Component_RemoveForceField(Entity entity)  -- remove the ForceFieldComponent of the entity (if exists)
+- Component_RemoveWeather(Entity entity) -- remove the WeatherComponent of the entity (if exists)
+- Component_RemoveSound(Entity entity)  -- remove the SoundComponent of the entity (if exists)
+- Component_RemoveCollider(Entity entity)  -- remove the ColliderComponent of the entity (if exists)
 
 - Component_Attach(Entity entity,parent, opt bool child_already_in_local_space = false)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer). If child_already_in_local_space is false, then child will be transformed into parent's local space, if true, it will be used as-is.
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
 - Component_DetachChildren(Entity parent)  -- detaches all children from parent, as if calling Component_Detach for all of its children
 
 - GetBounds() : AABB result  -- returns an AABB fully containing objects in the scene. Only valid after scene has been updated.
+- GetWeather() : WeatherComponent
+- SetWeather(WeatherComponent weather)
+
+
+- RetargetAnimation(Entity dst, src, bool bake_data) : Entity entity	-- Retargets an animation from a Humanoid to an other Humanoid such that the new animation will play back on the destination humanoid. dst : destination humanoid that the animation will be fit onto src : the animation to copy, it should already target humanoid bones. bake_data : if true, the retargeted data will be baked into a new animation data. If false, it will reuse the source animation data without creating a new one and retargeting will be applied at runtime on every Update. Returns entity ID of the new animation or INVALID_ENTITY if retargeting was not successful
 
 #### NameComponent
 Holds a string that can more easily identify an entity to humans than an entity ID. 
@@ -951,7 +959,7 @@ Describes a Rigid Body Physics object.
 - BoxParams_HalfExtents : Vector
 - SphereParams_Radius : floatd
 - CapsuleParams_Radius : float
-- CapsuleParams_Reight : float
+- CapsuleParams_Height : float
 - TargetMeshLOD : int
 
 </br>
@@ -1021,6 +1029,12 @@ Describes a Collider object.
 - SetGPUEnabled(bool value)
 - GetCapsule() : Capsule
 - GetSphere() : Sphere
+
+[outer] ColliderShape = {
+	Sphere = 0,
+	Capsule = 1,
+	Plane = 2,
+}
 
 #### ExpressionComponent
 - FindExpressionID(string name) : int	-- Find an expression within the ExpressionComponent by name

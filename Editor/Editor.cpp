@@ -373,63 +373,6 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&openButton);
 
 
-	//closeButton.Create("");
-	//closeButton.SetShadowRadius(2);
-	//closeButton.font.params.shadowColor = wi::Color::Transparent();
-	//closeButton.SetTooltip("Close the current scene.\nThis will clear everything from the currently selected scene, delete the scene and kill all script processes.\nThis operation cannot be undone!");
-	//closeButton.SetColor(wi::Color(255, 130, 100, 180), wi::gui::WIDGETSTATE::IDLE);
-	//closeButton.SetColor(wi::Color(255, 200, 150, 255), wi::gui::WIDGETSTATE::FOCUS);
-	//closeButton.OnClick([&](wi::gui::EventArgs args) {
-
-	//	wi::lua::KillProcesses();
-	//	componentsWnd.terrainWnd.terrain_preset = {};
-
-	//	translator.selected.clear();
-	//	wi::scene::Scene& scene = GetCurrentScene();
-	//	wi::renderer::ClearWorld(scene);
-	//	optionsWnd.cameraWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
-	//	componentsWnd.lightWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.soundWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.decalWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.envProbeWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.materialWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.emitterWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.hairWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.forceFieldWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.springWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.ikWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.transformWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.layerWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.nameWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.animWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.scriptWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.rigidWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.colliderWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.hierarchyWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.cameraComponentWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.expressionWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.armatureWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.humanoidWnd.SetEntity(INVALID_ENTITY);
-	//	componentsWnd.terrainWnd.SetEntity(INVALID_ENTITY);
-
-	//	optionsWnd.RefreshEntityTree();
-	//	ResetHistory();
-	//	GetCurrentEditorScene().path.clear();
-
-	//	wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-	//		if (scenes.size() > 1)
-	//		{
-	//			scenes.erase(scenes.begin() + current_scene);
-	//		}
-	//		SetCurrentScene(std::max(0, current_scene - 1));
-	//		});
-	//	});
-	//GetGUI().AddWidget(&closeButton);
-
-
 	logButton.Create("");
 	logButton.SetShadowRadius(2);
 	logButton.font.params.shadowColor = wi::Color::Transparent();
@@ -3236,7 +3179,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.terrainWnd.terrain_preset.props.clear();
 
 			translator.selected.clear();
-			wi::scene::Scene& scene = GetCurrentScene();
+			wi::scene::Scene& scene = scenes[i]->scene;
 			wi::renderer::ClearWorld(scene);
 			optionsWnd.cameraWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.objectWnd.SetEntity(wi::ecs::INVALID_ENTITY);

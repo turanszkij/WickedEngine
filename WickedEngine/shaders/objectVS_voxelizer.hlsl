@@ -1,4 +1,5 @@
 #define OBJECTSHADER_LAYOUT_COMMON
+#define DISABLE_WIND
 #include "objectHF.hlsli"
 
 struct VSOut

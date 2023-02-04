@@ -1123,19 +1123,10 @@ namespace dx12_internal
 		D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
 		D3D12_DESCRIPTOR_HEAP_TYPE type = {};
 		int index = -1; // bindless
-		union
-		{
-			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv;
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav;
-			D3D12_SAMPLER_DESC sam;
-			D3D12_RENDER_TARGET_VIEW_DESC rtv;
-			D3D12_DEPTH_STENCIL_VIEW_DESC dsv;
-		};
+
 		bool IsValid() const { return handle.ptr != 0; }
 		void init(const GraphicsDevice_DX12* device, const D3D12_CONSTANT_BUFFER_VIEW_DESC& cbv)
 		{
-			this->cbv = cbv;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			handle = allocationhandler->descriptors_res.allocate();
@@ -1159,7 +1150,6 @@ namespace dx12_internal
 		}
 		void init(const GraphicsDevice_DX12* device, const D3D12_SHADER_RESOURCE_VIEW_DESC& srv, ID3D12Resource* res)
 		{
-			this->srv = srv;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			handle = allocationhandler->descriptors_res.allocate();
@@ -1183,7 +1173,6 @@ namespace dx12_internal
 		}
 		void init(const GraphicsDevice_DX12* device, const D3D12_UNORDERED_ACCESS_VIEW_DESC& uav, ID3D12Resource* res)
 		{
-			this->uav = uav;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			handle = allocationhandler->descriptors_res.allocate();
@@ -1207,7 +1196,6 @@ namespace dx12_internal
 		}
 		void init(const GraphicsDevice_DX12* device, const D3D12_SAMPLER_DESC& sam)
 		{
-			this->sam = sam;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 			handle = allocationhandler->descriptors_sam.allocate();
@@ -1231,7 +1219,6 @@ namespace dx12_internal
 		}
 		void init(const GraphicsDevice_DX12* device, const D3D12_RENDER_TARGET_VIEW_DESC& rtv, ID3D12Resource* res)
 		{
-			this->rtv = rtv;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 			handle = allocationhandler->descriptors_rtv.allocate();
@@ -1239,7 +1226,6 @@ namespace dx12_internal
 		}
 		void init(const GraphicsDevice_DX12* device, const D3D12_DEPTH_STENCIL_VIEW_DESC& dsv, ID3D12Resource* res)
 		{
-			this->dsv = dsv;
 			this->allocationhandler = device->allocationhandler;
 			type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 			handle = allocationhandler->descriptors_dsv.allocate();
@@ -1702,8 +1688,7 @@ using namespace dx12_internal;
 		while (_BitScanReverse64(&index, dirty)) // This will make sure that only the dirty root params are iterated, bit-by-bit
 		{
 			const UINT root_parameter_index = (UINT)index;
-			const uint64_t parameter_mask = 1ull << root_parameter_index;
-			dirty &= ~parameter_mask; // remove dirty bit of this root parameter
+			dirty ^= 1ull << root_parameter_index; // remove dirty bit of this root parameter
 			const D3D12_ROOT_PARAMETER1& param = pso_internal->rootsig_desc->Desc_1_1.pParameters[root_parameter_index];
 			const RootSignatureOptimizer::RootParameterStatistics& stats = optimizer.root_stats[root_parameter_index];
 
@@ -1715,7 +1700,61 @@ using namespace dx12_internal;
 				DescriptorHeapGPU& heap = stats.sampler_table ? device->descriptorheap_sam : device->descriptorheap_res;
 				D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = heap.start_gpu;
 
-				if (stats.descriptorCopyCount > 0)
+				if (stats.descriptorCopyCount == 1 && param.DescriptorTable.pDescriptorRanges[0].RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_CBV)
+				{
+					// This is a special case of 1 descriptor per table. This doesn't need copying, but we can just reference single descriptors by their index
+					//	because descriptor index was created already in shader visible descriptor heap for bindless access.
+					//	We don't do this for constant buffers, because that needs to support dynamic offset (so we always create descriptor for them on the fly)
+					const D3D12_DESCRIPTOR_RANGE1& range = param.DescriptorTable.pDescriptorRanges[0];
+					switch (range.RangeType)
+					{
+					case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
+						{
+							const UINT reg = range.BaseShaderRegister;
+							const GPUResource& resource = table.SRV[reg];
+							if (resource.IsValid())
+							{
+								int subresource = table.SRV_index[reg];
+								auto internal_state = to_internal(&resource);
+								int descriptor_index = subresource < 0 ? internal_state->srv.index : internal_state->subresources_srv[subresource].index;
+								gpu_handle.ptr += descriptor_index * device->resource_descriptor_size;
+							}
+						}
+						break;
+					case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
+						{
+							const UINT reg = range.BaseShaderRegister;
+							const GPUResource& resource = table.UAV[reg];
+							if (resource.IsValid())
+							{
+								int subresource = table.UAV_index[reg];
+								auto internal_state = to_internal(&resource);
+								int descriptor_index = subresource < 0 ? internal_state->uav.index : internal_state->subresources_uav[subresource].index;
+								gpu_handle.ptr += descriptor_index * device->resource_descriptor_size;
+							}
+						}
+						break;
+					case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER:
+						{
+							const UINT reg = range.BaseShaderRegister;
+							const Sampler& sam = table.SAM[reg];
+							if (sam.IsValid())
+							{
+								auto internal_state = to_internal(&sam);
+								int descriptor_index = internal_state->descriptor.index;
+								gpu_handle.ptr += descriptor_index * device->sampler_descriptor_size;
+							}
+						}
+						break;
+					case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
+						assert(0); // This must not be reached, constant buffers are handled below with dynamically created descriptors
+						break;
+					default:
+						assert(0);
+						break;
+					}
+				}
+				else if (stats.descriptorCopyCount > 0)
 				{
 					D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = heap.start_cpu;
 					const uint32_t descriptorSize = stats.sampler_table ? device->sampler_descriptor_size : device->resource_descriptor_size;

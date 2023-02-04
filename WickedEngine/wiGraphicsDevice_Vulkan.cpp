@@ -508,6 +508,11 @@ namespace vulkan_internal
 	}
 
 
+	struct BindingUsage
+	{
+		bool used = false;
+		VkDescriptorSetLayoutBinding binding = {};
+	};
 	struct Buffer_Vulkan
 	{
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
@@ -729,7 +734,7 @@ namespace vulkan_internal
 		wi::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 		wi::vector<VkImageViewType> imageViewTypes;
 
-		wi::vector<VkDescriptorSetLayoutBinding> bindlessBindings;
+		wi::vector<BindingUsage> bindlessBindings;
 		wi::vector<VkDescriptorSet> bindlessSets;
 		uint32_t bindlessFirstSet = 0;
 
@@ -761,7 +766,7 @@ namespace vulkan_internal
 		wi::vector<VkImageViewType> imageViewTypes;
 		size_t hash = 0;
 
-		wi::vector<VkDescriptorSetLayoutBinding> bindlessBindings;
+		wi::vector<BindingUsage> bindlessBindings;
 		wi::vector<VkDescriptorSet> bindlessSets;
 		uint32_t bindlessFirstSet = 0;
 
@@ -4223,9 +4228,10 @@ using namespace vulkan_internal;
 				{
 					// There can be padding between bindless spaces because sets need to be bound contiguously
 					internal_state->bindlessBindings.resize(std::max(internal_state->bindlessBindings.size(), (size_t)x->set));
+					internal_state->bindlessBindings[x->set - 1].used = true;
 				}
 
-				auto& descriptor = bindless ? internal_state->bindlessBindings[x->set - 1] : internal_state->layoutBindings.emplace_back();
+				auto& descriptor = bindless ? internal_state->bindlessBindings[x->set - 1].binding : internal_state->layoutBindings.emplace_back();
 				descriptor.stageFlags = internal_state->stageInfo.stage;
 				descriptor.binding = x->binding;
 				descriptor.descriptorCount = x->count;
@@ -4321,10 +4327,11 @@ using namespace vulkan_internal;
 				}
 				for (auto& x : internal_state->bindlessBindings)
 				{
-					wi::helper::hash_combine(internal_state->binding_hash, x.binding);
-					wi::helper::hash_combine(internal_state->binding_hash, x.descriptorCount);
-					wi::helper::hash_combine(internal_state->binding_hash, x.descriptorType);
-					wi::helper::hash_combine(internal_state->binding_hash, x.stageFlags);
+					wi::helper::hash_combine(internal_state->binding_hash, x.used);
+					wi::helper::hash_combine(internal_state->binding_hash, x.binding.binding);
+					wi::helper::hash_combine(internal_state->binding_hash, x.binding.descriptorCount);
+					wi::helper::hash_combine(internal_state->binding_hash, x.binding.descriptorType);
+					wi::helper::hash_combine(internal_state->binding_hash, x.binding.stageFlags);
 				}
 				wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.offset);
 				wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.size);
@@ -4348,7 +4355,7 @@ using namespace vulkan_internal;
 					internal_state->bindlessFirstSet = (uint32_t)layouts.size();
 					for (auto& x : internal_state->bindlessBindings)
 					{
-						switch (x.descriptorType)
+						switch (x.binding.descriptorType)
 						{
 						case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 							assert(0); // not supported, use the raw buffers for same functionality
@@ -4810,13 +4817,16 @@ using namespace vulkan_internal;
 				int i = 0;
 				for (auto& x : shader_internal->bindlessBindings)
 				{
-					if (internal_state->bindlessBindings[i].descriptorType != x.descriptorType)
+					if (x.used)
 					{
-						internal_state->bindlessBindings[i] = x;
-					}
-					else
-					{
-						internal_state->bindlessBindings[i].stageFlags |= x.stageFlags;
+						if (internal_state->bindlessBindings[i].binding.descriptorType != x.binding.descriptorType)
+						{
+							internal_state->bindlessBindings[i] = x;
+						}
+						else
+						{
+							internal_state->bindlessBindings[i].binding.stageFlags |= x.binding.stageFlags;
+						}
 					}
 					i++;
 				}
@@ -4842,10 +4852,11 @@ using namespace vulkan_internal;
 			}
 			for (auto& x : internal_state->bindlessBindings)
 			{
-				wi::helper::hash_combine(internal_state->binding_hash, x.binding);
-				wi::helper::hash_combine(internal_state->binding_hash, x.descriptorCount);
-				wi::helper::hash_combine(internal_state->binding_hash, x.descriptorType);
-				wi::helper::hash_combine(internal_state->binding_hash, x.stageFlags);
+				wi::helper::hash_combine(internal_state->binding_hash, x.used);
+				wi::helper::hash_combine(internal_state->binding_hash, x.binding.binding);
+				wi::helper::hash_combine(internal_state->binding_hash, x.binding.descriptorCount);
+				wi::helper::hash_combine(internal_state->binding_hash, x.binding.descriptorType);
+				wi::helper::hash_combine(internal_state->binding_hash, x.binding.stageFlags);
 			}
 			wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.offset);
 			wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.size);
@@ -4869,7 +4880,7 @@ using namespace vulkan_internal;
 				internal_state->bindlessFirstSet = (uint32_t)layouts.size();
 				for (auto& x : internal_state->bindlessBindings)
 				{
-					switch (x.descriptorType)
+					switch (x.binding.descriptorType)
 					{
 					case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 						assert(0); // not supported, use the raw buffers for same functionality

@@ -401,6 +401,20 @@ HumanoidBone = {
 	RightLittleIntermediate = 53,
 	RightLittleDistal = 54,
 }
+
+ColliderShape = {
+	Sphere = 0,
+	Capsule = 1,
+	Plane = 2,
+}
+
+RigidBodyShape = {
+	Box = 0,
+	Sphere = 1,
+	Capsule = 2,
+	ConvexHull = 3,
+	TriangleMesh = 4,
+}
 )";
 
 void Bind()
@@ -465,6 +479,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
 	lunamethod(Scene_BindLua, Entity_Duplicate),
+	lunamethod(Scene_BindLua, Entity_IsDescendant),
 	lunamethod(Scene_BindLua, Component_CreateName),
 	lunamethod(Scene_BindLua, Component_CreateLayer),
 	lunamethod(Scene_BindLua, Component_CreateTransform),
@@ -536,6 +551,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetTransformArray),
 	lunamethod(Scene_BindLua, Entity_GetCameraArray),
 	lunamethod(Scene_BindLua, Entity_GetAnimationArray),
+	lunamethod(Scene_BindLua, Entity_GetAnimationDataArray),
 	lunamethod(Scene_BindLua, Entity_GetMaterialArray),
 	lunamethod(Scene_BindLua, Entity_GetMeshArray),
 	lunamethod(Scene_BindLua, Entity_GetEmitterArray),
@@ -559,6 +575,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_RemoveTransform),
 	lunamethod(Scene_BindLua, Component_RemoveCamera),
 	lunamethod(Scene_BindLua, Component_RemoveAnimation),
+	lunamethod(Scene_BindLua, Component_RemoveAnimationData),
 	lunamethod(Scene_BindLua, Component_RemoveMaterial),
 	lunamethod(Scene_BindLua, Component_RemoveMesh),
 	lunamethod(Scene_BindLua, Component_RemoveEmitter),
@@ -582,6 +599,9 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_DetachChildren),
 
 	lunamethod(Scene_BindLua, GetBounds),
+	lunamethod(Scene_BindLua, GetWeather),
+	lunamethod(Scene_BindLua, SetWeather),
+	lunamethod(Scene_BindLua, RetargetAnimation),
 	{ NULL, NULL }
 };
 Luna<Scene_BindLua>::PropertyType Scene_BindLua::properties[] = {
@@ -637,14 +657,20 @@ int Scene_BindLua::Entity_FindByName(lua_State* L)
 	{
 		std::string name = wi::lua::SGetString(L, 1);
 
-		Entity entity = scene->Entity_FindByName(name);
+		Entity ancestor = INVALID_ENTITY;
+		if (argc > 1)
+		{
+			ancestor = (Entity)wi::lua::SGetLongLong(L, 2);
+		}
+
+		Entity entity = scene->Entity_FindByName(name, ancestor);
 
 		wi::lua::SSetLongLong(L, entity);
 		return 1;
 	}
 	else
 	{
-		wi::lua::SError(L, "Scene::Entity_FindByName(string name) not enough arguments!");
+		wi::lua::SError(L, "Scene::Entity_FindByName(string name, opt Entity ancestor) not enough arguments!");
 	}
 	return 0;
 }
@@ -678,6 +704,23 @@ int Scene_BindLua::Entity_Duplicate(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Entity_Duplicate(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Entity_IsDescendant(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		Entity ancestor = (Entity)wi::lua::SGetLongLong(L, 2);
+
+		wi::lua::SSetBool(L, scene->Entity_IsDescendant(entity, ancestor));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Entity_IsDescendant(Entity entity, Entity ancestor) not enough arguments!");
 	}
 	return 0;
 }
@@ -1863,6 +1906,17 @@ int Scene_BindLua::Entity_GetAnimationArray(lua_State* L)
 	}
 	return 1;
 }
+int Scene_BindLua::Entity_GetAnimationDataArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->animation_datas.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->animation_datas.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->animation_datas.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
 int Scene_BindLua::Entity_GetMaterialArray(lua_State* L)
 {
 	lua_createtable(L, (int)scene->materials.GetCount(), 0);
@@ -2133,6 +2187,23 @@ int Scene_BindLua::Component_RemoveAnimation(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Component_RemoveAnimation(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_RemoveAnimationData(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		if (scene->animation_datas.Contains(entity))
+		{
+			scene->animation_datas.Remove(entity);
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_RemoveAnimationData(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -2511,6 +2582,25 @@ int Scene_BindLua::SetWeather(lua_State* L)
 	return 0;
 }
 
+int Scene_BindLua::RetargetAnimation(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 2)
+	{
+		Entity dst = (Entity)wi::lua::SGetLongLong(L, 1);
+		Entity src = (Entity)wi::lua::SGetLongLong(L, 2);
+		bool bake_data = wi::lua::SGetBool(L, 3);
+
+		Entity entity = scene->RetargetAnimation(dst, src, bake_data);
+		wi::lua::SSetLongLong(L, entity);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "RetargetAnimation(Entity dst, Entity src, bool bake_data) not enough arguments!");
+	}
+	return 0;
+}
 
 
 

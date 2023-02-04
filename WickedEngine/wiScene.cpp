@@ -823,13 +823,16 @@ namespace wi::scene
 			entry.second.component_manager->Remove(entity);
 		}
 	}
-	Entity Scene::Entity_FindByName(const std::string& name)
+	Entity Scene::Entity_FindByName(const std::string& name, Entity ancestor)
 	{
 		for (size_t i = 0; i < names.GetCount(); ++i)
 		{
 			if (names[i] == name)
 			{
-				return names.GetEntity(i);
+				Entity entity = names.GetEntity(i);
+				if (ancestor != INVALID_ENTITY && !Entity_IsDescendant(entity, ancestor))
+					continue;
+				return entity;
 			}
 		}
 		return INVALID_ENTITY;
@@ -848,6 +851,17 @@ namespace wi::scene
 		Entity root = Entity_Serialize(archive, seri, INVALID_ENTITY, EntitySerializeFlags::RECURSIVE | EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
 
 		return root;
+	}
+	bool Scene::Entity_IsDescendant(wi::ecs::Entity entity, wi::ecs::Entity ancestor) const
+	{
+		const HierarchyComponent* hier = hierarchy.GetComponent(entity);
+		while (hier != nullptr)
+		{
+			if (hier->parentID == ancestor)
+				return true;
+			hier = hierarchy.GetComponent(hier->parentID);
+		}
+		return false;
 	}
 	Entity Scene::Entity_CreateTransform(
 		const std::string& name
@@ -1410,11 +1424,11 @@ namespace wi::scene
 
 				union Interpolator
 				{
-					XMFLOAT4 f4 = {};
+					XMFLOAT4 f4;
 					XMFLOAT3 f3;
 					XMFLOAT2 f2;
 					float f;
-				} interpolator;
+				} interpolator = {};
 
 				TransformComponent* target_transform = nullptr;
 				MeshComponent* target_mesh = nullptr;
@@ -1721,8 +1735,16 @@ namespace wi::scene
 							const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
 							XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
 							XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
-							XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
-							vAnim = XMQuaternionNormalize(vAnim);
+							XMVECTOR vAnim;
+							if (channel.path == AnimationComponent::AnimationChannel::Path::ROTATION)
+							{
+								vAnim = XMQuaternionSlerp(vLeft, vRight, t);
+								vAnim = XMQuaternionNormalize(vAnim);
+							}
+							else
+							{
+								vAnim = XMVectorLerp(vLeft, vRight, t);
+							}
 							XMStoreFloat4(&interpolator.f4, vAnim);
 						}
 						break;
@@ -1805,7 +1827,10 @@ namespace wi::scene
 							XMVECTOR vRightTanIn = dt * XMLoadFloat4(&data[keyRight * 3 + 0]);
 							XMVECTOR vRight = XMLoadFloat4(&data[keyRight * 3 + 1]);
 							XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-							vAnim = XMQuaternionNormalize(vAnim);
+							if (channel.path == AnimationComponent::AnimationChannel::Path::ROTATION)
+							{
+								vAnim = XMQuaternionNormalize(vAnim);
+							}
 							XMStoreFloat4(&interpolator.f4, vAnim);
 						}
 						break;
@@ -1841,7 +1866,23 @@ namespace wi::scene
 					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
 					{
 						const XMVECTOR aT = XMLoadFloat3(&target_transform->translation_local);
-						const XMVECTOR bT = XMLoadFloat3(&interpolator.f3);
+						XMVECTOR bT = XMLoadFloat3(&interpolator.f3);
+						if (channel.retargetIndex >= 0 && channel.retargetIndex < (int)animation.retargets.size())
+						{
+							// Retargeting transfer from source to destination:
+							const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
+							TransformComponent* source_transform = transforms.GetComponent(retarget.source);
+							if (source_transform != nullptr)
+							{
+								XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
+								XMMATRIX srcRelativeParentMatrix = XMLoadFloat4x4(&retarget.srcRelativeParentMatrix);
+								XMVECTOR S, R; // matrix decompose destinations
+								TransformComponent transform = *source_transform;
+								XMStoreFloat3(&transform.translation_local, bT);
+								XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
+								XMMatrixDecompose(&S, &R, &bT, localMatrix);
+							}
+						}
 						const XMVECTOR T = XMVectorLerp(aT, bT, t);
 						XMStoreFloat3(&target_transform->translation_local, T);
 					}
@@ -1849,7 +1890,23 @@ namespace wi::scene
 					case AnimationComponent::AnimationChannel::Path::ROTATION:
 					{
 						const XMVECTOR aR = XMLoadFloat4(&target_transform->rotation_local);
-						const XMVECTOR bR = XMLoadFloat4(&interpolator.f4);
+						XMVECTOR bR = XMLoadFloat4(&interpolator.f4);
+						if (channel.retargetIndex >= 0 && channel.retargetIndex < (int)animation.retargets.size())
+						{
+							// Retargeting transfer from source to destination:
+							const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
+							TransformComponent* source_transform = transforms.GetComponent(retarget.source);
+							if (source_transform != nullptr)
+							{
+								XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
+								XMMATRIX srcRelativeParentMatrix = XMLoadFloat4x4(&retarget.srcRelativeParentMatrix);
+								XMVECTOR S, T; // matrix decompose destinations
+								TransformComponent transform = *source_transform;
+								XMStoreFloat4(&transform.rotation_local, bR);
+								XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
+								XMMatrixDecompose(&S, &bR, &T, localMatrix);
+							}
+						}
 						const XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
 						XMStoreFloat4(&target_transform->rotation_local, R);
 					}
@@ -1857,7 +1914,23 @@ namespace wi::scene
 					case AnimationComponent::AnimationChannel::Path::SCALE:
 					{
 						const XMVECTOR aS = XMLoadFloat3(&target_transform->scale_local);
-						const XMVECTOR bS = XMLoadFloat3(&interpolator.f3);
+						XMVECTOR bS = XMLoadFloat3(&interpolator.f3);
+						if (channel.retargetIndex >= 0 && channel.retargetIndex < (int)animation.retargets.size())
+						{
+							// Retargeting transfer from source to destination:
+							const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
+							TransformComponent* source_transform = transforms.GetComponent(retarget.source);
+							if (source_transform != nullptr)
+							{
+								XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
+								XMMATRIX srcRelativeParentMatrix = XMLoadFloat4x4(&retarget.srcRelativeParentMatrix);
+								XMVECTOR R, T; // matrix decompose destinations
+								TransformComponent transform = *source_transform;
+								XMStoreFloat3(&transform.scale_local, bS);
+								XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
+								XMMatrixDecompose(&bS, &R, &T, localMatrix);
+							}
+						}
 						const XMVECTOR S = XMVectorLerp(aS, bS, t);
 						XMStoreFloat3(&target_transform->scale_local, S);
 					}
@@ -4230,9 +4303,8 @@ namespace wi::scene
 			{
 				if (script.script.empty() && script.resource.IsValid())
 				{
-					script.script += "local function GetEntity() return " + std::to_string(entity) + "; end\n";
 					script.script += script.resource.GetScript();
-					wi::lua::AttachScriptParameters(script.script, script.filename);
+					wi::lua::AttachScriptParameters(script.script, script.filename, wi::lua::GeneratePID(), "local function GetEntity() return " + std::to_string(entity) + "; end;", "");
 				}
 				wi::lua::RunText(script.script);
 
@@ -5321,6 +5393,172 @@ namespace wi::scene
 	SceneIntersectCapsuleResult SceneIntersectCapsule(const wi::primitive::Capsule& capsule, uint32_t filterMask, uint32_t layerMask, const Scene& scene, uint32_t lod)
 	{
 		return scene.Intersects(capsule, filterMask, layerMask, lod);
+	}
+
+
+	XMMATRIX Scene::ComputeParentMatrixRecursive(Entity entity) const
+	{
+		XMMATRIX parentMatrix = XMMatrixIdentity();
+
+		HierarchyComponent* hier = hierarchy.GetComponent(entity);
+		if (hier != nullptr)
+		{
+			Entity parentID = hier->parentID;
+			while (parentID != INVALID_ENTITY)
+			{
+				TransformComponent* transform_parent = transforms.GetComponent(parentID);
+				if (transform_parent == nullptr)
+					break;
+
+				parentMatrix *= transform_parent->GetLocalMatrix();
+
+				const HierarchyComponent* hier_recursive = hierarchy.GetComponent(parentID);
+				if (hier_recursive != nullptr)
+				{
+					parentID = hier_recursive->parentID;
+				}
+				else
+				{
+					parentID = INVALID_ENTITY;
+				}
+			}
+		}
+		return parentMatrix;
+	}
+
+	Entity Scene::RetargetAnimation(Entity dst, Entity src, bool bake_data)
+	{
+		const AnimationComponent* animation_source = animations.GetComponent(src);
+		if (animation_source == nullptr)
+			return INVALID_ENTITY;
+		const HumanoidComponent* humanoid_dest = humanoids.GetComponent(dst);
+		if (humanoid_dest == nullptr)
+			return INVALID_ENTITY;
+
+		bool retarget_valid = false;
+		Scene retarget_scene;
+		Entity retarget_entity = CreateEntity();
+		AnimationComponent& animation = retarget_scene.animations.Create(retarget_entity);
+		animation = *animation_source;
+		animation.channels.clear();
+		animation.samplers.clear();
+		animation.retargets.clear();
+
+		for (auto& channel : animation_source->channels)
+		{
+			bool found = false;
+			for (size_t i = 0; (i < humanoids.GetCount()) && !found; ++i)
+			{
+				const HumanoidComponent& humanoid_source = humanoids[i];
+				for (size_t humanoidBoneIndex = 0; humanoidBoneIndex < arraysize(humanoid_source.bones); ++humanoidBoneIndex)
+				{
+					Entity bone_source = humanoid_source.bones[humanoidBoneIndex];
+					if (bone_source == channel.target)
+					{
+						retarget_valid = true;
+						found = true;
+						Entity bone_dest = humanoid_dest->bones[humanoidBoneIndex];
+
+						auto& retarget_channel = animation.channels.emplace_back();
+						retarget_channel = channel;
+						retarget_channel.target = bone_dest;
+						retarget_channel.samplerIndex = (int)animation.samplers.size();
+
+						auto& sampler = animation_source->samplers[channel.samplerIndex];
+
+						auto& retarget_sampler = animation.samplers.emplace_back();
+						retarget_sampler = sampler;
+						retarget_sampler.backwards_compatibility_data = {};
+
+						TransformComponent* transform_source = transforms.GetComponent(bone_source);
+						TransformComponent* transform_dest = transforms.GetComponent(bone_dest);
+						if (transform_source != nullptr && transform_dest != nullptr)
+						{
+							XMMATRIX srcParentMatrix = ComputeParentMatrixRecursive(bone_source);
+							XMMATRIX srcMatrix = transform_source->GetLocalMatrix() * srcParentMatrix;
+							XMMATRIX inverseSrcMatrix = XMMatrixInverse(nullptr, srcMatrix);
+
+							XMMATRIX dstParentMatrix = ComputeParentMatrixRecursive(bone_dest);
+							XMMATRIX dstMatrix = transform_dest->GetLocalMatrix() * dstParentMatrix;
+							XMMATRIX inverseDstParentMatrix = XMMatrixInverse(nullptr, dstParentMatrix);
+
+							XMMATRIX dstRelativeMatrix = dstMatrix * inverseSrcMatrix;
+							XMMATRIX srcRelativeParentMatrix = srcParentMatrix * inverseDstParentMatrix;
+
+							if (bake_data)
+							{
+								// Create new animation data and bake the retargeted result into it:
+								Entity retarget_data_entity = CreateEntity();
+								auto& retarget_animation_data = retarget_scene.animation_datas.Create(retarget_data_entity);
+								retarget_sampler.data = retarget_data_entity;
+								retarget_scene.Component_Attach(retarget_data_entity, retarget_entity);
+
+								auto& animation_data = animation_datas.Contains(sampler.data) ? *animation_datas.GetComponent(sampler.data) : sampler.backwards_compatibility_data;
+								retarget_animation_data = animation_data;
+
+								XMVECTOR S, R, T; // matrix decompose destinations
+
+								switch (channel.path)
+								{
+								case AnimationComponent::AnimationChannel::Path::SCALE:
+									for (size_t offset = 0; offset < retarget_animation_data.keyframe_data.size(); offset += 3)
+									{
+										XMFLOAT3* data = (XMFLOAT3*)&retarget_animation_data.keyframe_data[offset];
+										TransformComponent transform = *transform_source;
+										transform.scale_local = *data;
+										XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
+										XMMatrixDecompose(&S, &R, &T, localMatrix);
+										XMStoreFloat3(data, S);
+									}
+									break;
+								case AnimationComponent::AnimationChannel::Path::ROTATION:
+									for (size_t offset = 0; offset < retarget_animation_data.keyframe_data.size(); offset += 4)
+									{
+										XMFLOAT4* data = (XMFLOAT4*)&retarget_animation_data.keyframe_data[offset];
+										TransformComponent transform = *transform_source;
+										transform.rotation_local = *data;
+										XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
+										XMMatrixDecompose(&S, &R, &T, localMatrix);
+										XMStoreFloat4(data, R);
+									}
+									break;
+								case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+									for (size_t offset = 0; offset < retarget_animation_data.keyframe_data.size(); offset += 3)
+									{
+										XMFLOAT3* data = (XMFLOAT3*)&retarget_animation_data.keyframe_data[offset];
+										TransformComponent transform = *transform_source;
+										transform.translation_local = *data;
+										XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
+										XMMatrixDecompose(&S, &R, &T, localMatrix);
+										XMStoreFloat3(data, T);
+									}
+									break;
+								default:
+									break;
+								}
+							}
+							else
+							{
+								// Don't bake retarget data, but inform the animation channel of original source data:
+								retarget_channel.retargetIndex = (int)animation.retargets.size();
+								AnimationComponent::RetargetSourceData& retarget = animation.retargets.emplace_back();
+								retarget.source = bone_source;
+								XMStoreFloat4x4(&retarget.dstRelativeMatrix, dstRelativeMatrix);
+								XMStoreFloat4x4(&retarget.srcRelativeParentMatrix, srcRelativeParentMatrix);
+							}
+						}
+						break;
+					}
+				}
+			}
+		}
+		if (retarget_valid)
+		{
+			retarget_scene.Component_Attach(retarget_entity, dst);
+			Merge(retarget_scene);
+			return retarget_entity;
+		}
+		return INVALID_ENTITY;
 	}
 
 }

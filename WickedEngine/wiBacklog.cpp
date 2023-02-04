@@ -115,6 +115,7 @@ namespace wi::backlog
 				{
 					created = true;
 					inputField.Create("");
+					inputField.SetCancelInputEnabled(false);
 					inputField.OnInputAccepted([](wi::gui::EventArgs args) {
 						historyPos = 0;
 						post(args.sValue);
@@ -281,7 +282,7 @@ namespace wi::backlog
 		if (refitscroll)
 		{
 			float textheight = wi::font::TextHeight(getTextWithoutLock(), params);
-			float limit = canvas.GetLogicalHeight() - 35;
+			float limit = canvas.GetLogicalHeight() - 50;
 			if (scroll + textheight > limit)
 			{
 				scroll = limit - textheight;

@@ -106,12 +106,12 @@ namespace wi::jobsystem
 					args.sharedmemory = nullptr;
 				}
 
-				for (uint32_t i = job.groupJobOffset; i < job.groupJobEnd; ++i)
+				for (uint32_t j = job.groupJobOffset; j < job.groupJobEnd; ++j)
 				{
-					args.jobIndex = i;
-					args.groupIndex = i - job.groupJobOffset;
-					args.isFirstJobInGroup = (i == job.groupJobOffset);
-					args.isLastJobInGroup = (i == job.groupJobEnd - 1);
+					args.jobIndex = j;
+					args.groupIndex = j - job.groupJobOffset;
+					args.isFirstJobInGroup = (j == job.groupJobOffset);
+					args.isLastJobInGroup = (j == job.groupJobEnd - 1);
 					job.task(args);
 				}
 
