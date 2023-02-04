@@ -659,7 +659,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		
 	
 	float tDepth = depthWeightsSum == 0.0 ? tMax : depthWeightedSum / max(depthWeightsSum, 0.0000000001);
-	//float3 cloudWorldPosition = rayOrigin + rayDirection * tDepth;
+	float3 sampleWorldPosition = rayOrigin + rayDirection * tDepth;
 
 	float approxTransmittance = dot(transmittanceToView.rgb, 1.0 / 3.0);
 	float grayScaleTransmittance = approxTransmittance < GetWeather().volumetric_clouds.transmittanceThreshold ? 0.0 : approxTransmittance;
@@ -667,37 +667,46 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 	// Apply aerial perspective
 	if (depthWeightsSum > 0.0 && GetFrame().options & OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE)
 	{
-		float3 worldPosition = GetCameraPlanetPos(atmosphere, rayOrigin);
-		float3 worldDirection = rayDirection;
+		float4 aerialPerspective = 0;
 		
-		// Move to top atmosphere as the starting point for ray marching.
-		// This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
-		if (MoveToTopAtmosphere(worldPosition, worldDirection, atmosphere.topRadius))
+		if (GetFrame().options & OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY)
 		{
-			const float sampleCountIni = 0.0;
-			const bool variableSampleCount = true;
+			float3 worldPosition = GetCameraPlanetPos(atmosphere, rayOrigin);
+			float3 worldDirection = rayDirection;
+		
+			// Move to top atmosphere as the starting point for ray marching.
+			// This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
+			if (MoveToTopAtmosphere(worldPosition, worldDirection, atmosphere.topRadius))
+			{
+				const float sampleCountIni = 0.0;
+				const bool variableSampleCount = true;
 #ifdef VOLUMETRICCLOUD_CAPTURE
-			const bool perPixelNoise = false;
+				const bool perPixelNoise = false;
 #else
-			const bool perPixelNoise = true;
+				const bool perPixelNoise = true;
 #endif
-			const bool opaque = true;
-			const bool ground = false;
-			const bool mieRayPhase = true;
-			const bool multiScatteringApprox = true;
-			const bool volumetricCloudShadow = GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW;
-			const bool opaqueShadow = GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_RECIEVE_SHADOW;
-			const float opticalDepthScale = atmosphere.aerialPerspectiveScale;
-			SingleScatteringResult ss = IntegrateScatteredLuminance(
+				const bool opaque = true;
+				const bool ground = false;
+				const bool mieRayPhase = true;
+				const bool multiScatteringApprox = true;
+				const bool volumetricCloudShadow = GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW && GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECIEVE_SHADOW;
+				const bool opaqueShadow = GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_RECIEVE_SHADOW && GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECIEVE_SHADOW;
+				const float opticalDepthScale = atmosphere.aerialPerspectiveScale;
+				SingleScatteringResult ss = IntegrateScatteredLuminance(
 				atmosphere, DTid.xy, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth * M_TO_SKY_UNIT, sampleCountIni, variableSampleCount,
 				perPixelNoise, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut, opticalDepthScale);
-
-			float transmittance = dot(ss.transmittance, float3(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f));
-			float4 aerialPerspective = float4(ss.L, transmittance);
-			
-			luminance = aerialPerspective.a * luminance + aerialPerspective.rgb * (1.0 - approxTransmittance);
-			//luminance = aerialPerspective.rgb * (1.0 - approxTransmittance); // Debug
+				
+				float transmittance = 1.0 - dot(ss.transmittance, float3(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f));
+				aerialPerspective = float4(ss.L, transmittance);
+			}
 		}
+		else
+		{
+			aerialPerspective = GetAerialPerspectiveTransmittance(uv, sampleWorldPosition, GetCamera().position, texture_cameravolumelut);
+		}
+		
+		luminance = (1.0 - aerialPerspective.a) * luminance + aerialPerspective.rgb * (1.0 - approxTransmittance);
+		//luminance = aerialPerspective.rgb * (1.0 - approxTransmittance); // Debug
 	}
 	
 	float4 color = float4(luminance, 1.0 - grayScaleTransmittance);
