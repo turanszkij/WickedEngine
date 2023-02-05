@@ -1076,10 +1076,20 @@ namespace wi
 				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
 				device->BindViewports(1, &vp, cmd);
 
+				RenderPassImage::LoadOp clearColor;
+				if (scene->weather.IsRealisticSkyHighQuality())
+				{
+					clearColor = RenderPassImage::LoadOp::CLEAR;
+				}
+				else
+				{
+					clearColor = RenderPassImage::LoadOp::DONTCARE;
+				}
+
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(
 						&rtReflection,
-						RenderPassImage::LoadOp::DONTCARE,
+						clearColor,
 						RenderPassImage::StoreOp::STORE,
 						ResourceState::SHADER_RESOURCE,
 						ResourceState::SHADER_RESOURCE
@@ -1277,10 +1287,20 @@ namespace wi
 				device->EventEnd(cmd);
 			}
 
+			RenderPassImage::LoadOp clearColor;
+			if (scene->weather.IsRealisticSkyHighQuality())
+			{
+				clearColor = RenderPassImage::LoadOp::CLEAR;
+			}
+			else
+			{
+				clearColor = RenderPassImage::LoadOp::DONTCARE;
+			}
+
 			RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(
 					&rtMain_render,
-					RenderPassImage::LoadOp::DONTCARE
+					clearColor
 				),
 				RenderPassImage::DepthStencil(
 					&depthBuffer_Main,

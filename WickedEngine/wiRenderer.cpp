@@ -6890,7 +6890,7 @@ void DrawSky(const Scene& scene, CommandList cmd)
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_STATIC], cmd);
 	}
-	else
+	else if (!scene.weather.IsRealisticSkyHighQuality())
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_DYNAMIC], cmd);
 	}
@@ -6958,6 +6958,16 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			ComputeSkyAtmosphereSkyViewLut(cmd);
 		}
 
+		RenderPassImage::LoadOp clearColor;
+		if (vis.scene->weather.IsRealisticSkyHighQuality())
+		{
+			clearColor = RenderPassImage::LoadOp::CLEAR;
+		}
+		else
+		{
+			clearColor = RenderPassImage::LoadOp::DONTCARE;
+		}
+
 		if (probe.IsMSAA())
 		{
 			const RenderPassImage rp[] = {
@@ -6971,7 +6981,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				),
 				RenderPassImage::RenderTarget(
 					&vis.scene->envrenderingColorBuffer_MSAA,
-					RenderPassImage::LoadOp::DONTCARE,
+					clearColor,
 					RenderPassImage::StoreOp::DONTCARE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET
@@ -6998,7 +7008,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				),
 				RenderPassImage::RenderTarget(
 					&vis.scene->envmapArray,
-					RenderPassImage::LoadOp::DONTCARE,
+					clearColor,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE,
 					ResourceState::SHADER_RESOURCE,
@@ -7040,7 +7050,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
 			}
-			else
+			else if (!vis.scene->weather.IsRealisticSkyHighQuality())
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], cmd);
 			}

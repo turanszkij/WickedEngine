@@ -22,13 +22,8 @@ TextureCube<float> texture_input_depth : register(t0);
 RWTexture2D<float4> texture_output : register(u0);
 #endif // SKYATMOSPHERE_CAPTURE
 
-void RenderSky(uint3 DTid, float3 rayOrigin, float3 rayDirection, inout float3 luminance, inout float transmittance)
-{
-	AtmosphereParameters atmosphere = GetWeather().atmosphere;
-	
-	float3 worldPosition = GetCameraPlanetPos(atmosphere, rayOrigin);
-	float3 worldDirection = rayDirection;
-	
+void RenderSky(AtmosphereParameters atmosphere, uint3 DTid, float3 worldPosition, float3 worldDirection, float3 sunDirection, float3 sunIlluminance, inout float3 luminance, inout float transmittance)
+{	
 	// Move to top atmosphere as the starting point for ray marching.
 	// This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
 	if (!MoveToTopAtmosphere(worldPosition, worldDirection, atmosphere.topRadius))
@@ -38,9 +33,6 @@ void RenderSky(uint3 DTid, float3 rayOrigin, float3 rayDirection, inout float3 l
 
 	// Apply the start offset after moving to the top of atmosphere to avoid black pixels
 	worldPosition += worldDirection * AP_START_OFFSET_KM;
-			
-	float3 sunDirection = GetSunDirection();
-	float3 sunIlluminance = GetSunColor();
 
 	const bool recieveShadow = GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECIEVE_SHADOW;
 	
@@ -67,19 +59,15 @@ void RenderSky(uint3 DTid, float3 rayOrigin, float3 rayDirection, inout float3 l
 	transmittance = 1.0 - dot(ss.transmittance, float3(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0));
 }
 
-void RenderAerialPerspective(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition, float3 rayOrigin, float3 rayDirection, inout float3 luminance, inout float transmittance, bool forceHighQuality)
+void RenderAerialPerspective(AtmosphereParameters atmosphere, uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
+	float3 worldPosition, float3 worldDirection, float3 sunDirection, float3 sunIlluminance, inout float3 luminance, inout float transmittance, bool forceHighQuality)
 {
-	AtmosphereParameters atmosphere = GetWeather().atmosphere;
-	
-	float3 worldPosition = GetCameraPlanetPos(atmosphere, rayOrigin);
-	float3 worldDirection = rayDirection;
-
 	float viewHeight = length(worldPosition);
 
 	// Depending on viewHeight, switch to high quality when above atmosphere layer:
 	if (viewHeight < atmosphere.topRadius && !(GetFrame().options & OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY) && !forceHighQuality)
 	{
-		float4 AP = GetAerialPerspectiveTransmittance(uv, depthWorldPosition, rayOrigin, texture_cameravolumelut);
+		float4 AP = GetAerialPerspectiveTransmittance(uv, depthWorldPosition, worldPosition, texture_cameravolumelut);
 		
 		luminance = AP.rgb;
 		transmittance = AP.a;
@@ -95,9 +83,6 @@ void RenderAerialPerspective(uint3 DTid, float2 uv, float depth, float3 depthWor
 			
 		// Apply the start offset after moving to the top of atmosphere to avoid black pixels
 		worldPosition += worldDirection * AP_START_OFFSET_KM;
-			
-		float3 sunDirection = GetSunDirection();
-		float3 sunIlluminance = GetSunColor();
 
 		const bool recieveShadow = GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECIEVE_SHADOW;
 
@@ -127,16 +112,29 @@ void RenderAerialPerspective(uint3 DTid, float2 uv, float depth, float3 depthWor
 
 void Render(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition, float3 rayOrigin, float3 rayDirection, inout float3 luminance, inout float transmittance, bool forceHighQuality)
 {
+	AtmosphereParameters atmosphere = GetWeather().atmosphere;
+
+	float3 worldPosition = GetCameraPlanetPos(atmosphere, rayOrigin);
+	float3 worldDirection = rayDirection;
+
+	float3 sunDirection = GetSunDirection();
+	float3 sunIlluminance = GetSunColor();
+	
 	if (depth == 0.0)
 	{
 		if (!IsStaticSky())
 		{
-			RenderSky(DTid, rayOrigin, rayDirection, luminance, transmittance);
+			RenderSky(atmosphere, DTid, worldPosition, worldDirection, sunDirection, sunIlluminance, luminance, transmittance);
+
+			// Apply sun for capture
+#ifdef SKYATMOSPHERE_CAPTURE
+			luminance += GetSunLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, atmosphere, texture_transmittancelut);
+#endif // SKYATMOSPHERE_CAPTURE
 		}
 	}
 	else if (GetFrame().options & OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE)
 	{
-		RenderAerialPerspective(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, luminance, transmittance, forceHighQuality);
+		RenderAerialPerspective(atmosphere, DTid, uv, depth, depthWorldPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, luminance, transmittance, forceHighQuality);
 	}
 }
 
