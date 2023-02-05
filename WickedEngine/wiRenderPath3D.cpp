@@ -1077,7 +1077,7 @@ namespace wi
 				device->BindViewports(1, &vp, cmd);
 
 				RenderPassImage::LoadOp clearColor;
-				if (scene->weather.IsRealisticSkyHighQuality())
+				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyHighQuality() && !scene->weather.skyMap.IsValid())
 				{
 					clearColor = RenderPassImage::LoadOp::CLEAR;
 				}
@@ -1288,7 +1288,7 @@ namespace wi
 			}
 
 			RenderPassImage::LoadOp clearColor;
-			if (scene->weather.IsRealisticSkyHighQuality())
+			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyHighQuality() && !scene->weather.skyMap.IsValid())
 			{
 				clearColor = RenderPassImage::LoadOp::CLEAR;
 			}

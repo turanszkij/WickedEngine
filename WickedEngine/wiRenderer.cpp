@@ -6890,7 +6890,7 @@ void DrawSky(const Scene& scene, CommandList cmd)
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_STATIC], cmd);
 	}
-	else if (!scene.weather.IsRealisticSkyHighQuality())
+	else if (!scene.weather.IsRealisticSky() || !scene.weather.IsRealisticSkyHighQuality())
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_DYNAMIC], cmd);
 	}
@@ -6959,7 +6959,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		}
 
 		RenderPassImage::LoadOp clearColor;
-		if (vis.scene->weather.IsRealisticSkyHighQuality())
+		if (vis.scene->weather.IsRealisticSky() && vis.scene->weather.IsRealisticSkyHighQuality() && !vis.scene->weather.skyMap.IsValid())
 		{
 			clearColor = RenderPassImage::LoadOp::CLEAR;
 		}
@@ -7050,7 +7050,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
 			}
-			else if (!vis.scene->weather.IsRealisticSkyHighQuality())
+			else if (!vis.scene->weather.IsRealisticSky() || !vis.scene->weather.IsRealisticSkyHighQuality())
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], cmd);
 			}
