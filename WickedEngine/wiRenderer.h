@@ -675,21 +675,13 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd,
 		float strength = 100.0f
 	);
-	struct SkyAtmosphereResources
+	struct AerialPerspectiveResources
 	{
-		mutable int frame = 0;
 		wi::graphics::Texture texture_render;
-		wi::graphics::Texture texture_temporal[2];
-		wi::graphics::Texture texture_temporal_depth[2];
-		wi::graphics::Texture texture_sun;
 	};
-	void CreateSkyAtmosphereResources(SkyAtmosphereResources& res, XMUINT2 resolution);
-	void Postprocess_SkyAtmosphere_Sky(
-		const SkyAtmosphereResources& res,
-		wi::graphics::CommandList cmd
-	);
-	void Postprocess_SkyAtmosphere_Sun(
-		const SkyAtmosphereResources& res,
+	void CreateAerialPerspectiveResources(AerialPerspectiveResources& res, XMUINT2 resolution);
+	void Postprocess_AerialPerspective(
+		const AerialPerspectiveResources& res,
 		wi::graphics::CommandList cmd
 	);
 	struct VolumetricCloudResources

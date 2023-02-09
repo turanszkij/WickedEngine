@@ -6,20 +6,22 @@
 // Custom Atmosphere based on: https://www.shadertoy.com/view/Ml2cWG
 // Cloud noise based on: https://www.shadertoy.com/view/4tdSWr
 
-float3 AccurateAtmosphericScattering(float3 rayOrigin, float3 rayDirection, float3 sunDirection, float3 sunColor, bool enableSun, bool darkMode, bool stationary, bool highQuality)
+float3 AccurateAtmosphericScattering(float2 pixelPosition, float3 rayOrigin, float3 rayDirection, float3 sunDirection, float3 sunColor,
+	bool enableSun, bool darkMode, bool stationary, bool highQuality, bool perPixelNoise, bool recieveShadow)
 {
     AtmosphereParameters atmosphere = GetWeather().atmosphere;
 
-    float3 worldDirection = rayDirection;
-
 	// We get compiler warnings: "floating point division by zero" when stationary is true, but it gets handled by GetCameraPlanetPos anyway
     float3 skyRelativePosition = stationary ? float3(0.00001, 0.00001, 0.00001) : rayOrigin;
+	
     float3 worldPosition = GetCameraPlanetPos(atmosphere, skyRelativePosition);
+    float3 worldDirection = rayDirection;
 
     float viewHeight = length(worldPosition);
 
-    float3 luminance = float3(0.0, 0.0, 0.0);
+    float3 luminance = 0;
 
+	// Switch to high quality when above atmosphere layer, if high quality is not already enabled:
 	if (viewHeight < atmosphere.topRadius && !highQuality)
     {
         float2 uv;
@@ -41,34 +43,32 @@ float3 AccurateAtmosphericScattering(float3 rayOrigin, float3 rayDirection, floa
     else
     {
         // Move to top atmosphere as the starting point for ray marching.
-        // This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
-        if (MoveToTopAtmosphere(worldPosition, worldDirection, atmosphere.topRadius))
-        {
-            // Apply the start offset after moving to the top of atmosphere to avoid black pixels
+		// This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
+		if (MoveToTopAtmosphere(worldPosition, worldDirection, atmosphere.topRadius))
+		{
+			// Apply the start offset after moving to the top of atmosphere to avoid black pixels
 			worldPosition += worldDirection * AP_START_OFFSET_KM;
 
-            float3 sunIlluminance = sunColor;
+			float3 sunIlluminance = sunColor;
 
-			const float2 pixelPosition = float2(0.0, 0.0);
 			const float tDepth = 0.0;
 			const float sampleCountIni = 0.0;
 			const bool variableSampleCount = true;
-			const bool perPixelNoise = false;
 			const bool opaque = false;
-            const bool ground = false;
-            const bool mieRayPhase = true;
-            const bool multiScatteringApprox = true;
-			const bool volumetricCloudShadow = false;
-			const bool opaqueShadow = false;
-            SingleScatteringResult ss = IntegrateScatteredLuminance(
-                atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,
+			const bool ground = false;
+			const bool mieRayPhase = true;
+			const bool multiScatteringApprox = true;
+			const bool volumetricCloudShadow = recieveShadow;
+			const bool opaqueShadow = recieveShadow;
+			SingleScatteringResult ss = IntegrateScatteredLuminance(
+				atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,
 				perPixelNoise, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut);
 
-            luminance = ss.L;
-        }
+			luminance = ss.L;
+		}
     }
 
-    float3 totalColor = float3(0.0, 0.0, 0.0);
+    float3 totalColor = 0;
 
     if (enableSun)
     {
@@ -89,8 +89,9 @@ float3 AccurateAtmosphericScattering(float3 rayOrigin, float3 rayDirection, floa
 }
 
 // Returns sky color modulated by the sun and clouds
-//	V	: view direction
-float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool dark_enabled = false, bool stationary = false)
+//	pixel	: screen pixel position
+//	V		: view direction
+float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true, bool dark_enabled = false, bool stationary = false, bool highQuality = false, bool perPixelNoise = false, bool receiveShadow = false)
 {
     float3 sky = 0;
 
@@ -98,6 +99,7 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool dark_enable
     {
         sky = AccurateAtmosphericScattering
         (
+			pixel,
             GetCamera().position,       // Ray origin
             V,                          // Ray direction
 			GetSunDirection(),          // Position of the sun
@@ -105,7 +107,9 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool dark_enable
             sun_enabled,                // Use sun and total
             dark_enabled,               // Enable dark mode for light shafts etc.
             stationary,					// Fixed position for ambient and environment capture.
-			false						// Skip color lookup from lut
+			highQuality,				// Skip color lookup from lut
+			perPixelNoise,				// Vary sampling position with TAA
+			receiveShadow				// Atmosphere to use pre-rendered shadow data
         );
     }
     else
@@ -116,6 +120,10 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool dark_enable
 	sky *= GetWeather().sky_exposure;
 
     return sky;
+}
+float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool dark_enabled = false, bool stationary = false)
+{
+	return GetDynamicSkyColor(float2(0.0f, 0.0f), V, sun_enabled, dark_enabled, stationary, false, false, false);
 }
 
 float3 GetStaticSkyColor(in float3 V)

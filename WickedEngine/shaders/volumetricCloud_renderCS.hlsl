@@ -112,33 +112,21 @@ ParticipatingMedia SampleParticipatingMedia(float3 baseAlbedo, float3 baseExtinc
 void OpaqueShadow(inout ParticipatingMedia participatingMedia, float3 worldPosition)
 {
 	float shadow = 1.0f;
-	
-	for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
-	{
-		ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
-		
-		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC || !light.IsCastingShadow())
-		{
-			// static lights will be skipped (they are used in lightmap baking)
-			// useless if light doesn't cast shadow
-			continue;
-		}
-		
-		if (light.GetType() == ENTITY_TYPE_DIRECTIONALLIGHT)
-		{
-			for (uint cascade = 0; cascade < light.GetShadowCascadeCount(); ++cascade)
-			{
-				float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(worldPosition, 1)).xyz; // ortho matrix, no divide by .w
-				float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-				
-				if (is_saturated(shadow_uv))
-				{
-					shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade).r;
-				}
-			}
 
-			// We've found the first/primary directional light, quit
-			break;
+	// Unlike volumetric fog lighting, we only care about the outmost cascade. This improves performance where we can't see the inner cascades anyway
+	ShaderEntity light = (ShaderEntity) 0;
+	uint furthestCascade = 0;
+	
+	furthest_cascade_volumetrics(light, furthestCascade);
+
+	if (furthestCascade >= 0)
+	{
+		float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + furthestCascade), float4(worldPosition, 1)).xyz; // ortho matrix, no divide by .w
+		float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				
+		if (is_saturated(shadow_uv))
+		{
+			shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, furthestCascade).r;
 		}
 	}
 

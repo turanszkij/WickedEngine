@@ -64,7 +64,6 @@ static const uint POSTPROCESS_HBAO_THREADCOUNT = 320;
 #define hbao_uv_to_view_A postprocess.params1.xy
 #define hbao_uv_to_view_B postprocess.params1.zw
 
-#define skyatmosphere_frame postprocess.params0.z
 #define volumetricclouds_frame postprocess.params0.z
 
 static const uint POSTPROCESS_MSAO_BLOCKSIZE = 16;

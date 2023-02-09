@@ -968,11 +968,9 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], "motionblurCS_earlyexit.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], "motionblurCS_cheap.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], "bloomseparateCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_RENDER], "skyAtmosphere_renderCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_RENDER_CAPTURE], "skyAtmosphere_renderCS_capture.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_RENDER_CAPTURE_MSAA], "skyAtmosphere_renderCS_capture_MSAA.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_TEMPORAL], "skyAtmosphere_temporalCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_SUN], "skyAtmosphere_sunCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE], "aerialPerspectiveCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE_CAPTURE], "aerialPerspectiveCS_capture.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE_CAPTURE_MSAA], "aerialPerspectiveCS_capture_MSAA.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHAPENOISE], "volumetricCloud_shapenoiseCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_DETAILNOISE], "volumetricCloud_detailnoiseCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_CURLNOISE], "volumetricCloud_curlnoiseCS.cso"); });
@@ -6890,7 +6888,7 @@ void DrawSky(const Scene& scene, CommandList cmd)
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_STATIC], cmd);
 	}
-	else if (!scene.weather.IsRealisticSky() || !scene.weather.IsRealisticSkyHighQuality())
+	else
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_DYNAMIC], cmd);
 	}
@@ -6958,16 +6956,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			ComputeSkyAtmosphereSkyViewLut(cmd);
 		}
 
-		RenderPassImage::LoadOp clearColor;
-		if (vis.scene->weather.IsRealisticSky() && vis.scene->weather.IsRealisticSkyHighQuality() && !vis.scene->weather.skyMap.IsValid())
-		{
-			clearColor = RenderPassImage::LoadOp::CLEAR;
-		}
-		else
-		{
-			clearColor = RenderPassImage::LoadOp::DONTCARE;
-		}
-
 		if (probe.IsMSAA())
 		{
 			const RenderPassImage rp[] = {
@@ -6981,7 +6969,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				),
 				RenderPassImage::RenderTarget(
 					&vis.scene->envrenderingColorBuffer_MSAA,
-					clearColor,
+					RenderPassImage::LoadOp::DONTCARE,
 					RenderPassImage::StoreOp::DONTCARE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET
@@ -7008,7 +6996,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				),
 				RenderPassImage::RenderTarget(
 					&vis.scene->envmapArray,
-					clearColor,
+					RenderPassImage::LoadOp::DONTCARE,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE,
 					ResourceState::SHADER_RESOURCE,
@@ -7050,7 +7038,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
 			}
-			else if (!vis.scene->weather.IsRealisticSky() || !vis.scene->weather.IsRealisticSkyHighQuality())
+			else
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], cmd);
 			}
@@ -7060,26 +7048,26 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		device->RenderPassEnd(cmd);
 
-		// Compute SkyAtmosphere for environment map
-		if (vis.scene->weather.IsRealisticSky() && (vis.scene->weather.IsRealisticSkyAerialPerspective() || vis.scene->weather.IsRealisticSkyHighQuality()))
+		// Compute Aerial Perspective for environment map
+		if (vis.scene->weather.IsRealisticSky() && vis.scene->weather.IsRealisticSkyAerialPerspective() && (probe_aabb.layerMask & vis.layerMask))
 		{
 			if (probe.IsMSAA())
 			{
-				device->EventBegin("SkyAtmosphere Capture [MSAA]", cmd);
-				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_RENDER_CAPTURE_MSAA], cmd);
+				device->EventBegin("Aerial Perspective Capture [MSAA]", cmd);
+				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE_CAPTURE_MSAA], cmd);
 				device->BindResource(&vis.scene->envrenderingDepthBuffer_MSAA, 0, cmd);
 			}
 			else
 			{
-				device->EventBegin("SkyAtmosphere Capture", cmd);
-				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_RENDER_CAPTURE], cmd);
+				device->EventBegin("Aerial Perspective Capture", cmd);
+				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE_CAPTURE], cmd);
 				device->BindResource(&vis.scene->envrenderingDepthBuffer, 0, cmd);
 			}
 
 			TextureDesc desc = vis.scene->envmapArray.GetDesc();
 			int arrayIndex = probe.textureIndex;
 
-			SkyAtmosphereCapturePushConstants push;
+			AerialPerspectiveCapturePushConstants push;
 			push.resolution.x = desc.width;
 			push.resolution.y = desc.height;
 			push.resolution_rcp.x = 1.0f / push.resolution.x;
@@ -13297,43 +13285,24 @@ void Postprocess_MotionBlur(
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
 }
-void CreateSkyAtmosphereResources(SkyAtmosphereResources& res, XMUINT2 resolution)
+void CreateAerialPerspectiveResources(AerialPerspectiveResources& res, XMUINT2 resolution)
 {
-	res.frame = 0;
-
 	TextureDesc desc;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-	desc.width = resolution.x / 2;
-	desc.height = resolution.y / 2;
+	desc.width = resolution.x;
+	desc.height = resolution.y;
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_render);
 	device->SetName(&res.texture_render, "texture_render");
-
-	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
-	device->SetName(&res.texture_temporal[0], "texture_temporal[0]");
-	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
-	device->SetName(&res.texture_temporal[1], "texture_temporal[1]");
-	desc.format = Format::R32_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.texture_temporal_depth[0]);
-	device->SetName(&res.texture_temporal_depth[0], "texture_temporal_depth[0]");
-	device->CreateTexture(&desc, nullptr, &res.texture_temporal_depth[1]);
-	device->SetName(&res.texture_temporal_depth[1], "texture_temporal_depth[1]");
-
-	desc.width = resolution.x;
-	desc.height = resolution.y;
-	desc.format = Format::R11G11B10_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.texture_sun);
-	device->SetName(&res.texture_sun, "texture_sun");
 }
-void Postprocess_SkyAtmosphere_Sky(
-	const SkyAtmosphereResources& res,
+void Postprocess_AerialPerspective(
+	const AerialPerspectiveResources& res,
 	CommandList cmd
 )
 {
-	device->EventBegin("Postprocess_SkyAtmosphere_Sky", cmd);
-	auto range = wi::profiler::BeginRangeGPU("SkyAtmosphere Sky", cmd);
+	device->EventBegin("Postprocess_AerialPerspective", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Aerial Perspective", cmd);
 
 	BindCommonResources(cmd);
 
@@ -13344,10 +13313,10 @@ void Postprocess_SkyAtmosphere_Sky(
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 
-	// SkyAtmosphere render pass:
+	// Aerial Perspective render pass:
 	{
-		device->EventBegin("SkyAtmosphere Sky Render", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_RENDER], cmd);
+		device->EventBegin("Aerial Perspective Render", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* uavs[] = {
@@ -13373,115 +13342,6 @@ void Postprocess_SkyAtmosphere_Sky(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_render, ResourceState::UNORDERED_ACCESS, res.texture_render.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->EventEnd(cmd);
-	}
-
-	const TextureDesc& temporal_desc = res.texture_temporal[0].GetDesc();
-	postprocess.resolution.x = temporal_desc.width;
-	postprocess.resolution.y = temporal_desc.height;
-	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	skyatmosphere_frame = (float)res.frame;
-
-	int temporal_output = device->GetFrameCount() % 2;
-	int temporal_history = 1 - temporal_output;
-
-	// SkyAtmosphere temporal pass:
-	{
-		device->EventBegin("SkyAtmosphere Sky Temporal", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_TEMPORAL], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		device->BindResource(&res.texture_render, 0, cmd);
-		device->BindResource(&res.texture_temporal[temporal_history], 1, cmd);
-		device->BindResource(&res.texture_temporal_depth[temporal_history], 2, cmd);
-
-		const GPUResource* uavs[] = {
-			&res.texture_temporal[temporal_output],
-			&res.texture_temporal_depth[temporal_output],
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_temporal[temporal_output], res.texture_temporal[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_temporal_depth[temporal_output], res.texture_temporal_depth[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(
-			(res.texture_temporal[temporal_output].GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.texture_temporal[temporal_output].GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_temporal[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_temporal[temporal_output].desc.layout),
-				GPUBarrier::Image(&res.texture_temporal_depth[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_temporal_depth[temporal_output].desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->EventEnd(cmd);
-	}
-
-	wi::profiler::EndRange(range);
-	device->EventEnd(cmd);
-}
-void Postprocess_SkyAtmosphere_Sun(
-	const SkyAtmosphereResources& res,
-	CommandList cmd
-)
-{
-	device->EventBegin("Postprocess_SkyAtmosphere_Sun", cmd);
-	auto range = wi::profiler::BeginRangeGPU("SkyAtmosphere Sun", cmd);
-
-	BindCommonResources(cmd);
-
-	const TextureDesc& desc = res.texture_sun.GetDesc();
-	PostProcess postprocess;
-	postprocess.resolution.x = desc.width;
-	postprocess.resolution.y = desc.height;
-	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-
-	// SkyAtmosphere render pass:
-	{
-		device->EventBegin("SkyAtmosphere Sun Render", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SKYATMOSPHERE_SUN], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		const GPUResource* uavs[] = {
-			&res.texture_sun,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_sun, res.texture_sun.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(
-			(res.texture_sun.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.texture_sun.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_sun, ResourceState::UNORDERED_ACCESS, res.texture_sun.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}

@@ -107,4 +107,29 @@ inline float shadow_2D_volumetricclouds(float3 P)
 	return 1.0;
 }
 
+// Sample light and furthest cascade for large mediums (volumetrics)
+// Used with SkyAtmosphere and Volumetric Clouds
+inline void furthest_cascade_volumetrics(inout ShaderEntity light, inout uint furthestCascade)
+{
+	for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
+	{
+		light = load_entity(GetFrame().lightarray_offset + iterator);
+					
+		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC || !light.IsCastingShadow())
+		{
+			// static lights will be skipped (they are used in lightmap baking)
+			// useless if light doesn't cast shadow
+			continue;
+		}
+		
+		if (light.GetType() == ENTITY_TYPE_DIRECTIONALLIGHT)
+		{
+			furthestCascade = light.GetShadowCascadeCount() - 1;
+			
+			// We've found the first/primary directional light, quit
+			break;
+		}
+	}
+}
+
 #endif // WI_SHADOW_HF
