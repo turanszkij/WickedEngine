@@ -54,7 +54,7 @@ void RenderAerialPerspective(uint3 DTid, float2 uv, float depth, float3 depthWor
 		float3 sunDirection = GetSunDirection();
 		float3 sunIlluminance = GetSunColor();
 		
-		const bool recieveShadow = GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECIEVE_SHADOW;
+		const bool receiveShadow = GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECEIVE_SHADOW;
 
 		const float tDepth = length((depthWorldPosition.xyz * M_TO_SKY_UNIT) - (worldPosition + atmosphere.planetCenter)); // apply earth offset to go back to origin as top of earth mode
 		const float sampleCountIni = 0.0;
@@ -68,8 +68,8 @@ void RenderAerialPerspective(uint3 DTid, float2 uv, float depth, float3 depthWor
 		const bool ground = false;
 		const bool mieRayPhase = true;
 		const bool multiScatteringApprox = true;
-		const bool volumetricCloudShadow = recieveShadow;
-		const bool opaqueShadow = recieveShadow;
+		const bool volumetricCloudShadow = receiveShadow;
+		const bool opaqueShadow = receiveShadow;
 		const float opticalDepthScale = atmosphere.aerialPerspectiveScale;
 		SingleScatteringResult ss = IntegrateScatteredLuminance(
 			atmosphere, DTid.xy, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,

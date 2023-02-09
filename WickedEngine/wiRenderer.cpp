@@ -3455,13 +3455,13 @@ void UpdatePerFrameData(
 	{
 		frameCB.options |= OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY;
 	}
-	if (vis.scene->weather.IsRealisticSkyRecieveShadow() && vis.scene->weather.IsRealisticSky())
+	if (vis.scene->weather.IsRealisticSkyReceiveShadow() && vis.scene->weather.IsRealisticSky())
 	{
-		frameCB.options |= OPTION_BIT_REALISTIC_SKY_RECIEVE_SHADOW;
+		frameCB.options |= OPTION_BIT_REALISTIC_SKY_RECEIVE_SHADOW;
 	}
-	if (vis.scene->weather.IsVolumetricCloudsRecieveShadow() && vis.scene->weather.IsVolumetricClouds())
+	if (vis.scene->weather.IsVolumetricCloudsReceiveShadow() && vis.scene->weather.IsVolumetricClouds())
 	{
-		frameCB.options |= OPTION_BIT_VOLUMETRICCLOUDS_RECIEVE_SHADOW;
+		frameCB.options |= OPTION_BIT_VOLUMETRICCLOUDS_RECEIVE_SHADOW;
 	}
 
 	frameCB.scene = vis.scene->shaderscene;

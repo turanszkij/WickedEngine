@@ -5052,8 +5052,8 @@ Luna<WeatherComponent_BindLua>::FunctionType WeatherComponent_BindLua::methods[]
 	lunamethod(WeatherComponent_BindLua, IsOverrideFogColor),
 	lunamethod(WeatherComponent_BindLua, IsRealisticSkyAerialPerspective),
 	lunamethod(WeatherComponent_BindLua, IsRealisticSkyHighQuality),
-	lunamethod(WeatherComponent_BindLua, IsRealisticSkyRecieveShadow),
-	lunamethod(WeatherComponent_BindLua, IsVolumetricCloudsRecieveShadow),
+	lunamethod(WeatherComponent_BindLua, IsRealisticSkyReceiveShadow),
+	lunamethod(WeatherComponent_BindLua, IsVolumetricCloudsReceiveShadow),
 	lunamethod(WeatherComponent_BindLua, SetOceanEnabled),
 	lunamethod(WeatherComponent_BindLua, SetSimpleSky),
 	lunamethod(WeatherComponent_BindLua, SetRealisticSky),
@@ -5063,8 +5063,8 @@ Luna<WeatherComponent_BindLua>::FunctionType WeatherComponent_BindLua::methods[]
 	lunamethod(WeatherComponent_BindLua, SetOverrideFogColor),
 	lunamethod(WeatherComponent_BindLua, SetRealisticSkyAerialPerspective),
 	lunamethod(WeatherComponent_BindLua, SetRealisticSkyHighQuality),
-	lunamethod(WeatherComponent_BindLua, SetRealisticSkyRecieveShadow),
-	lunamethod(WeatherComponent_BindLua, SetVolumetricCloudsRecieveShadow),
+	lunamethod(WeatherComponent_BindLua, SetRealisticSkyReceiveShadow),
+	lunamethod(WeatherComponent_BindLua, SetVolumetricCloudsReceiveShadow),
 	{ NULL, NULL }
 };
 Luna<WeatherComponent_BindLua>::PropertyType WeatherComponent_BindLua::properties[] = {
@@ -5274,41 +5274,41 @@ int WeatherComponent_BindLua::SetRealisticSkyHighQuality(lua_State* L)
 	}
 	return 0;
 }
-int WeatherComponent_BindLua::IsRealisticSkyRecieveShadow(lua_State* L)
+int WeatherComponent_BindLua::IsRealisticSkyReceiveShadow(lua_State* L)
 {
-	wi::lua::SSetBool(L, component->IsRealisticSkyRecieveShadow());
+	wi::lua::SSetBool(L, component->IsRealisticSkyReceiveShadow());
 	return 1;
 }
-int WeatherComponent_BindLua::SetRealisticSkyRecieveShadow(lua_State* L)
+int WeatherComponent_BindLua::SetRealisticSkyReceiveShadow(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		bool value = wi::lua::SGetBool(L, 1);
-		component->SetRealisticSkyRecieveShadow(value);
+		component->SetRealisticSkyReceiveShadow(value);
 	}
 	else
 	{
-		wi::lua::SError(L, "SetRealisticSkyRecieveShadow(bool value) not enough arguments!");
+		wi::lua::SError(L, "SetRealisticSkyReceiveShadow(bool value) not enough arguments!");
 	}
 	return 0;
 }
-int WeatherComponent_BindLua::IsVolumetricCloudsRecieveShadow(lua_State* L)
+int WeatherComponent_BindLua::IsVolumetricCloudsReceiveShadow(lua_State* L)
 {
-	wi::lua::SSetBool(L, component->IsVolumetricCloudsRecieveShadow());
+	wi::lua::SSetBool(L, component->IsVolumetricCloudsReceiveShadow());
 	return 1;
 }
-int WeatherComponent_BindLua::SetVolumetricCloudsRecieveShadow(lua_State* L)
+int WeatherComponent_BindLua::SetVolumetricCloudsReceiveShadow(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		bool value = wi::lua::SGetBool(L, 1);
-		component->SetVolumetricCloudsRecieveShadow(value);
+		component->SetVolumetricCloudsReceiveShadow(value);
 	}
 	else
 	{
-		wi::lua::SError(L, "SetVolumetricCloudsRecieveShadow(bool value) not enough arguments!");
+		wi::lua::SError(L, "SetVolumetricCloudsReceiveShadow(bool value) not enough arguments!");
 	}
 	return 0;
 }

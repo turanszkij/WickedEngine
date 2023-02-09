@@ -422,7 +422,7 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 	if (any(participatingMedia.scatteringCoefficients[0] > 0.0))
 	{
 		// Sample shadows from opaque shadow maps
-		if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_RECIEVE_SHADOW)
+		if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_RECEIVE_SHADOW)
 		{
 			OpaqueShadow(participatingMedia, worldPosition);
 		}
@@ -677,8 +677,8 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 				const bool ground = false;
 				const bool mieRayPhase = true;
 				const bool multiScatteringApprox = true;
-				const bool volumetricCloudShadow = GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW && GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECIEVE_SHADOW;
-				const bool opaqueShadow = GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_RECIEVE_SHADOW && GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECIEVE_SHADOW;
+				const bool volumetricCloudShadow = GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW && GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECEIVE_SHADOW;
+				const bool opaqueShadow = GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_RECEIVE_SHADOW && GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECEIVE_SHADOW;
 				const float opticalDepthScale = atmosphere.aerialPerspectiveScale;
 				SingleScatteringResult ss = IntegrateScatteredLuminance(
 				atmosphere, DTid.xy, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth * M_TO_SKY_UNIT, sampleCountIni, variableSampleCount,

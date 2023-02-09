@@ -7,7 +7,7 @@
 // Cloud noise based on: https://www.shadertoy.com/view/4tdSWr
 
 float3 AccurateAtmosphericScattering(float2 pixelPosition, float3 rayOrigin, float3 rayDirection, float3 sunDirection, float3 sunColor,
-	bool enableSun, bool darkMode, bool stationary, bool highQuality, bool perPixelNoise, bool recieveShadow)
+	bool enableSun, bool darkMode, bool stationary, bool highQuality, bool perPixelNoise, bool receiveShadow)
 {
     AtmosphereParameters atmosphere = GetWeather().atmosphere;
 
@@ -58,8 +58,8 @@ float3 AccurateAtmosphericScattering(float2 pixelPosition, float3 rayOrigin, flo
 			const bool ground = false;
 			const bool mieRayPhase = true;
 			const bool multiScatteringApprox = true;
-			const bool volumetricCloudShadow = recieveShadow;
-			const bool opaqueShadow = recieveShadow;
+			const bool volumetricCloudShadow = receiveShadow;
+			const bool opaqueShadow = receiveShadow;
 			SingleScatteringResult ss = IntegrateScatteredLuminance(
 				atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,
 				perPixelNoise, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, texture_transmittancelut, texture_multiscatteringlut);

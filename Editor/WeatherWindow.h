@@ -39,7 +39,7 @@ public:
 	wi::gui::CheckBox realisticskyCheckBox;
 	wi::gui::CheckBox aerialperspectiveCheckBox;
 	wi::gui::CheckBox realisticskyHighQualityCheckBox;
-	wi::gui::CheckBox realisticskyRecieveShadowCheckBox;
+	wi::gui::CheckBox realisticskyReceiveShadowCheckBox;
 	wi::gui::Button skyButton;
 	wi::gui::Button colorgradingButton;
 
@@ -60,7 +60,7 @@ public:
 
 	// volumetric clouds:
 	wi::gui::CheckBox volumetricCloudsCheckBox;
-	wi::gui::CheckBox volumetricCloudsRecieveShadowCheckBox;
+	wi::gui::CheckBox volumetricCloudsReceiveShadowCheckBox;
 	wi::gui::CheckBox volumetricCloudsCastShadowCheckBox;
 	wi::gui::Slider cloudStartHeightSlider;
 	wi::gui::Slider cloudThicknessSlider;

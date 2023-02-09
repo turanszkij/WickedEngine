@@ -854,8 +854,8 @@ static const uint OPTION_BIT_OVERRIDE_FOG_COLOR = 1 << 14;
 static const uint OPTION_BIT_STATIC_SKY_SPHEREMAP = 1 << 15;
 static const uint OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE = 1 << 16;
 static const uint OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY = 1 << 17;
-static const uint OPTION_BIT_REALISTIC_SKY_RECIEVE_SHADOW = 1 << 18;
-static const uint OPTION_BIT_VOLUMETRICCLOUDS_RECIEVE_SHADOW = 1 << 19;
+static const uint OPTION_BIT_REALISTIC_SKY_RECEIVE_SHADOW = 1 << 18;
+static const uint OPTION_BIT_VOLUMETRICCLOUDS_RECEIVE_SHADOW = 1 << 19;
 
 // ---------- Common Constant buffers: -----------------
 

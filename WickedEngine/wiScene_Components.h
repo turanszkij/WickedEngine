@@ -1236,8 +1236,8 @@ namespace wi::scene
 			OVERRIDE_FOG_COLOR = 1 << 6,
 			REALISTIC_SKY_AERIAL_PERSPECTIVE = 1 << 7,
 			REALISTIC_SKY_HIGH_QUALITY = 1 << 8,
-			REALISTIC_SKY_RECIEVE_SHADOW = 1 << 9,
-			VOLUMETRIC_CLOUDS_RECIEVE_SHADOW = 1 << 10,
+			REALISTIC_SKY_RECEIVE_SHADOW = 1 << 9,
+			VOLUMETRIC_CLOUDS_RECEIVE_SHADOW = 1 << 10,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -1249,8 +1249,8 @@ namespace wi::scene
 		inline bool IsOverrideFogColor() const { return _flags & OVERRIDE_FOG_COLOR; }
 		inline bool IsRealisticSkyAerialPerspective() const { return _flags & REALISTIC_SKY_AERIAL_PERSPECTIVE; }
 		inline bool IsRealisticSkyHighQuality() const { return _flags & REALISTIC_SKY_HIGH_QUALITY; }
-		inline bool IsRealisticSkyRecieveShadow() const { return _flags & REALISTIC_SKY_RECIEVE_SHADOW; }
-		inline bool IsVolumetricCloudsRecieveShadow() const { return _flags & VOLUMETRIC_CLOUDS_RECIEVE_SHADOW; }
+		inline bool IsRealisticSkyReceiveShadow() const { return _flags & REALISTIC_SKY_RECEIVE_SHADOW; }
+		inline bool IsVolumetricCloudsReceiveShadow() const { return _flags & VOLUMETRIC_CLOUDS_RECEIVE_SHADOW; }
 
 		inline void SetOceanEnabled(bool value = true) { if (value) { _flags |= OCEAN_ENABLED; } else { _flags &= ~OCEAN_ENABLED; } }
 		inline void SetRealisticSky(bool value = true) { if (value) { _flags |= REALISTIC_SKY; } else { _flags &= ~REALISTIC_SKY; } }
@@ -1260,8 +1260,8 @@ namespace wi::scene
 		inline void SetOverrideFogColor(bool value = true) { if (value) { _flags |= OVERRIDE_FOG_COLOR; } else { _flags &= ~OVERRIDE_FOG_COLOR; } }
 		inline void SetRealisticSkyAerialPerspective(bool value = true) { if (value) { _flags |= REALISTIC_SKY_AERIAL_PERSPECTIVE; } else { _flags &= ~REALISTIC_SKY_AERIAL_PERSPECTIVE; } }
 		inline void SetRealisticSkyHighQuality(bool value = true) { if (value) { _flags |= REALISTIC_SKY_HIGH_QUALITY; } else { _flags &= ~REALISTIC_SKY_HIGH_QUALITY; } }
-		inline void SetRealisticSkyRecieveShadow(bool value = true) { if (value) { _flags |= REALISTIC_SKY_RECIEVE_SHADOW; } else { _flags &= ~REALISTIC_SKY_RECIEVE_SHADOW; } }
-		inline void SetVolumetricCloudsRecieveShadow(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS_RECIEVE_SHADOW; } else { _flags &= ~VOLUMETRIC_CLOUDS_RECIEVE_SHADOW; } }
+		inline void SetRealisticSkyReceiveShadow(bool value = true) { if (value) { _flags |= REALISTIC_SKY_RECEIVE_SHADOW; } else { _flags &= ~REALISTIC_SKY_RECEIVE_SHADOW; } }
+		inline void SetVolumetricCloudsReceiveShadow(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS_RECEIVE_SHADOW; } else { _flags &= ~VOLUMETRIC_CLOUDS_RECEIVE_SHADOW; } }
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
