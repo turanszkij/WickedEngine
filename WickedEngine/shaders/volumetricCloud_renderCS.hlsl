@@ -116,10 +116,8 @@ void OpaqueShadow(inout ParticipatingMedia participatingMedia, float3 worldPosit
 	// Unlike volumetric fog lighting, we only care about the outmost cascade. This improves performance where we can't see the inner cascades anyway
 	ShaderEntity light = (ShaderEntity) 0;
 	uint furthestCascade = 0;
-	
-	furthest_cascade_volumetrics(light, furthestCascade);
 
-	if (furthestCascade >= 0)
+	if (furthest_cascade_volumetrics(light, furthestCascade))
 	{
 		float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + furthestCascade), float4(worldPosition, 1)).xyz; // ortho matrix, no divide by .w
 		float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;

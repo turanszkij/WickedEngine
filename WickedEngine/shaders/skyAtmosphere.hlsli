@@ -576,9 +576,11 @@ SingleScatteringResult IntegrateScatteredLuminance(
 		// Unlike volumetric fog lighting, we only care about the outmost cascade. This improves performance where we can't see the inner cascades anyway
 		ShaderEntity light = (ShaderEntity) 0;
 		uint furthestCascade = 0;
+		bool validLight = false;
+		
 		if (opaqueShadow)
 		{
-			furthest_cascade_volumetrics(light, furthestCascade);
+			validLight = furthest_cascade_volumetrics(light, furthestCascade);
 		}
 		
 		// Phase functions
@@ -676,7 +678,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
 			}
 
 			// Opaque shadow from cascade shadow mapping
-			if (opaqueShadow && furthestCascade >= 0)
+			if (opaqueShadow && validLight)
 			{
 				float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + furthestCascade), float4(shadowP, 1)).xyz; // ortho matrix, no divide by .w
 				float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
