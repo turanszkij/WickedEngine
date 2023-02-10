@@ -677,7 +677,7 @@ namespace wi::renderer
 	);
 	struct AerialPerspectiveResources
 	{
-		wi::graphics::Texture texture_render;
+		wi::graphics::Texture texture_output;
 	};
 	void CreateAerialPerspectiveResources(AerialPerspectiveResources& res, XMUINT2 resolution);
 	void Postprocess_AerialPerspective(
@@ -692,6 +692,7 @@ namespace wi::renderer
 		wi::graphics::Texture texture_reproject[2];
 		wi::graphics::Texture texture_reproject_depth[2];
 		wi::graphics::Texture texture_reproject_additional[2];
+		wi::graphics::Texture texture_output;
 		wi::graphics::Texture texture_cloudMask;
 	};
 	void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution);

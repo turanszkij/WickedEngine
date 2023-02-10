@@ -173,6 +173,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"volumetricCloud_shadow_filterCS", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_shadow_renderCS", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_shapenoiseCS", wi::graphics::ShaderStage::CS },
+	{"volumetricCloud_upsampleCS", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_weathermapCS", wi::graphics::ShaderStage::CS },
 	{"shadingRateClassificationCS", wi::graphics::ShaderStage::CS },
 	{"shadingRateClassificationCS_DEBUG", wi::graphics::ShaderStage::CS },

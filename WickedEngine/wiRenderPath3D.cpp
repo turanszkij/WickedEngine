@@ -443,13 +443,13 @@ namespace wi
 
 		if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
 		{
-			if (!aerialperspectiveResources.texture_render.IsValid())
+			if (!aerialperspectiveResources.texture_output.IsValid())
 			{
 				wi::renderer::CreateAerialPerspectiveResources(aerialperspectiveResources, internalResolution);
 			}
 			if (getReflectionsEnabled() && depthBuffer_Reflection.IsValid())
 			{
-				if (!aerialperspectiveResources_reflection.texture_render.IsValid())
+				if (!aerialperspectiveResources_reflection.texture_output.IsValid())
 				{
 					wi::renderer::CreateAerialPerspectiveResources(aerialperspectiveResources_reflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
 				}
@@ -1096,7 +1096,7 @@ namespace wi
 					wi::image::Params fx;
 					fx.enableFullScreen();
 					fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-					wi::image::Draw(&aerialperspectiveResources_reflection.texture_render, fx, cmd);
+					wi::image::Draw(&aerialperspectiveResources_reflection.texture_output, fx, cmd);
 					device->EventEnd(cmd);
 				}
 
@@ -1107,7 +1107,7 @@ namespace wi
 					wi::image::Params fx;
 					fx.enableFullScreen();
 					fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-					wi::image::Draw(&volumetriccloudResources_reflection.texture_reproject[device->GetFrameCount() % 2], fx, cmd);
+					wi::image::Draw(&volumetriccloudResources_reflection.texture_output, fx, cmd);
 					device->EventEnd(cmd);
 				}
 
@@ -1299,21 +1299,18 @@ namespace wi
 				wi::image::Params fx;
 				fx.enableFullScreen();
 				fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-				wi::image::Draw(&aerialperspectiveResources.texture_render, fx, cmd);
+				wi::image::Draw(&aerialperspectiveResources.texture_output, fx, cmd);
 				device->EventEnd(cmd);
 			}
 
-			// Upsample + Blend the volumetric clouds on top:
+			// Blend the volumetric clouds on top:
 			if (scene->weather.IsVolumetricClouds())
 			{
-				device->EventBegin("Volumetric Clouds Upsample + Blend", cmd);
-				wi::renderer::Postprocess_Upsample_Bilateral(
-					volumetriccloudResources.texture_reproject[device->GetFrameCount() % 2],
-					rtLinearDepth,
-					rtMain_render, // only desc is taken if pixel shader upsampling is used
-					cmd,
-					true // pixel shader upsampling
-				);
+				device->EventBegin("Volumetric Clouds Blend", cmd);
+				wi::image::Params fx;
+				fx.enableFullScreen();
+				fx.blendFlag = BLENDMODE_PREMULTIPLIED;
+				wi::image::Draw(&volumetriccloudResources.texture_output, fx, cmd);
 				device->EventEnd(cmd);
 			}
 
