@@ -1113,6 +1113,7 @@ void WeatherWindow::Update()
 		realisticskyCheckBox.SetCheck(weather.IsRealisticSky());
 		aerialperspectiveCheckBox.SetCheck(weather.IsRealisticSkyAerialPerspective());
 		realisticskyHighQualityCheckBox.SetCheck(weather.IsRealisticSkyHighQuality());
+		realisticskyReceiveShadowCheckBox.SetCheck(weather.IsRealisticSkyReceiveShadow());
 
 		ocean_enabledCheckBox.SetCheck(weather.IsOceanEnabled());
 		ocean_patchSizeSlider.SetValue(weather.oceanParameters.patch_length);
