@@ -8,12 +8,10 @@ Texture2D<float2> cloud_depth_current : register(t1);
 
 RWTexture2D<float4> output : register(u0);
 
-#define DIFFERENCE_THRESHOLD 1.0
-
-#define UPSAMPLE_SAMPLE_RADIUS 2
+#define UPSAMPLE_SAMPLE_RADIUS 1
 
 #define GAUSSIAN_UPSAMPLE
-#define GAUSSIAN_SIGMA_SPATIAL 0.25
+#define GAUSSIAN_SIGMA_SPATIAL 0.5
 #define GAUSSIAN_SIGMA_RANGE 100.0
 
 #define UPSAMPLE_TOLERANCE 0.15
@@ -30,7 +28,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 	
 	const uint2 reprojectionCoord = DTid.xy / 2;
-
+	
 	const float2 reprojectionResolution = postprocess.params0.xy;
 	const float2 reprojectionTexelSize = postprocess.params0.zw;
 
@@ -54,14 +52,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		cloud_depth_current.SampleLevel(sampler_point_clamp, uv11, 0).g
 	);
 
-	const float4 depthDiff = abs(tToDepthBuffer - lineardepth_lowres);
-	const float accumDiff = dot(depthDiff, float4(1, 1, 1, 1));
+	const float4 depthDiff = abs(tToDepthBuffer - lineardepth_lowres);	
+	float depthDiffMax = max(max(depthDiff.x, depthDiff.y), max(depthDiff.z, depthDiff.w));
 	
 	bool validResult = false;
 	float4 result = 0;
-
+	
 	[branch]
-	if (accumDiff < DIFFERENCE_THRESHOLD)
+	if (depthDiffMax < tToDepthBuffer * 0.2)
 	{
 		// small error, take bilinear sample:
 
