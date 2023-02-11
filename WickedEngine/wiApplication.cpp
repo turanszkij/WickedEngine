@@ -123,8 +123,8 @@ namespace wi
 		if (!startup_script)
 		{
 			startup_script = true;
-			wi::lua::RegisterObject(wi::lua::Application_BindLua::className, "main", new wi::lua::Application_BindLua(this));
-			wi::lua::RegisterObject(wi::lua::Application_BindLua::className, "application", new wi::lua::Application_BindLua(this));
+			Luna<wi::lua::Application_BindLua>::push_global(wi::lua::GetLuaState(), "main", this);
+			Luna<wi::lua::Application_BindLua>::push_global(wi::lua::GetLuaState(), "application", this);
 			wi::lua::RunFile("startup.lua");
 		}
 

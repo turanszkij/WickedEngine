@@ -166,6 +166,20 @@ public:
 		lua_setmetatable(L, -2);
 	}
 
+	// Pushes an instance and registers it into a global object
+	//	example: name = T(args)
+	template<typename... ARG>
+	static void push_global(lua_State* L, const char* name, ARG&&... args)
+	{
+		T** a = (T**)lua_newuserdata(L, sizeof(T*)); // Create userdata
+		*a = allocator.allocate(std::forward<ARG>(args)...);
+
+		luaL_getmetatable(L, T::className);
+
+		lua_setmetatable(L, -2);
+		lua_setglobal(L, name);
+	}
+
 	/*
 	@ property_getter (internal)
 	Arguments:
