@@ -227,7 +227,7 @@ namespace wi::lua
 	}
 	int SpriteAnim_BindLua::GetVelocity(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&anim.vel)));
+		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat3(&anim.vel)));
 		return 1;
 	}
 	int SpriteAnim_BindLua::GetScaleX(lua_State* L)
@@ -242,12 +242,12 @@ namespace wi::lua
 	}
 	int SpriteAnim_BindLua::GetMovingTexAnim(lua_State* L)
 	{
-		Luna<MovingTexAnim_BindLua>::push(L, new MovingTexAnim_BindLua(anim.movingTexAnim));
+		Luna<MovingTexAnim_BindLua>::push(L, MovingTexAnim_BindLua(anim.movingTexAnim));
 		return 1;
 	}
 	int SpriteAnim_BindLua::GetDrawRecAnim(lua_State* L)
 	{
-		Luna<DrawRectAnim_BindLua>::push(L, new DrawRectAnim_BindLua(anim.drawRectAnim));
+		Luna<DrawRectAnim_BindLua>::push(L, DrawRectAnim_BindLua(anim.drawRectAnim));
 		return 1;
 	}
 

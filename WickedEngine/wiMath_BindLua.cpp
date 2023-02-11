@@ -42,13 +42,6 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 
-	Vector_BindLua::Vector_BindLua()
-	{
-		data.x = 0;
-		data.y = 0;
-		data.z = 0;
-		data.w = 0;
-	}
 	Vector_BindLua::Vector_BindLua(const XMFLOAT3& vector)
 	{
 		data.x = vector.x;
@@ -171,7 +164,7 @@ namespace wi::lua
 			Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 2);
 			if (vec && mat)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector4Transform(XMLoadFloat4(&vec->data), XMLoadFloat4x4(&mat->data))));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVector4Transform(XMLoadFloat4(&vec->data), XMLoadFloat4x4(&mat->data))));
 				return 1;
 			}
 			else
@@ -190,7 +183,7 @@ namespace wi::lua
 			Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 2);
 			if (vec && mat)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3TransformNormal(XMLoadFloat4(&vec->data), XMLoadFloat4x4(&mat->data))));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVector3TransformNormal(XMLoadFloat4(&vec->data), XMLoadFloat4x4(&mat->data))));
 				return 1;
 			}
 			else
@@ -209,7 +202,7 @@ namespace wi::lua
 			Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 2);
 			if (vec && mat)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3TransformCoord(XMLoadFloat4(&vec->data), XMLoadFloat4x4(&mat->data))));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVector3TransformCoord(XMLoadFloat4(&vec->data), XMLoadFloat4x4(&mat->data))));
 				return 1;
 			}
 			else
@@ -226,12 +219,12 @@ namespace wi::lua
 	}
 	int Vector_BindLua::Normalize(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3Normalize(XMLoadFloat4(&data))));
+		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVector3Normalize(XMLoadFloat4(&data))));
 		return 1;
 	}
 	int Vector_BindLua::QuaternionNormalize(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMQuaternionNormalize(XMLoadFloat4(&data))));
+		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMQuaternionNormalize(XMLoadFloat4(&data))));
 		return 1;
 	}
 	int Vector_BindLua::Clamp(lua_State* L)
@@ -241,7 +234,7 @@ namespace wi::lua
 		{
 			float a = wi::lua::SGetFloat(L, 1);
 			float b = wi::lua::SGetFloat(L, 2);
-			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorClamp(XMLoadFloat4(&data), XMVectorReplicate(a), XMVectorReplicate(b))));
+			Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVectorClamp(XMLoadFloat4(&data), XMVectorReplicate(a), XMVectorReplicate(b))));
 			return 1;
 		}
 		else
@@ -250,7 +243,7 @@ namespace wi::lua
 	}
 	int Vector_BindLua::Saturate(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSaturate(XMLoadFloat4(&data))));
+		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVectorSaturate(XMLoadFloat4(&data))));
 		return 1;
 	}
 
@@ -281,7 +274,7 @@ namespace wi::lua
 			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (v1 && v2)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3Cross(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data))));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVector3Cross(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data))));
 				return 1;
 			}
 		}
@@ -297,17 +290,17 @@ namespace wi::lua
 			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (v1 && v2)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorMultiply(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data))));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVectorMultiply(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data))));
 				return 1;
 			}
 			else if (v1)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&v1->data) * wi::lua::SGetFloat(L, 2)));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat4(&v1->data) * wi::lua::SGetFloat(L, 2)));
 				return 1;
 			}
 			else if (v2)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(wi::lua::SGetFloat(L, 1) * XMLoadFloat4(&v2->data)));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(wi::lua::SGetFloat(L, 1) * XMLoadFloat4(&v2->data)));
 				return 1;
 			}
 		}
@@ -323,7 +316,7 @@ namespace wi::lua
 			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (v1 && v2)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorAdd(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data))));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVectorAdd(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data))));
 				return 1;
 			}
 		}
@@ -339,7 +332,7 @@ namespace wi::lua
 			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (v1 && v2)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSubtract(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data))));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVectorSubtract(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data))));
 				return 1;
 			}
 		}
@@ -356,7 +349,7 @@ namespace wi::lua
 			float t = wi::lua::SGetFloat(L, 3);
 			if (v1 && v2)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorLerp(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data), t)));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVectorLerp(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data), t)));
 				return 1;
 			}
 		}
@@ -374,7 +367,7 @@ namespace wi::lua
 			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (v1 && v2)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMQuaternionMultiply(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data))));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMQuaternionMultiply(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data))));
 				return 1;
 			}
 		}
@@ -389,7 +382,7 @@ namespace wi::lua
 			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (v1)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMQuaternionRotationRollPitchYawFromVector(XMLoadFloat4(&v1->data))));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMQuaternionRotationRollPitchYawFromVector(XMLoadFloat4(&v1->data))));
 				return 1;
 			}
 		}
@@ -405,7 +398,7 @@ namespace wi::lua
 			if (v1)
 			{
 				XMFLOAT3 xyz = wi::math::QuaternionToRollPitchYaw(v1->data);
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMFLOAT4(xyz.x, xyz.y, xyz.z, 0)));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMFLOAT4(xyz.x, xyz.y, xyz.z, 0)));
 				return 1;
 			}
 		}
@@ -422,7 +415,7 @@ namespace wi::lua
 			float t = wi::lua::SGetFloat(L, 3);
 			if (v1 && v2)
 			{
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMQuaternionSlerp(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data), t)));
+				Luna<Vector_BindLua>::push(L, Vector_BindLua(XMQuaternionSlerp(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data), t)));
 				return 1;
 			}
 		}
@@ -476,15 +469,15 @@ namespace wi::lua
 	{
 		if(data_f2)
 		{
-			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(data_f2)));
+			Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat2(data_f2)));
 		}
 		if(data_f3)
 		{
-			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(data_f3)));
+			Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat3(data_f3)));
 		}
 		if(data_f4)
 		{
-			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(data_f4)));
+			Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat4(data_f4)));
 		}
 		return 1;
 	}
@@ -537,9 +530,6 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 
-	Matrix_BindLua::Matrix_BindLua()
-	{
-	}
 	Matrix_BindLua::Matrix_BindLua(const XMFLOAT4X4& matrix)
 	{
 		data = matrix;
@@ -593,7 +583,7 @@ namespace wi::lua
 				row = 0;
 		}
 		XMFLOAT4 r = XMFLOAT4(data.m[row][0], data.m[row][1], data.m[row][2], data.m[row][3]);
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(r));
+		Luna<Vector_BindLua>::push(L, Vector_BindLua(r));
 		return 1;
 	}
 
@@ -611,7 +601,7 @@ namespace wi::lua
 				mat = XMMatrixTranslationFromVector(XMLoadFloat4(&vector->data));
 			}
 		}
-		Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(mat));
+		Luna<Matrix_BindLua>::push(L, Matrix_BindLua(mat));
 		return 1;
 	}
 
@@ -627,7 +617,7 @@ namespace wi::lua
 				mat = XMMatrixRotationRollPitchYawFromVector(XMLoadFloat4(&vector->data));
 			}
 		}
-		Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(mat));
+		Luna<Matrix_BindLua>::push(L, Matrix_BindLua(mat));
 		return 1;
 	}
 
@@ -639,7 +629,7 @@ namespace wi::lua
 		{
 			mat = XMMatrixRotationX(wi::lua::SGetFloat(L, 1));
 		}
-		Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(mat));
+		Luna<Matrix_BindLua>::push(L, Matrix_BindLua(mat));
 		return 1;
 	}
 
@@ -651,7 +641,7 @@ namespace wi::lua
 		{
 			mat = XMMatrixRotationY(wi::lua::SGetFloat(L, 1));
 		}
-		Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(mat));
+		Luna<Matrix_BindLua>::push(L, Matrix_BindLua(mat));
 		return 1;
 	}
 
@@ -663,7 +653,7 @@ namespace wi::lua
 		{
 			mat = XMMatrixRotationZ(wi::lua::SGetFloat(L, 1));
 		}
-		Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(mat));
+		Luna<Matrix_BindLua>::push(L, Matrix_BindLua(mat));
 		return 1;
 	}
 
@@ -679,7 +669,7 @@ namespace wi::lua
 				mat = XMMatrixRotationQuaternion(XMLoadFloat4(&vector->data));
 			}
 		}
-		Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(mat));
+		Luna<Matrix_BindLua>::push(L, Matrix_BindLua(mat));
 		return 1;
 	}
 
@@ -695,7 +685,7 @@ namespace wi::lua
 				mat = XMMatrixScalingFromVector(XMLoadFloat4(&vector->data));
 			}
 		}
-		Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(mat));
+		Luna<Matrix_BindLua>::push(L, Matrix_BindLua(mat));
 		return 1;
 	}
 
@@ -716,7 +706,7 @@ namespace wi::lua
 				}
 				else
 					Up = XMVectorSet(0, 1, 0, 0);
-				Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(XMMatrixLookToLH(XMLoadFloat4(&pos->data), XMLoadFloat4(&dir->data), Up)));
+				Luna<Matrix_BindLua>::push(L, Matrix_BindLua(XMMatrixLookToLH(XMLoadFloat4(&pos->data), XMLoadFloat4(&dir->data), Up)));
 			}
 			else
 				wi::lua::SError(L, "LookTo(Vector eye, Vector direction, opt Vector up) argument is not a Vector!");
@@ -743,7 +733,7 @@ namespace wi::lua
 				}
 				else
 					Up = XMVectorSet(0, 1, 0, 0);
-				Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(XMMatrixLookAtLH(XMLoadFloat4(&pos->data), XMLoadFloat4(&dir->data), Up)));
+				Luna<Matrix_BindLua>::push(L, Matrix_BindLua(XMMatrixLookAtLH(XMLoadFloat4(&pos->data), XMLoadFloat4(&dir->data), Up)));
 			}
 			else
 				wi::lua::SError(L, "LookAt(Vector eye, Vector focusPos, opt Vector up) argument is not a Vector!");
@@ -762,7 +752,7 @@ namespace wi::lua
 			Matrix_BindLua* m2 = Luna<Matrix_BindLua>::lightcheck(L, 2);
 			if (m1 && m2)
 			{
-				Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(XMMatrixMultiply(XMLoadFloat4x4(&m1->data), XMLoadFloat4x4(&m2->data))));
+				Luna<Matrix_BindLua>::push(L, Matrix_BindLua(XMMatrixMultiply(XMLoadFloat4x4(&m1->data), XMLoadFloat4x4(&m2->data))));
 				return 1;
 			}
 		}
@@ -778,7 +768,7 @@ namespace wi::lua
 			Matrix_BindLua* m2 = Luna<Matrix_BindLua>::lightcheck(L, 2);
 			if (m1 && m2)
 			{
-				Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(XMLoadFloat4x4(&m1->data) + XMLoadFloat4x4(&m2->data)));
+				Luna<Matrix_BindLua>::push(L, Matrix_BindLua(XMLoadFloat4x4(&m1->data) + XMLoadFloat4x4(&m2->data)));
 				return 1;
 			}
 		}
@@ -793,7 +783,7 @@ namespace wi::lua
 			Matrix_BindLua* m1 = Luna<Matrix_BindLua>::lightcheck(L, 1);
 			if (m1)
 			{
-				Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(XMMatrixTranspose(XMLoadFloat4x4(&m1->data))));
+				Luna<Matrix_BindLua>::push(L, Matrix_BindLua(XMMatrixTranspose(XMLoadFloat4x4(&m1->data))));
 				return 1;
 			}
 		}
@@ -809,7 +799,7 @@ namespace wi::lua
 			if (m1)
 			{
 				XMVECTOR det;
-				Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(XMMatrixInverse(&det, XMLoadFloat4x4(&m1->data))));
+				Luna<Matrix_BindLua>::push(L, Matrix_BindLua(XMMatrixInverse(&det, XMLoadFloat4x4(&m1->data))));
 				wi::lua::SSetFloat(L, XMVectorGetX(det));
 				return 2;
 			}
@@ -836,7 +826,7 @@ namespace wi::lua
 	{
 		if(data_f4x4)
 		{
-			Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(*data_f4x4));
+			Luna<Matrix_BindLua>::push(L, Matrix_BindLua(*data_f4x4));
 		}
 		return 1;
 	}
