@@ -1022,20 +1022,6 @@ namespace wi
 					);
 				}
 
-				if (scene->weather.IsVolumetricClouds())
-				{
-					wi::renderer::Postprocess_VolumetricClouds(
-						volumetriccloudResources_reflection,
-						cmd,
-						camera_reflection,
-						camera_reflection_previous,
-						camera_reflection,
-						wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
-						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-					);
-				}
-
 				wi::profiler::EndRange(range); // Planar Reflections
 				device->EventEnd(cmd);
 
@@ -1059,6 +1045,20 @@ namespace wi
 					Texture(),
 					cmd
 				);
+
+				if (scene->weather.IsVolumetricClouds())
+				{
+					wi::renderer::Postprocess_VolumetricClouds(
+						volumetriccloudResources_reflection,
+						cmd,
+						camera_reflection,
+						camera_reflection_previous,
+						camera_reflection,
+						wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+					);
+				}
 
 				device->EventBegin("Planar reflections", cmd);
 				auto range = wi::profiler::BeginRangeGPU("Planar Reflections", cmd);
@@ -1103,12 +1103,7 @@ namespace wi
 				// Blend the volumetric clouds on top:
 				if (scene->weather.IsVolumetricClouds())
 				{
-					device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
-					wi::image::Params fx;
-					fx.enableFullScreen();
-					fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-					wi::image::Draw(&volumetriccloudResources_reflection.texture_output, fx, cmd);
-					device->EventEnd(cmd);
+					wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources_reflection, cmd);
 				}
 
 				device->RenderPassEnd(cmd);
@@ -1306,12 +1301,7 @@ namespace wi
 			// Blend the volumetric clouds on top:
 			if (scene->weather.IsVolumetricClouds())
 			{
-				device->EventBegin("Volumetric Clouds Blend", cmd);
-				wi::image::Params fx;
-				fx.enableFullScreen();
-				fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-				wi::image::Draw(&volumetriccloudResources.texture_output, fx, cmd);
-				device->EventEnd(cmd);
+				wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
 			}
 
 			device->RenderPassEnd(cmd);
@@ -1707,6 +1697,7 @@ namespace wi
 			drawscene_flags |= wi::renderer::DRAWSCENE_OCCLUSIONCULLING;
 			drawscene_flags |= wi::renderer::DRAWSCENE_HAIRPARTICLE;
 			drawscene_flags |= wi::renderer::DRAWSCENE_TESSELLATION;
+			drawscene_flags |= wi::renderer::DRAWSCENE_OCEAN;
 			wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 
 			device->EventEnd(cmd);

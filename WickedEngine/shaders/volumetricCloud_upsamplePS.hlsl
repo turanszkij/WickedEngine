@@ -6,9 +6,7 @@ PUSHCONSTANT(postprocess, PostProcess);
 Texture2D<float4> cloud_current : register(t0);
 Texture2D<float2> cloud_depth_current : register(t1);
 
-RWTexture2D<float4> output : register(u0);
-
-#define UPSAMPLE_SAMPLE_RADIUS 1
+static const int UPSAMPLE_SAMPLE_RADIUS = 1;
 
 #define GAUSSIAN_UPSAMPLE
 #define GAUSSIAN_SIGMA_SPATIAL 0.5
@@ -21,13 +19,12 @@ float Gaussian(float x, float sigma)
 	return exp(-x * x / (2.0 * sigma * sigma));
 }
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_Target
 {
-	const float depth = texture_depth[DTid.xy];
-	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
+	const uint2 pixel = pos.xy;
+	const float depth = texture_depth[pixel];
 	
-	const uint2 reprojectionCoord = DTid.xy / 2;
+	const uint2 reprojectionCoord = pixel / 2;
 	
 	const float2 reprojectionResolution = postprocess.params0.xy;
 	const float2 reprojectionTexelSize = postprocess.params0.zw;
@@ -74,10 +71,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float weightSum = 0;
 				
 		[unroll]
-		for (float y = -UPSAMPLE_SAMPLE_RADIUS; y <= UPSAMPLE_SAMPLE_RADIUS; y++)
+		for (int y = -UPSAMPLE_SAMPLE_RADIUS; y <= UPSAMPLE_SAMPLE_RADIUS; y++)
 		{
 			[unroll]
-			for (float x = -UPSAMPLE_SAMPLE_RADIUS; x <= UPSAMPLE_SAMPLE_RADIUS; x++)
+			for (int x = -UPSAMPLE_SAMPLE_RADIUS; x <= UPSAMPLE_SAMPLE_RADIUS; x++)
 			{
 				int2 offset = int2(x, y);
 			
@@ -108,5 +105,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	float4 color = validResult ? result : 0;
 
-	output[DTid.xy] = color;
+	return color;
 }

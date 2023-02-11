@@ -1085,8 +1085,8 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)windCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_upsampleCS.hlsl">
-      <Filter>CS</Filter>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_upsamplePS.hlsl">
+      <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

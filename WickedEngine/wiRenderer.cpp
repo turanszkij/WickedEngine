@@ -567,6 +567,7 @@ PipelineState PSO_deferredcomposition;
 PipelineState PSO_sss_skin;
 PipelineState PSO_sss_snow;
 PipelineState PSO_upsample_bilateral;
+PipelineState PSO_volumetricclouds_upsample;
 PipelineState PSO_outline;
 
 RaytracingPipelineState RTPSO_reflection;
@@ -866,6 +867,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_OUTLINE], "outlinePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LENSFLARE], "lensFlarePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_DDGI_DEBUG], "ddgi_debugPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE], "volumetricCloud_upsamplePS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
@@ -979,7 +981,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE], "volumetricCloud_renderCS_capture.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE_MSAA], "volumetricCloud_renderCS_capture_MSAA.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_REPROJECT], "volumetricCloud_reprojectCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE], "volumetricCloud_upsampleCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_RENDER], "volumetricCloud_shadow_renderCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHADOW_FILTER], "volumetricCloud_shadow_filterCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FXAA], "fxaaCS.cso"); });
@@ -1359,6 +1360,16 @@ void LoadShaders()
 		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 
 		device->CreatePipelineState(&desc, &PSO_upsample_bilateral);
+		});
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
+		PipelineStateDesc desc;
+		desc.vs = &shaders[VSTYPE_POSTPROCESS];
+		desc.ps = &shaders[PSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+
+		device->CreatePipelineState(&desc, &PSO_volumetricclouds_upsample);
 		});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
@@ -5228,13 +5239,14 @@ void DrawScene(
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
 	const bool impostor = flags & DRAWSCENE_IMPOSTOR;
 	const bool occlusion = (flags & DRAWSCENE_OCCLUSIONCULLING) && GetOcclusionCullingEnabled();
+	const bool ocean = flags & DRAWSCENE_OCEAN;
 
 	device->EventBegin("DrawScene", cmd);
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
 
 	BindCommonResources(cmd);
 
-	if (transparent && vis.scene->weather.IsOceanEnabled())
+	if (ocean && vis.scene->weather.IsOceanEnabled())
 	{
 		if (!occlusion || !vis.scene->ocean.IsOccluded())
 		{
@@ -13356,6 +13368,7 @@ void Postprocess_AerialPerspective(
 void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution)
 {
 	res.frame = 0;
+	res.final_resolution = resolution;
 
 	TextureDesc desc;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
@@ -13389,12 +13402,6 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	desc.format = Format::R8G8B8A8_UNORM;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudMask);
 	device->SetName(&res.texture_cloudMask, "texture_cloudMask");
-
-	desc.width = resolution.x;
-	desc.height = resolution.y;
-	desc.format = Format::R16G16B16A16_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.texture_output);
-	device->SetName(&res.texture_output, "texture_output");
 }
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
@@ -13426,13 +13433,11 @@ void Postprocess_VolumetricClouds(
 
 	BindCommonResources(cmd);
 
-	const TextureDesc& desc = res.texture_output.GetDesc();
-
 	PostProcess postprocess;
 
 	// Render quarter-res: 
-	postprocess.resolution.x = desc.width / 4;
-	postprocess.resolution.y = desc.height / 4;
+	postprocess.resolution.x = res.final_resolution.x / 4;
+	postprocess.resolution.y = res.final_resolution.y / 4;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 
@@ -13504,13 +13509,13 @@ void Postprocess_VolumetricClouds(
 	}
 
 	// Render half-res:
-	postprocess.resolution.x = desc.width / 2;
-	postprocess.resolution.y = desc.height / 2;
+	postprocess.resolution.x = res.final_resolution.x / 2;
+	postprocess.resolution.y = res.final_resolution.y / 2;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	volumetricclouds_frame = (float)res.frame;
 	
-	int temporal_output = device->GetFrameCount() % 2;
+	int temporal_output = res.frame % 2;
 	int temporal_history = 1 - temporal_output;
 
 	// Cloud reprojection pass:
@@ -13564,9 +13569,30 @@ void Postprocess_VolumetricClouds(
 		device->EventEnd(cmd);
 	}
 
+	// Rebind original cameras for other effects after this:
+	BindCameraCB(camera, camera_previous, camera_reflection, cmd);
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void Postprocess_VolumetricClouds_Upsample(
+	const VolumetricCloudResources& res,
+	CommandList cmd
+)
+{
+	device->EventBegin("Postprocess_VolumetricClouds_Upsample", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Volumetric Clouds Upsample", cmd);
+
+	BindCommonResources(cmd);
+
+	PostProcess postprocess;
+	volumetricclouds_frame = (float)res.frame;
+
+	int temporal_output = res.frame % 2;
+
 	// Render full-res: (output)
-	postprocess.resolution.x = desc.width;
-	postprocess.resolution.y = desc.height;
+	postprocess.resolution.x = res.final_resolution.x;
+	postprocess.resolution.y = res.final_resolution.y;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 
@@ -13579,44 +13605,16 @@ void Postprocess_VolumetricClouds(
 	// Cloud upsample pass:
 	{
 		device->EventBegin("Volumetric Cloud Upsample", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE], cmd);
+		device->BindPipelineState(&PSO_volumetricclouds_upsample, cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&res.texture_reproject[temporal_output], 0, cmd);
 		device->BindResource(&res.texture_reproject_depth[temporal_output], 1, cmd);
 
-		const GPUResource* uavs[] = {
-			&res.texture_output,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_output, res.texture_output.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(
-			(res.texture_output.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.texture_output.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_output, ResourceState::UNORDERED_ACCESS, res.texture_output.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->Draw(3, 0, cmd);
 
 		device->EventEnd(cmd);
 	}
-
-	// Rebind original cameras for other effects after this:
-	BindCameraCB(camera, camera_previous, camera_reflection, cmd);
 
 	res.frame++;
 
