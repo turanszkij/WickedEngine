@@ -1359,6 +1359,13 @@ namespace wi::scene
 			{
 				archive >> gravity;
 			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> atmosphereParameters.rayMarchMinMaxSPP;
+				archive >> atmosphereParameters.distanceSPPMaxInv;
+				archive >> atmosphereParameters.aerialPerspectiveScale;
+			}
 		}
 		else
 		{
@@ -1558,6 +1565,13 @@ namespace wi::scene
 			if (seri.GetVersion() >= 1)
 			{
 				archive << gravity;
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive << atmosphereParameters.rayMarchMinMaxSPP;
+				archive << atmosphereParameters.distanceSPPMaxInv;
+				archive << atmosphereParameters.aerialPerspectiveScale;
 			}
 		}
 	}

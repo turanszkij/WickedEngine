@@ -131,6 +131,8 @@ namespace wi
 		wi::renderer::ScreenSpaceShadowResources screenspaceshadowResources;
 		wi::renderer::DepthOfFieldResources depthoffieldResources;
 		wi::renderer::MotionBlurResources motionblurResources;
+		wi::renderer::AerialPerspectiveResources aerialperspectiveResources;
+		wi::renderer::AerialPerspectiveResources aerialperspectiveResources_reflection;
 		wi::renderer::VolumetricCloudResources volumetriccloudResources;
 		wi::renderer::VolumetricCloudResources volumetriccloudResources_reflection;
 		wi::renderer::BloomResources bloomResources;

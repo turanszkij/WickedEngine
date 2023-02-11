@@ -28,6 +28,7 @@
 #include "globals.hlsli"
 #include "brdf.hlsli"
 #include "lightingHF.hlsli"
+#include "skyAtmosphere.hlsli"
 #include "ShaderInterop_SurfelGI.h"
 #include "ShaderInterop_DDGI.h"
 
@@ -915,6 +916,15 @@ inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 	color.rgb = lerp(color.rgb, fogColor, fogAmount);
 }
 
+inline void ApplyAerialPerspective(float2 uv, float3 P, inout float4 color)
+{
+	if (GetFrame().options & OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE)
+	{
+		float4 AP = GetAerialPerspectiveTransmittance(uv, P, GetCamera().position, texture_cameravolumelut);
+		color.rgb = color.rgb * (1.0 - AP.a) + AP.rgb;
+	}
+}
+
 inline uint AlphaToCoverage(float alpha, float alphaTest, float4 svposition)
 {
 	if (alphaTest == 0)
@@ -1432,6 +1442,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifdef OBJECTSHADER_USE_POSITION3D
 	ApplyFog(dist, GetCamera().position, surface.V, color);
 #endif // OBJECTSHADER_USE_POSITION3D
+
+
+// Transparent objects has been rendered separately from opaque, so let's apply it now:
+#ifdef TRANSPARENT
+	ApplyAerialPerspective(ScreenCoord, surface.P, color);
+#endif // TRANSPARENT
 
 
 	color = clamp(color, 0, 65000);

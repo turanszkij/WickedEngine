@@ -200,6 +200,7 @@ struct PrimitiveID
 #define texture_transmittancelut bindless_textures[GetFrame().texture_transmittancelut_index]
 #define texture_multiscatteringlut bindless_textures[GetFrame().texture_multiscatteringlut_index]
 #define texture_skyluminancelut bindless_textures[GetFrame().texture_skyluminancelut_index]
+#define texture_cameravolumelut bindless_textures3D[GetFrame().texture_cameravolumelut_index]
 #define texture_wind bindless_textures3D[GetFrame().texture_wind_index]
 #define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 

@@ -54,7 +54,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			}
 		}
 
-		if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
+		if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW)
 		{
 			shadow *= shadow_2D_volumetricclouds(P);
 		}
