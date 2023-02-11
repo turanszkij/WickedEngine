@@ -1,7 +1,9 @@
 #pragma once
 
 //Luna : Official C++ to Lua binder project, 5th version
-//modified to fit with Wicked Engine, removed warnings
+// modified for Wicked Engine to use custom memory allocator and removed warnings
+
+#include "wiAllocator.h"
 
 #define lunamethod(class, name) {#name, &class::name}
 #define lunaproperty(class, name) {#name, &class::Get##name, &class::Set##name}
@@ -12,6 +14,8 @@ int Set##property (lua_State* L) { return property.Set(L); }
 
 template < class T > class Luna {
 public:
+
+	inline static wi::allocator::BlockAllocator<T> allocator;
 
 	struct PropertyType {
 		const char     *name;
@@ -133,7 +137,7 @@ public:
 	*/
 	static int constructor(lua_State * L)
 	{
-		T*  ap = new T(L);
+		T*  ap = allocator.allocate(L);
 		T** a = static_cast<T**>(lua_newuserdata(L, sizeof(T *))); // Push value = userdata
 		*a = ap;
 
@@ -151,10 +155,11 @@ public:
 	Description:
 	Loads an instance of the class into the Lua stack, and provides you a pointer so you can modify it.
 	*/
-	static void push(lua_State * L, T* instance)
+	template<typename... ARG>
+	static void push(lua_State * L, ARG&&... args)
 	{
 		T **a = (T **)lua_newuserdata(L, sizeof(T *)); // Create userdata
-		*a = instance;
+		*a = allocator.allocate(std::forward<ARG>(args)...);
 
 		luaL_getmetatable(L, T::className);
 
@@ -264,7 +269,7 @@ public:
 		T** obj = static_cast < T ** >(lua_touserdata(L, -1));
 
 		if (obj)
-			delete(*obj);
+			allocator.free(*obj);
 
 		return 0;
 	}
