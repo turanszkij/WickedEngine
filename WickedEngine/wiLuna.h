@@ -171,12 +171,7 @@ public:
 	template<typename... ARG>
 	static void push_global(lua_State* L, const char* name, ARG&&... args)
 	{
-		T** a = (T**)lua_newuserdata(L, sizeof(T*)); // Create userdata
-		*a = allocator.allocate(std::forward<ARG>(args)...);
-
-		luaL_getmetatable(L, T::className);
-
-		lua_setmetatable(L, -2);
+		push(L, std::forward<ARG>(args)...);
 		lua_setglobal(L, name);
 	}
 
