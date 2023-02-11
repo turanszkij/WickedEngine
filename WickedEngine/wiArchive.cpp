@@ -5,7 +5,7 @@ namespace wi
 {
 
 	// this should always be only INCREMENTED and only if a new serialization is implemeted somewhere!
-	static constexpr uint64_t __archiveVersion = 89;
+	static constexpr uint64_t __archiveVersion = 88;
 	// this is the version number of which below the archive is not compatible with the current version
 	static constexpr uint64_t __archiveVersionBarrier = 22;
 

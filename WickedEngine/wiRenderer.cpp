@@ -13386,16 +13386,15 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	device->SetName(&res.texture_reproject_additional[0], "texture_reproject_additional[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_reproject_additional[1]);
 	device->SetName(&res.texture_reproject_additional[1], "texture_reproject_additional[1]");
+	desc.format = Format::R8G8B8A8_UNORM;
+	device->CreateTexture(&desc, nullptr, &res.texture_cloudMask);
+	device->SetName(&res.texture_cloudMask, "texture_cloudMask");
 
 	desc.width = resolution.x;
 	desc.height = resolution.y;
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_output);
 	device->SetName(&res.texture_output, "texture_output");
-
-	desc.format = Format::R8G8B8A8_UNORM;
-	device->CreateTexture(&desc, nullptr, &res.texture_cloudMask);
-	device->SetName(&res.texture_cloudMask, "texture_cloudMask");
 }
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,

@@ -245,7 +245,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&aerialperspectiveCheckBox);
 
-	realisticskyHighQualityCheckBox.Create("High Quality: ");
+	realisticskyHighQualityCheckBox.Create("High Quality Sky: ");
 	realisticskyHighQualityCheckBox.SetTooltip("Skip LUT for more accurate sky and aerial perspective. This also enables shadowmaps to affect sky calculations. \nNote: For volumetric shadows to be visible, increase shadowmap boundary and/or enable cloud shadows.");
 	realisticskyHighQualityCheckBox.SetSize(XMFLOAT2(hei, hei));
 	realisticskyHighQualityCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -255,7 +255,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&realisticskyHighQualityCheckBox);
 
-	realisticskyReceiveShadowCheckBox.Create("Receive Shadow: ");
+	realisticskyReceiveShadowCheckBox.Create("Sky Receive Shadow: ");
 	realisticskyReceiveShadowCheckBox.SetTooltip("Realistic sky to recieve shadow from objects with shadow maps.");
 	realisticskyReceiveShadowCheckBox.SetSize(XMFLOAT2(hei, hei));
 	realisticskyReceiveShadowCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -275,7 +275,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&volumetricCloudsCheckBox);
 
-	volumetricCloudsReceiveShadowCheckBox.Create("Receive Shadow: ");
+	volumetricCloudsReceiveShadowCheckBox.Create("Cloud Receive Shadow: ");
 	volumetricCloudsReceiveShadowCheckBox.SetTooltip("Clouds to recieve shadow from objects with shadow maps.");
 	volumetricCloudsReceiveShadowCheckBox.SetSize(XMFLOAT2(hei, hei));
 	volumetricCloudsReceiveShadowCheckBox.SetPos(XMFLOAT2(x, y += step));
