@@ -26,17 +26,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 sunIlluminance = GetSunColor();
 	float3 sunDirection = GetSunDirection();
 	
-	SamplingParameters sampling;
-    {
-		sampling.variableSampleCount = false;
-		sampling.sampleCountIni = 10; // Should be enough since we're taking an approximation of luminance around a point
-	}
 	const float tDepth = 0.0;
+	const float sampleCountIni = 10.0;
+	const bool variableSampleCount = false;
+	const bool perPixelNoise = false;
 	const bool opaque = false;
 	const bool ground = false;
 	const bool mieRayPhase = false; // Perhabs?
 	const bool multiScatteringApprox = true;
 	const bool volumetricCloudShadow = false;
+	const bool opaqueShadow = false;
 
 	const float sphereSolidAngle = 4.0 * PI;
 	const float isotropicPhase = 1.0 / sphereSolidAngle;
@@ -60,8 +59,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		worldDirection.y = sinTheta * sinPhi;
 		worldDirection.z = cosPhi;
 		SingleScatteringResult result = IntegrateScatteredLuminance(
-            atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance,
-            sampling, tDepth, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, transmittanceLUT, multiScatteringLUT);
+            atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,
+			perPixelNoise, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, transmittanceLUT, multiScatteringLUT);
 
 		SkyLuminanceSharedMem[DTid.z] = result.L * sphereSolidAngle / (sqrtSample * sqrtSample);
 	}

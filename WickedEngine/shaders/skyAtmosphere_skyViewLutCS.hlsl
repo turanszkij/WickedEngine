@@ -50,24 +50,20 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
     
 	float3 sunIlluminance = GetSunColor();
-
-	SamplingParameters sampling;
-    {
-		sampling.variableSampleCount = true;
-		sampling.sampleCountIni = 30;
-		sampling.rayMarchMinMaxSPP = float2(4, 14);
-		sampling.distanceSPPMaxInv = 0.01;
-		sampling.perPixelNoise = false;
-	}
+	
 	const float tDepth = 0.0;
-	const bool ground = false;
+	const float sampleCountIni = 30.0;
+	const bool variableSampleCount = true;
+	const bool perPixelNoise = false;
 	const bool opaque = false;
+	const bool ground = false;
 	const bool mieRayPhase = true;
 	const bool multiScatteringApprox = true;
 	const bool volumetricCloudShadow = false;
+	const bool opaqueShadow = false;
 	SingleScatteringResult ss = IntegrateScatteredLuminance(
-        atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance,
-        sampling, tDepth, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, transmittanceLUT, multiScatteringLUT);
+        atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,
+		perPixelNoise, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, transmittanceLUT, multiScatteringLUT);
 
 	float3 L = ss.L;
     

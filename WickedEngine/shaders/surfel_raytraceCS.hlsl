@@ -70,7 +70,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			}
 			else
 			{
-				envColor = GetDynamicSkyColor(ray.Direction, true, true, false, true);
+				envColor = GetDynamicSkyColor(ray.Direction, true, false, true);
 			}
 			rayData.radiance = max(0, envColor);
 			rayData.depth = -1;

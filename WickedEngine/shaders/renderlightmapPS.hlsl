@@ -236,7 +236,7 @@ float4 main(Input input) : SV_TARGET
 			}
 			else
 			{
-				envColor = GetDynamicSkyColor(ray.Direction, true, true, false, true);
+				envColor = GetDynamicSkyColor(ray.Direction, true, false, true);
 			}
 			result += max(0, energy * envColor);
 			break;

@@ -38,6 +38,7 @@
     <None Include="$(MSBuildThisFileDirectory)PixelPacking_RGBE.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)quad.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)raytracingHF.hlsli" />
+    <None Include="$(MSBuildThisFileDirectory)shadowHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)skyAtmosphere.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)skyHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)stochasticSSRHF.hlsli" />
@@ -894,6 +895,10 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Compute</ShaderType>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)aerialPerspectiveCS.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)aerialPerspectiveCS_capture.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)aerialPerspectiveCS_capture_MSAA.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_cameraVolumeLutCS.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_skyLuminanceLutCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
@@ -1068,6 +1073,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_upsampleCS.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetriclight_directionalVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
