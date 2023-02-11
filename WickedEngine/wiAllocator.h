@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiVector.h"
 
 #include <cassert>
 #include <algorithm>
@@ -34,6 +35,41 @@ namespace wi::allocator
 		constexpr void reset()
 		{
 			offset = 0;
+		}
+	};
+
+	template<typename T, size_t block_size = 256>
+	struct BlockAllocator
+	{
+		struct Block
+		{
+			wi::vector<uint8_t> mem;
+		};
+		wi::vector<Block> blocks;
+		wi::vector<T*> free_list;
+
+		template<typename... ARG>
+		inline T* allocate(ARG&&... args)
+		{
+			if (free_list.empty())
+			{
+				free_list.reserve(block_size);
+				Block& block = blocks.emplace_back();
+				block.mem.resize(sizeof(T) * block_size);
+				T* ptr = (T*)block.mem.data();
+				for (size_t i = 0; i < block_size; ++i)
+				{
+					free_list.push_back(ptr + i);
+				}
+			}
+			T* ptr = free_list.back();
+			free_list.pop_back();
+			return new (ptr) T(std::forward<ARG>(args)...);
+		}
+		inline void free(T* ptr)
+		{
+			ptr->~T();
+			free_list.push_back(ptr);
 		}
 	};
 }
