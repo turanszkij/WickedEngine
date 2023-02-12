@@ -403,9 +403,6 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("SetGameSpeed", SetGameSpeed);
 			wi::lua::RegisterFunc("GetGameSpeed", GetGameSpeed);
 
-			wi::lua::RunText("GetScreenWidth = function() return main.GetCanvas().GetLogicalWidth() end");
-			wi::lua::RunText("GetScreenHeight = function() return main.GetCanvas().GetLogicalHeight() end");
-
 			wi::lua::RegisterFunc("SetShadowProps2D", SetShadowProps2D);
 			wi::lua::RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);
 			wi::lua::RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);
@@ -426,13 +423,18 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("DrawDebugText", DrawDebugText);
 			wi::lua::RegisterFunc("PutWaterRipple", PutWaterRipple);
 
-			wi::lua::RunText("DEBUG_TEXT_DEPTH_TEST = 1");
-			wi::lua::RunText("DEBUG_TEXT_CAMERA_FACING = 2");
-			wi::lua::RunText("DEBUG_TEXT_CAMERA_SCALING = 4");
-
-
 			wi::lua::RegisterFunc("ClearWorld", ClearWorld);
 			wi::lua::RegisterFunc("ReloadShaders", ReloadShaders);
+
+			wi::lua::RunText(R"(
+GetScreenWidth = function() return main.GetCanvas().GetLogicalWidth() end
+GetScreenHeight = function() return main.GetCanvas().GetLogicalHeight() end
+
+DEBUG_TEXT_DEPTH_TEST = 1
+DEBUG_TEXT_CAMERA_FACING = 2
+DEBUG_TEXT_CAMERA_SCALING = 4
+)");
+
 		}
 	}
 };

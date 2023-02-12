@@ -1190,6 +1190,7 @@ It can hold Sprites and SpriteFonts and can sort them by layers, update and rend
 - SetLayerOrder(string name, int order)
 - SetSpriteOrder(Sprite sprite, int order)
 - SetFontOrder(SpriteFont font, int order)
+- CopyFrom(RenderPath other) -- copies everything from other renderpath into this
 
 #### RenderPath3D
 This is the default scene render path. 

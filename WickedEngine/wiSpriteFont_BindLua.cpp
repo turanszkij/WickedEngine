@@ -332,12 +332,14 @@ namespace wi::lua
 			initialized = true;
 			Luna<SpriteFont_BindLua>::Register(wi::lua::GetLuaState());
 
+			wi::lua::RunText(R"(
+WIFALIGN_LEFT = 0
+WIFALIGN_CENTER = 1
+WIFALIGN_RIGHT = 2
+WIFALIGN_TOP = 3
+WIFALIGN_BOTTOM = 4
+)");
 
-			wi::lua::RunText("WIFALIGN_LEFT = 0");
-			wi::lua::RunText("WIFALIGN_CENTER = 1");
-			wi::lua::RunText("WIFALIGN_RIGHT = 2");
-			wi::lua::RunText("WIFALIGN_TOP = 3");
-			wi::lua::RunText("WIFALIGN_BOTTOM = 4");
 		}
 	}
 

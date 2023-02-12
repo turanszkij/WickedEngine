@@ -60,6 +60,8 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetFSR2Enabled),
 		lunamethod(RenderPath3D_BindLua, SetFSR2Sharpness),
 		lunamethod(RenderPath3D_BindLua, SetFSR2Preset),
+
+		lunamethod(RenderPath2D_BindLua, CopyFrom),
 		{ NULL, NULL }
 	};
 	Luna<RenderPath3D_BindLua>::PropertyType RenderPath3D_BindLua::properties[] = {

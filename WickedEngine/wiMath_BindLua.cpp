@@ -458,7 +458,7 @@ namespace wi::lua
 		{
 			initialized = true;
 			Luna<Vector_BindLua>::Register(wi::lua::GetLuaState());
-			wi::lua::RunText("vector = Vector()");
+			Luna<Vector_BindLua>::push_global(wi::lua::GetLuaState(), "vector");
 		}
 	}
 
@@ -816,7 +816,7 @@ namespace wi::lua
 		{
 			initialized = true;
 			Luna<Matrix_BindLua>::Register(wi::lua::GetLuaState());
-			wi::lua::RunText("matrix = Matrix()");
+			Luna<Matrix_BindLua>::push_global(wi::lua::GetLuaState(), "matrix");
 		}
 	}
 

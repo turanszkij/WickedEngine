@@ -470,32 +470,35 @@ namespace wi::lua
 			initialized = true;
 			Luna<ImageParams_BindLua>::Register(wi::lua::GetLuaState());
 
-			wi::lua::RunText("STENCILMODE_DISABLED		= 0");
-			wi::lua::RunText("STENCILMODE_EQUAL			= 1");
-			wi::lua::RunText("STENCILMODE_LESS			= 2");
-			wi::lua::RunText("STENCILMODE_LESSEQUAL		= 3");
-			wi::lua::RunText("STENCILMODE_GREATER		= 4");
-			wi::lua::RunText("STENCILMODE_GREATEREQUAL	= 5");
-			wi::lua::RunText("STENCILMODE_NOT			= 6");
-			wi::lua::RunText("STENCILMODE_ALWAYS			= 7");
+			wi::lua::RunText(R"(
+STENCILMODE_DISABLED		= 0
+STENCILMODE_EQUAL			= 1
+STENCILMODE_LESS			= 2
+STENCILMODE_LESSEQUAL		= 3
+STENCILMODE_GREATER			= 4
+STENCILMODE_GREATEREQUAL	= 5
+STENCILMODE_NOT				= 6
+STENCILMODE_ALWAYS			= 7
 
-			wi::lua::RunText("STENCILREFMODE_ENGINE		= 0");
-			wi::lua::RunText("STENCILREFMODE_USER		= 1");
-			wi::lua::RunText("STENCILREFMODE_ALL			= 2");
+STENCILREFMODE_ENGINE		= 0
+STENCILREFMODE_USER			= 1
+STENCILREFMODE_ALL			= 2
 
-			wi::lua::RunText("SAMPLEMODE_CLAMP			= 0");
-			wi::lua::RunText("SAMPLEMODE_WRAP			= 1");
-			wi::lua::RunText("SAMPLEMODE_MIRROR			= 2");
+SAMPLEMODE_CLAMP			= 0
+SAMPLEMODE_WRAP				= 1
+SAMPLEMODE_MIRROR			= 2
 
-			wi::lua::RunText("QUALITY_NEAREST			= 0");
-			wi::lua::RunText("QUALITY_LINEAR				= 1");
-			wi::lua::RunText("QUALITY_ANISOTROPIC		= 2");
-			wi::lua::RunText("QUALITY_BICUBIC			= 3");
+QUALITY_NEAREST				= 0
+QUALITY_LINEAR				= 1
+QUALITY_ANISOTROPIC			= 2
+QUALITY_BICUBIC				= 3
 
-			wi::lua::RunText("BLENDMODE_OPAQUE			= 0");
-			wi::lua::RunText("BLENDMODE_ALPHA			= 1");
-			wi::lua::RunText("BLENDMODE_PREMULTIPLIED	= 2");
-			wi::lua::RunText("BLENDMODE_ADDITIVE			= 3");
+BLENDMODE_OPAQUE			= 0
+BLENDMODE_ALPHA				= 1
+BLENDMODE_PREMULTIPLIED		= 2
+BLENDMODE_ADDITIVE			= 3
+)");
+
 		}
 	}
 

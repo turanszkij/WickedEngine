@@ -194,6 +194,7 @@ namespace wi::renderer
 		DRAWSCENE_HAIRPARTICLE = 1 << 4,
 		DRAWSCENE_IMPOSTOR = 1 << 5,
 		DRAWSCENE_OCEAN = 1 << 6,
+		DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS = 1 << 7,
 	};
 
 	// Draw the world from a camera. You must call BindCameraCB() at least once in this frame prior to this

@@ -357,11 +357,12 @@ namespace wi::lua
 		{
 			initialized = true;
 			Luna<Physics_BindLua>::Register(wi::lua::GetLuaState());
+			Luna<Physics_BindLua>::push_global(wi::lua::GetLuaState(), "physics");
 
-			wi::lua::RunText("physics = Physics()");
-
-			wi::lua::RunText("ACTIVATION_STATE_ACTIVE = 0");
-			wi::lua::RunText("ACTIVATION_STATE_INACTIVE = 1");
+			wi::lua::RunText(R"(
+ACTIVATION_STATE_ACTIVE = 0
+ACTIVATION_STATE_INACTIVE = 1
+)");
 		}
 	}
 }

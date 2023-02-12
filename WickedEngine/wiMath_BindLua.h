@@ -15,7 +15,7 @@ namespace wi::lua
 		static Luna<Vector_BindLua>::FunctionType methods[];
 		static Luna<Vector_BindLua>::PropertyType properties[];
 
-		Vector_BindLua();
+		Vector_BindLua() = default;
 		Vector_BindLua(const XMFLOAT3& vector);
 		Vector_BindLua(const XMFLOAT4& vector);
 		Vector_BindLua(const XMVECTOR& vector);
@@ -81,7 +81,7 @@ namespace wi::lua
 		static Luna<Matrix_BindLua>::FunctionType methods[];
 		static Luna<Matrix_BindLua>::PropertyType properties[];
 
-		Matrix_BindLua();
+		Matrix_BindLua() = default;
 		Matrix_BindLua(const XMMATRIX& matrix);
 		Matrix_BindLua(const XMFLOAT4X4& matrix);
 		Matrix_BindLua(lua_State* L);

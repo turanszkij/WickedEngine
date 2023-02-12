@@ -27,7 +27,7 @@ namespace wi::lua
 		if (argc > 0)
 		{
 			int mask = wi::lua::SGetInt(L, 1);
-			component->setlayerMask(*reinterpret_cast<uint32_t*>(&mask));
+			component->setlayerMask(uint32_t(mask));
 		}
 		else
 			wi::lua::SError(L, "SetLayerMask(uint mask) not enough arguments!");

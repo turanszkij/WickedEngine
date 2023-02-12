@@ -1010,7 +1010,7 @@ namespace wi
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
-				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_PREPASS, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR);
+				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_PREPASS, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR | wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS);
 
 				device->RenderPassEnd(cmd);
 
@@ -1085,8 +1085,8 @@ namespace wi
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
-				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR);
-				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_TRANSPARENT); // separate renderscene, to be drawn after opaque and transparent sort order
+				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR | wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS);
+				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_TRANSPARENT | wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS); // separate renderscene, to be drawn after opaque and transparent sort order
 				wi::renderer::DrawSky(*scene, cmd);
 
 				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
@@ -1101,9 +1101,15 @@ namespace wi
 				}
 
 				// Blend the volumetric clouds on top:
+				//	For planar reflections, we don't use upsample, because there is no linear depth here
 				if (scene->weather.IsVolumetricClouds())
 				{
-					wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources_reflection, cmd);
+					device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
+					wi::image::Params fx;
+					fx.enableFullScreen();
+					fx.blendFlag = BLENDMODE_PREMULTIPLIED;
+					wi::image::Draw(&volumetriccloudResources_reflection.texture_reproject[volumetriccloudResources_reflection.frame % 2], fx, cmd);
+					device->EventEnd(cmd);
 				}
 
 				device->RenderPassEnd(cmd);

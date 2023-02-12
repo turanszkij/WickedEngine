@@ -250,46 +250,6 @@ namespace wi::lua
 
 		return Success();
 	}
-	void RegisterLibrary(const std::string& tableName, const luaL_Reg* functions)
-	{
-		if (luaL_newmetatable(lua_internal().m_luaState, tableName.c_str()) != 0)
-		{
-			//table is not yet present
-			lua_pushvalue(lua_internal().m_luaState, -1);
-			lua_setfield(lua_internal().m_luaState, -2, "__index"); // Object.__index = Object
-			AddFuncArray(functions);
-		}
-	}
-	bool RegisterObject(const std::string& tableName, const std::string& name, void* object)
-	{
-		RegisterLibrary(tableName, nullptr);
-
-		// does this call need to be checked? eg. userData == nullptr?
-		void** userData = static_cast<void**>(lua_newuserdata(lua_internal().m_luaState, sizeof(void*)));
-		*(userData) = object;
-
-		luaL_setmetatable(lua_internal().m_luaState, tableName.c_str());
-		lua_setglobal(lua_internal().m_luaState, name.c_str());
-
-		return true;
-	}
-	void AddFunc(const std::string& name, lua_CFunction function)
-	{
-		lua_pushcfunction(lua_internal().m_luaState, function);
-		lua_setfield(lua_internal().m_luaState, -2, name.c_str());
-	}
-	void AddFuncArray(const luaL_Reg* functions)
-	{
-		if (functions != nullptr)
-		{
-			luaL_setfuncs(lua_internal().m_luaState, functions, 0);
-		}
-	}
-	void AddInt(const std::string& name, int data)
-	{
-		lua_pushinteger(lua_internal().m_luaState, data);
-		lua_setfield(lua_internal().m_luaState, -2, name.c_str());
-	}
 
 	void SetDeltaTime(double dt)
 	{

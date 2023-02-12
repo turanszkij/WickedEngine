@@ -2518,7 +2518,7 @@ void RenderMeshes(
 	RENDERPASS renderPass,
 	uint32_t filterMask,
 	CommandList cmd,
-	bool tessellation = false,
+	uint32_t flags = 0,
 	const Frustum* frusta = nullptr,
 	uint32_t frustum_count = 1
 )
@@ -2531,7 +2531,12 @@ void RenderMeshes(
 	wi::jobsystem::Wait(object_pso_job_ctx);
 	RenderPassInfo renderpass_info = device->GetRenderPassInfo(cmd);
 
-	tessellation = tessellation && device->CheckCapability(GraphicsDeviceCapability::TESSELLATION);
+	const bool tessellation =
+		(flags & DRAWSCENE_TESSELLATION) &&
+		GetTessellationEnabled() &&
+		device->CheckCapability(GraphicsDeviceCapability::TESSELLATION)
+		;
+	const bool skip_planareflection_objects = flags & DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS;
 	
 	// Do we need to compute a light mask for this pass on the CPU?
 	const bool forwardLightmaskRequest =
@@ -2597,6 +2602,9 @@ void RenderMeshes(
 				continue;
 			}
 			const MaterialComponent& material = vis.scene->materials[subset.materialIndex];
+
+			if (skip_planareflection_objects && material.HasPlanarReflection())
+				continue;
 
 			bool subsetRenderable = filterMask & material.GetFilterMask();
 
@@ -5203,7 +5211,7 @@ void DrawShadowmaps(
 					device->BindViewports(arraysize(vp), vp, cmd);
 
 					renderQueue.sort_opaque();
-					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, FILTER_OPAQUE, cmd, false, frusta, frustum_count);
+					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, FILTER_OPAQUE, cmd, 0, frusta, frustum_count);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, FILTER_TRANSPARENT | FILTER_WATER, cmd, false, frusta, frustum_count);
@@ -5235,18 +5243,18 @@ void DrawScene(
 {
 	const bool opaque = flags & FILTER_OPAQUE;
 	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
-	const bool tessellation = (flags & DRAWSCENE_TESSELLATION) && GetTessellationEnabled();
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
 	const bool impostor = flags & DRAWSCENE_IMPOSTOR;
 	const bool occlusion = (flags & DRAWSCENE_OCCLUSIONCULLING) && GetOcclusionCullingEnabled();
 	const bool ocean = flags & DRAWSCENE_OCEAN;
+	const bool skip_planar_reflection_objects = flags & DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS;
 
 	device->EventBegin("DrawScene", cmd);
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
 
 	BindCommonResources(cmd);
 
-	if (ocean && vis.scene->weather.IsOceanEnabled())
+	if (ocean && !skip_planar_reflection_objects && vis.scene->weather.IsOceanEnabled())
 	{
 		if (!occlusion || !vis.scene->ocean.IsOccluded())
 		{
@@ -5313,7 +5321,7 @@ void DrawScene(
 		{
 			renderQueue.sort_opaque();
 		}
-		RenderMeshes(vis, renderQueue, renderPass, filterMask, cmd, tessellation);
+		RenderMeshes(vis, renderQueue, renderPass, filterMask, cmd, flags);
 	}
 
 	if (impostor)
@@ -7041,7 +7049,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			if (!renderQueue.empty())
 			{
-				RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, FILTER_ALL, cmd, false, frusta, arraysize(frusta));
+				RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, FILTER_ALL, cmd, 0, frusta, arraysize(frusta));
 			}
 		}
 
@@ -7592,7 +7600,7 @@ void VXGI_Voxelize(
 #else
 			const uint32_t frustum_count = 3; // just used to replicate 3 times for main axes, but not with real frustums
 #endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
-			RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, false, nullptr, frustum_count);
+			RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, 0, nullptr, frustum_count);
 			device->RenderPassEnd(cmd);
 
 			{
@@ -9482,7 +9490,7 @@ void SurfelGI(
 
 void DDGI(
 	const wi::scene::Scene& scene,
-	wi::graphics::CommandList cmd,
+	CommandList cmd,
 	uint8_t instanceInclusionMask
 )
 {
@@ -13371,7 +13379,7 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	desc.width = resolution.x / 4;
 	desc.height = resolution.y / 4;
 	desc.format = Format::R16G16B16A16_FLOAT;
-	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+	desc.layout = ResourceState::SHADER_RESOURCE;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudRender);
 	device->SetName(&res.texture_cloudRender, "texture_cloudRender");
 	desc.format = Format::R32G32_FLOAT;
@@ -13492,15 +13500,6 @@ void Postprocess_VolumetricClouds(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_cloudRender, ResourceState::UNORDERED_ACCESS, res.texture_cloudRender.desc.layout),
-				GPUBarrier::Image(&res.texture_cloudDepth, ResourceState::UNORDERED_ACCESS, res.texture_cloudDepth.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->EventEnd(cmd);
 	}
 
@@ -13510,9 +13509,23 @@ void Postprocess_VolumetricClouds(
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	volumetricclouds_frame = (float)res.frame;
+	res.frame++; // before temporal_output index is computed!
 	
 	int temporal_output = res.frame % 2;
 	int temporal_history = 1 - temporal_output;
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.texture_cloudRender, ResourceState::UNORDERED_ACCESS, res.texture_cloudRender.desc.layout),
+			GPUBarrier::Image(&res.texture_cloudDepth, ResourceState::UNORDERED_ACCESS, res.texture_cloudDepth.desc.layout),
+
+			GPUBarrier::Image(&res.texture_reproject[temporal_output], res.texture_reproject[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_reproject_depth[temporal_output], res.texture_reproject_depth[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_reproject_additional[temporal_output], res.texture_reproject_additional[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_cloudMask, res.texture_cloudMask.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	// Cloud reprojection pass:
 	{
@@ -13534,16 +13547,6 @@ void Postprocess_VolumetricClouds(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_reproject[temporal_output], res.texture_reproject[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_reproject_depth[temporal_output], res.texture_reproject_depth[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_reproject_additional[temporal_output], res.texture_reproject_additional[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_cloudMask, res.texture_cloudMask.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->Dispatch(
 			(res.texture_reproject[temporal_output].GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			(res.texture_reproject[temporal_output].GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -13551,18 +13554,18 @@ void Postprocess_VolumetricClouds(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_reproject[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject[temporal_output].desc.layout),
-				GPUBarrier::Image(&res.texture_reproject_depth[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject_depth[temporal_output].desc.layout),
-				GPUBarrier::Image(&res.texture_reproject_additional[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject_additional[temporal_output].desc.layout),
-				GPUBarrier::Image(&res.texture_cloudMask, ResourceState::UNORDERED_ACCESS, res.texture_cloudMask.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->EventEnd(cmd);
+	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+			GPUBarrier::Image(&res.texture_reproject[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject[temporal_output].desc.layout),
+			GPUBarrier::Image(&res.texture_reproject_depth[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject_depth[temporal_output].desc.layout),
+			GPUBarrier::Image(&res.texture_reproject_additional[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject_additional[temporal_output].desc.layout),
+			GPUBarrier::Image(&res.texture_cloudMask, ResourceState::UNORDERED_ACCESS, res.texture_cloudMask.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	// Rebind original cameras for other effects after this:
@@ -13600,7 +13603,6 @@ void Postprocess_VolumetricClouds_Upsample(
 
 	// Cloud upsample pass:
 	{
-		device->EventBegin("Volumetric Cloud Upsample", cmd);
 		device->BindPipelineState(&PSO_volumetricclouds_upsample, cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
@@ -13608,11 +13610,7 @@ void Postprocess_VolumetricClouds_Upsample(
 		device->BindResource(&res.texture_reproject_depth[temporal_output], 1, cmd);
 
 		device->Draw(3, 0, cmd);
-
-		device->EventEnd(cmd);
 	}
-
-	res.frame++;
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -14945,9 +14943,9 @@ void Postprocess_NormalsFromDepth(
 	device->EventEnd(cmd);
 }
 void Postprocess_Underwater(
-	const wi::graphics::Texture& input,
-	const wi::graphics::Texture& output,
-	wi::graphics::CommandList cmd
+	const Texture& input,
+	const Texture& output,
+	CommandList cmd
 )
 {
 	device->EventBegin("Postprocess_Underwater", cmd);
