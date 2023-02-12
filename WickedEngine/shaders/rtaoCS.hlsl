@@ -6,9 +6,8 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-RWTexture2D<unorm float> output : register(u0);
-RWTexture2D<float3> output_normals : register(u1);
-RWStructuredBuffer<uint> output_tiles : register(u2);
+RWTexture2D<float3> output_normals : register(u0);
+RWStructuredBuffer<uint> output_tiles : register(u1);
 
 static const uint TILE_BORDER = 1;
 static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
@@ -95,7 +94,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	shadow = TraceRay_Any(newRay, asuint(postprocess.params1.x), groupIndex) ? 0 : 1;
 #endif // RTAPI
 
-	output[DTid.xy] = pow(saturate(shadow), rtao_power);
 	output_normals[DTid.xy] = saturate(N * 0.5 + 0.5);
 
 	uint2 pixel_pos = DTid.xy;
