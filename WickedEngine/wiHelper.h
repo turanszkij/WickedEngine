@@ -132,6 +132,11 @@ namespace wi::helper
 	// Spins for the given time and does nothing (OS can not overtake)
 	void Spin(float milliseconds);
 
+	// Sleeps if duration is long enough to wake up in time, Spins otherwise
+	//	This lets OS overtake thread if duration is long enough to remain accurate
+	//	Also spins for more accuracy if needed
+	void QuickSleep(float milliseconds);
+
 	// Opens URL in the default browser
 	void OpenUrl(const std::string& url);
 };

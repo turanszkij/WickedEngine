@@ -1236,14 +1236,23 @@ namespace wi::helper
 
 	void Spin(float milliseconds)
 	{
-		milliseconds /= 1000.0f;
-		std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-		double ms = 0;
-		while (ms < milliseconds)
+		const std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+		const double seconds = double(milliseconds) / 1000.0;
+		while (std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::high_resolution_clock::now() - t1).count() < seconds);
+	}
+
+	void QuickSleep(float milliseconds)
+	{
+		const std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+		const double seconds = double(milliseconds) / 1000.0;
+		const int sleep_millisec_accuracy = 1;
+		const double sleep_sec_accuracy = double(sleep_millisec_accuracy) / 1000.0;
+		while (std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::high_resolution_clock::now() - t1).count() < seconds)
 		{
-			std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-			ms = time_span.count();
+			if (seconds - (std::chrono::high_resolution_clock::now() - t1).count() > sleep_sec_accuracy)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(sleep_millisec_accuracy));
+			}
 		}
 	}
 
@@ -1251,6 +1260,7 @@ namespace wi::helper
 	{
 #ifdef PLATFORM_UWP
 		winrt::Windows::System::Launcher::LaunchUriAsync(winrt::Windows::Foundation::Uri(winrt::to_hstring(url)));
+		return;
 #endif // PLATFORM_UWP
 
 #ifdef PLATFORM_WINDOWS_DESKTOP

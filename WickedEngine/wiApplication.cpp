@@ -140,14 +140,19 @@ namespace wi
 
 		deltaTime = float(std::max(0.0, timer.record_elapsed_seconds()));
 
+		const float target_deltaTime = 1.0f / targetFrameRate;
+		if (framerate_lock && deltaTime < target_deltaTime)
+		{
+			wi::helper::QuickSleep((target_deltaTime - deltaTime) * 1000);
+			deltaTime += float(std::max(0.0, timer.record_elapsed_seconds()));
+		}
+
 		wi::input::Update(window, canvas);
 
 		// Wake up the events that need to be executed on the main thread, in thread safe manner:
 		wi::eventhandler::FireEvent(wi::eventhandler::EVENT_THREAD_SAFE_POINT, 0);
 
-		const float dt = framerate_lock ? (1.0f / targetFrameRate) : deltaTime;
-
-		fadeManager.Update(dt);
+		fadeManager.Update(deltaTime);
 
 		if (GetActivePath() != nullptr)
 		{
@@ -161,7 +166,7 @@ namespace wi
 		{
 			if (frameskip)
 			{
-				deltaTimeAccumulator += dt;
+				deltaTimeAccumulator += deltaTime;
 				if (deltaTimeAccumulator > 10)
 				{
 					// application probably lost control, fixed update would take too long
@@ -183,7 +188,7 @@ namespace wi
 		wi::profiler::EndRange(range); // Fixed Update
 
 		// Variable-timed update:
-		Update(dt);
+		Update(deltaTime);
 
 		Render();
 
