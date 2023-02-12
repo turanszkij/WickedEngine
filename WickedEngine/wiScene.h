@@ -201,7 +201,6 @@ namespace wi::scene
 		// Environment probe cubemap array state:
 		static constexpr uint32_t envmapCount = 16;
 		static constexpr uint32_t envmapRes = 128;
-		static constexpr uint32_t envmapMIPs = 8;
 		static constexpr uint32_t envmapMSAASampleCount = 8;
 		wi::graphics::Texture envrenderingDepthBuffer;
 		wi::graphics::Texture envrenderingDepthBuffer_MSAA;

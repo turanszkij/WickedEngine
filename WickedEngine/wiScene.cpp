@@ -3832,7 +3832,7 @@ namespace wi::scene
 			desc.format = Format::R11G11B10_FLOAT;
 			desc.height = envmapRes;
 			desc.width = envmapRes;
-			desc.mip_levels = envmapMIPs;
+			desc.mip_levels = 0; // all mips
 			desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 			desc.usage = Usage::DEFAULT;
 			desc.layout = ResourceState::SHADER_RESOURCE;
