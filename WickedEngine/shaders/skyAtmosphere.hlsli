@@ -1,7 +1,7 @@
 #ifndef WI_SKYATMOSPHERE_HF
 #define WI_SKYATMOSPHERE_HF
 #include "globals.hlsli"
-#include "volumetricCloudsHF.hlsli"
+#include "shadowHF.hlsli"
 
 /*
  *
@@ -17,10 +17,15 @@ static const float2 transmittanceLUTRes = float2(256, 64);
 static const float2 multiScatteringLUTRes = float2(32, 32);
 static const float2 skyViewLUTRes = float2(192, 104);
 static const float2 skyLuminanceLUTRes = float2(1, 1);
+static const float3 cameraVolumeLUTRes = float3(32, 32, 32);
 
 #define USE_CornetteShanks
 
 #define PLANET_RADIUS_OFFSET 0.001f // Float accuracy offset in Sky unit (km, so this is 1m)
+
+#define AP_START_OFFSET_KM 0.1f // 100m seems enough for long distances
+#define AP_SLICE_COUNT 32.0f
+#define AP_KM_PER_SLICE 4.0f
 
 ////////////////////////////////////////////////////////////
 // LUT functions
@@ -385,21 +390,30 @@ float3 GetAtmosphericLightTransmittance(AtmosphereParameters atmosphere, float3 
 	return atmosphereTransmittance;
 }
 
-float3 GetCameraPlanetPos(AtmosphereParameters atmosphere, float3 cameraPosition)
+float3 GetSkyWorldCameraOrigin(AtmosphereParameters atmosphere, float3 cameraPosition)
 {
 	const float planetRadiusOffset = 0.01; // Always force to be 10 meters above the ground/sea level
-    
 	const float offset = planetRadiusOffset * SKY_UNIT_TO_M;
-	const float bottomRadiusWorld = atmosphere.bottomRadius * SKY_UNIT_TO_M;
+
 	const float3 planetCenterWorld = atmosphere.planetCenter * SKY_UNIT_TO_M;
+	const float bottomRadiusWorld = atmosphere.bottomRadius * SKY_UNIT_TO_M;
+	const float bottomRadiusWorldOffset = bottomRadiusWorld + offset;
+	
 	const float3 planetCenterToCameraWorld = cameraPosition - planetCenterWorld;
 	const float distanceToPlanetCenterWorld = length(planetCenterToCameraWorld);
-    
-    // If the camera is below the planet surface, we snap it back onto the surface.
+	const float3 planetCenterToCameraWorldNormalized = planetCenterToCameraWorld / distanceToPlanetCenterWorld;
+	
+	// If the camera is below the planet surface, we snap it back onto the surface.
 	// This is to make sure the sky is always visible even if the camera is inside the virtual planet.
-	float3 skyWorldCameraOrigin = distanceToPlanetCenterWorld < (bottomRadiusWorld + offset) ?
-    planetCenterWorld + (bottomRadiusWorld + offset) * (planetCenterToCameraWorld / distanceToPlanetCenterWorld) : cameraPosition;
-    
+	return distanceToPlanetCenterWorld < bottomRadiusWorldOffset ?
+	planetCenterWorld + bottomRadiusWorldOffset * planetCenterToCameraWorldNormalized : cameraPosition;
+}
+
+float3 GetCameraPlanetPos(AtmosphereParameters atmosphere, float3 cameraPosition)
+{
+	const float3 planetCenterWorld = atmosphere.planetCenter * SKY_UNIT_TO_M;
+	const float3 skyWorldCameraOrigin = GetSkyWorldCameraOrigin(atmosphere, cameraPosition);
+	
 	return (skyWorldCameraOrigin - planetCenterWorld) * M_TO_SKY_UNIT;
 }
 
@@ -444,6 +458,34 @@ float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDi
 	return retval;
 }
 
+float AerialPerspectiveDepthToSlice(float depth)
+{
+	return depth * (1.0f / AP_KM_PER_SLICE);
+}
+float AerialPerspectiveSliceToDepth(float slice)
+{
+	return slice * AP_KM_PER_SLICE;
+}
+
+float4 GetAerialPerspectiveTransmittance(float2 uv, float3 worldPosition, float3 cameraPosition, Texture3D<float4> cameraVolumeLutTexture)
+{	
+	float tDepth = length((worldPosition * M_TO_SKY_UNIT) - (cameraPosition * M_TO_SKY_UNIT));
+	float slice = AerialPerspectiveDepthToSlice(tDepth);
+	float weight = 1.0;
+	if (slice < 0.5)
+	{
+		// We multiply by weight to fade to 0 at depth 0. That works for luminance and opacity.
+		weight = saturate(slice * 2.0);
+		slice = 0.5;
+	}
+	float w = sqrt(slice / AP_SLICE_COUNT); // squared distribution
+
+	float4 luminance = weight * cameraVolumeLutTexture.SampleLevel(sampler_linear_clamp, float3(uv, w), 0);
+	//luminance *= frac(clamp(w * AP_SLICE_COUNT, 0, AP_SLICE_COUNT)); // Debug slices
+	
+	return luminance;
+}
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -463,22 +505,23 @@ struct SingleScatteringResult
 	float3 newMultiScatStep1Out;
 };
 
-struct SamplingParameters
-{
-	bool variableSampleCount;
-	float sampleCountIni; // Used when variableSampleCount is false
-	float2 rayMarchMinMaxSPP;
-	float distanceSPPMaxInv;
-	bool perPixelNoise;
-};
-
 SingleScatteringResult IntegrateScatteredLuminance(
 	in AtmosphereParameters atmosphere, in float2 pixelPosition, in float3 worldPosition, in float3 worldDirection, in float3 sunDirection, in float3 sunIlluminance,
-    in SamplingParameters sampling, in float tDepth, in bool opaque, in bool ground, in bool mieRayPhase, in bool multiScatteringApprox, in bool volumetricCloudShadow,
-    in Texture2D<float4> transmittanceLutTexture, in Texture2D<float4> multiScatteringLUTTexture, in float tMaxMax = 9000000.0f)
+    in float tDepth, in float sampleCountIni, in bool variableSampleCount, in bool perPixelNoise, in bool opaque, in bool ground, in bool mieRayPhase, in bool multiScatteringApprox,
+	in bool volumetricCloudShadow, in bool opaqueShadow, in Texture2D<float4> transmittanceLutTexture, in Texture2D<float4> multiScatteringLUTTexture, in float opticalDepthScale = 1.0f, in float tMaxMax = 9000000.0f)
 {
 	SingleScatteringResult result = (SingleScatteringResult) 0;
+	result.L = 0;
+	result.opticalDepth = 0;
+	result.transmittance = 1.0;
+	result.multiScatAs1 = 0;
 
+	// If camera is inside ground, return
+	if (length(worldPosition) <= atmosphere.bottomRadius)
+	{
+		return result;
+	}
+	
 	// Compute next intersection with atmosphere or ground 
 	float3 earthO = float3(0.0f, 0.0f, 0.0f);
 	float tBottom = RaySphereIntersectNearest(worldPosition, worldDirection, earthO, atmosphere.bottomRadius);
@@ -519,23 +562,33 @@ SingleScatteringResult IntegrateScatteredLuminance(
 		tMax = min(tMax, tMaxMax);
 
 		// Sample count 
-		float sampleCount = sampling.sampleCountIni;
-		float sampleCountFloor = sampling.sampleCountIni;
+		float sampleCount = sampleCountIni;
+		float sampleCountFloor = sampleCountIni;
 		float tMaxFloor = tMax;
-		if (sampling.variableSampleCount)
+		if (variableSampleCount)
 		{
-			sampleCount = lerp(sampling.rayMarchMinMaxSPP.x, sampling.rayMarchMinMaxSPP.y, saturate(tMax * sampling.distanceSPPMaxInv));
+			sampleCount = lerp(atmosphere.rayMarchMinMaxSPP.x, atmosphere.rayMarchMinMaxSPP.y, saturate(tMax * atmosphere.distanceSPPMaxInv));
 			sampleCountFloor = floor(sampleCount);
 			tMaxFloor = tMax * sampleCountFloor / sampleCount; // rescale tMax to map to the last entire step segment.
 		}
 		float dt = tMax / sampleCount;
 
+		// Unlike volumetric fog lighting, we only care about the outmost cascade. This improves performance where we can't see the inner cascades anyway
+		ShaderEntity light = (ShaderEntity) 0;
+		uint furthestCascade = 0;
+		bool validLight = false;
+		
+		if (opaqueShadow)
+		{
+			validLight = furthest_cascade_volumetrics(light, furthestCascade);
+		}
+		
 		// Phase functions
 		const float uniformPhase = UniformPhase();
 		const float3 wi = sunDirection;
 		const float3 wo = worldDirection;
 		float cosTheta = dot(wi, wo);
-		float miePhaseValue = HgPhase(atmosphere.miePhaseG, -cosTheta); // mnegate cosTheta because due to WorldDir being a "in" direction. 
+		float miePhaseValue = HgPhase(atmosphere.miePhaseG, -cosTheta); // negate cosTheta because due to WorldDir being a "in" direction. 
 		float rayleighPhaseValue = RayleighPhase(cosTheta);
 
 		float3 globalL = sunIlluminance;
@@ -549,7 +602,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
 		const float sampleSegmentT = 0.3f;
 		for (float s = 0.0f; s < sampleCount; s += 1.0f)
 		{
-			if (sampling.variableSampleCount)
+			if (variableSampleCount)
 			{
 				// More expenssive but artefact free
 				float t0 = (s) / sampleCountFloor;
@@ -570,9 +623,10 @@ SingleScatteringResult IntegrateScatteredLuminance(
 				}
 
 				// Reduce sample count with noise and Temporal AA:
-				if (sampling.perPixelNoise)
+				if (perPixelNoise)
 				{
-					t = t0 + (t1 - t0) * InterleavedGradientNoise(pixelPosition, GetFrame().frame_count);
+					//t = t0 + (t1 - t0) * InterleavedGradientNoise(pixelPosition, GetFrame().frame_count % 16);
+					t = t0 + (t1 - t0) * blue_noise(pixelPosition).x;
 				}
 				else
 				{
@@ -593,7 +647,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
 			float pHeight = length(P);
 
 			MediumSampleRGB medium = SampleMediumRGB(P, atmosphere);
-			const float3 sampleOpticalDepth = medium.extinction * dt;
+			const float3 sampleOpticalDepth = medium.extinction * dt * opticalDepthScale;
 			const float3 sampleTransmittance = exp(-sampleOpticalDepth);
 			opticalDepth += sampleOpticalDepth;
 
@@ -615,10 +669,24 @@ SingleScatteringResult IntegrateScatteredLuminance(
 			float tEarth = RaySphereIntersectNearest(P, sunDirection, earthO + PLANET_RADIUS_OFFSET * UpVector, atmosphere.bottomRadius);
 			float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
 
+			float3 shadowP = P * SKY_UNIT_TO_M + atmosphere.planetCenter * SKY_UNIT_TO_M;
+			
 			// Volumetric cloud shadow
-			if (volumetricCloudShadow && GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_SHADOWS)
+			if (volumetricCloudShadow && GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW)
 			{
-				earthShadow *= shadow_2D_volumetricclouds(P * SKY_UNIT_TO_M + atmosphere.planetCenter * SKY_UNIT_TO_M);
+				earthShadow *= shadow_2D_volumetricclouds(shadowP);
+			}
+
+			// Opaque shadow from cascade shadow mapping
+			if (opaqueShadow && validLight)
+			{
+				float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + furthestCascade), float4(shadowP, 1)).xyz; // ortho matrix, no divide by .w
+				float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				
+				if (is_saturated(shadow_uv))
+				{
+					earthShadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, furthestCascade).r;
+				}
 			}
 			
 			// Dual scattering for multi scattering 

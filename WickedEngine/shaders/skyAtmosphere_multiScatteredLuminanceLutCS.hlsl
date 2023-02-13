@@ -33,17 +33,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	// This make the scattering factor independent of the light. It is now only linked to the atmosphere properties.
 	float3 sunIlluminance = 1.0;
     
-	SamplingParameters sampling;
-    {
-		sampling.variableSampleCount = false;
-		sampling.sampleCountIni = 20; // a minimum set of step is required for accuracy unfortunately
-	}
 	const float tDepth = 0.0;
+	const float sampleCountIni = 20.0;
+	const bool variableSampleCount = false;
+	const bool perPixelNoise = false;
 	const bool opaque = false;
 	const bool ground = true;
 	const bool mieRayPhase = false;
 	const bool multiScatteringApprox = false;
 	const bool volumetricCloudShadow = false;
+	const bool opaqueShadow = false;
 
 	const float sphereSolidAngle = 4.0 * PI;
 	const float isotropicPhase = 1.0 / sphereSolidAngle;
@@ -67,8 +66,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		worldDirection.y = sinTheta * sinPhi;
 		worldDirection.z = cosPhi;
 		SingleScatteringResult result = IntegrateScatteredLuminance(
-            atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance,
-            sampling, tDepth, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, transmittanceLUT, multiScatteringLUT);
+            atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,
+			perPixelNoise, opaque, ground, mieRayPhase, multiScatteringApprox, volumetricCloudShadow, opaqueShadow, transmittanceLUT, multiScatteringLUT);
 
 		MultiScatAs1SharedMem[DTid.z] = result.multiScatAs1 * sphereSolidAngle / (sqrtSample * sqrtSample);
 		LSharedMem[DTid.z] = result.L * sphereSolidAngle / (sqrtSample * sqrtSample);

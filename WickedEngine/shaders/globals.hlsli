@@ -200,6 +200,8 @@ struct PrimitiveID
 #define texture_transmittancelut bindless_textures[GetFrame().texture_transmittancelut_index]
 #define texture_multiscatteringlut bindless_textures[GetFrame().texture_multiscatteringlut_index]
 #define texture_skyluminancelut bindless_textures[GetFrame().texture_skyluminancelut_index]
+#define texture_cameravolumelut bindless_textures3D[GetFrame().texture_cameravolumelut_index]
+#define texture_wind bindless_textures3D[GetFrame().texture_wind_index]
 #define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
@@ -1258,20 +1260,7 @@ float3 compute_wind(float3 position, float weight)
 	[branch]
 	if (weight > 0)
 	{
-		const float time = GetTime();
-		position += time;
-		const ShaderWind wind = GetWeather().wind;
-
-		float randomness_amount = 0;
-		randomness_amount += noise_gradient_3D(position.xyz);
-		randomness_amount += noise_gradient_3D(position.xyz * 0.1);
-		randomness_amount *= wind.randomness;
-
-		float direction_amount = dot(position.xyz, wind.direction);
-		float waveoffset = mad(direction_amount, wind.wavesize, randomness_amount);
-		float3 wavedir = wind.direction * weight;
-
-		return sin(mad(time, wind.speed, waveoffset)) * wavedir;
+		return texture_wind.SampleLevel(sampler_linear_mirror, position, 0).r * GetWeather().wind.direction * weight;
 	}
 	else
 	{

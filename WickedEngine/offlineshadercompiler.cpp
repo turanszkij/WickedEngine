@@ -173,9 +173,14 @@ wi::vector<ShaderEntry> shaders = {
 	{"volumetricCloud_shadow_filterCS", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_shadow_renderCS", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_shapenoiseCS", wi::graphics::ShaderStage::CS },
+	{"volumetricCloud_upsamplePS", wi::graphics::ShaderStage::PS },
 	{"volumetricCloud_weathermapCS", wi::graphics::ShaderStage::CS },
 	{"shadingRateClassificationCS", wi::graphics::ShaderStage::CS },
 	{"shadingRateClassificationCS_DEBUG", wi::graphics::ShaderStage::CS },
+	{"aerialPerspectiveCS", wi::graphics::ShaderStage::CS },
+	{"aerialPerspectiveCS_capture", wi::graphics::ShaderStage::CS },
+	{"aerialPerspectiveCS_capture_MSAA", wi::graphics::ShaderStage::CS },
+	{"skyAtmosphere_cameraVolumeLutCS", wi::graphics::ShaderStage::CS },
 	{"skyAtmosphere_transmittanceLutCS", wi::graphics::ShaderStage::CS },
 	{"skyAtmosphere_skyViewLutCS", wi::graphics::ShaderStage::CS },
 	{"skyAtmosphere_multiScatteredLuminanceLutCS", wi::graphics::ShaderStage::CS },
@@ -214,6 +219,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"virtualTextureTileRequestsCS", wi::graphics::ShaderStage::CS },
 	{"virtualTextureTileAllocateCS", wi::graphics::ShaderStage::CS },
 	{"virtualTextureResidencyUpdateCS", wi::graphics::ShaderStage::CS },
+	{"windCS", wi::graphics::ShaderStage::CS },
 
 
 	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },
@@ -387,75 +393,39 @@ int main(int argc, char* argv[])
 		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6" << std::endl;
 	}
 
-	static const wi::vector<std::string> wind_permutation = { "WIND" };
-
 	shaders.push_back({ "objectVS_simple", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_common", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_common_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_prepass", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_prepass_alphatest", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_prepass_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_prepass_alphatest_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "objectVS_simple_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "shadowVS_transparent", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "shadowVS", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "shadowVS_alphatest", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS_alphatest", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS_emulation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS_alphatest_emulation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS_transparent", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 	shaders.push_back({ "cubeShadowVS_transparent_emulation", wi::graphics::ShaderStage::VS });
-	shaders.back().permutations.emplace_back();
-	shaders.back().permutations.emplace_back().defines = wind_permutation;
 
 
 	// permutations for objectPS:

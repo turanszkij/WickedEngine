@@ -271,12 +271,12 @@ namespace wi::lua
 	}
 	int SpriteFont_BindLua::GetPos(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSet((float)font.params.posX, (float)font.params.posY, 0, 0)));
+		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVectorSet((float)font.params.posX, (float)font.params.posY, 0, 0)));
 		return 1;
 	}
 	int SpriteFont_BindLua::GetSpacing(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSet((float)font.params.spacingX, (float)font.params.spacingY, 0, 0)));
+		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMVectorSet((float)font.params.spacingX, (float)font.params.spacingY, 0, 0)));
 		return 1;
 	}
 	int SpriteFont_BindLua::GetAlign(lua_State* L)
@@ -288,13 +288,13 @@ namespace wi::lua
 	int SpriteFont_BindLua::GetColor(lua_State* L)
 	{
 		XMFLOAT4 C = font.params.color.toFloat4();
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&C)));
+		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat4(&C)));
 		return 1;
 	}
 	int SpriteFont_BindLua::GetShadowColor(lua_State* L)
 	{
 		XMFLOAT4 C = font.params.color.toFloat4();
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&C)));
+		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat4(&C)));
 		return 1;
 	}
 	int SpriteFont_BindLua::GetBolden(lua_State* L)
@@ -320,7 +320,7 @@ namespace wi::lua
 	int SpriteFont_BindLua::GetShadowOffset(lua_State* L)
 	{
 		XMFLOAT4 C = XMFLOAT4(font.params.shadow_offset_x, font.params.shadow_offset_y, 0, 0);
-		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&C)));
+		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat4(&C)));
 		return 1;
 	}
 
@@ -332,12 +332,14 @@ namespace wi::lua
 			initialized = true;
 			Luna<SpriteFont_BindLua>::Register(wi::lua::GetLuaState());
 
+			wi::lua::RunText(R"(
+WIFALIGN_LEFT = 0
+WIFALIGN_CENTER = 1
+WIFALIGN_RIGHT = 2
+WIFALIGN_TOP = 3
+WIFALIGN_BOTTOM = 4
+)");
 
-			wi::lua::RunText("WIFALIGN_LEFT = 0");
-			wi::lua::RunText("WIFALIGN_CENTER = 1");
-			wi::lua::RunText("WIFALIGN_RIGHT = 2");
-			wi::lua::RunText("WIFALIGN_TOP = 3");
-			wi::lua::RunText("WIFALIGN_BOTTOM = 4");
 		}
 	}
 

@@ -21,8 +21,7 @@ namespace wi::lua
 		{
 			initialized = true;
 			Luna<Network_BindLua>::Register(wi::lua::GetLuaState());
-
-			wi::lua::RunText("network = Network()");
+			Luna<Network_BindLua>::push_global(wi::lua::GetLuaState(), "network");
 		}
 	}
 

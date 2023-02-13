@@ -12,6 +12,7 @@ namespace wi::lua
 		static Luna<Network_BindLua>::FunctionType methods[];
 		static Luna<Network_BindLua>::PropertyType properties[];
 
+		Network_BindLua() = default;
 		Network_BindLua(lua_State* L) {}
 
 		static void Bind();

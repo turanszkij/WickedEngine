@@ -73,7 +73,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			}
 			else
 			{
-				envColor = GetDynamicSkyColor(ray.Direction, true, true, false, true);
+				envColor = GetDynamicSkyColor(ray.Direction, true, false, true);
 			}
 
 			DDGIRayData rayData;

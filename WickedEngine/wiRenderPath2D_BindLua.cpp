@@ -1,4 +1,5 @@
 #include "wiRenderPath2D_BindLua.h"
+#include "wiRenderPath3D_BindLua.h"
 #include "wiSprite_BindLua.h"
 #include "wiSpriteFont_BindLua.h"
 
@@ -25,6 +26,8 @@ namespace wi::lua
 		lunamethod(RenderPath2D_BindLua, SetFontOrder),
 		lunamethod(RenderPath_BindLua, GetLayerMask),
 		lunamethod(RenderPath_BindLua, SetLayerMask),
+
+		lunamethod(RenderPath2D_BindLua, CopyFrom),
 		{ NULL, NULL }
 	};
 	Luna<RenderPath2D_BindLua>::PropertyType RenderPath2D_BindLua::properties[] = {
@@ -412,6 +415,41 @@ namespace wi::lua
 		{
 			wi::lua::SError(L, "SetFontOrder(Font font, int order) not enough arguments!");
 		}
+		return 0;
+	}
+
+	int RenderPath2D_BindLua::CopyFrom(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "CopyFrom(RenderPath other) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			RenderPath3D_BindLua* other3D = Luna<RenderPath3D_BindLua>::lightcheck(L, 1);
+			if (other3D != nullptr)
+			{
+				*component = *other3D->component;
+				return 0;
+			}
+			RenderPath2D_BindLua* other2D = Luna<RenderPath2D_BindLua>::lightcheck(L, 1);
+			if (other2D != nullptr)
+			{
+				*component = *other2D->component;
+				return 0;
+			}
+			RenderPath_BindLua* other = Luna<RenderPath_BindLua>::lightcheck(L, 1);
+			if (other != nullptr)
+			{
+				*component = *other->component;
+				return 0;
+			}
+
+			wi::lua::SError(L, "CopyFrom(RenderPath other) parameter is not a RenderPath3D!");
+		}
+		else
+			wi::lua::SError(L, "CopyFrom(RenderPath other) not enough arguments!");
 		return 0;
 	}
 

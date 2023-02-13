@@ -193,6 +193,8 @@ namespace wi::renderer
 		DRAWSCENE_TESSELLATION = 1 << 3,
 		DRAWSCENE_HAIRPARTICLE = 1 << 4,
 		DRAWSCENE_IMPOSTOR = 1 << 5,
+		DRAWSCENE_OCEAN = 1 << 6,
+		DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS = 1 << 7,
 	};
 
 	// Draw the world from a camera. You must call BindCameraCB() at least once in this frame prior to this
@@ -212,10 +214,14 @@ namespace wi::renderer
 		const wi::graphics::Texture* weatherMapFirst = nullptr,
 		const wi::graphics::Texture* weatherMapSecond = nullptr
 	);
-	// Compute essential atmospheric scattering textures for skybox, fog and clouds
-	void ComputeAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
-	// Update atmospheric scattering primarily for environment probes.
-	void RefreshAtmosphericScatteringTextures(wi::graphics::CommandList cmd);
+
+	// Compute essential SkyAtmosphere textures for lighting, skyviewlut and cameravolume.
+	void ComputeSkyAtmosphereTextures(wi::graphics::CommandList cmd);
+	// Update SkyViewLut independently, used primarily for environtment probes.
+	void ComputeSkyAtmosphereSkyViewLut(wi::graphics::CommandList cmd);
+	// Update CameraVolumeLut independently, used primarily for environtment probes.
+	void ComputeSkyAtmosphereCameraVolumeLut(wi::graphics::CommandList cmd);
+
 	// Draw skydome centered to camera.
 	void DrawSky(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 	// Draw shadow maps for each visible light that has associated shadow maps
@@ -671,9 +677,19 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd,
 		float strength = 100.0f
 	);
+	struct AerialPerspectiveResources
+	{
+		wi::graphics::Texture texture_output;
+	};
+	void CreateAerialPerspectiveResources(AerialPerspectiveResources& res, XMUINT2 resolution);
+	void Postprocess_AerialPerspective(
+		const AerialPerspectiveResources& res,
+		wi::graphics::CommandList cmd
+	);
 	struct VolumetricCloudResources
 	{
 		mutable int frame = 0;
+		XMUINT2 final_resolution = {};
 		wi::graphics::Texture texture_cloudRender;
 		wi::graphics::Texture texture_cloudDepth;
 		wi::graphics::Texture texture_reproject[2];
@@ -691,6 +707,10 @@ namespace wi::renderer
 		const bool jitterEnabled,
 		const wi::graphics::Texture* weatherMapFirst = nullptr,
 		const wi::graphics::Texture* weatherMapSecond = nullptr
+	);
+	void Postprocess_VolumetricClouds_Upsample(
+		const VolumetricCloudResources& res,
+		wi::graphics::CommandList cmd
 	);
 	void Postprocess_FXAA(
 		const wi::graphics::Texture& input,

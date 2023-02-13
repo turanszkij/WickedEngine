@@ -297,6 +297,12 @@ namespace wi
 				wi::renderer::BindCommonResources(cmd);
 				wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
 
+				if (scene->weather.IsRealisticSky())
+				{
+					wi::renderer::ComputeSkyAtmosphereTextures(cmd);
+					wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+				}
+
 				if (wi::renderer::GetRaytraceDebugBVHVisualizerEnabled())
 				{
 					RenderPassImage rp[] = {

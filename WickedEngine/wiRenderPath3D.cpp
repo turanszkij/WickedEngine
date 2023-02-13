@@ -65,6 +65,8 @@ namespace wi
 		screenspaceshadowResources = {};
 		depthoffieldResources = {};
 		motionblurResources = {};
+		aerialperspectiveResources = {};
+		aerialperspectiveResources_reflection = {};
 		volumetriccloudResources = {};
 		volumetriccloudResources_reflection = {};
 		bloomResources = {};
@@ -439,6 +441,29 @@ namespace wi
 			rtshadowResources = {};
 		}
 
+		if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+		{
+			if (!aerialperspectiveResources.texture_output.IsValid())
+			{
+				wi::renderer::CreateAerialPerspectiveResources(aerialperspectiveResources, internalResolution);
+			}
+			if (getReflectionsEnabled() && depthBuffer_Reflection.IsValid())
+			{
+				if (!aerialperspectiveResources_reflection.texture_output.IsValid())
+				{
+					wi::renderer::CreateAerialPerspectiveResources(aerialperspectiveResources_reflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
+				}
+			}
+			else
+			{
+				aerialperspectiveResources_reflection = {};
+			}
+		}
+		else
+		{
+			aerialperspectiveResources = {};
+		}
+
 		if (scene->weather.IsVolumetricClouds())
 		{
 			if (!volumetriccloudResources.texture_cloudRender.IsValid())
@@ -456,6 +481,10 @@ namespace wi
 			{
 				volumetriccloudResources_reflection = {};
 			}
+		}
+		else
+		{
+			volumetriccloudResources = {};
 		}
 
 		if (!scene->waterRipples.empty())
@@ -696,6 +725,12 @@ namespace wi
 				wi::renderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 			}
 
+			if (scene->weather.IsRealisticSky())
+			{
+				wi::renderer::ComputeSkyAtmosphereTextures(cmd);
+				wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+			}
+
 			if (wi::renderer::GetSurfelGIEnabled())
 			{
 				wi::renderer::SurfelGI(
@@ -866,20 +901,6 @@ namespace wi
 				);
 			}
 
-			if (scene->weather.IsVolumetricClouds())
-			{
-				wi::renderer::Postprocess_VolumetricClouds(
-					volumetriccloudResources,
-					cmd,
-					*camera,
-					camera_previous,
-					camera_reflection,
-					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
-					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-				);
-			}
-
 			RenderSSR(cmd);
 
 			if (wi::renderer::GetScreenSpaceShadowsEnabled())
@@ -908,7 +929,7 @@ namespace wi
 				);
 			}
 
-			});
+		});
 
 		// Shadow maps:
 		if (getShadowsEnabled())
@@ -958,6 +979,17 @@ namespace wi
 					cmd
 				);
 
+				// Render SkyAtmosphere assets from planar reflections point of view
+				if (scene->weather.IsRealisticSky())
+				{
+					wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+
+					if (scene->weather.IsRealisticSkyAerialPerspective())
+					{
+						wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
+					}
+				}
+
 				device->EventBegin("Planar reflections Z-Prepass", cmd);
 				auto range = wi::profiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
 
@@ -978,21 +1010,15 @@ namespace wi
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
-				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_PREPASS, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR);
+				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_PREPASS, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR | wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS);
 
 				device->RenderPassEnd(cmd);
 
-				if (scene->weather.IsVolumetricClouds())
+				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
 				{
-					wi::renderer::Postprocess_VolumetricClouds(
-						volumetriccloudResources_reflection,
-						cmd,
-						camera_reflection,
-						camera_reflection_previous,
-						camera_reflection,
-						wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
-						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+					wi::renderer::Postprocess_AerialPerspective(
+						aerialperspectiveResources_reflection,
+						cmd
 					);
 				}
 
@@ -1020,6 +1046,20 @@ namespace wi
 					cmd
 				);
 
+				if (scene->weather.IsVolumetricClouds())
+				{
+					wi::renderer::Postprocess_VolumetricClouds(
+						volumetriccloudResources_reflection,
+						cmd,
+						camera_reflection,
+						camera_reflection_previous,
+						camera_reflection,
+						wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+					);
+				}
+
 				device->EventBegin("Planar reflections", cmd);
 				auto range = wi::profiler::BeginRangeGPU("Planar Reflections", cmd);
 
@@ -1045,18 +1085,30 @@ namespace wi
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
-				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR);
-				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_TRANSPARENT); // separate renderscene, to be drawn after opaque and transparent sort order
+				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR | wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS);
+				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_TRANSPARENT | wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS); // separate renderscene, to be drawn after opaque and transparent sort order
 				wi::renderer::DrawSky(*scene, cmd);
 
+				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+				{
+					// Blend Aerial Perspective on top:
+					device->EventBegin("Aerial Perspective Reflection Blend", cmd);
+					wi::image::Params fx;
+					fx.enableFullScreen();
+					fx.blendFlag = BLENDMODE_PREMULTIPLIED;
+					wi::image::Draw(&aerialperspectiveResources_reflection.texture_output, fx, cmd);
+					device->EventEnd(cmd);
+				}
+
 				// Blend the volumetric clouds on top:
+				//	For planar reflections, we don't use upsample, because there is no linear depth here
 				if (scene->weather.IsVolumetricClouds())
 				{
 					device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
 					wi::image::Params fx;
 					fx.enableFullScreen();
 					fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-					wi::image::Draw(&volumetriccloudResources_reflection.texture_reproject[device->GetFrameCount() % 2], fx, cmd);
+					wi::image::Draw(&volumetriccloudResources_reflection.texture_reproject[volumetriccloudResources_reflection.frame % 2], fx, cmd);
 					device->EventEnd(cmd);
 				}
 
@@ -1084,6 +1136,15 @@ namespace wi
 
 			// This can't run in "main camera compute effects" async compute,
 			//	because it depends on shadow maps, and envmaps
+			if (scene->weather.IsRealisticSky())
+			{
+				wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+
+				if (scene->weather.IsRealisticSkyAerialPerspective())
+				{
+					wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
+				}
+			}
 			if (getRaytracedReflectionEnabled())
 			{
 				wi::renderer::Postprocess_RTReflection(
@@ -1115,6 +1176,26 @@ namespace wi
 					rtLinearDepth,
 					cmd,
 					getVXGIResolveFullResolutionEnabled()
+				);
+			}
+			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+			{
+				wi::renderer::Postprocess_AerialPerspective(
+					aerialperspectiveResources,
+					cmd
+				);
+			}
+			if (scene->weather.IsVolumetricClouds())
+			{
+				wi::renderer::Postprocess_VolumetricClouds(
+					volumetriccloudResources,
+					cmd,
+					*camera,
+					camera_previous,
+					camera_reflection,
+					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 				);
 			}
 
@@ -1212,18 +1293,21 @@ namespace wi
 
 			RenderOutline(cmd);
 
-			// Upsample + Blend the volumetric clouds on top:
+			// Blend Aerial Perspective on top:
+			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+			{
+				device->EventBegin("Aerial Perspective Blend", cmd);
+				wi::image::Params fx;
+				fx.enableFullScreen();
+				fx.blendFlag = BLENDMODE_PREMULTIPLIED;
+				wi::image::Draw(&aerialperspectiveResources.texture_output, fx, cmd);
+				device->EventEnd(cmd);
+			}
+
+			// Blend the volumetric clouds on top:
 			if (scene->weather.IsVolumetricClouds())
 			{
-				device->EventBegin("Volumetric Clouds Upsample + Blend", cmd);
-				wi::renderer::Postprocess_Upsample_Bilateral(
-					volumetriccloudResources.texture_reproject[device->GetFrameCount() % 2],
-					rtLinearDepth,
-					rtMain_render, // only desc is taken if pixel shader upsampling is used
-					cmd,
-					true // pixel shader upsampling
-				);
-				device->EventEnd(cmd);
+				wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
 			}
 
 			device->RenderPassEnd(cmd);
@@ -1619,6 +1703,7 @@ namespace wi
 			drawscene_flags |= wi::renderer::DRAWSCENE_OCCLUSIONCULLING;
 			drawscene_flags |= wi::renderer::DRAWSCENE_HAIRPARTICLE;
 			drawscene_flags |= wi::renderer::DRAWSCENE_TESSELLATION;
+			drawscene_flags |= wi::renderer::DRAWSCENE_OCEAN;
 			wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 
 			device->EventEnd(cmd);

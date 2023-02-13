@@ -361,6 +361,7 @@ namespace wi::terrain
 	{
 		weather.ambient = XMFLOAT3(0.4f, 0.4f, 0.4f);
 		weather.SetRealisticSky(true);
+		weather.SetRealisticSkyAerialPerspective(true);
 		weather.SetVolumetricClouds(true);
 		weather.volumetricCloudParameters.layerFirst.extinctionCoefficient = XMFLOAT3(0.71f * 0.05f, 0.86f * 0.05f, 1.0f * 0.05f);
 		weather.volumetricCloudParameters.layerFirst.totalNoiseScale = 0.0009f;

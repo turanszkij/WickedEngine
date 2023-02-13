@@ -44,7 +44,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<AnimationDataComponent>& animation_datas = componentLibrary.Register<AnimationDataComponent>("wi::scene::Scene::animation_datas");
 		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = componentLibrary.Register<EmittedParticleSystem>("wi::scene::Scene::emitters");
 		wi::ecs::ComponentManager<HairParticleSystem>& hairs = componentLibrary.Register<HairParticleSystem>("wi::scene::Scene::hairs");
-		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Register<WeatherComponent>("wi::scene::Scene::weathers", 1); // version = 1
+		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Register<WeatherComponent>("wi::scene::Scene::weathers", 2); // version = 2
 		wi::ecs::ComponentManager<SoundComponent>& sounds = componentLibrary.Register<SoundComponent>("wi::scene::Scene::sounds");
 		wi::ecs::ComponentManager<InverseKinematicsComponent>& inverse_kinematics = componentLibrary.Register<InverseKinematicsComponent>("wi::scene::Scene::inverse_kinematics");
 		wi::ecs::ComponentManager<SpringComponent>& springs = componentLibrary.Register<SpringComponent>("wi::scene::Scene::springs", 1); // version = 1
@@ -201,7 +201,6 @@ namespace wi::scene
 		// Environment probe cubemap array state:
 		static constexpr uint32_t envmapCount = 16;
 		static constexpr uint32_t envmapRes = 128;
-		static constexpr uint32_t envmapMIPs = 8;
 		static constexpr uint32_t envmapMSAASampleCount = 8;
 		wi::graphics::Texture envrenderingDepthBuffer;
 		wi::graphics::Texture envrenderingDepthBuffer_MSAA;

@@ -35,16 +35,6 @@ namespace wi::lua
 	bool RunText(const std::string& script);
 	//register function to use in scripts
 	bool RegisterFunc(const std::string& name, lua_CFunction function);
-	//register class
-	void RegisterLibrary(const std::string& tableName, const luaL_Reg* functions);
-	//register object
-	bool RegisterObject(const std::string& tableName, const std::string& name, void* object);
-	//add function to the previously registered object
-	void AddFunc(const std::string& name, lua_CFunction function);
-	//add function array to the previously registered object
-	void AddFuncArray(const luaL_Reg* functions);
-	//add int member to registered object
-	void AddInt(const std::string& name, int data);
 
 	//set delta time to use with lua
 	void SetDeltaTime(double dt);

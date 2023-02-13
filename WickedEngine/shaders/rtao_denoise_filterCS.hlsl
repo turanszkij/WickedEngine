@@ -83,7 +83,7 @@ void main(uint2 gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_
 
 		if (bWriteOutput)
 		{
-			output[did].x = pow(mean, rtao_power);
+			output[did].x = FFX_DNSR_Shadows_IsShadowReciever(did) ? pow(mean, rtao_power) : 1;
 		}
 	}
 }

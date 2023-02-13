@@ -12,6 +12,7 @@ namespace wi::lua
 		static Luna<Physics_BindLua>::FunctionType methods[];
 		static Luna<Physics_BindLua>::PropertyType properties[];
 
+		Physics_BindLua() = default;
 		Physics_BindLua(lua_State* L) {}
 
 		int SetEnabled(lua_State* L);
