@@ -85,7 +85,7 @@ namespace wi
 
 		XMUINT2 internalResolution = GetInternalResolution();
 
-		camera->CreatePerspective((float)internalResolution.x, (float)internalResolution.y, camera->zNearP, camera->zFarP);
+		camera->CreatePerspective((float)internalResolution.x, (float)internalResolution.y, camera->zNearP, camera->zFarP, camera->fov);
 
 		// Render targets:
 
