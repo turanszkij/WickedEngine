@@ -855,6 +855,7 @@ namespace wi::terrain
 						chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
 						chunk_data.grass.meshID = chunk_data.entity;
 						chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale * chunk_scale); // chunk_scale * chunk_scale : grass density increases with squared amount with chunk scale (x*z)
+						chunk_data.grass.CreateFromMesh(mesh);
 					}
 
 					// Create the textures for virtual texture update:
@@ -881,6 +882,7 @@ namespace wi::terrain
 							grass = chunk_data.grass;
 							chunk_data.grass_density_current = grass_density;
 							grass.strandCount = uint32_t(grass.strandCount * chunk_data.grass_density_current);
+							grass.CreateRenderData();
 							generator->scene.materials.Create(chunk_data.grass_entity) = material_GrassParticle;
 							generator->scene.transforms.Create(chunk_data.grass_entity);
 							generator->scene.names.Create(chunk_data.grass_entity) = "grass";

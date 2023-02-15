@@ -120,29 +120,7 @@ namespace wi
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_COL);
 			device->SetName(&vertexBuffer_COL, "EmittedParticleSystem::vertexBuffer_COL");
 
-			bd.bind_flags = BindFlag::SHADER_RESOURCE;
-			bd.misc_flags = ResourceMiscFlag::NONE;
-			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-			{
-				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
-			}
-			bd.format = Format::R32_UINT;
-			bd.stride = sizeof(uint);
-			bd.size = bd.stride * 6 * MAX_PARTICLES;
-			wi::vector<uint> primitiveData(6 * MAX_PARTICLES);
-			for (uint particleID = 0; particleID < MAX_PARTICLES; ++particleID)
-			{
-				uint v0 = particleID * 4;
-				uint i0 = particleID * 6;
-				primitiveData[i0 + 0] = v0 + 0;
-				primitiveData[i0 + 1] = v0 + 1;
-				primitiveData[i0 + 2] = v0 + 2;
-				primitiveData[i0 + 3] = v0 + 2;
-				primitiveData[i0 + 4] = v0 + 1;
-				primitiveData[i0 + 5] = v0 + 3;
-			}
-			device->CreateBuffer(&bd, primitiveData.data(), &primitiveBuffer);
-			device->SetName(&primitiveBuffer, "EmittedParticleSystem::primitiveBuffer");
+			primitiveBuffer = wi::renderer::GetIndexBufferForQuads(MAX_PARTICLES);
 		}
 
 		if (IsSorted() && distanceBuffer.desc.size < MAX_PARTICLES * sizeof(float))
@@ -275,8 +253,8 @@ namespace wi
 			geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
 			geometry.triangles.vertex_buffer = vertexBuffer_POS;
 			geometry.triangles.index_buffer = primitiveBuffer;
-			geometry.triangles.index_format = IndexBufferFormat::UINT32;
-			geometry.triangles.index_count = (uint32_t)(primitiveBuffer.desc.size / primitiveBuffer.desc.stride);
+			geometry.triangles.index_format = GetIndexBufferFormat(primitiveBuffer.desc.format);
+			geometry.triangles.index_count = MAX_PARTICLES * 6;
 			geometry.triangles.index_offset = 0;
 			geometry.triangles.vertex_count = (uint32_t)(vertexBuffer_POS.desc.size / vertexBuffer_POS.desc.stride);
 			geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
@@ -309,7 +287,6 @@ namespace wi
 		retVal += vertexBuffer_POS.GetDesc().size;
 		retVal += vertexBuffer_UVS.GetDesc().size;
 		retVal += vertexBuffer_COL.GetDesc().size;
-		retVal += primitiveBuffer.GetDesc().size;
 		retVal += culledIndirectionBuffer.GetDesc().size;
 		retVal += culledIndirectionBuffer2.GetDesc().size;
 
