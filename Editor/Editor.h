@@ -149,6 +149,8 @@ public:
 	void SetCurrentScene(int index);
 	void RefreshSceneList();
 	void NewScene();
+
+	void FocusCameraOnSelected();
 };
 
 class Editor : public wi::Application
