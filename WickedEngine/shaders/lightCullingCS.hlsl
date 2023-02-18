@@ -240,7 +240,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		case ENTITY_TYPE_POINTLIGHT:
 		{
 			float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
-			Sphere sphere = { positionVS.xyz, entity.GetRange() };
+			Sphere sphere = { positionVS.xyz, entity.GetRange() + entity.GetLength() };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
 				AppendEntity_Transparent(i);

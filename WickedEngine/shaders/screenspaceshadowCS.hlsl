@@ -143,6 +143,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					break;
 					case ENTITY_TYPE_POINTLIGHT:
 					{
+						if (light.GetLength() > 0)
+						{
+							light.position = light.position + light.GetDirection() * (blue_noise(DTid.xy).g - 0.5) * light.GetLength();
+						}
 						L = light.position - surface.P;
 						const float dist2 = dot(L, L);
 						const float range = light.GetRange();

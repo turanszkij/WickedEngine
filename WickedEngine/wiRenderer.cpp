@@ -3838,6 +3838,8 @@ void UpdateRenderData(
 			shaderentity.position = light.position;
 			shaderentity.SetRange(light.GetRange());
 			shaderentity.SetRadius(light.radius);
+			shaderentity.SetLength(light.length);
+			shaderentity.SetDirection(light.direction);
 			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
 
 			// mark as no shadow by default:
@@ -3858,7 +3860,6 @@ void UpdateRenderData(
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				shaderentity.SetDirection(light.direction);
 				shaderentity.SetShadowCascadeCount((uint)light.cascade_distances.size());
 
 				if (shadow && !light.cascade_distances.empty())
@@ -3900,7 +3901,6 @@ void UpdateRenderData(
 				shaderentity.SetConeAngleCos(outerConeAngleCos);
 				shaderentity.SetAngleScale(lightAngleScale);
 				shaderentity.SetAngleOffset(lightAngleOffset);
-				shaderentity.SetDirection(light.direction);
 
 				if (shadow)
 				{

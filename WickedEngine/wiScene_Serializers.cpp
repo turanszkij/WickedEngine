@@ -828,6 +828,7 @@ namespace wi::scene
 			if (seri.GetVersion() >= 2)
 			{
 				archive >> radius;
+				archive >> length;
 			}
 
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
@@ -889,6 +890,7 @@ namespace wi::scene
 			if (seri.GetVersion() >= 2)
 			{
 				archive << radius;
+				archive << length;
 			}
 		}
 	}

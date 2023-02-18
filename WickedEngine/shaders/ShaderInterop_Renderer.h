@@ -625,7 +625,7 @@ struct ShaderEntity
 	uint layerMask;
 	uint indices;
 	uint remap;
-	uint radius16_x16;
+	uint radius16_length16;
 
 	float4 shadowAtlasMulAdd;
 
@@ -645,7 +645,11 @@ struct ShaderEntity
 	}
 	inline float GetRadius()
 	{
-		return f16tof32(radius16_x16);
+		return f16tof32(radius16_length16);
+	}
+	inline float GetLength()
+	{
+		return f16tof32(radius16_length16 >> 16u);
 	}
 	inline float3 GetDirection()
 	{
@@ -725,7 +729,11 @@ struct ShaderEntity
 	}
 	inline void SetRadius(float value)
 	{
-		radius16_x16 |= XMConvertFloatToHalf(value);
+		radius16_length16 |= XMConvertFloatToHalf(value);
+	}
+	inline void SetLength(float value)
+	{
+		radius16_length16 |= XMConvertFloatToHalf(value) << 16u;
 	}
 	inline void SetColor(float4 value)
 	{

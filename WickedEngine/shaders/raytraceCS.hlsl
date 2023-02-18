@@ -231,6 +231,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
 			{
+				if (light.GetLength() > 0)
+				{
+					light.position = light.position + light.GetDirection() * (rng.next_float() - 0.5) * light.GetLength();
+				}
 				L = light.position - surface.P;
 				const float dist2 = dot(L, L);
 				const float range = light.GetRange();
@@ -354,8 +358,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				if (any(shadow))
 				{
 					lightColor *= shadow;
-					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 					result += light_count * mad(surface.albedo / PI * (1 - surface.transmission), lighting.direct.diffuse, lighting.direct.specular) * surface.opacity;
 				}
 			}

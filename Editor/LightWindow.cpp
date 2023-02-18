@@ -96,6 +96,20 @@ void LightWindow::Create(EditorComponent* _editor)
 	radiusSlider.SetTooltip("Adjust the radius of the light source. This will affect ray traced shadow softness.");
 	AddWidget(&radiusSlider);
 
+	lengthSlider.Create(0, 10, 0, 100000, "Length: ");
+	lengthSlider.SetSize(XMFLOAT2(wid, hei));
+	lengthSlider.SetPos(XMFLOAT2(x, y += step));
+	lengthSlider.OnSlide([&](wi::gui::EventArgs args) {
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->length = args.fValue;
+		}
+		});
+	lengthSlider.SetEnabled(false);
+	lengthSlider.SetTooltip("Adjust the length of the light source.");
+	AddWidget(&lengthSlider);
+
 	outerConeAngleSlider.Create(0.1f, XM_PIDIV2 - 0.01f, 0, 100000, "Outer Cone Angle: ");
 	outerConeAngleSlider.SetSize(XMFLOAT2(wid, hei));
 	outerConeAngleSlider.SetPos(XMFLOAT2(x, y += step));
@@ -302,6 +316,7 @@ void LightWindow::SetEntity(Entity entity)
 		intensitySlider.SetValue(light->intensity);
 		rangeSlider.SetValue(light->range);
 		radiusSlider.SetValue(light->radius);
+		lengthSlider.SetValue(light->length);
 		outerConeAngleSlider.SetValue(light->outerConeAngle);
 		innerConeAngleSlider.SetValue(light->innerConeAngle);
 		shadowCheckBox.SetEnabled(true);
@@ -339,6 +354,7 @@ void LightWindow::SetEntity(Entity entity)
 	{
 		rangeSlider.SetEnabled(false);
 		radiusSlider.SetEnabled(false);
+		lengthSlider.SetEnabled(false);
 		outerConeAngleSlider.SetEnabled(false);
 		innerConeAngleSlider.SetEnabled(false);
 		shadowCheckBox.SetEnabled(false);
@@ -366,6 +382,7 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 		outerConeAngleSlider.SetEnabled(false);
 		innerConeAngleSlider.SetEnabled(false);
 		radiusSlider.SetRange(0, 1);
+		lengthSlider.SetEnabled(false);
 	}
 	else
 	{
@@ -374,11 +391,13 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 		{
 			outerConeAngleSlider.SetEnabled(true);
 			innerConeAngleSlider.SetEnabled(true);
+			lengthSlider.SetEnabled(false);
 		}
 		else
 		{
 			outerConeAngleSlider.SetEnabled(false);
 			innerConeAngleSlider.SetEnabled(false);
+			lengthSlider.SetEnabled(true);
 		}
 		radiusSlider.SetRange(0, 10);
 	}
@@ -454,6 +473,8 @@ void LightWindow::RefreshCascades()
 
 void LightWindow::ResizeLayout()
 {
+	const LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
+
 	wi::gui::Window::ResizeLayout();
 	const float padding = 4;
 	const float width = GetWidgetAreaSize().x;
@@ -496,6 +517,10 @@ void LightWindow::ResizeLayout()
 	add(outerConeAngleSlider);
 	add(innerConeAngleSlider);
 	add(radiusSlider);
+	if (light != nullptr && light->GetType() == LightComponent::POINT)
+	{
+		add(lengthSlider);
+	}
 	add_right(shadowCheckBox);
 	add_right(haloCheckBox);
 	add_right(volumetricsCheckBox);
@@ -503,7 +528,6 @@ void LightWindow::ResizeLayout()
 	add_right(volumetricCloudsCheckBox);
 	add(shadowResolutionComboBox);
 
-	const LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 	if (light != nullptr && light->GetType() == LightComponent::DIRECTIONAL)
 	{
 		y += jump;
