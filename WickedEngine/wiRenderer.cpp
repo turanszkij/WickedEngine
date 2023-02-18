@@ -3837,6 +3837,7 @@ void UpdateRenderData(
 			shaderentity.SetType(light.GetType());
 			shaderentity.position = light.position;
 			shaderentity.SetRange(light.GetRange());
+			shaderentity.SetRadius(light.radius);
 			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
 
 			// mark as no shadow by default:

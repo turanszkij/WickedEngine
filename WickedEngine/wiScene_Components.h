@@ -850,6 +850,7 @@ namespace wi::scene
 		XMFLOAT3 color = XMFLOAT3(1, 1, 1);
 		float intensity = 1.0f; // Brightness of light in. The units that this is defined in depend on the type of light. Point and spot lights use luminous intensity in candela (lm/sr) while directional lights use illuminance in lux (lm/m2). https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
 		float range = 10.0f;
+		float radius = 0.025f;
 		float outerConeAngle = XM_PIDIV4;
 		float innerConeAngle = 0; // default value is 0, means only outer cone angle is used
 

@@ -82,6 +82,20 @@ void LightWindow::Create(EditorComponent* _editor)
 	rangeSlider.SetTooltip("Adjust the maximum range the light can affect.");
 	AddWidget(&rangeSlider);
 
+	radiusSlider.Create(0, 10, 0, 100000, "Radius: ");
+	radiusSlider.SetSize(XMFLOAT2(wid, hei));
+	radiusSlider.SetPos(XMFLOAT2(x, y += step));
+	radiusSlider.OnSlide([&](wi::gui::EventArgs args) {
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->radius = args.fValue;
+		}
+		});
+	radiusSlider.SetEnabled(false);
+	radiusSlider.SetTooltip("Adjust the radius of the light source. This will affect ray traced shadow softness.");
+	AddWidget(&radiusSlider);
+
 	outerConeAngleSlider.Create(0.1f, XM_PIDIV2 - 0.01f, 0, 100000, "Outer Cone Angle: ");
 	outerConeAngleSlider.SetSize(XMFLOAT2(wid, hei));
 	outerConeAngleSlider.SetPos(XMFLOAT2(x, y += step));
@@ -287,6 +301,7 @@ void LightWindow::SetEntity(Entity entity)
 		intensitySlider.SetEnabled(true);
 		intensitySlider.SetValue(light->intensity);
 		rangeSlider.SetValue(light->range);
+		radiusSlider.SetValue(light->radius);
 		outerConeAngleSlider.SetValue(light->outerConeAngle);
 		innerConeAngleSlider.SetValue(light->innerConeAngle);
 		shadowCheckBox.SetEnabled(true);
@@ -323,6 +338,7 @@ void LightWindow::SetEntity(Entity entity)
 	else
 	{
 		rangeSlider.SetEnabled(false);
+		radiusSlider.SetEnabled(false);
 		outerConeAngleSlider.SetEnabled(false);
 		innerConeAngleSlider.SetEnabled(false);
 		shadowCheckBox.SetEnabled(false);
@@ -349,6 +365,7 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 		rangeSlider.SetEnabled(false);
 		outerConeAngleSlider.SetEnabled(false);
 		innerConeAngleSlider.SetEnabled(false);
+		radiusSlider.SetRange(0, 1);
 	}
 	else
 	{
@@ -363,7 +380,9 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 			outerConeAngleSlider.SetEnabled(false);
 			innerConeAngleSlider.SetEnabled(false);
 		}
+		radiusSlider.SetRange(0, 10);
 	}
+	radiusSlider.SetEnabled(true);
 	RefreshCascades();
 }
 
@@ -476,6 +495,7 @@ void LightWindow::ResizeLayout()
 	add(rangeSlider);
 	add(outerConeAngleSlider);
 	add(innerConeAngleSlider);
+	add(radiusSlider);
 	add_right(shadowCheckBox);
 	add_right(haloCheckBox);
 	add_right(volumetricsCheckBox);

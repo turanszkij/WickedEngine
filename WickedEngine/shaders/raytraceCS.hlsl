@@ -292,9 +292,25 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 				RayDesc newRay;
 				newRay.Origin = surface.P;
-				newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, rng), 0.025 + max3(surface.sss)));
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
+
+				newRay.Direction = L;
+				if (light.GetRadius() > 0)
+				{
+					switch (light.GetType())
+					{
+					default:
+					case ENTITY_TYPE_DIRECTIONALLIGHT:
+						newRay.Direction += sample_hemisphere_cos(L, rng) * light.GetRadius();
+						break;
+					case ENTITY_TYPE_POINTLIGHT:
+					case ENTITY_TYPE_SPOTLIGHT:
+						newRay.Direction = normalize(light.position + sample_hemisphere_cos(L, rng) * light.GetRadius() - surface.P);
+						break;
+					}
+				}
+				newRay.Direction += max3(surface.sss);
 
 #ifdef RTAPI
 
