@@ -42,7 +42,7 @@ inline float3 sample_shadow(float2 uv, float cmp)
 	return shadow;
 }
 
-// This is used to pull the uvs to the center to avoid sampling on the border and overfiltering into a different shadow
+// This is used to clamp the uvs to last texel center to avoid sampling on the border and overfiltering into a different shadow
 inline void shadow_border_shrink(in ShaderEntity light, inout float2 shadow_uv)
 {
 	const float2 shadow_resolution = light.shadowAtlasMulAdd.xy * GetFrame().shadow_atlas_resolution;
@@ -51,9 +51,7 @@ inline void shadow_border_shrink(in ShaderEntity light, inout float2 shadow_uv)
 #else
 	const float border_size = 1.5;
 #endif // DISABLE_SOFT_SHADOWMAP
-	shadow_uv *= shadow_resolution - border_size * 2;
-	shadow_uv += border_size;
-	shadow_uv /= shadow_resolution;
+	shadow_uv = clamp(shadow_uv * shadow_resolution, border_size, shadow_resolution - border_size) / shadow_resolution;
 }
 
 inline float3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade)
