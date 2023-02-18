@@ -235,6 +235,11 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 				}
 
 				lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
+
+				if (light.GetRadius() > 0)
+				{
+					lighting.direct.specular /= max(1, 4 * PI * light.GetRadius() * light.GetRadius());
+				}
 			}
 		}
 	}
@@ -304,6 +309,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 
 					if (light.GetRadius() > 0)
 					{
+						light_color /= max(1, 4 * PI * light.GetRadius() * light.GetRadius());
 						L = light.position - surface.P;
 						float3 centerToRay = dot(L, surface.R) * surface.R - L;
 						L += centerToRay * saturate(light.GetRadius() / length(centerToRay));
@@ -312,6 +318,11 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 					}
 
 					lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
+
+					if (light.GetRadius() > 0)
+					{
+						lighting.direct.specular /= max(1, 4 * PI * light.GetRadius() * light.GetRadius());
+					}
 				}
 			}
 		}
