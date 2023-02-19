@@ -93,7 +93,7 @@ void LightWindow::Create(EditorComponent* _editor)
 		}
 		});
 	radiusSlider.SetEnabled(false);
-	radiusSlider.SetTooltip("Adjust the radius of the light source. This will affect ray traced shadow softness.");
+	radiusSlider.SetTooltip("Adjust the radius of the light source.\nFor directional light, this will only affect ray traced shadow softness.");
 	AddWidget(&radiusSlider);
 
 	lengthSlider.Create(0, 10, 0, 100000, "Length: ");
@@ -107,7 +107,7 @@ void LightWindow::Create(EditorComponent* _editor)
 		}
 		});
 	lengthSlider.SetEnabled(false);
-	lengthSlider.SetTooltip("Adjust the length of the light source.");
+	lengthSlider.SetTooltip("Adjust the length of the light source.\nWith this you can make capsule light out of a point light.");
 	AddWidget(&lengthSlider);
 
 	outerConeAngleSlider.Create(0.1f, XM_PIDIV2 - 0.01f, 0, 100000, "Outer Cone Angle: ");
@@ -473,8 +473,6 @@ void LightWindow::RefreshCascades()
 
 void LightWindow::ResizeLayout()
 {
-	const LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-
 	wi::gui::Window::ResizeLayout();
 	const float padding = 4;
 	const float width = GetWidgetAreaSize().x;
@@ -517,10 +515,7 @@ void LightWindow::ResizeLayout()
 	add(outerConeAngleSlider);
 	add(innerConeAngleSlider);
 	add(radiusSlider);
-	if (light != nullptr && light->GetType() == LightComponent::POINT)
-	{
-		add(lengthSlider);
-	}
+	add(lengthSlider);
 	add_right(shadowCheckBox);
 	add_right(haloCheckBox);
 	add_right(volumetricsCheckBox);
@@ -528,6 +523,7 @@ void LightWindow::ResizeLayout()
 	add_right(volumetricCloudsCheckBox);
 	add(shadowResolutionComboBox);
 
+	const LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 	if (light != nullptr && light->GetType() == LightComponent::DIRECTIONAL)
 	{
 		y += jump;
