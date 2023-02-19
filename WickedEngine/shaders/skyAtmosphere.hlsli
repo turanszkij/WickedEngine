@@ -761,5 +761,48 @@ SingleScatteringResult IntegrateScatteredLuminance(
 	return result;
 }
 
+inline float4 GetFog(float distance, float3 O, float3 V)
+{
+	float3 fogColor = 0;
+	
+	if ((GetFrame().options & OPTION_BIT_REALISTIC_SKY) && (GetFrame().options & OPTION_BIT_OVERRIDE_FOG_COLOR) == 0)
+	{
+		// Sample captured ambient color from realisitc sky:
+		fogColor = texture_skyluminancelut.SampleLevel(sampler_point_clamp, float2(0.5, 0.5), 0).rgb;
+	}
+	else
+	{
+		fogColor = GetHorizonColor();
+	}
+
+	// Sample inscattering color
+	{
+		const float3 L = GetSunDirection();
+		
+		float3 inscatteringColor = GetSunColor();
+
+		// Apply atmosphere transmittance:
+		if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
+		{
+			// 0 for position since fog is centered around world center
+			inscatteringColor *= GetAtmosphericLightTransmittance(GetWeather().atmosphere, float3(0.0, 0.0, 0.0), L, texture_transmittancelut);
+		}
+		
+		// Apply phase function:
+		const float cosTheta = dot(-V, L);
+		inscatteringColor *= HgPhase(0.6, cosTheta);
+
+		// Hack: Tone down the intensity a bit with uniform phase:
+		//inscatteringColor *= UniformPhase();
+		
+		fogColor += inscatteringColor;
+	}
+
+	const float fogAmount = GetFogAmount(distance, O, V);
+	fogColor.rgb *= fogAmount;
+	
+	return float4(fogColor, fogAmount);
+}
+
 
 #endif // WI_SKYATMOSPHERE_HF

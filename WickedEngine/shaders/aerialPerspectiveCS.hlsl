@@ -78,6 +78,16 @@ void RenderAerialPerspective(uint3 DTid, float2 uv, float depth, float3 depthWor
 		luminance = ss.L;
 		transmittance = 1.0 - dot(ss.transmittance, float3(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0));
 	}
+
+	// Since we apply opaque fog later in object shader, let's subtract the fog from aerial perspective
+	// so it gets applied correctly, since fog has to place OVER aerial perspective.
+	{
+		float distance = length(depthWorldPosition.xyz - GetCamera().position);		
+		float fogAmount = GetFogAmount(distance, GetCamera().position, rayDirection);
+		
+		luminance *= 1.0 - fogAmount;
+		transmittance *= 1.0 - fogAmount;
+	}
 }
 
 #ifdef AERIALPERSPECTIVE_CAPTURE

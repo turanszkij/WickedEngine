@@ -56,7 +56,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 #ifdef UNLIT
 	float4 color = float4(surface.albedo, 1);
-	ApplyFog(surface.hit_depth, GetCamera().position, surface.V, color);
+	ApplyFog(surface.hit_depth, surface.V, color);
 	output[pixel] = color;
 	return;
 #endif // UNLIT

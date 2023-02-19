@@ -60,11 +60,11 @@ float4 main(VSOut input) : SV_Target
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, GetCamera().position, V, color);
-
 #ifdef TRANSPARENT
 	ApplyAerialPerspective(ScreenCoord, surface.P, color);
 #endif // TRANSPARENT
+	
+	ApplyFog(dist, V, color);
 	
 	return color;
 }
