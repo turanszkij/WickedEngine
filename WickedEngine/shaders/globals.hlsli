@@ -285,8 +285,10 @@ inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 inline float GetFogAmount(float distance, float3 O, float3 V)
 {
 	ShaderFog fog = GetWeather().fog;
-	float fogDensity = saturate((distance - fog.start) / (fog.end - fog.start));
-
+	
+	float startDistanceFalloff = saturate((distance - fog.start) / fog.start);
+	startDistanceFalloff *= rcp(GetWeather().fog.end); // Temporary density function
+	
 	if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
 	{
 		float fogFalloffScale = 1.0 / max(0.01, fog.height_end - fog.height_start);
@@ -307,7 +309,7 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 		float exponentialFogDistance = distance - baseHeightFogDistance; // Exclude distance below base height
 		float exponentialHeightLineIntegral = exp(-heightLineFalloff * fogFalloff) * (1.0 - exp(-exponentialFogDistance * effectiveZ * fogFalloff)) / (effectiveZ * fogFalloff);
 		
-		float opticalDepthHeightFog = fogDensity * (baseHeightFogDistance + exponentialHeightLineIntegral);
+		float opticalDepthHeightFog = startDistanceFalloff * (baseHeightFogDistance + exponentialHeightLineIntegral);
 		float transmittanceHeightFog = exp(-opticalDepthHeightFog);
 		
 		float fogAmount = transmittanceHeightFog;
@@ -315,7 +317,13 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 	}
 	else
 	{
-		return fogDensity;
+		// Height fog algorithm (above) reduced with infinity start and end heights:
+		
+		float opticalDepthHeightFog = startDistanceFalloff * distance;
+		float transmittanceHeightFog = exp(-opticalDepthHeightFog);
+		
+		float fogAmount = transmittanceHeightFog;
+		return 1.0 - fogAmount;
 	}
 }
 
