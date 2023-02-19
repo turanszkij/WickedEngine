@@ -154,41 +154,41 @@ struct SurfaceToLight
 
 // These are the functions that will be used by shaders:
 
-float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surfaceToLight)
+float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surface_to_light)
 {
 #ifdef ANISOTROPIC
-	float D = D_GGX_Anisotropic(surface.at, surface.ab, surfaceToLight.TdotH, surfaceToLight.BdotH, surfaceToLight.NdotH);
+	float D = D_GGX_Anisotropic(surface.at, surface.ab, surface_to_light.TdotH, surface_to_light.BdotH, surface_to_light.NdotH);
 	float Vis = V_SmithGGXCorrelated_Anisotropic(surface.at, surface.ab, surface.TdotV, surface.BdotV,
-		surfaceToLight.TdotL, surfaceToLight.BdotL, surface.NdotV, surfaceToLight.NdotL);
+		surface_to_light.TdotL, surface_to_light.BdotL, surface.NdotV, surface_to_light.NdotL);
 #else
-	float D = D_GGX(surface.roughnessBRDF, surfaceToLight.NdotH, surfaceToLight.H);
-	float Vis = V_SmithGGXCorrelated(surface.roughnessBRDF, surface.NdotV, surfaceToLight.NdotL);
+	float D = D_GGX(surface.roughnessBRDF, surface_to_light.NdotH, surface_to_light.H);
+	float Vis = V_SmithGGXCorrelated(surface.roughnessBRDF, surface.NdotV, surface_to_light.NdotL);
 #endif // ANISOTROPIC
 
-	float3 specular = D * Vis * surfaceToLight.F;
+	float3 specular = D * Vis * surface_to_light.F;
 
 #ifdef SHEEN
 	specular *= surface.sheen.albedoScaling;
-	D = D_Charlie(surface.sheen.roughnessBRDF, surfaceToLight.NdotH);
-	Vis = V_Neubelt(surface.NdotV, surfaceToLight.NdotL);
+	D = D_Charlie(surface.sheen.roughnessBRDF, surface_to_light.NdotH);
+	Vis = V_Neubelt(surface.NdotV, surface_to_light.NdotL);
 	specular += D * Vis * surface.sheen.color;
 #endif // SHEEN
 
 #ifdef CLEARCOAT
 	specular *= 1 - surface.clearcoat.F;
-	float NdotH = saturate(dot(surface.clearcoat.N, surfaceToLight.H));
-	D = D_GGX(surface.clearcoat.roughnessBRDF, NdotH, surfaceToLight.H);
-	Vis = V_Kelemen(surfaceToLight.LdotH);
+	float NdotH = saturate(dot(surface.clearcoat.N, surface_to_light.H));
+	D = D_GGX(surface.clearcoat.roughnessBRDF, NdotH, surface_to_light.H);
+	Vis = V_Kelemen(surface_to_light.LdotH);
 	specular += D * Vis * surface.clearcoat.F;
 #endif // CLEARCOAT
 
-	return specular * surfaceToLight.NdotL;
+	return specular * surface_to_light.NdotL;
 }
-float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
+float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surface_to_light)
 {
 	// Note: subsurface scattering will remove Fresnel (F), because otherwise
 	//	there would be artifact on backside where diffuse wraps
-	float3 diffuse = (1 - lerp(surfaceToLight.F, 0, saturate(surface.sss.a)));
+	float3 diffuse = (1 - lerp(surface_to_light.F, 0, saturate(surface.sss.a)));
 
 #ifdef SHEEN
 	diffuse *= surface.sheen.albedoScaling;
@@ -198,7 +198,7 @@ float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 	diffuse *= 1 - surface.clearcoat.F;
 #endif // CLEARCOAT
 
-	return diffuse * surfaceToLight.NdotL_sss;
+	return diffuse * surface_to_light.NdotL_sss;
 }
 
 #endif // WI_BRDF_HF
