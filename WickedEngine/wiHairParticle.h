@@ -31,7 +31,8 @@ namespace wi
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 
-		void CreateRenderData(const wi::scene::MeshComponent& mesh);
+		void CreateFromMesh(const wi::scene::MeshComponent& mesh);
+		void CreateRenderData();
 		void CreateRaytracingRenderData();
 
 		void UpdateCPU(
@@ -78,6 +79,7 @@ namespace wi
 		float randomness = 0.2f;
 		float viewDistance = 200;
 		wi::vector<float> vertex_lengths;
+		wi::vector<uint8_t> vertex_lengths_packed;
 
 		// Sprite sheet properties:
 		uint32_t framesX = 1;

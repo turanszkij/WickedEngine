@@ -45,6 +45,10 @@ namespace wi::renderer
 	const wi::graphics::GPUBuffer* GetConstantBuffer(wi::enums::CBTYPES id);
 	const wi::graphics::Texture* GetTexture(wi::enums::TEXTYPES id);
 
+	// Returns a buffer preinitialized for quad index buffer laid out as:
+	//	vertexID * 4 + [0, 1, 2, 2, 1, 3]
+	const wi::graphics::GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count);
+
 	void ModifyObjectSampler(const wi::graphics::SamplerDesc& desc);
 
 	// Initializes the renderer

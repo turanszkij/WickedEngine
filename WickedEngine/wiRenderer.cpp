@@ -31,6 +31,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <mutex>
 
 using namespace wi::primitive;
 using namespace wi::graphics;
@@ -2243,6 +2244,77 @@ void SetUpStates()
 	samplerDesc.max_anisotropy = 0;
 	samplerDesc.comparison_func = ComparisonFunc::GREATER_EQUAL;
 	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_CMP_DEPTH]);
+}
+
+const GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count)
+{
+	const size_t required_index_count = max_quad_count * 6;
+	const size_t required_max_index = max_quad_count * 4;
+
+	static std::mutex locker;
+	std::scoped_lock lock(locker);
+
+	if (required_max_index < 65536)
+	{
+		static GPUBuffer indexBufferForQuads16;
+		if (!indexBufferForQuads16.IsValid() || indexBufferForQuads16.desc.size / indexBufferForQuads16.desc.stride < required_index_count)
+		{
+			GPUBufferDesc bd;
+			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::INDEX_BUFFER;
+			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+			{
+				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+			}
+			bd.format = Format::R16_UINT;
+			bd.stride = GetFormatStride(bd.format);
+			bd.size = bd.stride * required_index_count;
+			wi::vector<uint16_t> primitiveData(required_index_count);
+			for (uint16_t particleID = 0; particleID < uint16_t(max_quad_count); ++particleID)
+			{
+				uint16_t v0 = particleID * 4;
+				uint32_t i0 = particleID * 6;
+				primitiveData[i0 + 0] = v0 + 0;
+				primitiveData[i0 + 1] = v0 + 1;
+				primitiveData[i0 + 2] = v0 + 2;
+				primitiveData[i0 + 3] = v0 + 2;
+				primitiveData[i0 + 4] = v0 + 1;
+				primitiveData[i0 + 5] = v0 + 3;
+			}
+			device->CreateBuffer(&bd, primitiveData.data(), &indexBufferForQuads16);
+			device->SetName(&indexBufferForQuads16, "wi::renderer::indexBufferForQuads16");
+		}
+		return indexBufferForQuads16;
+	}
+
+	static GPUBuffer indexBufferForQuads32;
+	if (!indexBufferForQuads32.IsValid() || indexBufferForQuads32.desc.size / indexBufferForQuads32.desc.stride < required_index_count)
+	{
+		GPUBufferDesc bd;
+		bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::INDEX_BUFFER;
+		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+		{
+			bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+		}
+		bd.format = Format::R32_UINT;
+		bd.stride = GetFormatStride(bd.format);
+		bd.size = bd.stride * required_index_count;
+		wi::vector<uint32_t> primitiveData(required_index_count);
+		for (uint particleID = 0; particleID < max_quad_count; ++particleID)
+		{
+			uint32_t v0 = particleID * 4;
+			uint32_t i0 = particleID * 6;
+			primitiveData[i0 + 0] = v0 + 0;
+			primitiveData[i0 + 1] = v0 + 1;
+			primitiveData[i0 + 2] = v0 + 2;
+			primitiveData[i0 + 3] = v0 + 2;
+			primitiveData[i0 + 4] = v0 + 1;
+			primitiveData[i0 + 5] = v0 + 3;
+		}
+		device->CreateBuffer(&bd, primitiveData.data(), &indexBufferForQuads32);
+		device->SetName(&indexBufferForQuads32, "wi::renderer::indexBufferForQuads32");
+	}
+
+	return indexBufferForQuads32;
 }
 
 void ModifyObjectSampler(const SamplerDesc& desc)
