@@ -157,6 +157,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 	float3 L;
 	if (light.GetLength() > 0)
 	{
+		// Diffuse representative point on line:
 		const float3 line_point = closest_point_on_segment(
 			light.position - light.GetDirection() * light.GetLength() * 0.5,
 			light.position + light.GetDirection() * light.GetLength() * 0.5,
@@ -209,6 +210,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 
 				if (light.GetLength() > 0)
 				{
+					// Specular representative point on line:
 					float3 P0 = light.position - light.GetDirection() * light.GetLength() * 0.5;
 					float3 P1 = light.position + light.GetDirection() * light.GetLength() * 0.5;
 					float3 L0 = P0 - surface.P;
@@ -225,6 +227,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 				}
 				if(light.GetRadius() > 0)
 				{
+					// Specular representative point on sphere:
 					float3 centerToRay = dot(L, surface.R) * surface.R - L;
 					L += centerToRay * saturate(light.GetRadius() / length(centerToRay));
 				}
@@ -233,13 +236,14 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 					L = normalize(L);
 					surface_to_light.create(surface, L);
 				}
+				if (light.GetRadius() > 0)
+				{
+					// Energy conservation for radius:
+					surface_to_light.F /= max(1, sphere_volume(light.GetRadius()));
+				}
 
 				lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
 
-				if (light.GetRadius() > 0)
-				{
-					lighting.direct.specular /= max(1, sphere_volume(light.GetRadius()));
-				}
 			}
 		}
 	}
@@ -309,20 +313,17 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 
 					if (light.GetRadius() > 0)
 					{
-						light_color /= max(1, 4 * PI * light.GetRadius() * light.GetRadius());
+						// Specular representative point on sphere:
 						L = light.position - surface.P;
 						float3 centerToRay = dot(L, surface.R) * surface.R - L;
 						L += centerToRay * saturate(light.GetRadius() / length(centerToRay));
 						L = normalize(L);
 						surface_to_light.create(surface, L);
+						// Energy conservation for radius:
+						surface_to_light.F /= max(1, sphere_volume(light.GetRadius()));
 					}
 
 					lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
-
-					if (light.GetRadius() > 0)
-					{
-						lighting.direct.specular /= max(1, sphere_volume(light.GetRadius()));
-					}
 				}
 			}
 		}
