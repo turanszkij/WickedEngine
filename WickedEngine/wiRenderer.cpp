@@ -12850,6 +12850,8 @@ void Postprocess_DepthOfField(
 	device->EventBegin("Postprocess_DepthOfField", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Depth of Field", cmd);
 
+	device->ClearUAV(&res.buffer_tile_statistics, 0, cmd);
+
 	const TextureDesc& desc = output.GetDesc();
 
 	PostProcess postprocess;
@@ -13299,6 +13301,8 @@ void Postprocess_MotionBlur(
 	auto range = wi::profiler::BeginRangeGPU("MotionBlur", cmd);
 
 	const TextureDesc& desc = output.GetDesc();
+
+	device->ClearUAV(&res.buffer_tile_statistics, 0, cmd);
 
 	PostProcess postprocess;
 	postprocess.resolution.x = desc.width;
