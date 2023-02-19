@@ -238,7 +238,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 
 				if (light.GetRadius() > 0)
 				{
-					lighting.direct.specular /= max(1, 4 * PI * light.GetRadius() * light.GetRadius());
+					lighting.direct.specular /= max(1, sphere_volume(light.GetRadius()));
 				}
 			}
 		}
@@ -321,7 +321,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 
 					if (light.GetRadius() > 0)
 					{
-						lighting.direct.specular /= max(1, 4 * PI * light.GetRadius() * light.GetRadius());
+						lighting.direct.specular /= max(1, sphere_volume(light.GetRadius()));
 					}
 				}
 			}

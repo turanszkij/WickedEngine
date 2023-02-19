@@ -1039,6 +1039,15 @@ inline float dither(in float2 pixel)
 }
 
 
+inline float sphere_surface_area(in float radius)
+{
+	return 4 * PI * radius * radius;
+}
+inline float sphere_volume(in float radius)
+{
+	return 4.0 / 3.0 * PI * radius * radius * radius;
+}
+
 
 float plane_point_distance(float3 planeOrigin, float3 planeNormal, float3 P)
 {
