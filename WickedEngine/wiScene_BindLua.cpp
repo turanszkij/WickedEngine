@@ -5075,7 +5075,7 @@ Luna<WeatherComponent_BindLua>::PropertyType WeatherComponent_BindLua::propertie
 	lunaproperty(WeatherComponent_BindLua, zenith),
 	lunaproperty(WeatherComponent_BindLua, ambient),
 	lunaproperty(WeatherComponent_BindLua, fogStart),
-	lunaproperty(WeatherComponent_BindLua, fogEnd),
+	lunaproperty(WeatherComponent_BindLua, fogDensity),
 	lunaproperty(WeatherComponent_BindLua, fogHeightStart),
 	lunaproperty(WeatherComponent_BindLua, fogHeightEnd),
 	lunaproperty(WeatherComponent_BindLua, fogHeightSky),

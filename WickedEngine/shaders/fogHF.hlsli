@@ -16,7 +16,7 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 	ShaderFog fog = GetWeather().fog;
 	
 	float startDistanceFalloff = saturate((distance - fog.start) / fog.start);
-	startDistanceFalloff *= rcp(GetWeather().fog.end); // Temporary density function
+	startDistanceFalloff *= fog.density;
 	
 	if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
 	{

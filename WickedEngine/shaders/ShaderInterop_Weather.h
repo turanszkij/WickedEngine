@@ -322,7 +322,7 @@ struct VolumetricCloudParameters
 struct ShaderFog
 {
 	float start;
-	float end;
+	float density;
 	float height_start;
 	float height_end;
 };
