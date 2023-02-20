@@ -144,7 +144,7 @@ namespace wi
 		device->CreateBuffer(&bd, nullptr, &constantBuffer);
 		device->SetName(&constantBuffer, "HairParticleSystem::constantBuffer");
 
-		if (!vertex_lengths.empty())
+		if (!vertex_lengths_packed.empty())
 		{
 			bd.misc_flags = ResourceMiscFlag::NONE;
 			bd.bind_flags = BindFlag::SHADER_RESOURCE;
@@ -465,6 +465,12 @@ namespace wi
 			{
 				uint8_t shadingRate;
 				archive >> shadingRate; // no longer needed
+			}
+
+			vertex_lengths_packed.resize(vertex_lengths.size());
+			for (size_t i = 0; i < vertex_lengths.size(); ++i)
+			{
+				vertex_lengths_packed[i] = uint8_t(wi::math::Clamp(vertex_lengths[i], 0, 1) * 255.0f);
 			}
 		}
 		else
