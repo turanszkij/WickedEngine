@@ -1,6 +1,7 @@
 #define DISABLE_SOFT_SHADOWMAP
 #define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK // fix the lack of depth testing
 #include "volumetricLightHF.hlsli"
+#include "fogHF.hlsli"
 
 float4 main(VertexToPixel input) : SV_TARGET
 {

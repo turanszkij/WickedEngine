@@ -1,6 +1,7 @@
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "skyHF.hlsli"
+#include "fogHF.hlsli"
 
 ConstantBuffer<ShaderTypeBin> bin : register(b10);
 StructuredBuffer<VisibilityTile> binned_tiles : register(t0);
@@ -41,9 +42,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		// Apply height fog on sky
 		if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
 		{
-			// Layer fog on top of color
-			float4 fog = GetFog(FLT_MAX, GetCamera().position, ray.Direction);
-			envColor = (1.0 - fog.a) * envColor + fog.rgb;
+			ApplyFogSky(GetCamera().position, ray.Direction, envColor);
 		}
 	}
 

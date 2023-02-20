@@ -5,6 +5,7 @@
 #include "objectHF.hlsli"
 #include "lightingHF.hlsli"
 #include "skyHF.hlsli"
+#include "fogHF.hlsli"
 
 float4 main(PixelInput input) : SV_TARGET
 {
@@ -18,9 +19,7 @@ float4 main(PixelInput input) : SV_TARGET
 	// Apply height fog on sky
 	if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
 	{
-		// Layer fog on top of color
-		float4 fog = GetFog(FLT_MAX, GetCamera().position, normal);
-		color.rgb = (1.0 - fog.a) * color.rgb + fog.rgb;
+		ApplyFogSky(GetCamera().position, normal, color.rgb);
 	}
 	
 	color = clamp(color, 0, 65000);

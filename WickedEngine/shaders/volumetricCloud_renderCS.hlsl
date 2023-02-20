@@ -4,7 +4,7 @@
 #include "volumetricCloudsHF.hlsli"
 #include "skyAtmosphere.hlsli"
 #include "lightingHF.hlsli"
-#include "objectHF.hlsli"
+#include "fogHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
 /**

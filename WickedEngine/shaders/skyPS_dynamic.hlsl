@@ -2,6 +2,7 @@
 #define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 #include "objectHF.hlsli"
 #include "skyHF.hlsli"
+#include "fogHF.hlsli"
 
 #define G_SCATTERING 0.66
 float ComputeScattering(float lightDotView)
@@ -28,10 +29,7 @@ float4 main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD) : SV_TARGET
 	// Apply height fog on sky
 	if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
 	{	
-		// Layer fog on top of color
-		float3 O = GetCamera().position + V * GetWeather().fog.start;
-		float4 fog = GetFog(FLT_MAX, O, V);
-		color.rgb = (1.0 - fog.a) * color.rgb + fog.rgb;
+		ApplyFogSky(GetCamera().position, V, color.rgb);
 	}
 	
 	color = clamp(color, 0, 65000);
