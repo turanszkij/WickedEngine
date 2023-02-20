@@ -11753,6 +11753,8 @@ void Postprocess_SSR(
 
 	BindCommonResources(cmd);
 
+	device->ClearUAV(&res.buffer_tile_tracing_statistics, 0, cmd);
+
 	PostProcess postprocess;
 	ssr_roughness_cutoff = roughnessCutoff;
 	ssr_frame = (float)res.frame;

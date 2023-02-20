@@ -203,8 +203,8 @@ namespace wi::scene
 		struct TextureMap
 		{
 			std::string name;
-			uint32_t uvset = 0;
 			wi::Resource resource;
+			uint32_t uvset = 0;
 			const wi::graphics::GPUResource* GetGPUResource() const
 			{
 				if (!resource.IsValid() || !resource.GetTexture().IsValid())
