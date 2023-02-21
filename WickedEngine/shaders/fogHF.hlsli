@@ -16,7 +16,6 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 	ShaderFog fog = GetWeather().fog;
 	
 	float startDistanceFalloff = saturate((distance - fog.start) / fog.start);
-	startDistanceFalloff *= fog.density;
 	
 	if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
 	{
@@ -38,7 +37,7 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 		float exponentialFogDistance = distance - baseHeightFogDistance; // Exclude distance below base height
 		float exponentialHeightLineIntegral = exp(-heightLineFalloff * fogFalloff) * (1.0 - exp(-exponentialFogDistance * effectiveZ * fogFalloff)) / (effectiveZ * fogFalloff);
 		
-		float opticalDepthHeightFog = startDistanceFalloff * (baseHeightFogDistance + exponentialHeightLineIntegral);
+		float opticalDepthHeightFog = fog.density * startDistanceFalloff * (baseHeightFogDistance + exponentialHeightLineIntegral);
 		float transmittanceHeightFog = exp(-opticalDepthHeightFog);
 		
 		float fogAmount = transmittanceHeightFog;
@@ -48,7 +47,7 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 	{
 		// Height fog algorithm (above) reduced with infinity start and end heights:
 		
-		float opticalDepthHeightFog = startDistanceFalloff * distance;
+		float opticalDepthHeightFog = fog.density * startDistanceFalloff * distance;
 		float transmittanceHeightFog = exp(-opticalDepthHeightFog);
 		
 		float fogAmount = transmittanceHeightFog;
