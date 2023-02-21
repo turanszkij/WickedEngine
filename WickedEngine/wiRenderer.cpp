@@ -28,6 +28,8 @@
 #include "shaders/ShaderInterop_DDGI.h"
 #include "shaders/ShaderInterop_VXGI.h"
 #include "shaders/ShaderInterop_FSR2.h"
+#include "shaders/uvsphere.hlsli"
+#include "shaders/cone.hlsli"
 
 #include <algorithm>
 #include <atomic>
@@ -128,6 +130,9 @@ wi::vector<PaintRadius> paintrads;
 
 wi::SpinLock deferredMIPGenLock;
 wi::vector<std::pair<Texture, bool>> deferredMIPGens;
+
+static const uint32_t vertexCount_uvsphere = arraysize(UVSPHERE);
+static const uint32_t vertexCount_cone = arraysize(CONE);
 
 
 bool volumetric_clouds_precomputed = false;
@@ -779,6 +784,11 @@ void LoadShaders()
 		LoadShader(ShaderStage::VS, shaders[VSTYPE_RENDERLIGHTMAP], "renderlightmapVS.cso");
 		});
 
+	inputLayouts[ILTYPE_POSITION].elements =
+	{
+		{ "POSITION", 0, Format::R32G32B32A32_FLOAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, InputClassification::PER_VERTEX_DATA },
+	};
+
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_COMMON_TESSELLATION], "objectVS_common_tessellation.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_PREPASS_TESSELLATION], "objectVS_prepass_tessellation.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_PREPASS_ALPHATEST_TESSELLATION], "objectVS_prepass_alphatest_tessellation.cso"); });
@@ -1287,6 +1297,7 @@ void LoadShaders()
 				desc.bs = &blendStates[BSTYPE_ADDITIVE];
 				desc.vs = &shaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT];
 				desc.rs = &rasterizers[RSTYPE_FRONT];
+				desc.il = &inputLayouts[ILTYPE_POSITION];
 				break;
 			case LightComponent::SPOT:
 				desc.bs = &blendStates[BSTYPE_ADDITIVE];
@@ -3837,6 +3848,9 @@ void UpdateRenderData(
 			shaderentity.SetType(light.GetType());
 			shaderentity.position = light.position;
 			shaderentity.SetRange(light.GetRange());
+			shaderentity.SetRadius(light.radius);
+			shaderentity.SetLength(light.length);
+			shaderentity.SetDirection(light.direction);
 			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
 
 			// mark as no shadow by default:
@@ -3857,7 +3871,6 @@ void UpdateRenderData(
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				shaderentity.SetDirection(light.direction);
 				shaderentity.SetShadowCascadeCount((uint)light.cascade_distances.size());
 
 				if (shadow && !light.cascade_distances.empty())
@@ -3899,7 +3912,6 @@ void UpdateRenderData(
 				shaderentity.SetConeAngleCos(outerConeAngleCos);
 				shaderentity.SetAngleScale(lightAngleScale);
 				shaderentity.SetAngleOffset(lightAngleOffset);
-				shaderentity.SetDirection(light.direction);
 
 				if (shadow)
 				{
@@ -4796,23 +4808,148 @@ void DrawLightVisualizers(
 
 				if (light.GetType() == type && light.IsVisualizerEnabled())
 				{
-
 					VolumeLightCB lcb;
 					lcb.xLightColor = XMFLOAT4(light.color.x, light.color.y, light.color.z, 1);
 					lcb.xLightEnerdis = XMFLOAT4(light.intensity, light.GetRange(), light.outerConeAngle, light.intensity);
 
 					if (type == LightComponent::POINT)
 					{
+						const float sphere_volume = std::max(1.0f, wi::math::SphereVolume(light.radius));
+						lcb.xLightColor.x *= light.intensity / sphere_volume;
+						lcb.xLightColor.y *= light.intensity / sphere_volume;
+						lcb.xLightColor.z *= light.intensity / sphere_volume;
 						lcb.xLightEnerdis.w = light.GetRange() * 0.025f; // scale
 						XMStoreFloat4x4(&lcb.xLightWorld,
 							XMMatrixScaling(lcb.xLightEnerdis.w, lcb.xLightEnerdis.w, lcb.xLightEnerdis.w)*
 							camrot*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						);
-
 						device->BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
 
-						device->Draw(108, 0, cmd); // circle
+						uint32_t vertexCount = vertexCount_uvsphere;
+						uint32_t segmentCount_cylinder = 32;
+						if (light.length > 0)
+						{
+							vertexCount += segmentCount_cylinder * 2 * 3;
+						}
+						GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(vertexCount * sizeof(float4), cmd);
+						float4* dst = (float4*)allocation.data;
+						float rad = std::max(0.025f, light.radius);
+						if (light.length > 0)
+						{
+							// Capsule from two half spheres and an uncapped cylinder:
+							XMMATRIX M =
+								XMMatrixScaling(rad, rad, rad) *
+								XMMatrixTranslation(-light.length * 0.5f, 0, 0) *
+								XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+								XMMatrixTranslation(light.position.x, light.position.y, light.position.z)
+								;
+							for (uint32_t i = 0; i < vertexCount_uvsphere; i += 3)
+							{
+								if (UVSPHERE[i].x <= 0.01f && UVSPHERE[i + 1].x <= 0.01f && UVSPHERE[i + 2].x <= 0.01f)
+								{
+									XMVECTOR pos = XMLoadFloat4(&UVSPHERE[i]);
+									pos = XMVector3Transform(pos, M);
+									XMStoreFloat4(dst, pos);
+									dst++;
+									pos = XMLoadFloat4(&UVSPHERE[i + 1]);
+									pos = XMVector3Transform(pos, M);
+									XMStoreFloat4(dst, pos);
+									dst++;
+									pos = XMLoadFloat4(&UVSPHERE[i + 2]);
+									pos = XMVector3Transform(pos, M);
+									XMStoreFloat4(dst, pos);
+									dst++;
+								}
+							}
+							M =
+								XMMatrixScaling(rad, rad, rad) *
+								XMMatrixTranslation(light.length * 0.5f, 0, 0) *
+								XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+								XMMatrixTranslation(light.position.x, light.position.y, light.position.z)
+								;
+							for (uint32_t i = 0; i < vertexCount_uvsphere; i += 3)
+							{
+								if (UVSPHERE[i].x >= -0.01f && UVSPHERE[i + 1].x >= -0.01f && UVSPHERE[i + 2].x >= -0.01f)
+								{
+									XMVECTOR pos = XMLoadFloat4(&UVSPHERE[i]);
+									pos = XMVector3Transform(pos, M);
+									XMStoreFloat4(dst, pos);
+									dst++;
+									pos = XMLoadFloat4(&UVSPHERE[i + 1]);
+									pos = XMVector3Transform(pos, M);
+									XMStoreFloat4(dst, pos);
+									dst++;
+									pos = XMLoadFloat4(&UVSPHERE[i + 2]);
+									pos = XMVector3Transform(pos, M);
+									XMStoreFloat4(dst, pos);
+									dst++;
+								}
+							}
+							M =
+								XMMatrixScaling(light.length * 0.5f, rad, rad) *
+								XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+								XMMatrixTranslation(light.position.x, light.position.y, light.position.z)
+								;
+							for (uint32_t i = 0; i < segmentCount_cylinder; ++i)
+							{
+								float t1 = float(i) / segmentCount_cylinder * XM_2PI;
+								float t2 = float(i + 1) / segmentCount_cylinder * XM_2PI;
+								XMVECTOR pos = XMVectorSet(-1, std::sin(t1), std::cos(t1), 1);
+								pos = XMVector3Transform(pos, M);
+								XMStoreFloat4(dst, pos);
+								dst++;
+								pos = XMVectorSet(1, std::sin(t2), std::cos(t2), 1);
+								pos = XMVector3Transform(pos, M);
+								XMStoreFloat4(dst, pos);
+								dst++;
+								pos = XMVectorSet(1, std::sin(t1), std::cos(t1), 1);
+								pos = XMVector3Transform(pos, M);
+								XMStoreFloat4(dst, pos);
+								dst++;
+								pos = XMVectorSet(-1, std::sin(t1), std::cos(t1), 1);
+								pos = XMVector3Transform(pos, M);
+								XMStoreFloat4(dst, pos);
+								dst++;
+								pos = XMVectorSet(-1, std::sin(t2), std::cos(t2), 1);
+								pos = XMVector3Transform(pos, M);
+								XMStoreFloat4(dst, pos);
+								dst++;
+								pos = XMVectorSet(1, std::sin(t2), std::cos(t2), 1);
+								pos = XMVector3Transform(pos, M);
+								XMStoreFloat4(dst, pos);
+								dst++;
+							}
+						}
+						else
+						{
+							// Sphere:
+							XMMATRIX M =
+								XMMatrixScaling(rad, rad, rad) *
+								XMMatrixTranslation(-light.length * 0.5f, 0, 0) *
+								XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+								XMMatrixTranslation(light.position.x, light.position.y, light.position.z)
+								;
+							for (uint32_t i = 0; i < vertexCount_uvsphere; ++i)
+							{
+								XMVECTOR pos = XMLoadFloat4(&UVSPHERE[i]);
+								pos = XMVector3Transform(pos, M);
+								XMStoreFloat4(dst, pos);
+								dst++;
+							}
+						}
+						const GPUBuffer* vbs[] = {
+							&allocation.buffer,
+						};
+						const uint32_t strides[] = {
+							sizeof(float4),
+						};
+						const uint64_t offsets[] = {
+							allocation.offset,
+						};
+						device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+						device->Draw(vertexCount, 0, cmd);
 					}
 					else if (type == LightComponent::SPOT)
 					{
@@ -4828,7 +4965,7 @@ void DrawLightVisualizers(
 
 							device->BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
 
-							device->Draw(192, 0, cmd); // cone
+							device->Draw(vertexCount_cone, 0, cmd);
 						}
 
 						float coneS = (float)(light.outerConeAngle * 2 / XM_PIDIV4);
@@ -4841,7 +4978,7 @@ void DrawLightVisualizers(
 
 						device->BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
 
-						device->Draw(192, 0, cmd); // cone
+						device->Draw(vertexCount_cone, 0, cmd);
 					}
 				}
 			}
@@ -6275,7 +6412,7 @@ void DrawDebugWorld(
 				device->BindResource(&scene.envmapArray, 0, cmd, scene.envmapArray.GetDesc().mip_levels + probe.textureIndex);
 			}
 
-			device->Draw(2880, 0, cmd); // uv-sphere
+			device->Draw(vertexCount_uvsphere, 0, cmd);
 		}
 
 

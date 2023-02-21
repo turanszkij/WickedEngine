@@ -412,6 +412,7 @@ namespace wi::enums
 		ILTYPE_OBJECT_DEBUG,
 		ILTYPE_RENDERLIGHTMAP,
 		ILTYPE_VERTEXCOLOR,
+		ILTYPE_POSITION,
 		ILTYPE_COUNT
 	};
 	// rasterizer states

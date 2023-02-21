@@ -213,6 +213,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				dist = FLT_MAX;
 
 				L = light.GetDirection().xyz;
+				L += sample_hemisphere_cos(L, rng) * light.GetRadius();
 
 				surfaceToLight.create(surface, L);
 
@@ -231,6 +232,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
 			{
+				light.position += sample_hemisphere_cos(normalize(light.position - surface.P), rng) * light.GetRadius();
+				light.position += light.GetDirection() * (rng.next_float() - 0.5) * light.GetLength();
 				L = light.position - surface.P;
 				const float dist2 = dot(L, L);
 				const float range = light.GetRange();
@@ -255,6 +258,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			break;
 			case ENTITY_TYPE_SPOTLIGHT:
 			{
+				float3 Loriginal = normalize(light.position - surface.P);
+				light.position += sample_hemisphere_cos(normalize(light.position - surface.P), rng) * light.GetRadius();
 				L = light.position - surface.P;
 				const float dist2 = dot(L, L);
 				const float range = light.GetRange();
@@ -271,7 +276,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					[branch]
 					if (any(surfaceToLight.NdotL_sss))
 					{
-						const float spot_factor = dot(L, light.GetDirection());
+						const float spot_factor = dot(Loriginal, light.GetDirection());
 						const float spot_cutoff = light.GetConeAngleCos();
 
 						[branch]
@@ -292,9 +297,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 				RayDesc newRay;
 				newRay.Origin = surface.P;
-				newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, rng), 0.025 + max3(surface.sss)));
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
+				newRay.Direction = L + max3(surface.sss);
 
 #ifdef RTAPI
 
@@ -338,8 +343,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				if (any(shadow))
 				{
 					lightColor *= shadow;
-					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 					result += light_count * mad(surface.albedo / PI * (1 - surface.transmission), lighting.direct.diffuse, lighting.direct.specular) * surface.opacity;
 				}
 			}

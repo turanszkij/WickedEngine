@@ -155,6 +155,20 @@ inline float attenuation_pointlight(in float dist, in float dist2, in float rang
 inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
 {
 	float3 L = light.position - surface.P;
+
+#ifndef DISABLE_AREA_LIGHTS
+	if (light.GetLength() > 0)
+	{
+		// Diffuse representative point on line:
+		const float3 line_point = closest_point_on_segment(
+			light.position - light.GetDirection() * light.GetLength() * 0.5,
+			light.position + light.GetDirection() * light.GetLength() * 0.5,
+			surface.P
+		);
+		L = line_point - surface.P;
+	}
+#endif // DISABLE_AREA_LIGHTS
+
 	const float dist2 = dot(L, L);
 	const float range = light.GetRange();
 	const float range2 = range * range;
@@ -162,7 +176,6 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 	[branch]
 	if (dist2 < range2)
 	{
-		const float3 Lunnormalized = L;
 		const float dist = sqrt(dist2);
 		L /= dist;
 
@@ -182,7 +195,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 				if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0)
 #endif // SHADOW_MASK_ENABLED
 				{
-					shadow *= shadow_cube(light, Lunnormalized);
+					shadow *= shadow_cube(light, light.position - surface.P);
 				}
 			}
 
@@ -193,7 +206,42 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 				light_color *= attenuation_pointlight(dist, dist2, range, range2);
 
 				lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
+
+#ifndef DISABLE_AREA_LIGHTS
+				if (light.GetLength() > 0)
+				{
+					// Specular representative point on line:
+					float3 P0 = light.position - light.GetDirection() * light.GetLength() * 0.5;
+					float3 P1 = light.position + light.GetDirection() * light.GetLength() * 0.5;
+					float3 L0 = P0 - surface.P;
+					float3 L1 = P1 - surface.P;
+					float3 Ld = L1 - L0;
+					float RdotLd = dot(surface.R, Ld);
+					float t = dot(surface.R, L0) * RdotLd - dot(L0, Ld);
+					t /= dot(Ld, Ld) - RdotLd * RdotLd;
+					L = (L0 + saturate(t) * Ld);
+				}
+				else
+				{
+					L = light.position - surface.P;
+				}
+				if(light.GetRadius() > 0)
+				{
+					// Specular representative point on sphere:
+					float3 centerToRay = mad(dot(L, surface.R), surface.R, -L);
+					L = mad(centerToRay, saturate(light.GetRadius() / length(centerToRay)), L);
+					// Energy conservation for radius:
+					light_color /= max(1, sphere_volume(light.GetRadius()));
+				}
+				if (light.GetLength() > 0 || light.GetRadius() > 0)
+				{
+					L = normalize(L);
+					surface_to_light.create(surface, L); // recompute all surface-light vectors
+				}
+#endif // DISABLE_AREA_LIGHTS
+
 				lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
+
 			}
 		}
 	}
@@ -260,6 +308,21 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 					light_color *= attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 
 					lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
+
+#ifndef DISABLE_AREA_LIGHTS
+					if (light.GetRadius() > 0)
+					{
+						// Specular representative point on sphere:
+						L = light.position - surface.P;
+						float3 centerToRay = mad(dot(L, surface.R), surface.R, -L);
+						L = mad(centerToRay, saturate(light.GetRadius() / length(centerToRay)), L);
+						L = normalize(L);
+						surface_to_light.create(surface, L); // recompute all surface-light vectors
+						// Energy conservation for radius:
+						light_color /= max(1, sphere_volume(light.GetRadius()));
+					}
+#endif // DISABLE_AREA_LIGHTS
+
 					lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
 				}
 			}

@@ -82,6 +82,34 @@ void LightWindow::Create(EditorComponent* _editor)
 	rangeSlider.SetTooltip("Adjust the maximum range the light can affect.");
 	AddWidget(&rangeSlider);
 
+	radiusSlider.Create(0, 10, 0, 100000, "Radius: ");
+	radiusSlider.SetSize(XMFLOAT2(wid, hei));
+	radiusSlider.SetPos(XMFLOAT2(x, y += step));
+	radiusSlider.OnSlide([&](wi::gui::EventArgs args) {
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->radius = args.fValue;
+		}
+		});
+	radiusSlider.SetEnabled(false);
+	radiusSlider.SetTooltip("[Experimental] Adjust the radius of the light source.\nFor directional light, this will only affect ray traced shadow softness.");
+	AddWidget(&radiusSlider);
+
+	lengthSlider.Create(0, 10, 0, 100000, "Length: ");
+	lengthSlider.SetSize(XMFLOAT2(wid, hei));
+	lengthSlider.SetPos(XMFLOAT2(x, y += step));
+	lengthSlider.OnSlide([&](wi::gui::EventArgs args) {
+		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->length = args.fValue;
+		}
+		});
+	lengthSlider.SetEnabled(false);
+	lengthSlider.SetTooltip("[Experimental] Adjust the length of the light source.\nWith this you can make capsule light out of a point light.");
+	AddWidget(&lengthSlider);
+
 	outerConeAngleSlider.Create(0.1f, XM_PIDIV2 - 0.01f, 0, 100000, "Outer Cone Angle: ");
 	outerConeAngleSlider.SetSize(XMFLOAT2(wid, hei));
 	outerConeAngleSlider.SetPos(XMFLOAT2(x, y += step));
@@ -287,6 +315,8 @@ void LightWindow::SetEntity(Entity entity)
 		intensitySlider.SetEnabled(true);
 		intensitySlider.SetValue(light->intensity);
 		rangeSlider.SetValue(light->range);
+		radiusSlider.SetValue(light->radius);
+		lengthSlider.SetValue(light->length);
 		outerConeAngleSlider.SetValue(light->outerConeAngle);
 		innerConeAngleSlider.SetValue(light->innerConeAngle);
 		shadowCheckBox.SetEnabled(true);
@@ -323,6 +353,8 @@ void LightWindow::SetEntity(Entity entity)
 	else
 	{
 		rangeSlider.SetEnabled(false);
+		radiusSlider.SetEnabled(false);
+		lengthSlider.SetEnabled(false);
 		outerConeAngleSlider.SetEnabled(false);
 		innerConeAngleSlider.SetEnabled(false);
 		shadowCheckBox.SetEnabled(false);
@@ -349,6 +381,8 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 		rangeSlider.SetEnabled(false);
 		outerConeAngleSlider.SetEnabled(false);
 		innerConeAngleSlider.SetEnabled(false);
+		radiusSlider.SetRange(0, 1);
+		lengthSlider.SetEnabled(false);
 	}
 	else
 	{
@@ -357,13 +391,17 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 		{
 			outerConeAngleSlider.SetEnabled(true);
 			innerConeAngleSlider.SetEnabled(true);
+			lengthSlider.SetEnabled(false);
 		}
 		else
 		{
 			outerConeAngleSlider.SetEnabled(false);
 			innerConeAngleSlider.SetEnabled(false);
+			lengthSlider.SetEnabled(true);
 		}
+		radiusSlider.SetRange(0, 10);
 	}
+	radiusSlider.SetEnabled(true);
 	RefreshCascades();
 }
 
@@ -476,6 +514,8 @@ void LightWindow::ResizeLayout()
 	add(rangeSlider);
 	add(outerConeAngleSlider);
 	add(innerConeAngleSlider);
+	add(radiusSlider);
+	add(lengthSlider);
 	add_right(shadowCheckBox);
 	add_right(haloCheckBox);
 	add_right(volumetricsCheckBox);

@@ -143,6 +143,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					break;
 					case ENTITY_TYPE_POINTLIGHT:
 					{
+						if (light.GetLength() > 0)
+						{
+							light.position = light.position + light.GetDirection() * (blue_noise(DTid.xy).g - 0.5) * light.GetLength();
+						}
 						L = light.position - surface.P;
 						const float dist2 = dot(L, L);
 						const float range = light.GetRange();
@@ -199,7 +203,23 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						uint seed = 0;
 						float shadow = 0;
 
-						ray.Direction = normalize(lerp(L, mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(L)), 0.025 + max3(surface.sss)));
+						ray.Direction = L;
+						if (light.GetRadius() > 0)
+						{
+							switch (light.GetType())
+							{
+							default:
+							case ENTITY_TYPE_DIRECTIONALLIGHT:
+								ray.Direction += mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(L)) * light.GetRadius();
+								break;
+							case ENTITY_TYPE_POINTLIGHT:
+							case ENTITY_TYPE_SPOTLIGHT:
+								ray.Direction = normalize(light.position + mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(L)) * light.GetRadius() - P);
+								break;
+							}
+						}
+						ray.Direction += max3(surface.sss);
+
 #ifdef RTAPI
 						RayQuery<
 							RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
