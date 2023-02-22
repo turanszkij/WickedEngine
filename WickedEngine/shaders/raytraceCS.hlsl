@@ -232,8 +232,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
 			{
-				light.position += sample_hemisphere_cos(normalize(light.position - surface.P), rng) * light.GetRadius();
 				light.position += light.GetDirection() * (rng.next_float() - 0.5) * light.GetLength();
+				light.position += sample_hemisphere_cos(normalize(light.position - surface.P), rng) * light.GetRadius();
 				L = light.position - surface.P;
 				const float dist2 = dot(L, L);
 				const float range = light.GetRange();

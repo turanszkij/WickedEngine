@@ -151,6 +151,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					dist = FLT_MAX;
 
 					L = light.GetDirection().xyz;
+					L += sample_hemisphere_cos(L, rng) * light.GetRadius();
 					NdotL = saturate(dot(L, surface.N));
 
 					[branch]
@@ -170,6 +171,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				break;
 				case ENTITY_TYPE_POINTLIGHT:
 				{
+					light.position += light.GetDirection() * (rng.next_float() - 0.5) * light.GetLength();
+					light.position += sample_hemisphere_cos(normalize(light.position - surface.P), rng) * light.GetRadius();
 					L = light.position - surface.P;
 					const float dist2 = dot(L, L);
 					const float range = light.GetRange();
@@ -194,6 +197,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				break;
 				case ENTITY_TYPE_SPOTLIGHT:
 				{
+					float3 Loriginal = normalize(light.position - surface.P);
+					light.position += sample_hemisphere_cos(normalize(light.position - surface.P), rng) * light.GetRadius();
 					L = light.position - surface.P;
 					const float dist2 = dot(L, L);
 					const float range = light.GetRange();
@@ -209,7 +214,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 						[branch]
 						if (NdotL > 0)
 						{
-							const float spot_factor = dot(L, light.GetDirection());
+							const float spot_factor = dot(Loriginal, light.GetDirection());
 							const float spot_cutoff = light.GetConeAngleCos();
 
 							[branch]
@@ -233,23 +238,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					newRay.Origin = surface.P;
 					newRay.TMin = 0.001;
 					newRay.TMax = dist;
-
-					newRay.Direction = L;
-					if (light.GetRadius() > 0)
-					{
-						switch (light.GetType())
-						{
-						default:
-						case ENTITY_TYPE_DIRECTIONALLIGHT:
-							newRay.Direction += sample_hemisphere_cos(L, rng) * light.GetRadius();
-							break;
-						case ENTITY_TYPE_POINTLIGHT:
-						case ENTITY_TYPE_SPOTLIGHT:
-							newRay.Direction = normalize(light.position + sample_hemisphere_cos(L, rng) * light.GetRadius() - surface.P);
-							break;
-						}
-					}
-					newRay.Direction += max3(surface.sss);
+					newRay.Direction = L + max3(surface.sss);
 
 #ifdef RTAPI
 					q.TraceRayInline(

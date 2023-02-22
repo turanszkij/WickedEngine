@@ -126,6 +126,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					case ENTITY_TYPE_DIRECTIONALLIGHT:
 					{
 						L = normalize(light.GetDirection());
+						L += mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(L)) * light.GetRadius();
 
 						SurfaceToLight surfaceToLight;
 						surfaceToLight.create(surface, L);
@@ -143,10 +144,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					break;
 					case ENTITY_TYPE_POINTLIGHT:
 					{
-						if (light.GetLength() > 0)
-						{
-							light.position = light.position + light.GetDirection() * (blue_noise(DTid.xy).g - 0.5) * light.GetLength();
-						}
+						light.position += light.GetDirection() * (blue_noise(DTid.xy).g - 0.5) * light.GetLength();
+						light.position += mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(normalize(light.position - surface.P))) * light.GetRadius();
 						L = light.position - surface.P;
 						const float dist2 = dot(L, L);
 						const float range = light.GetRange();
@@ -172,6 +171,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					break;
 					case ENTITY_TYPE_SPOTLIGHT:
 					{
+						float3 Loriginal = normalize(light.position - surface.P);
+						light.position += mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(normalize(light.position - surface.P))) * light.GetRadius();
 						L = light.position - surface.P;
 						const float dist2 = dot(L, L);
 						const float range2 = light.GetRange() * light.GetRange();
@@ -186,7 +187,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							surfaceToLight.create(surface, L);
 
 							[branch]
-							if (any(surfaceToLight.NdotL_sss) && (dot(L, light.GetDirection()) > light.GetConeAngleCos()))
+							if (any(surfaceToLight.NdotL_sss) && (dot(Loriginal, light.GetDirection()) > light.GetConeAngleCos()))
 							{
 								ray.TMax = dist;
 							}
@@ -203,22 +204,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						uint seed = 0;
 						float shadow = 0;
 
-						ray.Direction = L;
-						if (light.GetRadius() > 0)
-						{
-							switch (light.GetType())
-							{
-							default:
-							case ENTITY_TYPE_DIRECTIONALLIGHT:
-								ray.Direction += mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(L)) * light.GetRadius();
-								break;
-							case ENTITY_TYPE_POINTLIGHT:
-							case ENTITY_TYPE_SPOTLIGHT:
-								ray.Direction = normalize(light.position + mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(L)) * light.GetRadius() - P);
-								break;
-							}
-						}
-						ray.Direction += max3(surface.sss);
+						ray.Direction = L + max3(surface.sss);
 
 #ifdef RTAPI
 						RayQuery<
