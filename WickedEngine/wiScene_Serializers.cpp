@@ -1114,6 +1114,10 @@ namespace wi::scene
 			archive >> ambient;
 			archive >> fogStart;
 			archive >> fogDensity;
+			if (seri.GetVersion() < 3)
+			{
+				fogDensity = (1.0f / fogDensity) * 7.0f; // Convert fogEnd to density with arbitrary constant
+			}
 			if (archive.GetVersion() < 86)
 			{
 				float fogHeightSky;
