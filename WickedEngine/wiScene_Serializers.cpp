@@ -825,6 +825,11 @@ namespace wi::scene
 			{
 				archive >> cascade_distances;
 			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> radius;
+				archive >> length;
+			}
 
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				lensFlareRimTextures.resize(lensFlareNames.size());
@@ -881,6 +886,11 @@ namespace wi::scene
 			if (seri.GetVersion() >= 1)
 			{
 				archive << cascade_distances;
+			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive << radius;
+				archive << length;
 			}
 		}
 	}

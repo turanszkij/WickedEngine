@@ -203,8 +203,8 @@ namespace wi::scene
 		struct TextureMap
 		{
 			std::string name;
-			uint32_t uvset = 0;
 			wi::Resource resource;
+			uint32_t uvset = 0;
 			const wi::graphics::GPUResource* GetGPUResource() const
 			{
 				if (!resource.IsValid() || !resource.GetTexture().IsValid())
@@ -852,6 +852,8 @@ namespace wi::scene
 		float range = 10.0f;
 		float outerConeAngle = XM_PIDIV4;
 		float innerConeAngle = 0; // default value is 0, means only outer cone angle is used
+		float radius = 0.025f;
+		float length = 0;
 
 		wi::vector<float> cascade_distances = { 8,80,800 };
 		wi::vector<std::string> lensFlareNames;

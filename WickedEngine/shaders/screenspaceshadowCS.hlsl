@@ -51,7 +51,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	surface.P = P;
 	surface.N = N;
 
-	const float2 bluenoise = blue_noise(DTid.xy).xy;
+	const float4 bluenoise = blue_noise(DTid.xy);
 
 	const uint2 tileIndex = uint2(floor(DTid.xy * 2 / TILED_CULLING_BLOCKSIZE));
 	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
@@ -127,6 +127,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					{
 						L = normalize(light.GetDirection());
 
+#ifdef RTSHADOW
+						L += mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(L)) * light.GetRadius();
+#endif // RTSHADOW
+
 						SurfaceToLight surfaceToLight;
 						surfaceToLight.create(surface, L);
 
@@ -143,6 +147,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					break;
 					case ENTITY_TYPE_POINTLIGHT:
 					{
+#ifdef RTSHADOW
+						light.position += light.GetDirection() * (bluenoise.z - 0.5) * light.GetLength();
+						light.position += mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(normalize(light.position - surface.P))) * light.GetRadius();
+#endif // RTSHADOW
 						L = light.position - surface.P;
 						const float dist2 = dot(L, L);
 						const float range = light.GetRange();
@@ -168,6 +176,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					break;
 					case ENTITY_TYPE_SPOTLIGHT:
 					{
+						float3 Loriginal = normalize(light.position - surface.P);
+#ifdef RTSHADOW
+						light.position += mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(normalize(light.position - surface.P))) * light.GetRadius();
+#endif // RTSHADOW
 						L = light.position - surface.P;
 						const float dist2 = dot(L, L);
 						const float range2 = light.GetRange() * light.GetRange();
@@ -182,7 +194,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							surfaceToLight.create(surface, L);
 
 							[branch]
-							if (any(surfaceToLight.NdotL_sss) && (dot(L, light.GetDirection()) > light.GetConeAngleCos()))
+							if (any(surfaceToLight.NdotL_sss) && (dot(Loriginal, light.GetDirection()) > light.GetConeAngleCos()))
 							{
 								ray.TMax = dist;
 							}
@@ -199,7 +211,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						uint seed = 0;
 						float shadow = 0;
 
-						ray.Direction = normalize(lerp(L, mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(L)), 0.025 + max3(surface.sss)));
+						ray.Direction = L + max3(surface.sss);
+
 #ifdef RTAPI
 						RayQuery<
 							RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
