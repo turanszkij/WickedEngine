@@ -379,11 +379,11 @@ namespace wi::terrain
 		weather.volumetricCloudParameters.layerSecond.coverageAmount = 0.0f;
 		weather.oceanParameters.waterHeight = -40;
 		weather.oceanParameters.wave_amplitude = 120;
-		weather.fogStart = 300;
-		weather.fogDensity = 0.005f;
+		weather.fogStart = 0;
+		weather.fogDensity = 0.004f;
 		weather.SetHeightFog(true);
 		weather.fogHeightStart = 0;
-		weather.fogHeightEnd = 100;
+		weather.fogHeightEnd = 500;
 		weather.windDirection = XMFLOAT3(0.05f, 0.05f, 0.05f);
 		weather.windSpeed = 4;
 		weather.stars = 0.6f;
