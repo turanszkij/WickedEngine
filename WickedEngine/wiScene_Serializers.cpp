@@ -1126,7 +1126,7 @@ namespace wi::scene
 			archive >> fogDensity;
 			if (seri.GetVersion() < 3)
 			{
-				fogDensity *= 0.0000001f; // convert old fogEnd to new fogDensity
+				fogDensity = (1.0f / fogDensity);
 			}
 			if (archive.GetVersion() < 86)
 			{
