@@ -377,7 +377,7 @@ namespace wi::graphics
 
 		struct AllocationHandler
 		{
-			D3D12MA::Allocator* allocator = nullptr;
+			Microsoft::WRL::ComPtr<D3D12MA::Allocator> allocator;
 			Microsoft::WRL::ComPtr<ID3D12Device> device;
 			uint64_t framecount = 0;
 			std::mutex destroylocker;
@@ -439,7 +439,7 @@ namespace wi::graphics
 			wi::vector<int> free_bindless_res;
 			wi::vector<int> free_bindless_sam;
 
-			std::deque<std::pair<D3D12MA::Allocation*, uint64_t>> destroyer_allocations;
+			std::deque<std::pair<Microsoft::WRL::ComPtr<D3D12MA::Allocation>, uint64_t>> destroyer_allocations;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint64_t>> destroyer_resources;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12QueryHeap>, uint64_t>> destroyer_queryheaps;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
@@ -451,7 +451,6 @@ namespace wi::graphics
 			~AllocationHandler()
 			{
 				Update(~0, 0); // destroy all remaining
-				if (allocator) allocator->Release();
 			}
 
 			// Deferred destroy of resources that the GPU is already finished with:
@@ -463,9 +462,8 @@ namespace wi::graphics
 				{
 					if (destroyer_allocations.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
-						auto item = destroyer_allocations.front();
 						destroyer_allocations.pop_front();
-						item.first->Release();
+						// comptr auto delete
 					}
 					else
 					{
