@@ -26,12 +26,6 @@ float4 main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD) : SV_TARGET
 	// Calculate dynamic sky
 	float4 color = float4(GetDynamicSkyColor(pos.xy, V, true, false, false, highQuality, perPixelNoise, receiveShadow), 1);
 
-	// Apply height fog on sky
-	if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
-	{	
-		ApplyFogSky(GetCamera().position, V, color.rgb);
-	}
-	
 	color = clamp(color, 0, 65000);
 	return color;
 }

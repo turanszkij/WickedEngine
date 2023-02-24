@@ -38,12 +38,6 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 		// Shadows disabled due to parallel computation along shadowmap rendering
 		envColor = GetDynamicSkyColor(pixel, ray.Direction, true, false, false, highQuality, perPixelNoise, false);
-
-		// Apply height fog on sky
-		if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
-		{
-			ApplyFogSky(GetCamera().position, ray.Direction, envColor);
-		}
 	}
 
 	output[pixel] = float4(envColor, 1);

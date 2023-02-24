@@ -98,16 +98,5 @@ inline float4 GetFog(float distance, float3 O, float3 V)
 	return float4(fogColor, fogAmount);
 }
 
-// Apply fog on sky where distance to skybox is infinite
-void ApplyFogSky(float3 O, float3 V, inout float3 color)
-{
-	// Offset origin with fog start value.
-	// We can't do this with normal distance due to infinite distance.
-	const float3 offsetO = O + V * GetWeather().fog.start;
-	
-	const float4 fog = GetFog(FLT_MAX, offsetO, V);
-	color = (1.0 - fog.a) * color + fog.rgb;
-}
-
 
 #endif // WI_FOG_HF

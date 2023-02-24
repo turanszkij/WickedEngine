@@ -2,6 +2,7 @@
 #define WI_SKY_HF
 #include "globals.hlsli"
 #include "skyAtmosphere.hlsli"
+#include "fogHF.hlsli"
 
 // Custom Atmosphere based on: https://www.shadertoy.com/view/Ml2cWG
 // Cloud noise based on: https://www.shadertoy.com/view/4tdSWr
@@ -84,6 +85,19 @@ float3 AccurateAtmosphericScattering(float2 pixelPosition, float3 rayOrigin, flo
     {
         totalColor = max(pow(saturate(dot(sunDirection, rayDirection)), 64) * sunColor, 0) * luminance * 1.0;
     }
+
+	if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
+	{
+		// Offset origin with fog start value.
+		// We can't do this with normal distance due to infinite distance.
+		const float3 offsetO = rayOrigin + rayDirection * GetWeather().fog.start;
+
+		float dist = RaySphereIntersectNearest(worldPosition, rayDirection, float3(0.0f, 0.0f, 0.0f), atmosphere.topRadius);
+		dist *= SKY_UNIT_TO_M;
+
+		const float4 fog = GetFog(dist, offsetO, rayDirection);
+		totalColor = (1.0 - fog.a) * totalColor + fog.rgb;
+	}
 
     return totalColor;
 }
