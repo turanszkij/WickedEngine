@@ -380,7 +380,7 @@ namespace wi::terrain
 		weather.oceanParameters.waterHeight = -40;
 		weather.oceanParameters.wave_amplitude = 120;
 		weather.fogStart = 0;
-		weather.fogDensity = 0.004f;
+		weather.fogDensity = 0.001f;
 		weather.SetHeightFog(true);
 		weather.fogHeightStart = 0;
 		weather.fogHeightEnd = 500;
