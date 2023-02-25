@@ -86,13 +86,29 @@ float3 AccurateAtmosphericScattering(float2 pixelPosition, float3 rayOrigin, flo
         totalColor = max(pow(saturate(dot(sunDirection, rayDirection)), 64) * sunColor, 0) * luminance * 1.0;
     }
 
-	if ((GetFrame().options & OPTION_BIT_HEIGHT_FOG) && rayOrigin.y < GetWeather().fog.height_end)
+	if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
 	{
-		// Offset origin with fog start value.
-		// We can't do this with normal distance due to infinite distance.
-		const float3 offsetO = rayOrigin + rayDirection * GetWeather().fog.start;
-		float4 fog = GetFog(FLT_MAX, offsetO, rayDirection);
-		totalColor = (1.0 - fog.a) * totalColor + fog.rgb;
+		const float3 planet_center = atmosphere.planetCenter * SKY_UNIT_TO_M;
+		const float bottom_radius = atmosphere.bottomRadius * SKY_UNIT_TO_M;
+		const float top_radius = bottom_radius + GetWeather().fog.height_end;
+		float dist = RaySphereIntersectNearest(rayOrigin, rayDirection, planet_center, top_radius);
+
+		if(dist >= 0)
+		{
+			// Offset origin with fog start value.
+			// We can't do this with normal distance due to infinite distance.
+			const float3 offsetO = rayOrigin + rayDirection * GetWeather().fog.start;
+			float4 fog = GetFog(dist, offsetO, rayDirection);
+			if (fog.a > 0) // this check avoids switching to fully fogged above fog level camera at zero density
+			{
+				if (length(rayOrigin - planet_center) > top_radius) // check if we are above fog height sphere
+				{
+					// hack: flip fog when camera is above
+					fog.a = 1 - fog.a; // this only supports non-premultiplied fog
+				}
+				totalColor = lerp(totalColor, fog.rgb, fog.a); // non-premultiplied fog
+			}
+		}
 	}
 
     return totalColor;

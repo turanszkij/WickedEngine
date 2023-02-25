@@ -702,7 +702,8 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 	{
 		// Layer fog on top of luminance
 		float4 fog = GetFog(tDepth, rayOrigin, rayDirection);
-		luminance = (1.0 - fog.a) * luminance + fog.rgb * (1.0 - approxTransmittance);
+		//luminance = (1.0 - fog.a) * luminance + fog.rgb * (1.0 - approxTransmittance); // premultilpied fog
+		luminance = lerp(luminance, fog.rgb * (1.0 - approxTransmittance), fog.a); // non-premultiplied fog
 	}
 
 	float4 color = float4(luminance, 1.0 - grayScaleTransmittance);

@@ -92,10 +92,7 @@ inline float4 GetFog(float distance, float3 O, float3 V)
 		fogColor += inscatteringColor;
 	}
 	
-	const float fogAmount = GetFogAmount(distance, O, V);
-	fogColor.rgb *= fogAmount;
-	
-	return float4(fogColor, fogAmount);
+	return float4(fogColor, GetFogAmount(distance, O, V));
 }
 
 

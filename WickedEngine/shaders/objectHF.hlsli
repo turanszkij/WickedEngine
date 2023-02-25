@@ -906,7 +906,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 inline void ApplyFog(in float distance, float3 V, inout float4 color)
 {
 	const float4 fog = GetFog(distance, GetCamera().position, -V);
-	color.rgb = (1.0 - fog.a) * color.rgb + fog.rgb;
+	//color.rgb = (1.0 - fog.a) * color.rgb + fog.rgb; // premultiplied fog
+	color.rgb = lerp(color.rgb, fog.rgb, fog.a); // non-premultiplied fog
 }
 
 inline void ApplyAerialPerspective(float2 uv, float3 P, inout float4 color)
