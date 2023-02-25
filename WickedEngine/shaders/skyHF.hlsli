@@ -86,16 +86,12 @@ float3 AccurateAtmosphericScattering(float2 pixelPosition, float3 rayOrigin, flo
         totalColor = max(pow(saturate(dot(sunDirection, rayDirection)), 64) * sunColor, 0) * luminance * 1.0;
     }
 
-	if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
+	if ((GetFrame().options & OPTION_BIT_HEIGHT_FOG) && rayOrigin.y < GetWeather().fog.height_end)
 	{
 		// Offset origin with fog start value.
 		// We can't do this with normal distance due to infinite distance.
 		const float3 offsetO = rayOrigin + rayDirection * GetWeather().fog.start;
-
-		float dist = RaySphereIntersectNearest(worldPosition, rayDirection, float3(0.0f, 0.0f, 0.0f), atmosphere.topRadius);
-		dist *= SKY_UNIT_TO_M;
-
-		const float4 fog = GetFog(dist, offsetO, rayDirection);
+		float4 fog = GetFog(FLT_MAX, offsetO, rayDirection);
 		totalColor = (1.0 - fog.a) * totalColor + fog.rgb;
 	}
 
