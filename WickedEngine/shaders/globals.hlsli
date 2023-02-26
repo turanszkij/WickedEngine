@@ -126,6 +126,14 @@ inline ShaderMaterial load_material(uint materialIndex)
 {
 	return bindless_buffers[GetScene().materialbuffer].Load<ShaderMaterial>(materialIndex * sizeof(ShaderMaterial));
 }
+uint load_entitytile(uint tileIndex)
+{
+#ifdef TRANSPARENT
+	return bindless_buffers[GetCamera().buffer_entitytiles_transparent_index].Load(tileIndex * sizeof(uint));
+#else
+	return bindless_buffers[GetCamera().buffer_entitytiles_opaque_index].Load(tileIndex * sizeof(uint));
+#endif // TRANSPARENT
+}
 inline ShaderEntity load_entity(uint entityIndex)
 {
 	return bindless_buffers[GetFrame().buffer_entityarray_index].Load<ShaderEntity>(entityIndex * sizeof(ShaderEntity));

@@ -55,15 +55,6 @@ inline ShaderMaterial GetMaterial()
 
 #define sampler_objectshader			bindless_samplers[GetMaterial().sampler_descriptor]
 
-uint load_entitytile(uint tileIndex)
-{
-#ifdef TRANSPARENT
-	return bindless_buffers[GetCamera().buffer_entitytiles_transparent_index].Load(tileIndex * sizeof(uint));
-#else
-	return bindless_buffers[GetCamera().buffer_entitytiles_opaque_index].Load(tileIndex * sizeof(uint));
-#endif // TRANSPARENT
-}
-
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
 //#define OBJECTSHADER_COMPILE_PS				- compile pixel shader prototype
