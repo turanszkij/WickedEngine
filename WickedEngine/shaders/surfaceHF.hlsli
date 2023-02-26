@@ -724,7 +724,7 @@ struct Surface
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 			clearcoatNormalMap = clearcoatNormalMap * 2 - 1;
-			const float3x3 TBN = float3x3(T.xyz, B, N);
+			const float3x3 TBN = float3x3(T.xyz, B, facenormal);
 			clearcoat.N = mul(clearcoatNormalMap, TBN);
 		}
 
