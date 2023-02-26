@@ -135,13 +135,13 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&fogStartSlider);
 
-	fogEndSlider.Create(1, 5000, 1000, 10000, "Fog End: ");
-	fogEndSlider.SetSize(XMFLOAT2(wid, hei));
-	fogEndSlider.SetPos(XMFLOAT2(x, y += step));
-	fogEndSlider.OnSlide([&](wi::gui::EventArgs args) {
-		GetWeather().fogEnd = args.fValue;
+	fogDensitySlider.Create(0, 0.05f, 0.01f, 10000, "Fog Density: ");
+	fogDensitySlider.SetSize(XMFLOAT2(wid, hei));
+	fogDensitySlider.SetPos(XMFLOAT2(x, y += step));
+	fogDensitySlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().fogDensity = args.fValue;
 	});
-	AddWidget(&fogEndSlider);
+	AddWidget(&fogDensitySlider);
 
 	fogHeightStartSlider.Create(-100, 100, 1, 10000, "Fog Height Start: ");
 	fogHeightStartSlider.SetSize(XMFLOAT2(wid, hei));
@@ -876,7 +876,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		weather.horizon = XMFLOAT3(101.0f / 255.0f, 101.0f / 255.0f, 227.0f / 255.0f);
 		weather.zenith = XMFLOAT3(99.0f / 255.0f, 133.0f / 255.0f, 255.0f / 255.0f);
 		weather.fogStart = 100;
-		weather.fogEnd = 1000;
+		weather.fogDensity = 0.0025f;
 
 		InvalidateProbes();
 
@@ -894,7 +894,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		weather.horizon = XMFLOAT3(121.0f / 255.0f, 28.0f / 255.0f, 22.0f / 255.0f);
 		weather.zenith = XMFLOAT3(80.0f / 255.0f, 10.0f / 255.0f, 10.0f / 255.0f);
 		weather.fogStart = 50;
-		weather.fogEnd = 600;
+		weather.fogDensity = 0.005f;
 
 		InvalidateProbes();
 
@@ -912,7 +912,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		weather.horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
 		weather.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
 		weather.fogStart = 0;
-		weather.fogEnd = 500;
+		weather.fogDensity = 0.01f;
 
 		InvalidateProbes();
 
@@ -930,7 +930,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		weather.horizon = XMFLOAT3(2.0f / 255.0f, 10.0f / 255.0f, 20.0f / 255.0f);
 		weather.zenith = XMFLOAT3(0, 0, 0);
 		weather.fogStart = 10;
-		weather.fogEnd = 400;
+		weather.fogDensity = 0.025f;
 
 		InvalidateProbes();
 
@@ -947,8 +947,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		weather.ambient = XMFLOAT3(0, 0, 0);
 		weather.horizon = XMFLOAT3(1, 1, 1);
 		weather.zenith = XMFLOAT3(1, 1, 1);
-		weather.fogStart = 1000000;
-		weather.fogEnd = 1000000;
+		weather.fogStart = 0;
+		weather.fogDensity = 0;
 
 		InvalidateProbes();
 
@@ -1070,7 +1070,7 @@ void WeatherWindow::Update()
 		overrideFogColorCheckBox.SetCheck(weather.IsOverrideFogColor());
 		heightFogCheckBox.SetCheck(weather.IsHeightFog());
 		fogStartSlider.SetValue(weather.fogStart);
-		fogEndSlider.SetValue(weather.fogEnd);
+		fogDensitySlider.SetValue(weather.fogDensity);
 		fogHeightStartSlider.SetValue(weather.fogHeightStart);
 		fogHeightEndSlider.SetValue(weather.fogHeightEnd);
 		gravitySlider.SetValue(weather.gravity.y);
@@ -1221,7 +1221,7 @@ void WeatherWindow::Update()
 		scene.weather.zenith = default_sky_zenith;
 		scene.weather.horizon = default_sky_horizon;
 		scene.weather.fogStart = std::numeric_limits<float>::max();
-		scene.weather.fogEnd = std::numeric_limits<float>::max();
+		scene.weather.fogDensity = 0;
 	}
 }
 
@@ -1304,7 +1304,7 @@ void WeatherWindow::ResizeLayout()
 	add_right(heightFogCheckBox);
 	overrideFogColorCheckBox.SetPos(XMFLOAT2(heightFogCheckBox.GetPos().x - 100, heightFogCheckBox.GetPos().y));
 	add(fogStartSlider);
-	add(fogEndSlider);
+	add(fogDensitySlider);
 	add(fogHeightStartSlider);
 	add(fogHeightEndSlider);
 	add(gravitySlider);

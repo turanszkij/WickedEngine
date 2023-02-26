@@ -709,7 +709,7 @@ namespace wi::scene
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = weather.ambient;
 		shaderscene.weather.fog.start = weather.fogStart;
-		shaderscene.weather.fog.end = weather.fogEnd;
+		shaderscene.weather.fog.density = weather.fogDensity;
 		shaderscene.weather.fog.height_start = weather.fogHeightStart;
 		shaderscene.weather.fog.height_end = weather.fogHeightEnd;
 		shaderscene.weather.horizon = weather.horizon;

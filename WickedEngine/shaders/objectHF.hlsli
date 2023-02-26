@@ -29,6 +29,7 @@
 #include "brdf.hlsli"
 #include "lightingHF.hlsli"
 #include "skyAtmosphere.hlsli"
+#include "fogHF.hlsli"
 #include "ShaderInterop_SurfelGI.h"
 #include "ShaderInterop_DDGI.h"
 
@@ -902,25 +903,18 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	TiledLighting(surface, lighting, tileIndex);
 }
 
-inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
+inline void ApplyFog(in float distance, float3 V, inout float4 color)
 {
-	const float fogAmount = GetFogAmount(distance, P, V);
-
-	float3 fogColor = GetHorizonColor();
-	
-	if ((GetFrame().options & OPTION_BIT_REALISTIC_SKY) && (GetFrame().options & OPTION_BIT_OVERRIDE_FOG_COLOR) == 0)
-	{
-		fogColor = texture_skyluminancelut.SampleLevel(sampler_point_clamp, float2(0.5, 0.5), 0).rgb;
-	}
-
-	color.rgb = lerp(color.rgb, fogColor, fogAmount);
+	const float4 fog = GetFog(distance, GetCamera().position, -V);
+	//color.rgb = (1.0 - fog.a) * color.rgb + fog.rgb; // premultiplied fog
+	color.rgb = lerp(color.rgb, fog.rgb, fog.a); // non-premultiplied fog
 }
 
 inline void ApplyAerialPerspective(float2 uv, float3 P, inout float4 color)
 {
 	if (GetFrame().options & OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE)
 	{
-		float4 AP = GetAerialPerspectiveTransmittance(uv, P, GetCamera().position, texture_cameravolumelut);
+		const float4 AP = GetAerialPerspectiveTransmittance(uv, P, GetCamera().position, texture_cameravolumelut);
 		color.rgb = color.rgb * (1.0 - AP.a) + AP.rgb;
 	}
 }
@@ -1439,15 +1433,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // UNLIT
 
 
-#ifdef OBJECTSHADER_USE_POSITION3D
-	ApplyFog(dist, GetCamera().position, surface.V, color);
-#endif // OBJECTSHADER_USE_POSITION3D
-
-
-// Transparent objects has been rendered separately from opaque, so let's apply it now:
+// Transparent objects has been rendered separately from opaque, so let's apply it now.
+// Must also be applied before fog since fog is layered over.
 #ifdef TRANSPARENT
 	ApplyAerialPerspective(ScreenCoord, surface.P, color);
 #endif // TRANSPARENT
+
+
+#ifdef OBJECTSHADER_USE_POSITION3D
+	ApplyFog(dist, surface.V, color);
+#endif // OBJECTSHADER_USE_POSITION3D
 
 
 	color = clamp(color, 0, 65000);

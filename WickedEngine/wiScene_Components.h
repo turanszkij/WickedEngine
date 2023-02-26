@@ -1272,7 +1272,7 @@ namespace wi::scene
 		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		float fogStart = 100;
-		float fogEnd = 1000;
+		float fogDensity = 0;
 		float fogHeightStart = 1;
 		float fogHeightEnd = 3;
 		XMFLOAT3 windDirection = XMFLOAT3(0, 0, 0);

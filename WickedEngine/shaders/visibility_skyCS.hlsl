@@ -1,6 +1,7 @@
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "skyHF.hlsli"
+#include "fogHF.hlsli"
 
 ConstantBuffer<ShaderTypeBin> bin : register(b10);
 StructuredBuffer<VisibilityTile> binned_tiles : register(t0);

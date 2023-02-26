@@ -112,7 +112,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(surface.hit_depth, GetCamera().position, surface.V, color);
+	ApplyFog(surface.hit_depth, surface.V, color);
 
 	color = clamp(color, 0, 65000);
 

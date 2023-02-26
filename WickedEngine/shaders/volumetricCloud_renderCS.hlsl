@@ -4,6 +4,7 @@
 #include "volumetricCloudsHF.hlsli"
 #include "skyAtmosphere.hlsli"
 #include "lightingHF.hlsli"
+#include "fogHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
 /**
@@ -650,7 +651,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 	float approxTransmittance = dot(transmittanceToView.rgb, 1.0 / 3.0);
 	float grayScaleTransmittance = approxTransmittance < GetWeather().volumetric_clouds.transmittanceThreshold ? 0.0 : approxTransmittance;
 	
-	// Apply aerial perspective
+	// Apply aerial perspective if any clouds is detected (depthWeightsSum)
 	if (depthWeightsSum > 0.0 && GetFrame().options & OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE)
 	{
 		float4 aerialPerspective = 0;
@@ -690,13 +691,23 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		{
 			aerialPerspective = GetAerialPerspectiveTransmittance(uv, sampleWorldPosition, GetCamera().position, texture_cameravolumelut);
 		}
-		
-		luminance = (1.0 - aerialPerspective.a) * luminance + aerialPerspective.rgb * (1.0 - approxTransmittance);
+
+		// Layer aerial perspective on top of luminance
+		luminance = (1.0 - aerialPerspective.a) * luminance + aerialPerspective.rgb * (1.0 - approxTransmittance); // Need to apply 1.0 - approxTransmittance due to inverse alpha
 		//luminance = aerialPerspective.rgb * (1.0 - approxTransmittance); // Debug
 	}
 	
+	// Apply height fog if any clouds is detected (depthWeightsSum)
+	if (depthWeightsSum > 0.0 && GetFrame().options & OPTION_BIT_HEIGHT_FOG)
+	{
+		// Layer fog on top of luminance
+		float4 fog = GetFog(tDepth, rayOrigin, rayDirection);
+		//luminance = (1.0 - fog.a) * luminance + fog.rgb * (1.0 - approxTransmittance); // premultilpied fog
+		luminance = lerp(luminance, fog.rgb * (1.0 - approxTransmittance), fog.a); // non-premultiplied fog
+	}
+
 	float4 color = float4(luminance, 1.0 - grayScaleTransmittance);
-	
+
     // Blend clouds with horizon
 	if (depthWeightsSum > 0.0)
 	{

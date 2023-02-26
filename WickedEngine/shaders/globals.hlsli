@@ -277,48 +277,6 @@ inline float GetTime() { return GetFrame().time; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((GetFrame().temporalaa_samplerotation >> 0u) & 0x000000FF, (GetFrame().temporalaa_samplerotation >> 8) & 0x000000FF); }
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 
-// Exponential height fog based on: https://www.iquilezles.org/www/articles/fog/fog.htm
-// Non constant density function
-//	distance	: sample to point distance
-//	O			: sample position
-//	V			: sample to point vector
-inline float GetFogAmount(float distance, float3 O, float3 V)
-{
-	ShaderFog fog = GetWeather().fog;
-	float fogDensity = saturate((distance - fog.start) / (fog.end - fog.start));
-
-	if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
-	{
-		float fogFalloffScale = 1.0 / max(0.01, fog.height_end - fog.height_start);
-
-		// solve for x, e^(-h * x) = 0.001
-		// x = 6.907755 * h^-1
-		float fogFalloff = 6.907755 * fogFalloffScale;
-		
-		float originHeight = O.y;
-		float Z = -V.y;
-		float effectiveZ = max(abs(Z), 0.001);
-
-		float endLineHeight = mad(distance, Z, originHeight); // Isolated vector equation for y
-		float minLineHeight = min(originHeight, endLineHeight);
-		float heightLineFalloff = max(minLineHeight - fog.height_start, 0);
-		
-		float baseHeightFogDistance = clamp((fog.height_start - minLineHeight) / effectiveZ, 0, distance);
-		float exponentialFogDistance = distance - baseHeightFogDistance; // Exclude distance below base height
-		float exponentialHeightLineIntegral = exp(-heightLineFalloff * fogFalloff) * (1.0 - exp(-exponentialFogDistance * effectiveZ * fogFalloff)) / (effectiveZ * fogFalloff);
-		
-		float opticalDepthHeightFog = fogDensity * (baseHeightFogDistance + exponentialHeightLineIntegral);
-		float transmittanceHeightFog = exp(-opticalDepthHeightFog);
-		
-		float fogAmount = transmittanceHeightFog;
-		return 1.0 - fogAmount;
-	}
-	else
-	{
-		return fogDensity;
-	}
-}
-
 inline float3 tonemap(float3 x)
 {
 	return x / (x + 1); // Reinhard tonemap

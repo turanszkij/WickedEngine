@@ -761,5 +761,4 @@ SingleScatteringResult IntegrateScatteredLuminance(
 	return result;
 }
 
-
 #endif // WI_SKYATMOSPHERE_HF

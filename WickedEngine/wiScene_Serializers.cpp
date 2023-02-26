@@ -1123,7 +1123,11 @@ namespace wi::scene
 			archive >> zenith;
 			archive >> ambient;
 			archive >> fogStart;
-			archive >> fogEnd;
+			archive >> fogDensity;
+			if (seri.GetVersion() < 3)
+			{
+				fogDensity = (1.0f / fogDensity);
+			}
 			if (archive.GetVersion() < 86)
 			{
 				float fogHeightSky;
@@ -1386,7 +1390,7 @@ namespace wi::scene
 			archive << zenith;
 			archive << ambient;
 			archive << fogStart;
-			archive << fogEnd;
+			archive << fogDensity;
 			archive << windDirection;
 			archive << windRandomness;
 			archive << windWaveSize;
