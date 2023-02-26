@@ -24,7 +24,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		}
 	}
 
-	float2 pixel = input.pos.xy;
+	uint2 pixel = input.pos.xy;
 	float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
 	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * GetCamera().z_far;
 	float depthFragment = input.pos.w;
@@ -74,7 +74,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		surface.sss_inv = material.subsurfaceScattering_inv;
 		surface.update();
 
-		TiledLighting(surface, lighting);
+		TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 
 		color.rgb *= lighting.direct.diffuse + lighting.indirect.diffuse;
 

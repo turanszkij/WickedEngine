@@ -1054,9 +1054,10 @@ namespace wi::scene
 		uint32_t _flags = EMPTY;
 
 		// Non-serialized attributes:
-		XMFLOAT4 color;
 		float emissive;
+		XMFLOAT4 color;
 		XMFLOAT3 front;
+		float normal_strength;
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 world;

@@ -3795,6 +3795,7 @@ namespace wi::scene
 			decal.emissive = material.GetEmissiveStrength();
 			decal.texture = material.textures[MaterialComponent::BASECOLORMAP].resource;
 			decal.normal = material.textures[MaterialComponent::NORMALMAP].resource;
+			decal.normal_strength = material.normalMapStrength;
 		}
 	}
 	void Scene::RunProbeUpdateSystem(wi::jobsystem::context& ctx)

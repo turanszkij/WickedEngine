@@ -31,8 +31,13 @@ ImpostorOutput main(PixelInput input)
 	[branch]
 	if (GetMaterial().textures[NORMALMAP].IsValid())
 	{
-		float3 bumpColor;
-		NormalMapping(input.uvsets, N, TBN, bumpColor);
+		[branch]
+		if (GetMaterial().normalMapStrength > 0 && GetMaterial().textures[NORMALMAP].IsValid())
+		{
+			float3 normalMap = float3(GetMaterial().textures[NORMALMAP].Sample(sampler_objectshader, input.uvsets).rg, 1);
+			float3 bumpColor = normalMap.rgb * 2 - 1;
+			N = normalize(lerp(N, mul(bumpColor, TBN), GetMaterial().normalMapStrength));
+		}
 	}
 
 	float4 surfaceMap = 1;

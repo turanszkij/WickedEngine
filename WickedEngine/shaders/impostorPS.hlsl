@@ -54,7 +54,7 @@ float4 main(VSOut input) : SV_Target
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-	TiledLighting(surface, lighting);
+	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 
 	float4 color = 0;
 

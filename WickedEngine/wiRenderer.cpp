@@ -3769,6 +3769,7 @@ void UpdateRenderData(
 			}
 			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
 			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], *(float*)&normal);
+			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], decal.normal_strength);
 
 			std::memcpy(matrixArray + matrixCounter, &shadermatrix, sizeof(XMMATRIX));
 			matrixCounter++;
