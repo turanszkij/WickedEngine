@@ -280,7 +280,7 @@ struct Surface
 
 		return true;
 	}
-	void load_internal()
+	void load_internal(uint flatTileIndex = 0)
 	{
 		SamplerState sam = bindless_samplers[material.sampler_descriptor];
 
@@ -383,16 +383,16 @@ struct Surface
 			if (geometry.vb_tan >= 0 && material.textures[NORMALMAP].IsValid() && material.normalMapStrength > 0)
 			{
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-				const float3 normalMap = float3(material.textures[NORMALMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rg, 1) * 2 - 1;
+				bumpColor = float3(material.textures[NORMALMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rg, 1);
 #else
 				float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
 				lod = compute_texture_lod(material.textures[NORMALMAP].GetTexture(), material.textures[NORMALMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-				const float3 normalMap = float3(material.textures[NORMALMAP].SampleLevel(sam, uvsets, lod).rg, 1) * 2 - 1;
+				bumpColor = float3(material.textures[NORMALMAP].SampleLevel(sam, uvsets, lod).rg, 1);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
-				N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
-				bumpColor = normalMap * material.normalMapStrength;
+				bumpColor = bumpColor * 2 - 1;
+				bumpColor.rg *= material.normalMapStrength;
 			}
 		}
 
@@ -444,6 +444,105 @@ struct Surface
 			gi = tex.SampleLevel(sampler_linear_clamp, atlas, 0).rgb;
 
 			flags |= SURFACE_FLAG_GI_APPLIED;
+		}
+
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+		// I need to copy the decal code here because include resolve issues:
+#ifndef DISABLE_DECALS
+		[branch]
+		if (GetFrame().decalarray_count > 0)
+		{
+			// decals are enabled, loop through them first:
+			float4 decalAccumulation = 0;
+			float4 decalBumpAccumulation = 0;
+
+			// Loop through decal buckets in the tile:
+			const uint first_item = GetFrame().decalarray_offset;
+			const uint last_item = first_item + GetFrame().decalarray_count - 1;
+			const uint first_bucket = first_item / 32;
+			const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
+			[loop]
+			for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
+			{
+				uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+
+#ifndef ENTITY_TILE_UNIFORM
+				// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
+				bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
+
+				[loop]
+				while (bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1)
+				{
+					// Retrieve global entity index from local bucket, then remove bit from local bucket:
+					const uint bucket_bit_index = firstbitlow(bucket_bits);
+					const uint entity_index = bucket * 32 + bucket_bit_index;
+					bucket_bits ^= 1u << bucket_bit_index;
+
+					[branch]
+					if (entity_index >= first_item && entity_index <= last_item)
+					{
+						ShaderEntity decal = load_entity(entity_index);
+						if ((decal.layerMask & layerMask) == 0)
+							continue;
+
+						float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
+						int decalTexture = asint(decalProjection[3][0]);
+						int decalNormal = asint(decalProjection[3][1]);
+						float decalNormalStrength = decalProjection[3][2];
+						decalProjection[3] = float4(0, 0, 0, 1);
+						const float3 clipSpacePos = mul(decalProjection, float4(P, 1)).xyz;
+						const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+						[branch]
+						if (is_saturated(uvw))
+						{
+							// mipmapping needs to be performed by hand:
+							const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
+							const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
+							float4 decalColor = decal.GetColor();
+							// blend out if close to cube Z:
+							const float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+							decalColor.a *= edgeBlend;
+							[branch]
+							if (decalTexture >= 0)
+							{
+								decalColor *= bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+								// perform manual blending of decals:
+								//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+								decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
+								decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
+							}
+							[branch]
+							if (decalNormal >= 0)
+							{
+								float3 decalBumpColor = float3(bindless_textures[NonUniformResourceIndex(decalNormal)].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
+								decalBumpColor = decalBumpColor * 2 - 1;
+								decalBumpColor.rg *= decalNormalStrength;
+								decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
+								decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
+							}
+						}
+					}
+					else if (entity_index > last_item)
+					{
+						// force exit:
+						bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
+						break;
+					}
+
+				}
+			}
+
+			baseColor.rgb = lerp(baseColor.rgb, decalAccumulation.rgb, decalAccumulation.a);
+			bumpColor.rgb = lerp(bumpColor.rgb, decalBumpAccumulation.rgb, decalBumpAccumulation.a);
+		}
+#endif // DISABLE_DECALS
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
+
+		if (any(bumpColor))
+		{
+			const float3x3 TBN = float3x3(T.xyz, B, N);
+			N = normalize(lerp(N, mul(bumpColor, TBN), length(bumpColor)));
 		}
 
 		float4 surfaceMap = 1;
@@ -617,7 +716,7 @@ struct Surface
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 			clearcoatNormalMap = clearcoatNormalMap * 2 - 1;
-			const float3x3 TBN = float3x3(T.xyz, B, N);
+			const float3x3 TBN = float3x3(T.xyz, B, facenormal);
 			clearcoat.N = mul(clearcoatNormalMap, TBN);
 		}
 
@@ -738,7 +837,7 @@ struct Surface
 		load_internal();
 		return true;
 	}
-	bool load(in PrimitiveID prim, in float3 rayOrigin, in float3 rayDirection, in float3 rayDirection_quad_x, in float3 rayDirection_quad_y)
+	bool load(in PrimitiveID prim, in float3 rayOrigin, in float3 rayDirection, in float3 rayDirection_quad_x, in float3 rayDirection_quad_y, in uint flatTileIndex = 0)
 	{
 		if (!preload_internal(prim))
 			return false;
@@ -781,7 +880,7 @@ struct Surface
 		P_dy = P - attribute_at_bary(P0, P1, P2, bary_quad_y);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
-		load_internal();
+		load_internal(flatTileIndex);
 		return true;
 	}
 };
