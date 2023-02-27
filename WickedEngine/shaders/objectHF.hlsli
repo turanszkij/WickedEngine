@@ -528,20 +528,19 @@ inline void ForwardDecals(inout Surface surface)
 				// mipmapping needs to be performed by hand:
 				const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
 				const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
-				float4 decalColor = 1;
+				// blend out if close to cube Z:
+				float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+				float4 decalColor = float4(1, 1, 1, edgeBlend);
 				[branch]
 				if (decalTexture >= 0)
 				{
-					decalColor = bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
+					decalColor *= bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
+					decalColor *= decal.GetColor();
+					// perform manual blending of decals:
+					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+					decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
+					decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 				}
-				// blend out if close to cube Z:
-				float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-				decalColor.a *= edgeBlend;
-				decalColor *= decal.GetColor();
-				// perform manual blending of decals:
-				//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-				decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
-				decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 				[branch]
 				if (decalNormal >= 0)
 				{
@@ -857,20 +856,19 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 					// mipmapping needs to be performed by hand:
 					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
 					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
-					float4 decalColor = 1;
+					// blend out if close to cube Z:
+					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+					float4 decalColor = float4(1, 1, 1, edgeBlend);
 					[branch]
 					if (decalTexture >= 0)
 					{
-						decalColor = bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
+						decalColor *= bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
+						decalColor *= decal.GetColor();
+						// perform manual blending of decals:
+						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
+						decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 					}
-					// blend out if close to cube Z:
-					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-					decalColor.a *= edgeBlend;
-					decalColor *= decal.GetColor();
-					// perform manual blending of decals:
-					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-					decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
-					decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 					[branch]
 					if (decalNormal >= 0)
 					{
