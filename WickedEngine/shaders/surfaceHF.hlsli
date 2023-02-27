@@ -472,7 +472,7 @@ struct Surface
 #endif // ENTITY_TILE_UNIFORM
 
 				[loop]
-				while (bucket_bits != 0)
+				while (bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1)
 				{
 					// Retrieve global entity index from local bucket, then remove bit from local bucket:
 					const uint bucket_bit_index = firstbitlow(bucket_bits);
@@ -480,7 +480,7 @@ struct Surface
 					bucket_bits ^= 1u << bucket_bit_index;
 
 					[branch]
-					if (entity_index >= first_item && entity_index <= last_item && decalAccumulation.a < 1)
+					if (entity_index >= first_item && entity_index <= last_item)
 					{
 						ShaderEntity decal = load_entity(entity_index);
 						if ((decal.layerMask & layerMask) == 0)
@@ -499,14 +499,14 @@ struct Surface
 							// mipmapping needs to be performed by hand:
 							const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
 							const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
+							float4 decalColor = decal.GetColor();
 							// blend out if close to cube Z:
-							float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-							float4 decalColor = float4(1, 1, 1, edgeBlend);
+							const float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+							decalColor.a *= edgeBlend;
 							[branch]
 							if (decalTexture >= 0)
 							{
 								decalColor *= bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
-								decalColor *= decal.GetColor();
 								// perform manual blending of decals:
 								//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
 								decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
@@ -520,13 +520,6 @@ struct Surface
 								decalBumpColor.rg *= decalNormalStrength;
 								decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
 								decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
-							}
-							[branch]
-							if (decalAccumulation.a >= 1.0)
-							{
-								// force exit:
-								bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
-								break;
 							}
 						}
 					}

@@ -501,69 +501,53 @@ inline void ForwardDecals(inout Surface surface)
 	uint bucket_bits = xForwardDecalMask;
 
 	[loop]
-	while (bucket_bits != 0)
+	while (bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1)
 	{
 		// Retrieve global entity index from local bucket, then remove bit from local bucket:
 		const uint bucket_bit_index = firstbitlow(bucket_bits);
 		const uint entity_index = bucket_bit_index;
 		bucket_bits ^= 1u << bucket_bit_index;
 
-		[branch]
-		if (decalAccumulation.a < 1)
-		{
-			ShaderEntity decal = load_entity(GetFrame().decalarray_offset + entity_index);
-			if ((decal.layerMask & surface.layerMask) == 0)
-				continue;
+		ShaderEntity decal = load_entity(GetFrame().decalarray_offset + entity_index);
+		if ((decal.layerMask & surface.layerMask) == 0)
+			continue;
 
-			float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
-			int decalTexture = asint(decalProjection[3][0]);
-			int decalNormal = asint(decalProjection[3][1]);
-			float decalNormalStrength = asint(decalProjection[3][2]);
-			decalProjection[3] = float4(0, 0, 0, 1);
-			const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
-			const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+		float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
+		int decalTexture = asint(decalProjection[3][0]);
+		int decalNormal = asint(decalProjection[3][1]);
+		float decalNormalStrength = asint(decalProjection[3][2]);
+		decalProjection[3] = float4(0, 0, 0, 1);
+		const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
+		const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+		[branch]
+		if (is_saturated(uvw))
+		{
+			// mipmapping needs to be performed by hand:
+			const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
+			const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
+			float4 decalColor = decal.GetColor();
+			// blend out if close to cube Z:
+			const float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+			decalColor.a *= edgeBlend;
 			[branch]
-			if (is_saturated(uvw))
+			if (decalTexture >= 0)
 			{
-				// mipmapping needs to be performed by hand:
-				const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
-				const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
-				// blend out if close to cube Z:
-				float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-				float4 decalColor = float4(1, 1, 1, edgeBlend);
-				[branch]
-				if (decalTexture >= 0)
-				{
-					decalColor *= bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
-					decalColor *= decal.GetColor();
-					// perform manual blending of decals:
-					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-					decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
-					decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
-				}
-				[branch]
-				if (decalNormal >= 0)
-				{
-					float3 decalBumpColor = float3(bindless_textures[NonUniformResourceIndex(decalNormal)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY).rg, 1);
-					decalBumpColor = decalBumpColor * 2 - 1;
-					decalBumpColor.rg *= decalNormalStrength;
-					decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
-					decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
-				}
-				[branch]
-				if (decalAccumulation.a >= 1.0)
-				{
-					// force exit:
-					break;
-				}
+				decalColor *= bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
+				// perform manual blending of decals:
+				//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+				decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
+				decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
+			}
+			[branch]
+			if (decalNormal >= 0)
+			{
+				float3 decalBumpColor = float3(bindless_textures[NonUniformResourceIndex(decalNormal)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY).rg, 1);
+				decalBumpColor = decalBumpColor * 2 - 1;
+				decalBumpColor.rg *= decalNormalStrength;
+				decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
+				decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
 			}
 		}
-		else
-		{
-			// force exit:
-			break;
-		}
-
 	}
 
 	surface.baseColor.rgb = lerp(surface.baseColor.rgb, decalAccumulation.rgb, decalAccumulation.a);
@@ -829,7 +813,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 #endif // ENTITY_TILE_UNIFORM
 
 		[loop]
-		while (bucket_bits != 0)
+		while (bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1)
 		{
 			// Retrieve global entity index from local bucket, then remove bit from local bucket:
 			const uint bucket_bit_index = firstbitlow(bucket_bits);
@@ -837,7 +821,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 			bucket_bits ^= 1u << bucket_bit_index;
 
 			[branch]
-			if (entity_index >= first_item && entity_index <= last_item && decalAccumulation.a < 1)
+			if (entity_index >= first_item && entity_index <= last_item)
 			{
 				ShaderEntity decal = load_entity(entity_index);
 				if ((decal.layerMask & surface.layerMask) == 0)
@@ -856,14 +840,14 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 					// mipmapping needs to be performed by hand:
 					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
 					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
+					float4 decalColor = decal.GetColor();
 					// blend out if close to cube Z:
-					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-					float4 decalColor = float4(1, 1, 1, edgeBlend);
+					const float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+					decalColor.a *= edgeBlend;
 					[branch]
 					if (decalTexture >= 0)
 					{
 						decalColor *= bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
-						decalColor *= decal.GetColor();
 						// perform manual blending of decals:
 						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
 						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
@@ -877,13 +861,6 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 						decalBumpColor.rg *= decalNormalStrength;
 						decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
 						decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
-					}
-					[branch]
-					if (decalAccumulation.a >= 1.0)
-					{
-						// force exit:
-						bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
-						break;
 					}
 				}
 			}
