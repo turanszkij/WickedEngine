@@ -230,15 +230,12 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	{
 		ShaderEntity entity = load_entity(i);
 
-		if (entity.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
-		{
-			continue; // static lights will be skipped here (they are used at lightmap baking)
-		}
-
 		switch (entity.GetType())
 		{
 		case ENTITY_TYPE_POINTLIGHT:
 		{
+			if (entity.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+				break; // static lights will be skipped here (they are used at lightmap baking)
 			float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
 			Sphere sphere = { positionVS.xyz, entity.GetRange() + entity.GetLength() };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
@@ -259,6 +256,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		break;
 		case ENTITY_TYPE_SPOTLIGHT:
 		{
+			if (entity.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+				break; // static lights will be skipped here (they are used at lightmap baking)
 			float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
 			float3 directionVS = mul((float3x3)GetCamera().view, entity.GetDirection());
 			// Construct a tight fitting sphere around the spotlight cone:
@@ -283,6 +282,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		break;
 		case ENTITY_TYPE_DIRECTIONALLIGHT:
 		{
+			if (entity.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+				break; // static lights will be skipped here (they are used at lightmap baking)
 			AppendEntity_Transparent(i);
 			AppendEntity_Opaque(i);
 		}

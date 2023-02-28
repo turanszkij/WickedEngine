@@ -1050,8 +1050,14 @@ namespace wi::scene
 		enum FLAGS
 		{
 			EMPTY = 0,
+			BASECOLOR_ONLY_ALPHA = 1 << 0,
 		};
 		uint32_t _flags = EMPTY;
+
+		// Set decal to only use alpha from base color texture. Useful for blending normalmap-only decals
+		constexpr void SetBaseColorOnlyAlpha(bool value) { if (value) { _flags |= BASECOLOR_ONLY_ALPHA; } else { _flags ^= BASECOLOR_ONLY_ALPHA; } }
+
+		constexpr bool IsBaseColorOnlyAlpha() const { return _flags & BASECOLOR_ONLY_ALPHA; }
 
 		// Non-serialized attributes:
 		float emissive;

@@ -533,10 +533,13 @@ inline void ForwardDecals(inout Surface surface)
 			if (decalTexture >= 0)
 			{
 				decalColor *= bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
-				// perform manual blending of decals:
-				//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-				decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
-				decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
+				if ((decal.GetFlags() & ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA) == 0)
+				{
+					// perform manual blending of decals:
+					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+					decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
+					decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
+				}
 			}
 			[branch]
 			if (decalNormal >= 0)
@@ -848,10 +851,13 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 					if (decalTexture >= 0)
 					{
 						decalColor *= bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
-						// perform manual blending of decals:
-						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
-						decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
+						if ((decal.GetFlags() & ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA) == 0)
+						{
+							// perform manual blending of decals:
+							//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+							decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
+							decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
+						}
 					}
 					[branch]
 					if (decalNormal >= 0)

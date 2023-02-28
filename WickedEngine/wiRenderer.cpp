@@ -3749,6 +3749,10 @@ void UpdateRenderData(
 			}
 
 			shaderentity.SetType(ENTITY_TYPE_DECAL);
+			if (decal.IsBaseColorOnlyAlpha())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA);
+			}
 			shaderentity.position = decal.position;
 			shaderentity.SetRange(decal.range);
 			float emissive_mul = 1 + decal.emissive;
@@ -4105,22 +4109,39 @@ void UpdateRenderData(
 		wi::profiler::EndRange(range);
 	}
 
-	auto range = wi::profiler::BeginRangeGPU("Skinning", cmd);
-	device->EventBegin("Skinning", cmd);
+	device->EventBegin("Morph Targets", cmd);
 	{
+		auto range = wi::profiler::BeginRangeGPU("Morph Targets", cmd);
+		bool morphs = false;
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
 		{
-			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
 
 			if (mesh.dirty_morph && !mesh.vertex_positions_morphed.empty())
 			{
+				morphs = true;
 				mesh.dirty_morph = false;
 				GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh.vb_pos_nor_wind.size, cmd);
 				std::memcpy(allocation.data, mesh.vertex_positions_morphed.data(), mesh.vb_pos_nor_wind.size);
 				device->CopyBuffer(&mesh.generalBuffer, mesh.vb_pos_nor_wind.offset, &allocation.buffer, allocation.offset, mesh.vb_pos_nor_wind.size, cmd);
 				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.generalBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 			}
+		}
+		if (morphs)
+		{
+			barrier_stack_flush(cmd);
+		}
+
+		wi::profiler::EndRange(range); // Morph Targets
+	}
+
+	device->EventBegin("Skinning", cmd);
+	{
+		auto range = wi::profiler::BeginRangeGPU("Skinning", cmd);
+		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
+		{
+			Entity entity = vis.scene->meshes.GetEntity(i);
+			const MeshComponent& mesh = vis.scene->meshes[i];
 
 			if (mesh.IsSkinned() && vis.scene->armatures.Contains(mesh.armatureID))
 			{
@@ -4148,23 +4169,21 @@ void UpdateRenderData(
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);
 
 				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.streamoutBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
-
 			}
-
 		}
 
-		barrier_stack_flush(cmd);
-
+		wi::profiler::EndRange(range); // skinning
 	}
 	device->EventEnd(cmd);
-	wi::profiler::EndRange(range); // skinning
+
+	barrier_stack_flush(cmd); // wind/skinning flush
 
 	// Hair particle systems GPU simulation:
 	//	(This must be non-async too, as prepass will render hairs!)
 	static thread_local wi::vector<HairParticleSystem::UpdateGPUItem> hair_updates;
 	if (!vis.visibleHairs.empty() && frameCB.delta_time > 0)
 	{
-		range = wi::profiler::BeginRangeGPU("HairParticles - Simulate", cmd);
+		auto range = wi::profiler::BeginRangeGPU("HairParticles - Simulate", cmd);
 		for (uint32_t hairIndex : vis.visibleHairs)
 		{
 			const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
@@ -4239,15 +4258,13 @@ void UpdateRenderData(
 
 		device->Dispatch((uint32_t)vis.scene->instanceArraySize, 1, 1, cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
 	}
+
+	barrier_stack_flush(cmd);
 
 	device->EventEnd(cmd);
 }
@@ -8580,7 +8597,7 @@ void RayTraceScene(
 	BindCommonResources(cmd);
 
 	const XMFLOAT4& halton = wi::math::GetHaltonSequence(accumulation_sample);
-	RaytracingCB cb;
+	RaytracingCB cb = {};
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
 	cb.xTraceAccumulationFactor = 1.0f / ((float)accumulation_sample + 1.0f);
 	cb.xTraceResolution.x = desc.width;
@@ -8599,36 +8616,53 @@ void RayTraceScene(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
+	barrier_stack.push_back(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
 	if (output_albedo != nullptr)
 	{
+		barrier_stack.push_back(GPUBarrier::Image(output_albedo, output_albedo->desc.layout, ResourceState::UNORDERED_ACCESS));
 		device->BindUAV(output_albedo, 1, cmd);
 	}
 	if (output_normal != nullptr)
 	{
+		barrier_stack.push_back(GPUBarrier::Image(output_normal, output_normal->desc.layout, ResourceState::UNORDERED_ACCESS));
 		device->BindUAV(output_normal, 2, cmd);
+	}
+	barrier_stack_flush(cmd);
+
+	if (accumulation_sample == 0)
+	{
+		device->ClearUAV(&output, 0, cmd);
+		barrier_stack.push_back(GPUBarrier::Memory(&output));
+		if (output_albedo != nullptr)
+		{
+			device->ClearUAV(output_albedo, 0, cmd);
+			barrier_stack.push_back(GPUBarrier::Memory(output_albedo));
+		}
+		if (output_normal != nullptr)
+		{
+			device->ClearUAV(output_normal, 0, cmd);
+			barrier_stack.push_back(GPUBarrier::Memory(output_normal));
+		}
+		barrier_stack_flush(cmd);
 	}
 
 	device->Dispatch(
 		(desc.width + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
 		(desc.height + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
 		1,
-		cmd);
+		cmd
+	);
 
+	barrier_stack.push_back(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
+	if (output_albedo != nullptr)
 	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
+		barrier_stack.push_back(GPUBarrier::Image(output_albedo, ResourceState::UNORDERED_ACCESS, output_albedo->desc.layout));
 	}
-
+	if (output_normal != nullptr)
+	{
+		barrier_stack.push_back(GPUBarrier::Image(output_normal, ResourceState::UNORDERED_ACCESS, output_normal->desc.layout));
+	}
+	barrier_stack_flush(cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd); // RayTraceScene
