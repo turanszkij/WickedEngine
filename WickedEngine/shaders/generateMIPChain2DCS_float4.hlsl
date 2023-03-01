@@ -30,11 +30,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			// Weight by alpha if it has even partially opaque pixels:
 			//	This avoids losing alpha coverage, it will extrude the areas which have alpha
 			//	And also avoids bleeding in background color from transparent area
-			color += float4(rrrr.x, gggg.x, bbbb.x, 1) * aaaa.x;
-			color += float4(rrrr.y, gggg.y, bbbb.y, 1) * aaaa.y;
-			color += float4(rrrr.z, gggg.z, bbbb.z, 1) * aaaa.z;
-			color += float4(rrrr.w, gggg.w, bbbb.w, 1) * aaaa.w;
-			color /= sum;
+			color.rgb += float3(rrrr.x, gggg.x, bbbb.x) * aaaa.x;
+			color.rgb += float3(rrrr.y, gggg.y, bbbb.y) * aaaa.y;
+			color.rgb += float3(rrrr.z, gggg.z, bbbb.z) * aaaa.z;
+			color.rgb += float3(rrrr.w, gggg.w, bbbb.w) * aaaa.w;
+			color.rgb /= sum;
+			color.a = max(aaaa.x, max(aaaa.y, max(aaaa.z, aaaa.w)));
 		}
 		else
 		{

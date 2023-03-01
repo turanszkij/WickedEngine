@@ -4134,6 +4134,7 @@ void UpdateRenderData(
 
 		wi::profiler::EndRange(range); // Morph Targets
 	}
+	device->EventEnd(cmd);
 
 	device->EventBegin("Skinning", cmd);
 	{
