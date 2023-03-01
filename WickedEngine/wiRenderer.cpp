@@ -8618,14 +8618,14 @@ void RayTraceScene(
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	barrier_stack.push_back(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
+
+	// Note: output_albedo and output_normal are always in ResourceState::UNORDERED_ACCESS, no need to transition!
 	if (output_albedo != nullptr)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(output_albedo, output_albedo->desc.layout, ResourceState::UNORDERED_ACCESS));
 		device->BindUAV(output_albedo, 1, cmd);
 	}
 	if (output_normal != nullptr)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(output_normal, output_normal->desc.layout, ResourceState::UNORDERED_ACCESS));
 		device->BindUAV(output_normal, 2, cmd);
 	}
 	barrier_stack_flush(cmd);
@@ -8655,14 +8655,6 @@ void RayTraceScene(
 	);
 
 	barrier_stack.push_back(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
-	if (output_albedo != nullptr)
-	{
-		barrier_stack.push_back(GPUBarrier::Image(output_albedo, ResourceState::UNORDERED_ACCESS, output_albedo->desc.layout));
-	}
-	if (output_normal != nullptr)
-	{
-		barrier_stack.push_back(GPUBarrier::Image(output_normal, ResourceState::UNORDERED_ACCESS, output_normal->desc.layout));
-	}
 	barrier_stack_flush(cmd);
 
 	wi::profiler::EndRange(range);
