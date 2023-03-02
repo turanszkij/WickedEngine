@@ -9248,11 +9248,12 @@ void Visibility_Surface(
 
 	BindCommonResources(cmd);
 
-	barrier_stack.push_back(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_0, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_1, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+	// First, do a bunch of resource discards to initialize texture metadata:
+	barrier_stack.push_back(GPUBarrier::Image(&output, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
 	barrier_stack_flush(cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
@@ -9338,8 +9339,8 @@ void Visibility_Shade(
 
 	BindCommonResources(cmd);
 
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNORDERED_ACCESS, res.texture_payload_0.desc.layout));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNORDERED_ACCESS, res.texture_payload_1.desc.layout));
 	barrier_stack_flush(cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
@@ -9357,12 +9358,8 @@ void Visibility_Shade(
 		device->DispatchIndirect(&res.bins, i * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
 	}
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	barrier_stack.push_back(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
+	barrier_stack_flush(cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

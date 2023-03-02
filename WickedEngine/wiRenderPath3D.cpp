@@ -695,10 +695,16 @@ namespace wi
 			);
 			wi::renderer::UpdateRenderData(visibility_main, frameCB, cmd);
 
-			GPUBarrier barriers[] = {
+			uint32_t num_barriers = 1;
+			GPUBarrier barriers[2] = {
 				GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			if (visibility_shading_in_compute)
+			{
+				num_barriers = 2;
+				barriers[1] = GPUBarrier::Image(&rtMain, rtMain.desc.layout, ResourceState::SHADER_RESOURCE_COMPUTE); // prepares transition for discard in dx12
+			}
+			device->Barrier(barriers, num_barriers, cmd);
 
 		});
 
@@ -1254,7 +1260,7 @@ namespace wi
 			RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(
 					&rtMain_render,
-					RenderPassImage::LoadOp::DONTCARE
+					visibility_shading_in_compute ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::DONTCARE
 				),
 				RenderPassImage::DepthStencil(
 					&depthBuffer_Main,
