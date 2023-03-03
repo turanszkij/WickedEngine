@@ -62,7 +62,9 @@ local character_capsules = {}
 local function Character(model_name, start_position, face, controllable)
 	local self = {
 		model = INVALID_ENTITY,
-		target = INVALID_ENTITY, -- Camera will look at this location, rays will be started from this location, etc.
+		target_rot_horizontal = 0,
+		target_rot_vertical = 0,
+		target_height = 0,
 		current_anim = INVALID_ENTITY,
 		idle_anim = INVALID_ENTITY,
 		walk_anim = INVALID_ENTITY,
@@ -181,12 +183,8 @@ local function Character(model_name, start_position, face, controllable)
 			model_transform.Rotate(self.rotation)
 			model_transform.Translate(self.start_position)
 			model_transform.UpdateTransform()
-			
-			self.target = CreateEntity()
-			local target_transform = scene.Component_CreateTransform(self.target)
-			target_transform.Translate(scene.Component_GetTransform(self.neck).GetPosition())
-			target_transform.Translate(self.start_position)
-			scene.Component_Attach(self.target, self.model)
+
+			self.target_height = scene.Component_GetTransform(self.neck).GetPosition().GetY()
 
 		end,
 		
@@ -195,8 +193,8 @@ local function Character(model_name, start_position, face, controllable)
 			self.state = States.JUMP
 		end,
 		MoveDirection = function(self,dir)
-			local target_transform = scene.Component_GetTransform(self.target)
-			dir = vector.Transform(dir:Normalize(), target_transform.GetMatrix())
+			local rotation_matrix = matrix.Multiply(matrix.RotationY(self.target_rot_horizontal), matrix.RotationX(self.target_rot_vertical))
+			dir = vector.Transform(dir.Normalize(), rotation_matrix)
 			dir.SetY(0)
 			local dot = vector.Dot(self.face, dir)
 			if(dot < 0) then
@@ -234,8 +232,6 @@ local function Character(model_name, start_position, face, controllable)
 			model_transform.Rotate(self.rotation)
 			model_transform.Translate(savedPos)
 			model_transform.UpdateTransform()
-			scene.Component_Detach(self.target)
-			scene.Component_Attach(self.target, self.model)
 
 			
 			if controllable then
@@ -257,9 +253,8 @@ local function Character(model_name, start_position, face, controllable)
 					input.HidePointer(false)
 				end
 				
-				local target_transform = scene.Component_GetTransform(self.target)
-				target_transform.Rotate(Vector(diff.GetY(),diff.GetX()))
-
+				self.target_rot_horizontal = self.target_rot_horizontal + diff.GetX()
+				self.target_rot_vertical = math.clamp(self.target_rot_vertical + diff.GetY(), -math.pi * 0.3, math.pi * 0.4) -- vertical camers limits
 			
 				if self.dance_anim ~= INVALID_ENTITY and self.state == States.IDLE and input.Press(string.byte('C')) then
 					self.state = States.DANCE
@@ -709,6 +704,9 @@ local function ThirdPersonCamera(character)
 		rest_distance_new = 1,
 		min_distance = 0.5,
 		zoom_speed = 0.3,
+		target_rot_horizontal = 0,
+		target_rot_vertical = 0,
+		target_height = 1,
 		
 		Create = function(self, character)
 			self.character = character
@@ -730,9 +728,19 @@ local function ThirdPersonCamera(character)
 			self.rest_distance_new = math.max(self.rest_distance_new - scroll, self.min_distance) -- do not allow too close using max
 			self.rest_distance = math.lerp(self.rest_distance, self.rest_distance_new, 0.1) -- lerp will smooth out the zooming
 
-			local camera_transform = scene.Component_GetTransform(self.camera)
-			local target_transform = scene.Component_GetTransform(self.character.target)
+			-- This will allow some smoothing for certain movements of camera target:
+			local character_transform = scene.Component_GetTransform(self.character.model)
+			local character_position = character_transform.GetPosition()
+			self.target_rot_horizontal = math.lerp(self.target_rot_horizontal, self.character.target_rot_horizontal, 0.1)
+			self.target_rot_vertical = math.lerp(self.target_rot_vertical, self.character.target_rot_vertical, 0.1)
+			self.target_height = math.lerp(self.target_height, character_position.GetY() + self.character.target_height, 0.05)
 
+			local camera_transform = scene.Component_GetTransform(self.camera)
+			local target_transform = TransformComponent()
+			target_transform.Translate(Vector(character_position.GetX(), 0, character_position.GetZ()))
+			target_transform.Translate(Vector(0, self.target_height))
+			target_transform.Rotate(Vector(self.target_rot_vertical, self.target_rot_horizontal))
+			target_transform.UpdateTransform()
 			
 			-- First calculate the rest orientation (transform) of the camera:
 			local mat = matrix.Translation(Vector(self.side_offset, 0, -self.rest_distance))
@@ -932,7 +940,7 @@ runProcess(function()
 		if debug and backlog_isactive() == false then
 
 			local model_transform = scene.Component_GetTransform(player.model)
-			local target_transform = scene.Component_GetTransform(player.target)
+			local target_transform = scene.Component_GetTransform(player.neck)
 			
 			--velocity
 			DrawLine(target_transform.GetPosition(),target_transform.GetPosition():Add(player.velocity))
