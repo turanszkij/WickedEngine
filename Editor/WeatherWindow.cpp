@@ -225,6 +225,15 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&starsSlider);
 
+	skyRotationSlider.Create(0, 360, 0, 10000, "Sky Texture Rotation: ");
+	skyRotationSlider.SetTooltip("Rotate the sky texture horizontally. (If using a sky texture)");
+	skyRotationSlider.SetSize(XMFLOAT2(wid, hei));
+	skyRotationSlider.SetPos(XMFLOAT2(x, y += step));
+	skyRotationSlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().sky_rotation = wi::math::DegreesToRadians(args.fValue);
+		});
+	AddWidget(&skyRotationSlider);
+
 	realisticskyCheckBox.Create("Realistic sky: ");
 	realisticskyCheckBox.SetTooltip("Physically based sky rendering model.\nNote that realistic sky requires a sun (directional light) to be visible.");
 	realisticskyCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -1079,6 +1088,7 @@ void WeatherWindow::Update()
 		windRandomnessSlider.SetValue(weather.windRandomness);
 		skyExposureSlider.SetValue(weather.skyExposure);
 		starsSlider.SetValue(weather.stars);
+		skyRotationSlider.SetValue(wi::math::RadiansToDegrees(weather.sky_rotation));
 		windMagnitudeSlider.SetValue(XMVectorGetX(XMVector3Length(XMLoadFloat3(&weather.windDirection))));
 
 		switch (colorComboBox.GetSelected())
@@ -1315,6 +1325,7 @@ void WeatherWindow::ResizeLayout()
 	add(windRandomnessSlider);
 	add(skyExposureSlider);
 	add(starsSlider);
+	add(skyRotationSlider);
 
 	y += jump;
 

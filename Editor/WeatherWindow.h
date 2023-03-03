@@ -36,6 +36,7 @@ public:
 	wi::gui::Slider windRandomnessSlider;
 	wi::gui::Slider skyExposureSlider;
 	wi::gui::Slider starsSlider;
+	wi::gui::Slider skyRotationSlider;
 	wi::gui::CheckBox realisticskyCheckBox;
 	wi::gui::CheckBox aerialperspectiveCheckBox;
 	wi::gui::CheckBox realisticskyHighQualityCheckBox;

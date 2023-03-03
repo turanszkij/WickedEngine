@@ -708,6 +708,8 @@ namespace wi::scene
 		shaderscene.weather.sun_direction = weather.sunDirection;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = weather.ambient;
+		shaderscene.weather.sky_rotation_sin = std::sin(weather.sky_rotation);
+		shaderscene.weather.sky_rotation_cos = std::cos(weather.sky_rotation);
 		shaderscene.weather.fog.start = weather.fogStart;
 		shaderscene.weather.fog.density = weather.fogDensity;
 		shaderscene.weather.fog.height_start = weather.fogHeightStart;

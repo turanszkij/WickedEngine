@@ -154,6 +154,13 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool dark_enable
 
 float3 GetStaticSkyColor(in float3 V)
 {
+	ShaderWeather weather = GetWeather();
+	float2x2 rot = float2x2(
+		weather.sky_rotation_cos, -weather.sky_rotation_sin,
+		weather.sky_rotation_sin, weather.sky_rotation_cos
+	);
+	V.xz = mul(V.xz, rot);
+
 	if (GetFrame().options & OPTION_BIT_STATIC_SKY_SPHEREMAP)
 	{
 		float2 uv = (float2(atan2(V.z, V.x) / PI, -V.y) + 1.0) * 0.5;

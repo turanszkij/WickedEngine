@@ -1380,6 +1380,10 @@ namespace wi::scene
 				archive >> atmosphereParameters.distanceSPPMaxInv;
 				archive >> atmosphereParameters.aerialPerspectiveScale;
 			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> sky_rotation;
+			}
 		}
 		else
 		{
@@ -1586,6 +1590,10 @@ namespace wi::scene
 				archive << atmosphereParameters.rayMarchMinMaxSPP;
 				archive << atmosphereParameters.distanceSPPMaxInv;
 				archive << atmosphereParameters.aerialPerspectiveScale;
+			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive << sky_rotation;
 			}
 		}
 	}

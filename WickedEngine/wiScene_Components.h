@@ -1288,6 +1288,7 @@ namespace wi::scene
 		float windSpeed = 1;
 		float stars = 0.5f;
 		XMFLOAT3 gravity = XMFLOAT3(0, -10, 0);
+		float sky_rotation = 0; // horizontal rotation for skyMap texture (in radians)
 
 		wi::Ocean::OceanParameters oceanParameters;
 		AtmosphereParameters atmosphereParameters;
