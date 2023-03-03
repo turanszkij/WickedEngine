@@ -2,6 +2,7 @@
 #define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK // fix the lack of depth testing
 #include "volumetricLightHF.hlsli"
 #include "volumetricCloudsHF.hlsli"
+#include "fogHF.hlsli"
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
@@ -32,7 +33,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	const float stepSize = length(P - rayEnd) / sampleCount;
 
 	// dither ray start to help with undersampling:
-	P = P + V * stepSize * dither(input.pos.xy);
+	P = P + V * min(stepSize * dither(input.pos.xy), 10); // limit dithering step to 10 to avoid very large dither on sky
 
 	// Perform ray marching to integrate light volume along view ray:
 	[loop]

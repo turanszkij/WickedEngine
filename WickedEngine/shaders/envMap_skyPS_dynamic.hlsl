@@ -5,6 +5,7 @@
 #include "objectHF.hlsli"
 #include "lightingHF.hlsli"
 #include "skyHF.hlsli"
+#include "fogHF.hlsli"
 
 float4 main(PixelInput input) : SV_TARGET
 {
@@ -14,7 +15,7 @@ float4 main(PixelInput input) : SV_TARGET
 	bool receiveShadow = GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECEIVE_SHADOW;
 
 	float4 color = float4(GetDynamicSkyColor(input.pos.xy, normal, true, false, false, highQuality, false, receiveShadow), 1);
-	
+
 	color = clamp(color, 0, 65000);
 	return float4(color.rgb, 1);
 }

@@ -1470,7 +1470,7 @@ namespace wi::lua::scene
 			zenith = VectorProperty(&component->zenith);
 			ambient = VectorProperty(&component->ambient);
 			fogStart = FloatProperty(&component->fogStart);
-			fogEnd = FloatProperty(&component->fogEnd);
+			fogDensity = FloatProperty(&component->fogDensity);
 			fogHeightStart = FloatProperty(&component->fogHeightStart);
 			fogHeightEnd = FloatProperty(&component->fogHeightEnd);
 			windDirection = VectorProperty(&component->windDirection);
@@ -1508,7 +1508,7 @@ namespace wi::lua::scene
 		VectorProperty zenith;
 		VectorProperty ambient;
 		FloatProperty fogStart;
-		FloatProperty fogEnd;
+		FloatProperty fogDensity;
 		FloatProperty fogHeightStart;
 		FloatProperty fogHeightEnd;
 		FloatProperty fogHeightSky;
@@ -1532,7 +1532,7 @@ namespace wi::lua::scene
 		PropertyFunction(zenith)
 		PropertyFunction(ambient)
 		PropertyFunction(fogStart)
-		PropertyFunction(fogEnd)
+		PropertyFunction(fogDensity)
 		PropertyFunction(fogHeightStart)
 		PropertyFunction(fogHeightEnd)
 		PropertyFunction(fogHeightSky)

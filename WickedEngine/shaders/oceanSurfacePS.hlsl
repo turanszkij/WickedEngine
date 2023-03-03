@@ -19,6 +19,7 @@ float4 main(PSIn input) : SV_TARGET
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
+	uint2 pixel = input.pos.xy;
 
 	float ocean_level_at_camera_pos = xOceanWaterHeight;
 	ocean_level_at_camera_pos += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, GetCamera().position.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
@@ -33,7 +34,7 @@ float4 main(PSIn input) : SV_TARGET
 	Surface surface;
 	surface.init();
 	surface.flags |= SURFACE_FLAG_RECEIVE_SHADOW;
-	surface.pixel = input.pos.xy;
+	surface.pixel = pixel;
 	float depth = input.pos.z;
 	surface.albedo = color.rgb;
 	surface.f0 = camera_above_water ? 0.02 : 0.1;
@@ -48,7 +49,7 @@ float4 main(PSIn input) : SV_TARGET
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-	TiledLighting(surface, lighting);
+	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 
 	float2 ScreenCoord = surface.pixel * GetCamera().internal_resolution_rcp;
 	const float bump_strength = camera_above_water ? 0.04 : 0.1;
@@ -94,9 +95,9 @@ float4 main(PSIn input) : SV_TARGET
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, GetCamera().position, V, color);
-
 	ApplyAerialPerspective(ScreenCoord, surface.P, color);
+	
+	ApplyFog(dist, V, color);
 
 	return color;
 }

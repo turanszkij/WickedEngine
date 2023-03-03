@@ -77,7 +77,12 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			pick.entity = scene.Entity_CreateForce("force");
 			break;
 		case 7:
-			pick.entity = scene.Entity_CreateDecal("decal", "images/logo_small.png");
+			pick.entity = scene.Entity_CreateDecal("decal", "");
+			if (scene.materials.Contains(pick.entity))
+			{
+				MaterialComponent* decal_material = scene.materials.GetComponent(pick.entity);
+				decal_material->textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(*wi::texturehelper::getLogo());
+			}
 			scene.transforms.GetComponent(pick.entity)->RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
 			break;
 		case 8:

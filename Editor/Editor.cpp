@@ -158,11 +158,6 @@ void EditorComponent::ResizeLayout()
 }
 void EditorComponent::Load()
 {
-	// Font icon is from #include "FontAwesomeV6.h"
-	//	We will not directly use this font style, but let the font renderer fall back on it
-	//	when an icon character is not found in the default font.
-	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, sizeof(font_awesome_v6));
-
 	newSceneButton.Create("+");
 	newSceneButton.SetTooltip("New scene");
 	newSceneButton.OnClick([&](wi::gui::EventArgs args) {
@@ -514,6 +509,7 @@ void EditorComponent::Load()
 		ss += "Scale Toggle: 3\n";
 		ss += "Wireframe mode: Ctrl + W\n";
 		ss += "Color grading reference: Ctrl + G (color grading palette reference will be displayed in top left corner)\n";
+		ss += "Focus on selected: F button, this will make the camera jump to selection.\n";
 		ss += "Inspector mode: I button (hold), hovered entity information will be displayed near mouse position.\n";
 		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
 		ss += "Script Console / backlog: HOME button\n";
@@ -590,6 +586,12 @@ void EditorComponent::Load()
 }
 void EditorComponent::Start()
 {
+	// Font icon is from #include "FontAwesomeV6.h"
+	//	We will not directly use this font style, but let the font renderer fall back on it
+	//	when an icon character is not found in the default font.
+	//	This is added on main thread, not inside Load(), to avoid conflict with font system intialization
+	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, sizeof(font_awesome_v6));
+
 	RenderPath2D::Start();
 }
 void EditorComponent::PreUpdate()
@@ -787,6 +789,11 @@ void EditorComponent::Update(float dt)
 
 			editorscene.camera_target.UpdateTransform();
 			editorscene.camera_transform.UpdateTransform_Parented(editorscene.camera_target);
+		}
+
+		if (!translator.selected.empty() && wi::input::Down((wi::input::BUTTON)'F'))
+		{
+			FocusCameraOnSelected();
 		}
 
 		inspector_mode = wi::input::Down((wi::input::BUTTON)'I');
@@ -3239,4 +3246,61 @@ void EditorComponent::NewScene()
 	RefreshSceneList();
 	UpdateTopMenuAnimation();
 	optionsWnd.cameraWnd.ResetCam();
+}
+
+void EditorComponent::FocusCameraOnSelected()
+{
+	Scene& scene = GetCurrentScene();
+	EditorScene& editorscene = GetCurrentEditorScene();
+	CameraComponent& camera = editorscene.camera;
+
+	AABB aabb;
+	XMVECTOR centerV = XMVectorSet(0, 0, 0, 0);
+	float count = 0;
+	for (auto& x : translator.selected)
+	{
+		TransformComponent* transform = scene.transforms.GetComponent(x.entity);
+		if (transform != nullptr)
+		{
+			centerV = XMVectorAdd(centerV, transform->GetPositionV());
+			count += 1.0f;
+		}
+
+		if (scene.objects.Contains(x.entity))
+		{
+			aabb = AABB::Merge(aabb, scene.aabb_objects[scene.objects.GetIndex(x.entity)]);
+		}
+		if (scene.lights.Contains(x.entity))
+		{
+			aabb = AABB::Merge(aabb, scene.aabb_lights[scene.lights.GetIndex(x.entity)]);
+		}
+		if (scene.decals.Contains(x.entity))
+		{
+			aabb = AABB::Merge(aabb, scene.aabb_decals[scene.decals.GetIndex(x.entity)]);
+		}
+		if (scene.probes.Contains(x.entity))
+		{
+			aabb = AABB::Merge(aabb, scene.aabb_probes[scene.probes.GetIndex(x.entity)]);
+		}
+	}
+	if (count > 0)
+	{
+		centerV /= count;
+	}
+
+	float focus_offset = 5;
+	if (aabb.getArea() > 0)
+	{
+		focus_offset = aabb.getRadius() * 1.5f;
+		XMFLOAT3 aabb_center = aabb.getCenter();
+		centerV = XMLoadFloat3(&aabb_center);
+	}
+
+	editorscene.camera_target = {};
+	editorscene.camera_target.Translate(centerV);
+	editorscene.camera_target.UpdateTransform();
+	editorscene.camera_transform.translation_local = {};
+	editorscene.camera_transform.Translate(centerV - camera.GetAt() * focus_offset);
+	editorscene.camera_transform.UpdateTransform();
+	editorscene.cam_move = {};
 }

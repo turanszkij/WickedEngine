@@ -322,7 +322,7 @@ struct VolumetricCloudParameters
 struct ShaderFog
 {
 	float start;
-	float end;
+	float density;
 	float height_start;
 	float height_end;
 };
@@ -359,10 +359,10 @@ struct ShaderWeather
 	float sky_exposure;
 
 	float3 zenith;
-	float padding0;
+	float sky_rotation_sin;
 
 	float3 ambient;
-	float padding1;
+	float sky_rotation_cos;
 
 	float4x4 stars_rotation;
 

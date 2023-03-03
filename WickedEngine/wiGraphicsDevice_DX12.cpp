@@ -1283,7 +1283,7 @@ namespace dx12_internal
 	struct Resource_DX12
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
-		D3D12MA::Allocation* allocation = nullptr;
+		ComPtr<D3D12MA::Allocation> allocation;
 		ComPtr<ID3D12Resource> resource;
 		SingleDescriptor srv;
 		SingleDescriptor uav;

@@ -25,7 +25,7 @@ public:
 	wi::gui::CheckBox overrideFogColorCheckBox;
 	wi::gui::CheckBox heightFogCheckBox;
 	wi::gui::Slider fogStartSlider;
-	wi::gui::Slider fogEndSlider;
+	wi::gui::Slider fogDensitySlider;
 	wi::gui::Slider fogHeightStartSlider;
 	wi::gui::Slider fogHeightEndSlider;
 	wi::gui::Slider gravitySlider;
@@ -36,6 +36,7 @@ public:
 	wi::gui::Slider windRandomnessSlider;
 	wi::gui::Slider skyExposureSlider;
 	wi::gui::Slider starsSlider;
+	wi::gui::Slider skyRotationSlider;
 	wi::gui::CheckBox realisticskyCheckBox;
 	wi::gui::CheckBox aerialperspectiveCheckBox;
 	wi::gui::CheckBox realisticskyHighQualityCheckBox;

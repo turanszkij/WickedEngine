@@ -1432,6 +1432,17 @@ namespace wi::graphics
 			return Format::UNKNOWN;
 		}
 	}
+	constexpr IndexBufferFormat GetIndexBufferFormat(Format format)
+	{
+		switch (format)
+		{
+		default:
+		case Format::R32_UINT:
+			return IndexBufferFormat::UINT32;
+		case Format::R16_UINT:
+			return IndexBufferFormat::UINT16;
+		}
+	}
 
 	constexpr uint32_t AlignTo(uint32_t value, uint32_t alignment)
 	{

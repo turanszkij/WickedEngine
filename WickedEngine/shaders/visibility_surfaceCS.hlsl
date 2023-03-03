@@ -42,21 +42,18 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	Surface surface;
 	surface.init();
-
-	[branch]
-	if (!surface.load(prim, ray.Origin, ray.Direction, rayDirection_quad_x, rayDirection_quad_y))
-	{
-		return;
-	}
 	surface.pixel = pixel.xy;
 	surface.screenUV = uv;
 
-	TiledDecals(surface, tile.entity_flat_tile_index);
-
+	[branch]
+	if (!surface.load(prim, ray.Origin, ray.Direction, rayDirection_quad_x, rayDirection_quad_y, tile.entity_flat_tile_index))
+	{
+		return;
+	}
 
 #ifdef UNLIT
 	float4 color = float4(surface.albedo, 1);
-	ApplyFog(surface.hit_depth, GetCamera().position, surface.V, color);
+	ApplyFog(surface.hit_depth, surface.V, color);
 	output[pixel] = color;
 	return;
 #endif // UNLIT

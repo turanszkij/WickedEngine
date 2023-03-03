@@ -203,8 +203,8 @@ namespace wi::scene
 		struct TextureMap
 		{
 			std::string name;
-			uint32_t uvset = 0;
 			wi::Resource resource;
+			uint32_t uvset = 0;
 			const wi::graphics::GPUResource* GetGPUResource() const
 			{
 				if (!resource.IsValid() || !resource.GetTexture().IsValid())
@@ -852,6 +852,8 @@ namespace wi::scene
 		float range = 10.0f;
 		float outerConeAngle = XM_PIDIV4;
 		float innerConeAngle = 0; // default value is 0, means only outer cone angle is used
+		float radius = 0.025f;
+		float length = 0;
 
 		wi::vector<float> cascade_distances = { 8,80,800 };
 		wi::vector<std::string> lensFlareNames;
@@ -1048,13 +1050,20 @@ namespace wi::scene
 		enum FLAGS
 		{
 			EMPTY = 0,
+			BASECOLOR_ONLY_ALPHA = 1 << 0,
 		};
 		uint32_t _flags = EMPTY;
 
+		// Set decal to only use alpha from base color texture. Useful for blending normalmap-only decals
+		constexpr void SetBaseColorOnlyAlpha(bool value) { if (value) { _flags |= BASECOLOR_ONLY_ALPHA; } else { _flags ^= BASECOLOR_ONLY_ALPHA; } }
+
+		constexpr bool IsBaseColorOnlyAlpha() const { return _flags & BASECOLOR_ONLY_ALPHA; }
+
 		// Non-serialized attributes:
-		XMFLOAT4 color;
 		float emissive;
+		XMFLOAT4 color;
 		XMFLOAT3 front;
+		float normal_strength;
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 world;
@@ -1270,7 +1279,7 @@ namespace wi::scene
 		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		float fogStart = 100;
-		float fogEnd = 1000;
+		float fogDensity = 0;
 		float fogHeightStart = 1;
 		float fogHeightEnd = 3;
 		XMFLOAT3 windDirection = XMFLOAT3(0, 0, 0);
@@ -1279,6 +1288,7 @@ namespace wi::scene
 		float windSpeed = 1;
 		float stars = 0.5f;
 		XMFLOAT3 gravity = XMFLOAT3(0, -10, 0);
+		float sky_rotation = 0; // horizontal rotation for skyMap texture (in radians)
 
 		wi::Ocean::OceanParameters oceanParameters;
 		AtmosphereParameters atmosphereParameters;

@@ -708,8 +708,10 @@ namespace wi::scene
 		shaderscene.weather.sun_direction = weather.sunDirection;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = weather.ambient;
+		shaderscene.weather.sky_rotation_sin = std::sin(weather.sky_rotation);
+		shaderscene.weather.sky_rotation_cos = std::cos(weather.sky_rotation);
 		shaderscene.weather.fog.start = weather.fogStart;
-		shaderscene.weather.fog.end = weather.fogEnd;
+		shaderscene.weather.fog.density = weather.fogDensity;
 		shaderscene.weather.fog.height_start = weather.fogHeightStart;
 		shaderscene.weather.fog.height_end = weather.fogHeightEnd;
 		shaderscene.weather.horizon = weather.horizon;
@@ -3795,6 +3797,7 @@ namespace wi::scene
 			decal.emissive = material.GetEmissiveStrength();
 			decal.texture = material.textures[MaterialComponent::BASECOLORMAP].resource;
 			decal.normal = material.textures[MaterialComponent::NORMALMAP].resource;
+			decal.normal_strength = material.normalMapStrength;
 		}
 	}
 	void Scene::RunProbeUpdateSystem(wi::jobsystem::context& ctx)
@@ -4007,6 +4010,7 @@ namespace wi::scene
 			{
 			default:
 			case LightComponent::DIRECTIONAL:
+				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
 				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()));
 				locker.lock();
 				if (args.jobIndex < weather.most_important_light_index)
@@ -4022,9 +4026,11 @@ namespace wi::scene
 				locker.unlock();
 				break;
 			case LightComponent::SPOT:
+				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
 				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
 			case LightComponent::POINT:
+				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(1, 0, 0, 0), W)));
 				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
 			}
@@ -4060,7 +4066,7 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			uint32_t indexCount = (uint32_t)hair.primitiveBuffer.desc.size / std::max(1u, (uint32_t)hair.primitiveBuffer.desc.stride);
+			uint32_t indexCount = hair.GetParticleCount() * 6;
 			uint32_t triangleCount = indexCount / 3u;
 			uint32_t meshletCount = triangle_count_to_meshlet_count(triangleCount);
 			uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount);
@@ -4160,7 +4166,7 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			uint32_t indexCount = (uint32_t)emitter.primitiveBuffer.desc.size / std::max(1u, (uint32_t)emitter.primitiveBuffer.desc.stride);
+			uint32_t indexCount = emitter.GetMaxParticleCount() * 6;
 			uint32_t triangleCount = indexCount / 3u;
 			uint32_t meshletCount = triangle_count_to_meshlet_count(triangleCount);
 			uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount);

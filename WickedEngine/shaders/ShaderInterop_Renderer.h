@@ -625,7 +625,7 @@ struct ShaderEntity
 	uint layerMask;
 	uint indices;
 	uint remap;
-	uint userdata;
+	uint radius16_length16;
 
 	float4 shadowAtlasMulAdd;
 
@@ -642,6 +642,14 @@ struct ShaderEntity
 	inline float GetRange()
 	{
 		return f16tof32(type8_flags8_range16 >> 16u);
+	}
+	inline float GetRadius()
+	{
+		return f16tof32(radius16_length16);
+	}
+	inline float GetLength()
+	{
+		return f16tof32(radius16_length16 >> 16u);
 	}
 	inline float3 GetDirection()
 	{
@@ -718,6 +726,14 @@ struct ShaderEntity
 	inline void SetRange(float value)
 	{
 		type8_flags8_range16 |= XMConvertFloatToHalf(value) << 16u;
+	}
+	inline void SetRadius(float value)
+	{
+		radius16_length16 |= XMConvertFloatToHalf(value);
+	}
+	inline void SetLength(float value)
+	{
+		radius16_length16 |= XMConvertFloatToHalf(value) << 16u;
 	}
 	inline void SetColor(float4 value)
 	{
@@ -822,6 +838,8 @@ enum SHADER_ENTITY_TYPE
 
 static const uint ENTITY_FLAG_LIGHT_STATIC = 1 << 0;
 static const uint ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS = 1 << 1;
+
+static const uint ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 0;
 
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;

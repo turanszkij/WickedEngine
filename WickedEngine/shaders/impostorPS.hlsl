@@ -54,17 +54,17 @@ float4 main(VSOut input) : SV_Target
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-	TiledLighting(surface, lighting);
+	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 
 	float4 color = 0;
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, GetCamera().position, V, color);
-
 #ifdef TRANSPARENT
 	ApplyAerialPerspective(ScreenCoord, surface.P, color);
 #endif // TRANSPARENT
+	
+	ApplyFog(dist, V, color);
 	
 	return color;
 }

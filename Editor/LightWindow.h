@@ -16,6 +16,8 @@ public:
 
 	wi::gui::Slider intensitySlider;
 	wi::gui::Slider rangeSlider;
+	wi::gui::Slider radiusSlider;
+	wi::gui::Slider lengthSlider;
 	wi::gui::Slider outerConeAngleSlider;
 	wi::gui::Slider innerConeAngleSlider;
 	wi::gui::CheckBox shadowCheckBox;

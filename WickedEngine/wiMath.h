@@ -30,6 +30,7 @@ using namespace DirectX::PackedVector;
 namespace wi::math
 {
 	static constexpr XMFLOAT4X4 IDENTITY_MATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+	static constexpr float PI = XM_PI;
 
 	constexpr float saturate(float x) { return std::min(std::max(x, 0.0f), 1.0f); }
 
@@ -220,6 +221,15 @@ namespace wi::math
 	float TriangleArea(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& C);
 	// a, b, c: trangle side lengths
 	float TriangleArea(float a, float b, float c);
+
+	constexpr float SphereSurfaceArea(float radius)
+	{
+		return 4 * PI * radius * radius;
+	}
+	constexpr float SphereVolume(float radius)
+	{
+		return 4.0f / 3.0f * PI * radius * radius * radius;
+	}
 
 	XMFLOAT3 GetCubicHermiteSplinePos(
 		const XMFLOAT3& startPos,

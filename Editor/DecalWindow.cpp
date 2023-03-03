@@ -40,8 +40,23 @@ void DecalWindow::Create(EditorComponent* _editor)
 
 	y += step;
 
+	onlyalphaCheckBox.Create("Alpha only basecolor: ");
+	onlyalphaCheckBox.SetSize(XMFLOAT2(hei, hei));
+	onlyalphaCheckBox.SetTooltip("You can enable this to only use alpha channel from basecolor map. Useful for blending normalmap-only decals.");
+	onlyalphaCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		DecalComponent* decal = scene.decals.GetComponent(entity);
+		if (decal != nullptr)
+		{
+			decal->SetBaseColorOnlyAlpha(args.bValue);
+		}
+	});
+	AddWidget(&onlyalphaCheckBox);
+
+	y += step;
+
 	infoLabel.Create("");
-	infoLabel.SetText("Set decal properties (texture, color, etc.) in the Material window.");
+	infoLabel.SetText("Set decal properties in the Material component. Decals support the following material properties:\n - Base color\n - Base color texture\n - Emissive strength\n - Normalmap texture\n - Normalmap strength");
 	infoLabel.SetSize(XMFLOAT2(300, 100));
 	infoLabel.SetPos(XMFLOAT2(10, y));
 	infoLabel.SetColor(wi::Color::Transparent());
@@ -64,6 +79,7 @@ void DecalWindow::SetEntity(Entity entity)
 	if (decal != nullptr)
 	{
 		SetEnabled(true);
+		onlyalphaCheckBox.SetCheck(decal->IsBaseColorOnlyAlpha());
 	}
 	else
 	{
@@ -110,5 +126,6 @@ void DecalWindow::ResizeLayout()
 
 	add_fullwidth(infoLabel);
 	add_right(placementCheckBox);
+	add_right(onlyalphaCheckBox);
 
 }
