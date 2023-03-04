@@ -90,7 +90,7 @@ namespace wi::lua
 	int Input_BindLua::GetPointer(lua_State* L)
 	{
 		XMFLOAT4 P = wi::input::GetPointer();
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat4(&P)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat4(&P));
 		return 1;
 	}
 	int Input_BindLua::SetPointer(lua_State* L)
@@ -112,7 +112,7 @@ namespace wi::lua
 	}
 	int Input_BindLua::GetPointerDelta(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat2(&wi::input::GetMouseState().delta_position)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat2(&wi::input::GetMouseState().delta_position));
 		return 1;
 	}
 	int Input_BindLua::HidePointer(lua_State* L)
@@ -144,7 +144,7 @@ namespace wi::lua
 		else
 			wi::lua::SError(L, "GetAnalog(int type, opt int playerindex = 0) not enough arguments!");
 
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat4(&result)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat4(&result));
 		return 1;
 	}
 	int Input_BindLua::GetTouches(lua_State* L)
@@ -152,7 +152,7 @@ namespace wi::lua
 		auto& touches = wi::input::GetTouches();
 		for (auto& touch : touches)
 		{
-			Luna<Touch_BindLua>::push(L, Touch_BindLua(touch));
+			Luna<Touch_BindLua>::push(L, touch);
 		}
 		return (int)touches.size();
 	}
@@ -284,7 +284,7 @@ TOUCHSTATE_MOVED			= 2
 	}
 	int Touch_BindLua::GetPos(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat2(&touch.pos)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat2(&touch.pos));
 		return 1;
 	}
 

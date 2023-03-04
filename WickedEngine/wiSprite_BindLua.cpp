@@ -59,7 +59,7 @@ namespace wi::lua
 	}
 	int Sprite_BindLua::GetParams(lua_State* L)
 	{
-		Luna<wi::lua::ImageParams_BindLua>::push(L, wi::lua::ImageParams_BindLua(sprite.params));
+		Luna<wi::lua::ImageParams_BindLua>::push(L, sprite.params);
 		return 1;
 	}
 	int Sprite_BindLua::SetAnim(lua_State* L)
@@ -81,7 +81,7 @@ namespace wi::lua
 	}
 	int Sprite_BindLua::GetAnim(lua_State* L)
 	{
-		Luna<SpriteAnim_BindLua>::push(L, SpriteAnim_BindLua(sprite.anim));
+		Luna<SpriteAnim_BindLua>::push(L, sprite.anim);
 		return 1;
 	}
 

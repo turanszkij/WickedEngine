@@ -353,7 +353,7 @@ namespace wi::lua
 			wi::lua::SError(L, "GetCanvas() component is empty!");
 			return 0;
 		}
-		Luna<Canvas_BindLua>::push(L, Canvas_BindLua(component->canvas));
+		Luna<Canvas_BindLua>::push(L, component->canvas);
 		return 1;
 	}
 	int Application_BindLua::SetCanvas(lua_State* L)

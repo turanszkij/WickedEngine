@@ -21,7 +21,7 @@ namespace wi::lua::scene
 	class Scene_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::Scene> owning;
+		wi::scene::Scene owning;
 	public:
 		wi::scene::Scene* scene = nullptr;
 
@@ -32,8 +32,7 @@ namespace wi::lua::scene
 		Scene_BindLua(wi::scene::Scene* scene) :scene(scene) {}
 		Scene_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::Scene>();
-			this->scene = owning.get();
+			scene = &owning;
 		}
 
 		int Update(lua_State* L);
@@ -178,7 +177,7 @@ namespace wi::lua::scene
 	class NameComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::NameComponent> owning;
+		wi::scene::NameComponent owning;
 	public:
 		wi::scene::NameComponent* component = nullptr;
 
@@ -189,8 +188,7 @@ namespace wi::lua::scene
 		NameComponent_BindLua(wi::scene::NameComponent* component) :component(component) {}
 		NameComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::NameComponent>();
-			component = owning.get();
+			component = &owning;
 		}
 
 		int SetName(lua_State* L);
@@ -200,7 +198,7 @@ namespace wi::lua::scene
 	class LayerComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::LayerComponent> owning;
+		wi::scene::LayerComponent owning;
 	public:
 		wi::scene::LayerComponent* component = nullptr;
 
@@ -211,8 +209,7 @@ namespace wi::lua::scene
 		LayerComponent_BindLua(wi::scene::LayerComponent* component) :component(component) {}
 		LayerComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::LayerComponent>();
-			component = owning.get();
+			component = &owning;
 		}
 
 		int SetLayerMask(lua_State* L);
@@ -222,7 +219,7 @@ namespace wi::lua::scene
 	class TransformComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::TransformComponent> owning;
+		wi::scene::TransformComponent owning;
 	public:
 		wi::scene::TransformComponent* component = nullptr;
 
@@ -243,8 +240,7 @@ namespace wi::lua::scene
 		}
 		TransformComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::TransformComponent>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -276,7 +272,7 @@ namespace wi::lua::scene
 	class CameraComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::CameraComponent> owning;
+		wi::scene::CameraComponent owning;
 	public:
 		wi::scene::CameraComponent* component = nullptr;
 
@@ -287,8 +283,7 @@ namespace wi::lua::scene
 		CameraComponent_BindLua(wi::scene::CameraComponent* component) :component(component) {}
 		CameraComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::CameraComponent>();
-			component = owning.get();
+			component = &owning;
 		}
 
 		int UpdateCamera(lua_State* L);
@@ -322,7 +317,7 @@ namespace wi::lua::scene
 	class AnimationComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::AnimationComponent> owning;
+		wi::scene::AnimationComponent owning;
 	public:
 		wi::scene::AnimationComponent* component = nullptr;
 
@@ -333,8 +328,7 @@ namespace wi::lua::scene
 		AnimationComponent_BindLua(wi::scene::AnimationComponent* component) :component(component) {}
 		AnimationComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::AnimationComponent>();
-			component = owning.get();
+			component = &owning;
 		}
 
 		int Play(lua_State* L);
@@ -357,7 +351,7 @@ namespace wi::lua::scene
 	class MaterialComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::MaterialComponent> owning;
+		wi::scene::MaterialComponent owning;
 	public:
 		wi::scene::MaterialComponent* component = nullptr;
 
@@ -399,8 +393,7 @@ namespace wi::lua::scene
 		}
 		MaterialComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::MaterialComponent>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -473,7 +466,7 @@ namespace wi::lua::scene
 	class MeshComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::MeshComponent> owning;
+		wi::scene::MeshComponent owning;
 	public:
 		wi::scene::MeshComponent* component = nullptr;
 
@@ -495,8 +488,7 @@ namespace wi::lua::scene
 		}
 		MeshComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::MeshComponent>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -517,7 +509,7 @@ namespace wi::lua::scene
 	class EmitterComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::EmittedParticleSystem> owning;
+		wi::EmittedParticleSystem owning;
 	public:
 		wi::EmittedParticleSystem* component = nullptr;
 
@@ -555,8 +547,7 @@ namespace wi::lua::scene
 		}
 		EmitterComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::EmittedParticleSystem>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -629,7 +620,7 @@ namespace wi::lua::scene
 	class HairParticleSystem_BindLua
 	{
 	private:
-		std::unique_ptr<wi::HairParticleSystem> owning;
+		wi::HairParticleSystem owning;
 	public:
 		wi::HairParticleSystem* component = nullptr;
 
@@ -661,8 +652,7 @@ namespace wi::lua::scene
 		}
 		HairParticleSystem_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<HairParticleSystem>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -700,7 +690,7 @@ namespace wi::lua::scene
 	class LightComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::LightComponent> owning;
+		wi::scene::LightComponent owning;
 	public:
 		wi::scene::LightComponent* component = nullptr;
 
@@ -711,8 +701,7 @@ namespace wi::lua::scene
 		LightComponent_BindLua(wi::scene::LightComponent* component) :component(component) {}
 		LightComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::LightComponent>();
-			component = owning.get();
+			component = &owning;
 		}
 
 		int SetType(lua_State* L);
@@ -743,7 +732,7 @@ namespace wi::lua::scene
 	class ObjectComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::ObjectComponent> owning;
+		wi::scene::ObjectComponent owning;
 	public:
 		wi::scene::ObjectComponent* component = nullptr;
 
@@ -754,8 +743,7 @@ namespace wi::lua::scene
 		ObjectComponent_BindLua(wi::scene::ObjectComponent* component) :component(component) {}
 		ObjectComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::ObjectComponent>();
-			component = owning.get();
+			component = &owning;
 		}
 
 		int GetMeshID(lua_State* L);
@@ -780,7 +768,7 @@ namespace wi::lua::scene
 	class InverseKinematicsComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::InverseKinematicsComponent> owning;
+		wi::scene::InverseKinematicsComponent owning;
 	public:
 		wi::scene::InverseKinematicsComponent* component = nullptr;
 
@@ -791,8 +779,7 @@ namespace wi::lua::scene
 		InverseKinematicsComponent_BindLua(wi::scene::InverseKinematicsComponent* component) :component(component) {}
 		InverseKinematicsComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::InverseKinematicsComponent>();
-			component = owning.get();
+			component = &owning;
 		}
 
 		int SetTarget(lua_State* L);
@@ -808,7 +795,7 @@ namespace wi::lua::scene
 	class SpringComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::SpringComponent> owning;
+		wi::scene::SpringComponent owning;
 	public:
 		wi::scene::SpringComponent* component = nullptr;
 
@@ -830,8 +817,7 @@ namespace wi::lua::scene
 		}
 		SpringComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::SpringComponent>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -856,7 +842,7 @@ namespace wi::lua::scene
 	class ScriptComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::ScriptComponent> owning;
+		wi::scene::ScriptComponent owning;
 	public:
 		wi::scene::ScriptComponent* component = nullptr;
 
@@ -867,8 +853,7 @@ namespace wi::lua::scene
 		ScriptComponent_BindLua(wi::scene::ScriptComponent* component) :component(component) {}
 		ScriptComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::ScriptComponent>();
-			component = owning.get();
+			component = &owning;
 		}
 
 		int CreateFromFile(lua_State* L);
@@ -881,7 +866,7 @@ namespace wi::lua::scene
 	class RigidBodyPhysicsComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::RigidBodyPhysicsComponent> owning;
+		wi::scene::RigidBodyPhysicsComponent owning;
 	public:
 		wi::scene::RigidBodyPhysicsComponent* component = nullptr;
 
@@ -910,8 +895,7 @@ namespace wi::lua::scene
 		}
 		RigidBodyPhysicsComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::RigidBodyPhysicsComponent>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -949,7 +933,7 @@ namespace wi::lua::scene
 	class SoftBodyPhysicsComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::SoftBodyPhysicsComponent> owning;
+		wi::scene::SoftBodyPhysicsComponent owning;
 	public:
 		wi::scene::SoftBodyPhysicsComponent* component = nullptr;
 
@@ -970,8 +954,7 @@ namespace wi::lua::scene
 		}
 		SoftBodyPhysicsComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::SoftBodyPhysicsComponent>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -991,7 +974,7 @@ namespace wi::lua::scene
 	class ForceFieldComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::ForceFieldComponent> owning;
+		wi::scene::ForceFieldComponent owning;
 	public:
 		wi::scene::ForceFieldComponent* component = nullptr;
 
@@ -1012,8 +995,7 @@ namespace wi::lua::scene
 		}
 		ForceFieldComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::ForceFieldComponent>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -1029,7 +1011,7 @@ namespace wi::lua::scene
 	class Weather_OceanParams_BindLua
 	{
 	private:
-		std::unique_ptr<wi::Ocean::OceanParameters> owning;
+		wi::Ocean::OceanParameters owning;
 	public:
 		wi::Ocean::OceanParameters* parameter = nullptr;
 
@@ -1055,8 +1037,7 @@ namespace wi::lua::scene
 		}
 		Weather_OceanParams_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::Ocean::OceanParameters>();
-			parameter = owning.get();
+			parameter = &owning;
 			BuildBindings();
 		}
 
@@ -1098,7 +1079,7 @@ namespace wi::lua::scene
 	class Weather_AtmosphereParams_BindLua
 	{
 	private:
-		std::unique_ptr<AtmosphereParameters> owning;
+		AtmosphereParameters owning;
 	public:
 		AtmosphereParameters* parameter = nullptr;
 
@@ -1135,8 +1116,7 @@ namespace wi::lua::scene
 		}
 		Weather_AtmosphereParams_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<AtmosphereParameters>();
-			parameter = owning.get();
+			parameter = &owning;
 			BuildBindings();
 		}
 
@@ -1193,7 +1173,7 @@ namespace wi::lua::scene
 	class Weather_VolumetricCloudParams_BindLua
 	{
 	private:
-		std::unique_ptr<VolumetricCloudParameters> owning;
+		VolumetricCloudParameters owning;
 	public:
 		VolumetricCloudParameters* parameter = nullptr;
 
@@ -1286,8 +1266,7 @@ namespace wi::lua::scene
 		}
 		Weather_VolumetricCloudParams_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<VolumetricCloudParameters>();
-			parameter = owning.get();
+			parameter = &owning;
 			BuildBindings();
 		}
 
@@ -1453,7 +1432,7 @@ namespace wi::lua::scene
 	class WeatherComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::WeatherComponent> owning;
+		wi::scene::WeatherComponent owning;
 	public:
 		wi::scene::WeatherComponent* component = nullptr;
 
@@ -1496,8 +1475,7 @@ namespace wi::lua::scene
 		}
 		WeatherComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::WeatherComponent>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -1601,7 +1579,7 @@ namespace wi::lua::scene
 	class SoundComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::SoundComponent> owning;
+		wi::scene::SoundComponent owning;
 	public:
 		wi::scene::SoundComponent* component = nullptr;
 
@@ -1621,8 +1599,7 @@ namespace wi::lua::scene
 		}
 		SoundComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::SoundComponent>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -1645,7 +1622,7 @@ namespace wi::lua::scene
 	class ColliderComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::ColliderComponent> owning;
+		wi::scene::ColliderComponent owning;
 	public:
 		wi::scene::ColliderComponent* component = nullptr;
 
@@ -1667,8 +1644,7 @@ namespace wi::lua::scene
 		}
 		ColliderComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::ColliderComponent>();
-			component = owning.get();
+			component = &owning;
 			BuildBindings();
 		}
 
@@ -1692,7 +1668,7 @@ namespace wi::lua::scene
 	class ExpressionComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::ExpressionComponent> owning;
+		wi::scene::ExpressionComponent owning;
 	public:
 		wi::scene::ExpressionComponent* component = nullptr;
 
@@ -1703,8 +1679,7 @@ namespace wi::lua::scene
 		ExpressionComponent_BindLua(wi::scene::ExpressionComponent* component) :component(component) {}
 		ExpressionComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::ExpressionComponent>();
-			component = owning.get();
+			component = &owning;
 		}
 
 		int FindExpressionID(lua_State* L);
@@ -1717,7 +1692,7 @@ namespace wi::lua::scene
 	class HumanoidComponent_BindLua
 	{
 	private:
-		std::unique_ptr<wi::scene::HumanoidComponent> owning;
+		wi::scene::HumanoidComponent owning;
 	public:
 		wi::scene::HumanoidComponent* component = nullptr;
 
@@ -1728,8 +1703,7 @@ namespace wi::lua::scene
 		HumanoidComponent_BindLua(wi::scene::HumanoidComponent* component) :component(component) {}
 		HumanoidComponent_BindLua(lua_State* L)
 		{
-			owning = std::make_unique<wi::scene::HumanoidComponent>();
-			component = owning.get();
+			component = &owning;
 		}
 
 		int GetBoneEntity(lua_State* L);
