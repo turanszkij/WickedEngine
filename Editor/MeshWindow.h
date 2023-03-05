@@ -14,6 +14,7 @@ public:
 	void SetEntity(wi::ecs::Entity entity, int subset);
 
 	wi::gui::Label meshInfoLabel;
+	wi::gui::Button subsetRemoveButton;
 	wi::gui::ComboBox subsetComboBox;
 	wi::gui::ComboBox subsetMaterialComboBox;
 	wi::gui::CheckBox doubleSidedCheckBox;

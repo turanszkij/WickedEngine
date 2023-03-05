@@ -57,14 +57,69 @@ void MeshWindow::Create(EditorComponent* _editor)
 		if (mesh != nullptr)
 		{
 			subset = args.iValue;
-			if (!editor->translator.selected.empty())
+
+			uint32_t main_subset_count = mesh->subsets_per_lod > 0 ? mesh->subsets_per_lod : (uint32_t)mesh->subsets.size();
+			if (main_subset_count <= (uint32_t)subset)
 			{
-				editor->translator.selected.back().subsetIndex = subset;
+				wi::Archive& archive = editor->AdvanceHistory();
+				archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+				editor->RecordEntity(archive, entity);
+
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh->GetLODSubsetRange(0, first_subset, last_subset);
+				wi::vector<MeshComponent::MeshSubset> newSubsets;
+				for (uint32_t i = first_subset; i < last_subset; ++i)
+				{
+					newSubsets.push_back(mesh->subsets[i]);
+				}
+				newSubsets.emplace_back().indexCount = (uint32_t)mesh->indices.size();
+				mesh->subsets = newSubsets;
+				mesh->subsets_per_lod = 0;
+
+				editor->RecordEntity(archive, entity);
 			}
+
+			SetEntity(entity, subset);
 		}
 	});
-	subsetComboBox.SetTooltip("Select a subset. A subset can also be selected by picking it in the 3D scene.\nLook at the material window when a subset is selected to edit it.");
+	subsetComboBox.SetTooltip("Select a subset. A subset can also be selected by picking it in the 3D scene.\nLook at the material window when a subset is selected to edit it.\nIf you add a new subset, LODs will be lost and need to be regenerated!");
 	AddWidget(&subsetComboBox);
+
+	subsetRemoveButton.Create("X");
+	subsetRemoveButton.SetTooltip("Remove currently selected subset. LODs will be lost and need to be regenerated!");
+	subsetRemoveButton.OnClick([=](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		MeshComponent* mesh = scene.meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+			editor->RecordEntity(archive, entity);
+
+			int selected = subsetComboBox.GetSelected();
+
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			mesh->GetLODSubsetRange(0, first_subset, last_subset);
+			wi::vector<MeshComponent::MeshSubset> newSubsets;
+			int s = 0;
+			for (uint32_t i = first_subset; i < last_subset; ++i)
+			{
+				if (s != selected)
+				{
+					newSubsets.push_back(mesh->subsets[i]);
+				}
+				s++;
+			}
+			mesh->subsets = newSubsets;
+			mesh->subsets_per_lod = 0;
+			SetEntity(entity, selected - 1);
+
+			editor->RecordEntity(archive, entity);
+		}
+	});
+	AddWidget(&subsetRemoveButton);
 
 	doubleSidedCheckBox.Create("Double Sided: ");
 	doubleSidedCheckBox.SetTooltip("If enabled, the inside of the mesh will be visible.");
@@ -664,13 +719,19 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		meshInfoLabel.SetText(ss);
 
 		subsetComboBox.ClearItems();
-		for (size_t i = 0; i < mesh->subsets.size(); ++i)
+		uint32_t main_subset_count = mesh->subsets_per_lod > 0 ? mesh->subsets_per_lod : (uint32_t)mesh->subsets.size();
+		for (uint32_t i = 0; i < main_subset_count; ++i)
 		{
 			subsetComboBox.AddItem(std::to_string(i));
 		}
-		if (subset >= 0)
+		subsetComboBox.AddItem("[Create New] " + std::to_string(main_subset_count));
+
+		subset = std::max(0, std::min(subset, (int)main_subset_count - 1));
+		subsetComboBox.SetSelectedWithoutCallback(subset);
+
+		if (!editor->translator.selected.empty())
 		{
-			subsetComboBox.SetSelectedWithoutCallback(subset);
+			editor->translator.selected.back().subsetIndex = subset;
 		}
 
 		subsetMaterialComboBox.ClearItems();
@@ -781,6 +842,8 @@ void MeshWindow::ResizeLayout()
 
 	add_fullwidth(meshInfoLabel);
 	add(subsetComboBox);
+	subsetRemoveButton.SetPos(XMFLOAT2(subsetComboBox.GetPos().x + subsetComboBox.GetSize().x + 1 + subsetComboBox.GetSize().y, subsetComboBox.GetPos().y));
+	subsetRemoveButton.SetSize(XMFLOAT2(subsetComboBox.GetSize().y, subsetComboBox.GetSize().y));
 	add(subsetMaterialComboBox);
 	add_right(doubleSidedCheckBox);
 	add_right(doubleSidedShadowCheckBox);
