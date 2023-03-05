@@ -169,11 +169,11 @@ struct RenderBatch
 	{
 		return XMConvertHalfToFloat(HALF(distance));
 	}
-	inline uint32_t GetMeshIndex() const
+	constexpr uint32_t GetMeshIndex() const
 	{
 		return meshIndex;
 	}
-	inline uint32_t GetInstanceIndex() const
+	constexpr uint32_t GetInstanceIndex() const
 	{
 		return instanceIndex;
 	}
@@ -181,7 +181,7 @@ struct RenderBatch
 	// opaque sorting
 	//	Priority is set to mesh index to have more instancing
 	//	distance is second priority (front to back Z-buffering)
-	bool operator<(const RenderBatch& other) const
+	constexpr bool operator<(const RenderBatch& other) const
 	{
 		union SortKey
 		{
@@ -189,8 +189,8 @@ struct RenderBatch
 			{
 				// The order of members is important here, it means the sort priority (low to high)!
 				uint64_t distance : 16;
-				uint64_t meshIndex : 24;
-				uint64_t sort_bits : 24;
+				uint64_t meshIndex : 16;
+				uint64_t sort_bits : 32;
 			} bits;
 			uint64_t value;
 		};
@@ -208,15 +208,15 @@ struct RenderBatch
 	// transparent sorting
 	//	Priority is distance for correct alpha blending (back to front rendering)
 	//	mesh index is second priority for instancing
-	bool operator>(const RenderBatch& other) const
+	constexpr bool operator>(const RenderBatch& other) const
 	{
 		union SortKey
 		{
 			struct
 			{
 				// The order of members is important here, it means the sort priority (low to high)!
-				uint64_t meshIndex : 24;
-				uint64_t sort_bits : 24;
+				uint64_t meshIndex : 16;
+				uint64_t sort_bits : 32;
 				uint64_t distance : 16;
 			} bits;
 			uint64_t value;

@@ -20,6 +20,7 @@ public:
 	wi::gui::Slider cascadeMaskSlider;
 	wi::gui::Slider lodSlider;
 	wi::gui::Slider drawdistanceSlider;
+	wi::gui::Slider sortPrioritySlider;
 
 	wi::gui::ComboBox colorComboBox;
 	wi::gui::ColorPicker colorPicker;
