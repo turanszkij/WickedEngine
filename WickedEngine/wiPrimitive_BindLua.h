@@ -13,7 +13,7 @@ namespace wi::lua::primitive
 	public:
 		wi::primitive::Ray ray;
 
-		static const char className[];
+		inline static constexpr char className[] = "Ray";
 		static Luna<Ray_BindLua>::FunctionType methods[];
 		static Luna<Ray_BindLua>::PropertyType properties[];
 
@@ -32,7 +32,7 @@ namespace wi::lua::primitive
 	public:
 		wi::primitive::AABB aabb;
 
-		static const char className[];
+		inline static constexpr char className[] = "AABB";
 		static Luna<AABB_BindLua>::FunctionType methods[];
 		static Luna<AABB_BindLua>::PropertyType properties[];
 
@@ -56,7 +56,7 @@ namespace wi::lua::primitive
 	public:
 		wi::primitive::Sphere sphere;
 
-		static const char className[];
+		inline static constexpr char className[] = "Sphere";
 		static Luna<Sphere_BindLua>::FunctionType methods[];
 		static Luna<Sphere_BindLua>::PropertyType properties[];
 
@@ -75,7 +75,7 @@ namespace wi::lua::primitive
 	public:
 		wi::primitive::Capsule capsule;
 
-		static const char className[];
+		inline static constexpr char className[] = "Capsule";
 		static Luna<Capsule_BindLua>::FunctionType methods[];
 		static Luna<Capsule_BindLua>::PropertyType properties[];
 

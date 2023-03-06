@@ -5,8 +5,6 @@
 
 namespace wi::lua
 {
-	const char Physics_BindLua::className[] = "Physics";
-
 	Luna<Physics_BindLua>::FunctionType Physics_BindLua::methods[] = {
 		lunamethod(Physics_BindLua, SetEnabled),
 		lunamethod(Physics_BindLua, IsEnabled),

@@ -3,8 +3,6 @@
 namespace wi::lua
 {
 
-	const char LoadingScreen_BindLua::className[] = "LoadingScreen";
-
 	Luna<LoadingScreen_BindLua>::FunctionType LoadingScreen_BindLua::methods[] = {
 		lunamethod(RenderPath2D_BindLua, AddSprite),
 		lunamethod(RenderPath2D_BindLua, AddFont),

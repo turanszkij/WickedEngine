@@ -461,14 +461,13 @@ void Bind()
 		Luna<ColliderComponent_BindLua>::Register(L);
 		Luna<ExpressionComponent_BindLua>::Register(L);
 		Luna<HumanoidComponent_BindLua>::Register(L);
+		Luna<DecalComponent_BindLua>::Register(L);
 
 		wi::lua::RunText(value_bindings);
 	}
 }
 
 
-
-const char Scene_BindLua::className[] = "Scene";
 
 Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Update),
@@ -499,6 +498,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateCollider),
 	lunamethod(Scene_BindLua, Component_CreateExpression),
 	lunamethod(Scene_BindLua, Component_CreateHumanoid),
+	lunamethod(Scene_BindLua, Component_CreateDecal),
 
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
@@ -522,6 +522,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetCollider),
 	lunamethod(Scene_BindLua, Component_GetExpression),
 	lunamethod(Scene_BindLua, Component_GetHumanoid),
+	lunamethod(Scene_BindLua, Component_GetDecal),
 
 	lunamethod(Scene_BindLua, Component_GetNameArray),
 	lunamethod(Scene_BindLua, Component_GetLayerArray),
@@ -545,6 +546,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetColliderArray),
 	lunamethod(Scene_BindLua, Component_GetExpressionArray),
 	lunamethod(Scene_BindLua, Component_GetHumanoidArray),
+	lunamethod(Scene_BindLua, Component_GetDecalArray),
 
 	lunamethod(Scene_BindLua, Entity_GetNameArray),
 	lunamethod(Scene_BindLua, Entity_GetLayerArray),
@@ -569,6 +571,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetColliderArray),
 	lunamethod(Scene_BindLua, Entity_GetExpressionArray),
 	lunamethod(Scene_BindLua, Entity_GetHumanoidArray),
+	lunamethod(Scene_BindLua, Entity_GetDecalArray),
 
 	lunamethod(Scene_BindLua, Component_RemoveName),
 	lunamethod(Scene_BindLua, Component_RemoveLayer),
@@ -593,6 +596,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_RemoveCollider),
 	lunamethod(Scene_BindLua, Component_RemoveExpression),
 	lunamethod(Scene_BindLua, Component_RemoveHumanoid),
+	lunamethod(Scene_BindLua, Component_RemoveDecal),
 
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
@@ -1122,6 +1126,23 @@ int Scene_BindLua::Component_CreateHumanoid(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_CreateDecal(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		DecalComponent& component = scene->decals.Create(entity);
+		Luna<DecalComponent_BindLua>::push(L, &component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateDecal(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetName(lua_State* L)
 {
@@ -1607,6 +1628,28 @@ int Scene_BindLua::Component_GetHumanoid(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetDecal(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		DecalComponent* component = scene->decals.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<DecalComponent_BindLua>::push(L, component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetDecal(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetNameArray(lua_State* L)
 {
@@ -1846,6 +1889,17 @@ int Scene_BindLua::Component_GetHumanoidArray(lua_State* L)
 	for (size_t i = 0; i < scene->humanoids.GetCount(); ++i)
 	{
 		Luna<HumanoidComponent_BindLua>::push(L, &scene->humanoids[i]);
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetDecalArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->decals.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->decals.GetCount(); ++i)
+	{
+		Luna<DecalComponent_BindLua>::push(L, &scene->decals[i]);
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -2100,6 +2154,17 @@ int Scene_BindLua::Entity_GetHumanoidArray(lua_State* L)
 	for (size_t i = 0; i < scene->humanoids.GetCount(); ++i)
 	{
 		wi::lua::SSetLongLong(L, scene->humanoids.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetDecalArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->decals.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->decals.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->decals.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -2492,7 +2557,24 @@ int Scene_BindLua::Component_RemoveHumanoid(lua_State* L)
 	}
 	else
 	{
-		wi::lua::SError(L, "Scene::Component_RemoveExpression(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_RemoveHumanoid(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_RemoveDecal(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		if (scene->decals.Contains(entity))
+		{
+			scene->decals.Remove(entity);
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_RemoveDecal(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -2606,8 +2688,6 @@ int Scene_BindLua::RetargetAnimation(lua_State* L)
 
 
 
-const char NameComponent_BindLua::className[] = "NameComponent";
-
 Luna<NameComponent_BindLua>::FunctionType NameComponent_BindLua::methods[] = {
 	lunamethod(NameComponent_BindLua, SetName),
 	lunamethod(NameComponent_BindLua, GetName),
@@ -2641,8 +2721,6 @@ int NameComponent_BindLua::GetName(lua_State* L)
 
 
 
-
-const char LayerComponent_BindLua::className[] = "LayerComponent";
 
 Luna<LayerComponent_BindLua>::FunctionType LayerComponent_BindLua::methods[] = {
 	lunamethod(LayerComponent_BindLua, SetLayerMask),
@@ -2678,8 +2756,6 @@ int LayerComponent_BindLua::GetLayerMask(lua_State* L)
 
 
 
-
-const char TransformComponent_BindLua::className[] = "TransformComponent";
 
 Luna<TransformComponent_BindLua>::FunctionType TransformComponent_BindLua::methods[] = {
 	lunamethod(TransformComponent_BindLua, Scale),
@@ -2962,8 +3038,6 @@ int TransformComponent_BindLua::SetDirty(lua_State *L)
 
 
 
-
-const char CameraComponent_BindLua::className[] = "CameraComponent";
 
 Luna<CameraComponent_BindLua>::FunctionType CameraComponent_BindLua::methods[] = {
 	lunamethod(CameraComponent_BindLua, UpdateCamera),
@@ -3255,8 +3329,6 @@ int CameraComponent_BindLua::SetUpDirection(lua_State* L)
 
 
 
-const char AnimationComponent_BindLua::className[] = "AnimationComponent";
-
 Luna<AnimationComponent_BindLua>::FunctionType AnimationComponent_BindLua::methods[] = {
 	lunamethod(AnimationComponent_BindLua, Play),
 	lunamethod(AnimationComponent_BindLua, Pause),
@@ -3411,8 +3483,6 @@ int AnimationComponent_BindLua::SetEnd(lua_State* L)
 
 
 
-const char MaterialComponent_BindLua::className[] = "MaterialComponent";
-
 Luna<MaterialComponent_BindLua>::FunctionType MaterialComponent_BindLua::methods[] = {
 	lunamethod(MaterialComponent_BindLua, SetBaseColor),
 	lunamethod(MaterialComponent_BindLua, SetEmissiveColor),
@@ -3423,6 +3493,7 @@ Luna<MaterialComponent_BindLua>::FunctionType MaterialComponent_BindLua::methods
 	lunamethod(MaterialComponent_BindLua, SetTexture),
 	lunamethod(MaterialComponent_BindLua, SetTextureUVSet),
 	lunamethod(MaterialComponent_BindLua, GetTexture),
+	lunamethod(MaterialComponent_BindLua, GetTextureName),
 	lunamethod(MaterialComponent_BindLua, GetTextureUVSet),
 	{ NULL, NULL }
 };
@@ -3568,22 +3639,30 @@ int MaterialComponent_BindLua::SetTexture(lua_State* L)
 	if (argc >= 2)
 	{
 		uint32_t textureindex = (uint32_t)wi::lua::SGetLongLong(L, 1);
-		std::string resourcename = wi::lua::SGetString(L, 2);
-
-		if(textureindex < MaterialComponent::TEXTURESLOT_COUNT)
+		if (textureindex >= MaterialComponent::TEXTURESLOT_COUNT)
 		{
-			auto& texturedata = component->textures[textureindex];
-			texturedata.name = resourcename;
-			texturedata.resource = wi::resourcemanager::Load(resourcename);
-			component->SetDirty();
+			wi::lua::SError(L, "SetTexture(int textureindex, string resourcename) index out of range!");
+			return 0;
+		}
+		auto& texturedata = component->textures[textureindex];
+
+		Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 2);
+		if (tex != nullptr)
+		{
+			texturedata.resource = tex->resource;
 		}
 		else
 		{
-			wi::lua::SError(L, "SetTexture(int textureindex, string resourcename) index out of range!");
+			std::string resourcename = wi::lua::SGetString(L, 2);
+
+			texturedata.name = resourcename;
+			texturedata.resource = wi::resourcemanager::Load(resourcename);
 		}
+		component->SetDirty();
 	}
 	else
 	{
+		wi::lua::SError(L, "SetTexture(int textureindex, Texture texture) not enough arguments!");
 		wi::lua::SError(L, "SetTexture(int textureindex, string resourcename) not enough arguments!");
 	}
 
@@ -3599,7 +3678,7 @@ int MaterialComponent_BindLua::GetTexture(lua_State* L)
 		if(textureindex < MaterialComponent::TEXTURESLOT_COUNT)
 		{
 			auto& texturedata = component->textures[textureindex];
-			wi::lua::SSetString(L, texturedata.name);
+			Luna<Texture_BindLua>::push(L, texturedata.resource);
 			return 1;
 		}
 		else
@@ -3610,6 +3689,30 @@ int MaterialComponent_BindLua::GetTexture(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "GetTexture(int textureindex) not enough arguments!");
+	}
+	return 0;
+}
+int MaterialComponent_BindLua::GetTextureName(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		uint32_t textureindex = (uint32_t)wi::lua::SGetLongLong(L, 1);
+
+		if (textureindex < MaterialComponent::TEXTURESLOT_COUNT)
+		{
+			auto& texturedata = component->textures[textureindex];
+			wi::lua::SSetString(L, texturedata.name);
+			return 1;
+		}
+		else
+		{
+			wi::lua::SError(L, "GetTextureName(int textureindex) index out of range!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "GetTextureName(int textureindex) not enough arguments!");
 	}
 	return 0;
 }
@@ -3672,8 +3775,6 @@ int MaterialComponent_BindLua::GetTextureUVSet(lua_State* L)
 
 
 
-
-const char MeshComponent_BindLua::className[] = "MeshComponent";
 
 Luna<MeshComponent_BindLua>::FunctionType MeshComponent_BindLua::methods[] = {
 	lunamethod(MeshComponent_BindLua, SetMeshSubsetMaterialID),
@@ -3746,8 +3847,6 @@ int MeshComponent_BindLua::GetMeshSubsetMaterialID(lua_State* L)
 
 
 
-
-const char EmitterComponent_BindLua::className[] = "EmitterComponent";
 
 Luna<EmitterComponent_BindLua>::FunctionType EmitterComponent_BindLua::methods[] = {
 	lunamethod(EmitterComponent_BindLua, Burst),
@@ -4011,8 +4110,6 @@ int EmitterComponent_BindLua::SetMotionBlurAmount(lua_State* L)
 
 
 
-const char HairParticleSystem_BindLua::className[] = "HairParticleSystem";
-
 Luna<HairParticleSystem_BindLua>::FunctionType HairParticleSystem_BindLua::methods[] = {
 	{ NULL, NULL }
 };
@@ -4042,8 +4139,6 @@ Luna<HairParticleSystem_BindLua>::PropertyType HairParticleSystem_BindLua::prope
 
 
 
-
-const char LightComponent_BindLua::className[] = "LightComponent";
 
 Luna<LightComponent_BindLua>::FunctionType LightComponent_BindLua::methods[] = {
 	lunamethod(LightComponent_BindLua, SetType),
@@ -4278,8 +4373,6 @@ int LightComponent_BindLua::SetInnerConeAngle(lua_State* L)
 
 
 
-const char ObjectComponent_BindLua::className[] = "ObjectComponent";
-
 Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] = {
 	lunamethod(ObjectComponent_BindLua, GetMeshID),
 	lunamethod(ObjectComponent_BindLua, GetCascadeMask),
@@ -4486,8 +4579,6 @@ int ObjectComponent_BindLua::SetDrawDistance(lua_State* L)
 
 
 
-const char InverseKinematicsComponent_BindLua::className[] = "InverseKinematicsComponent";
-
 Luna<InverseKinematicsComponent_BindLua>::FunctionType InverseKinematicsComponent_BindLua::methods[] = {
 	lunamethod(InverseKinematicsComponent_BindLua, SetTarget),
 	lunamethod(InverseKinematicsComponent_BindLua, SetChainLength),
@@ -4588,8 +4679,6 @@ int InverseKinematicsComponent_BindLua::IsDisabled(lua_State* L)
 
 
 
-const char SpringComponent_BindLua::className[] = "SpringComponent";
-
 Luna<SpringComponent_BindLua>::FunctionType SpringComponent_BindLua::methods[] = {
 	lunamethod(SpringComponent_BindLua, SetStiffness),
 	lunamethod(SpringComponent_BindLua, SetDamping),
@@ -4671,8 +4760,6 @@ int SpringComponent_BindLua::GetWindAffection(lua_State* L)
 
 
 
-const char ScriptComponent_BindLua::className[] = "ScriptComponent";
-
 Luna<ScriptComponent_BindLua>::FunctionType ScriptComponent_BindLua::methods[] = {
 	lunamethod(ScriptComponent_BindLua, CreateFromFile),
 	lunamethod(ScriptComponent_BindLua, Play),
@@ -4730,8 +4817,6 @@ int ScriptComponent_BindLua::Stop(lua_State* L)
 
 
 
-
-const char RigidBodyPhysicsComponent_BindLua::className[] = "RigidBodyPhysicsComponent";
 
 Luna<RigidBodyPhysicsComponent_BindLua>::FunctionType RigidBodyPhysicsComponent_BindLua::methods[] = {
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsDisableDeactivation),
@@ -4800,8 +4885,6 @@ int RigidBodyPhysicsComponent_BindLua::SetKinematic(lua_State* L)
 
 
 
-const char SoftBodyPhysicsComponent_BindLua::className[] = "SoftBodyPhysicsComponent";
-
 Luna<SoftBodyPhysicsComponent_BindLua>::FunctionType SoftBodyPhysicsComponent_BindLua::methods[] = {
 	lunamethod(SoftBodyPhysicsComponent_BindLua, SetDisableDeactivation),
 	lunamethod(SoftBodyPhysicsComponent_BindLua, IsDisableDeactivation),
@@ -4839,8 +4922,6 @@ int SoftBodyPhysicsComponent_BindLua::CreateFromMesh(lua_State *L)
 
 
 
-const char ForceFieldComponent_BindLua::className[] = "ForceFieldComponent";
-
 Luna<ForceFieldComponent_BindLua>::FunctionType ForceFieldComponent_BindLua::methods[] = {
 	{ NULL, NULL }
 };
@@ -4856,8 +4937,6 @@ Luna<ForceFieldComponent_BindLua>::PropertyType ForceFieldComponent_BindLua::pro
 
 
 
-
-const char Weather_OceanParams_BindLua::className[] = "OceanParameters";
 
 Luna<Weather_OceanParams_BindLua>::FunctionType Weather_OceanParams_BindLua::methods[] = {
 	{ NULL, NULL }
@@ -4898,8 +4977,6 @@ int Weather_OceanParams_Property::Set(lua_State *L)
 
 
 
-
-const char Weather_AtmosphereParams_BindLua::className[] = "AtmosphereParameters";
 
 Luna<Weather_AtmosphereParams_BindLua>::FunctionType Weather_AtmosphereParams_BindLua::methods[] = {
 	{ NULL, NULL }
@@ -4947,8 +5024,6 @@ int Weather_AtmosphereParams_Property::Set(lua_State *L)
 
 
 
-
-const char Weather_VolumetricCloudParams_BindLua::className[] = "VolumetricCloudParameters";
 
 Luna<Weather_VolumetricCloudParams_BindLua>::FunctionType Weather_VolumetricCloudParams_BindLua::methods[] = {
 	{ NULL, NULL }
@@ -5039,8 +5114,6 @@ int Weather_VolumetricCloudParams_Property::Set(lua_State *L)
 
 
 
-
-const char WeatherComponent_BindLua::className[] = "WeatherComponent";
 
 Luna<WeatherComponent_BindLua>::FunctionType WeatherComponent_BindLua::methods[] = {
 	lunamethod(WeatherComponent_BindLua, IsOceanEnabled),
@@ -5355,8 +5428,6 @@ int WeatherComponent_BindLua::SetColorGradingMapName(lua_State* L)
 
 
 
-const char SoundComponent_BindLua::className[] = "SoundComponent";
-
 Luna<SoundComponent_BindLua>::FunctionType SoundComponent_BindLua::methods[] = {
 	lunamethod(SoundComponent_BindLua, SetFilename),
 	lunamethod(SoundComponent_BindLua, SetVolume),
@@ -5438,8 +5509,6 @@ int SoundComponent_BindLua::SetDisable3D(lua_State* L)
 
 
 
-const char ColliderComponent_BindLua::className[] = "ColliderComponent";
-
 Luna<ColliderComponent_BindLua>::FunctionType ColliderComponent_BindLua::methods[] = {
 	lunamethod(ColliderComponent_BindLua, SetCPUEnabled),
 	lunamethod(ColliderComponent_BindLua, SetGPUEnabled),
@@ -5508,8 +5577,6 @@ int ColliderComponent_BindLua::GetSphere(lua_State* L)
 
 
 
-
-const char ExpressionComponent_BindLua::className[] = "ExpressionComponent";
 
 Luna<ExpressionComponent_BindLua>::FunctionType ExpressionComponent_BindLua::methods[] = {
 	lunamethod(ExpressionComponent_BindLua, FindExpressionID),
@@ -5639,8 +5706,6 @@ int ExpressionComponent_BindLua::GetPresetWeight(lua_State* L)
 
 
 
-const char HumanoidComponent_BindLua::className[] = "HumanoidComponent";
-
 Luna<HumanoidComponent_BindLua>::FunctionType HumanoidComponent_BindLua::methods[] = {
 	lunamethod(HumanoidComponent_BindLua, GetBoneEntity),
 	lunamethod(HumanoidComponent_BindLua, SetLookAtEnabled),
@@ -5709,6 +5774,40 @@ int HumanoidComponent_BindLua::SetLookAt(lua_State* L)
 		wi::lua::SError(L, "SetLookAt(Vector value) not enough arguments!");
 	}
 	return 0;
+}
+
+
+
+
+
+
+
+Luna<DecalComponent_BindLua>::FunctionType DecalComponent_BindLua::methods[] = {
+	lunamethod(DecalComponent_BindLua, SetBaseColorOnlyAlpha),
+	lunamethod(DecalComponent_BindLua, IsBaseColorOnlyAlpha),
+	{ NULL, NULL }
+};
+Luna<DecalComponent_BindLua>::PropertyType DecalComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+int DecalComponent_BindLua::SetBaseColorOnlyAlpha(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->SetBaseColorOnlyAlpha(wi::lua::SGetBool(L, 1));
+	}
+	else
+	{
+		wi::lua::SError(L, "SetBaseColorOnlyAlpha(bool value) not enough arguments!");
+	}
+	return 0;
+}
+int DecalComponent_BindLua::IsBaseColorOnlyAlpha(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsBaseColorOnlyAlpha());
+	return 1;
 }
 
 }

@@ -8,7 +8,7 @@ namespace wi::lua
 	class Physics_BindLua
 	{
 	public:
-		static const char className[];
+		inline static constexpr char className[] = "Physics";
 		static Luna<Physics_BindLua>::FunctionType methods[];
 		static Luna<Physics_BindLua>::PropertyType properties[];
 

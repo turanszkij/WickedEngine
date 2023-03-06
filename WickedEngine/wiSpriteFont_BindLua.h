@@ -10,7 +10,7 @@ namespace wi::lua
 	public:
 		wi::SpriteFont font;
 
-		static const char className[];
+		inline static constexpr char className[] = "SpriteFont";
 		static Luna<SpriteFont_BindLua>::FunctionType methods[];
 		static Luna<SpriteFont_BindLua>::PropertyType properties[];
 

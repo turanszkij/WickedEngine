@@ -10,7 +10,7 @@ namespace wi::lua
 	public:
 		wi::image::Params params;
 
-		static const char className[];
+		inline static constexpr char className[] = "ImageParams";
 		static Luna<ImageParams_BindLua>::FunctionType methods[];
 		static Luna<ImageParams_BindLua>::PropertyType properties[];
 

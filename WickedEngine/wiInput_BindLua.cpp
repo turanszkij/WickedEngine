@@ -4,8 +4,6 @@
 namespace wi::lua
 {
 
-	const char Input_BindLua::className[] = "Input";
-
 	Luna<Input_BindLua>::FunctionType Input_BindLua::methods[] = {
 		lunamethod(Input_BindLua, Down),
 		lunamethod(Input_BindLua, Press),
@@ -266,8 +264,6 @@ TOUCHSTATE_MOVED			= 2
 
 
 
-	const char Touch_BindLua::className[] = "Touch";
-
 	Luna<Touch_BindLua>::FunctionType Touch_BindLua::methods[] = {
 		lunamethod(Touch_BindLua, GetState),
 		lunamethod(Touch_BindLua, GetPos),
@@ -303,8 +299,6 @@ TOUCHSTATE_MOVED			= 2
 
 
 
-
-	const char ControllerFeedback_BindLua::className[] = "ControllerFeedback";
 
 	Luna<ControllerFeedback_BindLua>::FunctionType ControllerFeedback_BindLua::methods[] = {
 		lunamethod(ControllerFeedback_BindLua, SetVibrationRight),

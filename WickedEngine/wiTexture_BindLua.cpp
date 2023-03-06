@@ -5,8 +5,6 @@ using namespace wi::graphics;
 namespace wi::lua
 {
 
-	const char Texture_BindLua::className[] = "Texture";
-
 	Luna<Texture_BindLua>::FunctionType Texture_BindLua::methods[] = {
 		{ NULL, NULL }
 	};
@@ -14,11 +12,14 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 
-	Texture_BindLua::Texture_BindLua(Texture texture) :texture(texture)
-	{
-	}
 	Texture_BindLua::Texture_BindLua(lua_State* L)
 	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			std::string name = wi::lua::SGetString(L, 1);
+			resource = wi::resourcemanager::Load(name);
+		}
 	}
 
 	void Texture_BindLua::Bind()

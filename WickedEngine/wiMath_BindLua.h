@@ -11,7 +11,7 @@ namespace wi::lua
 	{
 	public:
 		XMFLOAT4 data = {};
-		static const char className[];
+		inline static constexpr char className[] = "Vector";
 		static Luna<Vector_BindLua>::FunctionType methods[];
 		static Luna<Vector_BindLua>::PropertyType properties[];
 
@@ -77,7 +77,7 @@ namespace wi::lua
 	{
 	public:
 		XMFLOAT4X4 data = wi::math::IDENTITY_MATRIX;
-		static const char className[];
+		inline static constexpr char className[] = "Matrix";
 		static Luna<Matrix_BindLua>::FunctionType methods[];
 		static Luna<Matrix_BindLua>::PropertyType properties[];
 

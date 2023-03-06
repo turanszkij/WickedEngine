@@ -3,8 +3,6 @@
 namespace wi::lua
 {
 
-	const char Vector_BindLua::className[] = "Vector";
-
 	Luna<Vector_BindLua>::FunctionType Vector_BindLua::methods[] = {
 		lunamethod(Vector_BindLua, GetX),
 		lunamethod(Vector_BindLua, GetY),
@@ -505,8 +503,6 @@ namespace wi::lua
 
 
 
-
-	const char Matrix_BindLua::className[] = "Matrix";
 
 	Luna<Matrix_BindLua>::FunctionType Matrix_BindLua::methods[] = {
 		lunamethod(Matrix_BindLua, GetRow),

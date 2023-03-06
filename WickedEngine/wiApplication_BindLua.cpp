@@ -8,7 +8,6 @@
 namespace wi::lua
 {
 
-	const char Application_BindLua::className[] = "Application";
 
 	Luna<Application_BindLua>::FunctionType Application_BindLua::methods[] = {
 		lunamethod(Application_BindLua, GetActivePath),
@@ -418,7 +417,6 @@ namespace wi::lua
 
 
 
-	const char Canvas_BindLua::className[] = "Canvas";
 
 	Luna<Canvas_BindLua>::FunctionType Canvas_BindLua::methods[] = {
 		lunamethod(Canvas_BindLua, GetDPI),

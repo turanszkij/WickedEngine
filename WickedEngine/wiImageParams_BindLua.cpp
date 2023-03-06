@@ -3,8 +3,6 @@
 
 namespace wi::lua
 {
-	const char ImageParams_BindLua::className[] = "ImageParams";
-
 	Luna<ImageParams_BindLua>::FunctionType ImageParams_BindLua::methods[] = {
 		lunamethod(ImageParams_BindLua, GetPos),
 		lunamethod(ImageParams_BindLua, GetSize),

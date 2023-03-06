@@ -8,7 +8,7 @@ namespace wi::lua
 	class Audio_BindLua
 	{
 	public:
-		static const char className[];
+		inline static constexpr char className[] = "Audio";
 		static Luna<Audio_BindLua>::FunctionType methods[];
 		static Luna<Audio_BindLua>::PropertyType properties[];
 
@@ -37,7 +37,7 @@ namespace wi::lua
 	public:
 		wi::audio::Sound sound;
 
-		static const char className[];
+		inline static constexpr char className[] = "Sound";
 		static Luna<Sound_BindLua>::FunctionType methods[];
 		static Luna<Sound_BindLua>::PropertyType properties[];
 
@@ -52,7 +52,7 @@ namespace wi::lua
 	public:
 		wi::audio::SoundInstance soundinstance;
 
-		static const char className[];
+		inline static constexpr char className[] = "SoundInstance";
 		static Luna<SoundInstance_BindLua>::FunctionType methods[];
 		static Luna<SoundInstance_BindLua>::PropertyType properties[];
 
@@ -69,7 +69,7 @@ namespace wi::lua
 	public:
 		wi::audio::SoundInstance3D soundinstance3D;
 
-		static const char className[];
+		inline static constexpr char className[] = "SoundInstance3D";
 		static Luna<SoundInstance3D_BindLua>::FunctionType methods[];
 		static Luna<SoundInstance3D_BindLua>::PropertyType properties[];
 
