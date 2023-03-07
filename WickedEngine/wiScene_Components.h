@@ -1068,6 +1068,7 @@ namespace wi::scene
 
 		wi::Resource texture;
 		wi::Resource normal;
+		wi::Resource surfacemap;
 
 		inline float GetOpacity() const { return color.w; }
 

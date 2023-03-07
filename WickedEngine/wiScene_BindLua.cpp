@@ -323,6 +323,22 @@ PICK_OPAQUE = FILTER_OPAQUE
 PICK_TRANSPARENT = FILTER_TRANSPARENT
 PICK_WATER = FILTER_WATER
 
+TextureSlot = {
+	BASECOLORMAP = 0,
+	NORMALMAP = 1,
+	SURFACEMAP = 2,
+	EMISSIVEMAP = 3,
+	DISPLACEMENTMAP = 4,
+	OCCLUSIONMAP = 5,
+	TRANSMISSIONMAP = 6,
+	SHEENCOLORMAP = 7,
+	SHEENROUGHNESSMAP = 8,
+	CLEARCOATMAP = 9,
+	CLEARCOATROUGHNESSMAP = 10,
+	CLEARCOATNORMALMAP = 11,
+	SPECULARMAP = 12,
+}
+
 ExpressionPreset = {
 	Happy = 0,
 	Angry = 1,
@@ -2797,7 +2813,9 @@ int TransformComponent_BindLua::Scale(lua_State* L)
 		}
 		else
 		{
-			wi::lua::SError(L, "Scale(Vector vector) argument is not a vector!");
+			XMFLOAT3 value;
+			value.x = value.y = value.z = wi::lua::SGetFloat(L, 1);
+			component->Scale(value);
 		}
 	}
 	else
@@ -3641,7 +3659,7 @@ int MaterialComponent_BindLua::SetTexture(lua_State* L)
 		uint32_t textureindex = (uint32_t)wi::lua::SGetLongLong(L, 1);
 		if (textureindex >= MaterialComponent::TEXTURESLOT_COUNT)
 		{
-			wi::lua::SError(L, "SetTexture(int textureindex, string resourcename) index out of range!");
+			wi::lua::SError(L, "SetTexture(TextureSlot slot, string resourcename) slot index out of range!");
 			return 0;
 		}
 		auto& texturedata = component->textures[textureindex];
@@ -3662,8 +3680,8 @@ int MaterialComponent_BindLua::SetTexture(lua_State* L)
 	}
 	else
 	{
-		wi::lua::SError(L, "SetTexture(int textureindex, Texture texture) not enough arguments!");
-		wi::lua::SError(L, "SetTexture(int textureindex, string resourcename) not enough arguments!");
+		wi::lua::SError(L, "SetTexture(TextureSlot slot, Texture texture) not enough arguments!");
+		wi::lua::SError(L, "SetTexture(TextureSlot slot, string resourcename) not enough arguments!");
 	}
 
 	return 0;
@@ -3683,12 +3701,12 @@ int MaterialComponent_BindLua::GetTexture(lua_State* L)
 		}
 		else
 		{
-			wi::lua::SError(L, "GetTexture(int textureindex) index out of range!");
+			wi::lua::SError(L, "GetTexture(TextureSlot slot) slot index out of range!");
 		}
 	}
 	else
 	{
-		wi::lua::SError(L, "GetTexture(int textureindex) not enough arguments!");
+		wi::lua::SError(L, "GetTexture(TextureSlot slot) not enough arguments!");
 	}
 	return 0;
 }
@@ -3707,12 +3725,12 @@ int MaterialComponent_BindLua::GetTextureName(lua_State* L)
 		}
 		else
 		{
-			wi::lua::SError(L, "GetTextureName(int textureindex) index out of range!");
+			wi::lua::SError(L, "GetTextureName(TextureSlot slot) slot index out of range!");
 		}
 	}
 	else
 	{
-		wi::lua::SError(L, "GetTextureName(int textureindex) not enough arguments!");
+		wi::lua::SError(L, "GetTextureName(TextureSlot slot) not enough arguments!");
 	}
 	return 0;
 }
@@ -3732,12 +3750,12 @@ int MaterialComponent_BindLua::SetTextureUVSet(lua_State* L)
 		}
 		else
 		{
-			wi::lua::SError(L, "SetTextureUVSet(int textureindex, int uvset) index out of range!");
+			wi::lua::SError(L, "SetTextureUVSet(TextureSlot slot, int uvset) slot index out of range!");
 		}
 	}
 	else
 	{
-		wi::lua::SError(L, "SetTextureUVSet(int textureindex, int uvset) not enough arguments!");
+		wi::lua::SError(L, "SetTextureUVSet(TextureSlot slot, int uvset) not enough arguments!");
 	}
 
 	return 0;
@@ -3757,12 +3775,12 @@ int MaterialComponent_BindLua::GetTextureUVSet(lua_State* L)
 		}
 		else
 		{
-			wi::lua::SError(L, "GetTextureUVSet(int textureindex) index out of range!");
+			wi::lua::SError(L, "GetTextureUVSet(TextureSlot slot) slot index out of range!");
 		}
 	}
 	else
 	{
-		wi::lua::SError(L, "GetTextureUVSet(int textureindex) not enough arguments!");
+		wi::lua::SError(L, "GetTextureUVSet(TextureSlot slot) not enough arguments!");
 	}
 	return 0;
 }

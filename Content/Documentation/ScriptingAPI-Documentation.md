@@ -667,6 +667,7 @@ Describes an orientation in 3D space.
 </br>
 
 - Scale(Vector vectorXYZ)  -- Applies scaling
+- Scale(float value)  -- Applies uniform scaling
 - Rotate(Vector vectorRollPitchYaw)  -- Applies rotation as roll,pitch,yaw
 - RotateQuaternion(Vector quaternion)  -- Applies rotation as quaternion
 - Translate(Vector vectorXYZ)  -- Applies translation (position offset)
@@ -775,12 +776,30 @@ Describes an orientation in 3D space.
 - SetEngineStencilRef(int value)
 - SetUserStencilRef(int value)
 - GetStencilRef() : int result
-- SetTexture(int textureindex, string texturefile)
-- SetTexture(int textureindex, Texture texture)
-- SetTextureUVSet(int textureindex, int uvset)
-- GetTexture(int textureindex) : Texture
-- GetTextureName(int textureindex) : string
-- GetTextureUVSet(int textureindex) : int uvset
+- SetTexture(TextureSlot slot, string texturefile)
+- SetTexture(TextureSlot slot, Texture texture)
+- SetTextureUVSet(TextureSlot slot, int uvset)
+- GetTexture(TextureSlot slot) : Texture
+- GetTextureName(TextureSlot slot) : string
+- GetTextureUVSet(TextureSlot slot) : int uvset
+
+```lua
+TextureSlot = {
+	BASECOLORMAP = 0,
+	NORMALMAP = 0,
+	SURFACEMAP = 0,
+	EMISSIVEMAP = 0,
+	DISPLACEMENTMAP = 0,
+	OCCLUSIONMAP = 0,
+	TRANSMISSIONMAP = 0,
+	SHEENCOLORMAP = 0,
+	SHEENROUGHNESSMAP = 0,
+	CLEARCOATMAP = 0,
+	CLEARCOATROUGHNESSMAP = 0,
+	CLEARCOATNORMALMAP = 0,
+	SPECULARMAP = 0,
+}
+```
 
 #### MeshComponent
 - _flags : int
@@ -1282,6 +1301,7 @@ A ray is defined by an origin Vector and a normalized direction Vector. It can b
 - GetDirection() : Vector result
 - SetOrigin(Vector vector)
 - SetDirection(Vector vector)
+- CreateFromPoints(Vector a,b)	-- creates a ray from two points. Point a will be the ray origin, pointing towards point b
 
 #### AABB
 Axis Aligned Bounding Box. Can be intersected with other primitives.

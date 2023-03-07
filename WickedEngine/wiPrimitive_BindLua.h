@@ -25,6 +25,7 @@ namespace wi::lua::primitive
 		int GetDirection(lua_State* L);
 		int SetOrigin(lua_State* L);
 		int SetDirection(lua_State* L);
+		int CreateFromPoints(lua_State* L);
 	};
 
 	class AABB_BindLua

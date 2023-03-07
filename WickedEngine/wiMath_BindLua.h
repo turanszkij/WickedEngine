@@ -21,6 +21,9 @@ namespace wi::lua
 		Vector_BindLua(const XMVECTOR& vector);
 		Vector_BindLua(lua_State* L);
 
+		XMFLOAT2 GetFloat2() { return XMFLOAT2(data.x, data.y); }
+		XMFLOAT3 GetFloat3() { return XMFLOAT3(data.x, data.y, data.z); }
+
 		int GetX(lua_State* L);
 		int GetY(lua_State* L);
 		int GetZ(lua_State* L);

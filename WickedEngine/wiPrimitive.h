@@ -173,6 +173,8 @@ namespace wi::primitive
 		bool intersects(const Plane& b) const;
 		bool intersects(const Plane& b, float& dist) const;
 		bool intersects(const Plane& b, float& dist, XMFLOAT3& direction) const;
+
+		void CreateFromPoints(const XMFLOAT3& a, const XMFLOAT3& b);
 	};
 
 	struct Frustum

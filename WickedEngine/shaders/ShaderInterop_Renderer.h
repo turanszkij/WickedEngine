@@ -844,7 +844,9 @@ static const uint ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 0;
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
 
-static const uint MATRIXARRAY_COUNT = 128;
+static const uint MATRIXARRAY_COUNT = SHADER_ENTITY_COUNT;
+static const uint MAX_SHADER_DECAL_COUNT = 128;
+static const uint MAX_SHADER_PROBE_COUNT = 32;
 
 static const uint TILED_CULLING_BLOCKSIZE = 16;
 static const uint TILED_CULLING_THREADSIZE = 8;

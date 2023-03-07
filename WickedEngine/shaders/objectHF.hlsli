@@ -485,7 +485,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 
 }
 
-inline void ForwardDecals(inout Surface surface)
+inline void ForwardDecals(inout Surface surface, inout float4 surfaceMap)
 {
 #ifndef DISABLE_DECALS
 	[branch]
@@ -495,13 +495,15 @@ inline void ForwardDecals(inout Surface surface)
 	// decals are enabled, loop through them first:
 	float4 decalAccumulation = 0;
 	float4 decalBumpAccumulation = 0;
+	float4 decalSurfaceAccumulation = 0;
+	float decalSurfaceAccumulationAlpha = 0;
 	const float3 P_dx = ddx_coarse(surface.P);
 	const float3 P_dy = ddy_coarse(surface.P);
 
 	uint bucket_bits = xForwardDecalMask;
 
 	[loop]
-	while (bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1)
+	while (bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1)
 	{
 		// Retrieve global entity index from local bucket, then remove bit from local bucket:
 		const uint bucket_bit_index = firstbitlow(bucket_bits);
@@ -515,7 +517,8 @@ inline void ForwardDecals(inout Surface surface)
 		float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
 		int decalTexture = asint(decalProjection[3][0]);
 		int decalNormal = asint(decalProjection[3][1]);
-		float decalNormalStrength = asint(decalProjection[3][2]);
+		float decalNormalStrength = decalProjection[3][2];
+		int decalSurfacemap = asint(decalProjection[3][3]);
 		decalProjection[3] = float4(0, 0, 0, 1);
 		const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 		const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
@@ -550,11 +553,19 @@ inline void ForwardDecals(inout Surface surface)
 				decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
 				decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
 			}
+			[branch]
+			if (decalSurfacemap >= 0)
+			{
+				float4 decalSurfaceColor = bindless_textures[NonUniformResourceIndex(decalSurfacemap)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
+				decalSurfaceAccumulation = mad(1 - decalSurfaceAccumulationAlpha, decalColor.a * decalSurfaceColor, decalSurfaceAccumulation);
+				decalSurfaceAccumulationAlpha = mad(1 - decalColor.a, decalSurfaceAccumulationAlpha, decalColor.a);
+			}
 		}
 	}
 
-	surface.baseColor.rgb = lerp(surface.baseColor.rgb, decalAccumulation.rgb, decalAccumulation.a);
-	surface.bumpColor.rgb = lerp(surface.bumpColor.rgb, decalBumpAccumulation.rgb, decalBumpAccumulation.a);
+	surface.baseColor.rgb = mad(surface.baseColor.rgb, 1 - decalAccumulation.a, decalAccumulation.rgb);
+	surface.bumpColor.rgb = mad(surface.bumpColor.rgb, 1 - decalBumpAccumulation.a, decalBumpAccumulation.rgb);
+	surfaceMap = mad(surfaceMap, 1 - decalSurfaceAccumulationAlpha, decalSurfaceAccumulation);
 #endif // DISABLE_DECALS
 }
 
@@ -781,7 +792,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 
 }
 
-inline void TiledDecals(inout Surface surface, uint flatTileIndex)
+inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout float4 surfaceMap)
 {
 #ifndef DISABLE_DECALS
 	[branch]
@@ -791,6 +802,8 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 	// decals are enabled, loop through them first:
 	float4 decalAccumulation = 0;
 	float4 decalBumpAccumulation = 0;
+	float4 decalSurfaceAccumulation = 0;
+	float decalSurfaceAccumulationAlpha = 0;
 
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 	const float3 P_dx = surface.P_dx;
@@ -816,7 +829,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 #endif // ENTITY_TILE_UNIFORM
 
 		[loop]
-		while (bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1)
+		while (bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1)
 		{
 			// Retrieve global entity index from local bucket, then remove bit from local bucket:
 			const uint bucket_bit_index = firstbitlow(bucket_bits);
@@ -834,6 +847,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 				int decalTexture = asint(decalProjection[3][0]);
 				int decalNormal = asint(decalProjection[3][1]);
 				float decalNormalStrength = decalProjection[3][2];
+				int decalSurfacemap = asint(decalProjection[3][3]);
 				decalProjection[3] = float4(0, 0, 0, 1);
 				const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 				const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
@@ -868,6 +882,13 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 						decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
 						decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
 					}
+					[branch]
+					if (decalSurfacemap >= 0)
+					{
+						float4 decalSurfaceColor = bindless_textures[NonUniformResourceIndex(decalSurfacemap)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
+						decalSurfaceAccumulation = mad(1 - decalSurfaceAccumulationAlpha, decalColor.a * decalSurfaceColor, decalSurfaceAccumulation);
+						decalSurfaceAccumulationAlpha = mad(1 - decalColor.a, decalSurfaceAccumulationAlpha, decalColor.a);
+					}
 				}
 			}
 			else if (entity_index > last_item)
@@ -880,8 +901,9 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 		}
 	}
 
-	surface.baseColor.rgb = lerp(surface.baseColor.rgb, decalAccumulation.rgb, decalAccumulation.a);
-	surface.bumpColor.rgb = lerp(surface.bumpColor.rgb, decalBumpAccumulation.rgb, decalBumpAccumulation.a);
+	surface.baseColor.rgb = mad(surface.baseColor.rgb, 1 - decalAccumulation.a, decalAccumulation.rgb);
+	surface.bumpColor.rgb = mad(surface.bumpColor.rgb, 1 - decalBumpAccumulation.a, decalBumpAccumulation.rgb);
+	surfaceMap = mad(surfaceMap, 1 - decalSurfaceAccumulationAlpha, decalSurfaceAccumulation);
 #endif // DISABLE_DECALS
 }
 
@@ -1137,15 +1159,43 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_TANGENT
 #endif // WATER
 
+	surface.layerMask = GetMaterial().layerMask & load_instance(input.instanceIndex).layerMask;
 
-#ifdef FORWARD
-	ForwardDecals(surface);
-#endif // FORWARD
+
+	float4 surfaceMap = 1;
+#ifdef OBJECTSHADER_USE_UVSETS
+	[branch]
+	if (GetMaterial().textures[SURFACEMAP].IsValid())
+	{
+		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_objectshader, input.uvsets);
+	}
+#endif // OBJECTSHADER_USE_UVSETS
+
+
+	[branch]
+	if (!GetMaterial().IsUsingSpecularGlossinessWorkflow())
+	{
+		// Premultiply these before evaluating decals:
+		surfaceMap.g *= GetMaterial().roughness;
+		surfaceMap.b *= GetMaterial().metalness;
+		surfaceMap.a *= GetMaterial().reflectance;
+	}
 
 #ifdef TILEDFORWARD
 	const uint flat_tile_index = GetFlatTileIndex(pixel);
-	TiledDecals(surface, flat_tile_index);
 #endif // TILEDFORWARD
+
+#ifndef PREPASS
+#ifndef WATER
+#ifdef FORWARD
+	ForwardDecals(surface, surfaceMap);
+#endif // FORWARD
+
+#ifdef TILEDFORWARD
+	TiledDecals(surface, flat_tile_index, surfaceMap);
+#endif // TILEDFORWARD
+#endif // WATER
+#endif // PREPASS
 
 
 #ifndef WATER
@@ -1157,17 +1207,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	}
 #endif // OBJECTSHADER_USE_TANGENT
 #endif // WATER
-
-
-	float4 surfaceMap = 1;
-
-#ifdef OBJECTSHADER_USE_UVSETS
-	[branch]
-	if (GetMaterial().textures[SURFACEMAP].IsValid())
-	{
-		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_objectshader, input.uvsets);
-	}
-#endif // OBJECTSHADER_USE_UVSETS
 
 
 	float4 specularMap = 1;
@@ -1290,8 +1329,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 	surface.pixel = pixel;
 	surface.screenUV = ScreenCoord;
-
-	surface.layerMask = GetMaterial().layerMask;
 
 	surface.update();
 

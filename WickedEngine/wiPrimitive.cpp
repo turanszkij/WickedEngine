@@ -682,6 +682,19 @@ namespace wi::primitive
 	{
 		return b.intersects(*this, dist, direction);
 	}
+	void Ray::CreateFromPoints(const XMFLOAT3& a, const XMFLOAT3& b)
+	{
+		XMVECTOR A = XMLoadFloat3(&a);
+		XMVECTOR B = XMLoadFloat3(&b);
+		XMVECTOR D = B - A;
+		XMVECTOR L = XMVector3Length(D);
+		D /= L;
+		XMStoreFloat3(&origin, A);
+		XMStoreFloat3(&direction, D);
+		XMStoreFloat3(&direction_inverse, XMVectorReciprocal(D));
+		TMin = 0;
+		TMax = XMVectorGetX(L);
+	}
 
 
 

@@ -130,8 +130,6 @@ struct Surface
 		sss = material.subsurfaceScattering;
 		sss_inv = material.subsurfaceScattering_inv;
 
-		layerMask = material.layerMask;
-
 		if (material.IsReceiveShadow())
 		{
 			flags |= SURFACE_FLAG_RECEIVE_SHADOW;
@@ -158,7 +156,6 @@ struct Surface
 		{
 			opacity = 1;
 		}
-		roughness = material.roughness;
 		f0 = material.GetSpecular() * specularMap.rgb * specularMap.a;
 
 #ifndef ENVMAPRENDERING
@@ -172,7 +169,7 @@ struct Surface
 		if (material.IsUsingSpecularGlossinessWorkflow())
 		{
 			// Specular-glossiness workflow:
-			roughness *= saturate(1 - surfaceMap.a);
+			roughness = material.roughness * saturate(1 - surfaceMap.a);
 			f0 *= surfaceMap.rgb;
 			albedo = baseColor.rgb;
 		}
@@ -183,9 +180,9 @@ struct Surface
 			{
 				occlusion = surfaceMap.r;
 			}
-			roughness *= surfaceMap.g;
-			const float metalness = material.metalness * surfaceMap.b;
-			const float reflectance = material.reflectance * surfaceMap.a;
+			roughness = surfaceMap.g;
+			const float metalness = surfaceMap.b;
+			const float reflectance = surfaceMap.a;
 			albedo = baseColor.rgb * (1 - max(reflectance, metalness));
 			f0 *= lerp(reflectance.xxx, baseColor.rgb, metalness);
 		}
@@ -266,6 +263,8 @@ struct Surface
 
 		material = load_material(geometry.materialIndex);
 		create(material);
+
+		layerMask = material.layerMask & inst.layerMask;
 
 		const uint startIndex = prim.primitiveIndex * 3 + geometry.indexOffset;
 		Buffer<uint> indexBuffer = bindless_ib[NonUniformResourceIndex(geometry.ib)];
@@ -446,15 +445,46 @@ struct Surface
 			flags |= SURFACE_FLAG_GI_APPLIED;
 		}
 
+		float4 surfaceMap = 1;
+		[branch]
+		if (material.textures[SURFACEMAP].IsValid() && !simple_lighting)
+		{
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+			surfaceMap = material.textures[SURFACEMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy);
+#else
+			float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+			lod = compute_texture_lod(material.textures[SURFACEMAP].GetTexture(), material.textures[SURFACEMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+			surfaceMap = material.textures[SURFACEMAP].SampleLevel(sam, uvsets, lod);
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
+		}
+
+		[branch]
+		if (!material.IsUsingSpecularGlossinessWorkflow())
+		{
+			// Premultiply these before evaluating decals:
+			surfaceMap.g *= material.roughness;
+			surfaceMap.b *= material.metalness;
+			surfaceMap.a *= material.reflectance;
+		}
+
+		if (simple_lighting)
+		{
+			surfaceMap = 0;
+		}
+
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 		// I need to copy the decal code here because include resolve issues:
 #ifndef DISABLE_DECALS
 		[branch]
-		if (GetFrame().decalarray_count > 0)
+		if (!simple_lighting && GetFrame().decalarray_count > 0)
 		{
 			// decals are enabled, loop through them first:
 			float4 decalAccumulation = 0;
 			float4 decalBumpAccumulation = 0;
+			float4 decalSurfaceAccumulation = 0;
+			float decalSurfaceAccumulationAlpha = 0;
 
 			// Loop through decal buckets in the tile:
 			const uint first_item = GetFrame().decalarray_offset;
@@ -472,7 +502,7 @@ struct Surface
 #endif // ENTITY_TILE_UNIFORM
 
 				[loop]
-				while (bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1)
+				while (bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1)
 				{
 					// Retrieve global entity index from local bucket, then remove bit from local bucket:
 					const uint bucket_bit_index = firstbitlow(bucket_bits);
@@ -490,6 +520,7 @@ struct Surface
 						int decalTexture = asint(decalProjection[3][0]);
 						int decalNormal = asint(decalProjection[3][1]);
 						float decalNormalStrength = decalProjection[3][2];
+						int decalSurfacemap = asint(decalProjection[3][3]);
 						decalProjection[3] = float4(0, 0, 0, 1);
 						const float3 clipSpacePos = mul(decalProjection, float4(P, 1)).xyz;
 						const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
@@ -524,6 +555,13 @@ struct Surface
 								decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
 								decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
 							}
+							[branch]
+							if (decalSurfacemap >= 0)
+							{
+								float4 decalSurfaceColor = bindless_textures[NonUniformResourceIndex(decalSurfacemap)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+								decalSurfaceAccumulation = mad(1 - decalSurfaceAccumulationAlpha, decalColor.a * decalSurfaceColor, decalSurfaceAccumulation);
+								decalSurfaceAccumulationAlpha = mad(1 - decalColor.a, decalSurfaceAccumulationAlpha, decalColor.a);
+							}
 						}
 					}
 					else if (entity_index > last_item)
@@ -536,8 +574,9 @@ struct Surface
 				}
 			}
 
-			baseColor.rgb = lerp(baseColor.rgb, decalAccumulation.rgb, decalAccumulation.a);
-			bumpColor.rgb = lerp(bumpColor.rgb, decalBumpAccumulation.rgb, decalBumpAccumulation.a);
+			baseColor.rgb = mad(baseColor.rgb, 1 - decalAccumulation.a, decalAccumulation.rgb);
+			bumpColor.rgb = mad(bumpColor.rgb, 1 - decalBumpAccumulation.a, decalBumpAccumulation.rgb);
+			surfaceMap = mad(surfaceMap, 1 - decalSurfaceAccumulationAlpha, decalSurfaceAccumulation);
 		}
 #endif // DISABLE_DECALS
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
@@ -546,25 +585,6 @@ struct Surface
 		{
 			const float3x3 TBN = float3x3(T.xyz, B, N);
 			N = normalize(lerp(N, mul(bumpColor, TBN), length(bumpColor)));
-		}
-
-		float4 surfaceMap = 1;
-		[branch]
-		if (material.textures[SURFACEMAP].IsValid() && !simple_lighting)
-		{
-#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			surfaceMap = material.textures[SURFACEMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy);
-#else
-			float lod = 0;
-#ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(material.textures[SURFACEMAP].GetTexture(), material.textures[SURFACEMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
-#endif // SURFACE_LOAD_MIPCONE
-			surfaceMap = material.textures[SURFACEMAP].SampleLevel(sam, uvsets, lod);
-#endif // SURFACE_LOAD_QUAD_DERIVATIVES
-		}
-		if (simple_lighting)
-		{
-			surfaceMap = 0;
 		}
 
 		float4 specularMap = 1;

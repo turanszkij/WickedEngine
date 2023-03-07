@@ -30,6 +30,7 @@ namespace wi::lua::primitive
 		lunamethod(Ray_BindLua, GetDirection),
 		lunamethod(Ray_BindLua, SetOrigin),
 		lunamethod(Ray_BindLua, SetDirection),
+		lunamethod(Ray_BindLua, CreateFromPoints),
 		{ NULL, NULL }
 	};
 	Luna<Ray_BindLua>::PropertyType Ray_BindLua::properties[] = {
@@ -150,6 +151,28 @@ namespace wi::lua::primitive
 		else
 		{
 			wi::lua::SError(L, "SetDirection(Vector vector) not enough arguments!");
+		}
+		return 0;
+	}
+	int Ray_BindLua::CreateFromPoints(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			Vector_BindLua* a = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* b = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (a != nullptr && b != nullptr)
+			{
+				ray.CreateFromPoints(a->GetFloat3(), b->GetFloat3());
+			}
+			else
+			{
+				wi::lua::SError(L, "CreateFromPoints(Vector a,b) argument is not a vector!");
+			}
+		}
+		else
+		{
+			wi::lua::SError(L, "CreateFromPoints(Vector a,b) not enough arguments!");
 		}
 		return 0;
 	}
