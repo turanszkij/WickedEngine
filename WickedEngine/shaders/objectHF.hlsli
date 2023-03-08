@@ -521,10 +521,11 @@ inline void ForwardDecals(inout Surface surface, inout float4 surfaceMap)
 		int decalSurfacemap = asint(decalProjection[3][3]);
 		decalProjection[3] = float4(0, 0, 0, 1);
 		const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
-		const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+		float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 		[branch]
 		if (is_saturated(uvw))
 		{
+			uvw.xy = mad(uvw.xy, decal.shadowAtlasMulAdd.xy, decal.shadowAtlasMulAdd.zw);
 			// mipmapping needs to be performed by hand:
 			const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
 			const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
@@ -850,10 +851,11 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout float4 
 				int decalSurfacemap = asint(decalProjection[3][3]);
 				decalProjection[3] = float4(0, 0, 0, 1);
 				const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
-				const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+				float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 				[branch]
 				if (is_saturated(uvw))
 				{
+					uvw.xy = mad(uvw.xy, decal.shadowAtlasMulAdd.xy, decal.shadowAtlasMulAdd.zw);
 					// mipmapping needs to be performed by hand:
 					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
 					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;

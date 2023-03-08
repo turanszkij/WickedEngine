@@ -56,7 +56,7 @@ void DecalWindow::Create(EditorComponent* _editor)
 	y += step;
 
 	infoLabel.Create("");
-	infoLabel.SetText("Set decal properties in the Material component. Decals support the following material properties:\n - Base color\n - Base color texture\n - Emissive strength\n - Normalmap texture\n - Normalmap strength\n - Surfacemap texture");
+	infoLabel.SetText("Set decal properties in the Material component. Decals support the following material properties:\n - Base color\n - Base color texture\n - Emissive strength\n - Normalmap texture\n - Normalmap strength\n - Surfacemap texture\n - Texture tiling (TexMulAdd)");
 	infoLabel.SetSize(XMFLOAT2(300, 100));
 	infoLabel.SetPos(XMFLOAT2(10, y));
 	infoLabel.SetColor(wi::Color::Transparent());

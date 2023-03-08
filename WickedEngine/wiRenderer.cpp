@@ -3768,6 +3768,7 @@ void UpdateRenderData(
 			shaderentity.SetRange(decal.range);
 			float emissive_mul = 1 + decal.emissive;
 			shaderentity.SetColor(float4(decal.color.x * emissive_mul, decal.color.y * emissive_mul, decal.color.z * emissive_mul, decal.color.w));
+			shaderentity.shadowAtlasMulAdd = decal.texMulAdd;
 
 			shaderentity.SetIndices(matrixCounter, 0);
 			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));

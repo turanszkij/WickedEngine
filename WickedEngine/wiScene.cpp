@@ -3801,6 +3801,7 @@ namespace wi::scene
 			decal.normal = material.textures[MaterialComponent::NORMALMAP].resource;
 			decal.surfacemap = material.textures[MaterialComponent::SURFACEMAP].resource;
 			decal.normal_strength = material.normalMapStrength;
+			decal.texMulAdd = material.texMulAdd;
 		}
 	}
 	void Scene::RunProbeUpdateSystem(wi::jobsystem::context& ctx)

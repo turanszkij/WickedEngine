@@ -3507,6 +3507,8 @@ Luna<MaterialComponent_BindLua>::FunctionType MaterialComponent_BindLua::methods
 	lunamethod(MaterialComponent_BindLua, SetEngineStencilRef),
 	lunamethod(MaterialComponent_BindLua, SetUserStencilRef),
 	lunamethod(MaterialComponent_BindLua, GetStencilRef),
+	lunamethod(MaterialComponent_BindLua, SetTexMulAdd),
+	lunamethod(MaterialComponent_BindLua, GetTexMulAdd),
 
 	lunamethod(MaterialComponent_BindLua, SetTexture),
 	lunamethod(MaterialComponent_BindLua, SetTextureUVSet),

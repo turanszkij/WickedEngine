@@ -776,6 +776,8 @@ Describes an orientation in 3D space.
 - SetEngineStencilRef(int value)
 - SetUserStencilRef(int value)
 - GetStencilRef() : int result
+- SetTexMulAdd(Vector vector)
+- GetTexMulAdd() : Vector
 - SetTexture(TextureSlot slot, string texturefile)
 - SetTexture(TextureSlot slot, Texture texture)
 - SetTextureUVSet(TextureSlot slot, int uvset)

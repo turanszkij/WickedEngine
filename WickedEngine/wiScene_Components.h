@@ -1065,6 +1065,7 @@ namespace wi::scene
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 world;
+		XMFLOAT4 texMulAdd;
 
 		wi::Resource texture;
 		wi::Resource normal;
