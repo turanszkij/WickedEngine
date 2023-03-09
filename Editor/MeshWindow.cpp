@@ -287,6 +287,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 	mergeButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		MeshComponent merged_mesh;
+		ObjectComponent merged_object;
 		bool valid_normals = false;
 		bool valid_uvset_0 = false;
 		bool valid_uvset_1 = false;
@@ -305,6 +306,9 @@ void MeshWindow::Create(EditorComponent* _editor)
 			MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 			if (mesh == nullptr)
 				continue;
+			merged_object._flags |= object->_flags;
+			merged_object.filterMask |= object->filterMask;
+			merged_mesh._flags |= mesh->_flags;
 			const TransformComponent* transform = scene.transforms.GetComponent(picked.entity);
 			XMMATRIX W = XMLoadFloat4x4(&transform->world);
 			uint32_t vertexOffset = (uint32_t)merged_mesh.vertex_positions.size();
@@ -422,8 +426,22 @@ void MeshWindow::Create(EditorComponent* _editor)
 			{
 				merged_mesh.armatureID = mesh->armatureID;
 			}
-			entities_to_remove.insert(object->meshID);
 			entities_to_remove.insert(picked.entity);
+
+			// Only remove mesh if it is no longer used by any other objects:
+			bool mesh_still_used = false;
+			for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+			{
+				if (entities_to_remove.count(scene.objects.GetEntity(i)) == 0 && scene.objects[i].meshID == object->meshID)
+				{
+					mesh_still_used = true;
+					break;
+				}
+			}
+			if (!mesh_still_used)
+			{
+				entities_to_remove.insert(object->meshID);
+			}
 		}
 
 		if (!merged_mesh.vertex_positions.empty())
@@ -448,6 +466,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 			Entity merged_object_entity = scene.Entity_CreateObject("mergedObject");
 			Entity merged_mesh_entity = scene.Entity_CreateMesh("mergedMesh");
 			ObjectComponent* object = scene.objects.GetComponent(merged_object_entity);
+			*object = std::move(merged_object);
 			object->meshID = merged_mesh_entity;
 			MeshComponent* mesh = scene.meshes.GetComponent(merged_mesh_entity);
 			*mesh = std::move(merged_mesh);
