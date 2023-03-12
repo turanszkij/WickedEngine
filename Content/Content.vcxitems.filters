@@ -270,6 +270,9 @@
     <None Include="$(MSBuildThisFileDirectory)scripts\subscript_demo\load_model.lua">
       <Filter>scripts\subscript_demo</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\animations.wiscene">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\background.png">
@@ -588,6 +591,9 @@
       <Filter>scripts\character_controller\assets</Filter>
     </Image>
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\waterNormalMap.jpg">
+      <Filter>scripts\character_controller\assets</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\footprint.dds">
       <Filter>scripts\character_controller\assets</Filter>
     </Image>
   </ItemGroup>
