@@ -31,7 +31,7 @@ namespace wi
 		};
 
 		ParticleCounters statistics = {};
-		wi::graphics::GPUBuffer statisticsReadbackBuffer[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		wi::graphics::GPUBuffer statisticsReadbackBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 
 		wi::graphics::GPUBuffer particleBuffer;
 		wi::graphics::GPUBuffer aliveList[2];
@@ -129,7 +129,6 @@ namespace wi
 
 		// Non-serialized attributes:
 		XMFLOAT3 center;
-		uint32_t statisticsReadBackIndex = 0;
 		uint32_t layerMask = ~0u;
 
 		inline bool IsDebug() const { return _flags & FLAG_DEBUG; }

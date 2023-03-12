@@ -5072,24 +5072,22 @@ using namespace dx12_internal;
 		// From here, we begin a new frame, this affects GetBufferIndex()!
 		FRAMECOUNT++;
 
-		// Begin next frame:
+		// Initiate stalling CPU when GPU is not yet finished with next frame:
+		const uint32_t bufferindex = GetBufferIndex();
+		for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 		{
-			// Initiate stalling CPU when GPU is not yet finished with next frame:
-			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+			if (FRAMECOUNT >= BUFFERCOUNT && frame_fence[bufferindex][queue]->GetCompletedValue() < 1)
 			{
-				if (FRAMECOUNT >= BUFFERCOUNT && frame_fence[GetBufferIndex()][queue]->GetCompletedValue() < 1)
-				{
-					// NULL event handle will simply wait immediately:
-					//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
-					hr = frame_fence[GetBufferIndex()][queue]->SetEventOnCompletion(1, NULL);
-					assert(SUCCEEDED(hr));
-				}
-				hr = frame_fence[GetBufferIndex()][queue]->Signal(0);
+				// NULL event handle will simply wait immediately:
+				//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
+				hr = frame_fence[bufferindex][queue]->SetEventOnCompletion(1, NULL);
+				assert(SUCCEEDED(hr));
 			}
-			assert(SUCCEEDED(hr));
-
-			allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
+			hr = frame_fence[bufferindex][queue]->Signal(0);
 		}
+		assert(SUCCEEDED(hr));
+
+		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
 	}
 
 	void GraphicsDevice_DX12::OnDeviceRemoved()

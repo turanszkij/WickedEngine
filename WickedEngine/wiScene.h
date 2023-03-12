@@ -125,7 +125,7 @@ namespace wi::scene
 		// Occlusion query state:
 		struct OcclusionResult
 		{
-			int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+			int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount()];
 			// occlusion result history bitfield (32 bit->32 frame history)
 			uint32_t occlusionHistory = ~0u;
 
@@ -142,7 +142,7 @@ namespace wi::scene
 		wi::graphics::GPUQueryHeap queryHeap;
 		wi::graphics::GPUBuffer queryResultBuffer[arraysize(OcclusionResult::occlusionQueries)];
 		wi::graphics::GPUBuffer queryPredicationBuffer;
-		int queryheap_idx = 0;
+		uint32_t queryheap_idx = 0;
 		mutable std::atomic<uint32_t> queryAllocator{ 0 };
 
 		// Surfel GI resources:

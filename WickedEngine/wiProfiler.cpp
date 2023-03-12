@@ -32,9 +32,9 @@ namespace wi::profiler
 	range_id cpu_frame;
 	range_id gpu_frame;
 	GPUQueryHeap queryHeap;
-	GPUBuffer queryResultBuffer[GraphicsDevice::GetBufferCount() + 1];
+	GPUBuffer queryResultBuffer[GraphicsDevice::GetBufferCount()];
 	std::atomic<uint32_t> nextQuery{ 0 };
-	int queryheap_idx = 0;
+	uint32_t queryheap_idx = 0;
 	bool drawn_this_frame = false;
 	wi::Color background_color = wi::Color(20, 20, 20, 230);
 	wi::Color text_color = wi::Color::White();
@@ -57,6 +57,9 @@ namespace wi::profiler
 
 		int gpuBegin[arraysize(queryResultBuffer)];
 		int gpuEnd[arraysize(queryResultBuffer)];
+
+		int gpuBegin_current = -1;
+		int gpuEnd_current = -1;
 
 		bool IsCPURange() const { return !cmd.IsValid(); }
 	};
@@ -110,6 +113,7 @@ namespace wi::profiler
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		CommandList cmd = device->BeginCommandList();
+		queryheap_idx = device->GetBufferIndex();
 
 		device->QueryReset(
 			&queryHeap,
@@ -130,6 +134,7 @@ namespace wi::profiler
 
 		// note: read the GPU Frame end range manually because it will be on a separate command list than start point:
 		auto& gpu_range = ranges[gpu_frame];
+		gpu_range.gpuEnd_current = gpu_range.gpuEnd[queryheap_idx];
 		gpu_range.gpuEnd[queryheap_idx] = nextQuery.fetch_add(1);
 		device->QueryEnd(&queryHeap, gpu_range.gpuEnd[queryheap_idx], cmd);
 
@@ -147,25 +152,22 @@ namespace wi::profiler
 		);
 
 		nextQuery.store(0);
-		queryheap_idx = (queryheap_idx + 1) % arraysize(queryResultBuffer);
-		uint64_t* queryResults = (uint64_t*)queryResultBuffer[queryheap_idx].mapped_data;
+		const uint64_t* queryResults = (const uint64_t*)queryResultBuffer[queryheap_idx].mapped_data;
 
 		for (auto& x : ranges)
 		{
 			auto& range = x.second;
+			if (!range.in_use)
+				continue;
 
 			if (!range.IsCPURange())
 			{
-				int begin_query = range.gpuBegin[queryheap_idx];
-				int end_query = range.gpuEnd[queryheap_idx];
-				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && begin_query >= 0 && end_query >= 0)
+				if (queryResults != nullptr && range.gpuBegin_current >= 0 && range.gpuEnd_current >= 0)
 				{
-					uint64_t begin_result = queryResults[begin_query];
-					uint64_t end_result = queryResults[end_query];
+					const uint64_t begin_result = queryResults[range.gpuBegin_current];
+					const uint64_t end_result = queryResults[range.gpuEnd_current];
 					range.time = (float)abs((double)(end_result - begin_result) / gpu_frequency);
 				}
-				range.gpuBegin[queryheap_idx] = -1;
-				range.gpuEnd[queryheap_idx] = -1;
 			}
 			range.times[range.avg_counter++ % arraysize(range.times)] = range.time;
 
@@ -232,8 +234,10 @@ namespace wi::profiler
 		ranges[id].name = name;
 		ranges[id].cmd = cmd;
 
+		GraphicsDevice* device = wi::graphics::GetDevice();
+		ranges[id].gpuBegin_current = ranges[id].gpuBegin[queryheap_idx];
 		ranges[id].gpuBegin[queryheap_idx] = nextQuery.fetch_add(1);
-		wi::graphics::GetDevice()->QueryEnd(&queryHeap, ranges[id].gpuBegin[queryheap_idx], cmd);
+		device->QueryEnd(&queryHeap, ranges[id].gpuBegin[queryheap_idx], cmd);
 
 		lock.unlock();
 
@@ -262,8 +266,10 @@ namespace wi::profiler
 			}
 			else
 			{
+				GraphicsDevice* device = wi::graphics::GetDevice();
+				ranges[id].gpuEnd_current = ranges[id].gpuEnd[queryheap_idx];
 				ranges[id].gpuEnd[queryheap_idx] = nextQuery.fetch_add(1);
-				wi::graphics::GetDevice()->QueryEnd(&queryHeap, it->second.gpuEnd[queryheap_idx], it->second.cmd);
+				device->QueryEnd(&queryHeap, it->second.gpuEnd[queryheap_idx], it->second.cmd);
 			}
 		}
 		else
@@ -330,6 +336,8 @@ namespace wi::profiler
 
 		for (auto& x : ranges)
 		{
+			if (!x.second.in_use)
+				continue;
 			if (x.second.IsCPURange())
 			{
 				if (x.first == cpu_frame)
@@ -354,7 +362,7 @@ namespace wi::profiler
 			{
 				ss << "\t" << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
 			}
-			else
+			else if(x.second.num_hits == 1)
 			{
 				ss << "\t" << x.first << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
 			}
@@ -371,7 +379,7 @@ namespace wi::profiler
 			{
 				ss << "\t" << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
 			}
-			else
+			else if (x.second.num_hits == 1)
 			{
 				ss << "\t" << x.first << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
 			}

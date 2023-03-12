@@ -151,7 +151,7 @@ namespace wi::scene
 			}
 
 			// Advance to next query result buffer to use (this will be the oldest one that was written)
-			queryheap_idx = (queryheap_idx + 1) % arraysize(queryResultBuffer);
+			queryheap_idx = device->GetBufferIndex();
 
 			// Clear query allocation state:
 			queryAllocator.store(0);
