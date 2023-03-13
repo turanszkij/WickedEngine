@@ -10,7 +10,7 @@ namespace wi::lua
 	{
 	public:
 		wi::Canvas canvas;
-		static const char className[];
+		inline static constexpr char className[] = "Canvas";
 		static Luna<Canvas_BindLua>::FunctionType methods[];
 		static Luna<Canvas_BindLua>::PropertyType properties[];
 
@@ -34,7 +34,7 @@ namespace wi::lua
 	private:
 		Application* component = nullptr;
 	public:
-		static const char className[];
+		inline static constexpr char className[] = "Application";
 		static Luna<Application_BindLua>::FunctionType methods[];
 		static Luna<Application_BindLua>::PropertyType properties[];
 

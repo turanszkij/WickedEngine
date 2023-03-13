@@ -31,7 +31,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<MaterialComponent>& materials = componentLibrary.Register<MaterialComponent>("wi::scene::Scene::materials", 1); // version = 1
 		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Register<MeshComponent>("wi::scene::Scene::meshes", 2); // version = 2
 		wi::ecs::ComponentManager<ImpostorComponent>& impostors = componentLibrary.Register<ImpostorComponent>("wi::scene::Scene::impostors");
-		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Register<ObjectComponent>("wi::scene::Scene::objects", 1); // version = 1
+		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Register<ObjectComponent>("wi::scene::Scene::objects", 2); // version = 2
 		wi::ecs::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies = componentLibrary.Register<RigidBodyPhysicsComponent>("wi::scene::Scene::rigidbodies", 1); // version = 1
 		wi::ecs::ComponentManager<SoftBodyPhysicsComponent>& softbodies = componentLibrary.Register<SoftBodyPhysicsComponent>("wi::scene::Scene::softbodies");
 		wi::ecs::ComponentManager<ArmatureComponent>& armatures = componentLibrary.Register<ArmatureComponent>("wi::scene::Scene::armatures");
@@ -125,7 +125,7 @@ namespace wi::scene
 		// Occlusion query state:
 		struct OcclusionResult
 		{
-			int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+			int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount()];
 			// occlusion result history bitfield (32 bit->32 frame history)
 			uint32_t occlusionHistory = ~0u;
 
@@ -142,7 +142,7 @@ namespace wi::scene
 		wi::graphics::GPUQueryHeap queryHeap;
 		wi::graphics::GPUBuffer queryResultBuffer[arraysize(OcclusionResult::occlusionQueries)];
 		wi::graphics::GPUBuffer queryPredicationBuffer;
-		int queryheap_idx = 0;
+		uint32_t queryheap_idx = 0;
 		mutable std::atomic<uint32_t> queryAllocator{ 0 };
 
 		// Surfel GI resources:

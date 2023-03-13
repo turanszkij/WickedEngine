@@ -648,15 +648,13 @@ namespace wi::scene
 		uint32_t filterMask = 0;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 1);
-
 		uint8_t userStencilRef = 0;
 		float lod_distance_multiplier = 1;
-
 		float draw_distance = std::numeric_limits<float>::max(); // object will begin to fade out at this distance to camera
-
 		uint32_t lightmapWidth = 0;
 		uint32_t lightmapHeight = 0;
 		wi::vector<uint8_t> lightmapTextureData;
+		uint32_t sort_priority = 0; // increase to draw earlier (currently 4 bits will be used)
 
 		// Non-serialized attributes:
 		uint32_t filterMaskDynamic = 0;
@@ -1067,9 +1065,11 @@ namespace wi::scene
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 world;
+		XMFLOAT4 texMulAdd;
 
 		wi::Resource texture;
 		wi::Resource normal;
+		wi::Resource surfacemap;
 
 		inline float GetOpacity() const { return color.w; }
 

@@ -9,7 +9,7 @@ namespace wi::lua
 	{
 	public:
 		RenderPath* component = nullptr;
-		static const char className[];
+		inline static constexpr char className[] = "RenderPath";
 		static Luna<RenderPath_BindLua>::FunctionType methods[];
 		static Luna<RenderPath_BindLua>::PropertyType properties[];
 

@@ -169,11 +169,11 @@ struct RenderBatch
 	{
 		return XMConvertHalfToFloat(HALF(distance));
 	}
-	inline uint32_t GetMeshIndex() const
+	constexpr uint32_t GetMeshIndex() const
 	{
 		return meshIndex;
 	}
-	inline uint32_t GetInstanceIndex() const
+	constexpr uint32_t GetInstanceIndex() const
 	{
 		return instanceIndex;
 	}
@@ -181,7 +181,7 @@ struct RenderBatch
 	// opaque sorting
 	//	Priority is set to mesh index to have more instancing
 	//	distance is second priority (front to back Z-buffering)
-	bool operator<(const RenderBatch& other) const
+	constexpr bool operator<(const RenderBatch& other) const
 	{
 		union SortKey
 		{
@@ -189,8 +189,8 @@ struct RenderBatch
 			{
 				// The order of members is important here, it means the sort priority (low to high)!
 				uint64_t distance : 16;
-				uint64_t meshIndex : 24;
-				uint64_t sort_bits : 24;
+				uint64_t meshIndex : 16;
+				uint64_t sort_bits : 32;
 			} bits;
 			uint64_t value;
 		};
@@ -208,15 +208,15 @@ struct RenderBatch
 	// transparent sorting
 	//	Priority is distance for correct alpha blending (back to front rendering)
 	//	mesh index is second priority for instancing
-	bool operator>(const RenderBatch& other) const
+	constexpr bool operator>(const RenderBatch& other) const
 	{
 		union SortKey
 		{
 			struct
 			{
 				// The order of members is important here, it means the sort priority (low to high)!
-				uint64_t meshIndex : 24;
-				uint64_t sort_bits : 24;
+				uint64_t meshIndex : 16;
+				uint64_t sort_bits : 32;
 				uint64_t distance : 16;
 			} bits;
 			uint64_t value;
@@ -3470,13 +3470,19 @@ void UpdatePerFrameData(
 
 	// The order is very important here:
 	frameCB.decalarray_offset = 0;
-	frameCB.decalarray_count = (uint)vis.visibleDecals.size();
+	frameCB.decalarray_count = std::min(MAX_SHADER_DECAL_COUNT, (uint)vis.visibleDecals.size());
 	frameCB.envprobearray_offset = frameCB.decalarray_count;
-	frameCB.envprobearray_count = std::min(vis.scene->envmapCount, (uint)vis.visibleEnvProbes.size());
+	frameCB.envprobearray_count = std::min(MAX_SHADER_PROBE_COUNT, std::min(vis.scene->envmapCount, (uint)vis.visibleEnvProbes.size()));
 	frameCB.lightarray_offset = frameCB.envprobearray_offset + frameCB.envprobearray_count;
 	frameCB.lightarray_count = (uint)vis.visibleLights.size();
 	frameCB.forcefieldarray_offset = frameCB.lightarray_offset + frameCB.lightarray_count;
 	frameCB.forcefieldarray_count = uint(vis.scene->forces.GetCount() + vis.scene->collider_count_gpu);
+
+	// Limit to avoid out of bounds accesses:
+	frameCB.decalarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.decalarray_offset);
+	frameCB.envprobearray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.envprobearray_offset);
+	frameCB.lightarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.lightarray_offset);
+	frameCB.forcefieldarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.forcefieldarray_offset);
 
 	frameCB.envprobe_mipcount = 0;
 	frameCB.envprobe_mipcount_rcp = 1.0f;
@@ -3723,7 +3729,8 @@ void UpdateRenderData(
 		uint32_t matrixCounter = 0;
 
 		// Write decals into entity array:
-		for (size_t i = 0; i < vis.visibleDecals.size(); ++i)
+		const size_t decal_iterations = std::min((size_t)MAX_SHADER_DECAL_COUNT, vis.visibleDecals.size());
+		for (size_t i = 0; i < decal_iterations; ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -3761,6 +3768,7 @@ void UpdateRenderData(
 			shaderentity.SetRange(decal.range);
 			float emissive_mul = 1 + decal.emissive;
 			shaderentity.SetColor(float4(decal.color.x * emissive_mul, decal.color.y * emissive_mul, decal.color.z * emissive_mul, decal.color.w));
+			shaderentity.shadowAtlasMulAdd = decal.texMulAdd;
 
 			shaderentity.SetIndices(matrixCounter, 0);
 			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
@@ -3775,9 +3783,15 @@ void UpdateRenderData(
 			{
 				normal = device->GetDescriptorIndex(&decal.normal.GetTexture(), SubresourceType::SRV);
 			}
+			int surfacemap = -1;
+			if (decal.surfacemap.IsValid())
+			{
+				surfacemap = device->GetDescriptorIndex(&decal.surfacemap.GetTexture(), SubresourceType::SRV);
+			}
 			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
 			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], *(float*)&normal);
 			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], decal.normal_strength);
+			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], *(float*)&surfacemap);
 
 			std::memcpy(matrixArray + matrixCounter, &shadermatrix, sizeof(XMMATRIX));
 			matrixCounter++;
@@ -3787,7 +3801,8 @@ void UpdateRenderData(
 		}
 
 		// Write environment probes into entity array:
-		for (size_t i = 0; i < std::min((size_t)vis.scene->envmapCount, vis.visibleEnvProbes.size()); ++i)
+		const size_t probe_iterations = std::min((size_t)MAX_SHADER_PROBE_COUNT, std::min((size_t)vis.scene->envmapCount, vis.visibleEnvProbes.size()));
+		for (size_t i = 0; i < probe_iterations; ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{

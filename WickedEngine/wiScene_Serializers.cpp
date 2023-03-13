@@ -577,6 +577,10 @@ namespace wi::scene
 			{
 				archive >> draw_distance;
 			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> sort_priority;
+			}
 		}
 		else
 		{
@@ -610,6 +614,10 @@ namespace wi::scene
 			if (archive.GetVersion() >= 80)
 			{
 				archive << draw_distance;
+			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive << sort_priority;
 			}
 		}
 	}

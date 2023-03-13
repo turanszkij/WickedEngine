@@ -151,7 +151,7 @@ namespace wi::scene
 			}
 
 			// Advance to next query result buffer to use (this will be the oldest one that was written)
-			queryheap_idx = (queryheap_idx + 1) % arraysize(queryResultBuffer);
+			queryheap_idx = device->GetBufferIndex();
 
 			// Clear query allocation state:
 			queryAllocator.store(0);
@@ -3575,8 +3575,8 @@ namespace wi::scene
 						uint32_t doublesided : 1;	// bool
 						uint32_t tessellation : 1;	// bool
 						uint32_t alphatest : 1;		// bool
-						uint32_t wind : 1;			// bool
 						uint32_t customshader : 10;
+						uint32_t sort_priority : 4;
 					} bits;
 					uint32_t value;
 				} sort_bits;
@@ -3584,6 +3584,7 @@ namespace wi::scene
 
 				sort_bits.bits.tessellation = mesh.GetTessellationFactor() > 0;
 				sort_bits.bits.doublesided = mesh.IsDoubleSided();
+				sort_bits.bits.sort_priority = object.sort_priority;
 
 				uint32_t first_subset = 0;
 				uint32_t last_subset = 0;
@@ -3606,7 +3607,6 @@ namespace wi::scene
 						sort_bits.bits.blendmode |= 1 << material->GetBlendMode();
 						sort_bits.bits.doublesided |= material->IsDoubleSided();
 						sort_bits.bits.alphatest |= material->IsAlphaTestEnabled();
-						sort_bits.bits.wind |= material->IsUsingWind();
 
 						int customshader = material->GetCustomShaderID();
 						if (customshader >= 0)
@@ -3615,6 +3615,8 @@ namespace wi::scene
 						}
 					}
 				}
+
+				object.sort_bits = sort_bits.value;
 
 				// Create GPU instance data:
 				GraphicsDevice* device = wi::graphics::GetDevice();
@@ -3797,7 +3799,9 @@ namespace wi::scene
 			decal.emissive = material.GetEmissiveStrength();
 			decal.texture = material.textures[MaterialComponent::BASECOLORMAP].resource;
 			decal.normal = material.textures[MaterialComponent::NORMALMAP].resource;
+			decal.surfacemap = material.textures[MaterialComponent::SURFACEMAP].resource;
 			decal.normal_strength = material.normalMapStrength;
+			decal.texMulAdd = material.texMulAdd;
 		}
 	}
 	void Scene::RunProbeUpdateSystem(wi::jobsystem::context& ctx)

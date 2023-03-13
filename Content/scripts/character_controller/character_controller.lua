@@ -39,6 +39,9 @@ local States = {
 	DANCE = "dance"
 }
 
+local enable_footprints = true
+local footprint_texture = Texture(script_dir() .. "assets/footprint.dds")
+local footprints = {}
 	
 local animations = {}
 local function LoadAnimations(model_name)
@@ -81,6 +84,8 @@ local function Character(model_name, start_position, face, controllable)
 		right_hand = INVALID_ENTITY,
 		left_foot = INVALID_ENTITY,
 		right_foot = INVALID_ENTITY,
+		left_toes = INVALID_ENTITY,
+		right_toes = INVALID_ENTITY,
 		face = Vector(0,0,1), -- forward direction
 		force = Vector(),
 		velocity = Vector(),
@@ -97,6 +102,8 @@ local function Character(model_name, start_position, face, controllable)
 		position = Vector(),
 		controllable = true,
 		root_bone_offset = 0,
+		foot_placed_left = false,
+		foot_placed_right = false,
 
 		patrol_waypoints = {},
 		patrol_next = 0,
@@ -131,6 +138,8 @@ local function Character(model_name, start_position, face, controllable)
 					self.right_hand = humanoid.GetBoneEntity(HumanoidBone.RightHand)
 					self.left_foot = humanoid.GetBoneEntity(HumanoidBone.LeftFoot)
 					self.right_foot = humanoid.GetBoneEntity(HumanoidBone.RightFoot)
+					self.left_toes = humanoid.GetBoneEntity(HumanoidBone.LeftToes)
+					self.right_toes = humanoid.GetBoneEntity(HumanoidBone.RightToes)
 
 					-- Create a base capsule collider if it's not yet configured for character:
 					--	It will be used for movement logic and GPU collision effects
@@ -634,7 +643,62 @@ local function Character(model_name, start_position, face, controllable)
 				ik.SetChainLength(2)
 				ik.SetIterationCount(10)
 			end
-		end
+		end,
+
+		Update_Footprints = function(self)
+			local radius = 0.1
+
+			-- Left footprint:
+			local capsule = Capsule(scene.Component_GetTransform(self.left_foot).GetPosition(), scene.Component_GetTransform(self.left_toes).GetPosition(), 0.1)
+			--DrawCapsule(capsule, Vector(1,0,0,1))
+			local collEntity,collPos = scene.Intersects(capsule, FILTER_NAVIGATION_MESH)
+			if collEntity ~= INVALID_ENTITY then
+				if not self.foot_placed_left then
+					self.foot_placed_left = true
+					local entity = CreateEntity()
+					local transform = scene.Component_CreateTransform(entity)
+					local material = scene.Component_CreateMaterial(entity)
+					local decal = scene.Component_CreateDecal(entity)
+					local layer = scene.Component_CreateLayer(entity)
+					transform.MatrixTransform(matrix.LookTo(Vector(),self.face):Inverse())
+					transform.Rotate(Vector(math.pi * 0.5))
+					transform.Scale(0.1)
+					transform.Translate(collPos)
+					material.SetTexture(TextureSlot.BASECOLORMAP, footprint_texture)
+					layer.SetLayerMask(~(Layers.Player | Layers.NPC))
+					scene.Component_Attach(entity, collEntity)
+					table.insert(footprints, entity)
+				end
+			else
+				self.foot_placed_left = false
+			end
+
+			-- Right footprint:
+			local capsule = Capsule(scene.Component_GetTransform(self.right_foot).GetPosition(), scene.Component_GetTransform(self.right_toes).GetPosition(), 0.1)
+			--DrawCapsule(capsule, Vector(1,0,0,1))
+			local collEntity,collPos = scene.Intersects(capsule, FILTER_NAVIGATION_MESH)
+			if collEntity ~= INVALID_ENTITY then
+				if not self.foot_placed_right then
+					self.foot_placed_right = true
+					local entity = CreateEntity()
+					local transform = scene.Component_CreateTransform(entity)
+					local material = scene.Component_CreateMaterial(entity)
+					local decal = scene.Component_CreateDecal(entity)
+					local layer = scene.Component_CreateLayer(entity)
+					transform.MatrixTransform(matrix.LookTo(Vector(),self.face):Inverse())
+					transform.Rotate(Vector(math.pi * 0.5))
+					transform.Scale(0.1)
+					transform.Translate(collPos)
+					material.SetTexture(TextureSlot.BASECOLORMAP, footprint_texture)
+					material.SetTexMulAdd(Vector(-1, 1, 0, 0)) -- flip left footprint texture to be right
+					layer.SetLayerMask(~(Layers.Player | Layers.NPC))
+					scene.Component_Attach(entity, collEntity)
+					table.insert(footprints, entity)
+				end
+			else
+				self.foot_placed_right = false
+			end
+		end,
 
 	}
 
@@ -884,6 +948,19 @@ runProcess(function()
 		player:Update_IK()
 		for k,npc in pairs(npcs) do
 			npc:Update_IK()
+		end
+
+		if enable_footprints then
+			player:Update_Footprints()
+			for k,npc in pairs(npcs) do
+				npc:Update_Footprints()
+			end
+			-- Cap the max number of decals:
+			while #footprints > 100 do
+				local entity = footprints[1]
+				scene.Entity_Remove(entity)
+				table.remove(footprints, 1)
+			end
 		end
 
 		camera:Update()

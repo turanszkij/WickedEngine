@@ -5,8 +5,6 @@
 namespace wi::lua
 {
 
-	const char Network_BindLua::className[] = "Network";
-
 	Luna<Network_BindLua>::FunctionType Network_BindLua::methods[] = {
 		{ NULL, NULL }
 	};

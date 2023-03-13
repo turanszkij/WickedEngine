@@ -304,6 +304,10 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\animations.wiscene">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
     <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\character.wiscene">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
@@ -623,6 +627,7 @@
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_ddn.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_spec.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\waterNormalMap.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\footprint.dds" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\grassparticle.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\ripple.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\waterNormalMap.jpg" />

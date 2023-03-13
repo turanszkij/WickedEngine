@@ -43,6 +43,9 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		17. [WeatherComponent](#weathercomponent)
 		18. [SoundComponent](#soundcomponent)
 		19. [ColliderComponent](#collidercomponent)
+		19. [ExpressionComponent](#expressioncomponent)
+		19. [HumanoidComponent](#humanoidcomponent)
+		19. [DecalComponent](#decalcomponent)
 	10. [Canvas](#canvas)
 	11. [High Level Interface](#high-level-interface)
 		1. [MainComponent](#maincomponent)
@@ -139,9 +142,7 @@ You can use the Renderer with the following functions, all of which are in the g
 	[outer]DEBUG_TEXT_CAMERA_FACING		-- text will be rotated to face the camera
 	[outer]DEBUG_TEXT_CAMERA_SCALING	-- text will be always the same size, independent of distance to camera
 - PutWaterRipple(String imagename, Vector position)
-- PutDecal(Decal decal)
-- PutEnvProbe(Vector pos)
-- ClearWorld(opt Scene scene) -- Clears the global scene and the associated renderer resources
+- ClearWorld(opt Scene scene) -- Clears the scene and the associated renderer resources. If parmaeter is not specified, it will clear the global scene
 - ReloadShaders()
 
 ### Sprite
@@ -156,6 +157,10 @@ Render images on the screen.
 - GetParams() : ImageParams result
 - SetAnim(SpriteAnim anim)
 - GetAnim() : SpriteAnim result
+- SetTexture(Texture texture)
+- GetTexture() : Texture
+- SetMaskTexture(Texture texture)
+- GetMaskTexture() : Texture
 
 #### ImageParams
 Specify Sprite properties, like position, size, etc.
@@ -360,7 +365,7 @@ Gives you the ability to render text with a custom font.
 
 ### Texture
 Just holds texture information in VRAM.
-- [void-constructor]Texture()
+- [constructor]Texture(opt string filename)	-- creates a texture from file
 
 ### Audio
 Loads and plays an audio files.
@@ -662,6 +667,7 @@ Describes an orientation in 3D space.
 </br>
 
 - Scale(Vector vectorXYZ)  -- Applies scaling
+- Scale(float value)  -- Applies uniform scaling
 - Rotate(Vector vectorRollPitchYaw)  -- Applies rotation as roll,pitch,yaw
 - RotateQuaternion(Vector quaternion)  -- Applies rotation as quaternion
 - Translate(Vector vectorXYZ)  -- Applies translation (position offset)
@@ -770,10 +776,32 @@ Describes an orientation in 3D space.
 - SetEngineStencilRef(int value)
 - SetUserStencilRef(int value)
 - GetStencilRef() : int result
-- SetTexture(int textureindex, string texturefile)
-- SetTextureUVSet(int textureindex, int uvset)
-- GetTexture(int textureindex) : string texturefile
-- GetTextureUVSet(int textureindex) : int uvset
+- SetTexMulAdd(Vector vector)
+- GetTexMulAdd() : Vector
+- SetTexture(TextureSlot slot, string texturefile)
+- SetTexture(TextureSlot slot, Texture texture)
+- SetTextureUVSet(TextureSlot slot, int uvset)
+- GetTexture(TextureSlot slot) : Texture
+- GetTextureName(TextureSlot slot) : string
+- GetTextureUVSet(TextureSlot slot) : int uvset
+
+```lua
+TextureSlot = {
+	BASECOLORMAP = 0,
+	NORMALMAP = 0,
+	SURFACEMAP = 0,
+	EMISSIVEMAP = 0,
+	DISPLACEMENTMAP = 0,
+	OCCLUSIONMAP = 0,
+	TRANSMISSIONMAP = 0,
+	SHEENCOLORMAP = 0,
+	SHEENROUGHNESSMAP = 0,
+	CLEARCOATMAP = 0,
+	CLEARCOATROUGHNESSMAP = 0,
+	CLEARCOATNORMALMAP = 0,
+	SPECULARMAP = 0,
+}
+```
 
 #### MeshComponent
 - _flags : int
@@ -1129,6 +1157,13 @@ Describes a Collider object.
 }
 
 
+#### DecalComponent
+The decal component is a textured sticker that can be put down onto meshes. Most of the properties can be controlled through an attached TransformComponent and MaterialComponent. 
+
+- SetBaseColorOnlyAlpha(bool value)	-- Set decal to only use alpha from base color texture. Useful for blending normalmap-only decals
+- IsBaseColorOnlyAlpha() : bool
+
+
 ## Canvas
 This is used to describe a drawable area
 - GetDPI() : float -- pixels per inch
@@ -1268,6 +1303,7 @@ A ray is defined by an origin Vector and a normalized direction Vector. It can b
 - GetDirection() : Vector result
 - SetOrigin(Vector vector)
 - SetDirection(Vector vector)
+- CreateFromPoints(Vector a,b)	-- creates a ray from two points. Point a will be the ray origin, pointing towards point b
 
 #### AABB
 Axis Aligned Bounding Box. Can be intersected with other primitives.

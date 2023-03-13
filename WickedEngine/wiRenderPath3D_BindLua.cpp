@@ -4,8 +4,6 @@
 namespace wi::lua
 {
 
-	const char RenderPath3D_BindLua::className[] = "RenderPath3D";
-
 	Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 		lunamethod(RenderPath2D_BindLua, AddSprite),
 		lunamethod(RenderPath2D_BindLua, AddFont),

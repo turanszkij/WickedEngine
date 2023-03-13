@@ -10,7 +10,7 @@ namespace wi::lua
 	public:
 		wi::Sprite sprite;
 
-		static const char className[];
+		inline static constexpr char className[] = "Sprite";
 		static Luna<Sprite_BindLua>::FunctionType methods[];
 		static Luna<Sprite_BindLua>::PropertyType properties[];
 
@@ -21,6 +21,10 @@ namespace wi::lua
 		int GetParams(lua_State* L);
 		int SetAnim(lua_State* L);
 		int GetAnim(lua_State* L);
+		int SetTexture(lua_State* L);
+		int GetTexture(lua_State* L);
+		int SetMaskTexture(lua_State* L);
+		int GetMaskTexture(lua_State* L);
 
 		static void Bind();
 	};

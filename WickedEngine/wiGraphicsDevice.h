@@ -49,7 +49,7 @@ namespace wi::graphics
 	class GraphicsDevice
 	{
 	protected:
-		static const uint32_t BUFFERCOUNT = 2;
+		static constexpr uint32_t BUFFERCOUNT = 2;
 		uint64_t FRAMECOUNT = 0;
 		ValidationMode validationMode = ValidationMode::Disabled;
 		GraphicsDeviceCapability capabilities = GraphicsDeviceCapability::NONE;
@@ -57,8 +57,8 @@ namespace wi::graphics
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 		uint64_t TIMESTAMP_FREQUENCY = 0;
-		uint32_t vendorId;
-		uint32_t deviceId;
+		uint32_t vendorId = 0;
+		uint32_t deviceId = 0;
 		std::string adapterName;
 		std::string driverDescription;
 		AdapterType adapterType = AdapterType::Other;
@@ -119,7 +119,7 @@ namespace wi::graphics
 		// Returns the buffer count, which is the array size of buffered resources used by both the CPU and GPU
 		static constexpr uint32_t GetBufferCount() { return BUFFERCOUNT; }
 		// Returns the current buffer index, which is in range [0, GetBufferCount() - 1]
-		constexpr uint32_t GetBufferIndex() const { return GetFrameCount() % BUFFERCOUNT; }
+		constexpr uint32_t GetBufferIndex() const { return GetFrameCount() % GetBufferCount(); }
 
 		// Returns whether the graphics debug layer is enabled. It can be enabled when creating the device.
 		constexpr bool IsDebugDevice() const { return validationMode != ValidationMode::Disabled; }

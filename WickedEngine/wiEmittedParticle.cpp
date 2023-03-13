@@ -313,12 +313,8 @@ namespace wi
 		std::swap(aliveList[0], aliveList[1]);
 
 		// Read back statistics (with GPU delay):
-		if (statisticsReadBackIndex > arraysize(statisticsReadbackBuffer))
-		{
-			const uint32_t oldest_stat_index = (statisticsReadBackIndex + 1) % arraysize(statisticsReadbackBuffer);
-			memcpy(&statistics, statisticsReadbackBuffer[oldest_stat_index].mapped_data, sizeof(statistics));
-		}
-		statisticsReadBackIndex++;
+		const uint32_t oldest_stat_index = wi::graphics::GetDevice()->GetBufferIndex();
+		memcpy(&statistics, statisticsReadbackBuffer[oldest_stat_index].mapped_data, sizeof(statistics));
 	}
 	void EmittedParticleSystem::Burst(int num)
 	{
@@ -679,7 +675,8 @@ namespace wi
 		}
 
 		// Statistics is copied to readback:
-		device->CopyResource(&statisticsReadbackBuffer[(statisticsReadBackIndex - 1) % arraysize(statisticsReadbackBuffer)], &counterBuffer, cmd);
+		const uint32_t oldest_stat_index = wi::graphics::GetDevice()->GetBufferIndex();
+		device->CopyResource(&statisticsReadbackBuffer[oldest_stat_index], &counterBuffer, cmd);
 
 		{
 			const GPUBarrier barriers[] = {
