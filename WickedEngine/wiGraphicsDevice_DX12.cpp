@@ -6157,13 +6157,15 @@ using namespace dx12_internal;
 
 		commandlist.GetGraphicsCommandList()->CopyBufferRegion(dst_internal->resource.Get(), dst_offset, src_internal->resource.Get(), src_offset, size);
 	}
-	void GraphicsDevice_DX12::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox)
+	void GraphicsDevice_DX12::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox, ImageAspect dst_aspect, ImageAspect src_aspect)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto src_internal = to_internal((const GPUBuffer*)src);
 		auto dst_internal = to_internal((const GPUBuffer*)dst);
-		CD3DX12_TEXTURE_COPY_LOCATION src_location(src_internal->resource.Get(), D3D12CalcSubresource(srcMip, srcSlice, 0, src->desc.mip_levels, src->desc.array_size));
-		CD3DX12_TEXTURE_COPY_LOCATION dst_location(dst_internal->resource.Get(), D3D12CalcSubresource(dstMip, dstSlice, 0, dst->desc.mip_levels, dst->desc.array_size));
+		UINT srcPlane = src_aspect == ImageAspect::STENCIL ? 1 : 0;
+		UINT dstPlane = dst_aspect == ImageAspect::STENCIL ? 1 : 0;
+		CD3DX12_TEXTURE_COPY_LOCATION src_location(src_internal->resource.Get(), D3D12CalcSubresource(srcMip, srcSlice, srcPlane, src->desc.mip_levels, src->desc.array_size));
+		CD3DX12_TEXTURE_COPY_LOCATION dst_location(dst_internal->resource.Get(), D3D12CalcSubresource(dstMip, dstSlice, dstPlane, dst->desc.mip_levels, dst->desc.array_size));
 		if (srcbox == nullptr)
 		{
 			commandlist.GetGraphicsCommandList()->CopyTextureRegion(

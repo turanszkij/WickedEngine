@@ -317,6 +317,13 @@ namespace wi::graphics
 		NOT_EQUAL_ZERO,
 	};
 
+	enum class ImageAspect
+	{
+		COLOR,
+		DEPTH,
+		STENCIL,
+	};
+
 	// Flags ////////////////////////////////////////////
 
 	enum class ColorWrite

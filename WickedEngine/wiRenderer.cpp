@@ -2392,8 +2392,7 @@ struct SHCAM
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
 
-	SHCAM() = default;
-	SHCAM(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov) 
+	inline void init(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov) 
 	{
 		const XMVECTOR E = XMLoadFloat3(&eyePos);
 		const XMVECTOR Q = XMQuaternionNormalize(XMLoadFloat4(&rotation));
@@ -2414,7 +2413,7 @@ struct SHCAM
 };
 inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
-	shcam = SHCAM(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
+	shcam.init(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
 }
 inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, SHCAM* shcams, size_t shcam_count)
 {
@@ -2510,12 +2509,12 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 inline void CreateCubemapCameras(const XMFLOAT3& position, float zNearP, float zFarP, SHCAM* shcams, size_t shcam_count)
 {
 	assert(shcam_count == 6);
-	shcams[0] = SHCAM(position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //+x
-	shcams[1] = SHCAM(position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //-x
-	shcams[2] = SHCAM(position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2); //+y
-	shcams[3] = SHCAM(position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2); //-y
-	shcams[4] = SHCAM(position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2); //+z
-	shcams[5] = SHCAM(position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2); //-z
+	shcams[0].init(position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //+x
+	shcams[1].init(position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //-x
+	shcams[2].init(position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2); //+y
+	shcams[3].init(position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2); //-y
+	shcams[4].init(position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2); //+z
+	shcams[5].init(position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2); //-z
 }
 
 ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& batch_aabb, RENDERPASS renderPass)
@@ -8603,7 +8602,10 @@ void RayTraceScene(
 	CommandList cmd,
 	uint8_t instanceInclusionMask,
 	const Texture* output_albedo,
-	const Texture* output_normal
+	const Texture* output_normal,
+	const Texture* output_depth,
+	const Texture* output_stencil,
+	const Texture* output_depth_stencil
 )
 {
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
@@ -8631,14 +8633,25 @@ void RayTraceScene(
 
 	device->BindComputeShader(&shaders[CSTYPE_RAYTRACE], cmd);
 
+	GPUResource nullUAV;
 	const GPUResource* uavs[] = {
 		&output,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	barrier_stack.push_back(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
 
-	// Note: output_albedo and output_normal are always in ResourceState::UNORDERED_ACCESS, no need to transition!
+	// Note: these are always in ResourceState::UNORDERED_ACCESS, no need to transition!
 	if (output_albedo != nullptr)
 	{
 		device->BindUAV(output_albedo, 1, cmd);
@@ -8646,6 +8659,14 @@ void RayTraceScene(
 	if (output_normal != nullptr)
 	{
 		device->BindUAV(output_normal, 2, cmd);
+	}
+	if (output_depth != nullptr)
+	{
+		device->BindUAV(output_depth, 3, cmd);
+	}
+	if (output_stencil != nullptr)
+	{
+		device->BindUAV(output_stencil, 4, cmd);
 	}
 	barrier_stack_flush(cmd);
 
@@ -8663,6 +8684,16 @@ void RayTraceScene(
 			device->ClearUAV(output_normal, 0, cmd);
 			barrier_stack.push_back(GPUBarrier::Memory(output_normal));
 		}
+		if (output_depth != nullptr)
+		{
+			device->ClearUAV(output_depth, 0, cmd);
+			barrier_stack.push_back(GPUBarrier::Memory(output_depth));
+		}
+		if (output_stencil != nullptr)
+		{
+			device->ClearUAV(output_stencil, 0, cmd);
+			barrier_stack.push_back(GPUBarrier::Memory(output_stencil));
+		}
 		barrier_stack_flush(cmd);
 	}
 
@@ -8674,7 +8705,49 @@ void RayTraceScene(
 	);
 
 	barrier_stack.push_back(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
+	if (output_depth_stencil != nullptr)
+	{
+		barrier_stack.push_back(GPUBarrier::Image(output_depth, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
+		barrier_stack.push_back(GPUBarrier::Image(output_stencil, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
+		barrier_stack.push_back(GPUBarrier::Image(output_depth_stencil, output_depth_stencil->desc.layout, ResourceState::COPY_DST));
+	}
+	else
+	{
+		if (output_depth != nullptr)
+		{
+			barrier_stack.push_back(GPUBarrier::Image(output_depth, ResourceState::UNORDERED_ACCESS, output_depth->desc.layout));
+		}
+		if (output_stencil != nullptr)
+		{
+			barrier_stack.push_back(GPUBarrier::Image(output_stencil, ResourceState::UNORDERED_ACCESS, output_stencil->desc.layout));
+		}
+	}
 	barrier_stack_flush(cmd);
+
+	if (output_depth_stencil != nullptr && output_depth != nullptr && output_stencil != nullptr)
+	{
+		// The separate depth, stencil textures will be copied to a real depth-stencil:
+		device->CopyTexture(
+			output_depth_stencil, 0, 0, 0, 0, 0,
+			output_depth, 0, 0,
+			cmd,
+			nullptr,
+			ImageAspect::DEPTH,
+			ImageAspect::COLOR
+		);
+		device->CopyTexture(
+			output_depth_stencil, 0, 0, 0, 0, 0,
+			output_stencil, 0, 0,
+			cmd,
+			nullptr,
+			ImageAspect::STENCIL,
+			ImageAspect::COLOR
+		);
+		barrier_stack.push_back(GPUBarrier::Image(output_depth, ResourceState::COPY_SRC, output_depth->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(output_stencil, ResourceState::COPY_SRC, output_stencil->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(output_depth_stencil, ResourceState::COPY_DST, output_depth_stencil->desc.layout));
+		barrier_stack_flush(cmd);
+	}
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd); // RayTraceScene

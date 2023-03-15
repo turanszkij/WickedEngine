@@ -260,6 +260,7 @@ namespace wi::scene
 		material.alphaTest = 1 - alphaRef;
 		material.layerMask = layerMask;
 		material.transmission = transmission;
+		material.stencilRef = wi::renderer::CombineStencilrefs(engineStencilRef, userStencilRef);
 		material.shaderType = (uint)shaderType;
 		material.userdata = userdata;
 

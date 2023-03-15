@@ -3650,6 +3650,7 @@ namespace wi::scene
 				inst.fadeDistance = object.fadeDistance;
 				inst.center = object.center;
 				inst.radius = object.radius;
+				inst.SetUserStencilRef(object.userStencilRef);
 
 				std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 

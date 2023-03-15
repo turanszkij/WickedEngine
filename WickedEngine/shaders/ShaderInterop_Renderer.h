@@ -329,7 +329,7 @@ struct ShaderMaterial
 	float		sheenRoughness;
 	float		clearcoat;
 	float		clearcoatRoughness;
-	float		padding;
+	uint		stencilRef;
 
 	int			sampler_descriptor;
 	uint		options;
@@ -368,6 +368,7 @@ struct ShaderMaterial
 
 		clearcoat = 0;
 		clearcoatRoughness = 0;
+		stencilRef = 0;
 		shaderType = 0;
 
 		userdata = uint4(0, 0, 0, 0);
@@ -530,7 +531,7 @@ struct ShaderTransform
 struct ShaderMeshInstance
 {
 	uint uid;
-	uint flags;
+	uint flags;	// high 8 bits: user stencilRef
 	uint layerMask;
 	uint geometryOffset;	// offset of all geometries for currently active LOD
 
@@ -572,6 +573,14 @@ struct ShaderMeshInstance
 		transformPrev.init();
 	}
 
+	inline void SetUserStencilRef(uint stencilRef)
+	{
+		flags |= (stencilRef & 0xFF) << 24u;
+	}
+	inline uint GetUserStencilRef()
+	{
+		return flags >> 24u;
+	}
 };
 struct ShaderMeshInstancePointer
 {

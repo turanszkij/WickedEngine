@@ -371,6 +371,19 @@ namespace vulkan_internal
 			return VK_SHADER_STAGE_ALL;
 		}
 	}
+	constexpr VkImageAspectFlags _ConvertImageAspect(ImageAspect value)
+	{
+		switch (value)
+		{
+		default:
+		case wi::graphics::ImageAspect::COLOR:
+			return VK_IMAGE_ASPECT_COLOR_BIT;
+		case wi::graphics::ImageAspect::DEPTH:
+			return VK_IMAGE_ASPECT_DEPTH_BIT;
+		case wi::graphics::ImageAspect::STENCIL:
+			return VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+	}
 	constexpr VkAccessFlags _ParseResourceState(ResourceState value)
 	{
 		VkAccessFlags flags = 0;
@@ -7720,14 +7733,14 @@ using namespace vulkan_internal;
 			1, &copy
 		);
 	}
-	void GraphicsDevice_Vulkan::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox)
+	void GraphicsDevice_Vulkan::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox, ImageAspect dst_aspect, ImageAspect src_aspect)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		auto src_internal = to_internal(src);
 		auto dst_internal = to_internal(dst);
 
 		VkImageCopy copy = {};
-		copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.dstSubresource.aspectMask = _ConvertImageAspect(dst_aspect);
 		copy.dstSubresource.baseArrayLayer = dstSlice;
 		copy.dstSubresource.layerCount = 1;
 		copy.dstSubresource.mipLevel = dstMip;
@@ -7735,7 +7748,7 @@ using namespace vulkan_internal;
 		copy.dstOffset.y = dstY;
 		copy.dstOffset.z = dstZ;
 
-		copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.srcSubresource.aspectMask = _ConvertImageAspect(src_aspect);
 		copy.srcSubresource.baseArrayLayer = srcSlice;
 		copy.srcSubresource.layerCount = 1;
 		copy.srcSubresource.mipLevel = srcMip;
