@@ -1685,6 +1685,8 @@ namespace wi::lua::scene
 
 		int SetBaseColorOnlyAlpha(lua_State* L);
 		int IsBaseColorOnlyAlpha(lua_State* L);
+		int SetSlopeBlendPower(lua_State* L);
+		int GetSlopeBlendPower(lua_State* L);
 	};
 }
 

@@ -534,7 +534,8 @@ struct Surface
 							float4 decalColor = decal.GetColor();
 							// blend out if close to cube Z:
 							const float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-							decalColor.a *= edgeBlend;
+							const float slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot(N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
+							decalColor.a *= edgeBlend * slopeBlend;
 							[branch]
 							if (decalTexture >= 0)
 							{

@@ -1162,6 +1162,8 @@ The decal component is a textured sticker that can be put down onto meshes. Most
 
 - SetBaseColorOnlyAlpha(bool value)	-- Set decal to only use alpha from base color texture. Useful for blending normalmap-only decals
 - IsBaseColorOnlyAlpha() : bool
+- SetSlopeBlendPower(float value)
+- GetSlopeBlendPower() : float
 
 
 ## Canvas

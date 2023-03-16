@@ -983,10 +983,20 @@ namespace wi::scene
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> slopeBlendPower;
+			}
 		}
 		else
 		{
 			archive << _flags;
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << slopeBlendPower;
+			}
 		}
 	}
 	void AnimationComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)

@@ -3770,7 +3770,7 @@ namespace wi::scene
 			decal.world = transform.world;
 
 			XMMATRIX W = XMLoadFloat4x4(&decal.world);
-			XMVECTOR front = XMVectorSet(0, 0, 1, 0);
+			XMVECTOR front = XMVectorSet(0, 0, -1, 0);
 			front = XMVector3TransformNormal(front, W);
 			XMStoreFloat3(&decal.front, front);
 

@@ -5805,6 +5805,8 @@ int HumanoidComponent_BindLua::SetLookAt(lua_State* L)
 Luna<DecalComponent_BindLua>::FunctionType DecalComponent_BindLua::methods[] = {
 	lunamethod(DecalComponent_BindLua, SetBaseColorOnlyAlpha),
 	lunamethod(DecalComponent_BindLua, IsBaseColorOnlyAlpha),
+	lunamethod(DecalComponent_BindLua, SetSlopeBlendPower),
+	lunamethod(DecalComponent_BindLua, GetSlopeBlendPower),
 	{ NULL, NULL }
 };
 Luna<DecalComponent_BindLua>::PropertyType DecalComponent_BindLua::properties[] = {
@@ -5827,6 +5829,24 @@ int DecalComponent_BindLua::SetBaseColorOnlyAlpha(lua_State* L)
 int DecalComponent_BindLua::IsBaseColorOnlyAlpha(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsBaseColorOnlyAlpha());
+	return 1;
+}
+int DecalComponent_BindLua::SetSlopeBlendPower(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->slopeBlendPower = wi::lua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetSlopeBlendPower(float value) not enough arguments!");
+	}
+	return 0;
+}
+int DecalComponent_BindLua::GetSlopeBlendPower(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->slopeBlendPower);
 	return 1;
 }
 

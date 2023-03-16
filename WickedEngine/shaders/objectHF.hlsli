@@ -532,7 +532,8 @@ inline void ForwardDecals(inout Surface surface, inout float4 surfaceMap)
 			float4 decalColor = decal.GetColor();
 			// blend out if close to cube Z:
 			const float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-			decalColor.a *= edgeBlend;
+			const float slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot(surface.N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
+			decalColor.a *= edgeBlend * slopeBlend;
 			[branch]
 			if (decalTexture >= 0)
 			{
@@ -862,7 +863,8 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout float4 
 					float4 decalColor = decal.GetColor();
 					// blend out if close to cube Z:
 					const float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-					decalColor.a *= edgeBlend;
+					const float slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot(surface.N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
+					decalColor.a *= edgeBlend * slopeBlend;
 					[branch]
 					if (decalTexture >= 0)
 					{
