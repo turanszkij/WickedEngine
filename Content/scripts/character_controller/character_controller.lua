@@ -9,6 +9,7 @@
 --		Right Mouse Button/Right thumbstick: rotate camera
 --		Scoll middle mouse/Left-Right triggers: adjust camera distance
 --		H: toggle debug draw
+--		L: toggle framerate lock
 --		ESCAPE key: quit
 --		ENTER: reload script
 
@@ -21,6 +22,10 @@ end
 
 local debug = true -- press H to toggle
 local allow_pushaway_NPC = true -- You can decide whether NPCs can be pushed away by player
+local framerate_lock = false
+local framerate_lock_target = 20
+local slope_threshold = 0.2 -- How much slopeiness will cause character to slide down instead of standing on it
+local gravity = -30
 
 local scene = GetScene()
 
@@ -86,14 +91,15 @@ local function Character(model_name, start_position, face, controllable)
 		right_foot = INVALID_ENTITY,
 		left_toes = INVALID_ENTITY,
 		right_toes = INVALID_ENTITY,
-		face = Vector(0,0,1), -- forward direction
+		face = Vector(0,0,1), -- forward direction (smoothed)
+		face_next = Vector(0,0,1), -- forward direction in current frame
 		force = Vector(),
 		velocity = Vector(),
 		savedPointerPos = Vector(),
 		walk_speed = 0.2,
 		jog_speed = 0.4,
 		run_speed = 0.8,
-		jump_speed = 14,
+		jump_speed = 8,
 		swim_speed = 0.5,
 		layerMask = ~0, -- layerMask will be used to filter collisions
 		scale = Vector(1, 1, 1),
@@ -101,6 +107,7 @@ local function Character(model_name, start_position, face, controllable)
 		start_position = Vector(0, 1, 0),
 		position = Vector(),
 		controllable = true,
+		fixed_update_remain = 0,
 		root_bone_offset = 0,
 		foot_placed_left = false,
 		foot_placed_right = false,
@@ -114,6 +121,7 @@ local function Character(model_name, start_position, face, controllable)
 		Create = function(self, model_name, start_position, face, controllable)
 			self.start_position = start_position
 			self.face = face
+			self.face_next = face
 			self.controllable = controllable
 			if controllable then
 				self.layerMask = Layers.Player
@@ -207,10 +215,10 @@ local function Character(model_name, start_position, face, controllable)
 			dir.SetY(0)
 			local dot = vector.Dot(self.face, dir)
 			if(dot < 0) then
-				self.face = vector.TransformNormal(self.face, matrix.RotationY(math.pi * 0.01))
+				self.face = vector.TransformNormal(self.face, matrix.RotationY(math.pi * 0.01)) -- Turn around 180 degrees easily when wanting to go backwards
 			end
-			self.face = vector.Lerp(self.face, dir, 0.2);
-			self.face.Normalize()
+			self.face_next = dir
+			self.face_next = self.face_next.Normalize()
 			if(dot > 0) then 
 				local speed = 0
 				if self.state == States.WALK then
@@ -241,7 +249,6 @@ local function Character(model_name, start_position, face, controllable)
 			model_transform.Rotate(self.rotation)
 			model_transform.Translate(savedPos)
 			model_transform.UpdateTransform()
-
 			
 			if controllable then
 				-- Camera target control:
@@ -299,25 +306,12 @@ local function Character(model_name, start_position, face, controllable)
 			
 			local current_anim = scene.Component_GetAnimation(self.current_anim)
 			if current_anim ~= nil then
-
-				-- Blend in current animation:
-				current_anim.SetAmount(math.lerp(current_anim.GetAmount(), 1, 0.1))
+				-- Play current anim:
 				current_anim.Play()
 				if self.state_prev ~= self.state then
 					-- If anim just started in this frame, reset timer to beginning:
 					current_anim.SetTimer(current_anim.GetStart())
 					self.state_prev = self.state
-				end
-				
-				-- Ease out other animations:
-				for i,anim in ipairs(self.all_anims) do
-					if (anim ~= INVALID_ENTITY) and (anim ~= self.current_anim) then
-						local prev_anim = scene.Component_GetAnimation(anim)
-						prev_anim.SetAmount(math.lerp(prev_anim.GetAmount(), 0, 0.1))
-						if prev_anim.GetAmount() <= 0 then
-							prev_anim.Stop()
-						end
-					end
 				end
 				
 				-- Simple state transition to idle:
@@ -332,7 +326,7 @@ local function Character(model_name, start_position, face, controllable)
 				end
 			end
 
-			if dt > 0.1 then
+			if dt > 0.2 then
 				return -- avoid processing too large delta times to avoid instability
 			end
 
@@ -348,57 +342,58 @@ local function Character(model_name, start_position, face, controllable)
 					model_transform.UpdateTransform()
 					self.force.SetY(0)
 					self.force = vector.Multiply(self.force, 0.8) -- water friction
-					self.velocity.SetY(0)
 					self.state = States.SWIM_IDLE
 				end
 			end
 
 			if controllable then
-				-- Movement input:
-				local lookDir = Vector()
-				if(input.Down(KEYBOARD_BUTTON_LEFT) or input.Down(string.byte('A'))) then
-					lookDir = lookDir:Add( Vector(-1) )
-				end
-				if(input.Down(KEYBOARD_BUTTON_RIGHT) or input.Down(string.byte('D'))) then
-					lookDir = lookDir:Add( Vector(1) )
-				end
-				
-				if(input.Down(KEYBOARD_BUTTON_UP) or input.Down(string.byte('W'))) then
-					lookDir = lookDir:Add( Vector(0,0,1) )
-				end
-				if(input.Down(KEYBOARD_BUTTON_DOWN) or input.Down(string.byte('S'))) then
-					lookDir = lookDir:Add( Vector(0,0,-1) )
-				end
-
-				local analog = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_L)
-				lookDir = vector.Add(lookDir, Vector(analog.GetX(), 0, analog.GetY()))
+				if not backlog_isactive() then
+					-- Movement input:
+					local lookDir = Vector()
+					if(input.Down(KEYBOARD_BUTTON_LEFT) or input.Down(string.byte('A'))) then
+						lookDir = lookDir:Add( Vector(-1) )
+					end
+					if(input.Down(KEYBOARD_BUTTON_RIGHT) or input.Down(string.byte('D'))) then
+						lookDir = lookDir:Add( Vector(1) )
+					end
 					
-				if self.state ~= States.JUMP and self.state_prev ~= States.JUMP and self.velocity.GetY() == 0 then
-					if(lookDir.Length() > 0) then
-						if self.state == States.SWIM_IDLE then
-							self.state = States.SWIM
-							self:MoveDirection(lookDir)
-						else
-							if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
-								if input.Down(string.byte('E')) or input.Down(GAMEPAD_BUTTON_5) then
-									self.state = States.RUN
-									self:MoveDirection(lookDir)
+					if(input.Down(KEYBOARD_BUTTON_UP) or input.Down(string.byte('W'))) then
+						lookDir = lookDir:Add( Vector(0,0,1) )
+					end
+					if(input.Down(KEYBOARD_BUTTON_DOWN) or input.Down(string.byte('S'))) then
+						lookDir = lookDir:Add( Vector(0,0,-1) )
+					end
+
+					local analog = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_L)
+					lookDir = vector.Add(lookDir, Vector(analog.GetX(), 0, analog.GetY()))
+						
+					if self.state ~= States.JUMP and self.state_prev ~= States.JUMP and self.velocity.GetY() == 0 then
+						if(lookDir.Length() > 0) then
+							if self.state == States.SWIM_IDLE then
+								self.state = States.SWIM
+								self:MoveDirection(lookDir)
+							else
+								if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
+									if input.Down(string.byte('E')) or input.Down(GAMEPAD_BUTTON_5) then
+										self.state = States.RUN
+										self:MoveDirection(lookDir)
+									else
+										self.state = States.JOG
+										self:MoveDirection(lookDir)
+									end
 								else
-									self.state = States.JOG
+									self.state = States.WALK
 									self:MoveDirection(lookDir)
 								end
-							else
-								self.state = States.WALK
-								self:MoveDirection(lookDir)
 							end
 						end
+						
+						if(input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2)) then
+							self:Jump(self.jump_speed)
+						end
+					elseif self.velocity.GetY() > 0 then
+						self:MoveDirection(lookDir)
 					end
-					
-					if(input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2)) then
-						self:Jump(self.jump_speed)
-					end
-				elseif self.velocity.GetY() > 0 then
-					self:MoveDirection(lookDir)
 				end
 
 			else
@@ -416,7 +411,7 @@ local function Character(model_name, start_position, face, controllable)
 						local patrol_wait = patrol.wait or 0 -- default: 0
 						local patrol_vec = vector.Subtract(patrol_pos, pos)
 						local distance = patrol_vec.Length()
-						local patrol_dist = patrol.distance or 0.2 -- default : 0.2
+						local patrol_dist = patrol.distance or 0.5 -- default : 0.5
 						local patrol_dist_threshold = patrol.distance_threshold or 0 -- default : 0
 						if distance < patrol_dist then
 							-- reached patrol waypoint:
@@ -483,41 +478,37 @@ local function Character(model_name, start_position, face, controllable)
 				
 			end
 
-			self.face.SetY(0)
-			self.face=self.face:Normalize()
-
-			self.force = vector.Add(self.force, Vector(0, -1, 0)) -- gravity
-			self.velocity = vector.Multiply(self.force, dt)
-
+			self.velocity = self.force
 			
-			-- Capsule collision for character:		
+			-- Capsule collision for character:
 			local capsule = scene.Component_GetCollider(self.collider).GetCapsule()
 			local original_capsulepos = model_transform.GetPosition()
 			local capsulepos = original_capsulepos
 			local capsuleheight = vector.Subtract(capsule.GetTip(), capsule.GetBase()).Length()
 			local radius = capsule.GetRadius()
+			local collision_layer = ~self.layerMask
+			if not controllable and not allow_pushaway_NPC then
+				-- For NPC, this makes it not pushable away by player:
+				--	This works by disabling NPC's collision to player
+				--	But the player can still collide with NPC and can be blocked
+				collision_layer = collision_layer & ~Layers.Player
+			end
+			local current_anim = scene.Component_GetAnimation(self.current_anim)
 			local ground_intersect = false
+			local platform_velocity_accumulation = Vector()
+			local platform_velocity_count = 0
 
-			local fixed_update_remain = dt
+			-- Perform fixed timestep logic:
+			self.fixed_update_remain = self.fixed_update_remain + dt
 			local fixed_update_fps = 120
-			local fixed_update_rate = 1.0 / fixed_update_fps
-			local fixed_dt = fixed_update_rate / dt
+			local fixed_dt = 1.0 / fixed_update_fps
 
-			while fixed_update_remain > 0 do
-				fixed_update_remain = fixed_update_remain - fixed_update_rate
-			
-				local step = vector.Multiply(self.velocity, fixed_dt)
-
-				capsulepos = vector.Add(capsulepos, step)
+			while self.fixed_update_remain >= fixed_dt do
+				self.fixed_update_remain = self.fixed_update_remain - fixed_dt
+				
+				capsulepos = vector.Add(capsulepos, vector.Multiply(self.velocity, fixed_dt))
 				capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
-				local collision_layer = ~self.layerMask
-				if not controllable and not allow_pushaway_NPC then
-					-- For NPC, this makes it not pushable away by player:
-					--	This works by disabling NPC's collision to player
-					--	But the player can still collide with NPC and can be blocked
-					collision_layer = collision_layer & ~Layers.Player
-				end
-				local o2, p2, n2, depth, velocity = scene.Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, collision_layer) -- scene/capsule collision
+				local o2, p2, n2, depth, platform_velocity = scene.Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, collision_layer) -- scene/capsule collision
 				if(o2 ~= INVALID_ENTITY) then
 
 					if debug then
@@ -526,34 +517,54 @@ local function Character(model_name, start_position, face, controllable)
 					end
 
 					local ground_slope = vector.Dot(n2, Vector(0,1,0))
-					local slope_threshold = 0.1
 
-					if self.velocity.GetY() < 0 and ground_slope > slope_threshold then
-						-- Ground intersection, remove falling motion:
-						self.velocity.SetY(0)
-						capsulepos = vector.Add(capsulepos, Vector(0, depth, 0))
-						capsulepos = vector.Add(capsulepos, velocity) -- apply moving platform velocity
-						self.force = vector.Multiply(self.force, 0.85) -- ground friction
+					if ground_slope > slope_threshold then
+						-- Ground intersection:
 						ground_intersect = true
-					elseif ground_slope <= slope_threshold then
+						capsulepos = vector.Add(capsulepos, Vector(0, depth, 0)) -- avoid sliding, instead stand upright
+						platform_velocity_accumulation = vector.Add(platform_velocity_accumulation, platform_velocity)
+						platform_velocity_count = platform_velocity_count + 1
+						self.velocity.SetY(0) -- remove falling motion
+					else
 						-- Slide on contact surface:
-						local velocityLen = self.velocity.Length()
-						local velocityNormalized = self.velocity.Normalize()
-						local undesiredMotion = n2:Multiply(vector.Dot(velocityNormalized, n2))
-						local desiredMotion = vector.Subtract(velocityNormalized, undesiredMotion)
-						if ground_intersect then
-							desiredMotion.SetY(0)
-						end
-						self.velocity = vector.Multiply(desiredMotion, velocityLen)
 						capsulepos = vector.Add(capsulepos, vector.Multiply(n2, depth))
 					end
-
+				end
+				
+				-- Some other things also updated at fixed rate:
+				self.face = vector.Lerp(self.face, self.face_next, 0.1) -- smooth the turning in fixed update
+				self.force = vector.Add(self.force, Vector(0, gravity * fixed_dt, 0)) -- gravity
+				-- Animation blending
+				if current_anim ~= nil then
+					-- Blend in current animation:
+					current_anim.SetAmount(math.lerp(current_anim.GetAmount(), 1, 0.1))
+					
+					-- Ease out other animations:
+					for i,anim in ipairs(self.all_anims) do
+						if (anim ~= INVALID_ENTITY) and (anim ~= self.current_anim) then
+							local prev_anim = scene.Component_GetAnimation(anim)
+							prev_anim.SetAmount(math.lerp(prev_anim.GetAmount(), 0, 0.1))
+							if prev_anim.GetAmount() <= 0 then
+								prev_anim.Stop()
+							end
+						end
+					end
 				end
 
 			end
 
+			if platform_velocity_count > 0 then
+				capsulepos = vector.Add(capsulepos, vector.Multiply(platform_velocity_accumulation, 1.0 / platform_velocity_count)) -- apply moving platform velocity
+			end
+
 			model_transform.Translate(vector.Subtract(capsulepos, original_capsulepos)) -- transform by the capsule offset
 			model_transform.UpdateTransform()
+			
+			self.face.SetY(0)
+			self.face = self.face.Normalize()
+			if ground_intersect then
+				self.force = vector.Multiply(self.force, 0.85) -- ground friction
+			end
 			
 			-- try to put water ripple:
 			if self.velocity.Length() > 0.01 and self.state ~= States.SWIM_IDLE then
@@ -665,6 +676,7 @@ local function Character(model_name, start_position, face, controllable)
 					transform.Scale(0.1)
 					transform.Translate(collPos)
 					material.SetTexture(TextureSlot.BASECOLORMAP, footprint_texture)
+					decal.SetSlopeBlendPower(2)
 					layer.SetLayerMask(~(Layers.Player | Layers.NPC))
 					scene.Component_Attach(entity, collEntity)
 					table.insert(footprints, entity)
@@ -691,6 +703,7 @@ local function Character(model_name, start_position, face, controllable)
 					transform.Translate(collPos)
 					material.SetTexture(TextureSlot.BASECOLORMAP, footprint_texture)
 					material.SetTexMulAdd(Vector(-1, 1, 0, 0)) -- flip left footprint texture to be right
+					decal.SetSlopeBlendPower(2)
 					layer.SetLayerMask(~(Layers.Player | Layers.NPC))
 					scene.Component_Attach(entity, collEntity)
 					table.insert(footprints, entity)
@@ -924,7 +937,7 @@ runProcess(function()
 	path.SetOutlineThickness(1.7)
 	path.SetOutlineColor(0,0,0,0.6)
 	path.SetBloomThreshold(5)
-	application.SetActivePath(path)
+	application.SetActivePath(path)	
 
 	--application.SetInfoDisplay(false)
 	application.SetFPSDisplay(true)
@@ -967,21 +980,30 @@ runProcess(function()
 
 		update()
 		
-		if(input.Press(KEYBOARD_BUTTON_ESCAPE)) then
-			-- restore previous component
-			--	so if you loaded this script from the editor, you can go back to the editor with ESC
-			backlog_post("EXIT")
-			killProcesses()
-			application.SetActivePath(prevPath)
-			return
-		end
-		if(not backlog_isactive() and input.Press(string.byte('R'))) then
-			-- reload script
-			backlog_post("RELOAD")
-			killProcesses()
-			application.SetActivePath(prevPath)
-			dofile(script_file())
-			return
+		if not backlog_isactive() then
+			if(input.Press(KEYBOARD_BUTTON_ESCAPE)) then
+				-- restore previous component
+				--	so if you loaded this script from the editor, you can go back to the editor with ESC
+				backlog_post("EXIT")
+				killProcesses()
+				application.SetActivePath(prevPath)
+				return
+			end
+			if(input.Press(string.byte('R'))) then
+				-- reload script
+				backlog_post("RELOAD")
+				killProcesses()
+				application.SetActivePath(prevPath)
+				dofile(script_file())
+				return
+			end
+			if input.Press(string.byte('L')) then
+				framerate_lock = not framerate_lock
+				application.SetFrameRateLock(framerate_lock)
+				if framerate_lock then
+					application.SetTargetFrameRate(framerate_lock_target)
+				end
+			end
 		end
 
 	end
@@ -1003,6 +1025,7 @@ runProcess(function()
 	help_text = help_text .. "ESCAPE key: quit\n"
 	help_text = help_text .. "R: reload script\n"
 	help_text = help_text .. "H: toggle debug draw\n"
+	help_text = help_text .. "L: toggle framerate lock\n"
 	
 	while true do
 
