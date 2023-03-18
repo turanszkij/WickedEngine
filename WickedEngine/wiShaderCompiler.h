@@ -11,6 +11,7 @@ namespace wi::shadercompiler
 	{
 		NONE = 0,
 		DISABLE_OPTIMIZATION = 1 << 0,
+		STRIP_REFLECTION = 1 << 1,
 	};
 	struct CompilerInput
 	{
