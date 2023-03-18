@@ -2056,7 +2056,7 @@ namespace wi::scene
 					break;
 					case AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
 					{
-						target_material->baseColor = wi::math::Lerp(target_material->emissiveColor, interpolator.f4, t);
+						target_material->emissiveColor = wi::math::Lerp(target_material->emissiveColor, interpolator.f4, t);
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
