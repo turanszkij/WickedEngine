@@ -554,7 +554,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 		if (mesh != nullptr && morphTargetCombo.GetSelected() < (int)mesh->morph_targets.size())
 		{
 			mesh->morph_targets[morphTargetCombo.GetSelected()].weight = args.fValue;
-			mesh->dirty_morph = true;
 		}
 	});
 	AddWidget(&morphTargetSlider);

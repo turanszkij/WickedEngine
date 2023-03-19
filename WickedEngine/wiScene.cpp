@@ -1951,8 +1951,6 @@ namespace wi::scene
 						{
 							target_mesh->morph_targets[j].weight = wi::math::Lerp(target_mesh->morph_targets[j].weight, animation.morph_weights_temp[j], t);
 						}
-
-						target_mesh->dirty_morph = true;
 					}
 
 					if (target_light != nullptr)
@@ -2413,7 +2411,6 @@ namespace wi::scene
 					{
 						MeshComponent::MorphTarget& morph_target = mesh->morph_targets[morph_target_binding.index];
 						morph_target.weight = wi::math::Lerp(morph_target.weight, morph_target_binding.weight, blend);
-						mesh->dirty_morph = true;
 					}
 				}
 			}
@@ -3097,84 +3094,11 @@ namespace wi::scene
 
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
-			if (!mesh.morph_targets.empty() && mesh.vertex_positions_morphed.size() != mesh.vertex_positions.size())
+			mesh.active_morph_count = 0;
+			for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
 			{
-				mesh.vertex_positions_morphed.resize(mesh.vertex_positions.size());
-				mesh.dirty_morph = true;
-			}
-
-			// Update morph targets if needed:
-			if (mesh.dirty_morph && !mesh.morph_targets.empty())
-			{
-			    XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-			    XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
-
-				mesh.morph_temp_pos = mesh.vertex_positions;
-				mesh.morph_temp_nor = mesh.vertex_normals;
-
-				for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
-				{
-					if (morph.weight <= 0)
-						continue;
-					if (morph.sparse_indices_positions.empty())
-					{
-						// Flat update:
-						for (size_t i = 0; i < morph.vertex_positions.size(); ++i)
-						{
-							mesh.morph_temp_pos[i].x += morph.weight * morph.vertex_positions[i].x;
-							mesh.morph_temp_pos[i].y += morph.weight * morph.vertex_positions[i].y;
-							mesh.morph_temp_pos[i].z += morph.weight * morph.vertex_positions[i].z;
-						}
-					}
-					else
-					{
-						// Sparse update:
-						for (size_t i = 0; i < morph.sparse_indices_positions.size(); ++i)
-						{
-							const uint32_t ind = morph.sparse_indices_positions[i];
-							mesh.morph_temp_pos[ind].x += morph.weight * morph.vertex_positions[i].x;
-							mesh.morph_temp_pos[ind].y += morph.weight * morph.vertex_positions[i].y;
-							mesh.morph_temp_pos[ind].z += morph.weight * morph.vertex_positions[i].z;
-						}
-					}
-
-					if (morph.sparse_indices_normals.empty())
-					{
-						// Flat update:
-						for (size_t i = 0; i < morph.vertex_normals.size(); ++i)
-						{
-							mesh.morph_temp_nor[i].x += morph.weight * morph.vertex_normals[i].x;
-							mesh.morph_temp_nor[i].y += morph.weight * morph.vertex_normals[i].y;
-							mesh.morph_temp_nor[i].z += morph.weight * morph.vertex_normals[i].z;
-						}
-					}
-					else
-					{
-						// Sparse update:
-						for (size_t i = 0; i < morph.sparse_indices_normals.size(); ++i)
-						{
-							const uint32_t ind = morph.sparse_indices_normals[i];
-							mesh.morph_temp_nor[ind].x += morph.weight * morph.vertex_normals[i].x;
-							mesh.morph_temp_nor[ind].y += morph.weight * morph.vertex_normals[i].y;
-							mesh.morph_temp_nor[ind].z += morph.weight * morph.vertex_normals[i].z;
-						}
-					}
-				}
-
-			    for (size_t i = 0; i < mesh.morph_temp_pos.size(); ++i)
-			    {
-					XMFLOAT3 pos = mesh.morph_temp_pos[i];
-					XMFLOAT3 nor = mesh.morph_temp_nor.empty() ? XMFLOAT3(1, 1, 1) : mesh.morph_temp_nor[i];
-					const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
-
-					XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
-					mesh.vertex_positions_morphed[i].FromFULL(pos, nor, wind);
-
-					_min = wi::math::Min(_min, pos);
-					_max = wi::math::Max(_max, pos);
-			    }
-
-			    mesh.aabb = AABB(_min, _max);
+				if (morph.weight > 0)
+					mesh.active_morph_count++;
 			}
 
 			if (geometryArrayMapped != nullptr)
@@ -3274,7 +3198,7 @@ namespace wi::scene
 						{
 							geometry.flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 						}
-						if (flags != geometry.flags || mesh.dirty_morph)
+						if (flags != geometry.flags || mesh.active_morph_count > 0)
 						{
 							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 						}
@@ -4503,18 +4427,9 @@ namespace wi::scene
 						{
 							if (jobData.armature == nullptr || jobData.armature->boneData.empty())
 							{
-								if (jobData.mesh->vertex_positions_morphed.empty())
-								{
-									p0 = XMLoadFloat3(&jobData.mesh->vertex_positions[i0]);
-									p1 = XMLoadFloat3(&jobData.mesh->vertex_positions[i1]);
-									p2 = XMLoadFloat3(&jobData.mesh->vertex_positions[i2]);
-								}
-								else
-								{
-									p0 = jobData.mesh->vertex_positions_morphed[i0].LoadPOS();
-									p1 = jobData.mesh->vertex_positions_morphed[i1].LoadPOS();
-									p2 = jobData.mesh->vertex_positions_morphed[i2].LoadPOS();
-								}
+								p0 = XMLoadFloat3(&jobData.mesh->vertex_positions[i0]);
+								p1 = XMLoadFloat3(&jobData.mesh->vertex_positions[i1]);
+								p2 = XMLoadFloat3(&jobData.mesh->vertex_positions[i2]);
 							}
 							else
 							{
@@ -5296,15 +5211,7 @@ namespace wi::scene
 
 	XMVECTOR SkinVertex(const MeshComponent& mesh, const ArmatureComponent& armature, uint32_t index, XMVECTOR* N)
 	{
-		XMVECTOR P;
-		if (mesh.vertex_positions_morphed.empty())
-		{
-		    P = XMLoadFloat3(&mesh.vertex_positions[index]);
-		}
-		else
-		{
-		    P = mesh.vertex_positions_morphed[index].LoadPOS();
-		}
+		XMVECTOR P = XMLoadFloat3(&mesh.vertex_positions[index]);
 		const XMUINT4& ind = mesh.vertex_boneindices[index];
 		const XMFLOAT4& wei = mesh.vertex_boneweights[index];
 

@@ -531,6 +531,18 @@ namespace wi::scene
 			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment)
 			;
 
+		for (MorphTarget& morph : morph_targets)
+		{
+			if (!morph.vertex_positions.empty())
+			{
+				bd.size += AlignTo(vertex_positions.size() * sizeof(XMHALF4), alignment);
+			}
+			if (!morph.vertex_normals.empty())
+			{
+				bd.size += AlignTo(vertex_normals.size() * sizeof(XMHALF4), alignment);
+			}
+		}
+
 		// single allocation storage for GPU buffer data:
 		wi::vector<uint8_t> buffer_data(bd.size);
 		uint64_t buffer_offset = 0ull;
@@ -661,6 +673,66 @@ namespace wi::scene
 				}
 				vertices[i].FromFULL(vertex_boneindices[i], wei);
 			}
+		}
+
+		// morph buffers:
+		if (!morph_targets.empty())
+		{
+			for (MorphTarget& morph : morph_targets)
+			{
+				if (!morph.vertex_positions.empty())
+				{
+					morph.offset_pos = buffer_offset;
+					XMHALF4* vertices = (XMHALF4*)(buffer_data.data() + buffer_offset);
+					std::fill(vertices, vertices + vertex_positions.size(), 0);
+					if (morph.sparse_indices_positions.empty())
+					{
+						// flat morphs:
+						for (size_t i = 0; i < morph.vertex_positions.size(); ++i)
+						{
+							XMStoreHalf4(vertices + i, XMLoadFloat3(&morph.vertex_positions[i]));
+						}
+					}
+					else
+					{
+						// sparse morphs will be flattened for GPU because they will be evaluated in skinning for every vertex:
+						for (size_t i = 0; i < morph.sparse_indices_positions.size(); ++i)
+						{
+							const uint32_t ind = morph.sparse_indices_positions[i];
+							XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_positions[i]));
+						}
+					}
+					buffer_offset += AlignTo(morph.vertex_positions.size() * sizeof(XMHALF4), alignment);
+				}
+				if (!morph.vertex_normals.empty())
+				{
+					morph.offset_nor = buffer_offset;
+					XMHALF4* vertices = (XMHALF4*)(buffer_data.data() + buffer_offset);
+					std::fill(vertices, vertices + vertex_normals.size(), 0);
+					if (morph.sparse_indices_normals.empty())
+					{
+						// flat morphs:
+						for (size_t i = 0; i < morph.vertex_normals.size(); ++i)
+						{
+							XMStoreHalf4(vertices + i, XMLoadFloat3(&morph.vertex_normals[i]));
+						}
+					}
+					else
+					{
+						// sparse morphs will be flattened for GPU because they will be evaluated in skinning for every vertex:
+						for (size_t i = 0; i < morph.sparse_indices_normals.size(); ++i)
+						{
+							const uint32_t ind = morph.sparse_indices_normals[i];
+							XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_normals[i]));
+						}
+					}
+					buffer_offset += AlignTo(morph.vertex_normals.size() * sizeof(XMHALF4), alignment);
+				}
+			}
+		}
+
+		if (!vertex_boneindices.empty() || !morph_targets.empty())
+		{
 			CreateStreamoutRenderData();
 		}
 
