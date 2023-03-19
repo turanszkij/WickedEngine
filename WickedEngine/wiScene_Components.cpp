@@ -425,6 +425,11 @@ namespace wi::scene
 		so_tan = {};
 		so_pre = {};
 		BLASes.clear();
+		for (MorphTarget& morph : morph_targets)
+		{
+			morph.offset_pos = ~0ull;
+			morph.offset_nor = ~0ull;
+		}
 	}
 	void MeshComponent::CreateRenderData()
 	{

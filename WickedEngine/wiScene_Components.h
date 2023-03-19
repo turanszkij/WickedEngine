@@ -356,21 +356,6 @@ namespace wi::scene
 		float tessellationFactor = 0.0f;
 		wi::ecs::Entity armatureID = wi::ecs::INVALID_ENTITY;
 
-		struct BufferView
-		{
-			uint64_t offset = ~0ull;
-			uint64_t size = 0ull;
-			int subresource_srv = -1;
-			int descriptor_srv = -1;
-			int subresource_uav = -1;
-			int descriptor_uav = -1;
-
-			constexpr bool IsValid() const
-			{
-				return offset != ~0ull;
-			}
-		};
-
 		struct MorphTarget
 		{
 			wi::vector<XMFLOAT3> vertex_positions;
@@ -391,6 +376,20 @@ namespace wi::scene
 		wi::primitive::AABB aabb;
 		wi::graphics::GPUBuffer generalBuffer; // index buffer + all static vertex buffers
 		wi::graphics::GPUBuffer streamoutBuffer; // all dynamic vertex buffers
+		struct BufferView
+		{
+			uint64_t offset = ~0ull;
+			uint64_t size = 0ull;
+			int subresource_srv = -1;
+			int descriptor_srv = -1;
+			int subresource_uav = -1;
+			int descriptor_uav = -1;
+
+			constexpr bool IsValid() const
+			{
+				return offset != ~0ull;
+			}
+		};
 		BufferView ib;
 		BufferView vb_pos_nor_wind;
 		BufferView vb_tan;
