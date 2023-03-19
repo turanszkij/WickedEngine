@@ -4129,9 +4129,9 @@ void UpdateRenderData(
 		wi::profiler::EndRange(range);
 	}
 
-	device->EventBegin("Skinning", cmd);
+	device->EventBegin("Skinning and Morph", cmd);
 	{
-		auto range = wi::profiler::BeginRangeGPU("Skinning", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Skinning and Morph", cmd);
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
 		{
 			Entity entity = vis.scene->meshes.GetEntity(i);
@@ -4203,9 +4203,9 @@ void UpdateRenderData(
 			}
 		}
 
-		wi::profiler::EndRange(range); // skinning
+		wi::profiler::EndRange(range); // Skinning and Morph
 	}
-	device->EventEnd(cmd);
+	device->EventEnd(cmd); // Skinning and Morph
 
 	barrier_stack_flush(cmd); // wind/skinning flush
 
