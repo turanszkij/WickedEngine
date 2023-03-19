@@ -36,6 +36,8 @@ namespace wi::scene
 		//	So GPU persistent resources need to be created accordingly for them too:
 		RunScriptUpdateSystem(ctx);
 
+		ScanAnimationDependencies();
+
 		// Terrains updates kick off:
 		if (dt > 0)
 		{
@@ -2057,7 +2059,7 @@ namespace wi::scene
 						break;
 						case AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
 						{
-							target_material->baseColor = wi::math::Lerp(target_material->emissiveColor, interpolator.f4, t);
+							target_material->emissiveColor = wi::math::Lerp(target_material->emissiveColor, interpolator.f4, t);
 						}
 						break;
 						case AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
@@ -2104,8 +2106,6 @@ namespace wi::scene
 		});
 
 		wi::jobsystem::Wait(ctx);
-
-		ScanAnimationDependencies(); // tunneling until next frame
 
 		wi::profiler::EndRange(range);
 	}
@@ -5580,10 +5580,17 @@ namespace wi::scene
 
 	void Scene::ScanAnimationDependencies()
 	{
+		if (animations.GetCount() == 0)
+		{
+			animation_queue_count = 0;
+			return;
+		}
+
 		animation_queues.reserve(animations.GetCount());
 		animation_queue_count = 0;
 
 		wi::jobsystem::Execute(animation_dependency_scan_workload, [&](wi::jobsystem::JobArgs args) {
+			auto range = wi::profiler::BeginRangeCPU("Animation Dependencies");
 			for (size_t i = 0; i < animations.GetCount(); ++i)
 			{
 				AnimationComponent& animationA = animations[i];
@@ -5595,23 +5602,19 @@ namespace wi::scene
 				for (size_t queue_index = 0; queue_index < animation_queue_count; ++queue_index)
 				{
 					AnimationQueue& queue = animation_queues[queue_index];
-					for (auto& animationB : queue.animations)
+					for (auto& channelA : animationA.channels)
 					{
-						for (auto& channelA : animationA.channels)
+						if (dependency)
 						{
-							for (auto& channelB : animationB->channels)
-							{
-								if (channelA.target == channelB.target)
-								{
-									// If two animations target the same entity, they have a dependency and need to be executed in order:
-									dependency = true;
-									queue.animations.push_back(&animationA);
-									break;
-								}
-							}
-							if (dependency) break;
+							// If dependency has been found, record all other entities in this animation too:
+							queue.entities.insert(channelA.target);
 						}
-						if (dependency) break;
+						else if (queue.entities.find(channelA.target) != queue.entities.end())
+						{
+							// If two animations target the same entity, they have a dependency and need to be executed in order:
+							dependency = true;
+							queue.animations.push_back(&animationA);
+						}
 					}
 					if (dependency) break;
 				}
@@ -5622,12 +5625,21 @@ namespace wi::scene
 					{
 						animation_queues.resize(animation_queue_count + 1);
 					}
-					animation_queues[animation_queue_count].animations.clear();
-					animation_queues[animation_queue_count].animations.push_back(&animationA);
+					AnimationQueue& queue = animation_queues[animation_queue_count];
+					queue.animations.clear();
+					queue.animations.push_back(&animationA);
+					queue.entities.clear();
+					for (auto& channelA : animationA.channels)
+					{
+						queue.entities.insert(channelA.target);
+					}
 					animation_queue_count++;
 				}
 			}
+			wi::profiler::EndRange(range);
 		});
+
+		// We don't wait for this job here, it will be waited just before animation update
 	}
 
 }
