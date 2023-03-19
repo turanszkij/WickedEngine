@@ -11,6 +11,7 @@
 #include "wiHairParticle.h"
 #include "wiTerrain.h"
 #include "wiBVH.h"
+#include "wiUnorderedSet.h"
 
 #include <string>
 #include <memory>
@@ -244,6 +245,18 @@ namespace wi::scene
 		// Simple water ripple sprites:
 		mutable wi::vector<wi::Sprite> waterRipples;
 		void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
+
+		// Animation processing optimizer:
+		struct AnimationQueue
+		{
+			// The animations within one queue must be processed on the same thread in order
+			wi::vector<AnimationComponent*> animations; // pointers for one frame only!
+			wi::unordered_set<wi::ecs::Entity> entities;
+		};
+		wi::vector<AnimationQueue> animation_queues; // different animation queues can be processed in different threads in any order
+		size_t animation_queue_count = 0; // to avoid resizing animation queues downwards because the internals for them needs to be reallocated in that case
+		wi::jobsystem::context animation_dependency_scan_workload;
+		void ScanAnimationDependencies();
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!
