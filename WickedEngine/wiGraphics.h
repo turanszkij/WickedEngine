@@ -742,7 +742,7 @@ namespace wi::graphics
 	struct GraphicsDeviceChild
 	{
 		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state.get() != nullptr; }
+		inline bool IsValid() const { return internal_state != nullptr; }
 
 		virtual ~GraphicsDeviceChild() = default;
 	};

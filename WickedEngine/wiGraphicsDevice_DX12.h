@@ -84,6 +84,7 @@ namespace wi::graphics
 				Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
 				Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 				GPUBuffer uploadbuffer;
+				inline bool IsValid() const { return uploadbuffer.IsValid(); }
 			};
 			wi::vector<CopyCMD> freelist;
 

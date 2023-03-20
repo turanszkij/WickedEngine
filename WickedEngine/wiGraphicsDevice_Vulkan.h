@@ -125,6 +125,7 @@ namespace wi::graphics
 				VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
 				uint64_t target = 0;
 				GPUBuffer uploadbuffer;
+				inline bool IsValid() const { return uploadbuffer.IsValid(); }
 			};
 			wi::vector<CopyCMD> freelist; // available
 			wi::vector<CopyCMD> worklist; // in progress

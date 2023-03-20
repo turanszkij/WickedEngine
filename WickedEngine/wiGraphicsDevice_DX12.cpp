@@ -3255,19 +3255,31 @@ using namespace dx12_internal;
 		// Issue data copy on request:
 		if (initial_data != nullptr)
 		{
-			auto cmd = copyAllocator.allocate(desc->size);
+			CopyAllocator::CopyCMD cmd;
+			void* mapped_data = nullptr;
+			if (desc->usage == Usage::UPLOAD)
+			{
+				mapped_data = buffer->mapped_data;
+			}
+			else
+			{
+				cmd = copyAllocator.allocate(desc->size);
+				mapped_data = cmd.uploadbuffer.mapped_data;
+			}
 
-			std::memcpy(cmd.uploadbuffer.mapped_data, initial_data, desc->size);
+			std::memcpy(mapped_data, initial_data, desc->size);
 
-			cmd.commandList->CopyBufferRegion(
-				internal_state->resource.Get(),
-				0,
-				to_internal(&cmd.uploadbuffer)->resource.Get(),
-				0,
-				desc->size
-			);
-
-			copyAllocator.submit(cmd);
+			if (cmd.IsValid())
+			{
+				cmd.commandList->CopyBufferRegion(
+					internal_state->resource.Get(),
+					0,
+					to_internal(&cmd.uploadbuffer)->resource.Get(),
+					0,
+					desc->size
+				);
+				copyAllocator.submit(cmd);
+			}
 		}
 
 
@@ -3516,34 +3528,50 @@ using namespace dx12_internal;
 				data[i] = _ConvertSubresourceData(initial_data[i]);
 			}
 
-			auto cmd = copyAllocator.allocate(internal_state->total_size);
+			CopyAllocator::CopyCMD cmd;
+			void* mapped_data = nullptr;
+			if (desc->usage == Usage::UPLOAD)
+			{
+				mapped_data = texture->mapped_data;
+			}
+			else
+			{
+				cmd = copyAllocator.allocate(internal_state->total_size);
+				mapped_data = cmd.uploadbuffer.mapped_data;
+			}
 
 			for (size_t i = 0; i < internal_state->footprints.size(); ++i)
 			{
 				if (internal_state->rowSizesInBytes[i] > (SIZE_T)-1)
 					continue;
 				D3D12_MEMCPY_DEST DestData = {};
-				DestData.pData = (void*)((UINT64)cmd.uploadbuffer.mapped_data + internal_state->footprints[i].Offset);
+				DestData.pData = (void*)((UINT64)mapped_data + internal_state->footprints[i].Offset);
 				DestData.RowPitch = (SIZE_T)internal_state->footprints[i].Footprint.RowPitch;
 				DestData.SlicePitch = (SIZE_T)internal_state->footprints[i].Footprint.RowPitch * (SIZE_T)internal_state->numRows[i];
 				MemcpySubresource(&DestData, &data[i], (SIZE_T)internal_state->rowSizesInBytes[i], internal_state->numRows[i], internal_state->footprints[i].Footprint.Depth);
+
+				if (cmd.IsValid())
+				{
+					for (UINT i = 0; i < internal_state->footprints.size(); ++i)
+					{
+						CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
+						CD3DX12_TEXTURE_COPY_LOCATION Src(to_internal(&cmd.uploadbuffer)->resource.Get(), internal_state->footprints[i]);
+						cmd.commandList->CopyTextureRegion(
+							&Dst,
+							0,
+							0,
+							0,
+							&Src,
+							nullptr
+						);
+					}
+				}
 			}
 
-			for (UINT i = 0; i < internal_state->footprints.size(); ++i)
+			if (cmd.IsValid())
 			{
-				CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
-				CD3DX12_TEXTURE_COPY_LOCATION Src(to_internal(&cmd.uploadbuffer)->resource.Get(), internal_state->footprints[i]);
-				cmd.commandList->CopyTextureRegion(
-					&Dst,
-					0,
-					0,
-					0,
-					&Src,
-					nullptr
-				);
+				copyAllocator.submit(cmd);
 			}
-
-			copyAllocator.submit(cmd);
 		}
 
 		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
