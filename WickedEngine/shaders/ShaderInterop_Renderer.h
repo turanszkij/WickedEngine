@@ -1145,13 +1145,27 @@ CBUFFER(PaintRadiusCB, CBSLOT_RENDERER_MISC)
 
 struct SkinningPushConstants
 {
-	int bonebuffer_index;
+	uint vertexCount;
 	int vb_pos_nor_wind;
 	int vb_tan;
-	int vb_bon;
-
 	int so_pos_nor_wind;
+
 	int so_tan;
+	int bonebuffer_index;
+	int vb_bon;
+	int morphbuffer_index;
+
+	uint morphbuffer_offset;
+	uint morph_count;
+	int morphvb_index;
+};
+
+struct MorphTargetGPU
+{
+	float weight;
+	uint offset_pos;
+	uint offset_nor;
+	uint offset_tan;
 };
 
 struct AerialPerspectiveCapturePushConstants

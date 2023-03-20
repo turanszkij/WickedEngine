@@ -363,6 +363,10 @@ namespace wi::scene
 			wi::vector<uint32_t> sparse_indices_positions; // optional, these can be used to target vertices indirectly
 			wi::vector<uint32_t> sparse_indices_normals; // optional, these can be used to target vertices indirectly
 			float weight = 0;
+
+			// Non-serialized attributes:
+			uint64_t offset_pos = ~0ull;
+			uint64_t offset_nor = ~0ull;
 		};
 		wi::vector<MorphTarget> morph_targets;
 
@@ -398,6 +402,7 @@ namespace wi::scene
 		BufferView so_pre;
 		uint32_t geometryOffset = 0;
 		uint32_t meshletCount = 0;
+		uint32_t active_morph_count = 0;
 
 		wi::vector<wi::graphics::RaytracingAccelerationStructure> BLASes; // one BLAS per LOD
 		enum BLAS_STATE
@@ -407,8 +412,6 @@ namespace wi::scene
 			BLAS_STATE_COMPLETE,
 		};
 		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
-
-		mutable bool dirty_morph = false;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -600,11 +603,6 @@ namespace wi::scene
 
 			static const wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_UNORM;
 		};
-
-		// Non serialized attributes:
-		wi::vector<Vertex_POS> vertex_positions_morphed;
-		wi::vector<XMFLOAT3> morph_temp_pos;
-		wi::vector<XMFLOAT3> morph_temp_nor;
 
 	};
 

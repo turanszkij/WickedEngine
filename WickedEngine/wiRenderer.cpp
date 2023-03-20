@@ -4129,42 +4129,15 @@ void UpdateRenderData(
 		wi::profiler::EndRange(range);
 	}
 
-	device->EventBegin("Morph Targets", cmd);
+	device->EventBegin("Skinning and Morph", cmd);
 	{
-		auto range = wi::profiler::BeginRangeGPU("Morph Targets", cmd);
-		bool morphs = false;
-		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
-		{
-			const MeshComponent& mesh = vis.scene->meshes[i];
-
-			if (mesh.dirty_morph && !mesh.vertex_positions_morphed.empty())
-			{
-				morphs = true;
-				mesh.dirty_morph = false;
-				GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh.vb_pos_nor_wind.size, cmd);
-				std::memcpy(allocation.data, mesh.vertex_positions_morphed.data(), mesh.vb_pos_nor_wind.size);
-				device->CopyBuffer(&mesh.generalBuffer, mesh.vb_pos_nor_wind.offset, &allocation.buffer, allocation.offset, mesh.vb_pos_nor_wind.size, cmd);
-				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.generalBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-			}
-		}
-		if (morphs)
-		{
-			barrier_stack_flush(cmd);
-		}
-
-		wi::profiler::EndRange(range); // Morph Targets
-	}
-	device->EventEnd(cmd);
-
-	device->EventBegin("Skinning", cmd);
-	{
-		auto range = wi::profiler::BeginRangeGPU("Skinning", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Skinning and Morph", cmd);
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
 		{
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
 
-			if (mesh.IsSkinned() && vis.scene->armatures.Contains(mesh.armatureID))
+			if (mesh.IsSkinned() || mesh.active_morph_count > 0)
 			{
 				const SoftBodyPhysicsComponent* softbody = vis.scene->softbodies.GetComponent(entity);
 				if (softbody != nullptr && softbody->physicsobject != nullptr)
@@ -4174,17 +4147,54 @@ void UpdateRenderData(
 					continue;
 				}
 
-				const ArmatureComponent& armature = *vis.scene->armatures.GetComponent(mesh.armatureID);
 
 				device->BindComputeShader(&shaders[CSTYPE_SKINNING], cmd);
 
 				SkinningPushConstants push;
-				push.bonebuffer_index = armature.descriptor_srv;
+				push.vertexCount = (uint)mesh.vertex_positions.size();
 				push.vb_pos_nor_wind = mesh.vb_pos_nor_wind.descriptor_srv;
 				push.vb_tan = mesh.vb_tan.descriptor_srv;
-				push.vb_bon = mesh.vb_bon.descriptor_srv;
 				push.so_pos_nor_wind = mesh.so_pos_nor_wind.descriptor_uav;
 				push.so_tan = mesh.so_tan.descriptor_uav;
+				const ArmatureComponent* armature = vis.scene->armatures.GetComponent(mesh.armatureID);
+				if (armature != nullptr)
+				{
+					push.bonebuffer_index = armature->descriptor_srv;
+				}
+				else
+				{
+					push.bonebuffer_index = -1;
+				}
+				push.vb_bon = mesh.vb_bon.descriptor_srv;
+				if (mesh.active_morph_count > 0)
+				{
+					GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(sizeof(MorphTargetGPU) * mesh.active_morph_count, cmd);
+					uint active_morph_count = 0;
+					for(const MeshComponent::MorphTarget& morph : mesh.morph_targets)
+					{
+						if (morph.weight > 0)
+						{
+							MorphTargetGPU morph_target_gpu = {};
+							morph_target_gpu.weight = morph.weight;
+							morph_target_gpu.offset_pos = (uint)morph.offset_pos;
+							morph_target_gpu.offset_nor = (uint)morph.offset_nor;
+							morph_target_gpu.offset_tan = ~0u;
+							std::memcpy((MorphTargetGPU*)allocation.data + active_morph_count, &morph_target_gpu, sizeof(morph_target_gpu));
+							active_morph_count++;
+						}
+					}
+					push.morph_count = active_morph_count;
+					push.morphbuffer_index = device->GetDescriptorIndex(&allocation.buffer, SubresourceType::SRV);
+					push.morphbuffer_offset = (uint)allocation.offset;
+					push.morphvb_index = device->GetDescriptorIndex(&mesh.generalBuffer, SubresourceType::SRV);
+				}
+				else
+				{
+					push.morph_count = 0;
+					push.morphbuffer_index = -1;
+					push.morphbuffer_offset = 0;
+					push.morphvb_index = -1;
+				}
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);
@@ -4193,9 +4203,9 @@ void UpdateRenderData(
 			}
 		}
 
-		wi::profiler::EndRange(range); // skinning
+		wi::profiler::EndRange(range); // Skinning and Morph
 	}
-	device->EventEnd(cmd);
+	device->EventEnd(cmd); // Skinning and Morph
 
 	barrier_stack_flush(cmd); // wind/skinning flush
 
