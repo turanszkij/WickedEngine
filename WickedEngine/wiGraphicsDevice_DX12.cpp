@@ -3117,7 +3117,7 @@ using namespace dx12_internal;
 		internal_state->dummyTexture.desc.height = desc->height;
 		return true;
 	}
-	bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* desc, const void* initial_data, GPUBuffer* buffer) const
+	bool GraphicsDevice_DX12::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer) const
 	{
 		auto internal_state = std::make_shared<Resource_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3253,7 +3253,7 @@ using namespace dx12_internal;
 		}
 
 		// Issue data copy on request:
-		if (initial_data != nullptr)
+		if (init_callback != nullptr)
 		{
 			CopyAllocator::CopyCMD cmd;
 			void* mapped_data = nullptr;
@@ -3267,7 +3267,7 @@ using namespace dx12_internal;
 				mapped_data = cmd.uploadbuffer.mapped_data;
 			}
 
-			std::memcpy(mapped_data, initial_data, desc->size);
+			init_callback(mapped_data);
 
 			if (cmd.IsValid())
 			{

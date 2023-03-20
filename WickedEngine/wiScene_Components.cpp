@@ -548,200 +548,196 @@ namespace wi::scene
 			}
 		}
 
-		// single allocation storage for GPU buffer data:
-		wi::vector<uint8_t> buffer_data(bd.size);
-		uint64_t buffer_offset = 0ull;
+		auto init_callback = [&](void* dest) {
+			uint8_t* buffer_data = (uint8_t*)dest;
+			uint64_t buffer_offset = 0ull;
 
-		// Create index buffer GPU data:
-		if (GetIndexFormat() == IndexBufferFormat::UINT32)
-		{
-			ib.offset = buffer_offset;
-			ib.size = indices.size() * sizeof(uint32_t);
-			uint32_t* indexdata = (uint32_t*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(ib.size, alignment);
-			for (size_t i = 0; i < indices.size(); ++i)
+			// Create index buffer GPU data:
+			if (GetIndexFormat() == IndexBufferFormat::UINT32)
 			{
-				indexdata[i] = indices[i];
-			}
-		}
-		else
-		{
-			ib.offset = buffer_offset;
-			ib.size = indices.size() * sizeof(uint16_t);
-			uint16_t* indexdata = (uint16_t*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(ib.size, alignment);
-			for (size_t i = 0; i < indices.size(); ++i)
-			{
-				indexdata[i] = (uint16_t)indices[i];
-			}
-		}
-
-		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-		XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
-
-		// vertexBuffer - POSITION + NORMAL + WIND:
-		{
-			vb_pos_nor_wind.offset = buffer_offset;
-			vb_pos_nor_wind.size = vertex_positions.size() * sizeof(Vertex_POS);
-			Vertex_POS* vertices = (Vertex_POS*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_pos_nor_wind.size, alignment);
-			for (size_t i = 0; i < vertex_positions.size(); ++i)
-			{
-				const XMFLOAT3& pos = vertex_positions[i];
-				XMFLOAT3 nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
-				XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
-				const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
-				vertices[i].FromFULL(pos, nor, wind);
-
-				_min = wi::math::Min(_min, pos);
-				_max = wi::math::Max(_max, pos);
-			}
-		}
-
-		aabb = AABB(_min, _max);
-
-		// vertexBuffer - TANGENTS
-		if (!vertex_tangents.empty())
-		{
-			vb_tan.offset = buffer_offset;
-			vb_tan.size = vertex_tangents.size() * sizeof(Vertex_TAN);
-			Vertex_TAN* vertices = (Vertex_TAN*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_tan.size, alignment);
-			for (size_t i = 0; i < vertex_tangents.size(); ++i)
-			{
-				vertices[i].FromFULL(vertex_tangents[i]);
-			}
-		}
-
-		// vertexBuffer - UV SETS
-		if (!vertex_uvset_0.empty() || !vertex_uvset_1.empty())
-		{
-			const XMFLOAT2* uv0_stream = vertex_uvset_0.empty() ? vertex_uvset_1.data() : vertex_uvset_0.data();
-			const XMFLOAT2* uv1_stream = vertex_uvset_1.empty() ? vertex_uvset_0.data() : vertex_uvset_1.data();
-
-			vb_uvs.offset = buffer_offset;
-			vb_uvs.size = uv_count * sizeof(Vertex_UVS);
-			Vertex_UVS* vertices = (Vertex_UVS*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_uvs.size, alignment);
-			for (size_t i = 0; i < uv_count; ++i)
-			{
-				vertices[i].uv0.FromFULL(uv0_stream[i]);
-				vertices[i].uv1.FromFULL(uv1_stream[i]);
-			}
-		}
-
-		// vertexBuffer - ATLAS
-		if (!vertex_atlas.empty())
-		{
-			vb_atl.offset = buffer_offset;
-			vb_atl.size = vertex_atlas.size() * sizeof(Vertex_TEX);
-			Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_atl.size, alignment);
-			for (size_t i = 0; i < vertex_atlas.size(); ++i)
-			{
-				vertices[i].FromFULL(vertex_atlas[i]);
-			}
-		}
-
-		// vertexBuffer - COLORS
-		if (!vertex_colors.empty())
-		{
-			vb_col.offset = buffer_offset;
-			vb_col.size = vertex_colors.size() * sizeof(Vertex_COL);
-			Vertex_COL* vertices = (Vertex_COL*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_col.size, alignment);
-			for (size_t i = 0; i < vertex_colors.size(); ++i)
-			{
-				vertices[i].color = vertex_colors[i];
-			}
-		}
-
-		// skinning buffers:
-		if (!vertex_boneindices.empty())
-		{
-			vb_bon.offset = buffer_offset;
-			vb_bon.size = vertex_boneindices.size() * sizeof(Vertex_BON);
-			Vertex_BON* vertices = (Vertex_BON*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_bon.size, alignment);
-			assert(vertex_boneindices.size() == vertex_boneweights.size());
-			for (size_t i = 0; i < vertex_boneindices.size(); ++i)
-			{
-				XMFLOAT4& wei = vertex_boneweights[i];
-				// normalize bone weights
-				float len = wei.x + wei.y + wei.z + wei.w;
-				if (len > 0)
+				ib.offset = buffer_offset;
+				ib.size = indices.size() * sizeof(uint32_t);
+				uint32_t* indexdata = (uint32_t*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(ib.size, alignment);
+				for (size_t i = 0; i < indices.size(); ++i)
 				{
-					wei.x /= len;
-					wei.y /= len;
-					wei.z /= len;
-					wei.w /= len;
-				}
-				vertices[i].FromFULL(vertex_boneindices[i], wei);
-			}
-		}
-
-		// morph buffers:
-		if (!morph_targets.empty())
-		{
-			for (MorphTarget& morph : morph_targets)
-			{
-				if (!morph.vertex_positions.empty())
-				{
-					morph.offset_pos = buffer_offset;
-					XMHALF4* vertices = (XMHALF4*)(buffer_data.data() + buffer_offset);
-					std::fill(vertices, vertices + vertex_positions.size(), 0);
-					if (morph.sparse_indices_positions.empty())
-					{
-						// flat morphs:
-						for (size_t i = 0; i < morph.vertex_positions.size(); ++i)
-						{
-							XMStoreHalf4(vertices + i, XMLoadFloat3(&morph.vertex_positions[i]));
-						}
-					}
-					else
-					{
-						// sparse morphs will be flattened for GPU because they will be evaluated in skinning for every vertex:
-						for (size_t i = 0; i < morph.sparse_indices_positions.size(); ++i)
-						{
-							const uint32_t ind = morph.sparse_indices_positions[i];
-							XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_positions[i]));
-						}
-					}
-					buffer_offset += AlignTo(morph.vertex_positions.size() * sizeof(XMHALF4), alignment);
-				}
-				if (!morph.vertex_normals.empty())
-				{
-					morph.offset_nor = buffer_offset;
-					XMHALF4* vertices = (XMHALF4*)(buffer_data.data() + buffer_offset);
-					std::fill(vertices, vertices + vertex_normals.size(), 0);
-					if (morph.sparse_indices_normals.empty())
-					{
-						// flat morphs:
-						for (size_t i = 0; i < morph.vertex_normals.size(); ++i)
-						{
-							XMStoreHalf4(vertices + i, XMLoadFloat3(&morph.vertex_normals[i]));
-						}
-					}
-					else
-					{
-						// sparse morphs will be flattened for GPU because they will be evaluated in skinning for every vertex:
-						for (size_t i = 0; i < morph.sparse_indices_normals.size(); ++i)
-						{
-							const uint32_t ind = morph.sparse_indices_normals[i];
-							XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_normals[i]));
-						}
-					}
-					buffer_offset += AlignTo(morph.vertex_normals.size() * sizeof(XMHALF4), alignment);
+					indexdata[i] = indices[i];
 				}
 			}
-		}
+			else
+			{
+				ib.offset = buffer_offset;
+				ib.size = indices.size() * sizeof(uint16_t);
+				uint16_t* indexdata = (uint16_t*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(ib.size, alignment);
+				for (size_t i = 0; i < indices.size(); ++i)
+				{
+					indexdata[i] = (uint16_t)indices[i];
+				}
+			}
 
-		if (!vertex_boneindices.empty() || !morph_targets.empty())
-		{
-			CreateStreamoutRenderData();
-		}
+			XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+			XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
-		bool success = device->CreateBuffer(&bd, buffer_data.data(), &generalBuffer);
+			// vertexBuffer - POSITION + NORMAL + WIND:
+			{
+				vb_pos_nor_wind.offset = buffer_offset;
+				vb_pos_nor_wind.size = vertex_positions.size() * sizeof(Vertex_POS);
+				Vertex_POS* vertices = (Vertex_POS*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_pos_nor_wind.size, alignment);
+				for (size_t i = 0; i < vertex_positions.size(); ++i)
+				{
+					const XMFLOAT3& pos = vertex_positions[i];
+					XMFLOAT3 nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
+					XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
+					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
+					vertices[i].FromFULL(pos, nor, wind);
+
+					_min = wi::math::Min(_min, pos);
+					_max = wi::math::Max(_max, pos);
+				}
+			}
+
+			aabb = AABB(_min, _max);
+
+			// vertexBuffer - TANGENTS
+			if (!vertex_tangents.empty())
+			{
+				vb_tan.offset = buffer_offset;
+				vb_tan.size = vertex_tangents.size() * sizeof(Vertex_TAN);
+				Vertex_TAN* vertices = (Vertex_TAN*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_tan.size, alignment);
+				for (size_t i = 0; i < vertex_tangents.size(); ++i)
+				{
+					vertices[i].FromFULL(vertex_tangents[i]);
+				}
+			}
+
+			// vertexBuffer - UV SETS
+			if (!vertex_uvset_0.empty() || !vertex_uvset_1.empty())
+			{
+				const XMFLOAT2* uv0_stream = vertex_uvset_0.empty() ? vertex_uvset_1.data() : vertex_uvset_0.data();
+				const XMFLOAT2* uv1_stream = vertex_uvset_1.empty() ? vertex_uvset_0.data() : vertex_uvset_1.data();
+
+				vb_uvs.offset = buffer_offset;
+				vb_uvs.size = uv_count * sizeof(Vertex_UVS);
+				Vertex_UVS* vertices = (Vertex_UVS*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_uvs.size, alignment);
+				for (size_t i = 0; i < uv_count; ++i)
+				{
+					vertices[i].uv0.FromFULL(uv0_stream[i]);
+					vertices[i].uv1.FromFULL(uv1_stream[i]);
+				}
+			}
+
+			// vertexBuffer - ATLAS
+			if (!vertex_atlas.empty())
+			{
+				vb_atl.offset = buffer_offset;
+				vb_atl.size = vertex_atlas.size() * sizeof(Vertex_TEX);
+				Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_atl.size, alignment);
+				for (size_t i = 0; i < vertex_atlas.size(); ++i)
+				{
+					vertices[i].FromFULL(vertex_atlas[i]);
+				}
+			}
+
+			// vertexBuffer - COLORS
+			if (!vertex_colors.empty())
+			{
+				vb_col.offset = buffer_offset;
+				vb_col.size = vertex_colors.size() * sizeof(Vertex_COL);
+				Vertex_COL* vertices = (Vertex_COL*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_col.size, alignment);
+				for (size_t i = 0; i < vertex_colors.size(); ++i)
+				{
+					vertices[i].color = vertex_colors[i];
+				}
+			}
+
+			// skinning buffers:
+			if (!vertex_boneindices.empty())
+			{
+				vb_bon.offset = buffer_offset;
+				vb_bon.size = vertex_boneindices.size() * sizeof(Vertex_BON);
+				Vertex_BON* vertices = (Vertex_BON*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_bon.size, alignment);
+				assert(vertex_boneindices.size() == vertex_boneweights.size());
+				for (size_t i = 0; i < vertex_boneindices.size(); ++i)
+				{
+					XMFLOAT4& wei = vertex_boneweights[i];
+					// normalize bone weights
+					float len = wei.x + wei.y + wei.z + wei.w;
+					if (len > 0)
+					{
+						wei.x /= len;
+						wei.y /= len;
+						wei.z /= len;
+						wei.w /= len;
+					}
+					vertices[i].FromFULL(vertex_boneindices[i], wei);
+				}
+			}
+
+			// morph buffers:
+			if (!morph_targets.empty())
+			{
+				for (MorphTarget& morph : morph_targets)
+				{
+					if (!morph.vertex_positions.empty())
+					{
+						morph.offset_pos = buffer_offset;
+						XMHALF4* vertices = (XMHALF4*)(buffer_data + buffer_offset);
+						std::fill(vertices, vertices + vertex_positions.size(), 0);
+						if (morph.sparse_indices_positions.empty())
+						{
+							// flat morphs:
+							for (size_t i = 0; i < morph.vertex_positions.size(); ++i)
+							{
+								XMStoreHalf4(vertices + i, XMLoadFloat3(&morph.vertex_positions[i]));
+							}
+						}
+						else
+						{
+							// sparse morphs will be flattened for GPU because they will be evaluated in skinning for every vertex:
+							for (size_t i = 0; i < morph.sparse_indices_positions.size(); ++i)
+							{
+								const uint32_t ind = morph.sparse_indices_positions[i];
+								XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_positions[i]));
+							}
+						}
+						buffer_offset += AlignTo(morph.vertex_positions.size() * sizeof(XMHALF4), alignment);
+					}
+					if (!morph.vertex_normals.empty())
+					{
+						morph.offset_nor = buffer_offset;
+						XMHALF4* vertices = (XMHALF4*)(buffer_data + buffer_offset);
+						std::fill(vertices, vertices + vertex_normals.size(), 0);
+						if (morph.sparse_indices_normals.empty())
+						{
+							// flat morphs:
+							for (size_t i = 0; i < morph.vertex_normals.size(); ++i)
+							{
+								XMStoreHalf4(vertices + i, XMLoadFloat3(&morph.vertex_normals[i]));
+							}
+						}
+						else
+						{
+							// sparse morphs will be flattened for GPU because they will be evaluated in skinning for every vertex:
+							for (size_t i = 0; i < morph.sparse_indices_normals.size(); ++i)
+							{
+								const uint32_t ind = morph.sparse_indices_normals[i];
+								XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_normals[i]));
+							}
+						}
+						buffer_offset += AlignTo(morph.vertex_normals.size() * sizeof(XMHALF4), alignment);
+					}
+				}
+			}
+		};
+
+		bool success = device->CreateBuffer2(&bd, init_callback, &generalBuffer);
 		assert(success);
 		device->SetName(&generalBuffer, "MeshComponent::generalBuffer");
 
@@ -778,6 +774,11 @@ namespace wi::scene
 		{
 			vb_bon.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_bon.offset, vb_bon.size);
 			vb_bon.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_bon.subresource_srv);
+		}
+
+		if (!vertex_boneindices.empty() || !morph_targets.empty())
+		{
+			CreateStreamoutRenderData();
 		}
 	}
 	void MeshComponent::CreateStreamoutRenderData()
