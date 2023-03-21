@@ -395,12 +395,15 @@ namespace wi::scene
 				device->CreateBuffer(&desc, nullptr, &surfelAliveBuffer[1]);
 				device->SetName(&surfelAliveBuffer[1], "surfelAliveBuffer[1]");
 
-				wi::vector<uint32_t> dead_indices(SURFEL_CAPACITY);
-				for (uint32_t i = 0; i < dead_indices.size(); ++i)
-				{
-					dead_indices[i] = uint32_t(dead_indices.size() - 1 - i);
-				}
-				device->CreateBuffer(&desc, dead_indices.data(), &surfelDeadBuffer);
+				auto fill_dead_indices = [&](void* dest) {
+					uint32_t* dead_indices = (uint32_t*)dest;
+					for (uint32_t i = 0; i < SURFEL_CAPACITY; ++i)
+					{
+						uint32_t ind = uint32_t(SURFEL_CAPACITY - 1 - i);
+						std::memcpy(dead_indices + i, &ind, sizeof(ind));
+					}
+				};
+				device->CreateBuffer2(&desc, fill_dead_indices, &surfelDeadBuffer);
 				device->SetName(&surfelDeadBuffer, "surfelDeadBuffer");
 
 				desc.stride = sizeof(uint);

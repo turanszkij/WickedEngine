@@ -559,10 +559,7 @@ namespace wi::scene
 				ib.size = indices.size() * sizeof(uint32_t);
 				uint32_t* indexdata = (uint32_t*)(buffer_data + buffer_offset);
 				buffer_offset += AlignTo(ib.size, alignment);
-				for (size_t i = 0; i < indices.size(); ++i)
-				{
-					indexdata[i] = indices[i];
-				}
+				std::memcpy(indexdata, indices.data(), ib.size);
 			}
 			else
 			{
@@ -572,7 +569,7 @@ namespace wi::scene
 				buffer_offset += AlignTo(ib.size, alignment);
 				for (size_t i = 0; i < indices.size(); ++i)
 				{
-					indexdata[i] = (uint16_t)indices[i];
+					std::memcpy(indexdata + i, &indices[i], sizeof(uint16_t));
 				}
 			}
 
@@ -591,7 +588,9 @@ namespace wi::scene
 					XMFLOAT3 nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
 					XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
 					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
-					vertices[i].FromFULL(pos, nor, wind);
+					Vertex_POS vert;
+					vert.FromFULL(pos, nor, wind);
+					std::memcpy(vertices + i, &vert, sizeof(vert));
 
 					_min = wi::math::Min(_min, pos);
 					_max = wi::math::Max(_max, pos);
@@ -609,7 +608,9 @@ namespace wi::scene
 				buffer_offset += AlignTo(vb_tan.size, alignment);
 				for (size_t i = 0; i < vertex_tangents.size(); ++i)
 				{
-					vertices[i].FromFULL(vertex_tangents[i]);
+					Vertex_TAN vert;
+					vert.FromFULL(vertex_tangents[i]);
+					std::memcpy(vertices + i, &vert, sizeof(vert));
 				}
 			}
 
@@ -625,8 +626,10 @@ namespace wi::scene
 				buffer_offset += AlignTo(vb_uvs.size, alignment);
 				for (size_t i = 0; i < uv_count; ++i)
 				{
-					vertices[i].uv0.FromFULL(uv0_stream[i]);
-					vertices[i].uv1.FromFULL(uv1_stream[i]);
+					Vertex_UVS vert;
+					vert.uv0.FromFULL(uv0_stream[i]);
+					vert.uv1.FromFULL(uv1_stream[i]);
+					std::memcpy(vertices + i, &vert, sizeof(vert));
 				}
 			}
 
@@ -639,7 +642,9 @@ namespace wi::scene
 				buffer_offset += AlignTo(vb_atl.size, alignment);
 				for (size_t i = 0; i < vertex_atlas.size(); ++i)
 				{
-					vertices[i].FromFULL(vertex_atlas[i]);
+					Vertex_TEX vert;
+					vert.FromFULL(vertex_atlas[i]);
+					std::memcpy(vertices + i, &vert, sizeof(vert));
 				}
 			}
 
@@ -652,7 +657,9 @@ namespace wi::scene
 				buffer_offset += AlignTo(vb_col.size, alignment);
 				for (size_t i = 0; i < vertex_colors.size(); ++i)
 				{
-					vertices[i].color = vertex_colors[i];
+					Vertex_COL vert;
+					vert.color = vertex_colors[i];
+					std::memcpy(vertices + i, &vert, sizeof(vert));
 				}
 			}
 
@@ -676,7 +683,9 @@ namespace wi::scene
 						wei.z /= len;
 						wei.w /= len;
 					}
-					vertices[i].FromFULL(vertex_boneindices[i], wei);
+					Vertex_BON vert;
+					vert.FromFULL(vertex_boneindices[i], wei);
+					std::memcpy(vertices + i, &vert, sizeof(vert));
 				}
 			}
 

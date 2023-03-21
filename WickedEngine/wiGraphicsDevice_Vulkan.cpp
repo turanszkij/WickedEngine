@@ -3456,7 +3456,7 @@ using namespace vulkan_internal;
 
 		return CreateSwapChainInternal(internal_state.get(), physicalDevice, device, allocationhandler);
 	}
-	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc * desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer) const
+	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer) const
 	{
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;

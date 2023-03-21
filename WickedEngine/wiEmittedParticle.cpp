@@ -87,12 +87,14 @@ namespace wi
 			device->SetName(&culledIndirectionBuffer2, "EmittedParticleSystem::culledIndirectionBuffer2");
 
 			// Dead index list:
-			wi::vector<uint32_t> indices(MAX_PARTICLES);
-			for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
-			{
-				indices[i] = i;
-			}
-			device->CreateBuffer(&bd, indices.data(), &deadList);
+			auto fill_dead_indices = [&](void* dest) {
+				uint32_t* indices = (uint32_t*)dest;
+				for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
+				{
+					std::memcpy(indices + i, &i, sizeof(uint32_t));
+				}
+			};
+			device->CreateBuffer2(&bd, fill_dead_indices, &deadList);
 			device->SetName(&deadList, "EmittedParticleSystem::deadList");
 
 
@@ -132,9 +134,11 @@ namespace wi
 			bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			bd.stride = sizeof(float);
 			bd.size = bd.stride * MAX_PARTICLES;
-			wi::vector<float> distances(MAX_PARTICLES);
-			std::fill(distances.begin(), distances.end(), 0.0f);
-			device->CreateBuffer(&bd, distances.data(), &distanceBuffer);
+			auto init_distances = [&](void* dest) {
+				float* distances = (float*)dest;
+				std::fill(distances, distances + MAX_PARTICLES, 0.0f);
+			};
+			device->CreateBuffer2(&bd, init_distances, &distanceBuffer);
 			device->SetName(&distanceBuffer, "EmittedParticleSystem::distanceBuffer");
 		}
 

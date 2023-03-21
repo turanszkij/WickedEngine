@@ -59,12 +59,6 @@ namespace wi
 			std::fill(vertex_lengths.begin(), vertex_lengths.end(), 1.0f);
 		}
 
-		vertex_lengths_packed.resize(vertex_lengths.size());
-		for (size_t i = 0; i < vertex_lengths.size(); ++i)
-		{
-			vertex_lengths_packed[i] = uint8_t(wi::math::Clamp(vertex_lengths[i], 0, 1) * 255.0f);
-		}
-
 		indices.clear();
 		uint32_t first_subset = 0;
 		uint32_t last_subset = 0;
@@ -144,14 +138,23 @@ namespace wi
 		device->CreateBuffer(&bd, nullptr, &constantBuffer);
 		device->SetName(&constantBuffer, "HairParticleSystem::constantBuffer");
 
-		if (!vertex_lengths_packed.empty())
+
+		if (!vertex_lengths.empty())
 		{
+			auto pack_lengths = [&](void* dest) {
+				uint8_t* vertex_lengths_packed = (uint8_t*)dest;
+				for (size_t i = 0; i < vertex_lengths.size(); ++i)
+				{
+					uint8_t packed = uint8_t(wi::math::Clamp(vertex_lengths[i], 0, 1) * 255.0f);
+					std::memcpy(vertex_lengths_packed + i, &packed, sizeof(uint8_t));
+				}
+			};
 			bd.misc_flags = ResourceMiscFlag::NONE;
 			bd.bind_flags = BindFlag::SHADER_RESOURCE;
 			bd.format = Format::R8_UNORM;
 			bd.stride = sizeof(uint8_t);
-			bd.size = bd.stride * vertex_lengths_packed.size();
-			device->CreateBuffer(&bd, vertex_lengths_packed.data(), &vertexBuffer_length);
+			bd.size = bd.stride * vertex_lengths.size();
+			device->CreateBuffer2(&bd, pack_lengths, &vertexBuffer_length);
 			device->SetName(&vertexBuffer_length, "HairParticleSystem::vertexBuffer_length");
 		}
 		if (!indices.empty())
@@ -465,12 +468,6 @@ namespace wi
 			{
 				uint8_t shadingRate;
 				archive >> shadingRate; // no longer needed
-			}
-
-			vertex_lengths_packed.resize(vertex_lengths.size());
-			for (size_t i = 0; i < vertex_lengths.size(); ++i)
-			{
-				vertex_lengths_packed[i] = uint8_t(wi::math::Clamp(vertex_lengths[i], 0, 1) * 255.0f);
 			}
 		}
 		else
