@@ -75,7 +75,6 @@ namespace wi::graphics
 		struct CopyAllocator
 		{
 			GraphicsDevice_DX12* device = nullptr;
-			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
 			std::mutex locker;
 
 			struct CopyCMD
@@ -84,12 +83,11 @@ namespace wi::graphics
 				Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
 				Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 				GPUBuffer uploadbuffer;
-				inline bool IsValid() const { return uploadbuffer.IsValid(); }
+				inline bool IsValid() const { return commandList != nullptr; }
 			};
 			wi::vector<CopyCMD> freelist;
 
 			void init(GraphicsDevice_DX12* device);
-			void destroy();
 			CopyCMD allocate(uint64_t staging_size);
 			void submit(CopyCMD cmd);
 		};
