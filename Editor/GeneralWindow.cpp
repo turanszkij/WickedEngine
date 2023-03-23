@@ -256,6 +256,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		Bright,
 		Soft,
 		Hacking,
+		Nord,
 	};
 
 	themeCombo.Create("Theme: ");
@@ -264,6 +265,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	themeCombo.AddItem("Bright " ICON_BRIGHT, (uint64_t)Theme::Bright);
 	themeCombo.AddItem("Soft " ICON_SOFT, (uint64_t)Theme::Soft);
 	themeCombo.AddItem("Hacking " ICON_HACKING, (uint64_t)Theme::Hacking);
+	themeCombo.AddItem("Nord " ICON_NORD, (uint64_t)Theme::Nord);
 	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		// Dark theme defaults:
@@ -308,7 +310,17 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.font.color = wi::Color(0, 200, 90, 255);
 			theme.font.shadow_color = wi::Color::Shadow();
 			break;
+		case Theme::Nord:
+			editor->main->config.GetSection("options").Set("theme", "Nord");
+			theme_color_idle = wi::Color(46, 52, 64, 255);
+			theme_color_focus = wi::Color(59, 66, 82, 255);
+			dark_point = wi::Color(46, 52, 64, 255);
+			theme.shadow_color = wi::Color(46, 52, 64, 200);
+			theme.font.color = wi::Color(236, 239, 244, 255);
+			theme.font.shadow_color = wi::Color::Shadow();
+			break;
 		}
+	
 		editor->main->config.Commit();
 
 		theme.tooltipImage = theme.image;

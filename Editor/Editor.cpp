@@ -581,6 +581,10 @@ void EditorComponent::Load()
 	{
 		optionsWnd.generalWnd.themeCombo.SetSelected(3);
 	}
+	else if (!theme.compare("Nord"))
+	{
+		optionsWnd.generalWnd.themeCombo.SetSelected(4);
+	}
 
 	RenderPath2D::Load();
 }
