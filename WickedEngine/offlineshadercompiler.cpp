@@ -341,13 +341,16 @@ using namespace wi::graphics;
 
 int main(int argc, char* argv[])
 {
-	std::cout << "[Wicked Engine Offline Shader Compiler]" << std::endl;
-	std::cout << "Available command arguments:" << std::endl;
-	std::cout << "\thlsl5 : \tCompile shaders to hlsl5 (dx11) format (using d3dcompiler)" << std::endl;
-	std::cout << "\thlsl6 : \tCompile shaders to hlsl6 (dx12) format (using dxcompiler)" << std::endl;
-	std::cout << "\tspirv : \tCompile shaders to spirv (vulkan) format (using dxcompiler)" << std::endl;
-	std::cout << "\trebuild : \tAll shaders will be rebuilt, regardless if they are outdated or not" << std::endl;
-	std::cout << "\tshaderdump : \tShaders will be saved to wiShaderDump.h C++ header file (rebuild is assumed)" << std::endl;
+	wi::shadercompiler::Flags compile_flags = wi::shadercompiler::Flags::NONE;
+	std::cout << "[Wicked Engine Offline Shader Compiler]\n";
+	std::cout << "Available command arguments:\n";
+	std::cout << "\thlsl5 : \t\tCompile shaders to hlsl5 (dx11) format (using d3dcompiler)\n";
+	std::cout << "\thlsl6 : \t\tCompile shaders to hlsl6 (dx12) format (using dxcompiler)\n";
+	std::cout << "\tspirv : \t\tCompile shaders to spirv (vulkan) format (using dxcompiler)\n";
+	std::cout << "\trebuild : \t\tAll shaders will be rebuilt, regardless if they are outdated or not\n";
+	std::cout << "\tdisable_optimization : \tShaders will be compiled without optimizations (this will improve shader debuggability, but reduce performance)\n";
+	std::cout << "\tstrip_reflection : \tReflection will be stripped from shader binary to reduce file size (this will reduce shader debuggability)\n";
+	std::cout << "\tshaderdump : \t\tShaders will be saved to wiShaderDump.h C++ header file (rebuild is assumed)\n";
 	std::cout << "Command arguments used: ";
 
 	wi::arguments::Parse(argc, argv);
@@ -381,7 +384,19 @@ int main(int argc, char* argv[])
 		std::cout << "rebuild ";
 	}
 
-	std::cout << std::endl;
+	if (wi::arguments::HasArgument("disable_optimization"))
+	{
+		compile_flags |= wi::shadercompiler::Flags::DISABLE_OPTIMIZATION;
+		std::cout << "disable_optimization ";
+	}
+
+	if (wi::arguments::HasArgument("strip_reflection"))
+	{
+		compile_flags |= wi::shadercompiler::Flags::STRIP_REFLECTION;
+		std::cout << "strip_reflection ";
+	}
+
+	std::cout << "\n";
 
 	if (targets.empty())
 	{
@@ -390,7 +405,7 @@ int main(int argc, char* argv[])
 			{ ShaderFormat::HLSL6, "shaders/hlsl6/" },
 			{ ShaderFormat::SPIRV, "shaders/spirv/" },
 		};
-		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6" << std::endl;
+		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6\n";
 	}
 
 	shaders.push_back({ "objectVS_simple", wi::graphics::ShaderStage::VS });
@@ -468,7 +483,7 @@ int main(int argc, char* argv[])
 	std::string SHADERSOURCEPATH = wi::renderer::GetShaderSourcePath();
 	wi::helper::MakePathAbsolute(SHADERSOURCEPATH);
 
-	std::cout << "[Wicked Engine Offline Shader Compiler] Searching for outdated shaders..." << std::endl;
+	std::cout << "[Wicked Engine Offline Shader Compiler] Searching for outdated shaders...\n";
 	wi::Timer timer;
 
 	for (auto& target : targets)
@@ -511,6 +526,7 @@ int main(int argc, char* argv[])
 					}
 
 					wi::shadercompiler::CompilerInput input;
+					input.flags = compile_flags;
 					input.format = target.format;
 					input.stage = shader.stage;
 					input.shadersourcefilename = SHADERSOURCEPATH + shader.name + ".hlsl";
@@ -535,9 +551,9 @@ int main(int argc, char* argv[])
 						locker.lock();
 						if (!output.error_message.empty())
 						{
-							std::cerr << output.error_message << std::endl;
+							std::cerr << output.error_message << "\n";
 						}
-						std::cout << "shader compiled: " << shaderbinaryfilename << std::endl;
+						std::cout << "shader compiled: " << shaderbinaryfilename << "\n";
 						if (shaderdump_enabled)
 						{
 							results[shaderbinaryfilename] = output;
@@ -547,7 +563,7 @@ int main(int argc, char* argv[])
 					else
 					{
 						locker.lock();
-						std::cerr << "shader compile FAILED: " << shaderbinaryfilename << std::endl << output.error_message;
+						std::cerr << "shader compile FAILED: " << shaderbinaryfilename << "\n" << output.error_message;
 						locker.unlock();
 						std::exit(1);
 					}
@@ -558,11 +574,11 @@ int main(int argc, char* argv[])
 	}
 	wi::jobsystem::Wait(ctx);
 
-	std::cout << "[Wicked Engine Offline Shader Compiler] Finished in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds" << std::endl;
+	std::cout << "[Wicked Engine Offline Shader Compiler] Finished in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds\n";
 
 	if (shaderdump_enabled)
 	{
-		std::cout << "[Wicked Engine Offline Shader Compiler] Creating ShaderDump..." << std::endl;
+		std::cout << "[Wicked Engine Offline Shader Compiler] Creating ShaderDump...\n";
 		timer.record();
 		std::string ss;
 		ss += "namespace wiShaderDump {\n";
@@ -598,7 +614,7 @@ int main(int argc, char* argv[])
 		ss += "};\n"; // map end
 		ss += "}\n"; // namespace end
 		wi::helper::FileWrite("wiShaderDump.h", (uint8_t*)ss.c_str(), ss.length());
-		std::cout << "[Wicked Engine Offline Shader Compiler] ShaderDump written to wiShaderDump.h in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds" << std::endl;
+		std::cout << "[Wicked Engine Offline Shader Compiler] ShaderDump written to wiShaderDump.h in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds\n";
 	}
 
 	return 0;

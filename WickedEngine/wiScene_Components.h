@@ -363,6 +363,10 @@ namespace wi::scene
 			wi::vector<uint32_t> sparse_indices_positions; // optional, these can be used to target vertices indirectly
 			wi::vector<uint32_t> sparse_indices_normals; // optional, these can be used to target vertices indirectly
 			float weight = 0;
+
+			// Non-serialized attributes:
+			uint64_t offset_pos = ~0ull;
+			uint64_t offset_nor = ~0ull;
 		};
 		wi::vector<MorphTarget> morph_targets;
 
@@ -398,6 +402,7 @@ namespace wi::scene
 		BufferView so_pre;
 		uint32_t geometryOffset = 0;
 		uint32_t meshletCount = 0;
+		uint32_t active_morph_count = 0;
 
 		wi::vector<wi::graphics::RaytracingAccelerationStructure> BLASes; // one BLAS per LOD
 		enum BLAS_STATE
@@ -407,8 +412,6 @@ namespace wi::scene
 			BLAS_STATE_COMPLETE,
 		};
 		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
-
-		mutable bool dirty_morph = false;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -601,11 +604,6 @@ namespace wi::scene
 			static const wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_UNORM;
 		};
 
-		// Non serialized attributes:
-		wi::vector<Vertex_POS> vertex_positions_morphed;
-		wi::vector<XMFLOAT3> morph_temp_pos;
-		wi::vector<XMFLOAT3> morph_temp_nor;
-
 	};
 
 	struct ImpostorComponent
@@ -648,15 +646,13 @@ namespace wi::scene
 		uint32_t filterMask = 0;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 1);
-
 		uint8_t userStencilRef = 0;
 		float lod_distance_multiplier = 1;
-
 		float draw_distance = std::numeric_limits<float>::max(); // object will begin to fade out at this distance to camera
-
 		uint32_t lightmapWidth = 0;
 		uint32_t lightmapHeight = 0;
 		wi::vector<uint8_t> lightmapTextureData;
+		uint32_t sort_priority = 0; // increase to draw earlier (currently 4 bits will be used)
 
 		// Non-serialized attributes:
 		uint32_t filterMaskDynamic = 0;
@@ -1054,6 +1050,8 @@ namespace wi::scene
 		};
 		uint32_t _flags = EMPTY;
 
+		float slopeBlendPower = 0;
+
 		// Set decal to only use alpha from base color texture. Useful for blending normalmap-only decals
 		constexpr void SetBaseColorOnlyAlpha(bool value) { if (value) { _flags |= BASECOLOR_ONLY_ALPHA; } else { _flags ^= BASECOLOR_ONLY_ALPHA; } }
 
@@ -1067,9 +1065,11 @@ namespace wi::scene
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 world;
+		XMFLOAT4 texMulAdd;
 
 		wi::Resource texture;
 		wi::Resource normal;
+		wi::Resource surfacemap;
 
 		inline float GetOpacity() const { return color.w; }
 

@@ -11,7 +11,7 @@ namespace wi::lua
 	public:
 		wi::Sprite::Anim anim;
 
-		static const char className[];
+		inline static constexpr char className[] = "SpriteAnim";
 		static Luna<SpriteAnim_BindLua>::FunctionType methods[];
 		static Luna<SpriteAnim_BindLua>::PropertyType properties[];
 
@@ -49,7 +49,7 @@ namespace wi::lua
 	public:
 		wi::Sprite::Anim::MovingTexAnim anim;
 
-		static const char className[];
+		inline static constexpr char className[] = "MovingTexAnim";
 		static Luna<MovingTexAnim_BindLua>::FunctionType methods[];
 		static Luna<MovingTexAnim_BindLua>::PropertyType properties[];
 
@@ -69,7 +69,7 @@ namespace wi::lua
 	public:
 		wi::Sprite::Anim::DrawRectAnim anim;
 
-		static const char className[];
+		inline static constexpr char className[] = "DrawRectAnim";
 		static Luna<DrawRectAnim_BindLua>::FunctionType methods[];
 		static Luna<DrawRectAnim_BindLua>::PropertyType properties[];
 

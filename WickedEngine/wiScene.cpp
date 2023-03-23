@@ -36,6 +36,8 @@ namespace wi::scene
 		//	So GPU persistent resources need to be created accordingly for them too:
 		RunScriptUpdateSystem(ctx);
 
+		ScanAnimationDependencies();
+
 		// Terrains updates kick off:
 		if (dt > 0)
 		{
@@ -151,7 +153,7 @@ namespace wi::scene
 			}
 
 			// Advance to next query result buffer to use (this will be the oldest one that was written)
-			queryheap_idx = (queryheap_idx + 1) % arraysize(queryResultBuffer);
+			queryheap_idx = device->GetBufferIndex();
 
 			// Clear query allocation state:
 			queryAllocator.store(0);
@@ -1358,748 +1360,750 @@ namespace wi::scene
 	{
 		auto range = wi::profiler::BeginRangeCPU("Animations");
 
-		for (size_t i = 0; i < animations.GetCount(); ++i)
-		{
-			AnimationComponent& animation = animations[i];
-			if (!animation.IsPlaying() && animation.last_update_time == animation.timer)
+		wi::jobsystem::Wait(animation_dependency_scan_workload);
+
+		wi::jobsystem::Dispatch(ctx, (uint32_t)animation_queue_count, 1, [&](wi::jobsystem::JobArgs args) {
+
+			AnimationQueue& animation_queue = animation_queues[args.jobIndex];
+			for (size_t animation_index = 0; animation_index < animation_queue.animations.size(); ++animation_index)
 			{
-				continue;
-			}
-			animation.last_update_time = animation.timer;
+				AnimationComponent& animation = *animation_queue.animations[animation_index];
+				animation.last_update_time = animation.timer;
 
-			for (const AnimationComponent::AnimationChannel& channel : animation.channels)
-			{
-				assert(channel.samplerIndex < (int)animation.samplers.size());
-				const AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
-				const AnimationDataComponent* animationdata = animation_datas.GetComponent(sampler.data);
-				if (animationdata == nullptr)
+				for (const AnimationComponent::AnimationChannel& channel : animation.channels)
 				{
-					continue;
-				}
+					assert(channel.samplerIndex < (int)animation.samplers.size());
+					const AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
+					const AnimationDataComponent* animationdata = animation_datas.GetComponent(sampler.data);
+					if (animationdata == nullptr)
+					{
+						continue;
+					}
 
-				const AnimationComponent::AnimationChannel::PathDataType path_data_type = channel.GetPathDataType();
+					const AnimationComponent::AnimationChannel::PathDataType path_data_type = channel.GetPathDataType();
 
-				float timeFirst = std::numeric_limits<float>::max();
-				float timeLast = std::numeric_limits<float>::min();
-				int keyLeft = 0;	float timeLeft = std::numeric_limits<float>::min();
-				int keyRight = 0;	float timeRight = std::numeric_limits<float>::max();
+					float timeFirst = std::numeric_limits<float>::max();
+					float timeLast = std::numeric_limits<float>::min();
+					int keyLeft = 0;	float timeLeft = std::numeric_limits<float>::min();
+					int keyRight = 0;	float timeRight = std::numeric_limits<float>::max();
 
-				// search for usable keyframes:
-				for (int k = 0; k < (int)animationdata->keyframe_times.size(); ++k)
-				{
-					const float time = animationdata->keyframe_times[k];
-					if (time < timeFirst)
+					// search for usable keyframes:
+					for (int k = 0; k < (int)animationdata->keyframe_times.size(); ++k)
 					{
-						timeFirst = time;
+						const float time = animationdata->keyframe_times[k];
+						if (time < timeFirst)
+						{
+							timeFirst = time;
+						}
+						if (time > timeLast)
+						{
+							timeLast = time;
+						}
+						if (time <= animation.timer && time > timeLeft)
+						{
+							timeLeft = time;
+							keyLeft = k;
+						}
+						if (time >= animation.timer && time < timeRight)
+						{
+							timeRight = time;
+							keyRight = k;
+						}
 					}
-					if (time > timeLast)
+					if (path_data_type != AnimationComponent::AnimationChannel::PathDataType::Event)
 					{
-						timeLast = time;
+						if (animation.timer < timeFirst)
+						{
+							// animation beginning haven't been reached, don't update animation:
+							continue;
+						}
 					}
-					if (time <= animation.timer && time > timeLeft)
+					else
 					{
-						timeLeft = time;
-						keyLeft = k;
+						timeLeft = std::max(timeLeft, timeFirst);
+						timeRight = std::max(timeRight, timeLast);
 					}
-					if (time >= animation.timer && time < timeRight)
-					{
-						timeRight = time;
-						keyRight = k;
-					}
-				}
-				if (path_data_type != AnimationComponent::AnimationChannel::PathDataType::Event)
-				{
-					if (animation.timer < timeFirst)
-					{
-						// animation beginning haven't been reached, don't update animation:
-						continue;
-					}
-				}
-				else
-				{
-					timeLeft = std::max(timeLeft, timeFirst);
-					timeRight = std::max(timeRight, timeLast);
-				}
 
-				const float left = animationdata->keyframe_times[keyLeft];
-				const float right = animationdata->keyframe_times[keyRight];
+					const float left = animationdata->keyframe_times[keyLeft];
+					const float right = animationdata->keyframe_times[keyRight];
 
-				union Interpolator
-				{
-					XMFLOAT4 f4;
-					XMFLOAT3 f3;
-					XMFLOAT2 f2;
-					float f;
-				} interpolator = {};
+					union Interpolator
+					{
+						XMFLOAT4 f4;
+						XMFLOAT3 f3;
+						XMFLOAT2 f2;
+						float f;
+					} interpolator = {};
 
-				TransformComponent* target_transform = nullptr;
-				MeshComponent* target_mesh = nullptr;
-				LightComponent* target_light = nullptr;
-				SoundComponent* target_sound = nullptr;
-				EmittedParticleSystem* target_emitter = nullptr;
-				CameraComponent* target_camera = nullptr;
-				ScriptComponent* target_script = nullptr;
-				MaterialComponent* target_material = nullptr;
+					TransformComponent* target_transform = nullptr;
+					MeshComponent* target_mesh = nullptr;
+					LightComponent* target_light = nullptr;
+					SoundComponent* target_sound = nullptr;
+					EmittedParticleSystem* target_emitter = nullptr;
+					CameraComponent* target_camera = nullptr;
+					ScriptComponent* target_script = nullptr;
+					MaterialComponent* target_material = nullptr;
 
-				if (
-					channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION ||
-					channel.path == AnimationComponent::AnimationChannel::Path::ROTATION ||
-					channel.path == AnimationComponent::AnimationChannel::Path::SCALE
-					)
-				{
-					target_transform = transforms.GetComponent(channel.target);
-					if (target_transform == nullptr)
-						continue;
-					switch (channel.path)
+					if (
+						channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION ||
+						channel.path == AnimationComponent::AnimationChannel::Path::ROTATION ||
+						channel.path == AnimationComponent::AnimationChannel::Path::SCALE
+						)
 					{
-					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
-						interpolator.f3 = target_transform->translation_local;
-						break;
-					case AnimationComponent::AnimationChannel::Path::ROTATION:
-						interpolator.f4 = target_transform->rotation_local;
-						break;
-					case AnimationComponent::AnimationChannel::Path::SCALE:
-						interpolator.f3 = target_transform->scale_local;
-						break;
-					default:
-						break;
-					}
-				}
-				else if (channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS)
-				{
-					ObjectComponent* object = objects.GetComponent(channel.target);
-					if (object == nullptr)
-						continue;
-					target_mesh = meshes.GetComponent(object->meshID);
-					if (target_mesh == nullptr)
-						continue;
-					animation.morph_weights_temp.resize(target_mesh->morph_targets.size());
-				}
-				else if (
-					channel.path >= AnimationComponent::AnimationChannel::Path::LIGHT_COLOR &&
-					channel.path < AnimationComponent::AnimationChannel::Path::_LIGHT_RANGE_END
-					)
-				{
-					target_light = lights.GetComponent(channel.target);
-					if (target_light == nullptr)
-						continue;
-					switch (channel.path)
-					{
-					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
-						interpolator.f3 = target_light->color;
-						break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
-						interpolator.f = target_light->intensity;
-						break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
-						interpolator.f = target_light->range;
-						break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
-						interpolator.f = target_light->innerConeAngle;
-						break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
-						interpolator.f = target_light->outerConeAngle;
-						break;
-					default:
-						break;
-					}
-				}
-				else if (
-					channel.path >= AnimationComponent::AnimationChannel::Path::SOUND_PLAY &&
-					channel.path < AnimationComponent::AnimationChannel::Path::_SOUND_RANGE_END
-					)
-				{
-					target_sound = sounds.GetComponent(channel.target);
-					if (target_sound == nullptr)
-						continue;
-					switch (channel.path)
-					{
-					case AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
-						interpolator.f = target_sound->volume;
-						break;
-					default:
-						break;
-					}
-				}
-				else if (
-					channel.path >= AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT &&
-					channel.path < AnimationComponent::AnimationChannel::Path::_EMITTER_RANGE_END
-					)
-				{
-					target_emitter = emitters.GetComponent(channel.target);
-					if (target_emitter == nullptr)
-						continue;
-					switch (channel.path)
-					{
-					case AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
-						interpolator.f = target_emitter->count;
-						break;
-					default:
-						break;
-					}
-				}
-				else if (
-					channel.path >= AnimationComponent::AnimationChannel::Path::CAMERA_FOV &&
-					channel.path < AnimationComponent::AnimationChannel::Path::_CAMERA_RANGE_END
-					)
-				{
-					target_camera = cameras.GetComponent(channel.target);
-					if (target_camera == nullptr)
-						continue;
-					switch (channel.path)
-					{
-					case AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
-						interpolator.f = target_camera->fov;
-						break;
-					case AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
-						interpolator.f = target_camera->focal_length;
-						break;
-					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
-						interpolator.f = target_camera->aperture_size;
-						break;
-					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
-						interpolator.f2 = target_camera->aperture_shape;
-						break;
-					default:
-						break;
-					}
-				}
-				else if (
-					channel.path >= AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY &&
-					channel.path < AnimationComponent::AnimationChannel::Path::_SCRIPT_RANGE_END
-					)
-				{
-					target_script = scripts.GetComponent(channel.target);
-					if (target_script == nullptr)
-						continue;
-				}
-				else if (
-					channel.path >= AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR &&
-					channel.path < AnimationComponent::AnimationChannel::Path::_MATERIAL_RANGE_END
-					)
-				{
-					target_material = materials.GetComponent(channel.target);
-					if (target_material == nullptr)
-						continue;
-					switch (channel.path)
-					{
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
-						interpolator.f4 = target_material->baseColor;
-						break;
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
-						interpolator.f4 = target_material->emissiveColor;
-						break;
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
-						interpolator.f = target_material->roughness;
-						break;
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
-						interpolator.f = target_material->metalness;
-						break;
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
-						interpolator.f = target_material->reflectance;
-						break;
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
-						interpolator.f4 = target_material->texMulAdd;
-						break;
-					default:
-						break;
-					}
-				}
-				else
-				{
-					assert(0);
-					continue;
-				}
-
-				if (path_data_type == AnimationComponent::AnimationChannel::PathDataType::Event)
-				{
-					// No path data, only event trigger:
-					if (keyLeft == channel.next_event && animation.timer >= timeLeft)
-					{
-						channel.next_event++;
+						target_transform = transforms.GetComponent(channel.target);
+						if (target_transform == nullptr)
+							continue;
 						switch (channel.path)
 						{
-						case AnimationComponent::AnimationChannel::Path::SOUND_PLAY:
-							target_sound->Play();
+						case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+							interpolator.f3 = target_transform->translation_local;
 							break;
-						case AnimationComponent::AnimationChannel::Path::SOUND_STOP:
-							target_sound->Stop();
+						case AnimationComponent::AnimationChannel::Path::ROTATION:
+							interpolator.f4 = target_transform->rotation_local;
 							break;
-						case AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY:
-							target_script->Play();
-							break;
-						case AnimationComponent::AnimationChannel::Path::SCRIPT_STOP:
-							target_script->Stop();
+						case AnimationComponent::AnimationChannel::Path::SCALE:
+							interpolator.f3 = target_transform->scale_local;
 							break;
 						default:
 							break;
 						}
 					}
-				}
-				else
-				{
-					// Path data interpolation:
-					switch (sampler.mode)
+					else if (channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS)
 					{
-					default:
-					case AnimationComponent::AnimationSampler::Mode::STEP:
+						ObjectComponent* object = objects.GetComponent(channel.target);
+						if (object == nullptr)
+							continue;
+						target_mesh = meshes.GetComponent(object->meshID);
+						if (target_mesh == nullptr)
+							continue;
+						animation.morph_weights_temp.resize(target_mesh->morph_targets.size());
+					}
+					else if (
+						channel.path >= AnimationComponent::AnimationChannel::Path::LIGHT_COLOR &&
+						channel.path < AnimationComponent::AnimationChannel::Path::_LIGHT_RANGE_END
+						)
 					{
-						// Nearest neighbor method:
-						const int key = wi::math::InverseLerp(timeLeft, timeRight, animation.timer) > 0.5f ? keyRight : keyLeft;
-						switch (path_data_type)
+						target_light = lights.GetComponent(channel.target);
+						if (target_light == nullptr)
+							continue;
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+							interpolator.f3 = target_light->color;
+							break;
+						case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+							interpolator.f = target_light->intensity;
+							break;
+						case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+							interpolator.f = target_light->range;
+							break;
+						case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+							interpolator.f = target_light->innerConeAngle;
+							break;
+						case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+							interpolator.f = target_light->outerConeAngle;
+							break;
+						default:
+							break;
+						}
+					}
+					else if (
+						channel.path >= AnimationComponent::AnimationChannel::Path::SOUND_PLAY &&
+						channel.path < AnimationComponent::AnimationChannel::Path::_SOUND_RANGE_END
+						)
+					{
+						target_sound = sounds.GetComponent(channel.target);
+						if (target_sound == nullptr)
+							continue;
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
+							interpolator.f = target_sound->volume;
+							break;
+						default:
+							break;
+						}
+					}
+					else if (
+						channel.path >= AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT &&
+						channel.path < AnimationComponent::AnimationChannel::Path::_EMITTER_RANGE_END
+						)
+					{
+						target_emitter = emitters.GetComponent(channel.target);
+						if (target_emitter == nullptr)
+							continue;
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
+							interpolator.f = target_emitter->count;
+							break;
+						default:
+							break;
+						}
+					}
+					else if (
+						channel.path >= AnimationComponent::AnimationChannel::Path::CAMERA_FOV &&
+						channel.path < AnimationComponent::AnimationChannel::Path::_CAMERA_RANGE_END
+						)
+					{
+						target_camera = cameras.GetComponent(channel.target);
+						if (target_camera == nullptr)
+							continue;
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
+							interpolator.f = target_camera->fov;
+							break;
+						case AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
+							interpolator.f = target_camera->focal_length;
+							break;
+						case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
+							interpolator.f = target_camera->aperture_size;
+							break;
+						case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
+							interpolator.f2 = target_camera->aperture_shape;
+							break;
+						default:
+							break;
+						}
+					}
+					else if (
+						channel.path >= AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY &&
+						channel.path < AnimationComponent::AnimationChannel::Path::_SCRIPT_RANGE_END
+						)
+					{
+						target_script = scripts.GetComponent(channel.target);
+						if (target_script == nullptr)
+							continue;
+					}
+					else if (
+						channel.path >= AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR &&
+						channel.path < AnimationComponent::AnimationChannel::Path::_MATERIAL_RANGE_END
+						)
+					{
+						target_material = materials.GetComponent(channel.target);
+						if (target_material == nullptr)
+							continue;
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
+							interpolator.f4 = target_material->baseColor;
+							break;
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
+							interpolator.f4 = target_material->emissiveColor;
+							break;
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
+							interpolator.f = target_material->roughness;
+							break;
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
+							interpolator.f = target_material->metalness;
+							break;
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
+							interpolator.f = target_material->reflectance;
+							break;
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
+							interpolator.f4 = target_material->texMulAdd;
+							break;
+						default:
+							break;
+						}
+					}
+					else
+					{
+						assert(0);
+						continue;
+					}
+
+					if (path_data_type == AnimationComponent::AnimationChannel::PathDataType::Event)
+					{
+						// No path data, only event trigger:
+						if (keyLeft == channel.next_event && animation.timer >= timeLeft)
+						{
+							channel.next_event++;
+							switch (channel.path)
+							{
+							case AnimationComponent::AnimationChannel::Path::SOUND_PLAY:
+								target_sound->Play();
+								break;
+							case AnimationComponent::AnimationChannel::Path::SOUND_STOP:
+								target_sound->Stop();
+								break;
+							case AnimationComponent::AnimationChannel::Path::SCRIPT_PLAY:
+								target_script->Play();
+								break;
+							case AnimationComponent::AnimationChannel::Path::SCRIPT_STOP:
+								target_script->Stop();
+								break;
+							default:
+								break;
+							}
+						}
+					}
+					else
+					{
+						// Path data interpolation:
+						switch (sampler.mode)
 						{
 						default:
-						case AnimationComponent::AnimationChannel::PathDataType::Float:
+						case AnimationComponent::AnimationSampler::Mode::STEP:
 						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-							interpolator.f = animationdata->keyframe_data[key];
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Float2:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2);
-							interpolator.f2 = ((const XMFLOAT2*)animationdata->keyframe_data.data())[key];
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Float3:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-							interpolator.f3 = ((const XMFLOAT3*)animationdata->keyframe_data.data())[key];
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Float4:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
-							interpolator.f4 = ((const XMFLOAT4*)animationdata->keyframe_data.data())[key];
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Weights:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
-							for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+							// Nearest neighbor method:
+							const int key = wi::math::InverseLerp(timeLeft, timeRight, animation.timer) > 0.5f ? keyRight : keyLeft;
+							switch (path_data_type)
 							{
-								animation.morph_weights_temp[j] = animationdata->keyframe_data[key * animation.morph_weights_temp.size() + j];
+							default:
+							case AnimationComponent::AnimationChannel::PathDataType::Float:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+								interpolator.f = animationdata->keyframe_data[key];
+							}
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Float2:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2);
+								interpolator.f2 = ((const XMFLOAT2*)animationdata->keyframe_data.data())[key];
+							}
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Float3:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+								interpolator.f3 = ((const XMFLOAT3*)animationdata->keyframe_data.data())[key];
+							}
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Float4:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
+								interpolator.f4 = ((const XMFLOAT4*)animationdata->keyframe_data.data())[key];
+							}
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Weights:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
+								for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+								{
+									animation.morph_weights_temp[j] = animationdata->keyframe_data[key * animation.morph_weights_temp.size() + j];
+								}
+							}
+							break;
 							}
 						}
 						break;
-						}
-					}
-					break;
-					case AnimationComponent::AnimationSampler::Mode::LINEAR:
-					{
-						// Linear interpolation method:
-						float t;
-						if (keyLeft == keyRight)
+						case AnimationComponent::AnimationSampler::Mode::LINEAR:
 						{
-							t = 0;
-						}
-						else
-						{
-							t = (animation.timer - left) / (right - left);
-						}
-						t = wi::math::saturate(t);
-
-						switch (path_data_type)
-						{
-						default:
-						case AnimationComponent::AnimationChannel::PathDataType::Float:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-							float vLeft = animationdata->keyframe_data[keyLeft];
-							float vRight = animationdata->keyframe_data[keyRight];
-							float vAnim = wi::math::Lerp(vLeft, vRight, t);
-							interpolator.f = vAnim;
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Float2:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2);
-							const XMFLOAT2* data = (const XMFLOAT2*)animationdata->keyframe_data.data();
-							XMVECTOR vLeft = XMLoadFloat2(&data[keyLeft]);
-							XMVECTOR vRight = XMLoadFloat2(&data[keyRight]);
-							XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-							XMStoreFloat2(&interpolator.f2, vAnim);
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Float3:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
-							const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-							XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
-							XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
-							XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-							XMStoreFloat3(&interpolator.f3, vAnim);
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Float4:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
-							const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
-							XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
-							XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
-							XMVECTOR vAnim;
-							if (channel.path == AnimationComponent::AnimationChannel::Path::ROTATION)
+							// Linear interpolation method:
+							float t;
+							if (keyLeft == keyRight)
 							{
-								vAnim = XMQuaternionSlerp(vLeft, vRight, t);
-								vAnim = XMQuaternionNormalize(vAnim);
+								t = 0;
 							}
 							else
 							{
-								vAnim = XMVectorLerp(vLeft, vRight, t);
+								t = (animation.timer - left) / (right - left);
 							}
-							XMStoreFloat4(&interpolator.f4, vAnim);
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Weights:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
-							for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+							t = wi::math::saturate(t);
+
+							switch (path_data_type)
 							{
-								float vLeft = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
-								float vRight = animationdata->keyframe_data[keyRight * animation.morph_weights_temp.size() + j];
+							default:
+							case AnimationComponent::AnimationChannel::PathDataType::Float:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+								float vLeft = animationdata->keyframe_data[keyLeft];
+								float vRight = animationdata->keyframe_data[keyRight];
 								float vAnim = wi::math::Lerp(vLeft, vRight, t);
-								animation.morph_weights_temp[j] = vAnim;
+								interpolator.f = vAnim;
+							}
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Float2:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2);
+								const XMFLOAT2* data = (const XMFLOAT2*)animationdata->keyframe_data.data();
+								XMVECTOR vLeft = XMLoadFloat2(&data[keyLeft]);
+								XMVECTOR vRight = XMLoadFloat2(&data[keyRight]);
+								XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
+								XMStoreFloat2(&interpolator.f2, vAnim);
+							}
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Float3:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3);
+								const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
+								XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
+								XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
+								XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
+								XMStoreFloat3(&interpolator.f3, vAnim);
+							}
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Float4:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4);
+								const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
+								XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
+								XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
+								XMVECTOR vAnim;
+								if (channel.path == AnimationComponent::AnimationChannel::Path::ROTATION)
+								{
+									vAnim = XMQuaternionSlerp(vLeft, vRight, t);
+									vAnim = XMQuaternionNormalize(vAnim);
+								}
+								else
+								{
+									vAnim = XMVectorLerp(vLeft, vRight, t);
+								}
+								XMStoreFloat4(&interpolator.f4, vAnim);
+							}
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Weights:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size());
+								for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+								{
+									float vLeft = animationdata->keyframe_data[keyLeft * animation.morph_weights_temp.size() + j];
+									float vRight = animationdata->keyframe_data[keyRight * animation.morph_weights_temp.size() + j];
+									float vAnim = wi::math::Lerp(vLeft, vRight, t);
+									animation.morph_weights_temp[j] = vAnim;
+								}
+							}
+							break;
 							}
 						}
 						break;
-						}
-					}
-					break;
-					case AnimationComponent::AnimationSampler::Mode::CUBICSPLINE:
-					{
-						// Cubic Spline interpolation method:
-						float t;
-						if (keyLeft == keyRight)
+						case AnimationComponent::AnimationSampler::Mode::CUBICSPLINE:
 						{
-							t = 0;
-						}
-						else
-						{
-							t = (animation.timer - left) / (right - left);
-						}
-						t = wi::math::saturate(t);
-
-						const float t2 = t * t;
-						const float t3 = t2 * t;
-
-						switch (path_data_type)
-						{
-						default:
-						case AnimationComponent::AnimationChannel::PathDataType::Float:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
-							float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
-							float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
-							float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
-							float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
-							float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-							interpolator.f = vAnim;
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Float2:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2 * 3);
-							const XMFLOAT2* data = (const XMFLOAT2*)animationdata->keyframe_data.data();
-							XMVECTOR vLeft = XMLoadFloat2(&data[keyLeft * 3 + 1]);
-							XMVECTOR vLeftTanOut = dt * XMLoadFloat2(&data[keyLeft * 3 + 2]);
-							XMVECTOR vRightTanIn = dt * XMLoadFloat2(&data[keyRight * 3 + 0]);
-							XMVECTOR vRight = XMLoadFloat2(&data[keyRight * 3 + 1]);
-							XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-							XMStoreFloat2(&interpolator.f2, vAnim);
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Float3:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
-							const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
-							XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
-							XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
-							XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
-							XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
-							XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-							XMStoreFloat3(&interpolator.f3, vAnim);
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Float4:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4 * 3);
-							const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
-							XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft * 3 + 1]);
-							XMVECTOR vLeftTanOut = dt * XMLoadFloat4(&data[keyLeft * 3 + 2]);
-							XMVECTOR vRightTanIn = dt * XMLoadFloat4(&data[keyRight * 3 + 0]);
-							XMVECTOR vRight = XMLoadFloat4(&data[keyRight * 3 + 1]);
-							XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-							if (channel.path == AnimationComponent::AnimationChannel::Path::ROTATION)
+							// Cubic Spline interpolation method:
+							float t;
+							if (keyLeft == keyRight)
 							{
-								vAnim = XMQuaternionNormalize(vAnim);
+								t = 0;
 							}
-							XMStoreFloat4(&interpolator.f4, vAnim);
-						}
-						break;
-						case AnimationComponent::AnimationChannel::PathDataType::Weights:
-						{
-							assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size() * 3);
-							for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+							else
 							{
-								float vLeft = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 1];
-								float vLeftTanOut = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 2];
-								float vRightTanIn = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 0];
-								float vRight = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 1];
+								t = (animation.timer - left) / (right - left);
+							}
+							t = wi::math::saturate(t);
+
+							const float t2 = t * t;
+							const float t3 = t2 * t;
+
+							switch (path_data_type)
+							{
+							default:
+							case AnimationComponent::AnimationChannel::PathDataType::Float:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size());
+								float vLeft = animationdata->keyframe_data[keyLeft * 3 + 1];
+								float vLeftTanOut = animationdata->keyframe_data[keyLeft * 3 + 2];
+								float vRightTanIn = animationdata->keyframe_data[keyRight * 3 + 0];
+								float vRight = animationdata->keyframe_data[keyRight * 3 + 1];
 								float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
-								animation.morph_weights_temp[j] = vAnim;
+								interpolator.f = vAnim;
 							}
-						}
-						break;
-						}
-					}
-					break;
-					}
-				}
-
-				// The interpolated raw values will be blended on top of component values:
-				const float t = animation.amount;
-
-				if (target_transform != nullptr)
-				{
-					target_transform->SetDirty();
-
-					switch (channel.path)
-					{
-					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
-					{
-						const XMVECTOR aT = XMLoadFloat3(&target_transform->translation_local);
-						XMVECTOR bT = XMLoadFloat3(&interpolator.f3);
-						if (channel.retargetIndex >= 0 && channel.retargetIndex < (int)animation.retargets.size())
-						{
-							// Retargeting transfer from source to destination:
-							const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
-							TransformComponent* source_transform = transforms.GetComponent(retarget.source);
-							if (source_transform != nullptr)
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Float2:
 							{
-								XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
-								XMMATRIX srcRelativeParentMatrix = XMLoadFloat4x4(&retarget.srcRelativeParentMatrix);
-								XMVECTOR S, R; // matrix decompose destinations
-								TransformComponent transform = *source_transform;
-								XMStoreFloat3(&transform.translation_local, bT);
-								XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
-								XMMatrixDecompose(&S, &R, &bT, localMatrix);
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 2 * 3);
+								const XMFLOAT2* data = (const XMFLOAT2*)animationdata->keyframe_data.data();
+								XMVECTOR vLeft = XMLoadFloat2(&data[keyLeft * 3 + 1]);
+								XMVECTOR vLeftTanOut = dt * XMLoadFloat2(&data[keyLeft * 3 + 2]);
+								XMVECTOR vRightTanIn = dt * XMLoadFloat2(&data[keyRight * 3 + 0]);
+								XMVECTOR vRight = XMLoadFloat2(&data[keyRight * 3 + 1]);
+								XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+								XMStoreFloat2(&interpolator.f2, vAnim);
 							}
-						}
-						const XMVECTOR T = XMVectorLerp(aT, bT, t);
-						XMStoreFloat3(&target_transform->translation_local, T);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::ROTATION:
-					{
-						const XMVECTOR aR = XMLoadFloat4(&target_transform->rotation_local);
-						XMVECTOR bR = XMLoadFloat4(&interpolator.f4);
-						if (channel.retargetIndex >= 0 && channel.retargetIndex < (int)animation.retargets.size())
-						{
-							// Retargeting transfer from source to destination:
-							const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
-							TransformComponent* source_transform = transforms.GetComponent(retarget.source);
-							if (source_transform != nullptr)
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Float3:
 							{
-								XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
-								XMMATRIX srcRelativeParentMatrix = XMLoadFloat4x4(&retarget.srcRelativeParentMatrix);
-								XMVECTOR S, T; // matrix decompose destinations
-								TransformComponent transform = *source_transform;
-								XMStoreFloat4(&transform.rotation_local, bR);
-								XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
-								XMMatrixDecompose(&S, &bR, &T, localMatrix);
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 3 * 3);
+								const XMFLOAT3* data = (const XMFLOAT3*)animationdata->keyframe_data.data();
+								XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3 + 1]);
+								XMVECTOR vLeftTanOut = dt * XMLoadFloat3(&data[keyLeft * 3 + 2]);
+								XMVECTOR vRightTanIn = dt * XMLoadFloat3(&data[keyRight * 3 + 0]);
+								XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3 + 1]);
+								XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+								XMStoreFloat3(&interpolator.f3, vAnim);
 							}
-						}
-						const XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
-						XMStoreFloat4(&target_transform->rotation_local, R);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::SCALE:
-					{
-						const XMVECTOR aS = XMLoadFloat3(&target_transform->scale_local);
-						XMVECTOR bS = XMLoadFloat3(&interpolator.f3);
-						if (channel.retargetIndex >= 0 && channel.retargetIndex < (int)animation.retargets.size())
-						{
-							// Retargeting transfer from source to destination:
-							const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
-							TransformComponent* source_transform = transforms.GetComponent(retarget.source);
-							if (source_transform != nullptr)
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Float4:
 							{
-								XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
-								XMMATRIX srcRelativeParentMatrix = XMLoadFloat4x4(&retarget.srcRelativeParentMatrix);
-								XMVECTOR R, T; // matrix decompose destinations
-								TransformComponent transform = *source_transform;
-								XMStoreFloat3(&transform.scale_local, bS);
-								XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
-								XMMatrixDecompose(&bS, &R, &T, localMatrix);
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * 4 * 3);
+								const XMFLOAT4* data = (const XMFLOAT4*)animationdata->keyframe_data.data();
+								XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft * 3 + 1]);
+								XMVECTOR vLeftTanOut = dt * XMLoadFloat4(&data[keyLeft * 3 + 2]);
+								XMVECTOR vRightTanIn = dt * XMLoadFloat4(&data[keyRight * 3 + 0]);
+								XMVECTOR vRight = XMLoadFloat4(&data[keyRight * 3 + 1]);
+								XMVECTOR vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+								if (channel.path == AnimationComponent::AnimationChannel::Path::ROTATION)
+								{
+									vAnim = XMQuaternionNormalize(vAnim);
+								}
+								XMStoreFloat4(&interpolator.f4, vAnim);
+							}
+							break;
+							case AnimationComponent::AnimationChannel::PathDataType::Weights:
+							{
+								assert(animationdata->keyframe_data.size() == animationdata->keyframe_times.size() * animation.morph_weights_temp.size() * 3);
+								for (size_t j = 0; j < animation.morph_weights_temp.size(); ++j)
+								{
+									float vLeft = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 1];
+									float vLeftTanOut = animationdata->keyframe_data[(keyLeft * animation.morph_weights_temp.size() + j) * 3 + 2];
+									float vRightTanIn = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 0];
+									float vRight = animationdata->keyframe_data[(keyRight * animation.morph_weights_temp.size() + j) * 3 + 1];
+									float vAnim = (2 * t3 - 3 * t2 + 1) * vLeft + (t3 - 2 * t2 + t) * vLeftTanOut + (-2 * t3 + 3 * t2) * vRight + (t3 - t2) * vRightTanIn;
+									animation.morph_weights_temp[j] = vAnim;
+								}
+							}
+							break;
 							}
 						}
-						const XMVECTOR S = XMVectorLerp(aS, bS, t);
-						XMStoreFloat3(&target_transform->scale_local, S);
-					}
-					break;
-					default:
 						break;
-					}
-				}
-
-				if (target_mesh != nullptr)
-				{
-					for (size_t j = 0; j < target_mesh->morph_targets.size(); ++j)
-					{
-						target_mesh->morph_targets[j].weight = wi::math::Lerp(target_mesh->morph_targets[j].weight, animation.morph_weights_temp[j], t);
+						}
 					}
 
-					target_mesh->dirty_morph = true;
-				}
+					// The interpolated raw values will be blended on top of component values:
+					const float t = animation.amount;
 
-				if (target_light != nullptr)
-				{
-					switch (channel.path)
+					if (target_transform != nullptr)
 					{
-					case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
-					{
-						target_light->color = wi::math::Lerp(target_light->color, interpolator.f3, t);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
-					{
-						target_light->intensity = wi::math::Lerp(target_light->intensity, interpolator.f, t);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
-					{
-						target_light->range = wi::math::Lerp(target_light->range, interpolator.f, t);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
-					{
-						target_light->innerConeAngle = wi::math::Lerp(target_light->innerConeAngle, interpolator.f, t);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
-					{
-						target_light->outerConeAngle = wi::math::Lerp(target_light->outerConeAngle, interpolator.f, t);
-					}
-					break;
-					default:
+						target_transform->SetDirty();
+
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+						{
+							const XMVECTOR aT = XMLoadFloat3(&target_transform->translation_local);
+							XMVECTOR bT = XMLoadFloat3(&interpolator.f3);
+							if (channel.retargetIndex >= 0 && channel.retargetIndex < (int)animation.retargets.size())
+							{
+								// Retargeting transfer from source to destination:
+								const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
+								TransformComponent* source_transform = transforms.GetComponent(retarget.source);
+								if (source_transform != nullptr)
+								{
+									XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
+									XMMATRIX srcRelativeParentMatrix = XMLoadFloat4x4(&retarget.srcRelativeParentMatrix);
+									XMVECTOR S, R; // matrix decompose destinations
+									TransformComponent transform = *source_transform;
+									XMStoreFloat3(&transform.translation_local, bT);
+									XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
+									XMMatrixDecompose(&S, &R, &bT, localMatrix);
+								}
+							}
+							const XMVECTOR T = XMVectorLerp(aT, bT, t);
+							XMStoreFloat3(&target_transform->translation_local, T);
+						}
 						break;
-					}
-				}
-
-				if (target_sound != nullptr)
-				{
-					switch (channel.path)
-					{
-					case AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
-					{
-						target_sound->volume = wi::math::Lerp(target_sound->volume, interpolator.f, t);
-					}
-					break;
-					default:
+						case AnimationComponent::AnimationChannel::Path::ROTATION:
+						{
+							const XMVECTOR aR = XMLoadFloat4(&target_transform->rotation_local);
+							XMVECTOR bR = XMLoadFloat4(&interpolator.f4);
+							if (channel.retargetIndex >= 0 && channel.retargetIndex < (int)animation.retargets.size())
+							{
+								// Retargeting transfer from source to destination:
+								const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
+								TransformComponent* source_transform = transforms.GetComponent(retarget.source);
+								if (source_transform != nullptr)
+								{
+									XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
+									XMMATRIX srcRelativeParentMatrix = XMLoadFloat4x4(&retarget.srcRelativeParentMatrix);
+									XMVECTOR S, T; // matrix decompose destinations
+									TransformComponent transform = *source_transform;
+									XMStoreFloat4(&transform.rotation_local, bR);
+									XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
+									XMMatrixDecompose(&S, &bR, &T, localMatrix);
+								}
+							}
+							const XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
+							XMStoreFloat4(&target_transform->rotation_local, R);
+						}
 						break;
-					}
-				}
-
-				if (target_emitter != nullptr)
-				{
-					switch (channel.path)
-					{
-					case AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
-					{
-						target_emitter->count = wi::math::Lerp(target_emitter->count, interpolator.f, t);
-					}
-					break;
-					default:
+						case AnimationComponent::AnimationChannel::Path::SCALE:
+						{
+							const XMVECTOR aS = XMLoadFloat3(&target_transform->scale_local);
+							XMVECTOR bS = XMLoadFloat3(&interpolator.f3);
+							if (channel.retargetIndex >= 0 && channel.retargetIndex < (int)animation.retargets.size())
+							{
+								// Retargeting transfer from source to destination:
+								const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
+								TransformComponent* source_transform = transforms.GetComponent(retarget.source);
+								if (source_transform != nullptr)
+								{
+									XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
+									XMMATRIX srcRelativeParentMatrix = XMLoadFloat4x4(&retarget.srcRelativeParentMatrix);
+									XMVECTOR R, T; // matrix decompose destinations
+									TransformComponent transform = *source_transform;
+									XMStoreFloat3(&transform.scale_local, bS);
+									XMMATRIX localMatrix = dstRelativeMatrix * transform.GetLocalMatrix() * srcRelativeParentMatrix;
+									XMMatrixDecompose(&bS, &R, &T, localMatrix);
+								}
+							}
+							const XMVECTOR S = XMVectorLerp(aS, bS, t);
+							XMStoreFloat3(&target_transform->scale_local, S);
+						}
 						break;
+						default:
+							break;
+						}
 					}
-				}
 
-				if (target_camera != nullptr)
-				{
-					switch (channel.path)
+					if (target_mesh != nullptr)
 					{
-					case AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
-					{
-						target_camera->fov = wi::math::Lerp(target_camera->fov, interpolator.f, t);
+						for (size_t j = 0; j < target_mesh->morph_targets.size(); ++j)
+						{
+							target_mesh->morph_targets[j].weight = wi::math::Lerp(target_mesh->morph_targets[j].weight, animation.morph_weights_temp[j], t);
+						}
 					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
+
+					if (target_light != nullptr)
 					{
-						target_camera->focal_length = wi::math::Lerp(target_camera->focal_length, interpolator.f, t);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
-					{
-						target_camera->aperture_size = wi::math::Lerp(target_camera->aperture_size, interpolator.f, t);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
-					{
-						target_camera->aperture_shape = wi::math::Lerp(target_camera->aperture_shape, interpolator.f2, t);
-					}
-					break;
-					default:
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::LIGHT_COLOR:
+						{
+							target_light->color = wi::math::Lerp(target_light->color, interpolator.f3, t);
+						}
 						break;
-					}
-				}
-
-				if (target_material != nullptr)
-				{
-					target_material->SetDirty();
-
-					switch (channel.path)
-					{
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
-					{
-						target_material->baseColor = wi::math::Lerp(target_material->baseColor, interpolator.f4, t);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
-					{
-						target_material->baseColor = wi::math::Lerp(target_material->emissiveColor, interpolator.f4, t);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
-					{
-						target_material->roughness = wi::math::Lerp(target_material->roughness, interpolator.f, t);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
-					{
-						target_material->metalness = wi::math::Lerp(target_material->metalness, interpolator.f, t);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
-					{
-						target_material->reflectance = wi::math::Lerp(target_material->reflectance, interpolator.f, t);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
-					{
-						target_material->texMulAdd = wi::math::Lerp(target_material->texMulAdd, interpolator.f4, t);
-					}
-					break;
-					default:
+						case AnimationComponent::AnimationChannel::Path::LIGHT_INTENSITY:
+						{
+							target_light->intensity = wi::math::Lerp(target_light->intensity, interpolator.f, t);
+						}
 						break;
+						case AnimationComponent::AnimationChannel::Path::LIGHT_RANGE:
+						{
+							target_light->range = wi::math::Lerp(target_light->range, interpolator.f, t);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::Path::LIGHT_INNERCONE:
+						{
+							target_light->innerConeAngle = wi::math::Lerp(target_light->innerConeAngle, interpolator.f, t);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::Path::LIGHT_OUTERCONE:
+						{
+							target_light->outerConeAngle = wi::math::Lerp(target_light->outerConeAngle, interpolator.f, t);
+						}
+						break;
+						default:
+							break;
+						}
+					}
+
+					if (target_sound != nullptr)
+					{
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::SOUND_VOLUME:
+						{
+							target_sound->volume = wi::math::Lerp(target_sound->volume, interpolator.f, t);
+						}
+						break;
+						default:
+							break;
+						}
+					}
+
+					if (target_emitter != nullptr)
+					{
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::EMITTER_EMITCOUNT:
+						{
+							target_emitter->count = wi::math::Lerp(target_emitter->count, interpolator.f, t);
+						}
+						break;
+						default:
+							break;
+						}
+					}
+
+					if (target_camera != nullptr)
+					{
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::CAMERA_FOV:
+						{
+							target_camera->fov = wi::math::Lerp(target_camera->fov, interpolator.f, t);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::Path::CAMERA_FOCAL_LENGTH:
+						{
+							target_camera->focal_length = wi::math::Lerp(target_camera->focal_length, interpolator.f, t);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SIZE:
+						{
+							target_camera->aperture_size = wi::math::Lerp(target_camera->aperture_size, interpolator.f, t);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::Path::CAMERA_APERTURE_SHAPE:
+						{
+							target_camera->aperture_shape = wi::math::Lerp(target_camera->aperture_shape, interpolator.f2, t);
+						}
+						break;
+						default:
+							break;
+						}
+					}
+
+					if (target_material != nullptr)
+					{
+						target_material->SetDirty();
+
+						switch (channel.path)
+						{
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_COLOR:
+						{
+							target_material->baseColor = wi::math::Lerp(target_material->baseColor, interpolator.f4, t);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_EMISSIVE:
+						{
+							target_material->emissiveColor = wi::math::Lerp(target_material->emissiveColor, interpolator.f4, t);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_ROUGHNESS:
+						{
+							target_material->roughness = wi::math::Lerp(target_material->roughness, interpolator.f, t);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_METALNESS:
+						{
+							target_material->metalness = wi::math::Lerp(target_material->metalness, interpolator.f, t);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_REFLECTANCE:
+						{
+							target_material->reflectance = wi::math::Lerp(target_material->reflectance, interpolator.f, t);
+						}
+						break;
+						case AnimationComponent::AnimationChannel::Path::MATERIAL_TEXMULADD:
+						{
+							target_material->texMulAdd = wi::math::Lerp(target_material->texMulAdd, interpolator.f4, t);
+						}
+						break;
+						default:
+							break;
+						}
+					}
+
+				}
+
+				if (animation.IsLooped() && animation.timer > animation.end)
+				{
+					animation.timer = animation.start;
+					for (auto& channel : animation.channels)
+					{
+						channel.next_event = 0;
 					}
 				}
 
+				if (animation.IsPlaying())
+				{
+					animation.timer += dt * animation.speed;
+				}
 			}
+		});
 
-			if (animation.IsLooped() && animation.timer > animation.end)
-			{
-				animation.timer = animation.start;
-				for (auto& channel : animation.channels)
-				{
-					channel.next_event = 0;
-				}
-			}
-
-			if (animation.IsPlaying())
-			{
-				animation.timer += dt * animation.speed;
-			}
-		}
+		wi::jobsystem::Wait(ctx);
 
 		wi::profiler::EndRange(range);
 	}
@@ -2407,7 +2411,6 @@ namespace wi::scene
 					{
 						MeshComponent::MorphTarget& morph_target = mesh->morph_targets[morph_target_binding.index];
 						morph_target.weight = wi::math::Lerp(morph_target.weight, morph_target_binding.weight, blend);
-						mesh->dirty_morph = true;
 					}
 				}
 			}
@@ -3091,84 +3094,11 @@ namespace wi::scene
 
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
-			if (!mesh.morph_targets.empty() && mesh.vertex_positions_morphed.size() != mesh.vertex_positions.size())
+			mesh.active_morph_count = 0;
+			for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
 			{
-				mesh.vertex_positions_morphed.resize(mesh.vertex_positions.size());
-				mesh.dirty_morph = true;
-			}
-
-			// Update morph targets if needed:
-			if (mesh.dirty_morph && !mesh.morph_targets.empty())
-			{
-			    XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-			    XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
-
-				mesh.morph_temp_pos = mesh.vertex_positions;
-				mesh.morph_temp_nor = mesh.vertex_normals;
-
-				for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
-				{
-					if (morph.weight <= 0)
-						continue;
-					if (morph.sparse_indices_positions.empty())
-					{
-						// Flat update:
-						for (size_t i = 0; i < morph.vertex_positions.size(); ++i)
-						{
-							mesh.morph_temp_pos[i].x += morph.weight * morph.vertex_positions[i].x;
-							mesh.morph_temp_pos[i].y += morph.weight * morph.vertex_positions[i].y;
-							mesh.morph_temp_pos[i].z += morph.weight * morph.vertex_positions[i].z;
-						}
-					}
-					else
-					{
-						// Sparse update:
-						for (size_t i = 0; i < morph.sparse_indices_positions.size(); ++i)
-						{
-							const uint32_t ind = morph.sparse_indices_positions[i];
-							mesh.morph_temp_pos[ind].x += morph.weight * morph.vertex_positions[i].x;
-							mesh.morph_temp_pos[ind].y += morph.weight * morph.vertex_positions[i].y;
-							mesh.morph_temp_pos[ind].z += morph.weight * morph.vertex_positions[i].z;
-						}
-					}
-
-					if (morph.sparse_indices_normals.empty())
-					{
-						// Flat update:
-						for (size_t i = 0; i < morph.vertex_normals.size(); ++i)
-						{
-							mesh.morph_temp_nor[i].x += morph.weight * morph.vertex_normals[i].x;
-							mesh.morph_temp_nor[i].y += morph.weight * morph.vertex_normals[i].y;
-							mesh.morph_temp_nor[i].z += morph.weight * morph.vertex_normals[i].z;
-						}
-					}
-					else
-					{
-						// Sparse update:
-						for (size_t i = 0; i < morph.sparse_indices_normals.size(); ++i)
-						{
-							const uint32_t ind = morph.sparse_indices_normals[i];
-							mesh.morph_temp_nor[ind].x += morph.weight * morph.vertex_normals[i].x;
-							mesh.morph_temp_nor[ind].y += morph.weight * morph.vertex_normals[i].y;
-							mesh.morph_temp_nor[ind].z += morph.weight * morph.vertex_normals[i].z;
-						}
-					}
-				}
-
-			    for (size_t i = 0; i < mesh.morph_temp_pos.size(); ++i)
-			    {
-					XMFLOAT3 pos = mesh.morph_temp_pos[i];
-					XMFLOAT3 nor = mesh.morph_temp_nor.empty() ? XMFLOAT3(1, 1, 1) : mesh.morph_temp_nor[i];
-					const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
-
-					XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
-					mesh.vertex_positions_morphed[i].FromFULL(pos, nor, wind);
-
-					_min = wi::math::Min(_min, pos);
-					_max = wi::math::Max(_max, pos);
-			    }
-
-			    mesh.aabb = AABB(_min, _max);
+				if (morph.weight > 0)
+					mesh.active_morph_count++;
 			}
 
 			if (geometryArrayMapped != nullptr)
@@ -3268,7 +3198,7 @@ namespace wi::scene
 						{
 							geometry.flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 						}
-						if (flags != geometry.flags || mesh.dirty_morph)
+						if (flags != geometry.flags || mesh.active_morph_count > 0)
 						{
 							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 						}
@@ -3575,8 +3505,8 @@ namespace wi::scene
 						uint32_t doublesided : 1;	// bool
 						uint32_t tessellation : 1;	// bool
 						uint32_t alphatest : 1;		// bool
-						uint32_t wind : 1;			// bool
 						uint32_t customshader : 10;
+						uint32_t sort_priority : 4;
 					} bits;
 					uint32_t value;
 				} sort_bits;
@@ -3584,6 +3514,7 @@ namespace wi::scene
 
 				sort_bits.bits.tessellation = mesh.GetTessellationFactor() > 0;
 				sort_bits.bits.doublesided = mesh.IsDoubleSided();
+				sort_bits.bits.sort_priority = object.sort_priority;
 
 				uint32_t first_subset = 0;
 				uint32_t last_subset = 0;
@@ -3606,7 +3537,6 @@ namespace wi::scene
 						sort_bits.bits.blendmode |= 1 << material->GetBlendMode();
 						sort_bits.bits.doublesided |= material->IsDoubleSided();
 						sort_bits.bits.alphatest |= material->IsAlphaTestEnabled();
-						sort_bits.bits.wind |= material->IsUsingWind();
 
 						int customshader = material->GetCustomShaderID();
 						if (customshader >= 0)
@@ -3615,6 +3545,8 @@ namespace wi::scene
 						}
 					}
 				}
+
+				object.sort_bits = sort_bits.value;
 
 				// Create GPU instance data:
 				GraphicsDevice* device = wi::graphics::GetDevice();
@@ -3648,6 +3580,7 @@ namespace wi::scene
 				inst.fadeDistance = object.fadeDistance;
 				inst.center = object.center;
 				inst.radius = object.radius;
+				inst.SetUserStencilRef(object.userStencilRef);
 
 				std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
@@ -3767,7 +3700,7 @@ namespace wi::scene
 			decal.world = transform.world;
 
 			XMMATRIX W = XMLoadFloat4x4(&decal.world);
-			XMVECTOR front = XMVectorSet(0, 0, 1, 0);
+			XMVECTOR front = XMVectorSet(0, 0, -1, 0);
 			front = XMVector3TransformNormal(front, W);
 			XMStoreFloat3(&decal.front, front);
 
@@ -3797,7 +3730,9 @@ namespace wi::scene
 			decal.emissive = material.GetEmissiveStrength();
 			decal.texture = material.textures[MaterialComponent::BASECOLORMAP].resource;
 			decal.normal = material.textures[MaterialComponent::NORMALMAP].resource;
+			decal.surfacemap = material.textures[MaterialComponent::SURFACEMAP].resource;
 			decal.normal_strength = material.normalMapStrength;
+			decal.texMulAdd = material.texMulAdd;
 		}
 	}
 	void Scene::RunProbeUpdateSystem(wi::jobsystem::context& ctx)
@@ -4492,18 +4427,9 @@ namespace wi::scene
 						{
 							if (jobData.armature == nullptr || jobData.armature->boneData.empty())
 							{
-								if (jobData.mesh->vertex_positions_morphed.empty())
-								{
-									p0 = XMLoadFloat3(&jobData.mesh->vertex_positions[i0]);
-									p1 = XMLoadFloat3(&jobData.mesh->vertex_positions[i1]);
-									p2 = XMLoadFloat3(&jobData.mesh->vertex_positions[i2]);
-								}
-								else
-								{
-									p0 = jobData.mesh->vertex_positions_morphed[i0].LoadPOS();
-									p1 = jobData.mesh->vertex_positions_morphed[i1].LoadPOS();
-									p2 = jobData.mesh->vertex_positions_morphed[i2].LoadPOS();
-								}
+								p0 = XMLoadFloat3(&jobData.mesh->vertex_positions[i0]);
+								p1 = XMLoadFloat3(&jobData.mesh->vertex_positions[i1]);
+								p2 = XMLoadFloat3(&jobData.mesh->vertex_positions[i2]);
 							}
 							else
 							{
@@ -5285,15 +5211,7 @@ namespace wi::scene
 
 	XMVECTOR SkinVertex(const MeshComponent& mesh, const ArmatureComponent& armature, uint32_t index, XMVECTOR* N)
 	{
-		XMVECTOR P;
-		if (mesh.vertex_positions_morphed.empty())
-		{
-		    P = XMLoadFloat3(&mesh.vertex_positions[index]);
-		}
-		else
-		{
-		    P = mesh.vertex_positions_morphed[index].LoadPOS();
-		}
+		XMVECTOR P = XMLoadFloat3(&mesh.vertex_positions[index]);
 		const XMUINT4& ind = mesh.vertex_boneindices[index];
 		const XMFLOAT4& wei = mesh.vertex_boneweights[index];
 
@@ -5565,6 +5483,70 @@ namespace wi::scene
 			return retarget_entity;
 		}
 		return INVALID_ENTITY;
+	}
+
+	void Scene::ScanAnimationDependencies()
+	{
+		if (animations.GetCount() == 0)
+		{
+			animation_queue_count = 0;
+			return;
+		}
+
+		animation_queues.reserve(animations.GetCount());
+		animation_queue_count = 0;
+
+		wi::jobsystem::Execute(animation_dependency_scan_workload, [&](wi::jobsystem::JobArgs args) {
+			auto range = wi::profiler::BeginRangeCPU("Animation Dependencies");
+			for (size_t i = 0; i < animations.GetCount(); ++i)
+			{
+				AnimationComponent& animationA = animations[i];
+				if (!animationA.IsPlaying() && animationA.last_update_time == animationA.timer)
+				{
+					continue;
+				}
+				bool dependency = false;
+				for (size_t queue_index = 0; queue_index < animation_queue_count; ++queue_index)
+				{
+					AnimationQueue& queue = animation_queues[queue_index];
+					for (auto& channelA : animationA.channels)
+					{
+						if (dependency)
+						{
+							// If dependency has been found, record all other entities in this animation too:
+							queue.entities.insert(channelA.target);
+						}
+						else if (queue.entities.find(channelA.target) != queue.entities.end())
+						{
+							// If two animations target the same entity, they have a dependency and need to be executed in order:
+							dependency = true;
+							queue.animations.push_back(&animationA);
+						}
+					}
+					if (dependency) break;
+				}
+				if (!dependency)
+				{
+					// No dependency, it can be executed on a separate queue (thread)
+					if (animation_queues.size() <= animation_queue_count)
+					{
+						animation_queues.resize(animation_queue_count + 1);
+					}
+					AnimationQueue& queue = animation_queues[animation_queue_count];
+					queue.animations.clear();
+					queue.animations.push_back(&animationA);
+					queue.entities.clear();
+					for (auto& channelA : animationA.channels)
+					{
+						queue.entities.insert(channelA.target);
+					}
+					animation_queue_count++;
+				}
+			}
+			wi::profiler::EndRange(range);
+		});
+
+		// We don't wait for this job here, it will be waited just before animation update
 	}
 
 }

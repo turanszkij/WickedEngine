@@ -863,7 +863,10 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd,
 		uint8_t instanceInclusionMask = 0xFF,
 		const wi::graphics::Texture* output_albedo = nullptr,
-		const wi::graphics::Texture* output_normal = nullptr
+		const wi::graphics::Texture* output_normal = nullptr,
+		const wi::graphics::Texture* output_depth = nullptr,
+		const wi::graphics::Texture* output_stencil = nullptr,
+		const wi::graphics::Texture* output_depth_stencil = nullptr
 	);
 	// Render the scene BVH with ray tracing to the screen
 	void RayTraceSceneBVH(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);

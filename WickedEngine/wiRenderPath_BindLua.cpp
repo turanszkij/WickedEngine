@@ -3,8 +3,6 @@
 namespace wi::lua
 {
 
-	const char RenderPath_BindLua::className[] = "RenderPath";
-
 	Luna<RenderPath_BindLua>::FunctionType RenderPath_BindLua::methods[] = {
 		lunamethod(RenderPath_BindLua, GetLayerMask),
 		lunamethod(RenderPath_BindLua, SetLayerMask),

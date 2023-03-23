@@ -12,9 +12,10 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
+	wi::gui::Label infoLabel;
 	wi::gui::CheckBox placementCheckBox;
 	wi::gui::CheckBox onlyalphaCheckBox;
-	wi::gui::Label infoLabel;
+	wi::gui::Slider slopeBlendPowerSlider;
 
 	void ResizeLayout() override;
 };

@@ -12,7 +12,7 @@ namespace wi::lua
 	private:
 		LoadingScreen loadingscreen;
 	public:
-		static const char className[];
+		inline static constexpr char className[] = "LoadingScreen";
 		static Luna<LoadingScreen_BindLua>::FunctionType methods[];
 		static Luna<LoadingScreen_BindLua>::PropertyType properties[];
 

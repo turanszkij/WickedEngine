@@ -3,8 +3,6 @@
 
 namespace wi::lua
 {
-	const char ImageParams_BindLua::className[] = "ImageParams";
-
 	Luna<ImageParams_BindLua>::FunctionType ImageParams_BindLua::methods[] = {
 		lunamethod(ImageParams_BindLua, GetPos),
 		lunamethod(ImageParams_BindLua, GetSize),
@@ -69,22 +67,22 @@ namespace wi::lua
 
 	int ImageParams_BindLua::GetPos(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat3(&params.pos)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat3(&params.pos));
 		return 1;
 	}
 	int ImageParams_BindLua::GetSize(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat2(&params.siz)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat2(&params.siz));
 		return 1;
 	}
 	int ImageParams_BindLua::GetPivot(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat2(&params.pivot)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat2(&params.pivot));
 		return 1;
 	}
 	int ImageParams_BindLua::GetColor(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat4(&params.color)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat4(&params.color));
 		return 1;
 	}
 	int ImageParams_BindLua::GetOpacity(lua_State* L)
@@ -104,22 +102,22 @@ namespace wi::lua
 	}
 	int ImageParams_BindLua::GetTexOffset(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat2(&params.texOffset)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat2(&params.texOffset));
 		return 1;
 	}
 	int ImageParams_BindLua::GetTexOffset2(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat2(&params.texOffset2)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat2(&params.texOffset2));
 		return 1;
 	}
 	int ImageParams_BindLua::GetDrawRect(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat4(&params.drawRect)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat4(&params.drawRect));
 		return 1;
 	}
 	int ImageParams_BindLua::GetDrawRect2(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat4(&params.drawRect2)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat4(&params.drawRect2));
 		return 1;
 	}
 	int ImageParams_BindLua::IsDrawRectEnabled(lua_State* L)

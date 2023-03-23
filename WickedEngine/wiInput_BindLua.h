@@ -9,7 +9,7 @@ namespace wi::lua
 	class Input_BindLua
 	{
 	public:
-		static const char className[];
+		inline static constexpr char className[] = "Input";
 		static Luna<Input_BindLua>::FunctionType methods[];
 		static Luna<Input_BindLua>::PropertyType properties[];
 
@@ -33,7 +33,7 @@ namespace wi::lua
 	{
 	public:
 		wi::input::Touch touch;
-		static const char className[];
+		inline static constexpr char className[] = "Touch";
 		static Luna<Touch_BindLua>::FunctionType methods[];
 		static Luna<Touch_BindLua>::PropertyType properties[];
 
@@ -50,7 +50,7 @@ namespace wi::lua
 	{
 	public:
 		wi::input::ControllerFeedback feedback;
-		static const char className[];
+		inline static constexpr char className[] = "ControllerFeedback";
 		static Luna<ControllerFeedback_BindLua>::FunctionType methods[];
 		static Luna<ControllerFeedback_BindLua>::PropertyType properties[];
 

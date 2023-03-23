@@ -7,7 +7,7 @@
 #include "wiProfiler.h"
 #include "wiScene.h"
 #include "wiBacklog.h"
-
+#include "wiGraphicsDevice_Vulkan.h"
 
 using namespace wi::graphics;
 using namespace wi::scene;
@@ -63,6 +63,26 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &denoiserNormal);
 			device->SetName(&denoiserNormal, "denoiserNormal");
 #endif // OPEN_IMAGE_DENOISE
+
+#ifdef WICKEDENGINE_BUILD_VULKAN
+			if (dynamic_cast<GraphicsDevice_Vulkan*>(device) == nullptr) // There is a problem with Vulkan depth/stencil copying, so for now it's disabled
+#endif // WICKEDENGINE_BUILD_VULKAN
+			{
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+				desc.layout = ResourceState::UNORDERED_ACCESS;
+				desc.format = Format::R32_FLOAT;
+				device->CreateTexture(&desc, nullptr, &traceDepth);
+				device->SetName(&traceDepth, "traceDepth");
+				desc.format = Format::R8_UINT;
+				device->CreateTexture(&desc, nullptr, &traceStencil);
+				device->SetName(&traceStencil, "traceStencil");
+
+				desc.layout = ResourceState::DEPTHSTENCIL;
+				desc.bind_flags = BindFlag::DEPTH_STENCIL;
+				desc.format = Format::D32_FLOAT_S8X24_UINT;
+				device->CreateTexture(&desc, nullptr, &traceDepthStencil);
+				device->SetName(&traceDepthStencil, "traceDepthStencil");
+			}
 		}
 		{
 			TextureDesc desc;
@@ -330,9 +350,11 @@ namespace wi
 						cmd,
 						instanceInclusionMask_PathTrace,
 						denoiserAlbedo.IsValid() ? &denoiserAlbedo : nullptr,
-						denoiserNormal.IsValid() ? &denoiserNormal : nullptr
+						denoiserNormal.IsValid() ? &denoiserNormal : nullptr,
+						traceDepth.IsValid() ? &traceDepth : nullptr,
+						traceStencil.IsValid() ? &traceStencil : nullptr,
+						traceDepthStencil.IsValid() ? &traceDepthStencil : nullptr
 					);
-
 
 					wi::profiler::EndRange(range); // Traced Scene
 				}

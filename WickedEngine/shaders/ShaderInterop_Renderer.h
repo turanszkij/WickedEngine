@@ -329,7 +329,7 @@ struct ShaderMaterial
 	float		sheenRoughness;
 	float		clearcoat;
 	float		clearcoatRoughness;
-	float		padding;
+	uint		stencilRef;
 
 	int			sampler_descriptor;
 	uint		options;
@@ -368,6 +368,7 @@ struct ShaderMaterial
 
 		clearcoat = 0;
 		clearcoatRoughness = 0;
+		stencilRef = 0;
 		shaderType = 0;
 
 		userdata = uint4(0, 0, 0, 0);
@@ -530,7 +531,7 @@ struct ShaderTransform
 struct ShaderMeshInstance
 {
 	uint uid;
-	uint flags;
+	uint flags;	// high 8 bits: user stencilRef
 	uint layerMask;
 	uint geometryOffset;	// offset of all geometries for currently active LOD
 
@@ -572,6 +573,14 @@ struct ShaderMeshInstance
 		transformPrev.init();
 	}
 
+	inline void SetUserStencilRef(uint stencilRef)
+	{
+		flags |= (stencilRef & 0xFF) << 24u;
+	}
+	inline uint GetUserStencilRef()
+	{
+		return flags >> 24u;
+	}
 };
 struct ShaderMeshInstancePointer
 {
@@ -844,7 +853,9 @@ static const uint ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 0;
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
 
-static const uint MATRIXARRAY_COUNT = 128;
+static const uint MATRIXARRAY_COUNT = SHADER_ENTITY_COUNT;
+static const uint MAX_SHADER_DECAL_COUNT = 128;
+static const uint MAX_SHADER_PROBE_COUNT = 32;
 
 static const uint TILED_CULLING_BLOCKSIZE = 16;
 static const uint TILED_CULLING_THREADSIZE = 8;
@@ -1134,13 +1145,27 @@ CBUFFER(PaintRadiusCB, CBSLOT_RENDERER_MISC)
 
 struct SkinningPushConstants
 {
-	int bonebuffer_index;
+	uint vertexCount;
 	int vb_pos_nor_wind;
 	int vb_tan;
-	int vb_bon;
-
 	int so_pos_nor_wind;
+
 	int so_tan;
+	int bonebuffer_index;
+	int vb_bon;
+	int morphbuffer_index;
+
+	uint morphbuffer_offset;
+	uint morph_count;
+	int morphvb_index;
+};
+
+struct MorphTargetGPU
+{
+	float weight;
+	uint offset_pos;
+	uint offset_nor;
+	uint offset_tan;
 };
 
 struct AerialPerspectiveCapturePushConstants

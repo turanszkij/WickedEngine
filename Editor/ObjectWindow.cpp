@@ -261,7 +261,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_OBJECT " Object", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 600));
+	SetSize(XMFLOAT2(670, 640));
 
 	closeButton.SetTooltip("Delete ObjectComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -413,6 +413,19 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		}
 		});
 	AddWidget(&drawdistanceSlider);
+
+	sortPrioritySlider.Create(0, 15, 0, 15, "Sort Priority: ");
+	sortPrioritySlider.SetTooltip("Set to larger value to draw earlier (most useful for transparents with alpha blending, if the sorting order by distance is not good enough)");
+	sortPrioritySlider.SetSize(XMFLOAT2(wid, hei));
+	sortPrioritySlider.SetPos(XMFLOAT2(x, y += step));
+	sortPrioritySlider.OnSlide([&](wi::gui::EventArgs args) {
+		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
+		if (object != nullptr)
+		{
+			object->sort_priority = (uint8_t)args.iValue;
+		}
+		});
+	AddWidget(&sortPrioritySlider);
 
 	y += step;
 
@@ -644,6 +657,7 @@ void ObjectWindow::SetEntity(Entity entity)
 		ditherSlider.SetValue(object->GetTransparency());
 		lodSlider.SetValue(object->lod_distance_multiplier);
 		drawdistanceSlider.SetValue(object->draw_distance);
+		sortPrioritySlider.SetValue((int)object->sort_priority);
 
 		switch (colorComboBox.GetSelected())
 		{
@@ -716,6 +730,7 @@ void ObjectWindow::ResizeLayout()
 	add(cascadeMaskSlider);
 	add(lodSlider);
 	add(drawdistanceSlider);
+	add(sortPrioritySlider);
 	add(colorComboBox);
 	add_fullwidth(colorPicker);
 	add(lightmapResolutionSlider);

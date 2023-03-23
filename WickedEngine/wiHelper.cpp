@@ -21,6 +21,7 @@ extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 
 #ifdef _WIN32
 #include <direct.h>
+#include <Psapi.h> // GetProcessMemoryInfo
 #ifdef PLATFORM_UWP
 #include <winrt/Windows.UI.Popups.h>
 #include <winrt/Windows.Storage.h>
@@ -1278,5 +1279,27 @@ namespace wi::helper
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 		wi::backlog::post("wi::helper::OpenUrl(" + url + "): not implemented for this operating system!", wi::backlog::LogLevel::Warning);
+	}
+
+	MemoryUsage GetMemoryUsage()
+	{
+		MemoryUsage mem;
+#if defined(_WIN32)
+		// https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
+		MEMORYSTATUSEX memInfo = {};
+		memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+		BOOL ret = GlobalMemoryStatusEx(&memInfo);
+		assert(ret);
+		mem.total_physical = memInfo.ullTotalPhys;
+		mem.total_virtual = memInfo.ullTotalVirtual;
+
+		PROCESS_MEMORY_COUNTERS_EX pmc = {};
+		GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
+		mem.process_physical = pmc.WorkingSetSize;
+		mem.process_virtual = pmc.PrivateUsage;
+#elif defined(PLATFORM_LINUX)
+		// TODO Linux
+#endif // _WIN32
+		return mem;
 	}
 }

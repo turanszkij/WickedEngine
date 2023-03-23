@@ -13,7 +13,7 @@ namespace wi::lua
 	private:
 		RenderPath3D renderpath;
 	public:
-		static const char className[];
+		inline static constexpr char className[] = "RenderPath3D";
 		static Luna<RenderPath3D_BindLua>::FunctionType methods[];
 		static Luna<RenderPath3D_BindLua>::PropertyType properties[];
 

@@ -169,11 +169,11 @@ struct RenderBatch
 	{
 		return XMConvertHalfToFloat(HALF(distance));
 	}
-	inline uint32_t GetMeshIndex() const
+	constexpr uint32_t GetMeshIndex() const
 	{
 		return meshIndex;
 	}
-	inline uint32_t GetInstanceIndex() const
+	constexpr uint32_t GetInstanceIndex() const
 	{
 		return instanceIndex;
 	}
@@ -181,7 +181,7 @@ struct RenderBatch
 	// opaque sorting
 	//	Priority is set to mesh index to have more instancing
 	//	distance is second priority (front to back Z-buffering)
-	bool operator<(const RenderBatch& other) const
+	constexpr bool operator<(const RenderBatch& other) const
 	{
 		union SortKey
 		{
@@ -189,8 +189,8 @@ struct RenderBatch
 			{
 				// The order of members is important here, it means the sort priority (low to high)!
 				uint64_t distance : 16;
-				uint64_t meshIndex : 24;
-				uint64_t sort_bits : 24;
+				uint64_t meshIndex : 16;
+				uint64_t sort_bits : 32;
 			} bits;
 			uint64_t value;
 		};
@@ -208,15 +208,15 @@ struct RenderBatch
 	// transparent sorting
 	//	Priority is distance for correct alpha blending (back to front rendering)
 	//	mesh index is second priority for instancing
-	bool operator>(const RenderBatch& other) const
+	constexpr bool operator>(const RenderBatch& other) const
 	{
 		union SortKey
 		{
 			struct
 			{
 				// The order of members is important here, it means the sort priority (low to high)!
-				uint64_t meshIndex : 24;
-				uint64_t sort_bits : 24;
+				uint64_t meshIndex : 16;
+				uint64_t sort_bits : 32;
 				uint64_t distance : 16;
 			} bits;
 			uint64_t value;
@@ -2392,8 +2392,7 @@ struct SHCAM
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
 
-	SHCAM() = default;
-	SHCAM(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov) 
+	inline void init(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov) 
 	{
 		const XMVECTOR E = XMLoadFloat3(&eyePos);
 		const XMVECTOR Q = XMQuaternionNormalize(XMLoadFloat4(&rotation));
@@ -2414,7 +2413,7 @@ struct SHCAM
 };
 inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
-	shcam = SHCAM(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
+	shcam.init(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
 }
 inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, SHCAM* shcams, size_t shcam_count)
 {
@@ -2510,12 +2509,12 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 inline void CreateCubemapCameras(const XMFLOAT3& position, float zNearP, float zFarP, SHCAM* shcams, size_t shcam_count)
 {
 	assert(shcam_count == 6);
-	shcams[0] = SHCAM(position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //+x
-	shcams[1] = SHCAM(position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //-x
-	shcams[2] = SHCAM(position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2); //+y
-	shcams[3] = SHCAM(position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2); //-y
-	shcams[4] = SHCAM(position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2); //+z
-	shcams[5] = SHCAM(position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2); //-z
+	shcams[0].init(position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //+x
+	shcams[1].init(position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //-x
+	shcams[2].init(position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2); //+y
+	shcams[3].init(position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2); //-y
+	shcams[4].init(position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2); //+z
+	shcams[5].init(position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2); //-z
 }
 
 ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& batch_aabb, RENDERPASS renderPass)
@@ -3470,13 +3469,19 @@ void UpdatePerFrameData(
 
 	// The order is very important here:
 	frameCB.decalarray_offset = 0;
-	frameCB.decalarray_count = (uint)vis.visibleDecals.size();
+	frameCB.decalarray_count = std::min(MAX_SHADER_DECAL_COUNT, (uint)vis.visibleDecals.size());
 	frameCB.envprobearray_offset = frameCB.decalarray_count;
-	frameCB.envprobearray_count = std::min(vis.scene->envmapCount, (uint)vis.visibleEnvProbes.size());
+	frameCB.envprobearray_count = std::min(MAX_SHADER_PROBE_COUNT, std::min(vis.scene->envmapCount, (uint)vis.visibleEnvProbes.size()));
 	frameCB.lightarray_offset = frameCB.envprobearray_offset + frameCB.envprobearray_count;
 	frameCB.lightarray_count = (uint)vis.visibleLights.size();
 	frameCB.forcefieldarray_offset = frameCB.lightarray_offset + frameCB.lightarray_count;
 	frameCB.forcefieldarray_count = uint(vis.scene->forces.GetCount() + vis.scene->collider_count_gpu);
+
+	// Limit to avoid out of bounds accesses:
+	frameCB.decalarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.decalarray_offset);
+	frameCB.envprobearray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.envprobearray_offset);
+	frameCB.lightarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.lightarray_offset);
+	frameCB.forcefieldarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.forcefieldarray_offset);
 
 	frameCB.envprobe_mipcount = 0;
 	frameCB.envprobe_mipcount_rcp = 1.0f;
@@ -3723,7 +3728,8 @@ void UpdateRenderData(
 		uint32_t matrixCounter = 0;
 
 		// Write decals into entity array:
-		for (size_t i = 0; i < vis.visibleDecals.size(); ++i)
+		const size_t decal_iterations = std::min((size_t)MAX_SHADER_DECAL_COUNT, vis.visibleDecals.size());
+		for (size_t i = 0; i < decal_iterations; ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -3761,6 +3767,9 @@ void UpdateRenderData(
 			shaderentity.SetRange(decal.range);
 			float emissive_mul = 1 + decal.emissive;
 			shaderentity.SetColor(float4(decal.color.x * emissive_mul, decal.color.y * emissive_mul, decal.color.z * emissive_mul, decal.color.w));
+			shaderentity.shadowAtlasMulAdd = decal.texMulAdd;
+			shaderentity.SetConeAngleCos(decal.slopeBlendPower);
+			shaderentity.SetDirection(decal.front);
 
 			shaderentity.SetIndices(matrixCounter, 0);
 			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
@@ -3775,9 +3784,15 @@ void UpdateRenderData(
 			{
 				normal = device->GetDescriptorIndex(&decal.normal.GetTexture(), SubresourceType::SRV);
 			}
+			int surfacemap = -1;
+			if (decal.surfacemap.IsValid())
+			{
+				surfacemap = device->GetDescriptorIndex(&decal.surfacemap.GetTexture(), SubresourceType::SRV);
+			}
 			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
 			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], *(float*)&normal);
 			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], decal.normal_strength);
+			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], *(float*)&surfacemap);
 
 			std::memcpy(matrixArray + matrixCounter, &shadermatrix, sizeof(XMMATRIX));
 			matrixCounter++;
@@ -3787,7 +3802,8 @@ void UpdateRenderData(
 		}
 
 		// Write environment probes into entity array:
-		for (size_t i = 0; i < std::min((size_t)vis.scene->envmapCount, vis.visibleEnvProbes.size()); ++i)
+		const size_t probe_iterations = std::min((size_t)MAX_SHADER_PROBE_COUNT, std::min((size_t)vis.scene->envmapCount, vis.visibleEnvProbes.size()));
+		for (size_t i = 0; i < probe_iterations; ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -4113,42 +4129,15 @@ void UpdateRenderData(
 		wi::profiler::EndRange(range);
 	}
 
-	device->EventBegin("Morph Targets", cmd);
+	device->EventBegin("Skinning and Morph", cmd);
 	{
-		auto range = wi::profiler::BeginRangeGPU("Morph Targets", cmd);
-		bool morphs = false;
-		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
-		{
-			const MeshComponent& mesh = vis.scene->meshes[i];
-
-			if (mesh.dirty_morph && !mesh.vertex_positions_morphed.empty())
-			{
-				morphs = true;
-				mesh.dirty_morph = false;
-				GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh.vb_pos_nor_wind.size, cmd);
-				std::memcpy(allocation.data, mesh.vertex_positions_morphed.data(), mesh.vb_pos_nor_wind.size);
-				device->CopyBuffer(&mesh.generalBuffer, mesh.vb_pos_nor_wind.offset, &allocation.buffer, allocation.offset, mesh.vb_pos_nor_wind.size, cmd);
-				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.generalBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-			}
-		}
-		if (morphs)
-		{
-			barrier_stack_flush(cmd);
-		}
-
-		wi::profiler::EndRange(range); // Morph Targets
-	}
-	device->EventEnd(cmd);
-
-	device->EventBegin("Skinning", cmd);
-	{
-		auto range = wi::profiler::BeginRangeGPU("Skinning", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Skinning and Morph", cmd);
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
 		{
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
 
-			if (mesh.IsSkinned() && vis.scene->armatures.Contains(mesh.armatureID))
+			if (mesh.IsSkinned() || mesh.active_morph_count > 0)
 			{
 				const SoftBodyPhysicsComponent* softbody = vis.scene->softbodies.GetComponent(entity);
 				if (softbody != nullptr && softbody->physicsobject != nullptr)
@@ -4158,17 +4147,54 @@ void UpdateRenderData(
 					continue;
 				}
 
-				const ArmatureComponent& armature = *vis.scene->armatures.GetComponent(mesh.armatureID);
 
 				device->BindComputeShader(&shaders[CSTYPE_SKINNING], cmd);
 
 				SkinningPushConstants push;
-				push.bonebuffer_index = armature.descriptor_srv;
+				push.vertexCount = (uint)mesh.vertex_positions.size();
 				push.vb_pos_nor_wind = mesh.vb_pos_nor_wind.descriptor_srv;
 				push.vb_tan = mesh.vb_tan.descriptor_srv;
-				push.vb_bon = mesh.vb_bon.descriptor_srv;
 				push.so_pos_nor_wind = mesh.so_pos_nor_wind.descriptor_uav;
 				push.so_tan = mesh.so_tan.descriptor_uav;
+				const ArmatureComponent* armature = vis.scene->armatures.GetComponent(mesh.armatureID);
+				if (armature != nullptr)
+				{
+					push.bonebuffer_index = armature->descriptor_srv;
+				}
+				else
+				{
+					push.bonebuffer_index = -1;
+				}
+				push.vb_bon = mesh.vb_bon.descriptor_srv;
+				if (mesh.active_morph_count > 0)
+				{
+					GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(sizeof(MorphTargetGPU) * mesh.active_morph_count, cmd);
+					uint active_morph_count = 0;
+					for(const MeshComponent::MorphTarget& morph : mesh.morph_targets)
+					{
+						if (morph.weight > 0)
+						{
+							MorphTargetGPU morph_target_gpu = {};
+							morph_target_gpu.weight = morph.weight;
+							morph_target_gpu.offset_pos = (uint)morph.offset_pos;
+							morph_target_gpu.offset_nor = (uint)morph.offset_nor;
+							morph_target_gpu.offset_tan = ~0u;
+							std::memcpy((MorphTargetGPU*)allocation.data + active_morph_count, &morph_target_gpu, sizeof(morph_target_gpu));
+							active_morph_count++;
+						}
+					}
+					push.morph_count = active_morph_count;
+					push.morphbuffer_index = device->GetDescriptorIndex(&allocation.buffer, SubresourceType::SRV);
+					push.morphbuffer_offset = (uint)allocation.offset;
+					push.morphvb_index = device->GetDescriptorIndex(&mesh.generalBuffer, SubresourceType::SRV);
+				}
+				else
+				{
+					push.morph_count = 0;
+					push.morphbuffer_index = -1;
+					push.morphbuffer_offset = 0;
+					push.morphvb_index = -1;
+				}
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);
@@ -4177,9 +4203,9 @@ void UpdateRenderData(
 			}
 		}
 
-		wi::profiler::EndRange(range); // skinning
+		wi::profiler::EndRange(range); // Skinning and Morph
 	}
-	device->EventEnd(cmd);
+	device->EventEnd(cmd); // Skinning and Morph
 
 	barrier_stack_flush(cmd); // wind/skinning flush
 
@@ -8588,7 +8614,10 @@ void RayTraceScene(
 	CommandList cmd,
 	uint8_t instanceInclusionMask,
 	const Texture* output_albedo,
-	const Texture* output_normal
+	const Texture* output_normal,
+	const Texture* output_depth,
+	const Texture* output_stencil,
+	const Texture* output_depth_stencil
 )
 {
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
@@ -8616,14 +8645,25 @@ void RayTraceScene(
 
 	device->BindComputeShader(&shaders[CSTYPE_RAYTRACE], cmd);
 
+	GPUResource nullUAV;
 	const GPUResource* uavs[] = {
 		&output,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
+		&nullUAV,
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	barrier_stack.push_back(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
 
-	// Note: output_albedo and output_normal are always in ResourceState::UNORDERED_ACCESS, no need to transition!
+	// Note: these are always in ResourceState::UNORDERED_ACCESS, no need to transition!
 	if (output_albedo != nullptr)
 	{
 		device->BindUAV(output_albedo, 1, cmd);
@@ -8631,6 +8671,14 @@ void RayTraceScene(
 	if (output_normal != nullptr)
 	{
 		device->BindUAV(output_normal, 2, cmd);
+	}
+	if (output_depth != nullptr)
+	{
+		device->BindUAV(output_depth, 3, cmd);
+	}
+	if (output_stencil != nullptr)
+	{
+		device->BindUAV(output_stencil, 4, cmd);
 	}
 	barrier_stack_flush(cmd);
 
@@ -8648,6 +8696,16 @@ void RayTraceScene(
 			device->ClearUAV(output_normal, 0, cmd);
 			barrier_stack.push_back(GPUBarrier::Memory(output_normal));
 		}
+		if (output_depth != nullptr)
+		{
+			device->ClearUAV(output_depth, 0, cmd);
+			barrier_stack.push_back(GPUBarrier::Memory(output_depth));
+		}
+		if (output_stencil != nullptr)
+		{
+			device->ClearUAV(output_stencil, 0, cmd);
+			barrier_stack.push_back(GPUBarrier::Memory(output_stencil));
+		}
 		barrier_stack_flush(cmd);
 	}
 
@@ -8659,7 +8717,49 @@ void RayTraceScene(
 	);
 
 	barrier_stack.push_back(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
+	if (output_depth_stencil != nullptr)
+	{
+		barrier_stack.push_back(GPUBarrier::Image(output_depth, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
+		barrier_stack.push_back(GPUBarrier::Image(output_stencil, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
+		barrier_stack.push_back(GPUBarrier::Image(output_depth_stencil, output_depth_stencil->desc.layout, ResourceState::COPY_DST));
+	}
+	else
+	{
+		if (output_depth != nullptr)
+		{
+			barrier_stack.push_back(GPUBarrier::Image(output_depth, ResourceState::UNORDERED_ACCESS, output_depth->desc.layout));
+		}
+		if (output_stencil != nullptr)
+		{
+			barrier_stack.push_back(GPUBarrier::Image(output_stencil, ResourceState::UNORDERED_ACCESS, output_stencil->desc.layout));
+		}
+	}
 	barrier_stack_flush(cmd);
+
+	if (output_depth_stencil != nullptr && output_depth != nullptr && output_stencil != nullptr)
+	{
+		// The separate depth, stencil textures will be copied to a real depth-stencil:
+		device->CopyTexture(
+			output_depth_stencil, 0, 0, 0, 0, 0,
+			output_depth, 0, 0,
+			cmd,
+			nullptr,
+			ImageAspect::DEPTH,
+			ImageAspect::COLOR
+		);
+		device->CopyTexture(
+			output_depth_stencil, 0, 0, 0, 0, 0,
+			output_stencil, 0, 0,
+			cmd,
+			nullptr,
+			ImageAspect::STENCIL,
+			ImageAspect::COLOR
+		);
+		barrier_stack.push_back(GPUBarrier::Image(output_depth, ResourceState::COPY_SRC, output_depth->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(output_stencil, ResourceState::COPY_SRC, output_stencil->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(output_depth_stencil, ResourceState::COPY_DST, output_depth_stencil->desc.layout));
+		barrier_stack_flush(cmd);
+	}
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd); // RayTraceScene

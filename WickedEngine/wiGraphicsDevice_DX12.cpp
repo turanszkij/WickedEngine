@@ -3255,19 +3255,31 @@ using namespace dx12_internal;
 		// Issue data copy on request:
 		if (initial_data != nullptr)
 		{
-			auto cmd = copyAllocator.allocate(desc->size);
+			CopyAllocator::CopyCMD cmd;
+			void* mapped_data = nullptr;
+			if (desc->usage == Usage::UPLOAD)
+			{
+				mapped_data = buffer->mapped_data;
+			}
+			else
+			{
+				cmd = copyAllocator.allocate(desc->size);
+				mapped_data = cmd.uploadbuffer.mapped_data;
+			}
 
-			std::memcpy(cmd.uploadbuffer.mapped_data, initial_data, desc->size);
+			std::memcpy(mapped_data, initial_data, desc->size);
 
-			cmd.commandList->CopyBufferRegion(
-				internal_state->resource.Get(),
-				0,
-				to_internal(&cmd.uploadbuffer)->resource.Get(),
-				0,
-				desc->size
-			);
-
-			copyAllocator.submit(cmd);
+			if (cmd.IsValid())
+			{
+				cmd.commandList->CopyBufferRegion(
+					internal_state->resource.Get(),
+					0,
+					to_internal(&cmd.uploadbuffer)->resource.Get(),
+					0,
+					desc->size
+				);
+				copyAllocator.submit(cmd);
+			}
 		}
 
 
@@ -3516,34 +3528,47 @@ using namespace dx12_internal;
 				data[i] = _ConvertSubresourceData(initial_data[i]);
 			}
 
-			auto cmd = copyAllocator.allocate(internal_state->total_size);
+			CopyAllocator::CopyCMD cmd;
+			void* mapped_data = nullptr;
+			if (desc->usage == Usage::UPLOAD)
+			{
+				mapped_data = texture->mapped_data;
+			}
+			else
+			{
+				cmd = copyAllocator.allocate(internal_state->total_size);
+				mapped_data = cmd.uploadbuffer.mapped_data;
+			}
 
 			for (size_t i = 0; i < internal_state->footprints.size(); ++i)
 			{
 				if (internal_state->rowSizesInBytes[i] > (SIZE_T)-1)
 					continue;
 				D3D12_MEMCPY_DEST DestData = {};
-				DestData.pData = (void*)((UINT64)cmd.uploadbuffer.mapped_data + internal_state->footprints[i].Offset);
+				DestData.pData = (void*)((UINT64)mapped_data + internal_state->footprints[i].Offset);
 				DestData.RowPitch = (SIZE_T)internal_state->footprints[i].Footprint.RowPitch;
 				DestData.SlicePitch = (SIZE_T)internal_state->footprints[i].Footprint.RowPitch * (SIZE_T)internal_state->numRows[i];
 				MemcpySubresource(&DestData, &data[i], (SIZE_T)internal_state->rowSizesInBytes[i], internal_state->numRows[i], internal_state->footprints[i].Footprint.Depth);
+
+				if (cmd.IsValid())
+				{
+					CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), UINT(i));
+					CD3DX12_TEXTURE_COPY_LOCATION Src(to_internal(&cmd.uploadbuffer)->resource.Get(), internal_state->footprints[i]);
+					cmd.commandList->CopyTextureRegion(
+						&Dst,
+						0,
+						0,
+						0,
+						&Src,
+						nullptr
+					);
+				}
 			}
 
-			for (UINT i = 0; i < internal_state->footprints.size(); ++i)
+			if (cmd.IsValid())
 			{
-				CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
-				CD3DX12_TEXTURE_COPY_LOCATION Src(to_internal(&cmd.uploadbuffer)->resource.Get(), internal_state->footprints[i]);
-				cmd.commandList->CopyTextureRegion(
-					&Dst,
-					0,
-					0,
-					0,
-					&Src,
-					nullptr
-				);
+				copyAllocator.submit(cmd);
 			}
-
-			copyAllocator.submit(cmd);
 		}
 
 		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
@@ -5072,24 +5097,22 @@ using namespace dx12_internal;
 		// From here, we begin a new frame, this affects GetBufferIndex()!
 		FRAMECOUNT++;
 
-		// Begin next frame:
+		// Initiate stalling CPU when GPU is not yet finished with next frame:
+		const uint32_t bufferindex = GetBufferIndex();
+		for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 		{
-			// Initiate stalling CPU when GPU is not yet finished with next frame:
-			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+			if (FRAMECOUNT >= BUFFERCOUNT && frame_fence[bufferindex][queue]->GetCompletedValue() < 1)
 			{
-				if (FRAMECOUNT >= BUFFERCOUNT && frame_fence[GetBufferIndex()][queue]->GetCompletedValue() < 1)
-				{
-					// NULL event handle will simply wait immediately:
-					//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
-					hr = frame_fence[GetBufferIndex()][queue]->SetEventOnCompletion(1, NULL);
-					assert(SUCCEEDED(hr));
-				}
-				hr = frame_fence[GetBufferIndex()][queue]->Signal(0);
+				// NULL event handle will simply wait immediately:
+				//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
+				hr = frame_fence[bufferindex][queue]->SetEventOnCompletion(1, NULL);
+				assert(SUCCEEDED(hr));
 			}
-			assert(SUCCEEDED(hr));
-
-			allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
+			hr = frame_fence[bufferindex][queue]->Signal(0);
 		}
+		assert(SUCCEEDED(hr));
+
+		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
 	}
 
 	void GraphicsDevice_DX12::OnDeviceRemoved()
@@ -6159,13 +6182,15 @@ using namespace dx12_internal;
 
 		commandlist.GetGraphicsCommandList()->CopyBufferRegion(dst_internal->resource.Get(), dst_offset, src_internal->resource.Get(), src_offset, size);
 	}
-	void GraphicsDevice_DX12::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox)
+	void GraphicsDevice_DX12::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox, ImageAspect dst_aspect, ImageAspect src_aspect)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto src_internal = to_internal((const GPUBuffer*)src);
 		auto dst_internal = to_internal((const GPUBuffer*)dst);
-		CD3DX12_TEXTURE_COPY_LOCATION src_location(src_internal->resource.Get(), D3D12CalcSubresource(srcMip, srcSlice, 0, src->desc.mip_levels, src->desc.array_size));
-		CD3DX12_TEXTURE_COPY_LOCATION dst_location(dst_internal->resource.Get(), D3D12CalcSubresource(dstMip, dstSlice, 0, dst->desc.mip_levels, dst->desc.array_size));
+		UINT srcPlane = src_aspect == ImageAspect::STENCIL ? 1 : 0;
+		UINT dstPlane = dst_aspect == ImageAspect::STENCIL ? 1 : 0;
+		CD3DX12_TEXTURE_COPY_LOCATION src_location(src_internal->resource.Get(), D3D12CalcSubresource(srcMip, srcSlice, srcPlane, src->desc.mip_levels, src->desc.array_size));
+		CD3DX12_TEXTURE_COPY_LOCATION dst_location(dst_internal->resource.Get(), D3D12CalcSubresource(dstMip, dstSlice, dstPlane, dst->desc.mip_levels, dst->desc.array_size));
 		if (srcbox == nullptr)
 		{
 			commandlist.GetGraphicsCommandList()->CopyTextureRegion(

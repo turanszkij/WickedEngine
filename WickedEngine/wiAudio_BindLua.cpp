@@ -5,8 +5,6 @@
 namespace wi::lua
 {
 
-	const char Audio_BindLua::className[] = "Audio";
-
 	Luna<Audio_BindLua>::FunctionType Audio_BindLua::methods[] = {
 		lunamethod(Audio_BindLua, CreateSound),
 		lunamethod(Audio_BindLua, CreateSoundInstance),
@@ -289,8 +287,6 @@ REVERB_PRESET_PLATE = 29
 
 
 
-	const char Sound_BindLua::className[] = "Sound";
-
 	Luna<Sound_BindLua>::FunctionType Sound_BindLua::methods[] = {
 		{ NULL, NULL }
 	};
@@ -310,8 +306,6 @@ REVERB_PRESET_PLATE = 29
 
 
 
-
-	const char SoundInstance_BindLua::className[] = "SoundInstance";
 
 	Luna<SoundInstance_BindLua>::FunctionType SoundInstance_BindLua::methods[] = {
 		lunamethod(SoundInstance_BindLua, SetSubmixType),
@@ -346,8 +340,6 @@ REVERB_PRESET_PLATE = 29
 
 
 
-
-	const char SoundInstance3D_BindLua::className[] = "SoundInstance3D";
 
 	Luna<SoundInstance3D_BindLua>::FunctionType SoundInstance3D_BindLua::methods[] = {
 		lunamethod(SoundInstance3D_BindLua, SetListenerPos),

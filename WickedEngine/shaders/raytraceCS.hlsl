@@ -14,6 +14,8 @@ static const uint ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT = 1;
 RWTexture2D<float4> output : register(u0);
 RWTexture2D<float4> output_albedo : register(u1);
 RWTexture2D<float4> output_normal : register(u2);
+RWTexture2D<float> output_depth : register(u3);
+RWTexture2D<uint> output_stencil : register(u4);
 
 [numthreads(RAYTRACING_LAUNCH_BLOCKSIZE, RAYTRACING_LAUNCH_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
@@ -51,6 +53,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	ray.Direction = focal_point - ray.Origin; // will be normalized before tracing!
 
 	RayCone raycone = pixel_ray_cone_from_image_height(xTraceResolution.y);
+
+	float depth = 0;
+	uint stencil = 0;
 
 	const uint bounces = xTraceUserData.x;
 	for (uint bounce = 0; bounce < bounces; ++bounce)
@@ -183,6 +188,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 			primary_albedo = surface.albedo;
 			primary_normal = surface.N;
+			stencil = surface.material.stencilRef;
+			uint userStencilRefOverride = surface.inst.GetUserStencilRef();
+			if (userStencilRefOverride > 0)
+			{
+				stencil = (userStencilRefOverride << 4u) | (stencil & 0xF);
+			}
+			float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
+			tmp.xyz /= max(0.0001, tmp.w); // max: avoid nan
+			depth = saturate(tmp.z); // saturate: avoid blown up values
 		}
 
 		if (surface.material.IsUnlit())
@@ -395,14 +409,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 	}
 
-	// Pre-clear result texture for first accumulation sample:
-	if (xTraceSampleIndex == 0)
-	{
-		output[pixel] = 0;
-		output_albedo[pixel] = 0;
-		output_normal[pixel] = 0;
-	}
 	output[pixel] = lerp(output[pixel], float4(result, 1), xTraceAccumulationFactor);
 	output_albedo[pixel] = lerp(output_albedo[pixel], float4(primary_albedo, 1), xTraceAccumulationFactor);
 	output_normal[pixel] = lerp(output_normal[pixel], float4(primary_normal, 1), xTraceAccumulationFactor);
+
+	if (xTraceSampleIndex == 0)
+	{
+		output_depth[pixel] = depth;
+		output_stencil[pixel] = stencil;
+	}
 }

@@ -371,6 +371,19 @@ namespace vulkan_internal
 			return VK_SHADER_STAGE_ALL;
 		}
 	}
+	constexpr VkImageAspectFlags _ConvertImageAspect(ImageAspect value)
+	{
+		switch (value)
+		{
+		default:
+		case wi::graphics::ImageAspect::COLOR:
+			return VK_IMAGE_ASPECT_COLOR_BIT;
+		case wi::graphics::ImageAspect::DEPTH:
+			return VK_IMAGE_ASPECT_DEPTH_BIT;
+		case wi::graphics::ImageAspect::STENCIL:
+			return VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+	}
 	constexpr VkAccessFlags _ParseResourceState(ResourceState value)
 	{
 		VkAccessFlags flags = 0;
@@ -3601,85 +3614,98 @@ using namespace vulkan_internal;
 		// Issue data copy on request:
 		if (initial_data != nullptr)
 		{
-			auto cmd = copyAllocator.allocate(desc->size);
-
-			std::memcpy(cmd.uploadbuffer.mapped_data, initial_data, buffer->desc.size);
-
-			VkBufferMemoryBarrier barrier = {};
-			barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-			barrier.buffer = internal_state->resource;
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.size = VK_WHOLE_SIZE;
-
-			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-			vkCmdPipelineBarrier(
-				cmd.commandBuffer,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				0,
-				0, nullptr,
-				1, &barrier,
-				0, nullptr
-			);
-
-			VkBufferCopy copyRegion = {};
-			copyRegion.size = buffer->desc.size;
-			copyRegion.srcOffset = 0;
-			copyRegion.dstOffset = 0;
-
-			vkCmdCopyBuffer(
-				cmd.commandBuffer,
-				to_internal(&cmd.uploadbuffer)->resource,
-				internal_state->resource,
-				1,
-				&copyRegion
-			);
-
-			std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
-
-			if (has_flag(buffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
+			CopyAllocator::CopyCMD cmd;
+			void* mapped_data = nullptr;
+			if (desc->usage == Usage::UPLOAD)
 			{
-				barrier.dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
+				mapped_data = buffer->mapped_data;
 			}
-			if (has_flag(buffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
+			else
 			{
-				barrier.dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-			}
-			if (has_flag(buffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
-			{
-				barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
-			}
-			if (has_flag(buffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
-			{
-				barrier.dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
-			}
-			if (has_flag(buffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
-			{
-				barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
-			}
-			if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
-			{
-				barrier.dstAccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-			}
-			if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
-			{
-				barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+				cmd = copyAllocator.allocate(desc->size);
+				mapped_data = cmd.uploadbuffer.mapped_data;
 			}
 
-			vkCmdPipelineBarrier(
-				cmd.commandBuffer,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				0,
-				0, nullptr,
-				1, &barrier,
-				0, nullptr
-			);
+			std::memcpy(mapped_data, initial_data, buffer->desc.size);
 
-			copyAllocator.submit(cmd);
+			if(cmd.IsValid())
+			{
+				VkBufferMemoryBarrier barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+				barrier.buffer = internal_state->resource;
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.size = VK_WHOLE_SIZE;
+
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+				vkCmdPipelineBarrier(
+					cmd.commandBuffer,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					0,
+					0, nullptr,
+					1, &barrier,
+					0, nullptr
+				);
+
+				VkBufferCopy copyRegion = {};
+				copyRegion.size = buffer->desc.size;
+				copyRegion.srcOffset = 0;
+				copyRegion.dstOffset = 0;
+
+				vkCmdCopyBuffer(
+					cmd.commandBuffer,
+					to_internal(&cmd.uploadbuffer)->resource,
+					internal_state->resource,
+					1,
+					&copyRegion
+				);
+
+				std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
+
+				if (has_flag(buffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
+				{
+					barrier.dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
+				}
+				if (has_flag(buffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
+				{
+					barrier.dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+				}
+				if (has_flag(buffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
+				{
+					barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
+				}
+				if (has_flag(buffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+				{
+					barrier.dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
+				}
+				if (has_flag(buffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+				{
+					barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
+				}
+				if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
+				{
+					barrier.dstAccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+				}
+				if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
+				{
+					barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+				}
+
+				vkCmdPipelineBarrier(
+					cmd.commandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					0,
+					0, nullptr,
+					1, &barrier,
+					0, nullptr
+				);
+
+				copyAllocator.submit(cmd);
+			}
 		}
 
 		// Create resource views if needed
@@ -3964,7 +3990,17 @@ using namespace vulkan_internal;
 		// Issue data copy on request:
 		if (initial_data != nullptr)
 		{
-			auto cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
+			CopyAllocator::CopyCMD cmd;
+			void* mapped_data = nullptr;
+			if (desc->usage == Usage::UPLOAD)
+			{
+				mapped_data = texture->mapped_data;
+			}
+			else
+			{
+				cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
+				mapped_data = cmd.uploadbuffer.mapped_data;
+			}
 
 			wi::vector<VkBufferImageCopy> copyRegions;
 
@@ -3987,7 +4023,7 @@ using namespace vulkan_internal;
 					const uint32_t src_slicepitch = subresourceData.slice_pitch;
 					for (uint32_t z = 0; z < depth; ++z)
 					{
-						uint8_t* dst_slice = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset + dst_slicepitch * z;
+						uint8_t* dst_slice = (uint8_t*)mapped_data + copyOffset + dst_slicepitch * z;
 						uint8_t* src_slice = (uint8_t*)subresourceData.data_ptr + src_slicepitch * z;
 						for (uint32_t y = 0; y < num_blocks_y; ++y)
 						{
@@ -3999,24 +4035,27 @@ using namespace vulkan_internal;
 						}
 					}
 
-					VkBufferImageCopy copyRegion = {};
-					copyRegion.bufferOffset = copyOffset;
-					copyRegion.bufferRowLength = 0;
-					copyRegion.bufferImageHeight = 0;
+					if (cmd.IsValid())
+					{
+						VkBufferImageCopy copyRegion = {};
+						copyRegion.bufferOffset = copyOffset;
+						copyRegion.bufferRowLength = 0;
+						copyRegion.bufferImageHeight = 0;
 
-					copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					copyRegion.imageSubresource.mipLevel = mip;
-					copyRegion.imageSubresource.baseArrayLayer = layer;
-					copyRegion.imageSubresource.layerCount = 1;
+						copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+						copyRegion.imageSubresource.mipLevel = mip;
+						copyRegion.imageSubresource.baseArrayLayer = layer;
+						copyRegion.imageSubresource.layerCount = 1;
 
-					copyRegion.imageOffset = { 0, 0, 0 };
-					copyRegion.imageExtent = {
-						width,
-						height,
-						depth
-					};
+						copyRegion.imageOffset = { 0, 0, 0 };
+						copyRegion.imageExtent = {
+							width,
+							height,
+							depth
+						};
 
-					copyRegions.push_back(copyRegion);
+						copyRegions.push_back(copyRegion);
+					}
 
 					copyOffset += dst_slicepitch * depth;
 
@@ -4026,6 +4065,7 @@ using namespace vulkan_internal;
 				}
 			}
 
+			if(cmd.IsValid())
 			{
 				VkImageMemoryBarrier barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -7720,14 +7760,14 @@ using namespace vulkan_internal;
 			1, &copy
 		);
 	}
-	void GraphicsDevice_Vulkan::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox)
+	void GraphicsDevice_Vulkan::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox, ImageAspect dst_aspect, ImageAspect src_aspect)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		auto src_internal = to_internal(src);
 		auto dst_internal = to_internal(dst);
 
 		VkImageCopy copy = {};
-		copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.dstSubresource.aspectMask = _ConvertImageAspect(dst_aspect);
 		copy.dstSubresource.baseArrayLayer = dstSlice;
 		copy.dstSubresource.layerCount = 1;
 		copy.dstSubresource.mipLevel = dstMip;
@@ -7735,7 +7775,7 @@ using namespace vulkan_internal;
 		copy.dstOffset.y = dstY;
 		copy.dstOffset.z = dstZ;
 
-		copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.srcSubresource.aspectMask = _ConvertImageAspect(src_aspect);
 		copy.srcSubresource.baseArrayLayer = srcSlice;
 		copy.srcSubresource.layerCount = 1;
 		copy.srcSubresource.mipLevel = srcMip;

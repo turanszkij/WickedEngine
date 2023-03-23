@@ -4,8 +4,6 @@
 namespace wi::lua
 {
 
-	const char SpriteAnim_BindLua::className[] = "SpriteAnim";
-
 	Luna<SpriteAnim_BindLua>::FunctionType SpriteAnim_BindLua::methods[] = {
 		lunamethod(SpriteAnim_BindLua, SetRot),
 		lunamethod(SpriteAnim_BindLua, SetRotation),
@@ -227,7 +225,7 @@ namespace wi::lua
 	}
 	int SpriteAnim_BindLua::GetVelocity(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, Vector_BindLua(XMLoadFloat3(&anim.vel)));
+		Luna<Vector_BindLua>::push(L, XMLoadFloat3(&anim.vel));
 		return 1;
 	}
 	int SpriteAnim_BindLua::GetScaleX(lua_State* L)
@@ -242,12 +240,12 @@ namespace wi::lua
 	}
 	int SpriteAnim_BindLua::GetMovingTexAnim(lua_State* L)
 	{
-		Luna<MovingTexAnim_BindLua>::push(L, MovingTexAnim_BindLua(anim.movingTexAnim));
+		Luna<MovingTexAnim_BindLua>::push(L, anim.movingTexAnim);
 		return 1;
 	}
 	int SpriteAnim_BindLua::GetDrawRecAnim(lua_State* L)
 	{
-		Luna<DrawRectAnim_BindLua>::push(L, DrawRectAnim_BindLua(anim.drawRectAnim));
+		Luna<DrawRectAnim_BindLua>::push(L, anim.drawRectAnim);
 		return 1;
 	}
 
@@ -265,8 +263,6 @@ namespace wi::lua
 
 
 
-
-	const char MovingTexAnim_BindLua::className[] = "MovingTexAnim";
 
 	Luna<MovingTexAnim_BindLua>::FunctionType MovingTexAnim_BindLua::methods[] = {
 		lunamethod(MovingTexAnim_BindLua, SetSpeedX),
@@ -343,8 +339,6 @@ namespace wi::lua
 	}
 
 
-
-	const char DrawRectAnim_BindLua::className[] = "DrawRecAnim";
 
 	Luna<DrawRectAnim_BindLua>::FunctionType DrawRectAnim_BindLua::methods[] = {
 		lunamethod(DrawRectAnim_BindLua, SetFrameRate),
