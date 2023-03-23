@@ -106,7 +106,7 @@ namespace wi::graphics
 			wi::vector<VkCommandBuffer> submit_cmds;
 
 			bool sparse_binding_supported = false;
-			std::mutex sparse_mutex;
+			std::mutex locker;
 
 			void submit(GraphicsDevice_Vulkan* device, VkFence fence);
 
@@ -115,28 +115,23 @@ namespace wi::graphics
 		struct CopyAllocator
 		{
 			GraphicsDevice_Vulkan* device = nullptr;
-			VkSemaphore semaphore = VK_NULL_HANDLE;
-			uint64_t fenceValue = 0;
 			std::mutex locker;
 
 			struct CopyCMD
 			{
 				VkCommandPool commandPool = VK_NULL_HANDLE;
 				VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
-				uint64_t target = 0;
+				VkFence fence = VK_NULL_HANDLE;
+				VkSemaphore semaphores[2] = { VK_NULL_HANDLE, VK_NULL_HANDLE }; // graphics, compute
 				GPUBuffer uploadbuffer;
-				inline bool IsValid() const { return uploadbuffer.IsValid(); }
+				inline bool IsValid() const { return commandBuffer != VK_NULL_HANDLE; }
 			};
-			wi::vector<CopyCMD> freelist; // available
-			wi::vector<CopyCMD> worklist; // in progress
-			wi::vector<VkCommandBuffer> submit_cmds; // for next submit
-			uint64_t submit_wait = 0; // last submit wait value
+			wi::vector<CopyCMD> freelist;
 
 			void init(GraphicsDevice_Vulkan* device);
 			void destroy();
 			CopyCMD allocate(uint64_t staging_size);
 			void submit(CopyCMD cmd);
-			uint64_t flush();
 		};
 		mutable CopyAllocator copyAllocator;
 
@@ -292,7 +287,7 @@ namespace wi::graphics
 		~GraphicsDevice_Vulkan() override;
 
 		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;
-		bool CreateBuffer(const GPUBufferDesc* desc, const void* initial_data, GPUBuffer* buffer) const override;
+		bool CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer) const override;
 		bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture) const override;
 		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const override;
 		bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const override;

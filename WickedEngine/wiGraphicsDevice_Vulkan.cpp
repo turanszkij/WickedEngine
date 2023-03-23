@@ -1151,6 +1151,7 @@ using namespace vulkan_internal;
 
 	void GraphicsDevice_Vulkan::CommandQueue::submit(GraphicsDevice_Vulkan* device, VkFence fence)
 	{
+		locker.lock();
 		VkSubmitInfo submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submitInfo.commandBufferCount = (uint32_t)submit_cmds.size();
@@ -1214,44 +1215,48 @@ using namespace vulkan_internal;
 		submit_signalSemaphores.clear();
 		submit_signalValues.clear();
 		submit_cmds.clear();
+		locker.unlock();
 	}
 
 	void GraphicsDevice_Vulkan::CopyAllocator::init(GraphicsDevice_Vulkan* device)
 	{
 		this->device = device;
-
-		VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
-		timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-		timelineCreateInfo.pNext = nullptr;
-		timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-		timelineCreateInfo.initialValue = 0;
-
-		VkSemaphoreCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		createInfo.pNext = &timelineCreateInfo;
-		createInfo.flags = 0;
-
-		VkResult res = vkCreateSemaphore(device->device, &createInfo, nullptr, &semaphore);
-		assert(res == VK_SUCCESS);
 	}
 	void GraphicsDevice_Vulkan::CopyAllocator::destroy()
 	{
-		vkQueueWaitIdle(device->copyQueue);
+		vkQueueWaitIdle(device->queues[QUEUE_COPY].queue);
 		for (auto& x : freelist)
 		{
 			vkDestroyCommandPool(device->device, x.commandPool, nullptr);
+			vkDestroySemaphore(device->device, x.semaphores[0], nullptr);
+			vkDestroySemaphore(device->device, x.semaphores[1], nullptr);
+			vkDestroyFence(device->device, x.fence, nullptr);
 		}
-		vkDestroySemaphore(device->device, semaphore, nullptr);
 	}
 	GraphicsDevice_Vulkan::CopyAllocator::CopyCMD GraphicsDevice_Vulkan::CopyAllocator::allocate(uint64_t staging_size)
 	{
+		CopyCMD cmd;
+
 		locker.lock();
-
-		// create a new command list if there are no free ones:
-		if (freelist.empty())
+		// Try to search for a staging buffer that can fit the request:
+		for (size_t i = 0; i < freelist.size(); ++i)
 		{
-			CopyCMD cmd;
+			if (freelist[i].uploadbuffer.desc.size >= staging_size)
+			{
+				if (vkGetFenceStatus(device->device, freelist[i].fence) == VK_SUCCESS)
+				{
+					cmd = std::move(freelist[i]);
+					std::swap(freelist[i], freelist.back());
+					freelist.pop_back();
+					break;
+				}
+			}
+		}
+		locker.unlock();
 
+		// If no buffer was found that fits the data, create one:
+		if (!cmd.IsValid())
+		{
 			VkCommandPoolCreateInfo poolInfo = {};
 			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 			poolInfo.queueFamilyIndex = device->copyFamily;
@@ -1269,29 +1274,18 @@ using namespace vulkan_internal;
 			res = vkAllocateCommandBuffers(device->device, &commandBufferInfo, &cmd.commandBuffer);
 			assert(res == VK_SUCCESS);
 
-			freelist.push_back(cmd);
-		}
+			VkFenceCreateInfo fenceInfo = {};
+			fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+			res = vkCreateFence(device->device, &fenceInfo, nullptr, &cmd.fence);
+			assert(res == VK_SUCCESS);
 
-		CopyCMD cmd = freelist.back();
-		if (cmd.uploadbuffer.desc.size < staging_size)
-		{
-			// Try to search for a staging buffer that can fit the request:
-			for (size_t i = 0; i < freelist.size(); ++i)
-			{
-				if (freelist[i].uploadbuffer.desc.size >= staging_size)
-				{
-					cmd = freelist[i];
-					std::swap(freelist[i], freelist.back());
-					break;
-				}
-			}
-		}
-		freelist.pop_back();
-		locker.unlock();
+			VkSemaphoreCreateInfo semaphoreInfo = {};
+			semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			res = vkCreateSemaphore(device->device, &semaphoreInfo, nullptr, &cmd.semaphores[0]);
+			assert(res == VK_SUCCESS);
+			res = vkCreateSemaphore(device->device, &semaphoreInfo, nullptr, &cmd.semaphores[1]);
+			assert(res == VK_SUCCESS);
 
-		// If no buffer was found that fits the data, create one:
-		if (cmd.uploadbuffer.desc.size < staging_size)
-		{
 			GPUBufferDesc uploaddesc;
 			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
 			uploaddesc.usage = Usage::UPLOAD;
@@ -1312,6 +1306,9 @@ using namespace vulkan_internal;
 		res = vkBeginCommandBuffer(cmd.commandBuffer, &beginInfo);
 		assert(res == VK_SUCCESS);
 
+		res = vkResetFences(device->device, 1, &cmd.fence);
+		assert(res == VK_SUCCESS);
+
 		return cmd;
 	}
 	void GraphicsDevice_Vulkan::CopyAllocator::submit(CopyCMD cmd)
@@ -1319,64 +1316,42 @@ using namespace vulkan_internal;
 		VkResult res = vkEndCommandBuffer(cmd.commandBuffer);
 		assert(res == VK_SUCCESS);
 
-		// It was very slow in Vulkan to submit the copies immediately
-		//	In Vulkan, the submit is not thread safe, so it had to be locked
-		//	Instead, the submits are batched and performed in flush() function
-		locker.lock();
-		cmd.target = ++fenceValue;
-		worklist.push_back(cmd);
-		submit_cmds.push_back(cmd.commandBuffer);
-		submit_wait = std::max(submit_wait, cmd.target);
-		locker.unlock();
-	}
-	uint64_t GraphicsDevice_Vulkan::CopyAllocator::flush()
-	{
-		locker.lock();
-		if (!submit_cmds.empty())
-		{
-			VkSubmitInfo submitInfo = {};
-			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			submitInfo.commandBufferCount = (uint32_t)submit_cmds.size();
-			submitInfo.pCommandBuffers = submit_cmds.data();
-			submitInfo.pSignalSemaphores = &semaphore;
-			submitInfo.signalSemaphoreCount = 1;
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.pCommandBuffers = &cmd.commandBuffer;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pSignalSemaphores = cmd.semaphores;
+		submitInfo.signalSemaphoreCount = arraysize(cmd.semaphores);
 
-			VkTimelineSemaphoreSubmitInfo timelineInfo = {};
-			timelineInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
-			timelineInfo.pNext = nullptr;
-			timelineInfo.waitSemaphoreValueCount = 0;
-			timelineInfo.pWaitSemaphoreValues = nullptr;
-			timelineInfo.signalSemaphoreValueCount = 1;
-			timelineInfo.pSignalSemaphoreValues = &submit_wait;
-
-			submitInfo.pNext = &timelineInfo;
-
-			VkResult res = vkQueueSubmit(device->copyQueue, 1, &submitInfo, VK_NULL_HANDLE);
-			assert(res == VK_SUCCESS);
-
-			submit_cmds.clear();
-		}
-
-		// free up the finished command lists:
-		uint64_t completed_fence_value;
-		VkResult res = vkGetSemaphoreCounterValue(device->device, semaphore, &completed_fence_value);
+		device->queues[QUEUE_COPY].locker.lock();
+		res = vkQueueSubmit(device->queues[QUEUE_COPY].queue, 1, &submitInfo, cmd.fence);
 		assert(res == VK_SUCCESS);
-		for (size_t i = 0; i < worklist.size(); ++i)
-		{
-			if (worklist[i].target <= completed_fence_value)
-			{
-				freelist.push_back(worklist[i]);
-				worklist[i] = worklist.back();
-				worklist.pop_back();
-				i--;
-			}
-		}
+		device->queues[QUEUE_COPY].locker.unlock();
 
-		uint64_t value = submit_wait;
-		submit_wait = 0;
+		submitInfo.pCommandBuffers = nullptr;
+		submitInfo.commandBufferCount = 0;
+		submitInfo.pSignalSemaphores = nullptr;
+		submitInfo.signalSemaphoreCount = 0;
+		VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		submitInfo.pWaitDstStageMask = &wait_stage;
+
+		submitInfo.pWaitSemaphores = &cmd.semaphores[0];
+		submitInfo.waitSemaphoreCount = 1;
+		device->queues[QUEUE_GRAPHICS].locker.lock();
+		res = vkQueueSubmit(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, VK_NULL_HANDLE);
+		assert(res == VK_SUCCESS);
+		device->queues[QUEUE_GRAPHICS].locker.unlock();
+
+		submitInfo.pWaitSemaphores = &cmd.semaphores[1];
+		submitInfo.waitSemaphoreCount = 1;
+		device->queues[QUEUE_COMPUTE].locker.lock();
+		res = vkQueueSubmit(device->queues[QUEUE_COMPUTE].queue, 1, &submitInfo, VK_NULL_HANDLE);
+		assert(res == VK_SUCCESS);
+		device->queues[QUEUE_COMPUTE].locker.unlock();
+
+		locker.lock();
+		freelist.push_back(cmd);
 		locker.unlock();
-
-		return value;
 	}
 
 	void GraphicsDevice_Vulkan::DescriptorBinderPool::init(GraphicsDevice_Vulkan* device)
@@ -2679,7 +2654,7 @@ using namespace vulkan_internal;
 			}
 
 			wi::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			wi::unordered_set<uint32_t> uniqueQueueFamilies = { graphicsFamily, copyFamily, computeFamily };
+			wi::unordered_set<uint32_t> uniqueQueueFamilies = { graphicsFamily,copyFamily,computeFamily };
 
 			float queuePriority = 1.0f;
 			for (uint32_t queueFamily : uniqueQueueFamilies)
@@ -3456,7 +3431,7 @@ using namespace vulkan_internal;
 
 		return CreateSwapChainInternal(internal_state.get(), physicalDevice, device, allocationhandler);
 	}
-	bool GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc * desc, const void* initial_data, GPUBuffer* buffer) const
+	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer) const
 	{
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3612,7 +3587,7 @@ using namespace vulkan_internal;
 		}
 
 		// Issue data copy on request:
-		if (initial_data != nullptr)
+		if (init_callback != nullptr)
 		{
 			CopyAllocator::CopyCMD cmd;
 			void* mapped_data = nullptr;
@@ -3626,7 +3601,7 @@ using namespace vulkan_internal;
 				mapped_data = cmd.uploadbuffer.mapped_data;
 			}
 
-			std::memcpy(mapped_data, initial_data, buffer->desc.size);
+			init_callback(mapped_data);
 
 			if(cmd.IsValid())
 			{
@@ -6345,19 +6320,6 @@ using namespace vulkan_internal;
 				queues[QUEUE_GRAPHICS].submit_cmds.push_back(frame.initCommandBuffer); // can only be submitted on graphics queue
 			}
 
-			uint64_t copy_sync = copyAllocator.flush();
-			if (copy_sync > 0) // sync up with copyallocator before first submit
-			{
-				for (int q = 0; q < QUEUE_COUNT; ++q)
-				{
-					CommandQueue& queue = queues[q];
-					queue.submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
-					queue.submit_waitSemaphores.push_back(copyAllocator.semaphore);
-					queue.submit_waitValues.push_back(copy_sync);
-				}
-				copy_sync = 0;
-			}
-
 			uint32_t cmd_last = cmd_count;
 			cmd_count = 0;
 			for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
@@ -6756,7 +6718,7 @@ using namespace vulkan_internal;
 		// Queue command:
 		{
 			CommandQueue& q = queues[queue];
-			std::scoped_lock lock(q.sparse_mutex);
+			std::scoped_lock lock(q.locker);
 			assert(q.sparse_binding_supported);
 
 			VkResult res = vkQueueBindSparse(q.queue, (uint32_t)sparse_infos.size(), sparse_infos.data(), VK_NULL_HANDLE);
