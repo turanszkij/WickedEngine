@@ -3552,19 +3552,16 @@ using namespace dx12_internal;
 
 				if (cmd.IsValid())
 				{
-					for (UINT i = 0; i < internal_state->footprints.size(); ++i)
-					{
-						CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
-						CD3DX12_TEXTURE_COPY_LOCATION Src(to_internal(&cmd.uploadbuffer)->resource.Get(), internal_state->footprints[i]);
-						cmd.commandList->CopyTextureRegion(
-							&Dst,
-							0,
-							0,
-							0,
-							&Src,
-							nullptr
-						);
-					}
+					CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), UINT(i));
+					CD3DX12_TEXTURE_COPY_LOCATION Src(to_internal(&cmd.uploadbuffer)->resource.Get(), internal_state->footprints[i]);
+					cmd.commandList->CopyTextureRegion(
+						&Dst,
+						0,
+						0,
+						0,
+						&Src,
+						nullptr
+					);
 				}
 			}
 
