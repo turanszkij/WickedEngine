@@ -126,7 +126,7 @@ namespace wi::graphics
 				GPUBuffer uploadbuffer;
 				inline bool IsValid() const { return commandBuffer != VK_NULL_HANDLE; }
 			};
-			wi::vector<CopyCMD> freelist; // available
+			wi::vector<CopyCMD> freelist;
 
 			void init(GraphicsDevice_Vulkan* device);
 			void destroy();
