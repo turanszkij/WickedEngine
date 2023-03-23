@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cstring>
 #include <algorithm>
+#include <functional>
 
 namespace wi::graphics
 {
@@ -68,7 +69,8 @@ namespace wi::graphics
 
 		// Create a SwapChain. If the SwapChain is to be recreated, the window handle can be nullptr.
 		virtual bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const = 0;
-		virtual bool CreateBuffer(const GPUBufferDesc* desc, const void* initial_data, GPUBuffer* buffer) const = 0;
+		// Create a buffer with a callback to initialize its data. Note: don't read from callback's dest pointer, reads will be very slow! Use memcpy to write to it to make sure only writes happen!
+		virtual bool CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void* dest)>& init_callback, GPUBuffer* buffer) const = 0;
 		virtual bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture) const = 0;
 		virtual bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const = 0;
 		virtual bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const = 0;
@@ -226,6 +228,15 @@ namespace wi::graphics
 		virtual RenderPassInfo GetRenderPassInfo(CommandList cmd) = 0;
 
 		// Some useful helpers:
+
+		bool CreateBuffer(const GPUBufferDesc* desc, const void* initial_data, GPUBuffer* buffer) const
+		{
+			if (initial_data == nullptr)
+			{
+				return CreateBuffer2(desc, nullptr, buffer);
+			}
+			return CreateBuffer2(desc, [&](void* dest) { std::memcpy(dest, initial_data, desc->size); }, buffer);
+		}
 
 		struct GPULinearAllocator
 		{

@@ -1558,35 +1558,33 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::CopyAllocator::init(GraphicsDevice_DX12* device)
 	{
 		this->device = device;
-
-		D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
-		copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-		copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-		copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		copyQueueDesc.NodeMask = 0;
-		HRESULT hr = device->device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&queue));
-		assert(SUCCEEDED(hr));
-	}
-	void GraphicsDevice_DX12::CopyAllocator::destroy()
-	{
-		ComPtr<ID3D12Fence> fence;
-		HRESULT hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
-		assert(SUCCEEDED(hr));
-
-		hr = queue->Signal(fence.Get(), 1);
-		assert(SUCCEEDED(hr));
-		hr = fence->SetEventOnCompletion(1, nullptr);
-		assert(SUCCEEDED(hr));
 	}
 	GraphicsDevice_DX12::CopyAllocator::CopyCMD GraphicsDevice_DX12::CopyAllocator::allocate(uint64_t staging_size)
 	{
+		CopyCMD cmd;
+
 		locker.lock();
-
-		// create a new command list if there are no free ones:
-		if (freelist.empty())
+		// Try to search for a staging buffer that can fit the request:
+		for (size_t i = 0; i < freelist.size(); ++i)
 		{
-			CopyCMD cmd;
+			if (freelist[i].uploadbuffer.desc.size >= staging_size)
+			{
+				if (freelist[i].fence->GetCompletedValue() == 1)
+				{
+					HRESULT hr = freelist[i].fence->Signal(0);
+					assert(SUCCEEDED(hr));
+					cmd = std::move(freelist[i]);
+					std::swap(freelist[i], freelist.back());
+					freelist.pop_back();
+					break;
+				}
+			}
+		}
+		locker.unlock();
 
+		// If no buffer was found that fits the data, create one:
+		if (!cmd.IsValid())
+		{
 			HRESULT hr = device->device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&cmd.commandAllocator));
 			assert(SUCCEEDED(hr));
 			hr = device->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, cmd.commandAllocator.Get(), nullptr, IID_PPV_ARGS(&cmd.commandList));
@@ -1598,29 +1596,6 @@ using namespace dx12_internal;
 			hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&cmd.fence));
 			assert(SUCCEEDED(hr));
 
-			freelist.push_back(cmd);
-		}
-
-		CopyCMD cmd = freelist.back();
-		if (cmd.uploadbuffer.desc.size < staging_size)
-		{
-			// Try to search for a staging buffer that can fit the request:
-			for (size_t i = 0; i < freelist.size(); ++i)
-			{
-				if (freelist[i].uploadbuffer.desc.size >= staging_size)
-				{
-					cmd = freelist[i];
-					std::swap(freelist[i], freelist.back());
-					break;
-				}
-			}
-		}
-		freelist.pop_back();
-		locker.unlock();
-
-		// If no buffer was found that fits the data, create one:
-		if (cmd.uploadbuffer.desc.size < staging_size)
-		{
 			GPUBufferDesc uploadBufferDesc;
 			uploadBufferDesc.size = wi::math::GetNextPowerOfTwo(staging_size);
 			uploadBufferDesc.usage = Usage::UPLOAD;
@@ -1645,12 +1620,12 @@ using namespace dx12_internal;
 		ID3D12CommandList* commandlists[] = {
 			cmd.commandList.Get()
 		};
-		queue->ExecuteCommandLists(1, commandlists);
-		hr = queue->Signal(cmd.fence.Get(), 1);
+		device->queues[QUEUE_COPY].queue->ExecuteCommandLists(1, commandlists);
+		hr = device->queues[QUEUE_COPY].queue->Signal(cmd.fence.Get(), 1);
 		assert(SUCCEEDED(hr));
-		hr = cmd.fence->SetEventOnCompletion(1, nullptr);
+		hr = device->queues[QUEUE_GRAPHICS].queue->Wait(cmd.fence.Get(), 1);
 		assert(SUCCEEDED(hr));
-		hr = cmd.fence->Signal(0);
+		hr = device->queues[QUEUE_COMPUTE].queue->Wait(cmd.fence.Get(), 1);
 		assert(SUCCEEDED(hr));
 
 		locker.lock();
@@ -2945,8 +2920,6 @@ using namespace dx12_internal;
 		std::ignore = UnregisterWait(deviceRemovedWaitHandle);
 		deviceRemovedFence.Reset();
 #endif
-
-		copyAllocator.destroy();
 	}
 
 	bool GraphicsDevice_DX12::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const
@@ -3117,7 +3090,7 @@ using namespace dx12_internal;
 		internal_state->dummyTexture.desc.height = desc->height;
 		return true;
 	}
-	bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* desc, const void* initial_data, GPUBuffer* buffer) const
+	bool GraphicsDevice_DX12::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer) const
 	{
 		auto internal_state = std::make_shared<Resource_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3253,7 +3226,7 @@ using namespace dx12_internal;
 		}
 
 		// Issue data copy on request:
-		if (initial_data != nullptr)
+		if (init_callback != nullptr)
 		{
 			CopyAllocator::CopyCMD cmd;
 			void* mapped_data = nullptr;
@@ -3267,7 +3240,7 @@ using namespace dx12_internal;
 				mapped_data = cmd.uploadbuffer.mapped_data;
 			}
 
-			std::memcpy(mapped_data, initial_data, desc->size);
+			init_callback(mapped_data);
 
 			if (cmd.IsValid())
 			{
