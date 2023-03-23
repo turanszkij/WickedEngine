@@ -369,6 +369,12 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
 			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
 		}
+		
+		if ((Theme)args.userdata == Theme::Nord)
+		{
+			gui.SetColor(wi::Color(136, 192, 208, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
+			gui.SetColor(wi::Color(76, 86, 106, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
+		}
 
 		// customize individual elements:
 		editor->componentsWnd.materialWnd.textureSlotButton.SetColor(wi::Color::White(), wi::gui::IDLE);
