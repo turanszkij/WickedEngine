@@ -151,6 +151,8 @@ public:
 	void NewScene();
 
 	void FocusCameraOnSelected();
+
+	wi::Localization default_localization;
 };
 
 class Editor : public wi::Application

@@ -602,6 +602,8 @@ void EditorComponent::Load()
 		optionsWnd.generalWnd.themeCombo.SetSelected(4);
 	}
 
+	optionsWnd.generalWnd.RefreshLanguageSelectionAfterWholeGUIWasInitialized();
+
 	RenderPath2D::Load();
 }
 void EditorComponent::Start()

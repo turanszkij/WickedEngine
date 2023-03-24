@@ -39,5 +39,7 @@ public:
 	wi::gui::Button localizationButton;
 
 	void ResizeLayout() override;
+
+	void RefreshLanguageSelectionAfterWholeGUIWasInitialized();
 };
 

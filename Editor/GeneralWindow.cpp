@@ -276,6 +276,18 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	languageCombo.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
 	languageCombo.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
 	languageCombo.OnSelect([=](wi::gui::EventArgs args) {
+		if (args.iValue == 0)
+		{
+			editor->GetGUI().ImportLocalization(editor->default_localization);
+			return;
+		}
+
+		if (!editor->default_localization.IsValid())
+		{
+			// Save the default localization at first language switching so that it can be restored:
+			editor->GetGUI().ExportLocalization(editor->default_localization);
+		}
+
 		std::string language = languageCombo.GetItemText(args.iValue);
 		std::string filename;
 		if (editor->main->config.GetSection("languages").Has(language.c_str()))
@@ -295,22 +307,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&languageCombo);
-
-	if (editor->main->config.GetSection("options").Has("language"))
-	{
-		std::string language = editor->main->config.GetSection("options").GetText("language");
-		if (editor->main->config.GetSection("languages").Has(language.c_str()))
-		{
-			for (int i = 0; i < languageCombo.GetItemCount(); ++i)
-			{
-				if (languageCombo.GetItemText(i) == language)
-				{
-					languageCombo.SetSelected(i);
-					break;
-				}
-			}
-		}
-	}
 
 
 	enum class Theme
@@ -524,6 +520,25 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 	});
 	AddWidget(&themeCombo);
+}
+
+void GeneralWindow::RefreshLanguageSelectionAfterWholeGUIWasInitialized()
+{
+	if (editor->main->config.GetSection("options").Has("language"))
+	{
+		std::string language = editor->main->config.GetSection("options").GetText("language");
+		if (editor->main->config.GetSection("languages").Has(language.c_str()))
+		{
+			for (int i = 0; i < languageCombo.GetItemCount(); ++i)
+			{
+				if (languageCombo.GetItemText(i) == language)
+				{
+					languageCombo.SetSelected(i);
+					break;
+				}
+			}
+		}
+	}
 }
 
 void GeneralWindow::ResizeLayout()

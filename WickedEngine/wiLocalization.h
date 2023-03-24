@@ -19,6 +19,8 @@ namespace wi
 		wi::unordered_map<size_t, size_t> lookup;
 		wi::unordered_map<std::string, Localization> sections;
 
+		bool IsValid() const { return !entries.empty() || !sections.empty(); }
+
 		Localization& GetSection(const char* name);
 		Localization& GetSection(const std::string& name);
 		const Localization* CheckSection(const char* name) const;
