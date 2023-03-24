@@ -21,6 +21,8 @@
 #define QOI_IMPLEMENTATION
 #include "qoi.h"
 
+#include "pugixml.cpp"
+
 
 
 // Basis Universal library sources are compiled below for simplicity:

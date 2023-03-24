@@ -224,6 +224,24 @@ namespace wi::gui
 			widget->SetTheme(theme, id);
 		}
 	}
+	void GUI::ExportLocalization(wi::Localization& localization) const
+	{
+		wi::Localization& section = localization.GetSection("gui");
+		for (auto& widget : widgets)
+		{
+			widget->ExportLocalization(section);
+		}
+	}
+	void GUI::ImportLocalization(const wi::Localization& localization)
+	{
+		const wi::Localization* section = localization.CheckSection("gui");
+		if (section == nullptr)
+			return;
+		for (auto& widget : widgets)
+		{
+			widget->ImportLocalization(*section);
+		}
+	}
 
 
 
@@ -405,6 +423,7 @@ namespace wi::gui
 		{
 			name = value;
 		}
+		name_hash = wi::helper::string_hash(name.c_str());
 	}
 	const std::string Widget::GetText() const
 	{
@@ -509,6 +528,19 @@ namespace wi::gui
 	wi::Color Widget::GetColor() const
 	{
 		return wi::Color::fromFloat4(sprites[GetState()].params.color);
+	}
+	void Widget::ExportLocalization(wi::Localization& localization) const
+	{
+		if (name_hash == 0 || !localization_enabled || GetText().empty())
+			return;
+		localization.Add(name_hash, GetText().c_str());
+	}
+	void Widget::ImportLocalization(const wi::Localization& localization)
+	{
+		const char* localized_text = localization.Get(name_hash);
+		if (localized_text == nullptr)
+			return;
+		SetText(localized_text);
 	}
 
 	void Widget::SetColor(wi::Color color, int id)
@@ -1674,6 +1706,7 @@ namespace wi::gui
 		SetSize(XMFLOAT2(200, 40));
 
 		valueInputField.Create(name + "_endInputField");
+		valueInputField.SetLocalizationEnabled(false);
 		valueInputField.SetShadowRadius(0);
 		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Enter \"reset\" to reset slider to initial state.");
 		valueInputField.SetValue(end);
@@ -2665,6 +2698,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the upperleft corner
 			resizeDragger_UpperLeft.Create(name + "_resize_dragger_upper_left");
+			resizeDragger_UpperLeft.SetLocalizationEnabled(false);
 			resizeDragger_UpperLeft.SetShadowRadius(0);
 			resizeDragger_UpperLeft.SetTooltip("Resize window");
 			resizeDragger_UpperLeft.SetText("«|»");
@@ -2687,6 +2721,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the upperleft corner
 			resizeDragger_UpperRight.Create(name + "_resize_dragger_upper_right");
+			resizeDragger_UpperRight.SetLocalizationEnabled(false);
 			resizeDragger_UpperRight.SetShadowRadius(0);
 			resizeDragger_UpperRight.SetTooltip("Resize window");
 			resizeDragger_UpperRight.SetText("«|»");
@@ -2709,6 +2744,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the bottom right corner
 			resizeDragger_BottomLeft.Create(name + "_resize_dragger_bottom_left");
+			resizeDragger_BottomLeft.SetLocalizationEnabled(false);
 			resizeDragger_BottomLeft.SetShadowRadius(0);
 			resizeDragger_BottomLeft.SetTooltip("Resize window");
 			resizeDragger_BottomLeft.SetText("«|»");
@@ -2731,6 +2767,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the bottom right corner
 			resizeDragger_BottomRight.Create(name + "_resize_dragger_bottom_right");
+			resizeDragger_BottomRight.SetLocalizationEnabled(false);
 			resizeDragger_BottomRight.SetShadowRadius(0);
 			resizeDragger_BottomRight.SetTooltip("Resize window");
 			resizeDragger_BottomRight.SetText("«|»");
@@ -2751,7 +2788,8 @@ namespace wi::gui
 		if (has_flag(window_controls, WindowControls::MOVE))
 		{
 			// Add a grabber onto the title bar
-			moveDragger.Create(name + "_move_dragger");
+			moveDragger.Create(name);
+			moveDragger.SetLocalizationEnabled(false);
 			moveDragger.SetShadowRadius(0);
 			moveDragger.SetText(name);
 			moveDragger.font.params.h_align = wi::font::WIFALIGN_LEFT;
@@ -2768,6 +2806,7 @@ namespace wi::gui
 		{
 			// Add close button to the top right corner
 			closeButton.Create(name + "_close_button");
+			closeButton.SetLocalizationEnabled(false);
 			closeButton.SetShadowRadius(0);
 			closeButton.SetText("x");
 			closeButton.OnClick([this](EventArgs args) {
@@ -2785,6 +2824,7 @@ namespace wi::gui
 		{
 			// Add minimize button to the top right corner
 			collapseButton.Create(name + "_collapse_button");
+			collapseButton.SetLocalizationEnabled(false);
 			collapseButton.SetShadowRadius(0);
 			collapseButton.SetText("-");
 			collapseButton.OnClick([this](EventArgs args) {
@@ -3411,6 +3451,28 @@ namespace wi::gui
 			scrollbar_vertical.AttachTo(this);
 		}
 	}
+	void Window::ExportLocalization(wi::Localization& localization) const
+	{
+		wi::Localization& section = localization.GetSection(GetName());
+		Widget::ExportLocalization(section);
+		for (auto& widget : widgets)
+		{
+			widget->ExportLocalization(section);
+		}
+	}
+	void Window::ImportLocalization(const wi::Localization& localization)
+	{
+		if (!localization_enabled)
+			return;
+		const wi::Localization* section = localization.CheckSection(GetName());
+		if (section == nullptr)
+			return;
+		Widget::ImportLocalization(*section);
+		for (auto& widget : widgets)
+		{
+			widget->ImportLocalization(*section);
+		}
+	}
 
 
 
@@ -3543,6 +3605,7 @@ namespace wi::gui
 		float step = 20;
 
 		text_R.Create("R");
+		text_R.SetLocalizationEnabled(false);
 		text_R.SetPos(XMFLOAT2(x, y += step));
 		text_R.SetSize(XMFLOAT2(40, 18));
 		text_R.SetText("");
@@ -3557,6 +3620,7 @@ namespace wi::gui
 		AddWidget(&text_R);
 
 		text_G.Create("G");
+		text_G.SetLocalizationEnabled(false);
 		text_G.SetPos(XMFLOAT2(x, y += step));
 		text_G.SetSize(XMFLOAT2(40, 18));
 		text_G.SetText("");
@@ -3571,6 +3635,7 @@ namespace wi::gui
 		AddWidget(&text_G);
 
 		text_B.Create("B");
+		text_B.SetLocalizationEnabled(false);
 		text_B.SetPos(XMFLOAT2(x, y += step));
 		text_B.SetSize(XMFLOAT2(40, 18));
 		text_B.SetText("");
@@ -3586,6 +3651,7 @@ namespace wi::gui
 
 
 		text_H.Create("H");
+		text_H.SetLocalizationEnabled(false);
 		text_H.SetPos(XMFLOAT2(x, y += step));
 		text_H.SetSize(XMFLOAT2(40, 18));
 		text_H.SetText("");
@@ -3598,6 +3664,7 @@ namespace wi::gui
 		AddWidget(&text_H);
 
 		text_S.Create("S");
+		text_S.SetLocalizationEnabled(false);
 		text_S.SetPos(XMFLOAT2(x, y += step));
 		text_S.SetSize(XMFLOAT2(40, 18));
 		text_S.SetText("");
@@ -3610,6 +3677,7 @@ namespace wi::gui
 		AddWidget(&text_S);
 
 		text_V.Create("V");
+		text_V.SetLocalizationEnabled(false);
 		text_V.SetPos(XMFLOAT2(x, y += step));
 		text_V.SetSize(XMFLOAT2(40, 18));
 		text_V.SetText("");
@@ -3622,6 +3690,7 @@ namespace wi::gui
 		AddWidget(&text_V);
 
 		alphaSlider.Create(0, 255, 255, 255, "");
+		alphaSlider.SetLocalizationEnabled(false);
 		alphaSlider.SetPos(XMFLOAT2(20, y));
 		alphaSlider.SetSize(XMFLOAT2(150, 18));
 		alphaSlider.SetText("A: ");

@@ -30,6 +30,8 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/volk.h
 		${CMAKE_CURRENT_SOURCE_DIR}/vk_mem_alloc.h
 		${CMAKE_CURRENT_SOURCE_DIR}/flat_hash_map.hpp
+		${CMAKE_CURRENT_SOURCE_DIR}/pugixml.hpp
+		${CMAKE_CURRENT_SOURCE_DIR}/pugiconfig.hpp
 		)
 install(FILES ${HEADER_FILES}
 		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/")

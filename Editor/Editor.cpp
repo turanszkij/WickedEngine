@@ -159,6 +159,7 @@ void EditorComponent::ResizeLayout()
 void EditorComponent::Load()
 {
 	newSceneButton.Create("+");
+	newSceneButton.SetLocalizationEnabled(false);
 	newSceneButton.SetTooltip("New scene");
 	newSceneButton.OnClick([&](wi::gui::EventArgs args) {
 		NewScene();
@@ -171,6 +172,7 @@ void EditorComponent::Load()
 	rotateButton.Create(ICON_ROTATE);
 	scaleButton.Create(ICON_SCALE);
 	{
+		scaleButton.SetLocalizationEnabled(false);
 		scaleButton.SetShadowRadius(2);
 		scaleButton.SetTooltip("Scale\nHotkey: 3");
 		scaleButton.OnClick([&](wi::gui::EventArgs args) {
@@ -180,6 +182,7 @@ void EditorComponent::Load()
 		});
 		GetGUI().AddWidget(&scaleButton);
 
+		rotateButton.SetLocalizationEnabled(false);
 		rotateButton.SetShadowRadius(2);
 		rotateButton.SetTooltip("Rotate\nHotkey: 2");
 		rotateButton.OnClick([&](wi::gui::EventArgs args) {
@@ -189,6 +192,7 @@ void EditorComponent::Load()
 			});
 		GetGUI().AddWidget(&rotateButton);
 
+		translateButton.SetLocalizationEnabled(false);
 		translateButton.SetShadowRadius(2);
 		translateButton.SetTooltip("Translate/Move (Ctrl + T)\nHotkey: 1");
 		translateButton.OnClick([&](wi::gui::EventArgs args) {
@@ -201,6 +205,7 @@ void EditorComponent::Load()
 
 
 	playButton.Create(ICON_PLAY);
+	playButton.SetLocalizationEnabled(false);
 	playButton.font.params.shadowColor = wi::Color::Transparent();
 	playButton.SetShadowRadius(2);
 	playButton.SetTooltip("Execute the last used (standalone) script.\nTo use a new script, use the Open button.");
@@ -243,6 +248,7 @@ void EditorComponent::Load()
 
 
 	stopButton.Create(ICON_STOP);
+	stopButton.SetLocalizationEnabled(false);
 	stopButton.font.params.shadowColor = wi::Color::Transparent();
 	stopButton.SetShadowRadius(2);
 	stopButton.SetTooltip("Stops every script background processes that are still running.");
@@ -255,6 +261,7 @@ void EditorComponent::Load()
 
 
 	saveButton.Create("");
+	saveButton.SetLocalizationEnabled(false);
 	saveButton.font.params.shadowColor = wi::Color::Transparent();
 	saveButton.SetShadowRadius(2);
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)\nBy default, the scene will be saved into .wiscene, but you can specify .gltf or .glb extensions to export into GLTF.\nYou can also use Ctrl + S to quicksave, without browsing.");
@@ -267,6 +274,7 @@ void EditorComponent::Load()
 
 
 	openButton.Create("");
+	openButton.SetLocalizationEnabled(false);
 	openButton.SetShadowRadius(2);
 	openButton.font.params.shadowColor = wi::Color::Transparent();
 	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...");
@@ -369,6 +377,7 @@ void EditorComponent::Load()
 
 
 	logButton.Create("");
+	logButton.SetLocalizationEnabled(false);
 	logButton.SetShadowRadius(2);
 	logButton.font.params.shadowColor = wi::Color::Transparent();
 	logButton.SetTooltip("Open the backlog (toggle with HOME button)");
@@ -381,6 +390,7 @@ void EditorComponent::Load()
 
 
 	profilerButton.Create("");
+	profilerButton.SetLocalizationEnabled(false);
 	profilerButton.SetShadowRadius(2);
 	profilerButton.font.params.shadowColor = wi::Color::Transparent();
 	profilerButton.SetTooltip("View the profiler frame timings");
@@ -394,6 +404,7 @@ void EditorComponent::Load()
 
 
 	cinemaButton.Create("");
+	cinemaButton.SetLocalizationEnabled(false);
 	cinemaButton.SetShadowRadius(2);
 	cinemaButton.font.params.shadowColor = wi::Color::Transparent();
 	cinemaButton.SetTooltip("Enter cinema mode (all HUD disabled). Press ESC to return to normal.");
@@ -412,6 +423,7 @@ void EditorComponent::Load()
 
 
 	fullscreenButton.Create("");
+	fullscreenButton.SetLocalizationEnabled(false);
 	fullscreenButton.SetShadowRadius(2);
 	fullscreenButton.font.params.shadowColor = wi::Color::Transparent();
 	fullscreenButton.SetTooltip("Toggle full screen");
@@ -453,6 +465,7 @@ void EditorComponent::Load()
 
 
 	bugButton.Create("");
+	bugButton.SetLocalizationEnabled(false);
 	bugButton.SetShadowRadius(2);
 	bugButton.font.params.shadowColor = wi::Color::Transparent();
 	bugButton.SetTooltip("Opens a browser window where you can report a bug or an issue.\nURL: https://github.com/turanszkij/WickedEngine/issues/new");
@@ -465,6 +478,7 @@ void EditorComponent::Load()
 
 
 	aboutButton.Create("");
+	aboutButton.SetLocalizationEnabled(false);
 	aboutButton.SetShadowRadius(2);
 	aboutButton.font.params.shadowColor = wi::Color::Transparent();
 	aboutButton.SetTooltip("About...");
@@ -537,10 +551,12 @@ void EditorComponent::Load()
 		aboutLabel.SetText(ss);
 		aboutLabel.SetVisible(false);
 		aboutLabel.SetColor(wi::Color(113, 183, 214, 100));
+		aboutLabel.SetLocalizationEnabled(false);
 		GetGUI().AddWidget(&aboutLabel);
 	}
 
 	exitButton.Create("");
+	exitButton.SetLocalizationEnabled(false);
 	exitButton.SetShadowRadius(2);
 	exitButton.font.params.shadowColor = wi::Color::Transparent();
 	exitButton.SetTooltip("Exit");
@@ -3242,7 +3258,9 @@ void EditorComponent::NewScene()
 	scenes.push_back(std::make_unique<EditorScene>());
 	auto& editorscene = scenes.back();
 	editorscene->tabSelectButton.Create("");
+	editorscene->tabSelectButton.SetLocalizationEnabled(false);
 	editorscene->tabCloseButton.Create("X");
+	editorscene->tabCloseButton.SetLocalizationEnabled(false);
 	editorscene->tabCloseButton.SetTooltip("Close scene. This operation cannot be undone!");
 	GetGUI().AddWidget(&editorscene->tabSelectButton);
 	GetGUI().AddWidget(&editorscene->tabCloseButton);

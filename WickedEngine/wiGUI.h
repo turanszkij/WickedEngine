@@ -8,6 +8,7 @@
 #include "wiScene.h"
 #include "wiSprite.h"
 #include "wiSpriteFont.h"
+#include "wiLocalization.h"
 
 #include <string>
 #include <functional>
@@ -230,6 +231,9 @@ namespace wi::gui
 		void SetColor(wi::Color color, int id = -1);
 		void SetShadowColor(wi::Color color);
 		void SetTheme(const Theme& theme, int id = -1);
+
+		void ExportLocalization(wi::Localization& localization) const;
+		void ImportLocalization(const wi::Localization& localization);
 	};
 
 	class Widget : public wi::scene::TransformComponent
@@ -238,8 +242,10 @@ namespace wi::gui
 		int tooltipTimer = 0;
 	protected:
 		std::string name;
+		size_t name_hash = 0;
 		bool enabled = true;
 		bool visible = true;
+		bool localization_enabled = true;
 		float shadow = 1; // shadow radius
 		wi::Color shadow_color = wi::Color::Shadow();
 		WIDGETSTATE state = IDLE;
@@ -253,6 +259,7 @@ namespace wi::gui
 		Widget();
 		virtual ~Widget() = default;
 
+		size_t GetNameHash() const { return name_hash; }
 		const std::string& GetName() const;
 		void SetName(const std::string& value);
 		const std::string GetText() const;
@@ -274,6 +281,8 @@ namespace wi::gui
 		wi::Color GetColor() const;
 		float GetShadowRadius() const { return shadow; }
 		void SetShadowRadius(float value) { shadow = value; }
+		bool IsLocalizationEnabled() const { return localization_enabled; }
+		void SetLocalizationEnabled(bool value) { localization_enabled = value; }
 
 		virtual void ResizeLayout() {};
 		virtual void Update(const wi::Canvas& canvas, float dt);
@@ -312,6 +321,9 @@ namespace wi::gui
 		bool priority_change = true;
 		uint32_t priority = 0;
 		bool force_disable = false;
+
+		virtual void ExportLocalization(wi::Localization& localization) const;
+		virtual void ImportLocalization(const wi::Localization& localization);
 	};
 
 	// Clickable, draggable box
@@ -641,6 +653,9 @@ namespace wi::gui
 		Label label;
 		ScrollBar scrollbar_vertical;
 		ScrollBar scrollbar_horizontal;
+
+		void ExportLocalization(wi::Localization& localization) const override;
+		void ImportLocalization(const wi::Localization& localization) override;
 	};
 
 	// HSV-Color Picker

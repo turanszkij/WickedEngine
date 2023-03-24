@@ -14,6 +14,7 @@ public:
 	wi::gui::CheckBox otherinfoCheckBox;
 	wi::gui::ComboBox themeCombo;
 	wi::gui::ComboBox saveModeComboBox;
+	wi::gui::ComboBox languageCombo;
 
 	wi::gui::CheckBox physicsEnabledCheckBox;
 	wi::gui::CheckBox physicsDebugCheckBox;
@@ -34,6 +35,8 @@ public:
 
 	wi::gui::Slider transformToolOpacitySlider;
 	wi::gui::Slider bonePickerOpacitySlider;
+
+	wi::gui::Button localizationButton;
 
 	void ResizeLayout() override;
 };

@@ -12,7 +12,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 	wi::gui::Window::Create("General", wi::gui::Window::WindowControls::COLLAPSE);
 
-	SetSize(XMFLOAT2(580, 580));
+	SetSize(XMFLOAT2(580, 620));
 
 	physicsEnabledCheckBox.Create("Physics: ");
 	physicsEnabledCheckBox.SetTooltip("Toggle Physics Simulation On/Off");
@@ -237,6 +237,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->main->config.GetSection("options").Set("transform_tool_opacity", args.fValue);
 	});
 	AddWidget(&transformToolOpacitySlider);
+
 	bonePickerOpacitySlider.Create(0, 1, 1, 100, "Bone Picker Opacity: ");
 	bonePickerOpacitySlider.SetTooltip("You can control the transparency of the bone selector tool");
 	bonePickerOpacitySlider.SetSize(XMFLOAT2(100, 18));
@@ -248,6 +249,68 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->main->config.GetSection("options").Set("bone_picker_opacity", args.fValue);
 	});
 	AddWidget(&bonePickerOpacitySlider);
+
+
+	localizationButton.Create(ICON_LANGUAGE " Create Localization Template");
+	localizationButton.SetTooltip("Generate a file that can be used to edit localization for the Editor's GUI.");
+	localizationButton.SetSize(XMFLOAT2(100, 18));
+	localizationButton.OnClick([&](wi::gui::EventArgs args) {
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::SAVE;
+		params.description = "XML file (.xml)";
+		params.extensions.push_back("xml");
+		wi::helper::FileDialog(params, [=](std::string fileName) {
+			wi::Localization localization;
+			editor->GetGUI().ExportLocalization(localization);
+			localization.Export(wi::helper::ForceExtension(fileName, params.extensions.back()));
+		});
+	});
+	AddWidget(&localizationButton);
+
+	languageCombo.Create("Language: ");
+	languageCombo.AddItem("English");
+	for (auto& x : editor->main->config.GetSection("languages"))
+	{
+		languageCombo.AddItem(x.first);
+	}
+	languageCombo.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
+	languageCombo.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
+	languageCombo.OnSelect([=](wi::gui::EventArgs args) {
+		std::string language = languageCombo.GetItemText(args.iValue);
+		std::string filename;
+		if (editor->main->config.GetSection("languages").Has(language.c_str()))
+		{
+			filename = editor->main->config.GetSection("languages").GetText(language.c_str());
+		}
+		wi::Localization localization;
+		if (localization.Import(filename))
+		{
+			editor->GetGUI().ImportLocalization(localization);
+			editor->main->config.GetSection("options").Set("language", language);
+			editor->main->config.Commit();
+		}
+		else
+		{
+			wi::backlog::post("Couldn't import localization file: " + filename, wi::backlog::LogLevel::Warning);
+		}
+	});
+	AddWidget(&languageCombo);
+
+	if (editor->main->config.GetSection("options").Has("language"))
+	{
+		std::string language = editor->main->config.GetSection("options").GetText("language");
+		if (editor->main->config.GetSection("languages").Has(language.c_str()))
+		{
+			for (int i = 0; i < languageCombo.GetItemCount(); ++i)
+			{
+				if (languageCombo.GetItemText(i) == language)
+				{
+					languageCombo.SetSelected(i);
+					break;
+				}
+			}
+		}
+	}
 
 
 	enum class Theme
@@ -493,8 +556,8 @@ void GeneralWindow::ResizeLayout()
 	auto add_fullwidth = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
-		const float margin_left = padding;
-		const float margin_right = padding;
+		const float margin_left = padding * 2;
+		const float margin_right = 0;
 		widget.SetPos(XMFLOAT2(margin_left, y));
 		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
 		y += widget.GetSize().y;
@@ -515,6 +578,11 @@ void GeneralWindow::ResizeLayout()
 	themeCombo.SetPos(XMFLOAT2(x_off, y));
 	themeCombo.SetSize(XMFLOAT2(width - x_off - themeCombo.GetScale().y - 1, themeCombo.GetScale().y));
 	y += themeCombo.GetSize().y;
+	y += padding;
+
+	languageCombo.SetPos(XMFLOAT2(x_off, y));
+	languageCombo.SetSize(XMFLOAT2(width - x_off - languageCombo.GetScale().y - 1, languageCombo.GetScale().y));
+	y += languageCombo.GetSize().y;
 	y += padding;
 
 	physicsEnabledCheckBox.SetPos(XMFLOAT2(width - physicsEnabledCheckBox.GetSize().x, y));
@@ -545,7 +613,13 @@ void GeneralWindow::ResizeLayout()
 
 	y += jump;
 
+	float prev_width = width;
 	width -= padding * 6;
 	add(transformToolOpacitySlider);
 	add(bonePickerOpacitySlider);
+
+	y += jump;
+
+	width = prev_width;
+	add_fullwidth(localizationButton);
 }

@@ -142,6 +142,7 @@ set(HEADER_FILES
 		wiTerrain.h
 		wiAllocator.h
 		wiBVH.h
+		wiLocalization.h
 		)
 
 add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
@@ -214,6 +215,7 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	wiShaderCompiler.cpp
 	wiConfig.cpp
 	wiTerrain.cpp
+	wiLocalization.cpp
 	${HEADER_FILES}
 )
 add_library(WickedEngine ALIAS ${TARGET_NAME})

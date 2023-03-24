@@ -1095,6 +1095,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBVH.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLocalization.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1840,6 +1843,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLocalization.cpp">
+      <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

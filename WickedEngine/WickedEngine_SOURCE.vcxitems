@@ -232,6 +232,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiConfig.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLocalization.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNoise.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysics_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.h" />
@@ -505,6 +506,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiConfig.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLocalization.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.cpp" />
