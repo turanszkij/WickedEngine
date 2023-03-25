@@ -276,7 +276,9 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	languageCombo.AddItem("English");
 	for (const auto& entry : std::filesystem::directory_iterator(languages_directory))
 	{
-		std::string language_name = entry.path().filename().generic_string();
+		std::wstring language_name_wide = entry.path().filename().generic_wstring();
+		std::string language_name;
+		wi::helper::StringConvert(language_name_wide, language_name);
 		if (wi::helper::toUpper(wi::helper::GetExtensionFromFileName(language_name)) == "XML")
 		{
 			language_name = wi::helper::RemoveExtension(language_name);
