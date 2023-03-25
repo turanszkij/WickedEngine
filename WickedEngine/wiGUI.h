@@ -100,7 +100,7 @@ namespace wi::gui
 		Items = 1 << 2,		// ComboBox items
 		Children = 1 << 3,	// Window children
 
-		All = Text | Tooltip | Children,
+		All = Text | Tooltip | Items | Children,
 	};
 
 	struct Theme

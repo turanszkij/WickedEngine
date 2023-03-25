@@ -256,7 +256,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 
 	localizationButton.Create(ICON_LANGUAGE " Create Localization Template");
-	localizationButton.SetTooltip("Generate a file that can be used to edit localization for the Editor's GUI.");
+	localizationButton.SetTooltip("Generate a file that can be used to edit localization for the Editor.\nThe template will be created from the currently selected language.");
 	localizationButton.SetSize(XMFLOAT2(100, 18));
 	localizationButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
@@ -264,15 +264,15 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		params.description = "XML file (.xml)";
 		params.extensions.push_back("xml");
 		wi::helper::FileDialog(params, [=](std::string fileName) {
-			wi::Localization localization;
-			editor->GetGUI().ExportLocalization(localization);
-			localization.Export(wi::helper::ForceExtension(fileName, params.extensions.back()));
+			editor->GetGUI().ExportLocalization(editor->current_localization);
+			editor->current_localization.Export(wi::helper::ForceExtension(fileName, params.extensions.back()));
 		});
 	});
 	AddWidget(&localizationButton);
 
 	languageCombo.Create("Language: ");
 	languageCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Text | wi::gui::LocalizationEnabled::Tooltip);
+	languageCombo.SetTooltip("Select a language. \nYou can also create a new language option by adding an XML file to the languages folder.\nThere is a button below that you can use to create a language template.");
 	languageCombo.AddItem("English");
 	for (const auto& entry : std::filesystem::directory_iterator(languages_directory))
 	{
@@ -285,22 +285,17 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	languageCombo.OnSelect([=](wi::gui::EventArgs args) {
 		if (args.iValue == 0)
 		{
-			editor->GetGUI().ImportLocalization(editor->default_localization);
+			editor->SetLocalization(editor->default_localization);
+			editor->main->config.GetSection("options").Set("language", "English");
+			editor->main->config.Commit();
 			return;
-		}
-
-		if (!editor->default_localization.IsValid())
-		{
-			// Save the default localization at first language switching so that it can be restored:
-			editor->GetGUI().ExportLocalization(editor->default_localization);
 		}
 
 		std::string language = languageCombo.GetItemText(args.iValue);
 		std::string filename = languages_directory + language + ".xml";
-		wi::Localization localization;
-		if (localization.Import(filename))
+		if (editor->current_localization.Import(filename))
 		{
-			editor->GetGUI().ImportLocalization(localization);
+			editor->SetLocalization(editor->current_localization);
 			editor->main->config.GetSection("options").Set("language", language);
 			editor->main->config.Commit();
 		}
@@ -492,6 +487,31 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->newSceneButton.sprites[i].params.corners_rounding[2].radius = 10;
 			editor->newSceneButton.sprites[i].params.corners_rounding[3].radius = 10;
 		}
+		for (int i = 0; i < arraysize(localizationButton.sprites); ++i)
+		{
+			localizationButton.sprites[i].params.enableCornerRounding();
+			localizationButton.sprites[i].params.corners_rounding[0].radius = 8;
+			localizationButton.sprites[i].params.corners_rounding[1].radius = 8;
+			localizationButton.sprites[i].params.corners_rounding[2].radius = 8;
+			localizationButton.sprites[i].params.corners_rounding[3].radius = 8;
+		}
+		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
+		{
+			editor->saveButton.sprites[i].params.enableCornerRounding();
+			editor->saveButton.sprites[i].params.corners_rounding[2].radius = 10;
+
+			editor->playButton.sprites[i].params.enableCornerRounding();
+			editor->playButton.sprites[i].params.corners_rounding[2].radius = 40;
+
+			editor->stopButton.sprites[i].params.enableCornerRounding();
+			editor->stopButton.sprites[i].params.corners_rounding[3].radius = 40;
+
+			editor->translateButton.sprites[i].params.enableCornerRounding();
+			editor->translateButton.sprites[i].params.corners_rounding[2].radius = 40;
+
+			editor->scaleButton.sprites[i].params.enableCornerRounding();
+			editor->scaleButton.sprites[i].params.corners_rounding[3].radius = 40;
+		}
 		editor->componentsWnd.weatherWnd.default_sky_horizon = dark_point;
 		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
 		editor->componentsWnd.weatherWnd.Update();
@@ -600,6 +620,8 @@ void GeneralWindow::ResizeLayout()
 	y += languageCombo.GetSize().y;
 	y += padding;
 
+	add_fullwidth(localizationButton);
+
 	physicsEnabledCheckBox.SetPos(XMFLOAT2(width - physicsEnabledCheckBox.GetSize().x, y));
 	physicsDebugCheckBox.SetPos(XMFLOAT2(physicsEnabledCheckBox.GetPos().x - physicsDebugCheckBox.GetSize().x - 70, y));
 	y += physicsEnabledCheckBox.GetSize().y;
@@ -634,7 +656,5 @@ void GeneralWindow::ResizeLayout()
 	add(bonePickerOpacitySlider);
 
 	y += jump;
-
 	width = prev_width;
-	add_fullwidth(localizationButton);
 }
