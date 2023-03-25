@@ -371,6 +371,7 @@ void EditorComponent::Load()
 
 
 	logButton.Create("Backlog");
+	logButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	logButton.SetText("");
 	logButton.SetShadowRadius(2);
 	logButton.font.params.shadowColor = wi::Color::Transparent();

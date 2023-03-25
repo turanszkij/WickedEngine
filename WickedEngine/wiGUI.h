@@ -92,6 +92,17 @@ namespace wi::gui
 		WIDGET_ID_USER,
 	};
 
+	enum class LocalizationEnabled
+	{
+		None = 0,
+		Text = 1 << 0,
+		Tooltip = 1 << 1,
+		Items = 1 << 2,		// ComboBox items
+		Children = 1 << 3,	// Window children
+
+		All = Text | Tooltip | Children,
+	};
+
 	struct Theme
 	{
 		// Reduced version of wi::image::Params, excluding position, alignment, etc.
@@ -244,7 +255,7 @@ namespace wi::gui
 		std::string name;
 		bool enabled = true;
 		bool visible = true;
-		bool localization_enabled = true;
+		LocalizationEnabled localization_enabled = LocalizationEnabled::All;
 		float shadow = 1; // shadow radius
 		wi::Color shadow_color = wi::Color::Shadow();
 		WIDGETSTATE state = IDLE;
@@ -279,8 +290,6 @@ namespace wi::gui
 		wi::Color GetColor() const;
 		float GetShadowRadius() const { return shadow; }
 		void SetShadowRadius(float value) { shadow = value; }
-		bool IsLocalizationEnabled() const { return localization_enabled; }
-		void SetLocalizationEnabled(bool value) { localization_enabled = value; }
 
 		virtual void ResizeLayout() {};
 		virtual void Update(const wi::Canvas& canvas, float dt);
@@ -321,6 +330,10 @@ namespace wi::gui
 		uint32_t priority = 0;
 		bool force_disable = false;
 
+		bool IsLocalizationEnabled() const { return localization_enabled != LocalizationEnabled::None; }
+		LocalizationEnabled GetLocalizationEnabled() const { return localization_enabled; }
+		void SetLocalizationEnabled(LocalizationEnabled value) { localization_enabled = value; }
+		void SetLocalizationEnabled(bool value) { localization_enabled = value ? LocalizationEnabled::All : LocalizationEnabled::None; }
 		virtual void ExportLocalization(wi::Localization& localization) const;
 		virtual void ImportLocalization(const wi::Localization& localization);
 	};
@@ -530,7 +543,6 @@ namespace wi::gui
 		int selected = -1;
 		int maxVisibleItemCount = 8;
 		int firstItemVisible = 0;
-		bool localization_enabled_for_items = true;
 
 		// While the widget is active (rolled down) these are the inner states that control behaviour
 		enum COMBOSTATE
@@ -578,7 +590,6 @@ namespace wi::gui
 		uint64_t GetItemUserData(int index) const;
 		size_t GetItemCount() const { return items.size(); }
 		void SetInvalidSelectionText(const std::string& text);
-		void SetLocalizationEnabledForItems(bool value) { localization_enabled_for_items = value; }
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
@@ -768,5 +779,10 @@ struct enable_bitmask_operators<wi::gui::Window::WindowControls> {
 
 template<>
 struct enable_bitmask_operators<wi::gui::Window::AttachmentOptions> {
+	static const bool enable = true;
+};
+
+template<>
+struct enable_bitmask_operators<wi::gui::LocalizationEnabled> {
 	static const bool enable = true;
 };

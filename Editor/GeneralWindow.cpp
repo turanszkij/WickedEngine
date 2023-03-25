@@ -272,7 +272,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	AddWidget(&localizationButton);
 
 	languageCombo.Create("Language: ");
-	languageCombo.SetLocalizationEnabledForItems(false);
+	languageCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Text | wi::gui::LocalizationEnabled::Tooltip);
 	languageCombo.AddItem("English");
 	for (const auto& entry : std::filesystem::directory_iterator(languages_directory))
 	{
