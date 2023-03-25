@@ -7,6 +7,7 @@
 #include "Translator.h"
 
 #include "FontAwesomeV6.h" // font TTF data
+#include "yumin.h" // yumin.ttf font
 
 #include <string>
 #include <cassert>
@@ -159,6 +160,7 @@ void EditorComponent::ResizeLayout()
 void EditorComponent::Load()
 {
 	newSceneButton.Create("+");
+	newSceneButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	newSceneButton.SetTooltip("New scene");
 	newSceneButton.OnClick([&](wi::gui::EventArgs args) {
 		NewScene();
@@ -173,6 +175,7 @@ void EditorComponent::Load()
 	{
 		scaleButton.SetShadowRadius(2);
 		scaleButton.SetTooltip("Scale\nHotkey: 3");
+		scaleButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 		scaleButton.OnClick([&](wi::gui::EventArgs args) {
 			translator.isScalator = true;
 			translator.isTranslator = false;
@@ -182,6 +185,7 @@ void EditorComponent::Load()
 
 		rotateButton.SetShadowRadius(2);
 		rotateButton.SetTooltip("Rotate\nHotkey: 2");
+		rotateButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 		rotateButton.OnClick([&](wi::gui::EventArgs args) {
 			translator.isRotator = true;
 			translator.isScalator = false;
@@ -191,6 +195,7 @@ void EditorComponent::Load()
 
 		translateButton.SetShadowRadius(2);
 		translateButton.SetTooltip("Translate/Move (Ctrl + T)\nHotkey: 1");
+		translateButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 		translateButton.OnClick([&](wi::gui::EventArgs args) {
 			translator.isTranslator = true;
 			translator.isScalator = false;
@@ -203,6 +208,7 @@ void EditorComponent::Load()
 	playButton.Create(ICON_PLAY);
 	playButton.font.params.shadowColor = wi::Color::Transparent();
 	playButton.SetShadowRadius(2);
+	playButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	playButton.SetTooltip("Execute the last used (standalone) script.\nTo use a new script, use the Open button.");
 	playButton.OnClick([&](wi::gui::EventArgs args) {
 		if (last_script_path.empty() || !wi::helper::FileExists(last_script_path))
@@ -243,6 +249,7 @@ void EditorComponent::Load()
 
 
 	stopButton.Create(ICON_STOP);
+	stopButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	stopButton.font.params.shadowColor = wi::Color::Transparent();
 	stopButton.SetShadowRadius(2);
 	stopButton.SetTooltip("Stops every script background processes that are still running.");
@@ -254,7 +261,8 @@ void EditorComponent::Load()
 
 
 
-	saveButton.Create("");
+	saveButton.Create("Save");
+	saveButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	saveButton.font.params.shadowColor = wi::Color::Transparent();
 	saveButton.SetShadowRadius(2);
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)\nBy default, the scene will be saved into .wiscene, but you can specify .gltf or .glb extensions to export into GLTF.\nYou can also use Ctrl + S to quicksave, without browsing.");
@@ -266,7 +274,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&saveButton);
 
 
-	openButton.Create("");
+	openButton.Create("Open");
+	openButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	openButton.SetShadowRadius(2);
 	openButton.font.params.shadowColor = wi::Color::Transparent();
 	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...");
@@ -368,7 +377,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&openButton);
 
 
-	logButton.Create("");
+	logButton.Create("Backlog");
+	logButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	logButton.SetShadowRadius(2);
 	logButton.font.params.shadowColor = wi::Color::Transparent();
 	logButton.SetTooltip("Open the backlog (toggle with HOME button)");
@@ -380,7 +390,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&logButton);
 
 
-	profilerButton.Create("");
+	profilerButton.Create("Profiler");
+	profilerButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	profilerButton.SetShadowRadius(2);
 	profilerButton.font.params.shadowColor = wi::Color::Transparent();
 	profilerButton.SetTooltip("View the profiler frame timings");
@@ -393,7 +404,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&profilerButton);
 
 
-	cinemaButton.Create("");
+	cinemaButton.Create("Cinema");
+	cinemaButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	cinemaButton.SetShadowRadius(2);
 	cinemaButton.font.params.shadowColor = wi::Color::Transparent();
 	cinemaButton.SetTooltip("Enter cinema mode (all HUD disabled). Press ESC to return to normal.");
@@ -411,7 +423,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&cinemaButton);
 
 
-	fullscreenButton.Create("");
+	fullscreenButton.Create("Full screen");
+	fullscreenButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	fullscreenButton.SetShadowRadius(2);
 	fullscreenButton.font.params.shadowColor = wi::Color::Transparent();
 	fullscreenButton.SetTooltip("Toggle full screen");
@@ -452,7 +465,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&fullscreenButton);
 
 
-	bugButton.Create("");
+	bugButton.Create("Bug report");
+	bugButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	bugButton.SetShadowRadius(2);
 	bugButton.font.params.shadowColor = wi::Color::Transparent();
 	bugButton.SetTooltip("Opens a browser window where you can report a bug or an issue.\nURL: https://github.com/turanszkij/WickedEngine/issues/new");
@@ -464,7 +478,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&bugButton);
 
 
-	aboutButton.Create("");
+	aboutButton.Create("About");
+	aboutButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	aboutButton.SetShadowRadius(2);
 	aboutButton.font.params.shadowColor = wi::Color::Transparent();
 	aboutButton.SetTooltip("About...");
@@ -537,10 +552,12 @@ void EditorComponent::Load()
 		aboutLabel.SetText(ss);
 		aboutLabel.SetVisible(false);
 		aboutLabel.SetColor(wi::Color(113, 183, 214, 100));
+		aboutLabel.SetLocalizationEnabled(false);
 		GetGUI().AddWidget(&aboutLabel);
 	}
 
-	exitButton.Create("");
+	exitButton.Create("Exit");
+	exitButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	exitButton.SetShadowRadius(2);
 	exitButton.font.params.shadowColor = wi::Color::Transparent();
 	exitButton.SetTooltip("Exit");
@@ -586,6 +603,9 @@ void EditorComponent::Load()
 		optionsWnd.generalWnd.themeCombo.SetSelected(4);
 	}
 
+	SetDefaultLocalization();
+	optionsWnd.generalWnd.RefreshLanguageSelectionAfterWholeGUIWasInitialized();
+
 	RenderPath2D::Load();
 }
 void EditorComponent::Start()
@@ -595,6 +615,9 @@ void EditorComponent::Start()
 	//	when an icon character is not found in the default font.
 	//	This is added on main thread, not inside Load(), to avoid conflict with font system intialization
 	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, sizeof(font_awesome_v6));
+
+	// Same thing with the yumin font as above, it is a fallback for asian characters
+	wi::font::AddFontStyle("yumin", yumin, sizeof(yumin));
 
 	RenderPath2D::Start();
 }
@@ -3048,17 +3071,123 @@ void EditorComponent::UpdateTopMenuAnimation()
 	float lerp = 0.4f;
 
 	bool fullscreen = main->config.GetBool("fullscreen");
-	const char* fullscreen_text = fullscreen ? ICON_FA_COMPRESS " Windowed" : ICON_FULLSCREEN " Full screen";
 
-	exitButton.SetText(exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_EXIT " Exit" : ICON_EXIT);
-	aboutButton.SetText(aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_HELP " About" : ICON_HELP);
-	fullscreenButton.SetText(fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? fullscreen_text : fullscreen ? ICON_FA_COMPRESS : ICON_FULLSCREEN);
-	bugButton.SetText(bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BUG " Bug report" : ICON_BUG);
-	profilerButton.SetText(profilerButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_PROFILER " Profiler" : ICON_PROFILER);
-	cinemaButton.SetText(cinemaButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_CINEMA_MODE " Cinema" : ICON_CINEMA_MODE);
-	logButton.SetText(logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BACKLOG " Backlog" : ICON_BACKLOG);
-	openButton.SetText(openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_OPEN " Open" : ICON_OPEN);
-	saveButton.SetText(saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_SAVE " Save" : ICON_SAVE);
+	static std::string tmp;
+
+	if (saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::Save) != nullptr)
+	{
+		tmp = ICON_SAVE " ";
+		tmp += current_localization.Get((size_t)EditorLocalization::Save);
+		saveButton.SetText(tmp);
+	}
+	else
+	{
+		saveButton.SetText(saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_SAVE " Save" : ICON_SAVE);
+	}
+
+	if (openButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::Open) != nullptr)
+	{
+		tmp = ICON_OPEN " ";
+		tmp += current_localization.Get((size_t)EditorLocalization::Open);
+		openButton.SetText(tmp);
+	}
+	else
+	{
+		openButton.SetText(openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_OPEN " Open" : ICON_OPEN);
+	}
+
+	if (logButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::Backlog) != nullptr)
+	{
+		tmp = ICON_BACKLOG " ";
+		tmp += current_localization.Get((size_t)EditorLocalization::Backlog);
+		logButton.SetText(tmp);
+	}
+	else
+	{
+		logButton.SetText(logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BACKLOG " Backlog" : ICON_BACKLOG);
+	}
+
+	if (cinemaButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::Cinema) != nullptr)
+	{
+		tmp = ICON_CINEMA_MODE " ";
+		tmp += current_localization.Get((size_t)EditorLocalization::Cinema);
+		cinemaButton.SetText(tmp);
+	}
+	else
+	{
+		cinemaButton.SetText(cinemaButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_CINEMA_MODE " Cinema" : ICON_CINEMA_MODE);
+	}
+
+	if (profilerButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::Profiler) != nullptr)
+	{
+		tmp = ICON_PROFILER " ";
+		tmp += current_localization.Get((size_t)EditorLocalization::Profiler);
+		profilerButton.SetText(tmp);
+	}
+	else
+	{
+		profilerButton.SetText(profilerButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_PROFILER " Profiler" : ICON_PROFILER);
+	}
+
+	if (bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::BugReport) != nullptr)
+	{
+		tmp = ICON_BUG " ";
+		tmp += current_localization.Get((size_t)EditorLocalization::BugReport);
+		bugButton.SetText(tmp);
+	}
+	else
+	{
+		bugButton.SetText(bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BUG " Bug report" : ICON_BUG);
+	}
+
+	if (fullscreen)
+	{
+		if (fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::Windowed) != nullptr)
+		{
+			tmp = ICON_WINDOWED " ";
+			tmp += current_localization.Get((size_t)EditorLocalization::Windowed);
+			fullscreenButton.SetText(tmp);
+		}
+		else
+		{
+			fullscreenButton.SetText(fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_WINDOWED " Windowed" : ICON_WINDOWED);
+		}
+	}
+	else
+	{
+		if (fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::FullScreen) != nullptr)
+		{
+			tmp = ICON_FULLSCREEN " ";
+			tmp += current_localization.Get((size_t)EditorLocalization::FullScreen);
+			fullscreenButton.SetText(tmp);
+		}
+		else
+		{
+			fullscreenButton.SetText(fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_FULLSCREEN " Full screen" : ICON_FULLSCREEN);
+		}
+	}
+
+	if (aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::About) != nullptr)
+	{
+		tmp = ICON_HELP " ";
+		tmp += current_localization.Get((size_t)EditorLocalization::About);
+		aboutButton.SetText(tmp);
+	}
+	else
+	{
+		aboutButton.SetText(aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_HELP " About" : ICON_HELP);
+	}
+
+	if (exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::Exit) != nullptr)
+	{
+		tmp = ICON_EXIT " ";
+		tmp += current_localization.Get((size_t)EditorLocalization::Exit);
+		exitButton.SetText(tmp);
+	}
+	else
+	{
+		exitButton.SetText(exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_EXIT " Exit" : ICON_EXIT);
+	}
 
 	exitButton.SetSize(XMFLOAT2(wi::math::Lerp(exitButton.GetSize().x, exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	aboutButton.SetSize(XMFLOAT2(wi::math::Lerp(aboutButton.GetSize().x, aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
@@ -3093,25 +3222,6 @@ void EditorComponent::UpdateTopMenuAnimation()
 	rotateButton.SetPos(XMFLOAT2(scaleButton.GetPos().x - rotateButton.GetSize().x - padding, 0));
 	translateButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	translateButton.SetPos(XMFLOAT2(rotateButton.GetPos().x - translateButton.GetSize().x - padding, 0));
-
-	// Custom corner rounding stuff for top menu:
-	for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
-	{
-		saveButton.sprites[i].params.enableCornerRounding();
-		saveButton.sprites[i].params.corners_rounding[2].radius = 10;
-
-		playButton.sprites[i].params.enableCornerRounding();
-		playButton.sprites[i].params.corners_rounding[2].radius = 40;
-
-		stopButton.sprites[i].params.enableCornerRounding();
-		stopButton.sprites[i].params.corners_rounding[3].radius = 40;
-
-		translateButton.sprites[i].params.enableCornerRounding();
-		translateButton.sprites[i].params.corners_rounding[2].radius = 40;
-
-		scaleButton.sprites[i].params.enableCornerRounding();
-		scaleButton.sprites[i].params.corners_rounding[3].radius = 40;
-	}
 
 	XMFLOAT4 color_on = playButton.sprites[wi::gui::FOCUS].params.color;
 	XMFLOAT4 color_off = playButton.sprites[wi::gui::IDLE].params.color;
@@ -3173,7 +3283,14 @@ void EditorComponent::RefreshSceneList()
 		auto& editorscene = scenes[i];
 		if (editorscene->path.empty())
 		{
-			editorscene->tabSelectButton.SetText("Untitled scene");
+			if (current_localization.Get((size_t)EditorLocalization::UntitledScene))
+			{
+				editorscene->tabSelectButton.SetText(current_localization.Get((size_t)EditorLocalization::UntitledScene));
+			}
+			else
+			{
+				editorscene->tabSelectButton.SetText("Untitled scene");
+			}
 			editorscene->tabSelectButton.SetTooltip("");
 		}
 		else
@@ -3242,7 +3359,9 @@ void EditorComponent::NewScene()
 	scenes.push_back(std::make_unique<EditorScene>());
 	auto& editorscene = scenes.back();
 	editorscene->tabSelectButton.Create("");
+	editorscene->tabSelectButton.SetLocalizationEnabled(false);
 	editorscene->tabCloseButton.Create("X");
+	editorscene->tabCloseButton.SetLocalizationEnabled(false);
 	editorscene->tabCloseButton.SetTooltip("Close scene. This operation cannot be undone!");
 	GetGUI().AddWidget(&editorscene->tabSelectButton);
 	GetGUI().AddWidget(&editorscene->tabCloseButton);
@@ -3307,4 +3426,26 @@ void EditorComponent::FocusCameraOnSelected()
 	editorscene.camera_transform.Translate(centerV - camera.GetAt() * focus_offset);
 	editorscene.camera_transform.UpdateTransform();
 	editorscene.cam_move = {};
+}
+
+void EditorComponent::SetDefaultLocalization()
+{
+	GetGUI().ExportLocalization(default_localization);
+
+	for (size_t i = 0; i < arraysize(EditorLocalizationStrings); ++i)
+	{
+		default_localization.Add(i, EditorLocalizationStrings[i]);
+	}
+
+	current_localization = default_localization;
+}
+void EditorComponent::SetLocalization(wi::Localization& loc)
+{
+	current_localization = loc;
+	GetGUI().ImportLocalization(current_localization);
+	RefreshSceneList();
+}
+void EditorComponent::ReloadLanguage()
+{
+	optionsWnd.generalWnd.languageCombo.SetSelected(optionsWnd.generalWnd.languageCombo.GetSelected());
 }

@@ -734,7 +734,15 @@ namespace wi::helper
 		std::replace(filepath.begin(), filepath.end(), '\\', '/');
 		std::ifstream file(filepath, std::ios::binary | std::ios::ate);
 #else
+
+#ifdef _WIN32
+		std::wstring fileName_wide;
+		StringConvert(fileName, fileName_wide);
+		std::ifstream file(fileName_wide, std::ios::binary | std::ios::ate);
+#else
 		std::ifstream file(fileName, std::ios::binary | std::ios::ate);
+#endif //_WIN32
+
 #endif // SDL_FILESYSTEM_UNIX
 		if (file.is_open())
 		{

@@ -30,6 +30,11 @@ namespace wi::config
 		void Set(const char* name, const char* value);
 		void Set(const char* name, const std::string& value);
 
+		std::unordered_map<std::string, std::string>::iterator begin() { return values.begin(); }
+		std::unordered_map<std::string, std::string>::const_iterator begin() const { return values.begin(); }
+		std::unordered_map<std::string, std::string>::iterator end() { return values.end(); }
+		std::unordered_map<std::string, std::string>::const_iterator end() const { return values.end(); }
+
 	protected:
 		std::unordered_map<std::string, std::string> values;
 	};

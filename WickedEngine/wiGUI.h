@@ -8,6 +8,7 @@
 #include "wiScene.h"
 #include "wiSprite.h"
 #include "wiSpriteFont.h"
+#include "wiLocalization.h"
 
 #include <string>
 #include <functional>
@@ -89,6 +90,17 @@ namespace wi::gui
 		// other user-defined widget states can be specified after this (but in user's own enum):
 		//	And you will of course need to handle it yourself in a SetColor() override for example
 		WIDGET_ID_USER,
+	};
+
+	enum class LocalizationEnabled
+	{
+		None = 0,
+		Text = 1 << 0,
+		Tooltip = 1 << 1,
+		Items = 1 << 2,		// ComboBox items
+		Children = 1 << 3,	// Window children
+
+		All = Text | Tooltip | Items | Children,
 	};
 
 	struct Theme
@@ -230,6 +242,9 @@ namespace wi::gui
 		void SetColor(wi::Color color, int id = -1);
 		void SetShadowColor(wi::Color color);
 		void SetTheme(const Theme& theme, int id = -1);
+
+		void ExportLocalization(wi::Localization& localization) const;
+		void ImportLocalization(const wi::Localization& localization);
 	};
 
 	class Widget : public wi::scene::TransformComponent
@@ -240,6 +255,7 @@ namespace wi::gui
 		std::string name;
 		bool enabled = true;
 		bool visible = true;
+		LocalizationEnabled localization_enabled = LocalizationEnabled::All;
 		float shadow = 1; // shadow radius
 		wi::Color shadow_color = wi::Color::Shadow();
 		WIDGETSTATE state = IDLE;
@@ -255,7 +271,7 @@ namespace wi::gui
 
 		const std::string& GetName() const;
 		void SetName(const std::string& value);
-		const std::string GetText() const;
+		std::string GetText() const;
 		void SetText(const std::string& value);
 		void SetText(std::string&& value);
 		void SetTooltip(const std::string& value);
@@ -286,6 +302,7 @@ namespace wi::gui
 		virtual void SetShadowColor(wi::Color color);
 		virtual void SetImage(wi::Resource textureResource, int id = -1);
 		virtual void SetTheme(const Theme& theme, int id = -1);
+		virtual const char* GetWidgetTypeName() const { return "Widget"; }
 
 		wi::Sprite sprites[WIDGETSTATE_COUNT];
 		wi::SpriteFont font;
@@ -312,6 +329,13 @@ namespace wi::gui
 		bool priority_change = true;
 		uint32_t priority = 0;
 		bool force_disable = false;
+
+		bool IsLocalizationEnabled() const { return localization_enabled != LocalizationEnabled::None; }
+		LocalizationEnabled GetLocalizationEnabled() const { return localization_enabled; }
+		void SetLocalizationEnabled(LocalizationEnabled value) { localization_enabled = value; }
+		void SetLocalizationEnabled(bool value) { localization_enabled = value ? LocalizationEnabled::All : LocalizationEnabled::None; }
+		virtual void ExportLocalization(wi::Localization& localization) const;
+		virtual void ImportLocalization(const wi::Localization& localization);
 	};
 
 	// Clickable, draggable box
@@ -333,6 +357,7 @@ namespace wi::gui
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "Button"; }
 
 		void OnClick(std::function<void(EventArgs args)> func);
 		void OnDragStart(std::function<void(EventArgs args)> func);
@@ -384,6 +409,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "ScrollBar"; }
 
 		void SetVertical(bool value) { vertical = value; }
 		bool IsVertical() const { return vertical; }
@@ -400,6 +426,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "Label"; }
 
 		float scrollbar_width = 18;
 		ScrollBar scrollbar;
@@ -441,6 +468,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "TextInputField"; }
 
 		// Called when input was accepted with ENTER key:
 		void OnInputAccepted(std::function<void(EventArgs args)> func);
@@ -475,6 +503,7 @@ namespace wi::gui
 		void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "Slider"; }
 
 		void OnSlide(std::function<void(EventArgs args)> func);
 
@@ -497,6 +526,7 @@ namespace wi::gui
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		const char* GetWidgetTypeName() const override { return "CheckBox"; }
 
 		void OnClick(std::function<void(EventArgs args)> func);
 
@@ -565,10 +595,14 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "ComboBox"; }
 
 		void OnSelect(std::function<void(EventArgs args)> func);
 
 		wi::SpriteFont selected_font;
+
+		void ExportLocalization(wi::Localization& localization) const override;
+		void ImportLocalization(const wi::Localization& localization) override;
 	};
 
 	// Widget container
@@ -616,6 +650,7 @@ namespace wi::gui
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetShadowColor(wi::Color color) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "Window"; }
 
 		void SetVisible(bool value) override;
 		void SetEnabled(bool value) override;
@@ -641,6 +676,9 @@ namespace wi::gui
 		Label label;
 		ScrollBar scrollbar_vertical;
 		ScrollBar scrollbar_horizontal;
+
+		void ExportLocalization(wi::Localization& localization) const override;
+		void ImportLocalization(const wi::Localization& localization) override;
 	};
 
 	// HSV-Color Picker
@@ -665,6 +703,7 @@ namespace wi::gui
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void ResizeLayout() override;
+		const char* GetWidgetTypeName() const override { return "ColorPicker"; }
 
 		wi::Color GetPickColor() const;
 		void SetPickColor(wi::Color value);
@@ -723,6 +762,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "TreeList"; }
 
 		void OnSelect(std::function<void(EventArgs args)> func);
 		void OnDelete(std::function<void(EventArgs args)> func);
@@ -739,5 +779,10 @@ struct enable_bitmask_operators<wi::gui::Window::WindowControls> {
 
 template<>
 struct enable_bitmask_operators<wi::gui::Window::AttachmentOptions> {
+	static const bool enable = true;
+};
+
+template<>
+struct enable_bitmask_operators<wi::gui::LocalizationEnabled> {
 	static const bool enable = true;
 };

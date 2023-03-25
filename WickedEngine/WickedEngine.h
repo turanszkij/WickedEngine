@@ -71,6 +71,7 @@
 #include "wiNoise.h"
 #include "wiConfig.h"
 #include "wiTerrain.h"
+#include "wiLocalization.h"
 
 #ifdef _WIN32
 #ifdef PLATFORM_UWP
