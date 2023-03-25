@@ -277,8 +277,11 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	for (const auto& entry : std::filesystem::directory_iterator(languages_directory))
 	{
 		std::string language_name = entry.path().filename().generic_string();
-		language_name = wi::helper::RemoveExtension(language_name);
-		languageCombo.AddItem(language_name);
+		if (wi::helper::toUpper(wi::helper::GetExtensionFromFileName(language_name)) == "XML")
+		{
+			language_name = wi::helper::RemoveExtension(language_name);
+			languageCombo.AddItem(language_name);
+		}
 	}
 	languageCombo.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
 	languageCombo.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
