@@ -587,6 +587,9 @@ namespace wi::gui
 		void OnSelect(std::function<void(EventArgs args)> func);
 
 		wi::SpriteFont selected_font;
+
+		void ExportLocalization(wi::Localization& localization) const override;
+		void ImportLocalization(const wi::Localization& localization) override;
 	};
 
 	// Widget container

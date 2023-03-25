@@ -2703,6 +2703,31 @@ namespace wi::gui
 		}
 		theme.font.Apply(selected_font.params);
 	}
+	void ComboBox::ExportLocalization(wi::Localization& localization) const
+	{
+		Widget::ExportLocalization(localization);
+		wi::Localization& section = localization.GetSection(GetName()).GetSection("items");
+		for (size_t i = 0; i < items.size(); ++i)
+		{
+			section.Add(i, items[i].name.c_str());
+		}
+	}
+	void ComboBox::ImportLocalization(const wi::Localization& localization)
+	{
+		if (!localization_enabled)
+			return;
+		Widget::ImportLocalization(localization);
+		const wi::Localization* section = localization.CheckSection(GetName());
+		if (section == nullptr)
+			return;
+		section = section->CheckSection("items");
+		if (section == nullptr)
+			return;
+		for (size_t i = 0; i < items.size(); ++i)
+		{
+			items[i].name = section->Get(i);
+		}
+	}
 
 
 

@@ -159,7 +159,6 @@ void EditorComponent::ResizeLayout()
 void EditorComponent::Load()
 {
 	newSceneButton.Create("+");
-	newSceneButton.SetLocalizationEnabled(false);
 	newSceneButton.SetTooltip("New scene");
 	newSceneButton.OnClick([&](wi::gui::EventArgs args) {
 		NewScene();
@@ -172,7 +171,6 @@ void EditorComponent::Load()
 	rotateButton.Create(ICON_ROTATE);
 	scaleButton.Create(ICON_SCALE);
 	{
-		scaleButton.SetLocalizationEnabled(false);
 		scaleButton.SetShadowRadius(2);
 		scaleButton.SetTooltip("Scale\nHotkey: 3");
 		scaleButton.OnClick([&](wi::gui::EventArgs args) {
@@ -182,7 +180,6 @@ void EditorComponent::Load()
 		});
 		GetGUI().AddWidget(&scaleButton);
 
-		rotateButton.SetLocalizationEnabled(false);
 		rotateButton.SetShadowRadius(2);
 		rotateButton.SetTooltip("Rotate\nHotkey: 2");
 		rotateButton.OnClick([&](wi::gui::EventArgs args) {
@@ -192,7 +189,6 @@ void EditorComponent::Load()
 			});
 		GetGUI().AddWidget(&rotateButton);
 
-		translateButton.SetLocalizationEnabled(false);
 		translateButton.SetShadowRadius(2);
 		translateButton.SetTooltip("Translate/Move (Ctrl + T)\nHotkey: 1");
 		translateButton.OnClick([&](wi::gui::EventArgs args) {
@@ -205,7 +201,6 @@ void EditorComponent::Load()
 
 
 	playButton.Create(ICON_PLAY);
-	playButton.SetLocalizationEnabled(false);
 	playButton.font.params.shadowColor = wi::Color::Transparent();
 	playButton.SetShadowRadius(2);
 	playButton.SetTooltip("Execute the last used (standalone) script.\nTo use a new script, use the Open button.");
@@ -248,7 +243,6 @@ void EditorComponent::Load()
 
 
 	stopButton.Create(ICON_STOP);
-	stopButton.SetLocalizationEnabled(false);
 	stopButton.font.params.shadowColor = wi::Color::Transparent();
 	stopButton.SetShadowRadius(2);
 	stopButton.SetTooltip("Stops every script background processes that are still running.");
