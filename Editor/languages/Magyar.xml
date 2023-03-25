@@ -423,15 +423,15 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 				<entry id="1" hint="tooltip">Készíts egy lokalizációs fájlt amivel más nyelvre lehet fordítani a programot, a jelenleg kiválasztott nyelv alapján.</entry>
 			</section>
 			<section name="Name visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Name visualizer: </entry>
+				<entry id="0" hint="text">Név vizualizáció: </entry>
 				<entry id="1" hint="tooltip">Visualize the entity names in the scene</entry>
 			</section>
 			<section name="Bone Picker Opacity: " hint="Slider">
-				<entry id="0" hint="text">Bone Picker Opacity: </entry>
+				<entry id="0" hint="text">Csont átlátszóság: </entry>
 				<entry id="1" hint="tooltip">You can control the transparency of the bone selector tool</entry>
 			</section>
 			<section name="Env probe visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Env probe visualizer: </entry>
+				<entry id="0" hint="text">Környezeti szonda vizualizáció: </entry>
 				<entry id="1" hint="tooltip">Toggle visualization of environment probes as reflective spheres</entry>
 			</section>
 			<section name="Theme: " hint="ComboBox">
@@ -450,7 +450,7 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 				<entry id="1" hint="tooltip">Toggle advanced data in the info display text in top left corner.</entry>
 			</section>
 			<section name="Force Field visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Force Field visualizer: </entry>
+				<entry id="0" hint="text">Erőtér vizualizáció: </entry>
 				<entry id="1" hint="tooltip">Visualize force fields</entry>
 			</section>
 			<section name="Language: " hint="ComboBox">
@@ -464,7 +464,7 @@ Alább van egy gomb amivel nyelvi mintát készíthetsz.</entry>
 				<entry id="1" hint="tooltip">Freeze culling camera update. Scene culling will not be updated with the view</entry>
 			</section>
 			<section name="Render Wireframe: " hint="CheckBox">
-				<entry id="0" hint="text">Render Wireframe: </entry>
+				<entry id="0" hint="text">Vonal rajzolás: </entry>
 				<entry id="1" hint="tooltip">Visualize the scene as a wireframe</entry>
 			</section>
 			<section name="FPS: " hint="CheckBox">
@@ -494,11 +494,11 @@ The Dump to header () option will use embedding and create a C++ header file 
 				<entry id="1" hint="tooltip">Toggle showing of unit visualizer grid in the world origin</entry>
 			</section>
 			<section name="Collider visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Collider visualizer: </entry>
+				<entry id="0" hint="text">Ütköző vizualizáció: </entry>
 				<entry id="1" hint="tooltip">Toggle visualization of colliders in the scene</entry>
 			</section>
 			<section name="Transform Tool Opacity: " hint="Slider">
-				<entry id="0" hint="text">Transform Tool Opacity: </entry>
+				<entry id="0" hint="text">Mozgató átlátszóság: </entry>
 				<entry id="1" hint="tooltip">You can control the transparency of the object placement tool</entry>
 			</section>
 			<section name="Version: " hint="CheckBox">
@@ -506,27 +506,27 @@ The Dump to header () option will use embedding and create a C++ header file 
 				<entry id="1" hint="tooltip">Toggle the engine version display text in top left corner.</entry>
 			</section>
 			<section name="Physics visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Physics visualizer: </entry>
+				<entry id="0" hint="text">Fizika vizualizáció: </entry>
 				<entry id="1" hint="tooltip">Visualize the physics world</entry>
 			</section>
 			<section name="Bone line visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Bone line visualizer: </entry>
+				<entry id="0" hint="text">Csont vizualizáció: </entry>
 				<entry id="1" hint="tooltip">Visualize bones of armatures</entry>
 			</section>
 			<section name="Emitter visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Emitter visualizer: </entry>
+				<entry id="0" hint="text">Emitter vizualizáció: </entry>
 				<entry id="1" hint="tooltip">Visualize emitters</entry>
 			</section>
 			<section name="Physics: " hint="CheckBox">
-				<entry id="0" hint="text">Physics: </entry>
+				<entry id="0" hint="text">Fizika: </entry>
 				<entry id="1" hint="tooltip">Toggle Physics Simulation On/Off</entry>
 			</section>
 			<section name="Camera visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Camera visualizer: </entry>
+				<entry id="0" hint="text">Kamera vizualizáció: </entry>
 				<entry id="1" hint="tooltip">Toggle visualization of camera proxies in the scene</entry>
 			</section>
 			<section name="RT BVH visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">RT BVH visualizer: </entry>
+				<entry id="0" hint="text">RT BVH vizualizáció: </entry>
 				<entry id="1" hint="tooltip">Visualize scene BVH if raytracing is enabled (only for software raytracing currently)</entry>
 			</section>
 		</section>
@@ -559,7 +559,7 @@ The Dump to header () option will use embedding and create a C++ header file 
 			</section>
 		</section>
 		<section name="Materials" hint="Window">
-			<entry id="0" hint="text">Materials</entry>
+			<entry id="0" hint="text">Anyagok</entry>
 			<section name="Zoom: " hint="Slider">
 				<entry id="0" hint="text">Zoom: </entry>
 			</section>
