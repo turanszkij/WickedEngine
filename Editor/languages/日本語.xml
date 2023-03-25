@@ -1,31 +1,31 @@
 <?xml version="1.0"?>
 <!--This file was created by Wicked Engine for language localization.-->
 <!--You can import this file with the wi::Localization::Import() function.-->
-<entry id="0">Mentés</entry>
-<entry id="1">Megnyitás</entry>
-<entry id="2">Jegyzetek</entry>
-<entry id="3">Mérések</entry>
-<entry id="4">Mozi</entry>
-<entry id="5">Teljes kép</entry>
-<entry id="6">Ablakos</entry>
-<entry id="7">Hibajeletés</entry>
-<entry id="8">Információ</entry>
-<entry id="9">Kilépés</entry>
-<entry id="10">Névtelen jelenet</entry>
+<entry id="0">セーブ</entry>
+<entry id="1">オペラ</entry>
+<entry id="2">バックろっぐ</entry>
+<entry id="3">プロファイラー</entry>
+<entry id="4">シネマ</entry>
+<entry id="5">フルスクリーン</entry>
+<entry id="6">ウィンドウ</entry>
+<entry id="7">バグレポート</entry>
+<entry id="8">情報</entry>
+<entry id="9">出口</entry>
+<entry id="10">無題のシーン</entry>
 <section name="gui">
 	<section name="+" hint="Button">
-		<entry id="1" hint="tooltip">Új jelenet</entry>
+		<entry id="1" hint="tooltip">新しいシーン</entry>
 	</section>
 	<section name="Backlog" hint="Button">
-		<entry id="1" hint="tooltip">Jegyzetek megnyitása (HOME gombbal kapcsolható)</entry>
+		<entry id="1" hint="tooltip">バックログを開く (HOME ボタンで切り替える)</entry>
 	</section>
 	<section name="" hint="Button">
-		<entry id="1" hint="tooltip">Minden háttérben futó szkript szál leállítása.</entry>
+		<entry id="1" hint="tooltip">まだ実行中のすべてのスクリプトバックグラウンドプロセスを停止します。</entry>
 	</section>
 	<section name="Options" hint="Window">
-		<entry id="0" hint="text">Opciók</entry>
+		<entry id="0" hint="text">オプション</entry>
 		<section name="Graphics" hint="Window">
-			<entry id="0" hint="text">Grafika</entry>
+			<entry id="0" hint="text">グラフィックス</entry>
 			<section name="Cube Shadowmap res: " hint="ComboBox">
 				<entry id="0" hint="text">Cube Shadowmap res: </entry>
 				<entry id="1" hint="tooltip">Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...
@@ -413,14 +413,15 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 			</section>
 		</section>
 		<section name="General" hint="Window">
-			<entry id="0" hint="text">Általános</entry>
+			<entry id="0" hint="text">一般設定</entry>
 			<section name="AABB visualizer: " hint="CheckBox">
 				<entry id="0" hint="text">AABB visualizer: </entry>
 				<entry id="1" hint="tooltip">Visualize the scene bounding boxes</entry>
 			</section>
 			<section name=" Create Localization Template" hint="Button">
-				<entry id="0" hint="text"> Lokalizációs Minta Készítése</entry>
-				<entry id="1" hint="tooltip">Készíts egy lokalizációs fájlt amivel más nyelvre lehet fordítani a programot, a jelenleg kiválasztott nyelv alapján.</entry>
+				<entry id="0" hint="text"> ローカリゼーションテンプレートの作成</entry>
+				<entry id="1" hint="tooltip">エディターのローカリゼーションの編集に使用できるファイルを生成する.
+テンプレートは現在選択されている言語から作成されます.</entry>
 			</section>
 			<section name="Name visualizer: " hint="CheckBox">
 				<entry id="0" hint="text">Name visualizer: </entry>
@@ -435,18 +436,18 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 				<entry id="1" hint="tooltip">Toggle visualization of environment probes as reflective spheres</entry>
 			</section>
 			<section name="Theme: " hint="ComboBox">
-				<entry id="0" hint="text">Téma: </entry>
-				<entry id="1" hint="tooltip">Choose a color theme...</entry>
+				<entry id="0" hint="text">テーマ: </entry>
+				<entry id="1" hint="tooltip">配色テーマを選択する...</entry>
 				<section name="items">
-					<entry id="0">Sötét </entry>
-					<entry id="1">Világos </entry>
-					<entry id="2">Kellemes </entry>
-					<entry id="3">Hacklés </entry>
+					<entry id="0">暗い </entry>
+					<entry id="1">明るい </entry>
+					<entry id="2">柔らかい </entry>
+					<entry id="3">ハッキング </entry>
 					<entry id="4">Nord </entry>
 				</section>
 			</section>
 			<section name="Info: " hint="CheckBox">
-				<entry id="0" hint="text">Infó: </entry>
+				<entry id="0" hint="text">情報: </entry>
 				<entry id="1" hint="tooltip">Toggle advanced data in the info display text in top left corner.</entry>
 			</section>
 			<section name="Force Field visualizer: " hint="CheckBox">
@@ -454,10 +455,10 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 				<entry id="1" hint="tooltip">Visualize force fields</entry>
 			</section>
 			<section name="Language: " hint="ComboBox">
-				<entry id="0" hint="text">Nyelv: </entry>
-				<entry id="1" hint="tooltip">Nyelv választás. 
-Új nyelv hozzáadásához készíts egy XML fájlt a languages mappába.
-Alább van egy gomb amivel nyelvi mintát készíthetsz.</entry>
+				<entry id="0" hint="text">言語: </entry>
+				<entry id="1" hint="tooltip">言語を選択. 
+XML ファイルを言語フォルダーに追加して、新しい言語オプションを作成することもできます。.
+言語テンプレートを作成するために使用できるボタンが下にあります.</entry>
 			</section>
 			<section name="Freeze culling camera: " hint="CheckBox">
 				<entry id="0" hint="text">Freeze culling camera: </entry>
@@ -476,7 +477,7 @@ Alább van egy gomb amivel nyelvi mintát készíthetsz.</entry>
 				<entry id="1" hint="tooltip">Disables albedo maps on objects for easier lighting debugging</entry>
 			</section>
 			<section name="Save Mode: " hint="ComboBox">
-				<entry id="0" hint="text">Mentési mód: </entry>
+				<entry id="0" hint="text">セーブモード: </entry>
 				<entry id="1" hint="tooltip">Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.
 The Dump to header () option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.</entry>
 				<section name="items">
@@ -502,7 +503,7 @@ The Dump to header () option will use embedding and create a C++ header file 
 				<entry id="1" hint="tooltip">You can control the transparency of the object placement tool</entry>
 			</section>
 			<section name="Version: " hint="CheckBox">
-				<entry id="0" hint="text">Verzió: </entry>
+				<entry id="0" hint="text">バージョン: </entry>
 				<entry id="1" hint="tooltip">Toggle the engine version display text in top left corner.</entry>
 			</section>
 			<section name="Physics visualizer: " hint="CheckBox">
@@ -531,41 +532,41 @@ The Dump to header () option will use embedding and create a C++ header file 
 			</section>
 		</section>
 		<section name="widget_2" hint="CheckBox">
-			<entry id="1" hint="tooltip">Toggle case-sensitive name filtering</entry>
+			<entry id="1" hint="tooltip">大文字と小文字を区別する名前のフィルター処理を切り替える</entry>
 		</section>
 		<section name="New: " hint="ComboBox">
-			<entry id="0" hint="text">Új: </entry>
-			<entry id="1" hint="tooltip">Create new entity</entry>
+			<entry id="0" hint="text">足す: </entry>
+			<entry id="1" hint="tooltip">新しいエンティティの作成</entry>
 			<section name="items">
-				<entry id="0">Transzformáció </entry>
-				<entry id="1">Anyag </entry>
-				<entry id="2">Pontfény </entry>
-				<entry id="3">Spotfény </entry>
-				<entry id="4">Irányfény </entry>
-				<entry id="5">Környezeti szonda </entry>
-				<entry id="6">Erőtér </entry>
-				<entry id="7">Matrica </entry>
-				<entry id="8">Hang </entry>
-				<entry id="9">Időjárás </entry>
-				<entry id="10">Emitter </entry>
-				<entry id="11">Haj Részecske </entry>
-				<entry id="12">Kamera </entry>
-				<entry id="13">Kocka </entry>
-				<entry id="14">Sík </entry>
-				<entry id="15">Animáció </entry>
-				<entry id="16">Szkript </entry>
-				<entry id="17">Ütköző </entry>
-				<entry id="18">Terep </entry>
+				<entry id="0">トランスフォーム </entry>
+				<entry id="1">マテリアル </entry>
+				<entry id="2">ポイントライト </entry>
+				<entry id="3">スポットライト </entry>
+				<entry id="4">指向性ライト </entry>
+				<entry id="5">環境プローブ </entry>
+				<entry id="6">フォース </entry>
+				<entry id="7">デカル </entry>
+				<entry id="8">音 </entry>
+				<entry id="9">天気 </entry>
+				<entry id="10">エミッター </entry>
+				<entry id="11">ヘアパーティクル </entry>
+				<entry id="12">カメラ </entry>
+				<entry id="13">三乗 </entry>
+				<entry id="14">プレーぬ </entry>
+				<entry id="15">アニメーション </entry>
+				<entry id="16">スクリプト </entry>
+				<entry id="17">コライダー </entry>
+				<entry id="18">地形 </entry>
 			</section>
 		</section>
 		<section name="Materials" hint="Window">
-			<entry id="0" hint="text">Materials</entry>
+			<entry id="0" hint="text">料</entry>
 			<section name="Zoom: " hint="Slider">
 				<entry id="0" hint="text">Zoom: </entry>
 			</section>
 		</section>
 		<section name="Paint Tool" hint="Window">
-			<entry id="0" hint="text">Festő Ecset</entry>
+			<entry id="0" hint="text">ペイントツール</entry>
 			<section name="Smoothness: " hint="Slider">
 				<entry id="0" hint="text">Smoothness: </entry>
 				<entry id="1" hint="tooltip">Set the brush smoothness. 0 = hard, increase for more smoothness</entry>
@@ -696,7 +697,7 @@ Splat mode means that the texture will be relative to the brush position</entry>
 			</section>
 		</section>
 		<section name="widget_0" hint="ComboBox">
-			<entry id="1" hint="tooltip">Entitások szűrése típus alapján</entry>
+			<entry id="1" hint="tooltip">タイプ別のエンティティにフィルタリングを適用する</entry>
 			<section name="items">
 				<entry id="0">*</entry>
 				<entry id="1"></entry>
@@ -724,13 +725,13 @@ Splat mode means that the texture will be relative to the brush position</entry>
 			</section>
 		</section>
 		<section name="Entities" hint="TreeList">
-			<entry id="0" hint="text">Entitások</entry>
+			<entry id="0" hint="text">エンティティ</entry>
 		</section>
 		<section name="widget_1" hint="TextInputField">
-			<entry id="1" hint="tooltip">Entitások szűrése név alapján</entry>
+			<entry id="1" hint="tooltip">名前によるエンティティへのフィルタリングの適用</entry>
 		</section>
 		<section name="Camera" hint="Window">
-			<entry id="0" hint="text">Kamera</entry>
+			<entry id="0" hint="text">カメラ</entry>
 			<section name="Movement Speed: " hint="Slider">
 				<entry id="0" hint="text">Movement Speed: </entry>
 			</section>
@@ -787,24 +788,22 @@ Splat mode means that the texture will be relative to the brush position</entry>
 		</section>
 	</section>
 	<section name="Cinema" hint="Button">
-		<entry id="1" hint="tooltip">Mozi mód bekapcsolása (minden HUD kikapcsolva). Nyomd meg az ESC gombot a kilépéshez.</entry>
+		<entry id="1" hint="tooltip">シネマモードに入ります(すべてのHUDが無効になります)。Esc キーを押して通常に戻ります。</entry>
 	</section>
 	<section name="About" hint="Button">
-		<entry id="1" hint="tooltip">Információk megjelenítése...</entry>
+		<entry id="1" hint="tooltip">情報の表示</entry>
 	</section>
 	<section name="" hint="Button">
-		<entry id="1" hint="tooltip">Mozgatás (Ctrl + T)
-Hotkey: 1</entry>
+		<entry id="1" hint="tooltip">動く (Ctrl + T)
+ホットキー: 1</entry>
 	</section>
 	<section name="Save" hint="Button">
-		<entry id="1" hint="tooltip">A jelenet mentése egy új fájlba (Ctrl + Shift + S)
-Alapból a jelenet .wiscene formátumba lesz mentve, de megadhatsz .gltf vagy .glb formátumot GLTF exportáláshoz.
-A Ctrl + S kombinációt is használhatod gyorsmentéshez, tallózás nélkül.</entry>
+		<entry id="1" hint="tooltip">現在のシーンを新しいファイルに保存します(Ctrl + Shift + S) デフォルトでは、シーンは.wiscene に保存されますが、.gltf または.glb 拡張子を指定して GLTF にエクスポートできます。 Ctrl + Sを使用して、参照せずにすばやく保存することもできます。</entry>
 	</section>
 	<section name="Components " hint="Window">
-		<entry id="0" hint="text">Komponensek </entry>
+		<entry id="0" hint="text">コンポーネント </entry>
 		<section name=" Weather" hint="Window">
-			<entry id="0" hint="text"> Időjárás</entry>
+			<entry id="0" hint="text"> 天気</entry>
 			<section name="widget_39" hint="TextInputField">
 				<entry id="1" hint="tooltip">Control the inward amount for large clouds (type 1.0). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
 			</section>
@@ -1188,7 +1187,7 @@ If you don't see it as fully white, it is because the tone mapping.</entry>
 			</section>
 		</section>
 		<section name=" Script" hint="Window">
-			<entry id="0" hint="text"> Szkript</entry>
+			<entry id="0" hint="text"> スクリプト</entry>
 			<section name="widget_110" hint="Button">
 				<entry id="1" hint="tooltip">Play / Stop script</entry>
 			</section>
@@ -1202,7 +1201,7 @@ Useful for having custom update frequency logic in the script.</entry>
 			</section>
 		</section>
 		<section name=" Mesh" hint="Window">
-			<entry id="0" hint="text"> Geometria</entry>
+			<entry id="0" hint="text"> 網目</entry>
 			<section name="X" hint="Button">
 				<entry id="0" hint="text">X</entry>
 				<entry id="1" hint="tooltip">Remove currently selected subset. LODs will be lost and need to be regenerated!</entry>
@@ -1306,7 +1305,7 @@ This can help fix some shadow artifacts without enabling double sided mode for t
 			</section>
 		</section>
 		<section name=" Sound" hint="Window">
-			<entry id="0" hint="text"> Hang</entry>
+			<entry id="0" hint="text"> 音</entry>
 			<section name="2D: " hint="CheckBox">
 				<entry id="0" hint="text">2D: </entry>
 				<entry id="1" hint="tooltip">Sounds in the scene are 3D spatial by default. Select this to disable 3D effect.</entry>
@@ -1380,7 +1379,7 @@ Sound properties like volume can be set per sound, or per submix channel.</entry
 			</section>
 		</section>
 		<section name=" Animation" hint="Window">
-			<entry id="0" hint="text"> Animáció</entry>
+			<entry id="0" hint="text"> アニメーション</entry>
 			<section name="" hint="Button">
 				<entry id="0" hint="text"></entry>
 				<entry id="1" hint="tooltip">Stop</entry>
@@ -1470,7 +1469,7 @@ This will only work for bones in this animation that are part of a humanoid.</en
 			</section>
 		</section>
 		<section name=" Soft Body Physics" hint="Window">
-			<entry id="0" hint="text"> Puha Test Fizika</entry>
+			<entry id="0" hint="text"> ソフトボディ物理学</entry>
 			<section name="Mass: " hint="Slider">
 				<entry id="0" hint="text">Mass: </entry>
 				<entry id="1" hint="tooltip">Set the mass amount for the physics engine.</entry>
@@ -1489,7 +1488,7 @@ You can use the Paint Tool to pin or soften soft body vertices.</entry>
 			</section>
 		</section>
 		<section name=" Material" hint="Window">
-			<entry id="0" hint="text"> Anyag</entry>
+			<entry id="0" hint="text"> マテリアル</entry>
 			<section name="Blend mode: " hint="ComboBox">
 				<entry id="0" hint="text">Blend mode: </entry>
 				<entry id="1" hint="tooltip">Set the blend mode of the material.</entry>
@@ -1704,7 +1703,7 @@ Note that custom shaders (*) can't select between blend modes, as they are creat
 			</section>
 		</section>
 		<section name=" Force Field" hint="Window">
-			<entry id="0" hint="text"> Erőtér</entry>
+			<entry id="0" hint="text"> フォースフィルド</entry>
 			<section name="Type: " hint="ComboBox">
 				<entry id="0" hint="text">Type: </entry>
 				<entry id="1" hint="tooltip">Choose the force field type.</entry>
@@ -1723,7 +1722,7 @@ Note that custom shaders (*) can't select between blend modes, as they are creat
 			</section>
 		</section>
 		<section name=" Inverse Kinematics" hint="Window">
-			<entry id="0" hint="text"> Inverz Kinematika</entry>
+			<entry id="0" hint="text"> インバースキネマティクス</entry>
 			<section name="Target: " hint="ComboBox">
 				<entry id="0" hint="text">Target: </entry>
 				<entry id="1" hint="tooltip">Choose a target entity (with transform) that the IK will follow</entry>
@@ -1743,7 +1742,7 @@ Note that custom shaders (*) can't select between blend modes, as they are creat
 			</section>
 		</section>
 		<section name=" Transform" hint="Window">
-			<entry id="0" hint="text"> Transzformáció</entry>
+			<entry id="0" hint="text"> トランスフォーム</entry>
 			<section name="widget_69" hint="TextInputField">
 				<entry id="0" hint="text">0</entry>
 				<entry id="1" hint="tooltip">Yaw (in degrees)
@@ -1808,7 +1807,7 @@ Note that custom shaders (*) can't select between blend modes, as they are creat
 			</section>
 		</section>
 		<section name=" Collider" hint="Window">
-			<entry id="0" hint="text"> Ütköző</entry>
+			<entry id="0" hint="text"> コライダー</entry>
 			<section name="CPU: " hint="CheckBox">
 				<entry id="0" hint="text">CPU: </entry>
 				<entry id="1" hint="tooltip">Enable for use on the CPU. CPU usage includes: springs.</entry>
@@ -1852,7 +1851,7 @@ Note that GPU can support only a limited amount of colliders.</entry>
 			</section>
 		</section>
 		<section name=" Light" hint="Window">
-			<entry id="0" hint="text"> Fény</entry>
+			<entry id="0" hint="text"> 光</entry>
 			<section name="Lens flare textures: " hint="Label">
 				<entry id="0" hint="text">Lens flare textures: </entry>
 			</section>
@@ -1958,8 +1957,8 @@ Point and spot lights use luminous intensity in candela (lm/sr) while directiona
 			</section>
 		</section>
 		<section name="Add: " hint="ComboBox">
-			<entry id="0" hint="text">Hozzáadás: </entry>
-			<entry id="1" hint="tooltip">Egy komponens hozzáadása az utoljára kiválasztott entitáshoz.</entry>
+			<entry id="0" hint="text">足す: </entry>
+			<entry id="1" hint="tooltip">Add a component to the last selected entity.</entry>
 			<section name="items">
 				<entry id="0">Name </entry>
 				<entry id="1">Layer </entry>
@@ -1986,7 +1985,7 @@ Point and spot lights use luminous intensity in candela (lm/sr) while directiona
 			</section>
 		</section>
 		<section name=" Humanoid" hint="Window">
-			<entry id="0" hint="text"> Humanoid</entry>
+			<entry id="0" hint="text"> ヒューマノイド</entry>
 			<section name="Bones: " hint="TreeList">
 				<entry id="0" hint="text">Bones: </entry>
 			</section>
@@ -2032,7 +2031,7 @@ A sample lookAt point can be generated by the editor if you enable the Follow mo
 			</section>
 		</section>
 		<section name=" Expression" hint="Window">
-			<entry id="0" hint="text"> Kifejezés</entry>
+			<entry id="0" hint="text"> 表現</entry>
 			<section name="widget_113" hint="Label">
 				<entry id="0" hint="text">Tip: If you also attach a Sound component to this entity, the mouth expression (if available) will be animated based on the sound playing.</entry>
 			</section>
@@ -2091,7 +2090,7 @@ A sample lookAt point can be generated by the editor if you enable the Follow mo
 			</section>
 		</section>
 		<section name=" Armature" hint="Window">
-			<entry id="0" hint="text"> Armatúra</entry>
+			<entry id="0" hint="text"> 鎧</entry>
 			<section name="widget_114" hint="Label">
 				<entry id="0" hint="text">This window will stay open even if you select other entities until it is collapsed, so you can select other bone entities.</entry>
 			</section>
@@ -2103,7 +2102,7 @@ A sample lookAt point can be generated by the editor if you enable the Follow mo
 			</section>
 		</section>
 		<section name=" Rigid Body Physics" hint="Window">
-			<entry id="0" hint="text"> Kemény Test Fizika</entry>
+			<entry id="0" hint="text"> 剛体物理学</entry>
 			<section name="Z: " hint="Slider">
 				<entry id="0" hint="text">Depth</entry>
 			</section>
@@ -2158,7 +2157,7 @@ A sample lookAt point can be generated by the editor if you enable the Follow mo
 			</section>
 		</section>
 		<section name=" Hair Particle System" hint="Window">
-			<entry id="0" hint="text"> Haj Részecske Rendszer</entry>
+			<entry id="0" hint="text"> ヘアパーティクルシステム</entry>
 			<section name="Mesh: " hint="ComboBox">
 				<entry id="0" hint="text">Mesh: </entry>
 				<entry id="1" hint="tooltip">Choose a mesh where hair will grow from...</entry>
@@ -2202,7 +2201,7 @@ A sample lookAt point can be generated by the editor if you enable the Follow mo
 			</section>
 		</section>
 		<section name=" Object" hint="Window">
-			<entry id="0" hint="text"> Objektum</entry>
+			<entry id="0" hint="text"> オブジェクト</entry>
 			<section name="LOD Multiplier: " hint="Slider">
 				<entry id="0" hint="text">LOD Multiplier: </entry>
 				<entry id="1" hint="tooltip">How much the distance to camera will affect LOD selection. (If the mesh has lods)</entry>
@@ -2300,7 +2299,7 @@ If denoiser is enabled, this is the point at which lightmap will be denoised, wh
 			</section>
 		</section>
 		<section name=" Decal" hint="Window">
-			<entry id="0" hint="text"> Matrica</entry>
+			<entry id="0" hint="text"> デカル</entry>
 			<section name="Decal Placement Enabled: " hint="CheckBox">
 				<entry id="0" hint="text">Decal Placement Enabled: </entry>
 				<entry id="1" hint="tooltip">Enable decal placement. Use the left mouse button to place decals to the scene.</entry>
@@ -2325,7 +2324,7 @@ If denoiser is enabled, this is the point at which lightmap will be denoised, wh
 			</section>
 		</section>
 		<section name=" Hierarchy" hint="Window">
-			<entry id="0" hint="text"> Hierarchia</entry>
+			<entry id="0" hint="text"> 階層</entry>
 			<section name="Parent: " hint="ComboBox">
 				<entry id="0" hint="text">Parent: </entry>
 				<entry id="1" hint="tooltip">Choose a parent entity (also works if selected entity has no transform)</entry>
@@ -2333,7 +2332,7 @@ If denoiser is enabled, this is the point at which lightmap will be denoised, wh
 			</section>
 		</section>
 		<section name=" Layer" hint="Window">
-			<entry id="0" hint="text"> Réteg</entry>
+			<entry id="0" hint="text"> 層</entry>
 			<section name="widget_104" hint="CheckBox">
 				<entry id="0" hint="text">27: </entry>
 			</section>
@@ -2443,7 +2442,7 @@ If denoiser is enabled, this is the point at which lightmap will be denoised, wh
 			</section>
 		</section>
 		<section name=" Environment Probe" hint="Window">
-			<entry id="0" hint="text"> Környezeti szonda</entry>
+			<entry id="0" hint="text"> 環境プローブ</entry>
 			<section name="widget_41" hint="Label">
 				<entry id="0" hint="text">Environment probes can be used to capture the scene from a specific location in a 360 degrees panorama. The probes will be used for reflections fallback, where a better reflection type is not available. The probes can affect the ambient colors slightly.
 Tip: You can scale, rotate and move the probes to set up parallax correct rendering to affect a specific area only. The parallax correction will take effect inside the probe's bounds (indicated with a cyan colored box).</entry>
@@ -2466,7 +2465,7 @@ Tip: You can scale, rotate and move the probes to set up parallax correct render
 			</section>
 		</section>
 		<section name=" Emitter" hint="Window">
-			<entry id="0" hint="text"> Emitter</entry>
+			<entry id="0" hint="text"> エミッタ</entry>
 			<section name="SPH (h): " hint="Slider">
 				<entry id="0" hint="text">SPH (h): </entry>
 				<entry id="1" hint="tooltip">Set the SPH parameter: smoothing radius</entry>
@@ -2638,13 +2637,13 @@ Tip: You can scale, rotate and move the probes to set up parallax correct render
 			</section>
 		</section>
 		<section name=" Name" hint="Window">
-			<entry id="0" hint="text"> Név</entry>
+			<entry id="0" hint="text"> 名前</entry>
 			<section name="widget_109" hint="TextInputField">
 				<entry id="0" hint="text">Select entity to modify name...</entry>
 			</section>
 		</section>
 		<section name=" Spring" hint="Window">
-			<entry id="0" hint="text"> Rugó</entry>
+			<entry id="0" hint="text"> 勢</entry>
 			<section name="Drag: " hint="Slider">
 				<entry id="0" hint="text">Drag: </entry>
 				<entry id="1" hint="tooltip">The drag affects how fast energy is lost (higher values make the spring come to rest faster)</entry>
@@ -2679,7 +2678,7 @@ Tip: You can scale, rotate and move the probes to set up parallax correct render
 			</section>
 		</section>
 		<section name=" Camera" hint="Window">
-			<entry id="0" hint="text"> Kamera</entry>
+			<entry id="0" hint="text"> カメラ</entry>
 			<section name="Far Plane: " hint="Slider">
 				<entry id="0" hint="text">Far Plane: </entry>
 				<entry id="1" hint="tooltip">Controls the camera's far clip plane, geometry farther than this will be clipped.</entry>
@@ -2710,7 +2709,7 @@ Tip: You can scale, rotate and move the probes to set up parallax correct render
 			</section>
 		</section>
 		<section name=" Terrain" hint="Window">
-			<entry id="0" hint="text"> Terep</entry>
+			<entry id="0" hint="text"> 地形</entry>
 			<section name="Add Modifier: " hint="ComboBox">
 				<entry id="0" hint="text">Add Modifier: </entry>
 				<entry id="1" hint="tooltip">Add a new modifier that will affect terrain generation.</entry>
@@ -2822,32 +2821,32 @@ The heightmap will be normalized into 8bit PNG format which can result in precis
 		</section>
 	</section>
 	<section name="" hint="Button">
-		<entry id="1" hint="tooltip">Méretezés
-Hotkey: 3</entry>
+		<entry id="1" hint="tooltip">規模
+ホットキー: 3</entry>
 	</section>
 	<section name="Full screen" hint="Button">
-		<entry id="1" hint="tooltip">Átváltás teljes képernyős módra</entry>
+		<entry id="1" hint="tooltip">全画面表示の切り替え</entry>
 	</section>
 	<section name="" hint="Button">
-		<entry id="1" hint="tooltip">Az utoljára használt (különálló) szkript futtatása.
-Új szkriptet a Megnyitás gombbal nyithatsz meg.</entry>
+		<entry id="1" hint="tooltip">最後に使用した(スタンドアロン)スクリプトを実行する.
+新しいスクリプトを使用するには、[開く] ボタン.</entry>
 	</section>
 	<section name="Bug report" hint="Button">
-		<entry id="1" hint="tooltip">Egy böngészőablak megnyitása hibajelentés gyanánt.
+		<entry id="1" hint="tooltip">バグや問題を報告できるブラウザウィンドウが開きます.
 URL: https://github.com/turanszkij/WickedEngine/issues/new</entry>
 	</section>
 	<section name="Open" hint="Button">
-		<entry id="1" hint="tooltip">Nyiss meg egy új jelenetet, importálj modellt, vagy futtass egy új szkriptet...</entry>
+		<entry id="1" hint="tooltip">シーンを開いたり、モデルをインポートしたり、Luaスクリプトを実行したり...</entry>
 	</section>
 	<section name="Profiler" hint="Window">
-		<entry id="1" hint="tooltip">Nézd meg a mérési eredményeket</entry>
-		<entry id="0" hint="text">Mérések</entry>
+		<entry id="1" hint="tooltip">プロファイラーフレームのタイミングを表示する</entry>
+		<entry id="0" hint="text">プロファイラー</entry>
 	</section>
 	<section name="Exit" hint="Button">
-		<entry id="1" hint="tooltip">Kilépés</entry>
+		<entry id="1" hint="tooltip">終了プログラム</entry>
 	</section>
 	<section name="" hint="Button">
-		<entry id="1" hint="tooltip">Forgatás
-Hotkey: 2</entry>
+		<entry id="1" hint="tooltip">回転
+ホットキー: 2</entry>
 	</section>
 </section>
