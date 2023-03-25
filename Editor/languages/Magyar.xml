@@ -1958,7 +1958,7 @@ Point and spot lights use luminous intensity in candela (lm/sr) while directiona
 			</section>
 		</section>
 		<section name="Add: " hint="ComboBox">
-			<entry id="0" hint="text">Hozzáadás: </entry>
+			<entry id="0" hint="text">Új: </entry>
 			<entry id="1" hint="tooltip">Egy komponens hozzáadása az utoljára kiválasztott entitáshoz.</entry>
 			<section name="items">
 				<entry id="0">Name </entry>
