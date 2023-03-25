@@ -2706,6 +2706,8 @@ namespace wi::gui
 	void ComboBox::ExportLocalization(wi::Localization& localization) const
 	{
 		Widget::ExportLocalization(localization);
+		if (!localization_enabled_for_items)
+			return;
 		wi::Localization& section = localization.GetSection(GetName()).GetSection("items");
 		for (size_t i = 0; i < items.size(); ++i)
 		{
@@ -2717,6 +2719,8 @@ namespace wi::gui
 		if (!localization_enabled)
 			return;
 		Widget::ImportLocalization(localization);
+		if (!localization_enabled_for_items)
+			return;
 		const wi::Localization* section = localization.CheckSection(GetName());
 		if (section == nullptr)
 			return;
@@ -2725,7 +2729,11 @@ namespace wi::gui
 			return;
 		for (size_t i = 0; i < items.size(); ++i)
 		{
-			items[i].name = section->Get(i);
+			const char* localized_item_name = section->Get(i);
+			if (localized_item_name != nullptr)
+			{
+				items[i].name = localized_item_name;
+			}
 		}
 	}
 

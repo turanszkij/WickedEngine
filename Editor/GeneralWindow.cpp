@@ -2,9 +2,13 @@
 #include "GeneralWindow.h"
 #include "Editor.h"
 
+#include <filesystem>
+
 using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
+
+static const std::string languages_directory = "languages/";
 
 void GeneralWindow::Create(EditorComponent* _editor)
 {
@@ -268,10 +272,13 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	AddWidget(&localizationButton);
 
 	languageCombo.Create("Language: ");
+	languageCombo.SetLocalizationEnabledForItems(false);
 	languageCombo.AddItem("English");
-	for (auto& x : editor->main->config.GetSection("languages"))
+	for (const auto& entry : std::filesystem::directory_iterator(languages_directory))
 	{
-		languageCombo.AddItem(x.first);
+		std::string language_name = entry.path().filename().generic_string();
+		language_name = wi::helper::RemoveExtension(language_name);
+		languageCombo.AddItem(language_name);
 	}
 	languageCombo.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
 	languageCombo.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
@@ -289,11 +296,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		}
 
 		std::string language = languageCombo.GetItemText(args.iValue);
-		std::string filename;
-		if (editor->main->config.GetSection("languages").Has(language.c_str()))
-		{
-			filename = editor->main->config.GetSection("languages").GetText(language.c_str());
-		}
+		std::string filename = languages_directory + language + ".xml";
 		wi::Localization localization;
 		if (localization.Import(filename))
 		{
@@ -527,15 +530,12 @@ void GeneralWindow::RefreshLanguageSelectionAfterWholeGUIWasInitialized()
 	if (editor->main->config.GetSection("options").Has("language"))
 	{
 		std::string language = editor->main->config.GetSection("options").GetText("language");
-		if (editor->main->config.GetSection("languages").Has(language.c_str()))
+		for (int i = 0; i < languageCombo.GetItemCount(); ++i)
 		{
-			for (int i = 0; i < languageCombo.GetItemCount(); ++i)
+			if (languageCombo.GetItemText(i) == language)
 			{
-				if (languageCombo.GetItemText(i) == language)
-				{
-					languageCombo.SetSelected(i);
-					break;
-				}
+				languageCombo.SetSelected(i);
+				break;
 			}
 		}
 	}

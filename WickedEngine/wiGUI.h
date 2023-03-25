@@ -530,6 +530,7 @@ namespace wi::gui
 		int selected = -1;
 		int maxVisibleItemCount = 8;
 		int firstItemVisible = 0;
+		bool localization_enabled_for_items = true;
 
 		// While the widget is active (rolled down) these are the inner states that control behaviour
 		enum COMBOSTATE
@@ -577,6 +578,7 @@ namespace wi::gui
 		uint64_t GetItemUserData(int index) const;
 		size_t GetItemCount() const { return items.size(); }
 		void SetInvalidSelectionText(const std::string& text);
+		void SetLocalizationEnabledForItems(bool value) { localization_enabled_for_items = value; }
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
