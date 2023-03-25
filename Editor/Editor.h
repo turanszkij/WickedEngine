@@ -156,6 +156,7 @@ public:
 	wi::Localization current_localization;
 	void SetDefaultLocalization();
 	void SetLocalization(wi::Localization& loc);
+	void ReloadLanguage();
 };
 
 class Editor : public wi::Application

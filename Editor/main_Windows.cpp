@@ -312,6 +312,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 				}).detach();
 		}
+		editor.renderComponent.ReloadLanguage();
 		break;
     case WM_PAINT:
         {

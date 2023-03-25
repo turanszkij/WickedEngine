@@ -52,6 +52,7 @@ int sdl_loop(Editor &editor)
                                     }
                                     }).detach();
                             }
+							editor.renderComponent.ReloadLanguage();
                             break;
                         default:
                             break;

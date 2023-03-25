@@ -3445,3 +3445,7 @@ void EditorComponent::SetLocalization(wi::Localization& loc)
 	GetGUI().ImportLocalization(current_localization);
 	RefreshSceneList();
 }
+void EditorComponent::ReloadLanguage()
+{
+	optionsWnd.generalWnd.languageCombo.SetSelected(optionsWnd.generalWnd.languageCombo.GetSelected());
+}
