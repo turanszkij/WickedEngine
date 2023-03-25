@@ -260,8 +260,8 @@ void EditorComponent::Load()
 
 
 
-	saveButton.Create("");
-	saveButton.SetLocalizationEnabled(false);
+	saveButton.Create("Save");
+	saveButton.SetText("");
 	saveButton.font.params.shadowColor = wi::Color::Transparent();
 	saveButton.SetShadowRadius(2);
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)\nBy default, the scene will be saved into .wiscene, but you can specify .gltf or .glb extensions to export into GLTF.\nYou can also use Ctrl + S to quicksave, without browsing.");
@@ -273,8 +273,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&saveButton);
 
 
-	openButton.Create("");
-	openButton.SetLocalizationEnabled(false);
+	openButton.Create("Open");
+	openButton.SetText("");
 	openButton.SetShadowRadius(2);
 	openButton.font.params.shadowColor = wi::Color::Transparent();
 	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...");
@@ -376,8 +376,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&openButton);
 
 
-	logButton.Create("");
-	logButton.SetLocalizationEnabled(false);
+	logButton.Create("Backlog");
+	logButton.SetText("");
 	logButton.SetShadowRadius(2);
 	logButton.font.params.shadowColor = wi::Color::Transparent();
 	logButton.SetTooltip("Open the backlog (toggle with HOME button)");
@@ -389,8 +389,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&logButton);
 
 
-	profilerButton.Create("");
-	profilerButton.SetLocalizationEnabled(false);
+	profilerButton.Create("Profiler");
+	profilerButton.SetText("");
 	profilerButton.SetShadowRadius(2);
 	profilerButton.font.params.shadowColor = wi::Color::Transparent();
 	profilerButton.SetTooltip("View the profiler frame timings");
@@ -403,8 +403,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&profilerButton);
 
 
-	cinemaButton.Create("");
-	cinemaButton.SetLocalizationEnabled(false);
+	cinemaButton.Create("Cinema");
+	cinemaButton.SetText("");
 	cinemaButton.SetShadowRadius(2);
 	cinemaButton.font.params.shadowColor = wi::Color::Transparent();
 	cinemaButton.SetTooltip("Enter cinema mode (all HUD disabled). Press ESC to return to normal.");
@@ -422,8 +422,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&cinemaButton);
 
 
-	fullscreenButton.Create("");
-	fullscreenButton.SetLocalizationEnabled(false);
+	fullscreenButton.Create("Full screen");
+	fullscreenButton.SetText("");
 	fullscreenButton.SetShadowRadius(2);
 	fullscreenButton.font.params.shadowColor = wi::Color::Transparent();
 	fullscreenButton.SetTooltip("Toggle full screen");
@@ -464,8 +464,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&fullscreenButton);
 
 
-	bugButton.Create("");
-	bugButton.SetLocalizationEnabled(false);
+	bugButton.Create("Bug report");
+	bugButton.SetText("");
 	bugButton.SetShadowRadius(2);
 	bugButton.font.params.shadowColor = wi::Color::Transparent();
 	bugButton.SetTooltip("Opens a browser window where you can report a bug or an issue.\nURL: https://github.com/turanszkij/WickedEngine/issues/new");
@@ -477,8 +477,8 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&bugButton);
 
 
-	aboutButton.Create("");
-	aboutButton.SetLocalizationEnabled(false);
+	aboutButton.Create("About");
+	aboutButton.SetText("");
 	aboutButton.SetShadowRadius(2);
 	aboutButton.font.params.shadowColor = wi::Color::Transparent();
 	aboutButton.SetTooltip("About...");
@@ -555,8 +555,8 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&aboutLabel);
 	}
 
-	exitButton.Create("");
-	exitButton.SetLocalizationEnabled(false);
+	exitButton.Create("Exit");
+	exitButton.SetText("");
 	exitButton.SetShadowRadius(2);
 	exitButton.font.params.shadowColor = wi::Color::Transparent();
 	exitButton.SetTooltip("Exit");

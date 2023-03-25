@@ -8,7 +8,7 @@ namespace wi
 {
 	Localization& Localization::GetSection(const char* name)
 	{
-		return sections[name];
+		return GetSection(std::string(name));
 	}
 	Localization& Localization::GetSection(const std::string& name)
 	{
@@ -16,12 +16,7 @@ namespace wi
 	}
 	const Localization* Localization::CheckSection(const char* name) const
 	{
-		auto it = sections.find(name);
-		if (it != sections.end())
-		{
-			return &it->second;
-		}
-		return nullptr;
+		return CheckSection(std::string(name));
 	}
 	const Localization* Localization::CheckSection(const std::string& name) const
 	{
@@ -32,24 +27,37 @@ namespace wi
 		}
 		return nullptr;
 	}
+	void Localization::SetSectionHint(const char* text)
+	{
+		SetSectionHint(std::string(text));
+	}
+	void Localization::SetSectionHint(const std::string& text)
+	{
+		section_hint = text;
+	}
 
 	void Localization::Add(size_t id, const char* text, const char* hint)
 	{
 		auto it = lookup.find(id);
-		if (it != lookup.end())
-			return;
-		lookup[id] = entries.size();
-		Entry& entry = entries.emplace_back();
-		entry.text = text;
-		entry.id_text = std::to_string(id);
+		Entry* entry = nullptr;
+		if (it == lookup.end())
+		{
+			// Add new entry:
+			lookup[id] = entries.size();
+			entry = &entries.emplace_back();
+		}
+		else
+		{
+			// Update existing entry:
+			entry = &entries[it->second];
+		}
+
+		entry->text = text;
+		entry->id_text = std::to_string(id);
 		if (hint != nullptr)
 		{
-			entry.hint = hint;
+			entry->hint = hint;
 		}
-	}
-	void Localization::Add(const char* id, const char* text)
-	{
-		Add(wi::helper::string_hash(id), text, id);
 	}
 
 	const char* Localization::Get(size_t id) const
@@ -60,11 +68,6 @@ namespace wi
 		size_t index = it->second;
 		const Entry& entry = entries[index];
 		return entry.text.c_str();
-	}
-	const char* Localization::Get(const char* id) const
-	{
-		size_t hash = wi::helper::string_hash(id);
-		return Get(hash);
 	}
 
 	void recursive_import(Localization& section, pugi::xml_node& node)
@@ -85,6 +88,10 @@ namespace wi
 		if (strcmp(node.name(), "section") == 0)
 		{
 			Localization& child_section = section.GetSection(node.attribute("name").as_string());
+			if (node.attribute("hint"))
+			{
+				child_section.section_hint = node.attribute("hint").as_string();
+			}
 			for (pugi::xml_node child : node.children())
 			{
 				recursive_import(child_section, child);
@@ -109,6 +116,10 @@ namespace wi
 			const Localization& child_section = it.second;
 			pugi::xml_node section_node = node.append_child("section");
 			section_node.append_attribute("name") = it.first.c_str();
+			if (!child_section.section_hint.empty())
+			{
+				section_node.append_attribute("hint") = child_section.section_hint.c_str();
+			}
 			recursive_export(child_section, section_node);
 		}
 	}

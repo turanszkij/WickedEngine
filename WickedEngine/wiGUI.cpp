@@ -423,9 +423,8 @@ namespace wi::gui
 		{
 			name = value;
 		}
-		name_hash = wi::helper::string_hash(name.c_str());
 	}
-	const std::string Widget::GetText() const
+	std::string Widget::GetText() const
 	{
 		return font.GetTextA();
 	}
@@ -529,18 +528,48 @@ namespace wi::gui
 	{
 		return wi::Color::fromFloat4(sprites[GetState()].params.color);
 	}
+
+	enum LOCALIZATION_ID
+	{
+		LOCALIZATION_ID_TEXT,
+		LOCALIZATION_ID_TOOLTIP,
+	};
 	void Widget::ExportLocalization(wi::Localization& localization) const
 	{
-		if (name_hash == 0 || !localization_enabled || GetText().empty())
+		if (!localization_enabled)
 			return;
-		localization.Add(name_hash, GetText().c_str());
+
+		if (font.GetText().empty() && tooltipFont.GetText().empty())
+			return;
+
+		wi::Localization& section = localization.GetSection(GetName());
+		section.SetSectionHint(GetWidgetTypeName());
+
+		if (!font.GetText().empty())
+		{
+			section.Add(LOCALIZATION_ID_TEXT, font.GetTextA().c_str(), "text");
+		}
+		if (!tooltipFont.GetText().empty())
+		{
+			section.Add(LOCALIZATION_ID_TOOLTIP, tooltipFont.GetTextA().c_str(), "tooltip");
+		}
 	}
 	void Widget::ImportLocalization(const wi::Localization& localization)
 	{
-		const char* localized_text = localization.Get(name_hash);
-		if (localized_text == nullptr)
+		const wi::Localization* section = localization.CheckSection(GetName());
+		if (section == nullptr)
 			return;
-		SetText(localized_text);
+
+		const char* localized_text = section->Get(LOCALIZATION_ID_TEXT);
+		if (localized_text != nullptr)
+		{
+			SetText(localized_text);
+		}
+		const char* localized_tooltip = section->Get(LOCALIZATION_ID_TOOLTIP);
+		if (localized_tooltip != nullptr)
+		{
+			SetTooltip(localized_tooltip);
+		}
 	}
 
 	void Widget::SetColor(wi::Color color, int id)
@@ -2842,6 +2871,7 @@ namespace wi::gui
 		{
 			// Simple title bar
 			label.Create(name);
+			label.SetLocalizationEnabled(false);
 			label.SetShadowRadius(0);
 			label.SetText(name);
 			label.font.params.h_align = wi::font::WIFALIGN_LEFT;
@@ -3453,8 +3483,8 @@ namespace wi::gui
 	}
 	void Window::ExportLocalization(wi::Localization& localization) const
 	{
+		Widget::ExportLocalization(localization);
 		wi::Localization& section = localization.GetSection(GetName());
-		Widget::ExportLocalization(section);
 		for (auto& widget : widgets)
 		{
 			widget->ExportLocalization(section);
@@ -3464,14 +3494,17 @@ namespace wi::gui
 	{
 		if (!localization_enabled)
 			return;
+		Widget::ImportLocalization(localization);
 		const wi::Localization* section = localization.CheckSection(GetName());
 		if (section == nullptr)
 			return;
-		Widget::ImportLocalization(*section);
 		for (auto& widget : widgets)
 		{
 			widget->ImportLocalization(*section);
 		}
+
+		label.SetText(GetText());
+		moveDragger.SetText(GetText());
 	}
 
 

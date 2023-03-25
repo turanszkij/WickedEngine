@@ -242,7 +242,6 @@ namespace wi::gui
 		int tooltipTimer = 0;
 	protected:
 		std::string name;
-		size_t name_hash = 0;
 		bool enabled = true;
 		bool visible = true;
 		bool localization_enabled = true;
@@ -259,10 +258,9 @@ namespace wi::gui
 		Widget();
 		virtual ~Widget() = default;
 
-		size_t GetNameHash() const { return name_hash; }
 		const std::string& GetName() const;
 		void SetName(const std::string& value);
-		const std::string GetText() const;
+		std::string GetText() const;
 		void SetText(const std::string& value);
 		void SetText(std::string&& value);
 		void SetTooltip(const std::string& value);
@@ -295,6 +293,7 @@ namespace wi::gui
 		virtual void SetShadowColor(wi::Color color);
 		virtual void SetImage(wi::Resource textureResource, int id = -1);
 		virtual void SetTheme(const Theme& theme, int id = -1);
+		virtual const char* GetWidgetTypeName() const { return "Widget"; }
 
 		wi::Sprite sprites[WIDGETSTATE_COUNT];
 		wi::SpriteFont font;
@@ -345,6 +344,7 @@ namespace wi::gui
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "Button"; }
 
 		void OnClick(std::function<void(EventArgs args)> func);
 		void OnDragStart(std::function<void(EventArgs args)> func);
@@ -396,6 +396,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "ScrollBar"; }
 
 		void SetVertical(bool value) { vertical = value; }
 		bool IsVertical() const { return vertical; }
@@ -412,6 +413,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "Label"; }
 
 		float scrollbar_width = 18;
 		ScrollBar scrollbar;
@@ -453,6 +455,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "TextInputField"; }
 
 		// Called when input was accepted with ENTER key:
 		void OnInputAccepted(std::function<void(EventArgs args)> func);
@@ -487,6 +490,7 @@ namespace wi::gui
 		void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "Slider"; }
 
 		void OnSlide(std::function<void(EventArgs args)> func);
 
@@ -509,6 +513,7 @@ namespace wi::gui
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		const char* GetWidgetTypeName() const override { return "CheckBox"; }
 
 		void OnClick(std::function<void(EventArgs args)> func);
 
@@ -577,6 +582,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "ComboBox"; }
 
 		void OnSelect(std::function<void(EventArgs args)> func);
 
@@ -628,6 +634,7 @@ namespace wi::gui
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetShadowColor(wi::Color color) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "Window"; }
 
 		void SetVisible(bool value) override;
 		void SetEnabled(bool value) override;
@@ -680,6 +687,7 @@ namespace wi::gui
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void ResizeLayout() override;
+		const char* GetWidgetTypeName() const override { return "ColorPicker"; }
 
 		wi::Color GetPickColor() const;
 		void SetPickColor(wi::Color value);
@@ -738,6 +746,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
+		const char* GetWidgetTypeName() const override { return "TreeList"; }
 
 		void OnSelect(std::function<void(EventArgs args)> func);
 		void OnDelete(std::function<void(EventArgs args)> func);
