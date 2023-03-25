@@ -274,15 +274,18 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	languageCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Text | wi::gui::LocalizationEnabled::Tooltip);
 	languageCombo.SetTooltip("Select a language. \nYou can also create a new language option by adding an XML file to the languages folder.\nThere is a button below that you can use to create a language template.");
 	languageCombo.AddItem("English");
-	for (const auto& entry : std::filesystem::directory_iterator(languages_directory))
+	if (std::filesystem::exists(languages_directory))
 	{
-		std::wstring language_name_wide = entry.path().filename().generic_wstring();
-		std::string language_name;
-		wi::helper::StringConvert(language_name_wide, language_name);
-		if (wi::helper::toUpper(wi::helper::GetExtensionFromFileName(language_name)) == "XML")
+		for (const auto& entry : std::filesystem::directory_iterator(languages_directory))
 		{
-			language_name = wi::helper::RemoveExtension(language_name);
-			languageCombo.AddItem(language_name);
+			std::wstring language_name_wide = entry.path().filename().generic_wstring();
+			std::string language_name;
+			wi::helper::StringConvert(language_name_wide, language_name);
+			if (wi::helper::toUpper(wi::helper::GetExtensionFromFileName(language_name)) == "XML")
+			{
+				language_name = wi::helper::RemoveExtension(language_name);
+				languageCombo.AddItem(language_name);
+			}
 		}
 	}
 	languageCombo.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
