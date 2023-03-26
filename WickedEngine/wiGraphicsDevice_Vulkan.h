@@ -119,12 +119,14 @@ namespace wi::graphics
 
 			struct CopyCMD
 			{
-				VkCommandPool commandPool = VK_NULL_HANDLE;
-				VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+				VkCommandPool transferCommandPool = VK_NULL_HANDLE;
+				VkCommandBuffer transferCommandBuffer = VK_NULL_HANDLE;
+				VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
+				VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
 				VkFence fence = VK_NULL_HANDLE;
 				VkSemaphore semaphores[2] = { VK_NULL_HANDLE, VK_NULL_HANDLE }; // graphics, compute
 				GPUBuffer uploadbuffer;
-				inline bool IsValid() const { return commandBuffer != VK_NULL_HANDLE; }
+				inline bool IsValid() const { return transferCommandBuffer != VK_NULL_HANDLE; }
 			};
 			wi::vector<CopyCMD> freelist;
 
@@ -135,19 +137,7 @@ namespace wi::graphics
 		};
 		mutable CopyAllocator copyAllocator;
 
-		mutable std::mutex initLocker;
-		mutable bool submit_inits = false;
-
-		struct FrameResources
-		{
-			VkFence fence[QUEUE_COUNT] = {};
-
-			VkCommandPool initCommandPool = VK_NULL_HANDLE;
-			VkCommandBuffer initCommandBuffer = VK_NULL_HANDLE;
-		};
-		FrameResources frames[BUFFERCOUNT];
-		const FrameResources& GetFrameResources() const { return frames[GetBufferIndex()]; }
-		FrameResources& GetFrameResources() { return frames[GetBufferIndex()]; }
+		VkFence frame_fence[BUFFERCOUNT][QUEUE_COUNT] = {};
 
 		struct DescriptorBinder
 		{
