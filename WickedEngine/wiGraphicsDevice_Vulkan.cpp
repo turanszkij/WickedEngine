@@ -1293,7 +1293,7 @@ using namespace vulkan_internal;
 
 			GPUBufferDesc uploaddesc;
 			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
-			uploaddesc.size = std::max(uploaddesc.size, 65536ull);
+			uploaddesc.size = std::max(uploaddesc.size, uint64_t(65536));
 			uploaddesc.usage = Usage::UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
