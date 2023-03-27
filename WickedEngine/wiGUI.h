@@ -272,6 +272,7 @@ namespace wi::gui
 		const std::string& GetName() const;
 		void SetName(const std::string& value);
 		std::string GetText() const;
+		void SetText(const char* value);
 		void SetText(const std::string& value);
 		void SetText(std::string&& value);
 		void SetTooltip(const std::string& value);
@@ -716,6 +717,7 @@ namespace wi::gui
 		TextInputField text_H;
 		TextInputField text_S;
 		TextInputField text_V;
+		TextInputField text_hex;
 		Slider alphaSlider;
 	};
 

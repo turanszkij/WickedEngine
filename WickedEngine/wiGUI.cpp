@@ -428,6 +428,10 @@ namespace wi::gui
 	{
 		return font.GetTextA();
 	}
+	void Widget::SetText(const char* value)
+	{
+		font.SetText(value);
+	}
 	void Widget::SetText(const std::string& value)
 	{
 		font.SetText(value);
@@ -3224,7 +3228,7 @@ namespace wi::gui
 	}
 	void Window::RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
 	{
-		Widget::RenderTooltip(canvas, cmd);
+		// Window base tooltip is not rendered
 		for (auto& x : widgets)
 		{
 			x->RenderTooltip(canvas, cmd);
@@ -3676,7 +3680,7 @@ namespace wi::gui
 		SetColor(wi::Color(100, 100, 100, 100));
 
 		float x = 250;
-		float y = 100;
+		float y = 80;
 		float step = 20;
 
 		text_R.Create("R");
@@ -3763,6 +3767,20 @@ namespace wi::gui
 			FireEvents();
 			});
 		AddWidget(&text_V);
+
+		text_hex.Create("Hex");
+		text_hex.SetLocalizationEnabled(LocalizationEnabled::Tooltip);
+		text_hex.SetPos(XMFLOAT2(x, y += step));
+		text_hex.SetSize(XMFLOAT2(80, 18));
+		text_hex.SetText("");
+		text_hex.SetTooltip("Enter RGBA hex value");
+		text_hex.SetDescription("Hex: ");
+		text_hex.OnInputAccepted([this](EventArgs args) {
+			wi::Color color(args.sValue.c_str());
+			SetPickColor(color);
+			FireEvents();
+			});
+		AddWidget(&text_hex);
 
 		alphaSlider.Create(0, 255, 255, 255, "");
 		alphaSlider.SetLocalizationEnabled(LocalizationEnabled::Tooltip);
@@ -3900,6 +3918,7 @@ namespace wi::gui
 			text_H.SetValue(int(hue));
 			text_S.SetValue(int(saturation * 100));
 			text_V.SetValue(int(luminance * 100));
+			text_hex.SetText(color.to_hex());
 
 			if (dragged)
 			{
@@ -4251,8 +4270,7 @@ namespace wi::gui
 		// render preview
 		{
 			XMStoreFloat4x4(&cb.g_xTransform,
-				XMMatrixScaling(sca, sca, 1) *
-				XMMatrixTranslation(translation.x + scale.x - sca - 4, translation.y + control_size + 4, 0) *
+				XMMatrixTranslation(translation.x + scale.x - sca - 2, translation.y + control_size + 4 + 22, 0) *
 				Projection
 			);
 			cb.g_xColor = final_color.toFloat4();
@@ -4307,6 +4325,9 @@ namespace wi::gui
 		add_right(text_B);
 		add_right(text_G);
 		add_right(text_R);
+
+		y = control_size + 4;
+		add_right(text_hex);
 	}
 	wi::Color ColorPicker::GetPickColor() const
 	{
