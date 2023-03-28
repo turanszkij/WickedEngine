@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Editor.h"
 #include "ObjectWindow.h"
 #include "wiScene.h"
 

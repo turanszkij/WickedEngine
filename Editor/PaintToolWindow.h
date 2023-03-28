@@ -1,6 +1,4 @@
 #pragma once
-#include "WickedEngine.h"
-
 #include <deque>
 
 class EditorComponent;

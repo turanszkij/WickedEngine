@@ -7,9 +7,6 @@
 #include "wiColor.h"
 #include "wiHairParticle.h"
 
-#include <random>
-#include <string>
-#include <atomic>
 #include <memory>
 
 namespace wi::terrain

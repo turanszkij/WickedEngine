@@ -1,5 +1,4 @@
 #pragma once
-#include "WickedEngine.h"
 #include "Translator.h"
 #include "wiScene_BindLua.h"
 #include "OptionsWindow.h"

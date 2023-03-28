@@ -1,6 +1,4 @@
 #pragma once
-#include "WickedEngine.h"
-
 class EditorComponent;
 
 class SpringWindow : public wi::gui::Window

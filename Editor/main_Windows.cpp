@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "main_Windows.h"
-#include "Editor.h"
 
 #include <fstream>
 #include <thread>

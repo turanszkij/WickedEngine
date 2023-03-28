@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "LightWindow.h"
-#include "Editor.h"
 
 #include <string>
 

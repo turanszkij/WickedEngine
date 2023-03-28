@@ -1,6 +1,4 @@
 #pragma once
-#include "WickedEngine.h"
-
 class EditorComponent;
 
 struct ModifierWindow : public wi::gui::Window

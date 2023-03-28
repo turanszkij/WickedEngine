@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Editor.h"
 #include "wiRenderer.h"
 #include "wiScene_BindLua.h"
 

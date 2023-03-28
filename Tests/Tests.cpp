@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Tests.h"
 
 #include <string>
 #include <fstream>

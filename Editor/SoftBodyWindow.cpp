@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "SoftBodyWindow.h"
-#include "Editor.h"
 
 using namespace wi::ecs;
 using namespace wi::scene;

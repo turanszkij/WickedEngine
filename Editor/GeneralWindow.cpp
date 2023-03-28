@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "GeneralWindow.h"
-#include "Editor.h"
 
 #include <filesystem>
 

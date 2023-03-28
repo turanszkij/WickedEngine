@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "EmitterWindow.h"
-#include "Editor.h"
 
 #include <string>
 

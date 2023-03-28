@@ -1,5 +1,4 @@
 #pragma once
-#include "WickedEngine.h"
 #include "MaterialWindow.h"
 #include "WeatherWindow.h"
 #include "ObjectWindow.h"
