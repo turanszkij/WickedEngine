@@ -1,8 +1,5 @@
 #include "stdafx.h"
 #include "EmitterWindow.h"
-#include "Editor.h"
-
-#include <string>
 
 using namespace wi::ecs;
 using namespace wi::scene;

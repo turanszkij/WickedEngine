@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "TransformWindow.h"
-#include "Editor.h"
 
 using namespace wi::ecs;
 using namespace wi::scene;
-
 
 void TransformWindow::Create(EditorComponent* _editor)
 {

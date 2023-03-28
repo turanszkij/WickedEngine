@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "NameWindow.h"
-#include "Editor.h"
 
 using namespace wi::ecs;
 using namespace wi::scene;
-
 
 void NameWindow::Create(EditorComponent* _editor)
 {

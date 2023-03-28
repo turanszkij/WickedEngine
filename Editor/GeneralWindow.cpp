@@ -1,8 +1,5 @@
 #include "stdafx.h"
 #include "GeneralWindow.h"
-#include "Editor.h"
-
-#include <filesystem>
 
 using namespace wi::graphics;
 using namespace wi::ecs;

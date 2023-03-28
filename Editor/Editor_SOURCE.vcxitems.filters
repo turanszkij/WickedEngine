@@ -138,6 +138,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)HumanoidWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GeneralWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ProfilerWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)yumin.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
@@ -158,6 +159,9 @@
     </Filter>
     <Filter Include="terrain">
       <UniqueIdentifier>{9a5b997d-f07e-45c5-849a-717f15cba0ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="languages">
+      <UniqueIdentifier>{beae58b9-9c06-4b1f-9e03-a27712d6a579}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -193,5 +197,16 @@
     <Text Include="$(MSBuildThisFileDirectory)terrain\licenses.txt">
       <Filter>terrain</Filter>
     </Text>
+    <Text Include="$(MSBuildThisFileDirectory)languages\readme.txt">
+      <Filter>languages</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="$(MSBuildThisFileDirectory)languages\Magyar.xml">
+      <Filter>languages</Filter>
+    </Xml>
+    <Xml Include="$(MSBuildThisFileDirectory)languages\日本語.xml">
+      <Filter>languages</Filter>
+    </Xml>
   </ItemGroup>
 </Project>

@@ -182,6 +182,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Translator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)WeatherWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)xatlas.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)yumin.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)config.ini">
@@ -250,6 +251,20 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)languages\readme.txt">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Text>
     <Text Include="$(MSBuildThisFileDirectory)terrain\licenses.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="$(MSBuildThisFileDirectory)languages\Magyar.xml">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Xml>
+    <Xml Include="$(MSBuildThisFileDirectory)languages\日本語.xml">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Xml>
   </ItemGroup>
 </Project>

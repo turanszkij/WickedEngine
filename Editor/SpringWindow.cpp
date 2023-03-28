@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "SpringWindow.h"
-#include "Editor.h"
 
 using namespace wi::ecs;
 using namespace wi::scene;
-
 
 void SpringWindow::Create(EditorComponent* _editor)
 {

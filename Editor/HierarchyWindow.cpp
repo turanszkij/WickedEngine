@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "HierarchyWindow.h"
-#include "Editor.h"
 
 using namespace wi::ecs;
 using namespace wi::scene;
-
 
 void HierarchyWindow::Create(EditorComponent* _editor)
 {

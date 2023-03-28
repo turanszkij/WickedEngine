@@ -1,9 +1,6 @@
 #include "stdafx.h"
-#include "Editor.h"
 #include "PaintToolWindow.h"
 #include "shaders/ShaderInterop_Renderer.h"
-
-#include <cmath>
 
 using namespace wi::ecs;
 using namespace wi::scene;

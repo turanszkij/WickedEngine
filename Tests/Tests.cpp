@@ -1,11 +1,4 @@
 #include "stdafx.h"
-#include "Tests.h"
-
-#include <string>
-#include <fstream>
-#include <thread>
-#include <unordered_map>
-#include <vector>
 
 using namespace wi::ecs;
 using namespace wi::scene;

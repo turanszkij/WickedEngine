@@ -1,13 +1,9 @@
 #include "stdafx.h"
 #include "LightWindow.h"
-#include "Editor.h"
-
-#include <string>
 
 using namespace wi::ecs;
 using namespace wi::graphics;
 using namespace wi::scene;
-
 
 void LightWindow::Create(EditorComponent* _editor)
 {

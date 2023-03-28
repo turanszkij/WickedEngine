@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "OptionsWindow.h"
-#include "Editor.h"
 
 using namespace wi::graphics;
 using namespace wi::ecs;

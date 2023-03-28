@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "ForceFieldWindow.h"
-#include "Editor.h"
 
 using namespace wi::ecs;
 using namespace wi::scene;
-
 
 void ForceFieldWindow::Create(EditorComponent* _editor)
 {

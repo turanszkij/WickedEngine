@@ -1,12 +1,9 @@
 #include "stdafx.h"
 #include "MeshWindow.h"
-#include "Editor.h"
 
 #include "Utility/stb_image.h"
 
 #include "meshoptimizer/meshoptimizer.h"
-
-#include <string>
 
 using namespace wi::ecs;
 using namespace wi::scene;

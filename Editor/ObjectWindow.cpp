@@ -1,15 +1,11 @@
 #include "stdafx.h"
-#include "Editor.h"
 #include "ObjectWindow.h"
 #include "wiScene.h"
 
 #include "xatlas.h"
 
-#include <string>
-
 using namespace wi::ecs;
 using namespace wi::scene;
-
 
 static void SetPixel(uint8_t *dest, int destWidth, int x, int y, const uint8_t *color)
 {

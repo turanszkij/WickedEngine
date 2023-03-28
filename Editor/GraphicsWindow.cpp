@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "GraphicsWindow.h"
-#include "Editor.h"
 #include "shaders/ShaderInterop_DDGI.h"
 
 using namespace wi::graphics;

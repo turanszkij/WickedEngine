@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "IKWindow.h"
-#include "Editor.h"
 
 using namespace wi::ecs;
 using namespace wi::scene;
-
 
 void IKWindow::Create(EditorComponent* _editor)
 {
