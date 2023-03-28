@@ -17,7 +17,6 @@ void MaterialPickerWindow::Create(EditorComponent* _editor)
 	SetCollapsed(true);
 }
 
-
 void MaterialPickerWindow::RecreateButtons()
 {
 	if (editor == nullptr)

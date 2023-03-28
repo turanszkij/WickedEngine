@@ -1,8 +1,4 @@
 #pragma once
-#include "CommonInclude.h"
-#include "wiCanvas.h"
-#include "wiVector.h"
-#include "wiUnorderedSet.h"
 
 class Translator
 {

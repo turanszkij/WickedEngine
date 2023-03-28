@@ -2,8 +2,6 @@
 #include "PaintToolWindow.h"
 #include "shaders/ShaderInterop_Renderer.h"
 
-#include <cmath>
-
 using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;

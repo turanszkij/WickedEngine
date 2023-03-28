@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "GeneralWindow.h"
 
-#include <filesystem>
-
 using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;

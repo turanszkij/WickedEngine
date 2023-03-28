@@ -8,11 +8,6 @@
 #include "FontAwesomeV6.h" // font TTF data
 #include "yumin.h" // yumin.ttf font
 
-#include <string>
-#include <cassert>
-#include <cmath>
-#include <limits>
-
 using namespace wi::graphics;
 using namespace wi::primitive;
 using namespace wi::scene;

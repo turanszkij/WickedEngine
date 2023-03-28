@@ -4,7 +4,6 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
-
 void IKWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;

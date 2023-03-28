@@ -5,8 +5,6 @@
 
 #include "meshoptimizer/meshoptimizer.h"
 
-#include <string>
-
 using namespace wi::ecs;
 using namespace wi::scene;
 

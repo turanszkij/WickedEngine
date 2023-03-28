@@ -4,7 +4,6 @@
 #include "OptionsWindow.h"
 #include "ComponentsWindow.h"
 #include "ProfilerWindow.h"
-
 #include "IconDefinitions.h"
 
 class EditorLoadingScreen : public wi::LoadingScreen

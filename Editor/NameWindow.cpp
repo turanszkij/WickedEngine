@@ -4,7 +4,6 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
-
 void NameWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;

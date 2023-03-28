@@ -3,8 +3,6 @@
 
 #include "Utility/stb_image.h"
 
-#include <unordered_map>
-
 using namespace wi::ecs;
 using namespace wi::scene;
 
