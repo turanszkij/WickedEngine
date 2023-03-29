@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "GeneralWindow.h"
-#include "Editor.h"
 
 using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
+
+static const std::string languages_directory = "languages/";
 
 void GeneralWindow::Create(EditorComponent* _editor)
 {
@@ -12,7 +13,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 	wi::gui::Window::Create("General", wi::gui::Window::WindowControls::COLLAPSE);
 
-	SetSize(XMFLOAT2(580, 580));
+	SetSize(XMFLOAT2(580, 620));
 
 	physicsEnabledCheckBox.Create("Physics: ");
 	physicsEnabledCheckBox.SetTooltip("Toggle Physics Simulation On/Off");
@@ -237,6 +238,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->main->config.GetSection("options").Set("transform_tool_opacity", args.fValue);
 	});
 	AddWidget(&transformToolOpacitySlider);
+
 	bonePickerOpacitySlider.Create(0, 1, 1, 100, "Bone Picker Opacity: ");
 	bonePickerOpacitySlider.SetTooltip("You can control the transparency of the bone selector tool");
 	bonePickerOpacitySlider.SetSize(XMFLOAT2(100, 18));
@@ -250,12 +252,73 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	AddWidget(&bonePickerOpacitySlider);
 
 
+	localizationButton.Create(ICON_LANGUAGE " Create Localization Template");
+	localizationButton.SetTooltip("Generate a file that can be used to edit localization for the Editor.\nThe template will be created from the currently selected language.");
+	localizationButton.SetSize(XMFLOAT2(100, 18));
+	localizationButton.OnClick([&](wi::gui::EventArgs args) {
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::SAVE;
+		params.description = "XML file (.xml)";
+		params.extensions.push_back("xml");
+		wi::helper::FileDialog(params, [=](std::string fileName) {
+			editor->GetGUI().ExportLocalization(editor->current_localization);
+			editor->current_localization.Export(wi::helper::ForceExtension(fileName, params.extensions.back()));
+		});
+	});
+	AddWidget(&localizationButton);
+
+	languageCombo.Create("Language: ");
+	languageCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Text | wi::gui::LocalizationEnabled::Tooltip);
+	languageCombo.SetTooltip("Select a language. \nYou can also create a new language option by adding an XML file to the languages folder.\nThere is a button below that you can use to create a language template.");
+	languageCombo.AddItem("English");
+	if (std::filesystem::exists(languages_directory))
+	{
+		for (const auto& entry : std::filesystem::directory_iterator(languages_directory))
+		{
+			std::wstring language_name_wide = entry.path().filename().generic_wstring();
+			std::string language_name;
+			wi::helper::StringConvert(language_name_wide, language_name);
+			if (wi::helper::toUpper(wi::helper::GetExtensionFromFileName(language_name)) == "XML")
+			{
+				language_name = wi::helper::RemoveExtension(language_name);
+				languageCombo.AddItem(language_name);
+			}
+		}
+	}
+	languageCombo.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
+	languageCombo.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
+	languageCombo.OnSelect([=](wi::gui::EventArgs args) {
+		if (args.iValue == 0)
+		{
+			editor->SetLocalization(editor->default_localization);
+			editor->main->config.GetSection("options").Set("language", "English");
+			editor->main->config.Commit();
+			return;
+		}
+
+		std::string language = languageCombo.GetItemText(args.iValue);
+		std::string filename = languages_directory + language + ".xml";
+		if (editor->current_localization.Import(filename))
+		{
+			editor->SetLocalization(editor->current_localization);
+			editor->main->config.GetSection("options").Set("language", language);
+			editor->main->config.Commit();
+		}
+		else
+		{
+			wi::backlog::post("Couldn't import localization file: " + filename, wi::backlog::LogLevel::Warning);
+		}
+	});
+	AddWidget(&languageCombo);
+
+
 	enum class Theme
 	{
 		Dark,
 		Bright,
 		Soft,
 		Hacking,
+		Nord,
 	};
 
 	themeCombo.Create("Theme: ");
@@ -264,6 +327,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	themeCombo.AddItem("Bright " ICON_BRIGHT, (uint64_t)Theme::Bright);
 	themeCombo.AddItem("Soft " ICON_SOFT, (uint64_t)Theme::Soft);
 	themeCombo.AddItem("Hacking " ICON_HACKING, (uint64_t)Theme::Hacking);
+	themeCombo.AddItem("Nord " ICON_NORD, (uint64_t)Theme::Nord);
 	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		// Dark theme defaults:
@@ -308,7 +372,17 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.font.color = wi::Color(0, 200, 90, 255);
 			theme.font.shadow_color = wi::Color::Shadow();
 			break;
+		case Theme::Nord:
+			editor->main->config.GetSection("options").Set("theme", "Nord");
+			theme_color_idle = wi::Color(46, 52, 64, 255);
+			theme_color_focus = wi::Color(59, 66, 82, 255);
+			dark_point = wi::Color(46, 52, 64, 255);
+			theme.shadow_color = wi::Color(46, 52, 64, 200);
+			theme.font.color = wi::Color(236, 239, 244, 255);
+			theme.font.shadow_color = wi::Color::Shadow();
+			break;
 		}
+	
 		editor->main->config.Commit();
 
 		theme.tooltipImage = theme.image;
@@ -356,6 +430,12 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		{
 			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
 			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
+		}
+		
+		if ((Theme)args.userdata == Theme::Nord)
+		{
+			gui.SetColor(wi::Color(136, 192, 208, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
+			gui.SetColor(wi::Color(76, 86, 106, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
 		}
 
 		// customize individual elements:
@@ -412,6 +492,31 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->newSceneButton.sprites[i].params.corners_rounding[2].radius = 10;
 			editor->newSceneButton.sprites[i].params.corners_rounding[3].radius = 10;
 		}
+		for (int i = 0; i < arraysize(localizationButton.sprites); ++i)
+		{
+			localizationButton.sprites[i].params.enableCornerRounding();
+			localizationButton.sprites[i].params.corners_rounding[0].radius = 8;
+			localizationButton.sprites[i].params.corners_rounding[1].radius = 8;
+			localizationButton.sprites[i].params.corners_rounding[2].radius = 8;
+			localizationButton.sprites[i].params.corners_rounding[3].radius = 8;
+		}
+		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
+		{
+			editor->saveButton.sprites[i].params.enableCornerRounding();
+			editor->saveButton.sprites[i].params.corners_rounding[2].radius = 10;
+
+			editor->playButton.sprites[i].params.enableCornerRounding();
+			editor->playButton.sprites[i].params.corners_rounding[2].radius = 40;
+
+			editor->stopButton.sprites[i].params.enableCornerRounding();
+			editor->stopButton.sprites[i].params.corners_rounding[3].radius = 40;
+
+			editor->translateButton.sprites[i].params.enableCornerRounding();
+			editor->translateButton.sprites[i].params.corners_rounding[2].radius = 40;
+
+			editor->scaleButton.sprites[i].params.enableCornerRounding();
+			editor->scaleButton.sprites[i].params.corners_rounding[3].radius = 40;
+		}
 		editor->componentsWnd.weatherWnd.default_sky_horizon = dark_point;
 		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
 		editor->componentsWnd.weatherWnd.Update();
@@ -445,6 +550,22 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	AddWidget(&themeCombo);
 }
 
+void GeneralWindow::RefreshLanguageSelectionAfterWholeGUIWasInitialized()
+{
+	if (editor->main->config.GetSection("options").Has("language"))
+	{
+		std::string language = editor->main->config.GetSection("options").GetText("language");
+		for (int i = 0; i < languageCombo.GetItemCount(); ++i)
+		{
+			if (languageCombo.GetItemText(i) == language)
+			{
+				languageCombo.SetSelected(i);
+				break;
+			}
+		}
+	}
+}
+
 void GeneralWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
@@ -475,8 +596,8 @@ void GeneralWindow::ResizeLayout()
 	auto add_fullwidth = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
-		const float margin_left = padding;
-		const float margin_right = padding;
+		const float margin_left = padding * 2;
+		const float margin_right = 0;
 		widget.SetPos(XMFLOAT2(margin_left, y));
 		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
 		y += widget.GetSize().y;
@@ -498,6 +619,13 @@ void GeneralWindow::ResizeLayout()
 	themeCombo.SetSize(XMFLOAT2(width - x_off - themeCombo.GetScale().y - 1, themeCombo.GetScale().y));
 	y += themeCombo.GetSize().y;
 	y += padding;
+
+	languageCombo.SetPos(XMFLOAT2(x_off, y));
+	languageCombo.SetSize(XMFLOAT2(width - x_off - languageCombo.GetScale().y - 1, languageCombo.GetScale().y));
+	y += languageCombo.GetSize().y;
+	y += padding;
+
+	add_fullwidth(localizationButton);
 
 	physicsEnabledCheckBox.SetPos(XMFLOAT2(width - physicsEnabledCheckBox.GetSize().x, y));
 	physicsDebugCheckBox.SetPos(XMFLOAT2(physicsEnabledCheckBox.GetPos().x - physicsDebugCheckBox.GetSize().x - 70, y));
@@ -527,7 +655,11 @@ void GeneralWindow::ResizeLayout()
 
 	y += jump;
 
+	float prev_width = width;
 	width -= padding * 6;
 	add(transformToolOpacitySlider);
 	add(bonePickerOpacitySlider);
+
+	y += jump;
+	width = prev_width;
 }

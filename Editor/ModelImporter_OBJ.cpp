@@ -5,10 +5,6 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-#include <string>
-#include <istream>
-#include <streambuf>
-
 using namespace wi::graphics;
 using namespace wi::scene;
 using namespace wi::ecs;

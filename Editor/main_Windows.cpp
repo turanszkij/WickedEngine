@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "main_Windows.h"
-#include "Editor.h"
 
 #include <fstream>
 #include <thread>
@@ -312,6 +311,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 				}).detach();
 		}
+		editor.renderComponent.ReloadLanguage();
 		break;
     case WM_PAINT:
         {

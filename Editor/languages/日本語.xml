@@ -1,0 +1,2852 @@
+<?xml version="1.0"?>
+<!--This file was created by Wicked Engine for language localization.-->
+<!--You can import this file with the wi::Localization::Import() function.-->
+<entry id="0">セーブ</entry>
+<entry id="1">オペラ</entry>
+<entry id="2">バックろっぐ</entry>
+<entry id="3">プロファイラー</entry>
+<entry id="4">シネマ</entry>
+<entry id="5">フルスクリーン</entry>
+<entry id="6">ウィンドウ</entry>
+<entry id="7">バグレポート</entry>
+<entry id="8">情報</entry>
+<entry id="9">出口</entry>
+<entry id="10">無題のシーン</entry>
+<section name="gui">
+	<section name="+" hint="Button">
+		<entry id="1" hint="tooltip">新しいシーン</entry>
+	</section>
+	<section name="Backlog" hint="Button">
+		<entry id="1" hint="tooltip">バックログを開く (HOME ボタンで切り替える)</entry>
+	</section>
+	<section name="" hint="Button">
+		<entry id="1" hint="tooltip">まだ実行中のすべてのスクリプトバックグラウンドプロセスを停止します。</entry>
+	</section>
+	<section name="Options" hint="Window">
+		<entry id="0" hint="text">オプション</entry>
+		<section name="Graphics" hint="Window">
+			<entry id="0" hint="text">グラフィックス</entry>
+			<section name="Cube Shadowmap res: " hint="ComboBox">
+				<entry id="0" hint="text">Cube Shadowmap res: </entry>
+				<entry id="1" hint="tooltip">Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...
+This specifies the maximum shadow resolution for these light types, but that can dynamically change unless they are set to a fixed resolution individually.</entry>
+				<section name="items">
+					<entry id="0">Off</entry>
+					<entry id="1">128</entry>
+					<entry id="2">256</entry>
+					<entry id="3">512</entry>
+					<entry id="4">1024</entry>
+					<entry id="5">2048</entry>
+				</section>
+			</section>
+			<section name="Path tracing statistics" hint="Label">
+				<entry id="0" hint="text">Path tracing statistics</entry>
+			</section>
+			<section name="EyeAdaption: " hint="CheckBox">
+				<entry id="0" hint="text">EyeAdaption: </entry>
+				<entry id="1" hint="tooltip">Enable eye adaption for the overall screen luminance</entry>
+			</section>
+			<section name="Shadow type: " hint="ComboBox">
+				<entry id="0" hint="text">Shadow type: </entry>
+				<entry id="1" hint="tooltip">Choose between shadowmaps and ray traced shadows.
+Note that ray traced shadows need hardware raytracing support, otherwise they are not available</entry>
+				<section name="items">
+					<entry id="0">Shadowmaps</entry>
+					<entry id="1">Ray traced</entry>
+				</section>
+			</section>
+			<section name="Display Output: " hint="ComboBox">
+				<entry id="0" hint="text">Display Output: </entry>
+				<entry id="1" hint="tooltip">Choose between different display output formats.
+If the display doesn't support the selected format, it will switch back to a reasonable default.
+HDR formats will be only selectable when the current display supports HDR output</entry>
+				<section name="items">
+					<entry id="0">SDR 8bit</entry>
+					<entry id="1">SDR 10bit</entry>
+				</section>
+			</section>
+			<section name="VXGI Reflections: " hint="CheckBox">
+				<entry id="0" hint="text">VXGI Reflections: </entry>
+				<entry id="1" hint="tooltip">Toggle specular reflections computation for VXGI.</entry>
+			</section>
+			<section name="widget_4" hint="ComboBox">
+				<entry id="1" hint="tooltip">Choose Surfel GI debug visualization.</entry>
+				<section name="items">
+					<entry id="0">No Debug</entry>
+					<entry id="1">Normal</entry>
+					<entry id="2">Color</entry>
+					<entry id="3">Point</entry>
+					<entry id="4">Random</entry>
+					<entry id="5">Heatmap</entry>
+					<entry id="6">Inconsist.</entry>
+				</section>
+			</section>
+			<section name="Key: " hint="Slider">
+				<entry id="0" hint="text">Key: </entry>
+				<entry id="1" hint="tooltip">Set the key value for eye adaption.</entry>
+			</section>
+			<section name="Sample count: " hint="Slider">
+				<entry id="0" hint="text">Sample count: </entry>
+				<entry id="1" hint="tooltip">The path tracing will perform this many samples per pixel.</entry>
+			</section>
+			<section name="Strength: " hint="Slider">
+				<entry id="0" hint="text">Strength: </entry>
+				<entry id="1" hint="tooltip">The lens distortion amount.</entry>
+			</section>
+			<section name="VXGI Distance: " hint="Slider">
+				<entry id="0" hint="text">VXGI Distance: </entry>
+				<entry id="1" hint="tooltip">Adjust max raymarching distance for VXGI.</entry>
+			</section>
+			<section name="widget_5" hint="TextInputField">
+				<entry id="1" hint="tooltip">Probe count in X dimension.</entry>
+			</section>
+			<section name="Rate: " hint="Slider">
+				<entry id="0" hint="text">Rate: </entry>
+				<entry id="1" hint="tooltip">Set the eye adaption rate (speed of adjustment)</entry>
+			</section>
+			<section name="Sample Count: " hint="Slider">
+				<entry id="0" hint="text">Sample Count: </entry>
+				<entry id="1" hint="tooltip">Set AO ray count. Only for SSAO</entry>
+			</section>
+			<section name="Cartoon Outline: " hint="CheckBox">
+				<entry id="0" hint="text">Cartoon Outline: </entry>
+				<entry id="1" hint="tooltip">Toggle the cartoon outline effect. Only those materials will be outlined that have Cartoon Outline enabled.</entry>
+			</section>
+			<section name="Cutoff: " hint="Slider">
+				<entry id="0" hint="text">Cutoff: </entry>
+				<entry id="1" hint="tooltip">Set maximum roughness which can be used to apply screen space or raytraced reflections.</entry>
+			</section>
+			<section name="Transparent Shadows: " hint="CheckBox">
+				<entry id="0" hint="text">Transparent Shadows: </entry>
+				<entry id="1" hint="tooltip">Enables color tinted shadows and refraction caustics effects for transparent objects and water.</entry>
+			</section>
+			<section name="DDGI RayCount: " hint="Slider">
+				<entry id="0" hint="text">DDGI RayCount: </entry>
+				<entry id="1" hint="tooltip">Adjust the ray count per DDGI probe.</entry>
+			</section>
+			<section name="2.5D Light Culling: " hint="CheckBox">
+				<entry id="0" hint="text">2.5D Light Culling: </entry>
+				<entry id="1" hint="tooltip">Enable a more aggressive light culling approach which can result in slower culling but faster rendering (Tiled renderer only)</entry>
+			</section>
+			<section name="2D Shadowmap res: " hint="ComboBox">
+				<entry id="0" hint="text">2D Shadowmap res: </entry>
+				<entry id="1" hint="tooltip">Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights)...
+This specifies the maximum shadow resolution for these light types, but that can dynamically change unless they are set to a fixed resolution individually.</entry>
+				<section name="items">
+					<entry id="0">Off</entry>
+					<entry id="1">128</entry>
+					<entry id="2">256</entry>
+					<entry id="3">512</entry>
+					<entry id="4">1024</entry>
+					<entry id="5">2048</entry>
+					<entry id="6">4096</entry>
+				</section>
+			</section>
+			<section name="DDGI Smoothen: " hint="Slider">
+				<entry id="0" hint="text">DDGI Smoothen: </entry>
+				<entry id="1" hint="tooltip">Adjust the amount of smooth backface test.</entry>
+			</section>
+			<section name="RT Reflections: " hint="CheckBox">
+				<entry id="0" hint="text">RT Reflections: </entry>
+				<entry id="1" hint="tooltip">Enable Ray Traced Reflections. Only if GPU supports raytracing.</entry>
+			</section>
+			<section name="AO: " hint="ComboBox">
+				<entry id="0" hint="text">AO: </entry>
+				<entry id="1" hint="tooltip">Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing</entry>
+				<section name="items">
+					<entry id="0">Disabled</entry>
+					<entry id="1">SSAO</entry>
+					<entry id="2">HBAO</entry>
+					<entry id="3">MSAO</entry>
+					<entry id="4">RTAO</entry>
+				</section>
+			</section>
+			<section name="Power: " hint="Slider">
+				<entry id="0" hint="text">Power: </entry>
+				<entry id="1" hint="tooltip">Set SSAO Power. Higher values produce darker, more pronounced effect</entry>
+			</section>
+			<section name="Visibility Compute Shading: " hint="CheckBox">
+				<entry id="0" hint="text">Visibility Compute Shading: </entry>
+				<entry id="1" hint="tooltip">Visibility Compute Shading (experimental)
+This will shade the scene in compute shaders instead of pixel shaders
+This has a higher initial performance cost, but it will be faster in high polygon scenes.
+It is not compatible with MSAA and tessellation.</entry>
+			</section>
+			<section name="Render Path: " hint="ComboBox">
+				<entry id="0" hint="text">Render Path: </entry>
+				<entry id="1" hint="tooltip">Choose a render path...
+Path tracing will use fallback raytracing with non-raytracing GPU, which will be slow.
+Changing render path will reset some graphics settings!</entry>
+				<section name="items">
+					<entry id="0">Default</entry>
+					<entry id="1">Path Tracing</entry>
+				</section>
+			</section>
+			<section name="Raytrace Bounces: " hint="Slider">
+				<entry id="0" hint="text">Raytrace Bounces: </entry>
+				<entry id="1" hint="tooltip">How many light bounces to compute when doing these ray tracing effects:
+- Path tracing
+- Lightmap baking</entry>
+			</section>
+			<section name="DEBUGJitter: " hint="CheckBox">
+				<entry id="0" hint="text">DEBUG: </entry>
+				<entry id="1" hint="tooltip">Disable blending of frame history. Camera Subpixel jitter will be visible.</entry>
+			</section>
+			<section name="Threshold: " hint="Slider">
+				<entry id="0" hint="text">Threshold: </entry>
+				<entry id="1" hint="tooltip">Outline edge detection threshold. Increase if not enough otlines are detected, decrease if too many outlines are detected.</entry>
+			</section>
+			<section name="FSR 2.1 Preset: " hint="ComboBox">
+				<entry id="0" hint="text">FSR 2.1 Preset: </entry>
+				<entry id="1" hint="tooltip">Set resolution scaling quality mode for FSR 2.1:
+Quality: 1.5x
+Balanced: 1.7x
+Performance: 2.0x
+Ultra performance: 3.0x</entry>
+				<section name="items">
+					<entry id="0">Quality</entry>
+					<entry id="1">Balanced</entry>
+					<entry id="2">Performance</entry>
+					<entry id="3">Ultra performance</entry>
+				</section>
+			</section>
+			<section name="DepthOfField: " hint="CheckBox">
+				<entry id="0" hint="text">DepthOfField: </entry>
+				<entry id="1" hint="tooltip">Enable Depth of field effect. Requires additional camera setup: focal length and aperture size.</entry>
+			</section>
+			<section name="Dithering: " hint="CheckBox">
+				<entry id="0" hint="text">Dithering: </entry>
+				<entry id="1" hint="tooltip">Toggle the full screen dithering effect. This helps to reduce color banding.</entry>
+			</section>
+			<section name="VXGI Ray Step: " hint="Slider">
+				<entry id="0" hint="text">VXGI Ray Step: </entry>
+				<entry id="1" hint="tooltip">Adjust the precision of ray marching for [reflection] cone tracing step. Lower values = more precision but slower performance.</entry>
+			</section>
+			<section name="GI Boost: " hint="Slider">
+				<entry id="0" hint="text">GI Boost: </entry>
+				<entry id="1" hint="tooltip">Adjust the strength of GI.
+Note that values other than 1.0 will cause mismatch with path tracing reference!</entry>
+			</section>
+			<section name="DEBUG: " hint="CheckBox">
+				<entry id="0" hint="text">DEBUG: </entry>
+				<entry id="1" hint="tooltip">Toggle visualization of the screen space light culling heatmap grid (Tiled renderer only)</entry>
+			</section>
+			<section name="Thickness: " hint="Slider">
+				<entry id="0" hint="text">Thickness: </entry>
+				<entry id="1" hint="tooltip">Set outline thickness.</entry>
+			</section>
+			<section name="Tessellation: " hint="CheckBox">
+				<entry id="0" hint="text">Tessellation: </entry>
+				<entry id="1" hint="tooltip">Enable tessellation feature. You also need to specify a tessellation factor for individual objects.</entry>
+			</section>
+			<section name="VSync: " hint="CheckBox">
+				<entry id="0" hint="text">VSync: </entry>
+				<entry id="1" hint="tooltip">Toggle vertical sync</entry>
+			</section>
+			<section name="Surfel GI: " hint="CheckBox">
+				<entry id="0" hint="text">Surfel GI: </entry>
+				<entry id="1" hint="tooltip">Surfel GI is a raytraced diffuse GI using raytracing and surface cache.</entry>
+			</section>
+			<section name="FSR 1.0: " hint="CheckBox">
+				<entry id="0" hint="text">FSR 1.0: </entry>
+				<entry id="1" hint="tooltip">FidelityFX FSR Upscaling version 1.0. Use this alongside Temporal AA or MSAA when the resolution scaling is lowered.</entry>
+			</section>
+			<section name="FSR 2.1: " hint="CheckBox">
+				<entry id="0" hint="text">FSR 2.1: </entry>
+				<entry id="1" hint="tooltip">FidelityFX FSR Upscaling, version 2.1. You can use this as a replacement for Temporal AA while also upscaling from lowered rendering resolution.</entry>
+			</section>
+			<section name="widget_8" hint="ComboBox">
+				<entry id="1" hint="tooltip">Toggle VXGI visualization.</entry>
+				<section name="items">
+					<entry id="0">No debug</entry>
+					<entry id="1">Clipmaps</entry>
+					<entry id="2">Clipmap 0</entry>
+					<entry id="3">Clipmap 1</entry>
+					<entry id="4">Clipmap 2</entry>
+					<entry id="5">Clipmap 3</entry>
+					<entry id="6">Clipmap 4</entry>
+					<entry id="7">Clipmap 5</entry>
+				</section>
+			</section>
+			<section name="SSR: " hint="CheckBox">
+				<entry id="0" hint="text">SSR: </entry>
+				<entry id="1" hint="tooltip">Enable Screen Space Reflections. This can not reflect anything that is outside of the screen.</entry>
+			</section>
+			<section name="VXGI Voxel Size: " hint="Slider">
+				<entry id="0" hint="text">VXGI Voxel Size: </entry>
+				<entry id="1" hint="tooltip">Adjust the voxel size for VXGI calculations.</entry>
+			</section>
+			<section name="Brightness: " hint="Slider">
+				<entry id="0" hint="text">Brightness: </entry>
+			</section>
+			<section name="LensFlare: " hint="CheckBox">
+				<entry id="0" hint="text">LensFlare: </entry>
+				<entry id="1" hint="tooltip">Toggle visibility of light source flares. Additional setup needed per light for a lensflare to be visible.</entry>
+			</section>
+			<section name="Speed: " hint="Slider">
+				<entry id="0" hint="text">Speed: </entry>
+				<entry id="1" hint="tooltip">Adjust the global speed (time multiplier)</entry>
+			</section>
+			<section name="VXGI: " hint="CheckBox">
+				<entry id="0" hint="text">VXGI: </entry>
+				<entry id="1" hint="tooltip">Toggle Voxel Global Illumination.</entry>
+			</section>
+			<section name="Samples: " hint="Slider">
+				<entry id="0" hint="text">Samples: </entry>
+				<entry id="1" hint="tooltip">Sample count of contact shadows. Higher values are better quality but slower.</entry>
+			</section>
+			<section name="Sharpen Filter: " hint="CheckBox">
+				<entry id="0" hint="text">Sharpen Filter: </entry>
+				<entry id="1" hint="tooltip">Toggle sharpening post process of the final image.</entry>
+			</section>
+			<section name="RT Diffuse: " hint="CheckBox">
+				<entry id="0" hint="text">RT Diffuse: </entry>
+				<entry id="1" hint="tooltip">Enable Ray Traced Diffuse. Only if GPU supports raytracing.
+This effect computes single bounce diffuse with ray tracing per pixel.
+If DDGI is enabled, it will make it multi bounce.</entry>
+			</section>
+			<section name="Range: " hint="Slider">
+				<entry id="0" hint="text">Range: </entry>
+				<entry id="1" hint="tooltip">Range of contact shadows</entry>
+			</section>
+			<section name="Resolution Scale: " hint="Slider">
+				<entry id="0" hint="text">Resolution Scale: </entry>
+				<entry id="1" hint="tooltip">Adjust the internal rendering resolution.</entry>
+			</section>
+			<section name="DDGI Blend Speed: " hint="Slider">
+				<entry id="0" hint="text">DDGI Blend Speed: </entry>
+				<entry id="1" hint="tooltip">Adjust the contribution of newly traced rays. Higher values will make the DDGI update faster, but can result in increased flickering.</entry>
+			</section>
+			<section name="Color Grading: " hint="CheckBox">
+				<entry id="0" hint="text">Color Grading: </entry>
+				<entry id="1" hint="tooltip">Enable color grading of the final render. An additional lookup texture must be set in the Weather!</entry>
+			</section>
+			<section name="VRS Classification: " hint="CheckBox">
+				<entry id="0" hint="text">VRS Classification: </entry>
+				<entry id="1" hint="tooltip">Enable classification of variable rate shading on the screen. Less important parts will be shaded with lesser resolution.
+Requires Tier2 support for variable shading rate</entry>
+			</section>
+			<section name="Temporal AA: " hint="CheckBox">
+				<entry id="0" hint="text">Temporal AA: </entry>
+				<entry id="1" hint="tooltip">Toggle Temporal Anti Aliasing. It is a supersampling techique which is performed across multiple frames.</entry>
+			</section>
+			<section name="MSAA: " hint="ComboBox">
+				<entry id="0" hint="text">MSAA: </entry>
+				<entry id="1" hint="tooltip">Multisampling Anti Aliasing quality. </entry>
+				<section name="items">
+					<entry id="0">Off</entry>
+					<entry id="1">2</entry>
+					<entry id="2">4</entry>
+					<entry id="3">8</entry>
+				</section>
+			</section>
+			<section name="FXAA: " hint="CheckBox">
+				<entry id="0" hint="text">FXAA: </entry>
+				<entry id="1" hint="tooltip">Fast Approximate Anti Aliasing. A fast antialiasing method, but can be a bit too blurry.</entry>
+			</section>
+			<section name="LightShafts: " hint="CheckBox">
+				<entry id="0" hint="text">LightShafts: </entry>
+				<entry id="1" hint="tooltip">Enable light shaft for directional light sources.</entry>
+			</section>
+			<section name="Chromatic Aberration: " hint="CheckBox">
+				<entry id="0" hint="text">Chromatic Aberration: </entry>
+				<entry id="1" hint="tooltip">Toggle the full screen chromatic aberration effect. This simulates lens distortion at screen edges.</entry>
+			</section>
+			<section name="widget_6" hint="TextInputField">
+				<entry id="1" hint="tooltip">Probe count in Y dimension.</entry>
+			</section>
+			<section name="Bloom: " hint="CheckBox">
+				<entry id="0" hint="text">Bloom: </entry>
+				<entry id="1" hint="tooltip">Enable bloom. The effect adds color bleeding to the brightest parts of the scene.</entry>
+			</section>
+			<section name="VXGI Full Resolution: " hint="CheckBox">
+				<entry id="0" hint="text">VXGI Full Resolution: </entry>
+				<entry id="1" hint="tooltip">Toggle resolve mode for VXGI opaque. Full resolution will use the full rendering resolution, otherwise it will be upsampled from lower resolution.</entry>
+			</section>
+			<section name="Contrast: " hint="Slider">
+				<entry id="0" hint="text">Contrast: </entry>
+			</section>
+			<section name="Saturation: " hint="Slider">
+				<entry id="0" hint="text">Saturation: </entry>
+			</section>
+			<section name="Texture Quality: " hint="ComboBox">
+				<entry id="0" hint="text">Texture Quality: </entry>
+				<entry id="1" hint="tooltip">Choose a texture sampling method for material textures.</entry>
+				<section name="items">
+					<entry id="0">Nearest</entry>
+					<entry id="1">Bilinear</entry>
+					<entry id="2">Trilinear</entry>
+					<entry id="3">Anisotropic</entry>
+				</section>
+			</section>
+			<section name="Screen Shadows: " hint="CheckBox">
+				<entry id="0" hint="text">Screen Shadows: </entry>
+				<entry id="1" hint="tooltip">Enable screen space contact shadows. This can add small shadows details to shadow maps in screen space.</entry>
+			</section>
+			<section name="widget_7" hint="TextInputField">
+				<entry id="1" hint="tooltip">Probe count in Z dimension.</entry>
+			</section>
+			<section name="Tonemap Exposure: " hint="Slider">
+				<entry id="0" hint="text">Tonemap Exposure: </entry>
+				<entry id="1" hint="tooltip">Set the tonemap exposure value</entry>
+			</section>
+			<section name="Sharpness: " hint="Slider">
+				<entry id="0" hint="text">Sharpness: </entry>
+				<entry id="1" hint="tooltip">The sharpening amount to apply for FSR 2.1 upscaling.</entry>
+			</section>
+			<section name="Occlusion Culling: " hint="CheckBox">
+				<entry id="0" hint="text">Occlusion Culling: </entry>
+				<entry id="1" hint="tooltip">Toggle occlusion culling. This can boost framerate if many objects are occluded in the scene.</entry>
+			</section>
+			<section name="MipLOD Bias: " hint="Slider">
+				<entry id="0" hint="text">MipLOD Bias: </entry>
+				<entry id="1" hint="tooltip">Bias the rendered mip map level of the material textures.</entry>
+			</section>
+			<section name="MotionBlur: " hint="CheckBox">
+				<entry id="0" hint="text">MotionBlur: </entry>
+				<entry id="1" hint="tooltip">Enable motion blur for camera movement and animated meshes.</entry>
+			</section>
+			<section name="DDGI: " hint="CheckBox">
+				<entry id="0" hint="text">DDGI: </entry>
+				<entry id="1" hint="tooltip">Toggle Dynamic Diffuse Global Illumination (DDGI).
+Note that DDGI probes that were loaded with the scene will still be active if this is turned off, but they won't be updated.</entry>
+			</section>
+		</section>
+		<section name="General" hint="Window">
+			<entry id="0" hint="text">一般設定</entry>
+			<section name="AABB visualizer: " hint="CheckBox">
+				<entry id="0" hint="text">AABB visualizer: </entry>
+				<entry id="1" hint="tooltip">Visualize the scene bounding boxes</entry>
+			</section>
+			<section name=" Create Localization Template" hint="Button">
+				<entry id="0" hint="text"> ローカリゼーションテンプレートの作成</entry>
+				<entry id="1" hint="tooltip">エディターのローカリゼーションの編集に使用できるファイルを生成する.
+テンプレートは現在選択されている言語から作成されます.</entry>
+			</section>
+			<section name="Name visualizer: " hint="CheckBox">
+				<entry id="0" hint="text">Name visualizer: </entry>
+				<entry id="1" hint="tooltip">Visualize the entity names in the scene</entry>
+			</section>
+			<section name="Bone Picker Opacity: " hint="Slider">
+				<entry id="0" hint="text">Bone Picker Opacity: </entry>
+				<entry id="1" hint="tooltip">You can control the transparency of the bone selector tool</entry>
+			</section>
+			<section name="Env probe visualizer: " hint="CheckBox">
+				<entry id="0" hint="text">Env probe visualizer: </entry>
+				<entry id="1" hint="tooltip">Toggle visualization of environment probes as reflective spheres</entry>
+			</section>
+			<section name="Theme: " hint="ComboBox">
+				<entry id="0" hint="text">テーマ: </entry>
+				<entry id="1" hint="tooltip">配色テーマを選択する...</entry>
+				<section name="items">
+					<entry id="0">暗い </entry>
+					<entry id="1">明るい </entry>
+					<entry id="2">柔らかい </entry>
+					<entry id="3">ハッキング </entry>
+					<entry id="4">Nord </entry>
+				</section>
+			</section>
+			<section name="Info: " hint="CheckBox">
+				<entry id="0" hint="text">情報: </entry>
+				<entry id="1" hint="tooltip">Toggle advanced data in the info display text in top left corner.</entry>
+			</section>
+			<section name="Force Field visualizer: " hint="CheckBox">
+				<entry id="0" hint="text">Force Field visualizer: </entry>
+				<entry id="1" hint="tooltip">Visualize force fields</entry>
+			</section>
+			<section name="Language: " hint="ComboBox">
+				<entry id="0" hint="text">言語: </entry>
+				<entry id="1" hint="tooltip">言語を選択. 
+XML ファイルを言語フォルダーに追加して、新しい言語オプションを作成することもできます。.
+言語テンプレートを作成するために使用できるボタンが下にあります.</entry>
+			</section>
+			<section name="Freeze culling camera: " hint="CheckBox">
+				<entry id="0" hint="text">Freeze culling camera: </entry>
+				<entry id="1" hint="tooltip">Freeze culling camera update. Scene culling will not be updated with the view</entry>
+			</section>
+			<section name="Render Wireframe: " hint="CheckBox">
+				<entry id="0" hint="text">Render Wireframe: </entry>
+				<entry id="1" hint="tooltip">Visualize the scene as a wireframe</entry>
+			</section>
+			<section name="FPS: " hint="CheckBox">
+				<entry id="0" hint="text">FPS: </entry>
+				<entry id="1" hint="tooltip">Toggle the FPS display text in top left corner.</entry>
+			</section>
+			<section name="Disable albedo maps: " hint="CheckBox">
+				<entry id="0" hint="text">Disable albedo maps: </entry>
+				<entry id="1" hint="tooltip">Disables albedo maps on objects for easier lighting debugging</entry>
+			</section>
+			<section name="Save Mode: " hint="ComboBox">
+				<entry id="0" hint="text">セーブモード: </entry>
+				<entry id="1" hint="tooltip">Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.
+The Dump to header () option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.</entry>
+				<section name="items">
+					<entry id="0">Embed resources </entry>
+					<entry id="1">No embedding </entry>
+					<entry id="2">Dump to header </entry>
+				</section>
+			</section>
+			<section name="Force diffuse lighting: " hint="CheckBox">
+				<entry id="0" hint="text">Force diffuse lighting: </entry>
+				<entry id="1" hint="tooltip">Sets every surface fully diffuse, with zero specularity</entry>
+			</section>
+			<section name="Grid helper: " hint="CheckBox">
+				<entry id="0" hint="text">Grid helper: </entry>
+				<entry id="1" hint="tooltip">Toggle showing of unit visualizer grid in the world origin</entry>
+			</section>
+			<section name="Collider visualizer: " hint="CheckBox">
+				<entry id="0" hint="text">Collider visualizer: </entry>
+				<entry id="1" hint="tooltip">Toggle visualization of colliders in the scene</entry>
+			</section>
+			<section name="Transform Tool Opacity: " hint="Slider">
+				<entry id="0" hint="text">Transform Tool Opacity: </entry>
+				<entry id="1" hint="tooltip">You can control the transparency of the object placement tool</entry>
+			</section>
+			<section name="Version: " hint="CheckBox">
+				<entry id="0" hint="text">バージョン: </entry>
+				<entry id="1" hint="tooltip">Toggle the engine version display text in top left corner.</entry>
+			</section>
+			<section name="Physics visualizer: " hint="CheckBox">
+				<entry id="0" hint="text">Physics visualizer: </entry>
+				<entry id="1" hint="tooltip">Visualize the physics world</entry>
+			</section>
+			<section name="Bone line visualizer: " hint="CheckBox">
+				<entry id="0" hint="text">Bone line visualizer: </entry>
+				<entry id="1" hint="tooltip">Visualize bones of armatures</entry>
+			</section>
+			<section name="Emitter visualizer: " hint="CheckBox">
+				<entry id="0" hint="text">Emitter visualizer: </entry>
+				<entry id="1" hint="tooltip">Visualize emitters</entry>
+			</section>
+			<section name="Physics: " hint="CheckBox">
+				<entry id="0" hint="text">Physics: </entry>
+				<entry id="1" hint="tooltip">Toggle Physics Simulation On/Off</entry>
+			</section>
+			<section name="Camera visualizer: " hint="CheckBox">
+				<entry id="0" hint="text">Camera visualizer: </entry>
+				<entry id="1" hint="tooltip">Toggle visualization of camera proxies in the scene</entry>
+			</section>
+			<section name="RT BVH visualizer: " hint="CheckBox">
+				<entry id="0" hint="text">RT BVH visualizer: </entry>
+				<entry id="1" hint="tooltip">Visualize scene BVH if raytracing is enabled (only for software raytracing currently)</entry>
+			</section>
+		</section>
+		<section name="widget_2" hint="CheckBox">
+			<entry id="1" hint="tooltip">大文字と小文字を区別する名前のフィルター処理を切り替える</entry>
+		</section>
+		<section name="New: " hint="ComboBox">
+			<entry id="0" hint="text">足す: </entry>
+			<entry id="1" hint="tooltip">新しいエンティティの作成</entry>
+			<section name="items">
+				<entry id="0">トランスフォーム </entry>
+				<entry id="1">マテリアル </entry>
+				<entry id="2">ポイントライト </entry>
+				<entry id="3">スポットライト </entry>
+				<entry id="4">指向性ライト </entry>
+				<entry id="5">環境プローブ </entry>
+				<entry id="6">フォース </entry>
+				<entry id="7">デカル </entry>
+				<entry id="8">音 </entry>
+				<entry id="9">天気 </entry>
+				<entry id="10">エミッター </entry>
+				<entry id="11">ヘアパーティクル </entry>
+				<entry id="12">カメラ </entry>
+				<entry id="13">三乗 </entry>
+				<entry id="14">プレーぬ </entry>
+				<entry id="15">アニメーション </entry>
+				<entry id="16">スクリプト </entry>
+				<entry id="17">コライダー </entry>
+				<entry id="18">地形 </entry>
+			</section>
+		</section>
+		<section name="Materials" hint="Window">
+			<entry id="0" hint="text">料</entry>
+			<section name="Zoom: " hint="Slider">
+				<entry id="0" hint="text">Zoom: </entry>
+			</section>
+		</section>
+		<section name="Paint Tool" hint="Window">
+			<entry id="0" hint="text">ペイントツール</entry>
+			<section name="Smoothness: " hint="Slider">
+				<entry id="0" hint="text">Smoothness: </entry>
+				<entry id="1" hint="tooltip">Set the brush smoothness. 0 = hard, increase for more smoothness</entry>
+			</section>
+			<section name="Spacing: " hint="Slider">
+				<entry id="0" hint="text">Spacing: </entry>
+				<entry id="1" hint="tooltip">Brush spacing means how much brush movement (in pixels) starts a new stroke. 0 = new stroke every frame, 100 = every 100 pixel movement since last stroke will start a new stroke.</entry>
+			</section>
+			<section name="Backfaces: " hint="CheckBox">
+				<entry id="0" hint="text">Backfaces: </entry>
+				<entry id="1" hint="tooltip">Set whether to paint on backfaces of geometry or not</entry>
+			</section>
+			<section name="Paint Tool is disabled." hint="Label">
+				<entry id="0" hint="text">Paint Tool is disabled.</entry>
+			</section>
+			<section name="Save Texture" hint="Button">
+				<entry id="0" hint="text">Save Texture</entry>
+				<entry id="1" hint="tooltip">Save edited texture.</entry>
+			</section>
+			<section name="Power: " hint="Slider">
+				<entry id="0" hint="text">Power: </entry>
+				<entry id="1" hint="tooltip">Set the brush power amount. 0 = minimum affection, 1 = maximum affection</entry>
+			</section>
+			<section name="Brush Shape: " hint="ComboBox">
+				<entry id="0" hint="text">Brush Shape: </entry>
+				<entry id="1" hint="tooltip">Choose shape for brush masking effect</entry>
+				<section name="items">
+					<entry id="0"></entry>
+					<entry id="1"></entry>
+				</section>
+			</section>
+			<section name="Brush Radius: " hint="Slider">
+				<entry id="0" hint="text">Brush Radius: </entry>
+				<entry id="1" hint="tooltip">Set the brush radius in pixel units</entry>
+			</section>
+			<section name="Stabilizer: " hint="Slider">
+				<entry id="0" hint="text">Stabilizer: </entry>
+				<entry id="1" hint="tooltip">The stabilizer generates a small delay between user input and painting, which will be used to compute a smoother paint stroke..</entry>
+			</section>
+			<section name="Color" hint="ColorPicker">
+				<entry id="0" hint="text">Color</entry>
+				<section name="B" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for BLUE channel (0-255)</entry>
+				</section>
+				<section name="S" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for SATURATION channel (0-100)</entry>
+				</section>
+				<section name="R" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for RED channel (0-255)</entry>
+				</section>
+				<section name="G" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for GREEN channel (0-255)</entry>
+				</section>
+				<section name="widget_9" hint="Slider">
+					<entry id="1" hint="tooltip">Value for ALPHA - TRANSPARENCY channel (0-255)</entry>
+				</section>
+				<section name="V" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for LUMINANCE channel (0-100)</entry>
+				</section>
+				<section name="H" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for HUE channel (0-360)</entry>
+				</section>
+			</section>
+			<section name="Axis Lock: " hint="ComboBox">
+				<entry id="0" hint="text">Axis Lock: </entry>
+				<entry id="1" hint="tooltip">You can lock modification to an axis here.</entry>
+				<section name="items">
+					<entry id="0"></entry>
+					<entry id="1">X </entry>
+					<entry id="2">Y </entry>
+					<entry id="3">Z </entry>
+				</section>
+			</section>
+			<section name="Pressure: " hint="CheckBox">
+				<entry id="0" hint="text">Pressure: </entry>
+				<entry id="1" hint="tooltip">Set whether to use pressure sensitivity (for example pen tablet)</entry>
+			</section>
+			<section name="Mode: " hint="ComboBox">
+				<entry id="0" hint="text">Mode: </entry>
+				<entry id="1" hint="tooltip">Choose paint tool mode</entry>
+				<section name="items">
+					<entry id="0"> Disabled</entry>
+					<entry id="1"> Texture</entry>
+					<entry id="2"> Vertexcolor</entry>
+					<entry id="3"> Sculpting - Add</entry>
+					<entry id="4"> Sculpting - Subtract</entry>
+					<entry id="5"> Softbody - Pinning</entry>
+					<entry id="6"> Softbody - Physics</entry>
+					<entry id="7"> Hairparticle - Add Triangle</entry>
+					<entry id="8"> Hairparticle - Remove Triangle</entry>
+					<entry id="9"> Hairparticle - Length (Alpha)</entry>
+					<entry id="10"> Wind weight (Alpha)</entry>
+				</section>
+			</section>
+			<section name="Wireframe: " hint="CheckBox">
+				<entry id="0" hint="text">Wireframe: </entry>
+				<entry id="1" hint="tooltip">Set whether to draw wireframe on top of geometry or not</entry>
+			</section>
+			<section name="Rotation: " hint="Slider">
+				<entry id="0" hint="text">Rotation: </entry>
+				<entry id="1" hint="tooltip">Brush rotation randomness. This will affect the splat mode brush texture.</entry>
+			</section>
+			<section name="widget_11" hint="Button">
+				<entry id="1" hint="tooltip">Open an image to use as reveal mode texture.
+Reveal mode means that the texture will use the UV of the mesh. It will be multiplied by brush tex.</entry>
+			</section>
+			<section name="Texture Slot: " hint="ComboBox">
+				<entry id="0" hint="text">Texture Slot: </entry>
+				<entry id="1" hint="tooltip">Choose texture slot of the selected material to paint (texture paint mode only)</entry>
+				<section name="items">
+					<entry id="0">BaseColor (RGBA)</entry>
+					<entry id="1">Normal (RGB)</entry>
+					<entry id="2">SurfaceMap (RGBA)</entry>
+					<entry id="3">DisplacementMap (R)</entry>
+					<entry id="4">EmissiveMap (RGBA)</entry>
+					<entry id="5">OcclusionMap (R)</entry>
+					<entry id="6">TransmissionMap (R)</entry>
+					<entry id="7">SheenColorMap (R)</entry>
+					<entry id="8">SheenRoughMap (R)</entry>
+					<entry id="9">ClearcoatMap (R)</entry>
+					<entry id="10">ClearcoatRoughMap (R)</entry>
+					<entry id="11">ClearcoatNormMap (R)</entry>
+				</section>
+			</section>
+			<section name="widget_10" hint="Button">
+				<entry id="1" hint="tooltip">Open an image to use as brush texture (splatting mode).
+Splat mode means that the texture will be relative to the brush position</entry>
+			</section>
+		</section>
+		<section name="widget_0" hint="ComboBox">
+			<entry id="1" hint="tooltip">タイプ別のエンティティにフィルタリングを適用する</entry>
+			<section name="items">
+				<entry id="0">*</entry>
+				<entry id="1"></entry>
+				<entry id="2"></entry>
+				<entry id="3"></entry>
+				<entry id="4"></entry>
+				<entry id="5"></entry>
+				<entry id="6"></entry>
+				<entry id="7"></entry>
+				<entry id="8"></entry>
+				<entry id="9"></entry>
+				<entry id="10"></entry>
+				<entry id="11"></entry>
+				<entry id="12"></entry>
+				<entry id="13"></entry>
+				<entry id="14"></entry>
+				<entry id="15"></entry>
+				<entry id="16"></entry>
+				<entry id="17"></entry>
+				<entry id="18"></entry>
+				<entry id="19"></entry>
+				<entry id="20"></entry>
+				<entry id="21"></entry>
+				<entry id="22"></entry>
+			</section>
+		</section>
+		<section name="Entities" hint="TreeList">
+			<entry id="0" hint="text">エンティティ</entry>
+		</section>
+		<section name="widget_1" hint="TextInputField">
+			<entry id="1" hint="tooltip">名前によるエンティティへのフィルタリングの適用</entry>
+		</section>
+		<section name="Camera" hint="Window">
+			<entry id="0" hint="text">カメラ</entry>
+			<section name="Movement Speed: " hint="Slider">
+				<entry id="0" hint="text">Movement Speed: </entry>
+			</section>
+			<section name="Far Plane: " hint="Slider">
+				<entry id="0" hint="text">Far Plane: </entry>
+				<entry id="1" hint="tooltip">Controls the camera's far clip plane, geometry farther than this will be clipped.</entry>
+			</section>
+			<section name="Aperture Shape Y: " hint="Slider">
+				<entry id="0" hint="text">Aperture Shape Y: </entry>
+				<entry id="1" hint="tooltip">Controls the depth of field effect's bokeh shape</entry>
+			</section>
+			<section name="Aperture Size: " hint="Slider">
+				<entry id="0" hint="text">Aperture Size: </entry>
+				<entry id="1" hint="tooltip">Controls the depth of field effect's strength</entry>
+			</section>
+			<section name="Aperture Shape X: " hint="Slider">
+				<entry id="0" hint="text">Aperture Shape X: </entry>
+				<entry id="1" hint="tooltip">Controls the depth of field effect's bokeh shape</entry>
+			</section>
+			<section name="Follow Proxy Delay: " hint="Slider">
+				<entry id="0" hint="text">Follow Proxy Delay: </entry>
+			</section>
+			<section name="Focal Length: " hint="Slider">
+				<entry id="0" hint="text">Focal Length: </entry>
+				<entry id="1" hint="tooltip">Controls the depth of field effect's focus distance</entry>
+			</section>
+			<section name="Place Proxy" hint="Button">
+				<entry id="0" hint="text">Place Proxy</entry>
+				<entry id="1" hint="tooltip">Copy the current camera and place a proxy of it in the world.</entry>
+			</section>
+			<section name="FOV: " hint="Slider">
+				<entry id="0" hint="text">FOV: </entry>
+				<entry id="1" hint="tooltip">Controls the camera's top-down field of view (in degrees)</entry>
+			</section>
+			<section name="Near Plane: " hint="Slider">
+				<entry id="0" hint="text">Near Plane: </entry>
+				<entry id="1" hint="tooltip">Controls the camera's near clip plane, geometry closer than this will be clipped.</entry>
+			</section>
+			<section name="Follow Proxy: " hint="CheckBox">
+				<entry id="0" hint="text">Follow Proxy: </entry>
+			</section>
+			<section name="Reset Camera" hint="Button">
+				<entry id="0" hint="text">Reset Camera</entry>
+			</section>
+			<section name="Acceleration: " hint="Slider">
+				<entry id="0" hint="text">Acceleration: </entry>
+			</section>
+			<section name="Rotation Speed: " hint="Slider">
+				<entry id="0" hint="text">Rotation Speed: </entry>
+			</section>
+			<section name="FPS Camera: " hint="CheckBox">
+				<entry id="0" hint="text">FPS Camera: </entry>
+			</section>
+		</section>
+	</section>
+	<section name="Cinema" hint="Button">
+		<entry id="1" hint="tooltip">シネマモードに入ります(すべてのHUDが無効になります)。Esc キーを押して通常に戻ります。</entry>
+	</section>
+	<section name="About" hint="Button">
+		<entry id="1" hint="tooltip">情報の表示</entry>
+	</section>
+	<section name="" hint="Button">
+		<entry id="1" hint="tooltip">動く (Ctrl + T)
+ホットキー: 1</entry>
+	</section>
+	<section name="Save" hint="Button">
+		<entry id="1" hint="tooltip">現在のシーンを新しいファイルに保存します(Ctrl + Shift + S) デフォルトでは、シーンは.wiscene に保存されますが、.gltf または.glb 拡張子を指定して GLTF にエクスポートできます。 Ctrl + Sを使用して、参照せずにすばやく保存することもできます。</entry>
+	</section>
+	<section name="Components " hint="Window">
+		<entry id="0" hint="text">コンポーネント </entry>
+		<section name=" Weather" hint="Window">
+			<entry id="0" hint="text"> 天気</entry>
+			<section name="widget_39" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for large clouds (type 1.0). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="Load Color Grading LUT" hint="Button">
+				<entry id="0" hint="text">Load Color Grading LUT</entry>
+				<entry id="1" hint="tooltip">Load a color grading lookup texture. It must be a 256x16 RGBA image!
+You should use a lossless format for this such as PNG</entry>
+			</section>
+			<section name="WeatherPreset - Default" hint="Button">
+				<entry id="0" hint="text">WeatherPreset - Default</entry>
+				<entry id="1" hint="tooltip">Apply this weather preset to the world.</entry>
+			</section>
+			<section name="Type amount 1: " hint="Slider">
+				<entry id="0" hint="text">Type amount 1: </entry>
+				<entry id="1" hint="tooltip">Adjust the type amount from the weather map</entry>
+			</section>
+			<section name="Wind Wave Size: " hint="Slider">
+				<entry id="0" hint="text">Wind Wave Size: </entry>
+			</section>
+			<section name="widget_30" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for small clouds (type 0.0). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="Tolerance: " hint="Slider">
+				<entry id="0" hint="text">Tolerance: </entry>
+				<entry id="1" hint="tooltip">Big waves can introduce glitches on screen borders, this can fix that but surface detail will decrease.</entry>
+			</section>
+			<section name="Ocean simulation: " hint="CheckBox">
+				<entry id="0" hint="text">Ocean simulation: </entry>
+			</section>
+			<section name="Sky Receive Shadow: " hint="CheckBox">
+				<entry id="0" hint="text">Sky Receive Shadow: </entry>
+				<entry id="1" hint="tooltip">Realistic sky to recieve shadow from objects with shadow maps.</entry>
+			</section>
+			<section name="widget_20" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where medium clouds should appear, based on type 0.5</entry>
+			</section>
+			<section name="Load Volumetric Clouds Weather Map 1" hint="Button">
+				<entry id="0" hint="text">Load Volumetric Clouds Weather Map 1</entry>
+				<entry id="1" hint="tooltip">Load a weather map for volumetric clouds. Red channel is coverage, green is type and blue is water density (rain).</entry>
+			</section>
+			<section name="widget_37" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for large clouds (type 1.0). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="Wind Direction: " hint="Slider">
+				<entry id="0" hint="text">Wind Direction: </entry>
+			</section>
+			<section name="Wind speed 1: " hint="Slider">
+				<entry id="0" hint="text">Wind speed 1: </entry>
+				<entry id="1" hint="tooltip">Wind speed of the noise</entry>
+			</section>
+			<section name="Type minimum 1: " hint="Slider">
+				<entry id="0" hint="text">Type minimum 1: </entry>
+				<entry id="1" hint="tooltip">Adjust the minimum type from the weather map</entry>
+			</section>
+			<section name="widget_38" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for large clouds (type 1.0). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="Realistic sky: " hint="CheckBox">
+				<entry id="0" hint="text">Realistic sky: </entry>
+				<entry id="1" hint="tooltip">Physically based sky rendering model.
+Note that realistic sky requires a sun (directional light) to be visible.</entry>
+			</section>
+			<section name="WeatherPreset - Night" hint="Button">
+				<entry id="0" hint="text">WeatherPreset - Night</entry>
+				<entry id="1" hint="tooltip">Apply this weather preset to the world.</entry>
+			</section>
+			<section name="Sky Texture Rotation: " hint="Slider">
+				<entry id="0" hint="text">Sky Texture Rotation: </entry>
+				<entry id="1" hint="tooltip">Rotate the sky texture horizontally. (If using a sky texture)</entry>
+			</section>
+			<section name="widget_28" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for small clouds (type 0.0). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="Cast Shadow: " hint="CheckBox">
+				<entry id="0" hint="text">Cast Shadow: </entry>
+				<entry id="1" hint="tooltip">Compute shadows for volumetric clouds that will be used for geometry and lighting.</entry>
+			</section>
+			<section name="widget_21" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where medium clouds should appear, based on type 0.5</entry>
+			</section>
+			<section name="widget_36" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for large clouds (type 1.0). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="WeatherPreset - Sunset" hint="Button">
+				<entry id="0" hint="text">WeatherPreset - Sunset</entry>
+				<entry id="1" hint="tooltip">Apply this weather preset to the world.</entry>
+			</section>
+			<section name="Curl height 1: " hint="Slider">
+				<entry id="0" hint="text">Curl height 1: </entry>
+				<entry id="1" hint="tooltip">Higher values pulls the curl more towards bottom</entry>
+			</section>
+			<section name="Detail modifier 1: " hint="Slider">
+				<entry id="0" hint="text">Detail modifier 1: </entry>
+			</section>
+			<section name="Coverage minimum 1: " hint="Slider">
+				<entry id="0" hint="text">Coverage minimum 1: </entry>
+				<entry id="1" hint="tooltip">Adjust the minimum amount from the weather map</entry>
+			</section>
+			<section name="widget_29" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for small clouds (type 0.0). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="WeatherPreset - Cloudy" hint="Button">
+				<entry id="0" hint="text">WeatherPreset - Cloudy</entry>
+				<entry id="1" hint="tooltip">Apply this weather preset to the world.</entry>
+			</section>
+			<section name="Aerial Perspective: " hint="CheckBox">
+				<entry id="0" hint="text">Aerial Perspective: </entry>
+				<entry id="1" hint="tooltip">Additional calculations for realistic sky to enable atmospheric effects for objects and other drawn effects.</entry>
+			</section>
+			<section name="Weather scale 1: " hint="Slider">
+				<entry id="0" hint="text">Weather scale 1: </entry>
+				<entry id="1" hint="tooltip">Scales the weather map that controls coverage, type and rain</entry>
+			</section>
+			<section name="Wave amplitude: " hint="Slider">
+				<entry id="0" hint="text">Wave amplitude: </entry>
+				<entry id="1" hint="tooltip">Adjust wave size</entry>
+			</section>
+			<section name="widget_22" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where medium clouds should appear, based on type 0.5</entry>
+			</section>
+			<section name="widget_35" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for medium clouds (type 0.5). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="Cloud start height: " hint="Slider">
+				<entry id="0" hint="text">Cloud start height: </entry>
+				<entry id="1" hint="tooltip">This tells how many meters above the surface the cloud system should appear</entry>
+			</section>
+			<section name="Volumetric Clouds: " hint="CheckBox">
+				<entry id="0" hint="text">Volumetric Clouds: </entry>
+				<entry id="1" hint="tooltip">Enable volumetric cloud rendering, which is separate from the simple cloud parameters.</entry>
+			</section>
+			<section name="Wind dependency: " hint="Slider">
+				<entry id="0" hint="text">Wind dependency: </entry>
+				<entry id="1" hint="tooltip">Adjust wind contribution</entry>
+			</section>
+			<section name="Override fog color: " hint="CheckBox">
+				<entry id="0" hint="text">Override fog color: </entry>
+				<entry id="1" hint="tooltip">If enabled, the fog color will be always taken from Horizon Color, even if the sky is realistic</entry>
+			</section>
+			<section name="Stars: " hint="Slider">
+				<entry id="0" hint="text">Stars: </entry>
+				<entry id="1" hint="tooltip">Amount of stars in the night sky (0 to disable). 
+It will only work with the realistic sky enabled. 
+They will be more visible at night time.</entry>
+			</section>
+			<section name="Skew noise 1: " hint="Slider">
+				<entry id="0" hint="text">Skew noise 1: </entry>
+				<entry id="1" hint="tooltip">Adjust the skew on noise alone</entry>
+			</section>
+			<section name="Coverage wind angle 1: " hint="Slider">
+				<entry id="0" hint="text">Coverage wind angle 1: </entry>
+				<entry id="1" hint="tooltip">Wind angle in radians</entry>
+			</section>
+			<section name="Cloud Receive Shadow: " hint="CheckBox">
+				<entry id="0" hint="text">Cloud Receive Shadow: </entry>
+				<entry id="1" hint="tooltip">Clouds to recieve shadow from objects with shadow maps.</entry>
+			</section>
+			<section name="Height fog: " hint="CheckBox">
+				<entry id="0" hint="text">Height fog: </entry>
+			</section>
+			<section name="widget_23" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where medium clouds should appear, based on type 0.5</entry>
+			</section>
+			<section name="widget_34" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for medium clouds (type 0.5). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="Surface Detail: " hint="Slider">
+				<entry id="0" hint="text">Surface Detail: </entry>
+				<entry id="1" hint="tooltip">Adjust surface tessellation resolution. High values can decrease performance.</entry>
+			</section>
+			<section name="Coverage wind speed 1: " hint="Slider">
+				<entry id="0" hint="text">Coverage wind speed 1: </entry>
+			</section>
+			<section name="Reset Ocean" hint="Button">
+				<entry id="0" hint="text">Reset Ocean</entry>
+				<entry id="1" hint="tooltip">Reset ocean to default values.</entry>
+			</section>
+			<section name="Color picker mode: " hint="ComboBox">
+				<entry id="0" hint="text">Color picker mode: </entry>
+				<entry id="1" hint="tooltip">Choose the destination data of the color picker.</entry>
+				<section name="items">
+					<entry id="0">Ambient color</entry>
+					<entry id="1">Horizon color</entry>
+					<entry id="2">Zenith color</entry>
+					<entry id="3">Ocean color</entry>
+					<entry id="4">Cloud color 1</entry>
+					<entry id="5">Cloud color 2</entry>
+					<entry id="6">Cloud extinction 1</entry>
+					<entry id="7">Cloud extinction 2</entry>
+				</section>
+			</section>
+			<section name="widget_24" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where large clouds should appear, based on type 1.0</entry>
+			</section>
+			<section name="widget_17" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where small clouds should appear, based on type 0.0</entry>
+			</section>
+			<section name="Color" hint="ColorPicker">
+				<entry id="0" hint="text">Color</entry>
+				<section name="B" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for BLUE channel (0-255)</entry>
+				</section>
+				<section name="S" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for SATURATION channel (0-100)</entry>
+				</section>
+				<section name="R" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for RED channel (0-255)</entry>
+				</section>
+				<section name="widget_15" hint="Slider">
+					<entry id="1" hint="tooltip">Value for ALPHA - TRANSPARENCY channel (0-255)</entry>
+				</section>
+				<section name="G" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for GREEN channel (0-255)</entry>
+				</section>
+				<section name="V" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for LUMINANCE channel (0-100)</entry>
+				</section>
+				<section name="H" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for HUE channel (0-360)</entry>
+				</section>
+			</section>
+			<section name="Rain amount 1: " hint="Slider">
+				<entry id="0" hint="text">Rain amount 1: </entry>
+				<entry id="1" hint="tooltip">Adjust the rain amount from the weather map</entry>
+			</section>
+			<section name="Load Sky" hint="Button">
+				<entry id="0" hint="text">Load Sky</entry>
+				<entry id="1" hint="tooltip">Load a skybox texture...
+It can be either a cubemap or spherical projection map</entry>
+			</section>
+			<section name="Choppiness: " hint="Slider">
+				<entry id="0" hint="text">Choppiness: </entry>
+				<entry id="1" hint="tooltip">Adjust wave choppiness</entry>
+			</section>
+			<section name="Water level: " hint="Slider">
+				<entry id="0" hint="text">Water level: </entry>
+				<entry id="1" hint="tooltip">Adjust water level</entry>
+			</section>
+			<section name="Coverage minimum 2: " hint="Slider">
+				<entry id="0" hint="text">Coverage minimum 2: </entry>
+				<entry id="1" hint="tooltip">Adjust the minimum amount from the weather map</entry>
+			</section>
+			<section name="widget_33" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for medium clouds (type 0.5). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="Rain minimum 1: " hint="Slider">
+				<entry id="0" hint="text">Rain minimum 1: </entry>
+				<entry id="1" hint="tooltip">Adjust the minimum rain from the weather map</entry>
+			</section>
+			<section name="KTX2 Convert" hint="Button">
+				<entry id="0" hint="text">KTX2 Convert</entry>
+				<entry id="1" hint="tooltip">All material textures in the scene will be converted to KTX2 format.
+THIS MIGHT TAKE LONG, SO GET YOURSELF A COFFEE OR TEA!</entry>
+			</section>
+			<section name="Total noise scale 1: " hint="Slider">
+				<entry id="0" hint="text">Total noise scale 1: </entry>
+				<entry id="1" hint="tooltip">Total scale adjusts base noise, detail noise and curl noise</entry>
+			</section>
+			<section name="Wind Randomness: " hint="Slider">
+				<entry id="0" hint="text">Wind Randomness: </entry>
+			</section>
+			<section name="widget_25" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where large clouds should appear, based on type 1.0</entry>
+			</section>
+			<section name="widget_16" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where small clouds should appear, based on type 0.0</entry>
+			</section>
+			<section name="Gravity: " hint="Slider">
+				<entry id="0" hint="text">Gravity: </entry>
+				<entry id="1" hint="tooltip">Set the gravity factor on Y (vertical) axis for physics.</entry>
+			</section>
+			<section name="Wind angle 1: " hint="Slider">
+				<entry id="0" hint="text">Wind angle 1: </entry>
+				<entry id="1" hint="tooltip">Wind angle in radians</entry>
+			</section>
+			<section name="Wind Magnitude: " hint="Slider">
+				<entry id="0" hint="text">Wind Magnitude: </entry>
+			</section>
+			<section name="Fog Height End: " hint="Slider">
+				<entry id="0" hint="text">Fog Height End: </entry>
+			</section>
+			<section name="Wind Speed: " hint="Slider">
+				<entry id="0" hint="text">Wind Speed: </entry>
+			</section>
+			<section name="Time scale: " hint="Slider">
+				<entry id="0" hint="text">Time scale: </entry>
+				<entry id="1" hint="tooltip">Adjust simulation speed</entry>
+			</section>
+			<section name="widget_19" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where small clouds should appear, based on type 0.0</entry>
+			</section>
+			<section name="Detail scale 1: " hint="Slider">
+				<entry id="0" hint="text">Detail scale 1: </entry>
+			</section>
+			<section name="widget_32" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for medium clouds (type 0.5). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="widget_26" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where large clouds should appear, based on type 1.0</entry>
+			</section>
+			<section name="Wind up amount 1: " hint="Slider">
+				<entry id="0" hint="text">Wind up amount 1: </entry>
+				<entry id="1" hint="tooltip">How much wind up drag the noise recieves</entry>
+			</section>
+			<section name="High Quality Sky: " hint="CheckBox">
+				<entry id="0" hint="text">High Quality Sky: </entry>
+				<entry id="1" hint="tooltip">Skip LUT for more accurate sky and aerial perspective. This also enables shadowmaps to affect sky calculations. 
+Note: For volumetric shadows to be visible, increase shadowmap boundary and/or enable cloud shadows.</entry>
+			</section>
+			<section name="Fog Start: " hint="Slider">
+				<entry id="0" hint="text">Fog Start: </entry>
+			</section>
+			<section name="Fog Density: " hint="Slider">
+				<entry id="0" hint="text">Fog Density: </entry>
+			</section>
+			<section name="Skew coverage 1: " hint="Slider">
+				<entry id="0" hint="text">Skew coverage 1: </entry>
+				<entry id="1" hint="tooltip">This pulls the entire clouds towards the wind direction along height</entry>
+			</section>
+			<section name="Sky Exposure: " hint="Slider">
+				<entry id="0" hint="text">Sky Exposure: </entry>
+			</section>
+			<section name="widget_18" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where small clouds should appear, based on type 0.0</entry>
+			</section>
+			<section name="Coverage amount 1: " hint="Slider">
+				<entry id="0" hint="text">Coverage amount 1: </entry>
+				<entry id="1" hint="tooltip">Adjust the coverage amount from the weather map</entry>
+			</section>
+			<section name="WeatherPreset - White Furnace" hint="Button">
+				<entry id="0" hint="text">WeatherPreset - White Furnace</entry>
+				<entry id="1" hint="tooltip">The white furnace mode sets the environment to fully white, it is useful to test energy conservation of light and materials. 
+If you don't see it as fully white, it is because the tone mapping.</entry>
+			</section>
+			<section name="widget_31" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control the inward amount for small clouds (type 0.0). Specify amount top (X), top offset (Y), amount bot (Z), bot offset (W)</entry>
+			</section>
+			<section name="Curl scale 1: " hint="Slider">
+				<entry id="0" hint="text">Curl scale 1: </entry>
+			</section>
+			<section name="Curl modifier 1: " hint="Slider">
+				<entry id="0" hint="text">Curl modifier 1: </entry>
+			</section>
+			<section name="Patch size: " hint="Slider">
+				<entry id="0" hint="text">Patch size: </entry>
+				<entry id="1" hint="tooltip">Adjust water tiling patch size</entry>
+			</section>
+			<section name="Detail height 1: " hint="Slider">
+				<entry id="0" hint="text">Detail height 1: </entry>
+				<entry id="1" hint="tooltip">Higher values pulls the detail more towards bottom</entry>
+			</section>
+			<section name="Fog Height Start: " hint="Slider">
+				<entry id="0" hint="text">Fog Height Start: </entry>
+			</section>
+			<section name="widget_27" hint="TextInputField">
+				<entry id="1" hint="tooltip">Control with a gradient where large clouds should appear, based on type 1.0</entry>
+			</section>
+			<section name="Coverage amount 2: " hint="Slider">
+				<entry id="0" hint="text">Coverage amount 2: </entry>
+				<entry id="1" hint="tooltip">Adjust the coverage amount from the weather map</entry>
+			</section>
+			<section name="Load Volumetric Clouds Weather Map 2" hint="Button">
+				<entry id="0" hint="text">Load Volumetric Clouds Weather Map 2</entry>
+				<entry id="1" hint="tooltip">Load a weather map for volumetric clouds. Red channel is coverage, green is type and blue is water density (rain).</entry>
+			</section>
+			<section name="Set as primary weather" hint="Button">
+				<entry id="0" hint="text">Set as primary weather</entry>
+				<entry id="1" hint="tooltip">This will be set as the primary weather used in rendering</entry>
+			</section>
+			<section name="Cloud thickness: " hint="Slider">
+				<entry id="0" hint="text">Cloud thickness: </entry>
+				<entry id="1" hint="tooltip">Specify the cloud system thickness, so from the start height plus additional thickness on top</entry>
+			</section>
+			<section name="WeatherPreset - Daytime" hint="Button">
+				<entry id="0" hint="text">WeatherPreset - Daytime</entry>
+				<entry id="1" hint="tooltip">Apply this weather preset to the world.</entry>
+			</section>
+			<section name="EliminateCoarseCascades" hint="Button">
+				<entry id="0" hint="text">EliminateCoarseCascades</entry>
+				<entry id="1" hint="tooltip">Eliminate the coarse cascade mask for every object in the scene.</entry>
+			</section>
+		</section>
+		<section name=" Script" hint="Window">
+			<entry id="0" hint="text"> スクリプト</entry>
+			<section name="widget_110" hint="Button">
+				<entry id="1" hint="tooltip">Play / Stop script</entry>
+			</section>
+			<section name="Open File..." hint="Button">
+				<entry id="0" hint="text">Open File...</entry>
+			</section>
+			<section name="Once: " hint="CheckBox">
+				<entry id="0" hint="text">Once: </entry>
+				<entry id="1" hint="tooltip">Play the script only one time, and stop immediately.
+Useful for having custom update frequency logic in the script.</entry>
+			</section>
+		</section>
+		<section name=" Mesh" hint="Window">
+			<entry id="0" hint="text"> 網目</entry>
+			<section name="X" hint="Button">
+				<entry id="0" hint="text">X</entry>
+				<entry id="1" hint="tooltip">Remove currently selected subset. LODs will be lost and need to be regenerated!</entry>
+			</section>
+			<section name="Merge Selected" hint="Button">
+				<entry id="0" hint="text">Merge Selected</entry>
+				<entry id="1" hint="tooltip">Merges selected objects/meshes into one.</entry>
+			</section>
+			<section name="Sloppy LOD: " hint="CheckBox">
+				<entry id="0" hint="text">Sloppy LOD: </entry>
+				<entry id="1" hint="tooltip">Use the sloppy simplification algorithm, which is faster but doesn't preserve shape well.</entry>
+			</section>
+			<section name="Weight: " hint="Slider">
+				<entry id="0" hint="text">Weight: </entry>
+				<entry id="1" hint="tooltip">Set the weight for morph target</entry>
+			</section>
+			<section name="Material: " hint="ComboBox">
+				<entry id="0" hint="text">Material: </entry>
+				<entry id="1" hint="tooltip">Set the base material of the selected MeshSubset</entry>
+				<section name="items" />
+			</section>
+			<section name="Select subset: " hint="ComboBox">
+				<entry id="0" hint="text">Select subset: </entry>
+				<entry id="1" hint="tooltip">Select a subset. A subset can also be selected by picking it in the 3D scene.
+Look at the material window when a subset is selected to edit it.
+If you add a new subset, LODs will be lost and need to be regenerated!</entry>
+				<section name="items" />
+			</section>
+			<section name="Compute Normals [HARD]" hint="Button">
+				<entry id="0" hint="text">Compute Normals [HARD]</entry>
+				<entry id="1" hint="tooltip">Compute surface normals of the mesh. Resulting normals will be unique per face. This can increase vertex count.</entry>
+			</section>
+			<section name="Optimize" hint="Button">
+				<entry id="0" hint="text">Optimize</entry>
+				<entry id="1" hint="tooltip">Run the meshoptimizer library.</entry>
+			</section>
+			<section name="Double Sided: " hint="CheckBox">
+				<entry id="0" hint="text">Double Sided: </entry>
+				<entry id="1" hint="tooltip">If enabled, the inside of the mesh will be visible.</entry>
+			</section>
+			<section name="Impostor Dist: " hint="Slider">
+				<entry id="0" hint="text">Impostor Dist: </entry>
+				<entry id="1" hint="tooltip">Assign the distance where the mesh geometry should be switched to the impostor image.</entry>
+			</section>
+			<section name="Tess Factor: " hint="Slider">
+				<entry id="0" hint="text">Tess Factor: </entry>
+				<entry id="1" hint="tooltip">Set the dynamic tessellation amount. Tessellation should be enabled in the Renderer window and your GPU must support it!</entry>
+			</section>
+			<section name="Flip Normals" hint="Button">
+				<entry id="0" hint="text">Flip Normals</entry>
+				<entry id="1" hint="tooltip">Flip surface normals.</entry>
+			</section>
+			<section name="Flip Culling" hint="Button">
+				<entry id="0" hint="text">Flip Culling</entry>
+				<entry id="1" hint="tooltip">Flip faces to reverse triangle culling order.</entry>
+			</section>
+			<section name="Compute Normals [SMOOTH]" hint="Button">
+				<entry id="0" hint="text">Compute Normals [SMOOTH]</entry>
+				<entry id="1" hint="tooltip">Compute surface normals of the mesh. Resulting normals will be unique per vertex. This can reduce vertex count, but is slow.</entry>
+			</section>
+			<section name="Double Sided Shadow: " hint="CheckBox">
+				<entry id="0" hint="text">Double Sided Shadow: </entry>
+				<entry id="1" hint="tooltip">If enabled, the shadow rendering will be forced to use double sided mode.
+This can help fix some shadow artifacts without enabling double sided mode for the main rendering of this mesh.</entry>
+			</section>
+			<section name="RecenterToBottom" hint="Button">
+				<entry id="0" hint="text">RecenterToBottom</entry>
+				<entry id="1" hint="tooltip">Recenter mesh to AABB bottom.</entry>
+			</section>
+			<section name="Recenter" hint="Button">
+				<entry id="0" hint="text">Recenter</entry>
+				<entry id="1" hint="tooltip">Recenter mesh to AABB center.</entry>
+			</section>
+			<section name="Morph Target:" hint="ComboBox">
+				<entry id="0" hint="text">Morph Target:</entry>
+				<entry id="1" hint="tooltip">Choose a morph target to edit weight.</entry>
+				<section name="items" />
+			</section>
+			<section name="LOD Error: " hint="Slider">
+				<entry id="0" hint="text">LOD Error: </entry>
+				<entry id="1" hint="tooltip">Lower values will make more precise levels of detail.</entry>
+			</section>
+			<section name="LOD Count: " hint="Slider">
+				<entry id="0" hint="text">LOD Count: </entry>
+				<entry id="1" hint="tooltip">This is how many levels of detail will be created.</entry>
+			</section>
+			<section name="LOD Quality: " hint="Slider">
+				<entry id="0" hint="text">LOD Quality: </entry>
+				<entry id="1" hint="tooltip">Lower values will make LODs more agressively simplified.</entry>
+			</section>
+			<section name="LOD Gen" hint="Button">
+				<entry id="0" hint="text">LOD Gen</entry>
+				<entry id="1" hint="tooltip">Generate LODs (levels of detail).</entry>
+			</section>
+			<section name="Mesh Info" hint="Label">
+				<entry id="0" hint="text">Select a mesh...</entry>
+			</section>
+			<section name="Create Impostor" hint="Button">
+				<entry id="0" hint="text">Create Impostor</entry>
+				<entry id="1" hint="tooltip">Create an impostor image of the mesh. The mesh will be replaced by this image when far away, to render faster.</entry>
+			</section>
+		</section>
+		<section name=" Sound" hint="Window">
+			<entry id="0" hint="text"> 音</entry>
+			<section name="2D: " hint="CheckBox">
+				<entry id="0" hint="text">2D: </entry>
+				<entry id="1" hint="tooltip">Sounds in the scene are 3D spatial by default. Select this to disable 3D effect.</entry>
+			</section>
+			<section name="Filename" hint="Label">
+				<entry id="0" hint="text">Filename</entry>
+			</section>
+			<section name="Reverb: " hint="ComboBox">
+				<entry id="0" hint="text">Reverb: </entry>
+				<entry id="1" hint="tooltip">Set the global reverb setting. Sound instances need to enable reverb to take effect!</entry>
+				<section name="items">
+					<entry id="0">DEFAULT</entry>
+					<entry id="1">GENERIC</entry>
+					<entry id="2">FOREST</entry>
+					<entry id="3">PADDEDCELL</entry>
+					<entry id="4">ROOM</entry>
+					<entry id="5">BATHROOM</entry>
+					<entry id="6">LIVINGROOM</entry>
+					<entry id="7">STONEROOM</entry>
+					<entry id="8">AUDITORIUM</entry>
+					<entry id="9">CONCERTHALL</entry>
+					<entry id="10">CAVE</entry>
+					<entry id="11">ARENA</entry>
+					<entry id="12">HANGAR</entry>
+					<entry id="13">CARPETEDHALLWAY</entry>
+					<entry id="14">HALLWAY</entry>
+					<entry id="15">STONECORRIDOR</entry>
+					<entry id="16">ALLEY</entry>
+					<entry id="17">CITY</entry>
+					<entry id="18">MOUNTAINS</entry>
+					<entry id="19">QUARRY</entry>
+					<entry id="20">PLAIN</entry>
+					<entry id="21">PARKINGLOT</entry>
+					<entry id="22">SEWERPIPE</entry>
+					<entry id="23">UNDERWATER</entry>
+					<entry id="24">SMALLROOM</entry>
+					<entry id="25">MEDIUMROOM</entry>
+					<entry id="26">LARGEROOM</entry>
+					<entry id="27">MEDIUMHALL</entry>
+					<entry id="28">LARGEHALL</entry>
+					<entry id="29">PLATE</entry>
+				</section>
+			</section>
+			<section name="Looped: " hint="CheckBox">
+				<entry id="0" hint="text">Looped: </entry>
+				<entry id="1" hint="tooltip">Enable looping for the selected sound instance.</entry>
+			</section>
+			<section name="Volume: " hint="Slider">
+				<entry id="0" hint="text">Volume: </entry>
+				<entry id="1" hint="tooltip">Set volume level for the selected sound instance.</entry>
+			</section>
+			<section name="Open File " hint="Button">
+				<entry id="0" hint="text">Open File </entry>
+				<entry id="1" hint="tooltip">Open sound file.
+Supported extensions: WAV, OGG</entry>
+			</section>
+			<section name="" hint="Button">
+				<entry id="0" hint="text"></entry>
+				<entry id="1" hint="tooltip">Play/Stop selected sound instance.</entry>
+			</section>
+			<section name="Submix: " hint="ComboBox">
+				<entry id="0" hint="text">Submix: </entry>
+				<entry id="1" hint="tooltip">Set the submix channel of the sound. 
+Sound properties like volume can be set per sound, or per submix channel.</entry>
+				<section name="items">
+					<entry id="0">SOUNDEFFECT</entry>
+					<entry id="1">MUSIC</entry>
+					<entry id="2">USER0</entry>
+					<entry id="3">USER1</entry>
+				</section>
+			</section>
+		</section>
+		<section name=" Animation" hint="Window">
+			<entry id="0" hint="text"> アニメーション</entry>
+			<section name="" hint="Button">
+				<entry id="0" hint="text"></entry>
+				<entry id="1" hint="tooltip">Stop</entry>
+			</section>
+			<section name="End" hint="TextInputField">
+				<entry id="0" hint="text">End</entry>
+				<entry id="1" hint="tooltip">Set the animation end in seconds. This is relative to 0, not the animation start.</entry>
+			</section>
+			<section name="Start" hint="TextInputField">
+				<entry id="0" hint="text">Start</entry>
+				<entry id="1" hint="tooltip">Set the animation start in seconds. This will be the loop's starting point.</entry>
+			</section>
+			<section name="Keyframes" hint="TreeList">
+				<entry id="0" hint="text">Keyframes</entry>
+			</section>
+			<section name="widget_44" hint="Label">
+				<entry id="0" hint="text">The animation window will stay open even if you select other entities until it is collapsed, so you can record other entities' data.</entry>
+			</section>
+			<section name="Record: " hint="ComboBox">
+				<entry id="0" hint="text">Record: </entry>
+				<entry id="1" hint="tooltip">Record selected entities' specified channels into the animation at the current time.</entry>
+				<section name="items">
+					<entry id="0">Transform   </entry>
+					<entry id="1">Position </entry>
+					<entry id="2">Rotation </entry>
+					<entry id="3">Scale </entry>
+					<entry id="4">Morph weights </entry>
+					<entry id="5">Light [color] </entry>
+					<entry id="6">Light [intensity] </entry>
+					<entry id="7">Light [range] </entry>
+					<entry id="8">Light [inner cone] </entry>
+					<entry id="9">Light [outer cone] </entry>
+					<entry id="10">Sound [play] </entry>
+					<entry id="11">Sound [stop] </entry>
+					<entry id="12">Sound [volume] </entry>
+					<entry id="13">Emitter [emit count] </entry>
+					<entry id="14">Camera [fov] </entry>
+					<entry id="15">Camera [focal length] </entry>
+					<entry id="16">Camera [aperture size] </entry>
+					<entry id="17">Camera [aperture shape] </entry>
+					<entry id="18">Script [play] </entry>
+					<entry id="19">Script [stop] </entry>
+					<entry id="20">Material [color] </entry>
+					<entry id="21">Material [emissive] </entry>
+					<entry id="22">Material [roughness] </entry>
+					<entry id="23">Material [metalness] </entry>
+					<entry id="24">Material [reflectance] </entry>
+					<entry id="25">Material [texmuladd] </entry>
+					<entry id="26">Close loop </entry>
+				</section>
+			</section>
+			<section name="Sampling: " hint="ComboBox">
+				<entry id="0" hint="text">Sampling: </entry>
+				<entry id="1" hint="tooltip">Choose how animation data is interpreted between keyframes.
+Note that Cubic spline sampling requires spline animation data, otherwise, it will fall back to Linear!
+Currently spline animation data creation is not supported, but it can be imported from GLTF/VRM models.</entry>
+				<section name="items">
+					<entry id="0">Step</entry>
+					<entry id="1">Linear</entry>
+					<entry id="2">Cubic spline</entry>
+				</section>
+			</section>
+			<section name="Retarget: " hint="ComboBox">
+				<entry id="0" hint="text">Retarget: </entry>
+				<entry id="1" hint="tooltip">Make a copy of this animation and retarget it for a humanoid.
+This will only work for bones in this animation that are part of a humanoid.</entry>
+				<section name="items" />
+			</section>
+			<section name="Amount: " hint="Slider">
+				<entry id="0" hint="text">Amount: </entry>
+				<entry id="1" hint="tooltip">Set the animation blending amount by hand.</entry>
+			</section>
+			<section name="Timer: " hint="Slider">
+				<entry id="0" hint="text">Timer: </entry>
+				<entry id="1" hint="tooltip">Set the animation timer by hand.</entry>
+			</section>
+			<section name="Speed: " hint="Slider">
+				<entry id="0" hint="text">Speed: </entry>
+				<entry id="1" hint="tooltip">Set the animation speed.</entry>
+			</section>
+			<section name="Looped: " hint="CheckBox">
+				<entry id="0" hint="text">Looped: </entry>
+				<entry id="1" hint="tooltip">Toggle animation looping behaviour.</entry>
+			</section>
+			<section name="" hint="Button">
+				<entry id="0" hint="text"></entry>
+			</section>
+		</section>
+		<section name=" Soft Body Physics" hint="Window">
+			<entry id="0" hint="text"> ソフトボディ物理学</entry>
+			<section name="Mass: " hint="Slider">
+				<entry id="0" hint="text">Mass: </entry>
+				<entry id="1" hint="tooltip">Set the mass amount for the physics engine.</entry>
+			</section>
+			<section name="Friction: " hint="Slider">
+				<entry id="0" hint="text">Friction: </entry>
+				<entry id="1" hint="tooltip">Set the friction amount for the physics engine.</entry>
+			</section>
+			<section name="Restitution: " hint="Slider">
+				<entry id="0" hint="text">Restitution: </entry>
+				<entry id="1" hint="tooltip">Set the restitution amount for the physics engine.</entry>
+			</section>
+			<section name="widget_111" hint="Label">
+				<entry id="0" hint="text">Soft body physics must be used together with a MeshComponent, otherwise it will have no effect.
+You can use the Paint Tool to pin or soften soft body vertices.</entry>
+			</section>
+		</section>
+		<section name=" Material" hint="Window">
+			<entry id="0" hint="text"> マテリアル</entry>
+			<section name="Blend mode: " hint="ComboBox">
+				<entry id="0" hint="text">Blend mode: </entry>
+				<entry id="1" hint="tooltip">Set the blend mode of the material.</entry>
+				<section name="items">
+					<entry id="0">Opaque</entry>
+					<entry id="1">Alpha</entry>
+					<entry id="2">Premultiplied</entry>
+					<entry id="3">Additive</entry>
+					<entry id="4">Multiply</entry>
+				</section>
+			</section>
+			<section name="Clearcoat Roughness: " hint="Slider">
+				<entry id="0" hint="text">Clearcoat Roughness: </entry>
+				<entry id="1" hint="tooltip">This affects roughness of clear coat layer.</entry>
+			</section>
+			<section name="Reflectance: " hint="Slider">
+				<entry id="0" hint="text">Reflectance: </entry>
+				<entry id="1" hint="tooltip">Adjust the surface [non-metal] reflectivity (also called specularFactor).
+Note: this is not available in specular-glossiness workflow</entry>
+			</section>
+			<section name="uvset" hint="TextInputField">
+				<entry id="1" hint="tooltip">uv set number</entry>
+			</section>
+			<section name="Subsurface Scattering: " hint="Slider">
+				<entry id="0" hint="text">Subsurface Scattering: </entry>
+				<entry id="1" hint="tooltip">Subsurface scattering amount. 
+You can also adjust the subsurface color by selecting it in the color picker</entry>
+			</section>
+			<section name="Texcoord anim V: " hint="Slider">
+				<entry id="0" hint="text">Texcoord anim V: </entry>
+				<entry id="1" hint="tooltip">Adjust the texture animation speed along the V direction in texture space.</entry>
+			</section>
+			<section name="Occlusion 1: " hint="CheckBox">
+				<entry id="0" hint="text">Occlusion 1: </entry>
+				<entry id="1" hint="tooltip">If enabled, surface map's RED channel will be used as occlusion map</entry>
+			</section>
+			<section name="widget_13" hint="Button">
+				<entry id="1" hint="tooltip">RGBA: Basecolor</entry>
+			</section>
+			<section name="Texcoord anim U: " hint="Slider">
+				<entry id="0" hint="text">Texcoord anim U: </entry>
+				<entry id="1" hint="tooltip">Adjust the texture animation speed along the U direction in texture space.</entry>
+			</section>
+			<section name="Clearcoat: " hint="Slider">
+				<entry id="0" hint="text">Clearcoat: </entry>
+				<entry id="1" hint="tooltip">This affects clearcoat layer blending.</entry>
+			</section>
+			<section name="Cast Shadow: " hint="CheckBox">
+				<entry id="0" hint="text">Cast Shadow: </entry>
+				<entry id="1" hint="tooltip">The subset will contribute to the scene shadows if enabled.</entry>
+			</section>
+			<section name="Cartoon Outline: " hint="CheckBox">
+				<entry id="0" hint="text">Cartoon Outline: </entry>
+				<entry id="1" hint="tooltip">Enable cartoon outline. The Cartoon Outline graphics setting also needs to be enabled for it to show up.</entry>
+			</section>
+			<section name="Roughness: " hint="Slider">
+				<entry id="0" hint="text">Roughness: </entry>
+				<entry id="1" hint="tooltip">Adjust the surface roughness. Rough surfaces are less shiny, more matte.</entry>
+			</section>
+			<section name="Texture TileSize X: " hint="Slider">
+				<entry id="0" hint="text">Texture TileSize X: </entry>
+				<entry id="1" hint="tooltip">Adjust the texture mapping size.</entry>
+			</section>
+			<section name="Double sided: " hint="CheckBox">
+				<entry id="0" hint="text">Double sided: </entry>
+				<entry id="1" hint="tooltip">Decide whether to render both sides of the material (It's also possible to set this behaviour per mesh).</entry>
+			</section>
+			<section name="Use vertex colors: " hint="CheckBox">
+				<entry id="0" hint="text">Use vertex colors: </entry>
+				<entry id="1" hint="tooltip">Enable if you want to render the mesh with vertex colors (must have appropriate vertex buffer)</entry>
+			</section>
+			<section name="AlphaRef: " hint="Slider">
+				<entry id="0" hint="text">AlphaRef: </entry>
+				<entry id="1" hint="tooltip">Adjust the alpha cutoff threshold. Alpha cutout can affect performance</entry>
+			</section>
+			<section name="Normalmap: " hint="Slider">
+				<entry id="0" hint="text">Normalmap: </entry>
+				<entry id="1" hint="tooltip">How much the normal map should distort the face normals (bumpiness).</entry>
+			</section>
+			<section name="Emissive: " hint="Slider">
+				<entry id="0" hint="text">Emissive: </entry>
+				<entry id="1" hint="tooltip">Adjust the light emission of the surface. The color of the light emitted is that of the color of the material.</entry>
+			</section>
+			<section name="MaterialName" hint="TextInputField">
+				<entry id="0" hint="text">No material selected</entry>
+				<entry id="1" hint="tooltip">Set a name for the material...</entry>
+			</section>
+			<section name="Displacement: " hint="Slider">
+				<entry id="0" hint="text">Displacement: </entry>
+				<entry id="1" hint="tooltip">Adjust how much the bump map should modulate the geometry when using tessellation.</entry>
+			</section>
+			<section name="Color picker mode: " hint="ComboBox">
+				<entry id="0" hint="text">Color picker mode: </entry>
+				<entry id="1" hint="tooltip">Choose the destination data of the color picker.</entry>
+				<section name="items">
+					<entry id="0">Base color</entry>
+					<entry id="1">Specular color</entry>
+					<entry id="2">Emissive color</entry>
+					<entry id="3">Subsurface color</entry>
+					<entry id="4">Sheen color</entry>
+				</section>
+			</section>
+			<section name="Receive Shadow: " hint="CheckBox">
+				<entry id="0" hint="text">Receive Shadow: </entry>
+				<entry id="1" hint="tooltip">Receives shadow or not?</entry>
+			</section>
+			<section name="Color" hint="ColorPicker">
+				<entry id="0" hint="text">Color</entry>
+				<section name="B" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for BLUE channel (0-255)</entry>
+				</section>
+				<section name="S" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for SATURATION channel (0-100)</entry>
+				</section>
+				<section name="widget_12" hint="Slider">
+					<entry id="1" hint="tooltip">Value for ALPHA - TRANSPARENCY channel (0-255)</entry>
+				</section>
+				<section name="R" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for RED channel (0-255)</entry>
+				</section>
+				<section name="G" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for GREEN channel (0-255)</entry>
+				</section>
+				<section name="V" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for LUMINANCE channel (0-100)</entry>
+				</section>
+				<section name="H" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for HUE channel (0-360)</entry>
+				</section>
+			</section>
+			<section name="Texcoord anim FPS: " hint="Slider">
+				<entry id="0" hint="text">Texcoord anim FPS: </entry>
+				<entry id="1" hint="tooltip">Adjust the texture animation frame rate (frames per second). Any value above 0 will make the material dynamic.</entry>
+			</section>
+			<section name="Shading Rate: " hint="ComboBox">
+				<entry id="0" hint="text">Shading Rate: </entry>
+				<entry id="1" hint="tooltip">Select shading rate for this material. 
+Selecting larger shading rate will decrease rendering quality of this material, 
+but increases performance.
+Requires hardware support for variable shading rate</entry>
+				<section name="items">
+					<entry id="0">1X1</entry>
+					<entry id="1">1X2</entry>
+					<entry id="2">2X1</entry>
+					<entry id="3">2X2</entry>
+					<entry id="4">2X4</entry>
+					<entry id="5">4X2</entry>
+					<entry id="6">4X4</entry>
+				</section>
+			</section>
+			<section name="Sheen Roughness: " hint="Slider">
+				<entry id="0" hint="text">Sheen Roughness: </entry>
+				<entry id="1" hint="tooltip">This affects roughness of sheen layer for cloth shading.</entry>
+			</section>
+			<section name="Transmission: " hint="Slider">
+				<entry id="0" hint="text">Transmission: </entry>
+				<entry id="1" hint="tooltip">Adjust the transmissiveness. More transmissiveness means more diffuse light is transmitted instead of absorbed.</entry>
+			</section>
+			<section name="Refraction: " hint="Slider">
+				<entry id="0" hint="text">Refraction: </entry>
+				<entry id="1" hint="tooltip">Adjust the refraction amount for transmissive materials.</entry>
+			</section>
+			<section name="Spec-gloss workflow: " hint="CheckBox">
+				<entry id="0" hint="text">Spec-gloss workflow: </entry>
+				<entry id="1" hint="tooltip">If enabled, surface map will be viewed like it contains specular color (RGB) and smoothness (A)</entry>
+			</section>
+			<section name="Occlusion 2: " hint="CheckBox">
+				<entry id="0" hint="text">Occlusion 2: </entry>
+				<entry id="1" hint="tooltip">If enabled, occlusion map's RED channel will be used as occlusion map</entry>
+			</section>
+			<section name="Wind: " hint="CheckBox">
+				<entry id="0" hint="text">Wind: </entry>
+				<entry id="1" hint="tooltip">If enabled, vertex wind weights will affect how much wind offset affects the subset.</entry>
+			</section>
+			<section name="Metalness: " hint="Slider">
+				<entry id="0" hint="text">Metalness: </entry>
+				<entry id="1" hint="tooltip">The more metal-like the surface is, the more the its color will contribute to the reflection color.
+Note: this is not available in specular-glossiness workflow</entry>
+			</section>
+			<section name="Texture Slot: " hint="ComboBox">
+				<entry id="0" hint="text">Texture Slot: </entry>
+				<entry id="1" hint="tooltip">Choose the texture slot to modify.</entry>
+				<section name="items">
+					<entry id="0">BaseColor map</entry>
+					<entry id="1">Normal map</entry>
+					<entry id="2">Surface map</entry>
+					<entry id="3">Emissive map</entry>
+					<entry id="4">Displacement map</entry>
+					<entry id="5">Occlusion map</entry>
+					<entry id="6">Transmission map</entry>
+					<entry id="7">SheenColor map</entry>
+					<entry id="8">SheenRoughness map</entry>
+					<entry id="9">Clearcoat map</entry>
+					<entry id="10">ClearcoatRoughness map</entry>
+					<entry id="11">ClearcoatNormal map</entry>
+					<entry id="12">Specular map</entry>
+				</section>
+			</section>
+			<section name="Texture TileSize Y: " hint="Slider">
+				<entry id="0" hint="text">Texture TileSize Y: </entry>
+				<entry id="1" hint="tooltip">Adjust the texture mapping size.</entry>
+			</section>
+			<section name="Shader: " hint="ComboBox">
+				<entry id="0" hint="text">Shader: </entry>
+				<entry id="1" hint="tooltip">Select a shader for this material. 
+Custom shaders (*) will also show up here (see wi::renderer:RegisterCustomShader() for more info.)
+Note that custom shaders (*) can't select between blend modes, as they are created with an explicit blend mode.</entry>
+				<section name="items" />
+			</section>
+			<section name="Par Occl Mapping: " hint="Slider">
+				<entry id="0" hint="text">Par Occl Mapping: </entry>
+			</section>
+		</section>
+		<section name=" Force Field" hint="Window">
+			<entry id="0" hint="text"> フォースフィルド</entry>
+			<section name="Type: " hint="ComboBox">
+				<entry id="0" hint="text">Type: </entry>
+				<entry id="1" hint="tooltip">Choose the force field type.</entry>
+				<section name="items">
+					<entry id="0">Point</entry>
+					<entry id="1">Plane</entry>
+				</section>
+			</section>
+			<section name="Gravity: " hint="Slider">
+				<entry id="0" hint="text">Gravity: </entry>
+				<entry id="1" hint="tooltip">Set the amount of gravity. Positive values attract, negatives deflect.</entry>
+			</section>
+			<section name="Range: " hint="Slider">
+				<entry id="0" hint="text">Range: </entry>
+				<entry id="1" hint="tooltip">Set the range of affection.</entry>
+			</section>
+		</section>
+		<section name=" Inverse Kinematics" hint="Window">
+			<entry id="0" hint="text"> インバースキネマティクス</entry>
+			<section name="Target: " hint="ComboBox">
+				<entry id="0" hint="text">Target: </entry>
+				<entry id="1" hint="tooltip">Choose a target entity (with transform) that the IK will follow</entry>
+				<section name="items" />
+			</section>
+			<section name="Disabled: " hint="CheckBox">
+				<entry id="0" hint="text">Disabled: </entry>
+				<entry id="1" hint="tooltip">Disable simulation.</entry>
+			</section>
+			<section name="Chain Length: " hint="Slider">
+				<entry id="0" hint="text">Chain Length: </entry>
+				<entry id="1" hint="tooltip">How far the hierarchy chain is simulated backwards from this entity</entry>
+			</section>
+			<section name="Iteration Count: " hint="Slider">
+				<entry id="0" hint="text">Iteration Count: </entry>
+				<entry id="1" hint="tooltip">How many iterations to compute the inverse kinematics for. Higher values are slower but more accurate.</entry>
+			</section>
+		</section>
+		<section name=" Transform" hint="Window">
+			<entry id="0" hint="text"> トランスフォーム</entry>
+			<section name="widget_69" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Yaw (in degrees)
+ Note: Euler angle rotations can result in precision loss from quaternion conversion!</entry>
+			</section>
+			<section name="widget_61" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+			</section>
+			<section name="widget_76" hint="TextInputField">
+				<entry id="0" hint="text">1</entry>
+			</section>
+			<section name="widget_62" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+			</section>
+			<section name="widget_75" hint="TextInputField">
+				<entry id="0" hint="text">45</entry>
+			</section>
+			<section name="widget_63" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+			</section>
+			<section name="widget_74" hint="TextInputField">
+				<entry id="0" hint="text">1</entry>
+			</section>
+			<section name="Clear Transform" hint="Button">
+				<entry id="0" hint="text">Clear Transform</entry>
+				<entry id="1" hint="tooltip">Reset transform to identity</entry>
+			</section>
+			<section name="widget_64" hint="TextInputField">
+				<entry id="0" hint="text">1</entry>
+			</section>
+			<section name="widget_73" hint="TextInputField">
+				<entry id="0" hint="text">1</entry>
+				<entry id="1" hint="tooltip">Rotation Quaternion.W</entry>
+			</section>
+			<section name="widget_65" hint="TextInputField">
+				<entry id="0" hint="text">1</entry>
+			</section>
+			<section name="widget_72" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Rotation Quaternion.Z</entry>
+			</section>
+			<section name="widget_66" hint="TextInputField">
+				<entry id="0" hint="text">1</entry>
+			</section>
+			<section name="widget_71" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Rotation Quaternion.Y</entry>
+			</section>
+			<section name="widget_68" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Pitch (in degrees)
+ Note: Euler angle rotations can result in precision loss from quaternion conversion!</entry>
+			</section>
+			<section name="widget_67" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Roll (in degrees)
+ Note: Euler angle rotations can result in precision loss from quaternion conversion!</entry>
+			</section>
+			<section name="widget_70" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Rotation Quaternion.X</entry>
+			</section>
+		</section>
+		<section name=" Collider" hint="Window">
+			<entry id="0" hint="text"> コライダー</entry>
+			<section name="CPU: " hint="CheckBox">
+				<entry id="0" hint="text">CPU: </entry>
+				<entry id="1" hint="tooltip">Enable for use on the CPU. CPU usage includes: springs.</entry>
+			</section>
+			<section name="Offset X: " hint="Slider">
+				<entry id="0" hint="text">Offset X: </entry>
+			</section>
+			<section name="Tail X: " hint="Slider">
+				<entry id="0" hint="text">Tail X: </entry>
+			</section>
+			<section name="Tail Y: " hint="Slider">
+				<entry id="0" hint="text">Tail Y: </entry>
+			</section>
+			<section name="GPU: " hint="CheckBox">
+				<entry id="0" hint="text">GPU: </entry>
+				<entry id="1" hint="tooltip">Enable for use on the GPU. GPU usage includes: emitter and hair particle systems.
+Note that GPU can support only a limited amount of colliders.</entry>
+			</section>
+			<section name="Offset Z: " hint="Slider">
+				<entry id="0" hint="text">Offset Z: </entry>
+			</section>
+			<section name="Radius: " hint="Slider">
+				<entry id="0" hint="text">Radius: </entry>
+			</section>
+			<section name="Offset Y: " hint="Slider">
+				<entry id="0" hint="text">Offset Y: </entry>
+			</section>
+			<section name="Shape: " hint="ComboBox">
+				<entry id="0" hint="text">Shape: </entry>
+				<section name="items">
+					<entry id="0">Sphere</entry>
+					<entry id="1">Capsule</entry>
+					<entry id="2">Plane</entry>
+				</section>
+			</section>
+			<section name="widget_112" hint="Label">
+				<entry id="0" hint="text">Colliders are used for simple fake physics, without using the physics engine. They are only used in specific CPU/GPU systems.</entry>
+			</section>
+			<section name="Tail Z: " hint="Slider">
+				<entry id="0" hint="text">Tail Z: </entry>
+			</section>
+		</section>
+		<section name=" Light" hint="Window">
+			<entry id="0" hint="text"> 光</entry>
+			<section name="Lens flare textures: " hint="Label">
+				<entry id="0" hint="text">Lens flare textures: </entry>
+			</section>
+			<section name="Static: " hint="CheckBox">
+				<entry id="0" hint="text">Static: </entry>
+				<entry id="1" hint="tooltip">Static lights will only be used for baking into lightmaps.</entry>
+			</section>
+			<section name="LensFlareSlot" hint="Button">
+				<entry id="1" hint="tooltip">Load a lensflare texture to this slot</entry>
+			</section>
+			<section name="Volumetric Clouds: " hint="CheckBox">
+				<entry id="0" hint="text">Volumetric Clouds: </entry>
+				<entry id="1" hint="tooltip">When enabled light emission will affect volumetric clouds.</entry>
+			</section>
+			<section name="Type: " hint="ComboBox">
+				<entry id="0" hint="text">Type: </entry>
+				<entry id="1" hint="tooltip">Choose the light source type...</entry>
+				<section name="items">
+					<entry id="0">Directional</entry>
+					<entry id="1">Point</entry>
+					<entry id="2">Spot</entry>
+				</section>
+			</section>
+			<section name="Shadow resolution: " hint="ComboBox">
+				<entry id="0" hint="text">Shadow resolution: </entry>
+				<entry id="1" hint="tooltip">You can force a fixed resolution for this light's shadow map to avoid dynamic scaling.
+If you leave it as dynamic, the resolution will be scaled between 0 and the max shadow resolution in the renderer for this light type, based on light's distance and size.</entry>
+				<section name="items">
+					<entry id="0">Dynamic</entry>
+					<entry id="1">32</entry>
+					<entry id="2">64</entry>
+					<entry id="3">128</entry>
+					<entry id="4">256</entry>
+					<entry id="5">512</entry>
+					<entry id="6">1024</entry>
+					<entry id="7">2048</entry>
+				</section>
+			</section>
+			<section name="Length: " hint="Slider">
+				<entry id="0" hint="text">Length: </entry>
+				<entry id="1" hint="tooltip">[Experimental] Adjust the length of the light source.
+With this you can make capsule light out of a point light.</entry>
+			</section>
+			<section name="Radius: " hint="Slider">
+				<entry id="0" hint="text">Radius: </entry>
+				<entry id="1" hint="tooltip">[Experimental] Adjust the radius of the light source.
+For directional light, this will only affect ray traced shadow softness.</entry>
+			</section>
+			<section name="Range: " hint="Slider">
+				<entry id="0" hint="text">Range: </entry>
+				<entry id="1" hint="tooltip">Adjust the maximum range the light can affect.</entry>
+			</section>
+			<section name="Inner Cone Angle: " hint="Slider">
+				<entry id="0" hint="text">Inner Cone Angle: </entry>
+				<entry id="1" hint="tooltip">Adjust the inner cone aperture for spotlight.
+(The inner cone will always be inside the outer cone)</entry>
+			</section>
+			<section name="Shadow: " hint="CheckBox">
+				<entry id="0" hint="text">Shadow: </entry>
+				<entry id="1" hint="tooltip">Set light as shadow caster. Many shadow casters can affect performance!</entry>
+			</section>
+			<section name="Visualizer: " hint="CheckBox">
+				<entry id="0" hint="text">Visualizer: </entry>
+				<entry id="1" hint="tooltip">Visualize light source emission</entry>
+			</section>
+			<section name="Outer Cone Angle: " hint="Slider">
+				<entry id="0" hint="text">Outer Cone Angle: </entry>
+				<entry id="1" hint="tooltip">Adjust the main cone aperture for spotlight.</entry>
+			</section>
+			<section name="Volumetric: " hint="CheckBox">
+				<entry id="0" hint="text">Volumetric: </entry>
+				<entry id="1" hint="tooltip">Compute volumetric light scattering effect. 
+The fog settings affect scattering (see Weather window). If there is no fog, there is no scattering.</entry>
+			</section>
+			<section name="Light Color" hint="ColorPicker">
+				<entry id="0" hint="text">Light Color</entry>
+				<section name="B" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for BLUE channel (0-255)</entry>
+				</section>
+				<section name="S" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for SATURATION channel (0-100)</entry>
+				</section>
+				<section name="R" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for RED channel (0-255)</entry>
+				</section>
+				<section name="G" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for GREEN channel (0-255)</entry>
+				</section>
+				<section name="V" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for LUMINANCE channel (0-100)</entry>
+				</section>
+				<section name="widget_43" hint="Slider">
+					<entry id="1" hint="tooltip">Value for ALPHA - TRANSPARENCY channel (0-255)</entry>
+				</section>
+				<section name="H" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for HUE channel (0-360)</entry>
+				</section>
+			</section>
+			<section name="Intensity: " hint="Slider">
+				<entry id="0" hint="text">Intensity: </entry>
+				<entry id="1" hint="tooltip">Brightness of light in. The units that this is defined in depend on the type of light. 
+Point and spot lights use luminous intensity in candela (lm/sr) while directional lights use illuminance in lux (lm/m2).</entry>
+			</section>
+		</section>
+		<section name="Add: " hint="ComboBox">
+			<entry id="0" hint="text">足す: </entry>
+			<entry id="1" hint="tooltip">Add a component to the last selected entity.</entry>
+			<section name="items">
+				<entry id="0">Name </entry>
+				<entry id="1">Layer </entry>
+				<entry id="2">Hierarchy </entry>
+				<entry id="3">Transform </entry>
+				<entry id="4">Light </entry>
+				<entry id="5">Material </entry>
+				<entry id="6">Spring</entry>
+				<entry id="7">Inverse Kinematics </entry>
+				<entry id="8">Sound </entry>
+				<entry id="9">Environment Probe </entry>
+				<entry id="10">Emitted Particle System </entry>
+				<entry id="11">Hair Particle System </entry>
+				<entry id="12">Decal </entry>
+				<entry id="13">Weather </entry>
+				<entry id="14">Force Field </entry>
+				<entry id="15">Animation </entry>
+				<entry id="16">Script </entry>
+				<entry id="17">Rigid Body Physics </entry>
+				<entry id="18">Soft Body Physics </entry>
+				<entry id="19">Collider </entry>
+				<entry id="20">Camera </entry>
+				<entry id="21">Object </entry>
+			</section>
+		</section>
+		<section name=" Humanoid" hint="Window">
+			<entry id="0" hint="text"> ヒューマノイド</entry>
+			<section name="Bones: " hint="TreeList">
+				<entry id="0" hint="text">Bones: </entry>
+			</section>
+			<section name="widget_115" hint="Label">
+				<entry id="0" hint="text">This window will stay open even if you select other entities until it is collapsed, so you can select other bone entities.</entry>
+			</section>
+			<section name="Head horizontal: " hint="Slider">
+				<entry id="0" hint="text">Head horizontal: </entry>
+				<entry id="1" hint="tooltip">Limit horizontal head movement (input in degrees)</entry>
+			</section>
+			<section name="Eye horizontal: " hint="Slider">
+				<entry id="0" hint="text">Eye horizontal: </entry>
+				<entry id="1" hint="tooltip">Limit horizontal eye movement (input in degrees)</entry>
+			</section>
+			<section name="Head size: " hint="Slider">
+				<entry id="0" hint="text">Head size: </entry>
+				<entry id="1" hint="tooltip">Adjust head size.</entry>
+			</section>
+			<section name="LookAt: " hint="CheckBox">
+				<entry id="0" hint="text">LookAt: </entry>
+				<entry id="1" hint="tooltip">Enable updating the lookAt direction. If enabled, head will turn to face the lookAt point.
+A sample lookAt point can be generated by the editor if you enable the Follow mouse option.</entry>
+			</section>
+			<section name="Eye speed: " hint="Slider">
+				<entry id="0" hint="text">Eye speed: </entry>
+				<entry id="1" hint="tooltip">Adjust eye turning speed.</entry>
+			</section>
+			<section name="Head speed: " hint="Slider">
+				<entry id="0" hint="text">Head speed: </entry>
+				<entry id="1" hint="tooltip">Adjust head turning speed.</entry>
+			</section>
+			<section name="Head vertical: " hint="Slider">
+				<entry id="0" hint="text">Head vertical: </entry>
+				<entry id="1" hint="tooltip">Limit vertical head movement (input in degrees)</entry>
+			</section>
+			<section name="Follow mouse: " hint="CheckBox">
+				<entry id="0" hint="text">Follow mouse: </entry>
+				<entry id="1" hint="tooltip">Generates a sample lookAt point at the mouse position. If LookAt is enabled, the character's head will try to face in the direction of the mouse</entry>
+			</section>
+			<section name="Eye vertical: " hint="Slider">
+				<entry id="0" hint="text">Eye vertical: </entry>
+				<entry id="1" hint="tooltip">Limit vertical eye movement (input in degrees)</entry>
+			</section>
+		</section>
+		<section name=" Expression" hint="Window">
+			<entry id="0" hint="text"> 表現</entry>
+			<section name="widget_113" hint="Label">
+				<entry id="0" hint="text">Tip: If you also attach a Sound component to this entity, the mouth expression (if available) will be animated based on the sound playing.</entry>
+			</section>
+			<section name="Weight: " hint="Slider">
+				<entry id="0" hint="text">Weight: </entry>
+			</section>
+			<section name="Blink Length: " hint="Slider">
+				<entry id="0" hint="text">Blink Length: </entry>
+			</section>
+			<section name="Expressions: " hint="TreeList">
+				<entry id="0" hint="text">Expressions: </entry>
+			</section>
+			<section name="Blinks: " hint="Slider">
+				<entry id="0" hint="text">Blinks: </entry>
+				<entry id="1" hint="tooltip">Specifies the number of blinks per second.</entry>
+			</section>
+			<section name="Override Look: " hint="ComboBox">
+				<entry id="0" hint="text">Override Look: </entry>
+				<entry id="1" hint="tooltip">Look-away override control</entry>
+				<section name="items">
+					<entry id="0">None</entry>
+					<entry id="1">Block</entry>
+					<entry id="2">Blend</entry>
+				</section>
+			</section>
+			<section name="Looks: " hint="Slider">
+				<entry id="0" hint="text">Looks: </entry>
+				<entry id="1" hint="tooltip">Specifies the number of look-aways per second.</entry>
+			</section>
+			<section name="Override Mouth: " hint="ComboBox">
+				<entry id="0" hint="text">Override Mouth: </entry>
+				<entry id="1" hint="tooltip">Lip sync override control</entry>
+				<section name="items">
+					<entry id="0">None</entry>
+					<entry id="1">Block</entry>
+					<entry id="2">Blend</entry>
+				</section>
+			</section>
+			<section name="Look Length: " hint="Slider">
+				<entry id="0" hint="text">Look Length: </entry>
+			</section>
+			<section name="Override Blink: " hint="ComboBox">
+				<entry id="0" hint="text">Override Blink: </entry>
+				<entry id="1" hint="tooltip">Blink override control</entry>
+				<section name="items">
+					<entry id="0">None</entry>
+					<entry id="1">Block</entry>
+					<entry id="2">Blend</entry>
+				</section>
+			</section>
+			<section name="Binary: " hint="CheckBox">
+				<entry id="0" hint="text">Binary: </entry>
+			</section>
+			<section name="Blink Count: " hint="Slider">
+				<entry id="0" hint="text">Blink Count: </entry>
+			</section>
+		</section>
+		<section name=" Armature" hint="Window">
+			<entry id="0" hint="text"> 鎧</entry>
+			<section name="widget_114" hint="Label">
+				<entry id="0" hint="text">This window will stay open even if you select other entities until it is collapsed, so you can select other bone entities.</entry>
+			</section>
+			<section name="Reset Pose" hint="Button">
+				<entry id="0" hint="text">Reset Pose</entry>
+			</section>
+			<section name="Bones: " hint="TreeList">
+				<entry id="0" hint="text">Bones: </entry>
+			</section>
+		</section>
+		<section name=" Rigid Body Physics" hint="Window">
+			<entry id="0" hint="text"> 剛体物理学</entry>
+			<section name="Z: " hint="Slider">
+				<entry id="0" hint="text">Depth</entry>
+			</section>
+			<section name="X: " hint="Slider">
+				<entry id="0" hint="text">Width</entry>
+			</section>
+			<section name="Y: " hint="Slider">
+				<entry id="0" hint="text">Height</entry>
+			</section>
+			<section name="Mass: " hint="Slider">
+				<entry id="0" hint="text">Mass: </entry>
+				<entry id="1" hint="tooltip">Set the mass amount for the physics engine.</entry>
+			</section>
+			<section name="Disable Deactivation: " hint="CheckBox">
+				<entry id="0" hint="text">Disable Deactivation: </entry>
+				<entry id="1" hint="tooltip">Toggle kinematic behaviour.</entry>
+			</section>
+			<section name="Linear Damping: " hint="Slider">
+				<entry id="0" hint="text">Linear Damping: </entry>
+				<entry id="1" hint="tooltip">Set the linear damping amount for the physics engine.</entry>
+			</section>
+			<section name="Use Mesh LOD: " hint="Slider">
+				<entry id="0" hint="text">Use Mesh LOD: </entry>
+				<entry id="1" hint="tooltip">Specify which LOD to use for triangle mesh physics.</entry>
+			</section>
+			<section name="Friction: " hint="Slider">
+				<entry id="0" hint="text">Friction: </entry>
+				<entry id="1" hint="tooltip">Set the friction amount for the physics engine.</entry>
+			</section>
+			<section name="Restitution: " hint="Slider">
+				<entry id="0" hint="text">Restitution: </entry>
+				<entry id="1" hint="tooltip">Set the restitution amount for the physics engine.</entry>
+			</section>
+			<section name="Kinematic: " hint="CheckBox">
+				<entry id="0" hint="text">Kinematic: </entry>
+				<entry id="1" hint="tooltip">Toggle kinematic behaviour.</entry>
+			</section>
+			<section name="Collision Shape: " hint="ComboBox">
+				<entry id="0" hint="text">Collision Shape: </entry>
+				<entry id="1" hint="tooltip">Set rigid body collision shape.</entry>
+				<section name="items">
+					<entry id="0">Box</entry>
+					<entry id="1">Sphere</entry>
+					<entry id="2">Capsule</entry>
+					<entry id="3">Convex Hull</entry>
+					<entry id="4">Triangle Mesh</entry>
+				</section>
+			</section>
+			<section name="Angular Damping: " hint="Slider">
+				<entry id="0" hint="text">Angular Damping: </entry>
+				<entry id="1" hint="tooltip">Set the angular damping amount for the physics engine.</entry>
+			</section>
+		</section>
+		<section name=" Hair Particle System" hint="Window">
+			<entry id="0" hint="text"> ヘアパーティクルシステム</entry>
+			<section name="Mesh: " hint="ComboBox">
+				<entry id="0" hint="text">Mesh: </entry>
+				<entry id="1" hint="tooltip">Choose a mesh where hair will grow from...</entry>
+				<section name="items" />
+			</section>
+			<section name="widget_57" hint="TextInputField">
+				<entry id="1" hint="tooltip">How many horizontal frames there are in the spritesheet.</entry>
+			</section>
+			<section name="Length: " hint="Slider">
+				<entry id="0" hint="text">Length: </entry>
+				<entry id="1" hint="tooltip">Set hair strand length</entry>
+			</section>
+			<section name="widget_59" hint="TextInputField">
+				<entry id="1" hint="tooltip">Enter a value to enable the random sprite sheet frame selection's max frame number.</entry>
+			</section>
+			<section name="Randomness: " hint="Slider">
+				<entry id="0" hint="text">Randomness: </entry>
+				<entry id="1" hint="tooltip">Set hair length randomization factor. This will affect randomness of hair lengths.</entry>
+			</section>
+			<section name="widget_58" hint="TextInputField">
+				<entry id="1" hint="tooltip">How many vertical frames there are in the spritesheet.</entry>
+			</section>
+			<section name="Strand Count: " hint="Slider">
+				<entry id="0" hint="text">Strand Count: </entry>
+				<entry id="1" hint="tooltip">Set hair strand count</entry>
+			</section>
+			<section name="View distance: " hint="Slider">
+				<entry id="0" hint="text">View distance: </entry>
+				<entry id="1" hint="tooltip">Set view distance. After this, particles will be faded out.</entry>
+			</section>
+			<section name="Random seed: " hint="Slider">
+				<entry id="0" hint="text">Random seed: </entry>
+				<entry id="1" hint="tooltip">Set hair system-wide random seed value. This will affect hair patch placement randomization.</entry>
+			</section>
+			<section name="Stiffness: " hint="Slider">
+				<entry id="0" hint="text">Stiffness: </entry>
+				<entry id="1" hint="tooltip">Set hair strand stiffness, how much it tries to get back to rest position.</entry>
+			</section>
+			<section name="widget_60" hint="TextInputField">
+				<entry id="1" hint="tooltip">Specifies the first frame of the sheet that can be used.</entry>
+			</section>
+		</section>
+		<section name=" Object" hint="Window">
+			<entry id="0" hint="text"> オブジェクト</entry>
+			<section name="LOD Multiplier: " hint="Slider">
+				<entry id="0" hint="text">LOD Multiplier: </entry>
+				<entry id="1" hint="tooltip">How much the distance to camera will affect LOD selection. (If the mesh has lods)</entry>
+			</section>
+			<section name="Lightmap resolution: " hint="Slider">
+				<entry id="0" hint="text">Lightmap resolution: </entry>
+				<entry id="1" hint="tooltip">Set the approximate resolution for this object's lightmap. This will be packed into the larger global lightmap later.</entry>
+			</section>
+			<section name="Clear Lightmap" hint="Button">
+				<entry id="0" hint="text">Clear Lightmap</entry>
+				<entry id="1" hint="tooltip">Clear the lightmap from this object.</entry>
+			</section>
+			<section name="Mesh: " hint="ComboBox">
+				<entry id="0" hint="text">Mesh: </entry>
+				<section name="items" />
+			</section>
+			<section name="Cast Shadow: " hint="CheckBox">
+				<entry id="0" hint="text">Cast Shadow: </entry>
+				<entry id="1" hint="tooltip">Set object to be participating in shadows.</entry>
+			</section>
+			<section name="Renderable: " hint="CheckBox">
+				<entry id="0" hint="text">Renderable: </entry>
+				<entry id="1" hint="tooltip">Set object to be participating in rendering.</entry>
+			</section>
+			<section name="Transparency: " hint="Slider">
+				<entry id="0" hint="text">Transparency: </entry>
+				<entry id="1" hint="tooltip">Adjust transparency of the object. Opaque materials will use dithered transparency in this case!</entry>
+			</section>
+			<section name="Color picker mode: " hint="ComboBox">
+				<entry id="0" hint="text">Color picker mode: </entry>
+				<entry id="1" hint="tooltip">Choose the destination data of the color picker.</entry>
+				<section name="items">
+					<entry id="0">Base color</entry>
+					<entry id="1">Emissive color</entry>
+				</section>
+			</section>
+			<section name="Stop Lightmap Gen" hint="Button">
+				<entry id="0" hint="text">Stop Lightmap Gen</entry>
+				<entry id="1" hint="tooltip">Stop the lightmap rendering and save the lightmap.
+If denoiser is enabled, this is the point at which lightmap will be denoised, which could take a while.</entry>
+			</section>
+			<section name="Object Color" hint="ColorPicker">
+				<entry id="0" hint="text">Object Color</entry>
+				<section name="B" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for BLUE channel (0-255)</entry>
+				</section>
+				<section name="S" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for SATURATION channel (0-100)</entry>
+				</section>
+				<section name="R" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for RED channel (0-255)</entry>
+				</section>
+				<section name="G" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for GREEN channel (0-255)</entry>
+				</section>
+				<section name="V" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for LUMINANCE channel (0-100)</entry>
+				</section>
+				<section name="widget_40" hint="Slider">
+					<entry id="1" hint="tooltip">Value for ALPHA - TRANSPARENCY channel (0-255)</entry>
+				</section>
+				<section name="H" hint="TextInputField">
+					<entry id="1" hint="tooltip">Enter value for HUE channel (0-360)</entry>
+				</section>
+			</section>
+			<section name="UV Set: " hint="ComboBox">
+				<entry id="0" hint="text">UV Set: </entry>
+				<entry id="1" hint="tooltip">Set which UV set to use when generating the lightmap Atlas</entry>
+				<section name="items">
+					<entry id="0">Copy UV 0</entry>
+					<entry id="1">Copy UV 1</entry>
+					<entry id="2">Keep Atlas</entry>
+					<entry id="3">Generate Atlas</entry>
+				</section>
+			</section>
+			<section name="Navmesh: " hint="CheckBox">
+				<entry id="0" hint="text">Navmesh: </entry>
+				<entry id="1" hint="tooltip">Set object to be a navigation mesh filtering (FILTER_NAVIGATION_MESH).</entry>
+			</section>
+			<section name="Cascade Mask: " hint="Slider">
+				<entry id="0" hint="text">Cascade Mask: </entry>
+				<entry id="1" hint="tooltip">How many shadow cascades to skip when rendering this object into shadow maps? (0: skip none, it will be in all cascades, 1: skip first (biggest cascade), ...etc...</entry>
+			</section>
+			<section name="Generate Lightmap" hint="Button">
+				<entry id="0" hint="text">Generate Lightmap</entry>
+				<entry id="1" hint="tooltip">Render the lightmap for only this object. It will automatically combined with the global lightmap.</entry>
+			</section>
+			<section name="Draw Distance: " hint="Slider">
+				<entry id="0" hint="text">Draw Distance: </entry>
+				<entry id="1" hint="tooltip">Specify the draw distance of the object</entry>
+			</section>
+			<section name="Sort Priority: " hint="Slider">
+				<entry id="0" hint="text">Sort Priority: </entry>
+				<entry id="1" hint="tooltip">Set to larger value to draw earlier (most useful for transparents with alpha blending, if the sorting order by distance is not good enough)</entry>
+			</section>
+		</section>
+		<section name=" Decal" hint="Window">
+			<entry id="0" hint="text"> デカル</entry>
+			<section name="Decal Placement Enabled: " hint="CheckBox">
+				<entry id="0" hint="text">Decal Placement Enabled: </entry>
+				<entry id="1" hint="tooltip">Enable decal placement. Use the left mouse button to place decals to the scene.</entry>
+			</section>
+			<section name="Slope Blend: " hint="Slider">
+				<entry id="0" hint="text">Slope Blend: </entry>
+				<entry id="1" hint="tooltip">Set a power factor for blending on surface slopes. 0 = no slope blend, increasing = more slope blend</entry>
+			</section>
+			<section name="widget_42" hint="Label">
+				<entry id="0" hint="text">Set decal properties in the Material component. Decals support the following material properties:
+ - Base color
+ - Base color texture
+ - Emissive strength
+ - Normalmap texture
+ - Normalmap strength
+ - Surfacemap texture
+ - Texture tiling (TexMulAdd)</entry>
+			</section>
+			<section name="Alpha only basecolor: " hint="CheckBox">
+				<entry id="0" hint="text">Alpha only basecolor: </entry>
+				<entry id="1" hint="tooltip">You can enable this to only use alpha channel from basecolor map. Useful for blending normalmap-only decals.</entry>
+			</section>
+		</section>
+		<section name=" Hierarchy" hint="Window">
+			<entry id="0" hint="text"> 階層</entry>
+			<section name="Parent: " hint="ComboBox">
+				<entry id="0" hint="text">Parent: </entry>
+				<entry id="1" hint="tooltip">Choose a parent entity (also works if selected entity has no transform)</entry>
+				<section name="items" />
+			</section>
+		</section>
+		<section name=" Layer" hint="Window">
+			<entry id="0" hint="text"> 層</entry>
+			<section name="widget_104" hint="CheckBox">
+				<entry id="0" hint="text">27: </entry>
+			</section>
+			<section name="widget_90" hint="CheckBox">
+				<entry id="0" hint="text">13: </entry>
+			</section>
+			<section name="widget_77" hint="CheckBox">
+				<entry id="0" hint="text">0: </entry>
+			</section>
+			<section name="widget_98" hint="CheckBox">
+				<entry id="0" hint="text">21: </entry>
+			</section>
+			<section name="widget_85" hint="CheckBox">
+				<entry id="0" hint="text">8: </entry>
+			</section>
+			<section name="widget_103" hint="CheckBox">
+				<entry id="0" hint="text">26: </entry>
+			</section>
+			<section name="widget_93" hint="CheckBox">
+				<entry id="0" hint="text">16: </entry>
+			</section>
+			<section name="widget_82" hint="CheckBox">
+				<entry id="0" hint="text">5: </entry>
+			</section>
+			<section name="widget_102" hint="CheckBox">
+				<entry id="0" hint="text">25: </entry>
+			</section>
+			<section name="widget_92" hint="CheckBox">
+				<entry id="0" hint="text">15: </entry>
+			</section>
+			<section name="widget_83" hint="CheckBox">
+				<entry id="0" hint="text">6: </entry>
+			</section>
+			<section name="widget_95" hint="CheckBox">
+				<entry id="0" hint="text">18: </entry>
+			</section>
+			<section name="widget_101" hint="CheckBox">
+				<entry id="0" hint="text">24: </entry>
+			</section>
+			<section name="widget_80" hint="CheckBox">
+				<entry id="0" hint="text">3: </entry>
+			</section>
+			<section name="widget_94" hint="CheckBox">
+				<entry id="0" hint="text">17: </entry>
+			</section>
+			<section name="widget_88" hint="CheckBox">
+				<entry id="0" hint="text">11: </entry>
+			</section>
+			<section name="widget_100" hint="CheckBox">
+				<entry id="0" hint="text">23: </entry>
+			</section>
+			<section name="widget_81" hint="CheckBox">
+				<entry id="0" hint="text">4: </entry>
+			</section>
+			<section name="LayerWindowLabel" hint="Label">
+				<entry id="0" hint="text">The layer is a 32-bit mask (uint32_t), which can be used for filtering by multiple systems (visibility, collision, picking, etc.).
+- If all bits are disabled, it means the layer will be inactive in most systems.
+- For ray tracing, the lower 8 bits will be used as instance inclusion mask.</entry>
+			</section>
+			<section name="widget_107" hint="CheckBox">
+				<entry id="0" hint="text">30: </entry>
+			</section>
+			<section name="widget_97" hint="CheckBox">
+				<entry id="0" hint="text">20: </entry>
+			</section>
+			<section name="widget_108" hint="CheckBox">
+				<entry id="0" hint="text">31: </entry>
+			</section>
+			<section name="widget_89" hint="CheckBox">
+				<entry id="0" hint="text">12: </entry>
+			</section>
+			<section name="widget_79" hint="CheckBox">
+				<entry id="0" hint="text">2: </entry>
+			</section>
+			<section name="widget_86" hint="CheckBox">
+				<entry id="0" hint="text">9: </entry>
+			</section>
+			<section name="widget_106" hint="CheckBox">
+				<entry id="0" hint="text">29: </entry>
+			</section>
+			<section name="widget_96" hint="CheckBox">
+				<entry id="0" hint="text">19: </entry>
+			</section>
+			<section name="widget_78" hint="CheckBox">
+				<entry id="0" hint="text">1: </entry>
+			</section>
+			<section name="widget_87" hint="CheckBox">
+				<entry id="0" hint="text">10: </entry>
+			</section>
+			<section name="widget_105" hint="CheckBox">
+				<entry id="0" hint="text">28: </entry>
+			</section>
+			<section name="widget_91" hint="CheckBox">
+				<entry id="0" hint="text">14: </entry>
+			</section>
+			<section name="NONE " hint="Button">
+				<entry id="0" hint="text">NONE </entry>
+			</section>
+			<section name="widget_99" hint="CheckBox">
+				<entry id="0" hint="text">22: </entry>
+			</section>
+			<section name="ALL " hint="Button">
+				<entry id="0" hint="text">ALL </entry>
+			</section>
+			<section name="widget_84" hint="CheckBox">
+				<entry id="0" hint="text">7: </entry>
+			</section>
+		</section>
+		<section name=" Environment Probe" hint="Window">
+			<entry id="0" hint="text"> 環境プローブ</entry>
+			<section name="widget_41" hint="Label">
+				<entry id="0" hint="text">Environment probes can be used to capture the scene from a specific location in a 360 degrees panorama. The probes will be used for reflections fallback, where a better reflection type is not available. The probes can affect the ambient colors slightly.
+Tip: You can scale, rotate and move the probes to set up parallax correct rendering to affect a specific area only. The parallax correction will take effect inside the probe's bounds (indicated with a cyan colored box).</entry>
+			</section>
+			<section name="Refresh" hint="Button">
+				<entry id="0" hint="text">Refresh</entry>
+				<entry id="1" hint="tooltip">Re-renders the selected probe.</entry>
+			</section>
+			<section name="RealTime: " hint="CheckBox">
+				<entry id="0" hint="text">RealTime: </entry>
+				<entry id="1" hint="tooltip">Enable continuous rendering of the probe in every frame.</entry>
+			</section>
+			<section name="MSAA: " hint="CheckBox">
+				<entry id="0" hint="text">MSAA: </entry>
+				<entry id="1" hint="tooltip">Enable Multi Sampling Anti Aliasing for the probe, this will improve its quality.</entry>
+			</section>
+			<section name="Refresh All" hint="Button">
+				<entry id="0" hint="text">Refresh All</entry>
+				<entry id="1" hint="tooltip">Re-renders all probes in the scene.</entry>
+			</section>
+		</section>
+		<section name=" Emitter" hint="Window">
+			<entry id="0" hint="text"> エミッタ</entry>
+			<section name="SPH (h): " hint="Slider">
+				<entry id="0" hint="text">SPH (h): </entry>
+				<entry id="1" hint="tooltip">Set the SPH parameter: smoothing radius</entry>
+			</section>
+			<section name="Drag: " hint="Slider">
+				<entry id="0" hint="text">Drag: </entry>
+				<entry id="1" hint="tooltip">The velocity will be multiplied with this value, so lower than 1 will slow decelerate the particles.</entry>
+			</section>
+			<section name="SPH - FluidSim: " hint="CheckBox">
+				<entry id="0" hint="text">SPH - FluidSim: </entry>
+				<entry id="1" hint="tooltip">Enable particle collisions with each other. Simulate with Smooth Particle Hydrodynamics (SPH) solver.</entry>
+			</section>
+			<section name="widget_54" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Vector Y component</entry>
+			</section>
+			<section name="widget_46" hint="TextInputField">
+				<entry id="1" hint="tooltip">How many horizontal frames there are in the spritesheet.</entry>
+			</section>
+			<section name="SPH (K): " hint="Slider">
+				<entry id="0" hint="text">SPH (K): </entry>
+				<entry id="1" hint="tooltip">Set the SPH parameter: pressure constant</entry>
+			</section>
+			<section name="Mesh: " hint="ComboBox">
+				<entry id="0" hint="text">Mesh: </entry>
+				<entry id="1" hint="tooltip">Choose an mesh that particles will be emitted from...</entry>
+				<section name="items" />
+			</section>
+			<section name="Sorting: " hint="CheckBox">
+				<entry id="0" hint="text">Sorting: </entry>
+				<entry id="1" hint="tooltip">Enable sorting of the particles. This might slow down performance.</entry>
+			</section>
+			<section name="widget_47" hint="TextInputField">
+				<entry id="1" hint="tooltip">How many vertical frames there are in the spritesheet.</entry>
+			</section>
+			<section name="SPH (p0): " hint="Slider">
+				<entry id="0" hint="text">SPH (p0): </entry>
+				<entry id="1" hint="tooltip">Set the SPH parameter: reference density</entry>
+			</section>
+			<section name="Frame Blending: " hint="CheckBox">
+				<entry id="0" hint="text">Frame Blending: </entry>
+				<entry id="1" hint="tooltip">If sprite sheet animation is in effect, frames will be smoothly blended.</entry>
+			</section>
+			<section name="Mass: " hint="Slider">
+				<entry id="0" hint="text">Mass: </entry>
+				<entry id="1" hint="tooltip">Set the mass per particle.</entry>
+			</section>
+			<section name="Scaling: " hint="Slider">
+				<entry id="0" hint="text">Scaling: </entry>
+				<entry id="1" hint="tooltip">Set the scaling of the particles based on their lifetime.</entry>
+			</section>
+			<section name="widget_51" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Vector Y component</entry>
+			</section>
+			<section name="Size: " hint="Slider">
+				<entry id="0" hint="text">Size: </entry>
+				<entry id="1" hint="tooltip">Set the size of the emitted particles.</entry>
+			</section>
+			<section name="Timestep: " hint="Slider">
+				<entry id="0" hint="text">Timestep: </entry>
+				<entry id="1" hint="tooltip">Adjust timestep for emitter simulation. -1 means variable timestep, positive means fixed timestep.</entry>
+			</section>
+			<section name="Motion blur: " hint="Slider">
+				<entry id="0" hint="text">Motion blur: </entry>
+				<entry id="1" hint="tooltip">Set the motion blur amount for the particle system.</entry>
+			</section>
+			<section name="DEBUG: " hint="CheckBox">
+				<entry id="0" hint="text">DEBUG: </entry>
+				<entry id="1" hint="tooltip">Toggle debug visualizer for emitters.</entry>
+			</section>
+			<section name="widget_45" hint="TextInputField">
+				<entry id="1" hint="tooltip">Enter a value to enable looping sprite sheet animation (frames per second). Set 0 for animation along paritcle lifetime.</entry>
+			</section>
+			<section name="Normal factor: " hint="Slider">
+				<entry id="0" hint="text">Normal factor: </entry>
+				<entry id="1" hint="tooltip">Set the velocity of the emitted particles based on the normal vector of the emitter surface.</entry>
+			</section>
+			<section name="Restitution: " hint="Slider">
+				<entry id="0" hint="text">Restitution: </entry>
+				<entry id="1" hint="tooltip">If the particles have collision enabled, then after collision this is a multiplier for their bouncing velocities</entry>
+			</section>
+			<section name="Depth Buffer: " hint="CheckBox">
+				<entry id="0" hint="text">Depth Buffer: </entry>
+				<entry id="1" hint="tooltip">Enable particle collisions with the depth buffer.</entry>
+			</section>
+			<section name="widget_50" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Vector X component</entry>
+			</section>
+			<section name="Randomness: " hint="Slider">
+				<entry id="0" hint="text">Randomness: </entry>
+				<entry id="1" hint="tooltip">Set the general randomness of the emitter.</entry>
+			</section>
+			<section name="Emit: " hint="Slider">
+				<entry id="0" hint="text">Emit: </entry>
+				<entry id="1" hint="tooltip">Set the number of particles to emit per second.</entry>
+			</section>
+			<section name="SPH (e): " hint="Slider">
+				<entry id="0" hint="text">SPH (e): </entry>
+				<entry id="1" hint="tooltip">Set the SPH parameter: viscosity constant</entry>
+			</section>
+			<section name="widget_53" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Vector X component</entry>
+			</section>
+			<section name="Color randomness: " hint="Slider">
+				<entry id="0" hint="text">Color randomness: </entry>
+				<entry id="1" hint="tooltip">Set the randomness of color for the emitted particles.</entry>
+			</section>
+			<section name="Restart Emitter" hint="Button">
+				<entry id="0" hint="text">Restart Emitter</entry>
+				<entry id="1" hint="tooltip">Restart particle system emitter</entry>
+			</section>
+			<section name="Max count: " hint="Slider">
+				<entry id="0" hint="text">Max count: </entry>
+				<entry id="1" hint="tooltip">Set the maximum amount of particles this system can handle. This has an effect on the memory budget.</entry>
+			</section>
+			<section name="Volume: " hint="CheckBox">
+				<entry id="0" hint="text">Volume: </entry>
+				<entry id="1" hint="tooltip">Enable volume for the emitter. Particles will be emitted inside volume.</entry>
+			</section>
+			<section name="widget_52" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Vector Z component</entry>
+			</section>
+			<section name="Life span: " hint="Slider">
+				<entry id="0" hint="text">Life span: </entry>
+				<entry id="1" hint="tooltip">Set the lifespan of the emitted particles (in seconds).</entry>
+			</section>
+			<section name="Rotation: " hint="Slider">
+				<entry id="0" hint="text">Rotation: </entry>
+				<entry id="1" hint="tooltip">Set the rotation velocity of the emitted particles.</entry>
+			</section>
+			<section name="widget_48" hint="TextInputField">
+				<entry id="1" hint="tooltip">Enter a value to enable the random sprite sheet frame selection's max frame number.</entry>
+			</section>
+			<section name="Colliders disabled: " hint="CheckBox">
+				<entry id="0" hint="text">Colliders disabled: </entry>
+				<entry id="1" hint="tooltip">Simply disables all colliders for acting on this particle system</entry>
+			</section>
+			<section name="ShaderType: " hint="ComboBox">
+				<entry id="0" hint="text">ShaderType: </entry>
+				<entry id="1" hint="tooltip">Choose a shader type for the particles. This is responsible of how they will be rendered.</entry>
+				<section name="items">
+					<entry id="0">SIMPLE</entry>
+					<entry id="1">SOFT</entry>
+					<entry id="2">DISTORTION</entry>
+					<entry id="3">LIGHTING</entry>
+				</section>
+			</section>
+			<section name="widget_55" hint="TextInputField">
+				<entry id="0" hint="text">0</entry>
+				<entry id="1" hint="tooltip">Vector Z component</entry>
+			</section>
+			<section name="Life randomness: " hint="Slider">
+				<entry id="0" hint="text">Life randomness: </entry>
+				<entry id="1" hint="tooltip">Set the randomness of lifespans for the emitted particles.</entry>
+			</section>
+			<section name="EmitterInfo" hint="Label">
+				<entry id="0" hint="text">No emitter object selected.</entry>
+			</section>
+			<section name="widget_49" hint="TextInputField">
+				<entry id="1" hint="tooltip">Specifies the starting frame of the animation.</entry>
+			</section>
+			<section name="PAUSE: " hint="CheckBox">
+				<entry id="0" hint="text">PAUSE: </entry>
+				<entry id="1" hint="tooltip">Stop simulation update.</entry>
+			</section>
+		</section>
+		<section name=" Name" hint="Window">
+			<entry id="0" hint="text"> 名前</entry>
+			<section name="widget_109" hint="TextInputField">
+				<entry id="0" hint="text">Select entity to modify name...</entry>
+			</section>
+		</section>
+		<section name=" Spring" hint="Window">
+			<entry id="0" hint="text"> 勢</entry>
+			<section name="Drag: " hint="Slider">
+				<entry id="0" hint="text">Drag: </entry>
+				<entry id="1" hint="tooltip">The drag affects how fast energy is lost (higher values make the spring come to rest faster)</entry>
+			</section>
+			<section name="Reset All" hint="Button">
+				<entry id="0" hint="text">Reset All</entry>
+				<entry id="1" hint="tooltip">Reset all springs in the scene to initial pose.</entry>
+			</section>
+			<section name="DEBUG: " hint="CheckBox">
+				<entry id="0" hint="text">DEBUG: </entry>
+				<entry id="1" hint="tooltip">Enabling this will visualize springs as small yellow X-es in the scene</entry>
+			</section>
+			<section name="Disabled: " hint="CheckBox">
+				<entry id="0" hint="text">Disabled: </entry>
+				<entry id="1" hint="tooltip">Disable simulation.</entry>
+			</section>
+			<section name="Wind affection: " hint="Slider">
+				<entry id="0" hint="text">Wind affection: </entry>
+				<entry id="1" hint="tooltip">How much the global wind effect affects the spring</entry>
+			</section>
+			<section name="Stretch enabled: " hint="CheckBox">
+				<entry id="0" hint="text">Stretch enabled: </entry>
+				<entry id="1" hint="tooltip">Stretch means that length from parent transform won't be preserved.</entry>
+			</section>
+			<section name="Gravity enabled: " hint="CheckBox">
+				<entry id="0" hint="text">Gravity enabled: </entry>
+				<entry id="1" hint="tooltip">Whether global gravity should affect the spring</entry>
+			</section>
+			<section name="Stiffness: " hint="Slider">
+				<entry id="0" hint="text">Stiffness: </entry>
+				<entry id="1" hint="tooltip">The stiffness affects how strongly the spring tries to orient itself to rest pose (higher values increase the jiggliness)</entry>
+			</section>
+		</section>
+		<section name=" Camera" hint="Window">
+			<entry id="0" hint="text"> カメラ</entry>
+			<section name="Far Plane: " hint="Slider">
+				<entry id="0" hint="text">Far Plane: </entry>
+				<entry id="1" hint="tooltip">Controls the camera's far clip plane, geometry farther than this will be clipped.</entry>
+			</section>
+			<section name="Aperture Shape Y: " hint="Slider">
+				<entry id="0" hint="text">Aperture Shape Y: </entry>
+				<entry id="1" hint="tooltip">Controls the depth of field effect's bokeh shape</entry>
+			</section>
+			<section name="Aperture Size: " hint="Slider">
+				<entry id="0" hint="text">Aperture Size: </entry>
+				<entry id="1" hint="tooltip">Controls the depth of field effect's strength</entry>
+			</section>
+			<section name="Aperture Shape X: " hint="Slider">
+				<entry id="0" hint="text">Aperture Shape X: </entry>
+				<entry id="1" hint="tooltip">Controls the depth of field effect's bokeh shape</entry>
+			</section>
+			<section name="Focal Length: " hint="Slider">
+				<entry id="0" hint="text">Focal Length: </entry>
+				<entry id="1" hint="tooltip">Controls the depth of field effect's focus distance</entry>
+			</section>
+			<section name="FOV: " hint="Slider">
+				<entry id="0" hint="text">FOV: </entry>
+				<entry id="1" hint="tooltip">Controls the camera's top-down field of view (in degrees)</entry>
+			</section>
+			<section name="Near Plane: " hint="Slider">
+				<entry id="0" hint="text">Near Plane: </entry>
+				<entry id="1" hint="tooltip">Controls the camera's near clip plane, geometry closer than this will be clipped.</entry>
+			</section>
+		</section>
+		<section name=" Terrain" hint="Window">
+			<entry id="0" hint="text"> 地形</entry>
+			<section name="Add Modifier: " hint="ComboBox">
+				<entry id="0" hint="text">Add Modifier: </entry>
+				<entry id="1" hint="tooltip">Add a new modifier that will affect terrain generation.</entry>
+				<section name="items">
+					<entry id="0">Perlin Noise</entry>
+					<entry id="1">Voronoi Noise</entry>
+					<entry id="2">Heightmap Image</entry>
+				</section>
+			</section>
+			<section name="High Altitude Region: " hint="Slider">
+				<entry id="0" hint="text">High Altitude Region: </entry>
+				<entry id="1" hint="tooltip">The region's falloff power</entry>
+			</section>
+			<section name="Prop Distance: " hint="Slider">
+				<entry id="0" hint="text">Prop Distance: </entry>
+				<entry id="1" hint="tooltip">How far out props will be generated (value is in number of chunks)</entry>
+			</section>
+			<section name="Mesh LOD Distance: " hint="Slider">
+				<entry id="0" hint="text">Mesh LOD Distance: </entry>
+				<entry id="1" hint="tooltip">Set the LOD (Level Of Detail) distance multiplier.
+Low values increase LOD detail in distance</entry>
+			</section>
+			<section name="Physics Distance: " hint="Slider">
+				<entry id="0" hint="text">Physics Distance: </entry>
+				<entry id="1" hint="tooltip">How far out physics meshes will be generated (value is in number of chunks)</entry>
+			</section>
+			<section name="Generation Distance: " hint="Slider">
+				<entry id="0" hint="text">Generation Distance: </entry>
+				<entry id="1" hint="tooltip">How far out chunks will be generated (value is in number of chunks)</entry>
+			</section>
+			<section name="Low Altitude Region: " hint="Slider">
+				<entry id="0" hint="text">Low Altitude Region: </entry>
+				<entry id="1" hint="tooltip">The region's falloff power</entry>
+			</section>
+			<section name="Top Level: " hint="Slider">
+				<entry id="0" hint="text">Top Level: </entry>
+				<entry id="1" hint="tooltip">Terrain mesh grid topmost level</entry>
+			</section>
+			<section name="Preset: " hint="ComboBox">
+				<entry id="0" hint="text">Preset: </entry>
+				<entry id="1" hint="tooltip">Select a terrain preset</entry>
+				<section name="items">
+					<entry id="0">Hills</entry>
+					<entry id="1">Islands</entry>
+					<entry id="2">Mountains</entry>
+					<entry id="3">Arctic</entry>
+				</section>
+			</section>
+			<section name="Seed: " hint="Slider">
+				<entry id="0" hint="text">Seed: </entry>
+				<entry id="1" hint="tooltip">Seed for terrain randomness</entry>
+			</section>
+			<section name="Tessellation: " hint="CheckBox">
+				<entry id="0" hint="text">Tessellation: </entry>
+				<entry id="1" hint="tooltip">Specify whether tessellation is enabled for terrain surface.
+Tessellation requires GPU hardware support
+Tessellation doesn't work with raytracing effects or Visibility Compute Shading rendering mode.</entry>
+			</section>
+			<section name="Removal: " hint="CheckBox">
+				<entry id="0" hint="text">Removal: </entry>
+				<entry id="1" hint="tooltip">Automatically remove chunks that are farther than generation distance around center chunk.</entry>
+			</section>
+			<section name="Grass: " hint="CheckBox">
+				<entry id="0" hint="text">Grass: </entry>
+				<entry id="1" hint="tooltip">Specify whether grass generation is enabled.</entry>
+			</section>
+			<section name="Prop Density: " hint="Slider">
+				<entry id="0" hint="text">Prop Density: </entry>
+				<entry id="1" hint="tooltip">Modifies overall prop density.</entry>
+			</section>
+			<section name="Chunk Scale: " hint="Slider">
+				<entry id="0" hint="text">Chunk Scale: </entry>
+				<entry id="1" hint="tooltip">Size of one chunk in horizontal directions.
+Larger chunk scale will cover larger distance, but will have less detail per unit.</entry>
+			</section>
+			<section name="Slope Region: " hint="Slider">
+				<entry id="0" hint="text">Slope Region: </entry>
+				<entry id="1" hint="tooltip">The region's falloff power</entry>
+			</section>
+			<section name="Grass Length: " hint="Slider">
+				<entry id="0" hint="text">Grass Length: </entry>
+				<entry id="1" hint="tooltip">Modifies overall grass length.</entry>
+			</section>
+			<section name="Bottom Level: " hint="Slider">
+				<entry id="0" hint="text">Bottom Level: </entry>
+				<entry id="1" hint="tooltip">Terrain mesh grid lowest level</entry>
+			</section>
+			<section name="Grass Density: " hint="Slider">
+				<entry id="0" hint="text">Grass Density: </entry>
+				<entry id="1" hint="tooltip">Modifies overall grass density.</entry>
+			</section>
+			<section name="Save Heightmap..." hint="Button">
+				<entry id="0" hint="text">Save Heightmap...</entry>
+				<entry id="1" hint="tooltip">Save a heightmap texture from the currently generated terrain, where the red channel corresponds to terrain height and the resolution to dimensions.
+The heightmap will be normalized into 8bit PNG format which can result in precision loss!</entry>
+			</section>
+			<section name="Center to Cam: " hint="CheckBox">
+				<entry id="0" hint="text">Center to Cam: </entry>
+				<entry id="1" hint="tooltip">Automatically generate chunks around camera. This sets the center chunk to camera position.</entry>
+			</section>
+			<section name="Physics: " hint="CheckBox">
+				<entry id="0" hint="text">Physics: </entry>
+				<entry id="1" hint="tooltip">Specify whether physics is enabled for newly generated terrain chunks.</entry>
+			</section>
+			<section name="Grass Distance: " hint="Slider">
+				<entry id="0" hint="text">Grass Distance: </entry>
+				<entry id="1" hint="tooltip">Modifies grass view distance.</entry>
+			</section>
+		</section>
+	</section>
+	<section name="" hint="Button">
+		<entry id="1" hint="tooltip">規模
+ホットキー: 3</entry>
+	</section>
+	<section name="Full screen" hint="Button">
+		<entry id="1" hint="tooltip">全画面表示の切り替え</entry>
+	</section>
+	<section name="" hint="Button">
+		<entry id="1" hint="tooltip">最後に使用した(スタンドアロン)スクリプトを実行する.
+新しいスクリプトを使用するには、[開く] ボタン.</entry>
+	</section>
+	<section name="Bug report" hint="Button">
+		<entry id="1" hint="tooltip">バグや問題を報告できるブラウザウィンドウが開きます.
+URL: https://github.com/turanszkij/WickedEngine/issues/new</entry>
+	</section>
+	<section name="Open" hint="Button">
+		<entry id="1" hint="tooltip">シーンを開いたり、モデルをインポートしたり、Luaスクリプトを実行したり...</entry>
+	</section>
+	<section name="Profiler" hint="Window">
+		<entry id="1" hint="tooltip">プロファイラーフレームのタイミングを表示する</entry>
+		<entry id="0" hint="text">プロファイラー</entry>
+	</section>
+	<section name="Exit" hint="Button">
+		<entry id="1" hint="tooltip">終了プログラム</entry>
+	</section>
+	<section name="" hint="Button">
+		<entry id="1" hint="tooltip">回転
+ホットキー: 2</entry>
+	</section>
+</section>

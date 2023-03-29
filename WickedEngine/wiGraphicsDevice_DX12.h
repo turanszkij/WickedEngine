@@ -75,7 +75,6 @@ namespace wi::graphics
 		struct CopyAllocator
 		{
 			GraphicsDevice_DX12* device = nullptr;
-			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
 			std::mutex locker;
 
 			struct CopyCMD
@@ -84,12 +83,11 @@ namespace wi::graphics
 				Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
 				Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 				GPUBuffer uploadbuffer;
-				inline bool IsValid() const { return uploadbuffer.IsValid(); }
+				inline bool IsValid() const { return commandList != nullptr; }
 			};
 			wi::vector<CopyCMD> freelist;
 
 			void init(GraphicsDevice_DX12* device);
-			void destroy();
 			CopyCMD allocate(uint64_t staging_size);
 			void submit(CopyCMD cmd);
 		};
@@ -216,7 +214,7 @@ namespace wi::graphics
 		~GraphicsDevice_DX12() override;
 
 		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;
-		bool CreateBuffer(const GPUBufferDesc * desc, const void* initial_data, GPUBuffer* buffer) const override;
+		bool CreateBuffer2(const GPUBufferDesc * desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer) const override;
 		bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture) const override;
 		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const override;
 		bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const override;

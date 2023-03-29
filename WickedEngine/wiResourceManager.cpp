@@ -746,15 +746,15 @@ namespace wi
 							desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 
 							uint32_t mipwidth = width;
-							wi::vector<SubresourceData> InitData(desc.mip_levels);
+							SubresourceData init_data[32]; // don't support more than 32 mips anyway
 							for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 							{
-								InitData[mip].data_ptr = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
-								InitData[mip].row_pitch = static_cast<uint32_t>(mipwidth * channelCount);
+								init_data[mip].data_ptr = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
+								init_data[mip].row_pitch = static_cast<uint32_t>(mipwidth * channelCount);
 								mipwidth = std::max(1u, mipwidth / 2);
 							}
 
-							success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
+							success = device->CreateTexture(&desc, init_data, &resource->texture);
 							device->SetName(&resource->texture, name.c_str());
 
 							for (uint32_t i = 0; i < resource->texture.desc.mip_levels; ++i)

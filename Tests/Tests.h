@@ -1,6 +1,4 @@
 #pragma once
-#include "WickedEngine.h"
-
 
 class TestsRenderer : public wi::RenderPath3D
 {

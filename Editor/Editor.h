@@ -1,11 +1,9 @@
 #pragma once
-#include "WickedEngine.h"
 #include "Translator.h"
 #include "wiScene_BindLua.h"
 #include "OptionsWindow.h"
 #include "ComponentsWindow.h"
 #include "ProfilerWindow.h"
-
 #include "IconDefinitions.h"
 
 class EditorLoadingScreen : public wi::LoadingScreen
@@ -151,6 +149,12 @@ public:
 	void NewScene();
 
 	void FocusCameraOnSelected();
+
+	wi::Localization default_localization;
+	wi::Localization current_localization;
+	void SetDefaultLocalization();
+	void SetLocalization(wi::Localization& loc);
+	void ReloadLanguage();
 };
 
 class Editor : public wi::Application
@@ -167,3 +171,41 @@ public:
 		config.Commit();
 	}
 };
+
+// Additional localizations that are outside the GUI can be defined here:
+enum class EditorLocalization
+{
+	// Top menu:
+	Save,
+	Open,
+	Backlog,
+	Profiler,
+	Cinema,
+	FullScreen,
+	Windowed,
+	BugReport,
+	About,
+	Exit,
+
+	// Other:
+	UntitledScene,
+
+	Count
+};
+static const char* EditorLocalizationStrings[] = {
+	// Top menu:
+	"Save",
+	"Open",
+	"Backlog",
+	"Profiler",
+	"Cinema",
+	"Full screen",
+	"Windowed",
+	"Bug report",
+	"About",
+	"Exit",
+
+	// Other:
+	"Untitled scene"
+};
+static_assert(arraysize(EditorLocalizationStrings) == size_t(EditorLocalization::Count));

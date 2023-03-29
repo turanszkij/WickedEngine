@@ -224,6 +224,24 @@ namespace wi::gui
 			widget->SetTheme(theme, id);
 		}
 	}
+	void GUI::ExportLocalization(wi::Localization& localization) const
+	{
+		wi::Localization& section = localization.GetSection("gui");
+		for (auto& widget : widgets)
+		{
+			widget->ExportLocalization(section);
+		}
+	}
+	void GUI::ImportLocalization(const wi::Localization& localization)
+	{
+		const wi::Localization* section = localization.CheckSection("gui");
+		if (section == nullptr)
+			return;
+		for (auto& widget : widgets)
+		{
+			widget->ImportLocalization(*section);
+		}
+	}
 
 
 
@@ -406,9 +424,13 @@ namespace wi::gui
 			name = value;
 		}
 	}
-	const std::string Widget::GetText() const
+	std::string Widget::GetText() const
 	{
 		return font.GetTextA();
+	}
+	void Widget::SetText(const char* value)
+	{
+		font.SetText(value);
 	}
 	void Widget::SetText(const std::string& value)
 	{
@@ -509,6 +531,55 @@ namespace wi::gui
 	wi::Color Widget::GetColor() const
 	{
 		return wi::Color::fromFloat4(sprites[GetState()].params.color);
+	}
+
+	enum LOCALIZATION_ID
+	{
+		LOCALIZATION_ID_TEXT,
+		LOCALIZATION_ID_TOOLTIP,
+	};
+	void Widget::ExportLocalization(wi::Localization& localization) const
+	{
+		if (!IsLocalizationEnabled())
+			return;
+
+		if (font.GetText().empty() && tooltipFont.GetText().empty())
+			return;
+
+		wi::Localization& section = localization.GetSection(GetName());
+		section.SetSectionHint(GetWidgetTypeName());
+
+		if (has_flag(localization_enabled, LocalizationEnabled::Text) && !font.GetText().empty())
+		{
+			section.Add(LOCALIZATION_ID_TEXT, font.GetTextA().c_str(), "text");
+		}
+		if (has_flag(localization_enabled, LocalizationEnabled::Tooltip) && !tooltipFont.GetText().empty())
+		{
+			section.Add(LOCALIZATION_ID_TOOLTIP, tooltipFont.GetTextA().c_str(), "tooltip");
+		}
+	}
+	void Widget::ImportLocalization(const wi::Localization& localization)
+	{
+		const wi::Localization* section = localization.CheckSection(GetName());
+		if (section == nullptr)
+			return;
+
+		if (has_flag(localization_enabled, LocalizationEnabled::Text))
+		{
+			const char* localized_text = section->Get(LOCALIZATION_ID_TEXT);
+			if (localized_text != nullptr)
+			{
+				SetText(localized_text);
+			}
+		}
+		if (has_flag(localization_enabled, LocalizationEnabled::Tooltip))
+		{
+			const char* localized_tooltip = section->Get(LOCALIZATION_ID_TOOLTIP);
+			if (localized_tooltip != nullptr)
+			{
+				SetTooltip(localized_tooltip);
+			}
+		}
 	}
 
 	void Widget::SetColor(wi::Color color, int id)
@@ -1674,6 +1745,7 @@ namespace wi::gui
 		SetSize(XMFLOAT2(200, 40));
 
 		valueInputField.Create(name + "_endInputField");
+		valueInputField.SetLocalizationEnabled(LocalizationEnabled::None);
 		valueInputField.SetShadowRadius(0);
 		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Enter \"reset\" to reset slider to initial state.");
 		valueInputField.SetValue(end);
@@ -2641,6 +2713,39 @@ namespace wi::gui
 		}
 		theme.font.Apply(selected_font.params);
 	}
+	void ComboBox::ExportLocalization(wi::Localization& localization) const
+	{
+		Widget::ExportLocalization(localization);
+		if (has_flag(localization_enabled, LocalizationEnabled::Items))
+		{
+			wi::Localization& section = localization.GetSection(GetName()).GetSection("items");
+			for (size_t i = 0; i < items.size(); ++i)
+			{
+				section.Add(i, items[i].name.c_str());
+			}
+		}
+	}
+	void ComboBox::ImportLocalization(const wi::Localization& localization)
+	{
+		Widget::ImportLocalization(localization);
+		if (has_flag(localization_enabled, LocalizationEnabled::Items))
+		{
+			const wi::Localization* section = localization.CheckSection(GetName());
+			if (section == nullptr)
+				return;
+			section = section->CheckSection("items");
+			if (section == nullptr)
+				return;
+			for (size_t i = 0; i < items.size(); ++i)
+			{
+				const char* localized_item_name = section->Get(i);
+				if (localized_item_name != nullptr)
+				{
+					items[i].name = localized_item_name;
+				}
+			}
+		}
+	}
 
 
 
@@ -2665,6 +2770,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the upperleft corner
 			resizeDragger_UpperLeft.Create(name + "_resize_dragger_upper_left");
+			resizeDragger_UpperLeft.SetLocalizationEnabled(LocalizationEnabled::None);
 			resizeDragger_UpperLeft.SetShadowRadius(0);
 			resizeDragger_UpperLeft.SetTooltip("Resize window");
 			resizeDragger_UpperLeft.SetText("«|»");
@@ -2687,6 +2793,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the upperleft corner
 			resizeDragger_UpperRight.Create(name + "_resize_dragger_upper_right");
+			resizeDragger_UpperRight.SetLocalizationEnabled(LocalizationEnabled::None);
 			resizeDragger_UpperRight.SetShadowRadius(0);
 			resizeDragger_UpperRight.SetTooltip("Resize window");
 			resizeDragger_UpperRight.SetText("«|»");
@@ -2709,6 +2816,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the bottom right corner
 			resizeDragger_BottomLeft.Create(name + "_resize_dragger_bottom_left");
+			resizeDragger_BottomLeft.SetLocalizationEnabled(LocalizationEnabled::None);
 			resizeDragger_BottomLeft.SetShadowRadius(0);
 			resizeDragger_BottomLeft.SetTooltip("Resize window");
 			resizeDragger_BottomLeft.SetText("«|»");
@@ -2731,6 +2839,7 @@ namespace wi::gui
 		{
 			// Add a resizer control to the bottom right corner
 			resizeDragger_BottomRight.Create(name + "_resize_dragger_bottom_right");
+			resizeDragger_BottomRight.SetLocalizationEnabled(LocalizationEnabled::None);
 			resizeDragger_BottomRight.SetShadowRadius(0);
 			resizeDragger_BottomRight.SetTooltip("Resize window");
 			resizeDragger_BottomRight.SetText("«|»");
@@ -2751,7 +2860,8 @@ namespace wi::gui
 		if (has_flag(window_controls, WindowControls::MOVE))
 		{
 			// Add a grabber onto the title bar
-			moveDragger.Create(name + "_move_dragger");
+			moveDragger.Create(name);
+			moveDragger.SetLocalizationEnabled(LocalizationEnabled::None);
 			moveDragger.SetShadowRadius(0);
 			moveDragger.SetText(name);
 			moveDragger.font.params.h_align = wi::font::WIFALIGN_LEFT;
@@ -2768,6 +2878,7 @@ namespace wi::gui
 		{
 			// Add close button to the top right corner
 			closeButton.Create(name + "_close_button");
+			closeButton.SetLocalizationEnabled(LocalizationEnabled::None);
 			closeButton.SetShadowRadius(0);
 			closeButton.SetText("x");
 			closeButton.OnClick([this](EventArgs args) {
@@ -2785,6 +2896,7 @@ namespace wi::gui
 		{
 			// Add minimize button to the top right corner
 			collapseButton.Create(name + "_collapse_button");
+			collapseButton.SetLocalizationEnabled(LocalizationEnabled::None);
 			collapseButton.SetShadowRadius(0);
 			collapseButton.SetText("-");
 			collapseButton.OnClick([this](EventArgs args) {
@@ -2802,6 +2914,7 @@ namespace wi::gui
 		{
 			// Simple title bar
 			label.Create(name);
+			label.SetLocalizationEnabled(LocalizationEnabled::None);
 			label.SetShadowRadius(0);
 			label.SetText(name);
 			label.font.params.h_align = wi::font::WIFALIGN_LEFT;
@@ -3115,7 +3228,7 @@ namespace wi::gui
 	}
 	void Window::RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
 	{
-		Widget::RenderTooltip(canvas, cmd);
+		// Window base tooltip is not rendered
 		for (auto& x : widgets)
 		{
 			x->RenderTooltip(canvas, cmd);
@@ -3411,6 +3524,34 @@ namespace wi::gui
 			scrollbar_vertical.AttachTo(this);
 		}
 	}
+	void Window::ExportLocalization(wi::Localization& localization) const
+	{
+		Widget::ExportLocalization(localization);
+		if (has_flag(localization_enabled, LocalizationEnabled::Children))
+		{
+			wi::Localization& section = localization.GetSection(GetName());
+			for (auto& widget : widgets)
+			{
+				widget->ExportLocalization(section);
+			}
+		}
+	}
+	void Window::ImportLocalization(const wi::Localization& localization)
+	{
+		Widget::ImportLocalization(localization);
+		if (has_flag(localization_enabled, LocalizationEnabled::Children))
+		{
+			const wi::Localization* section = localization.CheckSection(GetName());
+			if (section == nullptr)
+				return;
+			for (auto& widget : widgets)
+			{
+				widget->ImportLocalization(*section);
+			}
+		}
+		label.SetText(GetText());
+		moveDragger.SetText(GetText());
+	}
 
 
 
@@ -3539,10 +3680,11 @@ namespace wi::gui
 		SetColor(wi::Color(100, 100, 100, 100));
 
 		float x = 250;
-		float y = 100;
+		float y = 80;
 		float step = 20;
 
 		text_R.Create("R");
+		text_R.SetLocalizationEnabled(LocalizationEnabled::Tooltip);
 		text_R.SetPos(XMFLOAT2(x, y += step));
 		text_R.SetSize(XMFLOAT2(40, 18));
 		text_R.SetText("");
@@ -3557,6 +3699,7 @@ namespace wi::gui
 		AddWidget(&text_R);
 
 		text_G.Create("G");
+		text_G.SetLocalizationEnabled(LocalizationEnabled::Tooltip);
 		text_G.SetPos(XMFLOAT2(x, y += step));
 		text_G.SetSize(XMFLOAT2(40, 18));
 		text_G.SetText("");
@@ -3571,6 +3714,7 @@ namespace wi::gui
 		AddWidget(&text_G);
 
 		text_B.Create("B");
+		text_B.SetLocalizationEnabled(LocalizationEnabled::Tooltip);
 		text_B.SetPos(XMFLOAT2(x, y += step));
 		text_B.SetSize(XMFLOAT2(40, 18));
 		text_B.SetText("");
@@ -3586,6 +3730,7 @@ namespace wi::gui
 
 
 		text_H.Create("H");
+		text_H.SetLocalizationEnabled(LocalizationEnabled::Tooltip);
 		text_H.SetPos(XMFLOAT2(x, y += step));
 		text_H.SetSize(XMFLOAT2(40, 18));
 		text_H.SetText("");
@@ -3598,6 +3743,7 @@ namespace wi::gui
 		AddWidget(&text_H);
 
 		text_S.Create("S");
+		text_S.SetLocalizationEnabled(LocalizationEnabled::Tooltip);
 		text_S.SetPos(XMFLOAT2(x, y += step));
 		text_S.SetSize(XMFLOAT2(40, 18));
 		text_S.SetText("");
@@ -3610,6 +3756,7 @@ namespace wi::gui
 		AddWidget(&text_S);
 
 		text_V.Create("V");
+		text_V.SetLocalizationEnabled(LocalizationEnabled::Tooltip);
 		text_V.SetPos(XMFLOAT2(x, y += step));
 		text_V.SetSize(XMFLOAT2(40, 18));
 		text_V.SetText("");
@@ -3621,7 +3768,22 @@ namespace wi::gui
 			});
 		AddWidget(&text_V);
 
+		text_hex.Create("Hex");
+		text_hex.SetLocalizationEnabled(LocalizationEnabled::Tooltip);
+		text_hex.SetPos(XMFLOAT2(x, y += step));
+		text_hex.SetSize(XMFLOAT2(80, 18));
+		text_hex.SetText("");
+		text_hex.SetTooltip("Enter RGBA hex value");
+		text_hex.SetDescription("Hex: ");
+		text_hex.OnInputAccepted([this](EventArgs args) {
+			wi::Color color(args.sValue.c_str());
+			SetPickColor(color);
+			FireEvents();
+			});
+		AddWidget(&text_hex);
+
 		alphaSlider.Create(0, 255, 255, 255, "");
+		alphaSlider.SetLocalizationEnabled(LocalizationEnabled::Tooltip);
 		alphaSlider.SetPos(XMFLOAT2(20, y));
 		alphaSlider.SetSize(XMFLOAT2(150, 18));
 		alphaSlider.SetText("A: ");
@@ -3756,6 +3918,7 @@ namespace wi::gui
 			text_H.SetValue(int(hue));
 			text_S.SetValue(int(saturation * 100));
 			text_V.SetValue(int(luminance * 100));
+			text_hex.SetText(color.to_hex());
 
 			if (dragged)
 			{
@@ -4107,8 +4270,7 @@ namespace wi::gui
 		// render preview
 		{
 			XMStoreFloat4x4(&cb.g_xTransform,
-				XMMatrixScaling(sca, sca, 1) *
-				XMMatrixTranslation(translation.x + scale.x - sca - 4, translation.y + control_size + 4, 0) *
+				XMMatrixTranslation(translation.x + scale.x - sca - 2, translation.y + control_size + 4 + 22, 0) *
 				Projection
 			);
 			cb.g_xColor = final_color.toFloat4();
@@ -4163,6 +4325,9 @@ namespace wi::gui
 		add_right(text_B);
 		add_right(text_G);
 		add_right(text_R);
+
+		y = control_size + 4;
+		add_right(text_hex);
 	}
 	wi::Color ColorPicker::GetPickColor() const
 	{

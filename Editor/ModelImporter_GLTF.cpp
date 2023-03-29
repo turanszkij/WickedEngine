@@ -5,11 +5,6 @@
 
 #include "Utility/stb_image.h"
 
-#include <mutex>
-#include <string>
-#include <limits>
-#include <fstream>
-
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_FS
 #define TINYGLTF_NO_STB_IMAGE

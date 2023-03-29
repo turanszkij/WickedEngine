@@ -11,6 +11,9 @@
 #include "wiBacklog.h"
 
 #include <mutex>
+#include <string>
+#include <atomic>
+#include <random>
 
 using namespace wi::ecs;
 using namespace wi::scene;

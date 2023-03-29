@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "LayerWindow.h"
-#include "Editor.h"
 
 using namespace wi::ecs;
 using namespace wi::scene;
-
 
 void LayerWindow::Create(EditorComponent* _editor)
 {

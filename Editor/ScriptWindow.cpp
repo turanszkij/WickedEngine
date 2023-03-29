@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "ScriptWindow.h"
-#include "Editor.h"
 
 void ScriptWindow::Create(EditorComponent* _editor)
 {

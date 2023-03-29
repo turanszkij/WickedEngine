@@ -41,6 +41,7 @@ jobs:
         move Editor\config.ini .\
         move Editor\startup.lua .\
         move Editor\terrain .\
+        move Editor\languages .\
         move Content\Documentation .\
         
     - name: Package Editor
@@ -50,6 +51,7 @@ jobs:
         path: |
           Documentation/
           terrain/
+          languages/
           config.ini
           startup.lua
           Editor_Windows.exe
@@ -86,6 +88,7 @@ jobs:
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
         mv Editor/terrain ./
+        mv Editor/languages ./
         mv Content/Documentation ./
         
     - name: Package Editor
@@ -95,6 +98,7 @@ jobs:
         path: |
           Documentation/
           terrain/
+          languages/
           config.ini
           startup.lua
           WickedEngineEditor
@@ -137,6 +141,7 @@ jobs:
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
         mv Editor/terrain ./
+        mv Editor/languages ./
         mv Content/Documentation ./
         
     - name: Package Editor
@@ -146,6 +151,7 @@ jobs:
         path: |
           Documentation/
           terrain/
+          languages/
           config.ini
           startup.lua
           WickedEngineEditor
