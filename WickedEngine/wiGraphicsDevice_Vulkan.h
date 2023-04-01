@@ -37,14 +37,17 @@ namespace wi::graphics
 	    VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		VkDevice device = VK_NULL_HANDLE;
-		wi::vector<VkQueueFamilyProperties> queueFamilies;
+		wi::vector<VkQueueFamilyProperties2> queueFamilies;
+		wi::vector<VkQueueFamilyVideoPropertiesKHR> queueFamiliesVideo;
 		uint32_t graphicsFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t computeFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t copyFamily = VK_QUEUE_FAMILY_IGNORED;
+		uint32_t videoFamily = VK_QUEUE_FAMILY_IGNORED;
 		wi::vector<uint32_t> families;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue computeQueue = VK_NULL_HANDLE;
 		VkQueue copyQueue = VK_NULL_HANDLE;
+		VkQueue videoQueue = VK_NULL_HANDLE;
 
 		VkPhysicalDeviceProperties2 properties2 = {};
 		VkPhysicalDeviceVulkan11Properties properties_1_1 = {};
@@ -69,6 +72,16 @@ namespace wi::graphics
 		VkPhysicalDeviceConditionalRenderingFeaturesEXT conditional_rendering_features = {};
 		VkPhysicalDeviceDepthClipEnableFeaturesEXT depth_clip_enable_features = {};
 		VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_features = {};
+
+		VkVideoDecodeH264ProfileInfoKHR decode_h264_profile = {};
+		VkVideoDecodeH264CapabilitiesKHR decode_h264_capabilities = {};
+		struct VideoCapability
+		{
+			VkVideoProfileInfoKHR profile = {};
+			VkVideoDecodeCapabilitiesKHR decode_capabilities = {};
+			VkVideoCapabilitiesKHR video_capabilities = {};
+		};
+		VideoCapability video_capability_h264 = {};
 
 		wi::vector<VkDynamicState> pso_dynamicStates;
 		VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
@@ -285,8 +298,9 @@ namespace wi::graphics
 		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info = nullptr) const override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const override;
-		
-		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change = nullptr) const override;
+		bool CreateVideoDecoder(const VideoDesc* desc, VideoDecoder* video_decoder) const override;
+
+		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change = nullptr, const ImageAspect* aspect = nullptr) const override;
 		int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0, const Format* format_change = nullptr) const override;
 
 		int GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource = -1) const override;
@@ -401,6 +415,7 @@ namespace wi::graphics
 		void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd) override;
 		void PredicationEnd(CommandList cmd) override;
 		void ClearUAV(const GPUResource* resource, uint32_t value, CommandList cmd) override;
+		void VideoDecode(const VideoDecoder* video_decoder, const VideoDecodeOperation* op, CommandList cmd) override;
 
 		void EventBegin(const char* name, CommandList cmd) override;
 		void EventEnd(CommandList cmd) override;
@@ -553,6 +568,7 @@ namespace wi::graphics
 			std::deque<std::pair<VkSwapchainKHR, uint64_t>> destroyer_swapchains;
 			std::deque<std::pair<VkSurfaceKHR, uint64_t>> destroyer_surfaces;
 			std::deque<std::pair<VkSemaphore, uint64_t>> destroyer_semaphores;
+			std::deque<std::pair<VkVideoSessionKHR, uint64_t>> destroyer_video_sessions;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessSampledImages;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessUniformTexelBuffers;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageBuffers;
@@ -796,6 +812,19 @@ namespace wi::graphics
 						auto item = destroyer_semaphores.front();
 						destroyer_semaphores.pop_front();
 						vkDestroySemaphore(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_video_sessions.empty())
+				{
+					if (destroyer_video_sessions.front().second + BUFFERCOUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_video_sessions.front();
+						destroyer_video_sessions.pop_front();
+						vkDestroyVideoSessionKHR(device, item.first, nullptr);
 					}
 					else
 					{

@@ -5,6 +5,7 @@
 #include "wiArchive.h"
 #include "wiJobSystem.h"
 #include "wiVector.h"
+#include "wiVideo.h"
 
 #include <memory>
 
@@ -21,6 +22,7 @@ namespace wi
 		const wi::graphics::Texture& GetTexture() const;
 		const wi::audio::Sound& GetSound() const;
 		const std::string& GetScript() const;
+		const wi::video::Video& GetVideo() const;
 		int GetTextureSRGBSubresource() const;
 
 		void SetFileData(const wi::vector<uint8_t>& data);
@@ -30,6 +32,7 @@ namespace wi
 		void SetTexture(const wi::graphics::Texture& texture, int srgb_subresource = -1);
 		void SetSound(const wi::audio::Sound& sound);
 		void SetScript(const std::string& script);
+		void SetVideo(const wi::video::Video& script);
 	};
 
 	namespace resourcemanager

@@ -277,7 +277,9 @@ namespace wi::graphics
 		BC6H_UF16,
 		BC6H_SF16,
 		BC7_UNORM,
-		BC7_UNORM_SRGB
+		BC7_UNORM_SRGB,
+
+		NV12,				// video
 	};
 	enum class GpuQueryType
 	{
@@ -322,6 +324,8 @@ namespace wi::graphics
 		COLOR,
 		DEPTH,
 		STENCIL,
+		LUMINANCE,
+		CHROMINANCE,
 	};
 
 	// Flags ////////////////////////////////////////////
@@ -392,6 +396,7 @@ namespace wi::graphics
 		DEPTH_RESOLVE_MIN_MAX = 1 << 18,
 		STENCIL_RESOLVE_MIN_MAX = 1 << 19,
 		CACHE_COHERENT_UMA = 1 << 20,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
+		VIDEO_DECODE_H264,
 	};
 
 	enum class ResourceState
@@ -432,6 +437,11 @@ namespace wi::graphics
 		ALLOW_UAV_WRITES = 1 << 0,
 		SUSPENDING = 1 << 1,
 		RESUMING = 1 << 2,
+	};
+
+	enum class VideoProfile
+	{
+		H264,	// AVC
 	};
 
 
@@ -736,6 +746,19 @@ namespace wi::graphics
 		uint32_t packed_mip_tile_count = 0;		// how many tiles are required for the packed mipmaps
 	};
 
+	struct VideoDesc
+	{
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t bit_rate = 0;
+		Format format = Format::NV12;
+		VideoProfile profile = VideoProfile::H264;
+		const void* pps_datas = nullptr;
+		size_t pps_count = 0;
+		const void* sps_datas = nullptr;
+		size_t sps_count = 0;
+	};
+
 
 	// Resources:
 
@@ -798,6 +821,20 @@ namespace wi::graphics
 		const SparseTextureProperties* sparse_properties = nullptr;
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
+	};
+
+	struct VideoDecoder : public GraphicsDeviceChild
+	{
+		VideoDesc desc;
+		constexpr const VideoDesc& GetDesc() const { return desc; }
+	};
+
+	struct VideoDecodeOperation
+	{
+		const GPUBuffer* stream = nullptr;
+		uint64_t stream_offset = 0;
+		uint64_t stream_size = 0;
+		const Texture* output = nullptr;
 	};
 
 	struct RenderPassImage

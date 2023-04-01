@@ -72,6 +72,7 @@
 #include "wiConfig.h"
 #include "wiTerrain.h"
 #include "wiLocalization.h"
+#include "wiVideo.h"
 
 #ifdef _WIN32
 #ifdef PLATFORM_UWP

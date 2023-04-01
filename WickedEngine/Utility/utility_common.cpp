@@ -21,6 +21,10 @@
 #define QOI_IMPLEMENTATION
 #include "qoi.h"
 
+#define MINIMP4_IMPLEMENTATION
+#define MP4D_TRACE_SUPPORTED
+#include "minimp4.h"
+
 
 
 // Basis Universal library sources are compiled below for simplicity:

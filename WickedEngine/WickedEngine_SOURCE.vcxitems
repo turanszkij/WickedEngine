@@ -229,6 +229,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransformUtil.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\h264.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\minimp4.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugiconfig.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugixml.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBVH.h" />
@@ -364,6 +366,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedMap.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVector.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiVideo.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h" />
   </ItemGroup>
   <ItemGroup>
@@ -702,6 +705,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArguments.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiVideo.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>

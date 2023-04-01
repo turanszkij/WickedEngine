@@ -16,6 +16,7 @@
 #include <string>
 
 #include <pix.h>
+#include <dxva.h>
 
 #ifdef _DEBUG
 #include <dxgidebug.h>
@@ -636,6 +637,8 @@ namespace dx12_internal
 			return DXGI_FORMAT_BC7_UNORM;
 		case Format::BC7_UNORM_SRGB:
 			return DXGI_FORMAT_BC7_UNORM_SRGB;
+		case Format::NV12:
+			return DXGI_FORMAT_NV12;
 		}
 		return DXGI_FORMAT_UNKNOWN;
 	}
@@ -813,6 +816,23 @@ namespace dx12_internal
 			return D3D12_SHADING_RATE_1X1;
 		}
 		return D3D12_SHADING_RATE_1X1;
+	}
+	constexpr UINT _ImageAspectToPlane(ImageAspect value)
+	{
+		switch (value)
+		{
+		default:
+		case wi::graphics::ImageAspect::COLOR:
+			return 0;
+		case wi::graphics::ImageAspect::DEPTH:
+			return 0;
+		case wi::graphics::ImageAspect::STENCIL:
+			return 1;
+		case wi::graphics::ImageAspect::LUMINANCE:
+			return 0;
+		case wi::graphics::ImageAspect::CHROMINANCE:
+			return 1;
+		}
 	}
 
 	// Native -> Engine converters
@@ -1363,7 +1383,7 @@ namespace dx12_internal
 	struct QueryHeap_DX12
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
-		Microsoft::WRL::ComPtr<ID3D12QueryHeap> heap;
+		ComPtr<ID3D12QueryHeap> heap;
 
 		~QueryHeap_DX12()
 		{
@@ -1456,8 +1476,8 @@ namespace dx12_internal
 	struct SwapChain_DX12
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
-		Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
-		wi::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> backBuffers;
+		ComPtr<IDXGISwapChain3> swapChain;
+		wi::vector<ComPtr<ID3D12Resource>> backBuffers;
 		wi::vector<D3D12_CPU_DESCRIPTOR_HANDLE> backbufferRTV;
 
 		Texture dummyTexture;
@@ -1476,6 +1496,30 @@ namespace dx12_internal
 			{
 				allocationhandler->descriptors_rtv.free(x);
 			}
+		}
+	};
+	struct VideoDecoder_DX12
+	{
+		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		ComPtr<ID3D12VideoDecoderHeap> decoder_heap;
+		ComPtr<ID3D12VideoDecoder> decoder;
+		ComPtr<D3D12MA::Allocation> reference_frame_allocation;
+		ComPtr<ID3D12Resource> reference_frames;
+		std::mutex locker;
+		std::deque<UINT> reference_frames_usage;
+		UINT next_reference_frame = 0;
+		UINT reference_frame_count = 16;
+		DXVA_PicParams_H264 pic_params = {};
+
+		~VideoDecoder_DX12()
+		{
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			allocationhandler->destroyer_video_decoder_heaps.push_back(std::make_pair(decoder_heap, framecount));
+			allocationhandler->destroyer_video_decoders.push_back(std::make_pair(decoder, framecount));
+			allocationhandler->destroyer_allocations.push_back(std::make_pair(reference_frame_allocation, framecount));
+			allocationhandler->destroyer_resources.push_back(std::make_pair(reference_frames, framecount));
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 
@@ -1518,6 +1562,10 @@ namespace dx12_internal
 	SwapChain_DX12* to_internal(const SwapChain* param)
 	{
 		return static_cast<SwapChain_DX12*>(param->internal_state.get());
+	}
+	VideoDecoder_DX12* to_internal(const VideoDecoder* param)
+	{
+		return static_cast<VideoDecoder_DX12*>(param->internal_state.get());
 	}
 
 	inline const std::string GetCachePath()
@@ -2104,6 +2152,7 @@ using namespace dx12_internal;
 
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+		VIDEO_DECODE_BITSTREAM_ALIGNMENT = D3D12_VIDEO_DECODE_MIN_BITSTREAM_OFFSET_ALIGNMENT;
 
 		validationMode = validationMode_;
 
@@ -2390,7 +2439,7 @@ using namespace dx12_internal;
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].fence));
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].fence));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2415,7 +2464,7 @@ using namespace dx12_internal;
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].fence));
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].fence));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2440,12 +2489,40 @@ using namespace dx12_internal;
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_COPY].fence));
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&queues[QUEUE_COPY].fence));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
 				ss << "ID3D12Device::CreateFence[QUEUE_COPY] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+		}
+
+
+		if (SUCCEEDED(device.As(&video_device)))
+		{
+			capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H264;
+			queues[QUEUE_VIDEO_DECODE].desc.Type = D3D12_COMMAND_LIST_TYPE_VIDEO_DECODE;
+			queues[QUEUE_VIDEO_DECODE].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			queues[QUEUE_VIDEO_DECODE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queues[QUEUE_VIDEO_DECODE].desc.NodeMask = 0;
+			hr = device->CreateCommandQueue(&queues[QUEUE_VIDEO_DECODE].desc, IID_PPV_ARGS(&queues[QUEUE_VIDEO_DECODE].queue));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateCommandQueue[QUEUE_VIDEO_DECODE] failed! ERROR: 0x" << std::hex << hr;
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
+			}
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&queues[QUEUE_VIDEO_DECODE].fence));
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateFence[QUEUE_VIDEO_DECODE] failed! ERROR: 0x" << std::hex << hr;
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
@@ -2475,7 +2552,7 @@ using namespace dx12_internal;
 			descriptorheap_res.start_cpu = descriptorheap_res.heap_GPU->GetCPUDescriptorHandleForHeapStart();
 			descriptorheap_res.start_gpu = descriptorheap_res.heap_GPU->GetGPUDescriptorHandleForHeapStart();
 
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&descriptorheap_res.fence));
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&descriptorheap_res.fence));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2511,7 +2588,7 @@ using namespace dx12_internal;
 			descriptorheap_sam.start_cpu = descriptorheap_sam.heap_GPU->GetCPUDescriptorHandleForHeapStart();
 			descriptorheap_sam.start_gpu = descriptorheap_sam.heap_GPU->GetGPUDescriptorHandleForHeapStart();
 
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&descriptorheap_sam.fence));
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&descriptorheap_sam.fence));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -4339,8 +4416,140 @@ using namespace dx12_internal;
 
 		return SUCCEEDED(hr);
 	}
+	bool GraphicsDevice_DX12::CreateVideoDecoder(const VideoDesc* desc, VideoDecoder* video_decoder) const
+	{
+		if (video_device == nullptr)
+			return false;
 
-	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change) const
+		HRESULT hr = E_FAIL;
+
+		D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILE_COUNT video_decode_profile_count = {};
+		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILE_COUNT, &video_decode_profile_count, sizeof(video_decode_profile_count));
+		assert(SUCCEEDED(hr));
+
+		wi::vector<GUID> profiles(video_decode_profile_count.ProfileCount);
+		D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILES video_decode_profiles = {};
+		video_decode_profiles.ProfileCount = video_decode_profile_count.ProfileCount;
+		video_decode_profiles.pProfiles = profiles.data();
+		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILES, &video_decode_profiles, sizeof(video_decode_profiles));
+		assert(SUCCEEDED(hr));
+
+		D3D12_VIDEO_DECODER_DESC decoder_desc = {};
+		switch (desc->profile)
+		{
+		case VideoProfile::H264:
+			decoder_desc.Configuration.DecodeProfile = D3D12_VIDEO_DECODE_PROFILE_H264;
+			break;
+		//case VideoProfile::H265:
+		//	decoder_desc.Configuration.DecodeProfile = D3D12_VIDEO_DECODE_PROFILE_HEVC_MAIN;
+		//	break;
+		default:
+			assert(0); // not implemented
+			break;
+		}
+		bool profile_valid = false;
+		for (auto& x : profiles)
+		{
+			if (x == decoder_desc.Configuration.DecodeProfile)
+			{
+				profile_valid = true;
+				break;
+			}
+		}
+		if (!profile_valid)
+			return false;
+
+		D3D12_FEATURE_DATA_VIDEO_DECODE_FORMAT_COUNT video_decode_format_count = {};
+		video_decode_format_count.Configuration = decoder_desc.Configuration;
+		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_FORMAT_COUNT, &video_decode_format_count, sizeof(video_decode_format_count));
+		assert(SUCCEEDED(hr));
+
+		wi::vector<DXGI_FORMAT> formats(video_decode_format_count.FormatCount);
+		D3D12_FEATURE_DATA_VIDEO_DECODE_FORMATS video_decode_formats = {};
+		video_decode_formats.Configuration = decoder_desc.Configuration;
+		video_decode_formats.FormatCount = video_decode_format_count.FormatCount;
+		video_decode_formats.pOutputFormats = formats.data();
+		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_FORMATS, &video_decode_formats, sizeof(video_decode_formats));
+		assert(SUCCEEDED(hr));
+
+		D3D12_FEATURE_DATA_VIDEO_DECODE_SUPPORT video_decode_support = {};
+		video_decode_support.Configuration = decoder_desc.Configuration;
+		video_decode_support.DecodeFormat = _ConvertFormat(desc->format);
+		bool format_valid = false;
+		for (auto& x : formats)
+		{
+			if (x == video_decode_support.DecodeFormat)
+			{
+				format_valid = true;
+				break;
+			}
+		}
+		if (!format_valid)
+			return false;
+		video_decode_support.Width = desc->width;
+		video_decode_support.Height = desc->height;
+		video_decode_support.BitRate = desc->bit_rate;
+		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_SUPPORT, &video_decode_support, sizeof(video_decode_support));
+		assert(SUCCEEDED(hr));
+
+		bool reference_only = video_decode_support.ConfigurationFlags & D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_REFERENCE_ONLY_ALLOCATIONS_REQUIRED;
+
+		if (video_decode_support.DecodeTier < D3D12_VIDEO_DECODE_TIER_1)
+			return false;
+
+		D3D12_VIDEO_DECODER_HEAP_DESC heap_desc = {};
+		heap_desc.Configuration = decoder_desc.Configuration;
+		heap_desc.DecodeWidth = video_decode_support.Width;
+		heap_desc.DecodeHeight = video_decode_support.Height;
+		heap_desc.Format = video_decode_support.DecodeFormat;
+
+		D3D12_FEATURE_DATA_VIDEO_DECODER_HEAP_SIZE video_decoder_heap_size = {};
+		video_decoder_heap_size.VideoDecoderHeapDesc = heap_desc;
+		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODER_HEAP_SIZE, &video_decoder_heap_size, sizeof(video_decoder_heap_size));
+		assert(SUCCEEDED(hr));
+
+		auto internal_state = std::make_shared<VideoDecoder_DX12>();
+		internal_state->allocationhandler = allocationhandler;
+		video_decoder->internal_state = internal_state;
+		video_decoder->desc = *desc;
+
+		hr = video_device->CreateVideoDecoderHeap(&heap_desc, IID_PPV_ARGS(&internal_state->decoder_heap));
+		assert(SUCCEEDED(hr));
+		hr = video_device->CreateVideoDecoder(&decoder_desc, IID_PPV_ARGS(&internal_state->decoder));
+		assert(SUCCEEDED(hr));
+
+		D3D12MA::ALLOCATION_DESC allocationDesc = {};
+		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+		D3D12_RESOURCE_DESC resourcedesc = {};
+		resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		resourcedesc.Format = _ConvertFormat(desc->format);
+		resourcedesc.Width = desc->width;
+		resourcedesc.Height = desc->height;
+		resourcedesc.MipLevels = 1;
+		resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		resourcedesc.DepthOrArraySize = (UINT16)internal_state->reference_frame_count;
+		resourcedesc.SampleDesc.Count = 1;
+		resourcedesc.SampleDesc.Quality = 0;
+		resourcedesc.Alignment = 0;
+		resourcedesc.Flags = D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE | D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY;
+
+		hr = allocationhandler->allocator->CreateResource(
+			&allocationDesc,
+			&resourcedesc,
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			&internal_state->reference_frame_allocation,
+			IID_PPV_ARGS(&internal_state->reference_frames)
+		);
+		assert(SUCCEEDED(hr));
+		hr = internal_state->reference_frames->SetName(L"VideoDecoder::reference_frames");
+		assert(SUCCEEDED(hr));
+
+		return SUCCEEDED(hr);
+	}
+
+	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change, const ImageAspect* aspect) const
 	{
 		auto internal_state = to_internal(texture);
 
@@ -4348,6 +4557,11 @@ using namespace dx12_internal;
 		if (format_change != nullptr)
 		{
 			format = *format_change;
+		}
+		UINT plane = 0;
+		if (aspect != nullptr)
+		{
+			plane = _ImageAspectToPlane(*aspect);
 		}
 
 		switch (type)
@@ -4371,6 +4585,9 @@ using namespace dx12_internal;
 				break;
 			case Format::D32_FLOAT_S8X24_UINT:
 				srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+				break;
+			case Format::NV12:
+				srv_desc.Format = DXGI_FORMAT_R8_UNORM;
 				break;
 			default:
 				srv_desc.Format = _ConvertFormat(format);
@@ -4430,6 +4647,7 @@ using namespace dx12_internal;
 							srv_desc.Texture2DArray.ArraySize = sliceCount;
 							srv_desc.Texture2DArray.MostDetailedMip = firstMip;
 							srv_desc.Texture2DArray.MipLevels = mipCount;
+							srv_desc.Texture2DArray.PlaneSlice = plane;
 						}
 					}
 				}
@@ -4444,6 +4662,7 @@ using namespace dx12_internal;
 						srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 						srv_desc.Texture2D.MostDetailedMip = firstMip;
 						srv_desc.Texture2D.MipLevels = mipCount;
+						srv_desc.Texture2D.PlaneSlice = plane;
 					}
 				}
 			}
@@ -4903,7 +5122,7 @@ using namespace dx12_internal;
 		commandlist.id = cmd_current;
 		commandlist.waited_on.store(false);
 
-		if (commandlist.GetGraphicsCommandList() == nullptr)
+		if (commandlist.GetCommandList() == nullptr)
 		{
 			// need to create one more command list:
 
@@ -4913,7 +5132,18 @@ using namespace dx12_internal;
 				assert(SUCCEEDED(hr));
 			}
 
-			hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&commandlist.commandLists[queue]));
+			if (queue == QUEUE_VIDEO_DECODE)
+			{
+				ComPtr<CommandList_DX12::video_decode_command_list_version> videoCommandList;
+				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&videoCommandList));
+				commandlist.commandLists[queue] = videoCommandList;
+			}
+			else
+			{
+				ComPtr<CommandList_DX12::graphics_command_list_version> graphicsCommandList;
+				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&graphicsCommandList));
+				commandlist.commandLists[queue] = graphicsCommandList;
+			}
 			assert(SUCCEEDED(hr));
 
 			std::wstring ws = L"cmd" + std::to_wstring(commandlist.id);
@@ -4928,7 +5158,7 @@ using namespace dx12_internal;
 		hr = commandlist.GetGraphicsCommandList()->Reset(commandlist.GetCommandAllocator(), nullptr);
 		assert(SUCCEEDED(hr));
 
-		if (queue != QUEUE_COPY)
+		if (queue == QUEUE_GRAPHICS || queue == QUEUE_COMPUTE)
 		{
 			ID3D12DescriptorHeap* heaps[2] = {
 				descriptorheap_res.heap_GPU.Get(),
@@ -4963,11 +5193,18 @@ using namespace dx12_internal;
 			for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 			{
 				CommandList_DX12& commandlist = *commandlists[cmd].get();
-				hr = commandlist.GetGraphicsCommandList()->Close();
+				if (commandlist.queue == QUEUE_VIDEO_DECODE)
+				{
+					hr = commandlist.GetVideoDecodeCommandList()->Close();
+				}
+				else
+				{
+					hr = commandlist.GetGraphicsCommandList()->Close();
+				}
 				assert(SUCCEEDED(hr));
 
 				CommandQueue& queue = queues[commandlist.queue];
-				queue.submit_cmds.push_back(commandlist.GetGraphicsCommandList());
+				queue.submit_cmds.push_back(commandlist.GetCommandList());
 
 				if (commandlist.waited_on.load() || !commandlist.waits.empty())
 				{
@@ -6632,6 +6869,66 @@ using namespace dx12_internal;
 			values,
 			0,
 			nullptr
+		);
+	}
+	void GraphicsDevice_DX12::VideoDecode(const VideoDecoder* video_decoder, const VideoDecodeOperation* op, CommandList cmd)
+	{
+		auto decoder_internal = to_internal(video_decoder);
+		auto stream_internal = to_internal(op->stream);
+		auto output_internal = to_internal(op->output);
+		D3D12_VIDEO_DECODE_OUTPUT_STREAM_ARGUMENTS output = {};
+		D3D12_VIDEO_DECODE_INPUT_STREAM_ARGUMENTS input = {};
+
+		//ID3D12Resource* reference_frames[16] = {};
+		//UINT reference_subresources[16] = {};
+		//for (size_t i = 0; i < internal_state->reference_frame_count; ++i)
+		//{
+		//	reference_frames[i] = internal_state->reference_frames.Get();
+		//	reference_subresources[i] = (UINT)i;
+		//}
+		//UINT current_subresource = 0;
+
+		//internal_state->locker.lock();
+		//for (size_t i = 0; i < internal_state->reference_frames_usage.size(); ++i)
+		//{
+		//	reference_frames[i] = internal_state->reference_frames.Get();
+		//	reference_subresources[i] = internal_state->reference_frames_usage[i];
+		//}
+		//internal_state->next_reference_frame = (internal_state->next_reference_frame + 1) % internal_state->reference_frame_count;
+		//UINT current_subresource = internal_state->next_reference_frame;
+		//internal_state->reference_frames_usage.push_back(internal_state->next_reference_frame);
+		//while (internal_state->reference_frames_usage.size() > 16)
+		//	internal_state->reference_frames_usage.pop_front();
+		//internal_state->locker.unlock();
+
+		input.CompressedBitstream.pBuffer = stream_internal->resource.Get();
+		input.CompressedBitstream.Offset = op->stream_offset;
+		input.CompressedBitstream.Size = op->stream_size;
+		//input.ReferenceFrames.NumTexture2Ds = (UINT)internal_state->reference_frames_usage.size();
+		//input.ReferenceFrames.ppTexture2Ds = reference_frames;
+		//input.ReferenceFrames.pSubresources = reference_subresources;
+		input.FrameArguments[0].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
+		input.FrameArguments[0].Size = sizeof(decoder_internal->pic_params);
+		input.FrameArguments[0].pData = &decoder_internal->pic_params;
+		input.NumFrameArguments = 1;
+		input.pHeap = decoder_internal->decoder_heap.Get();
+
+#if 0
+		output.ConversionArguments.Enable = TRUE;
+		output.ConversionArguments.OutputColorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+		output.ConversionArguments.DecodeColorSpace = output.ConversionArguments.OutputColorSpace;
+		output.ConversionArguments.pReferenceTexture2D = internal_state->reference_frames.Get();
+		output.ConversionArguments.ReferenceSubresource = current_subresource;
+#endif
+
+		output.pOutputTexture2D = output_internal->resource.Get();
+		output.OutputSubresource = 0;
+
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetVideoDecodeCommandList()->DecodeFrame(
+			decoder_internal->decoder.Get(),
+			&output,
+			&input
 		);
 	}
 
