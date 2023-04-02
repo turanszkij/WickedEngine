@@ -14,3 +14,9 @@
 
 #include "WickedEngine.h"
 #include "Editor.h"
+
+// Linked externally from EmbeddedResources.cpp:
+extern const uint8_t font_awesome_v6[];
+extern const size_t font_awesome_v6_size;
+extern const uint8_t yumin[];
+extern const size_t yumin_size;
