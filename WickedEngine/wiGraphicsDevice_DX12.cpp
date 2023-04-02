@@ -13,10 +13,16 @@
 #include "Utility/dx12/d3dx12_pipeline_state_stream.h"
 #include "Utility/dx12/d3dx12_check_feature_support.h"
 #include "Utility/D3D12MemAlloc.h"
-#include <string>
+#include "Utility/h264.h"
 
+#include <string>
 #include <pix.h>
-#include <dxva.h>
+
+#ifdef PLATFORM_UWP
+#include "Utility/dxva_uwp.h" // DXVA_PicParams_H264
+#else
+#include <dxva.h> // DXVA_PicParams_H264
+#endif // PLATFORM_UWP
 
 #ifdef _DEBUG
 #include <dxgidebug.h>
@@ -4546,6 +4552,33 @@ using namespace dx12_internal;
 		hr = internal_state->reference_frames->SetName(L"VideoDecoder::reference_frames");
 		assert(SUCCEEDED(hr));
 
+
+		for (uint32_t i = 0; i < desc->sps_count; ++i)
+		{
+			const h264::sps_t* sps = (const h264::sps_t*)desc->sps_datas + i;
+			DXVA_PicParams_H264& pic_params = internal_state->pic_params;
+
+			pic_params.wFrameWidthInMbsMinus1 = sps->pic_width_in_mbs_minus1;
+			pic_params.wFrameHeightInMbsMinus1 = sps->pic_height_in_map_units_minus1;
+			pic_params.num_ref_frames = sps->num_ref_frames;
+			pic_params.field_pic_flag = 0;
+			pic_params.MbaffFrameFlag = sps->mb_adaptive_frame_field_flag;
+			pic_params.residual_colour_transform_flag = sps->residual_colour_transform_flag;
+			pic_params.sp_for_switch_flag = 0;
+			pic_params.chroma_format_idc = sps->chroma_format_idc;
+			pic_params.RefPicFlag = 0;
+			pic_params.constrained_intra_pred_flag = 0;
+			pic_params.weighted_pred_flag = 0;
+			pic_params.weighted_bipred_idc = 0;
+			pic_params.MbsConsecutiveFlag = 0;
+			pic_params.frame_mbs_only_flag = 0;
+			pic_params.transform_8x8_mode_flag = 0;
+			pic_params.MinLumaBipredSize8x8Flag = 0;
+			pic_params.IntraPicFlag = 0;
+			pic_params.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
+			pic_params.bit_depth_chroma_minus8 = sps->bit_depth_chroma_minus8;
+		}
+
 		return SUCCEEDED(hr);
 	}
 
@@ -6879,46 +6912,50 @@ using namespace dx12_internal;
 		D3D12_VIDEO_DECODE_OUTPUT_STREAM_ARGUMENTS output = {};
 		D3D12_VIDEO_DECODE_INPUT_STREAM_ARGUMENTS input = {};
 
-		//ID3D12Resource* reference_frames[16] = {};
-		//UINT reference_subresources[16] = {};
-		//for (size_t i = 0; i < internal_state->reference_frame_count; ++i)
-		//{
-		//	reference_frames[i] = internal_state->reference_frames.Get();
-		//	reference_subresources[i] = (UINT)i;
-		//}
-		//UINT current_subresource = 0;
+		ID3D12Resource* reference_frames[16] = {};
+		UINT reference_subresources[16] = {};
+		for (size_t i = 0; i < decoder_internal->reference_frame_count; ++i)
+		{
+			reference_frames[i] = decoder_internal->reference_frames.Get();
+			reference_subresources[i] = (UINT)i;
+		}
+		UINT current_subresource = 0;
 
-		//internal_state->locker.lock();
-		//for (size_t i = 0; i < internal_state->reference_frames_usage.size(); ++i)
-		//{
-		//	reference_frames[i] = internal_state->reference_frames.Get();
-		//	reference_subresources[i] = internal_state->reference_frames_usage[i];
-		//}
-		//internal_state->next_reference_frame = (internal_state->next_reference_frame + 1) % internal_state->reference_frame_count;
-		//UINT current_subresource = internal_state->next_reference_frame;
-		//internal_state->reference_frames_usage.push_back(internal_state->next_reference_frame);
-		//while (internal_state->reference_frames_usage.size() > 16)
-		//	internal_state->reference_frames_usage.pop_front();
-		//internal_state->locker.unlock();
+		decoder_internal->locker.lock();
+		for (size_t i = 0; i < decoder_internal->reference_frames_usage.size(); ++i)
+		{
+			reference_frames[i] = decoder_internal->reference_frames.Get();
+			reference_subresources[i] = decoder_internal->reference_frames_usage[i];
+		}
+		decoder_internal->next_reference_frame = (decoder_internal->next_reference_frame + 1) % decoder_internal->reference_frame_count;
+		current_subresource = decoder_internal->next_reference_frame;
+		decoder_internal->reference_frames_usage.push_back(decoder_internal->next_reference_frame);
+		while (decoder_internal->reference_frames_usage.size() > 16)
+			decoder_internal->reference_frames_usage.pop_front();
+		decoder_internal->locker.unlock();
 
 		input.CompressedBitstream.pBuffer = stream_internal->resource.Get();
 		input.CompressedBitstream.Offset = op->stream_offset;
 		input.CompressedBitstream.Size = op->stream_size;
-		//input.ReferenceFrames.NumTexture2Ds = (UINT)internal_state->reference_frames_usage.size();
-		//input.ReferenceFrames.ppTexture2Ds = reference_frames;
-		//input.ReferenceFrames.pSubresources = reference_subresources;
+		input.ReferenceFrames.NumTexture2Ds = (UINT)decoder_internal->reference_frames_usage.size();
+		input.ReferenceFrames.ppTexture2Ds = reference_frames;
+		input.ReferenceFrames.pSubresources = reference_subresources;
+
+		DXVA_PicParams_H264 pic_params = decoder_internal->pic_params; // copy
+		pic_params.CurrPic.Index7Bits = 4;
 		input.FrameArguments[0].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
 		input.FrameArguments[0].Size = sizeof(decoder_internal->pic_params);
 		input.FrameArguments[0].pData = &decoder_internal->pic_params;
 		input.NumFrameArguments = 1;
+
 		input.pHeap = decoder_internal->decoder_heap.Get();
 
-#if 0
+#if 1
 		output.ConversionArguments.Enable = TRUE;
-		output.ConversionArguments.OutputColorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
-		output.ConversionArguments.DecodeColorSpace = output.ConversionArguments.OutputColorSpace;
-		output.ConversionArguments.pReferenceTexture2D = internal_state->reference_frames.Get();
-		output.ConversionArguments.ReferenceSubresource = current_subresource;
+		output.ConversionArguments.DecodeColorSpace = DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709;
+		output.ConversionArguments.OutputColorSpace = DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709;
+		output.ConversionArguments.pReferenceTexture2D = decoder_internal->reference_frames.Get();
+		output.ConversionArguments.ReferenceSubresource = 0;
 #endif
 
 		output.pOutputTexture2D = output_internal->resource.Get();

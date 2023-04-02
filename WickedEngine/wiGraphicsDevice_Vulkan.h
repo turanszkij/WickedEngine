@@ -569,6 +569,7 @@ namespace wi::graphics
 			std::deque<std::pair<VkSurfaceKHR, uint64_t>> destroyer_surfaces;
 			std::deque<std::pair<VkSemaphore, uint64_t>> destroyer_semaphores;
 			std::deque<std::pair<VkVideoSessionKHR, uint64_t>> destroyer_video_sessions;
+			std::deque<std::pair<VkVideoSessionParametersKHR, uint64_t>> destroyer_video_session_parameters;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessSampledImages;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessUniformTexelBuffers;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageBuffers;
@@ -825,6 +826,19 @@ namespace wi::graphics
 						auto item = destroyer_video_sessions.front();
 						destroyer_video_sessions.pop_front();
 						vkDestroyVideoSessionKHR(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_video_session_parameters.empty())
+				{
+					if (destroyer_video_session_parameters.front().second + BUFFERCOUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_video_session_parameters.front();
+						destroyer_video_session_parameters.pop_front();
+						vkDestroyVideoSessionParametersKHR(device, item.first, nullptr);
 					}
 					else
 					{

@@ -49,10 +49,22 @@ namespace wi::video
 						const void* data = nullptr;
 						while (data = MP4D_read_sps(&mp4, ntrack, index, &size))
 						{
+							const uint8_t* sps_data = (const uint8_t*)data;
+							assert(sps_data[0] == 0x67); // verify SPS start code prefix
+							sps_data++;
+
 							h264::sps_t sps = {};
 							bs_t bs = {};
-							bs_init(&bs, (uint8_t*)data, size);
+							bs_init(&bs, (uint8_t*)sps_data, size);
 							h264::read_seq_parameter_set_rbsp(&sps, &bs);
+
+							// Some validation checks that data parsing returned expected values:
+							//	https://stackoverflow.com/questions/6394874/fetching-the-dimensions-of-a-h264video-stream
+							uint32_t width = ((sps.pic_width_in_mbs_minus1 + 1) * 16) - sps.frame_crop_left_offset * 2 - sps.frame_crop_right_offset * 2;
+							uint32_t height = ((2 - sps.frame_mbs_only_flag) * (sps.pic_height_in_map_units_minus1 + 1) * 16) - (sps.frame_crop_top_offset * 2) - (sps.frame_crop_bottom_offset * 2);
+							assert(track.SampleDescription.video.width == width);
+							assert(track.SampleDescription.video.height == height);
+
 							video->sps_datas.resize(video->sps_datas.size() + sizeof(sps));
 							std::memcpy((h264::sps_t*)video->sps_datas.data() + video->sps_count, &sps, sizeof(sps));
 							video->sps_count++;
@@ -69,9 +81,13 @@ namespace wi::video
 						const void* data = nullptr;
 						while (data = MP4D_read_pps(&mp4, ntrack, index, &size))
 						{
+							const uint8_t* pps_data = (const uint8_t*)data;
+							assert(pps_data[0] == 0x68); // verify PPS start code prefix
+							pps_data++;
+
 							h264::pps_t pps = {};
 							bs_t bs = {};
-							bs_init(&bs, (uint8_t*)data, size);
+							bs_init(&bs, (uint8_t*)pps_data, size);
 							h264::read_pic_parameter_set_rbsp(&pps, &bs);
 							video->pps_datas.resize(video->pps_datas.size() + sizeof(pps));
 							std::memcpy((h264::pps_t*)video->pps_datas.data() + video->pps_count, &pps, sizeof(pps));
