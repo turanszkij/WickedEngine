@@ -5,9 +5,6 @@
 #include "ModelImporter.h"
 #include "Translator.h"
 
-#include "FontAwesomeV6.h" // font TTF data
-#include "yumin.h" // yumin.ttf font
-
 using namespace wi::graphics;
 using namespace wi::primitive;
 using namespace wi::scene;
@@ -608,10 +605,10 @@ void EditorComponent::Start()
 	//	We will not directly use this font style, but let the font renderer fall back on it
 	//	when an icon character is not found in the default font.
 	//	This is added on main thread, not inside Load(), to avoid conflict with font system intialization
-	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, sizeof(font_awesome_v6));
+	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, font_awesome_v6_size);
 
 	// Same thing with the yumin font as above, it is a fallback for asian characters
-	wi::font::AddFontStyle("yumin", yumin, sizeof(yumin));
+	wi::font::AddFontStyle("yumin", yumin, yumin_size);
 
 	RenderPath2D::Start();
 }
