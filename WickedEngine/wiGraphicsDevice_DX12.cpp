@@ -4524,35 +4524,6 @@ using namespace dx12_internal;
 		hr = video_device->CreateVideoDecoder(&decoder_desc, IID_PPV_ARGS(&internal_state->decoder));
 		assert(SUCCEEDED(hr));
 
-		D3D12MA::ALLOCATION_DESC allocationDesc = {};
-		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-
-		D3D12_RESOURCE_DESC resourcedesc = {};
-		resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		resourcedesc.Format = _ConvertFormat(desc->format);
-		resourcedesc.Width = desc->width;
-		resourcedesc.Height = desc->height;
-		resourcedesc.MipLevels = 1;
-		resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-		resourcedesc.DepthOrArraySize = (UINT16)internal_state->reference_frame_count;
-		resourcedesc.SampleDesc.Count = 1;
-		resourcedesc.SampleDesc.Quality = 0;
-		resourcedesc.Alignment = 0;
-		resourcedesc.Flags = D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE | D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY;
-
-		hr = allocationhandler->allocator->CreateResource(
-			&allocationDesc,
-			&resourcedesc,
-			D3D12_RESOURCE_STATE_COMMON,
-			nullptr,
-			&internal_state->reference_frame_allocation,
-			IID_PPV_ARGS(&internal_state->reference_frames)
-		);
-		assert(SUCCEEDED(hr));
-		hr = internal_state->reference_frames->SetName(L"VideoDecoder::reference_frames");
-		assert(SUCCEEDED(hr));
-
-
 		for (uint32_t i = 0; i < desc->sps_count; ++i)
 		{
 			const h264::sps_t* sps = (const h264::sps_t*)desc->sps_datas + i;
@@ -4567,17 +4538,78 @@ using namespace dx12_internal;
 			pic_params.sp_for_switch_flag = 0;
 			pic_params.chroma_format_idc = sps->chroma_format_idc;
 			pic_params.RefPicFlag = 0;
-			pic_params.constrained_intra_pred_flag = 0;
-			pic_params.weighted_pred_flag = 0;
-			pic_params.weighted_bipred_idc = 0;
 			pic_params.MbsConsecutiveFlag = 0;
-			pic_params.frame_mbs_only_flag = 0;
-			pic_params.transform_8x8_mode_flag = 0;
+			pic_params.frame_mbs_only_flag = sps->frame_mbs_only_flag;
 			pic_params.MinLumaBipredSize8x8Flag = 0;
 			pic_params.IntraPicFlag = 0;
 			pic_params.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
 			pic_params.bit_depth_chroma_minus8 = sps->bit_depth_chroma_minus8;
+
+			internal_state->reference_frame_count = (UINT)sps->num_ref_frames;
 		}
+
+		for (uint32_t i = 0; i < desc->pps_count; ++i)
+		{
+			const h264::pps_t* pps = (const h264::pps_t*)desc->pps_datas + i;
+			DXVA_PicParams_H264& pic_params = internal_state->pic_params;
+
+			pic_params.transform_8x8_mode_flag = pps->transform_8x8_mode_flag;
+			pic_params.constrained_intra_pred_flag = pps->constrained_intra_pred_flag;
+			pic_params.weighted_pred_flag = pps->weighted_pred_flag;
+			pic_params.weighted_bipred_idc = pps->weighted_bipred_idc;
+		}
+
+		D3D12MA::ALLOCATION_DESC allocationDesc = {};
+		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+		D3D12_RESOURCE_DESC resourcedesc = {};
+		resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		resourcedesc.Format = _ConvertFormat(desc->format);
+		resourcedesc.Width = desc->width;
+		resourcedesc.Height = desc->height;
+		resourcedesc.MipLevels = 1;
+		resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		resourcedesc.DepthOrArraySize = (UINT16)internal_state->reference_frame_count;
+		resourcedesc.SampleDesc.Count = 1;
+		resourcedesc.SampleDesc.Quality = 0;
+		resourcedesc.Alignment = 0;
+		//resourcedesc.Flags = D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE | D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY;
+
+		hr = allocationhandler->allocator->CreateResource(
+			&allocationDesc,
+			&resourcedesc,
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			&internal_state->reference_frame_allocation,
+			IID_PPV_ARGS(&internal_state->reference_frames)
+		);
+		assert(SUCCEEDED(hr));
+		hr = internal_state->reference_frames->SetName(L"VideoDecoder::reference_frames");
+		assert(SUCCEEDED(hr));
+
+#if 1
+		UINT64 total_size = 0;
+		wi::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints(resourcedesc.DepthOrArraySize * resourcedesc.MipLevels);
+		wi::vector<UINT64> rowSizesInBytes(footprints.size());
+		wi::vector<UINT> numRows(footprints.size());
+		device->GetCopyableFootprints(
+			&resourcedesc,
+			0,
+			(UINT)footprints.size(),
+			0,
+			footprints.data(),
+			numRows.data(),
+			rowSizesInBytes.data(),
+			&total_size
+		);
+		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(total_size);
+		for (size_t i = 0; i < cmd.uploadbuffer.mapped_size; ++i)
+		{
+			uint8_t v = uint8_t(i ^ 4534346);
+			std::memcpy((uint8_t*)cmd.uploadbuffer.mapped_data + i, &v, sizeof(v));
+		}
+		copyAllocator.submit(cmd);
+#endif
 
 		return SUCCEEDED(hr);
 	}
@@ -6921,18 +6953,18 @@ using namespace dx12_internal;
 		}
 		UINT current_subresource = 0;
 
-		decoder_internal->locker.lock();
-		for (size_t i = 0; i < decoder_internal->reference_frames_usage.size(); ++i)
-		{
-			reference_frames[i] = decoder_internal->reference_frames.Get();
-			reference_subresources[i] = decoder_internal->reference_frames_usage[i];
-		}
-		decoder_internal->next_reference_frame = (decoder_internal->next_reference_frame + 1) % decoder_internal->reference_frame_count;
-		current_subresource = decoder_internal->next_reference_frame;
-		decoder_internal->reference_frames_usage.push_back(decoder_internal->next_reference_frame);
-		while (decoder_internal->reference_frames_usage.size() > 16)
-			decoder_internal->reference_frames_usage.pop_front();
-		decoder_internal->locker.unlock();
+		//decoder_internal->locker.lock();
+		//for (size_t i = 0; i < decoder_internal->reference_frames_usage.size(); ++i)
+		//{
+		//	reference_frames[i] = decoder_internal->reference_frames.Get();
+		//	reference_subresources[i] = decoder_internal->reference_frames_usage[i];
+		//}
+		//decoder_internal->next_reference_frame = (decoder_internal->next_reference_frame + 1) % decoder_internal->reference_frame_count;
+		//current_subresource = decoder_internal->next_reference_frame;
+		//decoder_internal->reference_frames_usage.push_back(decoder_internal->next_reference_frame);
+		//while (decoder_internal->reference_frames_usage.size() > decoder_internal->reference_frame_count)
+		//	decoder_internal->reference_frames_usage.pop_front();
+		//decoder_internal->locker.unlock();
 
 		input.CompressedBitstream.pBuffer = stream_internal->resource.Get();
 		input.CompressedBitstream.Offset = op->stream_offset;
@@ -6942,10 +6974,10 @@ using namespace dx12_internal;
 		input.ReferenceFrames.pSubresources = reference_subresources;
 
 		DXVA_PicParams_H264 pic_params = decoder_internal->pic_params; // copy
-		pic_params.CurrPic.Index7Bits = 4;
+		//pic_params.CurrPic.Index7Bits = 4;
 		input.FrameArguments[0].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
-		input.FrameArguments[0].Size = sizeof(decoder_internal->pic_params);
-		input.FrameArguments[0].pData = &decoder_internal->pic_params;
+		input.FrameArguments[0].Size = sizeof(pic_params);
+		input.FrameArguments[0].pData = &pic_params;
 		input.NumFrameArguments = 1;
 
 		input.pHeap = decoder_internal->decoder_heap.Get();
@@ -6955,7 +6987,7 @@ using namespace dx12_internal;
 		output.ConversionArguments.DecodeColorSpace = DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709;
 		output.ConversionArguments.OutputColorSpace = DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709;
 		output.ConversionArguments.pReferenceTexture2D = decoder_internal->reference_frames.Get();
-		output.ConversionArguments.ReferenceSubresource = 0;
+		output.ConversionArguments.ReferenceSubresource = current_subresource;
 #endif
 
 		output.pOutputTexture2D = output_internal->resource.Get();

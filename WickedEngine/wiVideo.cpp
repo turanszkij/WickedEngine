@@ -219,7 +219,6 @@ namespace wi::video
 		instance->time_until_next_frame -= dt;
 		//if (instance->time_until_next_frame > 0)
 		//	return;
-		instance->current_frame++;
 		if (instance->current_frame >= (int)instance->video->frames_infos.size() - 1)
 		{
 			if (has_flag(instance->flags, VideoInstance::Flags::Looped))
@@ -242,6 +241,9 @@ namespace wi::video
 		decode_operation.stream_offset = frame_info.offset;
 		decode_operation.stream_size = frame_info.size;
 		decode_operation.output = &instance->output;
+		decode_operation.frame_index = instance->current_frame;
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
+
+		instance->current_frame++;
 	}
 }

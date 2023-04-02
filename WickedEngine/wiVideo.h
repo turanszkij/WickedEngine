@@ -38,7 +38,7 @@ namespace wi::video
 		wi::graphics::VideoDecoder decoder;
 		wi::graphics::Texture output;
 		int output_subresource_chroma = -1;
-		int current_frame = -1;
+		uint64_t current_frame = 0;
 		float time_until_next_frame = 0;
 		enum class State
 		{

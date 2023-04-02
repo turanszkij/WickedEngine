@@ -5843,7 +5843,7 @@ using namespace vulkan_internal;
 			vk_pps.second_chroma_qp_index_offset = pps->second_chroma_qp_index_offset;
 		}
 
-		int num_reference_frames = 0;
+		uint32_t num_reference_frames = 0;
 		internal_state->sps_array_h264.resize(desc->sps_count);
 		internal_state->vui_array_h264.resize(desc->sps_count);
 		for (uint32_t i = 0; i < desc->sps_count; ++i)
@@ -5922,7 +5922,7 @@ using namespace vulkan_internal;
 			vk_sps.frame_crop_bottom_offset = sps->frame_crop_bottom_offset;
 			vk_sps.pOffsetForRefFrame = sps->offset_for_ref_frame;
 
-			num_reference_frames = std::max(num_reference_frames, sps->num_ref_frames);
+			num_reference_frames = std::max(num_reference_frames, (uint32_t)sps->num_ref_frames);
 		}
 
 		internal_state->session_parameters_add_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR;
@@ -5991,6 +5991,16 @@ using namespace vulkan_internal;
 		allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 		res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
+
+#if 1
+		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
+		for (size_t i = 0; i < cmd.uploadbuffer.mapped_size; ++i)
+		{
+			uint8_t v = uint8_t(i ^ 4534346);
+			std::memcpy((uint8_t*)cmd.uploadbuffer.mapped_data + i, &v, sizeof(v));
+		}
+		copyAllocator.submit(cmd);
+#endif
 
 		VkImageViewCreateInfo view_desc = {};
 		view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
