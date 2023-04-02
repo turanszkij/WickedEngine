@@ -97,6 +97,8 @@ namespace wi::image
 		QUALITY quality = QUALITY_LINEAR;
 
 		const wi::graphics::Texture* maskMap = nullptr;
+		int image_subresource = -1;
+		int mask_subresource = -1;
 
 		// Set a mask map that will be used to multiply the base image
 		constexpr void setMaskMap(const wi::graphics::Texture* tex) { maskMap = tex; }

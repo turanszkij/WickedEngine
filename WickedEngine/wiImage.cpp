@@ -75,8 +75,8 @@ namespace wi::image
 		ImageConstants image = {};
 		image.buffer_index = -1;
 		image.buffer_offset = 0;
-		image.texture_base_index = device->GetDescriptorIndex(texture, SubresourceType::SRV);
-		image.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SubresourceType::SRV);
+		image.texture_base_index = device->GetDescriptorIndex(texture, SubresourceType::SRV, params.image_subresource);
+		image.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SubresourceType::SRV, params.mask_subresource);
 		if (params.isBackgroundEnabled())
 		{
 			image.texture_background_index = device->GetDescriptorIndex(&backgroundTexture, SubresourceType::SRV);

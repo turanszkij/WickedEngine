@@ -925,6 +925,9 @@ namespace vulkan_internal
 		VkVideoDecodeH264SessionParametersAddInfoKHR session_parameters_add_info_h264 = {};
 		wi::vector<VkVideoReferenceSlotInfoKHR> reference_slots;
 		wi::vector<VkVideoPictureResourceInfoKHR> reference_slot_pictures;
+		VkImage resource = VK_NULL_HANDLE;
+		VkImageView resource_view = VK_NULL_HANDLE;
+		VmaAllocation allocation = nullptr;
 
 		~VideoDecoder_Vulkan()
 		{
@@ -934,6 +937,8 @@ namespace vulkan_internal
 			uint64_t framecount = allocationhandler->framecount;
 			allocationhandler->destroyer_video_sessions.push_back(std::make_pair(video_session, framecount));
 			allocationhandler->destroyer_video_session_parameters.push_back(std::make_pair(session_parameters, framecount));
+			allocationhandler->destroyer_imageviews.push_back(std::make_pair(resource_view, framecount));
+			allocationhandler->destroyer_images.push_back(std::make_pair(std::make_pair(resource, allocation), framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -5939,9 +5944,87 @@ using namespace vulkan_internal;
 		res = vkCreateVideoSessionParametersKHR(device, &session_parameters_info, nullptr, &internal_state->session_parameters);
 		assert(res == VK_SUCCESS);
 
+
+		VkImageCreateInfo imageInfo = {};
+		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageInfo.imageType = VK_IMAGE_TYPE_2D;
+		imageInfo.extent.width = desc->width;
+		imageInfo.extent.height = desc->height;
+		imageInfo.extent.depth = 1;
+		imageInfo.format = info.pictureFormat;
+		imageInfo.arrayLayers = num_reference_frames;
+		imageInfo.mipLevels = 1;
+		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+
+		VkVideoProfileListInfoKHR profile_list_info = {};
+		profile_list_info.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR;
+		profile_list_info.pProfiles = &video_capability_h264.profile;
+		profile_list_info.profileCount = 1;
+		if (imageInfo.usage & VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR)
+		{
+			imageInfo.pNext = &profile_list_info;
+
+			VkPhysicalDeviceVideoFormatInfoKHR video_format_info = {};
+			video_format_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_FORMAT_INFO_KHR;
+			video_format_info.imageUsage = VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+			video_format_info.pNext = &profile_list_info;
+			uint32_t format_property_count = 0;
+			VkResult res = vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, nullptr);
+			assert(res == VK_SUCCESS);
+
+			wi::vector<VkVideoFormatPropertiesKHR> video_format_properties(format_property_count);
+			for (auto& x : video_format_properties)
+			{
+				x.sType = VK_STRUCTURE_TYPE_VIDEO_FORMAT_PROPERTIES_KHR;
+			}
+			res = vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, video_format_properties.data());
+			assert(res == VK_SUCCESS);
+
+			assert(imageInfo.flags == 0 || (!video_format_properties.empty() && video_format_properties[0].imageCreateFlags & imageInfo.flags));
+			assert(!video_format_properties.empty() && video_format_properties[0].imageUsageFlags & imageInfo.usage);
+		}
+
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+		res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+		assert(res == VK_SUCCESS);
+
+		VkImageViewCreateInfo view_desc = {};
+		view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+		view_desc.flags = 0;
+		view_desc.image = internal_state->resource;
+		view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		view_desc.subresourceRange.baseArrayLayer = 0;
+		view_desc.subresourceRange.layerCount = imageInfo.arrayLayers;
+		view_desc.subresourceRange.baseMipLevel = 0;
+		view_desc.subresourceRange.levelCount = 1;
+		view_desc.format = imageInfo.format;
+		res = vkCreateImageView(device, &view_desc, nullptr, &internal_state->resource_view);
+		assert(res == VK_SUCCESS);
+
 		internal_state->reference_slots.resize(num_reference_frames);
 		internal_state->reference_slot_pictures.resize(num_reference_frames);
-		// TODO
+		for (uint32_t i = 0; i < num_reference_frames; ++i)
+		{
+			VkVideoReferenceSlotInfoKHR& slot = internal_state->reference_slots[i];
+			VkVideoPictureResourceInfoKHR& pic = internal_state->reference_slot_pictures[i];
+
+			slot.sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR;
+			slot.pPictureResource = &pic;
+			slot.slotIndex = i;
+
+			pic.sType = VK_STRUCTURE_TYPE_VIDEO_PICTURE_RESOURCE_INFO_KHR;
+			pic.codedOffset.x = 0;
+			pic.codedOffset.y = 0;
+			pic.codedExtent.width = desc->width;
+			pic.codedExtent.width = desc->height;
+			pic.baseArrayLayer = i;
+			pic.imageViewBinding = internal_state->resource_view;
+		}
 
 		return true;
 	}
