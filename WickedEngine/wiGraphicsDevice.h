@@ -94,8 +94,8 @@ namespace wi::graphics
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const {}
 
 		// Set a debug name which will be visible in graphics debuggers
-		virtual void SetName(GPUResource* pResource, const char* name) {}
-		virtual void SetName(Shader* shader, const char* name) {}
+		virtual void SetName(GPUResource* pResource, const char* name) const {}
+		virtual void SetName(Shader* shader, const char* name) const {}
 
 		// Begin a new command list for GPU command recording.
 		//	This will be valid until SubmitCommandLists() is called.

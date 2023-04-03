@@ -152,6 +152,7 @@ namespace wi::video
 					wi::graphics::GPUBufferDesc bd;
 					bd.size = aligned_size;
 					bd.usage = wi::graphics::Usage::DEFAULT;
+					bd.misc_flags = wi::graphics::ResourceMiscFlag::VIDEO_DECODE_SRC;
 					success = device->CreateBuffer2(&bd, copy_video_track, &video->data_stream);
 					assert(success);
 					device->SetName(&video->data_stream, "wi::Video::data_stream");
@@ -192,6 +193,7 @@ namespace wi::video
 		td.mip_levels = 1;
 		td.format = vd.format;
 		td.bind_flags = wi::graphics::BindFlag::SHADER_RESOURCE;
+		td.misc_flags = wi::graphics::ResourceMiscFlag::VIDEO_DECODE_DST;
 		success = device->CreateTexture(&td, nullptr, &instance->output);
 		assert(success);
 		device->SetName(&instance->output, "wi::VideoInstance::output");

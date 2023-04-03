@@ -657,6 +657,8 @@ namespace vulkan_internal
 		wi::vector<SubresourceData> mapped_subresources;
 		SparseTextureProperties sparse_texture_properties;
 
+		VkImageView video_decode_view = VK_NULL_HANDLE;
+
 		~Texture_Vulkan()
 		{
 			if (allocationhandler == nullptr)
@@ -710,6 +712,10 @@ namespace vulkan_internal
 			for (auto x : subresources_dsv)
 			{
 				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
+			}
+			if (video_decode_view != VK_NULL_HANDLE)
+			{
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(video_decode_view, framecount));
 			}
 			allocationhandler->destroylocker.unlock();
 		}
@@ -930,9 +936,7 @@ namespace vulkan_internal
 		wi::vector<VkVideoPictureResourceInfoKHR> reference_slot_pictures;
 		wi::vector<VkVideoDecodeH264DpbSlotInfoKHR> dpb_slots_h264;
 		wi::vector<StdVideoDecodeH264ReferenceInfo> reference_infos_h264;
-		VkImage resource = VK_NULL_HANDLE;
-		VkImageView resource_view = VK_NULL_HANDLE;
-		VmaAllocation allocation = nullptr;
+		Texture DPB;
 
 		~VideoDecoder_Vulkan()
 		{
@@ -942,8 +946,6 @@ namespace vulkan_internal
 			uint64_t framecount = allocationhandler->framecount;
 			allocationhandler->destroyer_video_sessions.push_back(std::make_pair(video_session, framecount));
 			allocationhandler->destroyer_video_session_parameters.push_back(std::make_pair(session_parameters, framecount));
-			allocationhandler->destroyer_imageviews.push_back(std::make_pair(resource_view, framecount));
-			allocationhandler->destroyer_images.push_back(std::make_pair(std::make_pair(resource, allocation), framecount));
 			for (auto& x : allocations)
 			{
 				allocationhandler->destroyer_allocations.push_back(std::make_pair(x, framecount));
@@ -3584,8 +3586,27 @@ using namespace vulkan_internal;
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 		}
+		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_SRC))
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
+		}
+		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DST))
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+		}
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+		VkVideoProfileListInfoKHR profile_list_info = {};
+		profile_list_info.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR;
+		profile_list_info.pProfiles = &video_capability_h264.profile;
+		profile_list_info.profileCount = 1;
+		if ((bufferInfo.usage & VK_BUFFER_USAGE_VIDEO_DECODE_DST_BIT_KHR) ||
+			(bufferInfo.usage & VK_BUFFER_USAGE_VIDEO_DECODE_SRC_BIT_KHR)
+			)
+		{
+			bufferInfo.pNext = &profile_list_info;
+		}
 
 		bufferInfo.flags = 0;
 
@@ -3861,39 +3882,53 @@ using namespace vulkan_internal;
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 		}
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_SRC))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
+		}
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DST))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+		}
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR;
+		}
+
+		if (desc->format == Format::NV12)
+		{
+			//imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+		}
 
 		VkVideoProfileListInfoKHR profile_list_info = {};
 		profile_list_info.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR;
 		profile_list_info.pProfiles = &video_capability_h264.profile;
 		profile_list_info.profileCount = 1;
-		if (desc->format == Format::NV12)
+		if ((imageInfo.usage & VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR) ||
+			(imageInfo.usage & VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR) ||
+			(imageInfo.usage & VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR)
+			)
 		{
-			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
-			//imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+			imageInfo.pNext = &profile_list_info;
 
-			if (imageInfo.usage & VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR)
+			VkPhysicalDeviceVideoFormatInfoKHR video_format_info = {};
+			video_format_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_FORMAT_INFO_KHR;
+			video_format_info.imageUsage = imageInfo.usage;
+			video_format_info.pNext = &profile_list_info;
+			uint32_t format_property_count = 0;
+			VkResult res = vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, nullptr);
+			assert(res == VK_SUCCESS);
+
+			wi::vector<VkVideoFormatPropertiesKHR> video_format_properties(format_property_count);
+			for (auto& x : video_format_properties)
 			{
-				imageInfo.pNext = &profile_list_info;
-
-				VkPhysicalDeviceVideoFormatInfoKHR video_format_info = {};
-				video_format_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_FORMAT_INFO_KHR;
-				video_format_info.imageUsage = VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
-				video_format_info.pNext = &profile_list_info;
-				uint32_t format_property_count = 0;
-				VkResult res = vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, nullptr);
-				assert(res == VK_SUCCESS);
-
-				wi::vector<VkVideoFormatPropertiesKHR> video_format_properties(format_property_count);
-				for (auto& x : video_format_properties)
-				{
-					x.sType = VK_STRUCTURE_TYPE_VIDEO_FORMAT_PROPERTIES_KHR;
-				}
-				res = vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, video_format_properties.data());
-				assert(res == VK_SUCCESS);
-
-				assert(imageInfo.flags == 0 || (!video_format_properties.empty() && video_format_properties[0].imageCreateFlags & imageInfo.flags));
-				assert(!video_format_properties.empty() && video_format_properties[0].imageUsageFlags & imageInfo.usage);
+				x.sType = VK_STRUCTURE_TYPE_VIDEO_FORMAT_PROPERTIES_KHR;
 			}
+			res = vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, video_format_properties.data());
+			assert(res == VK_SUCCESS);
+
+			assert(imageInfo.flags == 0 || (!video_format_properties.empty() && video_format_properties[0].imageCreateFlags & imageInfo.flags));
+			assert(!video_format_properties.empty() && video_format_properties[0].imageUsageFlags & imageInfo.usage);
 		}
 
 		if (families.size() > 1)
@@ -4221,7 +4256,7 @@ using namespace vulkan_internal;
 				copyAllocator.submit(cmd);
 			}
 		}
-		else
+		else if(texture->desc.layout != ResourceState::UNDEFINED)
 		{
 			VkImageMemoryBarrier barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -4262,99 +4297,6 @@ using namespace vulkan_internal;
 			copyAllocator.submit(cmd);
 		}
 
-#if 1
-		if (desc->format == Format::NV12)
-		{
-			CopyAllocator::CopyCMD cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
-			for (size_t i = 0; i < cmd.uploadbuffer.mapped_size; ++i)
-			{
-				uint8_t v = uint8_t(wi::random::GetRandom(0, 255));
-				std::memcpy((uint8_t*)cmd.uploadbuffer.mapped_data + i, &v, sizeof(v));
-			}
-
-			VkImageMemoryBarrier barrier = {};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.image = internal_state->resource;
-			barrier.oldLayout = imageInfo.initialLayout;
-			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = imageInfo.arrayLayers;
-			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = imageInfo.mipLevels;
-			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-			vkCmdPipelineBarrier(
-				cmd.transferCommandBuffer,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
-
-			VkBufferImageCopy copyRegion = {};
-			copyRegion.bufferOffset = 0;
-			copyRegion.bufferRowLength = 0;
-			copyRegion.bufferImageHeight = 0;
-
-			copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT;
-			copyRegion.imageSubresource.mipLevel = 0;
-			copyRegion.imageSubresource.baseArrayLayer = 0;
-			copyRegion.imageSubresource.layerCount = 1;
-
-			copyRegion.imageOffset = { 0, 0, 0 };
-			copyRegion.imageExtent = {
-				desc->width,
-				desc->height,
-				1
-			};
-
-			vkCmdCopyBufferToImage(
-				cmd.transferCommandBuffer,
-				to_internal(&cmd.uploadbuffer)->resource,
-				internal_state->resource,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1,
-				&copyRegion
-			);
-
-			copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT;
-			copyRegion.imageExtent.width /= 2;
-			copyRegion.imageExtent.height /= 2;
-			vkCmdCopyBufferToImage(
-				cmd.transferCommandBuffer,
-				to_internal(&cmd.uploadbuffer)->resource,
-				internal_state->resource,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1,
-				&copyRegion
-			);
-
-
-			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			barrier.newLayout = _ConvertImageLayout(texture->desc.layout);
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = _ParseResourceState(texture->desc.layout);
-
-			vkCmdPipelineBarrier(
-				cmd.transitionCommandBuffer,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
-
-			copyAllocator.submit(cmd);
-		}
-#endif
-
 		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
 			CreateSubresource(texture, SubresourceType::RTV, 0, -1, 0, -1);
@@ -4370,6 +4312,44 @@ using namespace vulkan_internal;
 		if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			CreateSubresource(texture, SubresourceType::UAV, 0, -1, 0, -1);
+		}
+
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DST) ||
+			has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_SRC) ||
+			has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB)
+			)
+		{
+			VkImageViewCreateInfo view_desc = {};
+			view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			view_desc.flags = 0;
+			view_desc.image = internal_state->resource;
+			view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			view_desc.subresourceRange.baseArrayLayer = 0;
+			view_desc.subresourceRange.layerCount = imageInfo.arrayLayers;
+			view_desc.subresourceRange.baseMipLevel = 0;
+			view_desc.subresourceRange.levelCount = imageInfo.mipLevels;
+			view_desc.format = imageInfo.format;
+			view_desc.viewType = imageInfo.arrayLayers > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D;
+
+			VkImageViewUsageCreateInfo viewUsageInfo = {};
+			viewUsageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO;
+			viewUsageInfo.usage = 0;
+			if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_SRC))
+			{
+				viewUsageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
+			}
+			if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DST))
+			{
+				viewUsageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+			}
+			if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB))
+			{
+				viewUsageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR;
+			}
+			view_desc.pNext = &viewUsageInfo;
+
+			res = vkCreateImageView(device, &view_desc, nullptr, &internal_state->video_decode_view);
+			assert(res == VK_SUCCESS);
 		}
 
 		return res == VK_SUCCESS;
@@ -6074,160 +6054,17 @@ using namespace vulkan_internal;
 		res = vkCreateVideoSessionParametersKHR(device, &session_parameters_info, nullptr, &internal_state->session_parameters);
 		assert(res == VK_SUCCESS);
 
-
-		VkImageCreateInfo imageInfo = {};
-		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		imageInfo.imageType = VK_IMAGE_TYPE_2D;
-		imageInfo.extent.width = desc->width;
-		imageInfo.extent.height = desc->height;
-		imageInfo.extent.depth = 1;
-		imageInfo.format = info.pictureFormat;
-		imageInfo.arrayLayers = num_reference_frames;
-		imageInfo.mipLevels = 1;
-		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-		imageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
-
-		VkVideoProfileListInfoKHR profile_list_info = {};
-		profile_list_info.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR;
-		profile_list_info.pProfiles = &video_capability_h264.profile;
-		profile_list_info.profileCount = 1;
-		if (imageInfo.usage & VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR)
-		{
-			imageInfo.pNext = &profile_list_info;
-
-			VkPhysicalDeviceVideoFormatInfoKHR video_format_info = {};
-			video_format_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_FORMAT_INFO_KHR;
-			video_format_info.imageUsage = VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
-			video_format_info.pNext = &profile_list_info;
-			uint32_t format_property_count = 0;
-			VkResult res = vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, nullptr);
-			assert(res == VK_SUCCESS);
-
-			wi::vector<VkVideoFormatPropertiesKHR> video_format_properties(format_property_count);
-			for (auto& x : video_format_properties)
-			{
-				x.sType = VK_STRUCTURE_TYPE_VIDEO_FORMAT_PROPERTIES_KHR;
-			}
-			res = vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, video_format_properties.data());
-			assert(res == VK_SUCCESS);
-
-			assert(imageInfo.flags == 0 || (!video_format_properties.empty() && video_format_properties[0].imageCreateFlags & imageInfo.flags));
-			assert(!video_format_properties.empty() && video_format_properties[0].imageUsageFlags & imageInfo.usage);
-		}
-
-		VmaAllocationCreateInfo allocInfo = {};
-		allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-		res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
-		assert(res == VK_SUCCESS);
-
-#if 1
-		if (desc->format == Format::NV12)
-		{
-			CopyAllocator::CopyCMD cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
-			for (size_t i = 0; i < cmd.uploadbuffer.mapped_size; ++i)
-			{
-				uint8_t v = uint8_t(wi::random::GetRandom(0, 255));
-				std::memcpy((uint8_t*)cmd.uploadbuffer.mapped_data + i, &v, sizeof(v));
-			}
-
-			VkImageMemoryBarrier barrier = {};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.image = internal_state->resource;
-			barrier.oldLayout = imageInfo.initialLayout;
-			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = imageInfo.arrayLayers;
-			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = imageInfo.mipLevels;
-			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-			vkCmdPipelineBarrier(
-				cmd.transferCommandBuffer,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
-
-			VkBufferImageCopy copyRegion = {};
-			copyRegion.bufferOffset = 0;
-			copyRegion.bufferRowLength = 0;
-			copyRegion.bufferImageHeight = 0;
-
-			copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT;
-			copyRegion.imageSubresource.mipLevel = 0;
-			copyRegion.imageSubresource.baseArrayLayer = 0;
-			copyRegion.imageSubresource.layerCount = 1;
-
-			copyRegion.imageOffset = { 0, 0, 0 };
-			copyRegion.imageExtent = {
-				desc->width,
-				desc->height,
-				1
-			};
-
-			vkCmdCopyBufferToImage(
-				cmd.transferCommandBuffer,
-				to_internal(&cmd.uploadbuffer)->resource,
-				internal_state->resource,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1,
-				&copyRegion
-			);
-
-			copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT;
-			copyRegion.imageExtent.width /= 2;
-			copyRegion.imageExtent.height /= 2;
-			vkCmdCopyBufferToImage(
-				cmd.transferCommandBuffer,
-				to_internal(&cmd.uploadbuffer)->resource,
-				internal_state->resource,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1,
-				&copyRegion
-			);
-
-
-			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-
-			vkCmdPipelineBarrier(
-				cmd.transitionCommandBuffer,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
-
-			copyAllocator.submit(cmd);
-		}
-#endif
-
-		VkImageViewCreateInfo view_desc = {};
-		view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-		view_desc.flags = 0;
-		view_desc.image = internal_state->resource;
-		view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		view_desc.subresourceRange.baseArrayLayer = 0;
-		view_desc.subresourceRange.layerCount = imageInfo.arrayLayers;
-		view_desc.subresourceRange.baseMipLevel = 0;
-		view_desc.subresourceRange.levelCount = 1;
-		view_desc.format = imageInfo.format;
-		res = vkCreateImageView(device, &view_desc, nullptr, &internal_state->resource_view);
-		assert(res == VK_SUCCESS);
+		TextureDesc td;
+		td.width = desc->width;
+		td.height = desc->height;
+		td.format = desc->format;
+		td.array_size = num_reference_frames;
+		td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_DPB | ResourceMiscFlag::VIDEO_DECODE_DST;
+		td.layout = ResourceState::UNDEFINED;
+		bool dpb_success = CreateTexture(&td, nullptr, &internal_state->DPB);
+		assert(dpb_success);
+		SetName(&internal_state->DPB, "VideoDecoder::DPB");
+		auto dpb_internal = to_internal(&internal_state->DPB);
 
 		internal_state->reference_slots.resize(num_reference_frames);
 		internal_state->reference_slot_pictures.resize(num_reference_frames);
@@ -6251,7 +6088,7 @@ using namespace vulkan_internal;
 			pic.codedExtent.width = desc->width;
 			pic.codedExtent.height = desc->height;
 			pic.baseArrayLayer = i;
-			pic.imageViewBinding = internal_state->resource_view;
+			pic.imageViewBinding = dpb_internal->video_decode_view;
 
 			dpb.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_DPB_SLOT_INFO_KHR;
 			dpb.pStdReferenceInfo = &ref;
@@ -6779,7 +6616,7 @@ using namespace vulkan_internal;
 		assert(res == VK_SUCCESS);
 	}
 	
-	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name)
+	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name) const
 	{
 		if (!debugUtils || pResource == nullptr || !pResource->IsValid())
 			return;
@@ -6808,7 +6645,7 @@ using namespace vulkan_internal;
 		VkResult res = vkSetDebugUtilsObjectNameEXT(device, &info);
 		assert(res == VK_SUCCESS);
 	}
-	void GraphicsDevice_Vulkan::SetName(Shader* shader, const char* name)
+	void GraphicsDevice_Vulkan::SetName(Shader* shader, const char* name) const
 	{
 		if (!debugUtils || shader == nullptr || !shader->IsValid())
 			return;
@@ -8885,7 +8722,7 @@ using namespace vulkan_internal;
 		decode_info.srcBufferRange = (VkDeviceSize)op->stream_size;
 
 		decode_info.dstPictureResource.sType = VK_STRUCTURE_TYPE_VIDEO_PICTURE_RESOURCE_INFO_KHR;
-		decode_info.dstPictureResource.imageViewBinding = output_internal->srv.image_view;
+		decode_info.dstPictureResource.imageViewBinding = output_internal->video_decode_view;
 		decode_info.dstPictureResource.baseArrayLayer = 0;
 		decode_info.dstPictureResource.codedExtent.width = video_decoder->desc.width;
 		decode_info.dstPictureResource.codedExtent.height = video_decoder->desc.height;
@@ -8912,9 +8749,13 @@ using namespace vulkan_internal;
 		std_picture_info_h264.PicOrderCnt[0] = 0;
 		std_picture_info_h264.PicOrderCnt[1] = 0;
 
+		uint32_t slice_offset = 0;
+
 		VkVideoDecodeH264PictureInfoKHR picture_info_h264 = {};
 		picture_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_PICTURE_INFO_KHR;
 		picture_info_h264.pStdPictureInfo = &std_picture_info_h264;
+		picture_info_h264.sliceCount = 1;
+		picture_info_h264.pSliceOffsets = &slice_offset;
 		decode_info.pNext = &picture_info_h264;
 
 		vkCmdDecodeVideoKHR(commandlist.GetCommandBuffer(), &decode_info);

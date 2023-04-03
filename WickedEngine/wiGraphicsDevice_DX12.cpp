@@ -1515,6 +1515,7 @@ namespace dx12_internal
 		std::deque<UINT> reference_frames_usage;
 		UINT next_reference_frame = 0;
 		UINT reference_frame_count = 16;
+		UINT dpb_count = reference_frame_count + 1;
 		DXVA_PicParams_H264 pic_params = {};
 
 		~VideoDecoder_DX12()
@@ -4559,6 +4560,8 @@ using namespace dx12_internal;
 			pic_params.weighted_bipred_idc = pps->weighted_bipred_idc;
 		}
 
+		internal_state->dpb_count = internal_state->reference_frame_count + 1;
+
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
@@ -4569,11 +4572,11 @@ using namespace dx12_internal;
 		resourcedesc.Height = desc->height;
 		resourcedesc.MipLevels = 1;
 		resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-		resourcedesc.DepthOrArraySize = (UINT16)internal_state->reference_frame_count;
+		resourcedesc.DepthOrArraySize = (UINT16)internal_state->dpb_count;
 		resourcedesc.SampleDesc.Count = 1;
 		resourcedesc.SampleDesc.Quality = 0;
 		resourcedesc.Alignment = 0;
-		//resourcedesc.Flags = D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE | D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY;
+		resourcedesc.Flags = D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE | D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY;
 
 		hr = allocationhandler->allocator->CreateResource(
 			&allocationDesc,
@@ -4586,30 +4589,6 @@ using namespace dx12_internal;
 		assert(SUCCEEDED(hr));
 		hr = internal_state->reference_frames->SetName(L"VideoDecoder::reference_frames");
 		assert(SUCCEEDED(hr));
-
-#if 1
-		UINT64 total_size = 0;
-		wi::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints(resourcedesc.DepthOrArraySize * resourcedesc.MipLevels);
-		wi::vector<UINT64> rowSizesInBytes(footprints.size());
-		wi::vector<UINT> numRows(footprints.size());
-		device->GetCopyableFootprints(
-			&resourcedesc,
-			0,
-			(UINT)footprints.size(),
-			0,
-			footprints.data(),
-			numRows.data(),
-			rowSizesInBytes.data(),
-			&total_size
-		);
-		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(total_size);
-		for (size_t i = 0; i < cmd.uploadbuffer.mapped_size; ++i)
-		{
-			uint8_t v = uint8_t(i ^ 4534346);
-			std::memcpy((uint8_t*)cmd.uploadbuffer.mapped_data + i, &v, sizeof(v));
-		}
-		copyAllocator.submit(cmd);
-#endif
 
 		return SUCCEEDED(hr);
 	}
@@ -5154,7 +5133,7 @@ using namespace dx12_internal;
 		std::memcpy(dest, identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	}
 	
-	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name)
+	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name) const
 	{
 		wchar_t text[256];
 		if (wi::helper::StringConvert(name, text) > 0)
@@ -6946,25 +6925,25 @@ using namespace dx12_internal;
 
 		ID3D12Resource* reference_frames[16] = {};
 		UINT reference_subresources[16] = {};
-		for (size_t i = 0; i < decoder_internal->reference_frame_count; ++i)
+		for (size_t i = 0; i < decoder_internal->dpb_count; ++i)
 		{
 			reference_frames[i] = decoder_internal->reference_frames.Get();
 			reference_subresources[i] = (UINT)i;
 		}
 		UINT current_subresource = 0;
 
-		//decoder_internal->locker.lock();
-		//for (size_t i = 0; i < decoder_internal->reference_frames_usage.size(); ++i)
-		//{
-		//	reference_frames[i] = decoder_internal->reference_frames.Get();
-		//	reference_subresources[i] = decoder_internal->reference_frames_usage[i];
-		//}
-		//decoder_internal->next_reference_frame = (decoder_internal->next_reference_frame + 1) % decoder_internal->reference_frame_count;
-		//current_subresource = decoder_internal->next_reference_frame;
-		//decoder_internal->reference_frames_usage.push_back(decoder_internal->next_reference_frame);
-		//while (decoder_internal->reference_frames_usage.size() > decoder_internal->reference_frame_count)
-		//	decoder_internal->reference_frames_usage.pop_front();
-		//decoder_internal->locker.unlock();
+		decoder_internal->locker.lock();
+		current_subresource = decoder_internal->next_reference_frame;
+		decoder_internal->reference_frames_usage.push_back(decoder_internal->next_reference_frame);
+		while (decoder_internal->reference_frames_usage.size() > decoder_internal->dpb_count)
+			decoder_internal->reference_frames_usage.pop_front();
+		for (size_t i = 0; i < decoder_internal->reference_frames_usage.size(); ++i)
+		{
+			reference_frames[i] = decoder_internal->reference_frames.Get();
+			reference_subresources[i] = decoder_internal->reference_frames_usage[i];
+		}
+		decoder_internal->next_reference_frame = (decoder_internal->next_reference_frame + 1) % decoder_internal->dpb_count;
+		decoder_internal->locker.unlock();
 
 		input.CompressedBitstream.pBuffer = stream_internal->resource.Get();
 		input.CompressedBitstream.Offset = op->stream_offset;

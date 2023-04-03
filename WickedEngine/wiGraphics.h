@@ -370,6 +370,9 @@ namespace wi::graphics
 		SPARSE_TILE_POOL = SPARSE_TILE_POOL_BUFFER | SPARSE_TILE_POOL_TEXTURE_NON_RT_DS | SPARSE_TILE_POOL_TEXTURE_RT_DS, // buffer only, makes it suitable for containing tile memory for all kinds of sparse resources. Requires GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL to be supported
 		TYPED_FORMAT_CASTING = 1 << 11,	// enable casting formats between same type and different modifiers: eg. UNORM -> SRGB
 		TYPELESS_FORMAT_CASTING = 1 << 12,	// enable casting formats to other formats that have the same bit-width and channel layout: eg. R32_FLOAT -> R32_UINT
+		VIDEO_DECODE_SRC = 1 << 13,	// resource is usabe in video decoding operations as source data
+		VIDEO_DECODE_DST = 1 << 14,	// resource is usabe in video decoding operations as destination data
+		VIDEO_DECODE_DPB = 1 << 15,	// resource is usabe in video decoding operations as decoded picture buffer
 	};
 
 	enum class GraphicsDeviceCapability
