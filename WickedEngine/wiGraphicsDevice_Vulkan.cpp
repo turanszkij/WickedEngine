@@ -920,12 +920,16 @@ namespace vulkan_internal
 		VkVideoSessionKHR video_session = VK_NULL_HANDLE;
 		VkVideoSessionParametersKHR session_parameters = VK_NULL_HANDLE;
 		wi::vector<VkVideoSessionMemoryRequirementsKHR> requirements;
+		wi::vector<VmaAllocation> allocations;
+		wi::vector<VkBindVideoSessionMemoryInfoKHR> bind_session_memory_infos;
 		wi::vector<StdVideoH264PictureParameterSet> pps_array_h264 = {};
 		wi::vector<StdVideoH264SequenceParameterSet> sps_array_h264 = {};
 		wi::vector<StdVideoH264SequenceParameterSetVui> vui_array_h264 = {};
 		VkVideoDecodeH264SessionParametersAddInfoKHR session_parameters_add_info_h264 = {};
 		wi::vector<VkVideoReferenceSlotInfoKHR> reference_slots;
 		wi::vector<VkVideoPictureResourceInfoKHR> reference_slot_pictures;
+		wi::vector<VkVideoDecodeH264DpbSlotInfoKHR> dpb_slots_h264;
+		wi::vector<StdVideoDecodeH264ReferenceInfo> reference_infos_h264;
 		VkImage resource = VK_NULL_HANDLE;
 		VkImageView resource_view = VK_NULL_HANDLE;
 		VmaAllocation allocation = nullptr;
@@ -940,6 +944,10 @@ namespace vulkan_internal
 			allocationhandler->destroyer_video_session_parameters.push_back(std::make_pair(session_parameters, framecount));
 			allocationhandler->destroyer_imageviews.push_back(std::make_pair(resource_view, framecount));
 			allocationhandler->destroyer_images.push_back(std::make_pair(std::make_pair(resource, allocation), framecount));
+			for (auto& x : allocations)
+			{
+				allocationhandler->destroyer_allocations.push_back(std::make_pair(x, framecount));
+			}
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -5890,7 +5898,7 @@ using namespace vulkan_internal;
 		info.maxActiveReferencePictures = video_capability_h264.video_capabilities.maxActiveReferencePictures;
 		info.maxDpbSlots = video_capability_h264.video_capabilities.maxDpbSlots;
 		info.maxCodedExtent.width = std::min(desc->width, video_capability_h264.video_capabilities.maxCodedExtent.width);
-		info.maxCodedExtent.height = std::min(desc->width, video_capability_h264.video_capabilities.maxCodedExtent.height);
+		info.maxCodedExtent.height = std::min(desc->height, video_capability_h264.video_capabilities.maxCodedExtent.height);
 		info.pictureFormat = _ConvertFormat(desc->format);
 		info.referencePictureFormat = info.pictureFormat;
 		info.pVideoProfile = &video_capability_h264.profile;
@@ -5909,6 +5917,34 @@ using namespace vulkan_internal;
 			x.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_MEMORY_REQUIREMENTS_KHR;
 		}
 		res = vkGetVideoSessionMemoryRequirementsKHR(device, internal_state->video_session, &requirement_count, internal_state->requirements.data());
+		assert(res == VK_SUCCESS);
+
+		internal_state->allocations.resize(requirement_count);
+		internal_state->bind_session_memory_infos.resize(requirement_count);
+		for (uint32_t i = 0; i < requirement_count; ++i)
+		{
+			const VkVideoSessionMemoryRequirementsKHR& video_req = internal_state->requirements[i];
+			VmaAllocationCreateInfo alloc_create_info = {};
+			alloc_create_info.memoryTypeBits = video_req.memoryRequirements.memoryTypeBits;
+			VmaAllocationInfo alloc_info = {};
+
+			res = vmaAllocateMemory(
+				allocationhandler->allocator,
+				&video_req.memoryRequirements,
+				&alloc_create_info,
+				&internal_state->allocations[i],
+				&alloc_info
+			);
+			assert(res == VK_SUCCESS);
+
+			VkBindVideoSessionMemoryInfoKHR& bind_info = internal_state->bind_session_memory_infos[i];
+			bind_info.sType = VK_STRUCTURE_TYPE_BIND_VIDEO_SESSION_MEMORY_INFO_KHR;
+			bind_info.memory = alloc_info.deviceMemory;
+			bind_info.memoryBindIndex = video_req.memoryBindIndex;
+			bind_info.memoryOffset = alloc_info.offset;
+			bind_info.memorySize = alloc_info.size;
+		}
+		res = vkBindVideoSessionMemoryKHR(device, internal_state->video_session, requirement_count, internal_state->bind_session_memory_infos.data());
 		assert(res == VK_SUCCESS);
 
 		internal_state->pps_array_h264.resize(desc->pps_count);
@@ -6195,22 +6231,34 @@ using namespace vulkan_internal;
 
 		internal_state->reference_slots.resize(num_reference_frames);
 		internal_state->reference_slot_pictures.resize(num_reference_frames);
+		internal_state->dpb_slots_h264.resize(num_reference_frames);
+		internal_state->reference_infos_h264.resize(num_reference_frames);
 		for (uint32_t i = 0; i < num_reference_frames; ++i)
 		{
 			VkVideoReferenceSlotInfoKHR& slot = internal_state->reference_slots[i];
 			VkVideoPictureResourceInfoKHR& pic = internal_state->reference_slot_pictures[i];
+			VkVideoDecodeH264DpbSlotInfoKHR& dpb = internal_state->dpb_slots_h264[i];
+			StdVideoDecodeH264ReferenceInfo& ref = internal_state->reference_infos_h264[i];
 
 			slot.sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR;
 			slot.pPictureResource = &pic;
 			slot.slotIndex = i;
+			slot.pNext = &dpb;
 
 			pic.sType = VK_STRUCTURE_TYPE_VIDEO_PICTURE_RESOURCE_INFO_KHR;
 			pic.codedOffset.x = 0;
 			pic.codedOffset.y = 0;
 			pic.codedExtent.width = desc->width;
-			pic.codedExtent.width = desc->height;
+			pic.codedExtent.height = desc->height;
 			pic.baseArrayLayer = i;
 			pic.imageViewBinding = internal_state->resource_view;
+
+			dpb.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_DPB_SLOT_INFO_KHR;
+			dpb.pStdReferenceInfo = &ref;
+
+			ref.FrameNum = 0;
+			ref.PicOrderCnt[0] = 0;
+			ref.PicOrderCnt[1] = 0;
 		}
 
 		return true;
@@ -8809,9 +8857,26 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::VideoDecode(const VideoDecoder* video_decoder, const VideoDecodeOperation* op, CommandList cmd)
 	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		auto decoder_internal = to_internal(video_decoder);
 		auto stream_internal = to_internal(op->stream);
 		auto output_internal = to_internal(op->output);
+
+		VkVideoBeginCodingInfoKHR begin_info = {};
+		begin_info.sType = VK_STRUCTURE_TYPE_VIDEO_BEGIN_CODING_INFO_KHR;
+		begin_info.videoSession = decoder_internal->video_session;
+		begin_info.videoSessionParameters = decoder_internal->session_parameters;
+		begin_info.referenceSlotCount = (uint32_t)decoder_internal->reference_slots.size();
+		begin_info.pReferenceSlots = decoder_internal->reference_slots.data();
+		vkCmdBeginVideoCodingKHR(commandlist.GetCommandBuffer(), &begin_info);
+
+		if (op->frame_index == 0)
+		{
+			VkVideoCodingControlInfoKHR control_info = {};
+			control_info.sType = VK_STRUCTURE_TYPE_VIDEO_CODING_CONTROL_INFO_KHR;
+			control_info.flags = VK_VIDEO_CODING_CONTROL_RESET_BIT_KHR;
+			vkCmdControlVideoCodingKHR(commandlist.GetCommandBuffer(), &control_info);
+		}
 
 		VkVideoDecodeInfoKHR decode_info = {};
 		decode_info.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_INFO_KHR;
@@ -8840,8 +8905,23 @@ using namespace vulkan_internal;
 		//VkResult res = vkUpdateVideoSessionParametersKHR(device, decoder_internal->session_parameters, &update_info);
 		//assert(res == VK_SUCCESS);
 
-		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
+		std_picture_info_h264.seq_parameter_set_id = 0;
+		std_picture_info_h264.pic_parameter_set_id = 0;
+		std_picture_info_h264.frame_num = 0;
+		std_picture_info_h264.PicOrderCnt[0] = 0;
+		std_picture_info_h264.PicOrderCnt[1] = 0;
+
+		VkVideoDecodeH264PictureInfoKHR picture_info_h264 = {};
+		picture_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_PICTURE_INFO_KHR;
+		picture_info_h264.pStdPictureInfo = &std_picture_info_h264;
+		decode_info.pNext = &picture_info_h264;
+
 		vkCmdDecodeVideoKHR(commandlist.GetCommandBuffer(), &decode_info);
+
+		VkVideoEndCodingInfoKHR end_info = {};
+		end_info.sType = VK_STRUCTURE_TYPE_VIDEO_END_CODING_INFO_KHR;
+		vkCmdEndVideoCodingKHR(commandlist.GetCommandBuffer(), &end_info);
 	}
 
 	void GraphicsDevice_Vulkan::EventBegin(const char* name, CommandList cmd)
