@@ -3010,31 +3010,29 @@ void UpdateVisibility(Visibility& vis)
 				group_list[group_count++] = args.jobIndex;
 
 				const ObjectComponent& object = vis.scene->objects[args.jobIndex];
+				Scene::OcclusionResult& occlusion_result = vis.scene->occlusion_results_objects[args.jobIndex];
 
-				if (vis.flags & Visibility::ALLOW_REQUEST_REFLECTION)
+				if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && object.IsRequestPlanarReflection() && !occlusion_result.IsOccluded())
 				{
-					if (object.IsRequestPlanarReflection())
+					// Planar reflection priority request:
+					float dist = wi::math::DistanceEstimated(vis.camera->Eye, object.center);
+					vis.locker.lock();
+					if (dist < vis.closestRefPlane)
 					{
-						float dist = wi::math::DistanceEstimated(vis.camera->Eye, object.center);
-						vis.locker.lock();
-						if (dist < vis.closestRefPlane)
-						{
-							vis.closestRefPlane = dist;
-							XMVECTOR P = XMLoadFloat3(&object.center);
-							XMVECTOR N = XMVectorSet(0, 1, 0, 0);
-							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&vis.scene->matrix_objects[args.jobIndex]));
-							XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
-							XMStoreFloat4(&vis.reflectionPlane, _refPlane);
+						vis.closestRefPlane = dist;
+						XMVECTOR P = XMLoadFloat3(&object.center);
+						XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+						N = XMVector3TransformNormal(N, XMLoadFloat4x4(&vis.scene->matrix_objects[args.jobIndex]));
+						XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
+						XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 
-							vis.planar_reflection_visible = true;
-						}
-						vis.locker.unlock();
+						vis.planar_reflection_visible = true;
 					}
+					vis.locker.unlock();
 				}
 
 				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
 				{
-					Scene::OcclusionResult& occlusion_result = vis.scene->occlusion_results_objects[args.jobIndex];
 					if (object.IsRenderable() && occlusion_result.occlusionQueries[vis.scene->queryheap_idx] < 0)
 					{
 						if (aabb.intersects(vis.camera->Eye))
