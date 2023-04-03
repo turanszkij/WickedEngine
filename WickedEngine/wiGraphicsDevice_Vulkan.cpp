@@ -6,6 +6,7 @@
 #include "wiVersion.h"
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
+#include "wiRandom.h"
 
 #include "Utility/vk_video/vulkan_video_codec_h264std_decode.h"
 #include "Utility/h264.h"
@@ -4253,6 +4254,99 @@ using namespace vulkan_internal;
 			copyAllocator.submit(cmd);
 		}
 
+#if 1
+		if (desc->format == Format::NV12)
+		{
+			CopyAllocator::CopyCMD cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
+			for (size_t i = 0; i < cmd.uploadbuffer.mapped_size; ++i)
+			{
+				uint8_t v = uint8_t(wi::random::GetRandom(0, 255));
+				std::memcpy((uint8_t*)cmd.uploadbuffer.mapped_data + i, &v, sizeof(v));
+			}
+
+			VkImageMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.image = internal_state->resource;
+			barrier.oldLayout = imageInfo.initialLayout;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = imageInfo.arrayLayers;
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = imageInfo.mipLevels;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+			vkCmdPipelineBarrier(
+				cmd.transferCommandBuffer,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier
+			);
+
+			VkBufferImageCopy copyRegion = {};
+			copyRegion.bufferOffset = 0;
+			copyRegion.bufferRowLength = 0;
+			copyRegion.bufferImageHeight = 0;
+
+			copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT;
+			copyRegion.imageSubresource.mipLevel = 0;
+			copyRegion.imageSubresource.baseArrayLayer = 0;
+			copyRegion.imageSubresource.layerCount = 1;
+
+			copyRegion.imageOffset = { 0, 0, 0 };
+			copyRegion.imageExtent = {
+				desc->width,
+				desc->height,
+				1
+			};
+
+			vkCmdCopyBufferToImage(
+				cmd.transferCommandBuffer,
+				to_internal(&cmd.uploadbuffer)->resource,
+				internal_state->resource,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1,
+				&copyRegion
+			);
+
+			copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT;
+			copyRegion.imageExtent.width /= 2;
+			copyRegion.imageExtent.height /= 2;
+			vkCmdCopyBufferToImage(
+				cmd.transferCommandBuffer,
+				to_internal(&cmd.uploadbuffer)->resource,
+				internal_state->resource,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1,
+				&copyRegion
+			);
+
+
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = _ConvertImageLayout(texture->desc.layout);
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = _ParseResourceState(texture->desc.layout);
+
+			vkCmdPipelineBarrier(
+				cmd.transitionCommandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier
+			);
+
+			copyAllocator.submit(cmd);
+		}
+#endif
+
 		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
 			CreateSubresource(texture, SubresourceType::RTV, 0, -1, 0, -1);
@@ -5993,13 +6087,96 @@ using namespace vulkan_internal;
 		assert(res == VK_SUCCESS);
 
 #if 1
-		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
-		for (size_t i = 0; i < cmd.uploadbuffer.mapped_size; ++i)
+		if (desc->format == Format::NV12)
 		{
-			uint8_t v = uint8_t(i ^ 4534346);
-			std::memcpy((uint8_t*)cmd.uploadbuffer.mapped_data + i, &v, sizeof(v));
+			CopyAllocator::CopyCMD cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
+			for (size_t i = 0; i < cmd.uploadbuffer.mapped_size; ++i)
+			{
+				uint8_t v = uint8_t(wi::random::GetRandom(0, 255));
+				std::memcpy((uint8_t*)cmd.uploadbuffer.mapped_data + i, &v, sizeof(v));
+			}
+
+			VkImageMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.image = internal_state->resource;
+			barrier.oldLayout = imageInfo.initialLayout;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = imageInfo.arrayLayers;
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = imageInfo.mipLevels;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+			vkCmdPipelineBarrier(
+				cmd.transferCommandBuffer,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier
+			);
+
+			VkBufferImageCopy copyRegion = {};
+			copyRegion.bufferOffset = 0;
+			copyRegion.bufferRowLength = 0;
+			copyRegion.bufferImageHeight = 0;
+
+			copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT;
+			copyRegion.imageSubresource.mipLevel = 0;
+			copyRegion.imageSubresource.baseArrayLayer = 0;
+			copyRegion.imageSubresource.layerCount = 1;
+
+			copyRegion.imageOffset = { 0, 0, 0 };
+			copyRegion.imageExtent = {
+				desc->width,
+				desc->height,
+				1
+			};
+
+			vkCmdCopyBufferToImage(
+				cmd.transferCommandBuffer,
+				to_internal(&cmd.uploadbuffer)->resource,
+				internal_state->resource,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1,
+				&copyRegion
+			);
+
+			copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT;
+			copyRegion.imageExtent.width /= 2;
+			copyRegion.imageExtent.height /= 2;
+			vkCmdCopyBufferToImage(
+				cmd.transferCommandBuffer,
+				to_internal(&cmd.uploadbuffer)->resource,
+				internal_state->resource,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1,
+				&copyRegion
+			);
+
+
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
+			vkCmdPipelineBarrier(
+				cmd.transitionCommandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier
+			);
+
+			copyAllocator.submit(cmd);
 		}
-		copyAllocator.submit(cmd);
 #endif
 
 		VkImageViewCreateInfo view_desc = {};

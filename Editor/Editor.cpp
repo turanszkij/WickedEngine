@@ -20,6 +20,10 @@ extern bool window_recreating;
 #include "sdl2.h"
 #endif // PLATFORM_WINDOWS
 
+wi::Resource video_resource;
+wi::video::VideoInstance video_instance;
+wi::graphics::CommandList video_cmd;
+
 void Editor::Initialize()
 {
 	Application::Initialize();
@@ -627,6 +631,12 @@ void EditorComponent::FixedUpdate()
 void EditorComponent::Update(float dt)
 {
 	wi::profiler::range_id profrange = wi::profiler::BeginRangeCPU("Editor Update");
+
+	if (!video_resource.IsValid())
+	{
+		video_resource = wi::resourcemanager::Load("foot.mp4");
+		wi::video::CreateVideoInstance(&video_resource.GetVideo(), &video_instance);
+	}
 
 	Scene& scene = GetCurrentScene();
 	EditorScene& editorscene = GetCurrentEditorScene();
@@ -1674,6 +1684,9 @@ void EditorComponent::Render() const
 {
 	const Scene& scene = GetCurrentScene();
 
+	video_cmd = GetDevice()->BeginCommandList(QUEUE_VIDEO_DECODE);
+	wi::video::UpdateVideo(&video_instance, 0.016f, video_cmd);
+
 	// Hovered item boxes:
 	if (GetGUI().IsVisible())
 	{
@@ -2571,6 +2584,15 @@ void EditorComponent::Compose(CommandList cmd) const
 		params.size = 30;
 		wi::font::Draw("Scene saved: " + GetCurrentEditorScene().path, params, cmd);
 	}
+
+	wi::image::Params params;
+	params.pos = XMFLOAT3(100, 100, 0);
+	params.siz = XMFLOAT2(480, 270);
+	wi::image::Draw(&video_instance.output, params, cmd);
+
+	params.pos.x += params.siz.x + 20;
+	params.image_subresource = video_instance.output_subresource_chroma;
+	wi::image::Draw(&video_instance.output, params, cmd);
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 	auto& scene = GetCurrentScene();
