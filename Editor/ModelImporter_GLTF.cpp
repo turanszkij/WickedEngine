@@ -955,6 +955,67 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 		}
 
+		auto ext_aniso = x.extensions.find("KHR_materials_anisotropy");
+		if (ext_aniso != x.extensions.end())
+		{
+			// https://github.com/ux3d/glTF/tree/extensions/KHR_materials_anisotropy/extensions/2.0/Khronos/KHR_materials_anisotropy
+
+			material.shaderType = MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC;
+
+			if (ext_aniso->second.Has("anisotropyStrength"))
+			{
+				auto& factor = ext_aniso->second.Get("anisotropyStrength");
+				material.anisotropy_strength = float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+			}
+			if (ext_aniso->second.Has("anisotropyRotation"))
+			{
+				auto& factor = ext_aniso->second.Get("anisotropyRotation");
+				material.anisotropy_rotation = float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+			}
+			if (ext_aniso->second.Has("anisotropyTexture"))
+			{
+				auto& param = ext_aniso->second.Get("anisotropyTexture");
+				int index = param.Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				int img_source = tex.source;
+				if (tex.extensions.count("KHR_texture_basisu"))
+				{
+					img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
+				}
+				auto& img = state.gltfModel.images[img_source];
+				material.textures[MaterialComponent::ANISOTROPYMAP].resource = wi::resourcemanager::Load(img.uri);
+				material.textures[MaterialComponent::ANISOTROPYMAP].name = img.uri;
+				material.textures[MaterialComponent::ANISOTROPYMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
+			}
+
+			// Differently from the proposed spec, in the proposed sample model, I see different namings: https://github.com/KhronosGroup/glTF-Sample-Models/tree/Anisotropy-Barn-Lamp/2.0/AnisotropyBarnLamp
+			if (ext_aniso->second.Has("anisotropy"))
+			{
+				auto& factor = ext_aniso->second.Get("anisotropy");
+				material.anisotropy_strength = float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+			}
+			if (ext_aniso->second.Has("anisotropyDirection"))
+			{
+				auto& factor = ext_aniso->second.Get("anisotropyDirection");
+				material.anisotropy_rotation = float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+			}
+			if (ext_aniso->second.Has("anisotropyDirectionTexture"))
+			{
+				auto& param = ext_aniso->second.Get("anisotropyDirectionTexture");
+				int index = param.Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				int img_source = tex.source;
+				if (tex.extensions.count("KHR_texture_basisu"))
+				{
+					img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
+				}
+				auto& img = state.gltfModel.images[img_source];
+				material.textures[MaterialComponent::ANISOTROPYMAP].resource = wi::resourcemanager::Load(img.uri);
+				material.textures[MaterialComponent::ANISOTROPYMAP].name = img.uri;
+				material.textures[MaterialComponent::ANISOTROPYMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
+			}
+		}
+
 	}
 
 	// Create meshes:

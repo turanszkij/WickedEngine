@@ -33,6 +33,20 @@ struct ClearcoatSurface
 	float3 F;
 };
 
+struct AnisotropicSurface
+{
+	float2 direction;
+	float strength;
+	float3 T;
+
+	// computed values:
+	float at;
+	float ab;
+	float3 B;
+	float TdotV;
+	float BdotV;
+};
+
 enum
 {
 	SURFACE_FLAG_BACKFACE = 1u << 0u,
@@ -60,7 +74,6 @@ struct Surface
 	float2 screenUV;		// pixel coordinate in UV space [0 -> 1] (used for randomization effects)
 	float4 T;				// tangent
 	float3 B;				// bitangent
-	float anisotropy;		// anisotropy factor [0 -> 1]
 	float4 sss;				// subsurface scattering color * amount
 	float4 sss_inv;			// 1 / (1 + sss)
 	uint layerMask;			// the engine-side layer mask
@@ -78,13 +91,10 @@ struct Surface
 	float f90;				// reflectance at grazing angle
 	float3 R;				// reflection vector
 	float3 F;				// fresnel term computed from NdotV
-	float TdotV;
-	float BdotV;
-	float at;
-	float ab;
 
 	SheenSurface sheen;
 	ClearcoatSurface clearcoat;
+	AnisotropicSurface aniso;
 
 	inline void init()
 	{
@@ -104,7 +114,6 @@ struct Surface
 		screenUV = 0;
 		T = 0;
 		B = 0;
-		anisotropy = 0;
 		sss = 0;
 		sss_inv = 1;
 		layerMask = ~0;
@@ -120,6 +129,10 @@ struct Surface
 		clearcoat.roughness = 0;
 		clearcoat.N = 0;
 
+		aniso.strength = 0;
+		aniso.direction = float2(1, 0);
+		aniso.T = 0;
+
 		uid_validate = 0;
 		raycone = (RayCone)0;
 		hit_depth = 0;
@@ -134,10 +147,6 @@ struct Surface
 		{
 			flags |= SURFACE_FLAG_RECEIVE_SHADOW;
 		}
-
-#ifdef ANISOTROPIC
-		anisotropy = material.parallaxOcclusionMapping;
-#endif // ANISOTROPIC
 	}
 
 	inline void create(
@@ -220,10 +229,12 @@ struct Surface
 		sheen.albedoScaling = 1.0 - max3(sheen.color) * sheen.DFG;
 
 		B = normalize(cross(T.xyz, N) * T.w); // Compute bitangent again after normal mapping
-		TdotV = dot(T.xyz, V);
-		BdotV = dot(B, V);
-		at = max(0, roughnessBRDF * (1 + anisotropy));
-		ab = max(0, roughnessBRDF * (1 - anisotropy));
+
+		aniso.B = normalize(cross(N, aniso.T));
+		aniso.TdotV = dot(aniso.T.xyz, V);
+		aniso.BdotV = dot(aniso.B, V);
+		aniso.at = max(0, roughnessBRDF * (1 + aniso.strength));
+		aniso.ab = max(0, roughnessBRDF * (1 - aniso.strength));
 
 #ifdef CARTOON
 		F = smoothstep(0.1, 0.5, F);
@@ -393,6 +404,33 @@ struct Surface
 				bumpColor = bumpColor * 2 - 1;
 				bumpColor.rg *= material.normalMapStrength;
 			}
+
+
+#ifdef ANISOTROPIC
+			aniso.strength = material.anisotropy_strength;
+			aniso.direction = float2(material.anisotropy_rotation_cos, material.anisotropy_rotation_sin);
+
+			[branch]
+			if (material.textures[ANISOTROPYMAP].IsValid())
+			{
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+				float2 anisotropyTexture = material.textures[ANISOTROPYMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rg * 2 - 1;
+#else
+				float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+				lod = compute_texture_lod(material.textures[ANISOTROPYMAP].GetTexture(), material.textures[ANISOTROPYMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+				float2 anisotropyTexture = material.textures[ANISOTROPYMAP].SampleLevel(sam, uvsets, lod).rg * 2 - 1;
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
+
+				aniso.strength *= length(anisotropyTexture);
+				aniso.direction = mul(float2x2(aniso.direction.x, aniso.direction.y, -aniso.direction.y, aniso.direction.x), normalize(anisotropyTexture));
+			}
+
+			aniso.T = normalize(mul(TBN, float3(aniso.direction, 0)));
+
+#endif // ANISOTROPIC
+
 		}
 
 		baseColor = is_emittedparticle ? 1 : material.baseColor;
@@ -662,6 +700,8 @@ struct Surface
 			occlusion *= material.textures[OCCLUSIONMAP].SampleLevel(sam, uvsets, lod).r;
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
+
+
 
 #ifdef SHEEN
 		sheen.color = material.GetSheenColor();

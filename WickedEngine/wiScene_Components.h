@@ -170,6 +170,8 @@ namespace wi::scene
 		float refraction = 0.0f;
 		float transmission = 0.0f;
 		float alphaRef = 1.0f;
+		float anisotropy_strength = 0;
+		float anisotropy_rotation = 0; //radians, counter-clockwise
 
 		XMFLOAT4 sheenColor = XMFLOAT4(1, 1, 1, 1);
 		float sheenRoughness = 0;
@@ -197,6 +199,7 @@ namespace wi::scene
 			CLEARCOATROUGHNESSMAP,
 			CLEARCOATNORMALMAP,
 			SPECULARMAP,
+			ANISOTROPYMAP,
 
 			TEXTURESLOT_COUNT
 		};

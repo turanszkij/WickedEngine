@@ -88,7 +88,8 @@ static const uint CLEARCOATMAP = 9;
 static const uint CLEARCOATROUGHNESSMAP = 10;
 static const uint CLEARCOATNORMALMAP = 11;
 static const uint SPECULARMAP = 12;
-static const uint TEXTURESLOT_COUNT = 13;
+static const uint ANISOTROPYMAP = 13;
+static const uint TEXTURESLOT_COUNT = 14;
 
 static const uint SVT_TILE_SIZE = 256u;
 static const uint SVT_TILE_BORDER = 4u;
@@ -330,6 +331,11 @@ struct ShaderMaterial
 	float		clearcoat;
 	float		clearcoatRoughness;
 	uint		stencilRef;
+
+	float		anisotropy_strength;
+	float		anisotropy_rotation_sin;
+	float		anisotropy_rotation_cos;
+	float		padding0;
 
 	int			sampler_descriptor;
 	uint		options;

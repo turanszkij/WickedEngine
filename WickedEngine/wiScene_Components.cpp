@@ -260,6 +260,18 @@ namespace wi::scene
 		material.alphaTest = 1 - alphaRef;
 		material.layerMask = layerMask;
 		material.transmission = transmission;
+		if (shaderType == SHADERTYPE_PBR_ANISOTROPIC)
+		{
+			material.anisotropy_strength = wi::math::Clamp(anisotropy_strength, 0, 0.99f);
+			material.anisotropy_rotation_sin = std::sin(anisotropy_rotation);
+			material.anisotropy_rotation_cos = std::cos(anisotropy_rotation);
+		}
+		else
+		{
+			material.anisotropy_strength = 0;
+			material.anisotropy_rotation_sin = 0;
+			material.anisotropy_rotation_cos = 0;
+		}
 		material.stencilRef = wi::renderer::CombineStencilrefs(engineStencilRef, userStencilRef);
 		material.shaderType = (uint)shaderType;
 		material.userdata = userdata;
