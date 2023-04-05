@@ -219,6 +219,18 @@ namespace wi::scene
 				archive >> userdata;
 			}
 
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> anisotropy_strength;
+				archive >> anisotropy_rotation;
+				archive >> textures[ANISOTROPYMAP].name;
+				archive >> textures[ANISOTROPYMAP].uvset;
+			}
+			else
+			{
+				anisotropy_strength = parallaxOcclusionMapping; // old version fix
+			}
+
 			for (auto& x : textures)
 			{
 				if (!x.name.empty())
@@ -348,6 +360,14 @@ namespace wi::scene
 			if (seri.GetVersion() >= 1)
 			{
 				archive << userdata;
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive << anisotropy_strength;
+				archive << anisotropy_rotation;
+				archive << textures[ANISOTROPYMAP].name;
+				archive << textures[ANISOTROPYMAP].uvset;
 			}
 		}
 	}

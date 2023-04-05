@@ -1273,7 +1273,21 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 
 #ifdef ANISOTROPIC
-	surface.anisotropy = GetMaterial().parallaxOcclusionMapping;
+	surface.aniso.strength = GetMaterial().anisotropy_strength;
+	surface.aniso.direction = float2(GetMaterial().anisotropy_rotation_cos, GetMaterial().anisotropy_rotation_sin);
+
+#ifdef OBJECTSHADER_USE_UVSETS
+	[branch]
+	if (GetMaterial().textures[ANISOTROPYMAP].IsValid())
+	{
+		float2 anisotropyTexture = GetMaterial().textures[ANISOTROPYMAP].Sample(sampler_objectshader, input.uvsets).rg * 2 - 1;
+		surface.aniso.strength *= length(anisotropyTexture);
+		surface.aniso.direction = mul(float2x2(surface.aniso.direction.x, surface.aniso.direction.y, -surface.aniso.direction.y, surface.aniso.direction.x), normalize(anisotropyTexture));
+	}
+#endif // OBJECTSHADER_USE_UVSETS
+
+	surface.aniso.T = normalize(mul(TBN, float3(surface.aniso.direction, 0)));
+
 #endif // ANISOTROPIC
 
 
