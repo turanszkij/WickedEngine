@@ -74,22 +74,25 @@ static const uint SHADERMATERIAL_OPTION_BIT_ADDITIVE = 1 << 9;
 static const uint SHADERMATERIAL_OPTION_BIT_UNLIT = 1 << 10;
 
 // Same as MaterialComponent::TEXTURESLOT
-//	Because of shader compiler issues, the enum is currently not usable in Vulkan for array indexing
-static const uint BASECOLORMAP = 0;
-static const uint NORMALMAP = 1;
-static const uint SURFACEMAP = 2;
-static const uint EMISSIVEMAP = 3;
-static const uint DISPLACEMENTMAP = 4;
-static const uint OCCLUSIONMAP = 5;
-static const uint TRANSMISSIONMAP = 6;
-static const uint SHEENCOLORMAP = 7;
-static const uint SHEENROUGHNESSMAP = 8;
-static const uint CLEARCOATMAP = 9;
-static const uint CLEARCOATROUGHNESSMAP = 10;
-static const uint CLEARCOATNORMALMAP = 11;
-static const uint SPECULARMAP = 12;
-static const uint ANISOTROPYMAP = 13;
-static const uint TEXTURESLOT_COUNT = 14;
+enum TEXTURESLOT
+{
+	BASECOLORMAP,
+	NORMALMAP,
+	SURFACEMAP,
+	EMISSIVEMAP,
+	DISPLACEMENTMAP,
+	OCCLUSIONMAP,
+	TRANSMISSIONMAP,
+	SHEENCOLORMAP,
+	SHEENROUGHNESSMAP,
+	CLEARCOATMAP,
+	CLEARCOATROUGHNESSMAP,
+	CLEARCOATNORMALMAP,
+	SPECULARMAP,
+	ANISOTROPYMAP,
+
+	TEXTURESLOT_COUNT
+};
 
 static const uint SVT_TILE_SIZE = 256u;
 static const uint SVT_TILE_BORDER = 4u;
@@ -503,6 +506,7 @@ struct ShaderMeshlet
 	uint instanceIndex;
 	uint geometryIndex;
 	uint primitiveOffset;
+	uint padding;
 };
 
 struct ShaderTransform
@@ -1095,6 +1099,7 @@ struct MipgenPushConstants
 	int texture_input;
 	int texture_output;
 	int sampler_index;
+	int padding;
 };
 static const uint MIPGEN_OPTION_BIT_PRESERVE_COVERAGE = 1 << 0;
 static const uint MIPGEN_OPTION_BIT_SRGB = 1 << 1;
@@ -1109,6 +1114,8 @@ struct FilterEnvmapPushConstants
 	uint padding_filterCB;
 	int texture_input;
 	int texture_output;
+	int padding0;
+	int padding1;
 };
 
 // CopyTexture2D params:
@@ -1167,6 +1174,7 @@ struct SkinningPushConstants
 	uint morphbuffer_offset;
 	uint morph_count;
 	int morphvb_index;
+	int padding;
 };
 
 struct MorphTargetGPU
@@ -1212,6 +1220,7 @@ struct TerrainVirtualTexturePush
 	uint write_size;
 	float resolution_rcp;
 	int region_weights_textureRO;
+	int padding;
 };
 struct VirtualTextureResidencyUpdateCB
 {
@@ -1239,6 +1248,9 @@ struct VirtualTextureTileRequestsPush
 	uint height;
 	int feedbackTextureRO;
 	int requestBufferRW;
+	int padding0;
+	int padding1;
+	int padding2;
 };
 
 

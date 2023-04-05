@@ -80,7 +80,6 @@ struct Surface
 	float3 facenormal;		// surface normal without normal map
 	uint flags;
 	uint uid_validate;
-	RayCone raycone;
 	float hit_depth;
 	float3 gi;
 	float3 bumpColor;
@@ -92,9 +91,21 @@ struct Surface
 	float3 R;				// reflection vector
 	float3 F;				// fresnel term computed from NdotV
 
+#ifdef SURFACE_LOAD_MIPCONE
+	RayCone raycone;
+#endif // SURFACE_LOAD_MIPCONE
+
+#ifdef SHEEN
 	SheenSurface sheen;
+#endif // SHEEN
+
+#ifdef CLEARCOAT
 	ClearcoatSurface clearcoat;
+#endif // CLEARCOAT
+
+#ifdef ANISOTROPIC
 	AnisotropicSurface aniso;
+#endif // ANISOTROPIC
 
 	inline void init()
 	{
@@ -122,20 +133,29 @@ struct Surface
 		gi = 0;
 		bumpColor = 0;
 
+		uid_validate = 0;
+		hit_depth = 0;
+
+#ifdef SURFACE_LOAD_MIPCONE
+		raycone = (RayCone)0;
+#endif // SURFACE_LOAD_MIPCONE
+
+#ifdef SHEEN
 		sheen.color = 0;
 		sheen.roughness = 0;
+#endif // SHEEN
 
+#ifdef CLEARCOAT
 		clearcoat.factor = 0;
 		clearcoat.roughness = 0;
 		clearcoat.N = 0;
+#endif // CLEARCOAT
 
+#ifdef ANISOTROPIC
 		aniso.strength = 0;
 		aniso.direction = float2(1, 0);
 		aniso.T = 0;
-
-		uid_validate = 0;
-		raycone = (RayCone)0;
-		hit_depth = 0;
+#endif // ANISOTROPIC
 	}
 
 	inline void create(in ShaderMaterial material)
@@ -208,33 +228,44 @@ struct Surface
 		roughness = clamp(roughness, 0.045, 1);
 		roughnessBRDF = roughness * roughness;
 
+#ifdef SHEEN
 		sheen.roughness = clamp(sheen.roughness, 0.045, 1);
 		sheen.roughnessBRDF = sheen.roughness * sheen.roughness;
+#endif // SHEEN
 
+#ifdef CLEARCOAT
 		clearcoat.roughness = clamp(clearcoat.roughness, 0.045, 1);
 		clearcoat.roughnessBRDF = clearcoat.roughness * clearcoat.roughness;
+#endif // CLEARCOAT
 
 		NdotV = saturate(dot(N, V) + 1e-5);
 
 		f90 = saturate(50.0 * dot(f0, 0.33));
 		F = F_Schlick(f0, f90, NdotV);
-		clearcoat.F = F_Schlick(f0, f90, saturate(dot(clearcoat.N, V) + 1e-5));
-		clearcoat.F *= clearcoat.factor;
 
 		R = -reflect(V, N);
-		clearcoat.R = -reflect(V, clearcoat.N);
 
+#ifdef SHEEN
 		// Sheen energy compensation: https://dassaultsystemes-technology.github.io/EnterprisePBRShadingModel/spec-2021x.md.html#figure_energy-compensation-sheen-e
 		sheen.DFG = texture_sheenlut.SampleLevel(sampler_linear_clamp, float2(NdotV, sheen.roughness), 0).r;
 		sheen.albedoScaling = 1.0 - max3(sheen.color) * sheen.DFG;
+#endif // SHEEN
+
+#ifdef CLEARCOAT
+		clearcoat.F = F_Schlick(f0, f90, saturate(dot(clearcoat.N, V) + 1e-5));
+		clearcoat.F *= clearcoat.factor;
+		clearcoat.R = -reflect(V, clearcoat.N);
+#endif // CLEARCOAT
 
 		B = normalize(cross(T.xyz, N) * T.w); // Compute bitangent again after normal mapping
 
+#ifdef ANISOTROPIC
 		aniso.B = normalize(cross(N, aniso.T));
 		aniso.TdotV = dot(aniso.T.xyz, V);
 		aniso.BdotV = dot(aniso.B, V);
 		aniso.at = max(0, roughnessBRDF * (1 + aniso.strength));
 		aniso.ab = max(0, roughnessBRDF * (1 - aniso.strength));
+#endif // ANISOTROPIC
 
 #ifdef CARTOON
 		F = smoothstep(0.1, 0.5, F);

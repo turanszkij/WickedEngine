@@ -102,11 +102,12 @@ struct SurfaceToLight
 	float VdotH;	// cos angle between view direction and half vector
 	float3 F;		// fresnel term computed from VdotH
 
-	// Aniso params:
+#ifdef ANISOTROPIC
 	float TdotL;
 	float BdotL;
 	float TdotH;
 	float BdotH;
+#endif // ANISOTROPIC
 
 	inline void create(in Surface surface, in float3 Lnormalized)
 	{
@@ -127,10 +128,12 @@ struct SurfaceToLight
 
 		F = F_Schlick(surface.f0, surface.f90, VdotH);
 
+#ifdef ANISOTROPIC
 		TdotL = dot(surface.aniso.T.xyz, L);
 		BdotL = dot(surface.aniso.B, L);
 		TdotH = dot(surface.aniso.T.xyz, H);
 		BdotH = dot(surface.aniso.B, H);
+#endif // ANISOTROPIC
 
 #ifdef CARTOON
 		// SSS is handled differently in cartoon shader:
