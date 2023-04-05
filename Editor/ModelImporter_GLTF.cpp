@@ -3433,6 +3433,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		"KHR_materials_clearcoat",
 		"KHR_materials_ior",
 		"KHR_materials_specular",
+		"KHR_materials_anisotropy",
 		"KHR_lights_punctual"
 	};
 
@@ -3717,7 +3718,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
 				material.textures[wi::scene::MaterialComponent::SPECULARMAP].name,
-				material.textures[wi::scene::MaterialComponent::CLEARCOATMAP].uvset);
+				material.textures[wi::scene::MaterialComponent::SPECULARMAP].uvset);
 			KHR_materials_specular_builder["specularTexture"] = tinygltf::Value({
 					{"index",tinygltf::Value(specularTexInfo_pre.index)},
 					{"texCoord",tinygltf::Value(specularTexInfo_pre.texCoord)}
@@ -3728,6 +3729,28 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				});
 		}
 		material_builder.extensions["KHR_materials_specular"] = tinygltf::Value(KHR_materials_specular_builder);
+
+		if (material.shaderType == MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC)
+		{
+			// Anisotropy Extension (KHR_materials_anisotropy)
+			tinygltf::Value::Object KHR_materials_anisotropy_builder = {
+				{"anisotropyStrength", tinygltf::Value(material.anisotropy_strength)},
+				{"anisotropyRotation", tinygltf::Value(material.anisotropy_rotation)}
+			};
+			if (material.textures[wi::scene::MaterialComponent::ANISOTROPYMAP].resource.IsValid())
+			{
+				auto specularTexInfo_pre = _ExportHelper_StoreMaterialTexture(
+					state,
+					wi::helper::GetDirectoryFromPath(filename),
+					material.textures[wi::scene::MaterialComponent::ANISOTROPYMAP].name,
+					material.textures[wi::scene::MaterialComponent::ANISOTROPYMAP].uvset);
+				KHR_materials_anisotropy_builder["anisotropyTexture"] = tinygltf::Value({
+						{"index",tinygltf::Value(specularTexInfo_pre.index)},
+						{"texCoord",tinygltf::Value(specularTexInfo_pre.texCoord)}
+					});
+			}
+			material_builder.extensions["KHR_materials_anisotropy"] = tinygltf::Value(KHR_materials_anisotropy_builder);
+		}
 
 		state.gltfModel.materials.push_back(material_builder);
 	}
