@@ -654,10 +654,16 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 		if (material->textures[slot].resource.IsValid())
 		{
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+			editor->RecordEntity(archive, entity);
+
 			material->textures[slot].resource = {};
 			material->textures[slot].name = "";
 			material->SetDirty();
 			textureSlotLabel.SetText("");
+
+			editor->RecordEntity(archive, entity);
 		}
 		else
 		{
