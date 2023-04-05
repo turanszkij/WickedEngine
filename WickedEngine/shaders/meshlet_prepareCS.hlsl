@@ -20,6 +20,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			meshlet.instanceIndex = instanceIndex;
 			meshlet.geometryIndex = geometryIndex;
 			meshlet.primitiveOffset = j * MESHLET_TRIANGLE_COUNT;
+			meshlet.padding = 0;
 
 			uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + j;
 			output_meshlets.Store<ShaderMeshlet>(meshletIndex * sizeof(ShaderMeshlet), meshlet);

@@ -102,11 +102,12 @@ struct SurfaceToLight
 	float VdotH;	// cos angle between view direction and half vector
 	float3 F;		// fresnel term computed from VdotH
 
-	// Aniso params:
+#ifdef ANISOTROPIC
 	float TdotL;
 	float BdotL;
 	float TdotH;
 	float BdotH;
+#endif // ANISOTROPIC
 
 	inline void create(in Surface surface, in float3 Lnormalized)
 	{
@@ -127,10 +128,12 @@ struct SurfaceToLight
 
 		F = F_Schlick(surface.f0, surface.f90, VdotH);
 
-		TdotL = dot(surface.T.xyz, L);
-		BdotL = dot(surface.B, L);
-		TdotH = dot(surface.T.xyz, H);
-		BdotH = dot(surface.B, H);
+#ifdef ANISOTROPIC
+		TdotL = dot(surface.aniso.T.xyz, L);
+		BdotL = dot(surface.aniso.B, L);
+		TdotH = dot(surface.aniso.T.xyz, H);
+		BdotH = dot(surface.aniso.B, H);
+#endif // ANISOTROPIC
 
 #ifdef CARTOON
 		// SSS is handled differently in cartoon shader:
@@ -157,8 +160,8 @@ struct SurfaceToLight
 float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surface_to_light)
 {
 #ifdef ANISOTROPIC
-	float D = D_GGX_Anisotropic(surface.at, surface.ab, surface_to_light.TdotH, surface_to_light.BdotH, surface_to_light.NdotH);
-	float Vis = V_SmithGGXCorrelated_Anisotropic(surface.at, surface.ab, surface.TdotV, surface.BdotV,
+	float D = D_GGX_Anisotropic(surface.aniso.at, surface.aniso.ab, surface_to_light.TdotH, surface_to_light.BdotH, surface_to_light.NdotH);
+	float Vis = V_SmithGGXCorrelated_Anisotropic(surface.aniso.at, surface.aniso.ab, surface.aniso.TdotV, surface.aniso.BdotV,
 		surface_to_light.TdotL, surface_to_light.BdotL, surface.NdotV, surface_to_light.NdotL);
 #else
 	float D = D_GGX(surface.roughnessBRDF, surface_to_light.NdotH, surface_to_light.H);
