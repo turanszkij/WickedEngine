@@ -634,7 +634,7 @@ void EditorComponent::Update(float dt)
 
 	if (!video_resource.IsValid())
 	{
-		video_resource = wi::resourcemanager::Load("foot.mp4");
+		video_resource = wi::resourcemanager::Load("talking.mp4");
 		wi::video::CreateVideoInstance(&video_resource.GetVideo(), &video_instance);
 	}
 
@@ -2584,6 +2584,8 @@ void EditorComponent::Compose(CommandList cmd) const
 		params.size = 30;
 		wi::font::Draw("Scene saved: " + GetCurrentEditorScene().path, params, cmd);
 	}
+
+	GetDevice()->WaitCommandList(cmd, video_cmd);
 
 	wi::image::Params params;
 	params.pos = XMFLOAT3(100, 100, 0);

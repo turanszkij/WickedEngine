@@ -424,7 +424,12 @@ namespace wi::graphics
 		CONSTANT_BUFFER = 1 << 11,			// constant buffer, read only
 		INDIRECT_ARGUMENT = 1 << 12,			// argument buffer to DrawIndirect() or DispatchIndirect()
 		RAYTRACING_ACCELERATION_STRUCTURE = 1 << 13, // acceleration structure storage or scratch
-		PREDICATION = 1 << 14				// storage for predication comparison value
+		PREDICATION = 1 << 14,				// storage for predication comparison value
+
+		// Other:
+		VIDEO_DECODE_SRC = 1 << 15,			// video decode operation source (bitstream buffer or DPB texture)
+		VIDEO_DECODE_DST = 1 << 16,			// video decode operation destination texture
+		VIDEO_DECODE_DPB = 1 << 17,			// video decode operation DPB texture
 	};
 
 	enum class ColorSpace

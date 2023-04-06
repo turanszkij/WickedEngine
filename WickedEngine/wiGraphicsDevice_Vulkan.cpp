@@ -349,6 +349,12 @@ namespace vulkan_internal
 			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		case ResourceState::SHADING_RATE_SOURCE:
 			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
+		case ResourceState::VIDEO_DECODE_SRC:
+			return VK_IMAGE_LAYOUT_VIDEO_DECODE_SRC_KHR;
+		case ResourceState::VIDEO_DECODE_DST:
+			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR;
+		case ResourceState::VIDEO_DECODE_DPB:
+			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR;
 		default:
 			return VK_IMAGE_LAYOUT_UNDEFINED;
 		}
@@ -3897,9 +3903,9 @@ using namespace vulkan_internal;
 			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR;
 		}
 
-		if (desc->format == Format::NV12)
+		if (desc->format == Format::NV12 && has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 		{
-			//imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 		}
 
 		VkVideoProfileListInfoKHR profile_list_info = {};
@@ -8184,7 +8190,7 @@ using namespace vulkan_internal;
 			copy.srcOffset.x = 0;
 			copy.srcOffset.y = 0;
 			copy.srcOffset.z = 0;
-			if (src_aspect == ImageAspect::CHROMINANCE)
+			if (src->desc.format == Format::NV12 && src_aspect == ImageAspect::CHROMINANCE)
 			{
 				copy.extent.width = std::min(dst->desc.width, src->desc.width / 2);
 				copy.extent.height = std::min(dst->desc.height, src->desc.height / 2);
@@ -8711,6 +8717,14 @@ using namespace vulkan_internal;
 		auto stream_internal = to_internal(op->stream);
 		auto output_internal = to_internal(op->output);
 
+		if (op->frame_index == 0)
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&decoder_internal->DPB, ResourceState::UNDEFINED, ResourceState::VIDEO_DECODE_DPB),
+			};
+			Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		VkVideoDecodeInfoKHR decode_info = {};
 		decode_info.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_INFO_KHR;
 		decode_info.srcBuffer = stream_internal->resource;
@@ -8765,12 +8779,15 @@ using namespace vulkan_internal;
 		picture_info_h264.pSliceOffsets = &slice_offset;
 		decode_info.pNext = &picture_info_h264;
 
+		// Current reconstructed DPB image:
 		reference_slots[decode_info.referenceSlotCount] = decoder_internal->reference_slots[decoder_internal->next_dpb];
+		reference_slots[decode_info.referenceSlotCount].slotIndex = -1; // not yet referenced, but it will be in current decode https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkCmdBeginVideoCodingKHR.html
+
 		VkVideoBeginCodingInfoKHR begin_info = {};
 		begin_info.sType = VK_STRUCTURE_TYPE_VIDEO_BEGIN_CODING_INFO_KHR;
 		begin_info.videoSession = decoder_internal->video_session;
 		begin_info.videoSessionParameters = decoder_internal->session_parameters;
-		begin_info.referenceSlotCount = decode_info.referenceSlotCount + 1; // add in the current DPB image
+		begin_info.referenceSlotCount = decode_info.referenceSlotCount + 1; // add in the current reconstructed DPB image
 		begin_info.pReferenceSlots = decode_info.pReferenceSlots;
 		vkCmdBeginVideoCodingKHR(commandlist.GetCommandBuffer(), &begin_info);
 
@@ -8788,26 +8805,39 @@ using namespace vulkan_internal;
 		end_info.sType = VK_STRUCTURE_TYPE_VIDEO_END_CODING_INFO_KHR;
 		vkCmdEndVideoCodingKHR(commandlist.GetCommandBuffer(), &end_info);
 
-		//VkImageMemoryBarrier2 image_barrier = {};
-		//image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-		//image_barrier.image;
+
+
+		//VkImageMemoryBarrier2 image_barriers[2] = {};
+		//image_barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+		//image_barriers[0].image = 
 
 		//VkDependencyInfo dependency_info = {};
 		//dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-		//dependency_info.imageMemoryBarrierCount = 1;
-		//dependency_info.pImageMemoryBarriers = &image_barrier;
+		//dependency_info.imageMemoryBarrierCount = arraysize(image_barriers);
+		//dependency_info.pImageMemoryBarriers = image_barriers;
 		//vkCmdPipelineBarrier2(commandlist.GetCommandBuffer(), &dependency_info);
 
-		//CopyTexture(
-		//	op->output, 0, 0, 0, 0, 0,
-		//	&decoder_internal->DPB, 0, decoder_internal->next_dpb,
-		//	cmd, nullptr, ImageAspect::LUMINANCE, ImageAspect::LUMINANCE
-		//);
-		//CopyTexture(
-		//	op->output, 0, 0, 0, 0, 0,
-		//	&decoder_internal->DPB, 0, decoder_internal->next_dpb,
-		//	cmd, nullptr, ImageAspect::CHROMINANCE, ImageAspect::CHROMINANCE
-		//);
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&decoder_internal->DPB, ResourceState::VIDEO_DECODE_DPB, ResourceState::COPY_SRC),
+			GPUBarrier::Image(op->output, op->output->desc.layout, ResourceState::COPY_DST),
+		};
+		Barrier(barriers, arraysize(barriers), cmd);
+
+		CopyTexture(
+			op->output, 0, 0, 0, 0, 0,
+			&decoder_internal->DPB, 0, decoder_internal->next_dpb,
+			cmd, nullptr, ImageAspect::LUMINANCE, ImageAspect::LUMINANCE
+		);
+		CopyTexture(
+			op->output, 0, 0, 0, 0, 0,
+			&decoder_internal->DPB, 0, decoder_internal->next_dpb,
+			cmd, nullptr, ImageAspect::CHROMINANCE, ImageAspect::CHROMINANCE
+		);
+
+		std::swap(barriers[0].image.layout_before, barriers[0].image.layout_after);
+		std::swap(barriers[1].image.layout_before, barriers[1].image.layout_after);
+		Barrier(barriers, arraysize(barriers), cmd);
+
 
 		decoder_internal->next_dpb = (decoder_internal->next_dpb + 1) % decoder_internal->reference_slots.size();
 	}

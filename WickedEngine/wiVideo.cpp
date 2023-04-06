@@ -140,12 +140,33 @@ namespace wi::video
 					video->average_frames_per_second = float(double(track.timescale) / double(track_duration) * track.sample_count);
 					video->duration_seconds = float(double(track_duration) * timescale_rcp);
 
+#define USE_SHORT_SYNC 0
+					char sync[4] = { 0, 0, 0, 1 };
+
 					auto copy_video_track = [&](void* dest) {
-						uint8_t* dest_buffer = (uint8_t*)dest;
 						for (uint32_t i = 0; i < track.sample_count; i++)
 						{
 							MP4D_file_offset_t ofs = MP4D_frame_offset(&mp4, ntrack, i, &frame_bytes, &timestamp, &duration);
-							std::memcpy(dest_buffer + video->frames_infos[i].offset, input_buf + ofs, frame_bytes);
+							uint8_t* dest_buffer = (uint8_t*)dest + video->frames_infos[i].offset;
+							//std::memcpy(dest_buffer, input_buf + ofs, frame_bytes);
+							uint8_t* mem = input_buf + ofs;
+							while (frame_bytes)
+							{
+								uint32_t size = ((uint32_t)mem[0] << 24) | ((uint32_t)mem[1] << 16) | ((uint32_t)mem[2] << 8) | mem[3];
+								size += 4;
+								mem[0] = 0; mem[1] = 0; mem[2] = 0; mem[3] = 1;
+								std::memcpy(dest_buffer, mem, size - USE_SHORT_SYNC);
+								//fwrite(mem + USE_SHORT_SYNC, 1, size - USE_SHORT_SYNC, fout);
+								if (frame_bytes < size)
+								{
+									//printf("error: demux sample failed\n");
+									//exit(1);
+									assert(0);
+								}
+								frame_bytes -= size;
+								mem += size;
+								dest_buffer += size;
+							}
 						}
 					};
 
@@ -193,7 +214,7 @@ namespace wi::video
 		td.mip_levels = 1;
 		td.format = vd.format;
 		td.bind_flags = wi::graphics::BindFlag::SHADER_RESOURCE;
-		td.misc_flags = wi::graphics::ResourceMiscFlag::VIDEO_DECODE_DST;
+		//td.misc_flags = wi::graphics::ResourceMiscFlag::VIDEO_DECODE_DST;
 		success = device->CreateTexture(&td, nullptr, &instance->output);
 		assert(success);
 		device->SetName(&instance->output, "wi::VideoInstance::output");

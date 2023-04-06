@@ -128,6 +128,13 @@ namespace dx12_internal
 		if (has_flag(value, ResourceState::PREDICATION))
 			ret |= D3D12_RESOURCE_STATE_PREDICATION;
 
+		if (has_flag(value, ResourceState::VIDEO_DECODE_SRC))
+			ret |= D3D12_RESOURCE_STATE_VIDEO_DECODE_READ;
+		if (has_flag(value, ResourceState::VIDEO_DECODE_DST))
+			ret |= D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE;
+		if (has_flag(value, ResourceState::VIDEO_DECODE_DPB))
+			ret |= D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE;
+
 		return ret;
 	}
 	constexpr D3D12_FILTER _ConvertFilter(Filter value)
@@ -6927,6 +6934,8 @@ using namespace dx12_internal;
 		input.CompressedBitstream.Offset = op->stream_offset;
 		input.CompressedBitstream.Size = op->stream_size;
 
+		DXVA_PicParams_H264 pic_params = decoder_internal->pic_params; // copy
+		pic_params.CurrPic.Index7Bits = decoder_internal->next_reference_frame;
 		ID3D12Resource* reference_frames[16] = {};
 		UINT reference_subresources[16] = {};
 		if (!decoder_internal->reference_frames_usage.empty())
@@ -6935,14 +6944,13 @@ using namespace dx12_internal;
 			{
 				reference_frames[i] = decoder_internal->reference_frames.Get();
 				reference_subresources[i] = decoder_internal->reference_frames_usage[i];
+				pic_params.RefFrameList[i].Index7Bits = reference_subresources[i];
 			}
 			input.ReferenceFrames.NumTexture2Ds = (UINT)decoder_internal->reference_frames_usage.size();
 			input.ReferenceFrames.ppTexture2Ds = reference_frames;
 			input.ReferenceFrames.pSubresources = reference_subresources;
 		}
 
-		DXVA_PicParams_H264 pic_params = decoder_internal->pic_params; // copy
-		pic_params.CurrPic.Index7Bits = decoder_internal->next_reference_frame;
 		input.FrameArguments[0].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
 		input.FrameArguments[0].Size = sizeof(pic_params);
 		input.FrameArguments[0].pData = &pic_params;
