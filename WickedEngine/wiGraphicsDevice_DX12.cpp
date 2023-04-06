@@ -1511,7 +1511,6 @@ namespace dx12_internal
 		ComPtr<ID3D12VideoDecoder> decoder;
 		ComPtr<D3D12MA::Allocation> reference_frame_allocation;
 		ComPtr<ID3D12Resource> reference_frames;
-		std::mutex locker;
 		std::deque<UINT> reference_frames_usage;
 		UINT next_reference_frame = 0;
 		UINT reference_frame_count = 16;
@@ -4504,26 +4503,10 @@ using namespace dx12_internal;
 		if (video_decode_support.DecodeTier < D3D12_VIDEO_DECODE_TIER_1)
 			return false;
 
-		D3D12_VIDEO_DECODER_HEAP_DESC heap_desc = {};
-		heap_desc.Configuration = decoder_desc.Configuration;
-		heap_desc.DecodeWidth = video_decode_support.Width;
-		heap_desc.DecodeHeight = video_decode_support.Height;
-		heap_desc.Format = video_decode_support.DecodeFormat;
-
-		D3D12_FEATURE_DATA_VIDEO_DECODER_HEAP_SIZE video_decoder_heap_size = {};
-		video_decoder_heap_size.VideoDecoderHeapDesc = heap_desc;
-		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODER_HEAP_SIZE, &video_decoder_heap_size, sizeof(video_decoder_heap_size));
-		assert(SUCCEEDED(hr));
-
 		auto internal_state = std::make_shared<VideoDecoder_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		video_decoder->internal_state = internal_state;
 		video_decoder->desc = *desc;
-
-		hr = video_device->CreateVideoDecoderHeap(&heap_desc, IID_PPV_ARGS(&internal_state->decoder_heap));
-		assert(SUCCEEDED(hr));
-		hr = video_device->CreateVideoDecoder(&decoder_desc, IID_PPV_ARGS(&internal_state->decoder));
-		assert(SUCCEEDED(hr));
 
 		for (uint32_t i = 0; i < desc->sps_count; ++i)
 		{
@@ -4561,6 +4544,23 @@ using namespace dx12_internal;
 		}
 
 		internal_state->dpb_count = internal_state->reference_frame_count + 1;
+
+		D3D12_VIDEO_DECODER_HEAP_DESC heap_desc = {};
+		heap_desc.Configuration = decoder_desc.Configuration;
+		heap_desc.DecodeWidth = video_decode_support.Width;
+		heap_desc.DecodeHeight = video_decode_support.Height;
+		heap_desc.Format = video_decode_support.DecodeFormat;
+		heap_desc.MaxDecodePictureBufferCount = internal_state->dpb_count;
+
+		D3D12_FEATURE_DATA_VIDEO_DECODER_HEAP_SIZE video_decoder_heap_size = {};
+		video_decoder_heap_size.VideoDecoderHeapDesc = heap_desc;
+		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODER_HEAP_SIZE, &video_decoder_heap_size, sizeof(video_decoder_heap_size));
+		assert(SUCCEEDED(hr));
+
+		hr = video_device->CreateVideoDecoderHeap(&heap_desc, IID_PPV_ARGS(&internal_state->decoder_heap));
+		assert(SUCCEEDED(hr));
+		hr = video_device->CreateVideoDecoder(&decoder_desc, IID_PPV_ARGS(&internal_state->decoder));
+		assert(SUCCEEDED(hr));
 
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
@@ -6923,37 +6923,26 @@ using namespace dx12_internal;
 		D3D12_VIDEO_DECODE_OUTPUT_STREAM_ARGUMENTS output = {};
 		D3D12_VIDEO_DECODE_INPUT_STREAM_ARGUMENTS input = {};
 
-		ID3D12Resource* reference_frames[16] = {};
-		UINT reference_subresources[16] = {};
-		for (size_t i = 0; i < decoder_internal->dpb_count; ++i)
-		{
-			reference_frames[i] = decoder_internal->reference_frames.Get();
-			reference_subresources[i] = (UINT)i;
-		}
-		UINT current_subresource = 0;
-
-		decoder_internal->locker.lock();
-		current_subresource = decoder_internal->next_reference_frame;
-		decoder_internal->reference_frames_usage.push_back(decoder_internal->next_reference_frame);
-		while (decoder_internal->reference_frames_usage.size() > decoder_internal->dpb_count)
-			decoder_internal->reference_frames_usage.pop_front();
-		for (size_t i = 0; i < decoder_internal->reference_frames_usage.size(); ++i)
-		{
-			reference_frames[i] = decoder_internal->reference_frames.Get();
-			reference_subresources[i] = decoder_internal->reference_frames_usage[i];
-		}
-		decoder_internal->next_reference_frame = (decoder_internal->next_reference_frame + 1) % decoder_internal->dpb_count;
-		decoder_internal->locker.unlock();
-
 		input.CompressedBitstream.pBuffer = stream_internal->resource.Get();
 		input.CompressedBitstream.Offset = op->stream_offset;
 		input.CompressedBitstream.Size = op->stream_size;
-		input.ReferenceFrames.NumTexture2Ds = (UINT)decoder_internal->reference_frames_usage.size();
-		input.ReferenceFrames.ppTexture2Ds = reference_frames;
-		input.ReferenceFrames.pSubresources = reference_subresources;
+
+		ID3D12Resource* reference_frames[16] = {};
+		UINT reference_subresources[16] = {};
+		if (!decoder_internal->reference_frames_usage.empty())
+		{
+			for (size_t i = 0; i < decoder_internal->reference_frames_usage.size(); ++i)
+			{
+				reference_frames[i] = decoder_internal->reference_frames.Get();
+				reference_subresources[i] = decoder_internal->reference_frames_usage[i];
+			}
+			input.ReferenceFrames.NumTexture2Ds = (UINT)decoder_internal->reference_frames_usage.size();
+			input.ReferenceFrames.ppTexture2Ds = reference_frames;
+			input.ReferenceFrames.pSubresources = reference_subresources;
+		}
 
 		DXVA_PicParams_H264 pic_params = decoder_internal->pic_params; // copy
-		//pic_params.CurrPic.Index7Bits = 4;
+		pic_params.CurrPic.Index7Bits = decoder_internal->next_reference_frame;
 		input.FrameArguments[0].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
 		input.FrameArguments[0].Size = sizeof(pic_params);
 		input.FrameArguments[0].pData = &pic_params;
@@ -6966,11 +6955,13 @@ using namespace dx12_internal;
 		output.ConversionArguments.DecodeColorSpace = DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709;
 		output.ConversionArguments.OutputColorSpace = DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709;
 		output.ConversionArguments.pReferenceTexture2D = decoder_internal->reference_frames.Get();
-		output.ConversionArguments.ReferenceSubresource = current_subresource;
-#endif
-
+		output.ConversionArguments.ReferenceSubresource = decoder_internal->next_reference_frame;
 		output.pOutputTexture2D = output_internal->resource.Get();
 		output.OutputSubresource = 0;
+#else
+		output.pOutputTexture2D = decoder_internal->reference_frames.Get();
+		output.OutputSubresource = decoder_internal->next_reference_frame;
+#endif
 
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.GetVideoDecodeCommandList()->DecodeFrame(
@@ -6978,6 +6969,12 @@ using namespace dx12_internal;
 			&output,
 			&input
 		);
+
+		decoder_internal->reference_frames_usage.push_back(decoder_internal->next_reference_frame);
+		while (decoder_internal->reference_frames_usage.size() > decoder_internal->dpb_count)
+			decoder_internal->reference_frames_usage.pop_front();
+		decoder_internal->next_reference_frame = (decoder_internal->next_reference_frame + 1) % decoder_internal->dpb_count;
+
 	}
 
 	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)
