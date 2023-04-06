@@ -8764,7 +8764,7 @@ using namespace vulkan_internal;
 		}
 
 		decode_info.referenceSlotCount = (uint32_t)decoder_internal->reference_usage.size();
-		decode_info.pReferenceSlots = reference_slots;
+		decode_info.pReferenceSlots = decode_info.referenceSlotCount == 0 ? nullptr : reference_slots;
 		decode_info.pSetupReferenceSlot = &decoder_internal->reference_slots[decoder_internal->next_dpb];
 
 		decoder_internal->reference_usage.push_back(decoder_internal->next_dpb);
@@ -8783,7 +8783,7 @@ using namespace vulkan_internal;
 		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
 		std_picture_info_h264.seq_parameter_set_id = 0;
 		std_picture_info_h264.pic_parameter_set_id = 0;
-		std_picture_info_h264.frame_num = 0;
+		std_picture_info_h264.frame_num = op->frame_index;
 		std_picture_info_h264.PicOrderCnt[0] = 0;
 		std_picture_info_h264.PicOrderCnt[1] = 0;
 
@@ -8796,6 +8796,7 @@ using namespace vulkan_internal;
 		picture_info_h264.pSliceOffsets = &slice_offset;
 		decode_info.pNext = &picture_info_h264;
 
+#if 1
 		// Current reconstructed DPB image:
 		reference_slots[decode_info.referenceSlotCount] = decoder_internal->reference_slots[decoder_internal->next_dpb];
 		reference_slots[decode_info.referenceSlotCount].slotIndex = -1; // not yet referenced, but it will be in current decode https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkCmdBeginVideoCodingKHR.html
@@ -8805,8 +8806,17 @@ using namespace vulkan_internal;
 		begin_info.videoSession = decoder_internal->video_session;
 		begin_info.videoSessionParameters = decoder_internal->session_parameters;
 		begin_info.referenceSlotCount = decode_info.referenceSlotCount + 1; // add in the current reconstructed DPB image
-		begin_info.pReferenceSlots = decode_info.pReferenceSlots;
+		begin_info.pReferenceSlots = begin_info.referenceSlotCount == 0 ? nullptr : reference_slots;
 		vkCmdBeginVideoCodingKHR(commandlist.GetCommandBuffer(), &begin_info);
+#else
+		VkVideoBeginCodingInfoKHR begin_info = {};
+		begin_info.sType = VK_STRUCTURE_TYPE_VIDEO_BEGIN_CODING_INFO_KHR;
+		begin_info.videoSession = decoder_internal->video_session;
+		begin_info.videoSessionParameters = decoder_internal->session_parameters;
+		begin_info.referenceSlotCount = decode_info.referenceSlotCount;
+		begin_info.pReferenceSlots = begin_info.referenceSlotCount == 0 ? nullptr : reference_slots;
+		vkCmdBeginVideoCodingKHR(commandlist.GetCommandBuffer(), &begin_info);
+#endif
 
 		if (op->flags & VideoDecodeOperation::FLAG_SESSION_RESET)
 		{

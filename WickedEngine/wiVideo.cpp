@@ -148,25 +148,25 @@ namespace wi::video
 						{
 							MP4D_file_offset_t ofs = MP4D_frame_offset(&mp4, ntrack, i, &frame_bytes, &timestamp, &duration);
 							uint8_t* dest_buffer = (uint8_t*)dest + video->frames_infos[i].offset;
-							//std::memcpy(dest_buffer, input_buf + ofs, frame_bytes);
-							uint8_t* mem = input_buf + ofs;
-							while (frame_bytes)
-							{
-								uint32_t size = ((uint32_t)mem[0] << 24) | ((uint32_t)mem[1] << 16) | ((uint32_t)mem[2] << 8) | mem[3];
-								size += 4;
-								mem[0] = 0; mem[1] = 0; mem[2] = 0; mem[3] = 1;
-								std::memcpy(dest_buffer, mem, size - USE_SHORT_SYNC);
-								//fwrite(mem + USE_SHORT_SYNC, 1, size - USE_SHORT_SYNC, fout);
-								if (frame_bytes < size)
-								{
-									//printf("error: demux sample failed\n");
-									//exit(1);
-									assert(0);
-								}
-								frame_bytes -= size;
-								mem += size;
-								dest_buffer += size;
-							}
+							std::memcpy(dest_buffer, input_buf + ofs, frame_bytes);
+							//uint8_t* mem = input_buf + ofs;
+							//while (frame_bytes)
+							//{
+							//	uint32_t size = ((uint32_t)mem[0] << 24) | ((uint32_t)mem[1] << 16) | ((uint32_t)mem[2] << 8) | mem[3];
+							//	size += 4;
+							//	mem[0] = 0; mem[1] = 0; mem[2] = 0; mem[3] = 1;
+							//	std::memcpy(dest_buffer, mem, size - USE_SHORT_SYNC);
+							//	//fwrite(mem + USE_SHORT_SYNC, 1, size - USE_SHORT_SYNC, fout);
+							//	if (frame_bytes < size)
+							//	{
+							//		//printf("error: demux sample failed\n");
+							//		//exit(1);
+							//		assert(0);
+							//	}
+							//	frame_bytes -= size;
+							//	mem += size;
+							//	dest_buffer += size;
+							//}
 						}
 					};
 
