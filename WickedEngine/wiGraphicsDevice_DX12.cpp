@@ -4588,7 +4588,7 @@ using namespace dx12_internal;
 		hr = allocationhandler->allocator->CreateResource(
 			&allocationDesc,
 			&resourcedesc,
-			D3D12_RESOURCE_STATE_COMMON,
+			D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE,
 			nullptr,
 			&internal_state->reference_frame_allocation,
 			IID_PPV_ARGS(&internal_state->reference_frames)
@@ -5421,6 +5421,7 @@ using namespace dx12_internal;
 			HRESULT hr = pDred->GetAutoBreadcrumbsOutput1(&dredAutoBreadcrumbsOutput);
 			if (SUCCEEDED(hr))
 			{
+				assert(0);
 				// TODO: Log DRED info -> to file?
 			}
 		}

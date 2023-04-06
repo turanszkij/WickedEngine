@@ -237,7 +237,7 @@ namespace wi::video
 	}
 	void UpdateVideo(VideoInstance* instance, float dt, wi::graphics::CommandList cmd)
 	{
-#if 1
+#if 0
 		instance->current_frame = 0;
 #else
 		if (instance->state == VideoInstance::State::Paused)
@@ -265,7 +265,10 @@ namespace wi::video
 		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 
 		wi::graphics::VideoDecodeOperation decode_operation;
-		decode_operation.flags = wi::graphics::VideoDecodeOperation::FLAG_SESSION_RESET;
+		if (instance->current_frame == 0)
+		{
+			decode_operation.flags = wi::graphics::VideoDecodeOperation::FLAG_SESSION_RESET;
+		}
 		decode_operation.stream = &instance->video->data_stream;
 		decode_operation.stream_offset = frame_info.offset;
 		decode_operation.stream_size = frame_info.size;
