@@ -839,6 +839,12 @@ namespace wi::graphics
 
 	struct VideoDecodeOperation
 	{
+		enum Flags
+		{
+			FLAG_EMPTY = 0,
+			FLAG_SESSION_RESET = 1 << 0,
+		};
+		uint32_t flags = FLAG_EMPTY;
 		const GPUBuffer* stream = nullptr;
 		uint64_t stream_offset = 0;
 		uint64_t stream_size = 0;

@@ -8717,12 +8717,13 @@ using namespace vulkan_internal;
 		auto stream_internal = to_internal(op->stream);
 		auto output_internal = to_internal(op->output);
 
-		if (op->frame_index == 0)
+		if (op->flags & VideoDecodeOperation::FLAG_SESSION_RESET)
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&decoder_internal->DPB, ResourceState::UNDEFINED, ResourceState::VIDEO_DECODE_DPB),
 			};
 			Barrier(barriers, arraysize(barriers), cmd);
+			decoder_internal->reference_usage.clear();
 		}
 
 		VkVideoDecodeInfoKHR decode_info = {};
@@ -8791,7 +8792,7 @@ using namespace vulkan_internal;
 		begin_info.pReferenceSlots = decode_info.pReferenceSlots;
 		vkCmdBeginVideoCodingKHR(commandlist.GetCommandBuffer(), &begin_info);
 
-		if (op->frame_index == 0)
+		if (op->flags & VideoDecodeOperation::FLAG_SESSION_RESET)
 		{
 			VkVideoCodingControlInfoKHR control_info = {};
 			control_info.sType = VK_STRUCTURE_TYPE_VIDEO_CODING_CONTROL_INFO_KHR;

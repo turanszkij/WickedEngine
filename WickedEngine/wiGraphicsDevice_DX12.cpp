@@ -6934,6 +6934,11 @@ using namespace dx12_internal;
 		input.CompressedBitstream.Offset = op->stream_offset;
 		input.CompressedBitstream.Size = op->stream_size;
 
+		if (op->flags & VideoDecodeOperation::FLAG_SESSION_RESET)
+		{
+			decoder_internal->reference_frames_usage.clear();
+		}
+
 		DXVA_PicParams_H264 pic_params = decoder_internal->pic_params; // copy
 		pic_params.CurrPic.Index7Bits = decoder_internal->next_reference_frame;
 		ID3D12Resource* reference_frames[16] = {};

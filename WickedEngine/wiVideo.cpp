@@ -237,11 +237,14 @@ namespace wi::video
 	}
 	void UpdateVideo(VideoInstance* instance, float dt, wi::graphics::CommandList cmd)
 	{
+#if 1
+		instance->current_frame = 0;
+#else
 		if (instance->state == VideoInstance::State::Paused)
 			return;
 		instance->time_until_next_frame -= dt;
-		//if (instance->time_until_next_frame > 0)
-		//	return;
+		if (instance->time_until_next_frame > 0)
+			return;
 		if (instance->current_frame >= (int)instance->video->frames_infos.size() - 1)
 		{
 			if (has_flag(instance->flags, VideoInstance::Flags::Looped))
@@ -254,12 +257,15 @@ namespace wi::video
 				instance->current_frame = (int)instance->video->frames_infos.size() - 1;
 			}
 		}
+#endif
+
 		const Video::FrameInfo& frame_info = instance->video->frames_infos[instance->current_frame];
 		instance->time_until_next_frame = frame_info.duration_seconds;
 
 		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 
 		wi::graphics::VideoDecodeOperation decode_operation;
+		decode_operation.flags = wi::graphics::VideoDecodeOperation::FLAG_SESSION_RESET;
 		decode_operation.stream = &instance->video->data_stream;
 		decode_operation.stream_offset = frame_info.offset;
 		decode_operation.stream_size = frame_info.size;
