@@ -11,6 +11,7 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::Label infoLabel;
+	wi::gui::CheckBox talkCheckBox;
 	wi::gui::Slider blinkFrequencySlider;
 	wi::gui::Slider blinkLengthSlider;
 	wi::gui::Slider blinkCountSlider;

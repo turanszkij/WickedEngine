@@ -1648,6 +1648,8 @@ namespace wi::lua::scene
 		int SetPresetWeight(lua_State* L);
 		int GetWeight(lua_State* L);
 		int GetPresetWeight(lua_State* L);
+		int SetForceTalkingEnabled(lua_State* L);
+		int IsForceTalkingEnabled(lua_State* L);
 	};
 
 	class HumanoidComponent_BindLua

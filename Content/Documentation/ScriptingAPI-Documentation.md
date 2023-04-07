@@ -1070,6 +1070,8 @@ Describes a Collider object.
 - GetWeight(int id) : float	-- returns current weight of expression
 - SetPresetWeight(ExpressionPreset preset, float weight)	-- Set a preset expression's weight. You can get access to preset values from ExpressionPreset table
 - GetPresetWeight(ExpressionPreset preset) : float	-- returns current weight of preset expression
+- SetForceTalkingEnabled(bool value) -- Force continuous talking animation, even if no voice is playing
+- IsForceTalkingEnabled() : bool
 
 [outer] ExpressionPreset = {
 	Happy = 0,
