@@ -338,19 +338,31 @@ void EditorComponent::Load()
 						Entity entity = GetCurrentScene().cameras.GetEntity(camera_count_prev);
 						if (entity != INVALID_ENTITY)
 						{
-							TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
-							if (camera_transform != nullptr)
-							{
-								GetCurrentEditorScene().camera_transform = *camera_transform;
-							}
-
 							CameraComponent* cam = GetCurrentScene().cameras.GetComponent(entity);
 							if (cam != nullptr)
 							{
-								GetCurrentEditorScene().camera = *cam;
+								EditorScene& editorscene = GetCurrentEditorScene();
+								editorscene.camera.Eye = cam->Eye;
+								editorscene.camera.At = cam->At;
+								editorscene.camera.Up = cam->Up;
+								editorscene.camera.fov = cam->fov;
+								editorscene.camera.zNearP = cam->zNearP;
+								editorscene.camera.zFarP = cam->zFarP;
+								editorscene.camera.focal_length = cam->focal_length;
+								editorscene.camera.aperture_size = cam->aperture_size;
+								editorscene.camera.aperture_shape = cam->aperture_shape;
 								// camera aspect should be always for the current screen
-								GetCurrentEditorScene().camera.width = (float)renderPath->GetInternalResolution().x;
-								GetCurrentEditorScene().camera.height = (float)renderPath->GetInternalResolution().y;
+								editorscene.camera.width = (float)renderPath->GetInternalResolution().x;
+								editorscene.camera.height = (float)renderPath->GetInternalResolution().y;
+
+								TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
+								if (camera_transform != nullptr)
+								{
+									editorscene.camera_transform = *camera_transform;
+									editorscene.camera.TransformCamera(editorscene.camera_transform);
+								}
+
+								editorscene.camera.UpdateCamera();
 							}
 						}
 					}
