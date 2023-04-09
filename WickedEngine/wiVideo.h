@@ -19,7 +19,6 @@ namespace wi::video
 		uint32_t sps_count = 0;
 		uint32_t pps_count = 0;
 		wi::graphics::GPUBuffer data_stream;
-		mutable bool data_stream_barrier = true;
 		float average_frames_per_second = 0;
 		float duration_seconds = 0;
 		struct FrameInfo

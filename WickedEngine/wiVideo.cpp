@@ -140,36 +140,23 @@ namespace wi::video
 					video->average_frames_per_second = float(double(track.timescale) / double(track_duration) * track.sample_count);
 					video->duration_seconds = float(double(track_duration) * timescale_rcp);
 
-#define USE_SHORT_SYNC 0
-					char sync[4] = { 0, 0, 0, 1 };
-
 					auto copy_video_track = [&](void* dest) {
 						for (uint32_t i = 0; i < track.sample_count; i++)
 						{
 							MP4D_file_offset_t ofs = MP4D_frame_offset(&mp4, ntrack, i, &frame_bytes, &timestamp, &duration);
-							uint8_t* dest_buffer = (uint8_t*)dest + video->frames_infos[i].offset;
-#if 0
-							std::memcpy(dest_buffer, input_buf + ofs, frame_bytes);
-#else
-							uint8_t* mem = input_buf + ofs;
-							while (frame_bytes)
+							uint8_t* dst_buffer = (uint8_t*)dest + video->frames_infos[i].offset;
+							uint8_t* src_buffer = input_buf + ofs;
+							while (frame_bytes > 0)
 							{
-								uint32_t size = ((uint32_t)mem[0] << 24) | ((uint32_t)mem[1] << 16) | ((uint32_t)mem[2] << 8) | mem[3];
+								uint32_t size = ((uint32_t)src_buffer[0] << 24) | ((uint32_t)src_buffer[1] << 16) | ((uint32_t)src_buffer[2] << 8) | src_buffer[3];
 								size += 4;
-								mem[0] = 0; mem[1] = 0; mem[2] = 0; mem[3] = 1;
-								std::memcpy(dest_buffer, mem + USE_SHORT_SYNC, size - USE_SHORT_SYNC);
-								//fwrite(mem + USE_SHORT_SYNC, 1, size - USE_SHORT_SYNC, fout);
-								if (frame_bytes < size)
-								{
-									//printf("error: demux sample failed\n");
-									//exit(1);
-									assert(0);
-								}
+								src_buffer[0] = 0; src_buffer[1] = 0; src_buffer[2] = 0; src_buffer[3] = 1;
+								std::memcpy(dst_buffer, src_buffer, size);
+								assert(frame_bytes >= size);
 								frame_bytes -= size;
-								mem += size;
-								dest_buffer += size;
+								src_buffer += size;
+								dst_buffer += size;
 							}
-#endif
 						}
 					};
 
@@ -242,13 +229,7 @@ namespace wi::video
 	{
 		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 
-		if (instance->video->data_stream_barrier)
-		{
-			instance->video->data_stream_barrier = false;
-			wi::graphics::GPUBarrier barrier = wi::graphics::GPUBarrier::Buffer(&instance->video->data_stream, wi::graphics::ResourceState::COPY_DST, wi::graphics::ResourceState::VIDEO_DECODE_SRC);
-			device->Barrier(&barrier, 1, cmd);
-		}
-#if 1
+#if 0
 		instance->current_frame = 0;
 #else
 		if (instance->state == VideoInstance::State::Paused)
@@ -256,6 +237,7 @@ namespace wi::video
 		instance->time_until_next_frame -= dt;
 		//if (instance->time_until_next_frame > 0)
 		//	return;
+		instance->flags = VideoInstance::Flags::Looped;
 		if (instance->current_frame >= (int)instance->video->frames_infos.size() - 1)
 		{
 			if (has_flag(instance->flags, VideoInstance::Flags::Looped))
