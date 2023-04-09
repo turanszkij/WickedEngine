@@ -279,7 +279,7 @@ namespace wi::graphics
 		BC7_UNORM,
 		BC7_UNORM_SRGB,
 
-		NV12,				// video
+		NV12,				// video YUV420; SRV Luminance aspect: R8_UNORM, SRV Chrominance aspect: R8G8_UNORM
 	};
 	enum class GpuQueryType
 	{

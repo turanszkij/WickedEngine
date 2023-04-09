@@ -1,5 +1,6 @@
 #include "wiVideo.h"
 #include "wiHelper.h"
+#include "wiRenderer.h"
 
 #include "Utility/minimp4.h"
 #include "Utility/h264.h"
@@ -212,6 +213,13 @@ namespace wi::video
 		wi::graphics::ImageAspect aspect = wi::graphics::ImageAspect::CHROMINANCE;
 		instance->output_subresource_chroma = device->CreateSubresource(&instance->output, wi::graphics::SubresourceType::SRV, 0, 1, 0, 1, &format, &aspect);
 		assert(instance->output_subresource_chroma >= 0);
+
+		td.format = wi::graphics::Format::R8G8B8A8_UNORM;
+		td.bind_flags = wi::graphics::BindFlag::UNORDERED_ACCESS | wi::graphics::BindFlag::SHADER_RESOURCE;
+		success = device->CreateTexture(&td, nullptr, &instance->output_rgb);
+		device->SetName(&instance->output_rgb, "wi::VideoInstance::output_rgb");
+		assert(success);
+
 		return success;
 	}
 
@@ -268,5 +276,9 @@ namespace wi::video
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
 
 		instance->current_frame++;
+	}
+	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd)
+	{
+		wi::renderer::YUV_to_RGB(instance->output, -1, instance->output_subresource_chroma, instance->output_rgb, cmd);
 	}
 }

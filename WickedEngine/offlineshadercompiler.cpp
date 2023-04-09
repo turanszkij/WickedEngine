@@ -220,6 +220,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"virtualTextureTileAllocateCS", wi::graphics::ShaderStage::CS },
 	{"virtualTextureResidencyUpdateCS", wi::graphics::ShaderStage::CS },
 	{"windCS", wi::graphics::ShaderStage::CS },
+	{"yuv_to_rgbCS", wi::graphics::ShaderStage::CS },
 
 
 	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },

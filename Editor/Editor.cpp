@@ -1829,6 +1829,9 @@ void EditorComponent::Render() const
 		CommandList cmd = device->BeginCommandList();
 		device->EventBegin("Editor", cmd);
 
+		GetDevice()->WaitCommandList(cmd, video_cmd);
+		wi::video::ResolveVideoToRGB(&video_instance, cmd);
+
 		// Selection outline:
 		if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 		{
@@ -2597,16 +2600,18 @@ void EditorComponent::Compose(CommandList cmd) const
 		wi::font::Draw("Scene saved: " + GetCurrentEditorScene().path, params, cmd);
 	}
 
-	GetDevice()->WaitCommandList(cmd, video_cmd);
-
 	wi::image::Params params;
-	params.pos = XMFLOAT3(100, 100, 0);
+	params.pos = XMFLOAT3(100, 10, 0);
 	params.siz = XMFLOAT2(480, 270);
 	wi::image::Draw(&video_instance.output, params, cmd);
 
 	params.pos.x += params.siz.x + 20;
 	params.image_subresource = video_instance.output_subresource_chroma;
 	wi::image::Draw(&video_instance.output, params, cmd);
+
+	params.pos.y += params.siz.y + 20;
+	params.image_subresource = -1;
+	wi::image::Draw(&video_instance.output_rgb, params, cmd);
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 	auto& scene = GetCurrentScene();

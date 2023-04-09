@@ -1091,6 +1091,9 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_upsamplePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)yuv_to_rgbCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">

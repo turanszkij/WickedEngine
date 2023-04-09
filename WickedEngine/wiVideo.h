@@ -37,6 +37,7 @@ namespace wi::video
 		const Video* video = nullptr;
 		wi::graphics::VideoDecoder decoder;
 		wi::graphics::Texture output;
+		wi::graphics::Texture output_rgb;
 		int output_subresource_chroma = -1;
 		uint64_t current_frame = 0;
 		float time_until_next_frame = 0;
@@ -60,6 +61,7 @@ namespace wi::video
 
 	bool IsDecodingRequired(VideoInstance* instances, size_t num_instances, float dt);
 	void UpdateVideo(VideoInstance* instance, float dt, wi::graphics::CommandList cmd);
+	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd);
 }
 
 template<>

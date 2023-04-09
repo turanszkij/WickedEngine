@@ -855,6 +855,14 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
+	void YUV_to_RGB(
+		const wi::graphics::Texture& input,
+		int input_subresource_luminance,
+		int input_subresource_chrominance,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
+
 	// Render the scene with ray tracing
 	void RayTraceScene(
 		const wi::scene::Scene& scene,
