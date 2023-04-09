@@ -6689,18 +6689,38 @@ using namespace dx12_internal;
 
 		if (!barrierdescs.empty())
 		{
-			commandlist.GetGraphicsCommandList()->ResourceBarrier(
-				(UINT)barrierdescs.size(),
-				barrierdescs.data()
-			);
+			if (commandlist.queue == QUEUE_VIDEO_DECODE)
+			{
+				commandlist.GetVideoDecodeCommandList()->ResourceBarrier(
+					(UINT)barrierdescs.size(),
+					barrierdescs.data()
+				);
+			}
+			else
+			{
+				commandlist.GetGraphicsCommandList()->ResourceBarrier(
+					(UINT)barrierdescs.size(),
+					barrierdescs.data()
+				);
+			}
 			barrierdescs.clear();
 		}
 
 		if (!commandlist.discards.empty())
 		{
-			for (auto& discard : commandlist.discards)
+			if (commandlist.queue == QUEUE_VIDEO_DECODE)
 			{
-				commandlist.GetGraphicsCommandList()->DiscardResource(discard.resource, discard.region.NumSubresources > 0 ? &discard.region : nullptr);
+				for (auto& discard : commandlist.discards)
+				{
+					commandlist.GetVideoDecodeCommandList()->DiscardResource(discard.resource, discard.region.NumSubresources > 0 ? &discard.region : nullptr);
+				}
+			}
+			else
+			{
+				for (auto& discard : commandlist.discards)
+				{
+					commandlist.GetGraphicsCommandList()->DiscardResource(discard.resource, discard.region.NumSubresources > 0 ? &discard.region : nullptr);
+				}
 			}
 			commandlist.discards.clear();
 		}

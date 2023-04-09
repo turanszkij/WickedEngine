@@ -110,8 +110,8 @@ namespace wi::video
 						break;
 					}
 
-					video->width = track.SampleDescription.video.width;
-					video->height = track.SampleDescription.video.height;
+					video->width = wi::graphics::AlignTo(track.SampleDescription.video.width, 16);
+					video->height = wi::graphics::AlignTo(track.SampleDescription.video.height, 16);
 					video->bit_rate = track.avg_bitrate_bps;
 
 					double timescale_rcp = 1.0 / double(track.timescale);
@@ -131,7 +131,7 @@ namespace wi::video
 						track_duration += duration;
 						Video::FrameInfo& info = video->frames_infos.emplace_back();
 						info.offset = aligned_size;
-						info.size = wi::graphics::AlignTo((uint64_t)frame_bytes, alignment);
+						info.size = wi::graphics::AlignTo((uint64_t)frame_bytes + 4, alignment);
 						aligned_size += info.size;
 						info.timestamp_seconds = float(double(timestamp) * timescale_rcp);
 						info.duration_seconds = float(double(duration) * timescale_rcp);
@@ -148,31 +148,34 @@ namespace wi::video
 						{
 							MP4D_file_offset_t ofs = MP4D_frame_offset(&mp4, ntrack, i, &frame_bytes, &timestamp, &duration);
 							uint8_t* dest_buffer = (uint8_t*)dest + video->frames_infos[i].offset;
+#if 0
 							std::memcpy(dest_buffer, input_buf + ofs, frame_bytes);
-							//uint8_t* mem = input_buf + ofs;
-							//while (frame_bytes)
-							//{
-							//	uint32_t size = ((uint32_t)mem[0] << 24) | ((uint32_t)mem[1] << 16) | ((uint32_t)mem[2] << 8) | mem[3];
-							//	size += 4;
-							//	mem[0] = 0; mem[1] = 0; mem[2] = 0; mem[3] = 1;
-							//	std::memcpy(dest_buffer, mem, size - USE_SHORT_SYNC);
-							//	//fwrite(mem + USE_SHORT_SYNC, 1, size - USE_SHORT_SYNC, fout);
-							//	if (frame_bytes < size)
-							//	{
-							//		//printf("error: demux sample failed\n");
-							//		//exit(1);
-							//		assert(0);
-							//	}
-							//	frame_bytes -= size;
-							//	mem += size;
-							//	dest_buffer += size;
-							//}
+#else
+							uint8_t* mem = input_buf + ofs;
+							while (frame_bytes)
+							{
+								uint32_t size = ((uint32_t)mem[0] << 24) | ((uint32_t)mem[1] << 16) | ((uint32_t)mem[2] << 8) | mem[3];
+								size += 4;
+								mem[0] = 0; mem[1] = 0; mem[2] = 0; mem[3] = 1;
+								std::memcpy(dest_buffer, mem + USE_SHORT_SYNC, size - USE_SHORT_SYNC);
+								//fwrite(mem + USE_SHORT_SYNC, 1, size - USE_SHORT_SYNC, fout);
+								if (frame_bytes < size)
+								{
+									//printf("error: demux sample failed\n");
+									//exit(1);
+									assert(0);
+								}
+								frame_bytes -= size;
+								mem += size;
+								dest_buffer += size;
+							}
+#endif
 						}
 					};
 
 					wi::graphics::GPUBufferDesc bd;
 					bd.size = aligned_size;
-					bd.usage = wi::graphics::Usage::DEFAULT;
+					bd.usage = wi::graphics::Usage::UPLOAD;
 					bd.misc_flags = wi::graphics::ResourceMiscFlag::VIDEO_DECODE_SRC;
 					success = device->CreateBuffer2(&bd, copy_video_track, &video->data_stream);
 					assert(success);
@@ -237,14 +240,22 @@ namespace wi::video
 	}
 	void UpdateVideo(VideoInstance* instance, float dt, wi::graphics::CommandList cmd)
 	{
-#if 0
+		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
+
+		if (instance->video->data_stream_barrier)
+		{
+			instance->video->data_stream_barrier = false;
+			wi::graphics::GPUBarrier barrier = wi::graphics::GPUBarrier::Buffer(&instance->video->data_stream, wi::graphics::ResourceState::COPY_DST, wi::graphics::ResourceState::VIDEO_DECODE_SRC);
+			device->Barrier(&barrier, 1, cmd);
+		}
+#if 1
 		instance->current_frame = 0;
 #else
 		if (instance->state == VideoInstance::State::Paused)
 			return;
 		instance->time_until_next_frame -= dt;
-		if (instance->time_until_next_frame > 0)
-			return;
+		//if (instance->time_until_next_frame > 0)
+		//	return;
 		if (instance->current_frame >= (int)instance->video->frames_infos.size() - 1)
 		{
 			if (has_flag(instance->flags, VideoInstance::Flags::Looped))
@@ -261,8 +272,6 @@ namespace wi::video
 
 		const Video::FrameInfo& frame_info = instance->video->frames_infos[instance->current_frame];
 		instance->time_until_next_frame = frame_info.duration_seconds;
-
-		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 
 		wi::graphics::VideoDecodeOperation decode_operation;
 		if (instance->current_frame == 0)
