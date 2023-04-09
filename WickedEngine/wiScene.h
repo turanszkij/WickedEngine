@@ -63,6 +63,7 @@ namespace wi::scene
 		};
 		uint32_t flags = EMPTY;
 
+		float time = 0;
 		CameraComponent camera; // for LOD and 3D sound update
 		std::shared_ptr<void> physics_scene;
 		wi::SpinLock locker;

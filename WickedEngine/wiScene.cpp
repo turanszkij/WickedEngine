@@ -29,6 +29,7 @@ namespace wi::scene
 	void Scene::Update(float dt)
 	{
 		this->dt = dt;
+		time += dt;
 
 		wi::jobsystem::context ctx;
 
@@ -2261,43 +2262,103 @@ namespace wi::scene
 
 			// Talking animation based on sound:
 			const SoundComponent* sound = sounds.GetComponent(entity);
-			if(sound != nullptr && sound->soundResource.IsValid() && sound->IsPlaying())
+			const bool voice_playing = sound != nullptr && sound->soundResource.IsValid() && sound->IsPlaying();
+			if(voice_playing || expression_mastering.IsForceTalkingEnabled())
 			{
-				wi::audio::SampleInfo info = wi::audio::GetSampleInfo(&sound->soundResource.GetSound());
-				uint32_t sample_frequency = info.sample_rate * info.channel_count;
-				uint64_t current_sample = wi::audio::GetTotalSamplesPlayed(&sound->soundinstance);
-				if (sound->IsLooped())
+				ExpressionComponent::Preset unused_phonemes[4];
+				int next = 0;
+				for (int phoneme = (int)ExpressionComponent::Preset::Aa; phoneme <= (int)ExpressionComponent::Preset::Oh; phoneme++)
 				{
-					float total_time = float(current_sample) / float(info.sample_rate);
-					if (total_time > sound->soundinstance.loop_begin)
+					if (phoneme != (int)expression_mastering.talking_phoneme) // don't allow to select the current phoneme next
 					{
-						float loop_length = sound->soundinstance.loop_length > 0 ? sound->soundinstance.loop_length : (float(info.sample_count) / float(sample_frequency));
-						float loop_time = std::fmod(total_time - sound->soundinstance.loop_begin, loop_length);
-						current_sample = uint64_t(loop_time * info.sample_rate);
+						unused_phonemes[next++] = (ExpressionComponent::Preset)phoneme;
+						int mouth = expression_mastering.presets[(int)phoneme];
+						ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
+						expression.weight = wi::math::Lerp(expression.weight, 0, 0.4f); // fade out unused
+						expression.SetDirty();
 					}
 				}
-				current_sample *= info.channel_count;
-				current_sample = std::min(current_sample, info.sample_count);
-
-				float voice = 0;
-				const int sample_count = 64;
-				for (int sam = 0; sam < sample_count; ++sam)
-				{
-					voice = std::max(voice, std::abs((float)info.samples[std::min(current_sample + sam, info.sample_count)] / 32768.0f));
-				}
-				int mouth = expression_mastering.presets[(int)ExpressionComponent::Preset::Aa];
+				int mouth = expression_mastering.presets[(int)expression_mastering.talking_phoneme];
 				ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
 
-				const float strength = 0.4f;
-				if (voice > 0.1f)
+				if (voice_playing)
 				{
-					expression.weight = wi::math::Lerp(expression.weight, 1, strength);
+					// Take voice sample from audio:
+					wi::audio::SampleInfo info = wi::audio::GetSampleInfo(&sound->soundResource.GetSound());
+					uint32_t sample_frequency = info.sample_rate * info.channel_count;
+					uint64_t current_sample = wi::audio::GetTotalSamplesPlayed(&sound->soundinstance);
+					if (sound->IsLooped())
+					{
+						float total_time = float(current_sample) / float(info.sample_rate);
+						if (total_time > sound->soundinstance.loop_begin)
+						{
+							float loop_length = sound->soundinstance.loop_length > 0 ? sound->soundinstance.loop_length : (float(info.sample_count) / float(sample_frequency));
+							float loop_time = std::fmod(total_time - sound->soundinstance.loop_begin, loop_length);
+							current_sample = uint64_t(loop_time * info.sample_rate);
+						}
+					}
+					current_sample *= info.channel_count;
+					current_sample = std::min(current_sample, info.sample_count);
+
+					float voice = 0;
+					const int sample_count = 64;
+					for (int sam = 0; sam < sample_count; ++sam)
+					{
+						voice = std::max(voice, std::abs((float)info.samples[std::min(current_sample + sam, info.sample_count)] / 32768.0f));
+					}
+					const float strength = 0.4f;
+					if (voice > 0.1f)
+					{
+						expression.weight = wi::math::Lerp(expression.weight, 1, strength);
+					}
+					else
+					{
+						expression.weight = wi::math::Lerp(expression.weight, 0, strength);
+					}
 				}
 				else
 				{
-					expression.weight = wi::math::Lerp(expression.weight, 0, strength);
+					float wave = std::sin(time * 30) * 0.5f + 0.5f;
+					expression.weight = wave;
 				}
+
+				float prev_slope = expression_mastering.talking_weight_prev - expression_mastering.talking_weight_prev_prev;
+				float curr_slope = expression.weight - expression_mastering.talking_weight_prev;
+				expression_mastering.talking_weight_prev_prev = expression_mastering.talking_weight_prev;
+				expression_mastering.talking_weight_prev = expression.weight;
+				if (prev_slope < 0 && curr_slope > 0)
+				{
+					// New phoneme when voice slope valley is detected:
+					expression_mastering.talking_phoneme = unused_phonemes[wi::random::GetRandom(0, (int)arraysize(unused_phonemes) - 1)];
+				}
+
 				expression.SetDirty();
+			}
+			else if (expression_mastering._flags & ExpressionComponent::TALKING_ENDED)
+			{
+				// When talking ended, smoothly blend out all phoneme expressions:
+				bool talking_active = false;
+				int phonemes[] = {
+					expression_mastering.presets[(int)ExpressionComponent::Preset::Aa],
+					expression_mastering.presets[(int)ExpressionComponent::Preset::Ih],
+					expression_mastering.presets[(int)ExpressionComponent::Preset::Ou],
+					expression_mastering.presets[(int)ExpressionComponent::Preset::Ee],
+					expression_mastering.presets[(int)ExpressionComponent::Preset::Oh],
+				};
+				for (auto& phoneme : phonemes)
+				{
+					if (phoneme < 0)
+						continue;
+					auto& expression = expression_mastering.expressions[phoneme];
+					expression.weight = wi::math::Lerp(expression.weight, 0, 0.4f);
+					expression.SetDirty();
+					if (expression.weight > 0)
+						talking_active = true;
+				}
+				if (!talking_active)
+				{
+					expression_mastering._flags ^= ExpressionComponent::TALKING_ENDED;
+				}
 			}
 
 			float overrideMouthBlend = 0;
@@ -2825,8 +2886,6 @@ namespace wi::scene
 
 
 		// Springs:
-		static float time = 0;
-		time += dt;
 		const XMVECTOR windDir = XMLoadFloat3(&weather.windDirection);
 
 		if (springs.GetCount() > 0)
