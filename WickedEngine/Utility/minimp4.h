@@ -15,6 +15,10 @@
 #include <limits.h>
 #include <assert.h>
 
+#ifdef _WIN32
+#define strdup _strdup
+#endif // _WIN32
+
 #ifdef __cplusplus
 extern "C" {
 #endif
