@@ -328,6 +328,12 @@ namespace wi::graphics
 		CHROMINANCE,
 	};
 
+	enum class VideoFrameType
+	{
+		Intra,
+		Predictive,
+	};
+
 	// Flags ////////////////////////////////////////////
 
 	enum class ColorWrite
@@ -849,6 +855,10 @@ namespace wi::graphics
 		uint64_t stream_offset = 0;
 		uint64_t stream_size = 0;
 		uint64_t frame_index = 0;
+		VideoFrameType frame_type = VideoFrameType::Intra;
+		uint32_t reference_priority = 0;
+		uint32_t pps_id = 0;
+		uint32_t sps_id = 0;
 	};
 
 	struct RenderPassImage

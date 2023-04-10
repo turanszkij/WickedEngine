@@ -947,6 +947,7 @@ namespace vulkan_internal
 		wi::vector<int> dpb_subresources_chrominance;
 		std::deque<uint32_t> reference_usage;
 		uint32_t next_dpb = 0;
+		uint32_t max_frame_num = 0;
 
 		~VideoDecoder_Vulkan()
 		{
@@ -1295,8 +1296,10 @@ using namespace vulkan_internal;
 		{
 			vkDestroyCommandPool(device->device, x.transferCommandPool, nullptr);
 			vkDestroyCommandPool(device->device, x.transitionCommandPool, nullptr);
-			vkDestroySemaphore(device->device, x.semaphores[0], nullptr);
-			vkDestroySemaphore(device->device, x.semaphores[1], nullptr);
+			for (auto& sema : x.semaphores)
+			{
+				vkDestroySemaphore(device->device, sema, nullptr);
+			}
 			vkDestroyFence(device->device, x.fence, nullptr);
 		}
 	}
@@ -1356,6 +1359,8 @@ using namespace vulkan_internal;
 			assert(res == VK_SUCCESS);
 			res = vkCreateSemaphore(device->device, &semaphoreInfo, nullptr, &cmd.semaphores[1]);
 			assert(res == VK_SUCCESS);
+			res = vkCreateSemaphore(device->device, &semaphoreInfo, nullptr, &cmd.semaphores[2]);
+			assert(res == VK_SUCCESS);
 
 			GPUBufferDesc uploaddesc;
 			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
@@ -1411,11 +1416,32 @@ using namespace vulkan_internal;
 		submitInfo.pWaitSemaphores = &cmd.semaphores[0];
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = &cmd.semaphores[1];
-		submitInfo.signalSemaphoreCount = 1;
+		if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
+		{
+			submitInfo.signalSemaphoreCount = 2;
+		}
+		else
+		{
+			submitInfo.signalSemaphoreCount = 1;
+		}
 		device->queues[QUEUE_GRAPHICS].locker.lock();
 		res = vkQueueSubmit(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, VK_NULL_HANDLE);
 		assert(res == VK_SUCCESS);
 		device->queues[QUEUE_GRAPHICS].locker.unlock();
+
+		if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
+		{
+			submitInfo.pCommandBuffers = nullptr;
+			submitInfo.commandBufferCount = 0;
+			submitInfo.pSignalSemaphores = nullptr;
+			submitInfo.signalSemaphoreCount = 0;
+			submitInfo.pWaitSemaphores = &cmd.semaphores[2];
+			submitInfo.waitSemaphoreCount = 1;
+			device->queues[QUEUE_VIDEO_DECODE].locker.lock();
+			res = vkQueueSubmit(device->queues[QUEUE_VIDEO_DECODE].queue, 1, &submitInfo, VK_NULL_HANDLE);
+			assert(res == VK_SUCCESS);
+			device->queues[QUEUE_VIDEO_DECODE].locker.unlock();
+		}
 
 		submitInfo.pCommandBuffers = nullptr;
 		submitInfo.commandBufferCount = 0;
@@ -6065,6 +6091,7 @@ using namespace vulkan_internal;
 			vk_sps.pOffsetForRefFrame = sps->offset_for_ref_frame;
 
 			num_reference_frames = std::max(num_reference_frames, (uint32_t)sps->num_ref_frames);
+			internal_state->max_frame_num = std::pow(2, vk_sps.log2_max_frame_num_minus4 + 4);
 		}
 		uint32_t num_dpb_slots = num_reference_frames + 1;
 
@@ -8838,6 +8865,7 @@ using namespace vulkan_internal;
 			};
 			Barrier(barriers, arraysize(barriers), cmd);
 			decoder_internal->reference_usage.clear();
+			decoder_internal->next_dpb = 0;
 		}
 		else
 		{
@@ -8865,16 +8893,16 @@ using namespace vulkan_internal;
 		decode_info.pSetupReferenceSlot = &decoder_internal->reference_slots[decoder_internal->next_dpb];
 
 		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
-		std_picture_info_h264.seq_parameter_set_id = 0;
-		std_picture_info_h264.pic_parameter_set_id = 0;
-		std_picture_info_h264.frame_num = op->frame_index;
+		std_picture_info_h264.seq_parameter_set_id = op->sps_id;
+		std_picture_info_h264.pic_parameter_set_id = op->pps_id;
+		std_picture_info_h264.frame_num = uint16_t(op->frame_index % decoder_internal->max_frame_num);
 		std_picture_info_h264.PicOrderCnt[0] = 0;
 		std_picture_info_h264.PicOrderCnt[1] = 0;
 		std_picture_info_h264.flags.field_pic_flag = 0;
-		std_picture_info_h264.flags.is_intra = 1;
-		std_picture_info_h264.flags.IdrPicFlag = 0;
+		std_picture_info_h264.flags.is_intra = op->frame_type == VideoFrameType::Intra ? 1 : 0;
+		std_picture_info_h264.flags.is_reference = op->reference_priority > 0 ? 1 : 0;
+		std_picture_info_h264.flags.IdrPicFlag = (std_picture_info_h264.flags.is_intra && std_picture_info_h264.flags.is_reference) ? 1 : 0;
 		std_picture_info_h264.flags.bottom_field_flag = 0;
-		std_picture_info_h264.flags.is_reference = 1;
 		std_picture_info_h264.flags.complementary_field_pair = 0;
 
 		uint32_t slice_offset = 0;

@@ -51,12 +51,13 @@ namespace wi::video
 						while (data = MP4D_read_sps(&mp4, ntrack, index, &size))
 						{
 							const uint8_t* sps_data = (const uint8_t*)data;
-							assert(sps_data[0] == 0x67); // verify SPS start code prefix
-							sps_data++;
-
-							h264::sps_t sps = {};
 							bs_t bs = {};
 							bs_init(&bs, (uint8_t*)sps_data, size);
+							h264::nal_header nal = {};
+							h264::read_nal_header(&nal, &bs);
+							assert(nal.type = h264::NAL_UNIT_TYPE_SPS);
+
+							h264::sps_t sps = {};
 							h264::read_seq_parameter_set_rbsp(&sps, &bs);
 
 							// Some validation checks that data parsing returned expected values:
@@ -85,12 +86,13 @@ namespace wi::video
 						while (data = MP4D_read_pps(&mp4, ntrack, index, &size))
 						{
 							const uint8_t* pps_data = (const uint8_t*)data;
-							assert(pps_data[0] == 0x68); // verify PPS start code prefix
-							pps_data++;
-
-							h264::pps_t pps = {};
 							bs_t bs = {};
 							bs_init(&bs, (uint8_t*)pps_data, size);
+							h264::nal_header nal = {};
+							h264::read_nal_header(&nal, &bs);
+							assert(nal.type = h264::NAL_UNIT_TYPE_PPS);
+
+							h264::pps_t pps = {};
 							h264::read_pic_parameter_set_rbsp(&pps, &bs);
 							video->pps_datas.resize(video->pps_datas.size() + sizeof(pps));
 							std::memcpy((h264::pps_t*)video->pps_datas.data() + video->pps_count, &pps, sizeof(pps));
@@ -119,9 +121,6 @@ namespace wi::video
 
 					double timescale_rcp = 1.0 / double(track.timescale);
 
-					unsigned frame_bytes, timestamp, duration;
-					MP4D_file_offset_t first_sample_offset = MP4D_frame_offset(&mp4, ntrack, 0, &frame_bytes, &timestamp, &duration);
-
 					wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 					const uint64_t alignment = device->GetVideoDecodeBitstreamAlignment();
 
@@ -130,10 +129,46 @@ namespace wi::video
 					uint64_t aligned_size = 0;
 					for (uint32_t i = 0; i < track.sample_count; i++)
 					{
+						unsigned frame_bytes, timestamp, duration;
 						MP4D_file_offset_t ofs = MP4D_frame_offset(&mp4, ntrack, i, &frame_bytes, &timestamp, &duration);
 						track_duration += duration;
+
 						Video::FrameInfo& info = video->frames_infos.emplace_back();
 						info.offset = aligned_size;
+
+						uint8_t* src_buffer = input_buf + ofs;
+						while (frame_bytes > 0)
+						{
+							uint32_t size = ((uint32_t)src_buffer[0] << 24) | ((uint32_t)src_buffer[1] << 16) | ((uint32_t)src_buffer[2] << 8) | src_buffer[3];
+							size += 4;
+							assert(frame_bytes >= size);
+
+							bs_t bs = {};
+							bs_init(&bs, &src_buffer[4], sizeof(uint8_t));
+							h264::nal_header nal = {};
+							h264::read_nal_header(&nal, &bs);
+
+							if (nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_IDR)
+							{
+								info.type = wi::graphics::VideoFrameType::Intra;
+							}
+							else if (nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR)
+							{
+								info.type = wi::graphics::VideoFrameType::Predictive;
+							}
+							else
+							{
+								// Continue search for frame beginning NAL unit:
+								frame_bytes -= size;
+								src_buffer += size;
+								continue;
+							}
+
+							// Accept frame beginning NAL unit:
+							info.reference_priority = nal.idc;
+							break;
+						}
+
 						info.size = wi::graphics::AlignTo((uint64_t)frame_bytes + 4, alignment);
 						aligned_size += info.size;
 						info.timestamp_seconds = float(double(timestamp) * timescale_rcp);
@@ -146,6 +181,7 @@ namespace wi::video
 					auto copy_video_track = [&](void* dest) {
 						for (uint32_t i = 0; i < track.sample_count; i++)
 						{
+							unsigned frame_bytes, timestamp, duration;
 							MP4D_file_offset_t ofs = MP4D_frame_offset(&mp4, ntrack, i, &frame_bytes, &timestamp, &duration);
 							uint8_t* dst_buffer = (uint8_t*)dest + video->frames_infos[i].offset;
 							uint8_t* src_buffer = input_buf + ofs;
@@ -153,12 +189,29 @@ namespace wi::video
 							{
 								uint32_t size = ((uint32_t)src_buffer[0] << 24) | ((uint32_t)src_buffer[1] << 16) | ((uint32_t)src_buffer[2] << 8) | src_buffer[3];
 								size += 4;
-								src_buffer[0] = 0; src_buffer[1] = 0; src_buffer[2] = 0; src_buffer[3] = 1;
-								std::memcpy(dst_buffer, src_buffer, size);
 								assert(frame_bytes >= size);
-								frame_bytes -= size;
-								src_buffer += size;
-								dst_buffer += size;
+
+								bs_t bs = {};
+								bs_init(&bs, &src_buffer[4], sizeof(uint8_t));
+								h264::nal_header nal = {};
+								h264::read_nal_header(&nal, &bs);
+
+								if (
+									nal.type != h264::NAL_UNIT_TYPE_CODED_SLICE_IDR &&
+									nal.type != h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR
+									)
+								{
+									frame_bytes -= size;
+									src_buffer += size;
+									continue;
+								}
+
+								std::memcpy(dst_buffer, src_buffer, size);
+
+								// overwrite beginning of GPU buffer with NAL sync unit:
+								const uint8_t nal_sync[] = { 0,0,0,1 };
+								std::memcpy(dst_buffer, nal_sync, sizeof(nal_sync));
+								break;
 							}
 						}
 					};
@@ -277,6 +330,8 @@ namespace wi::video
 		decode_operation.stream_offset = frame_info.offset;
 		decode_operation.stream_size = frame_info.size;
 		decode_operation.frame_index = instance->current_frame;
+		decode_operation.frame_type = frame_info.type;
+		decode_operation.reference_priority = frame_info.reference_priority;
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
 
 		instance->current_frame++;

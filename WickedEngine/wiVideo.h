@@ -29,6 +29,8 @@ namespace wi::video
 			uint64_t size = 0;
 			float timestamp_seconds = 0;
 			float duration_seconds = 0;
+			wi::graphics::VideoFrameType type = wi::graphics::VideoFrameType::Intra;
+			uint32_t reference_priority = 0;
 		};
 		wi::vector<FrameInfo> frames_infos;
 		inline bool IsValid() const { return data_stream.IsValid(); }

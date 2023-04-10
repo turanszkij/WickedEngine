@@ -1689,6 +1689,11 @@ using namespace dx12_internal;
 		assert(SUCCEEDED(hr));
 		hr = device->queues[QUEUE_COMPUTE].queue->Wait(cmd.fence.Get(), 1);
 		assert(SUCCEEDED(hr));
+		if (device->queues[QUEUE_VIDEO_DECODE].queue)
+		{
+			hr = device->queues[QUEUE_VIDEO_DECODE].queue->Wait(cmd.fence.Get(), 1);
+			assert(SUCCEEDED(hr));
+		}
 
 		locker.lock();
 		freelist.push_back(cmd);

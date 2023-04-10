@@ -137,7 +137,7 @@ namespace wi::graphics
 				VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
 				VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
 				VkFence fence = VK_NULL_HANDLE;
-				VkSemaphore semaphores[2] = { VK_NULL_HANDLE, VK_NULL_HANDLE }; // graphics, compute
+				VkSemaphore semaphores[3] = { VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE }; // graphics, compute, video
 				GPUBuffer uploadbuffer;
 				inline bool IsValid() const { return transferCommandBuffer != VK_NULL_HANDLE; }
 			};

@@ -855,6 +855,47 @@ namespace h264 {
 		read_rbsp_trailing_bits(b);
 	}
 
+	enum NAL_REF_IDC
+	{
+		NAL_REF_IDC_PRIORITY_HIGHEST = 3,
+		NAL_REF_IDC_PRIORITY_HIGH = 2,
+		NAL_REF_IDC_PRIORITY_LOW = 1,
+		NAL_REF_IDC_PRIORITY_DISPOSABLE = 0,
+	};
+
+	enum NAL_UNIT_TYPE
+	{
+		NAL_UNIT_TYPE_UNSPECIFIED = 0,	// Unspecified
+		NAL_UNIT_TYPE_CODED_SLICE_NON_IDR = 1,	// Coded slice of a non-IDR picture
+		NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_A = 2,	// Coded slice data partition A
+		NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_B = 3,	// Coded slice data partition B
+		NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_C = 4,	// Coded slice data partition C
+		NAL_UNIT_TYPE_CODED_SLICE_IDR = 5,	// Coded slice of an IDR picture
+		NAL_UNIT_TYPE_SEI = 6,	// Supplemental enhancement information (SEI)
+		NAL_UNIT_TYPE_SPS = 7,	// Sequence parameter set
+		NAL_UNIT_TYPE_PPS = 8,	// Picture parameter set
+		NAL_UNIT_TYPE_AUD = 9,	// Access unit delimiter
+		NAL_UNIT_TYPE_END_OF_SEQUENCE = 10,	// End of sequence
+		NAL_UNIT_TYPE_END_OF_STREAM = 11,	// End of stream
+		NAL_UNIT_TYPE_FILLER = 12,	// Filler data
+		NAL_UNIT_TYPE_SPS_EXT = 13,	// Sequence parameter set extension
+		NAL_UNIT_TYPE_CODED_SLICE_AUX = 19,	// Coded slice of an auxiliary coded picture without partitioning
+	};
+
+	struct nal_header
+	{
+		NAL_REF_IDC idc;
+		NAL_UNIT_TYPE type;
+	};
+	inline void read_nal_header(nal_header* nal, bs_t* bs)
+	{
+		*nal = {};
+		uint32_t forbidden_zero_bit = bs_read_u(bs, 1);
+		assert(forbidden_zero_bit == 0);
+		nal->idc = (h264::NAL_REF_IDC)bs_read_u(bs, 2);
+		nal->type = (h264::NAL_UNIT_TYPE)bs_read_u(bs, 5);
+	}
+
 }
 
 #endif
