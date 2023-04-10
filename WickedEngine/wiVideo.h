@@ -10,6 +10,8 @@ namespace wi::video
 {
 	struct Video
 	{
+		uint32_t padded_width = 0;
+		uint32_t padded_height = 0;
 		uint32_t width = 0;
 		uint32_t height = 0;
 		uint32_t bit_rate = 0;
@@ -49,6 +51,7 @@ namespace wi::video
 			Empty = 0,
 			Looped = 1 << 0,
 			Mipmapped = 1 << 1,
+			NeedsResolve = 1 << 2,
 		};
 		Flags flags = Flags::Empty;
 		inline bool IsValid() const { return decoder.IsValid(); }

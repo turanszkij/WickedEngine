@@ -65,6 +65,8 @@ namespace wi::video
 							uint32_t height = ((2 - sps.frame_mbs_only_flag) * (sps.pic_height_in_map_units_minus1 + 1) * 16) - (sps.frame_crop_top_offset * 2) - (sps.frame_crop_bottom_offset * 2);
 							assert(track.SampleDescription.video.width == width);
 							assert(track.SampleDescription.video.height == height);
+							video->padded_width = (sps.pic_width_in_mbs_minus1 + 1) * 16;
+							video->padded_height = (sps.pic_height_in_map_units_minus1 + 1) * 16;
 
 							video->sps_datas.resize(video->sps_datas.size() + sizeof(sps));
 							std::memcpy((h264::sps_t*)video->sps_datas.data() + video->sps_count, &sps, sizeof(sps));
@@ -111,8 +113,8 @@ namespace wi::video
 						break;
 					}
 
-					video->width = wi::graphics::AlignTo(track.SampleDescription.video.width, 16);
-					video->height = wi::graphics::AlignTo(track.SampleDescription.video.height, 16);
+					video->width = track.SampleDescription.video.width;
+					video->height = track.SampleDescription.video.height;
 					video->bit_rate = track.avg_bitrate_bps;
 
 					double timescale_rcp = 1.0 / double(track.timescale);
@@ -185,8 +187,8 @@ namespace wi::video
 		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 
 		wi::graphics::VideoDesc vd;
-		vd.width = video->width;
-		vd.height = video->height;
+		vd.width = video->padded_width;
+		vd.height = video->padded_height;
 		vd.bit_rate = video->bit_rate;
 		vd.format = wi::graphics::Format::NV12;
 		vd.profile = video->profile;
@@ -200,9 +202,9 @@ namespace wi::video
 			return false;
 
 		wi::graphics::TextureDesc td;
-		td.width = vd.width;
-		td.height = vd.height;
-		td.format = wi::graphics::Format::R8G8B8A8_UNORM;
+		td.width = video->width;
+		td.height = video->height;
+		td.format = wi::graphics::Format::R10G10B10A2_UNORM;
 		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
 		{
 			td.mip_levels = 0; // max mipcount
@@ -247,9 +249,8 @@ namespace wi::video
 		if (instance->state == VideoInstance::State::Paused)
 			return;
 		instance->time_until_next_frame -= dt;
-		//if (instance->time_until_next_frame > 0)
-		//	return;
-		instance->flags = VideoInstance::Flags::Looped;
+		if (instance->time_until_next_frame > 0)
+			return;
 		if (instance->current_frame >= (int)instance->video->frames_infos.size() - 1)
 		{
 			if (has_flag(instance->flags, VideoInstance::Flags::Looped))
@@ -279,9 +280,14 @@ namespace wi::video
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
 
 		instance->current_frame++;
+		instance->flags |= VideoInstance::Flags::NeedsResolve;
 	}
 	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd)
 	{
+		if (!has_flag(instance->flags, VideoInstance::Flags::NeedsResolve))
+			return;
+		instance->flags &= ~VideoInstance::Flags::NeedsResolve;
+
 		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 		wi::graphics::GraphicsDevice::VideoDecoderResult decode_result = device->GetVideoDecoderResult(&instance->decoder);
 		wi::renderer::YUV_to_RGB(
