@@ -8,7 +8,7 @@
 #include "wiUnorderedSet.h"
 #include "wiRandom.h"
 
-#include "Utility/vk_video/vulkan_video_codec_h264std_decode.h"
+#include "Utility/vulkan/vk_video/vulkan_video_codec_h264std_decode.h"
 #include "Utility/h264.h"
 
 #define VOLK_IMPLEMENTATION
@@ -943,6 +943,8 @@ namespace vulkan_internal
 		wi::vector<VkVideoDecodeH264DpbSlotInfoKHR> dpb_slots_h264;
 		wi::vector<StdVideoDecodeH264ReferenceInfo> reference_infos_h264;
 		Texture DPB;
+		wi::vector<int> dpb_subresources_luminance;
+		wi::vector<int> dpb_subresources_chrominance;
 		std::deque<uint32_t> reference_usage;
 		uint32_t next_dpb = 0;
 
@@ -6141,14 +6143,15 @@ using namespace vulkan_internal;
 		res = vkCreateVideoSessionParametersKHR(device, &session_parameters_info, nullptr, &internal_state->session_parameters);
 		assert(res == VK_SUCCESS);
 
+		assert(video_capability_h264.decode_capabilities.flags & VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_COINCIDE_BIT_KHR); // Currently the only method supported
+
 		TextureDesc td;
 		td.width = desc->width;
 		td.height = desc->height;
 		td.format = desc->format;
 		td.array_size = num_dpb_slots;
-		//td.bind_flags = BindFlag::SHADER_RESOURCE;
+		td.bind_flags = BindFlag::SHADER_RESOURCE;
 		td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_DPB | ResourceMiscFlag::VIDEO_DECODE_DST;
-		td.layout = ResourceState::UNDEFINED;
 		bool dpb_success = CreateTexture(&td, nullptr, &internal_state->DPB);
 		assert(dpb_success);
 		SetName(&internal_state->DPB, "VideoDecoder::DPB");
@@ -6158,6 +6161,8 @@ using namespace vulkan_internal;
 		internal_state->reference_slot_pictures.resize(num_dpb_slots);
 		internal_state->dpb_slots_h264.resize(num_dpb_slots);
 		internal_state->reference_infos_h264.resize(num_dpb_slots);
+		internal_state->dpb_subresources_luminance.resize(num_dpb_slots);
+		internal_state->dpb_subresources_chrominance.resize(num_dpb_slots);
 		for (uint32_t i = 0; i < num_dpb_slots; ++i)
 		{
 			VkVideoReferenceSlotInfoKHR& slot = internal_state->reference_slots[i];
@@ -6184,6 +6189,24 @@ using namespace vulkan_internal;
 			ref.FrameNum = 0;
 			ref.PicOrderCnt[0] = 0;
 			ref.PicOrderCnt[1] = 0;
+
+			Format luminance_format = Format::R8_UNORM;
+			ImageAspect luminance_aspect = ImageAspect::LUMINANCE;
+			internal_state->dpb_subresources_luminance[i] = CreateSubresource(
+				&internal_state->DPB,
+				SubresourceType::SRV,
+				i, 1, 0, 1,
+				&luminance_format, &luminance_aspect
+			);
+
+			Format chrominance_format = Format::R8G8_UNORM;
+			ImageAspect chrominance_aspect = ImageAspect::CHROMINANCE;
+			internal_state->dpb_subresources_chrominance[i] = CreateSubresource(
+				&internal_state->DPB,
+				SubresourceType::SRV,
+				i, 1, 0, 1,
+				&chrominance_format, &chrominance_aspect
+			);
 		}
 
 		return true;
@@ -6242,7 +6265,7 @@ using namespace vulkan_internal;
 
 		if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 		{
-			if (texture->desc.array_size > 1)
+			if (sliceCount > 1)
 			{
 				view_desc.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
 			}
@@ -6253,7 +6276,7 @@ using namespace vulkan_internal;
 		}
 		else if (texture->desc.type == TextureDesc::Type::TEXTURE_2D)
 		{
-			if (texture->desc.array_size > 1)
+			if (texture->desc.array_size > 1 && sliceCount > 1)
 			{
 				if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 				{
@@ -7017,7 +7040,6 @@ using namespace vulkan_internal;
 		result.desc.format = swapchain->desc.format;
 		return result;
 	}
-
 	ColorSpace GraphicsDevice_Vulkan::GetSwapChainColorSpace(const SwapChain* swapchain) const
 	{
 		auto internal_state = to_internal(swapchain);
@@ -7045,6 +7067,18 @@ using namespace vulkan_internal;
 			}
 		}
 		return false;
+	}
+
+	GraphicsDevice::VideoDecoderResult GraphicsDevice_Vulkan::GetVideoDecoderResult(const VideoDecoder* decoder) const
+	{
+		auto internal_state = to_internal(decoder);
+		uint32_t last_dpb_slot = internal_state->reference_usage.back();
+
+		VideoDecoderResult result;
+		result.texture = internal_state->DPB;
+		result.subresource_luminance = internal_state->dpb_subresources_luminance[last_dpb_slot];
+		result.subresource_chrominance = internal_state->dpb_subresources_chrominance[last_dpb_slot];
+		return result;
 	}
 
 	void GraphicsDevice_Vulkan::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
@@ -8796,7 +8830,6 @@ using namespace vulkan_internal;
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		auto decoder_internal = to_internal(video_decoder);
 		auto stream_internal = to_internal(op->stream);
-		auto output_internal = to_internal(op->output);
 
 		if (op->flags & VideoDecodeOperation::FLAG_SESSION_RESET)
 		{
@@ -8806,6 +8839,13 @@ using namespace vulkan_internal;
 			Barrier(barriers, arraysize(barriers), cmd);
 			decoder_internal->reference_usage.clear();
 		}
+		else
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&decoder_internal->DPB, decoder_internal->DPB.desc.layout, ResourceState::VIDEO_DECODE_DPB, -1, decoder_internal->reference_usage.back()),
+			};
+			Barrier(barriers, arraysize(barriers), cmd);
+		}
 
 		VkVideoDecodeInfoKHR decode_info = {};
 		decode_info.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_INFO_KHR;
@@ -8813,13 +8853,6 @@ using namespace vulkan_internal;
 		decode_info.srcBufferOffset = (VkDeviceSize)op->stream_offset;
 		decode_info.srcBufferRange = (VkDeviceSize)op->stream_size;
 
-		//decode_info.dstPictureResource.sType = VK_STRUCTURE_TYPE_VIDEO_PICTURE_RESOURCE_INFO_KHR;
-		//decode_info.dstPictureResource.imageViewBinding = output_internal->video_decode_view;
-		//decode_info.dstPictureResource.baseArrayLayer = 0;
-		//decode_info.dstPictureResource.codedExtent.width = video_decoder->desc.width;
-		//decode_info.dstPictureResource.codedExtent.height = video_decoder->desc.height;
-		//decode_info.dstPictureResource.codedOffset.x = 0;
-		//decode_info.dstPictureResource.codedOffset.y = 0;
 		decode_info.dstPictureResource = *decoder_internal->reference_slots[decoder_internal->next_dpb].pPictureResource;
 
 		VkVideoReferenceSlotInfoKHR reference_slots[17] = {};
@@ -8830,19 +8863,6 @@ using namespace vulkan_internal;
 		decode_info.referenceSlotCount = (uint32_t)decoder_internal->reference_usage.size();
 		decode_info.pReferenceSlots = decode_info.referenceSlotCount == 0 ? nullptr : reference_slots;
 		decode_info.pSetupReferenceSlot = &decoder_internal->reference_slots[decoder_internal->next_dpb];
-
-		decoder_internal->reference_usage.push_back(decoder_internal->next_dpb);
-		while (decoder_internal->reference_usage.size() >= decoder_internal->reference_slots.size())
-			decoder_internal->reference_usage.pop_front();
-
-		//VkVideoDecodeH264SessionParametersAddInfoKHR update_info_h264 = decoder_internal->session_parameters_add_info_h264;
-
-		//VkVideoSessionParametersUpdateInfoKHR update_info = {};
-		//update_info.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_PARAMETERS_UPDATE_INFO_KHR;
-		//update_info.updateSequenceCount = 0;
-		//update_info.pNext = &update_info_h264;
-		//VkResult res = vkUpdateVideoSessionParametersKHR(device, decoder_internal->session_parameters, &update_info);
-		//assert(res == VK_SUCCESS);
 
 		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
 		std_picture_info_h264.seq_parameter_set_id = 0;
@@ -8866,7 +8886,6 @@ using namespace vulkan_internal;
 		picture_info_h264.pSliceOffsets = &slice_offset;
 		decode_info.pNext = &picture_info_h264;
 
-#if 1
 		reference_slots[decode_info.referenceSlotCount] = decoder_internal->reference_slots[decoder_internal->next_dpb];
 		reference_slots[decode_info.referenceSlotCount].slotIndex = -1; // not yet referenced, but it will be in current decode https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkCmdBeginVideoCodingKHR.html
 
@@ -8877,15 +8896,6 @@ using namespace vulkan_internal;
 		begin_info.referenceSlotCount = decode_info.referenceSlotCount + 1; // add in the current reconstructed DPB image
 		begin_info.pReferenceSlots = begin_info.referenceSlotCount == 0 ? nullptr : reference_slots;
 		vkCmdBeginVideoCodingKHR(commandlist.GetCommandBuffer(), &begin_info);
-#else
-		VkVideoBeginCodingInfoKHR begin_info = {};
-		begin_info.sType = VK_STRUCTURE_TYPE_VIDEO_BEGIN_CODING_INFO_KHR;
-		begin_info.videoSession = decoder_internal->video_session;
-		begin_info.videoSessionParameters = decoder_internal->session_parameters;
-		begin_info.referenceSlotCount = decode_info.referenceSlotCount;
-		begin_info.pReferenceSlots = begin_info.referenceSlotCount == 0 ? nullptr : reference_slots;
-		vkCmdBeginVideoCodingKHR(commandlist.GetCommandBuffer(), &begin_info);
-#endif
 
 		if (op->flags & VideoDecodeOperation::FLAG_SESSION_RESET)
 		{
@@ -8901,10 +8911,16 @@ using namespace vulkan_internal;
 		end_info.sType = VK_STRUCTURE_TYPE_VIDEO_END_CODING_INFO_KHR;
 		vkCmdEndVideoCodingKHR(commandlist.GetCommandBuffer(), &end_info);
 
+#if 1
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&decoder_internal->DPB, ResourceState::VIDEO_DECODE_DPB, decoder_internal->DPB.desc.layout, -1, decoder_internal->next_dpb),
+		};
+		Barrier(barriers, arraysize(barriers), cmd);
+#else
 		// Copy from DPB to output:
 
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&decoder_internal->DPB, ResourceState::VIDEO_DECODE_DPB, ResourceState::COPY_SRC),
+			GPUBarrier::Image(&decoder_internal->DPB, ResourceState::VIDEO_DECODE_DPB, ResourceState::COPY_SRC, -1, decoder_internal->next_dpb),
 			GPUBarrier::Image(op->output, op->output->desc.layout, ResourceState::COPY_DST),
 		};
 		Barrier(barriers, arraysize(barriers), cmd);
@@ -8923,8 +8939,11 @@ using namespace vulkan_internal;
 		std::swap(barriers[0].image.layout_before, barriers[0].image.layout_after);
 		std::swap(barriers[1].image.layout_before, barriers[1].image.layout_after);
 		Barrier(barriers, arraysize(barriers), cmd);
+#endif
 
-
+		decoder_internal->reference_usage.push_back(decoder_internal->next_dpb);
+		while (decoder_internal->reference_usage.size() >= decoder_internal->reference_slots.size())
+			decoder_internal->reference_usage.pop_front();
 		decoder_internal->next_dpb = (decoder_internal->next_dpb + 1) % decoder_internal->reference_slots.size();
 	}
 

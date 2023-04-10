@@ -202,23 +202,27 @@ namespace wi::video
 		wi::graphics::TextureDesc td;
 		td.width = vd.width;
 		td.height = vd.height;
-		td.mip_levels = 1;
-		td.format = vd.format;
-		td.bind_flags = wi::graphics::BindFlag::SHADER_RESOURCE;
-		//td.misc_flags = wi::graphics::ResourceMiscFlag::VIDEO_DECODE_DST;
-		success = device->CreateTexture(&td, nullptr, &instance->output);
-		assert(success);
-		device->SetName(&instance->output, "wi::VideoInstance::output");
-		wi::graphics::Format format = wi::graphics::Format::R8G8_UNORM;
-		wi::graphics::ImageAspect aspect = wi::graphics::ImageAspect::CHROMINANCE;
-		instance->output_subresource_chroma = device->CreateSubresource(&instance->output, wi::graphics::SubresourceType::SRV, 0, 1, 0, 1, &format, &aspect);
-		assert(instance->output_subresource_chroma >= 0);
-
 		td.format = wi::graphics::Format::R8G8B8A8_UNORM;
+		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
+		{
+			td.mip_levels = 0; // max mipcount
+		}
 		td.bind_flags = wi::graphics::BindFlag::UNORDERED_ACCESS | wi::graphics::BindFlag::SHADER_RESOURCE;
 		success = device->CreateTexture(&td, nullptr, &instance->output_rgb);
 		device->SetName(&instance->output_rgb, "wi::VideoInstance::output_rgb");
 		assert(success);
+
+		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
+		{
+			for (uint32_t i = 0; i < instance->output_rgb.GetDesc().mip_levels; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&instance->output_rgb, wi::graphics::SubresourceType::SRV, 0, 1, i, 1);
+				assert(subresource_index == i);
+				subresource_index = device->CreateSubresource(&instance->output_rgb, wi::graphics::SubresourceType::UAV, 0, 1, i, 1);
+				assert(subresource_index == i);
+			}
+		}
 
 		return success;
 	}
@@ -271,7 +275,6 @@ namespace wi::video
 		decode_operation.stream = &instance->video->data_stream;
 		decode_operation.stream_offset = frame_info.offset;
 		decode_operation.stream_size = frame_info.size;
-		decode_operation.output = &instance->output;
 		decode_operation.frame_index = instance->current_frame;
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
 
@@ -279,6 +282,19 @@ namespace wi::video
 	}
 	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd)
 	{
-		wi::renderer::YUV_to_RGB(instance->output, -1, instance->output_subresource_chroma, instance->output_rgb, cmd);
+		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
+		wi::graphics::GraphicsDevice::VideoDecoderResult decode_result = device->GetVideoDecoderResult(&instance->decoder);
+		wi::renderer::YUV_to_RGB(
+			decode_result.texture,
+			decode_result.subresource_luminance,
+			decode_result.subresource_chrominance,
+			instance->output_rgb,
+			cmd
+		);
+
+		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
+		{
+			wi::renderer::GenerateMipChain(instance->output_rgb, wi::renderer::MIPGENFILTER_LINEAR, cmd);
+		}
 	}
 }

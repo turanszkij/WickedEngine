@@ -646,7 +646,7 @@ void EditorComponent::Update(float dt)
 
 	if (!video_resource.IsValid())
 	{
-		video_resource = wi::resourcemanager::Load("talking.mp4");
+		video_resource = wi::resourcemanager::Load("D:/Video/talking.mp4");
 		wi::video::CreateVideoInstance(&video_resource.GetVideo(), &video_instance);
 	}
 
@@ -2600,16 +2600,22 @@ void EditorComponent::Compose(CommandList cmd) const
 		wi::font::Draw("Scene saved: " + GetCurrentEditorScene().path, params, cmd);
 	}
 
+	wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
+	wi::graphics::GraphicsDevice::VideoDecoderResult decode_result = device->GetVideoDecoderResult(&video_instance.decoder);
+
 	wi::image::Params params;
 	params.pos = XMFLOAT3(100, 10, 0);
 	params.siz = XMFLOAT2(480, 270);
-	wi::image::Draw(&video_instance.output, params, cmd);
+	params.image_subresource = decode_result.subresource_luminance;
+	wi::image::Draw(&decode_result.texture, params, cmd);
 
 	params.pos.x += params.siz.x + 20;
-	params.image_subresource = video_instance.output_subresource_chroma;
-	wi::image::Draw(&video_instance.output, params, cmd);
+	params.image_subresource = decode_result.subresource_chrominance;
+	wi::image::Draw(&decode_result.texture, params, cmd);
 
+	params.pos.x = GetLogicalWidth() * 0.5f;
 	params.pos.y += params.siz.y + 20;
+	params.pivot.x = 0.5f;
 	params.image_subresource = -1;
 	wi::image::Draw(&video_instance.output_rgb, params, cmd);
 

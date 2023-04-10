@@ -848,7 +848,6 @@ namespace wi::graphics
 		const GPUBuffer* stream = nullptr;
 		uint64_t stream_offset = 0;
 		uint64_t stream_size = 0;
-		const Texture* output = nullptr;
 		uint64_t frame_index = 0;
 	};
 

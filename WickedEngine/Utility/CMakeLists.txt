@@ -94,16 +94,16 @@ install(FILES ${HEADER_FILES_vulkan}
 
 		
 set(HEADER_FILES_vk_video
-		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_video_codec_h264std.h
-		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_video_codec_h264std_decode.h
-		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_video_codec_h264std_encode.h
-		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_video_codec_h265std.h
-		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_video_codec_h265std_decode.h
-		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_video_codec_h265std_encode.h
-		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_video_codecs_common.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h264std.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h264std_decode.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h264std_encode.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h265std.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h265std_decode.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h265std_encode.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codecs_common.h
 		)
 install(FILES ${HEADER_FILES_vulkan}
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/vk_video/")
+		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/vulkan/vk_video/")
 
 
 set(HEADER_FILES_encoder

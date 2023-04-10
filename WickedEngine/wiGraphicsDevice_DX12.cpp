@@ -26,8 +26,9 @@
 
 #ifdef _DEBUG
 #include <dxgidebug.h>
-#pragma comment(lib,"dxguid.lib")
 #endif
+
+#pragma comment(lib,"dxguid.lib")
 
 #include <sstream>
 #include <algorithm>
@@ -4506,6 +4507,7 @@ using namespace dx12_internal;
 		assert(SUCCEEDED(hr));
 
 		bool reference_only = video_decode_support.ConfigurationFlags & D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_REFERENCE_ONLY_ALLOCATIONS_REQUIRED;
+		assert(!reference_only); // Not supported currently
 
 		if (video_decode_support.DecodeTier < D3D12_VIDEO_DECODE_TIER_1)
 			return false;
@@ -4523,16 +4525,13 @@ using namespace dx12_internal;
 			pic_params.wFrameWidthInMbsMinus1 = sps->pic_width_in_mbs_minus1;
 			pic_params.wFrameHeightInMbsMinus1 = sps->pic_height_in_map_units_minus1;
 			pic_params.num_ref_frames = sps->num_ref_frames;
-			pic_params.field_pic_flag = 0;
 			pic_params.MbaffFrameFlag = sps->mb_adaptive_frame_field_flag;
 			pic_params.residual_colour_transform_flag = sps->residual_colour_transform_flag;
 			pic_params.sp_for_switch_flag = 0;
 			pic_params.chroma_format_idc = sps->chroma_format_idc;
-			pic_params.RefPicFlag = 0;
 			pic_params.MbsConsecutiveFlag = 0;
 			pic_params.frame_mbs_only_flag = sps->frame_mbs_only_flag;
 			pic_params.MinLumaBipredSize8x8Flag = 0;
-			pic_params.IntraPicFlag = 0;
 			pic_params.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
 			pic_params.bit_depth_chroma_minus8 = sps->bit_depth_chroma_minus8;
 
@@ -4583,7 +4582,7 @@ using namespace dx12_internal;
 		resourcedesc.SampleDesc.Count = 1;
 		resourcedesc.SampleDesc.Quality = 0;
 		resourcedesc.Alignment = 0;
-		resourcedesc.Flags = D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE | D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY;
+		//resourcedesc.Flags = D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE | D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY;
 
 		hr = allocationhandler->allocator->CreateResource(
 			&allocationDesc,
@@ -4647,7 +4646,7 @@ using namespace dx12_internal;
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
-				if (texture->desc.array_size > 1)
+				if (texture->desc.array_size > 1 && sliceCount > 1)
 				{
 					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
 					srv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4664,11 +4663,11 @@ using namespace dx12_internal;
 			}
 			else if (texture->desc.type == TextureDesc::Type::TEXTURE_2D)
 			{
-				if (texture->desc.array_size > 1)
+				if (texture->desc.array_size > 1 && sliceCount > 1)
 				{
 					if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 					{
-						if (texture->desc.array_size > 6)
+						if (texture->desc.array_size > 6 && sliceCount > 6)
 						{
 							srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
 							srv_desc.TextureCubeArray.First2DArrayFace = firstSlice;
@@ -4747,7 +4746,7 @@ using namespace dx12_internal;
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
-				if (texture->desc.array_size > 1)
+				if (texture->desc.array_size > 1 && sliceCount > 1)
 				{
 					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
 					uav_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4762,7 +4761,7 @@ using namespace dx12_internal;
 			}
 			else if (texture->desc.type == TextureDesc::Type::TEXTURE_2D)
 			{
-				if (texture->desc.array_size > 1)
+				if (texture->desc.array_size > 1 && sliceCount > 1)
 				{
 					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
 					uav_desc.Texture2DArray.FirstArraySlice = firstSlice;
@@ -4806,7 +4805,7 @@ using namespace dx12_internal;
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
-				if (texture->desc.array_size > 1)
+				if (texture->desc.array_size > 1 && sliceCount > 1)
 				{
 					rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE1DARRAY;
 					rtv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4821,7 +4820,7 @@ using namespace dx12_internal;
 			}
 			else if (texture->desc.type == TextureDesc::Type::TEXTURE_2D)
 			{
-				if (texture->desc.array_size > 1)
+				if (texture->desc.array_size > 1 && sliceCount > 1)
 				{
 					if (texture->desc.sample_count > 1)
 					{
@@ -4881,7 +4880,7 @@ using namespace dx12_internal;
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
-				if (texture->desc.array_size > 1)
+				if (texture->desc.array_size > 1 && sliceCount > 1)
 				{
 					dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE1DARRAY;
 					dsv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4896,7 +4895,7 @@ using namespace dx12_internal;
 			}
 			else if (texture->desc.type == TextureDesc::Type::TEXTURE_2D)
 			{
-				if (texture->desc.array_size > 1)
+				if (texture->desc.array_size > 1 && sliceCount > 1)
 				{
 					if (texture->desc.sample_count > 1)
 					{
@@ -6947,7 +6946,6 @@ using namespace dx12_internal;
 	{
 		auto decoder_internal = to_internal(video_decoder);
 		auto stream_internal = to_internal(op->stream);
-		auto output_internal = to_internal(op->output);
 		D3D12_VIDEO_DECODE_OUTPUT_STREAM_ARGUMENTS output = {};
 		D3D12_VIDEO_DECODE_INPUT_STREAM_ARGUMENTS input = {};
 
@@ -6962,6 +6960,9 @@ using namespace dx12_internal;
 
 		DXVA_PicParams_H264 pic_params = decoder_internal->pic_params; // copy
 		pic_params.CurrPic.Index7Bits = decoder_internal->next_reference_frame;
+		pic_params.field_pic_flag = 0;
+		pic_params.IntraPicFlag = 1;
+		pic_params.RefPicFlag = 1;
 		ID3D12Resource* reference_frames[16] = {};
 		UINT reference_subresources[16] = {};
 		if (!decoder_internal->reference_frames_usage.empty())
@@ -6984,7 +6985,7 @@ using namespace dx12_internal;
 
 		input.pHeap = decoder_internal->decoder_heap.Get();
 
-#if 1
+#if 0
 		output.ConversionArguments.Enable = TRUE;
 		output.ConversionArguments.DecodeColorSpace = DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709;
 		output.ConversionArguments.OutputColorSpace = DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709;
