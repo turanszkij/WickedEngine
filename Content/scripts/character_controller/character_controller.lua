@@ -533,7 +533,9 @@ local function Character(model_name, start_position, face, controllable)
 				
 				-- Some other things also updated at fixed rate:
 				self.face = vector.Lerp(self.face, self.face_next, 0.1) -- smooth the turning in fixed update
-				self.force = vector.Add(self.force, Vector(0, gravity * fixed_dt, 0)) -- gravity
+				if self.force.Length() < 30 then
+					self.force = vector.Add(self.force, Vector(0, gravity * fixed_dt, 0)) -- gravity
+				end
 				-- Animation blending
 				if current_anim ~= nil then
 					-- Blend in current animation:
