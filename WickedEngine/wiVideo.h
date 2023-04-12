@@ -18,8 +18,10 @@ namespace wi::video
 		wi::graphics::VideoProfile profile = wi::graphics::VideoProfile::H264;
 		wi::vector<uint8_t> sps_datas;
 		wi::vector<uint8_t> pps_datas;
+		wi::vector<uint8_t> slice_header_datas;
 		uint32_t sps_count = 0;
 		uint32_t pps_count = 0;
+		uint32_t slice_header_count = 0;
 		wi::graphics::GPUBuffer data_stream;
 		float average_frames_per_second = 0;
 		float duration_seconds = 0;

@@ -896,6 +896,358 @@ namespace h264 {
 		nal->type = (h264::NAL_UNIT_TYPE)bs_read_u(bs, 5);
 	}
 
+
+	typedef struct
+	{
+		int first_mb_in_slice;
+		int slice_type;
+		int pic_parameter_set_id;
+		int frame_num;
+		int field_pic_flag;
+		int bottom_field_flag;
+		int idr_pic_id;
+		int pic_order_cnt_lsb;
+		int delta_pic_order_cnt_bottom;
+		int delta_pic_order_cnt[2];
+		int redundant_pic_cnt;
+		int direct_spatial_mv_pred_flag;
+		int num_ref_idx_active_override_flag;
+		int num_ref_idx_l0_active_minus1;
+		int num_ref_idx_l1_active_minus1;
+		int cabac_init_idc;
+		int slice_qp_delta;
+		int sp_for_switch_flag;
+		int slice_qs_delta;
+		int disable_deblocking_filter_idc;
+		int slice_alpha_c0_offset_div2;
+		int slice_beta_offset_div2;
+		int slice_group_change_cycle;
+
+
+		struct
+		{
+			int luma_log2_weight_denom;
+			int chroma_log2_weight_denom;
+			int luma_weight_l0_flag[64];
+			int luma_weight_l0[64];
+			int luma_offset_l0[64];
+			int chroma_weight_l0_flag[64];
+			int chroma_weight_l0[64][2];
+			int chroma_offset_l0[64][2];
+			int luma_weight_l1_flag[64];
+			int luma_weight_l1[64];
+			int luma_offset_l1[64];
+			int chroma_weight_l1_flag[64];
+			int chroma_weight_l1[64][2];
+			int chroma_offset_l1[64][2];
+		} pwt; // predictive weight table
+
+		// TODO check max index
+		// TODO array of structs instead of struct of arrays
+		struct
+		{
+			int ref_pic_list_reordering_flag_l0;
+			struct
+			{
+				int reordering_of_pic_nums_idc[64];
+				int abs_diff_pic_num_minus1[64];
+				int long_term_pic_num[64];
+			} reorder_l0;
+			int ref_pic_list_reordering_flag_l1;
+			struct
+			{
+				int reordering_of_pic_nums_idc[64];
+				int abs_diff_pic_num_minus1[64];
+				int long_term_pic_num[64];
+			} reorder_l1;
+		} rplr; // ref pic list reorder
+
+		struct
+		{
+			int no_output_of_prior_pics_flag;
+			int long_term_reference_flag;
+			int adaptive_ref_pic_marking_mode_flag;
+			int memory_management_control_operation[64];
+			int difference_of_pic_nums_minus1[64];
+			int long_term_pic_num[64];
+			int long_term_frame_idx[64];
+			int max_long_term_frame_idx_plus1[64];
+		} drpm; // decoded ref pic marking
+
+	} slice_header_t;
+
+	enum SH_SLICE_TYPE
+	{
+		SH_SLICE_TYPE_P = 0,        // P (P slice)
+		SH_SLICE_TYPE_B = 1,        // B (B slice)
+		SH_SLICE_TYPE_I = 2,        // I (I slice)
+		SH_SLICE_TYPE_SP = 3,        // SP (SP slice)
+		SH_SLICE_TYPE_SI = 4,        // SI (SI slice)
+		//as per footnote to Table 7-6, the *_ONLY slice types indicate that all other slices in that picture are of the same type
+		SH_SLICE_TYPE_P_ONLY = 5,        // P (P slice)
+		SH_SLICE_TYPE_B_ONLY = 6,        // B (B slice)
+		SH_SLICE_TYPE_I_ONLY = 7,        // I (I slice)
+		SH_SLICE_TYPE_SP_ONLY = 8,        // SP (SP slice)
+		SH_SLICE_TYPE_SI_ONLY = 9,        // SI (SI slice)
+	};
+	inline int is_slice_type(int slice_type, int cmp_type)
+	{
+		if (slice_type >= 5) { slice_type -= 5; }
+		if (cmp_type >= 5) { cmp_type -= 5; }
+		if (slice_type == cmp_type) { return 1; }
+		else { return 0; }
+	}
+
+	//7.3.3.1 Reference picture list reordering syntax
+	inline void read_ref_pic_list_reordering(slice_header_t* sh, bs_t* b)
+	{
+		// FIXME should be an array
+
+		if (!is_slice_type(sh->slice_type, SH_SLICE_TYPE_I) && !is_slice_type(sh->slice_type, SH_SLICE_TYPE_SI))
+		{
+			sh->rplr.ref_pic_list_reordering_flag_l0 = bs_read_u1(b);
+			if (sh->rplr.ref_pic_list_reordering_flag_l0)
+			{
+				int n = -1;
+				do
+				{
+					n++;
+					sh->rplr.reorder_l0.reordering_of_pic_nums_idc[n] = bs_read_ue(b);
+					if (sh->rplr.reorder_l0.reordering_of_pic_nums_idc[n] == 0 ||
+						sh->rplr.reorder_l0.reordering_of_pic_nums_idc[n] == 1)
+					{
+						sh->rplr.reorder_l0.abs_diff_pic_num_minus1[n] = bs_read_ue(b);
+					}
+					else if (sh->rplr.reorder_l0.reordering_of_pic_nums_idc[n] == 2)
+					{
+						sh->rplr.reorder_l0.long_term_pic_num[n] = bs_read_ue(b);
+					}
+				} while (sh->rplr.reorder_l0.reordering_of_pic_nums_idc[n] != 3 && !bs_eof(b));
+			}
+		}
+		if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
+		{
+			sh->rplr.ref_pic_list_reordering_flag_l1 = bs_read_u1(b);
+			if (sh->rplr.ref_pic_list_reordering_flag_l1)
+			{
+				int n = -1;
+				do
+				{
+					n++;
+					sh->rplr.reorder_l1.reordering_of_pic_nums_idc[n] = bs_read_ue(b);
+					if (sh->rplr.reorder_l1.reordering_of_pic_nums_idc[n] == 0 ||
+						sh->rplr.reorder_l1.reordering_of_pic_nums_idc[n] == 1)
+					{
+						sh->rplr.reorder_l1.abs_diff_pic_num_minus1[n] = bs_read_ue(b);
+					}
+					else if (sh->rplr.reorder_l1.reordering_of_pic_nums_idc[n] == 2)
+					{
+						sh->rplr.reorder_l1.long_term_pic_num[n] = bs_read_ue(b);
+					}
+				} while (sh->rplr.reorder_l1.reordering_of_pic_nums_idc[n] != 3 && !bs_eof(b));
+			}
+		}
+	}
+
+	//7.3.3.2 Prediction weight table syntax
+	inline void read_pred_weight_table(slice_header_t* sh, sps_t* sps, pps_t* pps, bs_t* b)
+	{
+		int i, j;
+
+		sh->pwt.luma_log2_weight_denom = bs_read_ue(b);
+		if (sps->chroma_format_idc != 0)
+		{
+			sh->pwt.chroma_log2_weight_denom = bs_read_ue(b);
+		}
+		for (i = 0; i <= pps->num_ref_idx_l0_active_minus1; i++)
+		{
+			sh->pwt.luma_weight_l0_flag[i] = bs_read_u1(b);
+			if (sh->pwt.luma_weight_l0_flag[i])
+			{
+				sh->pwt.luma_weight_l0[i] = bs_read_se(b);
+				sh->pwt.luma_offset_l0[i] = bs_read_se(b);
+			}
+			if (sps->chroma_format_idc != 0)
+			{
+				sh->pwt.chroma_weight_l0_flag[i] = bs_read_u1(b);
+				if (sh->pwt.chroma_weight_l0_flag[i])
+				{
+					for (j = 0; j < 2; j++)
+					{
+						sh->pwt.chroma_weight_l0[i][j] = bs_read_se(b);
+						sh->pwt.chroma_offset_l0[i][j] = bs_read_se(b);
+					}
+				}
+			}
+		}
+		if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
+		{
+			for (i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++)
+			{
+				sh->pwt.luma_weight_l1_flag[i] = bs_read_u1(b);
+				if (sh->pwt.luma_weight_l1_flag[i])
+				{
+					sh->pwt.luma_weight_l1[i] = bs_read_se(b);
+					sh->pwt.luma_offset_l1[i] = bs_read_se(b);
+				}
+				if (sps->chroma_format_idc != 0)
+				{
+					sh->pwt.chroma_weight_l1_flag[i] = bs_read_u1(b);
+					if (sh->pwt.chroma_weight_l1_flag[i])
+					{
+						for (j = 0; j < 2; j++)
+						{
+							sh->pwt.chroma_weight_l1[i][j] = bs_read_se(b);
+							sh->pwt.chroma_offset_l1[i][j] = bs_read_se(b);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	//7.3.3.3 Decoded reference picture marking syntax
+	inline void read_dec_ref_pic_marking(slice_header_t* sh, nal_header* nal, bs_t* b)
+	{
+		// FIXME should be an array
+
+		if (nal->type == 5)
+		{
+			sh->drpm.no_output_of_prior_pics_flag = bs_read_u1(b);
+			sh->drpm.long_term_reference_flag = bs_read_u1(b);
+		}
+		else
+		{
+			sh->drpm.adaptive_ref_pic_marking_mode_flag = bs_read_u1(b);
+			if (sh->drpm.adaptive_ref_pic_marking_mode_flag)
+			{
+				int n = -1;
+				do
+				{
+					n++;
+					sh->drpm.memory_management_control_operation[n] = bs_read_ue(b);
+					if (sh->drpm.memory_management_control_operation[n] == 1 ||
+						sh->drpm.memory_management_control_operation[n] == 3)
+					{
+						sh->drpm.difference_of_pic_nums_minus1[n] = bs_read_ue(b);
+					}
+					if (sh->drpm.memory_management_control_operation[n] == 2)
+					{
+						sh->drpm.long_term_pic_num[n] = bs_read_ue(b);
+					}
+					if (sh->drpm.memory_management_control_operation[n] == 3 ||
+						sh->drpm.memory_management_control_operation[n] == 6)
+					{
+						sh->drpm.long_term_frame_idx[n] = bs_read_ue(b);
+					}
+					if (sh->drpm.memory_management_control_operation[n] == 4)
+					{
+						sh->drpm.max_long_term_frame_idx_plus1[n] = bs_read_ue(b);
+					}
+				} while (sh->drpm.memory_management_control_operation[n] != 0 && !bs_eof(b));
+			}
+		}
+	}
+
+	inline void read_slice_header(slice_header_t* sh, nal_header* nal, pps_t* pps_table, sps_t* sps_table, bs_t* b)
+	{
+		sh->first_mb_in_slice = bs_read_ue(b);
+		sh->slice_type = bs_read_ue(b);
+		sh->pic_parameter_set_id = bs_read_ue(b);
+
+		// TODO check existence, otherwise fail
+		pps_t* pps = &pps_table[sh->pic_parameter_set_id];
+		sps_t* sps = &sps_table[pps->seq_parameter_set_id];
+
+		sh->frame_num = bs_read_u(b, sps->log2_max_frame_num_minus4 + 4); // was u(v)
+		if (!sps->frame_mbs_only_flag)
+		{
+			sh->field_pic_flag = bs_read_u1(b);
+			if (sh->field_pic_flag)
+			{
+				sh->bottom_field_flag = bs_read_u1(b);
+			}
+		}
+		if (nal->type == 5)
+		{
+			sh->idr_pic_id = bs_read_ue(b);
+		}
+		if (sps->pic_order_cnt_type == 0)
+		{
+			sh->pic_order_cnt_lsb = bs_read_u(b, sps->log2_max_pic_order_cnt_lsb_minus4 + 4); // was u(v)
+			if (pps->pic_order_present_flag && !sh->field_pic_flag)
+			{
+				sh->delta_pic_order_cnt_bottom = bs_read_se(b);
+			}
+		}
+		if (sps->pic_order_cnt_type == 1 && !sps->delta_pic_order_always_zero_flag)
+		{
+			sh->delta_pic_order_cnt[0] = bs_read_se(b);
+			if (pps->pic_order_present_flag && !sh->field_pic_flag)
+			{
+				sh->delta_pic_order_cnt[1] = bs_read_se(b);
+			}
+		}
+		if (pps->redundant_pic_cnt_present_flag)
+		{
+			sh->redundant_pic_cnt = bs_read_ue(b);
+		}
+		if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
+		{
+			sh->direct_spatial_mv_pred_flag = bs_read_u1(b);
+		}
+		if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_P) || is_slice_type(sh->slice_type, SH_SLICE_TYPE_SP) || is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
+		{
+			sh->num_ref_idx_active_override_flag = bs_read_u1(b);
+			if (sh->num_ref_idx_active_override_flag)
+			{
+				sh->num_ref_idx_l0_active_minus1 = bs_read_ue(b); // FIXME does this modify the pps?
+				if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
+				{
+					sh->num_ref_idx_l1_active_minus1 = bs_read_ue(b);
+				}
+			}
+		}
+		read_ref_pic_list_reordering(sh, b);
+		if ((pps->weighted_pred_flag && (is_slice_type(sh->slice_type, SH_SLICE_TYPE_P) || is_slice_type(sh->slice_type, SH_SLICE_TYPE_SP))) ||
+			(pps->weighted_bipred_idc == 1 && is_slice_type(sh->slice_type, SH_SLICE_TYPE_B)))
+		{
+			read_pred_weight_table(sh, sps, pps, b);
+		}
+		if (nal->idc != 0)
+		{
+			read_dec_ref_pic_marking(sh, nal, b);
+		}
+		if (pps->entropy_coding_mode_flag && !is_slice_type(sh->slice_type, SH_SLICE_TYPE_I) && !is_slice_type(sh->slice_type, SH_SLICE_TYPE_SI))
+		{
+			sh->cabac_init_idc = bs_read_ue(b);
+		}
+		sh->slice_qp_delta = bs_read_se(b);
+		if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_SP) || is_slice_type(sh->slice_type, SH_SLICE_TYPE_SI))
+		{
+			if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_SP))
+			{
+				sh->sp_for_switch_flag = bs_read_u1(b);
+			}
+			sh->slice_qs_delta = bs_read_se(b);
+		}
+		if (pps->deblocking_filter_control_present_flag)
+		{
+			sh->disable_deblocking_filter_idc = bs_read_ue(b);
+			if (sh->disable_deblocking_filter_idc != 1)
+			{
+				sh->slice_alpha_c0_offset_div2 = bs_read_se(b);
+				sh->slice_beta_offset_div2 = bs_read_se(b);
+			}
+		}
+		if (pps->num_slice_groups_minus1 > 0 &&
+			pps->slice_group_map_type >= 3 && pps->slice_group_map_type <= 5)
+		{
+			int v = intlog2(pps->pic_size_in_map_units_minus1 + pps->slice_group_change_rate_minus1 + 1);
+			sh->slice_group_change_cycle = bs_read_u(b, v); // FIXME add 2?
+		}
+	}
+
 }
 
 #endif

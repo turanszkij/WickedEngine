@@ -125,6 +125,8 @@ namespace wi::video
 					const uint64_t alignment = device->GetVideoDecodeBitstreamAlignment();
 
 					video->frames_infos.reserve(track.sample_count);
+					video->slice_header_datas.reserve(track.sample_count * sizeof(h264::slice_header_t));
+					video->slice_header_count = track.sample_count;
 					uint32_t track_duration = 0;
 					uint64_t aligned_size = 0;
 					for (uint32_t i = 0; i < track.sample_count; i++)
@@ -144,7 +146,7 @@ namespace wi::video
 							assert(frame_bytes >= size);
 
 							bs_t bs = {};
-							bs_init(&bs, &src_buffer[4], sizeof(uint8_t));
+							bs_init(&bs, &src_buffer[4], frame_bytes);
 							h264::nal_header nal = {};
 							h264::read_nal_header(&nal, &bs);
 
@@ -163,6 +165,9 @@ namespace wi::video
 								src_buffer += size;
 								continue;
 							}
+
+							h264::slice_header_t* slice_header = (h264::slice_header_t*)video->slice_header_datas.data() + i;
+							h264::read_slice_header(slice_header, &nal, (h264::pps_t*)video->pps_datas.data(), (h264::sps_t*)video->sps_datas.data(), &bs);
 
 							// Accept frame beginning NAL unit:
 							info.reference_priority = nal.idc;
@@ -332,6 +337,7 @@ namespace wi::video
 		decode_operation.frame_index = instance->current_frame;
 		decode_operation.frame_type = frame_info.type;
 		decode_operation.reference_priority = frame_info.reference_priority;
+		decode_operation.slice_header = (h264::slice_header_t*)instance->video->slice_header_datas.data() + instance->current_frame;
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
 
 		instance->current_frame++;

@@ -859,6 +859,7 @@ namespace wi::graphics
 		uint32_t reference_priority = 0;
 		uint32_t pps_id = 0;
 		uint32_t sps_id = 0;
+		const void* slice_header = nullptr;
 	};
 
 	struct RenderPassImage

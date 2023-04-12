@@ -8883,17 +8883,23 @@ using namespace vulkan_internal;
 		decode_info.srcBufferRange = (VkDeviceSize)op->stream_size;
 		decode_info.dstPictureResource = *decoder_internal->reference_slots[decoder_internal->next_dpb].pPictureResource;
 
+		h264::slice_header_t* slice_header = (h264::slice_header_t*)op->slice_header;
+
 		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
-		std_picture_info_h264.seq_parameter_set_id = op->sps_id;
-		std_picture_info_h264.pic_parameter_set_id = op->pps_id;
-		std_picture_info_h264.frame_num = uint16_t(op->frame_index % decoder_internal->max_frame_num);
-		std_picture_info_h264.PicOrderCnt[0] = 0;
-		std_picture_info_h264.PicOrderCnt[1] = 0;
+		//std_picture_info_h264.seq_parameter_set_id = op->sps_id;
+		//std_picture_info_h264.pic_parameter_set_id = op->pps_id;
+		//std_picture_info_h264.frame_num = uint16_t(op->frame_index % decoder_internal->max_frame_num);
+		std_picture_info_h264.pic_parameter_set_id = slice_header->pic_parameter_set_id;
+		std_picture_info_h264.seq_parameter_set_id = decoder_internal->pps_array_h264[std_picture_info_h264.pic_parameter_set_id].seq_parameter_set_id;
+		std_picture_info_h264.frame_num = slice_header->frame_num;
+		std_picture_info_h264.PicOrderCnt[0] = slice_header->pic_order_cnt_lsb;
+		std_picture_info_h264.PicOrderCnt[1] = slice_header->pic_order_cnt_lsb;
+		std_picture_info_h264.idr_pic_id = slice_header->idr_pic_id;
 		std_picture_info_h264.flags.is_intra = op->frame_type == VideoFrameType::Intra ? 1 : 0;
 		std_picture_info_h264.flags.is_reference = op->reference_priority > 0 ? 1 : 0;
-		std_picture_info_h264.flags.field_pic_flag = 0;
 		std_picture_info_h264.flags.IdrPicFlag = 0; //(std_picture_info_h264.flags.is_intra && std_picture_info_h264.flags.is_reference) ? 1 : 0;
-		std_picture_info_h264.flags.bottom_field_flag = 0;
+		std_picture_info_h264.flags.field_pic_flag = 0; //slice_header->field_pic_flag;
+		std_picture_info_h264.flags.bottom_field_flag = 0; //slice_header->bottom_field_flag;
 		std_picture_info_h264.flags.complementary_field_pair = 0;
 
 		uint32_t slice_offset = 0;
