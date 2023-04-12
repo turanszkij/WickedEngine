@@ -947,6 +947,7 @@ namespace vulkan_internal
 		wi::vector<int> dpb_subresources_chrominance;
 		std::deque<uint32_t> reference_usage;
 		uint32_t next_dpb = 0;
+		uint32_t prev_dpb = 0;
 		uint32_t max_frame_num = 0;
 
 		~VideoDecoder_Vulkan()
@@ -7099,7 +7100,7 @@ using namespace vulkan_internal;
 	GraphicsDevice::VideoDecoderResult GraphicsDevice_Vulkan::GetVideoDecoderResult(const VideoDecoder* decoder) const
 	{
 		auto internal_state = to_internal(decoder);
-		uint32_t last_dpb_slot = internal_state->reference_usage.back();
+		uint32_t last_dpb_slot = internal_state->prev_dpb;
 
 		VideoDecoderResult result;
 		result.texture = internal_state->DPB;
@@ -8870,7 +8871,7 @@ using namespace vulkan_internal;
 		else
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&decoder_internal->DPB, decoder_internal->DPB.desc.layout, ResourceState::VIDEO_DECODE_DPB, -1, decoder_internal->reference_usage.back()),
+				GPUBarrier::Image(&decoder_internal->DPB, decoder_internal->DPB.desc.layout, ResourceState::VIDEO_DECODE_DPB, -1, decoder_internal->prev_dpb),
 			};
 			Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -8880,17 +8881,7 @@ using namespace vulkan_internal;
 		decode_info.srcBuffer = stream_internal->resource;
 		decode_info.srcBufferOffset = (VkDeviceSize)op->stream_offset;
 		decode_info.srcBufferRange = (VkDeviceSize)op->stream_size;
-
 		decode_info.dstPictureResource = *decoder_internal->reference_slots[decoder_internal->next_dpb].pPictureResource;
-
-		VkVideoReferenceSlotInfoKHR reference_slots[17] = {};
-		for (size_t i = 0; i < decoder_internal->reference_usage.size(); ++i)
-		{
-			reference_slots[i] = decoder_internal->reference_slots[decoder_internal->reference_usage[i]];
-		}
-		decode_info.referenceSlotCount = (uint32_t)decoder_internal->reference_usage.size();
-		decode_info.pReferenceSlots = decode_info.referenceSlotCount == 0 ? nullptr : reference_slots;
-		decode_info.pSetupReferenceSlot = &decoder_internal->reference_slots[decoder_internal->next_dpb];
 
 		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
 		std_picture_info_h264.seq_parameter_set_id = op->sps_id;
@@ -8898,10 +8889,10 @@ using namespace vulkan_internal;
 		std_picture_info_h264.frame_num = uint16_t(op->frame_index % decoder_internal->max_frame_num);
 		std_picture_info_h264.PicOrderCnt[0] = 0;
 		std_picture_info_h264.PicOrderCnt[1] = 0;
-		std_picture_info_h264.flags.field_pic_flag = 0;
 		std_picture_info_h264.flags.is_intra = op->frame_type == VideoFrameType::Intra ? 1 : 0;
 		std_picture_info_h264.flags.is_reference = op->reference_priority > 0 ? 1 : 0;
-		std_picture_info_h264.flags.IdrPicFlag = (std_picture_info_h264.flags.is_intra && std_picture_info_h264.flags.is_reference) ? 1 : 0;
+		std_picture_info_h264.flags.field_pic_flag = 0;
+		std_picture_info_h264.flags.IdrPicFlag = 0; //(std_picture_info_h264.flags.is_intra && std_picture_info_h264.flags.is_reference) ? 1 : 0;
 		std_picture_info_h264.flags.bottom_field_flag = 0;
 		std_picture_info_h264.flags.complementary_field_pair = 0;
 
@@ -8913,6 +8904,15 @@ using namespace vulkan_internal;
 		picture_info_h264.sliceCount = 1;
 		picture_info_h264.pSliceOffsets = &slice_offset;
 		decode_info.pNext = &picture_info_h264;
+
+		VkVideoReferenceSlotInfoKHR reference_slots[17] = {};
+		for (size_t i = 0; i < decoder_internal->reference_usage.size(); ++i)
+		{
+			reference_slots[i] = decoder_internal->reference_slots[decoder_internal->reference_usage[i]];
+		}
+		decode_info.referenceSlotCount = (uint32_t)decoder_internal->reference_usage.size();
+		decode_info.pReferenceSlots = decode_info.referenceSlotCount == 0 ? nullptr : reference_slots;
+		decode_info.pSetupReferenceSlot = &decoder_internal->reference_slots[decoder_internal->next_dpb];
 
 		reference_slots[decode_info.referenceSlotCount] = decoder_internal->reference_slots[decoder_internal->next_dpb];
 		reference_slots[decode_info.referenceSlotCount].slotIndex = -1; // not yet referenced, but it will be in current decode https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkCmdBeginVideoCodingKHR.html
@@ -8969,10 +8969,14 @@ using namespace vulkan_internal;
 		Barrier(barriers, arraysize(barriers), cmd);
 #endif
 
-		decoder_internal->reference_usage.push_back(decoder_internal->next_dpb);
-		while (decoder_internal->reference_usage.size() >= decoder_internal->reference_slots.size())
-			decoder_internal->reference_usage.pop_front();
-		decoder_internal->next_dpb = (decoder_internal->next_dpb + 1) % decoder_internal->reference_slots.size();
+		decoder_internal->prev_dpb = decoder_internal->next_dpb;
+		if (std_picture_info_h264.flags.is_reference)
+		{
+			decoder_internal->reference_usage.push_back(decoder_internal->next_dpb);
+			while (decoder_internal->reference_usage.size() >= decoder_internal->reference_slots.size())
+				decoder_internal->reference_usage.pop_front();
+			decoder_internal->next_dpb = (decoder_internal->next_dpb + 1) % decoder_internal->reference_slots.size();
+		}
 	}
 
 	void GraphicsDevice_Vulkan::EventBegin(const char* name, CommandList cmd)
