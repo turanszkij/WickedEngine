@@ -117,7 +117,7 @@ namespace wi::font
 		constexpr int heightfromhash(int32_t hash) { return int((hash >> 0) & 0x3FF); }
 		static wi::unordered_set<int32_t> pendingGlyphs;
 		static wi::SpinLock glyphLock;
-		static const float upscaling = 2;
+		static const float upscaling = 1;
 		static const float upscaling_rcp = 1.0f / upscaling;
 
 		struct ParseStatus
