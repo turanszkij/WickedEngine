@@ -646,7 +646,7 @@ void EditorComponent::Update(float dt)
 
 	if (!video_resource.IsValid())
 	{
-		video_resource = wi::resourcemanager::Load("D:/Video/talking.mp4");
+		video_resource = wi::resourcemanager::Load("D:/Video/foot_placement.mp4");
 		wi::video::CreateVideoInstance(&video_resource.GetVideo(), &video_instance);
 	}
 
