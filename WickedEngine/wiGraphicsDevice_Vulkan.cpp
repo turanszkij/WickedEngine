@@ -1218,8 +1218,8 @@ using namespace vulkan_internal;
 	{
 		if (queue == VK_NULL_HANDLE)
 			return;
+		std::scoped_lock lock(locker);
 
-		locker.lock();
 		VkSubmitInfo submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submitInfo.commandBufferCount = (uint32_t)submit_cmds.size();
@@ -1283,7 +1283,6 @@ using namespace vulkan_internal;
 		submit_signalSemaphores.clear();
 		submit_signalValues.clear();
 		submit_cmds.clear();
-		locker.unlock();
 	}
 
 	void GraphicsDevice_Vulkan::CopyAllocator::init(GraphicsDevice_Vulkan* device)
@@ -1401,59 +1400,62 @@ using namespace vulkan_internal;
 
 		VkSubmitInfo submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.pCommandBuffers = &cmd.transferCommandBuffer;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pSignalSemaphores = &cmd.semaphores[0];
-		submitInfo.signalSemaphoreCount = 1;
-		device->queues[QUEUE_COPY].locker.lock();
-		res = vkQueueSubmit(device->queues[QUEUE_COPY].queue, 1, &submitInfo, VK_NULL_HANDLE);
-		assert(res == VK_SUCCESS);
-		device->queues[QUEUE_COPY].locker.unlock();
 
-		submitInfo.pCommandBuffers = &cmd.transitionCommandBuffer;
-		submitInfo.commandBufferCount = 1;
-		VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		submitInfo.pWaitDstStageMask = &wait_stage;
-		submitInfo.pWaitSemaphores = &cmd.semaphores[0];
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &cmd.semaphores[1];
-		if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
 		{
-			submitInfo.signalSemaphoreCount = 2;
-		}
-		else
-		{
+			std::scoped_lock lock(device->queues[QUEUE_COPY].locker);
+			submitInfo.pCommandBuffers = &cmd.transferCommandBuffer;
+			submitInfo.commandBufferCount = 1;
+			submitInfo.pSignalSemaphores = &cmd.semaphores[0];
 			submitInfo.signalSemaphoreCount = 1;
+			res = vkQueueSubmit(device->queues[QUEUE_COPY].queue, 1, &submitInfo, VK_NULL_HANDLE);
+			assert(res == VK_SUCCESS);
 		}
-		device->queues[QUEUE_GRAPHICS].locker.lock();
-		res = vkQueueSubmit(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, VK_NULL_HANDLE);
-		assert(res == VK_SUCCESS);
-		device->queues[QUEUE_GRAPHICS].locker.unlock();
+
+		{
+			std::scoped_lock lock(device->queues[QUEUE_GRAPHICS].locker);
+			submitInfo.pCommandBuffers = &cmd.transitionCommandBuffer;
+			submitInfo.commandBufferCount = 1;
+			VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+			submitInfo.pWaitDstStageMask = &wait_stage;
+			submitInfo.pWaitSemaphores = &cmd.semaphores[0];
+			submitInfo.waitSemaphoreCount = 1;
+			submitInfo.pSignalSemaphores = &cmd.semaphores[1];
+			if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
+			{
+				submitInfo.signalSemaphoreCount = 2;
+			}
+			else
+			{
+				submitInfo.signalSemaphoreCount = 1;
+			}
+			res = vkQueueSubmit(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, VK_NULL_HANDLE);
+			assert(res == VK_SUCCESS);
+		}
 
 		if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
 		{
+			std::scoped_lock lock(device->queues[QUEUE_VIDEO_DECODE].locker);
 			submitInfo.pCommandBuffers = nullptr;
 			submitInfo.commandBufferCount = 0;
 			submitInfo.pSignalSemaphores = nullptr;
 			submitInfo.signalSemaphoreCount = 0;
 			submitInfo.pWaitSemaphores = &cmd.semaphores[2];
 			submitInfo.waitSemaphoreCount = 1;
-			device->queues[QUEUE_VIDEO_DECODE].locker.lock();
 			res = vkQueueSubmit(device->queues[QUEUE_VIDEO_DECODE].queue, 1, &submitInfo, VK_NULL_HANDLE);
 			assert(res == VK_SUCCESS);
-			device->queues[QUEUE_VIDEO_DECODE].locker.unlock();
 		}
 
-		submitInfo.pCommandBuffers = nullptr;
-		submitInfo.commandBufferCount = 0;
-		submitInfo.pSignalSemaphores = nullptr;
-		submitInfo.signalSemaphoreCount = 0;
-		submitInfo.pWaitSemaphores = &cmd.semaphores[1];
-		submitInfo.waitSemaphoreCount = 1;
-		device->queues[QUEUE_COMPUTE].locker.lock();
-		res = vkQueueSubmit(device->queues[QUEUE_COMPUTE].queue, 1, &submitInfo, cmd.fence); // final submit also signals fence!
-		assert(res == VK_SUCCESS);
-		device->queues[QUEUE_COMPUTE].locker.unlock();
+		{
+			std::scoped_lock lock(device->queues[QUEUE_COMPUTE].locker);
+			submitInfo.pCommandBuffers = nullptr;
+			submitInfo.commandBufferCount = 0;
+			submitInfo.pSignalSemaphores = nullptr;
+			submitInfo.signalSemaphoreCount = 0;
+			submitInfo.pWaitSemaphores = &cmd.semaphores[1];
+			submitInfo.waitSemaphoreCount = 1;
+			res = vkQueueSubmit(device->queues[QUEUE_COMPUTE].queue, 1, &submitInfo, cmd.fence); // final submit also signals fence!
+			assert(res == VK_SUCCESS);
+		}
 
 		locker.lock();
 		freelist.push_back(cmd);
