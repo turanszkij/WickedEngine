@@ -6151,7 +6151,7 @@ using namespace vulkan_internal;
 		VkVideoSessionCreateInfoKHR info = {};
 		info.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_CREATE_INFO_KHR;
 		info.queueFamilyIndex = videoFamily;
-		info.maxActiveReferencePictures = num_reference_frames;
+		info.maxActiveReferencePictures = num_reference_frames * 2; // *2: top and bottom field counts as two I think: https://vulkan.lunarg.com/doc/view/1.3.239.0/windows/1.3-extensions/vkspec.html#_video_decode_commands
 		info.maxDpbSlots = num_dpb_slots;
 		info.maxCodedExtent.width = std::min(desc->width, video_capability_h264.video_capabilities.maxCodedExtent.width);
 		info.maxCodedExtent.height = std::min(desc->height, video_capability_h264.video_capabilities.maxCodedExtent.height);
@@ -8927,6 +8927,7 @@ using namespace vulkan_internal;
 		decode_info.srcBuffer = stream_internal->resource;
 		decode_info.srcBufferOffset = (VkDeviceSize)op->stream_offset;
 		decode_info.srcBufferRange = (VkDeviceSize)op->stream_size;
+		decode_info.dstPictureResource = *decoder_internal->reference_slots[decoder_internal->next_dpb].pPictureResource;
 
 		h264::slice_header_t* slice_header = (h264::slice_header_t*)op->slice_header;
 
@@ -8947,6 +8948,16 @@ using namespace vulkan_internal;
 		std_picture_info_h264.flags.bottom_field_flag = 0; //slice_header->bottom_field_flag;
 		std_picture_info_h264.flags.complementary_field_pair = 0;
 
+		VkVideoDecodeH264DpbSlotInfoKHR* dpb = (VkVideoDecodeH264DpbSlotInfoKHR*)decoder_internal->reference_slots[decoder_internal->next_dpb].pNext;
+		StdVideoDecodeH264ReferenceInfo* ref = (StdVideoDecodeH264ReferenceInfo*)dpb->pStdReferenceInfo; // Note: this is const removal and overwrite!
+		ref->flags.bottom_field_flag = 1; // important!
+		ref->flags.top_field_flag = 1; // important!
+		ref->flags.is_non_existing = 0;
+		ref->flags.used_for_long_term_reference = 0;
+		ref->FrameNum = std_picture_info_h264.frame_num;
+		ref->PicOrderCnt[0] = std_picture_info_h264.PicOrderCnt[0];
+		ref->PicOrderCnt[1] = std_picture_info_h264.PicOrderCnt[1];
+
 		uint32_t slice_offset = 0;
 
 		// https://vulkan.lunarg.com/doc/view/1.3.239.0/windows/1.3-extensions/vkspec.html#_h_264_decoding_parameters
@@ -8961,25 +8972,17 @@ using namespace vulkan_internal;
 		for (size_t i = 0; i < decoder_internal->reference_usage.size(); ++i)
 		{
 			reference_slots[i] = decoder_internal->reference_slots[decoder_internal->reference_usage[i]];
-			VkVideoDecodeH264DpbSlotInfoKHR* dpb = (VkVideoDecodeH264DpbSlotInfoKHR*)reference_slots[i].pNext;
-			StdVideoDecodeH264ReferenceInfo* ref = (StdVideoDecodeH264ReferenceInfo*)dpb->pStdReferenceInfo;
-			ref = ref;
+			//VkVideoDecodeH264DpbSlotInfoKHR* dpb = (VkVideoDecodeH264DpbSlotInfoKHR*)reference_slots[i].pNext;
+			//StdVideoDecodeH264ReferenceInfo* ref = (StdVideoDecodeH264ReferenceInfo*)dpb->pStdReferenceInfo;
+			//ref->flags.bottom_field_flag = 1; // important!
+			//ref->flags.top_field_flag = 1; // important!
 		}
 		decode_info.referenceSlotCount = (uint32_t)decoder_internal->reference_usage.size();
 		decode_info.pReferenceSlots = decode_info.referenceSlotCount == 0 ? nullptr : reference_slots;
-		decode_info.pSetupReferenceSlot = &decoder_internal->reference_slots[decoder_internal->next_dpb];
 
 		reference_slots[decode_info.referenceSlotCount] = decoder_internal->reference_slots[decoder_internal->next_dpb];
-		reference_slots[decode_info.referenceSlotCount].slotIndex = -1; // not yet referenced, but it will be in current decode https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkCmdBeginVideoCodingKHR.html
-		VkVideoDecodeH264DpbSlotInfoKHR* dpb = (VkVideoDecodeH264DpbSlotInfoKHR*)reference_slots[decode_info.referenceSlotCount].pNext;
-		StdVideoDecodeH264ReferenceInfo* ref = (StdVideoDecodeH264ReferenceInfo*)dpb->pStdReferenceInfo; // Note: this is const removal and overwrite!
-		ref->flags.bottom_field_flag = 1; // important!
-		ref->flags.top_field_flag = 1; // important!
-		ref->flags.is_non_existing = 0;
-		ref->flags.used_for_long_term_reference = 0;
-		ref->FrameNum = std_picture_info_h264.frame_num;
-		ref->PicOrderCnt[0] = std_picture_info_h264.PicOrderCnt[0];
-		ref->PicOrderCnt[1] = std_picture_info_h264.PicOrderCnt[1];
+		reference_slots[decode_info.referenceSlotCount].slotIndex = -1;
+		decode_info.pSetupReferenceSlot = &decoder_internal->reference_slots[decoder_internal->next_dpb];
 
 		VkVideoBeginCodingInfoKHR begin_info = {};
 		begin_info.sType = VK_STRUCTURE_TYPE_VIDEO_BEGIN_CODING_INFO_KHR;
@@ -8997,8 +9000,6 @@ using namespace vulkan_internal;
 			vkCmdControlVideoCodingKHR(commandlist.GetCommandBuffer(), &control_info);
 		}
 
-		reference_slots[decode_info.referenceSlotCount].pNext = &picture_info_h264;
-		decode_info.dstPictureResource = *decoder_internal->reference_slots[decoder_internal->next_dpb].pPictureResource;
 		vkCmdDecodeVideoKHR(commandlist.GetCommandBuffer(), &decode_info);
 
 		VkVideoEndCodingInfoKHR end_info = {};
