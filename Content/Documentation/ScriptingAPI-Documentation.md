@@ -788,18 +788,18 @@ Describes an orientation in 3D space.
 ```lua
 TextureSlot = {
 	BASECOLORMAP = 0,
-	NORMALMAP = 0,
-	SURFACEMAP = 0,
-	EMISSIVEMAP = 0,
-	DISPLACEMENTMAP = 0,
-	OCCLUSIONMAP = 0,
-	TRANSMISSIONMAP = 0,
-	SHEENCOLORMAP = 0,
-	SHEENROUGHNESSMAP = 0,
-	CLEARCOATMAP = 0,
-	CLEARCOATROUGHNESSMAP = 0,
-	CLEARCOATNORMALMAP = 0,
-	SPECULARMAP = 0,
+	NORMALMAP = 1,
+	SURFACEMAP = 2,
+	EMISSIVEMAP = 3,
+	DISPLACEMENTMAP = 4,
+	OCCLUSIONMAP = 5,
+	TRANSMISSIONMAP = 6,
+	SHEENCOLORMAP = 7,
+	SHEENROUGHNESSMAP = 8,
+	CLEARCOATMAP = 9,
+	CLEARCOATROUGHNESSMAP = 10,
+	CLEARCOATNORMALMAP = 11,
+	SPECULARMAP = 12,
 }
 ```
 
@@ -1070,6 +1070,8 @@ Describes a Collider object.
 - GetWeight(int id) : float	-- returns current weight of expression
 - SetPresetWeight(ExpressionPreset preset, float weight)	-- Set a preset expression's weight. You can get access to preset values from ExpressionPreset table
 - GetPresetWeight(ExpressionPreset preset) : float	-- returns current weight of preset expression
+- SetForceTalkingEnabled(bool value) -- Force continuous talking animation, even if no voice is playing
+- IsForceTalkingEnabled() : bool
 
 [outer] ExpressionPreset = {
 	Happy = 0,

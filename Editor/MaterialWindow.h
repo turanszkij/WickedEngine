@@ -31,6 +31,8 @@ public:
 	wi::gui::Slider transmissionSlider;
 	wi::gui::Slider refractionSlider;
 	wi::gui::Slider pomSlider;
+	wi::gui::Slider anisotropyStrengthSlider;
+	wi::gui::Slider anisotropyRotationSlider;
 	wi::gui::Slider displacementMappingSlider;
 	wi::gui::Slider subsurfaceScatteringSlider;
 	wi::gui::Slider texAnimFrameRateSlider;

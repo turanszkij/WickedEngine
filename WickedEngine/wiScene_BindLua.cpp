@@ -337,6 +337,7 @@ TextureSlot = {
 	CLEARCOATROUGHNESSMAP = 10,
 	CLEARCOATNORMALMAP = 11,
 	SPECULARMAP = 12,
+	ANISOTROPYMAP = 13,
 }
 
 ExpressionPreset = {
@@ -5604,6 +5605,8 @@ Luna<ExpressionComponent_BindLua>::FunctionType ExpressionComponent_BindLua::met
 	lunamethod(ExpressionComponent_BindLua, SetPresetWeight),
 	lunamethod(ExpressionComponent_BindLua, GetWeight),
 	lunamethod(ExpressionComponent_BindLua, GetPresetWeight),
+	lunamethod(ExpressionComponent_BindLua, SetForceTalkingEnabled),
+	lunamethod(ExpressionComponent_BindLua, IsForceTalkingEnabled),
 	{ NULL, NULL }
 };
 Luna<ExpressionComponent_BindLua>::PropertyType ExpressionComponent_BindLua::properties[] = {
@@ -5718,6 +5721,24 @@ int ExpressionComponent_BindLua::GetPresetWeight(lua_State* L)
 		wi::lua::SError(L, "GetPresetWeight(ExpressionPreset preset) not enough arguments!");
 	}
 	return 0;
+}
+int ExpressionComponent_BindLua::SetForceTalkingEnabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->SetForceTalkingEnabled(wi::lua::SGetBool(L, 1));
+	}
+	else
+	{
+		wi::lua::SError(L, "SetForceTalkingEnabled(bool value) not enough arguments!");
+	}
+	return 0;
+}
+int ExpressionComponent_BindLua::IsForceTalkingEnabled(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsForceTalkingEnabled());
+	return 1;
 }
 
 

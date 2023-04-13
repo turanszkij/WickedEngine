@@ -43,6 +43,7 @@ set (SOURCE_FILES
 	GeneralWindow.cpp
 	ProfilerWindow.cpp
 	xatlas.cpp
+	EmbeddedResources.cpp
 )
 
 add_subdirectory(meshoptimizer)

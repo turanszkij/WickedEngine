@@ -170,6 +170,8 @@ namespace wi::scene
 		float refraction = 0.0f;
 		float transmission = 0.0f;
 		float alphaRef = 1.0f;
+		float anisotropy_strength = 0;
+		float anisotropy_rotation = 0; //radians, counter-clockwise
 
 		XMFLOAT4 sheenColor = XMFLOAT4(1, 1, 1, 1);
 		float sheenRoughness = 0;
@@ -197,6 +199,7 @@ namespace wi::scene
 			CLEARCOATROUGHNESSMAP,
 			CLEARCOATNORMALMAP,
 			SPECULARMAP,
+			ANISOTROPYMAP,
 
 			TEXTURESLOT_COUNT
 		};
@@ -1464,6 +1467,8 @@ namespace wi::scene
 		enum FLAGS
 		{
 			EMPTY = 0,
+			FORCE_TALKING = 1 << 0,
+			TALKING_ENDED = 1 << 1,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -1566,10 +1571,18 @@ namespace wi::scene
 		};
 		wi::vector<Expression> expressions;
 
+		constexpr bool IsForceTalkingEnabled() const { return _flags & FORCE_TALKING; }
+
+		// Force continuous talking animation, even if no voice is playing
+		inline void SetForceTalkingEnabled(bool value = true) { if (value) { _flags |= FORCE_TALKING; } else { _flags &= ~FORCE_TALKING; _flags |= TALKING_ENDED; } }
+
 		// Non-serialized attributes:
 		float blink_timer = 0;
 		float look_timer = 0;
 		float look_weights[4] = {};
+		Preset talking_phoneme = Preset::Aa;
+		float talking_weight_prev_prev = 0;
+		float talking_weight_prev = 0;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

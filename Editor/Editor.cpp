@@ -5,9 +5,6 @@
 #include "ModelImporter.h"
 #include "Translator.h"
 
-#include "FontAwesomeV6.h" // font TTF data
-#include "yumin.h" // yumin.ttf font
-
 using namespace wi::graphics;
 using namespace wi::primitive;
 using namespace wi::scene;
@@ -341,19 +338,31 @@ void EditorComponent::Load()
 						Entity entity = GetCurrentScene().cameras.GetEntity(camera_count_prev);
 						if (entity != INVALID_ENTITY)
 						{
-							TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
-							if (camera_transform != nullptr)
-							{
-								GetCurrentEditorScene().camera_transform = *camera_transform;
-							}
-
 							CameraComponent* cam = GetCurrentScene().cameras.GetComponent(entity);
 							if (cam != nullptr)
 							{
-								GetCurrentEditorScene().camera = *cam;
+								EditorScene& editorscene = GetCurrentEditorScene();
+								editorscene.camera.Eye = cam->Eye;
+								editorscene.camera.At = cam->At;
+								editorscene.camera.Up = cam->Up;
+								editorscene.camera.fov = cam->fov;
+								editorscene.camera.zNearP = cam->zNearP;
+								editorscene.camera.zFarP = cam->zFarP;
+								editorscene.camera.focal_length = cam->focal_length;
+								editorscene.camera.aperture_size = cam->aperture_size;
+								editorscene.camera.aperture_shape = cam->aperture_shape;
 								// camera aspect should be always for the current screen
-								GetCurrentEditorScene().camera.width = (float)renderPath->GetInternalResolution().x;
-								GetCurrentEditorScene().camera.height = (float)renderPath->GetInternalResolution().y;
+								editorscene.camera.width = (float)renderPath->GetInternalResolution().x;
+								editorscene.camera.height = (float)renderPath->GetInternalResolution().y;
+
+								TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
+								if (camera_transform != nullptr)
+								{
+									editorscene.camera_transform = *camera_transform;
+									editorscene.camera.TransformCamera(editorscene.camera_transform);
+								}
+
+								editorscene.camera.UpdateCamera();
 							}
 						}
 					}
@@ -608,10 +617,10 @@ void EditorComponent::Start()
 	//	We will not directly use this font style, but let the font renderer fall back on it
 	//	when an icon character is not found in the default font.
 	//	This is added on main thread, not inside Load(), to avoid conflict with font system intialization
-	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, sizeof(font_awesome_v6));
+	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, font_awesome_v6_size);
 
 	// Same thing with the yumin font as above, it is a fallback for asian characters
-	wi::font::AddFontStyle("yumin", yumin, sizeof(yumin));
+	wi::font::AddFontStyle("yumin", yumin, yumin_size);
 
 	RenderPath2D::Start();
 }

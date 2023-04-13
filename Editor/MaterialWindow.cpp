@@ -9,7 +9,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MATERIAL " Material", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 1300));
+	SetSize(XMFLOAT2(300, 1340));
 
 	closeButton.SetTooltip("Delete MaterialComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -291,6 +291,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	AddWidget(&refractionSlider);
 
 	pomSlider.Create(0, 1.0f, 0.0f, 1000, "Par Occl Mapping: ");
+	pomSlider.SetTooltip("[Parallax Occlusion Mapping] Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
 	pomSlider.SetSize(XMFLOAT2(wid, hei));
 	pomSlider.SetPos(XMFLOAT2(x, y += step));
 	pomSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -299,6 +300,29 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			material->SetParallaxOcclusionMapping(args.fValue);
 	});
 	AddWidget(&pomSlider);
+
+	anisotropyStrengthSlider.Create(0, 1.0f, 0.0f, 1000, "Anisotropy Strength: ");
+	anisotropyStrengthSlider.SetTooltip("Adjust anisotropy specular effect's strength. \nOnly works with PBR + Anisotropic shader.");
+	anisotropyStrengthSlider.SetSize(XMFLOAT2(wid, hei));
+	anisotropyStrengthSlider.SetPos(XMFLOAT2(x, y += step));
+	anisotropyStrengthSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->anisotropy_strength = args.fValue;
+		});
+	AddWidget(&anisotropyStrengthSlider);
+
+	anisotropyRotationSlider.Create(0, 360, 0.0f, 360, "Anisotropy Rot: ");
+	anisotropyRotationSlider.SetTooltip("Adjust anisotropy specular effect's rotation. \nOnly works with PBR + Anisotropic shader.");
+	anisotropyRotationSlider.SetSize(XMFLOAT2(wid, hei));
+	anisotropyRotationSlider.SetPos(XMFLOAT2(x, y += step));
+	anisotropyRotationSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->anisotropy_rotation = wi::math::DegreesToRadians(args.fValue);
+		});
+	AddWidget(&anisotropyRotationSlider);
+
 
 	displacementMappingSlider.Create(0, 10.0f, 0.0f, 1000, "Displacement: ");
 	displacementMappingSlider.SetTooltip("Adjust how much the bump map should modulate the geometry when using tessellation.");
@@ -546,6 +570,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		case MaterialComponent::SPECULARMAP:
 			textureSlotComboBox.AddItem("Specular map");
 			break;
+		case MaterialComponent::ANISOTROPYMAP:
+			textureSlotComboBox.AddItem("Anisotropy map");
+			break;
 		default:
 			break;
 		}
@@ -594,6 +621,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			case MaterialComponent::SPECULARMAP:
 				textureSlotButton.SetTooltip("RGB: Specular color, A: Specular intensity [non-metal]");
 				break;
+			case MaterialComponent::ANISOTROPYMAP:
+				textureSlotButton.SetTooltip("RG: The anisotropy texture. Red and green channels represent the anisotropy direction in [-1, 1] tangent, bitangent space.\nThe vector is rotated by anisotropyRotation, and multiplied by anisotropyStrength, to obtain the final anisotropy direction and strength.");
+				break;
 			default:
 				break;
 			}
@@ -624,10 +654,16 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 		if (material->textures[slot].resource.IsValid())
 		{
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+			editor->RecordEntity(archive, entity);
+
 			material->textures[slot].resource = {};
 			material->textures[slot].name = "";
 			material->SetDirty();
 			textureSlotLabel.SetText("");
+
+			editor->RecordEntity(archive, entity);
 		}
 		else
 		{
@@ -727,6 +763,8 @@ void MaterialWindow::SetEntity(Entity entity)
 		refractionSlider.SetValue(material->refraction);
 		emissiveSlider.SetValue(material->emissiveColor.w);
 		pomSlider.SetValue(material->parallaxOcclusionMapping);
+		anisotropyStrengthSlider.SetValue(material->anisotropy_strength);
+		anisotropyRotationSlider.SetValue(wi::math::RadiansToDegrees(material->anisotropy_rotation));
 		displacementMappingSlider.SetValue(material->displacementMapping);
 		subsurfaceScatteringSlider.SetValue(material->subsurfaceScattering.w);
 		texAnimFrameRateSlider.SetValue(material->texAnimFrameRate);
@@ -782,21 +820,6 @@ void MaterialWindow::SetEntity(Entity entity)
 			break;
 		case 4:
 			colorPicker.SetPickColor(wi::Color::fromFloat3(XMFLOAT3(material->sheenColor.x, material->sheenColor.y, material->sheenColor.z)));
-			break;
-		}
-
-		switch (material->shaderType)
-		{
-		case MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC:
-			pomSlider.SetText("Anisotropy: ");
-			pomSlider.SetTooltip("Adjust anisotropy specular effect. \nOnly works with PBR + Anisotropic shader.");
-			break;
-		case MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING:
-			pomSlider.SetText("Par Occl Mapping: ");
-			pomSlider.SetTooltip("[Parallax Occlusion Mapping] Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
-			break;
-		default:
-			pomSlider.SetEnabled(false);
 			break;
 		}
 
@@ -909,6 +932,8 @@ void MaterialWindow::ResizeLayout()
 	add(transmissionSlider);
 	add(refractionSlider);
 	add(pomSlider);
+	add(anisotropyStrengthSlider);
+	add(anisotropyRotationSlider);
 	add(displacementMappingSlider);
 	add(subsurfaceScatteringSlider);
 	add(texAnimFrameRateSlider);

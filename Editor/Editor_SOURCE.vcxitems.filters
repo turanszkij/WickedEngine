@@ -87,6 +87,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)HumanoidWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)GeneralWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ProfilerWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)EmbeddedResources.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
