@@ -605,6 +605,10 @@ void EditorComponent::Load()
 	{
 		optionsWnd.generalWnd.themeCombo.SetSelected(4);
 	}
+	else if (!theme.compare("Dracula"))
+	{
+		optionsWnd.generalWnd.themeCombo.SetSelected(5);
+	}
 
 	SetDefaultLocalization();
 	optionsWnd.generalWnd.RefreshLanguageSelectionAfterWholeGUIWasInitialized();

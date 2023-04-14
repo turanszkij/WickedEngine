@@ -319,6 +319,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		Soft,
 		Hacking,
 		Nord,
+		Dracula,
 	};
 
 	themeCombo.Create("Theme: ");
@@ -328,6 +329,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	themeCombo.AddItem("Soft " ICON_SOFT, (uint64_t)Theme::Soft);
 	themeCombo.AddItem("Hacking " ICON_HACKING, (uint64_t)Theme::Hacking);
 	themeCombo.AddItem("Nord " ICON_NORD, (uint64_t)Theme::Nord);
+	themeCombo.AddItem("Dracula " ICON_DRACULA, (uint64_t)Theme::Dracula);
 	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		// Dark theme defaults:
@@ -379,6 +381,15 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			dark_point = wi::Color(46, 52, 64, 255);
 			theme.shadow_color = wi::Color(46, 52, 64, 200);
 			theme.font.color = wi::Color(236, 239, 244, 255);
+			theme.font.shadow_color = wi::Color::Shadow();
+			break;
+		case Theme::Dracula:
+			editor->main->config.GetSection("options").Set("theme", "Dracula");
+			theme_color_idle = wi::Color(68, 71, 90, 255);
+			theme_color_focus = wi::Color(68, 71, 90, 255);
+			dark_point = wi::Color(40, 42, 54, 255);
+			theme.shadow_color = wi::Color(40, 42, 54, 255);
+			theme.font.color = wi::Color(248, 248, 242, 255);
 			theme.font.shadow_color = wi::Color::Shadow();
 			break;
 		}
@@ -436,6 +447,12 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		{
 			gui.SetColor(wi::Color(136, 192, 208, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
 			gui.SetColor(wi::Color(76, 86, 106, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
+		}
+
+		if ((Theme)args.userdata == Theme::Dracula)
+		{
+			gui.SetColor(wi::Color(189, 147, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
+			gui.SetColor(wi::Color(40, 42, 54), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
 		}
 
 		// customize individual elements:
