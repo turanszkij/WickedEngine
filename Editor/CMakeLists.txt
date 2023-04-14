@@ -24,6 +24,7 @@ set (SOURCE_FILES
 	PaintToolWindow.cpp
 	GraphicsWindow.cpp
 	SoundWindow.cpp
+	VideoWindow.cpp
 	SpringWindow.cpp
 	ScriptWindow.cpp
 	stdafx.cpp
