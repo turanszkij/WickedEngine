@@ -6,6 +6,7 @@
 namespace wi::jobsystem
 {
 	void Initialize(uint32_t maxThreadCount = ~0u);
+	void ShutDown();
 
 	struct JobArgs
 	{

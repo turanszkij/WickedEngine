@@ -618,5 +618,7 @@ int main(int argc, char* argv[])
 		std::cout << "[Wicked Engine Offline Shader Compiler] ShaderDump written to wiShaderDump.h in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds\n";
 	}
 
+	wi::jobsystem::ShutDown();
+
 	return 0;
 }
