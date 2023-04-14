@@ -3348,6 +3348,15 @@ namespace wi::scene
 
 			material.WriteShaderMaterial(materialArrayMapped + args.jobIndex);
 
+			VideoComponent* video = videos.GetComponent(entity);
+			if (video != nullptr)
+			{
+				// Video attachment will overwrite texture slots on shader side:
+				int descriptor = GetDevice()->GetDescriptorIndex(&video->videoinstance.output_rgb, SubresourceType::SRV, video->videoinstance.output_srgb_subresource);
+				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, BASECOLORMAP, descriptor);
+				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, EMISSIVEMAP, descriptor);
+			}
+
 		});
 	}
 	void Scene::RunImpostorUpdateSystem(wi::jobsystem::context& ctx)

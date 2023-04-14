@@ -367,6 +367,14 @@ namespace wi::scene
 
 		std::memcpy(dest, &material, sizeof(ShaderMaterial)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
+	void MaterialComponent::WriteShaderTextureSlot(ShaderMaterial* dest, int slot, int descriptor)
+	{
+		std::memcpy(
+			(uint8_t*)dest + offsetof(ShaderMaterial, textures) + sizeof(ShaderTextureSlot) * slot + offsetof(ShaderTextureSlot, texture_descriptor),
+			&descriptor,
+			sizeof(descriptor)
+		);
+	}
 	void MaterialComponent::WriteTextures(const wi::graphics::GPUResource** dest, int count) const
 	{
 		count = std::min(count, (int)TEXTURESLOT_COUNT);

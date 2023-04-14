@@ -43,6 +43,7 @@ namespace wi::video
 		const Video* video = nullptr;
 		wi::graphics::VideoDecoder decoder;
 		wi::graphics::Texture output_rgb;
+		int output_srgb_subresource = -1;
 		uint64_t current_frame = 0;
 		float time_until_next_frame = 0;
 		enum class Flags

@@ -305,6 +305,7 @@ namespace wi::scene
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
+		void WriteShaderTextureSlot(ShaderMaterial* dest, int slot, int descriptor);
 
 		// Retrieve the array of textures from the material
 		void WriteTextures(const wi::graphics::GPUResource** dest, int count) const;

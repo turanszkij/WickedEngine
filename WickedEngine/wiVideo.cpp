@@ -262,12 +262,13 @@ namespace wi::video
 		wi::graphics::TextureDesc td;
 		td.width = video->width;
 		td.height = video->height;
-		td.format = wi::graphics::Format::R10G10B10A2_UNORM;
+		td.format = wi::graphics::Format::R8G8B8A8_UNORM;
 		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
 		{
 			td.mip_levels = 0; // max mipcount
 		}
 		td.bind_flags = wi::graphics::BindFlag::UNORDERED_ACCESS | wi::graphics::BindFlag::SHADER_RESOURCE;
+		td.misc_flags = wi::graphics::ResourceMiscFlag::TYPED_FORMAT_CASTING;
 		success = device->CreateTexture(&td, nullptr, &instance->output_rgb);
 		device->SetName(&instance->output_rgb, "wi::VideoInstance::output_rgb");
 		assert(success);
@@ -283,6 +284,16 @@ namespace wi::video
 				assert(subresource_index == i);
 			}
 		}
+
+		// This part must be AFTER mip level subresource creation:
+		wi::graphics::Format srgb_format = wi::graphics::GetFormatSRGB(td.format);
+		instance->output_srgb_subresource = device->CreateSubresource(
+			&instance->output_rgb,
+			wi::graphics::SubresourceType::SRV,
+			0, -1,
+			0, -1,
+			&srgb_format
+		);
 
 		return success;
 	}
