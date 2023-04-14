@@ -2298,13 +2298,13 @@ namespace wi::scene
 						}
 					}
 					current_sample *= info.channel_count;
-					current_sample = std::min(current_sample, info.sample_count);
+					current_sample = std::min(int(current_sample), int(info.sample_count));
 
 					float voice = 0;
 					const int sample_count = 64;
 					for (int sam = 0; sam < sample_count; ++sam)
 					{
-						voice = std::max(voice, std::abs((float)info.samples[std::min(current_sample + sam, info.sample_count)] / 32768.0f));
+						voice = std::max(int(voice), int(std::abs((float)info.samples[std::min(int(current_sample + sam), int(info.sample_count))] / 32768.0f)));
 					}
 					const float strength = 0.4f;
 					if (voice > 0.1f)
@@ -4337,7 +4337,7 @@ namespace wi::scene
 			float TMax;
 		} jobDataFunction;
 		const uint32_t threadCount = wi::jobsystem::GetThreadCount();
-		jobDataFunction.groupResults = (RayIntersectionResult*)allocator.allocate(AlignTo(sizeof(RayIntersectionResult) * threadCount, 16));
+		jobDataFunction.groupResults = (RayIntersectionResult*)allocator.allocate(AlignTo(uint32_t(sizeof(RayIntersectionResult)) * threadCount, uint32_t(16)));
 		const size_t allocator_reserved_begin = allocator.offset;
 		for (uint32_t t = 0; t < threadCount; ++t)
 		{
@@ -4433,13 +4433,13 @@ namespace wi::scene
 					XMVECTOR rayDirection_local;
 				};
 
-				uint8_t* jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+				uint8_t* jobdata_allocation = allocator.allocate(AlignTo(uint32_t(sizeof(JobDataForInstance)), uint32_t(16)));
 				if (jobdata_allocation == nullptr)
 				{
 					// Flush pending jobs, reset temp allocations, and reuse:
 					wi::jobsystem::Wait(ctx);
 					allocator.offset = allocator_reserved_begin;
-					jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+					jobdata_allocation = allocator.allocate(AlignTo(uint32_t(sizeof(JobDataForInstance)), uint32_t(16)));
 				}
 				JobDataForInstance& jobData = *(JobDataForInstance*)jobdata_allocation;
 				jobData.func = &jobDataFunction;
@@ -4572,7 +4572,7 @@ namespace wi::scene
 			XMVECTOR RadiusSq;
 		} jobDataFunction;
 		const uint32_t threadCount = wi::jobsystem::GetThreadCount();
-		jobDataFunction.groupResults = (SphereIntersectionResult*)allocator.allocate(AlignTo(sizeof(SphereIntersectionResult) * threadCount, 16));
+		jobDataFunction.groupResults = (SphereIntersectionResult*)allocator.allocate(AlignTo(uint32_t(sizeof(SphereIntersectionResult) * threadCount), uint32_t(16)));
 		const size_t allocator_reserved_begin = allocator.offset;
 		for (uint32_t t = 0; t < threadCount; ++t)
 		{
@@ -4662,13 +4662,13 @@ namespace wi::scene
 					XMMATRIX objectMatPrev;
 				};
 
-				uint8_t* jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+				uint8_t* jobdata_allocation = allocator.allocate(AlignTo(uint32_t(sizeof(JobDataForInstance)), uint32_t(16)));
 				if (jobdata_allocation == nullptr)
 				{
 					// Flush pending jobs, reset temp allocations, and reuse:
 					wi::jobsystem::Wait(ctx);
 					allocator.offset = allocator_reserved_begin;
-					jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+					jobdata_allocation = allocator.allocate(AlignTo(uint32_t(sizeof(JobDataForInstance)), uint32_t(16)));
 				}
 				JobDataForInstance& jobData = *(JobDataForInstance*)jobdata_allocation;
 				jobData.func = &jobDataFunction;
@@ -4885,7 +4885,7 @@ namespace wi::scene
 			AABB capsule_aabb;
 		} jobDataFunction;
 		const uint32_t threadCount = wi::jobsystem::GetThreadCount();
-		jobDataFunction.groupResults = (CapsuleIntersectionResult*)allocator.allocate(AlignTo(sizeof(CapsuleIntersectionResult) * threadCount, 16));
+		jobDataFunction.groupResults = (CapsuleIntersectionResult*)allocator.allocate(AlignTo(uint32_t(sizeof(CapsuleIntersectionResult) * threadCount), uint32_t(16)));
 		const size_t allocator_reserved_begin = allocator.offset;
 		for (uint32_t t = 0; t < threadCount; ++t)
 		{
@@ -4981,13 +4981,13 @@ namespace wi::scene
 					XMMATRIX objectMatPrev;
 				};
 
-				uint8_t* jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+				uint8_t* jobdata_allocation = allocator.allocate(AlignTo(uint32_t(sizeof(JobDataForInstance)), uint32_t(16)));
 				if (jobdata_allocation == nullptr)
 				{
 					// Flush pending jobs, reset temp allocations, and reuse:
 					wi::jobsystem::Wait(ctx);
 					allocator.offset = allocator_reserved_begin;
-					jobdata_allocation = allocator.allocate(AlignTo(sizeof(JobDataForInstance), 16));
+					jobdata_allocation = allocator.allocate(AlignTo(uint32_t(sizeof(JobDataForInstance)), uint32_t(16)));
 				}
 				JobDataForInstance& jobData = *(JobDataForInstance*)jobdata_allocation;
 				jobData.func = &jobDataFunction;
