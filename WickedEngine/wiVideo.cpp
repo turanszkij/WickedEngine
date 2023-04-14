@@ -287,37 +287,43 @@ namespace wi::video
 		return success;
 	}
 
-	bool IsDecodingRequired(VideoInstance* instances, size_t num_instances, float dt)
+	bool IsDecodingRequired(const VideoInstance* instance, float dt)
 	{
-		for (size_t i = 0; i < num_instances; ++i)
-		{
-			VideoInstance& instance = instances[i];
-			if (instance.state == VideoInstance::State::Playing && instance.time_until_next_frame - dt <= 0)
-				return true;
-		}
+		if (instance == nullptr || instance->video == nullptr)
+			return false;
+		if (!has_flag(instance->flags, VideoInstance::Flags::InitialFirstFrameDecoded))
+			return true;
+		if (has_flag(instance->flags, VideoInstance::Flags::Playing) && instance->time_until_next_frame - dt <= 0)
+			return true;
 		return false;
 	}
 	void UpdateVideo(VideoInstance* instance, float dt, wi::graphics::CommandList cmd)
 	{
-		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
+		if (!IsDecodingRequired(instance, dt))
+			return;
 
-		if (instance->state == VideoInstance::State::Paused)
-			return;
-		instance->time_until_next_frame -= dt;
-		if (instance->time_until_next_frame > 0)
-			return;
-		if (instance->current_frame >= (int)instance->video->frames_infos.size() - 1)
+		if (has_flag(instance->flags, VideoInstance::Flags::InitialFirstFrameDecoded))
 		{
-			if (has_flag(instance->flags, VideoInstance::Flags::Looped))
+			if (!has_flag(instance->flags, VideoInstance::Flags::Playing))
+				return;
+			instance->time_until_next_frame -= dt;
+			if (instance->time_until_next_frame > 0)
+				return;
+			if (instance->current_frame >= (int)instance->video->frames_infos.size() - 1)
 			{
-				instance->current_frame = 0;
-			}
-			else
-			{
-				instance->state = VideoInstance::State::Paused;
-				instance->current_frame = (int)instance->video->frames_infos.size() - 1;
+				if (has_flag(instance->flags, VideoInstance::Flags::Looped))
+				{
+					instance->current_frame = 0;
+				}
+				else
+				{
+					instance->flags &= ~VideoInstance::Flags::Playing;
+					instance->current_frame = (int)instance->video->frames_infos.size() - 1;
+				}
 			}
 		}
+
+		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 
 		const Video::FrameInfo& frame_info = instance->video->frames_infos[instance->current_frame];
 		instance->time_until_next_frame = frame_info.duration_seconds;
@@ -338,6 +344,7 @@ namespace wi::video
 
 		instance->current_frame++;
 		instance->flags |= VideoInstance::Flags::NeedsResolve;
+		instance->flags |= VideoInstance::Flags::InitialFirstFrameDecoded;
 	}
 	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd)
 	{

@@ -47,6 +47,7 @@ namespace wi
 		Mode GetMode();
 		wi::vector<std::string> GetSupportedImageExtensions();
 		wi::vector<std::string> GetSupportedSoundExtensions();
+		wi::vector<std::string> GetSupportedVideoExtensions();
 		wi::vector<std::string> GetSupportedScriptExtensions();
 
 		// Order of these must not change as the flags can be serialized!

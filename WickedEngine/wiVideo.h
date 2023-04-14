@@ -45,17 +45,14 @@ namespace wi::video
 		wi::graphics::Texture output_rgb;
 		uint64_t current_frame = 0;
 		float time_until_next_frame = 0;
-		enum class State
-		{
-			Paused,
-			Playing,
-		} state = State::Playing;
 		enum class Flags
 		{
 			Empty = 0,
-			Looped = 1 << 0,
-			Mipmapped = 1 << 1,
-			NeedsResolve = 1 << 2,
+			Playing = 1 << 0,
+			Looped = 1 << 1,
+			Mipmapped = 1 << 2,
+			NeedsResolve = 1 << 3,
+			InitialFirstFrameDecoded = 1 << 4,
 		};
 		Flags flags = Flags::Empty;
 		inline bool IsValid() const { return decoder.IsValid(); }
@@ -65,7 +62,7 @@ namespace wi::video
 	bool CreateVideo(const uint8_t* filedata, size_t filesize, Video* video);
 	bool CreateVideoInstance(const Video* video, VideoInstance* instance);
 
-	bool IsDecodingRequired(VideoInstance* instances, size_t num_instances, float dt);
+	bool IsDecodingRequired(const VideoInstance* instance, float dt);
 	void UpdateVideo(VideoInstance* instance, float dt, wi::graphics::CommandList cmd);
 	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd);
 }

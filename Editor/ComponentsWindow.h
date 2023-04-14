@@ -11,6 +11,7 @@
 #include "HairParticleWindow.h"
 #include "ForceFieldWindow.h"
 #include "SoundWindow.h"
+#include "VideoWindow.h"
 #include "SpringWindow.h"
 #include "IKWindow.h"
 #include "TransformWindow.h"
@@ -51,6 +52,7 @@ public:
 	HairParticleWindow hairWnd;
 	ForceFieldWindow forceFieldWnd;
 	SoundWindow soundWnd;
+	VideoWindow videoWnd;
 	SpringWindow springWnd;
 	IKWindow ikWnd;
 	TransformWindow transformWnd;

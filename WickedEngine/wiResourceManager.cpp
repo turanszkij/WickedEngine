@@ -178,6 +178,18 @@ namespace wi
 			}
 			return ret;
 		}
+		wi::vector<std::string> GetSupportedVideoExtensions()
+		{
+			wi::vector<std::string> ret;
+			for (auto& x : types)
+			{
+				if (x.second == DataType::VIDEO)
+				{
+					ret.push_back(x.first);
+				}
+			}
+			return ret;
+		}
 		wi::vector<std::string> GetSupportedScriptExtensions()
 		{
 			wi::vector<std::string> ret;

@@ -300,6 +300,8 @@ namespace wi::scene
 
 		RunSoundUpdateSystem(ctx);
 
+		RunVideoUpdateSystem(ctx);
+
 		RunImpostorUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
@@ -1091,6 +1093,26 @@ namespace wi::scene
 		TransformComponent& transform = transforms.Create(entity);
 		transform.Translate(position);
 		transform.UpdateTransform();
+
+		return entity;
+	}
+	Entity Scene::Entity_CreateVideo(
+		const std::string& name,
+		const std::string& filename
+	)
+	{
+		Entity entity = CreateEntity();
+
+		names.Create(entity) = name;
+
+		if (!filename.empty())
+		{
+			VideoComponent& video = videos.Create(entity);
+			video.filename = filename;
+			video.videoResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+			video.videoinstance.flags |= wi::video::VideoInstance::Flags::Mipmapped;
+			wi::video::CreateVideoInstance(&video.videoResource.GetVideo(), &video.videoinstance);
+		}
 
 		return entity;
 	}
@@ -4295,6 +4317,31 @@ namespace wi::scene
 				wi::audio::ExitLoop(&sound.soundinstance);
 			}
 			wi::audio::SetVolume(sound.volume, &sound.soundinstance);
+		}
+	}
+	void Scene::RunVideoUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		for (size_t i = 0; i < videos.GetCount(); ++i)
+		{
+			VideoComponent& video = videos[i];
+
+			if (video.IsPlaying())
+			{
+				video.videoinstance.flags |= wi::video::VideoInstance::Flags::Playing;
+			}
+			else
+			{
+				video.videoinstance.flags &= ~wi::video::VideoInstance::Flags::Playing;
+			}
+
+			if (video.IsLooped())
+			{
+				video.videoinstance.flags |= wi::video::VideoInstance::Flags::Looped;
+			}
+			else
+			{
+				video.videoinstance.flags &= ~wi::video::VideoInstance::Flags::Looped;
+			}
 		}
 	}
 	void Scene::RunScriptUpdateSystem(wi::jobsystem::context& ctx)

@@ -662,6 +662,30 @@ namespace wi
 		camera_reflection.texture_surfelgi_index = -1;
 		camera_reflection.texture_vxgi_diffuse_index = -1;
 		camera_reflection.texture_vxgi_specular_index = -1;
+
+		video_cmd = {};
+		if (scene->videos.GetCount() > 0)
+		{
+			bool decoding_required = false;
+			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
+			{
+				const wi::scene::VideoComponent& video = scene->videos[i];
+				if (wi::video::IsDecodingRequired(&video.videoinstance, dt))
+				{
+					decoding_required = true;
+					break;
+				}
+			}
+			if (decoding_required)
+			{
+				video_cmd = device->BeginCommandList(QUEUE_VIDEO_DECODE);
+				for (size_t i = 0; i < scene->videos.GetCount(); ++i)
+				{
+					wi::scene::VideoComponent& video = scene->videos[i];
+					wi::video::UpdateVideo(&video.videoinstance, dt, video_cmd);
+				}
+			}
+		}
 	}
 
 	void RenderPath3D::Render() const
@@ -829,10 +853,20 @@ namespace wi
 		//	must finish before "main scene opaque color pass")
 		cmd = device->BeginCommandList(QUEUE_COMPUTE);
 		device->WaitCommandList(cmd, cmd_maincamera_prepass);
+		if (video_cmd.IsValid())
+		{
+			device->WaitCommandList(cmd, video_cmd);
+		}
 		CommandList cmd_maincamera_compute_effects = cmd;
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
+
+			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
+			{
+				wi::scene::VideoComponent& video = scene->videos[i];
+				wi::video::ResolveVideoToRGB(&video.videoinstance, cmd);
+			}
 
 			wi::renderer::BindCameraCB(
 				*camera,

@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "SoundWindow.h"
-#include "wiAudio.h"
 
 using namespace wi::graphics;
 using namespace wi::ecs;

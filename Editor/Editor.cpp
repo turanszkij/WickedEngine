@@ -20,10 +20,6 @@ extern bool window_recreating;
 #include "sdl2.h"
 #endif // PLATFORM_WINDOWS
 
-wi::Resource video_resource;
-wi::video::VideoInstance video_instance;
-wi::graphics::CommandList video_cmd;
-
 void Editor::Initialize()
 {
 	Application::Initialize();
@@ -644,12 +640,6 @@ void EditorComponent::Update(float dt)
 {
 	wi::profiler::range_id profrange = wi::profiler::BeginRangeCPU("Editor Update");
 
-	if (!video_resource.IsValid())
-	{
-		video_resource = wi::resourcemanager::Load("D:/Video/foot_placement.mp4");
-		wi::video::CreateVideoInstance(&video_resource.GetVideo(), &video_instance);
-	}
-
 	Scene& scene = GetCurrentScene();
 	EditorScene& editorscene = GetCurrentEditorScene();
 	CameraComponent& camera = editorscene.camera;
@@ -1002,6 +992,25 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
 				{
 					Entity entity = scene.sounds.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+					float dis = XMVectorGetX(disV);
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					{
+						hovered = wi::scene::PickResult();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Video))
+			{
+				for (size_t i = 0; i < scene.videos.GetCount(); ++i)
+				{
+					Entity entity = scene.videos.GetEntity(i);
 					if (!scene.transforms.Contains(entity))
 						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
@@ -1481,6 +1490,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
 		componentsWnd.materialWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.soundWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.videoWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.decalWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.envProbeWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.forceFieldWnd.SetEntity(INVALID_ENTITY);
@@ -1523,6 +1533,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.hairWnd.SetEntity(picked.entity);
 		componentsWnd.lightWnd.SetEntity(picked.entity);
 		componentsWnd.soundWnd.SetEntity(picked.entity);
+		componentsWnd.videoWnd.SetEntity(picked.entity);
 		componentsWnd.decalWnd.SetEntity(picked.entity);
 		componentsWnd.envProbeWnd.SetEntity(picked.entity);
 		componentsWnd.forceFieldWnd.SetEntity(picked.entity);
@@ -1696,9 +1707,6 @@ void EditorComponent::Render() const
 {
 	const Scene& scene = GetCurrentScene();
 
-	video_cmd = GetDevice()->BeginCommandList(QUEUE_VIDEO_DECODE);
-	wi::video::UpdateVideo(&video_instance, scene.dt, video_cmd);
-
 	// Hovered item boxes:
 	if (GetGUI().IsVisible())
 	{
@@ -1828,9 +1836,6 @@ void EditorComponent::Render() const
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		CommandList cmd = device->BeginCommandList();
 		device->EventBegin("Editor", cmd);
-
-		GetDevice()->WaitCommandList(cmd, video_cmd);
-		wi::video::ResolveVideoToRGB(&video_instance, cmd);
 
 		// Selection outline:
 		if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
@@ -2260,6 +2265,36 @@ void EditorComponent::Render() const
 					wi::font::Draw(ICON_SOUND, fp, cmd);
 				}
 			}
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Video))
+			{
+				for (size_t i = 0; i < scene.videos.GetCount(); ++i)
+				{
+					Entity entity = scene.videos.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fp.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fp.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::font::Draw(ICON_VIDEO, fp, cmd);
+				}
+			}
 			if (bone_picking)
 			{
 				static PipelineState pso;
@@ -2599,25 +2634,6 @@ void EditorComponent::Compose(CommandList cmd) const
 		params.size = 30;
 		wi::font::Draw("Scene saved: " + GetCurrentEditorScene().path, params, cmd);
 	}
-
-	wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
-	wi::graphics::GraphicsDevice::VideoDecoderResult decode_result = device->GetVideoDecoderResult(&video_instance.decoder);
-
-	wi::image::Params params;
-	params.pos = XMFLOAT3(100, 10, 0);
-	params.siz = XMFLOAT2(480, 270);
-	params.image_subresource = decode_result.subresource_luminance;
-	wi::image::Draw(&decode_result.texture, params, cmd);
-
-	params.pos.x += params.siz.x + 20;
-	params.image_subresource = decode_result.subresource_chrominance;
-	wi::image::Draw(&decode_result.texture, params, cmd);
-
-	params.pos.x = GetLogicalWidth() * 0.5f;
-	params.pos.y += params.siz.y + 20;
-	params.pivot.x = 0.5f;
-	params.image_subresource = -1;
-	wi::image::Draw(&video_instance.output_rgb, params, cmd);
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
 	auto& scene = GetCurrentScene();
@@ -3352,6 +3368,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.meshWnd.SetEntity(wi::ecs::INVALID_ENTITY, -1);
 			componentsWnd.lightWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.soundWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.videoWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.decalWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.envProbeWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.materialWnd.SetEntity(wi::ecs::INVALID_ENTITY);

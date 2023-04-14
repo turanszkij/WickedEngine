@@ -26,6 +26,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	newCombo.AddItem("Force " ICON_FORCE, 6);
 	newCombo.AddItem("Decal " ICON_DECAL, 7);
 	newCombo.AddItem("Sound " ICON_SOUND, 8);
+	newCombo.AddItem("Video " ICON_VIDEO, 19);
 	newCombo.AddItem("Weather " ICON_WEATHER, 9);
 	newCombo.AddItem("Emitter " ICON_EMITTER, 10);
 	newCombo.AddItem("HairParticle " ICON_HAIR, 11);
@@ -111,6 +112,33 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			return;
 		}
 		break;
+		case 19:
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Video";
+			params.extensions = wi::resourcemanager::GetSupportedVideoExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					Entity entity = editor->GetCurrentScene().Entity_CreateVideo(wi::helper::GetFileNameFromPath(fileName), fileName);
+
+					wi::Archive& archive = editor->AdvanceHistory();
+					archive << EditorComponent::HISTORYOP_ADD;
+					editor->RecordSelection(archive);
+
+					editor->ClearSelected();
+					editor->AddSelected(entity);
+
+					editor->RecordSelection(archive);
+					editor->RecordEntity(archive, entity);
+
+					RefreshEntityTree();
+					editor->componentsWnd.videoWnd.SetEntity(entity);
+					});
+				});
+			return;
+		}
+		break;
 		case 9:
 			pick.entity = CreateEntity();
 			scene.weathers.Create(pick.entity);
@@ -191,6 +219,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem(ICON_ENVIRONMENTPROBE, (uint64_t)Filter::EnvironmentProbe);
 	filterCombo.AddItem(ICON_DECAL, (uint64_t)Filter::Decal);
 	filterCombo.AddItem(ICON_SOUND, (uint64_t)Filter::Sound);
+	filterCombo.AddItem(ICON_VIDEO, (uint64_t)Filter::Video);
 	filterCombo.AddItem(ICON_WEATHER, (uint64_t)Filter::Weather);
 	filterCombo.AddItem(ICON_POINTLIGHT, (uint64_t)Filter::Light);
 	filterCombo.AddItem(ICON_ANIMATION, (uint64_t)Filter::Animation);
@@ -463,6 +492,10 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	{
 		item.name += ICON_SOUND " ";
 	}
+	if (scene.videos.Contains(entity))
+	{
+		item.name += ICON_VIDEO " ";
+	}
 	if (scene.decals.Contains(entity))
 	{
 		item.name += ICON_DECAL " ";
@@ -680,6 +713,14 @@ void OptionsWindow::RefreshEntityTree()
 		for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
 		{
 			PushToEntityTree(scene.sounds.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::Video))
+	{
+		for (size_t i = 0; i < scene.videos.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.videos.GetEntity(i), 0);
 		}
 	}
 
