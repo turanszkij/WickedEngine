@@ -946,10 +946,14 @@ namespace vulkan_internal
 		Texture DPB;
 		wi::vector<int> dpb_subresources_luminance;
 		wi::vector<int> dpb_subresources_chrominance;
-		std::deque<uint32_t> reference_usage;
+		wi::vector<uint32_t> reference_usage;
+		uint32_t next_ref = 0;
 		uint32_t next_dpb = 0;
-		uint32_t prev_dpb = 0;
+		uint32_t disp_dpb = 0;
 		uint32_t max_frame_num = 0;
+		uint32_t target_pic_order_cnt = 0;
+		int32_t cnt_max_in_current_intra_frame = 0;
+		int32_t cnt_offset = 0;
 
 		~VideoDecoder_Vulkan()
 		{
@@ -7146,7 +7150,7 @@ using namespace vulkan_internal;
 	GraphicsDevice::VideoDecoderResult GraphicsDevice_Vulkan::GetVideoDecoderResult(const VideoDecoder* decoder) const
 	{
 		auto internal_state = to_internal(decoder);
-		uint32_t last_dpb_slot = internal_state->prev_dpb;
+		uint32_t last_dpb_slot = internal_state->disp_dpb;
 
 		VideoDecoderResult result;
 		result.texture = internal_state->DPB;
@@ -8913,11 +8917,15 @@ using namespace vulkan_internal;
 			Barrier(barriers, arraysize(barriers), cmd);
 			decoder_internal->reference_usage.clear();
 			decoder_internal->next_dpb = 0;
+			decoder_internal->disp_dpb = 0;
+			decoder_internal->target_pic_order_cnt = 0;
+			decoder_internal->cnt_max_in_current_intra_frame = 0;
+			decoder_internal->cnt_offset = 0;
 		}
 		else
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&decoder_internal->DPB, decoder_internal->DPB.desc.layout, ResourceState::VIDEO_DECODE_DPB, -1, decoder_internal->prev_dpb),
+				GPUBarrier::Image(&decoder_internal->DPB, decoder_internal->DPB.desc.layout, ResourceState::VIDEO_DECODE_DPB, -1, decoder_internal->disp_dpb),
 			};
 			Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -8932,9 +8940,6 @@ using namespace vulkan_internal;
 		h264::slice_header_t* slice_header = (h264::slice_header_t*)op->slice_header;
 
 		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
-		//std_picture_info_h264.seq_parameter_set_id = op->sps_id;
-		//std_picture_info_h264.pic_parameter_set_id = op->pps_id;
-		//std_picture_info_h264.frame_num = uint16_t(op->frame_index % decoder_internal->max_frame_num);
 		std_picture_info_h264.pic_parameter_set_id = slice_header->pic_parameter_set_id;
 		std_picture_info_h264.seq_parameter_set_id = decoder_internal->pps_array_h264[std_picture_info_h264.pic_parameter_set_id].seq_parameter_set_id;
 		std_picture_info_h264.frame_num = slice_header->frame_num;
@@ -8944,8 +8949,8 @@ using namespace vulkan_internal;
 		std_picture_info_h264.flags.is_intra = op->frame_type == VideoFrameType::Intra ? 1 : 0;
 		std_picture_info_h264.flags.is_reference = op->reference_priority > 0 ? 1 : 0;
 		std_picture_info_h264.flags.IdrPicFlag = (std_picture_info_h264.flags.is_intra && std_picture_info_h264.flags.is_reference) ? 1 : 0;
-		std_picture_info_h264.flags.field_pic_flag = 0; //slice_header->field_pic_flag;
-		std_picture_info_h264.flags.bottom_field_flag = 0; //slice_header->bottom_field_flag;
+		std_picture_info_h264.flags.field_pic_flag = 0;
+		std_picture_info_h264.flags.bottom_field_flag = 0;
 		std_picture_info_h264.flags.complementary_field_pair = 0;
 
 		VkVideoDecodeH264DpbSlotInfoKHR* dpb = (VkVideoDecodeH264DpbSlotInfoKHR*)decoder_internal->reference_slots[decoder_internal->next_dpb].pNext;
@@ -8972,10 +8977,6 @@ using namespace vulkan_internal;
 		for (size_t i = 0; i < decoder_internal->reference_usage.size(); ++i)
 		{
 			reference_slots[i] = decoder_internal->reference_slots[decoder_internal->reference_usage[i]];
-			//VkVideoDecodeH264DpbSlotInfoKHR* dpb = (VkVideoDecodeH264DpbSlotInfoKHR*)reference_slots[i].pNext;
-			//StdVideoDecodeH264ReferenceInfo* ref = (StdVideoDecodeH264ReferenceInfo*)dpb->pStdReferenceInfo;
-			//ref->flags.bottom_field_flag = 1; // important!
-			//ref->flags.top_field_flag = 1; // important!
 		}
 		decode_info.referenceSlotCount = (uint32_t)decoder_internal->reference_usage.size();
 		decode_info.pReferenceSlots = decode_info.referenceSlotCount == 0 ? nullptr : reference_slots;
@@ -9006,44 +9007,43 @@ using namespace vulkan_internal;
 		end_info.sType = VK_STRUCTURE_TYPE_VIDEO_END_CODING_INFO_KHR;
 		vkCmdEndVideoCodingKHR(commandlist.GetCommandBuffer(), &end_info);
 
-#if 1
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&decoder_internal->DPB, ResourceState::VIDEO_DECODE_DPB, decoder_internal->DPB.desc.layout, -1, decoder_internal->next_dpb),
-		};
-		Barrier(barriers, arraysize(barriers), cmd);
-#else
-		// Copy from DPB to output:
-
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&decoder_internal->DPB, ResourceState::VIDEO_DECODE_DPB, ResourceState::COPY_SRC, -1, decoder_internal->next_dpb),
-			GPUBarrier::Image(op->output, op->output->desc.layout, ResourceState::COPY_DST),
-		};
-		Barrier(barriers, arraysize(barriers), cmd);
-
-		CopyTexture(
-			op->output, 0, 0, 0, 0, 0,
-			&decoder_internal->DPB, 0, decoder_internal->next_dpb,
-			cmd, nullptr, ImageAspect::LUMINANCE, ImageAspect::LUMINANCE
-		);
-		CopyTexture(
-			op->output, 0, 0, 0, 0, 0,
-			&decoder_internal->DPB, 0, decoder_internal->next_dpb,
-			cmd, nullptr, ImageAspect::CHROMINANCE, ImageAspect::CHROMINANCE
-		);
-
-		std::swap(barriers[0].image.layout_before, barriers[0].image.layout_after);
-		std::swap(barriers[1].image.layout_before, barriers[1].image.layout_after);
-		Barrier(barriers, arraysize(barriers), cmd);
-#endif
-
-		decoder_internal->prev_dpb = decoder_internal->next_dpb;
 		if (std_picture_info_h264.flags.is_reference)
 		{
-			decoder_internal->reference_usage.push_back(decoder_internal->next_dpb);
-			while (decoder_internal->reference_usage.size() >= decoder_internal->reference_slots.size())
-				decoder_internal->reference_usage.pop_front();
+			if (decoder_internal->next_ref >= decoder_internal->reference_usage.size())
+			{
+				decoder_internal->reference_usage.resize(decoder_internal->next_ref + 1);
+			}
+			decoder_internal->reference_usage[decoder_internal->next_ref] = decoder_internal->next_dpb;
+			decoder_internal->next_ref = (decoder_internal->next_ref + 1) % (decoder_internal->reference_slots.size() - 1);
 			decoder_internal->next_dpb = (decoder_internal->next_dpb + 1) % decoder_internal->reference_slots.size();
 		}
+
+		// Determine the displayable DPB slot for the displayable frame:
+		decoder_internal->cnt_max_in_current_intra_frame = std::max(decoder_internal->cnt_max_in_current_intra_frame, std_picture_info_h264.PicOrderCnt[0]);
+		if (op->frame_type == VideoFrameType::Intra)
+		{
+			// In new intra frame, PicOrderCnt starts from zero.
+			//	Because we always increase the target_pic_order_cnt, we use an offset when PicOrderCnt is reset to zero
+			decoder_internal->cnt_offset += decoder_internal->cnt_max_in_current_intra_frame;
+			decoder_internal->cnt_max_in_current_intra_frame = 0;
+		}
+		for (size_t i = 0; i < decoder_internal->reference_infos_h264.size(); ++i)
+		{
+			StdVideoDecodeH264ReferenceInfo& ref = decoder_internal->reference_infos_h264[i];
+			uint32_t cnt = ref.PicOrderCnt[0];
+			cnt += decoder_internal->cnt_offset;
+			if (cnt == decoder_internal->target_pic_order_cnt)
+			{
+				decoder_internal->disp_dpb = i;
+				decoder_internal->target_pic_order_cnt++;
+				break;
+			}
+		}
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&decoder_internal->DPB, ResourceState::VIDEO_DECODE_DPB, decoder_internal->DPB.desc.layout, -1, decoder_internal->disp_dpb),
+		};
+		Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	void GraphicsDevice_Vulkan::EventBegin(const char* name, CommandList cmd)

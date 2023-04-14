@@ -301,9 +301,6 @@ namespace wi::video
 	{
 		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 
-#if 0
-		instance->current_frame = 0;
-#else
 		if (instance->state == VideoInstance::State::Paused)
 			return;
 		instance->time_until_next_frame -= dt;
@@ -321,7 +318,6 @@ namespace wi::video
 				instance->current_frame = (int)instance->video->frames_infos.size() - 1;
 			}
 		}
-#endif
 
 		const Video::FrameInfo& frame_info = instance->video->frames_infos[instance->current_frame];
 		instance->time_until_next_frame = frame_info.duration_seconds;

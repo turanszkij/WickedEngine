@@ -1697,7 +1697,7 @@ void EditorComponent::Render() const
 	const Scene& scene = GetCurrentScene();
 
 	video_cmd = GetDevice()->BeginCommandList(QUEUE_VIDEO_DECODE);
-	wi::video::UpdateVideo(&video_instance, 0.016f, video_cmd);
+	wi::video::UpdateVideo(&video_instance, scene.dt, video_cmd);
 
 	// Hovered item boxes:
 	if (GetGUI().IsVisible())
