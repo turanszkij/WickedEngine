@@ -4106,24 +4106,26 @@ namespace wi::scene
 				{
 					hair.CreateRaytracingRenderData();
 				}
-
-				// TLAS instance data:
-				RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
-				for (int i = 0; i < arraysize(instance.transform); ++i)
+				if (hair.BLAS.IsValid())
 				{
-					for (int j = 0; j < arraysize(instance.transform[i]); ++j)
+					// TLAS instance data:
+					RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
+					for (int i = 0; i < arraysize(instance.transform); ++i)
 					{
-						instance.transform[i][j] = wi::math::IDENTITY_MATRIX.m[j][i];
+						for (int j = 0; j < arraysize(instance.transform[i]); ++j)
+						{
+							instance.transform[i][j] = wi::math::IDENTITY_MATRIX.m[j][i];
+						}
 					}
-				}
-				instance.instance_id = (uint32_t)instanceIndex;
-				instance.instance_mask = hair.layerMask & 0xFF;
-				instance.bottom_level = &hair.BLAS;
-				instance.instance_contribution_to_hit_group_index = 0;
-				instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
+					instance.instance_id = (uint32_t)instanceIndex;
+					instance.instance_mask = hair.layerMask & 0xFF;
+					instance.bottom_level = &hair.BLAS;
+					instance.instance_contribution_to_hit_group_index = 0;
+					instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
 
-				void* dest = (void*)((size_t)TLAS_instancesMapped + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
-				device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
+					void* dest = (void*)((size_t)TLAS_instancesMapped + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+					device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
+				}
 			}
 
 		});
