@@ -17,7 +17,6 @@ namespace wi::video
 	}
 	bool CreateVideo(const uint8_t* filedata, size_t filesize, Video* video)
 	{
-		*video = {};
 		bool success = false;
 		uint8_t* input_buf = (uint8_t*)filedata;
 		struct INPUT_BUFFER
@@ -241,7 +240,6 @@ namespace wi::video
 	}
 	bool CreateVideoInstance(const Video* video, VideoInstance* instance)
 	{
-		*instance = {};
 		instance->video = video;
 
 		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
