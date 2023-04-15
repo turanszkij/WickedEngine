@@ -310,7 +310,7 @@ namespace wi::video
 	}
 	void UpdateVideo(VideoInstance* instance, float dt, wi::graphics::CommandList cmd)
 	{
-		if (!IsDecodingRequired(instance, dt))
+		if (instance == nullptr || instance->video == nullptr)
 			return;
 
 		if (has_flag(instance->flags, VideoInstance::Flags::InitialFirstFrameDecoded))
@@ -333,6 +333,9 @@ namespace wi::video
 				}
 			}
 		}
+
+		if (!cmd.IsValid())
+			return;
 
 		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 

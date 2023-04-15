@@ -666,24 +666,19 @@ namespace wi
 		video_cmd = {};
 		if (scene->videos.GetCount() > 0)
 		{
-			bool decoding_required = false;
 			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
 			{
 				const wi::scene::VideoComponent& video = scene->videos[i];
 				if (wi::video::IsDecodingRequired(&video.videoinstance, dt))
 				{
-					decoding_required = true;
+					video_cmd = device->BeginCommandList(QUEUE_VIDEO_DECODE);
 					break;
 				}
 			}
-			if (decoding_required)
+			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
 			{
-				video_cmd = device->BeginCommandList(QUEUE_VIDEO_DECODE);
-				for (size_t i = 0; i < scene->videos.GetCount(); ++i)
-				{
-					wi::scene::VideoComponent& video = scene->videos[i];
-					wi::video::UpdateVideo(&video.videoinstance, dt, video_cmd);
-				}
+				wi::scene::VideoComponent& video = scene->videos[i];
+				wi::video::UpdateVideo(&video.videoinstance, dt, video_cmd);
 			}
 		}
 	}
