@@ -20,7 +20,8 @@ public:
 
 	wi::gui::Button openButton;
 	wi::gui::Label filenameLabel;
-	wi::gui::Button playstopButton;
+	wi::gui::Button playpauseButton;
+	wi::gui::Button stopButton;
 	wi::gui::CheckBox loopedCheckbox;
 	VideoPreview preview;
 

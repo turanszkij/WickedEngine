@@ -269,6 +269,7 @@ namespace wi::video
 		}
 		td.bind_flags = wi::graphics::BindFlag::UNORDERED_ACCESS | wi::graphics::BindFlag::SHADER_RESOURCE;
 		td.misc_flags = wi::graphics::ResourceMiscFlag::TYPED_FORMAT_CASTING;
+		td.layout = wi::graphics::ResourceState::SHADER_RESOURCE_COMPUTE;
 		success = device->CreateTexture(&td, nullptr, &instance->output_rgb);
 		device->SetName(&instance->output_rgb, "wi::VideoInstance::output_rgb");
 		assert(success);

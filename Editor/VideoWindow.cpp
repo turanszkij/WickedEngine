@@ -83,27 +83,42 @@ void VideoWindow::Create(EditorComponent* _editor)
 	filenameLabel.SetSize(XMFLOAT2(wid, hei));
 	AddWidget(&filenameLabel);
 
-	playstopButton.Create(ICON_PLAY);
-	playstopButton.SetTooltip("Play/Stop selected video instance.");
-	playstopButton.SetPos(XMFLOAT2(x, y += step));
-	playstopButton.SetSize(XMFLOAT2(wid, hei));
-	playstopButton.OnClick([&](wi::gui::EventArgs args) {
+	playpauseButton.Create(ICON_PLAY);
+	playpauseButton.SetTooltip("Play/Pause selected video instance.");
+	playpauseButton.SetPos(XMFLOAT2(x, y += step));
+	playpauseButton.SetSize(XMFLOAT2(wid, hei));
+	playpauseButton.OnClick([&](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		if (video != nullptr)
 		{
 			if (video->IsPlaying())
 			{
 				video->Stop();
-				playstopButton.SetText(ICON_PLAY);
+				playpauseButton.SetText(ICON_PLAY);
 			}
 			else
 			{
 				video->Play();
-				playstopButton.SetText(ICON_STOP);
+				playpauseButton.SetText(ICON_PAUSE);
 			}
 		}
 		});
-	AddWidget(&playstopButton);
+	AddWidget(&playpauseButton);
+
+	stopButton.Create(ICON_STOP);
+	stopButton.SetTooltip("Stop selected video instance.");
+	stopButton.SetPos(XMFLOAT2(x, y += step));
+	stopButton.SetSize(XMFLOAT2(hei, hei));
+	stopButton.OnClick([&](wi::gui::EventArgs args) {
+		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
+		if (video != nullptr)
+		{
+			video->videoinstance.current_frame = 0;
+			video->videoinstance.flags &= ~wi::video::VideoInstance::Flags::InitialFirstFrameDecoded;
+			video->videoinstance.flags &= ~wi::video::VideoInstance::Flags::Playing;
+		}
+		});
+	AddWidget(&stopButton);
 
 	loopedCheckbox.Create("Looped: ");
 	loopedCheckbox.SetTooltip("Enable looping for the selected video instance.");
@@ -141,22 +156,24 @@ void VideoWindow::SetEntity(Entity entity)
 	if (video != nullptr)
 	{
 		filenameLabel.SetText(wi::helper::GetFileNameFromPath(video->filename));
-		playstopButton.SetEnabled(true);
+		playpauseButton.SetEnabled(true);
+		stopButton.SetEnabled(true);
 		loopedCheckbox.SetEnabled(true);
 		loopedCheckbox.SetCheck(video->IsLooped());
 		if (video->IsPlaying())
 		{
-			playstopButton.SetText(ICON_STOP);
+			playpauseButton.SetText(ICON_PAUSE);
 		}
 		else
 		{
-			playstopButton.SetText(ICON_PLAY);
+			playpauseButton.SetText(ICON_PLAY);
 		}
 	}
 	else
 	{
 		filenameLabel.SetText("");
-		playstopButton.SetEnabled(false);
+		playpauseButton.SetEnabled(false);
+		stopButton.SetEnabled(false);
 		loopedCheckbox.SetEnabled(false);
 	}
 }
@@ -200,8 +217,10 @@ void VideoWindow::ResizeLayout()
 
 	add_fullwidth(openButton);
 	add_fullwidth(filenameLabel);
-	add(playstopButton);
-	loopedCheckbox.SetPos(XMFLOAT2(playstopButton.GetPos().x - loopedCheckbox.GetSize().x - 2, playstopButton.GetPos().y));
+	add(playpauseButton);
+	loopedCheckbox.SetPos(XMFLOAT2(playpauseButton.GetPos().x - loopedCheckbox.GetSize().x - 2, playpauseButton.GetPos().y));
+	stopButton.SetPos(XMFLOAT2(playpauseButton.GetPos().x + playpauseButton.GetSize().x + 2, playpauseButton.GetPos().y));
+	stopButton.SetSize(XMFLOAT2(width - stopButton.GetPos().x - padding, playpauseButton.GetSize().y));
 
 	add_fullwidth(preview);
 	float h_aspect = 9.0f / 16.0f;
