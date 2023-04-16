@@ -138,6 +138,10 @@ void VideoWindow::Create(EditorComponent* _editor)
 	preview.SetSize(XMFLOAT2(160, 90));
 	AddWidget(&preview);
 
+	infoLabel.Create("");
+	infoLabel.SetSize(XMFLOAT2(800, 600));
+	AddWidget(&infoLabel);
+
 
 	SetMinimized(true);
 	SetVisible(false);
@@ -169,6 +173,24 @@ void VideoWindow::SetEntity(Entity entity)
 		{
 			playpauseButton.SetText(ICON_PLAY);
 		}
+
+		if (video->videoResource.IsValid())
+		{
+			const wi::video::Video& videofile = video->videoResource.GetVideo();
+			std::string str;
+			str += "title : " + videofile.title + "\n";
+			str += "album : " + videofile.album + "\n";
+			str += "artist : " + videofile.artist + "\n";
+			str += "year : " + videofile.year + "\n";
+			str += "comment : " + videofile.comment + "\n";
+			str += "genre : " + videofile.genre + "\n";
+			str += "width : " + std::to_string(videofile.width) + "\n";
+			str += "height : " + std::to_string(videofile.height) + "\n";
+			str += "bit rate : " + std::to_string(videofile.bit_rate) + "\n";
+			str += "PPS count : " + std::to_string(videofile.pps_count) + "\n";
+			str += "SPS count : " + std::to_string(videofile.sps_count) + "\n";
+			infoLabel.SetText(str);
+		}
 	}
 	else
 	{
@@ -176,6 +198,7 @@ void VideoWindow::SetEntity(Entity entity)
 		playpauseButton.SetEnabled(false);
 		stopButton.SetEnabled(false);
 		loopedCheckbox.SetEnabled(false);
+		infoLabel.SetText("");
 	}
 }
 
@@ -231,5 +254,7 @@ void VideoWindow::ResizeLayout()
 		h_aspect = (float)video.height / (float)video.width;
 	}
 	preview.SetSize(XMFLOAT2(preview.GetSize().x, preview.GetSize().x* h_aspect));
+
+	add_fullwidth(infoLabel);
 }
 

@@ -24,6 +24,7 @@ public:
 	wi::gui::Button stopButton;
 	wi::gui::CheckBox loopedCheckbox;
 	VideoPreview preview;
+	wi::gui::Label infoLabel;
 
 	void ResizeLayout() override;
 };

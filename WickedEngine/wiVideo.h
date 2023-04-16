@@ -10,6 +10,12 @@ namespace wi::video
 {
 	struct Video
 	{
+		std::string title;
+		std::string album;
+		std::string artist;
+		std::string year;
+		std::string comment;
+		std::string genre;
 		uint32_t padded_width = 0;
 		uint32_t padded_height = 0;
 		uint32_t width = 0;

@@ -36,6 +36,37 @@ namespace wi::video
 		int result = MP4D_open(&mp4, read_callback, &input_buffer, (int64_t)filesize);
 		if (result == 1)
 		{
+			video->title = {};
+			video->album = {};
+			video->artist = {};
+			video->year = {};
+			video->comment = {};
+			video->genre = {};
+			if (mp4.tag.title != nullptr)
+			{
+				video->title = (char*)mp4.tag.title;
+			}
+			if (mp4.tag.album != nullptr)
+			{
+				video->album = (char*)mp4.tag.album;
+			}
+			if (mp4.tag.artist != nullptr)
+			{
+				video->artist = (char*)mp4.tag.artist;
+			}
+			if (mp4.tag.year != nullptr)
+			{
+				video->year = (char*)mp4.tag.year;
+			}
+			if (mp4.tag.comment != nullptr)
+			{
+				video->comment = (char*)mp4.tag.comment;
+			}
+			if (mp4.tag.genre != nullptr)
+			{
+				video->genre = (char*)mp4.tag.genre;
+			}
+
 			for (uint32_t ntrack = 0; ntrack < mp4.track_count; ntrack++)
 			{
 				MP4D_track_t& track = mp4.track[ntrack];
