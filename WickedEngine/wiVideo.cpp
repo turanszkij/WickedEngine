@@ -155,6 +155,12 @@ namespace wi::video
 					wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 					const uint64_t alignment = device->GetVideoDecodeBitstreamAlignment();
 
+					h264::pps_t* pps_array = (h264::pps_t*)video->pps_datas.data();
+					h264::sps_t* sps_array = (h264::sps_t*)video->sps_datas.data();
+					int prev_pic_order_cnt_lsb = 0;
+					int prev_pic_order_cnt_msb = 0;
+					int poc_cycle = 0;
+
 					video->frames_infos.reserve(track.sample_count);
 					video->slice_header_datas.reserve(track.sample_count * sizeof(h264::slice_header_t));
 					video->slice_header_count = track.sample_count;
@@ -199,7 +205,42 @@ namespace wi::video
 
 							h264::slice_header_t* slice_header = (h264::slice_header_t*)video->slice_header_datas.data() + i;
 							*slice_header = {};
-							h264::read_slice_header(slice_header, &nal, (h264::pps_t*)video->pps_datas.data(), (h264::sps_t*)video->sps_datas.data(), &bs);
+							h264::read_slice_header(slice_header, &nal, pps_array, sps_array, &bs);
+
+							const h264::pps_t& pps = pps_array[slice_header->pic_parameter_set_id];
+							const h264::sps_t& sps = sps_array[pps.seq_parameter_set_id];
+
+							// Rec. ITU-T H.264 (08/2021) page 77
+							int max_pic_order_cnt_lsb = 1 << (sps.log2_max_pic_order_cnt_lsb_minus4 + 4);
+							int pic_order_cnt_lsb = slice_header->pic_order_cnt_lsb;
+
+							if (pic_order_cnt_lsb == 0)
+							{
+								poc_cycle++;
+							}
+
+							// Rec. ITU-T H.264 (08/2021) page 115
+							// Also: https://www.ramugedia.com/negative-pocs
+							int pic_order_cnt_msb = 0;
+							if (pic_order_cnt_lsb < prev_pic_order_cnt_lsb && (prev_pic_order_cnt_lsb - pic_order_cnt_lsb) >= max_pic_order_cnt_lsb / 2)
+							{
+								pic_order_cnt_msb = prev_pic_order_cnt_msb + max_pic_order_cnt_lsb; // pic_order_cnt_lsb wrapped around
+							}
+							else if (pic_order_cnt_lsb > prev_pic_order_cnt_lsb && (pic_order_cnt_lsb - prev_pic_order_cnt_lsb) > max_pic_order_cnt_lsb / 2)
+							{
+								pic_order_cnt_msb = prev_pic_order_cnt_msb - max_pic_order_cnt_lsb; // here negative POC might occur
+							}
+							else
+							{
+								pic_order_cnt_msb = prev_pic_order_cnt_msb;
+							}
+							//pic_order_cnt_msb = pic_order_cnt_msb % 256;
+							prev_pic_order_cnt_lsb = pic_order_cnt_lsb;
+							prev_pic_order_cnt_msb = pic_order_cnt_msb;
+
+							// https://www.vcodex.com/h264avc-picture-management/
+							info.poc = pic_order_cnt_msb + pic_order_cnt_lsb; // poc = TopFieldOrderCount
+							info.gop = poc_cycle - 1;
 
 							// Accept frame beginning NAL unit:
 							info.reference_priority = nal.idc;
@@ -210,6 +251,23 @@ namespace wi::video
 						aligned_size += info.size;
 						info.timestamp_seconds = float(double(timestamp) * timescale_rcp);
 						info.duration_seconds = float(double(duration) * timescale_rcp);
+					}
+
+					video->frame_display_order.resize(video->frames_infos.size());
+					for (size_t i = 0; i < video->frames_infos.size(); ++i)
+					{
+						video->frame_display_order[i] = i;
+					}
+					std::sort(video->frame_display_order.begin(), video->frame_display_order.end(), [&](size_t a, size_t b) {
+						const Video::FrameInfo& frameA = video->frames_infos[a];
+						const Video::FrameInfo& frameB = video->frames_infos[b];
+						int64_t prioA = (int64_t(frameA.gop) << 32ll) | int64_t(frameA.poc);
+						int64_t prioB = (int64_t(frameB.gop) << 32ll) | int64_t(frameB.poc);
+						return prioA < prioB;
+					});
+					for (size_t i = 0; i < video->frame_display_order.size(); ++i)
+					{
+						video->frames_infos[video->frame_display_order[i]].display_order = i;
 					}
 
 					video->average_frames_per_second = float(double(track.timescale) / double(track_duration) * track.sample_count);
@@ -374,7 +432,8 @@ namespace wi::video
 
 		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 
-		const Video::FrameInfo& frame_info = instance->video->frames_infos[instance->current_frame];
+		const Video* video = instance->video;
+		const Video::FrameInfo& frame_info = video->frames_infos[instance->current_frame];
 		instance->time_until_next_frame = frame_info.duration_seconds;
 
 		wi::graphics::VideoDecodeOperation decode_operation;
@@ -382,13 +441,15 @@ namespace wi::video
 		{
 			decode_operation.flags = wi::graphics::VideoDecodeOperation::FLAG_SESSION_RESET;
 		}
-		decode_operation.stream = &instance->video->data_stream;
+		decode_operation.stream = &video->data_stream;
 		decode_operation.stream_offset = frame_info.offset;
 		decode_operation.stream_size = frame_info.size;
 		decode_operation.frame_index = instance->current_frame;
+		decode_operation.poc = frame_info.poc;
+		decode_operation.display_order = frame_info.display_order;
 		decode_operation.frame_type = frame_info.type;
 		decode_operation.reference_priority = frame_info.reference_priority;
-		decode_operation.slice_header = (h264::slice_header_t*)instance->video->slice_header_datas.data() + instance->current_frame;
+		decode_operation.slice_header = (h264::slice_header_t*)video->slice_header_datas.data() + instance->current_frame;
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
 
 		instance->current_frame++;

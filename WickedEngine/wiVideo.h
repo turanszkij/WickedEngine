@@ -39,8 +39,12 @@ namespace wi::video
 			float duration_seconds = 0;
 			wi::graphics::VideoFrameType type = wi::graphics::VideoFrameType::Intra;
 			uint32_t reference_priority = 0;
+			int poc = 0;
+			int gop = 0;
+			int display_order = 0;
 		};
 		wi::vector<FrameInfo> frames_infos;
+		wi::vector<size_t> frame_display_order;
 		inline bool IsValid() const { return data_stream.IsValid(); }
 	};
 

@@ -951,11 +951,8 @@ namespace vulkan_internal
 		uint32_t next_dpb = 0;
 		uint32_t disp_dpb = 0;
 		uint32_t max_frame_num = 0;
-		uint32_t target_pic_order_cnt = 0;
-		int cnt_max_in_current_intra_frame = 0;
-		int cnt_offset = 0;
-		int prev_pic_order_cnt_lsb = 0;
-		int prev_pic_order_cnt_msb = 0;
+		wi::vector<int> dpb_display_order;
+		int target_display_order = 0;
 
 		~VideoDecoder_Vulkan()
 		{
@@ -8920,11 +8917,9 @@ using namespace vulkan_internal;
 			decoder_internal->reference_usage.clear();
 			decoder_internal->next_dpb = 0;
 			decoder_internal->disp_dpb = 0;
-			decoder_internal->target_pic_order_cnt = 0;
-			decoder_internal->cnt_max_in_current_intra_frame = 0;
-			decoder_internal->cnt_offset = 0;
-			decoder_internal->prev_pic_order_cnt_lsb = 0;
-			decoder_internal->prev_pic_order_cnt_msb = 0;
+			decoder_internal->dpb_display_order.clear();
+			decoder_internal->dpb_display_order.resize(decoder_internal->dpb_slots_h264.size());
+			decoder_internal->target_display_order = 0;
 		}
 		else
 		{
@@ -8945,38 +8940,12 @@ using namespace vulkan_internal;
 		StdVideoH264PictureParameterSet& pps = decoder_internal->pps_array_h264[slice_header->pic_parameter_set_id];
 		StdVideoH264SequenceParameterSet& sps = decoder_internal->sps_array_h264[pps.seq_parameter_set_id];
 
-		// Rec. ITU-T H.264 (08/2021) page 77
-		int max_pic_order_cnt_lsb = 1 << (sps.log2_max_pic_order_cnt_lsb_minus4 + 4);
-		int pic_order_cnt_lsb = slice_header->pic_order_cnt_lsb;
-
-		// Rec. ITU-T H.264 (08/2021) page 115
-		// Also: https://www.ramugedia.com/negative-pocs
-		int pic_order_cnt_msb = 0;
-		if (pic_order_cnt_lsb < decoder_internal->prev_pic_order_cnt_lsb && (decoder_internal->prev_pic_order_cnt_lsb - pic_order_cnt_lsb) >= max_pic_order_cnt_lsb / 2)
-		{
-			pic_order_cnt_msb = decoder_internal->prev_pic_order_cnt_msb + max_pic_order_cnt_lsb; // pic_order_cnt_lsb wrapped around
-		}
-		else if (pic_order_cnt_lsb > decoder_internal->prev_pic_order_cnt_lsb && (pic_order_cnt_lsb - decoder_internal->prev_pic_order_cnt_lsb) > max_pic_order_cnt_lsb / 2)
-		{
-			pic_order_cnt_msb = decoder_internal->prev_pic_order_cnt_msb - max_pic_order_cnt_lsb; // here negative POC might occur
-		}
-		else
-		{
-			pic_order_cnt_msb = decoder_internal->prev_pic_order_cnt_msb;
-		}
-		//pic_order_cnt_msb = pic_order_cnt_msb % 256;
-		decoder_internal->prev_pic_order_cnt_lsb = pic_order_cnt_lsb;
-		decoder_internal->prev_pic_order_cnt_msb = pic_order_cnt_msb;
-
-		// https://www.vcodex.com/h264avc-picture-management/
-		int poc = pic_order_cnt_msb + pic_order_cnt_lsb; // poc = TopFieldOrderCount
-
 		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
 		std_picture_info_h264.pic_parameter_set_id = slice_header->pic_parameter_set_id;
 		std_picture_info_h264.seq_parameter_set_id = pps.seq_parameter_set_id;
 		std_picture_info_h264.frame_num = slice_header->frame_num;
-		std_picture_info_h264.PicOrderCnt[0] = poc;
-		std_picture_info_h264.PicOrderCnt[1] = poc;
+		std_picture_info_h264.PicOrderCnt[0] = op->poc;
+		std_picture_info_h264.PicOrderCnt[1] = op->poc;
 		std_picture_info_h264.idr_pic_id = slice_header->idr_pic_id;
 		std_picture_info_h264.flags.is_intra = op->frame_type == VideoFrameType::Intra ? 1 : 0;
 		std_picture_info_h264.flags.is_reference = op->reference_priority > 0 ? 1 : 0;
@@ -9039,6 +9008,7 @@ using namespace vulkan_internal;
 		end_info.sType = VK_STRUCTURE_TYPE_VIDEO_END_CODING_INFO_KHR;
 		vkCmdEndVideoCodingKHR(commandlist.GetCommandBuffer(), &end_info);
 
+		decoder_internal->dpb_display_order[decoder_internal->next_dpb] = op->display_order;
 		if (std_picture_info_h264.flags.is_reference)
 		{
 			if (decoder_internal->next_ref >= decoder_internal->reference_usage.size())
@@ -9051,23 +9021,12 @@ using namespace vulkan_internal;
 		}
 
 		// Determine the displayable DPB slot for the displayable frame:
-		decoder_internal->cnt_max_in_current_intra_frame = std::max(decoder_internal->cnt_max_in_current_intra_frame, poc);
-		if (op->frame_type == VideoFrameType::Intra || poc == 0)
+		for (size_t i = 0; i < decoder_internal->dpb_display_order.size(); ++i)
 		{
-			// In new intra frame, PicOrderCnt starts from zero.
-			//	Because we always increase the target_pic_order_cnt, we use an offset when PicOrderCnt is reset to zero
-			decoder_internal->cnt_offset += decoder_internal->cnt_max_in_current_intra_frame;
-			decoder_internal->cnt_max_in_current_intra_frame = 0;
-		}
-		for (size_t i = 0; i < decoder_internal->reference_infos_h264.size(); ++i)
-		{
-			StdVideoDecodeH264ReferenceInfo& ref = decoder_internal->reference_infos_h264[i];
-			uint32_t cnt = ref.PicOrderCnt[0];
-			cnt += decoder_internal->cnt_offset;
-			if (cnt == decoder_internal->target_pic_order_cnt)
+			if (decoder_internal->dpb_display_order[i] == decoder_internal->target_display_order)
 			{
 				decoder_internal->disp_dpb = i;
-				decoder_internal->target_pic_order_cnt++;
+				decoder_internal->target_display_order++;
 				break;
 			}
 		}
