@@ -9051,8 +9051,8 @@ using namespace vulkan_internal;
 		}
 
 		// Determine the displayable DPB slot for the displayable frame:
-		decoder_internal->cnt_max_in_current_intra_frame = std::max(decoder_internal->cnt_max_in_current_intra_frame, std_picture_info_h264.PicOrderCnt[0]);
-		if (op->frame_type == VideoFrameType::Intra)
+		decoder_internal->cnt_max_in_current_intra_frame = std::max(decoder_internal->cnt_max_in_current_intra_frame, poc);
+		if (op->frame_type == VideoFrameType::Intra || poc == 0)
 		{
 			// In new intra frame, PicOrderCnt starts from zero.
 			//	Because we always increase the target_pic_order_cnt, we use an offset when PicOrderCnt is reset to zero
