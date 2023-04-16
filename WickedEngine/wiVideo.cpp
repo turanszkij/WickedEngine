@@ -167,6 +167,7 @@ namespace wi::video
 							}
 
 							h264::slice_header_t* slice_header = (h264::slice_header_t*)video->slice_header_datas.data() + i;
+							*slice_header = {};
 							h264::read_slice_header(slice_header, &nal, (h264::pps_t*)video->pps_datas.data(), (h264::sps_t*)video->sps_datas.data(), &bs);
 
 							// Accept frame beginning NAL unit:
@@ -241,6 +242,8 @@ namespace wi::video
 	bool CreateVideoInstance(const Video* video, VideoInstance* instance)
 	{
 		instance->video = video;
+		instance->current_frame = 0;
+		instance->flags &= ~VideoInstance::Flags::InitialFirstFrameDecoded;
 
 		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -319,8 +322,8 @@ namespace wi::video
 			if (!has_flag(instance->flags, VideoInstance::Flags::Playing))
 				return;
 			instance->time_until_next_frame -= dt;
-			if (instance->time_until_next_frame > 0)
-				return;
+			//if (instance->time_until_next_frame > 0)
+			//	return;
 			if (instance->current_frame >= (int)instance->video->frames_infos.size() - 1)
 			{
 				if (has_flag(instance->flags, VideoInstance::Flags::Looped))

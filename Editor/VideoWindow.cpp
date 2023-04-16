@@ -113,6 +113,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		if (video != nullptr)
 		{
+			video->Stop();
 			video->videoinstance.current_frame = 0;
 			video->videoinstance.flags &= ~wi::video::VideoInstance::Flags::InitialFirstFrameDecoded;
 			video->videoinstance.flags &= ~wi::video::VideoInstance::Flags::Playing;

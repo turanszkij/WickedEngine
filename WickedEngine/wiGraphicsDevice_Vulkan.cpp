@@ -952,8 +952,10 @@ namespace vulkan_internal
 		uint32_t disp_dpb = 0;
 		uint32_t max_frame_num = 0;
 		uint32_t target_pic_order_cnt = 0;
-		int32_t cnt_max_in_current_intra_frame = 0;
-		int32_t cnt_offset = 0;
+		int cnt_max_in_current_intra_frame = 0;
+		int cnt_offset = 0;
+		int prev_pic_order_cnt_lsb = 0;
+		int prev_pic_order_cnt_msb = 0;
 
 		~VideoDecoder_Vulkan()
 		{
@@ -8921,6 +8923,8 @@ using namespace vulkan_internal;
 			decoder_internal->target_pic_order_cnt = 0;
 			decoder_internal->cnt_max_in_current_intra_frame = 0;
 			decoder_internal->cnt_offset = 0;
+			decoder_internal->prev_pic_order_cnt_lsb = 0;
+			decoder_internal->prev_pic_order_cnt_msb = 0;
 		}
 		else
 		{
@@ -8938,13 +8942,41 @@ using namespace vulkan_internal;
 		decode_info.dstPictureResource = *decoder_internal->reference_slots[decoder_internal->next_dpb].pPictureResource;
 
 		h264::slice_header_t* slice_header = (h264::slice_header_t*)op->slice_header;
+		StdVideoH264PictureParameterSet& pps = decoder_internal->pps_array_h264[slice_header->pic_parameter_set_id];
+		StdVideoH264SequenceParameterSet& sps = decoder_internal->sps_array_h264[pps.seq_parameter_set_id];
+
+		// Rec. ITU-T H.264 (08/2021) page 77
+		int max_pic_order_cnt_lsb = 1 << (sps.log2_max_pic_order_cnt_lsb_minus4 + 4);
+		int pic_order_cnt_lsb = slice_header->pic_order_cnt_lsb;
+
+		// Rec. ITU-T H.264 (08/2021) page 115
+		// Also: https://www.ramugedia.com/negative-pocs
+		int pic_order_cnt_msb = 0;
+		if (pic_order_cnt_lsb < decoder_internal->prev_pic_order_cnt_lsb && (decoder_internal->prev_pic_order_cnt_lsb - pic_order_cnt_lsb) >= max_pic_order_cnt_lsb / 2)
+		{
+			pic_order_cnt_msb = decoder_internal->prev_pic_order_cnt_msb + max_pic_order_cnt_lsb; // pic_order_cnt_lsb wrapped around
+		}
+		else if (pic_order_cnt_lsb > decoder_internal->prev_pic_order_cnt_lsb && (pic_order_cnt_lsb - decoder_internal->prev_pic_order_cnt_lsb) > max_pic_order_cnt_lsb / 2)
+		{
+			pic_order_cnt_msb = decoder_internal->prev_pic_order_cnt_msb - max_pic_order_cnt_lsb; // here negative POC might occur
+		}
+		else
+		{
+			pic_order_cnt_msb = decoder_internal->prev_pic_order_cnt_msb;
+		}
+		//pic_order_cnt_msb = pic_order_cnt_msb % 256;
+		decoder_internal->prev_pic_order_cnt_lsb = pic_order_cnt_lsb;
+		decoder_internal->prev_pic_order_cnt_msb = pic_order_cnt_msb;
+
+		// https://www.vcodex.com/h264avc-picture-management/
+		int poc = pic_order_cnt_msb + pic_order_cnt_lsb; // poc = TopFieldOrderCount
 
 		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
 		std_picture_info_h264.pic_parameter_set_id = slice_header->pic_parameter_set_id;
-		std_picture_info_h264.seq_parameter_set_id = decoder_internal->pps_array_h264[std_picture_info_h264.pic_parameter_set_id].seq_parameter_set_id;
+		std_picture_info_h264.seq_parameter_set_id = pps.seq_parameter_set_id;
 		std_picture_info_h264.frame_num = slice_header->frame_num;
-		std_picture_info_h264.PicOrderCnt[0] = slice_header->pic_order_cnt_lsb;
-		std_picture_info_h264.PicOrderCnt[1] = slice_header->pic_order_cnt_lsb;
+		std_picture_info_h264.PicOrderCnt[0] = poc;
+		std_picture_info_h264.PicOrderCnt[1] = poc;
 		std_picture_info_h264.idr_pic_id = slice_header->idr_pic_id;
 		std_picture_info_h264.flags.is_intra = op->frame_type == VideoFrameType::Intra ? 1 : 0;
 		std_picture_info_h264.flags.is_reference = op->reference_priority > 0 ? 1 : 0;
