@@ -178,6 +178,14 @@ void VideoWindow::SetEntity(Entity entity)
 		{
 			const wi::video::Video& videofile = video->videoResource.GetVideo();
 			std::string str;
+			if (GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::VIDEO_DECODE_H264))
+			{
+				str += "GPU decode support: Yes\n\n";
+			}
+			else
+			{
+				str += "GPU decode support: No\n\n";
+			}
 			str += "title : " + videofile.title + "\n";
 			str += "album : " + videofile.album + "\n";
 			str += "artist : " + videofile.artist + "\n";
@@ -186,6 +194,7 @@ void VideoWindow::SetEntity(Entity entity)
 			str += "genre : " + videofile.genre + "\n";
 			str += "width : " + std::to_string(videofile.width) + "\n";
 			str += "height : " + std::to_string(videofile.height) + "\n";
+			str += "FPS : " + std::to_string(videofile.average_frames_per_second) + "\n";
 			str += "bit rate : " + std::to_string(videofile.bit_rate) + "\n";
 			str += "PPS count : " + std::to_string(videofile.pps_count) + "\n";
 			str += "SPS count : " + std::to_string(videofile.sps_count) + "\n";
