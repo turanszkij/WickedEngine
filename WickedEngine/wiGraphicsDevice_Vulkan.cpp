@@ -2636,7 +2636,7 @@ using namespace vulkan_internal;
 			familyIndex = 0;
 			for (const auto& queueFamily : queueFamilies)
 			{
-				if (queueFamily.queueCount > 0 && queueFamily.queueFlags == VK_QUEUE_TRANSFER_BIT)
+				if (queueFamily.queueCount > 0 && (queueFamily.queueFlags == VK_QUEUE_TRANSFER_BIT))
 				{
 					copyFamily = familyIndex;
 				}
