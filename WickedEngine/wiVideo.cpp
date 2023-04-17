@@ -267,7 +267,7 @@ namespace wi::video
 					});
 					for (size_t i = 0; i < video->frame_display_order.size(); ++i)
 					{
-						video->frames_infos[video->frame_display_order[i]].display_order = i;
+						video->frames_infos[video->frame_display_order[i]].display_order = (int)i;
 					}
 
 					video->average_frames_per_second = float(double(track.timescale) / double(track_duration) * track.sample_count);
@@ -411,8 +411,8 @@ namespace wi::video
 			if (!has_flag(instance->flags, VideoInstance::Flags::Playing))
 				return;
 			instance->time_until_next_frame -= dt;
-			//if (instance->time_until_next_frame > 0)
-			//	return;
+			if (instance->time_until_next_frame > 0)
+				return;
 			if (instance->current_frame >= (int)instance->video->frames_infos.size() - 1)
 			{
 				if (has_flag(instance->flags, VideoInstance::Flags::Looped))
@@ -440,21 +440,30 @@ namespace wi::video
 		if (instance->current_frame == 0)
 		{
 			decode_operation.flags = wi::graphics::VideoDecodeOperation::FLAG_SESSION_RESET;
+			instance->target_display_order = 0;
+			instance->available_display_orders.clear();
 		}
 		decode_operation.stream = &video->data_stream;
 		decode_operation.stream_offset = frame_info.offset;
 		decode_operation.stream_size = frame_info.size;
 		decode_operation.frame_index = instance->current_frame;
 		decode_operation.poc = frame_info.poc;
-		decode_operation.display_order = frame_info.display_order;
 		decode_operation.frame_type = frame_info.type;
 		decode_operation.reference_priority = frame_info.reference_priority;
 		decode_operation.slice_header = (h264::slice_header_t*)video->slice_header_datas.data() + instance->current_frame;
+		decode_operation.display_order = frame_info.display_order;
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
 
+		instance->available_display_orders.insert(frame_info.display_order);
+		if (instance->available_display_orders.count(instance->target_display_order))
+		{
+			instance->available_display_orders.erase(instance->target_display_order);
+			instance->flags |= VideoInstance::Flags::NeedsResolve;
+			instance->flags |= VideoInstance::Flags::InitialFirstFrameDecoded;
+			instance->target_display_order++;
+		}
+
 		instance->current_frame++;
-		instance->flags |= VideoInstance::Flags::NeedsResolve;
-		instance->flags |= VideoInstance::Flags::InitialFirstFrameDecoded;
 	}
 	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd)
 	{

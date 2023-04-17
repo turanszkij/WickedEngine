@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiVector.h"
+#include "wiUnorderedSet.h"
 
 #include <memory>
 #include <string>
@@ -66,6 +67,8 @@ namespace wi::video
 			InitialFirstFrameDecoded = 1 << 4,
 		};
 		Flags flags = Flags::Empty;
+		int target_display_order = 0;
+		wi::unordered_set<int> available_display_orders;
 		inline bool IsValid() const { return decoder.IsValid(); }
 	};
 
