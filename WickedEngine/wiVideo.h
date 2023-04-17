@@ -65,6 +65,7 @@ namespace wi::video
 			Mipmapped = 1 << 2,
 			NeedsResolve = 1 << 3,
 			InitialFirstFrameDecoded = 1 << 4,
+			DecoderReset = 1 << 5,
 		};
 		Flags flags = Flags::Empty;
 		int target_display_order = 0;

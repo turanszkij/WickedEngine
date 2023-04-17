@@ -437,10 +437,12 @@ namespace wi::video
 		instance->time_until_next_frame = frame_info.duration_seconds;
 
 		wi::graphics::VideoDecodeOperation decode_operation;
-		if (instance->current_frame == 0)
+		if (instance->current_frame == 0 || has_flag(instance->flags, VideoInstance::Flags::DecoderReset))
 		{
 			decode_operation.flags = wi::graphics::VideoDecodeOperation::FLAG_SESSION_RESET;
-			instance->target_display_order = 0;
+			instance->target_display_order = frame_info.display_order;
+			instance->available_display_orders.clear();
+			instance->flags &= ~VideoInstance::Flags::DecoderReset;
 			instance->available_display_orders.clear();
 		}
 		decode_operation.stream = &video->data_stream;

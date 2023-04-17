@@ -8929,7 +8929,7 @@ using namespace vulkan_internal;
 			decoder_internal->disp_dpb = 0;
 			decoder_internal->dpb_state.clear();
 			decoder_internal->dpb_state.resize(decoder_internal->dpb_slots_h264.size());
-			decoder_internal->target_display_order = 0;
+			decoder_internal->target_display_order = op->display_order;
 		}
 		else
 		{
