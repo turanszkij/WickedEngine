@@ -2636,18 +2636,14 @@ using namespace vulkan_internal;
 			familyIndex = 0;
 			for (const auto& queueFamily : queueFamilies)
 			{
-				if (queueFamily.queueCount > 0 &&
-					queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT &&
-					!(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
-					!(queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
-					)
+				if (queueFamily.queueCount > 0 && (queueFamily.queueFlags == VK_QUEUE_TRANSFER_BIT))
 				{
 					copyFamily = familyIndex;
-
-					if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
-					{
-						queues[QUEUE_COPY].sparse_binding_supported = true;
-					}
+				}
+				else if (queueFamily.queueCount > 0 && queueFamily.queueFlags == (VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT))
+				{
+					copyFamily = familyIndex;
+					queues[QUEUE_COPY].sparse_binding_supported = true;
 				}
 
 				if (queueFamily.queueCount > 0 &&
@@ -2664,6 +2660,29 @@ using namespace vulkan_internal;
 				}
 
 				familyIndex++;
+			}
+
+			// If the above search found no transfer family, fall back to the less strict exclusivity criteria
+			if (copyFamily == VK_QUEUE_FAMILY_IGNORED)
+			{
+				familyIndex = 0;
+				for (const auto& queueFamily : queueFamilies)
+				{
+					if (queueFamily.queueCount > 0 &&
+						queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT &&
+						!(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
+						!(queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+						)
+					{
+						copyFamily = familyIndex;
+
+						if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
+						{
+							queues[QUEUE_COPY].sparse_binding_supported = true;
+						}
+					}
+					familyIndex++;
+				}
 			}
 
 			wi::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
