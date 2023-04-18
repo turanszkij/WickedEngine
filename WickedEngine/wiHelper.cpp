@@ -961,9 +961,9 @@ namespace wi::helper
 
 		std::thread([=] {
 
-			char szFile[256];
+			wchar_t szFile[256];
 
-			OPENFILENAMEA ofn;
+			OPENFILENAME ofn;
 			ZeroMemory(&ofn, sizeof(ofn));
 			ofn.lStructSize = sizeof(ofn);
 			ofn.hwndOwner = nullptr;
@@ -982,7 +982,7 @@ namespace wi::helper
 			//	Second string is extensions, each separated by ';' and at the end of all, a '\0'
 			//	Then the whole container string is closed with an other '\0'
 			//		For example: "model files\0*.model;*.obj;\0"  <-- this string literal has "model files" as description and two accepted extensions "model" and "obj"
-			wi::vector<char> filter;
+			wi::vector<wchar_t> filter;
 			filter.reserve(256);
 			{
 				for (auto& x : params.description)
@@ -1013,18 +1013,20 @@ namespace wi::helper
 			case FileDialogParams::OPEN:
 				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 				ofn.Flags |= OFN_NOCHANGEDIR;
-				ok = GetOpenFileNameA(&ofn) == TRUE;
+				ok = GetOpenFileName(&ofn) == TRUE;
 				break;
 			case FileDialogParams::SAVE:
 				ofn.Flags = OFN_OVERWRITEPROMPT;
 				ofn.Flags |= OFN_NOCHANGEDIR;
-				ok = GetSaveFileNameA(&ofn) == TRUE;
+				ok = GetSaveFileName(&ofn) == TRUE;
 				break;
 			}
 
 			if (ok)
 			{
-				onSuccess(ofn.lpstrFile);
+				std::string result_filename;
+				StringConvert(ofn.lpstrFile, result_filename);
+				onSuccess(result_filename);
 			}
 
 			}).detach();

@@ -203,12 +203,14 @@ void VideoWindow::SetEntity(Entity entity)
 			std::string str;
 			if (GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::VIDEO_DECODE_H264))
 			{
-				str += "GPU decode: Supported\n\n";
+				str += "GPU decode: Supported\n";
 			}
 			else
 			{
-				str += "GPU decode: Not supported\n\n";
+				str += "GPU decode: Not supported\n";
 			}
+			str += "Display buffers in use: " + std::to_string(video->videoinstance.output_textures_used.size()) + "\n\n";
+
 			str += "title : " + videofile.title + "\n";
 			str += "album : " + videofile.album + "\n";
 			str += "artist : " + videofile.artist + "\n";

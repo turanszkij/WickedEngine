@@ -9035,7 +9035,7 @@ using namespace vulkan_internal;
 			{
 				decoder_internal->reference_usage.resize(decoder_internal->next_ref + 1);
 			}
-			decoder_internal->reference_usage[decoder_internal->next_ref] = decoder_internal->next_dpb;
+			decoder_internal->reference_usage[decoder_internal->next_ref] = current_dpb;
 			decoder_internal->next_ref = (decoder_internal->next_ref + 1) % (decoder_internal->reference_slots.size() - 1);
 			decoder_internal->next_dpb = (decoder_internal->next_dpb + 1) % decoder_internal->reference_slots.size();
 		}
