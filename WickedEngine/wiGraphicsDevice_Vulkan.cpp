@@ -2831,6 +2831,19 @@ using namespace vulkan_internal;
 				}
 			}
 
+			// Now try to find dedicated transfer queue with only transfer and sparse flags:
+			//	(This is a workaround for a driver bug with sparse updating from transfer queue)
+			for (uint32_t i = 0; i < queueFamilyCount; ++i)
+			{
+				auto& queueFamily = queueFamilies[i];
+
+				if (queueFamily.queueFamilyProperties.queueCount > 0 && queueFamily.queueFamilyProperties.queueFlags == (VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT))
+				{
+					copyFamily = i;
+					queues[QUEUE_COPY].sparse_binding_supported = true;
+				}
+			}
+
 			wi::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 			wi::unordered_set<uint32_t> uniqueQueueFamilies = { graphicsFamily,copyFamily,computeFamily };
 			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
