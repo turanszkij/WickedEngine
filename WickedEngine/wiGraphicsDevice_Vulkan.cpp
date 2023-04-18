@@ -926,14 +926,6 @@ namespace vulkan_internal
 
 		}
 	};
-	struct DPBSlot
-	{
-		bool can_recycle = true;
-		bool is_used = false;
-		bool is_reference = false;
-		int display_order = 0;
-		int age = -1;
-	};
 	struct VideoDecoder_Vulkan
 	{
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
@@ -954,10 +946,11 @@ namespace vulkan_internal
 		Texture DPB;
 		wi::vector<int> dpb_subresources_luminance;
 		wi::vector<int> dpb_subresources_chrominance;
+		wi::vector<uint32_t> reference_usage;
+		uint32_t next_ref = 0;
+		uint32_t next_dpb = 0;
 		uint32_t disp_dpb = 0;
 		uint32_t max_frame_num = 0;
-		int target_display_order = 0;
-		wi::vector<DPBSlot> dpb_state;
 		uint32_t num_reference_frames = 0;
 
 		~VideoDecoder_Vulkan()
@@ -2762,7 +2755,7 @@ using namespace vulkan_internal;
 				queueFamiliesVideo[i].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_VIDEO_PROPERTIES_KHR;
 			}
 			vkGetPhysicalDeviceQueueFamilyProperties2(physicalDevice, &queueFamilyCount, queueFamilies.data());
-			 
+			
 			// Query base queue families:
 			for (uint32_t i = 0; i < queueFamilyCount; ++i)
 			{
@@ -6163,7 +6156,7 @@ using namespace vulkan_internal;
 		}
 
 		internal_state->num_reference_frames = std::min(internal_state->num_reference_frames, video_capability_h264.video_capabilities.maxActiveReferencePictures);
-		uint32_t num_dpb_slots = video_capability_h264.video_capabilities.maxDpbSlots;//std::min(internal_state->num_reference_frames + 1, video_capability_h264.video_capabilities.maxDpbSlots);
+		uint32_t num_dpb_slots = std::min(internal_state->num_reference_frames + 1, video_capability_h264.video_capabilities.maxDpbSlots); // +1 for non-reference
 
 		VkVideoDecodeH264SessionParametersAddInfoKHR session_parameters_add_info_h264 = {};
 		session_parameters_add_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR;
@@ -8939,10 +8932,9 @@ using namespace vulkan_internal;
 				GPUBarrier::Image(&decoder_internal->DPB, ResourceState::UNDEFINED, ResourceState::VIDEO_DECODE_DPB),
 			};
 			Barrier(barriers, arraysize(barriers), cmd);
+			decoder_internal->reference_usage.clear();
+			decoder_internal->next_dpb = 0;
 			decoder_internal->disp_dpb = 0;
-			decoder_internal->dpb_state.clear();
-			decoder_internal->dpb_state.resize(decoder_internal->dpb_slots_h264.size());
-			decoder_internal->target_display_order = op->display_order;
 		}
 		else
 		{
@@ -8952,53 +8944,8 @@ using namespace vulkan_internal;
 			Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		int num_ref_frames = 0;
-		for (size_t i = 0; i < decoder_internal->dpb_state.size(); ++i)
-		{
-			DPBSlot& slot = decoder_internal->dpb_state[i];
-			if (slot.is_reference && slot.is_used)
-			{
-				num_ref_frames++;
-			}
-		}
-
-		// Free oldest reference if there are too many:
-		if (num_ref_frames > decoder_internal->num_reference_frames)
-		{
-			int min_age = INT_MAX;
-			size_t mini = 0;
-			for (size_t i = 0; i < decoder_internal->dpb_state.size(); ++i)
-			{
-				DPBSlot& slot = decoder_internal->dpb_state[i];
-				if (slot.is_reference&& slot.is_used&& slot.age < min_age)
-				{
-					min_age = slot.age;
-					mini = i;
-				}
-			}
-			decoder_internal->dpb_state[mini].is_used = false;
-			decoder_internal->dpb_state[mini].can_recycle = true;
-		}
-
-		DPBSlot current_slot;
-		current_slot.can_recycle = false;
-		current_slot.is_used = true;
-		current_slot.is_reference = op->reference_priority > 0;
-		current_slot.display_order = op->display_order;
-		current_slot.age = op->frame_index;
-
-		int min_age = INT_MAX;
-		uint32_t current_dpb = ~0u;
-		for (size_t i = 0; i < decoder_internal->dpb_state.size(); ++i)
-		{
-			const DPBSlot& slot = decoder_internal->dpb_state[i];
-			if (slot.can_recycle && slot.age < min_age)
-			{
-				min_age = slot.age;
-				current_dpb = (uint32_t)i;
-			}
-		}
-		assert(current_dpb != ~0u);
+		const uint32_t current_dpb = decoder_internal->next_dpb;
+		decoder_internal->disp_dpb = current_dpb;
 
 		VkVideoDecodeInfoKHR decode_info = {};
 		decode_info.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_INFO_KHR;
@@ -9042,16 +8989,12 @@ using namespace vulkan_internal;
 		decode_info.pNext = &picture_info_h264;
 
 		VkVideoReferenceSlotInfoKHR reference_slots[17] = {};
-		for (size_t i = 0; i < decoder_internal->dpb_state.size(); ++i)
+		for (size_t i = 0; i < decoder_internal->reference_usage.size(); ++i)
 		{
-			const DPBSlot& slot = decoder_internal->dpb_state[i];
-			if (slot.is_used && slot.is_reference)
-			{
-				reference_slots[decode_info.referenceSlotCount++] = decoder_internal->reference_slots[i];
-			}
+			reference_slots[i] = decoder_internal->reference_slots[decoder_internal->reference_usage[i]];
 		}
+		decode_info.referenceSlotCount = (uint32_t)decoder_internal->reference_usage.size();
 		decode_info.pReferenceSlots = decode_info.referenceSlotCount == 0 ? nullptr : reference_slots;
-		assert(decode_info.referenceSlotCount <= decoder_internal->num_reference_frames);
 
 		reference_slots[decode_info.referenceSlotCount] = decoder_internal->reference_slots[current_dpb];
 		reference_slots[decode_info.referenceSlotCount].slotIndex = -1;
@@ -9086,19 +9029,15 @@ using namespace vulkan_internal;
 		end_info.sType = VK_STRUCTURE_TYPE_VIDEO_END_CODING_INFO_KHR;
 		vkCmdEndVideoCodingKHR(commandlist.GetCommandBuffer(), &end_info);
 
-		decoder_internal->dpb_state[current_dpb] = current_slot;
-
-		// Determine the displayable DPB slot for the displayable frame:
-		for (size_t i = 0; i < decoder_internal->dpb_state.size(); ++i)
+		if (std_picture_info_h264.flags.is_reference)
 		{
-			DPBSlot& slot = decoder_internal->dpb_state[i];
-			if (slot.display_order == decoder_internal->target_display_order)
+			if (decoder_internal->next_ref >= decoder_internal->reference_usage.size())
 			{
-				decoder_internal->disp_dpb = i;
-				decoder_internal->target_display_order++;
-				slot.can_recycle = true; // mark slot for reuse
-				break;
+				decoder_internal->reference_usage.resize(decoder_internal->next_ref + 1);
 			}
+			decoder_internal->reference_usage[decoder_internal->next_ref] = decoder_internal->next_dpb;
+			decoder_internal->next_ref = (decoder_internal->next_ref + 1) % (decoder_internal->reference_slots.size() - 1);
+			decoder_internal->next_dpb = (decoder_internal->next_dpb + 1) % decoder_internal->reference_slots.size();
 		}
 
 		GPUBarrier barriers[] = {

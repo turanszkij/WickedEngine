@@ -3352,7 +3352,7 @@ namespace wi::scene
 			if (video != nullptr)
 			{
 				// Video attachment will overwrite texture slots on shader side:
-				int descriptor = GetDevice()->GetDescriptorIndex(&video->videoinstance.output_rgb, SubresourceType::SRV, video->videoinstance.output_srgb_subresource);
+				int descriptor = GetDevice()->GetDescriptorIndex(&video->videoinstance.output.texture, SubresourceType::SRV, video->videoinstance.output.subresource_srgb);
 				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, BASECOLORMAP, descriptor);
 				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, EMISSIVEMAP, descriptor);
 			}

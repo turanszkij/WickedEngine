@@ -53,9 +53,17 @@ namespace wi::video
 	{
 		const Video* video = nullptr;
 		wi::graphics::VideoDecoder decoder;
-		wi::graphics::Texture output_rgb;
-		int output_srgb_subresource = -1;
-		uint64_t current_frame = 0;
+		struct OutputTexture
+		{
+			wi::graphics::Texture texture;
+			int subresource_srgb = -1;
+			int display_order = -1;
+		};
+		wi::vector<OutputTexture> output_textures_free;
+		wi::vector<OutputTexture> output_textures_used;
+		OutputTexture output;
+		int target_display_order = 0;
+		int current_frame = 0;
 		float time_until_next_frame = 0;
 		enum class Flags
 		{
@@ -68,8 +76,6 @@ namespace wi::video
 			DecoderReset = 1 << 5,
 		};
 		Flags flags = Flags::Empty;
-		int target_display_order = 0;
-		wi::unordered_set<int> available_display_orders;
 		inline bool IsValid() const { return decoder.IsValid(); }
 	};
 

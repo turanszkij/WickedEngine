@@ -18,11 +18,11 @@ void VideoPreview::Render(const wi::Canvas& canvas, wi::graphics::CommandList cm
 	params.pos = translation;
 	params.siz = XMFLOAT2(scale.x, scale.y);
 	params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
-	if (!video->videoinstance.output_rgb.IsValid())
+	if (!video->videoinstance.output.texture.IsValid())
 	{
 		params.color = wi::Color::Black();
 	}
-	wi::image::Draw(&video->videoinstance.output_rgb, params, cmd);
+	wi::image::Draw(&video->videoinstance.output.texture, params, cmd);
 
 	device->EventEnd(cmd);
 }
@@ -142,13 +142,13 @@ void VideoWindow::Create(EditorComponent* _editor)
 		if (video != nullptr && video->videoResource.IsValid())
 		{
 			const wi::video::Video& videofile = video->videoResource.GetVideo();
-			uint64_t target_frame = uint64_t(float(args.fValue / videofile.duration_seconds) * videofile.frames_infos.size());
+			int target_frame = int(float(args.fValue / videofile.duration_seconds) * videofile.frames_infos.size());
 			for (size_t i = 0; i < videofile.frames_infos.size(); ++i)
 			{
 				auto& frame_info = videofile.frames_infos[i];
 				if (i >= target_frame && frame_info.type == wi::graphics::VideoFrameType::Intra)
 				{
-					target_frame = i;
+					target_frame = (int)i;
 					break;
 				}
 			}

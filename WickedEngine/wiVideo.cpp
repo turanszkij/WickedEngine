@@ -348,46 +348,6 @@ namespace wi::video
 		vd.sps_count = instance->video->sps_count;
 		bool success = device->CreateVideoDecoder(&vd, &instance->decoder);
 		assert(success);
-		if (!success)
-			return false;
-
-		wi::graphics::TextureDesc td;
-		td.width = video->width;
-		td.height = video->height;
-		td.format = wi::graphics::Format::R8G8B8A8_UNORM;
-		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
-		{
-			td.mip_levels = 0; // max mipcount
-		}
-		td.bind_flags = wi::graphics::BindFlag::UNORDERED_ACCESS | wi::graphics::BindFlag::SHADER_RESOURCE;
-		td.misc_flags = wi::graphics::ResourceMiscFlag::TYPED_FORMAT_CASTING;
-		td.layout = wi::graphics::ResourceState::SHADER_RESOURCE_COMPUTE;
-		success = device->CreateTexture(&td, nullptr, &instance->output_rgb);
-		device->SetName(&instance->output_rgb, "wi::VideoInstance::output_rgb");
-		assert(success);
-
-		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
-		{
-			for (uint32_t i = 0; i < instance->output_rgb.GetDesc().mip_levels; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&instance->output_rgb, wi::graphics::SubresourceType::SRV, 0, 1, i, 1);
-				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&instance->output_rgb, wi::graphics::SubresourceType::UAV, 0, 1, i, 1);
-				assert(subresource_index == i);
-			}
-		}
-
-		// This part must be AFTER mip level subresource creation:
-		wi::graphics::Format srgb_format = wi::graphics::GetFormatSRGB(td.format);
-		instance->output_srgb_subresource = device->CreateSubresource(
-			&instance->output_rgb,
-			wi::graphics::SubresourceType::SRV,
-			0, -1,
-			0, -1,
-			&srgb_format
-		);
-
 		return success;
 	}
 
@@ -440,10 +400,11 @@ namespace wi::video
 		if (instance->current_frame == 0 || has_flag(instance->flags, VideoInstance::Flags::DecoderReset))
 		{
 			decode_operation.flags = wi::graphics::VideoDecodeOperation::FLAG_SESSION_RESET;
-			instance->target_display_order = frame_info.display_order;
-			instance->available_display_orders.clear();
 			instance->flags &= ~VideoInstance::Flags::DecoderReset;
-			instance->available_display_orders.clear();
+			instance->output = {};
+			instance->output_textures_free.clear();
+			instance->output_textures_used.clear();
+			instance->target_display_order = instance->current_frame;
 		}
 		decode_operation.stream = &video->data_stream;
 		decode_operation.stream_offset = frame_info.offset;
@@ -452,40 +413,107 @@ namespace wi::video
 		decode_operation.poc = frame_info.poc;
 		decode_operation.frame_type = frame_info.type;
 		decode_operation.reference_priority = frame_info.reference_priority;
-		decode_operation.slice_header = (h264::slice_header_t*)video->slice_header_datas.data() + instance->current_frame;
+		decode_operation.slice_header = (const h264::slice_header_t*)video->slice_header_datas.data() + instance->current_frame;
 		decode_operation.display_order = frame_info.display_order;
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
 
-		instance->available_display_orders.insert(frame_info.display_order);
-		if (instance->available_display_orders.count(instance->target_display_order))
-		{
-			instance->available_display_orders.erase(instance->target_display_order);
-			instance->flags |= VideoInstance::Flags::NeedsResolve;
-			instance->flags |= VideoInstance::Flags::InitialFirstFrameDecoded;
-			instance->target_display_order++;
-		}
-
+		instance->flags |= VideoInstance::Flags::NeedsResolve;
+		instance->flags |= VideoInstance::Flags::InitialFirstFrameDecoded;
 		instance->current_frame++;
 	}
 	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd)
 	{
+		if (instance == nullptr || instance->video == nullptr)
+			return;
 		if (!has_flag(instance->flags, VideoInstance::Flags::NeedsResolve))
 			return;
 		instance->flags &= ~VideoInstance::Flags::NeedsResolve;
 
+		const Video* video = instance->video;
 		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
+
+		if (instance->output_textures_free.empty())
+		{
+			VideoInstance::OutputTexture& output = instance->output_textures_free.emplace_back();
+			wi::graphics::TextureDesc td;
+			td.width = video->width;
+			td.height = video->height;
+			td.format = wi::graphics::Format::R8G8B8A8_UNORM;
+			if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
+			{
+				td.mip_levels = 0; // max mipcount
+			}
+			td.bind_flags = wi::graphics::BindFlag::UNORDERED_ACCESS | wi::graphics::BindFlag::SHADER_RESOURCE;
+			td.misc_flags = wi::graphics::ResourceMiscFlag::TYPED_FORMAT_CASTING;
+			td.layout = wi::graphics::ResourceState::SHADER_RESOURCE_COMPUTE;
+			bool success = device->CreateTexture(&td, nullptr, &output.texture);
+			device->SetName(&output.texture, "VideoInstance::OutputTexture");
+			assert(success);
+
+			if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
+			{
+				for (uint32_t i = 0; i < output.texture.GetDesc().mip_levels; ++i)
+				{
+					int subresource_index;
+					subresource_index = device->CreateSubresource(&output.texture, wi::graphics::SubresourceType::SRV, 0, 1, i, 1);
+					assert(subresource_index == i);
+					subresource_index = device->CreateSubresource(&output.texture, wi::graphics::SubresourceType::UAV, 0, 1, i, 1);
+					assert(subresource_index == i);
+				}
+			}
+
+			// This part must be AFTER mip level subresource creation:
+			wi::graphics::Format srgb_format = wi::graphics::GetFormatSRGB(td.format);
+			output.subresource_srgb = device->CreateSubresource(
+				&output.texture,
+				wi::graphics::SubresourceType::SRV,
+				0, -1,
+				0, -1,
+				&srgb_format
+			);
+		}
+
+		VideoInstance::OutputTexture output = std::move(instance->output_textures_free.back());
+		instance->output_textures_free.pop_back();
+		output.display_order = video->frames_infos[instance->current_frame - 1].display_order;
+
 		wi::graphics::GraphicsDevice::VideoDecoderResult decode_result = device->GetVideoDecoderResult(&instance->decoder);
 		wi::renderer::YUV_to_RGB(
 			decode_result.texture,
 			decode_result.subresource_luminance,
 			decode_result.subresource_chrominance,
-			instance->output_rgb,
+			output.texture,
 			cmd
 		);
 
 		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
 		{
-			wi::renderer::GenerateMipChain(instance->output_rgb, wi::renderer::MIPGENFILTER_LINEAR, cmd);
+			wi::renderer::GenerateMipChain(output.texture, wi::renderer::MIPGENFILTER_LINEAR, cmd);
+		}
+
+		instance->output_textures_used.push_back(std::move(output));
+
+		for (size_t i = 0; i < instance->output_textures_used.size(); ++i)
+		{
+			if (instance->output_textures_used[i].display_order == instance->target_display_order)
+			{
+				if (instance->output.texture.IsValid())
+				{
+					// Free current output texture:
+					instance->output_textures_free.push_back(std::move(instance->output));
+				}
+
+				// Take this used texture as current oputput:
+				instance->output = std::move(instance->output_textures_used[i]);
+
+				// Remove this used texture:
+				std::swap(instance->output_textures_used[i], instance->output_textures_used.back());
+				instance->output_textures_used.pop_back();
+
+				// request next displayable picture in order:
+				instance->target_display_order++;
+				break;
+			}
 		}
 	}
 }
