@@ -2762,7 +2762,7 @@ using namespace vulkan_internal;
 				queueFamiliesVideo[i].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_VIDEO_PROPERTIES_KHR;
 			}
 			vkGetPhysicalDeviceQueueFamilyProperties2(physicalDevice, &queueFamilyCount, queueFamilies.data());
-
+			 
 			// Query base queue families:
 			for (uint32_t i = 0; i < queueFamilyCount; ++i)
 			{
