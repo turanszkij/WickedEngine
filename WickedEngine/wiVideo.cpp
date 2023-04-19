@@ -247,8 +247,8 @@ namespace wi::video
 							break;
 						}
 
-						info.size = (uint64_t)frame_bytes + 4;
-						aligned_size += wi::graphics::AlignTo(info.size, alignment);
+						info.size = wi::graphics::AlignTo((uint64_t)frame_bytes + 4, alignment);
+						aligned_size += info.size;
 						info.timestamp_seconds = float(double(timestamp) * timescale_rcp);
 						info.duration_seconds = float(double(duration) * timescale_rcp);
 					}

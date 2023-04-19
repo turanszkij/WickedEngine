@@ -8923,9 +8923,9 @@ using namespace vulkan_internal;
 		auto decoder_internal = to_internal(video_decoder);
 		auto stream_internal = to_internal(op->stream);
 
-		h264::slice_header_t* slice_header = (h264::slice_header_t*)op->slice_header;
-		StdVideoH264PictureParameterSet& pps = decoder_internal->pps_array_h264[slice_header->pic_parameter_set_id];
-		StdVideoH264SequenceParameterSet& sps = decoder_internal->sps_array_h264[pps.seq_parameter_set_id];
+		const h264::slice_header_t* slice_header = (const h264::slice_header_t*)op->slice_header;
+		const h264::pps_t* pps = (const h264::pps_t*)op->pps_array + slice_header->pic_parameter_set_id;
+		const h264::sps_t* sps = (const h264::sps_t*)op->sps_array + pps->seq_parameter_set_id;
 
 		if (op->flags & VideoDecodeOperation::FLAG_SESSION_RESET)
 		{
@@ -8957,7 +8957,7 @@ using namespace vulkan_internal;
 
 		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
 		std_picture_info_h264.pic_parameter_set_id = slice_header->pic_parameter_set_id;
-		std_picture_info_h264.seq_parameter_set_id = pps.seq_parameter_set_id;
+		std_picture_info_h264.seq_parameter_set_id = pps->seq_parameter_set_id;
 		std_picture_info_h264.frame_num = slice_header->frame_num;
 		std_picture_info_h264.PicOrderCnt[0] = op->poc;
 		std_picture_info_h264.PicOrderCnt[1] = op->poc;
