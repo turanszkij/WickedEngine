@@ -1,5 +1,6 @@
 #pragma once
 
+/* H.264/AVC picture entry data structure */
 typedef struct _DXVA_PicEntry_H264 {
 	union {
 		struct {
@@ -10,6 +11,7 @@ typedef struct _DXVA_PicEntry_H264 {
 	};
 } DXVA_PicEntry_H264, * LPDXVA_PicEntry_H264;  /* 1 byte */
 
+/* H.264/AVC picture parameters structure */
 typedef struct _DXVA_PicParams_H264 {
 	USHORT  wFrameWidthInMbsMinus1;
 	USHORT  wFrameHeightInMbsMinus1;
@@ -82,3 +84,49 @@ typedef struct _DXVA_PicParams_H264 {
 	UCHAR  SliceGroupMap[810]; /* 4b/sgmu, Size BT.601 */
 
 } DXVA_PicParams_H264, * LPDXVA_PicParams_H264;
+
+
+/* H.264/AVC slice control data structure - short form */
+typedef struct _DXVA_Slice_H264_Short {
+	UINT   BSNALunitDataLocation; /* type 1..5 */
+	UINT   SliceBytesInBuffer; /* for off-host parse */
+	USHORT wBadSliceChopping;  /* for off-host parse */
+} DXVA_Slice_H264_Short, * LPDXVA_Slice_H264_Short;
+
+/* H.264/AVC slice control data structure - short form */
+typedef struct _DXVA_Slice_H264_Short {
+	UINT   BSNALunitDataLocation; /* type 1..5 */
+	UINT   SliceBytesInBuffer; /* for off-host parse */
+	USHORT wBadSliceChopping;  /* for off-host parse */
+} DXVA_Slice_H264_Short, * LPDXVA_Slice_H264_Short;
+
+/* H.264/AVC picture entry data structure - long form */
+typedef struct _DXVA_Slice_H264_Long {
+	UINT   BSNALunitDataLocation; /* type 1..5 */
+	UINT   SliceBytesInBuffer; /* for off-host parse */
+	USHORT wBadSliceChopping;  /* for off-host parse */
+
+	USHORT first_mb_in_slice;
+	USHORT NumMbsForSlice;
+
+	USHORT BitOffsetToSliceData; /* after CABAC alignment */
+
+	UCHAR  slice_type;
+	UCHAR  luma_log2_weight_denom;
+	UCHAR  chroma_log2_weight_denom;
+	UCHAR  num_ref_idx_l0_active_minus1;
+	UCHAR  num_ref_idx_l1_active_minus1;
+	CHAR   slice_alpha_c0_offset_div2;
+	CHAR   slice_beta_offset_div2;
+	UCHAR  Reserved8Bits;
+	DXVA_PicEntry_H264 RefPicList[2][32]; /* L0 & L1 */
+	SHORT  Weights[2][32][3][2]; /* L0 & L1; Y, Cb, Cr */
+	CHAR   slice_qs_delta;
+	/* rest off-host parse */
+	CHAR   slice_qp_delta;
+	UCHAR  redundant_pic_cnt;
+	UCHAR  direct_spatial_mv_pred_flag;
+	UCHAR  cabac_init_idc;
+	UCHAR  disable_deblocking_filter_idc;
+	USHORT slice_id;
+} DXVA_Slice_H264_Long, * LPDXVA_Slice_H264_Long;

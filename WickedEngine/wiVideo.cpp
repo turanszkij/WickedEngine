@@ -247,8 +247,8 @@ namespace wi::video
 							break;
 						}
 
-						info.size = wi::graphics::AlignTo((uint64_t)frame_bytes + 4, alignment);
-						aligned_size += info.size;
+						info.size = (uint64_t)frame_bytes + 4;
+						aligned_size += wi::graphics::AlignTo(info.size, alignment);
 						info.timestamp_seconds = float(double(timestamp) * timescale_rcp);
 						info.duration_seconds = float(double(duration) * timescale_rcp);
 					}
@@ -414,6 +414,8 @@ namespace wi::video
 		decode_operation.frame_type = frame_info.type;
 		decode_operation.reference_priority = frame_info.reference_priority;
 		decode_operation.slice_header = (const h264::slice_header_t*)video->slice_header_datas.data() + instance->current_frame;
+		decode_operation.pps_array = video->pps_datas.data();
+		decode_operation.sps_array = video->sps_datas.data();
 		decode_operation.display_order = frame_info.display_order;
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
 

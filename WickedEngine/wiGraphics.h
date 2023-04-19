@@ -857,9 +857,9 @@ namespace wi::graphics
 		uint64_t frame_index = 0;
 		VideoFrameType frame_type = VideoFrameType::Intra;
 		uint32_t reference_priority = 0;
-		uint32_t pps_id = 0;
-		uint32_t sps_id = 0;
 		const void* slice_header = nullptr;
+		const void* pps_array = nullptr;
+		const void* sps_array = nullptr;
 		int poc = 0;
 		int display_order = 0;
 	};
