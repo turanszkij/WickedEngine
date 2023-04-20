@@ -4594,7 +4594,7 @@ using namespace dx12_internal;
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
-				if (texture->desc.array_size > 1 && sliceCount > 1)
+				if (texture->desc.array_size > 1)
 				{
 					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
 					srv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4611,7 +4611,7 @@ using namespace dx12_internal;
 			}
 			else if (texture->desc.type == TextureDesc::Type::TEXTURE_2D)
 			{
-				if (texture->desc.array_size > 1 && sliceCount > 1)
+				if (texture->desc.array_size > 1)
 				{
 					if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 					{
@@ -4694,7 +4694,7 @@ using namespace dx12_internal;
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
-				if (texture->desc.array_size > 1 && sliceCount > 1)
+				if (texture->desc.array_size > 1)
 				{
 					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
 					uav_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4709,7 +4709,7 @@ using namespace dx12_internal;
 			}
 			else if (texture->desc.type == TextureDesc::Type::TEXTURE_2D)
 			{
-				if (texture->desc.array_size > 1 && sliceCount > 1)
+				if (texture->desc.array_size > 1)
 				{
 					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
 					uav_desc.Texture2DArray.FirstArraySlice = firstSlice;
@@ -4753,7 +4753,7 @@ using namespace dx12_internal;
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
-				if (texture->desc.array_size > 1 && sliceCount > 1)
+				if (texture->desc.array_size > 1)
 				{
 					rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE1DARRAY;
 					rtv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4768,7 +4768,7 @@ using namespace dx12_internal;
 			}
 			else if (texture->desc.type == TextureDesc::Type::TEXTURE_2D)
 			{
-				if (texture->desc.array_size > 1 && sliceCount > 1)
+				if (texture->desc.array_size > 1)
 				{
 					if (texture->desc.sample_count > 1)
 					{
@@ -4828,7 +4828,7 @@ using namespace dx12_internal;
 
 			if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 			{
-				if (texture->desc.array_size > 1 && sliceCount > 1)
+				if (texture->desc.array_size > 1)
 				{
 					dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE1DARRAY;
 					dsv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4843,7 +4843,7 @@ using namespace dx12_internal;
 			}
 			else if (texture->desc.type == TextureDesc::Type::TEXTURE_2D)
 			{
-				if (texture->desc.array_size > 1 && sliceCount > 1)
+				if (texture->desc.array_size > 1)
 				{
 					if (texture->desc.sample_count > 1)
 					{

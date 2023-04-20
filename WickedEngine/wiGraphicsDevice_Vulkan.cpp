@@ -6279,7 +6279,7 @@ using namespace vulkan_internal;
 
 		if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 		{
-			if (sliceCount > 1)
+			if (texture->desc.array_size > 1)
 			{
 				view_desc.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
 			}
@@ -6290,7 +6290,7 @@ using namespace vulkan_internal;
 		}
 		else if (texture->desc.type == TextureDesc::Type::TEXTURE_2D)
 		{
-			if (texture->desc.array_size > 1 && sliceCount > 1)
+			if (texture->desc.array_size > 1)
 			{
 				if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 				{
