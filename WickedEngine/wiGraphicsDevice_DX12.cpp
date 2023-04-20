@@ -6922,15 +6922,15 @@ using namespace dx12_internal;
 		DXVA_PicParams_H264 pic_params = {};
 		pic_params.wFrameWidthInMbsMinus1 = sps->pic_width_in_mbs_minus1;
 		pic_params.wFrameHeightInMbsMinus1 = sps->pic_height_in_map_units_minus1;
-		pic_params.IntraPicFlag = op->frame_type == VideoFrameType::Intra;
+		pic_params.IntraPicFlag = op->frame_type == VideoFrameType::Intra ? 1 : 0;
 		pic_params.MbaffFrameFlag = sps->mb_adaptive_frame_field_flag;
-		pic_params.field_pic_flag = 0; // 0 = full frame (top and bottom field)
+		pic_params.field_pic_flag = slice_header->field_pic_flag; // 0 = full frame (top and bottom field)
 		//pic_params.bottom_field_flag = 0; // missing??
 		pic_params.chroma_format_idc = sps->chroma_format_idc;
 		pic_params.bit_depth_chroma_minus8 = sps->bit_depth_chroma_minus8;
 		pic_params.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
 		pic_params.residual_colour_transform_flag = sps->residual_colour_transform_flag;
-		pic_params.CurrPic.AssociatedFlag = 0; // non-field pic, so 0 for full frame
+		pic_params.CurrPic.AssociatedFlag = slice_header->bottom_field_flag ? 1 : 0; // if pic_params.field_pic_flag == 1, then this is 0 = top field, 1 = bottom_field
 		pic_params.CurrPic.Index7Bits = (UCHAR)op->current_dpb;
 		pic_params.CurrFieldOrderCnt[0] = op->poc;
 		pic_params.CurrFieldOrderCnt[1] = op->poc;
@@ -6981,120 +6981,132 @@ using namespace dx12_internal;
 		input.FrameArguments[1].pData = &qmatrix;
 
 		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 31
-#if 1
-		DXVA_Slice_H264_Short sliceinfo = {};
-		sliceinfo.BSNALunitDataLocation = 0;
-		sliceinfo.SliceBytesInBuffer = (UINT)op->stream_size;
-		sliceinfo.wBadSliceChopping = 0;
-#else
-		DXVA_Slice_H264_Long sliceinfo = {};
-		sliceinfo.BSNALunitDataLocation = 0;
-		sliceinfo.SliceBytesInBuffer = (UINT)op->stream_size;
-		sliceinfo.wBadSliceChopping = 0;
-		sliceinfo.first_mb_in_slice = slice_header->first_mb_in_slice;
-		sliceinfo.NumMbsForSlice = 0;
-		static USHORT bit_offset = 0;
-		sliceinfo.BitOffsetToSliceData = bit_offset;
-		sliceinfo.slice_type = slice_header->slice_type;
-		sliceinfo.luma_log2_weight_denom = slice_header->pwt.luma_log2_weight_denom;
-		sliceinfo.chroma_log2_weight_denom = slice_header->pwt.chroma_log2_weight_denom;
-		sliceinfo.num_ref_idx_l0_active_minus1 = slice_header->num_ref_idx_l0_active_minus1;
-		sliceinfo.num_ref_idx_l1_active_minus1 = slice_header->num_ref_idx_l1_active_minus1;
-		sliceinfo.slice_alpha_c0_offset_div2 = slice_header->slice_alpha_c0_offset_div2;
-		sliceinfo.slice_beta_offset_div2 = slice_header->slice_beta_offset_div2;
-		sliceinfo.slice_qs_delta = slice_header->slice_qs_delta;
-		sliceinfo.slice_qp_delta = slice_header->slice_qp_delta;
-		sliceinfo.redundant_pic_cnt = slice_header->redundant_pic_cnt;
-		sliceinfo.direct_spatial_mv_pred_flag = slice_header->direct_spatial_mv_pred_flag;
-		sliceinfo.cabac_init_idc = slice_header->cabac_init_idc;
-		sliceinfo.disable_deblocking_filter_idc = slice_header->disable_deblocking_filter_idc;
-		sliceinfo.slice_id = 0; // ??
-		std::memset(sliceinfo.RefPicList[0], 0xFF, sizeof(sliceinfo.RefPicList[0]));
-		std::memset(sliceinfo.RefPicList[1], 0xFF, sizeof(sliceinfo.RefPicList[0]));
-		switch (sliceinfo.slice_type)
+		DXVA_Slice_H264_Short sliceinfo_short = {};
+		DXVA_Slice_H264_Long sliceinfo_long = {};
+		//if (slice_header->first_mb_in_slice > 0 && slice_header->slice_type != h264::SH_SLICE_TYPE_B && slice_header->slice_type != h264::SH_SLICE_TYPE_B_ONLY)
+		if (0)
 		{
-		case 2:
-		case 4:
-		case 7:
-		case 9:
-			// keep 0xFF
-			break;
-		default:
-			for (int j = 0; j < sliceinfo.num_ref_idx_l0_active_minus1; ++j)
+			sliceinfo_long.BSNALunitDataLocation = 0;
+			sliceinfo_long.SliceBytesInBuffer = (UINT)op->stream_size;
+			sliceinfo_long.wBadSliceChopping = 0;
+			sliceinfo_long.first_mb_in_slice = slice_header->first_mb_in_slice;
+			sliceinfo_long.NumMbsForSlice = 0;
+			sliceinfo_long.BitOffsetToSliceData = 0;
+			sliceinfo_long.slice_type = slice_header->slice_type;
+			sliceinfo_long.luma_log2_weight_denom = slice_header->pwt.luma_log2_weight_denom;
+			sliceinfo_long.chroma_log2_weight_denom = slice_header->pwt.chroma_log2_weight_denom;
+			sliceinfo_long.num_ref_idx_l0_active_minus1 = slice_header->num_ref_idx_l0_active_minus1;
+			sliceinfo_long.num_ref_idx_l1_active_minus1 = slice_header->num_ref_idx_l1_active_minus1;
+			sliceinfo_long.slice_alpha_c0_offset_div2 = slice_header->slice_alpha_c0_offset_div2;
+			sliceinfo_long.slice_beta_offset_div2 = slice_header->slice_beta_offset_div2;
+			sliceinfo_long.slice_qs_delta = slice_header->slice_qs_delta;
+			sliceinfo_long.slice_qp_delta = slice_header->slice_qp_delta;
+			sliceinfo_long.redundant_pic_cnt = slice_header->redundant_pic_cnt;
+			sliceinfo_long.direct_spatial_mv_pred_flag = slice_header->direct_spatial_mv_pred_flag;
+			sliceinfo_long.cabac_init_idc = slice_header->cabac_init_idc;
+			sliceinfo_long.disable_deblocking_filter_idc = slice_header->disable_deblocking_filter_idc;
+			sliceinfo_long.slice_id = 0; // if picture has multiple slices, this identifies the slice id (not supported currently)
+			std::memset(sliceinfo_long.RefPicList, 0xFF, sizeof(sliceinfo_long.RefPicList));
+			// L0:
+			switch (sliceinfo_long.slice_type)
 			{
-				sliceinfo.RefPicList[0][j] = {};
-				sliceinfo.RefPicList[0][j].Index7Bits = j;
-			}
-			break;
-		}
-		switch (sliceinfo.slice_type)
-		{
-		case 0:
-		case 2:
-		case 3:
-		case 4:
-		case 5:
-		case 7:
-		case 8:
-		case 9:
-			// keep 0xFF
-			break;
-		default:
-			for (int j = 0; j < sliceinfo.num_ref_idx_l1_active_minus1; ++j)
-			{
-				sliceinfo.RefPicList[1][j] = {};
-				sliceinfo.RefPicList[1][j].Index7Bits = j;
-			}
-			break;
-		}
-		for (int j = 0; j < 32; ++j) // weights/offsets
-		{
-			for (int k = 0; k < 3; ++k) // y, cb, cr
-			{
-				switch (k)
+			case 2:
+			case 4:
+			case 7:
+			case 9:
+				// keep 0xFF
+				break;
+			default:
+				for (int j = 0; j < sliceinfo_long.num_ref_idx_l0_active_minus1; ++j)
 				{
-				default:
-				case 0:
-					sliceinfo.Weights[0][j][k][0] = slice_header->pwt.luma_weight_l0[j];
-					sliceinfo.Weights[0][j][k][1] = slice_header->pwt.luma_offset_l0[j];
-					break;
-				case 1:
-					sliceinfo.Weights[0][j][k][0] = slice_header->pwt.chroma_weight_l0[j][0];
-					sliceinfo.Weights[0][j][k][1] = slice_header->pwt.chroma_offset_l0[j][0];
-					break;
-				case 2:
-					sliceinfo.Weights[0][j][k][0] = slice_header->pwt.chroma_weight_l0[j][1];
-					sliceinfo.Weights[0][j][k][1] = slice_header->pwt.chroma_offset_l0[j][1];
-					break;
+					sliceinfo_long.RefPicList[0][j] = {};
+					sliceinfo_long.RefPicList[0][j].Index7Bits = op->dpb_reference_slots[j];
+				}
+				break;
+			}
+			// L1:
+			switch (sliceinfo_long.slice_type)
+			{
+			case 0:
+			case 2:
+			case 3:
+			case 4:
+			case 5:
+			case 7:
+			case 8:
+			case 9:
+				// keep 0xFF
+				break;
+			default:
+				for (int j = 0; j < sliceinfo_long.num_ref_idx_l1_active_minus1; ++j)
+				{
+					sliceinfo_long.RefPicList[1][j] = {};
+					sliceinfo_long.RefPicList[1][j].Index7Bits = op->dpb_reference_slots[j];
+				}
+				break;
+			}
+			// L0:
+			for (int j = 0; j < 32; ++j) // weights/offsets
+			{
+				for (int k = 0; k < 3; ++k) // y, cb, cr
+				{
+					switch (k)
+					{
+					default:
+					case 0:
+						sliceinfo_long.Weights[0][j][k][0] = slice_header->pwt.luma_weight_l0[j];
+						sliceinfo_long.Weights[0][j][k][1] = slice_header->pwt.luma_offset_l0[j];
+						break;
+					case 1:
+						sliceinfo_long.Weights[0][j][k][0] = slice_header->pwt.chroma_weight_l0[j][0];
+						sliceinfo_long.Weights[0][j][k][1] = slice_header->pwt.chroma_offset_l0[j][0];
+						break;
+					case 2:
+						sliceinfo_long.Weights[0][j][k][0] = slice_header->pwt.chroma_weight_l0[j][1];
+						sliceinfo_long.Weights[0][j][k][1] = slice_header->pwt.chroma_offset_l0[j][1];
+						break;
+					}
 				}
 			}
-		}
-		for (int j = 0; j < 32; ++j) // weights/offsets
-		{
-			for (int k = 0; k < 3; ++k) // y, cb, cr
+			// L1:
+			for (int j = 0; j < 32; ++j) // weights/offsets
 			{
-				switch (k)
+				for (int k = 0; k < 3; ++k) // y, cb, cr
 				{
-				default:
-				case 0:
-					sliceinfo.Weights[1][j][k][0] = slice_header->pwt.luma_weight_l1[j];
-					sliceinfo.Weights[1][j][k][1] = slice_header->pwt.luma_offset_l1[j];
-					break;
-				case 1:
-					sliceinfo.Weights[1][j][k][0] = slice_header->pwt.chroma_weight_l1[j][0];
-					sliceinfo.Weights[1][j][k][1] = slice_header->pwt.chroma_offset_l1[j][0];
-					break;
-				case 2:
-					sliceinfo.Weights[1][j][k][0] = slice_header->pwt.chroma_weight_l1[j][1];
-					sliceinfo.Weights[1][j][k][1] = slice_header->pwt.chroma_offset_l1[j][1];
-					break;
+					switch (k)
+					{
+					default:
+					case 0:
+						sliceinfo_long.Weights[1][j][k][0] = slice_header->pwt.luma_weight_l1[j];
+						sliceinfo_long.Weights[1][j][k][1] = slice_header->pwt.luma_offset_l1[j];
+						break;
+					case 1:
+						sliceinfo_long.Weights[1][j][k][0] = slice_header->pwt.chroma_weight_l1[j][0];
+						sliceinfo_long.Weights[1][j][k][1] = slice_header->pwt.chroma_offset_l1[j][0];
+						break;
+					case 2:
+						sliceinfo_long.Weights[1][j][k][0] = slice_header->pwt.chroma_weight_l1[j][1];
+						sliceinfo_long.Weights[1][j][k][1] = slice_header->pwt.chroma_offset_l1[j][1];
+						break;
+					}
 				}
 			}
+
+			input.FrameArguments[2].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
+			input.FrameArguments[2].Size = sizeof(sliceinfo_long);
+			input.FrameArguments[2].pData = &sliceinfo_long;
 		}
-#endif
-		input.FrameArguments[2].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
-		input.FrameArguments[2].Size = sizeof(sliceinfo);
-		input.FrameArguments[2].pData = &sliceinfo;
+		else
+		{
+			sliceinfo_short.BSNALunitDataLocation = 0;
+			sliceinfo_short.SliceBytesInBuffer = (UINT)op->stream_size;
+			sliceinfo_short.wBadSliceChopping = 0;
+
+			input.FrameArguments[2].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
+			input.FrameArguments[2].Size = sizeof(sliceinfo_short);
+			input.FrameArguments[2].pData = &sliceinfo_short;
+		}
+
 
 		input.NumFrameArguments = 3;
 
