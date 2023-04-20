@@ -5,6 +5,7 @@
 #include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
+#include "wiArguments.h"
 
 #include "Utility/dx12/dxgiformat.h"
 #include "Utility/dx12/d3d12.h"
@@ -1517,14 +1518,6 @@ namespace dx12_internal
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12VideoDecoderHeap> decoder_heap;
 		ComPtr<ID3D12VideoDecoder> decoder;
-		Texture DPB;
-		wi::vector<int> dpb_subresources_luminance;
-		wi::vector<int> dpb_subresources_chrominance;
-		wi::vector<uint32_t> dpb_poc_status;
-		wi::vector<uint32_t> reference_usage;
-		uint32_t next_ref = 0;
-		uint32_t next_dpb = 0;
-		uint32_t disp_dpb = 0;
 
 		~VideoDecoder_DX12()
 		{
@@ -2328,13 +2321,14 @@ using namespace dx12_internal;
 		auto NextAdapter = [&](uint32_t index, IDXGIAdapter1** ppAdapter)
 		{
 			if (queryByPreference)
-#if 1
+			{
+				if (wi::arguments::HasArgument("igpu"))
+				{
+					return dxgiFactory6->EnumAdapterByGpuPreference(index, DXGI_GPU_PREFERENCE_MINIMUM_POWER, IID_PPV_ARGS(ppAdapter));
+				}
 				return dxgiFactory6->EnumAdapterByGpuPreference(index, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(ppAdapter));
-#else
-				return dxgiFactory6->EnumAdapterByGpuPreference(index, DXGI_GPU_PREFERENCE_MINIMUM_POWER, IID_PPV_ARGS(ppAdapter));
-#endif
-			else
-				return dxgiFactory->EnumAdapters1(index, ppAdapter);
+			}
+			return dxgiFactory->EnumAdapters1(index, ppAdapter);
 		};
 
 		for (uint32_t i = 0; NextAdapter(i, dxgiAdapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND; ++i)
@@ -4550,43 +4544,6 @@ using namespace dx12_internal;
 		hr = video_device->CreateVideoDecoder(&decoder_desc, IID_PPV_ARGS(&internal_state->decoder));
 		assert(SUCCEEDED(hr));
 
-		D3D12MA::ALLOCATION_DESC allocationDesc = {};
-		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-
-		TextureDesc td;
-		td.width = desc->width;
-		td.height = desc->height;
-		td.format = desc->format;
-		td.array_size = num_dpb_slots;
-		td.bind_flags = BindFlag::SHADER_RESOURCE;
-		td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_DPB | ResourceMiscFlag::VIDEO_DECODE_DST;
-		bool dpb_success = CreateTexture(&td, nullptr, &internal_state->DPB);
-		assert(dpb_success);
-		SetName(&internal_state->DPB, "VideoDecoder::DPB");
-
-		internal_state->dpb_subresources_luminance.resize(num_dpb_slots);
-		internal_state->dpb_subresources_chrominance.resize(num_dpb_slots);
-		for (uint32_t i = 0; i < num_dpb_slots; ++i)
-		{
-			Format luminance_format = Format::R8_UNORM;
-			ImageAspect luminance_aspect = ImageAspect::LUMINANCE;
-			internal_state->dpb_subresources_luminance[i] = CreateSubresource(
-				&internal_state->DPB,
-				SubresourceType::SRV,
-				i, 1, 0, 1,
-				&luminance_format, &luminance_aspect
-			);
-
-			Format chrominance_format = Format::R8G8_UNORM;
-			ImageAspect chrominance_aspect = ImageAspect::CHROMINANCE;
-			internal_state->dpb_subresources_chrominance[i] = CreateSubresource(
-				&internal_state->DPB,
-				SubresourceType::SRV,
-				i, 1, 0, 1,
-				&chrominance_format, &chrominance_aspect
-			);
-		}
-
 		return SUCCEEDED(hr);
 	}
 
@@ -5528,18 +5485,6 @@ using namespace dx12_internal;
 			}
 		}
 		return false;
-	}
-
-	GraphicsDevice::VideoDecoderResult GraphicsDevice_DX12::GetVideoDecoderResult(const VideoDecoder* decoder) const
-	{
-		auto internal_state = to_internal(decoder);
-		uint32_t last_dpb_slot = internal_state->disp_dpb;
-
-		VideoDecoderResult result;
-		result.texture = internal_state->DPB;
-		result.subresource_luminance = internal_state->dpb_subresources_luminance[last_dpb_slot];
-		result.subresource_chrominance = internal_state->dpb_subresources_chrominance[last_dpb_slot];
-		return result;
 	}
 
 	void GraphicsDevice_DX12::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
@@ -6949,7 +6894,7 @@ using namespace dx12_internal;
 	{
 		auto decoder_internal = to_internal(video_decoder);
 		auto stream_internal = to_internal(op->stream);
-		auto dpb_internal = to_internal(&decoder_internal->DPB);
+		auto dpb_internal = to_internal(op->DPB);
 		D3D12_VIDEO_DECODE_OUTPUT_STREAM_ARGUMENTS output = {};
 		D3D12_VIDEO_DECODE_INPUT_STREAM_ARGUMENTS input = {};
 
@@ -6957,41 +6902,18 @@ using namespace dx12_internal;
 		input.CompressedBitstream.Offset = op->stream_offset;
 		input.CompressedBitstream.Size = op->stream_size;
 
-		if (op->flags & VideoDecodeOperation::FLAG_SESSION_RESET)
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&decoder_internal->DPB, ResourceState::UNDEFINED, ResourceState::VIDEO_DECODE_DPB),
-			};
-			//Barrier(barriers, arraysize(barriers), cmd);
-			decoder_internal->dpb_poc_status.resize(decoder_internal->DPB.desc.array_size);
-			decoder_internal->reference_usage.clear();
-			decoder_internal->next_dpb = 0;
-			decoder_internal->disp_dpb = 0;
-		}
-		else
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&decoder_internal->DPB, decoder_internal->DPB.desc.layout, ResourceState::VIDEO_DECODE_DPB, -1, decoder_internal->disp_dpb),
-			};
-			//Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		const uint32_t current_dpb = decoder_internal->next_dpb;
-		decoder_internal->disp_dpb = current_dpb;
-		decoder_internal->dpb_poc_status[current_dpb] = op->poc;
-
 		const h264::slice_header_t* slice_header = (const h264::slice_header_t*)op->slice_header;
 		const h264::pps_t* pps = (const h264::pps_t*)op->pps_array + slice_header->pic_parameter_set_id;
 		const h264::sps_t* sps = (const h264::sps_t*)op->sps_array + pps->seq_parameter_set_id;
 
 		ID3D12Resource* reference_frames[16] = {};
 		UINT reference_subresources[16] = {};
-		for (size_t i = 0; i < decoder_internal->reference_usage.size(); ++i)
+		for (size_t i = 0; i < op->dpb_reference_count; ++i)
 		{
 			reference_frames[i] = dpb_internal->resource.Get();
-			reference_subresources[i] = decoder_internal->reference_usage[i];
+			reference_subresources[i] = op->dpb_reference_slots[i];
 		}
-		input.ReferenceFrames.NumTexture2Ds = (UINT)decoder_internal->reference_usage.size();
+		input.ReferenceFrames.NumTexture2Ds = (UINT)op->dpb_reference_count;
 		input.ReferenceFrames.ppTexture2Ds = input.ReferenceFrames.NumTexture2Ds > 0 ? reference_frames : nullptr;
 		input.ReferenceFrames.pSubresources = input.ReferenceFrames.NumTexture2Ds > 0 ? reference_subresources : nullptr;
 
@@ -7009,15 +6931,16 @@ using namespace dx12_internal;
 		pic_params.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
 		pic_params.residual_colour_transform_flag = sps->residual_colour_transform_flag;
 		pic_params.CurrPic.AssociatedFlag = 0; // non-field pic, so 0 for full frame
-		pic_params.CurrPic.Index7Bits = (UCHAR)current_dpb;
+		pic_params.CurrPic.Index7Bits = (UCHAR)op->current_dpb;
 		pic_params.CurrFieldOrderCnt[0] = op->poc;
 		pic_params.CurrFieldOrderCnt[1] = op->poc;
-		for (size_t i = 0; i < decoder_internal->reference_usage.size(); ++i)
+		for (size_t i = 0; i < op->dpb_reference_count; ++i)
 		{
+			uint32_t ref_slot = op->dpb_reference_slots[i];
 			pic_params.RefFrameList[i].AssociatedFlag = 0; // non-field pic, so 0 for full frame
-			pic_params.RefFrameList[i].Index7Bits = (UCHAR)decoder_internal->reference_usage[i];
-			pic_params.FieldOrderCntList[i][0] = decoder_internal->dpb_poc_status[i];
-			pic_params.FieldOrderCntList[i][1] = decoder_internal->dpb_poc_status[i];
+			pic_params.RefFrameList[i].Index7Bits = (UCHAR)ref_slot;
+			pic_params.FieldOrderCntList[i][0] = op->dpb_poc[ref_slot];
+			pic_params.FieldOrderCntList[i][1] = op->dpb_poc[ref_slot];
 			pic_params.UsedForReferenceFlags |= 1 << (i * 2 + 0);
 			pic_params.UsedForReferenceFlags |= 1 << (i * 2 + 1);
 		}
@@ -7177,7 +7100,7 @@ using namespace dx12_internal;
 
 		input.pHeap = decoder_internal->decoder_heap.Get();
 		output.pOutputTexture2D = dpb_internal->resource.Get();
-		output.OutputSubresource = current_dpb;
+		output.OutputSubresource = op->current_dpb;
 
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.GetVideoDecodeCommandList()->DecodeFrame(
@@ -7185,17 +7108,6 @@ using namespace dx12_internal;
 			&output,
 			&input
 		);
-
-		if (op->reference_priority > 0)
-		{
-			if (decoder_internal->next_ref >= decoder_internal->reference_usage.size())
-			{
-				decoder_internal->reference_usage.resize(decoder_internal->next_ref + 1);
-			}
-			decoder_internal->reference_usage[decoder_internal->next_ref] = current_dpb;
-			decoder_internal->next_ref = (decoder_internal->next_ref + 1) % (decoder_internal->DPB.desc.array_size - 1);
-			decoder_internal->next_dpb = (decoder_internal->next_dpb + 1) % decoder_internal->DPB.desc.array_size;
-		}
 	}
 
 	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)

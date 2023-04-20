@@ -854,14 +854,18 @@ namespace wi::graphics
 		const GPUBuffer* stream = nullptr;
 		uint64_t stream_offset = 0;
 		uint64_t stream_size = 0;
-		uint64_t frame_index = 0;
 		VideoFrameType frame_type = VideoFrameType::Intra;
 		uint32_t reference_priority = 0;
 		const void* slice_header = nullptr;
 		const void* pps_array = nullptr;
 		const void* sps_array = nullptr;
 		int poc = 0;
-		int display_order = 0;
+		uint32_t current_dpb = 0;
+		uint8_t dpb_reference_count = 0;
+		const uint8_t* dpb_reference_slots = nullptr;
+		const int* dpb_poc = nullptr;
+		const int* dpb_framenum = nullptr;
+		const Texture* DPB = nullptr;
 	};
 
 	struct RenderPassImage

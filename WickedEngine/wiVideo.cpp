@@ -5,6 +5,8 @@
 #include "Utility/minimp4.h"
 #include "Utility/h264.h"
 
+using namespace wi::graphics;
+
 namespace wi::video
 {
 
@@ -75,6 +77,7 @@ namespace wi::video
 					// SPS:
 					video->sps_datas.clear();
 					video->sps_count = 0;
+					video->num_dpb_slots = 0;
 					{
 						int size = 0;
 						int index = 0;
@@ -99,6 +102,7 @@ namespace wi::video
 							assert(track.SampleDescription.video.height == height);
 							video->padded_width = (sps.pic_width_in_mbs_minus1 + 1) * 16;
 							video->padded_height = (sps.pic_height_in_map_units_minus1 + 1) * 16;
+							video->num_dpb_slots = std::max(video->num_dpb_slots, uint32_t(sps.num_ref_frames + 1));
 
 							video->sps_datas.resize(video->sps_datas.size() + sizeof(sps));
 							std::memcpy((h264::sps_t*)video->sps_datas.data() + video->sps_count, &sps, sizeof(sps));
@@ -135,10 +139,10 @@ namespace wi::video
 					switch (track.object_type_indication)
 					{
 					case MP4_OBJECT_TYPE_AVC:
-						video->profile = wi::graphics::VideoProfile::H264;
+						video->profile = VideoProfile::H264;
 						break;
 					case MP4_OBJECT_TYPE_HEVC:
-						//video->profile = wi::graphics::VideoProfile::H265;
+						//video->profile = VideoProfile::H265;
 						assert(0); // not implemented
 						break;
 					default:
@@ -152,7 +156,7 @@ namespace wi::video
 
 					double timescale_rcp = 1.0 / double(track.timescale);
 
-					wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
+					GraphicsDevice* device = GetDevice();
 					const uint64_t alignment = device->GetVideoDecodeBitstreamAlignment();
 
 					h264::pps_t* pps_array = (h264::pps_t*)video->pps_datas.data();
@@ -189,11 +193,11 @@ namespace wi::video
 
 							if (nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_IDR)
 							{
-								info.type = wi::graphics::VideoFrameType::Intra;
+								info.type = VideoFrameType::Intra;
 							}
 							else if (nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR)
 							{
-								info.type = wi::graphics::VideoFrameType::Predictive;
+								info.type = VideoFrameType::Predictive;
 							}
 							else
 							{
@@ -247,7 +251,7 @@ namespace wi::video
 							break;
 						}
 
-						info.size = wi::graphics::AlignTo((uint64_t)frame_bytes + 4, alignment);
+						info.size = AlignTo((uint64_t)frame_bytes + 4, alignment);
 						aligned_size += info.size;
 						info.timestamp_seconds = float(double(timestamp) * timescale_rcp);
 						info.duration_seconds = float(double(duration) * timescale_rcp);
@@ -311,10 +315,10 @@ namespace wi::video
 						}
 					};
 
-					wi::graphics::GPUBufferDesc bd;
+					GPUBufferDesc bd;
 					bd.size = aligned_size;
-					bd.usage = wi::graphics::Usage::UPLOAD;
-					bd.misc_flags = wi::graphics::ResourceMiscFlag::VIDEO_DECODE_SRC;
+					bd.usage = Usage::UPLOAD;
+					bd.misc_flags = ResourceMiscFlag::VIDEO_DECODE_SRC;
 					success = device->CreateBuffer2(&bd, copy_video_track, &video->data_stream);
 					assert(success);
 					device->SetName(&video->data_stream, "wi::Video::data_stream");
@@ -334,13 +338,13 @@ namespace wi::video
 		instance->current_frame = 0;
 		instance->flags &= ~VideoInstance::Flags::InitialFirstFrameDecoded;
 
-		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
+		GraphicsDevice* device = GetDevice();
 
-		wi::graphics::VideoDesc vd;
+		VideoDesc vd;
 		vd.width = video->padded_width;
 		vd.height = video->padded_height;
 		vd.bit_rate = video->bit_rate;
-		vd.format = wi::graphics::Format::NV12;
+		vd.format = Format::NV12;
 		vd.profile = video->profile;
 		vd.pps_datas = instance->video->pps_datas.data();
 		vd.pps_count = instance->video->pps_count;
@@ -348,6 +352,39 @@ namespace wi::video
 		vd.sps_count = instance->video->sps_count;
 		bool success = device->CreateVideoDecoder(&vd, &instance->decoder);
 		assert(success);
+
+		TextureDesc td;
+		td.width = vd.width;
+		td.height = vd.height;
+		td.format = vd.format;
+		td.array_size = video->num_dpb_slots;
+		td.bind_flags = BindFlag::SHADER_RESOURCE;
+		td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_DPB | ResourceMiscFlag::VIDEO_DECODE_DST;
+		success = device->CreateTexture(&td, nullptr, &instance->dpb.texture);
+		assert(success);
+		device->SetName(&instance->dpb.texture, "VideoInstance::DPB");
+
+		for (uint32_t i = 0; i < td.array_size; ++i)
+		{
+			Format luminance_format = Format::R8_UNORM;
+			ImageAspect luminance_aspect = ImageAspect::LUMINANCE;
+			instance->dpb.subresources_luminance[i] = device->CreateSubresource(
+				&instance->dpb.texture,
+				SubresourceType::SRV,
+				i, 1, 0, 1,
+				&luminance_format, &luminance_aspect
+			);
+
+			Format chrominance_format = Format::R8G8_UNORM;
+			ImageAspect chrominance_aspect = ImageAspect::CHROMINANCE;
+			instance->dpb.subresources_chrominance[i] = device->CreateSubresource(
+				&instance->dpb.texture,
+				SubresourceType::SRV,
+				i, 1, 0, 1,
+				&chrominance_format, &chrominance_aspect
+			);
+		}
+
 		return success;
 	}
 
@@ -361,7 +398,7 @@ namespace wi::video
 			return true;
 		return false;
 	}
-	void UpdateVideo(VideoInstance* instance, float dt, wi::graphics::CommandList cmd)
+	void UpdateVideo(VideoInstance* instance, float dt, CommandList cmd)
 	{
 		if (instance == nullptr || instance->video == nullptr)
 			return;
@@ -390,40 +427,67 @@ namespace wi::video
 		if (!cmd.IsValid())
 			return;
 
-		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
+		GraphicsDevice* device = GetDevice();
 
 		const Video* video = instance->video;
 		const Video::FrameInfo& frame_info = video->frames_infos[instance->current_frame];
 		instance->time_until_next_frame = frame_info.duration_seconds;
 
-		wi::graphics::VideoDecodeOperation decode_operation;
+		const h264::slice_header_t* slice_header = (const h264::slice_header_t*)video->slice_header_datas.data() + instance->current_frame;
+
+		VideoDecodeOperation decode_operation;
 		if (instance->current_frame == 0 || has_flag(instance->flags, VideoInstance::Flags::DecoderReset))
 		{
-			decode_operation.flags = wi::graphics::VideoDecodeOperation::FLAG_SESSION_RESET;
+			decode_operation.flags = VideoDecodeOperation::FLAG_SESSION_RESET;
 			instance->flags &= ~VideoInstance::Flags::DecoderReset;
 			instance->output = {};
 			instance->output_textures_free.clear();
 			instance->output_textures_used.clear();
 			instance->target_display_order = instance->current_frame;
+			instance->dpb.reference_usage.clear();
+			instance->dpb.next_ref = 0;
+			instance->dpb.next_slot = 0;
+			//GPUBarrier barriers[] = {
+			//	GPUBarrier::Image(&instance->dpb.texture, ResourceState::UNDEFINED, ResourceState::VIDEO_DECODE_DPB),
+			//};
+			//device->Barrier(barriers, arraysize(barriers), cmd);
 		}
+		instance->dpb.current_slot = instance->dpb.next_slot;
+		instance->dpb.poc_status[instance->dpb.current_slot] = frame_info.poc;
+		instance->dpb.framenum_status[instance->dpb.current_slot] = slice_header->frame_num;
 		decode_operation.stream = &video->data_stream;
 		decode_operation.stream_offset = frame_info.offset;
 		decode_operation.stream_size = frame_info.size;
-		decode_operation.frame_index = instance->current_frame;
 		decode_operation.poc = frame_info.poc;
 		decode_operation.frame_type = frame_info.type;
 		decode_operation.reference_priority = frame_info.reference_priority;
-		decode_operation.slice_header = (const h264::slice_header_t*)video->slice_header_datas.data() + instance->current_frame;
+		decode_operation.slice_header = slice_header;
 		decode_operation.pps_array = video->pps_datas.data();
 		decode_operation.sps_array = video->sps_datas.data();
-		decode_operation.display_order = frame_info.display_order;
+		decode_operation.current_dpb = instance->dpb.current_slot;
+		decode_operation.dpb_reference_count = (uint32_t)instance->dpb.reference_usage.size();
+		decode_operation.dpb_reference_slots = instance->dpb.reference_usage.data();
+		decode_operation.dpb_poc = instance->dpb.poc_status;
+		decode_operation.dpb_framenum = instance->dpb.framenum_status;
+		decode_operation.DPB = &instance->dpb.texture;
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
+
+		if (frame_info.reference_priority > 0)
+		{
+			if (instance->dpb.next_ref >= instance->dpb.reference_usage.size())
+			{
+				instance->dpb.reference_usage.resize(instance->dpb.next_ref + 1);
+			}
+			instance->dpb.reference_usage[instance->dpb.next_ref] = instance->dpb.current_slot;
+			instance->dpb.next_ref = (instance->dpb.next_ref + 1) % (instance->dpb.texture.desc.array_size - 1);
+			instance->dpb.next_slot = (instance->dpb.next_slot + 1) % instance->dpb.texture.desc.array_size;
+		}
 
 		instance->flags |= VideoInstance::Flags::NeedsResolve;
 		instance->flags |= VideoInstance::Flags::InitialFirstFrameDecoded;
 		instance->current_frame++;
 	}
-	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd)
+	void ResolveVideoToRGB(VideoInstance* instance, CommandList cmd)
 	{
 		if (instance == nullptr || instance->video == nullptr)
 			return;
@@ -432,22 +496,22 @@ namespace wi::video
 		instance->flags &= ~VideoInstance::Flags::NeedsResolve;
 
 		const Video* video = instance->video;
-		wi::graphics::GraphicsDevice* device = wi::graphics::GetDevice();
+		GraphicsDevice* device = GetDevice();
 
 		if (instance->output_textures_free.empty())
 		{
 			VideoInstance::OutputTexture& output = instance->output_textures_free.emplace_back();
-			wi::graphics::TextureDesc td;
+			TextureDesc td;
 			td.width = video->width;
 			td.height = video->height;
-			td.format = wi::graphics::Format::R8G8B8A8_UNORM;
+			td.format = Format::R8G8B8A8_UNORM;
 			if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
 			{
 				td.mip_levels = 0; // max mipcount
 			}
-			td.bind_flags = wi::graphics::BindFlag::UNORDERED_ACCESS | wi::graphics::BindFlag::SHADER_RESOURCE;
-			td.misc_flags = wi::graphics::ResourceMiscFlag::TYPED_FORMAT_CASTING;
-			td.layout = wi::graphics::ResourceState::SHADER_RESOURCE_COMPUTE;
+			td.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+			td.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
+			td.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 			bool success = device->CreateTexture(&td, nullptr, &output.texture);
 			device->SetName(&output.texture, "VideoInstance::OutputTexture");
 			assert(success);
@@ -457,18 +521,18 @@ namespace wi::video
 				for (uint32_t i = 0; i < output.texture.GetDesc().mip_levels; ++i)
 				{
 					int subresource_index;
-					subresource_index = device->CreateSubresource(&output.texture, wi::graphics::SubresourceType::SRV, 0, 1, i, 1);
+					subresource_index = device->CreateSubresource(&output.texture, SubresourceType::SRV, 0, 1, i, 1);
 					assert(subresource_index == i);
-					subresource_index = device->CreateSubresource(&output.texture, wi::graphics::SubresourceType::UAV, 0, 1, i, 1);
+					subresource_index = device->CreateSubresource(&output.texture, SubresourceType::UAV, 0, 1, i, 1);
 					assert(subresource_index == i);
 				}
 			}
 
 			// This part must be AFTER mip level subresource creation:
-			wi::graphics::Format srgb_format = wi::graphics::GetFormatSRGB(td.format);
+			Format srgb_format = GetFormatSRGB(td.format);
 			output.subresource_srgb = device->CreateSubresource(
 				&output.texture,
-				wi::graphics::SubresourceType::SRV,
+				SubresourceType::SRV,
 				0, -1,
 				0, -1,
 				&srgb_format
@@ -479,14 +543,27 @@ namespace wi::video
 		instance->output_textures_free.pop_back();
 		output.display_order = video->frames_infos[instance->current_frame - 1].display_order;
 
-		wi::graphics::GraphicsDevice::VideoDecoderResult decode_result = device->GetVideoDecoderResult(&instance->decoder);
+		//{
+		//	GPUBarrier barriers[] = {
+		//		GPUBarrier::Image(&instance->dpb.texture, ResourceState::VIDEO_DECODE_DPB, instance->dpb.texture.desc.layout, -1, instance->dpb.current_slot),
+		//	};
+		//	device->Barrier(barriers, arraysize(barriers), cmd);
+		//}
+
 		wi::renderer::YUV_to_RGB(
-			decode_result.texture,
-			decode_result.subresource_luminance,
-			decode_result.subresource_chrominance,
+			instance->dpb.texture,
+			instance->dpb.subresources_luminance[instance->dpb.current_slot],
+			instance->dpb.subresources_chrominance[instance->dpb.current_slot],
 			output.texture,
 			cmd
 		);
+
+		//{
+		//	GPUBarrier barriers[] = {
+		//		GPUBarrier::Image(&instance->dpb.texture, instance->dpb.texture.desc.layout, ResourceState::VIDEO_DECODE_DPB, -1, instance->dpb.current_slot),
+		//	};
+		//	device->Barrier(barriers, arraysize(barriers), cmd);
+		//}
 
 		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
 		{

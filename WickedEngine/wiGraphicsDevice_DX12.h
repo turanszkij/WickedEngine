@@ -263,8 +263,6 @@ namespace wi::graphics
 		ColorSpace GetSwapChainColorSpace(const SwapChain* swapchain) const override;
 		bool IsSwapChainSupportsHDR(const SwapChain* swapchain) const override;
 
-		VideoDecoderResult GetVideoDecoderResult(const VideoDecoder* decoder) const override;
-
 		uint64_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const override
 		{
 			uint64_t alignment = 1u;

@@ -152,14 +152,6 @@ namespace wi::graphics
 		//	Returns false if the swapchain couldn't support HDR output
 		virtual bool IsSwapChainSupportsHDR(const SwapChain* swapchain) const = 0;
 
-		struct VideoDecoderResult
-		{
-			Texture texture;
-			int subresource_luminance = -1;
-			int subresource_chrominance = -1;
-		};
-		virtual VideoDecoderResult GetVideoDecoderResult(const VideoDecoder* decoder) const { return {}; }
-
 		// Returns the minimum required alignment for buffer offsets when creating subresources
 		virtual uint64_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const = 0;
 

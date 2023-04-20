@@ -216,6 +216,10 @@ You can specify command line arguments (without any prefix) to switch between re
 	<td>Use GPU Based Validation for graphics. This must be used together with the debugdevice argument. Currently DX12 only.</td>
   </tr>
   <tr>
+	<td>igpu</td>
+	<td>Prefer integrated GPU selection for graphics. By default, dedicated GPU selection will be preferred.</td>
+  </tr>
+  <tr>
 	<td>alwaysactive</td>
 	<td>The application will not be paused when the window is in the background.</td>
   </tr>

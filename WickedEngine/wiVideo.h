@@ -46,6 +46,7 @@ namespace wi::video
 		};
 		wi::vector<FrameInfo> frames_infos;
 		wi::vector<size_t> frame_display_order;
+		uint32_t num_dpb_slots = 0;
 		inline bool IsValid() const { return data_stream.IsValid(); }
 	};
 
@@ -53,6 +54,18 @@ namespace wi::video
 	{
 		const Video* video = nullptr;
 		wi::graphics::VideoDecoder decoder;
+		struct DPB
+		{
+			wi::graphics::Texture texture;
+			int subresources_luminance[17];
+			int subresources_chrominance[17];
+			int poc_status[17];
+			int framenum_status[17];
+			wi::vector<uint8_t> reference_usage;
+			uint8_t next_ref = 0;
+			uint8_t next_slot = 0;
+			uint8_t current_slot = 0;
+		} dpb;
 		struct OutputTexture
 		{
 			wi::graphics::Texture texture;
