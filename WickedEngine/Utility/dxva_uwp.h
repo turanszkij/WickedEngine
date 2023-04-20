@@ -85,13 +85,14 @@ typedef struct _DXVA_PicParams_H264 {
 
 } DXVA_PicParams_H264, * LPDXVA_PicParams_H264;
 
+/* H.264/AVC quantization weighting matrix data structure */
+typedef struct _DXVA_Qmatrix_H264 {
+	UCHAR  bScalingLists4x4[6][16];
+	UCHAR  bScalingLists8x8[2][64];
 
-/* H.264/AVC slice control data structure - short form */
-typedef struct _DXVA_Slice_H264_Short {
-	UINT   BSNALunitDataLocation; /* type 1..5 */
-	UINT   SliceBytesInBuffer; /* for off-host parse */
-	USHORT wBadSliceChopping;  /* for off-host parse */
-} DXVA_Slice_H264_Short, * LPDXVA_Slice_H264_Short;
+} DXVA_Qmatrix_H264, * LPDXVA_Qmatrix_H264;
+
+
 
 /* H.264/AVC slice control data structure - short form */
 typedef struct _DXVA_Slice_H264_Short {
