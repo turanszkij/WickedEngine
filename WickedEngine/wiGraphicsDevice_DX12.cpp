@@ -6919,30 +6919,48 @@ using namespace dx12_internal;
 
 		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 21
 		//	https://www.microsoft.com/en-us/download/details.aspx?id=11323
+		//	Also: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp
 		DXVA_PicParams_H264 pic_params = {};
 		pic_params.wFrameWidthInMbsMinus1 = sps->pic_width_in_mbs_minus1;
 		pic_params.wFrameHeightInMbsMinus1 = sps->pic_height_in_map_units_minus1;
 		pic_params.IntraPicFlag = op->frame_type == VideoFrameType::Intra ? 1 : 0;
-		pic_params.MbaffFrameFlag = sps->mb_adaptive_frame_field_flag;
+		pic_params.MbaffFrameFlag = sps->mb_adaptive_frame_field_flag && slice_header->field_pic_flag;
 		pic_params.field_pic_flag = slice_header->field_pic_flag; // 0 = full frame (top and bottom field)
 		//pic_params.bottom_field_flag = 0; // missing??
-		pic_params.chroma_format_idc = sps->chroma_format_idc;
+		pic_params.chroma_format_idc = 1; // sps->chroma_format_idc; // only 1 is supported (YUV420)
 		pic_params.bit_depth_chroma_minus8 = sps->bit_depth_chroma_minus8;
+		assert(pic_params.bit_depth_chroma_minus8 == 0);   // Only support for NV12 now
 		pic_params.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
+		assert(pic_params.bit_depth_luma_minus8 == 0);   // Only support for NV12 now
 		pic_params.residual_colour_transform_flag = sps->residual_colour_transform_flag;
-		pic_params.CurrPic.AssociatedFlag = slice_header->bottom_field_flag ? 1 : 0; // if pic_params.field_pic_flag == 1, then this is 0 = top field, 1 = bottom_field
+		if (pic_params.field_pic_flag)
+		{
+			pic_params.CurrPic.AssociatedFlag = slice_header->bottom_field_flag ? 1 : 0; // if pic_params.field_pic_flag == 1, then this is 0 = top field, 1 = bottom_field
+		}
+		else
+		{
+			pic_params.CurrPic.AssociatedFlag = 0;
+		}
 		pic_params.CurrPic.Index7Bits = (UCHAR)op->current_dpb;
 		pic_params.CurrFieldOrderCnt[0] = op->poc;
 		pic_params.CurrFieldOrderCnt[1] = op->poc;
+		for (uint32_t i = 0; i < 16; ++i)
+		{
+			pic_params.RefFrameList[i].bPicEntry = 0xFF;
+			pic_params.FieldOrderCntList[i][0] = 0;
+			pic_params.FieldOrderCntList[i][1] = 0;
+			pic_params.FrameNumList[i] = 0;
+		}
 		for (size_t i = 0; i < op->dpb_reference_count; ++i)
 		{
 			uint32_t ref_slot = op->dpb_reference_slots[i];
-			pic_params.RefFrameList[i].AssociatedFlag = 0; // non-field pic, so 0 for full frame
+			pic_params.RefFrameList[i].AssociatedFlag = 0; // 0 = short term, 1 = long term reference
 			pic_params.RefFrameList[i].Index7Bits = (UCHAR)ref_slot;
 			pic_params.FieldOrderCntList[i][0] = op->dpb_poc[ref_slot];
 			pic_params.FieldOrderCntList[i][1] = op->dpb_poc[ref_slot];
 			pic_params.UsedForReferenceFlags |= 1 << (i * 2 + 0);
 			pic_params.UsedForReferenceFlags |= 1 << (i * 2 + 1);
+			pic_params.FrameNumList[i] = op->dpb_framenum[ref_slot];
 		}
 		pic_params.weighted_pred_flag = pps->weighted_pred_flag;
 		pic_params.weighted_bipred_idc = pps->weighted_bipred_idc;
@@ -6951,11 +6969,29 @@ using namespace dx12_internal;
 		pic_params.transform_8x8_mode_flag = pps->transform_8x8_mode_flag;
 		pic_params.constrained_intra_pred_flag = pps->constrained_intra_pred_flag;
 		pic_params.num_ref_frames = sps->num_ref_frames;
-		pic_params.MbsConsecutiveFlag = 0;
+		pic_params.MbsConsecutiveFlag = 1; // The value shall be 1 unless the restricted-mode profile in use explicitly supports the value 0.
 		pic_params.frame_mbs_only_flag = sps->frame_mbs_only_flag;
-		pic_params.MinLumaBipredSize8x8Flag = 0;
+		pic_params.MinLumaBipredSize8x8Flag = 1;
 		pic_params.RefPicFlag = op->reference_priority > 0 ? 1 : 0;
 		pic_params.frame_num = slice_header->frame_num;
+		pic_params.pic_init_qp_minus26 = pps->pic_init_qp_minus26;
+		pic_params.pic_init_qs_minus26 = pps->pic_init_qs_minus26;
+		pic_params.log2_max_frame_num_minus4 = sps->log2_max_frame_num_minus4;
+		pic_params.pic_order_cnt_type = sps->pic_order_cnt_type;
+		pic_params.log2_max_pic_order_cnt_lsb_minus4 = sps->log2_max_pic_order_cnt_lsb_minus4;
+		pic_params.delta_pic_order_always_zero_flag = sps->delta_pic_order_always_zero_flag;
+		pic_params.direct_8x8_inference_flag = sps->direct_8x8_inference_flag;
+		pic_params.entropy_coding_mode_flag = pps->entropy_coding_mode_flag;
+		pic_params.num_slice_groups_minus1 = pps->num_slice_groups_minus1;
+		assert(pic_params.num_slice_groups_minus1 == 0);   // FMO Not supported by VA
+		pic_params.slice_group_map_type = pps->slice_group_map_type;
+		pic_params.deblocking_filter_control_present_flag = pps->deblocking_filter_control_present_flag;
+		pic_params.redundant_pic_cnt_present_flag = pps->redundant_pic_cnt_present_flag;
+		pic_params.slice_group_change_rate_minus1 = pps->slice_group_change_rate_minus1;
+		pic_params.Reserved16Bits = 3; // DXVA spec
+		pic_params.StatusReportFeedbackNumber = slice_header->frame_num+1; // shall not be 0
+		assert(pic_params.StatusReportFeedbackNumber > 0);
+		pic_params.ContinuationFlag = 1;
 		input.FrameArguments[0].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
 		input.FrameArguments[0].Size = sizeof(pic_params);
 		input.FrameArguments[0].pData = &pic_params;
@@ -6986,7 +7022,7 @@ using namespace dx12_internal;
 		//if (slice_header->first_mb_in_slice > 0 && slice_header->slice_type != h264::SH_SLICE_TYPE_B && slice_header->slice_type != h264::SH_SLICE_TYPE_B_ONLY)
 		if (0)
 		{
-			sliceinfo_long.BSNALunitDataLocation = 0;
+			sliceinfo_long.BSNALunitDataLocation = (UINT)op->stream_offset;
 			sliceinfo_long.SliceBytesInBuffer = (UINT)op->stream_size;
 			sliceinfo_long.wBadSliceChopping = 0;
 			sliceinfo_long.first_mb_in_slice = slice_header->first_mb_in_slice;
@@ -7100,7 +7136,7 @@ using namespace dx12_internal;
 		{
 			sliceinfo_short.BSNALunitDataLocation = 0;
 			sliceinfo_short.SliceBytesInBuffer = (UINT)op->stream_size;
-			sliceinfo_short.wBadSliceChopping = 0;
+			sliceinfo_short.wBadSliceChopping = 0; // whole slice is in the buffer
 
 			input.FrameArguments[2].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
 			input.FrameArguments[2].Size = sizeof(sliceinfo_short);
