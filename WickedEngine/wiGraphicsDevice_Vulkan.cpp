@@ -8918,7 +8918,7 @@ using namespace vulkan_internal;
 		decode_info.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_INFO_KHR;
 		decode_info.srcBuffer = stream_internal->resource;
 		decode_info.srcBufferOffset = (VkDeviceSize)op->stream_offset;
-		decode_info.srcBufferRange = (VkDeviceSize)op->stream_size;
+		decode_info.srcBufferRange = (VkDeviceSize)AlignTo(op->stream_size, VIDEO_DECODE_BITSTREAM_ALIGNMENT);
 		decode_info.dstPictureResource = *reference_slot_infos[op->current_dpb].pPictureResource;
 		decode_info.referenceSlotCount = op->dpb_reference_count;
 		decode_info.pReferenceSlots = decode_info.referenceSlotCount == 0 ? nullptr : reference_slots;

@@ -165,6 +165,8 @@ namespace wi::video
 					int prev_pic_order_cnt_msb = 0;
 					int poc_cycle = 0;
 
+					const uint8_t nal_sync[] = { 0,0,1 };
+
 					video->frames_infos.reserve(track.sample_count);
 					video->slice_header_datas.reserve(track.sample_count * sizeof(h264::slice_header_t));
 					video->slice_header_count = track.sample_count;
@@ -248,11 +250,11 @@ namespace wi::video
 
 							// Accept frame beginning NAL unit:
 							info.reference_priority = nal.idc;
+							info.size = sizeof(nal_sync) + size - 4;
 							break;
 						}
 
-						info.size = AlignTo((uint64_t)frame_bytes + 4, alignment);
-						aligned_size += info.size;
+						aligned_size += AlignTo(info.size, alignment);
 						info.timestamp_seconds = float(double(timestamp) * timescale_rcp);
 						info.duration_seconds = float(double(duration) * timescale_rcp);
 					}
@@ -305,11 +307,8 @@ namespace wi::video
 									continue;
 								}
 
-								std::memcpy(dst_buffer, src_buffer, size);
-
-								// overwrite beginning of GPU buffer with NAL sync unit:
-								const uint8_t nal_sync[] = { 0,0,0,1 };
 								std::memcpy(dst_buffer, nal_sync, sizeof(nal_sync));
+								std::memcpy(dst_buffer + sizeof(nal_sync), src_buffer + 4, size - 4);
 								break;
 							}
 						}
@@ -541,7 +540,7 @@ namespace wi::video
 
 		VideoInstance::OutputTexture output = std::move(instance->output_textures_free.back());
 		instance->output_textures_free.pop_back();
-		output.display_order = video->frames_infos[instance->current_frame - 1].display_order;
+		output.display_order = video->frames_infos[std::max(instance->current_frame - 1, 0)].display_order;
 
 		//{
 		//	GPUBarrier barriers[] = {
