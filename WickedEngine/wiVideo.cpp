@@ -340,8 +340,8 @@ namespace wi::video
 		GraphicsDevice* device = GetDevice();
 
 		VideoDesc vd;
-		vd.width = video->padded_width;
-		vd.height = video->padded_height;
+		vd.width = video->width;
+		vd.height = video->height;
 		vd.bit_rate = video->bit_rate;
 		vd.format = Format::NV12;
 		vd.profile = video->profile;
