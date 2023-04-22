@@ -6925,7 +6925,7 @@ using namespace dx12_internal;
 		pic_params.wFrameWidthInMbsMinus1 = sps->pic_width_in_mbs_minus1;
 		pic_params.wFrameHeightInMbsMinus1 = sps->pic_height_in_map_units_minus1;
 		pic_params.IntraPicFlag = op->frame_type == VideoFrameType::Intra ? 1 : 0;
-		pic_params.MbaffFrameFlag = sps->mb_adaptive_frame_field_flag && slice_header->field_pic_flag;
+		pic_params.MbaffFrameFlag = sps->mb_adaptive_frame_field_flag && !slice_header->field_pic_flag;
 		pic_params.field_pic_flag = slice_header->field_pic_flag; // 0 = full frame (top and bottom field)
 		//pic_params.bottom_field_flag = 0; // missing??
 		pic_params.chroma_format_idc = 1; // sps->chroma_format_idc; // only 1 is supported (YUV420)
