@@ -57,10 +57,11 @@ namespace wi::video
 		struct DPB
 		{
 			wi::graphics::Texture texture;
-			int subresources_luminance[17];
-			int subresources_chrominance[17];
-			int poc_status[17];
-			int framenum_status[17];
+			int subresources_luminance[17] = {};
+			int subresources_chrominance[17] = {};
+			int poc_status[17] = {};
+			int framenum_status[17] = {};
+			wi::graphics::ResourceState resource_states[17] = {};
 			wi::vector<uint8_t> reference_usage;
 			uint8_t next_ref = 0;
 			uint8_t next_slot = 0;

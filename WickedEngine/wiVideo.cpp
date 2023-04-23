@@ -447,17 +447,6 @@ namespace wi::video
 			instance->dpb.reference_usage.clear();
 			instance->dpb.next_ref = 0;
 			instance->dpb.next_slot = 0;
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&instance->dpb.texture, ResourceState::UNDEFINED, ResourceState::VIDEO_DECODE_DPB),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-		else
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&instance->dpb.texture, ResourceState::SHADER_RESOURCE, ResourceState::VIDEO_DECODE_DPB, -1, instance->dpb.current_slot),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 		instance->dpb.current_slot = instance->dpb.next_slot;
 		instance->dpb.poc_status[instance->dpb.current_slot] = frame_info.poc;
@@ -478,12 +467,25 @@ namespace wi::video
 		decode_operation.dpb_framenum = instance->dpb.framenum_status;
 		decode_operation.DPB = &instance->dpb.texture;
 
+		if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::VIDEO_DECODE_DPB)
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, -1, instance->dpb.current_slot),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+			instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::VIDEO_DECODE_DPB;
+		}
+
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
 
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&instance->dpb.texture, ResourceState::VIDEO_DECODE_DPB, ResourceState::SHADER_RESOURCE, -1, instance->dpb.current_slot),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
+		if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::SHADER_RESOURCE)
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::SHADER_RESOURCE, -1, instance->dpb.current_slot),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+			instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::SHADER_RESOURCE;
+		}
 
 		if (frame_info.reference_priority > 0)
 		{
