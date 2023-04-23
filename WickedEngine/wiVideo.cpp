@@ -359,13 +359,14 @@ namespace wi::video
 		td.array_size = video->num_dpb_slots;
 		td.bind_flags = BindFlag::SHADER_RESOURCE;
 		td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_DPB | ResourceMiscFlag::VIDEO_DECODE_DST;
-		td.layout = ResourceState::UNDEFINED;
+		td.layout = ResourceState::VIDEO_DECODE_DPB;
 		success = device->CreateTexture(&td, nullptr, &instance->dpb.texture);
 		assert(success);
 		device->SetName(&instance->dpb.texture, "VideoInstance::DPB");
 
 		for (uint32_t i = 0; i < td.array_size; ++i)
 		{
+			instance->dpb.resource_states[i] = td.layout;
 			Format luminance_format = Format::R8_UNORM;
 			ImageAspect luminance_aspect = ImageAspect::LUMINANCE;
 			instance->dpb.subresources_luminance[i] = device->CreateSubresource(
@@ -470,7 +471,7 @@ namespace wi::video
 		if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::VIDEO_DECODE_DPB)
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, -1, instance->dpb.current_slot),
+				GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, 0, instance->dpb.current_slot),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 			instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::VIDEO_DECODE_DPB;
@@ -481,7 +482,7 @@ namespace wi::video
 		if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::SHADER_RESOURCE)
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::SHADER_RESOURCE, -1, instance->dpb.current_slot),
+				GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::SHADER_RESOURCE, 0, instance->dpb.current_slot),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 			instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::SHADER_RESOURCE;
