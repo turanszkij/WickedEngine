@@ -79,6 +79,7 @@ namespace wi::video
 		int target_display_order = 0;
 		int current_frame = 0;
 		float time_until_next_frame = 0;
+		wi::vector<wi::graphics::GPUBarrier> barriers;
 		enum class Flags
 		{
 			Empty = 0,

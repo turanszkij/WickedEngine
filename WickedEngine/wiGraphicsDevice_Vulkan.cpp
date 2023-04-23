@@ -351,7 +351,7 @@ namespace vulkan_internal
 		case ResourceState::SHADING_RATE_SOURCE:
 			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
 		case ResourceState::VIDEO_DECODE_SRC:
-			return VK_IMAGE_LAYOUT_VIDEO_DECODE_SRC_KHR;
+			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR; // yes, VK_IMAGE_LAYOUT_VIDEO_DECODE_SRC_KHR is not what we want, we want DPB reference state
 		case ResourceState::VIDEO_DECODE_DST:
 			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR;
 		case ResourceState::VIDEO_DECODE_DPB:
@@ -6004,7 +6004,7 @@ using namespace vulkan_internal;
 			vk_sps.flags.mb_adaptive_frame_field_flag = sps->mb_adaptive_frame_field_flag;
 			vk_sps.flags.frame_mbs_only_flag = sps->frame_mbs_only_flag;
 			vk_sps.flags.delta_pic_order_always_zero_flag = sps->delta_pic_order_always_zero_flag;
-			vk_sps.flags.separate_colour_plane_flag = 0; // ???
+			vk_sps.flags.separate_colour_plane_flag = sps->residual_colour_transform_flag; // https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp#L328
 			vk_sps.flags.gaps_in_frame_num_value_allowed_flag = sps->gaps_in_frame_num_value_allowed_flag;
 			vk_sps.flags.qpprime_y_zero_transform_bypass_flag = sps->qpprime_y_zero_transform_bypass_flag;
 			vk_sps.flags.frame_cropping_flag = sps->frame_cropping_flag;
@@ -6123,9 +6123,9 @@ using namespace vulkan_internal;
 				assert(0);
 				break;
 			}
-			assert(vk_sps.level_idc < decode_h264_capabilities.maxLevelIdc);
+			assert(vk_sps.level_idc <= decode_h264_capabilities.maxLevelIdc);
 			//vk_sps.chroma_format_idc = (StdVideoH264ChromaFormatIdc)sps->chroma_format_idc;
-			vk_sps.chroma_format_idc = STD_VIDEO_H264_CHROMA_FORMAT_IDC_420;
+			vk_sps.chroma_format_idc = STD_VIDEO_H264_CHROMA_FORMAT_IDC_420; // only one we support currently
 			vk_sps.seq_parameter_set_id = sps->seq_parameter_set_id;
 			vk_sps.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
 			vk_sps.bit_depth_chroma_minus8 = sps->bit_depth_chroma_minus8;
@@ -6148,7 +6148,7 @@ using namespace vulkan_internal;
 		}
 
 		num_reference_frames = std::min(num_reference_frames, video_capability_h264.video_capabilities.maxActiveReferencePictures);
-		uint32_t num_dpb_slots = std::min(num_reference_frames + 1, video_capability_h264.video_capabilities.maxDpbSlots); // +1 for non-reference
+		const uint32_t num_dpb_slots = std::min(num_reference_frames + 1, video_capability_h264.video_capabilities.maxDpbSlots); // +1 for non-reference
 
 		VkVideoDecodeH264SessionParametersAddInfoKHR session_parameters_add_info_h264 = {};
 		session_parameters_add_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR;

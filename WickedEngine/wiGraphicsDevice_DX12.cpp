@@ -6922,9 +6922,8 @@ using namespace dx12_internal;
 		D3D12_VIDEO_DECODE_OUTPUT_STREAM_ARGUMENTS output = {};
 		D3D12_VIDEO_DECODE_INPUT_STREAM_ARGUMENTS input = {};
 
-		input.CompressedBitstream.pBuffer = stream_internal->resource.Get();
-		input.CompressedBitstream.Offset = op->stream_offset;
-		input.CompressedBitstream.Size = op->stream_size;
+		output.pOutputTexture2D = dpb_internal->resource.Get();
+		output.OutputSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, 1, op->DPB->desc.array_size);
 
 		const h264::slice_header_t* slice_header = (const h264::slice_header_t*)op->slice_header;
 		const h264::pps_t* pps = (const h264::pps_t*)op->pps_array + slice_header->pic_parameter_set_id;
@@ -6940,6 +6939,11 @@ using namespace dx12_internal;
 		input.ReferenceFrames.NumTexture2Ds = (UINT)op->dpb_reference_count;
 		input.ReferenceFrames.ppTexture2Ds = input.ReferenceFrames.NumTexture2Ds > 0 ? reference_frames : nullptr;
 		input.ReferenceFrames.pSubresources = input.ReferenceFrames.NumTexture2Ds > 0 ? reference_subresources : nullptr;
+
+		input.CompressedBitstream.pBuffer = stream_internal->resource.Get();
+		input.CompressedBitstream.Offset = op->stream_offset;
+		input.CompressedBitstream.Size = op->stream_size;
+		input.pHeap = decoder_internal->decoder_heap.Get();
 
 		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 21
 		//	https://www.microsoft.com/en-us/download/details.aspx?id=11323
@@ -7013,32 +7017,51 @@ using namespace dx12_internal;
 		pic_params.redundant_pic_cnt_present_flag = pps->redundant_pic_cnt_present_flag;
 		pic_params.slice_group_change_rate_minus1 = pps->slice_group_change_rate_minus1;
 		pic_params.Reserved16Bits = 3; // DXVA spec
-		pic_params.StatusReportFeedbackNumber = slice_header->frame_num+1; // shall not be 0
+		pic_params.StatusReportFeedbackNumber = (UINT)op->decoded_frame_index + 1; // shall not be 0
 		assert(pic_params.StatusReportFeedbackNumber > 0);
 		pic_params.ContinuationFlag = 1;
-		input.FrameArguments[0].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
-		input.FrameArguments[0].Size = sizeof(pic_params);
-		input.FrameArguments[0].pData = &pic_params;
+		input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
+		input.FrameArguments[input.NumFrameArguments].Size = sizeof(pic_params);
+		input.FrameArguments[input.NumFrameArguments].pData = &pic_params;
+		input.NumFrameArguments++;
 
 		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 29
+		//	Also: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp#L548
+		static constexpr int vl_zscan_normal_16[] =
+		{
+			/* Zig-Zag scan pattern */
+			0, 1, 4, 8, 5, 2, 3, 6,
+			9, 12, 13, 10, 7, 11, 14, 15
+		};
+		static constexpr int vl_zscan_normal[] =
+		{
+			/* Zig-Zag scan pattern */
+			 0, 1, 8,16, 9, 2, 3,10,
+			17,24,32,25,18,11, 4, 5,
+			12,19,26,33,40,48,41,34,
+			27,20,13, 6, 7,14,21,28,
+			35,42,49,56,57,50,43,36,
+			29,22,15,23,30,37,44,51,
+			58,59,52,45,38,31,39,46,
+			53,60,61,54,47,55,62,63
+		};
 		DXVA_Qmatrix_H264 qmatrix = {};
-		for (int i = 0; i < arraysize(qmatrix.bScalingLists4x4); ++i)
+		for (int i = 0; i < 6; ++i)
 		{
-			for (int j = 0; j < arraysize(qmatrix.bScalingLists4x4[i]); ++j)
+			for (int j = 0; j < 16; ++j)
 			{
-				qmatrix.bScalingLists4x4[i][j] = pps->ScalingList4x4[i][j];
+				qmatrix.bScalingLists4x4[i][j] = pps->ScalingList4x4[i][vl_zscan_normal_16[j]];
 			}
 		}
-		for (int i = 0; i < arraysize(qmatrix.bScalingLists8x8); ++i)
+		for (int i = 0; i < 64; ++i)
 		{
-			for (int j = 0; j < arraysize(qmatrix.bScalingLists8x8[i]); ++j)
-			{
-				qmatrix.bScalingLists8x8[i][j] = pps->ScalingList8x8[i][j];
-			}
+			qmatrix.bScalingLists8x8[0][i] = pps->ScalingList8x8[0][vl_zscan_normal[i]];
+			qmatrix.bScalingLists8x8[1][i] = pps->ScalingList8x8[1][vl_zscan_normal[i]];
 		}
-		input.FrameArguments[1].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_INVERSE_QUANTIZATION_MATRIX;
-		input.FrameArguments[1].Size = sizeof(qmatrix);
-		input.FrameArguments[1].pData = &qmatrix;
+		input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_INVERSE_QUANTIZATION_MATRIX;
+		input.FrameArguments[input.NumFrameArguments].Size = sizeof(qmatrix);
+		input.FrameArguments[input.NumFrameArguments].pData = &qmatrix;
+		input.NumFrameArguments++;
 
 		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 31
 #if 1
@@ -7047,12 +7070,14 @@ using namespace dx12_internal;
 		sliceinfo.BSNALunitDataLocation = 0;
 		sliceinfo.SliceBytesInBuffer = (UINT)op->stream_size;
 		sliceinfo.wBadSliceChopping = 0; // whole slice is in the buffer
-		input.FrameArguments[2].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
-		input.FrameArguments[2].Size = sizeof(sliceinfo);
-		input.FrameArguments[2].pData = &sliceinfo;
+		input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
+		input.FrameArguments[input.NumFrameArguments].Size = sizeof(sliceinfo);
+		input.FrameArguments[input.NumFrameArguments].pData = &sliceinfo;
+		input.NumFrameArguments++;
 #else
 		DXVA_Slice_H264_Long sliceinfo = {};
-		sliceinfo.BSNALunitDataLocation = (UINT)op->stream_offset;
+		//sliceinfo.BSNALunitDataLocation = (UINT)op->stream_offset;
+		sliceinfo.BSNALunitDataLocation = 0;
 		sliceinfo.SliceBytesInBuffer = (UINT)op->stream_size;
 		sliceinfo.wBadSliceChopping = 0;
 		sliceinfo.first_mb_in_slice = slice_header->first_mb_in_slice;
@@ -7158,16 +7183,11 @@ using namespace dx12_internal;
 			}
 		}
 
-		input.FrameArguments[2].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
-		input.FrameArguments[2].Size = sizeof(sliceinfo);
-		input.FrameArguments[2].pData = &sliceinfo;
+		input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
+		input.FrameArguments[input.NumFrameArguments].Size = sizeof(sliceinfo);
+		input.FrameArguments[input.NumFrameArguments].pData = &sliceinfo;
+		input.NumFrameArguments++;
 #endif
-
-		input.NumFrameArguments = 3;
-
-		input.pHeap = decoder_internal->decoder_heap.Get();
-		output.pOutputTexture2D = dpb_internal->resource.Get();
-		output.OutputSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, 1, op->DPB->desc.array_size);
 
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.GetVideoDecodeCommandList()->DecodeFrame(

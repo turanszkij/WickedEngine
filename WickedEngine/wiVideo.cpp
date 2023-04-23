@@ -358,7 +358,7 @@ namespace wi::video
 		td.format = vd.format;
 		td.array_size = video->num_dpb_slots;
 		td.bind_flags = BindFlag::SHADER_RESOURCE;
-		td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_DPB | ResourceMiscFlag::VIDEO_DECODE_DST;
+		td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_DPB | ResourceMiscFlag::VIDEO_DECODE_DST | ResourceMiscFlag::VIDEO_DECODE_SRC;
 		td.layout = ResourceState::VIDEO_DECODE_DPB;
 		success = device->CreateTexture(&td, nullptr, &instance->dpb.texture);
 		assert(success);
@@ -458,6 +458,7 @@ namespace wi::video
 		decode_operation.poc = frame_info.poc;
 		decode_operation.frame_type = frame_info.type;
 		decode_operation.reference_priority = frame_info.reference_priority;
+		decode_operation.decoded_frame_index = instance->current_frame;
 		decode_operation.slice_header = slice_header;
 		decode_operation.pps_array = video->pps_datas.data();
 		decode_operation.sps_array = video->sps_datas.data();
@@ -470,11 +471,22 @@ namespace wi::video
 
 		if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::VIDEO_DECODE_DPB)
 		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, 0, instance->dpb.current_slot),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, 0, instance->dpb.current_slot));
 			instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::VIDEO_DECODE_DPB;
+		}
+		for (size_t i = 0; i < instance->dpb.reference_usage.size(); ++i)
+		{
+			uint8_t ref = instance->dpb.reference_usage[i];
+			if (instance->dpb.resource_states[ref] != ResourceState::VIDEO_DECODE_SRC)
+			{
+				instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[ref], ResourceState::VIDEO_DECODE_SRC, 0, ref));
+				instance->dpb.resource_states[ref] = ResourceState::VIDEO_DECODE_SRC;
+			}
+		}
+		if (!instance->barriers.empty())
+		{
+			device->Barrier(instance->barriers.data(), (uint32_t)instance->barriers.size(), cmd);
+			instance->barriers.clear();
 		}
 
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
