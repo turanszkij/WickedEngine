@@ -7,6 +7,7 @@
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
 #include "wiRandom.h"
+#include "wiArguments.h"
 
 #include "Utility/vulkan/vk_video/vulkan_video_codec_h264std_decode.h"
 #include "Utility/h264.h"
@@ -522,7 +523,7 @@ namespace vulkan_internal
 		{
 			ss += "[Vulkan Error]: ";
 			ss += callback_data->pMessage;
-#if 1
+#if 0
 			wi::backlog::post(ss, wi::backlog::LogLevel::Error);
 #else
 			OutputDebugStringA(callback_data->pMessage);
@@ -2542,13 +2543,17 @@ using namespace vulkan_internal;
 
 				vkGetPhysicalDeviceProperties2(dev, &properties2);
 
-				bool discrete = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-				if (discrete || physicalDevice == VK_NULL_HANDLE)
+				bool priority = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+				if (wi::arguments::HasArgument("igpu"))
+				{
+					priority = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
+				}
+				if (priority || physicalDevice == VK_NULL_HANDLE)
 				{
 					physicalDevice = dev;
-					if (discrete)
+					if (priority)
 					{
-						break; // if this is discrete GPU, look no further (prioritize discrete GPU)
+						break; // if this is prioritized GPU type, look no further
 					}
 				}
 			}

@@ -4506,11 +4506,12 @@ using namespace dx12_internal;
 		video_decode_support.Width = desc->width;
 		video_decode_support.Height = desc->height;
 		video_decode_support.BitRate = desc->bit_rate;
+		video_decode_support.FrameRate = { 0, 1 };
 		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_SUPPORT, &video_decode_support, sizeof(video_decode_support));
 		assert(SUCCEEDED(hr));
 
 		bool reference_only = video_decode_support.ConfigurationFlags & D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_REFERENCE_ONLY_ALLOCATIONS_REQUIRED;
-		assert(!reference_only); // Not supported currently
+		assert(!reference_only); // Not supported currently, will need to use resource flags: D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE, and do output decode conversion
 
 		if (video_decode_support.DecodeTier < D3D12_VIDEO_DECODE_TIER_1)
 			return false;
@@ -4533,7 +4534,15 @@ using namespace dx12_internal;
 		heap_desc.DecodeWidth = video_decode_support.Width;
 		heap_desc.DecodeHeight = video_decode_support.Height;
 		heap_desc.Format = video_decode_support.DecodeFormat;
+		heap_desc.FrameRate = { 0,1 };
+		heap_desc.BitRate = 0;
 		heap_desc.MaxDecodePictureBufferCount = num_dpb_slots;
+
+		if (video_decode_support.ConfigurationFlags & D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_HEIGHT_ALIGNMENT_MULTIPLE_32_REQUIRED)
+		{
+			heap_desc.DecodeWidth = AlignTo(video_decode_support.Width, 32u);
+			heap_desc.DecodeHeight = AlignTo(video_decode_support.Height, 32u);
+		}
 
 		D3D12_FEATURE_DATA_VIDEO_DECODER_HEAP_SIZE video_decoder_heap_size = {};
 		video_decoder_heap_size.VideoDecoderHeapDesc = heap_desc;
@@ -6639,6 +6648,20 @@ using namespace dx12_internal;
 		{
 			if (commandlist.queue == QUEUE_VIDEO_DECODE)
 			{
+				for (auto& barrier : barrierdescs)
+				{
+					if (barrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
+					{
+						if (barrier.Transition.StateBefore != D3D12_RESOURCE_STATE_VIDEO_DECODE_READ && barrier.Transition.StateBefore != D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE)
+						{
+							barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+						}
+						if (barrier.Transition.StateAfter != D3D12_RESOURCE_STATE_VIDEO_DECODE_READ && barrier.Transition.StateAfter != D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE)
+						{
+							barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+						}
+					}
+				}
 				commandlist.GetVideoDecodeCommandList()->ResourceBarrier(
 					(UINT)barrierdescs.size(),
 					barrierdescs.data()
@@ -6654,7 +6677,7 @@ using namespace dx12_internal;
 			barrierdescs.clear();
 		}
 
-		if (!commandlist.discards.empty())
+		if (!commandlist.discards.empty() && commandlist.queue != QUEUE_VIDEO_DECODE)
 		{
 			if (commandlist.queue == QUEUE_VIDEO_DECODE)
 			{
@@ -6912,7 +6935,7 @@ using namespace dx12_internal;
 		for (size_t i = 0; i < op->dpb_reference_count; ++i)
 		{
 			reference_frames[i] = dpb_internal->resource.Get();
-			reference_subresources[i] = op->dpb_reference_slots[i];
+			reference_subresources[i] = D3D12CalcSubresource(0, op->dpb_reference_slots[i], 0, 1, op->DPB->desc.array_size);
 		}
 		input.ReferenceFrames.NumTexture2Ds = (UINT)op->dpb_reference_count;
 		input.ReferenceFrames.ppTexture2Ds = input.ReferenceFrames.NumTexture2Ds > 0 ? reference_frames : nullptr;
@@ -7144,7 +7167,7 @@ using namespace dx12_internal;
 
 		input.pHeap = decoder_internal->decoder_heap.Get();
 		output.pOutputTexture2D = dpb_internal->resource.Get();
-		output.OutputSubresource = op->current_dpb;
+		output.OutputSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, 1, op->DPB->desc.array_size);
 
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.GetVideoDecodeCommandList()->DecodeFrame(

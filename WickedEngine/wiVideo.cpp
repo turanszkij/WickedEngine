@@ -340,8 +340,8 @@ namespace wi::video
 		GraphicsDevice* device = GetDevice();
 
 		VideoDesc vd;
-		vd.width = video->width;
-		vd.height = video->height;
+		vd.width = video->padded_width;
+		vd.height = video->padded_height;
 		vd.bit_rate = video->bit_rate;
 		vd.format = Format::NV12;
 		vd.profile = video->profile;
@@ -359,6 +359,7 @@ namespace wi::video
 		td.array_size = video->num_dpb_slots;
 		td.bind_flags = BindFlag::SHADER_RESOURCE;
 		td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_DPB | ResourceMiscFlag::VIDEO_DECODE_DST;
+		td.layout = ResourceState::UNDEFINED;
 		success = device->CreateTexture(&td, nullptr, &instance->dpb.texture);
 		assert(success);
 		device->SetName(&instance->dpb.texture, "VideoInstance::DPB");
@@ -446,10 +447,17 @@ namespace wi::video
 			instance->dpb.reference_usage.clear();
 			instance->dpb.next_ref = 0;
 			instance->dpb.next_slot = 0;
-			//GPUBarrier barriers[] = {
-			//	GPUBarrier::Image(&instance->dpb.texture, ResourceState::UNDEFINED, ResourceState::VIDEO_DECODE_DPB),
-			//};
-			//device->Barrier(barriers, arraysize(barriers), cmd);
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&instance->dpb.texture, ResourceState::UNDEFINED, ResourceState::VIDEO_DECODE_DPB),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+		else
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&instance->dpb.texture, ResourceState::SHADER_RESOURCE, ResourceState::VIDEO_DECODE_DPB, -1, instance->dpb.current_slot),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 		instance->dpb.current_slot = instance->dpb.next_slot;
 		instance->dpb.poc_status[instance->dpb.current_slot] = frame_info.poc;
@@ -469,7 +477,13 @@ namespace wi::video
 		decode_operation.dpb_poc = instance->dpb.poc_status;
 		decode_operation.dpb_framenum = instance->dpb.framenum_status;
 		decode_operation.DPB = &instance->dpb.texture;
+
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
+
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&instance->dpb.texture, ResourceState::VIDEO_DECODE_DPB, ResourceState::SHADER_RESOURCE, -1, instance->dpb.current_slot),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		if (frame_info.reference_priority > 0)
 		{
@@ -542,13 +556,6 @@ namespace wi::video
 		instance->output_textures_free.pop_back();
 		output.display_order = video->frames_infos[std::max(instance->current_frame - 1, 0)].display_order;
 
-		//{
-		//	GPUBarrier barriers[] = {
-		//		GPUBarrier::Image(&instance->dpb.texture, ResourceState::VIDEO_DECODE_DPB, instance->dpb.texture.desc.layout, -1, instance->dpb.current_slot),
-		//	};
-		//	device->Barrier(barriers, arraysize(barriers), cmd);
-		//}
-
 		wi::renderer::YUV_to_RGB(
 			instance->dpb.texture,
 			instance->dpb.subresources_luminance[instance->dpb.current_slot],
@@ -556,13 +563,6 @@ namespace wi::video
 			output.texture,
 			cmd
 		);
-
-		//{
-		//	GPUBarrier barriers[] = {
-		//		GPUBarrier::Image(&instance->dpb.texture, instance->dpb.texture.desc.layout, ResourceState::VIDEO_DECODE_DPB, -1, instance->dpb.current_slot),
-		//	};
-		//	device->Barrier(barriers, arraysize(barriers), cmd);
-		//}
 
 		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
 		{

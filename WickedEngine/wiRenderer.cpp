@@ -15352,11 +15352,12 @@ void YUV_to_RGB(
 
 	device->BindComputeShader(&shaders[CSTYPE_YUV_TO_RGB], cmd);
 
-	const TextureDesc& desc = output.GetDesc();
+	const TextureDesc& input_desc = input.GetDesc();
+	const TextureDesc& output_desc = output.GetDesc();
 
 	PostProcess postprocess;
-	postprocess.resolution.x = desc.width;
-	postprocess.resolution.y = desc.height;
+	postprocess.resolution.x = input_desc.width;  // taking input desc resolution to avoid sampling padding texels
+	postprocess.resolution.y = input_desc.height; // taking input desc resolution to avoid sampling padding texels
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
@@ -15377,8 +15378,8 @@ void YUV_to_RGB(
 	}
 
 	device->Dispatch(
-		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(output_desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(output_desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 		1,
 		cmd
 	);
