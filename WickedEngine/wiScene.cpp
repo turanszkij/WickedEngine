@@ -1110,7 +1110,6 @@ namespace wi::scene
 			VideoComponent& video = videos.Create(entity);
 			video.filename = filename;
 			video.videoResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
-			video.videoinstance.flags |= wi::video::VideoInstance::Flags::Mipmapped;
 			wi::video::CreateVideoInstance(&video.videoResource.GetVideo(), &video.videoinstance);
 		}
 
@@ -4351,6 +4350,9 @@ namespace wi::scene
 			{
 				video.videoinstance.flags &= ~wi::video::VideoInstance::Flags::Looped;
 			}
+
+			video.videoinstance.flags |= wi::video::VideoInstance::Flags::Mipmapped;
+
 		}
 	}
 	void Scene::RunScriptUpdateSystem(wi::jobsystem::context& ctx)
