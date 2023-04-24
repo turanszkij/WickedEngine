@@ -4,6 +4,7 @@
 //	It contains only the bare necessary structures for interoping with DirectX Video APIs
 
 /* H.264/AVC picture entry data structure */
+#pragma pack(push, BeforeDXVApacking, 1)
 typedef struct _DXVA_PicEntry_H264 {
 	union {
 		struct {
@@ -13,8 +14,10 @@ typedef struct _DXVA_PicEntry_H264 {
 		UCHAR  bPicEntry;
 	};
 } DXVA_PicEntry_H264, * LPDXVA_PicEntry_H264;  /* 1 byte */
+#pragma pack(pop, BeforeDXVApacking)
 
 /* H.264/AVC picture parameters structure */
+#pragma pack(push, BeforeDXVApacking, 1)
 typedef struct _DXVA_PicParams_H264 {
 	USHORT  wFrameWidthInMbsMinus1;
 	USHORT  wFrameHeightInMbsMinus1;
@@ -87,22 +90,28 @@ typedef struct _DXVA_PicParams_H264 {
 	UCHAR  SliceGroupMap[810]; /* 4b/sgmu, Size BT.601 */
 
 } DXVA_PicParams_H264, * LPDXVA_PicParams_H264;
+#pragma pack(pop, BeforeDXVApacking)
 
 /* H.264/AVC quantization weighting matrix data structure */
+#pragma pack(push, BeforeDXVApacking, 1)
 typedef struct _DXVA_Qmatrix_H264 {
 	UCHAR  bScalingLists4x4[6][16];
 	UCHAR  bScalingLists8x8[2][64];
 
 } DXVA_Qmatrix_H264, * LPDXVA_Qmatrix_H264;
+#pragma pack(pop, BeforeDXVApacking)
 
 /* H.264/AVC slice control data structure - short form */
+#pragma pack(push, BeforeDXVApacking, 1)
 typedef struct _DXVA_Slice_H264_Short {
 	UINT   BSNALunitDataLocation; /* type 1..5 */
 	UINT   SliceBytesInBuffer; /* for off-host parse */
 	USHORT wBadSliceChopping;  /* for off-host parse */
 } DXVA_Slice_H264_Short, * LPDXVA_Slice_H264_Short;
+#pragma pack(pop, BeforeDXVApacking)
 
 /* H.264/AVC picture entry data structure - long form */
+#pragma pack(push, BeforeDXVApacking, 1)
 typedef struct _DXVA_Slice_H264_Long {
 	UINT   BSNALunitDataLocation; /* type 1..5 */
 	UINT   SliceBytesInBuffer; /* for off-host parse */
@@ -132,5 +141,6 @@ typedef struct _DXVA_Slice_H264_Long {
 	UCHAR  disable_deblocking_filter_idc;
 	USHORT slice_id;
 } DXVA_Slice_H264_Long, * LPDXVA_Slice_H264_Long;
+#pragma pack(pop, BeforeDXVApacking)
 
 #endif // DXVA_H
