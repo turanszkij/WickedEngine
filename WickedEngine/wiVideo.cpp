@@ -435,6 +435,8 @@ namespace wi::video
 		instance->time_until_next_frame = frame_info.duration_seconds;
 
 		const h264::slice_header_t* slice_header = (const h264::slice_header_t*)video->slice_header_datas.data() + instance->current_frame;
+		const h264::pps_t* pps = (const h264::pps_t*)video->pps_datas.data() + slice_header->pic_parameter_set_id;
+		const h264::sps_t* sps = (const h264::sps_t*)video->sps_datas.data() + pps->seq_parameter_set_id;
 
 		VideoDecodeOperation decode_operation;
 		if (instance->current_frame == 0 || has_flag(instance->flags, VideoInstance::Flags::DecoderReset))
@@ -445,6 +447,9 @@ namespace wi::video
 			instance->output_textures_free.clear();
 			instance->output_textures_used.clear();
 			instance->target_display_order = instance->current_frame;
+		}
+		if (frame_info.type == VideoFrameType::Intra)
+		{
 			instance->dpb.reference_usage.clear();
 			instance->dpb.next_ref = 0;
 			instance->dpb.next_slot = 0;
@@ -455,13 +460,14 @@ namespace wi::video
 		decode_operation.stream = &video->data_stream;
 		decode_operation.stream_offset = frame_info.offset;
 		decode_operation.stream_size = frame_info.size;
-		decode_operation.poc = frame_info.poc;
+		decode_operation.poc[0] = frame_info.poc;
+		decode_operation.poc[1] = frame_info.poc;
 		decode_operation.frame_type = frame_info.type;
 		decode_operation.reference_priority = frame_info.reference_priority;
 		decode_operation.decoded_frame_index = instance->current_frame;
 		decode_operation.slice_header = slice_header;
-		decode_operation.pps_array = video->pps_datas.data();
-		decode_operation.sps_array = video->sps_datas.data();
+		decode_operation.pps = pps;
+		decode_operation.sps = sps;
 		decode_operation.current_dpb = instance->dpb.current_slot;
 		decode_operation.dpb_reference_count = (uint32_t)instance->dpb.reference_usage.size();
 		decode_operation.dpb_reference_slots = instance->dpb.reference_usage.data();
@@ -469,9 +475,12 @@ namespace wi::video
 		decode_operation.dpb_framenum = instance->dpb.framenum_status;
 		decode_operation.DPB = &instance->dpb.texture;
 
+		ImageAspect aspect_luma = ImageAspect::LUMINANCE;
+		ImageAspect aspect_chroma = ImageAspect::CHROMINANCE;
 		if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::VIDEO_DECODE_DPB)
 		{
-			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, 0, instance->dpb.current_slot));
+			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, 0, instance->dpb.current_slot, &aspect_luma));
+			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, 0, instance->dpb.current_slot, &aspect_chroma));
 			instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::VIDEO_DECODE_DPB;
 		}
 		for (size_t i = 0; i < instance->dpb.reference_usage.size(); ++i)
@@ -479,7 +488,8 @@ namespace wi::video
 			uint8_t ref = instance->dpb.reference_usage[i];
 			if (instance->dpb.resource_states[ref] != ResourceState::VIDEO_DECODE_SRC)
 			{
-				instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[ref], ResourceState::VIDEO_DECODE_SRC, 0, ref));
+				instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[ref], ResourceState::VIDEO_DECODE_SRC, 0, ref, &aspect_luma));
+				instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[ref], ResourceState::VIDEO_DECODE_SRC, 0, ref, &aspect_chroma));
 				instance->dpb.resource_states[ref] = ResourceState::VIDEO_DECODE_SRC;
 			}
 		}
@@ -494,7 +504,8 @@ namespace wi::video
 		if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::SHADER_RESOURCE)
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::SHADER_RESOURCE, 0, instance->dpb.current_slot),
+				GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::SHADER_RESOURCE, 0, instance->dpb.current_slot, &aspect_luma),
+				GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::SHADER_RESOURCE, 0, instance->dpb.current_slot, &aspect_chroma),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 			instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::SHADER_RESOURCE;

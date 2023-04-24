@@ -8497,6 +8497,10 @@ using namespace vulkan_internal;
 				{
 					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
+				if (barrier.image.aspect != nullptr)
+				{
+					barrierdesc.subresourceRange.aspectMask = _ConvertImageAspect(*barrier.image.aspect);
+				}
 				if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
 				{
 					barrierdesc.subresourceRange.baseMipLevel = (uint32_t)std::max(0, barrier.image.mip);
@@ -8840,15 +8844,15 @@ using namespace vulkan_internal;
 		auto dpb_internal = to_internal(op->DPB);
 
 		const h264::slice_header_t* slice_header = (const h264::slice_header_t*)op->slice_header;
-		const h264::pps_t* pps = (const h264::pps_t*)op->pps_array + slice_header->pic_parameter_set_id;
-		const h264::sps_t* sps = (const h264::sps_t*)op->sps_array + pps->seq_parameter_set_id;
+		const h264::pps_t* pps = (const h264::pps_t*)op->pps;
+		const h264::sps_t* sps = (const h264::sps_t*)op->sps;
 
 		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
 		std_picture_info_h264.pic_parameter_set_id = slice_header->pic_parameter_set_id;
 		std_picture_info_h264.seq_parameter_set_id = pps->seq_parameter_set_id;
 		std_picture_info_h264.frame_num = slice_header->frame_num;
-		std_picture_info_h264.PicOrderCnt[0] = op->poc;
-		std_picture_info_h264.PicOrderCnt[1] = op->poc;
+		std_picture_info_h264.PicOrderCnt[0] = op->poc[0];
+		std_picture_info_h264.PicOrderCnt[1] = op->poc[1];
 		std_picture_info_h264.idr_pic_id = slice_header->idr_pic_id;
 		std_picture_info_h264.flags.is_intra = op->frame_type == VideoFrameType::Intra ? 1 : 0;
 		std_picture_info_h264.flags.is_reference = op->reference_priority > 0 ? 1 : 0;

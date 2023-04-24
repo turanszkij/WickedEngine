@@ -6577,12 +6577,13 @@ using namespace dx12_internal;
 				barrierdesc.Transition.pResource = internal_state->resource.Get();
 				barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.image.layout_before);
 				barrierdesc.Transition.StateAfter = _ParseResourceState(barrier.image.layout_after);
-				if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
+				if (barrier.image.mip >= 0 || barrier.image.slice >= 0 || barrier.image.aspect != nullptr)
 				{
+					const UINT PlaneSlice = barrier.image.aspect != nullptr ? _ImageAspectToPlane(*barrier.image.aspect) : 0;
 					barrierdesc.Transition.Subresource = D3D12CalcSubresource(
 						(UINT)std::max(0, barrier.image.mip),
 						(UINT)std::max(0, barrier.image.slice),
-						0,
+						PlaneSlice,
 						barrier.image.texture->desc.mip_levels,
 						barrier.image.texture->desc.array_size
 					);
@@ -6679,19 +6680,9 @@ using namespace dx12_internal;
 
 		if (!commandlist.discards.empty() && commandlist.queue != QUEUE_VIDEO_DECODE)
 		{
-			if (commandlist.queue == QUEUE_VIDEO_DECODE)
+			for (auto& discard : commandlist.discards)
 			{
-				for (auto& discard : commandlist.discards)
-				{
-					commandlist.GetVideoDecodeCommandList()->DiscardResource(discard.resource, discard.region.NumSubresources > 0 ? &discard.region : nullptr);
-				}
-			}
-			else
-			{
-				for (auto& discard : commandlist.discards)
-				{
-					commandlist.GetGraphicsCommandList()->DiscardResource(discard.resource, discard.region.NumSubresources > 0 ? &discard.region : nullptr);
-				}
+				commandlist.GetGraphicsCommandList()->DiscardResource(discard.resource, discard.region.NumSubresources > 0 ? &discard.region : nullptr);
 			}
 			commandlist.discards.clear();
 		}
@@ -6926,8 +6917,8 @@ using namespace dx12_internal;
 		output.OutputSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, 1, op->DPB->desc.array_size);
 
 		const h264::slice_header_t* slice_header = (const h264::slice_header_t*)op->slice_header;
-		const h264::pps_t* pps = (const h264::pps_t*)op->pps_array + slice_header->pic_parameter_set_id;
-		const h264::sps_t* sps = (const h264::sps_t*)op->sps_array + pps->seq_parameter_set_id;
+		const h264::pps_t* pps = (const h264::pps_t*)op->pps;
+		const h264::sps_t* sps = (const h264::sps_t*)op->sps;
 
 		ID3D12Resource* reference_frames[16] = {};
 		UINT reference_subresources[16] = {};
@@ -6970,8 +6961,8 @@ using namespace dx12_internal;
 			pic_params.CurrPic.AssociatedFlag = 0;
 		}
 		pic_params.CurrPic.Index7Bits = (UCHAR)op->current_dpb;
-		pic_params.CurrFieldOrderCnt[0] = op->poc;
-		pic_params.CurrFieldOrderCnt[1] = op->poc;
+		pic_params.CurrFieldOrderCnt[0] = op->poc[0];
+		pic_params.CurrFieldOrderCnt[1] = op->poc[1];
 		for (uint32_t i = 0; i < 16; ++i)
 		{
 			pic_params.RefFrameList[i].bPicEntry = 0xFF;

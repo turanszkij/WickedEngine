@@ -643,6 +643,7 @@ namespace wi::graphics
 			ResourceState layout_after;
 			int mip;
 			int slice;
+			const ImageAspect* aspect;
 		};
 		struct Buffer
 		{
@@ -665,7 +666,7 @@ namespace wi::graphics
 			return barrier;
 		}
 		static GPUBarrier Image(const Texture* texture, ResourceState before, ResourceState after,
-			int mip = -1, int slice = -1)
+			int mip = -1, int slice = -1, const ImageAspect* aspect = nullptr)
 		{
 			GPUBarrier barrier;
 			barrier.type = Type::IMAGE;
@@ -674,6 +675,7 @@ namespace wi::graphics
 			barrier.image.layout_after = after;
 			barrier.image.mip = mip;
 			barrier.image.slice = slice;
+			barrier.image.aspect = aspect;
 			return barrier;
 		}
 		static GPUBarrier Buffer(const GPUBuffer* buffer, ResourceState before, ResourceState after)
@@ -855,18 +857,18 @@ namespace wi::graphics
 		uint64_t stream_offset = 0;
 		uint64_t stream_size = 0;
 		VideoFrameType frame_type = VideoFrameType::Intra;
-		uint32_t reference_priority = 0;
-		int decoded_frame_index = 0;
-		const void* slice_header = nullptr;
-		const void* pps_array = nullptr;
-		const void* sps_array = nullptr;
-		int poc = 0;
-		uint32_t current_dpb = 0;
-		uint8_t dpb_reference_count = 0;
-		const uint8_t* dpb_reference_slots = nullptr;
-		const int* dpb_poc = nullptr;
-		const int* dpb_framenum = nullptr;
-		const Texture* DPB = nullptr;
+		uint32_t reference_priority = 0; // nal_ref_idc
+		int decoded_frame_index = 0; // frame index in order of decoding
+		const void* slice_header = nullptr; // slice header for current frame
+		const void* pps = nullptr; // picture parameter set for current slice header
+		const void* sps = nullptr; // sequence parameter set for current picture parameter set
+		int poc[2] = {}; // PictureOrderCount Top and Bottom fields
+		uint32_t current_dpb = 0; // DPB slot for current output picture
+		uint8_t dpb_reference_count = 0; // number of references in dpb_reference_slots array
+		const uint8_t* dpb_reference_slots = nullptr; // dpb slot indices that are used as reference pictures
+		const int* dpb_poc = nullptr; // for each DPB reference slot, indicate the PictureOrderCount
+		const int* dpb_framenum = nullptr; // for each DPB reference slot, indicate the framenum value
+		const Texture* DPB = nullptr; // DPB texture with arraysize = num_references + 1
 	};
 
 	struct RenderPassImage
