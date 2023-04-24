@@ -384,67 +384,127 @@ namespace vulkan_internal
 			return VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
 	}
-	constexpr VkAccessFlags _ParseResourceState(ResourceState value)
+	constexpr VkPipelineStageFlags2 _ConvertPipelineStage(ResourceState value)
 	{
-		VkAccessFlags flags = 0;
+		VkPipelineStageFlags2 flags = VK_PIPELINE_STAGE_2_NONE;
 
-		if (has_flag(value, ResourceState::SHADER_RESOURCE))
+		if (has_flag(value, ResourceState::SHADER_RESOURCE) ||
+			has_flag(value, ResourceState::SHADER_RESOURCE_COMPUTE) ||
+			has_flag(value, ResourceState::UNORDERED_ACCESS))
 		{
-			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 		}
-		if (has_flag(value, ResourceState::SHADER_RESOURCE_COMPUTE))
+
+		if (has_flag(value, ResourceState::COPY_SRC) ||
+			has_flag(value, ResourceState::COPY_DST))
 		{
-			flags |= VK_ACCESS_SHADER_READ_BIT;
-		}
-		if (has_flag(value, ResourceState::UNORDERED_ACCESS))
-		{
-			flags |= VK_ACCESS_SHADER_READ_BIT;
-			flags |= VK_ACCESS_SHADER_WRITE_BIT;
-		}
-		if (has_flag(value, ResourceState::COPY_SRC))
-		{
-			flags |= VK_ACCESS_TRANSFER_READ_BIT;
-		}
-		if (has_flag(value, ResourceState::COPY_DST))
-		{
-			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+			flags |= VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 		}
 
 		if (has_flag(value, ResourceState::RENDERTARGET))
 		{
-			flags |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-			flags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			flags |= VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 		}
-		if (has_flag(value, ResourceState::DEPTHSTENCIL))
+
+		if (has_flag(value, ResourceState::DEPTHSTENCIL) ||
+			has_flag(value, ResourceState::DEPTHSTENCIL_READONLY))
 		{
-			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			flags |= VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
 		}
-		if (has_flag(value, ResourceState::DEPTHSTENCIL_READONLY))
+
+		if (has_flag(value, ResourceState::SHADING_RATE_SOURCE))
 		{
-			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+			flags |= VK_ACCESS_2_SHADING_RATE_IMAGE_READ_BIT_NV;
 		}
 
 		if (has_flag(value, ResourceState::VERTEX_BUFFER))
 		{
-			flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+			flags |= VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
 		}
 		if (has_flag(value, ResourceState::INDEX_BUFFER))
 		{
-			flags |= VK_ACCESS_INDEX_READ_BIT;
+			flags |= VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT;
 		}
 		if (has_flag(value, ResourceState::CONSTANT_BUFFER))
 		{
-			flags |= VK_ACCESS_UNIFORM_READ_BIT;
+			flags |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 		}
 		if (has_flag(value, ResourceState::INDIRECT_ARGUMENT))
 		{
-			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+			flags |= VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+		}
+		if (has_flag(value, ResourceState::RAYTRACING_ACCELERATION_STRUCTURE))
+		{
+			flags |= VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
+		}
+		if (has_flag(value, ResourceState::PREDICATION))
+		{
+			flags |= VK_PIPELINE_STAGE_2_CONDITIONAL_RENDERING_BIT_EXT;
+		}
+
+		return flags;
+	}
+	constexpr VkAccessFlags2 _ParseResourceState(ResourceState value)
+	{
+		VkAccessFlags2 flags = 0;
+
+		if (has_flag(value, ResourceState::SHADER_RESOURCE))
+		{
+			flags |= VK_ACCESS_2_SHADER_READ_BIT;
+		}
+		if (has_flag(value, ResourceState::SHADER_RESOURCE_COMPUTE))
+		{
+			flags |= VK_ACCESS_2_SHADER_READ_BIT;
+		}
+		if (has_flag(value, ResourceState::UNORDERED_ACCESS))
+		{
+			flags |= VK_ACCESS_2_SHADER_READ_BIT;
+			flags |= VK_ACCESS_2_SHADER_WRITE_BIT;
+		}
+		if (has_flag(value, ResourceState::COPY_SRC))
+		{
+			flags |= VK_ACCESS_2_TRANSFER_READ_BIT;
+		}
+		if (has_flag(value, ResourceState::COPY_DST))
+		{
+			flags |= VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+		}
+
+		if (has_flag(value, ResourceState::RENDERTARGET))
+		{
+			flags |= VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT;
+			flags |= VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+		}
+		if (has_flag(value, ResourceState::DEPTHSTENCIL))
+		{
+			flags |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+			flags |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		}
+		if (has_flag(value, ResourceState::DEPTHSTENCIL_READONLY))
+		{
+			flags |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+		}
+
+		if (has_flag(value, ResourceState::VERTEX_BUFFER))
+		{
+			flags |= VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT;
+		}
+		if (has_flag(value, ResourceState::INDEX_BUFFER))
+		{
+			flags |= VK_ACCESS_2_INDEX_READ_BIT;
+		}
+		if (has_flag(value, ResourceState::CONSTANT_BUFFER))
+		{
+			flags |= VK_ACCESS_2_UNIFORM_READ_BIT;
+		}
+		if (has_flag(value, ResourceState::INDIRECT_ARGUMENT))
+		{
+			flags |= VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
 		}
 
 		if (has_flag(value, ResourceState::PREDICATION))
 		{
-			flags |= VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
+			flags |= VK_ACCESS_2_CONDITIONAL_RENDERING_READ_BIT_EXT;
 		}
 
 		return flags;
@@ -2911,12 +2971,14 @@ using namespace vulkan_internal;
 			// Transitions:
 			{
 				CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
-				VkImageMemoryBarrier barrier = {};
-				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				VkImageMemoryBarrier2 barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 				barrier.oldLayout = imageInfo.initialLayout;
 				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 				barrier.srcAccessMask = 0;
-				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+				barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				barrier.subresourceRange.baseArrayLayer = 0;
 				barrier.subresourceRange.baseMipLevel = 0;
@@ -2925,37 +2987,22 @@ using namespace vulkan_internal;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.image = nullImage1D;
 				barrier.subresourceRange.layerCount = 1;
-				vkCmdPipelineBarrier(
-					cmd.transitionCommandBuffer,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier
-				);
+
+				VkDependencyInfo dependencyInfo = {};
+				dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+				dependencyInfo.imageMemoryBarrierCount = 1;
+				dependencyInfo.pImageMemoryBarriers = &barrier;
+
+				vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
+
 				barrier.image = nullImage2D;
 				barrier.subresourceRange.layerCount = 6;
-				vkCmdPipelineBarrier(
-					cmd.transitionCommandBuffer,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier
-				);
+				vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
+
 				barrier.image = nullImage3D;
 				barrier.subresourceRange.layerCount = 1;
-				vkCmdPipelineBarrier(
-					cmd.transitionCommandBuffer,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier
-				);
+				vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
+
 				copyAllocator.submit(cmd);
 			}
 
@@ -3593,25 +3640,23 @@ using namespace vulkan_internal;
 
 			if(cmd.IsValid())
 			{
-				VkBufferMemoryBarrier barrier = {};
-				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+				VkBufferMemoryBarrier2 barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 				barrier.buffer = internal_state->resource;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 				barrier.srcAccessMask = 0;
-				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 				barrier.size = VK_WHOLE_SIZE;
 
 				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-				vkCmdPipelineBarrier(
-					cmd.transferCommandBuffer,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					0,
-					0, nullptr,
-					1, &barrier,
-					0, nullptr
-				);
+				VkDependencyInfo dependencyInfo = {};
+				dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+				dependencyInfo.bufferMemoryBarrierCount = 1;
+				dependencyInfo.pBufferMemoryBarriers = &barrier;
+				vkCmdPipelineBarrier2(cmd.transferCommandBuffer, &dependencyInfo);
 
 				VkBufferCopy copyRegion = {};
 				copyRegion.size = buffer->desc.size;
@@ -3626,47 +3671,39 @@ using namespace vulkan_internal;
 					&copyRegion
 				);
 
+				std::swap(barrier.srcStageMask, barrier.dstStageMask);
 				std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
 
 				if (has_flag(buffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
 				{
-					barrier.dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
+					barrier.dstAccessMask |= VK_ACCESS_2_UNIFORM_READ_BIT;
 				}
 				if (has_flag(buffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
 				{
-					barrier.dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+					barrier.dstAccessMask |= VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT;
 				}
 				if (has_flag(buffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
 				{
-					barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
+					barrier.dstAccessMask |= VK_ACCESS_2_INDEX_READ_BIT;
 				}
 				if (has_flag(buffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 				{
-					barrier.dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
+					barrier.dstAccessMask |= VK_ACCESS_2_SHADER_READ_BIT;
 				}
 				if (has_flag(buffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 				{
-					barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
+					barrier.dstAccessMask |= VK_ACCESS_2_SHADER_WRITE_BIT;
 				}
 				if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
 				{
-					barrier.dstAccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+					barrier.dstAccessMask |= VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
 				}
 				if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
 				{
-					barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+					barrier.dstAccessMask |= VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 				}
-
-				vkCmdPipelineBarrier(
-					cmd.transferCommandBuffer,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					1, &barrier,
-					0, nullptr
-				);
-
+				vkCmdPipelineBarrier2(cmd.transferCommandBuffer, &dependencyInfo);
+				
 				copyAllocator.submit(cmd);
 			}
 		}
@@ -4030,13 +4067,15 @@ using namespace vulkan_internal;
 
 			if(cmd.IsValid())
 			{
-				VkImageMemoryBarrier barrier = {};
-				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				VkImageMemoryBarrier2 barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 				barrier.image = internal_state->resource;
 				barrier.oldLayout = imageInfo.initialLayout;
 				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 				barrier.srcAccessMask = 0;
-				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				barrier.subresourceRange.baseArrayLayer = 0;
 				barrier.subresourceRange.layerCount = imageInfo.arrayLayers;
@@ -4045,15 +4084,12 @@ using namespace vulkan_internal;
 				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-				vkCmdPipelineBarrier(
-					cmd.transferCommandBuffer,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier
-				);
+				VkDependencyInfo dependencyInfo = {};
+				dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+				dependencyInfo.imageMemoryBarrierCount = 1;
+				dependencyInfo.pImageMemoryBarriers = &barrier;
+
+				vkCmdPipelineBarrier2(cmd.transferCommandBuffer, &dependencyInfo);
 
 				vkCmdCopyBufferToImage(
 					cmd.transferCommandBuffer,
@@ -4064,33 +4100,26 @@ using namespace vulkan_internal;
 					copyRegions.data()
 				);
 
-
+				std::swap(barrier.srcStageMask, barrier.dstStageMask);
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.newLayout = _ConvertImageLayout(texture->desc.layout);
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = _ParseResourceState(texture->desc.layout);
-
-				vkCmdPipelineBarrier(
-					cmd.transitionCommandBuffer,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier
-				);
+				vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
 
 				copyAllocator.submit(cmd);
 			}
 		}
 		else
 		{
-			VkImageMemoryBarrier barrier = {};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			VkImageMemoryBarrier2 barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 			barrier.image = internal_state->resource;
 			barrier.oldLayout = imageInfo.initialLayout;
 			barrier.newLayout = _ConvertImageLayout(texture->desc.layout);
+			barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 			barrier.srcAccessMask = 0;
+			barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 			barrier.dstAccessMask = _ParseResourceState(texture->desc.layout);
 			if (IsFormatDepthSupport(texture->desc.format))
 			{
@@ -4112,15 +4141,13 @@ using namespace vulkan_internal;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 			CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
-			vkCmdPipelineBarrier(
-				cmd.transitionCommandBuffer,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
+
+			VkDependencyInfo dependencyInfo = {};
+			dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+			dependencyInfo.imageMemoryBarrierCount = 1;
+			dependencyInfo.pImageMemoryBarriers = &barrier;
+
+			vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
 			copyAllocator.submit(cmd);
 		}
 
@@ -6748,13 +6775,15 @@ using namespace vulkan_internal;
 		info.colorAttachmentCount = 1;
 		info.pColorAttachments = &color_attachment;
 
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		VkImageMemoryBarrier2 barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 		barrier.image = internal_state->swapChainImages[internal_state->swapChainImageIndex];
 		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		barrier.srcAccessMask = VK_ACCESS_NONE;
-		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+		barrier.srcAccessMask = VK_ACCESS_2_NONE;
+		barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+		barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		barrier.subresourceRange.baseMipLevel = 0;
 		barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
@@ -6762,19 +6791,17 @@ using namespace vulkan_internal;
 		barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		vkCmdPipelineBarrier(
-			commandlist.GetCommandBuffer(),
-			VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-			VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-			0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier
-		);
+
+		VkDependencyInfo dependencyInfo = {};
+		dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		dependencyInfo.imageMemoryBarrierCount = 1;
+		dependencyInfo.pImageMemoryBarriers = &barrier;
+		vkCmdPipelineBarrier2(commandlist.GetCommandBuffer(), &dependencyInfo);
+
 		barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_NONE;
+		barrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_2_NONE;
 		commandlist.renderpass_barriers_end.push_back(barrier);
 
 		vkCmdBeginRendering(commandlist.GetCommandBuffer(), &info);
@@ -6957,12 +6984,14 @@ using namespace vulkan_internal;
 
 			if (image.layout_before != image.layout)
 			{
-				VkImageMemoryBarrier& barrier = commandlist.renderpass_barriers_begin.emplace_back();
-				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				VkImageMemoryBarrier2& barrier = commandlist.renderpass_barriers_begin.emplace_back();
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 				barrier.image = internal_state->resource;
 				barrier.oldLayout = _ConvertImageLayout(image.layout_before);
 				barrier.newLayout = _ConvertImageLayout(image.layout);
+				barrier.srcStageMask = _ConvertPipelineStage(image.layout_before);
 				barrier.srcAccessMask = _ParseResourceState(image.layout_before);
+				barrier.dstStageMask = _ConvertPipelineStage(image.layout);
 				barrier.dstAccessMask = _ParseResourceState(image.layout);
 				if (IsFormatDepthSupport(desc.format))
 				{
@@ -6986,12 +7015,14 @@ using namespace vulkan_internal;
 
 			if (image.layout != image.layout_after)
 			{
-				VkImageMemoryBarrier& barrier = commandlist.renderpass_barriers_end.emplace_back();
-				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				VkImageMemoryBarrier2& barrier = commandlist.renderpass_barriers_end.emplace_back();
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 				barrier.image = internal_state->resource;
 				barrier.oldLayout = _ConvertImageLayout(image.layout);
 				barrier.newLayout = _ConvertImageLayout(image.layout_after);
+				barrier.srcStageMask = _ConvertPipelineStage(image.layout);
 				barrier.srcAccessMask = _ParseResourceState(image.layout);
+				barrier.dstStageMask = _ConvertPipelineStage(image.layout_after);
 				barrier.dstAccessMask = _ParseResourceState(image.layout_after);
 				if (IsFormatDepthSupport(desc.format))
 				{
@@ -7021,15 +7052,12 @@ using namespace vulkan_internal;
 
 		if (!commandlist.renderpass_barriers_begin.empty())
 		{
-			vkCmdPipelineBarrier(
-				commandlist.GetCommandBuffer(),
-				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				(uint32_t)commandlist.renderpass_barriers_begin.size(), commandlist.renderpass_barriers_begin.data()
-			);
+			VkDependencyInfo dependencyInfo = {};
+			dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+			dependencyInfo.imageMemoryBarrierCount = static_cast<uint32_t>(commandlist.renderpass_barriers_begin.size());
+			dependencyInfo.pImageMemoryBarriers = commandlist.renderpass_barriers_begin.data();
+
+			vkCmdPipelineBarrier2(commandlist.GetCommandBuffer(), &dependencyInfo);
 		}
 
 		vkCmdBeginRendering(commandlist.GetCommandBuffer(), &info);
@@ -7043,15 +7071,12 @@ using namespace vulkan_internal;
 
 		if (!commandlist.renderpass_barriers_end.empty())
 		{
-			vkCmdPipelineBarrier(
-				commandlist.GetCommandBuffer(),
-				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				(uint32_t)commandlist.renderpass_barriers_end.size(), commandlist.renderpass_barriers_end.data()
-			);
+			VkDependencyInfo dependencyInfo = {};
+			dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+			dependencyInfo.imageMemoryBarrierCount = static_cast<uint32_t>(commandlist.renderpass_barriers_end.size());
+			dependencyInfo.pImageMemoryBarriers = commandlist.renderpass_barriers_end.data();
+
+			vkCmdPipelineBarrier2(commandlist.GetCommandBuffer(), &dependencyInfo);
 			commandlist.renderpass_barriers_end.clear();
 		}
 
@@ -7812,9 +7837,6 @@ using namespace vulkan_internal;
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 
-		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
 		auto& memoryBarriers = commandlist.frame_memoryBarriers;
 		auto& imageBarriers = commandlist.frame_imageBarriers;
 		auto& bufferBarriers = commandlist.frame_bufferBarriers;
@@ -7833,26 +7855,28 @@ using namespace vulkan_internal;
 			default:
 			case GPUBarrier::Type::MEMORY:
 			{
-				VkMemoryBarrier barrierdesc = {};
-				barrierdesc.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+				VkMemoryBarrier2 barrierdesc = {};
+				barrierdesc.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
 				barrierdesc.pNext = nullptr;
-				barrierdesc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-				barrierdesc.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrierdesc.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+				barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrierdesc.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
 
 				if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 				{
-					barrierdesc.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-					barrierdesc.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-					srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-					dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+					barrierdesc.srcStageMask |= VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
+					barrierdesc.dstStageMask |= VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
+					barrierdesc.srcAccessMask |= VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+					barrierdesc.dstAccessMask |= VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
 				}
 
 				if (CheckCapability(GraphicsDeviceCapability::PREDICATION))
 				{
-					barrierdesc.srcAccessMask |= VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
-					barrierdesc.dstAccessMask |= VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
-					srcStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
-					dstStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
+					barrierdesc.srcStageMask |= VK_PIPELINE_STAGE_2_CONDITIONAL_RENDERING_BIT_EXT;
+					barrierdesc.dstStageMask |= VK_PIPELINE_STAGE_2_CONDITIONAL_RENDERING_BIT_EXT;
+					barrierdesc.srcAccessMask |= VK_ACCESS_2_CONDITIONAL_RENDERING_READ_BIT_EXT;
+					barrierdesc.dstAccessMask |= VK_ACCESS_2_CONDITIONAL_RENDERING_READ_BIT_EXT;
 				}
 
 				memoryBarriers.push_back(barrierdesc);
@@ -7863,13 +7887,15 @@ using namespace vulkan_internal;
 				const TextureDesc& desc = barrier.image.texture->desc;
 				auto internal_state = to_internal(barrier.image.texture);
 
-				VkImageMemoryBarrier barrierdesc = {};
-				barrierdesc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				VkImageMemoryBarrier2 barrierdesc = {};
+				barrierdesc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 				barrierdesc.pNext = nullptr;
 				barrierdesc.image = internal_state->resource;
 				barrierdesc.oldLayout = _ConvertImageLayout(barrier.image.layout_before);
 				barrierdesc.newLayout = _ConvertImageLayout(barrier.image.layout_after);
+				barrierdesc.srcStageMask = _ConvertPipelineStage(barrier.image.layout_before);
 				barrierdesc.srcAccessMask = _ParseResourceState(barrier.image.layout_before);
+				barrierdesc.dstStageMask = _ConvertPipelineStage(barrier.image.layout_after);
 				barrierdesc.dstAccessMask = _ParseResourceState(barrier.image.layout_after);
 				if (IsFormatDepthSupport(desc.format))
 				{
@@ -7908,32 +7934,34 @@ using namespace vulkan_internal;
 				const GPUBufferDesc& desc = barrier.buffer.buffer->desc;
 				auto internal_state = to_internal(barrier.buffer.buffer);
 
-				VkBufferMemoryBarrier barrierdesc = {};
-				barrierdesc.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+				VkBufferMemoryBarrier2 barrierdesc = {};
+				barrierdesc.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 				barrierdesc.pNext = nullptr;
 				barrierdesc.buffer = internal_state->resource;
 				barrierdesc.size = desc.size;
 				barrierdesc.offset = 0;
+				barrierdesc.srcStageMask = _ConvertPipelineStage(barrier.buffer.state_before);
 				barrierdesc.srcAccessMask = _ParseResourceState(barrier.buffer.state_before);
+				barrierdesc.dstStageMask = _ConvertPipelineStage(barrier.buffer.state_after);
 				barrierdesc.dstAccessMask = _ParseResourceState(barrier.buffer.state_after);
 				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-				bufferBarriers.push_back(barrierdesc);
-
 				if (has_flag(desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
 				{
 					assert(CheckCapability(GraphicsDeviceCapability::RAYTRACING));
-					srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-					dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+					barrierdesc.srcStageMask |= _ParseResourceState(ResourceState::RAYTRACING_ACCELERATION_STRUCTURE);
+					barrierdesc.dstStageMask |= _ParseResourceState(ResourceState::RAYTRACING_ACCELERATION_STRUCTURE);
 				}
 
 				if (has_flag(desc.misc_flags, ResourceMiscFlag::PREDICATION))
 				{
 					assert(CheckCapability(GraphicsDeviceCapability::PREDICATION));
-					srcStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
-					dstStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
+					barrierdesc.srcStageMask |= _ParseResourceState(ResourceState::PREDICATION);
+					barrierdesc.dstStageMask |= _ParseResourceState(ResourceState::PREDICATION);
 				}
+
+				bufferBarriers.push_back(barrierdesc);
 			}
 			break;
 			}
@@ -7944,15 +7972,16 @@ using namespace vulkan_internal;
 			!imageBarriers.empty()
 			)
 		{
-			vkCmdPipelineBarrier(
-				commandlist.GetCommandBuffer(),
-				srcStage,
-				dstStage,
-				0,
-				(uint32_t)memoryBarriers.size(), memoryBarriers.data(),
-				(uint32_t)bufferBarriers.size(), bufferBarriers.data(),
-				(uint32_t)imageBarriers.size(), imageBarriers.data()
-			);
+			VkDependencyInfo dependencyInfo = {};
+			dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+			dependencyInfo.memoryBarrierCount = static_cast<uint32_t>(memoryBarriers.size());
+			dependencyInfo.pMemoryBarriers = memoryBarriers.data();
+			dependencyInfo.bufferMemoryBarrierCount = static_cast<uint32_t>(bufferBarriers.size());
+			dependencyInfo.pBufferMemoryBarriers = bufferBarriers.data();
+			dependencyInfo.imageMemoryBarrierCount = static_cast<uint32_t>(imageBarriers.size());
+			dependencyInfo.pImageMemoryBarriers = imageBarriers.data();
+
+			vkCmdPipelineBarrier2(commandlist.GetCommandBuffer(), &dependencyInfo);
 
 			memoryBarriers.clear();
 			imageBarriers.clear();
