@@ -5937,7 +5937,7 @@ using namespace vulkan_internal;
 		internal_state->scalinglist_array_h264.resize(desc->pps_count);
 		for (uint32_t i = 0; i < desc->pps_count; ++i)
 		{
-			const h264::pps_t* pps = (const h264::pps_t*)desc->pps_datas + i;
+			const h264::PPS* pps = (const h264::PPS*)desc->pps_datas + i;
 			StdVideoH264PictureParameterSet& vk_pps = internal_state->pps_array_h264[i];
 			StdVideoH264ScalingLists& vk_scalinglist = internal_state->scalinglist_array_h264[i];
 
@@ -5991,7 +5991,7 @@ using namespace vulkan_internal;
 		internal_state->hrd_array_h264.resize(desc->sps_count);
 		for (uint32_t i = 0; i < desc->sps_count; ++i)
 		{
-			const h264::sps_t* sps = (const h264::sps_t*)desc->sps_datas + i;
+			const h264::SPS* sps = (const h264::SPS*)desc->sps_datas + i;
 			StdVideoH264SequenceParameterSet& vk_sps = internal_state->sps_array_h264[i];
 
 			vk_sps.flags.constraint_set0_flag = sps->constraint_set0_flag;
@@ -8843,9 +8843,9 @@ using namespace vulkan_internal;
 		auto stream_internal = to_internal(op->stream);
 		auto dpb_internal = to_internal(op->DPB);
 
-		const h264::slice_header_t* slice_header = (const h264::slice_header_t*)op->slice_header;
-		const h264::pps_t* pps = (const h264::pps_t*)op->pps;
-		const h264::sps_t* sps = (const h264::sps_t*)op->sps;
+		const h264::SliceHeader* slice_header = (const h264::SliceHeader*)op->slice_header;
+		const h264::PPS* pps = (const h264::PPS*)op->pps;
+		const h264::SPS* sps = (const h264::SPS*)op->sps;
 
 		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
 		std_picture_info_h264.pic_parameter_set_id = slice_header->pic_parameter_set_id;

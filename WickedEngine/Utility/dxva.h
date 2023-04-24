@@ -1,4 +1,7 @@
-#pragma once
+#ifndef DXVA_H
+#define DXVA_H
+// This is a minimal version of dxva.h from the Windows SDK
+//	It contains only the bare necessary structures for interoping with DirectX Video APIs
 
 /* H.264/AVC picture entry data structure */
 typedef struct _DXVA_PicEntry_H264 {
@@ -92,8 +95,6 @@ typedef struct _DXVA_Qmatrix_H264 {
 
 } DXVA_Qmatrix_H264, * LPDXVA_Qmatrix_H264;
 
-
-
 /* H.264/AVC slice control data structure - short form */
 typedef struct _DXVA_Slice_H264_Short {
 	UINT   BSNALunitDataLocation; /* type 1..5 */
@@ -131,3 +132,5 @@ typedef struct _DXVA_Slice_H264_Long {
 	UCHAR  disable_deblocking_filter_idc;
 	USHORT slice_id;
 } DXVA_Slice_H264_Long, * LPDXVA_Slice_H264_Long;
+
+#endif // DXVA_H

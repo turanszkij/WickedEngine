@@ -20,10 +20,10 @@ namespace wi::video
 	bool CreateVideo(const uint8_t* filedata, size_t filesize, Video* video)
 	{
 		bool success = false;
-		uint8_t* input_buf = (uint8_t*)filedata;
+		const uint8_t* input_buf = filedata;
 		struct INPUT_BUFFER
 		{
-			uint8_t* buffer;
+			const uint8_t* buffer;
 			size_t size;
 		} input_buffer = { input_buf,filesize };
 		MP4D_demux_t mp4 = {};
@@ -85,14 +85,14 @@ namespace wi::video
 						while (data = MP4D_read_sps(&mp4, ntrack, index, &size))
 						{
 							const uint8_t* sps_data = (const uint8_t*)data;
-							bs_t bs = {};
-							bs_init(&bs, (uint8_t*)sps_data, size);
-							h264::nal_header nal = {};
+							h264::Bitstream bs = {};
+							bs.init(sps_data, size);
+							h264::NALHeader nal = {};
 							h264::read_nal_header(&nal, &bs);
 							assert(nal.type = h264::NAL_UNIT_TYPE_SPS);
 
-							h264::sps_t sps = {};
-							h264::read_seq_parameter_set_rbsp(&sps, &bs);
+							h264::SPS sps = {};
+							h264::read_sps(&sps, &bs);
 
 							// Some validation checks that data parsing returned expected values:
 							//	https://stackoverflow.com/questions/6394874/fetching-the-dimensions-of-a-h264video-stream
@@ -105,7 +105,7 @@ namespace wi::video
 							video->num_dpb_slots = std::max(video->num_dpb_slots, uint32_t(sps.num_ref_frames + 1));
 
 							video->sps_datas.resize(video->sps_datas.size() + sizeof(sps));
-							std::memcpy((h264::sps_t*)video->sps_datas.data() + video->sps_count, &sps, sizeof(sps));
+							std::memcpy((h264::SPS*)video->sps_datas.data() + video->sps_count, &sps, sizeof(sps));
 							video->sps_count++;
 							index++;
 						}
@@ -121,16 +121,16 @@ namespace wi::video
 						while (data = MP4D_read_pps(&mp4, ntrack, index, &size))
 						{
 							const uint8_t* pps_data = (const uint8_t*)data;
-							bs_t bs = {};
-							bs_init(&bs, (uint8_t*)pps_data, size);
-							h264::nal_header nal = {};
+							h264::Bitstream bs = {};
+							bs.init(pps_data, size);
+							h264::NALHeader nal = {};
 							h264::read_nal_header(&nal, &bs);
 							assert(nal.type = h264::NAL_UNIT_TYPE_PPS);
 
-							h264::pps_t pps = {};
-							h264::read_pic_parameter_set_rbsp(&pps, &bs);
+							h264::PPS pps = {};
+							h264::read_pps(&pps, &bs);
 							video->pps_datas.resize(video->pps_datas.size() + sizeof(pps));
-							std::memcpy((h264::pps_t*)video->pps_datas.data() + video->pps_count, &pps, sizeof(pps));
+							std::memcpy((h264::PPS*)video->pps_datas.data() + video->pps_count, &pps, sizeof(pps));
 							video->pps_count++;
 							index++;
 						}
@@ -159,16 +159,14 @@ namespace wi::video
 					GraphicsDevice* device = GetDevice();
 					const uint64_t alignment = device->GetVideoDecodeBitstreamAlignment();
 
-					h264::pps_t* pps_array = (h264::pps_t*)video->pps_datas.data();
-					h264::sps_t* sps_array = (h264::sps_t*)video->sps_datas.data();
+					const h264::PPS* pps_array = (const h264::PPS*)video->pps_datas.data();
+					const h264::SPS* sps_array = (const h264::SPS*)video->sps_datas.data();
 					int prev_pic_order_cnt_lsb = 0;
 					int prev_pic_order_cnt_msb = 0;
 					int poc_cycle = 0;
 
-					const uint8_t nal_sync[] = { 0,0,1 };
-
 					video->frames_infos.reserve(track.sample_count);
-					video->slice_header_datas.reserve(track.sample_count * sizeof(h264::slice_header_t));
+					video->slice_header_datas.reserve(track.sample_count * sizeof(h264::SliceHeader));
 					video->slice_header_count = track.sample_count;
 					uint32_t track_duration = 0;
 					uint64_t aligned_size = 0;
@@ -181,16 +179,16 @@ namespace wi::video
 						Video::FrameInfo& info = video->frames_infos.emplace_back();
 						info.offset = aligned_size;
 
-						uint8_t* src_buffer = input_buf + ofs;
+						const uint8_t* src_buffer = input_buf + ofs;
 						while (frame_bytes > 0)
 						{
 							uint32_t size = ((uint32_t)src_buffer[0] << 24) | ((uint32_t)src_buffer[1] << 16) | ((uint32_t)src_buffer[2] << 8) | src_buffer[3];
 							size += 4;
 							assert(frame_bytes >= size);
 
-							bs_t bs = {};
-							bs_init(&bs, &src_buffer[4], frame_bytes);
-							h264::nal_header nal = {};
+							h264::Bitstream bs = {};
+							bs.init(&src_buffer[4], frame_bytes);
+							h264::NALHeader nal = {};
 							h264::read_nal_header(&nal, &bs);
 
 							if (nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_IDR)
@@ -209,12 +207,12 @@ namespace wi::video
 								continue;
 							}
 
-							h264::slice_header_t* slice_header = (h264::slice_header_t*)video->slice_header_datas.data() + i;
+							h264::SliceHeader* slice_header = (h264::SliceHeader*)video->slice_header_datas.data() + i;
 							*slice_header = {};
 							h264::read_slice_header(slice_header, &nal, pps_array, sps_array, &bs);
 
-							const h264::pps_t& pps = pps_array[slice_header->pic_parameter_set_id];
-							const h264::sps_t& sps = sps_array[pps.seq_parameter_set_id];
+							const h264::PPS& pps = pps_array[slice_header->pic_parameter_set_id];
+							const h264::SPS& sps = sps_array[pps.seq_parameter_set_id];
 
 							// Rec. ITU-T H.264 (08/2021) page 77
 							int max_pic_order_cnt_lsb = 1 << (sps.log2_max_pic_order_cnt_lsb_minus4 + 4);
@@ -250,7 +248,7 @@ namespace wi::video
 
 							// Accept frame beginning NAL unit:
 							info.reference_priority = nal.idc;
-							info.size = sizeof(nal_sync) + size - 4;
+							info.size = sizeof(h264::start_code) + size - 4;
 							break;
 						}
 
@@ -285,16 +283,16 @@ namespace wi::video
 							unsigned frame_bytes, timestamp, duration;
 							MP4D_file_offset_t ofs = MP4D_frame_offset(&mp4, ntrack, i, &frame_bytes, &timestamp, &duration);
 							uint8_t* dst_buffer = (uint8_t*)dest + video->frames_infos[i].offset;
-							uint8_t* src_buffer = input_buf + ofs;
+							const uint8_t* src_buffer = input_buf + ofs;
 							while (frame_bytes > 0)
 							{
 								uint32_t size = ((uint32_t)src_buffer[0] << 24) | ((uint32_t)src_buffer[1] << 16) | ((uint32_t)src_buffer[2] << 8) | src_buffer[3];
 								size += 4;
 								assert(frame_bytes >= size);
 
-								bs_t bs = {};
-								bs_init(&bs, &src_buffer[4], sizeof(uint8_t));
-								h264::nal_header nal = {};
+								h264::Bitstream bs = {};
+								bs.init(&src_buffer[4], sizeof(uint8_t));
+								h264::NALHeader nal = {};
 								h264::read_nal_header(&nal, &bs);
 
 								if (
@@ -307,8 +305,8 @@ namespace wi::video
 									continue;
 								}
 
-								std::memcpy(dst_buffer, nal_sync, sizeof(nal_sync));
-								std::memcpy(dst_buffer + sizeof(nal_sync), src_buffer + 4, size - 4);
+								std::memcpy(dst_buffer, h264::start_code, sizeof(h264::start_code));
+								std::memcpy(dst_buffer + sizeof(h264::start_code), src_buffer + 4, size - 4);
 								break;
 							}
 						}
@@ -431,12 +429,13 @@ namespace wi::video
 		GraphicsDevice* device = GetDevice();
 
 		const Video* video = instance->video;
+		instance->current_frame = std::min(instance->current_frame, std::max(0, (int)video->frames_infos.size() - 1));
 		const Video::FrameInfo& frame_info = video->frames_infos[instance->current_frame];
 		instance->time_until_next_frame = frame_info.duration_seconds;
 
-		const h264::slice_header_t* slice_header = (const h264::slice_header_t*)video->slice_header_datas.data() + instance->current_frame;
-		const h264::pps_t* pps = (const h264::pps_t*)video->pps_datas.data() + slice_header->pic_parameter_set_id;
-		const h264::sps_t* sps = (const h264::sps_t*)video->sps_datas.data() + pps->seq_parameter_set_id;
+		const h264::SliceHeader* slice_header = (const h264::SliceHeader*)video->slice_header_datas.data() + instance->current_frame;
+		const h264::PPS* pps = (const h264::PPS*)video->pps_datas.data() + slice_header->pic_parameter_set_id;
+		const h264::SPS* sps = (const h264::SPS*)video->sps_datas.data() + pps->seq_parameter_set_id;
 
 		VideoDecodeOperation decode_operation;
 		if (instance->current_frame == 0 || has_flag(instance->flags, VideoInstance::Flags::DecoderReset))

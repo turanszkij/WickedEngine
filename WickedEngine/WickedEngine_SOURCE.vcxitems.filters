@@ -1116,7 +1116,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\h264.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxva_uwp.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxva.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
   </ItemGroup>

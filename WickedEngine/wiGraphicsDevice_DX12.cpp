@@ -15,15 +15,10 @@
 #include "Utility/dx12/d3dx12_check_feature_support.h"
 #include "Utility/D3D12MemAlloc.h"
 #include "Utility/h264.h"
+#include "Utility/dxva.h"
 
 #include <string>
 #include <pix.h>
-
-#ifdef PLATFORM_UWP
-#include "Utility/dxva_uwp.h" // DXVA_PicParams_H264
-#else
-#include <dxva.h> // DXVA_PicParams_H264
-#endif // PLATFORM_UWP
 
 #ifdef _DEBUG
 #include <dxgidebug.h>
@@ -4524,7 +4519,7 @@ using namespace dx12_internal;
 		uint32_t num_reference_frames = 0;
 		for (uint32_t i = 0; i < desc->sps_count; ++i)
 		{
-			const h264::sps_t* sps = (const h264::sps_t*)desc->sps_datas + i;
+			const h264::SPS* sps = (const h264::SPS*)desc->sps_datas + i;
 			num_reference_frames = std::max(num_reference_frames, (uint32_t)sps->num_ref_frames);
 		}
 		uint32_t num_dpb_slots = num_reference_frames + 1;
@@ -6916,9 +6911,9 @@ using namespace dx12_internal;
 		output.pOutputTexture2D = dpb_internal->resource.Get();
 		output.OutputSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, 1, op->DPB->desc.array_size);
 
-		const h264::slice_header_t* slice_header = (const h264::slice_header_t*)op->slice_header;
-		const h264::pps_t* pps = (const h264::pps_t*)op->pps;
-		const h264::sps_t* sps = (const h264::sps_t*)op->sps;
+		const h264::SliceHeader* slice_header = (const h264::SliceHeader*)op->slice_header;
+		const h264::PPS* pps = (const h264::PPS*)op->pps;
+		const h264::SPS* sps = (const h264::SPS*)op->sps;
 
 		ID3D12Resource* reference_frames[16] = {};
 		UINT reference_subresources[16] = {};

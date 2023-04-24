@@ -22,8 +22,10 @@
 #include "qoi.h"
 
 #define MINIMP4_IMPLEMENTATION
-#define MP4D_TRACE_SUPPORTED
 #include "minimp4.h"
+
+#define H264_IMPLEMENTATION
+#include "h264.h"
 
 
 

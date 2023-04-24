@@ -154,6 +154,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 			}
 			video->videoinstance.current_frame = target_frame;
 			video->videoinstance.flags |= wi::video::VideoInstance::Flags::DecoderReset;
+			video->videoinstance.flags &= ~wi::video::VideoInstance::Flags::InitialFirstFrameDecoded;
 		}
 		});
 	AddWidget(&timerSlider);
@@ -287,7 +288,7 @@ void VideoWindow::ResizeLayout()
 		const wi::video::Video& video = preview.video->videoResource.GetVideo();
 		h_aspect = (float)video.height / (float)video.width;
 	}
-	preview.SetSize(XMFLOAT2(preview.GetSize().x, preview.GetSize().x* h_aspect));
+	preview.SetSize(XMFLOAT2(preview.GetSize().x, preview.GetSize().x * h_aspect));
 
 	add(playpauseButton);
 	loopedCheckbox.SetPos(XMFLOAT2(playpauseButton.GetPos().x - loopedCheckbox.GetSize().x - 2, playpauseButton.GetPos().y));
