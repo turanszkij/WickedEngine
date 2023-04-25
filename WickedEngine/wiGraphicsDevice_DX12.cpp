@@ -7181,6 +7181,38 @@ using namespace dx12_internal;
 			&output,
 			&input
 		);
+
+		// Debug immediate submit-wait:
+#if 0
+		ComPtr<ID3D12Fence> fence;
+		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+		assert(SUCCEEDED(hr));
+
+		hr = commandlist.GetVideoDecodeCommandList()->Close();
+		assert(SUCCEEDED(hr));
+
+		CommandQueue& queue = queues[commandlist.queue];
+		queue.submit_cmds.push_back(commandlist.GetCommandList());
+		queue.queue->ExecuteCommandLists(
+			(UINT)queue.submit_cmds.size(),
+			queue.submit_cmds.data()
+		);
+		queue.submit_cmds.clear();
+
+		hr = queue.queue->Signal(fence.Get(), 1);
+		assert(SUCCEEDED(hr));
+		if (fence->GetCompletedValue() < 1)
+		{
+			hr = fence->SetEventOnCompletion(1, NULL);
+			assert(SUCCEEDED(hr));
+		}
+		fence->Signal(0);
+
+		hr = commandlist.GetCommandAllocator()->Reset();
+		assert(SUCCEEDED(hr));
+		hr = commandlist.GetGraphicsCommandList()->Reset(commandlist.GetCommandAllocator(), nullptr);
+		assert(SUCCEEDED(hr));
+#endif
 	}
 
 	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)
