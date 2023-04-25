@@ -1,6 +1,7 @@
 #include "wiVideo.h"
 #include "wiHelper.h"
 #include "wiRenderer.h"
+#include "wiBacklog.h"
 
 #include "Utility/minimp4.h"
 #include "Utility/h264.h"
@@ -82,6 +83,19 @@ namespace wi::video
 
 				if (track.handler_type == MP4D_HANDLER_TYPE_VIDE)
 				{
+					switch (track.object_type_indication)
+					{
+					case MP4_OBJECT_TYPE_AVC:
+						video->profile = VideoProfile::H264;
+						break;
+					case MP4_OBJECT_TYPE_HEVC:
+						wi::helper::messageBox("H265 (HEVC) video format is not supported yet!", "Error!");
+						return false;
+					default:
+						wi::helper::messageBox("Unknown video format!", "Error!");
+						return false;
+					}
+
 					// SPS:
 					video->sps_datas.clear();
 					video->sps_count = 0;
@@ -158,20 +172,6 @@ namespace wi::video
 							video->pps_count++;
 							index++;
 						}
-					}
-
-					switch (track.object_type_indication)
-					{
-					case MP4_OBJECT_TYPE_AVC:
-						video->profile = VideoProfile::H264;
-						break;
-					case MP4_OBJECT_TYPE_HEVC:
-						//video->profile = VideoProfile::H265;
-						assert(0); // not implemented
-						break;
-					default:
-						assert(0); // not implemented
-						break;
 					}
 
 					video->width = track.SampleDescription.video.width;
@@ -358,9 +358,14 @@ namespace wi::video
 				}
 				else if (track.handler_type == MP4D_HANDLER_TYPE_SOUN)
 				{
-
+					wi::backlog::post("Audio from video file is not implemented yet!");
 				}
 			}
+		}
+		else
+		{
+			wi::helper::messageBox("MP4 parsing failure!", "Error!");
+			return false;
 		}
 		MP4D_close(&mp4);
 		return success;
