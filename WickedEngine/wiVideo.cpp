@@ -5,6 +5,8 @@
 #include "Utility/minimp4.h"
 #include "Utility/h264.h"
 
+//#define DEBUG_DUMP_H264
+
 using namespace wi::graphics;
 
 namespace wi::video
@@ -72,6 +74,12 @@ namespace wi::video
 			for (uint32_t ntrack = 0; ntrack < mp4.track_count; ntrack++)
 			{
 				MP4D_track_t& track = mp4.track[ntrack];
+
+#ifdef DEBUG_DUMP_H264
+				wi::vector<uint8_t> dump;
+				size_t dump_offset = 0;
+#endif // DEBUG_DUMP_H264
+
 				if (track.handler_type == MP4D_HANDLER_TYPE_VIDE)
 				{
 					// SPS:
@@ -85,6 +93,14 @@ namespace wi::video
 						while (data = MP4D_read_sps(&mp4, ntrack, index, &size))
 						{
 							const uint8_t* sps_data = (const uint8_t*)data;
+#ifdef DEBUG_DUMP_H264
+							size_t additional_dump_size = sizeof(h264::start_code) + size;
+							dump.resize(dump.size() + additional_dump_size);
+							std::memcpy(dump.data() + dump_offset, h264::start_code, sizeof(h264::start_code));
+							std::memcpy(dump.data() + dump_offset + sizeof(h264::start_code), sps_data, size);
+							dump_offset += additional_dump_size;
+#endif // DEBUG_DUMP_H264
+
 							h264::Bitstream bs = {};
 							bs.init(sps_data, size);
 							h264::NALHeader nal = {};
@@ -121,6 +137,14 @@ namespace wi::video
 						while (data = MP4D_read_pps(&mp4, ntrack, index, &size))
 						{
 							const uint8_t* pps_data = (const uint8_t*)data;
+#ifdef DEBUG_DUMP_H264
+							size_t additional_dump_size = sizeof(h264::start_code) + size;
+							dump.resize(dump.size() + additional_dump_size);
+							std::memcpy(dump.data() + dump_offset, h264::start_code, sizeof(h264::start_code));
+							std::memcpy(dump.data() + dump_offset + sizeof(h264::start_code), pps_data, size);
+							dump_offset += additional_dump_size;
+#endif // DEBUG_DUMP_H264
+
 							h264::Bitstream bs = {};
 							bs.init(pps_data, size);
 							h264::NALHeader nal = {};
@@ -185,6 +209,14 @@ namespace wi::video
 							uint32_t size = ((uint32_t)src_buffer[0] << 24) | ((uint32_t)src_buffer[1] << 16) | ((uint32_t)src_buffer[2] << 8) | src_buffer[3];
 							size += 4;
 							assert(frame_bytes >= size);
+
+#ifdef DEBUG_DUMP_H264
+							size_t additional_dump_size = sizeof(h264::start_code) + size - 4;
+							dump.resize(dump.size() + additional_dump_size);
+							std::memcpy(dump.data() + dump_offset, h264::start_code, sizeof(h264::start_code));
+							std::memcpy(dump.data() + dump_offset + sizeof(h264::start_code), src_buffer + 4, size - 4);
+							dump_offset += additional_dump_size;
+#endif // DEBUG_DUMP_H264
 
 							h264::Bitstream bs = {};
 							bs.init(&src_buffer[4], frame_bytes);
@@ -256,6 +288,10 @@ namespace wi::video
 						info.timestamp_seconds = float(double(timestamp) * timescale_rcp);
 						info.duration_seconds = float(double(duration) * timescale_rcp);
 					}
+
+#ifdef DEBUG_DUMP_H264
+					wi::helper::FileWrite("dump.h264", dump.data(), dump.size());
+#endif // DEBUG_DUMP_H264
 
 					video->frame_display_order.resize(video->frames_infos.size());
 					for (size_t i = 0; i < video->frames_infos.size(); ++i)
