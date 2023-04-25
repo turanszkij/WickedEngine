@@ -6990,12 +6990,15 @@ using namespace dx12_internal;
 		pic_params.frame_num = slice_header->frame_num;
 		pic_params.pic_init_qp_minus26 = pps->pic_init_qp_minus26;
 		pic_params.pic_init_qs_minus26 = pps->pic_init_qs_minus26;
+		pic_params.chroma_qp_index_offset = pps->chroma_qp_index_offset;
+		pic_params.second_chroma_qp_index_offset = pps->second_chroma_qp_index_offset;
 		pic_params.log2_max_frame_num_minus4 = sps->log2_max_frame_num_minus4;
 		pic_params.pic_order_cnt_type = sps->pic_order_cnt_type;
 		pic_params.log2_max_pic_order_cnt_lsb_minus4 = sps->log2_max_pic_order_cnt_lsb_minus4;
 		pic_params.delta_pic_order_always_zero_flag = sps->delta_pic_order_always_zero_flag;
 		pic_params.direct_8x8_inference_flag = sps->direct_8x8_inference_flag;
 		pic_params.entropy_coding_mode_flag = pps->entropy_coding_mode_flag;
+		pic_params.pic_order_present_flag = pps->pic_order_present_flag;
 		pic_params.num_slice_groups_minus1 = pps->num_slice_groups_minus1;
 		assert(pic_params.num_slice_groups_minus1 == 0);   // FMO Not supported by VA
 		pic_params.slice_group_map_type = pps->slice_group_map_type;
