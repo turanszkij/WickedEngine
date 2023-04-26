@@ -773,6 +773,7 @@ namespace wi::graphics
 		size_t pps_count = 0;
 		const void* sps_datas = nullptr;
 		size_t sps_count = 0;
+		uint32_t num_dpb_slots = 0;
 	};
 
 

@@ -393,6 +393,7 @@ namespace wi::video
 		vd.pps_count = instance->video->pps_count;
 		vd.sps_datas = instance->video->sps_datas.data();
 		vd.sps_count = instance->video->sps_count;
+		vd.num_dpb_slots = video->num_dpb_slots;
 		bool success = device->CreateVideoDecoder(&vd, &instance->decoder);
 		assert(success);
 

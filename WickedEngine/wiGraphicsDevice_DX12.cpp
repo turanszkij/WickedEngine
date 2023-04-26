@@ -4531,7 +4531,7 @@ using namespace dx12_internal;
 		heap_desc.Format = video_decode_support.DecodeFormat;
 		heap_desc.FrameRate = { 0,1 };
 		heap_desc.BitRate = 0;
-		heap_desc.MaxDecodePictureBufferCount = num_dpb_slots;
+		heap_desc.MaxDecodePictureBufferCount = desc->num_dpb_slots;
 
 		if (video_decode_support.ConfigurationFlags & D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_HEIGHT_ALIGNMENT_MULTIPLE_32_REQUIRED)
 		{

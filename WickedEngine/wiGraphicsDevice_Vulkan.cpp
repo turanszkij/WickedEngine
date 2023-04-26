@@ -6194,7 +6194,6 @@ using namespace vulkan_internal;
 		}
 
 		num_reference_frames = std::min(num_reference_frames, video_capability_h264.video_capabilities.maxActiveReferencePictures);
-		const uint32_t num_dpb_slots = std::min(num_reference_frames + 1, video_capability_h264.video_capabilities.maxDpbSlots); // +1 for non-reference
 
 		VkVideoDecodeH264SessionParametersAddInfoKHR session_parameters_add_info_h264 = {};
 		session_parameters_add_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR;
@@ -6207,7 +6206,7 @@ using namespace vulkan_internal;
 		info.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_CREATE_INFO_KHR;
 		info.queueFamilyIndex = videoFamily;
 		info.maxActiveReferencePictures = num_reference_frames * 2; // *2: top and bottom field counts as two I think: https://vulkan.lunarg.com/doc/view/1.3.239.0/windows/1.3-extensions/vkspec.html#_video_decode_commands
-		info.maxDpbSlots = num_dpb_slots;
+		info.maxDpbSlots = std::min(desc->num_dpb_slots, video_capability_h264.video_capabilities.maxDpbSlots);
 		info.maxCodedExtent.width = std::min(desc->width, video_capability_h264.video_capabilities.maxCodedExtent.width);
 		info.maxCodedExtent.height = std::min(desc->height, video_capability_h264.video_capabilities.maxCodedExtent.height);
 		info.pictureFormat = _ConvertFormat(desc->format);
