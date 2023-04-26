@@ -6956,10 +6956,10 @@ using namespace dx12_internal;
 			pic_params.CurrPic.AssociatedFlag = 0;
 		}
 		pic_params.CurrPic.Index7Bits = (UCHAR)op->current_dpb;
-		//pic_params.CurrFieldOrderCnt[0] = op->poc[0];
-		//pic_params.CurrFieldOrderCnt[1] = op->poc[1];
-		pic_params.CurrFieldOrderCnt[0] = 65536;
-		pic_params.CurrFieldOrderCnt[1] = 65536;
+		pic_params.CurrFieldOrderCnt[0] = op->poc[0];
+		pic_params.CurrFieldOrderCnt[1] = op->poc[1];
+		//pic_params.CurrFieldOrderCnt[0] = 65536;
+		//pic_params.CurrFieldOrderCnt[1] = 65536;
 		for (uint32_t i = 0; i < 16; ++i)
 		{
 			pic_params.RefFrameList[i].bPicEntry = 0xFF;
