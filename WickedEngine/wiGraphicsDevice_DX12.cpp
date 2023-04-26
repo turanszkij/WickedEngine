@@ -6956,8 +6956,10 @@ using namespace dx12_internal;
 			pic_params.CurrPic.AssociatedFlag = 0;
 		}
 		pic_params.CurrPic.Index7Bits = (UCHAR)op->current_dpb;
-		pic_params.CurrFieldOrderCnt[0] = op->poc[0];
-		pic_params.CurrFieldOrderCnt[1] = op->poc[1];
+		//pic_params.CurrFieldOrderCnt[0] = op->poc[0];
+		//pic_params.CurrFieldOrderCnt[1] = op->poc[1];
+		pic_params.CurrFieldOrderCnt[0] = 65536;
+		pic_params.CurrFieldOrderCnt[1] = 65536;
 		for (uint32_t i = 0; i < 16; ++i)
 		{
 			pic_params.RefFrameList[i].bPicEntry = 0xFF;
@@ -7185,11 +7187,74 @@ using namespace dx12_internal;
 			&input
 		);
 
+		// Debug printout for pic params:
+#if 0
+		AllocConsole();
+		AttachConsole(GetCurrentProcessId());
+		HWND Handle = GetConsoleWindow();
+		freopen("CON", "w", stdout);
+		const DXVA_PicParams_H264* pPicParams = &pic_params;
+		printf("\n=============================================\n");
+		printf("wFrameWidthInMbsMinus1 = %d\n", pPicParams->wFrameWidthInMbsMinus1);
+		printf("wFrameHeightInMbsMinus1 = %d\n", pPicParams->wFrameHeightInMbsMinus1);
+		printf("CurrPic.Index7Bits = %d\n", pPicParams->CurrPic.Index7Bits);
+		printf("CurrPic.AssociatedFlag = %d\n", pPicParams->CurrPic.AssociatedFlag);
+		printf("num_ref_frames = %d\n", pPicParams->num_ref_frames);
+		printf("sp_for_switch_flag = %d\n", pPicParams->sp_for_switch_flag);
+		printf("field_pic_flag = %d\n", pPicParams->field_pic_flag);
+		printf("MbaffFrameFlag = %d\n", pPicParams->MbaffFrameFlag);
+		printf("residual_colour_transform_flag = %d\n", pPicParams->residual_colour_transform_flag);
+		printf("chroma_format_idc = %d\n", pPicParams->chroma_format_idc);
+		printf("RefPicFlag = %d\n", pPicParams->RefPicFlag);
+		printf("IntraPicFlag = %d\n", pPicParams->IntraPicFlag);
+		printf("constrained_intra_pred_flag = %d\n", pPicParams->constrained_intra_pred_flag);
+		printf("MinLumaBipredSize8x8Flag = %d\n", pPicParams->MinLumaBipredSize8x8Flag);
+		printf("weighted_pred_flag = %d\n", pPicParams->weighted_pred_flag);
+		printf("weighted_bipred_idc = %d\n", pPicParams->weighted_bipred_idc);
+		printf("MbsConsecutiveFlag = %d\n", pPicParams->MbsConsecutiveFlag);
+		printf("frame_mbs_only_flag = %d\n", pPicParams->frame_mbs_only_flag);
+		printf("transform_8x8_mode_flag = %d\n", pPicParams->transform_8x8_mode_flag);
+		printf("StatusReportFeedbackNumber = %d\n", pPicParams->StatusReportFeedbackNumber);
+		printf("CurrFieldOrderCnt[0] = %d\n", pPicParams->CurrFieldOrderCnt[0]);
+		printf("CurrFieldOrderCnt[1] = %d\n", pPicParams->CurrFieldOrderCnt[1]);
+		printf("chroma_qp_index_offset = %d\n", pPicParams->chroma_qp_index_offset);
+		printf("second_chroma_qp_index_offset = %d\n", pPicParams->second_chroma_qp_index_offset);
+		printf("ContinuationFlag = %d\n", pPicParams->ContinuationFlag);
+		printf("pic_init_qp_minus26 = %d\n", pPicParams->pic_init_qp_minus26);
+		printf("pic_init_qs_minus26 = %d\n", pPicParams->pic_init_qs_minus26);
+		printf("num_ref_idx_l0_active_minus1 = %d\n", pPicParams->num_ref_idx_l0_active_minus1);
+		printf("num_ref_idx_l1_active_minus1 = %d\n", pPicParams->num_ref_idx_l1_active_minus1);
+		printf("frame_num = %d\n", pPicParams->frame_num);
+		printf("log2_max_frame_num_minus4 = %d\n", pPicParams->log2_max_frame_num_minus4);
+		printf("pic_order_cnt_type = %d\n", pPicParams->pic_order_cnt_type);
+		printf("log2_max_pic_order_cnt_lsb_minus4 = %d\n", pPicParams->log2_max_pic_order_cnt_lsb_minus4);
+		printf("delta_pic_order_always_zero_flag = %d\n", pPicParams->delta_pic_order_always_zero_flag);
+		printf("direct_8x8_inference_flag = %d\n", pPicParams->direct_8x8_inference_flag);
+		printf("entropy_coding_mode_flag = %d\n", pPicParams->entropy_coding_mode_flag);
+		printf("pic_order_present_flag = %d\n", pPicParams->pic_order_present_flag);
+		printf("deblocking_filter_control_present_flag = %d\n", pPicParams->deblocking_filter_control_present_flag);
+		printf("redundant_pic_cnt_present_flag = %d\n", pPicParams->redundant_pic_cnt_present_flag);
+		printf("num_slice_groups_minus1 = %d\n", pPicParams->num_slice_groups_minus1);
+		printf("slice_group_map_type = %d\n", pPicParams->slice_group_map_type);
+		printf("slice_group_change_rate_minus1 = %d\n", pPicParams->slice_group_change_rate_minus1);
+		printf("Reserved8BitsB = %d\n", pPicParams->Reserved8BitsB);
+		printf("UsedForReferenceFlags 0x%08x\n", pPicParams->UsedForReferenceFlags);
+		printf("NonExistingFrameFlags 0x%08x\n", pPicParams->NonExistingFrameFlags);
+#endif
+
 		// Debug immediate submit-wait:
 #if 0
 		ComPtr<ID3D12Fence> fence;
 		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 		assert(SUCCEEDED(hr));
+
+		//D3D12_RESOURCE_BARRIER bar = {};
+		//bar.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		//bar.Transition.pResource = dpb_internal->resource.Get();
+		//bar.Transition.StateBefore = D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE;
+		//bar.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+		//bar.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		//commandlist.GetVideoDecodeCommandList()->ResourceBarrier(1, &bar);
 
 		hr = commandlist.GetVideoDecodeCommandList()->Close();
 		assert(SUCCEEDED(hr));
