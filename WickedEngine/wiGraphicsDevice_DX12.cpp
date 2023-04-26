@@ -4516,14 +4516,6 @@ using namespace dx12_internal;
 		video_decoder->internal_state = internal_state;
 		video_decoder->desc = *desc;
 
-		uint32_t num_reference_frames = 0;
-		for (uint32_t i = 0; i < desc->sps_count; ++i)
-		{
-			const h264::SPS* sps = (const h264::SPS*)desc->sps_datas + i;
-			num_reference_frames = std::max(num_reference_frames, (uint32_t)sps->num_ref_frames);
-		}
-		uint32_t num_dpb_slots = num_reference_frames + 1;
-
 		D3D12_VIDEO_DECODER_HEAP_DESC heap_desc = {};
 		heap_desc.Configuration = decoder_desc.Configuration;
 		heap_desc.DecodeWidth = video_decode_support.Width;
@@ -4539,10 +4531,12 @@ using namespace dx12_internal;
 			heap_desc.DecodeHeight = AlignTo(video_decode_support.Height, 32u);
 		}
 
+#if 0
 		D3D12_FEATURE_DATA_VIDEO_DECODER_HEAP_SIZE video_decoder_heap_size = {};
 		video_decoder_heap_size.VideoDecoderHeapDesc = heap_desc;
 		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODER_HEAP_SIZE, &video_decoder_heap_size, sizeof(video_decoder_heap_size));
 		assert(SUCCEEDED(hr));
+#endif
 
 		hr = video_device->CreateVideoDecoderHeap(&heap_desc, IID_PPV_ARGS(&internal_state->decoder_heap));
 		assert(SUCCEEDED(hr));
