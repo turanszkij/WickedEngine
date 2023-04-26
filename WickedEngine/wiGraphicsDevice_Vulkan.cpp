@@ -594,7 +594,7 @@ namespace vulkan_internal
 		{
 			ss += "[Vulkan Error]: ";
 			ss += callback_data->pMessage;
-#if 0
+#if 1
 			wi::backlog::post(ss, wi::backlog::LogLevel::Error);
 #else
 			OutputDebugStringA(callback_data->pMessage);
@@ -1126,6 +1126,7 @@ namespace vulkan_internal
 		}
 		if (!valid)
 		{
+			internal_state->desc.format = Format::B8G8R8A8_UNORM;
 			surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
 			surfaceFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 		}
@@ -1486,7 +1487,14 @@ using namespace vulkan_internal;
 			submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
 			submitInfo.commandBufferInfoCount = 1;
 			submitInfo.pCommandBufferInfos = &cbSubmitInfo;
-			submitInfo.signalSemaphoreInfoCount = 2;
+			if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
+			{
+				submitInfo.signalSemaphoreInfoCount = 2;
+			}
+			else
+			{
+				submitInfo.signalSemaphoreInfoCount = 1;
+			}
 			submitInfo.pSignalSemaphoreInfos = signalSemaphoreInfos;
 
 			std::scoped_lock lock(device->queues[QUEUE_GRAPHICS].locker);
@@ -3649,7 +3657,13 @@ using namespace vulkan_internal;
 			return false;
 		}
 
-		return CreateSwapChainInternal(internal_state.get(), physicalDevice, device, allocationhandler);
+		bool success = CreateSwapChainInternal(internal_state.get(), physicalDevice, device, allocationhandler);
+		assert(success);
+
+		// The requested swapchain format is overridden if it wasn't supported:
+		swapchain->desc.format = internal_state->desc.format;
+
+		return success;
 	}
 	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer) const
 	{
