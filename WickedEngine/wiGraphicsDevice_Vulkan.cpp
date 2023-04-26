@@ -1387,38 +1387,56 @@ using namespace vulkan_internal;
 		res = vkEndCommandBuffer(cmd.transitionCommandBuffer);
 		assert(res == VK_SUCCESS);
 
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.pCommandBuffers = &cmd.transferCommandBuffer;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pSignalSemaphores = &cmd.semaphores[0];
-		submitInfo.signalSemaphoreCount = 1;
+		VkCommandBufferSubmitInfo cbSubmitInfo{};
+		cbSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+		cbSubmitInfo.commandBuffer = cmd.transferCommandBuffer;
+
+		VkSemaphoreSubmitInfoKHR signalSemaphoreInfo{};
+		signalSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+		signalSemaphoreInfo.semaphore = cmd.semaphores[0];
+
+		VkSubmitInfo2 submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+		submitInfo.commandBufferInfoCount = 1;
+		submitInfo.pCommandBufferInfos = &cbSubmitInfo;
+		submitInfo.signalSemaphoreInfoCount = 1;
+		submitInfo.pSignalSemaphoreInfos = &signalSemaphoreInfo;
 		device->queues[QUEUE_COPY].locker.lock();
-		res = vkQueueSubmit(device->queues[QUEUE_COPY].queue, 1, &submitInfo, VK_NULL_HANDLE);
+		res = vkQueueSubmit2(device->queues[QUEUE_COPY].queue, 1, &submitInfo, VK_NULL_HANDLE);
 		assert(res == VK_SUCCESS);
 		device->queues[QUEUE_COPY].locker.unlock();
 
-		submitInfo.pCommandBuffers = &cmd.transitionCommandBuffer;
-		submitInfo.commandBufferCount = 1;
-		VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		submitInfo.pWaitDstStageMask = &wait_stage;
-		submitInfo.pWaitSemaphores = &cmd.semaphores[0];
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &cmd.semaphores[1];
-		submitInfo.signalSemaphoreCount = 1;
+		VkSemaphoreSubmitInfoKHR waitSemaphoreInfo{};
+		waitSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+		waitSemaphoreInfo.semaphore = cmd.semaphores[0];
+		waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+
+		cbSubmitInfo.commandBuffer = cmd.transitionCommandBuffer;
+		signalSemaphoreInfo.semaphore = cmd.semaphores[1];
+		
+
+		submitInfo.waitSemaphoreInfoCount = 1;
+		submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
+		submitInfo.commandBufferInfoCount = 1;
+		submitInfo.pCommandBufferInfos = &cbSubmitInfo;
+		submitInfo.signalSemaphoreInfoCount = 1;
+		submitInfo.pSignalSemaphoreInfos = &signalSemaphoreInfo;
+
 		device->queues[QUEUE_GRAPHICS].locker.lock();
-		res = vkQueueSubmit(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, VK_NULL_HANDLE);
+		res = vkQueueSubmit2(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, VK_NULL_HANDLE);
 		assert(res == VK_SUCCESS);
 		device->queues[QUEUE_GRAPHICS].locker.unlock();
 
-		submitInfo.pCommandBuffers = nullptr;
-		submitInfo.commandBufferCount = 0;
-		submitInfo.pSignalSemaphores = nullptr;
-		submitInfo.signalSemaphoreCount = 0;
-		submitInfo.pWaitSemaphores = &cmd.semaphores[1];
-		submitInfo.waitSemaphoreCount = 1;
+		waitSemaphoreInfo.semaphore = cmd.semaphores[1];
+		submitInfo.waitSemaphoreInfoCount = 1;
+		submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
+		submitInfo.commandBufferInfoCount = 0;
+		submitInfo.pCommandBufferInfos = nullptr;
+		submitInfo.signalSemaphoreInfoCount = 0;
+		submitInfo.pSignalSemaphoreInfos = nullptr;
+
 		device->queues[QUEUE_COMPUTE].locker.lock();
-		res = vkQueueSubmit(device->queues[QUEUE_COMPUTE].queue, 1, &submitInfo, cmd.fence); // final submit also signals fence!
+		res = vkQueueSubmit2(device->queues[QUEUE_COMPUTE].queue, 1, &submitInfo, cmd.fence); // final submit also signals fence!
 		assert(res == VK_SUCCESS);
 		device->queues[QUEUE_COMPUTE].locker.unlock();
 
@@ -6989,9 +7007,12 @@ using namespace vulkan_internal;
 				barrier.image = internal_state->resource;
 				barrier.oldLayout = _ConvertImageLayout(image.layout_before);
 				barrier.newLayout = _ConvertImageLayout(image.layout);
+
+				assert(barrier.newLayout != VK_IMAGE_LAYOUT_UNDEFINED);
+
 				barrier.srcStageMask = _ConvertPipelineStage(image.layout_before);
-				barrier.srcAccessMask = _ParseResourceState(image.layout_before);
 				barrier.dstStageMask = _ConvertPipelineStage(image.layout);
+				barrier.srcAccessMask = _ParseResourceState(image.layout_before);
 				barrier.dstAccessMask = _ParseResourceState(image.layout);
 				if (IsFormatDepthSupport(desc.format))
 				{
@@ -7020,9 +7041,12 @@ using namespace vulkan_internal;
 				barrier.image = internal_state->resource;
 				barrier.oldLayout = _ConvertImageLayout(image.layout);
 				barrier.newLayout = _ConvertImageLayout(image.layout_after);
+
+				assert(barrier.newLayout != VK_IMAGE_LAYOUT_UNDEFINED);
+
 				barrier.srcStageMask = _ConvertPipelineStage(image.layout);
-				barrier.srcAccessMask = _ParseResourceState(image.layout);
 				barrier.dstStageMask = _ConvertPipelineStage(image.layout_after);
+				barrier.srcAccessMask = _ParseResourceState(image.layout);
 				barrier.dstAccessMask = _ParseResourceState(image.layout_after);
 				if (IsFormatDepthSupport(desc.format))
 				{
@@ -7780,7 +7804,7 @@ using namespace vulkan_internal;
 		switch (heap->desc.type)
 		{
 		case GpuQueryType::TIMESTAMP:
-			vkCmdWriteTimestamp(commandlist.GetCommandBuffer(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, internal_state->pool, index);
+			vkCmdWriteTimestamp2(commandlist.GetCommandBuffer(), VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, internal_state->pool, index);
 			break;
 		case GpuQueryType::OCCLUSION_BINARY:
 		case GpuQueryType::OCCLUSION:
@@ -7859,9 +7883,9 @@ using namespace vulkan_internal;
 				barrierdesc.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
 				barrierdesc.pNext = nullptr;
 				barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-				barrierdesc.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 				barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-				barrierdesc.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+				barrierdesc.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+				barrierdesc.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
 
 				if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 				{
