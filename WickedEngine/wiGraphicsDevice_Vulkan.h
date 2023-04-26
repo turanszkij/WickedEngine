@@ -111,12 +111,10 @@ namespace wi::graphics
 			wi::vector<SwapChain> swapchain_updates;
 			wi::vector<VkSwapchainKHR> submit_swapchains;
 			wi::vector<uint32_t> submit_swapChainImageIndices;
-			wi::vector<VkPipelineStageFlags> submit_waitStages;
-			wi::vector<VkSemaphore> submit_waitSemaphores;
-			wi::vector<uint64_t> submit_waitValues;
+			wi::vector<VkSemaphoreSubmitInfo> submit_waitSemaphoreInfos;
 			wi::vector<VkSemaphore> submit_signalSemaphores;
-			wi::vector<uint64_t> submit_signalValues;
-			wi::vector<VkCommandBuffer> submit_cmds;
+			wi::vector<VkSemaphoreSubmitInfo> submit_signalSemaphoreInfos;
+			wi::vector<VkCommandBufferSubmitInfo> submit_cmds;
 
 			bool sparse_binding_supported = false;
 			std::mutex locker;
@@ -217,14 +215,14 @@ namespace wi::graphics
 			ShadingRate prev_shadingrate = {};
 			wi::vector<SwapChain> prev_swapchains;
 			bool dirty_pso = {};
-			wi::vector<VkMemoryBarrier> frame_memoryBarriers;
-			wi::vector<VkImageMemoryBarrier> frame_imageBarriers;
-			wi::vector<VkBufferMemoryBarrier> frame_bufferBarriers;
+			wi::vector<VkMemoryBarrier2> frame_memoryBarriers;
+			wi::vector<VkImageMemoryBarrier2> frame_imageBarriers;
+			wi::vector<VkBufferMemoryBarrier2> frame_bufferBarriers;
 			wi::vector<VkAccelerationStructureGeometryKHR> accelerationstructure_build_geometries;
 			wi::vector<VkAccelerationStructureBuildRangeInfoKHR> accelerationstructure_build_ranges;
 			RenderPassInfo renderpass_info;
-			wi::vector<VkImageMemoryBarrier> renderpass_barriers_begin;
-			wi::vector<VkImageMemoryBarrier> renderpass_barriers_end;
+			wi::vector<VkImageMemoryBarrier2> renderpass_barriers_begin;
+			wi::vector<VkImageMemoryBarrier2> renderpass_barriers_end;
 
 			void reset(uint32_t bufferindex)
 			{

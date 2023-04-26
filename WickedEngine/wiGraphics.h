@@ -957,6 +957,7 @@ namespace wi::graphics
 			image.type = Type::RESOLVE;
 			image.texture = resource;
 			image.layout_before = layout_before;
+			image.layout = ResourceState::COPY_DST;
 			image.layout_after = layout_after;
 			image.subresource = subresource_SRV;
 			return image;
@@ -974,6 +975,7 @@ namespace wi::graphics
 			image.type = Type::RESOLVE_DEPTH;
 			image.texture = resource;
 			image.layout_before = layout_before;
+			image.layout = ResourceState::COPY_DST;
 			image.layout_after = layout_after;
 			image.subresource = subresource_SRV;
 			image.depth_resolve_mode = depth_resolve_mode;
