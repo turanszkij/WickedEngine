@@ -377,6 +377,11 @@ namespace wi::video
 		instance->flags &= ~VideoInstance::Flags::InitialFirstFrameDecoded;
 
 		GraphicsDevice* device = GetDevice();
+		if (!device->CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H264))
+		{
+			wi::helper::messageBox("Video decoding is not supported by your GPU!\nYou can attempt to update graphics driver.\nThere is no CPU decoding implemented yet, video will be disabled!", "Warning!");
+			return false;
+		}
 
 		VideoDesc vd;
 		vd.width = video->padded_width;
@@ -430,6 +435,8 @@ namespace wi::video
 
 	bool IsDecodingRequired(const VideoInstance* instance, float dt)
 	{
+		if (!GetDevice()->CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H264))
+			return false;
 		if (instance == nullptr || instance->video == nullptr)
 			return false;
 		if (!has_flag(instance->flags, VideoInstance::Flags::InitialFirstFrameDecoded))
@@ -440,6 +447,8 @@ namespace wi::video
 	}
 	void UpdateVideo(VideoInstance* instance, float dt, CommandList cmd)
 	{
+		if (!GetDevice()->CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H264))
+			return;
 		if (instance == nullptr || instance->video == nullptr)
 			return;
 

@@ -210,6 +210,7 @@ void VideoWindow::SetEntity(Entity entity)
 			{
 				str += "GPU decode: Not supported\n";
 			}
+			str += "Audio track: not implemented\n";
 			str += "Display buffers in use: " + std::to_string(video->videoinstance.output_textures_used.size()) + "\n\n";
 
 			str += "title : " + videofile.title + "\n";
