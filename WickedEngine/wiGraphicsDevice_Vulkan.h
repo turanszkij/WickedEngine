@@ -98,12 +98,10 @@ namespace wi::graphics
 			wi::vector<SwapChain> swapchain_updates;
 			wi::vector<VkSwapchainKHR> submit_swapchains;
 			wi::vector<uint32_t> submit_swapChainImageIndices;
-			wi::vector<VkPipelineStageFlags> submit_waitStages;
-			wi::vector<VkSemaphore> submit_waitSemaphores;
-			wi::vector<uint64_t> submit_waitValues;
+			wi::vector<VkSemaphoreSubmitInfo> submit_waitSemaphoreInfos;
 			wi::vector<VkSemaphore> submit_signalSemaphores;
-			wi::vector<uint64_t> submit_signalValues;
-			wi::vector<VkCommandBuffer> submit_cmds;
+			wi::vector<VkSemaphoreSubmitInfo> submit_signalSemaphoreInfos;
+			wi::vector<VkCommandBufferSubmitInfo> submit_cmds;
 
 			bool sparse_binding_supported = false;
 			std::mutex locker;

@@ -1212,29 +1212,18 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::CommandQueue::submit(GraphicsDevice_Vulkan* device, VkFence fence)
 	{
 		locker.lock();
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = (uint32_t)submit_cmds.size();
-		submitInfo.pCommandBuffers = submit_cmds.data();
+		VkSubmitInfo2 submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+		submitInfo.commandBufferInfoCount = (uint32_t)submit_cmds.size();
+		submitInfo.pCommandBufferInfos = submit_cmds.data();
 
-		submitInfo.waitSemaphoreCount = (uint32_t)submit_waitSemaphores.size();
-		submitInfo.pWaitSemaphores = submit_waitSemaphores.data();
-		submitInfo.pWaitDstStageMask = submit_waitStages.data();
+		submitInfo.waitSemaphoreInfoCount = (uint32_t)submit_waitSemaphoreInfos.size();
+		submitInfo.pWaitSemaphoreInfos = submit_waitSemaphoreInfos.data();
 
-		submitInfo.signalSemaphoreCount = (uint32_t)submit_signalSemaphores.size();
-		submitInfo.pSignalSemaphores = submit_signalSemaphores.data();
+		submitInfo.signalSemaphoreInfoCount = (uint32_t)submit_signalSemaphoreInfos.size();
+		submitInfo.pSignalSemaphoreInfos = submit_signalSemaphoreInfos.data();
 
-		VkTimelineSemaphoreSubmitInfo timelineInfo = {};
-		timelineInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
-		timelineInfo.pNext = nullptr;
-		timelineInfo.waitSemaphoreValueCount = (uint32_t)submit_waitValues.size();
-		timelineInfo.pWaitSemaphoreValues = submit_waitValues.data();
-		timelineInfo.signalSemaphoreValueCount = (uint32_t)submit_signalValues.size();
-		timelineInfo.pSignalSemaphoreValues = submit_signalValues.data();
-
-		submitInfo.pNext = &timelineInfo;
-
-		VkResult res = vkQueueSubmit(queue, 1, &submitInfo, fence);
+		VkResult res = vkQueueSubmit2(queue, 1, &submitInfo, fence);
 		assert(res == VK_SUCCESS);
 
 		if (!submit_swapchains.empty())
@@ -1269,11 +1258,9 @@ using namespace vulkan_internal;
 		swapchain_updates.clear();
 		submit_swapchains.clear();
 		submit_swapChainImageIndices.clear();
-		submit_waitStages.clear();
-		submit_waitSemaphores.clear();
-		submit_waitValues.clear();
+		submit_waitSemaphoreInfos.clear();
 		submit_signalSemaphores.clear();
-		submit_signalValues.clear();
+		submit_signalSemaphoreInfos.clear();
 		submit_cmds.clear();
 		locker.unlock();
 	}
@@ -1391,7 +1378,7 @@ using namespace vulkan_internal;
 		cbSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 		cbSubmitInfo.commandBuffer = cmd.transferCommandBuffer;
 
-		VkSemaphoreSubmitInfoKHR signalSemaphoreInfo{};
+		VkSemaphoreSubmitInfo signalSemaphoreInfo{};
 		signalSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		signalSemaphoreInfo.semaphore = cmd.semaphores[0];
 
@@ -1406,7 +1393,7 @@ using namespace vulkan_internal;
 		assert(res == VK_SUCCESS);
 		device->queues[QUEUE_COPY].locker.unlock();
 
-		VkSemaphoreSubmitInfoKHR waitSemaphoreInfo{};
+		VkSemaphoreSubmitInfo waitSemaphoreInfo{};
 		waitSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		waitSemaphoreInfo.semaphore = cmd.semaphores[0];
 		waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
@@ -1414,7 +1401,6 @@ using namespace vulkan_internal;
 		cbSubmitInfo.commandBuffer = cmd.transitionCommandBuffer;
 		signalSemaphoreInfo.semaphore = cmd.semaphores[1];
 		
-
 		submitInfo.waitSemaphoreInfoCount = 1;
 		submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
 		submitInfo.commandBufferInfoCount = 1;
@@ -6354,7 +6340,10 @@ using namespace vulkan_internal;
 				assert(res == VK_SUCCESS);
 
 				CommandQueue& queue = queues[commandlist.queue];
-				queue.submit_cmds.push_back(commandlist.GetCommandBuffer());
+
+				VkCommandBufferSubmitInfo& cbSubmitInfo = queue.submit_cmds.emplace_back();
+				cbSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+				cbSubmitInfo.commandBuffer = commandlist.GetCommandBuffer();
 
 				queue.swapchain_updates = commandlist.prev_swapchains;
 				for (auto& swapchain : commandlist.prev_swapchains)
@@ -6363,11 +6352,18 @@ using namespace vulkan_internal;
 
 					queue.submit_swapchains.push_back(internal_state->swapChain);
 					queue.submit_swapChainImageIndices.push_back(internal_state->swapChainImageIndex);
-					queue.submit_waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-					queue.submit_waitSemaphores.push_back(internal_state->swapchainAcquireSemaphore);
-					queue.submit_waitValues.push_back(0); // not a timeline semaphore
+
+					VkSemaphoreSubmitInfo& waitSemaphore = queue.submit_waitSemaphoreInfos.emplace_back();
+					waitSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+					waitSemaphore.semaphore = internal_state->swapchainAcquireSemaphore;
+					waitSemaphore.value = 0; // not a timeline semaphore
+					waitSemaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+
 					queue.submit_signalSemaphores.push_back(internal_state->swapchainReleaseSemaphore);
-					queue.submit_signalValues.push_back(0); // not a timeline semaphore
+					VkSemaphoreSubmitInfo& signalSemaphore = queue.submit_signalSemaphoreInfos.emplace_back();
+					signalSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+					signalSemaphore.semaphore = internal_state->swapchainReleaseSemaphore;
+					signalSemaphore.value = 0; // not a timeline semaphore
 				}
 
 				if (commandlist.waited_on.load() || !commandlist.waits.empty())
@@ -6376,16 +6372,21 @@ using namespace vulkan_internal;
 					{
 						// Wait for command list dependency:
 						CommandList_Vulkan& waitcommandlist = GetCommandList(wait);
-						queue.submit_waitStages.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-						queue.submit_waitSemaphores.push_back(queues[waitcommandlist.queue].semaphore);
-						queue.submit_waitValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id);
+
+						VkSemaphoreSubmitInfo& waitSemaphore = queue.submit_waitSemaphoreInfos.emplace_back();
+						waitSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+						waitSemaphore.semaphore = queues[waitcommandlist.queue].semaphore;
+						waitSemaphore.value = FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id;
+						waitSemaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 					}
 
 					if (commandlist.waited_on.load())
 					{
 						// Signal this command list's completion:
-						queue.submit_signalSemaphores.push_back(queue.semaphore);
-						queue.submit_signalValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)commandlist.id);
+						VkSemaphoreSubmitInfo& signalSemaphore = queue.submit_signalSemaphoreInfos.emplace_back();
+						signalSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+						signalSemaphore.semaphore = queue.semaphore;
+						signalSemaphore.value = FRAMECOUNT * commandlists.size() + (uint64_t)commandlist.id;
 					}
 
 					queue.submit(this, VK_NULL_HANDLE);
