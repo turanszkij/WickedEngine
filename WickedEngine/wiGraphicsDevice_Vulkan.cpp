@@ -467,7 +467,7 @@ namespace vulkan_internal
 		}
 		if (has_flag(value, ResourceState::COPY_DST))
 		{
-			flags |= VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+			flags |= VK_ACCESS_2_TRANSFER_WRITE_BIT;
 		}
 
 		if (has_flag(value, ResourceState::RENDERTARGET))
@@ -7009,11 +7009,12 @@ using namespace vulkan_internal;
 				barrier.newLayout = _ConvertImageLayout(image.layout);
 
 				assert(barrier.newLayout != VK_IMAGE_LAYOUT_UNDEFINED);
-
+				
 				barrier.srcStageMask = _ConvertPipelineStage(image.layout_before);
 				barrier.dstStageMask = _ConvertPipelineStage(image.layout);
 				barrier.srcAccessMask = _ParseResourceState(image.layout_before);
 				barrier.dstAccessMask = _ParseResourceState(image.layout);
+
 				if (IsFormatDepthSupport(desc.format))
 				{
 					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -7048,6 +7049,7 @@ using namespace vulkan_internal;
 				barrier.dstStageMask = _ConvertPipelineStage(image.layout_after);
 				barrier.srcAccessMask = _ParseResourceState(image.layout);
 				barrier.dstAccessMask = _ParseResourceState(image.layout_after);
+
 				if (IsFormatDepthSupport(desc.format))
 				{
 					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
