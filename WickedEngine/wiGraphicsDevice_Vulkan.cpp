@@ -7885,8 +7885,8 @@ using namespace vulkan_internal;
 				VkMemoryBarrier2 barrierdesc = {};
 				barrierdesc.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
 				barrierdesc.pNext = nullptr;
-				barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-				barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+				barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 				barrierdesc.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
 				barrierdesc.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
 
@@ -7921,8 +7921,8 @@ using namespace vulkan_internal;
 				barrierdesc.oldLayout = _ConvertImageLayout(barrier.image.layout_before);
 				barrierdesc.newLayout = _ConvertImageLayout(barrier.image.layout_after);
 				barrierdesc.srcStageMask = _ConvertPipelineStage(barrier.image.layout_before);
-				barrierdesc.srcAccessMask = _ParseResourceState(barrier.image.layout_before);
 				barrierdesc.dstStageMask = _ConvertPipelineStage(barrier.image.layout_after);
+				barrierdesc.srcAccessMask = _ParseResourceState(barrier.image.layout_before);
 				barrierdesc.dstAccessMask = _ParseResourceState(barrier.image.layout_after);
 				if (IsFormatDepthSupport(desc.format))
 				{
@@ -7968,8 +7968,8 @@ using namespace vulkan_internal;
 				barrierdesc.size = desc.size;
 				barrierdesc.offset = 0;
 				barrierdesc.srcStageMask = _ConvertPipelineStage(barrier.buffer.state_before);
-				barrierdesc.srcAccessMask = _ParseResourceState(barrier.buffer.state_before);
 				barrierdesc.dstStageMask = _ConvertPipelineStage(barrier.buffer.state_after);
+				barrierdesc.srcAccessMask = _ParseResourceState(barrier.buffer.state_before);
 				barrierdesc.dstAccessMask = _ParseResourceState(barrier.buffer.state_after);
 				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
