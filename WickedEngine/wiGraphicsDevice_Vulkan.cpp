@@ -33,6 +33,16 @@ namespace wi::graphics
 
 namespace vulkan_internal
 {
+	// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
+	//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
+	enum
+	{
+		VULKAN_BINDING_SHIFT_B = 0,
+		VULKAN_BINDING_SHIFT_T = 1000,
+		VULKAN_BINDING_SHIFT_U = 2000,
+		VULKAN_BINDING_SHIFT_S = 3000,
+	};
+
 	// Converters:
 	constexpr VkFormat _ConvertFormat(Format value)
 	{
@@ -1046,7 +1056,7 @@ namespace vulkan_internal
 
 	inline const std::string GetCachePath()
 	{
-		return wi::helper::GetTempDirectoryPath() + "wiPipelineCache_Vulkan";
+		return wi::helper::GetTempDirectoryPath() + "/wiPipelineCache_Vulkan";
 	}
 
 	bool CreateSwapChainInternal(
@@ -1600,15 +1610,6 @@ using namespace vulkan_internal;
 		}
 	}
 
-	// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
-	//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
-	enum
-	{
-		VULKAN_BINDING_SHIFT_B = 0,
-		VULKAN_BINDING_SHIFT_T = 1000,
-		VULKAN_BINDING_SHIFT_U = 2000,
-		VULKAN_BINDING_SHIFT_S = 3000,
-	};
 	void GraphicsDevice_Vulkan::DescriptorBinder::init(GraphicsDevice_Vulkan* device)
 	{
 		this->device = device;
@@ -5486,10 +5487,6 @@ using namespace vulkan_internal;
 		pipelineInfo.pTessellationState = &tessellationInfo;
 
 		pipelineInfo.pDynamicState = &dynamicStateInfo;
-
-		if (desc->il == nullptr)
-		{
-		}
 
 		if (renderpass_info != nullptr)
 		{
