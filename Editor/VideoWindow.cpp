@@ -213,6 +213,8 @@ void VideoWindow::SetEntity(Entity entity)
 			str += "Audio track: not implemented\n";
 			str += "Display buffers in use: " + std::to_string(video->videoinstance.output_textures_used.size()) + "\n\n";
 
+			str += "Tip: if you have a material on this entity, the material textures will be replaced by video. This way you can set video textures into the 3D scene.\n\n";
+
 			str += "title : " + videofile.title + "\n";
 			str += "album : " + videofile.album + "\n";
 			str += "artist : " + videofile.artist + "\n";
