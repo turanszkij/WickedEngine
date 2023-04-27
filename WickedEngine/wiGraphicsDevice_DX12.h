@@ -222,7 +222,7 @@ namespace wi::graphics
 		void predispatch(CommandList cmd);
 
 	public:
-		GraphicsDevice_DX12(ValidationMode validationMode = ValidationMode::Disabled);
+		GraphicsDevice_DX12(ValidationMode validationMode = ValidationMode::Disabled, GPUPreference preference = GPUPreference::Discrete);
 		~GraphicsDevice_DX12() override;
 
 		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;

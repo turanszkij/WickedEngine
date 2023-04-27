@@ -31,6 +31,12 @@ namespace wi::graphics
 		Cpu,
 	};
 
+	enum class GPUPreference
+	{
+		Discrete,
+		Integrated,
+	};
+
 	enum class ShaderStage
 	{
 		MS,		// Mesh Shader

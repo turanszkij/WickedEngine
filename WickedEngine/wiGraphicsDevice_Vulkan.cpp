@@ -6,7 +6,6 @@
 #include "wiVersion.h"
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
-#include "wiArguments.h"
 
 #include "Utility/vulkan/vk_video/vulkan_video_codec_h264std_decode.h"
 #include "Utility/h264.h"
@@ -28,13 +27,6 @@
 #include <cstring>
 #include <iostream>
 #include <algorithm>
-
-// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
-//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
-#define VULKAN_BINDING_SHIFT_B 0
-#define VULKAN_BINDING_SHIFT_T 1000
-#define VULKAN_BINDING_SHIFT_U 2000
-#define VULKAN_BINDING_SHIFT_S 3000
 
 namespace wi::graphics
 {
@@ -1608,6 +1600,15 @@ using namespace vulkan_internal;
 		}
 	}
 
+	// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
+	//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
+	enum
+	{
+		VULKAN_BINDING_SHIFT_B = 0,
+		VULKAN_BINDING_SHIFT_T = 1000,
+		VULKAN_BINDING_SHIFT_U = 2000,
+		VULKAN_BINDING_SHIFT_S = 3000,
+	};
 	void GraphicsDevice_Vulkan::DescriptorBinder::init(GraphicsDevice_Vulkan* device)
 	{
 		this->device = device;
@@ -2284,7 +2285,7 @@ using namespace vulkan_internal;
 	}
 
 	// Engine functions
-	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wi::platform::window_type window, ValidationMode validationMode_)
+	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wi::platform::window_type window, ValidationMode validationMode_, GPUPreference preference)
 	{
 		wi::Timer timer;
 
@@ -2614,7 +2615,7 @@ using namespace vulkan_internal;
 				vkGetPhysicalDeviceProperties2(dev, &properties2);
 
 				bool priority = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-				if (wi::arguments::HasArgument("igpu"))
+				if (preference == GPUPreference::Integrated)
 				{
 					priority = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
 				}

@@ -5,7 +5,6 @@
 #include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
-#include "wiArguments.h"
 
 #include "Utility/dx12/dxgiformat.h"
 #include "Utility/dx12/d3d12.h"
@@ -2150,7 +2149,7 @@ using namespace dx12_internal;
 
 
 	// Engine functions
-	GraphicsDevice_DX12::GraphicsDevice_DX12(ValidationMode validationMode_)
+	GraphicsDevice_DX12::GraphicsDevice_DX12(ValidationMode validationMode_, GPUPreference preference)
 	{
 		wi::Timer timer;
 
@@ -2315,11 +2314,7 @@ using namespace dx12_internal;
 		{
 			if (queryByPreference)
 			{
-				if (wi::arguments::HasArgument("igpu"))
-				{
-					return dxgiFactory6->EnumAdapterByGpuPreference(index, DXGI_GPU_PREFERENCE_MINIMUM_POWER, IID_PPV_ARGS(ppAdapter));
-				}
-				return dxgiFactory6->EnumAdapterByGpuPreference(index, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(ppAdapter));
+				return dxgiFactory6->EnumAdapterByGpuPreference(index, preference == GPUPreference::Integrated ? DXGI_GPU_PREFERENCE_MINIMUM_POWER : DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(ppAdapter));
 			}
 			return dxgiFactory->EnumAdapters1(index, ppAdapter);
 		};
