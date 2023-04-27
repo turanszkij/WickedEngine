@@ -37,8 +37,8 @@ struct CD3DX12_RESOURCE_BARRIER : public D3D12_RESOURCE_BARRIER
         return result;
     }
     static inline CD3DX12_RESOURCE_BARRIER Aliasing(
-        _In_ ID3D12Resource* pResourceBefore,
-        _In_ ID3D12Resource* pResourceAfter) noexcept
+        _In_opt_ ID3D12Resource* pResourceBefore,
+        _In_opt_ ID3D12Resource* pResourceAfter) noexcept
     {
         CD3DX12_RESOURCE_BARRIER result = {};
         D3D12_RESOURCE_BARRIER &barrier = result;
@@ -48,7 +48,7 @@ struct CD3DX12_RESOURCE_BARRIER : public D3D12_RESOURCE_BARRIER
         return result;
     }
     static inline CD3DX12_RESOURCE_BARRIER UAV(
-        _In_ ID3D12Resource* pResource) noexcept
+        _In_opt_ ID3D12Resource* pResource) noexcept
     {
         CD3DX12_RESOURCE_BARRIER result = {};
         D3D12_RESOURCE_BARRIER &barrier = result;
@@ -184,8 +184,8 @@ public:
         pGlobalBarriers = pBarriers;
     }
 };
-
 #endif // D3D12_SDK_VERSION >= 608
+
 
 #endif // defined( __cplusplus )
 

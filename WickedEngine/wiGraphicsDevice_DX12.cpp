@@ -7,7 +7,6 @@
 #include "wiUnorderedSet.h"
 
 #include "Utility/dx12/dxgiformat.h"
-#include "Utility/dx12/d3d12.h"
 #include "Utility/dx12/d3dx12_default.h"
 #include "Utility/dx12/d3dx12_resource_helpers.h"
 #include "Utility/dx12/d3dx12_pipeline_state_stream.h"

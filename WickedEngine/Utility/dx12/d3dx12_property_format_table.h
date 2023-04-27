@@ -80,7 +80,7 @@ public:
     static UINT                                 GetWidthAlignment                           (DXGI_FORMAT Format);
     static UINT                                 GetHeightAlignment                          (DXGI_FORMAT Format);
     static UINT                                 GetDepthAlignment                           (DXGI_FORMAT Format);
-    static BOOL                                 Planar                                      (DXGI_FORMAT Format); 
+    static BOOL                                 Planar                                      (DXGI_FORMAT Format);
     static BOOL                                 NonOpaquePlanar                             (DXGI_FORMAT Format);
     static BOOL                                 YUV                                         (DXGI_FORMAT Format);
     static BOOL                                 Opaque                                      (DXGI_FORMAT Format);
@@ -120,4 +120,5 @@ private:
     static const FORMAT_DETAIL*                 GetFormatDetail             (DXGI_FORMAT  Format);
 
 };
+
 #endif

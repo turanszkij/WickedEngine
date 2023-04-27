@@ -621,6 +621,112 @@ struct CD3DX12_RASTERIZER_DESC1 : public D3D12_RASTERIZER_DESC1
 #endif // D3D12_SDK_VERSION >= 608
 
 //------------------------------------------------------------------------------------------------
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 610)
+struct CD3DX12_RASTERIZER_DESC2 : public D3D12_RASTERIZER_DESC2
+{
+    CD3DX12_RASTERIZER_DESC2() = default;
+    explicit CD3DX12_RASTERIZER_DESC2(const D3D12_RASTERIZER_DESC2& o) noexcept :
+        D3D12_RASTERIZER_DESC2(o)
+
+    {
+    }
+    explicit CD3DX12_RASTERIZER_DESC2(const D3D12_RASTERIZER_DESC1& o) noexcept
+    {
+        FillMode = o.FillMode;
+        CullMode = o.CullMode;
+        FrontCounterClockwise = o.FrontCounterClockwise;
+        DepthBias = o.DepthBias;
+        DepthBiasClamp = o.DepthBiasClamp;
+        SlopeScaledDepthBias = o.SlopeScaledDepthBias;
+        DepthClipEnable = o.DepthClipEnable;
+        LineRasterizationMode = D3D12_LINE_RASTERIZATION_MODE_ALIASED;
+        if (o.MultisampleEnable)
+        {
+            LineRasterizationMode = D3D12_LINE_RASTERIZATION_MODE_QUADRILATERAL_WIDE;
+        }
+        else if (o.AntialiasedLineEnable)
+        {
+            LineRasterizationMode = D3D12_LINE_RASTERIZATION_MODE_ALPHA_ANTIALIASED;
+        }
+        ForcedSampleCount = o.ForcedSampleCount;
+        ConservativeRaster = o.ConservativeRaster;
+    }
+    explicit CD3DX12_RASTERIZER_DESC2(const D3D12_RASTERIZER_DESC& o) noexcept
+        : CD3DX12_RASTERIZER_DESC2(CD3DX12_RASTERIZER_DESC1(o))
+    {
+    }
+    explicit CD3DX12_RASTERIZER_DESC2(CD3DX12_DEFAULT) noexcept
+    {
+        FillMode = D3D12_FILL_MODE_SOLID;
+        CullMode = D3D12_CULL_MODE_BACK;
+        FrontCounterClockwise = FALSE;
+        DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+        DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+        SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+        DepthClipEnable = TRUE;
+        LineRasterizationMode = D3D12_LINE_RASTERIZATION_MODE_ALIASED;
+        ForcedSampleCount = 0;
+        ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+    }
+    explicit CD3DX12_RASTERIZER_DESC2(
+        D3D12_FILL_MODE fillMode,
+        D3D12_CULL_MODE cullMode,
+        BOOL frontCounterClockwise,
+        FLOAT depthBias,
+        FLOAT depthBiasClamp,
+        FLOAT slopeScaledDepthBias,
+        BOOL depthClipEnable,
+        D3D12_LINE_RASTERIZATION_MODE lineRasterizationMode,
+        UINT forcedSampleCount,
+        D3D12_CONSERVATIVE_RASTERIZATION_MODE conservativeRaster) noexcept
+    {
+        FillMode = fillMode;
+        CullMode = cullMode;
+        FrontCounterClockwise = frontCounterClockwise;
+        DepthBias = depthBias;
+        DepthBiasClamp = depthBiasClamp;
+        SlopeScaledDepthBias = slopeScaledDepthBias;
+        DepthClipEnable = depthClipEnable;
+        LineRasterizationMode = lineRasterizationMode;
+        ForcedSampleCount = forcedSampleCount;
+        ConservativeRaster = conservativeRaster;
+    }
+
+
+    operator D3D12_RASTERIZER_DESC1() const noexcept
+    {
+        D3D12_RASTERIZER_DESC1 o;
+
+        o.FillMode = FillMode;
+        o.CullMode = CullMode;
+        o.FrontCounterClockwise = FrontCounterClockwise;
+        o.DepthBias = DepthBias;
+        o.DepthBiasClamp = DepthBiasClamp;
+        o.SlopeScaledDepthBias = SlopeScaledDepthBias;
+        o.DepthClipEnable = DepthClipEnable;
+        o.MultisampleEnable = FALSE;
+        o.AntialiasedLineEnable = FALSE;
+        if (LineRasterizationMode == D3D12_LINE_RASTERIZATION_MODE_ALPHA_ANTIALIASED)
+        {
+            o.AntialiasedLineEnable = TRUE;
+        }
+        else if (LineRasterizationMode != D3D12_LINE_RASTERIZATION_MODE_ALIASED)
+        {
+            o.MultisampleEnable = TRUE;
+        }
+        o.ForcedSampleCount = ForcedSampleCount;
+        o.ConservativeRaster = ConservativeRaster;
+
+        return o;
+    }
+    operator D3D12_RASTERIZER_DESC() const noexcept
+    {
+        return (D3D12_RASTERIZER_DESC)CD3DX12_RASTERIZER_DESC1((D3D12_RASTERIZER_DESC1)*this);
+    }
+};
+#endif // D3D12_SDK_VERSION >= 610
+
+//------------------------------------------------------------------------------------------------
 struct CD3DX12_RESOURCE_ALLOCATION_INFO : public D3D12_RESOURCE_ALLOCATION_INFO
 {
     CD3DX12_RESOURCE_ALLOCATION_INFO() = default;
@@ -669,6 +775,9 @@ struct CD3DX12_HEAP_PROPERTIES : public D3D12_HEAP_PROPERTIES
     bool IsCPUAccessible() const noexcept
     {
         return Type == D3D12_HEAP_TYPE_UPLOAD || Type == D3D12_HEAP_TYPE_READBACK
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+            || Type == D3D12_HEAP_TYPE_GPU_UPLOAD
+#endif
             || (Type == D3D12_HEAP_TYPE_CUSTOM &&
                 (CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE || CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_BACK));
     }

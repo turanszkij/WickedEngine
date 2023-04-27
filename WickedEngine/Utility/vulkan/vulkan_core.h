@@ -68,7 +68,7 @@ extern "C" {
 #define VK_API_VERSION_1_0 VK_MAKE_API_VERSION(0, 1, 0, 0)// Patch version should always be set to 0
 
 // Version of this file
-#define VK_HEADER_VERSION 246
+#define VK_HEADER_VERSION 249
 
 // Complete version of this file
 #define VK_HEADER_VERSION_COMPLETE VK_MAKE_API_VERSION(0, 1, 3, VK_HEADER_VERSION)
@@ -1002,6 +1002,7 @@ typedef enum VkStructureType {
     VK_STRUCTURE_TYPE_OPTICAL_FLOW_SESSION_CREATE_PRIVATE_DATA_INFO_NV = 1000464010,
     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LEGACY_DITHERING_FEATURES_EXT = 1000465000,
     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_PROTECTED_ACCESS_FEATURES_EXT = 1000466000,
+    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_POSITION_FETCH_FEATURES_KHR = 1000481000,
     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT = 1000482000,
     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_PROPERTIES_EXT = 1000482001,
     VK_STRUCTURE_TYPE_SHADER_CREATE_INFO_EXT = 1000482002,
@@ -9419,11 +9420,11 @@ typedef struct VkVideoDecodeH265SessionParametersCreateInfoKHR {
 } VkVideoDecodeH265SessionParametersCreateInfoKHR;
 
 typedef struct VkVideoDecodeH265PictureInfoKHR {
-    VkStructureType                   sType;
-    const void*                       pNext;
-    StdVideoDecodeH265PictureInfo*    pStdPictureInfo;
-    uint32_t                          sliceSegmentCount;
-    const uint32_t*                   pSliceSegmentOffsets;
+    VkStructureType                         sType;
+    const void*                             pNext;
+    const StdVideoDecodeH265PictureInfo*    pStdPictureInfo;
+    uint32_t                                sliceSegmentCount;
+    const uint32_t*                         pSliceSegmentOffsets;
 } VkVideoDecodeH265PictureInfoKHR;
 
 typedef struct VkVideoDecodeH265DpbSlotInfoKHR {
@@ -10228,6 +10229,17 @@ VKAPI_ATTR void VKAPI_CALL vkGetDeviceImageSparseMemoryRequirementsKHR(
     uint32_t*                                   pSparseMemoryRequirementCount,
     VkSparseImageMemoryRequirements2*           pSparseMemoryRequirements);
 #endif
+
+
+#define VK_KHR_ray_tracing_position_fetch 1
+#define VK_KHR_RAY_TRACING_POSITION_FETCH_SPEC_VERSION 1
+#define VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME "VK_KHR_ray_tracing_position_fetch"
+typedef struct VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR {
+    VkStructureType    sType;
+    void*              pNext;
+    VkBool32           rayTracingPositionFetch;
+} VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR;
+
 
 
 #define VK_EXT_debug_report 1
@@ -12090,6 +12102,7 @@ typedef enum VkBuildAccelerationStructureFlagBitsKHR {
 #ifdef VK_ENABLE_BETA_EXTENSIONS
     VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DISPLACEMENT_MICROMAP_UPDATE_NV = 0x00000200,
 #endif
+    VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DATA_ACCESS_KHR = 0x00000800,
     VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_NV = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
     VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_NV = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR,
     VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
@@ -14695,7 +14708,7 @@ typedef struct VkPhysicalDevice4444FormatsFeaturesEXT {
 
 
 #define VK_EXT_device_fault 1
-#define VK_EXT_DEVICE_FAULT_SPEC_VERSION  1
+#define VK_EXT_DEVICE_FAULT_SPEC_VERSION  2
 #define VK_EXT_DEVICE_FAULT_EXTENSION_NAME "VK_EXT_device_fault"
 
 typedef enum VkDeviceFaultAddressTypeEXT {
@@ -14759,6 +14772,8 @@ typedef struct VkDeviceFaultVendorBinaryHeaderVersionOneEXT {
     uint32_t                                     applicationNameOffset;
     uint32_t                                     applicationVersion;
     uint32_t                                     engineNameOffset;
+    uint32_t                                     engineVersion;
+    uint32_t                                     apiVersion;
 } VkDeviceFaultVendorBinaryHeaderVersionOneEXT;
 
 typedef VkResult (VKAPI_PTR *PFN_vkGetDeviceFaultInfoEXT)(VkDevice device, VkDeviceFaultCountsEXT* pFaultCounts, VkDeviceFaultInfoEXT* pFaultInfo);
@@ -15540,7 +15555,7 @@ VKAPI_ATTR void VKAPI_CALL vkGetMicromapBuildSizesEXT(
 
 
 #define VK_HUAWEI_cluster_culling_shader 1
-#define VK_HUAWEI_CLUSTER_CULLING_SHADER_SPEC_VERSION 1
+#define VK_HUAWEI_CLUSTER_CULLING_SHADER_SPEC_VERSION 2
 #define VK_HUAWEI_CLUSTER_CULLING_SHADER_EXTENSION_NAME "VK_HUAWEI_cluster_culling_shader"
 typedef struct VkPhysicalDeviceClusterCullingShaderFeaturesHUAWEI {
     VkStructureType    sType;

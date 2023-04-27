@@ -12,11 +12,28 @@
 #endif
 
 #include "d3d12.h"
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+inline bool operator==(const D3D12_RENDER_PASS_BEGINNING_ACCESS_PRESERVE_LOCAL_PARAMETERS& a, const D3D12_RENDER_PASS_ENDING_ACCESS_PRESERVE_LOCAL_PARAMETERS& b) noexcept
+{
+    return ((a.AdditionalWidth == b.AdditionalWidth) && (a.AdditionalHeight == b.AdditionalHeight));
+}
+
+inline bool operator==(const D3D12_RENDER_PASS_BEGINNING_ACCESS_PRESERVE_LOCAL_PARAMETERS& a, const D3D12_RENDER_PASS_BEGINNING_ACCESS_PRESERVE_LOCAL_PARAMETERS& b) noexcept
+{
+    return ((a.AdditionalWidth == b.AdditionalWidth) && (a.AdditionalHeight == b.AdditionalHeight));
+}
+
+inline bool operator==(const D3D12_RENDER_PASS_ENDING_ACCESS_PRESERVE_LOCAL_PARAMETERS& a, const D3D12_RENDER_PASS_ENDING_ACCESS_PRESERVE_LOCAL_PARAMETERS& b) noexcept
+{
+    return ((a.AdditionalWidth == b.AdditionalWidth) && (a.AdditionalHeight == b.AdditionalHeight));
+}
+#endif
 
 inline bool operator==( const D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS &a, const D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS &b) noexcept
 {
     return a.ClearValue == b.ClearValue;
 }
+
 inline bool operator==( const D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS &a, const D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS &b) noexcept
 {
     if (a.pSrcResource != b.pSrcResource) return false;
@@ -27,18 +44,46 @@ inline bool operator==( const D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS
     if (a.PreserveResolveSource != b.PreserveResolveSource) return false;
     return true;
 }
+
 inline bool operator==( const D3D12_RENDER_PASS_BEGINNING_ACCESS &a, const D3D12_RENDER_PASS_BEGINNING_ACCESS &b) noexcept
 {
     if (a.Type != b.Type) return false;
-    if (a.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR && !(a.Clear == b.Clear)) return false;
+    switch (a.Type)
+    {
+    case D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR:
+        if (!(a.Clear == b.Clear)) return false;
+        break;
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    case D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_RENDER:
+    case D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_SRV:
+    case D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_UAV:
+        if (!(a.PreserveLocal == b.PreserveLocal)) return false;
+        break;
+#endif
+    }
     return true;
 }
-inline bool operator==( const D3D12_RENDER_PASS_ENDING_ACCESS &a, const D3D12_RENDER_PASS_ENDING_ACCESS &b) noexcept
+
+inline bool operator==(const D3D12_RENDER_PASS_ENDING_ACCESS& a, const D3D12_RENDER_PASS_ENDING_ACCESS& b) noexcept
 {
     if (a.Type != b.Type) return false;
-    if (a.Type == D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE && !(a.Resolve == b.Resolve)) return false;
+    switch (a.Type)
+    {
+    case D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE:
+        if (!(a.Resolve == b.Resolve)) return false;
+        break;
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    case D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE_LOCAL_RENDER:
+    case D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE_LOCAL_SRV:
+    case D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE_LOCAL_UAV:
+        if (!(a.PreserveLocal == b.PreserveLocal)) return false;
+        break;
+#endif
+    }
+
     return true;
 }
+
 inline bool operator==( const D3D12_RENDER_PASS_RENDER_TARGET_DESC &a, const D3D12_RENDER_PASS_RENDER_TARGET_DESC &b) noexcept
 {
     if (a.cpuDescriptor.ptr != b.cpuDescriptor.ptr) return false;
