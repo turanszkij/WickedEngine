@@ -994,14 +994,7 @@ namespace vulkan_internal
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkVideoSessionKHR video_session = VK_NULL_HANDLE;
 		VkVideoSessionParametersKHR session_parameters = VK_NULL_HANDLE;
-		wi::vector<VkVideoSessionMemoryRequirementsKHR> requirements;
 		wi::vector<VmaAllocation> allocations;
-		wi::vector<VkBindVideoSessionMemoryInfoKHR> bind_session_memory_infos;
-		wi::vector<StdVideoH264PictureParameterSet> pps_array_h264 = {};
-		wi::vector<StdVideoH264ScalingLists> scalinglist_array_h264 = {};
-		wi::vector<StdVideoH264SequenceParameterSet> sps_array_h264 = {};
-		wi::vector<StdVideoH264SequenceParameterSetVui> vui_array_h264 = {};
-		wi::vector<StdVideoH264HrdParameters> hrd_array_h264 = {};
 
 		~VideoDecoder_Vulkan()
 		{
@@ -5959,13 +5952,13 @@ using namespace vulkan_internal;
 		video_decoder->internal_state = internal_state;
 		video_decoder->desc = *desc;
 
-		internal_state->pps_array_h264.resize(desc->pps_count);
-		internal_state->scalinglist_array_h264.resize(desc->pps_count);
+		wi::vector<StdVideoH264PictureParameterSet> pps_array_h264(desc->pps_count);
+		wi::vector<StdVideoH264ScalingLists> scalinglist_array_h264(desc->pps_count);
 		for (uint32_t i = 0; i < desc->pps_count; ++i)
 		{
 			const h264::PPS* pps = (const h264::PPS*)desc->pps_datas + i;
-			StdVideoH264PictureParameterSet& vk_pps = internal_state->pps_array_h264[i];
-			StdVideoH264ScalingLists& vk_scalinglist = internal_state->scalinglist_array_h264[i];
+			StdVideoH264PictureParameterSet& vk_pps = pps_array_h264[i];
+			StdVideoH264ScalingLists& vk_scalinglist = scalinglist_array_h264[i];
 
 			vk_pps.flags.transform_8x8_mode_flag = pps->transform_8x8_mode_flag;
 			vk_pps.flags.redundant_pic_cnt_present_flag = pps->redundant_pic_cnt_present_flag;
@@ -6012,13 +6005,13 @@ using namespace vulkan_internal;
 		}
 
 		uint32_t num_reference_frames = 0;
-		internal_state->sps_array_h264.resize(desc->sps_count);
-		internal_state->vui_array_h264.resize(desc->sps_count);
-		internal_state->hrd_array_h264.resize(desc->sps_count);
+		wi::vector<StdVideoH264SequenceParameterSet> sps_array_h264(desc->sps_count);
+		wi::vector<StdVideoH264SequenceParameterSetVui> vui_array_h264(desc->sps_count);
+		wi::vector<StdVideoH264HrdParameters> hrd_array_h264(desc->sps_count);
 		for (uint32_t i = 0; i < desc->sps_count; ++i)
 		{
 			const h264::SPS* sps = (const h264::SPS*)desc->sps_datas + i;
-			StdVideoH264SequenceParameterSet& vk_sps = internal_state->sps_array_h264[i];
+			StdVideoH264SequenceParameterSet& vk_sps = sps_array_h264[i];
 
 			vk_sps.flags.constraint_set0_flag = sps->constraint_set0_flag;
 			vk_sps.flags.constraint_set1_flag = sps->constraint_set1_flag;
@@ -6039,7 +6032,7 @@ using namespace vulkan_internal;
 
 			if (vk_sps.flags.vui_parameters_present_flag)
 			{
-				StdVideoH264SequenceParameterSetVui& vk_vui = internal_state->vui_array_h264[i];
+				StdVideoH264SequenceParameterSetVui& vk_vui = vui_array_h264[i];
 				vk_sps.pSequenceParameterSetVui = &vk_vui;
 				vk_vui.flags.aspect_ratio_info_present_flag = sps->vui.aspect_ratio_info_present_flag;
 				vk_vui.flags.overscan_info_present_flag = sps->vui.overscan_info_present_flag;
@@ -6068,7 +6061,7 @@ using namespace vulkan_internal;
 				vk_vui.chroma_sample_loc_type_top_field = sps->vui.chroma_sample_loc_type_top_field;
 				vk_vui.chroma_sample_loc_type_bottom_field = sps->vui.chroma_sample_loc_type_bottom_field;
 
-				StdVideoH264HrdParameters& vk_hrd = internal_state->hrd_array_h264[i];
+				StdVideoH264HrdParameters& vk_hrd = hrd_array_h264[i];
 				vk_vui.pHrdParameters = &vk_hrd;
 				vk_hrd.cpb_cnt_minus1 = sps->hrd.cpb_cnt_minus1;
 				vk_hrd.bit_rate_scale = sps->hrd.bit_rate_scale;
@@ -6178,9 +6171,9 @@ using namespace vulkan_internal;
 		VkVideoDecodeH264SessionParametersAddInfoKHR session_parameters_add_info_h264 = {};
 		session_parameters_add_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR;
 		session_parameters_add_info_h264.stdPPSCount = (uint32_t)desc->pps_count;
-		session_parameters_add_info_h264.pStdPPSs = internal_state->pps_array_h264.data();
+		session_parameters_add_info_h264.pStdPPSs = pps_array_h264.data();
 		session_parameters_add_info_h264.stdSPSCount = (uint32_t)desc->sps_count;
-		session_parameters_add_info_h264.pStdSPSs = internal_state->sps_array_h264.data();
+		session_parameters_add_info_h264.pStdSPSs = sps_array_h264.data();
 
 		VkVideoSessionCreateInfoKHR info = {};
 		info.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_CREATE_INFO_KHR;
@@ -6201,19 +6194,19 @@ using namespace vulkan_internal;
 		res = vkGetVideoSessionMemoryRequirementsKHR(device, internal_state->video_session, &requirement_count, nullptr);
 		assert(res == VK_SUCCESS);
 
-		internal_state->requirements.resize(requirement_count);
-		for (auto& x : internal_state->requirements)
+		wi::vector<VkVideoSessionMemoryRequirementsKHR> requirements(requirement_count);
+		for (auto& x : requirements)
 		{
 			x.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_MEMORY_REQUIREMENTS_KHR;
 		}
-		res = vkGetVideoSessionMemoryRequirementsKHR(device, internal_state->video_session, &requirement_count, internal_state->requirements.data());
+		res = vkGetVideoSessionMemoryRequirementsKHR(device, internal_state->video_session, &requirement_count, requirements.data());
 		assert(res == VK_SUCCESS);
 
 		internal_state->allocations.resize(requirement_count);
-		internal_state->bind_session_memory_infos.resize(requirement_count);
+		wi::vector<VkBindVideoSessionMemoryInfoKHR> bind_session_memory_infos(requirement_count);
 		for (uint32_t i = 0; i < requirement_count; ++i)
 		{
-			const VkVideoSessionMemoryRequirementsKHR& video_req = internal_state->requirements[i];
+			const VkVideoSessionMemoryRequirementsKHR& video_req = requirements[i];
 			VmaAllocationCreateInfo alloc_create_info = {};
 			alloc_create_info.memoryTypeBits = video_req.memoryRequirements.memoryTypeBits;
 			VmaAllocationInfo alloc_info = {};
@@ -6227,14 +6220,14 @@ using namespace vulkan_internal;
 			);
 			assert(res == VK_SUCCESS);
 
-			VkBindVideoSessionMemoryInfoKHR& bind_info = internal_state->bind_session_memory_infos[i];
+			VkBindVideoSessionMemoryInfoKHR& bind_info = bind_session_memory_infos[i];
 			bind_info.sType = VK_STRUCTURE_TYPE_BIND_VIDEO_SESSION_MEMORY_INFO_KHR;
 			bind_info.memory = alloc_info.deviceMemory;
 			bind_info.memoryBindIndex = video_req.memoryBindIndex;
 			bind_info.memoryOffset = alloc_info.offset;
 			bind_info.memorySize = alloc_info.size;
 		}
-		res = vkBindVideoSessionMemoryKHR(device, internal_state->video_session, requirement_count, internal_state->bind_session_memory_infos.data());
+		res = vkBindVideoSessionMemoryKHR(device, internal_state->video_session, requirement_count, bind_session_memory_infos.data());
 		assert(res == VK_SUCCESS);
 
 		VkVideoDecodeH264SessionParametersCreateInfoKHR session_parameters_info_h264 = {};
