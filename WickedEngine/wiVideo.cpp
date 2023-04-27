@@ -280,7 +280,7 @@ namespace wi::video
 
 							// Accept frame beginning NAL unit:
 							info.reference_priority = nal.idc;
-							info.size = sizeof(h264::start_code) + size - 4;
+							info.size = sizeof(h264::nal_start_code) + size - 4;
 							break;
 						}
 
@@ -341,8 +341,8 @@ namespace wi::video
 									continue;
 								}
 
-								std::memcpy(dst_buffer, h264::start_code, sizeof(h264::start_code));
-								std::memcpy(dst_buffer + sizeof(h264::start_code), src_buffer + 4, size - 4);
+								std::memcpy(dst_buffer, h264::nal_start_code, sizeof(h264::nal_start_code));
+								std::memcpy(dst_buffer + sizeof(h264::nal_start_code), src_buffer + 4, size - 4);
 								break;
 							}
 						}

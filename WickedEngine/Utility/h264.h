@@ -1,13 +1,31 @@
 #ifndef H264_H
 #define H264_H
 // Minimal H264 video parser
-// Do this:
+// Read the H264 specification: Rec. ITU-T H.264 (08/2021)
+// The following library was used as reference: https://github.com/aizvorski/h264bitstream/
+// 
+// Use this to parse metadata information about a H264 video before passing it to a decoder.
+// You can use the following functions to access H264 information:
+//
+// Create a bitstream to consume binary data:
+// Bitstream bs;
+// bs.init(data, size);
+//
+// Then you can read a NAL header after you detected a new NAL unit (starts with h264::start_code bytes):
+// void read_nal_header(NALHeader* nal, Bitstream* b);
+//
+// After the NAL unit type was determined, you can use the following functions to read PPS, SPS and SliceHeaders (depending on NAL unit type):
+// void read_pps(PPS* pps, Bitstream* b);
+// void read_sps(SPS* sps, Bitstream* b);
+// void read_slice_header(SliceHeader* sh, NALHeader* nal, const PPS* pps_array, const SPS* sps_array, Bitstream* b);
+//
+// Do this before you include this file in *one* C++ file to create the implementation:
 // #define H264_IMPLEMENTATION
-// before you include this file in *one* C++ file to create the implementation.
+
+#include <stdint.h>
 
 namespace h264 {
-	static constexpr uint8_t start_code[] = { 0,0,1 };
-	static constexpr int Extended_SAR = 255;
+	static constexpr uint8_t nal_start_code[] = { 0,0,1 };
 
 	struct SPS
 	{
@@ -22,7 +40,7 @@ namespace h264 {
 		int level_idc;
 		int seq_parameter_set_id;
 		int chroma_format_idc;
-		int residual_colour_transform_flag;
+		int separate_colour_plane_flag; // also called residual_colour_transform_flag
 		int bit_depth_luma_minus8;
 		int bit_depth_chroma_minus8;
 		int qpprime_y_zero_transform_bypass_flag;
@@ -267,10 +285,10 @@ namespace h264 {
 
 	struct Bitstream
 	{
-		const uint8_t* start = nullptr;
-		const uint8_t* p = nullptr;
-		const uint8_t* end = nullptr;
-		int bits_left = 0;
+		const uint8_t* start;
+		const uint8_t* p;
+		const uint8_t* end;
+		int bits_left;
 
 		constexpr void init(const uint8_t* buf, size_t size)
 		{
@@ -279,84 +297,51 @@ namespace h264 {
 			end = buf + size;
 			bits_left = 8;
 		}
-		constexpr void clone(const Bitstream* src)
+		constexpr bool byte_aligned()
 		{
-			start = src->p;
-			p = src->p;
-			end = src->end;
-			bits_left = src->bits_left;
-		}
-		constexpr uint32_t byte_aligned()
-		{
-			return (bits_left == 8);
+			return bits_left == 8;
 		}
 		constexpr bool eof() { if (p >= end) { return true; } else { return false; } }
-		constexpr uint32_t read_u1()
+		constexpr uint32_t u1()
 		{
 			uint32_t r = 0;
-
 			bits_left--;
-
 			if (!eof())
 			{
 				r = ((*(p)) >> bits_left) & 0x01;
 			}
-
-			if (bits_left == 0) { p++; bits_left = 8; }
-
-			return r;
-		}
-		constexpr void skip_u1()
-		{
-			bits_left--;
-			if (bits_left == 0) { p++; bits_left = 8; }
-		}
-		constexpr uint32_t peek_u1()
-		{
-			uint32_t r = 0;
-
-			if (!eof())
+			if (bits_left == 0)
 			{
-				r = ((*(p)) >> (bits_left - 1)) & 0x01;
+				p++;
+				bits_left = 8;
 			}
 			return r;
 		}
-		constexpr uint32_t read_u(int n)
+		constexpr uint32_t u(int n)
 		{
 			uint32_t r = 0;
 			for (int i = 0; i < n; i++)
 			{
-				r |= (read_u1() << (n - i - 1));
+				r |= (u1() << (n - i - 1));
 			}
 			return r;
 		}
-		constexpr void skip_u(int n)
-		{
-			for (int i = 0; i < n; i++)
-			{
-				skip_u1();
-			}
-		}
-		constexpr uint32_t read_u8()
-		{
-			return read_u(8);
-		}
-		constexpr uint32_t read_ue()
+		constexpr uint32_t ue()
 		{
 			int32_t r = 0;
 			int i = 0;
 
-			while ((read_u1() == 0) && (i < 32) && (!eof()))
+			while ((u1() == 0) && (i < 32) && (!eof()))
 			{
 				i++;
 			}
-			r = read_u(i);
+			r = u(i);
 			r += (1 << i) - 1;
 			return r;
 		}
-		constexpr int32_t read_se()
+		constexpr int32_t se()
 		{
-			int32_t r = read_ue();
+			int32_t r = ue();
 			if (r & 0x01)
 			{
 				r = (r + 1) / 2;
@@ -377,15 +362,13 @@ namespace h264 {
 #ifdef H264_IMPLEMENTATION
 	void read_nal_header(NALHeader* nal, Bitstream* b)
 	{
-		*nal = {};
-		uint32_t forbidden_zero_bit = b->read_u(1);
+		uint32_t forbidden_zero_bit = b->u(1);
 		assert(forbidden_zero_bit == 0);
-		nal->idc = (h264::NAL_REF_IDC)b->read_u(2);
-		nal->type = (h264::NAL_UNIT_TYPE)b->read_u(5);
+		nal->idc = (h264::NAL_REF_IDC)b->u(2);
+		nal->type = (h264::NAL_UNIT_TYPE)b->u(5);
 	}
 	void read_scaling_list(Bitstream* b, int* scalingList, int sizeOfScalingList, int* useDefaultScalingMatrixFlag)
 	{
-		// NOTE need to be able to set useDefaultScalingMatrixFlag when reading, hence passing as pointer
 		int lastScale = 8;
 		int nextScale = 8;
 		int delta_scale;
@@ -396,16 +379,16 @@ namespace h264 {
 				if (0)
 				{
 					nextScale = scalingList[j];
-					if (useDefaultScalingMatrixFlag[0]) { nextScale = 0; }
+					if (*useDefaultScalingMatrixFlag) { nextScale = 0; }
 					delta_scale = (nextScale - lastScale) % 256;
 				}
 
-				delta_scale = b->read_se();
+				delta_scale = b->se();
 
 				if (1)
 				{
 					nextScale = (lastScale + delta_scale + 256) % 256;
-					useDefaultScalingMatrixFlag[0] = (j == 0 && nextScale == 0);
+					*useDefaultScalingMatrixFlag = (j == 0 && nextScale == 0);
 				}
 			}
 			if (1)
@@ -417,97 +400,97 @@ namespace h264 {
 	}
 	void read_hrd_parameters(SPS* sps, Bitstream* b)
 	{
-		sps->hrd.cpb_cnt_minus1 = b->read_ue();
-		sps->hrd.bit_rate_scale = b->read_u(4);
-		sps->hrd.cpb_size_scale = b->read_u(4);
+		sps->hrd.cpb_cnt_minus1 = b->ue();
+		sps->hrd.bit_rate_scale = b->u(4);
+		sps->hrd.cpb_size_scale = b->u(4);
 		for (int SchedSelIdx = 0; SchedSelIdx <= sps->hrd.cpb_cnt_minus1; SchedSelIdx++)
 		{
-			sps->hrd.bit_rate_value_minus1[SchedSelIdx] = b->read_ue();
-			sps->hrd.cpb_size_value_minus1[SchedSelIdx] = b->read_ue();
-			sps->hrd.cbr_flag[SchedSelIdx] = b->read_u1();
+			sps->hrd.bit_rate_value_minus1[SchedSelIdx] = b->ue();
+			sps->hrd.cpb_size_value_minus1[SchedSelIdx] = b->ue();
+			sps->hrd.cbr_flag[SchedSelIdx] = b->u1();
 		}
-		sps->hrd.initial_cpb_removal_delay_length_minus1 = b->read_u(5);
-		sps->hrd.cpb_removal_delay_length_minus1 = b->read_u(5);
-		sps->hrd.dpb_output_delay_length_minus1 = b->read_u(5);
-		sps->hrd.time_offset_length = b->read_u(5);
+		sps->hrd.initial_cpb_removal_delay_length_minus1 = b->u(5);
+		sps->hrd.cpb_removal_delay_length_minus1 = b->u(5);
+		sps->hrd.dpb_output_delay_length_minus1 = b->u(5);
+		sps->hrd.time_offset_length = b->u(5);
 	}
 	void read_rbsp_trailing_bits(Bitstream* b)
 	{
-		/* rbsp_stop_one_bit */ b->skip_u(1);
+		/* rbsp_stop_one_bit */ b->u(1);
 
 		while (!b->byte_aligned())
 		{
-			/* rbsp_alignment_zero_bit */ b->skip_u(1);
+			/* rbsp_alignment_zero_bit */ b->u(1);
 		}
 	}
 	void read_vui_parameters(SPS* sps, Bitstream* b)
 	{
-		sps->vui.aspect_ratio_info_present_flag = b->read_u1();
+		sps->vui.aspect_ratio_info_present_flag = b->u1();
 		if (sps->vui.aspect_ratio_info_present_flag)
 		{
-			sps->vui.aspect_ratio_idc = b->read_u8();
-			if (sps->vui.aspect_ratio_idc == Extended_SAR)
+			sps->vui.aspect_ratio_idc = b->u(8);
+			if (sps->vui.aspect_ratio_idc == 255) // Extended_SAR
 			{
-				sps->vui.sar_width = b->read_u(16);
-				sps->vui.sar_height = b->read_u(16);
+				sps->vui.sar_width = b->u(16);
+				sps->vui.sar_height = b->u(16);
 			}
 		}
-		sps->vui.overscan_info_present_flag = b->read_u1();
+		sps->vui.overscan_info_present_flag = b->u1();
 		if (sps->vui.overscan_info_present_flag)
 		{
-			sps->vui.overscan_appropriate_flag = b->read_u1();
+			sps->vui.overscan_appropriate_flag = b->u1();
 		}
-		sps->vui.video_signal_type_present_flag = b->read_u1();
+		sps->vui.video_signal_type_present_flag = b->u1();
 		if (sps->vui.video_signal_type_present_flag)
 		{
-			sps->vui.video_format = b->read_u(3);
-			sps->vui.video_full_range_flag = b->read_u1();
-			sps->vui.colour_description_present_flag = b->read_u1();
+			sps->vui.video_format = b->u(3);
+			sps->vui.video_full_range_flag = b->u1();
+			sps->vui.colour_description_present_flag = b->u1();
 			if (sps->vui.colour_description_present_flag)
 			{
-				sps->vui.colour_primaries = b->read_u8();
-				sps->vui.transfer_characteristics = b->read_u8();
-				sps->vui.matrix_coefficients = b->read_u8();
+				sps->vui.colour_primaries = b->u(8);
+				sps->vui.transfer_characteristics = b->u(8);
+				sps->vui.matrix_coefficients = b->u(8);
 			}
 		}
-		sps->vui.chroma_loc_info_present_flag = b->read_u1();
+		sps->vui.chroma_loc_info_present_flag = b->u1();
 		if (sps->vui.chroma_loc_info_present_flag)
 		{
-			sps->vui.chroma_sample_loc_type_top_field = b->read_ue();
-			sps->vui.chroma_sample_loc_type_bottom_field = b->read_ue();
+			sps->vui.chroma_sample_loc_type_top_field = b->ue();
+			sps->vui.chroma_sample_loc_type_bottom_field = b->ue();
 		}
-		sps->vui.timing_info_present_flag = b->read_u1();
+		sps->vui.timing_info_present_flag = b->u1();
 		if (sps->vui.timing_info_present_flag)
 		{
-			sps->vui.num_units_in_tick = b->read_u(32);
-			sps->vui.time_scale = b->read_u(32);
-			sps->vui.fixed_frame_rate_flag = b->read_u1();
+			sps->vui.num_units_in_tick = b->u(32);
+			sps->vui.time_scale = b->u(32);
+			sps->vui.fixed_frame_rate_flag = b->u1();
 		}
-		sps->vui.nal_hrd_parameters_present_flag = b->read_u1();
+		sps->vui.nal_hrd_parameters_present_flag = b->u1();
 		if (sps->vui.nal_hrd_parameters_present_flag)
 		{
 			read_hrd_parameters(sps, b);
 		}
-		sps->vui.vcl_hrd_parameters_present_flag = b->read_u1();
+		sps->vui.vcl_hrd_parameters_present_flag = b->u1();
 		if (sps->vui.vcl_hrd_parameters_present_flag)
 		{
 			read_hrd_parameters(sps, b);
 		}
 		if (sps->vui.nal_hrd_parameters_present_flag || sps->vui.vcl_hrd_parameters_present_flag)
 		{
-			sps->vui.low_delay_hrd_flag = b->read_u1();
+			sps->vui.low_delay_hrd_flag = b->u1();
 		}
-		sps->vui.pic_struct_present_flag = b->read_u1();
-		sps->vui.bitstream_restriction_flag = b->read_u1();
+		sps->vui.pic_struct_present_flag = b->u1();
+		sps->vui.bitstream_restriction_flag = b->u1();
 		if (sps->vui.bitstream_restriction_flag)
 		{
-			sps->vui.motion_vectors_over_pic_boundaries_flag = b->read_u1();
-			sps->vui.max_bytes_per_pic_denom = b->read_ue();
-			sps->vui.max_bits_per_mb_denom = b->read_ue();
-			sps->vui.log2_max_mv_length_horizontal = b->read_ue();
-			sps->vui.log2_max_mv_length_vertical = b->read_ue();
-			sps->vui.num_reorder_frames = b->read_ue();
-			sps->vui.max_dec_frame_buffering = b->read_ue();
+			sps->vui.motion_vectors_over_pic_boundaries_flag = b->u1();
+			sps->vui.max_bytes_per_pic_denom = b->ue();
+			sps->vui.max_bits_per_mb_denom = b->ue();
+			sps->vui.log2_max_mv_length_horizontal = b->ue();
+			sps->vui.log2_max_mv_length_vertical = b->ue();
+			sps->vui.num_reorder_frames = b->ue();
+			sps->vui.max_dec_frame_buffering = b->ue();
 		}
 	}
 	int intlog2(int x)
@@ -523,22 +506,18 @@ namespace h264 {
 	}
 	int more_rbsp_data(Bitstream* b)
 	{
-		// TODO this version handles reading only. writing version?
-
 		// no more data
 		if (b->eof()) { return 0; }
 
-		// no rbsp_stop_bit yet
-		if (b->peek_u1() == 0) { return 1; }
+		Bitstream bs_tmp = *b; // make copy
 
-		// next bit is 1, is it the rsbp_stop_bit? only if the rest of bits are 0
-		Bitstream bs_tmp;
-		bs_tmp.clone(b);
-		bs_tmp.skip_u1();
+		// no rbsp_stop_bit yet
+		if (bs_tmp.u1() == 0) { return 1; }
+
 		while (!bs_tmp.eof())
 		{
 			// A later bit was 1, it wasn't the rsbp_stop_bit
-			if (bs_tmp.read_u1() == 1) { return 1; }
+			if (bs_tmp.u1() == 1) { return 1; }
 		}
 
 		// All following bits were 0, it was the rsbp_stop_bit
@@ -546,34 +525,34 @@ namespace h264 {
 	}
 	void read_sps(SPS* sps, Bitstream* b)
 	{
-		sps->profile_idc = b->read_u8();
-		sps->constraint_set0_flag = b->read_u1();
-		sps->constraint_set1_flag = b->read_u1();
-		sps->constraint_set2_flag = b->read_u1();
-		sps->constraint_set3_flag = b->read_u1();
-		sps->constraint_set4_flag = b->read_u1();
-		sps->constraint_set5_flag = b->read_u1();
-		/* reserved_zero_2bits */ b->skip_u(2);
-		sps->level_idc = b->read_u8();
-		sps->seq_parameter_set_id = b->read_ue();
+		sps->profile_idc = b->u(8);
+		sps->constraint_set0_flag = b->u1();
+		sps->constraint_set1_flag = b->u1();
+		sps->constraint_set2_flag = b->u1();
+		sps->constraint_set3_flag = b->u1();
+		sps->constraint_set4_flag = b->u1();
+		sps->constraint_set5_flag = b->u1();
+		/* reserved_zero_2bits */ b->u(2);
+		sps->level_idc = b->u(8);
+		sps->seq_parameter_set_id = b->ue();
 
 		if (sps->profile_idc == 100 || sps->profile_idc == 110 ||
 			sps->profile_idc == 122 || sps->profile_idc == 144)
 		{
-			sps->chroma_format_idc = b->read_ue();
+			sps->chroma_format_idc = b->ue();
 			if (sps->chroma_format_idc == 3)
 			{
-				sps->residual_colour_transform_flag = b->read_u1();
+				sps->separate_colour_plane_flag = b->u1();
 			}
-			sps->bit_depth_luma_minus8 = b->read_ue();
-			sps->bit_depth_chroma_minus8 = b->read_ue();
-			sps->qpprime_y_zero_transform_bypass_flag = b->read_u1();
-			sps->seq_scaling_matrix_present_flag = b->read_u1();
+			sps->bit_depth_luma_minus8 = b->ue();
+			sps->bit_depth_chroma_minus8 = b->ue();
+			sps->qpprime_y_zero_transform_bypass_flag = b->u1();
+			sps->seq_scaling_matrix_present_flag = b->u1();
 			if (sps->seq_scaling_matrix_present_flag)
 			{
 				for (int i = 0; i < 8; i++)
 				{
-					sps->seq_scaling_list_present_flag[i] = b->read_u1();
+					sps->seq_scaling_list_present_flag[i] = b->u1();
 					if (sps->seq_scaling_list_present_flag[i])
 					{
 						if (i < 6)
@@ -590,42 +569,42 @@ namespace h264 {
 				}
 			}
 		}
-		sps->log2_max_frame_num_minus4 = b->read_ue();
-		sps->pic_order_cnt_type = b->read_ue();
+		sps->log2_max_frame_num_minus4 = b->ue();
+		sps->pic_order_cnt_type = b->ue();
 		if (sps->pic_order_cnt_type == 0)
 		{
-			sps->log2_max_pic_order_cnt_lsb_minus4 = b->read_ue();
+			sps->log2_max_pic_order_cnt_lsb_minus4 = b->ue();
 		}
 		else if (sps->pic_order_cnt_type == 1)
 		{
-			sps->delta_pic_order_always_zero_flag = b->read_u1();
-			sps->offset_for_non_ref_pic = b->read_se();
-			sps->offset_for_top_to_bottom_field = b->read_se();
-			sps->num_ref_frames_in_pic_order_cnt_cycle = b->read_ue();
+			sps->delta_pic_order_always_zero_flag = b->u1();
+			sps->offset_for_non_ref_pic = b->se();
+			sps->offset_for_top_to_bottom_field = b->se();
+			sps->num_ref_frames_in_pic_order_cnt_cycle = b->ue();
 			for (int i = 0; i < sps->num_ref_frames_in_pic_order_cnt_cycle; i++)
 			{
-				sps->offset_for_ref_frame[i] = b->read_se();
+				sps->offset_for_ref_frame[i] = b->se();
 			}
 		}
-		sps->num_ref_frames = b->read_ue();
-		sps->gaps_in_frame_num_value_allowed_flag = b->read_u1();
-		sps->pic_width_in_mbs_minus1 = b->read_ue();
-		sps->pic_height_in_map_units_minus1 = b->read_ue();
-		sps->frame_mbs_only_flag = b->read_u1();
+		sps->num_ref_frames = b->ue();
+		sps->gaps_in_frame_num_value_allowed_flag = b->u1();
+		sps->pic_width_in_mbs_minus1 = b->ue();
+		sps->pic_height_in_map_units_minus1 = b->ue();
+		sps->frame_mbs_only_flag = b->u1();
 		if (!sps->frame_mbs_only_flag)
 		{
-			sps->mb_adaptive_frame_field_flag = b->read_u1();
+			sps->mb_adaptive_frame_field_flag = b->u1();
 		}
-		sps->direct_8x8_inference_flag = b->read_u1();
-		sps->frame_cropping_flag = b->read_u1();
+		sps->direct_8x8_inference_flag = b->u1();
+		sps->frame_cropping_flag = b->u1();
 		if (sps->frame_cropping_flag)
 		{
-			sps->frame_crop_left_offset = b->read_ue();
-			sps->frame_crop_right_offset = b->read_ue();
-			sps->frame_crop_top_offset = b->read_ue();
-			sps->frame_crop_bottom_offset = b->read_ue();
+			sps->frame_crop_left_offset = b->ue();
+			sps->frame_crop_right_offset = b->ue();
+			sps->frame_crop_top_offset = b->ue();
+			sps->frame_crop_bottom_offset = b->ue();
 		}
-		sps->vui_parameters_present_flag = b->read_u1();
+		sps->vui_parameters_present_flag = b->u1();
 		if (sps->vui_parameters_present_flag)
 		{
 			read_vui_parameters(sps, b);
@@ -634,57 +613,57 @@ namespace h264 {
 	}
 	void read_pps(PPS* pps, Bitstream* b)
 	{
-		pps->pic_parameter_set_id = b->read_ue();
-		pps->seq_parameter_set_id = b->read_ue();
-		pps->entropy_coding_mode_flag = b->read_u1();
-		pps->pic_order_present_flag = b->read_u1();
-		pps->num_slice_groups_minus1 = b->read_ue();
+		pps->pic_parameter_set_id = b->ue();
+		pps->seq_parameter_set_id = b->ue();
+		pps->entropy_coding_mode_flag = b->u1();
+		pps->pic_order_present_flag = b->u1();
+		pps->num_slice_groups_minus1 = b->ue();
 
 		if (pps->num_slice_groups_minus1 > 0)
 		{
-			pps->slice_group_map_type = b->read_ue();
+			pps->slice_group_map_type = b->ue();
 			if (pps->slice_group_map_type == 0)
 			{
 				for (int i_group = 0; i_group <= pps->num_slice_groups_minus1; i_group++)
 				{
-					pps->run_length_minus1[i_group] = b->read_ue();
+					pps->run_length_minus1[i_group] = b->ue();
 				}
 			}
 			else if (pps->slice_group_map_type == 2)
 			{
 				for (int i_group = 0; i_group < pps->num_slice_groups_minus1; i_group++)
 				{
-					pps->top_left[i_group] = b->read_ue();
-					pps->bottom_right[i_group] = b->read_ue();
+					pps->top_left[i_group] = b->ue();
+					pps->bottom_right[i_group] = b->ue();
 				}
 			}
 			else if (pps->slice_group_map_type == 3 ||
 				pps->slice_group_map_type == 4 ||
 				pps->slice_group_map_type == 5)
 			{
-				pps->slice_group_change_direction_flag = b->read_u1();
-				pps->slice_group_change_rate_minus1 = b->read_ue();
+				pps->slice_group_change_direction_flag = b->u1();
+				pps->slice_group_change_rate_minus1 = b->ue();
 			}
 			else if (pps->slice_group_map_type == 6)
 			{
-				pps->pic_size_in_map_units_minus1 = b->read_ue();
+				pps->pic_size_in_map_units_minus1 = b->ue();
 				for (int i = 0; i <= pps->pic_size_in_map_units_minus1; i++)
 				{
 					int v = intlog2(pps->num_slice_groups_minus1 + 1);
-					pps->slice_group_id[i] = b->read_u(v);
+					pps->slice_group_id[i] = b->u(v);
 				}
 			}
 		}
-		pps->num_ref_idx_l0_active_minus1 = b->read_ue();
-		pps->num_ref_idx_l1_active_minus1 = b->read_ue();
-		pps->weighted_pred_flag = b->read_u1();
-		pps->weighted_bipred_idc = b->read_u(2);
-		pps->pic_init_qp_minus26 = b->read_se();
-		pps->pic_init_qs_minus26 = b->read_se();
-		pps->chroma_qp_index_offset = b->read_se();
-		pps->deblocking_filter_control_present_flag = b->read_u1();
-		pps->constrained_intra_pred_flag = b->read_u1();
-		pps->redundant_pic_cnt_present_flag = b->read_u1();
+		pps->num_ref_idx_l0_active_minus1 = b->ue();
+		pps->num_ref_idx_l1_active_minus1 = b->ue();
+		pps->weighted_pred_flag = b->u1();
+		pps->weighted_bipred_idc = b->u(2);
+		pps->pic_init_qp_minus26 = b->se();
+		pps->pic_init_qs_minus26 = b->se();
+		pps->chroma_qp_index_offset = b->se();
+		pps->deblocking_filter_control_present_flag = b->u1();
+		pps->constrained_intra_pred_flag = b->u1();
+		pps->redundant_pic_cnt_present_flag = b->u1();
 
 		int have_more_data = 0;
 		if (1) { have_more_data = more_rbsp_data(b); }
@@ -695,13 +674,13 @@ namespace h264 {
 
 		if (have_more_data)
 		{
-			pps->transform_8x8_mode_flag = b->read_u1();
-			pps->pic_scaling_matrix_present_flag = b->read_u1();
+			pps->transform_8x8_mode_flag = b->u1();
+			pps->pic_scaling_matrix_present_flag = b->u1();
 			if (pps->pic_scaling_matrix_present_flag)
 			{
 				for (int i = 0; i < 6 + 2 * pps->transform_8x8_mode_flag; i++)
 				{
-					pps->pic_scaling_list_present_flag[i] = b->read_u1();
+					pps->pic_scaling_list_present_flag[i] = b->u1();
 					if (pps->pic_scaling_list_present_flag[i])
 					{
 						if (i < 6)
@@ -717,7 +696,7 @@ namespace h264 {
 					}
 				}
 			}
-			pps->second_chroma_qp_index_offset = b->read_se();
+			pps->second_chroma_qp_index_offset = b->se();
 		}
 		read_rbsp_trailing_bits(b);
 	}
@@ -732,44 +711,44 @@ namespace h264 {
 	{
 		if (!is_slice_type(sh->slice_type, SH_SLICE_TYPE_I) && !is_slice_type(sh->slice_type, SH_SLICE_TYPE_SI))
 		{
-			sh->rplr.ref_pic_list_reordering_flag_l0 = b->read_u1();
+			sh->rplr.ref_pic_list_reordering_flag_l0 = b->u1();
 			if (sh->rplr.ref_pic_list_reordering_flag_l0)
 			{
 				int n = -1;
 				do
 				{
 					n++;
-					sh->rplr.reorder_l0.reordering_of_pic_nums_idc[n] = b->read_ue();
+					sh->rplr.reorder_l0.reordering_of_pic_nums_idc[n] = b->ue();
 					if (sh->rplr.reorder_l0.reordering_of_pic_nums_idc[n] == 0 ||
 						sh->rplr.reorder_l0.reordering_of_pic_nums_idc[n] == 1)
 					{
-						sh->rplr.reorder_l0.abs_diff_pic_num_minus1[n] = b->read_ue();
+						sh->rplr.reorder_l0.abs_diff_pic_num_minus1[n] = b->ue();
 					}
 					else if (sh->rplr.reorder_l0.reordering_of_pic_nums_idc[n] == 2)
 					{
-						sh->rplr.reorder_l0.long_term_pic_num[n] = b->read_ue();
+						sh->rplr.reorder_l0.long_term_pic_num[n] = b->ue();
 					}
 				} while (sh->rplr.reorder_l0.reordering_of_pic_nums_idc[n] != 3 && !b->eof());
 			}
 		}
 		if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
 		{
-			sh->rplr.ref_pic_list_reordering_flag_l1 = b->read_u1();
+			sh->rplr.ref_pic_list_reordering_flag_l1 = b->u1();
 			if (sh->rplr.ref_pic_list_reordering_flag_l1)
 			{
 				int n = -1;
 				do
 				{
 					n++;
-					sh->rplr.reorder_l1.reordering_of_pic_nums_idc[n] = b->read_ue();
+					sh->rplr.reorder_l1.reordering_of_pic_nums_idc[n] = b->ue();
 					if (sh->rplr.reorder_l1.reordering_of_pic_nums_idc[n] == 0 ||
 						sh->rplr.reorder_l1.reordering_of_pic_nums_idc[n] == 1)
 					{
-						sh->rplr.reorder_l1.abs_diff_pic_num_minus1[n] = b->read_ue();
+						sh->rplr.reorder_l1.abs_diff_pic_num_minus1[n] = b->ue();
 					}
 					else if (sh->rplr.reorder_l1.reordering_of_pic_nums_idc[n] == 2)
 					{
-						sh->rplr.reorder_l1.long_term_pic_num[n] = b->read_ue();
+						sh->rplr.reorder_l1.long_term_pic_num[n] = b->ue();
 					}
 				} while (sh->rplr.reorder_l1.reordering_of_pic_nums_idc[n] != 3 && !b->eof());
 			}
@@ -779,28 +758,28 @@ namespace h264 {
 	{
 		int i, j;
 
-		sh->pwt.luma_log2_weight_denom = b->read_ue();
+		sh->pwt.luma_log2_weight_denom = b->ue();
 		if (sps->chroma_format_idc != 0)
 		{
-			sh->pwt.chroma_log2_weight_denom = b->read_ue();
+			sh->pwt.chroma_log2_weight_denom = b->ue();
 		}
 		for (i = 0; i <= pps->num_ref_idx_l0_active_minus1; i++)
 		{
-			sh->pwt.luma_weight_l0_flag[i] = b->read_u1();
+			sh->pwt.luma_weight_l0_flag[i] = b->u1();
 			if (sh->pwt.luma_weight_l0_flag[i])
 			{
-				sh->pwt.luma_weight_l0[i] = b->read_se();
-				sh->pwt.luma_offset_l0[i] = b->read_se();
+				sh->pwt.luma_weight_l0[i] = b->se();
+				sh->pwt.luma_offset_l0[i] = b->se();
 			}
 			if (sps->chroma_format_idc != 0)
 			{
-				sh->pwt.chroma_weight_l0_flag[i] = b->read_u1();
+				sh->pwt.chroma_weight_l0_flag[i] = b->u1();
 				if (sh->pwt.chroma_weight_l0_flag[i])
 				{
 					for (j = 0; j < 2; j++)
 					{
-						sh->pwt.chroma_weight_l0[i][j] = b->read_se();
-						sh->pwt.chroma_offset_l0[i][j] = b->read_se();
+						sh->pwt.chroma_weight_l0[i][j] = b->se();
+						sh->pwt.chroma_offset_l0[i][j] = b->se();
 					}
 				}
 			}
@@ -809,21 +788,21 @@ namespace h264 {
 		{
 			for (i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++)
 			{
-				sh->pwt.luma_weight_l1_flag[i] = b->read_u1();
+				sh->pwt.luma_weight_l1_flag[i] = b->u1();
 				if (sh->pwt.luma_weight_l1_flag[i])
 				{
-					sh->pwt.luma_weight_l1[i] = b->read_se();
-					sh->pwt.luma_offset_l1[i] = b->read_se();
+					sh->pwt.luma_weight_l1[i] = b->se();
+					sh->pwt.luma_offset_l1[i] = b->se();
 				}
 				if (sps->chroma_format_idc != 0)
 				{
-					sh->pwt.chroma_weight_l1_flag[i] = b->read_u1();
+					sh->pwt.chroma_weight_l1_flag[i] = b->u1();
 					if (sh->pwt.chroma_weight_l1_flag[i])
 					{
 						for (j = 0; j < 2; j++)
 						{
-							sh->pwt.chroma_weight_l1[i][j] = b->read_se();
-							sh->pwt.chroma_offset_l1[i][j] = b->read_se();
+							sh->pwt.chroma_weight_l1[i][j] = b->se();
+							sh->pwt.chroma_offset_l1[i][j] = b->se();
 						}
 					}
 				}
@@ -834,36 +813,36 @@ namespace h264 {
 	{
 		if (nal->type == 5)
 		{
-			sh->drpm.no_output_of_prior_pics_flag = b->read_u1();
-			sh->drpm.long_term_reference_flag = b->read_u1();
+			sh->drpm.no_output_of_prior_pics_flag = b->u1();
+			sh->drpm.long_term_reference_flag = b->u1();
 		}
 		else
 		{
-			sh->drpm.adaptive_ref_pic_marking_mode_flag = b->read_u1();
+			sh->drpm.adaptive_ref_pic_marking_mode_flag = b->u1();
 			if (sh->drpm.adaptive_ref_pic_marking_mode_flag)
 			{
 				int n = -1;
 				do
 				{
 					n++;
-					sh->drpm.memory_management_control_operation[n] = b->read_ue();
+					sh->drpm.memory_management_control_operation[n] = b->ue();
 					if (sh->drpm.memory_management_control_operation[n] == 1 ||
 						sh->drpm.memory_management_control_operation[n] == 3)
 					{
-						sh->drpm.difference_of_pic_nums_minus1[n] = b->read_ue();
+						sh->drpm.difference_of_pic_nums_minus1[n] = b->ue();
 					}
 					if (sh->drpm.memory_management_control_operation[n] == 2)
 					{
-						sh->drpm.long_term_pic_num[n] = b->read_ue();
+						sh->drpm.long_term_pic_num[n] = b->ue();
 					}
 					if (sh->drpm.memory_management_control_operation[n] == 3 ||
 						sh->drpm.memory_management_control_operation[n] == 6)
 					{
-						sh->drpm.long_term_frame_idx[n] = b->read_ue();
+						sh->drpm.long_term_frame_idx[n] = b->ue();
 					}
 					if (sh->drpm.memory_management_control_operation[n] == 4)
 					{
-						sh->drpm.max_long_term_frame_idx_plus1[n] = b->read_ue();
+						sh->drpm.max_long_term_frame_idx_plus1[n] = b->ue();
 					}
 				} while (sh->drpm.memory_management_control_operation[n] != 0 && !b->eof());
 			}
@@ -871,59 +850,59 @@ namespace h264 {
 	}
 	void read_slice_header(SliceHeader* sh, NALHeader* nal, const PPS* pps_array, const SPS* sps_array, Bitstream* b)
 	{
-		sh->first_mb_in_slice = b->read_ue();
-		sh->slice_type = b->read_ue();
-		sh->pic_parameter_set_id = b->read_ue();
+		sh->first_mb_in_slice = b->ue();
+		sh->slice_type = b->ue();
+		sh->pic_parameter_set_id = b->ue();
 
 		const PPS* pps = pps_array + sh->pic_parameter_set_id;
 		const SPS* sps = sps_array + pps->seq_parameter_set_id;
 
-		sh->frame_num = b->read_u(sps->log2_max_frame_num_minus4 + 4); // was u(v)
+		sh->frame_num = b->u(sps->log2_max_frame_num_minus4 + 4); // was u(v)
 		if (!sps->frame_mbs_only_flag)
 		{
-			sh->field_pic_flag = b->read_u1();
+			sh->field_pic_flag = b->u1();
 			if (sh->field_pic_flag)
 			{
-				sh->bottom_field_flag = b->read_u1();
+				sh->bottom_field_flag = b->u1();
 			}
 		}
 		if (nal->type == 5)
 		{
-			sh->idr_pic_id = b->read_ue();
+			sh->idr_pic_id = b->ue();
 		}
 		if (sps->pic_order_cnt_type == 0)
 		{
-			sh->pic_order_cnt_lsb = b->read_u(sps->log2_max_pic_order_cnt_lsb_minus4 + 4); // was u(v)
+			sh->pic_order_cnt_lsb = b->u(sps->log2_max_pic_order_cnt_lsb_minus4 + 4); // was u(v)
 			if (pps->pic_order_present_flag && !sh->field_pic_flag)
 			{
-				sh->delta_pic_order_cnt_bottom = b->read_se();
+				sh->delta_pic_order_cnt_bottom = b->se();
 			}
 		}
 		if (sps->pic_order_cnt_type == 1 && !sps->delta_pic_order_always_zero_flag)
 		{
-			sh->delta_pic_order_cnt[0] = b->read_se();
+			sh->delta_pic_order_cnt[0] = b->se();
 			if (pps->pic_order_present_flag && !sh->field_pic_flag)
 			{
-				sh->delta_pic_order_cnt[1] = b->read_se();
+				sh->delta_pic_order_cnt[1] = b->se();
 			}
 		}
 		if (pps->redundant_pic_cnt_present_flag)
 		{
-			sh->redundant_pic_cnt = b->read_ue();
+			sh->redundant_pic_cnt = b->ue();
 		}
 		if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
 		{
-			sh->direct_spatial_mv_pred_flag = b->read_u1();
+			sh->direct_spatial_mv_pred_flag = b->u1();
 		}
 		if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_P) || is_slice_type(sh->slice_type, SH_SLICE_TYPE_SP) || is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
 		{
-			sh->num_ref_idx_active_override_flag = b->read_u1();
+			sh->num_ref_idx_active_override_flag = b->u1();
 			if (sh->num_ref_idx_active_override_flag)
 			{
-				sh->num_ref_idx_l0_active_minus1 = b->read_ue();
+				sh->num_ref_idx_l0_active_minus1 = b->ue();
 				if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
 				{
-					sh->num_ref_idx_l1_active_minus1 = b->read_ue();
+					sh->num_ref_idx_l1_active_minus1 = b->ue();
 				}
 			}
 		}
@@ -939,31 +918,31 @@ namespace h264 {
 		}
 		if (pps->entropy_coding_mode_flag && !is_slice_type(sh->slice_type, SH_SLICE_TYPE_I) && !is_slice_type(sh->slice_type, SH_SLICE_TYPE_SI))
 		{
-			sh->cabac_init_idc = b->read_ue();
+			sh->cabac_init_idc = b->ue();
 		}
-		sh->slice_qp_delta = b->read_se();
+		sh->slice_qp_delta = b->se();
 		if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_SP) || is_slice_type(sh->slice_type, SH_SLICE_TYPE_SI))
 		{
 			if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_SP))
 			{
-				sh->sp_for_switch_flag = b->read_u1();
+				sh->sp_for_switch_flag = b->u1();
 			}
-			sh->slice_qs_delta = b->read_se();
+			sh->slice_qs_delta = b->se();
 		}
 		if (pps->deblocking_filter_control_present_flag)
 		{
-			sh->disable_deblocking_filter_idc = b->read_ue();
+			sh->disable_deblocking_filter_idc = b->ue();
 			if (sh->disable_deblocking_filter_idc != 1)
 			{
-				sh->slice_alpha_c0_offset_div2 = b->read_se();
-				sh->slice_beta_offset_div2 = b->read_se();
+				sh->slice_alpha_c0_offset_div2 = b->se();
+				sh->slice_beta_offset_div2 = b->se();
 			}
 		}
 		if (pps->num_slice_groups_minus1 > 0 &&
 			pps->slice_group_map_type >= 3 && pps->slice_group_map_type <= 5)
 		{
 			int v = intlog2(pps->pic_size_in_map_units_minus1 + pps->slice_group_change_rate_minus1 + 1);
-			sh->slice_group_change_cycle = b->read_u(v);
+			sh->slice_group_change_cycle = b->u(v);
 		}
 	}
 #endif // H264_IMPLEMENTATION

@@ -6,7 +6,6 @@
 #include "wiVersion.h"
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
-#include "wiRandom.h"
 #include "wiArguments.h"
 
 #include "Utility/vulkan/vk_video/vulkan_video_codec_h264std_decode.h"
@@ -6023,7 +6022,7 @@ using namespace vulkan_internal;
 			vk_sps.flags.mb_adaptive_frame_field_flag = sps->mb_adaptive_frame_field_flag;
 			vk_sps.flags.frame_mbs_only_flag = sps->frame_mbs_only_flag;
 			vk_sps.flags.delta_pic_order_always_zero_flag = sps->delta_pic_order_always_zero_flag;
-			vk_sps.flags.separate_colour_plane_flag = sps->residual_colour_transform_flag; // https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp#L328
+			vk_sps.flags.separate_colour_plane_flag = sps->separate_colour_plane_flag;
 			vk_sps.flags.gaps_in_frame_num_value_allowed_flag = sps->gaps_in_frame_num_value_allowed_flag;
 			vk_sps.flags.qpprime_y_zero_transform_bypass_flag = sps->qpprime_y_zero_transform_bypass_flag;
 			vk_sps.flags.frame_cropping_flag = sps->frame_cropping_flag;

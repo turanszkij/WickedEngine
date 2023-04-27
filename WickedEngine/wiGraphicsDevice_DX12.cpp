@@ -6946,7 +6946,7 @@ using namespace dx12_internal;
 		assert(pic_params.bit_depth_chroma_minus8 == 0);   // Only support for NV12 now
 		pic_params.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
 		assert(pic_params.bit_depth_luma_minus8 == 0);   // Only support for NV12 now
-		pic_params.residual_colour_transform_flag = sps->residual_colour_transform_flag;
+		pic_params.residual_colour_transform_flag = sps->separate_colour_plane_flag; // https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp#L328
 		if (pic_params.field_pic_flag)
 		{
 			pic_params.CurrPic.AssociatedFlag = slice_header->bottom_field_flag ? 1 : 0; // if pic_params.field_pic_flag == 1, then this is 0 = top field, 1 = bottom_field
