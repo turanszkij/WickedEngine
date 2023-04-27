@@ -351,10 +351,7 @@ namespace vulkan_internal
 		case ResourceState::SHADING_RATE_SOURCE:
 			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
 		case ResourceState::VIDEO_DECODE_SRC:
-			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR; // yes, VK_IMAGE_LAYOUT_VIDEO_DECODE_SRC_KHR is not what we want, we want DPB reference state (SRC is invalid for images, it is for buffers)
 		case ResourceState::VIDEO_DECODE_DST:
-			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR;
-		case ResourceState::VIDEO_DECODE_DPB:
 			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR;
 		default:
 			return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -453,8 +450,7 @@ namespace vulkan_internal
 		{
 			flags |= VK_PIPELINE_STAGE_2_CONDITIONAL_RENDERING_BIT_EXT;
 		}
-		if (has_flag(value, ResourceState::VIDEO_DECODE_DPB) ||
-			has_flag(value, ResourceState::VIDEO_DECODE_DST) ||
+		if (has_flag(value, ResourceState::VIDEO_DECODE_DST) ||
 			has_flag(value, ResourceState::VIDEO_DECODE_SRC))
 		{
 			flags |= VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
@@ -520,11 +516,6 @@ namespace vulkan_internal
 		if (has_flag(value, ResourceState::PREDICATION))
 		{
 			flags |= VK_ACCESS_2_CONDITIONAL_RENDERING_READ_BIT_EXT;
-		}
-		if (has_flag(value, ResourceState::VIDEO_DECODE_DPB))
-		{
-			flags |= VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR;
-			flags |= VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
 		}
 		if (has_flag(value, ResourceState::VIDEO_DECODE_DST))
 		{
@@ -3726,13 +3717,9 @@ using namespace vulkan_internal;
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 		}
-		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_SRC))
+		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
-		}
-		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DST))
-		{
-			bufferInfo.usage |= VK_BUFFER_USAGE_VIDEO_DECODE_DST_BIT_KHR;
 		}
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -4012,17 +3999,11 @@ using namespace vulkan_internal;
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 		}
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_SRC))
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
-		}
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DST))
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
-		}
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB))
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR;
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
 		}
 
 		if (desc->format == Format::NV12 && has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
@@ -4434,10 +4415,7 @@ using namespace vulkan_internal;
 			CreateSubresource(texture, SubresourceType::UAV, 0, -1, 0, -1);
 		}
 
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DST) ||
-			has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_SRC) ||
-			has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB)
-			)
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
 		{
 			VkImageViewCreateInfo view_desc = {};
 			view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -4453,19 +4431,7 @@ using namespace vulkan_internal;
 
 			VkImageViewUsageCreateInfo viewUsageInfo = {};
 			viewUsageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO;
-			viewUsageInfo.usage = 0;
-			if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_SRC))
-			{
-				viewUsageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
-			}
-			if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DST))
-			{
-				viewUsageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
-			}
-			if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB))
-			{
-				viewUsageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR;
-			}
+			viewUsageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR | VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR | VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
 			view_desc.pNext = &viewUsageInfo;
 
 			res = vkCreateImageView(device, &view_desc, nullptr, &internal_state->video_decode_view);

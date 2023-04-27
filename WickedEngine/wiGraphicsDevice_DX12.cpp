@@ -129,8 +129,6 @@ namespace dx12_internal
 			ret |= D3D12_RESOURCE_STATE_VIDEO_DECODE_READ;
 		if (has_flag(value, ResourceState::VIDEO_DECODE_DST))
 			ret |= D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE;
-		if (has_flag(value, ResourceState::VIDEO_DECODE_DPB))
-			ret |= D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE;
 
 		return ret;
 	}
@@ -3420,6 +3418,12 @@ using namespace dx12_internal;
 		{
 			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::VIDEO_DECODE))
+		{
+			// Because video queue can only transition from/to VIDEO_ and COMMON states, we will use COMMON internally and rely on implicit transition for DPB textures
+			//	(See how the resource barrier on video queue overrides any user specified state into COMMON)
+			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
+		}
 
 		switch (texture->desc.type)
 		{
@@ -6638,6 +6642,8 @@ using namespace dx12_internal;
 		{
 			if (commandlist.queue == QUEUE_VIDEO_DECODE)
 			{
+				// Video queue can only transition from/to VIDEO_ and COMMON states, so we will overwrite anything else to COMMON,
+				//	but the video textures will be using D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS so that implicit transition can happen from COMMON in a different queue
 				for (auto& barrier : barrierdescs)
 				{
 					if (barrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)

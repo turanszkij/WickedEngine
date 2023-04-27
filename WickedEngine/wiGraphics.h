@@ -376,9 +376,7 @@ namespace wi::graphics
 		SPARSE_TILE_POOL = SPARSE_TILE_POOL_BUFFER | SPARSE_TILE_POOL_TEXTURE_NON_RT_DS | SPARSE_TILE_POOL_TEXTURE_RT_DS, // buffer only, makes it suitable for containing tile memory for all kinds of sparse resources. Requires GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL to be supported
 		TYPED_FORMAT_CASTING = 1 << 11,	// enable casting formats between same type and different modifiers: eg. UNORM -> SRGB
 		TYPELESS_FORMAT_CASTING = 1 << 12,	// enable casting formats to other formats that have the same bit-width and channel layout: eg. R32_FLOAT -> R32_UINT
-		VIDEO_DECODE_SRC = 1 << 13,	// resource is usabe in video decoding operations as source data
-		VIDEO_DECODE_DST = 1 << 14,	// resource is usabe in video decoding operations as destination data
-		VIDEO_DECODE_DPB = 1 << 15,	// resource is usabe in video decoding operations as decoded picture buffer
+		VIDEO_DECODE = 1 << 15,	// resource is usabe in video decoding operations
 	};
 
 	enum class GraphicsDeviceCapability
@@ -401,7 +399,7 @@ namespace wi::graphics
 		SPARSE_TEXTURE2D = 1 << 14,
 		SPARSE_TEXTURE3D = 1 << 15,
 		SPARSE_NULL_MAPPING = 1 << 16,
-		GENERIC_SPARSE_TILE_POOL = 1 << 17, // alows using ResourceMiscFlag::SPARSE_TILE_POOL (non resource type specific version)
+		GENERIC_SPARSE_TILE_POOL = 1 << 17, // allows using ResourceMiscFlag::SPARSE_TILE_POOL (non resource type specific version)
 		DEPTH_RESOLVE_MIN_MAX = 1 << 18,
 		STENCIL_RESOLVE_MIN_MAX = 1 << 19,
 		CACHE_COHERENT_UMA = 1 << 20,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
@@ -428,14 +426,13 @@ namespace wi::graphics
 		VERTEX_BUFFER = 1 << 9,				// vertex buffer, read only
 		INDEX_BUFFER = 1 << 10,				// index buffer, read only
 		CONSTANT_BUFFER = 1 << 11,			// constant buffer, read only
-		INDIRECT_ARGUMENT = 1 << 12,			// argument buffer to DrawIndirect() or DispatchIndirect()
+		INDIRECT_ARGUMENT = 1 << 12,		// argument buffer to DrawIndirect() or DispatchIndirect()
 		RAYTRACING_ACCELERATION_STRUCTURE = 1 << 13, // acceleration structure storage or scratch
 		PREDICATION = 1 << 14,				// storage for predication comparison value
 
 		// Other:
 		VIDEO_DECODE_SRC = 1 << 15,			// video decode operation source (bitstream buffer or DPB texture)
-		VIDEO_DECODE_DST = 1 << 16,			// video decode operation destination texture
-		VIDEO_DECODE_DPB = 1 << 17,			// video decode operation DPB texture
+		VIDEO_DECODE_DST = 1 << 16,			// video decode operation destination DPB texture
 	};
 
 	enum class ColorSpace
