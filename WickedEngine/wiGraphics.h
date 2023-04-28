@@ -230,7 +230,7 @@ namespace wi::graphics
 		R32G32_FLOAT,
 		R32G32_UINT,
 		R32G32_SINT,
-		D32_FLOAT_S8X24_UINT,	// depth (32-bit) + stencil (8-bit) | SRV: R32_FLOAT
+		D32_FLOAT_S8X24_UINT,	// depth (32-bit) + stencil (8-bit) | SRV: R32_FLOAT (default or depth aspect), R8_UINT (stencil aspect)
 
 		R10G10B10A2_UNORM,
 		R10G10B10A2_UINT,
@@ -251,7 +251,7 @@ namespace wi::graphics
 		R32_FLOAT,
 		R32_UINT,
 		R32_SINT, 
-		D24_UNORM_S8_UINT,		// depth (24-bit) + stencil (8-bit) | SRV: R24_INTERNAL
+		D24_UNORM_S8_UINT,		// depth (24-bit) + stencil (8-bit) | SRV: R24_INTERNAL (default or depth aspect), R8_UINT (stencil aspect)
 		R9G9B9E5_SHAREDEXP,
 
 		R8G8_UNORM,
@@ -269,6 +269,8 @@ namespace wi::graphics
 		R8_UINT,
 		R8_SNORM,
 		R8_SINT,
+
+		// Formats that are not usable in render pass must be below because formats in render pass must be encodable as 6 bits:
 
 		BC1_UNORM,
 		BC1_UNORM_SRGB,
@@ -767,16 +769,16 @@ namespace wi::graphics
 
 	struct VideoDesc
 	{
-		uint32_t width = 0;
-		uint32_t height = 0;
-		uint32_t bit_rate = 0;
+		uint32_t width = 0;					// must meet the codec specific alignment requirements
+		uint32_t height = 0;				// must meet the codec specific alignment requirements
+		uint32_t bit_rate = 0;				// can be 0, it means that decoding will be prepared for worst case
 		Format format = Format::NV12;
 		VideoProfile profile = VideoProfile::H264;
-		const void* pps_datas = nullptr;
-		size_t pps_count = 0;
-		const void* sps_datas = nullptr;
-		size_t sps_count = 0;
-		uint32_t num_dpb_slots = 0;
+		const void* pps_datas = nullptr;	// array of picture parameter set structures. The structure type depends on video codec
+		size_t pps_count = 0;				// number of picture parameter set structures in the pps_datas array
+		const void* sps_datas = nullptr;	// array of sequence parameter set structures. The structure type depends on video codec
+		size_t sps_count = 0;				// number of sequence parameter set structures in the sps_datas array
+		uint32_t num_dpb_slots = 0;			// The number of decode picture buffer slots. Usually it is required to be at least number_of_reference_frames + 1
 	};
 
 
@@ -854,14 +856,14 @@ namespace wi::graphics
 		enum Flags
 		{
 			FLAG_EMPTY = 0,
-			FLAG_SESSION_RESET = 1 << 0,
+			FLAG_SESSION_RESET = 1 << 0, // first usage of decoder needs reset
 		};
 		uint32_t flags = FLAG_EMPTY;
 		const GPUBuffer* stream = nullptr;
-		uint64_t stream_offset = 0;
+		uint64_t stream_offset = 0; // must be aligned with GraphicsDevice::GetVideoDecodeBitstreamAlignment()
 		uint64_t stream_size = 0;
 		VideoFrameType frame_type = VideoFrameType::Intra;
-		uint32_t reference_priority = 0; // nal_ref_idc
+		uint32_t reference_priority = 0; // nal_ref_idc from nal unit header
 		int decoded_frame_index = 0; // frame index in order of decoding
 		const void* slice_header = nullptr; // slice header for current frame
 		const void* pps = nullptr; // picture parameter set for current slice header

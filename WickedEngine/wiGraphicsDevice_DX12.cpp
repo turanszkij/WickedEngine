@@ -15,6 +15,7 @@
 #include "Utility/h264.h"
 #include "Utility/dxva.h"
 
+#include <map>
 #include <string>
 #include <pix.h>
 
@@ -1598,7 +1599,7 @@ namespace dx12_internal
 }
 using namespace dx12_internal;
 
-	// Allocators:
+	
 
 	void GraphicsDevice_DX12::CopyAllocator::init(GraphicsDevice_DX12* device)
 	{
@@ -3288,6 +3289,8 @@ using namespace dx12_internal;
 			);
 		}
 		assert(SUCCEEDED(hr));
+		if (!SUCCEEDED(hr))
+			return false;
 
 		internal_state->gpu_address = internal_state->resource->GetGPUVirtualAddress();
 
@@ -5358,16 +5361,186 @@ using namespace dx12_internal;
 			break;
 		}
 
+
+		// Based on: https://github.com/simco50/D3D12_Research/blob/869373829444f029eb3a6ce95dd3aa541c665bb2/D3D12/Graphics/RHI/Graphics.cpp
+
+		//D3D12_AUTO_BREADCRUMB_OP
+		constexpr const char* OpNames[] =
+		{
+			"SetMarker",
+			"BeginEvent",
+			"EndEvent",
+			"DrawInstanced",
+			"DrawIndexedInstanced",
+			"ExecuteIndirect",
+			"Dispatch",
+			"CopyBufferRegion",
+			"CopyTextureRegion",
+			"CopyResource",
+			"CopyTiles",
+			"ResolveSubresource",
+			"ClearRenderTargetView",
+			"ClearUnorderedAccessView",
+			"ClearDepthStencilView",
+			"ResourceBarrier",
+			"ExecuteBundle",
+			"Present",
+			"ResolveQueryData",
+			"BeginSubmission",
+			"EndSubmission",
+			"DecodeFrame",
+			"ProcessFrames",
+			"AtomicCopyBufferUint",
+			"AtomicCopyBufferUint64",
+			"ResolveSubresourceRegion",
+			"WriteBufferImmediate",
+			"DecodeFrame1",
+			"SetProtectedResourceSession",
+			"DecodeFrame2",
+			"ProcessFrames1",
+			"BuildRaytracingAccelerationStructure",
+			"EmitRaytracingAccelerationStructurePostBuildInfo",
+			"CopyRaytracingAccelerationStructure",
+			"DispatchRays",
+			"InitializeMetaCommand",
+			"ExecuteMetaCommand",
+			"EstimateMotion",
+			"ResolveMotionVectorHeap",
+			"SetPipelineState1",
+			"InitializeExtensionCommand",
+			"ExecuteExtensionCommand",
+			"DispatchMesh",
+			"EncodeFrame",
+			"ResolveEncoderOutputMetadata",
+		};
+		static_assert(ARRAYSIZE(OpNames) == D3D12_AUTO_BREADCRUMB_OP_RESOLVEENCODEROUTPUTMETADATA + 1, "OpNames array length mismatch");
+
+		//D3D12_DRED_ALLOCATION_TYPE
+		constexpr const char* AllocTypesNames[] =
+		{
+			"CommandQueue",
+			"CommandAllocator",
+			"PipelineState",
+			"CommandList",
+			"Fence",
+			"DescriptorHeap",
+			"Heap",
+			"Unknown",
+			"QueryHeap",
+			"CommandSignature",
+			"PipelineLibrary",
+			"VideoDecoder",
+			"Unknown",
+			"VideoProcessor",
+			"Unknown",
+			"Resource",
+			"Pass",
+			"CryptoSession",
+			"CryptoSessionPolicy",
+			"ProtectedResourceSession",
+			"VideoDecoderHeap",
+			"CommandPool",
+			"CommandRecorder",
+			"StateObjectr",
+			"MetaCommand",
+			"SchedulingGroup",
+			"VideoMotionEstimator",
+			"VideoMotionVectorHeap",
+			"VideoExtensionCommand",
+			"VideoEncoder",
+			"VideoEncoderHeap",
+		};
+		static_assert(ARRAYSIZE(AllocTypesNames) == D3D12_DRED_ALLOCATION_TYPE_VIDEO_ENCODER_HEAP - D3D12_DRED_ALLOCATION_TYPE_COMMAND_QUEUE + 1, "AllocTypes array length mismatch");
+
+		std::string log;
+
 		ComPtr<ID3D12DeviceRemovedExtendedData1> pDred;
 		if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&pDred))))
 		{
-			D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 dredAutoBreadcrumbsOutput;
-			HRESULT hr = pDred->GetAutoBreadcrumbsOutput1(&dredAutoBreadcrumbsOutput);
-			if (SUCCEEDED(hr))
+			D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 pDredAutoBreadcrumbsOutput = {};
+			if (SUCCEEDED(pDred->GetAutoBreadcrumbsOutput1(&pDredAutoBreadcrumbsOutput)))
 			{
-				assert(0);
-				// TODO: Log DRED info -> to file?
+				log += "[DRED] Last tracked GPU operations:\n";
+
+				std::map<int, const wchar_t*> contextStrings;
+
+				const D3D12_AUTO_BREADCRUMB_NODE1* pNode = pDredAutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
+				while (pNode && pNode->pLastBreadcrumbValue)
+				{
+					int lastCompletedOp = *pNode->pLastBreadcrumbValue;
+
+					log += std::string("[DRED] Commandlist = [") + (pNode->pCommandListDebugNameA == nullptr ? "-" : pNode->pCommandListDebugNameA) + std::string("], CommandQueue = [") + (pNode->pCommandQueueDebugNameA == nullptr ? "-" : pNode->pCommandQueueDebugNameA) + std::string("], lastCompletedOp = [") + std::to_string(lastCompletedOp) + "], BreadCrumbCount = [" + std::to_string(pNode->BreadcrumbCount) + "]\n";
+
+					int firstOp = std::max(lastCompletedOp - 100, 0);
+					int lastOp = std::min(lastCompletedOp + 20, int(pNode->BreadcrumbCount) - 1);
+
+					contextStrings.clear();
+					for (uint32_t breadcrumbContext = firstOp; breadcrumbContext < pNode->BreadcrumbContextsCount; ++breadcrumbContext)
+					{
+						const D3D12_DRED_BREADCRUMB_CONTEXT& context = pNode->pBreadcrumbContexts[breadcrumbContext];
+						contextStrings[context.BreadcrumbIndex] = context.pContextString;
+					}
+
+					for (int op = firstOp; op <= lastOp; ++op)
+					{
+						D3D12_AUTO_BREADCRUMB_OP breadcrumbOp = pNode->pCommandHistory[op];
+
+						std::string contextString;
+						auto it = contextStrings.find(op);
+						if (it != contextStrings.end())
+						{
+							wi::helper::StringConvert(it->second, contextString);
+						}
+
+						const char* opName = (breadcrumbOp < arraysize(OpNames)) ? OpNames[breadcrumbOp] : "Unknown Op";
+						log += "\tOp: " + std::to_string(op) + " " + opName + " " + contextString + "\n";
+					}
+
+					if (lastCompletedOp != (int)pNode->BreadcrumbCount)
+					{
+						log += "ERROR: lastCompletedOp = " + std::to_string(lastCompletedOp) + ", BreadcrumbCount = " + std::to_string((int)pNode->BreadcrumbCount) + "\n";
+					}
+
+					pNode = pNode->pNext;
+				}
 			}
+
+			D3D12_DRED_PAGE_FAULT_OUTPUT1 DredPageFaultOutput = {};
+			if (SUCCEEDED(pDred->GetPageFaultAllocationOutput1(&DredPageFaultOutput)) && DredPageFaultOutput.PageFaultVA != 0)
+			{
+				log += "[DRED] PageFault at VA GPUAddress " + std::to_string(DredPageFaultOutput.PageFaultVA) + "\n";
+
+				const D3D12_DRED_ALLOCATION_NODE1* pNode = DredPageFaultOutput.pHeadExistingAllocationNode;
+				if (pNode)
+				{
+					log += "[DRED] Active objects with VA ranges that match the faulting VA:\n";
+					while (pNode)
+					{
+						uint32_t alloc_type_index = pNode->AllocationType - D3D12_DRED_ALLOCATION_TYPE_COMMAND_QUEUE;
+						const char* AllocTypeName = (alloc_type_index < arraysize(AllocTypesNames)) ? AllocTypesNames[alloc_type_index] : "Unknown Alloc";
+						log += std::string("\tName: ") + pNode->ObjectNameA + std::string(" ") + AllocTypeName + std::string("\n");
+						pNode = pNode->pNext;
+					}
+				}
+
+				pNode = DredPageFaultOutput.pHeadRecentFreedAllocationNode;
+				if (pNode)
+				{
+					log +=  "[DRED] Recent freed objects with VA ranges that match the faulting VA:\n";
+					while (pNode)
+					{
+						uint32_t allocTypeIndex = pNode->AllocationType - D3D12_DRED_ALLOCATION_TYPE_COMMAND_QUEUE;
+						const char* AllocTypeName = (allocTypeIndex < arraysize(AllocTypesNames)) ? AllocTypesNames[allocTypeIndex] : "Unknown Alloc";
+						log += std::string("\tName: ") + pNode->ObjectNameA + std::string(" (Type: ") + AllocTypeName + std::string(")\n");
+						pNode = pNode->pNext;
+					}
+				}
+			}
+		}
+
+		if (!log.empty())
+		{
+			wi::backlog::post(log, wi::backlog::LogLevel::Error);
 		}
 
 		std::string message = "D3D12: device removed, cause: ";
@@ -7279,24 +7452,30 @@ using namespace dx12_internal;
 
 	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)
 	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		if (commandlist.queue == QUEUE_VIDEO_DECODE)
+			return;
 		wchar_t text[128];
 		if (wi::helper::StringConvert(name, text) > 0)
 		{
-			CommandList_DX12& commandlist = GetCommandList(cmd);
 			PIXBeginEvent(commandlist.GetGraphicsCommandList(), 0xFF000000, text);
 		}
 	}
 	void GraphicsDevice_DX12::EventEnd(CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
+		if (commandlist.queue == QUEUE_VIDEO_DECODE)
+			return;
 		PIXEndEvent(commandlist.GetGraphicsCommandList());
 	}
 	void GraphicsDevice_DX12::SetMarker(const char* name, CommandList cmd)
 	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		if (commandlist.queue == QUEUE_VIDEO_DECODE)
+			return;
 		wchar_t text[128];
 		if (wi::helper::StringConvert(name, text) > 0)
 		{
-			CommandList_DX12& commandlist = GetCommandList(cmd);
 			PIXSetMarker(commandlist.GetGraphicsCommandList(), 0xFFFF0000, text);
 		}
 	}

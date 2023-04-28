@@ -3557,6 +3557,11 @@ using namespace vulkan_internal;
 		vkDestroyImageView(device, nullImageView3D, nullptr);
 		vkDestroySampler(device, nullSampler, nullptr);
 
+		for (VkSampler sam : immutable_samplers)
+		{
+			vkDestroySampler(device, sam, nullptr);
+		}
+
 		if (pipelineCache != VK_NULL_HANDLE)
 		{
 			// Get size of pipeline cache
