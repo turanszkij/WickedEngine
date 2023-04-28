@@ -7125,8 +7125,6 @@ using namespace dx12_internal;
 		pic_params.CurrPic.Index7Bits = (UCHAR)op->current_dpb;
 		pic_params.CurrFieldOrderCnt[0] = op->poc[0];
 		pic_params.CurrFieldOrderCnt[1] = op->poc[1];
-		//pic_params.CurrFieldOrderCnt[0] = 65536;
-		//pic_params.CurrFieldOrderCnt[1] = 65536;
 		for (uint32_t i = 0; i < 16; ++i)
 		{
 			pic_params.RefFrameList[i].bPicEntry = 0xFF;
@@ -7224,7 +7222,6 @@ using namespace dx12_internal;
 		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 31
 #if 1
 		DXVA_Slice_H264_Short sliceinfo = {};
-		//sliceinfo.BSNALunitDataLocation = (UINT)op->stream_offset;
 		sliceinfo.BSNALunitDataLocation = 0;
 		sliceinfo.SliceBytesInBuffer = (UINT)op->stream_size;
 		sliceinfo.wBadSliceChopping = 0; // whole slice is in the buffer

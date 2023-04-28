@@ -2684,10 +2684,8 @@ void RenderMeshes(
 		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 		{
 			const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
-			if (subset.indexCount == 0)
-			{
+			if (subset.indexCount == 0 || subset.materialIndex >= vis.scene->materials.GetCount())
 				continue;
-			}
 			const MaterialComponent& material = vis.scene->materials[subset.materialIndex];
 
 			if (skip_planareflection_objects && material.HasPlanarReflection())
