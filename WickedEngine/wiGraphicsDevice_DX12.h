@@ -193,10 +193,12 @@ namespace wi::graphics
 			}
 			inline graphics_command_list_version* GetGraphicsCommandList()
 			{
+				assert(queue != QUEUE_VIDEO_DECODE);
 				return (graphics_command_list_version*)commandLists[queue].Get();
 			}
 			inline video_decode_command_list_version* GetVideoDecodeCommandList()
 			{
+				assert(queue == QUEUE_VIDEO_DECODE);
 				return (video_decode_command_list_version*)commandLists[queue].Get();
 			}
 		};

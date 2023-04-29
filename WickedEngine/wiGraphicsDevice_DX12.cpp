@@ -5145,7 +5145,7 @@ using namespace dx12_internal;
 			assert(SUCCEEDED(hr));
 
 			std::wstring ws = L"cmd" + std::to_wstring(commandlist.id);
-			commandlist.commandLists[queue]->SetName(ws.c_str());
+			commandlist.GetCommandList()->SetName(ws.c_str());
 
 			commandlist.binder.init(this);
 		}
@@ -5153,12 +5153,21 @@ using namespace dx12_internal;
 		// Start the command list in a default state:
 		hr = commandlist.GetCommandAllocator()->Reset();
 		assert(SUCCEEDED(hr));
-		hr = commandlist.GetGraphicsCommandList()->Reset(commandlist.GetCommandAllocator(), nullptr);
-		assert(SUCCEEDED(hr));
+
+		if (queue == QUEUE_VIDEO_DECODE)
+		{
+			hr = commandlist.GetVideoDecodeCommandList()->Reset(commandlist.GetCommandAllocator());
+			assert(SUCCEEDED(hr));
+		}
+		else
+		{
+			hr = commandlist.GetGraphicsCommandList()->Reset(commandlist.GetCommandAllocator(), nullptr);
+			assert(SUCCEEDED(hr));
+		}
 
 		if (queue == QUEUE_GRAPHICS || queue == QUEUE_COMPUTE)
 		{
-			ID3D12DescriptorHeap* heaps[2] = {
+			ID3D12DescriptorHeap* heaps[] = {
 				descriptorheap_res.heap_GPU.Get(),
 				descriptorheap_sam.heap_GPU.Get()
 			};
