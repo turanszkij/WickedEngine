@@ -40,7 +40,7 @@ namespace h264 {
 		int level_idc;
 		int seq_parameter_set_id;
 		int chroma_format_idc;
-		int separate_colour_plane_flag; // also called residual_colour_transform_flag
+		int separate_colour_plane_flag;
 		int bit_depth_luma_minus8;
 		int bit_depth_chroma_minus8;
 		int qpprime_y_zero_transform_bypass_flag;
@@ -113,7 +113,7 @@ namespace h264 {
 			int cpb_cnt_minus1;
 			int bit_rate_scale;
 			int cpb_size_scale;
-			int bit_rate_value_minus1[32]; // up to cpb_cnt_minus1, which is <= 31
+			int bit_rate_value_minus1[32];
 			int cpb_size_value_minus1[32];
 			int cbr_flag[32];
 			int initial_cpb_removal_delay_length_minus1;
@@ -131,13 +131,13 @@ namespace h264 {
 		int pic_order_present_flag;
 		int num_slice_groups_minus1;
 		int slice_group_map_type;
-		int run_length_minus1[8]; // up to num_slice_groups_minus1, which is <= 7 in Baseline and Extended, 0 otheriwse
+		int run_length_minus1[8];
 		int top_left[8];
 		int bottom_right[8];
 		int slice_group_change_direction_flag;
 		int slice_group_change_rate_minus1;
 		int pic_size_in_map_units_minus1;
-		int slice_group_id[256]; // FIXME what size?
+		int slice_group_id[256];
 		int num_ref_idx_l0_active_minus1;
 		int num_ref_idx_l1_active_minus1;
 		int weighted_pred_flag;
@@ -149,7 +149,6 @@ namespace h264 {
 		int constrained_intra_pred_flag;
 		int redundant_pic_cnt_present_flag;
 
-		// set iff we carry any of the optional headers
 		int _more_rbsp_data_present;
 
 		int transform_8x8_mode_flag;
@@ -164,17 +163,18 @@ namespace h264 {
 
 	enum SH_SLICE_TYPE
 	{
-		SH_SLICE_TYPE_P = 0,        // P (P slice)
-		SH_SLICE_TYPE_B = 1,        // B (B slice)
-		SH_SLICE_TYPE_I = 2,        // I (I slice)
-		SH_SLICE_TYPE_SP = 3,        // SP (SP slice)
-		SH_SLICE_TYPE_SI = 4,        // SI (SI slice)
-		//as per footnote to Table 7-6, the *_ONLY slice types indicate that all other slices in that picture are of the same type
-		SH_SLICE_TYPE_P_ONLY = 5,        // P (P slice)
-		SH_SLICE_TYPE_B_ONLY = 6,        // B (B slice)
-		SH_SLICE_TYPE_I_ONLY = 7,        // I (I slice)
-		SH_SLICE_TYPE_SP_ONLY = 8,        // SP (SP slice)
-		SH_SLICE_TYPE_SI_ONLY = 9,        // SI (SI slice)
+		SH_SLICE_TYPE_P = 0,
+		SH_SLICE_TYPE_B = 1,
+		SH_SLICE_TYPE_I = 2,
+		SH_SLICE_TYPE_SP = 3,
+		SH_SLICE_TYPE_SI = 4,
+
+		// The *_ONLY slice types indicate that all other slices in that picture are of the same type
+		SH_SLICE_TYPE_P_ONLY = 5,
+		SH_SLICE_TYPE_B_ONLY = 6,
+		SH_SLICE_TYPE_I_ONLY = 7,
+		SH_SLICE_TYPE_SP_ONLY = 8,
+		SH_SLICE_TYPE_SI_ONLY = 9,
 	};
 	struct SliceHeader
 	{

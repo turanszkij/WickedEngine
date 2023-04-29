@@ -12,7 +12,6 @@ using namespace wi::graphics;
 
 namespace wi::video
 {
-
 	bool CreateVideo(const std::string& filename, Video* video)
 	{
 		wi::vector<uint8_t> filedata;
@@ -527,12 +526,14 @@ namespace wi::video
 
 		ImageAspect aspect_luma = ImageAspect::LUMINANCE;
 		ImageAspect aspect_chroma = ImageAspect::CHROMINANCE;
+		// Ensure that current DPB slot is in DST state:
 		if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::VIDEO_DECODE_DST)
 		{
 			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DST, 0, instance->dpb.current_slot, &aspect_luma));
 			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DST, 0, instance->dpb.current_slot, &aspect_chroma));
 			instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::VIDEO_DECODE_DST;
 		}
+		// Ensure that reference frame DPB slots are in SRC state:
 		for (size_t i = 0; i < instance->dpb.reference_usage.size(); ++i)
 		{
 			uint8_t ref = instance->dpb.reference_usage[i];
@@ -551,6 +552,8 @@ namespace wi::video
 
 		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
 
+		// The current DPB slot is transitioned into a shader readable state because it will need to be resolved into RGB on a different GPU queue:
+		//	The video queue must be used to transition from video states
 		if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::SHADER_RESOURCE_COMPUTE)
 		{
 			GPUBarrier barriers[] = {
@@ -561,6 +564,9 @@ namespace wi::video
 			instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::SHADER_RESOURCE_COMPUTE;
 		}
 
+		// DPB slot management:
+		//	When current frame was a reference, then the next frame can not overwrite its DPB slot, so increment next_slot as a ring buffer
+		//	However, the ring buffer will wrap around so older reference frames can be overwritten by this
 		if (frame_info.reference_priority > 0)
 		{
 			if (instance->dpb.next_ref >= instance->dpb.reference_usage.size())

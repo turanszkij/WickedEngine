@@ -226,8 +226,9 @@ void VideoWindow::SetEntity(Entity entity)
 			str += "duration : " + std::to_string(videofile.duration_seconds) + " seconds\n";
 			str += "FPS : " + std::to_string(videofile.average_frames_per_second) + "\n";
 			str += "bit rate : " + std::to_string(videofile.bit_rate) + "\n";
-			str += "PPS count : " + std::to_string(videofile.pps_count) + "\n";
-			str += "SPS count : " + std::to_string(videofile.sps_count) + "\n";
+			str += "Picture Parameter Sets: " + std::to_string(videofile.pps_count) + "\n";
+			str += "Sequence Parameter Sets: " + std::to_string(videofile.sps_count) + "\n";
+			str += "Decode Picture Buffers: " + std::to_string(video->videoinstance.dpb.texture.desc.array_size) + "\n";
 			infoLabel.SetText(str);
 
 			timerSlider.SetRange(0, videofile.duration_seconds);
