@@ -20,6 +20,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	meshWnd.Create(editor);
 	envProbeWnd.Create(editor);
 	soundWnd.Create(editor);
+	videoWnd.Create(editor);
 	decalWnd.Create(editor);
 	lightWnd.Create(editor);
 	animWnd.Create(editor);
@@ -71,6 +72,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Collider " ICON_COLLIDER, 18);
 	newComponentCombo.AddItem("Camera " ICON_CAMERA, 20);
 	newComponentCombo.AddItem("Object " ICON_OBJECT, 21);
+	newComponentCombo.AddItem("Video " ICON_VIDEO, 22);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(-1);
 		if (editor->translator.selected.empty())
@@ -183,6 +185,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			if (scene.objects.Contains(entity))
 				return;
 			break;
+		case 22:
+			if (scene.videos.Contains(entity))
+				return;
+			break;
 		default:
 			return;
 		}
@@ -279,6 +285,9 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		case 21:
 			scene.objects.Create(entity);
 			break;
+		case 22:
+			scene.videos.Create(entity);
+			break;
 		default:
 			break;
 		}
@@ -297,6 +306,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&meshWnd);
 	AddWidget(&envProbeWnd);
 	AddWidget(&soundWnd);
+	AddWidget(&videoWnd);
 	AddWidget(&decalWnd);
 	AddWidget(&lightWnd);
 	AddWidget(&animWnd);
@@ -325,6 +335,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	meshWnd.SetVisible(false);
 	envProbeWnd.SetVisible(false);
 	soundWnd.SetVisible(false);
+	videoWnd.SetVisible(false);
 	decalWnd.SetVisible(false);
 	lightWnd.SetVisible(false);
 	animWnd.SetVisible(false);
@@ -541,6 +552,19 @@ void ComponentsWindow::ResizeLayout()
 	else
 	{
 		soundWnd.SetVisible(false);
+	}
+
+	if (scene.videos.Contains(videoWnd.entity))
+	{
+		videoWnd.SetVisible(true);
+		videoWnd.SetPos(pos);
+		videoWnd.SetSize(XMFLOAT2(width, videoWnd.GetScale().y));
+		pos.y += videoWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		videoWnd.SetVisible(false);
 	}
 
 	if (scene.decals.Contains(decalWnd.entity))

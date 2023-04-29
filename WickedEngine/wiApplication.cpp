@@ -105,7 +105,8 @@ namespace wi
 			return;
 		}
 
-		#ifdef WICKEDENGINE_BUILD_DX12
+#if 0
+#ifdef WICKEDENGINE_BUILD_DX12
 		static bool startup_workaround = false;
 		if (!startup_workaround)
 		{
@@ -117,7 +118,8 @@ namespace wi
 				graphicsDevice->SubmitCommandLists();
 			}
 		}
-		#endif // WICKEDENGINE_BUILD_DX12
+#endif // WICKEDENGINE_BUILD_DX12
+#endif
 
 		static bool startup_script = false;
 		if (!startup_script)
@@ -519,6 +521,12 @@ namespace wi
 				validationMode = ValidationMode::Verbose;
 			}
 
+			GPUPreference preference = GPUPreference::Discrete;
+			if (wi::arguments::HasArgument("igpu"))
+			{
+				preference = GPUPreference::Integrated;
+			}
+
 			bool use_dx12 = wi::arguments::HasArgument("dx12");
 			bool use_vulkan = wi::arguments::HasArgument("vulkan");
 
@@ -552,14 +560,14 @@ namespace wi
 			{
 #ifdef WICKEDENGINE_BUILD_VULKAN
 				wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "spirv/");
-				graphicsDevice = std::make_unique<GraphicsDevice_Vulkan>(window, validationMode);
+				graphicsDevice = std::make_unique<GraphicsDevice_Vulkan>(window, validationMode, preference);
 #endif
 			}
 			else if (use_dx12)
 			{
 #ifdef WICKEDENGINE_BUILD_DX12
 				wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "hlsl6/");
-				graphicsDevice = std::make_unique<GraphicsDevice_DX12>(validationMode);
+				graphicsDevice = std::make_unique<GraphicsDevice_DX12>(validationMode, preference);
 #endif
 			}
 		}

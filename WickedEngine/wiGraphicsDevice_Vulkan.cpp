@@ -7,6 +7,9 @@
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
 
+#include "Utility/vulkan/vk_video/vulkan_video_codec_h264std_decode.h"
+#include "Utility/h264.h"
+
 #define VOLK_IMPLEMENTATION
 #include "Utility/volk.h"
 
@@ -25,18 +28,21 @@
 #include <iostream>
 #include <algorithm>
 
-// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
-//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
-#define VULKAN_BINDING_SHIFT_B 0
-#define VULKAN_BINDING_SHIFT_T 1000
-#define VULKAN_BINDING_SHIFT_U 2000
-#define VULKAN_BINDING_SHIFT_S 3000
-
 namespace wi::graphics
 {
 
 namespace vulkan_internal
 {
+	// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
+	//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
+	enum
+	{
+		VULKAN_BINDING_SHIFT_B = 0,
+		VULKAN_BINDING_SHIFT_T = 1000,
+		VULKAN_BINDING_SHIFT_U = 2000,
+		VULKAN_BINDING_SHIFT_S = 3000,
+	};
+
 	// Converters:
 	constexpr VkFormat _ConvertFormat(Format value)
 	{
@@ -172,6 +178,8 @@ namespace vulkan_internal
 			return VK_FORMAT_BC7_UNORM_BLOCK;
 		case Format::BC7_UNORM_SRGB:
 			return VK_FORMAT_BC7_SRGB_BLOCK;
+		case Format::NV12:
+			return VK_FORMAT_G8_B8R8_2PLANE_420_UNORM;
 		}
 		return VK_FORMAT_UNDEFINED;
 	}
@@ -343,6 +351,9 @@ namespace vulkan_internal
 			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		case ResourceState::SHADING_RATE_SOURCE:
 			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
+		case ResourceState::VIDEO_DECODE_SRC:
+		case ResourceState::VIDEO_DECODE_DST:
+			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR;
 		default:
 			return VK_IMAGE_LAYOUT_UNDEFINED;
 		}
@@ -382,6 +393,10 @@ namespace vulkan_internal
 			return VK_IMAGE_ASPECT_DEPTH_BIT;
 		case wi::graphics::ImageAspect::STENCIL:
 			return VK_IMAGE_ASPECT_STENCIL_BIT;
+		case wi::graphics::ImageAspect::LUMINANCE:
+			return VK_IMAGE_ASPECT_PLANE_0_BIT;
+		case wi::graphics::ImageAspect::CHROMINANCE:
+			return VK_IMAGE_ASPECT_PLANE_1_BIT;
 		}
 	}
 	constexpr VkPipelineStageFlags2 _ConvertPipelineStage(ResourceState value)
@@ -394,29 +409,24 @@ namespace vulkan_internal
 		{
 			flags |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 		}
-
 		if (has_flag(value, ResourceState::COPY_SRC) ||
 			has_flag(value, ResourceState::COPY_DST))
 		{
 			flags |= VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 		}
-
 		if (has_flag(value, ResourceState::RENDERTARGET))
 		{
 			flags |= VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 		}
-
 		if (has_flag(value, ResourceState::DEPTHSTENCIL) ||
 			has_flag(value, ResourceState::DEPTHSTENCIL_READONLY))
 		{
 			flags |= VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
 		}
-
 		if (has_flag(value, ResourceState::SHADING_RATE_SOURCE))
 		{
 			flags |= VK_ACCESS_2_SHADING_RATE_IMAGE_READ_BIT_NV;
 		}
-
 		if (has_flag(value, ResourceState::VERTEX_BUFFER))
 		{
 			flags |= VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
@@ -440,6 +450,11 @@ namespace vulkan_internal
 		if (has_flag(value, ResourceState::PREDICATION))
 		{
 			flags |= VK_PIPELINE_STAGE_2_CONDITIONAL_RENDERING_BIT_EXT;
+		}
+		if (has_flag(value, ResourceState::VIDEO_DECODE_DST) ||
+			has_flag(value, ResourceState::VIDEO_DECODE_SRC))
+		{
+			flags |= VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
 		}
 
 		return flags;
@@ -469,7 +484,6 @@ namespace vulkan_internal
 		{
 			flags |= VK_ACCESS_2_TRANSFER_WRITE_BIT;
 		}
-
 		if (has_flag(value, ResourceState::RENDERTARGET))
 		{
 			flags |= VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT;
@@ -484,7 +498,6 @@ namespace vulkan_internal
 		{
 			flags |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 		}
-
 		if (has_flag(value, ResourceState::VERTEX_BUFFER))
 		{
 			flags |= VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT;
@@ -501,10 +514,17 @@ namespace vulkan_internal
 		{
 			flags |= VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
 		}
-
 		if (has_flag(value, ResourceState::PREDICATION))
 		{
 			flags |= VK_ACCESS_2_CONDITIONAL_RENDERING_READ_BIT_EXT;
+		}
+		if (has_flag(value, ResourceState::VIDEO_DECODE_DST))
+		{
+			flags |= VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
+		}
+		if (has_flag(value, ResourceState::VIDEO_DECODE_SRC))
+		{
+			flags |= VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR;
 		}
 
 		return flags;
@@ -707,6 +727,8 @@ namespace vulkan_internal
 		wi::vector<SubresourceData> mapped_subresources;
 		SparseTextureProperties sparse_texture_properties;
 
+		VkImageView video_decode_view = VK_NULL_HANDLE;
+
 		~Texture_Vulkan()
 		{
 			if (allocationhandler == nullptr)
@@ -760,6 +782,10 @@ namespace vulkan_internal
 			for (auto x : subresources_dsv)
 			{
 				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
+			}
+			if (video_decode_view != VK_NULL_HANDLE)
+			{
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(video_decode_view, framecount));
 			}
 			allocationhandler->destroylocker.unlock();
 		}
@@ -964,6 +990,28 @@ namespace vulkan_internal
 
 		}
 	};
+	struct VideoDecoder_Vulkan
+	{
+		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		VkVideoSessionKHR video_session = VK_NULL_HANDLE;
+		VkVideoSessionParametersKHR session_parameters = VK_NULL_HANDLE;
+		wi::vector<VmaAllocation> allocations;
+
+		~VideoDecoder_Vulkan()
+		{
+			if (allocationhandler == nullptr)
+				return;
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			allocationhandler->destroyer_video_sessions.push_back(std::make_pair(video_session, framecount));
+			allocationhandler->destroyer_video_session_parameters.push_back(std::make_pair(session_parameters, framecount));
+			for (auto& x : allocations)
+			{
+				allocationhandler->destroyer_allocations.push_back(std::make_pair(x, framecount));
+			}
+			allocationhandler->destroylocker.unlock();
+		}
+	};
 
 	Buffer_Vulkan* to_internal(const GPUBuffer* param)
 	{
@@ -1001,10 +1049,14 @@ namespace vulkan_internal
 	{
 		return static_cast<SwapChain_Vulkan*>(param->internal_state.get());
 	}
+	VideoDecoder_Vulkan* to_internal(const VideoDecoder* param)
+	{
+		return static_cast<VideoDecoder_Vulkan*>(param->internal_state.get());
+	}
 
 	inline const std::string GetCachePath()
 	{
-		return wi::helper::GetTempDirectoryPath() + "wiPipelineCache_Vulkan";
+		return wi::helper::GetTempDirectoryPath() + "/wiPipelineCache_Vulkan";
 	}
 
 	bool CreateSwapChainInternal(
@@ -1059,6 +1111,7 @@ namespace vulkan_internal
 		}
 		if (!valid)
 		{
+			internal_state->desc.format = Format::B8G8R8A8_UNORM;
 			surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
 			surfaceFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 		}
@@ -1211,7 +1264,10 @@ using namespace vulkan_internal;
 
 	void GraphicsDevice_Vulkan::CommandQueue::submit(GraphicsDevice_Vulkan* device, VkFence fence)
 	{
-		locker.lock();
+		if (queue == VK_NULL_HANDLE)
+			return;
+		std::scoped_lock lock(locker);
+
 		VkSubmitInfo2 submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
 		submitInfo.commandBufferInfoCount = (uint32_t)submit_cmds.size();
@@ -1262,7 +1318,6 @@ using namespace vulkan_internal;
 		submit_signalSemaphores.clear();
 		submit_signalSemaphoreInfos.clear();
 		submit_cmds.clear();
-		locker.unlock();
 	}
 
 	void GraphicsDevice_Vulkan::CopyAllocator::init(GraphicsDevice_Vulkan* device)
@@ -1276,8 +1331,10 @@ using namespace vulkan_internal;
 		{
 			vkDestroyCommandPool(device->device, x.transferCommandPool, nullptr);
 			vkDestroyCommandPool(device->device, x.transitionCommandPool, nullptr);
-			vkDestroySemaphore(device->device, x.semaphores[0], nullptr);
-			vkDestroySemaphore(device->device, x.semaphores[1], nullptr);
+			for (auto& sema : x.semaphores)
+			{
+				vkDestroySemaphore(device->device, sema, nullptr);
+			}
 			vkDestroyFence(device->device, x.fence, nullptr);
 		}
 	}
@@ -1337,6 +1394,8 @@ using namespace vulkan_internal;
 			assert(res == VK_SUCCESS);
 			res = vkCreateSemaphore(device->device, &semaphoreInfo, nullptr, &cmd.semaphores[1]);
 			assert(res == VK_SUCCESS);
+			res = vkCreateSemaphore(device->device, &semaphoreInfo, nullptr, &cmd.semaphores[2]);
+			assert(res == VK_SUCCESS);
 
 			GPUBufferDesc uploaddesc;
 			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
@@ -1374,61 +1433,96 @@ using namespace vulkan_internal;
 		res = vkEndCommandBuffer(cmd.transitionCommandBuffer);
 		assert(res == VK_SUCCESS);
 
-		VkCommandBufferSubmitInfo cbSubmitInfo{};
-		cbSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-		cbSubmitInfo.commandBuffer = cmd.transferCommandBuffer;
-
-		VkSemaphoreSubmitInfo signalSemaphoreInfo{};
-		signalSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-		signalSemaphoreInfo.semaphore = cmd.semaphores[0];
-
 		VkSubmitInfo2 submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-		submitInfo.commandBufferInfoCount = 1;
-		submitInfo.pCommandBufferInfos = &cbSubmitInfo;
-		submitInfo.signalSemaphoreInfoCount = 1;
-		submitInfo.pSignalSemaphoreInfos = &signalSemaphoreInfo;
-		device->queues[QUEUE_COPY].locker.lock();
-		res = vkQueueSubmit2(device->queues[QUEUE_COPY].queue, 1, &submitInfo, VK_NULL_HANDLE);
-		assert(res == VK_SUCCESS);
-		device->queues[QUEUE_COPY].locker.unlock();
 
-		VkSemaphoreSubmitInfo waitSemaphoreInfo{};
+		VkCommandBufferSubmitInfo cbSubmitInfo = {};
+		cbSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+
+		VkSemaphoreSubmitInfo signalSemaphoreInfos[2] = {};
+		signalSemaphoreInfos[0].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+		signalSemaphoreInfos[1].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+
+		VkSemaphoreSubmitInfo waitSemaphoreInfo = {};
 		waitSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-		waitSemaphoreInfo.semaphore = cmd.semaphores[0];
-		waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 
-		cbSubmitInfo.commandBuffer = cmd.transitionCommandBuffer;
-		signalSemaphoreInfo.semaphore = cmd.semaphores[1];
-		
-		submitInfo.waitSemaphoreInfoCount = 1;
-		submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
-		submitInfo.commandBufferInfoCount = 1;
-		submitInfo.pCommandBufferInfos = &cbSubmitInfo;
-		submitInfo.signalSemaphoreInfoCount = 1;
-		submitInfo.pSignalSemaphoreInfos = &signalSemaphoreInfo;
+		{
+			cbSubmitInfo.commandBuffer = cmd.transferCommandBuffer;
+			signalSemaphoreInfos[0].semaphore = cmd.semaphores[0]; // signal for graphics queue
 
-		device->queues[QUEUE_GRAPHICS].locker.lock();
-		res = vkQueueSubmit2(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, VK_NULL_HANDLE);
-		assert(res == VK_SUCCESS);
-		device->queues[QUEUE_GRAPHICS].locker.unlock();
+			submitInfo.commandBufferInfoCount = 1;
+			submitInfo.pCommandBufferInfos = &cbSubmitInfo;
+			submitInfo.signalSemaphoreInfoCount = 1;
+			submitInfo.pSignalSemaphoreInfos = signalSemaphoreInfos;
 
-		waitSemaphoreInfo.semaphore = cmd.semaphores[1];
-		submitInfo.waitSemaphoreInfoCount = 1;
-		submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
-		submitInfo.commandBufferInfoCount = 0;
-		submitInfo.pCommandBufferInfos = nullptr;
-		submitInfo.signalSemaphoreInfoCount = 0;
-		submitInfo.pSignalSemaphoreInfos = nullptr;
+			std::scoped_lock lock(device->queues[QUEUE_COPY].locker);
+			res = vkQueueSubmit2(device->queues[QUEUE_COPY].queue, 1, &submitInfo, VK_NULL_HANDLE);
+			assert(res == VK_SUCCESS);
+		}
 
-		device->queues[QUEUE_COMPUTE].locker.lock();
-		res = vkQueueSubmit2(device->queues[QUEUE_COMPUTE].queue, 1, &submitInfo, cmd.fence); // final submit also signals fence!
-		assert(res == VK_SUCCESS);
-		device->queues[QUEUE_COMPUTE].locker.unlock();
+		{
+			waitSemaphoreInfo.semaphore = cmd.semaphores[0]; // wait for copy queue
+			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 
-		locker.lock();
+			cbSubmitInfo.commandBuffer = cmd.transitionCommandBuffer;
+			signalSemaphoreInfos[0].semaphore = cmd.semaphores[1]; // signal for compute queue
+			signalSemaphoreInfos[1].semaphore = cmd.semaphores[2]; // signal for video decode queue
+
+			submitInfo.waitSemaphoreInfoCount = 1;
+			submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
+			submitInfo.commandBufferInfoCount = 1;
+			submitInfo.pCommandBufferInfos = &cbSubmitInfo;
+			if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
+			{
+				submitInfo.signalSemaphoreInfoCount = 2;
+			}
+			else
+			{
+				submitInfo.signalSemaphoreInfoCount = 1;
+			}
+			submitInfo.pSignalSemaphoreInfos = signalSemaphoreInfos;
+
+			std::scoped_lock lock(device->queues[QUEUE_GRAPHICS].locker);
+			res = vkQueueSubmit2(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, VK_NULL_HANDLE);
+			assert(res == VK_SUCCESS);
+		}
+
+		if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
+		{
+			waitSemaphoreInfo.semaphore = cmd.semaphores[2]; // wait for graphics queue
+			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+
+			submitInfo.waitSemaphoreInfoCount = 1;
+			submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
+			submitInfo.commandBufferInfoCount = 0;
+			submitInfo.pCommandBufferInfos = nullptr;
+			submitInfo.signalSemaphoreInfoCount = 0;
+			submitInfo.pSignalSemaphoreInfos = nullptr;
+
+			std::scoped_lock lock(device->queues[QUEUE_VIDEO_DECODE].locker);
+			res = vkQueueSubmit2(device->queues[QUEUE_VIDEO_DECODE].queue, 1, &submitInfo, VK_NULL_HANDLE);
+			assert(res == VK_SUCCESS);
+		}
+
+		// This must be final submit in this function because it will also signal a fence for state tracking by CPU!
+		{
+			waitSemaphoreInfo.semaphore = cmd.semaphores[1]; // wait for graphics queue
+			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+
+			submitInfo.waitSemaphoreInfoCount = 1;
+			submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
+			submitInfo.commandBufferInfoCount = 0;
+			submitInfo.pCommandBufferInfos = nullptr;
+			submitInfo.signalSemaphoreInfoCount = 0;
+			submitInfo.pSignalSemaphoreInfos = nullptr;
+
+			std::scoped_lock lock(device->queues[QUEUE_COMPUTE].locker);
+			res = vkQueueSubmit2(device->queues[QUEUE_COMPUTE].queue, 1, &submitInfo, cmd.fence); // final submit also signals fence!
+			assert(res == VK_SUCCESS);
+		}
+
+		std::scoped_lock lock(locker);
 		freelist.push_back(cmd);
-		locker.unlock();
 	}
 
 	void GraphicsDevice_Vulkan::DescriptorBinderPool::init(GraphicsDevice_Vulkan* device)
@@ -2192,7 +2286,7 @@ using namespace vulkan_internal;
 	}
 
 	// Engine functions
-	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wi::platform::window_type window, ValidationMode validationMode_)
+	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wi::platform::window_type window, ValidationMode validationMode_, GPUPreference preference)
 	{
 		wi::Timer timer;
 
@@ -2374,6 +2468,8 @@ using namespace vulkan_internal;
 			};
 			wi::vector<const char*> enabled_deviceExtensions;
 
+			bool h264_decode_extension = false;
+
 			for (const auto& dev : devices)
 			{
 				bool suitable = true;
@@ -2394,6 +2490,8 @@ using namespace vulkan_internal;
 				}
 				if (!suitable)
 					continue;
+
+				h264_decode_extension = false;
 
 				features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 				features_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
@@ -2505,15 +2603,29 @@ using namespace vulkan_internal;
 					features_chain = &conditional_rendering_features.pNext;
 				}
 
+				if (checkExtensionSupport(VK_KHR_VIDEO_QUEUE_EXTENSION_NAME, available_deviceExtensions) &&
+					checkExtensionSupport(VK_KHR_VIDEO_DECODE_QUEUE_EXTENSION_NAME, available_deviceExtensions) &&
+					checkExtensionSupport(VK_KHR_VIDEO_DECODE_H264_EXTENSION_NAME, available_deviceExtensions))
+				{
+					enabled_deviceExtensions.push_back(VK_KHR_VIDEO_QUEUE_EXTENSION_NAME);
+					enabled_deviceExtensions.push_back(VK_KHR_VIDEO_DECODE_QUEUE_EXTENSION_NAME);
+					enabled_deviceExtensions.push_back(VK_KHR_VIDEO_DECODE_H264_EXTENSION_NAME);
+					h264_decode_extension = true;
+				}
+
 				vkGetPhysicalDeviceProperties2(dev, &properties2);
 
-				bool discrete = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-				if (discrete || physicalDevice == VK_NULL_HANDLE)
+				bool priority = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+				if (preference == GPUPreference::Integrated)
+				{
+					priority = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
+				}
+				if (priority || physicalDevice == VK_NULL_HANDLE)
 				{
 					physicalDevice = dev;
-					if (discrete)
+					if (priority)
 					{
-						break; // if this is discrete GPU, look no further (prioritize discrete GPU)
+						break; // if this is prioritized GPU type, look no further
 					}
 				}
 			}
@@ -2663,94 +2775,138 @@ using namespace vulkan_internal;
 				capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_MIN_MAX;
 			}
 
+			if(h264_decode_extension)
+			{
+				decode_h264_profile.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_PROFILE_INFO_KHR;
+				decode_h264_profile.stdProfileIdc = STD_VIDEO_H264_PROFILE_IDC_HIGH;
+				decode_h264_profile.pictureLayout = VK_VIDEO_DECODE_H264_PICTURE_LAYOUT_INTERLACED_INTERLEAVED_LINES_BIT_KHR;
+
+				decode_h264_capabilities.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_CAPABILITIES_KHR;
+
+				video_capability_h264.profile.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_INFO_KHR;
+				video_capability_h264.profile.pNext = &decode_h264_profile;
+				video_capability_h264.profile.videoCodecOperation = VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR;
+				video_capability_h264.profile.lumaBitDepth = VK_VIDEO_COMPONENT_BIT_DEPTH_8_BIT_KHR;
+				video_capability_h264.profile.chromaBitDepth = VK_VIDEO_COMPONENT_BIT_DEPTH_8_BIT_KHR;
+				video_capability_h264.profile.chromaSubsampling = VK_VIDEO_CHROMA_SUBSAMPLING_420_BIT_KHR;
+
+				video_capability_h264.decode_capabilities.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_CAPABILITIES_KHR;
+
+				video_capability_h264.video_capabilities.sType = VK_STRUCTURE_TYPE_VIDEO_CAPABILITIES_KHR;
+				video_capability_h264.video_capabilities.pNext = &video_capability_h264.decode_capabilities;
+				video_capability_h264.decode_capabilities.pNext = &decode_h264_capabilities;
+				res = vkGetPhysicalDeviceVideoCapabilitiesKHR(physicalDevice, &video_capability_h264.profile, &video_capability_h264.video_capabilities);
+				assert(res == VK_SUCCESS);
+
+				if (video_capability_h264.decode_capabilities.flags)
+				{
+					capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H264;
+					VIDEO_DECODE_BITSTREAM_ALIGNMENT = std::max(VIDEO_DECODE_BITSTREAM_ALIGNMENT, video_capability_h264.video_capabilities.minBitstreamBufferOffsetAlignment);
+					VIDEO_DECODE_BITSTREAM_ALIGNMENT = std::max(VIDEO_DECODE_BITSTREAM_ALIGNMENT, video_capability_h264.video_capabilities.minBitstreamBufferSizeAlignment);
+				}
+			}
+
 			// Find queue families:
 			uint32_t queueFamilyCount = 0;
-			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+			vkGetPhysicalDeviceQueueFamilyProperties2(physicalDevice, &queueFamilyCount, nullptr);
 
 			queueFamilies.resize(queueFamilyCount);
-			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-
-			// Query base queue families:
-			uint32_t familyIndex = 0;
-			for (const auto& queueFamily : queueFamilies)
+			queueFamiliesVideo.resize(queueFamilyCount);
+			for (uint32_t i = 0; i < queueFamilyCount; ++i)
 			{
-				if (graphicsFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				queueFamilies[i].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
+				queueFamilies[i].pNext = &queueFamiliesVideo[i];
+				queueFamiliesVideo[i].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_VIDEO_PROPERTIES_KHR;
+			}
+			vkGetPhysicalDeviceQueueFamilyProperties2(physicalDevice, &queueFamilyCount, queueFamilies.data());
+			
+			// Query base queue families:
+			for (uint32_t i = 0; i < queueFamilyCount; ++i)
+			{
+				auto& queueFamily = queueFamilies[i];
+				auto& queueFamilyVideo = queueFamiliesVideo[i];
+
+				if (graphicsFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueFamilyProperties.queueCount > 0 && queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 				{
-					graphicsFamily = familyIndex;
-					if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
+					graphicsFamily = i;
+					if (queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
 					{
 						queues[QUEUE_GRAPHICS].sparse_binding_supported = true;
 					}
 				}
 
-				if (copyFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
+				if (copyFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueFamilyProperties.queueCount > 0 && queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT)
 				{
-					copyFamily = familyIndex;
+					copyFamily = i;
 				}
 
-				if (computeFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+				if (computeFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueFamilyProperties.queueCount > 0 && queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT)
 				{
-					computeFamily = familyIndex;
+					computeFamily = i;
 				}
 
-				familyIndex++;
+				if (videoFamily == VK_QUEUE_FAMILY_IGNORED &&
+					queueFamily.queueFamilyProperties.queueCount > 0 &&
+					(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_VIDEO_DECODE_BIT_KHR) &&
+					(queueFamilyVideo.videoCodecOperations & VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR)
+					)
+				{
+					videoFamily = i;
+				}
 			}
 
 			// Now try to find dedicated compute and transfer queues:
-			familyIndex = 0;
-			for (const auto& queueFamily : queueFamilies)
+			for (uint32_t i = 0; i < queueFamilyCount; ++i)
 			{
-				if (queueFamily.queueCount > 0 && (queueFamily.queueFlags == VK_QUEUE_TRANSFER_BIT))
-				{
-					copyFamily = familyIndex;
-				}
-				else if (queueFamily.queueCount > 0 && queueFamily.queueFlags == (VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT))
-				{
-					copyFamily = familyIndex;
-					queues[QUEUE_COPY].sparse_binding_supported = true;
-				}
+				auto& queueFamily = queueFamilies[i];
 
-				if (queueFamily.queueCount > 0 &&
-					queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT &&
-					!(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				if (queueFamily.queueFamilyProperties.queueCount > 0 &&
+					queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT &&
+					!(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
+					!(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT)
 					)
 				{
-					computeFamily = familyIndex;
+					copyFamily = i;
 
-					if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
+					if (queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
+					{
+						queues[QUEUE_COPY].sparse_binding_supported = true;
+					}
+				}
+
+				if (queueFamily.queueFamilyProperties.queueCount > 0 &&
+					queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT &&
+					!(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+					)
+				{
+					computeFamily = i;
+
+					if (queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
 					{
 						queues[QUEUE_COMPUTE].sparse_binding_supported = true;
 					}
 				}
-
-				familyIndex++;
 			}
 
-			// If the above search found no transfer family, fall back to the less strict exclusivity criteria
-			if (copyFamily == VK_QUEUE_FAMILY_IGNORED)
+			// Now try to find dedicated transfer queue with only transfer and sparse flags:
+			//	(This is a workaround for a driver bug with sparse updating from transfer queue)
+			for (uint32_t i = 0; i < queueFamilyCount; ++i)
 			{
-				familyIndex = 0;
-				for (const auto& queueFamily : queueFamilies)
-				{
-					if (queueFamily.queueCount > 0 &&
-						queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT &&
-						!(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
-						!(queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
-						)
-					{
-						copyFamily = familyIndex;
+				auto& queueFamily = queueFamilies[i];
 
-						if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
-						{
-							queues[QUEUE_COPY].sparse_binding_supported = true;
-						}
-					}
-					familyIndex++;
+				if (queueFamily.queueFamilyProperties.queueCount > 0 && queueFamily.queueFamilyProperties.queueFlags == (VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT))
+				{
+					copyFamily = i;
+					queues[QUEUE_COPY].sparse_binding_supported = true;
 				}
 			}
 
 			wi::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 			wi::unordered_set<uint32_t> uniqueQueueFamilies = { graphicsFamily,copyFamily,computeFamily };
+			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
+			{
+				uniqueQueueFamilies.insert(videoFamily);
+			}
 
 			float queuePriority = 1.0f;
 			for (uint32_t queueFamily : uniqueQueueFamilies)
@@ -2789,10 +2945,15 @@ using namespace vulkan_internal;
 			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
 			vkGetDeviceQueue(device, computeFamily, 0, &computeQueue);
 			vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
+			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
+			{
+				vkGetDeviceQueue(device, videoFamily, 0, &videoQueue);
+			}
 
 			queues[QUEUE_GRAPHICS].queue = graphicsQueue;
 			queues[QUEUE_COMPUTE].queue = computeQueue;
 			queues[QUEUE_COPY].queue = copyQueue;
+			queues[QUEUE_VIDEO_DECODE].queue = videoQueue;
 
 			VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
 			timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -2825,6 +2986,16 @@ using namespace vulkan_internal;
 			{
 				wi::helper::messageBox("vkCreateSemaphore[QUEUE_COPY] failed! ERROR: " + std::to_string(res), "Error!");
 				wi::platform::Exit();
+			}
+			if (videoQueue != VK_NULL_HANDLE)
+			{
+				res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_VIDEO_DECODE].semaphore);
+				assert(res == VK_SUCCESS);
+				if (res != VK_SUCCESS)
+				{
+					wi::helper::messageBox("vkCreateSemaphore[QUEUE_VIDEO_DECODE] failed! ERROR: " + std::to_string(res), "Error!");
+					wi::platform::Exit();
+				}
 			}
 		}
 
@@ -2901,6 +3072,9 @@ using namespace vulkan_internal;
 		{
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
+				if (queues[queue].queue == VK_NULL_HANDLE)
+					continue;
+
 				VkFenceCreateInfo fenceInfo = {};
 				fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 				//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -3383,6 +3557,11 @@ using namespace vulkan_internal;
 		vkDestroyImageView(device, nullImageView3D, nullptr);
 		vkDestroySampler(device, nullSampler, nullptr);
 
+		for (VkSampler sam : immutable_samplers)
+		{
+			vkDestroySampler(device, sam, nullptr);
+		}
+
 		if (pipelineCache != VK_NULL_HANDLE)
 		{
 			// Get size of pipeline cache
@@ -3453,7 +3632,7 @@ using namespace vulkan_internal;
 			res = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)familyIndex, internal_state->surface, &presentSupport);
 			assert(res == VK_SUCCESS);
 
-			if (presentFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && presentSupport)
+			if (presentFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueFamilyProperties.queueCount > 0 && presentSupport)
 			{
 				presentFamily = familyIndex;
 				break;
@@ -3468,7 +3647,13 @@ using namespace vulkan_internal;
 			return false;
 		}
 
-		return CreateSwapChainInternal(internal_state.get(), physicalDevice, device, allocationhandler);
+		bool success = CreateSwapChainInternal(internal_state.get(), physicalDevice, device, allocationhandler);
+		assert(success);
+
+		// The requested swapchain format is overridden if it wasn't supported:
+		swapchain->desc.format = internal_state->desc.format;
+
+		return success;
 	}
 	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer) const
 	{
@@ -3531,8 +3716,23 @@ using namespace vulkan_internal;
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 		}
+		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
+		}
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+		VkVideoProfileListInfoKHR profile_list_info = {};
+		profile_list_info.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR;
+		profile_list_info.pProfiles = &video_capability_h264.profile;
+		profile_list_info.profileCount = 1;
+		if ((bufferInfo.usage & VK_BUFFER_USAGE_VIDEO_DECODE_DST_BIT_KHR) ||
+			(bufferInfo.usage & VK_BUFFER_USAGE_VIDEO_DECODE_SRC_BIT_KHR)
+			)
+		{
+			bufferInfo.pNext = &profile_list_info;
+		}
 
 		bufferInfo.flags = 0;
 
@@ -3797,6 +3997,48 @@ using namespace vulkan_internal;
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+		}
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR;
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+		}
+
+		if (desc->format == Format::NV12 && has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		{
+			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+		}
+
+		VkVideoProfileListInfoKHR profile_list_info = {};
+		profile_list_info.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR;
+		profile_list_info.pProfiles = &video_capability_h264.profile;
+		profile_list_info.profileCount = 1;
+		if ((imageInfo.usage & VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR) ||
+			(imageInfo.usage & VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR) ||
+			(imageInfo.usage & VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR)
+			)
+		{
+			imageInfo.pNext = &profile_list_info;
+
+			VkPhysicalDeviceVideoFormatInfoKHR video_format_info = {};
+			video_format_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_FORMAT_INFO_KHR;
+			video_format_info.imageUsage = imageInfo.usage;
+			video_format_info.pNext = &profile_list_info;
+			uint32_t format_property_count = 0;
+			VkResult res = vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, nullptr);
+			assert(res == VK_SUCCESS);
+
+			wi::vector<VkVideoFormatPropertiesKHR> video_format_properties(format_property_count);
+			for (auto& x : video_format_properties)
+			{
+				x.sType = VK_STRUCTURE_TYPE_VIDEO_FORMAT_PROPERTIES_KHR;
+			}
+			res = vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, video_format_properties.data());
+			assert(res == VK_SUCCESS);
+
+			//assert(imageInfo.flags == 0 || (!video_format_properties.empty() && video_format_properties[0].imageCreateFlags & imageInfo.flags));
+			//assert(!video_format_properties.empty() && video_format_properties[0].imageUsageFlags & imageInfo.usage);
 		}
 
 		if (families.size() > 1)
@@ -4114,7 +4356,7 @@ using namespace vulkan_internal;
 				copyAllocator.submit(cmd);
 			}
 		}
-		else
+		else if(texture->desc.layout != ResourceState::UNDEFINED)
 		{
 			VkImageMemoryBarrier2 barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -4170,6 +4412,29 @@ using namespace vulkan_internal;
 		if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			CreateSubresource(texture, SubresourceType::UAV, 0, -1, 0, -1);
+		}
+
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
+		{
+			VkImageViewCreateInfo view_desc = {};
+			view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			view_desc.flags = 0;
+			view_desc.image = internal_state->resource;
+			view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			view_desc.subresourceRange.baseArrayLayer = 0;
+			view_desc.subresourceRange.layerCount = imageInfo.arrayLayers;
+			view_desc.subresourceRange.baseMipLevel = 0;
+			view_desc.subresourceRange.levelCount = imageInfo.mipLevels;
+			view_desc.format = imageInfo.format;
+			view_desc.viewType = imageInfo.arrayLayers > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D;
+
+			VkImageViewUsageCreateInfo viewUsageInfo = {};
+			viewUsageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO;
+			viewUsageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR | VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR | VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+			view_desc.pNext = &viewUsageInfo;
+
+			res = vkCreateImageView(device, &view_desc, nullptr, &internal_state->video_decode_view);
+			assert(res == VK_SUCCESS);
 		}
 
 		return res == VK_SUCCESS;
@@ -5228,10 +5493,6 @@ using namespace vulkan_internal;
 
 		pipelineInfo.pDynamicState = &dynamicStateInfo;
 
-		if (desc->il == nullptr)
-		{
-		}
-
 		if (renderpass_info != nullptr)
 		{
 			// MSAA:
@@ -5684,8 +5945,313 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	
-	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change) const
+	bool GraphicsDevice_Vulkan::CreateVideoDecoder(const VideoDesc* desc, VideoDecoder* video_decoder) const
+	{
+		VkResult res = VK_SUCCESS;
+
+		auto internal_state = std::make_shared<VideoDecoder_Vulkan>();
+		internal_state->allocationhandler = allocationhandler;
+		video_decoder->internal_state = internal_state;
+		video_decoder->desc = *desc;
+
+		wi::vector<StdVideoH264PictureParameterSet> pps_array_h264(desc->pps_count);
+		wi::vector<StdVideoH264ScalingLists> scalinglist_array_h264(desc->pps_count);
+		for (uint32_t i = 0; i < desc->pps_count; ++i)
+		{
+			const h264::PPS* pps = (const h264::PPS*)desc->pps_datas + i;
+			StdVideoH264PictureParameterSet& vk_pps = pps_array_h264[i];
+			StdVideoH264ScalingLists& vk_scalinglist = scalinglist_array_h264[i];
+
+			vk_pps.flags.transform_8x8_mode_flag = pps->transform_8x8_mode_flag;
+			vk_pps.flags.redundant_pic_cnt_present_flag = pps->redundant_pic_cnt_present_flag;
+			vk_pps.flags.constrained_intra_pred_flag = pps->constrained_intra_pred_flag;
+			vk_pps.flags.deblocking_filter_control_present_flag = pps->deblocking_filter_control_present_flag;
+			vk_pps.flags.weighted_pred_flag = pps->weighted_pred_flag;
+			vk_pps.flags.bottom_field_pic_order_in_frame_present_flag = pps->pic_order_present_flag;
+			vk_pps.flags.entropy_coding_mode_flag = pps->entropy_coding_mode_flag;
+			vk_pps.flags.pic_scaling_matrix_present_flag = pps->pic_scaling_matrix_present_flag;
+
+			vk_pps.seq_parameter_set_id = pps->seq_parameter_set_id;
+			vk_pps.pic_parameter_set_id = pps->pic_parameter_set_id;
+			vk_pps.num_ref_idx_l0_default_active_minus1 = pps->num_ref_idx_l0_active_minus1;
+			vk_pps.num_ref_idx_l1_default_active_minus1 = pps->num_ref_idx_l1_active_minus1;
+			vk_pps.weighted_bipred_idc = (StdVideoH264WeightedBipredIdc)pps->weighted_bipred_idc;
+			vk_pps.pic_init_qp_minus26 = pps->pic_init_qp_minus26;
+			vk_pps.pic_init_qs_minus26 = pps->pic_init_qs_minus26;
+			vk_pps.chroma_qp_index_offset = pps->chroma_qp_index_offset;
+			vk_pps.second_chroma_qp_index_offset = pps->second_chroma_qp_index_offset;
+
+			vk_pps.pScalingLists = &vk_scalinglist;
+			for (int j = 0; j < arraysize(pps->pic_scaling_list_present_flag); ++j)
+			{
+				vk_scalinglist.scaling_list_present_mask |= pps->pic_scaling_list_present_flag[j] << j;
+			}
+			for (int j = 0; j < arraysize(pps->UseDefaultScalingMatrix4x4Flag); ++j)
+			{
+				vk_scalinglist.use_default_scaling_matrix_mask |= pps->UseDefaultScalingMatrix4x4Flag[j] << j;
+			}
+			for (int j = 0; j < arraysize(pps->ScalingList4x4); ++j)
+			{
+				for (int k = 0; k < arraysize(pps->ScalingList4x4[j]); ++k)
+				{
+					vk_scalinglist.ScalingList4x4[j][k] = (uint8_t)pps->ScalingList4x4[j][k];
+				}
+			}
+			for (int j = 0; j < arraysize(pps->ScalingList8x8); ++j)
+			{
+				for (int k = 0; k < arraysize(pps->ScalingList8x8[j]); ++k)
+				{
+					vk_scalinglist.ScalingList8x8[j][k] = (uint8_t)pps->ScalingList8x8[j][k];
+				}
+			}
+		}
+
+		uint32_t num_reference_frames = 0;
+		wi::vector<StdVideoH264SequenceParameterSet> sps_array_h264(desc->sps_count);
+		wi::vector<StdVideoH264SequenceParameterSetVui> vui_array_h264(desc->sps_count);
+		wi::vector<StdVideoH264HrdParameters> hrd_array_h264(desc->sps_count);
+		for (uint32_t i = 0; i < desc->sps_count; ++i)
+		{
+			const h264::SPS* sps = (const h264::SPS*)desc->sps_datas + i;
+			StdVideoH264SequenceParameterSet& vk_sps = sps_array_h264[i];
+
+			vk_sps.flags.constraint_set0_flag = sps->constraint_set0_flag;
+			vk_sps.flags.constraint_set1_flag = sps->constraint_set1_flag;
+			vk_sps.flags.constraint_set2_flag = sps->constraint_set2_flag;
+			vk_sps.flags.constraint_set3_flag = sps->constraint_set3_flag;
+			vk_sps.flags.constraint_set4_flag = sps->constraint_set4_flag;
+			vk_sps.flags.constraint_set5_flag = sps->constraint_set5_flag;
+			vk_sps.flags.direct_8x8_inference_flag = sps->direct_8x8_inference_flag;
+			vk_sps.flags.mb_adaptive_frame_field_flag = sps->mb_adaptive_frame_field_flag;
+			vk_sps.flags.frame_mbs_only_flag = sps->frame_mbs_only_flag;
+			vk_sps.flags.delta_pic_order_always_zero_flag = sps->delta_pic_order_always_zero_flag;
+			vk_sps.flags.separate_colour_plane_flag = sps->separate_colour_plane_flag;
+			vk_sps.flags.gaps_in_frame_num_value_allowed_flag = sps->gaps_in_frame_num_value_allowed_flag;
+			vk_sps.flags.qpprime_y_zero_transform_bypass_flag = sps->qpprime_y_zero_transform_bypass_flag;
+			vk_sps.flags.frame_cropping_flag = sps->frame_cropping_flag;
+			vk_sps.flags.seq_scaling_matrix_present_flag = sps->seq_scaling_matrix_present_flag;
+			vk_sps.flags.vui_parameters_present_flag = sps->vui_parameters_present_flag;
+
+			if (vk_sps.flags.vui_parameters_present_flag)
+			{
+				StdVideoH264SequenceParameterSetVui& vk_vui = vui_array_h264[i];
+				vk_sps.pSequenceParameterSetVui = &vk_vui;
+				vk_vui.flags.aspect_ratio_info_present_flag = sps->vui.aspect_ratio_info_present_flag;
+				vk_vui.flags.overscan_info_present_flag = sps->vui.overscan_info_present_flag;
+				vk_vui.flags.overscan_appropriate_flag = sps->vui.overscan_appropriate_flag;
+				vk_vui.flags.video_signal_type_present_flag = sps->vui.video_signal_type_present_flag;
+				vk_vui.flags.video_full_range_flag = sps->vui.video_full_range_flag;
+				vk_vui.flags.color_description_present_flag = sps->vui.colour_description_present_flag;
+				vk_vui.flags.chroma_loc_info_present_flag = sps->vui.chroma_loc_info_present_flag;
+				vk_vui.flags.timing_info_present_flag = sps->vui.timing_info_present_flag;
+				vk_vui.flags.fixed_frame_rate_flag = sps->vui.fixed_frame_rate_flag;
+				vk_vui.flags.bitstream_restriction_flag = sps->vui.bitstream_restriction_flag;
+				vk_vui.flags.nal_hrd_parameters_present_flag = sps->vui.nal_hrd_parameters_present_flag;
+				vk_vui.flags.vcl_hrd_parameters_present_flag = sps->vui.vcl_hrd_parameters_present_flag;
+
+				vk_vui.aspect_ratio_idc = (StdVideoH264AspectRatioIdc)sps->vui.aspect_ratio_idc;
+				vk_vui.sar_width = sps->vui.sar_width;
+				vk_vui.sar_height = sps->vui.sar_height;
+				vk_vui.video_format = sps->vui.video_format;
+				vk_vui.colour_primaries = sps->vui.colour_primaries;
+				vk_vui.transfer_characteristics = sps->vui.transfer_characteristics;
+				vk_vui.matrix_coefficients = sps->vui.matrix_coefficients;
+				vk_vui.num_units_in_tick = sps->vui.num_units_in_tick;
+				vk_vui.time_scale = sps->vui.time_scale;
+				vk_vui.max_num_reorder_frames = sps->vui.num_reorder_frames;
+				vk_vui.max_dec_frame_buffering = sps->vui.max_dec_frame_buffering;
+				vk_vui.chroma_sample_loc_type_top_field = sps->vui.chroma_sample_loc_type_top_field;
+				vk_vui.chroma_sample_loc_type_bottom_field = sps->vui.chroma_sample_loc_type_bottom_field;
+
+				StdVideoH264HrdParameters& vk_hrd = hrd_array_h264[i];
+				vk_vui.pHrdParameters = &vk_hrd;
+				vk_hrd.cpb_cnt_minus1 = sps->hrd.cpb_cnt_minus1;
+				vk_hrd.bit_rate_scale = sps->hrd.bit_rate_scale;
+				vk_hrd.cpb_size_scale = sps->hrd.cpb_size_scale;
+				for (int j = 0; j < arraysize(sps->hrd.bit_rate_value_minus1); ++j)
+				{
+					vk_hrd.bit_rate_value_minus1[j] = sps->hrd.bit_rate_value_minus1[j];
+					vk_hrd.cpb_size_value_minus1[j] = sps->hrd.cpb_size_value_minus1[j];
+					vk_hrd.cbr_flag[j] = sps->hrd.cbr_flag[j];
+				}
+				vk_hrd.initial_cpb_removal_delay_length_minus1 = sps->hrd.initial_cpb_removal_delay_length_minus1;
+				vk_hrd.cpb_removal_delay_length_minus1 = sps->hrd.cpb_removal_delay_length_minus1;
+				vk_hrd.dpb_output_delay_length_minus1 = sps->hrd.dpb_output_delay_length_minus1;
+				vk_hrd.time_offset_length = sps->hrd.time_offset_length;
+			}
+
+			vk_sps.profile_idc = (StdVideoH264ProfileIdc)sps->profile_idc;
+			switch (sps->level_idc)
+			{
+			case 0:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_1_0;
+				break;
+			case 11:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_1_1;
+				break;
+			case 12:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_1_2;
+				break;
+			case 13:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_1_3;
+				break;
+			case 20:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_2_0;
+				break;
+			case 21:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_2_1;
+				break;
+			case 22:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_2_2;
+				break;
+			case 30:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_3_0;
+				break;
+			case 31:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_3_1;
+				break;
+			case 32:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_3_2;
+				break;
+			case 40:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_4_0;
+				break;
+			case 41:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_4_1;
+				break;
+			case 42:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_4_2;
+				break;
+			case 50:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_5_0;
+				break;
+			case 51:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_5_1;
+				break;
+			case 52:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_5_2;
+				break;
+			case 60:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_6_0;
+				break;
+			case 61:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_6_1;
+				break;
+			case 62:
+				vk_sps.level_idc = STD_VIDEO_H264_LEVEL_IDC_6_2;
+				break;
+			default:
+				assert(0);
+				break;
+			}
+			assert(vk_sps.level_idc <= decode_h264_capabilities.maxLevelIdc);
+			//vk_sps.chroma_format_idc = (StdVideoH264ChromaFormatIdc)sps->chroma_format_idc;
+			vk_sps.chroma_format_idc = STD_VIDEO_H264_CHROMA_FORMAT_IDC_420; // only one we support currently
+			vk_sps.seq_parameter_set_id = sps->seq_parameter_set_id;
+			vk_sps.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
+			vk_sps.bit_depth_chroma_minus8 = sps->bit_depth_chroma_minus8;
+			vk_sps.log2_max_frame_num_minus4 = sps->log2_max_frame_num_minus4;
+			vk_sps.pic_order_cnt_type = (StdVideoH264PocType)sps->pic_order_cnt_type;
+			vk_sps.offset_for_non_ref_pic = sps->offset_for_non_ref_pic;
+			vk_sps.offset_for_top_to_bottom_field = sps->offset_for_top_to_bottom_field;
+			vk_sps.log2_max_pic_order_cnt_lsb_minus4 = sps->log2_max_pic_order_cnt_lsb_minus4;
+			vk_sps.num_ref_frames_in_pic_order_cnt_cycle = sps->num_ref_frames_in_pic_order_cnt_cycle;
+			vk_sps.max_num_ref_frames = sps->num_ref_frames;
+			vk_sps.pic_width_in_mbs_minus1 = sps->pic_width_in_mbs_minus1;
+			vk_sps.pic_height_in_map_units_minus1 = sps->pic_height_in_map_units_minus1;
+			vk_sps.frame_crop_left_offset = sps->frame_crop_left_offset;
+			vk_sps.frame_crop_right_offset = sps->frame_crop_right_offset;
+			vk_sps.frame_crop_top_offset = sps->frame_crop_top_offset;
+			vk_sps.frame_crop_bottom_offset = sps->frame_crop_bottom_offset;
+			vk_sps.pOffsetForRefFrame = sps->offset_for_ref_frame;
+
+			num_reference_frames = std::max(num_reference_frames, (uint32_t)sps->num_ref_frames);
+		}
+
+		num_reference_frames = std::min(num_reference_frames, video_capability_h264.video_capabilities.maxActiveReferencePictures);
+
+		VkVideoDecodeH264SessionParametersAddInfoKHR session_parameters_add_info_h264 = {};
+		session_parameters_add_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR;
+		session_parameters_add_info_h264.stdPPSCount = (uint32_t)desc->pps_count;
+		session_parameters_add_info_h264.pStdPPSs = pps_array_h264.data();
+		session_parameters_add_info_h264.stdSPSCount = (uint32_t)desc->sps_count;
+		session_parameters_add_info_h264.pStdSPSs = sps_array_h264.data();
+
+		VkVideoSessionCreateInfoKHR info = {};
+		info.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_CREATE_INFO_KHR;
+		info.queueFamilyIndex = videoFamily;
+		info.maxActiveReferencePictures = num_reference_frames * 2; // *2: top and bottom field counts as two I think: https://vulkan.lunarg.com/doc/view/1.3.239.0/windows/1.3-extensions/vkspec.html#_video_decode_commands
+		info.maxDpbSlots = std::min(desc->num_dpb_slots, video_capability_h264.video_capabilities.maxDpbSlots);
+		info.maxCodedExtent.width = std::min(desc->width, video_capability_h264.video_capabilities.maxCodedExtent.width);
+		info.maxCodedExtent.height = std::min(desc->height, video_capability_h264.video_capabilities.maxCodedExtent.height);
+		info.pictureFormat = _ConvertFormat(desc->format);
+		info.referencePictureFormat = info.pictureFormat;
+		info.pVideoProfile = &video_capability_h264.profile;
+		info.pStdHeaderVersion = &video_capability_h264.video_capabilities.stdHeaderVersion;
+		
+		res = vkCreateVideoSessionKHR(device, &info, nullptr, &internal_state->video_session);
+		assert(res == VK_SUCCESS);
+
+		uint32_t requirement_count = 0;
+		res = vkGetVideoSessionMemoryRequirementsKHR(device, internal_state->video_session, &requirement_count, nullptr);
+		assert(res == VK_SUCCESS);
+
+		wi::vector<VkVideoSessionMemoryRequirementsKHR> requirements(requirement_count);
+		for (auto& x : requirements)
+		{
+			x.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_MEMORY_REQUIREMENTS_KHR;
+		}
+		res = vkGetVideoSessionMemoryRequirementsKHR(device, internal_state->video_session, &requirement_count, requirements.data());
+		assert(res == VK_SUCCESS);
+
+		internal_state->allocations.resize(requirement_count);
+		wi::vector<VkBindVideoSessionMemoryInfoKHR> bind_session_memory_infos(requirement_count);
+		for (uint32_t i = 0; i < requirement_count; ++i)
+		{
+			const VkVideoSessionMemoryRequirementsKHR& video_req = requirements[i];
+			VmaAllocationCreateInfo alloc_create_info = {};
+			alloc_create_info.memoryTypeBits = video_req.memoryRequirements.memoryTypeBits;
+			VmaAllocationInfo alloc_info = {};
+
+			res = vmaAllocateMemory(
+				allocationhandler->allocator,
+				&video_req.memoryRequirements,
+				&alloc_create_info,
+				&internal_state->allocations[i],
+				&alloc_info
+			);
+			assert(res == VK_SUCCESS);
+
+			VkBindVideoSessionMemoryInfoKHR& bind_info = bind_session_memory_infos[i];
+			bind_info.sType = VK_STRUCTURE_TYPE_BIND_VIDEO_SESSION_MEMORY_INFO_KHR;
+			bind_info.memory = alloc_info.deviceMemory;
+			bind_info.memoryBindIndex = video_req.memoryBindIndex;
+			bind_info.memoryOffset = alloc_info.offset;
+			bind_info.memorySize = alloc_info.size;
+		}
+		res = vkBindVideoSessionMemoryKHR(device, internal_state->video_session, requirement_count, bind_session_memory_infos.data());
+		assert(res == VK_SUCCESS);
+
+		VkVideoDecodeH264SessionParametersCreateInfoKHR session_parameters_info_h264 = {};
+		session_parameters_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_CREATE_INFO_KHR;
+		session_parameters_info_h264.maxStdPPSCount = (uint32_t)desc->pps_count;
+		session_parameters_info_h264.maxStdSPSCount = (uint32_t)desc->sps_count;
+		session_parameters_info_h264.pParametersAddInfo = &session_parameters_add_info_h264;
+
+		VkVideoSessionParametersCreateInfoKHR session_parameters_info = {};
+		session_parameters_info.sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_PARAMETERS_CREATE_INFO_KHR;
+		session_parameters_info.videoSession = internal_state->video_session;
+		session_parameters_info.videoSessionParametersTemplate = VK_NULL_HANDLE;
+		session_parameters_info.pNext = &session_parameters_info_h264;
+		res = vkCreateVideoSessionParametersKHR(device, &session_parameters_info, nullptr, &internal_state->session_parameters);
+		assert(res == VK_SUCCESS);
+
+		assert(video_capability_h264.decode_capabilities.flags & VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_COINCIDE_BIT_KHR); // Currently the only method supported
+
+		return true;
+	}
+
+	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change, const ImageAspect* aspect) const
 	{
 		auto internal_state = to_internal(texture);
 
@@ -5706,11 +6272,35 @@ using namespace vulkan_internal;
 		view_desc.flags = 0;
 		view_desc.image = internal_state->resource;
 		view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		if (aspect != nullptr)
+		{
+			view_desc.subresourceRange.aspectMask = _ConvertImageAspect(*aspect);
+		}
 		view_desc.subresourceRange.baseArrayLayer = firstSlice;
 		view_desc.subresourceRange.layerCount = sliceCount;
 		view_desc.subresourceRange.baseMipLevel = firstMip;
 		view_desc.subresourceRange.levelCount = mipCount;
-		view_desc.format = _ConvertFormat(format);
+		switch (format)
+		{
+		case Format::NV12:
+			if (view_desc.subresourceRange.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
+			{
+				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT;
+				view_desc.format = VK_FORMAT_R8_UNORM;
+			}
+			else if (view_desc.subresourceRange.aspectMask == VK_IMAGE_ASPECT_PLANE_0_BIT)
+			{
+				view_desc.format = VK_FORMAT_R8_UNORM;
+			}
+			else if (view_desc.subresourceRange.aspectMask == VK_IMAGE_ASPECT_PLANE_0_BIT)
+			{
+				view_desc.format = VK_FORMAT_R8G8_UNORM;
+			}
+			break;
+		default:
+			view_desc.format = _ConvertFormat(format);
+			break;
+		}
 
 		if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 		{
@@ -6176,7 +6766,7 @@ using namespace vulkan_internal;
 		assert(res == VK_SUCCESS);
 	}
 	
-	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name)
+	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name) const
 	{
 		if (!debugUtils || pResource == nullptr || !pResource->IsValid())
 			return;
@@ -6205,7 +6795,7 @@ using namespace vulkan_internal;
 		VkResult res = vkSetDebugUtilsObjectNameEXT(device, &info);
 		assert(res == VK_SUCCESS);
 	}
-	void GraphicsDevice_Vulkan::SetName(Shader* shader, const char* name)
+	void GraphicsDevice_Vulkan::SetName(Shader* shader, const char* name) const
 	{
 		if (!debugUtils || shader == nullptr || !shader->IsValid())
 			return;
@@ -6260,6 +6850,9 @@ using namespace vulkan_internal;
 					break;
 				case wi::graphics::QUEUE_COPY:
 					poolInfo.queueFamilyIndex = copyFamily;
+					break;
+				case wi::graphics::QUEUE_VIDEO_DECODE:
+					poolInfo.queueFamilyIndex = videoFamily;
 					break;
 				default:
 					assert(0); // queue type not handled
@@ -6419,12 +7012,15 @@ using namespace vulkan_internal;
 		FRAMECOUNT++;
 
 		// Initiate stalling CPU when GPU is not yet finished with next frame:
-		const uint32_t bufferindex = GetBufferIndex();
 		if (FRAMECOUNT >= BUFFERCOUNT)
 		{
+			const uint32_t bufferindex = GetBufferIndex();
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
-				res = vkWaitForFences(device, 1, &frame_fence[bufferindex][queue], true, 0xFFFFFFFFFFFFFFFF);
+				if (frame_fence[bufferindex][queue] == VK_NULL_HANDLE)
+					continue;
+
+				res = vkWaitForFences(device, 1, &frame_fence[bufferindex][queue], VK_TRUE, 0xFFFFFFFFFFFFFFFF);
 				assert(res == VK_SUCCESS);
 
 				res = vkResetFences(device, 1, &frame_fence[bufferindex][queue]);
@@ -6498,7 +7094,6 @@ using namespace vulkan_internal;
 		result.desc.format = swapchain->desc.format;
 		return result;
 	}
-
 	ColorSpace GraphicsDevice_Vulkan::GetSwapChainColorSpace(const SwapChain* swapchain) const
 	{
 		auto internal_state = to_internal(swapchain);
@@ -7758,8 +8353,16 @@ using namespace vulkan_internal;
 			copy.srcOffset.x = 0;
 			copy.srcOffset.y = 0;
 			copy.srcOffset.z = 0;
-			copy.extent.width = std::min(dst->desc.width, src->desc.width);
-			copy.extent.height = std::min(dst->desc.height, src->desc.height);
+			if (src->desc.format == Format::NV12 && src_aspect == ImageAspect::CHROMINANCE)
+			{
+				copy.extent.width = std::min(dst->desc.width, src->desc.width / 2);
+				copy.extent.height = std::min(dst->desc.height, src->desc.height / 2);
+			}
+			else
+			{
+				copy.extent.width = std::min(dst->desc.width, src->desc.width);
+				copy.extent.height = std::min(dst->desc.height, src->desc.height);
+			}
 			copy.extent.depth = std::min(dst->desc.depth, src->desc.depth);
 		}
 		else
@@ -7935,6 +8538,10 @@ using namespace vulkan_internal;
 				else
 				{
 					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				}
+				if (barrier.image.aspect != nullptr)
+				{
+					barrierdesc.subresourceRange.aspectMask = _ConvertImageAspect(*barrier.image.aspect);
 				}
 				if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
 				{
@@ -8273,6 +8880,119 @@ using namespace vulkan_internal;
 			);
 		}
 
+	}
+	void GraphicsDevice_Vulkan::VideoDecode(const VideoDecoder* video_decoder, const VideoDecodeOperation* op, CommandList cmd)
+	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		auto decoder_internal = to_internal(video_decoder);
+		auto stream_internal = to_internal(op->stream);
+		auto dpb_internal = to_internal(op->DPB);
+
+		const h264::SliceHeader* slice_header = (const h264::SliceHeader*)op->slice_header;
+		const h264::PPS* pps = (const h264::PPS*)op->pps;
+		const h264::SPS* sps = (const h264::SPS*)op->sps;
+
+		StdVideoDecodeH264PictureInfo std_picture_info_h264 = {};
+		std_picture_info_h264.pic_parameter_set_id = slice_header->pic_parameter_set_id;
+		std_picture_info_h264.seq_parameter_set_id = pps->seq_parameter_set_id;
+		std_picture_info_h264.frame_num = slice_header->frame_num;
+		std_picture_info_h264.PicOrderCnt[0] = op->poc[0];
+		std_picture_info_h264.PicOrderCnt[1] = op->poc[1];
+		std_picture_info_h264.idr_pic_id = slice_header->idr_pic_id;
+		std_picture_info_h264.flags.is_intra = op->frame_type == VideoFrameType::Intra ? 1 : 0;
+		std_picture_info_h264.flags.is_reference = op->reference_priority > 0 ? 1 : 0;
+		std_picture_info_h264.flags.IdrPicFlag = (std_picture_info_h264.flags.is_intra && std_picture_info_h264.flags.is_reference) ? 1 : 0;
+		std_picture_info_h264.flags.field_pic_flag = slice_header->field_pic_flag;
+		std_picture_info_h264.flags.bottom_field_flag = slice_header->bottom_field_flag;
+		std_picture_info_h264.flags.complementary_field_pair = 0;
+
+		VkVideoReferenceSlotInfoKHR reference_slot_infos[17] = {};
+		VkVideoPictureResourceInfoKHR reference_slot_pictures[17] = {};
+		VkVideoDecodeH264DpbSlotInfoKHR dpb_slots_h264[17] = {};
+		StdVideoDecodeH264ReferenceInfo reference_infos_h264[17] = {};
+		for (uint32_t i = 0; i < op->DPB->desc.array_size; ++i)
+		{
+			VkVideoReferenceSlotInfoKHR& slot = reference_slot_infos[i];
+			VkVideoPictureResourceInfoKHR& pic = reference_slot_pictures[i];
+			VkVideoDecodeH264DpbSlotInfoKHR& dpb = dpb_slots_h264[i];
+			StdVideoDecodeH264ReferenceInfo& ref = reference_infos_h264[i];
+
+			slot.sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR;
+			slot.pPictureResource = &pic;
+			slot.slotIndex = i;
+			slot.pNext = &dpb;
+
+			pic.sType = VK_STRUCTURE_TYPE_VIDEO_PICTURE_RESOURCE_INFO_KHR;
+			pic.codedOffset.x = 0;
+			pic.codedOffset.y = 0;
+			pic.codedExtent.width = op->DPB->desc.width;
+			pic.codedExtent.height = op->DPB->desc.height;
+			pic.baseArrayLayer = i;
+			pic.imageViewBinding = dpb_internal->video_decode_view;
+
+			dpb.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_DPB_SLOT_INFO_KHR;
+			dpb.pStdReferenceInfo = &ref;
+
+			ref.flags.bottom_field_flag = 1;
+			ref.flags.top_field_flag = 1;
+			ref.flags.is_non_existing = 0;
+			ref.flags.used_for_long_term_reference = 0;
+			ref.FrameNum = op->dpb_framenum[i];
+			ref.PicOrderCnt[0] = op->dpb_poc[i];
+			ref.PicOrderCnt[1] = op->dpb_poc[i];
+		}
+
+		VkVideoReferenceSlotInfoKHR reference_slots[17] = {};
+		for (size_t i = 0; i < op->dpb_reference_count; ++i)
+		{
+			uint32_t ref_slot = op->dpb_reference_slots[i];
+			assert(ref_slot != op->current_dpb);
+			reference_slots[i] = reference_slot_infos[ref_slot];
+		}
+		reference_slots[op->dpb_reference_count] = reference_slot_infos[op->current_dpb];
+		reference_slots[op->dpb_reference_count].slotIndex = -1;
+
+		VkVideoBeginCodingInfoKHR begin_info = {};
+		begin_info.sType = VK_STRUCTURE_TYPE_VIDEO_BEGIN_CODING_INFO_KHR;
+		begin_info.videoSession = decoder_internal->video_session;
+		begin_info.videoSessionParameters = decoder_internal->session_parameters;
+		begin_info.referenceSlotCount = op->dpb_reference_count + 1; // add in the current reconstructed DPB image
+		begin_info.pReferenceSlots = begin_info.referenceSlotCount == 0 ? nullptr : reference_slots;
+		vkCmdBeginVideoCodingKHR(commandlist.GetCommandBuffer(), &begin_info);
+
+		if (op->flags & VideoDecodeOperation::FLAG_SESSION_RESET)
+		{
+			VkVideoCodingControlInfoKHR control_info = {};
+			control_info.sType = VK_STRUCTURE_TYPE_VIDEO_CODING_CONTROL_INFO_KHR;
+			control_info.flags = VK_VIDEO_CODING_CONTROL_RESET_BIT_KHR;
+			vkCmdControlVideoCodingKHR(commandlist.GetCommandBuffer(), &control_info);
+		}
+
+		VkVideoDecodeInfoKHR decode_info = {};
+		decode_info.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_INFO_KHR;
+		decode_info.srcBuffer = stream_internal->resource;
+		decode_info.srcBufferOffset = (VkDeviceSize)op->stream_offset;
+		decode_info.srcBufferRange = (VkDeviceSize)AlignTo(op->stream_size, VIDEO_DECODE_BITSTREAM_ALIGNMENT);
+		decode_info.dstPictureResource = *reference_slot_infos[op->current_dpb].pPictureResource;
+		decode_info.referenceSlotCount = op->dpb_reference_count;
+		decode_info.pReferenceSlots = decode_info.referenceSlotCount == 0 ? nullptr : reference_slots;
+		decode_info.pSetupReferenceSlot = &reference_slot_infos[op->current_dpb];
+
+		uint32_t slice_offset = 0;
+
+		// https://vulkan.lunarg.com/doc/view/1.3.239.0/windows/1.3-extensions/vkspec.html#_h_264_decoding_parameters
+		VkVideoDecodeH264PictureInfoKHR picture_info_h264 = {};
+		picture_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_PICTURE_INFO_KHR;
+		picture_info_h264.pStdPictureInfo = &std_picture_info_h264;
+		picture_info_h264.sliceCount = 1;
+		picture_info_h264.pSliceOffsets = &slice_offset;
+		decode_info.pNext = &picture_info_h264;
+
+		vkCmdDecodeVideoKHR(commandlist.GetCommandBuffer(), &decode_info);
+
+		VkVideoEndCodingInfoKHR end_info = {};
+		end_info.sType = VK_STRUCTURE_TYPE_VIDEO_END_CODING_INFO_KHR;
+		vkCmdEndVideoCodingKHR(commandlist.GetCommandBuffer(), &end_info);
 	}
 
 	void GraphicsDevice_Vulkan::EventBegin(const char* name, CommandList cmd)

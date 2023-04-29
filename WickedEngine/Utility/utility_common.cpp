@@ -21,6 +21,12 @@
 #define QOI_IMPLEMENTATION
 #include "qoi.h"
 
+#define MINIMP4_IMPLEMENTATION
+#include "minimp4.h"
+
+#define H264_IMPLEMENTATION
+#include "h264.h"
+
 
 
 // Basis Universal library sources are compiled below for simplicity:

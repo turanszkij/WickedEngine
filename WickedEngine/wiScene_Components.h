@@ -3,6 +3,7 @@
 #include "wiArchive.h"
 #include "wiCanvas.h"
 #include "wiAudio.h"
+#include "wiVideo.h"
 #include "wiEnums.h"
 #include "wiOcean.h"
 #include "wiPrimitive.h"
@@ -304,6 +305,7 @@ namespace wi::scene
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
+		void WriteShaderTextureSlot(ShaderMaterial* dest, int slot, int descriptor);
 
 		// Retrieve the array of textures from the material
 		void WriteTextures(const wi::graphics::GPUResource** dest, int count) const;
@@ -1337,6 +1339,30 @@ namespace wi::scene
 		inline void Stop() { _flags &= ~PLAYING; }
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 		inline void SetDisable3D(bool value = true) { if (value) { _flags |= DISABLE_3D; } else { _flags &= ~DISABLE_3D; } }
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
+
+	struct VideoComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			PLAYING = 1 << 0,
+			LOOPED = 1 << 1,
+		};
+		uint32_t _flags = LOOPED;
+
+		std::string filename;
+		wi::Resource videoResource;
+		wi::video::VideoInstance videoinstance;
+
+		inline bool IsPlaying() const { return _flags & PLAYING; }
+		inline bool IsLooped() const { return _flags & LOOPED; }
+
+		inline void Play() { _flags |= PLAYING; }
+		inline void Stop() { _flags &= ~PLAYING; }
+		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

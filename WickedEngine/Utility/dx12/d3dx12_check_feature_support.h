@@ -1,4 +1,4 @@
-//*********************************************************
+﻿//*********************************************************
 //
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License (MIT).
@@ -204,6 +204,28 @@ public: // Function declaration
     // D3D12_OPTIONS16
     BOOL DynamicDepthBiasSupported() const noexcept;
 #endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    BOOL GPUUploadHeapSupported() const noexcept;
+
+    // D3D12_OPTIONS17
+    BOOL NonNormalizedCoordinateSamplersSupported() const noexcept;
+    BOOL ManualWriteTrackingResourceSupported() const noexcept;
+
+    // D3D12_OPTIONS18
+    BOOL RenderPassesValid() const noexcept;
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 610)
+    BOOL MismatchingOutputDimensionsSupported() const noexcept;
+    UINT SupportedSampleCountsWithNoOutputs() const noexcept;
+    BOOL PointSamplingAddressesNeverRoundUp() const noexcept;
+    BOOL RasterizerDesc2Supported() const noexcept;
+    BOOL NarrowQuadrilateralLinesSupported() const noexcept;
+    BOOL AnisoFilterWithPointMipSupported() const noexcept;
+    UINT MaxSamplerDescriptorHeapSize() const noexcept;
+    UINT MaxSamplerDescriptorHeapSizeWithStaticSamplers() const noexcept;
+    UINT MaxViewDescriptorHeapSize() const noexcept;
+#endif
 
 private: // Private structs and helpers declaration
     struct ProtectedResourceSessionTypesLocal : D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPES
@@ -278,6 +300,15 @@ private: // Member data
 #endif
 #if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 608)
     D3D12_FEATURE_DATA_D3D12_OPTIONS16 m_dOptions16;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    D3D12_FEATURE_DATA_D3D12_OPTIONS17 m_dOptions17;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    D3D12_FEATURE_DATA_D3D12_OPTIONS18 m_dOptions18;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 610)
+    D3D12_FEATURE_DATA_D3D12_OPTIONS19 m_dOptions19;
 #endif
 };
 
@@ -357,6 +388,15 @@ inline CD3DX12FeatureSupport::CD3DX12FeatureSupport() noexcept
 #endif
 #if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 608)
 , m_dOptions16{}
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+, m_dOptions17{}
+#endif
+#if defined (D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+, m_dOptions18{}
+#endif
+#if defined (D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 610)
+, m_dOptions19{}
 #endif
 {}
 
@@ -493,6 +533,29 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS16, &m_dOptions16, sizeof(m_dOptions16))))
     {
         m_dOptions16 = {};
+    }
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS17, &m_dOptions17, sizeof(m_dOptions17))))
+    {
+        m_dOptions17 = {};
+    }
+
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS18, &m_dOptions18, sizeof(m_dOptions18))))
+    {
+        m_dOptions18.RenderPassesValid = false;
+    }
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 610)
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS19, &m_dOptions19, sizeof(m_dOptions19))))
+    {
+        m_dOptions19 = {};
+        m_dOptions19.SupportedSampleCountsWithNoOutputs = 1;
+        m_dOptions19.MaxSamplerDescriptorHeapSize = D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE;
+        m_dOptions19.MaxSamplerDescriptorHeapSizeWithStaticSamplers = D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE;
+        m_dOptions19.MaxViewDescriptorHeapSize = D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_1;
     }
 #endif
 
@@ -840,6 +903,28 @@ FEATURE_SUPPORT_GET(BOOL, m_dOptions15, DynamicIndexBufferStripCutSupported);
 // 45: Options16
 FEATURE_SUPPORT_GET(BOOL, m_dOptions16, DynamicDepthBiasSupported);
 #endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+FEATURE_SUPPORT_GET(BOOL, m_dOptions16, GPUUploadHeapSupported);
+
+// 46: Options17
+FEATURE_SUPPORT_GET(BOOL, m_dOptions17, NonNormalizedCoordinateSamplersSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions17, ManualWriteTrackingResourceSupported);
+
+// 47: Option18
+FEATURE_SUPPORT_GET(BOOL, m_dOptions18, RenderPassesValid);
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 610)
+FEATURE_SUPPORT_GET(BOOL, m_dOptions19, MismatchingOutputDimensionsSupported);
+FEATURE_SUPPORT_GET(UINT, m_dOptions19, SupportedSampleCountsWithNoOutputs);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions19, PointSamplingAddressesNeverRoundUp);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions19, RasterizerDesc2Supported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions19, NarrowQuadrilateralLinesSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions19, AnisoFilterWithPointMipSupported);
+FEATURE_SUPPORT_GET(UINT, m_dOptions19, MaxSamplerDescriptorHeapSize);
+FEATURE_SUPPORT_GET(UINT, m_dOptions19, MaxSamplerDescriptorHeapSizeWithStaticSamplers);
+FEATURE_SUPPORT_GET(UINT, m_dOptions19, MaxViewDescriptorHeapSize);
+#endif
 
 // Helper function to decide the highest shader model supported by the system
 // Stores the result in m_dShaderModel
@@ -897,6 +982,9 @@ inline HRESULT CD3DX12FeatureSupport::QueryHighestRootSignatureVersion()
 
     const D3D_ROOT_SIGNATURE_VERSION allRootSignatureVersions[] =
     {
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+        D3D_ROOT_SIGNATURE_VERSION_1_2,
+#endif
         D3D_ROOT_SIGNATURE_VERSION_1_1,
         D3D_ROOT_SIGNATURE_VERSION_1_0,
         D3D_ROOT_SIGNATURE_VERSION_1,

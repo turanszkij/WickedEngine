@@ -220,6 +220,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"virtualTextureTileAllocateCS", wi::graphics::ShaderStage::CS },
 	{"virtualTextureResidencyUpdateCS", wi::graphics::ShaderStage::CS },
 	{"windCS", wi::graphics::ShaderStage::CS },
+	{"yuv_to_rgbCS", wi::graphics::ShaderStage::CS },
 
 
 	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },
@@ -616,6 +617,8 @@ int main(int argc, char* argv[])
 		wi::helper::FileWrite("wiShaderDump.h", (uint8_t*)ss.c_str(), ss.length());
 		std::cout << "[Wicked Engine Offline Shader Compiler] ShaderDump written to wiShaderDump.h in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds\n";
 	}
+
+	wi::jobsystem::ShutDown();
 
 	return 0;
 }

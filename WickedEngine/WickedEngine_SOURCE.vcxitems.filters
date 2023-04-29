@@ -52,6 +52,9 @@
     <Filter Include="ENGINE\High level interface">
       <UniqueIdentifier>{a25b4076-72bb-4c78-8bc1-84c59a8984fd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ENGINE\Video">
+      <UniqueIdentifier>{7cb35feb-169d-4eb9-b90c-61418a8e99df}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h">
@@ -1104,6 +1107,18 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugixml.hpp">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\minimp4.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiVideo.h">
+      <Filter>ENGINE\Video</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\h264.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxva.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1855,6 +1870,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\pugixml.cpp">
       <Filter>UTILITY</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiVideo.cpp">
+      <Filter>ENGINE\Video</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

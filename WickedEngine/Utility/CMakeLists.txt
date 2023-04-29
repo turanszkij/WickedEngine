@@ -32,6 +32,7 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/flat_hash_map.hpp
 		${CMAKE_CURRENT_SOURCE_DIR}/pugixml.hpp
 		${CMAKE_CURRENT_SOURCE_DIR}/pugiconfig.hpp
+		${CMAKE_CURRENT_SOURCE_DIR}/h264.h
 		)
 install(FILES ${HEADER_FILES}
 		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/")
@@ -90,6 +91,19 @@ set(HEADER_FILES_vulkan
 		)
 install(FILES ${HEADER_FILES_vulkan}
 		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/vulkan/")
+
+		
+set(HEADER_FILES_vk_video
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h264std.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h264std_decode.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h264std_encode.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h265std.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h265std_decode.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h265std_encode.h
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codecs_common.h
+		)
+install(FILES ${HEADER_FILES_vulkan}
+		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/vulkan/vk_video/")
 
 
 set(HEADER_FILES_encoder

@@ -64,7 +64,7 @@ namespace wi::jobsystem
 		std::mutex wakeMutex;
 		std::atomic<uint32_t> nextQueue{ 0 };
 		wi::vector<std::thread> threads;
-		~InternalState()
+		void ShutDown()
 		{
 			alive.store(false); // indicate that new jobs cannot be started from this point
 			bool wake_loop = true;
@@ -73,13 +73,21 @@ namespace wi::jobsystem
 				{
 					wakeCondition.notify_all(); // wakes up sleeping worker threads
 				}
-			});
+				});
 			for (auto& thread : threads)
 			{
 				thread.join();
 			}
 			wake_loop = false;
 			waker.join();
+			jobQueuePerThread.reset();
+			threads.clear();
+			numCores = 0;
+			numThreads = 0;
+		}
+		~InternalState()
+		{
+			ShutDown();
 		}
 	} static internal_state;
 
@@ -194,6 +202,11 @@ namespace wi::jobsystem
 		}
 
 		wi::backlog::post("wi::jobsystem Initialized with [" + std::to_string(internal_state.numCores) + " cores] [" + std::to_string(internal_state.numThreads) + " threads] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+	}
+
+	void ShutDown()
+	{
+		internal_state.ShutDown();
 	}
 
 	uint32_t GetThreadCount()

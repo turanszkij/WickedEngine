@@ -1088,6 +1088,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VIRTUALTEXTURE_TILEALLOCATE], "virtualTextureTileAllocateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VIRTUALTEXTURE_RESIDENCYUPDATE], "virtualTextureResidencyUpdateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_WIND], "windCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_YUV_TO_RGB], "yuv_to_rgbCS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -2683,10 +2684,8 @@ void RenderMeshes(
 		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 		{
 			const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
-			if (subset.indexCount == 0)
-			{
+			if (subset.indexCount == 0 || subset.materialIndex >= vis.scene->materials.GetCount())
 				continue;
-			}
 			const MaterialComponent& material = vis.scene->materials[subset.materialIndex];
 
 			if (skip_planareflection_objects && material.HasPlanarReflection())
@@ -15335,6 +15334,61 @@ void Postprocess_Underwater(
 	}
 
 	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+
+
+void YUV_to_RGB(
+	const Texture& input,
+	int input_subresource_luminance,
+	int input_subresource_chrominance,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	device->EventBegin("YUV_to_RGB", cmd);
+
+	device->BindComputeShader(&shaders[CSTYPE_YUV_TO_RGB], cmd);
+
+	const TextureDesc& input_desc = input.GetDesc();
+	const TextureDesc& output_desc = output.GetDesc();
+
+	PostProcess postprocess;
+	postprocess.resolution.x = input_desc.width;  // taking input desc resolution to avoid sampling padding texels
+	postprocess.resolution.y = input_desc.height; // taking input desc resolution to avoid sampling padding texels
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+	device->BindResource(&input, 0, cmd, input_subresource_luminance);
+	device->BindResource(&input, 1, cmd, input_subresource_chrominance);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->Dispatch(
+		(output_desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(output_desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
 	device->EventEnd(cmd);
 }
 

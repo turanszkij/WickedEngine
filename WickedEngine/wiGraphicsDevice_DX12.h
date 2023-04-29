@@ -16,6 +16,7 @@
 #include <wrl/client.h> // ComPtr
 
 #include "Utility/dx12/d3d12.h"
+#include "Utility/dx12/d3d12video.h"
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "Utility/D3D12MemAlloc.h"
 
@@ -31,6 +32,7 @@ namespace wi::graphics
 		Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 		Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgiAdapter;
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
+		Microsoft::WRL::ComPtr<ID3D12VideoDevice> video_device;
 		Microsoft::WRL::ComPtr<ID3D12PipelineLibrary1> pipelineLibrary;
 		wi::vector<uint8_t> pipelineLibraryData; // must be alive while pipelineLibrary object is alive!
 		mutable std::mutex pipelineLibraryLocker;
@@ -113,7 +115,9 @@ namespace wi::graphics
 		struct CommandList_DX12
 		{
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[BUFFERCOUNT][QUEUE_COUNT];
-			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> commandLists[QUEUE_COUNT];
+			Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[QUEUE_COUNT];
+			using graphics_command_list_version = ID3D12GraphicsCommandList6;
+			using video_decode_command_list_version = ID3D12VideoDecodeCommandList;
 			uint32_t buffer_index = 0;
 
 			QUEUE_TYPE queue = {};
@@ -183,9 +187,19 @@ namespace wi::graphics
 			{
 				return commandAllocators[buffer_index][queue].Get();
 			}
-			inline ID3D12GraphicsCommandList6* GetGraphicsCommandList()
+			inline ID3D12CommandList* GetCommandList()
 			{
-				return (ID3D12GraphicsCommandList6*)commandLists[queue].Get();
+				return commandLists[queue].Get();
+			}
+			inline graphics_command_list_version* GetGraphicsCommandList()
+			{
+				assert(queue != QUEUE_VIDEO_DECODE);
+				return (graphics_command_list_version*)commandLists[queue].Get();
+			}
+			inline video_decode_command_list_version* GetVideoDecodeCommandList()
+			{
+				assert(queue == QUEUE_VIDEO_DECODE);
+				return (video_decode_command_list_version*)commandLists[queue].Get();
 			}
 		};
 		wi::vector<std::unique_ptr<CommandList_DX12>> commandlists;
@@ -210,7 +224,7 @@ namespace wi::graphics
 		void predispatch(CommandList cmd);
 
 	public:
-		GraphicsDevice_DX12(ValidationMode validationMode = ValidationMode::Disabled);
+		GraphicsDevice_DX12(ValidationMode validationMode = ValidationMode::Disabled, GPUPreference preference = GPUPreference::Discrete);
 		~GraphicsDevice_DX12() override;
 
 		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;
@@ -222,8 +236,9 @@ namespace wi::graphics
 		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info = nullptr) const override;
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const override;
-		
-		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change = nullptr) const override;
+		bool CreateVideoDecoder(const VideoDesc* desc, VideoDecoder* video_decoder) const override;
+
+		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change = nullptr, const ImageAspect* aspect = nullptr) const override;
 		int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0, const Format* format_change = nullptr) const override;
 
 		int GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource = -1) const override;
@@ -233,7 +248,7 @@ namespace wi::graphics
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const override;
 
-		void SetName(GPUResource* pResource, const char* name) override;
+		void SetName(GPUResource* pResource, const char* name) const override;
 
 		CommandList BeginCommandList(QUEUE_TYPE queue = QUEUE_GRAPHICS) override;
 		void SubmitCommandLists() override;
@@ -332,6 +347,7 @@ namespace wi::graphics
 		void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd) override;
 		void PredicationEnd(CommandList cmd) override;
 		void ClearUAV(const GPUResource* resource, uint32_t value, CommandList cmd) override;
+		void VideoDecode(const VideoDecoder* video_decoder, const VideoDecodeOperation* op, CommandList cmd) override;
 
 		void EventBegin(const char* name, CommandList cmd) override;
 		void EventEnd(CommandList cmd) override;
@@ -444,6 +460,8 @@ namespace wi::graphics
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12RootSignature>, uint64_t>> destroyer_rootSignatures;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
+			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12VideoDecoderHeap>, uint64_t>> destroyer_video_decoder_heaps;
+			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12VideoDecoder>, uint64_t>> destroyer_video_decoders;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_res;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_sam;
 
@@ -522,6 +540,30 @@ namespace wi::graphics
 					if (destroyer_stateobjects.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						destroyer_stateobjects.pop_front();
+						// comptr auto delete
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_video_decoder_heaps.empty())
+				{
+					if (destroyer_video_decoder_heaps.front().second + BUFFERCOUNT < FRAMECOUNT)
+					{
+						destroyer_video_decoder_heaps.pop_front();
+						// comptr auto delete
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_video_decoders.empty())
+				{
+					if (destroyer_video_decoders.front().second + BUFFERCOUNT < FRAMECOUNT)
+					{
+						destroyer_video_decoders.pop_front();
 						// comptr auto delete
 					}
 					else

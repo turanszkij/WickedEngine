@@ -300,6 +300,8 @@ namespace wi::scene
 
 		RunSoundUpdateSystem(ctx);
 
+		RunVideoUpdateSystem(ctx);
+
 		RunImpostorUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
@@ -1091,6 +1093,25 @@ namespace wi::scene
 		TransformComponent& transform = transforms.Create(entity);
 		transform.Translate(position);
 		transform.UpdateTransform();
+
+		return entity;
+	}
+	Entity Scene::Entity_CreateVideo(
+		const std::string& name,
+		const std::string& filename
+	)
+	{
+		Entity entity = CreateEntity();
+
+		names.Create(entity) = name;
+
+		if (!filename.empty())
+		{
+			VideoComponent& video = videos.Create(entity);
+			video.filename = filename;
+			video.videoResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+			wi::video::CreateVideoInstance(&video.videoResource.GetVideo(), &video.videoinstance);
+		}
 
 		return entity;
 	}
@@ -3326,6 +3347,15 @@ namespace wi::scene
 
 			material.WriteShaderMaterial(materialArrayMapped + args.jobIndex);
 
+			VideoComponent* video = videos.GetComponent(entity);
+			if (video != nullptr)
+			{
+				// Video attachment will overwrite texture slots on shader side:
+				int descriptor = GetDevice()->GetDescriptorIndex(&video->videoinstance.output.texture, SubresourceType::SRV, video->videoinstance.output.subresource_srgb);
+				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, BASECOLORMAP, descriptor);
+				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, EMISSIVEMAP, descriptor);
+			}
+
 		});
 	}
 	void Scene::RunImpostorUpdateSystem(wi::jobsystem::context& ctx)
@@ -4295,6 +4325,34 @@ namespace wi::scene
 				wi::audio::ExitLoop(&sound.soundinstance);
 			}
 			wi::audio::SetVolume(sound.volume, &sound.soundinstance);
+		}
+	}
+	void Scene::RunVideoUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		for (size_t i = 0; i < videos.GetCount(); ++i)
+		{
+			VideoComponent& video = videos[i];
+
+			if (video.IsPlaying())
+			{
+				video.videoinstance.flags |= wi::video::VideoInstance::Flags::Playing;
+			}
+			else
+			{
+				video.videoinstance.flags &= ~wi::video::VideoInstance::Flags::Playing;
+			}
+
+			if (video.IsLooped())
+			{
+				video.videoinstance.flags |= wi::video::VideoInstance::Flags::Looped;
+			}
+			else
+			{
+				video.videoinstance.flags &= ~wi::video::VideoInstance::Flags::Looped;
+			}
+
+			video.videoinstance.flags |= wi::video::VideoInstance::Flags::Mipmapped;
+
 		}
 	}
 	void Scene::RunScriptUpdateSystem(wi::jobsystem::context& ctx)

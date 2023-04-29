@@ -31,6 +31,12 @@ namespace wi::graphics
 		Cpu,
 	};
 
+	enum class GPUPreference
+	{
+		Discrete,
+		Integrated,
+	};
+
 	enum class ShaderStage
 	{
 		MS,		// Mesh Shader
@@ -224,7 +230,7 @@ namespace wi::graphics
 		R32G32_FLOAT,
 		R32G32_UINT,
 		R32G32_SINT,
-		D32_FLOAT_S8X24_UINT,	// depth (32-bit) + stencil (8-bit) | SRV: R32_FLOAT
+		D32_FLOAT_S8X24_UINT,	// depth (32-bit) + stencil (8-bit) | SRV: R32_FLOAT (default or depth aspect), R8_UINT (stencil aspect)
 
 		R10G10B10A2_UNORM,
 		R10G10B10A2_UINT,
@@ -245,7 +251,7 @@ namespace wi::graphics
 		R32_FLOAT,
 		R32_UINT,
 		R32_SINT, 
-		D24_UNORM_S8_UINT,		// depth (24-bit) + stencil (8-bit) | SRV: R24_INTERNAL
+		D24_UNORM_S8_UINT,		// depth (24-bit) + stencil (8-bit) | SRV: R24_INTERNAL (default or depth aspect), R8_UINT (stencil aspect)
 		R9G9B9E5_SHAREDEXP,
 
 		R8G8_UNORM,
@@ -264,6 +270,8 @@ namespace wi::graphics
 		R8_SNORM,
 		R8_SINT,
 
+		// Formats that are not usable in render pass must be below because formats in render pass must be encodable as 6 bits:
+
 		BC1_UNORM,
 		BC1_UNORM_SRGB,
 		BC2_UNORM,
@@ -277,7 +285,9 @@ namespace wi::graphics
 		BC6H_UF16,
 		BC6H_SF16,
 		BC7_UNORM,
-		BC7_UNORM_SRGB
+		BC7_UNORM_SRGB,
+
+		NV12,				// video YUV420; SRV Luminance aspect: R8_UNORM, SRV Chrominance aspect: R8G8_UNORM
 	};
 	enum class GpuQueryType
 	{
@@ -322,6 +332,14 @@ namespace wi::graphics
 		COLOR,
 		DEPTH,
 		STENCIL,
+		LUMINANCE,
+		CHROMINANCE,
+	};
+
+	enum class VideoFrameType
+	{
+		Intra,
+		Predictive,
 	};
 
 	// Flags ////////////////////////////////////////////
@@ -366,6 +384,7 @@ namespace wi::graphics
 		SPARSE_TILE_POOL = SPARSE_TILE_POOL_BUFFER | SPARSE_TILE_POOL_TEXTURE_NON_RT_DS | SPARSE_TILE_POOL_TEXTURE_RT_DS, // buffer only, makes it suitable for containing tile memory for all kinds of sparse resources. Requires GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL to be supported
 		TYPED_FORMAT_CASTING = 1 << 11,	// enable casting formats between same type and different modifiers: eg. UNORM -> SRGB
 		TYPELESS_FORMAT_CASTING = 1 << 12,	// enable casting formats to other formats that have the same bit-width and channel layout: eg. R32_FLOAT -> R32_UINT
+		VIDEO_DECODE = 1 << 15,	// resource is usabe in video decoding operations
 	};
 
 	enum class GraphicsDeviceCapability
@@ -388,10 +407,11 @@ namespace wi::graphics
 		SPARSE_TEXTURE2D = 1 << 14,
 		SPARSE_TEXTURE3D = 1 << 15,
 		SPARSE_NULL_MAPPING = 1 << 16,
-		GENERIC_SPARSE_TILE_POOL = 1 << 17, // alows using ResourceMiscFlag::SPARSE_TILE_POOL (non resource type specific version)
+		GENERIC_SPARSE_TILE_POOL = 1 << 17, // allows using ResourceMiscFlag::SPARSE_TILE_POOL (non resource type specific version)
 		DEPTH_RESOLVE_MIN_MAX = 1 << 18,
 		STENCIL_RESOLVE_MIN_MAX = 1 << 19,
 		CACHE_COHERENT_UMA = 1 << 20,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
+		VIDEO_DECODE_H264,
 	};
 
 	enum class ResourceState
@@ -414,9 +434,13 @@ namespace wi::graphics
 		VERTEX_BUFFER = 1 << 9,				// vertex buffer, read only
 		INDEX_BUFFER = 1 << 10,				// index buffer, read only
 		CONSTANT_BUFFER = 1 << 11,			// constant buffer, read only
-		INDIRECT_ARGUMENT = 1 << 12,			// argument buffer to DrawIndirect() or DispatchIndirect()
+		INDIRECT_ARGUMENT = 1 << 12,		// argument buffer to DrawIndirect() or DispatchIndirect()
 		RAYTRACING_ACCELERATION_STRUCTURE = 1 << 13, // acceleration structure storage or scratch
-		PREDICATION = 1 << 14				// storage for predication comparison value
+		PREDICATION = 1 << 14,				// storage for predication comparison value
+
+		// Other:
+		VIDEO_DECODE_SRC = 1 << 15,			// video decode operation source (bitstream buffer or DPB texture)
+		VIDEO_DECODE_DST = 1 << 16,			// video decode operation destination DPB texture
 	};
 
 	enum class ColorSpace
@@ -432,6 +456,11 @@ namespace wi::graphics
 		ALLOW_UAV_WRITES = 1 << 0,
 		SUSPENDING = 1 << 1,
 		RESUMING = 1 << 2,
+	};
+
+	enum class VideoProfile
+	{
+		H264,	// AVC
 	};
 
 
@@ -619,6 +648,7 @@ namespace wi::graphics
 			ResourceState layout_after;
 			int mip;
 			int slice;
+			const ImageAspect* aspect;
 		};
 		struct Buffer
 		{
@@ -641,7 +671,7 @@ namespace wi::graphics
 			return barrier;
 		}
 		static GPUBarrier Image(const Texture* texture, ResourceState before, ResourceState after,
-			int mip = -1, int slice = -1)
+			int mip = -1, int slice = -1, const ImageAspect* aspect = nullptr)
 		{
 			GPUBarrier barrier;
 			barrier.type = Type::IMAGE;
@@ -650,6 +680,7 @@ namespace wi::graphics
 			barrier.image.layout_after = after;
 			barrier.image.mip = mip;
 			barrier.image.slice = slice;
+			barrier.image.aspect = aspect;
 			return barrier;
 		}
 		static GPUBarrier Buffer(const GPUBuffer* buffer, ResourceState before, ResourceState after)
@@ -736,6 +767,20 @@ namespace wi::graphics
 		uint32_t packed_mip_tile_count = 0;		// how many tiles are required for the packed mipmaps
 	};
 
+	struct VideoDesc
+	{
+		uint32_t width = 0;					// must meet the codec specific alignment requirements
+		uint32_t height = 0;				// must meet the codec specific alignment requirements
+		uint32_t bit_rate = 0;				// can be 0, it means that decoding will be prepared for worst case
+		Format format = Format::NV12;
+		VideoProfile profile = VideoProfile::H264;
+		const void* pps_datas = nullptr;	// array of picture parameter set structures. The structure type depends on video codec
+		size_t pps_count = 0;				// number of picture parameter set structures in the pps_datas array
+		const void* sps_datas = nullptr;	// array of sequence parameter set structures. The structure type depends on video codec
+		size_t sps_count = 0;				// number of sequence parameter set structures in the sps_datas array
+		uint32_t num_dpb_slots = 0;			// The number of decode picture buffer slots. Usually it is required to be at least number_of_reference_frames + 1
+	};
+
 
 	// Resources:
 
@@ -798,6 +843,38 @@ namespace wi::graphics
 		const SparseTextureProperties* sparse_properties = nullptr;
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
+	};
+
+	struct VideoDecoder : public GraphicsDeviceChild
+	{
+		VideoDesc desc;
+		constexpr const VideoDesc& GetDesc() const { return desc; }
+	};
+
+	struct VideoDecodeOperation
+	{
+		enum Flags
+		{
+			FLAG_EMPTY = 0,
+			FLAG_SESSION_RESET = 1 << 0, // first usage of decoder needs reset
+		};
+		uint32_t flags = FLAG_EMPTY;
+		const GPUBuffer* stream = nullptr;
+		uint64_t stream_offset = 0; // must be aligned with GraphicsDevice::GetVideoDecodeBitstreamAlignment()
+		uint64_t stream_size = 0;
+		VideoFrameType frame_type = VideoFrameType::Intra;
+		uint32_t reference_priority = 0; // nal_ref_idc from nal unit header
+		int decoded_frame_index = 0; // frame index in order of decoding
+		const void* slice_header = nullptr; // slice header for current frame
+		const void* pps = nullptr; // picture parameter set for current slice header
+		const void* sps = nullptr; // sequence parameter set for current picture parameter set
+		int poc[2] = {}; // PictureOrderCount Top and Bottom fields
+		uint32_t current_dpb = 0; // DPB slot for current output picture
+		uint8_t dpb_reference_count = 0; // number of references in dpb_reference_slots array
+		const uint8_t* dpb_reference_slots = nullptr; // dpb slot indices that are used as reference pictures
+		const int* dpb_poc = nullptr; // for each DPB reference slot, indicate the PictureOrderCount
+		const int* dpb_framenum = nullptr; // for each DPB reference slot, indicate the framenum value
+		const Texture* DPB = nullptr; // DPB texture with arraysize = num_references + 1
 	};
 
 	struct RenderPassImage

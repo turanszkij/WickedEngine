@@ -362,6 +362,120 @@ struct CD3DX12_STATIC_SAMPLER_DESC : public D3D12_STATIC_SAMPLER_DESC
 };
 
 //------------------------------------------------------------------------------------------------
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+struct CD3DX12_STATIC_SAMPLER_DESC1 : public D3D12_STATIC_SAMPLER_DESC1
+{
+    CD3DX12_STATIC_SAMPLER_DESC1() = default;
+    explicit CD3DX12_STATIC_SAMPLER_DESC1(const D3D12_STATIC_SAMPLER_DESC &o) noexcept
+    {
+        memcpy(this, &o, sizeof(D3D12_STATIC_SAMPLER_DESC));
+        Flags = D3D12_SAMPLER_FLAGS::D3D12_SAMPLER_FLAG_NONE;
+    }
+    explicit CD3DX12_STATIC_SAMPLER_DESC1(const D3D12_STATIC_SAMPLER_DESC1 & o) noexcept :
+        D3D12_STATIC_SAMPLER_DESC1(o)
+    {}
+    CD3DX12_STATIC_SAMPLER_DESC1(
+         UINT shaderRegister,
+         D3D12_FILTER filter = D3D12_FILTER_ANISOTROPIC,
+         D3D12_TEXTURE_ADDRESS_MODE addressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+         D3D12_TEXTURE_ADDRESS_MODE addressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+         D3D12_TEXTURE_ADDRESS_MODE addressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+         FLOAT mipLODBias = 0,
+         UINT maxAnisotropy = 16,
+         D3D12_COMPARISON_FUNC comparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+         D3D12_STATIC_BORDER_COLOR borderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+         FLOAT minLOD = 0.f,
+         FLOAT maxLOD = D3D12_FLOAT32_MAX,
+         D3D12_SHADER_VISIBILITY shaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
+         UINT registerSpace = 0,
+         D3D12_SAMPLER_FLAGS flags = D3D12_SAMPLER_FLAGS::D3D12_SAMPLER_FLAG_NONE) noexcept
+    {
+        Init(
+            shaderRegister,
+            filter,
+            addressU,
+            addressV,
+            addressW,
+            mipLODBias,
+            maxAnisotropy,
+            comparisonFunc,
+            borderColor,
+            minLOD,
+            maxLOD,
+            shaderVisibility,
+            registerSpace,
+            flags);
+    }
+
+    static inline void Init(
+        _Out_ D3D12_STATIC_SAMPLER_DESC1 &samplerDesc,
+         UINT shaderRegister,
+         D3D12_FILTER filter = D3D12_FILTER_ANISOTROPIC,
+         D3D12_TEXTURE_ADDRESS_MODE addressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+         D3D12_TEXTURE_ADDRESS_MODE addressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+         D3D12_TEXTURE_ADDRESS_MODE addressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+         FLOAT mipLODBias = 0,
+         UINT maxAnisotropy = 16,
+         D3D12_COMPARISON_FUNC comparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+         D3D12_STATIC_BORDER_COLOR borderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+         FLOAT minLOD = 0.f,
+         FLOAT maxLOD = D3D12_FLOAT32_MAX,
+         D3D12_SHADER_VISIBILITY shaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
+         UINT registerSpace = 0,
+        D3D12_SAMPLER_FLAGS flags = D3D12_SAMPLER_FLAGS::D3D12_SAMPLER_FLAG_NONE) noexcept
+    {
+        samplerDesc.ShaderRegister = shaderRegister;
+        samplerDesc.Filter = filter;
+        samplerDesc.AddressU = addressU;
+        samplerDesc.AddressV = addressV;
+        samplerDesc.AddressW = addressW;
+        samplerDesc.MipLODBias = mipLODBias;
+        samplerDesc.MaxAnisotropy = maxAnisotropy;
+        samplerDesc.ComparisonFunc = comparisonFunc;
+        samplerDesc.BorderColor = borderColor;
+        samplerDesc.MinLOD = minLOD;
+        samplerDesc.MaxLOD = maxLOD;
+        samplerDesc.ShaderVisibility = shaderVisibility;
+        samplerDesc.RegisterSpace = registerSpace;
+        samplerDesc.Flags = flags;
+    }
+    inline void Init(
+         UINT shaderRegister,
+         D3D12_FILTER filter = D3D12_FILTER_ANISOTROPIC,
+         D3D12_TEXTURE_ADDRESS_MODE addressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+         D3D12_TEXTURE_ADDRESS_MODE addressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+         D3D12_TEXTURE_ADDRESS_MODE addressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+         FLOAT mipLODBias = 0,
+         UINT maxAnisotropy = 16,
+         D3D12_COMPARISON_FUNC comparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+         D3D12_STATIC_BORDER_COLOR borderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+         FLOAT minLOD = 0.f,
+         FLOAT maxLOD = D3D12_FLOAT32_MAX,
+         D3D12_SHADER_VISIBILITY shaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
+         UINT registerSpace = 0,
+         D3D12_SAMPLER_FLAGS flags = D3D12_SAMPLER_FLAGS::D3D12_SAMPLER_FLAG_NONE) noexcept
+    {
+        Init(
+            *this,
+            shaderRegister,
+            filter,
+            addressU,
+            addressV,
+            addressW,
+            mipLODBias,
+            maxAnisotropy,
+            comparisonFunc,
+            borderColor,
+            minLOD,
+            maxLOD,
+            shaderVisibility,
+            registerSpace,
+            flags);
+    }
+};
+#endif // D3D12_SDK_VERSION >= 609
+
+//------------------------------------------------------------------------------------------------
 struct CD3DX12_ROOT_SIGNATURE_DESC : public D3D12_ROOT_SIGNATURE_DESC
 {
     CD3DX12_ROOT_SIGNATURE_DESC() = default;
@@ -653,6 +767,13 @@ struct CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC : public D3D12_VERSIONED_ROOT_SIGNA
         Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
         Desc_1_1 = o;
     }
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    explicit CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC(const D3D12_ROOT_SIGNATURE_DESC2& o) noexcept
+    {
+        Version = D3D_ROOT_SIGNATURE_VERSION_1_2;
+        Desc_1_2 = o;
+    }
+#endif
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC(
         UINT numParameters,
         _In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER* _pParameters,
@@ -727,6 +848,24 @@ struct CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC : public D3D12_VERSIONED_ROOT_SIGNA
         desc.Desc_1_1.pStaticSamplers = _pStaticSamplers;
         desc.Desc_1_1.Flags = flags;
     }
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    static inline void Init_1_2(
+        _Out_ D3D12_VERSIONED_ROOT_SIGNATURE_DESC& desc,
+        UINT numParameters,
+        _In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER1* _pParameters,
+        UINT numStaticSamplers = 0,
+        _In_reads_opt_(numStaticSamplers) const D3D12_STATIC_SAMPLER_DESC1* _pStaticSamplers = nullptr,
+        D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_NONE) noexcept
+    {
+        desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_2;
+        desc.Desc_1_2.NumParameters = numParameters;
+        desc.Desc_1_2.pParameters = _pParameters;
+        desc.Desc_1_2.NumStaticSamplers = numStaticSamplers;
+        desc.Desc_1_2.pStaticSamplers = _pStaticSamplers;
+        desc.Desc_1_2.Flags = flags;
+    }
+#endif
 };
 
 //------------------------------------------------------------------------------------------------
@@ -876,6 +1015,9 @@ inline HRESULT D3DX12SerializeVersionedRootSignature(
                     return D3D12SerializeRootSignature(&pRootSignatureDesc->Desc_1_0, D3D_ROOT_SIGNATURE_VERSION_1, ppBlob, ppErrorBlob);
 
                 case D3D_ROOT_SIGNATURE_VERSION_1_1:
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+                case D3D_ROOT_SIGNATURE_VERSION_1_2:
+#endif
                 {
                     HRESULT hr = S_OK;
                     const D3D12_ROOT_SIGNATURE_DESC1& desc_1_1 = pRootSignatureDesc->Desc_1_1;
@@ -942,9 +1084,36 @@ inline HRESULT D3DX12SerializeVersionedRootSignature(
                         }
                     }
 
+                    D3D12_STATIC_SAMPLER_DESC* pStaticSamplers = nullptr;
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+                    if (desc_1_1.NumStaticSamplers > 0 && pRootSignatureDesc->Version == D3D_ROOT_SIGNATURE_VERSION_1_2)
+                    {
+                        const SIZE_T SamplersSize = sizeof(D3D12_STATIC_SAMPLER_DESC) * desc_1_1.NumStaticSamplers;
+                        pStaticSamplers = static_cast<D3D12_STATIC_SAMPLER_DESC*>(HeapAlloc(GetProcessHeap(), 0, SamplersSize));
+
+                        if (pStaticSamplers == nullptr)
+                        {
+                            hr = E_OUTOFMEMORY;
+                        }
+                        else
+                        {
+                            const D3D12_ROOT_SIGNATURE_DESC2& desc_1_2 = pRootSignatureDesc->Desc_1_2;
+                            for (UINT n = 0; n < desc_1_1.NumStaticSamplers; ++n)
+                            {
+                                if ((desc_1_2.pStaticSamplers[n].Flags & ~D3D12_SAMPLER_FLAG_UINT_BORDER_COLOR) != 0)
+                                {
+                                    hr = E_INVALIDARG;
+                                    break;
+                                }
+                                memcpy(pStaticSamplers + n, desc_1_2.pStaticSamplers + n, sizeof(D3D12_STATIC_SAMPLER_DESC));
+                            }
+                        }
+                    }
+#endif
+
                     if (SUCCEEDED(hr))
                     {
-                        const CD3DX12_ROOT_SIGNATURE_DESC desc_1_0(desc_1_1.NumParameters, pParameters_1_0, desc_1_1.NumStaticSamplers, desc_1_1.pStaticSamplers, desc_1_1.Flags);
+                        const CD3DX12_ROOT_SIGNATURE_DESC desc_1_0(desc_1_1.NumParameters, pParameters_1_0, desc_1_1.NumStaticSamplers, pStaticSamplers == nullptr ? desc_1_1.pStaticSamplers : pStaticSamplers, desc_1_1.Flags);
                         hr = D3D12SerializeRootSignature(&desc_1_0, D3D_ROOT_SIGNATURE_VERSION_1, ppBlob, ppErrorBlob);
                     }
 
@@ -960,12 +1129,21 @@ inline HRESULT D3DX12SerializeVersionedRootSignature(
                         }
                         HeapFree(GetProcessHeap(), 0, pParameters);
                     }
+
+                    if (pStaticSamplers)
+                    {
+                        HeapFree(GetProcessHeap(), 0, pStaticSamplers);
+                    }
+
                     return hr;
                 }
             }
             break;
 
         case D3D_ROOT_SIGNATURE_VERSION_1_1:
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+        case D3D_ROOT_SIGNATURE_VERSION_1_2:
+#endif
             return D3D12SerializeVersionedRootSignature(pRootSignatureDesc, ppBlob, ppErrorBlob);
     }
 

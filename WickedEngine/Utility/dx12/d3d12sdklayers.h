@@ -171,6 +171,13 @@ typedef interface ID3D12SharingContract ID3D12SharingContract;
 #endif 	/* __ID3D12SharingContract_FWD_DEFINED__ */
 
 
+#ifndef __ID3D12ManualWriteTrackingResource_FWD_DEFINED__
+#define __ID3D12ManualWriteTrackingResource_FWD_DEFINED__
+typedef interface ID3D12ManualWriteTrackingResource ID3D12ManualWriteTrackingResource;
+
+#endif 	/* __ID3D12ManualWriteTrackingResource_FWD_DEFINED__ */
+
+
 #ifndef __ID3D12InfoQueue_FWD_DEFINED__
 #define __ID3D12InfoQueue_FWD_DEFINED__
 typedef interface ID3D12InfoQueue ID3D12InfoQueue;
@@ -2237,7 +2244,92 @@ EXTERN_C const IID IID_ID3D12SharingContract;
 #endif 	/* __ID3D12SharingContract_INTERFACE_DEFINED__ */
 
 
-/* interface __MIDL_itf_d3d12sdklayers_0000_0017 */
+#ifndef __ID3D12ManualWriteTrackingResource_INTERFACE_DEFINED__
+#define __ID3D12ManualWriteTrackingResource_INTERFACE_DEFINED__
+
+/* interface ID3D12ManualWriteTrackingResource */
+/* [unique][local][object][uuid] */ 
+
+
+EXTERN_C const IID IID_ID3D12ManualWriteTrackingResource;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("86ca3b85-49ad-4b6e-aed5-eddb18540f41")
+    ID3D12ManualWriteTrackingResource : public IUnknown
+    {
+    public:
+        virtual void STDMETHODCALLTYPE TrackWrite( 
+            UINT Subresource,
+            _In_opt_  const D3D12_RANGE *pWrittenRange) = 0;
+        
+    };
+    
+    
+#else 	/* C style interface */
+
+    typedef struct ID3D12ManualWriteTrackingResourceVtbl
+    {
+        BEGIN_INTERFACE
+        
+        DECLSPEC_XFGVIRT(IUnknown, QueryInterface)
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            ID3D12ManualWriteTrackingResource * This,
+            REFIID riid,
+            _COM_Outptr_  void **ppvObject);
+        
+        DECLSPEC_XFGVIRT(IUnknown, AddRef)
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            ID3D12ManualWriteTrackingResource * This);
+        
+        DECLSPEC_XFGVIRT(IUnknown, Release)
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            ID3D12ManualWriteTrackingResource * This);
+        
+        DECLSPEC_XFGVIRT(ID3D12ManualWriteTrackingResource, TrackWrite)
+        void ( STDMETHODCALLTYPE *TrackWrite )( 
+            ID3D12ManualWriteTrackingResource * This,
+            UINT Subresource,
+            _In_opt_  const D3D12_RANGE *pWrittenRange);
+        
+        END_INTERFACE
+    } ID3D12ManualWriteTrackingResourceVtbl;
+
+    interface ID3D12ManualWriteTrackingResource
+    {
+        CONST_VTBL struct ID3D12ManualWriteTrackingResourceVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define ID3D12ManualWriteTrackingResource_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define ID3D12ManualWriteTrackingResource_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define ID3D12ManualWriteTrackingResource_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define ID3D12ManualWriteTrackingResource_TrackWrite(This,Subresource,pWrittenRange)	\
+    ( (This)->lpVtbl -> TrackWrite(This,Subresource,pWrittenRange) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __ID3D12ManualWriteTrackingResource_INTERFACE_DEFINED__ */
+
+
+/* interface __MIDL_itf_d3d12sdklayers_0000_0018 */
 /* [local] */ 
 
 typedef 
@@ -3200,8 +3292,18 @@ enum D3D12_MESSAGE_ID
         D3D12_MESSAGE_ID_DYNAMIC_DEPTH_BIAS_NO_PIPELINE	= 1367,
         D3D12_MESSAGE_ID_DYNAMIC_INDEX_BUFFER_STRIP_CUT_FLAG_MISSING	= 1368,
         D3D12_MESSAGE_ID_DYNAMIC_INDEX_BUFFER_STRIP_CUT_NO_PIPELINE	= 1369,
+        D3D12_MESSAGE_ID_NONNORMALIZED_COORDINATE_SAMPLING_NOT_SUPPORTED	= 1370,
         D3D12_MESSAGE_ID_INVALID_CAST_TARGET	= 1371,
-        D3D12_MESSAGE_ID_D3D12_MESSAGES_END	= ( D3D12_MESSAGE_ID_INVALID_CAST_TARGET + 1 ) 
+        D3D12_MESSAGE_ID_RENDER_PASS_COMMANDLIST_INVALID_END_STATE	= 1372,
+        D3D12_MESSAGE_ID_RENDER_PASS_COMMANDLIST_INVALID_START_STATE	= 1373,
+        D3D12_MESSAGE_ID_RENDER_PASS_MISMATCHING_ACCESS	= 1374,
+        D3D12_MESSAGE_ID_RENDER_PASS_MISMATCHING_LOCAL_PRESERVE_PARAMETERS	= 1375,
+        D3D12_MESSAGE_ID_RENDER_PASS_LOCAL_PRESERVE_RENDER_PARAMETERS_ERROR	= 1376,
+        D3D12_MESSAGE_ID_RENDER_PASS_LOCAL_DEPTH_STENCIL_ERROR	= 1377,
+        D3D12_MESSAGE_ID_DRAW_POTENTIALLY_OUTSIDE_OF_VALID_RENDER_AREA	= 1378,
+        D3D12_MESSAGE_ID_CREATERASTERIZERSTATE_INVALID_LINERASTERIZATIONMODE	= 1379,
+        D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT_SMALLRESOURCE	= 1380,
+        D3D12_MESSAGE_ID_D3D12_MESSAGES_END	= ( D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT_SMALLRESOURCE + 1 ) 
     } 	D3D12_MESSAGE_ID;
 
 typedef struct D3D12_MESSAGE
@@ -3232,8 +3334,8 @@ typedef struct D3D12_INFO_QUEUE_FILTER
 #define D3D12_INFO_QUEUE_DEFAULT_MESSAGE_COUNT_LIMIT 1024
 
 
-extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0017_v0_0_c_ifspec;
-extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0017_v0_0_s_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0018_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0018_v0_0_s_ifspec;
 
 #ifndef __ID3D12InfoQueue_INTERFACE_DEFINED__
 #define __ID3D12InfoQueue_INTERFACE_DEFINED__
@@ -3678,7 +3780,7 @@ EXTERN_C const IID IID_ID3D12InfoQueue;
 #endif 	/* __ID3D12InfoQueue_INTERFACE_DEFINED__ */
 
 
-/* interface __MIDL_itf_d3d12sdklayers_0000_0018 */
+/* interface __MIDL_itf_d3d12sdklayers_0000_0019 */
 /* [local] */ 
 
 typedef 
@@ -3698,8 +3800,8 @@ typedef void ( __stdcall *D3D12MessageFunc )(
 
 
 
-extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0018_v0_0_c_ifspec;
-extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0018_v0_0_s_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0019_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0019_v0_0_s_ifspec;
 
 #ifndef __ID3D12InfoQueue1_INTERFACE_DEFINED__
 #define __ID3D12InfoQueue1_INTERFACE_DEFINED__
@@ -4075,7 +4177,7 @@ EXTERN_C const IID IID_ID3D12InfoQueue1;
 #endif 	/* __ID3D12InfoQueue1_INTERFACE_DEFINED__ */
 
 
-/* interface __MIDL_itf_d3d12sdklayers_0000_0019 */
+/* interface __MIDL_itf_d3d12sdklayers_0000_0020 */
 /* [local] */ 
 
 #endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_GAMES) */
@@ -4097,12 +4199,13 @@ DEFINE_GUID(IID_ID3D12DebugCommandList,0x09e0bf36,0x54ac,0x484f,0x88,0x47,0x4b,0
 DEFINE_GUID(IID_ID3D12DebugCommandList2,0xaeb575cf,0x4e06,0x48be,0xba,0x3b,0xc4,0x50,0xfc,0x96,0x65,0x2e);
 DEFINE_GUID(IID_ID3D12DebugCommandList3,0x197d5e15,0x4d37,0x4d34,0xaf,0x78,0x72,0x4c,0xd7,0x0f,0xdb,0x1f);
 DEFINE_GUID(IID_ID3D12SharingContract,0x0adf7d52,0x929c,0x4e61,0xad,0xdb,0xff,0xed,0x30,0xde,0x66,0xef);
+DEFINE_GUID(IID_ID3D12ManualWriteTrackingResource,0x86ca3b85,0x49ad,0x4b6e,0xae,0xd5,0xed,0xdb,0x18,0x54,0x0f,0x41);
 DEFINE_GUID(IID_ID3D12InfoQueue,0x0742a90b,0xc387,0x483f,0xb9,0x46,0x30,0xa7,0xe4,0xe6,0x14,0x58);
 DEFINE_GUID(IID_ID3D12InfoQueue1,0x2852dd88,0xb484,0x4c0c,0xb6,0xb1,0x67,0x16,0x85,0x00,0xe6,0x00);
 
 
-extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0019_v0_0_c_ifspec;
-extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0019_v0_0_s_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0020_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12sdklayers_0000_0020_v0_0_s_ifspec;
 
 /* Additional Prototypes for ALL interfaces */
 

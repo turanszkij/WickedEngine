@@ -1006,6 +1006,25 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Video))
+			{
+				for (size_t i = 0; i < scene.videos.GetCount(); ++i)
+				{
+					Entity entity = scene.videos.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+					float dis = XMVectorGetX(disV);
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					{
+						hovered = wi::scene::PickResult();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
 			if (bone_picking)
 			{
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
@@ -1471,6 +1490,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
 		componentsWnd.materialWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.soundWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.videoWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.decalWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.envProbeWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.forceFieldWnd.SetEntity(INVALID_ENTITY);
@@ -1513,6 +1533,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.hairWnd.SetEntity(picked.entity);
 		componentsWnd.lightWnd.SetEntity(picked.entity);
 		componentsWnd.soundWnd.SetEntity(picked.entity);
+		componentsWnd.videoWnd.SetEntity(picked.entity);
 		componentsWnd.decalWnd.SetEntity(picked.entity);
 		componentsWnd.envProbeWnd.SetEntity(picked.entity);
 		componentsWnd.forceFieldWnd.SetEntity(picked.entity);
@@ -2242,6 +2263,36 @@ void EditorComponent::Render() const
 
 
 					wi::font::Draw(ICON_SOUND, fp, cmd);
+				}
+			}
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Video))
+			{
+				for (size_t i = 0; i < scene.videos.GetCount(); ++i)
+				{
+					Entity entity = scene.videos.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fp.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fp.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::font::Draw(ICON_VIDEO, fp, cmd);
 				}
 			}
 			if (bone_picking)
@@ -3317,6 +3368,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.meshWnd.SetEntity(wi::ecs::INVALID_ENTITY, -1);
 			componentsWnd.lightWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.soundWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.videoWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.decalWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.envProbeWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.materialWnd.SetEntity(wi::ecs::INVALID_ENTITY);

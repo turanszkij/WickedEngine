@@ -88,6 +88,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)GeneralWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ProfilerWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)EmbeddedResources.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)VideoWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -140,6 +141,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)GeneralWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ProfilerWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)yumin.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)VideoWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

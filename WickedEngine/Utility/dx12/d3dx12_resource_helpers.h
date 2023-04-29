@@ -400,10 +400,11 @@ inline const CD3DX12_RESOURCE_DESC1* D3DX12ConditionallyExpandAPIDesc(
     return D3DX12ConditionallyExpandAPIDesc(static_cast<CD3DX12_RESOURCE_DESC1&>(LclDesc), static_cast<const CD3DX12_RESOURCE_DESC1*>(pDesc));
 }
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 606)
 //------------------------------------------------------------------------------------------------
-// The difference between D3DX12GetCopyableFootprints and ID3D12Device::GetCopyableFootprints 
+// The difference between D3DX12GetCopyableFootprints and ID3D12Device::GetCopyableFootprints
 // is that this one loses a lot of error checking by assuming the arguments are correct
-inline bool D3DX12GetCopyableFootprints( 
+inline bool D3DX12GetCopyableFootprints(
     _In_  const D3D12_RESOURCE_DESC1& ResourceDesc,
     _In_range_(0, D3D12_REQ_SUBRESOURCES) UINT FirstSubresource,
     _In_range_(0, D3D12_REQ_SUBRESOURCES - FirstSubresource) UINT NumSubresources,
@@ -470,16 +471,16 @@ inline bool D3DX12GetCopyableFootprints(
         UINT MinPlaneRowPitch = 0;
         D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::CalculateMinimumRowMajorRowPitch(PlaneFormat, MinPlanePitchWidth, MinPlaneRowPitch);
 
-        // Formats with more than one plane choose a larger pitch alignment to ensure that each plane begins on the row 
+        // Formats with more than one plane choose a larger pitch alignment to ensure that each plane begins on the row
         // immediately following the previous plane while still adhering to subresource alignment restrictions.
-        static_assert(   D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT >= D3D12_TEXTURE_DATA_PITCH_ALIGNMENT 
-                        && ((D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) == 0), 
+        static_assert(   D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT >= D3D12_TEXTURE_DATA_PITCH_ALIGNMENT
+                        && ((D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) == 0),
                         "D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT  must be >= and evenly divisible by D3D12_TEXTURE_DATA_PITCH_ALIGNMENT." );
 
-        Placement.RowPitch = D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::Planar(Format) 
+        Placement.RowPitch = D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::Planar(Format)
             ? D3DX12Align< UINT >( MinPlaneRowPitch, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT )
             : D3DX12Align< UINT >( MinPlaneRowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT );
-            
+
         if (pRowSizeInBytes)
         {
             UINT PlaneRowSize = 0;
@@ -499,7 +500,7 @@ inline bool D3DX12GetCopyableFootprints(
             D3DX12_ASSERT(Height % HeightAlignment == 0);
             NumRows = Height / HeightAlignment;
         }
-            
+
         if (pNumRows)
         {
             pNumRows[uSubRes] = NumRows;
@@ -522,7 +523,7 @@ inline bool D3DX12GetCopyableFootprints(
         }
         bResourceOverflow  = bResourceOverflow  || bOverflow;
     }
-        
+
     // Overflow error
     if (bResourceOverflow)
     {
@@ -556,7 +557,7 @@ inline bool D3DX12GetCopyableFootprints(
 //------------------------------------------------------------------------------------------------
 inline D3D12_RESOURCE_DESC1 D3DX12ResourceDesc0ToDesc1(D3D12_RESOURCE_DESC const& desc0)
 {
-	D3D12_RESOURCE_DESC1 	   desc1;
+    D3D12_RESOURCE_DESC1       desc1;
     desc1.Dimension          = desc0.Dimension;
     desc1.Alignment          = desc0.Alignment;
     desc1.Width              = desc0.Width;
@@ -597,3 +598,5 @@ inline bool D3DX12GetCopyableFootprints(
 		pRowSizeInBytes,
 		pTotalBytes);
 }
+
+#endif // D3D12_SDK_VERSION >= 606

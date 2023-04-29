@@ -25,6 +25,7 @@ namespace wi
 		int srgb_subresource = -1;
 		wi::audio::Sound sound;
 		std::string script;
+		wi::video::Video video;
 		wi::vector<uint8_t> filedata;
 	};
 
@@ -47,6 +48,11 @@ namespace wi
 	{
 		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		return resourceinternal->script;
+	}
+	const wi::video::Video& Resource::GetVideo() const
+	{
+		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		return resourceinternal->video;
 	}
 	int Resource::GetTextureSRGBSubresource() const
 	{
@@ -100,6 +106,15 @@ namespace wi
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->script = script;
 	}
+	void Resource::SetVideo(const wi::video::Video& video)
+	{
+		if (internal_state == nullptr)
+		{
+			internal_state = std::make_shared<ResourceInternal>();
+		}
+		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		resourceinternal->video = video;
+	}
 
 	namespace resourcemanager
 	{
@@ -121,6 +136,7 @@ namespace wi
 			IMAGE,
 			SOUND,
 			SCRIPT,
+			VIDEO,
 		};
 		static const wi::unordered_map<std::string, DataType> types = {
 			{"BASIS", DataType::IMAGE},
@@ -136,6 +152,7 @@ namespace wi
 			{"WAV", DataType::SOUND},
 			{"OGG", DataType::SOUND},
 			{"LUA", DataType::SCRIPT},
+			{"MP4", DataType::VIDEO},
 		};
 		wi::vector<std::string> GetSupportedImageExtensions()
 		{
@@ -155,6 +172,18 @@ namespace wi
 			for (auto& x : types)
 			{
 				if (x.second == DataType::SOUND)
+				{
+					ret.push_back(x.first);
+				}
+			}
+			return ret;
+		}
+		wi::vector<std::string> GetSupportedVideoExtensions()
+		{
+			wi::vector<std::string> ret;
+			for (auto& x : types)
+			{
+				if (x.second == DataType::VIDEO)
 				{
 					ret.push_back(x.first);
 				}
@@ -797,6 +826,12 @@ namespace wi
 				resource->script.resize(filesize);
 				std::memcpy(resource->script.data(), filedata, filesize);
 				success = true;
+			}
+			break;
+
+			case DataType::VIDEO:
+			{
+				success = wi::video::CreateVideo(filedata, filesize, &resource->video);
 			}
 			break;
 

@@ -43,6 +43,7 @@ namespace wi::graphics
 		QUEUE_GRAPHICS,
 		QUEUE_COMPUTE,
 		QUEUE_COPY,
+		QUEUE_VIDEO_DECODE,
 
 		QUEUE_COUNT,
 	};
@@ -58,6 +59,7 @@ namespace wi::graphics
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 		uint64_t TIMESTAMP_FREQUENCY = 0;
+		uint64_t VIDEO_DECODE_BITSTREAM_ALIGNMENT = 1u;
 		uint32_t vendorId = 0;
 		uint32_t deviceId = 0;
 		std::string adapterName;
@@ -79,8 +81,9 @@ namespace wi::graphics
 		virtual bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info = nullptr) const = 0;
 		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const { return false; }
 		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const { return false; }
-		
-		virtual int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change = nullptr) const = 0;
+		virtual bool CreateVideoDecoder(const VideoDesc* desc, VideoDecoder* video_decoder) const { return false; };
+
+		virtual int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change = nullptr, const ImageAspect* aspect = nullptr) const = 0;
 		virtual int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0, const Format* format_change = nullptr) const = 0;
 
 		virtual int GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource = -1) const = 0;
@@ -91,8 +94,8 @@ namespace wi::graphics
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const {}
 
 		// Set a debug name which will be visible in graphics debuggers
-		virtual void SetName(GPUResource* pResource, const char* name) {}
-		virtual void SetName(Shader* shader, const char* name) {}
+		virtual void SetName(GPUResource* pResource, const char* name) const {}
+		virtual void SetName(Shader* shader, const char* name) const {}
 
 		// Begin a new command list for GPU command recording.
 		//	This will be valid until SubmitCommandLists() is called.
@@ -130,6 +133,7 @@ namespace wi::graphics
 		constexpr size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
 		constexpr uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 		constexpr uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
+		constexpr uint64_t GetVideoDecodeBitstreamAlignment() const { return VIDEO_DECODE_BITSTREAM_ALIGNMENT; }
 
 		constexpr uint32_t GetVendorId() const { return vendorId; }
 		constexpr uint32_t GetDeviceId() const { return deviceId; }
@@ -220,6 +224,7 @@ namespace wi::graphics
 		virtual void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd) {}
 		virtual void PredicationEnd(CommandList cmd) {}
 		virtual void ClearUAV(const GPUResource* resource, uint32_t value, CommandList cmd) = 0;
+		virtual void VideoDecode(const VideoDecoder* video_decoder, const VideoDecodeOperation* op, CommandList cmd) {}
 
 		virtual void EventBegin(const char* name, CommandList cmd) = 0;
 		virtual void EventEnd(CommandList cmd) = 0;

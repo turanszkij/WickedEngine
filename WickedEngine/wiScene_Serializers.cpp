@@ -1665,6 +1665,32 @@ namespace wi::scene
 			archive << soundinstance.type;
 		}
 	}
+	void VideoComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		const std::string& dir = archive.GetSourceDirectory();
+
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> filename;
+
+			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
+				if (!filename.empty())
+				{
+					filename = dir + filename;
+					videoResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					wi::video::CreateVideoInstance(&videoResource.GetVideo(), &videoinstance);
+				}
+			});
+		}
+		else
+		{
+			wi::helper::MakePathRelative(dir, filename);
+
+			archive << _flags;
+			archive << filename;
+		}
+	}
 	void InverseKinematicsComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		SerializeEntity(archive, target, seri);
