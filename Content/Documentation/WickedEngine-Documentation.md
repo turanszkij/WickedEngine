@@ -69,9 +69,10 @@ This is a reference for the C++ features of Wicked Engine
 			15. [RayTracingAccelerationStructure](#raytracingaccelerationstructure)
 			16. [RayTracingPipelineState](#raytracingpipelinestate)
 			17. [Variable Rate Shading](#variable-rate-shading)
-		2. [GraphicsDevice_DX11](#wigraphicsdevice_dx11)
-		3. [GraphicsDevice_DX12](#wigraphicsdevice_dx12)
-		4. [GraphicsDevice_Vulkan](#wigraphicsdevice_vulkan)
+			17. [Video decoding](#video-decoding)
+		2. [GraphicsDevice_DX11](#graphicsdevice_dx11)
+		3. [GraphicsDevice_DX12](#graphicsdevice_dx12)
+		4. [GraphicsDevice_Vulkan](#graphicsdevice_vulkan)
 	2. [Renderer](#renderer)
 		1. [DrawScene](#drawscene)
 		2. [DrawScene_Transparent](#drawscene_transparent)
@@ -693,6 +694,17 @@ The final shading rate will be determined from the above methods using the maxim
 To read more about variable rate shading, refer to the [DirectX specifications.](https://microsoft.github.io/DirectX-Specs/d3d/VariableRateShading)
 
 
+##### Video Decoding
+Video decoding can be used to decode compressed video bitstream in real time on the GPU. Currently only the H264 format is supported. To decode a video, the following steps need to be taken:
+- Provide H264 slice data in a `GPUBuffer`. The slice data offset needs to be aligned within the buffer with `GraphcisDevice::GetVideoDecodeBitstreamAlignment()`. The bitstream buffer needs to be an `UPLOAD` buffer currently.
+- Create `VideoDecoder` object, while providing appropriate paraemters parsed from H264 such as resolution, picture parameters, sequence parameters. The decode format must be `Format::NV12` which is a multi planar YUV420 format.
+- Create a "Decode Picture Buffer" (DPB), which is a texture array storing reference and decoded images in the native video format (currently only `Format::NV12` is supported). Indicate in the `misc_flags` that it will be used as `ResourceMiscFlags::VIDEO_DECODE`.
+- Run the `GraphicsDevice::VideoDecode` operation providing correct arguments to decode a single video frame. You are responsible to provide correct H264 arguments and DPB picture indices.
+- You will need to manually read from the DPB texture (eg. in a shader) and resolve the YUV format to RGB if you want.
+
+All this is demonstrated in the [wi::video](../../WickedEngine/wiVideo.cpp) implementation.
+
+
 #### GraphicsDevice_DX11
 The DirectX11 interface has been removed after version 0.56
 
@@ -752,14 +764,14 @@ Hardware accelerated ray tracing API is now available, so a variety of renderer 
 After the acceleration structures are updated, ray tracing shaders can use it after binding to a shader resource slot.
 
 #### Ray tracing (legacy)
-Ray tracing can be used in multiple ways to render the scene. The `RayTraceScene()` function will render the scene with the rays that are provided as the `RayBuffers` type argument. For example, to render the scene from the camera perspective, first create rays that originate from the camera and shoot towards the caera far plane for every pixel. The `GenerateScreenRayBuffers()` helper function implements this functionality, by expecting a [CameraComponent](#cameracomponent) argument and returns a `RayBuffers` structure. The result will be written to a texture that is provided as parameter. The texture must have been created with `UNORDERED_ACCESS` bind flags, because it will be written in compute shaders. The scene BVH structure must have been already built to use this, it can be accomplished by calling [wi::renderer::BuildSceneBVH()](#build-scene-bvh). The [RenderPath3D_Pathracing](#renderpath3d_pathtracing) uses this ray tracing functionality to render a path traced scene.
+Ray tracing can be used in multiple ways to render the scene. The `RayTraceScene()` function will render the scene with path tracing. The result will be written to a texture that is provided as parameter. The texture must have been created with `UNORDERED_ACCESS` bind flags, because it will be written in compute shaders. The scene BVH structure must have been already built to use this, it can be accomplished by calling `wi::renderer::UpdateRaytracingAccelerationStructures()`. The [RenderPath3D_Pathracing](#renderpath3d_pathtracing) uses this ray tracing functionality to render a path traced scene.
 
 Other than path tracing, the scene BVH can be rendered by using the `RayTraceSceneBVH` function. This will render the bounding box hierarchy to the screen as a heatmap. Blue colors mean that few boxes were hit per pixel, and with more bounding box hits the colors go to green, yellow, red, and finaly white. This is useful to determine how expensive a the scene is with regards to ray tracing performance.
 
 The lightmap baking is also using ray tracing on the GPU to precompute static lighting for objects in the scene. [Objects](#objectcomponent) that contain lightmap atlas texture coordinate set can start lightmap rendering by setting `ObjectComponent::SetLightmapRenderRequest(true)`. Every object that have this flag set will have their lightmaps updated by performing ray traced rendering by the [wi::renderer](#wi::renderer) internally. Lightmap texture coordinates can be generated by a separate tool, such as the Wicked Engine Editor application. Lightmaps will be rendered to a global lightmap atlas that can be used by all shaders to read static lighting data. The global lightmap atlas texture contains lightmaps from all objects inside the scene in a compact format for performance. Apart from that, each object contains its own lightmap in a full precision texture format that can be post-processed and saved to disc for later use. To denoise lightmaps, follow the same steps as the path tracer denoiser setup described in the [Denoiser](#denoiser) section.
 
 #### Scene BVH
-The scene BVH can be rebuilt from scratch using the `wi::renderer::BuildSceneBVH()` function. This will use the global scene to build the BVH hierarchy and global material atlases. The [ray tracing](#ray-tracing) features require the scene BVH to be built before using them. This is using the [wiGPUBVH](#wigpubvh) facility to build the BVH using compute shaders running on the GPU. 
+The scene BVH can be rebuilt from scratch using the `wi::renderer::UpdateRaytracingAccelerationStructures()` function. The [ray tracing](#ray-tracing) features require the scene BVH to be built before using them. This is using the [wiGPUBVH](#wigpubvh) facility to build the BVH using compute shaders running on the GPU when hardware ray tracing is not available. Otherwise it uses ray tracing acceleration structure API objects. 
 
 #### Decals
 The [DecalComponents](#decalcomponent) in the scene can be rendered differently based on the rendering technique that is being used. The two main rendering techinques are forward and deferred rendering. 
