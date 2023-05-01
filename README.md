@@ -43,6 +43,8 @@ If you want to develop an application that uses Wicked Engine, you can build the
 
 You can also download prebuilt and packaged versions of the Editor and Tests here (requires Github sign in): [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
 
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/inverse_kinematics.gif" width="320px"/>
+
 If you have questions or stuck, please use the `windows` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
 Note: Building 32-bit and ARM versions should be possible, but no longer provided by default. You will need to configure the solution for these platforms yourself if you want this. For ARM platform, also use the `-DBT_USE_DOUBLE_PRECISION=1` definition when compiling.
@@ -78,7 +80,7 @@ If you have questions or stuck, please use the `linux` communication channel on 
 
 #### Initialization (C++):
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/inverse_kinematics.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_lookat.gif" width="320px"/>
 
 ```cpp
 // Include engine headers:
@@ -178,7 +180,7 @@ For more code samples and advanced use cases, please see the example projects, l
 
 ### Scripting API:
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_lookat.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/clouds.gif" width="320px"/>
 
 You can use a great number of engine features through the Lua scripting api, which can even be used real time while the program is running. The included applications, like the Editor,
 contain a scripting input method toggled by the "Home" key. A blue screen will be presented where the user can type in LUA commands. It is very minimal in regards to input methods.
@@ -194,6 +196,8 @@ In addition, the Editor supports the importing of some common model formats (the
 - <b>VRM</b>
 
 The preferred workflow is to import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
+
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/snowstorm.gif" width="320px"/>
 
 ### Graphics API:
 The default renderer is `DirectX 12` on Windows and `Vulkan` on Linux. The `DirectX 11` renderer is no longer available starting from version 0.57.0, but it can be found on the <a href="https://github.com/turanszkij/WickedEngine/tree/dx11-backup">dx11-backup branch</a>.
@@ -249,6 +253,9 @@ If you are having trouble getting the applications to run, make sure that you sa
 - If you built the application with Visual Studio, run it from the Visual Studio environment, where the executable working directory is set up to be the Project directory (not the build directory where the exe will be found)
 - If you want to run an application without Visual Studio, either copy the executable from the BUILD directory to the correct project directory, or set the working directory appropriately. You can also check the Working directory setting in Visual Studio to find out the right working directory of every project. 
 - If you want to build UWP application, then you will first need to build the shaders into a shader dump. For that, build and run the `offlineshadercompiler` project with the `hlsl6 shaderdump` command line arguments. If the `wiShaderDump.h` file is successfully generated, rebuilding the engine will embed all the shader files so they are not loaded separately. But embedded shaders also cannot be recompiled during runtime.
+
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/weather.gif" width="320px"/>
+
 - If you experience crashes, follow these steps to find out the problem:
 	- make sure your environment is up to date, with latest graphics drivers and operating system updates.
 	- see if there is a wiBackLog.txt in your user temp folder (for example: C:\Users\username\AppData\Local\Temp), and request help on Discord or Github issue
