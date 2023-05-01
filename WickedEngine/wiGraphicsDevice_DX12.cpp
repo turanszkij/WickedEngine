@@ -2978,7 +2978,7 @@ using namespace dx12_internal;
 			wi::helper::messageBox(ss.str(), "Warning!");
 		}
 
-		wi::backlog::post("Created GraphicsDevice_DX12 (" + std::to_string((int)std::round(timer.elapsed())) + " ms)\Adapter: " + adapterName);
+		wi::backlog::post("Created GraphicsDevice_DX12 (" + std::to_string((int)std::round(timer.elapsed())) + " ms)\nAdapter: " + adapterName);
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{
