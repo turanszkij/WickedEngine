@@ -11,7 +11,7 @@
 
 
 <br/>
-<img align="right" src="https://turanszkij.files.wordpress.com/2023/05/npc.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/npc.gif" width="320px"/>
 Wicked Engine is an open-source C++ engine focusing on modern rendering techniques and performance. Use this as a framework for your graphics projects, or learning. Some programming skills are required for the best experience, but some simple tools like an Editor are also included. It is free to be used for anything good.<br/>
 This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">GitHub</a>.
 
@@ -25,7 +25,7 @@ You can download the source code by using Git and cloning the repository, or dow
 Tip: try loading models or scripts from the Content folder using the Editor app to see how everything works.
 <br/>
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2023/05/swimming.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/swimming.gif" width="320px"/>
 
 ### Platforms:
 - Windows 10 or newer
@@ -52,7 +52,7 @@ Cmake: It is possible to build the windows version with Cmake, but the recommend
 #### Linux
 To build the engine for Linux, use Cmake. You can find a sample build script for Ubuntu 20.04 [here](.github/workflows/build.yml) (in the linux section). You might need to install some dependencies, such as Cmake (3.7 or newer), g++ compiler (C++ 17 compliant version) and SDL2. For Ubuntu 20.04, you can use the following commands to install dependencies:
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2023/05/grass.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/grass.gif" width="320px"/>
 
 ```bash
 sudo apt update
@@ -78,7 +78,7 @@ If you have questions or stuck, please use the `linux` communication channel on 
 
 #### Initialization (C++):
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2023/05/inverse_kinematics.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/inverse_kinematics.gif" width="320px"/>
 
 ```cpp
 // Include engine headers:
@@ -178,7 +178,7 @@ For more code samples and advanced use cases, please see the example projects, l
 
 ### Scripting API:
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2023/05/character_lookat.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_lookat.gif" width="320px"/>
 
 You can use a great number of engine features through the Lua scripting api, which can even be used real time while the program is running. The included applications, like the Editor,
 contain a scripting input method toggled by the "Home" key. A blue screen will be presented where the user can type in LUA commands. It is very minimal in regards to input methods.
@@ -234,7 +234,7 @@ You can specify command line arguments (without any prefix) to switch between re
 </table>
 
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2023/05/talking.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/talking.gif" width="320px"/>
 <br/>
 
 ### Other software using Wicked Engine
