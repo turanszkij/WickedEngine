@@ -243,11 +243,11 @@ namespace wi::graphics
 				renderpass_barriers_end.clear();
 			}
 
-			inline VkCommandPool GetCommandPool() const
+			constexpr VkCommandPool GetCommandPool() const
 			{
 				return commandPools[buffer_index][queue];
 			}
-			inline VkCommandBuffer GetCommandBuffer() const
+			constexpr VkCommandBuffer GetCommandBuffer() const
 			{
 				return commandBuffers[buffer_index][queue];
 			}

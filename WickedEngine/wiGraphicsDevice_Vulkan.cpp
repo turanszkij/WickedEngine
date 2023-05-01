@@ -1466,7 +1466,7 @@ using namespace vulkan_internal;
 
 			cbSubmitInfo.commandBuffer = cmd.transitionCommandBuffer;
 			signalSemaphoreInfos[0].semaphore = cmd.semaphores[1]; // signal for compute queue
-			signalSemaphoreInfos[1].semaphore = cmd.semaphores[2]; // signal for video decode queue
+			signalSemaphoreInfos[0].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // signal for compute queue
 
 			submitInfo.waitSemaphoreInfoCount = 1;
 			submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
@@ -1474,6 +1474,8 @@ using namespace vulkan_internal;
 			submitInfo.pCommandBufferInfos = &cbSubmitInfo;
 			if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
 			{
+				signalSemaphoreInfos[1].semaphore = cmd.semaphores[2]; // signal for video decode queue
+				signalSemaphoreInfos[1].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // signal for video decode queue
 				submitInfo.signalSemaphoreInfoCount = 2;
 			}
 			else
@@ -1490,7 +1492,7 @@ using namespace vulkan_internal;
 		if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
 		{
 			waitSemaphoreInfo.semaphore = cmd.semaphores[2]; // wait for graphics queue
-			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
 
 			submitInfo.waitSemaphoreInfoCount = 1;
 			submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
@@ -3492,7 +3494,7 @@ using namespace vulkan_internal;
 			assert(res == VK_SUCCESS);
 		}
 
-		wi::backlog::post("Created GraphicsDevice_Vulkan (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("Created GraphicsDevice_Vulkan (" + std::to_string((int)std::round(timer.elapsed())) + " ms)\nAdapter: " + adapterName);
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{
@@ -3896,6 +3898,7 @@ using namespace vulkan_internal;
 				}
 				if (has_flag(buffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 				{
+					barrier.dstAccessMask |= VK_ACCESS_2_SHADER_READ_BIT;
 					barrier.dstAccessMask |= VK_ACCESS_2_SHADER_WRITE_BIT;
 				}
 				if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
@@ -4324,9 +4327,9 @@ using namespace vulkan_internal;
 				barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				barrier.subresourceRange.baseArrayLayer = 0;
-				barrier.subresourceRange.layerCount = imageInfo.arrayLayers;
+				barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 				barrier.subresourceRange.baseMipLevel = 0;
-				barrier.subresourceRange.levelCount = imageInfo.mipLevels;
+				barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 

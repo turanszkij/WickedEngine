@@ -31,7 +31,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_VIDEO " Video", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(440, 600));
+	SetSize(XMFLOAT2(440, 840));
 
 	closeButton.SetTooltip("Delete VideoComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -163,7 +163,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 	AddWidget(&preview);
 
 	infoLabel.Create("");
-	infoLabel.SetSize(XMFLOAT2(800, 600));
+	infoLabel.SetSize(XMFLOAT2(800, 500));
 	AddWidget(&infoLabel);
 
 
