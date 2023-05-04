@@ -1226,7 +1226,7 @@ void WeatherWindow::Update()
 	else
 	{
 		scene.weather = {};
-		scene.weather.ambient = XMFLOAT3(0.5f, 0.5f, 0.5f);
+		scene.weather.ambient = XMFLOAT3(0.9f, 0.9f, 0.9f);
 		scene.weather.zenith = default_sky_zenith;
 		scene.weather.horizon = default_sky_horizon;
 		scene.weather.fogStart = std::numeric_limits<float>::max();

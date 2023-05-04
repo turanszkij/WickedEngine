@@ -2438,6 +2438,23 @@ void Import_Extension_VRM(LoaderState& state)
 					const std::string& name = value.Get<std::string>();
 					Entity entity = state.scene->Entity_FindByName(name);
 					component = state.scene->materials.GetComponent(entity);
+
+					// These customizations are just made for Wicked Engine, but not standardized:
+					if (name.find("SKIN") != std::string::npos)
+					{
+						// For skin, apply some subsurface scattering to look softer:
+						component->SetSubsurfaceScatteringAmount(0.5f);
+						component->SetSubsurfaceScatteringColor(XMFLOAT3(255.0f / 255.0f, 148.0f / 255.0f, 142.0f / 255.0f));
+					}
+					if (name.find("EYE") != std::string::npos ||
+						name.find("FaceEyeline") != std::string::npos ||
+						name.find("FaceEyelash") != std::string::npos ||
+						name.find("FaceBrow") != std::string::npos
+					)
+					{
+						// Disable shadow casting for some elements on the face like eyes, eyebrows, etc:
+						component->SetCastShadow(false);
+					}
 				}
 
 				if (component != nullptr)
