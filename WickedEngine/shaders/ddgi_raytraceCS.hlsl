@@ -51,7 +51,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		> q;
 		q.TraceRayInline(
 			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-			0,								// uint RayFlags
+			RAY_FLAG_CULL_BACK_FACING_TRIANGLES,	// uint RayFlags
 			push.instanceInclusionMask,		// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);

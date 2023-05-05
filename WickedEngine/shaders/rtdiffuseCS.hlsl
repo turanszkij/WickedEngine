@@ -1,6 +1,5 @@
 #define RTAPI
 #define DISABLE_SOFT_SHADOWMAP
-#define DISABLE_TRANSPARENT_SHADOWMAP
 #define SURFACE_LOAD_MIPCONE
 #define TEXTURE_SLOT_NONUNIFORM
 
@@ -50,7 +49,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	//const float2 bluenoise = blue_noise(DTid.xy).xy;
 	//const float3 R = normalize(mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(N)));
 
-	const uint samplecount = 1;
+	const uint samplecount = 2;
 	for (uint i = 0; i < samplecount; ++i)
 	{
 		const float2 bluenoise = blue_noise(DTid.xy, (float)i / (float)samplecount).xy;
@@ -69,7 +68,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		float4 additive_dist = float4(0, 0, 0, FLT_MAX);
 
 		RayQuery<
-			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+			RAY_FLAG_CULL_BACK_FACING_TRIANGLES
 		> q;
 		q.TraceRayInline(
 			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure

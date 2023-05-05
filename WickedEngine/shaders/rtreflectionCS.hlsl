@@ -70,7 +70,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	float4 additive_dist = float4(0, 0, 0, FLT_MAX);
 
 	RayQuery<
-		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+		RAY_FLAG_CULL_BACK_FACING_TRIANGLES
 	> q;
 	q.TraceRayInline(
 		scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
