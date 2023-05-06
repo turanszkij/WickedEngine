@@ -97,7 +97,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 
 #endif // USE_LDS
 
-	const float2 prevUV = uv + velocity;
+	const float2 prevUV = GetCamera().clamp_uv_to_scissor(uv + velocity);
 
 #if 1
 	// Disocclusion fallback:

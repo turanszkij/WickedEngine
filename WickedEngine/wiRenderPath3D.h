@@ -185,6 +185,30 @@ namespace wi
 
 		bool visibility_shading_in_compute = false;
 
+		// Crop parameters in logical coordinates:
+		float crop_left = 0;
+		float crop_top = 0;
+		float crop_right = 0;
+		float crop_bottom = 0;
+		wi::graphics::Rect GetScissorNativeResolution() const
+		{
+			wi::graphics::Rect scissor;
+			scissor.left = int(LogicalToPhysical(crop_left));
+			scissor.top = int(LogicalToPhysical(crop_top));
+			scissor.right = int(GetPhysicalWidth() - LogicalToPhysical(crop_right));
+			scissor.bottom = int(GetPhysicalHeight() - LogicalToPhysical(crop_bottom));
+			return scissor;
+		}
+		wi::graphics::Rect GetScissorInternalResolution() const
+		{
+			wi::graphics::Rect scissor;
+			scissor.left = int(LogicalToPhysical(crop_left) * resolutionScale);
+			scissor.top = int(LogicalToPhysical(crop_top) * resolutionScale);
+			scissor.right = int(GetInternalResolution().x - LogicalToPhysical(crop_right) * resolutionScale);
+			scissor.bottom = int(GetInternalResolution().y - LogicalToPhysical(crop_bottom) * resolutionScale);
+			return scissor;
+		}
+
 		const wi::graphics::Texture* GetDepthStencil() const override { return &depthBuffer_Main; }
 		const wi::graphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }
 

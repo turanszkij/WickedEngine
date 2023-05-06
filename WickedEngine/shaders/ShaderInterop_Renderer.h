@@ -1006,6 +1006,9 @@ struct CameraCB
 	uint2 internal_resolution;
 	float2 internal_resolution_rcp;
 
+	uint4 scissor; // scissor in physical coordinates (left,top,right,bottom) range: [0, internal_resolution]
+	float4 scissor_uv; // scissor in screen UV coordinates (left,top,right,bottom) range: [0, 1]
+
 	uint3 entity_culling_tilecount;
 	uint sample_count;
 
@@ -1037,6 +1040,31 @@ struct CameraCB
 	int texture_vxgi_specular_index;
 	int padding0;
 	int padding1;
+
+#ifndef __cplusplus
+	inline float2 clamp_uv_to_scissor(in float2 uv)
+	{
+		return float2(
+			clamp(uv.x, scissor_uv.x, scissor_uv.z),
+			clamp(uv.y, scissor_uv.y, scissor_uv.w)
+		);
+	}
+	inline float2 clamp_pixel_to_scissor(in uint2 pixel)
+	{
+		return uint2(
+			clamp(pixel.x, scissor.x, scissor.z),
+			clamp(pixel.y, scissor.y, scissor.w)
+		);
+	}
+	inline bool is_uv_inside_scissor(float2 uv)
+	{
+		return uv.x >= scissor_uv.x && uv.x <= scissor_uv.z && uv.y >= scissor_uv.y && uv.y <= scissor_uv.w;
+	}
+	inline bool is_pixel_inside_scissor(uint2 pixel)
+	{
+		return pixel.x >= scissor.x && pixel.x <= scissor.z && pixel.y >= scissor.y && pixel.y <= scissor.w;
+	}
+#endif // __cplusplus
 };
 
 

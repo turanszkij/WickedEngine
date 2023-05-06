@@ -53,6 +53,9 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	const uint2 subtile_upperleft = tile * MOTIONBLUR_TILESIZE + subtile * POSTPROCESS_BLOCKSIZE;
 	const uint2 pixel = subtile_upperleft + unflatten2D(GTid.x, POSTPROCESS_BLOCKSIZE);
 
+	if (!GetCamera().is_pixel_inside_scissor(pixel))
+		return;
+
 	float4 color;
 
 #ifdef MOTIONBLUR_EARLYEXIT
@@ -88,16 +91,19 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	[unroll]
 	for (float i = -range; i <= range; i += 2.0f)
 	{
+		uv2 = GetCamera().clamp_uv_to_scissor(uv2);
 		const float depth1 = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
 		const float2 velocity1 = texture_velocity.SampleLevel(sampler_point_clamp, uv2, 0).xy;
 		const float velocity_magnitude1 = length(velocity1);
 		const float3 color1 = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
 		uv2 += sampling_direction;
+		uv2 = GetCamera().clamp_uv_to_scissor(uv2);
 		const float depth2 = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
 		const float2 velocity2 = texture_velocity.SampleLevel(sampler_point_clamp, uv2, 0).xy;
 		const float velocity_magnitude2 = length(velocity2);
 		const float3 color2 = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
 		uv2 += sampling_direction;
+		uv2 = GetCamera().clamp_uv_to_scissor(uv2);
 
 #ifdef MOTIONBLUR_CHEAP
 		sum += float4(color1, 1);

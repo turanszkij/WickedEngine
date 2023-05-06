@@ -59,6 +59,11 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetFSR2Sharpness),
 		lunamethod(RenderPath3D_BindLua, SetFSR2Preset),
 
+		lunamethod(RenderPath3D_BindLua, SetCropLeft),
+		lunamethod(RenderPath3D_BindLua, SetCropTop),
+		lunamethod(RenderPath3D_BindLua, SetCropRight),
+		lunamethod(RenderPath3D_BindLua, SetCropBottom),
+
 		lunamethod(RenderPath2D_BindLua, CopyFrom),
 		{ NULL, NULL }
 	};
@@ -564,6 +569,26 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetFSR2Preset(FSR2_Preset value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetCropLeft(lua_State* L)
+	{
+		((RenderPath3D*)component)->crop_left = wi::lua::SGetFloat(L, 1);
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetCropTop(lua_State* L)
+	{
+		((RenderPath3D*)component)->crop_top = wi::lua::SGetFloat(L, 1);
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetCropRight(lua_State* L)
+	{
+		((RenderPath3D*)component)->crop_right = wi::lua::SGetFloat(L, 1);
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetCropBottom(lua_State* L)
+	{
+		((RenderPath3D*)component)->crop_bottom = wi::lua::SGetFloat(L, 1);
 		return 0;
 	}
 

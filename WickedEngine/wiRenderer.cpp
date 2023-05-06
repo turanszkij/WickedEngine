@@ -8921,7 +8921,18 @@ void BindCameraCB(
 	cb.canvas_size = float2(camera.canvas.GetLogicalWidth(), camera.canvas.GetLogicalHeight());
 	cb.canvas_size_rcp = float2(1.0f / cb.canvas_size.x, 1.0f / cb.canvas_size.y);
 	cb.internal_resolution = uint2((uint)camera.width, (uint)camera.height);
-	cb.internal_resolution_rcp = float2(1.0f / cb.internal_resolution.x, 1.0f / cb.internal_resolution.y);
+	cb.internal_resolution_rcp = float2(1.0f / std::max(1u, cb.internal_resolution.x), 1.0f / std::max(1u, cb.internal_resolution.y));
+
+	cb.scissor.x = camera.scissor.left;
+	cb.scissor.y = camera.scissor.top;
+	cb.scissor.z = camera.scissor.right;
+	cb.scissor.w = camera.scissor.bottom;
+
+	// scissor_uv is also offset by 0.5 (half pixel) to avoid going over last pixel center with bilinear sampler:
+	cb.scissor_uv.x = (cb.scissor.x + 0.5f) * cb.internal_resolution_rcp.x;
+	cb.scissor_uv.y = (cb.scissor.y + 0.5f) * cb.internal_resolution_rcp.y;
+	cb.scissor_uv.z = (cb.scissor.z - 0.5f) * cb.internal_resolution_rcp.x;
+	cb.scissor_uv.w = (cb.scissor.w - 0.5f) * cb.internal_resolution_rcp.y;
 
 	cb.entity_culling_tilecount = GetEntityCullingTileCount(cb.internal_resolution);
 	cb.sample_count = camera.sample_count;

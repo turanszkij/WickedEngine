@@ -1275,6 +1275,10 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetFSR2Enabled(bool value) -- FSR 2.1 on/off
 - SetFSR2Sharpness(float value) -- FSR 2.1 sharpness 0: least sharp, 1: sharpest (this is different to FSR 1.0)
 - SetFSR2Preset(FSR2_Preset value) -- FSR 2.1 preset will modify resolution scaling and sampler LOD bias
+- SetCropLeft(float value) -- Sets cropping from left of the screen in logical units
+- SetCropTop(float value) -- Sets cropping from top of the screen in logical units
+- SetCropRight(float value) -- Sets cropping from right of the screen in logical units
+- SetCropBottom(float value) -- Sets cropping from bottom of the screen in logical units
 
 FSR2_Preset = {
 	Quality = 0,			-- 1.5x scaling, -1.58 sampler LOD bias

@@ -613,6 +613,7 @@ namespace wi
 		camera->canvas.init(*this);
 		camera->width = (float)internalResolution.x;
 		camera->height = (float)internalResolution.y;
+		camera->scissor = GetScissorInternalResolution();
 		camera->sample_count = depthBuffer_Main.desc.sample_count;
 		camera->texture_primitiveID_index = device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV);
 		camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SubresourceType::SRV);
@@ -643,6 +644,10 @@ namespace wi
 		camera_reflection.canvas.init(*this);
 		camera_reflection.width = (float)depthBuffer_Reflection.desc.width;
 		camera_reflection.height = (float)depthBuffer_Reflection.desc.height;
+		camera_reflection.scissor.left = 0;
+		camera_reflection.scissor.top = 0;
+		camera_reflection.scissor.right = (int)depthBuffer_Reflection.desc.width;
+		camera_reflection.scissor.bottom = (int)depthBuffer_Reflection.desc.height;
 		camera_reflection.sample_count = depthBuffer_Reflection.desc.sample_count;
 		camera_reflection.texture_primitiveID_index = -1;
 		camera_reflection.texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection, SubresourceType::SRV);
@@ -827,6 +832,10 @@ namespace wi
 			vp.width = (float)depthBuffer_Main.GetDesc().width;
 			vp.height = (float)depthBuffer_Main.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
+
+			Rect scissor = GetScissorInternalResolution();
+			device->BindScissorRects(1, &scissor, cmd);
+
 			wi::renderer::DrawScene(visibility_main, RENDERPASS_PREPASS, cmd, drawscene_flags);
 
 			wi::profiler::EndRange(range);
@@ -1263,6 +1272,8 @@ namespace wi
 			vp.height = (float)depthBuffer_Main.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
 
+			Rect scissor = GetScissorInternalResolution();
+			device->BindScissorRects(1, &scissor, cmd);
 
 			if (getOutlineEnabled())
 			{
@@ -1289,7 +1300,7 @@ namespace wi
 			RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(
 					&rtMain_render,
-					visibility_shading_in_compute ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::DONTCARE
+					visibility_shading_in_compute ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::CLEAR
 				),
 				RenderPassImage::DepthStencil(
 					&depthBuffer_Main,
@@ -1422,6 +1433,11 @@ namespace wi
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
+		// Set scissor on Compose, because some post processes don't handle scissoring (eg. Bloom) and those should be cut off:
+		//	Note that on expensive render operations we also used scissor to avoid wasted processing
+		Rect scissor = GetScissorNativeResolution();
+		device->BindScissorRects(1, &scissor, cmd);
+
 		wi::image::Params fx;
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.quality = wi::image::QUALITY_LINEAR;
@@ -1441,6 +1457,13 @@ namespace wi
 			fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 			wi::image::Draw(&debugUAV, fx, cmd);
 		}
+
+		// Restore full resolution scissor:
+		scissor.left = 0;
+		scissor.top = 0;
+		scissor.right = GetPhysicalWidth();
+		scissor.bottom = GetPhysicalHeight();
+		device->BindScissorRects(1, &scissor, cmd);
 
 		RenderPath2D::Compose(cmd);
 	}
@@ -1582,6 +1605,9 @@ namespace wi
 				vp.width = (float)depthBuffer_Main.GetDesc().width;
 				vp.height = (float)depthBuffer_Main.GetDesc().height;
 				device->BindViewports(1, &vp, cmd);
+
+				Rect scissor = GetScissorInternalResolution();
+				device->BindScissorRects(1, &scissor, cmd);
 
 				wi::renderer::DrawSun(cmd);
 
@@ -1727,6 +1753,9 @@ namespace wi
 		vp.width = (float)depthBuffer_Main.GetDesc().width;
 		vp.height = (float)depthBuffer_Main.GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
+
+		Rect scissor = GetScissorInternalResolution();
+		device->BindScissorRects(1, &scissor, cmd);
 
 		// Transparent scene
 		{

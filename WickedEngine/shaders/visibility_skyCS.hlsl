@@ -18,6 +18,12 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		return;
 	const uint2 GTid = remap_lane_8x8(groupIndex);
 	const uint2 pixel = unpack_pixel(tile.visibility_tile_id) * VISIBILITY_BLOCKSIZE + GTid;
+	[branch]
+	if (!GetCamera().is_pixel_inside_scissor(pixel))
+	{
+		output[pixel] = 0;
+		return;
+	}
 
 	const float2 uv = ((float2) pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
