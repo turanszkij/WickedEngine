@@ -40,14 +40,14 @@ local function Conversation()
 		character = nil,
 		font = SpriteFont(),
 		advance_font = SpriteFont(""),
-		choice_font = SpriteFont(),
-		advance_font_timer = 0,
+		choice_fonts = {},
+		font_blink_timer = 0,
 		dialog = {},
 		speed = 30,
 		choice = 1,
 		override_input = false,
 
-		Update = function(self, path, scene)
+		Update = function(self, path, scene, player)
 
 			local crop_height = GetScreenHeight() * 0.18
 			local text_offset = GetScreenWidth() * 0.2
@@ -77,8 +77,11 @@ local function Conversation()
 				self.font.SetHidden(false)
 			end
 			self.advance_font.SetColor(Vector())
-			self.choice_font.SetColor(Vector())
 			self.override_input = false
+			for i,choice_font in ipairs(self.choice_fonts) do
+				choice_font.SetColor(Vector())
+			end
+			self.font_blink_timer = self.font_blink_timer + getDeltaTime()
 
 			-- Focus on character:
 			if self.character ~= nil then
@@ -92,7 +95,7 @@ local function Conversation()
 				-- End of talking:
 				if self.font.IsTypewriterFinished() then
 					self.state = ConversationState.Waiting
-					self.advance_font_timer = 0
+					self.font_blink_timer = 0
 				end
 
 				-- Skip talking:
@@ -111,28 +114,49 @@ local function Conversation()
 				
 				-- Dialog choices:
 				if self.dialog.choices ~= nil then
-					self.choice_font.SetPos(vector.Add(self.font.GetPos(), Vector(20, 10 + self.font.TextSize().GetY())))
-					self.choice_font.SetColor(self.font.GetColor())
-					self.choice_font.SetSize(self.font.GetSize())
-					self.choice_font.SetHorizontalWrapping(GetScreenWidth() - self.choice_font.GetPos().GetX() * 2)
-					local text = ""
+					local pos = vector.Add(self.font.GetPos(), Vector(20, 10 + self.font.TextSize().GetY()))
 					for i,choice in ipairs(self.dialog.choices) do
-						if i == self.choice then
-							text = text .. " " .. choice[1]
-						else
-							text = text .. "     " .. choice[1]
+						if self.choice_fonts[i] == nil then
+							self.choice_fonts[i] = SpriteFont()
+							path.AddFont(self.choice_fonts[i])
 						end
-						text = text .. "\n"
+						self.choice_fonts[i].SetPos(pos)
+						self.choice_fonts[i].SetSize(self.font.GetSize())
+						self.choice_fonts[i].SetHorizontalWrapping(GetScreenWidth() - self.choice_fonts[i].GetPos().GetX() * 2)
+						if i == self.choice then
+							self.choice_fonts[i].SetText(" " .. choice[1])
+							self.choice_fonts[i].SetColor(vector.Lerp(Vector(1,1,1,1), self.font.GetColor(), math.abs(math.sin(self.font_blink_timer * math.pi))))
+						else
+							self.choice_fonts[i].SetText("     " .. choice[1])
+							self.choice_fonts[i].SetColor(self.font.GetColor())
+						end
+						pos = vector.Add(pos, Vector(0, self.choice_fonts[i].TextSize().GetY() + 5))
 					end
-					self.choice_font.SetText(text)
+
+					-- Forced cinematic camera:
+					local head_pos = scene.Component_GetTransform(player.head).GetPosition()
+					local forward_dir = player.face
+					local up_dir = Vector(0,1,0)
+					local right_dir = vector.Cross(up_dir, forward_dir).Normalize()
+					local cam_offset = vector.Add(vector.Multiply(vector.Lerp(forward_dir, right_dir, 0.3), 1.4), Vector(0,-0.14))
+					local cam_target = vector.Add(vector.Add(head_pos, vector.Multiply(right_dir, -0.4)), Vector(0,-0.1))
+					local lookat = matrix.Inverse(matrix.LookAt(vector.Add(head_pos, cam_offset), cam_target))
+					local transform = TransformComponent()
+					transform.MatrixTransform(lookat)
+					transform.UpdateTransform()
+					cam.TransformCamera(transform)
+					cam.UpdateCamera()
+					cam.SetFocalLength(vector.Subtract(head_pos, cam.GetPosition()).Length())
 
 					-- Dialog input:
 					self.override_input = true
 					if input.Press(KEYBOARD_BUTTON_UP) then
 						self.choice = self.choice - 1
+						self.font_blink_timer = 0
 					end
 					if input.Press(KEYBOARD_BUTTON_DOWN) then
 						self.choice = self.choice + 1
+						self.font_blink_timer = 0
 					end
 					if self.choice < 1 then
 						self.choice = #self.dialog.choices
@@ -156,8 +180,7 @@ local function Conversation()
 						self.font.ResetTypewriter()
 					end
 					-- Blinking advance conversation icon:
-					self.advance_font_timer = self.advance_font_timer + getDeltaTime()
-					self.advance_font.SetColor(vector.Lerp(Vector(0,0,0,0), self.font.GetColor(), math.abs(math.sin(self.advance_font_timer * math.pi))))	
+					self.advance_font.SetColor(vector.Lerp(Vector(0,0,0,0), self.font.GetColor(), math.abs(math.sin(self.font_blink_timer * math.pi))))	
 				end
 
 				-- Turn off talking animation:
@@ -1095,7 +1118,7 @@ local npcs = {
 	Character(script_dir() .. "assets/character.wiscene", Vector(-2,0.1,8), Vector(-1,0,0), false),
 
 	-- stationary NPC IDs: 3,4....
-	Character(script_dir() .. "assets/character.wiscene", Vector(-1,0.1,-6), Vector(0,0,1), false),
+	Character(script_dir() .. "assets/johnny.wiscene", Vector(-1,0.1,-6), Vector(0,0,1), false),
 	--Character(script_dir() .. "assets/character.wiscene", Vector(10.8,0.1,4.1), Vector(0,0,-1), false),
 	--Character(script_dir() .. "assets/character.wiscene", Vector(11.1,4,7.2), Vector(-1,0,0), false),
 }
@@ -1161,10 +1184,12 @@ runProcess(function()
 			end
 		end
 
-		camera:Update()
-
-		conversation:Update(path, scene)
+		conversation:Update(path, scene, player)
 		player.controllable = not conversation.override_input
+
+		if not conversation.override_input then
+			camera:Update()
+		end
 
 		update()
 		
@@ -1271,6 +1296,7 @@ end)
 
 -- Conversation dialogs:
 npcs[4].dialogs = {
+	-- Dialog starts here:
 	{"Hello! Today is a nice day for a walk, isn't it? I just wanna look around and talk to people who come by. I also want to talk a lot!"},
 	{"I really enjoy just standing around here and do some people-watching."},
 	{
@@ -1292,9 +1318,13 @@ npcs[4].dialogs = {
 		}
 	},
 
+	-- Dialog 4: When chosen [Follow me] or [Just keep following me]
 	{"Lead the way!", action = function() conversation:Exit() conversation.character.next_dialog = 6 end},
-	{"Have a nice day!", action = function() conversation:Exit() end},
 
+	-- Dialog 5: When chosen [Never mind]
+	{"Have a nice day!", action = function() conversation:Exit() conversation.character.next_dialog = 1 end},
+
+	-- Dialog 6: After Dialog 4 finished, so character is following player
 	{
 		"Where are we going?",
 		choices = {
@@ -1302,7 +1332,7 @@ npcs[4].dialogs = {
 			{"Stay here!", action = function() conversation.character:Unfollow() end}
 		}
 	},
-	{"Of course!"},
+	{"Of course!"}, -- After chosen [Stay here]
 }
 
 -- Patrol waypoints:
