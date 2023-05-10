@@ -644,8 +644,8 @@ namespace wi
 
 						if (IsFormatBlockCompressed(desc.format))
 						{
-							desc.width = std::max(GetFormatBlockSize(desc.format), desc.width);
-							desc.height = std::max(GetFormatBlockSize(desc.format), desc.height);
+							desc.width = AlignTo(desc.width, GetFormatBlockSize(desc.format));
+							desc.height = AlignTo(desc.height, GetFormatBlockSize(desc.format));
 						}
 
 						success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
