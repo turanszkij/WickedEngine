@@ -11,7 +11,8 @@
 --		H: toggle debug draw
 --		L: toggle framerate lock
 --		ESCAPE key: quit
---		ENTER: reload script
+--		R: reload script
+--		ENTER: interaction
 
 -- Debug Draw Helper
 local DrawAxis = function(point,f)
@@ -20,12 +21,189 @@ local DrawAxis = function(point,f)
 	DrawLine(point,point:Add(Vector(0,0,f)),Vector(0,0,1,1))
 end
 
-local debug = true -- press H to toggle
+local debug = false -- press H to toggle
 local allow_pushaway_NPC = true -- You can decide whether NPCs can be pushed away by player
 local framerate_lock = false
 local framerate_lock_target = 20
 local slope_threshold = 0.2 -- How much slopeiness will cause character to slide down instead of standing on it
 local gravity = -30
+
+local ConversationState = {
+	Disabled = 0,
+	Talking = 1,
+	Waiting = 2,
+}
+local function Conversation()
+	local self = {
+		state = ConversationState.Disabled,
+		percent = 0,
+		character = nil,
+		font = SpriteFont(),
+		advance_font = SpriteFont(""),
+		choice_font = SpriteFont(),
+		advance_font_timer = 0,
+		dialog = {},
+		speed = 30,
+		choice = 1,
+		override_input = false,
+
+		Update = function(self, path, scene)
+
+			local crop_height = GetScreenHeight() * 0.18
+			local text_offset = GetScreenWidth() * 0.2
+			self.font.SetPos(Vector(text_offset, GetScreenHeight() - crop_height + 10))
+			self.font.SetHorizontalWrapping(GetScreenWidth() - self.font.GetPos().GetX() * 2)
+			self.font.SetSize(20)
+			self.font.SetColor(Vector(0.6,0.8,1,1))
+			
+			self.advance_font.SetPos(Vector(GetScreenWidth() - self.font.GetPos().GetX(), GetScreenHeight() - 50))
+			self.advance_font.SetSize(24)
+
+			-- Update conversation percentage (fade in/out of conversation)
+			if self.state == ConversationState.Disabled then
+				self.percent = math.lerp(self.percent, 0, 0.05)
+			else
+				self.percent = math.lerp(self.percent, 1, 0.05)
+			end
+			path.SetCropTop(self.percent * crop_height)
+			path.SetCropBottom(self.percent * crop_height)
+			local cam = GetCamera()
+			cam.SetApertureSize(self.percent)
+
+			if self.percent < 0.9 then
+				self.font.SetHidden(true)
+				self.font.ResetTypewriter()
+			else
+				self.font.SetHidden(false)
+			end
+			self.advance_font.SetColor(Vector())
+			self.choice_font.SetColor(Vector())
+			self.override_input = false
+
+			-- Focus on character:
+			if self.character ~= nil then
+				cam.SetFocalLength(vector.Subtract(scene.Component_GetTransform(self.character.head).GetPosition(), cam.GetPosition()).Length())
+			end
+
+			-- State flow:
+			if self.state == ConversationState.Disabled then
+			elseif self.state == ConversationState.Talking then
+
+				-- End of talking:
+				if self.font.IsTypewriterFinished() then
+					self.state = ConversationState.Waiting
+					self.advance_font_timer = 0
+				end
+
+				-- Skip talking:
+				if input.Press(KEYBOARD_BUTTON_ENTER) then
+					self.font.TypewriterFinish()
+				end
+
+				-- Turn on talking animation:
+				if self.character.expression ~= INVALID_ENTITY and self.percent >= 0.9 then
+					scene.Component_GetExpression(self.character.expression).SetForceTalkingEnabled(true)
+				end
+
+			elseif self.state == ConversationState.Waiting then
+
+				-- End of talking, waiting for input:
+				
+				-- Dialog choices:
+				if self.dialog.choices ~= nil then
+					self.choice_font.SetPos(vector.Add(self.font.GetPos(), Vector(20, 10 + self.font.TextSize().GetY())))
+					self.choice_font.SetColor(self.font.GetColor())
+					self.choice_font.SetSize(self.font.GetSize())
+					self.choice_font.SetHorizontalWrapping(GetScreenWidth() - self.choice_font.GetPos().GetX() * 2)
+					local text = ""
+					for i,choice in ipairs(self.dialog.choices) do
+						if i == self.choice then
+							text = text .. " " .. choice[1]
+						else
+							text = text .. "     " .. choice[1]
+						end
+						text = text .. "\n"
+					end
+					self.choice_font.SetText(text)
+
+					-- Dialog input:
+					self.override_input = true
+					if input.Press(KEYBOARD_BUTTON_UP) then
+						self.choice = self.choice - 1
+					end
+					if input.Press(KEYBOARD_BUTTON_DOWN) then
+						self.choice = self.choice + 1
+					end
+					if self.choice < 1 then
+						self.choice = #self.dialog.choices
+					end
+					if self.choice > #self.dialog.choices then
+						self.choice = 1
+					end
+					if input.Press(KEYBOARD_BUTTON_ENTER) then
+						if self.dialog.choices[self.choice].action ~= nil then
+							self.dialog.choices[self.choice].action() -- execute dialog choice action
+						end
+						self:Next()
+					end
+				else
+					-- No dialog choices:
+					if input.Press(KEYBOARD_BUTTON_ENTER) then
+						if self.dialog.action ~= nil then
+							self.dialog.action() -- execute dialog action
+						end
+						self:Next()
+						self.font.ResetTypewriter()
+					end
+					-- Blinking advance conversation icon:
+					self.advance_font_timer = self.advance_font_timer + getDeltaTime()
+					self.advance_font.SetColor(vector.Lerp(Vector(0,0,0,0), self.font.GetColor(), math.abs(math.sin(self.advance_font_timer * math.pi))))	
+				end
+
+				-- Turn off talking animation:
+				if self.character.expression ~= INVALID_ENTITY then
+					scene.Component_GetExpression(self.character.expression).SetForceTalkingEnabled(false)
+				end
+			end
+
+		end,
+		
+		Enter = function(self, character)
+			backlog_post("Entering conversation")
+			self.state = ConversationState.Talking
+			self.character = character
+			if #self.character.dialogs < self.character.next_dialog then
+				self.character.next_dialog = 1
+			end
+			self:Next()
+		end,
+	
+		Exit = function(self)
+			backlog_post("Exiting conversation")
+			self.state = ConversationState.Disabled
+			self.dialog = {}
+			self.override_input = false
+			self.font.ResetTypewriter()
+		end,
+
+		Next = function(self)
+			if #self.character.dialogs < self.character.next_dialog then
+				self:Exit()
+			end
+			if self.state == ConversationState.Disabled then
+				return
+			end
+			self.dialog = self.character.dialogs[self.character.next_dialog]
+			self.character.next_dialog = self.character.next_dialog + 1
+			self.state = ConversationState.Talking
+			self.font.SetText(self.dialog[1])
+			self.font.SetTypewriterTime(string.len(self.dialog[1]) / self.speed)
+			self.font.ResetTypewriter()
+		end
+	}
+	return self
+end
+local conversation = Conversation()
 
 local scene = GetScene()
 
@@ -117,6 +295,8 @@ local function Character(model_name, start_position, face, controllable)
 		patrol_wait = 0,
 		patrol_reached = false,
 		hired = nil,
+		dialogs = {},
+		next_dialog = 1,
 		
 		Create = function(self, model_name, start_position, face, controllable)
 			self.start_position = start_position
@@ -250,7 +430,7 @@ local function Character(model_name, start_position, face, controllable)
 			model_transform.Translate(savedPos)
 			model_transform.UpdateTransform()
 			
-			if controllable then
+			if self.controllable then
 				-- Camera target control:
 
 				-- read from gamepad analog stick:
@@ -346,7 +526,7 @@ local function Character(model_name, start_position, face, controllable)
 				end
 			end
 
-			if controllable then
+			if self.controllable then
 				if not backlog_isactive() then
 					-- Movement input:
 					local lookDir = Vector()
@@ -715,6 +895,14 @@ local function Character(model_name, start_position, face, controllable)
 			end
 		end,
 
+		Follow = function(self, leader)
+			self.hired = leader
+		end,
+		Unfollow = function(self)
+			self.hired = nil
+			self.patrol_waypoints = {}
+		end,
+
 	}
 
 	self:Create(model_name, start_position, face, controllable)
@@ -735,16 +923,11 @@ local ResolveCharacters = function(characterA, characterB)
 			humanoidA.SetLookAt(headB)
 			humanoidB.SetLookAt(headA)
 
-			if characterB.controllable then
+			if #characterA.dialogs > 0 and conversation.state == ConversationState.Disabled then
 				if input.Press(KEYBOARD_BUTTON_ENTER) then
-					characterA.hired = characterB
+					conversation:Enter(characterA)
 				end
-
-				if characterA.hired == nil then
-					DrawDebugText("Hello there!\nPress ENTER to hire me!", vector.Add(headA, Vector(0,0.4)), Vector(1,0.2,1,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
-				else
-					DrawDebugText("Where are we going?", vector.Add(headA, Vector(0,0.4)), Vector(0.2,1,0.2,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
-				end
+				DrawDebugText("", vector.Add(headA, Vector(0,0.4)), Vector(1,1,1,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
 			end
 		end
 
@@ -888,10 +1071,6 @@ local function ThirdPersonCamera(character)
 			-- Feed back camera after collision:
 			camera.TransformCamera(camera_transform)
 			camera.UpdateCamera()
-			
-			camera.ApertureSize = self.character.happy
-			camera.FocalLength = vector.Subtract(scene.Component_GetTransform(self.character.head).GetPosition(), camera.GetPosition()).Length()
-
 				
 		end,
 	}
@@ -948,6 +1127,10 @@ runProcess(function()
 	--path.SetFSR2Preset(FSR2_Preset.Performance)
 	--SetProfilerEnabled(true)
 
+	path.AddFont(conversation.font)
+	path.AddFont(conversation.advance_font)
+	path.AddFont(conversation.choice_font)
+
 	while true do
 
 		player:Update()
@@ -979,6 +1162,9 @@ runProcess(function()
 		end
 
 		camera:Update()
+
+		conversation:Update(path, scene)
+		player.controllable = not conversation.override_input
 
 		update()
 		
@@ -1083,7 +1269,41 @@ runProcess(function()
 	end
 end)
 
+-- Conversation dialogs:
+npcs[4].dialogs = {
+	{"Hello! Today is a nice day for a walk, isn't it? I just wanna look around and talk to people who come by. I also want to talk a lot!"},
+	{"I really enjoy just standing around here and do some people-watching."},
+	{
+		"Anything I can do for you?",
+		choices = {
+			{
+				"Follow me!",
+				action = function()
+					conversation.character:Follow(player)
+					conversation.character.next_dialog = 4
+				end
+			},
+			{
+				"Never mind.",
+				action = function()
+					conversation.character.next_dialog = 5
+				end
+			}
+		}
+	},
 
+	{"Lead the way!", action = function() conversation:Exit() conversation.character.next_dialog = 6 end},
+	{"Have a nice day!", action = function() conversation:Exit() end},
+
+	{
+		"Where are we going?",
+		choices = {
+			{"Just keep following me.", action = function() conversation.character.next_dialog = 4 end},
+			{"Stay here!", action = function() conversation.character:Unfollow() end}
+		}
+	},
+	{"Of course!"},
+}
 
 -- Patrol waypoints:
 

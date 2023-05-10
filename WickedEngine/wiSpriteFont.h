@@ -60,6 +60,14 @@ namespace wi
 				{
 					elapsed = 0;
 				}
+				void Finish()
+				{
+					elapsed = time;
+				}
+				bool IsFinished() const
+				{
+					return time <= elapsed;
+				}
 			} typewriter;
 		} anim;
 	};

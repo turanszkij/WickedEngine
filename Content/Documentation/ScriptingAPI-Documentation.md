@@ -350,6 +350,8 @@ Gives you the ability to render text with a custom font.
 - SetShadowBolden(float value)
 - SetShadowSoftness(float value)
 - SetShadowOffset(Vector value)
+- SetHorizontalWrapping(float value)
+- SetHidden(bool value)
 - GetText() : string result
 - GetSize() : int result
 - GetPos() : Vector result
@@ -362,6 +364,16 @@ Gives you the ability to render text with a custom font.
 - GetShadowBolden() : float result
 - GetShadowSoftness() : float result
 - GetShadowOffset() : Vector result
+- GetHorizontalWrapping() : float result
+- IsHidden() : bool result
+- TextSize() : Vector result -- returns text width and height in a Vector's X and Y components
+- SetTypewriterTime(float value) -- time to fully type the text in seconds (0: disable)
+- SetTypewriterLooped(bool value)) -- if true, typing starts over when finished
+- SetTypewriterCharacterStart(int value) -- starting character for the animation
+- ResetTypewriter() -- resets typewriter to first character
+- TypewriterFinish() -- finished typewriter animation immediately
+- IsTypewriterFinished() : bool -- returns tru if typewrites animation is finished, false otherwise
+
 
 ### Texture
 Just holds texture information in VRAM.
@@ -985,7 +997,7 @@ Describes a Rigid Body Physics object.
 - LinearDamping : float
 - AngularDamping : float
 - BoxParams_HalfExtents : Vector
-- SphereParams_Radius : floatd
+- SphereParams_Radius : float
 - CapsuleParams_Radius : float
 - CapsuleParams_Height : float
 - TargetMeshLOD : int
