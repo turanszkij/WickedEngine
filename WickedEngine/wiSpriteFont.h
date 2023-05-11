@@ -1,5 +1,6 @@
 #pragma once
 #include "wiFont.h"
+#include "wiAudio.h"
 
 #include <string>
 
@@ -53,6 +54,8 @@ namespace wi
 				float time = 0; // time to fully type the text in seconds (0: disable)
 				bool looped = false; // if true, typing starts over when finished
 				size_t character_start = 0; // starting character for the animation
+				wi::audio::Sound sound;
+				wi::audio::SoundInstance soundinstance;
 
 				float elapsed = 0; // internal use; you don't need to initialize
 

@@ -1,6 +1,7 @@
 #include "wiSpriteFont_BindLua.h"
 #include "wiFont.h"
 #include "wiMath_BindLua.h"
+#include "wiAudio_BindLua.h"
 
 namespace wi::lua
 {
@@ -41,6 +42,7 @@ namespace wi::lua
 		lunamethod(SpriteFont_BindLua, SetTypewriterTime),
 		lunamethod(SpriteFont_BindLua, SetTypewriterLooped),
 		lunamethod(SpriteFont_BindLua, SetTypewriterCharacterStart),
+		lunamethod(SpriteFont_BindLua, SetTypewriterSound),
 		lunamethod(SpriteFont_BindLua, ResetTypewriter),
 		lunamethod(SpriteFont_BindLua, TypewriterFinish),
 		lunamethod(SpriteFont_BindLua, IsTypewriterFinished),
@@ -400,6 +402,30 @@ namespace wi::lua
 			wi::lua::SError(L, "SetTypewriterCharacterStart(int value) not enough arguments!");
 		}
 		font.anim.typewriter.character_start = (size_t)wi::lua::SGetLongLong(L, 1);
+		return 0;
+	}
+	int SpriteFont_BindLua::SetTypewriterSound(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 2)
+		{
+			wi::lua::SError(L, "SetTypewriterSound(Sound sound, SoundInstance soundinstance) not enough arguments!");
+			return 0;
+		}
+		Sound_BindLua* sound = Luna<Sound_BindLua>::lightcheck(L, 1);
+		if (sound == nullptr)
+		{
+			wi::lua::SError(L, "SetTypewriterSound(Sound sound, SoundInstance soundinstance) first argument is not a sound!");
+			return 0;
+		}
+		SoundInstance_BindLua* soundinstance = Luna<SoundInstance_BindLua>::lightcheck(L, 2);
+		if (soundinstance == nullptr)
+		{
+			wi::lua::SError(L, "SetTypewriterSound(Sound sound, SoundInstance soundinstance) second argument is not a sound instance!");
+			return 0;
+		}
+		font.anim.typewriter.sound = sound->sound;
+		font.anim.typewriter.soundinstance = soundinstance->soundinstance;
 		return 0;
 	}
 	int SpriteFont_BindLua::ResetTypewriter(lua_State* L)

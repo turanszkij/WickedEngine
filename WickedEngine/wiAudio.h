@@ -64,6 +64,7 @@ namespace wi::audio
 	void SetVolume(float volume, SoundInstance* instance = nullptr);
 	float GetVolume(const SoundInstance* instance = nullptr);
 	void ExitLoop(SoundInstance* instance);
+	bool IsEnded(SoundInstance* instance);
 
 	struct SampleInfo
 	{

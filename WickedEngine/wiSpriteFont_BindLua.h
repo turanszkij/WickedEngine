@@ -53,6 +53,7 @@ namespace wi::lua
 		int SetTypewriterTime(lua_State* L);
 		int SetTypewriterLooped(lua_State* L);
 		int SetTypewriterCharacterStart(lua_State* L);
+		int SetTypewriterSound(lua_State* L);
 		int ResetTypewriter(lua_State* L);
 		int TypewriterFinish(lua_State* L);
 		int IsTypewriterFinished(lua_State* L);
