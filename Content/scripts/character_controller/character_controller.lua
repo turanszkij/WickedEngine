@@ -224,6 +224,12 @@ local function Conversation()
 			self.font.ResetTypewriter()
 		end
 	}
+	local sound = Sound()
+	local soundinstance = SoundInstance()
+	audio.CreateSound(script_dir() .. "assets/typewriter.wav", sound)
+	audio.CreateSoundInstance(sound, soundinstance)
+	audio.SetVolume(0.2, soundinstance)
+	self.font.SetTypewriterSound(sound, soundinstance)
 	return self
 end
 local conversation = Conversation()
@@ -755,7 +761,7 @@ local function Character(model_name, start_position, face, controllable)
 						end
 					end
 				end
-
+				
 			end
 
 			if platform_velocity_count > 0 then
@@ -1152,7 +1158,6 @@ runProcess(function()
 
 	path.AddFont(conversation.font)
 	path.AddFont(conversation.advance_font)
-	path.AddFont(conversation.choice_font)
 
 	while true do
 
