@@ -135,7 +135,7 @@ local function Conversation()
 
 					-- Forced cinematic camera:
 					local head_pos = scene.Component_GetTransform(player.head).GetPosition()
-					local forward_dir = player.face
+					local forward_dir = vector.Multiply(self.character.face, -1)
 					local up_dir = Vector(0,1,0)
 					local right_dir = vector.Cross(up_dir, forward_dir).Normalize()
 					local cam_offset = vector.Add(vector.Multiply(vector.Lerp(forward_dir, right_dir, 0.3), 1.4), Vector(0,-0.14))
