@@ -5710,6 +5710,7 @@ int ExpressionComponent_BindLua::GetPresetWeight(lua_State* L)
 		if (id >= 0 && component->expressions.size() > id)
 		{
 			wi::lua::SSetFloat(L, component->expressions[id].weight);
+			return 1;
 		}
 		else
 		{

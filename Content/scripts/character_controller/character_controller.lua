@@ -167,8 +167,8 @@ local function Conversation()
 					self:CinematicCamera(self.character, scene, cam)
 
 					if input.Press(KEYBOARD_BUTTON_ENTER) then
-						if self.dialog.action ~= nil then
-							self.dialog.action() -- execute dialog action
+						if self.dialog.action_after ~= nil then
+							self.dialog.action_after() -- execute dialog action after ended
 						end
 						self:Next()
 						self.font.ResetTypewriter()
@@ -216,6 +216,9 @@ local function Conversation()
 			self.font.SetText(self.dialog[1])
 			self.font.SetTypewriterTime(string.len(self.dialog[1]) / self.speed)
 			self.font.ResetTypewriter()
+			if self.dialog.action ~= nil then
+				self.dialog.action() -- execute dialog action
+			end
 		end,
 
 		CinematicCamera = function(self, character, scene, camera)
@@ -261,6 +264,15 @@ local States = {
 	DANCE = "dance"
 }
 
+local Mood = {
+	Neutral = ExpressionPreset.Neutral,
+	Happy = ExpressionPreset.Happy,
+	Angry = ExpressionPreset.Angry,
+	Sad = ExpressionPreset.Sad,
+	Relaxed = ExpressionPreset.Relaxed,
+	Surprised = ExpressionPreset.Surprised
+}
+
 local enable_footprints = true
 local footprint_texture = Texture(script_dir() .. "assets/footprint.dds")
 local footprints = {}
@@ -277,7 +289,7 @@ local function LoadAnimations(model_name)
 		JUMP = anim_scene.Entity_FindByName("jump"),
 		SWIM_IDLE = anim_scene.Entity_FindByName("swim_idle"),
 		SWIM = anim_scene.Entity_FindByName("swim"),
-		DANCE = anim_scene.Entity_FindByName("dance")
+		DANCE = anim_scene.Entity_FindByName("dance"),
 	}
 	scene.Merge(anim_scene)
 end
@@ -328,6 +340,8 @@ local function Character(model_name, start_position, face, controllable)
 		root_bone_offset = 0,
 		foot_placed_left = false,
 		foot_placed_right = false,
+		mood = Mood.Neutral,
+		mood_amount = 1,
 
 		patrol_waypoints = {},
 		patrol_next = 0,
@@ -391,7 +405,6 @@ local function Character(model_name, start_position, face, controllable)
 			for i,entity in ipairs(scene.Entity_GetExpressionArray()) do
 				if scene.Entity_IsDescendant(entity, self.model) then
 					self.expression = entity
-					self.happy = 0
 					break
 				end
 			end
@@ -496,13 +509,16 @@ local function Character(model_name, start_position, face, controllable)
 				end
 			end
 
-			if self.state == States.DANCE then
-				self.happy = math.lerp(self.happy, 1, 0.1)
-			else
-				self.happy = math.lerp(self.happy, 0, 0.1)
-			end
 			local expression = scene.Component_GetExpression(self.expression)
-			expression.SetPresetWeight(ExpressionPreset.Happy, self.happy)
+			for i,preset in pairs(Mood) do
+				local weight = expression.GetPresetWeight(preset)
+				if preset == self.mood then
+					weight = math.lerp(weight, self.mood_amount, 0.1)
+				else
+					weight = math.lerp(weight, 0, 0.1)
+				end
+				expression.SetPresetWeight(preset, weight)
+			end
 			
 			-- state and animation update
 			if(self.state == States.IDLE) then
@@ -1120,8 +1136,8 @@ local function ThirdPersonCamera(character)
 end
 
 ClearWorld()
-LoadModel(script_dir() .. "assets/level.wiscene")
---LoadModel(script_dir() .. "assets/terrain.wiscene")
+--LoadModel(script_dir() .. "assets/level.wiscene")
+LoadModel(script_dir() .. "assets/terrain.wiscene")
 --LoadModel(script_dir() .. "assets/waypoints.wiscene", matrix.Translation(Vector(1,0,2)))
 --dofile(script_dir() .. "../dungeon_generator/dungeon_generator.lua")
 
@@ -1130,9 +1146,9 @@ LoadAnimations(script_dir() .. "assets/animations.wiscene")
 local player = Character(script_dir() .. "assets/character.wiscene", Vector(0,0.5,0), Vector(0,0,1), true)
 local npcs = {
 	-- Patrolling NPC IDs: 1,2,3
-	Character(script_dir() .. "assets/character.wiscene", Vector(4,0.1,4), Vector(0,0,-1), false),
-	Character(script_dir() .. "assets/character.wiscene", Vector(-8,1,4), Vector(-1,0,0), false),
-	Character(script_dir() .. "assets/character.wiscene", Vector(-2,0.1,8), Vector(-1,0,0), false),
+	-- Character(script_dir() .. "assets/max.wiscene", Vector(4,0.1,4), Vector(0,0,-1), false),
+	-- Character(script_dir() .. "assets/otto.wiscene", Vector(-8,1,4), Vector(-1,0,0), false),
+	-- Character(script_dir() .. "assets/carl.wiscene", Vector(-2,0.1,8), Vector(-1,0,0), false),
 
 	-- stationary NPC IDs: 3,4....
 	Character(script_dir() .. "assets/johnny.wiscene", Vector(-1,0.1,-6), Vector(0,0,1), false),
@@ -1311,10 +1327,22 @@ runProcess(function()
 end)
 
 -- Conversation dialogs:
-npcs[4].dialogs = {
+npcs[1].dialogs = {
 	-- Dialog starts here:
-	{"Hello! Today is a nice day for a walk, isn't it? I just wanna look around and talk to people who come by. I also want to talk a lot!"},
-	{"I really enjoy just standing around here and do some people-watching."},
+	{
+		"Hello! Today is a nice day for a walk, isn't it? The sun is shining, the wind blows lightly, and the temperature is just perfect!",
+		action = function()
+			conversation.character.mood = Mood.Happy
+			conversation.character.mood_amount = 0.8
+		end
+	},
+	{
+		"I just finished my morning workout and I feel ready for the day.",
+		action = function()
+			conversation.character.mood = Mood.Neutral
+			conversation.character.mood_amount = 1
+		end
+	},
 	{
 		"Anything I can do for you?",
 		choices = {
@@ -1335,10 +1363,10 @@ npcs[4].dialogs = {
 	},
 
 	-- Dialog 4: When chosen [Follow me] or [Just keep following me]
-	{"Lead the way!", action = function() conversation:Exit() conversation.character.next_dialog = 6 end},
+	{"Lead the way!", action_after = function() conversation:Exit() conversation.character.next_dialog = 6 end},
 
 	-- Dialog 5: When chosen [Never mind]
-	{"Have a nice day!", action = function() conversation:Exit() conversation.character.next_dialog = 1 end},
+	{"Have a nice day!", action_after = function() conversation:Exit() conversation.character.next_dialog = 1 end},
 
 	-- Dialog 6: After Dialog 4 finished, so character is following player
 	{
@@ -1348,7 +1376,7 @@ npcs[4].dialogs = {
 			{"Stay here!", action = function() conversation.character:Unfollow() end}
 		}
 	},
-	{"Of course!"}, -- After chosen [Stay here]
+	{"Gotcha!"}, -- After chosen [Stay here]
 }
 
 -- Patrol waypoints:
