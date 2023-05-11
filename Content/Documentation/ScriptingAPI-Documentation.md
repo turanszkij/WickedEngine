@@ -370,6 +370,7 @@ Gives you the ability to render text with a custom font.
 - SetTypewriterTime(float value) -- time to fully type the text in seconds (0: disable)
 - SetTypewriterLooped(bool value)) -- if true, typing starts over when finished
 - SetTypewriterCharacterStart(int value) -- starting character for the animation
+- SetTypewriterSound(Sound sound, SoundInstance soundinstance) -- sound effect when new letter appears
 - ResetTypewriter() -- resets typewriter to first character
 - TypewriterFinish() -- finished typewriter animation immediately
 - IsTypewriterFinished() : bool -- returns tru if typewrites animation is finished, false otherwise

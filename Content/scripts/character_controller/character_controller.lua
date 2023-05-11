@@ -93,6 +93,9 @@ local function Conversation()
 				self.font.SetHidden(true)
 			elseif self.state == ConversationState.Talking then
 
+				self.override_input = true
+				self:CinematicCamera(self.character, scene, cam)
+
 				-- End of talking:
 				if self.font.IsTypewriterFinished() then
 					self.state = ConversationState.Waiting
@@ -113,8 +116,11 @@ local function Conversation()
 
 				-- End of talking, waiting for input:
 				
-				-- Dialog choices:
 				if self.dialog.choices ~= nil then
+					-- Dialog choices:
+					self.override_input = true
+					self:CinematicCamera(player, scene, cam)
+
 					local pos = vector.Add(self.font.GetPos(), Vector(20, 10 + self.font.TextSize().GetY()))
 					for i,choice in ipairs(self.dialog.choices) do
 						if self.choice_fonts[i] == nil then
@@ -134,23 +140,7 @@ local function Conversation()
 						pos = vector.Add(pos, Vector(0, self.choice_fonts[i].TextSize().GetY() + 5))
 					end
 
-					-- Forced cinematic camera:
-					local head_pos = scene.Component_GetTransform(player.head).GetPosition()
-					local forward_dir = vector.Multiply(self.character.face, -1)
-					local up_dir = Vector(0,1,0)
-					local right_dir = vector.Cross(up_dir, forward_dir).Normalize()
-					local cam_offset = vector.Add(vector.Multiply(vector.Lerp(forward_dir, right_dir, 0.3), 1.4), Vector(0,-0.14))
-					local cam_target = vector.Add(vector.Add(head_pos, vector.Multiply(right_dir, -0.4)), Vector(0,-0.1))
-					local lookat = matrix.Inverse(matrix.LookAt(vector.Add(head_pos, cam_offset), cam_target))
-					local transform = TransformComponent()
-					transform.MatrixTransform(lookat)
-					transform.UpdateTransform()
-					cam.TransformCamera(transform)
-					cam.UpdateCamera()
-					cam.SetFocalLength(vector.Subtract(head_pos, cam.GetPosition()).Length())
-
 					-- Dialog input:
-					self.override_input = true
 					if input.Press(KEYBOARD_BUTTON_UP) then
 						self.choice = self.choice - 1
 						self.font_blink_timer = 0
@@ -173,6 +163,9 @@ local function Conversation()
 					end
 				else
 					-- No dialog choices:
+					self.override_input = true
+					self:CinematicCamera(self.character, scene, cam)
+
 					if input.Press(KEYBOARD_BUTTON_ENTER) then
 						if self.dialog.action ~= nil then
 							self.dialog.action() -- execute dialog action
@@ -223,6 +216,22 @@ local function Conversation()
 			self.font.SetText(self.dialog[1])
 			self.font.SetTypewriterTime(string.len(self.dialog[1]) / self.speed)
 			self.font.ResetTypewriter()
+		end,
+
+		CinematicCamera = function(self, character, scene, camera)
+			local head_pos = scene.Component_GetTransform(character.head).GetPosition()
+			local forward_dir = character.face
+			local up_dir = Vector(0,1,0)
+			local right_dir = vector.Cross(up_dir, forward_dir).Normalize()
+			local cam_offset = vector.Add(vector.Multiply(vector.Lerp(forward_dir, right_dir, 0.3), 1.4), Vector(0,-0.14))
+			local cam_target = vector.Add(vector.Add(head_pos, vector.Multiply(right_dir, -0.4)), Vector(0,-0.1))
+			local lookat = matrix.Inverse(matrix.LookAt(vector.Add(head_pos, cam_offset), cam_target))
+			local transform = TransformComponent()
+			transform.MatrixTransform(lookat)
+			transform.UpdateTransform()
+			camera.TransformCamera(transform)
+			camera.UpdateCamera()
+			camera.SetFocalLength(vector.Subtract(head_pos, camera.GetPosition()).Length())
 		end
 	}
 	local sound = Sound()
@@ -953,7 +962,8 @@ local ResolveCharacters = function(characterA, characterB)
 			humanoidA.SetLookAt(headB)
 			humanoidB.SetLookAt(headA)
 
-			if #characterA.dialogs > 0 and conversation.state == ConversationState.Disabled then
+			local facing_amount = vector.Dot(characterB.face, vector.Subtract(characterA.position, characterB.position).Normalize())
+			if #characterA.dialogs > 0 and conversation.state == ConversationState.Disabled and facing_amount > 0.8 then
 				if input.Press(KEYBOARD_BUTTON_ENTER) then
 					conversation:Enter(characterA)
 				end
