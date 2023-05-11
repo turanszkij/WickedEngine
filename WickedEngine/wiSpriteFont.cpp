@@ -23,7 +23,7 @@ namespace wi
 			anim.typewriter.elapsed += dt;
 			size_t text_length_next = std::min(text_length, size_t(wi::math::Lerp(float(std::min(text_length, anim.typewriter.character_start)), float(text_length + 1), anim.typewriter.elapsed / anim.typewriter.time)));
 
-			if (anim.typewriter.soundinstance.IsValid())
+			if (anim.typewriter.soundinstance.IsValid() && !IsHidden())
 			{
 				if (!anim.typewriter.IsFinished() && wi::audio::IsEnded(&anim.typewriter.soundinstance) && text_length_prev != text_length_next && text[text_length_next - 1] != ' ' && anim.typewriter.soundinstance.IsValid())
 				{

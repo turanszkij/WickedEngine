@@ -90,6 +90,7 @@ local function Conversation()
 
 			-- State flow:
 			if self.state == ConversationState.Disabled then
+				self.font.SetHidden(true)
 			elseif self.state == ConversationState.Talking then
 
 				-- End of talking:
