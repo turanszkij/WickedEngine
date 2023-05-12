@@ -405,7 +405,12 @@ local function Character(model_name, start_position, face, controllable)
 			for i,entity in ipairs(scene.Entity_GetExpressionArray()) do
 				if scene.Entity_IsDescendant(entity, self.model) then
 					self.expression = entity
-					break
+
+					-- Set up some overrides to avoid bad looking expression combinations:
+					local expression = scene.Component_GetExpression(self.expression)
+					expression.SetPresetOverrideBlink(ExpressionPreset.Happy, ExpressionOverride.Block)
+					expression.SetPresetOverrideMouth(ExpressionPreset.Happy, ExpressionOverride.Blend)
+					expression.SetPresetOverrideBlink(ExpressionPreset.Surprised, ExpressionOverride.Block)
 				end
 			end
 
@@ -509,9 +514,8 @@ local function Character(model_name, start_position, face, controllable)
 				end
 			end
 
-			local expression = scene.Component_GetExpression(self.expression)
-
 			-- Blend to current mood, blend out other moods:
+			local expression = scene.Component_GetExpression(self.expression)
 			for i,preset in pairs(Mood) do
 				local weight = expression.GetPresetWeight(preset)
 				if preset == self.mood then
@@ -520,20 +524,6 @@ local function Character(model_name, start_position, face, controllable)
 					weight = math.lerp(weight, 0, 0.1)
 				end
 				expression.SetPresetWeight(preset, weight)
-			end
-
-			-- Happy mood overrides blink because eyes are closed:
-			if self.mood == Mood.Happy then
-				expression.SetPresetOverrideBlink(self.mood, ExpressionOverride.Blend)
-			else
-				expression.SetPresetOverrideBlink(self.mood, ExpressionOverride.None)
-			end
-
-			-- Happy and surprised moods override mouth because mouth is fully open:
-			if self.mood == Mood.Happy or self.mood == Mood.Surprised then
-				expression.SetPresetOverrideMouth(self.mood, ExpressionOverride.Blend)
-			else
-				expression.SetPresetOverrideMouth(self.mood, ExpressionOverride.None)
 			end
 			
 			-- state and animation update
