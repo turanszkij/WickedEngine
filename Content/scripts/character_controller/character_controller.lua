@@ -93,8 +93,9 @@ local function Conversation()
 				self.font.SetHidden(true)
 			elseif self.state == ConversationState.Talking then
 
+				self.choice = 1
 				self.override_input = true
-				self:CinematicCamera(self.character, scene, cam)
+				self:CinematicCamera(self.character, player, scene, cam)
 
 				-- End of talking:
 				if self.font.IsTypewriterFinished() then
@@ -119,7 +120,7 @@ local function Conversation()
 				if self.dialog.choices ~= nil then
 					-- Dialog choices:
 					self.override_input = true
-					self:CinematicCamera(player, scene, cam)
+					self:CinematicCamera(player, self.character, scene, cam)
 
 					local pos = vector.Add(self.font.GetPos(), Vector(20, 10 + self.font.TextSize().GetY()))
 					for i,choice in ipairs(self.dialog.choices) do
@@ -164,7 +165,7 @@ local function Conversation()
 				else
 					-- No dialog choices:
 					self.override_input = true
-					self:CinematicCamera(self.character, scene, cam)
+					self:CinematicCamera(self.character, player, scene, cam)
 
 					if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) then
 						if self.dialog.action_after ~= nil then
@@ -221,18 +222,16 @@ local function Conversation()
 			end
 		end,
 
-		CinematicCamera = function(self, character, scene, camera)
-			local head_pos = scene.Component_GetTransform(character.head).GetPosition()
-			local forward_dir = character.face
+		CinematicCamera = function(self, character_foreground, character_background, scene, camera)
+			local head_pos = scene.Component_GetTransform(character_foreground.head).GetPosition()
+			local forward_dir = vector.Subtract(character_background.position, character_foreground.position).Normalize()
+			forward_dir = vector.TransformNormal(forward_dir, matrix.RotationY(math.pi * 0.1))
 			local up_dir = Vector(0,1,0)
 			local right_dir = vector.Cross(up_dir, forward_dir).Normalize()
-			local cam_offset = vector.Add(vector.Multiply(vector.Lerp(forward_dir, right_dir, 0.3), 1.4), Vector(0,-0.14))
+			local cam_pos = vector.Add(head_pos, forward_dir)
 			local cam_target = vector.Add(vector.Add(head_pos, vector.Multiply(right_dir, -0.4)), Vector(0,-0.1))
-			local lookat = matrix.Inverse(matrix.LookAt(vector.Add(head_pos, cam_offset), cam_target))
-			local transform = TransformComponent()
-			transform.MatrixTransform(lookat)
-			transform.UpdateTransform()
-			camera.TransformCamera(transform)
+			local lookat = matrix.Inverse(matrix.LookAt(cam_pos, cam_target))
+			camera.TransformCamera(lookat)
 			camera.UpdateCamera()
 			camera.SetFocalLength(vector.Subtract(head_pos, camera.GetPosition()).Length())
 		end
@@ -1150,8 +1149,8 @@ runProcess(function()
 	application.SetActivePath(path)	
 
 	--application.SetInfoDisplay(false)
-	application.SetFPSDisplay(true)
-	--path.SetResolutionScale(0.5)
+	--application.SetFPSDisplay(true)
+	path.SetResolutionScale(0.75)
 	--path.SetFSR2Enabled(true)
 	--path.SetFSR2Preset(FSR2_Preset.Performance)
 	--SetProfilerEnabled(true)
@@ -1301,10 +1300,10 @@ runProcess(function()
 end)
 
 -- Conversation dialogs:
-npcs[4].dialogs = {
+local dialogtree = {
 	-- Dialog starts here:
-	{"Hello! Today is a nice day for a walk, isn't it? The sun is shining, the wind blows lightly, and the temperature is just perfect!"},
-	{"I just finished my morning workout and I feel ready for the day."},
+	{"Hello! Today is a nice day for a walk, isn't it? The sun is shining, the wind blows lightly, and the temperature is just perfect! To be honest, I don't need anything else to be happy."},
+	{"I just finished my morning routine and I'm ready for the day. What should I do now...?"},
 	{
 		"Anything I can do for you?",
 		choices = {
@@ -1354,6 +1353,10 @@ npcs[4].dialogs = {
 	},
 	{"Gotcha!"}, -- After chosen [Stay here]
 }
+
+for i,npc in pairs(npcs) do
+	npc.dialogs = dialogtree
+end
 
 -- Patrol waypoints:
 

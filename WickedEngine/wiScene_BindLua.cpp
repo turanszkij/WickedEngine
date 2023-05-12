@@ -3119,14 +3119,18 @@ int CameraComponent_BindLua::TransformCamera(lua_State* L)
 			component->TransformCamera(*transform->component);
 			return 0;
 		}
-		else
+		Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 1);
+		if (matrix != nullptr)
 		{
-			wi::lua::SError(L, "TransformCamera(TransformComponent transform) invalid argument!");
+			component->TransformCamera(XMLoadFloat4x4(&matrix->data));
+			return 0;
 		}
+
+		wi::lua::SError(L, "TransformCamera(TransformComponent | Matrix transform) invalid argument!");
 	}
 	else
 	{
-		wi::lua::SError(L, "TransformCamera(TransformComponent transform) not enough arguments!");
+		wi::lua::SError(L, "TransformCamera(TransformComponent | Matrix transform) not enough arguments!");
 	}
 	return 0;
 }

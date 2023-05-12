@@ -706,6 +706,7 @@ Describes an orientation in 3D space.
 
 - UpdateCamera()  -- update the camera matrices
 - TransformCamera(TransformComponent transform)  -- copies the transform's orientation to the camera, and sets the camera position, look direction and up direction. Camera matrices are not updated immediately. They will be updated by the Scene::Update() (if the camera is part of the scene), or by manually calling UpdateCamera()
+- TransformCamera(Matrix matrix)
 - GetFOV() : float result
 - SetFOV(float value)	-- Sets the vertical field of view for the camera (value is an angle in radians)
 - GetNearPlane() : float result
