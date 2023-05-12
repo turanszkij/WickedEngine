@@ -53,11 +53,7 @@ local function Conversation()
 			local text_offset = GetScreenWidth() * 0.2
 			self.font.SetPos(Vector(text_offset, GetScreenHeight() - crop_height + 10))
 			self.font.SetHorizontalWrapping(GetScreenWidth() - self.font.GetPos().GetX() * 2)
-			self.font.SetSize(20)
-			self.font.SetColor(Vector(0.6,0.8,1,1))
-			
 			self.advance_font.SetPos(Vector(GetScreenWidth() - self.font.GetPos().GetX(), GetScreenHeight() - 50))
-			self.advance_font.SetSize(24)
 
 			-- Update conversation percentage (fade in/out of conversation)
 			if self.state == ConversationState.Disabled then
@@ -236,6 +232,9 @@ local function Conversation()
 			camera.SetFocalLength(vector.Subtract(head_pos, camera.GetPosition()).Length())
 		end
 	}
+	self.font.SetSize(20)
+	self.font.SetColor(Vector(0.6,0.8,1,1))
+	self.advance_font.SetSize(24)
 	local sound = Sound()
 	local soundinstance = SoundInstance()
 	audio.CreateSound(script_dir() .. "assets/typewriter.wav", sound)
