@@ -261,7 +261,8 @@ local States = {
 	JUMP = "jump",
 	SWIM_IDLE = "swim_idle",
 	SWIM = "swim",
-	DANCE = "dance"
+	DANCE = "dance",
+	WAVE = "wave"
 }
 
 local Mood = {
@@ -290,6 +291,7 @@ local function LoadAnimations(model_name)
 		SWIM_IDLE = anim_scene.Entity_FindByName("swim_idle"),
 		SWIM = anim_scene.Entity_FindByName("swim"),
 		DANCE = anim_scene.Entity_FindByName("dance"),
+		WAVE = anim_scene.Entity_FindByName("wave"),
 	}
 	scene.Merge(anim_scene)
 end
@@ -302,16 +304,8 @@ local function Character(model_name, start_position, face, controllable)
 		target_rot_horizontal = 0,
 		target_rot_vertical = 0,
 		target_height = 0,
-		current_anim = INVALID_ENTITY,
-		idle_anim = INVALID_ENTITY,
-		walk_anim = INVALID_ENTITY,
-		jog_anim = INVALID_ENTITY,
-		run_anim = INVALID_ENTITY,
-		jump_anim = INVALID_ENTITY,
-		swim_idle_anim = INVALID_ENTITY,
-		dance_anim = INVALID_ENTITY,
-		swim_anim = INVALID_ENTITY,
-		all_anims = {},
+		anims = {},
+		anim_amount = 1,
 		neck = INVALID_ENTITY,
 		head = INVALID_ENTITY,
 		left_hand = INVALID_ENTITY,
@@ -416,20 +410,15 @@ local function Character(model_name, start_position, face, controllable)
 
 			self.root = scene.Entity_FindByName("Root", self.model)
 			
-			self.idle_anim = scene.RetargetAnimation(self.humanoid, animations.IDLE, false)
-			self.walk_anim = scene.RetargetAnimation(self.humanoid, animations.WALK, false)
-			self.jog_anim = scene.RetargetAnimation(self.humanoid, animations.JOG, false)
-			self.run_anim = scene.RetargetAnimation(self.humanoid, animations.RUN, false)
-			self.jump_anim = scene.RetargetAnimation(self.humanoid, animations.JUMP, false)
-			self.swim_idle_anim = scene.RetargetAnimation(self.humanoid, animations.SWIM_IDLE, false)
-			self.swim_anim = scene.RetargetAnimation(self.humanoid, animations.SWIM, false)
-			self.dance_anim = scene.RetargetAnimation(self.humanoid, animations.DANCE, false)
-			
-			for i,entity in ipairs(scene.Entity_GetAnimationArray()) do
-				if scene.Entity_IsDescendant(entity, self.model) then
-					table.insert(self.all_anims, entity)
-				end
-			end
+			self.anims[States.IDLE] = scene.RetargetAnimation(self.humanoid, animations.IDLE, false)
+			self.anims[States.WALK] = scene.RetargetAnimation(self.humanoid, animations.WALK, false)
+			self.anims[States.JOG] = scene.RetargetAnimation(self.humanoid, animations.JOG, false)
+			self.anims[States.RUN] = scene.RetargetAnimation(self.humanoid, animations.RUN, false)
+			self.anims[States.JUMP] = scene.RetargetAnimation(self.humanoid, animations.JUMP, false)
+			self.anims[States.SWIM_IDLE] = scene.RetargetAnimation(self.humanoid, animations.SWIM_IDLE, false)
+			self.anims[States.SWIM] = scene.RetargetAnimation(self.humanoid, animations.SWIM, false)
+			self.anims[States.DANCE] = scene.RetargetAnimation(self.humanoid, animations.DANCE, false)
+			self.anims[States.WAVE] = scene.RetargetAnimation(self.humanoid, animations.WAVE, false)
 			
 			local model_transform = scene.Component_GetTransform(self.model)
 			model_transform.ClearTransform()
@@ -508,10 +497,6 @@ local function Character(model_name, start_position, face, controllable)
 				
 				self.target_rot_horizontal = self.target_rot_horizontal + diff.GetX()
 				self.target_rot_vertical = math.clamp(self.target_rot_vertical + diff.GetY(), -math.pi * 0.3, math.pi * 0.4) -- vertical camers limits
-			
-				if self.dance_anim ~= INVALID_ENTITY and self.state == States.IDLE and input.Press(string.byte('C')) then
-					self.state = States.DANCE
-				end
 			end
 
 			-- Blend to current mood, blend out other moods:
@@ -527,25 +512,7 @@ local function Character(model_name, start_position, face, controllable)
 			end
 			
 			-- state and animation update
-			if(self.state == States.IDLE) then
-				self.current_anim = self.idle_anim
-			elseif(self.state == States.WALK) then
-				self.current_anim = self.walk_anim
-			elseif(self.state == States.JOG) then
-				self.current_anim = self.jog_anim
-			elseif(self.state == States.RUN) then
-				self.current_anim = self.run_anim
-			elseif(self.state == States.JUMP) then
-				self.current_anim = self.jump_anim
-			elseif(self.state == States.SWIM_IDLE) then
-				self.current_anim = self.swim_idle_anim
-			elseif(self.state == States.SWIM) then
-				self.current_anim = self.swim_anim
-			elseif(self.state == States.DANCE) then
-				self.current_anim = self.dance_anim
-			end
-			
-			local current_anim = scene.Component_GetAnimation(self.current_anim)
+			local current_anim = scene.Component_GetAnimation(self.anims[self.state])
 			if current_anim ~= nil then
 				-- Play current anim:
 				current_anim.Play()
@@ -561,7 +528,7 @@ local function Character(model_name, start_position, face, controllable)
 						self.state = States.IDLE
 					end
 				else
-					if self.velocity.Length() < 0.1 and self.state ~= States.SWIM_IDLE and self.state ~= States.SWIM and self.state ~= States.DANCE then
+					if self.velocity.Length() < 0.1 and self.state ~= States.SWIM_IDLE and self.state ~= States.SWIM and self.state ~= States.DANCE and self.state ~= States.WAVE then
 						self.state = States.IDLE
 					end
 				end
@@ -734,7 +701,7 @@ local function Character(model_name, start_position, face, controllable)
 				--	But the player can still collide with NPC and can be blocked
 				collision_layer = collision_layer & ~Layers.Player
 			end
-			local current_anim = scene.Component_GetAnimation(self.current_anim)
+			local current_anim = scene.Component_GetAnimation(self.anims[self.state])
 			local ground_intersect = false
 			local platform_velocity_accumulation = Vector()
 			local platform_velocity_count = 0
@@ -780,11 +747,11 @@ local function Character(model_name, start_position, face, controllable)
 				-- Animation blending
 				if current_anim ~= nil then
 					-- Blend in current animation:
-					current_anim.SetAmount(math.lerp(current_anim.GetAmount(), 1, 0.1))
+					current_anim.SetAmount(math.lerp(current_anim.GetAmount(), self.anim_amount, 0.1))
 					
 					-- Ease out other animations:
-					for i,anim in ipairs(self.all_anims) do
-						if (anim ~= INVALID_ENTITY) and (anim ~= self.current_anim) then
+					for i,anim in pairs(self.anims) do
+						if (anim ~= INVALID_ENTITY) and (anim ~= self.anims[self.state]) then
 							local prev_anim = scene.Component_GetAnimation(anim)
 							prev_anim.SetAmount(math.lerp(prev_anim.GetAmount(), 0, 0.1))
 							if prev_anim.GetAmount() <= 0 then
@@ -1142,8 +1109,8 @@ local function ThirdPersonCamera(character)
 end
 
 ClearWorld()
---LoadModel(script_dir() .. "assets/level.wiscene")
-LoadModel(script_dir() .. "assets/terrain.wiscene")
+LoadModel(script_dir() .. "assets/level.wiscene")
+--LoadModel(script_dir() .. "assets/terrain.wiscene")
 --LoadModel(script_dir() .. "assets/waypoints.wiscene", matrix.Translation(Vector(1,0,2)))
 --dofile(script_dir() .. "../dungeon_generator/dungeon_generator.lua")
 
@@ -1152,9 +1119,9 @@ LoadAnimations(script_dir() .. "assets/animations.wiscene")
 local player = Character(script_dir() .. "assets/character.wiscene", Vector(0,0.5,0), Vector(0,0,1), true)
 local npcs = {
 	-- Patrolling NPC IDs: 1,2,3
-	-- Character(script_dir() .. "assets/max.wiscene", Vector(4,0.1,4), Vector(0,0,-1), false),
-	-- Character(script_dir() .. "assets/otto.wiscene", Vector(-8,1,4), Vector(-1,0,0), false),
-	-- Character(script_dir() .. "assets/carl.wiscene", Vector(-2,0.1,8), Vector(-1,0,0), false),
+	Character(script_dir() .. "assets/max.wiscene", Vector(4,0.1,4), Vector(0,0,-1), false),
+	Character(script_dir() .. "assets/otto.wiscene", Vector(-8,1,4), Vector(-1,0,0), false),
+	Character(script_dir() .. "assets/carl.wiscene", Vector(-2,0.1,8), Vector(-1,0,0), false),
 
 	-- stationary NPC IDs: 3,4....
 	Character(script_dir() .. "assets/johnny.wiscene", Vector(-1,0.1,-6), Vector(0,0,1), false),
@@ -1333,7 +1300,7 @@ runProcess(function()
 end)
 
 -- Conversation dialogs:
-npcs[1].dialogs = {
+npcs[4].dialogs = {
 	-- Dialog starts here:
 	{"Hello! Today is a nice day for a walk, isn't it? The sun is shining, the wind blows lightly, and the temperature is just perfect!"},
 	{"I just finished my morning workout and I feel ready for the day."},
@@ -1364,12 +1331,14 @@ npcs[1].dialogs = {
 		"Have a nice day!",
 		action = function()
 			conversation.character.mood = Mood.Happy
-			conversation.character.mood_amount = 0.8
+			conversation.character.state = States.WAVE
+			conversation.character.anim_amount = 0.1
 		end,
 		action_after = function()
 			conversation.character.mood = Mood.Neutral
-			conversation.character.mood_amount = 1
 			conversation:Exit() conversation.character.next_dialog = 1 
+			conversation.character.state = States.IDLE
+			conversation.character.anim_amount = 1
 		end
 	},
 
