@@ -1650,6 +1650,13 @@ namespace wi::lua::scene
 		int GetPresetWeight(lua_State* L);
 		int SetForceTalkingEnabled(lua_State* L);
 		int IsForceTalkingEnabled(lua_State* L);
+
+		int SetPresetOverrideMouth(lua_State* L);
+		int SetPresetOverrideBlink(lua_State* L);
+		int SetPresetOverrideLook(lua_State* L);
+		int SetOverrideMouth(lua_State* L);
+		int SetOverrideBlink(lua_State* L);
+		int SetOverrideLook(lua_State* L);
 	};
 
 	class HumanoidComponent_BindLua

@@ -214,7 +214,7 @@ local function Conversation()
 			self.character.next_dialog = self.character.next_dialog + 1
 			self.state = ConversationState.Talking
 			self.font.SetText(self.dialog[1])
-			self.font.SetTypewriterTime(string.len(self.dialog[1]) / self.speed)
+			self.font.SetTypewriterTime(string.len(self.dialog[1] or "") / self.speed)
 			self.font.ResetTypewriter()
 			if self.dialog.action ~= nil then
 				self.dialog.action() -- execute dialog action
@@ -510,6 +510,8 @@ local function Character(model_name, start_position, face, controllable)
 			end
 
 			local expression = scene.Component_GetExpression(self.expression)
+
+			-- Blend to current mood, blend out other moods:
 			for i,preset in pairs(Mood) do
 				local weight = expression.GetPresetWeight(preset)
 				if preset == self.mood then
@@ -518,6 +520,20 @@ local function Character(model_name, start_position, face, controllable)
 					weight = math.lerp(weight, 0, 0.1)
 				end
 				expression.SetPresetWeight(preset, weight)
+			end
+
+			-- Happy mood overrides blink because eyes are closed:
+			if self.mood == Mood.Happy then
+				expression.SetPresetOverrideBlink(self.mood, ExpressionOverride.Blend)
+			else
+				expression.SetPresetOverrideBlink(self.mood, ExpressionOverride.None)
+			end
+
+			-- Happy and surprised moods override mouth because mouth is fully open:
+			if self.mood == Mood.Happy or self.mood == Mood.Surprised then
+				expression.SetPresetOverrideMouth(self.mood, ExpressionOverride.Blend)
+			else
+				expression.SetPresetOverrideMouth(self.mood, ExpressionOverride.None)
 			end
 			
 			-- state and animation update
@@ -1329,20 +1345,8 @@ end)
 -- Conversation dialogs:
 npcs[1].dialogs = {
 	-- Dialog starts here:
-	{
-		"Hello! Today is a nice day for a walk, isn't it? The sun is shining, the wind blows lightly, and the temperature is just perfect!",
-		action = function()
-			conversation.character.mood = Mood.Happy
-			conversation.character.mood_amount = 0.8
-		end
-	},
-	{
-		"I just finished my morning workout and I feel ready for the day.",
-		action = function()
-			conversation.character.mood = Mood.Neutral
-			conversation.character.mood_amount = 1
-		end
-	},
+	{"Hello! Today is a nice day for a walk, isn't it? The sun is shining, the wind blows lightly, and the temperature is just perfect!"},
+	{"I just finished my morning workout and I feel ready for the day."},
 	{
 		"Anything I can do for you?",
 		choices = {
@@ -1366,7 +1370,18 @@ npcs[1].dialogs = {
 	{"Lead the way!", action_after = function() conversation:Exit() conversation.character.next_dialog = 6 end},
 
 	-- Dialog 5: When chosen [Never mind]
-	{"Have a nice day!", action_after = function() conversation:Exit() conversation.character.next_dialog = 1 end},
+	{
+		"Have a nice day!",
+		action = function()
+			conversation.character.mood = Mood.Happy
+			conversation.character.mood_amount = 0.8
+		end,
+		action_after = function()
+			conversation.character.mood = Mood.Neutral
+			conversation.character.mood_amount = 1
+			conversation:Exit() conversation.character.next_dialog = 1 
+		end
+	},
 
 	-- Dialog 6: After Dialog 4 finished, so character is following player
 	{

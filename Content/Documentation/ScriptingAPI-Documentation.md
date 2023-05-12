@@ -1085,6 +1085,13 @@ Describes a Collider object.
 - GetPresetWeight(ExpressionPreset preset) : float	-- returns current weight of preset expression
 - SetForceTalkingEnabled(bool value) -- Force continuous talking animation, even if no voice is playing
 - IsForceTalkingEnabled() : bool
+- SetPresetOverrideMouth(ExpressionPreset preset, ExpressionOverride override)
+- SetPresetOverrideBlink(ExpressionPreset preset, ExpressionOverride override)
+- SetPresetOverrideLook(ExpressionPreset preset, ExpressionOverride override)
+- SetOverrideMouth(int id, ExpressionOverride override)
+- SetOverrideBlink(int id, ExpressionOverride override)
+- SetOverrideLook(int id, ExpressionOverride override)
+
 
 [outer] ExpressionPreset = {
 	Happy = 0,
@@ -1105,6 +1112,12 @@ Describes a Collider object.
 	LookLeft = 15,
 	LookRight = 16,
 	Neutral = 17,
+}
+
+[outer] ExpressionOverride = {
+	None = 0,
+	Block = 1,
+	Blend = 2,
 }
 
 
