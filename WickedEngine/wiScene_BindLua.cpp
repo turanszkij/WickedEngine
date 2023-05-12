@@ -361,6 +361,12 @@ ExpressionPreset = {
 	Neutral = 17,
 }
 
+ExpressionOverride = {
+	None = 0,
+	Block = 1,
+	Blend = 2,
+}
+
 HumanoidBone = {
 	Hips = 0,
 	Spine = 1,
@@ -3113,14 +3119,18 @@ int CameraComponent_BindLua::TransformCamera(lua_State* L)
 			component->TransformCamera(*transform->component);
 			return 0;
 		}
-		else
+		Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 1);
+		if (matrix != nullptr)
 		{
-			wi::lua::SError(L, "TransformCamera(TransformComponent transform) invalid argument!");
+			component->TransformCamera(XMLoadFloat4x4(&matrix->data));
+			return 0;
 		}
+
+		wi::lua::SError(L, "TransformCamera(TransformComponent | Matrix transform) invalid argument!");
 	}
 	else
 	{
-		wi::lua::SError(L, "TransformCamera(TransformComponent transform) not enough arguments!");
+		wi::lua::SError(L, "TransformCamera(TransformComponent | Matrix transform) not enough arguments!");
 	}
 	return 0;
 }
@@ -5607,6 +5617,12 @@ Luna<ExpressionComponent_BindLua>::FunctionType ExpressionComponent_BindLua::met
 	lunamethod(ExpressionComponent_BindLua, GetPresetWeight),
 	lunamethod(ExpressionComponent_BindLua, SetForceTalkingEnabled),
 	lunamethod(ExpressionComponent_BindLua, IsForceTalkingEnabled),
+	lunamethod(ExpressionComponent_BindLua, SetPresetOverrideMouth),
+	lunamethod(ExpressionComponent_BindLua, SetPresetOverrideBlink),
+	lunamethod(ExpressionComponent_BindLua, SetPresetOverrideLook),
+	lunamethod(ExpressionComponent_BindLua, SetOverrideMouth),
+	lunamethod(ExpressionComponent_BindLua, SetOverrideBlink),
+	lunamethod(ExpressionComponent_BindLua, SetOverrideLook),
 	{ NULL, NULL }
 };
 Luna<ExpressionComponent_BindLua>::PropertyType ExpressionComponent_BindLua::properties[] = {
@@ -5688,6 +5704,7 @@ int ExpressionComponent_BindLua::GetWeight(lua_State* L)
 		if (id >= 0 && component->expressions.size() > id)
 		{
 			wi::lua::SSetFloat(L, component->expressions[id].weight);
+			return 1;
 		}
 		else
 		{
@@ -5710,6 +5727,7 @@ int ExpressionComponent_BindLua::GetPresetWeight(lua_State* L)
 		if (id >= 0 && component->expressions.size() > id)
 		{
 			wi::lua::SSetFloat(L, component->expressions[id].weight);
+			return 1;
 		}
 		else
 		{
@@ -5739,6 +5757,142 @@ int ExpressionComponent_BindLua::IsForceTalkingEnabled(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsForceTalkingEnabled());
 	return 1;
+}
+
+int ExpressionComponent_BindLua::SetPresetOverrideMouth(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		ExpressionComponent::Preset preset = (ExpressionComponent::Preset)wi::lua::SGetInt(L, 1);
+		ExpressionComponent::Override value = (ExpressionComponent::Override)wi::lua::SGetInt(L, 2);
+		int id = component->presets[size_t(preset)];
+		if (id >= 0 && component->expressions.size() > id)
+		{
+			component->expressions[id].override_mouth = value;
+		}
+		else
+		{
+			wi::lua::SError(L, "SetPresetOverrideMouth(ExpressionPreset preset, ExpressionOverride override) preset doesn't exist!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetPresetOverrideMouth(ExpressionPreset preset, ExpressionOverride override) not enough arguments!");
+	}
+	return 0;
+}
+int ExpressionComponent_BindLua::SetPresetOverrideBlink(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		ExpressionComponent::Preset preset = (ExpressionComponent::Preset)wi::lua::SGetInt(L, 1);
+		ExpressionComponent::Override value = (ExpressionComponent::Override)wi::lua::SGetInt(L, 2);
+		int id = component->presets[size_t(preset)];
+		if (id >= 0 && component->expressions.size() > id)
+		{
+			component->expressions[id].override_blink = value;
+		}
+		else
+		{
+			wi::lua::SError(L, "SetPresetOverrideBlink(ExpressionPreset preset, ExpressionOverride override) preset doesn't exist!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetPresetOverrideBlink(ExpressionPreset preset, ExpressionOverride override) not enough arguments!");
+	}
+	return 0;
+}
+int ExpressionComponent_BindLua::SetPresetOverrideLook(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		ExpressionComponent::Preset preset = (ExpressionComponent::Preset)wi::lua::SGetInt(L, 1);
+		ExpressionComponent::Override value = (ExpressionComponent::Override)wi::lua::SGetInt(L, 2);
+		int id = component->presets[size_t(preset)];
+		if (id >= 0 && component->expressions.size() > id)
+		{
+			component->expressions[id].override_look = value;
+		}
+		else
+		{
+			wi::lua::SError(L, "SetPresetOverrideLook(ExpressionPreset preset, ExpressionOverride override) preset doesn't exist!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetPresetOverrideLook(ExpressionPreset preset, ExpressionOverride override) not enough arguments!");
+	}
+	return 0;
+}
+int ExpressionComponent_BindLua::SetOverrideMouth(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		int id = wi::lua::SGetInt(L, 1);
+		ExpressionComponent::Override value = (ExpressionComponent::Override)wi::lua::SGetInt(L, 2);
+		if (id >= 0 && component->expressions.size() > id)
+		{
+			component->expressions[id].override_mouth = value;
+		}
+		else
+		{
+			wi::lua::SError(L, "SetOverrideMouth(int id, ExpressionOverride override) id is out of bounds!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetOverrideMouth(int id, ExpressionOverride override) not enough arguments!");
+	}
+	return 0;
+}
+int ExpressionComponent_BindLua::SetOverrideBlink(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		int id = wi::lua::SGetInt(L, 1);
+		ExpressionComponent::Override value = (ExpressionComponent::Override)wi::lua::SGetInt(L, 2);
+		if (id >= 0 && component->expressions.size() > id)
+		{
+			component->expressions[id].override_blink = value;
+		}
+		else
+		{
+			wi::lua::SError(L, "SetOverrideBlink(int id, ExpressionOverride override) id is out of bounds!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetOverrideBlink(int id, ExpressionOverride override) not enough arguments!");
+	}
+	return 0;
+}
+int ExpressionComponent_BindLua::SetOverrideLook(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		int id = wi::lua::SGetInt(L, 1);
+		ExpressionComponent::Override value = (ExpressionComponent::Override)wi::lua::SGetInt(L, 2);
+		if (id >= 0 && component->expressions.size() > id)
+		{
+			component->expressions[id].override_look = value;
+		}
+		else
+		{
+			wi::lua::SError(L, "SetOverrideLook(int id, ExpressionOverride override) id is out of bounds!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetOverrideLook(int id, ExpressionOverride override) not enough arguments!");
+	}
+	return 0;
 }
 
 

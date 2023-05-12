@@ -1,6 +1,7 @@
 #include "wiSpriteFont_BindLua.h"
 #include "wiFont.h"
 #include "wiMath_BindLua.h"
+#include "wiAudio_BindLua.h"
 
 namespace wi::lua
 {
@@ -18,6 +19,8 @@ namespace wi::lua
 		lunamethod(SpriteFont_BindLua, SetShadowBolden),
 		lunamethod(SpriteFont_BindLua, SetShadowSoftness),
 		lunamethod(SpriteFont_BindLua, SetShadowOffset),
+		lunamethod(SpriteFont_BindLua, SetHorizontalWrapping),
+		lunamethod(SpriteFont_BindLua, SetHidden),
 
 		lunamethod(SpriteFont_BindLua, SetStyle),
 		lunamethod(SpriteFont_BindLua, GetText),
@@ -32,7 +35,17 @@ namespace wi::lua
 		lunamethod(SpriteFont_BindLua, GetShadowBolden),
 		lunamethod(SpriteFont_BindLua, GetShadowSoftness),
 		lunamethod(SpriteFont_BindLua, GetShadowOffset),
+		lunamethod(SpriteFont_BindLua, GetHorizontalWrapping),
+		lunamethod(SpriteFont_BindLua, IsHidden),
 
+		lunamethod(SpriteFont_BindLua, TextSize),
+		lunamethod(SpriteFont_BindLua, SetTypewriterTime),
+		lunamethod(SpriteFont_BindLua, SetTypewriterLooped),
+		lunamethod(SpriteFont_BindLua, SetTypewriterCharacterStart),
+		lunamethod(SpriteFont_BindLua, SetTypewriterSound),
+		lunamethod(SpriteFont_BindLua, ResetTypewriter),
+		lunamethod(SpriteFont_BindLua, TypewriterFinish),
+		lunamethod(SpriteFont_BindLua, IsTypewriterFinished),
 		{ NULL, NULL }
 	};
 	Luna<SpriteFont_BindLua>::PropertyType SpriteFont_BindLua::properties[] = {
@@ -256,6 +269,28 @@ namespace wi::lua
 			wi::lua::SError(L, "SetShadowOffset(Vector pos) not enough arguments!");
 		return 0;
 	}
+	int SpriteFont_BindLua::SetHorizontalWrapping(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			font.params.h_wrap = wi::lua::SGetFloat(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetHorizontalWrapping(float value) not enough arguments!");
+		return 0;
+	}
+	int SpriteFont_BindLua::SetHidden(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			font.SetHidden(wi::lua::SGetBool(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetHidden(bool value) not enough arguments!");
+		return 0;
+	}
 
 	int SpriteFont_BindLua::GetText(lua_State* L)
 	{
@@ -319,6 +354,93 @@ namespace wi::lua
 	{
 		XMFLOAT4 C = XMFLOAT4(font.params.shadow_offset_x, font.params.shadow_offset_y, 0, 0);
 		Luna<Vector_BindLua>::push(L, XMLoadFloat4(&C));
+		return 1;
+	}
+	int SpriteFont_BindLua::GetHorizontalWrapping(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, font.params.h_wrap);
+		return 1;
+	}
+	int SpriteFont_BindLua::IsHidden(lua_State* L)
+	{
+		wi::lua::SSetBool(L, font.IsHidden());
+		return 1;
+	}
+
+	int SpriteFont_BindLua::TextSize(lua_State* L)
+	{
+		XMFLOAT2 textsize = font.TextSize();
+		Luna<Vector_BindLua>::push(L, XMLoadFloat2(&textsize));
+		return 1;
+	}
+
+	int SpriteFont_BindLua::SetTypewriterTime(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "SetTypewriterTime(float value) not enough arguments!");
+		}
+		font.anim.typewriter.time = wi::lua::SGetFloat(L, 1);
+		return 0;
+	}
+	int SpriteFont_BindLua::SetTypewriterLooped(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "SetTypewriterLooped(bool value) not enough arguments!");
+		}
+		font.anim.typewriter.looped = wi::lua::SGetBool(L, 1);
+		return 0;
+	}
+	int SpriteFont_BindLua::SetTypewriterCharacterStart(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "SetTypewriterCharacterStart(int value) not enough arguments!");
+		}
+		font.anim.typewriter.character_start = (size_t)wi::lua::SGetLongLong(L, 1);
+		return 0;
+	}
+	int SpriteFont_BindLua::SetTypewriterSound(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 2)
+		{
+			wi::lua::SError(L, "SetTypewriterSound(Sound sound, SoundInstance soundinstance) not enough arguments!");
+			return 0;
+		}
+		Sound_BindLua* sound = Luna<Sound_BindLua>::lightcheck(L, 1);
+		if (sound == nullptr)
+		{
+			wi::lua::SError(L, "SetTypewriterSound(Sound sound, SoundInstance soundinstance) first argument is not a sound!");
+			return 0;
+		}
+		SoundInstance_BindLua* soundinstance = Luna<SoundInstance_BindLua>::lightcheck(L, 2);
+		if (soundinstance == nullptr)
+		{
+			wi::lua::SError(L, "SetTypewriterSound(Sound sound, SoundInstance soundinstance) second argument is not a sound instance!");
+			return 0;
+		}
+		font.anim.typewriter.sound = sound->sound;
+		font.anim.typewriter.soundinstance = soundinstance->soundinstance;
+		return 0;
+	}
+	int SpriteFont_BindLua::ResetTypewriter(lua_State* L)
+	{
+		font.anim.typewriter.reset();
+		return 0;
+	}
+	int SpriteFont_BindLua::TypewriterFinish(lua_State* L)
+	{
+		font.anim.typewriter.Finish();
+		return 0;
+	}
+	int SpriteFont_BindLua::IsTypewriterFinished(lua_State* L)
+	{
+		wi::lua::SSetBool(L, font.anim.typewriter.IsFinished());
 		return 1;
 	}
 

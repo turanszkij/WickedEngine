@@ -1600,10 +1600,8 @@ namespace wi::scene
 
 		frustum.Create(_VP);
 	}
-	void CameraComponent::TransformCamera(const TransformComponent& transform)
+	void CameraComponent::TransformCamera(const XMMATRIX& W)
 	{
-		XMMATRIX W = XMLoadFloat4x4(&transform.world);
-
 		XMVECTOR _Eye = XMVector3Transform(XMVectorSet(0, 0, 0, 1), W);
 		XMVECTOR _At = XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 0, 1, 0), W));
 		XMVECTOR _Up = XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W));

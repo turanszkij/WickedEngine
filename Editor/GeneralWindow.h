@@ -33,6 +33,7 @@ public:
 
 	wi::gui::Slider transformToolOpacitySlider;
 	wi::gui::Slider bonePickerOpacitySlider;
+	wi::gui::CheckBox skeletonsVisibleCheckBox;
 
 	wi::gui::Button localizationButton;
 

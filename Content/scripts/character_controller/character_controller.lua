@@ -5,13 +5,14 @@
 --		WASD/left thumbstick: walk
 --		SHIFT/right shoulder button: walk -> jog
 --		E/left shoulder button: jog -> run
---		SPACE/gamepad X/gamepad button 2: jump
+--		SPACE/gamepad X/gamepad button 3: jump
 --		Right Mouse Button/Right thumbstick: rotate camera
 --		Scoll middle mouse/Left-Right triggers: adjust camera distance
 --		H: toggle debug draw
 --		L: toggle framerate lock
 --		ESCAPE key: quit
---		ENTER: reload script
+--		R: reload script
+--		ENTER: interaction
 
 -- Debug Draw Helper
 local DrawAxis = function(point,f)
@@ -20,12 +21,229 @@ local DrawAxis = function(point,f)
 	DrawLine(point,point:Add(Vector(0,0,f)),Vector(0,0,1,1))
 end
 
-local debug = true -- press H to toggle
+local debug = false -- press H to toggle
 local allow_pushaway_NPC = true -- You can decide whether NPCs can be pushed away by player
 local framerate_lock = false
 local framerate_lock_target = 20
 local slope_threshold = 0.2 -- How much slopeiness will cause character to slide down instead of standing on it
 local gravity = -30
+
+local ConversationState = {
+	Disabled = 0,
+	Talking = 1,
+	Waiting = 2,
+}
+local function Conversation()
+	local self = {
+		state = ConversationState.Disabled,
+		percent = 0,
+		character = nil,
+		font = SpriteFont(),
+		advance_font = SpriteFont(""),
+		choice_fonts = {},
+		font_blink_timer = 0,
+		dialog = {},
+		speed = 30,
+		choice = 1,
+		override_input = false,
+
+		Update = function(self, path, scene, player)
+
+			local crop_height = GetScreenHeight() * 0.18
+			local text_offset = GetScreenWidth() * 0.2
+			self.font.SetPos(Vector(text_offset, GetScreenHeight() - crop_height + 10))
+			self.font.SetHorizontalWrapping(GetScreenWidth() - self.font.GetPos().GetX() * 2)
+			self.advance_font.SetPos(Vector(GetScreenWidth() - self.font.GetPos().GetX(), GetScreenHeight() - 50))
+
+			-- Update conversation percentage (fade in/out of conversation)
+			if self.state == ConversationState.Disabled then
+				self.percent = math.lerp(self.percent, 0, 0.05)
+			else
+				self.percent = math.lerp(self.percent, 1, 0.05)
+			end
+			path.SetCropTop(self.percent * crop_height)
+			path.SetCropBottom(self.percent * crop_height)
+			local cam = GetCamera()
+			cam.SetApertureSize(self.percent)
+
+			if self.percent < 0.9 then
+				self.font.SetHidden(true)
+				self.font.ResetTypewriter()
+			else
+				self.font.SetHidden(false)
+			end
+			self.advance_font.SetColor(Vector())
+			self.override_input = false
+			for i,choice_font in ipairs(self.choice_fonts) do
+				choice_font.SetColor(Vector())
+			end
+			self.font_blink_timer = self.font_blink_timer + getDeltaTime()
+
+			-- Focus on character:
+			if self.character ~= nil then
+				cam.SetFocalLength(vector.Subtract(scene.Component_GetTransform(self.character.head).GetPosition(), cam.GetPosition()).Length())
+			end
+
+			-- State flow:
+			if self.state == ConversationState.Disabled then
+				self.font.SetHidden(true)
+			elseif self.state == ConversationState.Talking then
+
+				self.choice = 1
+				self.override_input = true
+				self:CinematicCamera(self.character, player, scene, cam)
+
+				-- End of talking:
+				if self.font.IsTypewriterFinished() then
+					self.state = ConversationState.Waiting
+					self.font_blink_timer = 0
+				end
+
+				-- Skip talking:
+				if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) then
+					self.font.TypewriterFinish()
+				end
+
+				-- Turn on talking animation:
+				if self.character.expression ~= INVALID_ENTITY and self.percent >= 0.9 then
+					scene.Component_GetExpression(self.character.expression).SetForceTalkingEnabled(true)
+				end
+
+			elseif self.state == ConversationState.Waiting then
+
+				-- End of talking, waiting for input:
+				
+				if self.dialog.choices ~= nil then
+					-- Dialog choices:
+					self.override_input = true
+					self:CinematicCamera(player, self.character, scene, cam)
+
+					local pos = vector.Add(self.font.GetPos(), Vector(20, 10 + self.font.TextSize().GetY()))
+					for i,choice in ipairs(self.dialog.choices) do
+						if self.choice_fonts[i] == nil then
+							self.choice_fonts[i] = SpriteFont()
+							path.AddFont(self.choice_fonts[i])
+						end
+						self.choice_fonts[i].SetPos(pos)
+						self.choice_fonts[i].SetSize(self.font.GetSize())
+						self.choice_fonts[i].SetHorizontalWrapping(GetScreenWidth() - self.choice_fonts[i].GetPos().GetX() * 2)
+						if i == self.choice then
+							self.choice_fonts[i].SetText(" " .. choice[1])
+							self.choice_fonts[i].SetColor(vector.Lerp(Vector(1,1,1,1), self.font.GetColor(), math.abs(math.sin(self.font_blink_timer * math.pi))))
+						else
+							self.choice_fonts[i].SetText("     " .. choice[1])
+							self.choice_fonts[i].SetColor(self.font.GetColor())
+						end
+						pos = vector.Add(pos, Vector(0, self.choice_fonts[i].TextSize().GetY() + 5))
+					end
+
+					-- Dialog input:
+					if input.Press(KEYBOARD_BUTTON_UP) or input.Press(string.byte('W')) or input.Press(GAMEPAD_BUTTON_UP) then
+						self.choice = self.choice - 1
+						self.font_blink_timer = 0
+					end
+					if input.Press(KEYBOARD_BUTTON_DOWN) or input.Press(string.byte('S')) or input.Press(GAMEPAD_BUTTON_DOWN) then
+						self.choice = self.choice + 1
+						self.font_blink_timer = 0
+					end
+					if self.choice < 1 then
+						self.choice = #self.dialog.choices
+					end
+					if self.choice > #self.dialog.choices then
+						self.choice = 1
+					end
+					if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) then
+						if self.dialog.choices[self.choice].action ~= nil then
+							self.dialog.choices[self.choice].action() -- execute dialog choice action
+						end
+						self:Next()
+					end
+				else
+					-- No dialog choices:
+					self.override_input = true
+					self:CinematicCamera(self.character, player, scene, cam)
+
+					if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) then
+						if self.dialog.action_after ~= nil then
+							self.dialog.action_after() -- execute dialog action after ended
+						end
+						self:Next()
+						self.font.ResetTypewriter()
+					end
+					-- Blinking advance conversation icon:
+					self.advance_font.SetColor(vector.Lerp(Vector(0,0,0,0), self.font.GetColor(), math.abs(math.sin(self.font_blink_timer * math.pi))))	
+				end
+
+				-- Turn off talking animation:
+				if self.character.expression ~= INVALID_ENTITY then
+					scene.Component_GetExpression(self.character.expression).SetForceTalkingEnabled(false)
+				end
+			end
+
+		end,
+		
+		Enter = function(self, character)
+			backlog_post("Entering conversation")
+			self.state = ConversationState.Talking
+			self.character = character
+			if #self.character.dialogs < self.character.next_dialog then
+				self.character.next_dialog = 1
+			end
+			self:Next()
+		end,
+	
+		Exit = function(self)
+			backlog_post("Exiting conversation")
+			self.state = ConversationState.Disabled
+			self.dialog = {}
+			self.override_input = false
+			self.font.ResetTypewriter()
+		end,
+
+		Next = function(self)
+			if #self.character.dialogs < self.character.next_dialog then
+				self:Exit()
+			end
+			if self.state == ConversationState.Disabled then
+				return
+			end
+			self.dialog = self.character.dialogs[self.character.next_dialog]
+			self.character.next_dialog = self.character.next_dialog + 1
+			self.state = ConversationState.Talking
+			self.font.SetText(self.dialog[1])
+			self.font.SetTypewriterTime(string.len(self.dialog[1] or "") / self.speed)
+			self.font.ResetTypewriter()
+			if self.dialog.action ~= nil then
+				self.dialog.action() -- execute dialog action
+			end
+		end,
+
+		CinematicCamera = function(self, character_foreground, character_background, scene, camera)
+			local head_pos = scene.Component_GetTransform(character_foreground.head).GetPosition()
+			local forward_dir = vector.Subtract(character_background.position, character_foreground.position).Normalize()
+			forward_dir = vector.TransformNormal(forward_dir, matrix.RotationY(math.pi * 0.1))
+			local up_dir = Vector(0,1,0)
+			local right_dir = vector.Cross(up_dir, forward_dir).Normalize()
+			local cam_pos = vector.Add(head_pos, forward_dir)
+			local cam_target = vector.Add(vector.Add(head_pos, vector.Multiply(right_dir, -0.4)), Vector(0,-0.1))
+			local lookat = matrix.Inverse(matrix.LookAt(cam_pos, cam_target))
+			camera.TransformCamera(lookat)
+			camera.UpdateCamera()
+			camera.SetFocalLength(vector.Subtract(head_pos, camera.GetPosition()).Length())
+		end
+	}
+	self.font.SetSize(20)
+	self.font.SetColor(Vector(0.6,0.8,1,1))
+	self.advance_font.SetSize(24)
+	local sound = Sound()
+	local soundinstance = SoundInstance()
+	audio.CreateSound(script_dir() .. "assets/typewriter.wav", sound)
+	audio.CreateSoundInstance(sound, soundinstance)
+	audio.SetVolume(0.2, soundinstance)
+	self.font.SetTypewriterSound(sound, soundinstance)
+	return self
+end
+local conversation = Conversation()
 
 local scene = GetScene()
 
@@ -41,7 +259,17 @@ local States = {
 	JUMP = "jump",
 	SWIM_IDLE = "swim_idle",
 	SWIM = "swim",
-	DANCE = "dance"
+	DANCE = "dance",
+	WAVE = "wave"
+}
+
+local Mood = {
+	Neutral = ExpressionPreset.Neutral,
+	Happy = ExpressionPreset.Happy,
+	Angry = ExpressionPreset.Angry,
+	Sad = ExpressionPreset.Sad,
+	Relaxed = ExpressionPreset.Relaxed,
+	Surprised = ExpressionPreset.Surprised
 }
 
 local enable_footprints = true
@@ -60,7 +288,8 @@ local function LoadAnimations(model_name)
 		JUMP = anim_scene.Entity_FindByName("jump"),
 		SWIM_IDLE = anim_scene.Entity_FindByName("swim_idle"),
 		SWIM = anim_scene.Entity_FindByName("swim"),
-		DANCE = anim_scene.Entity_FindByName("dance")
+		DANCE = anim_scene.Entity_FindByName("dance"),
+		WAVE = anim_scene.Entity_FindByName("wave"),
 	}
 	scene.Merge(anim_scene)
 end
@@ -73,16 +302,8 @@ local function Character(model_name, start_position, face, controllable)
 		target_rot_horizontal = 0,
 		target_rot_vertical = 0,
 		target_height = 0,
-		current_anim = INVALID_ENTITY,
-		idle_anim = INVALID_ENTITY,
-		walk_anim = INVALID_ENTITY,
-		jog_anim = INVALID_ENTITY,
-		run_anim = INVALID_ENTITY,
-		jump_anim = INVALID_ENTITY,
-		swim_idle_anim = INVALID_ENTITY,
-		dance_anim = INVALID_ENTITY,
-		swim_anim = INVALID_ENTITY,
-		all_anims = {},
+		anims = {},
+		anim_amount = 1,
 		neck = INVALID_ENTITY,
 		head = INVALID_ENTITY,
 		left_hand = INVALID_ENTITY,
@@ -111,12 +332,16 @@ local function Character(model_name, start_position, face, controllable)
 		root_bone_offset = 0,
 		foot_placed_left = false,
 		foot_placed_right = false,
+		mood = Mood.Neutral,
+		mood_amount = 1,
 
 		patrol_waypoints = {},
 		patrol_next = 0,
 		patrol_wait = 0,
 		patrol_reached = false,
 		hired = nil,
+		dialogs = {},
+		next_dialog = 1,
 		
 		Create = function(self, model_name, start_position, face, controllable)
 			self.start_position = start_position
@@ -172,27 +397,26 @@ local function Character(model_name, start_position, face, controllable)
 			for i,entity in ipairs(scene.Entity_GetExpressionArray()) do
 				if scene.Entity_IsDescendant(entity, self.model) then
 					self.expression = entity
-					self.happy = 0
-					break
+
+					-- Set up some overrides to avoid bad looking expression combinations:
+					local expression = scene.Component_GetExpression(self.expression)
+					expression.SetPresetOverrideBlink(ExpressionPreset.Happy, ExpressionOverride.Block)
+					expression.SetPresetOverrideMouth(ExpressionPreset.Happy, ExpressionOverride.Blend)
+					expression.SetPresetOverrideBlink(ExpressionPreset.Surprised, ExpressionOverride.Block)
 				end
 			end
 
 			self.root = scene.Entity_FindByName("Root", self.model)
 			
-			self.idle_anim = scene.RetargetAnimation(self.humanoid, animations.IDLE, false)
-			self.walk_anim = scene.RetargetAnimation(self.humanoid, animations.WALK, false)
-			self.jog_anim = scene.RetargetAnimation(self.humanoid, animations.JOG, false)
-			self.run_anim = scene.RetargetAnimation(self.humanoid, animations.RUN, false)
-			self.jump_anim = scene.RetargetAnimation(self.humanoid, animations.JUMP, false)
-			self.swim_idle_anim = scene.RetargetAnimation(self.humanoid, animations.SWIM_IDLE, false)
-			self.swim_anim = scene.RetargetAnimation(self.humanoid, animations.SWIM, false)
-			self.dance_anim = scene.RetargetAnimation(self.humanoid, animations.DANCE, false)
-			
-			for i,entity in ipairs(scene.Entity_GetAnimationArray()) do
-				if scene.Entity_IsDescendant(entity, self.model) then
-					table.insert(self.all_anims, entity)
-				end
-			end
+			self.anims[States.IDLE] = scene.RetargetAnimation(self.humanoid, animations.IDLE, false)
+			self.anims[States.WALK] = scene.RetargetAnimation(self.humanoid, animations.WALK, false)
+			self.anims[States.JOG] = scene.RetargetAnimation(self.humanoid, animations.JOG, false)
+			self.anims[States.RUN] = scene.RetargetAnimation(self.humanoid, animations.RUN, false)
+			self.anims[States.JUMP] = scene.RetargetAnimation(self.humanoid, animations.JUMP, false)
+			self.anims[States.SWIM_IDLE] = scene.RetargetAnimation(self.humanoid, animations.SWIM_IDLE, false)
+			self.anims[States.SWIM] = scene.RetargetAnimation(self.humanoid, animations.SWIM, false)
+			self.anims[States.DANCE] = scene.RetargetAnimation(self.humanoid, animations.DANCE, false)
+			self.anims[States.WAVE] = scene.RetargetAnimation(self.humanoid, animations.WAVE, false)
 			
 			local model_transform = scene.Component_GetTransform(self.model)
 			model_transform.ClearTransform()
@@ -250,7 +474,7 @@ local function Character(model_name, start_position, face, controllable)
 			model_transform.Translate(savedPos)
 			model_transform.UpdateTransform()
 			
-			if controllable then
+			if self.controllable then
 				-- Camera target control:
 
 				-- read from gamepad analog stick:
@@ -271,40 +495,22 @@ local function Character(model_name, start_position, face, controllable)
 				
 				self.target_rot_horizontal = self.target_rot_horizontal + diff.GetX()
 				self.target_rot_vertical = math.clamp(self.target_rot_vertical + diff.GetY(), -math.pi * 0.3, math.pi * 0.4) -- vertical camers limits
-			
-				if self.dance_anim ~= INVALID_ENTITY and self.state == States.IDLE and input.Press(string.byte('C')) then
-					self.state = States.DANCE
-				end
 			end
 
-			if self.state == States.DANCE then
-				self.happy = math.lerp(self.happy, 1, 0.1)
-			else
-				self.happy = math.lerp(self.happy, 0, 0.1)
-			end
+			-- Blend to current mood, blend out other moods:
 			local expression = scene.Component_GetExpression(self.expression)
-			expression.SetPresetWeight(ExpressionPreset.Happy, self.happy)
+			for i,preset in pairs(Mood) do
+				local weight = expression.GetPresetWeight(preset)
+				if preset == self.mood then
+					weight = math.lerp(weight, self.mood_amount, 0.1)
+				else
+					weight = math.lerp(weight, 0, 0.1)
+				end
+				expression.SetPresetWeight(preset, weight)
+			end
 			
 			-- state and animation update
-			if(self.state == States.IDLE) then
-				self.current_anim = self.idle_anim
-			elseif(self.state == States.WALK) then
-				self.current_anim = self.walk_anim
-			elseif(self.state == States.JOG) then
-				self.current_anim = self.jog_anim
-			elseif(self.state == States.RUN) then
-				self.current_anim = self.run_anim
-			elseif(self.state == States.JUMP) then
-				self.current_anim = self.jump_anim
-			elseif(self.state == States.SWIM_IDLE) then
-				self.current_anim = self.swim_idle_anim
-			elseif(self.state == States.SWIM) then
-				self.current_anim = self.swim_anim
-			elseif(self.state == States.DANCE) then
-				self.current_anim = self.dance_anim
-			end
-			
-			local current_anim = scene.Component_GetAnimation(self.current_anim)
+			local current_anim = scene.Component_GetAnimation(self.anims[self.state])
 			if current_anim ~= nil then
 				-- Play current anim:
 				current_anim.Play()
@@ -320,7 +526,7 @@ local function Character(model_name, start_position, face, controllable)
 						self.state = States.IDLE
 					end
 				else
-					if self.velocity.Length() < 0.1 and self.state ~= States.SWIM_IDLE and self.state ~= States.SWIM and self.state ~= States.DANCE then
+					if self.velocity.Length() < 0.1 and self.state ~= States.SWIM_IDLE and self.state ~= States.SWIM and self.state ~= States.DANCE and self.state ~= States.WAVE then
 						self.state = States.IDLE
 					end
 				end
@@ -346,7 +552,7 @@ local function Character(model_name, start_position, face, controllable)
 				end
 			end
 
-			if controllable then
+			if self.controllable then
 				if not backlog_isactive() then
 					-- Movement input:
 					local lookDir = Vector()
@@ -388,7 +594,7 @@ local function Character(model_name, start_position, face, controllable)
 							end
 						end
 						
-						if(input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2)) then
+						if(input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_3)) then
 							self:Jump(self.jump_speed)
 						end
 					elseif self.velocity.GetY() > 0 then
@@ -493,7 +699,7 @@ local function Character(model_name, start_position, face, controllable)
 				--	But the player can still collide with NPC and can be blocked
 				collision_layer = collision_layer & ~Layers.Player
 			end
-			local current_anim = scene.Component_GetAnimation(self.current_anim)
+			local current_anim = scene.Component_GetAnimation(self.anims[self.state])
 			local ground_intersect = false
 			local platform_velocity_accumulation = Vector()
 			local platform_velocity_count = 0
@@ -539,11 +745,11 @@ local function Character(model_name, start_position, face, controllable)
 				-- Animation blending
 				if current_anim ~= nil then
 					-- Blend in current animation:
-					current_anim.SetAmount(math.lerp(current_anim.GetAmount(), 1, 0.1))
+					current_anim.SetAmount(math.lerp(current_anim.GetAmount(), self.anim_amount, 0.1))
 					
 					-- Ease out other animations:
-					for i,anim in ipairs(self.all_anims) do
-						if (anim ~= INVALID_ENTITY) and (anim ~= self.current_anim) then
+					for i,anim in pairs(self.anims) do
+						if (anim ~= INVALID_ENTITY) and (anim ~= self.anims[self.state]) then
 							local prev_anim = scene.Component_GetAnimation(anim)
 							prev_anim.SetAmount(math.lerp(prev_anim.GetAmount(), 0, 0.1))
 							if prev_anim.GetAmount() <= 0 then
@@ -552,7 +758,7 @@ local function Character(model_name, start_position, face, controllable)
 						end
 					end
 				end
-
+				
 			end
 
 			if platform_velocity_count > 0 then
@@ -715,6 +921,14 @@ local function Character(model_name, start_position, face, controllable)
 			end
 		end,
 
+		Follow = function(self, leader)
+			self.hired = leader
+		end,
+		Unfollow = function(self)
+			self.hired = nil
+			self.patrol_waypoints = {}
+		end,
+
 	}
 
 	self:Create(model_name, start_position, face, controllable)
@@ -735,16 +949,12 @@ local ResolveCharacters = function(characterA, characterB)
 			humanoidA.SetLookAt(headB)
 			humanoidB.SetLookAt(headA)
 
-			if characterB.controllable then
-				if input.Press(KEYBOARD_BUTTON_ENTER) then
-					characterA.hired = characterB
+			local facing_amount = vector.Dot(characterB.face, vector.Subtract(characterA.position, characterB.position).Normalize())
+			if #characterA.dialogs > 0 and conversation.state == ConversationState.Disabled and facing_amount > 0.8 then
+				if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(GAMEPAD_BUTTON_2) then
+					conversation:Enter(characterA)
 				end
-
-				if characterA.hired == nil then
-					DrawDebugText("Hello there!\nPress ENTER to hire me!", vector.Add(headA, Vector(0,0.4)), Vector(1,0.2,1,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
-				else
-					DrawDebugText("Where are we going?", vector.Add(headA, Vector(0,0.4)), Vector(0.2,1,0.2,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
-				end
+				DrawDebugText("", vector.Add(headA, Vector(0,0.4)), Vector(1,1,1,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
 			end
 		end
 
@@ -888,10 +1098,6 @@ local function ThirdPersonCamera(character)
 			-- Feed back camera after collision:
 			camera.TransformCamera(camera_transform)
 			camera.UpdateCamera()
-			
-			camera.ApertureSize = self.character.happy
-			camera.FocalLength = vector.Subtract(scene.Component_GetTransform(self.character.head).GetPosition(), camera.GetPosition()).Length()
-
 				
 		end,
 	}
@@ -943,10 +1149,13 @@ runProcess(function()
 
 	--application.SetInfoDisplay(false)
 	application.SetFPSDisplay(true)
-	--path.SetResolutionScale(0.5)
+	--path.SetResolutionScale(0.75)
 	--path.SetFSR2Enabled(true)
 	--path.SetFSR2Preset(FSR2_Preset.Performance)
 	--SetProfilerEnabled(true)
+
+	path.AddFont(conversation.font)
+	path.AddFont(conversation.advance_font)
 
 	while true do
 
@@ -978,7 +1187,12 @@ runProcess(function()
 			end
 		end
 
-		camera:Update()
+		conversation:Update(path, scene, player)
+		player.controllable = not conversation.override_input
+
+		if not conversation.override_input then
+			camera:Update()
+		end
 
 		update()
 		
@@ -1021,10 +1235,11 @@ runProcess(function()
 	help_text = help_text .. "WASD/arrows/left analog stick: walk\n"
 	help_text = help_text .. "SHIFT/right shoulder button: walk -> jog\n"
 	help_text = help_text .. "E/left shoulder button: jog -> run\n"
-	help_text = help_text .. "SPACE/gamepad X/gamepad button 2: Jump\n"
+	help_text = help_text .. "SPACE/gamepad X/gamepad button 3: Jump\n"
 	help_text = help_text .. "Right Mouse Button/Right thumbstick: rotate camera\n"
 	help_text = help_text .. "Scoll middle mouse/Left-Right triggers: adjust camera distance\n"
 	help_text = help_text .. "ESCAPE key: quit\n"
+	help_text = help_text .. "ENTER key: interact\n"
 	help_text = help_text .. "R: reload script\n"
 	help_text = help_text .. "H: toggle debug draw\n"
 	help_text = help_text .. "L: toggle framerate lock\n"
@@ -1083,7 +1298,64 @@ runProcess(function()
 	end
 end)
 
+-- Conversation dialogs:
+local dialogtree = {
+	-- Dialog starts here:
+	{"Hello! Today is a nice day for a walk, isn't it? The sun is shining, the wind blows lightly, and the temperature is just perfect! To be honest, I don't need anything else to be happy."},
+	{"I just finished my morning routine and I'm ready for the day. What should I do now...?"},
+	{
+		"Anything I can do for you?",
+		choices = {
+			{
+				"Follow me!",
+				action = function()
+					conversation.character:Follow(player)
+					conversation.character.next_dialog = 4
+				end
+			},
+			{
+				"Never mind.",
+				action = function()
+					conversation.character.next_dialog = 5
+				end
+			}
+		}
+	},
 
+	-- Dialog 4: When chosen [Follow me] or [Just keep following me]
+	{"Lead the way!", action_after = function() conversation:Exit() conversation.character.next_dialog = 6 end},
+
+	-- Dialog 5: When chosen [Never mind] - this also modifies mood (expression) and state (anim) while dialog is playing
+	{
+		"Have a nice day!",
+		action = function()
+			conversation.character.mood = Mood.Happy
+			conversation.character.state = States.WAVE
+			conversation.character.anim_amount = 0.1
+		end,
+		action_after = function()
+			conversation.character.mood = Mood.Neutral
+			conversation.character.state = States.IDLE
+			conversation.character.anim_amount = 1
+			conversation:Exit() 
+			conversation.character.next_dialog = 1 
+		end
+	},
+
+	-- Dialog 6: After Dialog 4 finished, so character is following player
+	{
+		"Where are we going?",
+		choices = {
+			{"Just keep following me.", action = function() conversation.character.next_dialog = 4 end},
+			{"Stay here!", action = function() conversation.character:Unfollow() end}
+		}
+	},
+	{"Gotcha!"}, -- After chosen [Stay here]
+}
+
+for i,npc in pairs(npcs) do
+	npc.dialogs = dialogtree
+end
 
 -- Patrol waypoints:
 

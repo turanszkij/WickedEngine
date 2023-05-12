@@ -60,7 +60,7 @@ namespace wi::scene
 			impostorInstanceOffset = uint32_t(instanceArraySize);
 			instanceArraySize += 1;
 		}
-		if (instanceBuffer.desc.size < (instanceArraySize * sizeof(ShaderMeshInstance)))
+		if (instanceUploadBuffer[0].desc.size < (instanceArraySize * sizeof(ShaderMeshInstance)))
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderMeshInstance);
@@ -93,7 +93,7 @@ namespace wi::scene
 			impostorMaterialOffset = uint32_t(materialArraySize);
 			materialArraySize += 1;
 		}
-		if (materialBuffer.desc.size < (materialArraySize * sizeof(ShaderMaterial)))
+		if (materialUploadBuffer[0].desc.size < (materialArraySize * sizeof(ShaderMaterial)))
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderMaterial);
@@ -241,7 +241,7 @@ namespace wi::scene
 			impostorGeometryOffset = uint32_t(geometryArraySize);
 			geometryArraySize += 1;
 		}
-		if (geometryBuffer.desc.size < (geometryArraySize * sizeof(ShaderGeometry)))
+		if (geometryUploadBuffer[0].desc.size < (geometryArraySize * sizeof(ShaderGeometry)))
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderGeometry);

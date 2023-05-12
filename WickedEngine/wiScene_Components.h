@@ -968,7 +968,8 @@ namespace wi::scene
 
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);
 		void UpdateCamera();
-		void TransformCamera(const TransformComponent& transform);
+		void TransformCamera(const XMMATRIX& W);
+		void TransformCamera(const TransformComponent& transform) { TransformCamera(XMLoadFloat4x4(&transform.world)); }
 		void Reflect(const XMFLOAT4& plane = XMFLOAT4(0, 1, 0, 0));
 
 		inline XMVECTOR GetEye() const { return XMLoadFloat3(&Eye); }

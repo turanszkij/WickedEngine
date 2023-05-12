@@ -350,6 +350,8 @@ Gives you the ability to render text with a custom font.
 - SetShadowBolden(float value)
 - SetShadowSoftness(float value)
 - SetShadowOffset(Vector value)
+- SetHorizontalWrapping(float value)
+- SetHidden(bool value)
 - GetText() : string result
 - GetSize() : int result
 - GetPos() : Vector result
@@ -362,6 +364,17 @@ Gives you the ability to render text with a custom font.
 - GetShadowBolden() : float result
 - GetShadowSoftness() : float result
 - GetShadowOffset() : Vector result
+- GetHorizontalWrapping() : float result
+- IsHidden() : bool result
+- TextSize() : Vector result -- returns text width and height in a Vector's X and Y components
+- SetTypewriterTime(float value) -- time to fully type the text in seconds (0: disable)
+- SetTypewriterLooped(bool value)) -- if true, typing starts over when finished
+- SetTypewriterCharacterStart(int value) -- starting character for the animation
+- SetTypewriterSound(Sound sound, SoundInstance soundinstance) -- sound effect when new letter appears
+- ResetTypewriter() -- resets typewriter to first character
+- TypewriterFinish() -- finished typewriter animation immediately
+- IsTypewriterFinished() : bool -- returns tru if typewrites animation is finished, false otherwise
+
 
 ### Texture
 Just holds texture information in VRAM.
@@ -693,6 +706,7 @@ Describes an orientation in 3D space.
 
 - UpdateCamera()  -- update the camera matrices
 - TransformCamera(TransformComponent transform)  -- copies the transform's orientation to the camera, and sets the camera position, look direction and up direction. Camera matrices are not updated immediately. They will be updated by the Scene::Update() (if the camera is part of the scene), or by manually calling UpdateCamera()
+- TransformCamera(Matrix matrix)
 - GetFOV() : float result
 - SetFOV(float value)	-- Sets the vertical field of view for the camera (value is an angle in radians)
 - GetNearPlane() : float result
@@ -985,7 +999,7 @@ Describes a Rigid Body Physics object.
 - LinearDamping : float
 - AngularDamping : float
 - BoxParams_HalfExtents : Vector
-- SphereParams_Radius : floatd
+- SphereParams_Radius : float
 - CapsuleParams_Radius : float
 - CapsuleParams_Height : float
 - TargetMeshLOD : int
@@ -1072,6 +1086,13 @@ Describes a Collider object.
 - GetPresetWeight(ExpressionPreset preset) : float	-- returns current weight of preset expression
 - SetForceTalkingEnabled(bool value) -- Force continuous talking animation, even if no voice is playing
 - IsForceTalkingEnabled() : bool
+- SetPresetOverrideMouth(ExpressionPreset preset, ExpressionOverride override)
+- SetPresetOverrideBlink(ExpressionPreset preset, ExpressionOverride override)
+- SetPresetOverrideLook(ExpressionPreset preset, ExpressionOverride override)
+- SetOverrideMouth(int id, ExpressionOverride override)
+- SetOverrideBlink(int id, ExpressionOverride override)
+- SetOverrideLook(int id, ExpressionOverride override)
+
 
 [outer] ExpressionPreset = {
 	Happy = 0,
@@ -1092,6 +1113,12 @@ Describes a Collider object.
 	LookLeft = 15,
 	LookRight = 16,
 	Neutral = 17,
+}
+
+[outer] ExpressionOverride = {
+	None = 0,
+	Block = 1,
+	Blend = 2,
 }
 
 

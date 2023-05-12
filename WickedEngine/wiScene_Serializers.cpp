@@ -1825,6 +1825,12 @@ namespace wi::scene
 			{
 				Expression& expression = expressions[expression_index];
 				archive >> expression.name;
+				if (expression.preset == ExpressionComponent::Preset::Count && expression.name.compare("Surprised") == 0)
+				{
+					// Vroid was not exporting Suprised expression properly and it was not handled at import for some models:
+					expression.preset = ExpressionComponent::Preset::Surprised;
+					presets[size_t(ExpressionComponent::Preset::Surprised)] = int(expression_index);
+				}
 				archive >> expression.weight;
 
 				uint32_t value = 0;

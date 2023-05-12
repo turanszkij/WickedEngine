@@ -189,7 +189,7 @@ namespace wi::audio
 		WAVEFORMATEX wfx = {};
 		wi::vector<uint8_t> audioData;
 	};
-	struct SoundInstanceInternal
+	struct SoundInstanceInternal : public IXAudio2VoiceCallback
 	{
 		std::shared_ptr<AudioInternal> audio;
 		std::shared_ptr<SoundInternal> soundinternal;
@@ -198,11 +198,55 @@ namespace wi::audio
 		wi::vector<float> outputMatrix;
 		wi::vector<float> channelAzimuths;
 		XAUDIO2_BUFFER buffer = {};
+		bool ended = true;
 
 		~SoundInstanceInternal()
 		{
 			sourceVoice->Stop();
 			sourceVoice->DestroyVoice();
+		}
+
+		// Called just before this voice's processing pass begins.
+		STDMETHOD_(void, OnVoiceProcessingPassStart) (THIS_ UINT32 BytesRequired)
+		{
+		}
+
+		// Called just after this voice's processing pass ends.
+		STDMETHOD_(void, OnVoiceProcessingPassEnd) (THIS)
+		{
+		}
+
+		// Called when this voice has just finished playing a buffer stream
+		// (as marked with the XAUDIO2_END_OF_STREAM flag on the last buffer).
+		STDMETHOD_(void, OnStreamEnd) (THIS)
+		{
+			ended = true;
+		}
+
+		// Called when this voice is about to start processing a new buffer.
+		STDMETHOD_(void, OnBufferStart) (THIS_ void* pBufferContext)
+		{
+			ended = false;
+		}
+
+		// Called when this voice has just finished processing a buffer.
+		// The buffer can now be reused or destroyed.
+		STDMETHOD_(void, OnBufferEnd) (THIS_ void* pBufferContext)
+		{
+		}
+
+		// Called when this voice has just reached the end position of a loop.
+		STDMETHOD_(void, OnLoopEnd) (THIS_ void* pBufferContext)
+		{
+		}
+
+		// Called in the event of a critical error during voice processing,
+		// such as a failing xAPO or an error from the hardware XMA decoder.
+		// The voice may have to be destroyed and re-created to recover from
+		// the error.  The callback arguments report which buffer was being
+		// processed when the error occurred, and its HRESULT code.
+		STDMETHOD_(void, OnVoiceError) (THIS_ void* pBufferContext, HRESULT Error)
+		{
 		}
 	};
 	SoundInternal* to_internal(const Sound* param)
@@ -366,7 +410,7 @@ namespace wi::audio
 		};
 
 		hr = instanceinternal->audio->audioEngine->CreateSourceVoice(&instanceinternal->sourceVoice, &soundinternal->wfx,
-			0, XAUDIO2_DEFAULT_FREQ_RATIO, NULL, &SFXSendList, NULL);
+			0, XAUDIO2_DEFAULT_FREQ_RATIO, instanceinternal.get(), &SFXSendList, NULL);
 		if (FAILED(hr))
 		{
 			assert(0);
@@ -425,8 +469,11 @@ namespace wi::audio
 			assert(SUCCEEDED(hr));
 			hr = instanceinternal->sourceVoice->FlushSourceBuffers(); // reset submitted audio buffer
 			assert(SUCCEEDED(hr));
-			hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&audio_internal->termination_mark); // mark this as terminated, this resets XAUDIO2_VOICE_STATE::SamplesPlayed to zero
-			assert(SUCCEEDED(hr));
+			if (!instanceinternal->ended) // if already ended, don't submit end again, it can cause high pitched jerky sound
+			{
+				hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&audio_internal->termination_mark); // mark this as terminated, this resets XAUDIO2_VOICE_STATE::SamplesPlayed to zero
+				assert(SUCCEEDED(hr));
+			}
 			hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer); // resubmit
 			assert(SUCCEEDED(hr));
 		}
@@ -467,6 +514,15 @@ namespace wi::audio
 			HRESULT hr = instanceinternal->sourceVoice->ExitLoop();
 			assert(SUCCEEDED(hr));
 		}
+	}
+	bool IsEnded(SoundInstance* instance)
+	{
+		if (instance != nullptr && instance->IsValid())
+		{
+			auto instanceinternal = to_internal(instance);
+			return instanceinternal->ended;
+		}
+		return false;
 	}
 
 	SampleInfo GetSampleInfo(const Sound* sound)
@@ -743,6 +799,7 @@ namespace wi::audio
 		wi::vector<float> outputMatrix;
 		wi::vector<float> channelAzimuths;
 		FAudioBuffer buffer = {};
+		bool ended = true;
 
 		~SoundInstanceInternal(){
 			FAudioSourceVoice_Stop(sourceVoice, 0, FAUDIO_COMMIT_NOW);
@@ -994,6 +1051,15 @@ namespace wi::audio
 			uint32_t res = FAudioSourceVoice_ExitLoop(instanceinternal->sourceVoice, FAUDIO_COMMIT_NOW);
 			assert(res == 0);
 		}
+	}
+	bool IsEnded(SoundInstance* instance)
+	{
+		if (instance != nullptr && instance->IsValid())
+		{
+			auto instanceinternal = to_internal(instance);
+			return instanceinternal->ended;
+		}
+		return false;
 	}
 
 	SampleInfo GetSampleInfo(const Sound* sound)

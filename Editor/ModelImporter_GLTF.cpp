@@ -1987,6 +1987,14 @@ void Import_Extension_VRM(LoaderState& state)
 						{
 							expression.preset = ExpressionComponent::Preset::Neutral;
 						}
+						else if (!presetName.compare("SURPRISED"))
+						{
+							expression.preset = ExpressionComponent::Preset::Surprised;
+						}
+						else if (!wi::helper::toUpper(expression.name).compare("SURPRISED")) // wtf vroid
+						{
+							expression.preset = ExpressionComponent::Preset::Surprised;
+						}
 
 						const size_t preset_index = (size_t)expression.preset;
 						if (preset_index < arraysize(component.presets))
