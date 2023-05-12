@@ -5,7 +5,7 @@
 --		WASD/left thumbstick: walk
 --		SHIFT/right shoulder button: walk -> jog
 --		E/left shoulder button: jog -> run
---		SPACE/gamepad X/gamepad button 2: jump
+--		SPACE/gamepad X/gamepad button 3: jump
 --		Right Mouse Button/Right thumbstick: rotate camera
 --		Scoll middle mouse/Left-Right triggers: adjust camera distance
 --		H: toggle debug draw
@@ -103,7 +103,7 @@ local function Conversation()
 				end
 
 				-- Skip talking:
-				if input.Press(KEYBOARD_BUTTON_ENTER) then
+				if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) then
 					self.font.TypewriterFinish()
 				end
 
@@ -141,11 +141,11 @@ local function Conversation()
 					end
 
 					-- Dialog input:
-					if input.Press(KEYBOARD_BUTTON_UP) then
+					if input.Press(KEYBOARD_BUTTON_UP) or input.Press(string.byte('W')) or input.Press(GAMEPAD_BUTTON_UP) then
 						self.choice = self.choice - 1
 						self.font_blink_timer = 0
 					end
-					if input.Press(KEYBOARD_BUTTON_DOWN) then
+					if input.Press(KEYBOARD_BUTTON_DOWN) or input.Press(string.byte('S')) or input.Press(GAMEPAD_BUTTON_DOWN) then
 						self.choice = self.choice + 1
 						self.font_blink_timer = 0
 					end
@@ -155,7 +155,7 @@ local function Conversation()
 					if self.choice > #self.dialog.choices then
 						self.choice = 1
 					end
-					if input.Press(KEYBOARD_BUTTON_ENTER) then
+					if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) then
 						if self.dialog.choices[self.choice].action ~= nil then
 							self.dialog.choices[self.choice].action() -- execute dialog choice action
 						end
@@ -166,7 +166,7 @@ local function Conversation()
 					self.override_input = true
 					self:CinematicCamera(self.character, scene, cam)
 
-					if input.Press(KEYBOARD_BUTTON_ENTER) then
+					if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) then
 						if self.dialog.action_after ~= nil then
 							self.dialog.action_after() -- execute dialog action after ended
 						end
@@ -596,7 +596,7 @@ local function Character(model_name, start_position, face, controllable)
 							end
 						end
 						
-						if(input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2)) then
+						if(input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_3)) then
 							self:Jump(self.jump_speed)
 						end
 					elseif self.velocity.GetY() > 0 then
@@ -953,7 +953,7 @@ local ResolveCharacters = function(characterA, characterB)
 
 			local facing_amount = vector.Dot(characterB.face, vector.Subtract(characterA.position, characterB.position).Normalize())
 			if #characterA.dialogs > 0 and conversation.state == ConversationState.Disabled and facing_amount > 0.8 then
-				if input.Press(KEYBOARD_BUTTON_ENTER) then
+				if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(GAMEPAD_BUTTON_2) then
 					conversation:Enter(characterA)
 				end
 				DrawDebugText("", vector.Add(headA, Vector(0,0.4)), Vector(1,1,1,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
@@ -1237,10 +1237,11 @@ runProcess(function()
 	help_text = help_text .. "WASD/arrows/left analog stick: walk\n"
 	help_text = help_text .. "SHIFT/right shoulder button: walk -> jog\n"
 	help_text = help_text .. "E/left shoulder button: jog -> run\n"
-	help_text = help_text .. "SPACE/gamepad X/gamepad button 2: Jump\n"
+	help_text = help_text .. "SPACE/gamepad X/gamepad button 3: Jump\n"
 	help_text = help_text .. "Right Mouse Button/Right thumbstick: rotate camera\n"
 	help_text = help_text .. "Scoll middle mouse/Left-Right triggers: adjust camera distance\n"
 	help_text = help_text .. "ESCAPE key: quit\n"
+	help_text = help_text .. "ENTER key: interact\n"
 	help_text = help_text .. "R: reload script\n"
 	help_text = help_text .. "H: toggle debug draw\n"
 	help_text = help_text .. "L: toggle framerate lock\n"
@@ -1326,7 +1327,7 @@ npcs[4].dialogs = {
 	-- Dialog 4: When chosen [Follow me] or [Just keep following me]
 	{"Lead the way!", action_after = function() conversation:Exit() conversation.character.next_dialog = 6 end},
 
-	-- Dialog 5: When chosen [Never mind]
+	-- Dialog 5: When chosen [Never mind] - this also modifies mood (expression) and state (anim) while dialog is playing
 	{
 		"Have a nice day!",
 		action = function()
