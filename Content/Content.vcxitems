@@ -320,39 +320,11 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_angry.lua">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_angry.wiscene">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_expression.lua">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_happy.lua">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_happy.wiscene">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_lookat.lua">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
     <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_lookat.wiscene">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_sad.lua">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_sad.wiscene">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
@@ -642,6 +614,7 @@
   </ItemGroup>
   <ItemGroup>
     <Media Include="$(MSBuildThisFileDirectory)models\water.wav" />
+    <Media Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\typewriter.wav" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)models\Sponza\copyright.txt" />

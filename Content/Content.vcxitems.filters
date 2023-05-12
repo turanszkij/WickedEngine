@@ -198,31 +198,10 @@
     <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\open_door.lua">
       <Filter>scripts\character_controller\assets</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_angry.lua">
-      <Filter>scripts\character_controller\assets</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_angry.wiscene">
-      <Filter>scripts\character_controller\assets</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_expression.lua">
-      <Filter>scripts\character_controller\assets</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_happy.lua">
-      <Filter>scripts\character_controller\assets</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_happy.wiscene">
-      <Filter>scripts\character_controller\assets</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_lookat.lua">
       <Filter>scripts\character_controller\assets</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_lookat.wiscene">
-      <Filter>scripts\character_controller\assets</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_sad.lua">
-      <Filter>scripts\character_controller\assets</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\zone_sad.wiscene">
       <Filter>scripts\character_controller\assets</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\character_controller.lua">
@@ -600,6 +579,9 @@
   <ItemGroup>
     <Media Include="$(MSBuildThisFileDirectory)models\water.wav">
       <Filter>models</Filter>
+    </Media>
+    <Media Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\typewriter.wav">
+      <Filter>scripts\character_controller\assets</Filter>
     </Media>
   </ItemGroup>
   <ItemGroup>
