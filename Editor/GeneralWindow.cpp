@@ -251,6 +251,10 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&bonePickerOpacitySlider);
 
+	skeletonsVisibleCheckBox.Create("Skeletons always visible: ");
+	skeletonsVisibleCheckBox.SetTooltip("Armature skeletons will be always visible, even when not selected.");
+	AddWidget(&skeletonsVisibleCheckBox);
+
 
 	localizationButton.Create(ICON_LANGUAGE " Create Localization Template");
 	localizationButton.SetTooltip("Generate a file that can be used to edit localization for the Editor.\nThe template will be created from the currently selected language.");
@@ -659,6 +663,7 @@ void GeneralWindow::ResizeLayout()
 	width -= padding * 6;
 	add(transformToolOpacitySlider);
 	add(bonePickerOpacitySlider);
+	add_right(skeletonsVisibleCheckBox);
 
 	y += jump;
 	width = prev_width;

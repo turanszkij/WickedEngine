@@ -1336,9 +1336,10 @@ npcs[4].dialogs = {
 		end,
 		action_after = function()
 			conversation.character.mood = Mood.Neutral
-			conversation:Exit() conversation.character.next_dialog = 1 
 			conversation.character.state = States.IDLE
 			conversation.character.anim_amount = 1
+			conversation:Exit() 
+			conversation.character.next_dialog = 1 
 		end
 	},
 

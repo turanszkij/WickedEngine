@@ -3084,6 +3084,12 @@ void EditorComponent::SaveAs()
 
 void EditorComponent::CheckBonePickingEnabled()
 {
+	if (optionsWnd.generalWnd.skeletonsVisibleCheckBox.GetCheck())
+	{
+		bone_picking = true;
+		return;
+	}
+
 	// Check if armature or bone is selected to allow bone picking:
 	//	(Don't want to always enable bone picking, because it can make the screen look very busy.)
 	Scene& scene = GetCurrentScene();
