@@ -1118,12 +1118,12 @@ LoadAnimations(script_dir() .. "assets/animations.wiscene")
 local player = Character(script_dir() .. "assets/character.wiscene", Vector(0,0.5,0), Vector(0,0,1), true)
 local npcs = {
 	-- Patrolling NPC IDs: 1,2,3
-	Character(script_dir() .. "assets/max.wiscene", Vector(4,0.1,4), Vector(0,0,-1), false),
-	Character(script_dir() .. "assets/otto.wiscene", Vector(-8,1,4), Vector(-1,0,0), false),
-	Character(script_dir() .. "assets/carl.wiscene", Vector(-2,0.1,8), Vector(-1,0,0), false),
+	Character(script_dir() .. "assets/character.wiscene", Vector(4,0.1,4), Vector(0,0,-1), false),
+	Character(script_dir() .. "assets/character.wiscene", Vector(-8,1,4), Vector(-1,0,0), false),
+	Character(script_dir() .. "assets/character.wiscene", Vector(-2,0.1,8), Vector(-1,0,0), false),
 
 	-- stationary NPC IDs: 3,4....
-	Character(script_dir() .. "assets/johnny.wiscene", Vector(-1,0.1,-6), Vector(0,0,1), false),
+	Character(script_dir() .. "assets/character.wiscene", Vector(-1,0.1,-6), Vector(0,0,1), false),
 	--Character(script_dir() .. "assets/character.wiscene", Vector(10.8,0.1,4.1), Vector(0,0,-1), false),
 	--Character(script_dir() .. "assets/character.wiscene", Vector(11.1,4,7.2), Vector(-1,0,0), false),
 }
@@ -1149,8 +1149,8 @@ runProcess(function()
 	application.SetActivePath(path)	
 
 	--application.SetInfoDisplay(false)
-	--application.SetFPSDisplay(true)
-	path.SetResolutionScale(0.75)
+	application.SetFPSDisplay(true)
+	--path.SetResolutionScale(0.75)
 	--path.SetFSR2Enabled(true)
 	--path.SetFSR2Preset(FSR2_Preset.Performance)
 	--SetProfilerEnabled(true)
