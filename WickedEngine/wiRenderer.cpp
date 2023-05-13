@@ -319,7 +319,7 @@ inline PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
 {
 	return &PSO_object[variant.bits.renderpass][variant.bits.shadertype][variant.value];
 }
-wi::jobsystem::context object_pso_job_ctx;
+wi::jobsystem::context object_pso_job_ctx[RENDERPASS_COUNT];
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
 
@@ -1629,15 +1629,15 @@ void LoadShaders()
 
 	
 
-	// default objectshaders:
-	//	We don't wait for these here, because then it can slow down the init time a lot
-	//	We will wait for these to complete in RenderMeshes() just before they will be first used
-	wi::jobsystem::Wait(object_pso_job_ctx);
 	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
+		// default objectshaders:
+		//	We don't wait for these here, because then it can slow down the init time a lot
+		//	We will wait for these to complete in RenderMeshes() just before they will be first used
+		wi::jobsystem::Wait(object_pso_job_ctx[renderPass]);
 		for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)
 		{
-			wi::jobsystem::Execute(object_pso_job_ctx, [=](wi::jobsystem::JobArgs args) {
+			wi::jobsystem::Execute(object_pso_job_ctx[renderPass], [=](wi::jobsystem::JobArgs args) {
 				for (uint32_t blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
 				{
 					for (uint32_t cullMode = 0; cullMode <= 3; ++cullMode)
@@ -2582,7 +2582,7 @@ void Workaround(const int bug , CommandList cmd)
 		//PE: https://github.com/turanszkij/WickedEngine/issues/450#issuecomment-1143647323
 
 		//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
-		wi::jobsystem::Wait(object_pso_job_ctx);
+		wi::jobsystem::Wait(object_pso_job_ctx[RENDERPASS_VOXELIZE]);
 		ObjectRenderingVariant variant = {};
 		variant.bits.renderpass = RENDERPASS_VOXELIZE;
 		variant.bits.blendmode = BLENDMODE_OPAQUE;
@@ -2615,7 +2615,7 @@ void RenderMeshes(
 
 	device->EventBegin("RenderMeshes", cmd);
 
-	wi::jobsystem::Wait(object_pso_job_ctx);
+	wi::jobsystem::Wait(object_pso_job_ctx[renderPass]);
 	RenderPassInfo renderpass_info = device->GetRenderPassInfo(cmd);
 
 	const bool tessellation =
