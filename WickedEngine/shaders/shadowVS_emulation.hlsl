@@ -1,2 +1,2 @@
 #define VPRT_EMULATION
-#include "cubeShadowVS.hlsl"
+#include "shadowVS.hlsl"
