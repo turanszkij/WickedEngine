@@ -52,8 +52,8 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	const uint2 subtile = unflatten2D(subtile_idx, MOTIONBLUR_TILESIZE / POSTPROCESS_BLOCKSIZE);
 	const uint2 subtile_upperleft = tile * MOTIONBLUR_TILESIZE + subtile * POSTPROCESS_BLOCKSIZE;
 	const uint2 pixel = subtile_upperleft + unflatten2D(GTid.x, POSTPROCESS_BLOCKSIZE);
-
-	if (!GetCamera().is_pixel_inside_scissor(pixel))
+	const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
+	if (!GetCamera().is_uv_inside_scissor(uv))
 		return;
 
 	float4 color;
@@ -68,8 +68,6 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	const float2 neighborhood_velocity = neighborhoodmax[(pixel + (dither((float2)pixel) - 0.5f) * 16) / MOTIONBLUR_TILESIZE] * strength; // dither to reduce tile artifact
 	const float neighborhood_velocity_magnitude = length(neighborhood_velocity);
 	const float4 center_color = input[pixel];
-
-	const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 
 	const float2 center_velocity = texture_velocity.SampleLevel(sampler_point_clamp, uv, 0).xy * strength;
 	const float center_velocity_magnitude = length(center_velocity);

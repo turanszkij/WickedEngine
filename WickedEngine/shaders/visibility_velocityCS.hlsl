@@ -9,14 +9,15 @@ RWTexture2D<float2> output_velocity : register(u0);
 void main(uint2 DTid : SV_DispatchThreadID)
 {
 	uint2 pixel = DTid.xy;
+	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
+
 	[branch]
-	if (!GetCamera().is_pixel_inside_scissor(pixel))
+	if (!GetCamera().is_uv_inside_scissor(uv))
 	{
 		output_velocity[pixel] = 0;
 		return;
 	}
 
-	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
 	RayDesc ray = CreateCameraRay(clipspace);
 
