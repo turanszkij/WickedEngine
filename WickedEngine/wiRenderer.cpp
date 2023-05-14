@@ -2626,6 +2626,8 @@ void RenderMeshes(
 	uint32_t prev_stencilref = STENCILREF_DEFAULT;
 	device->BindStencilRef(prev_stencilref, cmd);
 
+	const GPUBuffer* prev_ib = nullptr;
+
 	// This will be called every time we start a new draw call:
 	auto batch_flush = [&]()
 	{
@@ -2647,7 +2649,7 @@ void RenderMeshes(
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 		}
 
-		device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
+		bool index_buffer_set_for_mesh = false;
 
 		uint32_t first_subset = 0;
 		uint32_t last_subset = 0;
@@ -2727,6 +2729,12 @@ void RenderMeshes(
 			{
 				prev_stencilref = stencilRef;
 				device->BindStencilRef(stencilRef, cmd);
+			}
+
+			if (prev_ib != &mesh.generalBuffer)
+			{
+				device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
+				prev_ib = &mesh.generalBuffer;
 			}
 
 			if (renderPass != RENDERPASS_PREPASS && renderPass != RENDERPASS_VOXELIZE) // depth only alpha test will be full res
