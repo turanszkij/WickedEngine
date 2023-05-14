@@ -309,6 +309,21 @@ wi::vector<ShaderEntry> shaders = {
 	{"shadowGS_transparent_emulation", wi::graphics::ShaderStage::GS },
 	{"voxelGS", wi::graphics::ShaderStage::GS },
 	{"objectGS_voxelizer", wi::graphics::ShaderStage::GS },
+	{"objectVS_simple", wi::graphics::ShaderStage::VS },
+	{"objectVS_common", wi::graphics::ShaderStage::VS },
+	{"objectVS_common_tessellation", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass_alphatest", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass_tessellation", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass_alphatest_tessellation", wi::graphics::ShaderStage::VS },
+	{"objectVS_simple_tessellation", wi::graphics::ShaderStage::VS },
+	{"shadowVS", wi::graphics::ShaderStage::VS },
+	{"shadowVS_alphatest", wi::graphics::ShaderStage::VS },
+	{"shadowVS_emulation", wi::graphics::ShaderStage::VS },
+	{"shadowVS_alphatest_emulation", wi::graphics::ShaderStage::VS },
+	{"shadowVS_transparent", wi::graphics::ShaderStage::VS },
+	{"shadowVS_transparent_emulation", wi::graphics::ShaderStage::VS },
+
 
 
 	{"objectDS", wi::graphics::ShaderStage::DS },
@@ -406,24 +421,8 @@ int main(int argc, char* argv[])
 			{ ShaderFormat::HLSL6, "shaders/hlsl6/" },
 			{ ShaderFormat::SPIRV, "shaders/spirv/" },
 		};
-		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6\n";
+		std::cout << "No shader formats were specified, assuming command arguments: spirv hlsl6\n";
 	}
-
-	shaders.push_back({ "objectVS_simple", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "objectVS_common", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "objectVS_common_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "objectVS_prepass", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "objectVS_prepass_alphatest", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "objectVS_prepass_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "objectVS_prepass_alphatest_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "objectVS_simple_tessellation", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "shadowVS", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "shadowVS_alphatest", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "shadowVS_emulation", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "shadowVS_alphatest_emulation", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "shadowVS_transparent", wi::graphics::ShaderStage::VS });
-	shaders.push_back({ "shadowVS_transparent_emulation", wi::graphics::ShaderStage::VS });
-
 
 	// permutations for objectPS:
 	shaders.push_back({ "objectPS", wi::graphics::ShaderStage::PS });
