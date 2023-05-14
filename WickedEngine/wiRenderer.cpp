@@ -396,23 +396,6 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 			}
 		}
 		break;
-	case RENDERPASS_SHADOWCUBE:
-		if (transparent)
-		{
-			realVS = VSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT;
-		}
-		else
-		{
-			if (alphatest)
-			{
-				realVS = VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
-			}
-			else
-			{
-				realVS = VSTYPE_SHADOWCUBEMAPRENDER;
-			}
-		}
-		break;
 	case RENDERPASS_VOXELIZE:
 		realVS = VSTYPE_VOXELIZER;
 		break;
@@ -437,22 +420,22 @@ SHADERTYPE GetGSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 			break;
 		realGS = GSTYPE_ENVMAP_EMULATION;
 		break;
-	case RENDERPASS_SHADOWCUBE:
+	case RENDERPASS_SHADOW:
 		if (device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
 			break;
 		if (transparent)
 		{
-			realGS = GSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT_EMULATION;
+			realGS = GSTYPE_SHADOW_TRANSPARENT_EMULATION;
 		}
 		else
 		{
 			if (alphatest)
 			{
-				realGS = GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST_EMULATION;
+				realGS = GSTYPE_SHADOW_ALPHATEST_EMULATION;
 			}
 			else
 			{
-				realGS = GSTYPE_SHADOWCUBEMAPRENDER_EMULATION;
+				realGS = GSTYPE_SHADOW_EMULATION;
 			}
 		}
 		break;
@@ -529,7 +512,6 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Ma
 		realPS = PSTYPE_ENVMAP;
 		break;
 	case RENDERPASS_SHADOW:
-	case RENDERPASS_SHADOWCUBE:
 		if (transparent)
 		{
 			realPS = shaderType == MaterialComponent::SHADERTYPE_WATER ? PSTYPE_SHADOW_WATER : PSTYPE_SHADOW_TRANSPARENT;
@@ -757,13 +739,7 @@ void LoadShaders()
 		});
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
-		LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW], "shadowVS.cso");
-		});
-
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_SIMPLE], "objectVS_simple.cso");
-		LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_ALPHATEST], "shadowVS_alphatest.cso");
-		LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_TRANSPARENT], "shadowVS_transparent.cso");
 		});
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
@@ -815,23 +791,23 @@ void LoadShaders()
 	{
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_ENVMAP], "envMapVS.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_ENVMAP_SKY], "envMap_skyVS.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER], "cubeShadowVS.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], "cubeShadowVS_alphatest.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT], "cubeShadowVS_transparent.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW], "shadowVS.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_ALPHATEST], "shadowVS_alphatest.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_TRANSPARENT], "shadowVS_transparent.cso"); });
 	}
 	else
 	{
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_ENVMAP], "envMapVS_emulation.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_ENVMAP_SKY], "envMap_skyVS_emulation.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER], "cubeShadowVS_emulation.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], "cubeShadowVS_alphatest_emulation.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT], "cubeShadowVS_transparent_emulation.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW], "shadowVS_emulation.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_ALPHATEST], "shadowVS_alphatest_emulation.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_TRANSPARENT], "shadowVS_transparent_emulation.cso"); });
 
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_ENVMAP_EMULATION], "envMapGS_emulation.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_ENVMAP_SKY_EMULATION], "envMap_skyGS_emulation.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_SHADOWCUBEMAPRENDER_EMULATION], "cubeShadowGS_emulation.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST_EMULATION], "cubeShadowGS_alphatest_emulation.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_SHADOWCUBEMAPRENDER_TRANSPARENT_EMULATION], "cubeShadowGS_transparent_emulation.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_SHADOW_EMULATION], "shadowGS_emulation.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_SHADOW_ALPHATEST_EMULATION], "shadowGS_alphatest_emulation.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_SHADOW_TRANSPARENT_EMULATION], "shadowGS_transparent_emulation.cso"); });
 	}
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR], "impostorPS.cso"); });
@@ -1223,7 +1199,6 @@ void LoadShaders()
 		const bool impostorRequest =
 			args.jobIndex != RENDERPASS_VOXELIZE &&
 			args.jobIndex != RENDERPASS_SHADOW &&
-			args.jobIndex != RENDERPASS_SHADOWCUBE &&
 			args.jobIndex != RENDERPASS_ENVMAPCAPTURE;
 		if (!impostorRequest)
 		{
@@ -1691,7 +1666,6 @@ void LoadShaders()
 								switch (renderPass)
 								{
 								case RENDERPASS_SHADOW:
-								case RENDERPASS_SHADOWCUBE:
 									desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
 									break;
 								default:
@@ -1701,7 +1675,6 @@ void LoadShaders()
 								switch (renderPass)
 								{
 								case RENDERPASS_SHADOW:
-								case RENDERPASS_SHADOWCUBE:
 									desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
 									break;
 								case RENDERPASS_MAIN:
@@ -1735,7 +1708,6 @@ void LoadShaders()
 								switch (renderPass)
 								{
 								case RENDERPASS_SHADOW:
-								case RENDERPASS_SHADOWCUBE:
 									desc.rs = &rasterizers[cullMode == (int)CullMode::NONE ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
 									break;
 								case RENDERPASS_VOXELIZE:
@@ -1812,7 +1784,6 @@ void LoadShaders()
 								break;
 
 								case RENDERPASS_SHADOW:
-								case RENDERPASS_SHADOWCUBE:
 								{
 									RenderPassInfo renderpass_info;
 									renderpass_info.rt_count = 1;
@@ -2630,9 +2601,7 @@ void RenderMeshes(
 		renderPass == RENDERPASS_ENVMAPCAPTURE ||
 		renderPass == RENDERPASS_VOXELIZE;
 
-	const bool shadowRendering =
-		renderPass == RENDERPASS_SHADOW ||
-		renderPass == RENDERPASS_SHADOWCUBE;
+	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
 
 	// Pre-allocate space for all the instances in GPU-buffer:
 	const size_t alloc_size = renderQueue.size() * frustum_count * sizeof(ShaderMeshInstancePointer);
@@ -2693,7 +2662,7 @@ void RenderMeshes(
 
 			bool subsetRenderable = filterMask & material.GetFilterMask();
 
-			if (renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE)
+			if (shadowRendering)
 			{
 				subsetRenderable = subsetRenderable && material.IsCastingShadow();
 			}
@@ -5243,6 +5212,8 @@ void DrawShadowmaps(
 		XMStoreFloat4(&cam_frustum.Orientation, XMQuaternionNormalize(XMLoadFloat4(&cam_frustum.Orientation)));
 
 		static thread_local RenderQueue renderQueue;
+		CameraCB cb;
+		cb.init();
 
 		const RenderPassImage rp[] = {
 			RenderPassImage::DepthStencil(
@@ -5310,8 +5281,7 @@ void DrawShadowmaps(
 
 					if (!renderQueue.empty())
 					{
-						CameraCB cb;
-						XMStoreFloat4x4(&cb.view_projection, shcams[cascade].view_projection);
+						XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
 						device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 						Viewport vp;
@@ -5374,8 +5344,7 @@ void DrawShadowmaps(
 							cmd
 						);
 
-					CameraCB cb;
-					XMStoreFloat4x4(&cb.view_projection, shcam.view_projection);
+					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 					Viewport vp;
@@ -5445,13 +5414,12 @@ void DrawShadowmaps(
 					Frustum frusta[arraysize(cameras)];
 					uint32_t frustum_count = 0;
 
-					CubemapRenderCB cb;
 					for (uint32_t shcam = 0; shcam < arraysize(cameras); ++shcam)
 					{
 						if (cam_frustum.Intersects(cameras[shcam].boundingfrustum))
 						{
-							XMStoreFloat4x4(&cb.xCubemapRenderCams[frustum_count].view_projection, cameras[shcam].view_projection);
-							cb.xCubemapRenderCams[frustum_count].properties = uint4(shcam, 0, 0, 0);
+							XMStoreFloat4x4(&cb.cameras[frustum_count].view_projection, cameras[shcam].view_projection);
+							cb.cameras[frustum_count].output_index = shcam;
 							frusta[frustum_count] = cameras[shcam].frustum;
 							frustum_count++;
 						}
@@ -5462,14 +5430,14 @@ void DrawShadowmaps(
 						vp[shcam].min_depth = 0.0f;
 						vp[shcam].max_depth = 1.0f;
 					}
-					device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
+					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 					device->BindViewports(arraysize(vp), vp, cmd);
 
 					renderQueue.sort_opaque();
-					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, FILTER_OPAQUE, cmd, 0, frusta, frustum_count);
+					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd, 0, frusta, frustum_count);
 					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 					{
-						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, FILTER_TRANSPARENT | FILTER_WATER, cmd, false, frusta, frustum_count);
+						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd, false, frusta, frustum_count);
 					}
 
 					if (predicationRequest && light.occlusionquery >= 0)
@@ -7212,19 +7180,17 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		CreateCubemapCameras(probe.position, zNearP, zFarP, cameras, arraysize(cameras));
 		Frustum frusta[arraysize(cameras)];
 
-		CubemapRenderCB cb;
+		CameraCB cb;
+		cb.init();
 		for (uint32_t i = 0; i < arraysize(cameras); ++i)
 		{
 			frusta[i] = cameras[i].frustum;
-			XMStoreFloat4x4(&cb.xCubemapRenderCams[i].view_projection, cameras[i].view_projection);
-			XMStoreFloat4x4(&cb.xCubemapRenderCams[i].inverse_view_projection, cameras[i].view_projection);
-			cb.xCubemapRenderCams[i].properties = uint4(i, 0, 0, 0);
+			XMStoreFloat4x4(&cb.cameras[i].view_projection, cameras[i].view_projection);
+			XMStoreFloat4x4(&cb.cameras[i].inverse_view_projection, cameras[i].view_projection);
+			cb.cameras[i].position = probe.position;
+			cb.cameras[i].output_index = i;
 		}
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
-
-		CameraCB camcb;
-		camcb.position = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
-		device->BindDynamicConstantBuffer(camcb, CBSLOT_RENDERER_CAMERA, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 		if (vis.scene->weather.IsRealisticSky())
 		{
@@ -7588,9 +7554,10 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		// Reset SkyAtmosphere SkyViewLut after usage:
 		{
-			CameraCB camcb;
-			camcb.position = vis.camera->Eye;
-			device->BindDynamicConstantBuffer(camcb, CBSLOT_RENDERER_CAMERA, cmd);
+			CameraCB cb;
+			cb.init();
+			cb.cameras[0].position = vis.camera->Eye;
+			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 			ComputeSkyAtmosphereSkyViewLut(cmd);
 		}
@@ -8879,85 +8846,87 @@ void BindCameraCB(
 )
 {
 	CameraCB cb;
+	cb.init();
+	ShaderCamera& shadercam = cb.cameras[0];
 
-	XMStoreFloat4x4(&cb.view_projection, camera.GetViewProjection());
-	XMStoreFloat4x4(&cb.view, camera.GetView());
-	XMStoreFloat4x4(&cb.projection, camera.GetProjection());
-	cb.position = camera.Eye;
-	cb.distance_from_origin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&cb.position)));
-	XMStoreFloat4x4(&cb.inverse_view, camera.GetInvView());
-	XMStoreFloat4x4(&cb.inverse_projection, camera.GetInvProjection());
-	XMStoreFloat4x4(&cb.inverse_view_projection, camera.GetInvViewProjection());
-	cb.forward = camera.At;
-	cb.up = camera.Up;
-	cb.z_near = camera.zNearP;
-	cb.z_far = camera.zFarP;
-	cb.z_near_rcp = 1.0f / std::max(0.0001f, cb.z_near);
-	cb.z_far_rcp = 1.0f / std::max(0.0001f, cb.z_far);
-	cb.z_range = abs(cb.z_far - cb.z_near);
-	cb.z_range_rcp = 1.0f / std::max(0.0001f, cb.z_range);
-	cb.clip_plane = camera.clipPlane;
+	XMStoreFloat4x4(&shadercam.view_projection, camera.GetViewProjection());
+	XMStoreFloat4x4(&shadercam.view, camera.GetView());
+	XMStoreFloat4x4(&shadercam.projection, camera.GetProjection());
+	shadercam.position = camera.Eye;
+	shadercam.distance_from_origin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&shadercam.position)));
+	XMStoreFloat4x4(&shadercam.inverse_view, camera.GetInvView());
+	XMStoreFloat4x4(&shadercam.inverse_projection, camera.GetInvProjection());
+	XMStoreFloat4x4(&shadercam.inverse_view_projection, camera.GetInvViewProjection());
+	shadercam.forward = camera.At;
+	shadercam.up = camera.Up;
+	shadercam.z_near = camera.zNearP;
+	shadercam.z_far = camera.zFarP;
+	shadercam.z_near_rcp = 1.0f / std::max(0.0001f, shadercam.z_near);
+	shadercam.z_far_rcp = 1.0f / std::max(0.0001f, shadercam.z_far);
+	shadercam.z_range = abs(shadercam.z_far - shadercam.z_near);
+	shadercam.z_range_rcp = 1.0f / std::max(0.0001f, shadercam.z_range);
+	shadercam.clip_plane = camera.clipPlane;
 
-	static_assert(arraysize(camera.frustum.planes) == arraysize(cb.frustum.planes), "Mismatch!");
+	static_assert(arraysize(camera.frustum.planes) == arraysize(shadercam.frustum.planes), "Mismatch!");
 	for (int i = 0; i < arraysize(camera.frustum.planes); ++i)
 	{
-		cb.frustum.planes[i] = camera.frustum.planes[i];
+		shadercam.frustum.planes[i] = camera.frustum.planes[i];
 	}
 
-	cb.temporalaa_jitter = camera.jitter;
-	cb.temporalaa_jitter_prev = camera_previous.jitter;
+	shadercam.temporalaa_jitter = camera.jitter;
+	shadercam.temporalaa_jitter_prev = camera_previous.jitter;
 
-	XMStoreFloat4x4(&cb.previous_view, camera_previous.GetView());
-	XMStoreFloat4x4(&cb.previous_projection, camera_previous.GetProjection());
-	XMStoreFloat4x4(&cb.previous_view_projection, camera_previous.GetViewProjection());
-	XMStoreFloat4x4(&cb.previous_inverse_view_projection, camera_previous.GetInvViewProjection());
-	XMStoreFloat4x4(&cb.reflection_view_projection, camera_reflection.GetViewProjection());
-	XMStoreFloat4x4(&cb.reprojection, camera.GetInvViewProjection() * camera_previous.GetViewProjection());
+	XMStoreFloat4x4(&shadercam.previous_view, camera_previous.GetView());
+	XMStoreFloat4x4(&shadercam.previous_projection, camera_previous.GetProjection());
+	XMStoreFloat4x4(&shadercam.previous_view_projection, camera_previous.GetViewProjection());
+	XMStoreFloat4x4(&shadercam.previous_inverse_view_projection, camera_previous.GetInvViewProjection());
+	XMStoreFloat4x4(&shadercam.reflection_view_projection, camera_reflection.GetViewProjection());
+	XMStoreFloat4x4(&shadercam.reprojection, camera.GetInvViewProjection() * camera_previous.GetViewProjection());
 
-	cb.focal_length = camera.focal_length;
-	cb.aperture_size = camera.aperture_size;
-	cb.aperture_shape = camera.aperture_shape;
+	shadercam.focal_length = camera.focal_length;
+	shadercam.aperture_size = camera.aperture_size;
+	shadercam.aperture_shape = camera.aperture_shape;
 
-	cb.canvas_size = float2(camera.canvas.GetLogicalWidth(), camera.canvas.GetLogicalHeight());
-	cb.canvas_size_rcp = float2(1.0f / cb.canvas_size.x, 1.0f / cb.canvas_size.y);
-	cb.internal_resolution = uint2((uint)camera.width, (uint)camera.height);
-	cb.internal_resolution_rcp = float2(1.0f / std::max(1u, cb.internal_resolution.x), 1.0f / std::max(1u, cb.internal_resolution.y));
+	shadercam.canvas_size = float2(camera.canvas.GetLogicalWidth(), camera.canvas.GetLogicalHeight());
+	shadercam.canvas_size_rcp = float2(1.0f / shadercam.canvas_size.x, 1.0f / shadercam.canvas_size.y);
+	shadercam.internal_resolution = uint2((uint)camera.width, (uint)camera.height);
+	shadercam.internal_resolution_rcp = float2(1.0f / std::max(1u, shadercam.internal_resolution.x), 1.0f / std::max(1u, shadercam.internal_resolution.y));
 
-	cb.scissor.x = camera.scissor.left;
-	cb.scissor.y = camera.scissor.top;
-	cb.scissor.z = camera.scissor.right;
-	cb.scissor.w = camera.scissor.bottom;
+	shadercam.scissor.x = camera.scissor.left;
+	shadercam.scissor.y = camera.scissor.top;
+	shadercam.scissor.z = camera.scissor.right;
+	shadercam.scissor.w = camera.scissor.bottom;
 
 	// scissor_uv is also offset by 0.5 (half pixel) to avoid going over last pixel center with bilinear sampler:
-	cb.scissor_uv.x = (cb.scissor.x + 0.5f) * cb.internal_resolution_rcp.x;
-	cb.scissor_uv.y = (cb.scissor.y + 0.5f) * cb.internal_resolution_rcp.y;
-	cb.scissor_uv.z = (cb.scissor.z - 0.5f) * cb.internal_resolution_rcp.x;
-	cb.scissor_uv.w = (cb.scissor.w - 0.5f) * cb.internal_resolution_rcp.y;
+	shadercam.scissor_uv.x = (shadercam.scissor.x + 0.5f) * shadercam.internal_resolution_rcp.x;
+	shadercam.scissor_uv.y = (shadercam.scissor.y + 0.5f) * shadercam.internal_resolution_rcp.y;
+	shadercam.scissor_uv.z = (shadercam.scissor.z - 0.5f) * shadercam.internal_resolution_rcp.x;
+	shadercam.scissor_uv.w = (shadercam.scissor.w - 0.5f) * shadercam.internal_resolution_rcp.y;
 
-	cb.entity_culling_tilecount = GetEntityCullingTileCount(cb.internal_resolution);
-	cb.sample_count = camera.sample_count;
-	cb.visibility_tilecount = GetVisibilityTileCount(cb.internal_resolution);
-	cb.visibility_tilecount_flat = cb.visibility_tilecount.x * cb.visibility_tilecount.y;
+	shadercam.entity_culling_tilecount = GetEntityCullingTileCount(shadercam.internal_resolution);
+	shadercam.sample_count = camera.sample_count;
+	shadercam.visibility_tilecount = GetVisibilityTileCount(shadercam.internal_resolution);
+	shadercam.visibility_tilecount_flat = shadercam.visibility_tilecount.x * shadercam.visibility_tilecount.y;
 
-	cb.texture_primitiveID_index = camera.texture_primitiveID_index;
-	cb.texture_depth_index = camera.texture_depth_index;
-	cb.texture_lineardepth_index = camera.texture_lineardepth_index;
-	cb.texture_velocity_index = camera.texture_velocity_index;
-	cb.texture_normal_index = camera.texture_normal_index;
-	cb.texture_roughness_index = camera.texture_roughness_index;
-	cb.buffer_entitytiles_opaque_index = camera.buffer_entitytiles_opaque_index;
-	cb.buffer_entitytiles_transparent_index = camera.buffer_entitytiles_transparent_index;
-	cb.texture_reflection_index = camera.texture_reflection_index;
-	cb.texture_refraction_index = camera.texture_refraction_index;
-	cb.texture_waterriples_index = camera.texture_waterriples_index;
-	cb.texture_ao_index = camera.texture_ao_index;
-	cb.texture_ssr_index = camera.texture_ssr_index;
-	cb.texture_rtshadow_index = camera.texture_rtshadow_index;
-	cb.texture_rtdiffuse_index = camera.texture_rtdiffuse_index;
-	cb.texture_surfelgi_index = camera.texture_surfelgi_index;
-	cb.texture_depth_index_prev = camera_previous.texture_depth_index;
-	cb.texture_vxgi_diffuse_index = camera.texture_vxgi_diffuse_index;
-	cb.texture_vxgi_specular_index = camera.texture_vxgi_specular_index;
+	shadercam.texture_primitiveID_index = camera.texture_primitiveID_index;
+	shadercam.texture_depth_index = camera.texture_depth_index;
+	shadercam.texture_lineardepth_index = camera.texture_lineardepth_index;
+	shadercam.texture_velocity_index = camera.texture_velocity_index;
+	shadercam.texture_normal_index = camera.texture_normal_index;
+	shadercam.texture_roughness_index = camera.texture_roughness_index;
+	shadercam.buffer_entitytiles_opaque_index = camera.buffer_entitytiles_opaque_index;
+	shadercam.buffer_entitytiles_transparent_index = camera.buffer_entitytiles_transparent_index;
+	shadercam.texture_reflection_index = camera.texture_reflection_index;
+	shadercam.texture_refraction_index = camera.texture_refraction_index;
+	shadercam.texture_waterriples_index = camera.texture_waterriples_index;
+	shadercam.texture_ao_index = camera.texture_ao_index;
+	shadercam.texture_ssr_index = camera.texture_ssr_index;
+	shadercam.texture_rtshadow_index = camera.texture_rtshadow_index;
+	shadercam.texture_rtdiffuse_index = camera.texture_rtdiffuse_index;
+	shadercam.texture_surfelgi_index = camera.texture_surfelgi_index;
+	shadercam.texture_depth_index_prev = camera_previous.texture_depth_index;
+	shadercam.texture_vxgi_diffuse_index = camera.texture_vxgi_diffuse_index;
+	shadercam.texture_vxgi_specular_index = camera.texture_vxgi_specular_index;
 
 	device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 }

@@ -410,38 +410,19 @@ int main(int argc, char* argv[])
 	}
 
 	shaders.push_back({ "objectVS_simple", wi::graphics::ShaderStage::VS });
-
 	shaders.push_back({ "objectVS_common", wi::graphics::ShaderStage::VS });
-
 	shaders.push_back({ "objectVS_common_tessellation", wi::graphics::ShaderStage::VS });
-
 	shaders.push_back({ "objectVS_prepass", wi::graphics::ShaderStage::VS });
-
 	shaders.push_back({ "objectVS_prepass_alphatest", wi::graphics::ShaderStage::VS });
-
 	shaders.push_back({ "objectVS_prepass_tessellation", wi::graphics::ShaderStage::VS });
-
 	shaders.push_back({ "objectVS_prepass_alphatest_tessellation", wi::graphics::ShaderStage::VS });
-
 	shaders.push_back({ "objectVS_simple_tessellation", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "shadowVS_transparent", wi::graphics::ShaderStage::VS });
-
 	shaders.push_back({ "shadowVS", wi::graphics::ShaderStage::VS });
-
 	shaders.push_back({ "shadowVS_alphatest", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS_alphatest", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS_emulation", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS_alphatest_emulation", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS_transparent", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS_transparent_emulation", wi::graphics::ShaderStage::VS });
+	shaders.push_back({ "shadowVS_emulation", wi::graphics::ShaderStage::VS });
+	shaders.push_back({ "shadowVS_alphatest_emulation", wi::graphics::ShaderStage::VS });
+	shaders.push_back({ "shadowVS_transparent", wi::graphics::ShaderStage::VS });
+	shaders.push_back({ "shadowVS_transparent_emulation", wi::graphics::ShaderStage::VS });
 
 
 	// permutations for objectPS:
