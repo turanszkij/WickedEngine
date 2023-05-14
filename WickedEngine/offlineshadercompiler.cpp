@@ -304,9 +304,9 @@ wi::vector<ShaderEntry> shaders = {
 	{"ddgi_debugVS", wi::graphics::ShaderStage::VS },
 	{"envMap_skyGS_emulation", wi::graphics::ShaderStage::GS },
 	{"envMapGS_emulation", wi::graphics::ShaderStage::GS },
-	{"cubeShadowGS_emulation", wi::graphics::ShaderStage::GS },
-	{"cubeShadowGS_alphatest_emulation", wi::graphics::ShaderStage::GS },
-	{"cubeShadowGS_transparent_emulation", wi::graphics::ShaderStage::GS },
+	{"shadowGS_emulation", wi::graphics::ShaderStage::GS },
+	{"shadowGS_alphatest_emulation", wi::graphics::ShaderStage::GS },
+	{"shadowGS_transparent_emulation", wi::graphics::ShaderStage::GS },
 	{"voxelGS", wi::graphics::ShaderStage::GS },
 	{"objectGS_voxelizer", wi::graphics::ShaderStage::GS },
 
