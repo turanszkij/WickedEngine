@@ -1,37 +1,40 @@
 <?xml version="1.0"?>
 <!--This file was created by Wicked Engine for language localization.-->
 <!--You can import this file with the wi::Localization::Import() function.-->
-<entry id="0">Save</entry>
-<entry id="1">Open</entry>
-<entry id="2">Backlog</entry>
-<entry id="3">Profiler</entry>
+<!--Some terminology translations are stealed from Blender.-->
+<entry id="0">保存</entry>
+<entry id="1">打开</entry>
+<entry id="2">控制台</entry>
+<entry id="3">分析器</entry>
 <entry id="4">Cinema</entry>
-<entry id="5">Full screen</entry>
-<entry id="6">Windowed</entry>
-<entry id="7">Bug report</entry>
-<entry id="8">About</entry>
-<entry id="9">Exit</entry>
-<entry id="10">Untitled scene</entry>
+<entry id="5">全屏模式</entry>
+<entry id="6">窗口模式</entry>
+<entry id="7">错误报告</entry>
+<entry id="8">关于</entry>
+<entry id="9">退出</entry>
+<entry id="10">未命名场景</entry>
 <section name="gui">
 	<section name="+" hint="Button">
-		<entry id="1" hint="tooltip">New scene</entry>
+		<entry id="1" hint="tooltip">新建场景</entry>
 	</section>
 	<section name="Backlog" hint="Button">
-		<entry id="1" hint="tooltip">Open the backlog (toggle with HOME button)</entry>
+		<entry id="1" hint="tooltip">打开控制台 (Home键切换)</entry>
 	</section>
 	<section name="" hint="Button">
-		<entry id="1" hint="tooltip">Stops every script background processes that are still running.</entry>
+		<entry id="1" hint="tooltip">停止所有后台脚本进程.</entry>
 	</section>
 	<section name="Options" hint="Window">
-		<entry id="0" hint="text">Options</entry>
+		<entry id="0" hint="text">选项</entry>
 		<section name="Graphics" hint="Window">
-			<entry id="0" hint="text">Graphics</entry>
+			<entry id="0" hint="text">图形</entry>
 			<section name="Cube Shadowmap res: " hint="ComboBox">
 				<entry id="0" hint="text">Cube Shadowmap res: </entry>
-				<entry id="1" hint="tooltip">Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...
+				<!-- "Cube Shadowmap res" translated to "立方体阴影贴图尺寸", It's so long that it's cropped-->
+				<entry id="1" hint="tooltip">设置立方体阴影贴图的质量(pointlights, area lights)
+这个值用于指定这些光源类型的阴影贴图的最大分辨率, 它们的分辨率是动态变化的, 除非单独设置为固定尺寸.
 This specifies the maximum shadow resolution for these light types, but that can dynamically change unless they are set to a fixed resolution individually.</entry>
 				<section name="items">
-					<entry id="0">Off</entry>
+					<entry id="0">关</entry>
 					<entry id="1">128</entry>
 					<entry id="2">256</entry>
 					<entry id="3">512</entry>
@@ -43,7 +46,8 @@ This specifies the maximum shadow resolution for these light types, but that can
 				<entry id="0" hint="text">Path tracing statistics</entry>
 			</section>
 			<section name="EyeAdaption: " hint="CheckBox">
-				<entry id="0" hint="text">EyeAdaption: </entry>
+				<!-- EyeAdaption -> 自动曝光 -->
+				<entry id="0" hint="text">自动曝光: </entry>
 				<entry id="1" hint="tooltip">Enable eye adaption for the overall screen luminance</entry>
 			</section>
 			<section name="Shadow type: " hint="ComboBox">
@@ -55,9 +59,12 @@ Note that ray traced shadows need hardware raytracing support, otherwise they ar
 				</section>
 			</section>
 			<section name="Display Output: " hint="ComboBox">
-				<entry id="0" hint="text">Display Output: </entry>
-				<entry id="1" hint="tooltip">Choose between different display output formats.
+				<entry id="0" hint="text">输出格式: </entry>
+				<entry id="1" hint="tooltip">选择输出格式.
+Choose between different display output formats.
+如果显示器不支持所选格式, 将自动选择可用的默认格式.
 If the display doesn't support the selected format, it will switch back to a reasonable default.
+只有当前显示器支持HDR输出时才能选择HDR格式.
 HDR formats will be only selectable when the current display supports HDR output</entry>
 				<section name="items">
 					<entry id="0">SDR 8bit</entry>
@@ -85,7 +92,7 @@ HDR formats will be only selectable when the current display supports HDR output
 				<entry id="1" hint="tooltip">Set the key value for eye adaption.</entry>
 			</section>
 			<section name="Sample count: " hint="Slider">
-				<entry id="0" hint="text">Sample count: </entry>
+				<entry id="0" hint="text">采样数: </entry>
 				<entry id="1" hint="tooltip">The path tracing will perform this many samples per pixel.</entry>
 			</section>
 			<section name="Strength: " hint="Slider">
@@ -109,7 +116,7 @@ HDR formats will be only selectable when the current display supports HDR output
 				<entry id="1" hint="tooltip">Set AO ray count. Only for SSAO</entry>
 			</section>
 			<section name="Cartoon Outline: " hint="CheckBox">
-				<entry id="0" hint="text">Cartoon Outline: </entry>
+				<entry id="0" hint="text">卡通描边: </entry>
 				<entry id="1" hint="tooltip">Toggle the cartoon outline effect. Only those materials will be outlined that have Cartoon Outline enabled.</entry>
 			</section>
 			<section name="Cutoff: " hint="Slider">
@@ -133,7 +140,7 @@ HDR formats will be only selectable when the current display supports HDR output
 				<entry id="1" hint="tooltip">Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights)...
 This specifies the maximum shadow resolution for these light types, but that can dynamically change unless they are set to a fixed resolution individually.</entry>
 				<section name="items">
-					<entry id="0">Off</entry>
+					<entry id="0">关</entry>
 					<entry id="1">128</entry>
 					<entry id="2">256</entry>
 					<entry id="3">512</entry>
@@ -147,14 +154,17 @@ This specifies the maximum shadow resolution for these light types, but that can
 				<entry id="1" hint="tooltip">Adjust the amount of smooth backface test.</entry>
 			</section>
 			<section name="RT Reflections: " hint="CheckBox">
-				<entry id="0" hint="text">RT Reflections: </entry>
-				<entry id="1" hint="tooltip">Enable Ray Traced Reflections. Only if GPU supports raytracing.</entry>
+				<!-- RTReflections -> 光线追踪反射 -->
+				<entry id="0" hint="text">光线追踪反射: </entry>
+				<entry id="1" hint="tooltip">开启基于光线追踪的反射, 仅在GPU支持时生效.
+Enable Ray Traced Reflections. Only if GPU supports raytracing.</entry>
 			</section>
 			<section name="AO: " hint="ComboBox">
-				<entry id="0" hint="text">AO: </entry>
-				<entry id="1" hint="tooltip">Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing</entry>
+				<entry id="0" hint="text">环境光遮蔽(AO): </entry>
+				<entry id="1" hint="tooltip">选择环境光屏蔽的类型. 只有硬件支持 [光线追踪] 时才能选择RTAO.
+Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing</entry>
 				<section name="items">
-					<entry id="0">Disabled</entry>
+					<entry id="0">禁用</entry>
 					<entry id="1">SSAO</entry>
 					<entry id="2">HBAO</entry>
 					<entry id="3">MSAO</entry>
@@ -172,18 +182,23 @@ This has a higher initial performance cost, but it will be faster in high polygo
 It is not compatible with MSAA and tessellation.</entry>
 			</section>
 			<section name="Render Path: " hint="ComboBox">
-				<entry id="0" hint="text">Render Path: </entry>
+				<entry id="0" hint="text">渲染路径Render Path: </entry>
 				<entry id="1" hint="tooltip">Choose a render path...
 Path tracing will use fallback raytracing with non-raytracing GPU, which will be slow.
 Changing render path will reset some graphics settings!</entry>
 				<section name="items">
-					<entry id="0">Default</entry>
-					<entry id="1">Path Tracing</entry>
+					<entry id="0">默认</entry>
+					<entry id="1">路径追踪</entry>
 				</section>
 			</section>
 			<section name="Raytrace Bounces: " hint="Slider">
-				<entry id="0" hint="text">Raytrace Bounces: </entry>
-				<entry id="1" hint="tooltip">How many light bounces to compute when doing these ray tracing effects:
+				<entry id="0" hint="text">光线反弹次数: </entry> 
+				<entry id="1" hint="tooltip">光线追踪效果中, 光线反弹的次数. 
+该设置会影响:
+- 路径追踪
+- 光照贴图烘焙
+
+How many light bounces to compute when doing these ray tracing effects:
 - Path tracing
 - Lightmap baking</entry>
 			</section>
@@ -192,8 +207,9 @@ Changing render path will reset some graphics settings!</entry>
 				<entry id="1" hint="tooltip">Disable blending of frame history. Camera Subpixel jitter will be visible.</entry>
 			</section>
 			<section name="Threshold: " hint="Slider">
-				<entry id="0" hint="text">Threshold: </entry>
-				<entry id="1" hint="tooltip">Outline edge detection threshold. Increase if not enough otlines are detected, decrease if too many outlines are detected.</entry>
+				<entry id="0" hint="text">阈值: </entry>
+				<entry id="1" hint="tooltip">描边的边缘检测阈值. 如果描边太少可增大该值, 反之减少.
+Outline edge detection threshold. Increase if not enough otlines are detected, decrease if too many outlines are detected.</entry>
 			</section>
 			<section name="FSR 2.1 Preset: " hint="ComboBox">
 				<entry id="0" hint="text">FSR 2.1 Preset: </entry>
@@ -210,8 +226,9 @@ Ultra performance: 3.0x</entry>
 				</section>
 			</section>
 			<section name="DepthOfField: " hint="CheckBox">
-				<entry id="0" hint="text">DepthOfField: </entry>
-				<entry id="1" hint="tooltip">Enable Depth of field effect. Requires additional camera setup: focal length and aperture size.</entry>
+				<entry id="0" hint="text">景深: </entry>
+				<entry id="1" hint="tooltip">开启景深. 调整 [摄像机] 的 [焦距] 和 [光圈尺寸].
+Enable Depth of field effect. Requires additional camera setup: focal length and aperture size.</entry>
 			</section>
 			<section name="Dithering: " hint="CheckBox">
 				<entry id="0" hint="text">Dithering: </entry>
@@ -231,15 +248,16 @@ Note that values other than 1.0 will cause mismatch with path tracing reference!
 				<entry id="1" hint="tooltip">Toggle visualization of the screen space light culling heatmap grid (Tiled renderer only)</entry>
 			</section>
 			<section name="Thickness: " hint="Slider">
-				<entry id="0" hint="text">Thickness: </entry>
-				<entry id="1" hint="tooltip">Set outline thickness.</entry>
+				<entry id="0" hint="text">宽度: </entry>
+				<entry id="1" hint="tooltip">设置描边宽度.</entry>
 			</section>
 			<section name="Tessellation: " hint="CheckBox">
-				<entry id="0" hint="text">Tessellation: </entry>
-				<entry id="1" hint="tooltip">Enable tessellation feature. You also need to specify a tessellation factor for individual objects.</entry>
+				<entry id="0" hint="text">曲面细分: </entry>
+				<entry id="1" hint="tooltip">启用曲面细分特性, 你还需要为每个物体单独指定曲面细分系数.
+Enable tessellation feature. You also need to specify a tessellation factor for individual objects.</entry>
 			</section>
 			<section name="VSync: " hint="CheckBox">
-				<entry id="0" hint="text">VSync: </entry>
+				<entry id="0" hint="text">垂直同步: </entry>
 				<entry id="1" hint="tooltip">Toggle vertical sync</entry>
 			</section>
 			<section name="Surfel GI: " hint="CheckBox">
@@ -268,34 +286,36 @@ Note that values other than 1.0 will cause mismatch with path tracing reference!
 				</section>
 			</section>
 			<section name="SSR: " hint="CheckBox">
-				<entry id="0" hint="text">SSR: </entry>
-				<entry id="1" hint="tooltip">Enable Screen Space Reflections. This can not reflect anything that is outside of the screen.</entry>
+				<entry id="0" hint="text">屏幕空间反射(SSR): </entry>
+				<entry id="1" hint="tooltip">开启屏幕空间反射. 只能反射屏幕空间内的内容.</entry>
 			</section>
 			<section name="VXGI Voxel Size: " hint="Slider">
 				<entry id="0" hint="text">VXGI Voxel Size: </entry>
 				<entry id="1" hint="tooltip">Adjust the voxel size for VXGI calculations.</entry>
 			</section>
 			<section name="Brightness: " hint="Slider">
-				<entry id="0" hint="text">Brightness: </entry>
+				<entry id="0" hint="text">亮度: </entry>
 			</section>
 			<section name="LensFlare: " hint="CheckBox">
 				<entry id="0" hint="text">LensFlare: </entry>
 				<entry id="1" hint="tooltip">Toggle visibility of light source flares. Additional setup needed per light for a lensflare to be visible.</entry>
 			</section>
 			<section name="Speed: " hint="Slider">
-				<entry id="0" hint="text">Speed: </entry>
-				<entry id="1" hint="tooltip">Adjust the global speed (time multiplier)</entry>
+				<entry id="0" hint="text">时间倍率: </entry>
+				<entry id="1" hint="tooltip">调整全局速度 (时间流逝速率)
+Adjust the global speed (time multiplier)</entry>
 			</section>
 			<section name="VXGI: " hint="CheckBox">
 				<entry id="0" hint="text">VXGI: </entry>
 				<entry id="1" hint="tooltip">Toggle Voxel Global Illumination.</entry>
 			</section>
 			<section name="Samples: " hint="Slider">
-				<entry id="0" hint="text">Samples: </entry>
-				<entry id="1" hint="tooltip">Sample count of contact shadows. Higher values are better quality but slower.</entry>
+				<entry id="0" hint="text">采样数: </entry>
+				<entry id="1" hint="tooltip">接触阴影 (Contact Shadow) 的采样数, 该值越高效果越好, 效率越低.
+Sample count of contact shadows. Higher values are better quality but slower.</entry>
 			</section>
 			<section name="Sharpen Filter: " hint="CheckBox">
-				<entry id="0" hint="text">Sharpen Filter: </entry>
+				<entry id="0" hint="text">锐化: </entry>
 				<entry id="1" hint="tooltip">Toggle sharpening post process of the final image.</entry>
 			</section>
 			<section name="RT Diffuse: " hint="CheckBox">
@@ -305,12 +325,14 @@ This effect computes single bounce diffuse with ray tracing per pixel.
 If DDGI is enabled, it will make it multi bounce.</entry>
 			</section>
 			<section name="Range: " hint="Slider">
-				<entry id="0" hint="text">Range: </entry>
-				<entry id="1" hint="tooltip">Range of contact shadows</entry>
+				<entry id="0" hint="text">范围: </entry>
+				<entry id="1" hint="tooltip">接触阴影的范围.
+Range of contact shadows</entry>
 			</section>
 			<section name="Resolution Scale: " hint="Slider">
-				<entry id="0" hint="text">Resolution Scale: </entry>
-				<entry id="1" hint="tooltip">Adjust the internal rendering resolution.</entry>
+				<!-- Resolution Scale -> 渲染精度-->
+				<entry id="0" hint="text">渲染精度: </entry>
+				<entry id="1" hint="tooltip">调整内部渲染分辨率.</entry>
 			</section>
 			<section name="DDGI Blend Speed: " hint="Slider">
 				<entry id="0" hint="text">DDGI Blend Speed: </entry>
@@ -331,7 +353,8 @@ Requires Tier2 support for variable shading rate</entry>
 			</section>
 			<section name="MSAA: " hint="ComboBox">
 				<entry id="0" hint="text">MSAA: </entry>
-				<entry id="1" hint="tooltip">Multisampling Anti Aliasing quality. </entry>
+				<entry id="1" hint="tooltip">多重采样抗锯齿的质量.
+Multisampling Anti Aliasing quality. </entry>
 				<section name="items">
 					<entry id="0">Off</entry>
 					<entry id="1">2</entry>
@@ -341,22 +364,24 @@ Requires Tier2 support for variable shading rate</entry>
 			</section>
 			<section name="FXAA: " hint="CheckBox">
 				<entry id="0" hint="text">FXAA: </entry>
-				<entry id="1" hint="tooltip">Fast Approximate Anti Aliasing. A fast antialiasing method, but can be a bit too blurry.</entry>
+				<entry id="1" hint="tooltip">快速近似抗锯齿. 一种性能开销较小的抗锯齿方法, 但有时很模糊.
+Fast Approximate Anti Aliasing. A fast antialiasing method, but can be a bit too blurry.</entry>
 			</section>
 			<section name="LightShafts: " hint="CheckBox">
 				<entry id="0" hint="text">LightShafts: </entry>
 				<entry id="1" hint="tooltip">Enable light shaft for directional light sources.</entry>
 			</section>
 			<section name="Chromatic Aberration: " hint="CheckBox">
-				<entry id="0" hint="text">Chromatic Aberration: </entry>
-				<entry id="1" hint="tooltip">Toggle the full screen chromatic aberration effect. This simulates lens distortion at screen edges.</entry>
+				<entry id="0" hint="text">色差: </entry>
+				<entry id="1" hint="tooltip">切换是否开启全屏色差效果. 这模拟了屏幕边缘处的镜头扭曲效果.
+Toggle the full screen chromatic aberration effect. This simulates lens distortion at screen edges.</entry>
 			</section>
 			<section name="widget_6" hint="TextInputField">
 				<entry id="1" hint="tooltip">Probe count in Y dimension.</entry>
 				<entry id="0" hint="text">8</entry>
 			</section>
 			<section name="Bloom: " hint="CheckBox">
-				<entry id="0" hint="text">Bloom: </entry>
+				<entry id="0" hint="text">辉光: </entry>
 				<entry id="1" hint="tooltip">Enable bloom. The effect adds color bleeding to the brightest parts of the scene.</entry>
 			</section>
 			<section name="VXGI Full Resolution: " hint="CheckBox">
@@ -364,35 +389,38 @@ Requires Tier2 support for variable shading rate</entry>
 				<entry id="1" hint="tooltip">Toggle resolve mode for VXGI opaque. Full resolution will use the full rendering resolution, otherwise it will be upsampled from lower resolution.</entry>
 			</section>
 			<section name="Contrast: " hint="Slider">
-				<entry id="0" hint="text">Contrast: </entry>
+				<entry id="0" hint="text">对比度: </entry>
 			</section>
 			<section name="Saturation: " hint="Slider">
-				<entry id="0" hint="text">Saturation: </entry>
+				<entry id="0" hint="text">饱和度: </entry>
 			</section>
 			<section name="Texture Quality: " hint="ComboBox">
-				<entry id="0" hint="text">Texture Quality: </entry>
+				<!-- Texture Quality -> 贴图采样方法-->
+				<entry id="0" hint="text">贴图采样方法: </entry>
 				<entry id="1" hint="tooltip">Choose a texture sampling method for material textures.</entry>
 				<section name="items">
-					<entry id="0">Nearest</entry>
-					<entry id="1">Bilinear</entry>
-					<entry id="2">Trilinear</entry>
-					<entry id="3">Anisotropic</entry>
+					<entry id="0">邻近Nearest</entry>
+					<entry id="1">双线性Bilinear</entry>
+					<entry id="2">三线性Trilinear</entry>
+					<entry id="3">各向异性Anisotropic</entry>
 				</section>
 			</section>
 			<section name="Screen Shadows: " hint="CheckBox">
 				<entry id="0" hint="text">Screen Shadows: </entry>
-				<entry id="1" hint="tooltip">Enable screen space contact shadows. This can add small shadows details to shadow maps in screen space.</entry>
+				<entry id="1" hint="tooltip">开启屏幕空间接触阴影. (Contact Shadow)Enable screen space contact shadows.
+使用屏幕空间阴影贴图增加阴影细节.
+This can add small shadows details to shadow maps in screen space.</entry>
 			</section>
 			<section name="widget_7" hint="TextInputField">
 				<entry id="1" hint="tooltip">Probe count in Z dimension.</entry>
 				<entry id="0" hint="text">32</entry>
 			</section>
 			<section name="Tonemap Exposure: " hint="Slider">
-				<entry id="0" hint="text">Tonemap Exposure: </entry>
+				<entry id="0" hint="text">色调映射 曝光: </entry>
 				<entry id="1" hint="tooltip">Set the tonemap exposure value</entry>
 			</section>
 			<section name="Sharpness: " hint="Slider">
-				<entry id="0" hint="text">Sharpness: </entry>
+				<entry id="0" hint="text">锐化: </entry>
 				<entry id="1" hint="tooltip">The sharpening amount to apply for FSR 2.1 upscaling.</entry>
 			</section>
 			<section name="Occlusion Culling: " hint="CheckBox">
@@ -404,7 +432,7 @@ Requires Tier2 support for variable shading rate</entry>
 				<entry id="1" hint="tooltip">Bias the rendered mip map level of the material textures.</entry>
 			</section>
 			<section name="MotionBlur: " hint="CheckBox">
-				<entry id="0" hint="text">MotionBlur: </entry>
+				<entry id="0" hint="text">运动模糊: </entry>
 				<entry id="1" hint="tooltip">Enable motion blur for camera movement and animated meshes.</entry>
 			</section>
 			<section name="DDGI: " hint="CheckBox">
@@ -414,15 +442,15 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 			</section>
 		</section>
 		<section name="General" hint="Window">
-			<entry id="0" hint="text">General</entry>
+			<entry id="0" hint="text">通用</entry>
 			<section name="AABB visualizer: " hint="CheckBox">
 				<entry id="0" hint="text">AABB visualizer: </entry>
 				<entry id="1" hint="tooltip">Visualize the scene bounding boxes</entry>
 			</section>
 			<section name=" Create Localization Template" hint="Button">
-				<entry id="0" hint="text"> Create Localization Template</entry>
-				<entry id="1" hint="tooltip">Generate a file that can be used to edit localization for the Editor.
-The template will be created from the currently selected language.</entry>
+				<entry id="0" hint="text"> 创建翻译模板</entry>
+				<entry id="1" hint="tooltip">为WickedEngine编辑器生成一个翻译文件模板以供编辑.
+模板将基于当前语言生成.</entry>
 			</section>
 			<section name="Name visualizer: " hint="CheckBox">
 				<entry id="0" hint="text">Name visualizer: </entry>
@@ -437,19 +465,19 @@ The template will be created from the currently selected language.</entry>
 				<entry id="1" hint="tooltip">Toggle visualization of environment probes as reflective spheres</entry>
 			</section>
 			<section name="Theme: " hint="ComboBox">
-				<entry id="0" hint="text">Theme: </entry>
-				<entry id="1" hint="tooltip">Choose a color theme...</entry>
+				<entry id="0" hint="text">颜色主题: </entry>
+				<entry id="1" hint="tooltip">选择颜色主题...</entry>
 				<section name="items">
-					<entry id="0">Dark </entry>
-					<entry id="1">Bright </entry>
-					<entry id="2">Soft </entry>
-					<entry id="3">Hacking </entry>
-					<entry id="4">Nord </entry>
+					<entry id="0">暗色 </entry>
+					<entry id="1">亮色 </entry>
+					<entry id="2">柔和 </entry>
+					<entry id="3">黑客Hacking </entry>
+					<entry id="4">北欧Nord </entry>
 				</section>
 			</section>
 			<section name="Info: " hint="CheckBox">
-				<entry id="0" hint="text">Info: </entry>
-				<entry id="1" hint="tooltip">Toggle advanced data in the info display text in top left corner.</entry>
+				<entry id="0" hint="text">调试信息: </entry>
+				<entry id="1" hint="tooltip">切换是否在左上角显示高级信息.</entry>
 			</section>
 			<section name="Force Field visualizer: " hint="CheckBox">
 				<entry id="0" hint="text">Force Field visualizer: </entry>
@@ -460,22 +488,22 @@ The template will be created from the currently selected language.</entry>
 				<entry id="1" hint="tooltip">Armature skeletons will be always visible, even when not selected.</entry>
 			</section>
 			<section name="Language: " hint="ComboBox">
-				<entry id="0" hint="text">Language: </entry>
-				<entry id="1" hint="tooltip">Select a language. 
-You can also create a new language option by adding an XML file to the languages folder.
-There is a button below that you can use to create a language template.</entry>
+				<entry id="0" hint="text">语言: </entry>
+				<entry id="1" hint="tooltip">选择一种语言. 
+你也可以在 [languages] 文件夹中添加一个XML文件, 创建新的语言选项.You can also create a new language option by adding an XML file to the languages folder.
+下面有创建新翻译模板的按钮.</entry>
 			</section>
 			<section name="Freeze culling camera: " hint="CheckBox">
 				<entry id="0" hint="text">Freeze culling camera: </entry>
 				<entry id="1" hint="tooltip">Freeze culling camera update. Scene culling will not be updated with the view</entry>
 			</section>
 			<section name="Render Wireframe: " hint="CheckBox">
-				<entry id="0" hint="text">Render Wireframe: </entry>
+				<entry id="0" hint="text">渲染线框: </entry>
 				<entry id="1" hint="tooltip">Visualize the scene as a wireframe</entry>
 			</section>
 			<section name="FPS: " hint="CheckBox">
-				<entry id="0" hint="text">FPS: </entry>
-				<entry id="1" hint="tooltip">Toggle the FPS display text in top left corner.</entry>
+				<entry id="0" hint="text">帧率: </entry>
+				<entry id="1" hint="tooltip">切换是否在左上角显示帧率.</entry>
 			</section>
 			<section name="Disable albedo maps: " hint="CheckBox">
 				<entry id="0" hint="text">Disable albedo maps: </entry>
@@ -508,8 +536,8 @@ The Dump to header () option will use embedding and create a C++ header file 
 				<entry id="1" hint="tooltip">You can control the transparency of the object placement tool</entry>
 			</section>
 			<section name="Version: " hint="CheckBox">
-				<entry id="0" hint="text">Version: </entry>
-				<entry id="1" hint="tooltip">Toggle the engine version display text in top left corner.</entry>
+				<entry id="0" hint="text">版本: </entry>
+				<entry id="1" hint="tooltip">切换是否在左上角显示引擎版本.</entry>
 			</section>
 			<section name="Physics visualizer: " hint="CheckBox">
 				<entry id="0" hint="text">Physics visualizer: </entry>
@@ -524,8 +552,8 @@ The Dump to header () option will use embedding and create a C++ header file 
 				<entry id="1" hint="tooltip">Visualize emitters</entry>
 			</section>
 			<section name="Physics: " hint="CheckBox">
-				<entry id="0" hint="text">Physics: </entry>
-				<entry id="1" hint="tooltip">Toggle Physics Simulation On/Off</entry>
+				<entry id="0" hint="text">物理模拟: </entry>
+				<entry id="1" hint="tooltip">切换物理模拟 开/关</entry>
 			</section>
 			<section name="Camera visualizer: " hint="CheckBox">
 				<entry id="0" hint="text">Camera visualizer: </entry>
@@ -537,48 +565,49 @@ The Dump to header () option will use embedding and create a C++ header file 
 			</section>
 		</section>
 		<section name="widget_2" hint="CheckBox">
-			<entry id="1" hint="tooltip">Toggle case-sensitive name filtering</entry>
+			<entry id="1" hint="tooltip">过滤时匹配大小写
+Toggle case-sensitive name filtering</entry>
 		</section>
 		<section name="New: " hint="ComboBox">
-			<entry id="0" hint="text">New: </entry>
-			<entry id="1" hint="tooltip">Create new entity</entry>
+			<entry id="0" hint="text">新建: </entry>
+			<entry id="1" hint="tooltip">创建新的实体</entry>
 			<section name="items">
-				<entry id="0">Transform </entry>
-				<entry id="1">Material </entry>
-				<entry id="2">Point Light </entry>
-				<entry id="3">Spot Light </entry>
-				<entry id="4">Directional Light </entry>
-				<entry id="5">Environment Probe </entry>
-				<entry id="6">Force </entry>
-				<entry id="7">Decal </entry>
+				<entry id="0">变换 </entry>
+				<entry id="1">材质 </entry>
+				<entry id="2">点光 </entry>
+				<entry id="3">聚光 </entry>
+				<entry id="4">方向光 </entry>
+				<entry id="5">环境探针 </entry>
+				<entry id="6">力 </entry>
+				<entry id="7">贴花 </entry>
 				<entry id="8">Sound </entry>
 				<entry id="9">Video </entry>
-				<entry id="10">Weather </entry>
-				<entry id="11">Emitter </entry>
-				<entry id="12">HairParticle </entry>
-				<entry id="13">Camera </entry>
-				<entry id="14">Cube </entry>
-				<entry id="15">Plane </entry>
-				<entry id="16">Animation </entry>
-				<entry id="17">Script </entry>
-				<entry id="18">Collider </entry>
-				<entry id="19">Terrain </entry>
+				<entry id="10">天气 </entry>
+				<entry id="11">发射器 </entry>
+				<entry id="12">毛发粒子 </entry>
+				<entry id="13">摄像机 </entry>
+				<entry id="14">立方体 </entry>
+				<entry id="15">平面 </entry>
+				<entry id="16">动画 </entry>
+				<entry id="17">脚本 </entry>
+				<entry id="18">碰撞体 </entry>
+				<entry id="19">地形 </entry>
 			</section>
 		</section>
 		<section name="Materials" hint="Window">
-			<entry id="0" hint="text">Materials</entry>
+			<entry id="0" hint="text">材质</entry>
 			<section name="Zoom: " hint="Slider">
 				<entry id="0" hint="text">Zoom: </entry>
 			</section>
 		</section>
 		<section name="Paint Tool" hint="Window">
-			<entry id="0" hint="text">Paint Tool</entry>
+			<entry id="0" hint="text">绘制工具</entry>
 			<section name="Smoothness: " hint="Slider">
 				<entry id="0" hint="text">Smoothness: </entry>
 				<entry id="1" hint="tooltip">Set the brush smoothness. 0 = hard, increase for more smoothness</entry>
 			</section>
 			<section name="Spacing: " hint="Slider">
-				<entry id="0" hint="text">Spacing: </entry>
+				<entry id="0" hint="text">间距: </entry>
 				<entry id="1" hint="tooltip">Brush spacing means how much brush movement (in pixels) starts a new stroke. 0 = new stroke every frame, 100 = every 100 pixel movement since last stroke will start a new stroke.</entry>
 			</section>
 			<section name="Backfaces: " hint="CheckBox">
@@ -586,18 +615,19 @@ The Dump to header () option will use embedding and create a C++ header file 
 				<entry id="1" hint="tooltip">Set whether to paint on backfaces of geometry or not</entry>
 			</section>
 			<section name="Paint Tool is disabled." hint="Label">
-				<entry id="0" hint="text">Paint Tool is disabled.</entry>
+				<entry id="0" hint="text">绘制工具已禁用.</entry>
 			</section>
 			<section name="Save Texture" hint="Button">
-				<entry id="0" hint="text">Save Texture</entry>
-				<entry id="1" hint="tooltip">Save edited texture.</entry>
+				<entry id="0" hint="text">保存贴图</entry>
+				<entry id="1" hint="tooltip">保存修改后的贴图.</entry>
 			</section>
 			<section name="Power: " hint="Slider">
-				<entry id="0" hint="text">Power: </entry>
+				<!-- Power -> 流量 ? 强度? -->
+				<entry id="0" hint="text">强度: </entry>
 				<entry id="1" hint="tooltip">Set the brush power amount. 0 = minimum affection, 1 = maximum affection</entry>
 			</section>
 			<section name="Brush Shape: " hint="ComboBox">
-				<entry id="0" hint="text">Brush Shape: </entry>
+				<entry id="0" hint="text">形状: </entry>
 				<entry id="1" hint="tooltip">Choose shape for brush masking effect</entry>
 				<section name="items">
 					<entry id="0"></entry>
@@ -605,15 +635,16 @@ The Dump to header () option will use embedding and create a C++ header file 
 				</section>
 			</section>
 			<section name="Brush Radius: " hint="Slider">
-				<entry id="0" hint="text">Brush Radius: </entry>
-				<entry id="1" hint="tooltip">Set the brush radius in pixel units</entry>
+				<entry id="0" hint="text">大小: </entry>
+				<entry id="1" hint="tooltip">设置笔刷大小 (单位: 像素)</entry>
 			</section>
 			<section name="Stabilizer: " hint="Slider">
-				<entry id="0" hint="text">Stabilizer: </entry>
-				<entry id="1" hint="tooltip">The stabilizer generates a small delay between user input and painting, which will be used to compute a smoother paint stroke..</entry>
+				<entry id="0" hint="text">防抖: </entry>
+				<entry id="1" hint="tooltip">绘制时增加轻微的输入延迟, 以此计算更平滑的笔画
+The stabilizer generates a small delay between user input and painting, which will be used to compute a smoother paint stroke..</entry>
 			</section>
 			<section name="Color" hint="ColorPicker">
-				<entry id="0" hint="text">Color</entry>
+				<entry id="0" hint="text">颜色</entry>
 				<section name="Hex" hint="TextInputField">
 					<entry id="1" hint="tooltip">Enter RGBA hex value</entry>
 				</section>
@@ -654,14 +685,14 @@ The Dump to header () option will use embedding and create a C++ header file 
 				<entry id="1" hint="tooltip">Set whether to use pressure sensitivity (for example pen tablet)</entry>
 			</section>
 			<section name="Mode: " hint="ComboBox">
-				<entry id="0" hint="text">Mode: </entry>
-				<entry id="1" hint="tooltip">Choose paint tool mode</entry>
+				<entry id="0" hint="text">模式: </entry>
+				<entry id="1" hint="tooltip">选择绘制模式</entry>
 				<section name="items">
-					<entry id="0"> Disabled</entry>
-					<entry id="1"> Texture</entry>
-					<entry id="2"> Vertexcolor</entry>
-					<entry id="3"> Sculpting - Add</entry>
-					<entry id="4"> Sculpting - Subtract</entry>
+					<entry id="0"> 禁用</entry>
+					<entry id="1"> 贴图</entry>
+					<entry id="2"> 顶点色</entry>
+					<entry id="3"> 雕刻 - Add</entry>
+					<entry id="4"> 雕刻 - Subtract</entry>
 					<entry id="5"> Softbody - Pinning</entry>
 					<entry id="6"> Softbody - Physics</entry>
 					<entry id="7"> Hairparticle - Add Triangle</entry>
@@ -671,12 +702,13 @@ The Dump to header () option will use embedding and create a C++ header file 
 				</section>
 			</section>
 			<section name="Wireframe: " hint="CheckBox">
-				<entry id="0" hint="text">Wireframe: </entry>
+				<entry id="0" hint="text">线框: </entry>
 				<entry id="1" hint="tooltip">Set whether to draw wireframe on top of geometry or not</entry>
 			</section>
 			<section name="Rotation: " hint="Slider">
-				<entry id="0" hint="text">Rotation: </entry>
-				<entry id="1" hint="tooltip">Brush rotation randomness. This will affect the splat mode brush texture.</entry>
+				<entry id="0" hint="text">旋转: </entry>
+				<entry id="1" hint="tooltip">笔刷旋转的随机程度.
+Brush rotation randomness. This will affect the splat mode brush texture.</entry>
 			</section>
 			<section name="widget_11" hint="Button">
 				<entry id="1" hint="tooltip">Open an image to use as reveal mode texture.
@@ -706,7 +738,8 @@ Splat mode means that the texture will be relative to the brush position</entry>
 			</section>
 		</section>
 		<section name="widget_0" hint="ComboBox">
-			<entry id="1" hint="tooltip">Apply filtering to the Entities by components</entry>
+			<entry id="1" hint="tooltip">按组件类型过滤
+Apply filtering to the Entities by components</entry>
 			<section name="items">
 				<entry id="0">*</entry>
 				<entry id="1"></entry>
@@ -735,18 +768,19 @@ Splat mode means that the texture will be relative to the brush position</entry>
 			</section>
 		</section>
 		<section name="Entities" hint="TreeList">
-			<entry id="0" hint="text">Entities</entry>
+			<entry id="0" hint="text">实体</entry>
 		</section>
 		<section name="widget_1" hint="TextInputField">
-			<entry id="1" hint="tooltip">Apply filtering to the Entities by name</entry>
+			<entry id="1" hint="tooltip">按名称过滤
+Apply filtering to the Entities by name</entry>
 		</section>
 		<section name="Camera" hint="Window">
-			<entry id="0" hint="text">Camera</entry>
+			<entry id="0" hint="text">摄像机</entry>
 			<section name="Movement Speed: " hint="Slider">
-				<entry id="0" hint="text">Movement Speed: </entry>
+				<entry id="0" hint="text">移动速度: </entry>
 			</section>
 			<section name="Far Plane: " hint="Slider">
-				<entry id="0" hint="text">Far Plane: </entry>
+				<entry id="0" hint="text">远平面: </entry>
 				<entry id="1" hint="tooltip">Controls the camera's far clip plane, geometry farther than this will be clipped.</entry>
 			</section>
 			<section name="Aperture Shape Y: " hint="Slider">
@@ -754,8 +788,9 @@ Splat mode means that the texture will be relative to the brush position</entry>
 				<entry id="1" hint="tooltip">Controls the depth of field effect's bokeh shape</entry>
 			</section>
 			<section name="Aperture Size: " hint="Slider">
-				<entry id="0" hint="text">Aperture Size: </entry>
-				<entry id="1" hint="tooltip">Controls the depth of field effect's strength</entry>
+				<entry id="0" hint="text">光圈尺寸: </entry>
+				<entry id="1" hint="tooltip">控制景深效果的强度
+Controls the depth of field effect's strength</entry>
 			</section>
 			<section name="Aperture Shape X: " hint="Slider">
 				<entry id="0" hint="text">Aperture Shape X: </entry>
@@ -765,35 +800,38 @@ Splat mode means that the texture will be relative to the brush position</entry>
 				<entry id="0" hint="text">Follow Proxy Delay: </entry>
 			</section>
 			<section name="Focal Length: " hint="Slider">
-				<entry id="0" hint="text">Focal Length: </entry>
-				<entry id="1" hint="tooltip">Controls the depth of field effect's focus distance</entry>
+				<entry id="0" hint="text">焦距: </entry>
+				<entry id="1" hint="tooltip">控制景深效果的焦距
+Controls the depth of field effect's focus distance</entry>
 			</section>
 			<section name="Place Proxy" hint="Button">
 				<entry id="0" hint="text">Place Proxy</entry>
-				<entry id="1" hint="tooltip">Copy the current camera and place a proxy of it in the world.</entry>
+				<entry id="1" hint="tooltip">使用当前设置在场景中生成一个新的 摄像机 对象.
+Copy the current camera and place a proxy of it in the world.</entry>
 			</section>
 			<section name="FOV: " hint="Slider">
-				<entry id="0" hint="text">FOV: </entry>
-				<entry id="1" hint="tooltip">Controls the camera's top-down field of view (in degrees)</entry>
+				<entry id="0" hint="text">vFOV: </entry>
+				<entry id="1" hint="tooltip">控制摄像机的垂直视场角 (单位: 度)
+Controls the camera's top-down field of view (in degrees)</entry>
 			</section>
 			<section name="Near Plane: " hint="Slider">
-				<entry id="0" hint="text">Near Plane: </entry>
+				<entry id="0" hint="text">近平面: </entry>
 				<entry id="1" hint="tooltip">Controls the camera's near clip plane, geometry closer than this will be clipped.</entry>
 			</section>
 			<section name="Follow Proxy: " hint="CheckBox">
 				<entry id="0" hint="text">Follow Proxy: </entry>
 			</section>
 			<section name="Reset Camera" hint="Button">
-				<entry id="0" hint="text">Reset Camera</entry>
+				<entry id="0" hint="text">重置摄像机</entry>
 			</section>
 			<section name="Acceleration: " hint="Slider">
 				<entry id="0" hint="text">Acceleration: </entry>
 			</section>
 			<section name="Rotation Speed: " hint="Slider">
-				<entry id="0" hint="text">Rotation Speed: </entry>
+				<entry id="0" hint="text">旋转速度: </entry>
 			</section>
 			<section name="FPS Camera: " hint="CheckBox">
-				<entry id="0" hint="text">FPS Camera: </entry>
+				<entry id="0" hint="text">第一人称模式 : </entry>
 			</section>
 		</section>
 	</section>
@@ -2890,25 +2928,25 @@ The heightmap will be normalized into 8bit PNG format which can result in precis
 Hotkey: 3</entry>
 	</section>
 	<section name="Full screen" hint="Button">
-		<entry id="1" hint="tooltip">Toggle full screen</entry>
+		<entry id="1" hint="tooltip">切换是否全屏</entry>
 	</section>
 	<section name="" hint="Button">
-		<entry id="1" hint="tooltip">Execute the last used (standalone) script.
-To use a new script, use the Open button.</entry>
+		<entry id="1" hint="tooltip">运行上次使用的 (独立) 脚本.
+要运行新脚本, 单击 [打开] 按钮.</entry>
 	</section>
 	<section name="Bug report" hint="Button">
 		<entry id="1" hint="tooltip">Opens a browser window where you can report a bug or an issue.
 URL: https://github.com/turanszkij/WickedEngine/issues/new</entry>
 	</section>
 	<section name="Open" hint="Button">
-		<entry id="1" hint="tooltip">Open a scene, import a model or execute a Lua script...</entry>
+		<entry id="1" hint="tooltip">打开场景, 导入模型, 或运行Lua脚本...</entry>
 	</section>
 	<section name="Profiler" hint="Window">
 		<entry id="1" hint="tooltip">View the profiler frame timings</entry>
-		<entry id="0" hint="text">Profiler</entry>
+		<entry id="0" hint="text">分析器</entry>
 	</section>
 	<section name="Exit" hint="Button">
-		<entry id="1" hint="tooltip">Exit</entry>
+		<entry id="1" hint="tooltip">退出</entry>
 	</section>
 	<section name="" hint="Button">
 		<entry id="1" hint="tooltip">Rotate
