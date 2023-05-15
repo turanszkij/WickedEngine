@@ -1020,17 +1020,17 @@ PixelInput main(VertexInput input)
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 	const uint frustum_index = input.GetInstancePointer().GetFrustumIndex();
-	Out.RTIndex = xCubemapRenderCams[frustum_index].properties.x;
+	Out.RTIndex = GetCamera(frustum_index).output_index;
 #ifndef OBJECTSHADER_USE_NOCAMERA
-	Out.pos = mul(xCubemapRenderCams[frustum_index].view_projection, surface.position);
+	Out.pos = mul(GetCamera(frustum_index).view_projection, surface.position);
 #endif // OBJECTSHADER_USE_NOCAMERA
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 	const uint frustum_index = input.GetInstancePointer().GetFrustumIndex();
-	Out.VPIndex = xCubemapRenderCams[frustum_index].properties.x;
+	Out.VPIndex = GetCamera(frustum_index).output_index;
 #ifndef OBJECTSHADER_USE_NOCAMERA
-	Out.pos = mul(xCubemapRenderCams[frustum_index].view_projection, surface.position);
+	Out.pos = mul(GetCamera(frustum_index).view_projection, surface.position);
 #endif // OBJECTSHADER_USE_NOCAMERA
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 

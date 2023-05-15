@@ -958,14 +958,14 @@ struct FrameCB
 	VXGI vxgi;
 };
 
-struct CameraCB
+struct ShaderCamera
 {
 	float4x4	view_projection;
 
-	float4		clip_plane;
-
 	float3		position;
-	float		distance_from_origin;
+	uint		output_index; // viewport or rendertarget array index
+
+	float4		clip_plane;
 
 	float3		forward;
 	float		z_near;
@@ -1014,34 +1014,99 @@ struct CameraCB
 
 	uint2 visibility_tilecount;
 	uint visibility_tilecount_flat;
-	int texture_rtdiffuse_index;
+	float distance_from_origin;
 
+	int texture_rtdiffuse_index;
 	int texture_primitiveID_index;
 	int texture_depth_index;
 	int texture_lineardepth_index;
-	int texture_velocity_index;
 
+	int texture_velocity_index;
 	int texture_normal_index;
 	int texture_roughness_index;
 	int buffer_entitytiles_opaque_index;
-	int buffer_entitytiles_transparent_index;
 
+	int buffer_entitytiles_transparent_index;
 	int texture_reflection_index;
 	int texture_refraction_index;
 	int texture_waterriples_index;
-	int texture_ao_index;
 
+	int texture_ao_index;
 	int texture_ssr_index;
 	int texture_rtshadow_index;
 	int texture_surfelgi_index;
-	int texture_depth_index_prev;
 
+	int texture_depth_index_prev;
 	int texture_vxgi_diffuse_index;
 	int texture_vxgi_specular_index;
-	int padding0;
 	int padding1;
 
-#ifndef __cplusplus
+#ifdef __cplusplus
+	void init()
+	{
+		view_projection = {};
+		position = {};
+		output_index = 0;
+		clip_plane = {};
+		forward = {};
+		z_near = {};
+		up = {};
+		z_far = {};
+		z_near_rcp = {};
+		z_far_rcp = {};
+		z_range = {};
+		z_range_rcp = {};
+		view = {};
+		projection = {};
+		inverse_view = {};
+		inverse_projection = {};
+		inverse_view_projection = {};
+		frustum = {};
+		temporalaa_jitter = {};
+		temporalaa_jitter_prev = {};
+		previous_view = {};
+		previous_projection = {};
+		previous_view_projection = {};
+		previous_inverse_view_projection = {};
+		reflection_view_projection = {};
+		reprojection = {};
+		aperture_shape = {};
+		aperture_size = {};
+		focal_length = {};
+		canvas_size = {};
+		canvas_size_rcp = {};
+		internal_resolution = {};
+		internal_resolution_rcp = {};
+		scissor = {};
+		scissor_uv = {};
+		entity_culling_tilecount = {};
+		sample_count = {};
+		visibility_tilecount = {};
+		visibility_tilecount_flat = {};
+		distance_from_origin = {};
+
+		texture_rtdiffuse_index = -1;
+		texture_primitiveID_index = -1;
+		texture_depth_index = -1;
+		texture_lineardepth_index = -1;
+		texture_velocity_index = -1;
+		texture_normal_index = -1;
+		texture_roughness_index = -1;
+		buffer_entitytiles_opaque_index = -1;
+		buffer_entitytiles_transparent_index = -1;
+		texture_reflection_index = -1;
+		texture_refraction_index = -1;
+		texture_waterriples_index = -1;
+		texture_ao_index = -1;
+		texture_ssr_index = -1;
+		texture_rtshadow_index = -1;
+		texture_surfelgi_index = -1;
+		texture_depth_index_prev = -1;
+		texture_vxgi_diffuse_index = -1;
+		texture_vxgi_specular_index = -1;
+	}
+
+#else
 	inline float2 clamp_uv_to_scissor(in float2 uv)
 	{
 		return float2(
@@ -1069,6 +1134,21 @@ struct CameraCB
 
 
 CONSTANTBUFFER(g_xFrame, FrameCB, CBSLOT_RENDERER_FRAME);
+
+struct CameraCB
+{
+	ShaderCamera cameras[16];
+
+#ifdef __cplusplus
+	void init()
+	{
+		for (int i = 0; i < 16; ++i)
+		{
+			cameras[i].init();
+		}
+	}
+#endif // __cplusplus
+};
 CONSTANTBUFFER(g_xCamera, CameraCB, CBSLOT_RENDERER_CAMERA);
 
 
@@ -1100,17 +1180,6 @@ struct LensFlarePush
 	float xLensFlareOffset;
 	float2 xLensFlareSize;
 	float2 xLensFlare_padding;
-};
-
-struct CubemapRenderCam
-{
-	float4x4 view_projection;
-	float4x4 inverse_view_projection;
-	uint4 properties;
-};
-CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
-{
-	CubemapRenderCam xCubemapRenderCams[6];
 };
 
 // MIP Generator params:

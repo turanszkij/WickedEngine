@@ -621,7 +621,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 			continue;
 		}
 		
-		float tProgress = distance(GetCamera().position, sampleWorldPosition);
+		float tProgress = distance(rayOrigin, sampleWorldPosition);
 		float lod = round(tProgress / max(GetWeather().volumetric_clouds.LODDistance, 0.00001));
 		lod = clamp(lod, LOD_Min, LOD_Max);
 		
@@ -689,7 +689,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 		}
 		else
 		{
-			aerialPerspective = GetAerialPerspectiveTransmittance(uv, sampleWorldPosition, GetCamera().position, texture_cameravolumelut);
+			aerialPerspective = GetAerialPerspectiveTransmittance(uv, sampleWorldPosition, rayOrigin, texture_cameravolumelut);
 		}
 
 		// Layer aerial perspective on top of luminance
@@ -742,9 +742,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float depth = texture_input_depth.SampleLevel(sampler_point_clamp, N, 0).r;
 #endif // MSAA
 
-	float3 depthWorldPosition = reconstruct_position(uv, depth, xCubemapRenderCams[DTid.z].inverse_view_projection);
+	float3 depthWorldPosition = reconstruct_position(uv, depth, GetCamera(DTid.z).inverse_view_projection);
 
-	float3 rayOrigin = GetCamera().position;
+	float3 rayOrigin = GetCamera(DTid.z).position;
 	float3 rayDirection = normalize(N);
 
 	float4 cloudColor = 0;
