@@ -2207,13 +2207,18 @@ namespace wi
 			if (GetPhysicalWidth() == 0 || GetPhysicalHeight() == 0)
 				return;
 
-			wi::renderer::CreateFSR2Resources(fsr2Resources, GetInternalResolution(), XMUINT2(GetPhysicalWidth(), GetPhysicalHeight()));
+			XMUINT2 displayResolution = XMUINT2(
+				std::max(GetPhysicalWidth(), GetInternalResolution().x),
+				std::max(GetPhysicalHeight(), GetInternalResolution().y)
+			);
+
+			wi::renderer::CreateFSR2Resources(fsr2Resources, GetInternalResolution(), displayResolution);
 
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.format = Format::R11G11B10_FLOAT;
-			desc.width = std::max(GetPhysicalWidth(), GetInternalResolution().x);
-			desc.height = std::max(GetPhysicalHeight(), GetInternalResolution().y);
+			desc.width = displayResolution.x;
+			desc.height = displayResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtFSR[0]);
 			device->SetName(&rtFSR[0], "rtFSR[0]");
 			device->CreateTexture(&desc, nullptr, &rtFSR[1]);
