@@ -2212,8 +2212,8 @@ namespace wi
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.format = Format::R11G11B10_FLOAT;
-			desc.width = GetPhysicalWidth();
-			desc.height = GetPhysicalHeight();
+			desc.width = std::max(GetPhysicalWidth(), GetInternalResolution().x);
+			desc.height = std::max(GetPhysicalHeight(), GetInternalResolution().y);
 			device->CreateTexture(&desc, nullptr, &rtFSR[0]);
 			device->SetName(&rtFSR[0], "rtFSR[0]");
 			device->CreateTexture(&desc, nullptr, &rtFSR[1]);
