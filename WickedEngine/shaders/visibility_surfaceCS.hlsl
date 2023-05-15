@@ -9,9 +9,14 @@
 #include "ShaderInterop_Renderer.h"
 #include "raytracingHF.hlsli"
 #include "surfaceHF.hlsli"
-#include "objectHF.hlsli"
+#include "shadingHF.hlsli"
 
-ConstantBuffer<ShaderTypeBin> bin : register(b10);
+struct VisibilityPushConstants
+{
+	uint global_tile_offset;
+};
+PUSHCONSTANT(push, VisibilityPushConstants);
+
 StructuredBuffer<VisibilityTile> binned_tiles : register(t0);
 
 RWTexture2D<float4> output : register(u0);
@@ -23,7 +28,7 @@ RWTexture2D<uint4> output_payload_1 : register(u4);
 [numthreads(VISIBILITY_BLOCKSIZE, VISIBILITY_BLOCKSIZE, 1)]
 void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	const uint tile_offset = bin.offset + Gid.x;
+	const uint tile_offset = push.global_tile_offset + Gid.x;
 	VisibilityTile tile = binned_tiles[tile_offset];
 	const uint2 GTid = remap_lane_8x8(groupIndex);
 	const uint2 pixel = unpack_pixel(tile.visibility_tile_id) * VISIBILITY_BLOCKSIZE + GTid;
