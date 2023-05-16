@@ -112,7 +112,7 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		{
 			uint bin_tile_list_offset = groupIndex * GetCamera().visibility_tilecount_flat;
 			uint tile_offset = 0;
-			InterlockedAdd(output_bins[groupIndex].count, 1, tile_offset);
+			InterlockedAdd(output_bins[groupIndex].dispatchX, 1, tile_offset);
 
 			VisibilityTile tile;
 			tile.visibility_tile_id = pack_pixel(Gid.xy);

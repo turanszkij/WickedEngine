@@ -409,21 +409,11 @@ struct ShaderMaterial
 // For binning shading based on shader types:
 struct ShaderTypeBin
 {
-	uint shaderType;
-	uint offset;
-	uint count;
-	uint padding;
-
 	uint dispatchX;
 	uint dispatchY;
 	uint dispatchZ;
-	uint padding1;
-
-	uint4 padding2[14]; // force 256-byte alignment that's necessary for constant buffers :(
+	uint shaderType;
 };
-#ifdef __cplusplus
-static_assert(sizeof(ShaderTypeBin) == 256); // 256 byte forced constant buffer alignment for DX12
-#endif // __cplusplus
 static const uint SHADERTYPE_BIN_COUNT = 10;
 
 struct VisibilityTile
