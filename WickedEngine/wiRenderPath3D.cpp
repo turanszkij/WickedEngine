@@ -1297,30 +1297,27 @@ namespace wi
 				device->EventEnd(cmd);
 			}
 
-			RenderPassImage rp[] = {
-				RenderPassImage::RenderTarget(
-					&rtMain_render,
-					visibility_shading_in_compute ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::CLEAR
-				),
-				RenderPassImage::DepthStencil(
-					&depthBuffer_Main,
-					RenderPassImage::LoadOp::LOAD,
-					RenderPassImage::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY
-				),
-				RenderPassImage::Resolve(&rtMain),
-				RenderPassImage::ShadingRateSource(&rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS),
-			};
-			uint32_t rp_count = 2;
+			RenderPassImage rp[4] = {};
+			uint32_t rp_count = 0;
+			rp[rp_count++] = RenderPassImage::RenderTarget(
+				&rtMain_render,
+				visibility_shading_in_compute ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::CLEAR
+			);
+			rp[rp_count++] = RenderPassImage::DepthStencil(
+				&depthBuffer_Main,
+				RenderPassImage::LoadOp::LOAD,
+				RenderPassImage::StoreOp::STORE,
+				ResourceState::DEPTHSTENCIL_READONLY,
+				ResourceState::DEPTHSTENCIL_READONLY,
+				ResourceState::DEPTHSTENCIL_READONLY
+			);
 			if (getMSAASampleCount() > 1)
 			{
-				rp_count++;
+				rp[rp_count++] = RenderPassImage::Resolve(&rtMain);
 			}
 			if (device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2) && rtShadingRate.IsValid())
 			{
-				rp_count++;
+				rp[rp_count++] = RenderPassImage::ShadingRateSource(&rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
 			}
 			device->RenderPassBegin(rp, rp_count, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
 

@@ -425,7 +425,7 @@ namespace vulkan_internal
 		}
 		if (has_flag(value, ResourceState::SHADING_RATE_SOURCE))
 		{
-			flags |= VK_ACCESS_2_SHADING_RATE_IMAGE_READ_BIT_NV;
+			flags |= VK_PIPELINE_STAGE_2_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
 		}
 		if (has_flag(value, ResourceState::VERTEX_BUFFER))
 		{
@@ -517,6 +517,10 @@ namespace vulkan_internal
 		if (has_flag(value, ResourceState::PREDICATION))
 		{
 			flags |= VK_ACCESS_2_CONDITIONAL_RENDERING_READ_BIT_EXT;
+		}
+		if (has_flag(value, ResourceState::SHADING_RATE_SOURCE))
+		{
+			flags |= VK_ACCESS_2_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
 		}
 		if (has_flag(value, ResourceState::VIDEO_DECODE_DST))
 		{
