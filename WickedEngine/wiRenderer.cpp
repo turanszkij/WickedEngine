@@ -932,7 +932,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE_PREMIN_BLENDOUT], "msao_blurupsampleCS_premin_blendout.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSR_TILEMAXROUGHNESS_HORIZONTAL], "ssr_tileMaxRoughness_horizontalCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSR_TILEMAXROUGHNESS_VERTICAL], "ssr_tileMaxRoughness_verticalCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSR_KICKJOBS], "ssr_kickjobsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSR_DEPTHHIERARCHY], "ssr_depthHierarchyCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE], "ssr_raytraceCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE_EARLYEXIT], "ssr_raytraceCS_earlyexit.cso"); });
@@ -944,7 +943,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_HORIZONTAL], "depthoffield_tileMaxCOC_horizontalCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_VERTICAL], "depthoffield_tileMaxCOC_verticalCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_NEIGHBORHOODMAXCOC], "depthoffield_neighborhoodMaxCOCCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_KICKJOBS], "depthoffield_kickjobsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], "depthoffield_prepassCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS_EARLYEXIT], "depthoffield_prepassCS_earlyexit.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN], "depthoffield_mainCS.cso"); });
@@ -955,7 +953,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_HORIZONTAL], "motionblur_tileMaxVelocity_horizontalCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_VERTICAL], "motionblur_tileMaxVelocity_verticalCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_NEIGHBORHOODMAXVELOCITY], "motionblur_neighborhoodMaxVelocityCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_KICKJOBS], "motionblur_kickjobsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR], "motionblurCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], "motionblurCS_earlyexit.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], "motionblurCS_cheap.cso"); });
@@ -4219,11 +4216,11 @@ void UpdateRenderData(
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorIndirectBuffer, ResourceState::INDIRECT_ARGUMENT, ResourceState::COPY_DST));
 		barrier_stack_flush(cmd);
 		IndirectDrawArgsIndexedInstanced clear_indirect = {};
-		clear_indirect.index_count_per_instance = 0;
-		clear_indirect.instance_count = 1;
-		clear_indirect.start_index_location = 0;
-		clear_indirect.base_vertex_location = 0;
-		clear_indirect.start_instance_location = 0;
+		clear_indirect.IndexCountPerInstance = 0;
+		clear_indirect.InstanceCount = 1;
+		clear_indirect.StartIndexLocation = 0;
+		clear_indirect.BaseVertexLocation = 0;
+		clear_indirect.StartInstanceLocation = 0;
 		device->UpdateBuffer(&vis.scene->impostorIndirectBuffer, &clear_indirect, cmd, sizeof(clear_indirect), 0);
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorIndirectBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
@@ -11860,15 +11857,16 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	device->CreateTexture(&tile_desc, nullptr, &res.texture_tile_minmax_roughness_horizontal);
 
 	GPUBufferDesc bufferdesc;
-	bufferdesc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-
-	bufferdesc.size = TILE_STATISTICS_CAPACITY * sizeof(uint);
-	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
+	bufferdesc.stride = sizeof(PostprocessTileStatistics);
+	bufferdesc.size = bufferdesc.stride;
+	bufferdesc.bind_flags = BindFlag::UNORDERED_ACCESS;
+	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_tracing_statistics);
 
-	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 	bufferdesc.stride = sizeof(uint);
 	bufferdesc.size = tile_desc.width * tile_desc.height * bufferdesc.stride;
+	bufferdesc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_tracing_earlyexit);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_tracing_cheap);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_tracing_expensive);
@@ -11935,7 +11933,7 @@ void Postprocess_SSR(
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&res.texture_tile_minmax_roughness_horizontal, res.texture_tile_minmax_roughness_horizontal.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_tile_minmax_roughness, res.texture_tile_minmax_roughness.desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Buffer(&res.buffer_tile_tracing_statistics, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Buffer(&res.buffer_tile_tracing_statistics, ResourceState::UNDEFINED, ResourceState::COPY_DST),
 			GPUBarrier::Buffer(&res.buffer_tiles_tracing_earlyexit, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Buffer(&res.buffer_tiles_tracing_cheap, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Buffer(&res.buffer_tiles_tracing_expensive, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
@@ -11951,11 +11949,23 @@ void Postprocess_SSR(
 	}
 
 	device->ClearUAV(&output, 0, cmd);
-	device->ClearUAV(&res.buffer_tile_tracing_statistics, 0, cmd);
+
+	PostprocessTileStatistics tile_stats = {};
+	tile_stats.dispatch_earlyexit.ThreadGroupCountX = 0; // shader atomic
+	tile_stats.dispatch_earlyexit.ThreadGroupCountY = 1;
+	tile_stats.dispatch_earlyexit.ThreadGroupCountZ = 1;
+	tile_stats.dispatch_cheap.ThreadGroupCountX = 0; // shader atomic
+	tile_stats.dispatch_cheap.ThreadGroupCountY = 1;
+	tile_stats.dispatch_cheap.ThreadGroupCountZ = 1;
+	tile_stats.dispatch_expensive.ThreadGroupCountX = 0; // shader atomic
+	tile_stats.dispatch_expensive.ThreadGroupCountY = 1;
+	tile_stats.dispatch_expensive.ThreadGroupCountZ = 1;
+	device->UpdateBuffer(&res.buffer_tile_tracing_statistics, &tile_stats, cmd);
 
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
+			GPUBarrier::Buffer(&res.buffer_tile_tracing_statistics, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -12020,32 +12030,10 @@ void Postprocess_SSR(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&res.buffer_tile_tracing_statistics),
-				GPUBarrier::Memory(&res.buffer_tiles_tracing_earlyexit),
-				GPUBarrier::Memory(&res.buffer_tiles_tracing_cheap),
-				GPUBarrier::Memory(&res.buffer_tiles_tracing_expensive),
 				GPUBarrier::Image(&res.texture_tile_minmax_roughness, ResourceState::UNORDERED_ACCESS, res.texture_tile_minmax_roughness.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
-
-		device->EventEnd(cmd);
-	}
-
-	// Kick indirect tile jobs:
-	{
-		device->EventBegin("SSR Kickjobs", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_KICKJOBS], cmd);
-
-		const GPUResource* uavs[] = {
-			&res.buffer_tile_tracing_statistics,
-			&res.buffer_tiles_tracing_earlyexit,
-			&res.buffer_tiles_tracing_cheap,
-			&res.buffer_tiles_tracing_expensive,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(1, 1, 1, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -12179,15 +12167,15 @@ void Postprocess_SSR(
 		}
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE_EARLYEXIT], cmd);
-		device->DispatchIndirect(&res.buffer_tile_tracing_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
+		device->DispatchIndirect(&res.buffer_tile_tracing_statistics, offsetof(PostprocessTileStatistics, dispatch_earlyexit), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE_CHEAP], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-		device->DispatchIndirect(&res.buffer_tile_tracing_statistics, INDIRECT_OFFSET_CHEAP, cmd);
+		device->DispatchIndirect(&res.buffer_tile_tracing_statistics, offsetof(PostprocessTileStatistics, dispatch_cheap), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-		device->DispatchIndirect(&res.buffer_tile_tracing_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
+		device->DispatchIndirect(&res.buffer_tile_tracing_statistics, offsetof(PostprocessTileStatistics, dispatch_expensive), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -12976,15 +12964,16 @@ void CreateDepthOfFieldResources(DepthOfFieldResources& res, XMUINT2 resolution)
 
 
 	GPUBufferDesc bufferdesc;
-	bufferdesc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-
-	bufferdesc.size = TILE_STATISTICS_CAPACITY * sizeof(uint);
-	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
+	bufferdesc.stride = sizeof(PostprocessTileStatistics);
+	bufferdesc.size = bufferdesc.stride;
+	bufferdesc.bind_flags = BindFlag::UNORDERED_ACCESS;
+	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
-	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 	bufferdesc.stride = sizeof(uint);
 	bufferdesc.size = tile_desc.width * tile_desc.height * bufferdesc.stride;
+	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+	bufferdesc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_cheap);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_expensive);
@@ -13015,7 +13004,7 @@ void Postprocess_DepthOfField(
 			GPUBarrier::Image(&res.texture_postfilter, res.texture_postfilter.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_alpha2, res.texture_alpha2.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Buffer(&res.buffer_tile_statistics, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Buffer(&res.buffer_tile_statistics, ResourceState::UNDEFINED, ResourceState::COPY_DST),
 			GPUBarrier::Buffer(&res.buffer_tiles_earlyexit, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Buffer(&res.buffer_tiles_cheap, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Buffer(&res.buffer_tiles_expensive, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
@@ -13035,11 +13024,23 @@ void Postprocess_DepthOfField(
 	device->ClearUAV(&res.texture_postfilter, 0, cmd);
 	device->ClearUAV(&res.texture_alpha2, 0, cmd);
 	device->ClearUAV(&output, 0, cmd);
-	device->ClearUAV(&res.buffer_tile_statistics, 0, cmd);
+
+	PostprocessTileStatistics tile_stats = {};
+	tile_stats.dispatch_earlyexit.ThreadGroupCountX = 0; // shader atomic
+	tile_stats.dispatch_earlyexit.ThreadGroupCountY = 1;
+	tile_stats.dispatch_earlyexit.ThreadGroupCountZ = 1;
+	tile_stats.dispatch_cheap.ThreadGroupCountX = 0; // shader atomic
+	tile_stats.dispatch_cheap.ThreadGroupCountY = 1;
+	tile_stats.dispatch_cheap.ThreadGroupCountZ = 1;
+	tile_stats.dispatch_expensive.ThreadGroupCountX = 0; // shader atomic
+	tile_stats.dispatch_expensive.ThreadGroupCountY = 1;
+	tile_stats.dispatch_expensive.ThreadGroupCountZ = 1;
+	device->UpdateBuffer(&res.buffer_tile_statistics, &tile_stats, cmd);
 
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
+			GPUBarrier::Buffer(&res.buffer_tile_statistics, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -13149,42 +13150,14 @@ void Postprocess_DepthOfField(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&res.buffer_tile_statistics),
-				GPUBarrier::Memory(&res.buffer_tiles_earlyexit),
-				GPUBarrier::Memory(&res.buffer_tiles_cheap),
-				GPUBarrier::Memory(&res.buffer_tiles_expensive),
+				GPUBarrier::Buffer(&res.buffer_tile_statistics, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT),
+				GPUBarrier::Buffer(&res.buffer_tiles_earlyexit, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&res.buffer_tiles_cheap, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&res.buffer_tiles_expensive, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Image(&res.texture_neighborhoodmax, ResourceState::UNORDERED_ACCESS, res.texture_neighborhoodmax.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
-
-		device->EventEnd(cmd);
-	}
-
-	// Kick indirect tile jobs:
-	{
-		device->EventBegin("Kickjobs", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_KICKJOBS], cmd);
-
-		device->BindResource(&res.texture_tilemax, 0, cmd);
-
-		const GPUResource* uavs[] = {
-			&res.buffer_tile_statistics,
-			&res.buffer_tiles_earlyexit,
-			&res.buffer_tiles_cheap,
-			&res.buffer_tiles_expensive
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(1, 1, 1, cmd);
-
-		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&res.buffer_tile_statistics, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT),
-			GPUBarrier::Buffer(&res.buffer_tiles_earlyexit, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			GPUBarrier::Buffer(&res.buffer_tiles_cheap, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			GPUBarrier::Buffer(&res.buffer_tiles_expensive, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -13214,17 +13187,17 @@ void Postprocess_DepthOfField(
 		device->BindResource(&res.buffer_tiles_earlyexit, 2, cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS_EARLYEXIT], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
+		device->DispatchIndirect(&res.buffer_tile_statistics, offsetof(PostprocessTileStatistics, dispatch_earlyexit), cmd);
 
 		device->BindResource(&res.buffer_tiles_cheap, 2, cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_CHEAP, cmd);
+		device->DispatchIndirect(&res.buffer_tile_statistics, offsetof(PostprocessTileStatistics, dispatch_cheap), cmd);
 
 		device->BindResource(&res.buffer_tiles_expensive, 2, cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
+		device->DispatchIndirect(&res.buffer_tile_statistics, offsetof(PostprocessTileStatistics, dispatch_expensive), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -13258,15 +13231,15 @@ void Postprocess_DepthOfField(
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_EARLYEXIT], cmd);
-		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
+		device->DispatchIndirect(&res.buffer_tile_statistics, offsetof(PostprocessTileStatistics, dispatch_earlyexit), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_CHEAP], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_CHEAP, cmd);
+		device->DispatchIndirect(&res.buffer_tile_statistics, offsetof(PostprocessTileStatistics, dispatch_cheap), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
+		device->DispatchIndirect(&res.buffer_tile_statistics, offsetof(PostprocessTileStatistics, dispatch_expensive), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -13410,15 +13383,16 @@ void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution)
 
 
 	GPUBufferDesc bufferdesc;
-	bufferdesc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-
-	bufferdesc.size = TILE_STATISTICS_CAPACITY * sizeof(uint);
-	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
+	bufferdesc.stride = sizeof(PostprocessTileStatistics);
+	bufferdesc.size = bufferdesc.stride;
+	bufferdesc.bind_flags = BindFlag::UNORDERED_ACCESS;
+	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
-	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 	bufferdesc.stride = sizeof(uint);
 	bufferdesc.size = tile_desc.width * tile_desc.height * bufferdesc.stride;
+	bufferdesc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_cheap);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_expensive);
@@ -13444,7 +13418,7 @@ void Postprocess_MotionBlur(
 			GPUBarrier::Image(&res.texture_tilemin, res.texture_tilemin.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_neighborhoodmax, res.texture_neighborhoodmax.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Buffer(&res.buffer_tile_statistics, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Buffer(&res.buffer_tile_statistics, ResourceState::UNDEFINED, ResourceState::COPY_DST),
 			GPUBarrier::Buffer(&res.buffer_tiles_earlyexit, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Buffer(&res.buffer_tiles_cheap, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Buffer(&res.buffer_tiles_expensive, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
@@ -13458,11 +13432,23 @@ void Postprocess_MotionBlur(
 	device->ClearUAV(&res.texture_tilemin, 0, cmd);
 	device->ClearUAV(&res.texture_neighborhoodmax, 0, cmd);
 	device->ClearUAV(&output, 0, cmd);
-	device->ClearUAV(&res.buffer_tile_statistics, 0, cmd);
+
+	PostprocessTileStatistics tile_stats = {};
+	tile_stats.dispatch_earlyexit.ThreadGroupCountX = 0; // shader atomic
+	tile_stats.dispatch_earlyexit.ThreadGroupCountY = 1;
+	tile_stats.dispatch_earlyexit.ThreadGroupCountZ = 1;
+	tile_stats.dispatch_cheap.ThreadGroupCountX = 0; // shader atomic
+	tile_stats.dispatch_cheap.ThreadGroupCountY = 1;
+	tile_stats.dispatch_cheap.ThreadGroupCountZ = 1;
+	tile_stats.dispatch_expensive.ThreadGroupCountX = 0; // shader atomic
+	tile_stats.dispatch_expensive.ThreadGroupCountY = 1;
+	tile_stats.dispatch_expensive.ThreadGroupCountZ = 1;
+	device->UpdateBuffer(&res.buffer_tile_statistics, &tile_stats, cmd);
 
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
+			GPUBarrier::Buffer(&res.buffer_tile_statistics, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -13565,42 +13551,14 @@ void Postprocess_MotionBlur(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&res.buffer_tile_statistics),
-				GPUBarrier::Memory(&res.buffer_tiles_earlyexit),
-				GPUBarrier::Memory(&res.buffer_tiles_cheap),
-				GPUBarrier::Memory(&res.buffer_tiles_expensive),
+				GPUBarrier::Buffer(&res.buffer_tile_statistics, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT),
+				GPUBarrier::Buffer(&res.buffer_tiles_earlyexit, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&res.buffer_tiles_cheap, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&res.buffer_tiles_expensive, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Image(&res.texture_neighborhoodmax, ResourceState::UNORDERED_ACCESS, res.texture_neighborhoodmax.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
-
-		device->EventEnd(cmd);
-	}
-
-	// Kick indirect tile jobs:
-	{
-		device->EventBegin("Kickjobs", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_KICKJOBS], cmd);
-
-		device->BindResource(&res.texture_tilemax, 0, cmd);
-
-		const GPUResource* uavs[] = {
-			&res.buffer_tile_statistics,
-			&res.buffer_tiles_earlyexit,
-			&res.buffer_tiles_cheap,
-			&res.buffer_tiles_expensive
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(1, 1, 1, cmd);
-
-		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&res.buffer_tile_statistics, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT),
-			GPUBarrier::Buffer(&res.buffer_tiles_earlyexit, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			GPUBarrier::Buffer(&res.buffer_tiles_cheap, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			GPUBarrier::Buffer(&res.buffer_tiles_expensive, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -13624,15 +13582,16 @@ void Postprocess_MotionBlur(
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], cmd);
-		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+		device->DispatchIndirect(&res.buffer_tile_statistics, offsetof(PostprocessTileStatistics, dispatch_earlyexit), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_CHEAP, cmd);
+		device->DispatchIndirect(&res.buffer_tile_statistics, offsetof(PostprocessTileStatistics, dispatch_cheap), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
+		device->DispatchIndirect(&res.buffer_tile_statistics, offsetof(PostprocessTileStatistics, dispatch_expensive), cmd);
 
 		{
 			GPUBarrier barriers[] = {
