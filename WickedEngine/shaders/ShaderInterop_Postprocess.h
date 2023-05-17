@@ -136,13 +136,12 @@ struct PushConstantsTonemap
 	uint display_colorspace;
 };
 
-static const uint TILE_STATISTICS_OFFSET_EARLYEXIT = 0;
-static const uint TILE_STATISTICS_OFFSET_CHEAP = TILE_STATISTICS_OFFSET_EARLYEXIT + 4;
-static const uint TILE_STATISTICS_OFFSET_EXPENSIVE = TILE_STATISTICS_OFFSET_CHEAP + 4;
-static const uint INDIRECT_OFFSET_EARLYEXIT = TILE_STATISTICS_OFFSET_EXPENSIVE + 4;
-static const uint INDIRECT_OFFSET_CHEAP = INDIRECT_OFFSET_EARLYEXIT + 4 * 3;
-static const uint INDIRECT_OFFSET_EXPENSIVE = INDIRECT_OFFSET_CHEAP + 4 * 3;
-static const uint TILE_STATISTICS_CAPACITY = INDIRECT_OFFSET_EXPENSIVE + 4 * 3;
+struct PostprocessTileStatistics
+{
+	IndirectDispatchArgs dispatch_earlyexit;
+	IndirectDispatchArgs dispatch_cheap;
+	IndirectDispatchArgs dispatch_expensive;
+};
 
 
 #endif // WI_SHADERINTEROP_POSTPROCESS_H

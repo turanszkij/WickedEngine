@@ -2835,7 +2835,7 @@ using namespace dx12_internal;
 		D3D12_INDIRECT_ARGUMENT_DESC drawIndexedInstancedArgs[1];
 		drawIndexedInstancedArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
 
-		cmd_desc.ByteStride = sizeof(IndirectDispatchArgs);
+		cmd_desc.ByteStride = sizeof(D3D12_DISPATCH_ARGUMENTS);
 		cmd_desc.NumArgumentDescs = 1;
 		cmd_desc.pArgumentDescs = dispatchArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchIndirectCommandSignature));
@@ -2848,7 +2848,7 @@ using namespace dx12_internal;
 			wi::platform::Exit();
 		}
 
-		cmd_desc.ByteStride = sizeof(IndirectDrawArgsInstanced);
+		cmd_desc.ByteStride = sizeof(D3D12_DRAW_ARGUMENTS);
 		cmd_desc.NumArgumentDescs = 1;
 		cmd_desc.pArgumentDescs = drawInstancedArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawInstancedIndirectCommandSignature));
@@ -2861,7 +2861,7 @@ using namespace dx12_internal;
 			wi::platform::Exit();
 		}
 
-		cmd_desc.ByteStride = sizeof(IndirectDrawArgsIndexedInstanced);
+		cmd_desc.ByteStride = sizeof(D3D12_DRAW_INDEXED_ARGUMENTS);
 		cmd_desc.NumArgumentDescs = 1;
 		cmd_desc.pArgumentDescs = drawIndexedInstancedArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawIndexedInstancedIndirectCommandSignature));
@@ -2879,7 +2879,7 @@ using namespace dx12_internal;
 			D3D12_INDIRECT_ARGUMENT_DESC dispatchMeshArgs[1];
 			dispatchMeshArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
 
-			cmd_desc.ByteStride = sizeof(IndirectDispatchArgs);
+			cmd_desc.ByteStride = sizeof(D3D12_DISPATCH_MESH_ARGUMENTS);
 			cmd_desc.NumArgumentDescs = 1;
 			cmd_desc.pArgumentDescs = dispatchMeshArgs;
 			hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchMeshIndirectCommandSignature));

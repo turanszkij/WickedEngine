@@ -47,6 +47,8 @@ using int4 = XMINT4;
 #define PUSHCONSTANT(name, type) ConstantBuffer<type> name : register(b999)
 #endif // HLSL6
 
+#endif // __cplusplus
+
 struct IndirectDrawArgsInstanced
 {
 	uint VertexCountPerInstance;
@@ -68,8 +70,6 @@ struct IndirectDispatchArgs
 	uint ThreadGroupCountY;
 	uint ThreadGroupCountZ;
 };
-
-#endif // __cplusplus
 
 
 // Common buffers:
