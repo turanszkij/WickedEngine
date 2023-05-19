@@ -5512,7 +5512,7 @@ void DrawScene(
 	uint32_t flags
 )
 {
-	const bool opaque = flags & FILTER_OPAQUE;
+	const bool opaque = flags & DRAWSCENE_OPAQUE;
 	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
 	const bool impostor = flags & DRAWSCENE_IMPOSTOR;
