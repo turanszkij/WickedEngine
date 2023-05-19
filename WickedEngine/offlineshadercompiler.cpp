@@ -20,7 +20,6 @@ struct ShaderEntry
 };
 wi::vector<ShaderEntry> shaders = {
 	{"hairparticle_simulateCS", wi::graphics::ShaderStage::CS},
-	{"hairparticle_finishUpdateCS", wi::graphics::ShaderStage::CS},
 	{"emittedparticle_simulateCS", wi::graphics::ShaderStage::CS},
 	{"generateMIPChainCubeCS_float4", wi::graphics::ShaderStage::CS},
 	{"generateMIPChainCubeCS_unorm4", wi::graphics::ShaderStage::CS},

@@ -17,7 +17,7 @@ RWStructuredBuffer<PatchSimulationData> simulationBuffer : register(u0);
 RWByteAddressBuffer vertexBuffer_POS : register(u1);
 RWByteAddressBuffer vertexBuffer_UVS : register(u2);
 RWBuffer<uint> culledIndexBuffer : register(u3);
-RWByteAddressBuffer counterBuffer : register(u4);
+RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> indirectBuffer : register(u4);
 
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
@@ -288,9 +288,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		uint waveOffset;
 		if (WaveIsFirstLane() && waveAppendCount > 0)
 		{
-			counterBuffer.InterlockedAdd(0, waveAppendCount, waveOffset);
+			InterlockedAdd(indirectBuffer[0].IndexCountPerInstance, waveAppendCount * 6, waveOffset);
 		}
-		waveOffset = WaveReadLaneFirst(waveOffset);
+		waveOffset = WaveReadLaneFirst(waveOffset) / 6;
 
 		if (visible)
 		{
