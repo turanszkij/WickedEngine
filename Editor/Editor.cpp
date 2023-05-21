@@ -22,6 +22,12 @@ extern bool window_recreating;
 
 void Editor::Initialize()
 {
+	if (config.Has("font"))
+	{
+		// Replace default font from config:
+		wi::font::AddFontStyle(config.GetText("font"));
+	}
+
 	Application::Initialize();
 
 	// With this mode, file data for resources will be kept around. This allows serializing embedded resource data inside scenes

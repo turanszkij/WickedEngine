@@ -119,13 +119,13 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 	gridHelperCheckBox.Create("Grid helper: ");
 	gridHelperCheckBox.SetTooltip("Toggle showing of unit visualizer grid in the world origin");
-	if (editor->main->config.GetSection("graphics").Has("grid_helper"))
+	if (editor->main->config.GetSection("options").Has("grid_helper"))
 	{
-		wi::renderer::SetToDrawGridHelper(editor->main->config.GetSection("graphics").GetBool("grid_helper"));
+		wi::renderer::SetToDrawGridHelper(editor->main->config.GetSection("options").GetBool("grid_helper"));
 	}
 	gridHelperCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawGridHelper(args.bValue);
-		editor->main->config.GetSection("graphics").Set("grid_helper", args.bValue);
+		editor->main->config.GetSection("options").Set("grid_helper", args.bValue);
 		editor->main->config.Commit();
 		});
 	gridHelperCheckBox.SetCheck(wi::renderer::GetToDrawGridHelper());
