@@ -110,6 +110,8 @@ namespace wi::helper
 	};
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess);
 
+	void GetFileNamesInDirectory(const std::string& directory, wi::vector<std::string>& out_filenames, const std::string& filter_extension = "");
+
 	// Converts a file into a C++ header file that contains the file contents as byte array.
 	//	dataName : the byte array's name
 	bool Bin2H(const uint8_t* data, size_t size, const std::string& dst_filename, const char* dataName);

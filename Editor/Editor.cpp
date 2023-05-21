@@ -609,6 +609,14 @@ void EditorComponent::Load()
 	SetDefaultLocalization();
 	optionsWnd.generalWnd.RefreshLanguageSelectionAfterWholeGUIWasInitialized();
 
+	wi::vector<std::string> font_filenames;
+	wi::helper::GetFileNamesInDirectory("fonts/", font_filenames, "TTF");
+	for (auto& x : font_filenames)
+	{
+		font_datas.emplace_back().name = x;
+		wi::helper::FileRead("fonts/" + x, font_datas.back().filedata);
+	}
+
 	RenderPath2D::Load();
 }
 void EditorComponent::Start()
@@ -619,8 +627,11 @@ void EditorComponent::Start()
 	//	This is added on main thread, not inside Load(), to avoid conflict with font system intialization
 	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, font_awesome_v6_size);
 
-	// Same thing like the above, this is fallback for asian characters:
-	wi::font::AddFontStyle("NotoSansCJKsc-Regular", noto, noto_size);
+	// Add other fonts that were loaded from fonts directory as fallback fonts:
+	for (auto& x : font_datas)
+	{
+		wi::font::AddFontStyle(x.name, x.filedata.data(), x.filedata.size());
+	}
 
 	RenderPath2D::Start();
 }
