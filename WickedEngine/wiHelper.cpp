@@ -1160,19 +1160,19 @@ namespace wi::helper
 #endif // _WIN32
 	}
 
-	void GetFileNamesInDirectory(const std::string& directory, wi::vector<std::string>& out_filenames, const std::string& filter_extension)
+	void GetFileNamesInDirectory(const std::string& directory, std::function<void(std::string fileName)> onSuccess, const std::string& filter_extension)
 	{
 		if (!std::filesystem::exists(directory))
 			return;
 
 		for (const auto& entry : std::filesystem::directory_iterator(directory))
 		{
-			std::wstring name_wide = entry.path().filename().generic_wstring();
-			std::string name;
-			wi::helper::StringConvert(name_wide, name);
-			if (filter_extension.empty() || wi::helper::toUpper(wi::helper::GetExtensionFromFileName(name)).compare(filter_extension) == 0)
+			std::wstring filename_wide = entry.path().filename().generic_wstring();
+			std::string filename;
+			wi::helper::StringConvert(filename_wide, filename);
+			if (filter_extension.empty() || wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename)).compare(filter_extension) == 0)
 			{
-				out_filenames.push_back(name);
+				onSuccess(directory + filename);
 			}
 		}
 	}

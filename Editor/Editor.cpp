@@ -609,13 +609,11 @@ void EditorComponent::Load()
 	SetDefaultLocalization();
 	optionsWnd.generalWnd.RefreshLanguageSelectionAfterWholeGUIWasInitialized();
 
-	wi::vector<std::string> font_filenames;
-	wi::helper::GetFileNamesInDirectory("fonts/", font_filenames, "TTF");
-	for (auto& x : font_filenames)
-	{
-		font_datas.emplace_back().name = x;
-		wi::helper::FileRead("fonts/" + x, font_datas.back().filedata);
-	}
+	auto load_font = [this](std::string filename) {
+		font_datas.emplace_back().name = filename;
+		wi::helper::FileRead(filename, font_datas.back().filedata);
+	};
+	wi::helper::GetFileNamesInDirectory("fonts/", load_font, "TTF");
 
 	RenderPath2D::Load();
 }
