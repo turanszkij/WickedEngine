@@ -148,7 +148,8 @@ namespace wi::font
 	// Set canvas for the CommandList to handle DPI-aware font rendering on the current thread
 	void SetCanvas(const wi::Canvas& current_canvas);
 	// Call once per frame to update font atlas texture
-	void UpdateAtlas();
+	//	upscaling : this should be the DPI upscaling factor, otherwise there will be no upscaling. Upscaling will cause glyphs to be cached at higher resolution.
+	void UpdateAtlas(float upscaling = 1.0f);
 
 	// Draw text with specified parameters and return cursor for last word
 	//	The next Draw() can continue from where this left off by using the return value of this function

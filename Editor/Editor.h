@@ -155,6 +155,13 @@ public:
 	void SetDefaultLocalization();
 	void SetLocalization(wi::Localization& loc);
 	void ReloadLanguage();
+
+	struct FontData
+	{
+		std::string name;
+		wi::vector<uint8_t> filedata;
+	};
+	wi::vector<FontData> font_datas;
 };
 
 class Editor : public wi::Application

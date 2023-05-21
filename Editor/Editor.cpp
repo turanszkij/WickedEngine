@@ -22,6 +22,12 @@ extern bool window_recreating;
 
 void Editor::Initialize()
 {
+	if (config.Has("font"))
+	{
+		// Replace default font from config:
+		wi::font::AddFontStyle(config.GetText("font"));
+	}
+
 	Application::Initialize();
 
 	// With this mode, file data for resources will be kept around. This allows serializing embedded resource data inside scenes
@@ -609,6 +615,12 @@ void EditorComponent::Load()
 	SetDefaultLocalization();
 	optionsWnd.generalWnd.RefreshLanguageSelectionAfterWholeGUIWasInitialized();
 
+	auto load_font = [this](std::string filename) {
+		font_datas.emplace_back().name = filename;
+		wi::helper::FileRead(filename, font_datas.back().filedata);
+	};
+	wi::helper::GetFileNamesInDirectory("fonts/", load_font, "TTF");
+
 	RenderPath2D::Load();
 }
 void EditorComponent::Start()
@@ -619,8 +631,11 @@ void EditorComponent::Start()
 	//	This is added on main thread, not inside Load(), to avoid conflict with font system intialization
 	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, font_awesome_v6_size);
 
-	// Same thing with the yumin font as above, it is a fallback for asian characters
-	wi::font::AddFontStyle("yumin", yumin, yumin_size);
+	// Add other fonts that were loaded from fonts directory as fallback fonts:
+	for (auto& x : font_datas)
+	{
+		wi::font::AddFontStyle(x.name, x.filedata.data(), x.filedata.size());
+	}
 
 	RenderPath2D::Start();
 }
