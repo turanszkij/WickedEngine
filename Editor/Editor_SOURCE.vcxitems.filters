@@ -87,8 +87,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)HumanoidWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)GeneralWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ProfilerWindow.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)EmbeddedResources.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)VideoWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)FontAwesomeV6.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NotoSansCJKsc_Regular.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -123,7 +124,6 @@
       <Filter>meshoptimizer</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)TerrainWindow.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)FontAwesomeV6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IconsFontAwesome6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IconDefinitions.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.h" />

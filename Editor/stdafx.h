@@ -15,8 +15,10 @@
 #include "WickedEngine.h"
 #include "Editor.h"
 
-// Linked externally from EmbeddedResources.cpp:
+// Linked externally from FontAwesomeV6.cpp:
 extern const uint8_t font_awesome_v6[];
 extern const size_t font_awesome_v6_size;
+
+// Linked externally from NotoSansCJKsc_Regular.cpp:
 extern const uint8_t noto[];
 extern const size_t noto_size;

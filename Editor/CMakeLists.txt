@@ -44,7 +44,8 @@ set (SOURCE_FILES
 	GeneralWindow.cpp
 	ProfilerWindow.cpp
 	xatlas.cpp
-	EmbeddedResources.cpp
+	FontAwesomeV6.cpp
+	NotoSansCJKsc_Regular.cpp
 )
 
 add_subdirectory(meshoptimizer)
