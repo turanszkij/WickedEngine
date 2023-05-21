@@ -619,8 +619,8 @@ void EditorComponent::Start()
 	//	This is added on main thread, not inside Load(), to avoid conflict with font system intialization
 	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, font_awesome_v6_size);
 
-	// Same thing with the yumin font as above, it is a fallback for asian characters
-	wi::font::AddFontStyle("yumin", yumin, yumin_size);
+	// Same thing like the above, this is fallback for asian characters:
+	wi::font::AddFontStyle("NotoSansCJKsc-Regular", noto, noto_size);
 
 	RenderPath2D::Start();
 }
