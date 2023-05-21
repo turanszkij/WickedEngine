@@ -5549,21 +5549,6 @@ void DrawScene(
 		filterMask = FILTER_ALL;
 	}
 
-	if (hairparticle)
-	{
-		if (IsWireRender() || !transparent)
-		{
-			for (uint32_t hairIndex : vis.visibleHairs)
-			{
-				const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
-				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
-
-				hair.Draw(material, renderPass, cmd);
-			}
-		}
-	}
-
 	static thread_local RenderQueue renderQueue;
 	renderQueue.init();
 	for (uint32_t instanceIndex : vis.visibleObjects)
@@ -5598,6 +5583,21 @@ void DrawScene(
 	if (impostor)
 	{
 		RenderImpostors(vis, renderPass, cmd);
+	}
+
+	if (hairparticle)
+	{
+		if (IsWireRender() || !transparent)
+		{
+			for (uint32_t hairIndex : vis.visibleHairs)
+			{
+				const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
+
+				hair.Draw(material, renderPass, cmd);
+			}
+		}
 	}
 
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
