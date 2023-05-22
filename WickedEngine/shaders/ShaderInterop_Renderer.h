@@ -1254,14 +1254,14 @@ struct SkinningPushConstants
 	int so_pos_nor_wind;
 
 	int so_tan;
-	int bonebuffer_index;
 	int vb_bon;
-	int morphbuffer_index;
+	int bonebuffer_index;
+	uint bonebuffer_offset;
 
+	int morphbuffer_index;
 	uint morphbuffer_offset;
 	uint morph_count;
 	int morphvb_index;
-	int padding;
 };
 
 struct MorphTargetGPU

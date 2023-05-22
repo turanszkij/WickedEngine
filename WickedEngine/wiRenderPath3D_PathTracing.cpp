@@ -79,7 +79,7 @@ namespace wi
 
 				desc.layout = ResourceState::DEPTHSTENCIL;
 				desc.bind_flags = BindFlag::DEPTH_STENCIL;
-				desc.format = Format::D32_FLOAT_S8X24_UINT;
+				desc.format = wi::renderer::format_depthbuffer_main;
 				device->CreateTexture(&desc, nullptr, &traceDepthStencil);
 				device->SetName(&traceDepthStencil, "traceDepthStencil");
 			}

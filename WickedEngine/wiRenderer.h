@@ -16,11 +16,19 @@
 
 namespace wi::renderer
 {
-	inline uint32_t CombineStencilrefs(wi::enums::STENCILREF engineStencilRef, uint8_t userStencilRef)
+	constexpr wi::graphics::Format format_depthbuffer_main = wi::graphics::Format::D32_FLOAT_S8X24_UINT;
+	constexpr wi::graphics::Format format_rendertarget_main = wi::graphics::Format::R11G11B10_FLOAT;
+	constexpr wi::graphics::Format format_idbuffer = wi::graphics::Format::R32_UINT;
+	constexpr wi::graphics::Format format_rendertarget_shadowmap = wi::graphics::Format::R16G16B16A16_FLOAT;
+	constexpr wi::graphics::Format format_depthbuffer_shadowmap = wi::graphics::Format::D16_UNORM;
+	constexpr wi::graphics::Format format_rendertarget_envprobe = wi::graphics::Format::R11G11B10_FLOAT;
+	constexpr wi::graphics::Format format_depthbuffer_envprobe = wi::graphics::Format::D16_UNORM;
+
+	constexpr uint32_t CombineStencilrefs(wi::enums::STENCILREF engineStencilRef, uint8_t userStencilRef)
 	{
 		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
 	}
-	inline XMUINT3 GetEntityCullingTileCount(XMUINT2 internalResolution)
+	constexpr XMUINT3 GetEntityCullingTileCount(XMUINT2 internalResolution)
 	{
 		return XMUINT3(
 			(internalResolution.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
@@ -28,7 +36,7 @@ namespace wi::renderer
 			1
 		);
 	}
-	inline XMUINT2 GetVisibilityTileCount(XMUINT2 internalResolution)
+	constexpr XMUINT2 GetVisibilityTileCount(XMUINT2 internalResolution)
 	{
 		return XMUINT2(
 			(internalResolution.x + VISIBILITY_BLOCKSIZE - 1) / VISIBILITY_BLOCKSIZE,

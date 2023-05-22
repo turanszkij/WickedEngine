@@ -125,6 +125,13 @@ namespace wi::scene
 		wi::graphics::GPUBuffer meshletBuffer;
 		std::atomic<uint32_t> meshletAllocator{ 0 };
 
+		// Bone GPU data for all armatures:
+		wi::graphics::GPUBuffer boneUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
+		ShaderTransform* boneArrayMapped = nullptr;
+		size_t boneArraySize = 0;
+		wi::graphics::GPUBuffer boneBuffer;
+		std::atomic<uint32_t> boneAllocator{ 0 };
+
 		// Occlusion query state:
 		struct OcclusionResult
 		{

@@ -94,7 +94,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 			[loop]
 			for (uint i = 0; ((i < 4) && (weisum < 1.0f)); ++i)
 			{
-				float4x4 m = bindless_buffers[push.bonebuffer_index].Load<ShaderTransform>(ind[i] * sizeof(ShaderTransform)).GetMatrix();
+				float4x4 m = bindless_buffers[push.bonebuffer_index].Load<ShaderTransform>((push.bonebuffer_offset + ind[i]) * sizeof(ShaderTransform)).GetMatrix();
 
 				p += mul(m, float4(pos.xyz, 1)) * wei[i];
 				n += mul((float3x3)m, nor.xyz) * wei[i];

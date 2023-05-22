@@ -166,6 +166,9 @@
     <Filter Include="languages">
       <UniqueIdentifier>{beae58b9-9c06-4b1f-9e03-a27712d6a579}</UniqueIdentifier>
     </Filter>
+    <Filter Include="fonts">
+      <UniqueIdentifier>{73a992f5-b6f9-436f-bdd3-eacf76ab0809}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)terrain\base.jpg">
@@ -203,6 +206,9 @@
     <Text Include="$(MSBuildThisFileDirectory)languages\readme.txt">
       <Filter>languages</Filter>
     </Text>
+    <Text Include="$(MSBuildThisFileDirectory)fonts\readme.txt">
+      <Filter>fonts</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="$(MSBuildThisFileDirectory)languages\Magyar.xml">
@@ -211,5 +217,10 @@
     <Xml Include="$(MSBuildThisFileDirectory)languages\日本語.xml">
       <Filter>languages</Filter>
     </Xml>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="$(MSBuildThisFileDirectory)fonts\NotoSansCJKsc-Regular.ttf">
+      <Filter>fonts</Filter>
+    </Font>
   </ItemGroup>
 </Project>

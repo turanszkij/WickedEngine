@@ -1429,22 +1429,6 @@ namespace wi::scene
 #endif
 	}
 
-	void ArmatureComponent::CreateRenderData()
-	{
-		GraphicsDevice* device = wi::graphics::GetDevice();
-
-		GPUBufferDesc bd;
-		bd.size = sizeof(ShaderTransform) * (uint32_t)boneCollection.size();
-		bd.bind_flags = BindFlag::SHADER_RESOURCE;
-		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-		bd.stride = sizeof(ShaderTransform);
-
-		bool success = device->CreateBuffer(&bd, nullptr, &boneBuffer);
-		assert(success);
-		device->SetName(&boneBuffer, "ArmatureComponent::boneBuffer");
-		descriptor_srv = device->GetDescriptorIndex(&boneBuffer, SubresourceType::SRV);
-	}
-
 	AnimationComponent::AnimationChannel::PathDataType AnimationComponent::AnimationChannel::GetPathDataType() const
 	{
 		switch (path)

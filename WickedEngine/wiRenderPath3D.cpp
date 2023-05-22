@@ -91,7 +91,7 @@ namespace wi
 
 		{
 			TextureDesc desc;
-			desc.format = Format::R11G11B10_FLOAT;
+			desc.format = wi::renderer::format_rendertarget_main;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
@@ -115,7 +115,7 @@ namespace wi
 		}
 		{
 			TextureDesc desc;
-			desc.format = Format::R32_UINT;
+			desc.format = wi::renderer::format_idbuffer;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
@@ -155,7 +155,7 @@ namespace wi
 		{
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.format = Format::R11G11B10_FLOAT;
+			desc.format = wi::renderer::format_rendertarget_main;
 			desc.width = internalResolution.x / 4;
 			desc.height = internalResolution.y / 4;
 			desc.mip_levels = std::min(8u, (uint32_t)std::log2(std::max(desc.width, desc.height)));
@@ -181,7 +181,7 @@ namespace wi
 		{
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.format = Format::R11G11B10_FLOAT;
+			desc.format = wi::renderer::format_rendertarget_main;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtPostprocess);
@@ -228,7 +228,7 @@ namespace wi
 
 			desc.sample_count = getMSAASampleCount();
 			desc.layout = ResourceState::DEPTHSTENCIL_READONLY;
-			desc.format = Format::D32_FLOAT_S8X24_UINT;
+			desc.format = wi::renderer::format_depthbuffer_main;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL;
 			device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
 			device->SetName(&depthBuffer_Main, "depthBuffer_Main");
@@ -2176,7 +2176,7 @@ namespace wi
 
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.format = Format::R11G11B10_FLOAT;
+			desc.format = wi::renderer::format_rendertarget_main;
 			desc.width = GetPhysicalWidth();
 			desc.height = GetPhysicalHeight();
 			device->CreateTexture(&desc, nullptr, &rtFSR[0]);
@@ -2213,7 +2213,7 @@ namespace wi
 
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.format = Format::R11G11B10_FLOAT;
+			desc.format = wi::renderer::format_rendertarget_main;
 			desc.width = displayResolution.x;
 			desc.height = displayResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtFSR[0]);
@@ -2323,14 +2323,14 @@ namespace wi
 
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::R11G11B10_FLOAT;
+			desc.format = wi::renderer::format_rendertarget_main;
 			desc.width = internalResolution.x / 2;
 			desc.height = internalResolution.y / 2;
 			device->CreateTexture(&desc, nullptr, &rtReflection);
 			device->SetName(&rtReflection, "rtReflection");
 
 			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::D32_FLOAT_S8X24_UINT;
+			desc.format = wi::renderer::format_depthbuffer_main;
 			desc.width = internalResolution.x / 2;
 			desc.height = internalResolution.y / 2;
 			desc.layout = ResourceState::DEPTHSTENCIL;
@@ -2399,7 +2399,7 @@ namespace wi
 
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::R11G11B10_FLOAT;
+			desc.format = wi::renderer::format_rendertarget_main;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
 			desc.sample_count = getMSAASampleCount();

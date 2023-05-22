@@ -1754,8 +1754,8 @@ void LoadShaders()
 								{
 									RenderPassInfo renderpass_info;
 									renderpass_info.rt_count = 1;
-									renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? Format::R11G11B10_FLOAT : Format::R32_UINT;
-									renderpass_info.ds_format = Format::D32_FLOAT_S8X24_UINT;
+									renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? format_rendertarget_main : format_idbuffer;
+									renderpass_info.ds_format = format_depthbuffer_main;
 									const uint32_t msaa_support[] = { 1,2,4,8 };
 									for (uint32_t msaa : msaa_support)
 									{
@@ -1770,8 +1770,8 @@ void LoadShaders()
 								{
 									RenderPassInfo renderpass_info;
 									renderpass_info.rt_count = 1;
-									renderpass_info.rt_formats[0] = Format::R11G11B10_FLOAT;
-									renderpass_info.ds_format = Format::D16_UNORM;
+									renderpass_info.rt_formats[0] = format_rendertarget_envprobe;
+									renderpass_info.ds_format = format_depthbuffer_envprobe;
 									const uint32_t msaa_support[] = { 1,8 };
 									for (uint32_t msaa : msaa_support)
 									{
@@ -1786,8 +1786,8 @@ void LoadShaders()
 								{
 									RenderPassInfo renderpass_info;
 									renderpass_info.rt_count = 1;
-									renderpass_info.rt_formats[0] = Format::R16G16B16A16_FLOAT;
-									renderpass_info.ds_format = Format::D16_UNORM;
+									renderpass_info.rt_formats[0] = format_rendertarget_shadowmap;
+									renderpass_info.ds_format = format_depthbuffer_shadowmap;
 									device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
 								}
 								break;
@@ -3641,8 +3641,24 @@ void UpdateRenderData(
 	auto prof_updatebuffer_cpu = wi::profiler::BeginRangeCPU("Update Buffers (CPU)");
 	auto prof_updatebuffer_gpu = wi::profiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
 
-	GPUBarrier frame_cb_barrier = GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST);
-	device->Barrier(&frame_cb_barrier, 1, cmd);
+	barrier_stack.push_back(GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST));
+	if (vis.scene->instanceBuffer.IsValid())
+	{
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
+	}
+	if (vis.scene->geometryBuffer.IsValid())
+	{
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->geometryBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
+	}
+	if (vis.scene->materialBuffer.IsValid())
+	{
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
+	}
+	if (vis.scene->boneBuffer.IsValid())
+	{
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->boneBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
+	}
+	barrier_stack_flush(cmd);
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
 	barrier_stack.push_back(GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
@@ -3684,6 +3700,19 @@ void UpdateRenderData(
 			cmd
 		);
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+	}
+
+	if (vis.scene->boneBuffer.IsValid() && vis.scene->boneArraySize > 0)
+	{
+		device->CopyBuffer(
+			&vis.scene->boneBuffer,
+			0,
+			&vis.scene->boneUploadBuffer[device->GetBufferIndex()],
+			0,
+			vis.scene->boneArraySize * sizeof(ShaderTransform),
+			cmd
+		);
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->boneBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
@@ -4045,15 +4074,6 @@ void UpdateRenderData(
 
 	}
 
-	// Upload bones for skinning to shader:
-	for (size_t i = 0; i < vis.scene->armatures.GetCount(); ++i)
-	{
-		const ArmatureComponent& armature = vis.scene->armatures[i];
-		device->UpdateBuffer(&armature.boneBuffer, armature.boneData.data(), cmd);
-
-		barrier_stack.push_back(GPUBarrier::Buffer(&armature.boneBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-	}
-
 	// Soft body updates:
 	for (size_t i = 0; i < vis.scene->softbodies.GetCount(); ++i)
 	{
@@ -4102,6 +4122,17 @@ void UpdateRenderData(
 	device->EventBegin("Skinning and Morph", cmd);
 	{
 		auto range = wi::profiler::BeginRangeGPU("Skinning and Morph", cmd);
+		int descriptor_bonebuffer = -1;
+		if (vis.scene->boneBuffer.IsValid())
+		{
+			descriptor_bonebuffer = device->GetDescriptorIndex(&vis.scene->boneBuffer, SubresourceType::SRV);
+		}
+		else if (vis.scene->boneUploadBuffer[device->GetBufferIndex()].IsValid())
+		{
+			// In this case we use the upload buffer directly, this will be the case with UMA GPU:
+			descriptor_bonebuffer = device->GetDescriptorIndex(&vis.scene->boneUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
+		}
+		device->BindComputeShader(&shaders[CSTYPE_SKINNING], cmd);
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
 		{
 			Entity entity = vis.scene->meshes.GetEntity(i);
@@ -4117,9 +4148,6 @@ void UpdateRenderData(
 					continue;
 				}
 
-
-				device->BindComputeShader(&shaders[CSTYPE_SKINNING], cmd);
-
 				SkinningPushConstants push;
 				push.vertexCount = (uint)mesh.vertex_positions.size();
 				push.vb_pos_nor_wind = mesh.vb_pos_nor_wind.descriptor_srv;
@@ -4129,11 +4157,13 @@ void UpdateRenderData(
 				const ArmatureComponent* armature = vis.scene->armatures.GetComponent(mesh.armatureID);
 				if (armature != nullptr)
 				{
-					push.bonebuffer_index = armature->descriptor_srv;
+					push.bonebuffer_index = descriptor_bonebuffer;
+					push.bonebuffer_offset = armature->gpuBoneOffset;
 				}
 				else
 				{
 					push.bonebuffer_index = -1;
+					push.bonebuffer_offset = 0;
 				}
 				push.vb_bon = mesh.vb_bon.descriptor_srv;
 				if (mesh.active_morph_count > 0)

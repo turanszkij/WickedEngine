@@ -456,7 +456,7 @@ namespace wi::scene
 		enum COMPUTE_NORMALS
 		{
 			COMPUTE_NORMALS_HARD,		// hard face normals, can result in additional vertices generated
-			COMPUTE_NORMALS_SMOOTH,		// smooth per vertex normals, this can remove/simplyfy geometry, but slow
+			COMPUTE_NORMALS_SMOOTH,		// smooth per vertex normals, this can remove/simplify geometry, but slow
 			COMPUTE_NORMALS_SMOOTH_FAST	// average normals, vertex count will be unchanged, fast
 		};
 		void ComputeNormals(COMPUTE_NORMALS compute);
@@ -811,12 +811,8 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
-
+		uint32_t gpuBoneOffset = 0;
 		wi::vector<ShaderTransform> boneData;
-		wi::graphics::GPUBuffer boneBuffer;
-		int descriptor_srv = -1;
-
-		void CreateRenderData();
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

@@ -120,6 +120,38 @@ namespace wi::scene
 		}
 		materialArrayMapped = (ShaderMaterial*)materialUploadBuffer[device->GetBufferIndex()].mapped_data;
 
+		boneArraySize = 0;
+		for (size_t i = 0; i < armatures.GetCount(); ++i)
+		{
+			boneArraySize += armatures[i].boneCollection.size();
+		}
+		if (boneUploadBuffer[0].desc.size < (boneArraySize * sizeof(ShaderTransform)))
+		{
+			GPUBufferDesc desc;
+			desc.stride = sizeof(ShaderTransform);
+			desc.size = desc.stride * boneArraySize * 2; // *2 to grow fast
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			{
+				// Non-UMA: separate Default usage buffer
+				device->CreateBuffer(&desc, nullptr, &boneBuffer);
+				device->SetName(&boneBuffer, "Scene::boneBuffer");
+
+				// Upload buffer shouldn't be used by shaders with Non-UMA:
+				desc.bind_flags = BindFlag::NONE;
+				desc.misc_flags = ResourceMiscFlag::NONE;
+			}
+
+			desc.usage = Usage::UPLOAD;
+			for (int i = 0; i < arraysize(boneUploadBuffer); ++i)
+			{
+				device->CreateBuffer(&desc, nullptr, &boneUploadBuffer[i]);
+				device->SetName(&boneUploadBuffer[i], "Scene::boneUploadBuffer");
+			}
+		}
+		boneArrayMapped = (ShaderTransform*)boneUploadBuffer[device->GetBufferIndex()].mapped_data;
+
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
 		{
@@ -3095,6 +3127,7 @@ namespace wi::scene
 	}
 	void Scene::RunArmatureUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		boneAllocator.store(0);
 		wi::jobsystem::Dispatch(ctx, (uint32_t)armatures.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
 
 			ArmatureComponent& armature = armatures[args.jobIndex];
@@ -3115,6 +3148,9 @@ namespace wi::scene
 			//	But this will correct them too.
 			XMMATRIX R = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
 
+			armature.gpuBoneOffset = boneAllocator.fetch_add((uint32_t)armature.boneCollection.size());
+			ShaderTransform* gpu_dst = boneArrayMapped + armature.gpuBoneOffset;
+
 			if (armature.boneData.size() != armature.boneCollection.size())
 			{
 				armature.boneData.resize(armature.boneCollection.size());
@@ -3123,7 +3159,7 @@ namespace wi::scene
 			XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 			XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
-			int boneIndex = 0;
+			uint32_t boneIndex = 0;
 			for (Entity boneEntity : armature.boneCollection)
 			{
 				const TransformComponent* bone = transforms.GetComponent(boneEntity);
@@ -3136,7 +3172,10 @@ namespace wi::scene
 
 				XMFLOAT4X4 mat;
 				XMStoreFloat4x4(&mat, M);
-				armature.boneData[boneIndex++].Create(mat);
+
+				ShaderTransform& shadertransform = armature.boneData[boneIndex];
+				shadertransform.Create(mat);
+				std::memcpy(gpu_dst + boneIndex, &shadertransform, sizeof(shadertransform));
 
 				const float bone_radius = 1;
 				XMFLOAT3 bonepos = bone->GetPosition();
@@ -3144,14 +3183,11 @@ namespace wi::scene
 				boneAABB.createFromHalfWidth(bonepos, XMFLOAT3(bone_radius, bone_radius, bone_radius));
 				_min = wi::math::Min(_min, boneAABB._min);
 				_max = wi::math::Max(_max, boneAABB._max);
+
+				boneIndex++;
 			}
 
 			armature.aabb = AABB(_min, _max);
-
-			if (!armature.boneBuffer.IsValid() || armature.boneBuffer.desc.size != armature.boneData.size() * sizeof(ShaderTransform))
-			{
-				armature.CreateRenderData();
-			}
 		});
 	}
 	void Scene::RunMeshUpdateSystem(wi::jobsystem::context& ctx)

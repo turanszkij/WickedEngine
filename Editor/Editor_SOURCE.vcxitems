@@ -254,6 +254,10 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)fonts\readme.txt">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Text>
     <Text Include="$(MSBuildThisFileDirectory)languages\readme.txt">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
@@ -269,5 +273,11 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </Xml>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="$(MSBuildThisFileDirectory)fonts\NotoSansCJKsc-Regular.ttf">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Font>
   </ItemGroup>
 </Project>
