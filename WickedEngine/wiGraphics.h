@@ -706,30 +706,6 @@ namespace wi::graphics
 		bool allow_hdr = true;
 	};
 
-	struct IndirectDrawArgsInstanced
-	{
-		uint32_t vertex_count_per_instance = 0;
-		uint32_t instance_count = 0;
-		uint32_t start_vertex_location = 0;
-		uint32_t start_instance_location = 0;
-	};
-
-	struct IndirectDrawArgsIndexedInstanced
-	{
-		uint32_t index_count_per_instance = 0;
-		uint32_t instance_count = 0;
-		uint32_t start_index_location = 0;
-		int32_t base_vertex_location = 0;
-		uint32_t start_instance_location = 0;
-	};
-
-	struct IndirectDispatchArgs
-	{
-		uint32_t thread_group_count_x = 0;
-		uint32_t thread_group_count_y = 0;
-		uint32_t thread_group_count_z = 0;
-	};
-
 	struct SubresourceData
 	{
 		const void* data_ptr = nullptr;	// pointer to the beginning of the subresource data (pointer to beginning of resource + subresource offset)

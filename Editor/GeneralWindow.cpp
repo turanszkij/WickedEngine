@@ -119,13 +119,13 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 	gridHelperCheckBox.Create("Grid helper: ");
 	gridHelperCheckBox.SetTooltip("Toggle showing of unit visualizer grid in the world origin");
-	if (editor->main->config.GetSection("graphics").Has("grid_helper"))
+	if (editor->main->config.GetSection("options").Has("grid_helper"))
 	{
-		wi::renderer::SetToDrawGridHelper(editor->main->config.GetSection("graphics").GetBool("grid_helper"));
+		wi::renderer::SetToDrawGridHelper(editor->main->config.GetSection("options").GetBool("grid_helper"));
 	}
 	gridHelperCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawGridHelper(args.bValue);
-		editor->main->config.GetSection("graphics").Set("grid_helper", args.bValue);
+		editor->main->config.GetSection("options").Set("grid_helper", args.bValue);
 		editor->main->config.Commit();
 		});
 	gridHelperCheckBox.SetCheck(wi::renderer::GetToDrawGridHelper());
@@ -275,20 +275,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	languageCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Text | wi::gui::LocalizationEnabled::Tooltip);
 	languageCombo.SetTooltip("Select a language. \nYou can also create a new language option by adding an XML file to the languages folder.\nThere is a button below that you can use to create a language template.");
 	languageCombo.AddItem("English");
-	if (std::filesystem::exists(languages_directory))
-	{
-		for (const auto& entry : std::filesystem::directory_iterator(languages_directory))
-		{
-			std::wstring language_name_wide = entry.path().filename().generic_wstring();
-			std::string language_name;
-			wi::helper::StringConvert(language_name_wide, language_name);
-			if (wi::helper::toUpper(wi::helper::GetExtensionFromFileName(language_name)) == "XML")
-			{
-				language_name = wi::helper::RemoveExtension(language_name);
-				languageCombo.AddItem(language_name);
-			}
-		}
-	}
 	languageCombo.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
 	languageCombo.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
 	languageCombo.OnSelect([=](wi::gui::EventArgs args) {
@@ -314,6 +300,13 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&languageCombo);
+
+	auto add_language = [this](std::string filename) {
+		std::string language_name = wi::helper::GetFileNameFromPath(filename);
+		language_name = wi::helper::RemoveExtension(language_name);
+		languageCombo.AddItem(language_name);
+	};
+	wi::helper::GetFileNamesInDirectory(languages_directory, add_language, "XML");
 
 
 	enum class Theme

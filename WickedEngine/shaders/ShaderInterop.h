@@ -47,6 +47,8 @@ using int4 = XMINT4;
 #define PUSHCONSTANT(name, type) ConstantBuffer<type> name : register(b999)
 #endif // HLSL6
 
+#endif // __cplusplus
+
 struct IndirectDrawArgsInstanced
 {
 	uint VertexCountPerInstance;
@@ -69,8 +71,6 @@ struct IndirectDispatchArgs
 	uint ThreadGroupCountZ;
 };
 
-#endif // __cplusplus
-
 
 // Common buffers:
 // These are usable by all shaders
@@ -83,7 +83,6 @@ struct IndirectDispatchArgs
 // These are bound on demand and alive until another is bound at the same slot
 
 #define CBSLOT_RENDERER_FORWARD_LIGHTMASK		2
-#define CBSLOT_RENDERER_CUBEMAPRENDER			3
 #define CBSLOT_RENDERER_VOLUMELIGHT				3
 #define CBSLOT_RENDERER_VOXELIZER				3
 #define CBSLOT_RENDERER_TRACED					2

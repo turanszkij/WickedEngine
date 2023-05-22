@@ -1160,6 +1160,23 @@ namespace wi::helper
 #endif // _WIN32
 	}
 
+	void GetFileNamesInDirectory(const std::string& directory, std::function<void(std::string fileName)> onSuccess, const std::string& filter_extension)
+	{
+		if (!std::filesystem::exists(directory))
+			return;
+
+		for (const auto& entry : std::filesystem::directory_iterator(directory))
+		{
+			std::wstring filename_wide = entry.path().filename().generic_wstring();
+			std::string filename;
+			wi::helper::StringConvert(filename_wide, filename);
+			if (filter_extension.empty() || wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename)).compare(filter_extension) == 0)
+			{
+				onSuccess(directory + filename);
+			}
+		}
+	}
+
 	bool Bin2H(const uint8_t* data, size_t size, const std::string& dst_filename, const char* dataName)
 	{
 		std::string ss;

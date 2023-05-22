@@ -24,10 +24,6 @@ using namespace wi::graphics;
 
 namespace wi::font
 {
-#define WHITESPACE_SIZE ((float(params.size) + params.spacingX) * 0.25f)
-#define TAB_SIZE (WHITESPACE_SIZE * 4)
-#define LINEBREAK_SIZE ((float(params.size) + params.spacingY))
-
 	namespace font_internal
 	{
 		static BlendState blendState;
@@ -116,9 +112,7 @@ namespace wi::font
 		constexpr int stylefromhash(int32_t hash) { return int((hash >> 10) & 0x1F); }
 		constexpr int heightfromhash(int32_t hash) { return int((hash >> 0) & 0x3FF); }
 		static wi::unordered_set<int32_t> pendingGlyphs;
-		static wi::SpinLock glyphLock;
-		static const float upscaling = 1;
-		static const float upscaling_rcp = 1.0f / upscaling;
+		static std::mutex glyphLock;
 
 		struct ParseStatus
 		{
@@ -136,25 +130,29 @@ namespace wi::font
 
 			vertexList.clear();
 
+			const float whitespace_size = (float(params.size) + params.spacingX) * 0.25f;
+			const float tab_size = whitespace_size * 4;
+			const float linebreak_size = (float(params.size) + params.spacingY);
+
 			auto word_wrap = [&] {
 				status.start_new_word = true;
 				if (status.last_word_begin > 0 && params.h_wrap >= 0 && status.cursor.position.x >= params.h_wrap - 1)
 				{
 					// Word ended and wrap detected, push down last word by one line:
-					float word_offset = vertexList[status.last_word_begin].pos.x + WHITESPACE_SIZE;
+					float word_offset = vertexList[status.last_word_begin].pos.x + whitespace_size;
 					for (size_t i = status.last_word_begin; i < status.quadCount * 4; ++i)
 					{
 						vertexList[i].pos.x -= word_offset;
-						vertexList[i].pos.y += LINEBREAK_SIZE;
+						vertexList[i].pos.y += linebreak_size;
 					}
 					status.cursor.position.x -= word_offset;
-					status.cursor.position.y += LINEBREAK_SIZE;
+					status.cursor.position.y += linebreak_size;
 					status.cursor.size.x = std::max(status.cursor.size.x, status.cursor.position.x);
-					status.cursor.size.y = std::max(status.cursor.size.y, status.cursor.position.y + LINEBREAK_SIZE);
+					status.cursor.size.y = std::max(status.cursor.size.y, status.cursor.position.y + linebreak_size);
 				}
 			};
 
-			status.cursor.size.y = status.cursor.position.y + LINEBREAK_SIZE;
+			status.cursor.size.y = status.cursor.position.y + linebreak_size;
 			for (size_t i = 0; i < text_length; ++i)
 			{
 				int code = (int)text[i];
@@ -172,17 +170,17 @@ namespace wi::font
 				{
 					word_wrap();
 					status.cursor.position.x = 0;
-					status.cursor.position.y += LINEBREAK_SIZE;
+					status.cursor.position.y += linebreak_size;
 				}
 				else if (code == ' ')
 				{
 					word_wrap();
-					status.cursor.position.x += WHITESPACE_SIZE;
+					status.cursor.position.x += whitespace_size;
 				}
 				else if (code == '\t')
 				{
 					word_wrap();
-					status.cursor.position.x += TAB_SIZE;
+					status.cursor.position.x += tab_size;
 				}
 				else
 				{
@@ -233,7 +231,7 @@ namespace wi::font
 				}
 
 				status.cursor.size.x = std::max(status.cursor.size.x, status.cursor.position.x);
-				status.cursor.size.y = std::max(status.cursor.size.y, status.cursor.position.y + LINEBREAK_SIZE);
+				status.cursor.size.y = std::max(status.cursor.size.y, status.cursor.position.y + linebreak_size);
 			}
 
 			word_wrap();
@@ -326,9 +324,22 @@ namespace wi::font
 		wi::backlog::post("wi::font Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
-	void UpdateAtlas()
+	void UpdateAtlas(float upscaling)
 	{
 		std::scoped_lock locker(glyphLock);
+
+		static float upscaling_prev = 1;
+		const float upscaling_rcp = 1.0f / upscaling;
+
+		if (upscaling_prev != upscaling)
+		{
+			// If upscaling changed (DPI change), clear glyph caches, they will need to be re-rendered:
+			texture = {};
+			glyph_lookup.clear();
+			rect_lookup.clear();
+			bitmap_lookup.clear();
+			upscaling_prev = upscaling;
+		}
 
 		// If there are pending glyphs, render them and repack the atlas:
 		if (!pendingGlyphs.empty())
@@ -465,7 +476,7 @@ namespace wi::font
 		for (size_t i = 0; i < fontStyles.size(); i++)
 		{
 			const FontStyle& fontStyle = *fontStyles[i];
-			if (!fontStyle.name.compare(fontName))
+			if (fontStyle.name.compare(fontName) == 0)
 			{
 				return int(i);
 			}
@@ -479,7 +490,7 @@ namespace wi::font
 		for (size_t i = 0; i < fontStyles.size(); i++)
 		{
 			const FontStyle& fontStyle = *fontStyles[i];
-			if (!fontStyle.name.compare(fontName))
+			if (fontStyle.name.compare(fontName) == 0)
 			{
 				return int(i);
 			}

@@ -24,7 +24,6 @@ namespace wi
 	static Shader ps;
 	static Shader ps_simple;
 	static Shader cs_simulate;
-	static Shader cs_finishUpdate;
 	static DepthStencilState dss_default, dss_equal;
 	static RasterizerState rs, ncrs, wirers;
 	static BlendState bs;
@@ -171,8 +170,9 @@ namespace wi
 		if (!indirectBuffer.IsValid())
 		{
 			GPUBufferDesc desc;
-			desc.size = sizeof(uint) + sizeof(IndirectDrawArgsIndexedInstanced); // counter + draw args
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
+			desc.stride = sizeof(IndirectDrawArgsIndexedInstanced);
+			desc.size = desc.stride;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS;
 			device->CreateBuffer(&desc, nullptr, &indirectBuffer);
 		}
@@ -296,6 +296,16 @@ namespace wi
 			hcb.xHairLayerMask = hair.layerMask;
 			hcb.xHairInstanceIndex = item.instanceIndex;
 			device->UpdateBuffer(&hair.constantBuffer, &hcb, cmd);
+			barrier_stack.push_back(GPUBarrier::Buffer(&hair.constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
+
+			IndirectDrawArgsIndexedInstanced args = {};
+			args.BaseVertexLocation = 0;
+			args.IndexCountPerInstance = 0; // this will use shader atomic
+			args.InstanceCount = 1;
+			args.StartIndexLocation = 0;
+			args.StartInstanceLocation = 0;
+			device->UpdateBuffer(&hair.indirectBuffer, &args, cmd);
+			barrier_stack.push_back(GPUBarrier::Buffer(&hair.indirectBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
 
 			if (hair.regenerate_frame)
 			{
@@ -305,17 +315,14 @@ namespace wi
 				device->ClearUAV(&hair.vertexBuffer_POS[1], 0, cmd);
 				device->ClearUAV(&hair.vertexBuffer_UVS, 0, cmd);
 				device->ClearUAV(&hair.culledIndexBuffer, 0, cmd);
-				device->ClearUAV(&hair.indirectBuffer, 0, cmd);
 
 				barrier_stack.push_back(GPUBarrier::Memory(&hair.simulationBuffer));
 				barrier_stack.push_back(GPUBarrier::Memory(&hair.vertexBuffer_POS[0]));
 				barrier_stack.push_back(GPUBarrier::Memory(&hair.vertexBuffer_POS[1]));
 				barrier_stack.push_back(GPUBarrier::Memory(&hair.vertexBuffer_UVS));
 				barrier_stack.push_back(GPUBarrier::Memory(&hair.culledIndexBuffer));
-				barrier_stack.push_back(GPUBarrier::Memory(&hair.indirectBuffer));
 			}
 
-			barrier_stack.push_back(GPUBarrier::Buffer(&hair.constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
 		}
 
 		barrier_stack_flush();
@@ -364,33 +371,10 @@ namespace wi
 			device->Dispatch((hair.strandCount + THREADCOUNT_SIMULATEHAIR - 1) / THREADCOUNT_SIMULATEHAIR, 1, 1, cmd);
 
 			barrier_stack.push_back(GPUBarrier::Memory(&hair.simulationBuffer));
-			barrier_stack.push_back(GPUBarrier::Memory(&hair.indirectBuffer));
+			barrier_stack.push_back(GPUBarrier::Buffer(&hair.indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT));
 			barrier_stack.push_back(GPUBarrier::Buffer(&hair.vertexBuffer_POS[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 			barrier_stack.push_back(GPUBarrier::Buffer(&hair.vertexBuffer_UVS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 			barrier_stack.push_back(GPUBarrier::Buffer(&hair.culledIndexBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDEX_BUFFER));
-		}
-
-		barrier_stack_flush();
-
-		// Finish update (reset counter, create indirect draw args):
-		device->BindComputeShader(&cs_finishUpdate, cmd);
-		for (uint32_t i = 0; i < itemCount; ++i)
-		{
-			const UpdateGPUItem& item = items[i];
-			const HairParticleSystem& hair = *item.hair;
-			if (hair.strandCount == 0 || !hair.simulationBuffer.IsValid())
-			{
-				continue;
-			}
-
-			const GPUResource* uavs[] = {
-				&hair.indirectBuffer
-			};
-			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-			device->Dispatch(1, 1, 1, cmd);
-
-			barrier_stack.push_back(GPUBarrier::Buffer(&hair.indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT));
 		}
 
 		barrier_stack_flush();
@@ -433,7 +417,7 @@ namespace wi
 
 		device->BindIndexBuffer(&culledIndexBuffer, GetIndexBufferFormat(culledIndexBuffer.desc.format), 0, cmd);
 
-		device->DrawIndexedInstancedIndirect(&indirectBuffer, 4, cmd);
+		device->DrawIndexedInstancedIndirect(&indirectBuffer, 0, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -506,7 +490,6 @@ namespace wi
 			wi::renderer::LoadShader(ShaderStage::PS, ps, "hairparticlePS.cso");
 
 			wi::renderer::LoadShader(ShaderStage::CS, cs_simulate, "hairparticle_simulateCS.cso");
-			wi::renderer::LoadShader(ShaderStage::CS, cs_finishUpdate, "hairparticle_finishUpdateCS.cso");
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 

@@ -75,7 +75,6 @@ This is a reference for the C++ features of Wicked Engine
 		4. [GraphicsDevice_Vulkan](#graphicsdevice_vulkan)
 	2. [Renderer](#renderer)
 		1. [DrawScene](#drawscene)
-		2. [DrawScene_Transparent](#drawscene_transparent)
 		3. [Tessellation](#tessellation)
 		4. [Occlusion Culling](#occlusion-culling)
 		5. [Shadow Maps](#shadow-maps)
@@ -405,11 +404,7 @@ Initializes all engine systems either in a blocking or an asynchronous way.
 
 ### Platform
 [[Header]](../../WickedEngine/wiPlatform.h)
-You can get native platform specific handles here, such as window handle.
-- GetWindow <br/>
-Returns the platform specific window handle
-- IsWindowActive <br/>
-Returns true if the current window is the topmost one, false if it is not in focus
+You can get native platform specific functionality.
 
 ### Event Handler
 [[Header]](../../WickedEngine/wiEventHandler.h)
@@ -627,9 +622,12 @@ Define the `layout_before`, `layout` (only for `DEPTH_STENCIL`) and `layout_afte
 
 Notes:
 - When `RenderPassBegin()` is called, `RenderPassEnd()` must be called after on the same command list before the command list gets [submitted](#work-submission).
-- It is not allowed to call `CopyResource()`, `CopyTexture2D()`, etc. inside a render pass.
-- It is not allowed to call `Dispatch()` and `DispatchIndirect()` inside a render pass.
+- It is not allowed to call `RenderPassBegin()` inside a render pass.
+- It is not allowed to call `CopyResource()`, `CopyTexture()`, `CopyBuffer()` inside a render pass.
+- It is not allowed to call `Dispatch()`, `DispatchIndirect()`, `DispatchMesh()`, `DispatchMeshIndirect()`, `DispatchRays()` inside a render pass.
 - It is not allowed to call `UpdateBuffer()` inside the render pass.
+- It is not allowed to call `Barrier()` inside the render pass.
+- It is not allowed to call `ClearUAV()` inside the render pass.
 
 ##### GPU Barriers
 `GPUBarrier`s can be used to state dependencies between GPU workloads. There are different kinds of barriers:
@@ -740,7 +738,10 @@ The `flags` argument can contain various modifiers that determine what kind of o
 - `DRAWSCENE_TRANSPARENT`: Transparent objects will be rendered. Objects will be sorted back-to front, for blending purposes
 - `DRAWSCENE_OCCLUSIONCULLING`: Occluded objects won't be rendered. [Occlusion culling](#occlusion-culling) can be globally switched on/off using `wi::renderer::SetOcclusionCullingEnabled()`
 - `DRAWSCENE_TESSELLATION`: Enable [tessellation](#tessellation) (if hardware supports it). [Tessellation](#tessellation) can be globally switched on/off using `wi::renderer::SetTessellationEnabled()`
-- `DRAWSCENE_HAIRPARTICLE`: Draw hair particles
+- `DRAWSCENE_HAIRPARTICLE`: Allow drawing hair particles
+- `DRAWSCENE_IMPOSTOR` : Allow drawing impostors
+- `DRAWSCENE_OCEAN` : Allow drawing the ocean
+- `DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS` : Don't draw the objects which are rendering planar reflections. This is to avoid rendering the reflector object itself into the planar reflections, which could produce fully occluded reflections.
 
 #### Tessellation
 Tessellation can be used when rendering objects. Tessellation requires a GPU hardware feature and can enable displacement mapping on vertices or smoothing mesh silhouettes dynamically while rendering objects. Tessellation will be used when `tessellation` parameter to the [DrawScene](#drawscene) was set to `true` and the GPU supports the tessellation feature. Tessellation level can be specified per [MeshComponent](#meshcomponent)'s `tessellationFactor` parameter. Tessellation level will be modulated by distance from camera, so that tessellation factor will fade out on more distant objects. Greater tessellation factor means more detailed geometry will be generated.
@@ -798,7 +799,7 @@ Instanced rendering will be always used automatically when rendering objects. Th
 <i>Tip: to find out more about how instancing is used to batch objects together, take a look at the `RenderMeshes()` function inside [wi::renderer.cpp](../WickedEngine/wi::renderer.cpp)</i>
 
 #### Stencil
-If a depth stencil buffer is bound when using [DrawScene()](#drawscene), or [DrawScene_Transparent()](#drawscene_transparent), the stencil buffer will be written. The stencil is a 8-bit mask that can be used to achieve different kinds of screen space effects for different objects. [MaterialComponents](#materialcomponent) and [ObjectComponents](#objectcomponent) have the ability to set the stencil value that will be rendered. The 8-bit stencil value is separated into two parts:
+If a depth stencil buffer is bound when using [DrawScene()](#drawscene), the stencil buffer will be written. The stencil is a 8-bit mask that can be used to achieve different kinds of screen space effects for different objects. [MaterialComponents](#materialcomponent) and [ObjectComponents](#objectcomponent) have the ability to set the stencil value that will be rendered. The 8-bit stencil value is separated into two parts:
 - The first 4 bits are reseved for engine-specific values, such as to separate skin, sky, common materials from each other. these values are contained in [wiEnums](#wienums) in the `STENCILREF` enum.
 - The last 4 bits are reserved for user stencil values. The application can decide what it wants to use these for.
 
@@ -835,7 +836,11 @@ Configuring other debug rendering functionality:
 #### Custom Shaders
 Apart from the built in material shaders, the developer can create a library of custom shaders from the application side and assign them to materials. The `wi::renderer::RegisterCustomShader()` function is used to register a custom shader from the application. The function returns the ID of the custom shader that can be input to the `MaterialComponent::SetCustomShaderID()` function. 
 
-The custom shader is essentially the combination of a [Pipeline State Object](#pipeline-states-and-shaders) for each `RENDERPASS` and a `RENDERTYPE` flag that specifies whether it is to be drawn in a transparent or opaque, or other kind of pass within a `RENDERPASS`. The developer is responsible of creating a fully valid pipeline state to render a mesh. If a pipeline state is left as empty for a combination of `RENDERPASS` and `RENDERTYPE`, then the material will simply be skipped and not rendered.
+The `CustomShader` is essentially the combination of a [Pipeline State Object](#pipeline-states-and-shaders) for each `RENDERPASS` that specifies whether it is to be drawn in a transparent or opaque, or other kind of pass within a `RENDERPASS`. The developer is responsible of creating a fully valid pipeline state to render a mesh. If a pipeline state is left as empty for a combination of `RENDERPASS`, then the material will simply be skipped and not rendered in that pass. The other part of `CustomShader` is a name, that can be used as simple identifier for the user, and a `filterMask` that will be used to indicate what kind of material this is to multiple systems. You can set the `filterMask` to any combination of `wi::enums::FILTER` for your purposes, but you have to include `FILTER_OPAQUE` or `FILTER_TRANSPARENT` to indicate if this is going to be rendered in opaque or transparent passes (or both).
+
+The `MaterialComponent::userdata` can also be used to provide a small amount of custom material data that will be available to shaders. You can access that in shaders from `ShaderMaterial::userdata`. If the built in user data is not enough for your purposes, you can create additional `GPUBuffer` objects and send descriptor indices in user data to access extended user data indirectly.
+
+To look at an example, take a look at the built in Hologram custom shader and see how exactly to create a valid pipeline state, shader, etc.
 
 
 ### Enums
@@ -846,8 +851,8 @@ This is a collection of enum values used by the wi::renderer to identify graphic
 enum CBTYPE
 {
 	CBTYPE_MESH, // = 0
-	CBTYPE_APPLESANDORANGES, // = 1
-	CBTYPE_TAKEITEASY, // = 2
+	CBTYPE_SOMETHING_ELSE, // = 1
+	CBTYPE_AN_OTHER_THING, // = 2
 	CBTYPE_COUNT // = 3
 };
 GPUBuffer buffers[CBTYPE_COUNT]; // this example array contains 3 elements
@@ -861,7 +866,7 @@ This is widely used to make code straight forward and easy to add new objects, w
 [[Header]](../../WickedEngine/wiImage.h) [[Cpp]](../../WickedEngine/wiImage.cpp)
 This can render images to the screen in a simple manner. You can draw an image like this:
 ```cpp
-wi::image::SetCanvas(canvas, cmd); // setting the canvas area is required to set the drawing area and perform DPI scaling (the canvas will remain for the duration of the command list)
+wi::image::SetCanvas(canvas); // setting the canvas area is required to set the drawing area and perform DPI scaling (this is only for the current thread)
 wi::image::Draw(myTexture, wiImageParams(10, 20, 256, 128), cmd);
 ```
 The example will draw a 2D texture image to the position (10, 20), with a size of 256 x 128 pixels to the current render pass. There are a lot of other parameters to customize the rendered image, for more information see wiImageParams structure.
@@ -872,7 +877,7 @@ Describe all parameters of how and where to draw the image on the screen.
 [[Header]](../../WickedEngine/wiFont.h) [[Cpp]](../../WickedEngine/wiFont.cpp)
 This can render fonts to the screen in a simple manner. You can render a font as simple as this:
 ```cpp
-wi::font::SetCanvas(canvas, cmd); // setting the canvas area is required to set the drawing area and perform DPI scaling (the canvas will remain for the duration of the command list)
+wi::font::SetCanvas(canvas); // setting the canvas area is required to set the drawing area and perform DPI scaling (this is only for the current thread)
 wi::font::Draw("write this!", wiFontParams(10, 20), cmd);
 ```
 Which will write the text <i>write this!</i> to 10, 20 pixel position onto the screen. There are many other parameters to describe the font's position, size, color, etc. See the wiFontParams structure for more details.

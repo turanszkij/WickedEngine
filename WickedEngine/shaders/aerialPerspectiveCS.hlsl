@@ -83,8 +83,8 @@ void RenderAerialPerspective(uint3 DTid, float2 uv, float depth, float3 depthWor
 	// Since we apply opaque fog later in object shader, let's subtract the fog from aerial perspective
 	// so it gets applied correctly, since fog has to place OVER aerial perspective.
 	{
-		float distance = length(depthWorldPosition.xyz - GetCamera().position);		
-		float fogAmount = GetFogAmount(distance, GetCamera().position, rayDirection);
+		float distance = length(depthWorldPosition.xyz - rayOrigin);		
+		float fogAmount = GetFogAmount(distance, rayOrigin, rayDirection);
 		
 		luminance *= 1.0 - fogAmount;
 		transmittance *= 1.0 - fogAmount;
@@ -122,9 +122,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		return;
 	}
 
-	float3 depthWorldPosition = reconstruct_position(uv, depth, xCubemapRenderCams[DTid.z].inverse_view_projection);
+	float3 depthWorldPosition = reconstruct_position(uv, depth, GetCamera(DTid.z).inverse_view_projection);
 
-	float3 rayOrigin = GetCamera().position;
+	float3 rayOrigin = GetCamera(DTid.z).position;
 	float3 rayDirection = normalize(N);	
 	
 	float3 luminance = float3(0.0, 0.0, 0.0);

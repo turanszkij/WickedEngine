@@ -1297,30 +1297,27 @@ namespace wi
 				device->EventEnd(cmd);
 			}
 
-			RenderPassImage rp[] = {
-				RenderPassImage::RenderTarget(
-					&rtMain_render,
-					visibility_shading_in_compute ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::CLEAR
-				),
-				RenderPassImage::DepthStencil(
-					&depthBuffer_Main,
-					RenderPassImage::LoadOp::LOAD,
-					RenderPassImage::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY,
-					ResourceState::DEPTHSTENCIL_READONLY
-				),
-				RenderPassImage::Resolve(&rtMain),
-				RenderPassImage::ShadingRateSource(&rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS),
-			};
-			uint32_t rp_count = 2;
+			RenderPassImage rp[4] = {};
+			uint32_t rp_count = 0;
+			rp[rp_count++] = RenderPassImage::RenderTarget(
+				&rtMain_render,
+				visibility_shading_in_compute ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::CLEAR
+			);
+			rp[rp_count++] = RenderPassImage::DepthStencil(
+				&depthBuffer_Main,
+				RenderPassImage::LoadOp::LOAD,
+				RenderPassImage::StoreOp::STORE,
+				ResourceState::DEPTHSTENCIL_READONLY,
+				ResourceState::DEPTHSTENCIL_READONLY,
+				ResourceState::DEPTHSTENCIL_READONLY
+			);
 			if (getMSAASampleCount() > 1)
 			{
-				rp_count++;
+				rp[rp_count++] = RenderPassImage::Resolve(&rtMain);
 			}
 			if (device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2) && rtShadingRate.IsValid())
 			{
-				rp_count++;
+				rp[rp_count++] = RenderPassImage::ShadingRateSource(&rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
 			}
 			device->RenderPassBegin(rp, rp_count, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
 
@@ -2207,13 +2204,18 @@ namespace wi
 			if (GetPhysicalWidth() == 0 || GetPhysicalHeight() == 0)
 				return;
 
-			wi::renderer::CreateFSR2Resources(fsr2Resources, GetInternalResolution(), XMUINT2(GetPhysicalWidth(), GetPhysicalHeight()));
+			XMUINT2 displayResolution = XMUINT2(
+				std::max(GetPhysicalWidth(), GetInternalResolution().x),
+				std::max(GetPhysicalHeight(), GetInternalResolution().y)
+			);
+
+			wi::renderer::CreateFSR2Resources(fsr2Resources, GetInternalResolution(), displayResolution);
 
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.format = Format::R11G11B10_FLOAT;
-			desc.width = GetPhysicalWidth();
-			desc.height = GetPhysicalHeight();
+			desc.width = displayResolution.x;
+			desc.height = displayResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtFSR[0]);
 			device->SetName(&rtFSR[0], "rtFSR[0]");
 			device->CreateTexture(&desc, nullptr, &rtFSR[1]);

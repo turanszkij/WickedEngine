@@ -83,7 +83,7 @@ namespace wi
 			initialized = true;
 		}
 
-		wi::font::UpdateAtlas();
+		wi::font::UpdateAtlas(canvas.GetDPIScaling());
 
 		ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 

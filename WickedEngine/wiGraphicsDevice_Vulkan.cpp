@@ -425,7 +425,7 @@ namespace vulkan_internal
 		}
 		if (has_flag(value, ResourceState::SHADING_RATE_SOURCE))
 		{
-			flags |= VK_ACCESS_2_SHADING_RATE_IMAGE_READ_BIT_NV;
+			flags |= VK_PIPELINE_STAGE_2_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
 		}
 		if (has_flag(value, ResourceState::VERTEX_BUFFER))
 		{
@@ -517,6 +517,10 @@ namespace vulkan_internal
 		if (has_flag(value, ResourceState::PREDICATION))
 		{
 			flags |= VK_ACCESS_2_CONDITIONAL_RENDERING_READ_BIT_EXT;
+		}
+		if (has_flag(value, ResourceState::SHADING_RATE_SOURCE))
+		{
+			flags |= VK_ACCESS_2_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
 		}
 		if (has_flag(value, ResourceState::VIDEO_DECODE_DST))
 		{
@@ -8107,14 +8111,14 @@ using namespace vulkan_internal;
 		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		vkCmdDrawIndirect(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
+		vkCmdDrawIndirect(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, (uint32_t)sizeof(VkDrawIndirectCommand));
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		vkCmdDrawIndexedIndirect(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, sizeof(IndirectDrawArgsIndexedInstanced));
+		vkCmdDrawIndexedIndirect(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, sizeof(VkDrawIndexedIndirectCommand));
 	}
 	void GraphicsDevice_Vulkan::DrawInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
@@ -8122,7 +8126,7 @@ using namespace vulkan_internal;
 		auto args_internal = to_internal(args);
 		auto count_internal = to_internal(count);
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		vkCmdDrawIndirectCount(commandlist.GetCommandBuffer(), args_internal->resource, args_offset, count_internal->resource, count_offset, max_count, sizeof(IndirectDrawArgsInstanced));
+		vkCmdDrawIndirectCount(commandlist.GetCommandBuffer(), args_internal->resource, args_offset, count_internal->resource, count_offset, max_count, sizeof(VkDrawIndirectCommand));
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
@@ -8130,7 +8134,7 @@ using namespace vulkan_internal;
 		auto args_internal = to_internal(args);
 		auto count_internal = to_internal(count);
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		vkCmdDrawIndexedIndirectCount(commandlist.GetCommandBuffer(), args_internal->resource, args_offset, count_internal->resource, count_offset, max_count, sizeof(IndirectDrawArgsIndexedInstanced));
+		vkCmdDrawIndexedIndirectCount(commandlist.GetCommandBuffer(), args_internal->resource, args_offset, count_internal->resource, count_offset, max_count, sizeof(VkDrawIndexedIndirectCommand));
 	}
 	void GraphicsDevice_Vulkan::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
@@ -8156,7 +8160,7 @@ using namespace vulkan_internal;
 		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		vkCmdDrawMeshTasksIndirectEXT(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, sizeof(IndirectDispatchArgs));
+		vkCmdDrawMeshTasksIndirectEXT(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, sizeof(VkDispatchIndirectCommand));
 	}
 	void GraphicsDevice_Vulkan::DispatchMeshIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
@@ -8164,7 +8168,7 @@ using namespace vulkan_internal;
 		auto args_internal = to_internal(args);
 		auto count_internal = to_internal(count);
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		vkCmdDrawMeshTasksIndirectCountEXT(commandlist.GetCommandBuffer(), args_internal->resource, args_offset, count_internal->resource, count_offset, max_count, sizeof(IndirectDispatchArgs));
+		vkCmdDrawMeshTasksIndirectCountEXT(commandlist.GetCommandBuffer(), args_internal->resource, args_offset, count_internal->resource, count_offset, max_count, sizeof(VkDispatchIndirectCommand));
 	}
 	void GraphicsDevice_Vulkan::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{

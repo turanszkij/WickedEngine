@@ -20,7 +20,6 @@ struct ShaderEntry
 };
 wi::vector<ShaderEntry> shaders = {
 	{"hairparticle_simulateCS", wi::graphics::ShaderStage::CS},
-	{"hairparticle_finishUpdateCS", wi::graphics::ShaderStage::CS},
 	{"emittedparticle_simulateCS", wi::graphics::ShaderStage::CS},
 	{"generateMIPChainCubeCS_float4", wi::graphics::ShaderStage::CS},
 	{"generateMIPChainCubeCS_unorm4", wi::graphics::ShaderStage::CS},
@@ -69,7 +68,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"rtreflectionCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5},
 	{"ssr_tileMaxRoughness_horizontalCS", wi::graphics::ShaderStage::CS},
 	{"ssr_tileMaxRoughness_verticalCS", wi::graphics::ShaderStage::CS},
-	{"ssr_kickjobsCS", wi::graphics::ShaderStage::CS},
 	{"ssr_depthHierarchyCS", wi::graphics::ShaderStage::CS},
 	{"ssr_resolveCS", wi::graphics::ShaderStage::CS},
 	{"ssr_temporalCS", wi::graphics::ShaderStage::CS},
@@ -98,7 +96,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"motionblur_tileMaxVelocity_horizontalCS", wi::graphics::ShaderStage::CS},
 	{"motionblur_tileMaxVelocity_verticalCS", wi::graphics::ShaderStage::CS},
 	{"luminancePass2CS", wi::graphics::ShaderStage::CS},
-	{"motionblur_kickjobsCS", wi::graphics::ShaderStage::CS},
 	{"motionblurCS", wi::graphics::ShaderStage::CS},
 	{"motionblurCS_cheap", wi::graphics::ShaderStage::CS},
 	{"motionblurCS_earlyexit", wi::graphics::ShaderStage::CS},
@@ -135,7 +132,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"depthoffield_mainCS_cheap", wi::graphics::ShaderStage::CS},
 	{"depthoffield_mainCS_earlyexit", wi::graphics::ShaderStage::CS },
 	{"depthoffield_postfilterCS", wi::graphics::ShaderStage::CS },
-	{"depthoffield_kickjobsCS", wi::graphics::ShaderStage::CS },
 	{"copytexture2D_float4_borderexpandCS", wi::graphics::ShaderStage::CS },
 	{"copytexture2D_unorm4_borderexpandCS", wi::graphics::ShaderStage::CS },
 	{"copytexture2D_unorm4CS", wi::graphics::ShaderStage::CS },
@@ -196,7 +192,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"rtao_denoise_filterCS", wi::graphics::ShaderStage::CS },
 	{"visibility_resolveCS", wi::graphics::ShaderStage::CS },
 	{"visibility_resolveCS_MSAA", wi::graphics::ShaderStage::CS },
-	{"visibility_indirect_prepareCS", wi::graphics::ShaderStage::CS },
 	{"visibility_velocityCS", wi::graphics::ShaderStage::CS },
 	{"visibility_skyCS", wi::graphics::ShaderStage::CS },
 	{"surfel_coverageCS", wi::graphics::ShaderStage::CS },
@@ -304,11 +299,26 @@ wi::vector<ShaderEntry> shaders = {
 	{"ddgi_debugVS", wi::graphics::ShaderStage::VS },
 	{"envMap_skyGS_emulation", wi::graphics::ShaderStage::GS },
 	{"envMapGS_emulation", wi::graphics::ShaderStage::GS },
-	{"cubeShadowGS_emulation", wi::graphics::ShaderStage::GS },
-	{"cubeShadowGS_alphatest_emulation", wi::graphics::ShaderStage::GS },
-	{"cubeShadowGS_transparent_emulation", wi::graphics::ShaderStage::GS },
+	{"shadowGS_emulation", wi::graphics::ShaderStage::GS },
+	{"shadowGS_alphatest_emulation", wi::graphics::ShaderStage::GS },
+	{"shadowGS_transparent_emulation", wi::graphics::ShaderStage::GS },
 	{"voxelGS", wi::graphics::ShaderStage::GS },
 	{"objectGS_voxelizer", wi::graphics::ShaderStage::GS },
+	{"objectVS_simple", wi::graphics::ShaderStage::VS },
+	{"objectVS_common", wi::graphics::ShaderStage::VS },
+	{"objectVS_common_tessellation", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass_alphatest", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass_tessellation", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass_alphatest_tessellation", wi::graphics::ShaderStage::VS },
+	{"objectVS_simple_tessellation", wi::graphics::ShaderStage::VS },
+	{"shadowVS", wi::graphics::ShaderStage::VS },
+	{"shadowVS_alphatest", wi::graphics::ShaderStage::VS },
+	{"shadowVS_emulation", wi::graphics::ShaderStage::VS },
+	{"shadowVS_alphatest_emulation", wi::graphics::ShaderStage::VS },
+	{"shadowVS_transparent", wi::graphics::ShaderStage::VS },
+	{"shadowVS_transparent_emulation", wi::graphics::ShaderStage::VS },
+
 
 
 	{"objectDS", wi::graphics::ShaderStage::DS },
@@ -406,43 +416,8 @@ int main(int argc, char* argv[])
 			{ ShaderFormat::HLSL6, "shaders/hlsl6/" },
 			{ ShaderFormat::SPIRV, "shaders/spirv/" },
 		};
-		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6\n";
+		std::cout << "No shader formats were specified, assuming command arguments: spirv hlsl6\n";
 	}
-
-	shaders.push_back({ "objectVS_simple", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "objectVS_common", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "objectVS_common_tessellation", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "objectVS_prepass", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "objectVS_prepass_alphatest", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "objectVS_prepass_tessellation", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "objectVS_prepass_alphatest_tessellation", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "objectVS_simple_tessellation", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "shadowVS_transparent", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "shadowVS", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "shadowVS_alphatest", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS_alphatest", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS_emulation", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS_alphatest_emulation", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS_transparent", wi::graphics::ShaderStage::VS });
-
-	shaders.push_back({ "cubeShadowVS_transparent_emulation", wi::graphics::ShaderStage::VS });
-
 
 	// permutations for objectPS:
 	shaders.push_back({ "objectPS", wi::graphics::ShaderStage::PS });

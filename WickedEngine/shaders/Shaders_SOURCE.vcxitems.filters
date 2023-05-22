@@ -150,6 +150,9 @@
     <None Include="$(MSBuildThisFileDirectory)fogHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)shadingHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticle_simulateCS.hlsl">
@@ -302,9 +305,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)luminancePass2CS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)motionblur_kickjobsCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)motionblurCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -405,9 +405,6 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)depthoffield_postfilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)depthoffield_kickjobsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)copytexture2D_float4_borderexpandCS.hlsl">
@@ -644,15 +641,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)skyVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS_transparent.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS_alphatest.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)renderlightmapVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -695,10 +683,10 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)envMapVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowVS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowVS_alphatest.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS_alphatest.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)occludeeVS.hlsl">
@@ -758,13 +746,10 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetriclight_spotVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)hairparticle_finishUpdateCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowVS_emulation.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS_emulation.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowVS_alphatest_emulation.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS_alphatest_emulation.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)envMapVS_emulation.hlsl">
@@ -773,10 +758,10 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)envMap_skyVS_emulation.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowGS_emulation.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowGS_emulation.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowGS_alphatest_emulation.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowGS_alphatest_emulation.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)envMapGS_emulation.hlsl">
@@ -794,13 +779,13 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_multiScatteredLuminanceLutCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowVS_transparent.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS_transparent.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowVS_transparent_emulation.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS_transparent_emulation.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowGS_transparent_emulation.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowGS_transparent_emulation.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)upsample_bilateral_uint4CS.hlsl">
@@ -951,9 +936,6 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)ssr_depthHierarchyCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)ssr_kickjobsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)ssr_raytraceCS_cheap.hlsl">

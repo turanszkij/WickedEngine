@@ -98,9 +98,9 @@ inline FrameCB GetFrame()
 {
 	return g_xFrame;
 }
-inline CameraCB GetCamera()
+inline ShaderCamera GetCamera(uint camera_index = 0)
 {
-	return g_xCamera;
+	return g_xCamera.cameras[camera_index];
 }
 inline ShaderScene GetScene()
 {

@@ -32,8 +32,8 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
     const uint2 subtile = unflatten2D(subtile_idx, DEPTHOFFIELD_TILESIZE / 2 / POSTPROCESS_BLOCKSIZE);
     const uint2 subtile_upperleft = tile * DEPTHOFFIELD_TILESIZE / 2 + subtile * POSTPROCESS_BLOCKSIZE;
     const uint2 pixel = subtile_upperleft + unflatten2D(GTid.x, POSTPROCESS_BLOCKSIZE);
-
-	if (!GetCamera().is_pixel_inside_scissor(pixel * 2))
+	const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
+	if (!GetCamera().is_uv_inside_scissor(uv))
 		return;
 
     float alpha;
@@ -56,8 +56,6 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
     const float center_coc = center_presort.r;
     const float center_backgroundWeight = center_presort.g;
     const float center_foregroundWeight = center_presort.b;
-
-    const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 
 #ifdef DEPTHOFFIELD_CHEAP
     color = center_color;
