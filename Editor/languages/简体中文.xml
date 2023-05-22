@@ -424,7 +424,7 @@ This can add small shadows details to shadow maps in screen space.</entry>
 				<entry id="1" hint="tooltip">The sharpening amount to apply for FSR 2.1 upscaling.</entry>
 			</section>
 			<section name="Occlusion Culling: " hint="CheckBox">
-				<entry id="0" hint="text">Occlusion Culling: </entry>
+				<entry id="0" hint="text">遮挡裁剪: </entry>
 				<entry id="1" hint="tooltip">Toggle occlusion culling. This can boost framerate if many objects are occluded in the scene.</entry>
 			</section>
 			<section name="MipLOD Bias: " hint="Slider">
@@ -444,8 +444,8 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 		<section name="General" hint="Window">
 			<entry id="0" hint="text">通用</entry>
 			<section name="AABB visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">AABB visualizer: </entry>
-				<entry id="1" hint="tooltip">Visualize the scene bounding boxes</entry>
+				<entry id="0" hint="text">显示AABB: </entry>
+				<entry id="1" hint="tooltip">显示 轴对齐包围盒(Axis Aligned Bounding Box).</entry>
 			</section>
 			<section name=" Create Localization Template" hint="Button">
 				<entry id="0" hint="text"> 创建翻译模板</entry>
@@ -453,7 +453,7 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 模板将基于当前语言生成.</entry>
 			</section>
 			<section name="Name visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Name visualizer: </entry>
+				<entry id="0" hint="text">显示名称: </entry>
 				<entry id="1" hint="tooltip">Visualize the entity names in the scene</entry>
 			</section>
 			<section name="Bone Picker Opacity: " hint="Slider">
@@ -461,7 +461,7 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 				<entry id="1" hint="tooltip">You can control the transparency of the bone selector tool</entry>
 			</section>
 			<section name="Env probe visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Env probe visualizer: </entry>
+				<entry id="0" hint="text">显示环境探针: </entry>
 				<entry id="1" hint="tooltip">Toggle visualization of environment probes as reflective spheres</entry>
 			</section>
 			<section name="Theme: " hint="ComboBox">
@@ -471,7 +471,7 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 					<entry id="0">暗色 </entry>
 					<entry id="1">亮色 </entry>
 					<entry id="2">柔和 </entry>
-					<entry id="3">黑客Hacking </entry>
+					<entry id="3">黑客 </entry>
 					<entry id="4">北欧Nord </entry>
 				</section>
 			</section>
@@ -490,7 +490,7 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 			<section name="Language: " hint="ComboBox">
 				<entry id="0" hint="text">语言: </entry>
 				<entry id="1" hint="tooltip">选择一种语言. 
-你也可以在 [languages] 文件夹中添加一个XML文件, 创建新的语言选项.You can also create a new language option by adding an XML file to the languages folder.
+你也可以在 [languages] 文件夹中添加一个XML文件, 创建新的语言选项.
 下面有创建新翻译模板的按钮.</entry>
 			</section>
 			<section name="Freeze culling camera: " hint="CheckBox">
@@ -510,7 +510,7 @@ Note that DDGI probes that were loaded with the scene will still be active if th
 				<entry id="1" hint="tooltip">Disables albedo maps on objects for easier lighting debugging</entry>
 			</section>
 			<section name="Save Mode: " hint="ComboBox">
-				<entry id="0" hint="text">Save Mode: </entry>
+				<entry id="0" hint="text">保存模式: </entry>
 				<entry id="1" hint="tooltip">Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.
 The Dump to header () option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.</entry>
 				<section name="items">
@@ -528,7 +528,7 @@ The Dump to header () option will use embedding and create a C++ header file 
 				<entry id="1" hint="tooltip">Toggle showing of unit visualizer grid in the world origin</entry>
 			</section>
 			<section name="Collider visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Collider visualizer: </entry>
+				<entry id="0" hint="text">显示碰撞体: </entry>
 				<entry id="1" hint="tooltip">Toggle visualization of colliders in the scene</entry>
 			</section>
 			<section name="Transform Tool Opacity: " hint="Slider">
@@ -548,7 +548,7 @@ The Dump to header () option will use embedding and create a C++ header file 
 				<entry id="1" hint="tooltip">Visualize bones of armatures</entry>
 			</section>
 			<section name="Emitter visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Emitter visualizer: </entry>
+				<entry id="0" hint="text">显示发射器: </entry>
 				<entry id="1" hint="tooltip">Visualize emitters</entry>
 			</section>
 			<section name="Physics: " hint="CheckBox">
@@ -556,7 +556,7 @@ The Dump to header () option will use embedding and create a C++ header file 
 				<entry id="1" hint="tooltip">切换物理模拟 开/关</entry>
 			</section>
 			<section name="Camera visualizer: " hint="CheckBox">
-				<entry id="0" hint="text">Camera visualizer: </entry>
+				<entry id="0" hint="text">显示摄像机: </entry>
 				<entry id="1" hint="tooltip">Toggle visualization of camera proxies in the scene</entry>
 			</section>
 			<section name="RT BVH visualizer: " hint="CheckBox">
@@ -611,7 +611,7 @@ Toggle case-sensitive name filtering</entry>
 				<entry id="1" hint="tooltip">Brush spacing means how much brush movement (in pixels) starts a new stroke. 0 = new stroke every frame, 100 = every 100 pixel movement since last stroke will start a new stroke.</entry>
 			</section>
 			<section name="Backfaces: " hint="CheckBox">
-				<entry id="0" hint="text">Backfaces: </entry>
+				<entry id="0" hint="text">背面: </entry>
 				<entry id="1" hint="tooltip">Set whether to paint on backfaces of geometry or not</entry>
 			</section>
 			<section name="Paint Tool is disabled." hint="Label">
@@ -681,7 +681,7 @@ The stabilizer generates a small delay between user input and painting, which wi
 				</section>
 			</section>
 			<section name="Pressure: " hint="CheckBox">
-				<entry id="0" hint="text">Pressure: </entry>
+				<entry id="0" hint="text">压力: </entry>
 				<entry id="1" hint="tooltip">Set whether to use pressure sensitivity (for example pen tablet)</entry>
 			</section>
 			<section name="Mode: " hint="ComboBox">
@@ -839,19 +839,19 @@ Controls the camera's top-down field of view (in degrees)</entry>
 		<entry id="1" hint="tooltip">Enter cinema mode (all HUD disabled). Press ESC to return to normal.</entry>
 	</section>
 	<section name="About" hint="Button">
-		<entry id="1" hint="tooltip">About...</entry>
+		<entry id="1" hint="tooltip">关于...</entry>
 	</section>
 	<section name="" hint="Button">
 		<entry id="1" hint="tooltip">Translate/Move (Ctrl + T)
 Hotkey: 1</entry>
 	</section>
 	<section name="Save" hint="Button">
-		<entry id="1" hint="tooltip">Save the current scene to a new file (Ctrl + Shift + S)
-By default, the scene will be saved into .wiscene, but you can specify .gltf or .glb extensions to export into GLTF.
-You can also use Ctrl + S to quicksave, without browsing.</entry>
+		<entry id="1" hint="tooltip">将当前场景保存为新文件 (Ctrl + Shift + S)
+默认文件后缀为 .wiscene, 但你也可以指定 .gltf 或 .glb (GLTF格式)
+你还可以使用 Ctrl + S 快速保存.</entry>
 	</section>
 	<section name="Components " hint="Window">
-		<entry id="0" hint="text">Components </entry>
+		<entry id="0" hint="text">组件 </entry>
 		<section name=" Weather" hint="Window">
 			<entry id="0" hint="text"> Weather</entry>
 			<section name="widget_39" hint="TextInputField">
@@ -1432,7 +1432,7 @@ Sound properties like volume can be set per sound, or per submix channel.</entry
 			</section>
 		</section>
 		<section name=" Animation" hint="Window">
-			<entry id="0" hint="text"> Animation</entry>
+			<entry id="0" hint="text"> 动画</entry>
 			<section name="" hint="Button">
 				<entry id="0" hint="text"></entry>
 				<entry id="1" hint="tooltip">Stop</entry>
@@ -1446,7 +1446,7 @@ Sound properties like volume can be set per sound, or per submix channel.</entry
 				<entry id="1" hint="tooltip">Set the animation start in seconds. This will be the loop's starting point.</entry>
 			</section>
 			<section name="Keyframes" hint="TreeList">
-				<entry id="0" hint="text">Keyframes</entry>
+				<entry id="0" hint="text">关键帧</entry>
 			</section>
 			<section name="Record: " hint="ComboBox">
 				<entry id="0" hint="text">Record: </entry>
@@ -1466,18 +1466,18 @@ Sound properties like volume can be set per sound, or per submix channel.</entry
 					<entry id="11">Sound [stop] </entry>
 					<entry id="12">Sound [volume] </entry>
 					<entry id="13">Emitter [emit count] </entry>
-					<entry id="14">Camera [fov] </entry>
-					<entry id="15">Camera [focal length] </entry>
-					<entry id="16">Camera [aperture size] </entry>
-					<entry id="17">Camera [aperture shape] </entry>
+					<entry id="14">摄像机 [fov] </entry>
+					<entry id="15">摄像机 [focal length] </entry>
+					<entry id="16">摄像机 [aperture size] </entry>
+					<entry id="17">摄像机 [aperture shape] </entry>
 					<entry id="18">Script [play] </entry>
 					<entry id="19">Script [stop] </entry>
-					<entry id="20">Material [color] </entry>
-					<entry id="21">Material [emissive] </entry>
-					<entry id="22">Material [roughness] </entry>
-					<entry id="23">Material [metalness] </entry>
-					<entry id="24">Material [reflectance] </entry>
-					<entry id="25">Material [texmuladd] </entry>
+					<entry id="20">材质 [color] </entry>
+					<entry id="21">材质 [emissive] </entry>
+					<entry id="22">材质 [roughness] </entry>
+					<entry id="23">材质 [metalness] </entry>
+					<entry id="24">材质 [reflectance] </entry>
+					<entry id="25">材质 [texmuladd] </entry>
 					<entry id="26">Close loop </entry>
 				</section>
 			</section>
@@ -1541,9 +1541,9 @@ You can use the Paint Tool to pin or soften soft body vertices.</entry>
 			</section>
 		</section>
 		<section name=" Material" hint="Window">
-			<entry id="0" hint="text"> Material</entry>
+			<entry id="0" hint="text"> 材质</entry>
 			<section name="Blend mode: " hint="ComboBox">
-				<entry id="0" hint="text">Blend mode: </entry>
+				<entry id="0" hint="text">混合模式: </entry>
 				<entry id="1" hint="tooltip">Set the blend mode of the material.</entry>
 				<section name="items">
 					<entry id="0">Opaque</entry>
@@ -1645,7 +1645,7 @@ You can also adjust the subsurface color by selecting it in the color picker</en
 				</section>
 			</section>
 			<section name="Receive Shadow: " hint="CheckBox">
-				<entry id="0" hint="text">Receive Shadow: </entry>
+				<entry id="0" hint="text">接收阴影: </entry>
 				<entry id="1" hint="tooltip">Receives shadow or not?</entry>
 			</section>
 			<section name="Color" hint="ColorPicker">
