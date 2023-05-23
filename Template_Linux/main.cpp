@@ -43,6 +43,9 @@ int sdl_loop(wi::Application &application)
 int main(int argc, char *argv[])
 {
     wi::Application application;
+    #ifdef WickedEngine_SHADER_DIR
+    wi::renderer::SetShaderSourcePath(WickedEngine_SHADER_DIR);
+    #endif
 
     application.infoDisplay.active = true;
     application.infoDisplay.watermark = true;
