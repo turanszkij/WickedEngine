@@ -19,6 +19,7 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/portable-file-dialogs.h
 		${CMAKE_CURRENT_SOURCE_DIR}/sal.h
 		${CMAKE_CURRENT_SOURCE_DIR}/tinyddsloader.h
+		${CMAKE_CURRENT_SOURCE_DIR}/robin_hood.h
 		${CMAKE_CURRENT_SOURCE_DIR}/spirv_reflect.h
 		${CMAKE_CURRENT_SOURCE_DIR}/stb_image.h
 		${CMAKE_CURRENT_SOURCE_DIR}/stb_image_write.h
