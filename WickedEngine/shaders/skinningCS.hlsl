@@ -40,15 +40,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		tan.w = (float)((vtan >> 24) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	}
 
+	ByteAddressBuffer skinningbuffer = bindless_buffers[push.skinningbuffer_index];
+
 	// Morph targets:
 	[branch]
 	if (push.morph_count > 0)
 	{
-		ByteAddressBuffer morphbuffer = bindless_buffers[push.morphbuffer_index];
 		ByteAddressBuffer morphvb = bindless_buffers[push.morphvb_index];
 		for (uint morph_index = 0; morph_index < push.morph_count; ++morph_index)
 		{
-			MorphTargetGPU morph = morphbuffer.Load<MorphTargetGPU>(push.morphbuffer_offset + morph_index * sizeof(MorphTargetGPU));
+			MorphTargetGPU morph = skinningbuffer.Load<MorphTargetGPU>(push.morph_offset + morph_index * sizeof(MorphTargetGPU));
 			if (morph.offset_pos != ~0u)
 			{
 				pos += unpack_half3(morphvb.Load<uint2>(morph.offset_pos + vertexID * sizeof(uint2))) * morph.weight;
@@ -62,7 +63,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 
 	// Skinning:
 	[branch]
-	if (push.bonebuffer_index >= 0)
+	if (push.bone_offset != ~0u)
 	{
 		float4 ind = 0;
 		float4 wei = 0;
@@ -94,7 +95,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 			[loop]
 			for (uint i = 0; ((i < 4) && (weisum < 1.0f)); ++i)
 			{
-				float4x4 m = bindless_buffers[push.bonebuffer_index].Load<ShaderTransform>((push.bonebuffer_offset + ind[i]) * sizeof(ShaderTransform)).GetMatrix();
+				float4x4 m = skinningbuffer.Load<ShaderTransform>(push.bone_offset + ind[i] * sizeof(ShaderTransform)).GetMatrix();
 
 				p += mul(m, float4(pos.xyz, 1)) * wei[i];
 				n += mul((float3x3)m, nor.xyz) * wei[i];

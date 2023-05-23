@@ -3283,13 +3283,13 @@ void UpdatePerFrameData(
 						TextureDesc desc;
 						desc.width = uint32_t(packer.width);
 						desc.height = uint32_t(packer.height);
-						desc.format = Format::D16_UNORM;
+						desc.format = format_depthbuffer_shadowmap;
 						desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 						desc.layout = ResourceState::SHADER_RESOURCE;
 						device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
 						device->SetName(&shadowMapAtlas, "shadowMapAtlas");
 
-						desc.format = Format::R16G16B16A16_FLOAT;
+						desc.format = format_rendertarget_shadowmap;
 						desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 						desc.layout = ResourceState::SHADER_RESOURCE;
 						desc.clear.color[0] = 1;
@@ -3654,9 +3654,9 @@ void UpdateRenderData(
 	{
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
 	}
-	if (vis.scene->boneBuffer.IsValid())
+	if (vis.scene->skinningBuffer.IsValid())
 	{
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->boneBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->skinningBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
 	}
 	barrier_stack_flush(cmd);
 
@@ -3702,17 +3702,17 @@ void UpdateRenderData(
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
-	if (vis.scene->boneBuffer.IsValid() && vis.scene->boneArraySize > 0)
+	if (vis.scene->skinningBuffer.IsValid() && vis.scene->skinningDataSize > 0)
 	{
 		device->CopyBuffer(
-			&vis.scene->boneBuffer,
+			&vis.scene->skinningBuffer,
 			0,
-			&vis.scene->boneUploadBuffer[device->GetBufferIndex()],
+			&vis.scene->skinningUploadBuffer[device->GetBufferIndex()],
 			0,
-			vis.scene->boneArraySize * sizeof(ShaderTransform),
+			vis.scene->skinningDataSize,
 			cmd
 		);
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->boneBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->skinningBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
@@ -4122,15 +4122,15 @@ void UpdateRenderData(
 	device->EventBegin("Skinning and Morph", cmd);
 	{
 		auto range = wi::profiler::BeginRangeGPU("Skinning and Morph", cmd);
-		int descriptor_bonebuffer = -1;
-		if (vis.scene->boneBuffer.IsValid())
+		int descriptor_skinningbuffer = -1;
+		if (vis.scene->skinningBuffer.IsValid())
 		{
-			descriptor_bonebuffer = device->GetDescriptorIndex(&vis.scene->boneBuffer, SubresourceType::SRV);
+			descriptor_skinningbuffer = device->GetDescriptorIndex(&vis.scene->skinningBuffer, SubresourceType::SRV);
 		}
-		else if (vis.scene->boneUploadBuffer[device->GetBufferIndex()].IsValid())
+		else if (vis.scene->skinningUploadBuffer[device->GetBufferIndex()].IsValid())
 		{
 			// In this case we use the upload buffer directly, this will be the case with UMA GPU:
-			descriptor_bonebuffer = device->GetDescriptorIndex(&vis.scene->boneUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
+			descriptor_skinningbuffer = device->GetDescriptorIndex(&vis.scene->skinningUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
 		}
 		device->BindComputeShader(&shaders[CSTYPE_SKINNING], cmd);
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
@@ -4154,45 +4154,27 @@ void UpdateRenderData(
 				push.vb_tan = mesh.vb_tan.descriptor_srv;
 				push.so_pos_nor_wind = mesh.so_pos_nor_wind.descriptor_uav;
 				push.so_tan = mesh.so_tan.descriptor_uav;
+				push.skinningbuffer_index = descriptor_skinningbuffer;
 				const ArmatureComponent* armature = vis.scene->armatures.GetComponent(mesh.armatureID);
 				if (armature != nullptr)
 				{
-					push.bonebuffer_index = descriptor_bonebuffer;
-					push.bonebuffer_offset = armature->gpuBoneOffset;
+					push.bone_offset = armature->gpuBoneOffset;
 				}
 				else
 				{
-					push.bonebuffer_index = -1;
-					push.bonebuffer_offset = 0;
+					push.bone_offset = ~0u;
 				}
 				push.vb_bon = mesh.vb_bon.descriptor_srv;
 				if (mesh.active_morph_count > 0)
 				{
-					GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(sizeof(MorphTargetGPU) * mesh.active_morph_count, cmd);
-					uint active_morph_count = 0;
-					for(const MeshComponent::MorphTarget& morph : mesh.morph_targets)
-					{
-						if (morph.weight > 0)
-						{
-							MorphTargetGPU morph_target_gpu = {};
-							morph_target_gpu.weight = morph.weight;
-							morph_target_gpu.offset_pos = (uint)morph.offset_pos;
-							morph_target_gpu.offset_nor = (uint)morph.offset_nor;
-							morph_target_gpu.offset_tan = ~0u;
-							std::memcpy((MorphTargetGPU*)allocation.data + active_morph_count, &morph_target_gpu, sizeof(morph_target_gpu));
-							active_morph_count++;
-						}
-					}
-					push.morph_count = active_morph_count;
-					push.morphbuffer_index = device->GetDescriptorIndex(&allocation.buffer, SubresourceType::SRV);
-					push.morphbuffer_offset = (uint)allocation.offset;
+					push.morph_count = mesh.active_morph_count;
+					push.morph_offset = mesh.morphGPUOffset;
 					push.morphvb_index = device->GetDescriptorIndex(&mesh.generalBuffer, SubresourceType::SRV);
 				}
 				else
 				{
 					push.morph_count = 0;
-					push.morphbuffer_index = -1;
-					push.morphbuffer_offset = 0;
+					push.morph_offset = ~0u;
 					push.morphvb_index = -1;
 				}
 				device->PushConstants(&push, sizeof(push), cmd);

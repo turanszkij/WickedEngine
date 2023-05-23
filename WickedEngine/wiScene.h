@@ -125,12 +125,12 @@ namespace wi::scene
 		wi::graphics::GPUBuffer meshletBuffer;
 		std::atomic<uint32_t> meshletAllocator{ 0 };
 
-		// Bone GPU data for all armatures:
-		wi::graphics::GPUBuffer boneUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
-		ShaderTransform* boneArrayMapped = nullptr;
-		size_t boneArraySize = 0;
-		wi::graphics::GPUBuffer boneBuffer;
-		std::atomic<uint32_t> boneAllocator{ 0 };
+		// Skinning GPU data containining all bones, all morph descriptions:
+		wi::graphics::GPUBuffer skinningUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
+		void* skinningDataMapped = nullptr;
+		size_t skinningDataSize = 0;
+		wi::graphics::GPUBuffer skinningBuffer;
+		std::atomic<uint32_t> skinningAllocator{ 0 };
 
 		// Occlusion query state:
 		struct OcclusionResult

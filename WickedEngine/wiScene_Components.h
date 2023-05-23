@@ -408,6 +408,7 @@ namespace wi::scene
 		uint32_t geometryOffset = 0;
 		uint32_t meshletCount = 0;
 		uint32_t active_morph_count = 0;
+		uint32_t morphGPUOffset = 0;
 
 		wi::vector<wi::graphics::RaytracingAccelerationStructure> BLASes; // one BLAS per LOD
 		enum BLAS_STATE

@@ -120,38 +120,6 @@ namespace wi::scene
 		}
 		materialArrayMapped = (ShaderMaterial*)materialUploadBuffer[device->GetBufferIndex()].mapped_data;
 
-		boneArraySize = 0;
-		for (size_t i = 0; i < armatures.GetCount(); ++i)
-		{
-			boneArraySize += armatures[i].boneCollection.size();
-		}
-		if (boneUploadBuffer[0].desc.size < (boneArraySize * sizeof(ShaderTransform)))
-		{
-			GPUBufferDesc desc;
-			desc.stride = sizeof(ShaderTransform);
-			desc.size = desc.stride * boneArraySize * 2; // *2 to grow fast
-			desc.bind_flags = BindFlag::SHADER_RESOURCE;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
-			{
-				// Non-UMA: separate Default usage buffer
-				device->CreateBuffer(&desc, nullptr, &boneBuffer);
-				device->SetName(&boneBuffer, "Scene::boneBuffer");
-
-				// Upload buffer shouldn't be used by shaders with Non-UMA:
-				desc.bind_flags = BindFlag::NONE;
-				desc.misc_flags = ResourceMiscFlag::NONE;
-			}
-
-			desc.usage = Usage::UPLOAD;
-			for (int i = 0; i < arraysize(boneUploadBuffer); ++i)
-			{
-				device->CreateBuffer(&desc, nullptr, &boneUploadBuffer[i]);
-				device->SetName(&boneUploadBuffer[i], "Scene::boneUploadBuffer");
-			}
-		}
-		boneArrayMapped = (ShaderTransform*)boneUploadBuffer[device->GetBufferIndex()].mapped_data;
-
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
 		{
@@ -208,11 +176,17 @@ namespace wi::scene
 				}
 			});
 
-			// Scan mesh subset counts to allocate GPU geometry data:
+			// Scan mesh subset counts and skinning data sizes to allocate GPU geometry data:
 			geometryAllocator.store(0u);
+			skinningAllocator.store(0u);
 			wi::jobsystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 				MeshComponent& mesh = meshes[args.jobIndex];
 				mesh.geometryOffset = geometryAllocator.fetch_add((uint32_t)mesh.subsets.size());
+				skinningAllocator.fetch_add(uint32_t(mesh.morph_targets.size() * sizeof(MorphTargetGPU)));
+			});
+			wi::jobsystem::Dispatch(ctx, (uint32_t)armatures.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+				ArmatureComponent& armature = armatures[args.jobIndex];
+				skinningAllocator.fetch_add(uint32_t(armature.boneCollection.size() * sizeof(ShaderTransform)));
 			});
 
 			wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
@@ -299,6 +273,35 @@ namespace wi::scene
 			}
 		}
 		geometryArrayMapped = (ShaderGeometry*)geometryUploadBuffer[device->GetBufferIndex()].mapped_data;
+
+		// Skinning data size is ready at this point:
+		skinningDataSize = skinningAllocator.load();
+		skinningAllocator.store(0);
+		if (skinningUploadBuffer[0].desc.size < skinningDataSize)
+		{
+			GPUBufferDesc desc;
+			desc.size = skinningDataSize * 2; // *2 to grow fast
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			{
+				// Non-UMA: separate Default usage buffer
+				device->CreateBuffer(&desc, nullptr, &skinningBuffer);
+				device->SetName(&skinningBuffer, "Scene::skinningBuffer");
+
+				// Upload buffer shouldn't be used by shaders with Non-UMA:
+				desc.bind_flags = BindFlag::NONE;
+				desc.misc_flags = ResourceMiscFlag::NONE;
+			}
+
+			desc.usage = Usage::UPLOAD;
+			for (int i = 0; i < arraysize(skinningUploadBuffer); ++i)
+			{
+				device->CreateBuffer(&desc, nullptr, &skinningUploadBuffer[i]);
+				device->SetName(&skinningUploadBuffer[i], "Scene::skinningUploadBuffer");
+			}
+		}
+		skinningDataMapped = skinningUploadBuffer[device->GetBufferIndex()].mapped_data;
 
 		RunExpressionUpdateSystem(ctx);
 
@@ -3127,7 +3130,6 @@ namespace wi::scene
 	}
 	void Scene::RunArmatureUpdateSystem(wi::jobsystem::context& ctx)
 	{
-		boneAllocator.store(0);
 		wi::jobsystem::Dispatch(ctx, (uint32_t)armatures.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
 
 			ArmatureComponent& armature = armatures[args.jobIndex];
@@ -3148,8 +3150,8 @@ namespace wi::scene
 			//	But this will correct them too.
 			XMMATRIX R = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
 
-			armature.gpuBoneOffset = boneAllocator.fetch_add((uint32_t)armature.boneCollection.size());
-			ShaderTransform* gpu_dst = boneArrayMapped + armature.gpuBoneOffset;
+			armature.gpuBoneOffset = skinningAllocator.fetch_add(uint32_t(armature.boneCollection.size() * sizeof(ShaderTransform)));
+			ShaderTransform* gpu_dst = (ShaderTransform*)((uint8_t*)skinningDataMapped + armature.gpuBoneOffset);
 
 			if (armature.boneData.size() != armature.boneCollection.size())
 			{
@@ -3175,7 +3177,10 @@ namespace wi::scene
 
 				ShaderTransform& shadertransform = armature.boneData[boneIndex];
 				shadertransform.Create(mat);
-				std::memcpy(gpu_dst + boneIndex, &shadertransform, sizeof(shadertransform));
+				if (dt > 0)
+				{
+					std::memcpy(gpu_dst + boneIndex, &shadertransform, sizeof(shadertransform));
+				}
 
 				const float bone_radius = 1;
 				XMFLOAT3 bonepos = bone->GetPosition();
@@ -3214,10 +3219,23 @@ namespace wi::scene
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
 			mesh.active_morph_count = 0;
-			for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
+			if (dt > 0 && !mesh.morph_targets.empty())
 			{
-				if (morph.weight > 0)
-					mesh.active_morph_count++;
+				mesh.morphGPUOffset = skinningAllocator.fetch_add(uint32_t(mesh.morph_targets.size() * sizeof(MorphTargetGPU)));
+				MorphTargetGPU* gpu_dst = (MorphTargetGPU*)((uint8_t*)skinningDataMapped + mesh.morphGPUOffset);
+				for (const MeshComponent::MorphTarget& morph : mesh.morph_targets)
+				{
+					if (morph.weight > 0)
+					{
+						MorphTargetGPU morph_target_gpu = {};
+						morph_target_gpu.weight = morph.weight;
+						morph_target_gpu.offset_pos = (uint)morph.offset_pos;
+						morph_target_gpu.offset_nor = (uint)morph.offset_nor;
+						morph_target_gpu.offset_tan = ~0u;
+						std::memcpy(gpu_dst + mesh.active_morph_count, &morph_target_gpu, sizeof(morph_target_gpu));
+						mesh.active_morph_count++;
+					}
+				}
 			}
 
 			if (geometryArrayMapped != nullptr)
@@ -3879,14 +3897,14 @@ namespace wi::scene
 			desc.usage = Usage::DEFAULT;
 
 			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::D16_UNORM;
+			desc.format = wi::renderer::format_depthbuffer_envprobe;
 			desc.layout = ResourceState::SHADER_RESOURCE;
 			desc.sample_count = envmapMSAASampleCount;
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer_MSAA);
 			device->SetName(&envrenderingDepthBuffer_MSAA, "envrenderingDepthBuffer_MSAA");
 
 			desc.bind_flags = BindFlag::RENDER_TARGET;
-			desc.format = Format::R11G11B10_FLOAT;
+			desc.format = wi::renderer::format_rendertarget_envprobe;
 			desc.layout = ResourceState::RENDERTARGET;
 			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 			device->CreateTexture(&desc, nullptr, &envrenderingColorBuffer_MSAA);
@@ -3895,7 +3913,7 @@ namespace wi::scene
 			desc.sample_count = 1;
 			desc.array_size = envmapCount * 6;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
-			desc.format = Format::R11G11B10_FLOAT;
+			desc.format = wi::renderer::format_rendertarget_envprobe;
 			desc.height = envmapRes;
 			desc.width = envmapRes;
 			desc.mip_levels = 0; // all mips
@@ -3907,7 +3925,7 @@ namespace wi::scene
 
 			desc.array_size = 6;
 			desc.mip_levels = 1;
-			desc.format = Format::D16_UNORM;
+			desc.format = wi::renderer::format_depthbuffer_envprobe;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 			desc.layout = ResourceState::SHADER_RESOURCE;
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
