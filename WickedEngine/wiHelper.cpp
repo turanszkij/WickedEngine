@@ -1167,9 +1167,7 @@ namespace wi::helper
 
 		for (const auto& entry : std::filesystem::directory_iterator(directory))
 		{
-			std::wstring filename_wide = entry.path().filename().generic_wstring();
-			std::string filename;
-			wi::helper::StringConvert(filename_wide, filename);
+			std::string filename = entry.path().filename().generic_u8string();
 			if (filter_extension.empty() || wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename)).compare(filter_extension) == 0)
 			{
 				onSuccess(directory + filename);
