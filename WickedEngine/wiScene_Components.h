@@ -120,6 +120,7 @@ namespace wi::scene
 			DISABLE_RECEIVE_SHADOW = 1 << 10,
 			DOUBLE_SIDED = 1 << 11,
 			OUTLINE = 1 << 12,
+			PREFER_UNCOMPRESSED_TEXTURES = 1 << 13,
 		};
 		uint32_t _flags = CAST_SHADOW;
 
@@ -262,8 +263,9 @@ namespace wi::scene
 		inline bool IsOcclusionEnabled_Primary() const { return _flags & OCCLUSION_PRIMARY; }
 		inline bool IsOcclusionEnabled_Secondary() const { return _flags & OCCLUSION_SECONDARY; }
 		inline bool IsCustomShader() const { return customShaderID >= 0; }
-		inline bool IsDoubleSided() const { return  _flags & DOUBLE_SIDED; }
-		inline bool IsOutlineEnabled() const { return  _flags & OUTLINE; }
+		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
+		inline bool IsOutlineEnabled() const { return _flags & OUTLINE; }
+		inline bool IsPreferUncompressedTexturesEnabled() const { return _flags & PREFER_UNCOMPRESSED_TEXTURES; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
 		inline void SetSpecularColor(const XMFLOAT4& value) { SetDirty(); specularColor = value; }
@@ -302,6 +304,7 @@ namespace wi::scene
 		inline void DisableCustomShader() { customShaderID = -1; }
 		inline void SetDoubleSided(bool value = true) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
 		inline void SetOutlineEnabled(bool value = true) { if (value) { _flags |= OUTLINE; } else { _flags &= ~OUTLINE; } }
+		inline void SetPreferUncompressedTexturesEnabled(bool value = true) { if (value) { _flags |= PREFER_UNCOMPRESSED_TEXTURES; } else { _flags &= ~PREFER_UNCOMPRESSED_TEXTURES; } }
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;

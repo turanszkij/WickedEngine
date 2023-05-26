@@ -408,6 +408,10 @@ namespace wi::scene
 			if (!textureslot.name.empty())
 			{
 				wi::resourcemanager::Flags flags = wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA;
+				if (!IsPreferUncompressedTexturesEnabled())
+				{
+					flags |= wi::resourcemanager::Flags::IMPORT_BLOCK_COMPRESS;
+				}
 				switch (slot)
 				{
 				case NORMALMAP:

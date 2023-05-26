@@ -428,6 +428,10 @@ namespace wi::gui
 	{
 		return font.GetTextA();
 	}
+	std::string Widget::GetTooltip() const
+	{
+		return tooltipFont.GetTextA();
+	}
 	void Widget::SetText(const char* value)
 	{
 		font.SetText(value);

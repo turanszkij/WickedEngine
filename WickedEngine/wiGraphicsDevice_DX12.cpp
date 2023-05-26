@@ -3464,7 +3464,7 @@ using namespace dx12_internal;
 
 		if (texture->desc.mip_levels == 0)
 		{
-			texture->desc.mip_levels = (uint32_t)log2(std::max(texture->desc.width, texture->desc.height)) + 1;
+			texture->desc.mip_levels = GetMipCount(texture->desc.width, texture->desc.height, texture->desc.depth);
 		}
 
 		internal_state->total_size = 0;

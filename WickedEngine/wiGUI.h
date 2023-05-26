@@ -272,6 +272,7 @@ namespace wi::gui
 		const std::string& GetName() const;
 		void SetName(const std::string& value);
 		std::string GetText() const;
+		std::string GetTooltip() const;
 		void SetText(const char* value);
 		void SetText(const std::string& value);
 		void SetText(std::string&& value);

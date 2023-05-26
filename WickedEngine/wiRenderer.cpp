@@ -130,6 +130,7 @@ wi::vector<PaintRadius> paintrads;
 
 wi::SpinLock deferredMIPGenLock;
 wi::vector<std::pair<Texture, bool>> deferredMIPGens;
+wi::vector<std::pair<Texture, Texture>> deferredBCQueue;
 
 static const uint32_t vertexCount_uvsphere = arraysize(UVSPHERE);
 static const uint32_t vertexCount_cone = arraysize(CONE);
@@ -891,6 +892,9 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4], "generateMIPChainCubeCS_float4.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4], "generateMIPChainCubeArrayCS_unorm4.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4], "generateMIPChainCubeArrayCS_float4.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_BLOCKCOMPRESS_BC1], "blockcompressCS_BC1.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_BLOCKCOMPRESS_BC3], "blockcompressCS_BC3.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_BLOCKCOMPRESS_BC5], "blockcompressCS_BC5.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_FILTERENVMAP], "filterEnvMapCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_COPYTEXTURE2D_UNORM4], "copytexture2D_unorm4CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_COPYTEXTURE2D_FLOAT4], "copytexture2D_float4CS.cso"); });
@@ -2865,7 +2869,7 @@ void RenderImpostors(
 	}
 }
 
-void ProcessDeferredMipGenRequests(CommandList cmd)
+void ProcessDeferredTextureRequests(CommandList cmd)
 {
 	deferredMIPGenLock.lock();
 	for (auto& it : deferredMIPGens)
@@ -2875,6 +2879,11 @@ void ProcessDeferredMipGenRequests(CommandList cmd)
 		GenerateMipChain(it.first, MIPGENFILTER_LINEAR, cmd, mipopt);
 	}
 	deferredMIPGens.clear();
+	for (auto& it : deferredBCQueue)
+	{
+		BlockCompress(it.first, it.second, cmd);
+	}
+	deferredBCQueue.clear();
 	deferredMIPGenLock.unlock();
 }
 
@@ -8367,7 +8376,6 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 					{
 						GPUBarrier barriers[] = {
-							GPUBarrier::Memory(),
 							GPUBarrier::Image(&texture, ResourceState::UNORDERED_ACCESS, texture.desc.layout, i + 1, options.arrayIndex * 6 + 0),
 							GPUBarrier::Image(&texture, ResourceState::UNORDERED_ACCESS, texture.desc.layout, i + 1, options.arrayIndex * 6 + 1),
 							GPUBarrier::Image(&texture, ResourceState::UNORDERED_ACCESS, texture.desc.layout, i + 1, options.arrayIndex * 6 + 2),
@@ -8401,6 +8409,18 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 				for (uint32_t i = 0; i < desc.mip_levels - 1; ++i)
 				{
+					{
+						GPUBarrier barriers[] = {
+							GPUBarrier::Image(&texture, texture.desc.layout, ResourceState::UNORDERED_ACCESS, i + 1, 0),
+							GPUBarrier::Image(&texture, texture.desc.layout, ResourceState::UNORDERED_ACCESS, i + 1, 1),
+							GPUBarrier::Image(&texture, texture.desc.layout, ResourceState::UNORDERED_ACCESS, i + 1, 2),
+							GPUBarrier::Image(&texture, texture.desc.layout, ResourceState::UNORDERED_ACCESS, i + 1, 3),
+							GPUBarrier::Image(&texture, texture.desc.layout, ResourceState::UNORDERED_ACCESS, i + 1, 4),
+							GPUBarrier::Image(&texture, texture.desc.layout, ResourceState::UNORDERED_ACCESS, i + 1, 5),
+						};
+						device->Barrier(barriers, arraysize(barriers), cmd);
+					}
+
 					mipgen.texture_output = device->GetDescriptorIndex(&texture, SubresourceType::UAV, i + 1);
 					mipgen.texture_input = device->GetDescriptorIndex(&texture, SubresourceType::SRV, i);
 					desc.width = std::max(1u, desc.width / 2);
@@ -8419,10 +8439,17 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 						6,
 						cmd);
 
-					GPUBarrier barriers[] = {
-						GPUBarrier::Memory(),
-					};
-					device->Barrier(barriers, arraysize(barriers), cmd);
+					{
+						GPUBarrier barriers[] = {
+							GPUBarrier::Image(&texture, ResourceState::UNORDERED_ACCESS, texture.desc.layout, i + 1, 0),
+							GPUBarrier::Image(&texture, ResourceState::UNORDERED_ACCESS, texture.desc.layout, i + 1, 1),
+							GPUBarrier::Image(&texture, ResourceState::UNORDERED_ACCESS, texture.desc.layout, i + 1, 2),
+							GPUBarrier::Image(&texture, ResourceState::UNORDERED_ACCESS, texture.desc.layout, i + 1, 3),
+							GPUBarrier::Image(&texture, ResourceState::UNORDERED_ACCESS, texture.desc.layout, i + 1, 4),
+							GPUBarrier::Image(&texture, ResourceState::UNORDERED_ACCESS, texture.desc.layout, i + 1, 5),
+						};
+						device->Barrier(barriers, arraysize(barriers), cmd);
+					}
 				}
 			}
 
@@ -8489,7 +8516,6 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 				{
 					GPUBarrier barriers[] = {
-						GPUBarrier::Memory(),
 						GPUBarrier::Image(&texture,ResourceState::UNORDERED_ACCESS,texture.desc.layout,i + 1),
 					};
 					device->Barrier(barriers, arraysize(barriers), cmd);
@@ -8552,7 +8578,6 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
 					GPUBarrier::Image(&texture,ResourceState::UNORDERED_ACCESS,texture.desc.layout,i + 1),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
@@ -8566,6 +8591,102 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 	{
 		assert(0);
 	}
+}
+
+void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics::Texture& texture_bc, wi::graphics::CommandList cmd)
+{
+	const uint32_t block_size = GetFormatBlockSize(texture_bc.desc.format);
+	TextureDesc desc;
+	desc.width = std::max(1u, texture_bc.desc.width / block_size);
+	desc.height = std::max(1u, texture_bc.desc.height / block_size);
+	desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+	desc.layout = ResourceState::UNORDERED_ACCESS;
+	desc.mip_levels = GetMipCount(desc.width, desc.height); // full mipchain
+
+	static Texture bc_raw_uint2;
+	static Texture bc_raw_uint4;
+	Texture* bc_raw = nullptr;
+
+	switch (texture_bc.desc.format)
+	{
+	case Format::BC1_UNORM:
+	case Format::BC1_UNORM_SRGB:
+		bc_raw = &bc_raw_uint2;
+		desc.format = Format::R32G32_UINT;
+		device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC1], cmd);
+		break;
+	case Format::BC3_UNORM:
+	case Format::BC3_UNORM_SRGB:
+		bc_raw = &bc_raw_uint4;
+		desc.format = Format::R32G32B32A32_UINT;
+		device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC3], cmd);
+		break;
+	case Format::BC5_UNORM:
+		bc_raw = &bc_raw_uint4;
+		desc.format = Format::R32G32B32A32_UINT;
+		device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC5], cmd);
+		break;
+	default:
+		assert(0); // not supported
+		return;
+	}
+
+	if (!bc_raw->IsValid() || bc_raw->desc.width < desc.width || bc_raw->desc.height < desc.height)
+	{
+		device->CreateTexture(&desc, nullptr, bc_raw);
+		device->SetName(bc_raw, "bc_raw");
+
+		for (uint32_t i = 0; i < bc_raw->desc.mip_levels; ++i)
+		{
+			int subresource_index = device->CreateSubresource(bc_raw, SubresourceType::UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
+	}
+
+	device->EventBegin("BlockCompress", cmd);
+
+	for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+	{
+		const uint32_t width = std::max(1u, desc.width >> mip);
+		const uint32_t height = std::max(1u, desc.height >> mip);
+		device->BindResource(&texture_src, 0, cmd, mip);
+		device->BindUAV(bc_raw, 0, cmd, mip);
+		device->Dispatch((width + 7u) / 8u, (height + 7u) / 8u, 1, cmd);
+	}
+
+	GPUBarrier barriers[] = {
+		GPUBarrier::Image(bc_raw, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC),
+		GPUBarrier::Image(&texture_bc, texture_bc.desc.layout, ResourceState::COPY_DST),
+	};
+	device->Barrier(barriers, arraysize(barriers), cmd);
+
+	for (uint32_t mip = 0; mip < texture_bc.desc.mip_levels; ++mip)
+	{
+		const uint32_t width = std::max(1u, desc.width >> mip);
+		const uint32_t height = std::max(1u, desc.height >> mip);
+		Box box;
+		box.left = 0;
+		box.right = width;
+		box.top = 0;
+		box.bottom = height;
+		box.front = 0;
+		box.back = 1;
+
+		device->CopyTexture(
+			&texture_bc, 0, 0, 0, mip, 0,
+			bc_raw, std::min(mip, bc_raw->desc.mip_levels - 1), 0,
+			cmd,
+			&box
+		);
+	}
+
+	for (int i = 0; i < arraysize(barriers); ++i)
+	{
+		std::swap(barriers[i].image.layout_before, barriers[i].image.layout_after);
+	}
+	device->Barrier(barriers, arraysize(barriers), cmd);
+
+	device->EventEnd(cmd);
 }
 
 void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Texture& src, int SrcMIP, CommandList cmd, BORDEREXPANDSTYLE borderExpand)
@@ -8627,10 +8748,8 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 
 	device->Dispatch((cb.xCopySrcSize.x + 7) / 8, (cb.xCopySrcSize.y + 7) / 8, 1, cmd);
 
-
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
 			GPUBarrier::Image(&dst,ResourceState::UNORDERED_ACCESS,dst.desc.layout, DstMIP),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
@@ -15438,6 +15557,12 @@ void AddDeferredMIPGen(const Texture& texture, bool preserve_coverage)
 {
 	deferredMIPGenLock.lock();
 	deferredMIPGens.push_back(std::make_pair(texture, preserve_coverage));
+	deferredMIPGenLock.unlock();
+}
+void AddDeferredBlockCompression(const wi::graphics::Texture& texture_src, const wi::graphics::Texture& texture_bc)
+{
+	deferredMIPGenLock.lock();
+	deferredBCQueue.push_back(std::make_pair(texture_src, texture_bc));
 	deferredMIPGenLock.unlock();
 }
 
