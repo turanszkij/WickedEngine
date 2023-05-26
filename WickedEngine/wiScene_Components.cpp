@@ -400,8 +400,19 @@ namespace wi::scene
 		}
 		return FILTER_TRANSPARENT;
 	}
-	void MaterialComponent::CreateRenderData()
+	void MaterialComponent::CreateRenderData(bool force_recreate)
 	{
+		if (force_recreate)
+		{
+			for (uint32_t slot = 0; slot < TEXTURESLOT_COUNT; ++slot)
+			{
+				auto& textureslot = textures[slot];
+				if (textureslot.resource.IsValid())
+				{
+					textureslot.resource.SetOutdated();
+				}
+			}
+		}
 		for (uint32_t slot = 0; slot < TEXTURESLOT_COUNT; ++slot)
 		{
 			auto& textureslot = textures[slot];

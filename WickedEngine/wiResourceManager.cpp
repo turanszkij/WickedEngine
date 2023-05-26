@@ -116,6 +116,16 @@ namespace wi
 		resourceinternal->video = video;
 	}
 
+	void Resource::SetOutdated()
+	{
+		if (internal_state == nullptr)
+		{
+			internal_state = std::make_shared<ResourceInternal>();
+		}
+		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		resourceinternal->flags |= resourcemanager::Flags::IMPORT_DELAY; // this will cause resource to be recreated, but let using old file data like delayed loading
+	}
+
 	namespace resourcemanager
 	{
 		static std::mutex locker;
@@ -301,23 +311,28 @@ namespace wi
 								desc.misc_flags |= ResourceMiscFlag::TEXTURECUBE;
 							}
 
-							basist::transcoder_texture_format fmt;
-							if (has_flag(flags, Flags::IMPORT_NORMALMAP))
+							basist::transcoder_texture_format fmt = basist::transcoder_texture_format::cTFRGBA32;
+							desc.format = Format::R8G8B8A8_UNORM;
+
+							if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESS))
 							{
-								fmt = basist::transcoder_texture_format::cTFBC5_RG;
-								desc.format = Format::BC5_UNORM;
-							}
-							else
-							{
-								if (transcoder.get_has_alpha())
+								if (has_flag(flags, Flags::IMPORT_NORMALMAP))
 								{
-									fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
-									desc.format = Format::BC3_UNORM;
+									fmt = basist::transcoder_texture_format::cTFBC5_RG;
+									desc.format = Format::BC5_UNORM;
 								}
 								else
 								{
-									fmt = basist::transcoder_texture_format::cTFBC1_RGB;
-									desc.format = Format::BC1_UNORM;
+									if (transcoder.get_has_alpha())
+									{
+										fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
+										desc.format = Format::BC3_UNORM;
+									}
+									else
+									{
+										fmt = basist::transcoder_texture_format::cTFBC1_RGB;
+										desc.format = Format::BC1_UNORM;
+									}
 								}
 							}
 							uint32_t bytes_per_block = basis_get_bytes_per_block_or_pixel(fmt);

@@ -33,6 +33,10 @@ namespace wi
 		void SetSound(const wi::audio::Sound& sound);
 		void SetScript(const std::string& script);
 		void SetVideo(const wi::video::Video& script);
+
+		// Resource marked for recreate on resourcemanager::Load()
+		//	It keeps embedded file data if exists
+		void SetOutdated();
 	};
 
 	namespace resourcemanager

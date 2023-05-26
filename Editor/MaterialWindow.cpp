@@ -131,7 +131,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	AddWidget(&outlineCheckBox);
 
 	preferUncompressedCheckBox.Create("Prefer Uncompressed Textures: ");
-	preferUncompressedCheckBox.SetTooltip("For uncompressed textures (jpg, png, etc.) here it is possible to enable/disable auto block compression on importing. Block compression can reduce GPU memory usage and improve performance, but it can result in degraded quality.");
+	preferUncompressedCheckBox.SetTooltip("For uncompressed textures (jpg, png, etc.) or transcodable textures (KTX2, Basis) here it is possible to enable/disable auto block compression on importing. Block compression can reduce GPU memory usage and improve performance, but it can result in degraded quality.");
 	preferUncompressedCheckBox.SetPos(XMFLOAT2(x, y += step));
 	preferUncompressedCheckBox.SetSize(XMFLOAT2(hei, hei));
 	preferUncompressedCheckBox.OnClick([&](wi::gui::EventArgs args) {
@@ -696,6 +696,10 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			wi::helper::FileDialog(params, [this, material, slot](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					wi::resourcemanager::Flags flags = wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA;
+					if (!material->IsPreferUncompressedTexturesEnabled())
+					{
+						flags |= wi::resourcemanager::Flags::IMPORT_BLOCK_COMPRESS;
+					}
 					switch (slot)
 					{
 					case MaterialComponent::NORMALMAP:
