@@ -61,7 +61,7 @@ namespace wi
 			IMPORT_COLORGRADINGLUT = 1 << 0, // image import will convert resource to 3D color grading LUT
 			IMPORT_RETAIN_FILEDATA = 1 << 1, // file data will be kept for later reuse. This is necessary for keeping the resource serializable
 			IMPORT_NORMALMAP = 1 << 2, // image import will try to use optimal normal map encoding
-			IMPORT_BLOCK_COMPRESS = 1 << 3, // image import will request block compression for uncompressed formats
+			IMPORT_BLOCK_COMPRESSED = 1 << 3, // image import will request block compression for uncompressed or transcodable formats
 			IMPORT_DELAY = 1 << 4, // delay importing resource until later, for example when proper flags can be determined
 		};
 

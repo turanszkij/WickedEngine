@@ -695,26 +695,13 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 			wi::helper::FileDialog(params, [this, material, slot](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					wi::resourcemanager::Flags flags = wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA;
-					if (!material->IsPreferUncompressedTexturesEnabled())
-					{
-						flags |= wi::resourcemanager::Flags::IMPORT_BLOCK_COMPRESS;
-					}
-					switch (slot)
-					{
-					case MaterialComponent::NORMALMAP:
-					case MaterialComponent::CLEARCOATNORMALMAP:
-						flags |= wi::resourcemanager::Flags::IMPORT_NORMALMAP;
-						break;
-					default:
-						break;
-					};
+					wi::resourcemanager::Flags flags = material->GetTextureSlotResourceFlags(MaterialComponent::TEXTURESLOT(slot));
 					material->textures[slot].resource = wi::resourcemanager::Load(fileName, flags);
 					material->textures[slot].name = fileName;
 					material->SetDirty();
 					textureSlotLabel.SetText(wi::helper::GetFileNameFromPath(fileName));
-					});
 				});
+			});
 		}
 		});
 	AddWidget(&textureSlotButton);

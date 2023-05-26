@@ -316,6 +316,8 @@ namespace wi::scene
 		// Returns the bitwise OR of all the wi::enums::FILTER flags applicable to this material
 		uint32_t GetFilterMask() const;
 
+		wi::resourcemanager::Flags GetTextureSlotResourceFlags(TEXTURESLOT slot);
+
 		// Create texture resources for GPU
 		void CreateRenderData(bool force_recreate = false);
 

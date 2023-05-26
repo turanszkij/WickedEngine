@@ -314,7 +314,7 @@ namespace wi
 							basist::transcoder_texture_format fmt = basist::transcoder_texture_format::cTFRGBA32;
 							desc.format = Format::R8G8B8A8_UNORM;
 
-							if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESS))
+							if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESSED))
 							{
 								if (has_flag(flags, Flags::IMPORT_NORMALMAP))
 								{
@@ -840,7 +840,7 @@ namespace wi
 
 								wi::renderer::AddDeferredMIPGen(resource->texture, true);
 
-								if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESS))
+								if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESSED))
 								{
 									// Schedul additional task to compress into BC format and replace resource texture:
 									Texture uncompressed_src = std::move(resource->texture);
