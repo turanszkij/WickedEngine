@@ -1659,12 +1659,32 @@ namespace wi::graphics
 		uint32_t mips = 1;
 		while (width > 1u || height > 1u || depth > 1u)
 		{
-			width = std::max(1u, width / 2u);
-			height = std::max(1u, height / 2u);
-			depth = std::max(1u, depth / 2u);
+			width = std::max(1u, width >> 1u);
+			height = std::max(1u, height >> 1u);
+			depth = std::max(1u, depth >> 1u);
 			mips++;
 		}
 		return mips;
+	}
+	constexpr size_t ComputeTextureMemorySizeInBytes(const TextureDesc& desc)
+	{
+		size_t size = 0;
+		const uint32_t bytes_per_block = GetFormatStride(desc.format);
+		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
+		const uint32_t num_blocks_x = desc.width / pixels_per_block;
+		const uint32_t num_blocks_y = desc.height / pixels_per_block;
+		const uint32_t mips = desc.mip_levels == 0 ? GetMipCount(desc.width, desc.height, desc.depth) : desc.mip_levels;
+		for (uint32_t layer = 0; layer < desc.array_size; ++layer)
+		{
+			for (uint32_t mip = 0; mip < mips; ++mip)
+			{
+				const uint32_t width = std::max(1u, num_blocks_x >> mip);
+				const uint32_t height = std::max(1u, num_blocks_y >> mip);
+				const uint32_t depth = std::max(1u, desc.depth >> mip);
+				size += width * height * depth * bytes_per_block;
+			}
+		}
+		return size;
 	}
 
 
