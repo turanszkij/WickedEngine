@@ -927,9 +927,10 @@ namespace wi
 			{
 				resource->flags = flags;
 
-				if (resource->filedata.empty() && has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA))
+				if (resource->filedata.empty() && (has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) || has_flag(flags, Flags::IMPORT_DELAY)))
 				{
 					// resource was loaded with external filedata, and we want to retain filedata
+					//	this must also happen when using IMPORT_DELAY!
 					resource->filedata.resize(filesize);
 					std::memcpy(resource->filedata.data(), filedata, filesize);
 				}
