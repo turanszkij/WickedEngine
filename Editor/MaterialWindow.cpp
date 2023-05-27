@@ -133,7 +133,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	AddWidget(&outlineCheckBox);
 
 	preferUncompressedCheckBox.Create("Prefer Uncompressed Textures: ");
-	preferUncompressedCheckBox.SetTooltip("For uncompressed textures (jpg, png, etc.) or transcodable textures (KTX2, Basis) here it is possible to enable/disable auto block compression on importing. Block compression can reduce GPU memory usage and improve performance, but it can result in degraded quality.");
+	preferUncompressedCheckBox.SetTooltip("For uncompressed textures (jpg, png, etc.) or transcodable textures (KTX2, Basis) here it is possible to enable/disable auto block compression on importing. \nBlock compression can reduce GPU memory usage and improve performance, but it can result in degraded quality.");
 	preferUncompressedCheckBox.SetPos(XMFLOAT2(x, y += step));
 	preferUncompressedCheckBox.SetSize(XMFLOAT2(hei, hei));
 	preferUncompressedCheckBox.OnClick([&](wi::gui::EventArgs args) {
